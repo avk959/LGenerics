@@ -8,7 +8,8 @@ uses
 
   SysUtils, fpcunit, testregistry,
   LGUtils,
-  LGArrayHelpers;
+  LGArrayHelpers,
+  LGMiscUtils;
 
 type
 
@@ -24,16 +25,18 @@ type
   type
 
     TIntHelper  = specialize TGRegularArrayHelper<Integer>;
+    TIntTimSort = specialize TGRegularTimSort<Integer>;
     THackHelper = class(TIntHelper);
     TIntArray   = specialize TGArray<Integer>;
 
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairIdxCmp  = class
-      class function Compare(const L, R: TIntPair): SizeInt; static;
+      class function Less(const L, R: TIntPair): Boolean; static;
     end;
 
     TPairDataHelper = specialize TGRegularArrayHelper<TIntPair>;
+    TPairTimSort    = specialize TGRegularTimSort<TIntPair>;
 
     TPairIdxHelper  = specialize TGBaseArrayHelper<TIntPair, TPairIdxCmp>;
 
@@ -393,6 +396,9 @@ type
     procedure MergeSortDescOfDyn877Stable;
 
     procedure PDQSortTest;
+    procedure TimSortTest;
+    procedure TimSortAscStableTest;
+    procedure TimSortDescStableTest;
   end;
 
 implementation
@@ -419,52 +425,22 @@ const
 
   InOrderDblSrc21: TIntArray21 = (0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10);
 
-function IntCmp(constref L, R: Integer): SizeInt;
+function IntCmp(constref L, R: Integer): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE CPU64}
-  if L > R then
-    Result := 1
-  else
-    if L < R then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L < R;
 end;
 
 
-function PairCmp(constref L, R: TIntPair): SizeInt;
+function PairCmp(constref L, R: TIntPair): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L.Data) - SizeInt(R.Data);
-{$ELSE CPU64}
-  if L.Data > R.Data then
-    Result := 1
-  else
-    if R.Data > L.Data then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L.Data < R.Data;
 end;
 
 { TRegularArrayHelperTest.TPairIdxCmp }
 
-class function TRegularArrayHelperTest.TPairIdxCmp.Compare(const L, R: TIntPair): SizeInt;
+class function TRegularArrayHelperTest.TPairIdxCmp.Less(const L, R: TIntPair): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L.Index) - SizeInt(R.Index);
-{$ELSE CPU64}
-  if L.Index > R.Index then
-    Result := 1
-  else
-    if R.Index > L.Index then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L.Index < R.Index;
 end;
 
 { TRegularArrayHelperTest }
@@ -3472,6 +3448,113 @@ begin
   TIntHelper.Reverse(b);
   TIntHelper.PDQSort(a, @IntCmp, soDesc);
   AssertTrue(TIntHelper.Same(a, b, @IntCmp));
+end;
+
+procedure TRegularArrayHelperTest.TimSortTest;
+var
+  a, b: TIntArray;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  TIntTimSort.Sort(a{%H-}, @IntCmp);
+  AssertTrue(a = nil);
+  a := [9, 13, 13];
+  TIntTimSort.Sort(a, @IntCmp);
+  AssertTrue(TIntHelper.Same(a, [9, 13, 13], @IntCmp));
+  a := [13, 11, 5];
+  TIntTimSort.Sort(a, @IntCmp);
+  AssertTrue(TIntHelper.Same(a, [5, 11, 13], @IntCmp));
+  SetLength(b, TestSize);
+  for I := 0 to Pred(TestSize) do
+    b[I] := I;
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntTimSort.Sort(a, @IntCmp);
+  AssertTrue(TIntHelper.Same(a, b, @IntCmp));
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntHelper.Reverse(b);
+  TIntTimSort.Sort(a, @IntCmp, soDesc);
+  AssertTrue(TIntHelper.Same(a, b, @IntCmp));
+end;
+
+procedure TRegularArrayHelperTest.TimSortAscStableTest;
+const
+  ValCount = 65;
+  TestSize = 1000;
+type
+  TCounter = array[0..Pred(ValCount)] of Integer;
+var
+  Counter: TCounter;
+  a: TIntPairs;
+  I, J, v: Integer;
+begin
+  Counter := Default(TCounter);
+  System.SetLength(a, TestSize);
+  for I := 0 to System.High(a) do
+    begin
+      v := Random(ValCount);
+      a[I].Data := v;
+      a[I].Index := Counter[v];
+      Inc(Counter[v]);
+    end;
+  // pairs with same .Data have strictly increasing .Index values;
+  // after stable sorting, this order should be preserved
+  TPairTimSort.Sort(a, @PairCmp);
+  AssertTrue(TPairDataHelper.IsNonDescending(a, @PairCmp));
+  I := 0;
+  J := 0;
+  v := 0;
+  repeat
+    while (J < TestSize) and (a[J].Data = v) do
+      Inc(J);
+    AssertTrue(Counter[v] = J - I);
+    if I < Pred(J) then //current range may be empty or has single element - it is randomness :)
+      AssertTrue(TPairIdxHelper.IsStrictAscending(a[I..Pred(J)]))
+    else
+      AssertTrue(TPairIdxHelper.IsNonDescending(a[I..Pred(J)]));
+    Inc(v);
+    I := J;
+  until v = ValCount;
+end;
+
+procedure TRegularArrayHelperTest.TimSortDescStableTest;
+const
+  ValCount = 55;
+  TestSize = 1000;
+type
+  TCounter = array[0..Pred(ValCount)] of Integer;
+var
+  Counter: TCounter;
+  a: TIntPairs;
+  I, J, v: Integer;
+begin
+  Counter := Default(TCounter);
+  System.SetLength(a, TestSize);
+  for I := 0 to System.High(a) do
+    begin
+      v := Random(ValCount);
+      a[I].Data := v;
+      a[I].Index := Counter[v];
+      Inc(Counter[v]);
+    end;
+  // pairs with same .Data have strictly increasing .Index values;
+  // after stable sorting, this order should be preserved
+  TPairTimSort.Sort(a, @PairCmp, soDesc);
+  AssertTrue(TPairDataHelper.IsNonAscending(a, @PairCmp));
+  I := 0;
+  J := 0;
+  v := Pred(ValCount);
+  repeat
+    while (J < TestSize) and (a[J].Data = v) do
+      Inc(J);
+    AssertTrue(Counter[v] = J - I);
+    if I < Pred(J) then //current range may be empty or has single element - it is randomness :)
+      AssertTrue(TPairIdxHelper.IsStrictAscending(a[I..Pred(J)]))
+    else
+      AssertTrue(TPairIdxHelper.IsNonDescending(a[I..Pred(J)]));
+    Dec(v);
+    I := J;
+  until v < 0;
 end;
 
 
