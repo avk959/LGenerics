@@ -18,6 +18,8 @@ type
   TPairArrayCursor = specialize TGArrayCursor<TPair>;
   IPairEnumerable  = specialize IGEnumerable<TPair>;
 
+  { TEnumerableTest }
+
   TEnumerableTest = class(TTestCase)
   private
   type
@@ -52,11 +54,11 @@ type
       (key: 27;Value: 44),(key: 10;Value: 16),(key: 15;Value: 23),(key: 19;Value: 30),(key: 23;Value: 37));
 
 
-    function DoIntCmp(constref L, R: Integer): SizeInt;
+    function DoIntCmp(constref L, R: Integer): Boolean;
     function GetIsEven(constref aValue: Integer): Boolean;
     function DoMulBy4(constref aValue: Integer): Integer;
     function DoAddSquare(constref X, Y: Integer): Integer;
-    function PairCmp(constref L, R: TPair): SizeInt;
+    function PairCmp(constref L, R: TPair): Boolean;
   published
     procedure EmptyEnum_ToArray;
     procedure Enum21_ToArray;
@@ -238,19 +240,9 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-function IntCmp(constref L, R: Integer): SizeInt;
+function IntCmp(constref L, R: Integer): Boolean;
 begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+  Result := L < R;
 end;
 
 function IsEven(constref aValue: Integer): Boolean;
@@ -268,30 +260,14 @@ begin
   Result := X * X + Y;
 end;
 
-function PairCompare(constref L, R: TPair): SizeInt;
+function PairCompare(constref L, R: TPair): Boolean;
 begin
-  if L.Key > R.Key then
-    Result := 1
-  else
-    if R.Key > L.Key then
-      Result := -1
-    else
-      Result := 0;
+  Result := L.Key < R.Key;
 end;
 
-function TEnumerableTest.DoIntCmp(constref L, R: Integer): SizeInt;
+function TEnumerableTest.DoIntCmp(constref L, R: Integer): Boolean;
 begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+  Result := L < R;
 end;
 
 function TEnumerableTest.GetIsEven(constref aValue: Integer): Boolean;
@@ -309,15 +285,9 @@ begin
   Result := X * X + Y;
 end;
 
-function TEnumerableTest.PairCmp(constref L, R: TPair): SizeInt;
+function TEnumerableTest.PairCmp(constref L, R: TPair): Boolean;
 begin
-  if L.Key > R.Key then
-    Result := 1
-  else
-    if R.Key > L.Key then
-      Result := -1
-    else
-      Result := 0;
+  Result := L.Key < R.Key;
 end;
 
 procedure TEnumerableTest.EmptyEnum_ToArray;
@@ -499,19 +469,9 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_FindMinNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -522,19 +482,9 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_FindMinNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -606,19 +556,9 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_MinNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -669,19 +609,9 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_FindMaxNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -692,19 +622,9 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_FindMaxNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -776,21 +696,11 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_MaxNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
-  var
+var
   e: IIntEnumerable;
   o: TIntOptional;
 begin
@@ -947,19 +857,9 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_SortedNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -969,19 +869,9 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_SortedNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -991,19 +881,9 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_SortedNestedDesc;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(constref L, R: Integer): Boolean;
   begin
-  {$IFDEF CPU64}
-    Result := SizeInt(L) - SizeInt(R);
-  {$ELSE CPU64}
-    if L > R then
-      Result := 1
-    else
-      if R > L then
-        Result := -1
-      else
-        Result := 0;
-  {$ENDIF CPU64}
+    Result := L < R;
   end;
 var
   e: IIntEnumerable;
@@ -1647,15 +1527,9 @@ procedure TEnumerableTest.SortedRegular;
 type
   THelper     = specialize TGRegularArrayHelper<TPair>;
   TNestHelper = specialize TGNestedArrayHelper<TPair>;
-  function ValCmp(constref L, R: TPair): SizeInt;
+  function ValCmp(constref L, R: TPair): Boolean;
   begin
-    if L.Value > R.Value then
-      Result := 1
-    else
-      if R.Value > L.Value then
-        Result := -1
-      else
-        Result := 0;
+    Result := L.Value < R.Value;
   end;
 var
   e: IPairEnumerable;
@@ -1676,15 +1550,9 @@ procedure TEnumerableTest.SortedDelegated;
 type
   THelper     = specialize TGDelegatedArrayHelper<TPair>;
   TNestHelper = specialize TGNestedArrayHelper<TPair>;
-  function ValCmp(constref L, R: TPair): SizeInt;
+  function ValCmp(constref L, R: TPair): Boolean;
   begin
-    if L.Value > R.Value then
-      Result := 1
-    else
-      if R.Value > L.Value then
-        Result := -1
-      else
-        Result := 0;
+    Result := L.Value < R.Value;
   end;
 var
   e: IPairEnumerable;
@@ -1704,25 +1572,13 @@ end;
 procedure TEnumerableTest.SortedNested;
 type
   THelper = specialize TGNestedArrayHelper<TPair>;
-  function KeyCmp(constref L, R: TPair): SizeInt;
+  function KeyCmp(constref L, R: TPair): Boolean;
   begin
-    if L.Key > R.Key then
-      Result := 1
-    else
-      if R.Key > L.Key then
-        Result := -1
-      else
-        Result := 0;
+    Result := L.Key < R.Key;
   end;
-  function ValCmp(constref L, R: TPair): SizeInt;
+  function ValCmp(constref L, R: TPair): Boolean;
   begin
-    if L.Value > R.Value then
-      Result := 1
-    else
-      if R.Value > L.Value then
-        Result := -1
-      else
-        Result := 0;
+    Result := L.Value < R.Value;
   end;
 var
   e: IPairEnumerable;
