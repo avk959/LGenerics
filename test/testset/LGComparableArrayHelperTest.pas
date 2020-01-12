@@ -9,7 +9,8 @@ uses
 
   SysUtils, fpcunit, testregistry,
   LGUtils,
-  LGArrayHelpers;
+  LGArrayHelpers,
+  LGMiscUtils;
 
 type
 
@@ -20,6 +21,7 @@ type
   type
 
     TIntHelper  = specialize TGComparableArrayHelper<Integer>;
+    TIntTimSort = specialize TGComparableTimSort<Integer>;
     THackHelper = class(TIntHelper);
     TIntArray   = specialize TGArray<Integer>;
 
@@ -37,10 +39,11 @@ type
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairIdxCmp  = class
-      class function Compare(const L, R: TIntPair): SizeInt; static;
+      class function Less(const L, R: TIntPair): Boolean; static;
     end;
 
     TPairDataHelper = specialize TGComparableArrayHelper<TIntPair>;
+    TPairTimSort    = specialize TGComparableTimSort<TIntPair>;
 
     TPairIdxHelper  = specialize TGBaseArrayHelper<TIntPair, TPairIdxCmp>;
 
@@ -400,6 +403,9 @@ type
     procedure MergeSortDescOfDyn877Stable;
 
     procedure PDQSortTest;
+    procedure TimSortTest;
+    procedure TimSortAscStableTest;
+    procedure TimSortDescStableTest;
   end;
 
 implementation
@@ -461,19 +467,9 @@ end;
 
 { TComparableArrayHelperTest.TPairIdxCmp }
 
-class function TComparableArrayHelperTest.TPairIdxCmp.Compare(const L, R: TIntPair): SizeInt;
+class function TComparableArrayHelperTest.TPairIdxCmp.Less(const L, R: TIntPair): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L.Index) - SizeInt(R.Index);
-{$ELSE CPU64}
-  if L.Index > R.Index then
-    Result := 1
-  else
-    if R.Index > L.Index then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L.Index < R.Index;
 end;
 
 { TComparableArrayHelperTest }
@@ -3481,6 +3477,113 @@ begin
   TIntHelper.Reverse(b);
   TIntHelper.PDQSort(a, soDesc);
   AssertTrue(TIntHelper.Same(a, b));
+end;
+
+procedure TComparableArrayHelperTest.TimSortTest;
+var
+  a, b: TIntArray;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  TIntTimSort.Sort(a{%H-});
+  AssertTrue(a = nil);
+  a := [9, 13, 13];
+  TIntTimSort.Sort(a);
+  AssertTrue(TIntHelper.Same(a, [9, 13, 13]));
+  a := [13, 11, 5];
+  TIntTimSort.Sort(a);
+  AssertTrue(TIntHelper.Same(a, [5, 11, 13]));
+  SetLength(b, TestSize);
+  for I := 0 to Pred(TestSize) do
+    b[I] := I;
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntTimSort.Sort(a);
+  AssertTrue(TIntHelper.Same(a, b));
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntHelper.Reverse(b);
+  TIntTimSort.Sort(a, soDesc);
+  AssertTrue(TIntHelper.Same(a, b));
+end;
+
+procedure TComparableArrayHelperTest.TimSortAscStableTest;
+const
+  ValCount = 65;
+  TestSize = 1000;
+type
+  TCounter = array[0..Pred(ValCount)] of Integer;
+var
+  Counter: TCounter;
+  a: TIntPairs;
+  I, J, v: Integer;
+begin
+  Counter := Default(TCounter);
+  System.SetLength(a, TestSize);
+  for I := 0 to System.High(a) do
+    begin
+      v := Random(ValCount);
+      a[I].Data := v;
+      a[I].Index := Counter[v];
+      Inc(Counter[v]);
+    end;
+  // pairs with same .Data have strictly increasing .Index values;
+  // after stable sorting, this order should be preserved
+  TPairTimSort.Sort(a);
+  AssertTrue(TPairDataHelper.IsNonDescending(a));
+  I := 0;
+  J := 0;
+  v := 0;
+  repeat
+    while (J < TestSize) and (a[J].Data = v) do
+      Inc(J);
+    AssertTrue(Counter[v] = J - I);
+    if I < Pred(J) then //current range may be empty or has single element - it is randomness :)
+      AssertTrue(TPairIdxHelper.IsStrictAscending(a[I..Pred(J)]))
+    else
+      AssertTrue(TPairIdxHelper.IsNonDescending(a[I..Pred(J)]));
+    Inc(v);
+    I := J;
+  until v = ValCount;
+end;
+
+procedure TComparableArrayHelperTest.TimSortDescStableTest;
+const
+  ValCount = 55;
+  TestSize = 1000;
+type
+  TCounter = array[0..Pred(ValCount)] of Integer;
+var
+  Counter: TCounter;
+  a: TIntPairs;
+  I, J, v: Integer;
+begin
+  Counter := Default(TCounter);
+  System.SetLength(a, TestSize);
+  for I := 0 to System.High(a) do
+    begin
+      v := Random(ValCount);
+      a[I].Data := v;
+      a[I].Index := Counter[v];
+      Inc(Counter[v]);
+    end;
+  // pairs with same .Data have strictly increasing .Index values;
+  // after stable sorting, this order should be preserved
+  TPairTimSort.Sort(a, soDesc);
+  AssertTrue(TPairDataHelper.IsNonAscending(a));
+  I := 0;
+  J := 0;
+  v := Pred(ValCount);
+  repeat
+    while (J < TestSize) and (a[J].Data = v) do
+      Inc(J);
+    AssertTrue(Counter[v] = J - I);
+    if I < Pred(J) then //current range may be empty or has single element - it is randomness :)
+      AssertTrue(TPairIdxHelper.IsStrictAscending(a[I..Pred(J)]))
+    else
+      AssertTrue(TPairIdxHelper.IsNonDescending(a[I..Pred(J)]));
+    Dec(v);
+    I := J;
+  until v < 0;
 end;
 
 initialization
