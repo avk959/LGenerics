@@ -26,7 +26,7 @@ type
   TVec4 = record
     X, Y, Z, W: Double;
     class function CreateRandom(aRange: Integer): TVec4; static; inline;
-    class function Compare(const L, R: TVec4): Integer; static; inline;
+    class function Less(const L, R: TVec4): Boolean; static; inline;
   end;
 
   TUIntSample   = array of DWord;
@@ -126,10 +126,9 @@ begin
   end;
 end;
 
-class function TVec4.Compare(const L, R: TVec4): Integer;
+class function TVec4.Less(const L, R: TVec4): Boolean;
 begin
-  Result := Ord(L.X + L.Y + L.Z + L.W > R.X + R.Y + R.Z + R.W) -
-            Ord(L.X + L.Y + L.Z + L.W < R.X + R.Y + R.Z + R.W);
+  Result := L.X + L.Y + L.Z + L.W < R.X + R.Y + R.Z + R.W;
 end;
 
 { TSortAlgoHelper }
