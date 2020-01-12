@@ -1189,7 +1189,7 @@ begin
   TestSize := 100;
   e := CreateIntArray(TestSize);
   TIntHelper.RandomShuffle(e);
-  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.Compare);
+  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.Less);
   AssertTrue(m.Instance.Head(0).None);
   AssertTrue(m.Instance.Head(0, True).Total = 1);
   I := 0;
@@ -1211,7 +1211,7 @@ begin
   TestSize := 100;
   e := CreateIntArray(TestSize);
   TIntHelper.RandomShuffle(e);
-  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.Compare);
+  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.Less);
   AssertTrue(m.Instance.Tail(99).Total = 1);
   AssertTrue(m.Instance.Tail(99, False).None);
   I := 30;
@@ -1232,7 +1232,7 @@ begin
   TestSize := 100;
   e := CreateIntArray(TestSize);
   TIntHelper.RandomShuffle(e);
-  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.Compare);
+  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.Less);
   AssertTrue(m.Instance.Range(10, 10).None);
   AssertTrue(m.Instance.Range(100, 100).None);
   AssertTrue(m.Instance.Range(0, 0).None);
@@ -1552,7 +1552,7 @@ begin
   TestSize := 100;
   e := CreateIntArray(TestSize);
   TIntHelper.RandomShuffle(e);
-  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.OnLess);
   AssertTrue(m.Instance.Head(0).None);
   AssertTrue(m.Instance.Head(0, True).Total = 1);
   I := 0;
@@ -1574,7 +1574,7 @@ begin
   TestSize := 100;
   e := CreateIntArray(TestSize);
   TIntHelper.RandomShuffle(e);
-  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.OnLess);
   AssertTrue(m.Instance.Tail(99).Total = 1);
   AssertTrue(m.Instance.Tail(99, False).None);
   I := 30;
@@ -1595,7 +1595,7 @@ begin
   TestSize := 100;
   e := CreateIntArray(TestSize);
   TIntHelper.RandomShuffle(e);
-  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  m.Instance := TIntMap.Create(e, specialize TGDefaults<Integer>.OnLess);
   AssertTrue(m.Instance.Range(10, 10).None);
   AssertTrue(m.Instance.Range(100, 100).None);
   AssertTrue(m.Instance.Range(0, 0).None);

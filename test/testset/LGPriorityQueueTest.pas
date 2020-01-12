@@ -38,7 +38,7 @@ type
     TIntHelper               = specialize TGComparableArrayHelper<Integer>;
     TIntArray                = TIntBaseBinHeap.TArray;
     THandleArray             = array of THandle;
-    function LongIntCmp(constref L, R: LongInt): SizeInt;
+    function LongIntCmp(constref L, R: LongInt): Boolean;
   published
     procedure BaseBinHeap;
     procedure BaseBinHeapReverse;
@@ -112,19 +112,9 @@ type
 
 implementation
 
-function TGPriorityQueueTest.LongIntCmp(constref L, R: LongInt): SizeInt;
+function TGPriorityQueueTest.LongIntCmp(constref L, R: LongInt): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE CPU64}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L < R;
 end;
 
 procedure TGPriorityQueueTest.BaseBinHeap;
@@ -274,19 +264,9 @@ begin
   end;
 end;
 
-function CmpLongInt(constref L, R: LongInt): SizeInt;
+function CmpLongInt(constref L, R: LongInt): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE CPU64}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L < R;
 end;
 
 procedure TGPriorityQueueTest.RegularBinHeap;
@@ -1290,7 +1270,7 @@ begin
   System.SetLength(a, 100);
   for I := 1 to System.Length(a) do
     a[I - 1] := I * 1001;
-  q := TIntRegularPairHeap.Create(a, specialize TGDefaults<Integer>.Compare);
+  q := TIntRegularPairHeap.Create(a, specialize TGDefaults<Integer>.Less);
   try
     AssertTrue(q.Count = System.Length(a));
     J := Succ(System.Length(a));
@@ -1548,7 +1528,7 @@ begin
   System.SetLength(a, 100);
   for I := 1 to System.Length(a) do
     a[I - 1] := I * 1001;
-  q := TIntDelegatedPairHeap.Create(a, specialize TGDefaults<Integer>.OnCompare);
+  q := TIntDelegatedPairHeap.Create(a, specialize TGDefaults<Integer>.OnLess);
   try
     AssertTrue(q.Count = System.Length(a));
     J := Succ(System.Length(a));
