@@ -8,7 +8,9 @@ uses
 
   SysUtils, fpcunit, testregistry,
   LGUtils,
-  LGArrayHelpers;
+  LGArrayHelpers,
+  LGMiscUtils,
+  LGDeque;
 
 type
 
@@ -17,12 +19,12 @@ type
   TBaseArrayHelperTest = class(TTestCase)
   private
   type
-
     TIntCmpRel = class
-      class function Compare(L, R: Integer): SizeInt; static;
+      class function Less(L, R: Integer): Boolean; static;
     end;
 
     TIntHelper  = specialize TGBaseArrayHelper<Integer, TIntCmpRel>;
+    TIntTimSort = specialize TGBaseTimSort<Integer, TIntCmpRel>;
     THackHelper = class(TIntHelper);
     TIntArray   = specialize TGArray<Integer>;
 
@@ -34,14 +36,15 @@ type
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairDataCmp = class
-      class function Compare(const L, R: TIntPair): SizeInt; static;
+      class function Less(const L, R: TIntPair): Boolean; static;
     end;
 
     TPairIdxCmp  = class
-      class function Compare(const L, R: TIntPair): SizeInt; static;
+      class function Less(const L, R: TIntPair): Boolean; static;
     end;
 
     TPairDataHelper = specialize TGBaseArrayHelper<TIntPair, TPairDataCmp>;
+    TPairTimSort    = specialize TGBaseTimSort<TIntPair, TPairDataCmp>;
 
     TPairIdxHelper  = specialize TGBaseArrayHelper<TIntPair, TPairIdxCmp>;
 
@@ -418,6 +421,28 @@ type
     procedure MergeSortDescOfDyn877Stable;
 
     procedure PDQSortTest;
+    procedure TimSortTest;
+    procedure TimSortAscStableTest;
+    procedure TimSortDescStableTest;
+  end;
+
+  { TBaseIndexedHelperTest }
+
+  TBaseIndexedHelperTest = class(TTestCase)
+  private
+  type
+    TIntDeque  = specialize TGLiteDeque<Integer>;
+    TDeqHelper = specialize TGIndexedHelper<Integer, TIntDeque>;
+    THelper    = specialize TGArrayHelper<Integer>;
+  published
+    procedure CreateCopy;
+    procedure Reverse;
+    procedure Reverse2;
+    procedure SequentSearch;
+    procedure IndexOfMin;
+    procedure IndexOfMax;
+    procedure Sort;
+    procedure Sort2;
   end;
 
 implementation
@@ -449,53 +474,23 @@ const
 
 { TBaseArrayHelperTest.TIntCmpRel }
 
-class function TBaseArrayHelperTest.TIntCmpRel.Compare(L, R: Integer): SizeInt;
+class function TBaseArrayHelperTest.TIntCmpRel.Less(L, R: Integer): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE CPU64}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L < R;
 end;
 
 { TBaseArrayHelperTest.TPairDataCmp }
 
-class function TBaseArrayHelperTest.TPairDataCmp.Compare(const L, R: TIntPair): SizeInt;
+class function TBaseArrayHelperTest.TPairDataCmp.Less(const L, R: TIntPair): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L.Data) - SizeInt(R.Data);
-{$ELSE CPU64}
-  if L.Data > R.Data then
-    Result := 1
-  else
-    if R.Data > L.Data then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L.Data < R.Data;
 end;
 
 { TBaseArrayHelperTest.TPairIdxCmp }
 
-class function TBaseArrayHelperTest.TPairIdxCmp.Compare(const L, R: TIntPair): SizeInt;
+class function TBaseArrayHelperTest.TPairIdxCmp.Less(const L, R: TIntPair): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L.Index) - SizeInt(R.Index);
-{$ELSE CPU64}
-  if L.Index > R.Index then
-    Result := 1
-  else
-    if R.Index > L.Index then
-      Result := -1
-    else
-      Result := 0;
-{$ENDIF CPU64}
+  Result := L.Index < R.Index;
 end;
 
 { TBaseArrayHelperTest }
@@ -3616,9 +3611,274 @@ begin
   AssertTrue(TIntHelper.Same(a, b));
 end;
 
+procedure TBaseArrayHelperTest.TimSortTest;
+var
+  a, b: TIntArray;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  TIntTimSort.Sort(a{%H-});
+  AssertTrue(a = nil);
+  a := [9, 13, 13];
+  TIntTimSort.Sort(a);
+  AssertTrue(TIntHelper.Same(a, [9, 13, 13]));
+  a := [13, 11, 5];
+  TIntTimSort.Sort(a);
+  AssertTrue(TIntHelper.Same(a, [5, 11, 13]));
+  SetLength(b, TestSize);
+  for I := 0 to Pred(TestSize) do
+    b[I] := I;
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntTimSort.Sort(a);
+  AssertTrue(TIntHelper.Same(a, b));
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntHelper.Reverse(b);
+  TIntTimSort.Sort(a, soDesc);
+  AssertTrue(TIntHelper.Same(a, b));
+end;
+
+procedure TBaseArrayHelperTest.TimSortAscStableTest;
+const
+  ValCount = 65;
+  TestSize = 1000;
+type
+  TCounter = array[0..Pred(ValCount)] of Integer;
+var
+  Counter: TCounter;
+  a: TIntPairs;
+  I, J, v: Integer;
+begin
+  Counter := Default(TCounter);
+  System.SetLength(a, TestSize);
+  for I := 0 to System.High(a) do
+    begin
+      v := Random(ValCount);
+      a[I].Data := v;
+      a[I].Index := Counter[v];
+      Inc(Counter[v]);
+    end;
+  // pairs with same .Data have strictly increasing .Index values;
+  // after stable sorting, this order should be preserved
+  TPairTimSort.Sort(a);
+  AssertTrue(TPairDataHelper.IsNonDescending(a));
+  I := 0;
+  J := 0;
+  v := 0;
+  repeat
+    while (J < TestSize) and (a[J].Data = v) do
+      Inc(J);
+    AssertTrue(Counter[v] = J - I);
+    if I < Pred(J) then //current range may be empty or has single element - it is randomness :)
+      AssertTrue(TPairIdxHelper.IsStrictAscending(a[I..Pred(J)]))
+    else
+      AssertTrue(TPairIdxHelper.IsNonDescending(a[I..Pred(J)]));
+    Inc(v);
+    I := J;
+  until v = ValCount;
+end;
+
+procedure TBaseArrayHelperTest.TimSortDescStableTest;
+const
+  ValCount = 55;
+  TestSize = 1000;
+type
+  TCounter = array[0..Pred(ValCount)] of Integer;
+var
+  Counter: TCounter;
+  a: TIntPairs;
+  I, J, v: Integer;
+begin
+  Counter := Default(TCounter);
+  System.SetLength(a, TestSize);
+  for I := 0 to System.High(a) do
+    begin
+      v := Random(ValCount);
+      a[I].Data := v;
+      a[I].Index := Counter[v];
+      Inc(Counter[v]);
+    end;
+  // pairs with same .Data have strictly increasing .Index values;
+  // after stable sorting, this order should be preserved
+  TPairTimSort.Sort(a, soDesc);
+  AssertTrue(TPairDataHelper.IsNonAscending(a));
+  I := 0;
+  J := 0;
+  v := Pred(ValCount);
+  repeat
+    while (J < TestSize) and (a[J].Data = v) do
+      Inc(J);
+    AssertTrue(Counter[v] = J - I);
+    if I < Pred(J) then //current range may be empty or has single element - it is randomness :)
+      AssertTrue(TPairIdxHelper.IsStrictAscending(a[I..Pred(J)]))
+    else
+      AssertTrue(TPairIdxHelper.IsNonDescending(a[I..Pred(J)]));
+    Dec(v);
+    I := J;
+  until v < 0;
+end;
+
+{ TBaseIndexedHelperTest }
+
+procedure TBaseIndexedHelperTest.CreateCopy;
+const
+  TestSize = 100;
+var
+  d: TIntDeque;
+  a: array of Integer;
+  I: Integer;
+begin
+  AssertTrue(TDeqHelper.CreateCopy(d{%H-}, 0, 1) = nil);
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  for I := 1 to TestSize do
+    d.PushFirst(I + TestSize);
+  a := TDeqHelper.CreateCopy(d, TestSize, TestSize);
+  AssertTrue(Length(a) = TestSize);
+  for I := 0 to High(a) do
+    AssertTrue(a[I] = I + 1);
+end;
+
+procedure TBaseIndexedHelperTest.Reverse;
+const
+  TestSize = 100;
+var
+  d: TIntDeque;
+  a: array of Integer;
+  I: Integer;
+begin
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  for I := 1 to TestSize do
+    d.PushFirst(I + TestSize);
+  a := d.ToArray;
+  TDeqHelper.Reverse(d);
+  THelper.Reverse(a);
+  AssertTrue(THelper.Same(a, d.ToArray));
+end;
+
+procedure TBaseIndexedHelperTest.Reverse2;
+const
+  TestSize = 100;
+var
+  d: TIntDeque;
+  a: array of Integer;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  try
+    TDeqHelper.Reverse(d, 0, 1);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  for I := 1 to TestSize do
+    d.PushFirst(I + TestSize);
+  a := d.ToArray;
+  TDeqHelper.Reverse(d, TestSize div 2, Pred(TestSize + TestSize div 2));
+  THelper.Reverse(a[TestSize div 2..Pred(TestSize + TestSize div 2)]);
+  AssertTrue(THelper.Same(a, d.ToArray));
+end;
+
+procedure TBaseIndexedHelperTest.SequentSearch;
+const
+  TestSize = 100;
+var
+  d: TIntDeque;
+  I: Integer;
+begin
+  AssertTrue(TDeqHelper.SequentSearch(d{%H-}, TestSize) = -1);
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  for I := 1 to TestSize do
+    d.PushFirst(I + TestSize);
+  AssertTrue(TDeqHelper.SequentSearch(d, TestSize) = d.Count - 1);
+  AssertTrue(TDeqHelper.SequentSearch(d, TestSize*2) = 0);
+  AssertTrue(TDeqHelper.SequentSearch(d, 1) = TestSize);
+end;
+
+procedure TBaseIndexedHelperTest.IndexOfMin;
+const
+  TestSize = 100;
+var
+  d: TIntDeque;
+  I: Integer;
+begin
+  AssertTrue(TDeqHelper.IndexOfMin(d{%H-}) = -1);
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  for I := 1 to TestSize do
+    d.PushFirst(I + TestSize);
+  AssertTrue(TDeqHelper.IndexOfMin(d) = TestSize);
+  TDeqHelper.Reverse(d);
+  AssertTrue(TDeqHelper.IndexOfMin(d) = TestSize - 1);
+end;
+
+procedure TBaseIndexedHelperTest.IndexOfMax;
+const
+  TestSize = 100;
+var
+  d: TIntDeque;
+  I: Integer;
+begin
+  AssertTrue(TDeqHelper.IndexOfMax(d{%H-}) = -1);
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  for I := 1 to TestSize do
+    d.PushFirst(I + TestSize);
+  AssertTrue(TDeqHelper.IndexOfMax(d) = 0);
+  TDeqHelper.Reverse(d);
+  AssertTrue(TDeqHelper.IndexOfMax(d) = d.Count - 1);
+end;
+
+procedure TBaseIndexedHelperTest.Sort;
+const
+  TestSize = 1000;
+var
+  d: TIntDeque;
+  a: array of Integer;
+  I: Integer;
+begin
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  TDeqHelper.RandomShuffle(d);
+  TDeqHelper.Sort(d);
+  AssertTrue(TDeqHelper.IsStrictAscending(d));
+  a := d.ToArray;
+  AssertTrue(THelper.IsStrictAscending(a));
+  TDeqHelper.RandomShuffle(d);
+  TDeqHelper.Sort(d, soDesc);
+  AssertTrue(TDeqHelper.IsStrictDescending(d));
+  a := d.ToArray;
+  AssertTrue(THelper.IsStrictDescending(a));
+end;
+
+procedure TBaseIndexedHelperTest.Sort2;
+const
+  TestSize = 1000;
+var
+  d: TIntDeque;
+  a: array of Integer;
+  I: Integer;
+begin
+  for I := 1 to TestSize do
+    d.PushLast(I);
+  TDeqHelper.RandomShuffle(d);
+  TDeqHelper.Sort(d, 10, TestSize - 10);
+  a := TDeqHelper.CreateCopy(d, 10, Succ(TestSize - 10 - 10));
+  AssertTrue(THelper.IsStrictAscending(a));
+  TDeqHelper.RandomShuffle(d);
+  TDeqHelper.Sort(d, 10, TestSize - 10, soDesc);
+  a := TDeqHelper.CreateCopy(d, 10, Succ(TestSize - 10 - 10));
+  AssertTrue(THelper.IsStrictDescending(a));
+end;
+
 initialization
 
   RegisterTest(TBaseArrayHelperTest);
+  RegisterTest(TBaseIndexedHelperTest);
 
 end.
 
