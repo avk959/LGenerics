@@ -46,9 +46,9 @@ type
     IEnumerable     = specialize IGEnumerable<T>;
     TOptional       = specialize TGOptional<T>;
     TArray          = specialize TGArray<T>;
-    TCompare        = specialize TGCompare<T>;
-    TOnCompare      = specialize TGOnCompare<T>;
-    TNestCompare    = specialize TGNestCompare<T>;
+    TLess           = specialize TGLessCompare<T>;
+    TOnLess         = specialize TGOnLessCompare<T>;
+    TNestLess       = specialize TGNestLessCompare<T>;
     TTest           = specialize TGTest<T>;
     TOnTest         = specialize TGOnTest<T>;
     TNestTest       = specialize TGNestTest<T>;
@@ -76,23 +76,23 @@ type
     function First: TOptional;
     function FindLast(out aValue: T): Boolean;
     function Last: TOptional;
-    function FindMin(out aValue: T; c: TCompare): Boolean;
-    function FindMin(out aValue: T; c: TOnCompare): Boolean;
-    function FindMin(out aValue: T; c: TNestCompare): Boolean;
-    function Min(c: TCompare): TOptional;
-    function Min(c: TOnCompare): TOptional;
-    function Min(c: TNestCompare): TOptional;
-    function FindMax(out aValue: T; c: TCompare): Boolean;
-    function FindMax(out aValue: T; c: TOnCompare): Boolean;
-    function FindMax(out aValue: T; c: TNestCompare): Boolean;
-    function Max(c: TCompare): TOptional;
-    function Max(c: TOnCompare): TOptional;
-    function Max(c: TNestCompare): TOptional;
+    function FindMin(out aValue: T; c: TLess): Boolean;
+    function FindMin(out aValue: T; c: TOnLess): Boolean;
+    function FindMin(out aValue: T; c: TNestLess): Boolean;
+    function Min(c: TLess): TOptional;
+    function Min(c: TOnLess): TOptional;
+    function Min(c: TNestLess): TOptional;
+    function FindMax(out aValue: T; c: TLess): Boolean;
+    function FindMax(out aValue: T; c: TOnLess): Boolean;
+    function FindMax(out aValue: T; c: TNestLess): Boolean;
+    function Max(c: TLess): TOptional;
+    function Max(c: TOnLess): TOptional;
+    function Max(c: TNestLess): TOptional;
     function Skip(aCount: SizeInt): IEnumerable; inline;
     function Limit(aCount: SizeInt): IEnumerable; inline;
-    function Sorted(c: TCompare; aStable: Boolean = False): IEnumerable;
-    function Sorted(c: TOnCompare; aStable: Boolean = False): IEnumerable;
-    function Sorted(c: TNestCompare; aStable: Boolean = False): IEnumerable;
+    function Sorted(c: TLess; aStable: Boolean = False): IEnumerable;
+    function Sorted(c: TOnLess; aStable: Boolean = False): IEnumerable;
+    function Sorted(c: TNestLess; aStable: Boolean = False): IEnumerable;
     function Select(aTest: TTest): IEnumerable; inline;
     function Select(aTest: TOnTest): IEnumerable; inline;
     function Select(aTest: TNestTest): IEnumerable; inline;
@@ -108,9 +108,9 @@ type
     function Total(aTest: TTest): SizeInt;
     function Total(aTest: TOnTest): SizeInt;
     function Total(aTest: TNestTest): SizeInt;
-    function Distinct(c: TCompare): IEnumerable;
-    function Distinct(c: TOnCompare): IEnumerable;
-    function Distinct(c: TNestCompare): IEnumerable;
+    function Distinct(c: TLess): IEnumerable;
+    function Distinct(c: TOnLess): IEnumerable;
+    function Distinct(c: TNestLess): IEnumerable;
     function Map(aMap: TMapFunc): IEnumerable; inline;
     function Map(aMap: TOnMap): IEnumerable; inline;
     function Map(aMap: TNestMap): IEnumerable; inline;
@@ -1025,7 +1025,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGEnumerable.FindMin(out aValue: T; c: TCompare): Boolean;
+function TGEnumerable.FindMin(out aValue: T; c: TLess): Boolean;
 var
   v: T;
 begin
@@ -1038,7 +1038,7 @@ begin
           while MoveNext do
             begin
               v := Current;
-              if c(v, aValue) < 0 then
+              if c(v, aValue) then
                 aValue := v;
             end;
         end;
@@ -1047,7 +1047,7 @@ begin
     end;
 end;
 
-function TGEnumerable.FindMin(out aValue: T; c: TOnCompare): Boolean;
+function TGEnumerable.FindMin(out aValue: T; c: TOnLess): Boolean;
 var
   v: T;
 begin
@@ -1060,7 +1060,7 @@ begin
           while MoveNext do
             begin
               v := Current;
-              if c(v, aValue) < 0 then
+              if c(v, aValue) then
                 aValue := v;
             end;
         end;
@@ -1069,7 +1069,7 @@ begin
     end;
 end;
 
-function TGEnumerable.FindMin(out aValue: T; c: TNestCompare): Boolean;
+function TGEnumerable.FindMin(out aValue: T; c: TNestLess): Boolean;
 var
   v: T;
 begin
@@ -1082,7 +1082,7 @@ begin
           while MoveNext do
             begin
               v := Current;
-              if c(v, aValue) < 0 then
+              if c(v, aValue) then
                 aValue := v;
             end;
         end;
@@ -1091,7 +1091,7 @@ begin
     end;
 end;
 
-function TGEnumerable.Min(c: TCompare): TOptional;
+function TGEnumerable.Min(c: TLess): TOptional;
 var
   v: T;
 begin
@@ -1099,7 +1099,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGEnumerable.Min(c: TOnCompare): TOptional;
+function TGEnumerable.Min(c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -1107,7 +1107,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGEnumerable.Min(c: TNestCompare): TOptional;
+function TGEnumerable.Min(c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -1115,7 +1115,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGEnumerable.FindMax(out aValue: T; c: TCompare): Boolean;
+function TGEnumerable.FindMax(out aValue: T; c: TLess): Boolean;
 var
   v: T;
 begin
@@ -1128,7 +1128,7 @@ begin
           while MoveNext do
             begin
               v := Current;
-              if c(aValue, v) < 0 then
+              if c(aValue, v) then
                 aValue := v;
             end;
         end;
@@ -1137,7 +1137,7 @@ begin
     end;
 end;
 
-function TGEnumerable.FindMax(out aValue: T; c: TOnCompare): Boolean;
+function TGEnumerable.FindMax(out aValue: T; c: TOnLess): Boolean;
 var
   v: T;
 begin
@@ -1150,7 +1150,7 @@ begin
           while MoveNext do
             begin
               v := Current;
-              if c(aValue, v) < 0 then
+              if c(aValue, v) then
                 aValue := v;
             end;
         end;
@@ -1159,7 +1159,7 @@ begin
     end;
 end;
 
-function TGEnumerable.FindMax(out aValue: T; c: TNestCompare): Boolean;
+function TGEnumerable.FindMax(out aValue: T; c: TNestLess): Boolean;
 var
   v: T;
 begin
@@ -1172,7 +1172,7 @@ begin
           while MoveNext do
             begin
               v := Current;
-              if c(aValue, v) < 0 then
+              if c(aValue, v) then
                 aValue := v;
             end;
         end;
@@ -1181,7 +1181,7 @@ begin
     end;
 end;
 
-function TGEnumerable.Max(c: TCompare): TOptional;
+function TGEnumerable.Max(c: TLess): TOptional;
 var
   v: T;
 begin
@@ -1189,7 +1189,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGEnumerable.Max(c: TOnCompare): TOptional;
+function TGEnumerable.Max(c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -1197,7 +1197,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGEnumerable.Max(c: TNestCompare): TOptional;
+function TGEnumerable.Max(c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -1215,7 +1215,7 @@ begin
   Result := specialize TGLimitEnumerable<T>.Create(GetEnumerator, aCount);
 end;
 
-function TGEnumerable.Sorted(c: TCompare; aStable: Boolean): IEnumerable;
+function TGEnumerable.Sorted(c: TLess; aStable: Boolean): IEnumerable;
 var
   a: TArray;
 begin
@@ -1227,7 +1227,7 @@ begin
   Result := specialize TGArrayCursor<T>.Create(a);
 end;
 
-function TGEnumerable.Sorted(c: TOnCompare; aStable: Boolean): IEnumerable;
+function TGEnumerable.Sorted(c: TOnLess; aStable: Boolean): IEnumerable;
 var
   a: TArray;
 begin
@@ -1239,7 +1239,7 @@ begin
   Result := specialize TGArrayCursor<T>.Create(a);
 end;
 
-function TGEnumerable.Sorted(c: TNestCompare; aStable: Boolean): IEnumerable;
+function TGEnumerable.Sorted(c: TNestLess; aStable: Boolean): IEnumerable;
 var
   a: TArray;
 begin
@@ -1395,19 +1395,19 @@ begin
     end;
 end;
 
-function TGEnumerable.Distinct(c: TCompare): IEnumerable;
+function TGEnumerable.Distinct(c: TLess): IEnumerable;
 begin
   Result := specialize TGArrayCursor<T>.Create(
     specialize TGRegularArrayHelper<T>.SelectDistinct(ToArray, c));
 end;
 
-function TGEnumerable.Distinct(c: TOnCompare): IEnumerable;
+function TGEnumerable.Distinct(c: TOnLess): IEnumerable;
 begin
   Result := specialize TGArrayCursor<T>.Create(
     specialize TGDelegatedArrayHelper<T>.SelectDistinct(ToArray, c));
 end;
 
-function TGEnumerable.Distinct(c: TNestCompare): IEnumerable;
+function TGEnumerable.Distinct(c: TNestLess): IEnumerable;
 begin
   Result := specialize TGArrayCursor<T>.Create(
     specialize TGNestedArrayHelper<T>.SelectDistinct(ToArray, c));
