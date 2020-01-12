@@ -114,8 +114,6 @@ type
       NINTHER_THRESHOLD            = 128;
     var
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
-      FOffsetsL, FOffsetsR: PByte;
-      procedure AlignStorage;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
                                   aNum: SizeInt; aUseSwaps: Boolean); static;
     end;
@@ -184,9 +182,46 @@ type
     class function  FoldR(constref A: array of T; aFold: TNestFold): TOptional; static;
   end;
 
+  { TGIndexedHelpUtil
+      type TIndexed must provide:
+        method/property Count: SizeInt - number of items contained;
+        property UncMutable[aIndex: SizeInt]: PItem - indexed access to items }
+  generic TGIndexedHelpUtil<T, TIndexed> = class
+  protected
+  type
+    TUtil = class(specialize TGArrayHelpUtil<T>);
+  public
+  type
+    TItem             = TUtil.TItem;
+    PItem             = TUtil.PItem;
+    TEqualCompare     = TUtil.TEqualCompare;
+    TOnEqualCompare   = TUtil.TOnEqualCompare;
+    TNestEqualCompare = TUtil.TNestEqualCompare;
+    TArray            = TUtil.TArray;
+  protected
+  type
+    TFake = TUtil.TFake;
+    class procedure Swap(L, R: PItem); static; inline;
+    class procedure DoReverse(var e: TIndexed; L, R: SizeInt); static; inline;
+  public
+    class function  CreateCopy(constref aEntity: TIndexed; aFrom, aCount: SizeInt): TArray; static;
+    class procedure Reverse(var aEntity: TIndexed); static;
+    class procedure Reverse(var aEntity: TIndexed; aFirst, aLast: SizeInt); static;
+    class procedure RandomShuffle(var aEntity: TIndexed); static;
+    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+                    c: TEqualCompare): SizeInt; static;
+    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+                    c: TOnEqualCompare): SizeInt; static;
+    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+                    c: TNestEqualCompare): SizeInt; static;
+    class function  Same(constref e1, e2: TIndexed; c: TEqualCompare): Boolean; static;
+    class function  Same(constref e1, e2: TIndexed; c: TOnEqualCompare): Boolean; static;
+    class function  Same(constref e1, e2: TIndexed; c: TNestEqualCompare): Boolean; static;
+  end;
+
   { TGBaseArrayHelper
-      functor TCmpRel(comparision relation) must provide:
-        class function Compare([const[ref]] L, R: T): SizeInt }
+      functor TCmpRel(comparison relation) must provide:
+        class function Less([const[ref]] L, R: T): Boolean }
   generic TGBaseArrayHelper<T, TCmpRel> = class(specialize TGArrayHelpUtil<T>)
   protected
   type
@@ -225,6 +260,7 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
+    class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -318,7 +354,67 @@ type
   { TGArrayHelper assumes that type T implements TCmpRel }
   generic TGArrayHelper<T> = class(specialize TGBaseArrayHelper<T, T>);
 
-  {TGComparableArrayHelper assumes that type T defines comparision operators }
+  { TGBaseIndexedHelper
+      type TIndexed must provide:
+        method/property Count: SizeInt - number of items contained;
+        property UncMutable[aIndex: SizeInt]: PItem - indexed access to items;
+      functor TCmpRel(comparison relation) must provide:
+        class function Less([const[ref]] L, R: T): Boolean; }
+  generic TGBaseIndexedHelper<T, TIndexed, TCmpRel> = class(specialize TGIndexedHelpUtil<T, TIndexed>)
+  type
+    TOptional = TUtil.TOptional;
+  protected
+  type
+    TSortSplit = TUtil.TSortSplit;
+
+    class function  BiSearchLeftA(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+                    static;
+    class function  BiSearchLeftD(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+                    static;
+    class function  BiSearchRightA(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+                    static;
+    class function  BiSearchRightD(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+                    static;
+    class function  DoBinSearch(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  DoBinSearchPos(constref e: TIndexed; L, R: SizeInt; constref aValue: T): TSearchResult;
+                    static;
+    class function  CountRun2Asc(var e: TIndexed; L, R: SizeInt): SizeInt;
+    class procedure InsertionSort(var e: TIndexed; L, R: SizeInt); static;
+    class procedure DoHeapSort(var e: TIndexed; L, R: SizeInt); static;
+    class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
+    class function  QSplitMo9(var e: TIndexed; L, R: SizeInt): TSortSplit; static;
+    class procedure DoIntroSort(var e: TIndexed; L, R, Ttl: SizeInt); static;
+  public
+    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T): SizeInt; static;
+    class function  BinarySearch(constref aEntity: TIndexed; constref aValue: T): SizeInt; static;
+    class function  BinarySearchPos(constref aEntity: TIndexed; constref aValue: T): TSearchResult; static;
+    class function  IndexOfMin(constref aEntity: TIndexed): SizeInt; static;
+    class function  IndexOfMax(constref aEntity: TIndexed): SizeInt; static;
+    class function  GetMin(constref aEntity: TIndexed): TOptional; static;
+    class function  GetMax(constref aEntity: TIndexed): TOptional; static;
+    class function  FindMin(constref aEntity: TIndexed; out aValue: T): Boolean; static;
+    class function  FindMax(constref aEntity: TIndexed; out aValue: T): Boolean; static;
+    class function  FindMinMax(constref aEntity: TIndexed; out aMin, aMax: T): Boolean; static;
+    class function  FindNthSmallest(constref aEntity: TIndexed; N: SizeInt; out aValue: T): Boolean; static;
+    class function  NthSmallest(constref aEntity: TIndexed; N: SizeInt): TOptional; static;
+    class function  NextPermutation2Asc(var aEntity: TIndexed): Boolean; static;
+    class function  NextPermutation2Desc(var aEntity: TIndexed): Boolean; static;
+    class function  InversionCount(constref aEntity: TIndexed): Int64; static;
+    class function  IsNonDescending(constref aEntity: TIndexed): Boolean; static;
+    class function  IsStrictAscending(constref aEntity: TIndexed): Boolean; static;
+    class function  IsNonAscending(constref aEntity: TIndexed): Boolean; static;
+    class function  IsStrictDescending(constref aEntity: TIndexed): Boolean; static;
+    class function  Same(constref e1, e2: TIndexed): Boolean; static;
+    class procedure Sort(var aEntity: TIndexed; o: TSortOrder = soAsc); static;
+    class procedure Sort(var aEntity: TIndexed; aFirst, aLast: SizeInt; o: TSortOrder = soAsc); static;
+  { copies only distinct values from aEntity }
+    class function  SelectDistinct(const aEntity: TIndexed): TArray; static;
+  end;
+
+  { TGIndexedHelper assumes that type T implements TCmpRel }
+  generic TGIndexedHelper<T, TIndexed> = class(specialize TGBaseIndexedHelper<T, TIndexed, T>);
+
+  {TGComparableArrayHelper assumes that type T defines comparison operators }
   generic TGComparableArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   protected
   type
@@ -451,14 +547,14 @@ type
   generic TGRegularArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   public
   type
-    TCompare = specialize TGCompare<T>;
+    TLess = specialize TGLessCompare<T>;
 
   protected
   type
     TMergeSort = object(TMergeSortBase)
     private
-      FCompare: TCompare;
-      procedure Init(A: PItem; c: TCompare);
+      FLess: TLess;
+      procedure Init(A: PItem; c: TLess);
       procedure CollapseA;
       procedure CollapseD;
       procedure ForceCollapseA;
@@ -469,118 +565,119 @@ type
       procedure MergeLoD(From, CountLo, CountHi: SizeInt);
       procedure MergeHiA(From, CountLo, CountHi: SizeInt);
       procedure MergeHiD(From, CountLo, CountHi: SizeInt);
-      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TCompare); static;
-      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TCompare); static;
-      class function  CountRunAsc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
-      class function  CountRunDesc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
+      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TLess); static;
+      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TLess); static;
+      class function  CountRunAsc(A: PItem; R: SizeInt; c: TLess): SizeInt; static;
+      class function  CountRunDesc(A: PItem; R: SizeInt; c: TLess): SizeInt; static;
     public
-      class procedure SortAsc(A: PItem; R: SizeInt; c: TCompare); static;
-      class procedure SortDesc(A: PItem; R: SizeInt; c: TCompare); static;
+      class procedure SortAsc(A: PItem; R: SizeInt; c: TLess); static;
+      class procedure SortDesc(A: PItem; R: SizeInt; c: TLess); static;
     end;
 
     TPDQSort = object(TPDQSortBase)
     private
-      class procedure Sort3(A, B, D: PItem; c: TCompare); static; inline;
-      function  PartitionRight(aStart, aFinish: PItem; c: TCompare): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TCompare);
-      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TCompare): Boolean; static;
-      class function  PartitionLeft(aStart, aFinish: PItem; c: TCompare): PItem; static;
+      class procedure Sort3(A, B, D: PItem; c: TLess); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TLess);
+      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TLess): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem; c: TCompare); static;
+      class procedure Sort(aStart, aFinish: PItem; c: TLess); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
-    class procedure InsertionSort(A: PItem; R: SizeInt; c: TCompare); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): TSearchResult;
+    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TLess): SizeInt; static;
+    class procedure InsertionSort(A: PItem; R: SizeInt; c: TLess); static;
+    class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TLess); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TLess): TSearchResult;
                     static;
-    class procedure DoHeapSort(A: PItem; R: SizeInt; c: TCompare); static;
-    class function  QSplitR(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TCompare); static;
-    class function  MedianOf3(p1, p2, p3: PItem; c: TCompare): PItem; static; inline;
-    class function  QSplitMo9(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TCompare); static;
-    class function  DPQSplit(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TCompare); static;
+    class procedure DoHeapSort(A: PItem; R: SizeInt; c: TLess); static;
+    class function  QSplitR(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TLess); static;
+    class function  MedianOf3(p1, p2, p3: PItem; c: TLess): PItem; static; inline;
+    class function  QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess); static;
+    class function  DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TLess); static;
   { QuickSelect with random pivot, does not checks indices }
-    class function  QSelectR(A: PItem; R, N: SizeInt; c: TCompare): T; static;
+    class function  QSelectR(A: PItem; R, N: SizeInt; c: TLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TLess): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TCompare): TSearchResult;
+    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TLess): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T; c: TCompare): SizeInt; static;
+    class function  IndexOfMin(constref A: array of T; c: TLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T; c: TCompare): SizeInt; static;
+    class function  IndexOfMax(constref A: array of T; c: TLess): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A <> nil }
-    class function  GetMin(constref A: array of T; c: TCompare): TOptional; static;
+    class function  GetMin(constref A: array of T; c: TLess): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T; c: TCompare): TOptional; static;
+    class function  GetMax(constref A: array of T; c: TLess): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T; c: TCompare): Boolean; static;
+    class function  FindMin(constref A: array of T; out aValue: T; c: TLess): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T; c: TCompare): Boolean; static;
+    class function  FindMax(constref A: array of T; out aValue: T; c: TLess): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TCompare): Boolean; static;
+    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TLess): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
-    class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TCompare): Boolean; static;
+    class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
-    class function  NthSmallest(var A: array of T; N: SizeInt; c: TCompare): TOptional; static;
+    class function  NthSmallest(var A: array of T; N: SizeInt; c: TLess): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T; c: TCompare): Boolean; static;
+    class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T; c: TLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TCompare): TOptional; static;
+    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TLess): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
-    class function  NextPermutation2Asc(var A: array of T; c: TCompare): Boolean; static;
+    class function  NextPermutation2Asc(var A: array of T; c: TLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
-    class function  NextPermutation2Desc(var A: array of T; c: TCompare): Boolean; static;
+    class function  NextPermutation2Desc(var A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T; c: TCompare): Boolean; static;
+    class function  IsNonDescending(constref A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T; c: TCompare): Boolean; static;
+    class function  IsStrictAscending(constref A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T; c: TCompare): Boolean; static;
+    class function  IsNonAscending(constref A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T; c: TCompare): Boolean; static;
+    class function  IsStrictDescending(constref A: array of T; c: TLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
-    class function  InversionCount(var A: array of T; c: TCompare): Int64; static;
+    class function  InversionCount(var A: array of T; c: TLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T; c: TCompare): Int64; static;
+    class function  InversionCountND(constref A: array of T; c: TLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TCompare): Boolean; static;
+    class function  Same(constref A, B: array of T; c: TLess): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
-    class procedure QuickSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
-    class procedure IntroSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure IntroSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
-    class procedure DualPivotQuickSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
-    class procedure PDQSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
-    class procedure MergeSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure MergeSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
-    class procedure Sort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; c: TCompare; o: TSortOrder = soAsc): TArray; static;
+    class procedure Sort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
+    class function  Sorted(constref A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T; c: TCompare): TArray;
+    class function  SelectDistinct(constref A: array of T; c: TLess): TArray;
                     static;
   end;
 
@@ -588,14 +685,14 @@ type
   generic TGDelegatedArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   public
   type
-    TOnCompare = specialize TGOnCompare<T>;
+    TOnLess = specialize TGOnLessCompare<T>;
 
   protected
   type
     TMergeSort = object(TMergeSortBase)
     protected
-      FCompare: TOnCompare;
-      procedure Init(A: PItem; c: TOnCompare);
+      FLess: TOnLess;
+      procedure Init(A: PItem; c: TOnLess);
       procedure CollapseA;
       procedure CollapseD;
       procedure ForceCollapseA;
@@ -606,118 +703,119 @@ type
       procedure MergeLoD(From, CountLo, CountHi: SizeInt);
       procedure MergeHiA(From, CountLo, CountHi: SizeInt);
       procedure MergeHiD(From, CountLo, CountHi: SizeInt);
-      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TOnCompare); static;
-      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TOnCompare); static;
-      class function  CountRunAsc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
-      class function  CountRunDesc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
+      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TOnLess); static;
+      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TOnLess); static;
+      class function  CountRunAsc(A: PItem; R: SizeInt; c: TOnLess): SizeInt; static;
+      class function  CountRunDesc(A: PItem; R: SizeInt; c: TOnLess): SizeInt; static;
     public
-      class procedure SortAsc(A: PItem; R: SizeInt; c: TOnCompare); static;
-      class procedure SortDesc(A: PItem; R: SizeInt; c: TOnCompare); static;
+      class procedure SortAsc(A: PItem; R: SizeInt; c: TOnLess); static;
+      class procedure SortDesc(A: PItem; R: SizeInt; c: TOnLess); static;
     end;
 
     TPDQSort = object(TPDQSortBase)
     private
-      class procedure Sort3(A, B, D: PItem; c: TOnCompare); static; inline;
-      function  PartitionRight(aStart, aFinish: PItem; c: TOnCompare): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TOnCompare);
-      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TOnCompare): Boolean; static;
-      class function  PartitionLeft(aStart, aFinish: PItem; c: TOnCompare): PItem; static;
+      class procedure Sort3(A, B, D: PItem; c: TOnLess); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TOnLess);
+      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TOnLess): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem; c: TOnLess): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem; c: TOnCompare); static;
+      class procedure Sort(aStart, aFinish: PItem; c: TOnLess); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
-    class procedure InsertionSort(A: PItem; R: SizeInt; c: TOnCompare); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): TSearchResult;
+    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TOnLess): SizeInt; static;
+    class procedure InsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
+    class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): TSearchResult;
                     static;
-    class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnCompare); static;
-    class function  QSplitR(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnCompare); static;
-    class function  MedianOf3(p1, p2, p3: PItem; c: TOnCompare): PItem; static; inline;
-    class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnCompare); static;
-    class function  DPQSplit(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnCompare); static;
+    class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnLess); static;
+    class function  QSplitR(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnLess); static;
+    class function  MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem; static; inline;
+    class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess); static;
+    class function  DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnLess); static;
   { QuickSelect with random pivot, does not checks indices }
-    class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnCompare): T; static;
+    class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnCompare): SizeInt; static;
+    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnLess): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TOnCompare): SizeInt; static;
+    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TOnLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TOnCompare): TSearchResult;
+    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TOnLess): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T; c: TOnCompare): SizeInt; static;
+    class function  IndexOfMin(constref A: array of T; c: TOnLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T; c: TOnCompare): SizeInt; static;
+    class function  IndexOfMax(constref A: array of T; c: TOnLess): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T; c: TOnCompare): TOptional; static;
+    class function  GetMin(constref A: array of T; c: TOnLess): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T; c: TOnCompare): TOptional; static;
+    class function  GetMax(constref A: array of T; c: TOnLess): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T; c: TOnCompare): Boolean; static;
+    class function  FindMin(constref A: array of T; out aValue: T; c: TOnLess): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T; c: TOnCompare): Boolean; static;
+    class function  FindMax(constref A: array of T; out aValue: T; c: TOnLess): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TOnCompare): Boolean; static;
+    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TOnLess): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
-    class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TOnCompare): Boolean; static;
+    class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TOnLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
-    class function  NthSmallest(var A: array of T; N: SizeInt; c: TOnCompare): TOptional; static;
+    class function  NthSmallest(var A: array of T; N: SizeInt; c: TOnLess): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TOnCompare): Boolean; static;
+    class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TOnLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TOnCompare): TOptional; static;
+    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TOnLess): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
-    class function  NextPermutation2Asc(var A: array of T; c: TOnCompare): Boolean; static;
+    class function  NextPermutation2Asc(var A: array of T; c: TOnLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
-    class function  NextPermutation2Desc(var A: array of T; c: TOnCompare): Boolean; static;
+    class function  NextPermutation2Desc(var A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T; c: TOnCompare): Boolean; static;
+    class function  IsNonDescending(constref A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T; c: TOnCompare): Boolean; static;
+    class function  IsStrictAscending(constref A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T; c: TOnCompare): Boolean; static;
+    class function  IsNonAscending(constref A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T; c: TOnCompare): Boolean; static;
+    class function  IsStrictDescending(constref A: array of T; c: TOnLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
-    class function  InversionCount(var A: array of T; c: TOnCompare): Int64; static;
+    class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T; c: TOnCompare): Int64; static;
+    class function  InversionCountND(constref A: array of T; c: TOnLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TOnCompare): Boolean; static;
+    class function  Same(constref A, B: array of T; c: TOnLess): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
-    class procedure QuickSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
-    class procedure IntroSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure IntroSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
-    class procedure DualPivotQuickSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
-    class procedure PDQSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
-    class procedure MergeSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure MergeSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
-    class procedure Sort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; c: TOnCompare; o: TSortOrder = soAsc): TArray; static;
+    class procedure Sort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
+    class function  Sorted(constref A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T; c: TOnCompare): TArray;
+    class function  SelectDistinct(constref A: array of T; c: TOnLess): TArray;
                     static;
   end;
 
@@ -725,14 +823,14 @@ type
   generic TGNestedArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   public
   type
-    TNestCompare = specialize TGNestCompare<T>;
+    TNestLess = specialize TGNestLessCompare<T>;
 
   protected
   type
     TMergeSort = object(TMergeSortBase)
     protected
-      FCompare: TNestCompare;
-      procedure Init(A: PItem; c: TNestCompare);
+      FLess: TNestLess;
+      procedure Init(A: PItem; c: TNestLess);
       procedure CollapseA;
       procedure CollapseD;
       procedure ForceCollapseA;
@@ -743,123 +841,123 @@ type
       procedure MergeLoD(From, CountLo, CountHi: SizeInt);
       procedure MergeHiA(From, CountLo, CountHi: SizeInt);
       procedure MergeHiD(From, CountLo, CountHi: SizeInt);
-      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TNestCompare); static;
-      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TNestCompare); static;
-      class function  CountRunAsc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
-      class function  CountRunDesc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
+      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TNestLess); static;
+      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TNestLess); static;
+      class function  CountRunAsc(A: PItem; R: SizeInt; c: TNestLess): SizeInt; static;
+      class function  CountRunDesc(A: PItem; R: SizeInt; c: TNestLess): SizeInt; static;
     public
-      class procedure SortAsc(A: PItem; R: SizeInt; c: TNestCompare); static;
-      class procedure SortDesc(A: PItem; R: SizeInt; c: TNestCompare); static;
+      class procedure SortAsc(A: PItem; R: SizeInt; c: TNestLess); static;
+      class procedure SortDesc(A: PItem; R: SizeInt; c: TNestLess); static;
     end;
 
     TPDQSort = object(TPDQSortBase)
     private
-      class procedure Sort3(A, B, D: PItem; c: TNestCompare); static;{$ifndef CPU86}inline;{$endif}//todo: ???
-      function  PartitionRight(aStart, aFinish: PItem; c: TNestCompare): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TNestCompare);
-      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TNestCompare): Boolean; static;
-      class function  PartitionLeft(aStart, aFinish: PItem; c: TNestCompare): PItem; static;
+      class procedure Sort3(A, B, D: PItem; c: TNestLess); static;{$ifndef CPU86}inline;{$endif}//todo: ???
+      function  PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TNestLess);
+      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TNestLess): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem; c: TNestLess): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem; c: TNestCompare); static;
+      class procedure Sort(aStart, aFinish: PItem; c: TNestLess); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
-    class procedure InsertionSort(A: PItem; R: SizeInt; c: TNestCompare); static;
-
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TNestLess): SizeInt; static;
+    class procedure InsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
+    class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): TSearchResult;
+    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): TSearchResult;
                     static;
-    class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestCompare); static;
-    class function  QSplitR(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestCompare); static;
-    class function  MedianOf3(p1, p2, p3: PItem; c: TNestCompare): PItem; static; inline;
-    class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestCompare); static;
-    class function  DPQSplit(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestCompare); static;
+    class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestLess); static;
+    class function  QSplitR(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestLess); static;
+    class function  MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem; static; inline;
+    class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess); static;
+    class function  DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestLess); static;
   { QuickSelect with random pivot, does not checks indices }
-    class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestCompare): T; static;
+    class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestCompare): SizeInt; static;
+    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestLess): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TNestCompare): SizeInt; static;
+    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TNestLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TNestCompare): TSearchResult;
+    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TNestLess): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T; c: TNestCompare): SizeInt; static;
+    class function  IndexOfMin(constref A: array of T; c: TNestLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T; c: TNestCompare): SizeInt; static;
+    class function  IndexOfMax(constref A: array of T; c: TNestLess): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T; c: TNestCompare): TOptional; static;
+    class function  GetMin(constref A: array of T; c: TNestLess): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T; c: TNestCompare): TOptional; static;
+    class function  GetMax(constref A: array of T; c: TNestLess): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T; c: TNestCompare): Boolean; static;
+    class function  FindMin(constref A: array of T; out aValue: T; c: TNestLess): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T; c: TNestCompare): Boolean; static;
+    class function  FindMax(constref A: array of T; out aValue: T; c: TNestLess): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TNestCompare): Boolean; static;
+    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TNestLess): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
-    class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TNestCompare): Boolean; static;
+    class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TNestLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
-    class function  NthSmallest(var A: array of T; N: SizeInt; c: TNestCompare): TOptional; static;
+    class function  NthSmallest(var A: array of T; N: SizeInt; c: TNestLess): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TNestCompare): Boolean; static;
+    class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TNestLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TNestCompare): TOptional; static;
+    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TNestLess): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
-    class function  NextPermutation2Asc(var A: array of T; c: TNestCompare): Boolean; static;
+    class function  NextPermutation2Asc(var A: array of T; c: TNestLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
-    class function  NextPermutation2Desc(var A: array of T; c: TNestCompare): Boolean; static;
+    class function  NextPermutation2Desc(var A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T; c: TNestCompare): Boolean; static;
+    class function  IsNonDescending(constref A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T; c: TNestCompare): Boolean; static;
+    class function  IsStrictAscending(constref A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T; c: TNestCompare): Boolean; static;
+    class function  IsNonAscending(constref A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T; c: TNestCompare): Boolean; static;
+    class function  IsStrictDescending(constref A: array of T; c: TNestLess): Boolean; static;
   { returns the number of inversions in A, sorts array }
-    class function  InversionCount(var A: array of T; c: TNestCompare): Int64; static;
+    class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T; c: TNestCompare): Int64; static;
+    class function  InversionCountND(constref A: array of T; c: TNestLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TNestCompare): Boolean; static;
+    class function  Same(constref A, B: array of T; c: TNestLess): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
-    class procedure QuickSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
+    class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
-    class procedure IntroSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
+    class procedure IntroSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
-    class procedure DualPivotQuickSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
+    class procedure DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
-    class procedure PDQSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
-    class procedure MergeSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
+    class procedure MergeSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
-    class procedure Sort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; c: TNestCompare; o: TSortOrder = soAsc): TArray; static;
+    class procedure Sort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
+    class function  Sorted(constref A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T; c: TNestCompare): TArray;
+    class function  SelectDistinct(constref A: array of T; c: TNestLess): TArray;
                     static;
   end;
 
@@ -1137,12 +1235,6 @@ begin
 end;
 
 { TGArrayHelpUtil.TPDQSortBase }
-
-procedure TGArrayHelpUtil.TPDQSortBase.AlignStorage;
-begin
-  FOffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  FOffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
-end;
 
 class procedure TGArrayHelpUtil.TPDQSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
   aNum: SizeInt; aUseSwaps: Boolean);
@@ -1840,6 +1932,134 @@ begin
     end;
 end;
 
+{ TGIndexedHelpUtil }
+
+class procedure TGIndexedHelpUtil.Swap(L, R: PItem);
+var
+  v: TFake;
+begin
+  v := TFake(L^);
+  TFake(L^) := TFake(R^);
+  TFake(R^) := v;
+end;
+
+class procedure TGIndexedHelpUtil.DoReverse(var e: TIndexed; L, R: SizeInt);
+begin
+  while L < R do
+    begin
+      Swap(e.UncMutable[L], e.UncMutable[R]);
+      Inc(L);
+      Dec(R);
+    end;
+end;
+
+class function TGIndexedHelpUtil.CreateCopy(constref aEntity: TIndexed; aFrom, aCount: SizeInt): TArray;
+var
+  I: SizeInt;
+  a: TArray = nil;
+begin
+  if aFrom < aEntity.Count then
+    begin
+      aCount := Math.Min(aCount, aEntity.Count - aFrom);
+      System.SetLength(a, aCount);
+      for I := 0 to System.High(a) do
+        a[I] := aEntity.UncMutable[I + aFrom]^;
+      exit(a);
+    end;
+  Result := nil;
+end;
+
+class procedure TGIndexedHelpUtil.Reverse(var aEntity: TIndexed);
+var
+  R: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R > 0 then
+    DoReverse(aEntity, 0, R);
+end;
+
+class procedure TGIndexedHelpUtil.Reverse(var aEntity: TIndexed; aFirst, aLast: SizeInt);
+begin
+  if aLast < aEntity.Count then
+    if aFirst < aEntity.Count then
+      DoReverse(aEntity, aFirst, aLast)
+    else
+      raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aFirst])
+  else
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aLast]);
+end;
+
+class procedure TGIndexedHelpUtil.RandomShuffle(var aEntity: TIndexed);
+var
+  I: SizeInt;
+begin
+  for I := Pred(aEntity.Count) downto 1 do
+    Swap(aEntity.UncMutable[I], aEntity.UncMutable[Random(I)]);
+end;
+
+class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+  c: TEqualCompare): SizeInt;
+begin
+  for Result := 0 to Pred(aEntity.Count) do
+    if c(aEntity.UncMutable[Result]^, aValue) then
+      exit;
+  Result := NULL_INDEX;
+end;
+
+class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+  c: TOnEqualCompare): SizeInt;
+begin
+  for Result := 0 to Pred(aEntity.Count) do
+    if c(aEntity.UncMutable[Result]^, aValue) then
+      exit;
+  Result := NULL_INDEX;
+end;
+
+class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+  c: TNestEqualCompare): SizeInt;
+begin
+  for Result := 0 to Pred(aEntity.Count) do
+    if c(aEntity.UncMutable[Result]^, aValue) then
+      exit;
+  Result := NULL_INDEX;
+end;
+
+class function TGIndexedHelpUtil.Same(constref e1, e2: TIndexed; c: TEqualCompare): Boolean;
+var
+  I: SizeInt;
+begin
+  if e1.Count <> e2.Count then
+    exit(False);
+  for I := 0 to Pred(e1.Count) do
+    if not c(e1.UncMutable[I]^, e2.UncMutable[I]^) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGIndexedHelpUtil.Same(constref e1, e2: TIndexed; c: TOnEqualCompare): Boolean;
+var
+  I: SizeInt;
+begin
+  if e1.Count <> e2.Count then
+    exit(False);
+  for I := 0 to Pred(e1.Count) do
+    if not c(e1.UncMutable[I]^, e2.UncMutable[I]^) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGIndexedHelpUtil.Same(constref e1, e2: TIndexed; c: TNestEqualCompare): Boolean;
+var
+  I: SizeInt;
+begin
+  if e1.Count <> e2.Count then
+    exit(False);
+  for I := 0 to Pred(e1.Count) do
+    if not c(e1.UncMutable[I]^, e2.UncMutable[I]^) then
+      exit(False);
+  Result := True;
+end;
+
 { TGBaseArrayHelper.TMergeSort }
 
 procedure TGBaseArrayHelper.TMergeSort.CollapseA;
@@ -1957,7 +2177,7 @@ var
   LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
-  if TCmpRel.Compare(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  if TCmpRel.Less(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -1965,14 +2185,14 @@ begin
     {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
     {$ENDIF}
-      if TCmpRel.Compare(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not TCmpRel.Less(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if TCmpRel.Compare(LocB[pLo], LocA[pHi]) <= 0 then
+            if not TCmpRel.Less(LocA[pHi], LocB[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -2013,7 +2233,7 @@ var
   LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
-  if TCmpRel.Compare(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  if TCmpRel.Less(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -2021,14 +2241,14 @@ begin
     {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
     {$ENDIF}
-      if TCmpRel.Compare(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not TCmpRel.Less(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if TCmpRel.Compare(LocB[pLo], LocA[pHi]) >= 0 then
+            if not TCmpRel.Less(LocB[pLo], LocA[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -2069,7 +2289,7 @@ var
   LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
-  if TCmpRel.Compare(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  if TCmpRel.Less(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -2077,13 +2297,13 @@ begin
     {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
     {$ENDIF}
-      if TCmpRel.Compare(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not TCmpRel.Less(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if TCmpRel.Compare(LocA[pLo], LocB[pHi]) > 0 then
+            if TCmpRel.Less(LocB[pHi], LocA[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -2124,7 +2344,7 @@ var
   LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
-  if TCmpRel.Compare(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  if TCmpRel.Less(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -2132,13 +2352,13 @@ begin
     {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
     {$ENDIF}
-      if TCmpRel.Compare(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not TCmpRel.Less(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if TCmpRel.Compare(LocA[pLo], LocB[pHi]) < 0 then
+            if TCmpRel.Less(LocA[pLo], LocB[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -2181,7 +2401,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (TCmpRel.Compare(A[J], T(v)) > 0) do
+      while (J >= 0) and TCmpRel.Less(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -2201,7 +2421,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (TCmpRel.Compare(A[J], T(v)) < 0) do
+      while (J >= 0) and TCmpRel.Less(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -2215,12 +2435,12 @@ begin
   if R > 0 then
     begin
       Result := 1;
-      if TCmpRel.Compare(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) <= 0) do
+      if not TCmpRel.Less(A[1], A[0]) then  // ascending
+        while (Result < R) and not TCmpRel.Less(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                                      // descending
+      else                                  // descending
         begin
-          while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and TCmpRel.Less(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -2234,12 +2454,12 @@ begin
   if R > 0 then
     begin
       Result := 1;
-      if TCmpRel.Compare(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) >= 0) do
+      if not TCmpRel.Less(A[0], A[1]) then  // descending
+        while (Result < R) and  not TCmpRel.Less(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                                      // ascending
+      else                                  // ascending
         begin
-          while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and TCmpRel.Less(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -2310,19 +2530,19 @@ class procedure TGBaseArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
 var
   v: TFake;
 begin
-  if TCmpRel.Compare(B^, A^) < 0 then
+  if TCmpRel.Less(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
       TFake(B^) := v;
     end;
-  if TCmpRel.Compare(C^, B^) < 0 then
+  if TCmpRel.Less(C^, B^) then
     begin
       v := TFake(B^);
       TFake(B^) := TFake(C^);
       TFake(C^) := v;
     end;
-  if TCmpRel.Compare(B^, A^) < 0 then
+  if TCmpRel.Less(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
@@ -2343,16 +2563,16 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Inc(First) until TCmpRel.Compare(First^, Pivot) >= 0;
+  repeat Inc(First) until not TCmpRel.Less(First^, Pivot);
   if First - 1 = aStart then
     while First < Last do
       begin
         Dec(Last);
-        if TCmpRel.Compare(Last^, Pivot) < 0 then
+        if TCmpRel.Less(Last^, Pivot) then
           break;
       end
   else
-    repeat Dec(Last) until TCmpRel.Compare(Last^, Pivot) < 0;
+    repeat Dec(Last) until TCmpRel.Less(Last^, Pivot);
 
   AlreadyPartitioned := First >= Last;
 
@@ -2364,8 +2584,9 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := FOffsetsL;
-  OffsetsR := FOffsetsR;
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+
   NumL := 0;
   NumR := 0;
   StartL := 0;
@@ -2380,21 +2601,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(TCmpRel.Compare(It^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(TCmpRel.Compare((It + 1)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(TCmpRel.Compare((It + 2)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(TCmpRel.Compare((It + 3)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(TCmpRel.Compare((It + 4)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(TCmpRel.Compare((It + 5)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(TCmpRel.Compare((It + 6)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(TCmpRel.Compare((It + 7)^, Pivot) >= 0);
+              NumL += PtrInt(not TCmpRel.Less((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -2407,21 +2628,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(TCmpRel.Compare((It - 1)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(TCmpRel.Compare((It - 2)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(TCmpRel.Compare((It - 3)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(TCmpRel.Compare((It - 4)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(TCmpRel.Compare((It - 5)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(TCmpRel.Compare((It - 6)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(TCmpRel.Compare((It - 7)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(TCmpRel.Compare((It - 8)^, Pivot) < 0);
+              NumR += PtrInt(TCmpRel.Less((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -2469,7 +2690,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I; Inc(I);
-          NumL += PtrInt(TCmpRel.Compare(It^, Pivot) >= 0);
+          NumL += PtrInt(not TCmpRel.Less(It^, Pivot));
           It += 1;
         end;
     end;
@@ -2483,7 +2704,7 @@ begin
           Inc(I);
           (OffsetsR + NumR)^ := I;
           Dec(It);
-          NumR += PtrInt(TCmpRel.Compare(It^, Pivot) < 0);
+          NumR += PtrInt(TCmpRel.Less(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -2542,7 +2763,10 @@ begin
       Size := aFinish - aStart;
       if Size < INSERTION_SORT_THRESHOLD then
         begin
-          TGBaseArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart));
+          if aLeftMost then
+            TGBaseArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart))
+          else
+            TGBaseArrayHelper.UnguardInsertionSort(aStart, Pred(aFinish - aStart));
           exit;
         end;
       S2 := Size div 2;
@@ -2558,7 +2782,7 @@ begin
         end
       else
         Sort3(aStart + S2, aStart, aFinish - 1);
-      if not aLeftMost and (TCmpRel.Compare((aStart - 1)^, aStart^) >= 0) then
+      if not aLeftMost and not TCmpRel.Less((aStart - 1)^, aStart^) then
         begin
           aStart := PartitionLeft(aStart, aFinish) + 1;
           continue;
@@ -2650,13 +2874,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      if TCmpRel.Compare(Sift^, (Sift - 1)^) < 0 then
+      if TCmpRel.Less(Sift^, (Sift - 1)^) then
         begin
           v := TFake(Sift^);
           repeat
             TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-          until (Sift = aStart) or (TCmpRel.Compare(T(v), (Sift - 1)^) >= 0);
+          until (Sift = aStart) or not TCmpRel.Less(T(v), (Sift - 1)^);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -2674,24 +2898,24 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until TCmpRel.Compare(Pivot, Last^) >= 0;
+  repeat Dec(Last) until not TCmpRel.Less(Pivot, Last^);
   if Last + 1 = aFinish then
     while First < Last do
       begin
         Inc(First);
-        if TCmpRel.Compare(Pivot, First^) < 0 then
+        if TCmpRel.Less(Pivot, First^) then
           break;
       end
   else
-    repeat Inc(First) until TCmpRel.Compare(Pivot, First^) < 0;
+    repeat Inc(First) until TCmpRel.Less(Pivot, First^);
 
   while First < Last do
     begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until TCmpRel.Compare(Pivot, Last^) >= 0;
-      repeat Inc(First) until TCmpRel.Compare(Pivot, First^) < 0;
+      repeat Dec(Last) until not TCmpRel.Less(Pivot, Last^);
+      repeat Inc(First) until TCmpRel.Less(Pivot, First^);
     end;
   PivotPos := Last;
   aStart^ := PivotPos^;
@@ -2704,8 +2928,7 @@ var
   Sorter: TPDQSort;
 begin
   if aStart = aFinish then exit;
-  {%H-}Sorter.AlignStorage;
-  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGBaseArrayHelper }
@@ -2713,17 +2936,18 @@ end;
 class function TGBaseArrayHelper.CountRun2Asc(A: PItem; R: SizeInt): SizeInt;
 begin
   Result := 0;
-  while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) = 0) do
+  while (Result < R) and not(TCmpRel.Less(A[Result], A[Succ(Result)])or
+                             TCmpRel.Less(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
     begin
       Inc(Result);
-      if TCmpRel.Compare(A[Pred(Result)], A[Result]) < 0 then   // ascending
-        while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) <= 0) do
+      if TCmpRel.Less(A[Pred(Result)], A[Result]) then   // ascending
+        while (Result < R) and not TCmpRel.Less(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                                                      // descending
+      else                                                // descending
         begin
-          while (Result < R) and (TCmpRel.Compare(A[Succ(Result)], A[Result]) <= 0) do
+          while (Result < R) and not TCmpRel.Less(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -2739,7 +2963,25 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (TCmpRel.Compare(T(v), A[J]) < 0) do
+      while (J >= 0) and TCmpRel.Less(T(v), A[J]) do
+        begin
+          TFake(A[J + 1]) := TFake(A[J]);
+          Dec(J);
+        end;
+      TFake(A[J + 1]) := v;
+    end;
+end;
+
+class procedure TGBaseArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt);
+var
+  I, J: SizeInt;
+  v: TFake;
+begin
+  for I := 1 to R do
+    begin
+      v := TFake(A[I]);
+      J := I - 1;
+      while TCmpRel.Less(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -2756,7 +2998,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if TCmpRel.Compare(A[M], aValue) < 0 then
+      if TCmpRel.Less(A[M], aValue) then
         L := Succ(M)
       else
         R := M;
@@ -2772,7 +3014,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if TCmpRel.Compare(A[M], aValue) > 0 then
+      if TCmpRel.Less(aValue, A[M]) then
         L := Succ(M)
       else
         R := M;
@@ -2788,7 +3030,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if TCmpRel.Compare(A[M], aValue) > 0 then
+      if TCmpRel.Less(aValue, A[M]) then
         R := M
       else
         L := Succ(M);
@@ -2805,7 +3047,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if TCmpRel.Compare(A[M], aValue) < 0 then
+      if TCmpRel.Less(A[M], aValue) then
         R := M
       else
         L := Succ(M);
@@ -2814,98 +3056,89 @@ begin
 end;
 
 class function TGBaseArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
-var
-  c: SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  c := TCmpRel.Compare(A[R], A[0]);
-  if c > 0 then  //ascending
+  if TCmpRel.Less(A[0], A[R]) then  //ascending
     begin
-      if (TCmpRel.Compare(A[0], aValue) > 0) or (TCmpRel.Compare(A[R], aValue) < 0) then
+      if TCmpRel.Less(aValue, A[0]) or TCmpRel.Less(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue);
-      if TCmpRel.Compare(A[R], aValue) = 0 then
+      if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
         Result := R;
     end
   else
-    if c < 0 then  //descending
+    if TCmpRel.Less(A[R], A[0]) then   //descending
       begin
-        if (TCmpRel.Compare(A[0], aValue) < 0) or (TCmpRel.Compare(A[R], aValue) > 0) then
+        if TCmpRel.Less(A[0], aValue) or TCmpRel.Less(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue);
-        if TCmpRel.Compare(A[R], aValue) = 0 then
+        if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
           Result := R;
       end
     else           //constant
-      if TCmpRel.Compare(A[0], aValue) = 0 then
+      if not(TCmpRel.Less(A[0], aValue) or TCmpRel.Less(aValue, A[0])) then
         Result := 0;
 end;
 
 class function TGBaseArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  c: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  c := TCmpRel.Compare(A[R], A[0]);
-  if c > 0 then  //ascending
+  if TCmpRel.Less(A[0], A[R]) then  //ascending
     begin
-      if TCmpRel.Compare(A[0], aValue) > 0 then
+      if TCmpRel.Less(aValue, A[0]) then
         begin
           Result.InsertIndex := 0;
           exit;
         end
       else
-        if TCmpRel.Compare(A[R], aValue) < 0 then
+        if TCmpRel.Less(A[R], aValue) then
           begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
       R := BiSearchRightA(A, R, aValue);
       Result.InsertIndex := R;
-      if TCmpRel.Compare(A[R], aValue) = 0 then
+      if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
         Result := TSearchResult.Create(R, Succ(R))
       else
         if R > 0 then
-          if TCmpRel.Compare(A[Pred(R)], aValue) = 0 then
+          if not(TCmpRel.Less(A[Pred(R)], aValue) or TCmpRel.Less(aValue, A[Pred(R)])) then
             Result.FoundIndex := Pred(R);
     end
   else
-    if c < 0 then  //descending
+    if TCmpRel.Less(A[R], A[0]) then  //descending
       begin
-        if TCmpRel.Compare(A[0], aValue) < 0 then
+        if TCmpRel.Less(A[0], aValue) then
           begin
             Result.InsertIndex := 0;
             exit;
           end
         else
-          if TCmpRel.Compare(A[R], aValue) > 0 then
+          if TCmpRel.Less(aValue, A[R]) then
             begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
         R := BiSearchRightD(A, R, aValue);
         Result.InsertIndex := R;
-        if TCmpRel.Compare(A[R], aValue) = 0 then
+        if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
           Result := TSearchResult.Create(R, Succ(R))
         else
           if R > 0 then
-            if TCmpRel.Compare(A[Pred(R)], aValue) = 0 then
+            if not(TCmpRel.Less(A[Pred(R)], aValue) or TCmpRel.Less(aValue, A[Pred(R)])) then
               Result.FoundIndex := Pred(R);
       end
     else           //constant
-      begin
-        c := TCmpRel.Compare(A[0], aValue);
-        if c > 0 then
-          Result.InsertIndex := 0
-        else
-          begin
-            Result.InsertIndex := Succ(R);
-            if c = 0 then
-              Result.FoundIndex := R;
-          end;
-      end;
+      if TCmpRel.Less(aValue, A[0]) then
+        Result.InsertIndex := 0
+      else
+        begin
+          Result.InsertIndex := Succ(R);
+          if not TCmpRel.Less(A[0], aValue) then
+            Result.FoundIndex := R;
+        end;
 end;
 
 class procedure TGBaseArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
@@ -2922,9 +3155,9 @@ begin
           v := TFake(A[Curr]);
           while Next <= R do
             begin
-              if(Succ(Next) <= R) and (TCmpRel.Compare(A[Next], A[Succ(Next)]) < 0)then
+              if(Next < R) and TCmpRel.Less(A[Next], A[Succ(Next)]) then
                 Inc(Next);
-              if TCmpRel.Compare(T(v), A[Next]) >= 0 then
+              if not TCmpRel.Less(T(v), A[Next]) then
                 break;
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -2940,14 +3173,14 @@ begin
           TFake(A[I]) := TFake(A[0]);
           while Next < I do
             begin
-              if(Succ(Next) < I) and (TCmpRel.Compare(A[Next], A[Succ(Next)]) < 0) then
+              if(Succ(Next) < I) and TCmpRel.Less(A[Next], A[Succ(Next)]) then
                 Inc(Next);
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
               Next := Succ(Next shl 1);
             end;
           Next := Pred(Curr) shr 1;
-          while (Curr > 0) and (TCmpRel.Compare(T(v), A[Next]) > 0) do
+          while (Curr > 0) and TCmpRel.Less(A[Next], T(v)) do
             begin
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -2970,8 +3203,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until TCmpRel.Compare(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until TCmpRel.Compare(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not TCmpRel.Less(A[pL], Pivot);
+    repeat Dec(pR) until not TCmpRel.Less(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -3003,11 +3236,11 @@ end;
 class function TGBaseArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
   Result := p2;
-  if TCmpRel.Compare(p1^, Result^) < 0 then
+  if TCmpRel.Less(p1^, Result^) then
     begin
-      if TCmpRel.Compare(p3^, Result^) < 0 then
+      if TCmpRel.Less(p3^, Result^) then
         begin
-          if TCmpRel.Compare(p1^, p3^) < 0 then
+          if TCmpRel.Less(p1^, p3^) then
             Result := p3
           else
             Result := p1;
@@ -3015,9 +3248,9 @@ begin
     end
   else { p1^ >= Result^ }
     begin
-      if TCmpRel.Compare(p3^, Result^) > 0 then
+      if TCmpRel.Less(Result^, p3^) then
         begin
-          if TCmpRel.Compare(p1^, p3^) > 0 then
+          if TCmpRel.Less(p3^, p1^) then
             Result := p3
           else
             Result := p1;
@@ -3047,8 +3280,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until  TCmpRel.Compare(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until  TCmpRel.Compare(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not TCmpRel.Less(A[pL], Pivot);
+    repeat Dec(pR) until not TCmpRel.Less(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -3084,7 +3317,7 @@ begin
   pL := Succ(Random(Pred(R shr 1)));
   pR := Pred(R - Random(Pred(R shr 1)));
 
-  if TCmpRel.Compare(A[pL], A[pR]) <= 0 then
+  if not TCmpRel.Less(A[pR], A[pL]) then
     begin
       Pivot1 := TFake(A[pL]);
       TFake(A[pL]) := TFake(A[0]);
@@ -3105,20 +3338,20 @@ begin
   while I <= pR do
     begin
       v := TFake(A[I]);
-      if TCmpRel.Compare(T(v), T(Pivot1)) < 0 then
+      if TCmpRel.Less(T(v), T(Pivot1)) then
         begin
           TFake(A[I]) := TFake(A[pL]);
           TFake(A[pL]) := v;
           Inc(pL);
         end
       else
-        if TCmpRel.Compare(T(v), T(Pivot2)) > 0 then
+        if TCmpRel.Less(T(Pivot2), T(v)) then
           begin
-            while (pR >= I) and (TCmpRel.Compare(A[pR], T(Pivot2)) > 0) do
+            while (pR >= I) and TCmpRel.Less(T(Pivot2), A[pR]) do
               Dec(pR);
             if pR < I then
               break;
-            if TCmpRel.Compare(A[pR], T(Pivot1)) < 0 then
+            if TCmpRel.Less(A[pR], T(Pivot1)) then
               begin
                 TFake(A[I]) := TFake(A[pL]);
                 TFake(A[pL]) := TFake(A[pR]);
@@ -3148,7 +3381,7 @@ begin
       begin
         DoDPQSort(A, Left - 1);
         DoDPQSort(@A[Right + 1], R - Right - 1);
-        if TCmpRel.Compare(A[Left], A[Right]) <> 0 then
+        if TCmpRel.Less(A[Left], A[Right]) or TCmpRel.Less(A[Right], A[Left]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2);
       end
   else
@@ -3169,8 +3402,8 @@ begin
       pL := Pred(L);
       pR := Succ(R);
       repeat
-        repeat Inc(pL) until TCmpRel.Compare(A[pL], Pivot) >= 0;
-        repeat Dec(pR) until TCmpRel.Compare(A[pR], Pivot) <= 0;
+        repeat Inc(pL) until not TCmpRel.Less(A[pL], Pivot);
+        repeat Dec(pR) until not TCmpRel.Less(Pivot, A[pR]);
         if pL >= pR then break;
         v := TFake(A[pL]);
         TFake(A[pL]) := TFake(A[pR]);
@@ -3187,7 +3420,7 @@ begin
       if pR < N then L := pL;
       if pL > N then R := pR;
     end;
-  if (L < R) and (TCmpRel.Compare(A[L], A[R]) > 0) then
+  if (L < R) and TCmpRel.Less(A[R], A[L]) then
     begin
       v := TFake(A[L]);
       TFake(A[L]) := TFake(A[R]);
@@ -3199,9 +3432,9 @@ end;
 class function TGBaseArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
 begin
   for Result := 0 to System.High(A) do
-    if TCmpRel.Compare(aValue, A[Result]) = 0 then
+    if not(TCmpRel.Less(A[Result], aValue) or TCmpRel.Less(aValue, A[Result])) then
       exit;
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 class function TGBaseArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
@@ -3233,7 +3466,7 @@ begin
       Result := 0;
       m := A[0];
       for I := 1 to R do
-        if TCmpRel.Compare(A[I], m) < 0 then
+        if TCmpRel.Less(A[I], m) then
           begin
             m := A[I];
             Result := I;
@@ -3254,7 +3487,7 @@ begin
       Result := 0;
       m := A[0];
       for I := 1 to R do
-        if TCmpRel.Compare(m, A[I]) < 0 then
+        if TCmpRel.Less(m, A[I]) then
           begin
             m := A[I];
             Result := I;
@@ -3285,14 +3518,15 @@ var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if TCmpRel.Compare(A[I], aValue) < 0 then
+        if TCmpRel.Less(A[I], aValue) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGBaseArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
@@ -3300,14 +3534,15 @@ var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if TCmpRel.Compare(aValue, A[I]) < 0 then
+        if TCmpRel.Less(aValue, A[I]) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGBaseArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
@@ -3315,18 +3550,19 @@ var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aMin := A[0];
       aMax := A[0];
       for I := 1 to R do
-        if TCmpRel.Compare(aMax, A[I]) < 0 then
+        if TCmpRel.Less(aMax, A[I]) then
           aMax := A[I]
         else
-          if TCmpRel.Compare(A[I], aMin) < 0 then
+          if TCmpRel.Less(A[I], aMin) then
             aMin := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGBaseArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean;
@@ -3373,14 +3609,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if TCmpRel.Compare(A[I], A[Succ(I)]) > 0 then
+    if TCmpRel.Less(A[Succ(I)], A[I]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if TCmpRel.Compare(A[J], A[I]) > 0 then
+    if TCmpRel.Less(A[I], A[J]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -3399,14 +3635,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if TCmpRel.Compare(A[I], A[Succ(I)]) < 0 then
+    if TCmpRel.Less(A[I], A[Succ(I)]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if TCmpRel.Compare(A[J], A[I]) < 0 then
+    if TCmpRel.Less(A[J], A[I]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -3422,7 +3658,7 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if TCmpRel.Compare(A[Succ(I)], A[I]) < 0 then
+    if TCmpRel.Less(A[Succ(I)], A[I]) then
       exit(False);
   Result := True;
 end;
@@ -3435,7 +3671,7 @@ begin
   if R > 0 then
     begin
       for I := 0 to Pred(R) do
-        if TCmpRel.Compare(A[Succ(I)], A[I]) <= 0 then
+        if not TCmpRel.Less(A[I], A[Succ(I)]) then
           exit(False);
       Result := True;
     end
@@ -3448,7 +3684,7 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if TCmpRel.Compare(A[I], A[Succ(I)]) < 0 then
+    if TCmpRel.Less(A[I], A[Succ(I)]) then
       exit(False);
   Result := True;
 end;
@@ -3461,7 +3697,7 @@ begin
   if R > 0 then
     begin
       for I := 0 to Pred(R) do
-        if TCmpRel.Compare(A[I], A[Succ(I)]) <= 0 then
+        if not TCmpRel.Less(A[Succ(I)], A[I]) then
           exit(False);
       Result := True;
     end
@@ -3480,7 +3716,7 @@ var
     J := Succ(M);
     Merge := 0;
     for K := 0 to R - L do
-      if (J > R) or (I <= M) and (TCmpRel.Compare(A[I], A[J]) <= 0) then
+      if (J > R) or (I <= M) and not TCmpRel.Less(A[J], A[I]) then
         begin
           Buf[K] := A[I];
           Inc(I);
@@ -3526,7 +3762,7 @@ begin
   if System.High(B) <> R then
     exit(False);
   for I := 0 to R do
-    if TCmpRel.Compare(A[I], B[I]) <> 0 then
+    if TCmpRel.Less(A[I], B[I]) or TCmpRel.Less(B[I], A[I]) then
       exit(False);
   Result := True;
 end;
@@ -3544,7 +3780,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
+      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
         Reverse(A);
 end;
 
@@ -3561,7 +3797,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
+      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
         Reverse(A);
 end;
 
@@ -3578,7 +3814,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
+      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
         Reverse(A);
 end;
 
@@ -3595,7 +3831,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
+      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
         Reverse(A);
 end;
 
@@ -3633,13 +3869,644 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if TCmpRel.Compare(Result[I], Result[J]) = 0 then
+      if not (TCmpRel.Less(Result[I], Result[J]) or TCmpRel.Less(Result[J], Result[I])) then
         continue;
       Inc(I);
       if J > I then
         Result[I] := Result[J];
     end;
   System.SetLength(Result, Succ(I));
+end;
+
+{ TGBaseIndexedHelper }
+
+class function TGBaseIndexedHelper.BiSearchLeftA(constref e: TIndexed; L, R: SizeInt;
+  constref aValue: T): SizeInt;
+var
+  M: SizeInt;
+begin
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Less(e.UncMutable[M]^, aValue) then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGBaseIndexedHelper.BiSearchLeftD(constref e: TIndexed; L, R: SizeInt;
+  constref aValue: T): SizeInt;
+var
+  M: SizeInt;
+begin
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Less(aValue, e.UncMutable[M]^) then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGBaseIndexedHelper.BiSearchRightA(constref e: TIndexed; L, R: SizeInt;
+  constref aValue: T): SizeInt;
+var
+  M: SizeInt;
+begin
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Less(aValue, e.UncMutable[M]^) then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGBaseIndexedHelper.BiSearchRightD(constref e: TIndexed; L, R: SizeInt;
+  constref aValue: T): SizeInt;
+var
+  M: SizeInt;
+begin
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Less(e.UncMutable[M]^, aValue) then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGBaseIndexedHelper.DoBinSearch(constref e: TIndexed; L, R: SizeInt;
+  constref aValue: T): SizeInt;
+begin
+  Result := NULL_INDEX;
+  if TCmpRel.Less(e.UncMutable[L]^, e.UncMutable[R]^) then  //ascending
+    begin
+      if TCmpRel.Less(aValue, e.UncMutable[L]^) or TCmpRel.Less(e.UncMutable[R]^, aValue) then
+        exit;
+      R := BiSearchLeftA(e, L, R, aValue);
+      if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
+        Result := R;
+    end
+  else
+    if TCmpRel.Less(e.UncMutable[R]^, e.UncMutable[L]^) then //descending
+      begin
+        if TCmpRel.Less(e.UncMutable[L]^, aValue) or
+           TCmpRel.Less(aValue, e.UncMutable[R]^) then
+          exit;
+        R := BiSearchLeftD(e, L, R, aValue);
+        if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
+          Result := R;
+      end
+    else //constant
+      if not(TCmpRel.Less(e.UncMutable[L]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[L]^)) then
+        Result := L;
+end;
+
+class function TGBaseIndexedHelper.DoBinSearchPos(constref e: TIndexed; L, R: SizeInt;
+  constref aValue: T): TSearchResult;
+begin
+  //here R must be >= 0;
+  Result.FoundIndex := NULL_INDEX;
+  if TCmpRel.Less(e.UncMutable[L]^, e.UncMutable[R]^) then  //ascending
+    begin
+      if TCmpRel.Less(aValue, e.UncMutable[L]^) then
+        begin
+          Result.InsertIndex := L;
+          exit;
+        end
+      else
+        if TCmpRel.Less(e.UncMutable[R]^, aValue) then
+          begin
+            Result.InsertIndex := Succ(R);
+            exit;
+          end;
+      R := BiSearchRightA(e, L, R, aValue);
+      Result.InsertIndex := R;
+      if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > L then
+          if not(TCmpRel.Less(e.UncMutable[Pred(R)]^, aValue) or
+                 TCmpRel.Less(aValue, e.UncMutable[Pred(R)]^)) then
+            Result.FoundIndex := Pred(R);
+    end
+  else
+    if TCmpRel.Less(e.UncMutable[R]^, e.UncMutable[L]^) then  //descending
+      begin
+        if TCmpRel.Less(e.UncMutable[L]^, aValue) then
+          begin
+            Result.InsertIndex := L;
+            exit;
+          end
+        else
+          if TCmpRel.Less(aValue, e.UncMutable[R]^) then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        R := BiSearchRightD(e, L, R, aValue);
+        Result.InsertIndex := R;
+        if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > L then
+            if not(TCmpRel.Less(e.UncMutable[Pred(R)]^, aValue) or
+                   TCmpRel.Less(aValue, e.UncMutable[Pred(R)]^)) then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      if TCmpRel.Less(aValue, e.UncMutable[L]^) then
+        Result.InsertIndex := L
+      else
+        begin
+          Result.InsertIndex := Succ(R);
+          if not TCmpRel.Less(e.UncMutable[L]^, aValue) then
+            Result.FoundIndex := R;
+        end;
+end;
+
+class function TGBaseIndexedHelper.CountRun2Asc(var e: TIndexed; L, R: SizeInt): SizeInt;
+begin
+  Result := L;
+  while (Result < R) and not(TCmpRel.Less(e.UncMutable[Result]^, e.UncMutable[Succ(Result)]^)or
+                             TCmpRel.Less(e.UncMutable[Succ(Result)]^, e.UncMutable[Result]^))do
+    Inc(Result);
+  if Result < R then
+    begin
+      Inc(Result);
+      if TCmpRel.Less(e.UncMutable[Pred(Result)]^, e.UncMutable[Result]^) then   // ascending
+        while (Result < R) and not TCmpRel.Less(e.UncMutable[Succ(Result)]^, e.UncMutable[Result]^) do
+          Inc(Result)
+      else      // descending
+        begin
+          while (Result < R) and not TCmpRel.Less(e.UncMutable[Result]^, e.UncMutable[Succ(Result)]^) do
+            Inc(Result);
+          DoReverse(e, L, Result);
+        end;
+    end;
+end;
+
+class procedure TGBaseIndexedHelper.InsertionSort(var e: TIndexed; L, R: SizeInt);
+var
+  I, J: SizeInt;
+  v: TFake;
+begin
+  for I := Succ(L) to R do
+    begin
+      v := TFake(e.UncMutable[I]^);
+      J := I - 1;
+      while (J >= L) and TCmpRel.Less(T(v), e.UncMutable[J]^) do
+        begin
+          TFake(e.UncMutable[J + 1]^) := TFake(e.UncMutable[J]^);
+          Dec(J);
+        end;
+      TFake(e.UncMutable[Succ(J)]^) := v;
+    end;
+end;
+
+class procedure TGBaseIndexedHelper.DoHeapSort(var e: TIndexed; L, R: SizeInt);
+var
+  I, Curr, Next: SizeInt;
+  v: TFake;
+begin
+  if R - L > TUtil.HEAP_INSERT_CUTOFF then
+    begin
+      for I := Pred(Succ(R - L) shr 1) downto 0 do
+        begin
+          Curr := I;
+          Next := Succ(I shl 1);
+          v := TFake(e.UncMutable[Curr + L]^);
+          while Next + L <= R do
+            begin
+              if (Next + L < R) and
+                 TCmpRel.Less(e.UncMutable[Next + L]^, e.UncMutable[Succ(Next + L)]^) then
+                Inc(Next);
+              if not TCmpRel.Less(T(v), e.UncMutable[Next + L]^) then
+                break;
+              TFake(e.UncMutable[Curr + L]^) := TFake(e.UncMutable[Next + L]^);
+              Curr := Next;
+              Next := Succ(Next shl 1);
+            end;
+          TFake(e.UncMutable[Curr + L]^) := v;
+        end;
+      for I := R - L downto 1 do
+        begin
+          Curr := 0;
+          Next := 1;
+          v := TFake(e.UncMutable[I + L]^);
+          TFake(e.UncMutable[I + L]^) := TFake(e.UncMutable[L]^);
+          while Next < I do
+            begin
+              if(Succ(Next) < I) and
+                 TCmpRel.Less(e.UncMutable[Next + L]^, e.UncMutable[Succ(Next + L)]^) then
+                Inc(Next);
+              TFake(e.UncMutable[Curr + L]^) := TFake(e.UncMutable[Next + L]^);
+              Curr := Next;
+              Next := Succ(Next shl 1);
+            end;
+          Next := Pred(Curr) shr 1;
+          while (Curr > 0) and TCmpRel.Less(e.UncMutable[Next + L]^, T(v)) do
+            begin
+              TFake(e.UncMutable[Curr + L]^) := TFake(e.UncMutable[Next + L]^);
+              Curr := Next;
+              Next := Pred(Next) shr 1;
+            end;
+          TFake(e.UncMutable[Curr + L]^) := v;
+        end;
+    end
+  else
+    InsertionSort(e, L, R);
+end;
+
+class function TGBaseIndexedHelper.MedianOf3(p1, p2, p3: PItem): PItem;
+begin
+  Result := p2;
+  if TCmpRel.Less(p1^, Result^) then
+    begin
+      if TCmpRel.Less(p3^, Result^) then
+        begin
+          if TCmpRel.Less(p1^, p3^) then
+            Result := p3
+          else
+            Result := p1;
+        end;
+    end
+  else { p1^ >= Result^ }
+    begin
+      if TCmpRel.Less(Result^, p3^) then
+        begin
+          if TCmpRel.Less(p3^, p1^) then
+            Result := p3
+          else
+            Result := p1;
+        end;
+    end;
+end;
+
+class function TGBaseIndexedHelper.QSplitMo9(var e: TIndexed; L, R: SizeInt): TSortSplit;
+var
+  Pivot: T;
+  pL, pR: SizeInt;
+begin
+  if R - L > TUtil.MEDIAN_OF9_CUTOFF then
+    Pivot := MedianOf3(
+      MedianOf3(e.UncMutable[L],
+                e.UncMutable[Succ(R-L) shr 3 + L],
+                e.UncMutable[Succ(R-L) shr 2 + L]),
+      MedianOf3(e.UncMutable[Succ(R-L) shr 1 - Succ(R) shr 3 + L],
+                e.UncMutable[Succ(R-L) shr 1 + L],
+                e.UncMutable[Succ(R-L) shr 1 + Succ(R-L) shr 3 + L]),
+      MedianOf3(e.UncMutable[R - Succ(R-L) shr 2],
+                e.UncMutable[R - Succ(R-L) shr 3],
+                e.UncMutable[R]))^
+  else
+    Pivot := MedianOf3(e.UncMutable[L], e.UncMutable[Succ(R-L) shr 1 + L], e.UncMutable[R])^;
+  pL := Pred(L);
+  pR := Succ(R);
+  repeat
+    repeat Inc(pL) until not TCmpRel.Less(e.UncMutable[pL]^, Pivot);
+    repeat Dec(pR) until not TCmpRel.Less(Pivot, e.UncMutable[pR]^);
+    if pL > pR then break;
+    Swap(e.UncMutable[pL], e.UncMutable[pR]);
+  until False;
+  Result.Left := pR;
+  Result.Right := pL;
+end;
+
+class procedure TGBaseIndexedHelper.DoIntroSort(var e: TIndexed; L, R, Ttl: SizeInt);
+begin
+  if R - L > TUtil.QUICK_INSERT_CUTOFF then
+    if Ttl > 0 then
+      with QSplitMo9(e, L, R) do
+        begin
+          DoIntroSort(e, L, Left, Pred(Ttl));
+          DoIntroSort(e, Right, R, Pred(Ttl));
+        end
+    else
+      DoHeapSort(e, L, R)
+  else
+    InsertionSort(e, L, R);
+end;
+
+class function TGBaseIndexedHelper.SequentSearch(constref aEntity: TIndexed; constref aValue: T): SizeInt;
+begin
+  for Result := 0 to Pred(aEntity.Count) do
+    if not(TCmpRel.Less(aEntity.UncMutable[Result]^, aValue) or
+           TCmpRel.Less(aValue, aEntity.UncMutable[Result]^)) then
+      exit;
+  Result := NULL_INDEX;
+end;
+
+class function TGBaseIndexedHelper.BinarySearch(constref aEntity: TIndexed; constref aValue: T): SizeInt;
+begin
+  if aEntity.Count > 0 then
+    exit(DoBinSearch(aEntity, 0, Pred(aEntity.Count), aValue));
+  Result := NULL_INDEX;
+end;
+
+class function TGBaseIndexedHelper.BinarySearchPos(constref aEntity: TIndexed;
+  constref aValue: T): TSearchResult;
+begin
+  if aEntity.Count > 0 then
+    exit(DoBinSearchPos(aEntity, 0, Pred(aEntity.Count), aValue));
+  Result := TSearchResult.Create(NULL_INDEX, 0);
+end;
+
+class function TGBaseIndexedHelper.IndexOfMin(constref aEntity: TIndexed): SizeInt;
+var
+  R, I: SizeInt;
+  m: T;
+begin
+  R := Pred(aEntity.Count);
+  if R >= 0 then
+    begin
+      Result := 0;
+      m := aEntity.UncMutable[0]^;
+      for I := 1 to R do
+        if TCmpRel.Less(aEntity.UncMutable[I]^, m) then
+          begin
+            m := aEntity.UncMutable[I]^;
+            Result := I;
+          end;
+    end
+  else
+    Result := R;
+end;
+
+class function TGBaseIndexedHelper.IndexOfMax(constref aEntity: TIndexed): SizeInt;
+var
+  R, I: SizeInt;
+  m: T;
+begin
+  R := Pred(aEntity.Count);
+  if R >= 0 then
+    begin
+      Result := 0;
+      m := aEntity.UncMutable[0]^;
+      for I := 1 to R do
+        if TCmpRel.Less(m, aEntity.UncMutable[I]^) then
+          begin
+            m := aEntity.UncMutable[I]^;
+            Result := I;
+          end;
+    end
+  else
+    Result := R;
+end;
+
+class function TGBaseIndexedHelper.GetMin(constref aEntity: TIndexed): TOptional;
+var
+  v: T;
+begin
+  if FindMin(aEntity, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseIndexedHelper.GetMax(constref aEntity: TIndexed): TOptional;
+var
+  v: T;
+begin
+  if FindMax(aEntity, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseIndexedHelper.FindMin(constref aEntity: TIndexed; out aValue: T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R >= 0 then
+    begin
+      aValue := aEntity.UncMutable[0]^;
+      for I := 1 to R do
+        if TCmpRel.Less(aEntity.UncMutable[I]^, aValue) then
+          aValue := aEntity.UncMutable[I]^;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+class function TGBaseIndexedHelper.FindMax(constref aEntity: TIndexed; out aValue: T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R >= 0 then
+    begin
+      aValue := aEntity.UncMutable[0]^;
+      for I := 1 to R do
+        if TCmpRel.Less(aValue, aEntity.UncMutable[I]^) then
+          aValue := aEntity.UncMutable[I]^;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+class function TGBaseIndexedHelper.FindMinMax(constref aEntity: TIndexed; out aMin, aMax: T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R >= 0 then
+    begin
+      aMin := aEntity.UncMutable[0]^;
+      aMax := aEntity.UncMutable[0]^;
+      for I := 1 to R do
+        if TCmpRel.Less(aMax, aEntity.UncMutable[I]^) then
+          aMax := aEntity.UncMutable[I]^
+        else
+          if TCmpRel.Less(aEntity.UncMutable[I]^, aMin) then
+            aMin := aEntity.UncMutable[I]^;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+class function TGBaseIndexedHelper.FindNthSmallest(constref aEntity: TIndexed; N: SizeInt;
+  out aValue: T): Boolean;
+begin
+  if (aEntity.Count > 0) and (SizeUInt(N) < SizeUInt(aEntity.Count)) then
+    exit(specialize TGBaseArrayHelper<T, TCmpRel>
+      .FindNthSmallest(CreateCopy(aEntity, 0, aEntity.Count), N, aValue));
+  Result := False;
+end;
+
+class function TGBaseIndexedHelper.NthSmallest(constref aEntity: TIndexed; N: SizeInt): TOptional;
+var
+  v: T;
+begin
+  if FindNthSmallest(aEntity, N, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseIndexedHelper.NextPermutation2Asc(var aEntity: TIndexed): Boolean;
+var
+  I, J, R: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  J := -1;
+  for I := Pred(R) downto 0 do
+    if TCmpRel.Less(aEntity.UncMutable[Succ(I)]^, aEntity.UncMutable[I]^) then
+      begin
+        J := I;
+        break;
+      end;
+  if J < 0 then exit(False);
+  for I := R downto 0 do
+    if TCmpRel.Less(aEntity.UncMutable[I]^, aEntity.UncMutable[J]^) then
+      begin
+        Swap(aEntity.UncMutable[I], aEntity.UncMutable[J]);
+        break;
+      end;
+  DoReverse(aEntity, Succ(J), R);
+  Result := True;
+end;
+
+class function TGBaseIndexedHelper.NextPermutation2Desc(var aEntity: TIndexed): Boolean;
+var
+  I, J, R: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  J := -1;
+  for I := Pred(R) downto 0 do
+    if TCmpRel.Less(aEntity.UncMutable[I]^, aEntity.UncMutable[Succ(I)]^) then
+      begin
+        J := I;
+        break;
+      end;
+  if J < 0 then exit(False);
+  for I := R downto 0 do
+    if TCmpRel.Less(aEntity.UncMutable[J]^, aEntity.UncMutable[I]^) then
+      begin
+        Swap(aEntity.UncMutable[I], aEntity.UncMutable[J]);
+        break;
+      end;
+  DoReverse(aEntity, Succ(J), R);
+  Result := True;
+end;
+
+class function TGBaseIndexedHelper.InversionCount(constref aEntity: TIndexed): Int64;
+begin
+  if aEntity.Count > 1 then
+    exit(specialize TGBaseArrayHelper<T, TCmpRel>.InversionCount(CreateCopy(aEntity, 0, aEntity.Count)));
+  Result := 0;
+end;
+
+class function TGBaseIndexedHelper.IsNonDescending(constref aEntity: TIndexed): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to aEntity.Count - 2 do
+    if TCmpRel.Less(aEntity.UncMutable[Succ(I)]^, aEntity.UncMutable[I]^) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGBaseIndexedHelper.IsStrictAscending(constref aEntity: TIndexed): Boolean;
+var
+  I, R: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R > 0 then
+    begin
+      for I := 0 to Pred(R) do
+        if not TCmpRel.Less(aEntity.UncMutable[I]^, aEntity.UncMutable[Succ(I)]^) then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
+end;
+
+class function TGBaseIndexedHelper.IsNonAscending(constref aEntity: TIndexed): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to aEntity.Count - 2 do
+    if TCmpRel.Less(aEntity.UncMutable[I]^, aEntity.UncMutable[Succ(I)]^) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGBaseIndexedHelper.IsStrictDescending(constref aEntity: TIndexed): Boolean;
+var
+  I, R: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R > 0 then
+    begin
+      for I := 0 to Pred(R) do
+        if not TCmpRel.Less(aEntity.UncMutable[Succ(I)]^, aEntity.UncMutable[I]^) then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
+end;
+
+class function TGBaseIndexedHelper.Same(constref e1, e2: TIndexed): Boolean;
+var
+  I: SizeInt;
+begin
+  if e1.Count <> e2.Count then
+    exit(False);
+  for I := 0 to Pred(e1.Count) do
+    if TCmpRel.Less(e1.UncMutable[I]^, e2.UncMutable[I]^) or
+       TCmpRel.Less(e2.UncMutable[I]^, e1.UncMutable[I]^) then
+      exit(False);
+  Result := True;
+end;
+
+class procedure TGBaseIndexedHelper.Sort(var aEntity: TIndexed; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := Pred(aEntity.Count);
+  if R > 0 then
+    if CountRun2Asc(aEntity, 0, R) < R then
+      begin
+        DoIntroSort(aEntity, 0, R, LGUtils.NSB(R + 1) * TUtil.INTRO_LOG_FACTOR);
+        if o = soDesc then
+          Reverse(aEntity);
+      end
+    else
+      if (o = soDesc) and TCmpRel.Less(aEntity.UncMutable[0]^, aEntity.UncMutable[R]^) then
+        Reverse(aEntity);
+end;
+
+class procedure TGBaseIndexedHelper.Sort(var aEntity: TIndexed; aFirst, aLast: SizeInt; o: TSortOrder);
+begin
+  if aFirst >= aEntity.Count then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aFirst]);
+  if aLast >= aEntity.Count then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aLast]);
+  if aFirst < aLast then
+    if CountRun2Asc(aEntity, aFirst, aLast) < aLast then
+      begin
+        DoIntroSort(aEntity, aFirst, aLast, LGUtils.NSB(aLast-aFirst+1) * TUtil.INTRO_LOG_FACTOR);
+        if o = soDesc then
+          DoReverse(aEntity, aFirst, aLast);
+      end
+    else
+      if (o = soDesc) and
+         TCmpRel.Less(aEntity.UncMutable[aFirst]^, aEntity.UncMutable[aLast]^) then
+        DoReverse(aEntity, aFirst, aLast);
+end;
+
+class function TGBaseIndexedHelper.SelectDistinct(const aEntity: TIndexed): TArray;
+begin
+  if aEntity.Count > 1 then
+    exit(specialize TGBaseArrayHelper<T, TCmpRel>.SelectDistinct(CreateCopy(aEntity, 0, aEntity.Count)));
+  Result := nil;
 end;
 
 { TGComparableArrayHelper.TMergeSort }
@@ -4142,8 +5009,9 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := FOffsetsL;
-  OffsetsR := FOffsetsR;
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+
   NumL := 0;
   NumR := 0;
   StartL := 0;
@@ -4510,8 +5378,7 @@ var
   Sorter: TPDQSort;
 begin
   if aStart = aFinish then exit;
-  {%H-}Sorter.AlignStorage;
-  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGComparableArrayHelper }
@@ -4736,7 +5603,7 @@ begin
           v := TFake(A[Curr]);
           while Next <= R do
             begin
-              if(Succ(Next) <= R) and (A[Next] < A[Succ(Next)])then
+              if(Next < R) and (A[Next] < A[Succ(Next)])then
                 Inc(Next);
               if A[Next] <= T(v) then
                 break;
@@ -5015,7 +5882,7 @@ begin
   for Result := 0 to System.High(A) do
     if aValue = A[Result] then
       exit;
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 class function TGComparableArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
@@ -5459,10 +6326,10 @@ end;
 
 { TGRegularArrayHelper.TMergeSort }
 
-procedure TGRegularArrayHelper.TMergeSort.Init(A: PItem; c: TCompare);
+procedure TGRegularArrayHelper.TMergeSort.Init(A: PItem; c: TLess);
 begin
   inherited Init(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 procedure TGRegularArrayHelper.TMergeSort.CollapseA;
@@ -5578,11 +6445,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  c := FLess;
+  if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -5590,14 +6457,14 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocB[pLo], LocA[pHi]) <= 0 then
+            if not c(LocA[pHi], LocB[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -5636,11 +6503,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  c := FLess;
+  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -5648,14 +6515,14 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not c(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocB[pLo], LocA[pHi]) >= 0 then
+            if not c(LocB[pLo], LocA[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -5694,11 +6561,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  c := FLess;
+  if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -5706,13 +6573,13 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocA[pLo], LocB[pHi]) > 0 then
+            if c(LocB[pHi], LocA[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -5751,11 +6618,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  c := FLess;
+  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -5763,13 +6630,13 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not c(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocA[pLo], LocB[pHi]) < 0 then
+            if c(LocA[pLo], LocB[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -5801,7 +6668,7 @@ begin
     end;
 end;
 
-class procedure TGRegularArrayHelper.TMergeSort.InsertSortA(A: PItem; R, At: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.TMergeSort.InsertSortA(A: PItem; R, At: SizeInt; c: TLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -5812,7 +6679,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -5821,7 +6688,7 @@ begin
     end;
 end;
 
-class procedure TGRegularArrayHelper.TMergeSort.InsertSortD(A: PItem; R, At: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.TMergeSort.InsertSortD(A: PItem; R, At: SizeInt; c: TLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -5832,7 +6699,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) < 0) do
+      while (J >= 0) and c(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -5841,17 +6708,17 @@ begin
     end;
 end;
 
-class function TGRegularArrayHelper.TMergeSort.CountRunAsc(A: PItem; R: SizeInt; c: TCompare): SizeInt;
+class function TGRegularArrayHelper.TMergeSort.CountRunAsc(A: PItem; R: SizeInt; c: TLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if not c(A[1], A[0]) then  // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                        // descending
+      else                       // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and c(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -5860,17 +6727,17 @@ begin
     Result := 0;
 end;
 
-class function TGRegularArrayHelper.TMergeSort.CountRunDesc(A: PItem; R: SizeInt; c: TCompare): SizeInt;
+class function TGRegularArrayHelper.TMergeSort.CountRunDesc(A: PItem; R: SizeInt; c: TLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+      if not c(A[0], A[1]) then  // descending
+        while (Result < R) and not c(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                        // ascending
+      else                       // ascending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -5879,7 +6746,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGRegularArrayHelper.TMergeSort.SortAsc(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.TMergeSort.SortAsc(A: PItem; R: SizeInt; c: TLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
@@ -5907,7 +6774,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
 end;
 
-class procedure TGRegularArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
@@ -5937,23 +6804,23 @@ end;
 
 { TGRegularArrayHelper.TPDQSort }
 
-class procedure TGRegularArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TCompare);
+class procedure TGRegularArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TLess);
 var
   v: TFake;
 begin
-  if c(B^, A^) < 0 then
+  if c(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
       TFake(B^) := v;
     end;
-  if c(D^, B^) < 0 then
+  if c(D^, B^) then
     begin
       v := TFake(B^);
       TFake(B^) := TFake(D^);
       TFake(D^) := v;
     end;
-  if c(B^, A^) < 0 then
+  if c(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
@@ -5961,7 +6828,7 @@ begin
     end;
 end;
 
-function TGRegularArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TCompare): TPart;
+function TGRegularArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -5974,16 +6841,16 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Inc(First) until c(First^, Pivot) >= 0;
+  repeat Inc(First) until not c(First^, Pivot);
   if First - 1 = aStart then
     while First < Last do
       begin
         Dec(Last);
-        if c(Last^, Pivot) < 0 then
+        if c(Last^, Pivot) then
           break;
       end
   else
-    repeat Dec(Last) until c(Last^, Pivot) < 0;
+    repeat Dec(Last) until c(Last^, Pivot);
 
   AlreadyPartitioned := First >= Last;
 
@@ -5995,8 +6862,9 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := FOffsetsL;
-  OffsetsR := FOffsetsR;
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+
   NumL := 0;
   NumR := 0;
   StartL := 0;
@@ -6011,21 +6879,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(c(It^, Pivot) >= 0);
+              NumL += PtrInt(not c(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(c((It + 1)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(c((It + 2)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(c((It + 3)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(c((It + 4)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(c((It + 5)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(c((It + 6)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(c((It + 7)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -6038,21 +6906,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(c((It - 1)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(c((It - 2)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(c((It - 3)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(c((It - 4)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(c((It - 5)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(c((It - 6)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(c((It - 7)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(c((It - 8)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -6100,7 +6968,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I; Inc(I);
-          NumL += PtrInt(c(It^, Pivot) >= 0);
+          NumL += PtrInt(not c(It^, Pivot));
           It += 1;
         end;
     end;
@@ -6114,7 +6982,7 @@ begin
           Inc(I);
           (OffsetsR + NumR)^ := I;
           Dec(It);
-          NumR += PtrInt(c(It^, Pivot) < 0);
+          NumR += PtrInt(c(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -6162,7 +7030,7 @@ begin
 end;
 
 procedure TGRegularArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
-  aLeftMost: Boolean; c: TCompare);
+  aLeftMost: Boolean; c: TLess);
 var
   PivotPos: PItem;
   v: TFake;
@@ -6175,7 +7043,10 @@ begin
       Size := aFinish - aStart;
       if Size < INSERTION_SORT_THRESHOLD then
         begin
-          TGRegularArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c);
+          if aLeftMost then
+            TGRegularArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c)
+          else
+            TGRegularArrayHelper.UnguardInsertionSort(aStart, Pred(aFinish - aStart), c);
           exit;
         end;
       S2 := Size div 2;
@@ -6191,7 +7062,7 @@ begin
         end
       else
         Sort3(aStart + S2, aStart, aFinish - 1, c);
-      if (not aLeftMost) and (c((aStart - 1)^, aStart^) >= 0) then
+      if (not aLeftMost) and (not c((aStart - 1)^, aStart^)) then
         begin
           aStart := PartitionLeft(aStart, aFinish, c) + 1;
           continue;
@@ -6273,7 +7144,7 @@ begin
 end;
 
 class function TGRegularArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
-  c: TCompare): Boolean;
+  c: TLess): Boolean;
 var
   Curr, Sift: PItem;
   Limit: PtrUInt;
@@ -6286,13 +7157,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      if c(Sift^, (Sift - 1)^) < 0 then
+      if c(Sift^, (Sift - 1)^) then
         begin
           v := TFake(Sift^);
           repeat
             TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-          until (Sift = aStart) or (c(T(v), (Sift - 1)^) >= 0);
+          until (Sift = aStart) or not c(T(v), (Sift - 1)^);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -6301,7 +7172,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem; c: TCompare): PItem;
+class function TGRegularArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -6310,24 +7181,24 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until c(Pivot, Last^) >= 0;
+  repeat Dec(Last) until not c(Pivot, Last^);
   if Last + 1 = aFinish then
     while First < Last do
       begin
         Inc(First);
-        if c(Pivot, First^) < 0 then
+        if c(Pivot, First^) then
           break;
       end
   else
-    repeat Inc(First) until c(Pivot, First^) < 0;
+    repeat Inc(First) until c(Pivot, First^);
 
   while First < Last do
     begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until c(Pivot, Last^) >= 0;
-      repeat Inc(First) until c(Pivot, First^) < 0;
+      repeat Dec(Last) until not c(Pivot, Last^);
+      repeat Inc(First) until c(Pivot, First^);
     end;
   PivotPos := Last;
   aStart^ := PivotPos^;
@@ -6335,38 +7206,37 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGRegularArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TCompare);
+class procedure TGRegularArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TLess);
 var
   Sorter: TPDQSort;
 begin
   if aStart = aFinish then exit;
-  {%H-}Sorter.AlignStorage;
-  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
 
 { TGRegularArrayHelper }
 
-class function TGRegularArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TCompare): SizeInt;
+class function TGRegularArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TLess): SizeInt;
 begin
   Result := 0;
-  while (Result < R) and (c(A[Result], A[Succ(Result)]) = 0) do
+  while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
     begin
       Inc(Result);
-      if c(A[Pred(Result)], A[Result]) < 0 then   // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if c(A[Pred(Result)], A[Result]) then   // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                                        // descending
+      else                                    // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+          while (Result < R) and not c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
     end;
 end;
 
-class procedure TGRegularArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -6375,7 +7245,25 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
+        begin
+          TFake(A[J + 1]) := TFake(A[J]);
+          Dec(J);
+        end;
+      TFake(A[J + 1]) := v;
+    end;
+end;
+
+class procedure TGRegularArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt; c: TLess);
+var
+  I, J: SizeInt;
+  v: TFake;
+begin
+  for I := 1 to R do
+    begin
+      v := TFake(A[I]);
+      J := I - 1;
+      while c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -6385,7 +7273,7 @@ begin
 end;
 
 class function TGRegularArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -6393,7 +7281,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) < 0 then
+      if c(A[M], aValue) then
         L := Succ(M)
       else
         R := M;
@@ -6402,7 +7290,7 @@ begin
 end;
 
 class function TGRegularArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -6410,7 +7298,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) > 0 then
+      if c(aValue, A[M]) then
         L := Succ(M)
       else
         R := M;
@@ -6419,7 +7307,7 @@ begin
 end;
 
 class function TGRegularArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -6427,7 +7315,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) > 0 then
+      if c(aValue, A[M]) then
         R := M
       else
         L := Succ(M);
@@ -6436,7 +7324,7 @@ begin
 end;
 
 class function TGRegularArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -6444,7 +7332,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) < 0 then
+      if c(A[M], aValue) then
         R := M
       else
         L := Succ(M);
@@ -6452,103 +7340,97 @@ begin
   Result := R;
 end;
 
-class function TGRegularArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt;
-var
-  Cmp: SizeInt;
+class function TGRegularArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
+  c: TLess): SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  Cmp := c(A[R], A[0]);
-  if Cmp > 0 then  //ascending
+  if c(A[0], A[R]) then  //ascending
     begin
-      if (c(A[0], aValue) > 0) or (c(A[R], aValue) < 0) then
+      if c(aValue, A[0]) or c(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue, c);
-      if c(A[R], aValue) = 0 then
+      if not(c(A[R], aValue) or c(aValue, A[R])) then
         Result := R;
     end
   else
-    if Cmp < 0 then  //descending
+    if c(A[R], A[0]) then  //descending
       begin
-        if (c(A[0], aValue) < 0) or (c(A[R], aValue) > 0) then
+        if c(A[0], aValue) or c(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue, c);
-        if c(A[R], aValue) = 0 then
+        if not(c(A[R], aValue) or c(aValue, A[R])) then
           Result := R;
       end
     else           //constant
-      if c(A[0], aValue) = 0 then
+      if not(c(A[0], aValue) or c(aValue, A[0])) then
         Result := 0;
 end;
 
 class function TGRegularArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): TSearchResult;
-var
-  Cmp: SizeInt;
+  c: TLess): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  Cmp := c(A[R], A[0]);
-  if Cmp > 0 then  //ascending
+  if c(A[0], A[R]) then  //ascending
     begin
-      if c(A[0], aValue) > 0 then
+      if c(aValue, A[0]) then
         begin
           Result.InsertIndex := 0;
           exit;
         end
       else
-        if c(A[R], aValue) < 0 then
+        if c(A[R], aValue) then
           begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
       R := BiSearchRightA(A, R, aValue, c);
       Result.InsertIndex := R;
-      if c(A[R], aValue) = 0 then
+      if not(c(A[R], aValue) or c(aValue, A[R])) then
         Result := TSearchResult.Create(R, Succ(R))
       else
         if R > 0 then
-          if c(A[Pred(R)], aValue) = 0 then
+          if not(c(A[Pred(R)], aValue) or c(aValue, A[Pred(R)])) then
             Result.FoundIndex := Pred(R);
     end
   else
-    if Cmp < 0 then  //descending
+    if c(A[R], A[0]) then  //descending
       begin
-        if c(A[0], aValue) < 0 then
+        if c(A[0], aValue) then
           begin
             Result.InsertIndex := 0;
             exit;
           end
         else
-          if c(A[R], aValue) > 0 then
+          if c(aValue, A[R]) then
             begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
         R := BiSearchRightD(A, R, aValue, c);
         Result.InsertIndex := R;
-        if c(A[R], aValue) = 0 then
+        if not(c(A[R], aValue) or c(aValue, A[R])) then
           Result := TSearchResult.Create(R, Succ(R))
         else
           if R > 0 then
-            if c(A[Pred(R)], aValue) = 0 then
+            if not(c(A[Pred(R)], aValue) or c(aValue, A[Pred(R)])) then
               Result.FoundIndex := Pred(R);
       end
     else           //constant
       begin
-        Cmp := c(A[0], aValue);
-        if Cmp > 0 then
+        if c(aValue, A[0]) then
           Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
-            if Cmp = 0 then
+            if not c(A[0], aValue) then
               Result.FoundIndex := R;
           end;
       end;
 end;
 
-class procedure TGRegularArrayHelper.DoHeapSort(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.DoHeapSort(A: PItem; R: SizeInt; c: TLess);
 var
   I, Curr, Next: SizeInt;
   v: TFake;
@@ -6562,9 +7444,9 @@ begin
           v := TFake(A[Curr]);
           while Next <= R do
             begin
-              if(Succ(Next) <= R) and (c(A[Next], A[Succ(Next)]) < 0)then
+              if(Next < R) and c(A[Next], A[Succ(Next)]) then
                 Inc(Next);
-              if c(T(v), A[Next]) >= 0 then
+              if not c(T(v), A[Next]) then
                 break;
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -6580,14 +7462,14 @@ begin
           TFake(A[I]) := TFake(A[0]);
           while Next < I do
             begin
-              if(Succ(Next) < I) and (c(A[Next], A[Succ(Next)]) < 0) then
+              if(Succ(Next) < I) and c(A[Next], A[Succ(Next)]) then
                 Inc(Next);
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
               Next := Succ(Next shl 1);
             end;
           Next := Pred(Curr) shr 1;
-          while (Curr > 0) and (c(T(v), A[Next]) > 0) do
+          while (Curr > 0) and c(A[Next], T(v)) do
             begin
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -6600,7 +7482,7 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGRegularArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TCompare): TSortSplit;
+class function TGRegularArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TLess): TSortSplit;
 var
   Pivot: T;
   v: TFake;
@@ -6610,8 +7492,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -6621,7 +7503,7 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TLess);
 begin
   while R > QUICK_INSERT_CUTOFF do
     with QSplitR(A, R, c) do
@@ -6640,14 +7522,14 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGRegularArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TCompare): PItem;
+class function TGRegularArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TLess): PItem;
 begin
   Result := p2;
-  if c(p1^, Result^) < 0 then
+  if c(p1^, Result^) then
     begin
-      if c(p3^, Result^) < 0 then
+      if c(p3^, Result^) then
         begin
-          if c(p1^, p3^) < 0 then
+          if c(p1^, p3^) then
             Result := p3
           else
             Result := p1;
@@ -6655,9 +7537,9 @@ begin
     end
   else { p1^ >= Result^ }
     begin
-      if c(p3^, Result^) > 0 then
+      if c(Result^, p3^) then
         begin
-          if c(p1^, p3^) > 0 then
+          if c(p3^, p1^) then
             Result := p3
           else
             Result := p1;
@@ -6665,7 +7547,7 @@ begin
     end;
 end;
 
-class function TGRegularArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TCompare): TSortSplit;
+class function TGRegularArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit;
 var
   Pivot: T;
   v: TFake;
@@ -6687,8 +7569,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -6698,7 +7580,7 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGRegularArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess);
 begin
   if R > QUICK_INSERT_CUTOFF then
     if Ttl > 0 then
@@ -6716,7 +7598,7 @@ begin
       InsertionSort(A, R, c);
 end;
 
-class function TGRegularArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TCompare): TSortSplit;
+class function TGRegularArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit;
 var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
@@ -6724,7 +7606,7 @@ begin
   pL := Succ(Random(Pred(R shr 1)));
   pR := Pred(R - Random(Pred(R shr 1)));
 
-  if c(A[pL], A[pR]) <= 0 then
+  if not c(A[pR], A[pL]) then
     begin
       Pivot1 := TFake(A[pL]);
       TFake(A[pL]) := TFake(A[0]);
@@ -6745,20 +7627,20 @@ begin
   while I <= pR do
     begin
       v := TFake(A[I]);
-      if c(T(v), T(Pivot1)) < 0 then
+      if c(T(v), T(Pivot1)) then
         begin
           TFake(A[I]) := TFake(A[pL]);
           TFake(A[pL]) := v;
           Inc(pL);
         end
       else
-        if c(T(v), T(Pivot2)) > 0 then
+        if c(T(Pivot2), T(v)) then
           begin
-            while (pR >= I) and (c(A[pR], T(Pivot2)) > 0) do
+            while (pR >= I) and c(T(Pivot2), A[pR]) do
               Dec(pR);
             if pR < I then
               break;
-            if c(A[pR], T(Pivot1)) < 0 then
+            if c(A[pR], T(Pivot1)) then
               begin
                 TFake(A[I]) := TFake(A[pL]);
                 TFake(A[pL]) := TFake(A[pR]);
@@ -6780,14 +7662,14 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TLess);
 begin
   if R > DPQ_INSERT_CUTOFF then
     with DPQSplit(A, R, c) do
       begin
         DoDPQSort(A, Left - 1, c);
         DoDPQSort(@A[Right + 1], R - Right - 1, c);
-        if c(A[Left], A[Right]) <> 0 then
+        if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, c);
       end
   else
@@ -6795,7 +7677,7 @@ begin
       InsertionSort(A, R, c);
 end;
 
-class function TGRegularArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TCompare): T;
+class function TGRegularArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TLess): T;
 var
   v: TFake;
   Pivot: T;
@@ -6808,8 +7690,8 @@ begin
       pL := Pred(L);
       pR := Succ(R);
       repeat
-        repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-        repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+        repeat Inc(pL) until not c(A[pL], Pivot);
+        repeat Dec(pR) until not c(Pivot, A[pR]);
         if pL >= pR then break;
         v := TFake(A[pL]);
         TFake(A[pL]) := TFake(A[pR]);
@@ -6826,7 +7708,7 @@ begin
       if pR < N then L := pL;
       if pL > N then R := pR;
     end;
-  if (L < R) and (c(A[L], A[R]) > 0) then
+  if (L < R) and c(A[R], A[L]) then
     begin
       v := TFake(A[L]);
       TFake(A[L]) := TFake(A[R]);
@@ -6836,16 +7718,16 @@ begin
 end;
 
 class function TGRegularArrayHelper.SequentSearch(constref A: array of T; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 begin
   for Result := 0 to System.High(A) do
-    if c(aValue, A[Result]) = 0 then
+    if not(c(aValue, A[Result]) or c(A[Result], aValue)) then
       exit;
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 class function TGRegularArrayHelper.BinarySearch(constref A: array of T; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 begin
   Result := High(A);
   if Result >= 0 then
@@ -6853,7 +7735,7 @@ begin
 end;
 
 class function TGRegularArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
-  c: TCompare): TSearchResult;
+  c: TLess): TSearchResult;
 var
   R: SizeInt;
 begin
@@ -6864,7 +7746,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGRegularArrayHelper.IndexOfMin(constref A: array of T; c: TCompare): SizeInt;
+class function TGRegularArrayHelper.IndexOfMin(constref A: array of T; c: TLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -6875,7 +7757,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if c(A[I], v) < 0 then
+        if c(A[I], v) then
           begin
             v := A[I];
             Result := I;
@@ -6885,7 +7767,7 @@ begin
     Result := R;
 end;
 
-class function TGRegularArrayHelper.IndexOfMax(constref A: array of T; c: TCompare): SizeInt;
+class function TGRegularArrayHelper.IndexOfMax(constref A: array of T; c: TLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -6896,7 +7778,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if c(v, A[I]) < 0 then
+        if c(v, A[I]) then
           begin
             v := A[I];
             Result := I;
@@ -6906,7 +7788,7 @@ begin
     Result := R;
 end;
 
-class function TGRegularArrayHelper.GetMin(constref A: array of T; c: TCompare): TOptional;
+class function TGRegularArrayHelper.GetMin(constref A: array of T; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -6914,7 +7796,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGRegularArrayHelper.GetMax(constref A: array of T; c: TCompare): TOptional;
+class function TGRegularArrayHelper.GetMax(constref A: array of T; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -6922,57 +7804,60 @@ begin
     Result.Assign(v);
 end;
 
-class function TGRegularArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if c(A[I], aValue) < 0 then
+        if c(A[I], aValue) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
-class function TGRegularArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if c(aValue, A[I]) < 0 then
+        if c(aValue, A[I]) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
-class function TGRegularArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aMin := A[0];
       aMax := A[0];
       for I := 1 to R do
-        if c(aMax, A[I]) < 0 then
+        if c(aMax, A[I]) then
           aMax := A[I]
         else
-          if c(A[I], aMin) < 0 then
+          if c(A[I], aMin) then
             aMin := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGRegularArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T;
-  c: TCompare): Boolean;
+  c: TLess): Boolean;
 var
   R: SizeInt;
 begin
@@ -6987,7 +7872,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.NthSmallest(var A: array of T; N: SizeInt; c: TCompare): TOptional;
+class function TGRegularArrayHelper.NthSmallest(var A: array of T; N: SizeInt; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -6996,12 +7881,12 @@ begin
 end;
 
 class function TGRegularArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T;
-  c: TCompare): Boolean;
+  c: TLess): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue, c);
 end;
 
-class function TGRegularArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt; c: TCompare): TOptional;
+class function TGRegularArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -7009,7 +7894,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGRegularArrayHelper.NextPermutation2Asc(var A: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.NextPermutation2Asc(var A: array of T; c: TLess): Boolean;
 var
   I, J, R: SizeInt;
   v: TFake;
@@ -7017,14 +7902,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if c(A[I], A[Succ(I)]) > 0 then
+    if c(A[Succ(I)], A[I]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if c(A[J], A[I]) > 0 then
+    if c(A[I], A[J]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -7035,7 +7920,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.NextPermutation2Desc(var A: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.NextPermutation2Desc(var A: array of T; c: TLess): Boolean;
 var
   I, J, R: SizeInt;
   v: TFake;
@@ -7043,14 +7928,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if c(A[I], A[Succ(I)]) < 0 then
+    if c(A[I], A[Succ(I)]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if c(A[J], A[I]) < 0 then
+    if c(A[J], A[I]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -7061,17 +7946,17 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.IsNonDescending(constref A: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.IsNonDescending(constref A: array of T; c: TLess): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if c(A[I], A[Succ(I)]) > 0 then
+    if c(A[Succ(I)], A[I]) then
       exit(False);
   Result := True;
 end;
 
-class function TGRegularArrayHelper.IsStrictAscending(constref A: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.IsStrictAscending(constref A: array of T; c: TLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -7079,7 +7964,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if c(A[Pred(I)], A[I]) >= 0 then
+        if not c(A[Pred(I)], A[I]) then
           exit(False);
       Result := True;
     end
@@ -7087,17 +7972,17 @@ begin
     Result := False;
 end;
 
-class function TGRegularArrayHelper.IsNonAscending(constref A: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.IsNonAscending(constref A: array of T; c: TLess): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if c(A[I], A[Succ(I)]) < 0 then
+    if c(A[I], A[Succ(I)]) then
       exit(False);
   Result := True;
 end;
 
-class function TGRegularArrayHelper.IsStrictDescending(constref A: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.IsStrictDescending(constref A: array of T; c: TLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -7105,7 +7990,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if c(A[Pred(I)], A[I]) <= 0 then
+        if not c(A[I], A[Pred(I)]) then
           exit(False);
       Result := True;
     end
@@ -7113,7 +7998,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularArrayHelper.InversionCount(var A: array of T; c: TCompare): Int64;
+class function TGRegularArrayHelper.InversionCount(var A: array of T; c: TLess): Int64;
 var
   Buf: TArray;
   function Merge(L, M, R: SizeInt): Int64;
@@ -7124,7 +8009,7 @@ var
     J := Succ(M);
     Merge := 0;
     for K := 0 to R - L do
-      if (J > R) or (I <= M) and (c(A[I], A[J]) <= 0) then
+      if (J > R) or (I <= M) and not c(A[J], A[I]) then
         begin
           Buf[K] := A[I];
           Inc(I);
@@ -7157,12 +8042,12 @@ begin
   Result := 0;
 end;
 
-class function TGRegularArrayHelper.InversionCountND(constref A: array of T; c: TCompare): Int64;
+class function TGRegularArrayHelper.InversionCountND(constref A: array of T; c: TLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
-class function TGRegularArrayHelper.Same(constref A, B: array of T; c: TCompare): Boolean;
+class function TGRegularArrayHelper.Same(constref A, B: array of T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -7170,12 +8055,12 @@ begin
   if System.High(B) <> R then
     exit(False);
   for I := 0 to R do
-    if c(A[I], B[I]) <> 0 then
+    if c(A[I], B[I]) or c(B[I], A[I]) then
       exit(False);
   Result := True;
 end;
 
-class procedure TGRegularArrayHelper.QuickSort(var A: array of T; c: TCompare; o: TSortOrder);
+class procedure TGRegularArrayHelper.QuickSort(var A: array of T; c: TLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -7188,11 +8073,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGRegularArrayHelper.IntroSort(var A: array of T; c: TCompare; o: TSortOrder);
+class procedure TGRegularArrayHelper.IntroSort(var A: array of T; c: TLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -7205,11 +8090,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGRegularArrayHelper.DualPivotQuickSort(var A: array of T; c: TCompare; o: TSortOrder);
+class procedure TGRegularArrayHelper.DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -7222,11 +8107,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGRegularArrayHelper.PDQSort(var A: array of T; c: TCompare; o: TSortOrder);
+class procedure TGRegularArrayHelper.PDQSort(var A: array of T; c: TLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -7239,11 +8124,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGRegularArrayHelper.MergeSort(var A: array of T; c: TCompare; o: TSortOrder);
+class procedure TGRegularArrayHelper.MergeSort(var A: array of T; c: TLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -7255,18 +8140,18 @@ begin
       TMergeSort.SortDesc(@A[0], R, c);
 end;
 
-class procedure TGRegularArrayHelper.Sort(var A: array of T; c: TCompare; o: TSortOrder);
+class procedure TGRegularArrayHelper.Sort(var A: array of T; c: TLess; o: TSortOrder);
 begin
   IntroSort(A, c, o);
 end;
 
-class function TGRegularArrayHelper.Sorted(constref A: array of T; c: TCompare; o: TSortOrder): TArray;
+class function TGRegularArrayHelper.Sorted(constref A: array of T; c: TLess; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, c, o);
 end;
 
-class function TGRegularArrayHelper.SelectDistinct(constref A: array of T; c: TCompare): TArray;
+class function TGRegularArrayHelper.SelectDistinct(constref A: array of T; c: TLess): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -7277,7 +8162,7 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if c(Result[I], Result[J]) = 0 then
+      if not(c(Result[I], Result[J]) or c(Result[J], Result[I])) then
         continue;
       Inc(I);
       if J > I then
@@ -7288,10 +8173,10 @@ end;
 
 { TGDelegatedArrayHelper.TMergeSort }
 
-procedure TGDelegatedArrayHelper.TMergeSort.Init(A: PItem; c: TOnCompare);
+procedure TGDelegatedArrayHelper.TMergeSort.Init(A: PItem; c: TOnLess);
 begin
   inherited Init(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 procedure TGDelegatedArrayHelper.TMergeSort.CollapseA;
@@ -7407,11 +8292,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  c := FLess;
+  if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -7419,14 +8304,14 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocB[pLo], LocA[pHi]) <= 0 then
+            if not c(LocA[pHi], LocB[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -7465,11 +8350,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  c := FLess;
+  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -7477,14 +8362,14 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not c(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocB[pLo], LocA[pHi]) >= 0 then
+            if not c(LocB[pLo], LocA[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -7523,11 +8408,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  c := FLess;
+  if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -7535,13 +8420,13 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocA[pLo], LocB[pHi]) > 0 then
+            if c(LocB[pHi], LocA[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -7580,11 +8465,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  c := FLess;
+  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -7592,13 +8477,13 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not c(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocA[pLo], LocB[pHi]) < 0 then
+            if c(LocA[pLo], LocB[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -7630,7 +8515,7 @@ begin
     end;
 end;
 
-class procedure TGDelegatedArrayHelper.TMergeSort.InsertSortA(A: PItem; R, At: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.TMergeSort.InsertSortA(A: PItem; R, At: SizeInt; c: TOnLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -7641,7 +8526,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -7650,7 +8535,7 @@ begin
     end;
 end;
 
-class procedure TGDelegatedArrayHelper.TMergeSort.InsertSortD(A: PItem; R, At: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.TMergeSort.InsertSortD(A: PItem; R, At: SizeInt; c: TOnLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -7661,7 +8546,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) < 0) do
+      while (J >= 0) and c(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -7670,17 +8555,17 @@ begin
     end;
 end;
 
-class function TGDelegatedArrayHelper.TMergeSort.CountRunAsc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt;
+class function TGDelegatedArrayHelper.TMergeSort.CountRunAsc(A: PItem; R: SizeInt; c: TOnLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if not c(A[1], A[0]) then  // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                        // descending
+      else                       // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and c(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -7689,17 +8574,17 @@ begin
     Result := 0;
 end;
 
-class function TGDelegatedArrayHelper.TMergeSort.CountRunDesc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt;
+class function TGDelegatedArrayHelper.TMergeSort.CountRunDesc(A: PItem; R: SizeInt; c: TOnLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+      if not c(A[0], A[1]) then  // descending
+        while (Result < R) and not c(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                        // ascending
+      else                       // ascending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -7708,7 +8593,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGDelegatedArrayHelper.TMergeSort.SortAsc(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.TMergeSort.SortAsc(A: PItem; R: SizeInt; c: TOnLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
@@ -7736,7 +8621,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
 end;
 
-class procedure TGDelegatedArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TOnLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
@@ -7766,23 +8651,23 @@ end;
 
 { TGDelegatedArrayHelper.TPDQSort }
 
-class procedure TGDelegatedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TOnLess);
 var
   v: TFake;
 begin
-  if c(B^, A^) < 0 then
+  if c(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
       TFake(B^) := v;
     end;
-  if c(D^, B^) < 0 then
+  if c(D^, B^) then
     begin
       v := TFake(B^);
       TFake(B^) := TFake(D^);
       TFake(D^) := v;
     end;
-  if c(B^, A^) < 0 then
+  if c(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
@@ -7790,7 +8675,7 @@ begin
     end;
 end;
 
-function TGDelegatedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TOnCompare): TPart;
+function TGDelegatedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -7803,16 +8688,16 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Inc(First) until c(First^, Pivot) >= 0;
+  repeat Inc(First) until not c(First^, Pivot);
   if First - 1 = aStart then
     while First < Last do
       begin
         Dec(Last);
-        if c(Last^, Pivot) < 0 then
+        if c(Last^, Pivot) then
           break;
       end
   else
-    repeat Dec(Last) until c(Last^, Pivot) < 0;
+    repeat Dec(Last) until c(Last^, Pivot);
 
   AlreadyPartitioned := First >= Last;
 
@@ -7824,8 +8709,9 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := FOffsetsL;
-  OffsetsR := FOffsetsR;
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+
   NumL := 0;
   NumR := 0;
   StartL := 0;
@@ -7840,21 +8726,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(c(It^, Pivot) >= 0);
+              NumL += PtrInt(not c(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(c((It + 1)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(c((It + 2)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(c((It + 3)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(c((It + 4)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(c((It + 5)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(c((It + 6)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(c((It + 7)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -7867,21 +8753,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(c((It - 1)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(c((It - 2)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(c((It - 3)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(c((It - 4)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(c((It - 5)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(c((It - 6)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(c((It - 7)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(c((It - 8)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -7929,7 +8815,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I; Inc(I);
-          NumL += PtrInt(c(It^, Pivot) >= 0);
+          NumL += PtrInt(not c(It^, Pivot));
           It += 1;
         end;
     end;
@@ -7943,7 +8829,7 @@ begin
           Inc(I);
           (OffsetsR + NumR)^ := I;
           Dec(It);
-          NumR += PtrInt(c(It^, Pivot) < 0);
+          NumR += PtrInt(c(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -7991,7 +8877,7 @@ begin
 end;
 
 procedure TGDelegatedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
-  aLeftMost: Boolean; c: TOnCompare);
+  aLeftMost: Boolean; c: TOnLess);
 var
   PivotPos: PItem;
   v: TFake;
@@ -8004,7 +8890,10 @@ begin
       Size := aFinish - aStart;
       if Size < INSERTION_SORT_THRESHOLD then
         begin
-          TGDelegatedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c);
+          if aLeftMost then
+            TGDelegatedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c)
+          else
+            TGDelegatedArrayHelper.UnguardInsertionSort(aStart, Pred(aFinish - aStart), c);
           exit;
         end;
       S2 := Size div 2;
@@ -8020,7 +8909,7 @@ begin
         end
       else
         Sort3(aStart + S2, aStart, aFinish - 1, c);
-      if (not aLeftMost) and (c((aStart - 1)^, aStart^) >= 0) then
+      if (not aLeftMost) and not c((aStart - 1)^, aStart^) then
         begin
           aStart := PartitionLeft(aStart, aFinish, c) + 1;
           continue;
@@ -8102,7 +8991,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
-  c: TOnCompare): Boolean;
+  c: TOnLess): Boolean;
 var
   Curr, Sift: PItem;
   Limit: PtrUInt;
@@ -8115,13 +9004,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      if c(Sift^, (Sift - 1)^) < 0 then
+      if c(Sift^, (Sift - 1)^) then
         begin
           v := TFake(Sift^);
           repeat
             TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-          until (Sift = aStart) or (c(T(v), (Sift - 1)^) >= 0);
+          until (Sift = aStart) or not c(T(v), (Sift - 1)^);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -8131,7 +9020,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem;
-  c: TOnCompare): PItem;
+  c: TOnLess): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -8140,24 +9029,24 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until c(Pivot, Last^) >= 0;
+  repeat Dec(Last) until not c(Pivot, Last^);
   if Last + 1 = aFinish then
     while First < Last do
       begin
         Inc(First);
-        if c(Pivot, First^) < 0 then
+        if c(Pivot, First^) then
           break;
       end
   else
-    repeat Inc(First) until c(Pivot, First^) < 0;
+    repeat Inc(First) until c(Pivot, First^);
 
   while First < Last do
     begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until c(Pivot, Last^) >= 0;
-      repeat Inc(First) until c(Pivot, First^) < 0;
+      repeat Dec(Last) until not c(Pivot, Last^);
+      repeat Inc(First) until c(Pivot, First^);
     end;
   PivotPos := Last;
   aStart^ := PivotPos^;
@@ -8165,38 +9054,37 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGDelegatedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TOnLess);
 var
   Sorter: TPDQSort;
 begin
   if aStart = aFinish then exit;
-  {%H-}Sorter.AlignStorage;
-  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
 
 { TGDelegatedArrayHelper }
 
-class function TGDelegatedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt;
+class function TGDelegatedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TOnLess): SizeInt;
 begin
   Result := 0;
-  while (Result < R) and (c(A[Result], A[Succ(Result)]) = 0) do
+  while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
     begin
       Inc(Result);
-      if c(A[Pred(Result)], A[Result]) < 0 then   // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if c(A[Pred(Result)], A[Result]) then   // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                                        // descending
+      else                                    // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+          while (Result < R) and not c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
     end;
 end;
 
-class procedure TGDelegatedArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TOnLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -8205,7 +9093,25 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
+        begin
+          TFake(A[J + 1]) := TFake(A[J]);
+          Dec(J);
+        end;
+      TFake(A[J + 1]) := v;
+    end;
+end;
+
+class procedure TGDelegatedArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt; c: TOnLess);
+var
+  I, J: SizeInt;
+  v: TFake;
+begin
+  for I := 1 to R do
+    begin
+      v := TFake(A[I]);
+      J := I - 1;
+      while c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -8215,7 +9121,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -8223,7 +9129,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) < 0 then
+      if c(A[M], aValue) then
         L := Succ(M)
       else
         R := M;
@@ -8232,7 +9138,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -8240,7 +9146,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) > 0 then
+      if c(aValue, A[M]) then
         L := Succ(M)
       else
         R := M;
@@ -8249,7 +9155,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -8257,7 +9163,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) > 0 then
+      if c(aValue, A[M]) then
         R := M
       else
         L := Succ(M);
@@ -8266,7 +9172,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -8274,7 +9180,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) < 0 then
+      if c(A[M], aValue) then
         R := M
       else
         L := Succ(M);
@@ -8283,103 +9189,96 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): SizeInt;
-var
-  Cmp: SizeInt;
+  c: TOnLess): SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  Cmp := c(A[R], A[0]);
-  if Cmp > 0 then  //ascending
+  if c(A[0], A[R]) then  //ascending
     begin
-      if (c(A[0], aValue) > 0) or (c(A[R], aValue) < 0) then
+      if c(aValue, A[0]) or c(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue, c);
-      if c(A[R], aValue) = 0 then
+      if not(c(A[R], aValue) or c(aValue, A[R])) then
         Result := R;
     end
   else
-    if Cmp < 0 then  //descending
+    if c(A[R], A[0]) then  //descending
       begin
-        if (c(A[0], aValue) < 0) or (c(A[R], aValue) > 0) then
+        if c(A[0], aValue) or c(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue, c);
-        if c(A[R], aValue) = 0 then
+        if not(c(A[R], aValue) or c(aValue, A[R])) then
           Result := R;
       end
     else           //constant
-      if c(A[0], aValue) = 0 then
+      if not(c(A[0], aValue) or c(aValue, A[0])) then
         Result := 0;
 end;
 
 class function TGDelegatedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): TSearchResult;
-var
-  Cmp: SizeInt;
+  c: TOnLess): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  Cmp := c(A[R], A[0]);
-  if Cmp > 0 then  //ascending
+  if c(A[0], A[R]) then  //ascending
     begin
-      if c(A[0], aValue) > 0 then
+      if c(aValue, A[0]) then
         begin
           Result.InsertIndex := 0;
           exit;
         end
       else
-        if c(A[R], aValue) < 0 then
+        if c(A[R], aValue) then
           begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
       R := BiSearchRightA(A, R, aValue, c);
       Result.InsertIndex := R;
-      if c(A[R], aValue) = 0 then
+      if not(c(A[R], aValue) or c(aValue, A[R])) then
         Result := TSearchResult.Create(R, Succ(R))
       else
         if R > 0 then
-          if c(A[Pred(R)], aValue) = 0 then
+          if not(c(A[Pred(R)], aValue) or c(aValue, A[Pred(R)])) then
             Result.FoundIndex := Pred(R);
     end
   else
-    if Cmp < 0 then  //descending
+    if c(A[R], A[0]) then  //descending
       begin
-        if c(A[0], aValue) < 0 then
+        if c(A[0], aValue) then
           begin
             Result.InsertIndex := 0;
             exit;
           end
         else
-          if c(A[R], aValue) > 0 then
+          if c(aValue, A[R]) then
             begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
         R := BiSearchRightD(A, R, aValue, c);
         Result.InsertIndex := R;
-        if c(A[R], aValue) = 0 then
+        if not(c(A[R], aValue) or c(aValue, A[R])) then
           Result := TSearchResult.Create(R, Succ(R))
         else
           if R > 0 then
-            if c(A[Pred(R)], aValue) = 0 then
+            if not(c(A[Pred(R)], aValue) or c(aValue, A[Pred(R)])) then
               Result.FoundIndex := Pred(R);
       end
     else           //constant
       begin
-        Cmp := c(A[0], aValue);
-        if Cmp > 0 then
+        if c(aValue, A[0]) then
           Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
-            if Cmp = 0 then
+            if not c(A[0], aValue) then
               Result.FoundIndex := R;
           end;
       end;
 end;
 
-class procedure TGDelegatedArrayHelper.DoHeapSort(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.DoHeapSort(A: PItem; R: SizeInt; c: TOnLess);
 var
   I, Curr, Next: SizeInt;
   v: TFake;
@@ -8393,9 +9292,9 @@ begin
           v := TFake(A[Curr]);
           while Next <= R do
             begin
-              if(Succ(Next) <= R) and (c(A[Next], A[Succ(Next)]) < 0)then
+              if(Next < R) and c(A[Next], A[Succ(Next)])then
                 Inc(Next);
-              if c(T(v), A[Next]) >= 0 then
+              if not c(T(v), A[Next]) then
                 break;
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -8411,14 +9310,14 @@ begin
           TFake(A[I]) := TFake(A[0]);
           while Next < I do
             begin
-              if(Succ(Next) < I) and (c(A[Next], A[Succ(Next)]) < 0) then
+              if(Succ(Next) < I) and c(A[Next], A[Succ(Next)]) then
                 Inc(Next);
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
               Next := Succ(Next shl 1);
             end;
           Next := Pred(Curr) shr 1;
-          while (Curr > 0) and (c(T(v), A[Next]) > 0) do
+          while (Curr > 0) and c(A[Next], T(v)) do
             begin
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -8431,7 +9330,7 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGDelegatedArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit;
+class function TGDelegatedArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
 var
   Pivot: T;
   v: TFake;
@@ -8441,8 +9340,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -8452,7 +9351,7 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnLess);
 begin
   while R > QUICK_INSERT_CUTOFF do
     with QSplitR(A, R, c) do
@@ -8471,14 +9370,14 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGDelegatedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TOnCompare): PItem;
+class function TGDelegatedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem;
 begin
   Result := p2;
-  if c(p1^, Result^) < 0 then
+  if c(p1^, Result^) then
     begin
-      if c(p3^, Result^) < 0 then
+      if c(p3^, Result^) then
         begin
-          if c(p1^, p3^) < 0 then
+          if c(p1^, p3^) then
             Result := p3
           else
             Result := p1;
@@ -8486,9 +9385,9 @@ begin
     end
   else { p1^ >= Result^ }
     begin
-      if c(p3^, Result^) > 0 then
+      if c(Result^, p3^) then
         begin
-          if c(p1^, p3^) > 0 then
+          if c(p3^, p1^) then
             Result := p3
           else
             Result := p1;
@@ -8496,7 +9395,7 @@ begin
     end;
 end;
 
-class function TGDelegatedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit;
+class function TGDelegatedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
 var
   Pivot: T;
   v: TFake;
@@ -8518,8 +9417,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -8529,7 +9428,7 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGDelegatedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess);
 begin
   if R > QUICK_INSERT_CUTOFF then
     if Ttl > 0 then
@@ -8547,7 +9446,7 @@ begin
       InsertionSort(A, R, c);
 end;
 
-class function TGDelegatedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit;
+class function TGDelegatedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
 var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
@@ -8555,7 +9454,7 @@ begin
   pL := Succ(Random(Pred(R shr 1)));
   pR := Pred(R - Random(Pred(R shr 1)));
 
-  if c(A[pL], A[pR]) <= 0 then
+  if not c(A[pR], A[pL]) then
     begin
       Pivot1 := TFake(A[pL]);
       TFake(A[pL]) := TFake(A[0]);
@@ -8576,20 +9475,20 @@ begin
   while I <= pR do
     begin
       v := TFake(A[I]);
-      if c(T(v), T(Pivot1)) < 0 then
+      if c(T(v), T(Pivot1)) then
         begin
           TFake(A[I]) := TFake(A[pL]);
           TFake(A[pL]) := v;
           Inc(pL);
         end
       else
-        if c(T(v), T(Pivot2)) > 0 then
+        if c(T(Pivot2), T(v)) then
           begin
-            while (pR >= I) and (c(A[pR], T(Pivot2)) > 0) do
+            while (pR >= I) and c(T(Pivot2), A[pR]) do
               Dec(pR);
             if pR < I then
               break;
-            if c(A[pR], T(Pivot1)) < 0 then
+            if c(A[pR], T(Pivot1)) then
               begin
                 TFake(A[I]) := TFake(A[pL]);
                 TFake(A[pL]) := TFake(A[pR]);
@@ -8611,14 +9510,14 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TOnLess);
 begin
   if R > DPQ_INSERT_CUTOFF then
     with DPQSplit(A, R, c) do
       begin
         DoDPQSort(A, Left - 1, c);
         DoDPQSort(@A[Right + 1], R - Right - 1, c);
-        if c(A[Left], A[Right]) <> 0 then
+        if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, c);
       end
   else
@@ -8626,7 +9525,7 @@ begin
       InsertionSort(A, R, c);
 end;
 
-class function TGDelegatedArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TOnCompare): T;
+class function TGDelegatedArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T;
 var
   v: TFake;
   Pivot: T;
@@ -8639,8 +9538,8 @@ begin
       pL := Pred(L);
       pR := Succ(R);
       repeat
-        repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-        repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+        repeat Inc(pL) until not c(A[pL], Pivot);
+        repeat Dec(pR) until not c(Pivot, A[pR]);
         if pL >= pR then break;
         v := TFake(A[pL]);
         TFake(A[pL]) := TFake(A[pR]);
@@ -8657,7 +9556,7 @@ begin
       if pR < N then L := pL;
       if pL > N then R := pR;
     end;
-  if (L < R) and (c(A[L], A[R]) > 0) then
+  if (L < R) and c(A[R], A[L]) then
     begin
       v := TFake(A[L]);
       TFake(A[L]) := TFake(A[R]);
@@ -8667,16 +9566,16 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.SequentSearch(constref A: array of T; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 begin
   for Result := 0 to System.High(A) do
-    if c(aValue, A[Result]) = 0 then
+    if not(c(aValue, A[Result]) or c(A[Result], aValue)) then
       exit;
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 class function TGDelegatedArrayHelper.BinarySearch(constref A: array of T; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 begin
   Result := High(A);
   if Result >= 0 then
@@ -8684,7 +9583,7 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
-  c: TOnCompare): TSearchResult;
+  c: TOnLess): TSearchResult;
 var
   R: SizeInt;
 begin
@@ -8695,7 +9594,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGDelegatedArrayHelper.IndexOfMin(constref A: array of T; c: TOnCompare): SizeInt;
+class function TGDelegatedArrayHelper.IndexOfMin(constref A: array of T; c: TOnLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -8706,7 +9605,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if c(A[I], v) < 0 then
+        if c(A[I], v) then
           begin
             v := A[I];
             Result := I;
@@ -8716,7 +9615,7 @@ begin
     Result := R;
 end;
 
-class function TGDelegatedArrayHelper.IndexOfMax(constref A: array of T; c: TOnCompare): SizeInt;
+class function TGDelegatedArrayHelper.IndexOfMax(constref A: array of T; c: TOnLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -8727,7 +9626,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if c(v, A[I]) < 0 then
+        if c(v, A[I]) then
           begin
             v := A[I];
             Result := I;
@@ -8737,7 +9636,7 @@ begin
     Result := R;
 end;
 
-class function TGDelegatedArrayHelper.GetMin(constref A: array of T; c: TOnCompare): TOptional;
+class function TGDelegatedArrayHelper.GetMin(constref A: array of T; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -8745,7 +9644,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGDelegatedArrayHelper.GetMax(constref A: array of T; c: TOnCompare): TOptional;
+class function TGDelegatedArrayHelper.GetMax(constref A: array of T; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -8753,58 +9652,61 @@ begin
     Result.Assign(v);
 end;
 
-class function TGDelegatedArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if c(A[I], aValue) < 0 then
+        if c(A[I], aValue) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
-class function TGDelegatedArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if c(aValue, A[I]) < 0 then
+        if c(aValue, A[I]) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGDelegatedArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T;
-  c: TOnCompare): Boolean;
+  c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aMin := A[0];
       aMax := A[0];
       for I := 1 to R do
-        if c(aMax, A[I]) < 0 then
+        if c(aMax, A[I]) then
           aMax := A[I]
         else
-          if c(A[I], aMin) < 0 then
+          if c(A[I], aMin) then
             aMin := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGDelegatedArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T;
-  c: TOnCompare): Boolean;
+  c: TOnLess): Boolean;
 var
   R: SizeInt;
 begin
@@ -8819,7 +9721,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.NthSmallest(var A: array of T; N: SizeInt; c: TOnCompare): TOptional;
+class function TGDelegatedArrayHelper.NthSmallest(var A: array of T; N: SizeInt; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -8828,12 +9730,12 @@ begin
 end;
 
 class function TGDelegatedArrayHelper.FindNthSmallestND(constref A: array of T;
-  N: SizeInt; out aValue: T; c: TOnCompare): Boolean;
+  N: SizeInt; out aValue: T; c: TOnLess): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue, c);
 end;
 
-class function TGDelegatedArrayHelper.NthSmallestND(constref A: array of T;N: SizeInt; c: TOnCompare): TOptional;
+class function TGDelegatedArrayHelper.NthSmallestND(constref A: array of T;N: SizeInt; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -8841,7 +9743,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGDelegatedArrayHelper.NextPermutation2Asc(var A: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.NextPermutation2Asc(var A: array of T; c: TOnLess): Boolean;
 var
   I, J, R: SizeInt;
   v: TFake;
@@ -8849,14 +9751,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if c(A[I], A[Succ(I)]) > 0 then
+    if c(A[Succ(I)], A[I]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if c(A[J], A[I]) > 0 then
+    if c(A[I], A[J]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -8867,7 +9769,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.NextPermutation2Desc(var A: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.NextPermutation2Desc(var A: array of T; c: TOnLess): Boolean;
 var
   I, J, R: SizeInt;
   v: TFake;
@@ -8875,14 +9777,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if c(A[I], A[Succ(I)]) < 0 then
+    if c(A[I], A[Succ(I)]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if c(A[J], A[I]) < 0 then
+    if c(A[J], A[I]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -8893,17 +9795,17 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.IsNonDescending(constref A: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.IsNonDescending(constref A: array of T; c: TOnLess): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if c(A[I], A[Succ(I)]) > 0 then
+    if c(A[Succ(I)], A[I]) then
       exit(False);
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.IsStrictAscending(constref A: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.IsStrictAscending(constref A: array of T; c: TOnLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -8911,7 +9813,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if c(A[Pred(I)], A[I]) >= 0 then
+        if not c(A[Pred(I)], A[I]) then
           exit(False);
       Result := True;
     end
@@ -8919,17 +9821,17 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedArrayHelper.IsNonAscending(constref A: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.IsNonAscending(constref A: array of T; c: TOnLess): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if c(A[I], A[Succ(I)]) < 0 then
+    if c(A[I], A[Succ(I)]) then
       exit(False);
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.IsStrictDescending(constref A: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.IsStrictDescending(constref A: array of T; c: TOnLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -8937,7 +9839,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if c(A[Pred(I)], A[I]) <= 0 then
+        if not c(A[I], A[Pred(I)]) then
           exit(False);
       Result := True;
     end
@@ -8945,7 +9847,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedArrayHelper.InversionCount(var A: array of T; c: TOnCompare): Int64;
+class function TGDelegatedArrayHelper.InversionCount(var A: array of T; c: TOnLess): Int64;
 var
   Buf: TArray;
   function Merge(L, M, R: SizeInt): Int64;
@@ -8956,7 +9858,7 @@ var
     J := Succ(M);
     Merge := 0;
     for K := 0 to R - L do
-      if (J > R) or (I <= M) and (c(A[I], A[J]) <= 0) then
+      if (J > R) or (I <= M) and not c(A[J], A[I]) then
         begin
           Buf[K] := A[I];
           Inc(I);
@@ -8989,12 +9891,12 @@ begin
   Result := 0;
 end;
 
-class function TGDelegatedArrayHelper.InversionCountND(constref A: array of T; c: TOnCompare): Int64;
+class function TGDelegatedArrayHelper.InversionCountND(constref A: array of T; c: TOnLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
-class function TGDelegatedArrayHelper.Same(constref A, B: array of T; c: TOnCompare): Boolean;
+class function TGDelegatedArrayHelper.Same(constref A, B: array of T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -9002,12 +9904,12 @@ begin
   if System.High(B) <> R then
     exit(False);
   for I := 0 to R do
-    if c(A[I], B[I]) <> 0 then
+    if c(A[I], B[I]) or c(B[I], A[I]) then
       exit(False);
   Result := True;
 end;
 
-class procedure TGDelegatedArrayHelper.QuickSort(var A: array of T; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedArrayHelper.QuickSort(var A: array of T; c: TOnLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9020,11 +9922,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGDelegatedArrayHelper.IntroSort(var A: array of T; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedArrayHelper.IntroSort(var A: array of T; c: TOnLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9037,11 +9939,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGDelegatedArrayHelper.DualPivotQuickSort(var A: array of T; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedArrayHelper.DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9054,11 +9956,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGDelegatedArrayHelper.PDQSort(var A: array of T; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedArrayHelper.PDQSort(var A: array of T; c: TOnLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9071,11 +9973,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGDelegatedArrayHelper.MergeSort(var A: array of T; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedArrayHelper.MergeSort(var A: array of T; c: TOnLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9087,18 +9989,18 @@ begin
       TMergeSort.SortDesc(@A[0], R, c);
 end;
 
-class procedure TGDelegatedArrayHelper.Sort(var A: array of T; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedArrayHelper.Sort(var A: array of T; c: TOnLess; o: TSortOrder);
 begin
   IntroSort(A, c, o);
 end;
 
-class function TGDelegatedArrayHelper.Sorted(constref A: array of T; c: TOnCompare; o: TSortOrder): TArray;
+class function TGDelegatedArrayHelper.Sorted(constref A: array of T; c: TOnLess; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, c, o);
 end;
 
-class function TGDelegatedArrayHelper.SelectDistinct(constref A: array of T; c: TOnCompare): TArray;
+class function TGDelegatedArrayHelper.SelectDistinct(constref A: array of T; c: TOnLess): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -9109,7 +10011,7 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if c(Result[I], Result[J]) = 0 then
+      if not(c(Result[I], Result[J]) or c(Result[J], Result[I])) then
         continue;
       Inc(I);
       if J > I then
@@ -9120,10 +10022,10 @@ end;
 
 { TGNestedArrayHelper.TMergeSort }
 
-procedure TGNestedArrayHelper.TMergeSort.Init(A: PItem; c: TNestCompare);
+procedure TGNestedArrayHelper.TMergeSort.Init(A: PItem; c: TNestLess);
 begin
   inherited Init(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 procedure TGNestedArrayHelper.TMergeSort.CollapseA;
@@ -9239,11 +10141,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  c := FLess;
+  if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -9251,14 +10153,14 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocB[pLo], LocA[pHi]) <= 0 then
+            if not c(LocA[pHi], LocB[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -9297,11 +10199,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  c := FLess;
+  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -9309,14 +10211,14 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not c(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocB[pLo], LocA[pHi]) >= 0 then
+            if not c(LocB[pLo], LocA[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocB[pLo]);
                 Inc(pLo);
@@ -9355,11 +10257,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) > 0 then
+  c := FLess;
+  if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -9367,13 +10269,13 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) >= 0 then
+      if not c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocA[pLo], LocB[pHi]) > 0 then
+            if c(LocB[pHi], LocA[pLo]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -9412,11 +10314,11 @@ var
   pDst: SizeInt; // current CreateMerge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 begin
   LocA := FData;
-  c := FCompare;
-  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) < 0 then
+  c := FLess;
+  if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -9424,13 +10326,13 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if c(LocA[Pred(From + CountLo + CountHi)], LocA[From]) <= 0 then
+      if not c(LocA[From], LocA[Pred(From + CountLo + CountHi)]) then
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if c(LocA[pLo], LocB[pHi]) < 0 then
+            if c(LocA[pLo], LocB[pHi]) then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -9462,7 +10364,7 @@ begin
     end;
 end;
 
-class procedure TGNestedArrayHelper.TMergeSort.InsertSortA(A: PItem; R, At: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.TMergeSort.InsertSortA(A: PItem; R, At: SizeInt; c: TNestLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -9473,7 +10375,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -9482,7 +10384,7 @@ begin
     end;
 end;
 
-class procedure TGNestedArrayHelper.TMergeSort.InsertSortD(A: PItem; R, At: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.TMergeSort.InsertSortD(A: PItem; R, At: SizeInt; c: TNestLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -9493,7 +10395,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) < 0) do
+      while (J >= 0) and c(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -9502,17 +10404,17 @@ begin
     end;
 end;
 
-class function TGNestedArrayHelper.TMergeSort.CountRunAsc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt;
+class function TGNestedArrayHelper.TMergeSort.CountRunAsc(A: PItem; R: SizeInt; c: TNestLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if not c(A[1], A[0]) then  // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                        // descending
+      else                       // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and c(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -9521,17 +10423,17 @@ begin
     Result := 0;
 end;
 
-class function TGNestedArrayHelper.TMergeSort.CountRunDesc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt;
+class function TGNestedArrayHelper.TMergeSort.CountRunDesc(A: PItem; R: SizeInt; c: TNestLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+      if not c(A[0], A[1]) then  // descending
+        while (Result < R) and not c(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                        // ascending
+      else                       // ascending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -9540,7 +10442,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGNestedArrayHelper.TMergeSort.SortAsc(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.TMergeSort.SortAsc(A: PItem; R: SizeInt; c: TNestLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
@@ -9568,7 +10470,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
 end;
 
-class procedure TGNestedArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TNestLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
@@ -9598,23 +10500,23 @@ end;
 
 { TGNestedArrayHelper.TPDQSort }
 
-class procedure TGNestedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TNestCompare);
+class procedure TGNestedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TNestLess);
 var
   v: TFake;
 begin
-  if c(B^, A^) < 0 then
+  if c(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
       TFake(B^) := v;
     end;
-  if c(D^, B^) < 0 then
+  if c(D^, B^) then
     begin
       v := TFake(B^);
       TFake(B^) := TFake(D^);
       TFake(D^) := v;
     end;
-  if c(B^, A^) < 0 then
+  if c(B^, A^) then
     begin
       v := TFake(A^);
       TFake(A^) := TFake(B^);
@@ -9622,7 +10524,7 @@ begin
     end;
 end;
 
-function TGNestedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TNestCompare): TPart;
+function TGNestedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -9635,16 +10537,16 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Inc(First) until c(First^, Pivot) >= 0;
+  repeat Inc(First) until not c(First^, Pivot);
   if First - 1 = aStart then
     while First < Last do
       begin
         Dec(Last);
-        if c(Last^, Pivot) < 0 then
+        if c(Last^, Pivot) then
           break;
       end
   else
-    repeat Dec(Last) until c(Last^, Pivot) < 0;
+    repeat Dec(Last) until c(Last^, Pivot);
 
   AlreadyPartitioned := First >= Last;
 
@@ -9656,8 +10558,9 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := FOffsetsL;
-  OffsetsR := FOffsetsR;
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+
   NumL := 0;
   NumR := 0;
   StartL := 0;
@@ -9672,21 +10575,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(c(It^, Pivot) >= 0);
+              NumL += PtrInt(not c(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(c((It + 1)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(c((It + 2)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(c((It + 3)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(c((It + 4)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(c((It + 5)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(c((It + 6)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(c((It + 7)^, Pivot) >= 0);
+              NumL += PtrInt(not c((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -9699,21 +10602,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(c((It - 1)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(c((It - 2)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(c((It - 3)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(c((It - 4)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(c((It - 5)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(c((It - 6)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(c((It - 7)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(c((It - 8)^, Pivot) < 0);
+              NumR += PtrInt(c((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -9761,7 +10664,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I; Inc(I);
-          NumL += PtrInt(c(It^, Pivot) >= 0);
+          NumL += PtrInt(not c(It^, Pivot));
           It += 1;
         end;
     end;
@@ -9775,7 +10678,7 @@ begin
           Inc(I);
           (OffsetsR + NumR)^ := I;
           Dec(It);
-          NumR += PtrInt(c(It^, Pivot) < 0);
+          NumR += PtrInt(c(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -9823,7 +10726,7 @@ begin
 end;
 
 procedure TGNestedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
-  aLeftMost: Boolean; c: TNestCompare);
+  aLeftMost: Boolean; c: TNestLess);
 var
   PivotPos: PItem;
   v: TFake;
@@ -9836,7 +10739,10 @@ begin
       Size := aFinish - aStart;
       if Size < INSERTION_SORT_THRESHOLD then
         begin
-          TGNestedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c);
+          if aLeftMost then
+            TGNestedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c)
+          else
+            TGNestedArrayHelper.UnguardInsertionSort(aStart, Pred(aFinish - aStart), c);
           exit;
         end;
       S2 := Size div 2;
@@ -9852,7 +10758,7 @@ begin
         end
       else
         Sort3(aStart + S2, aStart, aFinish - 1, c);
-      if (not aLeftMost) and (c((aStart - 1)^, aStart^) >= 0) then
+      if (not aLeftMost) and not c((aStart - 1)^, aStart^) then
         begin
           aStart := PartitionLeft(aStart, aFinish, c) + 1;
           continue;
@@ -9934,7 +10840,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
-  c: TNestCompare): Boolean;
+  c: TNestLess): Boolean;
 var
   Curr, Sift: PItem;
   Limit: PtrUInt;
@@ -9947,13 +10853,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      if c(Sift^, (Sift - 1)^) < 0 then
+      if c(Sift^, (Sift - 1)^) then
         begin
           v := TFake(Sift^);
           repeat
             TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-          until (Sift = aStart) or (c(T(v), (Sift - 1)^) >= 0);
+          until (Sift = aStart) or not c(T(v), (Sift - 1)^);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -9963,7 +10869,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem;
-  c: TNestCompare): PItem;
+  c: TNestLess): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -9972,24 +10878,24 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until c(Pivot, Last^) >= 0;
+  repeat Dec(Last) until not c(Pivot, Last^);
   if Last + 1 = aFinish then
     while First < Last do
       begin
         Inc(First);
-        if c(Pivot, First^) < 0 then
+        if c(Pivot, First^) then
           break;
       end
   else
-    repeat Inc(First) until c(Pivot, First^) < 0;
+    repeat Inc(First) until c(Pivot, First^);
 
   while First < Last do
     begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until c(Pivot, Last^) >= 0;
-      repeat Inc(First) until c(Pivot, First^) < 0;
+      repeat Dec(Last) until not c(Pivot, Last^);
+      repeat Inc(First) until c(Pivot, First^);
     end;
   PivotPos := Last;
   aStart^ := PivotPos^;
@@ -9997,38 +10903,37 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGNestedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TNestCompare);
+class procedure TGNestedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TNestLess);
 var
   Sorter: TPDQSort;
 begin
   if aStart = aFinish then exit;
-  {%H-}Sorter.AlignStorage;
-  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
 
 { TGNestedArrayHelper }
 
-class function TGNestedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt;
+class function TGNestedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TNestLess): SizeInt;
 begin
   Result := 0;
-  while (Result < R) and (c(A[Result], A[Succ(Result)]) = 0) do
+  while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
     begin
       Inc(Result);
-      if c(A[Pred(Result)], A[Result]) < 0 then   // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if c(A[Pred(Result)], A[Result]) then   // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                                        // descending
+      else                                    // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+          while (Result < R) and not c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
     end;
 end;
 
-class procedure TGNestedArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TNestLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -10037,7 +10942,25 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
+        begin
+          TFake(A[J + 1]) := TFake(A[J]);
+          Dec(J);
+        end;
+      TFake(A[J + 1]) := v;
+    end;
+end;
+
+class procedure TGNestedArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt; c: TNestLess);
+var
+  I, J: SizeInt;
+  v: TFake;
+begin
+  for I := 1 to R do
+    begin
+      v := TFake(A[I]);
+      J := I - 1;
+      while c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -10047,7 +10970,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): SizeInt;
+  c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -10055,7 +10978,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) < 0 then
+      if c(A[M], aValue) then
         L := Succ(M)
       else
         R := M;
@@ -10064,7 +10987,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): SizeInt;
+  c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -10072,7 +10995,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) > 0 then
+      if c(aValue, A[M]) then
         L := Succ(M)
       else
         R := M;
@@ -10081,7 +11004,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): SizeInt;
+  c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -10089,7 +11012,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) > 0 then
+      if c(aValue, A[M]) then
         R := M
       else
         L := Succ(M);
@@ -10098,7 +11021,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): SizeInt;
+  c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -10106,7 +11029,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-      if c(A[M], aValue) < 0 then
+      if c(A[M], aValue) then
         R := M
       else
         L := Succ(M);
@@ -10115,103 +11038,96 @@ begin
 end;
 
 class function TGNestedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): SizeInt;
-var
-  Cmp: SizeInt;
+  c: TNestLess): SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  Cmp := c(A[R], A[0]);
-  if Cmp > 0 then  //ascending
+  if c(A[0], A[R]) then  //ascending
     begin
-      if (c(A[0], aValue) > 0) or (c(A[R], aValue) < 0) then
+      if c(aValue, A[0]) or c(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue, c);
-      if c(A[R], aValue) = 0 then
+      if not(c(A[R], aValue) or c(aValue, A[R])) then
         Result := R;
     end
   else
-    if Cmp < 0 then  //descending
+    if c(A[R], A[0]) then  //descending
       begin
-        if (c(A[0], aValue) < 0) or (c(A[R], aValue) > 0) then
+        if c(A[0], aValue) or c(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue, c);
-        if c(A[R], aValue) = 0 then
+        if not(c(A[R], aValue) or c(aValue, A[R])) then
           Result := R;
       end
     else           //constant
-      if c(A[0], aValue) = 0 then
+      if not(c(A[0], aValue) or c(aValue, A[0])) then
         Result := 0;
 end;
 
 class function TGNestedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): TSearchResult;
-var
-  Cmp: SizeInt;
+  c: TNestLess): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  Cmp := c(A[R], A[0]);
-  if Cmp > 0 then  //ascending
+  if c(A[0], A[R]) then  //ascending
     begin
-      if c(A[0], aValue) > 0 then
+      if c(aValue, A[0]) then
         begin
           Result.InsertIndex := 0;
           exit;
         end
       else
-        if c(A[R], aValue) < 0 then
+        if c(A[R], aValue) then
           begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
       R := BiSearchRightA(A, R, aValue, c);
       Result.InsertIndex := R;
-      if c(A[R], aValue) = 0 then
+      if not(c(A[R], aValue) or c(aValue, A[R])) then
         Result := TSearchResult.Create(R, Succ(R))
       else
         if R > 0 then
-          if c(A[Pred(R)], aValue) = 0 then
+          if not(c(A[Pred(R)], aValue) or c(aValue, A[Pred(R)])) then
             Result.FoundIndex := Pred(R);
     end
   else
-    if Cmp < 0 then  //descending
+    if c(A[R], A[0]) then  //descending
       begin
-        if c(A[0], aValue) < 0 then
+        if c(A[0], aValue) then
           begin
             Result.InsertIndex := 0;
             exit;
           end
         else
-          if c(A[R], aValue) > 0 then
+          if c(aValue, A[R]) then
             begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
         R := BiSearchRightD(A, R, aValue, c);
         Result.InsertIndex := R;
-        if c(A[R], aValue) = 0 then
+        if not(c(A[R], aValue) or c(aValue, A[R])) then
           Result := TSearchResult.Create(R, Succ(R))
         else
           if R > 0 then
-            if c(A[Pred(R)], aValue) = 0 then
+            if not(c(A[Pred(R)], aValue) or c(aValue, A[Pred(R)])) then
               Result.FoundIndex := Pred(R);
       end
     else           //constant
       begin
-        Cmp := c(A[0], aValue);
-        if Cmp > 0 then
+        if c(aValue, A[0]) then
           Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
-            if Cmp = 0 then
+            if not c(A[0], aValue) then
               Result.FoundIndex := R;
           end;
       end;
 end;
 
-class procedure TGNestedArrayHelper.DoHeapSort(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.DoHeapSort(A: PItem; R: SizeInt; c: TNestLess);
 var
   I, Curr, Next: SizeInt;
   v: TFake;
@@ -10225,9 +11141,9 @@ begin
           v := TFake(A[Curr]);
           while Next <= R do
             begin
-              if(Succ(Next) <= R) and (c(A[Next], A[Succ(Next)]) < 0)then
+              if(Next < R) and c(A[Next], A[Succ(Next)]) then
                 Inc(Next);
-              if c(T(v), A[Next]) >= 0 then
+              if not c(T(v), A[Next]) then
                 break;
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -10243,14 +11159,14 @@ begin
           TFake(A[I]) := TFake(A[0]);
           while Next < I do
             begin
-              if(Succ(Next) < I) and (c(A[Next], A[Succ(Next)]) < 0) then
+              if(Succ(Next) < I) and c(A[Next], A[Succ(Next)]) then
                 Inc(Next);
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
               Next := Succ(Next shl 1);
             end;
           Next := Pred(Curr) shr 1;
-          while (Curr > 0) and (c(T(v), A[Next]) > 0) do
+          while (Curr > 0) and c(A[Next], T(v)) do
             begin
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -10263,7 +11179,7 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGNestedArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit;
+class function TGNestedArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
 var
   Pivot: T;
   v: TFake;
@@ -10273,8 +11189,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -10284,7 +11200,7 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestLess);
 begin
   while R > QUICK_INSERT_CUTOFF do
     with QSplitR(A, R, c) do
@@ -10303,14 +11219,14 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGNestedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TNestCompare): PItem;
+class function TGNestedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem;
 begin
   Result := p2;
-  if c(p1^, Result^) < 0 then
+  if c(p1^, Result^) then
     begin
-      if c(p3^, Result^) < 0 then
+      if c(p3^, Result^) then
         begin
-          if c(p1^, p3^) < 0 then
+          if c(p1^, p3^) then
             Result := p3
           else
             Result := p1;
@@ -10318,9 +11234,9 @@ begin
     end
   else { p1^ >= Result^ }
     begin
-      if c(p3^, Result^) > 0 then
+      if c(Result^, p3^) then
         begin
-          if c(p1^, p3^) > 0 then
+          if c(p3^, p1^) then
             Result := p3
           else
             Result := p1;
@@ -10328,7 +11244,7 @@ begin
     end;
 end;
 
-class function TGNestedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit;
+class function TGNestedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
 var
   Pivot: T;
   v: TFake;
@@ -10350,8 +11266,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-    repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -10361,7 +11277,7 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGNestedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess);
 begin
   if R > QUICK_INSERT_CUTOFF then
     if Ttl > 0 then
@@ -10379,7 +11295,7 @@ begin
       InsertionSort(A, R, c);
 end;
 
-class function TGNestedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit;
+class function TGNestedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
 var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
@@ -10387,7 +11303,7 @@ begin
   pL := Succ(Random(Pred(R shr 1)));
   pR := Pred(R - Random(Pred(R shr 1)));
 
-  if c(A[pL], A[pR]) <= 0 then
+  if not c(A[pR], A[pL]) then
     begin
       Pivot1 := TFake(A[pL]);
       TFake(A[pL]) := TFake(A[0]);
@@ -10408,20 +11324,20 @@ begin
   while I <= pR do
     begin
       v := TFake(A[I]);
-      if c(T(v), T(Pivot1)) < 0 then
+      if c(T(v), T(Pivot1)) then
         begin
           TFake(A[I]) := TFake(A[pL]);
           TFake(A[pL]) := v;
           Inc(pL);
         end
       else
-        if c(T(v), T(Pivot2)) > 0 then
+        if c(T(Pivot2), T(v)) then
           begin
-            while (pR >= I) and (c(A[pR], T(Pivot2)) > 0) do
+            while (pR >= I) and c(T(Pivot2), A[pR]) do
               Dec(pR);
             if pR < I then
               break;
-            if c(A[pR], T(Pivot1)) < 0 then
+            if c(A[pR], T(Pivot1)) then
               begin
                 TFake(A[I]) := TFake(A[pL]);
                 TFake(A[pL]) := TFake(A[pR]);
@@ -10443,14 +11359,14 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TNestLess);
 begin
   if R > DPQ_INSERT_CUTOFF then
     with DPQSplit(A, R, c) do
       begin
         DoDPQSort(A, Left - 1, c);
         DoDPQSort(@A[Right + 1], R - Right - 1, c);
-        if c(A[Left], A[Right]) <> 0 then
+        if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, c);
       end
   else
@@ -10458,7 +11374,7 @@ begin
       InsertionSort(A, R, c);
 end;
 
-class function TGNestedArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TNestCompare): T;
+class function TGNestedArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T;
 var
   v: TFake;
   Pivot: T;
@@ -10471,8 +11387,8 @@ begin
       pL := Pred(L);
       pR := Succ(R);
       repeat
-        repeat Inc(pL) until c(A[pL], Pivot) >= 0;
-        repeat Dec(pR) until c(A[pR], Pivot) <= 0;
+        repeat Inc(pL) until not c(A[pL], Pivot);
+        repeat Dec(pR) until not c(Pivot, A[pR]);
         if pL >= pR then break;
         v := TFake(A[pL]);
         TFake(A[pL]) := TFake(A[pR]);
@@ -10489,7 +11405,7 @@ begin
       if pR < N then L := pL;
       if pL > N then R := pR;
     end;
-  if (L < R) and (c(A[L], A[R]) > 0) then
+  if (L < R) and c(A[R], A[L]) then
     begin
       v := TFake(A[L]);
       TFake(A[L]) := TFake(A[R]);
@@ -10499,16 +11415,16 @@ begin
 end;
 
 class function TGNestedArrayHelper.SequentSearch(constref A: array of T; constref aValue: T;
-  c: TNestCompare): SizeInt;
+  c: TNestLess): SizeInt;
 begin
   for Result := 0 to System.High(A) do
-    if c(aValue, A[Result]) = 0 then
+    if not(c(aValue, A[Result]) or c(A[Result], aValue)) then
       exit;
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 class function TGNestedArrayHelper.BinarySearch(constref A: array of T; constref aValue: T;
-  c: TNestCompare): SizeInt;
+  c: TNestLess): SizeInt;
 begin
   Result := High(A);
   if Result >= 0 then
@@ -10516,7 +11432,7 @@ begin
 end;
 
 class function TGNestedArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
-  c: TNestCompare): TSearchResult;
+  c: TNestLess): TSearchResult;
 var
   R: SizeInt;
 begin
@@ -10527,7 +11443,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGNestedArrayHelper.IndexOfMin(constref A: array of T; c: TNestCompare): SizeInt;
+class function TGNestedArrayHelper.IndexOfMin(constref A: array of T; c: TNestLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -10538,7 +11454,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if c(A[I], v) < 0 then
+        if c(A[I], v) then
           begin
             v := A[I];
             Result := I;
@@ -10548,7 +11464,7 @@ begin
     Result := R;
 end;
 
-class function TGNestedArrayHelper.IndexOfMax(constref A: array of T; c: TNestCompare): SizeInt;
+class function TGNestedArrayHelper.IndexOfMax(constref A: array of T; c: TNestLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -10559,7 +11475,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if c(v, A[I]) < 0 then
+        if c(v, A[I]) then
           begin
             v := A[I];
             Result := I;
@@ -10569,7 +11485,7 @@ begin
     Result := R;
 end;
 
-class function TGNestedArrayHelper.GetMin(constref A: array of T; c: TNestCompare): TOptional;
+class function TGNestedArrayHelper.GetMin(constref A: array of T; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -10577,7 +11493,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNestedArrayHelper.GetMax(constref A: array of T; c: TNestCompare): TOptional;
+class function TGNestedArrayHelper.GetMax(constref A: array of T; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -10585,58 +11501,61 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNestedArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if c(A[I], aValue) < 0 then
+        if c(A[I], aValue) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
-class function TGNestedArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aValue := A[0];
       for I := 1 to R do
-        if c(aValue, A[I]) < 0 then
+        if c(aValue, A[I]) then
           aValue := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGNestedArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T;
-  c: TNestCompare): Boolean;
+  c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
   R := System.High(A);
-  Result := R >= 0;
-  if Result then
+  if R >= 0 then
     begin
       aMin := A[0];
       aMax := A[0];
       for I := 1 to R do
-        if c(aMax, A[I]) < 0 then
+        if c(aMax, A[I]) then
           aMax := A[I]
         else
-          if c(A[I], aMin) < 0 then
+          if c(A[I], aMin) then
             aMin := A[I];
+      exit(True);
     end;
+  Result := False;
 end;
 
 class function TGNestedArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T;
-  c: TNestCompare): Boolean;
+  c: TNestLess): Boolean;
 var
   R: SizeInt;
 begin
@@ -10651,7 +11570,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.NthSmallest(var A: array of T; N: SizeInt; c: TNestCompare): TOptional;
+class function TGNestedArrayHelper.NthSmallest(var A: array of T; N: SizeInt; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -10660,12 +11579,12 @@ begin
 end;
 
 class function TGNestedArrayHelper.FindNthSmallestND(constref A: array of T;
-  N: SizeInt; out aValue: T; c: TNestCompare): Boolean;
+  N: SizeInt; out aValue: T; c: TNestLess): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue, c);
 end;
 
-class function TGNestedArrayHelper.NthSmallestND(constref A: array of T;N: SizeInt; c: TNestCompare): TOptional;
+class function TGNestedArrayHelper.NthSmallestND(constref A: array of T;N: SizeInt; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -10673,7 +11592,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNestedArrayHelper.NextPermutation2Asc(var A: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.NextPermutation2Asc(var A: array of T; c: TNestLess): Boolean;
 var
   I, J, R: SizeInt;
   v: TFake;
@@ -10681,14 +11600,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if c(A[I], A[Succ(I)]) > 0 then
+    if c(A[Succ(I)], A[I]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if c(A[J], A[I]) > 0 then
+    if c(A[I], A[J]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -10699,7 +11618,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.NextPermutation2Desc(var A: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.NextPermutation2Desc(var A: array of T; c: TNestLess): Boolean;
 var
   I, J, R: SizeInt;
   v: TFake;
@@ -10707,14 +11626,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if c(A[I], A[Succ(I)]) < 0 then
+    if c(A[I], A[Succ(I)]) then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if c(A[J], A[I]) < 0 then
+    if c(A[J], A[I]) then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -10725,17 +11644,17 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.IsNonDescending(constref A: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.IsNonDescending(constref A: array of T; c: TNestLess): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if c(A[I], A[Succ(I)]) > 0 then
+    if c(A[Succ(I)], A[I]) then
       exit(False);
   Result := True;
 end;
 
-class function TGNestedArrayHelper.IsStrictAscending(constref A: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.IsStrictAscending(constref A: array of T; c: TNestLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -10743,7 +11662,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if c(A[Pred(I)], A[I]) >= 0 then
+        if not c(A[Pred(I)], A[I]) then
           exit(False);
       Result := True;
     end
@@ -10751,17 +11670,17 @@ begin
     Result := False;
 end;
 
-class function TGNestedArrayHelper.IsNonAscending(constref A: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.IsNonAscending(constref A: array of T; c: TNestLess): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if c(A[I], A[Succ(I)]) < 0 then
+    if c(A[I], A[Succ(I)]) then
       exit(False);
   Result := True;
 end;
 
-class function TGNestedArrayHelper.IsStrictDescending(constref A: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.IsStrictDescending(constref A: array of T; c: TNestLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -10769,7 +11688,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if c(A[Pred(I)], A[I]) <= 0 then
+        if not c(A[I], A[Pred(I)]) then
           exit(False);
       Result := True;
     end
@@ -10777,7 +11696,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedArrayHelper.InversionCount(var A: array of T; c: TNestCompare): Int64;
+class function TGNestedArrayHelper.InversionCount(var A: array of T; c: TNestLess): Int64;
 var
   Buf: TArray;
   function Merge(L, M, R: SizeInt): Int64;
@@ -10788,7 +11707,7 @@ var
     J := Succ(M);
     Merge := 0;
     for K := 0 to R - L do
-      if (J > R) or (I <= M) and (c(A[I], A[J]) <= 0) then
+      if (J > R) or (I <= M) and not c(A[J], A[I]) then
         begin
           Buf[K] := A[I];
           Inc(I);
@@ -10821,12 +11740,12 @@ begin
   Result := 0;
 end;
 
-class function TGNestedArrayHelper.InversionCountND(constref A: array of T; c: TNestCompare): Int64;
+class function TGNestedArrayHelper.InversionCountND(constref A: array of T; c: TNestLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
-class function TGNestedArrayHelper.Same(constref A, B: array of T; c: TNestCompare): Boolean;
+class function TGNestedArrayHelper.Same(constref A, B: array of T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -10834,12 +11753,12 @@ begin
   if System.High(B) <> R then
     exit(False);
   for I := 0 to R do
-    if c(A[I], B[I]) <> 0 then
+    if c(A[I], B[I]) or c(B[I], A[I]) then
       exit(False);
   Result := True;
 end;
 
-class procedure TGNestedArrayHelper.QuickSort(var A: array of T; c: TNestCompare; o: TSortOrder);
+class procedure TGNestedArrayHelper.QuickSort(var A: array of T; c: TNestLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -10852,11 +11771,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGNestedArrayHelper.IntroSort(var A: array of T; c: TNestCompare; o: TSortOrder);
+class procedure TGNestedArrayHelper.IntroSort(var A: array of T; c: TNestLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -10869,11 +11788,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGNestedArrayHelper.DualPivotQuickSort(var A: array of T; c: TNestCompare; o: TSortOrder);
+class procedure TGNestedArrayHelper.DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -10886,11 +11805,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGNestedArrayHelper.PDQSort(var A: array of T; c: TNestCompare; o: TSortOrder);
+class procedure TGNestedArrayHelper.PDQSort(var A: array of T; c: TNestLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -10903,11 +11822,11 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+      if (o = soDesc) and c(A[0], A[R]) then
         Reverse(A);
 end;
 
-class procedure TGNestedArrayHelper.MergeSort(var A: array of T; c: TNestCompare; o: TSortOrder);
+class procedure TGNestedArrayHelper.MergeSort(var A: array of T; c: TNestLess; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -10919,18 +11838,18 @@ begin
       TMergeSort.SortDesc(@A[0], R, c);
 end;
 
-class procedure TGNestedArrayHelper.Sort(var A: array of T; c: TNestCompare; o: TSortOrder);
+class procedure TGNestedArrayHelper.Sort(var A: array of T; c: TNestLess; o: TSortOrder);
 begin
   IntroSort(A, c, o);
 end;
 
-class function TGNestedArrayHelper.Sorted(constref A: array of T; c: TNestCompare; o: TSortOrder): TArray;
+class function TGNestedArrayHelper.Sorted(constref A: array of T; c: TNestLess; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, c, o);
 end;
 
-class function TGNestedArrayHelper.SelectDistinct(constref A: array of T; c: TNestCompare): TArray;
+class function TGNestedArrayHelper.SelectDistinct(constref A: array of T; c: TNestLess): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -10941,7 +11860,7 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if c(Result[I], Result[J]) = 0 then
+      if not(c(Result[I], Result[J]) or c(Result[J], Result[I])) then
         continue;
       Inc(I);
       if J > I then
@@ -11009,8 +11928,9 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := FOffsetsL;
-  OffsetsR := FOffsetsR;
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+
   NumL := 0;
   NumR := 0;
   StartL := 0;
@@ -11385,8 +12305,7 @@ var
   Sorter: TPDQSort;
 begin
   if aStart = aFinish then exit;
-  {%H-}Sorter.AlignStorage;
-  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGSimpleArrayHelper }
@@ -11611,7 +12530,7 @@ begin
           v := A[Curr];
           while Next <= R do
             begin
-              if(Succ(Next) <= R) and (A[Next] < A[Succ(Next)])then
+              if(Next < R) and (A[Next] < A[Succ(Next)])then
                 Inc(Next);
               if v >= A[Next] then
                 break;
@@ -12001,7 +12920,7 @@ begin
   for Result := 0 to System.High(A) do
     if aValue = A[Result] then
       exit;
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 class function TGSimpleArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
