@@ -3,9 +3,8 @@ program TestLGArrayHelpers;
 {$mode objfpc}{$H+}
 
 uses
-  Interfaces, Forms, LGArrayHelpUtilTest, LGBaseArrayHelperTest, LGComparableArrayHelperTest,
-  LGDelegatedArrayHelperTest, LGNestedArrayHelperTest, LGNumArrayHelperTest, LGRegularArrayHelperTest,
-  GuiTestRunner;
+  Interfaces, Forms, GuiTestRunner, LGArrayHelpUtilTest, LGBaseArrayHelperTest, LGComparableArrayHelperTest,
+  LGDelegatedArrayHelperTest, LGRegularArrayHelperTest, LGNestedArrayHelperTest, LGNumArrayHelperTest;
 
 {$R *.res}
 
