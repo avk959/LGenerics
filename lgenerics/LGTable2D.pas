@@ -201,7 +201,7 @@ type
         class function Equal([const[ref]] L, R: TRow): Boolean;
 
       functor TColCmpRel(column equality relation) must provide:
-        class function Compare([const[ref]] L, R: TCol): SizeInt; }
+        class function Less([const[ref]] L, R: TCol): Boolean; }
   generic TGTreeTable2D<TRow, TCol, TValue, TRowEqRel, TColCmpRel> = class(
     specialize TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel>)
   protected
@@ -283,7 +283,7 @@ type
         class function Equal([const[ref]] L, R: TRow): Boolean;
 
       functor TColCmpRel(column equality relation) must provide:
-        class function Compare([const[ref]] L, R: TCol): SizeInt; }
+        class function Less([const[ref]] L, R: TCol): Boolean; }
   generic TGListTable2D<TRow, TCol, TValue, TRowEqRel, TColCmpRel> = class(
     specialize TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel>)
   protected

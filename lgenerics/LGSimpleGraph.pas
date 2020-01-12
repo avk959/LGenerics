@@ -251,8 +251,8 @@ type
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
     function  SortComplementByWidth: TIntArray;
     function  SortNodesByDegree(o: TSortOrder): TIntArray;
-    function  CmpByDegree(constref L, R: SizeInt): SizeInt;
-    function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
+    function  CmpByDegree(constref L, R: SizeInt): Boolean;
+    function  CmpIntArrayLen(constref L, R: TIntArray): Boolean;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; override;
@@ -3040,25 +3040,14 @@ begin
   TSortByDegreeHelper.Sort(Result, @CmpByDegree, o);
 end;
 
-function TGSimpleGraph.CmpByDegree(constref L, R: SizeInt): SizeInt;
+function TGSimpleGraph.CmpByDegree(constref L, R: SizeInt): Boolean;
 begin
-  Result := SizeInt.Compare(AdjLists[L]^.Count, AdjLists[R]^.Count);
-  if Result = 0 then
-    if L < R then
-      Result := -1
-    else
-      Result := 1;
+  Result := AdjLists[L]^.Count < AdjLists[R]^.Count;
 end;
 
-function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
+function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): Boolean;
 begin
-  if System.Length(L) > System.Length(R) then
-    Result := 1
-  else
-    if System.Length(L) < System.Length(R) then
-      Result := -1
-    else
-      Result := 0;
+  Result := System.Length(L) < System.Length(R);
 end;
 
 function TGSimpleGraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;

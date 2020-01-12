@@ -39,8 +39,8 @@ uses
 type
 
   { TGBaseSortedList is always sorted ascending;
-      functor TCmpRel(column equality relation) must provide:
-        class function Compare([const[ref]] L, R: TCol): SizeInt; }
+      functor TCmpRel(comparison relation) must provide:
+        class function Less([const[ref]] L, R: TCol): Boolean; }
   generic TGBaseSortedList<T, TCmpRel> = class(specialize TGAbstractCollection<T>)
   protected
   type
@@ -200,14 +200,14 @@ type
   { returns the leftmost index of the nearest element that is greater then or equal to
     aValue(depending on aInclusive), or -1 if there is no such element }
     function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt;
-  { returns the rightmost index of the nearest element that is less then aValue
+  { returns the rightmost index of the nearest element that is TLess then aValue
     (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
     function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt;
-  { enumerates values that are strictly less than(if not aInclusive) aHighBound }
+  { enumerates values that are strictly TLess than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable;
   { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
-  { enumerates values that are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+  { enumerates values that are greater than or equal to aLowBound and strictly TLess than aHighBound(by default)}
     function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
     function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TSortedList;
     function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TSortedList;
@@ -286,7 +286,7 @@ type
     PEntry = ^TEntry;
 
     TEntryCmpRel = class
-      class function Compare(constref L, R: TEntry): SizeInt; static; inline;
+      class function Less(constref L, R: TEntry): Boolean; static; inline;
     end;
 
     TEnumerator = record
@@ -335,8 +335,8 @@ type
   end;
 
   { TGLiteSortedList is always sorted ascending;
-      functor TCmpRel(column equality relation) must provide:
-        class function Compare([const[ref]] L, R: TCol): SizeInt; }
+      functor TCmpRel(comparison relation) must provide:
+        class function Less([const[ref]] L, R: TCol): Boolean; }
   generic TGLiteSortedList<T, TCmpRel> = record
   private
   type
@@ -475,7 +475,7 @@ type
   end;
 
   { TGLiteComparableSortedList is always sorted ascending;
-    it assumes that type T has implemented comparision operators }
+    it assumes that type T has implemented comparison operators }
   generic TGLiteComparableSortedList<T> = record
   private
   type
@@ -1065,10 +1065,8 @@ end;
 procedure TGBaseSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
 var
   sr: TSearchResult;
-  c: SizeInt;
 begin
-  c := TCmpRel.Compare(aValue, FItems[aIndex]);
-  if c <> 0 then
+  if TCmpRel.Less(aValue, FItems[aIndex]) or TCmpRel.Less(FItems[aIndex], aValue) then
     begin
       CheckInIteration;
       if ElemCount > 1 then
@@ -1099,7 +1097,7 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if TCmpRel.Compare(FItems[I], FItems[J]) = 0 then
+      if not(TCmpRel.Less(FItems[I], FItems[J]) or TCmpRel.Less(FItems[J], FItems[I])) then
         continue;
       Inc(I);
       if J > I then
@@ -1457,40 +1455,40 @@ end;
 
 function TGBaseSortedList.RightmostLT(constref aValue: T): SizeInt;
 begin
-  if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[0]) <= 0) then
+  if (ElemCount = 0) or not TCmpRel.Less(FItems[0], aValue) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0 then
+  if TCmpRel.Less(FItems[Pred(ElemCount)], aValue) then
     exit(Pred(ElemCount));
   Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
-  if TCmpRel.Compare(FItems[Result], aValue) = 0 then
+  if not(TCmpRel.Less(FItems[Result], aValue) or TCmpRel.Less(aValue, FItems[Result])) then
     Dec(Result);
 end;
 
 function TGBaseSortedList.RightmostLE(constref aValue: T): SizeInt;
 begin
-  if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[0]) < 0) then
+  if (ElemCount = 0) or TCmpRel.Less(aValue, FItems[0]) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0 then
+  if not TCmpRel.Less(aValue, FItems[Pred(ElemCount)]) then
     exit(Pred(ElemCount));
   Result := THelper.BiSearchRightA(@FItems[0], Pred(ElemCount), aValue);
-  if TCmpRel.Compare(FItems[Result], aValue) > 0 then
+  if TCmpRel.Less(aValue, FItems[Result]) then
     Dec(Result);
 end;
 
 function TGBaseSortedList.LeftmostGT(constref aValue: T): SizeInt;
 begin
-  if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0) then
+  if (ElemCount = 0) or not TCmpRel.Less(aValue, FItems[Pred(ElemCount)]) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FItems[0]) < 0 then
+  if TCmpRel.Less(aValue, FItems[0]) then
     exit(0);
   Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
 end;
 
 function TGBaseSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0) then
+  if (ElemCount = 0) or TCmpRel.Less(FItems[Pred(ElemCount)], aValue) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FItems[0]) <= 0 then
+  if not TCmpRel.Less(FItems[0], aValue) then
     exit(0);
   Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
 end;
@@ -1638,13 +1636,14 @@ function TGBaseSortedList.CountOf(constref aValue: T): SizeInt;
 var
   LastIdx, FirstIdx: SizeInt;
 begin
-  if ElemCount = 0 then
+  if ElemCount = 0 then //todo: ???
     exit(0);
   FirstIdx := THelper.BinarySearch(FItems[0..Pred(ElemCount)], aValue);
   if FirstIdx < 0 then
     exit(0);
   LastIdx := FirstIdx;
-  while (LastIdx < Pred(ElemCount)) and (TCmpRel.Compare(aValue, FItems[Succ(LastIdx)]) = 0) do
+  while (LastIdx < Pred(ElemCount)) and not
+        (TCmpRel.Less(aValue, FItems[Succ(LastIdx)]) or TCmpRel.Less(FItems[Succ(LastIdx)], aValue)) do
     Inc(LastIdx);
   Result := Succ(LastIdx - FirstIdx);
 end;
@@ -1930,9 +1929,9 @@ end;
 
 { TGSortedListTable.TEntryCmpRel }
 
-class function TGSortedListTable.TEntryCmpRel.Compare(constref L, R: TEntry): SizeInt;
+class function TGSortedListTable.TEntryCmpRel.Less(constref L, R: TEntry): Boolean;
 begin
-  Result := TCmpRel.Compare(L.Key, R.Key);
+  Result := TCmpRel.Less(L.Key, R.Key);
 end;
 
 { TGSortedListTable.TEnumerator }
@@ -2278,10 +2277,8 @@ end;
 procedure TGLiteSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
 var
   sr: TSearchResult;
-  c: SizeInt;
 begin
-  c := TCmpRel.Compare(aValue, FBuffer.FItems[aIndex]);
-  if c <> 0 then
+  if TCmpRel.Less(aValue, FBuffer.FItems[aIndex]) or TCmpRel.Less(FBuffer.FItems[aIndex], aValue) then
     begin
       if Count > 1 then
         begin
@@ -2337,7 +2334,8 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if TCmpRel.Compare(FBuffer.FItems[I], FBuffer.FItems[J]) = 0 then
+      if not(TCmpRel.Less(FBuffer.FItems[I], FBuffer.FItems[J]) or
+             TCmpRel.Less(FBuffer.FItems[J], FBuffer.FItems[I])) then
         continue;
       Inc(I);
       if J > I then
@@ -2360,40 +2358,40 @@ end;
 
 function TGLiteSortedList.RightmostLT(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0) then
+  if IsEmpty or not TCmpRel.Less(FBuffer.FItems[0], aValue) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0 then
+  if TCmpRel.Less(FBuffer.FItems[Pred(Count)], aValue) then
      exit(Pred(Count));
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if TCmpRel.Compare(FBuffer.FItems[Result], aValue) = 0 then
+  if not(TCmpRel.Less(FBuffer.FItems[Result], aValue) or TCmpRel.Less(aValue, FBuffer.FItems[Result])) then
     Dec(Result);
 end;
 
 function TGLiteSortedList.RightmostLE(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[0]) < 0) then
+  if IsEmpty or TCmpRel.Less(aValue, FBuffer.FItems[0]) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0 then
+  if not TCmpRel.Less(aValue, FBuffer.FItems[Pred(Count)]) then
     exit(Pred(Count));
   Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if TCmpRel.Compare(FBuffer.FItems[Result], aValue) > 0 then
+  if TCmpRel.Less(aValue, FBuffer.FItems[Result]) then
     Dec(Result);
 end;
 
 function TGLiteSortedList.LeftmostGT(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0) then
+  if IsEmpty or not TCmpRel.Less(aValue, FBuffer.FItems[Pred(Count)]) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FBuffer.FItems[0]) < 0 then
+  if TCmpRel.Less(aValue, FBuffer.FItems[0]) then
     exit(0);
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
 end;
 
 function TGLiteSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if (Count = 0) or (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0) then
+  if (Count = 0) or TCmpRel.Less(FBuffer.FItems[Pred(Count)], aValue) then
     exit(NULL_INDEX);
-  if TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0 then
+  if not TCmpRel.Less(FBuffer.FItems[0], aValue) then
     exit(0);
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
@@ -2630,13 +2628,15 @@ function TGLiteSortedList.CountOf(constref aValue: T): SizeInt;
 var
   LastIdx, FirstIdx: SizeInt;
 begin
-  if IsEmpty then
+  if IsEmpty then  //todo: ???
     exit(0);
   FirstIdx := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
   if FirstIdx < 0 then
     exit(0);
   LastIdx := FirstIdx;
-  while (LastIdx < Pred(Count)) and (TCmpRel.Compare(aValue, FBuffer.FItems[Succ(LastIdx)]) = 0) do
+  while (LastIdx < Pred(Count)) and not
+        (TCmpRel.Less(aValue, FBuffer.FItems[Succ(LastIdx)]) or
+         TCmpRel.Less(FBuffer.FItems[Succ(LastIdx)], aValue)) do
     Inc(LastIdx);
   Result := Succ(LastIdx - FirstIdx);
 end;

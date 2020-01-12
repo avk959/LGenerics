@@ -84,8 +84,8 @@ type
   end;
 
   { TGLiteRbTree implements the conventional red-black tree;
-      functor TCmpRel (comparision relation) must provide:
-        function Compare([const[ref]] L, R: TKey): SizeInt;
+      functor TCmpRel (comparison relation) must provide:
+        class function Less([const[ref]] L, R: TKey): Boolean;
     on assignment and when passed by value, the whole treap is copied }
   generic TGLiteRbTree<TKey, TValue, TCmpRel> = record
   public
@@ -416,19 +416,16 @@ begin
 end;
 
 function TGLiteRbTree.FindNode(constref aKey: TKey; out aParent: PNode): PNode;
-var
-  c: SizeInt;
 begin
   Result := Root;
   aParent := nil;
   while Result <> nil do
     begin
       aParent := Result;
-      c := TCmpRel.Compare(aKey, Result^.Key);
-      if c < 0 then
+      if TCmpRel.Less(aKey, Result^.Key) then
         Result := Result^.FLeft
       else
-        if c > 0 then
+        if TCmpRel.Less(Result^.Key, aKey) then
           Result := Result^.FRight
         else
           break;
@@ -439,7 +436,7 @@ function TGLiteRbTree.FindInsertPos(constref aKey: TKey): PNode;
 begin
   Result := Root;
   while Result <> nil do
-    if TCmpRel.Compare(aKey, Result^.Key) < 0 then
+    if TCmpRel.Less(aKey, Result^.Key) then
       begin
         if Result^.FLeft <> nil then
           Result := Result^.FLeft
@@ -463,7 +460,7 @@ begin
     begin
       Parent := FindInsertPos(aNode^.Key);
       aNode^.ParentPtr := Parent;
-      if TCmpRel.Compare(aNode^.Key, Parent^.Key) < 0 then
+      if TCmpRel.Less(aNode^.Key, Parent^.Key) then
         Parent^.FLeft := aNode
       else
         Parent^.FRight := aNode;
@@ -479,7 +476,7 @@ begin
   if aParent <> nil then
     begin
       aNode^.ParentPtr := aParent;
-      if TCmpRel.Compare(aNode^.Key, aParent^.Key) < 0 then
+      if TCmpRel.Less(aNode^.Key, aParent^.Key) then
         aParent^.FLeft := aNode
       else
         aParent^.FRight := aNode;
@@ -771,7 +768,7 @@ begin
           aState := rsInvalidLink;
           exit(0);
         end;
-      if TCmpRel.Compare(aNode^.Left^.Key, aNode^.Key) >= 0 then
+      if not TCmpRel.Less(aNode^.Left^.Key, aNode^.Key) then
         begin
           aState := rsInvalidKey;
           exit(0);
@@ -784,7 +781,7 @@ begin
           aState := rsInvalidLink;
           exit(0);
         end;
-      if TCmpRel.Compare(aNode^.Right^.Key, aNode^.Key) < 0 then
+      if TCmpRel.Less(aNode^.Right^.Key, aNode^.Key) then
         begin
           aState := rsInvalidKey;
           exit(0);

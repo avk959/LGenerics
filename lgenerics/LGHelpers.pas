@@ -38,117 +38,117 @@ type
 
   TGGuidHelper = record helper(TGuidHelper) for TGUID
   type
-    class function HashCode(constref aValue: TGUID): SizeInt; static; inline;
-    class function Equal(constref L, R: TGUID): Boolean; static; inline;
-    class function Compare(constref L, R: TGUID): SizeInt; static; inline;
+    class function HashCode(const aValue: TGUID): SizeInt; static; inline;
+    class function Equal(const L, R: TGUID): Boolean; static; inline;
+    class function Less(const L, R: TGUID): Boolean; static; inline;
   end;
 
   TStrHelper = type helper for string
-    class function HashCode(constref aValue: string): SizeInt; static; inline;
-    class function Equal(constref L, R: string): Boolean; static; inline;
-    class function Compare(constref L, R: string): SizeInt; static; inline;
+    class function HashCode(const aValue: string): SizeInt; static; inline;
+    class function Equal(const L, R: string): Boolean; static; inline;
+    class function Less(const L, R: string): Boolean; static; inline;
   end;
 
   TAStrHelper = type helper(TStringHelper) for ansistring
-    class function HashCode(constref aValue: ansistring): SizeInt; static; inline;
-    class function Equal(constref L, R: ansistring): Boolean; static; inline;
-    class function Compare(constref L, R: ansistring): SizeInt; static;
+    class function HashCode(const aValue: ansistring): SizeInt; static; inline;
+    class function Equal(const L, R: ansistring): Boolean; static; inline;
+    class function Less(const L, R: ansistring): Boolean; static;
   end;
 
   TWStrHelper = type helper for widestring
-    class function HashCode(constref aValue: widestring): SizeInt; static; inline;
-    class function Equal(constref L, R: widestring): Boolean; static; inline;
-    class function Compare(constref L, R: widestring): SizeInt; static;
+    class function HashCode(const aValue: widestring): SizeInt; static; inline;
+    class function Equal(const L, R: widestring): Boolean; static; inline;
+    class function Less(const L, R: widestring): Boolean; static;
   end;
 
   TUStrHelper = type helper for unicodestring
-    class function HashCode(constref aValue: unicodestring): SizeInt; static; inline;
-    class function Equal(constref L, R: unicodestring): Boolean; static; inline;
-    class function Compare(constref L, R: unicodestring): SizeInt; static;
+    class function HashCode(const aValue: unicodestring): SizeInt; static; inline;
+    class function Equal(const L, R: unicodestring): Boolean; static; inline;
+    class function Less(const L, R: unicodestring): Boolean; static;
   end;
 
   TShortStrHelper = type helper for shortstring
-    class function HashCode(constref aValue: shortstring): SizeInt; static; inline;
-    class function Equal(constref L, R: shortstring): Boolean; static; inline;
-    class function Compare(constref L, R: shortstring): SizeInt; static; inline;
+    class function HashCode(const aValue: shortstring): SizeInt; static; inline;
+    class function Equal(const L, R: shortstring): Boolean; static; inline;
+    class function Less(const L, R: shortstring): Boolean; static; inline;
   end;
 
   TGACharHelper = type helper for AnsiChar
     class function HashCode(aValue: AnsiChar): SizeInt; static; inline;
     class function Equal(L, R: AnsiChar): Boolean; static; inline;
-    class function Compare(L, R: AnsiChar): SizeInt; static; inline;
+    class function Less(L, R: AnsiChar): Boolean; static; inline;
   end;
 
   TGWCharHelper = type helper for WideChar
     class function HashCode(aValue: WideChar): SizeInt; static; inline;
     class function Equal(L, R: WideChar): Boolean; static; inline;
-    class function Compare(L, R: WideChar): SizeInt; static; inline;
+    class function Less(L, R: WideChar): Boolean; static; inline;
   end;
 
   TGByteHelper = type helper(TByteHelper) for Byte
     class function HashCode(aValue: Byte): SizeInt; static; inline;
     class function Equal(L, R: Byte): Boolean; static; inline;
-    class function Compare(L, R: Byte): SizeInt; static; inline;
+    class function Less(L, R: Byte): Boolean; static; inline;
   end;
 
   TGShortIntHelper = type helper(TShortIntHelper) for ShortInt
     class function HashCode(aValue: ShortInt): SizeInt; static; inline;
     class function Equal(L, R: ShortInt): Boolean; static; inline;
-    class function Compare(L, R: ShortInt): SizeInt; static; inline;
+    class function Less(L, R: ShortInt): Boolean; static; inline;
   end;
 
   TGWordHelper = type helper(TWordHelper) for Word
     class function HashCode(aValue: Word): SizeInt; static; inline;
     class function Equal(L, R: Word): Boolean; static; inline;
-    class function Compare(L, R: Word): SizeInt; static; inline;
+    class function Less(L, R: Word): Boolean; static; inline;
   end;
 
   TGSmallIntHelper = type helper(TSmallIntHelper) for SmallInt
     class function HashCode(aValue: SmallInt): SizeInt; static; inline;
     class function Equal(L, R: SmallInt): Boolean; static; inline;
-    class function Compare(L, R: SmallInt): SizeInt; static; inline;
+    class function Less(L, R: SmallInt): Boolean; static; inline;
   end;
 
   TGDWordHelper = type helper(TCardinalHelper) for DWord
     class function HashCode(aValue: DWord): SizeInt; static; inline;
     class function Equal(L, R: DWord): Boolean; static; inline;
-    class function Compare(L, R: DWord): SizeInt; static; inline;
+    class function Less(L, R: DWord): Boolean; static; inline;
   end;
 
   TGLongIntHelper = type helper(TIntegerHelper) for LongInt
     class function HashCode(aValue: LongInt): SizeInt; static; inline;
     class function Equal(L, R: LongInt): Boolean; static; inline;
-    class function Compare(L, R: LongInt): SizeInt; static; inline;
+    class function Less(L, R: LongInt): Boolean; static; inline;
   end;
 
   TGQWordHelper = type helper(TQWordHelper) for QWord
     class function HashCode(aValue: QWord): SizeInt; static; inline;
     class function Equal(L, R: QWord): Boolean; static; inline;
-    class function Compare(L, R: QWord): SizeInt; static; inline;
+    class function Less(L, R: QWord): Boolean; static; inline;
   end;
 
   TGInt64Helper = type helper(TInt64Helper) for Int64
     class function HashCode(aValue: Int64): SizeInt; static; inline;
     class function Equal(L, R: Int64): Boolean; static; inline;
-    class function Compare(L, R: Int64): SizeInt; static; inline;
+    class function Less(L, R: Int64): Boolean; static; inline;
   end;
 
   TGNativeUIntHelper = type helper(TNativeUIntHelper) for NativeUInt
     class function HashCode(aValue: NativeUInt): SizeInt; static; inline;
     class function Equal(L, R: NativeUInt): Boolean; static; inline;
-    class function Compare(L, R: NativeUInt): SizeInt; static; inline;
+    class function Less(L, R: NativeUInt): Boolean; static; inline;
   end;
 
   TGNativeIntHelper = type helper(TNativeIntHelper) for NativeInt
     class function HashCode(aValue: NativeInt): SizeInt; static; inline;
     class function Equal(L, R: NativeInt): Boolean; static; inline;
-    class function Compare(L, R: NativeInt): SizeInt; static; inline;
+    class function Less(L, R: NativeInt): Boolean; static; inline;
   end;
 
   TGPointerHelper = type helper for Pointer
     class function HashCode(aValue: Pointer): SizeInt; static; inline;
     class function Equal(L, R: Pointer): Boolean; static; inline;
-    class function Compare(L, R: Pointer): SizeInt; static; inline;
+    class function Less(L, R: Pointer): Boolean; static; inline;
   end;
 
  // currently special float types (nan, infinity) are ignored
@@ -157,14 +157,14 @@ type
     function IsZero: Boolean; inline;
     class function HashCode(aValue: Single): SizeInt; static; inline;
     class function Equal(L, R: Single): Boolean; static; inline;
-    class function Compare(L, R: Single): SizeInt; static; inline;
+    class function Less(L, R: Single): Boolean; static; inline;
   end;
 
   TGDoubleHelper = type helper(TDoubleHelper) for Double
     function IsZero: Boolean; inline;
     class function HashCode(aValue: Double): SizeInt; static; inline;
     class function Equal(L, R: Double): Boolean; static; inline;
-    class function Compare(L, R: Double): SizeInt; static; inline;
+    class function Less(L, R: Double): Boolean; static; inline;
   end;
 
 {$ifdef FPC_HAS_TYPE_EXTENDED}
@@ -172,32 +172,32 @@ type
     function IsZero: Boolean; inline;
     class function HashCode(aValue: Extended): SizeInt; static; inline;
     class function Equal(L, R: Extended): Boolean; static; inline;
-    class function Compare(L, R: Extended): SizeInt; static; inline;
+    class function Less(L, R: Extended): Boolean; static; inline;
   end;
 {$ENDIF}
 
   TCompHelper = type helper for Comp
     class function HashCode(aValue: Comp): SizeInt; static; inline;
     class function Equal(L, R: Comp): Boolean; static; inline;
-    class function Compare(L, R: Comp): SizeInt; static; inline;
+    class function Less(L, R: Comp): Boolean; static; inline;
   end;
 
   TGDateTimeHelper = type helper for TDateTime
     class function HashCode(aValue: TDateTime): SizeInt; static; inline;
     class function Equal(L, R: TDateTime): Boolean; static; inline;
-    class function Compare(L, R: TDateTime): SizeInt; static; inline;
+    class function Less(L, R: TDateTime): Boolean; static; inline;
   end;
 
   TGDateHelper = type helper for TDate
     class function HashCode(aValue: TDate): SizeInt; static; inline;
     class function Equal(L, R: TDate): Boolean; static; inline;
-    class function Compare(L, R: TDate): SizeInt; static; inline;
+    class function Less(L, R: TDate): Boolean; static; inline;
   end;
 
   TGTimeHelper = type helper for TTime
     class function HashCode(aValue: TTime): SizeInt; static; inline;
     class function Equal(L, R: TTime): Boolean; static; inline;
-    class function Compare(L, R: TTime): SizeInt; static; inline;
+    class function Less(L, R: TTime): Boolean; static; inline;
   end;
 
   TGCurrencyHelper = type helper for Currency
@@ -206,20 +206,20 @@ type
     MaxValue: Currency = 922337203685477.5807;
     class function HashCode(const aValue: Currency): SizeInt; static; inline;
     class function Equal(const L, R: Currency): Boolean; static; inline;
-    class function Compare(const L, R: Currency): SizeInt; static; inline;
+    class function Less(const L, R: Currency): Boolean; static; inline;
     function ToString: string; inline;
   end;
 
   TGObjectHelper = class helper for TObject
     class function HashCode(aValue: TObject): SizeInt; static; inline;
     class function Equal(L, R: TObject): Boolean; static; inline;
-    class function Compare(L, R: TObject): SizeInt; static; inline;
+    class function Less(L, R: TObject): Boolean; static; inline;
   end;
 
   TVariantHelper = type helper for Variant
     class function HashCode(constref aValue: Variant): SizeInt; static; inline;
     class function Equal(constref L, R: Variant): Boolean; static; inline;
-    class function Compare(constref L, R: Variant): SizeInt; static; inline;
+    class function Less(constref L, R: Variant): Boolean; static; inline;
   end;
 
   TStringArrayHelper = type helper for TStringArray
@@ -239,7 +239,7 @@ type
   end;
 
   TPrioTaskHelper = type helper for IPriorityTask
-    class function Compare(L, R: IPriorityTask): SizeInt; static; inline;
+    class function Less(L, R: IPriorityTask): Boolean; static; inline;
   end;
 
   PTypeInfo = TypInfo.PTypeInfo;
@@ -248,13 +248,13 @@ type
   generic TGDefaults<T> = class
   public
   type
-    TCompare          = specialize TGCompare<T>;
-    TOnCompare        = specialize TGOnCompare<T>;
-    TEqualCompare     = specialize TGEqualCompare<T>;
-    TOnEqualCompare   = specialize TGOnEqualCompare<T>;
+    TLess           = specialize TGLessCompare<T>;
+    TOnLess         = specialize TGOnLessCompare<T>;
+    TEqualCompare   = specialize TGEqualCompare<T>;
+    TOnEqualCompare = specialize TGOnEqualCompare<T>;
 
     TComparer = class
-      class function Compare(constref L, R: T): SizeInt; static; inline;
+      class function Less(constref L, R: T): Boolean; static; inline;
     end;
 
     TEqualityComparer = class
@@ -267,53 +267,53 @@ type
     THashCode = function(constref aValue: T): SizeInt;
 
     TComparator = object
-      function Compare(constref L, R: T): SizeInt;
+      function LessCompare(constref L, R: T): Boolean;
       function EqualCompare(constref L, R: T): Boolean;
     end;
 
   class var
-    CFCompare: TCompare;
+    CFLess: TLess;
     CFEqualCompare: TEqualCompare;
     CFHashCode: THashCode;
     CFComparator: TComparator;
     class constructor Init;
     class procedure InitInt(aData: PTypeData); static;
     class procedure InitFloat(aData: PTypeData); static;
-    class function CompareBin(constref L, R: T): SizeInt; static;
+    class function CompareBin(constref L, R: T): Boolean; static;
     class function EqualBin(constref L, R: T): Boolean; static;
     class function HashBin(constref aValue: T): SizeInt; static;
-    class function GetOnCompare: TOnCompare; static; inline;
+    class function GetOnLess: TOnLess; static; inline;
     class function GetOnEqualCompare: TOnEqualCompare; static; inline;
   public
-    class property Compare: TCompare read CFCompare;
+    class property Less: TLess read CFLess;
     class property EqualCompare: TEqualCompare read CFEqualCompare;
-    class property OnCompare: TOnCompare read GetOnCompare;
+    class property OnLess: TOnLess read GetOnLess;
     class property OnEqualCompare: TOnEqualCompare read GetOnEqualCompare;
   end;
 
-  function CompareShortInt(constref L, R: ShortInt): SizeInt;
-  function CompareUByte(constref L, R: Byte): SizeInt;
-  function CompareSmallInt(constref L, R: SmallInt): SizeInt;
-  function CompareWord(constref L, R: Word): SizeInt;
-  function CompareLongInt(constref L, R: LongInt): SizeInt;
-  function CompareDWord(constref L, R: DWord): SizeInt;
-  function CompareInt64(constref L, R: Int64): SizeInt;
-  function CompareQWord(constref L, R: QWord): SizeInt;
-  function CompareChar(constref L, R: AnsiChar): SizeInt;
-  function CompareSingle(constref L, R: Single): SizeInt;
-  function CompareDouble(constref L, R: Double): SizeInt;
-  function CompareExtended(constref L, R: Extended): SizeInt;
-  function CompareComp(constref L, R: Comp): SizeInt;
-  function CompareCurrency(constref L, R: Currency): SizeInt;
-  function CompareShortStr(constref L, R: shortstring): SizeInt;
-  function CompareLStr(constref L, R: string): SizeInt;
-  function CompareAStr(constref L, R: ansistring): SizeInt;
-  function CompareWStr(constref L, R: widestring): SizeInt;
-  function CompareVariant(constref L, R: Variant): SizeInt;
-  function CompareObj(constref L, R: TObject): SizeInt;
-  function CompareWChar(constref L, R: WideChar): SizeInt;
-  function CompareUStr(constref L, R: unicodestring): SizeInt;
-  function ComparePointer(constref L, R: Pointer): SizeInt;
+  function CompareShortInt(constref L, R: ShortInt): Boolean;
+  function CompareUByte(constref L, R: Byte): Boolean;
+  function CompareSmallInt(constref L, R: SmallInt): Boolean;
+  function CompareWord(constref L, R: Word): Boolean;
+  function CompareLongInt(constref L, R: LongInt): Boolean;
+  function CompareDWord(constref L, R: DWord): Boolean;
+  function CompareInt64(constref L, R: Int64): Boolean;
+  function CompareQWord(constref L, R: QWord): Boolean;
+  function CompareChar(constref L, R: AnsiChar): Boolean;
+  function CompareSingle(constref L, R: Single): Boolean;
+  function CompareDouble(constref L, R: Double): Boolean;
+  function CompareExtended(constref L, R: Extended): Boolean;
+  function CompareComp(constref L, R: Comp): Boolean;
+  function CompareCurrency(constref L, R: Currency): Boolean;
+  function CompareShortStr(constref L, R: shortstring): Boolean;
+  function CompareLStr(constref L, R: string): Boolean;
+  function CompareAStr(constref L, R: ansistring): Boolean;
+  function CompareWStr(constref L, R: widestring): Boolean;
+  function CompareVariant(constref L, R: Variant): Boolean;
+  function CompareObj(constref L, R: TObject): Boolean;
+  function CompareWChar(constref L, R: WideChar): Boolean;
+  function CompareUStr(constref L, R: unicodestring): Boolean;
+  function ComparePointer(constref L, R: Pointer): Boolean;
 
   function ShortIntEqual(constref L, R: ShortInt): Boolean;
   function UByteEqual(constref L, R: Byte): Boolean;
@@ -368,12 +368,12 @@ implementation
 {$DEFINE HashFunc := TxxHash32LE}
 {.$DEFINE HashFunc := TMurmur3LE}
 
-class function TGGuidHelper.HashCode(constref aValue: TGUID): SizeInt;
+class function TGGuidHelper.HashCode(const aValue: TGUID): SizeInt;
 begin
   Result := HashFunc.HashGuid(aValue);
 end;
 
-class function TGGuidHelper.Equal(constref L, R: TGUID): Boolean;
+class function TGGuidHelper.Equal(const L, R: TGUID): Boolean;
 type
   TDWords4 = packed record
     D1, D2, D3, D4: DWord;
@@ -387,95 +387,89 @@ begin
   Result := (dL.D1 = dR.D1) and (dL.D2 = dR.D2) and (dL.D3 = dR.D3) and (dL.D4 = dR.D4);
 end;
 
-class function TGGuidHelper.Compare(constref L, R: TGUID): SizeInt;
+class function TGGuidHelper.Less(const L, R: TGUID): Boolean;
 begin
-  // todo: compare as 128-bit numbers ???
-  Result := CompareMemRange(@L, @R, SizeOf(TGUID));
+  // todo: Less as 128-bit numbers ???
+  Result := CompareMemRange(@L, @R, SizeOf(TGUID)) < 0;
 end;
 
 { TStrHelper }
 
-class function TStrHelper.HashCode(constref aValue: string): SizeInt;
+class function TStrHelper.HashCode(const aValue: string): SizeInt;
 begin
   Result := HashFunc.HashStr(aValue);
 end;
 
-class function TStrHelper.Equal(constref L, R: string): Boolean;
+class function TStrHelper.Equal(const L, R: string): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TStrHelper.Compare(constref L, R: string): SizeInt;
+class function TStrHelper.Less(const L, R: string): Boolean;
 begin
-  Result := CompareStr(L, R);
+  Result := CompareStr(L, R) < 0;
 end;
 
-class function TAStrHelper.HashCode(constref aValue: ansistring): SizeInt;
+class function TAStrHelper.HashCode(const aValue: ansistring): SizeInt;
 begin
   Result := HashFunc.HashStr(aValue);
 end;
 
-class function TAStrHelper.Equal(constref L, R: ansistring): Boolean;
+class function TAStrHelper.Equal(const L, R: ansistring): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TAStrHelper.Compare(constref L, R: ansistring): SizeInt;
+class function TAStrHelper.Less(const L, R: ansistring): Boolean;
 begin
   //Result := StrComp(PAnsiChar(L), PAnsiChar(R));
-  Result := AnsiCompareStr(L, R);
+  Result := AnsiCompareStr(L, R) < 0;
 end;
 
-class function TWStrHelper.HashCode(constref aValue: widestring): SizeInt;
+class function TWStrHelper.HashCode(const aValue: widestring): SizeInt;
 begin
   Result := HashFunc.HashBuf(PWideChar(aValue), System.Length(aValue) * SizeOf(System.WideChar));
 end;
 
-class function TWStrHelper.Equal(constref L, R: widestring): Boolean;
+class function TWStrHelper.Equal(const L, R: widestring): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TWStrHelper.Compare(constref L, R: widestring): SizeInt;
+class function TWStrHelper.Less(const L, R: widestring): Boolean;
 begin
   //Result := StrComp(PWideChar(L), PWideChar(R));
-  Result := WideCompareStr(L, R);
+  Result := WideCompareStr(L, R) < 0;
 end;
 
-class function TUStrHelper.HashCode(constref aValue: unicodestring): SizeInt;
+class function TUStrHelper.HashCode(const aValue: unicodestring): SizeInt;
 begin
   Result := HashFunc.HashBuf(PUnicodeChar(aValue), System.Length(aValue) * SizeOf(System.UnicodeChar));
 end;
 
-class function TUStrHelper.Equal(constref L, R: unicodestring): Boolean;
+class function TUStrHelper.Equal(const L, R: unicodestring): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TUStrHelper.Compare(constref L, R: unicodestring): SizeInt;
+class function TUStrHelper.Less(const L, R: unicodestring): Boolean;
 begin
-  Result := UnicodeCompareStr(L, R);
+  Result := UnicodeCompareStr(L, R) < 0;
 end;
 
-class function TShortStrHelper.HashCode(constref aValue: shortstring): SizeInt;
+class function TShortStrHelper.HashCode(const aValue: shortstring): SizeInt;
 begin
   Result := HashFunc.HashBuf(@aValue[1], System.Length(aValue));
 end;
 
-class function TShortStrHelper.Equal(constref L, R: shortstring): Boolean;
+class function TShortStrHelper.Equal(const L, R: shortstring): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TShortStrHelper.Compare(constref L, R: shortstring): SizeInt;
+class function TShortStrHelper.Less(const L, R: shortstring): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := L < R;
 end;
 
 class function TGACharHelper.HashCode(aValue: AnsiChar): SizeInt;
@@ -489,9 +483,9 @@ begin
   Result := L = R;
 end;
 
-class function TGACharHelper.Compare(L, R: AnsiChar): SizeInt;
+class function TGACharHelper.Less(L, R: AnsiChar): Boolean;
 begin
-  Result := SizeInt(L) - SizeInt(R);
+  Result := L < R;
 end;
 
 class function TGWCharHelper.HashCode(aValue: WideChar): SizeInt;
@@ -504,13 +498,9 @@ begin
   Result := L = R;
 end;
 
-class function TGWCharHelper.Compare(L, R: WideChar): SizeInt;
+class function TGWCharHelper.Less(L, R: WideChar): Boolean;
 begin
-{$IFNDEF CPU16}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE !CPU16}
-  Result := Ord(L > R) - Ord(L < R);
-{$ENDIF !CPU16}
+  Result := L < R;
 end;
 
 class function TGByteHelper.HashCode(aValue: Byte): SizeInt;
@@ -523,9 +513,9 @@ begin
   Result := L = R;
 end;
 
-class function TGByteHelper.Compare(L, R: Byte): SizeInt;
+class function TGByteHelper.Less(L, R: Byte): Boolean;
 begin
-  Result := SizeInt(L) - SizeInt(R);
+  Result := L < R;
 end;
 
 class function TGShortIntHelper.HashCode(aValue: ShortInt): SizeInt;
@@ -538,9 +528,9 @@ begin
   Result := L = R;
 end;
 
-class function TGShortIntHelper.Compare(L, R: ShortInt): SizeInt;
+class function TGShortIntHelper.Less(L, R: ShortInt): Boolean;
 begin
-  Result := SizeInt(L) - SizeInt(R);
+  Result := L < R;
 end;
 
 class function TGWordHelper.HashCode(aValue: Word): SizeInt;
@@ -553,13 +543,9 @@ begin
   Result := L = R;
 end;
 
-class function TGWordHelper.Compare(L, R: Word): SizeInt;
+class function TGWordHelper.Less(L, R: Word): Boolean;
 begin
-{$IFNDEF CPU16}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE !CPU16}
-  Result := Ord(L > R) - Ord(L < R);
-{$ENDIF !CPU16}
+  Result := L < R;
 end;
 
 class function TGSmallIntHelper.HashCode(aValue: SmallInt): SizeInt;
@@ -572,13 +558,9 @@ begin
   Result := L = R;
 end;
 
-class function TGSmallIntHelper.Compare(L, R: SmallInt): SizeInt;
+class function TGSmallIntHelper.Less(L, R: SmallInt): Boolean;
 begin
-{$IFNDEF CPU16}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE !CPU16}
-  Result := Ord(L > R) - Ord(L < R);
-{$ENDIF !CPU16}
+  Result := L < R;
 end;
 
 class function TGDWordHelper.HashCode(aValue: DWord): SizeInt;
@@ -591,13 +573,9 @@ begin
   Result := L = R;
 end;
 
-class function TGDWordHelper.Compare(L, R: DWord): SizeInt;
+class function TGDWordHelper.Less(L, R: DWord): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE CPU64}
-  Result := Ord(L > R) - Ord(L < R);
-{$ENDIF CPU64}
+  Result := L < R;
 end;
 
 class function TGLongIntHelper.HashCode(aValue: LongInt): SizeInt;
@@ -610,13 +588,9 @@ begin
   Result := L = R;
 end;
 
-class function TGLongIntHelper.Compare(L, R: LongInt): SizeInt;
+class function TGLongIntHelper.Less(L, R: LongInt): Boolean;
 begin
-{$IFDEF CPU64}
-  Result := SizeInt(L) - SizeInt(R);
-{$ELSE CPU64}
-  Result := Ord(L > R) - Ord(L < R);
-{$ENDIF CPU64}
+  Result := L < R;
 end;
 
 class function TGQWordHelper.HashCode(aValue: QWord): SizeInt;
@@ -629,9 +603,9 @@ begin
   Result := L = R;
 end;
 
-class function TGQWordHelper.Compare(L, R: QWord): SizeInt;
+class function TGQWordHelper.Less(L, R: QWord): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGInt64Helper.HashCode(aValue: Int64): SizeInt;
@@ -644,9 +618,9 @@ begin
   Result := L = R;
 end;
 
-class function TGInt64Helper.Compare(L, R: Int64): SizeInt;
+class function TGInt64Helper.Less(L, R: Int64): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGNativeUIntHelper.HashCode(aValue: NativeUInt): SizeInt;
@@ -665,9 +639,9 @@ begin
   Result := L = R;
 end;
 
-class function TGNativeUIntHelper.Compare(L, R: NativeUInt): SizeInt;
+class function TGNativeUIntHelper.Less(L, R: NativeUInt): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGNativeIntHelper.HashCode(aValue: NativeInt): SizeInt;
@@ -686,9 +660,9 @@ begin
   Result := L = R;
 end;
 
-class function TGNativeIntHelper.Compare(L, R: NativeInt): SizeInt;
+class function TGNativeIntHelper.Less(L, R: NativeInt): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGPointerHelper.HashCode(aValue: Pointer): SizeInt;
@@ -701,9 +675,9 @@ begin
   Result := L = R;
 end;
 
-class function TGPointerHelper.Compare(L, R: Pointer): SizeInt;
+class function TGPointerHelper.Less(L, R: Pointer): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 function TGSingleHelper.IsZero: Boolean;
@@ -724,9 +698,9 @@ begin
   Result := L = R;
 end;
 
-class function TGSingleHelper.Compare(L, R: Single): SizeInt;
+class function TGSingleHelper.Less(L, R: Single): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 function TGDoubleHelper.IsZero: Boolean;
@@ -747,9 +721,9 @@ begin
   Result := L = R;
 end;
 
-class function TGDoubleHelper.Compare(L, R: Double): SizeInt;
+class function TGDoubleHelper.Less(L, R: Double): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 {$ifdef FPC_HAS_TYPE_EXTENDED}
 function TGExtendedHelper.IsZero: Boolean;
@@ -772,9 +746,9 @@ begin
   Result := L = R;
 end;
 
-class function TGExtendedHelper.Compare(L, R: Extended): SizeInt;
+class function TGExtendedHelper.Less(L, R: Extended): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 {$ENDIF}
 
@@ -790,9 +764,9 @@ begin
   Result := L = R;
 end;
 
-class function TCompHelper.Compare(L, R: Comp): SizeInt;
+class function TCompHelper.Less(L, R: Comp): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGDateTimeHelper.HashCode(aValue: TDateTime): SizeInt;
@@ -805,9 +779,9 @@ begin
   Result := L = R;
 end;
 
-class function TGDateTimeHelper.Compare(L, R: TDateTime): SizeInt;
+class function TGDateTimeHelper.Less(L, R: TDateTime): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGDateHelper.HashCode(aValue: TDate): SizeInt;
@@ -820,9 +794,9 @@ begin
   Result := L = R;
 end;
 
-class function TGDateHelper.Compare(L, R: TDate): SizeInt;
+class function TGDateHelper.Less(L, R: TDate): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGTimeHelper.HashCode(aValue: TTime): SizeInt;
@@ -835,9 +809,9 @@ begin
   Result := L = R;
 end;
 
-class function TGTimeHelper.Compare(L, R: TTime): SizeInt;
+class function TGTimeHelper.Less(L, R: TTime): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 class function TGCurrencyHelper.HashCode(const aValue: Currency): SizeInt;
@@ -850,9 +824,9 @@ begin
   Result := L = R;
 end;
 
-class function TGCurrencyHelper.Compare(const L, R: Currency): SizeInt;
+class function TGCurrencyHelper.Less(const L, R: Currency): Boolean;
 begin
-  Result := Ord(L > R) - Ord(L < R);
+  Result := L < R;
 end;
 
 function TGCurrencyHelper.ToString: string;
@@ -885,9 +859,9 @@ begin
   Result := L.Equals(R);
 end;
 
-class function TGObjectHelper.Compare(L, R: TObject): SizeInt;
+class function TGObjectHelper.Less(L, R: TObject): Boolean;
 begin
-  Result := Pointer.Compare(Pointer(L), Pointer(R));
+  Result := Pointer(L) < Pointer(R);
 end;
 
 class function TVariantHelper.HashCode(constref aValue: Variant): SizeInt;
@@ -900,18 +874,9 @@ begin
   Result := VarCompareValue(L, R) = vrEqual;
 end;
 
-class function TVariantHelper.Compare(constref L, R: Variant): SizeInt;
+class function TVariantHelper.Less(constref L, R: Variant): Boolean;
 begin
-  case VarCompareValue(L, R) of
-    vrGreaterThan: Result := 1;
-    vrLessThan:    Result := -1;
-    vrEqual:       Result := 0;
-  else //vrNotEqual
-    if VarIsEmpty(L) or VarIsNull(L) then
-      Result := 1
-    else
-      Result := -1;
-  end;
+  Result := VarCompareValue(L, R) = vrLessThan;
 end;
 
 function TStringArrayHelper.GetLength: SizeInt;
@@ -961,124 +926,124 @@ end;
 
 { TPrioTaskHelper }
 
-class function TPrioTaskHelper.Compare(L, R: IPriorityTask): SizeInt;
+class function TPrioTaskHelper.Less(L, R: IPriorityTask): Boolean;
 begin
-  Result := SizeInt(L.GetPriority) - SizeInt(R.GetPriority);
+  Result := L.GetPriority < R.GetPriority;
 end;
 
-function CompareShortInt(constref L, R: ShortInt): SizeInt;
+function CompareShortInt(constref L, R: ShortInt): Boolean;
 begin
-  Result := ShortInt.Compare(L, R);
+  Result := ShortInt.Less(L, R);
 end;
 
-function CompareUByte(constref L, R: Byte): SizeInt;
+function CompareUByte(constref L, R: Byte): Boolean;
 begin
-  Result := Byte.Compare(L, R);
+  Result := Byte.Less(L, R);
 end;
 
-function CompareSmallInt(constref L, R: SmallInt): SizeInt;
+function CompareSmallInt(constref L, R: SmallInt): Boolean;
 begin
-  Result := SmallInt.Compare(L, R);
+  Result := SmallInt.Less(L, R);
 end;
 
-function CompareWord(constref L, R: Word): SizeInt;
+function CompareWord(constref L, R: Word): Boolean;
 begin
-  Result := Word.Compare(L, R);
+  Result := Word.Less(L, R);
 end;
 
-function CompareLongInt(constref L, R: LongInt): SizeInt;
+function CompareLongInt(constref L, R: LongInt): Boolean;
 begin
-  Result := LongInt.Compare(L, R);
+  Result := LongInt.Less(L, R);
 end;
 
-function CompareDWord(constref L, R: DWord): SizeInt;
+function CompareDWord(constref L, R: DWord): Boolean;
 begin
-  Result := DWord.Compare(L, R);
+  Result := DWord.Less(L, R);
 end;
 
-function CompareInt64(constref L, R: Int64): SizeInt;
+function CompareInt64(constref L, R: Int64): Boolean;
 begin
-  Result := Int64.Compare(L, R);
+  Result := Int64.Less(L, R);
 end;
 
-function CompareQWord(constref L, R: QWord): SizeInt;
+function CompareQWord(constref L, R: QWord): Boolean;
 begin
-  Result := QWord.Compare(L, R);
+  Result := QWord.Less(L, R);
 end;
 
-function CompareChar(constref L, R: AnsiChar): SizeInt;
+function CompareChar(constref L, R: AnsiChar): Boolean;
 begin
-  Result := AnsiChar.Compare(L, R);
+  Result := AnsiChar.Less(L, R);
 end;
 
-function CompareSingle(constref L, R: Single): SizeInt;
+function CompareSingle(constref L, R: Single): Boolean;
 begin
-  Result := Single.Compare(L, R);
+  Result := Single.Less(L, R);
 end;
 
-function CompareDouble(constref L, R: Double): SizeInt;
+function CompareDouble(constref L, R: Double): Boolean;
 begin
-  Result := Double.Compare(L, R);
+  Result := Double.Less(L, R);
 end;
 
-function CompareExtended(constref L, R: Extended): SizeInt;
+function CompareExtended(constref L, R: Extended): Boolean;
 begin
-  Result := Extended.Compare(L, R);
+  Result := Extended.Less(L, R);
 end;
 
-function CompareComp(constref L, R: Comp): SizeInt;
+function CompareComp(constref L, R: Comp): Boolean;
 begin
-  Result := Comp.Compare(L, R);
+  Result := Comp.Less(L, R);
 end;
 
-function CompareCurrency(constref L, R: Currency): SizeInt;
+function CompareCurrency(constref L, R: Currency): Boolean;
 begin
-  Result := Currency.Compare(L, R);
+  Result := Currency.Less(L, R);
 end;
 
-function CompareShortStr(constref L, R: shortstring): SizeInt;
+function CompareShortStr(constref L, R: shortstring): Boolean;
 begin
-  Result := shortstring.Compare(L, R);
+  Result := shortstring.Less(L, R);
 end;
 
-function CompareLStr(constref L, R: string): SizeInt;
+function CompareLStr(constref L, R: string): Boolean;
 begin
-  Result := ansistring.Compare(L, R);
+  Result := ansistring.Less(L, R);
 end;
 
-function CompareAStr(constref L, R: ansistring): SizeInt;
+function CompareAStr(constref L, R: ansistring): Boolean;
 begin
-  Result := ansistring.Compare(L, R);
+  Result := ansistring.Less(L, R);
 end;
 
-function CompareWStr(constref L, R: widestring): SizeInt;
+function CompareWStr(constref L, R: widestring): Boolean;
 begin
-  Result := widestring.Compare(L, R);
+  Result := widestring.Less(L, R);
 end;
 
-function CompareVariant(constref L, R: Variant): SizeInt;
+function CompareVariant(constref L, R: Variant): Boolean;
 begin
-  Result := Variant.Compare(L, R);
+  Result := Variant.Less(L, R);
 end;
 
-function CompareObj(constref L, R: TObject): SizeInt;
+function CompareObj(constref L, R: TObject): Boolean;
 begin
-  Result := TObject.Compare(L, R);
+  Result := TObject.Less(L, R);
 end;
 
-function CompareWChar(constref L, R: WideChar): SizeInt;
+function CompareWChar(constref L, R: WideChar): Boolean;
 begin
-  Result := WideChar.Compare(L, R);
+  Result := WideChar.Less(L, R);
 end;
 
-function CompareUStr(constref L, R: unicodestring): SizeInt;
+function CompareUStr(constref L, R: unicodestring): Boolean;
 begin
-  Result := unicodestring.Compare(L, R);
+  Result := unicodestring.Less(L, R);
 end;
 
-function ComparePointer(constref L, R: Pointer): SizeInt;
+function ComparePointer(constref L, R: Pointer): Boolean;
 begin
-  Result := Pointer.Compare(L, R);
+  Result := Pointer.Less(L, R);
 end;
 
 function ShortIntEqual(constref L, R: ShortInt): Boolean;
@@ -1313,9 +1278,9 @@ end;
 
 { TGDefaults.TComparer }
 
-class function TGDefaults.TComparer.Compare(constref L, R: T): SizeInt;
+class function TGDefaults.TComparer.Less(constref L, R: T): Boolean;
 begin
-  Result := CFCompare(L, R);
+  Result := CFLess(L, R);
 end;
 
 { TGDefaults.TEqualityComparer }
@@ -1332,9 +1297,9 @@ end;
 
 { TGDefaults.TComparator }
 
-function TGDefaults.TComparator.Compare(constref L, R: T): SizeInt;
+function TGDefaults.TComparator.LessCompare(constref L, R: T): Boolean;
 begin
-  Result := CFCompare(L, R);
+  Result := CFLess(L, R);
 end;
 
 function TGDefaults.TComparator.EqualCompare(constref L, R: T): Boolean;
@@ -1356,7 +1321,7 @@ begin
           InitInt(GetTypeData(p));
         tkChar:
           begin
-            CFCompare := TCompare(@CompareChar);
+            CFLess := TLess(@CompareChar);
             CFEqualCompare := TEqualCompare(@CharEqual);
             CFHashCode := THashCode(@HashChar);
           end;
@@ -1364,85 +1329,85 @@ begin
           InitFloat(GetTypeData(p));
         tkSString:
           begin
-            CFCompare := TCompare(@CompareShortStr);
+            CFLess := TLess(@CompareShortStr);
             CFEqualCompare := TEqualCompare(@ShortStrEqual);
             CFHashCode := THashCode(@HashShortStr);
           end;
         tkLString:
           begin
-            CFCompare := TCompare(@CompareLStr);
+            CFLess := TLess(@CompareLStr);
             CFEqualCompare := TEqualCompare(@LStrEqual);
             CFHashCode := THashCode(@HashLStr);
           end;
         tkAString:
           begin
-            CFCompare := TCompare(@CompareAStr);
+            CFLess := TLess(@CompareAStr);
             CFEqualCompare := TEqualCompare(@AStrEqual);
             CFHashCode := THashCode(@HashAStr);
           end;
         tkWString:
           begin
-            CFCompare := TCompare(@CompareWStr);
+            CFLess := TLess(@CompareWStr);
             CFEqualCompare := TEqualCompare(@WStrEqual);
             CFHashCode := THashCode(@HashWStr);
           end;
         tkVariant:
           begin
-            CFCompare := TCompare(@CompareVariant);
+            CFLess := TLess(@CompareVariant);
             CFEqualCompare := TEqualCompare(@VariantEqual);
             CFHashCode := THashCode(@HashVariant);
           end;
         tkClass:
           begin
-            CFCompare := TCompare(@CompareObj);
+            CFLess := TLess(@CompareObj);
             CFEqualCompare := TEqualCompare(@ObjEqual);
             CFHashCode := THashCode(@HashObj);
           end;
         tkWChar:
           begin
-            CFCompare := TCompare(@CompareWChar);
+            CFLess := TLess(@CompareWChar);
             CFEqualCompare := TEqualCompare(@WCharEqual);
             CFHashCode := THashCode(@HashWChar);
           end;
         tkInt64:
           begin
-            CFCompare := TCompare(@CompareInt64);
+            CFLess := TLess(@CompareInt64);
             CFEqualCompare := TEqualCompare(@Int64Equal);
             CFHashCode := THashCode(@HashInt64);
           end;
         tkQWord:
           begin
-            CFCompare := TCompare(@CompareQWord);
+            CFLess := TLess(@CompareQWord);
             CFEqualCompare := TEqualCompare(@QWordEqual);
             CFHashCode := THashCode(@HashQWord);
           end;
         tkUString:
           begin
-            CFCompare := TCompare(@CompareUStr);
+            CFLess := TLess(@CompareUStr);
             CFEqualCompare := TEqualCompare(@UStrEqual);
             CFHashCode := THashCode(@HashUStr);
           end;
         tkUChar:
           begin
-            CFCompare := TCompare(@CompareWChar);
+            CFLess := TLess(@CompareWChar);
             CFEqualCompare := TEqualCompare(@WCharEqual);
             CFHashCode := THashCode(@HashWChar);
           end;
         tkPointer:
           begin
-            CFCompare := TCompare(@ComparePointer);
+            CFLess := TLess(@ComparePointer);
             CFEqualCompare := TEqualCompare(@PointerEqual);
             CFHashCode := THashCode(@HashPointer);
           end;
       else
-        CFCompare := TCompare(@CompareBin);
+        CFLess := TLess(@CompareBin);
         CFEqualCompare := TEqualCompare(@EqualBin);
         CFHashCode := THashCode(@HashBin);
       end;
     end
   else
     begin
-      CFCompare := TCompare(@CompareBin);
+      CFLess := TLess(@CompareBin);
       CFEqualCompare := TEqualCompare(@EqualBin);
       CFHashCode := THashCode(@HashBin);
     end;
@@ -1453,49 +1418,49 @@ begin
   case aData^.OrdType of
     otSByte:
       begin
-        CFCompare := TCompare(@CompareShortInt);
+        CFLess := TLess(@CompareShortInt);
         CFEqualCompare := TEqualCompare(@ShortIntEqual);
         CFHashCode := THashCode(@HashShortInt);
       end;
     otUByte:
       begin
-        CFCompare := TCompare(@CompareUByte);
+        CFLess := TLess(@CompareUByte);
         CFEqualCompare := TEqualCompare(@UByteEqual);
         CFHashCode := THashCode(@HashUByte);
       end;
     otSWord:
       begin
-        CFCompare := TCompare(@CompareSmallInt);
+        CFLess := TLess(@CompareSmallInt);
         CFEqualCompare := TEqualCompare(@SmallIntEqual);
         CFHashCode := THashCode(@HashSmallInt);
       end;
     otUWord:
       begin
-        CFCompare := TCompare(@CompareWord);
+        CFLess := TLess(@CompareWord);
         CFEqualCompare := TEqualCompare(@WordEqual);
         CFHashCode := THashCode(@HashWord);
       end;
     otSLong:
       begin
-        CFCompare := TCompare(@CompareLongInt);
+        CFLess := TLess(@CompareLongInt);
         CFEqualCompare := TEqualCompare(@LongIntEqual);
         CFHashCode := THashCode(@HashLongInt);
       end;
     otULong:
       begin
-        CFCompare := TCompare(@CompareDWord);
+        CFLess := TLess(@CompareDWord);
         CFEqualCompare := TEqualCompare(@DWordEqual);
         CFHashCode := THashCode(@HashDWord);
       end;
     otSQWord:
       begin
-        CFCompare := TCompare(@CompareInt64);
+        CFLess := TLess(@CompareInt64);
         CFEqualCompare := TEqualCompare(@Int64Equal);
         CFHashCode := THashCode(@HashInt64);
       end;
     otUQWord:
       begin
-        CFCompare := TCompare(@CompareQWord);
+        CFLess := TLess(@CompareQWord);
         CFEqualCompare := TEqualCompare(@QWordEqual);
         CFHashCode := THashCode(@HashQWord);
       end;
@@ -1507,40 +1472,40 @@ begin
   case aData^.FloatType of
     ftSingle:
       begin
-        CFCompare := TCompare(@CompareSingle);
+        CFLess := TLess(@CompareSingle);
         CFEqualCompare := TEqualCompare(@SingleEqual);
         CFHashCode := THashCode(@HashSingle);
       end;
     ftDouble:
       begin
-        CFCompare := TCompare(@CompareDouble);
+        CFLess := TLess(@CompareDouble);
         CFEqualCompare := TEqualCompare(@DoubleEqual);
         CFHashCode := THashCode(@HashDouble);
       end;
     ftExtended:
       begin
-        CFCompare := TCompare(@CompareExtended);
+        CFLess := TLess(@CompareExtended);
         CFEqualCompare := TEqualCompare(@ExtendedEqual);
         CFHashCode := THashCode(@HashExtended);
       end;
     ftComp:
       begin
-        CFCompare := TCompare(@CompareComp);
+        CFLess := TLess(@CompareComp);
         CFEqualCompare := TEqualCompare(@CompEqual);
         CFHashCode := THashCode(@HashComp);
       end;
     ftCurr:
       begin
-        CFCompare := TCompare(@CompareCurrency);
+        CFLess := TLess(@CompareCurrency);
         CFEqualCompare := TEqualCompare(@CurrencyEqual);
         CFHashCode := THashCode(@HashCurrency);
       end;
   end;
 end;
 
-class function TGDefaults.CompareBin(constref L, R: T): SizeInt;
+class function TGDefaults.CompareBin(constref L, R: T): Boolean;
 begin
-  Result := CompareMemRange(@L, @R, SizeOf(T));
+  Result := CompareMemRange(@L, @R, SizeOf(T)) < 0;
 end;
 
 class function TGDefaults.EqualBin(constref L, R: T): Boolean;
@@ -1553,9 +1518,9 @@ begin
   Result := HashFunc.HashBuf(@aValue, SizeOf(T));
 end;
 
-class function TGDefaults.GetOnCompare: TOnCompare;
+class function TGDefaults.GetOnLess: TOnLess;
 begin
-  Result := @CFComparator.Compare;
+  Result := @CFComparator.LessCompare;
 end;
 
 class function TGDefaults.GetOnEqualCompare: TOnEqualCompare;

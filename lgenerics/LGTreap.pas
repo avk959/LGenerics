@@ -35,8 +35,8 @@ uses
 type
   { TGLiteTreap implements randomized Cartesian BST(only);
     on assignment and when passed by value, the whole treap is copied;
-      functor TCmpRel (comparision relation) must provide:
-        function Compare([const[ref]] L, R: TKey): SizeInt; }
+      functor TCmpRel (comparison relation) must provide:
+        class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteTreap<TKey, TValue, TCmpRel> = record
   public
   type
@@ -98,8 +98,8 @@ type
   { TGLiteIdxTreap implements randomized Cartesian BST which allows indexing access
       (IOW rank and N-th order statistics)
       on assignment and when passed by value, the whole treap is copied;
-        functor TCmpRel (comparision relation) must provide:
-          function Compare([const[ref]] L, R: TKey): SizeInt; }
+        functor TCmpRel (comparison relation) must provide:
+          class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteIdxTreap<TKey, TValue, TCmpRel> = record
   public
   type
@@ -168,9 +168,9 @@ type
     indexing access and allows find the value of the monoid function on an arbitrary
     range of keys in O(log N); on assignment and when passed by value, the whole treap is copied;
       functor TCmpRel (comparision relation) must provide:
-        function Compare([const[ref]] L, R: TKey): SizeInt;
+        class function Less([const[ref]] L, R: TKey): Boolean;
       functor TValMonoid must provide:
-        field/property/function Identity: TValue; - neutral element of the monoid;
+        class field/property/function Identity: TValue; - neutral element of the monoid;
         associative dyadic function BinOp([const[ref]] L, R: TValue): TValue; }
   generic TGLiteSegmentTreap<TKey, TValue, TCmpRel, TValMonoid> = record
   public
@@ -331,7 +331,7 @@ type
       - add an arbitrary range of elements to the array in O(log N);
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
       functor TMonoid must provide:
-        field/property/function Identity: T; - neutral element of the monoid;
+        class field/property/function Identity: T; - neutral element of the monoid;
         associative dyadic function BinOp([const[ref]] L, R: T): T;
     on assignment and when passed by value, the whole treap is copied; }
   generic TGLiteImplSegmentTreap<T, TMonoid> = record
@@ -412,12 +412,12 @@ type
       - modify an arbitrary range of elements of an array by some constant value in O(log N);
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
       functor TMonoid must provide:
-        field/property/function Identity: T; - neutral element of the monoid;
+        class field/property/function Identity: T; - neutral element of the monoid;
         associative dyadic function BinOp([const[ref]] L, R: T): T; - base monoid operation;
         additional operation AddConst must be associative, and operations must satisfy the
         distributive property:
         function AddConst([const[ref]] aValue, aConst: T; aSize: SizeInt = 1): T;
-        field/property/function ZeroConst: T; - neutral element of the additional operation;
+        class field/property/function ZeroConst: T; - neutral element of the additional operation;
         function IsZeroConst([const[ref]] aValue: T): Boolean; - helper function;
     on assignment and when passed by value, the whole treap is copied; }
   generic TGLiteImplicitSegTreap<T, TMonoid> = record
@@ -556,7 +556,7 @@ class procedure TGLiteTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, 
 begin
   if aRoot <> nil then
     begin
-      if TCmpRel.Compare(aRoot^.Key, aKey) < 0 then
+      if TCmpRel.Less(aRoot^.Key, aKey) then
         begin
           L := aRoot;
           SplitNode(aKey, L^.FRight, L^.FRight, R);
@@ -602,7 +602,7 @@ begin
           aRoot := aNode;
         end
       else
-        if TCmpRel.Compare(aNode^.Key, aRoot^.Key) < 0 then
+        if TCmpRel.Less(aNode^.Key, aRoot^.Key) then
           AddNode(aRoot^.FLeft, aNode)
         else
           AddNode(aRoot^.FRight, aNode);
@@ -617,15 +617,18 @@ var
   Found: PNode;
 begin
   if aRoot <> nil then
-    case SizeInt(TCmpRel.Compare(aKey, aRoot^.Key)) of
-      System.Low(SizeInt)..-1: exit(RemoveNode(aKey, aRoot^.FLeft));
-      1..System.High(SizeInt): exit(RemoveNode(aKey, aRoot^.FRight));
+    if TCmpRel.Less(aKey, aRoot^.Key) then
+      exit(RemoveNode(aKey, aRoot^.FLeft))
     else
-      Found := aRoot;
-      aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
-      TUtil.FreeNode(Found);
-      exit(True);
-    end;
+      if TCmpRel.Less(aRoot^.Key, aKey) then
+        exit(RemoveNode(aKey, aRoot^.FRight))
+      else
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+          TUtil.FreeNode(Found);
+          exit(True);
+        end;
   Result := False;
 end;
 
@@ -634,16 +637,19 @@ var
   Found: PNode;
 begin
   if aRoot <> nil then
-    case SizeInt(TCmpRel.Compare(aKey, aRoot^.Key)) of
-      System.Low(SizeInt)..-1: exit(RemoveNode(aKey, aRoot^.FLeft, v));
-      1..System.High(SizeInt): exit(RemoveNode(aKey, aRoot^.FRight, v));
+    if TCmpRel.Less(aKey, aRoot^.Key) then
+      exit(RemoveNode(aKey, aRoot^.FLeft, v))
     else
-      Found := aRoot;
-      aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
-      v := Found^.Value;
-      TUtil.FreeNode(Found);
-      exit(True);
-    end;
+      if TCmpRel.Less(aRoot^.Key, aKey) then
+        exit(RemoveNode(aKey, aRoot^.FRight, v))
+      else
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+          v := Found^.Value;
+          TUtil.FreeNode(Found);
+          exit(True);
+        end;
   Result := False;
 end;
 
@@ -850,7 +856,7 @@ class procedure TGLiteIdxTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out 
 begin
   if aRoot <> nil then
     begin
-      if TCmpRel.Compare(aRoot^.Key, aKey) < 0 then
+      if TCmpRel.Less(aRoot^.Key, aKey) then
         begin
           L := aRoot;
           SplitNode(aKey, L^.FRight, L^.FRight, R);
@@ -900,7 +906,7 @@ begin
           aRoot := aNode;
         end
       else
-        if TCmpRel.Compare(aNode^.Key, aRoot^.Key) < 0 then
+        if TCmpRel.Less(aNode^.Key, aRoot^.Key) then
           AddNode(aRoot^.FLeft, aNode)
         else
           AddNode(aRoot^.FRight, aNode);
@@ -913,60 +919,56 @@ end;
 class function TGLiteIdxTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean;
 var
   Found: PNode;
-  c: SizeInt;
 begin
-  if aRoot <> nil then
+  if aRoot = nil then exit(False);
+  if TCmpRel.Less(aKey, aRoot^.Key) then
     begin
-      c := TCmpRel.Compare(aKey, aRoot^.Key);
-      if c = 0 then
-        begin
-          Found := aRoot;
-          aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
-          TUtil.FreeNode(Found);
-          Result := True;
-        end
-      else
-        begin
-          if c < 0 then
-            Result := RemoveNode(aKey, aRoot^.FLeft)
-          else
-            Result := RemoveNode(aKey, aRoot^.FRight);
-          if Result and (aRoot <> nil) then
-            UpdateSize(aRoot);
-        end;
+      Result := RemoveNode(aKey, aRoot^.FLeft);
+      if Result and (aRoot <> nil) then
+        UpdateSize(aRoot);
     end
   else
-    Result := False;
+    if TCmpRel.Less(aRoot^.Key, aKey) then
+      begin
+        Result := RemoveNode(aKey, aRoot^.FRight);
+        if Result and (aRoot <> nil) then
+          UpdateSize(aRoot);
+      end
+    else
+      begin
+        Found := aRoot;
+        aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+        TUtil.FreeNode(Found);
+        Result := True;
+      end;
 end;
 
 class function TGLiteIdxTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
 var
   Found: PNode;
-  c: SizeInt;
 begin
-  if aRoot <> nil then
+  if aRoot = nil then exit(False);
+  if TCmpRel.Less(aKey, aRoot^.Key) then
     begin
-      c := TCmpRel.Compare(aKey, aRoot^.Key);
-      if c = 0 then
-        begin
-          Found := aRoot;
-          aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
-          v := Found^.Value;
-          TUtil.FreeNode(Found);
-          Result := True;
-        end
-      else
-        begin
-          if c < 0 then
-            Result := RemoveNode(aKey, aRoot^.FLeft, v)
-          else
-            Result := RemoveNode(aKey, aRoot^.FRight, v);
-          if Result and (aRoot <> nil) then
-            UpdateSize(aRoot);
-        end;
+      Result := RemoveNode(aKey, aRoot^.FLeft, v);
+      if Result and (aRoot <> nil) then
+        UpdateSize(aRoot);
     end
   else
-    Result := False;
+    if TCmpRel.Less(aRoot^.Key, aKey) then
+      begin
+        Result := RemoveNode(aKey, aRoot^.FRight, v);
+        if Result and (aRoot <> nil) then
+          UpdateSize(aRoot);
+      end
+    else
+      begin
+        Found := aRoot;
+        aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+        v := Found^.Value;
+        TUtil.FreeNode(Found);
+        Result := True;
+      end;
 end;
 
 class operator TGLiteIdxTreap.Initialize(var aTreap: TGLiteIdxTreap);
@@ -1209,27 +1211,26 @@ end;
 class function TGLiteSegmentTreap.UpdateValue(aRoot: PNode; constref aKey: TKey;
   constref aValue: TValue): Boolean;
 begin
-  if aRoot <> nil then
-    begin
-      case SizeInt(TCmpRel.Compare(aKey, aRoot^.Key)) of
-        System.Low(SizeInt)..-1: Result := UpdateValue(aRoot^.Left, aKey, aValue);
-        1..System.High(SizeInt): Result := UpdateValue(aRoot^.Right, aKey, aValue);
-      else
+  if aRoot = nil then exit(False);
+  if TCmpRel.Less(aKey, aRoot^.Key) then
+    Result := UpdateValue(aRoot^.Left, aKey, aValue)
+  else
+    if TCmpRel.Less(aRoot^.Key, aKey) then
+      Result := UpdateValue(aRoot^.Right, aKey, aValue)
+    else
+      begin
         aRoot^.Value := aValue;
         Result := True;
       end;
-      if Result then
-        UpdateCache(aRoot);
-    end
-  else
-    Result := False;
+  if Result then
+    UpdateCache(aRoot);
 end;
 
 class procedure TGLiteSegmentTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
 begin
   if aRoot <> nil then
     begin
-      if TCmpRel.Compare(aRoot^.Key, aKey) < 0 then
+      if TCmpRel.Less(aRoot^.Key, aKey) then
         begin
           L := aRoot;
           SplitNode(aKey, L^.Right, L^.Right, R);
@@ -1281,7 +1282,7 @@ begin
           aRoot := aNode;
         end
       else
-        if TCmpRel.Compare(aNode^.Key, aRoot^.Key) < 0 then
+        if TCmpRel.Less(aNode^.Key, aRoot^.Key) then
           AddNode(aRoot^.Left, aNode)
         else
           AddNode(aRoot^.Right, aNode);
@@ -1294,60 +1295,56 @@ end;
 class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean;
 var
   Found: PNode;
-  c: SizeInt;
 begin
-  if aRoot <> nil then
+  if aRoot = nil then exit(False);
+  if TCmpRel.Less(aKey, aRoot^.Key) then
     begin
-      c := TCmpRel.Compare(aKey, aRoot^.Key);
-      if c = 0 then
-        begin
-          Found := aRoot;
-          aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
-          TUtil.FreeNode(Found);
-          Result := True;
-        end
-      else
-        begin
-          if c < 0 then
-            Result := RemoveNode(aKey, aRoot^.Left)
-          else
-            Result := RemoveNode(aKey, aRoot^.Right);
-          if Result then
-            UpdateNode(aRoot);
-        end;
+      Result := RemoveNode(aKey, aRoot^.Left);
+      if Result then
+        UpdateNode(aRoot);
     end
   else
-    Result := False;
+    if TCmpRel.Less(aRoot^.Key, aKey) then
+      begin
+        Result := RemoveNode(aKey, aRoot^.Right);
+        if Result then
+          UpdateNode(aRoot);
+      end
+    else
+      begin
+        Found := aRoot;
+        aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
+        TUtil.FreeNode(Found);
+        Result := True;
+      end;
 end;
 
 class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
 var
   Found: PNode;
-  c: SizeInt;
 begin
-  if aRoot <> nil then
+  if aRoot = nil then exit(False);
+  if TCmpRel.Less(aKey, aRoot^.Key) then
     begin
-      c := TCmpRel.Compare(aKey, aRoot^.Key);
-      if c = 0 then
-        begin
-          Found := aRoot;
-          aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
-          v := Found^.Value;
-          TUtil.FreeNode(Found);
-          Result := True;
-        end
-      else
-        begin
-          if c < 0 then
-            Result := RemoveNode(aKey, aRoot^.Left, v)
-          else
-            Result := RemoveNode(aKey, aRoot^.Right, v);
-          if Result then
-            UpdateNode(aRoot);
-        end;
+      Result := RemoveNode(aKey, aRoot^.Left, v);
+      if Result then
+        UpdateNode(aRoot);
     end
   else
-    Result := False;
+    if TCmpRel.Less(aRoot^.Key, aKey) then
+      begin
+        Result := RemoveNode(aKey, aRoot^.Right, v);
+        if Result then
+          UpdateNode(aRoot);
+      end
+    else
+      begin
+        Found := aRoot;
+        aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
+        v := Found^.Value;
+        TUtil.FreeNode(Found);
+        Result := True;
+      end;
 end;
 
 class operator TGLiteSegmentTreap.Initialize(var aTreap: TGLiteSegmentTreap);
@@ -1563,7 +1560,7 @@ function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey): TValue;
 var
   pL, pM, pR: PNode;
 begin
-  if (FRoot <> nil) and (TCmpRel.Compare(L, R) < 0) then
+  if (FRoot <> nil) and TCmpRel.Less(L, R) then
     begin
       SplitNode(L, FRoot, pL, pR);
       SplitNode(R, pR, pM, pR);
@@ -1582,7 +1579,7 @@ var
   pL, pM, pR: PNode;
 begin
   aCount := 0;
-  if (FRoot <> nil) and (TCmpRel.Compare(L, R) < 0) then
+  if (FRoot <> nil) and TCmpRel.Less(L, R) then
     begin
       SplitNode(L, FRoot, pL, pR);
       SplitNode(R, pR, pM, pR);

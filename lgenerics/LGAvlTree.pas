@@ -170,9 +170,9 @@ type
   end;
 
   { TGAvlTree
-      functor TKeyCmpRel (key comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt; }
-  generic TGAvlTree<TKey, TEntry, TKeyCmpRel> = class(specialize TGCustomAvlTree<TKey, TEntry>)
+      functor TCmpRel (key comparison relation) must provide:
+        class function Less([const[ref]] L, R: TKey): Boolean; }
+  generic TGAvlTree<TKey, TEntry, TCmpRel> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   protected
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
     function  FindInsertPos(constref aKey: TKey): PNode; override;
@@ -187,7 +187,7 @@ type
     function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
   end;
 
-  { TGComparableAvlTree assumes that type TKey has defined comparision operators }
+  { TGComparableAvlTree assumes that type TKey has defined comparison operators }
   generic TGComparableAvlTree<TKey, TEntry> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   protected
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
@@ -207,48 +207,48 @@ type
   generic TGRegularAvlTree<TKey, TEntry> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   public
   type
-    TCompare = specialize TGCompare<TKey>;
+    TLess = specialize TGLessCompare<TKey>;
   private
-    FCompare: TCompare;
+    FLess: TLess;
   protected
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
     function  FindInsertPos(constref aKey: TKey): PNode; override;
     procedure InsertNode(aNode: PNode); override;
     procedure InsertNodeAt(aNode, aParent: PNode); override;
   public
-    constructor Create(aCompare: TCompare);
-    constructor Create(aCapacity: SizeInt; aCompare: TCompare);
+    constructor Create(aLess: TLess);
+    constructor Create(aCapacity: SizeInt; aLess: TLess);
     function  Clone: TGRegularAvlTree;
     function  Find(constref aKey: TKey): PNode; override;
     function  FindLess(constref aKey: TKey): PNode; override;
     function  FindLessOrEqual(constref aKey: TKey): PNode; override;
     function  FindGreater(constref aKey: TKey): PNode; override;
     function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
-    property  Comparator: TCompare read FCompare;
+    property  Comparator: TLess read FLess;
   end;
 
   { TGDelegatedAvlTree is avl tree with delegated comparator }
   generic TGDelegatedAvlTree<TKey, TEntry> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   public
   type
-    TOnCompare = specialize TGOnCompare<TKey>;
+    TOnLess = specialize TGOnLessCompare<TKey>;
   private
-    FCompare: TOnCompare;
+    FLess: TOnLess;
   protected
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
     function  FindInsertPos(constref aKey: TKey): PNode; override;
     procedure InsertNode(aNode: PNode); override;
     procedure InsertNodeAt(aNode, aParent: PNode); override;
   public
-    constructor Create(aCompare: TOnCompare);
-    constructor Create(aCapacity: SizeInt; aCompare: TOnCompare);
+    constructor Create(aLess: TOnLess);
+    constructor Create(aCapacity: SizeInt; aLess: TOnLess);
     function  Clone: TGDelegatedAvlTree;
     function  Find(constref aKey: TKey): PNode; override;
     function  FindLess(constref aKey: TKey): PNode; override;
     function  FindLessOrEqual(constref aKey: TKey): PNode; override;
     function  FindGreater(constref aKey: TKey): PNode; override;
     function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
-    property  Comparator: TOnCompare read FCompare;
+    property  Comparator: TOnLess read FLess;
   end;
 
   { TGAvlTree2: simplified version TGAvlTree }
@@ -345,8 +345,8 @@ type
   end;
 
   { TGLiteAvlTree
-      functor TKeyCmpRel (key comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt;
+      functor TKeyCmpRel (key comparison relation) must provide:
+        class function Less([const[ref]] L, R: TKey): SizeInt;
     on assignment and when passed by value, the whole treap is copied }
   generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
   public
@@ -1258,19 +1258,16 @@ end;
 { TGAvlTree }
 
 function TGAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   aInsertPos := nil;
   while Result <> nil do
     begin
-      c := TKeyCmpRel.Compare(aKey, Result^.Data.Key);
       aInsertPos := Result;
-      if c < 0 then
+      if TCmpRel.Less(aKey, Result^.Data.Key) then
         Result := Result^.Left
       else
-        if c > 0 then
+        if TCmpRel.Less(Result^.Data.Key, aKey) then
           Result := Result^.Right
         else
           break;
@@ -1281,7 +1278,7 @@ function TGAvlTree.FindInsertPos(constref aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
-    if TKeyCmpRel.Compare(aKey, Result^.Data.Key) < 0 then
+    if TCmpRel.Less(aKey, Result^.Data.Key) then
       begin
         if Result^.Left <> nil then
           Result := Result^.Left
@@ -1305,7 +1302,7 @@ begin
     begin
       ParentNode := FindInsertPos(aNode^.Data.Key);
       aNode^.Parent := ParentNode;
-      if TKeyCmpRel.Compare(aNode^.Data.Key, ParentNode^.Data.Key) < 0 then
+      if TCmpRel.Less(aNode^.Data.Key, ParentNode^.Data.Key) then
         ParentNode^.Left := aNode
       else
         ParentNode^.Right := aNode;
@@ -1323,7 +1320,7 @@ begin
   if aParent <> nil then
     begin
       aNode^.Parent := aParent;
-      if TKeyCmpRel.Compare(aNode^.Data.Key, aParent^.Data.Key) < 0 then
+      if TCmpRel.Less(aNode^.Data.Key, aParent^.Data.Key) then
         aParent^.Left := aNode
       else
         aParent^.Right := aNode;
@@ -1346,21 +1343,16 @@ begin
 end;
 
 function TGAvlTree.Find(constref aKey: TKey): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   while Result <> nil do
-    begin
-      c := TKeyCmpRel.Compare(aKey, Result^.Data.Key);
-      if c < 0 then
-        Result := Result^.Left
+    if TCmpRel.Less(aKey, Result^.Data.Key) then
+      Result := Result^.Left
+    else
+      if TCmpRel.Less(Result^.Data.Key, aKey) then
+        Result := Result^.Right
       else
-        if c > 0 then
-          Result := Result^.Right
-        else
-          break;
-    end;
+        break;
 end;
 
 function TGAvlTree.FindLess(constref aKey: TKey): PNode;
@@ -1370,7 +1362,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if TKeyCmpRel.Compare(aKey, Node^.Data.Key) > 0 then
+    if TCmpRel.Less(Node^.Data.Key, aKey) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1386,7 +1378,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if TKeyCmpRel.Compare(aKey, Node^.Data.Key) >= 0 then
+    if not TCmpRel.Less(aKey, Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1402,7 +1394,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if TKeyCmpRel.Compare(aKey, Node^.Data.Key) < 0 then
+    if TCmpRel.Less(aKey, Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -1418,7 +1410,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if TKeyCmpRel.Compare(aKey, Node^.Data.Key) <= 0 then
+    if not TCmpRel.Less(Node^.Data.Key, aKey) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -1594,19 +1586,16 @@ end;
 { TGRegularAvlTree }
 
 function TGRegularAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   aInsertPos := nil;
   while Result <> nil do
     begin
-      c := FCompare(aKey, Result^.Data.Key);
       aInsertPos := Result;
-      if c < 0 then
+      if FLess(aKey, Result^.Data.Key) then
         Result := Result^.Left
       else
-        if c > 0 then
+        if FLess(Result^.Data.Key, aKey) then
           Result := Result^.Right
         else
           break;
@@ -1617,7 +1606,7 @@ function TGRegularAvlTree.FindInsertPos(constref aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
-    if FCompare(aKey, Result^.Data.Key) < 0 then
+    if FLess(aKey, Result^.Data.Key) then
       begin
         if Result^.Left <> nil then
           Result := Result^.Left
@@ -1641,7 +1630,7 @@ begin
     begin
       ParentNode := FindInsertPos(aNode^.Data.Key);
       aNode^.Parent := ParentNode;
-      if FCompare(aNode^.Data.Key, ParentNode^.Data.Key) < 0 then
+      if FLess(aNode^.Data.Key, ParentNode^.Data.Key) then
         ParentNode^.Left := aNode
       else
         ParentNode^.Right := aNode;
@@ -1659,7 +1648,7 @@ begin
   if aParent <> nil then
     begin
       aNode^.Parent := aParent;
-      if FCompare(aNode^.Data.Key, aParent^.Data.Key) < 0 then
+      if FLess(aNode^.Data.Key, aParent^.Data.Key) then
         aParent^.Left := aNode
       else
         aParent^.Right := aNode;
@@ -1672,43 +1661,38 @@ begin
     end;
 end;
 
-constructor TGRegularAvlTree.Create(aCompare: TCompare);
+constructor TGRegularAvlTree.Create(aLess: TLess);
 begin
   inherited Create;
-  FCompare := aCompare;
+  FLess := aLess;
 end;
 
-constructor TGRegularAvlTree.Create(aCapacity: SizeInt; aCompare: TCompare);
+constructor TGRegularAvlTree.Create(aCapacity: SizeInt; aLess: TLess);
 begin
   inherited Create(aCapacity);
-  FCompare := aCompare;
+  FLess := aLess;
 end;
 
 function TGRegularAvlTree.Clone: TGRegularAvlTree;
 var
   p: PNode;
 begin
-  Result := TGRegularAvlTree.Create(Count, FCompare);
+  Result := TGRegularAvlTree.Create(Count, FLess);
   for p in Self do
     Result.Add(p^.Data);
 end;
 
 function TGRegularAvlTree.Find(constref aKey: TKey): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   while Result <> nil do
-    begin
-      c := FCompare(aKey, Result^.Data.Key);
-      if c < 0 then
-        Result := Result^.Left
+    if FLess(aKey, Result^.Data.Key) then
+      Result := Result^.Left
+    else
+      if FLess(Result^.Data.Key, aKey) then
+        Result := Result^.Right
       else
-        if c > 0 then
-          Result := Result^.Right
-        else
-          exit;
-    end;
+        exit;
 end;
 
 function TGRegularAvlTree.FindLess(constref aKey: TKey): PNode;
@@ -1718,7 +1702,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) > 0 then
+    if FLess(Node^.Data.Key, aKey) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1734,7 +1718,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) >= 0 then
+    if not FLess(aKey, Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1750,7 +1734,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) < 0 then
+    if FLess(aKey, Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -1766,7 +1750,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) <= 0 then
+    if not FLess(Node^.Data.Key, aKey) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -1778,19 +1762,16 @@ end;
 { TGDelegatedAvlTree }
 
 function TGDelegatedAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   aInsertPos := nil;
   while Result <> nil do
     begin
-      c := FCompare(aKey, Result^.Data.Key);
       aInsertPos := Result;
-      if c < 0 then
+      if FLess(aKey, Result^.Data.Key) then
         Result := Result^.Left
       else
-        if c > 0 then
+        if FLess(Result^.Data.Key, aKey) then
           Result := Result^.Right
         else
           break;
@@ -1801,7 +1782,7 @@ function TGDelegatedAvlTree.FindInsertPos(constref aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
-    if FCompare(aKey, Result^.Data.Key) < 0 then
+    if FLess(aKey, Result^.Data.Key) then
       begin
         if Result^.Left <> nil then
           Result := Result^.Left
@@ -1825,7 +1806,7 @@ begin
     begin
       ParentNode := FindInsertPos(aNode^.Data.Key);
       aNode^.Parent := ParentNode;
-      if FCompare(aNode^.Data.Key, ParentNode^.Data.Key) < 0 then
+      if FLess(aNode^.Data.Key, ParentNode^.Data.Key) then
         ParentNode^.Left := aNode
       else
         ParentNode^.Right := aNode;
@@ -1843,7 +1824,7 @@ begin
   if aParent <> nil then
     begin
       aNode^.Parent := aParent;
-      if FCompare(aNode^.Data.Key, aParent^.Data.Key) < 0 then
+      if FLess(aNode^.Data.Key, aParent^.Data.Key) then
         aParent^.Left := aNode
       else
         aParent^.Right := aNode;
@@ -1856,43 +1837,38 @@ begin
     end;
 end;
 
-constructor TGDelegatedAvlTree.Create(aCompare: TOnCompare);
+constructor TGDelegatedAvlTree.Create(aLess: TOnLess);
 begin
   inherited Create;
-  FCompare := aCompare;
+  FLess := aLess;
 end;
 
-constructor TGDelegatedAvlTree.Create(aCapacity: SizeInt; aCompare: TOnCompare);
+constructor TGDelegatedAvlTree.Create(aCapacity: SizeInt; aLess: TOnLess);
 begin
   inherited Create(aCapacity);
-  FCompare := aCompare;
+  FLess := aLess;
 end;
 
 function TGDelegatedAvlTree.Clone: TGDelegatedAvlTree;
 var
   p: PNode;
 begin
-  Result := TGDelegatedAvlTree.Create(Count, FCompare);
+  Result := TGDelegatedAvlTree.Create(Count, FLess);
   for p in Self do
     Result.Add(p^.Data);
 end;
 
 function TGDelegatedAvlTree.Find(constref aKey: TKey): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   while Result <> nil do
-    begin
-      c := FCompare(aKey, Result^.Data.Key);
-      if c < 0 then
-        Result := Result^.Left
+    if FLess(aKey, Result^.Data.Key) then
+      Result := Result^.Left
+    else
+      if FLess(Result^.Data.Key, aKey) then
+        Result := Result^.Right
       else
-        if c > 0 then
-          Result := Result^.Right
-        else
-          exit;
-    end;
+        exit;
 end;
 
 function TGDelegatedAvlTree.FindLess(constref aKey: TKey): PNode;
@@ -1902,7 +1878,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) > 0 then
+    if FLess(Node^.Data.Key, aKey) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1918,7 +1894,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) >= 0 then
+    if not FLess(aKey, Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1934,7 +1910,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) < 0 then
+    if FLess(aKey, Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -1950,7 +1926,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if FCompare(aKey, Node^.Data.Key) <= 0 then
+    if not FLess(Node^.Data.Key, aKey) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -2037,19 +2013,16 @@ begin
 end;
 
 function TGAvlTree2.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   aInsertPos := nil;
   while Result <> nil do
     begin
-      c := TKeyCmpRel.Compare(aKey, Result^.Data.Key);
       aInsertPos := Result;
-      if c < 0 then
+      if TKeyCmpRel.Less(aKey, Result^.Data.Key) then
         Result := Result^.Left
       else
-        if c > 0 then
+        if TKeyCmpRel.Less(Result^.Data.Key, aKey) then
           Result := Result^.Right
         else
           break;
@@ -2060,7 +2033,7 @@ function TGAvlTree2.FindInsertPos(constref aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
-    if TKeyCmpRel.Compare(aKey, Result^.Data.Key) < 0 then
+    if TKeyCmpRel.Less(aKey, Result^.Data.Key) then
       begin
         if Result^.Left <> nil then
           Result := Result^.Left
@@ -2084,7 +2057,7 @@ begin
     begin
       ParentNode := FindInsertPos(aNode^.Data.Key);
       aNode^.Parent := ParentNode;
-      if TKeyCmpRel.Compare(aNode^.Data.Key, ParentNode^.Data.Key) < 0 then
+      if TKeyCmpRel.Less(aNode^.Data.Key, ParentNode^.Data.Key) then
         ParentNode^.Left := aNode
       else
         ParentNode^.Right := aNode;
@@ -2102,7 +2075,7 @@ begin
   if aParent <> nil then
     begin
       aNode^.Parent := aParent;
-      if TKeyCmpRel.Compare(aNode^.Data.Key, aParent^.Data.Key) < 0 then
+      if TKeyCmpRel.Less(aNode^.Data.Key, aParent^.Data.Key) then
         aParent^.Left := aNode
       else
         aParent^.Right := aNode;
@@ -2798,7 +2771,7 @@ var
 begin
   Result := Root;
   while Result <> 0 do
-    if TKeyCmpRel.Compare(aKey, FNodes[Result].Data.Key) < 0 then
+    if TKeyCmpRel.Less(aKey, FNodes[Result].Data.Key)  then
       begin
         Curr := FNodes[Result].Left;
         if Curr <> 0 then
@@ -2817,19 +2790,16 @@ begin
 end;
 
 function TGLiteAvlTree.FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
-var
-  Cmp: SizeInt;
 begin
   Result := Root;
   aInsertPos := 0;
   while Result <> 0 do
     begin
-      Cmp := TKeyCmpRel.Compare(aKey, FNodes[Result].Data.Key);
       aInsertPos := Result;
-      if Cmp < 0 then
+      if TKeyCmpRel.Less(aKey, FNodes[Result].Data.Key) then
         Result := FNodes[Result].Left
       else
-        if Cmp > 0 then
+        if TKeyCmpRel.Less(FNodes[Result].Data.Key, aKey) then
           Result := FNodes[Result].Right
         else
           break;
@@ -2947,7 +2917,7 @@ begin
     begin
       ParentNode := FindInsertPos(FNodes[aNode].Data.Key);
       FNodes[aNode].Parent := ParentNode;
-      if TKeyCmpRel.Compare(FNodes[aNode].Data.Key, FNodes[ParentNode].Data.Key) < 0 then
+      if TKeyCmpRel.Less(FNodes[aNode].Data.Key, FNodes[ParentNode].Data.Key) then
         FNodes[ParentNode].Left := aNode
       else
         FNodes[ParentNode].Right := aNode;
@@ -2962,7 +2932,7 @@ begin
   if aParent <> 0 then
     begin
       FNodes[aNode].Parent := aParent;
-      if TKeyCmpRel.Compare(FNodes[aNode].Data.Key, FNodes[aParent].Data.Key) < 0 then
+      if TKeyCmpRel.Less(FNodes[aNode].Data.Key, FNodes[aParent].Data.Key) then
         FNodes[aParent].Left := aNode
       else
         FNodes[aParent].Right := aNode;
@@ -3220,7 +3190,7 @@ begin
           aState := asInvalidLink;
           exit(0);
         end;
-      if TKeyCmpRel.Compare(FNodes[FNodes[aNode].Left].Data.Key, FNodes[aNode].Data.Key) >= 0 then
+      if not TKeyCmpRel.Less(FNodes[FNodes[aNode].Left].Data.Key, FNodes[aNode].Data.Key) then
         begin
           aState := asInvalidKey;
           exit(0);
@@ -3233,7 +3203,7 @@ begin
           aState := asInvalidLink;
           exit(0);
         end;
-      if TKeyCmpRel.Compare(FNodes[FNodes[aNode].Right].Data.Key, FNodes[aNode].Data.Key) < 0 then
+      if TKeyCmpRel.Less(FNodes[FNodes[aNode].Right].Data.Key, FNodes[aNode].Data.Key) then
         begin
           aState := asInvalidKey;
           exit(0);
@@ -3353,7 +3323,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) > 0 then
+    if TKeyCmpRel.Less(FNodes[CurrNode].Data.Key, aKey) then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Right;
@@ -3369,7 +3339,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) >= 0 then
+    if not TKeyCmpRel.Less(aKey, FNodes[CurrNode].Data.Key) then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Right;
@@ -3385,7 +3355,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) < 0 then
+    if TKeyCmpRel.Less(aKey, FNodes[CurrNode].Data.Key) then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Left;
@@ -3401,7 +3371,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) <= 0 then
+    if not TKeyCmpRel.Less(FNodes[CurrNode].Data.Key, aKey) then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Left;

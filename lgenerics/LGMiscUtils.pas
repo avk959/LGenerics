@@ -82,10 +82,10 @@ type
 
   end;
 
-  { TGTimSortBase
-      functor TCmpRel (comparision relation) must provide:
-        class function Compare([const[ref]] L, R: T): SizeInt }
-  generic TGTimSortBase<T, TCmpRel> = class(specialize TGTimSortAnc<T>)
+  { TGBaseTimSort
+      functor TCmpRel (comparison relation) must provide:
+        class function Less([const[ref]] L, R: T): Boolean; }
+  generic TGBaseTimSort<T, TCmpRel> = class(specialize TGTimSortAnc<T>)
   protected
   type
     TTimSort = object(TTimSortBase)
@@ -118,9 +118,9 @@ type
   end;
 
   { TGTimSort assumes that type T has implemented TCmpRel }
-  generic TGTimSort<T> = class(specialize TGTimSortBase<T, T>);
+  generic TGTimSort<T> = class(specialize TGBaseTimSort<T, T>);
 
-  { TGComparableTimSort assumes that type T has defined comparision operators }
+  { TGComparableTimSort assumes that type T has defined comparison operators }
   generic TGComparableTimSort<T> = class(specialize TGTimSortAnc<T>)
   protected
   type
@@ -157,14 +157,14 @@ type
   generic TGRegularTimSort<T> = class(specialize TGTimSortAnc<T>)
   public
   type
-    TCompare = specialize TGCompare<T>;
+    TLess = specialize TGLessCompare<T>;
 
   protected
   type
     TTimSort = object(TTimSortBase)
     protected
-      FCompare: TCompare;
-      procedure Init(A: PItem; c: TCompare);
+      FLess: TLess;
+      procedure Init(A: PItem; c: TLess);
       procedure CollapseA;
       procedure CollapseD;
       procedure ForceCollapseA;
@@ -179,31 +179,31 @@ type
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiD(Base1, Len1, Base2, Len2: SizeInt);
-      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TCompare); static;
-      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TCompare); static;
-      class function  CountRunAsc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
-      class function  CountRunDesc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
+      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TLess); static;
+      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TLess); static;
+      class function  CountRunAsc(A: PItem; R: SizeInt; c: TLess): SizeInt; static;
+      class function  CountRunDesc(A: PItem; R: SizeInt; c: TLess): SizeInt; static;
     public
-      class procedure SortAsc(A: PItem; R: SizeInt; c: TCompare); static;
-      class procedure SortDesc(A: PItem; R: SizeInt; c: TCompare); static;
+      class procedure SortAsc(A: PItem; R: SizeInt; c: TLess); static;
+      class procedure SortDesc(A: PItem; R: SizeInt; c: TLess); static;
     end;
 
   public
-    class procedure Sort(var A: array of T; c: TCompare; aOrder: TSortOrder = soAsc); static;
+    class procedure Sort(var A: array of T; c: TLess; aOrder: TSortOrder = soAsc); static;
   end;
 
   { TGDelegatedTimSort: TimSort with delegated comparator }
   generic TGDelegatedTimSort<T> = class(specialize TGTimSortAnc<T>)
   public
   type
-    TOnCompare = specialize TGOnCompare<T>;
+    TOnLess = specialize TGOnLessCompare<T>;
 
   protected
   type
     TTimSort = object(TTimSortBase)
     protected
-      FCompare: TOnCompare;
-      procedure Init(A: PItem; c: TOnCompare);
+      FLess: TOnLess;
+      procedure Init(A: PItem; c: TOnLess);
       procedure CollapseA;
       procedure CollapseD;
       procedure ForceCollapseA;
@@ -218,31 +218,31 @@ type
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiD(Base1, Len1, Base2, Len2: SizeInt);
-      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TOnCompare); static;
-      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TOnCompare); static;
-      class function  CountRunAsc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
-      class function  CountRunDesc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
+      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TOnLess); static;
+      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TOnLess); static;
+      class function  CountRunAsc(A: PItem; R: SizeInt; c: TOnLess): SizeInt; static;
+      class function  CountRunDesc(A: PItem; R: SizeInt; c: TOnLess): SizeInt; static;
     public
-      class procedure SortAsc(A: PItem; R: SizeInt; c: TOnCompare); static;
-      class procedure SortDesc(A: PItem; R: SizeInt; c: TOnCompare); static;
+      class procedure SortAsc(A: PItem; R: SizeInt; c: TOnLess); static;
+      class procedure SortDesc(A: PItem; R: SizeInt; c: TOnLess); static;
     end;
 
   public
-    class procedure Sort(var A: array of T; c: TOnCompare; aOrder: TSortOrder = soAsc); static;
+    class procedure Sort(var A: array of T; c: TOnLess; aOrder: TSortOrder = soAsc); static;
   end;
 
   { TGNestedTimSort: TimSort with nested comparator }
   generic TGNestedTimSort<T> = class(specialize TGTimSortAnc<T>)
   public
   type
-    TNestCompare = specialize TGNestCompare<T>;
+    TNestLess = specialize TGNestLessCompare<T>;
 
   protected
   type
     TTimSort = object(TTimSortBase)
     protected
-      FCompare: TNestCompare;
-      procedure Init(A: PItem; c: TNestCompare);
+      FLess: TNestLess;
+      procedure Init(A: PItem; c: TNestLess);
       procedure CollapseA;
       procedure CollapseD;
       procedure ForceCollapseA;
@@ -257,17 +257,17 @@ type
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiD(Base1, Len1, Base2, Len2: SizeInt);
-      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TNestCompare); static;
-      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TNestCompare); static;
-      class function  CountRunAsc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
-      class function  CountRunDesc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
+      class procedure InsertSortA(A: PItem; R, At: SizeInt; c: TNestLess); static;
+      class procedure InsertSortD(A: PItem; R, At: SizeInt; c: TNestLess); static;
+      class function  CountRunAsc(A: PItem; R: SizeInt; c: TNestLess): SizeInt; static;
+      class function  CountRunDesc(A: PItem; R: SizeInt; c: TNestLess): SizeInt; static;
     public
-      class procedure SortAsc(A: PItem; R: SizeInt; c: TNestCompare); static;
-      class procedure SortDesc(A: PItem; R: SizeInt; c: TNestCompare); static;
+      class procedure SortAsc(A: PItem; R: SizeInt; c: TNestLess); static;
+      class procedure SortDesc(A: PItem; R: SizeInt; c: TNestLess); static;
     end;
 
   public
-    class procedure Sort(var A: array of T; c: TNestCompare; aOrder: TSortOrder = soAsc); static;
+    class procedure Sort(var A: array of T; c: TNestLess; aOrder: TSortOrder = soAsc); static;
   end;
 
   { TTextFileReader is small wrapper around TextFile to mimic string enumerable with buffered read as a bonus;
@@ -667,9 +667,9 @@ begin
   end;
 end;
 
-{ TGTimSortBase.TTimSort }
+{ TGBaseTimSort.TTimSort }
 
-procedure TGTimSortBase.TTimSort.CollapseA;
+procedure TGBaseTimSort.TTimSort.CollapseA;
 var
   I: SizeInt;
 begin
@@ -688,7 +688,7 @@ begin
     end;
 end;
 
-procedure TGTimSortBase.TTimSort.CollapseD;
+procedure TGBaseTimSort.TTimSort.CollapseD;
 var
   I: SizeInt;
 begin
@@ -707,7 +707,7 @@ begin
     end;
 end;
 
-procedure TGTimSortBase.TTimSort.ForceCollapseA;
+procedure TGBaseTimSort.TTimSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
@@ -721,7 +721,7 @@ begin
     end;
 end;
 
-procedure TGTimSortBase.TTimSort.ForceCollapseD;
+procedure TGBaseTimSort.TTimSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
@@ -735,7 +735,7 @@ begin
     end;
 end;
 
-procedure TGTimSortBase.TTimSort.MergeAtA(aIndex: SizeInt);
+procedure TGBaseTimSort.TTimSort.MergeAtA(aIndex: SizeInt);
 var
   Base1, Len1, Base2, Len2, D: SizeInt;
 begin
@@ -750,13 +750,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if TCmpRel.Compare(FData[Pred(Base2)], FData[Base2]) > 0 then
+  if TCmpRel.Less(FData[Base2], FData[Pred(Base2)]) then
     begin
       D := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
       Base1 += D;
       Len1 -= D;
       if Len1 > 0 then
-        if TCmpRel.Compare(FData[Pred(Base2 + Len2)], FData[Base1]) >= 0 then
+        if not TCmpRel.Less(FData[Pred(Base2 + Len2)], FData[Base1]) then
           begin
             Len2 := GallopLeftA(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -770,7 +770,7 @@ begin
     end;
 end;
 
-procedure TGTimSortBase.TTimSort.MergeAtD(aIndex: SizeInt);
+procedure TGBaseTimSort.TTimSort.MergeAtD(aIndex: SizeInt);
 var
   Base1, Len1, Base2, Len2, D: SizeInt;
 begin
@@ -785,13 +785,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if TCmpRel.Compare(FData[Pred(Base2)], FData[Base2]) < 0 then
+  if TCmpRel.Less(FData[Pred(Base2)], FData[Base2]) then
     begin
       D := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
       Base1 += D;
       Len1 -= D;
       if Len1 > 0 then
-        if TCmpRel.Compare(FData[Pred(Base2 + Len2)], FData[Base1]) <= 0 then
+        if not TCmpRel.Less(FData[Base1], FData[Pred(Base2 + Len2)]) then
           begin
             Len2 := GallopLeftD(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -805,16 +805,16 @@ begin
     end;
 end;
 
-function TGTimSortBase.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
   Dist := 0;
   Result := 1;
-  if TCmpRel.Compare(Key, A[Base + Hint]) > 0 then
+  if TCmpRel.Less(A[Base + Hint], Key) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint + Result]) > 0) do
+      while (Result < MaxDist) and TCmpRel.Less(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -827,7 +827,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint - Result]) <= 0) do
+      while (Result < MaxDist) and not TCmpRel.Less(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -841,23 +841,23 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if TCmpRel.Compare(Key, A[Base + M]) > 0 then
+      if TCmpRel.Less(A[Base + M], Key) then
         Dist := Succ(M)
       else
         Result := M;
     end;
 end;
 
-function TGTimSortBase.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
   Dist := 0;
   Result := 1;
-  if TCmpRel.Compare(Key, A[Base + Hint]) < 0 then
+  if TCmpRel.Less(Key, A[Base + Hint]) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint + Result]) < 0) do
+      while (Result < MaxDist) and TCmpRel.Less(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -870,7 +870,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint - Result]) >= 0) do
+      while (Result < MaxDist) and not TCmpRel.Less(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -884,23 +884,23 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if TCmpRel.Compare(Key, A[Base + M]) < 0 then
+      if TCmpRel.Less(Key, A[Base + M]) then
         Dist := Succ(M)
       else
         Result := M;
     end;
 end;
 
-function TGTimSortBase.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
   Dist := 0;
   Result := 1;
-  if TCmpRel.Compare(Key, A[Base + Hint]) < 0 then
+  if TCmpRel.Less(Key, A[Base + Hint]) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint - Result]) < 0) do
+      while (Result < MaxDist) and TCmpRel.Less(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -914,7 +914,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint + Result]) >= 0) do
+      while (Result < MaxDist) and not TCmpRel.Less(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -927,23 +927,23 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if TCmpRel.Compare(Key, A[Base + M]) < 0 then
+      if TCmpRel.Less(Key, A[Base + M]) then
         Result := M
       else
         Dist := Succ(M);
     end;
 end;
 
-function TGTimSortBase.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
   Dist := 0;
   Result := 1;
-  if TCmpRel.Compare(Key, A[Base + Hint]) > 0 then
+  if TCmpRel.Less(A[Base + Hint], Key) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint - Result]) > 0) do
+      while (Result < MaxDist) and TCmpRel.Less(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -957,7 +957,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (TCmpRel.Compare(Key, A[Base + Hint + Result]) <= 0) do
+      while (Result < MaxDist) and not TCmpRel.Less(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -970,14 +970,14 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if TCmpRel.Compare(Key, A[Base + M]) > 0 then
+      if TCmpRel.Less(A[Base + M], Key) then
         Result := M
       else
         Dist := Succ(M);
     end;
 end;
 
-procedure TGTimSortBase.TTimSort.MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
+procedure TGBaseTimSort.TTimSort.MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
 var
   LocMinGallop,    // local copy FMinGallop
   pLo,             // position in low part   (in buffer)
@@ -1001,7 +1001,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if TCmpRel.Compare(LocB[pLo], LocA[pHi]) <= 0 then
+      if not TCmpRel.Less(LocA[pHi], LocB[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -1073,7 +1073,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-procedure TGTimSortBase.TTimSort.MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
+procedure TGBaseTimSort.TTimSort.MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
 var
   LocMinGallop,    // local copy FMinGallop
   pLo,             // position in low part   (in buffer)
@@ -1097,7 +1097,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if TCmpRel.Compare(LocB[pLo], LocA[pHi]) >= 0 then
+      if not TCmpRel.Less(LocB[pLo], LocA[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -1169,7 +1169,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-procedure TGTimSortBase.TTimSort.MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
+procedure TGBaseTimSort.TTimSort.MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
 var
   LocMinGallop,    // local copy FMinGallop
   pLo,             // position in low part   (in data array)
@@ -1193,7 +1193,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if TCmpRel.Compare(LocA[pLo], LocB[pHi]) > 0 then
+      if TCmpRel.Less(LocB[pHi], LocA[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -1265,7 +1265,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-procedure TGTimSortBase.TTimSort.MergeHiD(Base1, Len1, Base2, Len2: SizeInt);
+procedure TGBaseTimSort.TTimSort.MergeHiD(Base1, Len1, Base2, Len2: SizeInt);
 var
   LocMinGallop,    // local copy FMinGallop
   pLo,             // position in low part   (in data array)
@@ -1289,7 +1289,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if TCmpRel.Compare(LocA[pLo], LocB[pHi]) < 0 then
+      if TCmpRel.Less(LocA[pLo], LocB[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -1361,7 +1361,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-class procedure TGTimSortBase.TTimSort.InsertSortA(A: PItem; R, At: SizeInt);
+class procedure TGBaseTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt);
 var
   I, J: SizeInt;
   v: TFake;
@@ -1372,7 +1372,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (TCmpRel.Compare(A[J], T(v)) > 0) do
+      while (J >= 0) and TCmpRel.Less(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -1381,7 +1381,7 @@ begin
     end;
 end;
 
-class procedure TGTimSortBase.TTimSort.InsertSortD(A: PItem; R, At: SizeInt);
+class procedure TGBaseTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt);
 var
   I, J: SizeInt;
   v: TFake;
@@ -1392,7 +1392,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (TCmpRel.Compare(A[J], T(v)) < 0) do
+      while (J >= 0) and TCmpRel.Less(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -1401,17 +1401,17 @@ begin
     end;
 end;
 
-class function TGTimSortBase.TTimSort.CountRunAsc(A: PItem; R: SizeInt): SizeInt;
+class function TGBaseTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if TCmpRel.Compare(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) <= 0) do
+      if not TCmpRel.Less(A[1], A[0]) then  // ascending
+        while (Result < R) and not TCmpRel.Less(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                                      // descending
+      else                                  // descending
         begin
-          while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and TCmpRel.Less(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -1420,17 +1420,17 @@ begin
     Result := 0;
 end;
 
-class function TGTimSortBase.TTimSort.CountRunDesc(A: PItem; R: SizeInt): SizeInt;
+class function TGBaseTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if TCmpRel.Compare(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) >= 0) do
+      if not TCmpRel.Less(A[0], A[1]) then  // descending
+        while (Result < R) and not TCmpRel.Less(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                                      // ascending
+      else                                  // ascending
         begin
-          while (Result < R) and (TCmpRel.Compare(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and TCmpRel.Less(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -1439,7 +1439,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGTimSortBase.TTimSort.SortAsc(A: PItem; R: SizeInt);
+class procedure TGBaseTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -1467,7 +1467,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R)));
 end;
 
-class procedure TGTimSortBase.TTimSort.SortDesc(A: PItem; R: SizeInt);
+class procedure TGBaseTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -1495,9 +1495,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
-{ TGTimSortBase }
+{ TGBaseTimSort }
 
-class procedure TGTimSortBase.Sort(var A: array of T; aOrder: TSortOrder);
+class procedure TGBaseTimSort.Sort(var A: array of T; aOrder: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -2353,10 +2353,10 @@ end;
 
 { TGRegularTimSort.TTimSort }
 
-procedure TGRegularTimSort.TTimSort.Init(A: PItem; c: TCompare);
+procedure TGRegularTimSort.TTimSort.Init(A: PItem; c: TLess);
 begin
   inherited Init(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 procedure TGRegularTimSort.TTimSort.CollapseA;
@@ -2440,13 +2440,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FCompare(FData[Pred(Base2)], FData[Base2]) > 0 then
+  if FLess(FData[Base2], FData[Pred(Base2)]) then
     begin
       Dist := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
       Base1 += Dist;
       Len1 -= Dist;
       if Len1 > 0 then
-        if FCompare(FData[Pred(Base2 + Len2)], FData[Base1]) >= 0 then
+        if not FLess(FData[Pred(Base2 + Len2)], FData[Base1]) then
           begin
             Len2 := GallopLeftA(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -2475,13 +2475,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FCompare(FData[Pred(Base2)], FData[Base2]) < 0 then
+  if FLess(FData[Pred(Base2)], FData[Base2]) then
     begin
       Dist := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
       Base1 += Dist;
       Len1 -= Dist;
       if Len1 > 0 then
-        if FCompare(FData[Pred(Base2 + Len2)], FData[Base1]) <= 0 then
+        if not FLess(FData[Base1], FData[Pred(Base2 + Len2)]) then
           begin
             Len2 := GallopLeftD(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -2498,15 +2498,15 @@ end;
 function TGRegularTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TCompare;
+  c: TLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) > 0 then
+  if c(A[Base + Hint], Key) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) > 0) do
+      while (Result < MaxDist) and c(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2519,7 +2519,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) <= 0) do
+      while (Result < MaxDist) and not c(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2533,7 +2533,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) > 0 then
+      if c(A[Base + M], Key) then
         Dist := Succ(M)
       else
         Result := M;
@@ -2543,15 +2543,15 @@ end;
 function TGRegularTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TCompare;
+  c: TLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) < 0 then
+  if c(Key, A[Base + Hint]) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) < 0) do
+      while (Result < MaxDist) and c(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2564,7 +2564,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) >= 0) do
+      while (Result < MaxDist) and not c(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2578,7 +2578,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) < 0 then
+      if c(Key, A[Base + M]) then
         Dist := Succ(M)
       else
         Result := M;
@@ -2588,15 +2588,15 @@ end;
 function TGRegularTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TCompare;
+  c: TLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) < 0 then
+  if c(Key, A[Base + Hint]) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) < 0) do
+      while (Result < MaxDist) and c(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2610,7 +2610,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) >= 0) do
+      while (Result < MaxDist) and not c(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2623,7 +2623,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) < 0 then
+      if c(Key, A[Base + M]) then
         Result := M
       else
         Dist := Succ(M);
@@ -2633,15 +2633,15 @@ end;
 function TGRegularTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TCompare;
+  c: TLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) > 0 then
+  if c(A[Base + Hint], Key) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) > 0) do
+      while (Result < MaxDist) and c(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2655,7 +2655,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) <= 0) do
+      while (Result < MaxDist) and not c(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -2668,7 +2668,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) > 0 then
+      if c(A[Base + M], Key) then
         Result := M
       else
         Dist := Succ(M);
@@ -2685,13 +2685,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data
   LocB: PItem;     // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len1);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base1], LocB[0], Len1 * SizeOf(T));
   pLo := 0;
   pHi := Base2;
@@ -2701,7 +2701,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocB[pLo], LocA[pHi]) <= 0 then
+      if not c(LocA[pHi], LocB[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -2783,13 +2783,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data
   LocB: PItem;     // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len1);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base1], LocB[0], Len1 * SizeOf(T));
   pLo := 0;
   pHi := Base2;
@@ -2799,7 +2799,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocB[pLo], LocA[pHi]) >= 0 then
+      if not c(LocB[pLo], LocA[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -2881,13 +2881,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data array
   LocB: PItem;     // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len2);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base2], LocB[0], Len2 * SizeOf(T));
   pLo := Pred(Base1 + Len1);
   pHi := Pred(Len2);
@@ -2897,7 +2897,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocA[pLo], LocB[pHi]) > 0 then
+      if c(LocB[pHi], LocA[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -2979,13 +2979,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data array
   LocB: PItem;     // local pointer to buffer
-  c: TCompare;
+  c: TLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len2);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base2], LocB[0], Len2 * SizeOf(T));
   pLo := Pred(Base1 + Len1);
   pHi := Pred(Len2);
@@ -2995,7 +2995,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocA[pLo], LocB[pHi]) < 0 then
+      if c(LocA[pLo], LocB[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -3067,7 +3067,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-class procedure TGRegularTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt; c: TCompare);
+class procedure TGRegularTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt; c: TLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -3078,7 +3078,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -3087,7 +3087,7 @@ begin
     end;
 end;
 
-class procedure TGRegularTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt; c: TCompare);
+class procedure TGRegularTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt; c: TLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -3098,7 +3098,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) < 0) do
+      while (J >= 0) and c(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -3107,17 +3107,17 @@ begin
     end;
 end;
 
-class function TGRegularTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt; c: TCompare): SizeInt;
+class function TGRegularTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt; c: TLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if not c(A[1], A[0]) then  // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                        // descending
+      else                       // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and c(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -3126,17 +3126,17 @@ begin
     Result := 0;
 end;
 
-class function TGRegularTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt; c: TCompare): SizeInt;
+class function TGRegularTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt; c: TLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+      if not c(A[0], A[1]) then  // descending
+        while (Result < R) and not c(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                        // ascending
+      else                       // ascending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -3145,7 +3145,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGRegularTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt; c: TLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -3173,7 +3173,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
 end;
 
-class procedure TGRegularTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt; c: TCompare);
+class procedure TGRegularTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt; c: TLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -3203,7 +3203,7 @@ end;
 
 { TGRegularTimSort }
 
-class procedure TGRegularTimSort.Sort(var A: array of T; c: TCompare; aOrder: TSortOrder);
+class procedure TGRegularTimSort.Sort(var A: array of T; c: TLess; aOrder: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -3217,10 +3217,10 @@ end;
 
 { TGDelegatedTimSort.TTimSort }
 
-procedure TGDelegatedTimSort.TTimSort.Init(A: PItem; c: TOnCompare);
+procedure TGDelegatedTimSort.TTimSort.Init(A: PItem; c: TOnLess);
 begin
   inherited Init(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 procedure TGDelegatedTimSort.TTimSort.CollapseA;
@@ -3304,13 +3304,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FCompare(FData[Pred(Base2)], FData[Base2]) > 0 then
+  if FLess(FData[Base2], FData[Pred(Base2)]) then
     begin
       Dist := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
       Base1 += Dist;
       Len1 -= Dist;
       if Len1 > 0 then
-        if FCompare(FData[Pred(Base2 + Len2)], FData[Base1]) >= 0 then
+        if not FLess(FData[Pred(Base2 + Len2)], FData[Base1]) then
           begin
             Len2 := GallopLeftA(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -3339,13 +3339,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FCompare(FData[Pred(Base2)], FData[Base2]) < 0 then
+  if FLess(FData[Pred(Base2)], FData[Base2]) then
     begin
       Dist := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
       Base1 += Dist;
       Len1 -= Dist;
       if Len1 > 0 then
-        if FCompare(FData[Pred(Base2 + Len2)], FData[Base1]) <= 0 then
+        if not FLess(FData[Base1], FData[Pred(Base2 + Len2)]) then
           begin
             Len2 := GallopLeftD(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -3362,15 +3362,15 @@ end;
 function TGDelegatedTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TOnCompare;
+  c: TOnLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) > 0 then
+  if c(A[Base + Hint], Key) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) > 0) do
+      while (Result < MaxDist) and c(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3383,7 +3383,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) <= 0) do
+      while (Result < MaxDist) and not c(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3397,7 +3397,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) > 0 then
+      if c(A[Base + M], Key) then
         Dist := Succ(M)
       else
         Result := M;
@@ -3407,15 +3407,15 @@ end;
 function TGDelegatedTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TOnCompare;
+  c: TOnLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) < 0 then
+  if c(Key, A[Base + Hint]) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) < 0) do
+      while (Result < MaxDist) and c(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3428,7 +3428,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) >= 0) do
+      while (Result < MaxDist) and not c(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3442,7 +3442,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) < 0 then
+      if c(Key, A[Base + M]) then
         Dist := Succ(M)
       else
         Result := M;
@@ -3452,15 +3452,15 @@ end;
 function TGDelegatedTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TOnCompare;
+  c: TOnLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) < 0 then
+  if c(Key, A[Base + Hint]) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) < 0) do
+      while (Result < MaxDist) and c(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3474,7 +3474,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) >= 0) do
+      while (Result < MaxDist) and not c(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3487,7 +3487,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) < 0 then
+      if c(Key, A[Base + M]) then
         Result := M
       else
         Dist := Succ(M);
@@ -3497,15 +3497,15 @@ end;
 function TGDelegatedTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TOnCompare;
+  c: TOnLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) > 0 then
+  if c(A[Base + Hint], Key) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) > 0) do
+      while (Result < MaxDist) and c(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3519,7 +3519,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) <= 0) do
+      while (Result < MaxDist) and not c(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -3532,7 +3532,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) > 0 then
+      if c(A[Base + M], Key) then
         Result := M
       else
         Dist := Succ(M);
@@ -3549,13 +3549,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data
   LocB: PItem;     // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len1);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base1], LocB[0], Len1 * SizeOf(T));
   pLo := 0;
   pHi := Base2;
@@ -3565,7 +3565,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocB[pLo], LocA[pHi]) <= 0 then
+      if not c(LocA[pHi], LocB[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -3647,13 +3647,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data
   LocB: PItem;     // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len1);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base1], LocB[0], Len1 * SizeOf(T));
   pLo := 0;
   pHi := Base2;
@@ -3663,7 +3663,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocB[pLo], LocA[pHi]) >= 0 then
+      if not c(LocB[pLo], LocA[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -3745,13 +3745,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data array
   LocB: PItem;     // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len2);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base2], LocB[0], Len2 * SizeOf(T));
   pLo := Pred(Base1 + Len1);
   pHi := Pred(Len2);
@@ -3761,7 +3761,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocA[pLo], LocB[pHi]) > 0 then
+      if c(LocB[pHi], LocA[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -3843,13 +3843,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data array
   LocB: PItem;     // local pointer to buffer
-  c: TOnCompare;
+  c: TOnLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len2);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base2], LocB[0], Len2 * SizeOf(T));
   pLo := Pred(Base1 + Len1);
   pHi := Pred(Len2);
@@ -3859,7 +3859,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocA[pLo], LocB[pHi]) < 0 then
+      if c(LocA[pLo], LocB[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -3931,7 +3931,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-class procedure TGDelegatedTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt; c: TOnCompare);
+class procedure TGDelegatedTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt; c: TOnLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -3942,7 +3942,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -3951,7 +3951,7 @@ begin
     end;
 end;
 
-class procedure TGDelegatedTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt; c: TOnCompare);
+class procedure TGDelegatedTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt; c: TOnLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -3962,7 +3962,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) < 0) do
+      while (J >= 0) and c(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -3971,17 +3971,17 @@ begin
     end;
 end;
 
-class function TGDelegatedTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt;
+class function TGDelegatedTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt; c: TOnLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if not c(A[1], A[0]) then  // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
-      else                        // descending
+      else                       // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and c(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -3990,17 +3990,17 @@ begin
     Result := 0;
 end;
 
-class function TGDelegatedTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt;
+class function TGDelegatedTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt; c: TOnLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+      if not c(A[0], A[1]) then  // descending
+        while (Result < R) and not c(A[Result], A[Succ(Result)]) do
           Inc(Result)
       else                        // ascending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -4009,7 +4009,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGDelegatedTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt; c: TOnLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -4037,7 +4037,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
 end;
 
-class procedure TGDelegatedTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt; c: TOnCompare);
+class procedure TGDelegatedTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt; c: TOnLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -4067,7 +4067,7 @@ end;
 
 { TGDelegatedTimSort }
 
-class procedure TGDelegatedTimSort.Sort(var A: array of T; c: TOnCompare; aOrder: TSortOrder);
+class procedure TGDelegatedTimSort.Sort(var A: array of T; c: TOnLess; aOrder: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -4081,10 +4081,10 @@ end;
 
 { TGNestedTimSort.TTimSort }
 
-procedure TGNestedTimSort.TTimSort.Init(A: PItem; c: TNestCompare);
+procedure TGNestedTimSort.TTimSort.Init(A: PItem; c: TNestLess);
 begin
   inherited Init(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 procedure TGNestedTimSort.TTimSort.CollapseA;
@@ -4168,13 +4168,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FCompare(FData[Pred(Base2)], FData[Base2]) > 0 then
+  if FLess(FData[Base2], FData[Pred(Base2)]) then
     begin
       Dist := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
       Base1 += Dist;
       Len1 -= Dist;
       if Len1 > 0 then
-        if FCompare(FData[Pred(Base2 + Len2)], FData[Base1]) >= 0 then
+        if not FLess(FData[Pred(Base2 + Len2)], FData[Base1]) then
           begin
             Len2 := GallopLeftA(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -4203,13 +4203,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FCompare(FData[Pred(Base2)], FData[Base2]) < 0 then
+  if FLess(FData[Pred(Base2)], FData[Base2]) then
     begin
       Dist := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
       Base1 += Dist;
       Len1 -= Dist;
       if Len1 > 0 then
-        if FCompare(FData[Pred(Base2 + Len2)], FData[Base1]) <= 0 then
+        if not FLess(FData[Base1], FData[Pred(Base2 + Len2)]) then
           begin
             Len2 := GallopLeftD(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -4226,15 +4226,15 @@ end;
 function TGNestedTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TNestCompare;
+  c: TNestLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) > 0 then
+  if c(A[Base + Hint], Key) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) > 0) do
+      while (Result < MaxDist) and c(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4247,7 +4247,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) <= 0) do
+      while (Result < MaxDist) and not c(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4261,7 +4261,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) > 0 then
+      if c(A[Base + M], Key) then
         Dist := Succ(M)
       else
         Result := M;
@@ -4271,15 +4271,15 @@ end;
 function TGNestedTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TNestCompare;
+  c: TNestLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) < 0 then
+  if c(Key, A[Base + Hint]) then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) < 0) do
+      while (Result < MaxDist) and c(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4292,7 +4292,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) >= 0) do
+      while (Result < MaxDist) and not c(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4306,7 +4306,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) < 0 then
+      if c(Key, A[Base + M]) then
         Dist := Succ(M)
       else
         Result := M;
@@ -4316,15 +4316,15 @@ end;
 function TGNestedTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TNestCompare;
+  c: TNestLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) < 0 then
+  if c(Key, A[Base + Hint]) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) < 0) do
+      while (Result < MaxDist) and c(Key, A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4338,7 +4338,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) >= 0) do
+      while (Result < MaxDist) and not c(Key, A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4351,7 +4351,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) < 0 then
+      if c(Key, A[Base + M]) then
         Result := M
       else
         Dist := Succ(M);
@@ -4361,15 +4361,15 @@ end;
 function TGNestedTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
-  c: TNestCompare;
+  c: TNestLess;
 begin
-  c := FCompare;
+  c := FLess;
   Dist := 0;
   Result := 1;
-  if c(Key, A[Base + Hint]) > 0 then
+  if c(A[Base + Hint], Key) then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (c(Key, A[Base + Hint - Result]) > 0) do
+      while (Result < MaxDist) and c(A[Base + Hint - Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4383,7 +4383,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (c(Key, A[Base + Hint + Result]) <= 0) do
+      while (Result < MaxDist) and not c(A[Base + Hint + Result], Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -4396,7 +4396,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if c(Key, A[Base + M]) > 0 then
+      if c(A[Base + M], Key) then
         Result := M
       else
         Dist := Succ(M);
@@ -4413,13 +4413,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data
   LocB: PItem;     // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len1);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base1], LocB[0], Len1 * SizeOf(T));
   pLo := 0;
   pHi := Base2;
@@ -4429,7 +4429,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocB[pLo], LocA[pHi]) <= 0 then
+      if not c(LocA[pHi], LocB[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -4511,13 +4511,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data
   LocB: PItem;     // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len1);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base1], LocB[0], Len1 * SizeOf(T));
   pLo := 0;
   pHi := Base2;
@@ -4527,7 +4527,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocB[pLo], LocA[pHi]) >= 0 then
+      if not c(LocB[pLo], LocA[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -4609,13 +4609,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data array
   LocB: PItem;     // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len2);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base2], LocB[0], Len2 * SizeOf(T));
   pLo := Pred(Base1 + Len1);
   pHi := Pred(Len2);
@@ -4625,7 +4625,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocA[pLo], LocB[pHi]) > 0 then
+      if c(LocB[pHi], LocA[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -4707,13 +4707,13 @@ var
   Count2: SizeInt; // second run win count
   LocA: PItem;     // local pointer to data array
   LocB: PItem;     // local pointer to buffer
-  c: TNestCompare;
+  c: TNestLess;
 label
   MainLoopDone;
 begin
   LocA := FData;
   LocB := EnsureBufferSize(Len2);
-  c := FCompare;
+  c := FLess;
   System.Move(LocA[Base2], LocB[0], Len2 * SizeOf(T));
   pLo := Pred(Base1 + Len1);
   pHi := Pred(Len2);
@@ -4723,7 +4723,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if c(LocA[pLo], LocB[pHi]) < 0 then
+      if c(LocA[pLo], LocB[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -4795,7 +4795,7 @@ MainLoopDone:
     FMinGallop := LocMinGallop;
 end;
 
-class procedure TGNestedTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt; c: TNestCompare);
+class procedure TGNestedTimSort.TTimSort.InsertSortA(A: PItem; R, At: SizeInt; c: TNestLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -4806,7 +4806,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) > 0) do
+      while (J >= 0) and c(T(v), A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -4815,7 +4815,7 @@ begin
     end;
 end;
 
-class procedure TGNestedTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt; c: TNestCompare);
+class procedure TGNestedTimSort.TTimSort.InsertSortD(A: PItem; R, At: SizeInt; c: TNestLess);
 var
   I, J: SizeInt;
   v: TFake;
@@ -4826,7 +4826,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (c(A[J], T(v)) < 0) do
+      while (J >= 0) and c(A[J], T(v)) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -4835,17 +4835,17 @@ begin
     end;
 end;
 
-class function TGNestedTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt;
+class function TGNestedTimSort.TTimSort.CountRunAsc(A: PItem; R: SizeInt; c: TNestLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) <= 0 then  // ascending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) <= 0) do
+      if not c(A[1], A[0]) then  // ascending
+        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
           Inc(Result)
       else                        // descending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) > 0) do
+          while (Result < R) and c(A[Succ(Result)], A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -4854,17 +4854,17 @@ begin
     Result := 0;
 end;
 
-class function TGNestedTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt;
+class function TGNestedTimSort.TTimSort.CountRunDesc(A: PItem; R: SizeInt; c: TNestLess): SizeInt;
 begin
   if R > 0 then
     begin
       Result := 1;
-      if c(A[0], A[1]) >= 0 then  // descending
-        while (Result < R) and (c(A[Result], A[Succ(Result)]) >= 0) do
+      if not c(A[0], A[1]) then  // descending
+        while (Result < R) and not c(A[Result], A[Succ(Result)]) do
           Inc(Result)
-      else                        // ascending
+      else                       // ascending
         begin
-          while (Result < R) and (c(A[Result], A[Succ(Result)]) < 0) do
+          while (Result < R) and c(A[Result], A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -4873,7 +4873,7 @@ begin
     Result := 0;
 end;
 
-class procedure TGNestedTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedTimSort.TTimSort.SortAsc(A: PItem; R: SizeInt; c: TNestLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -4901,7 +4901,7 @@ begin
     InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
 end;
 
-class procedure TGNestedTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt; c: TNestCompare);
+class procedure TGNestedTimSort.TTimSort.SortDesc(A: PItem; R: SizeInt; c: TNestLess);
 var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
@@ -4931,7 +4931,7 @@ end;
 
 { TGNestedTimSort }
 
-class procedure TGNestedTimSort.Sort(var A: array of T; c: TNestCompare; aOrder: TSortOrder);
+class procedure TGNestedTimSort.Sort(var A: array of T; c: TNestLess; aOrder: TSortOrder);
 var
   R: SizeInt;
 begin

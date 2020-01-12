@@ -57,17 +57,16 @@ type
 
   { TGBaseBinHeap implements maximizing priority queue with queue interface;
       functor TCmpRel (comparision relation) must provide
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGBaseBinHeap<T, TCmpRel> = class(specialize TGCustomBinHeap<T>)
   protected
     procedure BuildHeap; override;
     procedure SiftDown; override;
     procedure FloatUp(aIndex: SizeInt);  override;
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
   type
-    TComparator = TCompare;
-    class function Comparator: TComparator; static; inline;
+    class function Comparator: TLess; static; inline;
   end;
 
   { TGBinHeap assumes that type T implements TCmpRel}
@@ -94,15 +93,13 @@ type
 
   generic TGComparableBinHeap<T> = class(specialize TGCustomBinHeap<T>)
   protected
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
-  type
-    TComparator = TCompare;
-    class function Comparator: TComparator; static; inline;
+    class function Comparator: TLess; static; inline;
   end;
 
   { TGComparableBinHeapMax: maximizing priority queue with queue interface,
-    it assumes that type T has defined comparision operators }
+    it assumes that type T has defined comparison operators }
   generic TGComparableBinHeapMax<T> = class(specialize TGComparableBinHeap<T>)
   protected
     procedure BuildHeap; override;
@@ -111,7 +108,7 @@ type
   end;
 
   { TGComparableBinHeapMin: minimizing priority queue with queue interface,
-    it assumes that type T has defined comparision operators }
+    it assumes that type T has defined comparison operators }
   generic TGComparableBinHeapMin<T> = class(specialize TGComparableBinHeap<T>)
   protected
     procedure BuildHeap; override;
@@ -122,44 +119,42 @@ type
   { TGRegularBinHeap: maximizing priority queue with queue interface and regular comparator }
   generic TGRegularBinHeap<T> = class(specialize TGCustomBinHeap<T>)
   private
-    FCompare: TCompare;
+    FLess: TLess;
   protected
     procedure BuildHeap; override;
     procedure SiftDown; override;
     procedure FloatUp(aIndex: SizeInt); override;
   public
-  type
-    TComparator = TCompare;
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
-    constructor Create(constref A: array of T; c: TComparator);
-    constructor Create(e: IEnumerable; c: TComparator);
-    function Comparator: TComparator; inline;
+    constructor Create(c: TLess);
+    constructor Create(aCapacity: SizeInt; c: TLess);
+    constructor Create(constref A: array of T; c: TLess);
+    constructor Create(e: IEnumerable; c: TLess);
+    function Comparator: TLess; inline;
   end;
 
   { TGDelegatedBinHeap: maximizing priority queue with queue interface and delegated comparator }
   generic TGDelegatedBinHeap<T> = class(specialize TGCustomBinHeap<T>)
   private
-    FCompare: TOnCompare;
+    FLess: TOnLess;
   protected
     procedure BuildHeap; override;
     procedure SiftDown; override;
     procedure FloatUp(aIndex: SizeInt); override;
   public
   type
-    TComparator = TOnCompare;
+    TComparator = TOnLess;
     constructor Create;
     constructor Create(c: TComparator);
     constructor Create(aCapacity: SizeInt; c: TComparator);
     constructor Create(constref A: array of T; c: TComparator);
     constructor Create(e: IEnumerable; c: TComparator);
-    function Comparator: TOnCompare; inline;
+    function Comparator: TOnLess; inline;
   end;
 
   { TGLiteBinHeap implements maximizing priority queue with queue interface;
       functor TCmpRel (comparision relation) must provide
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGLiteBinHeap<T, TCmpRel> = record
   public
   type
@@ -180,11 +175,11 @@ type
     procedure FloatUp(aIndex: SizeInt);
     function  DequeueItem: T;
     property  Items: TBuffer.TArray read FBuffer.FItems;
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
   type
-    TComparator = specialize TGCompare<T>;
-    function  Comparator: TComparator; inline;
+    TLess = specialize TGLessCompare<T>;
+    function  Comparator: TLess; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
@@ -226,7 +221,7 @@ type
   end;
 
   { TGLiteComparableBinHeapMin implements minimizing priority queue with queue interface;
-    it assumes that type T has defined comparision operators }
+    it assumes that type T has defined comparison operators }
   generic TGLiteComparableBinHeapMin<T> = record
   public
   type
@@ -245,11 +240,11 @@ type
     procedure SiftDown;
     procedure FloatUp(aIndex: SizeInt);
     function  DequeueItem: T;
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
   type
-    TComparator = specialize TGCompare<T>;
-    function  Comparator: TComparator; inline;
+    TLess = specialize TGLessCompare<T>;
+    function  Comparator: TLess; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
@@ -366,7 +361,7 @@ type
 
   { TGBasePairingHeap implements maximizing priority queue;
       functor TCmpRel (comparision relation) must provide
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGBasePairingHeap<T, TCmpRel> = class(specialize TGCustomPairingHeap<T>)
   protected
     procedure RootMerge(aNode: PNode); inline;
@@ -378,11 +373,9 @@ type
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
     class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
-  type
-    TComparator = TCompare;
-    class function Comparator: TComparator; static; inline;
+    class function Comparator: TLess; static; inline;
     constructor Create(constref A: array of T); overload;
     constructor Create(e: IEnumerable); overload;
   end;
@@ -392,15 +385,13 @@ type
 
   generic TGComparablePairHeap<T> = class(specialize TGCustomPairingHeap<T>)
   protected
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
-  type
-    TComparator = TCompare;
-    class function Comparator: TComparator; static; inline;
+    class function Comparator: TLess; static; inline;
   end;
 
   { TGComparablePairHeapMax: maximizing priority queue, it assumes
-    that type T has defined comparision operators }
+    that type T has defined comparison operators }
   generic TGComparablePairHeapMax<T> = class(specialize TGComparablePairHeap<T>)
   protected
     procedure RootMerge(aNode: PNode); inline;
@@ -418,7 +409,7 @@ type
   end;
 
   { TGComparablePairHeapMin: minimizing priority queue, it assumes
-    that type T has defined comparision operators }
+    that type T has defined comparison operators }
   generic TGComparablePairHeapMin<T> = class(specialize TGComparablePairHeap<T>)
   protected
     procedure RootMerge(aNode: PNode); inline;
@@ -438,7 +429,7 @@ type
   { TGRegularPairHeap: maximizing priority queue with regular comparator }
   generic TGRegularPairHeap<T> = class(specialize TGCustomPairingHeap<T>)
   protected
-    FCompare: TCompare;
+    FLess: TLess;
     function  DoMerge(L, R: PNode): PNode;
     procedure RootMerge(aNode: PNode); inline;
     function  TwoPassMerge(aNode: PNode): PNode;
@@ -449,19 +440,17 @@ type
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
   public
-  type
-    TComparator = TCompare;
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(constref A: array of T; c: TComparator);
-    constructor Create(e: IEnumerable; c: TComparator);
-    function Comparator: TComparator; inline;
+    constructor Create(c: TLess);
+    constructor Create(constref A: array of T; c: TLess);
+    constructor Create(e: IEnumerable; c: TLess);
+    function Comparator: TLess; inline;
   end;
 
   { TGDelegatedPairHeap: maximizing priority queue with delegated comparator }
   generic TGDelegatedPairHeap<T> = class(specialize TGCustomPairingHeap<T>)
   protected
-    FCompare: TOnCompare;
+    FLess: TOnLess;
     function  DoMerge(L, R: PNode): PNode;
     procedure RootMerge(aNode: PNode); inline;
     function  TwoPassMerge(aNode: PNode): PNode;
@@ -472,18 +461,16 @@ type
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
   public
-  type
-    TComparator = TOnCompare;
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(constref A: array of T; c: TComparator);
-    constructor Create(e: IEnumerable; c: TComparator);
-    function Comparator: TComparator; inline;
+    constructor Create(c: TOnLess);
+    constructor Create(constref A: array of T; c: TOnLess);
+    constructor Create(e: IEnumerable; c: TOnLess);
+    function Comparator: TOnLess; inline;
   end;
 
   { TGLitePairingHeap implements maximizing priority queue;
-      functor TCmpRel (comparision relation) must provide
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+      functor TCmpRel (comparison relation) must provide
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGLitePairingHeap<T, TCmpRel> = record
   private
   type
@@ -561,11 +548,11 @@ type
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
-    class function  DoCompare(constref L, R: T): SizeInt; static;
+    class function  DoCompare(constref L, R: T): Boolean; static;
   public
   type
-    TComparator = specialize TGCompare<T>;
-    function  Comparator: TComparator;
+    TLess = specialize TGLessCompare<T>;
+    function  Comparator: TLess;
     function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse;
     function  ToArray: TArray;
@@ -590,7 +577,7 @@ type
   end;
 
   { TGLiteComparablePairHeapMin implements minimizing priority queue;
-    it assumes that type T has defined comparision operators }
+    it assumes that type T has defined comparison operators }
   generic TGLiteComparablePairHeapMin<T> = record
   private
   type
@@ -669,11 +656,11 @@ type
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
-    class function  DoCompare(constref L, R: T): SizeInt; static;
+    class function  DoCompare(constref L, R: T): Boolean; static;
   public
   type
-    TComparator = specialize TGCompare<T>;
-    function  Comparator: TComparator;
+    TLess = specialize TGLessCompare<T>;
+    function  Comparator: TLess;
     function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
@@ -824,9 +811,9 @@ begin
           v := TFake(FItems[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if(Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(FItems[NextIdx], FItems[Succ(NextIdx)]) < 0)then
+              if(Succ(NextIdx) <= HighIdx) and TCmpRel.Less(FItems[NextIdx], FItems[Succ(NextIdx)])then
                 Inc(NextIdx);
-              if TCmpRel.Compare(T(v), FItems[NextIdx]) >= 0 then
+              if not TCmpRel.Less(T(v), FItems[NextIdx]) then
                 break;
               TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
               CurrIdx := NextIdx;
@@ -850,14 +837,14 @@ begin
       v := TFake(FItems[0]);
       while NextIdx <= HighIdx do
         begin
-          if(Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(FItems[NextIdx], FItems[Succ(NextIdx)]) < 0) then
+          if(Succ(NextIdx) <= HighIdx) and TCmpRel.Less(FItems[NextIdx], FItems[Succ(NextIdx)]) then
             Inc(NextIdx);
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (TCmpRel.Compare(T(v), FItems[NextIdx]) > 0) do
+      while (CurrIdx > 0) and TCmpRel.Less(FItems[NextIdx], T(v)) do
         begin
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
@@ -874,7 +861,7 @@ var
 begin
   ParentIdx := Pred(aIndex) shr 1;
   v := TFake(FItems[aIndex]);
-  while(aIndex > 0) and (TCmpRel.Compare(T(v), FItems[ParentIdx]) > 0) do
+  while(aIndex > 0) and TCmpRel.Less(FItems[ParentIdx], T(v)) do
     begin
       TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
       aIndex := ParentIdx;
@@ -883,12 +870,12 @@ begin
   TFake(FItems[aIndex]) := v;
 end;
 
-class function TGBaseBinHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGBaseBinHeap.DoCompare(constref L, R: T): Boolean;
 begin
-  Result := TCmpRel.Compare(L, R);
+  Result := TCmpRel.Less(L, R);
 end;
 
-class function TGBaseBinHeap.Comparator: TComparator;
+class function TGBaseBinHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -1007,18 +994,12 @@ end;
 
 { TGComparableBinHeap }
 
-class function TGComparableBinHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGComparableBinHeap.DoCompare(constref L, R: T): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := L < R;
 end;
 
-class function TGComparableBinHeap.Comparator: TComparator;
+class function TGComparableBinHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -1116,9 +1097,9 @@ begin
           v := TFake(FItems[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if (Succ(NextIdx) <= HighIdx) and (FCompare(FItems[NextIdx], FItems[Succ(NextIdx)]) < 0) then
+              if (Succ(NextIdx) <= HighIdx) and FLess(FItems[NextIdx], FItems[Succ(NextIdx)]) then
                 Inc(NextIdx);
-              if FCompare(T(v), FItems[NextIdx]) >= 0 then
+              if not FLess(T(v), FItems[NextIdx]) then
                 break;
               TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
               CurrIdx := NextIdx;
@@ -1142,14 +1123,14 @@ begin
       v := TFake(FItems[0]);
       while NextIdx <= HighIdx do
         begin
-          if(Succ(NextIdx) <= HighIdx) and (FCompare(FItems[NextIdx], FItems[Succ(NextIdx)]) < 0) then
+          if(Succ(NextIdx) <= HighIdx) and FLess(FItems[NextIdx], FItems[Succ(NextIdx)]) then
             Inc(NextIdx);
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (FCompare(T(v), FItems[NextIdx]) > 0) do
+      while (CurrIdx > 0) and FLess(FItems[NextIdx], T(v)) do
         begin
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
@@ -1166,7 +1147,7 @@ var
 begin
   ParentIdx := Pred(aIndex) shr 1;
   v := TFake(FItems[aIndex]);
-  while(aIndex > 0) and (FCompare(T(v), FItems[ParentIdx]) > 0) do
+  while(aIndex > 0) and FLess(FItems[ParentIdx], T(v)) do
     begin
       TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
       aIndex := ParentIdx;
@@ -1177,36 +1158,36 @@ end;
 
 constructor TGRegularBinHeap.Create;
 begin
-  Create(TDefaults.Compare);
+  Create(TDefaults.Less);
 end;
 
-constructor TGRegularBinHeap.Create(c: TComparator);
+constructor TGRegularBinHeap.Create(c: TLess);
 begin
   inherited Create;
-  FCompare := c;
+  FLess := c;
 end;
 
-constructor TGRegularBinHeap.Create(aCapacity: SizeInt; c: TComparator);
+constructor TGRegularBinHeap.Create(aCapacity: SizeInt; c: TLess);
 begin
   inherited Create(aCapacity);
-  FCompare := c;
+  FLess := c;
 end;
 
-constructor TGRegularBinHeap.Create(constref A: array of T; c: TComparator);
+constructor TGRegularBinHeap.Create(constref A: array of T; c: TLess);
 begin
   inherited Create(A);
-  FCompare := c;
+  FLess := c;
 end;
 
-constructor TGRegularBinHeap.Create(e: IEnumerable; c: TComparator);
+constructor TGRegularBinHeap.Create(e: IEnumerable; c: TLess);
 begin
   inherited Create(e);
-  FCompare := c;
+  FLess := c;
 end;
 
-function TGRegularBinHeap.Comparator: TComparator;
+function TGRegularBinHeap.Comparator: TLess;
 begin
-  Result := FCompare;
+  Result := FLess;
 end;
 
 { TGDelegatedBinHeap }
@@ -1226,9 +1207,9 @@ begin
           v := TFake(FItems[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if (Succ(NextIdx) <= HighIdx) and (FCompare(FItems[NextIdx], FItems[Succ(NextIdx)]) < 0) then
+              if (Succ(NextIdx) <= HighIdx) and FLess(FItems[NextIdx], FItems[Succ(NextIdx)]) then
                 Inc(NextIdx);
-              if FCompare(T(v), FItems[NextIdx]) >= 0 then
+              if not FLess(T(v), FItems[NextIdx]) then
                 break;
               TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
               CurrIdx := NextIdx;
@@ -1252,14 +1233,14 @@ begin
       v := TFake(FItems[0]);
       while NextIdx <= HighIdx do
         begin
-          if(Succ(NextIdx) <= HighIdx) and (FCompare(FItems[NextIdx], FItems[Succ(NextIdx)]) < 0) then
+          if(Succ(NextIdx) <= HighIdx) and FLess(FItems[NextIdx], FItems[Succ(NextIdx)]) then
             Inc(NextIdx);
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (FCompare(T(v), FItems[NextIdx]) > 0) do
+      while (CurrIdx > 0) and FLess(FItems[NextIdx], T(v)) do
         begin
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
@@ -1276,7 +1257,7 @@ var
 begin
   ParentIdx := Pred(aIndex) shr 1;
   v := TFake(FItems[aIndex]);
-  while(aIndex > 0) and (FCompare(T(v), FItems[ParentIdx]) > 0) do
+  while(aIndex > 0) and FLess(FItems[ParentIdx], T(v)) do
     begin
       TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
       aIndex := ParentIdx;
@@ -1287,36 +1268,36 @@ end;
 
 constructor TGDelegatedBinHeap.Create;
 begin
-  Create(TDefaults.OnCompare);
+  Create(TDefaults.OnLess);
 end;
 
 constructor TGDelegatedBinHeap.Create(c: TComparator);
 begin
   inherited Create;
-  FCompare := c;
+  FLess := c;
 end;
 
 constructor TGDelegatedBinHeap.Create(aCapacity: SizeInt; c: TComparator);
 begin
   inherited Create(aCapacity);
-  FCompare := c;
+  FLess := c;
 end;
 
 constructor TGDelegatedBinHeap.Create(constref A: array of T; c: TComparator);
 begin
   inherited Create(A);
-  FCompare := c;
+  FLess := c;
 end;
 
 constructor TGDelegatedBinHeap.Create(e: IEnumerable; c: TComparator);
 begin
   inherited Create(e);
-  FCompare := c;
+  FLess := c;
 end;
 
-function TGDelegatedBinHeap.Comparator: TOnCompare;
+function TGDelegatedBinHeap.Comparator: TOnLess;
 begin
-  Result := FCompare;
+  Result := FLess;
 end;
 
 { TGLiteBinHeap }
@@ -1341,9 +1322,9 @@ begin
           v := TFake(Items[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if (Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(Items[NextIdx], Items[Succ(NextIdx)]) < 0)then
+              if (Succ(NextIdx) <= HighIdx) and TCmpRel.Less(Items[NextIdx], Items[Succ(NextIdx)])then
                 Inc(NextIdx);
-              if TCmpRel.Compare(T(v), Items[NextIdx]) >= 0 then
+              if not TCmpRel.Less(T(v), Items[NextIdx]) then
                 break;
               TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
               CurrIdx := NextIdx;
@@ -1367,14 +1348,14 @@ begin
       v := TFake(Items[0]);
       while NextIdx <= HighIdx do
         begin
-          if (Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(Items[NextIdx], Items[Succ(NextIdx)]) < 0) then
+          if (Succ(NextIdx) <= HighIdx) and TCmpRel.Less(Items[NextIdx], Items[Succ(NextIdx)])then
             Inc(NextIdx);
           TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (TCmpRel.Compare(T(v), Items[NextIdx]) > 0) do
+      while (CurrIdx > 0) and TCmpRel.Less(Items[NextIdx], T(v)) do
         begin
           TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
           CurrIdx := NextIdx;
@@ -1393,7 +1374,7 @@ begin
     begin
       ParentIdx := Pred(aIndex) shr 1;
       v := TFake(FBuffer.FItems[aIndex]);
-      while(aIndex > 0) and (TCmpRel.Compare(T(v), Items[ParentIdx]) > 0) do
+      while(aIndex > 0) and TCmpRel.Less(Items[ParentIdx], T(v)) do
         begin
           TFake(Items[aIndex]) := TFake(Items[ParentIdx]);
           aIndex := ParentIdx;
@@ -1417,12 +1398,12 @@ begin
     FBuffer.FItems[0] := Default(T);
 end;
 
-class function TGLiteBinHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGLiteBinHeap.DoCompare(constref L, R: T): Boolean;
 begin
-  Result := TCmpRel.Compare(L, R);
+  Result := TCmpRel.Less(L, R);
 end;
 
-function TGLiteBinHeap.Comparator: TComparator;
+function TGLiteBinHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -1676,18 +1657,12 @@ begin
     FBuffer.FItems[0] := Default(T);
 end;
 
-class function TGLiteComparableBinHeapMin.DoCompare(constref L, R: T): SizeInt;
+class function TGLiteComparableBinHeapMin.DoCompare(constref L, R: T): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := L < R;
 end;
 
-function TGLiteComparableBinHeapMin.Comparator: TComparator;
+function TGLiteComparableBinHeapMin.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -2227,11 +2202,8 @@ begin
 end;
 
 procedure TGBasePairingHeap.DoUpdate(aNode: PNode; constref aValue: T);
-var
-  c: SizeInt;
 begin
-  c := TCmpRel.Compare(aValue, aNode^.Data);
-  if c > 0 then
+  if TCmpRel.Less(aNode^.Data, aValue) then
     begin
       aNode^.Data := aValue;
       if aNode <> FRoot then
@@ -2241,7 +2213,7 @@ begin
         end;
     end
   else
-    if c < 0 then
+    if TCmpRel.Less(aValue, aNode^.Data) then
       begin
         aNode^.Data := aValue;
         DoExtract(aNode);
@@ -2294,7 +2266,7 @@ begin
     begin
       if R <> nil then
         begin
-          if TCmpRel.Compare(L^.Data, R^.Data) >= 0 then
+          if not TCmpRel.Less(L^.Data, R^.Data) then
             begin
               L^.AddChild(R);
               Result := L;
@@ -2329,12 +2301,12 @@ begin
   Result := DoMerge(Result, aNode);
 end;
 
-class function TGBasePairingHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGBasePairingHeap.DoCompare(constref L, R: T): Boolean;
 begin
-  Result := TCmpRel.Compare(L, R);
+  Result := TCmpRel.Less(L, R);
 end;
 
-class function TGBasePairingHeap.Comparator: TComparator;
+class function TGBasePairingHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -2351,18 +2323,12 @@ end;
 
 { TGComparablePairHeap }
 
-class function TGComparablePairHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGComparablePairHeap.DoCompare(constref L, R: T): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result :=  L < R;
 end;
 
-class function TGComparablePairHeap.Comparator: TComparator;
+class function TGComparablePairHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -2657,7 +2623,7 @@ begin
     begin
       if R <> nil then
         begin
-          if FCompare(L^.Data, R^.Data) >= 0 then
+          if not FLess(L^.Data, R^.Data) then
             begin
               L^.AddChild(R);
               Result := L;
@@ -2723,11 +2689,8 @@ begin
 end;
 
 procedure TGRegularPairHeap.DoUpdate(aNode: PNode; constref aValue: T);
-var
-  c: SizeInt;
 begin
-  c := FCompare(aValue, aNode^.Data);
-  if c > 0 then
+  if FLess(aNode^.Data, aValue) then
     begin
       aNode^.Data := aValue;
       if aNode <> FRoot then
@@ -2737,7 +2700,7 @@ begin
         end;
     end
   else
-    if c < 0 then
+    if FLess(aValue, aNode^.Data) then
       begin
         aNode^.Data := aValue;
         DoExtract(aNode);
@@ -2786,29 +2749,29 @@ end;
 
 constructor TGRegularPairHeap.Create;
 begin
-  Create(TDefaults.Compare);
+  Create(TDefaults.Less);
 end;
 
-constructor TGRegularPairHeap.Create(c: TComparator);
+constructor TGRegularPairHeap.Create(c: TLess);
 begin
-  FCompare := c;
+  FLess := c;
 end;
 
-constructor TGRegularPairHeap.Create(constref A: array of T; c: TComparator);
+constructor TGRegularPairHeap.Create(constref A: array of T; c: TLess);
 begin
   Create(c);
   EnqueueAll(A);
 end;
 
-constructor TGRegularPairHeap.Create(e: IEnumerable; c: TComparator);
+constructor TGRegularPairHeap.Create(e: IEnumerable; c: TLess);
 begin
   Create(c);
   EnqueueAll(e);
 end;
 
-function TGRegularPairHeap.Comparator: TComparator;
+function TGRegularPairHeap.Comparator: TLess;
 begin
-  Result := FCompare;
+  Result := FLess;
 end;
 
 { TGDelegatedPairHeap }
@@ -2819,7 +2782,7 @@ begin
     begin
       if R <> nil then
         begin
-          if FCompare(L^.Data, R^.Data) >= 0 then
+          if not FLess(L^.Data, R^.Data) then
             begin
               L^.AddChild(R);
               Result := L;
@@ -2885,11 +2848,8 @@ begin
 end;
 
 procedure TGDelegatedPairHeap.DoUpdate(aNode: PNode; constref aValue: T);
-var
-  c: SizeInt;
 begin
-  c := FCompare(aValue, aNode^.Data);
-  if c > 0 then
+  if FLess(aNode^.Data, aValue) then
     begin
       aNode^.Data := aValue;
       if aNode <> FRoot then
@@ -2899,7 +2859,7 @@ begin
         end;
     end
   else
-    if c < 0 then
+    if FLess(aValue, aNode^.Data) then
       begin
         aNode^.Data := aValue;
         DoExtract(aNode);
@@ -2948,29 +2908,29 @@ end;
 
 constructor TGDelegatedPairHeap.Create;
 begin
-  Create(TDefaults.OnCompare);
+  Create(TDefaults.OnLess);
 end;
 
-constructor TGDelegatedPairHeap.Create(c: TComparator);
+constructor TGDelegatedPairHeap.Create(c: TOnLess);
 begin
-  FCompare := c;
+  FLess := c;
 end;
 
-constructor TGDelegatedPairHeap.Create(constref A: array of T; c: TComparator);
+constructor TGDelegatedPairHeap.Create(constref A: array of T; c: TOnLess);
 begin
   Create(c);
   EnqueueAll(A);
 end;
 
-constructor TGDelegatedPairHeap.Create(e: IEnumerable; c: TComparator);
+constructor TGDelegatedPairHeap.Create(e: IEnumerable; c: TOnLess);
 begin
   Create(c);
   EnqueueAll(e);
 end;
 
-function TGDelegatedPairHeap.Comparator: TComparator;
+function TGDelegatedPairHeap.Comparator: TOnLess;
 begin
-  Result := FCompare;
+  Result := FLess;
 end;
 
 { TGLitePairingHeap.TNode }
@@ -3198,27 +3158,23 @@ begin
 end;
 
 procedure TGLitePairingHeap.UpdateNode(aNode: PNode; constref aValue: T);
-var
-  c: SizeInt;
 begin
-  c := TCmpRel.Compare(aValue, aNode^.Data);
-  if c <> 0 then
+  if TCmpRel.Less(aNode^.Data, aValue) then
     begin
       aNode^.Data := aValue;
-      if c > 0 then
+      if aNode <> FRoot then
         begin
-          if aNode <> FRoot then
-            begin
-              CutNode(aNode);
-              RootMerge(aNode);
-            end;
-        end
-      else
-        begin
-          ExtractNode(aNode);
+          CutNode(aNode);
           RootMerge(aNode);
         end;
-    end;
+    end
+  else
+    if TCmpRel.Less(aValue, aNode^.Data) then
+      begin
+        aNode^.Data := aValue;
+        ExtractNode(aNode);
+        RootMerge(aNode);
+      end;
 end;
 
 procedure TGLitePairingHeap.ExtractNode(aNode: PNode);
@@ -3292,7 +3248,7 @@ class function TGLitePairingHeap.NodeMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
     if R <> nil then
-      if TCmpRel.Compare(L^.Data, R^.Data) >= 0 then
+      if not TCmpRel.Less(L^.Data, R^.Data) then
         begin
           L^.AddChild(R);
           Result := L;
@@ -3336,12 +3292,12 @@ begin
   aNode^.Sibling := nil;
 end;
 
-class function TGLitePairingHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGLitePairingHeap.DoCompare(constref L, R: T): Boolean;
 begin
-  Result := TCmpRel.Compare(L, R);
+  Result := TCmpRel.Less(L, R);
 end;
 
-function TGLitePairingHeap.Comparator: TComparator;
+function TGLitePairingHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -3830,18 +3786,12 @@ begin
   aNode^.Sibling := nil;
 end;
 
-class function TGLiteComparablePairHeapMin.DoCompare(constref L, R: T): SizeInt;
+class function TGLiteComparablePairHeapMin.DoCompare(constref L, R: T): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := L < R;
 end;
 
-function TGLiteComparablePairHeapMin.Comparator: TComparator;
+function TGLiteComparablePairHeapMin.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;

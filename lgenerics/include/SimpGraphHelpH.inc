@@ -387,7 +387,7 @@ type
     end;
 
     TArcCmp = class
-      class function Compare(constref L, R: PArc): SizeInt; static;
+      class function Less(L, R: PArc): Boolean; static;
     end;
 
     TNode = record

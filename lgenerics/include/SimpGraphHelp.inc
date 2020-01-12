@@ -2039,15 +2039,9 @@ end;
 
 { TGSimpleGraph.TPlanarHelper.TArcCmp }
 
-class function TGSimpleGraph.TPlanarHelper.TArcCmp.Compare(constref L, R: PArc): SizeInt;
+class function TGSimpleGraph.TPlanarHelper.TArcCmp.Less(L, R: PArc): Boolean;
 begin
-  if L^.NestingDepth > R^.NestingDepth then
-    Result := 1
-  else
-    if L^.NestingDepth < R^.NestingDepth then
-      Result := -1
-    else
-      Result := 0;
+  Result := L^.NestingDepth < R^.NestingDepth;
 end;
 
 { TGSimpleGraph.TPlanarHelper.TNode }

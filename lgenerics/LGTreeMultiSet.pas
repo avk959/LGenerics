@@ -141,29 +141,29 @@ type
     function  FindMax(out aValue: T): Boolean;
   { returns True if exists element whose value greater then or equal to aValue (depending on aInclusive) }
     function FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean;
-  { returns True if exists element whose value less then aBound (or equal to aValue, depending on aInclusive) }
+  { returns True if exists element whose value TLess then aBound (or equal to aValue, depending on aInclusive) }
     function FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean;
-  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+  { enumerates values whose are strictly TLess than(if not aInclusive) aHighBound }
     function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; virtual; abstract;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
-  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+  { enumerates values whose are greater than or equal to aLowBound and strictly TLess than aHighBound(by default)}
     function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
       virtual; abstract;
-  { returns sorted multiset whose items are strictly less than(if not aInclusive) aHighBound }
+  { returns sorted multiset whose items are strictly TLess than(if not aInclusive) aHighBound }
     function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TAbstractTreeMultiSet;
       virtual; abstract;
   { returns sorted multiset whose items are greater than or equal(if aInclusive) to aLowBound }
     function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TAbstractTreeMultiSet; virtual; abstract;
-  { returns sorted multiset whose items are greater than or equal to aLowBound and strictly less than
+  { returns sorted multiset whose items are greater than or equal to aLowBound and strictly TLess than
     aHighBound(by default) }
     function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]):
       TAbstractTreeMultiSet; virtual; abstract;
   end;
 
   { TGBaseTreeMultiSet implements sorted multiset;
-      functor TCmpRel (comparision relation) must provide:
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+      functor TCmpRel (comparison relation) must provide:
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGBaseTreeMultiSet<T, TCmpRel> = class(specialize TGAbstractTreeMultiSet<T>)
   protected
   type
@@ -189,11 +189,9 @@ type
                   overload;
     end;
 
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
-  type
-    TComparator = TCompare;
-    class function Comparator: TComparator; static; inline;
+    class function Comparator: TLess; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     constructor Create(constref a: array of T);
@@ -213,7 +211,7 @@ type
   generic TGTreeMultiSet<T> = class(specialize TGBaseTreeMultiSet<T, T>);
 
   { TGComparableTreeMultiSet implements sorted multiset;
-      it assumes that type T has defined comparision operators }
+      it assumes that type T has defined comparison operators }
   generic TGComparableTreeMultiSet<T> = class(specialize TGAbstractTreeMultiSet<T>)
   protected
   type
@@ -239,11 +237,9 @@ type
                   overload;
     end;
 
-    class function DoCompare(constref L, R: T): SizeInt; static;
+    class function DoCompare(constref L, R: T): Boolean; static;
   public
-  type
-    TComparator = TCompare;
-    class function Comparator: TComparator; static; inline;
+    class function Comparator: TLess; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     constructor Create(constref a: array of T);
@@ -272,7 +268,6 @@ type
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
-    class function DoCompare(constref L, R: T): SizeInt; static;
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
@@ -295,7 +290,7 @@ type
     protected
       FEnum: TTree.TEnumerator;
       FHighBound: T;
-      FCompare: TCompare;
+      FLess: TLess;
       FCurrKeyCount: SizeInt;
       FInclusive,
       FDone: Boolean;
@@ -313,15 +308,13 @@ type
     end;
 
   public
-  type
-    TComparator = TCompare;
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
-    constructor Create(constref a: array of T; c: TComparator);
-    constructor Create(e: IEnumerable; c: TComparator);
+    constructor Create(aLess: TLess);
+    constructor Create(aCapacity: SizeInt; aLess: TLess);
+    constructor Create(constref a: array of T; aLess: TLess);
+    constructor Create(e: IEnumerable; aLess: TLess);
     constructor CreateCopy(aMultiSet: TGRegularTreeMultiSet);
-    function Comparator: TComparator; inline;
+    function Comparator: TLess; inline;
     function Clone: TGRegularTreeMultiSet; override;
     function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
     function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
@@ -342,7 +335,7 @@ type
     protected
       FEnum: TTree.TEnumerator;
       FHighBound: T;
-      FCompare: TOnCompare;
+      FLess: TOnLess;
       FCurrKeyCount: SizeInt;
       FInclusive,
       FDone: Boolean;
@@ -360,15 +353,13 @@ type
     end;
 
   public
-  type
-    TComparator = TOnCompare;
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
-    constructor Create(constref a: array of T; c: TComparator);
-    constructor Create(e: IEnumerable; c: TComparator);
+    constructor Create(aLess: TOnLess);
+    constructor Create(aCapacity: SizeInt; aLess: TOnLess);
+    constructor Create(constref a: array of T; aLess: TOnLess);
+    constructor Create(e: IEnumerable; aLess: TOnLess);
     constructor CreateCopy(aMultiSet: TGDelegatedTreeMultiSet);
-    function Comparator: TComparator; inline;
+    function Comparator: TOnLess; inline;
     function Clone: TGDelegatedTreeMultiSet; override;
     function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
     function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
@@ -906,9 +897,9 @@ begin
       if not FEnum.MoveNext then
         exit(False);
       if FInclusive then
-        Result := TCmpRel.Compare(FEnum.Current^.Data.Key, FHighBound) <= 0
+        Result := not TCmpRel.Less(FHighBound, FEnum.Current^.Data.Key)
       else
-        Result := TCmpRel.Compare(FEnum.Current^.Data.Key, FHighBound) < 0;
+        Result := TCmpRel.Less(FEnum.Current^.Data.Key, FHighBound);
       if Result then
         FCurrKeyCount := Pred(FEnum.Current^.Data.Count);
     end;
@@ -934,12 +925,12 @@ end;
 
 { TGBaseTreeMultiSet }
 
-class function TGBaseTreeMultiSet.DoCompare(constref L, R: T): SizeInt;
+class function TGBaseTreeMultiSet.DoCompare(constref L, R: T): Boolean;
 begin
-  Result := TCmpRel.Compare(L, R);
+  Result := TCmpRel.Less(L, R);
 end;
 
-class function TGBaseTreeMultiSet.Comparator: TComparator;
+class function TGBaseTreeMultiSet.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -1113,18 +1104,12 @@ end;
 
 { TGComparableTreeMultiSet }
 
-class function TGComparableTreeMultiSet.DoCompare(constref L, R: T): SizeInt;
+class function TGComparableTreeMultiSet.DoCompare(constref L, R: T): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := L < R;
 end;
 
-class function TGComparableTreeMultiSet.Comparator: TComparator;
+class function TGComparableTreeMultiSet.Comparator: TLess;
 begin
   Result := @DoCompare;
 end;
@@ -1320,11 +1305,6 @@ begin
   Result -= ElemCount;
 end;
 
-class function TGObjectTreeMultiSet.DoCompare(constref L, R: T): SizeInt;
-begin
-  Result := TCmpRel.Compare(L, R);
-end;
-
 constructor TGObjectTreeMultiSet.Create(aOwnsObjects: Boolean);
 begin
   FTree := TBaseTree.Create;
@@ -1386,7 +1366,7 @@ constructor TGRegularTreeMultiSet.THeadEnumerable.Create(constref aHighBound: T;
 begin
   inherited Create(tms);
   FEnum := tms.FTree.GetEnumerator;
-  FCompare := TRegularTree(tms.FTree).Comparator;
+  FLess := TRegularTree(tms.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := aInclusive;
 end;
@@ -1408,9 +1388,9 @@ begin
       if not FEnum.MoveNext then
         exit(False);
       if FInclusive then
-        Result := FCompare(FEnum.Current^.Data.Key, FHighBound) <= 0
+        Result := not FLess(FHighBound, FEnum.Current^.Data.Key)
       else
-        Result := FCompare(FEnum.Current^.Data.Key, FHighBound) < 0;
+        Result := FLess(FEnum.Current^.Data.Key, FHighBound);
       if Result then
         FCurrKeyCount := Pred(FEnum.Current^.Data.Count);
     end;
@@ -1430,7 +1410,7 @@ constructor TGRegularTreeMultiSet.TRangeEnumerable.Create(constref aLowBound, aH
 begin
   inherited Create(tms);
   FEnum := tms.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
-  FCompare := TRegularTree(tms.FTree).Comparator;
+  FLess := TRegularTree(tms.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := rbHigh in aBounds;
 end;
@@ -1439,28 +1419,28 @@ end;
 
 constructor TGRegularTreeMultiSet.Create;
 begin
-  FTree := TRegularTree.Create(TDefaults.Compare);
+  FTree := TRegularTree.Create(TDefaults.Less);
 end;
 
-constructor TGRegularTreeMultiSet.Create(c: TComparator);
+constructor TGRegularTreeMultiSet.Create(aLess: TLess);
 begin
-  FTree := TRegularTree.Create(c);
+  FTree := TRegularTree.Create(aLess);
 end;
 
-constructor TGRegularTreeMultiSet.Create(aCapacity: SizeInt; c: TComparator);
+constructor TGRegularTreeMultiSet.Create(aCapacity: SizeInt; aLess: TLess);
 begin
-  FTree := TRegularTree.Create(aCapacity, c);
+  FTree := TRegularTree.Create(aCapacity, aLess);
 end;
 
-constructor TGRegularTreeMultiSet.Create(constref a: array of T; c: TComparator);
+constructor TGRegularTreeMultiSet.Create(constref a: array of T; aLess: TLess);
 begin
-  FTree := TRegularTree.Create(c);
+  FTree := TRegularTree.Create(aLess);
   DoAddAll(a);
 end;
 
-constructor TGRegularTreeMultiSet.Create(e: IEnumerable; c: TComparator);
+constructor TGRegularTreeMultiSet.Create(e: IEnumerable; aLess: TLess);
 begin
-  FTree := TRegularTree.Create(c);
+  FTree := TRegularTree.Create(aLess);
   DoAddAll(e);
 end;
 
@@ -1470,7 +1450,7 @@ begin
   FCount := aMultiSet.Count;
 end;
 
-function TGRegularTreeMultiSet.Comparator: TComparator;
+function TGRegularTreeMultiSet.Comparator: TLess;
 begin
   Result := TRegularTree(FTree).Comparator;
 end;
@@ -1556,7 +1536,7 @@ constructor TGDelegatedTreeMultiSet.THeadEnumerable.Create(constref aHighBound: 
 begin
   inherited Create(tms);
   FEnum := tms.FTree.GetEnumerator;
-  FCompare := TDelegatedTree(tms.FTree).Comparator;
+  FLess := TDelegatedTree(tms.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := aInclusive;
 end;
@@ -1578,9 +1558,9 @@ begin
       if not FEnum.MoveNext then
         exit(False);
       if FInclusive then
-        Result := FCompare(FEnum.Current^.Data.Key, FHighBound) <= 0
+        Result := not FLess(FHighBound, FEnum.Current^.Data.Key)
       else
-        Result := FCompare(FEnum.Current^.Data.Key, FHighBound) < 0;
+        Result := FLess(FEnum.Current^.Data.Key, FHighBound);
       if Result then
         FCurrKeyCount := Pred(FEnum.Current^.Data.Count);
     end;
@@ -1600,7 +1580,7 @@ constructor TGDelegatedTreeMultiSet.TRangeEnumerable.Create(constref aLowBound, 
 begin
   inherited Create(tms);
   FEnum := tms.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
-  FCompare := TDelegatedTree(tms.FTree).Comparator;
+  FLess := TDelegatedTree(tms.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := rbHigh in aBounds;
 end;
@@ -1609,28 +1589,28 @@ end;
 
 constructor TGDelegatedTreeMultiSet.Create;
 begin
-  FTree := TDelegatedTree.Create(TDefaults.OnCompare);
+  FTree := TDelegatedTree.Create(TDefaults.OnLess);
 end;
 
-constructor TGDelegatedTreeMultiSet.Create(c: TComparator);
+constructor TGDelegatedTreeMultiSet.Create(aLess: TOnLess);
 begin
-  FTree := TDelegatedTree.Create(c);
+  FTree := TDelegatedTree.Create(aLess);
 end;
 
-constructor TGDelegatedTreeMultiSet.Create(aCapacity: SizeInt; c: TComparator);
+constructor TGDelegatedTreeMultiSet.Create(aCapacity: SizeInt; aLess: TOnLess);
 begin
-  FTree := TDelegatedTree.Create(aCapacity, c);
+  FTree := TDelegatedTree.Create(aCapacity, aLess);
 end;
 
-constructor TGDelegatedTreeMultiSet.Create(constref a: array of T; c: TComparator);
+constructor TGDelegatedTreeMultiSet.Create(constref a: array of T; aLess: TOnLess);
 begin
-  FTree := TDelegatedTree.Create(c);
+  FTree := TDelegatedTree.Create(aLess);
   DoAddAll(a);
 end;
 
-constructor TGDelegatedTreeMultiSet.Create(e: IEnumerable; c: TComparator);
+constructor TGDelegatedTreeMultiSet.Create(e: IEnumerable; aLess: TOnLess);
 begin
-  FTree := TDelegatedTree.Create(c);
+  FTree := TDelegatedTree.Create(aLess);
   DoAddAll(e);
 end;
 
@@ -1640,7 +1620,7 @@ begin
   FCount := aMultiSet.Count;
 end;
 
-function TGDelegatedTreeMultiSet.Comparator: TComparator;
+function TGDelegatedTreeMultiSet.Comparator: TOnLess;
 begin
   Result := TDelegatedTree(FTree).Comparator;
 end;

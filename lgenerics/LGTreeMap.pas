@@ -154,8 +154,8 @@ type
 
 
   { TGBaseTreeMap implements sorted map;
-     functor TKeyCmpRel (key comparision relation) must provide:
-       class function Compare([const[ref]] L, R: TKey): SizeInt;  }
+     functor TKeyCmpRel (key comparison relation) must provide:
+       class function Less([const[ref]] L, R: TKey): Boolean;  }
   generic TGBaseTreeMap<TKey, TValue, TKeyCmpRel> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   protected
   type
@@ -180,10 +180,10 @@ type
       constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
-    class function DoCompare(constref L, R: TKey): SizeInt; static;
+    class function DoCompare(constref L, R: TKey): Boolean; static;
   public
   type
-    TComparator = specialize TGCompare<TKey>;
+    TComparator = specialize TGLessCompare<TKey>;
     class function Comparator: TComparator; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
@@ -231,7 +231,7 @@ type
 
   generic TGObjTreeMap<TKey, TValue> = class(specialize TGObjectTreeMap<TKey, TValue, TKey>);
 
-  { TGComparableTreeMap implements sorted map; it assumes that type T has defined comparision operators }
+  { TGComparableTreeMap implements sorted map; it assumes that type T has defined comparison operators }
   generic TGComparableTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   protected
   type
@@ -255,10 +255,10 @@ type
       constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
-    class function DoCompare(constref L, R: TKey): SizeInt; static;
+    class function DoCompare(constref L, R: TKey): Boolean; static;
   public
   type
-    TComparator = specialize TGCompare<TKey>;
+    TComparator = specialize TGLessCompare<TKey>;
     class function Comparator: TComparator; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
@@ -279,7 +279,7 @@ type
   generic TGRegularTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   public
   type
-    TComparator = specialize TGCompare<TKey>;
+    TLess = specialize TGLessCompare<TKey>;
 
   protected
   type
@@ -288,7 +288,7 @@ type
     TKeyHeadEnumerable = class(TCustomKeyEnumerable)
     protected
       FEnum: TTree.TEnumerator;
-      FCompare: TComparator;
+      FLess: TLess;
       FHighBound: TKey;
       FInclusive,
       FDone: Boolean;
@@ -306,12 +306,12 @@ type
 
   public
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
-    constructor Create(constref a: array of TEntry; c: TComparator);
-    constructor Create(e: IEntryEnumerable; c: TComparator);
+    constructor Create(aLess: TLess);
+    constructor Create(aCapacity: SizeInt; aLess: TLess);
+    constructor Create(constref a: array of TEntry; aLess: TLess);
+    constructor Create(e: IEntryEnumerable; aLess: TLess);
     constructor CreateCopy(aMap: TGRegularTreeMap);
-    function Comparator: TComparator; inline;
+    function Comparator: TLess; inline;
     function Clone: TGRegularTreeMap; override;
     function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
     function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
@@ -339,10 +339,10 @@ type
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(constref a: array of TEntry; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectRegularTreeMap);
     function  Clone: TGObjectRegularTreeMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -353,7 +353,7 @@ type
   generic TGDelegatedTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   public
   type
-    TComparator = specialize TGOnCompare<TKey>;
+    TOnLess = specialize TGOnLessCompare<TKey>;
 
   protected
   type
@@ -362,7 +362,7 @@ type
     TKeyHeadEnumerable = class(TCustomKeyEnumerable)
     protected
       FEnum: TTree.TEnumerator;
-      FCompare: TComparator;
+      FLess: TOnLess;
       FHighBound: TKey;
       FInclusive,
       FDone: Boolean;
@@ -380,12 +380,12 @@ type
 
   public
     constructor Create;
-    constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
-    constructor Create(constref a: array of TEntry; c: TComparator);
-    constructor Create(e: IEntryEnumerable; c: TComparator);
+    constructor Create(aLess: TOnLess);
+    constructor Create(aCapacity: SizeInt; aLess: TOnLess);
+    constructor Create(constref a: array of TEntry; aLess: TOnLess);
+    constructor Create(e: IEntryEnumerable; aLess: TOnLess);
     constructor CreateCopy(aMap: TGDelegatedTreeMap);
-    function Comparator: TComparator;
+    function Comparator: TOnLess;
     function Clone: TGDelegatedTreeMap; override;
 
     function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
@@ -414,10 +414,10 @@ type
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; c: TComparator; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(constref a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectDelegatedTreeMap);
     function  Clone: TGObjectDelegatedTreeMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -875,9 +875,9 @@ begin
   if FDone or not FEnum.MoveNext then
     exit(False);
   if FInclusive then
-    Result := TKeyCmpRel.Compare(FEnum.Current^.Data.Key, FHighBound) <= 0
+    Result := not TKeyCmpRel.Less(FHighBound, FEnum.Current^.Data.Key)
   else
-    Result := TKeyCmpRel.Compare(FEnum.Current^.Data.Key, FHighBound) < 0;
+    Result := TKeyCmpRel.Less(FEnum.Current^.Data.Key, FHighBound);
   FDone := not Result;
 end;
 
@@ -900,9 +900,9 @@ end;
 
 { TGBaseTreeMap }
 
-class function TGBaseTreeMap.DoCompare(constref L, R: TKey): SizeInt;
+class function TGBaseTreeMap.DoCompare(constref L, R: TKey): Boolean;
 begin
-  Result := TKeyCmpRel.Compare(L, R);
+  Result := TKeyCmpRel.Less(L, R);
 end;
 
 class function TGBaseTreeMap.Comparator: TComparator;
@@ -1167,15 +1167,9 @@ end;
 
 { TGComparableTreeMap }
 
-class function TGComparableTreeMap.DoCompare(constref L, R: TKey): SizeInt;
+class function TGComparableTreeMap.DoCompare(constref L, R: TKey): Boolean;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := L < R;
 end;
 
 class function TGComparableTreeMap.Comparator: TComparator;
@@ -1278,7 +1272,7 @@ constructor TGRegularTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumerator;
-  FCompare := TRegularTree(aMap.FTree).Comparator;
+  FLess := TRegularTree(aMap.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := aInclusive;
 end;
@@ -1294,9 +1288,9 @@ begin
   if FDone or not FEnum.MoveNext then
     exit(False);
   if FInclusive then
-    Result := FCompare(FEnum.Current^.Data.Key, FHighBound) <= 0
+    Result := not FLess(FHighBound, FEnum.Current^.Data.Key)
   else
-    Result := FCompare(FEnum.Current^.Data.Key, FHighBound) < 0;
+    Result := FLess(FEnum.Current^.Data.Key, FHighBound);
   FDone := not Result;
 end;
 
@@ -1313,42 +1307,42 @@ constructor TGRegularTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHig
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
-  FCompare := TRegularTree(aMap.FTree).Comparator;
+  FLess := TRegularTree(aMap.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := rbHigh in aBounds;
 end;
 
 { TGRegularTreeMap }
 
-function TGRegularTreeMap.Comparator: TComparator;
+function TGRegularTreeMap.Comparator: TLess;
 begin
   Result := TRegularTree(FTree).Comparator;
 end;
 
 constructor TGRegularTreeMap.Create;
 begin
-  FTree := TRegularTree.Create(specialize TGDefaults<TKey>.Compare);
+  FTree := TRegularTree.Create(specialize TGDefaults<TKey>.Less);
 end;
 
-constructor TGRegularTreeMap.Create(c: TComparator);
+constructor TGRegularTreeMap.Create(aLess: TLess);
 begin
-  FTree := TRegularTree.Create(c);
+  FTree := TRegularTree.Create(aLess);
 end;
 
-constructor TGRegularTreeMap.Create(aCapacity: SizeInt; c: TComparator);
+constructor TGRegularTreeMap.Create(aCapacity: SizeInt; aLess: TLess);
 begin
-  FTree := TRegularTree.Create(aCapacity, c);
+  FTree := TRegularTree.Create(aCapacity, aLess);
 end;
 
-constructor TGRegularTreeMap.Create(constref a: array of TEntry; c: TComparator);
+constructor TGRegularTreeMap.Create(constref a: array of TEntry; aLess: TLess);
 begin
-  Create(c);
+  Create(aLess);
   DoAddAll(a);
 end;
 
-constructor TGRegularTreeMap.Create(e: IEntryEnumerable; c: TComparator);
+constructor TGRegularTreeMap.Create(e: IEntryEnumerable; aLess: TLess);
 begin
-  Create(c);
+  Create(aLess);
   DoAddAll(e);
 end;
 
@@ -1505,25 +1499,25 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(aCapacity: SizeInt; c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(constref a: array of TEntry; c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(constref a: array of TEntry; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(a, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(e: IEntryEnumerable; c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(e, c);
   SetOwnership(aOwns);
@@ -1553,7 +1547,7 @@ constructor TGDelegatedTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TK
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumerator;
-  FCompare := TDelegatedTree(aMap.FTree).Comparator;
+  FLess := TDelegatedTree(aMap.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := aInclusive;
 end;
@@ -1569,9 +1563,9 @@ begin
   if FDone or not FEnum.MoveNext then
     exit(False);
   if FInclusive then
-    Result := FCompare(FEnum.Current^.Data.Key, FHighBound) <= 0
+    Result := not FLess(FHighBound, FEnum.Current^.Data.Key)
   else
-    Result := FCompare(FEnum.Current^.Data.Key, FHighBound) < 0;
+    Result := FLess(FEnum.Current^.Data.Key, FHighBound);
   FDone := not Result;
 end;
 
@@ -1588,7 +1582,7 @@ constructor TGDelegatedTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aH
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
-  FCompare := TDelegatedTree(aMap.FTree).Comparator;
+  FLess := TDelegatedTree(aMap.FTree).Comparator;
   FHighBound := aHighBound;
   FInclusive := rbHigh in aBounds;
 end;
@@ -1597,28 +1591,28 @@ end;
 
 constructor TGDelegatedTreeMap.Create;
 begin
-  FTree := TDelegatedTree.Create(specialize TGDefaults<TKey>.OnCompare);
+  FTree := TDelegatedTree.Create(specialize TGDefaults<TKey>.OnLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(c: TComparator);
+constructor TGDelegatedTreeMap.Create(aLess: TOnLess);
 begin
-  FTree := TDelegatedTree.Create(c);
+  FTree := TDelegatedTree.Create(aLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(aCapacity: SizeInt; c: TComparator);
+constructor TGDelegatedTreeMap.Create(aCapacity: SizeInt; aLess: TOnLess);
 begin
-  FTree := TDelegatedTree.Create(aCapacity, c);
+  FTree := TDelegatedTree.Create(aCapacity, aLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(constref a: array of TEntry; c: TComparator);
+constructor TGDelegatedTreeMap.Create(constref a: array of TEntry; aLess: TOnLess);
 begin
-  Create(c);
+  Create(aLess);
   DoAddAll(a);
 end;
 
-constructor TGDelegatedTreeMap.Create(e: IEntryEnumerable; c: TComparator);
+constructor TGDelegatedTreeMap.Create(e: IEntryEnumerable; aLess: TOnLess);
 begin
-  Create(c);
+  Create(aLess);
   DoAddAll(e);
 end;
 
@@ -1627,7 +1621,7 @@ begin
   FTree := TDelegatedTree(aMap.FTree).Clone;
 end;
 
-function TGDelegatedTreeMap.Comparator: TComparator;
+function TGDelegatedTreeMap.Comparator: TOnLess;
 begin
   Result := TDelegatedTree(FTree).Comparator;
 end;
@@ -1780,25 +1774,25 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(aCapacity: SizeInt; c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(constref a: array of TEntry; c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(constref a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(a, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(e: IEntryEnumerable; c: TComparator; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(e, c);
   SetOwnership(aOwns);

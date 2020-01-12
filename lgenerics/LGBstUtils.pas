@@ -33,7 +33,7 @@ uses
 type
 
   { TGBaseBstUtil - binary search tree utility, it assumes TNode is a record type and
-    it allocate memory with System.GetMem;
+    it allocates memory with System.GetMem;
       TNode must provide:
         field/property/function Key: TKey;
         field/property/function Left: ^TNode;
@@ -59,8 +59,8 @@ type
     class function  PostOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt; static;
   end;
 
-  { TGBstUtil - functor TCmpRel (comparision relation) must provide:
-                  function Compare([const[ref]] L, R: TKey): SizeInt; }
+  { TGBstUtil - functor TCmpRel (comparison relation) must provide:
+                  class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGBstUtil<TKey, TNode, TCmpRel> = class(specialize TGBaseBstUtil<TNode>)
   public
     class function  FindKey(aRoot: PNode; constref aKey: TKey): PNode; static;
@@ -89,11 +89,8 @@ type
     class function GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
   end;
 
-  { TGIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
+  { TGCmpIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
     which is the size of its subtree }
-
-  { TGCmpIndexedBstUtil }
-
   generic TGCmpIndexedBstUtil<TKey, TNode> = class(specialize TGComparableBstUtil<TKey, TNode>)
   public
     class function GetNodeSize(aNode: PNode): SizeInt; static; inline;
@@ -321,12 +318,13 @@ end;
 class function TGBstUtil.FindKey(aRoot: PNode; constref aKey: TKey): PNode;
 begin
   while aRoot <> nil do
-    case SizeInt(TCmpRel.Compare(aKey, aRoot^.Key)) of
-      System.Low(SizeInt)..-1: aRoot := aRoot^.Left;
-      1..System.High(SizeInt): aRoot := aRoot^.Right;
+    if TCmpRel.Less(aKey, aRoot^.Key) then
+      aRoot := aRoot^.Left
     else
-      exit(aRoot);
-    end;
+      if TCmpRel.Less(aRoot^.Key, aKey) then
+        aRoot := aRoot^.Right
+      else
+        break;
   Result := aRoot;
 end;
 
@@ -334,7 +332,7 @@ class function TGBstUtil.GetLess(aRoot: PNode; constref aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
-    if TCmpRel.Compare(aKey, aRoot^.Key) > 0 then
+    if TCmpRel.Less(aRoot^.Key, aKey) then
       begin
         Result := aRoot;
         aRoot := aRoot^.Right;
@@ -347,7 +345,7 @@ class function TGBstUtil.GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNod
 begin
   Result := nil;
   while aRoot <> nil do
-    if TCmpRel.Compare(aKey, aRoot^.Key) >= 0 then
+    if not TCmpRel.Less(aKey, aRoot^.Key) then
       begin
         Result := aRoot;
         aRoot := aRoot^.Right;
@@ -360,7 +358,7 @@ class function TGBstUtil.GetGreater(aRoot: PNode; constref aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
-    if TCmpRel.Compare(aKey, aRoot^.Key) < 0 then
+    if TCmpRel.Less(aKey, aRoot^.Key) then
       begin
         Result := aRoot;
         aRoot := aRoot^.Left;
@@ -373,7 +371,7 @@ class function TGBstUtil.GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): P
 begin
   Result := nil;
   while aRoot <> nil do
-    if TCmpRel.Compare(aKey, aRoot^.Key) <= 0 then
+    if not TCmpRel.Less(aRoot^.Key, aKey) then
       begin
         Result := aRoot;
         aRoot := aRoot^.Left;
@@ -393,7 +391,7 @@ begin
       if aKey > aRoot^.Key then
         aRoot := aRoot^.Right
       else
-        exit(aRoot);
+        break;
   Result := aRoot;
 end;
 
@@ -483,16 +481,16 @@ var
   Pos: SizeInt = 0;
 begin
   while aRoot <> nil do
-    case SizeInt(TCmpRel.Compare(aKey, aRoot^.Key)) of
-      System.Low(SizeInt)..-1: aRoot := aRoot^.Left;
-      1..System.High(SizeInt):
+    if TCmpRel.Less(aKey, aRoot^.Key) then
+      aRoot := aRoot^.Left
+    else
+      if TCmpRel.Less(aRoot^.Key, aKey) then
         begin
           Pos += Succ(GetNodeSize(aRoot^.Left));
           aRoot := aRoot^.Right;
-        end;
-    else
-      exit(Pos + GetNodeSize(aRoot^.Left));
-    end;
+        end
+      else
+        exit(Pos + GetNodeSize(aRoot^.Left));
   Result := NULL_INDEX;
 end;
 
