@@ -974,37 +974,6 @@ begin
   System.SetLength(FItems, Count);
 end;
 
-function TGLiteRingDynBuffer.TailIndex: SizeInt;
-begin
-  Result := InternalIndex(Pred(Count));
-end;
-
-procedure TGLiteRingDynBuffer.ItemAdding;
-begin
-  if Count = Capacity then
-    Expand(Succ(Count));
-end;
-
-function TGLiteRingDynBuffer.PopHead: T;
-begin
-  Result := FItems[FHead];
-  FItems[FHead] := Default(T);
-  Inc(FHead);
-  Dec(FCount);
-  if FHead = Capacity then
-    FHead := 0;
-end;
-
-function TGLiteRingDynBuffer.PopTail: T;
-var
-  TailPos: SizeInt;
-begin
-  TailPos := TailIndex;
-  Dec(FCount);
-  Result := FItems[TailPos];
-  FItems[TailPos] := Default(T);
-end;
-
 procedure TGLiteRingDynBuffer.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
@@ -1043,14 +1012,35 @@ begin
     Result -= Capacity;
 end;
 
-function TGLiteRingDynBuffer.FastGetItem(aIndex: SizeInt): T;
+function TGLiteRingDynBuffer.TailIndex: SizeInt;
 begin
-  Result := FItems[InternalIndex(aIndex)];
+  Result := InternalIndex(Pred(Count));
 end;
 
-procedure TGLiteRingDynBuffer.FastSetItem(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteRingDynBuffer.ItemAdding;
 begin
-  FItems[InternalIndex(aIndex)] := aValue;
+  if Count = Capacity then
+    Expand(Succ(Count));
+end;
+
+function TGLiteRingDynBuffer.PopHead: T;
+begin
+  Result := FItems[FHead];
+  FItems[FHead] := Default(T);
+  Inc(FHead);
+  Dec(FCount);
+  if FHead = Capacity then
+    FHead := 0;
+end;
+
+function TGLiteRingDynBuffer.PopTail: T;
+var
+  TailPos: SizeInt;
+begin
+  TailPos := TailIndex;
+  Dec(FCount);
+  Result := FItems[TailPos];
+  FItems[TailPos] := Default(T);
 end;
 
 procedure TGLiteRingDynBuffer.Clear;

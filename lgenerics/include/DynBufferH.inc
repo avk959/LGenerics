@@ -306,25 +306,21 @@
     procedure Expand(aValue: SizeInt);
     procedure Grow(aValue: SizeInt);
     procedure Shrink;
-    // do not check count !!!
-    function  TailIndex: SizeInt; inline;
-    procedure ItemAdding; inline;
-    // do not check count !!!
-    function  PopHead: T;
-    // do not check count !!!
-    function  PopTail: T;
     procedure CapacityExceedError(aValue: SizeInt);
     procedure AccessEmptyError;
     procedure CheckEmpty; inline;
     class operator Initialize(var b: TGLiteRingDynBuffer);
     class operator Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer); inline;
   public
-    // do not check bounds !!!
-    function  InternalIndex(aIndex: SizeInt): SizeInt;
-    // do not check bounds !!!
-    function  FastGetItem(aIndex: SizeInt): T; inline;
-    // do not check bounds !!!
-    procedure FastSetItem(aIndex: SizeInt; constref aValue: T); inline;
+    // does not checks bounds !!!
+    function  InternalIndex(aIndex: SizeInt): SizeInt; inline;
+    // does not checks count !!!
+    function  TailIndex: SizeInt; inline;
+    procedure ItemAdding; inline;
+    // does not checks count !!!
+    function  PopHead: T;
+    // does not checks count !!!
+    function  PopTail: T;
     procedure Clear; inline;
     procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
