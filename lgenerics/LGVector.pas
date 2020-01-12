@@ -38,10 +38,13 @@ uses
 
 type
 
+  { TGVector }
   generic TGVector<T> = class(specialize TGCustomArrayContainer<T>)
   protected
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); virtual;
+    function  GetMutable(aIndex: SizeInt): PItem;
+    function  GetUncMutable(aIndex: SizeInt): PItem;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  InsertArray(aIndex: SizeInt; constref a: array of T): SizeInt;
     function  InsertContainer(aIndex: SizeInt; aContainer: TSpecContainer): SizeInt;
@@ -99,6 +102,9 @@ type
   { will return False if aIndex out of bounds or instance in iteration }
     function  TrySplit(aIndex: SizeInt; out aValue: TGVector): Boolean;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+    property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
+  { does not checks aIndex range }
+    property  UncMutable[aIndex: SizeInt]: PItem read GetUncMutable;
   end;
 
   { TGObjectVector
@@ -251,6 +257,7 @@ type
     TReverseEnumerator = TVector.TReverseEnumerator;
     TReverse           = TVector.TReverse;
     TArray             = TVector.TArray;
+    PItem              = TVector.PItem;
 
   private
     FVector: TVector;
@@ -258,6 +265,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): T; inline;
+    function  GetUncMutable(aIndex: SizeInt): PItem; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T);
     procedure CheckFreeItems;
     class operator Initialize(var v: TGLiteObjectVector);
@@ -303,6 +311,8 @@ type
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+  { does not checks aIndex range }
+    property  UncMutable[aIndex: SizeInt]: PItem read GetUncMutable;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
@@ -462,8 +472,8 @@ type
   end;
 
   { TGBaseVectorHelper
-      functor TCmpRel(comparision relation) must provide:
-        class function Compare([const[ref]] L, R: T): SizeInt }
+      functor TCmpRel(comparison relation) must provide:
+        class function Less([const[ref]] L, R: T): Boolean }
   generic TGBaseVectorHelper<T, TCmpRel> = class
   private
   type
@@ -555,7 +565,7 @@ type
   { TGVectorHelper assumes that type T implements TCmpRel }
   generic TGVectorHelper<T> = class(specialize TGBaseVectorHelper<T, T>);
 
-  { TGComparableVectorHelper assumes that type T defines comparision operators }
+  { TGComparableVectorHelper assumes that type T defines comparison operators }
   generic TGComparableVectorHelper<T> = class
   private
   type
@@ -658,83 +668,83 @@ type
     TVector     = specialize TGVector<T>;
     TLiteVector = specialize TGLiteVector<T>;
     TOptional   = specialize TGOptional<T>;
-    TCompare    = specialize TGCompare<T>;
+    TLess       = specialize TGLessCompare<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TCompare): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TCompare): SizeInt; static; inline;
+    class function  SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static; inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T; c: TCompare): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TCompare): SizeInt; static; inline;
+    class function  BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static; inline;
   { returns position of minimal value in V, -1 if V is empty }
-    class function  IndexOfMin(v: TVector; c: TCompare): SizeInt; static; inline;
+    class function  IndexOfMin(v: TVector; c: TLess): SizeInt; static; inline;
   { returns position of maximal value in V, -1 if V is empty }
-    class function  IndexOfMax(v: TVector; c: TCompare): SizeInt; static; inline;
-    class function  IndexOfMax(constref v: TLiteVector; c: TCompare): SizeInt; static; inline;
+    class function  IndexOfMax(v: TVector; c: TLess): SizeInt; static; inline;
+    class function  IndexOfMax(constref v: TLiteVector; c: TLess): SizeInt; static; inline;
   { returns smallest element of A in TOptional.Value if V is nonempty }
-    class function  GetMin(v: TVector; c: TCompare): TOptional; static; inline;
-    class function  GetMin(constref v: TLiteVector; c: TCompare): TOptional; static; inline;
+    class function  GetMin(v: TVector; c: TLess): TOptional; static; inline;
+    class function  GetMin(constref v: TLiteVector; c: TLess): TOptional; static; inline;
   { returns greatest element of A in TOptional.Value if V is nonempty }
-    class function  GetMax(v: TVector; c: TCompare): TOptional; static; inline;
-    class function  GetMax(constref v: TLiteVector; c: TCompare): TOptional; static; inline;
+    class function  GetMax(v: TVector; c: TLess): TOptional; static; inline;
+    class function  GetMax(constref v: TLiteVector; c: TLess): TOptional; static; inline;
   { returns True and smallest element of A in aValue if V is nonempty, False otherwise }
-    class function  FindMin(v: TVector; out aValue: T; c: TCompare): Boolean; static; inline;
-    class function  FindMin(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean; static; inline;
+    class function  FindMin(v: TVector; out aValue: T; c: TLess): Boolean; static; inline;
+    class function  FindMin(constref v: TLiteVector; out aValue: T; c: TLess): Boolean; static; inline;
   { returns True and greatest element of A in aValue if V is nonempty, False otherwise }
-    class function  FindMax(v: TVector; out aValue: T; c: TCompare): Boolean; static; inline;
-    class function  FindMax(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean; static; inline;
+    class function  FindMax(v: TVector; out aValue: T; c: TLess): Boolean; static; inline;
+    class function  FindMax(constref v: TLiteVector; out aValue: T; c: TLess): Boolean; static; inline;
   { returns True, smallest element of V in aMin and greatest element of V in aMax, if V is nonempty,
     False otherwise }
-    class function  FindMinMax(v: TVector; out aMin, aMax: T; c: TCompare): Boolean; static; inline;
-    class function  FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TCompare): Boolean; static; inline;
+    class function  FindMinMax(v: TVector; out aMin, aMax: T; c: TLess): Boolean; static; inline;
+    class function  FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TLess): Boolean; static; inline;
   { returns True and V's Nth order statistic(0-based) in aValue if V is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is nondestuctive: creates temp copy of V }
-    class function  FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TCompare): Boolean; static; inline;
-    class function  FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T; c: TCompare): Boolean;
+    class function  FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TLess): Boolean; static; inline;
+    class function  FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T; c: TLess): Boolean;
                     static; inline;
   { returns V's Nth order statistic(0-based) in TOptional.Value if V is nonempty;
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is nondestuctive: creates temp copy of V }
-    class function  NthSmallest(v: TVector; N: SizeInt; c: TCompare): TOptional; static; inline;
-    class function  NthSmallest(constref v: TLiteVector; N: SizeInt; c: TCompare): TOptional; static; inline;
+    class function  NthSmallest(v: TVector; N: SizeInt; c: TLess): TOptional; static; inline;
+    class function  NthSmallest(constref v: TLiteVector; N: SizeInt; c: TLess): TOptional; static; inline;
   { returns True if permutation towards nondescending state of V has done, False otherwise }
-    class function  NextPermutation2Asc(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  NextPermutation2Asc(var v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  NextPermutation2Asc(v: TVector; c: TLess): Boolean; static; inline;
+    class function  NextPermutation2Asc(var v: TLiteVector; c: TLess): Boolean; static; inline;
   { returns True if permutation towards nonascending state of V has done, False otherwise }
-    class function  NextPermutation2Desc(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  NextPermutation2Desc(var v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  NextPermutation2Desc(v: TVector; c: TLess): Boolean; static; inline;
+    class function  NextPermutation2Desc(var v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsNonDescending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsNonDescending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsNonDescending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(v: TVector; c: TCompare): Boolean; static; inline;
+    class function  IsStrictAscending(v: TVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsNonAscending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsNonAscending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsNonAscending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsStrictDescending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsStrictDescending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsStrictDescending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(A, B: TVector; c: TCompare): Boolean; static;
-    class function  Same(constref A, B: TLiteVector; c: TCompare): Boolean; static;
+    class function  Same(A, B: TVector; c: TLess): Boolean; static;
+    class function  Same(constref A, B: TLiteVector; c: TLess): Boolean; static;
   { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure QuickSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
-    class procedure IntroSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure IntroSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure IntroSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure IntroSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { Pascal translation of Orson Peters' PDQSort algorithm }
-    class procedure PDQSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static;
-    class procedure PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
-    class procedure MergeSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure MergeSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure MergeSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure MergeSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { default sort algorithm, currently it is IntroSort}
-    class procedure Sort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure Sort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
-    class function  SelectDistinct(v: TVector; c: TCompare): TVector.TArray; static; inline;
-    class function  SelectDistinct(constref v: TLiteVector; c: TCompare): TLiteVector.TArray; static; inline;
+    class function  SelectDistinct(v: TVector; c: TLess): TVector.TArray; static; inline;
+    class function  SelectDistinct(constref v: TLiteVector; c: TLess): TLiteVector.TArray; static; inline;
   end;
 
   { TGDelegatedVectorHelper: with delegated comparator }
@@ -747,87 +757,87 @@ type
     TVector     = specialize TGVector<T>;
     TLiteVector = specialize TGLiteVector<T>;
     TOptional   = specialize TGOptional<T>;
-    TOnCompare  = specialize TGOnCompare<T>;
+    TOnLess     = specialize TGOnLessCompare<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TOnCompare): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TOnCompare): SizeInt; static; inline;
+    class function  SequentSearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T; c: TOnCompare): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TOnCompare): SizeInt; static; inline;
+    class function  BinarySearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
   { returns position of minimal value in V, -1 if V is empty }
-    class function  IndexOfMin(v: TVector; c: TOnCompare): SizeInt; static; inline;
-    class function  IndexOfMin(constref v: TLiteVector; c: TOnCompare): SizeInt; static; inline;
+    class function  IndexOfMin(v: TVector; c: TOnLess): SizeInt; static; inline;
+    class function  IndexOfMin(constref v: TLiteVector; c: TOnLess): SizeInt; static; inline;
   { returns position of maximal value in V, -1 if V is empty }
-    class function  IndexOfMax(v: TVector; c: TOnCompare): SizeInt; static; inline;
-    class function  IndexOfMax(constref v: TLiteVector; c: TOnCompare): SizeInt; static; inline;
+    class function  IndexOfMax(v: TVector; c: TOnLess): SizeInt; static; inline;
+    class function  IndexOfMax(constref v: TLiteVector; c: TOnLess): SizeInt; static; inline;
   { returns smallest element of A in TOptional.Value if V is nonempty }
-    class function  GetMin(v: TVector; c: TOnCompare): TOptional; static; inline;
-    class function  GetMin(constref v: TLiteVector; c: TOnCompare): TOptional; static; inline;
+    class function  GetMin(v: TVector; c: TOnLess): TOptional; static; inline;
+    class function  GetMin(constref v: TLiteVector; c: TOnLess): TOptional; static; inline;
   { returns greatest element of A in TOptional.Value if V is nonempty }
-    class function  GetMax(v: TVector; c: TOnCompare): TOptional; static; inline;
-    class function  GetMax(constref v: TLiteVector; c: TOnCompare): TOptional; static; inline;
+    class function  GetMax(v: TVector; c: TOnLess): TOptional; static; inline;
+    class function  GetMax(constref v: TLiteVector; c: TOnLess): TOptional; static; inline;
   { returns True and smallest element of A in aValue if V is nonempty, False otherwise }
-    class function  FindMin(v: TVector; out aValue: T; c: TOnCompare): Boolean; static; inline;
-    class function  FindMin(constref v: TLiteVector; out aValue: T; c: TOnCompare): Boolean; static; inline;
+    class function  FindMin(v: TVector; out aValue: T; c: TOnLess): Boolean; static; inline;
+    class function  FindMin(constref v: TLiteVector; out aValue: T; c: TOnLess): Boolean; static; inline;
   { returns True and greatest element of A in aValue if V is nonempty, False otherwise }
-    class function  FindMax(v: TVector; out aValue: T; c: TOnCompare): Boolean; static; inline;
-    class function  FindMax(constref v: TLiteVector; out aValue: T; c: TOnCompare): Boolean; static; inline;
+    class function  FindMax(v: TVector; out aValue: T; c: TOnLess): Boolean; static; inline;
+    class function  FindMax(constref v: TLiteVector; out aValue: T; c: TOnLess): Boolean; static; inline;
   { returns True, smallest element of V in aMin and greatest element of V in aMax, if V is nonempty,
     False otherwise }
-    class function  FindMinMax(v: TVector; out aMin, aMax: T; c: TOnCompare): Boolean; static; inline;
-    class function  FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TOnCompare): Boolean;
+    class function  FindMinMax(v: TVector; out aMin, aMax: T; c: TOnLess): Boolean; static; inline;
+    class function  FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TOnLess): Boolean;
                     static; inline;
   { returns True and V's Nth order statistic(0-based) in aValue if V is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is destuctive: changes order of elements in V }
-    class function  FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TOnCompare): Boolean;
+    class function  FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TOnLess): Boolean;
                     static; inline;
-    class function  FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T; c: TOnCompare): Boolean;
+    class function  FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T; c: TOnLess): Boolean;
                     static; inline;
   { returns V's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is destuctive: changes order of elements in V }
-    class function  NthSmallest(v: TVector; N: SizeInt; c: TOnCompare): TOptional; static; inline;
-    class function  NthSmallest(constref v: TLiteVector; N: SizeInt; c: TOnCompare): TOptional; static; inline;
+    class function  NthSmallest(v: TVector; N: SizeInt; c: TOnLess): TOptional; static; inline;
+    class function  NthSmallest(constref v: TLiteVector; N: SizeInt; c: TOnLess): TOptional; static; inline;
   { returns True if permutation towards nondescending state of V has done, False otherwise }
-    class function  NextPermutation2Asc(v: TVector; c: TOnCompare): Boolean; static; inline;
-    class function  NextPermutation2Asc(var v: TLiteVector; c: TOnCompare): Boolean; static; inline;
+    class function  NextPermutation2Asc(v: TVector; c: TOnLess): Boolean; static; inline;
+    class function  NextPermutation2Asc(var v: TLiteVector; c: TOnLess): Boolean; static; inline;
   { returns True if permutation towards nonascending state of V has done, False otherwise }
-    class function  NextPermutation2Desc(v: TVector; c: TOnCompare): Boolean; static; inline;
-    class function  NextPermutation2Desc(var v: TLiteVector; c: TOnCompare): Boolean; static; inline;
+    class function  NextPermutation2Desc(v: TVector; c: TOnLess): Boolean; static; inline;
+    class function  NextPermutation2Desc(var v: TLiteVector; c: TOnLess): Boolean; static; inline;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(v: TVector; c: TOnCompare): Boolean; static; inline;
-    class function  IsNonDescending(constref v: TLiteVector; c: TOnCompare): Boolean; static; inline;
+    class function  IsNonDescending(v: TVector; c: TOnLess): Boolean; static; inline;
+    class function  IsNonDescending(constref v: TLiteVector; c: TOnLess): Boolean; static; inline;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(v: TVector; c: TOnCompare): Boolean; static; inline;
-    class function  IsStrictAscending(constref v: TLiteVector; c: TOnCompare): Boolean; static; inline;
+    class function  IsStrictAscending(v: TVector; c: TOnLess): Boolean; static; inline;
+    class function  IsStrictAscending(constref v: TLiteVector; c: TOnLess): Boolean; static; inline;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(v: TVector; c: TOnCompare): Boolean; static; inline;
-    class function  IsNonAscending(constref v: TLiteVector; c: TOnCompare): Boolean; static; inline;
+    class function  IsNonAscending(v: TVector; c: TOnLess): Boolean; static; inline;
+    class function  IsNonAscending(constref v: TLiteVector; c: TOnLess): Boolean; static; inline;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(v: TVector; c: TOnCompare): Boolean; static; inline;
-    class function  IsStrictDescending(constref v: TLiteVector; c: TOnCompare): Boolean; static; inline;
+    class function  IsStrictDescending(v: TVector; c: TOnLess): Boolean; static; inline;
+    class function  IsStrictDescending(constref v: TLiteVector; c: TOnLess): Boolean; static; inline;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(A, B: TVector; c: TOnCompare): Boolean; static;
-    class function  Same(constref A, B: TLiteVector; c: TOnCompare): Boolean; static;
+    class function  Same(A, B: TVector; c: TOnLess): Boolean; static;
+    class function  Same(constref A, B: TLiteVector; c: TOnLess): Boolean; static;
   { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure QuickSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
+    class procedure QuickSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
-    class procedure IntroSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure IntroSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure IntroSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
+    class procedure IntroSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
   { Pascal translation of Orson Peters' PDQSort algorithm }
-    class procedure PDQSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static;
-    class procedure PDQSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
-    class procedure MergeSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure MergeSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure MergeSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
+    class procedure MergeSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
   { default sort algorithm, currently it is IntroSort}
-    class procedure Sort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure Sort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
-    class function  SelectDistinct(v: TVector; c: TOnCompare): TVector.TArray; static; inline;
-    class function  SelectDistinct(constref v: TLiteVector; c: TOnCompare): TLiteVector.TArray; static; inline;
+    class function  SelectDistinct(v: TVector; c: TOnLess): TVector.TArray; static; inline;
+    class function  SelectDistinct(constref v: TLiteVector; c: TOnLess): TLiteVector.TArray; static; inline;
   end;
 
   { TGNestedVectorHelper: with nested comparator }
@@ -840,87 +850,87 @@ type
     TVector     = specialize TGVector<T>;
     TLiteVector = specialize TGLiteVector<T>;
     TOptional   = specialize TGOptional<T>;
-    TCompare    = specialize TGNestCompare<T>;
+    TLess       = specialize TGNestLessCompare<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TCompare): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static;
                     inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T; c: TCompare): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static;
                     inline;
   { returns position of minimal value in V, -1 if V is empty }
-    class function  IndexOfMin(v: TVector; c: TCompare): SizeInt; static; inline;
-    class function  IndexOfMin(constref v: TLiteVector; c: TCompare): SizeInt; static; inline;
+    class function  IndexOfMin(v: TVector; c: TLess): SizeInt; static; inline;
+    class function  IndexOfMin(constref v: TLiteVector; c: TLess): SizeInt; static; inline;
   { returns position of maximal value in V, -1 if V is empty }
-    class function  IndexOfMax(v: TVector; c: TCompare): SizeInt; static; inline;
-    class function  IndexOfMax(constref v: TLiteVector; c: TCompare): SizeInt; static; inline;
+    class function  IndexOfMax(v: TVector; c: TLess): SizeInt; static; inline;
+    class function  IndexOfMax(constref v: TLiteVector; c: TLess): SizeInt; static; inline;
   { returns smallest element of A in TOptional.Value if V is nonempty }
-    class function  GetMin(v: TVector; c: TCompare): TOptional; static; inline;
-    class function  GetMin(constref v: TLiteVector; c: TCompare): TOptional; static; inline;
+    class function  GetMin(v: TVector; c: TLess): TOptional; static; inline;
+    class function  GetMin(constref v: TLiteVector; c: TLess): TOptional; static; inline;
   { returns greatest element of A in TOptional.Value if V is nonempty }
-    class function  GetMax(v: TVector; c: TCompare): TOptional; static; inline;
-    class function  GetMax(constref v: TLiteVector; c: TCompare): TOptional; static; inline;
+    class function  GetMax(v: TVector; c: TLess): TOptional; static; inline;
+    class function  GetMax(constref v: TLiteVector; c: TLess): TOptional; static; inline;
   { returns True and smallest element of A in aValue if V is nonempty, False otherwise }
-    class function  FindMin(v: TVector; out aValue: T; c: TCompare): Boolean; static; inline;
-    class function  FindMin(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean; static; inline;
+    class function  FindMin(v: TVector; out aValue: T; c: TLess): Boolean; static; inline;
+    class function  FindMin(constref v: TLiteVector; out aValue: T; c: TLess): Boolean; static; inline;
   { returns True and greatest element of A in aValue if V is nonempty, False otherwise }
-    class function  FindMax(v: TVector; out aValue: T; c: TCompare): Boolean; static; inline;
-    class function  FindMax(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean; static; inline;
+    class function  FindMax(v: TVector; out aValue: T; c: TLess): Boolean; static; inline;
+    class function  FindMax(constref v: TLiteVector; out aValue: T; c: TLess): Boolean; static; inline;
   { returns True, smallest element of V in aMin and greatest element of V in aMax, if V is nonempty,
     False otherwise }
-    class function  FindMinMax(v: TVector; out aMin, aMax: T; c: TCompare): Boolean; static; inline;
-    class function  FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TCompare): Boolean; static; inline;
+    class function  FindMinMax(v: TVector; out aMin, aMax: T; c: TLess): Boolean; static; inline;
+    class function  FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TLess): Boolean; static; inline;
   { returns True and V's Nth order statistic(0-based) in aValue if V is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is destuctive: changes order of elements in V }
-    class function  FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TCompare): Boolean; static; inline;
-    class function  FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T; c: TCompare): Boolean;
+    class function  FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TLess): Boolean; static; inline;
+    class function  FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T; c: TLess): Boolean;
                     static; inline;
     { returns V's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is destuctive: changes order of elements in V }
-    class function  NthSmallest(v: TVector; N: SizeInt; c: TCompare): TOptional; static; inline;
-    class function  NthSmallest(constref v: TLiteVector; N: SizeInt; c: TCompare): TOptional; static; inline;
+    class function  NthSmallest(v: TVector; N: SizeInt; c: TLess): TOptional; static; inline;
+    class function  NthSmallest(constref v: TLiteVector; N: SizeInt; c: TLess): TOptional; static; inline;
   { returns True if permutation towards nondescending state of V has done, False otherwise }
-    class function  NextPermutation2Asc(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  NextPermutation2Asc(var v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  NextPermutation2Asc(v: TVector; c: TLess): Boolean; static; inline;
+    class function  NextPermutation2Asc(var v: TLiteVector; c: TLess): Boolean; static; inline;
   { returns True if permutation towards nonascending state of V has done, False otherwise }
-    class function  NextPermutation2Desc(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  NextPermutation2Desc(var v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  NextPermutation2Desc(v: TVector; c: TLess): Boolean; static; inline;
+    class function  NextPermutation2Desc(var v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsNonDescending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsNonDescending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsNonDescending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsStrictAscending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsStrictAscending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsStrictAscending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsNonAscending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsNonAscending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsNonAscending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(v: TVector; c: TCompare): Boolean; static; inline;
-    class function  IsStrictDescending(constref v: TLiteVector; c: TCompare): Boolean; static; inline;
+    class function  IsStrictDescending(v: TVector; c: TLess): Boolean; static; inline;
+    class function  IsStrictDescending(constref v: TLiteVector; c: TLess): Boolean; static; inline;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(A, B: TVector; c: TCompare): Boolean; static;
-    class function  Same(constref A, B: TLiteVector; c: TCompare): Boolean; static;
+    class function  Same(A, B: TVector; c: TLess): Boolean; static;
+    class function  Same(constref A, B: TLiteVector; c: TLess): Boolean; static;
   { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure QuickSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
-    class procedure IntroSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure IntroSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure IntroSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure IntroSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { Pascal translation of Orson Peters' PDQSort algorithm }
-    class procedure PDQSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static;
-    class procedure PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
-    class procedure MergeSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure MergeSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure MergeSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure MergeSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { default sort algorithm, currently it is IntroSort}
-    class procedure Sort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
-    class procedure Sort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
-    class function  SelectDistinct(v: TVector; c: TCompare): TVector.TArray; static; inline;
-    class function  SelectDistinct(constref v: TLiteVector; c: TCompare): TVector.TArray; static; inline;
+    class function  SelectDistinct(v: TVector; c: TLess): TVector.TArray; static; inline;
+    class function  SelectDistinct(constref v: TLiteVector; c: TLess): TVector.TArray; static; inline;
   end;
 
 implementation
@@ -939,6 +949,17 @@ begin
   //CheckInIteration;
   CheckIndexRange(aIndex);
   FItems[aIndex] := aValue;
+end;
+
+function TGVector.GetMutable(aIndex: SizeInt): PItem;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FItems[aIndex];
+end;
+
+function TGVector.GetUncMutable(aIndex: SizeInt): PItem;
+begin
+  Result := @FItems[aIndex];
 end;
 
 procedure TGVector.InsertItem(aIndex: SizeInt; constref aValue: T);
@@ -1195,9 +1216,12 @@ procedure TGObjectVector.SetItem(aIndex: SizeInt; const aValue: T);
 begin
   //CheckInIteration;
   CheckIndexRange(aIndex);
-  if OwnsObjects and not TObject.Equal(FItems[aIndex], aValue) then
-    FItems[aIndex].Free;
-  FItems[aIndex] := aValue;
+  if FItems[aIndex] <> aValue then
+    begin
+      if OwnsObjects then
+        FItems[aIndex].Free;
+      FItems[aIndex] := aValue;
+    end;
 end;
 
 procedure TGObjectVector.DoClear;
@@ -1720,17 +1744,22 @@ begin
   Result := FVector.GetItem(aIndex);
 end;
 
+function TGLiteObjectVector.GetUncMutable(aIndex: SizeInt): PItem;
+begin
+  Result := FVector.GetUncMutable(aIndex);
+end;
+
 procedure TGLiteObjectVector.SetItem(aIndex: SizeInt; const aValue: T);
 var
-  v: T;
+  p: PItem;
 begin
-  if OwnsObjects then
+  p := FVector.GetMutable(aIndex);
+  if p^ <> aValue then
     begin
-      v := FVector[aIndex];
-      if not TObject.Equal(v, aValue) then
-        v.Free;
+      if OwnsObjects then
+        p^.Free;
+      p^ := aValue;
     end;
-  FVector.SetItem(aIndex, aValue);
 end;
 
 procedure TGLiteObjectVector.CheckFreeItems;
@@ -3467,7 +3496,7 @@ end;
 
 { TGRegularVectorHelper }
 
-class function TGRegularVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TCompare): SizeInt;
+class function TGRegularVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3476,7 +3505,7 @@ begin
 end;
 
 class function TGRegularVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.SequentSearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3484,7 +3513,7 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TCompare): SizeInt;
+class function TGRegularVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3493,12 +3522,12 @@ begin
 end;
 
 class function TGRegularVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 begin
 
 end;
 
-class function TGRegularVectorHelper.IndexOfMin(v: TVector; c: TCompare): SizeInt;
+class function TGRegularVectorHelper.IndexOfMin(v: TVector; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IndexOfMin(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3506,7 +3535,7 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.IndexOfMax(v: TVector; c: TCompare): SizeInt;
+class function TGRegularVectorHelper.IndexOfMax(v: TVector; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IndexOfMax(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3514,7 +3543,7 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.IndexOfMax(constref v: TLiteVector; c: TCompare): SizeInt;
+class function TGRegularVectorHelper.IndexOfMax(constref v: TLiteVector; c: TLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.IndexOfMax(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3522,31 +3551,31 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.GetMin(v: TVector; c: TCompare): TOptional;
+class function TGRegularVectorHelper.GetMin(v: TVector; c: TLess): TOptional;
 begin
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
-class function TGRegularVectorHelper.GetMin(constref v: TLiteVector; c: TCompare): TOptional;
+class function TGRegularVectorHelper.GetMin(constref v: TLiteVector; c: TLess): TOptional;
 begin
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
-class function TGRegularVectorHelper.GetMax(v: TVector; c: TCompare): TOptional;
+class function TGRegularVectorHelper.GetMax(v: TVector; c: TLess): TOptional;
 begin
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
-class function TGRegularVectorHelper.GetMax(constref v: TLiteVector; c: TCompare): TOptional;
+class function TGRegularVectorHelper.GetMax(constref v: TLiteVector; c: TLess): TOptional;
 begin
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
-class function TGRegularVectorHelper.FindMin(v: TVector; out aValue: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindMin(v: TVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMin(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3554,7 +3583,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.FindMin(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindMin(constref v: TLiteVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMin(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3562,7 +3591,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.FindMax(v: TVector; out aValue: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindMax(v: TVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMax(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3570,7 +3599,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.FindMax(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindMax(constref v: TLiteVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMax(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3578,7 +3607,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.FindMinMax(v: TVector; out aMin, aMax: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindMinMax(v: TVector; out aMin, aMax: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMinMax(v.FItems[0..Pred(v.ElemCount)], aMin, aMax, c)
@@ -3586,7 +3615,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMinMax(v.FBuffer.FItems[0..Pred(v.Count)], aMin, aMax, c)
@@ -3594,7 +3623,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TCompare): Boolean;
+class function TGRegularVectorHelper.FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindNthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, aValue, c)
@@ -3603,7 +3632,7 @@ begin
 end;
 
 class function TGRegularVectorHelper.FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T;
-  c: TCompare): Boolean;
+  c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindNthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, aValue, c)
@@ -3611,19 +3640,19 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TCompare): TOptional;
+class function TGRegularVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TLess): TOptional;
 begin
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, c);
 end;
 
-class function TGRegularVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt; c: TCompare): TOptional;
+class function TGRegularVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt; c: TLess): TOptional;
 begin
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, c);
 end;
 
-class function TGRegularVectorHelper.NextPermutation2Asc(v: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.NextPermutation2Asc(v: TVector; c: TLess): Boolean;
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
@@ -3632,7 +3661,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.NextPermutation2Asc(var v: TLiteVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.NextPermutation2Asc(var v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.NextPermutation2Asc(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3640,7 +3669,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.NextPermutation2Desc(v: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.NextPermutation2Desc(v: TVector; c: TLess): Boolean;
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
@@ -3649,7 +3678,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.NextPermutation2Desc(var v: TLiteVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.NextPermutation2Desc(var v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.NextPermutation2Desc(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3657,7 +3686,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.IsNonDescending(v: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsNonDescending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IsNonDescending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3665,7 +3694,7 @@ begin
     Result := True;
 end;
 
-class function TGRegularVectorHelper.IsNonDescending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsNonDescending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.IsNonDescending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3673,7 +3702,7 @@ begin
     Result := True;
 end;
 
-class function TGRegularVectorHelper.IsStrictAscending(v: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsStrictAscending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 1 then
     Result := THelper.IsStrictAscending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3681,7 +3710,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.IsNonAscending(v: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsNonAscending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IsNonAscending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3689,7 +3718,7 @@ begin
     Result := True;
 end;
 
-class function TGRegularVectorHelper.IsNonAscending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsNonAscending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.IsNonAscending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3697,7 +3726,7 @@ begin
     Result := True;
 end;
 
-class function TGRegularVectorHelper.IsStrictDescending(v: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsStrictDescending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 1 then
     Result := THelper.IsStrictDescending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3705,7 +3734,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.IsStrictDescending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.IsStrictDescending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.IsStrictDescending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3713,7 +3742,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.Same(A, B: TVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.Same(A, B: TVector; c: TLess): Boolean;
 var
   cnt: SizeInt;
 begin
@@ -3724,7 +3753,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularVectorHelper.Same(constref A, B: TLiteVector; c: TCompare): Boolean;
+class function TGRegularVectorHelper.Same(constref A, B: TLiteVector; c: TLess): Boolean;
 var
   cnt: SizeInt;
 begin
@@ -3735,72 +3764,72 @@ begin
     Result := False;
 end;
 
-class procedure TGRegularVectorHelper.QuickSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.QuickSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.QuickSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.IntroSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.IntroSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.IntroSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.IntroSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.IntroSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.PDQSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.PDQSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.PDQSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.MergeSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.MergeSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.MergeSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.MergeSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.MergeSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.MergeSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.Sort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.Sort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.Sort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGRegularVectorHelper.Sort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGRegularVectorHelper.Sort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.Sort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class function TGRegularVectorHelper.SelectDistinct(v: TVector; c: TCompare): TVector.TArray;
+class function TGRegularVectorHelper.SelectDistinct(v: TVector; c: TLess): TVector.TArray;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SelectDistinct(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3808,7 +3837,7 @@ begin
     Result := nil;
 end;
 
-class function TGRegularVectorHelper.SelectDistinct(constref v: TLiteVector; c: TCompare): TLiteVector.TArray;
+class function TGRegularVectorHelper.SelectDistinct(constref v: TLiteVector; c: TLess): TLiteVector.TArray;
 begin
   if v.Count > 0 then
     Result := THelper.SelectDistinct(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3818,7 +3847,7 @@ end;
 
 { TGDelegatedVectorHelper }
 
-class function TGDelegatedVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TOnCompare): SizeInt;
+class function TGDelegatedVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3827,7 +3856,7 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.SequentSearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3835,7 +3864,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TOnCompare): SizeInt;
+class function TGDelegatedVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3844,7 +3873,7 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T;
-  c: TOnCompare): SizeInt;
+  c: TOnLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.BinarySearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3852,7 +3881,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.IndexOfMin(v: TVector; c: TOnCompare): SizeInt;
+class function TGDelegatedVectorHelper.IndexOfMin(v: TVector; c: TOnLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IndexOfMin(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3860,7 +3889,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.IndexOfMin(constref v: TLiteVector; c: TOnCompare): SizeInt;
+class function TGDelegatedVectorHelper.IndexOfMin(constref v: TLiteVector; c: TOnLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.IndexOfMin(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3868,7 +3897,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.IndexOfMax(v: TVector; c: TOnCompare): SizeInt;
+class function TGDelegatedVectorHelper.IndexOfMax(v: TVector; c: TOnLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IndexOfMax(v.FItems[0..Pred(v.ElemCount)], c)
@@ -3876,7 +3905,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.IndexOfMax(constref v: TLiteVector; c: TOnCompare): SizeInt;
+class function TGDelegatedVectorHelper.IndexOfMax(constref v: TLiteVector; c: TOnLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.IndexOfMax(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -3884,31 +3913,31 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.GetMin(v: TVector; c: TOnCompare): TOptional;
+class function TGDelegatedVectorHelper.GetMin(v: TVector; c: TOnLess): TOptional;
 {%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
-class function TGDelegatedVectorHelper.GetMin(constref v: TLiteVector; c: TOnCompare): TOptional;
+class function TGDelegatedVectorHelper.GetMin(constref v: TLiteVector; c: TOnLess): TOptional;
 {%H-}begin
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
-class function TGDelegatedVectorHelper.GetMax(v: TVector; c: TOnCompare): TOptional;
+class function TGDelegatedVectorHelper.GetMax(v: TVector; c: TOnLess): TOptional;
 {%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
-class function TGDelegatedVectorHelper.GetMax(constref v: TLiteVector; c: TOnCompare): TOptional;
+class function TGDelegatedVectorHelper.GetMax(constref v: TLiteVector; c: TOnLess): TOptional;
 {%H-}begin
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
-class function TGDelegatedVectorHelper.FindMin(v: TVector; out aValue: T; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.FindMin(v: TVector; out aValue: T; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMin(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3916,7 +3945,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.FindMin(constref v: TLiteVector; out aValue: T; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.FindMin(constref v: TLiteVector; out aValue: T; c: TOnLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMin(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3924,7 +3953,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.FindMax(v: TVector; out aValue: T; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.FindMax(v: TVector; out aValue: T; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMax(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3932,7 +3961,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.FindMax(constref v: TLiteVector; out aValue: T; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.FindMax(constref v: TLiteVector; out aValue: T; c: TOnLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMax(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -3940,7 +3969,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.FindMinMax(v: TVector; out aMin, aMax: T; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.FindMinMax(v: TVector; out aMin, aMax: T; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMinMax(v.FItems[0..Pred(v.ElemCount)], aMin, aMax, c)
@@ -3949,7 +3978,7 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.FindMinMax(constref v: TLiteVector; out aMin, aMax: T;
-  c: TOnCompare): Boolean;
+  c: TOnLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMinMax(v.FBuffer.FItems[0..Pred(v.Count)], aMin, aMax, c)
@@ -3958,7 +3987,7 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.FindNthSmallest(v: TVector; N: SizeInt; out aValue: T;
-  c: TOnCompare): Boolean;
+  c: TOnLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindNthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, aValue, c)
@@ -3967,7 +3996,7 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T;
-  c: TOnCompare): Boolean;
+  c: TOnLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindNthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, aValue, c)
@@ -3975,20 +4004,20 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TOnCompare): TOptional;
+class function TGDelegatedVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TOnLess): TOptional;
 {%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, c);
 end;
 
 class function TGDelegatedVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt;
-  c: TOnCompare): TOptional;
+  c: TOnLess): TOptional;
 {%H-}begin
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, c);
 end;
 
-class function TGDelegatedVectorHelper.NextPermutation2Asc(v: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.NextPermutation2Asc(v: TVector; c: TOnLess): Boolean;
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
@@ -3997,7 +4026,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.NextPermutation2Asc(var v: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.NextPermutation2Asc(var v: TLiteVector; c: TOnLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.NextPermutation2Asc(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4005,7 +4034,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.NextPermutation2Desc(v: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.NextPermutation2Desc(v: TVector; c: TOnLess): Boolean;
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
@@ -4014,7 +4043,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.NextPermutation2Desc(var v: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.NextPermutation2Desc(var v: TLiteVector; c: TOnLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.NextPermutation2Desc(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4022,7 +4051,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.IsNonDescending(v: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsNonDescending(v: TVector; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IsNonDescending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4030,7 +4059,7 @@ begin
     Result := True;
 end;
 
-class function TGDelegatedVectorHelper.IsNonDescending(constref v: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsNonDescending(constref v: TLiteVector; c: TOnLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.IsNonDescending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4038,7 +4067,7 @@ begin
     Result := True;
 end;
 
-class function TGDelegatedVectorHelper.IsStrictAscending(v: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsStrictAscending(v: TVector; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 1 then
     Result := THelper.IsStrictAscending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4046,7 +4075,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.IsStrictAscending(constref v: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsStrictAscending(constref v: TLiteVector; c: TOnLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.IsStrictAscending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4054,7 +4083,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.IsNonAscending(v: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsNonAscending(v: TVector; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IsNonAscending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4062,7 +4091,7 @@ begin
     Result := True;
 end;
 
-class function TGDelegatedVectorHelper.IsNonAscending(constref v: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsNonAscending(constref v: TLiteVector; c: TOnLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.IsNonAscending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4070,7 +4099,7 @@ begin
     Result := True;
 end;
 
-class function TGDelegatedVectorHelper.IsStrictDescending(v: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsStrictDescending(v: TVector; c: TOnLess): Boolean;
 begin
   if v.ElemCount > 1 then
     Result := THelper.IsStrictDescending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4078,7 +4107,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.IsStrictDescending(constref v: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.IsStrictDescending(constref v: TLiteVector; c: TOnLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.IsStrictDescending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4086,7 +4115,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.Same(A, B: TVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.Same(A, B: TVector; c: TOnLess): Boolean;
 var
   cnt: SizeInt;
 begin
@@ -4097,7 +4126,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedVectorHelper.Same(constref A, B: TLiteVector; c: TOnCompare): Boolean;
+class function TGDelegatedVectorHelper.Same(constref A, B: TLiteVector; c: TOnLess): Boolean;
 var
   cnt: SizeInt;
 begin
@@ -4108,72 +4137,72 @@ begin
     Result := False;
 end;
 
-class procedure TGDelegatedVectorHelper.QuickSort(v: TVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.QuickSort(v: TVector; c: TOnLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.QuickSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.QuickSort(var v: TLiteVector; c: TOnLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.IntroSort(v: TVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.IntroSort(v: TVector; c: TOnLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.IntroSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.IntroSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.IntroSort(var v: TLiteVector; c: TOnLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.PDQSort(v: TVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.PDQSort(v: TVector; c: TOnLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.PDQSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.PDQSort(var v: TLiteVector; c: TOnLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.MergeSort(v: TVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.MergeSort(v: TVector; c: TOnLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.MergeSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.MergeSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.MergeSort(var v: TLiteVector; c: TOnLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.MergeSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.Sort(v: TVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.Sort(v: TVector; c: TOnLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.Sort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGDelegatedVectorHelper.Sort(var v: TLiteVector; c: TOnCompare; o: TSortOrder);
+class procedure TGDelegatedVectorHelper.Sort(var v: TLiteVector; c: TOnLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.Sort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class function TGDelegatedVectorHelper.SelectDistinct(v: TVector; c: TOnCompare): TVector.TArray;
+class function TGDelegatedVectorHelper.SelectDistinct(v: TVector; c: TOnLess): TVector.TArray;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SelectDistinct(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4182,7 +4211,7 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.SelectDistinct(constref v: TLiteVector;
-  c: TOnCompare): TLiteVector.TArray;
+  c: TOnLess): TLiteVector.TArray;
 begin
   if v.Count > 0 then
     Result := THelper.SelectDistinct(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4192,7 +4221,7 @@ end;
 
 { TGNestedVectorHelper }
 
-class function TGNestedVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TCompare): SizeInt;
+class function TGNestedVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -4201,7 +4230,7 @@ begin
 end;
 
 class function TGNestedVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.SequentSearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -4209,7 +4238,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TCompare): SizeInt;
+class function TGNestedVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -4218,7 +4247,7 @@ begin
 end;
 
 class function TGNestedVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T;
-  c: TCompare): SizeInt;
+  c: TLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.BinarySearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -4226,7 +4255,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.IndexOfMin(v: TVector; c: TCompare): SizeInt;
+class function TGNestedVectorHelper.IndexOfMin(v: TVector; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IndexOfMin(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4234,7 +4263,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.IndexOfMin(constref v: TLiteVector; c: TCompare): SizeInt;
+class function TGNestedVectorHelper.IndexOfMin(constref v: TLiteVector; c: TLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.IndexOfMin(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4242,7 +4271,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.IndexOfMax(v: TVector; c: TCompare): SizeInt;
+class function TGNestedVectorHelper.IndexOfMax(v: TVector; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IndexOfMax(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4250,7 +4279,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.IndexOfMax(constref v: TLiteVector; c: TCompare): SizeInt;
+class function TGNestedVectorHelper.IndexOfMax(constref v: TLiteVector; c: TLess): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.IndexOfMax(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4258,31 +4287,31 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.GetMin(v: TVector; c: TCompare): TOptional;
+class function TGNestedVectorHelper.GetMin(v: TVector; c: TLess): TOptional;
 begin
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
-class function TGNestedVectorHelper.GetMin(constref v: TLiteVector; c: TCompare): TOptional;
+class function TGNestedVectorHelper.GetMin(constref v: TLiteVector; c: TLess): TOptional;
 begin
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
-class function TGNestedVectorHelper.GetMax(v: TVector; c: TCompare): TOptional;
+class function TGNestedVectorHelper.GetMax(v: TVector; c: TLess): TOptional;
 begin
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
-class function TGNestedVectorHelper.GetMax(constref v: TLiteVector; c: TCompare): TOptional;
+class function TGNestedVectorHelper.GetMax(constref v: TLiteVector; c: TLess): TOptional;
 begin
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
-class function TGNestedVectorHelper.FindMin(v: TVector; out aValue: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindMin(v: TVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMin(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -4290,7 +4319,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.FindMin(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindMin(constref v: TLiteVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMin(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -4298,7 +4327,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.FindMax(v: TVector; out aValue: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindMax(v: TVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMax(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -4306,7 +4335,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.FindMax(constref v: TLiteVector; out aValue: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindMax(constref v: TLiteVector; out aValue: T; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMax(v.FBuffer.FItems[0..Pred(v.Count)], aValue, c)
@@ -4314,7 +4343,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.FindMinMax(v: TVector; out aMin, aMax: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindMinMax(v: TVector; out aMin, aMax: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindMinMax(v.FItems[0..Pred(v.ElemCount)], aMin, aMax, c)
@@ -4322,7 +4351,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindMinMax(constref v: TLiteVector; out aMin, aMax: T; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindMinMax(v.FBuffer.FItems[0..Pred(v.Count)], aMin, aMax, c)
@@ -4330,7 +4359,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TCompare): Boolean;
+class function TGNestedVectorHelper.FindNthSmallest(v: TVector; N: SizeInt; out aValue: T; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.FindNthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, aValue, c)
@@ -4339,7 +4368,7 @@ begin
 end;
 
 class function TGNestedVectorHelper.FindNthSmallest(constref v: TLiteVector; N: SizeInt; out aValue: T;
-  c: TCompare): Boolean;
+  c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.FindNthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, aValue, c)
@@ -4347,19 +4376,19 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TCompare): TOptional;
+class function TGNestedVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TLess): TOptional;
 begin
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, c);
 end;
 
-class function TGNestedVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt; c: TCompare): TOptional;
+class function TGNestedVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt; c: TLess): TOptional;
 begin
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, c);
 end;
 
-class function TGNestedVectorHelper.NextPermutation2Asc(v: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.NextPermutation2Asc(v: TVector; c: TLess): Boolean;
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
@@ -4368,7 +4397,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.NextPermutation2Asc(var v: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.NextPermutation2Asc(var v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.NextPermutation2Asc(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4376,7 +4405,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.NextPermutation2Desc(v: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.NextPermutation2Desc(v: TVector; c: TLess): Boolean;
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
@@ -4385,7 +4414,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.NextPermutation2Desc(var v: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.NextPermutation2Desc(var v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.NextPermutation2Desc(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4393,7 +4422,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.IsNonDescending(v: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsNonDescending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IsNonDescending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4401,7 +4430,7 @@ begin
     Result := True;
 end;
 
-class function TGNestedVectorHelper.IsNonDescending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsNonDescending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.IsNonDescending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4409,7 +4438,7 @@ begin
     Result := True;
 end;
 
-class function TGNestedVectorHelper.IsStrictAscending(v: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsStrictAscending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 1 then
     Result := THelper.IsStrictAscending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4417,7 +4446,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.IsStrictAscending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsStrictAscending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.IsStrictAscending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4425,7 +4454,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.IsNonAscending(v: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsNonAscending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 0 then
     Result := THelper.IsNonAscending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4433,7 +4462,7 @@ begin
     Result := True;
 end;
 
-class function TGNestedVectorHelper.IsNonAscending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsNonAscending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 0 then
     Result := THelper.IsNonAscending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4441,7 +4470,7 @@ begin
     Result := True;
 end;
 
-class function TGNestedVectorHelper.IsStrictDescending(v: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsStrictDescending(v: TVector; c: TLess): Boolean;
 begin
   if v.ElemCount > 1 then
     Result := THelper.IsStrictDescending(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4449,7 +4478,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.IsStrictDescending(constref v: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.IsStrictDescending(constref v: TLiteVector; c: TLess): Boolean;
 begin
   if v.Count > 1 then
     Result := THelper.IsStrictDescending(v.FBuffer.FItems[0..Pred(v.Count)], c)
@@ -4457,7 +4486,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.Same(A, B: TVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.Same(A, B: TVector; c: TLess): Boolean;
 var
   cnt: SizeInt;
 begin
@@ -4468,7 +4497,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedVectorHelper.Same(constref A, B: TLiteVector; c: TCompare): Boolean;
+class function TGNestedVectorHelper.Same(constref A, B: TLiteVector; c: TLess): Boolean;
 var
   cnt: SizeInt;
 begin
@@ -4479,72 +4508,72 @@ begin
     Result := False;
 end;
 
-class procedure TGNestedVectorHelper.QuickSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.QuickSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.QuickSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.IntroSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.IntroSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.IntroSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.IntroSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.IntroSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.PDQSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.PDQSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.PDQSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.MergeSort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.MergeSort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.MergeSort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.MergeSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.MergeSort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.MergeSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.Sort(v: TVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.Sort(v: TVector; c: TLess; o: TSortOrder);
 begin
   v.CheckInIteration;
   if v.ElemCount > 1 then
     THelper.Sort(v.FItems[0..Pred(v.ElemCount)], c, o);
 end;
 
-class procedure TGNestedVectorHelper.Sort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+class procedure TGNestedVectorHelper.Sort(var v: TLiteVector; c: TLess; o: TSortOrder);
 begin
   if v.Count > 1 then
     THelper.Sort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
-class function TGNestedVectorHelper.SelectDistinct(v: TVector; c: TCompare): TVector.TArray;
+class function TGNestedVectorHelper.SelectDistinct(v: TVector; c: TLess): TVector.TArray;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SelectDistinct(v.FItems[0..Pred(v.ElemCount)], c)
@@ -4552,7 +4581,7 @@ begin
     Result := nil;
 end;
 
-class function TGNestedVectorHelper.SelectDistinct(constref v: TLiteVector; c: TCompare): TVector.TArray;
+class function TGNestedVectorHelper.SelectDistinct(constref v: TLiteVector; c: TLess): TVector.TArray;
 begin
   if v.Count > 0 then
     Result := THelper.SelectDistinct(v.FBuffer.FItems[0..Pred(v.Count)], c)
