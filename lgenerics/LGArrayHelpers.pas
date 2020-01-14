@@ -4189,8 +4189,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(e, L, R) do
         begin
-          DoIntroSort(e, L, Left, Pred(Ttl));
-          DoIntroSort(e, Right, R, Pred(Ttl));
+          if Left > L then
+            DoIntroSort(e, L, Left, Pred(Ttl));
+          if Right < R then
+            DoIntroSort(e, Right, R, Pred(Ttl));
         end
     else
       DoHeapSort(e, L, R)
@@ -12684,8 +12686,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(A, L, R) do
         begin
-          DoIntroSort(A, L, Left, Pred(Ttl));
-          DoIntroSort(A, Right, R, Pred(Ttl));
+          if Left > L then
+            DoIntroSort(A, L, Left, Pred(Ttl));
+          if Right < R then
+            DoIntroSort(A, Right, R, Pred(Ttl));
         end
     else
       DoHeapSort(@A[L], R - L)
