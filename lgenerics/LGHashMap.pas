@@ -230,7 +230,7 @@ type
   end;
 
   { TGCustomObjectHashMap
-      note: for equality comparision of (TValue as TObject) used TObjectHelper from LGHelpers }
+      note: for equality comparison of (TValue as TObject) used TObjectHelper from LGHelpers }
   generic TGCustomObjectHashMap<TKey, TValue> = class abstract(specialize TGAbstractHashMap<TKey, TValue>)
   private
     FOwnsKeys: Boolean;
