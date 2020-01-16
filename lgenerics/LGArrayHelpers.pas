@@ -115,7 +115,7 @@ type
     var
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-                                  aNum: SizeInt; aUseSwaps: Boolean); static;
+                                  aNum: PtrInt; aUseSwaps: Boolean); static;
     end;
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
@@ -973,7 +973,7 @@ type
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-                                  aNum: SizeInt; aUseSwaps: Boolean); static;
+                                  aNum: PtrInt; aUseSwaps: Boolean); static;
     public
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
@@ -1237,31 +1237,31 @@ end;
 { TGArrayHelpUtil.TPDQSortBase }
 
 class procedure TGArrayHelpUtil.TPDQSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-  aNum: SizeInt; aUseSwaps: Boolean);
+  aNum: PtrInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
-  I: SizeInt;
+  I: PtrInt;
   v: TFake;
 begin
   if aUseSwaps then
     for I := 0 to Pred(aNum) do
       begin
-        v := TFake((aFirst + aOffsetsL[I])^);
-        TFake((aFirst + aOffsetsL[I])^) := TFake((aLast - aOffsetsR[I])^);
-        TFake((aLast - aOffsetsR[I])^) := v;
+        v := TFake((aFirst + PtrInt(aOffsetsL[I]))^);
+        TFake((aFirst + PtrInt(aOffsetsL[I]))^) := TFake((aLast - PtrInt(aOffsetsR[I]))^);
+        TFake((aLast - PtrInt(aOffsetsR[I]))^) := v;
       end
   else
     if aNum > 0 then
       begin
-        L := aFirst + aOffsetsL[0];
-        R := aLast - aOffsetsR[0];
+        L := aFirst + PtrInt(aOffsetsL[0]);
+        R := aLast - PtrInt(aOffsetsR[0]);
         v := TFake(L^);
         TFake(L^) := TFake(R^);
         for I := 1 to Pred(aNum) do
           begin
-            L := aFirst + aOffsetsL[I];
+            L := aFirst + PtrInt(aOffsetsL[I]);
             TFake(R^) := TFake(L^);
-            R := aLast - aOffsetsR[I];
+            R := aLast - PtrInt(aOffsetsR[I]);
             TFake(L^) := TFake(R^);
           end;
         TFake(R^) := v;
@@ -12276,31 +12276,31 @@ begin
 end;
 
 class procedure TGSimpleArrayHelper.TPDQSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-  aNum: SizeInt; aUseSwaps: Boolean);
+  aNum: PtrInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
-  I: SizeInt;
+  I: PtrInt;
   v: T;
 begin
   if aUseSwaps then
     for I := 0 to Pred(aNum) do
       begin
-        v := (aFirst + aOffsetsL[I])^;
-        (aFirst + aOffsetsL[I])^ := (aLast - aOffsetsR[I])^;
-        (aLast - aOffsetsR[I])^ := v;
+        v := (aFirst + PtrInt(aOffsetsL[I]))^;
+        (aFirst + PtrInt(aOffsetsL[I]))^ := (aLast - PtrInt(aOffsetsR[I]))^;
+        (aLast - PtrInt(aOffsetsR[I]))^ := v;
       end
   else
     if aNum > 0 then
       begin
-        L := aFirst + aOffsetsL[0];
-        R := aLast - aOffsetsR[0];
+        L := aFirst + PtrInt(aOffsetsL[0]);
+        R := aLast - PtrInt(aOffsetsR[0]);
         v := L^;
         L^ := R^;
         for I := 1 to Pred(aNum) do
           begin
-            L := aFirst + aOffsetsL[I];
+            L := aFirst + PtrInt(aOffsetsL[I]);
             R^ := L^;
-            R := aLast - aOffsetsR[I];
+            R := aLast - PtrInt(aOffsetsR[I]);
             L^ := R^;
           end;
         R^ := v;
