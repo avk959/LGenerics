@@ -121,6 +121,7 @@ type
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
   public
+    class procedure Swap(var L, R: T); static; inline;
   { swaps the elements of A with the indices L and R;
     raises EArgumentException if L or R is out of bounds }
     class procedure SwapItems(var A: array of T; L, R: SizeInt); static;
@@ -1001,6 +1002,7 @@ type
   { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
   public
+    class procedure Swap(var L, R: T); static; inline;
     class procedure Reverse(var A: array of T); static;
   { cyclic shift of array elements by aDist positions to the left;
     the case if Abs(aDist) > Length(A) is ignored }
@@ -1383,6 +1385,15 @@ begin
         TFake(p[R - 2]) := v2;
       end;
   end;
+end;
+
+class procedure TGArrayHelpUtil.Swap(var L, R: T);
+var
+  v: TFake;
+begin
+  v := TFake(L);
+  TFake(L) := TFake(R);
+  TFake(R) := v;
 end;
 
 class procedure TGArrayHelpUtil.SwapItems(var A: array of T; L, R: SizeInt);
@@ -12889,6 +12900,15 @@ begin
       A[R] := v;
     end;
   Result := A[N];
+end;
+
+class procedure TGSimpleArrayHelper.Swap(var L, R: T);
+var
+  v: T;
+begin
+  v := L;
+  L := R;
+  R := v;
 end;
 
 class procedure TGSimpleArrayHelper.Reverse(var A: array of T);
