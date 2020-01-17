@@ -32,7 +32,9 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGAbstractContainer;
+  LGAbstractContainer,
+  LGHashMap,
+  LGStrConst;
 
 type
 
@@ -380,6 +382,35 @@ type
     destructor Destroy; override;
     function  MoveNext: Boolean; override;
     procedure Reset; override;
+  end;
+
+  { TGBaseLruCache wraps a (heavy)user function OnGetValue with a memoized method
+    GetValue that saves up to the SizeLimit most recent results }
+  generic TGBaseLruCache<TKey, TValue, TKeyEqRel> = class
+  public
+  type
+    TOnGetValue = function(constref aKey: TKey): TValue of object;
+  protected
+  type
+    TMap = class(specialize TGBaseOrderedHashMap<TKey, TValue, TKeyEqRel>);
+  var
+    FMap: TMap;
+    FGetValue: TOnGetValue;
+    FSizeLimit: SizeInt;
+    function  GetLoadFactor: Single;
+    procedure SetSizeLimit(aValue: SizeInt);
+    procedure SetLoadFactor(aValue: Single);
+  public
+    constructor Create(aGetValue: TOnGetValue; aSizeLimit: SizeInt);
+    constructor Create(aGetValue: TOnGetValue; aSizeLimit: SizeInt; aLoadFactor: Single);
+    constructor Create(aGetValue: TOnGetValue; aSizeLimit, aCapacity: SizeInt; aLoadFactor: Single);
+    destructor Destroy; override;
+    procedure Clear;
+    procedure TrimToFit;
+    function  GetValue(constref aKey: TKey): TValue;
+    property  SizeLimit: SizeInt read FSizeLimit write SetSizeLimit;
+    property  OnGetValue: TOnGetValue read FGetValue;
+    property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
   end;
 
   TParamKind = (pkOption, pkLongOption, pkArgument);
@@ -5259,6 +5290,81 @@ procedure TGClassEnumerable.Reset;
 begin
   FEnum.Free;
   FEnum := FEntity.GetEnumerator;
+end;
+
+{ TGBaseLruCache }
+
+function TGBaseLruCache.GetLoadFactor: Single;
+begin
+  Result := FMap.LoadFactor;
+end;
+
+procedure TGBaseLruCache.SetSizeLimit(aValue: SizeInt);
+begin
+  if FSizeLimit = aValue then exit;
+  if aValue < 1 then
+    EArgumentException.CreateFmt(SEInputShouldAtLeastFmt, ['aSizeLimit', 1]);
+  FSizeLimit := aValue;
+  while FMap.Count > SizeLimit do
+    FMap.RemoveFirst;
+end;
+
+procedure TGBaseLruCache.SetLoadFactor(aValue: Single);
+begin
+  FMap.LoadFactor := aValue;
+end;
+
+constructor TGBaseLruCache.Create(aGetValue: TOnGetValue; aSizeLimit: SizeInt);
+begin
+  if aGetValue = nil then
+    raise EArgumentNilException.Create(SECallbackMissed);
+  FGetValue := aGetValue;
+  FMap := TMap.Create;
+  FMap.UpdateOnHit := True;
+  SizeLimit := aSizeLimit;
+end;
+
+constructor TGBaseLruCache.Create(aGetValue: TOnGetValue; aSizeLimit: SizeInt; aLoadFactor: Single);
+begin
+  Create(aGetValue, aSizeLimit);
+  FMap.LoadFactor := aLoadFactor;
+end;
+
+constructor TGBaseLruCache.Create(aGetValue: TOnGetValue; aSizeLimit, aCapacity: SizeInt; aLoadFactor: Single);
+begin
+  if aGetValue = nil then
+    raise EArgumentNilException.Create(SECallbackMissed);
+  FGetValue := aGetValue;
+  FMap := TMap.Create(aCapacity, aLoadFactor);
+  FMap.UpdateOnHit := True;
+  SizeLimit := aSizeLimit;
+end;
+
+destructor TGBaseLruCache.Destroy;
+begin
+  FMap.Free;
+  inherited;
+end;
+
+procedure TGBaseLruCache.Clear;
+begin
+  FMap.Clear;
+end;
+
+procedure TGBaseLruCache.TrimToFit;
+begin
+  FMap.TrimToFit;
+end;
+
+function TGBaseLruCache.GetValue(constref aKey: TKey): TValue;
+begin
+  if not FMap.TryGetValue(aKey, Result) then
+    begin
+      Result := FGetValue(aKey);
+      FMap.Add(aKey, Result);
+      if FMap.Count > FSizeLimit then
+        FMap.RemoveFirst;
+    end;
 end;
 
 end.
