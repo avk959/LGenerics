@@ -76,9 +76,9 @@ var
     Result := LowerCase(aValue);
     Inc(TotalCount);
   end;
-  function CompareItem(constref L, R: TCountItem): SizeInt;
+  function CompareItem(constref L, R: TCountItem): Boolean;
   begin
-    Result := -SizeInt.Compare(L.Count, R.Count);
+    Result := R.Count < L.Count;
   end;
   function IsReservedWord(constref aValue: string): Boolean;
   begin
