@@ -31,7 +31,7 @@ type
     function ToString: string;
   end;
 
-  TEmployeeCompare = specialize TGOnCompare<TEmployee>;
+  TEmployeeCompare = specialize TGOnLessCompare<TEmployee>;
   TEmployees       = specialize TGVector<TEmployee>;
 
   { TfrmMain }
@@ -104,13 +104,13 @@ type
   private
     FEmployees: TEmployees;
     Comparators: array[0..5] of TEmployeeCompare;
-    function  StringCmp(constref L, R: string): SizeInt;
-    function  CmpByFirst(constref L, R: TEmployee): SizeInt;
-    function  CmpByLast(constref L, R: TEmployee): SizeInt;
-    function  CmpByAge(constref L, R: TEmployee): SizeInt;
-    function  CmpByLocation(constref L, R: TEmployee): SizeInt;
-    function  CmpByPhone(constref L, R: TEmployee): SizeInt;
-    function  CmpBySalary(constref L, R: TEmployee): SizeInt;
+    function  StringCmp(constref L, R: string): Boolean;
+    function  CmpByFirst(constref L, R: TEmployee): Boolean;
+    function  CmpByLast(constref L, R: TEmployee): Boolean;
+    function  CmpByAge(constref L, R: TEmployee): Boolean;
+    function  CmpByLocation(constref L, R: TEmployee): Boolean;
+    function  CmpByPhone(constref L, R: TEmployee): Boolean;
+    function  CmpBySalary(constref L, R: TEmployee): Boolean;
     procedure FillcbCmpKind;
     procedure FillcbLocation;
     procedure FillcbGender;
@@ -209,39 +209,39 @@ begin
   SelectGenderAndAge(cbGender.Text, seLoAge.Value, seHiAge.Value);
 end;
 
-function TfrmMain.StringCmp(constref L, R: string): SizeInt;
+function TfrmMain.StringCmp(constref L, R: string): Boolean;
 begin
-  Result := ansistring.Compare(L, R);
+  Result := ansistring.Less(L, R);
 end;
 
-function TfrmMain.CmpByFirst(constref L, R: TEmployee): SizeInt;
+function TfrmMain.CmpByFirst(constref L, R: TEmployee): Boolean;
 begin
-  Result := ansistring.Compare(L.FirstName, R.FirstName);
+  Result := ansistring.Less(L.FirstName, R.FirstName);
 end;
 
-function TfrmMain.CmpByLast(constref L, R: TEmployee): SizeInt;
+function TfrmMain.CmpByLast(constref L, R: TEmployee): Boolean;
 begin
-  Result := ansistring.Compare(L.LastName, R.LastName);
+  Result := ansistring.Less(L.LastName, R.LastName);
 end;
 
-function TfrmMain.CmpByAge(constref L, R: TEmployee): SizeInt;
+function TfrmMain.CmpByAge(constref L, R: TEmployee): Boolean;
 begin
-  Result := ShortInt.Compare(L.Age, R.Age);
+  Result := L.Age < R.Age;
 end;
 
-function TfrmMain.CmpByLocation(constref L, R: TEmployee): SizeInt;
+function TfrmMain.CmpByLocation(constref L, R: TEmployee): Boolean;
 begin
-  Result := ansistring.Compare(L.Location, R.Location);
+  Result := ansistring.Less(L.Location, R.Location);
 end;
 
-function TfrmMain.CmpByPhone(constref L, R: TEmployee): SizeInt;
+function TfrmMain.CmpByPhone(constref L, R: TEmployee): Boolean;
 begin
-  Result := ansistring.Compare(L.Phone, R.Phone);
+  Result := ansistring.Less(L.Phone, R.Phone);
 end;
 
-function TfrmMain.CmpBySalary(constref L, R: TEmployee): SizeInt;
+function TfrmMain.CmpBySalary(constref L, R: TEmployee): Boolean;
 begin
-  Result := Currency.Compare(L.Salary, R.Salary);
+  Result := Currency.Less(L.Salary, R.Salary);
 end;
 
 procedure TfrmMain.FillcbCmpKind;
