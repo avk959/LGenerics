@@ -2569,8 +2569,6 @@ end;
 procedure TSpinLock.Unlock;
 begin
   InterlockedExchange(FState, DWord(0));
-  //FState := 0;
-  //ReadWriteBarrier;
 end;
 
 end.
