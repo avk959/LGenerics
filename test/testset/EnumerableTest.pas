@@ -15,6 +15,7 @@ uses
 type
 
   TPair            = record Key, Value: Integer end;
+  TPairArray       = array of TPair;
   TPairArrayCursor = specialize TGArrayCursor<TPair>;
   IPairEnumerable  = specialize IGEnumerable<TPair>;
 
@@ -43,22 +44,13 @@ type
     IntOddInc11: TIntArray11    = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
     IntMul4Inc21: TIntArray21   = (
       4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84);
-    Pair35: array[1..35] of TPair = ( //array size must be greater then TGArrayHelpUtil.QUICK_INSERT_CUTOFF
-      //10 15, 19, 23, 27
-      (key: 10;Value: 10),(key: 15;Value: 17),(key: 19;Value: 24),(key: 23;Value: 31),(key: 27;Value: 38),
-      (key: 27;Value: 39),(key: 10;Value: 11),(key: 15;Value: 18),(key: 19;Value: 25),(key: 23;Value: 32),
-      (key: 23;Value: 33),(key: 27;Value: 40),(key: 10;Value: 12),(key: 15;Value: 19),(key: 19;Value: 26),
-      (key: 19;Value: 27),(key: 23;Value: 34),(key: 27;Value: 41),(key: 10;Value: 13),(key: 15;Value: 20),
-      (key: 15;Value: 21),(key: 19;Value: 28),(key: 23;Value: 35),(key: 27;Value: 42),(key: 10;Value: 14),
-      (key: 10;Value: 15),(key: 15;Value: 22),(key: 19;Value: 29),(key: 23;Value: 36),(key: 27;Value: 43),
-      (key: 27;Value: 44),(key: 10;Value: 16),(key: 15;Value: 23),(key: 19;Value: 30),(key: 23;Value: 37));
-
 
     function DoIntCmp(constref L, R: Integer): Boolean;
     function GetIsEven(constref aValue: Integer): Boolean;
     function DoMulBy4(constref aValue: Integer): Integer;
     function DoAddSquare(constref X, Y: Integer): Integer;
     function PairCmp(constref L, R: TPair): Boolean;
+    function CreatePairArray(aKeyCount, aPairCount: Integer): TPairArray;
   published
     procedure EmptyEnum_ToArray;
     procedure Enum21_ToArray;
@@ -288,6 +280,28 @@ end;
 function TEnumerableTest.PairCmp(constref L, R: TPair): Boolean;
 begin
   Result := L.Key < R.Key;
+end;
+
+function TEnumerableTest.CreatePairArray(aKeyCount, aPairCount: Integer): TPairArray;
+var
+  Counter: array of Integer;
+  I, Key: Integer;
+begin
+  SetLength(Result, aPairCount);
+  SetLength(Counter, aKeyCount);
+  Key := 0;
+  for I := 0 to Pred(aKeyCount) do
+    begin
+      Counter[I] := Key;
+      Key += aKeyCount;
+    end;
+  for I := 0 to System.High(Result) do
+    begin
+      Key := Random(aKeyCount);
+      Result[I].Key := Key;
+      Result[I].Value := Counter[Key];
+      Inc(Counter[Key]);
+    end;
 end;
 
 procedure TEnumerableTest.EmptyEnum_ToArray;
@@ -1534,12 +1548,15 @@ type
 var
   e: IPairEnumerable;
   a: array of TPair;
+const
+  KeyCount = 55;
+  TestSize = 1000;
 begin
-  e := TPairArrayCursor.Create(THelper.CreateCopy(Pair35));
+  e := TPairArrayCursor.Create(CreatePairArray(KeyCount, TestSize));
   a := e.Sorted(@PairCompare).ToArray;
   AssertTrue(THelper.IsNonDescending(a, @PairCompare));
   AssertFalse(TNestHelper.IsStrictAscending(a, @ValCmp));
-  a := IPairEnumerable(TPairArrayCursor.Create(THelper.CreateCopy(Pair35)))
+  a := IPairEnumerable(TPairArrayCursor.Create(CreatePairArray(KeyCount, TestSize)))
       .Sorted(@PairCompare, True)
       .ToArray;
   AssertTrue(THelper.IsNonDescending(a, @PairCompare));
@@ -1557,12 +1574,15 @@ type
 var
   e: IPairEnumerable;
   a: array of TPair;
+const
+  KeyCount = 55;
+  TestSize = 1000;
 begin
-  e := TPairArrayCursor.Create(THelper.CreateCopy(Pair35));
+  e := TPairArrayCursor.Create(CreatePairArray(KeyCount, TestSize));
   a := e.Sorted(@PairCompare).ToArray;
   AssertTrue(THelper.IsNonDescending(a, @PairCmp));
   AssertFalse(TNestHelper.IsStrictAscending(a, @ValCmp));
-  a := IPairEnumerable(TPairArrayCursor.Create(THelper.CreateCopy(Pair35)))
+  a := IPairEnumerable(TPairArrayCursor.Create(CreatePairArray(KeyCount, TestSize)))
       .Sorted(@PairCompare, True)
       .ToArray;
   AssertTrue(THelper.IsNonDescending(a, @PairCmp));
@@ -1583,12 +1603,15 @@ type
 var
   e: IPairEnumerable;
   a: array of TPair;
+const
+  KeyCount = 55;
+  TestSize = 1000;
 begin
-  e := TPairArrayCursor.Create(THelper.CreateCopy(Pair35));
+  e := TPairArrayCursor.Create(CreatePairArray(KeyCount, TestSize));
   a := e.Sorted(@PairCompare).ToArray;
   AssertTrue(THelper.IsNonDescending(a, @KeyCmp));
   AssertFalse(THelper.IsStrictAscending(a, @ValCmp));
-  a := IPairEnumerable(TPairArrayCursor.Create(THelper.CreateCopy(Pair35)))
+  a := IPairEnumerable(TPairArrayCursor.Create(CreatePairArray(KeyCount, TestSize)))
       .Sorted(@PairCompare, True)
       .ToArray;
   AssertTrue(THelper.IsNonDescending(a, @KeyCmp));
