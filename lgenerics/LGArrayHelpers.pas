@@ -64,11 +64,12 @@ type
 
   protected
   const
-    HEAP_INSERT_CUTOFF  = 63;
-    QUICK_INSERT_CUTOFF = 31;
-    MEDIAN_OF9_CUTOFF   = 511;
-    DPQ_INSERT_CUTOFF   = 47;
-    INTRO_LOG_FACTOR    = 2;
+    HEAP_INSERTION_SORT_CUTOFF   = 63;
+    QUICK_INSERTION_SORT_CUTOFF  = 47;
+    MEDIAN_OF9_CUTOFF            = 511;
+    DPQ_INSERTION_SORT_CUTOFF    = 47;
+    INTROSORT_LOG_FACTOR         = 2;
+    PARTIAL_INSERTION_SORT_LIMIT = 12;
   type
     //to supress unnecessary refcounting
     TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
@@ -107,8 +108,6 @@ type
       TPart = specialize TGTuple2<PItem, Boolean>;
     private
     const
-      PARTIAL_INSERTION_SORT_LIMIT = 12;
-      INSERTION_SORT_THRESHOLD     = 32;
       BLOCK_SIZE                   = 128;
       CACHE_LINE_SIZE              = 64;
       NINTHER_THRESHOLD            = 128;
@@ -259,7 +258,7 @@ type
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
+    class function  CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -270,12 +269,12 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt); static;
+    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt); static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
   { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
@@ -379,7 +378,7 @@ type
     class function  DoBinSearch(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt; static;
     class function  DoBinSearchPos(constref e: TIndexed; L, R: SizeInt; constref aValue: T): TSearchResult;
                     static;
-    class function  CountRun2Asc(var e: TIndexed; L, R: SizeInt): SizeInt;
+    class function  CountRun(var e: TIndexed; L, R: SizeInt; o: TSortOrder): SizeInt;
     class procedure InsertionSort(var e: TIndexed; L, R: SizeInt); static;
     class procedure DoHeapSort(var e: TIndexed; L, R: SizeInt); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
@@ -451,7 +450,7 @@ type
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
+    class function  CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -462,12 +461,12 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt); static;
+    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt); static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
   { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
@@ -586,7 +585,7 @@ type
       class procedure Sort(aStart, aFinish: PItem; c: TLess); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TLess): SizeInt; static;
+    class function  CountRun(A: PItem; R: SizeInt; c: TLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TLess); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
@@ -598,12 +597,12 @@ type
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TLess); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TLess); static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TLess): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess); static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TLess); static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TLess): T; static;
   public
@@ -724,7 +723,7 @@ type
       class procedure Sort(aStart, aFinish: PItem; c: TOnLess); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TOnLess): SizeInt; static;
+    class function  CountRun(A: PItem; R: SizeInt; c: TOnLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
@@ -736,12 +735,12 @@ type
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnLess); static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess); static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnLess); static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T; static;
   public
@@ -862,7 +861,7 @@ type
       class procedure Sort(aStart, aFinish: PItem; c: TNestLess); static;
     end;
 
-    class function  CountRun2Asc(A: PItem; R: SizeInt; c: TNestLess): SizeInt; static;
+    class function  CountRun(A: PItem; R: SizeInt; c: TNestLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
@@ -878,12 +877,12 @@ type
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestLess); static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess); static;
+    class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestLess); static;
+    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T; static;
   public
@@ -979,7 +978,7 @@ type
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
-    class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
+    class function  CountRun(var A: array of T; L, R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
     class procedure UnguardInsertionSort(var A: array of T; L, R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -1126,7 +1125,7 @@ type
   generic TGOrdinalArrayHelper<T> = class(specialize TGNumArrayHelper<T>)
   private
   type
-    TMonotonicity = (moAsc, moDesc, moConst, moNone);
+    TMonotonyKind = (mkAsc, mkDesc, mkConst, mkNone);
     TGetAllow     = function(aMin, aMax: T; aLen: SizeInt): Boolean;
 
   const
@@ -1136,7 +1135,7 @@ type
     COUNTSORT_CUTOFF = $400000; //todo: ???
   {$ENDIF CPU16}
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
-    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity; static;
+    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonyKind; static;
     class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class constructor Init;
@@ -2773,7 +2772,7 @@ begin
   while True do
     begin
       Size := aFinish - aStart;
-      if Size < INSERTION_SORT_THRESHOLD then
+      if Size <= QUICK_INSERTION_SORT_CUTOFF then
         begin
           if aLeftMost then
             TGBaseArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart))
@@ -2813,7 +2812,7 @@ begin
               TGBaseArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
               exit;
             end;
-          if LSize >= INSERTION_SORT_THRESHOLD then
+          if LSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               LSizeDiv := LSize div 4;
               v := TFake(aStart^);
@@ -2838,7 +2837,7 @@ begin
                   TFake((PivotPos - (LSizeDiv + 2))^) := v;
                 end;
             end;
-          if RSize >= INSERTION_SORT_THRESHOLD then
+          if RSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               RSizeDiv := RSize div 4;
               v := TFake((PivotPos + 1)^);
@@ -2945,23 +2944,28 @@ end;
 
 { TGBaseArrayHelper }
 
-class function TGBaseArrayHelper.CountRun2Asc(A: PItem; R: SizeInt): SizeInt;
+class function TGBaseArrayHelper.CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := 0;
-  while (Result < R) and not(TCmpRel.Less(A[Result], A[Succ(Result)])or
-                             TCmpRel.Less(A[Succ(Result)], A[Result])) do
+  while (Result < R) and not
+        (TCmpRel.Less(A[Result], A[Succ(Result)])or TCmpRel.Less(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
     begin
       Inc(Result);
       if TCmpRel.Less(A[Pred(Result)], A[Result]) then   // ascending
-        while (Result < R) and not TCmpRel.Less(A[Succ(Result)], A[Result]) do
-          Inc(Result)
-      else                                                // descending
+        begin
+          while (Result < R) and not TCmpRel.Less(A[Succ(Result)], A[Result]) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc) then
+            DoReverse(A, Result);
+        end
+      else                                               // descending
         begin
           while (Result < R) and not TCmpRel.Less(A[Result], A[Succ(Result)]) do
             Inc(Result);
-          DoReverse(A, Result);
+          if (Result = R) and (o = soAsc) then
+            DoReverse(A, Result);
         end;
     end;
 end;
@@ -3158,7 +3162,7 @@ var
   I, Curr, Next: SizeInt;
   v: TFake;
 begin
-  if R > HEAP_INSERT_CUTOFF then
+  if R > HEAP_INSERTION_SORT_CUTOFF then
     begin
       for I := Pred(Succ(R) shr 1) downto 0 do
         begin
@@ -3226,23 +3230,27 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGBaseArrayHelper.DoQSort(A: PItem; R: SizeInt);
+class procedure TGBaseArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
 begin
-  while R > QUICK_INSERT_CUTOFF do
+  while R > QUICK_INSERTION_SORT_CUTOFF do
     with QSplitR(A, R) do
       if Left <= R - Right then
         begin
-          DoQSort(A, Left);
+          DoQSort(A, Left, aLeftmost);
           A := @A[Right];
           R -= Right;
+          aLeftmost := False;
         end
       else
         begin
-          DoQSort(@A[Right], R - Right);
+          DoQSort(@A[Right], R - Right, False);
           R := Left;
         end;
   if R > 0 then
-    InsertionSort(A, R);
+    if aLeftmost then
+      InsertionSort(A, R)
+    else
+      UnguardInsertionSort(A, R);
 end;
 
 class function TGBaseArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
@@ -3303,22 +3311,25 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGBaseArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt);
+class procedure TGBaseArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
 begin
-  if R > QUICK_INSERT_CUTOFF then
+  if R > QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, R) do
         begin
           if Left > 0 then
-            DoIntroSort(A, Left, Pred(Ttl));
+            DoIntroSort(A, Left, Pred(Ttl), aLeftmost);
           if Right < R then
-            DoIntroSort(@A[Right], R - Right, Pred(Ttl));
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), False);
         end
     else
       DoHeapSort(A, R)
   else
     if R > 0 then
-      InsertionSort(A, R);
+      if aLeftmost then
+        InsertionSort(A, R)
+      else
+        UnguardInsertionSort(A, R);
 end;
 
 class function TGBaseArrayHelper.DPQSplit(A: PItem; R: SizeInt): TSortSplit;
@@ -3386,19 +3397,22 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGBaseArrayHelper.DoDPQSort(A: PItem; R: SizeInt);
+class procedure TGBaseArrayHelper.DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
 begin
-  if R > DPQ_INSERT_CUTOFF then
+  if R > DPQ_INSERTION_SORT_CUTOFF then
     with DPQSplit(A, R) do
       begin
-        DoDPQSort(A, Left - 1);
-        DoDPQSort(@A[Right + 1], R - Right - 1);
+        DoDPQSort(A, Left - 1, aLeftmost);
+        DoDPQSort(@A[Right + 1], R - Right - 1, False);
         if TCmpRel.Less(A[Left], A[Right]) or TCmpRel.Less(A[Right], A[Left]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2);
+          DoDPQSort(@A[Left + 1], Right - Left - 2, False);
       end
   else
     if R > 0 then
-      InsertionSort(A, R);
+      if aLeftmost then
+        InsertionSort(A, R)
+      else
+        UnguardInsertionSort(A, R);
 end;
 
 class function TGBaseArrayHelper.QSelectR(A: PItem; R, N: SizeInt): T;
@@ -3784,16 +3798,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        DoQSort(@A[0], R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      DoQSort(@A[0], R, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGBaseArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
@@ -3801,16 +3811,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGBaseArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
@@ -3818,16 +3824,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        DoDPQSort(@A[0], R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      DoDPQSort(@A[0], R, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGBaseArrayHelper.PDQSort(var A: array of T; o: TSortOrder);
@@ -3835,16 +3837,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        TPDQSort.Sort(@A[0], @A[R] + 1);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and TCmpRel.Less(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      TPDQSort.Sort(@A[0], @A[R] + 1);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGBaseArrayHelper.MergeSort(var A: array of T; o: TSortOrder);
@@ -4046,7 +4044,7 @@ begin
         end;
 end;
 
-class function TGBaseIndexedHelper.CountRun2Asc(var e: TIndexed; L, R: SizeInt): SizeInt;
+class function TGBaseIndexedHelper.CountRun(var e: TIndexed; L, R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := L;
   while (Result < R) and not(TCmpRel.Less(e.UncMutable[Result]^, e.UncMutable[Succ(Result)]^)or
@@ -4056,13 +4054,18 @@ begin
     begin
       Inc(Result);
       if TCmpRel.Less(e.UncMutable[Pred(Result)]^, e.UncMutable[Result]^) then   // ascending
-        while (Result < R) and not TCmpRel.Less(e.UncMutable[Succ(Result)]^, e.UncMutable[Result]^) do
-          Inc(Result)
+        begin
+          while (Result < R) and not TCmpRel.Less(e.UncMutable[Succ(Result)]^, e.UncMutable[Result]^) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc)then
+            DoReverse(e, L, Result);
+        end
       else      // descending
         begin
           while (Result < R) and not TCmpRel.Less(e.UncMutable[Result]^, e.UncMutable[Succ(Result)]^) do
             Inc(Result);
-          DoReverse(e, L, Result);
+          if (Result = R) and (o = soAsc)then
+            DoReverse(e, L, Result);
         end;
     end;
 end;
@@ -4090,7 +4093,7 @@ var
   I, Curr, Next: SizeInt;
   v: TFake;
 begin
-  if R - L > TUtil.HEAP_INSERT_CUTOFF then
+  if R - L > TUtil.HEAP_INSERTION_SORT_CUTOFF then
     begin
       for I := Pred(Succ(R - L) shr 1) downto 0 do
         begin
@@ -4196,7 +4199,7 @@ end;
 
 class procedure TGBaseIndexedHelper.DoIntroSort(var e: TIndexed; L, R, Ttl: SizeInt);
 begin
-  if R - L > TUtil.QUICK_INSERT_CUTOFF then
+  if R - L > TUtil.QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(e, L, R) do
         begin
@@ -4485,16 +4488,12 @@ var
   R: SizeInt;
 begin
   R := Pred(aEntity.Count);
-  if R > 0 then
-    if CountRun2Asc(aEntity, 0, R) < R then
-      begin
-        DoIntroSort(aEntity, 0, R, LGUtils.NSB(R + 1) * TUtil.INTRO_LOG_FACTOR);
-        if o = soDesc then
-          Reverse(aEntity);
-      end
-    else
-      if (o = soDesc) and TCmpRel.Less(aEntity.UncMutable[0]^, aEntity.UncMutable[R]^) then
+  if (R > 0) and (CountRun(aEntity, 0, R, o) < R) then
+    begin
+      DoIntroSort(aEntity, 0, R, LGUtils.NSB(R + 1) * TUtil.INTROSORT_LOG_FACTOR);
+      if o = soDesc then
         Reverse(aEntity);
+    end;
 end;
 
 class procedure TGBaseIndexedHelper.Sort(var aEntity: TIndexed; aFirst, aLast: SizeInt; o: TSortOrder);
@@ -4503,17 +4502,12 @@ begin
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aFirst]);
   if aLast >= aEntity.Count then
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aLast]);
-  if aFirst < aLast then
-    if CountRun2Asc(aEntity, aFirst, aLast) < aLast then
-      begin
-        DoIntroSort(aEntity, aFirst, aLast, LGUtils.NSB(aLast-aFirst+1) * TUtil.INTRO_LOG_FACTOR);
-        if o = soDesc then
-          DoReverse(aEntity, aFirst, aLast);
-      end
-    else
-      if (o = soDesc) and
-         TCmpRel.Less(aEntity.UncMutable[aFirst]^, aEntity.UncMutable[aLast]^) then
+  if (aFirst < aLast) and (CountRun(aEntity, aFirst, aLast, o) < aLast) then
+    begin
+      DoIntroSort(aEntity, aFirst, aLast, LGUtils.NSB(aLast-aFirst+1) * TUtil.INTROSORT_LOG_FACTOR);
+      if o = soDesc then
         DoReverse(aEntity, aFirst, aLast);
+    end;
 end;
 
 class function TGBaseIndexedHelper.SelectDistinct(const aEntity: TIndexed): TArray;
@@ -5226,7 +5220,7 @@ begin
   while True do
     begin
       Size := aFinish - aStart;
-      if Size < INSERTION_SORT_THRESHOLD then
+      if Size <= QUICK_INSERTION_SORT_CUTOFF then
         begin
           if aLeftMost then
             TGComparableArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart))
@@ -5266,7 +5260,7 @@ begin
               TGComparableArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
               exit;
             end;
-          if LSize >= INSERTION_SORT_THRESHOLD then
+          if LSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               LSizeDiv := LSize div 4;
               v := TFake(aStart^);
@@ -5291,7 +5285,7 @@ begin
                   TFake((PivotPos - (LSizeDiv + 2))^) := v;
                 end;
             end;
-          if RSize >= INSERTION_SORT_THRESHOLD then
+          if RSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               RSizeDiv := RSize div 4;
               v := TFake((PivotPos + 1)^);
@@ -5398,7 +5392,7 @@ end;
 
 { TGComparableArrayHelper }
 
-class function TGComparableArrayHelper.CountRun2Asc(A: PItem; R: SizeInt): SizeInt;
+class function TGComparableArrayHelper.CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and (A[Result] = A[Succ(Result)]) do
@@ -5407,13 +5401,18 @@ begin
     begin
       Inc(Result);
       if A[Pred(Result)] < A[Result] then   // ascending
-        while (Result < R) and (A[Result] <= A[Succ(Result)]) do
-          Inc(Result)
+        begin
+          while (Result < R) and (A[Result] <= A[Succ(Result)]) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc) then
+            DoReverse(A, Result);
+        end
       else                                  // descending
         begin
           while (Result < R) and (A[Succ(Result)] <= A[Result]) do
             Inc(Result);
-          DoReverse(A, Result);
+          if (Result = R) and (o = soAsc) then
+            DoReverse(A, Result);
         end;
     end;
 end;
@@ -5609,7 +5608,7 @@ var
   I, Curr, Next: SizeInt;
   v: TFake;
 begin
-  if R > HEAP_INSERT_CUTOFF then
+  if R > HEAP_INSERTION_SORT_CUTOFF then
     begin
       for I := Pred(Succ(R) shr 1) downto 0 do
         begin
@@ -5677,23 +5676,27 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGComparableArrayHelper.DoQSort(A: PItem; R: SizeInt);
+class procedure TGComparableArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
 begin
-  while R > QUICK_INSERT_CUTOFF do
+  while R > QUICK_INSERTION_SORT_CUTOFF do
     with QSplitR(A, R) do
       if Left <= R - Right then
         begin
-          DoQSort(A, Left);
+          DoQSort(A, Left, aLeftmost);
           A := @A[Right];
           R -= Right;
+          aLeftmost := False;
         end
       else
         begin
-          DoQSort(@A[Right], R - Right);
+          DoQSort(@A[Right], R - Right, False);
           R := Left;
         end;
   if R > 0 then
-    InsertionSort(A, R);
+    if aLeftmost then
+      InsertionSort(A, R)
+    else
+      UnguardInsertionSort(A, R);
 end;
 
 class function TGComparableArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
@@ -5754,22 +5757,25 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGComparableArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt);
+class procedure TGComparableArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
 begin
-  if R > QUICK_INSERT_CUTOFF then
+  if R > DPQ_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, R) do
         begin
           if Left > 0 then
-            DoIntroSort(A, Left, Pred(Ttl));
+            DoIntroSort(A, Left, Pred(Ttl), aLeftmost);
           if Right < R then
-            DoIntroSort(@A[Right], R - Right, Pred(Ttl));
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), False);
         end
     else
       DoHeapSort(A, R)
   else
     if R > 0 then
-      InsertionSort(A, R);
+      if aLeftmost then
+        InsertionSort(A, R)
+      else
+        UnguardInsertionSort(A, R);
 end;
 
 class function TGComparableArrayHelper.DPQSplit(A: PItem; R: SizeInt): TSortSplit;
@@ -5837,19 +5843,22 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGComparableArrayHelper.DoDPQSort(A: PItem; R: SizeInt);
+class procedure TGComparableArrayHelper.DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
 begin
-  if R > DPQ_INSERT_CUTOFF then
+  if R > DPQ_INSERTION_SORT_CUTOFF then
     with DPQSplit(A, R) do
       begin
-        DoDPQSort(A, Left - 1);
-        DoDPQSort(@A[Right + 1], R - Right - 1);
+        DoDPQSort(A, Left - 1, aLeftmost);
+        DoDPQSort(@A[Right + 1], R - Right - 1, False);
         if A[Left] <> A[Right] then
-          DoDPQSort(@A[Left + 1], Right - Left - 2);
+          DoDPQSort(@A[Left + 1], Right - Left - 2, False);
       end
   else
     if R > 0 then
-      InsertionSort(A, R);
+      if aLeftmost then
+        InsertionSort(A, R)
+      else
+        UnguardInsertionSort(A, R);
 end;
 
 class function TGComparableArrayHelper.QSelectR(A: PItem; R, N: SizeInt): T;
@@ -6233,16 +6242,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        DoQSort(@A[0], R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      DoQSort(@A[0], R, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGComparableArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
@@ -6250,16 +6255,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGComparableArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
@@ -6267,16 +6268,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        DoDPQSort(@A[0], R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      DoDPQSort(@A[0], R, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGComparableArrayHelper.PDQSort(var A: array of T; o: TSortOrder);
@@ -6284,16 +6281,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R) < R then
-      begin
-        TPDQSort.Sort(@A[0], @A[R] + 1);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, o) < R) then
+    begin
+      TPDQSort.Sort(@A[0], @A[R] + 1);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGComparableArrayHelper.MergeSort(var A: array of T; o: TSortOrder);
@@ -7057,7 +7050,7 @@ begin
   while True do
     begin
       Size := aFinish - aStart;
-      if Size < INSERTION_SORT_THRESHOLD then
+      if Size <= QUICK_INSERTION_SORT_CUTOFF then
         begin
           if aLeftMost then
             TGRegularArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c)
@@ -7099,7 +7092,7 @@ begin
               TGRegularArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
               exit;
             end;
-          if LSize >= INSERTION_SORT_THRESHOLD then
+          if LSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               LSizeDiv := LSize div 4;
               v := TFake(aStart^);
@@ -7124,7 +7117,7 @@ begin
                   TFake((PivotPos - (LSizeDiv + 2))^) := v;
                 end;
             end;
-          if RSize >= INSERTION_SORT_THRESHOLD then
+          if RSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               RSizeDiv := RSize div 4;
               v := TFake((PivotPos + 1)^);
@@ -7232,7 +7225,7 @@ end;
 
 { TGRegularArrayHelper }
 
-class function TGRegularArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TLess): SizeInt;
+class function TGRegularArrayHelper.CountRun(A: PItem; R: SizeInt; c: TLess; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
@@ -7241,13 +7234,18 @@ begin
     begin
       Inc(Result);
       if c(A[Pred(Result)], A[Result]) then   // ascending
-        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
-          Inc(Result)
+        begin
+          while (Result < R) and not c(A[Succ(Result)], A[Result]) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc) then
+            DoReverse(A, Result);
+        end
       else                                    // descending
         begin
           while (Result < R) and not c(A[Result], A[Succ(Result)]) do
             Inc(Result);
-          DoReverse(A, Result);
+          if (Result = R) and (o = soAsc) then
+            DoReverse(A, Result);
         end;
     end;
 end;
@@ -7451,7 +7449,7 @@ var
   I, Curr, Next: SizeInt;
   v: TFake;
 begin
-  if R > HEAP_INSERT_CUTOFF then
+  if R > HEAP_INSERTION_SORT_CUTOFF then
     begin
       for I := Pred(Succ(R) shr 1) downto 0 do
         begin
@@ -7519,23 +7517,27 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TLess);
+class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean);
 begin
-  while R > QUICK_INSERT_CUTOFF do
+  while R > QUICK_INSERTION_SORT_CUTOFF do
     with QSplitR(A, R, c) do
       if Left <= R - Right then
         begin
-          DoQSort(A, Left, c);
+          DoQSort(A, Left, c, aLeftmost);
           A := @A[Right];
           R -= Right;
+          aLeftmost := False;
         end
       else
         begin
-          DoQSort(@A[Right], R - Right, c);
+          DoQSort(@A[Right], R - Right, c, False);
           R := Left;
         end;
   if R > 0 then
-    InsertionSort(A, R, c);
+    if aLeftmost then
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGRegularArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TLess): PItem;
@@ -7596,22 +7598,25 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGRegularArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess);
+class procedure TGRegularArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean);
 begin
-  if R > QUICK_INSERT_CUTOFF then
+  if R > QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, R, c) do
         begin
           if Left > 0 then
-            DoIntroSort(A, Left, Pred(Ttl), c);
+            DoIntroSort(A, Left, Pred(Ttl), c, aLeftmost);
           if Right < R then
-            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c, False);
         end
     else
       DoHeapSort(A, R, c)
   else
     if R > 0 then
-      InsertionSort(A, R, c);
+      if aLeftmost then
+        InsertionSort(A, R, c)
+      else
+        UnguardInsertionSort(A, R, c);
 end;
 
 class function TGRegularArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit;
@@ -7678,19 +7683,21 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TLess);
+class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean);
 begin
-  if R > DPQ_INSERT_CUTOFF then
+  if R > DPQ_INSERTION_SORT_CUTOFF then
     with DPQSplit(A, R, c) do
       begin
-        DoDPQSort(A, Left - 1, c);
-        DoDPQSort(@A[Right + 1], R - Right - 1, c);
+        DoDPQSort(A, Left - 1, c, aLeftmost);
+        DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
         if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, c);
+          DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
       end
   else
     if R > 0 then
-      InsertionSort(A, R, c);
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGRegularArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TLess): T;
@@ -8081,16 +8088,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoQSort(@A[0], R, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoQSort(@A[0], R, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGRegularArrayHelper.IntroSort(var A: array of T; c: TLess; o: TSortOrder);
@@ -8098,16 +8101,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGRegularArrayHelper.DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder);
@@ -8115,16 +8114,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoDPQSort(@A[0], R, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoDPQSort(@A[0], R, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGRegularArrayHelper.PDQSort(var A: array of T; c: TLess; o: TSortOrder);
@@ -8132,16 +8127,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        TPDQSort.Sort(@A[0], @A[R] + 1, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      TPDQSort.Sort(@A[0], @A[R] + 1, c);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGRegularArrayHelper.MergeSort(var A: array of T; c: TLess; o: TSortOrder);
@@ -8905,7 +8896,7 @@ begin
   while True do
     begin
       Size := aFinish - aStart;
-      if Size < INSERTION_SORT_THRESHOLD then
+      if Size <= QUICK_INSERTION_SORT_CUTOFF then
         begin
           if aLeftMost then
             TGDelegatedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c)
@@ -8947,7 +8938,7 @@ begin
               TGDelegatedArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
               exit;
             end;
-          if LSize >= INSERTION_SORT_THRESHOLD then
+          if LSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               LSizeDiv := LSize div 4;
               v := TFake(aStart^);
@@ -8972,7 +8963,7 @@ begin
                   TFake((PivotPos - (LSizeDiv + 2))^) := v;
                 end;
             end;
-          if RSize >= INSERTION_SORT_THRESHOLD then
+          if RSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               RSizeDiv := RSize div 4;
               v := TFake((PivotPos + 1)^);
@@ -9081,7 +9072,7 @@ end;
 
 { TGDelegatedArrayHelper }
 
-class function TGDelegatedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TOnLess): SizeInt;
+class function TGDelegatedArrayHelper.CountRun(A: PItem; R: SizeInt; c: TOnLess; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
@@ -9090,13 +9081,18 @@ begin
     begin
       Inc(Result);
       if c(A[Pred(Result)], A[Result]) then   // ascending
-        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
-          Inc(Result)
+        begin
+          while (Result < R) and not c(A[Succ(Result)], A[Result]) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc) then
+            DoReverse(A, Result);
+        end
       else                                    // descending
         begin
           while (Result < R) and not c(A[Result], A[Succ(Result)]) do
             Inc(Result);
-          DoReverse(A, Result);
+          if (Result = R) and (o = soAsc) then
+            DoReverse(A, Result);
         end;
     end;
 end;
@@ -9300,7 +9296,7 @@ var
   I, Curr, Next: SizeInt;
   v: TFake;
 begin
-  if R > HEAP_INSERT_CUTOFF then
+  if R > HEAP_INSERTION_SORT_CUTOFF then
     begin
       for I := Pred(Succ(R) shr 1) downto 0 do
         begin
@@ -9368,23 +9364,27 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnLess);
+class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean);
 begin
-  while R > QUICK_INSERT_CUTOFF do
+  while R > QUICK_INSERTION_SORT_CUTOFF do
     with QSplitR(A, R, c) do
       if Left <= R - Right then
         begin
-          DoQSort(A, Left, c);
+          DoQSort(A, Left, c, aLeftmost);
           A := @A[Right];
           R -= Right;
+          aLeftmost := False;
         end
       else
         begin
-          DoQSort(@A[Right], R - Right, c);
+          DoQSort(@A[Right], R - Right, c, False);
           R := Left;
         end;
   if R > 0 then
-    InsertionSort(A, R, c);
+    if aLeftmost then
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGDelegatedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem;
@@ -9445,22 +9445,26 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGDelegatedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess);
+class procedure TGDelegatedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess;
+  aLeftmost: Boolean);
 begin
-  if R > QUICK_INSERT_CUTOFF then
+  if R > QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, R, c) do
         begin
           if Left > 0 then
-            DoIntroSort(A, Left, Pred(Ttl), c);
+            DoIntroSort(A, Left, Pred(Ttl), c, aLeftmost);
           if Right < R then
-            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c, False);
         end
     else
       DoHeapSort(A, R, c)
   else
     if R > 0 then
-      InsertionSort(A, R, c);
+      if aLeftmost then
+        InsertionSort(A, R, c)
+      else
+        UnguardInsertionSort(A, R, c);
 end;
 
 class function TGDelegatedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
@@ -9527,19 +9531,22 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TOnLess);
+class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean);
 begin
-  if R > DPQ_INSERT_CUTOFF then
+  if R > DPQ_INSERTION_SORT_CUTOFF then
     with DPQSplit(A, R, c) do
       begin
-        DoDPQSort(A, Left - 1, c);
-        DoDPQSort(@A[Right + 1], R - Right - 1, c);
+        DoDPQSort(A, Left - 1, c, aLeftmost);
+        DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
         if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, c);
+          DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
       end
   else
     if R > 0 then
-      InsertionSort(A, R, c);
+      if aLeftmost then
+        InsertionSort(A, R, c)
+      else
+        UnguardInsertionSort(A, R, c);
 end;
 
 class function TGDelegatedArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T;
@@ -9931,16 +9938,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoQSort(@A[0], R, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoQSort(@A[0], R, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGDelegatedArrayHelper.IntroSort(var A: array of T; c: TOnLess; o: TSortOrder);
@@ -9948,16 +9951,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGDelegatedArrayHelper.DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder);
@@ -9965,16 +9964,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoDPQSort(@A[0], R, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoDPQSort(@A[0], R, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGDelegatedArrayHelper.PDQSort(var A: array of T; c: TOnLess; o: TSortOrder);
@@ -9982,16 +9977,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        TPDQSort.Sort(@A[0], @A[R] + 1, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      TPDQSort.Sort(@A[0], @A[R] + 1, c);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGDelegatedArrayHelper.MergeSort(var A: array of T; c: TOnLess; o: TSortOrder);
@@ -10755,7 +10746,7 @@ begin
   while True do
     begin
       Size := aFinish - aStart;
-      if Size < INSERTION_SORT_THRESHOLD then
+      if Size <= QUICK_INSERTION_SORT_CUTOFF then
         begin
           if aLeftMost then
             TGNestedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c)
@@ -10797,7 +10788,7 @@ begin
               TGNestedArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
               exit;
             end;
-          if LSize >= INSERTION_SORT_THRESHOLD then
+          if LSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               LSizeDiv := LSize div 4;
               v := TFake(aStart^);
@@ -10822,7 +10813,7 @@ begin
                   TFake((PivotPos - (LSizeDiv + 2))^) := v;
                 end;
             end;
-          if RSize >= INSERTION_SORT_THRESHOLD then
+          if RSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               RSizeDiv := RSize div 4;
               v := TFake((PivotPos + 1)^);
@@ -10931,7 +10922,7 @@ end;
 
 { TGNestedArrayHelper }
 
-class function TGNestedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TNestLess): SizeInt;
+class function TGNestedArrayHelper.CountRun(A: PItem; R: SizeInt; c: TNestLess; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
@@ -10940,13 +10931,18 @@ begin
     begin
       Inc(Result);
       if c(A[Pred(Result)], A[Result]) then   // ascending
-        while (Result < R) and not c(A[Succ(Result)], A[Result]) do
-          Inc(Result)
+        begin
+          while (Result < R) and not c(A[Succ(Result)], A[Result]) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc) then
+            DoReverse(A, Result);
+        end
       else                                    // descending
         begin
           while (Result < R) and not c(A[Result], A[Succ(Result)]) do
             Inc(Result);
-          DoReverse(A, Result);
+          if (Result = R) and (o = soAsc) then
+            DoReverse(A, Result);
         end;
     end;
 end;
@@ -11150,7 +11146,7 @@ var
   I, Curr, Next: SizeInt;
   v: TFake;
 begin
-  if R > HEAP_INSERT_CUTOFF then
+  if R > HEAP_INSERTION_SORT_CUTOFF then
     begin
       for I := Pred(Succ(R) shr 1) downto 0 do
         begin
@@ -11218,23 +11214,27 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestLess);
+class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean);
 begin
-  while R > QUICK_INSERT_CUTOFF do
+  while R > QUICK_INSERTION_SORT_CUTOFF do
     with QSplitR(A, R, c) do
       if Left <= R - Right then
         begin
-          DoQSort(A, Left, c);
+          DoQSort(A, Left, c, aLeftmost);
           A := @A[Right];
           R -= Right;
+          aLeftmost := False;
         end
       else
         begin
-          DoQSort(@A[Right], R - Right, c);
+          DoQSort(@A[Right], R - Right, c, False);
           R := Left;
         end;
   if R > 0 then
-    InsertionSort(A, R, c);
+    if aLeftmost then
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGNestedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem;
@@ -11295,22 +11295,26 @@ begin
   Result.Right := pL;
 end;
 
-class procedure TGNestedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess);
+class procedure TGNestedArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess;
+  aLeftmost: Boolean);
 begin
-  if R > QUICK_INSERT_CUTOFF then
+  if R > QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, R, c) do
         begin
           if Left > 0 then
-            DoIntroSort(A, Left, Pred(Ttl), c);
+            DoIntroSort(A, Left, Pred(Ttl), c, aLeftmost);
           if Right < R then
-            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c, False);
         end
     else
       DoHeapSort(A, R, c)
   else
     if R > 0 then
-      InsertionSort(A, R, c);
+      if aLeftmost then
+        InsertionSort(A, R, c)
+      else
+        UnguardInsertionSort(A, R, c);
 end;
 
 class function TGNestedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
@@ -11377,19 +11381,22 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TNestLess);
+class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean);
 begin
-  if R > DPQ_INSERT_CUTOFF then
+  if R > DPQ_INSERTION_SORT_CUTOFF then
     with DPQSplit(A, R, c) do
       begin
-        DoDPQSort(A, Left - 1, c);
-        DoDPQSort(@A[Right + 1], R - Right - 1, c);
+        DoDPQSort(A, Left - 1, c, aLeftmost);
+        DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
         if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, c);
+          DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
       end
   else
     if R > 0 then
-      InsertionSort(A, R, c);
+      if aLeftmost then
+        InsertionSort(A, R, c)
+      else
+        UnguardInsertionSort(A, R, c);
 end;
 
 class function TGNestedArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T;
@@ -11781,16 +11788,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoQSort(@A[0], R, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoQSort(@A[0], R, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGNestedArrayHelper.IntroSort(var A: array of T; c: TNestLess; o: TSortOrder);
@@ -11798,16 +11801,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGNestedArrayHelper.DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder);
@@ -11815,16 +11814,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        DoDPQSort(@A[0], R, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      DoDPQSort(@A[0], R, c, True);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGNestedArrayHelper.PDQSort(var A: array of T; c: TNestLess; o: TSortOrder);
@@ -11832,16 +11827,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(@A[0], R, c) < R then
-      begin
-        TPDQSort.Sort(@A[0], @A[R] + 1, c);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and c(A[0], A[R]) then
+  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
+    begin
+      TPDQSort.Sort(@A[0], @A[R] + 1, c);
+      if o = soDesc then
         Reverse(A);
+    end;
 end;
 
 class procedure TGNestedArrayHelper.MergeSort(var A: array of T; c: TNestLess; o: TSortOrder);
@@ -12125,7 +12116,7 @@ begin
   while True do
     begin
       Size := aFinish - aStart;
-      if Size < INSERTION_SORT_THRESHOLD then
+      if Size <= QUICK_INSERTION_SORT_CUTOFF then
         begin
           if aLeftMost then
             TGSimpleArrayHelper.InsertionSort(aStart^, 0, Pred(aFinish - aStart))
@@ -12165,7 +12156,7 @@ begin
               TGSimpleArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
               exit;
             end;
-          if LSize >= INSERTION_SORT_THRESHOLD then
+          if LSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               LSizeDiv := LSize div 4;
               v := aStart^;
@@ -12190,7 +12181,7 @@ begin
                   (PivotPos - (LSizeDiv + 2))^ := v;
                 end;
             end;
-          if RSize >= INSERTION_SORT_THRESHOLD then
+          if RSize > QUICK_INSERTION_SORT_CUTOFF then
             begin
               RSizeDiv := RSize div 4;
               v := (PivotPos + 1)^;
@@ -12328,7 +12319,7 @@ end;
 
 { TGSimpleArrayHelper }
 
-class function TGSimpleArrayHelper.CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt;
+class function TGSimpleArrayHelper.CountRun(var A: array of T; L, R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := L;
   while (Result < R) and (A[Result] = A[Succ(Result)]) do
@@ -12337,13 +12328,18 @@ begin
     begin
       Inc(Result);
       if A[Pred(Result)] < A[Result] then  // ascending
-        while (Result < R) and (A[Result] <= A[Succ(Result)]) do
-          Inc(Result)
+        begin
+          while (Result < R) and (A[Result] <= A[Succ(Result)]) do
+            Inc(Result);
+          if (Result = R) and (o = soDesc) then
+            DoReverse(A, L, Result);
+        end
       else                                 // descending
         begin
           while (Result < R) and (A[Result] >= A[Succ(Result)]) do
             Inc(Result);
-          Reverse(A[0..Result]);
+          if (Result = R) and (o = soAsc) then
+            DoReverse(A, L, Result);
         end;
     end;
 end;
@@ -12611,7 +12607,7 @@ end;
 
 class procedure TGSimpleArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
 begin
-  while R - L > QUICK_INSERT_CUTOFF do
+  while R - L > QUICK_INSERTION_SORT_CUTOFF do
     with QSplitR(A, L, R) do
       if Left - L <= R - Right then
         begin
@@ -12624,10 +12620,10 @@ begin
           R := Left;
         end;
   if R - L > 0 then
-    if L > 0 then
-      UnguardInsertionSort(A, L, R)
+    if L = 0 then
+      InsertionSort(A, L, R)
     else
-      InsertionSort(A, L, R);
+      UnguardInsertionSort(A, L, R);
 end;
 
 class function TGSimpleArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
@@ -12693,7 +12689,7 @@ end;
 
 class procedure TGSimpleArrayHelper.DoIntroSort(var A: array of T; L, R, Ttl: SizeInt);
 begin
-  if R - L > QUICK_INSERT_CUTOFF then
+  if R - L > QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, L, R) do
         begin
@@ -12706,10 +12702,10 @@ begin
       DoHeapSort(@A[L], R - L)
   else
     if R - L > 0 then
-      if L > 0 then
-        UnguardInsertionSort(A, L, R)
+      if L = 0 then
+        InsertionSort(A, L, R)
       else
-        InsertionSort(A, L, R);
+        UnguardInsertionSort(A, L, R);
 end;
 
 class function TGSimpleArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
@@ -12785,7 +12781,7 @@ end;
 
 class procedure TGSimpleArrayHelper.DoDPQSort(var A: array of T; L, R: SizeInt);
 begin
-  if R - L > DPQ_INSERT_CUTOFF then
+  if R - L > DPQ_INSERTION_SORT_CUTOFF then
     with DPQSplit(A, L, R) do
       begin
         DoDPQSort(A, L, Left - 1);
@@ -12795,10 +12791,10 @@ begin
       end
   else
     if R - L > 0 then
-      if L > 0 then
-        UnguardInsertionSort(A, L, R)
+      if L = 0 then
+        InsertionSort(A, L, R)
       else
-        InsertionSort(A, L, R);
+        UnguardInsertionSort(A, L, R);
 end;
 
 class procedure TGSimpleArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
@@ -13278,16 +13274,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        DoQSort(A, 0, R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
+  if (R > 0) and (CountRun(A, 0, R, o) < R) then
+    begin
+      DoQSort(A, 0, R);
+      if o = soDesc then
+        DoReverse(A, 0, R);
+    end;
 end;
 
 class procedure TGSimpleArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
@@ -13295,16 +13287,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
+  if (R > 0) and (CountRun(A, 0, R, o) < R) then
+    begin
+      DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
+      if o = soDesc then
+        DoReverse(A, 0, R);
+    end;
 end;
 
 class procedure TGSimpleArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
@@ -13312,16 +13300,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        DoDPQSort(A, 0, R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
+  if (R > 0) and (CountRun(A, 0, R, o) < R) then
+    begin
+      DoDPQSort(A, 0, R);
+      if o = soDesc then
+        DoReverse(A, 0, R);
+    end;
 end;
 
 class procedure TGSimpleArrayHelper.PDQSort(var A: array of T; o: TSortOrder);
@@ -13329,16 +13313,12 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        TPDQSort.Sort(@A[0], @A[R] + 1);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
+  if (R > 0) and (CountRun(A, 0, R, o) < R) then
+    begin
+      TPDQSort.Sort(@A[0], @A[R] + 1);
+      if o = soDesc then
+        DoReverse(A, 0, R);
+    end;
 end;
 
 class procedure TGSimpleArrayHelper.Sort(var A: array of T; o: TSortOrder);
@@ -13469,12 +13449,12 @@ begin
       end;
 end;
 
-class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity;
+class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonyKind;
 var
   I, R: SizeInt;
 begin
   R := System.High(A);
-  Result := moConst;
+  Result := mkConst;
   I := 0;
   aMinValue := A[0];
   aMaxValue := A[0];
@@ -13485,7 +13465,7 @@ begin
       Inc(I);
       if A[Pred(I)] < A[I] then  // ascending
         begin
-          Result := moAsc;
+          Result := mkAsc;
           while (I < R) and (A[I] <= A[Succ(I)]) do
             begin
               if A[I] > aMaxValue then
@@ -13495,7 +13475,7 @@ begin
         end
       else                      // descending
         begin
-          Result := moDesc;
+          Result := mkDesc;
           while (I < R) and (A[I] >= A[Succ(I)]) do
             begin
               if A[I] < aMinValue then
@@ -13506,7 +13486,7 @@ begin
     end;
   if I < R then
     begin
-      Result := moNone;
+      Result := mkNone;
       repeat
         if A[I] < aMinValue then
           aMinValue := A[I]
@@ -13571,22 +13551,22 @@ class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder)
 var
   R: SizeInt;
   vMin, vMax: T;
-  Mono: TMonotonicity;
+  MonoKind: TMonotonyKind;
 begin
   R := System.High(A);
   if R > 0 then
     begin
-      if R <= HEAP_INSERT_CUTOFF then
+      if R <= HEAP_INSERTION_SORT_CUTOFF then
         begin
           InsertionSort(A, 0, R);
           if aOrder = soDesc then
             Reverse(A);
           exit;
         end;
-      Mono := Scan(A, vMin, vMax);
-      if Mono < moNone then
+      MonoKind := Scan(A, vMin, vMax);
+      if MonoKind < mkNone then
         begin
-          if (Mono <> moConst) and (Ord(Mono) <> Ord(aOrder)) then
+          if (MonoKind <> mkConst) and (Ord(MonoKind) <> Ord(aOrder)) then
             Reverse(A);
         end
       else
@@ -13594,7 +13574,7 @@ begin
           if CountSortAllow(vMin, vMax, Succ(R)) then
             CountSort(A, vMin, vMax)
           else
-            DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+            DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTROSORT_LOG_FACTOR);
           if aOrder = soDesc then
             Reverse(A);
         end;
