@@ -2976,16 +2976,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while (J >= 0) and TCmpRel.Less(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if TCmpRel.Less(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until (J = 0) or not TCmpRel.Less(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class procedure TGBaseArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt);
@@ -2994,16 +2994,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while TCmpRel.Less(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if TCmpRel.Less(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until not TCmpRel.Less(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class function TGBaseArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
@@ -4076,16 +4076,16 @@ var
   v: TFake;
 begin
   for I := Succ(L) to R do
-    begin
-      v := TFake(e.UncMutable[I]^);
-      J := I - 1;
-      while (J >= L) and TCmpRel.Less(T(v), e.UncMutable[J]^) do
-        begin
-          TFake(e.UncMutable[J + 1]^) := TFake(e.UncMutable[J]^);
+    if TCmpRel.Less(e.UncMutable[I]^, e.UncMutable[I-1]^) then
+      begin
+        J := I;
+        v := TFake(e.UncMutable[I]^);
+        repeat
+          TFake(e.UncMutable[J]^) := TFake(e.UncMutable[J-1]^);
           Dec(J);
-        end;
-      TFake(e.UncMutable[Succ(J)]^) := v;
-    end;
+        until (J = L) or not TCmpRel.Less(T(v), e.UncMutable[J-1]^);
+        TFake(e.UncMutable[J]^) := v;
+      end;
 end;
 
 class procedure TGBaseIndexedHelper.DoHeapSort(var e: TIndexed; L, R: SizeInt);
@@ -5423,16 +5423,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while (J >= 0) and (T(v) < A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if A[I] < A[I-1] then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until (J = 0) or (T(v) >= A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class procedure TGComparableArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt);
@@ -5441,16 +5441,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while T(v) < A[J] do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if A[I] < A[I-1] then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until T(v) >= A[J-1];
+        TFake(A[J]) := v;
+      end;
 end;
 
 class function TGComparableArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
@@ -5759,7 +5759,7 @@ end;
 
 class procedure TGComparableArrayHelper.DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
 begin
-  if R > DPQ_INSERTION_SORT_CUTOFF then
+  if R > QUICK_INSERTION_SORT_CUTOFF then
     if Ttl > 0 then
       with QSplitMo9(A, R) do
         begin
@@ -7256,16 +7256,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while (J >= 0) and c(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if c(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until (J = 0) or not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class procedure TGRegularArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt; c: TLess);
@@ -7274,16 +7274,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while c(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if c(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class function TGRegularArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
@@ -9103,16 +9103,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while (J >= 0) and c(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if c(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until (J = 0) or not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class procedure TGDelegatedArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt; c: TOnLess);
@@ -9121,16 +9121,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while c(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if c(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class function TGDelegatedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
@@ -10953,16 +10953,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while (J >= 0) and c(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if c(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until (J = 0) or not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class procedure TGNestedArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt; c: TNestLess);
@@ -10971,16 +10971,16 @@ var
   v: TFake;
 begin
   for I := 1 to R do
-    begin
-      v := TFake(A[I]);
-      J := I - 1;
-      while c(T(v), A[J]) do
-        begin
-          TFake(A[J + 1]) := TFake(A[J]);
+    if c(A[I], A[I-1]) then
+      begin
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        end;
-      TFake(A[J + 1]) := v;
-    end;
+        until not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+      end;
 end;
 
 class function TGNestedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
@@ -12350,16 +12350,16 @@ var
   v: T;
 begin
   for I := L + 1 to R do
-    begin
-      v := A[I];
-      J := I - 1;
-      while (J >= 0) and (A[J] > v) do
-        begin
-          A[J + 1] := A[J];
+    if A[I] < A[I-1] then
+      begin
+        J := I;
+        v := A[I];
+        repeat
+          A[J] := A[J-1];
           Dec(J);
-        end;
-      A[J + 1] := v;
-    end;
+        until (J = L) or (v >= A[J-1]);
+        A[J] := v;
+      end;
 end;
 
 class procedure TGSimpleArrayHelper.UnguardInsertionSort(var A: array of T; L, R: SizeInt);
@@ -12368,16 +12368,16 @@ var
   v: T;
 begin
   for I := L + 1 to R do
-    begin
-      v := A[I];
-      J := I - 1;
-      while A[J] > v do
-        begin
-          A[J + 1] := A[J];
+    if A[I] < A[I-1] then
+      begin
+        J := I;
+        v := A[I];
+        repeat
+          A[J] := A[J-1];
           Dec(J);
-        end;
-      A[J + 1] := v;
-    end;
+        until v >= A[J-1];
+        A[J] := v;
+      end;
 end;
 
 class function TGSimpleArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
