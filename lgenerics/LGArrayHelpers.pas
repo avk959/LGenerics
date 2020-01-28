@@ -64,12 +64,11 @@ type
 
   protected
   const
-    HEAP_INSERTION_SORT_CUTOFF   = 63;
-    QUICK_INSERTION_SORT_CUTOFF  = 47;
-    MEDIAN_OF9_CUTOFF            = 511;
-    DPQ_INSERTION_SORT_CUTOFF    = 47;
-    INTROSORT_LOG_FACTOR         = 2;
-    PARTIAL_INSERTION_SORT_LIMIT = 12;
+    HEAP_INSERTION_SORT_CUTOFF  = 63;
+    QUICK_INSERTION_SORT_CUTOFF = 47;
+    MEDIAN_OF9_CUTOFF           = 511;
+    DPQ_INSERTION_SORT_CUTOFF   = 47;
+    INTROSORT_LOG_FACTOR        = 2;
   type
     //to supress unnecessary refcounting
     TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
@@ -110,6 +109,7 @@ type
     const
       BLOCK_SIZE                   = 128;
       CACHE_LINE_SIZE              = 64;
+      PARTIAL_INSERTION_SORT_LIMIT = 12;
       NINTHER_THRESHOLD            = 128;
     var
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
@@ -275,7 +275,7 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
-  { QuickSelect with random pivot, does not checks indices }
+  { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
@@ -334,17 +334,17 @@ type
     class function  InversionCountND(constref A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T): Boolean; static;
-  { slightly modified optimized quicksort with random pivot selection }
+  { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { slightly modified Introsort with pseudo-median-of-9 pivot selection }
+  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
+  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sort algorithm, currently it is IntroSort}
+  { default sorting, currently it is IntroSort}
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -467,7 +467,7 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
-  { QuickSelect with random pivot, does not checks indices }
+  { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
@@ -526,17 +526,17 @@ type
     class function  InversionCountND(constref A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T): Boolean; static;
-  { slightly modified optimized quicksort with random pivot selection }
+  { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { slightly modified Introsort with pseudo-median-of-9 pivot selection }
+  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { slightly modified V.Yaroslavskiy proposed dual pivot Quicksort algorithm with random pivot selection }
+  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sort algorithm, currently it is IntroSort }
+  { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -603,7 +603,7 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
-  { QuickSelect with random pivot, does not checks indices }
+  { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
@@ -663,17 +663,17 @@ type
     class function  InversionCountND(constref A: array of T; c: TLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T; c: TLess): Boolean; static;
-  { slightly modified optimized quicksort with random pivot selection }
+  { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { slightly modified Introsort with pseudo-median-of-9 pivot selection }
+  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
+  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { default sort algorithm, currently it is IntroSort }
+  { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -741,7 +741,7 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
-  { QuickSelect with random pivot, does not checks indices }
+  { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
@@ -801,17 +801,17 @@ type
     class function  InversionCountND(constref A: array of T; c: TOnLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T; c: TOnLess): Boolean; static;
-  { slightly modified optimized quicksort with random pivot selection }
+  { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { slightly modified Introsort with pseudo-median-of-9 pivot selection }
+  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
+  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { default sort algorithm, currently it is IntroSort }
+  { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -883,7 +883,7 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
-  { QuickSelect with random pivot, does not checks indices }
+  { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
@@ -943,17 +943,17 @@ type
     class function  InversionCountND(constref A: array of T; c: TNestLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T; c: TNestLess): Boolean; static;
-  { slightly modified optimized quicksort with random pivot selection }
+  { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { slightly modified Introsort with pseudo-median-of-9 pivot selection }
+  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
+  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { default sort algorithm, currently it is IntroSort }
+  { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -998,7 +998,7 @@ type
     class procedure DoDPQSort(var A: array of T; L, R: SizeInt); static;
     class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
     class procedure DoReverse(var A: array of T; L, R: SizeInt); static;
-  { QuickSelect with random pivot, does not checks indices }
+  { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
   public
     class procedure Swap(var L, R: T); static; inline;
@@ -1065,15 +1065,15 @@ type
     class function  InversionCountND(constref A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T): Boolean; static;
-  { slightly modified optimized quicksort with random pivot selection }
+  { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { slightly modified Introsort with pseudo-median-of-9 pivot selection }
+  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
+  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sort algorithm, currently it is IntroSort }
+  { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -1144,7 +1144,7 @@ type
   public
     class function  CreateRange(aFirst, aLast: T): TArray; static;
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
-  { uses counting sort if possible }
+  { hybrid sorting, will use counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
@@ -2483,7 +2483,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A);
       L := 0;
@@ -2511,7 +2511,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A);
       L := 0;
@@ -4930,7 +4930,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A);
       L := 0;
@@ -4958,7 +4958,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A);
       L := 0;
@@ -6759,7 +6759,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -6787,7 +6787,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -8605,7 +8605,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -8633,7 +8633,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -10455,7 +10455,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -10483,7 +10483,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);

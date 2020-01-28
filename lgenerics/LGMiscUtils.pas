@@ -1475,7 +1475,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A);
       MinLen := MinRunLen(R + 1);
@@ -1503,7 +1503,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A);
       MinLen := MinRunLen(R + 1);
@@ -2317,7 +2317,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A);
       MinLen := MinRunLen(R + 1);
@@ -2345,7 +2345,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A);
       MinLen := MinRunLen(R + 1);
@@ -3181,7 +3181,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -3209,7 +3209,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -4045,7 +4045,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -4073,7 +4073,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -4909,7 +4909,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -4937,7 +4937,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ts: TTimSort;
 begin
-  if R + 1 > MIN_MERGE_LEN shl 1 then
+  if R + 1 > MIN_MERGE_LEN shl 2 then
     begin
       ts.Init(A, c);
       MinLen := MinRunLen(R + 1);
