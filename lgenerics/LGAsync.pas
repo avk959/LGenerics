@@ -69,6 +69,11 @@ type
   ['{49381C21-82D6-456E-93A2-B8E0DC4B34BA}']
     procedure EnqueueTask(aTask: ITask);
   end;
+
+  IATaskExecutor = interface
+  ['{95CC5945-A97C-4503-9160-826BA0F3930B}']
+    procedure EnqueueTask(aTask: IAsyncTask);
+  end;
 {$POP}
 
   { TAsyncTask }
@@ -76,7 +81,7 @@ type
   strict private
     FAwait: PRtlEvent;
     FException: Exception;
-    FState: SizeUInt;
+    FState: LongInt;
   protected
     function  GetState: TAsyncTaskState; inline;
     function  GetRefCount: Integer;
@@ -110,7 +115,15 @@ type
 
   private
   type
-    ITask = specialize IGAsyncTask<T>;
+    ITask   = specialize IGAsyncTask<T>;
+    TWorker = class(TThread)
+    private
+      FTask: ITask;
+    protected
+      procedure Execute; override;
+    public
+      constructor Create(aTask: ITask);
+    end;
 
   strict private
     FTask: ITask;
@@ -119,8 +132,9 @@ type
     procedure Resolve;
   private
     function  GetState: TFutureState;
+  { executes aTask in separate thread if aEx = nil }
+    procedure Start(aTask: ITask; aEx: IATaskExecutor);
     class operator Finalize(var f: TGFuture);
-    procedure Start(aTask: ITask; aEx: IExecutor);
   public
     function  WaitFor: TFutureState;
     procedure Cancel;
@@ -155,9 +169,9 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aProc: TProcedure; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TProcedure; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(e: IProcEnumerable; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aProc: TProcedure; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(constref a: array of TProcedure; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(e: IProcEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aProc: TProcedure);
   end;
 
@@ -174,9 +188,9 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Run(aTask: ITask; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of ITask; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(e: ITaskEnumerable; aEx: IExecutor = nil): TSpawn; static;
+    class function Run(aTask: ITask; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(constref a: array of ITask; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(e: ITaskEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aTask: ITask);
   end;
 
@@ -194,9 +208,9 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Run(aTask: ICallable; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of ICallable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(e: ICallEnumerable; aEx: IExecutor = nil): TSpawn; static;
+    class function Run(aTask: ICallable; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(constref a: array of ICallable; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(e: ICallEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aTask: ICallable);
   end;
 
@@ -214,9 +228,9 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(e: IFunEnumerable; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aFun: TFun; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(constref a: array of TFun; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(e: IFunEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -234,8 +248,8 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aFun: TFun; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(constref a: array of TFun; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -253,9 +267,9 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(e: IFunEnumerable; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aFun: TFun; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(constref a: array of TFun; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(e: IFunEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -278,10 +292,10 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v: T; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(aFun: TFun; constref Args: array of T; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(aFun: TFun; e: TParamEnumerable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(constref a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aFun: TFun; constref v: T; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(aFun: TFun; constref Args: array of T; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(aFun: TFun; e: TParamEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(constref a: array of TCallData; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun; constref v: T);
   end;
 
@@ -305,11 +319,14 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor = nil): TFuture; static;
-    class function CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(constref a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IATaskExecutor = nil): TFuture;
+                   static;
+    class function CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor = nil): TFuture;
+                   static;
+    class function Spawn(aFun: TFun; constref Args: array of TParamTuple;
+                   aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(constref a: array of TCallData; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2);
     constructor Create(aFun: TFun; constref aTup: TParamTuple);
   end;
@@ -335,11 +352,12 @@ type
     procedure DoExecute; override;
   public
     class function Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
-                        aEx: IExecutor = nil): TFuture; static;
-    class function Call(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(constref a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
+                        aEx: IATaskExecutor = nil): TFuture; static;
+    class function Call(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor = nil): TFuture; static;
+    class function Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IATaskExecutor = nil): TSpawn;
+                   static;
+    class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
+    class function Spawn(constref a: array of TCallData; aEx: IATaskExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
     constructor Create(aFun: TFun; constref aTup: TParamTuple);
   end;
@@ -386,7 +404,7 @@ type
 
     TThreadPool = specialize TGLiteVector<TWorkThread>;
 
-    TExecutor = class
+    TExecutor = class(TObject, IATaskExecutor)
     private
       FTaskQueue: TTaskQueue;
       FThreadPool: TThreadPool;
@@ -413,11 +431,13 @@ type
 
   public
     class procedure EnsureThreadCount(aValue: Integer); static;
+    class function  GetExecutor: IATaskExecutor;
     class procedure Enqueue(aTask: IAsyncTask); static;
   { for estimate purpose only }
     class function  UnhandledCount: SizeInt; static;
     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
   end;
+
 
 const
   DEFAULT_CHAN_SIZE = 256;
@@ -670,8 +690,53 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
+  TTaskExceptionHandler = procedure(aId: TThreadID; e: Exception) of object;
+
+  procedure ExecuteTask(aTask: ITask; aHandler: TTaskExceptionHandler = nil);
+
 implementation
 {$B-}{$COPERATORS ON}
+
+type
+
+  { TTaskWorker }
+  TTaskWorker = class(TThread)
+  private
+    FTask: ITask;
+    FHandler: TTaskExceptionHandler;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(aTask: ITask; aHandler: TTaskExceptionHandler);
+  end;
+
+{ TTaskWorker }
+
+procedure TTaskWorker.Execute;
+begin
+  if FTask <> nil then
+    try
+      FTask.Execute;
+    except
+      if FHandler <> nil then
+        FHandler(ThreadID, Exception(System.AcquireExceptionObject))
+    end;
+  Terminate;
+end;
+
+constructor TTaskWorker.Create(aTask: ITask; aHandler: TTaskExceptionHandler);
+begin
+  inherited Create(True);
+  FTask := aTask;
+  FHandler := aHandler;
+  FreeOnTerminate := True;
+end;
+
+procedure ExecuteTask(aTask: ITask; aHandler: TTaskExceptionHandler);
+begin
+  with TTaskWorker.Create(aTask, aHandler) do
+    Start;
+end;
 
 { TAsyncTask }
 
@@ -687,22 +752,14 @@ end;
 
 procedure TAsyncTask.Execute;
 begin
-{$IFDEF CPU64}
-  InterlockedIncrement64(FState);
-{$ELSE CPU64}
   InterlockedIncrement(FState);
-{$ENDIF CPU64}
   try
     DoExecute;
   except
     on e: Exception do
       FException := Exception(System.AcquireExceptionObject);
   end;
-{$IFDEF CPU64}
-  InterlockedIncrement64(FState);
-{$ELSE CPU64}
   InterlockedIncrement(FState);
-{$ENDIF CPU64}
   System.RtlEventSetEvent(FAwait);
 end;
 
@@ -736,6 +793,22 @@ end;
 function TGAsyncTask.GetResult: T;
 begin
   Result := FResult;
+end;
+
+{ TGFuture.TWorker }
+
+procedure TGFuture.TWorker.Execute;
+begin
+  if FTask <> nil then
+    FTask.Execute;
+  Terminate;
+end;
+
+constructor TGFuture.TWorker.Create(aTask: ITask);
+begin
+  inherited Create(True);
+  FTask := aTask;
+  FreeOnTerminate := True;
 end;
 
 { TGFuture }
@@ -778,19 +851,20 @@ begin
   Result := FState;
 end;
 
-class operator TGFuture.Finalize(var f: TGFuture);
-begin
-  f.FTask := nil;
-end;
-
-procedure TGFuture.Start(aTask: ITask; aEx: IExecutor);
+procedure TGFuture.Start(aTask: ITask; aEx: IATaskExecutor);
 begin
   FTask := aTask;
   FState := fsPending;
   if aEx <> nil then
     aEx.EnqueueTask(FTask)
   else
-    TDefaultExecutor.Enqueue(FTask);
+    with TWorker.Create(aTask) do
+      Start;
+end;
+
+class operator TGFuture.Finalize(var f: TGFuture);
+begin
+  f.FTask := nil;
 end;
 
 function TGFuture.WaitFor: TFutureState;
@@ -859,12 +933,12 @@ begin
   FResult := True;
 end;
 
-class function TGAsyncProc.Call(aProc: TProcedure; aEx: IExecutor): TFuture;
+class function TGAsyncProc.Call(aProc: TProcedure; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncProc.Create(aProc), aEx);
 end;
 
-class function TGAsyncProc.Spawn(constref a: array of TProcedure; aEx: IExecutor): TSpawn;
+class function TGAsyncProc.Spawn(constref a: array of TProcedure; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -873,7 +947,7 @@ begin
     Result.Futures[I] := Call(a[I], aEx);
 end;
 
-class function TGAsyncProc.Spawn(e: IProcEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncProc.Spawn(e: IProcEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   Proc: TProcedure;
@@ -904,12 +978,12 @@ begin
   FResult := True;
 end;
 
-class function TAsyncExecutable.Run(aTask: ITask; aEx: IExecutor): TFuture;
+class function TAsyncExecutable.Run(aTask: ITask; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TAsyncExecutable.Create(aTask), aEx);
 end;
 
-class function TAsyncExecutable.Spawn(constref a: array of ITask; aEx: IExecutor): TSpawn;
+class function TAsyncExecutable.Spawn(constref a: array of ITask; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -918,7 +992,7 @@ begin
     Result.Futures[I] := Run(a[I], aEx);
 end;
 
-class function TAsyncExecutable.Spawn(e: ITaskEnumerable; aEx: IExecutor): TSpawn;
+class function TAsyncExecutable.Spawn(e: ITaskEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   Task: ITask;
@@ -947,12 +1021,12 @@ begin
   FResult := FTask.Call;
 end;
 
-class function TGAsyncCallable.Run(aTask: ICallable; aEx: IExecutor): TFuture;
+class function TGAsyncCallable.Run(aTask: ICallable; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncCallable.Create(aTask), aEx);
 end;
 
-class function TGAsyncCallable.Spawn(constref a: array of ICallable; aEx: IExecutor): TSpawn;
+class function TGAsyncCallable.Spawn(constref a: array of ICallable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -961,7 +1035,7 @@ begin
     Result.Futures[I] := Run(a[I], aEx);
 end;
 
-class function TGAsyncCallable.Spawn(e: ICallEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncCallable.Spawn(e: ICallEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   Call: ICallable;
@@ -990,12 +1064,12 @@ begin
   FResult := FFun();
 end;
 
-class function TGAsyncMethod.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncMethod.Call(aFun: TFun; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncMethod.Create(aFun), aEx);
 end;
 
-class function TGAsyncMethod.Spawn(constref a: array of TFun; aEx: IExecutor): TSpawn;
+class function TGAsyncMethod.Spawn(constref a: array of TFun; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1004,7 +1078,7 @@ begin
     Result.Futures[I] := Call(a[I], aEx);
 end;
 
-class function TGAsyncMethod.Spawn(e: IFunEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncMethod.Spawn(e: IFunEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   f: TFun;
@@ -1033,12 +1107,12 @@ begin
   FResult := FFun();
 end;
 
-class function TGAsyncNested.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncNested.Call(aFun: TFun; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncNested.Create(aFun), aEx);
 end;
 
-class function TGAsyncNested.Spawn(constref a: array of TFun; aEx: IExecutor): TSpawn;
+class function TGAsyncNested.Spawn(constref a: array of TFun; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1060,12 +1134,12 @@ begin
   FResult := FFun();
 end;
 
-class function TGAsyncNiladic.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncNiladic.Call(aFun: TFun; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncNiladic.Create(aFun), aEx);
 end;
 
-class function TGAsyncNiladic.Spawn(constref a: array of TFun; aEx: IExecutor): TSpawn;
+class function TGAsyncNiladic.Spawn(constref a: array of TFun; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1074,7 +1148,7 @@ begin
     Result.Futures[I] := Call(a[I], aEx);
 end;
 
-class function TGAsyncNiladic.Spawn(e: IFunEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncNiladic.Spawn(e: IFunEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   f: TFun;
@@ -1103,12 +1177,12 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IExecutor): TFuture;
+class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncMonadic.Create(aFun, v), aEx);
 end;
 
-class function TGAsyncMonadic.Spawn(aFun: TFun; constref Args: array of T; aEx: IExecutor): TSpawn;
+class function TGAsyncMonadic.Spawn(aFun: TFun; constref Args: array of T; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1117,7 +1191,7 @@ begin
     Result.Futures[I] := Call(aFun, Args[I], aEx);
 end;
 
-class function TGAsyncMonadic.Spawn(aFun: TFun; e: TParamEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncMonadic.Spawn(aFun: TFun; e: TParamEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   v: T;
@@ -1133,7 +1207,7 @@ begin
   System.SetLength(Result.Futures, I);
 end;
 
-class function TGAsyncMonadic.Spawn(constref a: array of TCallData; aEx: IExecutor): TSpawn;
+class function TGAsyncMonadic.Spawn(constref a: array of TCallData; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1155,17 +1229,18 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor): TFuture;
+class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncDyadic.Create(aFun, v1, v2), aEx);
 end;
 
-class function TGAsyncDyadic.CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor): TFuture;
+class function TGAsyncDyadic.CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncDyadic.Create(aFun, aTup), aEx);
 end;
 
-class function TGAsyncDyadic.Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IExecutor): TSpawn;
+class function TGAsyncDyadic.Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IATaskExecutor
+  ): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1174,7 +1249,7 @@ begin
     Result.Futures[I] := CallTup(aFun, Args[I], aEx);
 end;
 
-class function TGAsyncDyadic.Spawn(aFun: TFun; e: TTupEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncDyadic.Spawn(aFun: TFun; e: TTupEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   Tup: TParamTuple;
@@ -1190,7 +1265,7 @@ begin
   System.SetLength(Result.Futures, I);
 end;
 
-class function TGAsyncDyadic.Spawn(constref a: array of TCallData; aEx: IExecutor): TSpawn;
+class function TGAsyncDyadic.Spawn(constref a: array of TCallData; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1219,17 +1294,18 @@ begin
 end;
 
 class function TGAsyncTriadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
-  aEx: IExecutor): TFuture;
+  aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
 end;
 
-class function TGAsyncTriadic.Call(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor): TFuture;
+class function TGAsyncTriadic.Call(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncTriadic.Create(aFun, aTup), aEx);
 end;
 
-class function TGAsyncTriadic.Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IExecutor): TSpawn;
+class function TGAsyncTriadic.Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IATaskExecutor
+  ): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1238,7 +1314,7 @@ begin
     Result.Futures[I] := Call(aFun, Args[I], aEx);
 end;
 
-class function TGAsyncTriadic.Spawn(aFun: TFun; e: TTupEnumerable; aEx: IExecutor): TSpawn;
+class function TGAsyncTriadic.Spawn(aFun: TFun; e: TTupEnumerable; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt = 0;
   Tup: TParamTuple;
@@ -1254,7 +1330,7 @@ begin
   System.SetLength(Result.Futures, I);
 end;
 
-class function TGAsyncTriadic.Spawn(constref a: array of TCallData; aEx: IExecutor): TSpawn;
+class function TGAsyncTriadic.Spawn(constref a: array of TCallData; aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1512,6 +1588,13 @@ begin
       CFExecutor := TExecutor.Create(aValue)
     else
       CFExecutor.PoolGrow(aValue);
+end;
+
+class function TDefaultExecutor.GetExecutor: IATaskExecutor;
+begin
+  if not Assigned(CFExecutor) then
+    CFExecutor := TExecutor.Create;
+  Result := CFExecutor;
 end;
 
 class procedure TDefaultExecutor.Enqueue(aTask: IAsyncTask);
