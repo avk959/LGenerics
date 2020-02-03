@@ -333,9 +333,9 @@ begin
   {%H-}q.Instance.EnqueueAll(IntArray21);
   AssertTrue(q.Instance.EnqueueAll(q.Instance) = 21);
   for I := 1 to 21 do
-    AssertTrue(q{%H-}.Instance.Dequeue = I);
+    AssertTrue(q.Instance.Dequeue = I);
   for I := 1 to 21 do
-    AssertTrue(q{%H-}.Instance.Dequeue = I);
+    AssertTrue(q.Instance.Dequeue = I);
   AssertTrue(q.Instance.IsEmpty);
 end;
 
@@ -361,7 +361,7 @@ begin
   {%H-}q.Instance := TIntQueue.Create(IntArray21);
   for I := 1 to 21 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   AssertTrue(q.Instance.IsEmpty);
@@ -377,14 +377,14 @@ begin
 
   for I := 1 to 40 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   for I := 65 to 90 do
     q.Instance.Enqueue(I);
   for I := 41 to 90 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   AssertTrue(q.Instance.IsEmpty);
@@ -400,7 +400,7 @@ begin
 
   for I := 1 to 20 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   for I := 65 to 100 do
@@ -409,7 +409,7 @@ begin
   AssertTrue(q.Instance.Capacity = 128);
   for I := 21 to 100 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   AssertTrue(q.Instance.IsEmpty);
@@ -421,11 +421,11 @@ var
   I, v: Integer;
 begin
   for I := 1 to 64 do
-    q.Instance.Enqueue(I);
+    {%H-}q.Instance.Enqueue(I);
   q.Instance.TrimToFit;
   for I := 1 to 40 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   for I := 65 to 85 do
@@ -481,14 +481,12 @@ var
   I, v: Integer;
 begin
   {%H-}q.Instance := TIntQueue.Create(IntArray21);
-  v := q{%H-}.Instance.Peek;
-  AssertTrue(v = 1);
-  v := q{%H-}.Instance.Peek;
+  v := q.Instance.Peek;
   AssertTrue(v = 1);
   for I := 1 to 21 do
     begin
-      v := q{%H-}.Instance.Peek;
-      {%H-}q.Instance.Dequeue;
+      v := q.Instance.Peek;
+      q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
 end;
@@ -515,7 +513,7 @@ begin
     begin
       AssertTrue(q.Instance.TryPeek(v));
       AssertTrue(v = I);
-      {%H-}q.Instance.Dequeue;
+      q.Instance.Dequeue;
     end;
   AssertTrue(q.Instance.IsEmpty);
 end;
@@ -586,7 +584,7 @@ begin
   for I := 1 to 64 do
     {%H-}q.Instance.Enqueue(I);
   for I := 1 to 40 do
-    {%H-}q.Instance.Dequeue;
+    q.Instance.Dequeue;
   for I := 65 to 100 do
     q.Instance.Enqueue(I);
   q.Instance.TrimToFit;
@@ -601,7 +599,7 @@ begin
   q.Instance.EnsureCapacity(110);
   for I := 41 to 140 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = I);
     end;
   AssertTrue(q.Instance.IsEmpty);
@@ -616,7 +614,7 @@ begin
   for I := 1 to 64 do
     {%H-}q.Instance.Enqueue('string ' + I.ToString);
   for I := 1 to 40 do
-    {%H-}q.Instance.Dequeue;
+    q.Instance.Dequeue;
   for I := 65 to 100 do
     q.Instance.Enqueue('string ' + I.ToString);
   q.Instance.TrimToFit;
@@ -631,7 +629,7 @@ begin
   q.Instance.EnsureCapacity(110);
   for I := 41 to 140 do
     begin
-      v := q{%H-}.Instance.Dequeue;
+      v := q.Instance.Dequeue;
       AssertTrue(v = 'string ' + I.ToString);
     end;
   AssertTrue(q.Instance.IsEmpty);
@@ -643,9 +641,9 @@ var
   I, v: Integer;
 begin
   for I := 1 to 64 do
-    q.Instance.Enqueue(I);
+    {%H-}q.Instance.Enqueue(I);
   for I := 1 to 40 do
-    {%H-}q.Instance.Dequeue;
+    q.Instance.Dequeue;
   for I := 65 to 100 do
     q.Instance.Enqueue(I);
   q.Instance.TrimToFit;
@@ -669,9 +667,9 @@ var
   v: string;
 begin
   for I := 1 to 64 do
-    q.Instance.Enqueue('string ' + I.ToString);
+    {%H-}q.Instance.Enqueue('string ' + I.ToString);
   for I := 1 to 40 do
-    {%H-}q.Instance.Dequeue;
+    q.Instance.Dequeue;
   for I := 65 to 100 do
     q.Instance.Enqueue('string ' + I.ToString);
   q.Instance.TrimToFit;
@@ -697,7 +695,7 @@ begin
   for I := 1 to 62 do
     {%H-}q.Instance.Enqueue(I);
   for I := 1 to 40 do
-    {%H-}q.Instance.Dequeue;
+    q.Instance.Dequeue;
   for I := 63 to 100 do
     q.Instance.Enqueue(I);
   q.Instance.TrimToFit;
@@ -720,7 +718,7 @@ begin
   for I := 1 to 61 do
     {%H-}q.Instance.Enqueue('string ' + I.ToString);
   for I := 1 to 40 do
-    {%H-}q.Instance.Dequeue;
+    q.Instance.Dequeue;
   for I := 62 to 100 do
     q.Instance.Enqueue('string ' + I.ToString);
   q.Instance.TrimToFit;
@@ -744,12 +742,12 @@ var
   I: Integer;
   Raised: Boolean = False;
 begin
-  s.Instance := TIntQueue.Create(IntArray21);
+  {%H-}s.Instance := TIntQueue.Create(IntArray21);
   try
     for I in s.Instance.Select(@IsEven) do
       begin
         if not Odd(I) then
-        {%H-}s.Instance.Dequeue;
+        s.Instance.Dequeue;
       end;
   except
     on e: ELGUpdateLock do
@@ -771,7 +769,7 @@ var
   q: TAutoIntQueue;
   I, J: Integer;
 begin
-  q.Instance := TIntQueue.Create(IntArray21);
+  {%H-}q.Instance := TIntQueue.Create(IntArray21);
   J := 2;
   for I in q.Instance.Select(@IsEven).Map(@Double) do
     begin
@@ -795,7 +793,7 @@ begin
   AssertTrue(q.Instance.Count = 100);
   q.Instance.TrimToFit;
   for I := 1 to 20 do
-    q.Instance.Dequeue{%H-}.Free;
+    q.Instance.Dequeue.Free;
   AssertTrue(Counter.Count = 20);
   AssertTrue(q.Instance.Count = 80);
   for I := 1 to 20 do
@@ -868,10 +866,10 @@ var
   I, J: Integer;
 begin
   for I in IntArray21 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   for I := 1 to 21 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   AssertTrue(q.IsEmpty);
@@ -887,14 +885,14 @@ begin
 
   for I := 1 to 40 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   for I := 65 to 90 do
     q.Enqueue(I);
   for I := 41 to 90 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   AssertTrue(q.IsEmpty);
@@ -910,7 +908,7 @@ begin
 
   for I := 1 to 20 do
     begin
-      v := q{%H-}.Dequeue;
+      v := q.Dequeue;
       AssertTrue(v = I);
     end;
   for I := 65 to 100 do
@@ -918,7 +916,7 @@ begin
   AssertTrue(q.Count = 80);
   for I := 21 to 100 do
     begin
-      v := q{%H-}.Dequeue;
+      v := q.Dequeue;
       AssertTrue(v = I);
     end;
   AssertTrue(q.IsEmpty);
@@ -930,11 +928,11 @@ var
   I, J: Integer;
 begin
   for I := 1 to 64 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   q.TrimToFit;
   for I := 1 to 40 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   for I := 65 to 85 do
@@ -942,7 +940,7 @@ begin
   AssertTrue(q.Count = 45);
   q.EnsureCapacity(1022);
   J := 85;
-  for {%H-}I in q.Reverse do
+  for I in q.Reverse do
     begin
       AssertTrue(I = J);
       Dec(J);
@@ -957,10 +955,10 @@ var
 begin
   for I := 1 to 50 do
     {%H-}q.Enqueue(I);
-  for {%H-}p in q.Mutables do
+  for p in q.Mutables do
     p^ := p^ + 10;
   J := 1;
-  for {%H-}I in q do
+  for I in q do
     begin
       AssertTrue(I = J + 10);
       Inc(J);
@@ -981,7 +979,7 @@ var
   I, J: Integer;
 begin
   for I in IntArray21 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   for I := 1 to 21 do
     begin
       AssertTrue(q.TryDequeue(J){%H-});
@@ -1009,15 +1007,15 @@ var
   I, J: Integer;
 begin
   for I in IntArray21 do
-    q.Enqueue(I);
-  J := q{%H-}.Peek;
+    {%H-}q.Enqueue(I);
+  J := q.Peek;
   AssertTrue(J = 1);
-  J := q{%H-}.Peek;
+  J := q.Peek;
   AssertTrue(J = 1);
   for I := 1 to 21 do
     begin
-      J := q{%H-}.Peek;
-      {%H-}q.Dequeue;
+      J := q.Peek;
+      q.Dequeue;
       AssertTrue(J = I);
     end;
 end;
@@ -1036,7 +1034,7 @@ var
   I, J: Integer;
 begin
   for I in IntArray21 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   AssertTrue(q.TryPeek(J));
   AssertTrue(J = 1);
   AssertTrue(q.TryPeek(J));
@@ -1045,7 +1043,7 @@ begin
     begin
       AssertTrue(q.TryPeek(J));
       AssertTrue(J = I);
-      {%H-}q.Dequeue;
+      q.Dequeue;
     end;
   AssertTrue(q.IsEmpty);
 end;
@@ -1056,7 +1054,7 @@ var
   I: Integer;
 begin
   for I in IntArray21 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   AssertTrue(q.Count = 21);
   q.Clear;
   AssertTrue(q.IsEmpty);
@@ -1069,7 +1067,7 @@ var
   I: Integer;
 begin
   for I in IntArray21 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   AssertTrue(q.Count = 21);
   AssertTrue(q.Capacity = DEFAULT_CONTAINER_CAPACITY);
   q.TrimToFit;
@@ -1095,7 +1093,7 @@ begin
     {%H-}q.Enqueue(I);
   for I := 1 to 40 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   for I := 65 to 85 do
@@ -1105,7 +1103,7 @@ begin
   AssertTrue(q.Capacity = 45);
   for I := 41 to 85 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   AssertTrue(q.IsEmpty);
@@ -1119,7 +1117,7 @@ begin
   for I := 1 to 64 do
     {%H-}q.Enqueue(I);
   for I := 1 to 40 do
-    {%H-}q.Dequeue;
+    q.Dequeue;
   for I := 65 to 100 do
     q.Enqueue(I);
   q.TrimToFit;
@@ -1134,7 +1132,7 @@ begin
   q.EnsureCapacity(110);
   for I := 41 to 140 do
     begin
-      J := q{%H-}.Dequeue;
+      J := q.Dequeue;
       AssertTrue(J = I);
     end;
   AssertTrue(q.IsEmpty);
@@ -1149,7 +1147,7 @@ begin
   for I := 1 to 64 do
     {%H-}q.Enqueue('string ' + I.ToString);
   for I := 1 to 40 do
-    {%H-}q.Dequeue;
+    q.Dequeue;
   for I := 65 to 100 do
     q.Enqueue('string ' + I.ToString);
   q.TrimToFit;
@@ -1164,7 +1162,7 @@ begin
   q.EnsureCapacity(110);
   for I := 41 to 140 do
     begin
-      v := q{%H-}.Dequeue;
+      v := q.Dequeue;
       AssertTrue(v = 'string ' + I.ToString);
     end;
   AssertTrue(q.IsEmpty);
@@ -1176,9 +1174,9 @@ var
   I, J: Integer;
 begin
   for I := 1 to 64 do
-    q.Enqueue(I);
+    {%H-}q.Enqueue(I);
   for I := 1 to 40 do
-    {%H-}q.Dequeue;
+    q.Dequeue;
   for I := 65 to 100 do
     q.Enqueue(I);
   q.TrimToFit;
@@ -1188,7 +1186,7 @@ begin
   q.TrimToFit;
   q.EnsureCapacity(110);
   I := 41;
-  for {%H-}J in q do
+  for J in q do
     begin
       AssertTrue(J = I);
       Inc(I);
@@ -1202,9 +1200,9 @@ var
   s: string;
 begin
   for I := 1 to 64 do
-    q.Enqueue('string ' + I.ToString);
+    {%H-}q.Enqueue('string ' + I.ToString);
   for I := 1 to 40 do
-    {%H-}q.Dequeue;
+    q.Dequeue;
   for I := 65 to 100 do
     q.Enqueue('string ' + I.ToString);
   q.TrimToFit;
@@ -1214,7 +1212,7 @@ begin
   q.TrimToFit;
   q.EnsureCapacity(110);
   I := 41;
-  for {%H-}s in q do
+  for s in q do
     begin
       AssertTrue(s = 'string ' + I.ToString);
       Inc(I);
@@ -1262,7 +1260,7 @@ procedure TLiteQueueTest.PassByValue;
 var
   q: TIntQueue;
 begin
-  {%q-}q.EnsureCapacity(10);
+  {%H-}q.EnsureCapacity(10);
   AssertTrue(q.Capacity > 2);
   AssertTrue(q.IsEmpty);
   Test(q);
@@ -1278,7 +1276,7 @@ begin
   for I := 1 to 62 do
     {%H-}q.Enqueue(I);
   for I := 1 to 40 do
-    {%H-}q.Dequeue;
+    q.Dequeue;
   for I := 63 to 100 do
     q.Enqueue(I);
   q.TrimToFit;
@@ -1301,7 +1299,7 @@ begin
   for I := 1 to 61 do
     {%H-}q.Enqueue('string ' + I.ToString);
   for I := 1 to 40 do
-    {%H-}q.Dequeue;
+    q.Dequeue;
   for I := 62 to 100 do
     q.Enqueue('string ' + I.ToString);
   q.TrimToFit;
@@ -1328,9 +1326,9 @@ begin
   for I := 1 to 100 do
     {%H-}q.Enqueue(TTestObj.Create(@IncCounter));
   AssertTrue(q.Count = 100);
-  {%H-}q.TrimToFit;
+  q.TrimToFit;
   for I := 1 to 20 do
-    q.Dequeue{%H-}.Free;
+    q.Dequeue.Free;
   AssertTrue(Counter = 20);
   AssertTrue(q.Count = 80);
   for I := 1 to 20 do
