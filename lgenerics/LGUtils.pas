@@ -2548,7 +2548,7 @@ end;
 
 procedure TSpinLock.Lock;
 begin
-  while Boolean(InterlockedExchange(FState, DWord(1))) do
+  while InterlockedExchange(FState, DWord(1)) <> 0 do
     ThreadSwitch;
 end;
 
@@ -2556,14 +2556,14 @@ procedure TSpinLock.LockTts;
 begin
   repeat
     while Boolean(FState) do;
-    if not Boolean(InterlockedExchange(FState, DWord(1))) then
+    if InterlockedExchange(FState, DWord(1)) = 0 then
       exit;
   until False;
 end;
 
 function TSpinLock.TryLock: Boolean;
 begin
-  Result := not Boolean(InterlockedExchange(FState, DWord(1)));
+  Result := InterlockedExchange(FState, DWord(1)) = 0;
 end;
 
 procedure TSpinLock.Unlock;
