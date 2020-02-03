@@ -307,7 +307,6 @@
     procedure Grow(aValue: SizeInt);
     procedure Shrink;
     procedure CapacityExceedError(aValue: SizeInt);
-    procedure AccessEmptyError;
     procedure CheckEmpty; inline;
     class operator Initialize(var b: TGLiteRingDynBuffer);
     class operator Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer); inline;

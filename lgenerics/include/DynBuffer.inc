@@ -979,15 +979,10 @@ begin
   raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
-procedure TGLiteRingDynBuffer.AccessEmptyError;
-begin
-  raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
 procedure TGLiteRingDynBuffer.CheckEmpty;
 begin
   if Count = 0 then
-    AccessEmptyError;
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
 class operator TGLiteRingDynBuffer.Initialize(var b: TGLiteRingDynBuffer);
