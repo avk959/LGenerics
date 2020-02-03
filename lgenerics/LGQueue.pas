@@ -390,6 +390,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGThreadQueue.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGThreadQueue.Create(aQueue: IQueue);
 begin
   System.InitCriticalSection(FLock);
@@ -453,11 +458,6 @@ function TGThreadQueue.Lock: IQueue;
 begin
   Result := FQueue;
   DoLock;
-end;
-
-procedure TGThreadQueue.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteQueue }
@@ -569,6 +569,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGLiteThreadQueue.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGLiteThreadQueue.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -630,11 +635,6 @@ function TGLiteThreadQueue.Lock: PQueue;
 begin
   Result := @FQueue;
   DoLock;
-end;
-
-procedure TGLiteThreadQueue.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteBlockQueue }
@@ -864,6 +864,11 @@ begin
   System.InitCriticalSection(FLock);
 end;
 
+procedure TGLiteThreadObjectQueue.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 destructor TGLiteThreadObjectQueue.Destroy;
 begin
   DoLock;
@@ -920,11 +925,6 @@ function TGLiteThreadObjectQueue.Lock: PQueue;
 begin
   Result := @FQueue;
   DoLock;
-end;
-
-procedure TGLiteThreadObjectQueue.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteThreadQueueSL }
