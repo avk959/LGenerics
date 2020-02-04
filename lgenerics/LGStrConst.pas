@@ -44,6 +44,7 @@ resourcestring
   SECantAcceptNegCount     = 'Can not accept negative TEntry.Count value';
   SECantAcceptNegLen       = 'Can not accept negative length value';
   SEInternalDataInconsist  = 'Internal data inconsistency';
+  SEInvalidParamFmt        = 'Invalid parameter "%s" value';
   SEInputShouldAtLeastFmt  = 'Parameter "%s" should be at least %d';
   SEValueAlreadyExist      = 'Value already exists';
   SEKeyAlreadyExist        = 'Key already exists';
