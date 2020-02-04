@@ -27,8 +27,7 @@ unit LGAsync;
 interface
 
 uses
-  Classes,
-  SysUtils,
+  Classes, SysUtils, Math,
   LGUtils,
   LGQueue,
   LGVector,
@@ -437,6 +436,31 @@ type
     class function  UnhandledCount: SizeInt; static;
     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
     class property  Instance: IATaskExecutor read GetInstance;
+  end;
+
+  { TSemaphore }
+  TSemaphore = class
+  private
+    FLock: TRtlCriticalSection;
+    FLimit,
+    FCounter: Integer;
+    FQueue: specialize TGLiteQueue<PRtlEvent>;
+    function  GetWaitCount: Integer;
+    function  CreateEvent(out e: PRTLEvent): PRTLEvent; inline;
+    procedure WaitForEvent(e: PRTLEvent); inline;
+  public
+  { sets Counter to aInitialCount, i.e. if aInitialCount = 0 then after creation the semaphore is locked;
+    raises EArgumentException if aLimit < 1 or aInitialCount < 0 or aInitialCount > aLimit }
+    constructor Create(aLimit: Integer; aInitialCount: Integer = 0);
+    destructor Destroy; override;
+    procedure Wait;
+  { returns False immediately if the semaphore is locked }
+    function  TryWait: Boolean;
+  { returns the value of the increment of the counter }
+    function  Signal(aCount: Integer = 1): Integer;
+    property  WaitCount: Integer read GetWaitCount;
+    property  Counter: Integer read FCounter;
+    property  Limit: Integer read FLimit;
   end;
 
 
@@ -1608,6 +1632,107 @@ begin
     Result := CFExecutor.Unhandled
   else
     Result := 0;
+end;
+
+{ TSemaphore }
+
+function TSemaphore.GetWaitCount: Integer;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if FCounter < 0 then
+      Result := -FCounter
+    else
+      Result := 0;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSemaphore.CreateEvent(out e: PRTLEvent): PRTLEvent;
+begin
+  e := System.RTLEventCreate;
+  Result := e;
+end;
+
+procedure TSemaphore.WaitForEvent(e: PRTLEvent);
+begin
+  System.RTLeventWaitFor(e);
+  System.RTLEventDestroy(e);
+end;
+
+constructor TSemaphore.Create(aLimit: Integer; aInitialCount: Integer);
+begin
+  if aLimit < 1 then
+    raise EArgumentException.CreateFmt(SEInputShouldAtLeastFmt, ['aLimit', 1]);
+  if (aInitialCount < 0) or (aInitialCount > aLimit) then
+    raise EArgumentException.CreateFmt(SEInvalidParamFmt, ['aInitialCount']);
+  FLimit := aLimit;
+  FCounter := aInitialCount;
+  FQueue.EnsureCapacity(DEFAULT_CONTAINER_CAPACITY);
+  System.InitCriticalSection(FLock);
+end;
+
+destructor TSemaphore.Destroy;
+var
+  e: PRtlEvent;
+begin
+  System.DoneCriticalSection(FLock);
+  while FQueue.TryDequeue(e) do
+    begin
+      System.RTLEventSetEvent(e);
+      System.RTLEventDestroy(e);
+    end;
+  inherited;
+end;
+
+procedure TSemaphore.Wait;
+var
+  e: PRTLEvent;
+  WaitNeeded: Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Dec(FCounter);
+    WaitNeeded := Counter < 0;
+    if WaitNeeded then
+      FQueue.Enqueue(CreateEvent(e));
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+  if WaitNeeded then
+    WaitForEvent(e);
+end;
+
+function TSemaphore.TryWait: Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if FCounter > 0 then
+      begin
+        Dec(FCounter);
+        exit(True);
+      end;
+    Result := False;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSemaphore.Signal(aCount: Integer): Integer;
+var
+  I: Integer;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := Math.Max(Math.Min(aCount, FLimit - FCounter), 0);
+    if Result = 0 then exit;
+    for I := 1 to Math.Min(aCount, FQueue.Count) do
+      System.RTLEventSetEvent(FQueue.Dequeue);
+    FCounter += Result;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
 end;
 
 { TGBlockChannel }
