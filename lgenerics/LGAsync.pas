@@ -91,8 +91,8 @@ type
     procedure WaitFor;
     function  FatalException: Exception;
   public
+    constructor Create;
     destructor Destroy; override;
-    procedure AfterConstruction; override;
   end;
 
   generic TGAsyncTask<T> = class abstract(TAsyncTask, specialize IGAsyncTask<T>)
@@ -385,7 +385,6 @@ type
     public
       constructor Create;
       destructor Destroy; override;
-      procedure AfterConstruction; override;
       procedure Clear;
       procedure Close;
       procedure Open;
@@ -422,20 +421,22 @@ type
       function  Unhandled: SizeInt;
     end;
 
-    class constructor Init;
-    class destructor  Done;
-    class function    GetThreadCount: Integer; static; inline;
-    class procedure   SetThreadCount(aValue: Integer); static;
   class var
     CFExecutor: TExecutor; // CF -> Class Field
-
+    class constructor Init;
+    class destructor  Done;
+    class function  GetThreadCount: Integer; static; inline;
+    class procedure SetThreadCount(aValue: Integer); static;
+    class function  GetInstance: IATaskExecutor; static;
   public
+  { always returns nil; just to hide the constructor }
+    class function  Create: TDefaultExecutor; static;
     class procedure EnsureThreadCount(aValue: Integer); static;
-    class function  GetExecutor: IATaskExecutor;
     class procedure Enqueue(aTask: IAsyncTask); static;
-  { for estimate purpose only }
+  { not syncronized, for estimate purpose only  }
     class function  UnhandledCount: SizeInt; static;
     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
+    class property  Instance: IATaskExecutor read GetInstance;
   end;
 
 
@@ -469,7 +470,6 @@ type
     if aCapacity <= 0 then an unbound channel will be created }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
-    procedure AfterConstruction; override;
   { blocking method }
     function  Send(constref aValue: T): Boolean;
   { non blocking method }
@@ -520,7 +520,7 @@ type
     function  GetThreadID: TThreadID;
     function  GetHandle: TThreadID;
     procedure Queue(aMethod: TThreadMethod);
-    procedure Synchronize(AMethod: TThreadMethod);
+    procedure Synchronize(aMethod: TThreadMethod);
     property  ThreadID: TThreadID read GetThreadID;
     property  Handle: TThreadID read GetHandle;
   end;
@@ -571,7 +571,6 @@ type
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE; aStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure AfterConstruction; override;
-    procedure BeforeDestruction; override;
   { blocking method }
     procedure Send(constref aMessage: T);
   { non blocking method }
@@ -774,18 +773,17 @@ begin
   FException := nil;
 end;
 
+constructor TAsyncTask.Create;
+begin
+  FAwait := System.RtlEventCreate;
+end;
+
 destructor TAsyncTask.Destroy;
 begin
   System.RtlEventDestroy(FAwait);
   FAwait := nil;
   FException.Free;
   inherited;
-end;
-
-procedure TAsyncTask.AfterConstruction;
-begin
-  inherited;
-  FAwait := System.RtlEventCreate;
 end;
 
 { TGAsyncTask }
@@ -1356,6 +1354,7 @@ end;
 constructor TDefaultExecutor.TTaskQueue.Create;
 begin
   inherited;
+  FReadAwait := System.RtlEventCreate;
   System.InitCriticalSection(FLock);
 end;
 
@@ -1371,12 +1370,6 @@ begin
     System.LeaveCriticalSection(FLock);
     System.DoneCriticalSection(FLock);
   end;
-end;
-
-procedure TDefaultExecutor.TTaskQueue.AfterConstruction;
-begin
-  inherited;
-  FReadAwait := System.RtlEventCreate;
 end;
 
 procedure TDefaultExecutor.TTaskQueue.Clear;
@@ -1581,6 +1574,18 @@ begin
       CFExecutor.PoolShrink(aValue);
 end;
 
+class function TDefaultExecutor.GetInstance: IATaskExecutor;
+begin
+  if not Assigned(CFExecutor) then
+    CFExecutor := TExecutor.Create;
+  Result := CFExecutor;
+end;
+
+class function TDefaultExecutor.Create: TDefaultExecutor;
+begin
+  Result := nil;
+end;
+
 class procedure TDefaultExecutor.EnsureThreadCount(aValue: Integer);
 begin
   if aValue > ThreadCount then
@@ -1588,13 +1593,6 @@ begin
       CFExecutor := TExecutor.Create(aValue)
     else
       CFExecutor.PoolGrow(aValue);
-end;
-
-class function TDefaultExecutor.GetExecutor: IATaskExecutor;
-begin
-  if not Assigned(CFExecutor) then
-    CFExecutor := TExecutor.Create;
-  Result := CFExecutor;
 end;
 
 class procedure TDefaultExecutor.Enqueue(aTask: IAsyncTask);
@@ -1658,6 +1656,9 @@ begin
       FQueue := CreateQueue(aCapacity);
     end;
   FActive := True;
+  FWriteAwait := System.RtlEventCreate;
+  FReadAwait  := System.RtlEventCreate;
+  System.RtlEventSetEvent(FWriteAwait);
   System.InitCriticalSection(FLock);
 end;
 
@@ -1676,14 +1677,6 @@ begin
     System.LeaveCriticalSection(FLock);
     System.DoneCriticalSection(FLock);
   end;
-end;
-
-procedure TGBlockChannel.AfterConstruction;
-begin
-  inherited;
-  FWriteAwait := System.RtlEventCreate;
-  FReadAwait  := System.RtlEventCreate;
-  System.RtlEventSetEvent(FWriteAwait);
 end;
 
 function TGBlockChannel.Send(constref aValue: T): Boolean;
@@ -1923,7 +1916,8 @@ end;
 
 destructor TGListenThread.Destroy;
 begin
-  FWorker := nil;
+  FWorker.Terminate;
+  FChannel.Close;
   FChannel.Free;
   inherited;
 end;
@@ -1932,13 +1926,6 @@ procedure TGListenThread.AfterConstruction;
 begin
   inherited;
   FWorker.Start;
-end;
-
-procedure TGListenThread.BeforeDestruction;
-begin
-  FWorker.Terminate;
-  FChannel.Close;
-  inherited;
 end;
 
 procedure TGListenThread.Send(constref aMessage: T);
