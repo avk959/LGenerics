@@ -144,7 +144,7 @@ begin
   Data := CreateData;
   StartTimer;
   ////////////////////
-  TMonadic.Spawn(@Sort, CreateDataList(Data), TDefaultExecutor.GetExecutor).WaitFor;
+  TMonadic.Spawn(@Sort, CreateDataList(Data), TDefaultExecutor.Instance).WaitFor;
   //////////////////
   FTimer.Stop;
   lbResultTime.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
