@@ -2182,7 +2182,7 @@ procedure TGBaseArrayHelper.TMergeSort.MergeLoA(From, CountLo, CountHi: SizeInt)
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -2238,7 +2238,7 @@ procedure TGBaseArrayHelper.TMergeSort.MergeLoD(From, CountLo, CountHi: SizeInt)
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -2294,7 +2294,7 @@ procedure TGBaseArrayHelper.TMergeSort.MergeHiA(From, CountLo, CountHi: SizeInt)
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -2349,7 +2349,7 @@ procedure TGBaseArrayHelper.TMergeSort.MergeHiD(From, CountLo, CountHi: SizeInt)
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -4629,7 +4629,7 @@ procedure TGComparableArrayHelper.TMergeSort.MergeLoA(From, CountLo, CountHi: Si
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -4685,9 +4685,9 @@ procedure TGComparableArrayHelper.TMergeSort.MergeLoD(From, CountLo, CountHi: Si
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
-  LocA: PItem;    // local pointer to data array
-  LocB: PItem;    // local pointer to buffer
+  pDst: SizeInt; // current merge position (in data array)
+  LocA: PItem;   // local pointer to data array
+  LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
   if FData[Pred(From + CountLo)] < FData[From + CountLo] then
@@ -4741,7 +4741,7 @@ procedure TGComparableArrayHelper.TMergeSort.MergeHiA(From, CountLo, CountHi: Si
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -4796,7 +4796,7 @@ procedure TGComparableArrayHelper.TMergeSort.MergeHiD(From, CountLo, CountHi: Si
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
 begin
@@ -6450,7 +6450,7 @@ procedure TGRegularArrayHelper.TMergeSort.MergeLoA(From, CountLo, CountHi: SizeI
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TLess;
@@ -6508,7 +6508,7 @@ procedure TGRegularArrayHelper.TMergeSort.MergeLoD(From, CountLo, CountHi: SizeI
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TLess;
@@ -6566,7 +6566,7 @@ procedure TGRegularArrayHelper.TMergeSort.MergeHiA(From, CountLo, CountHi: SizeI
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TLess;
@@ -6623,7 +6623,7 @@ procedure TGRegularArrayHelper.TMergeSort.MergeHiD(From, CountLo, CountHi: SizeI
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TLess;
@@ -8296,7 +8296,7 @@ procedure TGDelegatedArrayHelper.TMergeSort.MergeLoA(From, CountLo, CountHi: Siz
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TOnLess;
@@ -8354,7 +8354,7 @@ procedure TGDelegatedArrayHelper.TMergeSort.MergeLoD(From, CountLo, CountHi: Siz
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TOnLess;
@@ -8412,7 +8412,7 @@ procedure TGDelegatedArrayHelper.TMergeSort.MergeHiA(From, CountLo, CountHi: Siz
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TOnLess;
@@ -8469,7 +8469,7 @@ procedure TGDelegatedArrayHelper.TMergeSort.MergeHiD(From, CountLo, CountHi: Siz
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TOnLess;
@@ -10146,7 +10146,7 @@ procedure TGNestedArrayHelper.TMergeSort.MergeLoA(From, CountLo, CountHi: SizeIn
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TNestLess;
@@ -10204,7 +10204,7 @@ procedure TGNestedArrayHelper.TMergeSort.MergeLoD(From, CountLo, CountHi: SizeIn
 var
   pLo,           // position in low part   (in buffer)
   pHi,           // position in high part  (in data array)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TNestLess;
@@ -10262,7 +10262,7 @@ procedure TGNestedArrayHelper.TMergeSort.MergeHiA(From, CountLo, CountHi: SizeIn
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TNestLess;
@@ -10319,7 +10319,7 @@ procedure TGNestedArrayHelper.TMergeSort.MergeHiD(From, CountLo, CountHi: SizeIn
 var
   pLo,           // position in low part   (in data array)
   pHi,           // position in high part  (in buffer)
-  pDst: SizeInt; // current CreateMerge position (in data array)
+  pDst: SizeInt; // current merge position (in data array)
   LocA: PItem;   // local pointer to data array
   LocB: PItem;   // local pointer to buffer
   c: TNestLess;
