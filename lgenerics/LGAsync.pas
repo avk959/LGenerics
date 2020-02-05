@@ -438,29 +438,47 @@ type
     class property  Instance: IATaskExecutor read GetInstance;
   end;
 
-  { TSemaphore }
-  TSemaphore = class
+  { TSemObj }
+  TSemObj = class
   private
     FLock: TRtlCriticalSection;
     FLimit,
     FCounter: Integer;
     FQueue: specialize TGLiteQueue<PRtlEvent>;
-    function  GetWaitCount: Integer;
     function  CreateEvent(out e: PRTLEvent): PRTLEvent; inline;
-    procedure WaitForEvent(e: PRTLEvent); inline;
+    procedure WaitForThenFree(e: PRTLEvent); inline;
+    procedure SignalThenFree(e: PRTLEvent); inline;
+  public
+    destructor Destroy; override;
+    property  Counter: Integer read FCounter;
+    property  Limit: Integer read FLimit;
+  end;
+
+  { TSemaphore }
+  TSemaphore = class(TSemObj)
+  private
+    FInitialCount: Integer;
+    function GetUsed: Boolean;
+    function GetWaitCount: Integer;
   public
   { sets Counter to aInitialCount, i.e. if aInitialCount = 0 then after creation the semaphore is locked;
     raises EArgumentException if aLimit < 1 or aInitialCount < 0 or aInitialCount > aLimit }
     constructor Create(aLimit: Integer; aInitialCount: Integer = 0);
-    destructor Destroy; override;
-    procedure Wait;
+    procedure WaitFor;
   { returns False immediately if the semaphore is locked }
     function  TryWait: Boolean;
   { returns the value of the increment of the counter }
-    function  Signal(aCount: Integer = 1): Integer;
+    function  Post(aCount: Integer = 1): Integer;
+    property  Used: Boolean read GetUsed;
     property  WaitCount: Integer read GetWaitCount;
-    property  Counter: Integer read FCounter;
-    property  Limit: Integer read FLimit;
+    property  InitialCount: Integer read FInitialCount;
+  end;
+
+  { TBarrier }
+  TBarrier = class(TSemObj)
+  public
+    constructor Create(aLimit: Integer);
+    procedure WaitFor;
   end;
 
 
@@ -1634,31 +1652,54 @@ begin
     Result := 0;
 end;
 
-{ TSemaphore }
+{ TSemObj }
 
-function TSemaphore.GetWaitCount: Integer;
-begin
-  System.EnterCriticalSection(FLock);
-  try
-    if FCounter < 0 then
-      Result := -FCounter
-    else
-      Result := 0;
-  finally
-    System.LeaveCriticalSection(FLock);
-  end;
-end;
-
-function TSemaphore.CreateEvent(out e: PRTLEvent): PRTLEvent;
+function TSemObj.CreateEvent(out e: PRTLEvent): PRTLEvent;
 begin
   e := System.RTLEventCreate;
   Result := e;
 end;
 
-procedure TSemaphore.WaitForEvent(e: PRTLEvent);
+procedure TSemObj.WaitForThenFree(e: PRTLEvent);
 begin
   System.RTLeventWaitFor(e);
   System.RTLEventDestroy(e);
+end;
+
+procedure TSemObj.SignalThenFree(e: PRTLEvent);
+begin
+  System.RTLEventSetEvent(e);
+  System.RTLEventDestroy(e);
+end;
+
+destructor TSemObj.Destroy;
+begin
+  System.DoneCriticalSection(FLock);
+  while FQueue.NonEmpty do
+    SignalThenFree(FQueue.Dequeue);
+  inherited;
+end;
+
+{ TSemaphore }
+
+function TSemaphore.GetUsed: Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := Counter <> InitialCount;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSemaphore.GetWaitCount: Integer;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := Math.Max(-Counter, 0);
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
 end;
 
 constructor TSemaphore.Create(aLimit: Integer; aInitialCount: Integer);
@@ -1668,64 +1709,49 @@ begin
   if (aInitialCount < 0) or (aInitialCount > aLimit) then
     raise EArgumentException.CreateFmt(SEInvalidParamFmt, ['aInitialCount']);
   FLimit := aLimit;
+  FInitialCount := aInitialCount;
   FCounter := aInitialCount;
   FQueue.EnsureCapacity(DEFAULT_CONTAINER_CAPACITY);
   System.InitCriticalSection(FLock);
 end;
 
-destructor TSemaphore.Destroy;
-var
-  e: PRtlEvent;
-begin
-  System.DoneCriticalSection(FLock);
-  while FQueue.TryDequeue(e) do
-    begin
-      System.RTLEventSetEvent(e);
-      System.RTLEventDestroy(e);
-    end;
-  inherited;
-end;
-
-procedure TSemaphore.Wait;
+procedure TSemaphore.WaitFor;
 var
   e: PRTLEvent;
-  WaitNeeded: Boolean;
+  MustWait: Boolean;
 begin
   System.EnterCriticalSection(FLock);
   try
     Dec(FCounter);
-    WaitNeeded := Counter < 0;
-    if WaitNeeded then
+    MustWait := Counter < 0;
+    if MustWait then
       FQueue.Enqueue(CreateEvent(e));
   finally
     System.LeaveCriticalSection(FLock);
   end;
-  if WaitNeeded then
-    WaitForEvent(e);
+  if MustWait then
+    WaitForThenFree(e);
 end;
 
 function TSemaphore.TryWait: Boolean;
 begin
-  System.EnterCriticalSection(FLock);
+  if System.TryEnterCriticalSection(FLock) = 0 then exit(False);
   try
-    if FCounter > 0 then
-      begin
-        Dec(FCounter);
-        exit(True);
-      end;
-    Result := False;
+    if Counter < 1 then exit(False);
+    Dec(FCounter);
+    Result := True;
   finally
     System.LeaveCriticalSection(FLock);
   end;
 end;
 
-function TSemaphore.Signal(aCount: Integer): Integer;
+function TSemaphore.Post(aCount: Integer): Integer;
 var
   I: Integer;
 begin
   System.EnterCriticalSection(FLock);
   try
-    Result := Math.Max(Math.Min(aCount, FLimit - FCounter), 0);
+    Result := Math.Max(Math.Min(aCount, Limit - Counter), 0);
     if Result = 0 then exit;
     for I := 1 to Math.Min(aCount, FQueue.Count) do
       System.RTLEventSetEvent(FQueue.Dequeue);
@@ -1733,6 +1759,43 @@ begin
   finally
     System.LeaveCriticalSection(FLock);
   end;
+end;
+
+{ TBarrier }
+
+constructor TBarrier.Create(aLimit: Integer);
+begin
+  if aLimit < 2 then
+    raise EArgumentException.CreateFmt(SEInputShouldAtLeastFmt, ['aLimit', 2]);
+  FLimit := aLimit;
+  FQueue.EnsureCapacity(aLimit);
+  System.InitCriticalSection(FLock);
+end;
+
+procedure TBarrier.WaitFor;
+var
+  e: PRTLEvent;
+  MustWait: Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    MustWait := Counter < Limit - 1;
+    if MustWait then
+      begin
+        Inc(FCounter);
+        FQueue.Enqueue(CreateEvent(e));
+      end
+    else
+      begin
+        while FQueue.TryDequeue(e) do
+          System.RTLEventSetEvent(e);
+        FCounter := 0;
+      end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+  if MustWait then
+    WaitForThenFree(e);
 end;
 
 { TGBlockChannel }
