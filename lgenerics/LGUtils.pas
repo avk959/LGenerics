@@ -30,7 +30,6 @@ uses
   SysUtils,
   Math,
   typinfo,
-  {%H-}Rtti,
   LGStrConst;
 
 type
@@ -227,9 +226,6 @@ type
   type
     PValue = ^T;
   private
-  class var
-    CFIsManaged: Boolean;
-  var
     FPtr: PValue;
     FOwnsPtr: Boolean;
     function  GetAllocated: Boolean; inline;
@@ -237,13 +233,11 @@ type
     procedure FreePtr; inline;
     function  GetValue: T; inline;
     procedure SetValue(const aValue: T); inline;
-    class constructor Init;
     class operator Initialize(var u: TGUniqPtr<T>); inline;
     class operator Finalize(var u: TGUniqPtr<T>); inline;
     class operator Copy(constref aSrc: TGUniqPtr<T>; var aDst: TGUniqPtr<T>);
     class operator AddRef(var u: TGUniqPtr<T>); inline;
   public
-    class property IsManaged: Boolean read CFIsManaged;
     class operator Implicit(var u: TGUniqPtr<T>): T; inline;
     class operator Explicit(var u: TGUniqPtr<T>): T; inline;
     procedure Clear;
@@ -262,12 +256,10 @@ type
   private
   type
     TInstance = record
-      RefCount: Integer;
       Value: T;
+      RefCount: Integer;
     end;
     PInstance = ^TInstance;
-  class var
-    CFIsManaged: Boolean;
   var
     FInstance: PInstance;
     function  NewInstance: PInstance;
@@ -278,13 +270,11 @@ type
     function  GetUniqPtr: PValue;
     function  GetValue: T; inline;
     procedure SetValue(const aValue: T); inline;
-    class constructor Init;
     class operator Initialize(var cp: TGCowPtr<T>); inline;
     class operator Finalize(var cp: TGCowPtr<T>); inline;
     class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>);
     class operator AddRef(var cp: TGCowPtr<T>); inline;
   public
-    class property IsManaged: Boolean read CFIsManaged;
     class operator Implicit(var cp: TGCowPtr<T>): T; inline;
     class operator Explicit(var cp: TGCowPtr<T>): T; inline;
     procedure Release;
@@ -313,9 +303,6 @@ type
     end;
     PInstance = ^TInstance;
     PArray    = ^TGCowDynArray<T>;
-
-  class var
-    CFIsManaged: Boolean;
   var
     FInstance: PInstance;
     function  NewInstance: PInstance; inline;
@@ -329,9 +316,8 @@ type
     function  GetPtr: PItem; inline;
     function  GetUniqPtr: PItem;
     procedure SetLen(aValue: SizeInt);
-    procedure SetItem(aIndex: SizeInt; const aValue: T);
+    procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     function  GetHigh: SizeInt; inline;
-    class constructor Init;
     class procedure FillItems(aFrom: PItem; aCount: SizeInt; const aValue: T); static;
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class operator  Initialize(var a: TGCowDynArray<T>); inline;
@@ -370,7 +356,6 @@ type
   private
     function  GetReverseEnumerator: TReverseEnumerator;
   public
-    class property ItemTypeIsManaged: Boolean read CFIsManaged;
     function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse; inline;
     function  IsEmpty: Boolean; inline;
@@ -387,6 +372,87 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
     property  Ptr: PItem read GetPtr;
     property  UniqPtr: PItem read GetUniqPtr;
+  end;
+
+  { TGDynArray dynamic array without ARC, it pretends to be a value type }
+  TGDynArray<T> = record
+  type
+    PItem = ^T;
+  private
+  var
+    FItems: PItem;
+    FLength: SizeInt;
+    procedure FillItems(aFrom, aCount: SizeInt; const aValue: T);
+    procedure ReallocManaged(aNewLen: SizeInt);
+    procedure SetLen(aValue: SizeInt);
+    function  GetItem(aIndex: SizeInt): T; inline;
+    procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
+    function  GetHigh: SizeInt; inline;
+    class function  AllocBuffer(aCount: SizeInt): PItem; static;
+    class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
+    class operator  Initialize(var a: TGDynArray<T>); inline;
+    class operator  Finalize(var a: TGDynArray<T>); inline;
+    class operator  Copy(constref aSrc: TGDynArray<T>; var aDst: TGDynArray<T>);
+    class operator  AddRef(var a: TGDynArray<T>);
+  public
+  type
+    TEnumerator = record
+    private
+      FCurrent,
+      FLast: PItem;
+      function GetCurrent: T; inline;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: T read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FCurrent,
+      FFirst: PItem;
+      function GetCurrent: T; inline;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: T read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FArray: ^TGDynArray<T>;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+    TMutableEnumerator = record
+    private
+      FCurrent,
+      FLast: PItem;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: PItem read FCurrent;
+    end;
+
+    TMutables = record
+    private
+      FArray: ^TGDynArray<T>;
+    public
+      function GetEnumerator: TMutableEnumerator; inline;
+    end;
+
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  Reverse: TReverse; inline;
+    function  Mutables: TMutables; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+  { sets length to aCount and fills array by aCount values aValue }
+    procedure Fill(aCount: SizeInt; constref aValue: T);
+    function  CreateCopy(aFromIndex, aCount: SizeInt): TGDynArray<T>;
+    procedure Clear;
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+    property  Length: SizeInt read FLength write SetLen;
+    property  High: SizeInt read GetHigh;
+    property  Ptr: PItem read FItems;
   end;
 
   TGEnumerator<T> = class abstract
@@ -1526,7 +1592,7 @@ procedure TGUniqPtr<T>.FreePtr;
 begin
   if OwnsPtr then
     begin
-      if IsManaged then
+      if IsManagedType(T) then
         FPtr^ := Default(T);
       System.Dispose(FPtr);
     end;
@@ -1540,11 +1606,6 @@ end;
 procedure TGUniqPtr<T>.SetValue(const aValue: T);
 begin
   Ptr^ := aValue;
-end;
-
-class constructor TGUniqPtr<T>.Init;
-begin
-  CFIsManaged := Rtti.IsManaged(TypeInfo(T));
 end;
 
 class operator TGUniqPtr<T>.Initialize(var u: TGUniqPtr<T>);
@@ -1616,7 +1677,7 @@ procedure TGCowPtr<T>.ReleaseInstance;
 begin
   if InterlockedDecrement(FInstance^.RefCount) = 0 then
     begin
-      if IsManaged then
+      if IsManagedType(T) then
         FInstance^.Value := Default(T);
       System.Dispose(FInstance);
     end;
@@ -1658,11 +1719,6 @@ begin
   if (FInstance <> nil) and (FInstance^.RefCount > 1) then
     ReleaseInstance;
   GetPtr^ := aValue;
-end;
-
-class constructor TGCowPtr<T>.Init;
-begin
-  CFIsManaged := Rtti.IsManaged(TypeInfo(T));
 end;
 
 class operator TGCowPtr<T>.Initialize(var cp: TGCowPtr<T>);
@@ -1783,7 +1839,7 @@ begin
   if FInstance^.FLength > 0 then
     begin
       FInstance^.FItems := System.GetMem(FInstance^.FLength * SizeOf(T));
-      if ItemTypeIsManaged then
+      if IsManagedType(T) then
         begin
           System.FillChar(FInstance^.FItems^, FInstance^.FLength * SizeOf(T), 0);
           CopyItems(OldInstance^.FItems, FInstance^.FItems, FInstance^.FLength);
@@ -1804,7 +1860,7 @@ begin
   if FInstance^.FLength > 0 then
     begin
       FInstance^.FItems := System.GetMem(FInstance^.FLength * SizeOf(T));
-      if ItemTypeIsManaged then
+      if IsManagedType(T) then
         System.FillChar(FInstance^.FItems^, FInstance^.FLength * SizeOf(T), 0);
       CopyItems(OldInstance^.FItems, FInstance^.FItems, Math.Min(FInstance^.FLength, OldInstance^.FLength));
     end;
@@ -1813,7 +1869,7 @@ end;
 
 procedure TGCowDynArray<T>.Realloc(aNewLen: SizeInt);
 begin
-  if ItemTypeIsManaged then
+  if IsManagedType(T) then
     ReallocManaged(aNewLen)
   else
     FInstance^.FItems := System.ReallocMem(FInstance^.FItems, aNewLen * SizeOf(T));
@@ -1863,10 +1919,14 @@ end;
 
 function TGCowDynArray<T>.GetItem(aIndex: SizeInt): T;
 begin
+{$IFOPT R+}
   if (FInstance <> nil) and (SizeUInt(aIndex) < SizeUInt(FInstance^.FLength)) then
     Result := FInstance^.FItems[aIndex]
   else
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+{$ELSE}
+  Result := FInstance^.FItems[aIndex];
+{$ENDIF}
 end;
 
 function TGCowDynArray<T>.GetPtr: PItem;
@@ -1911,6 +1971,7 @@ end;
 
 procedure TGCowDynArray<T>.SetItem(aIndex: SizeInt; const aValue: T);
 begin
+{$IFOPT R+}
   if (FInstance <> nil) and (SizeUInt(aIndex) < SizeUInt(FInstance^.FLength)) then
     begin
       if FInstance^.FRefCount > 1 then
@@ -1919,6 +1980,11 @@ begin
     end
   else
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+{$ELSE}
+  if FInstance^.FRefCount > 1 then
+    UniqInstance;
+  FInstance^.FItems[aIndex] := aValue;
+{$ENDIF}
 end;
 
 function TGCowDynArray<T>.GetHigh: SizeInt;
@@ -1926,11 +1992,6 @@ begin
   if FInstance <> nil then
     exit(Pred(FInstance^.FLength));
   Result := NULL_INDEX;
-end;
-
-class constructor TGCowDynArray<T>.Init;
-begin
-  CFIsManaged := IsManaged(TypeInfo(T));
 end;
 
 class procedure TGCowDynArray<T>.FillItems(aFrom: PItem; aCount: SizeInt; const aValue: T);
@@ -2065,11 +2126,12 @@ end;
 
 procedure TGCowDynArray<T>.Release;
 begin
-  if (FInstance <> nil) and (InterlockedDecrement(FInstance^.FRefCount) = 0) then
+  if FInstance = nil then exit;
+  if InterlockedDecrement(FInstance^.FRefCount) = 0 then
     begin
       if FInstance^.FItems <> nil then
         begin
-          if ItemTypeIsManaged then
+          if IsManagedType(T) then
             FillItems(FInstance^.FItems, FInstance^.FLength, Default(T));
           System.FreeMem(FInstance^.FItems);
         end;
@@ -2102,10 +2164,350 @@ begin
     exit;
   aCount := Math.Min(aCount, Length - aFromIndex);
   Result.Length := aCount;
-  if ItemTypeIsManaged then
+  if IsManagedType(T) then
     CopyItems(FInstance^.FItems + aFromIndex, Result.FInstance^.FItems, aCount)
   else
     System.Move((FInstance^.FItems + aFromIndex)^, Result.FInstance^.FItems^, aCount * SizeOf(T));
+end;
+
+{ TGDynArray<T>.TEnumerator }
+
+function TGDynArray<T>.TEnumerator.GetCurrent: T;
+begin
+  Result := FCurrent^;
+end;
+
+function TGDynArray<T>.TEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent < FLast then
+    begin
+      Inc(FCurrent);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGDynArray<T>.TReverseEnumerator }
+
+function TGDynArray<T>.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FCurrent^;
+end;
+
+function TGDynArray<T>.TReverseEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent > FFirst then
+    begin
+      Dec(FCurrent);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGDynArray<T>.TReverse }
+
+function TGDynArray<T>.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  with FArray^ do
+    if FLength > 0 then
+      begin
+        Result.FFirst := FItems;
+        Result.FCurrent := FItems + FLength;
+      end
+    else
+      begin
+        Result.FCurrent := nil;
+        Result.FFirst := nil;
+      end;
+end;
+
+{ TGDynArray<T>.TMutableEnumerator }
+
+function TGDynArray<T>.TMutableEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent < FLast then
+    begin
+      Inc(FCurrent);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGDynArray<T>.TMutables }
+
+function TGDynArray<T>.TMutables.GetEnumerator: TMutableEnumerator;
+begin
+  with FArray^ do
+    if FLength > 0 then
+      begin
+        Result.FCurrent := FItems - 1;
+        Result.FLast := FItems + FLength - 1;
+      end
+    else
+      begin
+        Result.FCurrent := nil;
+        Result.FLast := nil;
+      end;
+end;
+
+{ TGDynArray }
+
+procedure TGDynArray<T>.FillItems(aFrom, aCount: SizeInt; const aValue: T);
+begin
+  while aCount >= 4 do
+    begin
+      FItems[aFrom  ] := aValue;
+      FItems[aFrom+1] := aValue;
+      FItems[aFrom+2] := aValue;
+      FItems[aFrom+3] := aValue;
+      aFrom += 4;
+      aCount -= 4;
+    end;
+  case aCount of
+    1: FItems[aFrom] := aValue;
+    2:
+      begin
+        FItems[aFrom  ] := aValue;
+        FItems[aFrom+1] := aValue;
+      end;
+    3:
+      begin
+        FItems[aFrom  ] := aValue;
+        FItems[aFrom+1] := aValue;
+        FItems[aFrom+2] := aValue;
+      end;
+  else
+  end;
+end;
+
+procedure TGDynArray<T>.ReallocManaged(aNewLen: SizeInt);
+var
+  Tmp: PItem;
+begin
+  Tmp := System.GetMem(aNewLen * SizeOf(T));
+  if aNewLen > Length then
+    begin
+      if Length <> 0 then
+        begin
+          System.Move(FItems^, Tmp^, Length * SizeOf(T));
+          System.FillChar(FItems^, Length * SizeOf(T), 0);
+        end;
+      System.FillChar(Tmp[Length], (aNewLen - Length) * SizeOf(T), 0);
+    end
+  else  //aNewLen < Length
+    begin
+      System.Move(FItems^, Tmp^, aNewLen * SizeOf(T));
+      System.FillChar(FItems^, aNewLen * SizeOf(T), 0);
+      FillItems(aNewLen, Length - aNewLen, Default(T));
+    end;
+  System.FreeMem(FItems);
+  FItems := Tmp;
+end;
+
+procedure TGDynArray<T>.SetLen(aValue: SizeInt);
+begin
+  if aValue <> FLength then
+    begin
+      if aValue = 0 then
+        begin
+          Clear;
+          exit;
+        end;
+      if aValue > 0 then
+        begin
+          if IsManagedType(T) then
+            ReallocManaged(aValue)
+          else
+            FItems := System.ReallocMem(FItems, aValue * SizeOf(T));
+          FLength := aValue;
+        end
+      else
+        raise EInvalidOpException.Create(SECantAcceptNegLen);
+    end;
+end;
+
+function TGDynArray<T>.GetItem(aIndex: SizeInt): T;
+begin
+{$IFOPT R+}
+  if SizeUInt(aIndex) < SizeUInt(Length) then
+    Result := FItems[aIndex]
+  else
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+{$ELSE}
+   Result := FItems[aIndex];
+{$ENDIF}
+end;
+
+procedure TGDynArray<T>.SetItem(aIndex: SizeInt; const aValue: T);
+begin
+{$IFOPT R+}
+  if SizeUInt(aIndex) < SizeUInt(Length) then
+    FItems[aIndex] := aValue
+  else
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+{$ELSE}
+  FItems[aIndex] := aValue;
+{$ENDIF}
+end;
+
+function TGDynArray<T>.GetHigh: SizeInt;
+begin
+  Result := Pred(FLength);
+end;
+
+class function TGDynArray<T>.AllocBuffer(aCount: SizeInt): PItem;
+begin
+  if aCount < 1 then
+    exit(nil);
+  Result := GetMem(aCount);
+  if IsManagedType(T) then
+    FillChar(Result^, aCount * SizeOf(T), 0);
+end;
+
+class procedure TGDynArray<T>.CopyItems(aSrc, aDst: PItem; aCount: SizeInt);
+var
+  I: SizeInt;
+begin
+  I := 0;
+  while I <= aCount - 4 do
+    begin
+      aDst[I  ] := aSrc[I  ];
+      aDst[I+1] := aSrc[I+1];
+      aDst[I+2] := aSrc[I+2];
+      aDst[I+3] := aSrc[I+3];
+      I += 4;
+    end;
+  case aCount - I of
+    1: aDst[I] := aSrc[I];
+    2:
+      begin
+        aDst[I  ] := aSrc[I  ];
+        aDst[I+1] := aSrc[I+1];
+      end;
+    3:
+      begin
+        aDst[I  ] := aSrc[I  ];
+        aDst[I+1] := aSrc[I+1];
+        aDst[I+2] := aSrc[I+2];
+      end;
+  else
+  end;
+end;
+
+class operator TGDynArray<T>.Initialize(var a: TGDynArray<T>);
+begin
+  a.FItems := nil;
+  a.FLength := 0;
+end;
+
+class operator TGDynArray<T>.Finalize(var a: TGDynArray<T>);
+begin
+  a.Clear;
+end;
+
+class operator TGDynArray<T>.Copy(constref aSrc: TGDynArray<T>; var aDst: TGDynArray<T>);
+begin
+  if @aSrc <> @aDst then
+    begin
+      aDst.Clear;
+      if aSrc.Length <> 0 then
+        begin
+          aDst.Length := aSrc.Length;
+          if IsManagedType(T) then
+            CopyItems(aSrc.FItems, aDst.FItems, aSrc.Length)
+          else
+            System.Move(aSrc.FItems^, aDst.FItems^, aSrc.Length * SizeOf(T));
+        end;
+    end;
+end;
+
+function TGDynArray<T>.GetEnumerator: TEnumerator;
+begin
+  if Length > 0 then
+    begin
+      Result.FCurrent := FItems - 1;
+      Result.FLast := FItems + FLength - 1;
+    end
+  else
+    begin
+      Result.FCurrent := nil;
+      Result.FLast := nil;
+    end;
+end;
+
+function TGDynArray<T>.Reverse: TReverse;
+begin
+  Result.FArray := @Self;
+end;
+
+function TGDynArray<T>.Mutables: TMutables;
+begin
+  Result.FArray := @Self;
+end;
+
+function TGDynArray<T>.IsEmpty: Boolean;
+begin
+  Result := Length = 0;
+end;
+
+function TGDynArray<T>.NonEmpty: Boolean;
+begin
+  Result := Length <> 0;
+end;
+
+class operator TGDynArray<T>.AddRef(var a: TGDynArray<T>);
+var
+  Tmp: PItem;
+begin
+  if a.NonEmpty then
+    begin
+      Tmp := AllocBuffer(a.Length);
+      if IsManagedType(T) then
+        CopyItems(a.FItems, Tmp, a.Length)
+      else
+        System.Move(a.FItems^, Tmp^, a.Length * SizeOf(T));
+      a.FItems := Tmp;
+    end;
+end;
+
+procedure TGDynArray<T>.Fill(aCount: SizeInt; constref aValue: T);
+begin
+  Clear;
+  if aCount < 1 then
+    exit;
+  Length := aCount;
+  FillItems(0, Length, aValue);
+end;
+
+function TGDynArray<T>.CreateCopy(aFromIndex, aCount: SizeInt): TGDynArray<T>;
+var
+  Tmp: PItem;
+begin
+  if aFromIndex < 0 then
+    aFromIndex := 0;
+  if (aFromIndex >= Length) or (aCount < 1) then
+    begin
+      Result.Clear;
+      exit;
+    end;
+  aCount := Math.Min(aCount, Length - aFromIndex);
+  Result.Length := aCount;
+  if IsManagedType(T) then
+    CopyItems(FItems + aFromIndex, Result.FItems, aCount)
+  else
+    System.Move((FItems + aFromIndex)^, Result.FItems^, aCount * SizeOf(T));
+end;
+
+procedure TGDynArray<T>.Clear;
+begin
+  if Length > 0 then
+    begin
+      if IsManagedType(T) then
+        FillItems(0, Length, Default(T));
+      FreeMem(FItems);
+      FItems := nil;
+      FLength := 0;
+    end;
 end;
 
 { TGMapEntry }
