@@ -333,6 +333,35 @@ type
     procedure PassByValue;
   end;
 
+  { TDynArrayTest }
+
+  TDynArrayTest = class(TTestCase)
+  private
+  type
+    TIntArray  = specialize TGDynArray<Integer>;
+    TStrArray  = specialize TGDynArray<string>;
+    TIntHelper = specialize TGOrdinalArrayHelper<Integer>;
+  published
+    procedure LengthInt;
+    procedure LengthStr;
+    procedure HighInt;
+    procedure HighStr;
+    procedure EnumeratorInt;
+    procedure EnumeratorStr;
+    procedure ReverseInt;
+    procedure ReverseStr;
+    procedure MutablesInt;
+    procedure MutablesStr;
+    procedure AssignInt;
+    procedure AssignStr;
+    procedure FillInt;
+    procedure FillStr;
+    procedure CopyInt;
+    procedure CopyInt2DynArray;
+    procedure SortInt;
+    procedure PassByValue;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -1730,8 +1759,6 @@ var
   NameRec: specialize TGUniqPtr<TNameRec>;
   Rec: specialize TGUniqPtr<TRec>;
 begin
-  AssertTrue(NameRec.IsManaged);
-  AssertFalse(Rec.IsManaged);
   AssertFalse({%H-}NameRec.Allocated);
   AssertFalse({%H-}Rec.Allocated);
   NameRec.Ptr^.Name := 'New name';
@@ -2211,7 +2238,7 @@ var
   I, J: Integer;
 begin
   J := 0;
-  for I in a do
+  for I in {%H-}a do
     Inc(J);
   AssertTrue(J = 0);
   a.Length := 55;
@@ -2232,7 +2259,7 @@ var
   s: string;
 begin
   I := 0;
-  for s in a do
+  for s in {%H-}a do
     Inc(I);
   AssertTrue(I = 0);
   a.Length := 55;
@@ -2275,7 +2302,7 @@ var
   s: string;
 begin
   I := 0;
-  for s in a.Reverse do
+  for s in {%H-}a.Reverse do
     Inc(I);
   AssertTrue(I = 0);
   a.Length := 55;
@@ -2466,6 +2493,344 @@ begin
   AssertTrue(a.Length = 50);
 end;
 
+{ TDynArrayTest }
+
+procedure TDynArrayTest.LengthInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.Length = 0);
+  AssertTrue(a.IsEmpty);
+  AssertFalse(a.NonEmpty);
+  a.Length := 35;
+  AssertTrue(a.Length = 35);
+  AssertFalse(a.IsEmpty);
+  AssertTrue(a.NonEmpty);
+  for I := 0 to 34 do
+    a[I] := I;
+  for I := 0 to 34 do
+    AssertTrue(a[I] = I);
+  a.Length := 0;
+  AssertTrue(a.Length = 0);
+end;
+
+procedure TDynArrayTest.LengthStr;
+var
+  a: TStrArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.Length = 0);
+  AssertTrue(a.IsEmpty);
+  AssertFalse(a.NonEmpty);
+  a.Length := 35;
+  AssertTrue(a.Length = 35);
+  AssertFalse(a.IsEmpty);
+  AssertTrue(a.NonEmpty);
+  for I := 0 to 34 do
+    AssertTrue(a[I] = '');
+  for I := 0 to 34 do
+    a[I] := 'str_' + I.ToString;
+  for I := 0 to 34 do
+    AssertTrue(a[I] = 'str_' + I.ToString);
+  a.Length := 0;
+  AssertTrue(a.Length = 0);
+end;
+
+procedure TDynArrayTest.HighInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.High = -1);
+  a.Length := 25;
+  AssertTrue(a.High = 24);
+  for I := 0 to a.High do
+    a[I] := I;
+  for I := 0 to a.High do
+    AssertTrue(a[I] = I);
+  a.Length := 0;
+  AssertTrue(a.High = -1);
+end;
+
+procedure TDynArrayTest.HighStr;
+var
+  a: TStrArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.High = -1);
+  a.Length := 25;
+  AssertTrue(a.High = 24);
+  for I := 0 to a.High do
+    a[I] := 'str_' + I.ToString;
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 'str_' + I.ToString);
+  a.Length := 0;
+  AssertTrue(a.High = -1);
+end;
+
+procedure TDynArrayTest.EnumeratorInt;
+var
+  a: TIntArray;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in {%H-}a do
+    Inc(J);
+  AssertTrue(J = 0);
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := I;
+  for I in a do
+    begin
+      AssertTrue(I = J);
+      Inc(J);
+    end;
+  AssertTrue(J = 55);
+end;
+
+procedure TDynArrayTest.EnumeratorStr;
+var
+  a: TStrArray;
+  I: Integer;
+  s: string;
+begin
+  I := 0;
+  for s in {%H-}a do
+    Inc(I);
+  AssertTrue(I = 0);
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := 'str_' + I.ToString;
+  I := 0;
+  for s in a do
+    begin
+      AssertTrue(s = 'str_' + I.ToString);
+      Inc(I);
+    end;
+  AssertTrue(I = 55);
+end;
+
+procedure TDynArrayTest.ReverseInt;
+var
+  a: TIntArray;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in {%H-}a.Reverse do
+    Inc(J);
+  AssertTrue(J = 0);
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := I;
+  J := 55;
+  for I in a.Reverse do
+    begin
+      Dec(J);
+      AssertTrue(I = J);
+    end;
+  AssertTrue(J = 0);
+end;
+
+procedure TDynArrayTest.ReverseStr;
+var
+  a: TStrArray;
+  I: Integer;
+  s: string;
+begin
+  I := 0;
+  for s in {%H-}a.Reverse do
+    Inc(I);
+  AssertTrue(I = 0);
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := 'str_' + I.ToString;
+  I := 55;
+  for s in a.Reverse do
+    begin
+      Dec(I);
+      AssertTrue(s = 'str_' + I.ToString);
+    end;
+  AssertTrue(I = 0);
+end;
+
+procedure TDynArrayTest.MutablesInt;
+var
+  a: TIntArray;
+  I: Integer;
+  p: PInteger;
+begin
+  I := 0;
+  for p in {%H-}a.Mutables do
+    Inc(I);
+  AssertTrue(I = 0);
+  a.Length := 55;
+  for p in a.Mutables do
+    begin
+      p^ := I;
+      Inc(I);
+    end;
+  AssertTrue(I = 55);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = I);
+end;
+
+procedure TDynArrayTest.MutablesStr;
+var
+  a: TStrArray;
+  I: Integer;
+  p: ^string;
+begin
+  I := 0;
+  for p in {%H-}a.Mutables do
+    Inc(I);
+  AssertTrue(I = 0);
+  a.Length := 55;
+  for p in a.Mutables do
+    begin
+      p^ := 'str_' + I.ToString;
+      Inc(I);
+    end;
+  AssertTrue(I = 55);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 'str_' + I.ToString);
+end;
+
+procedure TDynArrayTest.AssignInt;
+var
+  a1, a2: TIntArray;
+  I: Integer;
+begin
+  a1.Length := 30;
+  for I := 0 to a1.High do
+    a1[I] := I;
+  a2 := a1;
+  AssertTrue(a2.Length = 30);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = I);
+  a1[0] := 10;
+  AssertTrue(a2[0] = 0);
+  a2.Clear;
+  AssertTrue(a1.Length = 30);
+end;
+
+procedure TDynArrayTest.AssignStr;
+var
+  a1, a2: TStrArray;
+  I: Integer;
+begin
+  a1.Length := 30;
+  for I := 0 to a1.High do
+    a1[I] := 'str_' + I.ToString;
+  a2 := a1;
+  AssertTrue(a2.Length = 30);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = 'str_' + I.ToString);
+  a1[0] := a1[0] + '_new';
+  AssertTrue(a2[0] = 'str_0');
+  a2.Clear;
+  AssertTrue(a1.Length = 30);
+end;
+
+procedure TDynArrayTest.FillInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  a.Fill(50, 100);
+  AssertTrue(a.Length = 50);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 100);
+end;
+
+procedure TDynArrayTest.FillStr;
+var
+  a: TStrArray;
+  I: Integer;
+begin
+  a.Fill(50, 'test');
+  AssertTrue(a.Length = 50);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 'test');
+end;
+
+procedure TDynArrayTest.CopyInt;
+var
+  a, ac: TIntArray;
+  I: Integer;
+begin
+  a.Length := 45;
+  for I := 0 to a.High do
+    a[I] := I;
+  ac := a.CreateCopy(0, a.Length);
+  AssertTrue(ac.Length = a.Length);
+  for I := 0 to ac.High do
+    AssertTrue(ac[I] = I);
+  ac := ac.CreateCopy(10, a.Length);
+  AssertTrue(ac.Length = a.Length - 10);
+  for I := 0 to ac.High do
+    AssertTrue(ac[I] = I + 10);
+end;
+
+procedure TDynArrayTest.CopyInt2DynArray;
+var
+  a: TIntArray;
+  ac: array of Integer;
+  I: Integer;
+begin
+  a.Length := 45;
+  for I := 0 to a.High do
+    a[I] := I;
+  ac := TIntHelper.CreateCopy(a.Ptr[0..a.High]);
+  AssertTrue(Length(ac) = a.Length);
+  for I := 0 to High(ac) do
+    AssertTrue(ac[I] = I);
+  ac := TIntHelper.CreateCopy(a.Ptr[10..a.High]);
+  AssertTrue(Length(ac) = a.Length - 10);
+  for I := 10 to a.High do
+    AssertTrue(ac[I - 10] = I);
+end;
+
+procedure TDynArrayTest.SortInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  a.Length := 245;
+  for I := 0 to a.High do
+    a[I] := I;
+  TIntHelper.RandomShuffle(a.Ptr[0..a.High]);
+  AssertTrue(a.Length = 245);
+  AssertFalse(TIntHelper.IsStrictAscending(a.Ptr[0..a.High]));
+  TIntHelper.Sort(a.Ptr[0..a.High]);
+  for I := 0 to a.High do
+    a[I] := I;
+end;
+
+procedure TDynArrayTest.PassByValue;
+  procedure Test(a: TIntArray; aLen: SizeInt);
+  var
+    I: Integer;
+  begin
+    AssertTrue(a.Length = aLen);
+    a.Length := a.Length + 5;
+    for I := 0 to a.High do
+      a[I] := I + aLen;
+  end;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  a.Length := 50;
+  for I := 0 to a.High do
+    a[I] := 50 - I;
+  Test(a, 50);
+  AssertTrue(a.Length = 50);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 50 - I);
+end;
+
+
 initialization
 
   RegisterTest(TCommonFunctionTest);
@@ -2477,6 +2842,7 @@ initialization
   RegisterTest(TUniqPtrTest);
   RegisterTest(TCowPtrTest);
   RegisterTest(TCowDynArrayTest);
+  RegisterTest(TDynArrayTest);
 
 end.
 
