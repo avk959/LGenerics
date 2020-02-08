@@ -2312,11 +2312,8 @@ begin
     begin
       if aNewLen > OldLen then
         begin
-          if OldLen <> 0 then
-            begin
-              System.Move(FItems^, Tmp^, OldLen * SizeOf(T));
-              System.FillChar(FItems^, OldLen * SizeOf(T), 0);
-            end;
+          System.Move(FItems^, Tmp^, OldLen * SizeOf(T));
+          System.FillChar(FItems^, OldLen * SizeOf(T), 0);
           System.FillChar(Tmp[OldLen], (aNewLen - OldLen) * SizeOf(T), 0);
         end
       else  //aNewLen < OldLen
@@ -2360,10 +2357,17 @@ begin
         end;
       if aValue > 0 then
         begin
-          if IsManagedType(T) then
-            ReallocManaged(aValue)
+          if FItems = nil then
+            begin
+              FItems := System.GetMem(aValue * SizeOf(T));
+              if IsManagedType(T) then
+                System.FillChar(FItems^, aValue * SizeOf(T), 0);
+            end
           else
-            Realloc(aValue);
+            if IsManagedType(T) then
+              ReallocManaged(aValue)
+            else
+              Realloc(aValue);
           FLength := aValue or OWN_FLAG;
         end
       else
