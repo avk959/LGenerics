@@ -448,10 +448,12 @@ type
     function  CreateEvent(out e: PRTLEvent): PRTLEvent; inline;
     procedure WaitForThenFree(e: PRTLEvent); inline;
     procedure SignalThenFree(e: PRTLEvent); inline;
+    function  GetWaitCount: Integer;
   public
     destructor Destroy; override;
     property  Counter: Integer read FCounter;
     property  Limit: Integer read FLimit;
+    property  WaitCount: Integer read GetWaitCount;
   end;
 
   { TSemaphore }
@@ -459,7 +461,6 @@ type
   private
     FInitialCount: Integer;
     function GetUsed: Boolean;
-    function GetWaitCount: Integer;
   public
   { sets Counter to aInitialCount, i.e. if aInitialCount = 0 then after creation the semaphore is locked;
     raises EArgumentException if aLimit < 1 or aInitialCount < 0 or aInitialCount > aLimit }
@@ -470,7 +471,6 @@ type
   { returns the value of the increment of the counter }
     function  Post(aCount: Integer = 1): Integer;
     property  Used: Boolean read GetUsed;
-    property  WaitCount: Integer read GetWaitCount;
     property  InitialCount: Integer read FInitialCount;
   end;
 
@@ -479,6 +479,7 @@ type
   public
     constructor Create(aLimit: Integer);
     procedure WaitFor;
+    function  Signal: Integer;
   end;
 
 
@@ -1672,6 +1673,16 @@ begin
   System.RTLEventDestroy(e);
 end;
 
+function TSemObj.GetWaitCount: Integer;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := Math.Max(-Counter, 0);
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
 destructor TSemObj.Destroy;
 begin
   System.DoneCriticalSection(FLock);
@@ -1687,16 +1698,6 @@ begin
   System.EnterCriticalSection(FLock);
   try
     Result := Counter <> InitialCount;
-  finally
-    System.LeaveCriticalSection(FLock);
-  end;
-end;
-
-function TSemaphore.GetWaitCount: Integer;
-begin
-  System.EnterCriticalSection(FLock);
-  try
-    Result := Math.Max(-Counter, 0);
   finally
     System.LeaveCriticalSection(FLock);
   end;
@@ -1796,6 +1797,19 @@ begin
   end;
   if MustWait then
     WaitForThenFree(e);
+end;
+
+function TBarrier.Signal: Integer;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := FCounter;
+    while FQueue.NonEmpty do
+      SignalThenFree(FQueue.Dequeue);
+    FCounter := 0;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
 end;
 
 { TGBlockChannel }
