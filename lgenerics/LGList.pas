@@ -821,8 +821,10 @@ type
     function  AddUniq(constref e: TEntry): Boolean; inline;
     function  AddAllUniq(constref a: array of TEntry): SizeInt;
     function  AddAllUniq(e: IEntryEnumerable): SizeInt;
-    function  AddOrUpdate(constref e: TEntry; out aIndex: SizeInt): Boolean;
-    function  AddOrUpdate(constref e: TEntry): Boolean;
+    function  AddOrUpdate(constref e: TEntry; out aIndex: SizeInt): Boolean; inline;
+    function  AddOrUpdate(constref e: TEntry): Boolean; inline;
+    function  AddAllOrUpdate(constref a: array of TEntry): SizeInt;
+    function  AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; constref e: TEntry);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aKey: TKey): Boolean; inline;
@@ -3723,12 +3725,12 @@ end;
 
 function TGLiteHashList.AddAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
   Result := System.Length(a);
   EnsureCapacity(Count + Result);
-  for v in a do
-    DoAdd(v);
+  for I := 0 to System.High(a) do
+    DoAdd(a[I]);
 end;
 
 function TGLiteHashList.AddAll(e: IEnumerable): SizeInt;
@@ -3750,11 +3752,11 @@ end;
 
 function TGLiteHashList.AddAllUniq(constref a: array of T): SizeInt;
 var
-  v: T;
+  I, Dummy: SizeInt;
 begin
   Result := Count;
-  for v in a do
-    AddUniq(v);
+  for I := 0 to System.High(a) do
+    FindOrAdd(a[I], Dummy);
   Result := Count - Result;
 end;
 
@@ -4220,12 +4222,12 @@ end;
 
 function TGLiteHashList2.AddAll(constref a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
   Result := System.Length(a);
   EnsureCapacity(Count + Result);
-  for e in a do
-    DoAdd(e);
+  for I := 0 to System.High(a) do
+    DoAdd(a[I]);
 end;
 
 function TGLiteHashList2.AddAll(e: IEntryEnumerable): SizeInt;
@@ -4240,21 +4242,21 @@ end;
 
 function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
 var
-  I: SizeInt;
+  Dummy: SizeInt;
   p: PEntry;
 begin
-  Result := not FindOrAdd(e.Key, p, I);
+  Result := not FindOrAdd(e.Key, p, Dummy);
   if Result then
     p^ := e;
 end;
 
 function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
   Result := Count;
-  for e in a do
-    AddUniq(e);
+  for I := 0 to System.High(a) do
+    AddUniq(a[I]);
   Result := Count - Result;
 end;
 
@@ -4278,11 +4280,35 @@ end;
 
 function TGLiteHashList2.AddOrUpdate(constref e: TEntry): Boolean;
 var
-  I: SizeInt;
+  Dummy: SizeInt;
   p: PEntry;
 begin
-  Result := not FindOrAdd(e.Key, p, I);
+  Result := not FindOrAdd(e.Key, p, Dummy);
   p^ := e;
+end;
+
+function TGLiteHashList2.AddAllOrUpdate(constref a: array of TEntry): SizeInt;
+var
+  I, Dummy: SizeInt;
+  p: PEntry;
+begin
+  Result := Count;
+  for I := 0 to System.High(a) do
+    begin
+      FindOrAdd(a[I].Key, p, Dummy);
+      p^ := a[I];
+    end;
+  Result := Count - Result;
+end;
+
+function TGLiteHashList2.AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
+var
+  Entry: TEntry;
+begin
+  Result := Count;
+  for Entry in e do
+    AddOrUpdate(Entry);
+  Result := Count - Result;
 end;
 
 procedure TGLiteHashList2.Insert(aIndex: SizeInt; constref e: TEntry);
