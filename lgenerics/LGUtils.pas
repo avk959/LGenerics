@@ -94,8 +94,9 @@ type
     class operator Initialize(var o: TGOptional<T>); inline;
   public
     class operator Implicit(constref aValue: T): TGOptional<T>; inline;
-    class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
-    class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
+    { For reasons that are still unknown, these operators cause problems in some cases }
+    //class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
+    //class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
     procedure Assign(constref aValue: T);
     function  OrElseDefault: T; inline;
     function  OrElse(constref aValue: T): T; inline;
@@ -1171,15 +1172,15 @@ begin
   Result.Assign(aValue);
 end;
 
-class operator TGOptional<T>.Implicit(constref aOpt: TGOptional<T>): T;
-begin
-  Result := aOpt.Value;
-end;
+//class operator TGOptional<T>.Implicit(constref aOpt: TGOptional<T>): T;
+//begin
+//  Result := aOpt.Value;
+//end;
 
-class operator TGOptional<T>.Explicit(constref aOpt: TGOptional<T>): T;
-begin
-  Result := aOpt.Value;
-end;
+//class operator TGOptional<T>.Explicit(constref aOpt: TGOptional<T>): T;
+//begin
+//  Result := aOpt.Value;
+//end;
 
 procedure TGOptional<T>.Assign(constref aValue: T);
 begin
