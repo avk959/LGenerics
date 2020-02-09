@@ -44,7 +44,6 @@ type
   generic TGBaseSortedList<T, TCmpRel> = class(specialize TGAbstractCollection<T>)
   protected
   type
-    TSortedList = specialize TGBaseSortedList<T, TCmpRel>;
     THelper     = class(specialize TGBaseArrayHelper<T, TCmpRel>);
 
     TEnumerator = class(TContainerEnumerator)
@@ -55,7 +54,7 @@ type
     protected
       function  GetCurrent: T; override;
     public
-      constructor Create(aList: TSortedList);
+      constructor Create(aList: TGBaseSortedList);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -67,7 +66,7 @@ type
       FCount: SizeInt;
       function  GetCurrent: T; override;
     public
-      constructor Create(aList: TSortedList);
+      constructor Create(aList: TGBaseSortedList);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -79,7 +78,7 @@ type
       FLast: SizeInt;
       function  GetCurrent: T; override;
     public
-      constructor Create(aList: TSortedList; aLastIndex: SizeInt); overload;
+      constructor Create(aList: TGBaseSortedList; aLastIndex: SizeInt); overload;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -92,25 +91,23 @@ type
       FLast: SizeInt;
       function  GetCurrent: T; override;
     public
-      constructor Create(aList: TSortedList; aStartIndex: SizeInt); overload;
+      constructor Create(aList: TGBaseSortedList; aStartIndex: SizeInt); overload;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
-  TRangeEnumerable = class(TTailEnumerable)
-    constructor Create(aList: TSortedList; aStartIndex, aLastIndex: SizeInt); overload;
-  end;
+    TRangeEnumerable = class(TTailEnumerable)
+      constructor Create(aList: TGBaseSortedList; aStartIndex, aLastIndex: SizeInt); overload;
+    end;
 
-  public
-  type
     TRecEnumerator = record
     private
       FItems: TArray;
       FCurrIndex,
       FLast: SizeInt;
       function  GetCurrent: T; inline;
+      procedure Init(aList: TGBaseSortedList);
     public
-      procedure Init(aList: TSortedList);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -209,10 +206,10 @@ type
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
   { enumerates values that are greater than or equal to aLowBound and strictly TLess than aHighBound(by default)}
     function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
-    function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TSortedList;
-    function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TSortedList;
-    function  SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TSortedList;
-    function  Clone: TSortedList; override;
+    function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGBaseSortedList;
+    function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGBaseSortedList;
+    function  SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseSortedList;
+    function  Clone: TGBaseSortedList; override;
     property  RejectDuplicates: Boolean read FRejectDuplicates write SetRejectDuplicates;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
   end;
@@ -680,11 +677,11 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  Find(constref aValue: T): SizeInt;
-    function  Find(constref aValue: T; aHash: SizeInt): SizeInt;
+    function  Find(constref aValue: T; aHash: SizeInt): SizeInt; inline;
+    function  Find(constref aValue: T): SizeInt; inline;
     function  GetCountOf(constref aValue: T): SizeInt;
-    function  DoAdd(constref aValue: T): SizeInt;
-    function  DoAdd(constref aValue: T; aHash: SizeInt): SizeInt;
+    function  DoAdd(constref aValue: T; aHash: SizeInt): SizeInt; inline;
+    function  DoAdd(constref aValue: T): SizeInt; inline;
     procedure DoInsert(aIndex: SizeInt; constref aValue: T);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
@@ -791,8 +788,8 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  Find(constref aKey: TKey): SizeInt;
-    function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
+    function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt; inline;
+    function  Find(constref aKey: TKey): SizeInt; inline;
     function  GetCountOf(constref aKey: TKey): SizeInt;
     function  DoAdd(constref e: TEntry): SizeInt;
     function  DoAddHash(aHash: SizeInt): SizeInt;
@@ -824,6 +821,8 @@ type
     function  AddUniq(constref e: TEntry): Boolean; inline;
     function  AddAllUniq(constref a: array of TEntry): SizeInt;
     function  AddAllUniq(e: IEntryEnumerable): SizeInt;
+    function  AddOrUpdate(constref e: TEntry; out aIndex: SizeInt): Boolean;
+    function  AddOrUpdate(constref e: TEntry): Boolean;
     procedure Insert(aIndex: SizeInt; constref e: TEntry);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aKey: TKey): Boolean; inline;
@@ -843,7 +842,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGBaseSortedList.TEnumerator.Create(aList: TSortedList);
+constructor TGBaseSortedList.TEnumerator.Create(aList: TGBaseSortedList);
 begin
   inherited Create(aList);
   FItems := aList.FItems;
@@ -869,7 +868,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGBaseSortedList.TReverseEnumerable.Create(aList: TSortedList);
+constructor TGBaseSortedList.TReverseEnumerable.Create(aList: TGBaseSortedList);
 begin
   inherited Create(aList);
   FItems := aList.FItems;
@@ -895,7 +894,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGBaseSortedList.THeadEnumerable.Create(aList: TSortedList; aLastIndex: SizeInt);
+constructor TGBaseSortedList.THeadEnumerable.Create(aList: TGBaseSortedList; aLastIndex: SizeInt);
 begin
   inherited Create(aList);
   FItems := aList.FItems;
@@ -921,7 +920,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGBaseSortedList.TTailEnumerable.Create(aList: TSortedList; aStartIndex: SizeInt);
+constructor TGBaseSortedList.TTailEnumerable.Create(aList: TGBaseSortedList; aStartIndex: SizeInt);
 begin
   inherited Create(aList);
   FItems := aList.FItems;
@@ -943,7 +942,7 @@ end;
 
 { TGBaseSortedList.TRangeEnumerable }
 
-constructor TGBaseSortedList.TRangeEnumerable.Create(aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
+constructor TGBaseSortedList.TRangeEnumerable.Create(aList: TGBaseSortedList; aStartIndex, aLastIndex: SizeInt);
 begin
   inherited Create(aList, aStartIndex);
   FLast := aLastIndex;
@@ -956,7 +955,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-procedure TGBaseSortedList.TRecEnumerator.Init(aList: TSortedList);
+procedure TGBaseSortedList.TRecEnumerator.Init(aList: TGBaseSortedList);
 begin
   FItems := aList.FItems;
   FLast := Pred(aList.ElemCount);
@@ -1079,7 +1078,8 @@ begin
             System.Move(FItems[Succ(aIndex)], FItems[aIndex], sr.InsertIndex - aIndex)
           else
             System.Move(FItems[sr.InsertIndex], FItems[Succ(sr.InsertIndex)], aIndex - sr.InsertIndex);
-          System.FillChar(FItems[sr.InsertIndex], SizeOf(T), 0);
+          if IsManagedType(T) then
+            System.FillChar(FItems[sr.InsertIndex], SizeOf(T), 0);
           FItems[sr.InsertIndex] := aValue;
         end;
     end
@@ -1104,8 +1104,9 @@ begin
         FItems[I] := FItems[J];
     end;
   FCount := Succ(I);
-  for I := ElemCount to Hi do
-    FItems[I] := Default(T);
+  if IsManagedType(T) then
+    for I := ElemCount to Hi do
+      FItems[I] := Default(T);
 end;
 
 procedure TGBaseSortedList.InsertItem(aIndex: SizeInt; constref aValue: T);
@@ -1114,7 +1115,8 @@ begin
   if aIndex < ElemCount then
     begin
       System.Move(FItems[aIndex], FItems[Succ(aIndex)], SizeOf(T) * (ElemCount - aIndex));
-      System.FillChar(FItems[aIndex], SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FItems[aIndex], SizeOf(T), 0);
     end;
   FItems[aIndex] := aValue;
   Inc(FCount);
@@ -1189,9 +1191,10 @@ begin
           Inc(J);
         end;
       FCount := J;
-      for I := ElemCount to Pred(Result) do
-        FItems[I] := Default(T);
-      Result := Result - ElemCount;
+      if IsManagedType(T) then
+        for I := ElemCount to Pred(Result) do
+          FItems[I] := Default(T);
+      Result -= ElemCount;
     end;
 end;
 
@@ -1212,9 +1215,10 @@ begin
           Inc(J);
         end;
       FCount := J;
-      for I := ElemCount to Pred(Result) do
-        FItems[I] := Default(T);
-      Result := Result - ElemCount;
+      if IsManagedType(T) then
+        for I := ElemCount to Pred(Result) do
+          FItems[I] := Default(T);
+      Result -= ElemCount;
     end;
 end;
 
@@ -1235,9 +1239,10 @@ begin
           Inc(J);
         end;
       FCount := J;
-      for I := ElemCount to Pred(Result) do
-        FItems[I] := Default(T);
-      Result := Result - ElemCount;
+      if IsManagedType(T) then
+        for I := ElemCount to Pred(Result) do
+          FItems[I] := Default(T);
+      Result -= ElemCount;
     end;
 end;
 
@@ -1263,8 +1268,9 @@ begin
       Inc(J);
     end;
   FCount := J;
-  for I := ElemCount to Pred(OldCount) do
-    FItems[I] := Default(T);
+  if IsManagedType(T) then
+    for I := ElemCount to Pred(OldCount) do
+      FItems[I] := Default(T);
   Result := h.Final;
 end;
 
@@ -1290,8 +1296,9 @@ begin
       Inc(J);
     end;
   FCount := J;
-  for I := ElemCount to Pred(OldCount) do
-    FItems[I] := Default(T);
+  if IsManagedType(T) then
+    for I := ElemCount to Pred(OldCount) do
+      FItems[I] := Default(T);
   Result := h.Final;
 end;
 
@@ -1317,8 +1324,9 @@ begin
       Inc(J);
     end;
   FCount := J;
-  for I := ElemCount to Pred(OldCount) do
-    FItems[I] := Default(T);
+  if IsManagedType(T) then
+    for I := ElemCount to Pred(OldCount) do
+      FItems[I] := Default(T);
   Result := h.Final;
 end;
 
@@ -1420,10 +1428,12 @@ end;
 function TGBaseSortedList.ExtractItem(aIndex: SizeInt): T;
 begin
   Result := FItems[aIndex];
-  FItems[aIndex] := Default(T);
+  if IsManagedType(T) then
+    FItems[aIndex] := Default(T);
   Dec(FCount);
   System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-  System.FillChar(FItems[ElemCount], SizeOf(T), 0);
+  if IsManagedType(T) then
+    System.FillChar(FItems[ElemCount], SizeOf(T), 0);
 end;
 
 function TGBaseSortedList.DeleteItem(aIndex: SizeInt): T;
@@ -1444,7 +1454,8 @@ begin
         FItems[I] := Default(T);
       FCount -= Result;
       System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-      System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
+      if IsManagedType(T) then
+        System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
     end;
 end;
 
@@ -1692,52 +1703,52 @@ begin
   Result := TRangeEnumerable.Create(Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
-function TGBaseSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TSortedList;
+function TGBaseSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGBaseSortedList;
 var
   HeadCount: SizeInt;
 begin
   HeadCount := Succ(IndexOfFloor(aHighBound, aInclusive));
   if HeadCount = 0 then
-    exit(TSortedList.Create(RejectDuplicates));
-  Result := TSortedList.Create(HeadCount);
+    exit(TGBaseSortedList.Create(RejectDuplicates));
+  Result := TGBaseSortedList.Create(HeadCount);
   Result.RejectDuplicates := RejectDuplicates;
   Result.FCount := HeadCount;
   THelper.CopyItems(@FItems[0], @Result.FItems[0], HeadCount);
 end;
 
-function TGBaseSortedList.TailList(constref aLowBound: T; aInclusive: Boolean): TSortedList;
+function TGBaseSortedList.TailList(constref aLowBound: T; aInclusive: Boolean): TGBaseSortedList;
 var
   StartIdx: SizeInt;
 begin
   StartIdx := IndexOfCeil(ALowBound, aInclusive);
   if StartIdx < 0 then
-    exit(TSortedList.Create(RejectDuplicates));
-  Result := TSortedList.Create(ElemCount - StartIdx);
+    exit(TGBaseSortedList.Create(RejectDuplicates));
+  Result := TGBaseSortedList.Create(ElemCount - StartIdx);
   Result.RejectDuplicates := RejectDuplicates;
   Result.FCount := ElemCount - StartIdx;
   THelper.CopyItems(@FItems[StartIdx], @Result.FItems[0], ElemCount - StartIdx);
 end;
 
-function TGBaseSortedList.SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TSortedList;
+function TGBaseSortedList.SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGBaseSortedList;
 var
   StartIdx, LastIdx, RangeCount: SizeInt;
 begin
   StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
   if StartIdx < 0 then
-    exit(TSortedList.Create(RejectDuplicates));
+    exit(TGBaseSortedList.Create(RejectDuplicates));
   LastIdx := IndexOfFloor(aHighBound, rbHigh in aIncludeBounds);
   if LastIdx < StartIdx then
-    exit(TSortedList.CreateEmpty);
+    exit(TGBaseSortedList.CreateEmpty);
   RangeCount := Succ(LastIdx - StartIdx);
-  Result := TSortedList.Create(RangeCount);
+  Result := TGBaseSortedList.Create(RangeCount);
   Result.RejectDuplicates := RejectDuplicates;
   Result.FCount := RangeCount;
   THelper.CopyItems(@FItems[StartIdx], @Result.FItems[0], RangeCount);
 end;
 
-function TGBaseSortedList.Clone: TSortedList;
+function TGBaseSortedList.Clone: TGBaseSortedList;
 begin
-  Result := TSortedList.CreateEmpty;
+  Result := TGBaseSortedList.CreateEmpty;
   //Result.FItems := System.Copy(FItems, 0, ListCapacity);
   Result.FItems := ToArray; ///////////////
   Result.FCount := ElemCount;
@@ -1803,7 +1814,8 @@ begin
   if aIndex < Count then
     begin
       System.Move(FItems[aIndex], FItems[Succ(aIndex)], SizeOf(T) * (Count - aIndex));
-      System.FillChar(FItems[aIndex], SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FItems[aIndex], SizeOf(T), 0);
     end;
   FItems[aIndex] := aValue;
   Inc(FCount);
@@ -1814,7 +1826,8 @@ begin
   FItems[aIndex] := Default(T);
   Dec(FCount);
   System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(T) * (Count - aIndex));
-  System.FillChar(FItems[Count], SizeOf(T), 0);
+  if IsManagedType(T) then
+    System.FillChar(FItems[Count], SizeOf(T), 0);
 end;
 
 procedure TGSortedList2.CapacityExceedError(aValue: SizeInt);
@@ -1993,7 +2006,8 @@ begin
   if aIndex < Count then
     begin
       System.Move(FItems[aIndex], FItems[Succ(aIndex)], SizeOf(TEntry) * (Count - aIndex));
-      System.FillChar(FItems[aIndex], SizeOf(TEntry), 0);
+      if IsManagedType(TEntry) then
+        System.FillChar(FItems[aIndex], SizeOf(TEntry), 0);
     end;
   FItems[aIndex] := aValue;
   Inc(FCount);
@@ -2004,7 +2018,8 @@ begin
   FItems[aIndex] := Default(TEntry);
   Dec(FCount);
   System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(TEntry) * (Count - aIndex));
-  System.FillChar(FItems[Count], SizeOf(TEntry), 0);
+  if IsManagedType(TEntry) then
+    System.FillChar(FItems[Count], SizeOf(TEntry), 0);
 end;
 
 procedure TGSortedListTable.CapacityExceedError(aValue: SizeInt);
@@ -2290,7 +2305,8 @@ begin
             System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], sr.InsertIndex - aIndex)
           else
             System.Move(FBuffer.FItems[sr.InsertIndex], FBuffer.FItems[Succ(sr.InsertIndex)], aIndex - sr.InsertIndex);
-          System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
+          if IsManagedType(T) then
+            System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
           FBuffer.FItems[sr.InsertIndex] := aValue;
         end;
     end
@@ -2304,7 +2320,8 @@ begin
   if aIndex < Count then
     begin
       System.Move(FBuffer.FItems[aIndex], FBuffer.FItems[Succ(aIndex)], SizeOf(T) * (Count - aIndex));
-      System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
     end;
   FBuffer.FItems[aIndex] := aValue;
   Inc(FBuffer.FCount);
@@ -2316,7 +2333,8 @@ begin
   FBuffer.FItems[aIndex] := Default(T);
   Dec(FBuffer.FCount);
   System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
-  System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
+  if IsManagedType(T) then
+    System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
 end;
 
 function TGLiteSortedList.DeleteItem(aIndex: SizeInt): T;
@@ -2342,8 +2360,9 @@ begin
         FBuffer.FItems[I] := FBuffer.FItems[J];
     end;
   FBuffer.FCount := Succ(I);
-  for I := Count to Hi do
-    FBuffer.FItems[I] := Default(T);
+  if IsManagedType(T) then
+    for I := Count to Hi do
+      FBuffer.FItems[I] := Default(T);
 end;
 
 procedure TGLiteSortedList.SetRejectDuplicates(aValue: Boolean);
@@ -2856,7 +2875,8 @@ begin
             System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], sr.InsertIndex - aIndex)
           else
             System.Move(FBuffer.FItems[sr.InsertIndex], FBuffer.FItems[Succ(sr.InsertIndex)], aIndex - sr.InsertIndex);
-          System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
+          if IsManagedType(T) then
+            System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
           FBuffer.FItems[sr.InsertIndex] := aValue;
         end;
     end
@@ -2870,7 +2890,8 @@ begin
   if aIndex < Count then
     begin
       System.Move(FBuffer.FItems[aIndex], FBuffer.FItems[Succ(aIndex)], SizeOf(T) * (Count - aIndex));
-      System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
     end;
   FBuffer.FItems[aIndex] := aValue;
   Inc(FBuffer.FCount);
@@ -2882,7 +2903,8 @@ begin
   FBuffer.FItems[aIndex] := Default(T);
   Dec(FBuffer.FCount);
   System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
-  System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
+  if IsManagedType(T) then
+    System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
 end;
 
 function TGLiteComparableSortedList.DeleteItem(aIndex: SizeInt): T;
@@ -2907,8 +2929,9 @@ begin
         FBuffer.FItems[I] := FBuffer.FItems[J];
     end;
   FBuffer.FCount := Succ(I);
-  for I := Count to Hi do
-    FBuffer.FItems[I] := Default(T);
+  if IsManagedType(T) then
+    for I := Count to Hi do
+      FBuffer.FItems[I] := Default(T);
 end;
 
 procedure TGLiteComparableSortedList.SetRejectDuplicates(aValue: Boolean);
@@ -3443,20 +3466,6 @@ begin
     InitialAlloc;
 end;
 
-function TGLiteHashList.Find(constref aValue: T): SizeInt;
-var
-  h: SizeInt;
-begin
-  h := TEqRel.HashCode(aValue);
-  Result := FChainList[h and Pred(Capacity)];
-  while Result <> NULL_INDEX do
-    begin
-      if (FNodeList[Result].Hash = h) and TEqRel.Equal(FNodeList[Result].Data, aValue) then
-        exit;
-      Result := FNodeList[Result].Next;
-    end;
-end;
-
 function TGLiteHashList.Find(constref aValue: T; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and Pred(Capacity)];
@@ -3466,6 +3475,11 @@ begin
         exit;
       Result := FNodeList[Result].Next;
     end;
+end;
+
+function TGLiteHashList.Find(constref aValue: T): SizeInt;
+begin
+  Result := Find(aValue, TEqRel.HashCode(aValue));
 end;
 
 function TGLiteHashList.GetCountOf(constref aValue: T): SizeInt;
@@ -3483,19 +3497,6 @@ begin
     end;
 end;
 
-function TGLiteHashList.DoAdd(constref aValue: T): SizeInt;
-var
-  I: SizeInt;
-begin
-  Result := Count;
-  FNodeList[Result].Hash := TEqRel.HashCode(aValue);
-  I := FNodeList[Result].Hash and Pred(Capacity);
-  FNodeList[Result].Data := aValue;
-  FNodeList[Result].Next := FChainList[I];
-  FChainList[I] := Result;
-  Inc(FCount);
-end;
-
 function TGLiteHashList.DoAdd(constref aValue: T; aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
@@ -3509,12 +3510,18 @@ begin
   Inc(FCount);
 end;
 
+function TGLiteHashList.DoAdd(constref aValue: T): SizeInt;
+begin
+  Result := DoAdd(aValue, TEqRel.HashCode(aValue));
+end;
+
 procedure TGLiteHashList.DoInsert(aIndex: SizeInt; constref aValue: T);
 begin
   if aIndex < Count then
     begin
       System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * SizeOf(TNode));
-      System.FillChar(FNodeList[aIndex].Data, SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FNodeList[aIndex].Data, SizeOf(T), 0);
       FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
       FNodeList[aIndex].Data := aValue;
       Inc(FCount);
@@ -3529,15 +3536,18 @@ begin
   Dec(FCount);
   if aIndex < Count then
     begin
-      FNodeList[aIndex].Data := Default(T);
+      if IsManagedType(T) then
+        FNodeList[aIndex].Data := Default(T);
       System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * SizeOf(TNode));
-      System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
       Rehash;
     end
   else   // last element
     begin
       RemoveFromChain(aIndex);
-      System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
     end;
 end;
 
@@ -3950,20 +3960,6 @@ begin
     InitialAlloc;
 end;
 
-function TGLiteHashList2.Find(constref aKey: TKey): SizeInt;
-var
-  h: SizeInt;
-begin
-  h := TKeyEqRel.HashCode(aKey);
-  Result := FChainList[h and Pred(Capacity)];
-  while Result <> NULL_INDEX do
-    begin
-      if (FNodeList[Result].Hash = h) and TKeyEqRel.Equal(FNodeList[Result].Data.Key, aKey) then
-        exit;
-      Result := FNodeList[Result].Next;
-    end;
-end;
-
 function TGLiteHashList2.Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and Pred(Capacity)];
@@ -3973,6 +3969,11 @@ begin
         exit;
       Result := FNodeList[Result].Next;
     end;
+end;
+
+function TGLiteHashList2.Find(constref aKey: TKey): SizeInt;
+begin
+  Result := Find(aKey, TKeyEqRel.HashCode(aKey));
 end;
 
 function TGLiteHashList2.GetCountOf(constref aKey: TKey): SizeInt;
@@ -4265,6 +4266,23 @@ begin
   for Entry in e do
     AddUniq(Entry);
   Result := Count - Result;
+end;
+
+function TGLiteHashList2.AddOrUpdate(constref e: TEntry; out aIndex: SizeInt): Boolean;
+var
+  p: PEntry;
+begin
+  Result := not FindOrAdd(e.Key, p, aIndex);
+  p^ := e;
+end;
+
+function TGLiteHashList2.AddOrUpdate(constref e: TEntry): Boolean;
+var
+  I: SizeInt;
+  p: PEntry;
+begin
+  Result := not FindOrAdd(e.Key, p, I);
+  p^ := e;
 end;
 
 procedure TGLiteHashList2.Insert(aIndex: SizeInt; constref e: TEntry);
