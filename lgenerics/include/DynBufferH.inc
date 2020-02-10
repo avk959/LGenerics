@@ -22,7 +22,7 @@
   generic TGCustomArrayBuffer<T> = class abstract(specialize TGAbstractContainer<T>)
   protected
   type
-    TCopyArrayHelper = class(specialize TGArrayHelpUtil<T>); // need access to protected functions
+    TCopyHelper = class(specialize TGArrayHelpUtil<T>); // need access to protected functions
 
   var
     FItems: TArray;
@@ -147,7 +147,6 @@
   private
     function  GetCapacity: SizeInt; inline;
     procedure Expand(aValue: SizeInt);
-    procedure AccessEmptyError;
     class operator Initialize(var b: TGLiteDynBuffer);
     class operator Copy(constref aSrc: TGLiteDynBuffer; var aDst: TGLiteDynBuffer); inline;
   public
@@ -155,7 +154,9 @@
     FCount: SizeInt;
     procedure CheckEmpty; inline;
     procedure ItemAdding; inline;
+    procedure FinalizeItems(aFrom: PItem; aCount: SizeInt);
     procedure Clear;
+    procedure MakeEmpty; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  GetEnumerator: TEnumerator;

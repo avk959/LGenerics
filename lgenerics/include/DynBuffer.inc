@@ -41,23 +41,23 @@ end;
 
 function TGCustomArrayBuffer.IndexInRange(aIndex: SizeInt): Boolean;
 begin
-  Result := (aIndex >= 0) and (aIndex < ElemCount);
+  Result := SizeUInt(aIndex) < SizeUInt(ElemCount);
 end;
 
 function TGCustomArrayBuffer.IndexInInsertRange(aIndex: SizeInt): Boolean;
 begin
-  Result := (aIndex >= 0) and (aIndex <= ElemCount);
+  Result := SizeUInt(aIndex) <= SizeUInt(ElemCount);
 end;
 
 procedure TGCustomArrayBuffer.CheckIndexRange(aIndex: SizeInt);
 begin
-  if not IndexInRange(aIndex) then
+  if SizeUInt(aIndex) >= SizeUInt(ElemCount) then
     IndexOutOfBoundError(aIndex);
 end;
 
 procedure TGCustomArrayBuffer.CheckInsertIndexRange(aIndex: SizeInt);
 begin
-  if not IndexInInsertRange(aIndex) then
+  if SizeUInt(aIndex) > SizeUInt(ElemCount) then
     IndexOutOfBoundError(aIndex);
 end;
 
@@ -84,8 +84,12 @@ end;
 
 function TGCustomArrayContainer.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLast;
-  FCurrIndex += Ord(Result);
+  if FCurrIndex < FLast then
+    begin
+      Inc(FCurrIndex);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGCustomArrayContainer.TEnumerator.Reset;
@@ -110,8 +114,12 @@ end;
 
 function TGCustomArrayContainer.TReverseEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex > 0;
-  FCurrIndex -= Ord(Result);
+  if FCurrIndex > 0 then
+    begin
+      Dec(FCurrIndex);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGCustomArrayContainer.TReverseEnumerator.Reset;
@@ -156,7 +164,10 @@ begin
   if Result > 0 then
     begin
       DoEnsureCapacity(ElemCount + Result);
-      TCopyArrayHelper.CopyItems(@a[0], @FItems[ElemCount], Result);
+      if IsManagedType(T) then
+        TCopyHelper.CopyItems(@a[0], @FItems[ElemCount], Result)
+      else
+        System.Move(a[0], FItems[ElemCount], Result * SizeOf(T));
       FCount += Result;
     end;
 end;
@@ -165,14 +176,14 @@ function TGCustomArrayContainer.AppendEnum(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := ElemCount;
   for v in e do
     begin
       ItemAdding;
       FItems[ElemCount] := v;
       Inc(FCount);
-      Inc(Result);
     end;
+  Result := ElemCount - Result;
 end;
 
 function TGCustomArrayContainer.AppendContainer(aContainer: TSpecContainer): SizeInt;
@@ -222,7 +233,10 @@ end;
 procedure TGCustomArrayContainer.CopyItems(aBuffer: PItem);
 begin
   if ElemCount > 0 then
-    TCopyArrayHelper.CopyItems(@FItems[0], aBuffer, ElemCount);
+    if IsManagedType(T) then
+      TCopyHelper.CopyItems(@FItems[0], aBuffer, ElemCount)
+    else
+      System.Move(FItems[0], aBuffer^, ElemCount * SizeOf(T));
 end;
 
 constructor TGCustomArrayContainer.Create;
@@ -353,11 +367,6 @@ begin
       raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
-procedure TGLiteDynBuffer.AccessEmptyError;
-begin
-  raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
 class operator TGLiteDynBuffer.Initialize(var b: TGLiteDynBuffer);
 begin
   b.FCount := 0;
@@ -374,7 +383,7 @@ end;
 procedure TGLiteDynBuffer.CheckEmpty;
 begin
   if Count = 0 then
-    AccessEmptyError;
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
 procedure TGLiteDynBuffer.ItemAdding;
@@ -383,15 +392,53 @@ begin
     Expand(Succ(FCount));
 end;
 
+procedure TGLiteDynBuffer.FinalizeItems(aFrom: PItem; aCount: SizeInt);
+begin
+  while aCount <= 4 do
+    begin
+      aFrom[0] := Default(T);
+      aFrom[1] := Default(T);
+      aFrom[2] := Default(T);
+      aFrom[3] := Default(T);
+      aFrom += 4;
+      aCount -= 4;
+    end;
+  case aCount of
+    1: aFrom[0] := Default(T);
+    2:
+      begin
+        aFrom[0] := Default(T);
+        aFrom[1] := Default(T);
+      end;
+    3:
+      begin
+        aFrom[0] := Default(T);
+        aFrom[1] := Default(T);
+        aFrom[2] := Default(T);
+      end;
+  else
+  end;
+end;
+
 procedure TGLiteDynBuffer.Clear;
 begin
   FItems := nil;
   FCount := 0;
 end;
 
+procedure TGLiteDynBuffer.MakeEmpty;
+begin
+  if Count <> 0 then
+    begin
+      if IsManagedType(T) then
+        FinalizeItems(Pointer(FItems), Count);
+      FCount := 0;
+    end;
+end;
+
 procedure TGLiteDynBuffer.EnsureCapacity(aValue: SizeInt);
 begin
-  if aValue > GetCapacity then
+  if aValue > Capacity then
     Expand(aValue);
 end;
 
@@ -481,11 +528,15 @@ end;
 
 function TGCustomRingArrayBuffer.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FRest > 0;
-  FCurrIndex += Ord(Result);
-  FRest -= Ord(Result);
-  if FCurrIndex = FCapacity then
-    FCurrIndex := 0;
+  if FRest > 0 then
+    begin
+      Inc(FCurrIndex);
+      Dec(FRest);
+      if FCurrIndex = FCapacity then
+        FCurrIndex := 0;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGCustomRingArrayBuffer.TEnumerator.Reset;
@@ -514,29 +565,24 @@ begin
 end;
 
 function TGCustomRingArrayBuffer.TReverseEnum.MoveNext: Boolean;
-var
-  c: SizeInt;
 begin
-  Result := FRest > 0;
-  if Result then
+  if FRest > 0 then
     begin
-      c := System.Length(FItems);
       Dec(FCurrIndex);
       Dec(FRest);
       if FCurrIndex < 0 then
-        FCurrIndex += c;
+        FCurrIndex += System.Length(FItems);
+      exit(True);
     end;
+  Result := False;
 end;
 
 procedure TGCustomRingArrayBuffer.TReverseEnum.Reset;
-var
-  c: SizeInt;
 begin
-  c := System.Length(FItems);
   FCurrIndex := FHead + FCount;
   FRest := FCount;
-  if FCurrIndex >= c then
-    FCurrIndex -= c;
+  if FCurrIndex >= System.Length(FItems) then
+    FCurrIndex -= System.Length(FItems);
 end;
 
 { TGCustomRingArrayContainer }
@@ -577,13 +623,15 @@ begin
       if (TailPos < Succ(OldCapacity - Head)) and (TailPos <= ExpandCount) then
         begin // move tail to tail :)
           System.Move(FItems[0], FItems[OldCapacity], SizeOf(T) * TailPos);
-          System.FillChar(FItems[0], SizeOf(T) * TailPos, 0);
+          if IsManagedType(T) then
+            System.FillChar(FItems[0], SizeOf(T) * TailPos, 0);
         end
       else
         begin // move head to tail
           ToMove := OldCapacity - Head;
           System.Move(FItems[Head], FItems[Head + ExpandCount], SizeOf(T) * ToMove);
-          System.FillChar(FItems[Head], SizeOf(T) * Math.Min(ToMove, ExpandCount), 0);
+          if IsManagedType(T) then
+            System.FillChar(FItems[Head], SizeOf(T) * Math.Min(ToMove, ExpandCount), 0);
           FHead += ExpandCount;
         end;
     end;
@@ -601,10 +649,11 @@ begin
   if (TailPos > Head) then // consecutive
     begin
       System.Move(FItems[Head], FItems[0], SizeOf(T) * ElCount);
-      if Head >= ElCount then
-        FillChar(FItems[Head], SizeOf(T) * ElCount, 0)
-      else
-        FillChar(FItems[ElCount], SizeOf(T) * Head, 0);
+      if IsManagedType(T) then
+        if Head >= ElCount then
+          FillChar(FItems[Head], SizeOf(T) * ElCount, 0)
+        else
+          FillChar(FItems[ElCount], SizeOf(T) * Head, 0);
       FHead := 0;
     end
   else
@@ -612,10 +661,11 @@ begin
       begin
         ToMove := OldCapacity - Head;
         System.Move(FItems[Head], FItems[TailPos], SizeOf(T) * ToMove);
-        if Head >= ElCount then
-          FillChar(FItems[Head], SizeOf(T) * ToMove, 0)
-        else
-          FillChar(FItems[ElCount], SizeOf(T) * (Head - TailPos), 0);
+        if IsManagedType(T) then
+          if Head >= ElCount then
+            FillChar(FItems[Head], SizeOf(T) * ToMove, 0)
+          else
+            FillChar(FItems[ElCount], SizeOf(T) * (Head - TailPos), 0);
         FHead := TailPos;
       end;
   System.SetLength(FItems, ElemCount);
@@ -724,7 +774,8 @@ end;
 function TGCustomRingArrayBuffer.ExtractHead: T;
 begin
   Result := FItems[Head];
-  FItems[Head] := Default(T);
+  if IsManagedType(T) then
+    FItems[Head] := Default(T);
   Inc(FHead);
   Dec(FCount);
   if Head = System.Length(FItems) then
@@ -931,13 +982,15 @@ begin
       if (TailPos < Succ(OldCapacity - FHead)) and (TailPos <= ExpandCount) then
         begin // move tail to tail :)
           System.Move(FItems[0], FItems[OldCapacity], SizeOf(T) * TailPos);
-          System.FillChar(FItems[0], SizeOf(T) * TailPos, 0);
+          if IsManagedType(T) then
+            System.FillChar(FItems[0], SizeOf(T) * TailPos, 0);
         end
       else
         begin // move head to tail
           ToMove := OldCapacity - FHead;
           System.Move(FItems[FHead], FItems[FHead + ExpandCount], SizeOf(T) * ToMove);
-          System.FillChar(FItems[FHead], SizeOf(T) * Math.Min(ToMove, ExpandCount), 0);
+          if IsManagedType(T) then
+            System.FillChar(FItems[FHead], SizeOf(T) * Math.Min(ToMove, ExpandCount), 0);
           FHead += ExpandCount;
         end;
     end;
@@ -954,10 +1007,11 @@ begin
   if (TailPos > FHead) then // consecutive
     begin
       System.Move(FItems[FHead], FItems[0], SizeOf(T) * Count);
-      if FHead >= Count then
-        FillChar(FItems[FHead], SizeOf(T) * Count, 0)
-      else
-        FillChar(FItems[Count], SizeOf(T) * FHead, 0);
+      if IsManagedType(T) then
+        if FHead >= Count then
+          FillChar(FItems[FHead], SizeOf(T) * Count, 0)
+        else
+          FillChar(FItems[Count], SizeOf(T) * FHead, 0);
       FHead := 0;
     end
   else
@@ -965,10 +1019,11 @@ begin
       begin
         ToMove := OldCapacity - FHead;
         System.Move(FItems[FHead], FItems[TailPos], SizeOf(T) * ToMove);
-        if FHead >= Count then
-          FillChar(FItems[FHead], SizeOf(T) * ToMove, 0)
-        else
-          FillChar(FItems[Count], SizeOf(T) * (FHead - TailPos), 0);
+        if IsManagedType(T) then
+          if FHead >= Count then
+            FillChar(FItems[FHead], SizeOf(T) * ToMove, 0)
+          else
+            FillChar(FItems[Count], SizeOf(T) * (FHead - TailPos), 0);
         FHead := TailPos;
       end;
   System.SetLength(FItems, Count);
@@ -1021,7 +1076,8 @@ end;
 function TGLiteRingDynBuffer.PopHead: T;
 begin
   Result := FItems[FHead];
-  FItems[FHead] := Default(T);
+  if IsManagedType(T) then
+    FItems[FHead] := Default(T);
   Inc(FHead);
   Dec(FCount);
   if FHead = Capacity then
@@ -1035,7 +1091,8 @@ begin
   TailPos := TailIndex;
   Dec(FCount);
   Result := FItems[TailPos];
-  FItems[TailPos] := Default(T);
+  if IsManagedType(T) then
+    FItems[TailPos] := Default(T);
 end;
 
 procedure TGLiteRingDynBuffer.Clear;
@@ -1050,17 +1107,18 @@ var
   I, h, c: SizeInt;
 begin
   if Count > 0 then
-    begin
-      c := Capacity;
-      h := FHead;
-      for I := 0 to Pred(Count) do
-        begin
-          FItems[h] := Default(T);
-          Inc(h);
-          if h = c then
-            h := 0;
-        end;
-    end;
+    if IsManagedType(T) then
+      begin
+        c := Capacity;
+        h := FHead;
+        for I := 0 to Pred(Count) do
+          begin
+            FItems[h] := Default(T);
+            Inc(h);
+            if h = c then
+              h := 0;
+          end;
+      end;
   FCount := 0;
   FHead := 0;
 end;
