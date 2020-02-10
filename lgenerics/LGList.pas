@@ -712,6 +712,10 @@ type
     function  AddUniq(constref aValue: T): Boolean; inline;
     function  AddAllUniq(constref a: array of T): SizeInt;
     function  AddAllUniq(e: IEnumerable): SizeInt;
+    function  AddOrUpdate(constref aValue: T; out aIndex: SizeInt): Boolean; inline;
+    function  AddOrUpdate(constref aValue: T): Boolean; inline;
+    function  AddAllOrUpdate(constref a: array of T): SizeInt;
+    function  AddAllOrUpdate(e: IEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; constref aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aValue: T): Boolean; inline;
@@ -3767,6 +3771,53 @@ begin
   Result := Count;
   for v in e do
     AddUniq(v);
+  Result := Count - Result;
+end;
+
+function TGLiteHashList.AddOrUpdate(constref aValue: T; out aIndex: SizeInt): Boolean;
+begin
+  if FindOrAdd(aValue, aIndex) then
+    begin
+      FNodeList[aIndex].Data := aValue;
+      Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteHashList.AddOrUpdate(constref aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  if FindOrAdd(aValue, I) then
+    begin
+      FNodeList[I].Data := aValue;
+      Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteHashList.AddAllOrUpdate(constref a: array of T): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  Result := Count;
+  for I := 0 to System.High(a) do
+    if FindOrAdd(a[I], J) then
+      FNodeList[J].Data := a[I];
+  Result := Count - Result;
+end;
+
+function TGLiteHashList.AddAllOrUpdate(e: IEnumerable): SizeInt;
+var
+  I: SizeInt;
+  v: T;
+begin
+  Result := Count;
+  for v in e do
+    if FindOrAdd(v, I) then
+      FNodeList[I].Data := v;
   Result := Count - Result;
 end;
 
