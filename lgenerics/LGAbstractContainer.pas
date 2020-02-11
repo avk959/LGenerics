@@ -889,7 +889,7 @@ type
   { returns count of the columns in the removed row }
     function  RemoveRow(constref aRow: TRow): SizeInt; inline;
   { returns count of the removed cells }
-    function  RemoveColumn(constref aCol: TCol): SizeInt; inline;
+    function  RemoveColumn(constref aCol: TCol): SizeInt;
     function  ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
     function  FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
     function  GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue = Default(TValue)): TValue; inline;
@@ -1659,26 +1659,25 @@ end;
 
 function TGAbstractCollection.DoAddAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
-  Result := 0;
-  for v in a do
-    Result += Ord(DoAdd(v));
+  Result := Count;
+  for I := 0 to System.High(a) do
+    DoAdd(a[I]);
+  Result := Count - Result;
 end;
 
 function TGAbstractCollection.DoRemoveAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
-  Result := 0;
+  Result := Count;
   if NonEmpty then
-    for v in a do
-      if DoRemove(v) then
-        begin
-          Inc(Result);
-          if Count = 0 then
-            exit;
-        end;
+    for I := 0 to System.High(a) do
+      if DoRemove(a[I]) then
+        if IsEmpty then
+          break;
+  Result -= Count;
 end;
 
 function TGAbstractCollection.DoRemoveAll(e: IEnumerable): SizeInt;
@@ -1689,14 +1688,12 @@ begin
   o := e._GetRef;
   if o <> Self then
     begin
-      Result := 0;
+      Result := Count;
       for v in e do
         if DoRemove(v) then
-          begin
-            Inc(Result);
-            if Count = 0 then
-              exit;
-          end;
+          if IsEmpty then
+            break;
+      Result -= Count;
     end
   else
     begin
@@ -1736,11 +1733,11 @@ end;
 
 function TGAbstractCollection.ContainsAny(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
 begin
   if NonEmpty then
-    for v in a do
-      if Contains(v) then
+    for I := 0 to System.High(a) do
+      if Contains(a[I]) then
         exit(True);
   Result := False;
 end;
@@ -1767,10 +1764,11 @@ end;
 
 function TGAbstractCollection.ContainsAll(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
 begin
-  for v in a do
-    if not Contains(v) then
+  if IsEmpty then exit(System.Length(a) = 0);
+  for I := 0 to System.High(a) do
+    if not Contains(a[I]) then
       exit(False);
   Result := True;
 end;
@@ -1779,9 +1777,10 @@ function TGAbstractCollection.ContainsAll(e: IEnumerable): Boolean;
 var
   v: T;
 begin
+  if IsEmpty then exit(e.None);
   if e._GetRef <> Self then
     for v in e do
-      if NonContains(v) then
+      if not Contains(v) then
         exit(False);
   Result := True;
 end;
@@ -2642,11 +2641,12 @@ end;
 
 function TGAbstractMap.DoAddAll(constref a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
   Result := Count;
-  for e in a do
-    DoAdd(e.Key, e.Value);
+  for I := 0 to System.High(a) do
+    with a[I] do
+      DoAdd(Key, Value);
   Result := Count - Result;
 end;
 
@@ -2663,13 +2663,15 @@ end;
 
 function TGAbstractMap.DoRemoveAll(constref a: array of TKey): SizeInt;
 var
-  k: TKey;
+  I: SizeInt;
 begin
   Result := Count;
   if Result > 0 then
     begin
-      for k in a do
-        DoRemove(k);
+      for I := 0 to System.High(a) do
+        if DoRemove(a[I]) then
+          if Count = 0 then
+            break;
       Result -= Count;
     end;
 end;
@@ -2682,7 +2684,9 @@ begin
   if Result > 0 then
     begin
       for k in e do
-        DoRemove(k);
+        if DoRemove(k) then
+          if Count = 0 then
+            break;
       Result -= Count;
     end
   else
@@ -2808,11 +2812,12 @@ end;
 
 function TGAbstractMap.ContainsAny(constref a: array of TKey): Boolean;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  for k in a do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for I := 0 to System.High(a) do
+      if Contains(a[I]) then
+        exit(True);
   Result := False;
 end;
 
@@ -2833,10 +2838,11 @@ end;
 
 function TGAbstractMap.ContainsAll(constref a: array of TKey): Boolean;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  for k in a do
-    if not Contains(k) then
+  if IsEmpty then exit(System.Length(a) = 0);
+  for I := 0 to System.High(a) do
+    if not Contains(a[I]) then
       exit(False);
   Result := True;
 end;
