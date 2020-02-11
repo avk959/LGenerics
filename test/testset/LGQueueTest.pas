@@ -104,6 +104,8 @@ type
     procedure ObjectQueue;
   end;
 
+  { TLiteQueueTest }
+
   TLiteQueueTest = class(TTestCase)
   private
   type
@@ -140,6 +142,8 @@ type
     procedure TryPeekEmpty;
     procedure TryPeek;
     procedure Clear;
+    procedure MakeEmpty;
+    procedure MakeEmptyStr;
     procedure TrimToFit;
     procedure TrimToFit_1;
     procedure TrimToFit_2;
@@ -1059,6 +1063,46 @@ begin
   q.Clear;
   AssertTrue(q.IsEmpty);
   AssertTrue(q.Capacity = 0);
+end;
+
+procedure TLiteQueueTest.MakeEmpty;
+var
+  q: TIntQueue;
+  I, cap: Integer;
+begin
+  AssertTrue({%H-}q.IsEmpty);
+  AssertTrue(q.Capacity = 0);
+  q.MakeEmpty;
+  AssertTrue(q.IsEmpty);
+  AssertTrue(q.Capacity = 0);
+  for I in IntArray21 do
+    q.Enqueue(I);
+  AssertTrue(q.Count = 21);
+  cap := q.Capacity;
+  AssertTrue(cap <> 0);
+  q.MakeEmpty;
+  AssertTrue(q.IsEmpty);
+  AssertTrue(q.Capacity = cap);
+end;
+
+procedure TLiteQueueTest.MakeEmptyStr;
+var
+  q: TStrQueue;
+  I, cap: Integer;
+begin
+  AssertTrue({%H-}q.IsEmpty);
+  AssertTrue(q.Capacity = 0);
+  q.MakeEmpty;
+  AssertTrue(q.IsEmpty);
+  AssertTrue(q.Capacity = 0);
+  for I in [1..50] do
+    q.Enqueue('str_' + I.ToString);
+  AssertTrue(q.Count = 50);
+  cap := q.Capacity;
+  AssertTrue(cap <> 0);
+  q.MakeEmpty;
+  AssertTrue(q.IsEmpty);
+  AssertTrue(q.Capacity = cap);
 end;
 
 procedure TLiteQueueTest.TrimToFit;
