@@ -186,6 +186,7 @@ type
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
+    procedure MakeEmpty; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -968,7 +969,8 @@ begin
     begin
       ItemAdding;
       System.Move(FItems[aIndex], FItems[Succ(aIndex)], SizeOf(T) * (ElemCount - aIndex));
-      System.FillChar(FItems[aIndex], SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FItems[aIndex], SizeOf(T), 0);
       FItems[aIndex] := aValue;
       Inc(FCount);
     end
@@ -984,9 +986,14 @@ begin
       if Result > 0 then
         begin
           EnsureCapacity(ElemCount + Result);
-          System.Move(FItems[aIndex], FItems[aIndex + Result], SizeOf(T) * (ElemCount - aIndex));
-          System.FillChar(FItems[aIndex], SizeOf(T) * Result, 0);
-          TCopyArrayHelper.CopyItems(@a[0], @FItems[aIndex], Result);
+          System.Move(FItems[aIndex], FItems[aIndex + Result], (ElemCount - aIndex) * SizeOf(T));
+          if IsManagedType(T) then
+            begin
+              System.FillChar(FItems[aIndex], Result * SizeOf(T), 0);
+              TCopyHelper.CopyItems(@a[0], @FItems[aIndex], Result);
+            end
+          else
+            System.Move(a[0], FItems[aIndex], Result * SizeOf(T));
           FCount += Result;
         end;
     end
@@ -995,8 +1002,6 @@ begin
 end;
 
 function TGVector.InsertContainer(aIndex: SizeInt; aContainer: TSpecContainer): SizeInt;
-var
-  v: T;
 begin
   if aIndex < ElemCount then
     begin
@@ -1005,18 +1010,21 @@ begin
         begin
           EnsureCapacity(ElemCount + Result);
           System.Move(FItems[aIndex], FItems[aIndex + Result], SizeOf(T) * (ElemCount - aIndex));
-          System.FillChar(FItems[aIndex], SizeOf(T) * Result, 0);
+          if IsManagedType(T) then
+            System.FillChar(FItems[aIndex], SizeOf(T) * Result, 0);
           if aContainer <> Self then
-            for v in aContainer do
-              begin
-                FItems[aIndex] := v;
-                Inc(aIndex);
-              end
+            aContainer.CopyItems(@FItems[aIndex])
           else
-            begin
-              TCopyArrayHelper.CopyItems(@FItems[0], @FItems[aIndex], aIndex);
-              TCopyArrayHelper.CopyItems(@FItems[aIndex + Result], @FItems[aIndex + aIndex], Result - aIndex);
-            end;
+            if IsManagedType(T) then
+              begin
+                TCopyHelper.CopyItems(@FItems[0], @FItems[aIndex], aIndex);
+                TCopyHelper.CopyItems(@FItems[aIndex + Result], @FItems[aIndex + aIndex], Result - aIndex);
+              end
+            else
+              begin
+                System.Move(FItems[0], FItems[aIndex], aIndex * SizeOf(T));
+                System.Move(FItems[aIndex + Result], FItems[aIndex + aIndex], (Result - aIndex) * SizeOf(T));
+              end;
           FCount += Result;
         end;
     end
@@ -1047,10 +1055,12 @@ end;
 function TGVector.ExtractItem(aIndex: SizeInt): T;
 begin
   Result := FItems[aIndex];
-  FItems[aIndex] := Default(T);
+  if IsManagedType(T) then
+    FItems[aIndex] := Default(T);
   Dec(FCount);
   System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-  System.FillChar(FItems[ElemCount], SizeOf(T), 0);
+  if IsManagedType(T) then
+    System.FillChar(FItems[ElemCount], SizeOf(T), 0);
 end;
 
 function TGVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
@@ -1064,7 +1074,8 @@ begin
       System.Move(FItems[aIndex], Result[0], SizeOf(T) * aCount);
       FCount -= aCount;
       System.Move(FItems[aIndex + aCount], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-      System.FillChar(FItems[ElemCount], SizeOf(T) * aCount, 0);
+      if IsManagedType(T) then
+        System.FillChar(FItems[ElemCount], SizeOf(T) * aCount, 0);
     end;
 end;
 
@@ -1082,11 +1093,13 @@ begin
   Result := Math.Min(aCount, ElemCount - aIndex);
   if Result > 0 then
     begin
-      for I := aIndex to Pred(aIndex + Result) do
-        FItems[I] := Default(T);
+      if IsManagedType(T) then
+        for I := aIndex to Pred(aIndex + Result) do
+          FItems[I] := Default(T);
       FCount -= Result;
       System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-      System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
+      if IsManagedType(T) then
+        System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
     end;
 end;
 
@@ -1097,7 +1110,8 @@ begin
   RCount := ElemCount - aIndex;
   Result := TGVector.Create(RCount);
   System.Move(FItems[aIndex], Result.FItems[0], SizeOf(T) * RCount);
-  System.FillChar(FItems[aIndex], SizeOf(T) * RCount, 0);
+  if IsManagedType(T) then
+    System.FillChar(FItems[aIndex], SizeOf(T) * RCount, 0);
   Result.FCount := RCount;
   FCount -= RCount;
 end;
@@ -1433,7 +1447,8 @@ begin
     begin
       FBuffer.ItemAdding;
       System.Move(FBuffer.FItems[aIndex], FBuffer.FItems[Succ(aIndex)], SizeOf(T) * (Count - aIndex));
-      System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
       FBuffer.FItems[aIndex] := aValue;
       Inc(FBuffer.FCount);
     end
@@ -1444,10 +1459,12 @@ end;
 function TGLiteVector.DeleteItem(aIndex: SizeInt): T;
 begin
   Result := FBuffer.FItems[aIndex];
-  FBuffer.FItems[aIndex] := Default(T);
+  if IsManagedType(T) then
+    FBuffer.FItems[aIndex] := Default(T);
   Dec(FBuffer.FCount);
   System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
-  System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
+  if IsManagedType(T) then
+    System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
 end;
 
 function TGLiteVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
@@ -1461,24 +1478,24 @@ begin
       System.Move(FBuffer.FItems[aIndex], Result[0], SizeOf(T) * aCount);
       FBuffer.FCount -= aCount;
       System.Move(FBuffer.FItems[aIndex + aCount], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
-      System.FillChar(FBuffer.FItems[Count], SizeOf(T) * aCount, 0);
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[Count], SizeOf(T) * aCount, 0);
     end;
 end;
 
 function TGLiteVector.DeleteRange(aIndex, aCount: SizeInt): SizeInt;
-var
-  I: SizeInt;
 begin
   if aCount < 0 then
     aCount := 0;
   Result := Math.Min(aCount, Count - aIndex);
   if Result > 0 then
     begin
-      for I := aIndex to Pred(aIndex + Result) do
-        FBuffer.FItems[I] := Default(T);
+      if IsManagedType(T) then
+        FBuffer.FinalizeItems(@(FBuffer.FItems[aIndex]), Result);
       FBuffer.FCount -= Result;
       System.Move(FBuffer.FItems[aIndex + Result], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
-      System.FillChar(FBuffer.FItems[Count], SizeOf(T) * Result, 0);
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[Count], SizeOf(T) * Result, 0);
     end;
 end;
 
@@ -1517,6 +1534,11 @@ begin
   FBuffer.Clear;
 end;
 
+procedure TGLiteVector.MakeEmpty;
+begin
+  FBuffer.MakeEmpty;
+end;
+
 function TGLiteVector.IsEmpty: Boolean;
 begin
   Result := Count = 0;
@@ -1548,15 +1570,19 @@ var
   I: SizeInt;
 begin
   Result := System.Length(a);
+  if Result = 0 then exit;
   EnsureCapacity(Count + Result);
   I := Count;
   with FBuffer do
     begin
-      for v in a do
-        begin
-          FItems[I] := v;
-          Inc(I);
-        end;
+      if IsManagedType(T) then
+        for v in a do
+          begin
+            FItems[I] := v;
+            Inc(I);
+          end
+      else
+        System.Move(a[0], FItems[I], Result * SizeOf(T));
       FCount += Result;
     end;
 end;
@@ -1567,15 +1593,19 @@ var
   I: SizeInt;
 begin
   Result := aVector.Count;
+  if Result = 0 then exit;
   EnsureCapacity(Count + Result);
   I := Count;
   with FBuffer do
     begin
-      for v in aVector do
-        begin
-          FItems[I] := v;
-          Inc(I);
-        end;
+      if IsManagedType(T) then
+        for v in aVector do
+          begin
+            FItems[I] := v;
+            Inc(I);
+          end
+      else
+        System.Move(Pointer(aVector.FBuffer.FItems)^, FItems[I], Result * SizeOf(T));
       FCount += Result;
     end;
 end;
@@ -1765,13 +1795,13 @@ end;
 procedure TGLiteObjectVector.CheckFreeItems;
 var
   I: SizeInt;
-  InnerItems: TArray;
+  LocItems: PItem;
 begin
   if OwnsObjects then
     begin
-      InnerItems := FVector.FBuffer.FItems;
+      LocItems := PItem(FVector.FBuffer.FItems);
       for I := 0 to Pred(Count) do
-        InnerItems[I].Free;
+        LocItems[I].Free;
     end;
 end;
 
