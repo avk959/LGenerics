@@ -190,6 +190,7 @@ type
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
+    procedure MakeEmpty; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -1142,6 +1143,11 @@ end;
 procedure TGLiteDeque.Clear;
 begin
   FBuffer.Clear;
+end;
+
+procedure TGLiteDeque.MakeEmpty;
+begin
+  FBuffer.MakeEmpty;
 end;
 
 function TGLiteDeque.IsEmpty: Boolean;
