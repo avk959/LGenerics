@@ -1659,7 +1659,7 @@ var
 begin
   for I := System.High(A) downto 1 do
     begin
-      J := Random(I);
+      J := Random(I+1);
       v := TFake(A[I]);
       TFake(A[I]) := TFake(A[J]);
       TFake(A[J]) := v;
