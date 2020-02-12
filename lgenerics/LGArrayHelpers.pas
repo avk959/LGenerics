@@ -2004,7 +2004,7 @@ var
   I: SizeInt;
 begin
   for I := Pred(aEntity.Count) downto 1 do
-    Swap(aEntity.UncMutable[I], aEntity.UncMutable[Random(I)]);
+    Swap(aEntity.UncMutable[I], aEntity.UncMutable[Random(I+1)]);
 end;
 
 class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
