@@ -94,6 +94,8 @@ type
     procedure ObjectDelete;
   end;
 
+  { TLiteDequeTest }
+
   TLiteDequeTest = class(TTestCase)
   private
   type
@@ -125,6 +127,8 @@ type
     procedure DeleteStr;
     procedure Delete;
     procedure Clear;
+    procedure MakeEmpty;
+    procedure MakeEmptyStr;
     procedure TrimToFit;
     procedure TrimToFit_1;
     procedure TrimToFitStr;
@@ -1113,6 +1117,50 @@ begin
   d.Clear;
   AssertTrue(d.IsEmpty);
   AssertTrue(d.Capacity = 0);
+end;
+
+procedure TLiteDequeTest.MakeEmpty;
+var
+  d: TIntDeque;
+  I, cap: Integer;
+begin
+  AssertTrue({%H-}d.IsEmpty);
+  AssertTrue(d.Capacity = 0);
+  d.MakeEmpty;
+  AssertTrue(d.IsEmpty);
+  AssertTrue(d.Capacity = 0);
+  for I in [1..20] do
+    d.PushLast(I);
+  for I in [1..20] do
+    d.PushFirst(I);
+  AssertTrue(d.Count = 40);
+  cap := d.Capacity;
+  AssertTrue(cap <> 0);
+  d.MakeEmpty;
+  AssertTrue(d.IsEmpty);
+  AssertTrue(d.Capacity = cap);
+end;
+
+procedure TLiteDequeTest.MakeEmptyStr;
+var
+  d: TStrDeque;
+  I, cap: Integer;
+begin
+  AssertTrue({%H-}d.IsEmpty);
+  AssertTrue(d.Capacity = 0);
+  d.MakeEmpty;
+  AssertTrue(d.IsEmpty);
+  AssertTrue(d.Capacity = 0);
+  for I in [1..20] do
+    d.PushLast('str_' + I.ToString);
+  for I in [1..20] do
+    d.PushFirst('str_' + I.ToString);
+  AssertTrue(d.Count = 40);
+  cap := d.Capacity;
+  AssertTrue(cap <> 0);
+  d.MakeEmpty;
+  AssertTrue(d.IsEmpty);
+  AssertTrue(d.Capacity = cap);
 end;
 
 procedure TLiteDequeTest.TrimToFit;
