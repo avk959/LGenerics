@@ -140,6 +140,8 @@ type
     procedure ObjectVector;
   end;
 
+  { TGLiteVectorTest }
+
   TGLiteVectorTest = class(TTestCase)
   private
   type
@@ -190,6 +192,8 @@ type
     procedure AddAllSelf;
 
     procedure Clear;
+    procedure MakeEmpty;
+    procedure MakeEmptyStr;
     procedure TrimToFit;
 
     procedure Insert;
@@ -1519,6 +1523,43 @@ begin
   v.Clear;
   AssertTrue(v.IsEmpty);
   AssertTrue(v.Capacity = 0);
+end;
+
+procedure TGLiteVectorTest.MakeEmpty;
+var
+  v: TIntVector;
+begin
+  AssertTrue({%H-}v.IsEmpty);
+  AssertTrue(v.Capacity = 0);
+  v.MakeEmpty;
+  AssertTrue(v.IsEmpty);
+  AssertTrue(v.Capacity = 0);
+  v.AddAll(IntArray21);
+  AssertTrue(v.Count = 21);
+  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  v.MakeEmpty;
+  AssertTrue(v.IsEmpty);
+  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+end;
+
+procedure TGLiteVectorTest.MakeEmptyStr;
+var
+  v: TStrVector;
+  I, cap: Integer;
+begin
+  AssertTrue({%H-}v.IsEmpty);
+  AssertTrue(v.Capacity = 0);
+  v.MakeEmpty;
+  AssertTrue(v.IsEmpty);
+  AssertTrue(v.Capacity = 0);
+  for I in [1..50] do
+    v.Add('str_' + I.ToString);
+  AssertTrue(v.Count = 50);
+  cap := v.Capacity;
+  AssertTrue(cap <> 0);
+  v.MakeEmpty;
+  AssertTrue(v.IsEmpty);
+  AssertTrue(v.Capacity = cap);
 end;
 
 procedure TGLiteVectorTest.TrimToFit;
