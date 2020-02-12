@@ -2821,6 +2821,8 @@ var
   a: TIntArray;
   I: Integer;
 begin
+  Test({%H-}a, {%H-}a.Length);
+  AssertTrue(a.IsEmpty);
   a.Length := 50;
   for I := 0 to a.High do
     a[I] := 50 - I;
