@@ -514,13 +514,6 @@ type
     function  GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator;
     function  GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds): TRangeEnumerator;
   public
-    class operator +(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-    class operator -(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-    class operator *(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-    class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-    class operator =(constref L, R: TGLiteTreeSet): Boolean; inline;
-    class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
     function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
@@ -590,6 +583,13 @@ type
     function  SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteTreeSet;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
+    class operator +(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator -(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator *(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator =(constref L, R: TGLiteTreeSet): Boolean; inline;
+    class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
   end;
 
 implementation
@@ -1991,48 +1991,6 @@ begin
   Result := TRangeEnumerator.Create(Self, aLowBound, aHighBound, aBounds);
 end;
 
-class operator TGLiteTreeSet. + (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-begin
-  Result := L;
-  Result.Join(R);
-end;
-
-class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-var
-  v: T;
-begin
-  for v in L do
-    if R.NonContains(v) then
-      Result.Add(v);
-end;
-
-class operator TGLiteTreeSet. * (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-begin
-  Result := L;
-  Result.Intersect(R);
-end;
-
-class operator TGLiteTreeSet.><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
-begin
-  Result := L;
-  Result.SymmetricSubtract(R);
-end;
-
-class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
-begin
-  Result := aSet.Contains(aValue);
-end;
-
-class operator TGLiteTreeSet. = (constref L, R: TGLiteTreeSet): Boolean;
-begin
-  Result := L.IsEqual(R);
-end;
-
-class operator TGLiteTreeSet.<=(constref L, R: TGLiteTreeSet): Boolean;
-begin
-  Result := L.IsSubset(R);
-end;
-
 function TGLiteTreeSet.GetEnumerator: TEnumerator;
 begin
   Result := TEnumerator.Create(Self);
@@ -2566,6 +2524,48 @@ var
 begin
   for v in Range(aLowBound, aHighBound, aIncludeBounds) do
     Result.Add(v);
+end;
+
+class operator TGLiteTreeSet. + (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  Result := L;
+  Result.Join(R);
+end;
+
+class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in L do
+    if R.NonContains(v) then
+      Result.Add(v);
+end;
+
+class operator TGLiteTreeSet. * (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  Result := L;
+  Result.Intersect(R);
+end;
+
+class operator TGLiteTreeSet.><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  Result := L;
+  Result.SymmetricSubtract(R);
+end;
+
+class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := aSet.Contains(aValue);
+end;
+
+class operator TGLiteTreeSet. = (constref L, R: TGLiteTreeSet): Boolean;
+begin
+  Result := L.IsEqual(R);
+end;
+
+class operator TGLiteTreeSet.<=(constref L, R: TGLiteTreeSet): Boolean;
+begin
+  Result := L.IsSubset(R);
 end;
 
 end.
