@@ -923,8 +923,13 @@ begin
                 begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
-                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      if IsManagedType(TEntry) then
+                        begin
+                          TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                          TFakeNode(FList[I]) := Default(TFakeNode);
+                        end
+                      else
+                        aTarget[h] := FList[I];
                       break;
                     end;
                   h := TProbeSeq.NextProbe(h, J) and Mask;// probe sequence
@@ -1140,8 +1145,16 @@ begin
           h := h and Mask;
           if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
             begin
-              TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-              TFakeNode(FList[aIndex]) := Default(TFakeNode);
+              if IsManagedType(TEntry) then
+                begin
+                  TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+                  TFakeNode(FList[aIndex]) := Default(TFakeNode);
+                end
+              else
+                begin
+                  FList[Gap] := FList[aIndex];
+                  FList[aIndex].Hash := 0;
+                end;
               Gap := aIndex;
             end;
           aIndex := Succ(aIndex) and Mask;
@@ -1262,7 +1275,8 @@ end;
 procedure TGOpenAddrTombstones.DoRemove(aIndex: SizeInt);
 begin
   FList[aIndex].Hash := TOMBSTONE;
-  FList[aIndex].Data := Default(TEntry);
+  if IsManagedType(TEntry) then
+    FList[aIndex].Data := Default(TEntry);
   Inc(FTombstonesCount);
   Dec(FCount);
 end;
@@ -1482,20 +1496,16 @@ begin
 end;
 
 function TGOrderedHashTable.TEnumerator.MoveNext: Boolean;
-var
-  NextNode: PNode = nil;
 begin
   if FCurrNode <> nil then
-    NextNode := FCurrNode^.Next
+    FCurrNode := FCurrNode^.Next
   else
     if not FInCycle then
       begin
-        NextNode := FHead;
+        FCurrNode := FHead;
         FInCycle := True;
       end;
-  Result := NextNode <> nil;
-  if Result then
-    FCurrNode := NextNode;
+  Result := FCurrNode <> nil;
 end;
 
 procedure TGOrderedHashTable.TEnumerator.Reset;
@@ -1519,20 +1529,16 @@ begin
 end;
 
 function TGOrderedHashTable.TReverseEnumerator.MoveNext: Boolean;
-var
-  NextNode: PNode = nil;
 begin
   if FCurrNode <> nil then
-    NextNode := FCurrNode^.Prior
+    FCurrNode := FCurrNode^.Prior
   else
     if not FInCycle then
       begin
-        NextNode := FTail;
+        FCurrNode := FTail;
         FInCycle := True;
       end;
-  Result := NextNode <> nil;
-  if Result then
-    FCurrNode := NextNode;
+  Result := FCurrNode <> nil;
 end;
 
 procedure TGOrderedHashTable.TReverseEnumerator.Reset;
@@ -2671,8 +2677,13 @@ begin
                 begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
-                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      if IsManagedType(TEntry) then
+                        begin
+                          TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                          TFakeNode(FList[I]) := Default(TFakeNode);
+                        end
+                      else
+                        aTarget[h] := FList[I];
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence
@@ -2745,8 +2756,16 @@ begin
           h := h and Mask;
           if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
             begin
-              TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-              TFakeNode(FList[aIndex]) := Default(TFakeNode);
+              if IsManagedType(TEntry) then
+                begin
+                  TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+                  TFakeNode(FList[aIndex]) := Default(TFakeNode);
+                end
+              else
+                begin
+                  FList[Gap] := FList[aIndex];
+                  FList[aIndex].Hash := 0;
+                end;
               Gap := aIndex;
             end;
           aIndex := Succ(aIndex) and Mask;
@@ -3056,8 +3075,13 @@ begin
                 begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
-                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      if IsManagedType(TEntry) then
+                        begin
+                          TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                          TFakeNode(FList[I]) := Default(TFakeNode);
+                        end
+                      else
+                        aTarget[h] := FList[I];
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence
@@ -3130,8 +3154,16 @@ begin
           h := h and Mask;
           if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
             begin
-              TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-              TFakeNode(FList[aIndex]) := Default(TFakeNode);
+              if IsManagedType(TEntry) then
+                begin
+                  TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+                  TFakeNode(FList[aIndex]) := Default(TFakeNode);
+                end
+              else
+                begin
+                  FList[Gap] := FList[aIndex];
+                  FList[aIndex].Hash := 0;
+                end;
               Gap := aIndex;
             end;
           aIndex := Succ(aIndex) and Mask;
@@ -3408,13 +3440,14 @@ begin
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
   else
     FChainList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
-  FNodeList[aPos.Index].Data := Default(TEntry);
+  if IsManagedType(TEntry) then
+    FNodeList[aPos.Index].Data := Default(TEntry);
   Dec(FCount);
   if aPos.Index < Count then
     begin
-      //System.Move(FNodeList[Count], FNodeList[aPos.Index], SizeOf(TNode));
       FNodeList[aPos.Index] := FNodeList[Count];
-      System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+      if IsManagedType(TEntry) then
+        System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
       FixChain(Count, aPos.Index);
     end;
 end;
@@ -3422,13 +3455,15 @@ end;
 procedure TGLiteChainHashTable.DoRemoveIndex(aIndex: SizeInt);
 begin
   RemoveFromChain(aIndex);
-  FNodeList[aIndex].Data := Default(TEntry);
+  if IsManagedType(TEntry) then
+    FNodeList[aIndex].Data := Default(TEntry);
   Dec(FCount);
   if aIndex < Count then
     begin
       //System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
       FNodeList[aIndex] := FNodeList[Count];
-      System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+      if IsManagedType(TEntry) then
+        System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
       FixChain(Count, aIndex);
     end;
 end;
@@ -3532,7 +3567,7 @@ end;
 
 procedure TGLiteChainHashTable.RemoveIndex(aIndex: SizeInt);
 begin
-  if (aIndex >= 0) and (aIndex < Count) then
+  if SizeUInt(aIndex) < SizeUInt(Count) then
     DoRemoveIndex(aIndex)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
@@ -3617,8 +3652,13 @@ begin
                 begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
-                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      if IsManagedType(TEntry) then
+                        begin
+                          TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                          TFakeNode(FList[I]) := Default(TFakeNode);
+                        end
+                      else
+                        aTarget[h] := FList[I];
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence
@@ -3693,8 +3733,16 @@ begin
     h := FList[aIndex].Hash shr FShift;
     if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
       begin
-        TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-        TFakeNode(FList[aIndex]) := Default(TFakeNode);
+        if IsManagedType(TEntry) then
+          begin
+            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+            TFakeNode(FList[aIndex]) := Default(TFakeNode);
+          end
+        else
+          begin
+            FList[Gap] := FList[aIndex];
+            FList[aIndex].Hash := 0;
+          end;
         Gap := aIndex;
       end;
     aIndex := Succ(aIndex) and Mask;
