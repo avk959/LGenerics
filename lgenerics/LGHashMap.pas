@@ -430,7 +430,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     function  Find(constref aKey: TKey): PEntry; inline;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean; inline;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
@@ -454,7 +454,7 @@ type
   { returns Value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean; inline;
   { returns True and add e only if not contains e.Key }
     function  Add(constref e: TEntry): Boolean; inline;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
@@ -1906,20 +1906,24 @@ end;
 
 function TGLiteHashMapLP.AddAll(const a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
-  Result := 0;
-  for e in a do
-    Result += Ord(Add(e));
+  Result := Count;
+  for I := 0 to System.High(a) do
+    with a[I] do
+      Add(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGLiteHashMapLP.AddAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
-  Result := 0;
+  Result := Count;
   for Entry in e do
-    Result += Ord(Add(Entry));
+    with Entry do
+      Add(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGLiteHashMapLP.AddAll(constref aMap: TGLiteHashMapLP): SizeInt;
@@ -1928,9 +1932,11 @@ var
 begin
   if @AMap = @Self then
     exit(0);
-  Result := 0;
+  Result := Count;
   for e in aMap do
-    Result += Ord(Add(e));
+    with e do
+      Add(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGLiteHashMapLP.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -1950,11 +1956,12 @@ end;
 
 function TGLiteHashMapLP.ContainsAny(const a: array of TKey): Boolean;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  for k in a do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for I := 0 to System.High(a) do
+      if Contains(a[I]) then
+        exit(True);
   Result := False;
 end;
 
@@ -1962,9 +1969,10 @@ function TGLiteHashMapLP.ContainsAny(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
-  for k in e do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for k in e do
+      if Contains(k) then
+        exit(True);
   Result := False;
 end;
 
@@ -1974,18 +1982,20 @@ var
 begin
   if @aMap = @Self then
     exit(True);
-  for k in aMap.Keys do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for k in aMap.Keys do
+      if Contains(k) then
+        exit(True);
   Result := False;
 end;
 
 function TGLiteHashMapLP.ContainsAll(const a: array of TKey): Boolean;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  for k in a do
-    if not Contains(k) then
+  if IsEmpty then exit(System.Length(a) = 0);
+  for I := 0 to System.High(a) do
+    if not Contains(a[I]) then
       exit(False);
   Result := True;
 end;
@@ -1994,6 +2004,7 @@ function TGLiteHashMapLP.ContainsAll(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
+  if IsEmpty then exit(e.None);
   for k in e do
     if not Contains(k) then
       exit(False);
@@ -2006,6 +2017,7 @@ var
 begin
   if @aMap = @Self then
     exit(True);
+  if IsEmpty then exit(aMap.IsEmpty);
   for k in aMap.Keys do
     if not Contains(k) then
       exit(False);
@@ -2019,20 +2031,32 @@ end;
 
 function TGLiteHashMapLP.RemoveAll(const a: array of TKey): SizeInt;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  Result := 0;
-  for k in a do
-    Result += Ord(Remove(k));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if FTable.Remove(a[I]) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteHashMapLP.RemoveAll(e: IKeyEnumerable): SizeInt;
 var
   k: TKey;
 begin
-  Result := 0;
-  for k in e do
-    Result += Ord(Remove(k));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for k in e do
+        if FTable.Remove(k) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteHashMapLP.RemoveAll(constref aMap: TGLiteHashMapLP): SizeInt;
@@ -2041,9 +2065,15 @@ var
 begin
   if @aMap <> @Self then
     begin
-      Result := 0;
-      for k in aMap.Keys do
-        Result += Ord(Remove(k));
+      Result := Count;
+      if Result > 0 then
+        begin
+          for k in aMap.Keys do
+            if FTable.Remove(k) then
+              if IsEmpty then
+                break;
+          Result -= Count;
+        end;
     end
   else
     begin
@@ -2422,20 +2452,24 @@ end;
 
 function TGLiteChainHashMap.AddAll(const a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
-  Result := 0;
-  for e in a do
-    Result += Ord(Add(e));
+  Result := Count;
+  for I := 0 to System.High(a) do
+    with a[I] do
+      Add(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGLiteChainHashMap.AddAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
-  Result := 0;
+  Result := Count;
   for Entry in e do
-    Result += Ord(Add(Entry));
+    with Entry do
+      Add(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGLiteChainHashMap.AddAll(constref aMap: TGLiteChainHashMap): SizeInt;
@@ -2444,9 +2478,11 @@ var
 begin
   if @AMap = @Self then
     exit(0);
-  Result := 0;
+  Result := Count;
   for e in aMap do
-    Result += Ord(Add(e));
+    with e do
+      Add(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGLiteChainHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -2466,11 +2502,12 @@ end;
 
 function TGLiteChainHashMap.ContainsAny(const a: array of TKey): Boolean;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  for k in a do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for I := 0 to System.High(a) do
+      if Contains(a[I]) then
+        exit(True);
   Result := False;
 end;
 
@@ -2478,9 +2515,10 @@ function TGLiteChainHashMap.ContainsAny(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
-  for k in e do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for k in e do
+      if Contains(k) then
+        exit(True);
   Result := False;
 end;
 
@@ -2490,9 +2528,10 @@ var
 begin
   if @aMap = @Self then
     exit(True);
-  for k in aMap.Keys do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    for k in aMap.Keys do
+      if Contains(k) then
+        exit(True);
   Result := False;
 end;
 
@@ -2500,6 +2539,7 @@ function TGLiteChainHashMap.ContainsAll(const a: array of TKey): Boolean;
 var
   k: TKey;
 begin
+  if IsEmpty then exit(System.Length(a) = 0);
   for k in a do
     if not Contains(k) then
       exit(False);
@@ -2510,6 +2550,7 @@ function TGLiteChainHashMap.ContainsAll(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
+  if IsEmpty then exit(e.None);
   for k in e do
     if not Contains(k) then
       exit(False);
@@ -2522,6 +2563,7 @@ var
 begin
   if @aMap = @Self then
     exit(True);
+  if IsEmpty then exit(aMap.IsEmpty);
   for k in aMap.Keys do
     if not Contains(k) then
       exit(False);
@@ -2535,20 +2577,32 @@ end;
 
 function TGLiteChainHashMap.RemoveAll(const a: array of TKey): SizeInt;
 var
-  k: TKey;
+  I: SizeInt;
 begin
-  Result := 0;
-  for k in a do
-    Result += Ord(Remove(k));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if FTable.Remove(a[I]) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteChainHashMap.RemoveAll(e: IKeyEnumerable): SizeInt;
 var
   k: TKey;
 begin
-  Result := 0;
-  for k in e do
-    Result += Ord(Remove(k));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for k in e do
+        if FTable.Remove(k) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteChainHashMap.RemoveAll(constref aMap: TGLiteChainHashMap): SizeInt;
@@ -2557,9 +2611,15 @@ var
 begin
   if @aMap <> @Self then
     begin
-      Result := 0;
-      for k in aMap.Keys do
-        Result += Ord(Remove(k));
+      Result := Count;
+      if Result > 0 then
+        begin
+          for k in aMap.Keys do
+            if FTable.Remove(k) then
+              if IsEmpty then
+                break;
+          Result -= Count;
+        end;
     end
   else
     begin
