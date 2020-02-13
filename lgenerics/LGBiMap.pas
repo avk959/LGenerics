@@ -659,12 +659,18 @@ procedure TGHashBiMap.DoRemove(aIndex: SizeInt);
 begin
   RemoveFromKeyChain(aIndex);
   RemoveFromValueChain(aIndex);
-  FNodeList[aIndex].Data := Default(TEntry);
+  if IsManagedType(TEntry) then
+    FNodeList[aIndex].Data := Default(TEntry);
   Dec(FCount);
   if aIndex < Count then
     begin
-      System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
-      System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+      if IsManagedType(TEntry) then
+        begin
+          System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
+          System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+        end
+      else
+        FNodeList[aIndex] := FNodeList[Count];
       FixKeyChain(Count, aIndex);
       FixValueChain(Count, aIndex);
     end;
@@ -737,11 +743,12 @@ end;
 
 function TGHashBiMap.DoAddAll(constref a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
   Result := Count;
-  for e in a do
-    DoAdd(e.Key, e.Value);
+  for I := 0 to System.High(a) do
+    with a[I] do
+      DoAdd(Key, Value);
   Result := Count - Result;
 end;
 
@@ -809,12 +816,17 @@ end;
 
 function TGHashBiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
 var
-  k: TKey;
+  I: SizeInt;
 begin
   Result := Count;
-  for k in a do
-    DoRemoveKey(k);
-  Result := Result - Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if DoRemoveKey(a[I]) then
+          if IsEmpty then
+            break;
+      Result := Result - Count;
+    end;
 end;
 
 function TGHashBiMap.DoRemoveKeys(e: IKeyEnumerable): SizeInt;
@@ -849,12 +861,17 @@ end;
 
 function TGHashBiMap.DoRemoveValues(constref a: array of TValue): SizeInt;
 var
-  v: TValue;
+  I: SizeInt;
 begin
   Result := Count;
-  for v in a do
-    DoRemoveValue(v);
-  Result := Result - Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if DoRemoveValue(a[I]) then
+          if IsEmpty then
+            break;
+      Result := Result - Count;
+    end;
 end;
 
 function TGHashBiMap.DoRemoveValues(e: IValueEnumerable): SizeInt;
