@@ -1628,11 +1628,12 @@ end;
 
 function TGLiteHashMultiSetLP.ContainsAny(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
 begin
-  for v in a do
-    if Contains(v) then
-      exit(True);
+  if NonEmpty then
+    for I := 0 to System.High(a) do
+      if Contains(a[I]) then
+        exit(True);
   Result := False;
 end;
 
@@ -1640,9 +1641,10 @@ function TGLiteHashMultiSetLP.ContainsAny(e: IEnumerable): Boolean;
 var
   v: T;
 begin
-  for v in e do
-    if Contains(v) then
-      exit(True);
+  if NonEmpty then
+    for v in e do
+      if Contains(v) then
+        exit(True);
   Result := False;
 end;
 
@@ -1652,9 +1654,10 @@ var
 begin
   if @aSet <> @Self then
     begin
-      for v in aSet.Distinct do
-        if Contains(v) then
-          exit(True);
+      if NonEmpty then
+        for v in aSet.Distinct do
+          if Contains(v) then
+            exit(True);
       Result := False;
     end
   else
@@ -1663,10 +1666,11 @@ end;
 
 function TGLiteHashMultiSetLP.ContainsAll(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
 begin
-  for v in a do
-    if NonContains(v) then
+  if IsEmpty then exit(System.Length(a) = 0);
+  for I := 0 to System.High(a) do
+    if NonContains(a[I]) then
       exit(False);
   Result := True;
 end;
@@ -1675,6 +1679,7 @@ function TGLiteHashMultiSetLP.ContainsAll(e: IEnumerable): Boolean;
 var
   v: T;
 begin
+  if IsEmpty then exit(e.None);
   for v in e do
     if NonContains(v) then
       exit(False);
@@ -1711,26 +1716,22 @@ end;
 
 function TGLiteHashMultiSetLP.AddAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
-  Result := 0;
-  for v in a do
-    begin
-      Add(v);
-      Inc(Result);
-    end;
+  Result := Count;
+  for I := 0 to System.High(a) do
+    Add(a[I]);
+  Result := Count - Result;
 end;
 
 function TGLiteHashMultiSetLP.AddAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in e do
-    begin
-      Add(v);
-      Inc(Result);
-    end;
+    Add(v);
+  Result := Count - Result;
 end;
 
 function TGLiteHashMultiSetLP.AddAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
@@ -1747,27 +1748,39 @@ end;
 
 function TGLiteHashMultiSetLP.RemoveAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
-  Result := 0;
-  for v in a do
-    Result += Ord(Remove(v));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if Remove(a[I]) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteHashMultiSetLP.RemoveAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
-  for v in e do
-    Result += Ord(Remove(v));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for v in e do
+        if Remove(v) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteHashMultiSetLP.RemoveAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
 begin
   Result := Count;
   SymmetricSubtract(aSet);
-  Result := Result - Count;
+  Result -= Count;
 end;
 
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TTest): SizeInt;
