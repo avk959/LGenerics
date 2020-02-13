@@ -379,13 +379,6 @@ type
     function  GetExpandTreshold: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
   public
-    class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator -(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator *(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
-    class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
@@ -397,7 +390,7 @@ type
     procedure TrimToFit; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
   { returns True if element added }
-    function  Add(constref aValue: T): Boolean;
+    function  Add(constref aValue: T): Boolean; inline;
   { returns count of added elements }
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
@@ -441,6 +434,13 @@ type
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
+    class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator -(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator *(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
+    class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
   end;
 
   { TGDisjointSetUnion: see https://en.wikipedia.org/wiki/Disjoint-set_data_structure }
@@ -1406,48 +1406,6 @@ begin
   FTable.LoadFactor := aValue;
 end;
 
-class operator TGLiteHashSetLP. + (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-begin
-  Result := L;
-  Result.Join(R);
-end;
-
-class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-var
-  v: T;
-begin
-  for v in L do
-    if R.NonContains(v) then
-      Result.Add(v);
-end;
-
-class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-begin
-  Result := L;
-  Result.Intersect(R);
-end;
-
-class operator TGLiteHashSetLP.><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-begin
-  Result := L;
-  Result.SymmetricSubtract(R);
-end;
-
-class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
-begin
-  Result := aSet.Contains(aValue);
-end;
-
-class operator TGLiteHashSetLP. = (constref L, R: TGLiteHashSetLP): Boolean;
-begin
-  Result := L.IsEqual(R);
-end;
-
-class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
-begin
-  Result := L.IsSubset(R);
-end;
-
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
 begin
   Result := FTable.DEFAULT_LOAD_FACTOR;
@@ -1518,20 +1476,22 @@ end;
 
 function TGLiteHashSetLP.AddAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
-  Result := 0;
-  for v in a do
-    Result += Ord(Add(v));
+  Result := Count;
+  for I := 0 to System.High(a) do
+    Add(a[I]);
+  Result := Count - Result;
 end;
 
 function TGLiteHashSetLP.AddAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in e do
-    Result += Ord(Add(v));
+    Add(v);
+  Result := Count - Result;
 end;
 
 function TGLiteHashSetLP.AddAll(constref aSet: TGLiteHashSetLP): SizeInt;
@@ -1540,9 +1500,10 @@ var
 begin
   if @aSet <> @Self then
     begin
-      Result := 0;
+      Result := Count;
       for v in aSet do
-        Result += Ord(Add(v));
+        Add(v);
+      Result := Count - Result;
     end
   else
     Result := 0;
@@ -1562,12 +1523,13 @@ end;
 
 function TGLiteHashSetLP.ContainsAny(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
   p: SizeInt;
 begin
-  for v in a do
-    if FTable.Find(v, p) <> nil then
-      exit(True);
+  if NonEmpty then
+    for I := 0 to System.High(a) do
+      if FTable.Find(a[I], p) <> nil then
+        exit(True);
   Result := False;
 end;
 
@@ -1576,9 +1538,10 @@ var
   v: T;
   p: SizeInt;
 begin
-  for v in e do
-    if FTable.Find(v, p) <> nil then
-      exit(True);
+  if NonEmpty then
+    for v in e do
+      if FTable.Find(v, p) <> nil then
+        exit(True);
   Result := False;
 end;
 
@@ -1589,19 +1552,21 @@ var
 begin
   if @aSet = @Self then
     exit(True);
-  for v in aSet do
-    if FTable.Find(v, p) <> nil then
-      exit(True);
+  if NonEmpty then
+    for v in aSet do
+      if FTable.Find(v, p) <> nil then
+        exit(True);
   Result := False;
 end;
 
 function TGLiteHashSetLP.ContainsAll(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
   p: SizeInt;
 begin
-  for v in a do
-    if FTable.Find(v, p) = nil then
+  if IsEmpty then exit(System.Length(a) = 0);
+  for I := 0 to System.High(a) do
+    if FTable.Find(a[I], p) = nil then
       exit(False);
   Result := True;
 end;
@@ -1611,6 +1576,7 @@ var
   v: T;
   p: SizeInt;
 begin
+  if IsEmpty then exit(e.None);
   for v in e do
     if FTable.Find(v, p) = nil then
       exit(False);
@@ -1624,6 +1590,7 @@ var
 begin
   if @aSet = @Self then
     exit(True);
+  if IsEmpty then exit(aSet.IsEmpty);
   for v in aSet do
     if FTable.Find(v, p) = nil then
       exit(False);
@@ -1637,20 +1604,32 @@ end;
 
 function TGLiteHashSetLP.RemoveAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
-  Result := 0;
-  for v in a do
-    Result += Ord(Remove(v));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if FTable.Remove(a[I]) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteHashSetLP.RemoveAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
-  for v in e do
-    Result += Ord(Remove(v));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for v in e do
+        if FTable.Remove(v) then
+          if IsEmpty then
+            break;
+      Result -= Count;
+    end;
 end;
 
 function TGLiteHashSetLP.RemoveAll(constref aSet: TGLiteHashSetLP): SizeInt;
@@ -1659,9 +1638,14 @@ var
 begin
   if @aSet <> @Self then
     begin
-      Result := 0;
-      for v in aSet do
-        Result += Ord(Remove(v));
+      Result := Count;
+      begin
+        for v in aSet do
+          if FTable.Remove(v) then
+            if IsEmpty then
+              break;
+        Result -= Count;
+      end;
     end
   else
     begin
@@ -1853,6 +1837,48 @@ begin
     end
   else
     Clear;
+end;
+
+class operator TGLiteHashSetLP. + (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  Result := L;
+  Result.Join(R);
+end;
+
+class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+var
+  v: T;
+begin
+  for v in L do
+    if R.NonContains(v) then
+      Result.Add(v);
+end;
+
+class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  Result := L;
+  Result.Intersect(R);
+end;
+
+class operator TGLiteHashSetLP.><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  Result := L;
+  Result.SymmetricSubtract(R);
+end;
+
+class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
+begin
+  Result := aSet.Contains(aValue);
+end;
+
+class operator TGLiteHashSetLP. = (constref L, R: TGLiteHashSetLP): Boolean;
+begin
+  Result := L.IsEqual(R);
+end;
+
+class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
+begin
+  Result := L.IsSubset(R);
 end;
 
 { TGDisjointSetUnion.TEnumerator }
