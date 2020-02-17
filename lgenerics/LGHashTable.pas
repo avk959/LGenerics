@@ -534,6 +534,8 @@ type
     property  FillRatio: Single read GetFillRatio;
   end;
 
+  { TGLiteHashTableLP }
+
   generic TGLiteHashTableLP<TKey, TEntry, TEqRel> = record
   private
   type
@@ -605,6 +607,7 @@ type
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
     class operator Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP);
+    class operator AddRef(var ht: TGLiteHashTableLP);
   public
   const
     DEFAULT_LOAD_FACTOR: Single = 0.55;
@@ -674,6 +677,7 @@ type
     procedure DoRemoveIndex(aIndex: SizeInt);
     class operator Initialize(var ht: TGLiteChainHashTable);
     class operator Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
+    class operator AddRef(var ht: TGLiteChainHashTable);
   public
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
@@ -749,10 +753,12 @@ type
     procedure Expand;
     function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
+    procedure FinalizeList;
     class function HashCode(aValue: TKey): SizeInt; static; inline;
     class constructor Init;
-    class operator Initialize(var ht: TGLiteIntHashTable);
+    class operator Initialize(var ht: TGLiteIntHashTable); inline;
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable);
+    class operator AddRef(var ht: TGLiteIntHashTable); inline;
   public
     function  GetEnumerator: TEnumerator;
     function  GetRemovableEnumerator: TRemovableEnumerator;
@@ -771,7 +777,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
-    property  Size: SizeInt read GetCapacity;
   end;
 
 const
@@ -3254,6 +3259,12 @@ begin
     end;
 end;
 
+class operator TGLiteHashTableLP.AddRef(var ht: TGLiteHashTableLP);
+begin
+  if ht.FList <> nil then
+    ht.FList := System.Copy(ht.FList);
+end;
+
 function TGLiteHashTableLP.GetEnumerator: TEnumerator;
 begin
   Result := TEnumerator.Create(FList);
@@ -3530,6 +3541,15 @@ begin
       aDst.FNodeList := System.Copy(aSrc.FNodeList);
       aDst.FChainList := System.Copy(aSrc.FChainList);
       aDst.FCount := aSrc.Count;
+    end;
+end;
+
+class operator TGLiteChainHashTable.AddRef(var ht: TGLiteChainHashTable);
+begin
+  if ht.FNodeList <> nil then
+    begin
+      ht.FNodeList := System.Copy(ht.FNodeList);
+      ht.FChainList := System.Copy(ht.FChainList);
     end;
 end;
 
@@ -3818,6 +3838,39 @@ begin
     until False;
 end;
 
+procedure TGLiteIntHashTable.FinalizeList;
+var
+  Len: SizeInt;
+  p: PNode;
+begin
+  Len := System.Length(FList);
+  p := PNode(FList);
+  while Len >= 4 do
+    begin
+      p[0] := Default(TNode);
+      p[1] := Default(TNode);
+      p[2] := Default(TNode);
+      p[3] := Default(TNode);
+      p += 4;
+      Len -= 4;
+    end;
+  case Len of
+    1: p[0] := Default(TNode);
+    2:
+      begin
+        p[0] := Default(TNode);
+        p[1] := Default(TNode);
+      end;
+    3:
+      begin
+        p[0] := Default(TNode);
+        p[1] := Default(TNode);
+        p[2] := Default(TNode);
+      end;
+  else
+  end;
+end;
+
 class function TGLiteIntHashTable.HashCode(aValue: TKey): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
@@ -3846,6 +3899,12 @@ begin
   aDst.FShift := aSrc.FShift;
 end;
 
+class operator TGLiteIntHashTable.AddRef(var ht: TGLiteIntHashTable);
+begin
+  if ht.FList <> nil then
+    ht.FList := System.Copy(ht.FList);
+end;
+
 function TGLiteIntHashTable.GetEnumerator: TEnumerator;
 begin
   Result.FList := Pointer(FList);
@@ -3865,12 +3924,9 @@ begin
 end;
 
 procedure TGLiteIntHashTable.MakeEmpty;
-var
-  I: SizeInt;
 begin
   if IsManagedType(TEntry) then
-    for I := 0 to Pred(Capacity) do
-      FList[I] := Default(TNode)
+    FinalizeList
   else
     System.FillChar(Pointer(FList)^, Capacity * SizeOf(TNode), 0);
   FCount := 0;
