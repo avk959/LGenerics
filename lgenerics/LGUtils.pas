@@ -380,18 +380,10 @@ type
   type
     PItem = ^T;
   private
-  const
-    LEN_MASK: SizeInt = High(SizeInt);
-    OWN_FLAG: SizeInt = Low(SizeInt);
-  var
     FItems: PItem;
     FLength: SizeInt;
-    procedure DropOwns; inline;
-    function  OwnsItems: Boolean; inline;
-    function  GetLen: SizeInt; inline;
     procedure FillItems(aFrom: PItem; aCount: SizeInt; constref aValue: T);
     procedure ReallocManaged(aNewLen: SizeInt);
-    procedure Realloc(aNewLen: SizeInt);
     procedure SetLen(aValue: SizeInt);
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
@@ -457,7 +449,7 @@ type
     function  CreateCopy(aFromIndex, aCount: SizeInt): TGDynArray<T>;
     procedure Clear;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
-    property  Length: SizeInt read GetLen write SetLen;
+    property  Length: SizeInt read FLength write SetLen;
     property  High: SizeInt read GetHigh;
     property  Ptr: PItem read FItems;
   end;
@@ -2259,21 +2251,6 @@ end;
 
 { TGDynArray }
 
-procedure TGDynArray<T>.DropOwns;
-begin
-  FLength := FLength and LEN_MASK;
-end;
-
-function TGDynArray<T>.OwnsItems: Boolean;
-begin
-  Result := (FLength and OWN_FLAG) <> 0;
-end;
-
-function TGDynArray<T>.GetLen: SizeInt;
-begin
-  Result := FLength and LEN_MASK;
-end;
-
 procedure TGDynArray<T>.FillItems(aFrom: PItem; aCount: SizeInt; constref aValue: T);
 begin
   while aCount >= 4 do
@@ -2309,42 +2286,20 @@ var
 begin
   Tmp := System.GetMem(aNewLen * SizeOf(T));
   OldLen := Length;
-  if OwnsItems then
+  if aNewLen > OldLen then
     begin
-      if aNewLen > OldLen then
-        begin
-          System.Move(FItems^, Tmp^, OldLen * SizeOf(T));
-          System.FillChar(FItems^, OldLen * SizeOf(T), 0);
-          System.FillChar(Tmp[OldLen], (aNewLen - OldLen) * SizeOf(T), 0);
-        end
-      else  //aNewLen < OldLen
-        begin
-          System.Move(FItems^, Tmp^, aNewLen * SizeOf(T));
-          System.FillChar(FItems^, aNewLen * SizeOf(T), 0);
-          FillItems(FItems + aNewLen, OldLen - aNewLen, Default(T));
-        end;
-      System.FreeMem(FItems);
+      System.Move(FItems^, Tmp^, OldLen * SizeOf(T));
+      System.FillChar(FItems^, OldLen * SizeOf(T), 0);
+      System.FillChar(Tmp[OldLen], (aNewLen - OldLen) * SizeOf(T), 0);
     end
-  else
+  else  //aNewLen < OldLen
     begin
-      System.FillChar(Tmp^, aNewLen * SizeOf(T), 0);
-      CopyItems(FItems, Tmp, Math.Min(aNewLen, OldLen));
+      System.Move(FItems^, Tmp^, aNewLen * SizeOf(T));
+      System.FillChar(FItems^, aNewLen * SizeOf(T), 0);
+      FillItems(FItems + aNewLen, OldLen - aNewLen, Default(T));
     end;
+  System.FreeMem(FItems);
   FItems := Tmp;
-end;
-
-procedure TGDynArray<T>.Realloc(aNewLen: SizeInt);
-var
-  Tmp: PItem;
-begin
-  if OwnsItems then
-    FItems := System.ReallocMem(FItems, aNewLen * SizeOf(T))
-  else
-    begin
-      Tmp := System.GetMem(aNewLen * SizeOf(T));
-      System.Move(FItems^, Tmp^, Math.Min(aNewLen, Length) * SizeOf(T));
-      FItems := Tmp;
-    end;
 end;
 
 procedure TGDynArray<T>.SetLen(aValue: SizeInt);
@@ -2368,8 +2323,8 @@ begin
             if IsManagedType(T) then
               ReallocManaged(aValue)
             else
-              Realloc(aValue);
-          FLength := aValue or OWN_FLAG;
+              FItems := System.ReallocMem(FItems, aValue * SizeOf(T));;
+          FLength := aValue;
         end
       else
         raise EInvalidOpException.Create(SECantAcceptNegLen);
@@ -2463,8 +2418,21 @@ begin
 end;
 
 class operator TGDynArray<T>.AddRef(var a: TGDynArray<T>);
+var
+  OldItems: PItem;
 begin
-  a.DropOwns;
+  if a.Length <> 0 then
+    begin
+      OldItems := a.FItems;
+      a.FItems := System.GetMem(a.Length * SizeOf(T));
+      if IsManagedType(T) then
+        begin
+          System.FillChar(a.FItems^, a.Length * SizeOf(T), 0);
+          CopyItems(OldItems, a.FItems, a.Length)
+        end
+      else
+        System.Move(OldItems^, a.FItems^, a.Length * SizeOf(T));
+    end;
 end;
 
 function TGDynArray<T>.GetEnumerator: TEnumerator;
@@ -2531,12 +2499,9 @@ procedure TGDynArray<T>.Clear;
 begin
   if Length > 0 then
     begin
-      if OwnsItems then
-        begin
-          if IsManagedType(T) then
-            FillItems(FItems, Length, Default(T));
-          FreeMem(FItems);
-        end;
+      if IsManagedType(T) then
+        FillItems(FItems, Length, Default(T));
+      FreeMem(FItems);
       FItems := nil;
       FLength := 0;
     end;
