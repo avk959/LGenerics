@@ -101,6 +101,7 @@ type
   end;
 
   function JdkHash(aValue: DWord): DWord; inline;
+  function JdkHashQ(aValue: QWord): DWord; inline;
 
 implementation
 
@@ -111,6 +112,11 @@ function JdkHash(aValue: DWord): DWord;
 begin
   aValue := aValue xor aValue shr 20 xor aValue shr 12;
   Result := aValue xor aValue shr 7 xor aValue shr 4;
+end;
+
+function JdkHashQ(aValue: QWord): DWord;
+begin
+  Result := JdkHash(aValue xor aValue shr 32);
 end;
 
 {$DEFINE c1 := DWord($9e3779b1)}{$DEFINE c2 := DWord($85ebca77)}{$DEFINE c3 := DWord($c2b2ae3d)}
