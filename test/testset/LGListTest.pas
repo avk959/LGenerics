@@ -1557,6 +1557,9 @@ begin
   AssertTrue(lst.IsEmpty);
   Test(lst);
   AssertTrue(lst.IsEmpty);
+  lst.Add(7);
+  Test(lst);
+  AssertTrue(lst[0] = 7);
 end;
 
 { TLiteComparableSortedListTest }
@@ -2188,6 +2191,9 @@ begin
   AssertTrue(lst.IsEmpty);
   Test(lst);
   AssertTrue(lst.IsEmpty);
+  lst.Add(7);
+  Test(lst);
+  AssertTrue(lst[0] = 7);
 end;
 
 { TLiteHashListTest }
@@ -2495,6 +2501,8 @@ begin
   AssertTrue(lst.IsEmpty);
   Test(lst);
   AssertTrue(lst.IsEmpty);
+  lst.Add(7);
+  AssertTrue(lst.IndexOf(2) = -1);
 end;
 
 initialization
