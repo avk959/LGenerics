@@ -691,6 +691,7 @@ type
     class procedure CapacityExceedError(aValue: SizeInt); static;
     class operator Initialize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
+    class operator AddRef(var hl: TGLiteHashList);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
@@ -805,6 +806,7 @@ type
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
+    class operator AddRef(var hl: TGLiteHashList2);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
@@ -3619,9 +3621,19 @@ end;
 
 class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
 begin
+  if @aSrc = @aDst then exit;
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FChainList := System.Copy(aSrc.FChainList);
   aDst.FCount := aSrc.FCount;
+end;
+
+class operator TGLiteHashList.AddRef(var hl: TGLiteHashList);
+begin
+  if hl.FNodeList <> nil then
+    begin
+      hl.FNodeList := System.Copy(hl.FNodeList);
+      hl.FChainList := System.Copy(hl.FChainList);
+    end;
 end;
 
 function TGLiteHashList.GetEnumerator: TEnumerator;
@@ -4167,6 +4179,15 @@ begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FChainList := System.Copy(aSrc.FChainList);
   aDst.FCount := aSrc.FCount;
+end;
+
+class operator TGLiteHashList2.AddRef(var hl: TGLiteHashList2);
+begin
+  if hl.FNodeList <> nil then
+    begin
+      hl.FNodeList := System.Copy(hl.FNodeList);
+      hl.FChainList := System.Copy(hl.FChainList);
+    end;
 end;
 
 function TGLiteHashList2.GetEnumerator: TEnumerator;
