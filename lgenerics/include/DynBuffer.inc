@@ -380,6 +380,12 @@ begin
   aDst.FCount := aSrc.Count;
 end;
 
+class operator TGLiteDynBuffer.AddRef(var b: TGLiteDynBuffer);
+begin
+  if b.FItems <> nil then
+    b.FItems := System.Copy(b.FItems);
+end;
+
 procedure TGLiteDynBuffer.CheckEmpty;
 begin
   if Count = 0 then
@@ -1053,6 +1059,12 @@ begin
   aDst.FItems := System.Copy(aSrc.FItems, 0, aSrc.Capacity);
   aDst.FCount := aSrc.Count;
   aDst.FHead := aSrc.FHead;
+end;
+
+class operator TGLiteRingDynBuffer.AddRef(var b: TGLiteRingDynBuffer);
+begin
+  if b.FItems <> nil then
+    b.FItems := System.Copy(b.FItems);
 end;
 
 function TGLiteRingDynBuffer.InternalIndex(aIndex: SizeInt): SizeInt;

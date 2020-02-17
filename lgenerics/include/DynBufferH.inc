@@ -147,8 +147,9 @@
   private
     function  GetCapacity: SizeInt; inline;
     procedure Expand(aValue: SizeInt);
-    class operator Initialize(var b: TGLiteDynBuffer);
+    class operator Initialize(var b: TGLiteDynBuffer); inline;
     class operator Copy(constref aSrc: TGLiteDynBuffer; var aDst: TGLiteDynBuffer); inline;
+    class operator AddRef(var b: TGLiteDynBuffer); inline;
   public
     FItems: TArray;
     FCount: SizeInt;
@@ -309,8 +310,9 @@
     procedure Shrink;
     procedure CapacityExceedError(aValue: SizeInt);
     procedure CheckEmpty; inline;
-    class operator Initialize(var b: TGLiteRingDynBuffer);
+    class operator Initialize(var b: TGLiteRingDynBuffer); inline;
     class operator Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer); inline;
+    class operator AddRef(var b: TGLiteRingDynBuffer); inline;
   public
     // does not checks bounds !!!
     function  InternalIndex(aIndex: SizeInt): SizeInt; inline;
