@@ -381,7 +381,6 @@ type
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: TKey; inline;
     public
-      constructor Create(constref aMap: TGLiteHashMapLP);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TKey read GetCurrent;
@@ -392,7 +391,6 @@ type
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: TValue; inline;
     public
-      constructor Create(constref aMap: TGLiteHashMapLP);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TValue read GetCurrent;
@@ -403,7 +401,6 @@ type
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: TEntry; inline;
     public
-      constructor Create(constref aMap: TGLiteHashMapLP);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TEntry read GetCurrent;
@@ -413,7 +410,6 @@ type
     private
       FMap: PLiteHashMapLP;
     public
-      constructor Create(aMap: PLiteHashMapLP);
       function GetEnumerator: TKeyEnumerator; inline;
     end;
 
@@ -421,7 +417,6 @@ type
     private
       FMap: PLiteHashMapLP;
     public
-      constructor Create(aMap: PLiteHashMapLP);
       function GetEnumerator: TValueEnumerator; inline;
     end;
 
@@ -532,7 +527,6 @@ type
       FLast: SizeInt;
       function  GetCurrent: TKey; inline;
     public
-      constructor Create(constref aMap: TGLiteChainHashMap);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TKey read GetCurrent;
@@ -545,7 +539,6 @@ type
       FLast: SizeInt;
       function  GetCurrent: TValue; inline;
     public
-      constructor Create(constref aMap: TGLiteChainHashMap);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TValue read GetCurrent;
@@ -558,7 +551,6 @@ type
       FLast: SizeInt;
       function  GetCurrent: TEntry; inline;
     public
-      constructor Create(constref aMap: TGLiteChainHashMap);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TEntry read GetCurrent;
@@ -568,7 +560,6 @@ type
     private
       FMap: PHashMap;
     public
-      constructor Create(aMap: PHashMap);
       function GetEnumerator: TKeyEnumerator; inline;
     end;
 
@@ -576,7 +567,6 @@ type
     private
       FMap: PHashMap;
     public
-      constructor Create(aMap: PHashMap);
       function GetEnumerator: TValueEnumerator; inline;
     end;
 
@@ -584,6 +574,7 @@ type
     FTable: TTable;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
+    function  GetExpandTreshold: SizeInt; inline;
     function  Find(constref aKey: TKey): PEntry; inline;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
     function  GetValue(const aKey: TKey): TValue; inline;
@@ -641,6 +632,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise ELGMapError if an aKey is not present in map }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGThreadFGHashMap: fine-grained concurrent map attempt;
@@ -1653,11 +1645,6 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGLiteHashMapLP.TKeyEnumerator.Create(constref aMap: TGLiteHashMapLP);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
 function TGLiteHashMapLP.TKeyEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
@@ -1673,11 +1660,6 @@ end;
 function TGLiteHashMapLP.TValueEnumerator.GetCurrent: TValue;
 begin
   Result := FEnum.Current^.Value;
-end;
-
-constructor TGLiteHashMapLP.TValueEnumerator.Create(constref aMap: TGLiteHashMapLP);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
 end;
 
 function TGLiteHashMapLP.TValueEnumerator.MoveNext: Boolean;
@@ -1697,11 +1679,6 @@ begin
   Result := FEnum.Current^;
 end;
 
-constructor TGLiteHashMapLP.TEntryEnumerator.Create(constref aMap: TGLiteHashMapLP);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
 function TGLiteHashMapLP.TEntryEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
@@ -1714,26 +1691,16 @@ end;
 
 { TGLiteHashMapLP.TKeys }
 
-constructor TGLiteHashMapLP.TKeys.Create(aMap: PLiteHashMapLP);
-begin
-  FMap := aMap;
-end;
-
 function TGLiteHashMapLP.TKeys.GetEnumerator: TKeyEnumerator;
 begin
-  Result := TKeyEnumerator.Create(FMap^);
+  Result.FEnum := FMap^.FTable.GetEnumerator;
 end;
 
 { TGLiteHashMapLP.TValues }
 
-constructor TGLiteHashMapLP.TValues.Create(aMap: PLiteHashMapLP);
-begin
-  FMap := aMap;
-end;
-
 function TGLiteHashMapLP.TValues.GetEnumerator: TValueEnumerator;
 begin
-  Result := TValueEnumerator.Create(FMap^);
+  Result.FEnum := FMap^.FTable.GetEnumerator;
 end;
 
 { TGLiteHashMapLP }
@@ -1817,7 +1784,7 @@ end;
 
 function TGLiteHashMapLP.GetEnumerator: TEntryEnumerator;
 begin
-  Result := TEntryEnumerator.Create(Self);
+  Result.FEnum := FTable.GetEnumerator;
 end;
 
 function TGLiteHashMapLP.ToArray: TEntryArray;
@@ -2208,12 +2175,12 @@ end;
 
 function TGLiteHashMapLP.Keys: TKeys;
 begin
-  Result := TKeys.Create(@Self);
+  Result.FMap := @Self;
 end;
 
 function TGLiteHashMapLP.Values: TValues;
 begin
-  Result := TValues.Create(@Self);
+  Result.FMap := @Self;
 end;
 
 { TGLiteChainHashMap.TKeyEnumerator }
@@ -2221,13 +2188,6 @@ end;
 function TGLiteChainHashMap.TKeyEnumerator.GetCurrent: TKey;
 begin
   Result := FList[FCurrent].Data.Key;
-end;
-
-constructor TGLiteChainHashMap.TKeyEnumerator.Create(constref aMap: TGLiteChainHashMap);
-begin
-  FList := aMap.FTable.NodeList;
-  FLast := Pred(aMap.FTable.Count);
-  FCurrent := NULL_INDEX;
 end;
 
 function TGLiteChainHashMap.TKeyEnumerator.MoveNext: Boolean;
@@ -2248,13 +2208,6 @@ begin
   Result := FList[FCurrent].Data.Value;
 end;
 
-constructor TGLiteChainHashMap.TValueEnumerator.Create(constref aMap: TGLiteChainHashMap);
-begin
-  FList := aMap.FTable.NodeList;
-  FLast := Pred(aMap.FTable.Count);
-  FCurrent := NULL_INDEX;
-end;
-
 function TGLiteChainHashMap.TValueEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrent < FLast;
@@ -2273,13 +2226,6 @@ begin
   Result := FList[FCurrent].Data;
 end;
 
-constructor TGLiteChainHashMap.TEntryEnumerator.Create(constref aMap: TGLiteChainHashMap);
-begin
-  FList := aMap.FTable.NodeList;
-  FLast := Pred(aMap.FTable.Count);
-  FCurrent := NULL_INDEX;
-end;
-
 function TGLiteChainHashMap.TEntryEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrent < FLast;
@@ -2293,26 +2239,26 @@ end;
 
 { TGLiteChainHashMap.TKeys }
 
-constructor TGLiteChainHashMap.TKeys.Create(aMap: PHashMap);
-begin
-  FMap := aMap;
-end;
-
 function TGLiteChainHashMap.TKeys.GetEnumerator: TKeyEnumerator;
 begin
-  Result := TKeyEnumerator.Create(FMap^);
+  with Result do
+    begin
+      FList := FMap^.FTable.NodeList;
+      FLast := Pred(FMap^.FTable.Count);
+      FCurrent := NULL_INDEX;
+    end;
 end;
 
 { TGLiteChainHashMap.TValues }
 
-constructor TGLiteChainHashMap.TValues.Create(aMap: PHashMap);
-begin
-  FMap := aMap;
-end;
-
 function TGLiteChainHashMap.TValues.GetEnumerator: TValueEnumerator;
 begin
-  Result := TValueEnumerator.Create(FMap^);
+  with Result do
+    begin
+      FList := FMap^.FTable.NodeList;
+      FLast := Pred(FMap^.FTable.Count);
+      FCurrent := NULL_INDEX;
+    end;
 end;
 
 { TGLiteChainHashMap }
@@ -2323,6 +2269,11 @@ begin
 end;
 
 function TGLiteChainHashMap.GetCapacity: SizeInt;
+begin
+  Result := FTable.Capacity;
+end;
+
+function TGLiteChainHashMap.GetExpandTreshold: SizeInt;
 begin
   Result := FTable.Capacity;
 end;
@@ -2361,7 +2312,12 @@ end;
 
 function TGLiteChainHashMap.GetEnumerator: TEntryEnumerator;
 begin
-  Result := TEntryEnumerator.Create(Self);
+  with Result do
+    begin
+      FList := FTable.NodeList;
+      FLast := Pred(FTable.Count);
+      FCurrent := NULL_INDEX;
+    end;
 end;
 
 function TGLiteChainHashMap.ToArray: TEntryArray;
@@ -2774,12 +2730,12 @@ end;
 
 function TGLiteChainHashMap.Keys: TKeys;
 begin
-  Result := TKeys.Create(@Self);
+  Result.FMap := @Self;
 end;
 
 function TGLiteChainHashMap.Values: TValues;
 begin
-  Result := TValues.Create(@Self);
+  Result.FMap := @Self;
 end;
 
 { TGThreadFGHashMap.TSlot }
