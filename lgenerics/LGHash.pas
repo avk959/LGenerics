@@ -100,6 +100,7 @@ type
     class function HashGuid(constref aValue: TGuid; aSeed: QWord = 0): QWord; static;
   end;
 
+  function JdkHashW(aValue: Word): Word; inline;
   function JdkHash(aValue: DWord): DWord; inline;
   function JdkHashQ(aValue: QWord): DWord; inline;
 
@@ -107,6 +108,12 @@ implementation
 
 {$Q-}{$R-}{$B-}{$COPERATORS ON}{$MACRO ON}
 {.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  for test purpose only}
+
+function JdkHashW(aValue: Word): Word;
+begin
+  aValue := aValue xor aValue shr 12;
+  Result := aValue xor aValue shr 7 xor aValue shr 4;
+end;
 
 function JdkHash(aValue: DWord): DWord;
 begin
