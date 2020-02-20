@@ -488,7 +488,7 @@ end;
 
 class function TGWCharHelper.HashCode(aValue: WideChar): SizeInt;
 begin
-  Result := JdkHashW(Word(aValue));
+  Result := HashFunc.HashWord(Ord(aValue));
 end;
 
 class function TGWCharHelper.Equal(L, R: WideChar): Boolean;
@@ -533,7 +533,7 @@ end;
 
 class function TGWordHelper.HashCode(aValue: Word): SizeInt;
 begin
-  Result := JdkHashW(Word(aValue));
+  Result := HashFunc.HashWord(aValue);
 end;
 
 class function TGWordHelper.Equal(L, R: Word): Boolean;
@@ -548,7 +548,7 @@ end;
 
 class function TGSmallIntHelper.HashCode(aValue: SmallInt): SizeInt;
 begin
-  Result := JdkHashW(Word(aValue));
+  Result := HashFunc.HashWord(aValue);
 end;
 
 class function TGSmallIntHelper.Equal(L, R: SmallInt): Boolean;
@@ -563,7 +563,7 @@ end;
 
 class function TGDWordHelper.HashCode(aValue: DWord): SizeInt;
 begin
-  Result := JdkHash(aValue);
+  Result := HashFunc.HashDWord(aValue);
 end;
 
 class function TGDWordHelper.Equal(L, R: DWord): Boolean;
@@ -578,7 +578,7 @@ end;
 
 class function TGLongIntHelper.HashCode(aValue: LongInt): SizeInt;
 begin
-  Result := JdkHash(aValue);
+  Result := HashFunc.HashDWord(aValue);
 end;
 
 class function TGLongIntHelper.Equal(L, R: LongInt): Boolean;
@@ -593,7 +593,7 @@ end;
 
 class function TGQWordHelper.HashCode(aValue: QWord): SizeInt;
 begin
-  Result := JdkHashQ(aValue);
+  Result := HashFunc.HashQWord(aValue);
 end;
 
 class function TGQWordHelper.Equal(L, R: QWord): Boolean;
@@ -608,7 +608,7 @@ end;
 
 class function TGInt64Helper.HashCode(aValue: Int64): SizeInt;
 begin
-  Result := JdkHashQ(aValue);
+  Result := HashFunc.HashQWord(aValue);
 end;
 
 class function TGInt64Helper.Equal(L, R: Int64): Boolean;
@@ -624,11 +624,11 @@ end;
 class function TGNativeUIntHelper.HashCode(aValue: NativeUInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
-  Result := JdkHashQ(aValue);
+  Result := HashFunc.HashQWord(aValue);
 {$ELSEIF DEFINED(CPU32)}
-  Result := JdkHash(aValue);
+  Result := HashFunc.HashDWord(aValue);
 {$ELSE}
-  Result := JdkHashW(aValue);
+  Result := HashFunc.HashWord(aValue);
 {$ENDIF}
 end;
 
@@ -645,11 +645,11 @@ end;
 class function TGNativeIntHelper.HashCode(aValue: NativeInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
-  Result := JdkHashQ(aValue);
+  Result := HashFunc.HashQWord(aValue);
 {$ELSEIF DEFINED(CPU32)}
-  Result := JdkHash(aValue);
+  Result := HashFunc.HashDWord(aValue);
 {$ELSE}
-  Result := JdkHashW(aValue);
+  Result := HashFunc.HashWord(aValue);
 {$ENDIF}
 end;
 
