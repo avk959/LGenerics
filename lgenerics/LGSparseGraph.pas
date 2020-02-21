@@ -30,14 +30,14 @@ interface
 uses
   Classes, SysUtils, DateUtils,
   LGUtils,
-  {%H-}LGHelpers,
-  LGArrayHelpers,
   LGStack,
   LGQueue,
   LGVector,
+  LGHashSet,
   LGHashTable,
   LGHash,
-  LGHashSet,
+  LGArrayHelpers,
+  {%H-}LGHelpers,
   LGStrConst;
 
 type
