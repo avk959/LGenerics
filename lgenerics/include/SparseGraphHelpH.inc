@@ -104,7 +104,7 @@ type
   TIntHashSet = record
   strict private
   type
-    TTable = specialize TGLiteIntHashTable<SizeInt, TIntValue>;
+    TTable = specialize TGLiteEquitableHashTable<SizeInt, TIntValue, SizeInt>;
     PEntry = TTable.PEntry;
 
   public
@@ -297,7 +297,7 @@ type
   generic TGJoinableHashList<TEntry> = record
   strict private
   type
-    TTable = specialize TGLiteIntHashTable<SizeInt, TEntry>;
+    TTable = specialize TGLiteEquitableHashTable<SizeInt, TEntry, SizeInt>;
   public
   type
     TEnumerator = TTable.TEnumerator;
