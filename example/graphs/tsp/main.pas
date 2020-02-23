@@ -42,8 +42,9 @@ type
     procedure PaintBoxPaint(Sender: TObject);
   private
   type
-    TSolver  = specialize TGMetricTspHelper<Integer>;
-    THashSet = specialize TGLiteHashSetLP<TPoint2D, TPoint2D>;
+    TSolver      = specialize TGMetricTspHelper<Integer>;
+    THashSetSpec = specialize TGLiteHashSetLP<TPoint2D, TPoint2D>;
+    THashSet     = THashSetSpec.TSet;
 
   const
     GAP = 5;
