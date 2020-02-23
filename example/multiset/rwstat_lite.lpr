@@ -19,7 +19,8 @@ uses
 
 type
   TCounter    = specialize TGLiteHashMultiSetLP<string, string>;
-  TDictionary = specialize TGLiteHashSetLP<string, string>;
+  TDictSpec   = specialize TGLiteHashSetLP<string, string>;
+  TDictionary = TDictSpec.TSet;
   TCountItem  = TCounter.TEntry;
   THelper     = specialize TGNestedArrayHelper<TCountItem>;
 
