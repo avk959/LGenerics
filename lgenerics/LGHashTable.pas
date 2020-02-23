@@ -534,8 +534,7 @@ type
     property  FillRatio: Single read GetFillRatio;
   end;
 
-  { TGLiteHashTableLP }
-
+  { TGLiteHashTableLP implements open addressing hash table with linear probing(step = 1) }
   generic TGLiteHashTableLP<TKey, TEntry, TEqRel> = record
   private
   type
@@ -744,7 +743,8 @@ type
     property  ExpandTreshold: SizeInt read GetCapacity;
   end;
 
-  { TGLiteEquitableHashTable: for types having a defined fast operator "=";
+  { TGLiteEquitableHashTable implements open addressing hash table with linear probing(step = 1)
+    and constant load factor 0.5; for types having a defined fast operator "=";
      functor THashFun must provide:
        class function HashCode([const[ref]] aValue: TKey): SizeInt;     }
   generic TGLiteEquitableHashTable<TKey, TEntry, THashFun> = record
@@ -3613,7 +3613,7 @@ procedure TGLiteChainHashTable.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
   System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(Pointer(FChainList)^, DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FChainList)^, System.Length(FChainList) * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteChainHashTable.Rehash;
@@ -3621,7 +3621,6 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := System.High(FNodeList);
-  System.FillChar(Pointer(FChainList)^, Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
@@ -3634,12 +3633,13 @@ procedure TGLiteChainHashTable.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
   System.SetLength(FChainList, aNewCapacity);
+  System.FillChar(Pointer(FChainList)^, aNewCapacity * SizeOf(SizeInt), $ff);
   Rehash;
 end;
 
 procedure TGLiteChainHashTable.Expand;
 begin
-  if Capacity > 0 then
+  if Capacity <> 0 then
     Resize(Capacity shl 1)
   else
     InitialAlloc;
@@ -3812,36 +3812,20 @@ end;
 function TGLiteChainHashTable.GetEnumerator: TEnumerator;
 begin
   with Result do
-    if FCount <> 0 then
-      begin
-        FList := PNode(FNodeList);
-        FCurrIndex := NULL_INDEX;
-        FLastIndex := Pred(FCount);
-      end
-    else
-      begin
-        FList := nil;
-        FCurrIndex := NULL_INDEX;
-        FLastIndex := NULL_INDEX;
-      end;
+    begin
+      FList := PNode(FNodeList);
+      FCurrIndex := NULL_INDEX;
+      FLastIndex := Pred(FCount);
+    end;
 end;
 
 function TGLiteChainHashTable.GetRemovableEnumerator: TRemovableEnumerator;
 begin
   with Result do
     begin
-      if FCount <> 0 then
-        begin
-          FList := PNode(FNodeList);
-          FCurrIndex := NULL_INDEX;
-          FLastIndex := Pred(FCount);
-        end
-      else
-        begin
-          FList := nil;
-          FCurrIndex := NULL_INDEX;
-          FLastIndex := NULL_INDEX;
-        end;
+      FList := PNode(FNodeList);
+      FCurrIndex := NULL_INDEX;
+      FLastIndex := Pred(FCount);
       FTable := @Self;
     end;
 end;
@@ -3896,7 +3880,7 @@ var
 begin
   h := TKeyEqRel.HashCode(aKey);
   sr.Index := NULL_INDEX;
-  if Count > 0 then
+  if Count <> 0 then
     Result := DoFind(aKey, h, sr)
   else
     Result := False;
@@ -3922,7 +3906,7 @@ var
   sr: TSearchResult;
 begin
   sr.Index := NULL_INDEX;
-  if (Count > 0) and DoFind(aKey, TKeyEqRel.HashCode(aKey), sr) then
+  if (Count <> 0) and DoFind(aKey, TKeyEqRel.HashCode(aKey), sr) then
     Result := @FNodeList[sr.Index].Data
   else
     Result := nil;
