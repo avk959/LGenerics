@@ -336,20 +336,11 @@ type
   { TGObjChainHashSet assumes that type T implements TEqRel }
   generic TGObjChainHashSet<T: class> = class(specialize TGObjectChainHashSet<T, T>);
 
-  { TGLiteHashSetLP implements open addressing hashset with linear probing;
-      functor TEqRel(equality relation) must provide:
-        class function HashCode([const[ref]] aValue: T): SizeInt;
-        class function Equal([const[ref]] L, R: T): Boolean; }
-  generic TGLiteHashSetLP<T, TEqRel> = record
+  { TGLiteHashSet }
+  generic TGLiteHashSet<T, TEntry, TTable, TTblEnumerator, TTblRemovableEnumerator> = record
   private
   type
-    TEntry = record
-      Key: T;
-    end;
     PEntry = ^TEntry;
-
-    TTableLP = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
-
   public
   type
     IEnumerable = specialize IGEnumerable<T>;
@@ -361,7 +352,7 @@ type
 
     TEnumerator = record
     private
-      FEnum: TTableLP.TEnumerator;
+      FEnum: TTblEnumerator;
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
@@ -370,13 +361,14 @@ type
     end;
 
   private
-    FTable: TTableLP;
+    FTable: TTable;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     function  GetExpandTreshold: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
+    class operator Copy(constref aSrc: TGLiteHashSet; var aDst: TGLiteHashSet);
   public
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
@@ -393,21 +385,22 @@ type
   { returns count of added elements }
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
-    function  AddAll(constref aSet: TGLiteHashSetLP): SizeInt;
+    function  AddAll(constref aSet: TGLiteHashSet): SizeInt;
     function  Contains(constref aValue: T): Boolean;
     function  NonContains(constref aValue: T): Boolean;
+    function  FindFirst(out aValue: T): Boolean; inline;
     function  ContainsAny(constref a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
-    function  ContainsAny(constref aSet: TGLiteHashSetLP): Boolean;
+    function  ContainsAny(constref aSet: TGLiteHashSet): Boolean;
     function  ContainsAll(constref a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
-    function  ContainsAll(constref aSet: TGLiteHashSetLP): Boolean;
+    function  ContainsAll(constref aSet: TGLiteHashSet): Boolean;
   { returns True if element removed }
     function  Remove(constref aValue: T): Boolean; inline;
   { returns count of removed elements }
     function  RemoveAll(constref a: array of T): SizeInt;
     function  RemoveAll(e: IEnumerable): SizeInt;
-    function  RemoveAll(constref aSet: TGLiteHashSetLP): SizeInt;
+    function  RemoveAll(constref aSet: TGLiteHashSet): SizeInt;
   { returns count of removed elements }
     function  RemoveIf(aTest: TTest): SizeInt;
     function  RemoveIf(aTest: TOnTest): SizeInt;
@@ -419,27 +412,69 @@ type
     function  ExtractIf(aTest: TNestTest): TArray;
   { will contain only those elements that are simultaneously contained in self and aCollection/aSet }
     procedure RetainAll(aCollection: ICollection);
-    procedure RetainAll(constref aSet: TGLiteHashSetLP);
-    function  IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
-    function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean;
-    function  IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
-    function  Intersecting(constref aSet: TGLiteHashSetLP): Boolean;
-    procedure Intersect(constref aSet: TGLiteHashSetLP);
-    procedure Join(constref aSet: TGLiteHashSetLP);
-    procedure Subtract(constref aSet: TGLiteHashSetLP);
-    procedure SymmetricSubtract(constref aSet: TGLiteHashSetLP);
+    procedure RetainAll(constref aSet: TGLiteHashSet);
+    function  IsSuperset(constref aSet: TGLiteHashSet): Boolean;
+    function  IsSubset(constref aSet: TGLiteHashSet): Boolean;
+    function  IsEqual(constref aSet: TGLiteHashSet): Boolean;
+    function  Intersecting(constref aSet: TGLiteHashSet): Boolean;
+    procedure Intersect(constref aSet: TGLiteHashSet);
+    procedure Join(constref aSet: TGLiteHashSet);
+    procedure Subtract(constref aSet: TGLiteHashSet);
+    procedure SymmetricSubtract(constref aSet: TGLiteHashSet);
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
-    class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator -(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator *(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-    class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
-    class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
+    class operator +(constref L, R: TGLiteHashSet): TGLiteHashSet;
+    class operator -(constref L, R: TGLiteHashSet): TGLiteHashSet;
+    class operator *(constref L, R: TGLiteHashSet): TGLiteHashSet;
+    class operator ><(constref L, R: TGLiteHashSet): TGLiteHashSet;
+    class operator =(constref L, R: TGLiteHashSet): Boolean; inline;
+    class operator <=(constref L, R: TGLiteHashSet): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteHashSet): Boolean; inline;
+  end;
+
+  { TGLiteHashSetLP implements open addressing hashset with linear probing;
+      functor TEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: T): SizeInt;
+        class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGLiteHashSetLP<T, TEqRel> = record
+  private
+  type
+    TEntry  = record Key: T; end;
+    TTable  = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
+  public
+  type
+    TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
+  end;
+
+  { TGLiteChainHashSet implements node based hashset with load factor 1.0;
+      functor TEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: T): SizeInt;
+        class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGLiteChainHashSet<T, TEqRel> = record
+  private
+  type
+    TEntry  = record Key: T; end;
+    TTable  = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
+  public
+  type
+    TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
+  end;
+
+  { TGLiteEquitableHashSet: open addressing hashset with linear probing and
+    constant load factor 0.5; for types having a defined fast operator "=";
+      functor THashFun(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: T): SizeInt; }
+  generic TGLiteEquitableHashSet<T, THashFun> = record
+  private
+  type
+    TEntry  = record Key: T; end;
+    TTable  = specialize TGLiteEquitableHashTable<T, TEntry, THashFun>;
+  public
+  type
+    TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
   end;
 
   { TGDisjointSetUnion: see https://en.wikipedia.org/wiki/Disjoint-set_data_structure }
@@ -1351,124 +1386,129 @@ begin
   Result := TGObjectChainHashSet.CreateCopy(Self);
 end;
 
-{ TGLiteHashSetLP.TEnumerator }
+{ TGLiteHashSet.TEnumerator }
 
-function TGLiteHashSetLP.TEnumerator.GetCurrent: T;
+function TGLiteHashSet.TEnumerator.GetCurrent: T;
 begin
   Result := FEnum.Current^.Key;
 end;
 
-function TGLiteHashSetLP.TEnumerator.MoveNext: Boolean;
+function TGLiteHashSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGLiteHashSetLP.TEnumerator.Reset;
+procedure TGLiteHashSet.TEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGLiteHashSetLP }
+{ TGLiteHashSet }
 
-function TGLiteHashSetLP.GetCapacity: SizeInt;
+function TGLiteHashSet.GetCapacity: SizeInt;
 begin
   Result := FTable.Capacity;
 end;
 
-function TGLiteHashSetLP.GetCount: SizeInt;
+function TGLiteHashSet.GetCount: SizeInt;
 begin
   Result := FTable.Count;
 end;
 
-function TGLiteHashSetLP.GetFillRatio: Single;
+function TGLiteHashSet.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
 end;
 
-function TGLiteHashSetLP.GetLoadFactor: Single;
+function TGLiteHashSet.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
 end;
 
-function TGLiteHashSetLP.GetExpandTreshold: SizeInt;
+function TGLiteHashSet.GetExpandTreshold: SizeInt;
 begin
   Result := FTable.ExpandTreshold;
 end;
 
-procedure TGLiteHashSetLP.SetLoadFactor(aValue: Single);
+procedure TGLiteHashSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGLiteHashSetLP.DefaultLoadFactor: Single;
+class operator TGLiteHashSet.Copy(constref aSrc: TGLiteHashSet; var aDst: TGLiteHashSet);
+begin
+  aDst.FTable := aSrc.FTable;
+end;
+
+function TGLiteHashSet.DefaultLoadFactor: Single;
 begin
   Result := FTable.DEFAULT_LOAD_FACTOR;
 end;
 
-function TGLiteHashSetLP.MaxLoadFactor: Single;
+function TGLiteHashSet.MaxLoadFactor: Single;
 begin
   Result := FTable.MAX_LOAD_FACTOR;
 end;
 
-function TGLiteHashSetLP.MinLoadFactor: Single;
+function TGLiteHashSet.MinLoadFactor: Single;
 begin
   Result := FTable.MIN_LOAD_FACTOR;
 end;
 
-function TGLiteHashSetLP.GetEnumerator: TEnumerator;
+function TGLiteHashSet.GetEnumerator: TEnumerator;
 begin
   Result.FEnum := FTable.GetEnumerator;
 end;
 
-function TGLiteHashSetLP.ToArray: TArray;
+function TGLiteHashSet.ToArray: TArray;
 var
   I: SizeInt = 0;
-  p: PEntry;
+  e: TTblEnumerator;
 begin
   System.SetLength(Result, Count);
-  for p in FTable do
+  e := FTable.GetEnumerator;
+  while e.MoveNext do
     begin
-      Result[I] := p^.Key;
+      Result[I] := e.Current^.Key;
       Inc(I);
     end;
 end;
 
-function TGLiteHashSetLP.IsEmpty: Boolean;
+function TGLiteHashSet.IsEmpty: Boolean;
 begin
   Result := FTable.Count = 0;
 end;
 
-function TGLiteHashSetLP.NonEmpty: Boolean;
+function TGLiteHashSet.NonEmpty: Boolean;
 begin
   Result := FTable.Count <> 0;
 end;
 
-procedure TGLiteHashSetLP.Clear;
+procedure TGLiteHashSet.Clear;
 begin
   FTable.Clear;
 end;
 
-procedure TGLiteHashSetLP.TrimToFit;
+procedure TGLiteHashSet.TrimToFit;
 begin
   FTable.TrimToFit;
 end;
 
-procedure TGLiteHashSetLP.EnsureCapacity(aValue: SizeInt);
+procedure TGLiteHashSet.EnsureCapacity(aValue: SizeInt);
 begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGLiteHashSetLP.Add(constref aValue: T): Boolean;
+function TGLiteHashSet.Add(constref aValue: T): Boolean;
 var
   p: PEntry;
-  Pos: SizeInt;
 begin
-  Result := not FTable.FindOrAdd(aValue, p, Pos);
+  Result := not FTable.FindOrAdd(aValue, p);
   if Result then
     p^.Key := aValue;
 end;
 
-function TGLiteHashSetLP.AddAll(constref a: array of T): SizeInt;
+function TGLiteHashSet.AddAll(constref a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1478,7 +1518,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashSetLP.AddAll(e: IEnumerable): SizeInt;
+function TGLiteHashSet.AddAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
@@ -1488,7 +1528,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashSetLP.AddAll(constref aSet: TGLiteHashSetLP): SizeInt;
+function TGLiteHashSet.AddAll(constref aSet: TGLiteHashSet): SizeInt;
 var
   v: T;
 begin
@@ -1503,100 +1543,97 @@ begin
     Result := 0;
 end;
 
-function TGLiteHashSetLP.Contains(constref aValue: T): Boolean;
-var
-  p: SizeInt;
+function TGLiteHashSet.Contains(constref aValue: T): Boolean;
 begin
-  Result := FTable.Find(aValue, p) <> nil;
+  Result := FTable.Find(aValue) <> nil;
 end;
 
-function TGLiteHashSetLP.NonContains(constref aValue: T): Boolean;
+function TGLiteHashSet.NonContains(constref aValue: T): Boolean;
 begin
-  Result := not Contains(aValue);
+  Result := FTable.Find(aValue) = nil;
 end;
 
-function TGLiteHashSetLP.ContainsAny(constref a: array of T): Boolean;
+function TGLiteHashSet.FindFirst(out aValue: T): Boolean;
+begin
+  Result := FTable.FindFirstKey(aValue);
+end;
+
+function TGLiteHashSet.ContainsAny(constref a: array of T): Boolean;
 var
   I: SizeInt;
-  p: SizeInt;
 begin
   if NonEmpty then
     for I := 0 to System.High(a) do
-      if FTable.Find(a[I], p) <> nil then
+      if FTable.Find(a[I]) <> nil then
         exit(True);
   Result := False;
 end;
 
-function TGLiteHashSetLP.ContainsAny(e: IEnumerable): Boolean;
+function TGLiteHashSet.ContainsAny(e: IEnumerable): Boolean;
 var
   v: T;
-  p: SizeInt;
 begin
   if NonEmpty then
     for v in e do
-      if FTable.Find(v, p) <> nil then
+      if FTable.Find(v) <> nil then
         exit(True);
   Result := False;
 end;
 
-function TGLiteHashSetLP.ContainsAny(constref aSet: TGLiteHashSetLP): Boolean;
+function TGLiteHashSet.ContainsAny(constref aSet: TGLiteHashSet): Boolean;
 var
   v: T;
-  p: SizeInt;
 begin
   if @aSet = @Self then
     exit(True);
   if NonEmpty then
     for v in aSet do
-      if FTable.Find(v, p) <> nil then
+      if FTable.Find(v) <> nil then
         exit(True);
   Result := False;
 end;
 
-function TGLiteHashSetLP.ContainsAll(constref a: array of T): Boolean;
+function TGLiteHashSet.ContainsAll(constref a: array of T): Boolean;
 var
   I: SizeInt;
-  p: SizeInt;
 begin
   if IsEmpty then exit(System.Length(a) = 0);
   for I := 0 to System.High(a) do
-    if FTable.Find(a[I], p) = nil then
+    if FTable.Find(a[I]) = nil then
       exit(False);
   Result := True;
 end;
 
-function TGLiteHashSetLP.ContainsAll(e: IEnumerable): Boolean;
+function TGLiteHashSet.ContainsAll(e: IEnumerable): Boolean;
 var
   v: T;
-  p: SizeInt;
 begin
   if IsEmpty then exit(e.None);
   for v in e do
-    if FTable.Find(v, p) = nil then
+    if FTable.Find(v) = nil then
       exit(False);
   Result := True;
 end;
 
-function TGLiteHashSetLP.ContainsAll(constref aSet: TGLiteHashSetLP): Boolean;
+function TGLiteHashSet.ContainsAll(constref aSet: TGLiteHashSet): Boolean;
 var
   v: T;
-  p: SizeInt;
 begin
   if @aSet = @Self then
     exit(True);
   if IsEmpty then exit(aSet.IsEmpty);
   for v in aSet do
-    if FTable.Find(v, p) = nil then
+    if FTable.Find(v) = nil then
       exit(False);
   Result := True;
 end;
 
-function TGLiteHashSetLP.Remove(constref aValue: T): Boolean;
+function TGLiteHashSet.Remove(constref aValue: T): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
 
-function TGLiteHashSetLP.RemoveAll(constref a: array of T): SizeInt;
+function TGLiteHashSet.RemoveAll(constref a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1604,14 +1641,13 @@ begin
   if Result > 0 then
     begin
       for I := 0 to System.High(a) do
-        if FTable.Remove(a[I]) then
-          if IsEmpty then
-            break;
+        if FTable.Remove(a[I]) and IsEmpty then
+          break;
       Result -= Count;
     end;
 end;
 
-function TGLiteHashSetLP.RemoveAll(e: IEnumerable): SizeInt;
+function TGLiteHashSet.RemoveAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
@@ -1619,14 +1655,13 @@ begin
   if Result > 0 then
     begin
       for v in e do
-        if FTable.Remove(v) then
-          if IsEmpty then
-            break;
+        if FTable.Remove(v) and IsEmpty then
+          break;
       Result -= Count;
     end;
 end;
 
-function TGLiteHashSetLP.RemoveAll(constref aSet: TGLiteHashSetLP): SizeInt;
+function TGLiteHashSet.RemoveAll(constref aSet: TGLiteHashSet): SizeInt;
 var
   v: T;
 begin
@@ -1635,9 +1670,8 @@ begin
       Result := Count;
       begin
         for v in aSet do
-          if FTable.Remove(v) then
-            if IsEmpty then
-              break;
+          if FTable.Remove(v) and IsEmpty then
+            break;
         Result -= Count;
       end;
     end
@@ -1648,129 +1682,138 @@ begin
     end;
 end;
 
-function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
+function TGLiteHashSet.RemoveIf(aTest: TTest): SizeInt;
+var
+  re: TTblRemovableEnumerator;
 begin
-  Result := 0;
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end;
+  re := FTable.GetRemovableEnumerator;
+  Result := Count;
+  while re.MoveNext do
+    if aTest(re.Current^.Key) then
+      re.RemoveCurrent;
+  Result -= Count;
 end;
 
-function TGLiteHashSetLP.RemoveIf(aTest: TOnTest): SizeInt;
+function TGLiteHashSet.RemoveIf(aTest: TOnTest): SizeInt;
+var
+  re: TTblRemovableEnumerator;
 begin
-  Result := 0;
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end;
+  re := FTable.GetRemovableEnumerator;
+  Result := Count;
+  while re.MoveNext do
+    if aTest(re.Current^.Key) then
+      re.RemoveCurrent;
+  Result -= Count;
 end;
 
-function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
+function TGLiteHashSet.RemoveIf(aTest: TNestTest): SizeInt;
+var
+  re: TTblRemovableEnumerator;
 begin
-  Result := 0;
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end;
+  re := FTable.GetRemovableEnumerator;
+  Result := Count;
+  while re.MoveNext do
+    if aTest(re.Current^.Key) then
+      re.RemoveCurrent;
+  Result -= Count;
 end;
 
-function TGLiteHashSetLP.Extract(constref aValue: T): Boolean;
+function TGLiteHashSet.Extract(constref aValue: T): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
 
-function TGLiteHashSetLP.ExtractIf(aTest: TTest): TArray;
+function TGLiteHashSet.ExtractIf(aTest: TTest): TArray;
 var
+  re: TTblRemovableEnumerator;
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          if I = System.Length(Result) then
-            System.SetLength(Result, I shl 1);
-          Result[I] := Current^.Key;
-          RemoveCurrent;
-          Inc(I);
-        end;
+  re := FTable.GetRemovableEnumerator;
+  while re.MoveNext do
+    if aTest(re.Current^.Key) then
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I shl 1);
+        Result[I] := re.Current^.Key;
+        re.RemoveCurrent;
+        Inc(I);
+      end;
   System.SetLength(Result, I);
 end;
 
-function TGLiteHashSetLP.ExtractIf(aTest: TOnTest): TArray;
+function TGLiteHashSet.ExtractIf(aTest: TOnTest): TArray;
 var
+  re: TTblRemovableEnumerator;
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          if I = System.Length(Result) then
-            System.SetLength(Result, I shl 1);
-          Result[I] := Current^.Key;
-          RemoveCurrent;
-          Inc(I);
-        end;
+  re := FTable.GetRemovableEnumerator;
+  while re.MoveNext do
+    if aTest(re.Current^.Key) then
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I shl 1);
+        Result[I] := re.Current^.Key;
+        re.RemoveCurrent;
+        Inc(I);
+      end;
   System.SetLength(Result, I);
 end;
 
-function TGLiteHashSetLP.ExtractIf(aTest: TNestTest): TArray;
+function TGLiteHashSet.ExtractIf(aTest: TNestTest): TArray;
 var
+  re: TTblRemovableEnumerator;
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          if I = System.Length(Result) then
-            System.SetLength(Result, I shl 1);
-          Result[I] := Current^.Key;
-          RemoveCurrent;
-          Inc(I);
-        end;
+  re := FTable.GetRemovableEnumerator;
+  while re.MoveNext do
+    if aTest(re.Current^.Key) then
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I shl 1);
+        Result[I] := re.Current^.Key;
+        re.RemoveCurrent;
+        Inc(I);
+      end;
   System.SetLength(Result, I);
 end;
 
-procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
+procedure TGLiteHashSet.RetainAll(aCollection: ICollection);
+var
+  re: TTblRemovableEnumerator;
 begin
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aCollection.NonContains(Current^.Key) then
-        RemoveCurrent;
+  re := FTable.GetRemovableEnumerator;
+  while re.MoveNext do
+    if aCollection.NonContains(re.Current^.Key) then
+      re.RemoveCurrent;
 end;
 
-procedure TGLiteHashSetLP.RetainAll(constref aSet: TGLiteHashSetLP);
+procedure TGLiteHashSet.RetainAll(constref aSet: TGLiteHashSet);
+var
+  re: TTblRemovableEnumerator;
 begin
   if @aSet <> @Self then
-    with FTable.GetRemovableEnumerator do
-      while MoveNext do
-        if aSet.NonContains(Current^.Key) then
-          RemoveCurrent;
+    begin
+      re := FTable.GetRemovableEnumerator;
+      while re.MoveNext do
+        if aSet.NonContains(re.Current^.Key) then
+          re.RemoveCurrent;
+    end;
 end;
 
-function TGLiteHashSetLP.IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
+function TGLiteHashSet.IsSuperset(constref aSet: TGLiteHashSet): Boolean;
 begin
   Result := ContainsAll(aSet);
 end;
 
-function TGLiteHashSetLP.IsSubset(constref aSet: TGLiteHashSetLP): Boolean;
+function TGLiteHashSet.IsSubset(constref aSet: TGLiteHashSet): Boolean;
 begin
   Result := aSet.ContainsAll(Self);
 end;
 
-function TGLiteHashSetLP.IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
+function TGLiteHashSet.IsEqual(constref aSet: TGLiteHashSet): Boolean;
 begin
   if @aSet <> @Self then
     begin
@@ -1782,7 +1825,7 @@ begin
     Result := True;
 end;
 
-function TGLiteHashSetLP.Intersecting(constref aSet: TGLiteHashSetLP): Boolean;
+function TGLiteHashSet.Intersecting(constref aSet: TGLiteHashSet): Boolean;
 begin
   if @aSet <> @Self then
     Result := ContainsAny(aSet)
@@ -1790,12 +1833,12 @@ begin
     Result := True;
 end;
 
-procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
+procedure TGLiteHashSet.Intersect(constref aSet: TGLiteHashSet);
 begin
   RetainAll(aSet);
 end;
 
-procedure TGLiteHashSetLP.Join(constref aSet: TGLiteHashSetLP);
+procedure TGLiteHashSet.Join(constref aSet: TGLiteHashSet);
 var
   v: T;
 begin
@@ -1804,7 +1847,7 @@ begin
       Add(v);
 end;
 
-procedure TGLiteHashSetLP.Subtract(constref aSet: TGLiteHashSetLP);
+procedure TGLiteHashSet.Subtract(constref aSet: TGLiteHashSet);
 var
   v: T;
 begin
@@ -1815,7 +1858,7 @@ begin
     Clear;
 end;
 
-procedure TGLiteHashSetLP.SymmetricSubtract(constref aSet: TGLiteHashSetLP);
+procedure TGLiteHashSet.SymmetricSubtract(constref aSet: TGLiteHashSet);
 var
   v: T;
   e: PEntry;
@@ -1833,44 +1876,41 @@ begin
     Clear;
 end;
 
-class operator TGLiteHashSetLP. + (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+class operator TGLiteHashSet. + (constref L, R: TGLiteHashSet): TGLiteHashSet;
 begin
   Result := L;
   Result.Join(R);
 end;
 
-class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
-var
-  v: T;
+class operator TGLiteHashSet. - (constref L, R: TGLiteHashSet): TGLiteHashSet;
 begin
-  for v in L do
-    if R.NonContains(v) then
-      Result.Add(v);
+  Result := L;
+  Result.Subtract(R);
 end;
 
-class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+class operator TGLiteHashSet. * (constref L, R: TGLiteHashSet): TGLiteHashSet;
 begin
   Result := L;
   Result.Intersect(R);
 end;
 
-class operator TGLiteHashSetLP.><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+class operator TGLiteHashSet.><(constref L, R: TGLiteHashSet): TGLiteHashSet;
 begin
   Result := L;
   Result.SymmetricSubtract(R);
 end;
 
-class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
+class operator TGLiteHashSet.in(constref aValue: T; constref aSet: TGLiteHashSet): Boolean;
 begin
   Result := aSet.Contains(aValue);
 end;
 
-class operator TGLiteHashSetLP. = (constref L, R: TGLiteHashSetLP): Boolean;
+class operator TGLiteHashSet. = (constref L, R: TGLiteHashSet): Boolean;
 begin
   Result := L.IsEqual(R);
 end;
 
-class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
+class operator TGLiteHashSet.<=(constref L, R: TGLiteHashSet): Boolean;
 begin
   Result := L.IsSubset(R);
 end;
