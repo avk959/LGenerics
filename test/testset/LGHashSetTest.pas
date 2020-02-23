@@ -421,12 +421,13 @@ type
     procedure ObjectSetSymmetricSubtract;
   end;
 
-  { TLiteHashSetTest }
+  { TLiteHashSetLPTest }
 
-  TLiteHashSetTest = class(TTestClass)
+  TLiteHashSetLPTest = class(TTestClass)
   private
   type
-    TSet = specialize TGLiteHashSetLP<Integer, Integer>;
+    TSetSpec = specialize TGLiteHashSetLP<Integer, Integer>;
+    TSet     = TSetSpec.TSet;
 
   published
     procedure Add;
@@ -436,6 +437,114 @@ type
     procedure AddSet;
     procedure AddSelf;
     procedure LoadFactor;
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure TrimToFit;
+    procedure Remove;
+    procedure RemoveArray;
+    procedure RemoveEnum;
+    procedure RemoveSet;
+    procedure RemoveSelf;
+
+    procedure RemoveIfRegular;
+    procedure RemoveIfDelegated;
+    procedure RemoveIfNested;
+
+    procedure ExtractIfRegular;
+    procedure ExtractIfDelegated;
+    procedure ExtractIfNested;
+
+    procedure Retain;
+    procedure Retain_1;
+    procedure RetainSelf;
+
+    procedure IsSuperset;
+    procedure IsSubset;
+    procedure IsEqual;
+    procedure Intersecting;
+    procedure SymmetricSubtract;
+
+    procedure Include;
+    procedure Include1;
+    procedure Exclude;
+    procedure Exclude1;
+    procedure Intersection;
+    procedure Intersection1;
+    procedure SymmetricDifference;
+    procedure SymmetricDifference1;
+    procedure Equality;
+    procedure Contains;
+    procedure TestIn;
+    procedure PassByValue;
+  end;
+
+  TLiteChainHashSetTest = class(TTestClass)
+  private
+  type
+    TSetSpec = specialize TGLiteChainHashSet<Integer, Integer>;
+    TSet     = TSetSpec.TSet;
+
+  published
+    procedure Add;
+    procedure Add100;
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddSet;
+    procedure AddSelf;
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure TrimToFit;
+    procedure Remove;
+    procedure RemoveArray;
+    procedure RemoveEnum;
+    procedure RemoveSet;
+    procedure RemoveSelf;
+
+    procedure RemoveIfRegular;
+    procedure RemoveIfDelegated;
+    procedure RemoveIfNested;
+
+    procedure ExtractIfRegular;
+    procedure ExtractIfDelegated;
+    procedure ExtractIfNested;
+
+    procedure Retain;
+    procedure Retain_1;
+    procedure RetainSelf;
+
+    procedure IsSuperset;
+    procedure IsSubset;
+    procedure IsEqual;
+    procedure Intersecting;
+    procedure SymmetricSubtract;
+
+    procedure Include;
+    procedure Include1;
+    procedure Exclude;
+    procedure Exclude1;
+    procedure Intersection;
+    procedure Intersection1;
+    procedure SymmetricDifference;
+    procedure SymmetricDifference1;
+    procedure Equality;
+    procedure Contains;
+    procedure TestIn;
+    procedure PassByValue;
+  end;
+
+  TLiteEquitableHashSetTest = class(TTestClass)
+  private
+  type
+    TSetSpec = specialize TGLiteEquitableHashSet<Integer, Integer>;
+    TSet     = TSetSpec.TSet;
+
+  published
+    procedure Add;
+    procedure Add100;
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddSet;
+    procedure AddSelf;
     procedure Clear;
     procedure EnsureCapacity;
     procedure TrimToFit;
@@ -4790,9 +4899,9 @@ begin
   AssertTrue(Counter.Count = TestSize * 3);
 end;
 
-{ TLiteHashSetTest }
+{ TLiteHashSetLPTest }
 
-procedure TLiteHashSetTest.Add;
+procedure TLiteHashSetLPTest.Add;
 var
   s: TSet;
 begin
@@ -4811,7 +4920,7 @@ begin
   AssertTrue(s.Contains(52));
 end;
 
-procedure TLiteHashSetTest.Add100;
+procedure TLiteHashSetLPTest.Add100;
 var
   s: TSet;
   I: Integer;
@@ -4826,7 +4935,7 @@ begin
     AssertTrue(s.Contains(I));
 end;
 
-procedure TLiteHashSetTest.AddArray;
+procedure TLiteHashSetLPTest.AddArray;
 var
   s: TSet;
 begin
@@ -4835,7 +4944,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.AddEnum;
+procedure TLiteHashSetLPTest.AddEnum;
 var
   s: TSet;
   e: IIntEnumerable;
@@ -4846,7 +4955,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.AddSet;
+procedure TLiteHashSetLPTest.AddSet;
 var
   s, s21: TSet;
 begin
@@ -4859,7 +4968,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.AddSelf;
+procedure TLiteHashSetLPTest.AddSelf;
 var
   s: TSet;
 begin
@@ -4868,7 +4977,7 @@ begin
   AssertTrue(s.Count = Length(IntArray21));
 end;
 
-procedure TLiteHashSetTest.LoadFactor;
+procedure TLiteHashSetLPTest.LoadFactor;
 var
   s: TSet;
 begin
@@ -4885,7 +4994,7 @@ begin
   AssertTrue(s.Count = Length(IntArray21));
 end;
 
-procedure TLiteHashSetTest.Clear;
+procedure TLiteHashSetLPTest.Clear;
 var
   s: TSet;
 begin
@@ -4897,7 +5006,7 @@ begin
   AssertTrue(s.Capacity = 0);
 end;
 
-procedure TLiteHashSetTest.EnsureCapacity;
+procedure TLiteHashSetLPTest.EnsureCapacity;
 var
   s: TSet;
   c: SizeInt;
@@ -4907,7 +5016,7 @@ begin
   AssertTrue(s.Capacity > c);
 end;
 
-procedure TLiteHashSetTest.TrimToFit;
+procedure TLiteHashSetLPTest.TrimToFit;
 var
   s: TSet;
   c: SizeInt;
@@ -4920,7 +5029,7 @@ begin
   AssertTrue(s.Capacity = c);
 end;
 
-procedure TLiteHashSetTest.Remove;
+procedure TLiteHashSetLPTest.Remove;
 var
   s: TSet;
 begin
@@ -4936,7 +5045,7 @@ begin
   AssertTrue(s.Count = Length(IntArray21) - 2);
 end;
 
-procedure TLiteHashSetTest.RemoveArray;
+procedure TLiteHashSetLPTest.RemoveArray;
 var
   s: TSet;
 begin
@@ -4945,7 +5054,7 @@ begin
   AssertTrue(s.Count = 10);
 end;
 
-procedure TLiteHashSetTest.RemoveEnum;
+procedure TLiteHashSetLPTest.RemoveEnum;
 var
   s: TSet;
   e: IIntEnumerable;
@@ -4956,7 +5065,7 @@ begin
   AssertTrue(s.Count = 10);
 end;
 
-procedure TLiteHashSetTest.RemoveSet;
+procedure TLiteHashSetLPTest.RemoveSet;
 var
   s, s11: TSet;
 begin
@@ -4966,7 +5075,7 @@ begin
   AssertTrue(s.Count = 10);
 end;
 
-procedure TLiteHashSetTest.RemoveSelf;
+procedure TLiteHashSetLPTest.RemoveSelf;
 var
   s: TSet;
 begin
@@ -4975,7 +5084,7 @@ begin
   AssertTrue(s.IsEmpty);
 end;
 
-procedure TLiteHashSetTest.RemoveIfRegular;
+procedure TLiteHashSetLPTest.RemoveIfRegular;
 var
   s: TSet;
 begin
@@ -4985,7 +5094,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray11));
 end;
 
-procedure TLiteHashSetTest.RemoveIfDelegated;
+procedure TLiteHashSetLPTest.RemoveIfDelegated;
 var
   s: TSet;
 begin
@@ -4995,7 +5104,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray11));
 end;
 
-procedure TLiteHashSetTest.RemoveIfNested;
+procedure TLiteHashSetLPTest.RemoveIfNested;
   function IsEvenInt(constref aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
@@ -5009,7 +5118,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray11));
 end;
 
-procedure TLiteHashSetTest.ExtractIfRegular;
+procedure TLiteHashSetLPTest.ExtractIfRegular;
 var
   s: TSet;
   a: TIntArray;
@@ -5023,7 +5132,7 @@ begin
   AssertTrue(TIntHelper.Same(IntArray10, a));
 end;
 
-procedure TLiteHashSetTest.ExtractIfDelegated;
+procedure TLiteHashSetLPTest.ExtractIfDelegated;
 var
   s: TSet;
   a: TIntArray;
@@ -5037,7 +5146,7 @@ begin
   AssertTrue(TIntHelper.Same(IntArray10, a));
 end;
 
-procedure TLiteHashSetTest.ExtractIfNested;
+procedure TLiteHashSetLPTest.ExtractIfNested;
   function IsEvenInt(constref aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
@@ -5055,7 +5164,7 @@ begin
   AssertTrue(TIntHelper.Same(IntArray10, a));
 end;
 
-procedure TLiteHashSetTest.Retain;
+procedure TLiteHashSetLPTest.Retain;
 var
   s, s11: TSet;
 begin
@@ -5068,7 +5177,7 @@ begin
   AssertTrue(s.ContainsAll(s11));
 end;
 
-procedure TLiteHashSetTest.Retain_1;
+procedure TLiteHashSetLPTest.Retain_1;
 var
   s, s11: TSet;
 begin
@@ -5078,7 +5187,7 @@ begin
   AssertTrue(s.IsEmpty);
 end;
 
-procedure TLiteHashSetTest.RetainSelf;
+procedure TLiteHashSetLPTest.RetainSelf;
 var
   s: TSet;
 begin
@@ -5088,7 +5197,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.IsSuperset;
+procedure TLiteHashSetLPTest.IsSuperset;
 var
   s, s1: TSet;
 begin
@@ -5103,7 +5212,7 @@ begin
   AssertFalse(s1.IsSuperset(s));
 end;
 
-procedure TLiteHashSetTest.IsSubset;
+procedure TLiteHashSetLPTest.IsSubset;
 var
   s, s1: TSet;
 begin
@@ -5118,7 +5227,7 @@ begin
   AssertFalse(s.IsSubset(s1));
 end;
 
-procedure TLiteHashSetTest.IsEqual;
+procedure TLiteHashSetLPTest.IsEqual;
 var
   s, s1: TSet;
 begin
@@ -5132,7 +5241,7 @@ begin
   AssertFalse(s1.IsEqual(s));
 end;
 
-procedure TLiteHashSetTest.Intersecting;
+procedure TLiteHashSetLPTest.Intersecting;
 var
   s, s11: TSet;
 begin
@@ -5147,7 +5256,7 @@ begin
   AssertFalse(s11.Intersecting(s));
 end;
 
-procedure TLiteHashSetTest.SymmetricSubtract;
+procedure TLiteHashSetLPTest.SymmetricSubtract;
 var
   s, s1: TSet;
 begin
@@ -5175,7 +5284,7 @@ begin
   AssertTrue(s.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.Include;
+procedure TLiteHashSetLPTest.Include;
 var
   s1, s2, s3: TSet;
 begin
@@ -5193,7 +5302,7 @@ begin
   AssertTrue(s3.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.Include1;
+procedure TLiteHashSetLPTest.Include1;
 var
   s1, s2: TSet;
 begin
@@ -5219,7 +5328,7 @@ begin
   AssertTrue(s2.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.Exclude;
+procedure TLiteHashSetLPTest.Exclude;
 var
   s1, s2, s3: TSet;
 begin
@@ -5237,7 +5346,7 @@ begin
   AssertTrue(s3.ContainsAll(IntArray11));
 end;
 
-procedure TLiteHashSetTest.Exclude1;
+procedure TLiteHashSetLPTest.Exclude1;
 var
   s1, s2: TSet;
 begin
@@ -5262,7 +5371,7 @@ begin
   AssertTrue(s2.ContainsAll(IntArray11));
 end;
 
-procedure TLiteHashSetTest.Intersection;
+procedure TLiteHashSetLPTest.Intersection;
 var
   s1, s2, s3: TSet;
 begin
@@ -5283,7 +5392,7 @@ begin
   AssertTrue(s3.ContainsAll(IntArray10));
 end;
 
-procedure TLiteHashSetTest.Intersection1;
+procedure TLiteHashSetLPTest.Intersection1;
 var
   s1, s2: TSet;
 begin
@@ -5308,7 +5417,7 @@ begin
   AssertTrue(s2.ContainsAll(IntArray11));
 end;
 
-procedure TLiteHashSetTest.SymmetricDifference;
+procedure TLiteHashSetLPTest.SymmetricDifference;
 var
   s1, s2, s3: TSet;
 begin
@@ -5334,7 +5443,7 @@ begin
   AssertTrue(s3.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.SymmetricDifference1;
+procedure TLiteHashSetLPTest.SymmetricDifference1;
 var
   s1, s2: TSet;
 begin
@@ -5364,7 +5473,7 @@ begin
   AssertTrue(s1.ContainsAll(IntArray21));
 end;
 
-procedure TLiteHashSetTest.Equality;
+procedure TLiteHashSetLPTest.Equality;
 var
   s1, s2: TSet;
 begin
@@ -5384,7 +5493,7 @@ begin
   AssertFalse(s1 = s2);
 end;
 
-procedure TLiteHashSetTest.Contains;
+procedure TLiteHashSetLPTest.Contains;
 var
   s1, s2: TSet;
 begin
@@ -5404,7 +5513,7 @@ begin
   AssertFalse(s2 <= s1);
 end;
 
-procedure TLiteHashSetTest.TestIn;
+procedure TLiteHashSetLPTest.TestIn;
 var
   s: TSet;
 begin
@@ -5415,11 +5524,12 @@ begin
   AssertFalse(22 in s);
 end;
 
-procedure TLiteHashSetTest.PassByValue;
+procedure TLiteHashSetLPTest.PassByValue;
   procedure Test(aSet: TSet);
   begin
     aSet.Add(2);
     aSet.Add(-5);
+    aSet.Add(15);
     AssertTrue(aSet.NonEmpty);
   end;
 var
@@ -5429,6 +5539,1271 @@ begin
   AssertTrue(s.IsEmpty);
   Test(s);
   AssertTrue(s.IsEmpty);
+  s.Add(0);
+  AssertFalse(s.Contains(2));
+  AssertFalse(s.Contains(-5));
+  AssertFalse(s.Contains(15));
+end;
+
+
+{ TLiteChainHashSetTest }
+
+procedure TLiteChainHashSetTest.Add;
+var
+  s: TSet;
+begin
+  AssertTrue(s.Count = 0);
+  AssertTrue(s.Add(1));
+  AssertTrue(s.Count = 1);
+  AssertTrue(s.Contains(1));
+  AssertTrue(s.Add(51));
+  AssertTrue(s.Count = 2);
+  AssertTrue(s.Contains(51));
+  AssertFalse(s.Add(1));
+  AssertFalse(s.Add(51));
+  AssertTrue(s.Count = 2);
+  AssertTrue(s.Add(52));
+  AssertTrue(s.Count = 3);
+  AssertTrue(s.Contains(52));
+end;
+
+procedure TLiteChainHashSetTest.Add100;
+var
+  s: TSet;
+  I: Integer;
+begin
+  for I := 1 to 100 do
+    AssertTrue(s.Add(I));
+  AssertTrue(s.Count = 100);
+  for I := 1 to 100 do
+    AssertFalse(s.Add(I));
+  AssertTrue(s.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(s.Contains(I));
+end;
+
+procedure TLiteChainHashSetTest.AddArray;
+var
+  s: TSet;
+begin
+  AssertTrue(s.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.AddEnum;
+var
+  s: TSet;
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21));
+  AssertTrue(s.AddAll(e) = Length(IntArray21));
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.AddSet;
+var
+  s, s21: TSet;
+begin
+  AssertTrue(s.AddAll(IntArray11) = Length(IntArray11));
+  AssertTrue(s.Count = Length(IntArray11));
+  AssertTrue(s21.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(s21.Count = Length(IntArray21));
+  AssertTrue(s.AddAll(s21) = 10);
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.AddSelf;
+var
+  s: TSet;
+begin
+  AssertTrue(s.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(s.AddAll(s) = 0);
+  AssertTrue(s.Count = Length(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.Clear;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray11);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.Capacity >= 11);
+  s.Clear;
+  AssertTrue(s.Count = 0);
+  AssertTrue(s.Capacity = 0);
+end;
+
+procedure TLiteChainHashSetTest.EnsureCapacity;
+var
+  s: TSet;
+  c: SizeInt;
+begin
+  c := s.ExpandTreshold;
+  s.EnsureCapacity(c + 1);
+  AssertTrue(s.Capacity > c);
+end;
+
+procedure TLiteChainHashSetTest.TrimToFit;
+var
+  s: TSet;
+  c: SizeInt;
+begin
+  s.AddAll(IntArray21);
+  c := s.Capacity;
+  s.EnsureCapacity(s.ExpandTreshold + 1);
+  AssertTrue(s.Capacity > c);
+  s.TrimToFit;
+  AssertTrue(s.Capacity <= c);
+end;
+
+procedure TLiteChainHashSetTest.Remove;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.Remove(IntArray21[1]));
+  AssertTrue(s.Count = Length(IntArray21) - 1);
+  AssertTrue(s.Remove(IntArray21[High(IntArray21)]));
+  AssertTrue(s.Count = Length(IntArray21) - 2);
+  AssertFalse(s.Remove(-1));
+  AssertTrue(s.Count = Length(IntArray21) - 2);
+  AssertFalse(s.Remove(100));
+  AssertTrue(s.Count = Length(IntArray21) - 2);
+end;
+
+procedure TLiteChainHashSetTest.RemoveArray;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(IntArray11) = 11);
+  AssertTrue(s.Count = 10);
+end;
+
+procedure TLiteChainHashSetTest.RemoveEnum;
+var
+  s: TSet;
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(e) = 11);
+  AssertTrue(s.Count = 10);
+end;
+
+procedure TLiteChainHashSetTest.RemoveSet;
+var
+  s, s11: TSet;
+begin
+  s11.AddAll(IntArray11);
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(s11) = 11);
+  AssertTrue(s.Count = 10);
+end;
+
+procedure TLiteChainHashSetTest.RemoveSelf;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(s) = 21);
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TLiteChainHashSetTest.RemoveIfRegular;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveIf(@IsEvenInt) = 10);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+end;
+
+procedure TLiteChainHashSetTest.RemoveIfDelegated;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveIf(@IsEven) = 10);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+end;
+
+procedure TLiteChainHashSetTest.RemoveIfNested;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveIf(@IsEvenInt) = 10);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+end;
+
+procedure TLiteChainHashSetTest.ExtractIfRegular;
+var
+  s: TSet;
+  a: TIntArray;
+begin
+  s.AddAll(IntArray21);
+  a := s.ExtractIf(@IsEvenInt);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+  AssertTrue(Length(a) = 10);
+  TIntHelper.Sort(a);
+  AssertTrue(TIntHelper.Same(IntArray10, a));
+end;
+
+procedure TLiteChainHashSetTest.ExtractIfDelegated;
+var
+  s: TSet;
+  a: TIntArray;
+begin
+  s.AddAll(IntArray21);
+  a := s.ExtractIf(@IsEven);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+  AssertTrue(Length(a) = 10);
+  TIntHelper.Sort(a);
+  AssertTrue(TIntHelper.Same(IntArray10, a));
+end;
+
+procedure TLiteChainHashSetTest.ExtractIfNested;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  s: TSet;
+  a: TIntArray;
+begin
+  s.AddAll(IntArray21);
+  a := s.ExtractIf(@IsEvenInt);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+  AssertTrue(Length(a) = 10);
+  TIntHelper.Sort(a);
+  AssertTrue(TIntHelper.Same(IntArray10, a));
+end;
+
+procedure TLiteChainHashSetTest.Retain;
+var
+  s, s11: TSet;
+begin
+  s.AddAll(IntArray21);
+  s.AddAll([-3, -2, -1, 0]);
+  AssertTrue(s.Count = 25);
+  s11.AddAll(IntArray11);
+  s.RetainAll(s11);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(s11));
+end;
+
+procedure TLiteChainHashSetTest.Retain_1;
+var
+  s, s11: TSet;
+begin
+  s.AddAll(IntArray10);
+  s11.AddAll(IntArray11);
+  s.RetainAll(s11);
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TLiteChainHashSetTest.RetainSelf;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  s.RetainAll(s);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.IsSuperset;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s1.AddAll(IntArray21);
+  AssertTrue(s.IsSuperset(s1));
+  AssertTrue(s1.IsSuperset(s));
+  AssertTrue(s.IsSuperset(s));
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s.IsSuperset(s1));
+  AssertFalse(s1.IsSuperset(s));
+end;
+
+procedure TLiteChainHashSetTest.IsSubset;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s1.AddAll(IntArray21);
+  AssertTrue(s.IsSubset(s1));
+  AssertTrue(s1.IsSubset(s));
+  AssertTrue(s.IsSubset(s));
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s1.IsSubset(s));
+  AssertFalse(s.IsSubset(s1));
+end;
+
+procedure TLiteChainHashSetTest.IsEqual;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s1.AddAll(IntArray21);
+  AssertTrue(s.IsEqual(s));
+  AssertTrue(s.IsEqual(s1));
+  AssertTrue(s1.IsEqual(s));
+  s1.Remove(21);
+  AssertFalse(s.IsEqual(s1));
+  AssertFalse(s1.IsEqual(s));
+end;
+
+procedure TLiteChainHashSetTest.Intersecting;
+var
+  s, s11: TSet;
+begin
+  s.AddAll(IntArray21);
+  s11.AddAll(IntArray11);
+  AssertTrue(s.Intersecting(s));
+  AssertTrue(s.Intersecting(s11));
+  AssertTrue(s11.Intersecting(s));
+  s.Clear;
+  s.AddAll(IntArray10);
+  AssertFalse(s.Intersecting(s11));
+  AssertFalse(s11.Intersecting(s));
+end;
+
+procedure TLiteChainHashSetTest.SymmetricSubtract;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+  s1.AddAll(IntArray21);
+  s.Clear;
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.ContainsAll(IntArray21));
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.IsEmpty);
+  s.AddAll(IntArray11);
+  s1.Clear;
+  s1.AddAll(IntArray10);
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+  s.Clear;
+  s.AddAll(IntArray11);
+  s.AddAll([-5, -4, -3, -2, -1, 0]);
+  s1.AddAll([-5, -4, -3, -2, -1, 0]);
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.Include;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 + s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.Include1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 + s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 + s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 + s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  s1.Clear;
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.Exclude;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 - s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 - s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s3 := s2 - s1;
+  AssertTrue(s3.Count = 11);
+  AssertTrue(s3.ContainsAll(IntArray11));
+end;
+
+procedure TLiteChainHashSetTest.Exclude1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 - s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 - s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 - s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteChainHashSetTest.Intersection;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s2 * s1;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+end;
+
+procedure TLiteChainHashSetTest.Intersection1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s2 := s1 * s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteChainHashSetTest.SymmetricDifference;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.SymmetricDifference1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 >< s2;
+  AssertTrue(s2.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s2 := s1 >< s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s2.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s1 := s1 >< s2;
+  AssertTrue(s1.Count = 21);
+  AssertTrue(s1.ContainsAll(IntArray21));
+end;
+
+procedure TLiteChainHashSetTest.Equality;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 = s1);
+  AssertTrue(s2 = s2);
+  AssertTrue(s1 = s2);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  AssertTrue(s2 = s2);
+  AssertTrue(s2 = s1);
+  AssertTrue(s1 = s2);
+  AssertTrue(s1 = s1);
+
+  s1.Remove(11);
+  AssertFalse(s2 = s1);
+  AssertFalse(s1 = s2);
+end;
+
+procedure TLiteChainHashSetTest.Contains;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s1);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+
+  AssertTrue(s2 <= s1);
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s2);
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s1 <= s2);
+  AssertFalse(s2 <= s1);
+end;
+
+procedure TLiteChainHashSetTest.TestIn;
+var
+  s: TSet;
+begin
+  AssertFalse(10 in s);
+  s.AddAll(IntArray21);
+  AssertTrue(10 in s);
+  AssertFalse(0 in s);
+  AssertFalse(22 in s);
+end;
+
+procedure TLiteChainHashSetTest.PassByValue;
+  procedure Test(aSet: TSet);
+  begin
+    aSet.Add(2);
+    aSet.Add(-5);
+    aSet.Add(15);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  s: TSet;
+begin
+  s.EnsureCapacity(10);
+  AssertTrue(s.IsEmpty);
+  Test(s);
+  AssertTrue(s.IsEmpty);
+  s.Add(0);
+  AssertFalse(s.Contains(2));
+  AssertFalse(s.Contains(-5));
+  AssertFalse(s.Contains(15));
+end;
+
+{ TLiteEquitableHashSetTest }
+
+procedure TLiteEquitableHashSetTest.Add;
+var
+  s: TSet;
+begin
+  AssertTrue(s.Count = 0);
+  AssertTrue(s.Add(1));
+  AssertTrue(s.Count = 1);
+  AssertTrue(s.Contains(1));
+  AssertTrue(s.Add(51));
+  AssertTrue(s.Count = 2);
+  AssertTrue(s.Contains(51));
+  AssertFalse(s.Add(1));
+  AssertFalse(s.Add(51));
+  AssertTrue(s.Count = 2);
+  AssertTrue(s.Add(52));
+  AssertTrue(s.Count = 3);
+  AssertTrue(s.Contains(52));
+end;
+
+procedure TLiteEquitableHashSetTest.Add100;
+var
+  s: TSet;
+  I: Integer;
+begin
+  for I := 1 to 100 do
+    AssertTrue(s.Add(I));
+  AssertTrue(s.Count = 100);
+  for I := 1 to 100 do
+    AssertFalse(s.Add(I));
+  AssertTrue(s.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(s.Contains(I));
+end;
+
+procedure TLiteEquitableHashSetTest.AddArray;
+var
+  s: TSet;
+begin
+  AssertTrue(s.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.AddEnum;
+var
+  s: TSet;
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21));
+  AssertTrue(s.AddAll(e) = Length(IntArray21));
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.AddSet;
+var
+  s, s21: TSet;
+begin
+  AssertTrue(s.AddAll(IntArray11) = Length(IntArray11));
+  AssertTrue(s.Count = Length(IntArray11));
+  AssertTrue(s21.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(s21.Count = Length(IntArray21));
+  AssertTrue(s.AddAll(s21) = 10);
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.AddSelf;
+var
+  s: TSet;
+begin
+  AssertTrue(s.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(s.AddAll(s) = 0);
+  AssertTrue(s.Count = Length(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.Clear;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray11);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.Capacity >= 11);
+  s.Clear;
+  AssertTrue(s.Count = 0);
+  AssertTrue(s.Capacity = 0);
+end;
+
+procedure TLiteEquitableHashSetTest.EnsureCapacity;
+var
+  s: TSet;
+  c: SizeInt;
+begin
+  c := s.ExpandTreshold;
+  s.EnsureCapacity(c + 1);
+  AssertTrue(s.Capacity > c);
+end;
+
+procedure TLiteEquitableHashSetTest.TrimToFit;
+var
+  s: TSet;
+  c: SizeInt;
+begin
+  s.AddAll(IntArray21);
+  c := s.Capacity;
+  s.EnsureCapacity(s.ExpandTreshold + 1);
+  AssertTrue(s.Capacity > c);
+  s.TrimToFit;
+  AssertTrue(s.Capacity <= c);
+end;
+
+procedure TLiteEquitableHashSetTest.Remove;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.Count = Length(IntArray21));
+  AssertTrue(s.Remove(IntArray21[1]));
+  AssertTrue(s.Count = Length(IntArray21) - 1);
+  AssertTrue(s.Remove(IntArray21[High(IntArray21)]));
+  AssertTrue(s.Count = Length(IntArray21) - 2);
+  AssertFalse(s.Remove(-1));
+  AssertTrue(s.Count = Length(IntArray21) - 2);
+  AssertFalse(s.Remove(100));
+  AssertTrue(s.Count = Length(IntArray21) - 2);
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveArray;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(IntArray11) = 11);
+  AssertTrue(s.Count = 10);
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveEnum;
+var
+  s: TSet;
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(e) = 11);
+  AssertTrue(s.Count = 10);
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveSet;
+var
+  s, s11: TSet;
+begin
+  s11.AddAll(IntArray11);
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(s11) = 11);
+  AssertTrue(s.Count = 10);
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveSelf;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveAll(s) = 21);
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveIfRegular;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveIf(@IsEvenInt) = 10);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveIfDelegated;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveIf(@IsEven) = 10);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+end;
+
+procedure TLiteEquitableHashSetTest.RemoveIfNested;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  AssertTrue(s.RemoveIf(@IsEvenInt) = 10);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+end;
+
+procedure TLiteEquitableHashSetTest.ExtractIfRegular;
+var
+  s: TSet;
+  a: TIntArray;
+begin
+  s.AddAll(IntArray21);
+  a := s.ExtractIf(@IsEvenInt);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+  AssertTrue(Length(a) = 10);
+  TIntHelper.Sort(a);
+  AssertTrue(TIntHelper.Same(IntArray10, a));
+end;
+
+procedure TLiteEquitableHashSetTest.ExtractIfDelegated;
+var
+  s: TSet;
+  a: TIntArray;
+begin
+  s.AddAll(IntArray21);
+  a := s.ExtractIf(@IsEven);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+  AssertTrue(Length(a) = 10);
+  TIntHelper.Sort(a);
+  AssertTrue(TIntHelper.Same(IntArray10, a));
+end;
+
+procedure TLiteEquitableHashSetTest.ExtractIfNested;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  s: TSet;
+  a: TIntArray;
+begin
+  s.AddAll(IntArray21);
+  a := s.ExtractIf(@IsEvenInt);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(IntArray11));
+  AssertTrue(Length(a) = 10);
+  TIntHelper.Sort(a);
+  AssertTrue(TIntHelper.Same(IntArray10, a));
+end;
+
+procedure TLiteEquitableHashSetTest.Retain;
+var
+  s, s11: TSet;
+begin
+  s.AddAll(IntArray21);
+  s.AddAll([-3, -2, -1, 0]);
+  AssertTrue(s.Count = 25);
+  s11.AddAll(IntArray11);
+  s.RetainAll(s11);
+  AssertTrue(s.Count = 11);
+  AssertTrue(s.ContainsAll(s11));
+end;
+
+procedure TLiteEquitableHashSetTest.Retain_1;
+var
+  s, s11: TSet;
+begin
+  s.AddAll(IntArray10);
+  s11.AddAll(IntArray11);
+  s.RetainAll(s11);
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TLiteEquitableHashSetTest.RetainSelf;
+var
+  s: TSet;
+begin
+  s.AddAll(IntArray21);
+  s.RetainAll(s);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.IsSuperset;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s1.AddAll(IntArray21);
+  AssertTrue(s.IsSuperset(s1));
+  AssertTrue(s1.IsSuperset(s));
+  AssertTrue(s.IsSuperset(s));
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s.IsSuperset(s1));
+  AssertFalse(s1.IsSuperset(s));
+end;
+
+procedure TLiteEquitableHashSetTest.IsSubset;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s1.AddAll(IntArray21);
+  AssertTrue(s.IsSubset(s1));
+  AssertTrue(s1.IsSubset(s));
+  AssertTrue(s.IsSubset(s));
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s1.IsSubset(s));
+  AssertFalse(s.IsSubset(s1));
+end;
+
+procedure TLiteEquitableHashSetTest.IsEqual;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s1.AddAll(IntArray21);
+  AssertTrue(s.IsEqual(s));
+  AssertTrue(s.IsEqual(s1));
+  AssertTrue(s1.IsEqual(s));
+  s1.Remove(21);
+  AssertFalse(s.IsEqual(s1));
+  AssertFalse(s1.IsEqual(s));
+end;
+
+procedure TLiteEquitableHashSetTest.Intersecting;
+var
+  s, s11: TSet;
+begin
+  s.AddAll(IntArray21);
+  s11.AddAll(IntArray11);
+  AssertTrue(s.Intersecting(s));
+  AssertTrue(s.Intersecting(s11));
+  AssertTrue(s11.Intersecting(s));
+  s.Clear;
+  s.AddAll(IntArray10);
+  AssertFalse(s.Intersecting(s11));
+  AssertFalse(s11.Intersecting(s));
+end;
+
+procedure TLiteEquitableHashSetTest.SymmetricSubtract;
+var
+  s, s1: TSet;
+begin
+  s.AddAll(IntArray21);
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+  s1.AddAll(IntArray21);
+  s.Clear;
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.ContainsAll(IntArray21));
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.IsEmpty);
+  s.AddAll(IntArray11);
+  s1.Clear;
+  s1.AddAll(IntArray10);
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+  s.Clear;
+  s.AddAll(IntArray11);
+  s.AddAll([-5, -4, -3, -2, -1, 0]);
+  s1.AddAll([-5, -4, -3, -2, -1, 0]);
+  s.SymmetricSubtract(s1);
+  AssertTrue(s.Count = 21);
+  AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.Include;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 + s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.Include1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 + s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 + s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 + s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  s1.Clear;
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.Exclude;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 - s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 - s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s3 := s2 - s1;
+  AssertTrue(s3.Count = 11);
+  AssertTrue(s3.ContainsAll(IntArray11));
+end;
+
+procedure TLiteEquitableHashSetTest.Exclude1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 - s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 - s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 - s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteEquitableHashSetTest.Intersection;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s2 * s1;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+end;
+
+procedure TLiteEquitableHashSetTest.Intersection1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s2 := s1 * s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteEquitableHashSetTest.SymmetricDifference;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.SymmetricDifference1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 >< s2;
+  AssertTrue(s2.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s2 := s1 >< s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s2.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s1 := s1 >< s2;
+  AssertTrue(s1.Count = 21);
+  AssertTrue(s1.ContainsAll(IntArray21));
+end;
+
+procedure TLiteEquitableHashSetTest.Equality;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 = s1);
+  AssertTrue(s2 = s2);
+  AssertTrue(s1 = s2);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  AssertTrue(s2 = s2);
+  AssertTrue(s2 = s1);
+  AssertTrue(s1 = s2);
+  AssertTrue(s1 = s1);
+
+  s1.Remove(11);
+  AssertFalse(s2 = s1);
+  AssertFalse(s1 = s2);
+end;
+
+procedure TLiteEquitableHashSetTest.Contains;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s1);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+
+  AssertTrue(s2 <= s1);
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s2);
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s1 <= s2);
+  AssertFalse(s2 <= s1);
+end;
+
+procedure TLiteEquitableHashSetTest.TestIn;
+var
+  s: TSet;
+begin
+  AssertFalse(10 in s);
+  s.AddAll(IntArray21);
+  AssertTrue(10 in s);
+  AssertFalse(0 in s);
+  AssertFalse(22 in s);
+end;
+
+procedure TLiteEquitableHashSetTest.PassByValue;
+  procedure Test(aSet: TSet);
+  begin
+    aSet.Add(2);
+    aSet.Add(-5);
+    aSet.Add(15);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  s: TSet;
+begin
+  s.EnsureCapacity(10);
+  AssertTrue(s.IsEmpty);
+  Test(s);
+  AssertTrue(s.IsEmpty);
+  s.Add(0);
+  AssertFalse(s.Contains(2));
+  AssertFalse(s.Contains(-5));
+  AssertFalse(s.Contains(15));
 end;
 
 { TGDisjointSetUnionTest }
@@ -5801,7 +7176,9 @@ initialization
   RegisterTest(THashSetQPTest);
   RegisterTest(TChainHashSetTest);
   RegisterTest(TOrdHashSetTest);
-  RegisterTest(TLiteHashSetTest);
+  RegisterTest(TLiteHashSetLPTest);
+  RegisterTest(TLiteChainHashSetTest);
+  RegisterTest(TLiteEquitableHashSetTest);
   RegisterTest(TGDisjointSetUnionTest);
   RegisterTest(THashSetFGTest);
 end.
