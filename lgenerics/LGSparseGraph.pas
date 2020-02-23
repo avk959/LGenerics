@@ -94,7 +94,8 @@ type
   TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
-  TIntEdgeHashSet       = specialize TGLiteHashSetLp<TIntEdge, TIntEdge>;
+  TIntEdgeHashSetSpec   = specialize TGLiteHashSetLP<TIntEdge, TIntEdge>;
+  TIntEdgeHashSet       = TIntEdgeHashSetSpec.TSet;
 
   TGraphMagic           = string[8];
 
