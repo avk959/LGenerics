@@ -1048,7 +1048,7 @@ end;
 
 function TGOpenAddressing.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
-  I, Pos, h, Mask: SizeInt;
+  I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
@@ -1057,14 +1057,13 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      h := FList[Pos].Hash;
-      if h = 0 then                               // node empty => key not found
+      if FList[Pos].Hash = 0 then                 // node empty => key not found
         begin
           Result.InsertIndex := Pos;
           exit;
         end
       else
-        if (h = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
           begin
             Result.FoundIndex := Pos;             // key found
             exit;
@@ -1224,38 +1223,28 @@ begin
   if IsManagedType(TEntry) then
     for I := 0 to Mask do
       begin
-        h := FList[aIndex].Hash;
-        if h <> 0 then
+        if FList[aIndex].Hash = 0 then exit;
+        h := FList[aIndex].Hash and Mask;
+        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
           begin
-            h := h and Mask;
-            if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-              begin
-                TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-                TFakeNode(FList[aIndex]) := Default(TFakeNode);
-                Gap := aIndex;
-              end;
-            aIndex := Succ(aIndex) and Mask;
-          end
-        else
-          break;
+            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+            TFakeNode(FList[aIndex]) := Default(TFakeNode);
+            Gap := aIndex;
+          end;
+        aIndex := Succ(aIndex) and Mask;
       end
   else
     for I := 0 to Mask do
       begin
-        h := FList[aIndex].Hash;
-        if h <> 0 then
+        if FList[aIndex].Hash = 0 then exit;
+        h := FList[aIndex].Hash and Mask and Mask;
+        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
           begin
-            h := h and Mask;
-            if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-              begin
-                FList[Gap] := FList[aIndex];
-                FList[aIndex].Hash := 0;
-                Gap := aIndex;
-              end;
-            aIndex := Succ(aIndex) and Mask;
-          end
-        else
-          break;
+            FList[Gap] := FList[aIndex];
+            FList[aIndex].Hash := 0;
+            Gap := aIndex;
+          end;
+        aIndex := Succ(aIndex) and Mask;
       end;
 end;
 
@@ -1510,7 +1499,7 @@ end;
 
 function TGOpenAddrTombstones.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
-  I, Pos, h, Mask: SizeInt;
+  I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
@@ -1519,21 +1508,20 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      h := FList[Pos].Hash;
-      if h = 0 then                                // node empty => key not found
+      if FList[Pos].Hash = 0 then                  // node empty => key not found
         begin
           if Result.InsertIndex = NULL_INDEX then  // if none tombstone found, remember first empty
             Result.InsertIndex := Pos;
           exit;
         end
       else
-        if h = TOMBSTONE then
+        if FList[Pos].Hash = TOMBSTONE then
           begin
             if Result.InsertIndex = NULL_INDEX then// remember first tombstone position
               Result.InsertIndex := Pos;
           end
         else
-          if (h = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+          if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
             begin
               Result.FoundIndex := Pos;            // key found
               exit;
@@ -2828,7 +2816,7 @@ end;
 
 function TGHashTableLP.DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
-  I, Pos, h, Mask: SizeInt;
+  I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
@@ -2836,11 +2824,10 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      h := FList[Pos].Hash;
-      if h = 0 then               // node empty => key not found
+      if FList[Pos].Hash = 0 then // node empty => key not found
         exit(not Pos)
       else
-        if (h = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
           exit(Pos);              // key found
       Pos := Succ(Pos) and Mask;  // probe sequence
     end;
@@ -2858,40 +2845,31 @@ begin
   if Count = 0 then exit;
   Gap := aIndex;
   aIndex := Succ(aIndex) and Mask;
-  for I := 0 to Mask do
-    if IsManagedType(TEntry) then
+  if IsManagedType(TEntry) then
+    for I := 0 to Mask do
       begin
-        h := FList[aIndex].Hash;
-        if h <> 0 then
+        if FList[aIndex].Hash = 0 then exit;
+        h := FList[aIndex].Hash and Mask;
+        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
           begin
-            h := h and Mask;
-            if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-              begin
-                TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-                TFakeNode(FList[aIndex]) := Default(TFakeNode);
-                Gap := aIndex;
-              end;
-            aIndex := Succ(aIndex) and Mask;
-          end
-        else
-          break;
+            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+            TFakeNode(FList[aIndex]) := Default(TFakeNode);
+            Gap := aIndex;
+          end;
+        aIndex := Succ(aIndex) and Mask;
       end
-    else
+  else
+    for I := 0 to Mask do
       begin
-        h := FList[aIndex].Hash;
-        if h <> 0 then
+        if FList[aIndex].Hash = 0 then exit;
+        h := FList[aIndex].Hash and Mask;
+        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
           begin
-            h := h and Mask;
-            if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-              begin
-                FList[Gap] := FList[aIndex];
-                FList[aIndex].Hash := 0;
-                Gap := aIndex;
-              end;
-            aIndex := Succ(aIndex) and Mask;
-          end
-        else
-          break;
+            FList[Gap] := FList[aIndex];
+            FList[aIndex].Hash := 0;
+            Gap := aIndex;
+          end;
+        aIndex := Succ(aIndex) and Mask;
       end;
 end;
 
@@ -3238,7 +3216,7 @@ end;
 
 function TGLiteHashTableLP.DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
-  I, Pos, h, Mask: SizeInt;
+  I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
@@ -3246,11 +3224,10 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      h := FList[Pos].Hash;
-      if h = 0 then               // node empty => key not found
+      if FList[Pos].Hash = 0 then // node empty => key not found
         exit(not Pos)
       else
-        if (h = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
           exit(Pos);              // key found
       Pos := Succ(Pos) and Mask;  // probe sequence
     end;
@@ -3271,38 +3248,28 @@ begin
   if IsManagedType(TEntry) then
     for I := 0 to Mask do
       begin
-        h := FList[aIndex].Hash;
-        if h <> 0 then
+        if FList[aIndex].Hash = 0 then exit;
+        h := FList[aIndex].Hash and Mask;
+        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
           begin
-            h := h and Mask;
-            if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-              begin
-                TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-                TFakeNode(FList[aIndex]) := Default(TFakeNode);
-                Gap := aIndex;
-              end;
-            aIndex := Succ(aIndex) and Mask;
-          end
-        else
-          break;
+            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+            TFakeNode(FList[aIndex]) := Default(TFakeNode);
+            Gap := aIndex;
+          end;
+        aIndex := Succ(aIndex) and Mask;
       end
   else
     for I := 0 to Mask do
       begin
-        h := FList[aIndex].Hash;
-        if h <> 0 then
+        if FList[aIndex].Hash = 0 then exit;
+        h := FList[aIndex].Hash and Mask;
+        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
           begin
-            h := h and Mask;
-            if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-              begin
-                FList[Gap] := FList[aIndex];
-                FList[aIndex].Hash := 0;
-                Gap := aIndex;
-              end;
-            aIndex := Succ(aIndex) and Mask;
-          end
-        else
-          break;
+            FList[Gap] := FList[aIndex];
+            FList[aIndex].Hash := 0;
+            Gap := aIndex;
+          end;
+        aIndex := Succ(aIndex) and Mask;
       end;
 end;
 
@@ -3886,7 +3853,7 @@ begin
     Result := False;
   if not Result then          // key not found
     begin
-      if Count = Capacity then
+      if Count >= Capacity then
         Expand;
       sr.Index := DoAdd(h);
     end;
@@ -4131,8 +4098,7 @@ begin
   aIndex := Succ(aIndex) and Mask;
   if IsManagedType(TEntry) then
     repeat
-      if FList[aIndex].Hash = 0 then
-        break;
+      if FList[aIndex].Hash = 0 then exit;
       h := FList[aIndex].Hash and Mask;
       if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
         begin
@@ -4144,8 +4110,7 @@ begin
     until False
   else
     repeat
-      if FList[aIndex].Hash = 0 then
-        break;
+      if FList[aIndex].Hash = 0 then exit;
       h := FList[aIndex].Hash and Mask;
       if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
         begin
