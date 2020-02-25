@@ -1210,7 +1210,7 @@ end;
 
 procedure TGOpenAddrLP.DoRemove(aIndex: SizeInt);
 var
-  I, h, Gap, Mask: SizeInt;
+  h, Gap, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   FList[aIndex].Hash := 0;
@@ -1221,31 +1221,29 @@ begin
   Gap := aIndex;
   aIndex := Succ(aIndex) and Mask;
   if IsManagedType(TEntry) then
-    for I := 0 to Mask do
-      begin
-        if FList[aIndex].Hash = 0 then exit;
-        h := FList[aIndex].Hash and Mask;
-        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-          begin
-            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-            TFakeNode(FList[aIndex]) := Default(TFakeNode);
-            Gap := aIndex;
-          end;
-        aIndex := Succ(aIndex) and Mask;
-      end
+    repeat
+      if FList[aIndex].Hash = 0 then exit;
+      h := FList[aIndex].Hash and Mask;
+      if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+        begin
+          TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+          TFakeNode(FList[aIndex]) := Default(TFakeNode);
+          Gap := aIndex;
+        end;
+      aIndex := Succ(aIndex) and Mask;
+    until False
   else
-    for I := 0 to Mask do
-      begin
-        if FList[aIndex].Hash = 0 then exit;
-        h := FList[aIndex].Hash and Mask and Mask;
-        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-          begin
-            FList[Gap] := FList[aIndex];
-            FList[aIndex].Hash := 0;
-            Gap := aIndex;
-          end;
-        aIndex := Succ(aIndex) and Mask;
-      end;
+    repeat
+      if FList[aIndex].Hash = 0 then exit;
+      h := FList[aIndex].Hash and Mask and Mask;
+      if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+        begin
+          FList[Gap] := FList[aIndex];
+          FList[aIndex].Hash := 0;
+          Gap := aIndex;
+        end;
+      aIndex := Succ(aIndex) and Mask;
+    until False;
 end;
 
 function TGOpenAddrLP.Clone: TAbstractHashTable;
@@ -1707,24 +1705,23 @@ end;
 
 procedure TGOrderedHashTable.Rehash(var aTarget: TChainList);
 var
-  Node, CurrNode, NextNode: PNode;
+  Curr, Next: PNode;
   I, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
       Mask := System.High(aTarget);
-      for Node in FList do
-        begin
-          CurrNode := Node;
-          while CurrNode <> nil do
-            begin
-              I := CurrNode^.Hash and Mask;
-              NextNode := CurrNode^.ChainNext;
-              CurrNode^.ChainNext := aTarget[I];
-              aTarget[I] := CurrNode;
-              CurrNode := NextNode;
-            end;
-        end;
+      for I := 0 to System.High(FList) do
+        if FList[I] <> nil then
+          begin
+            Curr := FList[I];
+            repeat
+              Next := Curr^.ChainNext;
+              Curr^.ChainNext := aTarget[Curr^.Hash and Mask];
+              aTarget[Curr^.Hash and Mask] := Curr;
+              Curr := Next;
+            until Next = nil;
+          end;
     end;
 end;
 
@@ -2227,24 +2224,23 @@ end;
 
 procedure TGChainHashTable.Rehash(var aTarget: TChainList);
 var
-  Node, CurrNode, NextNode: PNode;
+  Curr, Next: PNode;
   I, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
       Mask := System.High(aTarget);
-      for Node in FList do
-        begin
-          CurrNode := Node;
-          while CurrNode <> nil do
-            begin
-              I := CurrNode^.Hash and Mask;
-              NextNode := CurrNode^.Next;
-              CurrNode^.Next := aTarget[I];
-              aTarget[I] := CurrNode;
-              CurrNode := NextNode;
-            end;
-        end;
+      for I := 0 to System.High(FList) do
+        if FList[I] <> nil then
+          begin
+            Curr := FList[I];
+            repeat
+              Next := Curr^.Next;
+              Curr^.Next := aTarget[Curr^.Hash and Mask];
+              aTarget[Curr^.Hash and Mask] := Curr;
+              Curr := Next;
+            until Next = nil;
+          end;
     end;
 end;
 
@@ -2746,7 +2742,7 @@ end;
 
 procedure TGHashTableLP.Rehash(var aTarget: TNodeList);
 var
-  h, I, J, Mask: SizeInt;
+  h, I, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
@@ -2757,16 +2753,15 @@ begin
             if FList[I].Hash <> 0 then
               begin
                 h := FList[I].Hash and Mask;
-                for J := 0 to Mask do
-                  begin
-                    if aTarget[h].Hash = 0 then // -> target node is empty
-                      begin
-                        TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                        TFakeNode(FList[I]) := Default(TFakeNode);
-                        break;
-                      end;
-                    h := Succ(h) and Mask;     // probe sequence
-                  end;
+                repeat
+                  if aTarget[h].Hash = 0 then // -> target node is empty
+                    begin
+                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      break;
+                    end;
+                  h := Succ(h) and Mask;      // probe sequence
+                until False;
               end;
           end
       else
@@ -2775,15 +2770,14 @@ begin
             if FList[I].Hash <> 0 then
               begin
                 h := FList[I].Hash and Mask;
-                for J := 0 to Mask do
-                  begin
+                repeat
                     if aTarget[h].Hash = 0 then
                       begin
                         aTarget[h] := FList[I];
                         break;
                       end;
                     h := Succ(h) and Mask;
-                  end;
+                until False;
               end;
           end;
     end;
@@ -2835,7 +2829,7 @@ end;
 
 procedure TGHashTableLP.DoRemove(aIndex: SizeInt);
 var
-  I, h, Gap, Mask: SizeInt;
+  h, Gap, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   FList[aIndex].Hash := 0;
@@ -2846,31 +2840,29 @@ begin
   Gap := aIndex;
   aIndex := Succ(aIndex) and Mask;
   if IsManagedType(TEntry) then
-    for I := 0 to Mask do
-      begin
-        if FList[aIndex].Hash = 0 then exit;
-        h := FList[aIndex].Hash and Mask;
-        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-          begin
-            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-            TFakeNode(FList[aIndex]) := Default(TFakeNode);
-            Gap := aIndex;
-          end;
-        aIndex := Succ(aIndex) and Mask;
-      end
+    repeat
+      if FList[aIndex].Hash = 0 then exit;
+      h := FList[aIndex].Hash and Mask;
+      if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+        begin
+          TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+          TFakeNode(FList[aIndex]) := Default(TFakeNode);
+          Gap := aIndex;
+        end;
+      aIndex := Succ(aIndex) and Mask;
+    until False
   else
-    for I := 0 to Mask do
-      begin
-        if FList[aIndex].Hash = 0 then exit;
-        h := FList[aIndex].Hash and Mask;
-        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-          begin
-            FList[Gap] := FList[aIndex];
-            FList[aIndex].Hash := 0;
-            Gap := aIndex;
-          end;
-        aIndex := Succ(aIndex) and Mask;
-      end;
+    repeat
+      if FList[aIndex].Hash = 0 then exit;
+      h := FList[aIndex].Hash and Mask;
+      if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+        begin
+          FList[Gap] := FList[aIndex];
+          FList[aIndex].Hash := 0;
+          Gap := aIndex;
+        end;
+      aIndex := Succ(aIndex) and Mask;
+    until False;
 end;
 
 class function TGHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
@@ -3146,7 +3138,7 @@ end;
 
 procedure TGLiteHashTableLP.Rehash(var aTarget: TNodeList);
 var
-  h, I, J, Mask: SizeInt;
+  h, I, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
@@ -3157,16 +3149,15 @@ begin
             if FList[I].Hash <> 0 then
               begin
                 h := FList[I].Hash and Mask;
-                for J := 0 to Mask do
-                  begin
-                    if aTarget[h].Hash = 0 then // -> target node is empty
-                      begin
-                        TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                        TFakeNode(FList[I]) := Default(TFakeNode);
-                        break;
-                      end;
-                    h := Succ(h) and Mask;     // probe sequence
-                  end;
+                repeat
+                  if aTarget[h].Hash = 0 then // -> target node is empty
+                    begin
+                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      break;
+                    end;
+                  h := Succ(h) and Mask;      // probe sequence
+                until False;
               end;
           end
       else
@@ -3175,15 +3166,14 @@ begin
             if FList[I].Hash <> 0 then
               begin
                 h := FList[I].Hash and Mask;
-                for J := 0 to Mask do
-                  begin
-                    if aTarget[h].Hash = 0 then
-                      begin
-                        aTarget[h] := FList[I];
-                        break;
-                      end;
-                    h := Succ(h) and Mask;
-                  end;
+                repeat
+                  if aTarget[h].Hash = 0 then
+                    begin
+                      aTarget[h] := FList[I];
+                      break;
+                    end;
+                  h := Succ(h) and Mask;
+                until False;
               end;
           end;
     end;
@@ -3235,7 +3225,7 @@ end;
 
 procedure TGLiteHashTableLP.DoRemove(aIndex: SizeInt);
 var
-  I, h, Gap, Mask: SizeInt;
+  h, Gap, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   FList[aIndex].Hash := 0;
@@ -3246,31 +3236,29 @@ begin
   Gap := aIndex;
   aIndex := Succ(aIndex) and Mask;
   if IsManagedType(TEntry) then
-    for I := 0 to Mask do
-      begin
-        if FList[aIndex].Hash = 0 then exit;
-        h := FList[aIndex].Hash and Mask;
-        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-          begin
-            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-            TFakeNode(FList[aIndex]) := Default(TFakeNode);
-            Gap := aIndex;
-          end;
-        aIndex := Succ(aIndex) and Mask;
-      end
+    repeat
+      if FList[aIndex].Hash = 0 then exit;
+      h := FList[aIndex].Hash and Mask;
+      if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+        begin
+          TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+          TFakeNode(FList[aIndex]) := Default(TFakeNode);
+          Gap := aIndex;
+        end;
+      aIndex := Succ(aIndex) and Mask;
+    until False
   else
-    for I := 0 to Mask do
-      begin
-        if FList[aIndex].Hash = 0 then exit;
-        h := FList[aIndex].Hash and Mask;
-        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-          begin
-            FList[Gap] := FList[aIndex];
-            FList[aIndex].Hash := 0;
-            Gap := aIndex;
-          end;
-        aIndex := Succ(aIndex) and Mask;
-      end;
+    repeat
+      if FList[aIndex].Hash = 0 then exit;
+      h := FList[aIndex].Hash and Mask;
+      if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+        begin
+          FList[Gap] := FList[aIndex];
+          FList[aIndex].Hash := 0;
+          Gap := aIndex;
+        end;
+      aIndex := Succ(aIndex) and Mask;
+   until False;
 end;
 
 procedure TGLiteHashTableLP.FinalizeList;
@@ -3330,7 +3318,7 @@ class operator TGLiteHashTableLP.Copy(constref aSrc: TGLiteHashTableLP; var aDst
 begin
   if @aSrc <> @aDst then
     begin
-      aDst.FList := System.Copy(aSrc.FList, 0, System.Length(aSrc.FList));
+      aDst.FList := System.Copy(aSrc.FList);
       aDst.FCount := aSrc.Count;
       aDst.FExpandTreshold := aSrc.ExpandTreshold;
       aDst.FLoadFactor := aSrc.LoadFactor;
@@ -3999,7 +3987,7 @@ end;
 
 procedure TGLiteEquitableHashTable.Rehash(var aTarget: TNodeList);
 var
-  h, I, J, Mask: SizeInt;
+  h, I, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
@@ -4010,16 +3998,15 @@ begin
             if FList[I].Hash <> 0 then
               begin
                 h := FList[I].Hash and Mask;
-                for J := 0 to Mask do
-                  begin
-                    if aTarget[h].Hash = 0 then // -> target node is empty
-                      begin
-                        TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                        TFakeNode(FList[I]) := Default(TFakeNode);
-                        break;
-                      end;
-                    h := Succ(h) and Mask;     // probe sequence
-                  end;
+                repeat
+                  if aTarget[h].Hash = 0 then // -> target node is empty
+                    begin
+                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
+                      break;
+                    end;
+                  h := Succ(h) and Mask;      // probe sequence
+                until False;
               end;
           end
       else
@@ -4028,15 +4015,14 @@ begin
             if FList[I].Hash <> 0 then
               begin
                 h := FList[I].Hash and Mask;
-                for J := 0 to Mask do
-                  begin
-                    if aTarget[h].Hash = 0 then
-                      begin
-                        aTarget[h] := FList[I];
-                        break;
-                      end;
-                    h := Succ(h) and Mask;
-                  end;
+                repeat
+                  if aTarget[h].Hash = 0 then
+                    begin
+                      aTarget[h] := FList[I];
+                      break;
+                    end;
+                  h := Succ(h) and Mask;
+                until False;
               end;
           end;
     end;
