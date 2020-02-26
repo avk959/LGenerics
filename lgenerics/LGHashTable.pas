@@ -1061,13 +1061,12 @@ begin
         begin
           Result.InsertIndex := Pos;
           exit;
-        end
-      else
-        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-          begin
-            Result.FoundIndex := Pos;             // key found
-            exit;
-          end;
+        end;
+      if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+        begin
+          Result.FoundIndex := Pos;               // key found
+          exit;
+        end;
       Pos := TProbeSeq.NextProbe(Pos, I) and Mask;// probe sequence
     end;
 end;
@@ -1506,25 +1505,24 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      if FList[Pos].Hash = 0 then                  // node empty => key not found
+      if FList[Pos].Hash = 0 then                 // node empty => key not found
         begin
-          if Result.InsertIndex = NULL_INDEX then  // if none tombstone found, remember first empty
+          if Result.InsertIndex = NULL_INDEX then // if none tombstone found, remember first empty
             Result.InsertIndex := Pos;
           exit;
+        end;
+      if FList[Pos].Hash = TOMBSTONE then
+        begin
+          if Result.InsertIndex = NULL_INDEX then // remember first tombstone position
+            Result.InsertIndex := Pos;
         end
       else
-        if FList[Pos].Hash = TOMBSTONE then
+        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
           begin
-            if Result.InsertIndex = NULL_INDEX then// remember first tombstone position
-              Result.InsertIndex := Pos;
-          end
-        else
-          if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-            begin
-              Result.FoundIndex := Pos;            // key found
-              exit;
-            end;
-      Pos := TProbeSeq.NextProbe(Pos, I) and Mask; // probe sequence
+            Result.FoundIndex := Pos;             // key found
+            exit;
+          end;
+      Pos := TProbeSeq.NextProbe(Pos, I) and Mask;// probe sequence
     end;
 end;
 
@@ -2819,10 +2817,9 @@ begin
   for I := 0 to Mask do
     begin
       if FList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos)
-      else
-        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-          exit(Pos);              // key found
+        exit(not Pos);
+      if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+        exit(Pos);                // key found
       Pos := Succ(Pos) and Mask;  // probe sequence
     end;
 end;
@@ -3215,10 +3212,9 @@ begin
   for I := 0 to Mask do
     begin
       if FList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos)
-      else
-        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-          exit(Pos);              // key found
+        exit(not Pos);
+      if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+        exit(Pos);                // key found
       Pos := Succ(Pos) and Mask;  // probe sequence
     end;
 end;
@@ -4062,10 +4058,9 @@ begin
   for I := 0 to Mask do
     begin
       if FList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos)
-      else
-        if FList[Pos].Data.Key = aKey then
-          exit(Pos);              // key found
+        exit(not Pos);
+      if FList[Pos].Data.Key = aKey then
+        exit(Pos);                // key found
       Pos := Succ(Pos) and Mask;  // probe sequence
     end;
 end;
