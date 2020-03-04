@@ -368,7 +368,6 @@ type
     function  GetLoadFactor: Single; inline;
     function  GetExpandTreshold: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    class operator Copy(constref aSrc: TGLiteHashSet; var aDst: TGLiteHashSet);
   public
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
@@ -442,8 +441,8 @@ type
   generic TGLiteHashSetLP<T, TEqRel> = record
   private
   type
-    TEntry  = record Key: T; end;
-    TTable  = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
+    TEntry = record Key: T; end;
+    TTable = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
   public
   type
     TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
@@ -456,8 +455,8 @@ type
   generic TGLiteChainHashSet<T, TEqRel> = record
   private
   type
-    TEntry  = record Key: T; end;
-    TTable  = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
+    TEntry = record Key: T; end;
+    TTable = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
   public
   type
     TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
@@ -465,13 +464,13 @@ type
 
   { TGLiteEquitableHashSet: open addressing hashset with linear probing and
     constant load factor 0.5; for types having a defined fast operator "=";
-      functor THashFun(equality relation) must provide:
+      functor THashFun must provide:
         class function HashCode([const[ref]] aValue: T): SizeInt; }
   generic TGLiteEquitableHashSet<T, THashFun> = record
   private
   type
-    TEntry  = record Key: T; end;
-    TTable  = specialize TGLiteEquitableHashTable<T, TEntry, THashFun>;
+    TEntry = record Key: T; end;
+    TTable = specialize TGLiteEquitableHashTable<T, TEntry, THashFun>;
   public
   type
     TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
@@ -1433,11 +1432,6 @@ end;
 procedure TGLiteHashSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-class operator TGLiteHashSet.Copy(constref aSrc: TGLiteHashSet; var aDst: TGLiteHashSet);
-begin
-  aDst.FTable := aSrc.FTable;
 end;
 
 function TGLiteHashSet.DefaultLoadFactor: Single;
