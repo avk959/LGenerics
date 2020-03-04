@@ -47,7 +47,6 @@ type
       FStartIndex,
       FCurrIndex: SizeInt;
       FDelimiters: TSysCharSet;
-      FFound: Boolean;
     protected
       function  GetCurrent: string; override;
     public
@@ -120,10 +119,7 @@ implementation
 
 function TAnsiStrHelper.TStrEnumerable.GetCurrent: string;
 begin
-  if FFound then
-    Result := System.Copy(FString, FStartIndex, FCurrIndex - FStartIndex)
-  else
-    Result := '';
+  Result := System.Copy(FString, FStartIndex, FCurrIndex - FStartIndex)
 end;
 
 constructor TAnsiStrHelper.TStrEnumerable.Create(const aValue: string; const aDelimiters: TSysCharSet);
@@ -132,46 +128,28 @@ begin
   FString := aValue;
   FDelimiters := aDelimiters;
   FStartIndex := 1;
-  FCurrIndex := 1;
+  FCurrIndex := 0;
 end;
 
 function TAnsiStrHelper.TStrEnumerable.MoveNext: Boolean;
 var
-  I, Len: SizeInt;
-  WordFound: Boolean;
+  I: SizeInt;
 begin
-  Len := System.Length(FString);
-  if FCurrIndex <= Len then
+  Result := False;
+  for I := Succ(FCurrIndex) to System.Length(FString) do
     begin
-      WordFound := False;
-      I := FCurrIndex;
-      repeat
-        if FString[I] in FDelimiters then
-          begin
-            if WordFound then
-              break;
-          end
-        else
-          if not WordFound then
-            begin
-              WordFound := True;
-              FStartIndex := I;
-            end;
-        Inc(I);
-      until I > Len;
       FCurrIndex := I;
-      Result := WordFound;
-      FFound := WordFound;
-    end
-  else
-    Result := False;
+      if (FString[I] in FDelimiters) xor Result then continue;
+      if Result then break;
+      FStartIndex := I;
+      Result := True;
+    end;
 end;
 
 procedure TAnsiStrHelper.TStrEnumerable.Reset;
 begin
-  FStartIndex := 1;
+  FStartIndex := 0;
   FCurrIndex := 1;
-  FFound := False;
 end;
 
 { TAnsiStrHelper }
