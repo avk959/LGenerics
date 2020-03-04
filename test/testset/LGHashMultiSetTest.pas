@@ -386,10 +386,104 @@ type
   TLiteHashMultisetLPTest = class(TTestCase)
   private
   type
-    TMultiSet = specialize TGLiteHashMultiSetLP<Integer, Integer>;
+    TMultiSetSpec = specialize TGLiteHashMultiSetLP<Integer, Integer>;
+    TMultiSet     = TMultiSetSpec.TMultiSet;
 
     function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+  published
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure TrimToFit;
+
+    procedure Add;
+    procedure Add100;
+
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddSelf;
+
+    procedure Remove;
+    procedure RemoveArray;
+    procedure RemoveEnum;
+    procedure RemoveSelf;
+
+    procedure RemoveIfRegular;
+    procedure RemoveIfDelegated;
+    procedure RemoveIfNested;
+
+    procedure ExtractIfRegular;
+    procedure ExtractIfDelegated;
+    procedure ExtractIfNested;
+
+    procedure Retain;
+    procedure Retain_1;
+
+    procedure IsSuperset;
+    procedure IsSubset;
+    procedure IsEqual;
+    procedure Intersecting;
+    procedure Intersect;
+    procedure Join;
+    procedure ArithmeticAdd;
+    procedure ArithmeticSubtract;
+    procedure SymmetricSubtract;
+    procedure PassByValue;
+  end;
+
+  TLiteChainHashMultisetTest = class(TTestCase)
+  private
+  type
+    TMultiSetSpec = specialize TGLiteChainHashMultiSet<Integer, Integer>;
+    TMultiSet     = TMultiSetSpec.TMultiSet;
+
+    function IsEven(constref aValue: Integer): Boolean;
+  published
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure TrimToFit;
+
+    procedure Add;
+    procedure Add100;
+
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddSelf;
+
+    procedure Remove;
+    procedure RemoveArray;
+    procedure RemoveEnum;
+    procedure RemoveSelf;
+
+    procedure RemoveIfRegular;
+    procedure RemoveIfDelegated;
+    procedure RemoveIfNested;
+
+    procedure ExtractIfRegular;
+    procedure ExtractIfDelegated;
+    procedure ExtractIfNested;
+
+    procedure Retain;
+    procedure Retain_1;
+
+    procedure IsSuperset;
+    procedure IsSubset;
+    procedure IsEqual;
+    procedure Intersecting;
+    procedure Intersect;
+    procedure Join;
+    procedure ArithmeticAdd;
+    procedure ArithmeticSubtract;
+    procedure SymmetricSubtract;
+    procedure PassByValue;
+  end;
+
+  TLiteEquitableHashMultisetTest = class(TTestCase)
+  private
+  type
+    TMultiSetSpec = specialize TGLiteEquitableHashMultiSet<Integer, Integer>;
+    TMultiSet     = TMultiSetSpec.TMultiSet;
+
+    function IsEven(constref aValue: Integer): Boolean;
   published
     procedure Clear;
     procedure EnsureCapacity;
@@ -4046,9 +4140,8 @@ var
   lf: Single;
 begin
   lf := 0.45;
-  ms.Instance := TMultiSet.Create(50);
+  ms.Instance := TMultiSet.Create(50, lf);
   AssertTrue(ms.Instance.Count = 0);
-  ms.Instance.LoadFactor := lf;
   AssertTrue(ms.Instance.Capacity >= 50);
   AssertTrue(ms.Instance.LoadFactor = lf);
 end;
@@ -5017,11 +5110,6 @@ begin
   Result := not Odd(aValue);
 end;
 
-function TLiteHashMultisetLPTest.ObjIsEven(constref aObj: TTestObj): Boolean;
-begin
-  Result := not Odd(aObj.Value);
-end;
-
 procedure TLiteHashMultisetLPTest.Clear;
 var
   ms: TMultiSet;
@@ -5536,6 +5624,7 @@ procedure TLiteHashMultisetLPTest.PassByValue;
   begin
     aSet.Add(5);
     aSet.Add(10);
+    aSet.Add(15);
     AssertTrue(aSet.NonEmpty);
   end;
 var
@@ -5545,6 +5634,1082 @@ begin
   AssertTrue(ms.IsEmpty);
   Test(ms);
   AssertTrue(ms.IsEmpty);
+  AssertTrue(ms.NonContains(5));
+  AssertTrue(ms.NonContains(10));
+  AssertTrue(ms.NonContains(15));
+end;
+
+
+{ TLiteChainHashMultisetTest }
+
+function TLiteChainHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
+begin
+  Result := not Odd(aValue);
+end;
+
+procedure TLiteChainHashMultisetTest.Clear;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray11);
+  AssertTrue(ms.Count = 11);
+  AssertTrue(ms.Capacity >= 11);
+  ms.Clear;
+  AssertTrue(ms.Count = 0);
+  AssertTrue(ms.Capacity = 0);
+end;
+
+procedure TLiteChainHashMultisetTest.EnsureCapacity;
+var
+  ms: TMultiSet;
+  c: SizeInt;
+begin
+  c := ms.ExpandTreshold;
+  ms.EnsureCapacity(c + 100);
+  AssertTrue(ms.ExpandTreshold >= c + 100);
+end;
+
+procedure TLiteChainHashMultisetTest.TrimToFit;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray11);
+  AssertTrue(ms.Capacity = 32);
+  ms.TrimToFit;
+  AssertTrue(ms.Capacity = 16);
+end;
+
+procedure TLiteChainHashMultisetTest.Add;
+var
+  ms: TMultiSet;
+begin
+  AssertTrue(ms.Count = 0);
+  ms.Add(1);
+  AssertTrue(ms.Count = 1);
+  AssertTrue(ms.Contains(1));
+  ms.Add(51);
+  AssertTrue(ms.Contains(51));
+  AssertTrue(ms.Count = 2);
+  AssertTrue(ms.EntryCount = 2);
+  ms.Add(1);
+  ms.Add(51);
+  AssertTrue(ms.Count = 4);
+  AssertTrue(ms.EntryCount = 2);
+  AssertTrue(ms[1] = 2);
+  AssertTrue(ms[51] = 2);
+  ms.Add(52);
+  AssertTrue(ms.Contains(52));
+  AssertTrue(ms.Count = 5);
+  AssertTrue(ms.EntryCount = 3);
+  AssertTrue(ms[52] = 1);
+end;
+
+procedure TLiteChainHashMultisetTest.Add100;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  for I := 1 to 100 do
+    ms.Add(I);
+  AssertTrue(ms.Count = 100);
+  for I := 1 to 100 do
+    ms.Add(I);
+  AssertTrue(ms.Count = 200);
+  AssertTrue(ms.EntryCount = 100);
+  for I := 1 to 100 do
+    AssertTrue(ms[I] = 2);
+  ms[10] := 52;
+  AssertTrue(ms.Count = 250);
+  ms[10] := 12;
+  AssertTrue(ms.Count = 210);
+end;
+
+procedure TLiteChainHashMultisetTest.AddArray;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  AssertTrue(ms.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21));
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  AssertTrue(ms.ContainsAll(IntArray21));
+  AssertTrue(ms.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21) * 2);
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  for I in IntArray21 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.AddEnum;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  AssertTrue(ms.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21));
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  AssertTrue(ms.ContainsAll(IntArray21));
+  AssertTrue(ms.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21) * 2);
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  for I in IntArray21 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.AddSelf;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.AddAll(ms) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21) * 2);
+  for I in IntArray21 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.Remove;
+var
+  ms: TMultiSet;
+  Len, Len2: SizeInt;
+begin
+  Len := Length(IntArray21);
+  Len2 := Len * 2;
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = Len2);
+  AssertTrue(ms.EntryCount = Len);
+  AssertTrue(ms.Remove(IntArray21[1]));
+  AssertTrue(ms.Count = Len2 - 1);
+  AssertTrue(ms.EntryCount = Len);
+  AssertTrue(ms.Remove(IntArray21[High(IntArray21)]));
+  AssertTrue(ms.Count = Len2 - 2);
+  AssertTrue(ms.EntryCount = Len);
+  AssertTrue(ms.Remove(IntArray21[1]));
+  AssertTrue(ms.Count = Len2 - 3);
+  AssertTrue(ms.EntryCount = Len - 1);
+  AssertFalse(ms.Remove(-1));
+  AssertTrue(ms.Count = Len2 - 3);
+  AssertFalse(ms.Remove(100));
+  AssertTrue(ms.Count = Len2 - 3);
+end;
+
+procedure TLiteChainHashMultisetTest.RemoveArray;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  AssertTrue(ms.RemoveAll(IntArray11) = 11);
+  AssertTrue(ms.Count = 31);
+  AssertTrue(ms.EntryCount = 21);
+  AssertTrue(ms.RemoveAll(IntArray10) = 10);
+  AssertTrue(ms.Count = 21);
+  AssertTrue(ms.EntryCount = 21);
+end;
+
+procedure TLiteChainHashMultisetTest.RemoveEnum;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  AssertTrue(ms.RemoveAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11))) = 11);
+  AssertTrue(ms.Count = 31);
+  AssertTrue(ms.EntryCount = 21);
+  AssertTrue(ms.RemoveAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray10))) = 10);
+  AssertTrue(ms.Count = 21);
+  AssertTrue(ms.EntryCount = 21);
+end;
+
+procedure TLiteChainHashMultisetTest.RemoveSelf;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveAll(ms) = 42);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteChainHashMultisetTest.RemoveIfRegular;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveIf(@IsEvenInt) = 20);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.RemoveIfDelegated;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveIf(@IsEven) = 20);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.RemoveIfNested;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveIf(@IsEvenInt) = 20);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.ExtractIfRegular;
+var
+  ms, ms1: TMultiSet;
+  e: TIntArray;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  e := ms.ExtractIf(@IsEvenInt);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  AssertTrue(Length(e) = 20);
+  ms1.AddAll(e);
+  for I in IntArray10 do
+    AssertTrue(ms1[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.ExtractIfDelegated;
+var
+  ms, ms1: TMultiSet;
+  e: TIntArray;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  e := ms.ExtractIf(@IsEven);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  AssertTrue(Length(e) = 20);
+  ms1.AddAll(e);
+  for I in IntArray10 do
+    AssertTrue(ms1[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.ExtractIfNested;
+var
+  ms, ms1: TMultiSet;
+  e: TIntArray;
+  I: Integer;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  e := ms.ExtractIf(@IsEvenInt);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  AssertTrue(Length(e) = 20);
+  ms1.AddAll(e);
+  for I in IntArray10 do
+    AssertTrue(ms1[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.Retain;
+var
+  ms: TMultiSet;
+  s: specialize TGHashMultiSetLP<Integer>;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  s := specialize TGHashMultiSetLP<Integer>.Create(IntArray11);
+  try
+    ms.RetainAll(s);
+  finally
+    s.Free;
+  end;
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.Retain_1;
+var
+  ms: TMultiSet;
+  s: specialize TGHashMultiSetLP<Integer>;
+begin
+  ms.AddAll(IntArray10);
+  ms.AddAll(IntArray10);
+  AssertTrue(ms.Count = 20);
+  s := specialize TGHashMultiSetLP<Integer>.Create(IntArray11);
+  try
+    ms.RetainAll(s);
+  finally
+    s.Free;
+  end;
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteChainHashMultisetTest.IsSuperset;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  ms1.AddAll(ms);
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertTrue(ms1.IsSuperSet(ms));
+  AssertTrue(ms.IsSuperSet(ms));
+  ms1.Remove(IntArray21[1]);
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertFalse(ms1.IsSuperSet(ms));
+  ms1.Clear;
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertFalse(ms1.IsSuperSet(ms));
+  ms.Clear;
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertTrue(ms1.IsSuperSet(ms));
+end;
+
+procedure TLiteChainHashMultisetTest.IsSubset;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  ms1.AddAll(ms);
+  AssertTrue(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  AssertTrue(ms.IsSubSet(ms));
+  ms1.Remove(IntArray21[1]);
+  AssertFalse(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  ms1.Clear;
+  AssertFalse(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  ms.Clear;
+  AssertTrue(ms1.IsSubSet(ms));
+  AssertTrue(ms.IsSubSet(ms1));
+end;
+
+procedure TLiteChainHashMultisetTest.IsEqual;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  ms1.AddAll(ms);
+  AssertTrue(ms.IsEqual(ms1));
+  AssertTrue(ms1.IsEqual(ms));
+  AssertTrue(ms.IsEqual(ms));
+  ms1.Remove(IntArray21[1]);
+  AssertFalse(ms.IsEqual(ms1));
+  AssertFalse(ms1.IsEqual(ms));
+  ms.Remove(IntArray21[1]);
+  AssertTrue(ms1.IsEqual(ms));
+  AssertTrue(ms.IsEqual(ms));
+  ms1.Clear;
+  ms.Clear;
+  AssertTrue(ms.IsEqual(ms1));
+  AssertTrue(ms1.IsEqual(ms));
+end;
+
+procedure TLiteChainHashMultisetTest.Intersecting;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms1.AddAll(IntArray11);
+  AssertTrue(ms.Intersecting(ms));
+  AssertTrue(ms.Intersecting(ms1));
+  ms.RemoveAll(IntArray11);
+  AssertFalse(ms.Intersecting(ms1));
+  AssertFalse(ms1.Intersecting(ms));
+end;
+
+procedure TLiteChainHashMultisetTest.Intersect;
+var
+  ms, ms1: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  ms1.AddAll(IntArray11);
+  ms1.AddAll([-4, -3, -2, -1, 0]);
+  ms.Intersect(ms1);
+  AssertTrue(ms.Count = 11);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 1);
+end;
+
+procedure TLiteChainHashMultisetTest.Join;
+var
+  ms, ms1: TMultiSet;
+  I: Integer;
+begin
+  ms1.AddAll(IntArray11);
+  ms.Join(ms1);
+  AssertTrue(ms.IsEqual(ms1));
+  ms1.Clear;
+  ms1.AddAll(IntArray10);
+  ms1.AddAll(ms1);
+  ms.Join(ms1);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 1);
+  for I in IntArray10 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.ArithmeticAdd;
+var
+  ms, ms1: TMultiSet;
+  I: Integer;
+begin
+  ms1.AddAll(IntArray11);
+  ms.ArithmeticAdd(ms1);
+  AssertTrue(ms.IsEqual(ms1));
+  ms.AddAll(IntArray10);
+  ms.ArithmeticAdd(ms1);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  for I in IntArray10 do
+    AssertTrue(ms[I] = 1);
+  ms.ArithmeticAdd(ms);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 4);
+  for I in IntArray10 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteChainHashMultisetTest.ArithmeticSubtract;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms1.AddAll(IntArray11);
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+  ms.AddAll(IntArray10);
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.Count = 10);
+  AssertTrue(ms.ContainsAll(IntArray10));
+  ms.AddAll(IntArray11);
+  AssertTrue(ms.ContainsAll(IntArray21));
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.Count = 10);
+  AssertTrue(ms.ContainsAll(IntArray10));
+  ms1.AddAll(IntArray10);
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteChainHashMultisetTest.SymmetricSubtract;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms1.AddAll(IntArray11);
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.Count = 11);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  ms.AddAll(IntArray10);
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.Count = 10);
+  AssertTrue(ms.ContainsAll(IntArray10));
+  ms.AddAll(IntArray11);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  ms1.AddAll(IntArray10);
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.Count = 21);
+  AssertTrue(ms.ContainsAll(IntArray21));
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteChainHashMultisetTest.PassByValue;
+  procedure Test(aSet: TMultiSet);
+  begin
+    aSet.Add(5);
+    aSet.Add(10);
+    aSet.Add(15);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  ms: TMultiSet;
+begin
+  ms.EnsureCapacity(10);
+  AssertTrue(ms.IsEmpty);
+  Test(ms);
+  AssertTrue(ms.IsEmpty);
+  AssertTrue(ms.NonContains(5));
+  AssertTrue(ms.NonContains(10));
+  AssertTrue(ms.NonContains(15));
+end;
+
+
+{ TLiteEquitableHashMultisetTest }
+
+function TLiteEquitableHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
+begin
+  Result := not Odd(aValue);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Clear;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray11);
+  AssertTrue(ms.Count = 11);
+  AssertTrue(ms.Capacity >= 11);
+  ms.Clear;
+  AssertTrue(ms.Count = 0);
+  AssertTrue(ms.Capacity = 0);
+end;
+
+procedure TLiteEquitableHashMultisetTest.EnsureCapacity;
+var
+  ms: TMultiSet;
+  c: SizeInt;
+begin
+  c := ms.ExpandTreshold;
+  ms.EnsureCapacity(c + 100);
+  AssertTrue(ms.ExpandTreshold >= c + 100);
+end;
+
+procedure TLiteEquitableHashMultisetTest.TrimToFit;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray11);
+  ms.EnsureCapacity(50);
+  AssertTrue(ms.Capacity = 128);
+  ms.TrimToFit;
+  AssertTrue(ms.Capacity = 32);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Add;
+var
+  ms: TMultiSet;
+begin
+  AssertTrue(ms.Count = 0);
+  ms.Add(1);
+  AssertTrue(ms.Count = 1);
+  AssertTrue(ms.Contains(1));
+  ms.Add(51);
+  AssertTrue(ms.Contains(51));
+  AssertTrue(ms.Count = 2);
+  AssertTrue(ms.EntryCount = 2);
+  ms.Add(1);
+  ms.Add(51);
+  AssertTrue(ms.Count = 4);
+  AssertTrue(ms.EntryCount = 2);
+  AssertTrue(ms[1] = 2);
+  AssertTrue(ms[51] = 2);
+  ms.Add(52);
+  AssertTrue(ms.Contains(52));
+  AssertTrue(ms.Count = 5);
+  AssertTrue(ms.EntryCount = 3);
+  AssertTrue(ms[52] = 1);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Add100;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  for I := 1 to 100 do
+    ms.Add(I);
+  AssertTrue(ms.Count = 100);
+  for I := 1 to 100 do
+    ms.Add(I);
+  AssertTrue(ms.Count = 200);
+  AssertTrue(ms.EntryCount = 100);
+  for I := 1 to 100 do
+    AssertTrue(ms[I] = 2);
+  ms[10] := 52;
+  AssertTrue(ms.Count = 250);
+  ms[10] := 12;
+  AssertTrue(ms.Count = 210);
+end;
+
+procedure TLiteEquitableHashMultisetTest.AddArray;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  AssertTrue(ms.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21));
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  AssertTrue(ms.ContainsAll(IntArray21));
+  AssertTrue(ms.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21) * 2);
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  for I in IntArray21 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.AddEnum;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  AssertTrue(ms.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21));
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  AssertTrue(ms.ContainsAll(IntArray21));
+  AssertTrue(ms.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21) * 2);
+  AssertTrue(ms.EntryCount = Length(IntArray21));
+  for I in IntArray21 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.AddSelf;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.AddAll(ms) = Length(IntArray21));
+  AssertTrue(ms.Count = Length(IntArray21) * 2);
+  for I in IntArray21 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Remove;
+var
+  ms: TMultiSet;
+  Len, Len2: SizeInt;
+begin
+  Len := Length(IntArray21);
+  Len2 := Len * 2;
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = Len2);
+  AssertTrue(ms.EntryCount = Len);
+  AssertTrue(ms.Remove(IntArray21[1]));
+  AssertTrue(ms.Count = Len2 - 1);
+  AssertTrue(ms.EntryCount = Len);
+  AssertTrue(ms.Remove(IntArray21[High(IntArray21)]));
+  AssertTrue(ms.Count = Len2 - 2);
+  AssertTrue(ms.EntryCount = Len);
+  AssertTrue(ms.Remove(IntArray21[1]));
+  AssertTrue(ms.Count = Len2 - 3);
+  AssertTrue(ms.EntryCount = Len - 1);
+  AssertFalse(ms.Remove(-1));
+  AssertTrue(ms.Count = Len2 - 3);
+  AssertFalse(ms.Remove(100));
+  AssertTrue(ms.Count = Len2 - 3);
+end;
+
+procedure TLiteEquitableHashMultisetTest.RemoveArray;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  AssertTrue(ms.RemoveAll(IntArray11) = 11);
+  AssertTrue(ms.Count = 31);
+  AssertTrue(ms.EntryCount = 21);
+  AssertTrue(ms.RemoveAll(IntArray10) = 10);
+  AssertTrue(ms.Count = 21);
+  AssertTrue(ms.EntryCount = 21);
+end;
+
+procedure TLiteEquitableHashMultisetTest.RemoveEnum;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  AssertTrue(ms.RemoveAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11))) = 11);
+  AssertTrue(ms.Count = 31);
+  AssertTrue(ms.EntryCount = 21);
+  AssertTrue(ms.RemoveAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray10))) = 10);
+  AssertTrue(ms.Count = 21);
+  AssertTrue(ms.EntryCount = 21);
+end;
+
+procedure TLiteEquitableHashMultisetTest.RemoveSelf;
+var
+  ms: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveAll(ms) = 42);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteEquitableHashMultisetTest.RemoveIfRegular;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveIf(@IsEvenInt) = 20);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.RemoveIfDelegated;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveIf(@IsEven) = 20);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.RemoveIfNested;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  ms: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.RemoveIf(@IsEvenInt) = 20);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.ExtractIfRegular;
+var
+  ms, ms1: TMultiSet;
+  e: TIntArray;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  e := ms.ExtractIf(@IsEvenInt);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  AssertTrue(Length(e) = 20);
+  ms1.AddAll(e);
+  for I in IntArray10 do
+    AssertTrue(ms1[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.ExtractIfDelegated;
+var
+  ms, ms1: TMultiSet;
+  e: TIntArray;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  e := ms.ExtractIf(@IsEven);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  AssertTrue(Length(e) = 20);
+  ms1.AddAll(e);
+  for I in IntArray10 do
+    AssertTrue(ms1[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.ExtractIfNested;
+var
+  ms, ms1: TMultiSet;
+  e: TIntArray;
+  I: Integer;
+  function IsEvenInt(constref aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  e := ms.ExtractIf(@IsEvenInt);
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  AssertTrue(Length(e) = 20);
+  ms1.AddAll(e);
+  for I in IntArray10 do
+    AssertTrue(ms1[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Retain;
+var
+  ms: TMultiSet;
+  s: specialize TGHashMultiSetLP<Integer>;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  s := specialize TGHashMultiSetLP<Integer>.Create(IntArray11);
+  try
+    ms.RetainAll(s);
+  finally
+    s.Free;
+  end;
+  AssertTrue(ms.Count = 22);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Retain_1;
+var
+  ms: TMultiSet;
+  s: specialize TGHashMultiSetLP<Integer>;
+begin
+  ms.AddAll(IntArray10);
+  ms.AddAll(IntArray10);
+  AssertTrue(ms.Count = 20);
+  s := specialize TGHashMultiSetLP<Integer>.Create(IntArray11);
+  try
+    ms.RetainAll(s);
+  finally
+    s.Free;
+  end;
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteEquitableHashMultisetTest.IsSuperset;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  ms1.AddAll(ms);
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertTrue(ms1.IsSuperSet(ms));
+  AssertTrue(ms.IsSuperSet(ms));
+  ms1.Remove(IntArray21[1]);
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertFalse(ms1.IsSuperSet(ms));
+  ms1.Clear;
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertFalse(ms1.IsSuperSet(ms));
+  ms.Clear;
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertTrue(ms1.IsSuperSet(ms));
+end;
+
+procedure TLiteEquitableHashMultisetTest.IsSubset;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  ms1.AddAll(ms);
+  AssertTrue(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  AssertTrue(ms.IsSubSet(ms));
+  ms1.Remove(IntArray21[1]);
+  AssertFalse(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  ms1.Clear;
+  AssertFalse(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  ms.Clear;
+  AssertTrue(ms1.IsSubSet(ms));
+  AssertTrue(ms.IsSubSet(ms1));
+end;
+
+procedure TLiteEquitableHashMultisetTest.IsEqual;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  ms1.AddAll(ms);
+  AssertTrue(ms.IsEqual(ms1));
+  AssertTrue(ms1.IsEqual(ms));
+  AssertTrue(ms.IsEqual(ms));
+  ms1.Remove(IntArray21[1]);
+  AssertFalse(ms.IsEqual(ms1));
+  AssertFalse(ms1.IsEqual(ms));
+  ms.Remove(IntArray21[1]);
+  AssertTrue(ms1.IsEqual(ms));
+  AssertTrue(ms.IsEqual(ms));
+  ms1.Clear;
+  ms.Clear;
+  AssertTrue(ms.IsEqual(ms1));
+  AssertTrue(ms1.IsEqual(ms));
+end;
+
+procedure TLiteEquitableHashMultisetTest.Intersecting;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms.AddAll(IntArray21);
+  ms1.AddAll(IntArray11);
+  AssertTrue(ms.Intersecting(ms));
+  AssertTrue(ms.Intersecting(ms1));
+  ms.RemoveAll(IntArray11);
+  AssertFalse(ms.Intersecting(ms1));
+  AssertFalse(ms1.Intersecting(ms));
+end;
+
+procedure TLiteEquitableHashMultisetTest.Intersect;
+var
+  ms, ms1: TMultiSet;
+  I: Integer;
+begin
+  ms.AddAll(IntArray21);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  ms1.AddAll(IntArray11);
+  ms1.AddAll([-4, -3, -2, -1, 0]);
+  ms.Intersect(ms1);
+  AssertTrue(ms.Count = 11);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 1);
+end;
+
+procedure TLiteEquitableHashMultisetTest.Join;
+var
+  ms, ms1: TMultiSet;
+  I: Integer;
+begin
+  ms1.AddAll(IntArray11);
+  ms.Join(ms1);
+  AssertTrue(ms.IsEqual(ms1));
+  ms1.Clear;
+  ms1.AddAll(IntArray10);
+  ms1.AddAll(ms1);
+  ms.Join(ms1);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 1);
+  for I in IntArray10 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.ArithmeticAdd;
+var
+  ms, ms1: TMultiSet;
+  I: Integer;
+begin
+  ms1.AddAll(IntArray11);
+  ms.ArithmeticAdd(ms1);
+  AssertTrue(ms.IsEqual(ms1));
+  ms.AddAll(IntArray10);
+  ms.ArithmeticAdd(ms1);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 2);
+  for I in IntArray10 do
+    AssertTrue(ms[I] = 1);
+  ms.ArithmeticAdd(ms);
+  for I in IntArray11 do
+    AssertTrue(ms[I] = 4);
+  for I in IntArray10 do
+    AssertTrue(ms[I] = 2);
+end;
+
+procedure TLiteEquitableHashMultisetTest.ArithmeticSubtract;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms1.AddAll(IntArray11);
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+  ms.AddAll(IntArray10);
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.Count = 10);
+  AssertTrue(ms.ContainsAll(IntArray10));
+  ms.AddAll(IntArray11);
+  AssertTrue(ms.ContainsAll(IntArray21));
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.Count = 10);
+  AssertTrue(ms.ContainsAll(IntArray10));
+  ms1.AddAll(IntArray10);
+  ms.ArithmeticSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteEquitableHashMultisetTest.SymmetricSubtract;
+var
+  ms, ms1: TMultiSet;
+begin
+  ms1.AddAll(IntArray11);
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.Count = 11);
+  AssertTrue(ms.ContainsAll(IntArray11));
+  ms.AddAll(IntArray10);
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.Count = 10);
+  AssertTrue(ms.ContainsAll(IntArray10));
+  ms.AddAll(IntArray11);
+  ms.AddAll(IntArray21);
+  AssertTrue(ms.Count = 42);
+  ms1.AddAll(IntArray10);
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.Count = 21);
+  AssertTrue(ms.ContainsAll(IntArray21));
+  ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteEquitableHashMultisetTest.PassByValue;
+  procedure Test(aSet: TMultiSet);
+  begin
+    aSet.Add(5);
+    aSet.Add(10);
+    aSet.Add(15);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  ms: TMultiSet;
+begin
+  ms.EnsureCapacity(10);
+  AssertTrue(ms.IsEmpty);
+  Test(ms);
+  AssertTrue(ms.IsEmpty);
+  AssertTrue(ms.NonContains(5));
+  AssertTrue(ms.NonContains(10));
+  AssertTrue(ms.NonContains(15));
 end;
 
 { TThreadFGHashMultiSetTest.TWorker }
@@ -5721,6 +6886,8 @@ initialization
   RegisterTest(THashMultisetQPTest);
   RegisterTest(TChainHashMultisetTest);
   RegisterTest(TLiteHashMultisetLPTest);
+  RegisterTest(TLiteChainHashMultisetTest);
+  RegisterTest(TLiteEquitableHashMultisetTest);
   RegisterTest(TThreadFGHashMultiSetTest);
 end.
 
