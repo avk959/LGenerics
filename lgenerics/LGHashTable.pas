@@ -2331,7 +2331,7 @@ end;
 
 constructor TGChainHashTable.CreateEmpty;
 begin
-  inherited CreateEmpty;
+  inherited;
   FNodeManager := TNodeManager.Create;
 end;
 
