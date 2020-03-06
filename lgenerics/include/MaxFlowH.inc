@@ -18,7 +18,8 @@
 *****************************************************************************}
 
 type
-  TWeightArcMap = specialize TGLiteHashMapLP<TIntEdge, TWeight, TIntEdge>;
+  TWeightArcSpec = specialize TGLiteHashMapLP<TIntEdge, TWeight, TIntEdge>;
+  TWeightArcMap  = TWeightArcSpec.TMap;
 
   { THPrHelper: an implementation of the high-level push-relabel method;
     B.V. Cherkassky, A.V. Goldberg: On Implementing Push-Relabel Method for the Maximum Flow Problem. }
