@@ -18,7 +18,8 @@ uses
   LGArrayHelpers;
 
 type
-  TCounter    = specialize TGLiteHashMultiSetLP<string, string>;
+  TCountSpec  = specialize TGLiteHashMultiSetLP<string, string>;
+  TCounter    = TCountSpec.TMultiSet;
   TDictSpec   = specialize TGLiteHashSetLP<string, string>;
   TDictionary = TDictSpec.TSet;
   TCountItem  = TCounter.TEntry;
@@ -41,9 +42,9 @@ var
   OutFile: string = 'stdout';
   InFiles: TStringArray = nil;
   AllowModifiers: Boolean = False;
-  ReadRef: specialize TGAutoRef<TTextFileReader>;
-  CountRef: TCounter;
-  DictRef: TDictionary;
+  Reader: specialize TGAutoRef<TTextFileReader>;
+  Counter: TCounter;
+  Dictionary: TDictionary;
 
 function ParamsFound: Boolean;
 var
@@ -83,27 +84,27 @@ var
   end;
   function IsReservedWord(constref aValue: string): Boolean;
   begin
-    Result := DictRef.Contains(aValue);
+    Result := Dictionary.Contains(aValue);
   end;
 var
   FileName, CurrLine: string;
   Item: TCountItem;
 begin
-  DictRef.AddAll([{$I reswords.inc}]);
+  Dictionary.AddAll([{$I reswords.inc}]);
   if AllowModifiers then
-    DictRef.AddAll([{$I modifiers.inc}]);
+    Dictionary.AddAll([{$I modifiers.inc}]);
 
   for FileName in InFiles do
-    if ReadRef.Instance.Open(FileName) then
-      for CurrLine in ReadRef.Instance do
-        CountRef.AddAll(CurrLine.Words.Map(@ToLower).Select(@IsReservedWord))
+    if Reader.Instance.Open(FileName) then
+      for CurrLine in Reader.Instance do
+        Counter.AddAll(CurrLine.Words.Map(@ToLower).Select(@IsReservedWord))
     else
       WriteLn(Format(sFailedOpenFmt, [FileName]));
 
   with TTextFileWriter.Create(OutFile) do
     try
       if IsOpen then
-        for Item in THelper.Sorted(CountRef.ToEntryArray, @CompareItem) do
+        for Item in THelper.Sorted(Counter.ToEntryArray, @CompareItem) do
           WriteLn(OutFile^, Item.Count,  #9, Item.Key)
       else
         WriteLn(Format(sFailedCreateFmt, [OutFile]));
@@ -111,8 +112,8 @@ begin
       Free;
     end;
   Writeln('total words:             ', TotalCount);
-  Writeln('total reserved words:    ', CountRef.Count);
-  Writeln('distinct reserved words: ', CountRef.EntryCount);
+  Writeln('total reserved words:    ', Counter.Count);
+  Writeln('distinct reserved words: ', Counter.EntryCount);
   Writeln(sFinished);
 end;
 
