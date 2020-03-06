@@ -168,8 +168,10 @@ type
   TLiteHashMapLPTest = class(TTestCase)
   private
   type
-    TIntMap = specialize TGLiteHashMapLP<Integer, Integer, Integer>;
-    TStrMap = specialize TGLiteHashMapLP<string, Integer, string>;
+    TIntMapSpec = specialize TGLiteHashMapLP<Integer, Integer, Integer>;
+    TIntMap     = TIntMapSpec.TMap;
+    TStrMapSpec = specialize TGLiteHashMapLP<string, Integer, string>;
+    TStrMap     = TStrMapSpec.TMap;
 
   published
     procedure Int_1;
@@ -184,8 +186,28 @@ type
   TLiteChainHashMapTest = class(TTestCase)
   private
   type
-    TIntMap = specialize TGLiteChainHashMap<Integer, Integer, Integer>;
-    TStrMap = specialize TGLiteChainHashMap<string, Integer, string>;
+    TIntMapSpec = specialize TGLiteChainHashMap<Integer, Integer, Integer>;
+    TIntMap     = TIntMapSpec.TMap;
+    TStrMapSpec = specialize TGLiteChainHashMap<string, Integer, string>;
+    TStrMap     = TStrMapSpec.TMap;
+
+  published
+    procedure Int_1;
+    procedure Int_2;
+    procedure IntRetain;
+    procedure Str_1;
+    procedure Str_2;
+    procedure StrRetain;
+    procedure PassByValue;
+  end;
+
+  TLiteEquitableHashMapTest = class(TTestCase)
+  private
+  type
+    TIntMapSpec = specialize TGLiteEquitableHashMap<Integer, Integer, Integer>;
+    TIntMap     = TIntMapSpec.TMap;
+    TStrMapSpec = specialize TGLiteEquitableHashMap<string, Integer, string>;
+    TStrMap     = TStrMapSpec.TMap;
 
   published
     procedure Int_1;
@@ -2021,6 +2043,8 @@ procedure TLiteHashMapLPTest.PassByValue;
   procedure Test(aMap: TStrMap);
   begin
     aMap.Add('key0', 0);
+    aMap.Add('key1', 1);
+    aMap.Add('key2', 2);
     AssertTrue(aMap.NonEmpty);
   end;
 var
@@ -2030,6 +2054,9 @@ begin
   AssertTrue(m.IsEmpty);
   Test(m);
   AssertTrue(m.IsEmpty);
+  AssertTrue(m.NonContains('key0'));
+  AssertTrue(m.NonContains('key1'));
+  AssertTrue(m.NonContains('key2'));
 end;
 
 //////////////////////////////
@@ -2255,6 +2282,8 @@ procedure TLiteChainHashMapTest.PassByValue;
   procedure Test(aMap: TStrMap);
   begin
     aMap.Add('key0', 0);
+    aMap.Add('key1', 1);
+    aMap.Add('key2', 2);
     AssertTrue(aMap.NonEmpty);
   end;
 var
@@ -2264,6 +2293,246 @@ begin
   AssertTrue(m.IsEmpty);
   Test(m);
   AssertTrue(m.IsEmpty);
+  AssertTrue(m.NonContains('key0'));
+  AssertTrue(m.NonContains('key1'));
+  AssertTrue(m.NonContains('key2'));
+end;
+
+procedure TLiteEquitableHashMapTest.Int_1;
+var
+  m: TIntMap;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(m.IsEmpty);
+  m.Add(1,11);
+  AssertTrue(m.Count = 1);
+  AssertTrue(m.Contains(1));
+  AssertTrue(m[1] = 11);
+  AssertFalse(m.Contains(2));
+  m[2] := 22;
+  AssertTrue(m.Contains(2));
+  AssertTrue(m[2] = 22);
+  AssertTrue(m.Count = 2);
+  m.Clear;
+  AssertTrue(m.Count = 0);
+  for I := 1 to 100 do
+    m[I * 23] := I * 47;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[I * 23] = I * 47);
+  for I := 1 to 100 do
+    m[I * 23] := I * 53;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[I * 23] = I * 53);
+  for I := 1 to 100 do
+    AssertTrue(m[I * 23] = I * 53);
+  try
+    I := m[22];
+  except
+    on e: ELGMapError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  AssertTrue(m.Remove(23));
+  AssertFalse(m.Contains(23));
+  AssertFalse(m.TryGetValue(12, I));
+  AssertTrue(m.TryGetValue(46, I));
+  AssertTrue(I = 106);
+  AssertTrue(m.GetValueDef(17) = 0);
+  AssertTrue(m.GetValueDef(17, 27) = 27);
+  for I := 1 to 100 do
+    m.Remove(I * 23);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteEquitableHashMapTest.Int_2;
+var
+  m: TIntMap;
+  I, TestSize: Integer;
+  e: TIntEntryArray;
+  k: TIntKeyArray;
+begin
+  TestSize := 100;
+  e := CreateIntArray(TestSize);
+  System.SetLength(k, TestSize);
+  for I := 0 to System.High(e) do
+    k[I] := e[I].Key;
+  m.AddAll(e);
+  AssertTrue(m.Count = TestSize);
+  AssertTrue(m.ContainsAll(k));
+  AssertTrue(m.RemoveAll(k[0..49]) = 50);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(k[50..99]));
+  AssertTrue(m.RemoveAll(k[50..99]) = 50);
+  AssertTrue(m.Count = 0);
+  m.AddAll(e);
+  AssertTrue(m.RemoveIf(@IntOdd) = 50);
+  AssertTrue(m.Count = 50);
+  for {%H-}I in m.Keys do
+    AssertFalse(IntOdd(I));
+  AssertTrue(m.AddAll(e) = 50);
+  e := m.ExtractIf(@IntOdd);
+  for I := 0 to System.High(e) do
+    AssertTrue(IntOdd(e[I].Key));
+end;
+
+procedure TLiteEquitableHashMapTest.IntRetain;
+var
+  m: TIntMap;
+  s: TAutoIntSet;
+  I, TestSize: Integer;
+  e: TIntEntryArray;
+begin
+  TestSize := 100;
+  e := CreateIntArray(TestSize);
+  I := 1;
+  while I <= System.High(e) do
+    begin
+      {%H-}s.Instance.Add(e[I].Key);
+      I += 2;
+    end;
+  AssertTrue(s.Instance.Count = 50);
+  m.AddAll(e);
+  AssertTrue(m.Count = TestSize);
+  m.RetainAll(s.Instance);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(s.Instance));
+  for {%H-}I in m.Keys do
+    AssertTrue(IntOdd(I));
+  AssertTrue(m.RemoveAll(s.Instance) = 50);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteEquitableHashMapTest.Str_1;
+var
+  m: TStrMap;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(m.IsEmpty);
+  m.Add('1',11);
+  AssertTrue(m.Count = 1);
+  AssertTrue(m.Contains('1'));
+  AssertTrue(m['1'] = 11);
+  AssertFalse(m.Contains('2'));
+  m['2'] := 22;
+  AssertTrue(m.Contains('2'));
+  AssertTrue(m['2'] = 22);
+  AssertTrue(m.Count = 2);
+  m.Clear;
+  AssertTrue(m.Count = 0);
+  for I := 1 to 100 do
+    m[(I * 23).ToString] := I * 47;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[(I * 23).ToString] = I * 47);
+  for I := 1 to 100 do
+    m[(I * 23).ToString] := I * 53;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[(I * 23).ToString] = I * 53);
+  for I := 1 to 100 do
+    AssertTrue(m[(I * 23).ToString] = I * 53);
+  try
+    I := m['22'];
+  except
+    on e: ELGMapError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertTrue(m.Remove('23'));
+  AssertFalse(m.Contains('23'));
+  AssertFalse(m.TryGetValue('12', I));
+  AssertTrue(m.TryGetValue('46', I));
+  AssertTrue(I = 106);
+  AssertTrue(m.GetValueDef('17') = 0);
+  AssertTrue(m.GetValueDef('17', 27) = 27);
+  for I := 1 to 100 do
+    m.Remove((I * 23).ToString);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteEquitableHashMapTest.Str_2;
+var
+  m: TStrMap;
+  I, TestSize: Integer;
+  e: TStrEntryArray;
+  k: TStrKeyArray;
+  s: string;
+begin
+  TestSize := 100;
+  e := CreateStrArray(TestSize);
+  System.SetLength(k, TestSize);
+  for I := 0 to System.High(e) do
+    k[I] := e[I].Key;
+  m.AddAll(e);
+  AssertTrue(m.Count = TestSize);
+  AssertTrue(m.ContainsAll(k));
+  AssertTrue(m.RemoveAll(k[0..49]) = 50);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(k[50..99]));
+  AssertTrue(m.RemoveAll(k[50..99]) = 50);
+  AssertTrue(m.Count = 0);
+  m.AddAll(e);
+  AssertTrue(m.RemoveIf(@StrOdd) = 50);
+  AssertTrue(m.Count = 50);
+  for {%H-}s in m.Keys do
+    AssertFalse(StrOdd(s));
+  AssertTrue(m.AddAll(e) = 50);
+  e := m.ExtractIf(@StrOdd);
+  for I := 0 to System.High(e) do
+    AssertTrue(StrOdd(e[I].Key));
+end;
+
+procedure TLiteEquitableHashMapTest.StrRetain;
+var
+  m: TStrMap;
+  s: TAutoStrSet;
+  I, TestSize: Integer;
+  e: TStrEntryArray;
+  v: string;
+begin
+  TestSize := 100;
+  e := CreateStrArray(TestSize);
+  I := 1;
+  while I <= System.High(e) do
+    begin
+      {%H-}s.Instance.Add(e[I].Key);
+      I += 2;
+    end;
+  AssertTrue(s.Instance.Count = 50);
+  m.AddAll(e);
+  AssertTrue(m.Count = TestSize);
+  m.RetainAll(s.Instance);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(s.Instance));
+  for {%H-}v in m.Keys do
+    AssertTrue(StrOdd(v));
+  AssertTrue(m.RemoveAll(s.Instance) = 50);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteEquitableHashMapTest.PassByValue;
+  procedure Test(aMap: TStrMap);
+  begin
+    aMap.Add('key0', 0);
+    aMap.Add('key1', 1);
+    aMap.Add('key2', 2);
+    AssertTrue(aMap.NonEmpty);
+  end;
+var
+  m: TStrMap;
+begin
+  m.EnsureCapacity(10);
+  AssertTrue(m.IsEmpty);
+  Test(m);
+  AssertTrue(m.IsEmpty);
+  AssertTrue(m.NonContains('key0'));
+  AssertTrue(m.NonContains('key1'));
+  AssertTrue(m.NonContains('key2'));
 end;
 
 { THashMapFGTest.TWorker }
@@ -2511,6 +2780,8 @@ initialization
   RegisterTest(TChainHashMapTest);
   RegisterTest(TOrderHashMapTest);
   RegisterTest(TLiteHashMapLPTest);
+  RegisterTest(TLiteChainHashMapTest);
+  RegisterTest(TLiteEquitableHashMapTest);
   RegisterTest(THashMapFGTest);
 end.
 
