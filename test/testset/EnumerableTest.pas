@@ -44,13 +44,15 @@ type
     IntOddInc11: TIntArray11    = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
     IntMul4Inc21: TIntArray21   = (
       4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84);
-
+  var
+    FCounter: Integer;
     function DoIntCmp(constref L, R: Integer): Boolean;
     function GetIsEven(constref aValue: Integer): Boolean;
     function DoMulBy4(constref aValue: Integer): Integer;
     function DoAddSquare(constref X, Y: Integer): Integer;
     function PairCmp(constref L, R: TPair): Boolean;
     function CreatePairArray(aKeyCount, aPairCount: Integer): TPairArray;
+    procedure DoIncCounter(constref aValue: Integer);
   published
     procedure EmptyEnum_ToArray;
     procedure Enum21_ToArray;
@@ -227,10 +229,17 @@ type
     procedure SortedRegular;
     procedure SortedDelegated;
     procedure SortedNested;
+
+    procedure ForEachRegular;
+    procedure ForEachDelegated;
+    procedure ForEachNested;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}
+
+var
+  Counter: Integer;
 
 function IntCmp(constref L, R: Integer): Boolean;
 begin
@@ -255,6 +264,12 @@ end;
 function PairCompare(constref L, R: TPair): Boolean;
 begin
   Result := L.Key < R.Key;
+end;
+
+procedure IncCounter(constref aValue: Integer);
+begin
+  assert(aValue = aValue);
+  Inc(Counter);
 end;
 
 function TEnumerableTest.DoIntCmp(constref L, R: Integer): Boolean;
@@ -302,6 +317,12 @@ begin
       Result[I].Value := Counter[Key];
       Inc(Counter[Key]);
     end;
+end;
+
+procedure TEnumerableTest.DoIncCounter(constref aValue: Integer);
+begin
+  assert(aValue = aValue);
+  Inc(FCounter);
 end;
 
 procedure TEnumerableTest.EmptyEnum_ToArray;
@@ -1616,6 +1637,47 @@ begin
       .ToArray;
   AssertTrue(THelper.IsNonDescending(a, @KeyCmp));
   AssertTrue(THelper.IsStrictAscending(a, @ValCmp));
+end;
+
+procedure TEnumerableTest.ForEachRegular;
+var
+  e: IIntEnumerable;
+begin
+  Counter := 0;
+  e := TIntArrayCursor.Create([]);
+  e.ForEach(@IncCounter);
+  AssertTrue(Counter = 0);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictDec21));
+  e.ForEach(@IncCounter);
+  AssertTrue(Counter = 21);
+end;
+
+procedure TEnumerableTest.ForEachDelegated;
+var
+  e: IIntEnumerable;
+begin
+  FCounter := 0;
+  e := TIntArrayCursor.Create([]);
+  e.ForEach(@DoIncCounter);
+  AssertTrue(FCounter = 0);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictDec21));
+  e.ForEach(@DoIncCounter);
+  AssertTrue(FCounter = 21);
+end;
+
+procedure TEnumerableTest.ForEachNested;
+var
+  Counter: Integer = 0;
+  procedure IncCounter(constref v: Integer);begin assert(v=v); Inc(Counter);end;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create([]);
+  e.ForEach(@IncCounter);
+  AssertTrue(Counter = 0);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictDec21));
+  e.ForEach(@IncCounter);
+  AssertTrue(Counter = 21);
 end;
 
 
