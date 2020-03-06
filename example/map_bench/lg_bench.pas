@@ -18,7 +18,8 @@ implementation
 type
   TChainMap = specialize TGChainHashMap<string, Integer>;
   TMap      = specialize TGHashMapLP<string, Integer>;
-  TLiteMap  = specialize TGLiteHashMapLP<string, Integer, string>;
+  TLiteSpec = specialize TGLiteHashMapLP<string, Integer, string>;
+  TLiteMap  = TLiteSpec.TMap;
 
 procedure DoRunHashMapLP(aSeed, aSize, aKeySize, aInterval: Integer; aBenchBy: TBenchBy);
 {$define MapTypeMacro := TMap}
