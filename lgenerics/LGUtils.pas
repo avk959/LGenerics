@@ -54,6 +54,10 @@ type
   TGMapFunc<X, Y>       = function(constref aValue: X): Y;
   TGOnMap<X, Y>         = function(constref aValue: X): Y of object;
   TGNestMap<X, Y>       = function(constref aValue: X): Y is nested;
+{ callbacks }
+  TGUnaryProc<T>        = procedure(constref aValue: T);
+  TGUnaryMethod<T>      = procedure(constref aValue: T) of object;
+  TGNestUnaryProc<T>    = procedure(constref aValue: T) is nested;
 { foldings; note: accumulator on second position }
   TGFold<X, Y>          = function(constref L: X; constref R: Y): Y;
   TGOnFold<X, Y>        = function(constref L: X; constref R: Y): Y of object;
@@ -535,6 +539,9 @@ type
     function  Map(f: TGMapFunc<T, T>): IGEnumerable<T>; overload;
     function  Map(f: TGOnMap<T, T>): IGEnumerable<T>; overload;
     function  Map(f: TGNestMap<T, T>): IGEnumerable<T>; overload;
+    procedure ForEach(aCallback: TGUnaryProc<T>); overload;
+    procedure ForEach(aCallback: TGUnaryMethod<T>); overload;
+    procedure ForEach(aCallback: TGNestUnaryProc<T>); overload;
   { left-associative linear fold }
     function  Fold(f: TGFold<T, T>; constref v0: T): T; overload;
     function  Fold(f: TGFold<T, T>): TGOptional<T>; overload;

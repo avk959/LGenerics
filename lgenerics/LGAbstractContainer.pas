@@ -55,6 +55,9 @@ type
     TMapFunc        = specialize TGMapFunc<T, T>;
     TOnMap          = specialize TGOnMap<T, T>;
     TNestMap        = specialize TGNestMap<T, T>;
+    TUnaryProc      = specialize TGUnaryProc<T>;
+    TUnaryMethod    = specialize TGUnaryMethod<T>;
+    TNestUnaryProc  = specialize TGNestUnaryProc<T>;
     TFold           = specialize TGFold<T, T>;
     TOnFold         = specialize TGOnFold<T, T>;
     TNestFold       = specialize TGNestFold<T, T>;
@@ -65,62 +68,65 @@ type
     function  _GetRef: TObject; inline;
     procedure Discard;
   public
-    function GetEnumerator: TSpecEnumerator; virtual; abstract;
+    function  GetEnumerator: TSpecEnumerator; virtual; abstract;
   { enumerates elements in reverse order }
-    function Reverse: IEnumerable; virtual;
-    function ToArray: TArray; virtual;
-    function Any: Boolean;
-    function None: Boolean;
-    function Total: SizeInt;
-    function FindFirst(out aValue: T): Boolean;
-    function First: TOptional;
-    function FindLast(out aValue: T): Boolean;
-    function Last: TOptional;
-    function FindMin(out aValue: T; c: TLess): Boolean;
-    function FindMin(out aValue: T; c: TOnLess): Boolean;
-    function FindMin(out aValue: T; c: TNestLess): Boolean;
-    function Min(c: TLess): TOptional;
-    function Min(c: TOnLess): TOptional;
-    function Min(c: TNestLess): TOptional;
-    function FindMax(out aValue: T; c: TLess): Boolean;
-    function FindMax(out aValue: T; c: TOnLess): Boolean;
-    function FindMax(out aValue: T; c: TNestLess): Boolean;
-    function Max(c: TLess): TOptional;
-    function Max(c: TOnLess): TOptional;
-    function Max(c: TNestLess): TOptional;
-    function Skip(aCount: SizeInt): IEnumerable; inline;
-    function Limit(aCount: SizeInt): IEnumerable; inline;
-    function Sorted(c: TLess; aStable: Boolean = False): IEnumerable;
-    function Sorted(c: TOnLess; aStable: Boolean = False): IEnumerable;
-    function Sorted(c: TNestLess; aStable: Boolean = False): IEnumerable;
-    function Select(aTest: TTest): IEnumerable; inline;
-    function Select(aTest: TOnTest): IEnumerable; inline;
-    function Select(aTest: TNestTest): IEnumerable; inline;
-    function Any(aTest: TTest): Boolean;
-    function Any(aTest: TOnTest): Boolean;
-    function Any(aTest: TNestTest): Boolean;
-    function None(aTest: TTest): Boolean; inline;
-    function None(aTest: TOnTest): Boolean; inline;
-    function None(aTest: TNestTest): Boolean; inline;
-    function All(aTest: TTest): Boolean;
-    function All(aTest: TOnTest): Boolean;
-    function All(aTest: TNestTest): Boolean;
-    function Total(aTest: TTest): SizeInt;
-    function Total(aTest: TOnTest): SizeInt;
-    function Total(aTest: TNestTest): SizeInt;
-    function Distinct(c: TLess): IEnumerable;
-    function Distinct(c: TOnLess): IEnumerable;
-    function Distinct(c: TNestLess): IEnumerable;
-    function Map(aMap: TMapFunc): IEnumerable; inline;
-    function Map(aMap: TOnMap): IEnumerable; inline;
-    function Map(aMap: TNestMap): IEnumerable; inline;
+    function  Reverse: IEnumerable; virtual;
+    function  ToArray: TArray; virtual;
+    function  Any: Boolean;
+    function  None: Boolean;
+    function  Total: SizeInt;
+    function  FindFirst(out aValue: T): Boolean;
+    function  First: TOptional;
+    function  FindLast(out aValue: T): Boolean;
+    function  Last: TOptional;
+    function  FindMin(out aValue: T; c: TLess): Boolean;
+    function  FindMin(out aValue: T; c: TOnLess): Boolean;
+    function  FindMin(out aValue: T; c: TNestLess): Boolean;
+    function  Min(c: TLess): TOptional;
+    function  Min(c: TOnLess): TOptional;
+    function  Min(c: TNestLess): TOptional;
+    function  FindMax(out aValue: T; c: TLess): Boolean;
+    function  FindMax(out aValue: T; c: TOnLess): Boolean;
+    function  FindMax(out aValue: T; c: TNestLess): Boolean;
+    function  Max(c: TLess): TOptional;
+    function  Max(c: TOnLess): TOptional;
+    function  Max(c: TNestLess): TOptional;
+    function  Skip(aCount: SizeInt): IEnumerable; inline;
+    function  Limit(aCount: SizeInt): IEnumerable; inline;
+    function  Sorted(c: TLess; aStable: Boolean = False): IEnumerable;
+    function  Sorted(c: TOnLess; aStable: Boolean = False): IEnumerable;
+    function  Sorted(c: TNestLess; aStable: Boolean = False): IEnumerable;
+    function  Select(aTest: TTest): IEnumerable; inline;
+    function  Select(aTest: TOnTest): IEnumerable; inline;
+    function  Select(aTest: TNestTest): IEnumerable; inline;
+    function  Any(aTest: TTest): Boolean;
+    function  Any(aTest: TOnTest): Boolean;
+    function  Any(aTest: TNestTest): Boolean;
+    function  None(aTest: TTest): Boolean; inline;
+    function  None(aTest: TOnTest): Boolean; inline;
+    function  None(aTest: TNestTest): Boolean; inline;
+    function  All(aTest: TTest): Boolean;
+    function  All(aTest: TOnTest): Boolean;
+    function  All(aTest: TNestTest): Boolean;
+    function  Total(aTest: TTest): SizeInt;
+    function  Total(aTest: TOnTest): SizeInt;
+    function  Total(aTest: TNestTest): SizeInt;
+    function  Distinct(c: TLess): IEnumerable;
+    function  Distinct(c: TOnLess): IEnumerable;
+    function  Distinct(c: TNestLess): IEnumerable;
+    function  Map(aMap: TMapFunc): IEnumerable; inline;
+    function  Map(aMap: TOnMap): IEnumerable; inline;
+    function  Map(aMap: TNestMap): IEnumerable; inline;
+    procedure ForEach(aCallback: TUnaryProc);
+    procedure ForEach(aCallback: TUnaryMethod);
+    procedure ForEach(aCallback: TNestUnaryProc);
   { left-associative linear fold }
-    function Fold(aFold: TFold; constref v0: T): T;
-    function Fold(aFold: TFold): TOptional;
-    function Fold(aFold: TOnFold; constref v0: T): T;
-    function Fold(aFold: TOnFold): TOptional;
-    function Fold(aFold: TNestFold; constref v0: T): T;
-    function Fold(aFold: TNestFold): TOptional;
+    function  Fold(aFold: TFold; constref v0: T): T;
+    function  Fold(aFold: TFold): TOptional;
+    function  Fold(aFold: TOnFold; constref v0: T): T;
+    function  Fold(aFold: TOnFold): TOptional;
+    function  Fold(aFold: TNestFold; constref v0: T): T;
+    function  Fold(aFold: TNestFold): TOptional;
   end;
 
 {$I EnumsH.inc}
@@ -1426,6 +1432,39 @@ end;
 function TGEnumerable.Map(aMap: TNestMap): IEnumerable;
 begin
   Result := specialize TGEnumNestedMap<T>.Create(GetEnumerator, aMap);
+end;
+
+procedure TGEnumerable.ForEach(aCallback: TUnaryProc);
+begin
+  with GetEnumerator do
+    try
+      while MoveNext do
+        aCallback(Current);
+    finally
+      Free;
+    end;
+end;
+
+procedure TGEnumerable.ForEach(aCallback: TUnaryMethod);
+begin
+  with GetEnumerator do
+    try
+      while MoveNext do
+        aCallback(Current);
+    finally
+      Free;
+    end;
+end;
+
+procedure TGEnumerable.ForEach(aCallback: TNestUnaryProc);
+begin
+  with GetEnumerator do
+    try
+      while MoveNext do
+        aCallback(Current);
+    finally
+      Free;
+    end;
 end;
 
 function TGEnumerable.Fold(aFold: TFold; constref v0: T): T;
