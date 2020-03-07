@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hashmap implementations.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -522,17 +522,17 @@ type
       <TKey, TValue, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
   end;
 
-  { TGLiteEquitableHashMap: open addressing hashmap with linear probing and
+  { TGLiteEquatableHashMap: open addressing hashmap with linear probing and
     constant load factor 0.5; for types having a defined fast operator "=";
       functor THashFun must provide:
         class function HashCode([const[ref]] aKey: TKey): SizeInt; }
-  generic TGLiteEquitableHashMap<TKey, TValue, THashFun> = record
+  generic TGLiteEquatableHashMap<TKey, TValue, THashFun> = record
   public
   type
     TEntry = specialize TGMapEntry<TKey, TValue>;
   private
   type
-    TTable = specialize TGLiteEquitableHashTable<TKey, TEntry, THashFun>;
+    TTable = specialize TGLiteEquatableHashTable<TKey, TEntry, THashFun>;
   public
   type
     TMap = specialize TGLiteHashMap

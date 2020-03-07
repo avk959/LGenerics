@@ -201,12 +201,12 @@ type
     procedure PassByValue;
   end;
 
-  TLiteEquitableHashMapTest = class(TTestCase)
+  TLiteEquatableHashMapTest = class(TTestCase)
   private
   type
-    TIntMapSpec = specialize TGLiteEquitableHashMap<Integer, Integer, Integer>;
+    TIntMapSpec = specialize TGLiteEquatableHashMap<Integer, Integer, Integer>;
     TIntMap     = TIntMapSpec.TMap;
-    TStrMapSpec = specialize TGLiteEquitableHashMap<string, Integer, string>;
+    TStrMapSpec = specialize TGLiteEquatableHashMap<string, Integer, string>;
     TStrMap     = TStrMapSpec.TMap;
 
   published
@@ -2298,7 +2298,7 @@ begin
   AssertTrue(m.NonContains('key2'));
 end;
 
-procedure TLiteEquitableHashMapTest.Int_1;
+procedure TLiteEquatableHashMapTest.Int_1;
 var
   m: TIntMap;
   I: Integer;
@@ -2348,7 +2348,7 @@ begin
   AssertTrue(m.Count = 0);
 end;
 
-procedure TLiteEquitableHashMapTest.Int_2;
+procedure TLiteEquatableHashMapTest.Int_2;
 var
   m: TIntMap;
   I, TestSize: Integer;
@@ -2379,7 +2379,7 @@ begin
     AssertTrue(IntOdd(e[I].Key));
 end;
 
-procedure TLiteEquitableHashMapTest.IntRetain;
+procedure TLiteEquatableHashMapTest.IntRetain;
 var
   m: TIntMap;
   s: TAutoIntSet;
@@ -2406,7 +2406,7 @@ begin
   AssertTrue(m.Count = 0);
 end;
 
-procedure TLiteEquitableHashMapTest.Str_1;
+procedure TLiteEquatableHashMapTest.Str_1;
 var
   m: TStrMap;
   I: Integer;
@@ -2455,7 +2455,7 @@ begin
   AssertTrue(m.Count = 0);
 end;
 
-procedure TLiteEquitableHashMapTest.Str_2;
+procedure TLiteEquatableHashMapTest.Str_2;
 var
   m: TStrMap;
   I, TestSize: Integer;
@@ -2487,7 +2487,7 @@ begin
     AssertTrue(StrOdd(e[I].Key));
 end;
 
-procedure TLiteEquitableHashMapTest.StrRetain;
+procedure TLiteEquatableHashMapTest.StrRetain;
 var
   m: TStrMap;
   s: TAutoStrSet;
@@ -2515,7 +2515,7 @@ begin
   AssertTrue(m.Count = 0);
 end;
 
-procedure TLiteEquitableHashMapTest.PassByValue;
+procedure TLiteEquatableHashMapTest.PassByValue;
   procedure Test(aMap: TStrMap);
   begin
     aMap.Add('key0', 0);
@@ -2781,7 +2781,7 @@ initialization
   RegisterTest(TOrderHashMapTest);
   RegisterTest(TLiteHashMapLPTest);
   RegisterTest(TLiteChainHashMapTest);
-  RegisterTest(TLiteEquitableHashMapTest);
+  RegisterTest(TLiteEquatableHashMapTest);
   RegisterTest(THashMapFGTest);
 end.
 

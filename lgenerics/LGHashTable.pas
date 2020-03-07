@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hash table implementations for internal use.                    *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -743,11 +743,11 @@ type
     property  ExpandTreshold: SizeInt read GetCapacity;
   end;
 
-  { TGLiteEquitableHashTable implements open addressing hash table with linear probing(step = 1)
+  { TGLiteEquatableHashTable implements open addressing hash table with linear probing(step = 1)
     and constant load factor 0.5; for types having a defined fast operator "=";
      functor THashFun must provide:
        class function HashCode([const[ref]] aValue: TKey): SizeInt;     }
-  generic TGLiteEquitableHashTable<TKey, TEntry, THashFun> = record
+  generic TGLiteEquatableHashTable<TKey, TEntry, THashFun> = record
   private
   type
     TNode = record
@@ -766,7 +766,7 @@ type
     {$POP}
   type
     TFakeNode  = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
-    PHashTable = ^TGLiteEquitableHashTable;
+    PHashTable = ^TGLiteEquatableHashTable;
 
   public
   type
@@ -811,9 +811,9 @@ type
     procedure DoRemove(aIndex: SizeInt);
     procedure FinalizeList;
     class constructor Init;
-    class operator Initialize(var ht: TGLiteEquitableHashTable); inline;
-    class operator Copy(constref aSrc: TGLiteEquitableHashTable; var aDst: TGLiteEquitableHashTable);
-    class operator AddRef(var ht: TGLiteEquitableHashTable); inline;
+    class operator Initialize(var ht: TGLiteEquatableHashTable); inline;
+    class operator Copy(constref aSrc: TGLiteEquatableHashTable; var aDst: TGLiteEquatableHashTable);
+    class operator AddRef(var ht: TGLiteEquatableHashTable); inline;
   public
   const
     DEFAULT_LOAD_FACTOR: Single = 0.5;
@@ -3903,14 +3903,14 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-{ TGLiteEquitableHashTable.TEnumerator }
+{ TGLiteEquatableHashTable.TEnumerator }
 
-function TGLiteEquitableHashTable.TEnumerator.GetCurrent: PEntry;
+function TGLiteEquatableHashTable.TEnumerator.GetCurrent: PEntry;
 begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-function TGLiteEquitableHashTable.TEnumerator.MoveNext: Boolean;
+function TGLiteEquatableHashTable.TEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FCurrIndex >= FLastIndex then
@@ -3920,47 +3920,47 @@ begin
   until Result;
 end;
 
-procedure TGLiteEquitableHashTable.TEnumerator.Reset;
+procedure TGLiteEquatableHashTable.TEnumerator.Reset;
 begin
   FCurrIndex := NULL_INDEX;
 end;
 
-{ TGLiteEquitableHashTable.TRemovableEnumerator }
+{ TGLiteEquatableHashTable.TRemovableEnumerator }
 
-function TGLiteEquitableHashTable.TRemovableEnumerator.GetCurrent: PEntry;
+function TGLiteEquatableHashTable.TRemovableEnumerator.GetCurrent: PEntry;
 begin
   Result := FEnum.Current;
 end;
 
-function TGLiteEquitableHashTable.TRemovableEnumerator.MoveNext: Boolean;
+function TGLiteEquatableHashTable.TRemovableEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGLiteEquitableHashTable.TRemovableEnumerator.RemoveCurrent;
+procedure TGLiteEquatableHashTable.TRemovableEnumerator.RemoveCurrent;
 begin
   FTable^.DoRemove(FEnum.FCurrIndex);
   Dec(FEnum.FCurrIndex);
 end;
 
-procedure TGLiteEquitableHashTable.TRemovableEnumerator.Reset;
+procedure TGLiteEquatableHashTable.TRemovableEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGLiteEquitableHashTable }
+{ TGLiteEquatableHashTable }
 
-function TGLiteEquitableHashTable.GetExpandTreshold: SizeInt;
+function TGLiteEquatableHashTable.GetExpandTreshold: SizeInt;
 begin
   Result := System.Length(FList) shr 1;
 end;
 
-function TGLiteEquitableHashTable.GetCapacity: SizeInt;
+function TGLiteEquatableHashTable.GetCapacity: SizeInt;
 begin
   Result := System.Length(FList);
 end;
 
-function TGLiteEquitableHashTable.GetFillRatio: Single;
+function TGLiteEquatableHashTable.GetFillRatio: Single;
 var
   c: SizeInt;
 begin
@@ -3971,17 +3971,17 @@ begin
     Result := 0.0;
 end;
 
-function TGLiteEquitableHashTable.GetLoadFactor: Single;
+function TGLiteEquatableHashTable.GetLoadFactor: Single;
 begin
   Result := DEFAULT_LOAD_FACTOR;
 end;
 
-procedure TGLiteEquitableHashTable.SetLoadFactor(aValue: Single);
+procedure TGLiteEquatableHashTable.SetLoadFactor(aValue: Single);
 begin
   assert(aValue = aValue);
 end;
 
-procedure TGLiteEquitableHashTable.Rehash(var aTarget: TNodeList);
+procedure TGLiteEquatableHashTable.Rehash(var aTarget: TNodeList);
 var
   h, I, Mask: SizeInt;
 begin
@@ -4024,7 +4024,7 @@ begin
     end;
 end;
 
-procedure TGLiteEquitableHashTable.Resize(aNewCapacity: SizeInt);
+procedure TGLiteEquatableHashTable.Resize(aNewCapacity: SizeInt);
 var
   List: TNodeList;
 begin
@@ -4033,7 +4033,7 @@ begin
   FList := List;
 end;
 
-procedure TGLiteEquitableHashTable.Expand;
+procedure TGLiteEquatableHashTable.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
@@ -4048,7 +4048,7 @@ begin
     Resize(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-function TGLiteEquitableHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt): SizeInt;
+function TGLiteEquatableHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
@@ -4065,7 +4065,7 @@ begin
     end;
 end;
 
-procedure TGLiteEquitableHashTable.DoRemove(aIndex: SizeInt);
+procedure TGLiteEquatableHashTable.DoRemove(aIndex: SizeInt);
 var
   h, Gap, Mask: SizeInt;
 begin
@@ -4103,7 +4103,7 @@ begin
     until False;
 end;
 
-procedure TGLiteEquitableHashTable.FinalizeList;
+procedure TGLiteEquatableHashTable.FinalizeList;
 var
   Len: SizeInt;
   p: PNode;
@@ -4136,48 +4136,48 @@ begin
   end;
 end;
 
-class constructor TGLiteEquitableHashTable.Init;
+class constructor TGLiteEquatableHashTable.Init;
 begin
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
 end;
 
-class operator TGLiteEquitableHashTable.Initialize(var ht: TGLiteEquitableHashTable);
+class operator TGLiteEquatableHashTable.Initialize(var ht: TGLiteEquatableHashTable);
 begin
   ht.FCount := 0;
 end;
 
-class operator TGLiteEquitableHashTable.Copy(constref aSrc: TGLiteEquitableHashTable; var aDst: TGLiteEquitableHashTable);
+class operator TGLiteEquatableHashTable.Copy(constref aSrc: TGLiteEquatableHashTable; var aDst: TGLiteEquatableHashTable);
 begin
   aDst.FList := System.Copy(aSrc.FList);
   aDst.FCount := aSrc.Count;
 end;
 
-class operator TGLiteEquitableHashTable.AddRef(var ht: TGLiteEquitableHashTable);
+class operator TGLiteEquatableHashTable.AddRef(var ht: TGLiteEquatableHashTable);
 begin
   if ht.FList <> nil then
     ht.FList := System.Copy(ht.FList);
 end;
 
-function TGLiteEquitableHashTable.GetEnumerator: TEnumerator;
+function TGLiteEquatableHashTable.GetEnumerator: TEnumerator;
 begin
   Result.FList := Pointer(FList);
   Result.FLastIndex := System.High(FList);
   Result.FCurrIndex := NULL_INDEX;
 end;
 
-function TGLiteEquitableHashTable.GetRemovableEnumerator: TRemovableEnumerator;
+function TGLiteEquatableHashTable.GetRemovableEnumerator: TRemovableEnumerator;
 begin
   Result.FEnum := GetEnumerator;
   Result.FTable := @Self;
 end;
 
-procedure TGLiteEquitableHashTable.Clear;
+procedure TGLiteEquatableHashTable.Clear;
 begin
   FList := nil;
   FCount := 0;
 end;
 
-procedure TGLiteEquitableHashTable.MakeEmpty;
+procedure TGLiteEquatableHashTable.MakeEmpty;
 begin
   if IsManagedType(TEntry) then
     FinalizeList
@@ -4186,7 +4186,7 @@ begin
   FCount := 0;
 end;
 
-procedure TGLiteEquitableHashTable.EnsureCapacity(aValue: SizeInt);
+procedure TGLiteEquatableHashTable.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
@@ -4205,7 +4205,7 @@ begin
     raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
-procedure TGLiteEquitableHashTable.TrimToFit;
+procedure TGLiteEquatableHashTable.TrimToFit;
 var
   NewCapacity: SizeInt;
 begin
@@ -4219,12 +4219,12 @@ begin
     Clear;
 end;
 
-function TGLiteEquitableHashTable.Contains(const aKey: TKey): Boolean;
+function TGLiteEquatableHashTable.Contains(const aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGLiteEquitableHashTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+function TGLiteEquatableHashTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
   Hash: SizeInt;
 begin
@@ -4252,14 +4252,14 @@ begin
   e := @FList[aPos].Data;
 end;
 
-function TGLiteEquitableHashTable.FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
+function TGLiteEquatableHashTable.FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
 var
   Pos: SizeInt;
 begin
   Result := FindOrAdd(aKey, e, Pos);
 end;
 
-function TGLiteEquitableHashTable.Find(const aKey: TKey; out aPos: SizeInt): PEntry;
+function TGLiteEquatableHashTable.Find(const aKey: TKey; out aPos: SizeInt): PEntry;
 begin
   aPos := NULL_INDEX;
   Result := nil;
@@ -4271,14 +4271,14 @@ begin
     end;
 end;
 
-function TGLiteEquitableHashTable.Find(const aKey: TKey): PEntry;
+function TGLiteEquatableHashTable.Find(const aKey: TKey): PEntry;
 var
   Pos: SizeInt;
 begin
   Result := Find(aKey, Pos);
 end;
 
-function TGLiteEquitableHashTable.FindFirstKey(out aKey: TKey): Boolean;
+function TGLiteEquatableHashTable.FindFirstKey(out aKey: TKey): Boolean;
 var
   I: SizeInt;
 begin
@@ -4292,7 +4292,7 @@ begin
   Result := False;
 end;
 
-function TGLiteEquitableHashTable.Remove(const aKey: TKey): Boolean;
+function TGLiteEquatableHashTable.Remove(const aKey: TKey): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -4307,7 +4307,7 @@ begin
     Result := False;
 end;
 
-procedure TGLiteEquitableHashTable.RemoveAt(aPos: SizeInt);
+procedure TGLiteEquatableHashTable.RemoveAt(aPos: SizeInt);
 begin
   if (aPos >= 0) and (aPos <= System.High(FList)) then
     DoRemove(aPos);

@@ -477,10 +477,10 @@ type
     procedure PassByValue;
   end;
 
-  TLiteEquitableHashMultisetTest = class(TTestCase)
+  TLiteEquatableHashMultisetTest = class(TTestCase)
   private
   type
-    TMultiSetSpec = specialize TGLiteEquitableHashMultiSet<Integer, Integer>;
+    TMultiSetSpec = specialize TGLiteEquatableHashMultiSet<Integer, Integer>;
     TMultiSet     = TMultiSetSpec.TMultiSet;
 
     function IsEven(constref aValue: Integer): Boolean;
@@ -6176,14 +6176,14 @@ begin
 end;
 
 
-{ TLiteEquitableHashMultisetTest }
+{ TLiteEquatableHashMultisetTest }
 
-function TLiteEquitableHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TLiteEquatableHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Clear;
+procedure TLiteEquatableHashMultisetTest.Clear;
 var
   ms: TMultiSet;
 begin
@@ -6195,7 +6195,7 @@ begin
   AssertTrue(ms.Capacity = 0);
 end;
 
-procedure TLiteEquitableHashMultisetTest.EnsureCapacity;
+procedure TLiteEquatableHashMultisetTest.EnsureCapacity;
 var
   ms: TMultiSet;
   c: SizeInt;
@@ -6205,7 +6205,7 @@ begin
   AssertTrue(ms.ExpandTreshold >= c + 100);
 end;
 
-procedure TLiteEquitableHashMultisetTest.TrimToFit;
+procedure TLiteEquatableHashMultisetTest.TrimToFit;
 var
   ms: TMultiSet;
 begin
@@ -6216,7 +6216,7 @@ begin
   AssertTrue(ms.Capacity = 32);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Add;
+procedure TLiteEquatableHashMultisetTest.Add;
 var
   ms: TMultiSet;
 begin
@@ -6241,7 +6241,7 @@ begin
   AssertTrue(ms[52] = 1);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Add100;
+procedure TLiteEquatableHashMultisetTest.Add100;
 var
   ms: TMultiSet;
   I: Integer;
@@ -6261,7 +6261,7 @@ begin
   AssertTrue(ms.Count = 210);
 end;
 
-procedure TLiteEquitableHashMultisetTest.AddArray;
+procedure TLiteEquatableHashMultisetTest.AddArray;
 var
   ms: TMultiSet;
   I: Integer;
@@ -6277,7 +6277,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.AddEnum;
+procedure TLiteEquatableHashMultisetTest.AddEnum;
 var
   ms: TMultiSet;
   I: Integer;
@@ -6293,7 +6293,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.AddSelf;
+procedure TLiteEquatableHashMultisetTest.AddSelf;
 var
   ms: TMultiSet;
   I: Integer;
@@ -6305,7 +6305,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Remove;
+procedure TLiteEquatableHashMultisetTest.Remove;
 var
   ms: TMultiSet;
   Len, Len2: SizeInt;
@@ -6331,7 +6331,7 @@ begin
   AssertTrue(ms.Count = Len2 - 3);
 end;
 
-procedure TLiteEquitableHashMultisetTest.RemoveArray;
+procedure TLiteEquatableHashMultisetTest.RemoveArray;
 var
   ms: TMultiSet;
 begin
@@ -6346,7 +6346,7 @@ begin
   AssertTrue(ms.EntryCount = 21);
 end;
 
-procedure TLiteEquitableHashMultisetTest.RemoveEnum;
+procedure TLiteEquatableHashMultisetTest.RemoveEnum;
 var
   ms: TMultiSet;
 begin
@@ -6361,7 +6361,7 @@ begin
   AssertTrue(ms.EntryCount = 21);
 end;
 
-procedure TLiteEquitableHashMultisetTest.RemoveSelf;
+procedure TLiteEquatableHashMultisetTest.RemoveSelf;
 var
   ms: TMultiSet;
 begin
@@ -6371,7 +6371,7 @@ begin
   AssertTrue(ms.IsEmpty);
 end;
 
-procedure TLiteEquitableHashMultisetTest.RemoveIfRegular;
+procedure TLiteEquatableHashMultisetTest.RemoveIfRegular;
 var
   ms: TMultiSet;
   I: Integer;
@@ -6385,7 +6385,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.RemoveIfDelegated;
+procedure TLiteEquatableHashMultisetTest.RemoveIfDelegated;
 var
   ms: TMultiSet;
   I: Integer;
@@ -6399,7 +6399,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.RemoveIfNested;
+procedure TLiteEquatableHashMultisetTest.RemoveIfNested;
   function IsEvenInt(constref aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
@@ -6417,7 +6417,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.ExtractIfRegular;
+procedure TLiteEquatableHashMultisetTest.ExtractIfRegular;
 var
   ms, ms1: TMultiSet;
   e: TIntArray;
@@ -6436,7 +6436,7 @@ begin
     AssertTrue(ms1[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.ExtractIfDelegated;
+procedure TLiteEquatableHashMultisetTest.ExtractIfDelegated;
 var
   ms, ms1: TMultiSet;
   e: TIntArray;
@@ -6455,7 +6455,7 @@ begin
     AssertTrue(ms1[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.ExtractIfNested;
+procedure TLiteEquatableHashMultisetTest.ExtractIfNested;
 var
   ms, ms1: TMultiSet;
   e: TIntArray;
@@ -6478,7 +6478,7 @@ begin
     AssertTrue(ms1[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Retain;
+procedure TLiteEquatableHashMultisetTest.Retain;
 var
   ms: TMultiSet;
   s: specialize TGHashMultiSetLP<Integer>;
@@ -6499,7 +6499,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Retain_1;
+procedure TLiteEquatableHashMultisetTest.Retain_1;
 var
   ms: TMultiSet;
   s: specialize TGHashMultiSetLP<Integer>;
@@ -6516,7 +6516,7 @@ begin
   AssertTrue(ms.IsEmpty);
 end;
 
-procedure TLiteEquitableHashMultisetTest.IsSuperset;
+procedure TLiteEquatableHashMultisetTest.IsSuperset;
 var
   ms, ms1: TMultiSet;
 begin
@@ -6537,7 +6537,7 @@ begin
   AssertTrue(ms1.IsSuperSet(ms));
 end;
 
-procedure TLiteEquitableHashMultisetTest.IsSubset;
+procedure TLiteEquatableHashMultisetTest.IsSubset;
 var
   ms, ms1: TMultiSet;
 begin
@@ -6558,7 +6558,7 @@ begin
   AssertTrue(ms.IsSubSet(ms1));
 end;
 
-procedure TLiteEquitableHashMultisetTest.IsEqual;
+procedure TLiteEquatableHashMultisetTest.IsEqual;
 var
   ms, ms1: TMultiSet;
 begin
@@ -6580,7 +6580,7 @@ begin
   AssertTrue(ms1.IsEqual(ms));
 end;
 
-procedure TLiteEquitableHashMultisetTest.Intersecting;
+procedure TLiteEquatableHashMultisetTest.Intersecting;
 var
   ms, ms1: TMultiSet;
 begin
@@ -6593,7 +6593,7 @@ begin
   AssertFalse(ms1.Intersecting(ms));
 end;
 
-procedure TLiteEquitableHashMultisetTest.Intersect;
+procedure TLiteEquatableHashMultisetTest.Intersect;
 var
   ms, ms1: TMultiSet;
   I: Integer;
@@ -6609,7 +6609,7 @@ begin
     AssertTrue(ms[I] = 1);
 end;
 
-procedure TLiteEquitableHashMultisetTest.Join;
+procedure TLiteEquatableHashMultisetTest.Join;
 var
   ms, ms1: TMultiSet;
   I: Integer;
@@ -6627,7 +6627,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.ArithmeticAdd;
+procedure TLiteEquatableHashMultisetTest.ArithmeticAdd;
 var
   ms, ms1: TMultiSet;
   I: Integer;
@@ -6648,7 +6648,7 @@ begin
     AssertTrue(ms[I] = 2);
 end;
 
-procedure TLiteEquitableHashMultisetTest.ArithmeticSubtract;
+procedure TLiteEquatableHashMultisetTest.ArithmeticSubtract;
 var
   ms, ms1: TMultiSet;
 begin
@@ -6669,7 +6669,7 @@ begin
   AssertTrue(ms.IsEmpty);
 end;
 
-procedure TLiteEquitableHashMultisetTest.SymmetricSubtract;
+procedure TLiteEquatableHashMultisetTest.SymmetricSubtract;
 var
   ms, ms1: TMultiSet;
 begin
@@ -6692,7 +6692,7 @@ begin
   AssertTrue(ms.IsEmpty);
 end;
 
-procedure TLiteEquitableHashMultisetTest.PassByValue;
+procedure TLiteEquatableHashMultisetTest.PassByValue;
   procedure Test(aSet: TMultiSet);
   begin
     aSet.Add(5);
@@ -6887,7 +6887,7 @@ initialization
   RegisterTest(TChainHashMultisetTest);
   RegisterTest(TLiteHashMultisetLPTest);
   RegisterTest(TLiteChainHashMultisetTest);
-  RegisterTest(TLiteEquitableHashMultisetTest);
+  RegisterTest(TLiteEquatableHashMultisetTest);
   RegisterTest(TThreadFGHashMultiSetTest);
 end.
 

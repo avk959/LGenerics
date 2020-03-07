@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -104,7 +104,7 @@ type
   TIntHashSet = record
   strict private
   type
-    TTable = specialize TGLiteEquitableHashTable<SizeInt, TIntValue, SizeInt>;
+    TTable = specialize TGLiteEquatableHashTable<SizeInt, TIntValue, SizeInt>;
     PEntry = TTable.PEntry;
 
   public
@@ -297,7 +297,7 @@ type
   generic TGJoinableHashList<TEntry> = record
   strict private
   type
-    TTable = specialize TGLiteEquitableHashTable<SizeInt, TEntry, SizeInt>;
+    TTable = specialize TGLiteEquatableHashTable<SizeInt, TEntry, SizeInt>;
   public
   type
     TEnumerator = TTable.TEnumerator;

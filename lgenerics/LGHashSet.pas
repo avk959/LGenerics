@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hashset implementations.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -462,15 +462,15 @@ type
     TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
   end;
 
-  { TGLiteEquitableHashSet: open addressing hashset with linear probing and
+  { TGLiteEquatableHashSet: open addressing hashset with linear probing and
     constant load factor 0.5; for types having a defined fast operator "=";
       functor THashFun must provide:
         class function HashCode([const[ref]] aValue: T): SizeInt; }
-  generic TGLiteEquitableHashSet<T, THashFun> = record
+  generic TGLiteEquatableHashSet<T, THashFun> = record
   private
   type
     TEntry = record Key: T; end;
-    TTable = specialize TGLiteEquitableHashTable<T, TEntry, THashFun>;
+    TTable = specialize TGLiteEquatableHashTable<T, TEntry, THashFun>;
   public
   type
     TSet = specialize TGLiteHashSet<T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
