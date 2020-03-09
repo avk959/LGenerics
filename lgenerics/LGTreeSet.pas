@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sorted set implementations on the top of AVL tree.              *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -2057,24 +2057,26 @@ begin
 end;
 
 function TGLiteTreeSet.AddAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := Count;
-  for v in e do
-    Add(v);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        Add(v);
+    finally
+      Free;
+    end;
   Result := Count - Result;
 end;
 
 function TGLiteTreeSet.AddAll(constref aSet: TGLiteTreeSet): SizeInt;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     begin
       Result := Count;
-      for {%H-}v in aSet do
-        Add(v);
+      with aSet.GetEnumerator do
+        while MoveNext do
+          Add(Current);
       Result := Count - Result;
     end
   else
@@ -2102,56 +2104,61 @@ begin
 end;
 
 function TGLiteTreeSet.ContainsAny(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
-  for v in e do
-    if Contains(v) then
-      exit(True);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        if Contains(Current) then
+          exit(True);
+    finally
+      Free;
+    end;
   Result := False;
 end;
 
 function TGLiteTreeSet.ContainsAny(constref aSet: TGLiteTreeSet): Boolean;
-var
-  v: T;
 begin
   if @aSet = @Self then
     exit(True);
-  for {%H-}v in aSet do
-    if Contains(v) then
-      exit(True);
+  with aSet.GetEnumerator do
+    while MoveNext do
+      if Contains(Current) then
+        exit(True);
   Result := False;
 end;
 
 function TGLiteTreeSet.ContainsAll(constref a: array of T): Boolean;
 var
-  v: T;
+  I: SizeInt;
 begin
-  for v in a do
-    if NonContains(v) then
+  for I := 0 to System.High(a) do
+    if NonContains(a[I]) then
       exit(False);
   Result := True;
 end;
 
 function TGLiteTreeSet.ContainsAll(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
-  for v in e do
-    if NonContains(v) then
-      exit(False);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        if NonContains(Current) then
+          exit(False);
+    finally
+      Free;
+    end;
   Result := True;
 end;
 
 function TGLiteTreeSet.ContainsAll(constref aSet: TGLiteTreeSet): Boolean;
-var
-  v: T;
 begin
   if @aSet = @Self then
     exit(True);
-  for {%H-}v in aSet do
-    if NonContains(v) then
-      exit(False);
+  if IsEmpty then exit(aSet.IsEmpty);
+  with aSet.GetEnumerator do
+    while MoveNext do
+      if NonContains(Current) then
+        exit(False);
   Result := True;
 end;
 
@@ -2162,34 +2169,50 @@ end;
 
 function TGLiteTreeSet.RemoveAll(constref a: array of T): SizeInt;
 var
-  v: T;
+  I: SizeInt;
 begin
   Result := Count;
-  for v in a do
-    Remove(v);
-  Result := Result - Count;
+  if Result > 0 then
+    begin
+      for I := 0 to System.High(a) do
+        if Remove(a[I]) and IsEmpty then
+          break;
+      Result := Result - Count;
+    end;
 end;
 
 function TGLiteTreeSet.RemoveAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := Count;
-  for v in e do
-    Remove(v);
-  Result := Result - Count;
+  if Result > 0 then
+    begin
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            if Remove(v) and IsEmpty then
+              break;
+        finally
+          Free;
+        end;
+      Result := Result - Count;
+    end
+  else
+    e.Discard;
 end;
 
 function TGLiteTreeSet.RemoveAll(constref aSet: TGLiteTreeSet): SizeInt;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     begin
       Result := Count;
-      for {%H-}v in aSet do
-        Remove(v);
-      Result := Result - Count;
+      if Result > 0 then
+        begin
+          with aSet.GetEnumerator do
+            while MoveNext do
+              if Remove(v) and IsEmpty then
+                break;
+          Result := Result - Count;
+        end;
     end
   else
     begin
@@ -2381,16 +2404,15 @@ begin
 end;
 
 function TGLiteTreeSet.IsEqual(constref aSet: TGLiteTreeSet): Boolean;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     begin
       if Count <> aSet.Count then
         exit(False);
-      for v in aSet do
-        if NonContains(v) then
-          exit(False);
+      with aSet.GetEnumerator do
+        while MoveNext do
+          if NonContains(Current) then
+            exit(False);
       Result := True;
     end
   else
@@ -2398,18 +2420,17 @@ begin
 end;
 
 function TGLiteTreeSet.Intersecting(constref aSet: TGLiteTreeSet): Boolean;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     begin
-      for v in aSet do
-        if Contains(v) then
-          exit(True);
+      with aSet.GetEnumerator do
+        while MoveNext do
+          if Contains(Current) then
+            exit(True);
       Result := False;
     end
   else
-    Result := True;
+    Result := NonEmpty;
 end;
 
 procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
@@ -2418,23 +2439,13 @@ begin
 end;
 
 procedure TGLiteTreeSet.Join(constref aSet: TGLiteTreeSet);
-var
-  v: T;
 begin
-  if @aSet <> @Self then
-    for v in aSet do
-      Add(v);
+  AddAll(aSet);
 end;
 
 procedure TGLiteTreeSet.Subtract(constref aSet: TGLiteTreeSet);
-var
-  v: T;
 begin
-  if @aSet <> @Self then
-    for v in aSet do
-      Remove(v)
-  else
-    Clear;
+  RemoveAll(aSet);
 end;
 
 procedure TGLiteTreeSet.SymmetricSubtract(constref aSet: TGLiteTreeSet);
