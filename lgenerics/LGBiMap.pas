@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic bijective map implementation on top of hash table.              *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -753,12 +753,12 @@ begin
 end;
 
 function TGHashBiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
 begin
   Result := Count;
-  for Entry in e do
-    DoAdd(Entry.Key, Entry.Value);
+  with e.GetEnumerator do
+    while MoveNext do
+      with Current do
+        DoAdd(Key, Value);
   Result := Count - Result;
 end;
 
@@ -830,13 +830,18 @@ begin
 end;
 
 function TGHashBiMap.DoRemoveKeys(e: IKeyEnumerable): SizeInt;
-var
-  k: TKey;
 begin
   Result := Count;
-  for k in e do
-    DoRemoveKey(k);
-  Result := Result - Count;
+  if Result > 0 then
+    begin
+      with e.GetEnumerator do
+        while MoveNext do
+          if DoRemoveKey(Current) and (Count = 0) then
+            break;
+      Result := Result - Count;
+    end
+  else
+    e.Discard;
 end;
 
 function TGHashBiMap.DoExtractValue(constref aValue: TValue; out k: TKey): Boolean;
@@ -875,13 +880,18 @@ begin
 end;
 
 function TGHashBiMap.DoRemoveValues(e: IValueEnumerable): SizeInt;
-var
-  v: TValue;
 begin
   Result := Count;
-  for v in e do
-    DoRemoveValue(v);
-  Result := Result - Count;
+  if Result > 0 then
+    begin
+      with e.GetEnumerator do
+        while MoveNext do
+          if DoRemoveValue(Current) and (Count = 0) then
+            break;
+      Result := Result - Count;
+    end
+  else
+    e.Discard;
 end;
 
 function TGHashBiMap.DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
