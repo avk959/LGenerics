@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic helper utils for arrays.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1159,6 +1159,8 @@ type
   type
     TOnGetElem   = procedure(aIndex: SizeInt; out aElem: T) of object;
     TNestGetElem = procedure(aIndex: SizeInt; out aElem: T) is nested;
+  private
+  type
     THelper      = specialize TGArrayHelpUtil<T>;
   var
     FTree: array of T;
