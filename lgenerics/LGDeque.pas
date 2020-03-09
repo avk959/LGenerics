@@ -423,15 +423,19 @@ function TGDeque.AddEnum2Head(e: IEnumerable): SizeInt;
 begin
   Result := ElemCount;
   with e.GetEnumerator do
-    while MoveNext do
-      begin
-        ItemAdding;
-        Dec(FHead);
-        if Head < 0 then
-          FHead += System.Length(FItems);
-        Inc(FCount);
-        FItems[Head] := Current;
-      end;
+    try
+      while MoveNext do
+        begin
+          ItemAdding;
+          Dec(FHead);
+          if Head < 0 then
+            FHead += System.Length(FItems);
+          Inc(FCount);
+          FItems[Head] := Current;
+        end;
+    finally
+      Free;
+    end;
   Result := ElemCount - Result;
 end;
 
