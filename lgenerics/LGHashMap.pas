@@ -1783,26 +1783,28 @@ begin
 end;
 
 function TGLiteHashMap.AddAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
 begin
   Result := Count;
-  for Entry in e do
-    with Entry do
-      Add(Key, Value);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        with Current do
+          Add(Key, Value);
+    finally
+      Free;
+    end;
   Result := Count - Result;
 end;
 
 function TGLiteHashMap.AddAll(constref aMap: TGLiteHashMap): SizeInt;
-var
-  e: TEntry;
 begin
   if @AMap = @Self then
     exit(0);
   Result := Count;
-  for e in aMap do
-    with e do
-      Add(Key, Value);
+  with aMap.GetEnumerator do
+    while MoveNext do
+      with Current do
+        Add(Key, Value);
   Result := Count - Result;
 end;
 
@@ -1838,26 +1840,30 @@ begin
 end;
 
 function TGLiteHashMap.ContainsAny(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
 begin
   if NonEmpty then
-    for k in e do
-      if Contains(k) then
-        exit(True);
+    with e.GetEnumerator do
+      try
+        while MoveNext do
+          if Contains(Current) then
+            exit(True);
+      finally
+        Free;
+      end
+  else
+    e.Discard;
   Result := False;
 end;
 
 function TGLiteHashMap.ContainsAny(constref aMap: TGLiteHashMap): Boolean;
-var
-  k: TKey;
 begin
   if @aMap = @Self then
     exit(True);
   if NonEmpty then
-    for k in aMap.Keys do
-      if Contains(k) then
-        exit(True);
+    with aMap.Keys.GetEnumerator do
+      while MoveNext do
+        if Contains(Current) then
+          exit(True);
   Result := False;
 end;
 
@@ -1873,26 +1879,28 @@ begin
 end;
 
 function TGLiteHashMap.ContainsAll(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
 begin
   if IsEmpty then exit(e.None);
-  for k in e do
-    if not Contains(k) then
-      exit(False);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        if not Contains(Current) then
+          exit(False);
+    finally
+      Free;
+    end;
   Result := True;
 end;
 
 function TGLiteHashMap.ContainsAll(constref aMap: TGLiteHashMap): Boolean;
-var
-  k: TKey;
 begin
   if @aMap = @Self then
     exit(True);
   if IsEmpty then exit(aMap.IsEmpty);
-  for k in aMap.Keys do
-    if not Contains(k) then
-      exit(False);
+  with aMap.Keys.GetEnumerator do
+    while MoveNext do
+      if not Contains(Current) then
+        exit(False);
   Result := True;
 end;
 
@@ -1916,31 +1924,35 @@ begin
 end;
 
 function TGLiteHashMap.RemoveAll(e: IKeyEnumerable): SizeInt;
-var
-  k: TKey;
 begin
   Result := Count;
   if Result > 0 then
     begin
-      for k in e do
-        if FTable.Remove(k) and IsEmpty then
-          break;
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            if FTable.Remove(Current) and (FTable.Count = 0) then
+              break;
+        finally
+          Free;
+        end;
       Result -= Count;
-    end;
+    end
+  else
+    e.Discard;
 end;
 
 function TGLiteHashMap.RemoveAll(constref aMap: TGLiteHashMap): SizeInt;
-var
-  k: TKey;
 begin
   if @aMap <> @Self then
     begin
       Result := Count;
       if Result > 0 then
         begin
-          for k in aMap.Keys do
-            if FTable.Remove(k) and IsEmpty then
-              break;
+          with aMap.Keys.GetEnumerator do
+            while MoveNext do
+              if FTable.Remove(Current) and (FTable.Count = 0) then
+                break;
           Result -= Count;
         end;
     end
