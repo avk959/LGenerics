@@ -1790,17 +1790,18 @@ begin
 end;
 
 function TGAbstractCollection.ContainsAny(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
   if e._GetRef <> Self then
     begin
       if NonEmpty then
-        begin
-          for v in e do
-            if Contains(v) then
-              exit(True);
-        end
+        with e.GetEnumerator do
+          try
+            while MoveNext do
+              if Contains(Current) then
+                exit(True);
+          finally
+            Free;
+          end
       else
         e.Discard;
       Result := False;
@@ -1821,14 +1822,17 @@ begin
 end;
 
 function TGAbstractCollection.ContainsAll(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
   if IsEmpty then exit(e.None);
   if e._GetRef <> Self then
-    for v in e do
-      if not Contains(v) then
-        exit(False);
+    with e.GetEnumerator do
+      try
+        while MoveNext do
+          if not Contains(Current) then
+            exit(False);
+      finally
+        Free;
+      end;
   Result := True;
 end;
 
@@ -2923,6 +2927,7 @@ end;
 
 function TGAbstractMap.ContainsAll(e: IKeyEnumerable): Boolean;
 begin
+  if IsEmpty then exit(e.None);
   with e.GetEnumerator do
     try
       while MoveNext do
@@ -3273,8 +3278,6 @@ begin
 end;
 
 function TGAbstractMultiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
 begin
   Result := Count;
   with e.GetEnumerator do
