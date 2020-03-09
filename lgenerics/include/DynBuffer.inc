@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -173,15 +173,18 @@ begin
 end;
 
 function TGCustomArrayContainer.AppendEnum(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := ElemCount;
-  for v in e do
-    begin
-      ItemAdding;
-      FItems[ElemCount] := v;
-      Inc(FCount);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        begin
+          ItemAdding;
+          FItems[ElemCount] := Current;
+          Inc(FCount);
+        end;
+    finally
+      Free;
     end;
   Result := ElemCount - Result;
 end;
@@ -398,29 +401,29 @@ begin
     Expand(Succ(FCount));
 end;
 
-procedure TGLiteDynBuffer.FinalizeItems(aFrom: PItem; aCount: SizeInt);
+procedure TGLiteDynBuffer.FinalizeItems(aFrom, aCount: SizeInt);
 begin
-  while aCount <= 4 do
+  while aCount >= 4 do
     begin
-      aFrom[0] := Default(T);
-      aFrom[1] := Default(T);
-      aFrom[2] := Default(T);
-      aFrom[3] := Default(T);
+      FItems[aFrom  ] := Default(T);
+      FItems[aFrom+1] := Default(T);
+      FItems[aFrom+2] := Default(T);
+      FItems[aFrom+3] := Default(T);
       aFrom += 4;
       aCount -= 4;
     end;
   case aCount of
-    1: aFrom[0] := Default(T);
+    1: FItems[0] := Default(T);
     2:
       begin
-        aFrom[0] := Default(T);
-        aFrom[1] := Default(T);
+        FItems[aFrom  ] := Default(T);
+        FItems[aFrom+1] := Default(T);
       end;
     3:
       begin
-        aFrom[0] := Default(T);
-        aFrom[1] := Default(T);
-        aFrom[2] := Default(T);
+        FItems[aFrom  ] := Default(T);
+        FItems[aFrom+1] := Default(T);
+        FItems[aFrom+2] := Default(T);
       end;
   else
   end;
@@ -437,7 +440,7 @@ begin
   if Count <> 0 then
     begin
       if IsManagedType(T) then
-        FinalizeItems(Pointer(FItems), Count);
+        FinalizeItems(0, Count);
       FCount := 0;
     end;
 end;
@@ -749,19 +752,23 @@ end;
 
 function TGCustomRingArrayBuffer.AppendEnum(e: IEnumerable): SizeInt;
 var
-  v: T;
   TailPos, c: SizeInt;
 begin
   Result := ElemCount;
-  for v in e do
-    begin
-      ItemAdding;
-      c := System.Length(FItems);
-      TailPos := Head + ElemCount;
-      if TailPos >= c then
-        TailPos -= c;
-      FItems[TailPos] := v;
-      Inc(FCount);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        begin
+          ItemAdding;
+          c := System.Length(FItems);
+          TailPos := Head + ElemCount;
+          if TailPos >= c then
+            TailPos -= c;
+          FItems[TailPos] := Current;
+          Inc(FCount);
+        end;
+    finally
+      Free;
     end;
   Result := ElemCount - Result;
 end;
