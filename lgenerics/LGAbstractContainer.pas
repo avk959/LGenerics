@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Common abstact container classes.                                       *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -961,7 +961,7 @@ function TGEnumerable.Any: Boolean;
 begin
   with GetEnumerator do
     try
-      Result :=  MoveNext;
+      Result := MoveNext;
     finally
       Free;
     end;
@@ -985,17 +985,18 @@ begin
 end;
 
 function TGEnumerable.FindFirst(out aValue: T): Boolean;
-var
-  e: TSpecEnumerator;
 begin
-  e := GetEnumerator;
-  try
-    Result := e.MoveNext;
-    if Result then
-      aValue := e.Current;
-  finally
-    e.Free;
-  end;
+  with GetEnumerator do
+    try
+      if MoveNext then
+        begin
+          aValue := Current;
+          exit(True);
+        end;
+    finally
+      Free;
+    end;
+  Result := False;
 end;
 
 function TGEnumerable.First: TOptional;
@@ -1007,20 +1008,19 @@ begin
 end;
 
 function TGEnumerable.FindLast(out aValue: T): Boolean;
-var
-  e: TSpecEnumerator;
 begin
-  e := GetEnumerator;
-  try
-    Result := e.MoveNext;
-    if Result then
-      begin
-        while e.MoveNext do;
-        aValue := e.Current;
-      end;
-  finally
-    e.Free;
-  end;
+  with GetEnumerator do
+    try
+      if MoveNext then
+        begin
+          while MoveNext do;
+          aValue := Current; //todo: ???
+          exit(True);
+        end;
+    finally
+      Free;
+    end;
+  Result := False;
 end;
 
 function TGEnumerable.Last: TOptional;
@@ -1722,17 +1722,25 @@ end;
 function TGAbstractCollection.DoRemoveAll(e: IEnumerable): SizeInt;
 var
   o: TObject;
-  v: T;
 begin
   o := e._GetRef;
   if o <> Self then
     begin
       Result := Count;
-      for v in e do
-        if DoRemove(v) then
-          if IsEmpty then
-            break;
-      Result -= Count;
+      if Count > 0 then
+        begin
+          with e.GetEnumerator do
+            try
+              while MoveNext do
+                if DoRemove(Current) and IsEmpty then
+                  break;
+            finally
+              Free;
+            end;
+          Result -= Count;
+        end
+      else
+        e.Discard;
     end
   else
     begin
@@ -2111,14 +2119,18 @@ end;
 { TGAbstractSet }
 
 function TGAbstractSet.DoAddAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   if e._GetRef <> Self then
     begin
-      Result := 0;
-      for v in e do
-        Result += Ord(DoAdd(v));
+      Result := Count;
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            DoAdd(Current);
+        finally
+          Free;
+        end;
+      Result := Count - Result;
     end
   else
     Result := 0;
@@ -2366,7 +2378,6 @@ begin
 end;
 function TGAbstractMultiSet.DoAddAll(e: IEnumerable): SizeInt;
 var
-  v: T;
   o: TObject;
 begin
   o := e._GetRef;
@@ -2378,16 +2389,21 @@ begin
     end
   else
     begin
-      Result := 0;
-      for v in e do
-        Result += Ord(DoAdd(v));
+      Result := Count;
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            DoAdd(Current);
+        finally
+          Free;
+        end;
+      Result := Count - Result;
     end;
 end;
 
 function TGAbstractMultiSet.DoRemoveAll(e: IEnumerable): SizeInt;
 var
   o: TObject;
-  v: T;
 begin
   o := e._GetRef;
   if o is TSpecMultiSet then
@@ -2398,9 +2414,21 @@ begin
     end
   else
     begin
-      Result := 0;
-      for v in e do
-        Result += Ord(DoRemove(v));
+      Result := ElemCount;
+      if Result > 0 then
+        begin
+          with e.GetEnumerator do
+            try
+              while MoveNext do
+                if DoRemove(Current) and (ElemCount = 0) then
+                  break;
+            finally
+              Free;
+            end;
+          Result -= ElemCount;
+        end
+      else
+        e.Discard;
     end;
 end;
 
@@ -2690,13 +2718,17 @@ begin
 end;
 
 function TGAbstractMap.DoAddAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
 begin
   Result := Count;
   if e._GetRef <> Self then
-    for Entry in e do
-      DoAdd(Entry.Key, Entry.Value);
+    with e.GetEnumerator do
+      try
+        while MoveNext do
+          with Current do
+            DoAdd(Key, Value);
+      finally
+        Free;
+      end;
   Result := Count - Result;
 end;
 
@@ -2716,16 +2748,18 @@ begin
 end;
 
 function TGAbstractMap.DoRemoveAll(e: IKeyEnumerable): SizeInt;
-var
-  k: TKey;
 begin
   Result := Count;
   if Result > 0 then
     begin
-      for k in e do
-        if DoRemove(k) then
-          if Count = 0 then
-            break;
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            if DoRemove(Current) and (Count = 0) then
+              break;
+        finally
+          Free;
+        end;
       Result -= Count;
     end
   else
@@ -2861,15 +2895,16 @@ begin
 end;
 
 function TGAbstractMap.ContainsAny(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
 begin
   if NonEmpty then
-    begin
-      for k in e do
-        if Contains(k) then
-          exit(True);
-    end
+    with e.GetEnumerator do
+      try
+        while MoveNext do
+          if Contains(Current) then
+            exit(True);
+      finally
+        Free;
+      end
   else
     e.Discard;
   Result := False;
@@ -2887,12 +2922,15 @@ begin
 end;
 
 function TGAbstractMap.ContainsAll(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
 begin
-  for k in e do
-    if not Contains(k) then
-      exit(False);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        if not Contains(Current) then
+          exit(False);
+    finally
+      Free;
+    end;
   Result := True;
 end;
 
@@ -3215,26 +3253,39 @@ var
   p: PMMEntry;
 begin
   p := FindOrAdd(aKey);
-  Result := p^.Values.Add(aValue);
-  FCount += Ord(Result);
+  if p^.Values.Add(aValue) then
+    begin
+      Inc(FCount);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGAbstractMultiMap.DoAddAll(constref a: array of TEntry): SizeInt;
 var
-  e: TEntry;
+  I: SizeInt;
 begin
-  Result := 0;
-  for e in a do
-    Result += Ord(DoAdd(e.Key, e.Value));
+  Result := Count;
+  for I := 0 to High(a) do
+    with a[I] do
+      DoAdd(Key, Value);
+  Result := Count - Result;
 end;
 
 function TGAbstractMultiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
-  Result := 0;
-  for Entry in e do
-    Result += Ord(DoAdd(Entry.Key, Entry.Value));
+  Result := Count;
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        with Current do
+          DoAdd(Key, Value);
+    finally
+      Free;
+    end;
+  Result := Count - Result;
 end;
 
 function TGAbstractMultiMap.DoAddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
@@ -3254,15 +3305,16 @@ end;
 
 function TGAbstractMultiMap.DoAddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
 var
-  p: PMMEntry = nil;
-  v: TValue;
+  p: PMMEntry;
 begin
   Result := 0;
-  for v in e do
-    begin
-      if p = nil then
-        p := FindOrAdd(aKey);
-      Result += Ord(p^.Values.Add(v));
+  p := FindOrAdd(aKey);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        Result += Ord(p^.Values.Add(Current));
+    finally
+      Free;
     end;
   FCount += Result;
 end;
@@ -3293,12 +3345,23 @@ begin
 end;
 
 function TGAbstractMultiMap.DoRemoveAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
 begin
-  Result := 0;
-  for Entry in e do
-    Result += Ord(DoRemove(Entry.Key, Entry.Value));
+  Result := Count;
+  if Result > 0 then
+    begin
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            with Current do
+              if DoRemove(Key, Value) and (Count = 0) then
+                break;
+        finally
+          Free;
+        end;
+      Result -= Count;
+    end
+  else
+    e.Discard;
 end;
 
 function TGAbstractMultiMap.DoRemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
