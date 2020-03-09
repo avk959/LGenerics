@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic vector implementations.                                         *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -151,6 +151,8 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
+  { TGLiteVector }
+
   generic TGLiteVector<T> = record
   private
   type
@@ -194,6 +196,7 @@ type
   { appends aValue and returns it index }
     function  Add(constref aValue: T): SizeInt;
     function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(e: specialize IGEnumerable<T>): SizeInt;
     function  AddAll(constref aVector: TGLiteVector): SizeInt;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
@@ -1475,7 +1478,7 @@ begin
   System.SetLength(Result, aCount);
   if aCount > 0 then
     begin
-      System.Move(FBuffer.FItems[aIndex], Result[0], SizeOf(T) * aCount);
+      System.Move(FBuffer.FItems[aIndex], Pointer(Result)^, SizeOf(T) * aCount);
       FBuffer.FCount -= aCount;
       System.Move(FBuffer.FItems[aIndex + aCount], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
       if IsManagedType(T) then
@@ -1491,7 +1494,7 @@ begin
   if Result > 0 then
     begin
       if IsManagedType(T) then
-        FBuffer.FinalizeItems(@(FBuffer.FItems[aIndex]), Result);
+        FBuffer.FinalizeItems(aIndex, Result);
       FBuffer.FCount -= Result;
       System.Move(FBuffer.FItems[aIndex + Result], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
       if IsManagedType(T) then
@@ -1566,8 +1569,7 @@ end;
 
 function TGLiteVector.AddAll(constref a: array of T): SizeInt;
 var
-  v: T;
-  I: SizeInt;
+  I, J: SizeInt;
 begin
   Result := System.Length(a);
   if Result = 0 then exit;
@@ -1576,9 +1578,9 @@ begin
   with FBuffer do
     begin
       if IsManagedType(T) then
-        for v in a do
+        for J := 0 to System.High(a) do
           begin
-            FItems[I] := v;
+            FItems[I] := a[J];
             Inc(I);
           end
       else
@@ -1587,10 +1589,22 @@ begin
     end;
 end;
 
+function TGLiteVector.AddAll(e: specialize IGEnumerable<T>): SizeInt;
+begin
+  Result := Count;
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        FBuffer.PushLast(Current);
+    finally
+      Free;
+    end;
+  Result := Count - Result;
+end;
+
 function TGLiteVector.AddAll(constref aVector: TGLiteVector): SizeInt;
 var
-  v: T;
-  I: SizeInt;
+  I, J: SizeInt;
 begin
   Result := aVector.Count;
   if Result = 0 then exit;
@@ -1599,9 +1613,9 @@ begin
   with FBuffer do
     begin
       if IsManagedType(T) then
-        for v in aVector do
+        for J := 0 to Pred(aVector.Count) do
           begin
-            FItems[I] := v;
+            FItems[I] := aVector.FBuffer.FItems[J];
             Inc(I);
           end
       else
