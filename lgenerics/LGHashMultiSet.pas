@@ -1648,26 +1648,30 @@ begin
 end;
 
 function TGLiteHashMultiSet.ContainsAny(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
   if NonEmpty then
-    for v in e do
-      if Contains(v) then
-        exit(True);
+    with e.GetEnumerator do
+      try
+        while MoveNext do
+          if Contains(Current) then
+            exit(True);
+      finally
+        Free;
+      end
+  else
+    e.Discard;
   Result := False;
 end;
 
 function TGLiteHashMultiSet.ContainsAny(constref aSet: TGLiteHashMultiSet): Boolean;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     begin
       if NonEmpty then
-        for v in aSet.Distinct do
-          if Contains(v) then
-            exit(True);
+        with aSet.Distinct.GetEnumerator do
+          while MoveNext do
+            if Contains(Current) then
+              exit(True);
       Result := False;
     end
   else
@@ -1686,13 +1690,16 @@ begin
 end;
 
 function TGLiteHashMultiSet.ContainsAll(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
   if IsEmpty then exit(e.None);
-  for v in e do
-    if NonContains(v) then
-      exit(False);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        if not Contains(Current) then
+          exit(False);
+    finally
+      Free;
+    end;
   Result := True;
 end;
 
@@ -1745,12 +1752,15 @@ begin
 end;
 
 function TGLiteHashMultiSet.AddAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := Count;
-  for v in e do
-    Add(v);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        Add(Current);
+    finally
+      Free;
+    end;
   Result := Count - Result;
 end;
 
@@ -1781,17 +1791,22 @@ begin
 end;
 
 function TGLiteHashMultiSet.RemoveAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := Count;
   if Result > 0 then
     begin
-      for v in e do
-        if Remove(v) and IsEmpty then
-          break;
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            if Remove(Current) and IsEmpty then
+              break;
+        finally
+          Free;
+        end;
       Result -= Count;
-    end;
+    end
+  else
+    e.Discard;
 end;
 
 function TGLiteHashMultiSet.RemoveAll(constref aSet: TGLiteHashMultiSet): SizeInt;
