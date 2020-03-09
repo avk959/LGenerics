@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic deque(double ended queue) implementation.                       *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -420,19 +420,18 @@ begin
 end;
 
 function TGDeque.AddEnum2Head(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := ElemCount;
-  for v in e do
-    begin
-      ItemAdding;
-      Dec(FHead);
-      if Head < 0 then
-        FHead += System.Length(FItems);
-      Inc(FCount);
-      FItems[Head] := v;
-    end;
+  with e.GetEnumerator do
+    while MoveNext do
+      begin
+        ItemAdding;
+        Dec(FHead);
+        if Head < 0 then
+          FHead += System.Length(FItems);
+        Inc(FCount);
+        FItems[Head] := Current;
+      end;
   Result := ElemCount - Result;
 end;
 
@@ -640,7 +639,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -664,7 +663,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
