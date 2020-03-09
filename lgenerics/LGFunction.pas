@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -493,8 +493,13 @@ begin
 end;
 {$DEFINE FoldEnum :=
   Result := y0;
-  for v in e do
-    Result := f(v, Result)
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        Result := f(Current, Result);
+    finally
+      Free;
+    end
 }
 {$DEFINE ReduceEnum :=
   with e.GetEnumerator do
@@ -511,8 +516,6 @@ end;
     end
 }
 class function TGFolding.Left(e: IXEnumerable; f: TFold; constref y0: Y): Y;
-var
-  v: X;
 begin
   FoldEnum;
 end;
@@ -525,8 +528,6 @@ begin
 end;
 
 class function TGFolding.Left(e: IXEnumerable; f: TOnFold; constref y0: Y): Y;
-var
-  v: X;
 begin
   FoldEnum;
 end;
@@ -539,8 +540,6 @@ begin
 end;
 
 class function TGFolding.Left(e: IXEnumerable; f: TNestFold; constref y0: Y): Y;
-var
-  v: X;
 begin
   FoldEnum;
 end;
@@ -616,8 +615,13 @@ begin
 end;
 {$DEFINE FoldEnum :=
   Result := y0;
-  for v in e.Reverse do
-    Result := f(v, Result)
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        Result := f(v, Result)
+    finally
+      Free;
+    end
 }
 {$DEFINE ReduceEnum :=
   with e.Reverse.GetEnumerator do
@@ -634,8 +638,6 @@ end;
     end
 }
 class function TGFolding.Right(e: IXEnumerable; f: TFold; constref y0: Y): Y;
-var
-  v: X;
 begin
   FoldEnum;
 end;
@@ -648,8 +650,6 @@ begin
 end;
 
 class function TGFolding.Right(e: IXEnumerable; f: TOnFold; constref y0: Y): Y;
-var
-  v: X;
 begin
   FoldEnum;
 end;
@@ -662,8 +662,6 @@ begin
 end;
 
 class function TGFolding.Right(e: IXEnumerable; f: TNestFold; constref y0: Y): Y;
-var
-  v: X;
 begin
   FoldEnum;
 end;
