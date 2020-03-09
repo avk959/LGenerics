@@ -756,9 +756,13 @@ function TGHashBiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
 begin
   Result := Count;
   with e.GetEnumerator do
-    while MoveNext do
-      with Current do
-        DoAdd(Key, Value);
+    try
+      while MoveNext do
+        with Current do
+          DoAdd(Key, Value);
+    finally
+      Free;
+    end;
   Result := Count - Result;
 end;
 
@@ -835,9 +839,13 @@ begin
   if Result > 0 then
     begin
       with e.GetEnumerator do
-        while MoveNext do
-          if DoRemoveKey(Current) and (Count = 0) then
-            break;
+        try
+          while MoveNext do
+            if DoRemoveKey(Current) and (Count = 0) then
+              break;
+        finally
+          Free;
+        end;
       Result := Result - Count;
     end
   else
@@ -885,9 +893,13 @@ begin
   if Result > 0 then
     begin
       with e.GetEnumerator do
-        while MoveNext do
-          if DoRemoveValue(Current) and (Count = 0) then
-            break;
+        try
+          while MoveNext do
+            if DoRemoveValue(Current) and (Count = 0) then
+              break;
+        finally
+          Free;
+        end;
       Result := Result - Count;
     end
   else
