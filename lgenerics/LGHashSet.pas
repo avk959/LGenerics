@@ -1513,12 +1513,15 @@ begin
 end;
 
 function TGLiteHashSet.AddAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := Count;
-  for v in e do
-    Add(v);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        Add(Current);
+    finally
+      Free;
+    end;
   Result := Count - Result;
 end;
 
@@ -1564,26 +1567,30 @@ begin
 end;
 
 function TGLiteHashSet.ContainsAny(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
   if NonEmpty then
-    for v in e do
-      if FTable.Find(v) <> nil then
-        exit(True);
+    with e.GetEnumerator do
+      try
+        while MoveNext do
+          if FTable.Find(Current) <> nil then
+            exit(True);
+      finally
+        Free;
+      end
+  else
+    e.Discard;
   Result := False;
 end;
 
 function TGLiteHashSet.ContainsAny(constref aSet: TGLiteHashSet): Boolean;
-var
-  v: T;
 begin
   if @aSet = @Self then
     exit(True);
   if NonEmpty then
-    for v in aSet do
-      if FTable.Find(v) <> nil then
-        exit(True);
+    with aSet.GetEnumerator do
+      while MoveNext do
+        if FTable.Find(Current) <> nil then
+          exit(True);
   Result := False;
 end;
 
@@ -1599,26 +1606,28 @@ begin
 end;
 
 function TGLiteHashSet.ContainsAll(e: IEnumerable): Boolean;
-var
-  v: T;
 begin
   if IsEmpty then exit(e.None);
-  for v in e do
-    if FTable.Find(v) = nil then
-      exit(False);
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        if FTable.Find(Current) = nil then
+          exit(False);
+    finally
+      Free;
+    end;
   Result := True;
 end;
 
 function TGLiteHashSet.ContainsAll(constref aSet: TGLiteHashSet): Boolean;
-var
-  v: T;
 begin
   if @aSet = @Self then
     exit(True);
   if IsEmpty then exit(aSet.IsEmpty);
-  for v in aSet do
-    if FTable.Find(v) = nil then
-      exit(False);
+  with aSet.GetEnumerator do
+    while MoveNext do
+      if FTable.Find(Current) = nil then
+        exit(False);
   Result := True;
 end;
 
@@ -1635,37 +1644,41 @@ begin
   if Result > 0 then
     begin
       for I := 0 to System.High(a) do
-        if FTable.Remove(a[I]) and IsEmpty then
+        if FTable.Remove(a[I]) and (FTable.Count = 0) then
           break;
       Result -= Count;
     end;
 end;
 
 function TGLiteHashSet.RemoveAll(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
   Result := Count;
   if Result > 0 then
     begin
-      for v in e do
-        if FTable.Remove(v) and IsEmpty then
-          break;
+      with e.GetEnumerator do
+        try
+          while MoveNext do
+            if FTable.Remove(Current) and (FTable.Count = 0) then
+              break;
+        finally
+          Free;
+        end;
       Result -= Count;
-    end;
+    end
+  else
+    e.Discard;
 end;
 
 function TGLiteHashSet.RemoveAll(constref aSet: TGLiteHashSet): SizeInt;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     begin
       Result := Count;
       begin
-        for v in aSet do
-          if FTable.Remove(v) and IsEmpty then
-            break;
+        with aSet.GetEnumerator do
+          while MoveNext do
+            if FTable.Remove(Current) and (FTable.Count = 0) then
+              break;
         Result -= Count;
       end;
     end
@@ -1833,21 +1846,19 @@ begin
 end;
 
 procedure TGLiteHashSet.Join(constref aSet: TGLiteHashSet);
-var
-  v: T;
 begin
   if @aSet <> @Self then
-    for v in aSet do
-      Add(v);
+    with aSet.GetEnumerator do
+      while MoveNext do
+        Add(Current);
 end;
 
 procedure TGLiteHashSet.Subtract(constref aSet: TGLiteHashSet);
-var
-  v: T;
 begin
   if @aSet <> @Self then
-    for v in aSet do
-      Remove(v)
+    with aSet.GetEnumerator do
+      while MoveNext do
+        Remove(Current)
   else
     Clear;
 end;
