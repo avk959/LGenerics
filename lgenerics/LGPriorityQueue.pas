@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic prority queue implementations.                                  *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -2019,15 +2019,16 @@ begin
 end;
 
 function TGCustomPairingHeap.EnqueueEnum(e: IEnumerable): SizeInt;
-var
-  v: T;
 begin
-  Result := 0;
-  for v in e do
-    begin
-      DoEnqueue(v);
-      Inc(Result);
+  Result := Count;
+  with e.GetEnumerator do
+    try
+      while MoveNext do
+        DoEnqueue(Current);
+    finally
+      Free;
     end;
+  Result := Count - Result;
 end;
 
 class procedure TGCustomPairingHeap.CutNode(aNode: PNode);
