@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -155,7 +155,7 @@
     FCount: SizeInt;
     procedure CheckEmpty; inline;
     procedure ItemAdding; inline;
-    procedure FinalizeItems(aFrom: PItem; aCount: SizeInt);
+    procedure FinalizeItems(aFrom, aCount: SizeInt);
     procedure Clear;
     procedure MakeEmpty; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
