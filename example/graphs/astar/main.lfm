@@ -1,0 +1,87 @@
+object frmMain: TfrmMain
+  Left = 369
+  Height = 613
+  Top = 250
+  Width = 958
+  Caption = 'frmMain'
+  ClientHeight = 613
+  ClientWidth = 958
+  DesignTimePPI = 115
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '2.0.3.0'
+  object mmInfo: TMemo
+    Left = 8
+    Height = 592
+    Top = 5
+    Width = 772
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    TabOrder = 0
+  end
+  object btRun: TButton
+    Left = 858
+    Height = 30
+    Top = 248
+    Width = 90
+    Anchors = [akTop, akRight]
+    Caption = 'Run'
+    OnClick = btRunClick
+    TabOrder = 1
+  end
+  object Label1: TLabel
+    Left = 794
+    Height = 19
+    Top = 10
+    Width = 74
+    Anchors = [akTop, akRight]
+    Caption = 'Point count:'
+    ParentColor = False
+  end
+  object sedPointCount: TSpinEdit
+    Left = 794
+    Height = 27
+    Top = 40
+    Width = 154
+    Anchors = [akTop, akRight]
+    MaxValue = 1000000
+    MinValue = 1000
+    TabOrder = 2
+    Value = 100000
+  end
+  object Label2: TLabel
+    Left = 794
+    Height = 19
+    Top = 80
+    Width = 44
+    Anchors = [akTop, akRight]
+    Caption = 'Source:'
+    ParentColor = False
+  end
+  object sedSouce: TSpinEdit
+    Left = 794
+    Height = 27
+    Top = 112
+    Width = 154
+    Anchors = [akTop, akRight]
+    MaxValue = 999999
+    TabOrder = 3
+  end
+  object Label3: TLabel
+    Left = 794
+    Height = 19
+    Top = 156
+    Width = 42
+    Anchors = [akTop, akRight]
+    Caption = 'Target:'
+    ParentColor = False
+  end
+  object sedTarget: TSpinEdit
+    Left = 794
+    Height = 27
+    Top = 188
+    Width = 154
+    Anchors = [akTop, akRight]
+    MaxValue = 999999
+    TabOrder = 4
+  end
+end
