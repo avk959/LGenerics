@@ -119,22 +119,23 @@ var
   Elapsed: QWord;
   T: Double;
 begin
+
+  if not FCurrGraph.HasInstance then
+    FCurrGraph.Instance := CreateNewGraph;
+  g := FCurrGraph;
+
   src := sedSouce.Value;
-  if (src < 0) or (src >= sedPointCount.Value) then
+  if (src < 0) or (src >= g.VertexCount) then
     begin
       mmInfo.Append(Format('Invalid source point index (%d)', [src]));
       exit;
     end;
   trg := sedTarget.Value;
-  if (trg < 0) or (trg >= sedPointCount.Value) then
+  if (trg < 0) or (trg >= g.VertexCount) then
     begin
       mmInfo.Append(Format('Invalid target point index (%d)', [trg]));
       exit;
     end;
-
-  if not FCurrGraph.HasInstance then
-    FCurrGraph.Instance := CreateNewGraph;
-  g := FCurrGraph;
 
   mmInfo.Append(
     Format('Gonna to find the shortest path from a point with index %d to a point with index %d.',
