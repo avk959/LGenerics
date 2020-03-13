@@ -9,7 +9,6 @@ object frmMain: TfrmMain
   DesignTimePPI = 115
   OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '2.0.3.0'
   object mmInfo: TMemo
     Left = 8
     Height = 592
@@ -18,15 +17,15 @@ object frmMain: TfrmMain
     Anchors = [akTop, akLeft, akRight, akBottom]
     TabOrder = 0
   end
-  object btRun: TButton
+  object btFind: TButton
     Left = 858
     Height = 30
-    Top = 248
+    Top = 332
     Width = 90
     Anchors = [akTop, akRight]
-    Caption = 'Run'
-    OnClick = btRunClick
-    TabOrder = 1
+    Caption = 'Find path'
+    OnClick = btFindClick
+    TabOrder = 5
   end
   object Label1: TLabel
     Left = 794
@@ -45,7 +44,7 @@ object frmMain: TfrmMain
     Anchors = [akTop, akRight]
     MaxValue = 1000000
     MinValue = 1000
-    TabOrder = 2
+    TabOrder = 1
     Value = 100000
   end
   object Label2: TLabel
@@ -64,7 +63,7 @@ object frmMain: TfrmMain
     Width = 154
     Anchors = [akTop, akRight]
     MaxValue = 999999
-    TabOrder = 3
+    TabOrder = 2
   end
   object Label3: TLabel
     Left = 794
@@ -82,6 +81,16 @@ object frmMain: TfrmMain
     Width = 154
     Anchors = [akTop, akRight]
     MaxValue = 999999
+    TabOrder = 3
+  end
+  object btNew: TButton
+    Left = 858
+    Height = 30
+    Top = 276
+    Width = 90
+    Anchors = [akTop, akRight]
+    Caption = 'New graph'
+    OnClick = btNewClick
     TabOrder = 4
   end
 end

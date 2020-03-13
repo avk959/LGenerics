@@ -17,7 +17,8 @@ type
   { TfrmMain }
 
   TfrmMain = class(TForm)
-    btRun: TButton;
+    btFind: TButton;
+    btNew: TButton;
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
@@ -25,10 +26,12 @@ type
     sedPointCount: TSpinEdit;
     sedSouce: TSpinEdit;
     sedTarget: TSpinEdit;
-    procedure btRunClick(Sender: TObject);
+    procedure btFindClick(Sender: TObject);
+    procedure btNewClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
-    function CreateGraph: TPointsChart;
+    FCurrGraph: specialize TGAutoRef<TPointsChart>;
+    function CreateNewGraph: TPointsChart;
   public
 
   end;
@@ -77,7 +80,7 @@ begin
   CheckCpuSpeed;
 end;
 
-function TfrmMain.CreateGraph: TPointsChart;
+function TfrmMain.CreateNewGraph: TPointsChart;
 type
   TSetSpec = specialize TGLiteHashSetLP<Integer, Integer>;
   TIntSet  = TSetSpec.TSet;
@@ -86,6 +89,7 @@ var
   GSize, s, d: SizeInt;
 begin
   GSize := sedPointCount.Value;
+  mmInfo.Append('Creating new graph...');
   Result := TPointsChart.Create;
   Result.EnsureCapacity(GSize);
   while Result.VertexCount < GSize do
@@ -99,12 +103,14 @@ begin
     s := Random(GSize);
     repeat d := Random(GSize) until s <> d;
     Result.AddEdgeI(s, d);
-  until (Result.EdgeCount >= GSize * 3) and Result.Connected;
+  until (Result.EdgeCount >= GSize * 3);
+  Result.EnsureConnected;
+  mmInfo.Append(
+    Format('A random graph with %d vertices and %d edges is ready.', [Result.VertexCount, Result.EdgeCount]));
 end;
 
-procedure TfrmMain.btRunClick(Sender: TObject);
+procedure TfrmMain.btFindClick(Sender: TObject);
 var
-  GRef: specialize TGAutoRef<TPointsChart>;
   g: TPointsChart;
   pathDijk, pathAStar: TIntArray;
   src, trg, I: SizeInt;
@@ -113,7 +119,7 @@ var
   Elapsed: QWord;
   T: Double;
 begin
-  src := sedSouce.Value; TStringList.Al
+  src := sedSouce.Value;
   if (src < 0) or (src >= sedPointCount.Value) then
     begin
       mmInfo.Append(Format('Invalid source point index (%d)', [src]));
@@ -126,12 +132,10 @@ begin
       exit;
     end;
 
-  mmInfo.Append('Creating new graph...');
-  {%H-}GRef.Instance := CreateGraph;
-  g := GRef;
+  if not FCurrGraph.HasInstance then
+    FCurrGraph.Instance := CreateNewGraph;
+  g := FCurrGraph;
 
-  mmInfo.Append(
-    Format('A random graph with %d vertices and %d edges is ready.', [g.VertexCount, g.EdgeCount]));
   mmInfo.Append(
     Format('Gonna to find the shortest path from a point with index %d to a point with index %d.',
     [src, trg]));
@@ -169,6 +173,11 @@ begin
     strPath :=  strPath + IntToStr(I) + '-';
   SetLength(strPath, Pred(Length(strPath)));
   mmInfo.Append('AStar'' path =       ' + strPath);
+end;
+
+procedure TfrmMain.btNewClick(Sender: TObject);
+begin
+  FCurrGraph.Instance := CreateNewGraph;
 end;
 
 end.
