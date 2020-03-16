@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Miscellaneous classes and utils.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -306,7 +306,6 @@ type
   public
     class function FileExists(const aFileName: string): Boolean; static;
     class function FileSize(const aFileName: string): Int64; static;
-    constructor Create;
     destructor Destroy; override;
     function GetEnumerator: TEnumerator; override;
     function Open(const aFileName: string): Boolean;
@@ -5053,12 +5052,6 @@ begin
   end;
 end;
 
-constructor TTextFileReader.Create;
-begin
-  inherited Create;
-  System.SetTextBuf(FFile, FBuffer, SizeOf(FBuffer));
-end;
-
 destructor TTextFileReader.Destroy;
 begin
   if IsOpen then
@@ -5080,6 +5073,7 @@ begin
   try
     Assign(FFile, FFileName);
     System.Reset(FFile);
+    System.SetTextBuf(FFile, FBuffer, SizeOf(FBuffer));
     FIsOpen := True;
   except
     on e: Exception do
@@ -5136,8 +5130,8 @@ begin
   if not IsStandardFile then
     try
       System.Assign(FFile, FFileName);
-      System.SetTextBuf(FFile, FBuffer, SizeOf(FBuffer));
       System.Rewrite(FFile);
+      System.SetTextBuf(FFile, FBuffer, SizeOf(FBuffer));
       FIsOpen := True;
     except
       on e: Exception do
@@ -5155,8 +5149,8 @@ begin
   if not IsStandardFile then
     try
       System.Assign(FFile, FFileName);
-      System.SetTextBuf(FFile, FBuffer, SizeOf(FBuffer));
       System.Append(FFile);
+      System.SetTextBuf(FFile, FBuffer, SizeOf(FBuffer));
       FIsOpen := True;
     except
       on e: Exception do

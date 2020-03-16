@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some generic treap variants.                                            *
 *                                                                           *
-*   Copyright(c) 2019 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2019-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *

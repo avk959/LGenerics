@@ -2,9 +2,8 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *   Some generic AVL tree implementations.                                  *
-*   (see https://en.wikipedia.org/wiki/AVL_tree)                            *
 *                                                                           *
-*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2020 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
