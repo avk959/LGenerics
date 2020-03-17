@@ -45,6 +45,7 @@ type
     private
       FString: string;
       FStartIndex,
+      FCurrLen,
       FCurrIndex: SizeInt;
       FDelimiters: TSysCharSet;
     protected
@@ -119,7 +120,7 @@ implementation
 
 function TAnsiStrHelper.TStrEnumerable.GetCurrent: string;
 begin
-  Result := System.Copy(FString, FStartIndex, FCurrIndex - FStartIndex)
+  Result := System.Copy(FString, FStartIndex, FCurrLen);
 end;
 
 constructor TAnsiStrHelper.TStrEnumerable.Create(const aValue: string; const aDelimiters: TSysCharSet);
@@ -128,28 +129,38 @@ begin
   FString := aValue;
   FDelimiters := aDelimiters;
   FStartIndex := 1;
+  FCurrLen := 0;
   FCurrIndex := 0;
 end;
 
 function TAnsiStrHelper.TStrEnumerable.MoveNext: Boolean;
 var
-  I: SizeInt;
+  I, Len: SizeInt;
 begin
-  Result := False;
+  Len := 0;
   for I := Succ(FCurrIndex) to System.Length(FString) do
-    begin
-      FCurrIndex := I;
-      if (FString[I] in FDelimiters) xor Result then continue;
-      if Result then break;
-      FStartIndex := I;
-      Result := True;
-    end;
+    if not (FString[I] in FDelimiters) then
+      begin
+        if Len = 0 then
+          FStartIndex := I;
+        Inc(Len);
+      end
+    else
+      if Len <> 0 then
+        begin
+          FCurrIndex := I;
+          FCurrLen := Len;
+          exit(True);
+        end;
+  FCurrIndex := System.Length(FString);
+  Result := False;
 end;
 
 procedure TAnsiStrHelper.TStrEnumerable.Reset;
 begin
-  FStartIndex := 0;
-  FCurrIndex := 1;
+  FStartIndex := 1;
+  FCurrLen := 0;
+  FCurrIndex := 0;
 end;
 
 { TAnsiStrHelper }
