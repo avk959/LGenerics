@@ -153,6 +153,11 @@ begin
           exit(True);
         end;
   FCurrIndex := System.Length(FString);
+  if Len <> 0 then
+    begin
+      FCurrLen := Len;
+      exit(True);
+    end;
   Result := False;
 end;
 
