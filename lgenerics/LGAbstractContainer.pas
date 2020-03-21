@@ -37,8 +37,6 @@ uses
 
 type
 
-  { TGEnumerable }
-
   generic TGEnumerable<T> = class abstract(TObject, specialize IGEnumerable<T>, IObjInstance)
   public
   type
@@ -476,6 +474,7 @@ type
   type
     TSpecMap         = specialize TGAbstractMap<TKey, TValue>;
     TEntry           = specialize TGMapEntry<TKey, TValue>;
+    PValue           = ^TValue;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
@@ -567,8 +566,10 @@ type
     procedure TrimToFit;
   { returns True and aValue mapped to aKey if contains aKey, False otherwise }
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-  { returns Value mapped to aKey or aDefault }
+  { returns value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
+  { returns True if contains aKey, otherwise adds aKey and returns False }
+    function  GetOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
   { returns True and add e only if not contains e.Key }
@@ -2828,6 +2829,15 @@ function TGAbstractMap.GetValueDef(constref aKey: TKey; constref aDefault: TValu
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
+end;
+
+function TGAbstractMap.GetOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+var
+  pe: PEntry;
+begin
+  CheckInIteration;
+  Result := FindOrAdd(aKey, pe);
+  p := @pe^.Value;
 end;
 
 function TGAbstractMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
