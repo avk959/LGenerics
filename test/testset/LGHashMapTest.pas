@@ -611,25 +611,25 @@ var
   I: Integer;
   p: PInteger;
 begin
-  AssertFalse(im.Instance.GetOrAddMutValue(1, p));
+  AssertFalse(im.Instance.FindOrAddMutValue(1, p));
   p^ := 1;
   AssertTrue(im.Instance.TryGetValue(1, I));
   AssertTrue(I = 1);
-  AssertTrue(im.Instance.GetOrAddMutValue(1, p));
+  AssertTrue(im.Instance.FindOrAddMutValue(1, p));
   p^ := 2;
   AssertTrue(im.Instance.TryGetValue(1, I));
   AssertTrue(I = 2);
-  AssertFalse(im.Instance.GetOrAddMutValue(2, p));
+  AssertFalse(im.Instance.FindOrAddMutValue(2, p));
 
-  AssertFalse(sm.Instance.GetOrAddMutValue('key 1', p));
+  AssertFalse(sm.Instance.FindOrAddMutValue('key 1', p));
   p^ := 1;
   AssertTrue(sm.Instance.TryGetValue('key 1', I));
   AssertTrue(I = 1);
-  AssertTrue(sm.Instance.GetOrAddMutValue('key 1', p));
+  AssertTrue(sm.Instance.FindOrAddMutValue('key 1', p));
   p^ := 2;
   AssertTrue(sm.Instance.TryGetValue('key 1', I));
   AssertTrue(I = 2);
-  AssertFalse(sm.Instance.GetOrAddMutValue('key 2', p));
+  AssertFalse(sm.Instance.FindOrAddMutValue('key 2', p));
 end;
 
 procedure THashMapLPTest.GetOrAddMutValue2;
@@ -641,12 +641,12 @@ var
   p: ^string;
   s: string;
 begin
-  AssertFalse(Map.Instance.GetOrAddMutValue(1, p));
+  AssertFalse(Map.Instance.FindOrAddMutValue(1, p));
   AssertTrue(p^ = '');
   p^ := 'value 1';
   AssertTrue(Map.Instance.TryGetValue(1, s));
   AssertTrue(s = 'value 1');
-  AssertTrue(Map.Instance.GetOrAddMutValue(1, p));
+  AssertTrue(Map.Instance.FindOrAddMutValue(1, p));
   p^ := 'value 2';
   AssertTrue(Map.Instance.TryGetValue(1, s));
   AssertTrue(s = 'value 2');
