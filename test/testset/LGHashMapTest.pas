@@ -52,6 +52,8 @@ type
   TIntKeyArray   = array of Integer;
   TStrKeyArray   = array of string;
 
+  { THashMapLPTest }
+
   THashMapLPTest = class(TTestCase)
   private
   type
@@ -70,6 +72,8 @@ type
     procedure Str_2;
     procedure StrRetain;
     procedure ObjectMap;
+    procedure GetOrAddMutValue;
+    procedure GetOrAddMutValue2;
   end;
 
   THashMapLPTTest = class(TTestCase)
@@ -165,6 +169,8 @@ type
     procedure ObjectOrdMapLast;
   end;
 
+  { TLiteHashMapLPTest }
+
   TLiteHashMapLPTest = class(TTestCase)
   private
   type
@@ -181,6 +187,8 @@ type
     procedure Str_2;
     procedure StrRetain;
     procedure PassByValue;
+    procedure GetOrAddMutValue;
+    procedure GetOrAddMutValue2;
   end;
 
   TLiteChainHashMapTest = class(TTestCase)
@@ -594,6 +602,54 @@ begin
   AssertTrue(Counter.Count = 150);
   s.Instance.Clear;
   AssertTrue(Counter.Count = 200);
+end;
+
+procedure THashMapLPTest.GetOrAddMutValue;
+var
+  im: TAutoIntMap;
+  sm: TAutoStrMap;
+  I: Integer;
+  p: PInteger;
+begin
+  AssertFalse(im.Instance.GetOrAddMutValue(1, p));
+  p^ := 1;
+  AssertTrue(im.Instance.TryGetValue(1, I));
+  AssertTrue(I = 1);
+  AssertTrue(im.Instance.GetOrAddMutValue(1, p));
+  p^ := 2;
+  AssertTrue(im.Instance.TryGetValue(1, I));
+  AssertTrue(I = 2);
+  AssertFalse(im.Instance.GetOrAddMutValue(2, p));
+
+  AssertFalse(sm.Instance.GetOrAddMutValue('key 1', p));
+  p^ := 1;
+  AssertTrue(sm.Instance.TryGetValue('key 1', I));
+  AssertTrue(I = 1);
+  AssertTrue(sm.Instance.GetOrAddMutValue('key 1', p));
+  p^ := 2;
+  AssertTrue(sm.Instance.TryGetValue('key 1', I));
+  AssertTrue(I = 2);
+  AssertFalse(sm.Instance.GetOrAddMutValue('key 2', p));
+end;
+
+procedure THashMapLPTest.GetOrAddMutValue2;
+type
+  TMap = specialize TGHashMapLP<Integer, string>;
+  TRef = specialize TGAutoRef<TMap>;
+var
+  Map: TRef;
+  p: ^string;
+  s: string;
+begin
+  AssertFalse(Map.Instance.GetOrAddMutValue(1, p));
+  AssertTrue(p^ = '');
+  p^ := 'value 1';
+  AssertTrue(Map.Instance.TryGetValue(1, s));
+  AssertTrue(s = 'value 1');
+  AssertTrue(Map.Instance.GetOrAddMutValue(1, p));
+  p^ := 'value 2';
+  AssertTrue(Map.Instance.TryGetValue(1, s));
+  AssertTrue(s = 'value 2');
 end;
 
 
@@ -2057,6 +2113,53 @@ begin
   AssertTrue(m.NonContains('key0'));
   AssertTrue(m.NonContains('key1'));
   AssertTrue(m.NonContains('key2'));
+end;
+
+procedure TLiteHashMapLPTest.GetOrAddMutValue;
+var
+  iMap: TIntMap;
+  sMap: TStrMap;
+  I: Integer;
+  p: PInteger;
+begin
+  AssertFalse(iMap.GetOrAddMutValue(1, p));
+  p^ := 1;
+  AssertTrue(iMap.TryGetValue(1, I));
+  AssertTrue(I = 1);
+  AssertTrue(iMap.GetOrAddMutValue(1, p));
+  p^ := 2;
+  AssertTrue(iMap.TryGetValue(1, I));
+  AssertTrue(I = 2);
+  AssertFalse(iMap.GetOrAddMutValue(2, p));
+
+  AssertFalse(sMap.GetOrAddMutValue('key 1', p));
+  p^ := 1;
+  AssertTrue(sMap.TryGetValue('key 1', I));
+  AssertTrue(I = 1);
+  AssertTrue(sMap.GetOrAddMutValue('key 1', p));
+  p^ := 2;
+  AssertTrue(sMap.TryGetValue('key 1', I));
+  AssertTrue(I = 2);
+  AssertFalse(sMap.GetOrAddMutValue('key 2', p));
+end;
+
+procedure TLiteHashMapLPTest.GetOrAddMutValue2;
+type
+  TMap = specialize TGLiteHashMapLP<Integer, string, Integer>.TMap;
+var
+  Map: TMap;
+  p: ^string;
+  s: string;
+begin
+  AssertFalse(Map.GetOrAddMutValue(1, p));
+  AssertTrue(p^ = '');
+  p^ := 'value 1';
+  AssertTrue(Map.TryGetValue(1, s));
+  AssertTrue(s = 'value 1');
+  AssertTrue(Map.GetOrAddMutValue(1, p));
+  p^ := 'value 2';
+  AssertTrue(Map.TryGetValue(1, s));
+  AssertTrue(s = 'value 2');
 end;
 
 //////////////////////////////
