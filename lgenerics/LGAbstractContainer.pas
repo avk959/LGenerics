@@ -568,6 +568,7 @@ type
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
   { returns value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
+    function  GetMutValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): PValue;
   { returns True if contains aKey, otherwise adds aKey and returns False }
     function  FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
@@ -2829,6 +2830,16 @@ function TGAbstractMap.GetValueDef(constref aKey: TKey; constref aDefault: TValu
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
+end;
+
+function TGAbstractMap.GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
+var
+  pe: PEntry;
+begin
+  CheckInIteration;
+  if not FindOrAdd(aKey, pe) then
+    pe^.Value := aDefault;
+  Result := @pe^.Value;
 end;
 
 function TGAbstractMap.FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
