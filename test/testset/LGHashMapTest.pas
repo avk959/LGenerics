@@ -2122,25 +2122,25 @@ var
   I: Integer;
   p: PInteger;
 begin
-  AssertFalse(iMap.GetOrAddMutValue(1, p));
+  AssertFalse(iMap.FindOrAddMutValue(1, p));
   p^ := 1;
   AssertTrue(iMap.TryGetValue(1, I));
   AssertTrue(I = 1);
-  AssertTrue(iMap.GetOrAddMutValue(1, p));
+  AssertTrue(iMap.FindOrAddMutValue(1, p));
   p^ := 2;
   AssertTrue(iMap.TryGetValue(1, I));
   AssertTrue(I = 2);
-  AssertFalse(iMap.GetOrAddMutValue(2, p));
+  AssertFalse(iMap.FindOrAddMutValue(2, p));
 
-  AssertFalse(sMap.GetOrAddMutValue('key 1', p));
+  AssertFalse(sMap.FindOrAddMutValue('key 1', p));
   p^ := 1;
   AssertTrue(sMap.TryGetValue('key 1', I));
   AssertTrue(I = 1);
-  AssertTrue(sMap.GetOrAddMutValue('key 1', p));
+  AssertTrue(sMap.FindOrAddMutValue('key 1', p));
   p^ := 2;
   AssertTrue(sMap.TryGetValue('key 1', I));
   AssertTrue(I = 2);
-  AssertFalse(sMap.GetOrAddMutValue('key 2', p));
+  AssertFalse(sMap.FindOrAddMutValue('key 2', p));
 end;
 
 procedure TLiteHashMapLPTest.GetOrAddMutValue2;
@@ -2151,12 +2151,12 @@ var
   p: ^string;
   s: string;
 begin
-  AssertFalse(Map.GetOrAddMutValue(1, p));
+  AssertFalse(Map.FindOrAddMutValue(1, p));
   AssertTrue(p^ = '');
   p^ := 'value 1';
   AssertTrue(Map.TryGetValue(1, s));
   AssertTrue(s = 'value 1');
-  AssertTrue(Map.GetOrAddMutValue(1, p));
+  AssertTrue(Map.FindOrAddMutValue(1, p));
   p^ := 'value 2';
   AssertTrue(Map.TryGetValue(1, s));
   AssertTrue(s = 'value 2');

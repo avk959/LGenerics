@@ -443,7 +443,7 @@ type
   { returns value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
   { returns True if contains aKey, otherwise adds aKey and returns False }
-    function  GetOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+    function  FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean; inline;
   { returns True and add e only if not contains e.Key }
@@ -1738,7 +1738,7 @@ begin
     Result := aDefault;
 end;
 
-function TGLiteHashMap.GetOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+function TGLiteHashMap.FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
 var
   pe: PEntry;
 begin
