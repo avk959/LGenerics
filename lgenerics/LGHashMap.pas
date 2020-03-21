@@ -442,6 +442,7 @@ type
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
   { returns value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
+    function  GetMutValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): PValue;
   { returns True if contains aKey, otherwise adds aKey and returns False }
     function  FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
@@ -1736,6 +1737,18 @@ function TGLiteHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValu
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
+end;
+
+function TGLiteHashMap.GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
+var
+  pe: PEntry;
+begin
+  if not FTable.FindOrAdd(aKey, pe) then
+    begin
+      pe^.Key := aKey;
+      pe^.Value := aDefault;
+    end;
+  Result := @pe^.Value;
 end;
 
 function TGLiteHashMap.FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
