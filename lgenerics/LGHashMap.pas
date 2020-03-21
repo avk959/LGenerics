@@ -362,6 +362,7 @@ type
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     IKeyCollection   = specialize IGCollection<TKey>;
+    PValue           = ^TValue;
 
   private
   type
@@ -439,8 +440,10 @@ type
     procedure TrimToFit; inline;
   { returns True and aValue mapped to aKey if contains aKey, False otherwise }
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-  { returns Value mapped to aKey or aDefault }
+  { returns value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
+  { returns True if contains aKey, otherwise adds aKey and returns False }
+    function  GetOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean; inline;
   { returns True and add e only if not contains e.Key }
@@ -1733,6 +1736,16 @@ function TGLiteHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValu
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
+end;
+
+function TGLiteHashMap.GetOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+var
+  pe: PEntry;
+begin
+  Result := FTable.FindOrAdd(aKey, pe);
+  if not Result then
+    pe^.Key := aKey;
+  p := @pe^.Value;
 end;
 
 function TGLiteHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
