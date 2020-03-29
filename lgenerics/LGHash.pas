@@ -30,7 +30,7 @@ type
   { TxxHash32LE: little endian implementation of Yann Collet's xxHash32 }
   TxxHash32LE = class
     class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
-    class function HashStr(constref aValue: ansistring; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(constref aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
@@ -276,7 +276,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TxxHash32LE.HashStr(constref aValue: ansistring; aSeed: DWord): DWord;
+class function TxxHash32LE.HashStr(constref aValue: string; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
