@@ -2062,7 +2062,7 @@ begin
   with e.GetEnumerator do
     try
       while MoveNext do
-        Add(v);
+        Add(Current);
     finally
       Free;
     end;
@@ -2189,7 +2189,7 @@ begin
       with e.GetEnumerator do
         try
           while MoveNext do
-            if Remove(v) and IsEmpty then
+            if Remove(Current) and IsEmpty then
               break;
         finally
           Free;
@@ -2209,7 +2209,7 @@ begin
         begin
           with aSet.GetEnumerator do
             while MoveNext do
-              if Remove(v) and IsEmpty then
+              if Remove(Current) and IsEmpty then
                 break;
           Result := Result - Count;
         end;
