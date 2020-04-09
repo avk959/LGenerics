@@ -1129,20 +1129,9 @@ begin
 end;
 
 class constructor TGOptional<T>.InitTypeInfo;
-var
-  p: typinfo.PTypeInfo;
 begin
-  p := System.TypeInfo(T);
-  if p <> nil then
-    begin
-      CFTypeKind := p^.Kind;
-      CFNilable := CFTypeKind in NilableKinds;
-    end
-  else
-    begin
-      CFNilable := False;
-      CFTypeKind := System.tkUnknown;
-    end;
+  CFTypeKind := PTypeInfo(System.TypeInfo(T))^.Kind;
+  CFNilable := CFTypeKind in NilableKinds;
 end;
 
 class function TGOptional<T>.ValueIsNil(constref aValue): Boolean;
