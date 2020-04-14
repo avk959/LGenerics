@@ -3015,7 +3015,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(A[M], aValue) then
         L := Succ(M)
       else
@@ -3031,7 +3031,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(aValue, A[M]) then
         L := Succ(M)
       else
@@ -3047,7 +3047,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(aValue, A[M]) then
         R := M
       else
@@ -3064,7 +3064,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(A[M], aValue) then
         R := M
       else
@@ -3899,7 +3899,7 @@ var
 begin
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(e.UncMutable[M]^, aValue) then
         L := Succ(M)
       else
@@ -3915,7 +3915,7 @@ var
 begin
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(aValue, e.UncMutable[M]^) then
         L := Succ(M)
       else
@@ -3931,7 +3931,7 @@ var
 begin
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(aValue, e.UncMutable[M]^) then
         R := M
       else
@@ -3947,7 +3947,7 @@ var
 begin
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if TCmpRel.Less(e.UncMutable[M]^, aValue) then
         R := M
       else
@@ -5462,7 +5462,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] < aValue then
         L := Succ(M)
       else
@@ -5478,7 +5478,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] > aValue then
         L := Succ(M)
       else
@@ -5494,7 +5494,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] > aValue then
         R := M
       else
@@ -5510,7 +5510,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] < aValue then
         R := M
       else
@@ -7296,7 +7296,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(A[M], aValue) then
         L := Succ(M)
       else
@@ -7313,7 +7313,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(aValue, A[M]) then
         L := Succ(M)
       else
@@ -7330,7 +7330,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(aValue, A[M]) then
         R := M
       else
@@ -7347,7 +7347,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(A[M], aValue) then
         R := M
       else
@@ -9143,7 +9143,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(A[M], aValue) then
         L := Succ(M)
       else
@@ -9160,7 +9160,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(aValue, A[M]) then
         L := Succ(M)
       else
@@ -9177,7 +9177,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(aValue, A[M]) then
         R := M
       else
@@ -9194,7 +9194,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(A[M], aValue) then
         R := M
       else
@@ -10993,7 +10993,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(A[M], aValue) then
         L := Succ(M)
       else
@@ -11010,7 +11010,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(aValue, A[M]) then
         L := Succ(M)
       else
@@ -11027,7 +11027,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(aValue, A[M]) then
         R := M
       else
@@ -11044,7 +11044,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if c(A[M], aValue) then
         R := M
       else
@@ -12389,7 +12389,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] < aValue then
         L := Succ(M)
       else
@@ -12405,7 +12405,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] > aValue then
         L := Succ(M)
       else
@@ -12421,7 +12421,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] > aValue then
         R := M
       else
@@ -12437,7 +12437,7 @@ begin
   L := 0;
   while L < R do
     begin
-      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
       if A[M] < aValue then
         R := M
       else
