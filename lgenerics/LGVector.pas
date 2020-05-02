@@ -408,6 +408,7 @@ type
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
     procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit;
     procedure Clear; inline;
     procedure ClearBits; inline;
     procedure SetBits; inline;
@@ -2230,10 +2231,13 @@ begin
 end;
 
 function TBoolVector.SignLimbCount: SizeInt;
+var
+  I: SizeInt;
 begin
-  Result := System.Length(FBits);
-  while (Result > 0) and (FBits[Pred(Result)] = 0) do
-    Dec(Result);
+  for I := System.High(FBits) downto 0 do
+    if FBits[I] <> 0 then
+      exit(Succ(I));
+  Result := 0;
 end;
 
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
@@ -2290,6 +2294,15 @@ procedure TBoolVector.EnsureCapacity(aValue: SizeInt);
 begin
   if Capacity < aValue then
     SetCapacity(aValue);
+end;
+
+procedure TBoolVector.TrimToFit;
+var
+  slCount: SizeInt;
+begin
+  slCount := SignLimbCount;
+  if slCount <> System.Length(FBits) then
+    System.SetLength(FBits, slCount);
 end;
 
 procedure TBoolVector.Clear;
