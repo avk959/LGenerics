@@ -2053,18 +2053,18 @@ end;
 
 function TBoolVector.TEnumerator.FindFirst: Boolean;
 var
-  I: SizeInt = 0;
+  I: SizeInt;
 begin
   for I := 0 to Pred(System.Length(FBits)) do
     if FBits[I] <> 0 then
       begin
-        {$IF DEFINED(CPU64)}
-          FBitIndex := ShortInt(BsfQWord(FBits[I]));
-        {$ELSEIF DEFINED(CPU32)}
-          FBitIndex := ShortInt(BsfDWord(FBits[I]));
-        {$ELSE}
-          FBitIndex := ShortInt(BsfWord(FBits[I]));
-        {$ENDIF};
+      {$IF DEFINED(CPU64)}
+        FBitIndex := ShortInt(BsfQWord(FBits[I]));
+      {$ELSEIF DEFINED(CPU32)}
+        FBitIndex := ShortInt(BsfDWord(FBits[I]));
+      {$ELSE}
+        FBitIndex := ShortInt(BsfWord(FBits[I]));
+      {$ENDIF};
         FLimbIndex := I;
         FCurrLimb := FBits[I] and not(SizeUInt(1) shl FBitIndex);
         exit(True);
@@ -2081,26 +2081,31 @@ end;
 
 function TBoolVector.TEnumerator.MoveNext: Boolean;
 begin
-  if FLimbIndex >= 0 then
-    repeat
-      {$IF DEFINED(CPU64)}
-        FBitIndex := ShortInt(BsfQWord(FCurrLimb));
-      {$ELSEIF DEFINED(CPU32)}
-        FBitIndex := ShortInt(BsfDWord(FCurrLimb));
-      {$ELSE}
-        FBitIndex := ShortInt(BsfWord(FCurrLimb));
-      {$ENDIF}
-      Result := FBitIndex >= 0;
-      if Result then
-        FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
-      else
-        begin
-          if FLimbIndex >= Pred(System.Length(FBits)) then
-            exit(False);
-          Inc(FLimbIndex);
-          FCurrLimb := FBits[FLimbIndex];
-        end;
-    until Result
+  if FLimbIndex <> NULL_INDEX then
+    begin
+      Result := False;
+      repeat
+        if FCurrLimb <> 0 then
+          begin
+          {$IF DEFINED(CPU64)}
+            FBitIndex := ShortInt(BsfQWord(FCurrLimb));
+          {$ELSEIF DEFINED(CPU32)}
+            FBitIndex := ShortInt(BsfDWord(FCurrLimb));
+          {$ELSE}
+            FBitIndex := ShortInt(BsfWord(FCurrLimb));
+          {$ENDIF}
+            FCurrLimb := FCurrLimb and not(SizeUInt(1) shl FBitIndex);
+            exit(True);
+          end
+        else
+          begin
+            if FLimbIndex >= Pred(System.Length(FBits)) then
+              exit;
+            Inc(FLimbIndex);
+            FCurrLimb := FBits[FLimbIndex];
+          end;
+      until False;
+    end
   else
     Result := FindFirst;
 end;
@@ -2142,26 +2147,31 @@ end;
 
 function TBoolVector.TReverseEnumerator.MoveNext: Boolean;
 begin
-  if FLimbIndex >= 0 then
-    repeat
-      {$IF DEFINED(CPU64)}
-        FBitIndex := ShortInt(BsrQWord(FCurrLimb));
-      {$ELSEIF DEFINED(CPU32)}
-        FBitIndex := ShortInt(BsrDWord(FCurrLimb));
-      {$ELSE}
-        FBitIndex := ShortInt(BsrWord(FCurrLimb));
-      {$ENDIF}
-      Result := FBitIndex >= 0;
-      if Result then
-        FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
-      else
-        begin
-          if FLimbIndex <= 0 then
-            exit(False);
-          Dec(FLimbIndex);
-          FCurrLimb := FBits[FLimbIndex];
-        end;
-    until Result
+  if FLimbIndex <> NULL_INDEX then
+    begin
+      Result := False;
+      repeat
+        if FCurrLimb <> 0 then
+          begin
+          {$IF DEFINED(CPU64)}
+            FBitIndex := ShortInt(BsrQWord(FCurrLimb));
+          {$ELSEIF DEFINED(CPU32)}
+            FBitIndex := ShortInt(BsrDWord(FCurrLimb));
+          {$ELSE}
+            FBitIndex := ShortInt(BsrWord(FCurrLimb));
+          {$ENDIF}
+            FCurrLimb := FCurrLimb and not(SizeUInt(1) shl FBitIndex);
+            exit(True);
+          end
+        else
+          begin
+            if FLimbIndex <= 0 then
+              exit;
+            Dec(FLimbIndex);
+            FCurrLimb := FBits[FLimbIndex];
+          end;
+      until False;
+    end
   else
     Result := FindLast;
 end;
