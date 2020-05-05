@@ -362,6 +362,35 @@ type
     procedure PassByValue;
   end;
 
+  { TGSetTest }
+
+  TGSetTest = class(TTestCase)
+  private
+  type
+    TMyRange = -1024..1023;
+    TMySet   = specialize TGSet<TMyRange>;
+  published
+    procedure Init;
+    procedure Include;
+    procedure IncludeArray;
+    procedure Exclude;
+    procedure ExcludeArray;
+    procedure Implicit;
+    procedure ImplicitArray;
+    procedure Explicit;
+    procedure ExplicitArray;
+    procedure Count;
+    procedure Clear;
+    procedure EnumeratorTest;
+    procedure EnumeratorTest2;
+    procedure ToArray;
+    procedure Intersecting;
+    procedure Intersection;
+    procedure Union;
+    procedure Difference;
+    procedure SymmetricDifference;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -2832,6 +2861,345 @@ begin
     AssertTrue(a[I] = 50 - I);
 end;
 
+{ TGSetTest }
+
+procedure TGSetTest.Init;
+var
+  s: TMySet;
+  I: TMyRange;
+begin
+  AssertTrue(SizeOf(s) = 256);
+  AssertTrue(s.IsEmpty);
+  for I := Low(TMyRange) to High(TMyRange) do
+    AssertFalse(s.Contains(I));
+end;
+
+procedure TGSetTest.Include;
+var
+  s: TMySet;
+  a: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 5);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 5;
+    end;
+  for J in a do
+    AssertFalse({%H-}s.Contains(J));
+  for J in a do
+    s.Include(J);
+  for J in a do
+    AssertTrue(s.Contains(J));
+end;
+
+procedure TGSetTest.IncludeArray;
+var
+  s: TMySet;
+  a: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 5);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 5;
+    end;
+  {%H-}s.IncludeArray(a);
+  for J in a do
+    AssertTrue(s.Contains(J));
+end;
+
+procedure TGSetTest.Exclude;
+var
+  s: TMySet;
+  a: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 7);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 7;
+    end;
+  for J in a do
+    {%H-}s.Include(J);
+  for J in a do
+    AssertTrue(s.Contains(J));
+  for J in a do
+    s.Exclude(J);
+  for J in a do
+    AssertFalse(s.Contains(J));
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TGSetTest.ExcludeArray;
+var
+  s: TMySet;
+  a: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 7);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 7;
+    end;
+  {%H-}s.IncludeArray(a);
+  for J in a do
+    AssertTrue(s.Contains(J));
+  s.ExcludeArray(a);
+  for J in a do
+    AssertFalse(s.Contains(J));
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TGSetTest.Implicit;
+var
+  s: TMySet;
+begin
+  AssertTrue(s.IsEmpty);
+  s += Low(TMyRange);
+  s += High(TMyRange);
+  AssertTrue(s.Contains(Low(TMyRange)));
+  AssertTrue(s.Contains(High(TMyRange)));
+end;
+
+procedure TGSetTest.ImplicitArray;
+var
+  s: TMySet;
+  I: TMyRange;
+begin
+  s := [-100, 0, 15, 150, 270, -15];
+  AssertTrue(s.Count = 6);
+  for I in s do
+    AssertTrue(s.Contains(I));
+end;
+
+procedure TGSetTest.Explicit;
+begin
+  AssertTrue(TMySet(Low(TMyRange)).Contains(Low(TMyRange)));
+  AssertTrue(TMySet(0).Contains(0));
+  AssertTrue(TMySet(High(TMyRange)).Contains(High(TMyRange)));
+end;
+
+procedure TGSetTest.ExplicitArray;
+var
+  I: TMyRange;
+begin
+  with TMySet([-1000, 10, 150, 110, 275, -151]) do
+    begin
+      AssertTrue(Count = 6);
+      for I in DenseItems do
+        AssertTrue(Contains(I));
+    end;
+end;
+
+procedure TGSetTest.Count;
+var
+  s: TMySet;
+  a: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 9);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 9;
+    end;
+  for J in a do
+    {%H-}s.Include(J);
+  AssertTrue(s.Count = Length(a));
+end;
+
+procedure TGSetTest.Clear;
+var
+  s: TMySet;
+  a: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 11);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 11;
+    end;
+  for J in a do
+    {%H-}s.Include(J);
+  AssertFalse(s.IsEmpty);
+  s.Clear;
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TGSetTest.EnumeratorTest;
+var
+  s: TMySet;
+  a, a1: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  a1 := s.ToArray;
+  AssertTrue(a1 = nil);
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 12);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 12;
+    end;
+  for J in a do
+    {%H-}s.Include(J);
+  I := 0;
+  for J in s do
+    begin
+      AssertTrue(J = a[I]);
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+end;
+
+procedure TGSetTest.EnumeratorTest2;
+var
+  s: TMySet;
+  a, a1: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  a1 := s.ToArray;
+  AssertTrue(a1 = nil);
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 2);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 2;
+    end;
+  for J in a do
+    {%H-}s.Include(J);
+  I := 0;
+  for J in s.DenseItems do
+    begin
+      AssertTrue(J = a[I]);
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+end;
+
+procedure TGSetTest.ToArray;
+var
+  s: TMySet;
+  a, a1: array of TMyRange;
+  I: Integer;
+  J: TMyRange;
+begin
+  a1 := s.ToArray;
+  AssertTrue(a1 = nil);
+  SetLength(a, Succ(High(TMyRange) - Low(TMyRange)) div 12);
+  J := Low(TMyRange);
+  for I := 0 to High(a) do
+    begin
+      a[I] := J;
+      J += 12;
+    end;
+  for J in a do
+    {%H-}s.Include(J);
+  a1 := s.ToArray;
+  AssertTrue(Length(a) = Length(a1));
+  AssertTrue(Length(a1) = s.Count);
+  AssertTrue(specialize TGComparableArrayHelper<TMyRange>.Same(a, a1));
+end;
+
+procedure TGSetTest.Intersecting;
+var
+  s, s1: TMySet;
+  I: TMyRange;
+begin
+  AssertFalse(s.Intersecting(s1{%H-}));
+  for I := Low(TMyRange) to High(TMyRange) do
+    if Odd(I) then
+      s.Include(I)
+    else
+      s1.Include(I);
+  AssertFalse(s.Intersecting(s1));
+  s.Include(2);
+  AssertTrue(s.Intersecting(s1));
+end;
+
+procedure TGSetTest.Intersection;
+var
+  s, s1, s2: TMySet;
+  I: TMyRange;
+begin
+  AssertFalse(s1.Intersecting(s2{%H-}));
+  for I := Low(TMyRange) to High(TMyRange) do
+    if Odd(I) then
+      s1.Include(I)
+    else
+      s2.Include(I);
+  s := s1 * s2;
+  AssertTrue(s.IsEmpty);
+  s1.Include(2);
+  s := s1 * s2;
+  AssertTrue(s.Count = 1);
+  AssertTrue(2 in s);
+end;
+
+procedure TGSetTest.Union;
+var
+  s, s1, s2: TMySet;
+  I: TMyRange;
+begin
+  for I := Low(TMyRange) to High(TMyRange) do
+    if Odd(I) then
+      s1{%H-}.Include(I)
+    else
+      s2{%H-}.Include(I);
+  s := s1 + s2;
+  AssertTrue(s.Count = 2048);
+end;
+
+procedure TGSetTest.Difference;
+var
+  s, s1, s2: TMySet;
+  I: TMyRange;
+begin
+  for I := Low(TMyRange) to High(TMyRange) do
+    if Odd(I) then
+      s1{%H-}.Include(I)
+    else
+      s2{%H-}.Include(I);
+  s := s1 - s2;
+  AssertTrue(s = s1);
+  s := s1 - s1;
+  AssertTrue(s.IsEmpty);
+end;
+
+procedure TGSetTest.SymmetricDifference;
+var
+  s, s1, s2: TMySet;
+  I: TMyRange;
+begin
+  for I := Low(TMyRange) to High(TMyRange) do
+    if Odd(I) then
+      s1{%H-}.Include(I)
+    else
+      s2{%H-}.Include(I);
+  s := s1 >< s2;
+  AssertTrue(s.Count = 2048);
+end;
 
 initialization
 
@@ -2845,6 +3213,7 @@ initialization
   RegisterTest(TCowPtrTest);
   RegisterTest(TCowDynArrayTest);
   RegisterTest(TDynArrayTest);
+  RegisterTest(TGSetTest);
 
 end.
 
