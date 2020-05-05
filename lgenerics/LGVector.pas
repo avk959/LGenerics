@@ -2058,13 +2058,7 @@ begin
   for I := 0 to Pred(System.Length(FBits)) do
     if FBits[I] <> 0 then
       begin
-      {$IF DEFINED(CPU64)}
-        FBitIndex := ShortInt(BsfQWord(FBits[I]));
-      {$ELSEIF DEFINED(CPU32)}
-        FBitIndex := ShortInt(BsfDWord(FBits[I]));
-      {$ELSE}
-        FBitIndex := ShortInt(BsfWord(FBits[I]));
-      {$ENDIF};
+        FBitIndex := BsfSizeUInt(FBits[I]);
         FLimbIndex := I;
         FCurrLimb := FBits[I] and not(SizeUInt(1) shl FBitIndex);
         exit(True);
@@ -2087,19 +2081,13 @@ begin
       repeat
         if FCurrLimb <> 0 then
           begin
-          {$IF DEFINED(CPU64)}
-            FBitIndex := ShortInt(BsfQWord(FCurrLimb));
-          {$ELSEIF DEFINED(CPU32)}
-            FBitIndex := ShortInt(BsfDWord(FCurrLimb));
-          {$ELSE}
-            FBitIndex := ShortInt(BsfWord(FCurrLimb));
-          {$ENDIF}
+            FBitIndex := BsfSizeUInt(FCurrLimb);
             FCurrLimb := FCurrLimb and not(SizeUInt(1) shl FBitIndex);
             exit(True);
           end
         else
           begin
-            if FLimbIndex >= Pred(System.Length(FBits)) then
+            if FLimbIndex = System.High(FBits) then
               exit;
             Inc(FLimbIndex);
             FCurrLimb := FBits[FLimbIndex];
@@ -2124,13 +2112,7 @@ begin
   for I := Pred(System.Length(FBits)) downto 0 do
     if FBits[I] <> 0 then
       begin
-        {$IF DEFINED(CPU64)}
-          FBitIndex := ShortInt(BsrQWord(FBits[I]));
-        {$ELSEIF DEFINED(CPU32)}
-          FBitIndex := ShortInt(BsrDWord(FBits[I]));
-        {$ELSE}
-          FBitIndex := ShortInt(BsrWord(FBits[I]));
-        {$ENDIF};
+        FBitIndex := BsrSizeUInt(FBits[I]);
         FLimbIndex := I;
         FCurrLimb := FBits[I] and not(SizeUInt(1) shl FBitIndex);
         exit(True);
@@ -2153,19 +2135,13 @@ begin
       repeat
         if FCurrLimb <> 0 then
           begin
-          {$IF DEFINED(CPU64)}
-            FBitIndex := ShortInt(BsrQWord(FCurrLimb));
-          {$ELSEIF DEFINED(CPU32)}
-            FBitIndex := ShortInt(BsrDWord(FCurrLimb));
-          {$ELSE}
-            FBitIndex := ShortInt(BsrWord(FCurrLimb));
-          {$ENDIF}
+            FBitIndex := BsrSizeUInt(FCurrLimb);
             FCurrLimb := FCurrLimb and not(SizeUInt(1) shl FBitIndex);
             exit(True);
           end
         else
           begin
-            if FLimbIndex <= 0 then
+            if FLimbIndex = 0 then
               exit;
             Dec(FLimbIndex);
             FCurrLimb := FBits[FLimbIndex];
