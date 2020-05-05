@@ -970,6 +970,8 @@ const
 {$ENDIF}
   MAX_POSITIVE_POW2 = Succ(High(SizeInt) shr 1);
 
+  function  BsfSizeUInt(aValue: SizeUInt): ShortInt; inline;
+  function  BsrSizeUInt(aValue: SizeUInt): ShortInt; inline;
   { returns number of significant bits of aValue }
   function  NSB(aValue: SizeUInt): SizeInt; inline;
   function  IsTwoPower(aValue: SizeUInt): Boolean; inline;
@@ -986,19 +988,115 @@ const
   function  BJNextRandom: DWord;
   function  BJNextRandom64: QWord;
 
+type
+
+  { TGSet<T> implements set of arbitrary size(up to High(Cardinal) div 33) }
+  TGSet<T> = record
+  private
+  const
+    LO_VALUE   = Integer(System.Low(T));
+    ELEM_COUNT = Succ(Integer(System.High(T)) - LO_VALUE);
+    LIMB_COUNT = ELEM_COUNT shr INT_SIZE_LOG + Ord(ELEM_COUNT and INT_SIZE_MASK <> 0);
+  type
+    TBits = array[0..Pred(LIMB_COUNT)] of SizeUInt;
+  var
+    FBits: TBits;
+    class operator Initialize(var s: TGSet<T>);
+  public
+  type
+    TArray      = array of T;
+
+    TEnumerator = record
+    private
+      FBits: PSizeUInt;
+      FBitIndex,
+      FLimbIndex: Integer;
+      FCurrLimb: SizeUInt;
+      function  GetCurrent: T; inline;
+      function  FindFirst: Boolean;
+      procedure Init(aBits: PSizeUInt);
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TDenseEnumerator = record
+    private
+      FBits: PSizeUInt;
+      FCurrIndex: Integer;
+      function  GetCurrent: T; inline;
+      procedure Init(aBits: PSizeUInt);
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TDenseItems = record
+    private
+      FBits: PSizeUInt;
+    public
+      function  GetEnumerator: TDenseEnumerator; inline;
+    end;
+
+    function  GetEnumerator: TEnumerator; inline;
+    function  DenseItems: TDenseItems; inline;
+    function  ToArray: TArray;
+    function  IsEmpty: Boolean;
+    function  Count: Integer;
+    procedure Clear;
+    procedure Include(aValue: T); inline;
+    procedure Exclude(aValue: T); inline;
+    procedure IncludeArray(const a: array of T);
+    procedure ExcludeArray(const a: array of T);
+    function  Contains(aValue: T): Boolean; inline;
+    function  Intersecting(const aSet: TGSet<T>): Boolean;
+    procedure Intersect(const aSet: TGSet<T>);
+    procedure Join(const aSet: TGSet<T>);
+    procedure Subtract(const aSet: TGSet<T>);
+    procedure SymmetricSubtract(const aSet: TGSet<T>);
+    class operator  +(const L, R: TGSet<T>): TGSet<T>;
+    class operator  -(const L, R: TGSet<T>): TGSet<T>;
+    class operator  *(const L, R: TGSet<T>): TGSet<T>;
+    class operator ><(const L, R: TGSet<T>): TGSet<T>;
+    class operator  =(const L, R: TGSet<T>): Boolean;
+    class operator <=(const L, R: TGSet<T>): Boolean;
+    class operator in(aValue: T; const aSet: TGSet<T>): Boolean; inline;
+    class operator Implicit(aValue: T): TGSet<T>; inline; overload;
+    class operator Explicit(aValue: T): TGSet<T>; inline; overload;
+    class operator Implicit(const a: array of T): TGSet<T>; overload;
+    class operator Explicit(const a: array of T): TGSet<T>; overload;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 {$PUSH}{$Q-}{$R-}
-function NSB(aValue: SizeUInt): SizeInt;
+
+function BsfSizeUInt(aValue: SizeUInt): ShortInt;
 begin
 {$IF DEFINED(CPU64)}
-  Result := Succ(ShortInt(BsrQWord(aValue)));
+  Result := ShortInt(BsfQWord(aValue));
 {$ELSEIF DEFINED(CPU32)}
-  Result := Succ(ShortInt(BsrDWord(aValue)));
+  Result := ShortInt(BsfDWord(aValue));
 {$ELSE}
-  Result := Succ(ShortInt(BsrWord(aValue)));
+  Result := ShortInt(BsfWord(aValue));
 {$ENDIF}
+end;
+
+function BsrSizeUInt(aValue: SizeUInt): ShortInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := ShortInt(BsrQWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := ShortInt(BsrDWord(aValue));
+{$ELSE}
+  Result := ShortInt(BsrWord(aValue));
+{$ENDIF}
+end;
+
+function NSB(aValue: SizeUInt): SizeInt;
+begin
+  Result := Succ(BsrSizeUInt(aValue));
 end;
 
 function IsTwoPower(aValue: SizeUInt): Boolean;
@@ -2964,6 +3062,312 @@ end;
 procedure TSpinLock.Unlock;
 begin
   InterlockedExchange(FState, DWord(0));
+end;
+
+{ TGSet<T>.TEnumerator }
+
+function TGSet<T>.TEnumerator.GetCurrent: T;
+begin
+  Result := T(FLimbIndex shl INT_SIZE_LOG + FBitIndex + LO_VALUE);
+end;
+
+function TGSet<T>.TEnumerator.FindFirst: Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] <> 0 then
+      begin
+        FBitIndex := BsfSizeUInt(FBits[I]);
+        FLimbIndex := I;
+        FCurrLimb := FBits[I] and not(SizeUInt(1) shl FBitIndex);
+        exit(True);
+      end;
+  Result := False;
+end;
+
+procedure TGSet<T>.TEnumerator.Init(aBits: PSizeUInt);
+begin
+  FBits := aBits;
+  FLimbIndex := -1;
+end;
+
+function TGSet<T>.TEnumerator.MoveNext: Boolean;
+begin
+  if FLimbIndex <> -1 then
+    begin
+      Result := False;
+      repeat
+        if FCurrLimb <> 0 then
+          begin
+            FBitIndex := BsfSizeUInt(FCurrLimb);
+            FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex);
+            exit(True);
+          end
+        else
+          begin
+            if FLimbIndex = Pred(LIMB_COUNT) then
+              exit(False);
+            Inc(FLimbIndex);
+            FCurrLimb := FBits[FLimbIndex];
+          end;
+      until False;
+    end
+  else
+    Result := FindFirst;
+end;
+
+{ TGSet.TDenseEnumerator }
+
+function TGSet<T>.TDenseEnumerator.GetCurrent: T;
+begin
+  Result := T(FCurrIndex + LO_VALUE);
+end;
+
+procedure TGSet<T>.TDenseEnumerator.Init(aBits: PSizeUInt);
+begin
+  FBits := aBits;
+  FCurrIndex := -1;
+end;
+
+function TGSet<T>.TDenseEnumerator.MoveNext: Boolean;
+begin
+  while FCurrIndex < Pred(ELEM_COUNT) do
+    begin
+      Inc(FCurrIndex);
+      if FBits[FCurrIndex shr INT_SIZE_LOG] and (SizeUInt(1)shl(FCurrIndex and INT_SIZE_MASK)) <> 0 then
+        exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGSet.TDenseItems }
+
+function TGSet<T>.TDenseItems.GetEnumerator: TDenseEnumerator;
+begin
+  Result.Init(FBits);
+end;
+
+{ TGSet }
+
+class operator TGSet<T>.Initialize(var s: TGSet<T>);
+begin
+  s.FBits := Default(TBits);
+end;
+
+function TGSet<T>.GetEnumerator: TEnumerator;
+begin
+  Result.Init(@FBits[0]);
+end;
+
+function TGSet<T>.DenseItems: TDenseItems;
+begin
+  Result.FBits := @FBits[0];
+end;
+
+function TGSet<T>.ToArray: TArray;
+var
+  I: Integer = 0;
+begin
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with GetEnumerator do
+    while MoveNext do
+      begin
+        if System.Length(Result) = I then
+          System.SetLength(Result, I + I);
+        Result[I] := Current;
+        Inc(I);
+      end;
+  System.SetLength(Result, I);
+end;
+
+function TGSet<T>.IsEmpty: Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] <> 0 then
+      exit(False);
+  Result := True;
+end;
+
+function TGSet<T>.Count: Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 0 to Pred(LIMB_COUNT) do
+    Result += Integer(PopCnt(FBits[I]));
+end;
+
+procedure TGSet<T>.Clear;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := 0;
+end;
+
+procedure TGSet<T>.Include(aValue: T);
+begin
+  FBits[(Integer(aValue) - LO_VALUE) shr INT_SIZE_LOG] :=
+    FBits[(Integer(aValue) - LO_VALUE) shr INT_SIZE_LOG] or
+          SizeUInt(1) shl ((Integer(aValue) - LO_VALUE) and INT_SIZE_MASK);
+end;
+
+procedure TGSet<T>.Exclude(aValue: T);
+begin
+  FBits[(Integer(aValue) - LO_VALUE) shr INT_SIZE_LOG] :=
+    FBits[(Integer(aValue) - LO_VALUE) shr INT_SIZE_LOG] and not
+          (SizeUInt(1) shl ((Integer(aValue) - LO_VALUE) and INT_SIZE_MASK));
+end;
+
+procedure TGSet<T>.IncludeArray(const a: array of T);
+var
+  I: Integer;
+begin
+  for I := 0 to System.High(a) do
+    Include(a[I]);
+end;
+
+procedure TGSet<T>.ExcludeArray(const a: array of T);
+var
+  I: Integer;
+begin
+  for I := 0 to System.High(a) do
+    Exclude(a[I]);
+end;
+
+function TGSet<T>.Contains(aValue: T): Boolean;
+begin
+  Result :=
+    FBits[(Integer(aValue) - LO_VALUE) shr INT_SIZE_LOG] and
+          (SizeUInt(1) shl ((Integer(aValue) - LO_VALUE) and INT_SIZE_MASK)) <> 0;
+end;
+
+function TGSet<T>.Intersecting(const aSet: TGSet<T>): Boolean;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] and aSet.FBits[I] <> 0 then
+      exit(True);
+  Result := False;
+end;
+
+procedure TGSet<T>.Intersect(const aSet: TGSet<T>);
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] and aSet.FBits[I];
+end;
+
+procedure TGSet<T>.Join(const aSet: TGSet<T>);
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] or aSet.FBits[I];
+end;
+
+procedure TGSet<T>.Subtract(const aSet: TGSet<T>);
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] and not aSet.FBits[I];
+end;
+
+procedure TGSet<T>.SymmetricSubtract(const aSet: TGSet<T>);
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] xor aSet.FBits[I];
+end;
+
+class operator TGSet<T>.+(const L, R: TGSet<T>): TGSet<T>;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    Result.FBits[I] := L.FBits[I] or R.FBits[I];
+end;
+
+class operator TGSet<T>.-(const L, R: TGSet<T>): TGSet<T>;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    Result.FBits[I] := L.FBits[I] and not R.FBits[I];
+end;
+
+class operator TGSet<T>.*(const L, R: TGSet<T>): TGSet<T>;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    Result.FBits[I] := L.FBits[I] and R.FBits[I];
+end;
+
+class operator TGSet<T>.><(const L, R: TGSet<T>): TGSet<T>;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    Result.FBits[I] := L.FBits[I] xor R.FBits[I];
+end;
+
+class operator TGSet<T>.=(const L, R: TGSet<T>): Boolean; inline;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    if L.FBits[I] <> R.FBits[I] then
+      exit(False);
+  Result := True;
+end;
+
+class operator TGSet<T>.<=(const L, R: TGSet<T>): Boolean; inline;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    if L.FBits[I] <> L.FBits[I] and R.FBits[I] then
+      exit(False);
+  Result := True;
+end;
+
+class operator TGSet<T>.in (aValue: T; const aSet: TGSet<T>): Boolean;
+begin
+  Result := aSet.Contains(aValue);
+end;
+
+class operator TGSet<T>.Implicit(aValue: T): TGSet<T>;
+begin
+  Result{%H-}.Include(aValue);
+end;
+
+class operator TGSet<T>.Explicit(aValue: T): TGSet<T>;
+begin
+  Result{%H-}.Include(aValue);
+end;
+
+class operator TGSet<T>.Implicit(const a: array of T): TGSet<T>;
+var
+  I: Integer;
+begin
+  for I := 0 to System.High(a) do
+    Result{%H-}.Include(a[I]);
+end;
+
+class operator TGSet<T>.Explicit(const a: array of T): TGSet<T>;
+var
+  I: Integer;
+begin
+  for I := 0 to System.High(a) do
+    Result{%H-}.Include(a[I]);
 end;
 
 end.
