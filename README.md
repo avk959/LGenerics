@@ -20,6 +20,7 @@
   - hashset(unit LGHashSet)
   - fine-grained concurrent hashset(unit LGHashSet)
   - sorted set(unit LGTreeSet)
+  - set of arbitrary size(unit LGUtil, TGSet)
   - hash multiset(unit LGHashMultiSet)
   - fine-grained concurrent hashmultiset(unit LGHashMultiSet)
   - sorted multiset(unit LGTreeMultiSet)
