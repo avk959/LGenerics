@@ -1001,7 +1001,7 @@ type
     TBits = array[0..Pred(LIMB_COUNT)] of SizeUInt;
   var
     FBits: TBits;
-    class operator Initialize(var s: TGSet<T>);
+    class operator Initialize(var s: TGSet<T>); inline;
   public
   type
     TArray      = array of T;
@@ -3152,7 +3152,7 @@ end;
 
 class operator TGSet<T>.Initialize(var s: TGSet<T>);
 begin
-  System.FillChar(s.FBits, SizeOf(s.FBits), 0);
+  s.FBits := Default(TBits);
 end;
 
 function TGSet<T>.GetEnumerator: TEnumerator;
