@@ -193,14 +193,18 @@ begin
   WriteLn('SizeOf(TGSet<SmallInt>) = ', SizeOf(s));
   WriteLn('Let''s try to add some elements(-12001, 20000, -1005, -2500, 1500, 31000)');
   s.IncludeArray([-12001, 20000, -1005, -2500, 1500, 31000]);
+
   WriteLn('Now test it');
   WriteLn('s.Count = ', s.Count);
   for I in s do
     WriteLn(I);
-  WriteLn('TGSet<TMyRange> may contain ', High(Integer) div 33 - Low(Integer) div 33, ' elements');
+
+  WriteLn('TGSet<TMyRange> may contain ', High(TMyRange) - Low(TMyRange) + 1, ' elements');
   WriteLn('SizeOf(TGSet<TMyRange>) = ', SizeOf(s2));
+
   WriteLn('Let''s try to add High(TMyRange) and Low(TMyRange)(',High(TMyRange),', ',Low(TMyRange),')');
   s2.IncludeArray([High(TMyRange), Low(TMyRange)]);
+
   WriteLn('Ok, now test it');
   WriteLn('s2.Count = ', s2.Count);
   for J in s2 do
