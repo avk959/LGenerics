@@ -990,7 +990,8 @@ const
 
 type
 
-  { TGSet<T> implements set of arbitrary size(up to High(Cardinal) div 33) }
+  { TGSet<T> implements set of arbitrary size(up to High(Cardinal) div 33);
+    T must be of some ordinal type with a range of <= High(Cardinal) div 33 or WideChar }
   TGSet<T> = record
   private
   const
