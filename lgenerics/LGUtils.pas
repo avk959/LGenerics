@@ -1035,7 +1035,7 @@ type
     private
       FBits: PSizeUInt;
     public
-      function  GetEnumerator: TDenseEnumerator; inline;
+      function GetEnumerator: TDenseEnumerator; inline;
     end;
 
     function  GetEnumerator: TEnumerator; inline;
@@ -3152,7 +3152,7 @@ end;
 
 class operator TGSet<T>.Initialize(var s: TGSet<T>);
 begin
-  s.FBits := Default(TBits);
+  System.FillChar(s.FBits, SizeOf(s.FBits), 0);
 end;
 
 function TGSet<T>.GetEnumerator: TEnumerator;
@@ -3339,7 +3339,7 @@ begin
   Result := True;
 end;
 
-class operator TGSet<T>.in (aValue: T; const aSet: TGSet<T>): Boolean;
+class operator TGSet<T>.in(aValue: T; const aSet: TGSet<T>): Boolean;
 begin
   Result := aSet.Contains(aValue);
 end;
