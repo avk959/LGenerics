@@ -1043,7 +1043,7 @@ type
     function  ToArray: TArray;
     function  IsEmpty: Boolean;
     function  Count: Integer;
-    procedure Clear;
+    procedure Clear; inline;
     procedure Include(aValue: T); inline;
     procedure Exclude(aValue: T); inline;
     procedure IncludeArray(const a: array of T);
@@ -3201,11 +3201,8 @@ begin
 end;
 
 procedure TGSet<T>.Clear;
-var
-  I: Integer;
 begin
-  for I := 0 to Pred(LIMB_COUNT) do
-    FBits[I] := 0;
+  FBits := Default(TBits);
 end;
 
 procedure TGSet<T>.Include(aValue: T);
