@@ -30,7 +30,7 @@ var
 begin
   for I := 1 to 1000000 do
     begin
-      s.Clear;
+      s := Default(TGByteSet);
       for J := 0 to 255 do
         s.Include(J);
     end;
@@ -51,6 +51,8 @@ var
   s: TGByteSet;
   I: Integer;
 begin
+  if not IsManagedType(s) then
+    s := Default(TGByteSet);
   for I := 1 to 200000000 do
     if (I and 255) {%H-}in s then;
 end;
@@ -76,6 +78,11 @@ var
   s, s1, s2: TGByteSet;
   I: Integer;
 begin
+  if not IsManagedType(s) then
+    begin
+      s1 := Default(TGByteSet);
+      s2 := Default(TGByteSet);
+    end;
   for I := 0 to 255 do
     if Odd(I) then
       {%H-}s1.Include(I)
@@ -107,6 +114,8 @@ var
   I, J: Integer;
 begin
   I := 0;
+  if not IsManagedType(s) then
+    s := Default(TGByteSet);
   while I < 256 do
     begin
       {%H-}s.Include(I);
@@ -135,6 +144,8 @@ var
   I, J: Integer;
 begin
   I := 0;
+  if not IsManagedType(s) then
+    s := Default(TGByteSet);
   for I := 0 to 255 do
     {%H-}s.Include(I);
   for I := 1 to 1000000 do
