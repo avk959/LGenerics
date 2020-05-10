@@ -989,7 +989,7 @@ const
   function  BJNextRandom64: QWord;
 
 type
-
+  {$DEFINE USE_TGSET_INITIALIZE}
   { TGSet<T> implements set of arbitrary size(up to High(Cardinal) div 33);
     T must be of some ordinal type with a range of <= High(Cardinal) div 33 or WideChar }
   TGSet<T> = record
@@ -1002,7 +1002,9 @@ type
     TBits = array[0..Pred(LIMB_COUNT)] of SizeUInt;
   var
     FBits: TBits;
+    {$IFDEF USE_TGSET_INITIALIZE}
     class operator Initialize(var s: TGSet<T>); inline;
+    {$ENDIF USE_TGSET_INITIALIZE}
   public
   type
     TArray      = array of T;
@@ -3151,10 +3153,12 @@ end;
 
 { TGSet }
 
+{$IFDEF USE_TGSET_INITIALIZE}
 class operator TGSet<T>.Initialize(var s: TGSet<T>);
 begin
   s.FBits := Default(TBits);
 end;
+{$ENDIF}
 
 function TGSet<T>.GetEnumerator: TEnumerator;
 begin
@@ -3344,11 +3348,17 @@ end;
 
 class operator TGSet<T>.Implicit(aValue: T): TGSet<T>;
 begin
+{$IFNDEF USE_TGSET_INITIALIZE}
+  Result.FBits := Default(TBits);
+{$ENDIF}
   Result{%H-}.Include(aValue);
 end;
 
 class operator TGSet<T>.Explicit(aValue: T): TGSet<T>;
 begin
+{$IFNDEF USE_TGSET_INITIALIZE}
+  Result.FBits := Default(TBits);
+{$ENDIF}
   Result{%H-}.Include(aValue);
 end;
 
@@ -3356,6 +3366,9 @@ class operator TGSet<T>.Implicit(const a: array of T): TGSet<T>;
 var
   I: Integer;
 begin
+{$IFNDEF USE_TGSET_INITIALIZE}
+  Result.FBits := Default(TBits);
+{$ENDIF}
   for I := 0 to System.High(a) do
     Result{%H-}.Include(a[I]);
 end;
@@ -3364,6 +3377,9 @@ class operator TGSet<T>.Explicit(const a: array of T): TGSet<T>;
 var
   I: Integer;
 begin
+{$IFNDEF USE_TGSET_INITIALIZE}
+  Result.FBits := Default(TBits);
+{$ENDIF}
   for I := 0 to System.High(a) do
     Result{%H-}.Include(a[I]);
 end;
