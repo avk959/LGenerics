@@ -147,6 +147,48 @@
     procedure Reset; override;
   end;
 
+  generic TGRegularTakeWhileEnumerable<T> = class(specialize TGEnumCursor<T>)
+  public
+  type
+    TTest = TEnumerable.TTest;
+
+  private
+    FTest: TTest;
+    FDone: Boolean;
+  public
+    constructor Create(e: TSpecEnumerator; aTest: TTest);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  generic TGDelegatedTakeWhileEnumerable<T> = class(specialize TGEnumCursor<T>)
+  public
+  type
+    TOnTest = TEnumerable.TOnTest;
+
+  private
+    FTest: TOnTest;
+    FDone: Boolean;
+  public
+    constructor Create(e: TSpecEnumerator; aTest: TOnTest);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  generic TGNestedTakeWhileEnumerable<T> = class(specialize TGEnumCursor<T>)
+  public
+  type
+    TNestTest = TEnumerable.TNestTest;
+
+  private
+    FTest: TNestTest;
+    FDone: Boolean;
+  public
+    constructor Create(e: TSpecEnumerator; aTest: TNestTest);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
   generic TGArrayCursor<T> = class(specialize TGAutoEnumerable<T>)
   public
   type

@@ -202,6 +202,72 @@ begin
   FCurrent := 0;
 end;
 
+{ TGRegularTakeWhileEnumerable }
+
+constructor TGRegularTakeWhileEnumerable.Create(e: TSpecEnumerator; aTest: TTest);
+begin
+  inherited Create(e);
+  FTest := aTest;
+end;
+
+function TGRegularTakeWhileEnumerable.MoveNext: Boolean;
+begin
+  if FDone then exit(False);
+  if FEnum.MoveNext and FTest(FEnum.GetCurrent) then exit(True);
+  FDone := True;
+  Result := False;
+end;
+
+procedure TGRegularTakeWhileEnumerable.Reset;
+begin
+  inherited;
+  FDone := False;
+end;
+
+{ TGDelegatedTakeWhileEnumerable }
+
+constructor TGDelegatedTakeWhileEnumerable.Create(e: TSpecEnumerator; aTest: TOnTest);
+begin
+  inherited Create(e);
+  FTest := aTest;
+end;
+
+function TGDelegatedTakeWhileEnumerable.MoveNext: Boolean;
+begin
+  if FDone then exit(False);
+  if FEnum.MoveNext and FTest(FEnum.GetCurrent) then exit(True);
+  FDone := True;
+  Result := False;
+end;
+
+procedure TGDelegatedTakeWhileEnumerable.Reset;
+begin
+  inherited;
+  FDone := False;
+end;
+
+{ TGNestedTakeWhileEnumerable }
+
+constructor TGNestedTakeWhileEnumerable.Create(e: TSpecEnumerator; aTest: TNestTest);
+begin
+  inherited Create(e);
+  FTest := aTest;
+end;
+
+function TGNestedTakeWhileEnumerable.MoveNext: Boolean;
+begin
+  if FDone then exit(False);
+  if FEnum.MoveNext and FTest(FEnum.GetCurrent) then exit(True);
+  FDone := True;
+  Result := False;
+end;
+
+procedure TGNestedTakeWhileEnumerable.Reset;
+begin
+  inherited;
+  FDone := False;
+end;
+
 { TGArrayCursor.TArrayEnumerable }
 
 function TGArrayCursor.TArrayEnumerable.ToArray: TArray;

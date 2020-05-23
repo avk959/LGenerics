@@ -515,6 +515,9 @@ type
     function  Max(c: TGNestLessCompare<T>): TGOptional<T>; overload;
     function  Skip(aCount: SizeInt): IGEnumerable<T>;
     function  Limit(aCount: SizeInt): IGEnumerable<T>;
+    function  TakeWhile(p: TGTest<T>): IGEnumerable<T>; overload;
+    function  TakeWhile(p: TGOnTest<T>): IGEnumerable<T>; overload;
+    function  TakeWhile(p: TGNestTest<T>): IGEnumerable<T>; overload;
     function  Sorted(c: TGLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Sorted(c: TGOnLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Sorted(c: TGNestLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;

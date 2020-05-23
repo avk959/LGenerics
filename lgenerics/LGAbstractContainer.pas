@@ -37,6 +37,8 @@ uses
 
 type
 
+  { TGEnumerable }
+
   generic TGEnumerable<T> = class abstract(TObject, specialize IGEnumerable<T>, IObjInstance)
   public
   type
@@ -91,6 +93,9 @@ type
     function  Max(c: TNestLess): TOptional;
     function  Skip(aCount: SizeInt): IEnumerable; inline;
     function  Limit(aCount: SizeInt): IEnumerable; inline;
+    function  TakeWhile(aTest: TTest): IEnumerable; inline;
+    function  TakeWhile(aTest: TOnTest): IEnumerable; inline;
+    function  TakeWhile(aTest: TNestTest): IEnumerable; inline;
     function  Sorted(c: TLess; aStable: Boolean = False): IEnumerable;
     function  Sorted(c: TOnLess; aStable: Boolean = False): IEnumerable;
     function  Sorted(c: TNestLess; aStable: Boolean = False): IEnumerable;
@@ -1221,6 +1226,21 @@ end;
 function TGEnumerable.Limit(aCount: SizeInt): IEnumerable;
 begin
   Result := specialize TGLimitEnumerable<T>.Create(GetEnumerator, aCount);
+end;
+
+function TGEnumerable.TakeWhile(aTest: TTest): IEnumerable;
+begin
+  Result := specialize TGRegularTakeWhileEnumerable<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.TakeWhile(aTest: TOnTest): IEnumerable;
+begin
+  Result := specialize TGDelegatedTakeWhileEnumerable<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.TakeWhile(aTest: TNestTest): IEnumerable;
+begin
+  Result := specialize TGNestedTakeWhileEnumerable<T>.Create(GetEnumerator, aTest);
 end;
 
 function TGEnumerable.Sorted(c: TLess; aStable: Boolean): IEnumerable;
