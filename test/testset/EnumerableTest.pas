@@ -238,6 +238,10 @@ type
     procedure TakeWhileRegular;
     procedure TakeWhileDelegated;
     procedure TakeWhileNested;
+
+    procedure SkipWhileRegular;
+    procedure SkipWhileDelegated;
+    procedure SkipWhileNested;
   end;
 
 implementation
@@ -1745,6 +1749,58 @@ begin
   AssertTrue(TIntHelper.Same(a, [1, 4, 10]));
   e := TIntArrayCursor.Create([15, 1, 4, 10, 15, 11, 9, 3, 5]);
   AssertTrue(e.TakeWhile(@IsLessThen15).None);
+end;
+
+procedure TEnumerableTest.SkipWhileRegular;
+var
+  e: IIntEnumerable;
+  a: array of Integer;
+begin
+  e := TIntArrayCursor.Create([]);
+  AssertTrue(e.SkipWhile(@LessThen15).None);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  a := e.SkipWhile(@LessThen15).ToArray;
+  AssertTrue(TIntHelper.Same(a, [15, 16, 17, 18, 19, 20, 21]));
+  e := TIntArrayCursor.Create([1, 4, 10, 15, 11, 9, 3, 5]);
+  a := e.SkipWhile(@LessThen15).ToArray;
+  AssertTrue(TIntHelper.Same(a, [15, 11, 9, 3, 5]));
+  e := TIntArrayCursor.Create([14, 1, 4, 10, 13, 11, 9, 3, 5]);
+  AssertTrue(e.SkipWhile(@LessThen15).None);
+end;
+
+procedure TEnumerableTest.SkipWhileDelegated;
+var
+  e: IIntEnumerable;
+  a: array of Integer;
+begin
+  e := TIntArrayCursor.Create([]);
+  AssertTrue(e.SkipWhile(@Self.LessThen15).None);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  a := e.SkipWhile(@Self.LessThen15).ToArray;
+  AssertTrue(TIntHelper.Same(a, [15, 16, 17, 18, 19, 20, 21]));
+  e := TIntArrayCursor.Create([1, 4, 10, 15, 11, 9, 3, 5]);
+  a := e.SkipWhile(@Self.LessThen15).ToArray;
+  AssertTrue(TIntHelper.Same(a, [15, 11, 9, 3, 5]));
+  e := TIntArrayCursor.Create([14, 1, 4, 10, 13, 11, 9, 3, 5]);
+  AssertTrue(e.SkipWhile(@Self.LessThen15).None);
+end;
+
+procedure TEnumerableTest.SkipWhileNested;
+var
+  e: IIntEnumerable;
+  a: array of Integer;
+  function IsLessThen15(constref v: Integer): Boolean; begin Result := v < 15 end;
+begin
+  e := TIntArrayCursor.Create([]);
+  AssertTrue(e.SkipWhile(@IsLessThen15).None);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  a := e.SkipWhile(@IsLessThen15).ToArray;
+  AssertTrue(TIntHelper.Same(a, [15, 16, 17, 18, 19, 20, 21]));
+  e := TIntArrayCursor.Create([1, 4, 10, 15, 11, 9, 3, 5]);
+  a := e.SkipWhile(@IsLessThen15).ToArray;
+  AssertTrue(TIntHelper.Same(a, [15, 11, 9, 3, 5]));
+  e := TIntArrayCursor.Create([14, 1, 4, 10, 13, 11, 9, 3, 5]);
+  AssertTrue(e.SkipWhile(@IsLessThen15).None);
 end;
 
 
