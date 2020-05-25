@@ -92,6 +92,9 @@ type
     function  Max(c: TOnLess): TOptional;
     function  Max(c: TNestLess): TOptional;
     function  Skip(aCount: SizeInt): IEnumerable; inline;
+    function  SkipWhile(aTest: TTest): IEnumerable; inline;
+    function  SkipWhile(aTest: TOnTest): IEnumerable; inline;
+    function  SkipWhile(aTest: TNestTest): IEnumerable; inline;
     function  Limit(aCount: SizeInt): IEnumerable; inline;
     function  TakeWhile(aTest: TTest): IEnumerable; inline;
     function  TakeWhile(aTest: TOnTest): IEnumerable; inline;
@@ -1221,6 +1224,21 @@ end;
 function TGEnumerable.Skip(aCount: SizeInt): IEnumerable;
 begin
   Result := specialize TGSkipEnumerable<T>.Create(GetEnumerator, aCount);
+end;
+
+function TGEnumerable.SkipWhile(aTest: TTest): IEnumerable;
+begin
+  Result := specialize TGRegularSkipWhileEnumerable<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.SkipWhile(aTest: TOnTest): IEnumerable;
+begin
+  Result := specialize TGDelegatedSkipWhileEnumerable<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.SkipWhile(aTest: TNestTest): IEnumerable;
+begin
+  Result := specialize TGNestedSkipWhileEnumerable<T>.Create(GetEnumerator, aTest);
 end;
 
 function TGEnumerable.Limit(aCount: SizeInt): IEnumerable;

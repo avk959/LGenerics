@@ -137,6 +137,47 @@
     procedure Reset; override;
   end;
 
+  generic TGRegularSkipWhileEnumerable<T> = class(specialize TGEnumCursor<T>)
+  public
+  type
+    TTest = TEnumerable.TTest;
+
+  private
+    FTest: TTest;
+    FSkipDone: Boolean;
+  public
+    constructor Create(e: TSpecEnumerator; aTest: TTest);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  generic TGDelegatedSkipWhileEnumerable<T> = class(specialize TGEnumCursor<T>)
+  public
+  type
+    TOnTest = TEnumerable.TOnTest;
+
+  private
+    FTest: TOnTest;
+    FSkipDone: Boolean;
+  public
+    constructor Create(e: TSpecEnumerator; aTest: TOnTest);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  generic TGNestedSkipWhileEnumerable<T> = class(specialize TGEnumCursor<T>)
+  public
+  type
+    TNestTest = TEnumerable.TNestTest;
+  private
+    FTest: TNestTest;
+    FSkipDone: Boolean;
+  public
+    constructor Create(e: TSpecEnumerator; aTest: TNestTest);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
   generic TGLimitEnumerable<T> = class(specialize TGEnumCursor<T>)
   private
     FLimit,

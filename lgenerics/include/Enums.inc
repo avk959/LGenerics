@@ -182,6 +182,91 @@ begin
   Skip;
 end;
 
+{ TGRegularSkipWhileEnumerable }
+
+constructor TGRegularSkipWhileEnumerable.Create(e: TSpecEnumerator; aTest: TTest);
+begin
+  inherited Create(e);
+  FTest := aTest;
+end;
+
+function TGRegularSkipWhileEnumerable.MoveNext: Boolean;
+begin
+  if not FSkipDone then
+    begin
+      FSkipDone := True;
+      while FEnum.MoveNext do
+        if not FTest(FEnum.GetCurrent) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := FEnum.MoveNext;
+end;
+
+procedure TGRegularSkipWhileEnumerable.Reset;
+begin
+  inherited;
+  FSkipDone := False;
+end;
+
+{ TGDelegatedSkipWhileEnumerable }
+
+constructor TGDelegatedSkipWhileEnumerable.Create(e: TSpecEnumerator; aTest: TOnTest);
+begin
+  inherited Create(e);
+  FTest := aTest;
+end;
+
+function TGDelegatedSkipWhileEnumerable.MoveNext: Boolean;
+begin
+  if not FSkipDone then
+    begin
+      FSkipDone := True;
+      while FEnum.MoveNext do
+        if not FTest(FEnum.GetCurrent) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := FEnum.MoveNext;
+end;
+
+procedure TGDelegatedSkipWhileEnumerable.Reset;
+begin
+  inherited;
+  FSkipDone := False;
+end;
+
+{ TGNestedSkipWhileEnumerable }
+
+constructor TGNestedSkipWhileEnumerable.Create(e: TSpecEnumerator; aTest: TNestTest);
+begin
+  inherited Create(e);
+  FTest := aTest;
+end;
+
+function TGNestedSkipWhileEnumerable.MoveNext: Boolean;
+begin
+  if not FSkipDone then
+    begin
+      FSkipDone := True;
+      while FEnum.MoveNext do
+        if not FTest(FEnum.GetCurrent) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := FEnum.MoveNext;
+end;
+
+procedure TGNestedSkipWhileEnumerable.Reset;
+begin
+  inherited;
+  FSkipDone := False;
+end;
+
+
 { TGLimitEnumerable }
 
 constructor TGLimitEnumerable.Create(e: TSpecEnumerator; aCount: SizeInt);
