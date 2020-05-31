@@ -551,7 +551,7 @@ procedure TGOptionalTest.AssignArray;
 var
   o: TArrayOptional;
 begin
-  AssertTrue(o.Nilable);
+  AssertFalse(o.Nilable);
   AssertFalse({%H-}o.Assigned);
   o := TIntArray([0, 11, 27]);
   AssertTrue(o.Assigned);
@@ -562,7 +562,7 @@ var
   o: TArrayOptional;
 begin
   o := nil;
-  AssertFalse(o.Assigned);
+  AssertTrue(o.Assigned);
 end;
 
 procedure TGOptionalTest.OrElseDefaultInt;
