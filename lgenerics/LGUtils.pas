@@ -90,11 +90,11 @@ type
     CFTypeKind: System.TTypeKind;
     CFNilable: Boolean;
   const
-    NilableKinds = [System.tkMethod, System.tkInterface, System.tkClass, System.tkDynArray,
-                    System.tkInterfaceRaw, System.tkProcVar, System.tkClassRef, System.tkPointer];
+    NilableKinds = [System.tkMethod, System.tkInterface, System.tkClass, System.tkInterfaceRaw,
+                    System.tkProcVar, System.tkClassRef, System.tkPointer];
     function GetValue: T;
     class constructor InitTypeInfo;
-    class function ValueIsNil(constref aValue): Boolean; static;
+    class function IsNil(const aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
     class operator Implicit(constref aValue: T): TGOptional<T>; inline;
@@ -110,7 +110,7 @@ type
     class property Nilable: Boolean read CFNilable;
   end;
 
-  { TGAutoRef: the easy way to get a class instance with limited lifetime;
+  { TGAutoRef: an easy way to get an instance of a class limited lifetime;
     An instance owned by TGAutoRef will be automatically created upon first request
     and will automatically be destroyed upon leaving the scope;
     class T must provide default parameterless constructor;
@@ -173,8 +173,8 @@ type
     property  OwnsInstance: Boolean read FOwnsInstance;
   end;
 
-  { TGSharedRefA(A - Auto create): intended to be shared a single instance by several TGSharedRefA
-    entities using ARC, the instance will be automatically destroyed when the reference count becomes
+  { TGSharedRefA(A - Auto create): intended to be shared a single instance by several T entities
+    using ARC, the instance will be automatically destroyed when the reference count becomes
     zero; to automatically create an instance, class T must provide default parameterless constructor }
   TGSharedRefA<T: class, constructor> = record
   private
@@ -199,8 +199,8 @@ type
     property  Instance: T read GetInstance write SetInstance;
   end;
 
-  { TGSharedRef: like TGSharedRefA intended to be shared a single instance by several TGSharedRef
-    entities using ARC; it does not require T to have a parameterless constructor, and does not
+  { TGSharedRef: like TGSharedRefA intended to be shared a single instance by several T entities
+    using ARC; it does not require T to have a parameterless constructor and does not
     automatically create an instance }
   TGSharedRef<T: class> = record
   private
@@ -1229,10 +1229,9 @@ end;
 
 function TGOptional<T>.GetValue: T;
 begin
-  if Assigned then
-    Result := FValue
-  else
+  if not Assigned then
     raise ELGOptional.Create(SEOptionalValueEmpty);
+  Result := FValue;
 end;
 
 class constructor TGOptional<T>.InitTypeInfo;
@@ -1241,13 +1240,12 @@ begin
   CFNilable := CFTypeKind in NilableKinds;
 end;
 
-class function TGOptional<T>.ValueIsNil(constref aValue): Boolean;
+class function TGOptional<T>.IsNil(const aValue): Boolean;
 begin
   case CFTypeKind of
     System.tkMethod:       exit(Pointer(aValue) = nil);
     System.tkInterface:    exit(Pointer(aValue) = nil);
     System.tkClass:        exit(TObject(aValue) = nil);
-    System.tkDynArray:     exit(Pointer(aValue) = nil);
     System.tkInterfaceRaw: exit(Pointer(aValue) = nil);
     System.tkProcVar:      exit(Pointer(aValue) = nil);
     System.tkClassRef:     exit(TClass(aValue)  = nil);
@@ -1279,10 +1277,10 @@ end;
 
 procedure TGOptional<T>.Assign(constref aValue: T);
 begin
-  if CFNilable and ValueIsNil((@aValue)^) then
+  if CFNilable and IsNil((@aValue)^) then
     exit;
-  FAssigned := True;
   FValue := aValue;
+  FAssigned := True;
 end;
 
 function TGOptional<T>.OrElseDefault: T;
