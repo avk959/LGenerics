@@ -43,8 +43,8 @@ type
   protected
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); virtual;
-    function  GetMutable(aIndex: SizeInt): PItem;
-    function  GetUncMutable(aIndex: SizeInt): PItem;
+    function  GetMutable(aIndex: SizeInt): PItem; inline;
+    function  GetUncMutable(aIndex: SizeInt): PItem; inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  InsertArray(aIndex: SizeInt; constref a: array of T): SizeInt;
     function  InsertContainer(aIndex: SizeInt; aContainer: TSpecContainer): SizeInt;
