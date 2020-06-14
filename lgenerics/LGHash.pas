@@ -21,6 +21,7 @@
 unit LGHash;
 
 {$MODE OBJFPC}{$H+}
+{$MODESWITCH ADVANCEDRECORDS}
 {$INLINE ON}
 
 interface
@@ -28,7 +29,7 @@ interface
 type
 
   { TxxHash32LE: little endian implementation of Yann Collet's xxHash32 }
-  TxxHash32LE = class
+  TxxHash32LE = record
     class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
     class function HashStr(constref aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
@@ -38,7 +39,7 @@ type
   end;
 
   { TxxHash64LE: little endian implementation of Yann Collet's xxHash64 }
-  TxxHash64LE = class
+  TxxHash64LE = record
     class function HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord = 0): QWord; static;
     class function HashStr(constref aValue: string; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
