@@ -364,7 +364,7 @@ type
   function HashPointer(constref aValue: Pointer): SizeInt;
 
 implementation
-{$Q-}{$B-}{$COPERATORS ON}{$MACRO ON}
+{$Q-}{$R-}{$B-}{$COPERATORS ON}{$MACRO ON}
 {$DEFINE HashFunc := TxxHash32LE}
 {.$DEFINE HashFunc := TMurmur3LE}
 
@@ -518,7 +518,7 @@ end;
 
 class function TGShortIntHelper.HashCode(aValue: ShortInt): SizeInt;
 begin
-  Result := aValue xor aValue shr 5;
+  Result := Byte.HashCode(aValue);
 end;
 
 class function TGShortIntHelper.Equal(L, R: ShortInt): Boolean;
