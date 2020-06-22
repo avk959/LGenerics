@@ -104,6 +104,8 @@ type
   function JdkHashW(aValue: Word): Word; inline;
   function JdkHash(aValue: DWord): DWord; inline;
   function JdkHashQ(aValue: QWord): DWord; inline;
+  { FNV1A_JesteressM: slightly modified FNV1A_Hash_Jesteress from http://www.sanmayce.com/Fastest_Hash}
+  function FNV1A_JesteressM(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord;
 
 implementation
 
@@ -127,11 +129,80 @@ begin
   Result := JdkHash(aValue xor aValue shr 32);
 end;
 
+function FNV1A_JesteressM(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+var
+  p: PByte absolute aBuffer;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  buf: array[0..15] of DWord;
+begin
+  Result := DWord(2166136261) + DWord(aCount) + aSeed;
+  while aCount > Pred(SizeOf(buf)) do
+    begin
+      System.Move(p^, buf{%H-}, SizeOf(buf));
+      Result := (Result xor (RolDWord(buf[ 0], 5) xor buf[ 1])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[ 2], 5) xor buf[ 3])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[ 4], 5) xor buf[ 5])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[ 6], 5) xor buf[ 7])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[ 8], 5) xor buf[ 9])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[10], 5) xor buf[11])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[12], 5) xor buf[13])) * DWord(709607);
+      Result := (Result xor (RolDWord(buf[14], 5) xor buf[15])) * DWord(709607);
+      p += SizeOf(buf);
+      aCount -= SizeOf(buf);
+    end;
+  if aCount <> 0 then
+    begin
+      System.Move(p^, buf{%H-}, aCount);
+      p := @buf;
+      while aCount > 7 do
+        begin
+          Result := (Result xor (RolDWord(PDWord(p)^, 5) xor PDWord(p + 4)^)) * DWord(709607);
+          p += 8;
+          aCount -= 8;
+        end;
+      if aCount and 4 <> 0 then
+        begin
+          Result := (Result xor PDWord(p)^) * DWord(709607);
+          p += 4;
+        end;
+      if aCount and 2 <> 0 then
+        begin
+          Result := (Result xor PWord(p)^) * DWord(709607);
+          p += 2;
+        end;
+      if aCount and 1 <> 0 then
+        Result := (Result xor p^) * DWord(709607);
+    end;
+{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
+begin
+  Result := DWord(2166136261) + DWord(aCount) + aSeed;
+  while aCount > 7 do
+    begin
+      Result := (Result xor (RolDWord(PDWord(p)^, 5) xor PDWord(p + 4)^)) * DWord(709607);
+      p += 8;
+      aCount -= 8;
+    end;
+  if aCount and 4 <> 0 then
+    begin
+      Result := (Result xor PDWord(p)^) * DWord(709607);
+      p += 4;
+    end;
+  if aCount and 2 <> 0 then
+    begin
+      Result := (Result xor PWord(p)^) * DWord(709607);
+      p += 2;
+    end;
+  if aCount and 1 <> 0 then
+    Result := (Result xor p^) * DWord(709607);
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+  Result := Result xor Result shr 16;
+end;
+
 {$DEFINE c1 := DWord($9e3779b1)}{$DEFINE c2 := DWord($85ebca77)}{$DEFINE c3 := DWord($c2b2ae3d)}
 {$DEFINE c4 := DWord($27d4eb2f)}{$DEFINE c5 := DWord($165667b1)}
 
 {$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash32LE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
+class function TxxHash32LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
 var
   v1, v2, v3, v4: DWord;
   buf: array[0..3] of DWord;
