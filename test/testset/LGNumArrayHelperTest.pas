@@ -18,9 +18,8 @@ type
   private
   type
 
-    TIntHelper  = specialize TGNumArrayHelper<Integer>;
+    TIntHelper  = specialize TGSimpleArrayHelper<Integer>;
     THackHelper = class(TIntHelper);
-    TDblHelper  = specialize TGNumArrayHelper<Double>;
     TIntArray   = specialize TGArray<Integer>;
 
   published
@@ -363,15 +362,6 @@ type
     procedure DualPivotQuickSortAscOfDyn577RandomZeroes;
     procedure DualPivotQuickSortDescOfDyn577Random;
     procedure DualPivotQuickSortDescOfDyn577RandomZeroes;
-
-    procedure RangeInt0;
-    procedure RangeDouble0;
-    procedure DownRangeInt0;
-    procedure DownRangeDouble0;
-    procedure RangeInt1;
-    procedure RangeDouble1;
-    procedure DownRangeInt1;
-    procedure DownRangeDouble1;
 
     procedure PDQSortTest;
   end;
@@ -3150,146 +3140,6 @@ begin
     a[I] := Random(2);
   TIntHelper.DualPivotQuickSort(a, soDesc);
   AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TNumArrayHelperTest.RangeInt0;
-var
-  I: Integer;
-  Times: Integer = 0;
-begin
-  for I in TIntHelper.Range(2, 1) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  for I in TIntHelper.Range(2, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for I in TIntHelper.Range(2, 3, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for I in TIntHelper.Range(2, 3, -2) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  Times := 0;
-  for I in TIntHelper.Range(2, 3, 0) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-end;
-
-procedure TNumArrayHelperTest.RangeDouble0;
-var
-  d: Double;
-  Times: Integer = 0;
-begin
-  for d in TDblHelper.Range(2, 1) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  for d in TDblHelper.Range(2, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for d in TDblHelper.Range(2, 3, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for d in TDblHelper.Range(2, 3, -2) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  Times := 0;
-  for d in TDblHelper.Range(2, 3, 0) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-end;
-
-procedure TNumArrayHelperTest.DownRangeInt0;
-var
-  I: Integer;
-  Times: Integer = 0;
-begin
-  for I in TIntHelper.DownRange(1, 2) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  for I in TIntHelper.DownRange(2, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for I in TIntHelper.DownRange(2, 1, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for I in TIntHelper.DownRange(2, 1, -2) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  Times := 0;
-  for I in TIntHelper.DownRange(2, 1, 0) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-end;
-
-procedure TNumArrayHelperTest.DownRangeDouble0;
-var
-  d: Double;
-  Times: Integer = 0;
-begin
-  for d in TDblHelper.DownRange(1, 2) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  for d in TDblHelper.DownRange(2, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for d in TDblHelper.DownRange(2, 1, 2) do
-    Inc(Times);
-  AssertTrue(Times = 1);
-  Times := 0;
-  for d in TDblHelper.DownRange(2, 1, -2) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-  Times := 0;
-  for d in TDblHelper.DownRange(2, 1, 0) do
-    Inc(Times);
-  AssertTrue(Times = 0);
-end;
-
-procedure TNumArrayHelperTest.RangeInt1;
-var
-  I: Integer;
-  Sum: Integer = 0;
-begin
-  for I in TIntHelper.Range(1, 10, 2) do
-    Sum += I;
-  AssertTrue(Sum = 25);
-end;
-
-procedure TNumArrayHelperTest.RangeDouble1;
-var
-  d: Double;
-  Sum: Double = 0;
-begin
-  for d in TDblHelper.Range(1, 10, 2) do
-    Sum += d;
-  AssertTrue(Sum = 25);
-end;
-
-procedure TNumArrayHelperTest.DownRangeInt1;
-var
-  I: Integer;
-  Sum: Integer = 0;
-begin
-  for I in TIntHelper.DownRange(10, 1, 2) do
-    Sum += I;
-  AssertTrue(Sum = 30);
-end;
-
-procedure TNumArrayHelperTest.DownRangeDouble1;
-var
-  d: Double;
-  Sum: Double = 0;
-begin
-  for d in TDblHelper.DownRange(10, 1, 2) do
-    Sum += d;
-  AssertTrue(Sum = 30);
 end;
 
 procedure TNumArrayHelperTest.PDQSortTest;

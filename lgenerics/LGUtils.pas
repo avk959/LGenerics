@@ -1076,6 +1076,43 @@ type
     class operator Explicit(const a: array of T): TGSet<T>; overload;
   end;
 
+  TGRangeRecEnumerable<T> = record
+  private
+    FCurrent,
+    FLast,
+    FStep: T;
+    FInLoop: Boolean;
+    procedure Init(aFrom, aTo, aStep: T); inline;
+  public
+    function GetEnumerator: TGRangeRecEnumerable<T>; inline;
+    function MoveNext: Boolean; inline;
+    property Current: T read FCurrent;
+  end;
+
+  TGDownRangeRecEnumerable<T> = record
+  private
+    FCurrent,
+    FLast,
+    FStep: T;
+    FInLoop: Boolean;
+    procedure Init(aFrom, aDownTo, aStep: T); inline;
+  public
+    function GetEnumerator: TGDownRangeRecEnumerable<T>; inline;
+    function MoveNext: Boolean; inline;
+    property Current: T read FCurrent;
+  end;
+
+{ for numeric types only;
+  loop from aFrom to aTo with step aStep;
+  if aStep > T(0) then iteration count = Max(0, Int((aTo - aFrom + aStep)/aStep)),
+  otherwise 0 }
+  function Range<T>(aFrom, aTo: T; aStep: T = T(1)): TGRangeRecEnumerable<T>; inline;
+{ for numeric types only;
+  loop from aFrom down to aDownTo with step aStep;
+  if aStep > T(0) then iteration count = Max(0, Int((aFrom - aDownTo + aStep)/aStep)),
+  otherwise 0 }
+  function DownRange<T>(aFrom, aDownTo: T; aStep: T = T(1)): TGDownRangeRecEnumerable<T>; inline;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
@@ -3386,6 +3423,76 @@ begin
 {$ENDIF}
   for I := 0 to System.High(a) do
     Result{%H-}.Include(a[I]);
+end;
+
+{ TGRangeRecEnumerable }
+
+procedure TGRangeRecEnumerable<T>.Init(aFrom, aTo, aStep: T);
+begin
+  FCurrent := aFrom;
+  FLast := aTo;
+  FStep := aStep;
+  FInLoop := False;
+end;
+
+function TGRangeRecEnumerable<T>.GetEnumerator: TGRangeRecEnumerable<T>;
+begin
+  Result := Self;
+end;
+
+function TGRangeRecEnumerable<T>.MoveNext: Boolean;
+begin
+  if FInLoop then
+    begin
+      if FLast - FCurrent >= FStep then
+        begin
+          FCurrent += FStep;
+          exit(True);
+        end;
+      exit(False);
+    end;
+  FInLoop := True;
+  Result := (FCurrent <= FLast) and (FStep > T(0));
+end;
+
+{ TGDownRangeRecEnumerable }
+
+procedure TGDownRangeRecEnumerable<T>.Init(aFrom, aDownTo, aStep: T);
+begin
+  FCurrent := aFrom;
+  FLast := aDownTo;
+  FStep := aStep;
+  FInLoop := False;
+end;
+
+function TGDownRangeRecEnumerable<T>.GetEnumerator: TGDownRangeRecEnumerable<T>;
+begin
+  Result := Self;
+end;
+
+function TGDownRangeRecEnumerable<T>.MoveNext: Boolean;
+begin
+  if FInLoop then
+    begin
+      if FCurrent - FLast >= FStep then
+        begin
+          FCurrent -= FStep;
+          exit(True);
+        end;
+      exit(False);
+    end;
+  FInLoop := True;
+  Result := (FCurrent >= FLast) and (FStep > T(0));
+end;
+
+function Range<T>(aFrom, aTo: T; aStep: T): TGRangeRecEnumerable<T>;
+begin
+  Result.Init(aFrom, aTo, aStep);
+end;
+
+function DownRange<T>(aFrom, aDownTo: T; aStep: T): TGDownRangeRecEnumerable<T>;
+begin
+  Result.Init(aFrom, aDownTo, aStep);
 end;
 
 end.

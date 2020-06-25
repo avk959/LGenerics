@@ -15,6 +15,8 @@ uses
 
 type
 
+  { TCommonFunctionTest }
+
   TCommonFunctionTest = class(TTestCase)
   published
     procedure NSBOfZero;
@@ -30,6 +32,15 @@ type
     procedure RoundUp2TwoPowerOfOne;
     procedure RoundUp2TwoPowerOfNeg;
     procedure RoundUp2TwoPowerAll;
+
+    procedure RangeInt0;
+    procedure RangeDouble0;
+    procedure DownRangeInt0;
+    procedure DownRangeDouble0;
+    procedure RangeInt1;
+    procedure RangeDouble1;
+    procedure DownRangeInt1;
+    procedure DownRangeDouble1;
   end;
 
   TGOptionalTest = class(TTestCase)
@@ -471,6 +482,146 @@ begin
       TwoPow := SizeInt(1) shl Succ(I);
       AssertTrue(RoundUpTwoPower(v) = TwoPow);
     end;
+end;
+
+procedure TCommonFunctionTest.RangeInt0;
+var
+  I: Integer;
+  Times: Integer = 0;
+begin
+  for I in specialize Range<Integer>(2, 1) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for I in specialize Range<Integer>(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for I in specialize Range<Integer>(2, 3, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for I in specialize Range<Integer>(2, 3, -2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  Times := 0;
+  for I in specialize Range<Integer>(2, 3, 0) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+end;
+
+procedure TCommonFunctionTest.RangeDouble0;
+var
+  d: Double;
+  Times: Integer = 0;
+begin
+  for d in specialize Range<Double>(2, 1) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for d in specialize Range<Double>(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for d in specialize Range<Double>(2, 3, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for d in specialize Range<Double>(2, 3, -2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  Times := 0;
+  for d in specialize Range<Double>(2, 3, 0) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+end;
+
+procedure TCommonFunctionTest.DownRangeInt0;
+var
+  I: Integer;
+  Times: Integer = 0;
+begin
+  for I in specialize DownRange<Integer>(1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for I in specialize DownRange<Integer>(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for I in specialize DownRange<Integer>(2, 1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for I in specialize DownRange<Integer>(2, 1, -2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  Times := 0;
+  for I in specialize DownRange<Integer>(2, 1, 0) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+end;
+
+procedure TCommonFunctionTest.DownRangeDouble0;
+var
+  d: Double;
+  Times: Integer = 0;
+begin
+  for d in specialize DownRange<Double>(1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for d in specialize DownRange<Double>(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for d in specialize DownRange<Double>(2, 1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for d in specialize DownRange<Double>(2, 1, -2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  Times := 0;
+  for d in specialize DownRange<Double>(2, 1, 0) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+end;
+
+procedure TCommonFunctionTest.RangeInt1;
+var
+  I: Integer;
+  Sum: Integer = 0;
+begin
+  for I in specialize Range<Integer>(1, 10, 2) do
+    Sum += I;
+  AssertTrue(Sum = 25);
+end;
+
+procedure TCommonFunctionTest.RangeDouble1;
+var
+  d: Double;
+  Sum: Double = 0;
+begin
+  for d in specialize Range<Double>(1, 10, 2) do
+    Sum += d;
+  AssertTrue(Sum = 25);
+end;
+
+procedure TCommonFunctionTest.DownRangeInt1;
+var
+  I: Integer;
+  Sum: Integer = 0;
+begin
+  for I in specialize DownRange<Integer>(10, 1, 2) do
+    Sum += I;
+  AssertTrue(Sum = 30);
+end;
+
+procedure TCommonFunctionTest.DownRangeDouble1;
+var
+  d: Double;
+  Sum: Double = 0;
+begin
+  for d in specialize DownRange<Double>(10, 1, 2) do
+    Sum += d;
+  AssertTrue(Sum = 30);
 end;
 
 { TGOptionalTest }

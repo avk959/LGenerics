@@ -1080,49 +1080,8 @@ type
     class function  SelectDistinct(constref A: array of T): TArray; static;
   end;
 
-  { TGNumArrayHelper: for numeric types only }
-  generic TGNumArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
-  public
-  type
-    TRange = record
-    strict private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInLoop: Boolean;
-    public
-      constructor Create(aFrom, aTo, aStep: T);
-      function GetEnumerator: TRange; inline;
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-    TDownRange = record
-    strict private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInLoop: Boolean;
-    public
-      constructor Create(aFrom, aDownTo, aStep: T);
-      function GetEnumerator: TDownRange; inline;
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-  public
-  { loop from aFrom to aTo with step aStep;
-    if aStep > T(0) then iteration count = Max(0, Int((aTo - aFrom + aStep)/aStep)),
-    otherwise 0 }
-    class function Range(aFrom, aTo: T; aStep: T = T(1)): TRange; static; inline;
-  { loop from aFrom down to aDownTo with step aStep;
-    if aStep > T(0) then iteration count = Max(0, Int((aFrom - aDownTo + aStep)/aStep)),
-    otherwise 0 }
-    class function DownRange(aFrom, aDownTo: T; aStep: T = T(1)): TDownRange; static; inline;
-  end;
-
   { TGOrdinalArrayHelper: for ordinal numeric types only }
-  generic TGOrdinalArrayHelper<T> = class(specialize TGNumArrayHelper<T>)
+  generic TGOrdinalArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
   private
   type
     TMonotonyKind = (mkAsc, mkDesc, mkConst, mkNone);
@@ -13352,76 +13311,6 @@ begin
         Result[I] := Result[J];
     end;
   System.SetLength(Result, Succ(I));
-end;
-
-{ TGNumArrayHelper.TRange }
-
-constructor TGNumArrayHelper.TRange.Create(aFrom, aTo, aStep: T);
-begin
-  FCurrent := aFrom;
-  FLast := aTo;
-  FStep := aStep;
-  FInLoop := False;
-end;
-
-function TGNumArrayHelper.TRange.GetEnumerator: TRange;
-begin
-  Result := Self;
-end;
-
-function TGNumArrayHelper.TRange.MoveNext: Boolean;
-begin
-  if FInLoop then
-    begin
-      if FLast - FCurrent >= FStep then
-        begin
-          FCurrent += FStep;
-          exit(True);
-        end;
-      exit(False);
-    end;
-  FInLoop := True;
-  Result := (FCurrent <= FLast) and (FStep > T(0));
-end;
-
-{ TGNumArrayHelper.TDownRange }
-
-constructor TGNumArrayHelper.TDownRange.Create(aFrom, aDownTo, aStep: T);
-begin
-  FCurrent := aFrom;
-  FLast := aDownTo;
-  FStep := aStep;
-  FInLoop := False;
-end;
-
-function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRange;
-begin
-  Result := Self;
-end;
-
-function TGNumArrayHelper.TDownRange.MoveNext: Boolean;
-begin
-  if FInLoop then
-    begin
-      if FCurrent - FLast >= FStep then
-        begin
-          FCurrent -= FStep;
-          exit(True);
-        end;
-      exit(False);
-    end;
-  FInLoop := True;
-  Result := (FCurrent >= FLast) and (FStep > T(0));
-end;
-
-class function TGNumArrayHelper.Range(aFrom, aTo: T; aStep: T): TRange;
-begin
-  Result := TRange.Create(aFrom, aTo, aStep);
-end;
-
-class function TGNumArrayHelper.DownRange(aFrom, aDownTo: T; aStep: T): TDownRange;
-begin
-  Result := TDownRange.Create(aFrom, aDownTo, aStep);
 end;
 
 { TGOrdinalArrayHelper }
