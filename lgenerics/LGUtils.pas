@@ -708,7 +708,7 @@ type
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
+    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
     function  Contains(constref aKey: TKey): Boolean;

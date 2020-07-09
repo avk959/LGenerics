@@ -441,8 +441,8 @@ type
   { returns True and aValue mapped to aKey if contains aKey, False otherwise }
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
   { returns value mapped to aKey or aDefault }
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
-    function  GetMutValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): PValue;
+    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue; inline;
+    function  GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
   { returns True if contains aKey, otherwise adds aKey and returns False }
     function  FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
