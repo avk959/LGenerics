@@ -280,7 +280,7 @@ begin
   AssertFalse(m.Instance.TryGetValue(12, I));
   AssertTrue(m.Instance.TryGetValue(46, I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef(17) = 0);
+  AssertTrue(m.Instance.GetValueDef(17, 0) = 0);
   AssertTrue(m.Instance.GetValueDef(17, 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(I * 23);
@@ -387,7 +387,7 @@ begin
   AssertFalse(m.Instance.TryGetValue('12', I));
   AssertTrue(m.Instance.TryGetValue('46', I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef('17') = 0);
+  AssertTrue(m.Instance.GetValueDef('17', 0) = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(IntToStr(I * 23));
@@ -643,7 +643,7 @@ begin
   AssertFalse(m.Instance.TryGetValue(12, I));
   AssertTrue(m.Instance.TryGetValue(46, I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef(17) = 0);
+  AssertTrue(m.Instance.GetValueDef(17, 0) = 0);
   AssertTrue(m.Instance.GetValueDef(17, 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(I * 23);
@@ -750,7 +750,7 @@ begin
   AssertFalse(m.Instance.TryGetValue('12', I));
   AssertTrue(m.Instance.TryGetValue('46', I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef('17') = 0);
+  AssertTrue(m.Instance.GetValueDef('17', 0) = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(IntToStr(I * 23));
@@ -976,7 +976,7 @@ begin
   AssertFalse(m.Instance.TryGetValue(12, I));
   AssertTrue(m.Instance.TryGetValue(46, I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef(17) = 0);
+  AssertTrue(m.Instance.GetValueDef(17, 0) = 0);
   AssertTrue(m.Instance.GetValueDef(17, 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(I * 23);
@@ -1083,7 +1083,7 @@ begin
   AssertFalse(m.Instance.TryGetValue('12', I));
   AssertTrue(m.Instance.TryGetValue('46', I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef('17') = 0);
+  AssertTrue(m.Instance.GetValueDef('17', 0) = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(IntToStr(I * 23));
@@ -1339,7 +1339,7 @@ begin
   AssertFalse(m.Instance.TryGetValue(12, I));
   AssertTrue(m.Instance.TryGetValue(46, I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef(17) = 0);
+  AssertTrue(m.Instance.GetValueDef(17, 0) = 0);
   AssertTrue(m.Instance.GetValueDef(17, 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(I * 23);
@@ -1446,7 +1446,7 @@ begin
   AssertFalse(m.Instance.TryGetValue('12', I));
   AssertTrue(m.Instance.TryGetValue('46', I));
   AssertTrue(I = 106);
-  AssertTrue(m.Instance.GetValueDef('17') = 0);
+  AssertTrue(m.Instance.GetValueDef('17', 0) = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
     m.Instance.Remove(IntToStr(I * 23));
