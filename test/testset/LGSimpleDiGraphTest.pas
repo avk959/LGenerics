@@ -132,7 +132,7 @@ type
     TNetRef      = specialize TGAutoRef<TNet>;
     TCostNetRef  = specialize TGAutoRef<TCostNet>;
     THelper      = specialize TGOrdinalArrayHelper<Integer>;
-    TSearch      = specialize TGNumArrayHelper<SizeInt>;
+    TSearch      = specialize TGSimpleArrayHelper<SizeInt>;
 
     function  GenerateTestWDigr1: TGraph;
     function  GenerateTestWDigr2: TGraph;
