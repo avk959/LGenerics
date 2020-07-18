@@ -489,22 +489,22 @@ var
   I: Integer;
   Times: Integer = 0;
 begin
-  for I in specialize Range<Integer>(2, 1) do
+  for I in specialize GRange<Integer>(2, 1) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for I in specialize Range<Integer>(2, 2) do
+  for I in specialize GRange<Integer>(2, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for I in specialize Range<Integer>(2, 3, 2) do
+  for I in specialize GRange<Integer>(2, 3, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for I in specialize Range<Integer>(2, 3, -2) do
+  for I in specialize GRange<Integer>(2, 3, -2) do
     Inc(Times);
   AssertTrue(Times = 0);
   Times := 0;
-  for I in specialize Range<Integer>(2, 3, 0) do
+  for I in specialize GRange<Integer>(2, 3, 0) do
     Inc(Times);
   AssertTrue(Times = 0);
 end;
@@ -514,22 +514,22 @@ var
   d: Double;
   Times: Integer = 0;
 begin
-  for d in specialize Range<Double>(2, 1) do
+  for d in specialize GRange<Double>(2, 1) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for d in specialize Range<Double>(2, 2) do
+  for d in specialize GRange<Double>(2, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for d in specialize Range<Double>(2, 3, 2) do
+  for d in specialize GRange<Double>(2, 3, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for d in specialize Range<Double>(2, 3, -2) do
+  for d in specialize GRange<Double>(2, 3, -2) do
     Inc(Times);
   AssertTrue(Times = 0);
   Times := 0;
-  for d in specialize Range<Double>(2, 3, 0) do
+  for d in specialize GRange<Double>(2, 3, 0) do
     Inc(Times);
   AssertTrue(Times = 0);
 end;
@@ -539,22 +539,22 @@ var
   I: Integer;
   Times: Integer = 0;
 begin
-  for I in specialize DownRange<Integer>(1, 2) do
+  for I in specialize GDownRange<Integer>(1, 2) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for I in specialize DownRange<Integer>(2, 2) do
+  for I in specialize GDownRange<Integer>(2, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for I in specialize DownRange<Integer>(2, 1, 2) do
+  for I in specialize GDownRange<Integer>(2, 1, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for I in specialize DownRange<Integer>(2, 1, -2) do
+  for I in specialize GDownRange<Integer>(2, 1, -2) do
     Inc(Times);
   AssertTrue(Times = 0);
   Times := 0;
-  for I in specialize DownRange<Integer>(2, 1, 0) do
+  for I in specialize GDownRange<Integer>(2, 1, 0) do
     Inc(Times);
   AssertTrue(Times = 0);
 end;
@@ -564,22 +564,22 @@ var
   d: Double;
   Times: Integer = 0;
 begin
-  for d in specialize DownRange<Double>(1, 2) do
+  for d in specialize GDownRange<Double>(1, 2) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for d in specialize DownRange<Double>(2, 2) do
+  for d in specialize GDownRange<Double>(2, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for d in specialize DownRange<Double>(2, 1, 2) do
+  for d in specialize GDownRange<Double>(2, 1, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for d in specialize DownRange<Double>(2, 1, -2) do
+  for d in specialize GDownRange<Double>(2, 1, -2) do
     Inc(Times);
   AssertTrue(Times = 0);
   Times := 0;
-  for d in specialize DownRange<Double>(2, 1, 0) do
+  for d in specialize GDownRange<Double>(2, 1, 0) do
     Inc(Times);
   AssertTrue(Times = 0);
 end;
@@ -589,7 +589,7 @@ var
   I: Integer;
   Sum: Integer = 0;
 begin
-  for I in specialize Range<Integer>(1, 10, 2) do
+  for I in specialize GRange<Integer>(1, 10, 2) do
     Sum += I;
   AssertTrue(Sum = 25);
 end;
@@ -599,7 +599,7 @@ var
   d: Double;
   Sum: Double = 0;
 begin
-  for d in specialize Range<Double>(1, 10, 2) do
+  for d in specialize GRange<Double>(1, 10, 2) do
     Sum += d;
   AssertTrue(Sum = 25);
 end;
@@ -609,7 +609,7 @@ var
   I: Integer;
   Sum: Integer = 0;
 begin
-  for I in specialize DownRange<Integer>(10, 1, 2) do
+  for I in specialize GDownRange<Integer>(10, 1, 2) do
     Sum += I;
   AssertTrue(Sum = 30);
 end;
@@ -619,7 +619,7 @@ var
   d: Double;
   Sum: Double = 0;
 begin
-  for d in specialize DownRange<Double>(10, 1, 2) do
+  for d in specialize GDownRange<Double>(10, 1, 2) do
     Sum += d;
   AssertTrue(Sum = 30);
 end;
