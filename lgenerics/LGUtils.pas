@@ -1014,7 +1014,7 @@ type
     {$ENDIF USE_TGSET_INITIALIZE}
   public
   type
-    TArray      = array of T;
+    TArray = array of T;
 
     TEnumerator = record
     private
@@ -1077,28 +1077,28 @@ type
     class operator Explicit(const a: array of T): TGSet<T>; overload;
   end;
 
-  TGRangeRecEnumerable<T> = record
+  TGRecRange<T> = record
   private
     FCurrent,
     FLast,
     FStep: T;
     FInLoop: Boolean;
-    procedure Init(aFrom, aTo, aStep: T); inline;
   public
-    function GetEnumerator: TGRangeRecEnumerable<T>; inline;
+    constructor Create(aFrom, aTo, aStep: T);
+    function GetEnumerator: TGRecRange<T>; inline;
     function MoveNext: Boolean; inline;
     property Current: T read FCurrent;
   end;
 
-  TGDownRangeRecEnumerable<T> = record
+  TGRecDownRange<T> = record
   private
     FCurrent,
     FLast,
     FStep: T;
     FInLoop: Boolean;
-    procedure Init(aFrom, aDownTo, aStep: T); inline;
   public
-    function GetEnumerator: TGDownRangeRecEnumerable<T>; inline;
+    constructor Create(aFrom, aDownTo, aStep: T);
+    function GetEnumerator: TGRecDownRange<T>; inline;
     function MoveNext: Boolean; inline;
     property Current: T read FCurrent;
   end;
@@ -1107,12 +1107,12 @@ type
   loop from aFrom to aTo with step aStep;
   if aStep > T(0) then iteration count = Max(0, Int((aTo - aFrom + aStep)/aStep)),
   otherwise 0 }
-  function Range<T>(aFrom, aTo: T; aStep: T = T(1)): TGRangeRecEnumerable<T>; inline;
+  function GRange<T>(aFrom, aTo: T; aStep: T = T(1)): TGRecRange<T>; inline;
 { for numeric types only;
   loop from aFrom down to aDownTo with step aStep;
   if aStep > T(0) then iteration count = Max(0, Int((aFrom - aDownTo + aStep)/aStep)),
   otherwise 0 }
-  function DownRange<T>(aFrom, aDownTo: T; aStep: T = T(1)): TGDownRangeRecEnumerable<T>; inline;
+  function GDownRange<T>(aFrom, aDownTo: T; aStep: T = T(1)): TGRecDownRange<T>; inline;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3426,9 +3426,9 @@ begin
     Result{%H-}.Include(a[I]);
 end;
 
-{ TGRangeRecEnumerable }
+{ TGRecRange }
 
-procedure TGRangeRecEnumerable<T>.Init(aFrom, aTo, aStep: T);
+constructor TGRecRange<T>.Create(aFrom, aTo, aStep: T);
 begin
   FCurrent := aFrom;
   FLast := aTo;
@@ -3436,16 +3436,16 @@ begin
   FInLoop := False;
 end;
 
-function TGRangeRecEnumerable<T>.GetEnumerator: TGRangeRecEnumerable<T>;
+function TGRecRange<T>.GetEnumerator: TGRecRange<T>;
 begin
   Result := Self;
 end;
 
-function TGRangeRecEnumerable<T>.MoveNext: Boolean;
+function TGRecRange<T>.MoveNext: Boolean;
 begin
   if FInLoop then
     begin
-      if FLast - FCurrent >= FStep then
+      if FLast - FStep >= FCurrent then
         begin
           FCurrent += FStep;
           exit(True);
@@ -3456,9 +3456,9 @@ begin
   Result := (FCurrent <= FLast) and (FStep > T(0));
 end;
 
-{ TGDownRangeRecEnumerable }
+{ TGRecDownRange }
 
-procedure TGDownRangeRecEnumerable<T>.Init(aFrom, aDownTo, aStep: T);
+constructor TGRecDownRange<T>.Create(aFrom, aDownTo, aStep: T);
 begin
   FCurrent := aFrom;
   FLast := aDownTo;
@@ -3466,16 +3466,16 @@ begin
   FInLoop := False;
 end;
 
-function TGDownRangeRecEnumerable<T>.GetEnumerator: TGDownRangeRecEnumerable<T>;
+function TGRecDownRange<T>.GetEnumerator: TGRecDownRange<T>;
 begin
   Result := Self;
 end;
 
-function TGDownRangeRecEnumerable<T>.MoveNext: Boolean;
+function TGRecDownRange<T>.MoveNext: Boolean;
 begin
   if FInLoop then
     begin
-      if FCurrent - FLast >= FStep then
+      if FLast + FStep <= FCurrent then
         begin
           FCurrent -= FStep;
           exit(True);
@@ -3486,14 +3486,14 @@ begin
   Result := (FCurrent >= FLast) and (FStep > T(0));
 end;
 
-function Range<T>(aFrom, aTo: T; aStep: T): TGRangeRecEnumerable<T>;
+function GRange<T>(aFrom, aTo: T; aStep: T): TGRecRange<T>;
 begin
-  Result.Init(aFrom, aTo, aStep);
+  Result := TGRecRange<T>.Create(aFrom, aTo, aStep);
 end;
 
-function DownRange<T>(aFrom, aDownTo: T; aStep: T): TGDownRangeRecEnumerable<T>;
+function GDownRange<T>(aFrom, aDownTo: T; aStep: T): TGRecDownRange<T>;
 begin
-  Result.Init(aFrom, aDownTo, aStep);
+  Result := TGRecDownRange<T>.Create(aFrom, aDownTo, aStep);
 end;
 
 end.
