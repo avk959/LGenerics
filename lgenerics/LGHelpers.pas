@@ -176,11 +176,13 @@ type
   end;
 {$ENDIF}
 
+{$IF DECLARED(Comp)}
   TCompHelper = type helper for Comp
     class function HashCode(aValue: Comp): SizeInt; static; inline;
     class function Equal(L, R: Comp): Boolean; static; inline;
     class function Less(L, R: Comp): Boolean; static; inline;
   end;
+{$ENDIF}
 
   TGDateTimeHelper = type helper for TDateTime
     class function HashCode(aValue: TDateTime): SizeInt; static; inline;
@@ -750,6 +752,7 @@ begin
 end;
 {$ENDIF}
 
+{$IF DECLARED(Comp)}
 { TCompHelper }
 
 class function TCompHelper.HashCode(aValue: Comp): SizeInt;
@@ -766,6 +769,7 @@ class function TCompHelper.Less(L, R: Comp): Boolean;
 begin
   Result := L < R;
 end;
+{$ENDIF}
 
 class function TGDateTimeHelper.HashCode(aValue: TDateTime): SizeInt;
 begin
