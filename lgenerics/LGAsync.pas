@@ -511,7 +511,7 @@ type
 {$POP}
 
   { TGBlockChannel }
-  generic TGBlockChannel<T> = class(specialize IGReadChannel<T>, specialize GWriteChannel<T>)
+  generic TGBlockChannel<T> = class(specialize IGReadChannel<T>, specialize IGWriteChannel<T>)
   strict protected
   type
     IQueue = specialize IGQueue<T>;
