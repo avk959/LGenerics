@@ -488,9 +488,30 @@ const
   UNBOUND_CHAN_SIZE = High(SizeInt);
 
 type
+{$PUSH}{$INTERFACES CORBA}
+  generic IGReadChannel<T> = interface
+  ['{5861F2A8-CA8E-4EE7-A66A-AA69B80670A7}']
+    function GetActive: Boolean;
+  { blocking method }
+    function Receive(out aValue: T): Boolean;
+  { non blocking method }
+    function TryReceive(out aValue: T): Boolean;
+    property Active: Boolean read GetActive;
+  end;
+
+  generic IGWriteChannel<T> = interface
+  ['{2B1861EE-950B-411C-AA22-91D1B9B071A5}']
+    function GetActive: Boolean;
+  { blocking method }
+    function Send(constref aValue: T): Boolean;
+  { non blocking method }
+    function TrySend(constref aValue: T): Boolean;
+    property Active: Boolean read GetActive;
+  end;
+{$POP}
 
   { TGBlockChannel }
-  generic TGBlockChannel<T> = class
+  generic TGBlockChannel<T> = class(specialize IGReadChannel<T>, specialize GWriteChannel<T>)
   strict protected
   type
     IQueue = specialize IGQueue<T>;
