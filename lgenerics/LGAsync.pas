@@ -352,7 +352,7 @@ type
   public
     class function Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
                         aEx: IATaskExecutor = nil): TFuture; static;
-    class function Call(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor = nil): TFuture; static;
+    class function CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor = nil): TFuture; static;
     class function Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IATaskExecutor = nil): TSpawn;
                    static;
     class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IATaskExecutor = nil): TSpawn; static;
@@ -504,6 +504,7 @@ type
     FWait: Integer;
     FActive: Boolean;
     function  GetWait: Boolean; inline;
+    function  GetActive: Boolean; inline;
     function  GetCapacity: SizeInt; inline;
     procedure SendData(constref aValue: T);
     function  ReceiveData: T;
@@ -1312,7 +1313,7 @@ var
 begin
   System.SetLength(Result.Futures, System.Length(a));
   for I := 0 to Pred(System.Length(a)) do
-    Result.Futures[I] := Call(a[I].F1, a[I].F2, aEx);
+    Result.Futures[I] := CallTup(a[I].F1, a[I].F2, aEx);
 end;
 
 constructor TGAsyncDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
@@ -1340,19 +1341,19 @@ begin
   Result.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
 end;
 
-class function TGAsyncTriadic.Call(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor): TFuture;
+class function TGAsyncTriadic.CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IATaskExecutor): TFuture;
 begin
   Result.Start(TGAsyncTriadic.Create(aFun, aTup), aEx);
 end;
 
-class function TGAsyncTriadic.Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IATaskExecutor
-  ): TSpawn;
+class function TGAsyncTriadic.Spawn(aFun: TFun; constref Args: array of TParamTuple;
+  aEx: IATaskExecutor): TSpawn;
 var
   I: SizeInt;
 begin
   System.SetLength(Result.Futures, System.Length(Args));
   for I := 0 to Pred(System.Length(Args)) do
-    Result.Futures[I] := Call(aFun, Args[I], aEx);
+    Result.Futures[I] := CallTup(aFun, Args[I], aEx);
 end;
 
 class function TGAsyncTriadic.Spawn(aFun: TFun; e: TTupEnumerable; aEx: IATaskExecutor): TSpawn;
@@ -1365,7 +1366,7 @@ begin
     begin
       if I = System.Length(Result.Futures) then
         System.SetLength(Result.Futures, I * 2);
-      Result.Futures[I] := Call(aFun, Tup, aEx);
+      Result.Futures[I] := CallTup(aFun, Tup, aEx);
       Inc(I);
     end;
   System.SetLength(Result.Futures, I);
@@ -1377,7 +1378,7 @@ var
 begin
   System.SetLength(Result.Futures, System.Length(a));
   for I := 0 to Pred(System.Length(a)) do
-    Result.Futures[I] := Call(a[I].F1, a[I].F2, aEx);
+    Result.Futures[I] := CallTup(a[I].F1, a[I].F2, aEx);
 end;
 
 constructor TGAsyncTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
@@ -1817,6 +1818,11 @@ end;
 function TGBlockChannel.GetWait: Boolean;
 begin
   Result := LongBool(FWait);
+end;
+
+function TGBlockChannel.GetActive: Boolean;
+begin
+  Result := FActive;
 end;
 
 function TGBlockChannel.GetCapacity: SizeInt;
