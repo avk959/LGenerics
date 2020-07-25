@@ -81,6 +81,7 @@ const
   {$PUSH}{$J-}
   NULL_INDEX: SizeInt        = SizeInt(-1);
   {$POP}
+  VOID: TDummy               = ();
 type
   TGOptional<T> = record
   private
