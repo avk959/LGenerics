@@ -144,7 +144,7 @@ begin
   Data := CreateData;
   StartTimer;
   ////////////////////
-  TMonadic.Spawn(@Sort, CreateDataList(Data), TDefaultExecutor.Instance).WaitFor;
+  TMonadic.Spawn(@Sort, CreateDataList(Data), DefaultExecutor).WaitFor;
   //////////////////
   FTimer.Stop;
   lbResultTime.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
@@ -210,15 +210,15 @@ begin
   ChankSize := Length(Data) div 4;
   StartTimer;
   ////////////////////////////////////////////////////////////////
-  p1 := TTriadic.Call(@SortLeft, @Data, 0, Pred(ChankSize));
-  p2 := TTriadic.Call(@SortRight, @Data, ChankSize, Pred(ChankSize*2));
-  p3 := TTriadic.Call(@SortLeft, @Data, ChankSize*2, Pred(ChankSize*3));
-  p4 := TTriadic.Call(@SortRight, @Data, ChankSize*3, High(Data));
+  p1 := TTriadic.Call(@SortLeft, @Data, 0, Pred(ChankSize), DefaultExecutor);
+  p2 := TTriadic.Call(@SortRight, @Data, ChankSize, Pred(ChankSize*2), DefaultExecutor);
+  p3 := TTriadic.Call(@SortLeft, @Data, ChankSize*2, Pred(ChankSize*3), DefaultExecutor);
+  p4 := TTriadic.Call(@SortRight, @Data, ChankSize*3, High(Data), DefaultExecutor);
 
-  p5 := TTriadic.Call(@MergeSortLeft, @Data, p1.Value, p2.Value);
-  p6 := TTriadic.Call(@MergeSortRight, @Data, p3.Value, p4.Value);
+  p5 := TTriadic.Call(@MergeSortLeft, @Data, p1.Value, p2.Value, DefaultExecutor);
+  p6 := TTriadic.Call(@MergeSortRight, @Data, p3.Value, p4.Value, DefaultExecutor);
 
-  TTriadic.Call(@MergeSortLeft, @Data, p5.Value, p6.Value).WaitFor;
+  TTriadic.Call(@MergeSortLeft, @Data, p5.Value, p6.Value, DefaultExecutor).WaitFor;
   ////////////////////////////////////////////////////////////////
   FTimer.Stop;
   lbResultTime1.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
