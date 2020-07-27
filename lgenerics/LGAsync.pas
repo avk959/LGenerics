@@ -602,16 +602,17 @@ type
   generic TGListenThread<T> = class abstract
   strict private
   type
-    TChannel = specialize TGBlockChannel<T>;
+    TChannel  = specialize TGBlockChannel<T>;
+    IReadChan = specialize IGReadChannel<T>;
 
     TWorker = class(TWorkThread)
     private
-      FChannel: TChannel;
+      FChannel: IReadChan;
       FOwner: TGListenThread;
     protected
       procedure Execute; override;
     public
-      constructor Create(aOwner: TGListenThread; aChannel: TChannel; aStackSize: SizeUInt);
+      constructor Create(aOwner: TGListenThread; aChannel: IReadChan; aStackSize: SizeUInt);
     end;
 
   var
@@ -637,9 +638,9 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
   { blocking method }
-    procedure Send(constref aMessage: T);
+    procedure Send(constref aMessage: T); inline;
   { non blocking method }
-    function  TrySend(constref aMessage: T): Boolean;
+    function  TrySend(constref aMessage: T): Boolean; inline;
     property  Priority: TThreadPriority read GetPriority write SetPriority;
     property  ThreadID: TThreadID read GetThreadID;
     property  Handle: TThreadID read GetHandle;
@@ -2079,12 +2080,11 @@ begin
     end;
 end;
 
-constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: TChannel; aStackSize: SizeUInt);
+constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: IReadChan; aStackSize: SizeUInt);
 begin
   inherited Create(True, aStackSize);
   FOwner := aOwner;
   FChannel := aChannel;
-  FreeOnTerminate := True;
 end;
 
 
@@ -2147,6 +2147,8 @@ destructor TGListenThread.Destroy;
 begin
   FWorker.Terminate;
   FChannel.Close;
+  FWorker.WaitFor;
+  FWorker.Free;
   FChannel.Free;
   inherited;
 end;
