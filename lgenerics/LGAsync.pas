@@ -653,16 +653,17 @@ type
   TThreadPool = class(TObject, IExecutor)
   strict private
   type
-    TChannel = specialize TGBlockChannel<ITask>;
+    TChannel  = specialize TGBlockChannel<ITask>;
+    IReadChan = specialize IGReadChannel<ITask>;
 
     TWorker = class(TWorkThread)
     private
-      FChannel: TChannel;
+      FChannel: IReadChan;
       FOwner: TThreadPool;
     protected
       procedure Execute; override;
     public
-      constructor Create(aOwner: TThreadPool; aChannel: TChannel; aStackSize: SizeUInt);
+      constructor Create(aOwner: TThreadPool; aChannel: IReadChan; aStackSize: SizeUInt);
     end;
 
     TPool = specialize TGLiteVector<TWorker>;
@@ -2183,7 +2184,7 @@ begin
     end;
 end;
 
-constructor TThreadPool.TWorker.Create(aOwner: TThreadPool; aChannel: TChannel; aStackSize: SizeUInt);
+constructor TThreadPool.TWorker.Create(aOwner: TThreadPool; aChannel: IReadChan; aStackSize: SizeUInt);
 begin
   inherited Create(True, aStackSize);
   FOwner := aOwner;
