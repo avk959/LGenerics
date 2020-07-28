@@ -10,25 +10,27 @@ uses
 
 type
 
-  TChannel = specialize TGBlockChannel<string>;
+  TChannel   = specialize TGBlockChannel<string>;
+  IReadChan  = specialize IGReadChannel<string>;
+  IWriteChan = specialize IGWriteChannel<string>;
 
   TSender = class(TThread)
   private
-    FChannel: TChannel;
+    FChannel: IWriteChan;
     FCurrData: string;
     procedure UpdateLabel;
   public
-    constructor Create(aChannel: TChannel);
+    constructor Create(aChannel: IWriteChan);
     procedure Execute; override;
   end;
 
   TReceiver = class(TThread)
   private
-    FChannel: TChannel;
+    FChannel: IReadChan;
     FCurrData: string;
     procedure UpdateLabel;
   public
-    constructor Create(aChannel: TChannel);
+    constructor Create(aChannel: IReadChan);
     procedure Execute; override;
   end;
 
@@ -79,7 +81,7 @@ begin
   frmMain.lbSendedData.Caption := FCurrData;
 end;
 
-constructor TSender.Create(aChannel: TChannel);
+constructor TSender.Create(aChannel: IWriteChan);
 begin
   inherited Create(True);
   FChannel := aChannel;
@@ -110,7 +112,7 @@ begin
   frmMain.lbReceivedData.Caption := FCurrData;
 end;
 
-constructor TReceiver.Create(aChannel: TChannel);
+constructor TReceiver.Create(aChannel: IReadChan);
 begin
   inherited Create(True);
   FChannel := aChannel;
