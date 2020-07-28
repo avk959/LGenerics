@@ -125,13 +125,11 @@ type
 
   strict private
     FTask: IATask;
-    FTaskResult: T;
     procedure Resolve;
   private
     function  GetState: TAsyncTaskState; inline;
   { executes aTask in separate thread if aEx = nil }
     procedure Start(aTask: IATask; aEx: IExecutor);
-    class operator Finalize(var f: TGFuture);
   public
     function  WaitFor: TAsyncTaskState;
     function  Cancel: Boolean; inline;
@@ -905,7 +903,6 @@ begin
   FTask.MarkResolved;
   if FTask.State = astFatal then
     raise FTask.FatalException;
-  FTaskResult := FTask.Result;
 end;
 
 function TGFuture.GetState: TAsyncTaskState;
@@ -921,11 +918,6 @@ begin
   else
     with TWorker.Create(aTask) do
       Start;
-end;
-
-class operator TGFuture.Finalize(var f: TGFuture);
-begin
-  f.FTask := nil;
 end;
 
 function TGFuture.WaitFor: TAsyncTaskState;
@@ -952,13 +944,13 @@ begin
       raise ELGFuture.Create(SEResultUnknownCancel);
   else
   end;
-  Result := FTaskResult;
+  Result := FTask.Result;
 end;
 
 function TGFuture.GetValue: TOptional;
 begin
   if WaitFor < astFatal then
-    Result.Assign(FTaskResult);
+    Result.Assign(FTask.Result);
 end;
 
 { TGSpawn }
