@@ -37,7 +37,7 @@ uses
 
 type
 
-  TAsyncTaskState = (astPending, astExecuting, astFinished, astFatal, astCancelled);
+  TAsyncTaskState = (atsPending, atsExecuting, atsFinished, atsFatal, atsCancelled);
 
 {$PUSH}{$INTERFACES COM}
   IAsyncTask = interface(ITask)
@@ -810,20 +810,20 @@ end;
 function TAsyncTask.Cancel: Boolean;
 begin
   Result :=
-    InterlockedCompareExchange(FState, LongInt(astCancelled), LongInt(astPending)) = LongInt(astPending);
+    InterlockedCompareExchange(FState, LongInt(atsCancelled), LongInt(atsPending)) = LongInt(atsPending);
 end;
 
 procedure TAsyncTask.Execute;
 begin
   if InterlockedCompareExchange(
-       FState, LongInt(astExecuting), LongInt(astPending)) = LongInt(astPending) then
+       FState, LongInt(atsExecuting), LongInt(atsPending)) = LongInt(atsPending) then
     try
       DoExecute;
       InterlockedIncrement(FState);
     except
       on e: Exception do
         begin
-          InterlockedExchange(FState, LongInt(astFatal));
+          InterlockedExchange(FState, LongInt(atsFatal));
           FException := Exception(System.AcquireExceptionObject);
         end;
     end;
@@ -884,9 +884,9 @@ procedure TGFuture.Resolve;
 var
   e: Exception;
 begin
-  if FTask.State <= astFinished then
+  if FTask.State <= atsFinished then
     FTask.WaitFor;
-  if FTask.State = astFatal then
+  if FTask.State = atsFatal then
     begin
       e := FTask.FatalException;
       if e <> nil then
@@ -927,9 +927,9 @@ function TGFuture.Value: T;
 begin
   Resolve;
   case FTask.State of
-    astFatal:
+    atsFatal:
       raise ELGFuture.Create(SEResultUnknownFatal);
-    astCancelled:
+    atsCancelled:
       raise ELGFuture.Create(SEResultUnknownCancel);
   else
   end;
@@ -938,7 +938,7 @@ end;
 
 function TGFuture.GetValue: TOptional;
 begin
-  if WaitFor < astFatal then
+  if WaitFor < atsFatal then
     Result.Assign(FTask.Result);
 end;
 
