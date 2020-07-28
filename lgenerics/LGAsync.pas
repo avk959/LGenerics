@@ -831,18 +831,18 @@ end;
 
 procedure TAsyncTask.Execute;
 begin
-  if FState <> LongInt(astPending) then exit;
-  InterlockedIncrement(FState);
-  try
-    DoExecute;
-    InterlockedIncrement(FState);
-  except
-    on e: Exception do
-      begin
-        InterlockedExchange(FState, LongInt(astFatal));
-        FException := Exception(System.AcquireExceptionObject);
-      end;
-  end;
+  if InterlockedCompareExchange(
+       FState, LongInt(astExecuting), LongInt(astPending)) = LongInt(astPending) then
+    try
+      DoExecute;
+      InterlockedIncrement(FState);
+    except
+      on e: Exception do
+        begin
+          InterlockedExchange(FState, LongInt(astFatal));
+          FException := Exception(System.AcquireExceptionObject);
+        end;
+    end;
   System.RtlEventSetEvent(FAwait);
 end;
 
