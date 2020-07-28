@@ -43,13 +43,10 @@ type
   IAsyncTask = interface(ITask)
   ['{4122B5EC-40CF-421D-AFB8-23534663C24E}']
     function  GetState: TAsyncTaskState;
-    function  GetResolved: Boolean;
-    procedure MarkResolved;
     function  Cancel: Boolean;
     procedure WaitFor;
     function  FatalException: Exception;
     property  State: TAsyncTaskState read GetState;
-    property  Resolved: Boolean read GetResolved;
   end;
 
   generic IGCallable<T> = interface
@@ -76,12 +73,9 @@ type
   strict private
     FAwait: PRtlEvent;
     FException: Exception;
-    FState,
-    FResolved: LongInt;
+    FState: LongInt;
   protected
     function  GetState: TAsyncTaskState; inline;
-    function  GetResolved: Boolean; inline;
-    procedure MarkResolved; inline;
   { to override in descendants }
     procedure DoExecute; virtual; abstract;
     function  Cancel: Boolean; inline;
@@ -813,16 +807,6 @@ begin
   Result := TAsyncTaskState(FState);
 end;
 
-function TAsyncTask.GetResolved: Boolean;
-begin
-  Result := Boolean(FResolved);
-end;
-
-procedure TAsyncTask.MarkResolved;
-begin
-  InterlockedExchange(FResolved, LongInt(True));
-end;
-
 function TAsyncTask.Cancel: Boolean;
 begin
   Result :=
@@ -849,6 +833,7 @@ end;
 procedure TAsyncTask.WaitFor;
 begin
   System.RtlEventWaitFor(FAwait);
+  System.RtlEventSetEvent(FAwait);
 end;
 
 function TAsyncTask.FatalException: Exception;
@@ -896,13 +881,17 @@ end;
 { TGFuture }
 
 procedure TGFuture.Resolve;
+var
+  e: Exception;
 begin
-  if FTask.Resolved then exit;
   if FTask.State <= astFinished then
     FTask.WaitFor;
-  FTask.MarkResolved;
   if FTask.State = astFatal then
-    raise FTask.FatalException;
+    begin
+      e := FTask.FatalException;
+      if e <> nil then
+        raise e;
+    end;
 end;
 
 function TGFuture.GetState: TAsyncTaskState;
