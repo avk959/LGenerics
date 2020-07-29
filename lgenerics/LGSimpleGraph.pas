@@ -2495,7 +2495,7 @@ begin
     else
       begin
         Stack.Pop;
-        if Parents[Curr] <> NULL_INDEX then
+        if Curr <> aRoot then
           begin
             Next := Curr;
             Curr := Parents[Curr];
@@ -2531,7 +2531,7 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if PreOrd[Next] = -1 then
+          if PreOrd[Next] = NULL_INDEX then
             begin
               Parents[Next] := Curr;
               PreOrd[Next] := Counter;
@@ -2547,7 +2547,7 @@ begin
     else
       begin
         Stack.Pop;
-        if Parents[Curr] <> NULL_INDEX then
+        if Curr <> aRoot then
           begin
             Next := Curr;
             Curr := Parents[Curr];
@@ -2582,9 +2582,9 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if PreOrd[Next] = -1 then
+          if PreOrd[Next] = NULL_INDEX then
             begin
-              if Across[Curr] = -1 then
+              if Across[Curr] = NULL_INDEX then
                 Across[Curr] := Next;
               Parents[Next] := Curr;
               PreOrd[Next] := Counter;
@@ -2599,7 +2599,7 @@ begin
     else
       begin
         Stack.Pop;
-        if Parents[Curr] <> NULL_INDEX then
+        if Curr <> aRoot then
           begin
             Next := Curr;
             Curr := Parents[Curr];
@@ -2626,7 +2626,6 @@ var
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, ChildCount, I: SizeInt;
-  e: TIntEdge;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
@@ -2643,7 +2642,7 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if PreOrd[Next] = -1 then
+          if PreOrd[Next] = NULL_INDEX then
             begin
               Parents[Next] := Curr;
               PreOrd[Next] := Counter;
@@ -2663,7 +2662,7 @@ begin
     else
       begin
         Stack.Pop;
-        if Parents[Curr] <> NULL_INDEX then
+        if Curr <> aRoot then
           begin
             Next := Curr;
             Curr := Parents[Curr];
@@ -2672,25 +2671,19 @@ begin
             if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
               begin
                 I := EdgeStack.Count;
-                repeat
-                  Dec(I);
-                  e := EdgeStack[I];
-                until (e.Source = Curr) or (e.Destination = Next);
+                repeat Dec(I);
+                until (EdgeStack[I].Source = Curr) and (EdgeStack[I].Destination = Next);
                 aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
               end;
           end;
       end;
-  if ChildCount > 1 then
+  for Next := 1 to ChildCount do
     begin
       I := EdgeStack.Count;
-      repeat
-        Dec(I);
-        e := EdgeStack[I];
-      until e.Source = aRoot;
+      repeat Dec(I);
+      until EdgeStack[I].Source = aRoot;
       aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
     end;
-  if EdgeStack.NonEmpty then
-    aComp.Add(EdgeStack.ToArray);
 end;
 
 function TGSimpleGraph.BridgeExists: Boolean;
