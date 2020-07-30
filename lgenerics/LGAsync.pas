@@ -884,8 +884,7 @@ procedure TGFuture.Resolve;
 var
   e: Exception;
 begin
-  if FTask.State <= atsFinished then
-    FTask.WaitFor;
+  FTask.WaitFor;
   if FTask.State = atsFatal then
     begin
       e := FTask.FatalException;
