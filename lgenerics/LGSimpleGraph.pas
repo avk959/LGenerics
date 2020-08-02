@@ -388,10 +388,10 @@ type
     function  FindBridges: TIntEdgeArray;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
-  { returns vector containing in the corresponding elements edges of found bicomponents
-    in aVertex connected component }
-    function  FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
-    function  FindBicomponentsI(aIndex: SizeInt): TEdgeArrayVector;
+  { returns a vector containing in the corresponding elements the edges
+    of found bicomponents (in aVertex connected component) in aComps }
+    procedure FindBicomponents(constref aVertex: TVertex; out aComps: TEdgeArrayVector);
+    procedure FindBicomponentsI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
   { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -3980,20 +3980,20 @@ begin
     Result := False;
 end;
 
-function TGSimpleGraph.FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
+procedure TGSimpleGraph.FindBicomponents(constref aVertex: TVertex; out aComps: TEdgeArrayVector);
 begin
-  Result := FindBicomponentsI(IndexOf(aVertex));
+  FindBicomponentsI(IndexOf(aVertex), aComps);
 end;
 
-function TGSimpleGraph.FindBicomponentsI(aIndex: SizeInt): TEdgeArrayVector;
+procedure TGSimpleGraph.FindBicomponentsI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
 begin
-  Result := Default(TEdgeArrayVector);
+  aComps := Default(TEdgeArrayVector);
   CheckIndexRange(aIndex);
   if VertexCount > 2 then
-    SearchForBicomponent(aIndex, Result)
+    SearchForBicomponent(aIndex, aComps)
   else
     if (VertexCount = 2) and ContainsEdgeI(0, 1) then
-      Result.Add([TIntEdge.Create(0, 1)]);
+      aComps.Add([TIntEdge.Create(0, 1)]);
 end;
 
 function TGSimpleGraph.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
