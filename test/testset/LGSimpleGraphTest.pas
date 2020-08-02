@@ -32,6 +32,7 @@ type
     function  GenerateTestGr3: TGraph;
     function  GenerateTestGr4: TGraph;
     function  GenerateTestGr5: TGraph;
+    function  GenerateTestGr6: TGraph;
     function  GenerateTestGr5Compl: TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
@@ -130,11 +131,13 @@ type
     procedure FindEulerianCycle;
     procedure ContainsCutVertex;
     procedure FindCutVertices;
+    procedure FindCutVertices2;
     procedure RemoveCutVertices;
     procedure ContainsBridge;
     procedure FindBridges;
     procedure IsBiconnected;
     procedure FindBicomponents;
+    procedure FindBicomponents2;
     procedure EnsureBiconnected;
     procedure FindMetrics;
     procedure FindCenter;
@@ -314,6 +317,13 @@ begin
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 6, 12, 12, 7,
                    7, 13, 13, 8, 8, 14, 14, 9, 9, 15, 15, 10, 10, 11, 11, 6, 12, 17, 13, 18,
                    14, 19, 15, 20, 16, 11, 16, 17, 17, 18, 18, 19, 19, 20, 20, 16]);
+end;
+
+function TSimpleGraphTest.GenerateTestGr6: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddEdges([1, 2, 2, 3, 2, 4, 3, 4, 3, 9, 3, 10, 4, 5, 5, 6, 5, 7, 5, 8, 6, 7, 7, 8,
+                    9, 10, 9, 11, 10, 12, 11, 12]);
 end;
 
 function TSimpleGraphTest.GenerateTestGr5Compl: TGraph;
@@ -2189,6 +2199,27 @@ begin
              (TIntHelper.SequentSearch(Points, 9) <> NULL_INDEX));
 end;
 
+procedure TSimpleGraphTest.FindCutVertices2;
+type
+  TVRange = 1..12;
+  TVSet   = set of TVRange;
+var
+  g: TRef;
+  cv: TIntArray;
+  I, J: SizeInt;
+  CutVerts: TVSet;
+begin
+  CutVerts := [2, 3, 4, 5];
+  {%H-}g.Instance := GenerateTestGr6;
+  for I := 0 to Pred(g.Instance.VertexCount) do
+    begin
+      cv := g.Instance.FindCutVerticesI(I);
+      AssertTrue(Length(cv) = 4);
+      for J in cv do
+        AssertTrue(g.Instance[J] in CutVerts);
+    end;
+end;
+
 procedure TSimpleGraphTest.RemoveCutVertices;
 var
   Ref: TRef;
@@ -2272,20 +2303,64 @@ var
 begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
-  Comps := g.FindBicomponentsI(1);
+  g.FindBicomponentsI(1, Comps);
   AssertTrue(Comps.Count = 1);
   Ref.Instance := GenerateWheel;
   g := Ref;
-  Comps := g.FindBicomponentsI(1);
+  g.FindBicomponentsI(1, Comps);
   AssertTrue(Comps.Count = 1);
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  Comps := g.FindBicomponentsI(1);
+  g.FindBicomponentsI(1, Comps);
   AssertTrue(Comps.Count = 6);
   Ref.Instance := GenerateTestGr3;
   g := Ref;
-  Comps := g.FindBicomponentsI(1);
+  g.FindBicomponentsI(1, Comps);
   AssertTrue(Comps.Count = 3);
+end;
+
+procedure TSimpleGraphTest.FindBicomponents2;
+var
+  g, r3, r4, r5: TRef;
+  Comps: TEdgeArrayVector;
+  e: TIntEdge;
+  I, J: SizeInt;
+begin
+  r3.Instance.AddEdges([2, 3, 2, 4, 3, 4]);
+  r4.Instance.AddEdges([5, 6, 5, 7, 5, 8, 6, 7, 7, 8]);
+  r5.Instance.AddEdges([3, 9, 3, 10, 9, 10, 9, 11, 10, 12, 11, 12]);
+  {%H-}g.Instance := GenerateTestGr6;
+  for I := 0 to Pred(g.Instance.VertexCount) do
+    begin
+      g.Instance.FindBicomponentsI(I, Comps);
+      AssertTrue(Comps.Count = 5);
+      for J := 0 to Pred(Comps.Count) do
+        case Length(Comps[J]) of
+          1:
+            begin
+              e := Comps[J][0];
+              case g.Instance[e.Source] of
+                1: AssertTrue(g.Instance[e.Destination] = 2);
+                2: AssertTrue(g.Instance[e.Destination] = 1);
+                4: AssertTrue(g.Instance[e.Destination] = 5);
+                5: AssertTrue(g.Instance[e.Destination] = 4);
+              else
+                Fail(Format('Unexpected vertex(%d)', [g.Instance[e.Source]]));
+              end;
+            end;
+          3:
+            for e in Comps[J] do
+              AssertTrue(r3.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
+          5:
+            for e in Comps[J] do
+              AssertTrue(r4.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
+          6:
+            for e in Comps[J] do
+              AssertTrue(r5.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
+        else
+          Fail(Format('Unexpected count of edges(%d)', [Length(Comps[J])]));
+        end;
+    end;
 end;
 
 procedure TSimpleGraphTest.EnsureBiconnected;
