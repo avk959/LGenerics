@@ -1573,7 +1573,8 @@ begin
         begin
           System.Move(A[aIndex], Result[0], SizeOf(T) * aCount);
           Len -= aCount;
-          System.Move(A[aIndex + aCount], A[aIndex], SizeOf(T) * (Len - aIndex));
+          if Len - aIndex > 0 then
+            System.Move(A[aIndex + aCount], A[aIndex], SizeOf(T) * (Len - aIndex));
           System.FillChar(A[Len], SizeOf(T) * aCount, 0);
           System.SetLength(A, Len);
         end;

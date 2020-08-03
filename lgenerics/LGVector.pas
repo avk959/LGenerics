@@ -1077,7 +1077,8 @@ begin
     begin
       System.Move(FItems[aIndex], Result[0], SizeOf(T) * aCount);
       FCount -= aCount;
-      System.Move(FItems[aIndex + aCount], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
+      if ElemCount - aIndex > 0 then
+        System.Move(FItems[aIndex + aCount], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
       if IsManagedType(T) then
         System.FillChar(FItems[ElemCount], SizeOf(T) * aCount, 0);
     end;
@@ -1101,7 +1102,8 @@ begin
         for I := aIndex to Pred(aIndex + Result) do
           FItems[I] := Default(T);
       FCount -= Result;
-      System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
+      if ElemCount - aIndex > 0 then
+        System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
       if IsManagedType(T) then
         System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
     end;
@@ -1481,7 +1483,8 @@ begin
     begin
       System.Move(FBuffer.FItems[aIndex], Pointer(Result)^, SizeOf(T) * aCount);
       FBuffer.FCount -= aCount;
-      System.Move(FBuffer.FItems[aIndex + aCount], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
+      if Count - aIndex > 0 then
+        System.Move(FBuffer.FItems[aIndex + aCount], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
       if IsManagedType(T) then
         System.FillChar(FBuffer.FItems[Count], SizeOf(T) * aCount, 0);
     end;
@@ -1497,7 +1500,8 @@ begin
       if IsManagedType(T) then
         FBuffer.FinalizeItems(aIndex, Result);
       FBuffer.FCount -= Result;
-      System.Move(FBuffer.FItems[aIndex + Result], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
+      if Count - aIndex > 0 then
+        System.Move(FBuffer.FItems[aIndex + Result], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
       if IsManagedType(T) then
         System.FillChar(FBuffer.FItems[Count], SizeOf(T) * Result, 0);
     end;

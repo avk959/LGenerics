@@ -1461,7 +1461,8 @@ begin
       for I := aIndex to Pred(aIndex + Result) do
         FItems[I] := Default(T);
       FCount -= Result;
-      System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
+      if ElemCount - aIndex > 0 then
+        System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
       if IsManagedType(T) then
         System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
     end;
