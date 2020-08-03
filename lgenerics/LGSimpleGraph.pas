@@ -2653,9 +2653,10 @@ begin
               EdgeStack.Add(TIntEdge.Create(Curr, Next));
             end
           else
-            if LowPt[Curr] > PreOrd[Next] then
+            if PreOrd[Curr] > PreOrd[Next] then
               begin
-                LowPt[Curr] := PreOrd[Next];
+                if LowPt[Curr] > PreOrd[Next] then
+                  LowPt[Curr] := PreOrd[Next];
                 EdgeStack.Add(TIntEdge.Create(Curr, Next));
               end;
       end
