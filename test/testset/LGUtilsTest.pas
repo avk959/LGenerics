@@ -489,10 +489,10 @@ var
   I: Integer;
   Times: Integer = 0;
 begin
-  for I in specialize GRange<Integer>(2, 1) do
+  for I in specialize GRange<Integer>(2, 1{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for I in specialize GRange<Integer>(2, 2) do
+  for I in specialize GRange<Integer>(2, 2{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
@@ -514,10 +514,10 @@ var
   d: Double;
   Times: Integer = 0;
 begin
-  for d in specialize GRange<Double>(2, 1) do
+  for d in specialize GRange<Double>(2, 1{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for d in specialize GRange<Double>(2, 2) do
+  for d in specialize GRange<Double>(2, 2{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
@@ -539,10 +539,10 @@ var
   I: Integer;
   Times: Integer = 0;
 begin
-  for I in specialize GDownRange<Integer>(1, 2) do
+  for I in specialize GDownRange<Integer>(1, 2{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for I in specialize GDownRange<Integer>(2, 2) do
+  for I in specialize GDownRange<Integer>(2, 2{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
@@ -564,10 +564,10 @@ var
   d: Double;
   Times: Integer = 0;
 begin
-  for d in specialize GDownRange<Double>(1, 2) do
+  for d in specialize GDownRange<Double>(1, 2{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for d in specialize GDownRange<Double>(2, 2) do
+  for d in specialize GDownRange<Double>(2, 2{$IF FPC_FULLVERSION<30301}, 1{$ENDIF}) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;

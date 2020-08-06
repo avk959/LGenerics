@@ -1108,12 +1108,12 @@ type
   loop from aFrom to aTo with step aStep;
   if aStep > T(0) then iteration count = Max(0, Int((aTo - aFrom + aStep)/aStep)),
   otherwise 0 }
-  function GRange<T>(aFrom, aTo: T; aStep: T = T(1)): TGRecRange<T>; inline;
+  function GRange<T>(aFrom, aTo: T; aStep: T{$IF FPC_FULLVERSION>=30301}=T(1){$ENDIF}): TGRecRange<T>; inline;//Mantis #37380
 { for numeric types only;
   loop from aFrom down to aDownTo with step aStep;
   if aStep > T(0) then iteration count = Max(0, Int((aFrom - aDownTo + aStep)/aStep)),
   otherwise 0 }
-  function GDownRange<T>(aFrom, aDownTo: T; aStep: T = T(1)): TGRecDownRange<T>; inline;
+  function GDownRange<T>(aFrom, aDownTo: T; aStep: T{$IF FPC_FULLVERSION>=30301}=T(1){$ENDIF}): TGRecDownRange<T>; inline;//Mantis #37380
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
