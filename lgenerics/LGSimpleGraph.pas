@@ -2625,7 +2625,7 @@ var
   EdgeStack: TIntEdgeVector;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
-  Counter, Curr, Next, ChildCount, I: SizeInt;
+  Counter, Curr, Next, I: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
@@ -2636,7 +2636,6 @@ begin
   LowPt[aRoot] := 0;
   {%H-}Stack.Push(aRoot);
   Counter := 1;
-  ChildCount := 0;
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
@@ -2648,7 +2647,6 @@ begin
               PreOrd[Next] := Counter;
               LowPt[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Curr = aRoot));
               Stack.Push(Next);
               EdgeStack.Add(TIntEdge.Create(Curr, Next));
             end
@@ -2669,22 +2667,16 @@ begin
             Curr := Parents[Curr];
             if LowPt[Curr] > LowPt[Next] then
               LowPt[Curr] := LowPt[Next];
-            if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
+            if LowPt[Next] >= PreOrd[Curr] then
               begin
                 I := EdgeStack.Count;
-                repeat Dec(I);
-                until (EdgeStack[I].Source = Curr) and (EdgeStack[I].Destination = Next);
-                aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
+                with EdgeStack do
+                  repeat Dec(I);
+                  until (UncMutable[I]^.Source = Curr) and (UncMutable[I]^.Destination = Next);
+                aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count));
               end;
           end;
       end;
-  for Next := 1 to ChildCount do
-    begin
-      I := EdgeStack.Count;
-      repeat Dec(I);
-      until EdgeStack[I].Source = aRoot;
-      aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
-    end;
 end;
 
 function TGSimpleGraph.BridgeExists: Boolean;
