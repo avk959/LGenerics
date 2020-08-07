@@ -33,6 +33,7 @@ type
     function  GenerateTestGr4: TGraph;
     function  GenerateTestGr5: TGraph;
     function  GenerateTestGr6: TGraph;
+    function  GenerateTestGr7: TGraph;
     function  GenerateTestGr5Compl: TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
@@ -138,6 +139,7 @@ type
     procedure IsBiconnected;
     procedure FindBicomponents;
     procedure FindBicomponents2;
+    procedure FindBicomponents3;
     procedure EnsureBiconnected;
     procedure FindMetrics;
     procedure FindCenter;
@@ -321,9 +323,19 @@ end;
 
 function TSimpleGraphTest.GenerateTestGr6: TGraph;
 begin
+  //see TestGr6.png
   Result := TGraph.Create;
   Result.AddEdges([1, 2, 2, 3, 2, 4, 3, 4, 3, 9, 3, 10, 4, 5, 5, 6, 5, 7, 5, 8, 6, 7, 7, 8,
                     9, 10, 9, 11, 10, 12, 11, 12]);
+end;
+
+function TSimpleGraphTest.GenerateTestGr7: TGraph;
+begin
+  //from Lazarus forum member @upsidasi
+  //see TestGr7.png
+  Result := TGraph.Create;
+  Result.AddEdges([0, 1, 0, 10, 1, 2, 1, 11, 2, 3, 2, 4, 4, 5, 4, 10, 5, 6, 6, 7, 6, 8,
+                   6, 9, 9, 10, 11, 12, 11, 17, 12, 13, 13, 14, 14, 15, 14, 16, 14, 17]);
 end;
 
 function TSimpleGraphTest.GenerateTestGr5Compl: TGraph;
@@ -2357,6 +2369,52 @@ begin
           6:
             for e in Comps[J] do
               AssertTrue(r5.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
+        else
+          Fail(Format('Unexpected count of edges(%d)', [Length(Comps[J])]));
+        end;
+    end;
+end;
+
+procedure TSimpleGraphTest.FindBicomponents3;
+var
+  g, r5, r8: TRef;
+  Comps: TEdgeArrayVector;
+  e: TIntEdge;
+  I, J: SizeInt;
+begin
+  r5.Instance.AddEdges([11, 12, 11, 17, 12, 13, 13, 14, 14, 17]);
+  r8.Instance.AddEdges([0, 1, 0, 10, 1, 2, 2, 4, 4, 10, 4, 5, 5, 6, 6, 9, 9, 10]);
+  {%H-}g.Instance := GenerateTestGr7;
+  for I := 0 to Pred(g.Instance.VertexCount) do
+    begin
+      g.Instance.FindBicomponentsI(I, Comps);
+      AssertTrue(Comps.Count = 8);
+      for J := 0 to Pred(Comps.Count) do
+        case Length(Comps[J]) of
+          1:
+            begin
+              e := Comps[J][0];
+              case g.Instance[e.Source] of
+                1:  AssertTrue(g.Instance[e.Destination] = 11);
+                2:  AssertTrue(g.Instance[e.Destination] = 3);
+                3:  AssertTrue(g.Instance[e.Destination] = 2);
+                6:  AssertTrue((g.Instance[e.Destination] = 7)or(g.Instance[e.Destination] = 8));
+                7:  AssertTrue(g.Instance[e.Destination] = 6);
+                8:  AssertTrue(g.Instance[e.Destination] = 6);
+                11: AssertTrue(g.Instance[e.Destination] = 1);
+                14: AssertTrue((g.Instance[e.Destination] = 15)or(g.Instance[e.Destination] = 16));
+                15: AssertTrue(g.Instance[e.Destination] = 14);
+                16: AssertTrue(g.Instance[e.Destination] = 14);
+              else
+                Fail(Format('Unexpected vertex(%d)', [g.Instance[e.Source]]));
+              end;
+            end;
+          5:
+            for e in Comps[J] do
+              AssertTrue(r5.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
+          9:
+            for e in Comps[J] do
+              AssertTrue(r8.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
         else
           Fail(Format('Unexpected count of edges(%d)', [Length(Comps[J])]));
         end;
