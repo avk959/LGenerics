@@ -1948,7 +1948,7 @@ end;
 
 function TGSparseGraph.ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
 var
-  DstEdges: array of TIncidentEdge;
+  DstEdges: array of TIncidentEdge = nil;
   e: TIncidentEdge;
   I, Deg: SizeInt;
   pList: PAdjList;
@@ -1961,11 +1961,12 @@ begin
   if Deg > 0 then
     begin
       I := 0;
-      System.SetLength(DstEdges{%H-}, Deg);
+      System.SetLength(DstEdges, Deg);
       for p in pList^ do
         begin
           DstEdges[I].Destination := p^.Destination;
           DstEdges[I].Data := p^.Data;
+          DoSetEdgeData(aDst, p^.Destination, Default(TEdgeData));
           Inc(I);
         end;
       for e in DstEdges do
