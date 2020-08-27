@@ -3064,14 +3064,12 @@ begin
       CurrEdges := FNodeList[I].AdjList.ToArray;
       FNodeList[I].AdjList.MakeEmpty;
       for J := 0 to System.High(CurrEdges) do
-        begin
-          if CurrEdges[J].Destination <> aIndex then
-            begin
-              if CurrEdges[J].Destination > aIndex then
-                Dec(CurrEdges[J].Destination);
-              FNodeList[I].AdjList.Add(CurrEdges[J]);
-            end;
-        end;
+        if CurrEdges[J].Destination <> aIndex then
+          begin
+            if CurrEdges[J].Destination > aIndex then
+              Dec(CurrEdges[J].Destination);
+            FNodeList[I].AdjList.Add(CurrEdges[J]);
+          end;
     end;
 end;
 
