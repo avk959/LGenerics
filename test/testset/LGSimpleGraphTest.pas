@@ -68,6 +68,7 @@ type
     procedure Degree;
     procedure Connected;
     procedure RemoveVertex;
+    procedure RemoveVertex1;
     procedure SeparateCount1;
     procedure SeparateCount2;
     procedure RemoveEdge;
@@ -737,6 +738,29 @@ begin
   AssertTrue(g.Degree(10) = 0);
   AssertTrue(g.Degree(11) = 1);
   AssertTrue(g.Degree(12) = 1);
+end;
+
+procedure TSimpleGraphTest.RemoveVertex1;
+var
+  g: specialize TGAutoRef<TStrChart>;
+begin
+  with g.Instance do
+    AddEdges(['one', 'two', 'one', 'three', 'two', 'four', 'two', 'five', 'three', 'six',
+              'three', 'seven', 'six', 'eight', 'seven', 'eight', 'eight', 'one']);
+  AssertTrue(g.Instance.VertexCount = 8);
+  AssertTrue(g.Instance.EdgeCount = 9);
+  g.Instance.RemoveVertex('four');
+  AssertTrue(g.Instance.VertexCount = 7);
+  AssertTrue(g.Instance.EdgeCount = 8);
+  AssertTrue(g.Instance.Connected);
+  g.Instance.RemoveVertex('three');
+  AssertTrue(g.Instance.VertexCount = 6);
+  AssertTrue(g.Instance.EdgeCount = 5);
+  AssertTrue(g.Instance.Connected);
+  g.Instance.RemoveVertex('one');
+  AssertTrue(g.Instance.VertexCount = 5);
+  AssertTrue(g.Instance.EdgeCount = 3);
+  AssertFalse(g.Instance.Connected);
 end;
 
 procedure TSimpleGraphTest.SeparateCount1;
