@@ -1306,9 +1306,9 @@ end;
 procedure TGSparseGraph.Delete(aIndex: SizeInt);
 begin
   Dec(FCount);
-  Finalize(FNodeList[aIndex].AdjList);
   if aIndex < VertexCount then
     begin
+      FNodeList[aIndex] := Default(TNode);
       System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (VertexCount - aIndex) * SizeOf(TNode));
       System.FillChar(FNodeList[VertexCount], SizeOf(TNode), 0);
       Rehash;
@@ -1316,7 +1316,7 @@ begin
   else   // last element
     begin
       RemoveFromChain(aIndex);
-      System.FillChar(FNodeList[VertexCount], SizeOf(TNode), 0);
+      FNodeList[aIndex] := Default(TNode);
     end;
 end;
 
@@ -1327,12 +1327,13 @@ begin
   if NonEmpty then
     begin
       ToRemove := Find(v);
-      Result := ToRemove >= 0;
-      if Result then
-        Delete(ToRemove);
-    end
-  else
-    Result := False;
+      if ToRemove >= 0 then
+        begin
+          Delete(ToRemove);
+          exit(True);
+        end;
+    end;
+  Result := False;
 end;
 
 function TGSparseGraph.Find(constref v: TVertex): SizeInt;
