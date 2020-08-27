@@ -3094,7 +3094,7 @@ end;
 
 function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Remove(aDst);
+  Result := FNodeList[aSrc].AdjList.Remove(aDst);
   if Result then
     begin
       FNodeList[aDst].AdjList.Remove(aSrc);
