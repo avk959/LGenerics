@@ -971,13 +971,13 @@ function TGAdjList.Find(aDst: SizeInt): PAdjItem;
 var
   Pos: SizeInt;
 begin
-  Result := nil;
   if Count <> 0 then
     begin
       Pos := DoFind(aDst);
       if Pos >= 0 then
-        Result := @FItems[Pos];
+        exit(@FItems[Pos]);
     end;
+  Result := nil;
 end;
 
 function TGAdjList.FindFirst(out aValue: SizeInt): Boolean;
