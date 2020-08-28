@@ -542,6 +542,28 @@ type
 
   TLineGraph = class(specialize TGSimpleGraph<TOrdIntPair, TIntValue, TOrdIntPair>);
 
+  { TGSimpleObjGraph }
+  generic TGSimpleObjGraph<TVertexClass, TEdgeClass, TEqRel> = class(
+    specialize TGSimpleGraph<TVertexClass, TEdgeClass, TEqRel>)
+  private
+    FOwnsVerts,
+    FOwnsEdges: Boolean;
+    procedure ClearObjects;
+  protected
+    procedure DoRemoveVertex(aIndex: SizeInt); override;
+    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeClass): Boolean; override;
+  public
+  type
+    TObjectOwns   = (ooOwnsVertices, ooOwnsEdges);
+    TObjOwnership = set of TObjectOwns;
+    constructor Create(aOwns: TObjOwnership = [ooOwnsVertices, ooOwnsEdges]);
+    destructor  Destroy; override;
+    procedure Clear; override;
+    property  OwnsVertices: Boolean read FOwnsVerts write FOwnsVerts;
+    property  OwnsEdges: Boolean read FOwnsEdges write FOwnsEdges;
+  end;
+
   { TGChart: simple outline;
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -4839,6 +4861,84 @@ begin
         exit(False);
     end;
   Result := True;
+end;
+
+{ TGSimpleObjGraph }
+
+procedure TGSimpleObjGraph.ClearObjects;
+var
+  e: TEdge;
+  I: SizeInt;
+begin
+  if OwnsEdges then
+    for e in DistinctEdges do
+      TObject(e.Data).Free;
+  if OwnsVertices then
+    for I := 0 to Pred(VertexCount) do
+      TObject(FNodeList[I].Vertex).Free;
+end;
+
+procedure TGSimpleObjGraph.DoRemoveVertex(aIndex: SizeInt);
+var
+  p: PAdjItem;
+begin
+  if OwnsEdges then
+    for p in AdjLists[aIndex]^ do
+      TObject(p^.Data).Free;
+  if OwnsVertices then
+    TObject(FNodeList[aIndex].Vertex).Free;
+  inherited DoRemoveVertex(aIndex);
+end;
+
+function TGSimpleObjGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+var
+  e: TEdgeClass;
+begin
+  if OwnsEdges then
+    begin
+      if GetEdgeDataI(aSrc, aDst, e) and (inherited DoRemoveEdge(aSrc, aDst)) then
+        begin
+          TObject(e).Free;
+          exit(True);
+        end;
+        Result := False;
+    end
+  else
+    Result := inherited DoRemoveEdge(aSrc, aDst)
+end;
+
+function TGSimpleObjGraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeClass): Boolean;
+var
+  p: PAdjItem;
+begin
+  p := AdjLists[aSrc]^.Find(aDst);
+  Result := p <> nil;
+  if Result then
+    begin
+      if OwnsEdges then
+        TObject(p^.Data).Free;
+      p^.Data := aValue;
+      AdjLists[aDst]^.Find(aSrc)^.Data := aValue;
+    end;
+end;
+
+constructor TGSimpleObjGraph.Create(aOwns: TObjOwnership);
+begin
+  inherited Create;
+  OwnsVertices := ooOwnsVertices in aOwns;
+  OwnsEdges := ooOwnsEdges in aOwns;
+end;
+
+destructor TGSimpleObjGraph.Destroy;
+begin
+  ClearObjects;
+  inherited;
+end;
+
+procedure TGSimpleObjGraph.Clear;
+begin
+  ClearObjects;
+  inherited;
 end;
 
 { TGChart }
