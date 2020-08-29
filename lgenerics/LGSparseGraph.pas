@@ -920,7 +920,7 @@ end;
 function TGAdjList.Contains(aValue: SizeInt): Boolean;
 begin
   if Count <> 0 then
-    exit(DoFind(aValue) >= 0)
+    exit(DoFind(aValue) >= 0);
   Result := False;
 end;
 
