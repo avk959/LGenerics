@@ -136,7 +136,7 @@ type
     function  GetCapacity: SizeInt; inline;
     procedure Expand; inline;
     function  DoFind(aValue: SizeInt): SizeInt;
-    procedure DoRemove(aIndex: SizeInt);
+    procedure DoRemove(aIndex: SizeInt); inline;
     class operator Initialize(var aList: TGAdjList);
     class operator Copy(constref aSrc: TGAdjList; var aDst: TGAdjList);
   public
@@ -148,14 +148,15 @@ type
     procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    function  Contains(aDst: SizeInt): Boolean; inline;
+    function  Contains(aValue: SizeInt): Boolean; inline;
     function  ContainsAll(constref aList: TGAdjList): Boolean;
-    function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
+    function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
     function  Find(aDst: SizeInt): PAdjItem;
     function  FindFirst(out aValue: SizeInt): Boolean;
     function  Add(constref aItem: TAdjItem): Boolean;
     procedure Append(constref aItem: TAdjItem);
-    function  Remove(aDst: SizeInt): Boolean; inline;
+    function  Remove(aDst: SizeInt): Boolean;
+    function  Remove(aDst: SizeInt; out d: T): Boolean;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -852,13 +853,10 @@ end;
 
 procedure TGAdjList.DoRemove(aIndex: SizeInt);
 begin
-  FItems[aIndex] := Default(TAdjItem);
   Dec(FCount);
   if aIndex < Count then
-    begin
-      FItems[aIndex] := FItems[Count];
-      FItems[Count] := Default(TAdjItem);
-    end;
+    FItems[aIndex] := FItems[Count];
+  FItems[Count] := Default(TAdjItem);
 end;
 
 class operator TGAdjList.Initialize(var aList: TGAdjList);
@@ -919,12 +917,11 @@ begin
   System.SetLength(FItems, Count);
 end;
 
-function TGAdjList.Contains(aDst: SizeInt): Boolean;
+function TGAdjList.Contains(aValue: SizeInt): Boolean;
 begin
   if Count <> 0 then
-    Result := DoFind(aDst) >= 0
-  else
-    Result := False;
+    exit(DoFind(aValue) >= 0)
+  Result := False;
 end;
 
 function TGAdjList.ContainsAll(constref aList: TGAdjList): Boolean;
@@ -1017,12 +1014,30 @@ begin
   if Count > 0 then
     begin
       Pos := DoFind(aDst);
-      Result := Pos >= 0;
-      if Result then
-        DoRemove(Pos);
-    end
-  else
-    Result := False;
+      if Pos >= 0 then
+        begin
+          DoRemove(Pos);
+          exit(True);
+        end;
+    end;
+  Result := False;
+end;
+
+function TGAdjList.Remove(aDst: SizeInt; out d: T): Boolean;
+var
+  Pos: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      Pos := DoFind(aDst);
+      if Pos >= 0 then
+        begin
+          d := FItems[Pos].Data;
+          DoRemove(Pos);
+          exit(True);
+        end;
+    end;
+  Result := False;
 end;
 
 {$I SparseGraphBitHelp.inc}
