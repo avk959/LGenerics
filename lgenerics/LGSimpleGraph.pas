@@ -4896,12 +4896,14 @@ var
 begin
   if OwnsEdges then
     begin
-      if GetEdgeDataI(aSrc, aDst, e) and (inherited DoRemoveEdge(aSrc, aDst)) then
+      Result := FNodeList[aSrc].AdjList.Remove(aDst, e);
+      if Result then
         begin
+          FNodeList[aDst].AdjList.Remove(aSrc);
+          Dec(FEdgeCount);
+          FConnectedValid := False;
           TObject(e).Free;
-          exit(True);
         end;
-        Result := False;
     end
   else
     Result := inherited DoRemoveEdge(aSrc, aDst)
