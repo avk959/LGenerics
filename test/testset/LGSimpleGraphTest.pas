@@ -200,6 +200,30 @@ type
     procedure SetIntersectionOf3;
   end;
 
+  { TSimpleObjGraphTest }
+
+  TSimpleObjGraphTest = class(TTestCase)
+  private
+  type
+    TMyObj = class
+    strict private
+      FCounter: PInteger;
+    public
+      constructor Create(c: PInteger);
+      destructor Destroy; override;
+    end;
+
+    TGraph = specialize TGSimpleObjGraph<TMyObj, TMyObj, TMyObj>;
+    TRef   = specialize TGAutoRef<TGraph>;
+
+  published
+    procedure Clear;
+    procedure Destruction;
+    procedure RemoveEdge;
+    procedure RemoveVertex;
+    procedure SetEdgeData;
+  end;
+
   { TWeightedGraphTest }
 
   TWeightedGraphTest = class(TTestCase)
@@ -3730,6 +3754,243 @@ begin
   AssertTrue(g.IsCycle);
 end;
 
+{ TSimpleObjGraphTest.TMyObj }
+
+constructor TSimpleObjGraphTest.TMyObj.Create(c: PInteger);
+begin
+  FCounter := c;
+end;
+
+destructor TSimpleObjGraphTest.TMyObj.Destroy;
+begin
+  if FCounter <> nil then
+    Inc(FCounter^);
+  inherited;
+end;
+
+{ TSimpleObjGraphTest }
+
+procedure TSimpleObjGraphTest.Clear;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+  Objs: array of TMyObj;
+  o: TMyObj;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(@Counter));
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, TMyObj.Create(@Counter));
+      AddEdgeI(0, 2, TMyObj.Create(@Counter));
+      AddEdgeI(0, 3, TMyObj.Create(@Counter));
+      AddEdgeI(0, 4, TMyObj.Create(@Counter));
+    end;
+  AssertTrue(g.Instance.EdgeCount = 4);
+  g.Instance.Clear;
+  AssertTrue(g.Instance.VertexCount = 0);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 9);
+  Counter := 0;
+  SetLength(Objs, 10);
+  for I := 0 to High(Objs) do
+    Objs[I] := TMyObj.Create(@Counter);
+  for I in [0..4] do
+    g.Instance.AddVertex(Objs[I]);
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, Objs[5]);
+      AddEdgeI(0, 2, Objs[6]);
+      AddEdgeI(0, 3, Objs[7]);
+      AddEdgeI(0, 4, Objs[8]);
+      AddEdgeI(1, 4, Objs[9]);
+    end;
+  AssertTrue(g.Instance.EdgeCount = 5);
+  g.Instance.OwnsVertices := False;
+  g.Instance.OwnsEdges := False;
+  g.Instance.Clear;
+  AssertTrue(g.Instance.VertexCount = 0);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 0);
+  for o in Objs do
+    o.Free;
+  AssertTrue(Counter = 10);
+end;
+
+procedure TSimpleObjGraphTest.Destruction;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+  Objs: array of TMyObj;
+  o: TMyObj;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(@Counter));
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, TMyObj.Create(@Counter));
+      AddEdgeI(0, 2, TMyObj.Create(@Counter));
+      AddEdgeI(0, 3, TMyObj.Create(@Counter));
+      AddEdgeI(0, 4, TMyObj.Create(@Counter));
+    end;
+  AssertTrue(g.Instance.EdgeCount = 4);
+  g.Instance := nil;
+  AssertTrue(g.Instance.VertexCount = 0);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 9);
+  Counter := 0;
+  SetLength(Objs, 10);
+  for I := 0 to High(Objs) do
+    Objs[I] := TMyObj.Create(@Counter);
+  for I in [0..4] do
+    g.Instance.AddVertex(Objs[I]);
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, Objs[5]);
+      AddEdgeI(0, 2, Objs[6]);
+      AddEdgeI(0, 3, Objs[7]);
+      AddEdgeI(0, 4, Objs[8]);
+      AddEdgeI(1, 4, Objs[9]);
+    end;
+  AssertTrue(g.Instance.EdgeCount = 5);
+  g.Instance.OwnsVertices := False;
+  g.Instance.OwnsEdges := False;
+  g.Instance := nil;
+  AssertTrue(g.Instance.VertexCount = 0);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 0);
+  for o in Objs do
+    o.Free;
+  AssertTrue(Counter = 10);
+end;
+
+procedure TSimpleObjGraphTest.RemoveEdge;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+  Objs: array of TMyObj;
+  o: TMyObj;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(nil));
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, TMyObj.Create(@Counter));
+      AddEdgeI(0, 2, TMyObj.Create(@Counter));
+      AddEdgeI(0, 3, TMyObj.Create(@Counter));
+      AddEdgeI(0, 4, TMyObj.Create(@Counter));
+    end;
+  AssertTrue(g.Instance.EdgeCount = 4);
+  AssertTrue(g.Instance.RemoveEdgeI(0, 1));
+  AssertTrue(Counter = 1);
+  AssertTrue(g.Instance.RemoveEdgeI(0, 2));
+  AssertTrue(Counter = 2);
+  AssertTrue(g.Instance.RemoveEdgeI(0, 3));
+  AssertTrue(Counter = 3);
+  AssertTrue(g.Instance.RemoveEdgeI(0, 4));
+  AssertTrue(Counter = 4);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  Counter := 0;
+  SetLength(Objs, 5);
+  for I := 0 to High(Objs) do
+    Objs[I] := TMyObj.Create(@Counter);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, Objs[0]);
+      AddEdgeI(0, 2, Objs[1]);
+      AddEdgeI(0, 3, Objs[2]);
+      AddEdgeI(0, 4, Objs[3]);
+      AddEdgeI(1, 2, Objs[4]);
+    end;
+  AssertTrue(g.Instance.EdgeCount = 5);
+  g.Instance.OwnsEdges := False;
+  AssertTrue(g.Instance.RemoveEdgeI(0, 1));
+  AssertTrue(g.Instance.RemoveEdgeI(0, 2));
+  AssertTrue(g.Instance.RemoveEdgeI(0, 3));
+  AssertTrue(g.Instance.RemoveEdgeI(0, 4));
+  AssertTrue(g.Instance.RemoveEdgeI(1, 2));
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 0);
+  for o in Objs do
+    o.Free;
+  AssertTrue(Counter = 5);
+end;
+
+procedure TSimpleObjGraphTest.RemoveVertex;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(@Counter));
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, TMyObj.Create(@Counter));
+      AddEdgeI(0, 2, TMyObj.Create(@Counter));
+      AddEdgeI(0, 3, TMyObj.Create(@Counter));
+      AddEdgeI(0, 4, TMyObj.Create(@Counter));
+      AddEdgeI(1, 4, TMyObj.Create(@Counter));
+      AddEdgeI(2, 4, TMyObj.Create(@Counter));
+    end;
+  AssertTrue(g.Instance.EdgeCount = 6);
+  g.Instance.RemoveVertexI(4);
+  AssertTrue(g.Instance.VertexCount = 4);
+  AssertTrue(g.Instance.EdgeCount = 3);
+  AssertTrue(Counter = 4);
+  g.Instance.RemoveVertexI(3);
+  AssertTrue(g.Instance.VertexCount = 3);
+  AssertTrue(g.Instance.EdgeCount = 2);
+  AssertTrue(Counter = 6);
+  g.Instance.RemoveVertexI(2);
+  AssertTrue(g.Instance.VertexCount = 2);
+  AssertTrue(g.Instance.EdgeCount = 1);
+  AssertTrue(Counter = 8);
+  g.Instance.RemoveVertexI(1);
+  AssertTrue(g.Instance.VertexCount = 1);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 10);
+  g.Instance.RemoveVertexI(0);
+  AssertTrue(g.Instance.VertexCount = 0);
+  AssertTrue(g.Instance.EdgeCount = 0);
+  AssertTrue(Counter = 11);
+end;
+
+procedure TSimpleObjGraphTest.SetEdgeData;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(@Counter));
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, TMyObj.Create(@Counter));
+      AddEdgeI(0, 2, TMyObj.Create(@Counter));
+      AddEdgeI(0, 3, TMyObj.Create(@Counter));
+      AddEdgeI(0, 4, TMyObj.Create(@Counter));
+    end;
+  AssertTrue(g.Instance.EdgeCount = 4);
+  AssertTrue(g.Instance.SetEdgeDataI(0, 1, TMyObj.Create(@Counter)));
+  AssertTrue(g.Instance.SetEdgeDataI(0, 2, TMyObj.Create(@Counter)));
+  AssertTrue(g.Instance.SetEdgeDataI(0, 3, TMyObj.Create(@Counter)));
+  AssertTrue(g.Instance.SetEdgeDataI(0, 4, TMyObj.Create(@Counter)));
+  AssertTrue(Counter = 4);
+  g.Instance := nil;
+  AssertTrue(Counter = 13);
+end;
+
 { TWeightedGraphTest }
 
 function TWeightedGraphTest.GenerateTestWGr1: TGraph;
@@ -4722,6 +4983,7 @@ end;
 
 initialization
   RegisterTest(TSimpleGraphTest);
+  RegisterTest(TSimpleObjGraphTest);
   RegisterTest(TWeightedGraphTest);
 end.
 
