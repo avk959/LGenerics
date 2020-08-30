@@ -550,6 +550,7 @@ type
     FOwnsEdges: Boolean;
     procedure ClearObjects;
   protected
+    procedure VertexReplaced(constref v: TVertexClass); override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeClass): Boolean; override;
@@ -4876,6 +4877,12 @@ begin
   if OwnsVertices then
     for I := 0 to Pred(VertexCount) do
       TObject(FNodeList[I].Vertex).Free;
+end;
+
+procedure TGSimpleObjGraph.VertexReplaced(constref v: TVertexClass);
+begin
+  if OwnsVertices then
+    TObject(v).Free;
 end;
 
 procedure TGSimpleObjGraph.DoRemoveVertex(aIndex: SizeInt);
