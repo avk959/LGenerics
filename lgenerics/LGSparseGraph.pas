@@ -280,6 +280,7 @@ type
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
+    procedure VertexReplaced(constref v: TVertex); virtual;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; virtual; abstract;
@@ -526,6 +527,7 @@ type
     property VertexCount: SizeInt read FCount;
     property EdgeCount: SizeInt read FEdgeCount;
     property Capacity: SizeInt read GetCapacity;
+  {SetItem will raise an exception if the new value is already in the graph }
     property Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
   end;
 
@@ -1228,11 +1230,15 @@ end;
 
 procedure TGSparseGraph.SetItem(aIndex: SizeInt; const aValue: TVertex);
 var
+  OldValue: TVertex;
   I: SizeInt;
 begin
   CheckIndexRange(aIndex);
   if TEqRel.Equal(aValue, FNodeList[aIndex].Vertex) then
     exit;
+  if Find(aValue) <> NULL_INDEX then
+    raise EGraphError.Create(SEVertexNonUnique);
+  OldValue := FNodeList[aIndex].Vertex;
   RemoveFromChain(aIndex);
   //add to new chain
   FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
@@ -1240,6 +1246,7 @@ begin
   I := FNodeList[aIndex].Hash and System.High(FNodeList);
   FNodeList[aIndex].Next := FChainList[I];
   FChainList[I] := aIndex;
+  VertexReplaced(OldValue);
 end;
 
 procedure TGSparseGraph.InitialAlloc;
@@ -1618,6 +1625,10 @@ begin
       if Ecc > aDiameter then
         aDiameter := Ecc;
     end;
+end;
+
+procedure TGSparseGraph.VertexReplaced(constref v: TVertex);
+begin
 end;
 
 class function TGSparseGraph.TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray;
