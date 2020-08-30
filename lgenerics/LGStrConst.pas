@@ -74,6 +74,7 @@ resourcestring
   SEInvalidTreeInst        = 'Invalid tree instance';
   SENoSuchEdgeFmt          = 'No such edge (%d, %d)';
   SEInputIsNotProperPermut = 'Input array is not proper permutation';
+  SEVertexNonUnique        = 'Vertex label is not unique';
 
 implementation
 
