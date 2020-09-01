@@ -128,6 +128,7 @@ type
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
+    procedure EdgeContracting(aSrc, aDst: SizeInt); override;
   public
   type
     TIncomingArc = record
@@ -1018,14 +1019,14 @@ begin
     if (FInCount < 1) or (FCurrIndex >= FLastIndex) then
       exit(False);
     Inc(FCurrIndex);
-    for p in FGraph.AdjLists[FCurrIndex]^ do
-      if p^.Destination = FTarget then
-        begin
-          FCurrArc.Source := FCurrIndex;
-          FCurrArc.Data := p^.Data;
-          Dec(FInCount);
-          exit(True);
-        end;
+    p := FGraph.AdjLists[FCurrIndex]^.Find(FTarget);
+    if p <> nil then
+      begin
+        FCurrArc.Source := FCurrIndex;
+        FCurrArc.Data := p^.Data;
+        Dec(FInCount);
+        exit(True);
+      end;
   until False;
 end;
 
@@ -2053,6 +2054,39 @@ begin
     end;
 end;
 
+procedure TGSimpleDigraph.EdgeContracting(aSrc, aDst: SizeInt);
+var
+  ToRemove: TIntArray = nil;
+  a: TIncomingArc;
+  I, RemoveCount: SizeInt;
+  p: PAdjItem;
+begin
+  //there arc aSrc -> aDst already removed
+  if AdjLists[aDst]^.Count <> 0 then
+    begin
+      ToRemove.Length := AdjLists[aDst]^.Count;
+      RemoveCount := 0;
+      for p in AdjLists[aDst]^ do
+        if not DoAddEdge(aSrc, p^.Destination, p^.Data) then
+          begin
+            ToRemove[RemoveCount] := p^.Destination;
+            Inc(RemoveCount);
+          end;
+      for I := 0 to Pred(RemoveCount) do
+        DoRemoveEdge(aDst, ToRemove[I]);
+      Dec(FEdgeCount, AdjLists[aDst]^.Count);
+      AdjLists[aDst]^.MakeEmpty;
+    end;
+  for a in IncomingArcsI(aDst) do
+    if DoAddEdge(a.Source, aSrc, a.Data) then
+      begin
+        AdjLists[a.Source]^.Remove(aDst);
+        Dec(FEdgeCount);
+      end
+    else
+      DoRemoveEdge(a.Source, aDst);
+end;
+
 procedure TGSimpleDigraph.Clear;
 begin
   inherited;
@@ -2060,20 +2094,9 @@ begin
 end;
 
 function TGSimpleDigraph.Clone: TGSimpleDigraph;
-var
-  I: SizeInt;
 begin
   Result := TGSimpleDigraph.Create;
-  Result.FCount := VertexCount;
-  Result.FEdgeCount := EdgeCount;
-  Result.FTitle := Title;
-  if NonEmpty then
-    begin
-      Result.FChainList := System.Copy(FChainList);
-      System.SetLength(Result.FNodeList, System.Length(FNodeList));
-      for I := 0 to Pred(VertexCount) do
-        Result.FNodeList[I].Assign(FNodeList[I]);
-    end;
+  Result.AssignGraph(Self);
 end;
 
 function TGSimpleDigraph.Reverse: TGSimpleDigraph;
@@ -2242,7 +2265,7 @@ var
   Counter: SizeInt = 0;
   procedure OnWhite(aNode, aParent: SizeInt);
   begin
-    Assert(aParent = aParent);
+    Assert(aParent = aParent); // :))))
     Reachable[Counter] := aNode;
     Inc(Counter);
   end;

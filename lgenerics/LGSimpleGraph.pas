@@ -259,6 +259,7 @@ type
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
+    procedure EdgeContracting(aSrc, aDst: SizeInt); override;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -3152,6 +3153,31 @@ begin
       aStream.WriteBuffer(NtoLE(d), SizeOf(d));
       aOnWriteData(aStream, e.Data);
     end;
+end;
+
+procedure TGSimpleGraph.EdgeContracting(aSrc, aDst: SizeInt);
+var
+  ToRemove: TIntArray = nil;
+  I, RemoveCount: SizeInt;
+  p: PAdjItem;
+begin
+  //there edge aSrc -- aDst already removed
+  if AdjLists[aDst]^.Count = 0 then
+    exit;
+  ToRemove.Length := AdjLists[aDst]^.Count;
+  RemoveCount := 0;
+  for p in AdjLists[aDst]^ do
+    if DoAddEdge(aSrc, p^.Destination, p^.Data) then
+      AdjLists[p^.Destination]^.Remove(aDst)
+    else
+      begin
+        ToRemove[RemoveCount] := p^.Destination;
+        Inc(RemoveCount);
+      end;
+  for I := 0 to Pred(RemoveCount) do
+    DoRemoveEdge(aDst, ToRemove[I]);
+  Dec(FEdgeCount, AdjLists[aDst]^.Count);
+  AdjLists[aDst]^.MakeEmpty;
 end;
 
 class function TGSimpleGraph.MayBeIsomorphic(L, R: TGSimpleGraph): Boolean;

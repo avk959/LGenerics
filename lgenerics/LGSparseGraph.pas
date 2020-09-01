@@ -287,6 +287,7 @@ type
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
+    procedure EdgeContracting(aSrc, aDst: SizeInt); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
     class function TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray; static;
     class function TreeCycleLen(const aTree: TIntArray; aJoin, aPred: SizeInt): SizeInt; static;
@@ -1974,34 +1975,11 @@ begin
 end;
 
 function TGSparseGraph.ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
-var
-  DstEdges: array of TIncidentEdge = nil;
-  e: TIncidentEdge;
-  I, Deg: SizeInt;
-  pList: PAdjList;
-  p: PAdjItem;
 begin
   if not RemoveEdgeI(aSrc, aDst) then
     exit(False);
-  pList := AdjLists[aDst];
-  Deg := pList^.Count;
-  if Deg > 0 then
-    begin
-      I := 0;
-      System.SetLength(DstEdges, Deg);
-      for p in pList^ do
-        begin
-          DstEdges[I].Destination := p^.Destination;
-          DstEdges[I].Data := p^.Data;
-          DoSetEdgeData(aDst, p^.Destination, Default(TEdgeData));
-          Inc(I);
-        end;
-      for e in DstEdges do
-        begin
-          DoRemoveEdge(aDst, e.Destination);
-          DoAddEdge(aSrc, e.Destination, e.Data);
-        end;
-    end;
+  EdgeContracting(aSrc, aDst);
+  //there AdjList(aDst)^ must be empty
   DoRemoveVertex(aDst);
   Result := True;
 end;
