@@ -55,6 +55,7 @@ type
     procedure IsSink;
     procedure IncomingArcs;
     procedure IncomingArcs1;
+    procedure ContractEdge;
     procedure PathExists;
     procedure PathExists1;
     procedure ReachableFrom;
@@ -717,6 +718,43 @@ begin
         end;
       AssertTrue(c = g.InDegreeI(I));
     end;
+end;
+
+procedure TSimpleDigraphTest.ContractEdge;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertTrue(g.VertexCount = 9);
+  AssertTrue(g.EdgeCount = 12);
+  AssertTrue(g.ContractEdge(0, 1));
+  AssertTrue(g.VertexCount = 8);
+  AssertTrue(g.EdgeCount = 11);
+  AssertFalse(g.ContainsVertex(1));
+  AssertTrue(g.ContainsEdge(4, 0));
+
+  AssertTrue(g.ContractEdge(3, 0));
+  AssertTrue(g.VertexCount = 7);
+  AssertTrue(g.EdgeCount = 10);
+  AssertFalse(g.ContainsVertex(0));
+  AssertTrue(g.ContainsEdge(3, 5));
+  AssertTrue(g.ContainsEdge(3, 2));
+  AssertTrue(g.ContainsEdge(4, 3));
+  AssertTrue(g.ContainsEdge(3, 6));
+  AssertTrue(g.ContainsEdge(8, 3));
+
+  AssertTrue(g.ContractEdge(8, 3));
+  AssertTrue(g.VertexCount = 6);
+  AssertTrue(g.EdgeCount = 9);
+  AssertTrue(g.ContainsEdge(8, 5));
+  AssertTrue(g.ContainsEdge(5, 8));
+  AssertTrue(g.ContainsEdge(8, 2));
+  AssertTrue(g.ContainsEdge(2, 8));
+  AssertTrue(g.ContainsEdge(8, 4));
+  AssertTrue(g.ContainsEdge(4, 8));
+  AssertTrue(g.ContainsEdge(8, 6));
 end;
 
 procedure TSimpleDigraphTest.PathExists;
