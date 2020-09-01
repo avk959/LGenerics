@@ -222,6 +222,9 @@ type
     procedure RemoveEdge;
     procedure RemoveVertex;
     procedure SetEdgeData;
+    procedure SetItem;
+    procedure SetItem1;
+    procedure ContractEdge;
   end;
 
   { TWeightedGraphTest }
@@ -3989,6 +3992,81 @@ begin
   AssertTrue(Counter = 4);
   g.Instance := nil;
   AssertTrue(Counter = 13);
+end;
+
+procedure TSimpleObjGraphTest.SetItem;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(@Counter));
+  for I in [0..4] do
+    g.Instance[I] := TMyObj.Create(@Counter);
+  AssertTrue(Counter = 5);
+  g.Instance := nil;
+  AssertTrue(Counter = 10);
+end;
+
+procedure TSimpleObjGraphTest.SetItem1;
+var
+  g: TRef;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  for I in [1..3] do
+    g.Instance.AddVertex(TMyObj.Create(nil));
+  for I in [0..2] do
+    try
+      g.Instance[I] := g.Instance[I];
+    except
+      on e: Exception do
+        Raised := True;
+    end;
+  AssertFalse(Raised);
+  try
+    g.Instance[0] := g.Instance[2];
+  except
+    on e: EGraphError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TSimpleObjGraphTest.ContractEdge;
+var
+  g: TRef;
+  Counter: Integer = 0;
+  I: Integer;
+begin
+  for I in [1..5] do
+    g.Instance.AddVertex(TMyObj.Create(@Counter));
+  AssertTrue(g.Instance.VertexCount = 5);
+  with g.Instance do
+    begin
+      AddEdgeI(0, 1, TMyObj.Create(@Counter));
+      AddEdgeI(0, 2, TMyObj.Create(@Counter));
+      AddEdgeI(0, 3, TMyObj.Create(@Counter));
+      AddEdgeI(3, 4, TMyObj.Create(@Counter));
+      AddEdgeI(1, 4, TMyObj.Create(@Counter));
+    end;
+  AssertTrue(g.Instance.EdgeCount = 5);
+  AssertTrue(g.Instance.ContractEdgeI(1, 4));
+  AssertTrue(g.Instance.VertexCount = 4);
+  AssertTrue(g.Instance.EdgeCount = 4);
+  AssertTrue(Counter = 2);
+  AssertTrue(g.Instance.DegreeI(1) = 2);
+  AssertTrue(g.Instance.ContainsEdgeI(1, 3));
+  AssertTrue(g.Instance.ContractEdgeI(0, 1));
+  AssertTrue(Counter = 5);
+  AssertTrue(g.Instance.DegreeI(0) = 2);
+  AssertTrue(g.Instance.ContractEdgeI(0, 1));
+  AssertTrue(Counter = 7);
+  AssertTrue(g.Instance.DegreeI(0) = 1);
+  AssertTrue(g.Instance.ContractEdgeI(0, 1));
+  AssertTrue(Counter = 9);
+  AssertTrue(g.Instance.DegreeI(0) = 0);
 end;
 
 { TWeightedGraphTest }
