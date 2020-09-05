@@ -242,7 +242,7 @@ begin
                     FInQueue.UncBits[I] := True;
                   end
                 else
-                  if RelaxPrice < FQueue.ItemPtr(I)^.Cost then
+                  if RelaxPrice < FQueue.GetItemPtr(I)^.Cost then
                     begin
                       UpdateNextNode;
                       FQueue.Update(I, TCostItem.Create(I, RelaxPrice));

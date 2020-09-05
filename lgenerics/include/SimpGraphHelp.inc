@@ -1138,7 +1138,7 @@ begin
                     for pAdj in aGraph.AdjLists[p^.Key]^ do
                       if InQueue.UncBits[pAdj^.Key] then
                         begin
-                          NextNode := Queue.Peek(pAdj^.Key);
+                          NextNode := Queue.GetItem(pAdj^.Key);
                           Inc(NextNode.WDegree);
                           Queue.Update(pAdj^.Key, NextNode);
                         end;
@@ -1964,7 +1964,7 @@ begin
       for p in FGraph[I] do
         if FInQueue.UncBits[p^.Target] then
           begin
-            Item := FQueue.Peek(p^.Target);
+            Item := FQueue.GetItem(p^.Target);
             Item.Data += p^.Weight;
             FQueue.Update(p^.Target, Item);
             p^.Scanned := True;

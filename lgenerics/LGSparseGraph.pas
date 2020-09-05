@@ -280,7 +280,7 @@ type
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
-    procedure VertexReplaced(constref v: TVertex); virtual;
+    procedure VertexReplaced(constref {%H-}v: TVertex); virtual;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; virtual; abstract;
@@ -4384,6 +4384,16 @@ begin
     end;
 end;
 
+function TGBinHeapMin.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGBinHeapMin.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
 procedure TGBinHeapMin.MakeEmpty;
 begin
   FCount := 0;
@@ -4391,8 +4401,7 @@ end;
 
 function TGBinHeapMin.TryDequeue(out aValue: T): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
+  if Count <> 0 then
     begin
       Dec(FCount);
       aValue := FHeap[0];
@@ -4401,7 +4410,61 @@ begin
       FIndex2Handle[0] := FIndex2Handle[Count];
       FHeap[Count] := Default(T);
       SiftDown(0);
+      exit(True);
     end;
+  Result := False;
+end;
+
+function TGBinHeapMin.TryPeek(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := FHeap[0];
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBinHeapMin.TryPeekPtr(out aValue: PItem): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := @FHeap[0];
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBinHeapMin.Dequeue: T;
+begin
+  if Count <> 0 then
+    begin
+      Dec(FCount);
+      Result := FHeap[0];
+      FHeap[0] := FHeap[Count];
+      FHandle2Index[FIndex2Handle[Count]] := 0;
+      FIndex2Handle[0] := FIndex2Handle[Count];
+      FHeap[Count] := Default(T);
+      SiftDown(0);
+    end
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGBinHeapMin.Peek: T;
+begin
+  if Count <> 0 then
+    Result := FHeap[0]
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGBinHeapMin.PeekPtr: PItem;
+begin
+  if Count <> 0 then
+    Result := @FHeap[0]
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
 procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
@@ -4434,12 +4497,12 @@ begin
       end;
 end;
 
-function TGBinHeapMin.Peek(aHandle: SizeInt): T;
+function TGBinHeapMin.GetItem(aHandle: SizeInt): T;
 begin
   Result := FHeap[FHandle2Index[aHandle]];
 end;
 
-function TGBinHeapMin.ItemPtr(aHandle: SizeInt): PItem;
+function TGBinHeapMin.GetItemPtr(aHandle: SizeInt): PItem;
 begin
   Result := @FHeap[FHandle2Index[aHandle]];
 end;
@@ -4557,6 +4620,16 @@ begin
   FCount := 0;
 end;
 
+function TGPairHeapMin.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGPairHeapMin.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
 procedure TGPairHeapMin.MakeEmpty;
 begin
   FRoot := nil;
@@ -4565,15 +4638,54 @@ end;
 
 function TGPairHeapMin.TryDequeue(out aValue: T): Boolean;
 begin
-  Result := Count <> 0;
-  if Result then
-    aValue := DequeueItem;
+  if Count <> 0 then
+    begin
+      aValue := DequeueItem;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMin.TryPeek(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMin.TryPeekPtr(out aValue: PItem): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := @FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGPairHeapMin.Dequeue: T;
 begin
-  if Count > 0 then
+  if Count <> 0 then
     Result := DequeueItem
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMin.Peek: T;
+begin
+  if Count <> 0 then
+    Result := FRoot^.Data
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMin.PeekPtr: PItem;
+begin
+  if Count <> 0 then
+    Result := @FRoot^.Data
   else
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
@@ -4604,12 +4716,12 @@ begin
   ExtractNode(@FNodeList[aHandle]);
 end;
 
-function TGPairHeapMin.Peek(aHandle: SizeInt): T;
+function TGPairHeapMin.GetItem(aHandle: SizeInt): T;
 begin
   Result := FNodeList[aHandle].Data;
 end;
 
-function TGPairHeapMin.ItemPtr(aHandle: SizeInt): PItem;
+function TGPairHeapMin.GetItemPtr(aHandle: SizeInt): PItem;
 begin
   Result := @FNodeList[aHandle].Data;
 end;
@@ -4711,6 +4823,16 @@ begin
   FCount := 0;
 end;
 
+function TGPairHeapMax.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGPairHeapMax.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
 procedure TGPairHeapMax.MakeEmpty;
 begin
   FRoot := nil;
@@ -4719,15 +4841,54 @@ end;
 
 function TGPairHeapMax.TryDequeue(out aValue: T): Boolean;
 begin
-  Result := Count <> 0;
-  if Result then
-    aValue := DequeueItem;
+  if Count <> 0 then
+    begin
+      aValue := DequeueItem;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMax.TryPeek(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMax.TryPeekPtr(out aValue: PItem): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := @FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGPairHeapMax.Dequeue: T;
 begin
-  if Count > 0 then
+  if Count <> 0 then
     Result := DequeueItem
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMax.Peek: T;
+begin
+  if Count <> 0 then
+    Result := FRoot^.Data
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMax.PeekPtr: PItem;
+begin
+  if Count <> 0 then
+    Result := @FRoot^.Data
   else
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
@@ -4753,12 +4914,12 @@ begin
     end;
 end;
 
-function TGPairHeapMax.Peek(aHandle: SizeInt): T;
+function TGPairHeapMax.GetItem(aHandle: SizeInt): T;
 begin
   Result := FNodeList[aHandle].Data;
 end;
 
-function TGPairHeapMax.ItemPtr(aHandle: SizeInt): PItem;
+function TGPairHeapMax.GetItemPtr(aHandle: SizeInt): PItem;
 begin
   Result := @FNodeList[aHandle].Data;
 end;
@@ -5550,7 +5711,7 @@ begin
             InQueue.UncBits[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
+          if p^.Data.Weight + Item.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
   until not Queue.TryDequeue(Item);
 end;
@@ -5580,7 +5741,7 @@ begin
             InQueue.UncBits[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
+          if p^.Data.Weight + Item.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               aPathTree[p^.Key] := Item.Index;
@@ -5617,7 +5778,7 @@ begin
             InQueue.UncBits[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
+          if p^.Data.Weight + Item.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               Parents[p^.Key] := Item.Index;
@@ -5661,7 +5822,7 @@ begin
               InQueue.UncBits[p^.Key] := True;
             end
           else
-            if Relax < Queue.ItemPtr(p^.Key)^.Weight then
+            if Relax < Queue.GetItemPtr(p^.Key)^.Weight then
               begin
                 Queue.Update(p^.Key, TRankItem.Create(
                   p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
@@ -6037,7 +6198,7 @@ begin
                   InQueue.UncBits[p^.Key] := True;
                 end
               else
-                if Relax < Queue.ItemPtr(p^.Key)^.Weight then
+                if Relax < Queue.GetItemPtr(p^.Key)^.Weight then
                   begin
                     Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
                     Parents[p^.Key] := Item.Index;

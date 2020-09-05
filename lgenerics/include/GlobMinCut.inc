@@ -121,7 +121,7 @@ begin
       for p in FGraph[I] do
         if FInQueue.UncBits[p^.Target] then
           begin
-            Item := FQueue.Peek(p^.Target);
+            Item := FQueue.GetItem(p^.Target);
             Item.Weight += p^.Weight;
             FQueue.Update(p^.Target, Item);
             p^.Scanned := True;
