@@ -271,6 +271,7 @@ type
     procedure FindMinPathsMap4;
     procedure MinPath;
     procedure MinPath1;
+    procedure MinPathBiDir;
     procedure FindMinPath;
     procedure FindMinPath1;
     procedure FindMinPath2;
@@ -4412,6 +4413,24 @@ begin
   for I := 1 to Pred(g.VertexCount) do
     begin
       Path := g.MinPath(0, I, Weight);
+      AssertTrue(Weight = WEIGHTS_ARRAY[0, I]);
+      AssertTrue(THelper.Same(Path, PATHS_FROM_0[I - 1]));
+    end;
+end;
+
+procedure TWeightedGraphTest.MinPathBiDir;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  Weight: Integer;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path := g.MinPathBiDir(0, I, Weight);
       AssertTrue(Weight = WEIGHTS_ARRAY[0, I]);
       AssertTrue(THelper.Same(Path, PATHS_FROM_0[I - 1]));
     end;
