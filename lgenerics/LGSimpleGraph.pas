@@ -692,6 +692,7 @@ type
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
     function CreateEdgeArray: TEdgeArray;
+    function BiDijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -746,6 +747,12 @@ type
     used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+    { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+      the weights of all edges MUST be nonnegative;
+      returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
+      used bidirectional Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
+    function MinPathBiDir(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+    function MinPathBiDirI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { returns False if exists negative weight cycle reachable from aSrc,
     otherwise returns the vertex path of minimal weight from a aSrc to aDst in aPath,
     if exists, and its weight in aWeight;
@@ -1598,7 +1605,7 @@ begin
       {%H-}Lefts.MakeEmpty;
       for p in AdjLists[Node.Index]^ do
         if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Succ(Queue.ItemPtr(p^.Key)^.Data)))
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Succ(Queue.GetItemPtr(p^.Key)^.Data)))
         else
           begin
             J := Index2Ord[p^.Key];
@@ -1856,7 +1863,7 @@ begin
             I := p^.Destination;
             if not Matched.UncBits[I] then
               begin
-                Node := Nodes.Peek(I);
+                Node := Nodes.GetItem(I);
                 if  Node.Data < Deg then
                   begin
                     Deg := Node.Data;
@@ -1873,7 +1880,7 @@ begin
                 I := p^.Destination;
                 if (I <> s) and not Matched.UncBits[I] then
                   begin
-                    Node := Nodes.Peek(I);
+                    Node := Nodes.GetItem(I);
                     Dec(Node.Data);
                     Nodes.Update(I, Node);
                   end;
@@ -2963,7 +2970,7 @@ begin
       InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
         if InQueue.UncBits[p^.Key] then
-          with Queue.ItemPtr(p^.Key)^ do
+          with Queue.GetItemPtr(p^.Key)^ do
             Queue.Update(p^.Key, TSbWNode.Create(Index, Pred(WDegree), Degree));
     end;
   if o = soDesc then
@@ -3029,7 +3036,7 @@ function TGSimpleGraph.SortComplementByWidth: TIntArray;
         InQueue.UncBits[Item.Index] := False;
         for J in m[Item.Index] do
           if InQueue.UncBits[J] then
-            with Queue.ItemPtr(J)^ do
+            with Queue.GetItemPtr(J)^ do
               Queue.Update(J, TSbWNode.Create(Index, Pred(WDegree), Degree));
       end;
     TIntHelper.Reverse(List);
@@ -3703,7 +3710,7 @@ begin
       InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
         if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.GetItemPtr(p^.Key)^.Data)));
     end;
 end;
 
@@ -3732,7 +3739,7 @@ begin
       InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
         if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.GetItemPtr(p^.Key)^.Data)));
     end;
 end;
 
@@ -3759,7 +3766,7 @@ begin
       InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
         if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.GetItemPtr(p^.Key)^.Data)));
     end;
   Result := InQueue.ToArray;
 end;
@@ -5377,6 +5384,78 @@ begin
         end;
 end;
 
+function TGWeightedGraph.BiDijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+var
+  Queue: array[Boolean] of TWeightHelper.TBinHeap;
+  Parents: array[Boolean] of TIntArray;
+  Reached: array[Boolean] of TWeightArray;
+  InQueue: array[Boolean] of TBoolVector;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: PAdjItem;
+  Dir: Boolean = True;
+const
+  Forwd = False;
+  Bckwd = True;
+begin
+  Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Parents[Forwd] := CreateIntArray;
+  Parents[Bckwd] := CreateIntArray;
+  Reached[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Reached[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  InQueue[Forwd].Capacity := VertexCount;
+  InQueue[Bckwd].Capacity := VertexCount;
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      Dir := not Dir;
+      Item := Queue[Dir].Dequeue;
+      if Item.Weight + Queue[not Dir].PeekPtr^.Weight > BestWeight then
+        begin
+          aWeight := BestWeight;
+          Result := TreePathTo(Parents[Bckwd], MeetPoint);
+          Result.Length := Result.Length - 1;
+          TIntHelper.Reverse(Result);
+          exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result));
+        end;
+      Reached[Dir][Item.Index] := Item.Weight;
+      for p in AdjLists[Item.Index]^ do
+        if not (Reached[Dir][p^.Key] < TWeight.INF_VALUE) then
+          begin
+            CurrWeight := Item.Weight + p^.Data.Weight;
+            if not InQueue[Dir].UncBits[p^.Key] then
+              begin
+                Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                Parents[Dir][p^.Key] := Item.Index;
+                InQueue[Dir].UncBits[p^.Key] := True;
+              end
+            else
+              if CurrWeight < Queue[Dir].GetItemPtr(p^.Key)^.Weight then
+                begin
+                  Queue[Dir].Update(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                  Parents[Dir][p^.Key] := Item.Index;
+                end;
+            if Reached[not Dir][p^.Key] < TWeight.INF_VALUE then
+              begin
+                CurrWeight := Reached[not Dir][p^.Key] + CurrWeight;
+                if CurrWeight < BestWeight  then
+                  begin
+                    BestWeight := CurrWeight;
+                    MeetPoint := p^.Key;
+                  end;
+              end;
+          end;
+    end;
+  aWeight := TWeight.INF_VALUE;
+  Result := [];
+end;
+
 class function TGWeightedGraph.InfWeight: TWeight;
 begin
   Result := TWeight.INF_VALUE;
@@ -5561,6 +5640,24 @@ begin
     end
   else
     Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedGraph.MinPathBiDir(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathBiDirI(IndexOf(aSrc), IndexOf(aDst), aWeight);
+end;
+
+function TGWeightedGraph.MinPathBiDirI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      Result := nil;
+    end
+  else
+    Result := BiDijkstraPath(aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
@@ -5795,7 +5892,7 @@ begin
                   InQueue.UncBits[p^.Key] := True;
                 end
               else
-                if p^.Data.Weight < Queue.ItemPtr(p^.Key)^.Weight then
+                if p^.Data.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
                   begin
                     Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                     Result[p^.Key] := Curr;
@@ -6044,7 +6141,7 @@ begin
           for pItem in g[Prev] do
             if vInQueue.UncBits[pItem^.Index] then
               begin
-                NextItem := Queue.Peek(pItem^.Index);
+                NextItem := Queue.GetItem(pItem^.Index);
                 NextItem.Weight += pItem^.Weight;
                 Queue.Update(pItem^.Index, NextItem);
               end;
