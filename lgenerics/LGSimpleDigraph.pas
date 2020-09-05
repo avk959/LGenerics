@@ -144,7 +144,7 @@ type
       FLastIndex,
       FInCount: SizeInt;
       FCurrArc: TIncomingArc;
-      function  GetCurrent: TIncomingArc; inline;
+      function  GetCurrent: TIncomingArc;
     public
       function  MoveNext: Boolean;
       property  Current: TIncomingArc read GetCurrent;
@@ -155,7 +155,7 @@ type
       FGraph: TGSimpleDigraph;
       FTarget: SizeInt;
     public
-      function GetEnumerator: TIncomingEnumerator; inline;
+      function GetEnumerator: TIncomingEnumerator;
     end;
 
     TDomTree = record
@@ -271,7 +271,7 @@ type
     function  SourceCount: SizeInt;
     function  SinkCount: SizeInt;
   { enumerates incoming arcs, slow }
-    function  IncomingArcs(constref aVertex: TVertex): TIncomingArcs; inline;
+    function  IncomingArcs(constref aVertex: TVertex): TIncomingArcs;
     function  IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
   { checks whether the aDst is reachable from the aSrc(each vertex is reachable from itself) }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
