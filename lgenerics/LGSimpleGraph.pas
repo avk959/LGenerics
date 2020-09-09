@@ -693,6 +693,8 @@ type
 
     function CreateEdgeArray: TEdgeArray;
     function BiDijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+  {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
+    function NBAStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -766,6 +768,11 @@ type
     raises an exception if aSrc or aDst does not exist }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+  { finds the path of minimal weight from a aSrc to aDst if it exists;
+    the weights of all edges MUST be nonnegative; used NBA* algorithm if aEst <> nil;
+    raises an exception if aSrc or aDst does not exist }
+    function MinPathNBAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathNBAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { creates a matrix of weights of edges }
     function CreateWeightsMatrix: TWeightMatrix; inline;
   { returns True and the shortest paths between all pairs of vertices in matrix aPaths
@@ -826,6 +833,8 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
+    function  MinPathNBAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
+    function  MinPathNBAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
   end;
 
   { TGInt64Net specializes TWeight with Int64 }
@@ -5385,44 +5394,42 @@ begin
 end;
 
 function TGWeightedGraph.BiDijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
 var
   Queue: array[Boolean] of TWeightHelper.TBinHeap;
   Parents: array[Boolean] of TIntArray;
-  Reached: array[Boolean] of TWeightArray;
   InQueue: array[Boolean] of TBoolVector;
+  Reached: array[Boolean] of TWeightArray;
   BestWeight, CurrWeight: TWeight;
   Item: TWeightItem;
   MeetPoint: SizeInt = -1;
   p: PAdjItem;
-  Dir: Boolean = True;
-const
-  Forwd = False;
-  Bckwd = True;
+  Dir: Boolean = Forwd;
 begin
-  Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
-  Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
-  Parents[Forwd] := CreateIntArray;
-  Parents[Bckwd] := CreateIntArray;
   Reached[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
   Reached[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
-  InQueue[Forwd].Capacity := VertexCount;
-  InQueue[Bckwd].Capacity := VertexCount;
+  Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
   Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
   Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
+  InQueue[Forwd].Capacity := VertexCount;
+  InQueue[Bckwd].Capacity := VertexCount;
   InQueue[Forwd].UncBits[aSrc] := True;
   InQueue[Bckwd].UncBits[aDst] := True;
+  Parents[Forwd] := CreateIntArray;
+  Parents[Bckwd] := CreateIntArray;
   BestWeight := TWeight.INF_VALUE;
   while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
     begin
-      Dir := not Dir;
       Item := Queue[Dir].Dequeue;
       if Item.Weight + Queue[not Dir].PeekPtr^.Weight > BestWeight then
         begin
           aWeight := BestWeight;
-          Result := TreePathTo(Parents[Bckwd], MeetPoint);
-          Result.Length := Result.Length - 1;
-          TIntHelper.Reverse(Result);
-          exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result));
+          Result := TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
+          TIntHelper.Reverse(Result[0..Result.Length-2]);
+          exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]));
         end;
       Reached[Dir][Item.Index] := Item.Weight;
       for p in AdjLists[Item.Index]^ do
@@ -5451,9 +5458,105 @@ begin
                   end;
               end;
           end;
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
     end;
   aWeight := TWeight.INF_VALUE;
-  Result := [];
+  Result := nil;
+end;
+
+function TGWeightedGraph.NBAStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
+var
+  Queue: array[Boolean] of TWeightHelper.TBinHeap;
+  Parents: array[Boolean] of TIntArray;
+  Weights: array[Boolean] of TWeightArray;
+  InQueue: array[Boolean] of TBoolVector;
+  Dest: array[Boolean] of TVertex;
+  F: array[Boolean] of TWeight;
+  Reached: TBoolVector;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: PAdjItem;
+  Dir: Boolean = Forwd;
+begin
+  Parents[Forwd] := CreateIntArray;
+  Parents[Bckwd] := CreateIntArray;
+  Weights[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Weights[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Reached.Capacity := VertexCount;
+  InQueue[Forwd].Capacity := VertexCount;
+  InQueue[Bckwd].Capacity := VertexCount;
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  Dest[Forwd] := Items[aDst];
+  Dest[Bckwd] := Items[aSrc];
+  F[Forwd] := aEst(Dest[Forwd], Dest[Bckwd]);
+  F[Bckwd] := F[Forwd];
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, F[Forwd]));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, F[Bckwd]));
+  Weights[Forwd][aSrc] := TWeight(0);
+  Weights[Bckwd][aDst] := TWeight(0);
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
+      Item := Queue[Dir].Dequeue;
+      if Reached.UncBits[Item.Index] then continue;
+      Reached.UncBits[Item.Index] := True;
+      if(Weights[Dir][Item.Index] + aEst(Items[Item.Index], Dest[Dir]) < BestWeight) and
+        (Weights[Dir][Item.Index] - aEst(Items[Item.Index], Dest[not Dir]) + F[not Dir] < BestWeight) then
+        for p in AdjLists[Item.Index]^ do // stabilize the node[Item.Index]
+          if not Reached.UncBits[p^.Key] then
+            begin
+              CurrWeight := Weights[Dir][Item.Index] + p^.Data.Weight;
+              if Weights[Dir][p^.Key] > CurrWeight then
+                begin
+                  Weights[Dir][p^.Key] := CurrWeight;
+                  if not InQueue[Dir].UncBits[p^.Key] then
+                    begin
+                      Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(
+                        p^.Key, CurrWeight + aEst(Items[p^.Key], Dest[Dir])));
+                      Parents[Dir][p^.Key] := Item.Index;
+                      InQueue[Dir].UncBits[p^.Key] := True;
+                    end
+                  else
+                    begin
+                      Queue[Dir].Update(p^.Key, TWeightItem.Create(
+                        p^.Key, CurrWeight + aEst(Items[p^.Key], Dest[Dir])));
+                      Parents[Dir][p^.Key] := Item.Index;
+                    end;
+                  if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
+                    begin
+                      CurrWeight := Weights[not Dir][p^.Key] + CurrWeight;
+                      if CurrWeight < BestWeight  then
+                        begin
+                          BestWeight := CurrWeight;
+                          MeetPoint := p^.Key;
+                        end;
+                    end;
+                end;
+            end;
+      if Queue[Dir].NonEmpty then
+        F[Dir] := Queue[Dir].PeekPtr^.Weight;
+    end;
+
+  if MeetPoint = NULL_INDEX then
+    begin
+      aWeight := TWeight.INF_VALUE;
+      exit(nil);
+    end;
+
+  aWeight := BestWeight;
+  Result := TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]));
 end;
 
 class function TGWeightedGraph.InfWeight: TWeight;
@@ -5700,6 +5803,28 @@ begin
       Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
     else
       Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedGraph.MinPathNBAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+  aEst: TEstimate): TIntArray;
+begin
+  Result := MinPathNBAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aEst);
+end;
+
+function TGWeightedGraph.MinPathNBAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      Result := nil;
+    end
+  else
+    if aEst <> nil then
+      Result := NBAStar(aSrc, aDst, aWeight, aEst)
+    else
+      Result := BiDijkstraPath(aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.CreateWeightsMatrix: TWeightMatrix;
@@ -6056,6 +6181,19 @@ begin
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, @Distance)
   else
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
+end;
+
+function TPointsChart.MinPathNBAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
+begin
+  Result := MinPathNBAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aHeur);
+end;
+
+function TPointsChart.MinPathNBAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
+begin
+  if aHeur = nil then
+    Result := inherited MinPathNBAStarI(aSrc, aDst, aWeight, @Distance)
+  else
+    Result := inherited MinPathNBAStarI(aSrc, aDst, aWeight, aHeur);
 end;
 
 {$I GlobMinCut.inc}
