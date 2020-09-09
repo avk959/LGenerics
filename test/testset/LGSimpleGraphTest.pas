@@ -271,11 +271,12 @@ type
     procedure FindMinPathsMap4;
     procedure MinPath;
     procedure MinPath1;
+    procedure MinPathAStar;
     procedure MinPathBiDir;
+    procedure MinPathNBAStar;
     procedure FindMinPath;
     procedure FindMinPath1;
     procedure FindMinPath2;
-    procedure MinPathAStar;
     procedure FindAllPairMinPaths;
     procedure FindAllPairMinPaths1;
     procedure FindAllPairMinPaths2;
@@ -4436,6 +4437,28 @@ begin
     end;
 end;
 
+procedure TWeightedGraphTest.MinPathNBAStar;
+var
+  Ref: specialize TGAutoRef<TPointsChart>;
+  g: TPointsChart;
+  NBAStarPath, DijkPath: TIntArray;
+  NBAStarWeight, DijkWeight: ValReal;
+  I: SizeInt = 0;
+const
+  TestSize = 100;
+begin
+  {%H-}Ref.Instance := GenerateRandomPoints(TestSize);
+  g := Ref;
+  while I < Pred(TestSize) do
+    begin
+      NBAStarPath := g.MinPathNBAStarI(I, Pred(TestSize), NBAStarWeight);
+      DijkPath := g.MinPathI(I, Pred(TestSize), DijkWeight);
+      AssertTrue(math.SameValue(NBAStarWeight, DijkWeight));
+      AssertTrue(THelper.Same(NBAStarPath, DijkPath));
+      Inc(I);
+    end;
+end;
+
 procedure TWeightedGraphTest.FindMinPath;
 var
   Ref: TRef;
@@ -4500,15 +4523,20 @@ var
   g: TPointsChart;
   AStarPath, DijkPath: TIntArray;
   AStarWeight, DijkWeight: ValReal;
+  I: Integer = 0;
 const
   TestSize = 100;
 begin
   {%H-}Ref.Instance := GenerateRandomPoints(TestSize);
   g := Ref;
-  AStarPath := g.MinPathAStarI(0, 99, AStarWeight);
-  DijkPath := g.MinPathI(0, 99, DijkWeight);
-  AssertTrue(math.SameValue(AStarWeight, DijkWeight));
-  AssertTrue(THelper.Same(AStarPath, DijkPath));
+  while I < Pred(TestSize) do
+    begin
+      AStarPath := g.MinPathAStarI(I, Pred(TestSize), AStarWeight);
+      DijkPath := g.MinPathI(I, Pred(TestSize), DijkWeight);
+      AssertTrue(math.SameValue(AStarWeight, DijkWeight));
+      AssertTrue(THelper.Same(AStarPath, DijkPath));
+      Inc(I);
+    end;
 end;
 
 procedure TWeightedGraphTest.FindAllPairMinPaths;
