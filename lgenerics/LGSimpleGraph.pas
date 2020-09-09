@@ -5450,7 +5450,7 @@ begin
                 end;
             if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
               begin
-                CurrWeight := Weights[not Dir][p^.Key] + CurrWeight;
+                CurrWeight += Weights[not Dir][p^.Key];
                 if CurrWeight < BestWeight  then
                   begin
                     BestWeight := CurrWeight;
@@ -5534,7 +5534,7 @@ begin
                     end;
                   if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
                     begin
-                      CurrWeight := Weights[not Dir][p^.Key] + CurrWeight;
+                      CurrWeight += Weights[not Dir][p^.Key];
                       if CurrWeight < BestWeight  then
                         begin
                           BestWeight := CurrWeight;
