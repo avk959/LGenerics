@@ -63,10 +63,12 @@ type
   end;
 {$ENDIF}
 
+{$IF DECLARED(Comp)}
   TLGCompHelper = type helper(TCompHelper) for Comp
     const INF_VALUE: Comp    = 9223372036854775807;
     const NEGINF_VALUE: Comp = -9223372036854775808;
   end;
+{$ENDIF}
 
   TLGCurrencyHelper = type helper(TGCurrencyHelper) for Currency
     const INF_VALUE: Currency    = 922337203685477.5807;
@@ -379,11 +381,10 @@ type
   strict private
     class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
     class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
+    class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
+  public
     class function  wMax(L, R: TWeight): TWeight; static; inline;
     class function  wMin(L, R: TWeight): TWeight; static; inline;
-    class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
-
-  public
   type
     TWeightEdge = record
       Source,

@@ -5650,22 +5650,6 @@ begin
     a[I] := aValue;
 end;
 
-class function TGWeightHelper.wMax(L, R: TWeight): TWeight;
-begin
-  if L >= R then
-    Result := L
-  else
-    Result := R;
-end;
-
-class function TGWeightHelper.wMin(L, R: TWeight): TWeight;
-begin
-  if L <= R then
-    Result := L
-  else
-    Result := R;
-end;
-
 class function TGWeightHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
 var
   v: TIntVector;
@@ -5686,6 +5670,22 @@ begin
       Result[J] := I;
       Inc(J);
     end;
+end;
+
+class function TGWeightHelper.wMax(L, R: TWeight): TWeight;
+begin
+  if L >= R then
+    Result := L
+  else
+    Result := R;
+end;
+
+class function TGWeightHelper.wMin(L, R: TWeight): TWeight;
+begin
+  if L <= R then
+    Result := L
+  else
+    Result := R;
 end;
 
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
