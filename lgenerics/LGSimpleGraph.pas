@@ -5401,15 +5401,15 @@ var
   Queue: array[Boolean] of TWeightHelper.TBinHeap;
   Parents: array[Boolean] of TIntArray;
   InQueue: array[Boolean] of TBoolVector;
-  Reached: array[Boolean] of TWeightArray;
+  Weights: array[Boolean] of TWeightArray;
   BestWeight, CurrWeight: TWeight;
   Item: TWeightItem;
   MeetPoint: SizeInt = -1;
   p: PAdjItem;
   Dir: Boolean = Forwd;
 begin
-  Reached[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
-  Reached[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Weights[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Weights[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
   Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
   Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
   Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
@@ -5431,9 +5431,9 @@ begin
           TIntHelper.Reverse(Result[0..Result.Length-2]);
           exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]));
         end;
-      Reached[Dir][Item.Index] := Item.Weight;
+      Weights[Dir][Item.Index] := Item.Weight;
       for p in AdjLists[Item.Index]^ do
-        if not (Reached[Dir][p^.Key] < TWeight.INF_VALUE) then
+        if not (Weights[Dir][p^.Key] < TWeight.INF_VALUE) then
           begin
             CurrWeight := Item.Weight + p^.Data.Weight;
             if not InQueue[Dir].UncBits[p^.Key] then
@@ -5448,9 +5448,9 @@ begin
                   Queue[Dir].Update(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
                   Parents[Dir][p^.Key] := Item.Index;
                 end;
-            if Reached[not Dir][p^.Key] < TWeight.INF_VALUE then
+            if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
               begin
-                CurrWeight := Reached[not Dir][p^.Key] + CurrWeight;
+                CurrWeight := Weights[not Dir][p^.Key] + CurrWeight;
                 if CurrWeight < BestWeight  then
                   begin
                     BestWeight := CurrWeight;
