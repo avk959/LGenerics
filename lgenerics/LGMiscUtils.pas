@@ -122,7 +122,7 @@ type
   { TGTimSort assumes that type T has implemented TCmpRel }
   generic TGTimSort<T> = class(specialize TGBaseTimSort<T, T>);
 
-  { TGComparableTimSort assumes that type T has defined comparison operators }
+  { TGComparableTimSort assumes that type T has defined comparison operator < }
   generic TGComparableTimSort<T> = class(specialize TGTimSortAnc<T>)
   protected
   type
@@ -1622,13 +1622,13 @@ begin
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
   Dec(FStackSize);
-  if FData[Pred(Base2)] > FData[Base2] then
+  if FData[Base2] < FData[Pred(Base2)] then
     begin
       D := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
       Base1 += D;
       Len1 -= D;
       if Len1 > 0 then
-        if FData[Pred(Base2 + Len2)] >= FData[Base1] then
+        if not (FData[Pred(Base2 + Len2)] < FData[Base1]) then
           begin
             Len2 := GallopLeftA(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -1663,7 +1663,7 @@ begin
       Base1 += D;
       Len1 -= D;
       if Len1 > 0 then
-        if FData[Pred(Base2 + Len2)] <= FData[Base1] then
+        if not(FData[Base1] < FData[Pred(Base2 + Len2)]) then
           begin
             Len2 := GallopLeftD(FData, FData[Pred(Base1 + Len1)], Base2, Len2, Len2 - 1);
             if Len2 > 0 then
@@ -1683,10 +1683,10 @@ var
 begin
   Dist := 0;
   Result := 1;
-  if Key > A[Base + Hint] then
+  if A[Base + Hint] < Key then
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (Key > A[Base + Hint + Result]) do
+      while (Result < MaxDist) and (A[Base + Hint + Result] < Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -1699,7 +1699,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (Key <= A[Base + Hint - Result]) do
+      while (Result < MaxDist) and not(A[Base + Hint - Result] < Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -1713,7 +1713,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if Key > A[Base + M] then
+      if A[Base + M] < Key then
         Dist := Succ(M)
       else
         Result := M;
@@ -1742,7 +1742,7 @@ begin
   else
     begin
       MaxDist := Hint + 1;
-      while (Result < MaxDist) and (Key >= A[Base + Hint - Result]) do
+      while (Result < MaxDist) and not(Key < A[Base + Hint - Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -1786,7 +1786,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (Key >= A[Base + Hint + Result]) do
+      while (Result < MaxDist) and not(Key < A[Base + Hint + Result]) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -1812,10 +1812,10 @@ var
 begin
   Dist := 0;
   Result := 1;
-  if Key > A[Base + Hint] then
+  if A[Base + Hint] < Key then
     begin
       MaxDist := Succ(Hint);
-      while (Result < MaxDist) and (Key > A[Base + Hint - Result]) do
+      while (Result < MaxDist) and (A[Base + Hint - Result] < Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -1829,7 +1829,7 @@ begin
   else
     begin
       MaxDist := Len - Hint;
-      while (Result < MaxDist) and (Key <= A[Base + Hint + Result]) do
+      while (Result < MaxDist) and not(A[Base + Hint + Result] < Key) do
         begin
           Dist := Result;
           Result := Succ(Result shl 1);
@@ -1842,7 +1842,7 @@ begin
   while Dist < Result do
     begin
       M := Dist + (Result - Dist) shr 1;
-      if Key > A[Base + M] then
+      if A[Base + M] < Key then
         Result := M
       else
         Dist := Succ(M);
@@ -1873,7 +1873,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if LocB[pLo] <= LocA[pHi] then
+      if not(LocA[pHi] < LocB[pLo]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -1969,7 +1969,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if LocB[pLo] >= LocA[pHi] then
+      if not(LocB[pLo] < LocA[pHi]) then
         begin
           TFake(LocA[pDst]) := TFake(LocB[pLo]);
           Inc(pDst);
@@ -2065,7 +2065,7 @@ begin
     Count1 := 0;
     Count2 := 0;
     repeat
-      if LocA[pLo] > LocB[pHi] then
+      if LocB[pHi] < LocA[pLo] then
         begin
           TFake(LocA[pDst]) := TFake(LocA[pLo]);
           Dec(pDst);
@@ -2244,7 +2244,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (A[J] > T(v)) do
+      while (J >= 0) and (T(v) < A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -2278,12 +2278,12 @@ begin
   if R > 0 then
     begin
       Result := 1;
-      if A[0] <= A[1] then  // ascending
-        while (Result < R) and (A[Result] <= A[Succ(Result)]) do
+      if not(A[1] < A[0]) then// ascending
+        while (Result < R) and not(A[Succ(Result)] < A[Result]) do
           Inc(Result)
-      else                  // descending
+      else                    // descending
         begin
-          while (Result < R) and (A[Result] > A[Succ(Result)]) do
+          while (Result < R) and (A[Succ(Result)] < A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -2297,12 +2297,12 @@ begin
   if R > 0 then
     begin
       Result := 1;
-      if A[0] >= A[1] then  // descending
-        while (Result < R) and (A[Result] >= A[Succ(Result)]) do
+      if not(A[0] < A[1]) then// descending
+        while (Result < R) and not(A[Result] < A[Succ(Result)]) do
           Inc(Result)
-      else                  // ascending
+      else                    // ascending
         begin
-          while (Result < R) and (A[Result] <  A[Succ(Result)]) do
+          while (Result < R) and (A[Result] < A[Succ(Result)]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
