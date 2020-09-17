@@ -108,20 +108,20 @@ type
     function FindMax(out aValue: T): Boolean;
   { returns True if exists element whose value greater then or equal to aValue (depending on aInclusive) }
     function FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean;
-  { returns True if exists element whose value TLess then aValue (or equal to aValue, depending on aInclusive) }
+  { returns True if exists element whose value less then aValue (or equal to aValue, depending on aInclusive) }
     function FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean;
-  { enumerates values whose are strictly TLess than(if not aInclusive) aHighBound }
+  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
     function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; virtual; abstract;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
     function Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
-  { enumerates values whose are greater than or equal to aLowBound and strictly TLess than aHighBound(by default)}
+  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
     function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
        virtual; abstract;
-  { returns sorted set whose items are strictly TLess than(if not aInclusive) aHighBound }
+  { returns sorted set whose items are strictly less than(if not aInclusive) aHighBound }
     function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TAbstractTreeSet; virtual; abstract;
   { returns sorted set whose items are greater than or equal(if aInclusive) to aLowBound}
     function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TAbstractTreeSet; virtual; abstract;
-  { returns sorted set whose items are greater than or equal to aLowBound and strictly TLess than
+  { returns sorted set whose items are greater than or equal to aLowBound and strictly less than
     aHighBound(by default) }
     function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeSet;
        virtual; abstract;
@@ -174,7 +174,7 @@ type
   { TGTreeSet implements sorded set, it assumes that type T implements TCmpRel }
   generic TGTreeSet<T> = class(specialize TGBaseTreeSet<T, T>);
 
-  { TGComparableTreeSet implements sorted set; it assumes that type T has defined comparison operators }
+  { TGComparableTreeSet implements sorted set; it assumes that type T has defined comparison operator < }
   generic TGComparableTreeSet<T> = class(specialize TGAbstractTreeSet<T>)
   protected
   type
@@ -370,8 +370,8 @@ type
   end;
 
   { TGLiteTreeSet implements sorted set;
-            functor TCmpRel (comparision relation) must provide:
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+      functor TCmpRel (comparision relation) must provide:
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGLiteTreeSet<T, TCmpRel> = record
   private
   type
@@ -1040,7 +1040,7 @@ begin
   if FDone or not FEnum.MoveNext then
     exit(False);
   if FInclusive then
-    Result := FEnum.Current^.Data.Key <= FHighBound
+    Result := not(FHighBound < FEnum.Current^.Data.Key)
   else
     Result := FEnum.Current^.Data.Key < FHighBound;
   FDone := not Result;

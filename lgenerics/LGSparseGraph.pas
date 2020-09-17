@@ -4265,31 +4265,7 @@ end;
 
 { TIntNode }
 
-class operator TIntNode.>(constref L, R: TIntNode): Boolean;
-begin
-  if L.Data = R.Data then
-    Result := L.Index > R.Index
-  else
-    Result := L.Data > R.Data;
-end;
-
 class operator TIntNode.<(constref L, R: TIntNode): Boolean;
-begin
-  if L.Data = R.Data then
-    Result := L.Index < R.Index
-  else
-    Result := L.Data < R.Data;
-end;
-
-class operator TIntNode.>=(constref L, R: TIntNode): Boolean;
-begin
-  if L.Data = R.Data then
-    Result := L.Index > R.Index
-  else
-    Result := L.Data > R.Data;
-end;
-
-class operator TIntNode.<=(constref L, R: TIntNode): Boolean;
 begin
   if L.Data = R.Data then
     Result := L.Index < R.Index
@@ -4301,627 +4277,6 @@ constructor TIntNode.Create(aIndex, aData: SizeInt);
 begin
   Index := aIndex;
   Data := aData;
-end;
-
-{ TGBinHeapMin }
-
-function TGBinHeapMin.GetCapacity: SizeInt;
-begin
-  Result := System.Length(FHeap);
-end;
-
-procedure TGBinHeapMin.FloatUp(aIndex: SizeInt);
-var
-  CurrIdx, ParentIdx, HandleIdx: SizeInt;
-  v: T;
-begin
-  if aIndex > 0 then
-    begin
-      CurrIdx := aIndex;
-      ParentIdx := Pred(aIndex) shr 1;
-      v := FHeap[aIndex];
-      HandleIdx := FIndex2Handle[aIndex];
-      while (CurrIdx > 0) and (v < FHeap[ParentIdx]) do
-        begin
-          FHeap[CurrIdx] := FHeap[ParentIdx];
-          FHandle2Index[FIndex2Handle[ParentIdx]] := CurrIdx;
-          FIndex2Handle[CurrIdx] := FIndex2Handle[ParentIdx];
-          CurrIdx := ParentIdx;
-          ParentIdx := Pred(ParentIdx) shr 1;
-        end;
-      FHeap[CurrIdx] := v;
-      FHandle2Index[HandleIdx] := CurrIdx;
-      FIndex2Handle[CurrIdx] := HandleIdx;
-    end;
-end;
-
-procedure TGBinHeapMin.SiftDown(aIndex: SizeInt);
-var
-  CurrIdx, NextIdx, HighIdx, HandleIdx: SizeInt;
-  v: T;
-begin
-  HighIdx := Pred(Count);
-  if HighIdx > 0 then
-    begin
-      CurrIdx := aIndex;
-      NextIdx := Succ(aIndex shl 1);
-      v := FHeap[aIndex];
-      HandleIdx := FIndex2Handle[aIndex];
-      while NextIdx <= HighIdx do
-        begin
-          if (Succ(NextIdx) <= HighIdx) and (FHeap[NextIdx] > FHeap[Succ(NextIdx)]) then
-            Inc(NextIdx);
-          FHeap[CurrIdx] := FHeap[NextIdx];
-          FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
-          FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
-          CurrIdx := NextIdx;
-          NextIdx := Succ(NextIdx shl 1);
-        end;
-      NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (v < FHeap[NextIdx]) do
-        begin
-          FHeap[CurrIdx] := FHeap[NextIdx];
-          FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
-          FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
-          CurrIdx := NextIdx;
-          NextIdx := Pred(NextIdx) shr 1;
-        end;
-      FHeap[CurrIdx] := v;
-      FHandle2Index[HandleIdx] := CurrIdx;
-      FIndex2Handle[CurrIdx] := HandleIdx;
-    end;
-end;
-
-constructor TGBinHeapMin.Create(aSize: SizeInt);
-begin
-  FCount := 0;
-  if aSize > 0 then
-    begin
-      System.SetLength(FHeap, aSize);
-      FBuffer := TIntArray.Construct(aSize * 2, NULL_INDEX);
-      FHandle2Index := Pointer(FBuffer);
-      FIndex2Handle := FHandle2Index + aSize;
-    end;
-end;
-
-function TGBinHeapMin.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGBinHeapMin.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGBinHeapMin.MakeEmpty;
-begin
-  FCount := 0;
-end;
-
-function TGBinHeapMin.TryDequeue(out aValue: T): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      Dec(FCount);
-      aValue := FHeap[0];
-      FHeap[0] := FHeap[Count];
-      FHandle2Index[FIndex2Handle[Count]] := 0;
-      FIndex2Handle[0] := FIndex2Handle[Count];
-      FHeap[Count] := Default(T);
-      SiftDown(0);
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGBinHeapMin.TryPeek(out aValue: T): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := FHeap[0];
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGBinHeapMin.TryPeekPtr(out aValue: PItem): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := @FHeap[0];
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGBinHeapMin.Dequeue: T;
-begin
-  if Count <> 0 then
-    begin
-      Dec(FCount);
-      Result := FHeap[0];
-      FHeap[0] := FHeap[Count];
-      FHandle2Index[FIndex2Handle[Count]] := 0;
-      FIndex2Handle[0] := FIndex2Handle[Count];
-      FHeap[Count] := Default(T);
-      SiftDown(0);
-    end
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-function TGBinHeapMin.Peek: T;
-begin
-  if Count <> 0 then
-    Result := FHeap[0]
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-function TGBinHeapMin.PeekPtr: PItem;
-begin
-  if Count <> 0 then
-    Result := @FHeap[0]
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
-var
-  InsertIdx: SizeInt;
-begin
-  InsertIdx := Count;
-  Inc(FCount);
-  FHeap[InsertIdx] := aValue;
-  FHandle2Index[aHandle] := InsertIdx;
-  FIndex2Handle[InsertIdx] := aHandle;
-  FloatUp(InsertIdx);
-end;
-
-procedure TGBinHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
-var
-  I: SizeInt;
-begin
-  I := FHandle2Index[aHandle];
-  if aNewValue < FHeap[I] then
-    begin
-      FHeap[I] := aNewValue;
-      FloatUp(I);
-    end
-  else
-    if aNewValue > FHeap[I] then
-      begin
-        FHeap[I] := aNewValue;
-        SiftDown(I);
-      end;
-end;
-
-function TGBinHeapMin.GetItem(aHandle: SizeInt): T;
-begin
-  Result := FHeap[FHandle2Index[aHandle]];
-end;
-
-function TGBinHeapMin.GetItemPtr(aHandle: SizeInt): PItem;
-begin
-  Result := @FHeap[FHandle2Index[aHandle]];
-end;
-
-{ TGPairHeapMin.TNode }
-
-function TGPairHeapMin.TNode.AddChild(aNode: PNode): PNode;
-begin
-  Result := @Self;
-  aNode^.Prev := Result;
-  Sibling :=  aNode^.Sibling;
-  if Sibling <> nil then
-    Sibling^.Prev := @Self;
-  aNode^.Sibling := Child;
-  if Child <> nil then
-    Child^.Prev := aNode;
-  Child := aNode;
-end;
-
-{ TGPairHeapMin }
-
-function TGPairHeapMin.GetCapacity: SizeInt;
-begin
-  Result := System.Length(FNodeList);
-end;
-
-function TGPairHeapMin.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
-begin
-  Result := @FNodeList[aHandle];
-  Inc(FCount);
-  Result^.Data := aValue;
-  Result^.Prev := nil;
-  Result^.Child := nil;
-  Result^.Sibling := nil;
-end;
-
-function TGPairHeapMin.DequeueItem: T;
-begin
-  Result := FRoot^.Data;
-  Dec(FCount);
-  FRoot := TwoPassMerge(FRoot^.Child);
-  if FRoot <> nil then
-    FRoot^.Prev := nil;
-end;
-
-procedure TGPairHeapMin.RootMerge(aNode: PNode);
-begin
-  FRoot := NodeMerge(FRoot, aNode);
-  if FRoot <> nil then
-    FRoot^.Prev := nil;
-end;
-
-procedure TGPairHeapMin.ExtractNode(aNode: PNode);
-begin
-  if aNode <> FRoot then
-    begin
-      CutNode(aNode);
-      RootMerge(TwoPassMerge(aNode^.Child));
-    end
-  else
-    begin
-      FRoot := TwoPassMerge(FRoot^.Child);
-      if FRoot <> nil then
-        FRoot^.Prev := nil;
-    end;
-  Dec(FCount);
-end;
-
-class function TGPairHeapMin.NodeMerge(L, R: PNode): PNode;
-begin
-  if L <> nil then
-    if R <> nil then
-      if L^.Data <= R^.Data then
-        Result := L^.AddChild(R)
-      else
-        Result := R^.AddChild(L)
-    else
-      Result := L
-  else
-    Result := R;
-end;
-
-class function TGPairHeapMin.TwoPassMerge(aNode: PNode): PNode;
-var
-  CurrNode, NextNode: PNode;
-begin
-  Result := nil;
-  while (aNode <> nil) and (aNode^.Sibling <> nil) do
-    begin
-      NextNode := aNode^.Sibling;
-      CurrNode := aNode;
-      aNode := NextNode^.Sibling;
-      NextNode^.Sibling := nil;
-      CurrNode^.Sibling := nil;
-      Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
-    end;
-  Result := NodeMerge(Result, aNode);
-end;
-
-class procedure TGPairHeapMin.CutNode(aNode: PNode);
-begin
-  if aNode^.Sibling <> nil then
-    aNode^.Sibling^.Prev := aNode^.Prev;
-  if aNode^.Prev^.Child = aNode then
-    aNode^.Prev^.Child := aNode^.Sibling
-  else
-    aNode^.Prev^.Sibling := aNode^.Sibling;
-  aNode^.Sibling := nil;
-end;
-
-constructor TGPairHeapMin.Create(aSize: SizeInt);
-begin
-  System.SetLength(FNodeList, aSize);
-  FRoot := nil;
-  FCount := 0;
-end;
-
-function TGPairHeapMin.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGPairHeapMin.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGPairHeapMin.MakeEmpty;
-begin
-  FRoot := nil;
-  FCount := 0;
-end;
-
-function TGPairHeapMin.TryDequeue(out aValue: T): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := DequeueItem;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGPairHeapMin.TryPeek(out aValue: T): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := FRoot^.Data;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGPairHeapMin.TryPeekPtr(out aValue: PItem): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := @FRoot^.Data;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGPairHeapMin.Dequeue: T;
-begin
-  if Count <> 0 then
-    Result := DequeueItem
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-function TGPairHeapMin.Peek: T;
-begin
-  if Count <> 0 then
-    Result := FRoot^.Data
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-function TGPairHeapMin.PeekPtr: PItem;
-begin
-  if Count <> 0 then
-    Result := @FRoot^.Data
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-procedure TGPairHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
-begin
-  RootMerge(NewNode(aValue, aHandle));
-end;
-
-procedure TGPairHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
-var
-  Node: PNode;
-begin
-  Node := @FNodeList[aHandle];
-  if aNewValue < Node^.Data then
-    begin
-      Node^.Data := aNewValue;
-      if Node <> FRoot then
-        begin
-          CutNode(Node);
-          RootMerge(Node);
-        end;
-    end;
-end;
-
-procedure TGPairHeapMin.Remove(aHandle: SizeInt);
-begin
-  ExtractNode(@FNodeList[aHandle]);
-end;
-
-function TGPairHeapMin.GetItem(aHandle: SizeInt): T;
-begin
-  Result := FNodeList[aHandle].Data;
-end;
-
-function TGPairHeapMin.GetItemPtr(aHandle: SizeInt): PItem;
-begin
-  Result := @FNodeList[aHandle].Data;
-end;
-
-{ TGPairHeapMax.TNode }
-
-function TGPairHeapMax.TNode.AddChild(aNode: PNode): PNode;
-begin
-  Result := @Self;
-  aNode^.Prev := Result;
-  Sibling :=  aNode^.Sibling;
-  if Sibling <> nil then
-    Sibling^.Prev := @Self;
-  aNode^.Sibling := Child;
-  if Child <> nil then
-    Child^.Prev := aNode;
-  Child := aNode;
-end;
-
-{ TGPairHeapMax }
-
-function TGPairHeapMax.GetCapacity: SizeInt;
-begin
-  Result := System.Length(FNodeList);
-end;
-
-function TGPairHeapMax.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
-begin
-  Result := @FNodeList[aHandle];
-  Inc(FCount);
-  Result^.Data := aValue;
-  Result^.Prev := nil;
-  Result^.Child := nil;
-  Result^.Sibling := nil;
-end;
-
-function TGPairHeapMax.DequeueItem: T;
-begin
-  Result := FRoot^.Data;
-  Dec(FCount);
-  FRoot := TwoPassMerge(FRoot^.Child);
-  if FRoot <> nil then
-    FRoot^.Prev := nil;
-end;
-
-procedure TGPairHeapMax.RootMerge(aNode: PNode);
-begin
-  FRoot := NodeMerge(FRoot, aNode);
-  if FRoot <> nil then
-    FRoot^.Prev := nil;
-end;
-
-class function TGPairHeapMax.NodeMerge(L, R: PNode): PNode;
-begin
-  if L <> nil then
-    if R <> nil then
-      if L^.Data >= R^.Data then
-        Result := L^.AddChild(R)
-      else
-        Result := R^.AddChild(L)
-    else
-      Result := L
-  else
-    Result := R;
-end;
-
-class function TGPairHeapMax.TwoPassMerge(aNode: PNode): PNode;
-var
-  CurrNode, NextNode: PNode;
-begin
-  Result := nil;
-  while (aNode <> nil) and (aNode^.Sibling <> nil) do
-    begin
-      NextNode := aNode^.Sibling;
-      CurrNode := aNode;
-      aNode := NextNode^.Sibling;
-      NextNode^.Sibling := nil;
-      CurrNode^.Sibling := nil;
-      Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
-    end;
-  Result := NodeMerge(Result, aNode);
-end;
-
-class procedure TGPairHeapMax.CutNode(aNode: PNode);
-begin
-  if aNode^.Sibling <> nil then
-    aNode^.Sibling^.Prev := aNode^.Prev;
-  if aNode^.Prev^.Child = aNode then
-    aNode^.Prev^.Child := aNode^.Sibling
-  else
-    aNode^.Prev^.Sibling := aNode^.Sibling;
-  aNode^.Sibling := nil;
-end;
-
-constructor TGPairHeapMax.Create(aSize: SizeInt);
-begin
-  System.SetLength(FNodeList, aSize);
-  FRoot := nil;
-  FCount := 0;
-end;
-
-function TGPairHeapMax.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGPairHeapMax.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGPairHeapMax.MakeEmpty;
-begin
-  FRoot := nil;
-  FCount := 0;
-end;
-
-function TGPairHeapMax.TryDequeue(out aValue: T): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := DequeueItem;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGPairHeapMax.TryPeek(out aValue: T): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := FRoot^.Data;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGPairHeapMax.TryPeekPtr(out aValue: PItem): Boolean;
-begin
-  if Count <> 0 then
-    begin
-      aValue := @FRoot^.Data;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGPairHeapMax.Dequeue: T;
-begin
-  if Count <> 0 then
-    Result := DequeueItem
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-function TGPairHeapMax.Peek: T;
-begin
-  if Count <> 0 then
-    Result := FRoot^.Data
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-function TGPairHeapMax.PeekPtr: PItem;
-begin
-  if Count <> 0 then
-    Result := @FRoot^.Data
-  else
-    raise ELGAccessEmpty.Create(SECantAccessEmpty);
-end;
-
-procedure TGPairHeapMax.Enqueue(aHandle: SizeInt; constref aValue: T);
-begin
-  RootMerge(NewNode(aValue, aHandle));
-end;
-
-procedure TGPairHeapMax.Update(aHandle: SizeInt; constref aNewValue: T);
-var
-  Node: PNode;
-begin
-  Node := @FNodeList[aHandle];
-  if aNewValue > Node^.Data then
-    begin
-      Node^.Data := aNewValue;
-      if Node <> FRoot then
-        begin
-          CutNode(Node);
-          RootMerge(Node);
-        end;
-    end;
-end;
-
-function TGPairHeapMax.GetItem(aHandle: SizeInt): T;
-begin
-  Result := FNodeList[aHandle].Data;
-end;
-
-function TGPairHeapMax.GetItemPtr(aHandle: SizeInt): PItem;
-begin
-  Result := @FNodeList[aHandle].Data;
 end;
 
 { TGJoinableHashList }
@@ -5036,34 +4391,9 @@ end;
 
 { TGWeightHelper.TWeightEdge }
 
-class operator TGWeightHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight > R.Weight;
-end;
-
 class operator TGWeightHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight >= R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight <= R.Weight;
 end;
 
 constructor TGWeightHelper.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
@@ -5080,34 +4410,9 @@ end;
 
 { TCostItem }
 
-class operator TCostItem. = (constref L, R: TCostItem): Boolean;
-begin
-  Result := L.Cost = R.Cost;
-end;
-
-class operator TCostItem.<>(constref L, R: TCostItem): Boolean;
-begin
-  Result := L.Cost <> R.Cost;
-end;
-
-class operator TCostItem.>(constref L, R: TCostItem): Boolean;
-begin
-  Result := L.Cost > R.Cost;
-end;
-
 class operator TCostItem.<(constref L, R: TCostItem): Boolean;
 begin
   Result := L.Cost < R.Cost;
-end;
-
-class operator TCostItem.>=(constref L, R: TCostItem): Boolean;
-begin
-  Result := L.Cost >= R.Cost;
-end;
-
-class operator TCostItem.<=(constref L, R: TCostItem): Boolean;
-begin
-  Result := L.Cost <= R.Cost;
 end;
 
 constructor TCostItem.Create(aIndex: SizeInt; aCost: TCost);
@@ -5118,34 +4423,9 @@ end;
 
 { TGWeightHelper.TWeightItem }
 
-class operator TGWeightHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightItem.>(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight > R.Weight;
-end;
-
 class operator TGWeightHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight >= R.Weight;
-end;
-
-class operator TGWeightHelper.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight <= R.Weight;
 end;
 
 constructor TGWeightHelper.TWeightItem.Create(aIndex: SizeInt; w: TWeight);
@@ -5156,34 +4436,9 @@ end;
 
 { TGWeightHelper.TRankItem }
 
-class operator TGWeightHelper.TRankItem. = (constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank = R.Rank;
-end;
-
-class operator TGWeightHelper.TRankItem.<>(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank <> R.Rank;
-end;
-
-class operator TGWeightHelper.TRankItem.>(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank > R.Rank;
-end;
-
 class operator TGWeightHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank < R.Rank;
-end;
-
-class operator TGWeightHelper.TRankItem.>=(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank >= R.Rank;
-end;
-
-class operator TGWeightHelper.TRankItem.<=(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank <= R.Rank;
 end;
 
 constructor TGWeightHelper.TRankItem.Create(aIndex: SizeInt; aRank, aWeight: TWeight);
@@ -5690,13 +4945,13 @@ end;
 
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
-  Queue: TPairHeap;
+  Queue: specialize TGPairHeapMin<TWeightItem>;
   Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
-  Queue := TPairHeap.Create(g.VertexCount);
+  Queue := specialize TGPairHeapMin<TWeightItem>.Create(g.VertexCount);
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
   Item := TWeightItem.Create(aSrc, 0);
@@ -5718,13 +4973,13 @@ end;
 
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
-  Queue: TPairHeap;
+  Queue: specialize TGPairHeapMin<TWeightItem>;
   Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
-  Queue := TPairHeap.Create(g.VertexCount);
+  Queue := specialize TGPairHeapMin<TWeightItem>.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
@@ -5751,13 +5006,13 @@ end;
 
 class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
-  Queue: TBinHeap;
+  Queue: specialize TGBinHeapMin<TWeightItem>;
   Parents: TIntArray;
   Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
-  Queue := TBinHeap.Create(g.VertexCount);
+  Queue := specialize TGBinHeapMin<TWeightItem>.Create(g.VertexCount);
   Parents := g.CreateIntArray;
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
@@ -5791,14 +5046,14 @@ end;
 class function TGWeightHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 var
-  Queue: TAStarHeap;
+  Queue: specialize TGBinHeapMin<TRankItem>;
   Parents: TIntArray;
   Reached, InQueue: TBoolVector;
   Item: TRankItem;
   Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
-  Queue := TAStarHeap.Create(g.VertexCount);
+  Queue := specialize TGBinHeapMin<TRankItem>.Create(g.VertexCount);
   Parents := g.CreateIntArray;
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
@@ -6155,7 +5410,7 @@ end;
 
 class function TGWeightHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
 var
-  Queue: TPairHeap;
+  Queue: specialize TGPairHeapMin<TWeightItem>;
   Parents: TIntArray;
   Phi, Weights: TWeightArray;
   Reached, InQueue: TBoolVector;
@@ -6173,7 +5428,7 @@ begin
   VertCount := aGraph.VertexCount;
   Parents.Length := VertCount;
   System.SetLength(Weights, VertCount);
-  Queue := TPairHeap.Create(VertCount);
+  Queue := specialize TGPairHeapMin<TWeightItem>.Create(VertCount);
   Reached.Capacity := VertCount;
   InQueue.Capacity := VertCount;
   System.SetLength(aPaths, VertCount, VertCount);
@@ -6341,6 +5596,627 @@ var
   Helper: THungarian;
 begin
   Result := Helper.MaxMatching(aGraph, w, g);
+end;
+
+{ TGBinHeapMin }
+
+function TGBinHeapMin.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FHeap);
+end;
+
+procedure TGBinHeapMin.FloatUp(aIndex: SizeInt);
+var
+  CurrIdx, ParentIdx, HandleIdx: SizeInt;
+  v: T;
+begin
+  if aIndex > 0 then
+    begin
+      CurrIdx := aIndex;
+      ParentIdx := Pred(aIndex) shr 1;
+      v := FHeap[aIndex];
+      HandleIdx := FIndex2Handle[aIndex];
+      while (CurrIdx > 0) and (v < FHeap[ParentIdx]) do
+        begin
+          FHeap[CurrIdx] := FHeap[ParentIdx];
+          FHandle2Index[FIndex2Handle[ParentIdx]] := CurrIdx;
+          FIndex2Handle[CurrIdx] := FIndex2Handle[ParentIdx];
+          CurrIdx := ParentIdx;
+          ParentIdx := Pred(ParentIdx) shr 1;
+        end;
+      FHeap[CurrIdx] := v;
+      FHandle2Index[HandleIdx] := CurrIdx;
+      FIndex2Handle[CurrIdx] := HandleIdx;
+    end;
+end;
+
+procedure TGBinHeapMin.SiftDown(aIndex: SizeInt);
+var
+  CurrIdx, NextIdx, HighIdx, HandleIdx: SizeInt;
+  v: T;
+begin
+  HighIdx := Pred(Count);
+  if HighIdx > 0 then
+    begin
+      CurrIdx := aIndex;
+      NextIdx := Succ(aIndex shl 1);
+      v := FHeap[aIndex];
+      HandleIdx := FIndex2Handle[aIndex];
+      while NextIdx <= HighIdx do
+        begin
+          if (Succ(NextIdx) <= HighIdx) and (FHeap[Succ(NextIdx)] < FHeap[NextIdx]) then
+            Inc(NextIdx);
+          FHeap[CurrIdx] := FHeap[NextIdx];
+          FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
+          FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
+          CurrIdx := NextIdx;
+          NextIdx := Succ(NextIdx shl 1);
+        end;
+      NextIdx := Pred(CurrIdx) shr 1;
+      while (CurrIdx > 0) and (v < FHeap[NextIdx]) do
+        begin
+          FHeap[CurrIdx] := FHeap[NextIdx];
+          FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
+          FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
+          CurrIdx := NextIdx;
+          NextIdx := Pred(NextIdx) shr 1;
+        end;
+      FHeap[CurrIdx] := v;
+      FHandle2Index[HandleIdx] := CurrIdx;
+      FIndex2Handle[CurrIdx] := HandleIdx;
+    end;
+end;
+
+constructor TGBinHeapMin.Create(aSize: SizeInt);
+begin
+  FCount := 0;
+  if aSize > 0 then
+    begin
+      System.SetLength(FHeap, aSize);
+      FBuffer := TIntArray.Construct(aSize * 2, NULL_INDEX);
+      FHandle2Index := Pointer(FBuffer);
+      FIndex2Handle := FHandle2Index + aSize;
+    end;
+end;
+
+function TGBinHeapMin.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGBinHeapMin.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGBinHeapMin.MakeEmpty;
+begin
+  FCount := 0;
+end;
+
+function TGBinHeapMin.TryDequeue(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      Dec(FCount);
+      aValue := FHeap[0];
+      FHeap[0] := FHeap[Count];
+      FHandle2Index[FIndex2Handle[Count]] := 0;
+      FIndex2Handle[0] := FIndex2Handle[Count];
+      FHeap[Count] := Default(T);
+      SiftDown(0);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBinHeapMin.TryPeek(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := FHeap[0];
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBinHeapMin.TryPeekPtr(out aValue: PItem): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := @FHeap[0];
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBinHeapMin.Dequeue: T;
+begin
+  if Count <> 0 then
+    begin
+      Dec(FCount);
+      Result := FHeap[0];
+      FHeap[0] := FHeap[Count];
+      FHandle2Index[FIndex2Handle[Count]] := 0;
+      FIndex2Handle[0] := FIndex2Handle[Count];
+      FHeap[Count] := Default(T);
+      SiftDown(0);
+    end
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGBinHeapMin.Peek: T;
+begin
+  if Count <> 0 then
+    Result := FHeap[0]
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGBinHeapMin.PeekPtr: PItem;
+begin
+  if Count <> 0 then
+    Result := @FHeap[0]
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
+var
+  InsertIdx: SizeInt;
+begin
+  InsertIdx := Count;
+  Inc(FCount);
+  FHeap[InsertIdx] := aValue;
+  FHandle2Index[aHandle] := InsertIdx;
+  FIndex2Handle[InsertIdx] := aHandle;
+  FloatUp(InsertIdx);
+end;
+
+procedure TGBinHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
+var
+  I: SizeInt;
+begin
+  I := FHandle2Index[aHandle];
+  if aNewValue < FHeap[I] then
+    begin
+      FHeap[I] := aNewValue;
+      FloatUp(I);
+    end
+  else
+    if FHeap[I] < aNewValue then
+      begin
+        FHeap[I] := aNewValue;
+        SiftDown(I);
+      end;
+end;
+
+function TGBinHeapMin.GetItem(aHandle: SizeInt): T;
+begin
+  Result := FHeap[FHandle2Index[aHandle]];
+end;
+
+function TGBinHeapMin.GetItemPtr(aHandle: SizeInt): PItem;
+begin
+  Result := @FHeap[FHandle2Index[aHandle]];
+end;
+
+{ TGPairHeapMin.TNode }
+
+function TGPairHeapMin.TNode.AddChild(aNode: PNode): PNode;
+begin
+  Result := @Self;
+  aNode^.Prev := Result;
+  Sibling :=  aNode^.Sibling;
+  if Sibling <> nil then
+    Sibling^.Prev := @Self;
+  aNode^.Sibling := Child;
+  if Child <> nil then
+    Child^.Prev := aNode;
+  Child := aNode;
+end;
+
+{ TGPairHeapMin }
+
+function TGPairHeapMin.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGPairHeapMin.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+begin
+  Result := @FNodeList[aHandle];
+  Inc(FCount);
+  Result^.Data := aValue;
+  Result^.Prev := nil;
+  Result^.Child := nil;
+  Result^.Sibling := nil;
+end;
+
+function TGPairHeapMin.DequeueItem: T;
+begin
+  Result := FRoot^.Data;
+  Dec(FCount);
+  FRoot := TwoPassMerge(FRoot^.Child);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+end;
+
+procedure TGPairHeapMin.RootMerge(aNode: PNode);
+begin
+  FRoot := NodeMerge(FRoot, aNode);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+end;
+
+procedure TGPairHeapMin.ExtractNode(aNode: PNode);
+begin
+  if aNode <> FRoot then
+    begin
+      CutNode(aNode);
+      RootMerge(TwoPassMerge(aNode^.Child));
+    end
+  else
+    begin
+      FRoot := TwoPassMerge(FRoot^.Child);
+      if FRoot <> nil then
+        FRoot^.Prev := nil;
+    end;
+  Dec(FCount);
+end;
+
+class function TGPairHeapMin.NodeMerge(L, R: PNode): PNode;
+begin
+  if L <> nil then
+    if R <> nil then
+      if R^.Data < L^.Data then
+        Result := R^.AddChild(L)
+      else
+        Result := L^.AddChild(R)
+    else
+      Result := L
+  else
+    Result := R;
+end;
+
+class function TGPairHeapMin.TwoPassMerge(aNode: PNode): PNode;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := nil;
+  while (aNode <> nil) and (aNode^.Sibling <> nil) do
+    begin
+      NextNode := aNode^.Sibling;
+      CurrNode := aNode;
+      aNode := NextNode^.Sibling;
+      NextNode^.Sibling := nil;
+      CurrNode^.Sibling := nil;
+      Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
+    end;
+  Result := NodeMerge(Result, aNode);
+end;
+
+class procedure TGPairHeapMin.CutNode(aNode: PNode);
+begin
+  if aNode^.Sibling <> nil then
+    aNode^.Sibling^.Prev := aNode^.Prev;
+  if aNode^.Prev^.Child = aNode then
+    aNode^.Prev^.Child := aNode^.Sibling
+  else
+    aNode^.Prev^.Sibling := aNode^.Sibling;
+  aNode^.Sibling := nil;
+end;
+
+constructor TGPairHeapMin.Create(aSize: SizeInt);
+begin
+  System.SetLength(FNodeList, aSize);
+  FRoot := nil;
+  FCount := 0;
+end;
+
+function TGPairHeapMin.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGPairHeapMin.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGPairHeapMin.MakeEmpty;
+begin
+  FRoot := nil;
+  FCount := 0;
+end;
+
+function TGPairHeapMin.TryDequeue(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := DequeueItem;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMin.TryPeek(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMin.TryPeekPtr(out aValue: PItem): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := @FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMin.Dequeue: T;
+begin
+  if Count <> 0 then
+    Result := DequeueItem
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMin.Peek: T;
+begin
+  if Count <> 0 then
+    Result := FRoot^.Data
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMin.PeekPtr: PItem;
+begin
+  if Count <> 0 then
+    Result := @FRoot^.Data
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+procedure TGPairHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
+begin
+  RootMerge(NewNode(aValue, aHandle));
+end;
+
+procedure TGPairHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
+var
+  Node: PNode;
+begin
+  Node := @FNodeList[aHandle];
+  if aNewValue < Node^.Data then
+    begin
+      Node^.Data := aNewValue;
+      if Node <> FRoot then
+        begin
+          CutNode(Node);
+          RootMerge(Node);
+        end;
+    end;
+end;
+
+procedure TGPairHeapMin.Remove(aHandle: SizeInt);
+begin
+  ExtractNode(@FNodeList[aHandle]);
+end;
+
+function TGPairHeapMin.GetItem(aHandle: SizeInt): T;
+begin
+  Result := FNodeList[aHandle].Data;
+end;
+
+function TGPairHeapMin.GetItemPtr(aHandle: SizeInt): PItem;
+begin
+  Result := @FNodeList[aHandle].Data;
+end;
+
+{ TGPairHeapMax.TNode }
+
+function TGPairHeapMax.TNode.AddChild(aNode: PNode): PNode;
+begin
+  Result := @Self;
+  aNode^.Prev := Result;
+  Sibling :=  aNode^.Sibling;
+  if Sibling <> nil then
+    Sibling^.Prev := @Self;
+  aNode^.Sibling := Child;
+  if Child <> nil then
+    Child^.Prev := aNode;
+  Child := aNode;
+end;
+
+{ TGPairHeapMax }
+
+function TGPairHeapMax.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGPairHeapMax.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+begin
+  Result := @FNodeList[aHandle];
+  Inc(FCount);
+  Result^.Data := aValue;
+  Result^.Prev := nil;
+  Result^.Child := nil;
+  Result^.Sibling := nil;
+end;
+
+function TGPairHeapMax.DequeueItem: T;
+begin
+  Result := FRoot^.Data;
+  Dec(FCount);
+  FRoot := TwoPassMerge(FRoot^.Child);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+end;
+
+procedure TGPairHeapMax.RootMerge(aNode: PNode);
+begin
+  FRoot := NodeMerge(FRoot, aNode);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+end;
+
+class function TGPairHeapMax.NodeMerge(L, R: PNode): PNode;
+begin
+  if L <> nil then
+    if R <> nil then
+      if not(L^.Data < R^.Data) then
+        Result := L^.AddChild(R)
+      else
+        Result := R^.AddChild(L)
+    else
+      Result := L
+  else
+    Result := R;
+end;
+
+class function TGPairHeapMax.TwoPassMerge(aNode: PNode): PNode;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := nil;
+  while (aNode <> nil) and (aNode^.Sibling <> nil) do
+    begin
+      NextNode := aNode^.Sibling;
+      CurrNode := aNode;
+      aNode := NextNode^.Sibling;
+      NextNode^.Sibling := nil;
+      CurrNode^.Sibling := nil;
+      Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
+    end;
+  Result := NodeMerge(Result, aNode);
+end;
+
+class procedure TGPairHeapMax.CutNode(aNode: PNode);
+begin
+  if aNode^.Sibling <> nil then
+    aNode^.Sibling^.Prev := aNode^.Prev;
+  if aNode^.Prev^.Child = aNode then
+    aNode^.Prev^.Child := aNode^.Sibling
+  else
+    aNode^.Prev^.Sibling := aNode^.Sibling;
+  aNode^.Sibling := nil;
+end;
+
+constructor TGPairHeapMax.Create(aSize: SizeInt);
+begin
+  System.SetLength(FNodeList, aSize);
+  FRoot := nil;
+  FCount := 0;
+end;
+
+function TGPairHeapMax.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGPairHeapMax.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGPairHeapMax.MakeEmpty;
+begin
+  FRoot := nil;
+  FCount := 0;
+end;
+
+function TGPairHeapMax.TryDequeue(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := DequeueItem;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMax.TryPeek(out aValue: T): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMax.TryPeekPtr(out aValue: PItem): Boolean;
+begin
+  if Count <> 0 then
+    begin
+      aValue := @FRoot^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGPairHeapMax.Dequeue: T;
+begin
+  if Count <> 0 then
+    Result := DequeueItem
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMax.Peek: T;
+begin
+  if Count <> 0 then
+    Result := FRoot^.Data
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+function TGPairHeapMax.PeekPtr: PItem;
+begin
+  if Count <> 0 then
+    Result := @FRoot^.Data
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+procedure TGPairHeapMax.Enqueue(aHandle: SizeInt; constref aValue: T);
+begin
+  RootMerge(NewNode(aValue, aHandle));
+end;
+
+procedure TGPairHeapMax.Update(aHandle: SizeInt; constref aNewValue: T);
+var
+  Node: PNode;
+begin
+  Node := @FNodeList[aHandle];
+  if Node^.Data < aNewValue then
+    begin
+      Node^.Data := aNewValue;
+      if Node <> FRoot then
+        begin
+          CutNode(Node);
+          RootMerge(Node);
+        end;
+    end;
+end;
+
+function TGPairHeapMax.GetItem(aHandle: SizeInt): T;
+begin
+  Result := FNodeList[aHandle].Data;
+end;
+
+function TGPairHeapMax.GetItemPtr(aHandle: SizeInt): PItem;
+begin
+  Result := @FNodeList[aHandle].Data;
 end;
 
 end.

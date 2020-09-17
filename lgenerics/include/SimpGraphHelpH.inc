@@ -185,10 +185,7 @@ type
       Index,
       WDegree,
       Degree: SizeInt;
-      class operator > (constref L, R: TNode): Boolean;
       class operator < (constref L, R: TNode): Boolean;
-      class operator >=(constref L, R: TNode): Boolean;
-      class operator <=(constref L, R: TNode): Boolean;
       constructor Create(aIndex, aDegree: SizeInt);
     end;
     TQueue = specialize TGPairHeapMax<TNode>;
@@ -402,15 +399,15 @@ type
       HighA: PArc;
       constructor Create(aLowArc, aHighArc: PArc);
       function IsEmpty: Boolean; inline;
-      function Conflicting(aArc: PArc): Boolean;
+      function Conflicting(aArc: PArc): Boolean; inline;
     end;
 
     TConflictPair = record
       Left,
       Right: TInterval;
       constructor Create(constref aRight: TInterval);
-      procedure Swap;
-      function  Lowest: SizeInt;
+      procedure Swap; inline;
+      function  Lowest: SizeInt; inline;
     end;
     PConflictPair = ^TConflictPair;
 
@@ -440,7 +437,7 @@ type
     procedure TestLrPartition;
     procedure CreateEmbeddingR(out aEmbed: TPlanarEmbedding);
     procedure CreateEmbedding(out aEmbed: TPlanarEmbedding);
-    class function  Min(L, R: SizeInt): SizeInt; static;
+    class function Min(L, R: SizeInt): SizeInt; static;
   public
     function  GraphIsPlanarR(aGraph: TGSimpleGraph): Boolean;
     function  GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TPlanarEmbedding): Boolean;
@@ -452,10 +449,7 @@ type
     Index,
     WDegree,
     Degree: SizeInt;
-    class operator > (constref L, R: TSbWNode): Boolean; inline;
     class operator < (constref L, R: TSbWNode): Boolean; inline;
-    class operator >=(constref L, R: TSbWNode): Boolean; inline;
-    class operator <=(constref L, R: TSbWNode): Boolean; inline;
     constructor Create(aIndex, aWDegree, aDegree: SizeInt);
   end;
 

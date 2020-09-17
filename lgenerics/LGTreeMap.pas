@@ -231,7 +231,7 @@ type
 
   generic TGObjTreeMap<TKey, TValue> = class(specialize TGObjectTreeMap<TKey, TValue, TKey>);
 
-  { TGComparableTreeMap implements sorted map; it assumes that type T has defined comparison operators }
+  { TGComparableTreeMap implements sorted map; it assumes that type T has defined comparison operator < }
   generic TGComparableTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   protected
   type
@@ -1142,7 +1142,7 @@ begin
   if FDone or not FEnum.MoveNext then
     exit(False);
   if FInclusive then
-    Result := FEnum.Current^.Data.Key <= FHighBound
+    Result := not(FHighBound < FEnum.Current^.Data.Key)
   else
     Result := FEnum.Current^.Data.Key < FHighBound;
   FDone := not Result;

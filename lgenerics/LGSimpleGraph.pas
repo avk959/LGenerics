@@ -686,10 +686,8 @@ type
 
   protected
   type
-    TPairingHeap = TWeightHelper.TPairHeap;
     TWeightItem  = TWeightHelper.TWeightItem;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
-    TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
     function CreateEdgeArray: TEdgeArray;
     function BiDijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
@@ -5398,7 +5396,7 @@ const
   Forwd = False;
   Bckwd = True;
 var
-  Queue: array[Boolean] of TWeightHelper.TBinHeap;
+  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
   Parents: array[Boolean] of TIntArray;
   InQueue: array[Boolean] of TBoolVector;
   Weights: array[Boolean] of TWeightArray;
@@ -5410,8 +5408,8 @@ var
 begin
   Weights[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
   Weights[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
-  Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
-  Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
+  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
   Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
   Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
   InQueue[Forwd].Capacity := VertexCount;
@@ -5470,7 +5468,7 @@ const
   Forwd = False;
   Bckwd = True;
 var
-  Queue: array[Boolean] of TWeightHelper.TBinHeap;
+  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
   Parents: array[Boolean] of TIntArray;
   Weights: array[Boolean] of TWeightArray;
   InQueue: array[Boolean] of TBoolVector;
@@ -5487,8 +5485,8 @@ begin
   Parents[Bckwd] := CreateIntArray;
   Weights[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
   Weights[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
-  Queue[Forwd] := TWeightHelper.TBinHeap.Create(VertexCount);
-  Queue[Bckwd] := TWeightHelper.TBinHeap.Create(VertexCount);
+  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
+  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
   Reached.Capacity := VertexCount;
   InQueue[Forwd].Capacity := VertexCount;
   InQueue[Bckwd].Capacity := VertexCount;
@@ -5989,14 +5987,14 @@ end;
 
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 var
-  Queue: TPairingHeap;
+  Queue: specialize TGPairHeapMin<TWeightItem>;
   Reached, InQueue: TBoolVector;
   I, Curr: SizeInt;
   Item: TWeightItem;
   p: PAdjItem;
 begin
   Result := CreateIntArray;
-  Queue := TPairingHeap.Create(VertexCount);
+  Queue := specialize TGPairHeapMin<TWeightItem>.Create(VertexCount);
   Reached.Capacity := VertexCount;
   InQueue.Capacity := VertexCount;
   aTotalWeight := 0;
@@ -6242,7 +6240,7 @@ end;
 
 function TGInt64Net.StoerWagner(out aCut: TIntSet): TWeight;
 var
-  Queue: TPairHeapMax;
+  Queue: specialize TGPairHeapMax<TWeightItem>;
   g: array of TSWAdjList;
   Cuts: array of TIntSet;
   vRemains, vInQueue: TBoolVector;
@@ -6262,7 +6260,7 @@ begin
   System.SetLength(Cuts, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Cuts[I].Add(I);
-  Queue := TPairHeapMax.Create(VertexCount);
+  Queue := specialize TGPairHeapMax<TWeightItem>.Create(VertexCount);
   vRemains.InitRange(VertexCount);
   vInQueue.Capacity := VertexCount;
   Result := MAX_WEIGHT;

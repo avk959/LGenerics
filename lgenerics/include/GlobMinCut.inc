@@ -49,7 +49,7 @@ begin
       for p in aGraph.AdjLists[I]^ do
         FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
     end;
-  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := MAX_WEIGHT;
@@ -71,7 +71,7 @@ begin
   System.SetLength(FCuts, aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
     FCuts[I].Add(I);
-  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := MAX_WEIGHT;

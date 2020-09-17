@@ -186,7 +186,7 @@ type
     function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
   end;
 
-  { TGComparableAvlTree assumes that type TKey has defined comparison operators }
+  { TGComparableAvlTree assumes that type TKey has defined comparison operator < }
   generic TGComparableAvlTree<TKey, TEntry> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   protected
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
@@ -345,8 +345,7 @@ type
 
   { TGLiteAvlTree
       functor TKeyCmpRel (key comparison relation) must provide:
-        class function Less([const[ref]] L, R: TKey): SizeInt;
-    on assignment and when passed by value, the whole treap is copied }
+        class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
   public
   type
@@ -432,8 +431,7 @@ type
     property  Height: SizeInt read GetHeight;
   end;
 
-  { TGLiteComparableAvlTree assumes TKey has defined comparison operators;
-    on assignment and when passed by value, the whole treap is copied }
+  { TGLiteComparableAvlTree assumes TKey has defined comparison operator < }
   generic TGLiteComparableAvlTree<TKey, TEntry> = record
   public
   type
@@ -1430,7 +1428,7 @@ begin
       if aKey < Result^.Data.Key then
         Result := Result^.Left
       else
-        if aKey > Result^.Data.Key then
+        if Result^.Data.Key < aKey then
           Result := Result^.Right
         else
           break;
@@ -1512,7 +1510,7 @@ begin
     if aKey < Result^.Data.Key then
       Result := Result^.Left
     else
-      if aKey > Result^.Data.Key then
+      if Result^.Data.Key < aKey then
         Result := Result^.Right
       else
         break;
@@ -1525,7 +1523,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if aKey > Node^.Data.Key then
+    if Node^.Data.Key < aKey then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1541,7 +1539,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if aKey >= Node^.Data.Key then
+    if not(aKey < Node^.Data.Key) then
       begin
         Result := Node;
         Node := Node^.Right;
@@ -1573,7 +1571,7 @@ begin
   Node := FRoot;
   Result := nil;
   while Node <> nil do
-    if aKey <= Node^.Data.Key then
+    if not(Node^.Data.Key < aKey) then
       begin
         Result := Node;
         Node := Node^.Left;
@@ -3653,7 +3651,7 @@ begin
       if aKey < FNodes[Result].Data.Key then
         Result := FNodes[Result].Left
       else
-        if aKey > FNodes[Result].Data.Key then
+        if FNodes[Result].Data.Key < aKey then
           Result := FNodes[Result].Right
         else
           break;
@@ -4044,7 +4042,7 @@ begin
           aState := asInvalidLink;
           exit(0);
         end;
-      if FNodes[FNodes[aNode].Left].Data.Key >= FNodes[aNode].Data.Key then
+      if not(FNodes[FNodes[aNode].Left].Data.Key < FNodes[aNode].Data.Key) then
         begin
           aState := asInvalidKey;
           exit(0);
@@ -4178,7 +4176,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if aKey > FNodes[CurrNode].Data.Key then
+    if FNodes[CurrNode].Data.Key < aKey then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Right;
@@ -4194,7 +4192,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if aKey >= FNodes[CurrNode].Data.Key then
+    if not(aKey < FNodes[CurrNode].Data.Key) then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Right;
@@ -4226,7 +4224,7 @@ begin
   CurrNode := Root;
   Result := 0;
   while CurrNode <> 0 do
-    if aKey <= FNodes[CurrNode].Data.Key then
+    if not(FNodes[CurrNode].Data.Key < aKey) then
       begin
         Result := CurrNode;
         CurrNode := FNodes[CurrNode].Left;

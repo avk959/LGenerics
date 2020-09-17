@@ -1057,17 +1057,6 @@ end;
 
 { TGSimpleGraph.TGreedyColorRlf.TNode }
 
-class operator TGSimpleGraph.TGreedyColorRlf.TNode.>(constref L, R: TNode): Boolean;
-begin
-  if L.WDegree <> R.WDegree then
-    Result := L.WDegree > R.WDegree
-  else
-    if L.Degree <> R.Degree then
-      Result := L.Degree > R.Degree
-    else
-      Result := L.Index > R.Index;
-end;
-
 class operator TGSimpleGraph.TGreedyColorRlf.TNode.<(constref L, R: TNode): Boolean;
 begin
   if L.WDegree <> R.WDegree then
@@ -1077,16 +1066,6 @@ begin
       Result := L.Degree < R.Degree
     else
       Result := L.Index < R.Index;
-end;
-
-class operator TGSimpleGraph.TGreedyColorRlf.TNode.>=(constref L, R: TNode): Boolean;
-begin
-  Result := not (L < R);
-end;
-
-class operator TGSimpleGraph.TGreedyColorRlf.TNode.<=(constref L, R: TNode): Boolean;
-begin
-  Result := not (L > R);
 end;
 
 constructor TGSimpleGraph.TGreedyColorRlf.TNode.Create(aIndex, aDegree: SizeInt);
@@ -2894,40 +2873,7 @@ end;
 
 { TGSimpleGraph.TSbWNode }
 
-class operator TGSimpleGraph.TSbWNode.>(constref L, R: TSbWNode): Boolean;
-begin
-  if L.WDegree = R.WDegree then
-    if L.Degree = R.Degree then
-      Result := L.Index > R.Index
-    else
-      Result := L.Degree > R.Degree
-  else
-    Result := L.WDegree > R.WDegree;
-end;
-
 class operator TGSimpleGraph.TSbWNode.<(constref L, R: TSbWNode): Boolean;
-begin
-  if L.WDegree = R.WDegree then
-    if L.Degree = R.Degree then
-      Result := L.Index < R.Index
-    else
-      Result := L.Degree < R.Degree
-  else
-    Result := L.WDegree < R.WDegree;
-end;
-
-class operator TGSimpleGraph.TSbWNode.>=(constref L, R: TSbWNode): Boolean;
-begin
-  if L.WDegree = R.WDegree then
-    if L.Degree = R.Degree then
-      Result := L.Index > R.Index
-    else
-      Result := L.Degree > R.Degree
-  else
-    Result := L.WDegree > R.WDegree;
-end;
-
-class operator TGSimpleGraph.TSbWNode.<=(constref L, R: TSbWNode): Boolean;
 begin
   if L.WDegree = R.WDegree then
     if L.Degree = R.Degree then

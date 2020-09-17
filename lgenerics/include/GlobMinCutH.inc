@@ -37,11 +37,12 @@ type
     PNiEdge    = ^TNiEdge;
     TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
     TEdgeQueue = specialize TGLiteQueue<TOrdIntPair>;
+    TQueue     = specialize TGPairHeapMax<TWeightItem>;
 
   var
     FGraph: array of TNiAdjList;
     FCuts: array of TIntSet;
-    FQueue: TPairHeapMax;
+    FQueue: TQueue;
     FEdgeQueue: TEdgeQueue;
     FExistNodes,
     FInQueue: TBoolVector;
