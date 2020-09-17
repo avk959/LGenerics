@@ -1,7 +1,8 @@
 unit LGTreeMapTest;
 
 {$mode objfpc}{$H+}
-{$MODESWITCH NESTEDPROCVARS}
+{$modeswitch nestedprocvars}
+{$modeswitch advancedrecords}
 
 interface
 uses
@@ -79,6 +80,15 @@ type
     procedure FindCeil;
   end;
 
+  TRec = record
+    a,
+    b: Integer;
+    class operator < (const L, R: TRec): Boolean;
+    constructor Create(ai, bi: Integer);
+  end;
+
+  { TComparableTreeMapTest }
+
   TComparableTreeMapTest = class(TTestCase)
   private
   type
@@ -86,10 +96,12 @@ type
     TAutoIntMap = specialize TGAutoRef<TIntMap>;
     TStrMap     = specialize TGComparableTreeMap<string, Integer>;
     TAutoStrMap = specialize TGAutoRef<TStrMap>;
+    TRecMap     = specialize TGComparableTreeMap<TRec, Integer>;
 
   published
     procedure Int_1;
     procedure Int_2;
+    procedure Rec_1;
     procedure IntRetain;
     procedure Str_1;
     procedure Str_2;
@@ -214,7 +226,7 @@ end;
 
 function CreateStrArray(aSize: Integer): TStrEntryArray;
 const
-  STR_PREFIX     = 'str_';
+  STR_PREFIX = 'str_';
 var
   I: Integer;
 begin
@@ -599,6 +611,19 @@ begin
   AssertTrue(I = 30);
 end;
 
+{ TRec }
+
+class operator TRec.<(const L, R: TRec): Boolean;
+begin
+  Result := L.a + L.b < R.a + R.b;
+end;
+
+constructor TRec.Create(ai, bi: Integer);
+begin
+  a := ai;
+  b := bi;
+end;
+
 { TComparableTreeMapTest}
 
 procedure TComparableTreeMapTest.Int_1;
@@ -679,6 +704,24 @@ begin
   e := m.Instance.ExtractIf(@IntOdd);
   for I := 0 to System.High(e) do
     AssertTrue(IntOdd(e[I].Key));
+end;
+
+procedure TComparableTreeMapTest.Rec_1;
+var
+  m: specialize TGAutoRef<TRecMap>;
+  I: Integer;
+  r: TRec;
+const
+  TestSize = 100;
+begin
+  for I := 1 to TestSize do
+    AssertTrue(m.Instance.Add(TRec.Create(I, 0), I));
+  AssertTrue(m.Instance.Count = TestSize);
+  AssertFalse(m.Instance.Add(TRec.Create(1, 0), 2));
+  I := 0;
+  for r in m.Instance.Range(TRec.Create(10, 0), TRec.Create(30, 0)) do
+    Inc(I);
+  AssertTrue(I = 20);
 end;
 
 procedure TComparableTreeMapTest.IntRetain;
