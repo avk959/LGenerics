@@ -1,7 +1,8 @@
 unit LGTreeMultisetTest;
 
 {$mode objfpc}{$H+}
-{$MODESWITCH NESTEDPROCVARS}
+{$modeswitch nestedprocvars}
+{$modeswitch advancedrecords}
 
 interface
 uses
@@ -124,11 +125,19 @@ type
     procedure ObjectMultiSetSymmetricSubtract;
   end;
 
+  TRec = record
+    a,
+    b: Integer;
+    class operator < (const L, R: TRec): Boolean;
+    constructor Create(ai, bi: Integer);
+  end;
+
   TComparableTreeMultisetTest = class(TTestCase)
   private
   type
     TMultiSet        = class(specialize TGComparableTreeMultiSet<Integer>);
     TAutoMultiSet    = specialize TGAutoRef<TMultiSet>;
+    TRecMultiSet     = class(specialize TGComparableTreeMultiSet<TRec>);
 
     function IsEven(constref aValue: Integer): Boolean;
     function ObjIsEven(constref aObj: TTestObj): Boolean;
@@ -144,6 +153,7 @@ type
     procedure EnsureCapacity_1;
 
     procedure Add;
+    procedure AddRec;
     procedure Add100;
     procedure AddArray;
     procedure AddEnum;
@@ -1442,6 +1452,19 @@ begin
   AssertTrue(Counter.Count = TestSize * 2);
 end;
 
+{ TRec }
+
+class operator TRec.<(const L, R: TRec): Boolean;
+begin
+  Result := L.a + L.b < R.a + R.b;
+end;
+
+constructor TRec.Create(ai, bi: Integer);
+begin
+  a := ai;
+  b := bi;
+end;
+
 function TComparableTreeMultisetTest.IsEven(constref aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
@@ -1555,6 +1578,24 @@ begin
   AssertTrue(ms.Instance.Contains(52));
   AssertTrue(ms.Instance.Count = 5);
   AssertTrue(ms.Instance.EntryCount = 3);
+end;
+
+procedure TComparableTreeMultisetTest.AddRec;
+var
+  ms: specialize TGAutoRef<TRecMultiSet>;
+  I: Integer;
+  r: TRec;
+const
+  TestSize = 100;
+begin
+  for I := 1 to TestSize do
+    AssertTrue(ms.Instance.Add(TRec.Create(I, 0)));
+  AssertTrue(ms.Instance.Count = TestSize);
+  AssertTrue(ms.Instance.Add(TRec.Create(1, 0)));
+  I := 0;
+  for r in ms.Instance.Range(TRec.Create(10, 0), TRec.Create(30, 0)) do
+    Inc(I);
+  AssertTrue(I = 20);
 end;
 
 procedure TComparableTreeMultisetTest.Add100;
