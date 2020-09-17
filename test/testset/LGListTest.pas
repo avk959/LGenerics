@@ -1,7 +1,8 @@
 unit LGListTest;
 
 {$mode objfpc}{$H+}
-{$MODESWITCH NESTEDPROCVARS}
+{$modeswitch advancedrecords}
+{$modeswitch nestedprocvars}
 
 interface
 
@@ -132,15 +133,24 @@ type
     procedure PassByValue;
   end;
 
+  TRec = record
+    Key,
+    Value: Integer;
+    class operator < (const L, R: TRec): Boolean;
+    constructor Create(k, v: Integer);
+  end;
+
   { TLiteComparableSortedListTest }
 
   TLiteComparableSortedListTest = class(TTestCase)
   private
   type
+    TRecList = specialize TGLiteComparableSortedList<TRec>;
     TIntList = specialize TGLiteComparableSortedList<Integer>;
 
   published
     procedure Add;
+    procedure AddRec;
     procedure Clear;
     procedure EnsureCapacity;
     procedure TrimToFit;
@@ -1562,6 +1572,19 @@ begin
   AssertTrue(lst[0] = 7);
 end;
 
+{ TLiteComparableSortedListTest.TRec }
+
+class operator TRec.<(const L, R: TRec): Boolean;
+begin
+  Result := L.Key < R.Key;
+end;
+
+constructor TRec.Create(k, v: Integer);
+begin
+  Key := k;
+  Value := v;
+end;
+
 { TLiteComparableSortedListTest }
 
 procedure TLiteComparableSortedListTest.Add;
@@ -1584,6 +1607,25 @@ begin
   AssertTrue(lst.Count = 103);
   for I := 1 to 100 do
     AssertTrue(lst.Contains(I));
+end;
+
+procedure TLiteComparableSortedListTest.AddRec;
+var
+  lst: TRecList;
+  I: Integer;
+  r: TRec;
+const
+  TestSize = 100;
+begin
+  lst.RejectDuplicates := True;
+  for I := 1 to TestSize do
+    lst.Add(TRec.Create(I, 0));
+  AssertTrue(lst.Count = 100);
+  AssertFalse(lst.Add(TRec.Create(TestSize, 0)));
+  I := 0;
+  for r in lst.Range(TRec.Create(10, 0), TRec.Create(30, 0)) do
+    Inc(I);
+  AssertTrue(I = 20);
 end;
 
 procedure TLiteComparableSortedListTest.Clear;
