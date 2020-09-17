@@ -1,7 +1,8 @@
 unit LGTreeSetTest;
 
 {$mode objfpc}{$H+}
-{$MODESWITCH NESTEDPROCVARS}
+{$modeswitch nestedprocvars}
+{$modeswitch advancedrecords}
 
 interface
 uses
@@ -116,11 +117,19 @@ type
     procedure ObjectSetSymmetricSubtract;
   end;
 
+  TRec = record
+    a,
+    b: Integer;
+    class operator < (const L, R: TRec): Boolean;
+    constructor Create(ai, bi: Integer);
+  end;
+
   TComparableTreeSetTest = class(TTestCase)
   private
   type
     TSet        = class(specialize TGComparableTreeSet<Integer>);
     TAutoSet    = specialize TGAutoRef<TSet>;
+    TRecSet     = class(specialize TGComparableTreeSet<TRec>);
 
     function IsEven(constref aValue: Integer): Boolean;
     function ObjIsEven(constref aObj: TTestObj): Boolean;
@@ -133,6 +142,7 @@ type
     procedure Clear;
     procedure EnsureCapacity;
     procedure Add;
+    procedure AddRec;
     procedure Add100;
     procedure AddArray;
     procedure AddEnum;
@@ -1258,6 +1268,16 @@ begin
   AssertTrue(Counter.Count = TestSize * 3);
 end;
 
+class operator TRec.<(const L, R: TRec): Boolean;
+begin
+  Result := L.a + L.b < R.a + R.b;
+end;
+
+constructor TRec.Create(ai, bi: Integer);
+begin
+  a := ai;
+  b := bi
+end;
 
 function TComparableTreeSetTest.IsEven(constref aValue: Integer): Boolean;
 begin
@@ -1360,6 +1380,24 @@ begin
   AssertTrue(s.Instance.Add(52));
   AssertTrue(s.Instance.Count = 3);
   AssertTrue(s.Instance.Contains(52));
+end;
+
+procedure TComparableTreeSetTest.AddRec;
+var
+  s: specialize TGAutoRef<TRecSet>;
+  I: Integer;
+  r: TRec;
+const
+  TestSize = 100;
+begin
+  for I := 1 to TestSize do
+    AssertTrue(s.Instance.Add(TRec.Create(I, 0)));
+  AssertTrue(s.Instance.Count = TestSize);
+  AssertFalse(s.Instance.Add(TRec.Create(1, 0)));
+  I := 0;
+  for r in s.Instance.Range(TRec.Create(10, 0), TRec.Create(30, 0)) do
+    Inc(I);
+  AssertTrue(I = 20);
 end;
 
 procedure TComparableTreeSetTest.Add100;
