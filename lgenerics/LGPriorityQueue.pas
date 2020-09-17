@@ -99,7 +99,7 @@ type
   end;
 
   { TGComparableBinHeapMax: maximizing priority queue with queue interface,
-    it assumes that type T has defined comparison operators }
+    it assumes that type T has defined comparison operator < }
   generic TGComparableBinHeapMax<T> = class(specialize TGComparableBinHeap<T>)
   protected
     procedure BuildHeap; override;
@@ -108,7 +108,7 @@ type
   end;
 
   { TGComparableBinHeapMin: minimizing priority queue with queue interface,
-    it assumes that type T has defined comparison operators }
+    it assumes that type T has defined comparison operator < }
   generic TGComparableBinHeapMin<T> = class(specialize TGComparableBinHeap<T>)
   protected
     procedure BuildHeap; override;
@@ -221,7 +221,7 @@ type
   end;
 
   { TGLiteComparableBinHeapMin implements minimizing priority queue with queue interface;
-    it assumes that type T has defined comparison operators }
+    it assumes that type T has defined comparison operator < }
   generic TGLiteComparableBinHeapMin<T> = record
   public
   type
@@ -339,6 +339,8 @@ type
     function  DoDequeue: T; virtual; abstract;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; virtual; abstract;
     class procedure CutNode(aNode: PNode); static;
+    class function  Ptr2Handle(aNode: PNode): THandle; static; inline;
+    class function  Handle2Ptr(h: THandle): PNode; static; inline;
   public
     destructor Destroy; override;
     function  Reverse: IEnumerable; override;
@@ -391,7 +393,7 @@ type
   end;
 
   { TGComparablePairHeapMax: maximizing priority queue, it assumes
-    that type T has defined comparison operators }
+    that type T has defined comparison operator < }
   generic TGComparablePairHeapMax<T> = class(specialize TGComparablePairHeap<T>)
   protected
     procedure RootMerge(aNode: PNode); inline;
@@ -409,7 +411,7 @@ type
   end;
 
   { TGComparablePairHeapMin: minimizing priority queue, it assumes
-    that type T has defined comparison operators }
+    that type T has defined comparison operator < }
   generic TGComparablePairHeapMin<T> = class(specialize TGComparablePairHeap<T>)
   protected
     procedure RootMerge(aNode: PNode); inline;
@@ -549,6 +551,8 @@ type
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
     class function  DoCompare(constref L, R: T): Boolean; static;
+    class function  Ptr2Handle(aNode: PNode): THandle; static; inline;
+    class function  Handle2Ptr(h: THandle): PNode; static; inline;
   public
   type
     TLess = specialize TGLessCompare<T>;
@@ -577,7 +581,7 @@ type
   end;
 
   { TGLiteComparablePairHeapMin implements minimizing priority queue;
-    it assumes that type T has defined comparison operators }
+    it assumes that type T has defined comparison operator < }
   generic TGLiteComparablePairHeapMin<T> = record
   private
   type
@@ -657,6 +661,8 @@ type
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
     class function  DoCompare(constref L, R: T): Boolean; static;
+    class function  Ptr2Handle(aNode: PNode): THandle; static; inline;
+    class function  Handle2Ptr(h: THandle): PNode; static; inline;
   public
   type
     TLess = specialize TGLessCompare<T>;
@@ -935,7 +941,7 @@ begin
             begin
               if(Succ(NextIdx) <= HighIdx) and (FItems[NextIdx] < FItems[Succ(NextIdx)])then
                 Inc(NextIdx);
-              if T(v) >= FItems[NextIdx] then
+              if not (T(v) < FItems[NextIdx]) then
                 break;
               TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
               CurrIdx := NextIdx;
@@ -966,7 +972,7 @@ begin
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (T(v) > FItems[NextIdx]) do
+      while (CurrIdx > 0) and (FItems[NextIdx] < T(v)) do
         begin
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
@@ -983,7 +989,7 @@ var
 begin
   ParentIdx := Pred(aIndex) shr 1;
   v := TFake(FItems[aIndex]);
-  while (aIndex > 0) and (T(v) > FItems[ParentIdx]) do
+  while (aIndex > 0) and (FItems[ParentIdx] < T(v)) do
     begin
       TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
       aIndex := ParentIdx;
@@ -1021,9 +1027,9 @@ begin
           v := TFake(FItems[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if(Succ(NextIdx) <= HighIdx) and (FItems[NextIdx] > FItems[Succ(NextIdx)])then
+              if(Succ(NextIdx) <= HighIdx) and (FItems[Succ(NextIdx)] < FItems[NextIdx])then
                 Inc(NextIdx);
-              if T(v) <= FItems[NextIdx] then
+              if not (FItems[NextIdx] < T(v)) then
                 break;
               TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
               CurrIdx := NextIdx;
@@ -1047,7 +1053,7 @@ begin
       v := TFake(FItems[0]);
       while NextIdx <= HighIdx do
         begin
-          if (Succ(NextIdx) <= HighIdx) and (FItems[NextIdx] > FItems[Succ(NextIdx)]) then
+          if (Succ(NextIdx) <= HighIdx) and (FItems[Succ(NextIdx)] < FItems[NextIdx]) then
             Inc(NextIdx);
           TFake(FItems[CurrIdx]) := TFake(FItems[NextIdx]);
           CurrIdx := NextIdx;
@@ -1581,9 +1587,9 @@ begin
           v := TFake(FBuffer.FItems[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if(Succ(NextIdx) <= HighIdx) and (FBuffer.FItems[NextIdx] > FBuffer.FItems[Succ(NextIdx)])then
+              if(Succ(NextIdx) <= HighIdx) and (FBuffer.FItems[Succ(NextIdx)] < FBuffer.FItems[NextIdx])then
                 Inc(NextIdx);
-              if T(v) <= FBuffer.FItems[NextIdx] then
+              if not (FBuffer.FItems[NextIdx] < T(v)) then
                 break;
               TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
               CurrIdx := NextIdx;
@@ -1607,7 +1613,7 @@ begin
       v := TFake(FBuffer.FItems[0]);
       while NextIdx <= HighIdx do
         begin
-          if(Succ(NextIdx) <= HighIdx) and (FBuffer.FItems[NextIdx] > FBuffer.FItems[Succ(NextIdx)]) then
+          if(Succ(NextIdx) <= HighIdx) and (FBuffer.FItems[Succ(NextIdx)] < FBuffer.FItems[NextIdx]) then
             Inc(NextIdx);
           TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
           CurrIdx := NextIdx;
@@ -2042,6 +2048,20 @@ begin
   aNode^.Sibling := nil;
 end;
 
+class function TGCustomPairingHeap.Ptr2Handle(aNode: PNode): THandle;
+var
+  h: THandle absolute aNode;
+begin
+  Result := h;
+end;
+
+class function TGCustomPairingHeap.Handle2Ptr(h: THandle): PNode;
+var
+  p: PNode absolute h;
+begin
+  Result := p;
+end;
+
 destructor TGCustomPairingHeap.Destroy;
 begin
   DoClear;
@@ -2115,39 +2135,39 @@ end;
 function TGCustomPairingHeap.Insert(constref aValue: T): THandle;
 begin
   CheckInIteration;
-  Result := {%H-}THandle(DoEnqueue(aValue));
+  Result := Ptr2Handle(DoEnqueue(aValue));
 end;
 
 function TGCustomPairingHeap.PeekHandle: THandle;
 begin
   CheckEmpty;
-  Result := {%H-}THandle(FRoot);
+  Result := Ptr2Handle(FRoot);
 end;
 
 function TGCustomPairingHeap.TryPeekHandle(out aHandle: THandle): Boolean;
 begin
   Result := FCount > 0;
   if Result then
-    aHandle := {%H-}THandle(FRoot);
+    aHandle := Ptr2Handle(FRoot);
 end;
 
 function TGCustomPairingHeap.ValueOf(aHandle: THandle): T;
 begin
-  Result := {%H-}PNode(aHandle)^.Data;
+  Result := Handle2Ptr(aHandle)^.Data;
 end;
 
 procedure TGCustomPairingHeap.Update(aHandle: THandle; constref aValue: T);
 begin
   CheckInIteration;
   CheckEmpty;
-  DoUpdate({%H-}PNode(aHandle), aValue);
+  DoUpdate(Handle2Ptr(aHandle), aValue);
 end;
 
 function TGCustomPairingHeap.Remove(aHandle: THandle): T;
 begin
   CheckInIteration;
   CheckEmpty;
-  Result := DoRemove({%H-}PNode(aHandle));
+  Result := DoRemove(Handle2Ptr(aHandle));
 end;
 
 function TGCustomPairingHeap.Merge(aQueue: IPriorityQueue): SizeInt;
@@ -2264,23 +2284,19 @@ end;
 class function TGBasePairingHeap.DoMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
-    begin
-      if R <> nil then
+    if R <> nil then
+      if TCmpRel.Less(L^.Data, R^.Data) then
         begin
-          if not TCmpRel.Less(L^.Data, R^.Data) then
-            begin
-              L^.AddChild(R);
-              Result := L;
-            end
-          else
-            begin
-              R^.AddChild(L);
-              Result := R;
-            end;
+          R^.AddChild(L);
+          Result := R;
         end
       else
-        Result := L;
-    end
+        begin
+          L^.AddChild(R);
+          Result := L;
+        end
+    else
+      Result := L
   else
     Result := R;
 end;
@@ -2367,7 +2383,7 @@ end;
 
 procedure TGComparablePairHeapMax.DoUpdate(aNode: PNode; constref aValue: T);
 begin
-  if aValue > aNode^.Data then
+  if aNode^.Data < aValue then
     begin
       aNode^.Data := aValue;
       if aNode <> FRoot then
@@ -2427,23 +2443,19 @@ end;
 class function TGComparablePairHeapMax.DoMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
-    begin
-      if R <> nil then
+    if R <> nil then
+      if L^.Data < R^.Data then
         begin
-          if L^.Data >= R^.Data then
-            begin
-              L^.AddChild(R);
-              Result := L;
-            end
-          else
-            begin
-              R^.AddChild(L);
-              Result := R;
-            end;
+          R^.AddChild(L);
+          Result := R;
         end
       else
-        Result := L;
-    end
+        begin
+          L^.AddChild(R);
+          Result := L;
+        end
+    else
+      Result := L
   else
     Result := R;
 end;
@@ -2518,7 +2530,7 @@ begin
         end;
     end
   else
-    if aValue > aNode^.Data then
+    if aNode^.Data < aValue then
       begin
         aNode^.Data := aValue;
         DoExtract(aNode);
@@ -2568,23 +2580,19 @@ end;
 class function TGComparablePairHeapMin.DoMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
-    begin
-      if R <> nil then
+    if R <> nil then
+      if R^.Data < L^.Data then
         begin
-          if L^.Data <= R^.Data then
-            begin
-              L^.AddChild(R);
-              Result := L;
-            end
-          else
-            begin
-              R^.AddChild(L);
-              Result := R;
-            end;
+          R^.AddChild(L);
+          Result := R;
         end
       else
-        Result := L;
-    end
+        begin
+          L^.AddChild(R);
+          Result := L;
+        end
+    else
+      Result := L
   else
     Result := R;
 end;
@@ -3298,6 +3306,20 @@ begin
   Result := TCmpRel.Less(L, R);
 end;
 
+class function TGLitePairingHeap.Ptr2Handle(aNode: PNode): THandle;
+var
+  h: THandle absolute aNode;
+begin
+  Result := h;
+end;
+
+class function TGLitePairingHeap.Handle2Ptr(h: THandle): PNode;
+var
+  p: PNode absolute h;
+begin
+  Result := p;
+end;
+
 function TGLitePairingHeap.Comparator: TLess;
 begin
   Result := @DoCompare;
@@ -3380,37 +3402,37 @@ var
 begin
   p := NewNode(aValue);
   RootMerge(p);
-  Result := {%H-}THandle(p);
+  Result := Ptr2Handle(p);
 end;
 
 function TGLitePairingHeap.PeekHandle: THandle;
 begin
   CheckEmpty;
-  Result := {%H-}THandle(FRoot);
+  Result := Ptr2Handle(FRoot);
 end;
 
 function TGLitePairingHeap.TryPeekHandle(out aValue: THandle): Boolean;
 begin
   Result := NonEmpty;
   if Result then
-    aValue := {%H-}THandle(FRoot);
+    aValue := Ptr2Handle(FRoot);
 end;
 
 function TGLitePairingHeap.ValueOf(aHandle: THandle): T;
 begin
-  Result := {%H-}PNode(aHandle)^.Data;
+  Result := Handle2Ptr(aHandle)^.Data;
 end;
 
 procedure TGLitePairingHeap.Update(aHandle: THandle; constref aValue: T);
 begin
   CheckEmpty;
-  UpdateNode({%H-}PNode(aHandle), aValue);
+  UpdateNode(Handle2Ptr(aHandle), aValue);
 end;
 
 function TGLitePairingHeap.Remove(aHandle: THandle): T;
 begin
   CheckEmpty;
-  Result := RemoveNode({%H-}PNode(aHandle));
+  Result := RemoveNode(Handle2Ptr(aHandle));
 end;
 
 function TGLitePairingHeap.Merge(var aHeap: TGLitePairingHeap): SizeInt;
@@ -3663,7 +3685,7 @@ begin
         end;
     end
   else
-    if aValue > aNode^.Data then
+    if aNode^.Data < aValue then
       begin
         aNode^.Data := aValue;
         ExtractNode(aNode);
@@ -3743,15 +3765,15 @@ class function TGLiteComparablePairHeapMin.NodeMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
     if R <> nil then
-      if L^.Data <= R^.Data then
-        begin
-          L^.AddChild(R);
-          Result := L;
-        end
-      else
+      if R^.Data < L^.Data  then
         begin
           R^.AddChild(L);
           Result := R;
+        end
+      else
+        begin
+          L^.AddChild(R);
+          Result := L;
         end
     else
       Result := L
@@ -3790,6 +3812,20 @@ end;
 class function TGLiteComparablePairHeapMin.DoCompare(constref L, R: T): Boolean;
 begin
   Result := L < R;
+end;
+
+class function TGLiteComparablePairHeapMin.Ptr2Handle(aNode: PNode): THandle;
+var
+  h: THandle absolute aNode;
+begin
+  Result := h;
+end;
+
+class function TGLiteComparablePairHeapMin.Handle2Ptr(h: THandle): PNode;
+var
+  p: PNode absolute h;
+begin
+  Result := p;
 end;
 
 function TGLiteComparablePairHeapMin.Comparator: TLess;
@@ -3874,37 +3910,37 @@ var
 begin
   p := NewNode(aValue);
   RootMerge(p);
-  Result := {%H-}THandle(p);
+  Result := Ptr2Handle(p);
 end;
 
 function TGLiteComparablePairHeapMin.PeekHandle: THandle;
 begin
   CheckEmpty;
-  Result := {%H-}THandle(FRoot);
+  Result := Ptr2Handle(FRoot);
 end;
 
 function TGLiteComparablePairHeapMin.TryPeekHandle(out aValue: THandle): Boolean;
 begin
   Result := NonEmpty;
   if Result then
-    aValue := {%H-}THandle(FRoot);
+    aValue := Ptr2Handle(FRoot);
 end;
 
 function TGLiteComparablePairHeapMin.ValueOf(aHandle: THandle): T;
 begin
-  Result := {%H-}PNode(aHandle)^.Data;
+  Result := Handle2Ptr(aHandle)^.Data;
 end;
 
 procedure TGLiteComparablePairHeapMin.Update(aHandle: THandle; constref aValue: T);
 begin
   CheckEmpty;
-  UpdateNode({%H-}PNode(aHandle), aValue);
+  UpdateNode(Handle2Ptr(aHandle), aValue);
 end;
 
 function TGLiteComparablePairHeapMin.Remove(aHandle: THandle): T;
 begin
   CheckEmpty;
-  Result := RemoveNode({%H-}PNode(aHandle));
+  Result := RemoveNode(Handle2Ptr(aHandle));
 end;
 
 function TGLiteComparablePairHeapMin.Merge(var aHeap: TGLiteComparablePairHeapMin): SizeInt;
