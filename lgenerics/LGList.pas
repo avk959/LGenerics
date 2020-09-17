@@ -40,7 +40,7 @@ type
 
   { TGBaseSortedList is always sorted ascending;
       functor TCmpRel(comparison relation) must provide:
-        class function Less([const[ref]] L, R: TCol): Boolean; }
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGBaseSortedList<T, TCmpRel> = class(specialize TGAbstractCollection<T>)
   protected
   type
@@ -333,7 +333,7 @@ type
 
   { TGLiteSortedList is always sorted ascending;
       functor TCmpRel(comparison relation) must provide:
-        class function Less([const[ref]] L, R: TCol): Boolean; }
+        class function Less([const[ref]] L, R: T): Boolean; }
   generic TGLiteSortedList<T, TCmpRel> = record
   private
   type
@@ -472,7 +472,7 @@ type
   end;
 
   { TGLiteComparableSortedList is always sorted ascending;
-    it assumes that type T has implemented comparison operators }
+    it assumes that type T has implemented comparison operator < }
   generic TGLiteComparableSortedList<T> = record
   private
   type
@@ -2872,7 +2872,7 @@ procedure TGLiteComparableSortedList.DoSetItem(aIndex: SizeInt; const aValue: T)
 var
   sr: TSearchResult;
 begin
-  if aValue <> FBuffer.FItems[aIndex] then
+  if THelper.ValNotEqual(aValue, FBuffer.FItems[aIndex]) then
     begin
       if Count > 1 then
         begin
@@ -2931,7 +2931,7 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if FBuffer.FItems[I] = FBuffer.FItems[J] then
+      if THelper.ValEqual(FBuffer.FItems[I], FBuffer.FItems[J]) then
         continue;
       Inc(I);
       if J > I then
@@ -2955,12 +2955,12 @@ end;
 
 function TGLiteComparableSortedList.RightmostLT(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (aValue <= FBuffer.FItems[0]) then
+  if IsEmpty or not(FBuffer.FItems[0] < aValue) then
     exit(NULL_INDEX);
-  if aValue > FBuffer.FItems[Pred(Count)] then
+  if FBuffer.FItems[Pred(Count)] < aValue then
      exit(Pred(Count));
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if FBuffer.FItems[Result] = aValue then
+  if THelper.ValEqual(FBuffer.FItems[Result], aValue) then
     Dec(Result);
 end;
 
@@ -2968,16 +2968,16 @@ function TGLiteComparableSortedList.RightmostLE(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue < FBuffer.FItems[0]) then
     exit(NULL_INDEX);
-  if aValue >= FBuffer.FItems[Pred(Count)] then
+  if not(aValue < FBuffer.FItems[Pred(Count)]) then
     exit(Pred(Count));
   Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if FBuffer.FItems[Result] > aValue then
+  if aValue < FBuffer.FItems[Result] then
     Dec(Result);
 end;
 
 function TGLiteComparableSortedList.LeftmostGT(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (aValue >= FBuffer.FItems[Pred(Count)]) then
+  if IsEmpty or not(aValue < FBuffer.FItems[Pred(Count)]) then
     exit(NULL_INDEX);
   if aValue < FBuffer.FItems[0] then
     exit(0);
@@ -2986,9 +2986,9 @@ end;
 
 function TGLiteComparableSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if (Count = 0) or (aValue > FBuffer.FItems[Pred(Count)]) then
+  if (Count = 0) or (FBuffer.FItems[Pred(Count)] < aValue) then
     exit(NULL_INDEX);
-  if aValue <= FBuffer.FItems[0] then
+  if not(FBuffer.FItems[0] < aValue) then
     exit(0);
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
@@ -3231,7 +3231,7 @@ begin
   if FirstIdx < 0 then
     exit(0);
   LastIdx := FirstIdx;
-  while (LastIdx < Pred(Count)) and (aValue = FBuffer.FItems[Succ(LastIdx)]) do
+  while (LastIdx < Pred(Count)) and THelper.ValEqual(aValue, FBuffer.FItems[Succ(LastIdx)]) do
     Inc(LastIdx);
   Result := Succ(LastIdx - FirstIdx);
 end;
