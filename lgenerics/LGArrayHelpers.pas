@@ -414,8 +414,11 @@ type
   { TGIndexedHelper assumes that type T implements TCmpRel }
   generic TGIndexedHelper<T, TIndexed> = class(specialize TGBaseIndexedHelper<T, TIndexed, T>);
 
-  {TGComparableArrayHelper assumes that type T defines comparison operators }
+  {TGComparableArrayHelper assumes that type T defines comparison operator < }
   generic TGComparableArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
+  public
+    class function ValEqual(const L, R: T): Boolean; static; inline;
+    class function ValNotEqual(const L, R: T): Boolean; static; inline;
   protected
   type
     TMergeSort = object(TMergeSortBase)
@@ -3723,7 +3726,7 @@ var
   begin
     if R <= L then
       exit(0);
-    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
     InvCount := InvCount(L, M);
     InvCount += InvCount(Succ(M), R);
     InvCount += Merge(L, M, R);
@@ -4479,6 +4482,18 @@ begin
   Result := nil;
 end;
 
+{ TGComparableArrayHelper }
+
+class function TGComparableArrayHelper.ValEqual(const L, R: T): Boolean;
+begin
+  Result := not((L < R) or (R < L));
+end;
+
+class function TGComparableArrayHelper.ValNotEqual(const L, R: T): Boolean;
+begin
+  Result := (L < R) or (R < L);
+end;
+
 { TGComparableArrayHelper.TMergeSort }
 
 procedure TGComparableArrayHelper.TMergeSort.CollapseA;
@@ -4596,7 +4611,7 @@ var
   LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
-  if FData[Pred(From + CountLo)] > FData[From + CountLo] then
+  if FData[From + CountLo] < FData[Pred(From + CountLo)] then
     begin
       LocB := EnsureBufferCapacity(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -4604,33 +4619,7 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if LocA[Pred(From + CountLo + CountHi)] >= LocA[From] then
-        begin
-          pLo := 0;
-          pHi := From + CountLo;
-          pDst := From;
-          CountHi := Pred(From + CountLo + CountHi);
-          repeat
-            if LocB[pLo] <= LocA[pHi] then
-              begin
-                TFake(LocA[pDst]) := TFake(LocB[pLo]);
-                Inc(pLo);
-              end
-            else
-              begin
-                TFake(LocA[pDst]) := TFake(LocA[pHi]);
-                Inc(pHi);
-              end;
-            Inc(pDst);
-          until (pLo >= CountLo) or (pHi > CountHi);
-          if pLo < CountLo then
-            {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-            System.Move(LocB[pLo], LocA[pDst], (CountLo - pLo) * SizeOf(T)); ///
-            {$ELSE}
-            CopyItems(@LocB[pLo], @LocA[pDst], CountLo - pLo);
-            {$ENDIF}
-        end
-      else
+      if LocA[Pred(From + CountLo + CountHi)] < LocA[From] then
         begin
           {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
           System.Move(LocA[From + CountLo], LocA[From], CountHi * SizeOf(T));///
@@ -4639,6 +4628,32 @@ begin
           CopyItems(@LocA[From + CountLo], @LocA[From], CountHi);
           CopyItems(LocB, @LocA[From + CountHi], CountLo);
           {$ENDIF}
+        end
+      else
+        begin
+          pLo := 0;
+          pHi := From + CountLo;
+          pDst := From;
+          CountHi := Pred(From + CountLo + CountHi);
+          repeat
+            if LocA[pHi] < LocB[pLo] then
+              begin
+                TFake(LocA[pDst]) := TFake(LocA[pHi]);
+                Inc(pHi);
+              end
+            else
+            begin
+              TFake(LocA[pDst]) := TFake(LocB[pLo]);
+              Inc(pLo);
+            end;
+            Inc(pDst);
+          until (pLo >= CountLo) or (pHi > CountHi);
+          if pLo < CountLo then
+            {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+            System.Move(LocB[pLo], LocA[pDst], (CountLo - pLo) * SizeOf(T)); ///
+            {$ELSE}
+            CopyItems(@LocB[pLo], @LocA[pDst], CountLo - pLo);
+            {$ENDIF}
         end;
     end;
 end;
@@ -4660,22 +4675,32 @@ begin
       {$ELSE}
       CopyItems(@LocA[From], LocB, CountLo);
       {$ENDIF}
-      if LocA[Pred(From + CountLo + CountHi)] <= LocA[From] then
+      if LocA[From] < LocA[Pred(From + CountLo + CountHi)] then
+        begin
+          {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+          System.Move(LocA[From + CountLo], LocA[From], CountHi * SizeOf(T));///
+          System.Move(LocB[0], LocA[From + CountHi], CountLo * SizeOf(T));   ///
+          {$ELSE}
+          CopyItems(@LocA[From + CountLo], @LocA[From], CountHi);
+          CopyItems(LocB, @LocA[From + CountHi], CountLo);
+          {$ENDIF}
+        end
+      else
         begin
           pLo := 0;
           pHi := From + CountLo;
           pDst := From;
           CountHi := Pred(From + CountLo + CountHi);
           repeat
-            if LocB[pLo] >= LocA[pHi] then
-              begin
-                TFake(LocA[pDst]) := TFake(LocB[pLo]);
-                Inc(pLo);
-              end
-            else
+            if LocB[pLo] < LocA[pHi] then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pHi]);
                 Inc(pHi);
+              end
+            else
+              begin
+                TFake(LocA[pDst]) := TFake(LocB[pLo]);
+                Inc(pLo);
               end;
             Inc(pDst);
           until (pLo >= CountLo) or (pHi > CountHi);
@@ -4685,16 +4710,6 @@ begin
             {$ELSE}
             CopyItems(@LocB[pLo], @LocA[pDst], CountLo - pLo);
             {$ENDIF}
-        end
-      else
-        begin
-          {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-          System.Move(LocA[From + CountLo], LocA[From], CountHi * SizeOf(T));///
-          System.Move(LocB[0], LocA[From + CountHi], CountLo * SizeOf(T));   ///
-          {$ELSE}
-          CopyItems(@LocA[From + CountLo], @LocA[From], CountHi);
-          CopyItems(LocB, @LocA[From + CountHi], CountLo);
-          {$ENDIF}
         end;
     end;
 end;
@@ -4708,7 +4723,7 @@ var
   LocB: PItem;   // local pointer to buffer
 begin
   LocA := FData;
-  if FData[Pred(From + CountLo)] > FData[From + CountLo] then
+  if FData[From + CountLo] < FData[Pred(From + CountLo)] then
     begin
       LocB := EnsureBufferCapacity(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -4716,13 +4731,23 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if LocA[Pred(From + CountLo + CountHi)] >= LocA[From] then
+      if LocA[Pred(From + CountLo + CountHi)] < LocA[From] then
+        begin
+          {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+          System.Move(LocA[From], LocA[From + CountHi], CountLo * SizeOf(T)); ///
+          System.Move(LocB[0], LocA[From], CountHi * SizeOf(T));  ///
+          {$ELSE}
+          CopyItems(@LocA[From], @LocA[From + CountHi], CountLo);
+          CopyItems(LocB, @LocA[From], CountHi);
+          {$ENDIF}
+        end
+      else
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
           pDst := Pred(From + CountLo + CountHi);
           repeat
-            if LocA[pLo] > LocB[pHi] then
+            if LocB[pHi] < LocA[pLo] then
               begin
                 TFake(LocA[pDst]) := TFake(LocA[pLo]);
                 Dec(pLo);
@@ -4741,16 +4766,6 @@ begin
             CopyItems(LocB, @LocA[From], Succ(pHi));
             {$ENDIF}
         end
-      else
-        begin
-          {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-          System.Move(LocA[From], LocA[From + CountHi], CountLo * SizeOf(T)); ///
-          System.Move(LocB[0], LocA[From], CountHi * SizeOf(T));  ///
-          {$ELSE}
-          CopyItems(@LocA[From], @LocA[From + CountHi], CountLo);
-          CopyItems(LocB, @LocA[From], CountHi);
-          {$ENDIF}
-        end;
     end;
 end;
 
@@ -4771,7 +4786,17 @@ begin
       {$ELSE}
       CopyItems(@LocA[From + CountLo], LocB, CountHi);
       {$ENDIF}
-      if LocA[Pred(From + CountLo + CountHi)] <= LocA[From] then
+      if LocA[From] < LocA[Pred(From + CountLo + CountHi)] then
+        begin
+          {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+          System.Move(LocA[From], LocA[From + CountHi], CountLo * SizeOf(T)); ///
+          System.Move(LocB[0], LocA[From], CountHi * SizeOf(T));              ///
+          {$ELSE}
+          CopyItems(@LocA[From], @LocA[From + CountHi], CountLo);
+          CopyItems(LocB, @LocA[From], CountHi);
+          {$ENDIF}
+        end
+      else
         begin
           pLo := Pred(From + CountLo);
           pHi := CountHi - 1;
@@ -4795,16 +4820,6 @@ begin
             {$ELSE}
             CopyItems(LocB, @LocA[From], Succ(pHi));
             {$ENDIF}
-        end
-      else
-        begin
-          {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-          System.Move(LocA[From], LocA[From + CountHi], CountLo * SizeOf(T)); ///
-          System.Move(LocB[0], LocA[From], CountHi * SizeOf(T));              ///
-          {$ELSE}
-          CopyItems(@LocA[From], @LocA[From + CountHi], CountLo);
-          CopyItems(LocB, @LocA[From], CountHi);
-          {$ENDIF}
         end;
     end;
 end;
@@ -4820,7 +4835,7 @@ begin
     begin
       v := TFake(A[I]);
       J := I - 1;
-      while (J >= 0) and (A[J] > T(v)) do
+      while (J >= 0) and (T(v) < A[J]) do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -4854,12 +4869,12 @@ begin
   if R > 0 then
     begin
       Result := 1;
-      if A[0] <= A[1] then  // ascending
-        while (Result < R) and (A[Result] <= A[Succ(Result)]) do
+      if not(A[1] < A[0]) then// ascending
+        while (Result < R) and not(A[Succ(Result)] < A[Result]) do
           Inc(Result)
-      else                 // descending
+      else                    // descending
         begin
-          while (Result < R) and (A[Result] > A[Succ(Result)]) do
+          while (Result < R) and (A[Succ(Result)] < A[Result]) do
             Inc(Result);
           DoReverse(A, Result);
         end;
@@ -4873,10 +4888,10 @@ begin
   if R > 0 then
     begin
       Result := 1;
-      if A[0] >= A[1] then  // descending
-        while (Result < R) and (A[Result] >= A[Succ(Result)]) do
+      if not (A[0] < A[1]) then // descending
+        while (Result < R) and  not(A[Result] < A[Succ(Result)]) do
           Inc(Result)
-      else                  // ascending
+      else                      // ascending
         begin
           while (Result < R) and (A[Result] < A[Succ(Result)]) do
             Inc(Result);
@@ -4982,7 +4997,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Inc(First) until First^ >= Pivot;
+  repeat Inc(First) until not(First^ < Pivot);
   if First - 1 = aStart then
     while First < Last do
       begin
@@ -4993,7 +5008,7 @@ begin
   else
     repeat Dec(Last) until Last^ < Pivot;
 
-  AlreadyPartitioned := First >= Last;
+  AlreadyPartitioned := not(First < Last);
 
   if not AlreadyPartitioned then
     begin
@@ -5020,21 +5035,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(It^ >= Pivot);
+              NumL += PtrInt(not(It^ < Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt((It + 1)^ >= Pivot);
+              NumL += PtrInt(not((It + 1)^ < Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt((It + 2)^ >= Pivot);
+              NumL += PtrInt(not((It + 2)^ < Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt((It + 3)^ >= Pivot);
+              NumL += PtrInt(not((It + 3)^ < Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt((It + 4)^ >= Pivot);
+              NumL += PtrInt(not((It + 4)^ < Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt((It + 5)^ >= Pivot);
+              NumL += PtrInt(not((It + 5)^ < Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt((It + 6)^ >= Pivot);
+              NumL += PtrInt(not((It + 6)^ < Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt((It + 7)^ >= Pivot);
+              NumL += PtrInt(not((It + 7)^ < Pivot));
               I += 8;
               It += 8;
             end;
@@ -5109,7 +5124,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(It^ >= Pivot);
+          NumL += PtrInt(not(It^ < Pivot));
           Inc(I);
           Inc(It);
         end;
@@ -5203,7 +5218,7 @@ begin
         end
       else
         Sort3(aStart + S2, aStart, aFinish - 1);
-      if (not aLeftMost) and ((aStart - 1)^ >= aStart^) then
+      if not aLeftMost and not((aStart - 1)^ < aStart^) then
         begin
           aStart := PartitionLeft(aStart, aFinish) + 1;
           continue;
@@ -5301,7 +5316,7 @@ begin
           repeat
             TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-          until (Sift = aStart) or (T(v) >= (Sift - 1)^);
+          until (Sift = aStart) or not(T(v) < (Sift - 1)^);
           TFake(Sift^) := v;
           Limit += Curr - Sift;
         end;
@@ -5319,7 +5334,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until Pivot >= Last^;
+  repeat Dec(Last) until not(Pivot < Last^);
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -5335,7 +5350,7 @@ begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until Pivot >= Last^;
+      repeat Dec(Last) until not(Pivot < Last^);
       repeat Inc(First) until Pivot < First^;
     end;
   PivotPos := Last;
@@ -5357,21 +5372,21 @@ end;
 class function TGComparableArrayHelper.CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := 0;
-  while (Result < R) and (A[Result] = A[Succ(Result)]) do
+  while (Result < R) and ValEqual(A[Result], A[Succ(Result)]) do
     Inc(Result);
   if Result < R then
     begin
       Inc(Result);
       if A[Pred(Result)] < A[Result] then   // ascending
         begin
-          while (Result < R) and (A[Result] <= A[Succ(Result)]) do
+          while (Result < R) and not(A[Succ(Result)] < A[Result]) do
             Inc(Result);
           if (Result = R) and (o = soDesc) then
             DoReverse(A, Result);
         end
       else                                  // descending
         begin
-          while (Result < R) and (A[Succ(Result)] <= A[Result]) do
+          while (Result < R) and not(A[Result] < A[Succ(Result)]) do
             Inc(Result);
           if (Result = R) and (o = soAsc) then
             DoReverse(A, Result);
@@ -5392,7 +5407,7 @@ begin
         repeat
           TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        until (J = 0) or (T(v) >= A[J-1]);
+        until (J = 0) or not(T(v) < A[J-1]);
         TFake(A[J]) := v;
       end;
 end;
@@ -5410,7 +5425,7 @@ begin
         repeat
           TFake(A[J]) := TFake(A[J-1]);
           Dec(J);
-        until T(v) >= A[J-1];
+        until not(T(v) < A[J-1]);
         TFake(A[J]) := v;
       end;
 end;
@@ -5439,7 +5454,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-      if A[M] > aValue then
+      if aValue < A[M] then
         L := Succ(M)
       else
         R := M;
@@ -5455,7 +5470,7 @@ begin
   while L < R do
     begin
       {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-      if A[M] > aValue then
+      if aValue < A[M] then
         R := M
       else
         L := Succ(M);
@@ -5483,25 +5498,25 @@ class function TGComparableArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constre
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  if A[R] > A[0] then  //ascending
+  if A[0] < A[R] then   //ascending
     begin
-      if (A[0] > aValue) or (A[R] < aValue) then
+      if (aValue < A[0]) or (A[R] < aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue);
-      if A[R] = aValue then
+      if ValEqual(A[R], aValue) then
         Result := R;
     end
   else
-    if A[R] < A[0] then  //descending
+    if A[R] < A[0] then //descending
       begin
-        if (A[0] < aValue) or (A[R] > aValue) then
+        if (A[0] < aValue) or (aValue < A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue);
-        if A[R] = aValue then
+        if ValEqual(A[R], aValue) then
           Result := R;
       end
-    else              //constant
-      if A[0] = aValue then
+    else               //constant
+      if ValEqual(A[0], aValue) then
         Result := 0;
 end;
 
@@ -5509,9 +5524,9 @@ class function TGComparableArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; cons
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  if A[R] > A[0] then  //ascending
+  if A[0] < A[R] then  //ascending
     begin
-      if A[0] > aValue then
+      if aValue < A[0] then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -5524,11 +5539,11 @@ begin
           end;
       R := BiSearchRightA(A, R, aValue);
       Result.InsertIndex := R;
-      if A[R] = aValue then
+      if ValEqual(A[R], aValue) then
         Result := TSearchResult.Create(R, Succ(R))
       else
         if R > 0 then
-          if A[Pred(R)] = aValue then
+          if ValEqual(A[Pred(R)], aValue) then
             Result.FoundIndex := Pred(R);
     end
   else
@@ -5540,27 +5555,27 @@ begin
             exit;
           end
         else
-          if A[R] > aValue then
+          if aValue < A[R] then
             begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
         R := BiSearchRightD(A, R, aValue);
         Result.InsertIndex := R;
-        if A[R] = aValue then
+        if ValEqual(A[R], aValue) then
           Result := TSearchResult.Create(R, Succ(R))
         else
           if R > 0 then
-            if A[Pred(R)] = aValue then
+            if ValEqual(A[Pred(R)], aValue) then
               Result.FoundIndex := Pred(R);
       end
     else           //constant
-      if A[0] > aValue then
+      if aValue < A[0] then
         Result.InsertIndex := 0
       else
         begin
           Result.InsertIndex := Succ(R);
-          if A[0] = aValue then
+          if ValEqual(A[0], aValue) then
             Result.FoundIndex := R;
         end;
 end;
@@ -5581,7 +5596,7 @@ begin
             begin
               if(Next < R) and (A[Next] < A[Succ(Next)])then
                 Inc(Next);
-              if A[Next] <= T(v) then
+              if not(T(v) < A[Next]) then
                 break;
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -5604,7 +5619,7 @@ begin
               Next := Succ(Next shl 1);
             end;
           Next := Pred(Curr) shr 1;
-          while (Curr > 0) and (T(v) > A[Next]) do
+          while (Curr > 0) and (A[Next] < T(v)) do
             begin
               TFake(A[Curr]) := TFake(A[Next]);
               Curr := Next;
@@ -5627,8 +5642,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until A[pL] >= Pivot;
-    repeat Dec(pR) until A[pR] <= Pivot;
+    repeat Inc(pL) until not(A[pL] < Pivot);
+    repeat Dec(pR) until not(Pivot < A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -5676,9 +5691,9 @@ begin
     end
   else { p1^ >= Result^ }
     begin
-      if p3^ > Result^ then
+      if Result^ < p3^ then
         begin
-          if p1^ > p3^ then
+          if p3^ < p1^ then
             Result := p3
           else
             Result := p1;
@@ -5708,8 +5723,8 @@ begin
   pL := -1;
   pR := Succ(R);
   repeat
-    repeat Inc(pL) until A[pL] >= Pivot;
-    repeat Dec(pR) until A[pR] <= Pivot;
+    repeat Inc(pL) until not(A[pL] < Pivot);
+    repeat Dec(pR) until not(Pivot < A[pR]);
     if pL > pR then break;
     v := TFake(A[pL]);
     TFake(A[pL]) := TFake(A[pR]);
@@ -5748,21 +5763,20 @@ begin
   pL := Succ(Random(Pred(R shr 1)));
   pR := Pred(R - Random(Pred(R shr 1)));
 
-  if A[pL] <= A[pR] then
-    begin
-      Pivot1 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[0]);
-      Pivot2 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[R]);
-    end
-  else
+  if A[pR] < A[pL] then
     begin
       Pivot2 := TFake(A[pL]);
       TFake(A[pL]) := TFake(A[R]);
       Pivot1 := TFake(A[pR]);
       TFake(A[pR]) := TFake(A[0]);
+    end
+  else
+    begin
+      Pivot1 := TFake(A[pL]);
+      TFake(A[pL]) := TFake(A[0]);
+      Pivot2 := TFake(A[pR]);
+      TFake(A[pR]) := TFake(A[R]);
     end;
-
   pL := 1;
   I  := 1;
   pR := Pred(R);
@@ -5812,7 +5826,7 @@ begin
       begin
         DoDPQSort(A, Left - 1, aLeftmost);
         DoDPQSort(@A[Right + 1], R - Right - 1, False);
-        if A[Left] <> A[Right] then
+        if ValNotEqual(A[Left], A[Right]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, False);
       end
   else
@@ -5836,8 +5850,8 @@ begin
       pL := Pred(L);
       pR := Succ(R);
       repeat
-        repeat Inc(pL) until A[pL] >= Pivot;
-        repeat Dec(pR) until A[pR] <= Pivot;
+        repeat Inc(pL) until not(A[pL] < Pivot);
+        repeat Dec(pR) until not(Pivot < A[pR]);
         if pL >= pR then break;
         v := TFake(A[pL]);
         TFake(A[pL]) := TFake(A[pR]);
@@ -5854,7 +5868,7 @@ begin
       if pR < N then L := pL;
       if pL > N then R := pR;
     end;
-  if (L < R) and (A[L] > A[R]) then
+  if (L < R) and (A[R] < A[L]) then
     begin
       v := TFake(A[L]);
       TFake(A[L]) := TFake(A[R]);
@@ -5866,7 +5880,7 @@ end;
 class function TGComparableArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
 begin
   for Result := 0 to System.High(A) do
-    if aValue = A[Result] then
+    if ValEqual(aValue, A[Result]) then
       exit;
   Result := NULL_INDEX;
 end;
@@ -5900,7 +5914,7 @@ begin
       Result := 0;
       v := A[0];
       for I := 1 to R do
-        if v > A[I] then
+        if A[I] < v then
           begin
             v := A[I];
             Result := I;
@@ -5957,7 +5971,7 @@ begin
     begin
       aValue := A[0];
       for I := 1 to R do
-        if aValue > A[I] then
+        if A[I] < aValue then
           aValue := A[I];
     end;
 end;
@@ -5988,7 +6002,7 @@ begin
       aMin := A[0];
       aMax := A[0];
       for I := 1 to R do
-        if A[I] > aMax then
+        if aMax < A[I] then
           aMax := A[I]
         else
           if A[I] < aMin then
@@ -6041,14 +6055,14 @@ begin
   R := System.High(A);
   J := -1;
   for I := Pred(R) downto 0 do
-    if A[I] > A[Succ(I)] then
+    if A[Succ(I)] < A[I] then
       begin
         J := I;
         break;
       end;
   if J < 0 then exit(False);
   for I := R downto 0 do
-    if A[J] > A[I] then
+    if  A[I] < A[J] then
       begin
         v := TFake(A[I]);
         TFake(A[I]) := TFake(A[J]);
@@ -6090,7 +6104,7 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(A)) do
-    if A[I] > A[Succ(I)] then
+    if A[Succ(I)] < A[I] then
       exit(False);
   Result := True;
 end;
@@ -6103,7 +6117,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if A[Pred(I)] >= A[I] then
+        if not(A[Pred(I)] < A[I]) then
           exit(False);
       Result := True;
     end
@@ -6129,7 +6143,7 @@ begin
   if R > 0 then
     begin
       for I := 1 to R do
-        if A[Pred(I)] <= A[I] then
+        if not(A[I] < A[Pred(I)]) then
           exit(False);
       Result := True;
     end
@@ -6148,7 +6162,7 @@ var
     J := Succ(M);
     Merge := 0;
     for K := 0 to R - L do
-      if (J > R) or (I <= M) and (A[I] <= A[J]) then
+      if (J > R) or (I <= M) and not(A[J] < A[I]) then
         begin
           Buf[K] := A[I];
           Inc(I);
@@ -6167,7 +6181,7 @@ var
   begin
     if R <= L then
       exit(0);
-    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
     InvCount := InvCount(L, M);
     InvCount += InvCount(Succ(M), R);
     InvCount += Merge(L, M, R);
@@ -6194,7 +6208,7 @@ begin
   if System.High(B) <> R then
     exit(False);
   for I := 0 to R do
-    if A[I] <> B[I] then
+    if ValNotEqual(A[I], B[I]) then
       exit(False);
   Result := True;
 end;
@@ -6285,7 +6299,7 @@ begin
   I := 0;
   for J := 1 to Hi do
     begin
-      if Result[I] = Result[J] then
+      if ValEqual(Result[I], Result[J]) then
         continue;
       Inc(I);
       if J > I then
@@ -8013,7 +8027,7 @@ var
   begin
     if R <= L then
       exit(0);
-    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
     InvCount := InvCount(L, M);
     InvCount += InvCount(Succ(M), R);
     InvCount += Merge(L, M, R);
@@ -9863,7 +9877,7 @@ var
   begin
     if R <= L then
       exit(0);
-    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
     InvCount := InvCount(L, M);
     InvCount += InvCount(Succ(M), R);
     InvCount += Merge(L, M, R);
@@ -11713,7 +11727,7 @@ var
   begin
     if R <= L then
       exit(0);
-    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
     InvCount := InvCount(L, M);
     InvCount += InvCount(Succ(M), R);
     InvCount += Merge(L, M, R);
@@ -13199,7 +13213,7 @@ var
   begin
     if R <= L then
       exit(0);
-    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
     InvCount := InvCount(L, M);
     InvCount += InvCount(Succ(M), R);
     InvCount += Merge(L, M, R);
@@ -13389,7 +13403,7 @@ begin
       until I > R;
     end;
 end;
-{$PUSH}{$Q-}
+{$PUSH}{$Q-}{$R-}
 class function TGOrdinalArrayHelper.AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean;
 var
   Sum: Int64;      //todo: any tuning needed ???
