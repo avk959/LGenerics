@@ -1,6 +1,7 @@
 unit LGPriorityQueueTest;
 
 {$mode objfpc}{$H+}
+{$modeswitch advancedrecords}
 
 interface
 uses
@@ -17,6 +18,13 @@ type
   TGPriorityQueueTest = class(TTestCase)
   private
   type
+    TRec = record
+      Key,
+      Value: Integer;
+      class operator < (const L, R: TRec): Boolean; inline;
+      constructor Create(k, v: Integer);
+    end;
+
     TIntBaseBinHeap          = specialize TGBinHeap<Integer>;
     TIntComparbleBinHeapMax  = specialize TGComparableBinHeapMax<Integer>;
     TIntComparbleBinHeapMin  = specialize TGComparableBinHeapMin<Integer>;
@@ -43,8 +51,10 @@ type
     procedure BaseBinHeap;
     procedure BaseBinHeapReverse;
     procedure ComparableBinHeapMax;
+    procedure ComparableBinHeapMax1;
     procedure ComparableBinHeapMaxReverse;
     procedure ComparableBinHeapMin;
+    procedure ComparableBinHeapMin1;
     procedure ComparableBinHeapMinReverse;
     procedure RegularBinHeap;
     procedure DefaultRegularBinHeap;
@@ -58,6 +68,7 @@ type
     procedure LiteBinHeapAssign;
     procedure LiteBinHeapPassByValue;
     procedure LiteComparableBinHeap;
+    procedure LiteComparableBinHeap1;
     procedure LiteComparableBinHeapReverse;
     procedure LiteComparableBinHeapAssign;
     procedure LiteComparableBinHeapPassByValue;
@@ -103,6 +114,7 @@ type
     procedure LitePairHeapPassByValue;
 
     procedure LiteCompareblePairHeapEnqueue;
+    procedure LiteCompareblePairHeapEnqueue1;
     procedure LiteCompareblePairHeapUpdate;
     procedure LiteCompareblePairHeapMerge;
     procedure LiteCompareblePairHeapReverse;
@@ -111,6 +123,19 @@ type
   end;
 
 implementation
+
+{ TGPriorityQueueTest.TRec }
+
+class operator TGPriorityQueueTest.TRec.<(const L, R: TRec): Boolean;
+begin
+  Result := L.Key < R.Key;
+end;
+
+constructor TGPriorityQueueTest.TRec.Create(k, v: Integer);
+begin
+  Key := k;
+  Value := v;
+end;
 
 function TGPriorityQueueTest.LongIntCmp(constref L, R: LongInt): Boolean;
 begin
@@ -195,6 +220,35 @@ begin
   end;
 end;
 
+procedure TGPriorityQueueTest.ComparableBinHeapMax1;
+var
+  q: specialize TGComparableBinHeapMax<TRec>;
+  I: Integer;
+  a: array of TRec;
+begin
+  System.SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := TRec.Create(I * 1001, 0);
+  specialize TGComparableArrayHelper<TRec>.RandomShuffle(a);
+  q := specialize TGComparableBinHeapMax<TRec>.Create;
+  try
+    AssertTrue(q.IsEmpty);
+    I := q.EnqueueAll(a);
+    AssertTrue(I = System.Length(a));
+    AssertTrue(q.Count = System.Length(a));
+    I := 0;
+    while q.NonEmpty do
+      begin
+        a[I] := q.Dequeue;
+        Inc(I);
+      end;
+    AssertTrue(I = System.Length(a));
+    AssertTrue(specialize TGComparableArrayHelper<TRec>.IsStrictDescending(a));
+  finally
+    q.Free;
+  end;
+end;
+
 procedure TGPriorityQueueTest.ComparableBinHeapMaxReverse;
 var
   q: TIntComparbleBinHeapMax;
@@ -239,6 +293,35 @@ begin
       end;
     AssertTrue(I = System.Length(a));
     AssertTrue(TIntHelper.IsStrictAscending(a));
+  finally
+    q.Free;
+  end;
+end;
+
+procedure TGPriorityQueueTest.ComparableBinHeapMin1;
+var
+  q: specialize TGComparableBinHeapMin<TRec>;
+  I: Integer;
+  a: array of TRec;
+begin
+  System.SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := TRec.Create(I * 1001, 0);
+  specialize TGComparableArrayHelper<TRec>.RandomShuffle(a);
+  q := specialize TGComparableBinHeapMin<TRec>.Create;
+  try
+    AssertTrue(q.IsEmpty);
+    I := q.EnqueueAll(a);
+    AssertTrue(I = System.Length(a));
+    AssertTrue(q.Count = System.Length(a));
+    I := 0;
+    while q.NonEmpty do
+      begin
+        a[I] := q.Dequeue;
+        Inc(I);
+      end;
+    AssertTrue(I = System.Length(a));
+    AssertTrue(specialize TGComparableArrayHelper<TRec>.IsStrictAscending(a));
   finally
     q.Free;
   end;
@@ -537,6 +620,30 @@ begin
     end;
   AssertTrue(I = System.Length(a));
   AssertTrue(TIntHelper.IsStrictAscending(a));
+end;
+
+procedure TGPriorityQueueTest.LiteComparableBinHeap1;
+var
+  q: specialize TGLiteComparableBinHeapMin<TRec>;
+  I: Integer;
+  a: array of TRec;
+begin
+  System.SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := TRec.Create(I * 1001, 0);
+  specialize TGComparableArrayHelper<TRec>.RandomShuffle(a);
+  AssertTrue({%H-}q.IsEmpty);
+  for I := 0 to High(a) do
+    q.Enqueue(a[I]);
+  AssertTrue(q.Count = System.Length(a));
+  I := 0;
+  while q.NonEmpty do
+    begin
+      a[I] := q.Dequeue;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(a));
+  AssertTrue(specialize TGComparableArrayHelper<TRec>.IsStrictAscending(a));
 end;
 
 procedure TGPriorityQueueTest.LiteComparableBinHeapReverse;
@@ -1734,7 +1841,7 @@ begin
   TIntHelper.RandomShuffle(a);
   AssertTrue({%H-}q.IsEmpty);
   for I in a do
-    {%H-}q.Enqueue(I);
+    q.Enqueue(I);
   AssertTrue(q.Count = System.Length(a));
   I := 0;
   while q.NonEmpty do
@@ -1744,6 +1851,30 @@ begin
     end;
   AssertTrue(I = System.Length(a));
   AssertTrue(TIntHelper.IsStrictAscending(a));
+end;
+
+procedure TGPriorityQueueTest.LiteCompareblePairHeapEnqueue1;
+var
+  q: specialize TGLiteComparablePairHeapMin<TRec>;
+  I: SizeInt;
+  a: array of TRec;
+begin
+  System.SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := TRec.Create(I * 1001, 0);
+  specialize TGComparableArrayHelper<TRec>.RandomShuffle(a);
+  AssertTrue({%H-}q.IsEmpty);
+  for I := 0 to High(a) do
+    q.Enqueue(a[I]);
+  AssertTrue(q.Count = System.Length(a));
+  I := 0;
+  while q.NonEmpty do
+    begin
+      a[I] := q.Dequeue;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(a));
+  AssertTrue(specialize TGComparableArrayHelper<TRec>.IsStrictAscending(a));
 end;
 
 procedure TGPriorityQueueTest.LiteCompareblePairHeapUpdate;
