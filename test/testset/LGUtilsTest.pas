@@ -386,6 +386,7 @@ type
     procedure IncludeArray;
     procedure Exclude;
     procedure ExcludeArray;
+    procedure Turn;
     procedure Implicit;
     procedure ImplicitArray;
     procedure Explicit;
@@ -3112,6 +3113,18 @@ begin
   for J in a do
     AssertFalse(s.Contains(J));
   AssertTrue(s.IsEmpty);
+end;
+
+procedure TGSetTest.Turn;
+var
+  s: TMySet;
+  I: TMyRange = -1;
+begin
+  AssertFalse({%H-}s.Contains(I));
+  s.Turn(I, True);
+  AssertTrue(s.Contains(I));
+  s.Turn(I, False);
+  AssertFalse(s.Contains(I));
 end;
 
 procedure TGSetTest.Implicit;
