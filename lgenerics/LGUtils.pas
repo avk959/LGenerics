@@ -1060,6 +1060,7 @@ type
     procedure IncludeArray(const a: array of T);
     procedure ExcludeArray(const a: array of T);
     function  Contains(aValue: T): Boolean; inline;
+    procedure Turn(aValue: T; aOn: Boolean); inline;
     function  Intersecting(const aSet: TGSet<T>): Boolean;
     procedure Intersect(const aSet: TGSet<T>);
     procedure Join(const aSet: TGSet<T>);
@@ -3288,6 +3289,14 @@ begin
   Result :=
     FBits[(Integer(aValue) - LO_VALUE) shr INT_SIZE_LOG] and
           (SizeUInt(1) shl ((Integer(aValue) - LO_VALUE) and INT_SIZE_MASK)) <> 0;
+end;
+
+procedure TGSet<T>.Turn(aValue: T; aOn: Boolean);
+begin
+  if aOn then
+    Include(aValue)
+  else
+    Exclude(aValue);
 end;
 
 function TGSet<T>.Intersecting(const aSet: TGSet<T>): Boolean;
