@@ -30,7 +30,7 @@
     </CompilerOptions>
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
-    <Version Minor="5" Release="3"/>
+    <Version Minor="5" Release="4"/>
     <Files Count="52">
       <Item1>
         <Filename Value="LGAbstractContainer.pas"/>
