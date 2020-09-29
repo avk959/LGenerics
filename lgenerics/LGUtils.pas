@@ -82,6 +82,7 @@ const
   NULL_INDEX: SizeInt        = SizeInt(-1);
   {$POP}
   VOID: TDummy               = ();
+
 type
   TGOptional<T> = record
   private
@@ -1115,6 +1116,9 @@ type
   if aStep > T(0) then iteration count = Max(0, Int((aFrom - aDownTo + aStep)/aStep)),
   otherwise 0 }
   function GDownRange<T>(aFrom, aDownTo: T; aStep: T{$IF FPC_FULLVERSION>=30301}=T(1){$ENDIF}): TGRecDownRange<T>; inline;//Mantis #37380
+
+  {.$DEFINE FPC_REV_GE_46953}//uncomment if FPC revision >= 46953
+  procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);{$IFDEF FPC_REV_GE_46953}inline;{$ENDIF}
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3504,6 +3508,29 @@ end;
 function GDownRange<T>(aFrom, aDownTo: T; aStep: T): TGRecDownRange<T>;
 begin
   Result := TGRecDownRange<T>.Create(aFrom, aDownTo, aStep);
+end;
+
+procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);
+{$IFDEF FPC_REV_GE_46953}
+begin
+  if aOn then
+    Include(aSet, aElem)
+  else
+    Exclude(aSet, aElem);
+{$ELSE }
+  procedure TurnElem(var ASet; const AItem; AOn: Boolean); inline;
+  type
+    TItem = 0..31;
+    TItemSet = set of TItem;
+  begin
+    if AOn then
+      Include(TItemSet(ASet), TItem(AItem))
+    else
+      Exclude(TItemSet(ASet), TItem(AItem))
+  end;
+begin
+  TurnElem(aSet, aElem, AOn);
+{$ENDIF}
 end;
 
 end.
