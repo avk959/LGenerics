@@ -114,7 +114,7 @@ type
     var
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-                                  aNum: PtrInt; aUseSwaps: Boolean); static;
+                                  aNum: SizeInt; aUseSwaps: Boolean); static;
     end;
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
@@ -976,7 +976,7 @@ type
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-                                  aNum: PtrInt; aUseSwaps: Boolean); static;
+                                  aNum: SizeInt; aUseSwaps: Boolean); static;
     public
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
@@ -1202,31 +1202,31 @@ end;
 { TGArrayHelpUtil.TPDQSortBase }
 
 class procedure TGArrayHelpUtil.TPDQSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-  aNum: PtrInt; aUseSwaps: Boolean);
+  aNum: SizeInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
-  I: PtrInt;
+  I: SizeInt;
   v: TFake;
 begin
   if aUseSwaps then
     for I := 0 to Pred(aNum) do
       begin
-        v := TFake((aFirst + PtrInt(aOffsetsL[I]))^);
-        TFake((aFirst + PtrInt(aOffsetsL[I]))^) := TFake((aLast - PtrInt(aOffsetsR[I]))^);
-        TFake((aLast - PtrInt(aOffsetsR[I]))^) := v;
+        v := TFake((aFirst + SizeInt(aOffsetsL[I]))^);
+        TFake((aFirst + SizeInt(aOffsetsL[I]))^) := TFake((aLast - SizeInt(aOffsetsR[I]))^);
+        TFake((aLast - SizeInt(aOffsetsR[I]))^) := v;
       end
   else
     if aNum > 0 then
       begin
-        L := aFirst + PtrInt(aOffsetsL[0]);
-        R := aLast - PtrInt(aOffsetsR[0]);
+        L := aFirst + SizeInt(aOffsetsL[0]);
+        R := aLast - SizeInt(aOffsetsR[0]);
         v := TFake(L^);
         TFake(L^) := TFake(R^);
         for I := 1 to Pred(aNum) do
           begin
-            L := aFirst + PtrInt(aOffsetsL[I]);
+            L := aFirst + SizeInt(aOffsetsL[I]);
             TFake(R^) := TFake(L^);
-            R := aLast - PtrInt(aOffsetsR[I]);
+            R := aLast - SizeInt(aOffsetsR[I]);
             TFake(L^) := TFake(R^);
           end;
         TFake(R^) := v;
@@ -2530,7 +2530,7 @@ var
   Pivot: T;
   v: TFake;
   First, Last, It, PivotPos: PItem;
-  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: PtrInt;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
   OffsetsL, OffsetsR: PByte;
   I: Byte;
   AlreadyPartitioned: Boolean;
@@ -2576,21 +2576,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(not TCmpRel.Less(It^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(not TCmpRel.Less((It + 1)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(not TCmpRel.Less((It + 2)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(not TCmpRel.Less((It + 3)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(not TCmpRel.Less((It + 4)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(not TCmpRel.Less((It + 5)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(not TCmpRel.Less((It + 6)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(not TCmpRel.Less((It + 7)^, Pivot));
+              NumL += SizeInt(not TCmpRel.Less((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -2603,21 +2603,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(TCmpRel.Less((It - 1)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(TCmpRel.Less((It - 2)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(TCmpRel.Less((It - 3)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(TCmpRel.Less((It - 4)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(TCmpRel.Less((It - 5)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(TCmpRel.Less((It - 6)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(TCmpRel.Less((It - 7)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(TCmpRel.Less((It - 8)^, Pivot));
+              NumR += SizeInt(TCmpRel.Less((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -2665,7 +2665,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(not TCmpRel.Less(It^, Pivot));
+          NumL += SizeInt(not TCmpRel.Less(It^, Pivot));
           Inc(I);
           Inc(It);
         end;
@@ -2680,7 +2680,7 @@ begin
           Inc(I);
           Dec(It);
           (OffsetsR + NumR)^ := I;
-          NumR += PtrInt(TCmpRel.Less(It^, Pivot));
+          NumR += SizeInt(TCmpRel.Less(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -2731,7 +2731,7 @@ procedure TGBaseArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed:
 var
   PivotPos: PItem;
   v: TFake;
-  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: PtrInt;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
 begin
   while True do
@@ -2839,7 +2839,7 @@ end;
 
 class function TGBaseArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
-  Limit: PtrInt;
+  Limit: SizeInt;
   Curr, Sift: PItem;
   v: TFake;
 begin
@@ -4989,7 +4989,7 @@ var
   Pivot: T;
   v: TFake;
   First, Last, It, PivotPos: PItem;
-  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: PtrInt;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
   OffsetsL, OffsetsR: PByte;
   I: Byte;
   AlreadyPartitioned: Boolean;
@@ -5035,21 +5035,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(not(It^ < Pivot));
+              NumL += SizeInt(not(It^ < Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(not((It + 1)^ < Pivot));
+              NumL += SizeInt(not((It + 1)^ < Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(not((It + 2)^ < Pivot));
+              NumL += SizeInt(not((It + 2)^ < Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(not((It + 3)^ < Pivot));
+              NumL += SizeInt(not((It + 3)^ < Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(not((It + 4)^ < Pivot));
+              NumL += SizeInt(not((It + 4)^ < Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(not((It + 5)^ < Pivot));
+              NumL += SizeInt(not((It + 5)^ < Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(not((It + 6)^ < Pivot));
+              NumL += SizeInt(not((It + 6)^ < Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(not((It + 7)^ < Pivot));
+              NumL += SizeInt(not((It + 7)^ < Pivot));
               I += 8;
               It += 8;
             end;
@@ -5062,21 +5062,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt((It - 1)^ < Pivot);
+              NumR += SizeInt((It - 1)^ < Pivot);
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt((It - 2)^ < Pivot);
+              NumR += SizeInt((It - 2)^ < Pivot);
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt((It - 3)^ < Pivot);
+              NumR += SizeInt((It - 3)^ < Pivot);
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt((It - 4)^ < Pivot);
+              NumR += SizeInt((It - 4)^ < Pivot);
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt((It - 5)^ < Pivot);
+              NumR += SizeInt((It - 5)^ < Pivot);
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt((It - 6)^ < Pivot);
+              NumR += SizeInt((It - 6)^ < Pivot);
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt((It - 7)^ < Pivot);
+              NumR += SizeInt((It - 7)^ < Pivot);
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt((It - 8)^ < Pivot);
+              NumR += SizeInt((It - 8)^ < Pivot);
               I += 8;
               It -= 8;
             end;
@@ -5124,7 +5124,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(not(It^ < Pivot));
+          NumL += SizeInt(not(It^ < Pivot));
           Inc(I);
           Inc(It);
         end;
@@ -5139,7 +5139,7 @@ begin
           Inc(I);
           Dec(It);
           (OffsetsR + NumR)^ := I;
-          NumR += PtrInt(It^ < Pivot);
+          NumR += SizeInt(It^ < Pivot);
         end;
     end;
   Num := NumL;
@@ -5191,7 +5191,7 @@ procedure TGComparableArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAl
 var
   PivotPos: PItem;
   v: TFake;
-  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: PtrInt;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
 begin
   while True do
@@ -5300,7 +5300,7 @@ end;
 class function TGComparableArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Curr, Sift: PItem;
-  Limit: PtrInt;
+  Limit: SizeInt;
   v: TFake;
 begin
   if aStart = aFinish then exit(True);
@@ -6817,7 +6817,7 @@ var
   Pivot: T;
   v: TFake;
   First, Last, It, PivotPos: PItem;
-  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: PtrInt;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
   OffsetsL, OffsetsR: PByte;
   I: Byte;
   AlreadyPartitioned: Boolean;
@@ -6863,21 +6863,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(not c(It^, Pivot));
+              NumL += SizeInt(not c(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(not c((It + 1)^, Pivot));
+              NumL += SizeInt(not c((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(not c((It + 2)^, Pivot));
+              NumL += SizeInt(not c((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(not c((It + 3)^, Pivot));
+              NumL += SizeInt(not c((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(not c((It + 4)^, Pivot));
+              NumL += SizeInt(not c((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(not c((It + 5)^, Pivot));
+              NumL += SizeInt(not c((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(not c((It + 6)^, Pivot));
+              NumL += SizeInt(not c((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(not c((It + 7)^, Pivot));
+              NumL += SizeInt(not c((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -6890,21 +6890,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(c((It - 1)^, Pivot));
+              NumR += SizeInt(c((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(c((It - 2)^, Pivot));
+              NumR += SizeInt(c((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(c((It - 3)^, Pivot));
+              NumR += SizeInt(c((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(c((It - 4)^, Pivot));
+              NumR += SizeInt(c((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(c((It - 5)^, Pivot));
+              NumR += SizeInt(c((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(c((It - 6)^, Pivot));
+              NumR += SizeInt(c((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(c((It - 7)^, Pivot));
+              NumR += SizeInt(c((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(c((It - 8)^, Pivot));
+              NumR += SizeInt(c((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -6952,7 +6952,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(not c(It^, Pivot));
+          NumL += SizeInt(not c(It^, Pivot));
           Inc(I);
           Inc(It);
         end;
@@ -6967,7 +6967,7 @@ begin
           Inc(I);
           Dec(It);
           (OffsetsR + NumR)^ := I;
-          NumR += PtrInt(c(It^, Pivot));
+          NumR += SizeInt(c(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -7019,7 +7019,7 @@ procedure TGRegularArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllow
 var
   PivotPos: PItem;
   v: TFake;
-  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: PtrInt;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
   AlreadyPartitioned, HighlyUnbalanced: Boolean;
 begin
@@ -7132,7 +7132,7 @@ class function TGRegularArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinis
   c: TLess): Boolean;
 var
   Curr, Sift: PItem;
-  Limit: PtrInt;
+  Limit: SizeInt;
   v: TFake;
 begin
   if aStart = aFinish then exit(True);
@@ -8663,7 +8663,7 @@ var
   Pivot: T;
   v: TFake;
   First, Last, It, PivotPos: PItem;
-  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: PtrInt;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
   OffsetsL, OffsetsR: PByte;
   I: Byte;
   AlreadyPartitioned: Boolean;
@@ -8709,21 +8709,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(not c(It^, Pivot));
+              NumL += SizeInt(not c(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(not c((It + 1)^, Pivot));
+              NumL += SizeInt(not c((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(not c((It + 2)^, Pivot));
+              NumL += SizeInt(not c((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(not c((It + 3)^, Pivot));
+              NumL += SizeInt(not c((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(not c((It + 4)^, Pivot));
+              NumL += SizeInt(not c((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(not c((It + 5)^, Pivot));
+              NumL += SizeInt(not c((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(not c((It + 6)^, Pivot));
+              NumL += SizeInt(not c((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(not c((It + 7)^, Pivot));
+              NumL += SizeInt(not c((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -8736,21 +8736,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(c((It - 1)^, Pivot));
+              NumR += SizeInt(c((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(c((It - 2)^, Pivot));
+              NumR += SizeInt(c((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(c((It - 3)^, Pivot));
+              NumR += SizeInt(c((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(c((It - 4)^, Pivot));
+              NumR += SizeInt(c((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(c((It - 5)^, Pivot));
+              NumR += SizeInt(c((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(c((It - 6)^, Pivot));
+              NumR += SizeInt(c((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(c((It - 7)^, Pivot));
+              NumR += SizeInt(c((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(c((It - 8)^, Pivot));
+              NumR += SizeInt(c((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -8798,7 +8798,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(not c(It^, Pivot));
+          NumL += SizeInt(not c(It^, Pivot));
           Inc(I);
           Inc(It);
         end;
@@ -8813,7 +8813,7 @@ begin
           Inc(I);
           Dec(It);
           (OffsetsR + NumR)^ := I;
-          NumR += PtrInt(c(It^, Pivot));
+          NumR += SizeInt(c(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -8865,7 +8865,7 @@ procedure TGDelegatedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAll
 var
   PivotPos: PItem;
   v: TFake;
-  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: PtrInt;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
   AlreadyPartitioned, HighlyUnbalanced: Boolean;
 begin
@@ -8978,7 +8978,7 @@ class function TGDelegatedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFin
   c: TOnLess): Boolean;
 var
   Curr, Sift: PItem;
-  Limit: PtrInt;
+  Limit: SizeInt;
   v: TFake;
 begin
   if aStart = aFinish then exit(True);
@@ -10513,7 +10513,7 @@ var
   Pivot: T;
   v: TFake;
   First, Last, It, PivotPos: PItem;
-  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: PtrInt;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
   OffsetsL, OffsetsR: PByte;
   I: Byte;
   AlreadyPartitioned: Boolean;
@@ -10559,21 +10559,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(not c(It^, Pivot));
+              NumL += SizeInt(not c(It^, Pivot));
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt(not c((It + 1)^, Pivot));
+              NumL += SizeInt(not c((It + 1)^, Pivot));
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt(not c((It + 2)^, Pivot));
+              NumL += SizeInt(not c((It + 2)^, Pivot));
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt(not c((It + 3)^, Pivot));
+              NumL += SizeInt(not c((It + 3)^, Pivot));
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt(not c((It + 4)^, Pivot));
+              NumL += SizeInt(not c((It + 4)^, Pivot));
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt(not c((It + 5)^, Pivot));
+              NumL += SizeInt(not c((It + 5)^, Pivot));
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt(not c((It + 6)^, Pivot));
+              NumL += SizeInt(not c((It + 6)^, Pivot));
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt(not c((It + 7)^, Pivot));
+              NumL += SizeInt(not c((It + 7)^, Pivot));
               I += 8;
               It += 8;
             end;
@@ -10586,21 +10586,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt(c((It - 1)^, Pivot));
+              NumR += SizeInt(c((It - 1)^, Pivot));
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt(c((It - 2)^, Pivot));
+              NumR += SizeInt(c((It - 2)^, Pivot));
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt(c((It - 3)^, Pivot));
+              NumR += SizeInt(c((It - 3)^, Pivot));
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt(c((It - 4)^, Pivot));
+              NumR += SizeInt(c((It - 4)^, Pivot));
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt(c((It - 5)^, Pivot));
+              NumR += SizeInt(c((It - 5)^, Pivot));
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt(c((It - 6)^, Pivot));
+              NumR += SizeInt(c((It - 6)^, Pivot));
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt(c((It - 7)^, Pivot));
+              NumR += SizeInt(c((It - 7)^, Pivot));
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt(c((It - 8)^, Pivot));
+              NumR += SizeInt(c((It - 8)^, Pivot));
               I += 8;
               It -= 8;
             end;
@@ -10648,7 +10648,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(not c(It^, Pivot));
+          NumL += SizeInt(not c(It^, Pivot));
           Inc(I);
           Inc(It);
         end;
@@ -10663,7 +10663,7 @@ begin
           Inc(I);
           Dec(It);
           (OffsetsR + NumR)^ := I;
-          NumR += PtrInt(c(It^, Pivot));
+          NumR += SizeInt(c(It^, Pivot));
         end;
     end;
   Num := NumL;
@@ -10715,7 +10715,7 @@ procedure TGNestedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowe
 var
   PivotPos: PItem;
   v: TFake;
-  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: PtrInt;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
   AlreadyPartitioned, HighlyUnbalanced: Boolean;
 begin
@@ -10828,7 +10828,7 @@ class function TGNestedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish
   c: TNestLess): Boolean;
 var
   Curr, Sift: PItem;
-  Limit: PtrInt;
+  Limit: SizeInt;
   v: TFake;
 begin
   if aStart = aFinish then exit(True);
@@ -11884,7 +11884,7 @@ function TGSimpleArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TP
 var
   Pivot, v: T;
   First, Last, It, PivotPos: PItem;
-  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: PtrInt;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
   OffsetsL, OffsetsR: PByte;
   I: Byte;
   AlreadyPartitioned: Boolean;
@@ -11930,21 +11930,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsL + NumL)^ := I;
-              NumL += PtrInt(It^ >= Pivot);
+              NumL += SizeInt(It^ >= Pivot);
               (OffsetsL + NumL)^ := I + 1;
-              NumL += PtrInt((It + 1)^ >= Pivot);
+              NumL += SizeInt((It + 1)^ >= Pivot);
               (OffsetsL + NumL)^ := I + 2;
-              NumL += PtrInt((It + 2)^ >= Pivot);
+              NumL += SizeInt((It + 2)^ >= Pivot);
               (OffsetsL + NumL)^ := I + 3;
-              NumL += PtrInt((It + 3)^ >= Pivot);
+              NumL += SizeInt((It + 3)^ >= Pivot);
               (OffsetsL + NumL)^ := I + 4;
-              NumL += PtrInt((It + 4)^ >= Pivot);
+              NumL += SizeInt((It + 4)^ >= Pivot);
               (OffsetsL + NumL)^ := I + 5;
-              NumL += PtrInt((It + 5)^ >= Pivot);
+              NumL += SizeInt((It + 5)^ >= Pivot);
               (OffsetsL + NumL)^ := I + 6;
-              NumL += PtrInt((It + 6)^ >= Pivot);
+              NumL += SizeInt((It + 6)^ >= Pivot);
               (OffsetsL + NumL)^ := I + 7;
-              NumL += PtrInt((It + 7)^ >= Pivot);
+              NumL += SizeInt((It + 7)^ >= Pivot);
               I += 8;
               It += 8;
             end;
@@ -11957,21 +11957,21 @@ begin
           while I < BLOCK_SIZE do
             begin
               (OffsetsR + NumR)^ := I + 1;
-              NumR += PtrInt((It - 1)^ < Pivot);
+              NumR += SizeInt((It - 1)^ < Pivot);
               (OffsetsR + NumR)^ := I + 2;
-              NumR += PtrInt((It - 2)^ < Pivot);
+              NumR += SizeInt((It - 2)^ < Pivot);
               (OffsetsR + NumR)^ := I + 3;
-              NumR += PtrInt((It - 3)^ < Pivot);
+              NumR += SizeInt((It - 3)^ < Pivot);
               (OffsetsR + NumR)^ := I + 4;
-              NumR += PtrInt((It - 4)^ < Pivot);
+              NumR += SizeInt((It - 4)^ < Pivot);
               (OffsetsR + NumR)^ := I + 5;
-              NumR += PtrInt((It - 5)^ < Pivot);
+              NumR += SizeInt((It - 5)^ < Pivot);
               (OffsetsR + NumR)^ := I + 6;
-              NumR += PtrInt((It - 6)^ < Pivot);
+              NumR += SizeInt((It - 6)^ < Pivot);
               (OffsetsR + NumR)^ := I + 7;
-              NumR += PtrInt((It - 7)^ < Pivot);
+              NumR += SizeInt((It - 7)^ < Pivot);
               (OffsetsR + NumR)^ := I + 8;
-              NumR += PtrInt((It - 8)^ < Pivot);
+              NumR += SizeInt((It - 8)^ < Pivot);
               I += 8;
               It -= 8;
             end;
@@ -12019,7 +12019,7 @@ begin
       while I < LSize do
         begin
           (OffsetsL + NumL)^ := I;
-          NumL += PtrInt(It^ >= Pivot);
+          NumL += SizeInt(It^ >= Pivot);
           Inc(I);
           Inc(It);
         end;
@@ -12034,7 +12034,7 @@ begin
           Inc(I);
           Dec(It);
           (OffsetsR + NumR)^ := I;
-          NumR += PtrInt(It^ < Pivot);
+          NumR += SizeInt(It^ < Pivot);
         end;
     end;
   Num := NumL;
@@ -12086,7 +12086,7 @@ procedure TGSimpleArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowe
 var
   PivotPos: PItem;
   v: T;
-  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: PtrInt;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
 begin
   while True do
@@ -12195,7 +12195,7 @@ end;
 class function TGSimpleArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Curr, Sift: PItem;
-  Limit: PtrInt;
+  Limit: SizeInt;
   v: T;
 begin
   if aStart = aFinish then exit(True);
@@ -12254,31 +12254,31 @@ begin
 end;
 
 class procedure TGSimpleArrayHelper.TPDQSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
-  aNum: PtrInt; aUseSwaps: Boolean);
+  aNum: SizeInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
-  I: PtrInt;
+  I: SizeInt;
   v: T;
 begin
   if aUseSwaps then
     for I := 0 to Pred(aNum) do
       begin
-        v := (aFirst + PtrInt(aOffsetsL[I]))^;
-        (aFirst + PtrInt(aOffsetsL[I]))^ := (aLast - PtrInt(aOffsetsR[I]))^;
-        (aLast - PtrInt(aOffsetsR[I]))^ := v;
+        v := (aFirst + SizeInt(aOffsetsL[I]))^;
+        (aFirst + SizeInt(aOffsetsL[I]))^ := (aLast - SizeInt(aOffsetsR[I]))^;
+        (aLast - SizeInt(aOffsetsR[I]))^ := v;
       end
   else
     if aNum > 0 then
       begin
-        L := aFirst + PtrInt(aOffsetsL[0]);
-        R := aLast - PtrInt(aOffsetsR[0]);
+        L := aFirst + SizeInt(aOffsetsL[0]);
+        R := aLast - SizeInt(aOffsetsR[0]);
         v := L^;
         L^ := R^;
         for I := 1 to Pred(aNum) do
           begin
-            L := aFirst + PtrInt(aOffsetsL[I]);
+            L := aFirst + SizeInt(aOffsetsL[I]);
             R^ := L^;
-            R := aLast - PtrInt(aOffsetsR[I]);
+            R := aLast - SizeInt(aOffsetsR[I]);
             L^ := R^;
           end;
         R^ := v;
