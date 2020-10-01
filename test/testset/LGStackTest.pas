@@ -467,7 +467,7 @@ begin
 end;
 
 procedure TGStackTest.InIteration;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -491,11 +491,11 @@ begin
 end;
 
 procedure TGStackTest.IterationDone;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
-  function Double(constref aValue: Integer): Integer;
+  function Double(const aValue: Integer): Integer;
   begin
     Result := aValue + aValue;
   end;

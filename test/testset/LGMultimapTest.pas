@@ -141,12 +141,12 @@ const
   ArrayFish4:  array[1..4] of string = ('shark', 'perch', 'tuna', 'burbot');
   ArrayPlant4: array[1..4] of string = ('nettle', 'cedar', 'wheat', 'peach');
 
-function EntriesEqual(constref L, R: TStrEntry): Boolean;
+function EntriesEqual(const L, R: TStrEntry): Boolean;
 begin
   Result := (L.Key = R.Key) and (L.Value = R.Value)
 end;
 
-function ArrayContainsEntry(constref a: array of TStrEntry; constref e: TStrEntry): Boolean;
+function ArrayContainsEntry(const a: array of TStrEntry; const e: TStrEntry): Boolean;
 begin
   Result := THelper.SequentSearch(a, e, @EntriesEqual) >= 0;
 end;

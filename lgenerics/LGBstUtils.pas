@@ -63,21 +63,21 @@ type
                   class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGBstUtil<TKey, TNode, TCmpRel> = class(specialize TGBaseBstUtil<TNode>)
   public
-    class function  FindKey(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetLess(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;static;
-    class function  GetGreater(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  FindKey(aRoot: PNode; const aKey: TKey): PNode; static;
+    class function  GetLess(aRoot: PNode; const aKey: TKey): PNode; static;
+    class function  GetLessOrEqual(aRoot: PNode; const aKey: TKey): PNode;static;
+    class function  GetGreater(aRoot: PNode; const aKey: TKey): PNode; static;
+    class function  GetGreaterOrEqual(aRoot: PNode; const aKey: TKey): PNode; static;
   end;
 
-  { TGComparableBstUtil assumes TKey has defined comparison operators }
+  { TGComparableBstUtil assumes TKey has defined comparison operator < }
   generic TGComparableBstUtil<TKey, TNode> = class(specialize TGBaseBstUtil<TNode>)
   public
-    class function  FindKey(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetLess(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;static;
-    class function  GetGreater(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  FindKey(aRoot: PNode; const aKey: TKey): PNode; static;
+    class function  GetLess(aRoot: PNode; const aKey: TKey): PNode; static;
+    class function  GetLessOrEqual(aRoot: PNode; const aKey: TKey): PNode;static;
+    class function  GetGreater(aRoot: PNode; const aKey: TKey): PNode; static;
+    class function  GetGreaterOrEqual(aRoot: PNode; const aKey: TKey): PNode; static;
   end;
 
   { TGIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
@@ -86,7 +86,7 @@ type
   public
     class function GetNodeSize(aNode: PNode): SizeInt; static; inline;
     class function GetByIndex(aRoot: PNode; aIndex: SizeInt): PNode; static;
-    class function GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
+    class function GetKeyIndex(aRoot: PNode; const aKey: TKey): SizeInt;
   end;
 
   { TGCmpIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
@@ -95,7 +95,7 @@ type
   public
     class function GetNodeSize(aNode: PNode): SizeInt; static; inline;
     class function GetByIndex(aRoot: PNode; aIndex: SizeInt): PNode; static;
-    class function GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
+    class function GetKeyIndex(aRoot: PNode; const aKey: TKey): SizeInt;
   end;
 
 implementation
@@ -315,7 +315,7 @@ end;
 
 { TGBstUtil }
 
-class function TGBstUtil.FindKey(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGBstUtil.FindKey(aRoot: PNode; const aKey: TKey): PNode;
 begin
   while aRoot <> nil do
     if TCmpRel.Less(aKey, aRoot^.Key) then
@@ -328,7 +328,7 @@ begin
   Result := aRoot;
 end;
 
-class function TGBstUtil.GetLess(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGBstUtil.GetLess(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
@@ -341,7 +341,7 @@ begin
       aRoot := aRoot^.Left;
 end;
 
-class function TGBstUtil.GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGBstUtil.GetLessOrEqual(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
@@ -354,7 +354,7 @@ begin
       aRoot := aRoot^.Left;
 end;
 
-class function TGBstUtil.GetGreater(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGBstUtil.GetGreater(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
@@ -367,7 +367,7 @@ begin
       aRoot := aRoot^.Right;
 end;
 
-class function TGBstUtil.GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGBstUtil.GetGreaterOrEqual(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
@@ -382,24 +382,24 @@ end;
 
 { TGComparableBstUtil }
 
-class function TGComparableBstUtil.FindKey(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGComparableBstUtil.FindKey(aRoot: PNode; const aKey: TKey): PNode;
 begin
   while aRoot <> nil do
     if aKey < aRoot^.Key then
       aRoot := aRoot^.Left
     else
-      if aKey > aRoot^.Key then
+      if aRoot^.Key < aKey then
         aRoot := aRoot^.Right
       else
         break;
   Result := aRoot;
 end;
 
-class function TGComparableBstUtil.GetLess(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGComparableBstUtil.GetLess(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
-    if aKey > aRoot^.Key then
+    if aRoot^.Key < aKey then
       begin
         Result := aRoot;
         aRoot := aRoot^.Right;
@@ -408,11 +408,11 @@ begin
       aRoot := aRoot^.Left;
 end;
 
-class function TGComparableBstUtil.GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGComparableBstUtil.GetLessOrEqual(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
-    if aKey >= aRoot^.Key then
+    if not(aKey < aRoot^.Key) then
       begin
         Result := aRoot;
         aRoot := aRoot^.Right;
@@ -421,7 +421,7 @@ begin
       aRoot := aRoot^.Left;
 end;
 
-class function TGComparableBstUtil.GetGreater(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGComparableBstUtil.GetGreater(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
@@ -434,11 +434,11 @@ begin
       aRoot := aRoot^.Right;
 end;
 
-class function TGComparableBstUtil.GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode;
+class function TGComparableBstUtil.GetGreaterOrEqual(aRoot: PNode; const aKey: TKey): PNode;
 begin
   Result := nil;
   while aRoot <> nil do
-    if aKey <= aRoot^.Key then
+    if not(aRoot^.Key < aKey) then
       begin
         Result := aRoot;
         aRoot := aRoot^.Left;
@@ -476,7 +476,7 @@ begin
   Result := aRoot;
 end;
 
-class function TGIndexedBstUtil.GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
+class function TGIndexedBstUtil.GetKeyIndex(aRoot: PNode; const aKey: TKey): SizeInt;
 var
   Pos: SizeInt = 0;
 begin
@@ -523,7 +523,7 @@ begin
   Result := aRoot;
 end;
 
-class function TGCmpIndexedBstUtil.GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
+class function TGCmpIndexedBstUtil.GetKeyIndex(aRoot: PNode; const aKey: TKey): SizeInt;
 var
   Pos: SizeInt = 0;
 begin
@@ -531,7 +531,7 @@ begin
     if aKey < aRoot^.Key then
       aRoot := aRoot^.Left
     else
-      if aKey > aRoot^.Key then
+      if aRoot^.Key < aKey then
         begin
           Pos += Succ(GetNodeSize(aRoot^.Left));
           aRoot := aRoot^.Right;

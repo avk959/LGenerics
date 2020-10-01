@@ -73,16 +73,16 @@ end;
 procedure ProcessFiles;
 var
   TotalCount: SizeInt = 0;
-  function ToLower(constref aValue: string): string;
+  function ToLower(const aValue: string): string;
   begin
     Result := LowerCase(aValue);
     Inc(TotalCount);
   end;
-  function CompareItem(constref L, R: TCountItem): Boolean;
+  function CompareItem(const L, R: TCountItem): Boolean;
   begin
     Result := R.Count < L.Count;
   end;
-  function IsReservedWord(constref aValue: string): Boolean;
+  function IsReservedWord(const aValue: string): Boolean;
   begin
     Result := Dictionary.Contains(aValue);
   end;

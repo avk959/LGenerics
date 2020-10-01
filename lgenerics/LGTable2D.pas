@@ -49,7 +49,7 @@ type
       FCol: TCol;
       function GetCurrent: TColData; override;
     public
-      constructor Create(aTable: TGAbstractHashTable2D; constref ACol: TCol);
+      constructor Create(aTable: TGAbstractHashTable2D; const ACol: TCol);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -97,10 +97,10 @@ type
     procedure SetLoadFactor(aValue: Single); inline;
     procedure ClearItems;
     function  GetRowCount: SizeInt; override;
-    function  DoFindRow(constref aRow: TRow): PRowEntry; override;
+    function  DoFindRow(const aRow: TRow): PRowEntry; override;
   { returns True if row found, False otherwise }
-    function  DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean; override;
-    function  DoRemoveRow(constref aRow: TRow): SizeInt; override;
+    function  DoFindOrAddRow(const aRow: TRow; out p: PRowEntry): Boolean; override;
+    function  DoRemoveRow(const aRow: TRow): SizeInt; override;
     function  GetColumn(const aCol: TCol): IColDataEnumerable; override;
     function  GetCellData: ICellDataEnumerable; override;
   public
@@ -169,12 +169,12 @@ type
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
-      function  Contains(constref aCol: TCol): Boolean; override;
-      function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
+      function  Contains(const aCol: TCol): Boolean; override;
+      function  TryGetValue(const aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
-      function  Add(constref aCol: TCol; constref aValue: TValue): Boolean; override;
+      function  Add(const aCol: TCol; const aValue: TValue): Boolean; override;
       procedure AddOrSetValue(const aCol: TCol; const aValue: TValue); override;
-      function  Remove(constref aCol: TCol): Boolean; override;
+      function  Remove(const aCol: TCol): Boolean; override;
     end;
 
     function CreateRowMap: TCustomRowMap; override;
@@ -242,12 +242,12 @@ type
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
-      function  Contains(constref aCol: TCol): Boolean; override;
-      function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
+      function  Contains(const aCol: TCol): Boolean; override;
+      function  TryGetValue(const aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
-      function  Add(constref aCol: TCol; constref aValue: TValue): Boolean; override;
+      function  Add(const aCol: TCol; const aValue: TValue): Boolean; override;
       procedure AddOrSetValue(const aCol: TCol; const aValue: TValue); override;
-      function  Remove(constref aCol: TCol): Boolean; override;
+      function  Remove(const aCol: TCol): Boolean; override;
     end;
 
   var
@@ -322,12 +322,12 @@ type
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
-      function  Contains(constref aCol: TCol): Boolean; override;
-      function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
+      function  Contains(const aCol: TCol): Boolean; override;
+      function  TryGetValue(const aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
-      function  Add(constref aCol: TCol; constref aValue: TValue): Boolean; override;
+      function  Add(const aCol: TCol; const aValue: TValue): Boolean; override;
       procedure AddOrSetValue(const aCol: TCol; const aValue: TValue); override;
-      function  Remove(constref aCol: TCol): Boolean; override;
+      function  Remove(const aCol: TCol): Boolean; override;
     end;
 
    function  CreateRowMap: TCustomRowMap; override;
@@ -357,7 +357,7 @@ begin
   Result := TColData.Create(FEnum.Current^.Key, FCurrValue);
 end;
 
-constructor TGAbstractHashTable2D.TColEnumerable.Create(aTable: TGAbstractHashTable2D; constref ACol: TCol);
+constructor TGAbstractHashTable2D.TColEnumerable.Create(aTable: TGAbstractHashTable2D; const ACol: TCol);
 begin
   inherited Create;
   FEnum := aTable.FRowTable.GetEnumerator;
@@ -510,14 +510,14 @@ begin
   Result := FRowTable.Count;
 end;
 
-function TGAbstractHashTable2D.DoFindRow(constref aRow: TRow): PRowEntry;
+function TGAbstractHashTable2D.DoFindRow(const aRow: TRow): PRowEntry;
 var
   Pos: SizeInt;
 begin
   Result := FRowTable.Find(aRow, Pos);
 end;
 
-function TGAbstractHashTable2D.DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean;
+function TGAbstractHashTable2D.DoFindOrAddRow(const aRow: TRow; out p: PRowEntry): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -529,7 +529,7 @@ begin
     end;
 end;
 
-function TGAbstractHashTable2D.DoRemoveRow(constref aRow: TRow): SizeInt;
+function TGAbstractHashTable2D.DoRemoveRow(const aRow: TRow): SizeInt;
 var
   Pos: SizeInt;
   p: PRowEntry;
@@ -667,14 +667,14 @@ begin
   FMap.TrimToFit;
 end;
 
-function TGHashTable2D.TRowMap.Contains(constref aCol: TCol): Boolean;
+function TGHashTable2D.TRowMap.Contains(const aCol: TCol): Boolean;
 var
   p: SizeInt;
 begin
   Result := FMap.Find(aCol, p) <> nil;
 end;
 
-function TGHashTable2D.TRowMap.TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
+function TGHashTable2D.TRowMap.TryGetValue(const aCol: TCol; out aValue: TValue): Boolean;
 var
   Pos: SizeInt;
   p: PEntry;
@@ -685,7 +685,7 @@ begin
     aValue := p^.Value;
 end;
 
-function TGHashTable2D.TRowMap.Add(constref aCol: TCol; constref aValue: TValue): Boolean;
+function TGHashTable2D.TRowMap.Add(const aCol: TCol; const aValue: TValue): Boolean;
 var
   Pos: SizeInt;
   p: PEntry;
@@ -714,7 +714,7 @@ begin
     end;
 end;
 
-function TGHashTable2D.TRowMap.Remove(constref aCol: TCol): Boolean;
+function TGHashTable2D.TRowMap.Remove(const aCol: TCol): Boolean;
 begin
   Result := FMap.Remove(aCol);
   FTable.FCellCount -= Ord(Result);
@@ -786,12 +786,12 @@ begin
   //do nothing
 end;
 
-function TGTreeTable2D.TRowMap.Contains(constref aCol: TCol): Boolean;
+function TGTreeTable2D.TRowMap.Contains(const aCol: TCol): Boolean;
 begin
   Result := FMap.Find(aCol) <> nil;
 end;
 
-function TGTreeTable2D.TRowMap.TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
+function TGTreeTable2D.TRowMap.TryGetValue(const aCol: TCol; out aValue: TValue): Boolean;
 var
   p: PNode;
 begin
@@ -801,7 +801,7 @@ begin
     aValue := p^.Data.Value;
 end;
 
-function TGTreeTable2D.TRowMap.Add(constref aCol: TCol; constref aValue: TValue): Boolean;
+function TGTreeTable2D.TRowMap.Add(const aCol: TCol; const aValue: TValue): Boolean;
 var
   p: PNode;
 begin
@@ -822,7 +822,7 @@ begin
   p^.Data.Value := aValue;
 end;
 
-function TGTreeTable2D.TRowMap.Remove(constref aCol: TCol): Boolean;
+function TGTreeTable2D.TRowMap.Remove(const aCol: TCol): Boolean;
 begin
   Result := FMap.Remove(aCol);
   FTable.FCellCount -= Ord(Result);
@@ -932,14 +932,14 @@ begin
   FMap.TrimToFit;
 end;
 
-function TGListTable2D.TRowMap.Contains(constref aCol: TCol): Boolean;
+function TGListTable2D.TRowMap.Contains(const aCol: TCol): Boolean;
 var
   I: SizeInt;
 begin
   Result := FMap.Find(aCol, I) <> nil;
 end;
 
-function TGListTable2D.TRowMap.TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
+function TGListTable2D.TRowMap.TryGetValue(const aCol: TCol; out aValue: TValue): Boolean;
 var
   I: SizeInt;
   p: PEntry;
@@ -950,7 +950,7 @@ begin
     aValue := p^.Value;
 end;
 
-function TGListTable2D.TRowMap.Add(constref aCol: TCol; constref aValue: TValue): Boolean;
+function TGListTable2D.TRowMap.Add(const aCol: TCol; const aValue: TValue): Boolean;
 var
   I: SizeInt;
   p: PEntry;
@@ -973,7 +973,7 @@ begin
   p^.Value := aValue;
 end;
 
-function TGListTable2D.TRowMap.Remove(constref aCol: TCol): Boolean;
+function TGListTable2D.TRowMap.Remove(const aCol: TCol): Boolean;
 begin
   Result := FMap.Remove(aCol);
   FTable.FCellCount -= Ord(Result);

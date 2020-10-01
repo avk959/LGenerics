@@ -52,8 +52,8 @@ type
     TIntList  = class(specialize TGSortedList<Integer>);
     TAutoList = specialize TGAutoRef<TIntList>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateCapacity;
@@ -213,12 +213,12 @@ const
   IntArray15: array[1..15] of Integer = (1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 7);
   IntArray21: array[1..21] of Integer = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
 
-function IsEvenInt(constref aValue: Integer): Boolean;
+function IsEvenInt(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function IsEvenObj(constref aObj: TTestObj): Boolean;
+function IsEvenObj(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -257,12 +257,12 @@ end;
 
 { TGSortedListTest }
 
-function TGSortedListTest.IsEven(constref aValue: Integer): Boolean;
+function TGSortedListTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TGSortedListTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TGSortedListTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -641,7 +641,7 @@ end;
 procedure TGSortedListTest.RemoveIfNested;
 var
   lst: TAutoList;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -682,7 +682,7 @@ procedure TGSortedListTest.ExtractIfNested;
 var
   lst: TAutoList;
   e: TIntArray;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;

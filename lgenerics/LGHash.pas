@@ -31,21 +31,21 @@ type
   { TxxHash32LE: little endian implementation of Yann Collet's xxHash32 }
   TxxHash32LE = record
     class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
-    class function HashStr(constref aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
-    class function HashGuid(constref aValue: TGuid; aSeed: DWord = 0): DWord; static;
+    class function HashGuid(const aValue: TGuid; aSeed: DWord = 0): DWord; static;
   end;
 
   { TxxHash64LE: little endian implementation of Yann Collet's xxHash64 }
   TxxHash64LE = record
     class function HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord = 0): QWord; static;
-    class function HashStr(constref aValue: string; aSeed: QWord = 0): QWord; static; inline;
+    class function HashStr(const aValue: string; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
     class function HashDWord(aValue: DWord; aSeed: QWord = 0): QWord; static;
     class function HashQWord(aValue: QWord; aSeed: QWord = 0): QWord; static;
-    class function HashGuid(constref aValue: TGuid; aSeed: QWord = 0): QWord; static;
+    class function HashGuid(const aValue: TGuid; aSeed: QWord = 0): QWord; static;
   end;
 
   TMurmur = class
@@ -64,41 +64,41 @@ type
   { TMurmur2LE: little endian implementation of Austin Appleby's MurmurHash2 }
   TMurmur2LE = class(TMurmur)
     class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
-    class function HashStr(constref aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
-    class function HashGuid(constref aValue: TGuid; aSeed: DWord = 0): DWord; static;
+    class function HashGuid(const aValue: TGuid; aSeed: DWord = 0): DWord; static;
   end;
 
   { TMurmur2aLE: little endian implementation of Austin Appleby's MurmurHash2A }
   TMurmur2aLE = class(TMurmur)
     class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
-    class function HashStr(constref aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
-    class function HashGuid(constref aValue: TGuid; aSeed: DWord = 0): DWord; static;
+    class function HashGuid(const aValue: TGuid; aSeed: DWord = 0): DWord; static;
   end;
 
   { TMurmur3LE: little endian implementation of Austin Appleby's MurmurHash3_x86_32 }
   TMurmur3LE = class(TMurmur)
     class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
-    class function HashStr(constref aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
-    class function HashGuid(constref aValue: TGuid; aSeed: DWord = 0): DWord; static;
+    class function HashGuid(const aValue: TGuid; aSeed: DWord = 0): DWord; static;
   end;
 
   { TMurmur64aLE: little endian implementation of Austin Appleby's MurmurHash64A }
   TMurmur64aLE = class(TMurmur)
     class function HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord = 0): QWord; static;
-    class function HashStr(constref aValue: string; aSeed: QWord = 0): QWord; static; inline;
+    class function HashStr(const aValue: string; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
     class function HashDWord(aValue: DWord; aSeed: QWord = 0): QWord; static;
     class function HashQWord(aValue: QWord; aSeed: QWord = 0): QWord; static;
-    class function HashGuid(constref aValue: TGuid; aSeed: QWord = 0): QWord; static;
+    class function HashGuid(const aValue: TGuid; aSeed: QWord = 0): QWord; static;
   end;
 
   function JdkHashW(aValue: Word): Word; inline;
@@ -348,7 +348,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TxxHash32LE.HashStr(constref aValue: string; aSeed: DWord): DWord;
+class function TxxHash32LE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -384,7 +384,7 @@ type
     D1, D2, D3, D4: DWord;
   end;
 
-class function TxxHash32LE.HashGuid(constref aValue: TGuid; aSeed: DWord): DWord;
+class function TxxHash32LE.HashGuid(const aValue: TGuid; aSeed: DWord): DWord;
 var
   g: TDWords4 absolute aValue;
 begin
@@ -569,7 +569,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TxxHash64LE.HashStr(constref aValue: string; aSeed: QWord): QWord;
+class function TxxHash64LE.HashStr(const aValue: string; aSeed: QWord): QWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -605,7 +605,7 @@ begin
   Result := HashBuf(@aValue, SizeOf(aValue), aSeed);
 end;
 {$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash64LE.HashGuid(constref aValue: TGuid; aSeed: QWord): QWord;
+class function TxxHash64LE.HashGuid(const aValue: TGuid; aSeed: QWord): QWord;
 begin
   Result := RolQWord((aSeed + c5 + SizeOf(TGuid))xor(c1 * RolQWord(PQWord(@aValue)[0] * c2, 31)), 27) * c1 + c4;
   Result := RolQWord(Result xor (c1 * RolQWord(PQWord(@aValue)[1] * c2, 31)), 27) * c1 + c4;
@@ -738,7 +738,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TMurmur2LE.HashStr(constref aValue: string; aSeed: DWord): DWord;
+class function TMurmur2LE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -769,7 +769,7 @@ begin
   Result :=  Result xor Result shr 15;
 end;
 
-class function TMurmur2LE.HashGuid(constref aValue: TGuid; aSeed: DWord): DWord;
+class function TMurmur2LE.HashGuid(const aValue: TGuid; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
 begin
@@ -913,7 +913,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TMurmur2aLE.HashStr(constref aValue: string; aSeed: DWord): DWord;
+class function TMurmur2aLE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
   Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
 end;
@@ -952,7 +952,7 @@ begin
   Result :=  Result xor Result shr 15;
 end;
 
-class function TMurmur2aLE.HashGuid(constref aValue: TGuid; aSeed: DWord): DWord;
+class function TMurmur2aLE.HashGuid(const aValue: TGuid; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
 begin
@@ -1097,7 +1097,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TMurmur3LE.HashStr(constref aValue: string; aSeed: DWord): DWord;
+class function TMurmur3LE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -1130,7 +1130,7 @@ begin
   Result :=  Result xor Result shr 16;
 end;
 
-class function TMurmur3LE.HashGuid(constref aValue: TGuid; aSeed: DWord): DWord;
+class function TMurmur3LE.HashGuid(const aValue: TGuid; aSeed: DWord): DWord;
 var
   g: TDWords4 absolute aValue;
 begin
@@ -1274,7 +1274,7 @@ begin
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
-class function TMurmur64aLE.HashStr(constref aValue: string; aSeed: QWord): QWord;
+class function TMurmur64aLE.HashStr(const aValue: string; aSeed: QWord): QWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -1307,7 +1307,7 @@ begin
   Result := HashBuf(@aValue, SizeOf(aValue), aSeed);
 end;
 {$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur64aLE.HashGuid(constref aValue: TGuid; aSeed: QWord): QWord;
+class function TMurmur64aLE.HashGuid(const aValue: TGuid; aSeed: QWord): QWord;
 var
   k1, k2: QWord;
 begin

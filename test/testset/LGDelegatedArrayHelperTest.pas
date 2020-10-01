@@ -40,8 +40,8 @@ type
 
     TPairIdxHelper  = specialize TGBaseArrayHelper<TIntPair, TPairIdxCmp>;
 
-    function  IntCmp(constref L, R: Integer): Boolean;
-    function  PairCmp(constref L, R: TIntPair): Boolean;
+    function  IntCmp(const L, R: Integer): Boolean;
+    function  PairCmp(const L, R: TIntPair): Boolean;
   published
     procedure SequentSearchEmpty;
     procedure SequentSearchStaticSuccess1;
@@ -437,13 +437,13 @@ end;
 
 { TDelegatedArrayHelperTest }
 
-function TDelegatedArrayHelperTest.IntCmp(constref L, R: Integer): Boolean;
+function TDelegatedArrayHelperTest.IntCmp(const L, R: Integer): Boolean;
 begin
   Result := L < R;
 end;
 
 
-function TDelegatedArrayHelperTest.PairCmp(constref L, R: TIntPair): Boolean;
+function TDelegatedArrayHelperTest.PairCmp(const L, R: TIntPair): Boolean;
 begin
   Result := L.Data < R.Data;
 end;

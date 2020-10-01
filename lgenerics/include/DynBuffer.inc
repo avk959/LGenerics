@@ -150,7 +150,7 @@ begin
     Expand(Succ(ElemCount));
 end;
 
-function TGCustomArrayContainer.Append(constref aValue: T): SizeInt;
+function TGCustomArrayContainer.Append(const aValue: T): SizeInt;
 begin
   Result := ElemCount;
   ItemAdding;
@@ -158,7 +158,7 @@ begin
   Inc(FCount);
 end;
 
-function TGCustomArrayContainer.AppendArray(constref a: array of T): SizeInt;
+function TGCustomArrayContainer.AppendArray(const a: array of T): SizeInt;
 begin
   Result := System.Length(a);
   if Result > 0 then
@@ -259,7 +259,7 @@ begin
     CapacityExceedError(aCapacity);
 end;
 
-constructor TGCustomArrayContainer.Create(constref a: array of T);
+constructor TGCustomArrayContainer.Create(const a: array of T);
 begin
   Create(Math.Max(System.Length(a), DEFAULT_CONTAINER_CAPACITY));
   AppendArray(a);
@@ -510,7 +510,7 @@ begin
   Result := System.Copy(FItems, 0, FCount);
 end;
 
-function TGLiteDynBuffer.PushLast(constref aValue: T): SizeInt;
+function TGLiteDynBuffer.PushLast(const aValue: T): SizeInt;
 begin
   Result := FCount;
   ItemAdding;
@@ -686,7 +686,7 @@ begin
     Expand(Succ(ElemCount));
 end;
 
-procedure TGCustomRingArrayBuffer.Append(constref aValue: T);
+procedure TGCustomRingArrayBuffer.Append(const aValue: T);
 var
   TailPos, c: SizeInt;
 begin
@@ -699,7 +699,7 @@ begin
   Inc(FCount);
 end;
 
-function TGCustomRingArrayBuffer.AppendArray(constref a: array of T): SizeInt;
+function TGCustomRingArrayBuffer.AppendArray(const a: array of T): SizeInt;
 var
   TailPos, I, c: SizeInt;
 begin
@@ -857,7 +857,7 @@ begin
     CapacityExceedError(aCapacity);
 end;
 
-constructor TGCustomRingArrayBuffer.Create(constref A: array of T);
+constructor TGCustomRingArrayBuffer.Create(const A: array of T);
 begin
   Create(Math.Max(System.Length(A), DEFAULT_CONTAINER_CAPACITY));
   AppendArray(A);
@@ -1228,7 +1228,7 @@ begin
     end;
 end;
 
-procedure TGLiteRingDynBuffer.PushLast(constref aValue: T);
+procedure TGLiteRingDynBuffer.PushLast(const aValue: T);
 var
   TailPos, c: SizeInt;
 begin
@@ -1241,7 +1241,7 @@ begin
   Inc(FCount);
 end;
 
-procedure TGLiteRingDynBuffer.PushFirst(constref aValue: T);
+procedure TGLiteRingDynBuffer.PushFirst(const aValue: T);
 begin
   ItemAdding;
   Dec(FHead);

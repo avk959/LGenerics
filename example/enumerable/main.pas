@@ -104,18 +104,18 @@ type
   private
     FEmployees: TEmployees;
     Comparators: array[0..5] of TEmployeeCompare;
-    function  StringCmp(constref L, R: string): Boolean;
-    function  CmpByFirst(constref L, R: TEmployee): Boolean;
-    function  CmpByLast(constref L, R: TEmployee): Boolean;
-    function  CmpByAge(constref L, R: TEmployee): Boolean;
-    function  CmpByLocation(constref L, R: TEmployee): Boolean;
-    function  CmpByPhone(constref L, R: TEmployee): Boolean;
-    function  CmpBySalary(constref L, R: TEmployee): Boolean;
+    function  StringCmp(const L, R: string): Boolean;
+    function  CmpByFirst(const L, R: TEmployee): Boolean;
+    function  CmpByLast(const L, R: TEmployee): Boolean;
+    function  CmpByAge(const L, R: TEmployee): Boolean;
+    function  CmpByLocation(const L, R: TEmployee): Boolean;
+    function  CmpByPhone(const L, R: TEmployee): Boolean;
+    function  CmpBySalary(const L, R: TEmployee): Boolean;
     procedure FillcbCmpKind;
     procedure FillcbLocation;
     procedure FillcbGender;
-    function  GetLocation(constref e: TEmployee): string;
-    function  GenderIsMale(constref e: TEmployee): Boolean;
+    function  GetLocation(const e: TEmployee): string;
+    function  GenderIsMale(const e: TEmployee): Boolean;
 
     procedure ShowAllRecords;
     procedure ExecSimpleQuery(SkipCount, LimitCount: SizeInt; aCmp: TEmployeeCompare);
@@ -209,37 +209,37 @@ begin
   SelectGenderAndAge(cbGender.Text, seLoAge.Value, seHiAge.Value);
 end;
 
-function TfrmMain.StringCmp(constref L, R: string): Boolean;
+function TfrmMain.StringCmp(const L, R: string): Boolean;
 begin
   Result := ansistring.Less(L, R);
 end;
 
-function TfrmMain.CmpByFirst(constref L, R: TEmployee): Boolean;
+function TfrmMain.CmpByFirst(const L, R: TEmployee): Boolean;
 begin
   Result := ansistring.Less(L.FirstName, R.FirstName);
 end;
 
-function TfrmMain.CmpByLast(constref L, R: TEmployee): Boolean;
+function TfrmMain.CmpByLast(const L, R: TEmployee): Boolean;
 begin
   Result := ansistring.Less(L.LastName, R.LastName);
 end;
 
-function TfrmMain.CmpByAge(constref L, R: TEmployee): Boolean;
+function TfrmMain.CmpByAge(const L, R: TEmployee): Boolean;
 begin
   Result := L.Age < R.Age;
 end;
 
-function TfrmMain.CmpByLocation(constref L, R: TEmployee): Boolean;
+function TfrmMain.CmpByLocation(const L, R: TEmployee): Boolean;
 begin
   Result := ansistring.Less(L.Location, R.Location);
 end;
 
-function TfrmMain.CmpByPhone(constref L, R: TEmployee): Boolean;
+function TfrmMain.CmpByPhone(const L, R: TEmployee): Boolean;
 begin
   Result := ansistring.Less(L.Phone, R.Phone);
 end;
 
-function TfrmMain.CmpBySalary(constref L, R: TEmployee): Boolean;
+function TfrmMain.CmpBySalary(const L, R: TEmployee): Boolean;
 begin
   Result := Currency.Less(L.Salary, R.Salary);
 end;
@@ -282,12 +282,12 @@ begin
   cbGender.ItemIndex := 0;
 end;
 
-function TfrmMain.GetLocation(constref e: TEmployee): string;
+function TfrmMain.GetLocation(const e: TEmployee): string;
 begin
   Result := e.Location;
 end;
 
-function TfrmMain.GenderIsMale(constref e: TEmployee): Boolean;
+function TfrmMain.GenderIsMale(const e: TEmployee): Boolean;
 begin
   Result := e.Gender = 'Male';
 end;
@@ -358,7 +358,7 @@ begin
 end;
 
 procedure TfrmMain.SelectByLocation(const aLocation: string);
-  function RightLocation(constref e: TEmployee): Boolean;
+  function RightLocation(const e: TEmployee): Boolean;
   begin
     Result := e.Location = aLocation;
   end;
@@ -382,7 +382,7 @@ type
   TMapping = specialize TGMapping<TEmployee, string>;
 var
   s: string;
-  function RightLocation(constref e: TEmployee): Boolean;
+  function RightLocation(const e: TEmployee): Boolean;
   begin
     Result := e.Location = s;
   end;
@@ -400,7 +400,7 @@ begin
 end;
 
 procedure TfrmMain.SelectMinMaxByLocation(const aLocation: string; aCmp: TEmployeeCompare);
-  function RightLocation(constref e: TEmployee): Boolean;
+  function RightLocation(const e: TEmployee): Boolean;
   begin
     Result := e.Location = aLocation;
   end;
@@ -440,7 +440,7 @@ type
   TMapping = specialize TGMapping<TEmployee, string>;
 var
   s: string;
-  function RightLocation(constref e: TEmployee): Boolean;
+  function RightLocation(const e: TEmployee): Boolean;
   begin
     Result := e.Location = s;
   end;
@@ -460,7 +460,7 @@ end;
 procedure TfrmMain.SelectGenderAndAge(const aGender: string; LoAge, HiAge: Integer);
 var
   s: string;
-  function IsRightEmployee(constref e: TEmployee): Boolean;
+  function IsRightEmployee(const e: TEmployee): Boolean;
   begin
     Result := (e.Location = s) and (e.Gender = aGender) and (e.Age >= LoAge) and (e.Age <= HiAge);
   end;

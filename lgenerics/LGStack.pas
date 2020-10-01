@@ -37,8 +37,8 @@ type
   strict private
     function  PopItem: T; inline;
   public
-    procedure Push(constref aValue: T);
-    function  PushAll(constref a: array of T): SizeInt;
+    procedure Push(const aValue: T);
+    function  PushAll(const a: array of T): SizeInt;
     function  PushAll(e: IEnumerable): SizeInt;
   { EXTRACTS element from the top of stack }
     function  Pop: T;
@@ -58,7 +58,7 @@ type
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref A: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
@@ -76,7 +76,7 @@ type
     constructor Create(aStack: IStack);
     destructor Destroy; override;
     procedure Clear;
-    procedure Push(constref aValue: T);
+    procedure Push(const aValue: T);
     function  TryPop(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: IStack;
@@ -114,7 +114,7 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure Push(constref aValue: T); inline;
+    procedure Push(const aValue: T); inline;
     function  Pop: T;
     function  TryPop(out aValue: T): Boolean;
     function  Peek: T;
@@ -139,7 +139,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure Push(constref aValue: T);
+    procedure Push(const aValue: T);
     function  TryPop(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: PStack;
@@ -177,7 +177,7 @@ type
     function  NonEmpty: Boolean;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    procedure Push(constref aValue: T); inline;
+    procedure Push(const aValue: T); inline;
     function  Pop: T; inline;
     function  TryPop(out aValue: T): Boolean; inline;
     function  Peek: T; inline;
@@ -201,7 +201,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure Push(constref aValue: T);
+    procedure Push(const aValue: T);
     function  TryPop(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: PStack;
@@ -221,13 +221,13 @@ begin
   FItems[ElemCount] := Default(T);
 end;
 
-procedure TGStack.Push(constref aValue: T);
+procedure TGStack.Push(const aValue: T);
 begin
   CheckInIteration;
   Append(aValue);
 end;
 
-function TGStack.PushAll(constref a: array of T): SizeInt;
+function TGStack.PushAll(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := AppendArray(a);
@@ -302,7 +302,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectStack.Create(constref A: array of T; aOwnsObjects: Boolean);
+constructor TGObjectStack.Create(const A: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(A);
   FOwnsObjects := aOwnsObjects;
@@ -350,7 +350,7 @@ begin
   end;
 end;
 
-procedure TGThreadStack.Push(constref aValue: T);
+procedure TGThreadStack.Push(const aValue: T);
 begin
   DoLock;
   try
@@ -460,7 +460,7 @@ begin
   FBuffer.TrimToFit;
 end;
 
-procedure TGLiteStack.Push(constref aValue: T);
+procedure TGLiteStack.Push(const aValue: T);
 begin
   FBuffer.PushLast(aValue);
 end;
@@ -544,7 +544,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadStack.Push(constref aValue: T);
+procedure TGLiteThreadStack.Push(const aValue: T);
 begin
   DoLock;
   try
@@ -671,7 +671,7 @@ begin
   FStack.TrimToFit;
 end;
 
-procedure TGLiteObjectStack.Push(constref aValue: T);
+procedure TGLiteObjectStack.Push(const aValue: T);
 begin
   FStack.Push(aValue);
 end;
@@ -730,7 +730,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadObjectStack.Push(constref aValue: T);
+procedure TGLiteThreadObjectStack.Push(const aValue: T);
 begin
   DoLock;
   try

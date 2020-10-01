@@ -149,46 +149,46 @@ type
     procedure RemoveFromValueChain(aIndex: SizeInt);
     procedure FixKeyChain(aOldIndex, aNewIndex: SizeInt);
     procedure FixValueChain(aOldIndex, aNewIndex: SizeInt);
-    function  DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
-    function  DoFindValue(constref aValue: TValue; aHash: SizeInt): SizeInt;
-    function  FindKey(constref aKey: TKey): SizeInt; inline;
-    function  FindValue(constref aValue: TValue): SizeInt; inline;
-    procedure DoAddData(constref aKey: TKey; constref aValue: TValue; aKeyHash, aValHash: SizeInt);
+    function  DoFindKey(const aKey: TKey; aHash: SizeInt): SizeInt;
+    function  DoFindValue(const aValue: TValue; aHash: SizeInt): SizeInt;
+    function  FindKey(const aKey: TKey): SizeInt; inline;
+    function  FindValue(const aValue: TValue): SizeInt; inline;
+    procedure DoAddData(const aKey: TKey; const aValue: TValue; aKeyHash, aValHash: SizeInt);
     procedure DoRemove(aIndex: SizeInt);
     procedure DoClear; virtual;
     procedure DoEnsureCapacity(aValue: SizeInt);
     procedure DoTrimToFit;
-    function  DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
-    function  DoAddAll(constref a: array of TEntry): SizeInt;
+    function  DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
+    function  DoAddAll(const a: array of TEntry): SizeInt;
     function  DoAddAll(e: IEntryEnumerable): SizeInt;
-    function  TryAddOrSetValue(constref aKey: TKey; constref aValue: TValue): Boolean;
-    function  TryAddOrSetKey(constref aValue: TValue; constref aKey: TKey): Boolean;
-    procedure DoAddOrSetValue(constref aKey: TKey; constref aValue: TValue);
-    procedure DoAddOrSetKey(constref aValue: TValue; constref aKey: TKey);
-    function  DoExtractKey(constref aKey: TKey; out v: TValue): Boolean;
-    function  DoRemoveKey(constref aKey: TKey): Boolean; virtual;
-    function  DoRemoveKeys(constref a: array of TKey): SizeInt;
+    function  TryAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean;
+    function  TryAddOrSetKey(const aValue: TValue; const aKey: TKey): Boolean;
+    procedure DoAddOrSetValue(const aKey: TKey; const aValue: TValue);
+    procedure DoAddOrSetKey(const aValue: TValue; const aKey: TKey);
+    function  DoExtractKey(const aKey: TKey; out v: TValue): Boolean;
+    function  DoRemoveKey(const aKey: TKey): Boolean; virtual;
+    function  DoRemoveKeys(const a: array of TKey): SizeInt;
     function  DoRemoveKeys(e: IKeyEnumerable): SizeInt;
-    function  DoExtractValue(constref aValue: TValue; out k: TKey): Boolean;
-    function  DoRemoveValue(constref aValue: TValue): Boolean; virtual;
-    function  DoRemoveValues(constref a: array of TValue): SizeInt;
+    function  DoExtractValue(const aValue: TValue; out k: TKey): Boolean;
+    function  DoRemoveValue(const aValue: TValue): Boolean; virtual;
+    function  DoRemoveValues(const a: array of TValue): SizeInt;
     function  DoRemoveValues(e: IValueEnumerable): SizeInt;
-    function  DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; virtual;
-    function  DoReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean; virtual;
+    function  DoReplaceValue(const aKey: TKey; const aNewValue: TValue): Boolean; virtual;
+    function  DoReplaceKey(const aValue: TValue; const aNewKey: TKey): Boolean; virtual;
     procedure DoRetainAll({%H-}c: IKeyCollection); virtual;
     procedure DoRetainAllVal({%H-}c: IValueCollection); virtual;
     function  GetKeys: IKeyEnumerable;
     function  GetValues: IValueEnumerable;
     function  GetEntries: IEntryEnumerable;
   { returns True and add aValue and aKey only if keys do not contain aKey and values do not contain aValue }
-    function  AddInverse(constref aValue: TValue; constref aKey: TKey): Boolean;
+    function  AddInverse(const aValue: TValue; const aKey: TKey): Boolean;
     class constructor Init;
   public
     constructor Create;
-    constructor Create(constref a: array of TEntry);
+    constructor Create(const a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; constref a: array of TEntry);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry);
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     constructor CreateCopy(aMap: TGHashBiMap);
     destructor  Destroy; override;
@@ -197,46 +197,46 @@ type
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  Contains(constref aKey: TKey): Boolean;
-    function  NonContains(constref aKey: TKey): Boolean;
-    function  ContainsValue(constref aValue: TValue): Boolean;
-    function  NonContainsValue(constref aValue: TValue): Boolean;
+    function  Contains(const aKey: TKey): Boolean;
+    function  NonContains(const aKey: TKey): Boolean;
+    function  ContainsValue(const aValue: TValue): Boolean;
+    function  NonContainsValue(const aValue: TValue): Boolean;
   { will raise ELGMapError if not contains aKey }
     function  GetValue(const aKey: TKey): TValue; inline;
   { will raise ELGMapError if not contains aKey }
     function  GetKey(const aValue: TValue): TKey; inline;
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  TryGetKey(constref aValue: TValue; out aKey: TKey): Boolean;
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
-    function  GetKeyDef(constref aValue: TValue; constref aDefault: TKey = Default(TKey)): TKey; inline;
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+    function  TryGetKey(const aValue: TValue; out aKey: TKey): Boolean;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue; inline;
+    function  GetKeyDef(const aValue: TValue; const aDefault: TKey): TKey; inline;
   { returns True and maps aValue to aKey only if not contains aKey and not contains aValue }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;
   { returns True and maps e.Value to e.Key only if not contains e.Key and not contains e.Value }
-    function  Add(constref e: TEntry): Boolean;
+    function  Add(const e: TEntry): Boolean;
   { will raise ELGMapError if contains aValue }
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
   { will return False if contains aValue }
-    function  TryAddOrSetValue(constref e: TEntry): Boolean;
+    function  TryAddOrSetValue(const e: TEntry): Boolean;
   { will raise ELGMapError if contains aValue }
     procedure AddOrSetKey(const aValue: TValue; const aKey: TKey);
   { will return False if contains aValue }
-    function  TryAddOrSetKey(constref e: TInverseEntry): Boolean;
+    function  TryAddOrSetKey(const e: TInverseEntry): Boolean;
   { will add only entries which keys and values are not contained in the map }
-    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
   { returns True if contains aKey and not contains aNewValue }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+    function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
   { returns True if contains aValue and not contains aNewKey }
-    function  ReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean;
-    function  Extract(constref aKey: TKey; out v: TValue): Boolean;
-    function  ExtractValue(constref aValue: TValue; out k: TKey): Boolean;
+    function  ReplaceKey(const aValue: TValue; const aNewKey: TKey): Boolean;
+    function  Extract(const aKey: TKey; out v: TValue): Boolean;
+    function  ExtractValue(const aValue: TValue; out k: TKey): Boolean;
   { returns True if aKey contained in the map and removes an aKey from the map }
-    function  Remove(constref aKey: TKey): Boolean;
-    function  RemoveAll(constref a: array of TKey): SizeInt;
+    function  Remove(const aKey: TKey): Boolean;
+    function  RemoveAll(const a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
   { returns True if aValue contained in the map and removes an aValue from the map }
-    function  RemoveValue(constref aValue: TValue): Boolean;
-    function  RemoveValues(constref a: array of TValue): SizeInt;
+    function  RemoveValue(const aValue: TValue): Boolean;
+    function  RemoveValues(const a: array of TValue): SizeInt;
     function  RemoveValues(e: IValueEnumerable): SizeInt;
     procedure RetainAll(c: IKeyCollection);
     procedure RetainAll(c: IValueCollection);
@@ -294,18 +294,18 @@ type
   protected
     procedure SetOwnership(aOwns: TMapObjOwnership); inline;
     procedure DoClear; override;
-    function  DoRemoveKey(constref aKey: TKey): Boolean; override;
-    function  DoRemoveValue(constref aValue: TValue): Boolean; override;
-    function  DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; override;
-    function  DoReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean; override;
+    function  DoRemoveKey(const aKey: TKey): Boolean; override;
+    function  DoRemoveValue(const aValue: TValue): Boolean; override;
+    function  DoReplaceValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
+    function  DoReplaceKey(const aValue: TValue; const aNewKey: TKey): Boolean; override;
     procedure DoRetainAll({%H-}c: IKeyCollection); override;
     procedure DoRetainAllVal({%H-}c: IValueCollection); override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectHashBiMap);
     function  Clone: TGObjectHashBiMap; override;
@@ -600,7 +600,7 @@ begin
   raise ELGMapError.Create(SEInternalDataInconsist);
 end;
 
-function TGHashBiMap.DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
+function TGHashBiMap.DoFindKey(const aKey: TKey; aHash: SizeInt): SizeInt;
 begin
   Result := FKeyChains[aHash and System.High(FNodeList)];
   while Result <> NULL_INDEX do
@@ -611,7 +611,7 @@ begin
     end;
 end;
 
-function TGHashBiMap.DoFindValue(constref aValue: TValue; aHash: SizeInt): SizeInt;
+function TGHashBiMap.DoFindValue(const aValue: TValue; aHash: SizeInt): SizeInt;
 begin
   Result := FValueChains[aHash and System.High(FNodeList)];
   while Result <> NULL_INDEX do
@@ -622,7 +622,7 @@ begin
     end;
 end;
 
-function TGHashBiMap.FindKey(constref aKey: TKey): SizeInt;
+function TGHashBiMap.FindKey(const aKey: TKey): SizeInt;
 begin
   if Count > 0 then
     Result:= DoFindKey(aKey, TKeyEqRel.HashCode(aKey))
@@ -630,7 +630,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGHashBiMap.FindValue(constref aValue: TValue): SizeInt;
+function TGHashBiMap.FindValue(const aValue: TValue): SizeInt;
 begin
   if Count > 0 then
     Result := DoFindValue(aValue, TValueEqRel.HashCode(aValue))
@@ -638,7 +638,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-procedure TGHashBiMap.DoAddData(constref aKey: TKey; constref aValue: TValue; aKeyHash, aValHash: SizeInt);
+procedure TGHashBiMap.DoAddData(const aKey: TKey; const aValue: TValue; aKeyHash, aValHash: SizeInt);
 var
   kInd, vInd, I: SizeInt;
 begin
@@ -722,7 +722,7 @@ begin
     Clear;
 end;
 
-function TGHashBiMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGHashBiMap.DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
 var
   kh, vh: SizeInt;
 begin
@@ -741,7 +741,7 @@ begin
   Result := True;
 end;
 
-function TGHashBiMap.DoAddAll(constref a: array of TEntry): SizeInt;
+function TGHashBiMap.DoAddAll(const a: array of TEntry): SizeInt;
 var
   I: SizeInt;
 begin
@@ -766,7 +766,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGHashBiMap.TryAddOrSetValue(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGHashBiMap.TryAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   Result := not ContainsValue(aValue);
   if Result then
@@ -776,7 +776,7 @@ begin
       DoAdd(aKey, aValue);
 end;
 
-function TGHashBiMap.TryAddOrSetKey(constref aValue: TValue; constref aKey: TKey): Boolean;
+function TGHashBiMap.TryAddOrSetKey(const aValue: TValue; const aKey: TKey): Boolean;
 begin
   Result := not Contains(aKey);
   if Result then
@@ -786,19 +786,19 @@ begin
       DoAdd(aKey, aValue);
 end;
 
-procedure TGHashBiMap.DoAddOrSetValue(constref aKey: TKey; constref aValue: TValue);
+procedure TGHashBiMap.DoAddOrSetValue(const aKey: TKey; const aValue: TValue);
 begin
   if not TryAddOrSetValue(aKey, aValue) then
     raise ELGMapError.Create(SEValueAlreadyExist);
 end;
 
-procedure TGHashBiMap.DoAddOrSetKey(constref aValue: TValue; constref aKey: TKey);
+procedure TGHashBiMap.DoAddOrSetKey(const aValue: TValue; const aKey: TKey);
 begin
   if not TryAddOrSetKey(aValue, aKey) then
     raise ELGMapError.Create(SEKeyAlreadyExist);
 end;
 
-function TGHashBiMap.DoExtractKey(constref aKey: TKey; out v: TValue): Boolean;
+function TGHashBiMap.DoExtractKey(const aKey: TKey; out v: TValue): Boolean;
 var
   I: SizeInt;
 begin
@@ -811,14 +811,14 @@ begin
     end;
 end;
 
-function TGHashBiMap.DoRemoveKey(constref aKey: TKey): Boolean;
+function TGHashBiMap.DoRemoveKey(const aKey: TKey): Boolean;
 var
   Dummy: TValue;
 begin
   Result := DoExtractKey(aKey, Dummy);
 end;
 
-function TGHashBiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
+function TGHashBiMap.DoRemoveKeys(const a: array of TKey): SizeInt;
 var
   I: SizeInt;
 begin
@@ -852,7 +852,7 @@ begin
     e.Discard;
 end;
 
-function TGHashBiMap.DoExtractValue(constref aValue: TValue; out k: TKey): Boolean;
+function TGHashBiMap.DoExtractValue(const aValue: TValue; out k: TKey): Boolean;
 var
   I: SizeInt;
 begin
@@ -865,14 +865,14 @@ begin
     end;
 end;
 
-function TGHashBiMap.DoRemoveValue(constref aValue: TValue): Boolean;
+function TGHashBiMap.DoRemoveValue(const aValue: TValue): Boolean;
 var
   Dummy: TKey;
 begin
   Result := DoExtractValue(aValue, Dummy);
 end;
 
-function TGHashBiMap.DoRemoveValues(constref a: array of TValue): SizeInt;
+function TGHashBiMap.DoRemoveValues(const a: array of TValue): SizeInt;
 var
   I: SizeInt;
 begin
@@ -906,7 +906,7 @@ begin
     e.Discard;
 end;
 
-function TGHashBiMap.DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGHashBiMap.DoReplaceValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   I, J, h: SizeInt;
 begin
@@ -928,7 +928,7 @@ begin
   Result := True;
 end;
 
-function TGHashBiMap.DoReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean;
+function TGHashBiMap.DoReplaceKey(const aValue: TValue; const aNewKey: TKey): Boolean;
 var
   I, J, h: SizeInt;
 begin
@@ -987,7 +987,7 @@ begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-function TGHashBiMap.AddInverse(constref aValue: TValue; constref aKey: TKey): Boolean;
+function TGHashBiMap.AddInverse(const aValue: TValue; const aKey: TKey): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
@@ -1003,7 +1003,7 @@ begin
   InitialAlloc;
 end;
 
-constructor TGHashBiMap.Create(constref a: array of TEntry);
+constructor TGHashBiMap.Create(const a: array of TEntry);
 begin
   Create;
   DoAddAll(a);
@@ -1020,7 +1020,7 @@ begin
   EnsureCapacity(aCapacity);
 end;
 
-constructor TGHashBiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
+constructor TGHashBiMap.Create(aCapacity: SizeInt; const a: array of TEntry);
 begin
   Create(aCapacity);
   DoAddAll(a);
@@ -1074,22 +1074,22 @@ begin
   DoTrimToFit;
 end;
 
-function TGHashBiMap.Contains(constref aKey: TKey): Boolean;
+function TGHashBiMap.Contains(const aKey: TKey): Boolean;
 begin
   Result := FindKey(aKey) <> NULL_INDEX;
 end;
 
-function TGHashBiMap.NonContains(constref aKey: TKey): Boolean;
+function TGHashBiMap.NonContains(const aKey: TKey): Boolean;
 begin
   Result := FindKey(aKey) = NULL_INDEX;
 end;
 
-function TGHashBiMap.ContainsValue(constref aValue: TValue): Boolean;
+function TGHashBiMap.ContainsValue(const aValue: TValue): Boolean;
 begin
   Result := FindValue(aValue) <> NULL_INDEX;
 end;
 
-function TGHashBiMap.NonContainsValue(constref aValue: TValue): Boolean;
+function TGHashBiMap.NonContainsValue(const aValue: TValue): Boolean;
 begin
   Result := FindValue(aValue) = NULL_INDEX;
 end;
@@ -1106,7 +1106,7 @@ begin
     raise ELGMapError.Create(SEValueNotFound);
 end;
 
-function TGHashBiMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGHashBiMap.TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
 var
   I: SizeInt;
 begin
@@ -1116,7 +1116,7 @@ begin
     aValue := FNodeList[I].Data.Value;
 end;
 
-function TGHashBiMap.TryGetKey(constref aValue: TValue; out aKey: TKey): Boolean;
+function TGHashBiMap.TryGetKey(const aValue: TValue; out aKey: TKey): Boolean;
 var
   I: SizeInt;
 begin
@@ -1126,25 +1126,25 @@ begin
     aKey := FNodeList[I].Data.Key;
 end;
 
-function TGHashBiMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+function TGHashBiMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
 end;
 
-function TGHashBiMap.GetKeyDef(constref aValue: TValue; constref aDefault: TKey): TKey;
+function TGHashBiMap.GetKeyDef(const aValue: TValue; const aDefault: TKey): TKey;
 begin
   if not TryGetKey(aValue, Result) then
     Result := aDefault;
 end;
 
-function TGHashBiMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGHashBiMap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
 end;
 
-function TGHashBiMap.Add(constref e: TEntry): Boolean;
+function TGHashBiMap.Add(const e: TEntry): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(e.Key, e.Value);
@@ -1156,7 +1156,7 @@ begin
   DoAddOrSetValue(aKey, aValue);
 end;
 
-function TGHashBiMap.TryAddOrSetValue(constref e: TEntry): Boolean;
+function TGHashBiMap.TryAddOrSetValue(const e: TEntry): Boolean;
 begin
   CheckInIteration;
   Result := TryAddOrSetValue(e.Key, e.Value);
@@ -1168,13 +1168,13 @@ begin
   DoAddOrSetKey(aValue, aKey);
 end;
 
-function TGHashBiMap.TryAddOrSetKey(constref e: TInverseEntry): Boolean;
+function TGHashBiMap.TryAddOrSetKey(const e: TInverseEntry): Boolean;
 begin
   CheckInIteration;
   Result := TryAddOrSetKey(e.Key, e.Value);
 end;
 
-function TGHashBiMap.AddAll(constref a: array of TEntry): SizeInt;
+function TGHashBiMap.AddAll(const a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
@@ -1192,13 +1192,13 @@ begin
     end;
 end;
 
-function TGHashBiMap.Remove(constref aKey: TKey): Boolean;
+function TGHashBiMap.Remove(const aKey: TKey): Boolean;
 begin
   CheckInIteration;
   Result := DoRemoveKey(aKey);
 end;
 
-function TGHashBiMap.RemoveAll(constref a: array of TKey): SizeInt;
+function TGHashBiMap.RemoveAll(const a: array of TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveKeys(a);
@@ -1216,13 +1216,13 @@ begin
     end;
 end;
 
-function TGHashBiMap.RemoveValue(constref aValue: TValue): Boolean;
+function TGHashBiMap.RemoveValue(const aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoRemoveValue(aValue);
 end;
 
-function TGHashBiMap.RemoveValues(constref a: array of TValue): SizeInt;
+function TGHashBiMap.RemoveValues(const a: array of TValue): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveValues(a);
@@ -1240,25 +1240,25 @@ begin
     end;
 end;
 
-function TGHashBiMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGHashBiMap.Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoReplaceValue(aKey, aNewValue);
 end;
 
-function TGHashBiMap.ReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean;
+function TGHashBiMap.ReplaceKey(const aValue: TValue; const aNewKey: TKey): Boolean;
 begin
   CheckInIteration;
   Result := DoReplaceKey(aValue, aNewKey);
 end;
 
-function TGHashBiMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
+function TGHashBiMap.Extract(const aKey: TKey; out v: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoExtractKey(aKey, v);
 end;
 
-function TGHashBiMap.ExtractValue(constref aValue: TValue; out k: TKey): Boolean;
+function TGHashBiMap.ExtractValue(const aValue: TValue; out k: TKey): Boolean;
 begin
   CheckInIteration;
   Result := DoExtractValue(aValue, k);
@@ -1322,7 +1322,7 @@ begin
   inherited;
 end;
 
-function TGObjectHashBiMap.DoRemoveKey(constref aKey: TKey): Boolean;
+function TGObjectHashBiMap.DoRemoveKey(const aKey: TKey): Boolean;
 var
   v: TValue;
 begin
@@ -1336,7 +1336,7 @@ begin
     end;
 end;
 
-function TGObjectHashBiMap.DoRemoveValue(constref aValue: TValue): Boolean;
+function TGObjectHashBiMap.DoRemoveValue(const aValue: TValue): Boolean;
 var
   k: TKey;
 begin
@@ -1350,7 +1350,7 @@ begin
     end;
 end;
 
-function TGObjectHashBiMap.DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGObjectHashBiMap.DoReplaceValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   I, J, h: SizeInt;
 begin
@@ -1374,7 +1374,7 @@ begin
   Result := True;
 end;
 
-function TGObjectHashBiMap.DoReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean;
+function TGObjectHashBiMap.DoReplaceKey(const aValue: TValue; const aNewKey: TKey): Boolean;
 var
   I, J, h: SizeInt;
 begin
@@ -1438,7 +1438,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectHashBiMap.Create(constref a: array of TEntry; aOwns: TMapObjOwnership);
+constructor TGObjectHashBiMap.Create(const a: array of TEntry; aOwns: TMapObjOwnership);
 begin
   inherited Create(a);
   SetOwnership(aOwns);
@@ -1456,7 +1456,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectHashBiMap.Create(aCapacity: SizeInt; constref a: array of TEntry; aOwns: TMapObjOwnership);
+constructor TGObjectHashBiMap.Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, a);
   SetOwnership(aOwns);

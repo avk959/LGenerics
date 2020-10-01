@@ -338,7 +338,7 @@ begin
   Result := -1;
 end;
 
-function TGSparseGraph.TBits256.Intersecting(constref aValue: TBits256): Boolean;
+function TGSparseGraph.TBits256.Intersecting(const aValue: TBits256): Boolean;
 var
   I: SizeInt;
 begin
@@ -348,7 +348,7 @@ begin
   Result := False;
 end;
 
-function TGSparseGraph.TBits256.IntersectionPop(constref aValue: TBits256): SizeInt;
+function TGSparseGraph.TBits256.IntersectionPop(const aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(FBits[0] and aValue.FBits[0])) +
@@ -375,7 +375,7 @@ begin
 {$ENDIF }
 end;
 
-function TGSparseGraph.TBits256.Contains(constref aValue: TBits256): Boolean;
+function TGSparseGraph.TBits256.Contains(const aValue: TBits256): Boolean;
 var
   I: SizeInt;
 begin
@@ -385,7 +385,7 @@ begin
   Result := True;
 end;
 
-function TGSparseGraph.TBits256.JoinGain(constref aValue: TBits256): SizeInt;
+function TGSparseGraph.TBits256.JoinGain(const aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(not FBits[0] and aValue.FBits[0])) +
@@ -412,7 +412,7 @@ begin
 {$ENDIF }
 end;
 
-procedure TGSparseGraph.TBits256.Join(constref aValue: TBits256);
+procedure TGSparseGraph.TBits256.Join(const aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] or aValue.FBits[0];
@@ -438,13 +438,13 @@ begin
 {$ENDIF }
 end;
 
-function TGSparseGraph.TBits256.Union(constref aValue: TBits256): TBits256;
+function TGSparseGraph.TBits256.Union(const aValue: TBits256): TBits256;
 begin
   Result := Self;
   Result.Join(aValue);
 end;
 
-procedure TGSparseGraph.TBits256.Subtract(constref aValue: TBits256);
+procedure TGSparseGraph.TBits256.Subtract(const aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] and not aValue.FBits[0];
@@ -470,13 +470,13 @@ begin
 {$ENDIF }
 end;
 
-function TGSparseGraph.TBits256.Difference(constref aValue: TBits256): TBits256;
+function TGSparseGraph.TBits256.Difference(const aValue: TBits256): TBits256;
 begin
   Result := Self;
   Result.Subtract(aValue);
 end;
 
-procedure TGSparseGraph.TBits256.Intersect(constref aValue: TBits256);
+procedure TGSparseGraph.TBits256.Intersect(const aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] and aValue.FBits[0];
@@ -502,7 +502,7 @@ begin
 {$ENDIF }
 end;
 
-function TGSparseGraph.TBits256.Intersection(constref aValue: TBits256): TBits256;
+function TGSparseGraph.TBits256.Intersection(const aValue: TBits256): TBits256;
 begin
   Result := Self;
   Result.Intersect(aValue);

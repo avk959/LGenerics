@@ -51,8 +51,8 @@ type
     TObjMultiSet     = specialize TGObjHashMultiSetLP<TTestObj>;
     TAutoObjMultiSet = specialize TGAutoRef<TObjMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray11;
@@ -136,8 +136,8 @@ type
     TObjMultiSet     = specialize TGObjHashMultiSetLPT<TTestObj>;
     TAutoObjMultiSet = specialize TGAutoRef<TObjMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray11;
@@ -221,8 +221,8 @@ type
     TObjMultiSet     = specialize TGObjHashMultiSetQP<TTestObj>;
     TAutoObjMultiSet = specialize TGAutoRef<TObjMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray11;
@@ -306,8 +306,8 @@ type
     TObjMultiSet     = specialize TGObjChainHashMultiSet<TTestObj>;
     TAutoObjMultiSet = specialize TGAutoRef<TObjMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray11;
@@ -389,7 +389,7 @@ type
     TMultiSetSpec = specialize TGLiteHashMultiSetLP<Integer, Integer>;
     TMultiSet     = TMultiSetSpec.TMultiSet;
 
-    function IsEven(constref aValue: Integer): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
   published
     procedure Clear;
     procedure EnsureCapacity;
@@ -436,7 +436,7 @@ type
     TMultiSetSpec = specialize TGLiteChainHashMultiSet<Integer, Integer>;
     TMultiSet     = TMultiSetSpec.TMultiSet;
 
-    function IsEven(constref aValue: Integer): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
   published
     procedure Clear;
     procedure EnsureCapacity;
@@ -483,7 +483,7 @@ type
     TMultiSetSpec = specialize TGLiteEquatableHashMultiSet<Integer, Integer>;
     TMultiSet     = TMultiSetSpec.TMultiSet;
 
-    function IsEven(constref aValue: Integer): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
   published
     procedure Clear;
     procedure EnsureCapacity;
@@ -568,12 +568,12 @@ const
   IntArray11: array[1..11] of Integer = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
   IntArray21: array[1..21] of Integer = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
 
-function IsEvenInt(constref aValue: Integer): Boolean;
+function IsEvenInt(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function IsEvenObj(constref aObj: TTestObj): Boolean;
+function IsEvenObj(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -610,12 +610,12 @@ begin
   Result := @IncCount;
 end;
 
-function THashMultisetLPTest.IsEven(constref aValue: Integer): Boolean;
+function THashMultisetLPTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function THashMultisetLPTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function THashMultisetLPTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -1017,7 +1017,7 @@ begin
 end;
 
 procedure THashMultisetLPTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1077,7 +1077,7 @@ var
   ms, ms1: TAutoMultiSet;
   e: TIntArray;
   I: Integer;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1452,7 +1452,7 @@ begin
 end;
 
 procedure THashMultisetLPTest.ObjectMultiSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -1536,7 +1536,7 @@ begin
 end;
 
 procedure THashMultisetLPTest.ObjectMultiSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -1729,12 +1729,12 @@ begin
 end;
 
 
-function THashMultisetLPTTest.IsEven(constref aValue: Integer): Boolean;
+function THashMultisetLPTTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function THashMultisetLPTTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function THashMultisetLPTTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -2142,7 +2142,7 @@ begin
 end;
 
 procedure THashMultisetLPTTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2198,7 +2198,7 @@ begin
 end;
 
 procedure THashMultisetLPTTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2577,7 +2577,7 @@ begin
 end;
 
 procedure THashMultisetLPTTest.ObjectMultiSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -2661,7 +2661,7 @@ begin
 end;
 
 procedure THashMultisetLPTTest.ObjectMultiSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -2854,12 +2854,12 @@ begin
 end;
 
 
-function THashMultisetQPTest.IsEven(constref aValue: Integer): Boolean;
+function THashMultisetQPTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function THashMultisetQPTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function THashMultisetQPTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -3264,7 +3264,7 @@ begin
 end;
 
 procedure THashMultisetQPTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -3320,7 +3320,7 @@ begin
 end;
 
 procedure THashMultisetQPTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -3699,7 +3699,7 @@ begin
 end;
 
 procedure THashMultisetQPTest.ObjectMultiSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -3783,7 +3783,7 @@ begin
 end;
 
 procedure THashMultisetQPTest.ObjectMultiSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -3976,12 +3976,12 @@ begin
 end;
 
 
-function TChainHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TChainHashMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TChainHashMultisetTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TChainHashMultisetTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -4392,7 +4392,7 @@ begin
 end;
 
 procedure TChainHashMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -4448,7 +4448,7 @@ begin
 end;
 
 procedure TChainHashMultisetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -4827,7 +4827,7 @@ begin
 end;
 
 procedure TChainHashMultisetTest.ObjectMultiSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -4911,7 +4911,7 @@ begin
 end;
 
 procedure TChainHashMultisetTest.ObjectMultiSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -5105,7 +5105,7 @@ end;
 
 { TLiteHashMultisetLPTest }
 
-function TLiteHashMultisetLPTest.IsEven(constref aValue: Integer): Boolean;
+function TLiteHashMultisetLPTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
@@ -5327,7 +5327,7 @@ begin
 end;
 
 procedure TLiteHashMultisetLPTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -5387,7 +5387,7 @@ var
   ms, ms1: TMultiSet;
   e: TIntArray;
   I: Integer;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -5642,7 +5642,7 @@ end;
 
 { TLiteChainHashMultisetTest }
 
-function TLiteChainHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TLiteChainHashMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
@@ -5863,7 +5863,7 @@ begin
 end;
 
 procedure TLiteChainHashMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -5923,7 +5923,7 @@ var
   ms, ms1: TMultiSet;
   e: TIntArray;
   I: Integer;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -6178,7 +6178,7 @@ end;
 
 { TLiteEquatableHashMultisetTest }
 
-function TLiteEquatableHashMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TLiteEquatableHashMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
@@ -6400,7 +6400,7 @@ begin
 end;
 
 procedure TLiteEquatableHashMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -6460,7 +6460,7 @@ var
   ms, ms1: TMultiSet;
   e: TIntArray;
   I: Integer;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;

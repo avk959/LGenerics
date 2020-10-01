@@ -28,18 +28,19 @@ type
     TIntPair    = record
       Data,
       Index: Integer;
-      class operator =(const L, R: TIntPair): Boolean;
       class operator <(const L, R: TIntPair): Boolean;
-      class operator >(const L, R: TIntPair): Boolean;
-      class operator <=(const L, R: TIntPair): Boolean;
-      class operator >=(const L, R: TIntPair): Boolean;
-      class operator <>(const L, R: TIntPair): Boolean;
     end;
 
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairIdxCmp  = class
       class function Less(const L, R: TIntPair): Boolean; static;
+    end;
+
+    TVec4 = record
+      X, Y, Z, W: Double;
+      class function CreateRandom(aRange: Integer): TVec4; static; inline;
+      class operator < (const L, R: TVec4): Boolean; inline;
     end;
 
     TPairDataHelper = specialize TGComparableArrayHelper<TIntPair>;
@@ -406,6 +407,7 @@ type
     procedure TimSortTest;
     procedure TimSortAscStableTest;
     procedure TimSortDescStableTest;
+    procedure TimSortBug;  //mantis #0037527
   end;
 
 implementation
@@ -432,37 +434,29 @@ const
 
   InOrderDblSrc21: TIntArray21 = (0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10);
 
-{ TComparableArrayHelperTest.TIntPair }
+{ TComparableArrayHelperTest.TVec4 }
 
-class operator TComparableArrayHelperTest.TIntPair. = (const L, R: TIntPair): Boolean;
+class function TComparableArrayHelperTest.TVec4.CreateRandom(aRange: Integer): TVec4;
 begin
-  Result := L.Data = R.Data;
+  with Result do
+    begin
+      X := Succ(Random(aRange));
+      Y := Succ(Random(aRange));
+      Z := Succ(Random(aRange));
+      W := Succ(Random(aRange));
+    end;
 end;
+
+class operator TComparableArrayHelperTest.TVec4.<(const L, R: TVec4): Boolean;
+begin
+  Result := L.X + L.Y + L.Z + L.W < R.X + R.Y + R.Z + R.W;
+end;
+
+{ TComparableArrayHelperTest.TIntPair }
 
 class operator TComparableArrayHelperTest.TIntPair. <(const L, R: TIntPair): Boolean;
 begin
   Result := L.Data < R.Data;
-end;
-
-class operator TComparableArrayHelperTest.TIntPair. >(const L, R: TIntPair): Boolean;
-begin
-  Result := L.Data > R.Data;
-end;
-
-
-class operator TComparableArrayHelperTest.TIntPair. <=(const L, R: TIntPair): Boolean;
-begin
-  Result := L.Data <= R.Data;
-end;
-
-class operator TComparableArrayHelperTest.TIntPair. >=(const L, R: TIntPair): Boolean;
-begin
-  Result := L.Data >= R.Data;
-end;
-
-class operator TComparableArrayHelperTest.TIntPair. <>(const L, R: TIntPair): Boolean;
-begin
-  Result := L.Data <> R.Data;
 end;
 
 { TComparableArrayHelperTest.TPairIdxCmp }
@@ -3584,6 +3578,29 @@ begin
     Dec(v);
     I := J;
   until v < 0;
+end;
+
+procedure TComparableArrayHelperTest.TimSortBug;
+type
+  TTimSort = specialize TGComparableTimSort<TVec4>;
+var
+  a: array of TVec4;
+  I: Integer;
+  Present: Boolean = False;
+const
+  TestSize = 1000;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := TVec4.CreateRandom(1000);
+  try
+    TTimSort.Sort(a);
+  except
+    Present := True;
+  end;
+  if not Present then
+    AssertTrue(specialize TGComparableArrayHelper<TVec4>.IsNonDescending(a));
+  AssertFalse('still present', Present);
 end;
 
 initialization

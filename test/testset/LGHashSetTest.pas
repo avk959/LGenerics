@@ -43,8 +43,8 @@ type
 
   TTestClass = class(TTestCase)
   private
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   end;
 
   THashSetLPTest = class(TTestClass)
@@ -652,12 +652,12 @@ const
   IntArray11: array[1..11] of Integer = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
   IntArray21: array[1..21] of Integer = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
 
-function IsEvenInt(constref aValue: Integer): Boolean;
+function IsEvenInt(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function IsEvenObj(constref aObj: TTestObj): Boolean;
+function IsEvenObj(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -696,12 +696,12 @@ end;
 
 { TTestClass }
 
-function TTestClass.IsEven(constref aValue: Integer): Boolean;
+function TTestClass.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TTestClass.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TTestClass.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -1042,7 +1042,7 @@ begin
 end;
 
 procedure THashSetLPTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1084,7 +1084,7 @@ begin
 end;
 
 procedure THashSetLPTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1399,7 +1399,7 @@ begin
 end;
 
 procedure THashSetLPTest.ObjectSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -1480,7 +1480,7 @@ begin
 end;
 
 procedure THashSetLPTest.ObjectSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -1942,7 +1942,7 @@ begin
 end;
 
 procedure THashSetLPTTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1984,7 +1984,7 @@ begin
 end;
 
 procedure THashSetLPTTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2238,7 +2238,7 @@ begin
 end;
 
 procedure THashSetLPTTest.ObjectSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -2319,7 +2319,7 @@ begin
 end;
 
 procedure THashSetLPTTest.ObjectSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -2779,7 +2779,7 @@ begin
 end;
 
 procedure THashSetQPTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2821,7 +2821,7 @@ begin
 end;
 
 procedure THashSetQPTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -3075,7 +3075,7 @@ begin
 end;
 
 procedure THashSetQPTest.ObjectSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -3156,7 +3156,7 @@ begin
 end;
 
 procedure THashSetQPTest.ObjectSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -3592,7 +3592,7 @@ begin
 end;
 
 procedure TChainHashSetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -3634,7 +3634,7 @@ begin
 end;
 
 procedure TChainHashSetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -3888,7 +3888,7 @@ begin
 end;
 
 procedure TChainHashSetTest.ObjectSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -3969,7 +3969,7 @@ begin
 end;
 
 procedure TChainHashSetTest.ObjectSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -4408,7 +4408,7 @@ begin
 end;
 
 procedure TOrdHashSetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -4461,7 +4461,7 @@ begin
 end;
 
 procedure TOrdHashSetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -4731,7 +4731,7 @@ begin
 end;
 
 procedure TOrdHashSetTest.ObjectSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -4812,7 +4812,7 @@ begin
 end;
 
 procedure TOrdHashSetTest.ObjectSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -5105,7 +5105,7 @@ begin
 end;
 
 procedure TLiteHashSetLPTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -5147,7 +5147,7 @@ begin
 end;
 
 procedure TLiteHashSetLPTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -5735,7 +5735,7 @@ begin
 end;
 
 procedure TLiteChainHashSetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -5777,7 +5777,7 @@ begin
 end;
 
 procedure TLiteChainHashSetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -6365,7 +6365,7 @@ begin
 end;
 
 procedure TLiteEquatableHashSetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -6407,7 +6407,7 @@ begin
 end;
 
 procedure TLiteEquatableHashSetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;

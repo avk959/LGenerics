@@ -124,8 +124,8 @@ type
     FRoot: PNode;
     function  GetCount: SizeInt;
     function  GetHeight: SizeInt;
-    function  FindNode(constref aKey: TKey; out aParent: PNode): PNode;
-    function  FindInsertPos(constref aKey: TKey): PNode;
+    function  FindNode(const aKey: TKey; out aParent: PNode): PNode;
+    function  FindInsertPos(const aKey: TKey): PNode;
     procedure InsertNode(aNode: PNode);
     procedure InsertNodeAt(aNode, aParent: PNode);
     procedure DoRemoveNode(aNode: PNode);
@@ -133,7 +133,7 @@ type
     procedure RemoveFixUp(aNode: PNode);
     procedure RotateLeft(aNode: PNode);
     procedure RotateRight(aNode: PNode);
-    class function NewNode(constref aKey: TKey): PNode; static; inline;
+    class function NewNode(const aKey: TKey): PNode; static; inline;
     class function CopyTree(aRoot: PNode): PNode; static;
     class function TestNodeState(aNode: PNode; var aState: TRbtState): SizeInt;  static;
     class operator Initialize(var rbt: TGLiteRbTree);
@@ -144,14 +144,14 @@ type
     function  IsEmpty: Boolean; inline;
     function  GetEnumerator: TEnumerator;
     function  GetReverseEnumerator: TReverseEnumerator;
-    function  GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator;
+    function  GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator;
     function  ToArray: TEntryArray;           //O(N)
     procedure Clear;                          //O(N)
-    function  Add(constref aKey: TKey): PNode;
-    function  FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
-    function  Find(constref aKey: TKey): PNode;
-    function  Remove(constref aKey: TKey): Boolean;
-    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  Add(const aKey: TKey): PNode;
+    function  FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
+    function  Find(const aKey: TKey): PNode;
+    function  Remove(const aKey: TKey): Boolean;
+    function  Remove(const aKey: TKey; out aValue: TValue): Boolean;
     procedure RemoveNode(aNode: PNode); inline;
     function  CheckState: TRbtState;
     property  Root: PNode read FRoot;
@@ -160,7 +160,7 @@ type
   end;
 
   { TGLiteComparableRbTree implements the conventional red-black tree;
-    it assumes TKey has defined comparison operators;
+    it assumes TKey has defined comparison operator <;
     on assignment and when passed by value, the whole treap is copied }
   generic TGLiteComparableRbTree<TKey, TValue> = record
   public
@@ -199,8 +199,8 @@ type
     FRoot: PNode;
     function  GetCount: SizeInt;
     function  GetHeight: SizeInt;
-    function  FindNode(constref aKey: TKey; out aParent: PNode): PNode;
-    function  FindInsertPos(constref aKey: TKey): PNode;
+    function  FindNode(const aKey: TKey; out aParent: PNode): PNode;
+    function  FindInsertPos(const aKey: TKey): PNode;
     procedure InsertNode(aNode: PNode);
     procedure InsertNodeAt(aNode, aParent: PNode);
     procedure DoRemoveNode(aNode: PNode);
@@ -208,7 +208,7 @@ type
     procedure RemoveFixUp(aNode: PNode);
     procedure RotateLeft(aNode: PNode);
     procedure RotateRight(aNode: PNode);
-    class function NewNode(constref aKey: TKey): PNode; static; inline;
+    class function NewNode(const aKey: TKey): PNode; static; inline;
     class function CopyTree(aRoot: PNode): PNode; static;
     class function TestNodeState(aNode: PNode; var aState: TRbtState): SizeInt;  static;
     class operator Initialize(var rbt: TGLiteComparableRbTree);
@@ -219,14 +219,14 @@ type
     function  IsEmpty: Boolean; inline;
     function  GetEnumerator: TEnumerator;
     function  GetReverseEnumerator: TReverseEnumerator;
-    function  GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator;
+    function  GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator;
     function  ToArray: TEntryArray;           //O(N)
     procedure Clear;                          //O(N)
-    function  Add(constref aKey: TKey): PNode;
-    function  FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
-    function  Find(constref aKey: TKey): PNode;
-    function  Remove(constref aKey: TKey): Boolean;
-    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  Add(const aKey: TKey): PNode;
+    function  FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
+    function  Find(const aKey: TKey): PNode;
+    function  Remove(const aKey: TKey): Boolean;
+    function  Remove(const aKey: TKey; out aValue: TValue): Boolean;
     procedure RemoveNode(aNode: PNode); inline;
     function  CheckState: TRbtState;
     property  Root: PNode read FRoot;
@@ -415,7 +415,7 @@ begin
   Result := TUtil.GetHeight(FRoot)
 end;
 
-function TGLiteRbTree.FindNode(constref aKey: TKey; out aParent: PNode): PNode;
+function TGLiteRbTree.FindNode(const aKey: TKey; out aParent: PNode): PNode;
 begin
   Result := Root;
   aParent := nil;
@@ -432,7 +432,7 @@ begin
     end;
 end;
 
-function TGLiteRbTree.FindInsertPos(constref aKey: TKey): PNode;
+function TGLiteRbTree.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := Root;
   while Result <> nil do
@@ -718,7 +718,7 @@ begin
     aNode^.ParentPtr := L;
 end;
 
-class function TGLiteRbTree.NewNode(constref aKey: TKey): PNode;
+class function TGLiteRbTree.NewNode(const aKey: TKey): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -840,7 +840,7 @@ begin
   Result.FInCycle := False;
 end;
 
-function TGLiteRbTree.GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator;
+function TGLiteRbTree.GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator;
 begin
   Result.FCurr := nil;
   if aInclusive then
@@ -881,7 +881,7 @@ begin
   FRoot := nil;
 end;
 
-function TGLiteRbTree.Add(constref aKey: TKey): PNode;
+function TGLiteRbTree.Add(const aKey: TKey): PNode;
 var
   Parent: PNode;
 begin
@@ -894,7 +894,7 @@ begin
   Result := nil;
 end;
 
-function TGLiteRbTree.FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
+function TGLiteRbTree.FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
 var
   Parent: PNode;
 begin
@@ -907,14 +907,14 @@ begin
     end;
 end;
 
-function TGLiteRbTree.Find(constref aKey: TKey): PNode;
+function TGLiteRbTree.Find(const aKey: TKey): PNode;
 begin
   if Root <> nil then
     exit(TUtil.FindKey(Root, aKey));
   Result := nil;
 end;
 
-function TGLiteRbTree.Remove(constref aKey: TKey): Boolean;
+function TGLiteRbTree.Remove(const aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -927,7 +927,7 @@ begin
   Result := False;
 end;
 
-function TGLiteRbTree.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteRbTree.Remove(const aKey: TKey; out aValue: TValue): Boolean;
 var
   Node: PNode;
 begin
@@ -1027,7 +1027,7 @@ begin
   Result := TUtil.GetHeight(FRoot)
 end;
 
-function TGLiteComparableRbTree.FindNode(constref aKey: TKey; out aParent: PNode): PNode;
+function TGLiteComparableRbTree.FindNode(const aKey: TKey; out aParent: PNode): PNode;
 begin
   Result := Root;
   aParent := nil;
@@ -1037,14 +1037,14 @@ begin
       if aKey < Result^.Key then
         Result := Result^.FLeft
       else
-        if aKey > Result^.Key then
+        if Result^.Key < aKey then
           Result := Result^.FRight
         else
           break;
     end;
 end;
 
-function TGLiteComparableRbTree.FindInsertPos(constref aKey: TKey): PNode;
+function TGLiteComparableRbTree.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := Root;
   while Result <> nil do
@@ -1330,7 +1330,7 @@ begin
     aNode^.ParentPtr := L;
 end;
 
-class function TGLiteComparableRbTree.NewNode(constref aKey: TKey): PNode;
+class function TGLiteComparableRbTree.NewNode(const aKey: TKey): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -1380,7 +1380,7 @@ begin
           aState := rsInvalidLink;
           exit(0);
         end;
-      if aNode^.Left^.Key >= aNode^.Key then
+      if not(aNode^.Left^.Key < aNode^.Key) then
         begin
           aState := rsInvalidKey;
           exit(0);
@@ -1453,7 +1453,7 @@ begin
   Result.FInCycle := False;
 end;
 
-function TGLiteComparableRbTree.GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator;
+function TGLiteComparableRbTree.GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator;
 begin
   Result.FCurr := nil;
   if aInclusive then
@@ -1494,7 +1494,7 @@ begin
   FRoot := nil;
 end;
 
-function TGLiteComparableRbTree.Add(constref aKey: TKey): PNode;
+function TGLiteComparableRbTree.Add(const aKey: TKey): PNode;
 var
   Parent: PNode;
 begin
@@ -1507,7 +1507,7 @@ begin
   Result := nil;
 end;
 
-function TGLiteComparableRbTree.FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
+function TGLiteComparableRbTree.FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
 var
   Parent: PNode;
 begin
@@ -1520,14 +1520,14 @@ begin
     end;
 end;
 
-function TGLiteComparableRbTree.Find(constref aKey: TKey): PNode;
+function TGLiteComparableRbTree.Find(const aKey: TKey): PNode;
 begin
   if Root <> nil then
     exit(TUtil.FindKey(Root, aKey));
   Result := nil;
 end;
 
-function TGLiteComparableRbTree.Remove(constref aKey: TKey): Boolean;
+function TGLiteComparableRbTree.Remove(const aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -1540,7 +1540,7 @@ begin
   Result := False;
 end;
 
-function TGLiteComparableRbTree.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteComparableRbTree.Remove(const aKey: TKey; out aValue: TValue): Boolean;
 var
   Node: PNode;
 begin

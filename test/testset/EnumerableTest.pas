@@ -46,14 +46,14 @@ type
       4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84);
   var
     FCounter: Integer;
-    function DoIntCmp(constref L, R: Integer): Boolean;
-    function GetIsEven(constref aValue: Integer): Boolean;
-    function DoMulBy4(constref aValue: Integer): Integer;
-    function DoAddSquare(constref X, Y: Integer): Integer;
-    function PairCmp(constref L, R: TPair): Boolean;
+    function DoIntCmp(const L, R: Integer): Boolean;
+    function GetIsEven(const aValue: Integer): Boolean;
+    function DoMulBy4(const aValue: Integer): Integer;
+    function DoAddSquare(const X, Y: Integer): Integer;
+    function PairCmp(const L, R: TPair): Boolean;
     function CreatePairArray(aKeyCount, aPairCount: Integer): TPairArray;
-    procedure DoIncCounter(constref aValue: Integer);
-    function LessThen15(constref aValue: Integer): Boolean;
+    procedure DoIncCounter(const aValue: Integer);
+    function LessThen15(const aValue: Integer): Boolean;
   published
     procedure EmptyEnum_ToArray;
     procedure Enum21_ToArray;
@@ -250,63 +250,63 @@ implementation
 var
   Counter: Integer;
 
-function IntCmp(constref L, R: Integer): Boolean;
+function IntCmp(const L, R: Integer): Boolean;
 begin
   Result := L < R;
 end;
 
-function IsEven(constref aValue: Integer): Boolean;
+function IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function MulBy4(constref aValue: Integer): Integer;
+function MulBy4(const aValue: Integer): Integer;
 begin
   Result := aValue * 4;
 end;
 
-function AddSquare(constref X, Y: Integer): Integer;
+function AddSquare(const X, Y: Integer): Integer;
 begin
   Result := X * X + Y;
 end;
 
-function PairCompare(constref L, R: TPair): Boolean;
+function PairCompare(const L, R: TPair): Boolean;
 begin
   Result := L.Key < R.Key;
 end;
 
-procedure IncCounter(constref aValue: Integer);
+procedure IncCounter(const aValue: Integer);
 begin
   assert(aValue = aValue);
   Inc(Counter);
 end;
 
-function LessThen15(constref aValue: Integer): Boolean;
+function LessThen15(const aValue: Integer): Boolean;
 begin
   Result := aValue < 15;
 end;
 
-function TEnumerableTest.DoIntCmp(constref L, R: Integer): Boolean;
+function TEnumerableTest.DoIntCmp(const L, R: Integer): Boolean;
 begin
   Result := L < R;
 end;
 
-function TEnumerableTest.GetIsEven(constref aValue: Integer): Boolean;
+function TEnumerableTest.GetIsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TEnumerableTest.DoMulBy4(constref aValue: Integer): Integer;
+function TEnumerableTest.DoMulBy4(const aValue: Integer): Integer;
 begin
   Result := aValue * 4;
 end;
 
-function TEnumerableTest.DoAddSquare(constref X, Y: Integer): Integer;
+function TEnumerableTest.DoAddSquare(const X, Y: Integer): Integer;
 begin
   Result := X * X + Y;
 end;
 
-function TEnumerableTest.PairCmp(constref L, R: TPair): Boolean;
+function TEnumerableTest.PairCmp(const L, R: TPair): Boolean;
 begin
   Result := L.Key < R.Key;
 end;
@@ -333,13 +333,13 @@ begin
     end;
 end;
 
-procedure TEnumerableTest.DoIncCounter(constref aValue: Integer);
+procedure TEnumerableTest.DoIncCounter(const aValue: Integer);
 begin
   assert(aValue = aValue);
   Inc(FCounter);
 end;
 
-function TEnumerableTest.LessThen15(constref aValue: Integer): Boolean;
+function TEnumerableTest.LessThen15(const aValue: Integer): Boolean;
 begin
   Result := aValue < 15;
 end;
@@ -523,7 +523,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_FindMinNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -536,7 +536,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_FindMinNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -610,7 +610,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_MinNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -663,7 +663,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_FindMaxNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -676,7 +676,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_FindMaxNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -728,7 +728,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_MaxNested;
-  function IntComp(constref L, R: Integer): SizeInt;
+  function IntComp(const L, R: Integer): SizeInt;
   begin
   {$IFDEF CPU64}
     Result := SizeInt(L) - SizeInt(R);
@@ -750,7 +750,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_MaxNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -911,7 +911,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_SortedNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -923,7 +923,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_SortedNested;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -935,7 +935,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_SortedNestedDesc;
-  function IntComp(constref L, R: Integer): Boolean;
+  function IntComp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end;
@@ -999,7 +999,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_SelectNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1011,7 +1011,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_SelectNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1025,7 +1025,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum11_SelectNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1085,7 +1085,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_AnyNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1097,7 +1097,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_AnyNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1109,7 +1109,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum11_AnyNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1169,7 +1169,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_NoneNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1181,7 +1181,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_NoneNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1193,7 +1193,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum11_NoneNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1253,7 +1253,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_AllNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1265,7 +1265,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_AllNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1277,7 +1277,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum10_AllNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1337,7 +1337,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_TotalNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1349,7 +1349,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_TotalNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1361,7 +1361,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum11_TotalNested;
-  function IsEven(constref aValue: Integer): Boolean;
+  function IsEven(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1421,7 +1421,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_MapNested;
-  function MulBy4(constref aValue: Integer): Integer;
+  function MulBy4(const aValue: Integer): Integer;
   begin
     Result := aValue * 4;
   end;
@@ -1433,7 +1433,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_MapNested;
-  function MulBy4(constref aValue: Integer): Integer;
+  function MulBy4(const aValue: Integer): Integer;
   begin
     Result := aValue * 4;
   end;
@@ -1445,7 +1445,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum10_MapNested;
-  function MulBy4(constref aValue: Integer): Integer;
+  function MulBy4(const aValue: Integer): Integer;
   begin
     Result := aValue * 4;
   end;
@@ -1527,7 +1527,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_FoldNestedWithV0;
-  function AddSquare(constref X, Y: Integer): Integer;
+  function AddSquare(const X, Y: Integer): Integer;
   begin
     Result := X * X + Y;
   end;
@@ -1539,7 +1539,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_FoldNestedWithV0;
-  function AddSquare(constref X, Y: Integer): Integer;
+  function AddSquare(const X, Y: Integer): Integer;
   begin
     Result := X * X + Y;
   end;
@@ -1551,7 +1551,7 @@ begin
 end;
 
 procedure TEnumerableTest.EmptyEnum_FoldNested;
-  function AddSquare(constref X, Y: Integer): Integer;
+  function AddSquare(const X, Y: Integer): Integer;
   begin
     Result := X * X + Y;
   end;
@@ -1563,7 +1563,7 @@ begin
 end;
 
 procedure TEnumerableTest.Enum21_FoldNested;
-  function AddSquare(constref X, Y: Integer): Integer;
+  function AddSquare(const X, Y: Integer): Integer;
   begin
     Result := X * X + Y;
   end;
@@ -1581,7 +1581,7 @@ procedure TEnumerableTest.SortedRegular;
 type
   THelper     = specialize TGRegularArrayHelper<TPair>;
   TNestHelper = specialize TGNestedArrayHelper<TPair>;
-  function ValCmp(constref L, R: TPair): Boolean;
+  function ValCmp(const L, R: TPair): Boolean;
   begin
     Result := L.Value < R.Value;
   end;
@@ -1607,7 +1607,7 @@ procedure TEnumerableTest.SortedDelegated;
 type
   THelper     = specialize TGDelegatedArrayHelper<TPair>;
   TNestHelper = specialize TGNestedArrayHelper<TPair>;
-  function ValCmp(constref L, R: TPair): Boolean;
+  function ValCmp(const L, R: TPair): Boolean;
   begin
     Result := L.Value < R.Value;
   end;
@@ -1632,11 +1632,11 @@ end;
 procedure TEnumerableTest.SortedNested;
 type
   THelper = specialize TGNestedArrayHelper<TPair>;
-  function KeyCmp(constref L, R: TPair): Boolean;
+  function KeyCmp(const L, R: TPair): Boolean;
   begin
     Result := L.Key < R.Key;
   end;
-  function ValCmp(constref L, R: TPair): Boolean;
+  function ValCmp(const L, R: TPair): Boolean;
   begin
     Result := L.Value < R.Value;
   end;
@@ -1687,7 +1687,7 @@ end;
 procedure TEnumerableTest.ForEachNested;
 var
   Counter: Integer = 0;
-  procedure IncCounter(constref v: Integer);begin assert(v=v); Inc(Counter);end;
+  procedure IncCounter(const v: Integer);begin assert(v=v); Inc(Counter);end;
 var
   e: IIntEnumerable;
 begin
@@ -1737,7 +1737,7 @@ procedure TEnumerableTest.TakeWhileNested;
 var
   e: IIntEnumerable;
   a: array of Integer;
-  function IsLessThen15(constref v: Integer): Boolean; begin Result := v < 15 end;
+  function IsLessThen15(const v: Integer): Boolean; begin Result := v < 15 end;
 begin
   e := TIntArrayCursor.Create([]);
   AssertTrue(e.TakeWhile(@IsLessThen15).None);
@@ -1789,7 +1789,7 @@ procedure TEnumerableTest.SkipWhileNested;
 var
   e: IIntEnumerable;
   a: array of Integer;
-  function IsLessThen15(constref v: Integer): Boolean; begin Result := v < 15 end;
+  function IsLessThen15(const v: Integer): Boolean; begin Result := v < 15 end;
 begin
   e := TIntArrayCursor.Create([]);
   AssertTrue(e.SkipWhile(@IsLessThen15).None);

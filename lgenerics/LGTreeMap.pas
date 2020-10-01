@@ -43,8 +43,8 @@ type
 
   protected
   type
-    TTree          = specialize TGCustomAvlTree<TKey, TEntry>;
-    PNode          = TTree.PNode;
+    TTree = specialize TGCustomAvlTree<TKey, TEntry>;
+    PNode = TTree.PNode;
 
     TKeyEnumerable = class(TCustomKeyEnumerable)
     protected
@@ -84,7 +84,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aLowBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean);
+      constructor Create(const aLowBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -94,10 +94,10 @@ type
     FTree: TTree;
     function  GetCount: SizeInt; override;
     function  GetCapacity: SizeInt; override;
-    function  Find(constref aKey: TKey): PEntry; override;
+    function  Find(const aKey: TKey): PEntry; override;
     //return True if aKey found, otherwise insert (garbage) pair and return False;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean; override;
-    function  DoExtract(constref aKey: TKey; out v: TValue): Boolean; override;
+    function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; override;
+    function  DoExtract(const aKey: TKey; out v: TValue): Boolean; override;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
@@ -110,10 +110,10 @@ type
     function  GetKeys: IKeyEnumerable; override;
     function  GetValues: IValueEnumerable; override;
     function  GetEntries: IEntryEnumerable; override;
-    function  FindNearestLT(constref aPattern: TKey; out aKey: TKey): Boolean;
-    function  FindNearestLE(constref aPattern: TKey; out aKey: TKey): Boolean;
-    function  FindNearestGT(constref aPattern: TKey; out aKey: TKey): Boolean;
-    function  FindNearestGE(constref aPattern: TKey; out aKey: TKey): Boolean;
+    function  FindNearestLT(const aPattern: TKey; out aKey: TKey): Boolean;
+    function  FindNearestLE(const aPattern: TKey; out aKey: TKey): Boolean;
+    function  FindNearestGT(const aPattern: TKey; out aKey: TKey): Boolean;
+    function  FindNearestGE(const aPattern: TKey; out aKey: TKey): Boolean;
   public
     destructor Destroy; override;
     function ReverseKeys: IKeyEnumerable;
@@ -132,23 +132,23 @@ type
     function FindMax(out aKey: TKey): Boolean; inline;
     function Max: TKeyOptional; inline;
   { returns True if exists key whose value greater then or equal to aKey (depending on aInclusive) }
-    function FindCeil(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean = True): Boolean;
+    function FindCeil(const aKey: TKey; out aCeil: TKey; aInclusive: Boolean = True): Boolean;
   { returns True if exists key whose value less then aKey (or equal to aKey, depending on aInclusive) }
-    function FindFloor(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean = False): Boolean;
+    function FindFloor(const aKey: TKey; out aFloor: TKey; aInclusive: Boolean = False): Boolean;
   { enumerates keys which are strictly less than(if not aInclusive) aHighBound }
-    function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; virtual; abstract;
+    function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; virtual; abstract;
   { enumerates keys whose are greater than or equal to aLowBound(if aInclusive) }
-    function Tail(constref aLowBound: TKey; aInclusive: Boolean = True): IKeyEnumerable;
+    function Tail(const aLowBound: TKey; aInclusive: Boolean = True): IKeyEnumerable;
   { enumerates keys which are greater than or equal to aLowBound and strictly less than aHighBound(by default) }
-    function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
       virtual; abstract;
   { returns sorted map whose keys are strictly less than(if not aInclusive) aHighBound }
-    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TAbstractTreeMap; virtual; abstract;
+    function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TAbstractTreeMap; virtual; abstract;
   { returns sorted map whose keys are greater than or equal to(if aInclusive) aLowBound }
-    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TAbstractTreeMap; virtual; abstract;
+    function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TAbstractTreeMap; virtual; abstract;
   { returns sorted map whose keys are greater than or equal to aLowBound and strictly less than
     aHighBound(by default) }
-    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeMap;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeMap;
       virtual; abstract;
   end;
 
@@ -170,33 +170,33 @@ type
     protected
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
-    class function DoCompare(constref L, R: TKey): Boolean; static;
+    class function DoCompare(const L, R: TKey): Boolean; static;
   public
   type
     TComparator = specialize TGLessCompare<TKey>;
     class function Comparator: TComparator; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref a: array of TEntry);
+    constructor Create(const a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
     constructor CreateCopy(aMap: TGBaseTreeMap);
     function Clone: TGBaseTreeMap; override;
-    function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
-    function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
+    function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
       override;
-    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TGBaseTreeMap; override;
-    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TGBaseTreeMap; override;
-    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseTreeMap;
+    function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TGBaseTreeMap; override;
+    function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TGBaseTreeMap; override;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseTreeMap;
       override;
   end;
 
@@ -211,17 +211,17 @@ type
     FOwnsValues: Boolean;
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
-    function  DoRemove(constref aKey: TKey): Boolean; override;
+    function  DoRemove(const aKey: TKey): Boolean; override;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
     procedure DoClear; override;
-    function  DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; override;
+    function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectTreeMap);
     function  Clone: TGObjectTreeMap; override;
@@ -245,33 +245,33 @@ type
       FDone: Boolean;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
-    class function DoCompare(constref L, R: TKey): Boolean; static;
+    class function DoCompare(const L, R: TKey): Boolean; static;
   public
   type
     TComparator = specialize TGLessCompare<TKey>;
     class function Comparator: TComparator; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref a: array of TEntry);
+    constructor Create(const a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
     constructor CreateCopy(aMap: TGComparableTreeMap);
     function Clone: TGComparableTreeMap; override;
-    function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
-    function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
+    function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
       override;
-    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TGComparableTreeMap; override;
-    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TGComparableTreeMap; override;
-    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGComparableTreeMap;
+    function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TGComparableTreeMap; override;
+    function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TGComparableTreeMap; override;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGComparableTreeMap;
       override;
   end;
 
@@ -294,31 +294,31 @@ type
       FDone: Boolean;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
   public
     constructor Create;
     constructor Create(aLess: TLess);
     constructor Create(aCapacity: SizeInt; aLess: TLess);
-    constructor Create(constref a: array of TEntry; aLess: TLess);
+    constructor Create(const a: array of TEntry; aLess: TLess);
     constructor Create(e: IEntryEnumerable; aLess: TLess);
     constructor CreateCopy(aMap: TGRegularTreeMap);
     function Comparator: TLess; inline;
     function Clone: TGRegularTreeMap; override;
-    function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
-    function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
+    function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
       override;
-    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TGRegularTreeMap; override;
-    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TGRegularTreeMap; override;
-    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGRegularTreeMap;
+    function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TGRegularTreeMap; override;
+    function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TGRegularTreeMap; override;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGRegularTreeMap;
       override;
   end;
 
@@ -330,18 +330,18 @@ type
     FOwnsValues: Boolean;
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
-    function  DoRemove(constref aKey: TKey): Boolean; override;
+    function  DoRemove(const aKey: TKey): Boolean; override;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
     procedure DoClear; override;
-    function  DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; override;
+    function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectRegularTreeMap);
     function  Clone: TGObjectRegularTreeMap; override;
@@ -368,32 +368,32 @@ type
       FDone: Boolean;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
   public
     constructor Create;
     constructor Create(aLess: TOnLess);
     constructor Create(aCapacity: SizeInt; aLess: TOnLess);
-    constructor Create(constref a: array of TEntry; aLess: TOnLess);
+    constructor Create(const a: array of TEntry; aLess: TOnLess);
     constructor Create(e: IEntryEnumerable; aLess: TOnLess);
     constructor CreateCopy(aMap: TGDelegatedTreeMap);
     function Comparator: TOnLess;
     function Clone: TGDelegatedTreeMap; override;
 
-    function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
-    function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
+    function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
       override;
-    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TGDelegatedTreeMap; override;
-    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TGDelegatedTreeMap; override;
-    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGDelegatedTreeMap;
+    function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TGDelegatedTreeMap; override;
+    function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TGDelegatedTreeMap; override;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGDelegatedTreeMap;
       override;
   end;
 
@@ -405,18 +405,18 @@ type
     FOwnsValues: Boolean;
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
-    function  DoRemove(constref aKey: TKey): Boolean; override;
+    function  DoRemove(const aKey: TKey): Boolean; override;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
     procedure DoClear; override;
-    function  DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; override;
+    function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectDelegatedTreeMap);
     function  Clone: TGObjectDelegatedTreeMap; override;
@@ -530,7 +530,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGAbstractTreeMap.TKeyTailEnumerable.Create(constref aLowBound: TKey; aMap: TAbstractTreeMap;
+constructor TGAbstractTreeMap.TKeyTailEnumerable.Create(const aLowBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -565,7 +565,7 @@ begin
   Result := FTree.Capacity;
 end;
 
-function TGAbstractTreeMap.Find(constref aKey: TKey): PEntry;
+function TGAbstractTreeMap.Find(const aKey: TKey): PEntry;
 var
   Node: PNode;
 begin
@@ -576,7 +576,7 @@ begin
     Result := nil;
 end;
 
-function TGAbstractTreeMap.FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+function TGAbstractTreeMap.FindOrAdd(const aKey: TKey; out p: PEntry): Boolean;
 var
   Node: PNode;
 begin
@@ -584,7 +584,7 @@ begin
   p := @Node^.Data;
 end;
 
-function TGAbstractTreeMap.DoExtract(constref aKey: TKey; out v: TValue): Boolean;
+function TGAbstractTreeMap.DoExtract(const aKey: TKey; out v: TValue): Boolean;
 var
   Node: PNode;
 begin
@@ -669,7 +669,7 @@ begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-function TGAbstractTreeMap.FindNearestLT(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestLT(const aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -679,7 +679,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGAbstractTreeMap.FindNearestLE(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestLE(const aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -689,7 +689,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGAbstractTreeMap.FindNearestGT(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestGT(const aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -699,7 +699,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGAbstractTreeMap.FindNearestGE(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestGE(const aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -826,7 +826,7 @@ begin
   Result := LastKey;
 end;
 
-function TGAbstractTreeMap.FindCeil(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean): Boolean;
+function TGAbstractTreeMap.FindCeil(const aKey: TKey; out aCeil: TKey; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestGE(aKey, aCeil)
@@ -834,7 +834,7 @@ begin
     Result := FindNearestGT(aKey, aCeil);
 end;
 
-function TGAbstractTreeMap.FindFloor(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean): Boolean;
+function TGAbstractTreeMap.FindFloor(const aKey: TKey; out aFloor: TKey; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestLE(aKey, aFloor)
@@ -842,7 +842,7 @@ begin
     Result := FindNearestLT(aKey, aFloor);
 end;
 
-function TGAbstractTreeMap.Tail(constref aLowBound: TKey; aInclusive: Boolean): IKeyEnumerable;
+function TGAbstractTreeMap.Tail(const aLowBound: TKey; aInclusive: Boolean): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyTailEnumerable.Create(aLowBound, Self, aInclusive);
@@ -855,7 +855,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGBaseTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
+constructor TGBaseTreeMap.TKeyHeadEnumerable.Create(const aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -889,7 +889,7 @@ end;
 
 { TGBaseTreeMap.TKeyRangeEnumerable }
 
-constructor TGBaseTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
+constructor TGBaseTreeMap.TKeyRangeEnumerable.Create(const aLowBound, aHighBound: TKey;
   aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
@@ -900,7 +900,7 @@ end;
 
 { TGBaseTreeMap }
 
-class function TGBaseTreeMap.DoCompare(constref L, R: TKey): Boolean;
+class function TGBaseTreeMap.DoCompare(const L, R: TKey): Boolean;
 begin
   Result := TKeyCmpRel.Less(L, R);
 end;
@@ -920,7 +920,7 @@ begin
   FTree := TBaseTree.Create(aCapacity);
 end;
 
-constructor TGBaseTreeMap.Create(constref a: array of TEntry);
+constructor TGBaseTreeMap.Create(const a: array of TEntry);
 begin
   FTree := TBaseTree.Create;
   DoAddAll(a);
@@ -942,19 +942,19 @@ begin
   Result := TGBaseTreeMap.CreateCopy(Self);
 end;
 
-function TGBaseTreeMap.Head(constref aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
+function TGBaseTreeMap.Head(const aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGBaseTreeMap.Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds): IKeyEnumerable;
+function TGBaseTreeMap.Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGBaseTreeMap.HeadMap(constref aHighBound: TKey; aInclusive: Boolean): TGBaseTreeMap;
+function TGBaseTreeMap.HeadMap(const aHighBound: TKey; aInclusive: Boolean): TGBaseTreeMap;
 begin
   Result := TGBaseTreeMap.Create;
   with TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive) do
@@ -966,7 +966,7 @@ begin
     end;
 end;
 
-function TGBaseTreeMap.TailMap(constref aLowBound: TKey; aInclusive: Boolean): TGBaseTreeMap;
+function TGBaseTreeMap.TailMap(const aLowBound: TKey; aInclusive: Boolean): TGBaseTreeMap;
 begin
   Result := TGBaseTreeMap.Create;
   with TKeyTailEnumerable.Create(aLowBound, Self, aInclusive) do
@@ -978,7 +978,7 @@ begin
     end;
 end;
 
-function TGBaseTreeMap.SubMap(constref aLowBound, aHighBound: TKey;
+function TGBaseTreeMap.SubMap(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): TGBaseTreeMap;
 begin
   Result := TGBaseTreeMap.Create;
@@ -1007,7 +1007,7 @@ begin
   FOwnsValues := moOwnsValues in aOwns;
 end;
 
-function TGObjectTreeMap.DoRemove(constref aKey: TKey): Boolean;
+function TGObjectTreeMap.DoRemove(const aKey: TKey): Boolean;
 var
   v: TValue;
 begin
@@ -1051,7 +1051,7 @@ begin
   inherited;
 end;
 
-function TGObjectTreeMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGObjectTreeMap.DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1090,7 +1090,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectTreeMap.Create(constref a: array of TEntry; aOwns: TMapObjOwnership);
+constructor TGObjectTreeMap.Create(const a: array of TEntry; aOwns: TMapObjOwnership);
 begin
   inherited Create(a);
   SetOwnership(aOwns);
@@ -1122,7 +1122,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGComparableTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
+constructor TGComparableTreeMap.TKeyHeadEnumerable.Create(const aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -1156,7 +1156,7 @@ end;
 
 { TGComparableTreeMap.TKeyRangeEnumerable }
 
-constructor TGComparableTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
+constructor TGComparableTreeMap.TKeyRangeEnumerable.Create(const aLowBound, aHighBound: TKey;
   aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
@@ -1167,7 +1167,7 @@ end;
 
 { TGComparableTreeMap }
 
-class function TGComparableTreeMap.DoCompare(constref L, R: TKey): Boolean;
+class function TGComparableTreeMap.DoCompare(const L, R: TKey): Boolean;
 begin
   Result := L < R;
 end;
@@ -1187,7 +1187,7 @@ begin
   FTree := TComparableTree.Create(aCapacity);
 end;
 
-constructor TGComparableTreeMap.Create(constref a: array of TEntry);
+constructor TGComparableTreeMap.Create(const a: array of TEntry);
 begin
   Create;
   DoAddAll(a);
@@ -1210,20 +1210,20 @@ begin
   Result := TGComparableTreeMap.CreateCopy(Self);
 end;
 
-function TGComparableTreeMap.Head(constref aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
+function TGComparableTreeMap.Head(const aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGComparableTreeMap.Range(constref aLowBound, aHighBound: TKey;
+function TGComparableTreeMap.Range(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGComparableTreeMap.HeadMap(constref aHighBound: TKey; aInclusive: Boolean): TGComparableTreeMap;
+function TGComparableTreeMap.HeadMap(const aHighBound: TKey; aInclusive: Boolean): TGComparableTreeMap;
 begin
   Result := TGComparableTreeMap.Create;
   with TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive) do
@@ -1235,7 +1235,7 @@ begin
       end;
 end;
 
-function TGComparableTreeMap.TailMap(constref aLowBound: TKey; aInclusive: Boolean): TGComparableTreeMap;
+function TGComparableTreeMap.TailMap(const aLowBound: TKey; aInclusive: Boolean): TGComparableTreeMap;
 begin
   Result := TGComparableTreeMap.Create;
   with TKeyTailEnumerable.Create(aLowBound, Self, aInclusive) do
@@ -1247,7 +1247,7 @@ begin
     end;
 end;
 
-function TGComparableTreeMap.SubMap(constref aLowBound, aHighBound: TKey;
+function TGComparableTreeMap.SubMap(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): TGComparableTreeMap;
 begin
   Result := TGComparableTreeMap.Create;
@@ -1267,7 +1267,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGRegularTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
+constructor TGRegularTreeMap.TKeyHeadEnumerable.Create(const aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -1302,7 +1302,7 @@ end;
 
 { TGRegularTreeMap.TKeyRangeEnumerable }
 
-constructor TGRegularTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
+constructor TGRegularTreeMap.TKeyRangeEnumerable.Create(const aLowBound, aHighBound: TKey;
   aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
@@ -1334,7 +1334,7 @@ begin
   FTree := TRegularTree.Create(aCapacity, aLess);
 end;
 
-constructor TGRegularTreeMap.Create(constref a: array of TEntry; aLess: TLess);
+constructor TGRegularTreeMap.Create(const a: array of TEntry; aLess: TLess);
 begin
   Create(aLess);
   DoAddAll(a);
@@ -1356,20 +1356,20 @@ begin
   Result := TGRegularTreeMap.CreateCopy(Self);
 end;
 
-function TGRegularTreeMap.Head(constref aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
+function TGRegularTreeMap.Head(const aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGRegularTreeMap.Range(constref aLowBound, aHighBound: TKey;
+function TGRegularTreeMap.Range(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGRegularTreeMap.HeadMap(constref aHighBound: TKey; aInclusive: Boolean): TGRegularTreeMap;
+function TGRegularTreeMap.HeadMap(const aHighBound: TKey; aInclusive: Boolean): TGRegularTreeMap;
 begin
   Result := TGRegularTreeMap.Create(Comparator);
   with TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive) do
@@ -1381,7 +1381,7 @@ begin
     end;
 end;
 
-function TGRegularTreeMap.TailMap(constref aLowBound: TKey; aInclusive: Boolean): TGRegularTreeMap;
+function TGRegularTreeMap.TailMap(const aLowBound: TKey; aInclusive: Boolean): TGRegularTreeMap;
 begin
   Result := TGRegularTreeMap.Create(Comparator);
   with TKeyTailEnumerable.Create(aLowBound, Self, aInclusive) do
@@ -1393,7 +1393,7 @@ begin
     end;
 end;
 
-function TGRegularTreeMap.SubMap(constref aLowBound, aHighBound: TKey;
+function TGRegularTreeMap.SubMap(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): TGRegularTreeMap;
 begin
   Result := TGRegularTreeMap.Create(Comparator);
@@ -1422,7 +1422,7 @@ begin
   OwnsValues := moOwnsValues in aOwns;
 end;
 
-function TGObjectRegularTreeMap.DoRemove(constref aKey: TKey): Boolean;
+function TGObjectRegularTreeMap.DoRemove(const aKey: TKey): Boolean;
 var
   v: TValue;
 begin
@@ -1466,7 +1466,7 @@ begin
   inherited;
 end;
 
-function TGObjectRegularTreeMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGObjectRegularTreeMap.DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1511,7 +1511,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(constref a: array of TEntry; c: TLess; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(const a: array of TEntry; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(a, c);
   SetOwnership(aOwns);
@@ -1542,7 +1542,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGDelegatedTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
+constructor TGDelegatedTreeMap.TKeyHeadEnumerable.Create(const aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -1577,7 +1577,7 @@ end;
 
 { TGDelegatedTreeMap.TKeyRangeEnumerable }
 
-constructor TGDelegatedTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
+constructor TGDelegatedTreeMap.TKeyRangeEnumerable.Create(const aLowBound, aHighBound: TKey;
   aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
@@ -1604,7 +1604,7 @@ begin
   FTree := TDelegatedTree.Create(aCapacity, aLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(constref a: array of TEntry; aLess: TOnLess);
+constructor TGDelegatedTreeMap.Create(const a: array of TEntry; aLess: TOnLess);
 begin
   Create(aLess);
   DoAddAll(a);
@@ -1631,20 +1631,20 @@ begin
   Result := TGDelegatedTreeMap.CreateCopy(Self);
 end;
 
-function TGDelegatedTreeMap.Head(constref aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
+function TGDelegatedTreeMap.Head(const aHighBound: TKey; aInclusive: Boolean): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGDelegatedTreeMap.Range(constref aLowBound, aHighBound: TKey;
+function TGDelegatedTreeMap.Range(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGDelegatedTreeMap.HeadMap(constref aHighBound: TKey; aInclusive: Boolean): TGDelegatedTreeMap;
+function TGDelegatedTreeMap.HeadMap(const aHighBound: TKey; aInclusive: Boolean): TGDelegatedTreeMap;
 begin
   Result := TGDelegatedTreeMap.Create(Comparator);
   with TKeyHeadEnumerable.Create(aHighBound, Self, aInclusive) do
@@ -1656,7 +1656,7 @@ begin
     end;
 end;
 
-function TGDelegatedTreeMap.TailMap(constref aLowBound: TKey; aInclusive: Boolean): TGDelegatedTreeMap;
+function TGDelegatedTreeMap.TailMap(const aLowBound: TKey; aInclusive: Boolean): TGDelegatedTreeMap;
 begin
   Result := TGDelegatedTreeMap.Create(Comparator);
   with TKeyTailEnumerable.Create(aLowBound, Self, aInclusive) do
@@ -1668,7 +1668,7 @@ begin
     end;
 end;
 
-function TGDelegatedTreeMap.SubMap(constref aLowBound, aHighBound: TKey;
+function TGDelegatedTreeMap.SubMap(const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): TGDelegatedTreeMap;
 begin
   Result := TGDelegatedTreeMap.Create(Comparator);
@@ -1697,7 +1697,7 @@ begin
   OwnsValues := moOwnsValues in aOwns;
 end;
 
-function TGObjectDelegatedTreeMap.DoRemove(constref aKey: TKey): Boolean;
+function TGObjectDelegatedTreeMap.DoRemove(const aKey: TKey): Boolean;
 var
   v: TValue;
 begin
@@ -1741,7 +1741,7 @@ begin
   inherited;
 end;
 
-function TGObjectDelegatedTreeMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGObjectDelegatedTreeMap.DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1786,7 +1786,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(constref a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(const a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(a, c);
   SetOwnership(aOwns);

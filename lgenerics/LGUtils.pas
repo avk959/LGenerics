@@ -40,28 +40,28 @@ type
   TRangeBounds          = set of TRangeBound;
   TDummy                = packed record end;
   TGArray<T>            = array of T;
-  TGLessCompare<T>      = function(constref L, R: T): Boolean;
-  TGOnLessCompare<T>    = function(constref L, R: T): Boolean of object;
-  TGNestLessCompare<T>  = function(constref L, R: T): Boolean is nested;
-  TGEqualCompare<T>     = function(constref L, R: T): Boolean;
-  TGOnEqualCompare<T>   = function(constref L, R: T): Boolean of object;
-  TGNestEqualCompare<T> = function(constref L, R: T): Boolean is nested;
+  TGLessCompare<T>      = function(const L, R: T): Boolean;
+  TGOnLessCompare<T>    = function(const L, R: T): Boolean of object;
+  TGNestLessCompare<T>  = function(const L, R: T): Boolean is nested;
+  TGEqualCompare<T>     = function(const L, R: T): Boolean;
+  TGOnEqualCompare<T>   = function(const L, R: T): Boolean of object;
+  TGNestEqualCompare<T> = function(const L, R: T): Boolean is nested;
 { predicates }
-  TGTest<T>             = function(constref aValue: T): Boolean;
-  TGOnTest<T>           = function(constref aValue: T): Boolean of object;
-  TGNestTest<T>         = function(constref aValue: T): Boolean is nested;
+  TGTest<T>             = function(const aValue: T): Boolean;
+  TGOnTest<T>           = function(const aValue: T): Boolean of object;
+  TGNestTest<T>         = function(const aValue: T): Boolean is nested;
 { mappings }
-  TGMapFunc<X, Y>       = function(constref aValue: X): Y;
-  TGOnMap<X, Y>         = function(constref aValue: X): Y of object;
-  TGNestMap<X, Y>       = function(constref aValue: X): Y is nested;
+  TGMapFunc<X, Y>       = function(const aValue: X): Y;
+  TGOnMap<X, Y>         = function(const aValue: X): Y of object;
+  TGNestMap<X, Y>       = function(const aValue: X): Y is nested;
 { callbacks }
-  TGUnaryProc<T>        = procedure(constref aValue: T);
-  TGUnaryMethod<T>      = procedure(constref aValue: T) of object;
-  TGNestUnaryProc<T>    = procedure(constref aValue: T) is nested;
+  TGUnaryProc<T>        = procedure(const aValue: T);
+  TGUnaryMethod<T>      = procedure(const aValue: T) of object;
+  TGNestUnaryProc<T>    = procedure(const aValue: T) is nested;
 { foldings; note: accumulator on second position }
-  TGFold<X, Y>          = function(constref L: X; constref R: Y): Y;
-  TGOnFold<X, Y>        = function(constref L: X; constref R: Y): Y of object;
-  TGNestFold<X, Y>      = function(constref L: X; constref R: Y): Y is nested;
+  TGFold<X, Y>          = function(const L: X; const R: Y): Y;
+  TGOnFold<X, Y>        = function(const L: X; const R: Y): Y of object;
+  TGNestFold<X, Y>      = function(const L: X; const R: Y): Y is nested;
 
   ELGCapacityExceed     = class(Exception);
   ELGAccessEmpty        = class(Exception);
@@ -104,9 +104,9 @@ type
     { For reasons that are still unknown, these operators cause problems in some cases }
     //class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
     //class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
-    procedure Assign(constref aValue: T);
+    procedure Assign(const aValue: T);
     function  OrElseDefault: T; inline;
-    function  OrElse(constref aValue: T): T; inline;
+    function  OrElse(const aValue: T): T; inline;
     function  OrElseRaise(e: ExceptClass; const aMsg: string = ''): T; inline;
     property  Assigned: Boolean read FAssigned;
     property  Value: T read GetValue;
@@ -372,7 +372,7 @@ type
   { ensures that the current instance is unique }
     procedure Unique;
   { sets length to aCount and fills array by aCount values aValue }
-    procedure Fill(aCount: SizeInt; constref aValue: T);
+    procedure Fill(aCount: SizeInt; const aValue: T);
     function  CreateCopy(aFromIndex, aCount: SizeInt): TGCowDynArray<T>;
     property  RefCount: Integer read GetRefCount;
     property  Length: SizeInt read GetLength write SetLen;
@@ -576,8 +576,8 @@ type
 
   IGStack<T> = interface(IGContainer<T>)
   ['{6057A96E-1953-49CE-A81A-DF5633BCB38C}']
-    procedure Push(constref aValue: T);
-    function  PushAll(constref a: array of T): SizeInt; overload;
+    procedure Push(const aValue: T);
+    function  PushAll(const a: array of T): SizeInt; overload;
     function  PushAll(e: IGEnumerable<T>): SizeInt; overload;
   { EXTRACTS element from the top of stack }
     function  Pop: T;
@@ -589,8 +589,8 @@ type
   IGQueue<T> = interface(IGContainer<T>)
   ['{913AFB4A-7D2C-46D8-A4FD-DAEC1F80D6C2}']
   { puts element in the tail of the queue }
-    procedure Enqueue(constref aValue: T);
-    function  EnqueueAll(constref a: array of T): SizeInt; overload;
+    procedure Enqueue(const aValue: T);
+    function  EnqueueAll(const a: array of T): SizeInt; overload;
     function  EnqueueAll(e: IGEnumerable<T>): SizeInt; overload;
   { EXTRACTS element from the head of queue }
     function  Dequeue: T;
@@ -609,11 +609,11 @@ type
 
   IGPriorityQueue<T> = interface(IGQueue<T>)
   ['{39ADFF1D-018D-423B-A16A-8942B06D0A76}']
-    function  Insert(constref aValue: T): THandle;
+    function  Insert(const aValue: T): THandle;
     function  PeekHandle: THandle;
     function  TryPeekHandle(out aValue: THandle): Boolean;
     function  ValueOf(h: THandle): T;
-    procedure Update(h: THandle; constref aValue: T);
+    procedure Update(h: THandle; const aValue: T);
     function  Remove(h: THandle): T;
   { only another entity can be merged, aQueue will be cleared after Merge }
     function  Merge(aQueue: IGPriorityQueue<T>): SizeInt;
@@ -623,11 +623,11 @@ type
   ['{0D127C9E-9706-4D9A-A64C-A70844DC1F55}']
     function  GetItem(aIndex: SizeInt): T;
     procedure SetItem(aIndex: SizeInt; const aValue: T);
-    procedure PushFirst(constref aValue: T);
-    function  PushAllFirst(constref a: array of T): SizeInt; overload;
+    procedure PushFirst(const aValue: T);
+    function  PushAllFirst(const a: array of T): SizeInt; overload;
     function  PushAllFirst(e: IGEnumerable<T>): SizeInt; overload;
-    procedure PushLast(constref aValue: T);
-    function  PushAllLast(constref a: array of T): SizeInt; overload;
+    procedure PushLast(const aValue: T);
+    function  PushAllLast(const a: array of T): SizeInt; overload;
     function  PushAllLast(e: IGEnumerable<T>): SizeInt; overload;
   { EXTRACTS element from the head of deque }
     function  PopFirst: T;
@@ -642,8 +642,8 @@ type
     function  PeekLast: T;
     function  TryPeekLast(out aValue: T): Boolean;
   { inserts aValue into position aIndex }
-    procedure Insert(aIndex: SizeInt; constref aValue: T);
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+    procedure Insert(aIndex: SizeInt; const aValue: T);
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
   { extracts value from position aIndex }
     function  Extract(aIndex: SizeInt): T;
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
@@ -656,18 +656,18 @@ type
   IGCollection<T> = interface(IGContainer<T>)
   ['{53197613-B1FC-46BD-923A-A602D0545330}']
   { returns True if element added }
-    function  Add(constref aValue: T): Boolean;
-    function  Contains(constref aValue: T): Boolean;
-    function  NonContains(constref aValue: T): Boolean;
-    function  ContainsAny(constref a: array of T): Boolean; overload;
+    function  Add(const aValue: T): Boolean;
+    function  Contains(const aValue: T): Boolean;
+    function  NonContains(const aValue: T): Boolean;
+    function  ContainsAny(const a: array of T): Boolean; overload;
     function  ContainsAny(e: IGEnumerable<T>): Boolean; overload;
-    function  ContainsAll(constref a: array of T): Boolean; overload;
+    function  ContainsAll(const a: array of T): Boolean; overload;
     function  ContainsAll(e: IGEnumerable<T>): Boolean; overload;
-    function  Extract(constref aValue: T): Boolean;
+    function  Extract(const aValue: T): Boolean;
   { returns True if element removed }
-    function  Remove(constref aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean;
   { returns count of removed elements }
-    function  RemoveAll(constref a: array of T): SizeInt; overload;
+    function  RemoveAll(const a: array of T): SizeInt; overload;
   { returns count of removed elements }
     function  RemoveAll(e: IGEnumerable<T>): SizeInt; overload;
   { will contain only those elements that are simultaneously contained in self and c }
@@ -679,11 +679,11 @@ type
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
-    function  Contains(constref aValue: T): Boolean;
-    function  NonContains(constref aValue: T): Boolean;
-    function  ContainsAny(constref a: array of T): Boolean; overload;
+    function  Contains(const aValue: T): Boolean;
+    function  NonContains(const aValue: T): Boolean;
+    function  ContainsAny(const a: array of T): Boolean; overload;
     function  ContainsAny(e: IGEnumerable<T>): Boolean; overload;
-    function  ContainsAll(constref a: array of T): Boolean; overload;
+    function  ContainsAll(const a: array of T): Boolean; overload;
     function  ContainsAll(e: IGEnumerable<T>): Boolean; overload;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -707,16 +707,16 @@ type
   { free unused memory if possible }
     procedure TrimToFit;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  Contains(constref aKey: TKey): Boolean;
-    function  NonContains(constref aKey: TKey): Boolean;
-    function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
+    function  Contains(const aKey: TKey): Boolean;
+    function  NonContains(const aKey: TKey): Boolean;
+    function  Extract(const aKey: TKey; out aValue: TValue): Boolean;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RetainAll(aCollection: IGCollection<TKey>);
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
@@ -733,10 +733,10 @@ type
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
-    function  Contains(constref aKey: TKey): Boolean;
-    function  NonContains(constref aKey: TKey): Boolean;
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue = Default(TValue)): TValue;
+    function  Contains(const aKey: TKey): Boolean;
+    function  NonContains(const aKey: TKey): Boolean;
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
   { if uncomment it compiles but blocks Lazarus CodeTools }
@@ -832,14 +832,14 @@ type
   TGTuple2<T1, T2> = record
     F1: T1;
     F2: T2;
-    constructor Create(constref v1: T1; constref v2: T2);
+    constructor Create(const v1: T1; const v2: T2);
   end;
 
   TGTuple3<T1, T2, T3> = record
     F1: T1;
     F2: T2;
     F3: T3;
-    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3);
+    constructor Create(const v1: T1; const v2: T2; const v3: T3);
   end;
 
   TGTuple4<T1, T2, T3, T4> = record
@@ -847,7 +847,7 @@ type
     F2: T2;
     F3: T3;
     F4: T4;
-    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3; constref v4: T4);
+    constructor Create(const v1: T1; const v2: T2; const v3: T3; const v4: T4);
   end;
 
   TGTuple5<T1, T2, T3, T4, T5> = record
@@ -856,7 +856,7 @@ type
     F3: T3;
     F4: T4;
     F5: T5;
-    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3; constref v4: T4; constref v5: T5);
+    constructor Create(const v1: T1; const v2: T2; const v3: T3; const v4: T4; const v5: T5);
   end;
 
   { TGAddMonoid uses Default(T) as identity;
@@ -875,8 +875,8 @@ type
   private
     class function GetZeroConst: T; static; inline;
   public
-    class function AddConst(constref aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
-    class function IsZeroConst(constref aValue: T): Boolean; static; inline;
+    class function AddConst(const aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
+    class function IsZeroConst(const aValue: T): Boolean; static; inline;
     class property ZeroConst: T read GetZeroConst;
   end;
 
@@ -896,8 +896,8 @@ type
   private
     class function GetZeroConst: T; static; inline;
   public
-    class function AddConst(constref aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
-    class function IsZeroConst(constref aValue: T): Boolean; static; inline;
+    class function AddConst(const aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
+    class function IsZeroConst(const aValue: T): Boolean; static; inline;
     class property ZeroConst: T read GetZeroConst;
   end;
 
@@ -917,8 +917,8 @@ type
   private
     class function GetZeroConst: T; static; inline;
   public
-    class function AddConst(constref aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
-    class function IsZeroConst(constref aValue: T): Boolean; static; inline;
+    class function AddConst(const aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
+    class function IsZeroConst(const aValue: T): Boolean; static; inline;
     class property ZeroConst: T read GetZeroConst;
   end;
 
@@ -1319,7 +1319,7 @@ end;
 //  Result := aOpt.Value;
 //end;
 
-procedure TGOptional<T>.Assign(constref aValue: T);
+procedure TGOptional<T>.Assign(const aValue: T);
 begin
   if CFNilable and IsNil((@aValue)^) then
     exit;
@@ -1335,7 +1335,7 @@ begin
     Result := Default(T);
 end;
 
-function TGOptional<T>.OrElse(constref aValue: T): T;
+function TGOptional<T>.OrElse(const aValue: T): T;
 begin
   if Assigned then
     Result := FValue
@@ -2290,7 +2290,7 @@ begin
     UniqInstance;
 end;
 
-procedure TGCowDynArray<T>.Fill(aCount: SizeInt; constref aValue: T);
+procedure TGCowDynArray<T>.Fill(aCount: SizeInt; const aValue: T);
 begin
   Release;
   if aCount < 1 then
@@ -2919,7 +2919,7 @@ end;
 
 { TGTuple2 }
 
-constructor TGTuple2<T1, T2>.Create(constref v1: T1; constref v2: T2);
+constructor TGTuple2<T1, T2>.Create(const v1: T1; const v2: T2);
 begin
   F1 := v1;
   F2 := v2;
@@ -2927,7 +2927,7 @@ end;
 
 { TGTuple3 }
 
-constructor TGTuple3<T1, T2, T3>.Create(constref v1: T1; constref v2: T2; constref v3: T3);
+constructor TGTuple3<T1, T2, T3>.Create(const v1: T1; const v2: T2; const v3: T3);
 begin
   F1 := v1;
   F2 := v2;
@@ -2936,8 +2936,7 @@ end;
 
 { TGTuple4 }
 
-constructor TGTuple4<T1, T2, T3, T4>.Create(constref v1: T1; constref v2: T2; constref v3: T3;
-  constref v4: T4);
+constructor TGTuple4<T1, T2, T3, T4>.Create(const v1: T1; const v2: T2; const v3: T3; const v4: T4);
 begin
   F1 := v1;
   F2 := v2;
@@ -2947,8 +2946,8 @@ end;
 
 { TGTuple5 }
 
-constructor TGTuple5<T1, T2, T3, T4, T5>.Create(constref v1: T1; constref v2: T2; constref v3: T3;
-  constref v4: T4; constref v5: T5);
+constructor TGTuple5<T1, T2, T3, T4, T5>.Create(const v1: T1; const v2: T2; const v3: T3; const v4: T4;
+  const v5: T5);
 begin
   F1 := v1;
   F2 := v2;
@@ -2976,12 +2975,12 @@ begin
   Result := Default(T);
 end;
 
-class function TGAddMonoidEx<T>.AddConst(constref aValue, aConst: T; aSize: SizeInt): T;
+class function TGAddMonoidEx<T>.AddConst(const aValue, aConst: T; aSize: SizeInt): T;
 begin
   Result := aValue + aConst * aSize;
 end;
 
-class function TGAddMonoidEx<T>.IsZeroConst(constref aValue: T): Boolean;
+class function TGAddMonoidEx<T>.IsZeroConst(const aValue: T): Boolean;
 begin
   Result := aValue = Default(T);
 end;
@@ -3008,12 +3007,12 @@ begin
   Result := Default(T);
 end;
 
-class function TGMaxMonoidEx<T>.AddConst(constref aValue, aConst: T; aSize: SizeInt): T;
+class function TGMaxMonoidEx<T>.AddConst(const aValue, aConst: T; aSize: SizeInt): T;
 begin
   Result := aValue + aConst;
 end;
 
-class function TGMaxMonoidEx<T>.IsZeroConst(constref aValue: T): Boolean;
+class function TGMaxMonoidEx<T>.IsZeroConst(const aValue: T): Boolean;
 begin
   Result := aValue = Default(T);
 end;
@@ -3040,12 +3039,12 @@ begin
   Result := Default(T);
 end;
 
-class function TGMinMonoidEx<T>.AddConst(constref aValue, aConst: T; aSize: SizeInt): T;
+class function TGMinMonoidEx<T>.AddConst(const aValue, aConst: T; aSize: SizeInt): T;
 begin
   Result := aValue + aConst;
 end;
 
-class function TGMinMonoidEx<T>.IsZeroConst(constref aValue: T): Boolean;
+class function TGMinMonoidEx<T>.IsZeroConst(const aValue: T): Boolean;
 begin
   Result := aValue = Default(T);
 end;

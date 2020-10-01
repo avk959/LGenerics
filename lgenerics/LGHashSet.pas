@@ -84,8 +84,8 @@ type
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
-    function  DoAdd(constref aValue: T): Boolean; override;
-    function  DoExtract(constref aValue: T): Boolean; override;
+    function  DoAdd(const aValue: T): Boolean; override;
+    function  DoExtract(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -98,23 +98,23 @@ type
     class function DefaultLoadFactor: Single; inline;
     class function MaxLoadFactor: Single; inline;
     class function MinLoadFactor: Single; inline;
-    class function Distinct(constref a: TArray): IEnumerable; inline;
+    class function Distinct(const a: TArray): IEnumerable; inline;
     class function Distinct(e: IEnumerable): IEnumerable; inline;
     constructor Create;
-    constructor Create(constref a: array of T);
+    constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; constref a: array of T);
+    constructor Create(aCapacity: SizeInt; const a: array of T);
     constructor Create(aCapacity: SizeInt; e: IEnumerable);
     constructor Create(aLoadFactor: Single);
-    constructor Create(aLoadFactor: Single; constref a: array of T);
+    constructor Create(aLoadFactor: Single; const a: array of T);
     constructor Create(aLoadFactor: Single; e: IEnumerable);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
     constructor CreateCopy(aSet: TAbstractHashSet);
     destructor Destroy; override;
-    function  Contains(constref aValue: T): Boolean; override;
+    function  Contains(const aValue: T): Boolean; override;
     function  Clone: TAbstractHashSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
@@ -221,22 +221,22 @@ type
   protected
     procedure EntryRemoving(p: PEntry);
     procedure DoClear; override;
-    function  DoRemove(constref aValue: T): Boolean; override;
+    function  DoRemove(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
   public
     constructor Create(aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aCapacity: SizeInt; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aLoadFactor: Single; aOwnsObjects: Boolean = True);
-    constructor Create(aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aLoadFactor: Single; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor CreateCopy(aSet: TGCustomObjectHashSet);
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
@@ -298,7 +298,7 @@ type
 
     procedure EntryRemoving(p: PEntry);
     procedure DoClear; override;
-    function  DoRemove(constref aValue: T): Boolean; override;
+    function  DoRemove(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -306,16 +306,16 @@ type
     class function GetTableClass: THashTableClass; override;
   public
     constructor Create(aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aCapacity: SizeInt; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aLoadFactor: Single; aOwnsObjects: Boolean = True);
-    constructor Create(aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aLoadFactor: Single; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor CreateCopy(aSet: TGObjectOrderedHashSet);
     function  Clone: TGObjectOrderedHashSet; override;
@@ -380,24 +380,24 @@ type
     procedure TrimToFit; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
   { returns True if element added }
-    function  Add(constref aValue: T): Boolean; inline;
+    function  Add(const aValue: T): Boolean; inline;
   { returns count of added elements }
-    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
     function  AddAll(constref aSet: TGLiteHashSet): SizeInt;
-    function  Contains(constref aValue: T): Boolean;
-    function  NonContains(constref aValue: T): Boolean;
+    function  Contains(const aValue: T): Boolean;
+    function  NonContains(const aValue: T): Boolean;
     function  FindFirst(out aValue: T): Boolean; inline;
-    function  ContainsAny(constref a: array of T): Boolean;
+    function  ContainsAny(const a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
     function  ContainsAny(constref aSet: TGLiteHashSet): Boolean;
-    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(const a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
     function  ContainsAll(constref aSet: TGLiteHashSet): Boolean;
   { returns True if element removed }
-    function  Remove(constref aValue: T): Boolean; inline;
+    function  Remove(const aValue: T): Boolean; inline;
   { returns count of removed elements }
-    function  RemoveAll(constref a: array of T): SizeInt;
+    function  RemoveAll(const a: array of T): SizeInt;
     function  RemoveAll(e: IEnumerable): SizeInt;
     function  RemoveAll(constref aSet: TGLiteHashSet): SizeInt;
   { returns count of removed elements }
@@ -405,7 +405,7 @@ type
     function  RemoveIf(aTest: TOnTest): SizeInt;
     function  RemoveIf(aTest: TNestTest): SizeInt;
   { returns True if element extracted }
-    function  Extract(constref aValue: T): Boolean; inline;
+    function  Extract(const aValue: T): Boolean; inline;
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
@@ -509,7 +509,7 @@ type
     FDsu: array of SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
-    function  FindOrAdd(constref aValue: T): SizeInt;
+    function  FindOrAdd(const aValue: T): SizeInt;
     procedure ExpandDsu;
     function  GetItem(aIndex: SizeInt): T; inline;
     function  GetTag(aValue: SizeInt): SizeInt;
@@ -520,22 +520,22 @@ type
     function  NonEmpty: Boolean; inline;
     procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
-    function  IndexOf(constref aValue: T): SizeInt;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
+    function  IndexOf(const aValue: T): SizeInt;
+    function  Contains(const aValue: T): Boolean; inline;
+    function  NonContains(const aValue: T): Boolean; inline;
   { returns index of the added element, -1 if such element already exists }
-    function  Add(constref aValue: T): SizeInt;
+    function  Add(const aValue: T): SizeInt;
   { destroys subsets }
     procedure Reset;
   { values related to the same subset will have the same Tag }
-    function  Tag(constref aValue: T): SizeInt;
+    function  Tag(const aValue: T): SizeInt;
     function  TagI(aIndex: SizeInt): SizeInt;
-    function  InSameSet(constref L, R: T): Boolean; inline;
+    function  InSameSet(const L, R: T): Boolean; inline;
     function  InSameSetI(L, R: SizeInt): Boolean; inline;
-    function  InDiffSets(constref L, R: T): Boolean; inline;
+    function  InDiffSets(const L, R: T): Boolean; inline;
     function  InDiffSetsI(L, R: SizeInt): Boolean; inline;
   { returns True and joins L and R, if L and R related to the different subsets, False otherwise }
-    function  Join(constref L, R: T): Boolean; inline;
+    function  Join(const L, R: T): Boolean; inline;
     function  JoinI(L, R: SizeInt): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -571,13 +571,13 @@ type
     FCount: SizeInt;
     FLoadFactor: Single;
     FGlobLock: TMultiReadExclusiveWriteSynchronizer;
-    function  NewNode(constref aValue: T; aHash: SizeInt): PNode;
+    function  NewNode(const aValue: T; aHash: SizeInt): PNode;
     procedure FreeNode(aNode: PNode);
     function  GetCapacity: SizeInt;
     procedure ClearChainList;
-    function  LockSlot(constref aValue: T; out aHash: SizeInt): SizeInt;
-    function  Find(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
-    function  RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  LockSlot(const aValue: T; out aHash: SizeInt): SizeInt;
+    function  Find(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  RemoveNode(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
     procedure CheckNeedExpand;
     procedure Expand;
   public
@@ -589,9 +589,9 @@ type
     constructor Create;
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 1.0);
     destructor Destroy; override;
-    function  Add(constref aValue: T): Boolean;
-    function  Contains(constref aValue: T): Boolean;
-    function  Remove(constref aValue: T): Boolean; virtual;
+    function  Add(const aValue: T): Boolean;
+    function  Contains(const aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean; virtual;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor;
@@ -714,7 +714,7 @@ begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGAbstractHashSet.DoAdd(constref aValue: T): Boolean;
+function TGAbstractHashSet.DoAdd(const aValue: T): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -724,7 +724,7 @@ begin
     p^.Key := aValue;
 end;
 
-function TGAbstractHashSet.DoExtract(constref aValue: T): Boolean;
+function TGAbstractHashSet.DoExtract(const aValue: T): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
@@ -786,7 +786,7 @@ begin
   Result := GetTableClass.MinLoadFactor;
 end;
 
-class function TGAbstractHashSet.Distinct(constref a: TArray): IEnumerable;
+class function TGAbstractHashSet.Distinct(const a: TArray): IEnumerable;
 begin
   Result := TDistinctEnumerable.Create(specialize TGArrayEnumerator<T>.Create(a), GetClass);
 end;
@@ -801,7 +801,7 @@ begin
   FTable := GetTableClass.Create;
 end;
 
-constructor TGAbstractHashSet.Create(constref a: array of T);
+constructor TGAbstractHashSet.Create(const a: array of T);
 begin
   FTable := GetTableClass.Create;
   DoAddAll(a);
@@ -829,7 +829,7 @@ begin
   FTable := GetTableClass.Create(aCapacity);
 end;
 
-constructor TGAbstractHashSet.Create(aCapacity: SizeInt; constref a: array of T);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; const a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(a);
@@ -846,7 +846,7 @@ begin
   FTable := GetTableClass.Create(aLoadFactor);
 end;
 
-constructor TGAbstractHashSet.Create(aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashSet.Create(aLoadFactor: Single; const a: array of T);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
   DoAddAll(a);
@@ -869,7 +869,7 @@ begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
 end;
 
-constructor TGAbstractHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(a);
@@ -899,7 +899,7 @@ begin
   inherited;
 end;
 
-function TGAbstractHashSet.Contains(constref aValue: T): Boolean;
+function TGAbstractHashSet.Contains(const aValue: T): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -1043,7 +1043,7 @@ begin
   inherited;
 end;
 
-function TGCustomObjectHashSet.DoRemove(constref aValue: T): Boolean;
+function TGCustomObjectHashSet.DoRemove(const aValue: T): Boolean;
 begin
   Result := inherited DoRemove(aValue);
   if Result and OwnsObjects then
@@ -1080,7 +1080,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashSet.Create(constref a: array of T; aOwnsObjects: Boolean);
+constructor TGCustomObjectHashSet.Create(const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(a);
   OwnsObjects := aOwnsObjects;
@@ -1098,7 +1098,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashSet.Create(aCapacity: SizeInt; constref a: array of T; aOwnsObjects: Boolean);
+constructor TGCustomObjectHashSet.Create(aCapacity: SizeInt; const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(aCapacity, a);
   OwnsObjects := aOwnsObjects;
@@ -1116,7 +1116,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashSet.Create(aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean);
+constructor TGCustomObjectHashSet.Create(aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(aLoadFactor, a);
   OwnsObjects := aOwnsObjects;
@@ -1134,7 +1134,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T;
+constructor TGCustomObjectHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T;
   aOwnsObjects: Boolean);
 begin
   inherited Create(aCapacity, aLoadFactor, a);
@@ -1242,7 +1242,7 @@ begin
   inherited;
 end;
 
-function TGObjectOrderedHashSet.DoRemove(constref aValue: T): Boolean;
+function TGObjectOrderedHashSet.DoRemove(const aValue: T): Boolean;
 begin
   Result := inherited DoRemove(aValue);
   if Result and OwnsObjects then
@@ -1289,7 +1289,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectOrderedHashSet.Create(constref a: array of T; aOwnsObjects: Boolean);
+constructor TGObjectOrderedHashSet.Create(const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(a);
   OwnsObjects := aOwnsObjects;
@@ -1307,7 +1307,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectOrderedHashSet.Create(aCapacity: SizeInt; constref a: array of T; aOwnsObjects: Boolean);
+constructor TGObjectOrderedHashSet.Create(aCapacity: SizeInt; const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(aCapacity, a);
   OwnsObjects := aOwnsObjects;
@@ -1325,7 +1325,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectOrderedHashSet.Create(aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean);
+constructor TGObjectOrderedHashSet.Create(aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(aLoadFactor, a);
   OwnsObjects := aOwnsObjects;
@@ -1343,7 +1343,7 @@ begin
   OwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectOrderedHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T;
+constructor TGObjectOrderedHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T;
   aOwnsObjects: Boolean);
 begin
   inherited Create(aCapacity, aLoadFactor, a);
@@ -1493,7 +1493,7 @@ begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGLiteHashSet.Add(constref aValue: T): Boolean;
+function TGLiteHashSet.Add(const aValue: T): Boolean;
 var
   p: PEntry;
 begin
@@ -1502,7 +1502,7 @@ begin
     p^.Key := aValue;
 end;
 
-function TGLiteHashSet.AddAll(constref a: array of T): SizeInt;
+function TGLiteHashSet.AddAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1540,12 +1540,12 @@ begin
     Result := 0;
 end;
 
-function TGLiteHashSet.Contains(constref aValue: T): Boolean;
+function TGLiteHashSet.Contains(const aValue: T): Boolean;
 begin
   Result := FTable.Find(aValue) <> nil;
 end;
 
-function TGLiteHashSet.NonContains(constref aValue: T): Boolean;
+function TGLiteHashSet.NonContains(const aValue: T): Boolean;
 begin
   Result := FTable.Find(aValue) = nil;
 end;
@@ -1555,7 +1555,7 @@ begin
   Result := FTable.FindFirstKey(aValue);
 end;
 
-function TGLiteHashSet.ContainsAny(constref a: array of T): Boolean;
+function TGLiteHashSet.ContainsAny(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1594,7 +1594,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashSet.ContainsAll(constref a: array of T): Boolean;
+function TGLiteHashSet.ContainsAll(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1631,12 +1631,12 @@ begin
   Result := True;
 end;
 
-function TGLiteHashSet.Remove(constref aValue: T): Boolean;
+function TGLiteHashSet.Remove(const aValue: T): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
 
-function TGLiteHashSet.RemoveAll(constref a: array of T): SizeInt;
+function TGLiteHashSet.RemoveAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1725,7 +1725,7 @@ begin
   Result -= Count;
 end;
 
-function TGLiteHashSet.Extract(constref aValue: T): Boolean;
+function TGLiteHashSet.Extract(const aValue: T): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
@@ -1950,7 +1950,7 @@ begin
   Result := FTable.Count;
 end;
 
-function TGDisjointSetUnion.FindOrAdd(constref aValue: T): SizeInt;
+function TGDisjointSetUnion.FindOrAdd(const aValue: T): SizeInt;
 var
   OldCapacity: SizeInt;
   e: PEntry;
@@ -2037,22 +2037,22 @@ begin
     ExpandDsu;
 end;
 
-function TGDisjointSetUnion.IndexOf(constref aValue: T): SizeInt;
+function TGDisjointSetUnion.IndexOf(const aValue: T): SizeInt;
 begin
   FTable.Find(aValue, Result);
 end;
 
-function TGDisjointSetUnion.Contains(constref aValue: T): Boolean;
+function TGDisjointSetUnion.Contains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) >= 0;
 end;
 
-function TGDisjointSetUnion.NonContains(constref aValue: T): Boolean;
+function TGDisjointSetUnion.NonContains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) < 0;
 end;
 
-function TGDisjointSetUnion.Add(constref aValue: T): SizeInt;
+function TGDisjointSetUnion.Add(const aValue: T): SizeInt;
 var
   OldCapacity: SizeInt;
   e: PEntry;
@@ -2076,7 +2076,7 @@ begin
     FDsu[I] := I;
 end;
 
-function TGDisjointSetUnion.Tag(constref aValue: T): SizeInt;
+function TGDisjointSetUnion.Tag(const aValue: T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2092,7 +2092,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGDisjointSetUnion.InSameSet(constref L, R: T): Boolean;
+function TGDisjointSetUnion.InSameSet(const L, R: T): Boolean;
 var
   I, J: SizeInt;
 begin
@@ -2106,7 +2106,7 @@ begin
   Result := TagI(L) = TagI(R);
 end;
 
-function TGDisjointSetUnion.InDiffSets(constref L, R: T): Boolean;
+function TGDisjointSetUnion.InDiffSets(const L, R: T): Boolean;
 var
   I, J: SizeInt;
 begin
@@ -2120,7 +2120,7 @@ begin
   Result := TagI(L) <> TagI(R);
 end;
 
-function TGDisjointSetUnion.Join(constref L, R: T): Boolean;
+function TGDisjointSetUnion.Join(const L, R: T): Boolean;
 var
   I, J: SizeInt;
 begin
@@ -2177,7 +2177,7 @@ end;
 
 { TGThreadFGHashSet }
 
-function TGThreadFGHashSet.NewNode(constref aValue: T; aHash: SizeInt): PNode;
+function TGThreadFGHashSet.NewNode(const aValue: T; aHash: SizeInt): PNode;
 begin
   New(Result);
   Result^.Hash := aHash;
@@ -2232,7 +2232,7 @@ begin
   FSlotList := nil;
 end;
 
-function TGThreadFGHashSet.LockSlot(constref aValue: T; out aHash: SizeInt): SizeInt;
+function TGThreadFGHashSet.LockSlot(const aValue: T; out aHash: SizeInt): SizeInt;
 begin
   aHash := TEqRel.HashCode(aValue);
   FGlobLock.BeginRead;
@@ -2244,7 +2244,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashSet.Find(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashSet.Find(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
 begin
@@ -2258,7 +2258,7 @@ begin
   Result := nil;
 end;
 
-function TGThreadFGHashSet.RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashSet.RemoveNode(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
   Prev: PNode = nil;
@@ -2369,7 +2369,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashSet.Add(constref aValue: T): Boolean;
+function TGThreadFGHashSet.Add(const aValue: T): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2391,7 +2391,7 @@ begin
     CheckNeedExpand;
 end;
 
-function TGThreadFGHashSet.Contains(constref aValue: T): Boolean;
+function TGThreadFGHashSet.Contains(const aValue: T): Boolean;
 var
   SlotIdx, Hash: SizeInt;
 begin
@@ -2403,7 +2403,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashSet.Remove(constref aValue: T): Boolean;
+function TGThreadFGHashSet.Remove(const aValue: T): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;

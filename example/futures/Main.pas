@@ -118,7 +118,7 @@ begin
     ShowMessage('Sequential sort failed');
 end;
 
-function Sort(constref a: PSmallArray): Boolean;
+function Sort(const a: PSmallArray): Boolean;
 begin
   THelper.Sort(a^);
   Result := True;
@@ -174,25 +174,25 @@ begin
 end;
 
 
-function SortLeft(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
+function SortLeft(const a: PDWordArray; const aFrom, aTo: Integer): Integer;
 begin
   THelper.Sort(a^[aFrom..aTo]);
   Result := aFrom;
 end;
 
-function SortRight(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
+function SortRight(const a: PDWordArray; const aFrom, aTo: Integer): Integer;
 begin
   THelper.Sort(a^[aFrom..aTo]);
   Result := aTo;
 end;
 
-function MergeSortLeft(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
+function MergeSortLeft(const a: PDWordArray; const aFrom, aTo: Integer): Integer;
 begin
   THelper.MergeSort(a^[aFrom..aTo]);
   Result := aFrom;
 end;
 
-function MergeSortRight(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
+function MergeSortRight(const a: PDWordArray; const aFrom, aTo: Integer): Integer;
 begin
   THelper.MergeSort(a^[aFrom..aTo]);
   Result := aTo;

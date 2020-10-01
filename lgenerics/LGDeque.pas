@@ -41,8 +41,8 @@ type
   const
     SIZE_CUTOFF = 64;
 
-    procedure DoPushFirst(constref aValue: T);
-    function  AddArray2Head(constref a: array of T): SizeInt;
+    procedure DoPushFirst(const aValue: T);
+    function  AddArray2Head(const a: array of T): SizeInt;
     function  AddContainer2Head(aContainer: TSpecContainer): SizeInt;
     function  AddEnum2Head(e: IEnumerable): SizeInt;
     function  InternalIndex(aIndex: SizeInt): SizeInt; inline;
@@ -61,11 +61,11 @@ type
     function  ExtractItem(aIndex: SizeInt): T;
     function  DeleteItem(aIndex: SizeInt): T; virtual;
   public
-    procedure PushFirst(constref aValue: T); inline;
-    function  PushAllFirst(constref a: array of T): SizeInt;
+    procedure PushFirst(const aValue: T); inline;
+    function  PushAllFirst(const a: array of T): SizeInt;
     function  PushAllFirst(e: IEnumerable): SizeInt;
-    procedure PushLast(constref aValue: T);
-    function  PushAllLast(constref a: array of T): SizeInt;
+    procedure PushLast(const aValue: T);
+    function  PushAllLast(const a: array of T): SizeInt;
     function  PushAllLast(e: IEnumerable): SizeInt;
   { EXTRACTS element from the head of deque; will raise ELGAccessEmpty if inctance is empty;
     will raise ELGUpdateLock if instance in iteration }
@@ -84,9 +84,9 @@ type
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
     will raise ELGUpdateLock if instance in iteration }
-    procedure Insert(aIndex: SizeInt; constref aValue: T);
+    procedure Insert(aIndex: SizeInt; const aValue: T);
   { will return False if aIndex out of bounds or instance in iteration }
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
   { extracts value from position aIndex;
     will raise ELGListError if aIndex out of bounds;
     will raise ELGUpdateLock if instance in iteration }
@@ -120,7 +120,7 @@ type
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref A: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
@@ -137,8 +137,8 @@ type
     constructor Create(aDeque: IDeque);
     destructor Destroy; override;
     procedure Clear;
-    procedure PushFirst(constref aValue: T); inline;
-    procedure PushLast(constref aValue: T); inline;
+    procedure PushFirst(const aValue: T); inline;
+    procedure PushLast(const aValue: T); inline;
     function  TryPopFirst(out aValue: T): Boolean;
     function  TryPopLast(out aValue: T): Boolean;
     function  TryPeekFirst(out aValue: T): Boolean;
@@ -195,8 +195,8 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure PushFirst(constref aValue: T); inline;
-    procedure PushLast(constref aValue: T); inline;
+    procedure PushFirst(const aValue: T); inline;
+    procedure PushLast(const aValue: T); inline;
   { EXTRACTS element from the head of deque; will raise ELGAccessEmpty if inctance is empty }
     function  PopFirst: T; inline;
     function  TryPopFirst(out aValue: T): Boolean; inline;
@@ -245,8 +245,8 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure PushFirst(constref aValue: T); inline;
-    procedure PushLast(constref aValue: T); inline;
+    procedure PushFirst(const aValue: T); inline;
+    procedure PushLast(const aValue: T); inline;
     function  TryPopFirst(out aValue: T): Boolean;
     function  TryPopLast(out aValue: T): Boolean;
     function  TryPeekFirst(out aValue: T): Boolean;
@@ -293,8 +293,8 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure PushFirst(constref aValue: T); inline;
-    procedure PushLast(constref aValue: T); inline;
+    procedure PushFirst(const aValue: T); inline;
+    procedure PushLast(const aValue: T); inline;
   { EXTRACTS element from the head of deque; will raise ELGAccessEmpty if inctance is empty }
     function  PopFirst: T; inline;
     function  TryPopFirst(out aValue: T): Boolean; inline;
@@ -309,9 +309,9 @@ type
     function  TryPeekLast(out aValue: T): Boolean; inline;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
-    procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
+    procedure Insert(aIndex: SizeInt; const aValue: T); inline;
   { will return False if aIndex out of bounds }
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean; inline;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean; inline;
   { extracts value from position aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  Extract(aIndex: SizeInt): T; inline;
@@ -344,8 +344,8 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure PushFirst(constref aValue: T); inline;
-    procedure PushLast(constref aValue: T); inline;
+    procedure PushFirst(const aValue: T); inline;
+    procedure PushLast(const aValue: T); inline;
     function  TryPopFirst(out aValue: T): Boolean;
     function  TryPopLast(out aValue: T): Boolean;
     function  TryPeekFirst(out aValue: T): Boolean;
@@ -359,7 +359,7 @@ implementation
 
 { TGDeque }
 
-procedure TGDeque.DoPushFirst(constref aValue: T);
+procedure TGDeque.DoPushFirst(const aValue: T);
 begin
   ItemAdding;
   Dec(FHead);
@@ -369,7 +369,7 @@ begin
   FItems[Head] := aValue;
 end;
 
-function TGDeque.AddArray2Head(constref a: array of T): SizeInt;
+function TGDeque.AddArray2Head(const a: array of T): SizeInt;
 var
   HeadPos, I, c: SizeInt;
 begin
@@ -616,13 +616,13 @@ begin
   Result := ExtractItem(aIndex);
 end;
 
-procedure TGDeque.PushFirst(constref aValue: T);
+procedure TGDeque.PushFirst(const aValue: T);
 begin
   CheckInIteration;
   DoPushFirst(aValue);
 end;
 
-function TGDeque.PushAllFirst(constref a: array of T): SizeInt;
+function TGDeque.PushAllFirst(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := AddArray2Head(a);
@@ -648,13 +648,13 @@ begin
     end;
 end;
 
-procedure TGDeque.PushLast(constref aValue: T);
+procedure TGDeque.PushLast(const aValue: T);
 begin
   CheckInIteration;
   Append(aValue);
 end;
 
-function TGDeque.PushAllLast(constref a: array of T): SizeInt;
+function TGDeque.PushAllLast(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := AppendArray(a);
@@ -738,14 +738,14 @@ begin
   Result := False;
 end;
 
-procedure TGDeque.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGDeque.Insert(aIndex: SizeInt; const aValue: T);
 begin
   CheckInIteration;
   CheckInsertIndexRange(aIndex);
   InsertItem(aIndex, aValue);
 end;
 
-function TGDeque.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGDeque.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   Result := not InIteration and IndexInInsertRange(aIndex);
   if Result then
@@ -834,7 +834,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectDeque.Create(constref A: array of T; aOwnsObjects: Boolean = True);
+constructor TGObjectDeque.Create(const A: array of T; aOwnsObjects: Boolean = True);
 begin
   inherited Create(A);
   FOwnsObjects := aOwnsObjects;
@@ -880,7 +880,7 @@ begin
   end;
 end;
 
-procedure TGThreadDeque.PushFirst(constref aValue: T);
+procedure TGThreadDeque.PushFirst(const aValue: T);
 begin
   DoLock;
   try
@@ -890,7 +890,7 @@ begin
   end;
 end;
 
-procedure TGThreadDeque.PushLast(constref aValue: T);
+procedure TGThreadDeque.PushLast(const aValue: T);
 begin
   DoLock;
   try
@@ -1173,12 +1173,12 @@ begin
   FBuffer.TrimToFit;
 end;
 
-procedure TGLiteDeque.PushFirst(constref aValue: T);
+procedure TGLiteDeque.PushFirst(const aValue: T);
 begin
   FBuffer.PushFirst(aValue);
 end;
 
-procedure TGLiteDeque.PushLast(constref aValue: T);
+procedure TGLiteDeque.PushLast(const aValue: T);
 begin
   FBuffer.PushLast(aValue);
 end;
@@ -1307,7 +1307,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadDeque.PushFirst(constref aValue: T);
+procedure TGLiteThreadDeque.PushFirst(const aValue: T);
 begin
   DoLock;
   try
@@ -1317,7 +1317,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadDeque.PushLast(constref aValue: T);
+procedure TGLiteThreadDeque.PushLast(const aValue: T);
 begin
   DoLock;
   try
@@ -1487,12 +1487,12 @@ begin
   FDeque.TrimToFit;
 end;
 
-procedure TGLiteObjectDeque.PushFirst(constref aValue: T);
+procedure TGLiteObjectDeque.PushFirst(const aValue: T);
 begin
   FDeque.PushFirst(aValue);
 end;
 
-procedure TGLiteObjectDeque.PushLast(constref aValue: T);
+procedure TGLiteObjectDeque.PushLast(const aValue: T);
 begin
   FDeque.PushLast(aValue);
 end;
@@ -1537,12 +1537,12 @@ begin
   Result := FDeque.TryPeekLast(aValue);
 end;
 
-procedure TGLiteObjectDeque.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteObjectDeque.Insert(aIndex: SizeInt; const aValue: T);
 begin
   FDeque.Insert(aIndex, aValue);
 end;
 
-function TGLiteObjectDeque.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGLiteObjectDeque.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   Result := FDeque.TryInsert(aIndex, aValue);
 end;
@@ -1609,7 +1609,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadObjectDeque.PushFirst(constref aValue: T);
+procedure TGLiteThreadObjectDeque.PushFirst(const aValue: T);
 begin
   DoLock;
   try
@@ -1619,7 +1619,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadObjectDeque.PushLast(constref aValue: T);
+procedure TGLiteThreadObjectDeque.PushLast(const aValue: T);
 begin
   DoLock;
   try

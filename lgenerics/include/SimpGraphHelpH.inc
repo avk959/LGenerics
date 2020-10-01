@@ -34,7 +34,7 @@ type
     FNodes: TIntArray;
     FOnFind: TOnSetFound;
     FCurrCount: SizeInt;
-    procedure GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+    procedure GreedyColor(const aCand: TBoolVector; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
     procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -64,7 +64,7 @@ type
     FNodes: TIntArray;
     FOnFind: TOnSetFound;
     FCurrCount: SizeInt;
-    procedure GreedyColor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+    procedure GreedyColor(const aCand: TBits256; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBits256);
     procedure Extend(var aSub, aCand: TBits256);
     procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -93,7 +93,7 @@ type
     FCurrSet: TIntSet;
     FNodes: TIntArray;
     FOnFind: TOnSetFound;
-    procedure GreedyColor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+    procedure GreedyColor(const aCand: TIntSet; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TIntSet);
     procedure Extend(var aSub, aCand: TIntSet);
   public
@@ -121,7 +121,7 @@ type
     FNodes: TIntArray;
     FCurrCount: SizeInt;
     procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
-    procedure Extend(constref aCand, aTested: TBits256);
+    procedure Extend(const aCand, aTested: TBits256);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
@@ -130,7 +130,7 @@ type
   strict private
     FMatrix: TSkeleton;
     FCurrSet: TIntSet;
-    procedure Extend(constref aCand: TIntSet);
+    procedure Extend(const aCand: TIntSet);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
@@ -215,7 +215,7 @@ type
     FCancelled: Boolean;
     procedure Init(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
     function  TimeToFinish: Boolean; inline;
-    function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+    function  SelectMin(const v: TBoolVector; out aValue: SizeInt): Boolean;
     procedure CheckIsCycle(aNode: SizeInt);
     procedure CheckIsPath(aNode: SizeInt); inline;
     procedure SearchFor(aNode: SizeInt);
@@ -257,7 +257,7 @@ type
     function  Dfs(aRoot: SizeInt): Boolean;
     function  HopcroftKarp: TIntEdgeArray;
   public
-    function  MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+    function  MaxMatching(aGraph: TGSimpleGraph; const w, g: TIntArray): TIntEdgeArray;
   end;
 
   { TBfsMatch: simple BFS matching algorithm for bipartite graph }
@@ -271,13 +271,13 @@ type
     FWhites: TBoolVector;
     FMatchCount: SizeInt;
     procedure Match(aNode, aMate: SizeInt); inline;
-    procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+    procedure Init(aGraph: TGSimpleGraph; const w, g: TIntArray);
     function  FindAugmentPath(aRoot: SizeInt): SizeInt;
     procedure AlternatePath(aRoot: SizeInt);
     procedure BfsMatch;
     function  CreateEdges: TIntEdgeArray;
   public
-    function  MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+    function  MaxMatching(aGraph: TGSimpleGraph; const w, g: TIntArray): TIntEdgeArray;
   end;
 
 { TEdMatchHelper: Edmonds algorithm for maximum cardinality matching }
@@ -405,7 +405,7 @@ type
     TConflictPair = record
       Left,
       Right: TInterval;
-      constructor Create(constref aRight: TInterval);
+      constructor Create(const aRight: TInterval);
       procedure Swap; inline;
       function  Lowest: SizeInt; inline;
     end;

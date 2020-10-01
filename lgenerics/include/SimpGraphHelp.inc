@@ -28,7 +28,7 @@ end;
 
 { TGSimpleGraph.TBPCliqueIsHelper }
 
-procedure TGSimpleGraph.TBPCliqueIsHelper.GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TBPCliqueIsHelper.GreedyColor(const aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
   I, J, ColorClass, PCount: SizeInt;
@@ -224,7 +224,7 @@ end;
 
 { TGSimpleGraph.TBPCliqueIsHelper256 }
 
-procedure TGSimpleGraph.TBPCliqueIsHelper256.GreedyColor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.GreedyColor(const aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBits256;
   I, J, ColorClass, PCount: SizeInt;
@@ -438,7 +438,7 @@ begin
   FOnFind := aOnFind;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.GreedyColor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueHelper.GreedyColor(const aCand: TIntSet; var aColOrd, aColors: TIntArray);
 var
   P, Q: TIntSet;
   I, J, ColorClass: SizeInt;
@@ -690,7 +690,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aCand, aTested: TBits256);
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend(const aCand, aTested: TBits256);
 var
   NewCand, NewTested: TBits256;
   I, J: SizeInt;
@@ -769,7 +769,7 @@ end;
 
 { TGSimpleGraph.TDomSetHelper }
 
-procedure TGSimpleGraph.TDomSetHelper.Extend(constref aCand: TIntSet);
+procedure TGSimpleGraph.TDomSetHelper.Extend(const aCand: TIntSet);
 var
   NewCand: TIntSet;
   I, J: SizeInt;
@@ -1155,7 +1155,7 @@ begin
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleGraph.THamiltonSearch.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonSearch.SelectMin(const v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -1447,7 +1447,7 @@ begin
       end;
 end;
 
-function TGSimpleGraph.THKMatch.MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.THKMatch.MaxMatching(aGraph: TGSimpleGraph; const w, g: TIntArray): TIntEdgeArray;
 begin
   Init(aGraph, w, g);
   Result := HopcroftKarp;
@@ -1461,7 +1461,7 @@ begin
   FMates[aMate] := aNode;
 end;
 
-procedure TGSimpleGraph.TBfsMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+procedure TGSimpleGraph.TBfsMatch.Init(aGraph: TGSimpleGraph; const w, g: TIntArray);
 var
   I: SizeInt;
   e: TIntEdge;
@@ -1574,7 +1574,7 @@ begin
       end;
 end;
 
-function TGSimpleGraph.TBfsMatch.MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.TBfsMatch.MaxMatching(aGraph: TGSimpleGraph; const w, g: TIntArray): TIntEdgeArray;
 begin
   Init(aGraph, w, g);
   BfsMatch;
@@ -2054,7 +2054,7 @@ end;
 
 { TGSimpleGraph.TPlanarHelper.TConflictPair }
 
-constructor TGSimpleGraph.TPlanarHelper.TConflictPair.Create(constref aRight: TInterval);
+constructor TGSimpleGraph.TPlanarHelper.TConflictPair.Create(const aRight: TInterval);
 begin
   Left := Default(TInterval);
   Right := aRight;

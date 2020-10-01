@@ -127,8 +127,8 @@ type
     function  GetHighest: PNode;
     function  GetLowest: PNode;
     function  GetHeight: SizeInt;
-    function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; virtual; abstract;
-    function  FindInsertPos(constref aKey: TKey): PNode; virtual; abstract;
+    function  FindNode(const aKey: TKey; out aInsertPos: PNode): PNode; virtual; abstract;
+    function  FindInsertPos(const aKey: TKey): PNode; virtual; abstract;
     procedure InsertNode(aNode: PNode); virtual; abstract;
     procedure InsertNodeAt(aNode, aParent: PNode); virtual; abstract;
     procedure ReplaceWithSuccessor(aNode: PNode);
@@ -145,22 +145,22 @@ type
     procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
-    function  FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
-    function  Add(constref aData: TEntry): PNode; inline;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
+    function  Add(const aData: TEntry): PNode; inline;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveNode(aNode: PNode); inline;
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TEnumerator; inline;
-    function  GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator; inline;
+    function  GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator; inline;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt;
     function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt;
-    function  Find(constref aKey: TKey): PNode; virtual; abstract;
-    function  FindLess(constref aKey: TKey): PNode; virtual; abstract;
-    function  FindLessOrEqual(constref aKey: TKey): PNode; virtual; abstract;
-    function  FindGreater(constref aKey: TKey): PNode; virtual; abstract;
-    function  FindGreaterOrEqual(constref aKey: TKey): PNode; virtual; abstract;
+    function  Find(const aKey: TKey): PNode; virtual; abstract;
+    function  FindLess(const aKey: TKey): PNode; virtual; abstract;
+    function  FindLessOrEqual(const aKey: TKey): PNode; virtual; abstract;
+    function  FindGreater(const aKey: TKey): PNode; virtual; abstract;
+    function  FindGreaterOrEqual(const aKey: TKey): PNode; virtual; abstract;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Lowest: PNode read GetLowest;
@@ -173,33 +173,33 @@ type
         class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGAvlTree<TKey, TEntry, TCmpRel> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   protected
-    function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
-    function  FindInsertPos(constref aKey: TKey): PNode; override;
+    function  FindNode(const aKey: TKey; out aInsertPos: PNode): PNode; override;
+    function  FindInsertPos(const aKey: TKey): PNode; override;
     procedure InsertNode(aNode: PNode); override;
     procedure InsertNodeAt(aNode, aParent: PNode); override;
   public
     function  Clone: TGAvlTree;
-    function  Find(constref aKey: TKey): PNode; override;
-    function  FindLess(constref aKey: TKey): PNode; override;
-    function  FindLessOrEqual(constref aKey: TKey): PNode; override;
-    function  FindGreater(constref aKey: TKey): PNode; override;
-    function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
+    function  Find(const aKey: TKey): PNode; override;
+    function  FindLess(const aKey: TKey): PNode; override;
+    function  FindLessOrEqual(const aKey: TKey): PNode; override;
+    function  FindGreater(const aKey: TKey): PNode; override;
+    function  FindGreaterOrEqual(const aKey: TKey): PNode; override;
   end;
 
   { TGComparableAvlTree assumes that type TKey has defined comparison operator < }
   generic TGComparableAvlTree<TKey, TEntry> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   protected
-    function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
-    function  FindInsertPos(constref aKey: TKey): PNode; override;
+    function  FindNode(const aKey: TKey; out aInsertPos: PNode): PNode; override;
+    function  FindInsertPos(const aKey: TKey): PNode; override;
     procedure InsertNode(aNode: PNode); override;
     procedure InsertNodeAt(aNode, aParent: PNode); override;
   public
     function  Clone: TGComparableAvlTree;
-    function  Find(constref aKey: TKey): PNode; override;
-    function  FindLess(constref aKey: TKey): PNode; override;
-    function  FindLessOrEqual(constref aKey: TKey): PNode; override;
-    function  FindGreater(constref aKey: TKey): PNode; override;
-    function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
+    function  Find(const aKey: TKey): PNode; override;
+    function  FindLess(const aKey: TKey): PNode; override;
+    function  FindLessOrEqual(const aKey: TKey): PNode; override;
+    function  FindGreater(const aKey: TKey): PNode; override;
+    function  FindGreaterOrEqual(const aKey: TKey): PNode; override;
   end;
 
   { TGRegularAvlTree is avl tree with regular comparator }
@@ -210,19 +210,19 @@ type
   private
     FLess: TLess;
   protected
-    function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
-    function  FindInsertPos(constref aKey: TKey): PNode; override;
+    function  FindNode(const aKey: TKey; out aInsertPos: PNode): PNode; override;
+    function  FindInsertPos(const aKey: TKey): PNode; override;
     procedure InsertNode(aNode: PNode); override;
     procedure InsertNodeAt(aNode, aParent: PNode); override;
   public
     constructor Create(aLess: TLess);
     constructor Create(aCapacity: SizeInt; aLess: TLess);
     function  Clone: TGRegularAvlTree;
-    function  Find(constref aKey: TKey): PNode; override;
-    function  FindLess(constref aKey: TKey): PNode; override;
-    function  FindLessOrEqual(constref aKey: TKey): PNode; override;
-    function  FindGreater(constref aKey: TKey): PNode; override;
-    function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
+    function  Find(const aKey: TKey): PNode; override;
+    function  FindLess(const aKey: TKey): PNode; override;
+    function  FindLessOrEqual(const aKey: TKey): PNode; override;
+    function  FindGreater(const aKey: TKey): PNode; override;
+    function  FindGreaterOrEqual(const aKey: TKey): PNode; override;
     property  Comparator: TLess read FLess;
   end;
 
@@ -234,19 +234,19 @@ type
   private
     FLess: TOnLess;
   protected
-    function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
-    function  FindInsertPos(constref aKey: TKey): PNode; override;
+    function  FindNode(const aKey: TKey; out aInsertPos: PNode): PNode; override;
+    function  FindInsertPos(const aKey: TKey): PNode; override;
     procedure InsertNode(aNode: PNode); override;
     procedure InsertNodeAt(aNode, aParent: PNode); override;
   public
     constructor Create(aLess: TOnLess);
     constructor Create(aCapacity: SizeInt; aLess: TOnLess);
     function  Clone: TGDelegatedAvlTree;
-    function  Find(constref aKey: TKey): PNode; override;
-    function  FindLess(constref aKey: TKey): PNode; override;
-    function  FindLessOrEqual(constref aKey: TKey): PNode; override;
-    function  FindGreater(constref aKey: TKey): PNode; override;
-    function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
+    function  Find(const aKey: TKey): PNode; override;
+    function  FindLess(const aKey: TKey): PNode; override;
+    function  FindLessOrEqual(const aKey: TKey): PNode; override;
+    function  FindGreater(const aKey: TKey): PNode; override;
+    function  FindGreaterOrEqual(const aKey: TKey): PNode; override;
     property  Comparator: TOnLess read FLess;
   end;
 
@@ -284,8 +284,8 @@ type
     procedure ClearTree; inline;
     function  GetHighest: PNode;
     function  GetLowest: PNode;
-    function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
-    function  FindInsertPos(constref aKey: TKey): PNode;
+    function  FindNode(const aKey: TKey; out aInsertPos: PNode): PNode;
+    function  FindInsertPos(const aKey: TKey): PNode;
     procedure InsertNode(aNode: PNode);
     procedure InsertNodeAt(aNode, aParent: PNode);
     procedure ReplaceWithSuccessor(aNode: PNode);
@@ -300,9 +300,9 @@ type
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
     procedure Clear; inline;
-    function  FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
-    function  Find(constref aKey: TKey): PNode;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
+    function  Find(const aKey: TKey): PNode;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveNode(aNode: PNode); inline;
     property  Count: SizeInt read FCount;
     property  Lowest: PNode read GetLowest;
@@ -393,8 +393,8 @@ type
     function  GetLowest: SizeInt;
     function  GetNodeHeight(aNode: SizeInt): SizeInt;
     function  GetHeight: SizeInt;
-    function  FindInsertPos(constref aKey: TKey): SizeInt;
-    function  FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    function  FindInsertPos(const aKey: TKey): SizeInt;
+    function  FindNode(const aKey: TKey; out aInsertPos: SizeInt): SizeInt;
     procedure ReplaceWithSuccessor(aNode: SizeInt);
     procedure RotateLeft(aNode: SizeInt);
     procedure RotateRight(aNode: SizeInt);
@@ -413,15 +413,15 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { returns nil if aKey already exists }
-    function  Add(constref aKey: TKey): PEntry;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
-    function  Find(constref aKey: TKey): PEntry;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Add(const aKey: TKey): PEntry;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
+    function  Find(const aKey: TKey): PEntry;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aIndex: SizeInt); inline;
-    function  FindLess(constref aKey: TKey): SizeInt;
-    function  FindLessOrEqual(constref aKey: TKey): SizeInt;
-    function  FindGreater(constref aKey: TKey): SizeInt;
-    function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+    function  FindLess(const aKey: TKey): SizeInt;
+    function  FindLessOrEqual(const aKey: TKey): SizeInt;
+    function  FindGreater(const aKey: TKey): SizeInt;
+    function  FindGreaterOrEqual(const aKey: TKey): SizeInt;
     function  CheckState: TAvlTreeState;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -479,8 +479,8 @@ type
     function  GetLowest: SizeInt;
     function  GetNodeHeight(aNode: SizeInt): SizeInt;
     function  GetHeight: SizeInt;
-    function  FindInsertPos(constref aKey: TKey): SizeInt;
-    function  FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    function  FindInsertPos(const aKey: TKey): SizeInt;
+    function  FindNode(const aKey: TKey; out aInsertPos: SizeInt): SizeInt;
     procedure ReplaceWithSuccessor(aNode: SizeInt);
     procedure RotateLeft(aNode: SizeInt);
     procedure RotateRight(aNode: SizeInt);
@@ -499,15 +499,15 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { returns nil if aKey already exists }
-    function  Add(constref aKey: TKey): PEntry;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
-    function  Find(constref aKey: TKey): PEntry;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Add(const aKey: TKey): PEntry;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
+    function  Find(const aKey: TKey): PEntry;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aIndex: SizeInt); inline;
-    function  FindLess(constref aKey: TKey): SizeInt;
-    function  FindLessOrEqual(constref aKey: TKey): SizeInt;
-    function  FindGreater(constref aKey: TKey): SizeInt;
-    function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+    function  FindLess(const aKey: TKey): SizeInt;
+    function  FindLessOrEqual(const aKey: TKey): SizeInt;
+    function  FindGreater(const aKey: TKey): SizeInt;
+    function  FindGreaterOrEqual(const aKey: TKey): SizeInt;
     function  CheckState: TAvlTreeState;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -1117,7 +1117,7 @@ begin
     FNodeManager.Clear;
 end;
 
-function TGCustomAvlTree.FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
+function TGCustomAvlTree.FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
 var
   ParentNode: PNode;
 begin
@@ -1131,14 +1131,14 @@ begin
     end;
 end;
 
-function TGCustomAvlTree.Add(constref aData: TEntry): PNode;
+function TGCustomAvlTree.Add(const aData: TEntry): PNode;
 begin
   Result := NewNode;
   Result^.Data := aData;
   InsertNode(Result);
 end;
 
-function TGCustomAvlTree.Remove(constref aKey: TKey): Boolean;
+function TGCustomAvlTree.Remove(const aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -1164,7 +1164,7 @@ begin
   Result := TReverseEnumerator.Create(Highest);
 end;
 
-function TGCustomAvlTree.GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator;
+function TGCustomAvlTree.GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator;
 begin
   if aInclusive then
     Result := TEnumerator.Create(FindGreaterOrEqual(aKey))
@@ -1254,7 +1254,7 @@ end;
 
 { TGAvlTree }
 
-function TGAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
+function TGAvlTree.FindNode(const aKey: TKey; out aInsertPos: PNode): PNode;
 begin
   Result := FRoot;
   aInsertPos := nil;
@@ -1271,7 +1271,7 @@ begin
     end;
 end;
 
-function TGAvlTree.FindInsertPos(constref aKey: TKey): PNode;
+function TGAvlTree.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1339,7 +1339,7 @@ begin
     Result.Add(p^.Data);
 end;
 
-function TGAvlTree.Find(constref aKey: TKey): PNode;
+function TGAvlTree.Find(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1352,7 +1352,7 @@ begin
         break;
 end;
 
-function TGAvlTree.FindLess(constref aKey: TKey): PNode;
+function TGAvlTree.FindLess(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1368,7 +1368,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGAvlTree.FindLessOrEqual(constref aKey: TKey): PNode;
+function TGAvlTree.FindLessOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1384,7 +1384,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGAvlTree.FindGreater(constref aKey: TKey): PNode;
+function TGAvlTree.FindGreater(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1400,7 +1400,7 @@ begin
       Node := Node^.Right;
 end;
 
-function TGAvlTree.FindGreaterOrEqual(constref aKey: TKey): PNode;
+function TGAvlTree.FindGreaterOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1418,7 +1418,7 @@ end;
 
 { TGComparableAvlTree }
 
-function TGComparableAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
+function TGComparableAvlTree.FindNode(const aKey: TKey; out aInsertPos: PNode): PNode;
 begin
   Result := FRoot;
   aInsertPos := nil;
@@ -1435,7 +1435,7 @@ begin
     end;
 end;
 
-function TGComparableAvlTree.FindInsertPos(constref aKey: TKey): PNode;
+function TGComparableAvlTree.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1503,7 +1503,7 @@ begin
     Result.Add(p^.Data);
 end;
 
-function TGComparableAvlTree.Find(constref aKey: TKey): PNode;
+function TGComparableAvlTree.Find(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1516,7 +1516,7 @@ begin
         break;
 end;
 
-function TGComparableAvlTree.FindLess(constref aKey: TKey): PNode;
+function TGComparableAvlTree.FindLess(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1532,7 +1532,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGComparableAvlTree.FindLessOrEqual(constref aKey: TKey): PNode;
+function TGComparableAvlTree.FindLessOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1548,7 +1548,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGComparableAvlTree.FindGreater(constref aKey: TKey): PNode;
+function TGComparableAvlTree.FindGreater(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1564,7 +1564,7 @@ begin
       Node := Node^.Right;
 end;
 
-function TGComparableAvlTree.FindGreaterOrEqual(constref aKey: TKey): PNode;
+function TGComparableAvlTree.FindGreaterOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1582,7 +1582,7 @@ end;
 
 { TGRegularAvlTree }
 
-function TGRegularAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
+function TGRegularAvlTree.FindNode(const aKey: TKey; out aInsertPos: PNode): PNode;
 begin
   Result := FRoot;
   aInsertPos := nil;
@@ -1599,7 +1599,7 @@ begin
     end;
 end;
 
-function TGRegularAvlTree.FindInsertPos(constref aKey: TKey): PNode;
+function TGRegularAvlTree.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1679,7 +1679,7 @@ begin
     Result.Add(p^.Data);
 end;
 
-function TGRegularAvlTree.Find(constref aKey: TKey): PNode;
+function TGRegularAvlTree.Find(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1692,7 +1692,7 @@ begin
         exit;
 end;
 
-function TGRegularAvlTree.FindLess(constref aKey: TKey): PNode;
+function TGRegularAvlTree.FindLess(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1708,7 +1708,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGRegularAvlTree.FindLessOrEqual(constref aKey: TKey): PNode;
+function TGRegularAvlTree.FindLessOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1724,7 +1724,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGRegularAvlTree.FindGreater(constref aKey: TKey): PNode;
+function TGRegularAvlTree.FindGreater(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1740,7 +1740,7 @@ begin
       Node := Node^.Right;
 end;
 
-function TGRegularAvlTree.FindGreaterOrEqual(constref aKey: TKey): PNode;
+function TGRegularAvlTree.FindGreaterOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1758,7 +1758,7 @@ end;
 
 { TGDelegatedAvlTree }
 
-function TGDelegatedAvlTree.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
+function TGDelegatedAvlTree.FindNode(const aKey: TKey; out aInsertPos: PNode): PNode;
 begin
   Result := FRoot;
   aInsertPos := nil;
@@ -1775,7 +1775,7 @@ begin
     end;
 end;
 
-function TGDelegatedAvlTree.FindInsertPos(constref aKey: TKey): PNode;
+function TGDelegatedAvlTree.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1855,7 +1855,7 @@ begin
     Result.Add(p^.Data);
 end;
 
-function TGDelegatedAvlTree.Find(constref aKey: TKey): PNode;
+function TGDelegatedAvlTree.Find(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -1868,7 +1868,7 @@ begin
         exit;
 end;
 
-function TGDelegatedAvlTree.FindLess(constref aKey: TKey): PNode;
+function TGDelegatedAvlTree.FindLess(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1884,7 +1884,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGDelegatedAvlTree.FindLessOrEqual(constref aKey: TKey): PNode;
+function TGDelegatedAvlTree.FindLessOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1900,7 +1900,7 @@ begin
       Node := Node^.Left;
 end;
 
-function TGDelegatedAvlTree.FindGreater(constref aKey: TKey): PNode;
+function TGDelegatedAvlTree.FindGreater(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -1916,7 +1916,7 @@ begin
       Node := Node^.Right;
 end;
 
-function TGDelegatedAvlTree.FindGreaterOrEqual(constref aKey: TKey): PNode;
+function TGDelegatedAvlTree.FindGreaterOrEqual(const aKey: TKey): PNode;
 var
   Node: PNode;
 begin
@@ -2009,7 +2009,7 @@ begin
       Result := Result^.Left;
 end;
 
-function TGAvlTree2.FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode;
+function TGAvlTree2.FindNode(const aKey: TKey; out aInsertPos: PNode): PNode;
 begin
   Result := FRoot;
   aInsertPos := nil;
@@ -2026,7 +2026,7 @@ begin
     end;
 end;
 
-function TGAvlTree2.FindInsertPos(constref aKey: TKey): PNode;
+function TGAvlTree2.FindInsertPos(const aKey: TKey): PNode;
 begin
   Result := FRoot;
   while Result <> nil do
@@ -2456,7 +2456,7 @@ begin
   ClearTree;
 end;
 
-function TGAvlTree2.FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
+function TGAvlTree2.FindOrAdd(const aKey: TKey; out aNode: PNode): Boolean;
 var
   ParentNode: PNode;
 begin
@@ -2470,7 +2470,7 @@ begin
     end;
 end;
 
-function TGAvlTree2.Find(constref aKey: TKey): PNode;
+function TGAvlTree2.Find(const aKey: TKey): PNode;
 var
   c: SizeInt;
 begin
@@ -2488,7 +2488,7 @@ begin
     end;
 end;
 
-function TGAvlTree2.Remove(constref aKey: TKey): Boolean;
+function TGAvlTree2.Remove(const aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -2762,7 +2762,7 @@ begin
   Result := GetNodeHeight(Root);
 end;
 
-function TGLiteAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
+function TGLiteAvlTree.FindInsertPos(const aKey: TKey): SizeInt;
 var
   Curr: SizeInt;
 begin
@@ -2786,7 +2786,7 @@ begin
       end;
 end;
 
-function TGLiteAvlTree.FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+function TGLiteAvlTree.FindNode(const aKey: TKey; out aInsertPos: SizeInt): SizeInt;
 begin
   Result := Root;
   aInsertPos := 0;
@@ -3257,7 +3257,7 @@ begin
     Clear;
 end;
 
-function TGLiteAvlTree.Add(constref aKey: TKey): PEntry;
+function TGLiteAvlTree.Add(const aKey: TKey): PEntry;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -3271,7 +3271,7 @@ begin
   Result := nil;
 end;
 
-function TGLiteAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+function TGLiteAvlTree.FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -3286,7 +3286,7 @@ begin
   e := @FNodes[Node].Data;
 end;
 
-function TGLiteAvlTree.Find(constref aKey: TKey): PEntry;
+function TGLiteAvlTree.Find(const aKey: TKey): PEntry;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -3297,7 +3297,7 @@ begin
     Result := nil;
 end;
 
-function TGLiteAvlTree.Remove(constref aKey: TKey): Boolean;
+function TGLiteAvlTree.Remove(const aKey: TKey): Boolean;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -3313,7 +3313,7 @@ begin
     RemoveNode(aIndex);
 end;
 
-function TGLiteAvlTree.FindLess(constref aKey: TKey): SizeInt;
+function TGLiteAvlTree.FindLess(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -3329,7 +3329,7 @@ begin
       CurrNode := FNodes[CurrNode].Left;
 end;
 
-function TGLiteAvlTree.FindLessOrEqual(constref aKey: TKey): SizeInt;
+function TGLiteAvlTree.FindLessOrEqual(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -3345,7 +3345,7 @@ begin
       CurrNode := FNodes[CurrNode].Left;
 end;
 
-function TGLiteAvlTree.FindGreater(constref aKey: TKey): SizeInt;
+function TGLiteAvlTree.FindGreater(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -3361,7 +3361,7 @@ begin
       CurrNode := FNodes[CurrNode].Right;
 end;
 
-function TGLiteAvlTree.FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+function TGLiteAvlTree.FindGreaterOrEqual(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -3617,7 +3617,7 @@ begin
   Result := GetNodeHeight(Root);
 end;
 
-function TGLiteComparableAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
+function TGLiteComparableAvlTree.FindInsertPos(const aKey: TKey): SizeInt;
 var
   Curr: SizeInt;
 begin
@@ -3641,7 +3641,7 @@ begin
       end;
 end;
 
-function TGLiteComparableAvlTree.FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+function TGLiteComparableAvlTree.FindNode(const aKey: TKey; out aInsertPos: SizeInt): SizeInt;
 begin
   Result := Root;
   aInsertPos := 0;
@@ -4113,7 +4113,7 @@ begin
     Clear;
 end;
 
-function TGLiteComparableAvlTree.Add(constref aKey: TKey): PEntry;
+function TGLiteComparableAvlTree.Add(const aKey: TKey): PEntry;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -4127,7 +4127,7 @@ begin
   Result := nil;
 end;
 
-function TGLiteComparableAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+function TGLiteComparableAvlTree.FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -4142,7 +4142,7 @@ begin
   e := @FNodes[Node].Data;
 end;
 
-function TGLiteComparableAvlTree.Find(constref aKey: TKey): PEntry;
+function TGLiteComparableAvlTree.Find(const aKey: TKey): PEntry;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -4153,7 +4153,7 @@ begin
     Result := nil;
 end;
 
-function TGLiteComparableAvlTree.Remove(constref aKey: TKey): Boolean;
+function TGLiteComparableAvlTree.Remove(const aKey: TKey): Boolean;
 var
   Node, ParentNode: SizeInt;
 begin
@@ -4169,7 +4169,7 @@ begin
     RemoveNode(aIndex);
 end;
 
-function TGLiteComparableAvlTree.FindLess(constref aKey: TKey): SizeInt;
+function TGLiteComparableAvlTree.FindLess(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -4185,7 +4185,7 @@ begin
       CurrNode := FNodes[CurrNode].Left;
 end;
 
-function TGLiteComparableAvlTree.FindLessOrEqual(constref aKey: TKey): SizeInt;
+function TGLiteComparableAvlTree.FindLessOrEqual(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -4201,7 +4201,7 @@ begin
       CurrNode := FNodes[CurrNode].Left;
 end;
 
-function TGLiteComparableAvlTree.FindGreater(constref aKey: TKey): SizeInt;
+function TGLiteComparableAvlTree.FindGreater(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin
@@ -4217,7 +4217,7 @@ begin
       CurrNode := FNodes[CurrNode].Right;
 end;
 
-function TGLiteComparableAvlTree.FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+function TGLiteComparableAvlTree.FindGreaterOrEqual(const aKey: TKey): SizeInt;
 var
   CurrNode: SizeInt;
 begin

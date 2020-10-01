@@ -97,11 +97,11 @@ type
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
-    function  FindEntry(constref aKey: T): PEntry; override;
-    function  FindOrAdd(constref aKey: T; out p: PEntry): Boolean; override;
-    function  DoSubEntry(constref e: TEntry): Boolean; override;
-    function  DoSymmSubEntry(constref e: TEntry): Boolean; override;
-    function  DoExtract(constref aKey: T): Boolean; override;
+    function  FindEntry(const aKey: T): PEntry; override;
+    function  FindOrAdd(const aKey: T; out p: PEntry): Boolean; override;
+    function  DoSubEntry(const e: TEntry): Boolean; override;
+    function  DoSymmSubEntry(const e: TEntry): Boolean; override;
+    function  DoExtract(const aKey: T): Boolean; override;
     function  GetEntryCount: SizeInt; override;
     function  DoDoubleEntryCounters: SizeInt; override;
     function  GetDistinct: IEnumerable; override;  // distinct keys
@@ -212,9 +212,9 @@ type
   type
     TObjectHashMultiSetClass = class of TGCustomObjectHashMultiSet;
 
-    function  DoSubEntry(constref e: TEntry): Boolean; override;
-    function  DoSymmSubEntry(constref e: TEntry): Boolean; override;
-    function  DoRemove(constref aKey: T): Boolean; override;
+    function  DoSubEntry(const e: TEntry): Boolean; override;
+    function  DoSymmSubEntry(const e: TEntry): Boolean; override;
+    function  DoRemove(const aKey: T): Boolean; override;
     procedure DoClear; override;
     procedure EntryRemoved(p: PEntry);
     procedure DoIntersect(aSet: TSpecMultiSet); override;
@@ -223,16 +223,16 @@ type
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
   public
     constructor Create(aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aCapacity: SizeInt; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aLoadFactor: Single; aOwnsObjects: Boolean = True);
-    constructor Create(aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aLoadFactor: Single; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor CreateCopy(aMultiSet: TGCustomObjectHashMultiSet);
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
@@ -388,23 +388,23 @@ type
     procedure MakeEmpty;
     procedure TrimToFit; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
+    function  Contains(const aValue: T): Boolean; inline;
+    function  NonContains(const aValue: T): Boolean; inline;
     function  FindFirst(out aValue: T): Boolean; inline;
-    function  ContainsAny(constref a: array of T): Boolean;
+    function  ContainsAny(const a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
     function  ContainsAny(constref aSet: TGLiteHashMultiSet): Boolean;
-    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(const a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
     function  ContainsAll(constref aSet: TGLiteHashMultiSet): Boolean;
-    procedure Add(constref aValue: T);
+    procedure Add(const aValue: T);
   { returns count of added elements }
-    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
     function  AddAll(constref aSet: TGLiteHashMultiSet): SizeInt;
   { returns True if element removed }
-    function  Remove(constref aValue: T): Boolean; inline;
-    function  RemoveAll(constref a: array of T): SizeInt;
+    function  Remove(const aValue: T): Boolean; inline;
+    function  RemoveAll(const a: array of T): SizeInt;
     function  RemoveAll(e: IEnumerable): SizeInt;
     function  RemoveAll(constref aSet: TGLiteHashMultiSet): SizeInt;
   { returns count of removed elements }
@@ -412,7 +412,7 @@ type
     function  RemoveIf(aTest: TOnTest): SizeInt;
     function  RemoveIf(aTest: TNestTest): SizeInt;
   { returns True if element extracted }
-    function  Extract(constref aValue: T): Boolean;
+    function  Extract(const aValue: T): Boolean;
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
@@ -539,10 +539,10 @@ type
     function  GetCapacity: SizeInt;
     function  GetCount(const aValue: T): SizeInt;
     procedure ClearChainList;
-    function  LockSlot(constref aValue: T; out aHash: SizeInt): SizeInt;
-    function  Find(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
-    function  FindOrAdd(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
-    function  RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  LockSlot(const aValue: T; out aHash: SizeInt): SizeInt;
+    function  Find(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  FindOrAdd(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  RemoveNode(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
     procedure CheckNeedExpand;
     procedure Expand;
   public
@@ -554,9 +554,9 @@ type
     constructor Create;
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 1.0);
     destructor Destroy; override;
-    procedure Add(constref aValue: T);
-    function  Contains(constref aValue: T): Boolean;
-    function  Remove(constref aValue: T): Boolean; virtual;
+    procedure Add(const aValue: T);
+    function  Contains(const aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean; virtual;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor;
@@ -722,14 +722,14 @@ begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGAbstractHashMultiSet.FindEntry(constref aKey: T): PEntry;
+function TGAbstractHashMultiSet.FindEntry(const aKey: T): PEntry;
 var
   sr: TSearchResult;
 begin
   Result := FTable.Find(aKey, sr);
 end;
 
-function TGAbstractHashMultiSet.FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
+function TGAbstractHashMultiSet.FindOrAdd(const aKey: T; out p: PEntry): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -741,7 +741,7 @@ begin
     end;
 end;
 
-function TGAbstractHashMultiSet.DoSubEntry(constref e: TEntry): Boolean;
+function TGAbstractHashMultiSet.DoSubEntry(const e: TEntry): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -764,7 +764,7 @@ begin
   Result := False;
 end;
 
-function TGAbstractHashMultiSet.DoSymmSubEntry(constref e: TEntry): Boolean;
+function TGAbstractHashMultiSet.DoSymmSubEntry(const e: TEntry): Boolean;
 var
   sr: TSearchResult;
   p: PEntry;
@@ -802,7 +802,7 @@ begin
   Result := False;
 end;
 
-function TGAbstractHashMultiSet.DoExtract(constref aKey: T): Boolean;
+function TGAbstractHashMultiSet.DoExtract(const aKey: T): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -1113,21 +1113,21 @@ end;
 
 { TGCustomObjectHashMultiSet }
 
-function TGCustomObjectHashMultiSet.DoSubEntry(constref e: TEntry): Boolean;
+function TGCustomObjectHashMultiSet.DoSubEntry(const e: TEntry): Boolean;
 begin
   Result := inherited DoSubEntry(e);
   if Result and OwnsObjects then
     e.Key.Free;
 end;
 
-function TGCustomObjectHashMultiSet.DoSymmSubEntry(constref e: TEntry): Boolean;
+function TGCustomObjectHashMultiSet.DoSymmSubEntry(const e: TEntry): Boolean;
 begin
   Result := inherited DoSymmSubEntry(e);
   if Result and OwnsObjects then
     e.Key.Free;
 end;
 
-function TGCustomObjectHashMultiSet.DoRemove(constref aKey: T): Boolean;
+function TGCustomObjectHashMultiSet.DoRemove(const aKey: T): Boolean;
 var
   p: PEntry;
   ItemPos: TSearchResult;
@@ -1201,7 +1201,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashMultiSet.Create(constref a: array of T; aOwnsObjects: Boolean);
+constructor TGCustomObjectHashMultiSet.Create(const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(a);
   FOwnsObjects := aOwnsObjects;
@@ -1219,7 +1219,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashMultiSet.Create(aCapacity: SizeInt; constref a: array of T; aOwnsObjects: Boolean);
+constructor TGCustomObjectHashMultiSet.Create(aCapacity: SizeInt; const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(aCapacity, a);
   FOwnsObjects := aOwnsObjects;
@@ -1237,7 +1237,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashMultiSet.Create(aLoadFactor: Single; constref a: array of T; aOwnsObjects: Boolean);
+constructor TGCustomObjectHashMultiSet.Create(aLoadFactor: Single; const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(aLoadFactor, a);
   FOwnsObjects := aOwnsObjects;
@@ -1255,7 +1255,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGCustomObjectHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T;
+constructor TGCustomObjectHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T;
   aOwnsObjects: Boolean);
 begin
   inherited Create(aCapacity, aLoadFactor, a);
@@ -1621,12 +1621,12 @@ begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGLiteHashMultiSet.Contains(constref aValue: T): Boolean;
+function TGLiteHashMultiSet.Contains(const aValue: T): Boolean;
 begin
   Result := FTable.Find(aValue) <> nil;
 end;
 
-function TGLiteHashMultiSet.NonContains(constref aValue: T): Boolean;
+function TGLiteHashMultiSet.NonContains(const aValue: T): Boolean;
 begin
   Result := FTable.Find(aValue) = nil;
 end;
@@ -1636,7 +1636,7 @@ begin
   Result := FTable.FindFirstKey(aValue);
 end;
 
-function TGLiteHashMultiSet.ContainsAny(constref a: array of T): Boolean;
+function TGLiteHashMultiSet.ContainsAny(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1678,7 +1678,7 @@ begin
     Result := True;
 end;
 
-function TGLiteHashMultiSet.ContainsAll(constref a: array of T): Boolean;
+function TGLiteHashMultiSet.ContainsAll(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1725,7 +1725,7 @@ begin
     Result := False;
 end;
 
-procedure TGLiteHashMultiSet.Add(constref aValue: T);
+procedure TGLiteHashMultiSet.Add(const aValue: T);
 var
   p: PEntry;
 begin
@@ -1741,7 +1741,7 @@ begin
     end;
 end;
 
-function TGLiteHashMultiSet.AddAll(constref a: array of T): SizeInt;
+function TGLiteHashMultiSet.AddAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1771,12 +1771,12 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashMultiSet.Remove(constref aValue: T): Boolean;
+function TGLiteHashMultiSet.Remove(const aValue: T): Boolean;
 begin
   Result := Extract(aValue);
 end;
 
-function TGLiteHashMultiSet.RemoveAll(constref a: array of T): SizeInt;
+function TGLiteHashMultiSet.RemoveAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1873,7 +1873,7 @@ begin
   Result -= Count;
 end;
 
-function TGLiteHashMultiSet.Extract(constref aValue: T): Boolean;
+function TGLiteHashMultiSet.Extract(const aValue: T): Boolean;
 var
   p: PEntry;
   Pos: SizeInt;
@@ -2302,7 +2302,7 @@ begin
   FSlotList := nil;
 end;
 
-function TGThreadFGHashMultiSet.LockSlot(constref aValue: T; out aHash: SizeInt): SizeInt;
+function TGThreadFGHashMultiSet.LockSlot(const aValue: T; out aHash: SizeInt): SizeInt;
 begin
   aHash := TEqRel.HashCode(aValue);
   FGlobLock.BeginRead;
@@ -2314,7 +2314,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMultiSet.Find(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashMultiSet.Find(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
 begin
@@ -2328,7 +2328,7 @@ begin
   Result := nil;
 end;
 
-function TGThreadFGHashMultiSet.FindOrAdd(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashMultiSet.FindOrAdd(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 begin
   Result := Find(aValue, aSlotIdx, aHash);
   if Result = nil then
@@ -2339,7 +2339,7 @@ begin
     end;
 end;
 
-function TGThreadFGHashMultiSet.RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashMultiSet.RemoveNode(const aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
   Prev: PNode = nil;
@@ -2451,7 +2451,7 @@ begin
   end;
 end;
 
-procedure TGThreadFGHashMultiSet.Add(constref aValue: T);
+procedure TGThreadFGHashMultiSet.Add(const aValue: T);
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2474,7 +2474,7 @@ begin
     CheckNeedExpand;
 end;
 
-function TGThreadFGHashMultiSet.Contains(constref aValue: T): Boolean;
+function TGThreadFGHashMultiSet.Contains(const aValue: T): Boolean;
 var
   SlotIdx, Hash: SizeInt;
 begin
@@ -2486,7 +2486,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMultiSet.Remove(constref aValue: T): Boolean;
+function TGThreadFGHashMultiSet.Remove(const aValue: T): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;

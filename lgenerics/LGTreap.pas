@@ -64,14 +64,14 @@ type
     FRoot: PNode;
     function  GetCount: SizeInt;
     function  GetHeight: SizeInt;
-    class function  NewNode(constref aKey: TKey): PNode; static;
+    class function  NewNode(const aKey: TKey): PNode; static;
     class function  CopyTree(aRoot: PNode): PNode; static;
   { splits tree of aRoot into two subtrees, where min(R.Key) >= aKey }
-    class procedure SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode); static;
+    class procedure SplitNode(const aKey: TKey; aRoot: PNode; out L, R: PNode); static;
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
+    class function  RemoveNode(const aKey: TKey; var aRoot: PNode): Boolean; static;
+    class function  RemoveNode(const aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteTreap);
     class operator  Finalize(var aTreap: TGLiteTreap);
     class operator  Copy(constref aSrc: TGLiteTreap; var aDst: TGLiteTreap);
@@ -79,20 +79,20 @@ type
   public
     { splits aTreap so that L will contain all keys < aKey and  R will contain all keys >= aKey;
       aTreap becomes empty }
-    class procedure Split(constref aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap); static;
-    function  IsEmpty: Boolean; inline;             //O(1)
-    procedure Clear;                                //O(N)
-    function  ToArray: TEntryArray;                 //O(N)
-    function  Find(constref aKey: TKey): PNode;     //O(LogN)
-    function  CountOf(constref aKey: TKey): SizeInt;//O(N)
-    function  Add(constref aKey: TKey): PNode;      //O(LogN)
-    function  Remove(constref aKey: TKey): Boolean; //O(LogN)
-    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean; //O(LogN)
+    class procedure Split(const aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap); static;
+    function  IsEmpty: Boolean; inline;          //O(1)
+    procedure Clear;                             //O(N)
+    function  ToArray: TEntryArray;              //O(N)
+    function  Find(const aKey: TKey): PNode;     //O(LogN)
+    function  CountOf(const aKey: TKey): SizeInt;//O(N)
+    function  Add(const aKey: TKey): PNode;      //O(LogN)
+    function  Remove(const aKey: TKey): Boolean; //O(LogN)
+    function  Remove(const aKey: TKey; out aValue: TValue): Boolean; //O(LogN)
   { splits treap so that aTreap will contain all elements with keys >= aKey }
-    procedure Split(constref aKey: TKey; out aTreap: TGLiteTreap);//O(LogN)
-    property  Root: PNode read FRoot;               //O(1)
-    property  Count: SizeInt read GetCount;         //O(N)
-    property  Height: SizeInt read GetHeight;       //O(N)
+    procedure Split(const aKey: TKey; out aTreap: TGLiteTreap);//O(LogN)
+    property  Root: PNode read FRoot;            //O(1)
+    property  Count: SizeInt read GetCount;      //O(N)
+    property  Height: SizeInt read GetHeight;    //O(N)
   end;
 
   { TGLiteIdxTreap implements randomized Cartesian BST which allows indexing access
@@ -131,14 +131,14 @@ type
     function  GetHeight: SizeInt;
     function  GetItem(aIndex: SizeInt): PNode; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
-    class function  NewNode(constref aKey: TKey): PNode; static;
+    class function  NewNode(const aKey: TKey): PNode; static;
     class function  CopyTree(aRoot: PNode): PNode; static;
     class procedure UpdateSize(aNode: PNode); static; inline;
-    class procedure SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode); static;
+    class procedure SplitNode(const aKey: TKey; aRoot: PNode; out L, R: PNode); static;
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
+    class function  RemoveNode(const aKey: TKey; var aRoot: PNode): Boolean; static;
+    class function  RemoveNode(const aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteIdxTreap);
     class operator  Finalize(var aTreap: TGLiteIdxTreap);
     class operator  Copy(constref aSrc: TGLiteIdxTreap; var aDst: TGLiteIdxTreap);
@@ -146,21 +146,21 @@ type
   public
   { splits aTreap so that L will contain all keys < aKey and  R will contain all keys >= aKey;
     aTreap becomes empty }
-    class procedure Split(constref aKey: TKey; var aTreap: TGLiteIdxTreap; out L, R: TGLiteIdxTreap); static;
-    function  IsEmpty: Boolean; inline;              //O(1)
-    procedure Clear;                                 //O(N)
-    function  ToArray: TEntryArray;                  //O(N)
-    function  Find(constref aKey: TKey): PNode;      //O(LogN)
-    function  IndexOf(constref aKey: TKey): SizeInt; inline;//O(LogN)
-    function  CountOf(constref aKey: TKey): SizeInt; //O(LogN)
-    function  Add(constref aKey: TKey): PNode;       //O(LogN)
-    function  Remove(constref aKey: TKey): Boolean;  //O(LogN)
-    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;//O(LogN)
+    class procedure Split(const aKey: TKey; var aTreap: TGLiteIdxTreap; out L, R: TGLiteIdxTreap); static;
+    function  IsEmpty: Boolean; inline;           //O(1)
+    procedure Clear;                              //O(N)
+    function  ToArray: TEntryArray;               //O(N)
+    function  Find(const aKey: TKey): PNode;      //O(LogN)
+    function  IndexOf(const aKey: TKey): SizeInt; inline;//O(LogN)
+    function  CountOf(const aKey: TKey): SizeInt; //O(LogN)
+    function  Add(const aKey: TKey): PNode;       //O(LogN)
+    function  Remove(const aKey: TKey): Boolean;  //O(LogN)
+    function  Remove(const aKey: TKey; out aValue: TValue): Boolean;//O(LogN)
   { splits treap so that aTreap will contain all elements with keys >= aKey }
-    procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);  //O(LogN)
-    property  Root: PNode read FRoot;                //O(1)
-    property  Count: SizeInt read GetCount;          //O(1)
-    property  Height: SizeInt read GetHeight;        //O(N)
+    procedure Split(const aKey: TKey; out aTreap: TGLiteIdxTreap);  //O(LogN)
+    property  Root: PNode read FRoot;             //O(1)
+    property  Count: SizeInt read GetCount;       //O(1)
+    property  Height: SizeInt read GetHeight;     //O(N)
     property  Items[aIndex: SizeInt]: PNode read GetItem; default;//O(LogN)
   end;
 
@@ -201,65 +201,65 @@ type
     function  GetEntry(aIndex: SizeInt): TEntry;
     procedure SetValue(const aKey: TKey; const aValue: TValue);
 
-    class function  NewNode(constref aKey: TKey; constref aValue: TValue): PNode; static;
+    class function  NewNode(const aKey: TKey; const aValue: TValue): PNode; static;
     class function  CopyTree(aRoot: PNode): PNode; static;
     class procedure UpdateNode(aNode: PNode); static; inline;
     class procedure UpdateCache(aNode: PNode); static; inline;
-    class function  UpdateValue(aRoot: PNode; constref aKey: TKey; constref aValue: TValue): Boolean; static;
-    class procedure SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode); static;
+    class function  UpdateValue(aRoot: PNode; const aKey: TKey; const aValue: TValue): Boolean; static;
+    class procedure SplitNode(const aKey: TKey; aRoot: PNode; out L, R: PNode); static;
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
+    class function  RemoveNode(const aKey: TKey; var aRoot: PNode): Boolean; static;
+    class function  RemoveNode(const aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteSegmentTreap);
     class operator  Finalize(var aTreap: TGLiteSegmentTreap);
     class operator  Copy(constref aSrc: TGLiteSegmentTreap; var aDst: TGLiteSegmentTreap);
     class operator  AddRef(var aTreap: TGLiteSegmentTreap); inline;
   public
-    class procedure Split(constref aKey: TKey; var aTreap: TGLiteSegmentTreap;
+    class procedure Split(const aKey: TKey; var aTreap: TGLiteSegmentTreap;
                           out L, R: TGLiteSegmentTreap); static;
-    function  IsEmpty: Boolean; inline;                        //O(1)
-    procedure Clear;                                           //O(N)
-    function  ToArray: TEntryArray;                            //O(N)
-    function  Contains(constref aKey: TKey): Boolean;          //O(LogN)
-    function  Find(constref aKey: TKey; out aValue: TValue): Boolean;    //O(LogN)
-    function  FindLess(constref aKey: TKey; out aLess: TKey): Boolean;
-    function  FindLessOrEqual(constref aKey: TKey; out aLessOrEq: TKey): Boolean;
-    function  FindGreater(constref aKey: TKey; out aGreater: TKey): Boolean;
-    function  FindGreaterOrEqual(constref aKey: TKey; out aGreaterOrEq: TKey): Boolean;
-    function  IndexOf(constref aKey: TKey): SizeInt; inline;   //O(LogN)
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;//O(LogN)
-    function  Add(constref e: TEntry): Boolean; inline;        //O(LogN)
-    function  Remove(constref aKey: TKey): Boolean;            //O(LogN)
-    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;  //O(LogN)
-    procedure Split(constref aKey: TKey; out aTreap: TGLiteSegmentTreap);//O(LogN)
+    function  IsEmpty: Boolean; inline;                      //O(1)
+    procedure Clear;                                         //O(N)
+    function  ToArray: TEntryArray;                          //O(N)
+    function  Contains(const aKey: TKey): Boolean;           //O(LogN)
+    function  Find(const aKey: TKey; out aValue: TValue): Boolean; //O(LogN)
+    function  FindLess(const aKey: TKey; out aLess: TKey): Boolean;
+    function  FindLessOrEqual(const aKey: TKey; out aLessOrEq: TKey): Boolean;
+    function  FindGreater(const aKey: TKey; out aGreater: TKey): Boolean;
+    function  FindGreaterOrEqual(const aKey: TKey; out aGreaterOrEq: TKey): Boolean;
+    function  IndexOf(const aKey: TKey): SizeInt; inline;    //O(LogN)
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;//O(LogN)
+    function  Add(const e: TEntry): Boolean; inline;         //O(LogN)
+    function  Remove(const aKey: TKey): Boolean;             //O(LogN)
+    function  Remove(const aKey: TKey; out aValue: TValue): Boolean;  //O(LogN)
+    procedure Split(const aKey: TKey; out aTreap: TGLiteSegmentTreap);//O(LogN)
   { returns value of the monoid function on the segment[L, R](indices);
     raises exception if L or R out of bounds }
-    function  RangeQueryI(L, R: SizeInt): TValue;              //O(LogN)
+    function  RangeQueryI(L, R: SizeInt): TValue;            //O(LogN)
   { returns value of the monoid function on the half-open interval[L, R) }
-    function  RangeQuery(constref L, R: TKey): TValue;         //O(LogN)
+    function  RangeQuery(const L, R: TKey): TValue;          //O(LogN)
   { returns value of the monoid function on the half-open interval[L, R)
     and the number of elements that fit into this interval in aCount }
-    function  RangeQuery(constref L, R: TKey; out aCount: SizeInt): TValue;
+    function  RangeQuery(const L, R: TKey; out aCount: SizeInt): TValue;
   { returns value of the monoid function on the segment[0, aIndex](indices);
     raises exception if aIndex out of bounds }
-    function  HeadQueryI(aIndex: SizeInt): TValue;             //O(LogN)
+    function  HeadQueryI(aIndex: SizeInt): TValue;           //O(LogN)
   { returns value of the monoid function on the half-open interval[Lowest(key), aKey) }
-    function  HeadQuery(constref aKey: TKey): TValue;          //O(LogN)
+    function  HeadQuery(const aKey: TKey): TValue;           //O(LogN)
   { returns value of the monoid function on the half-open interval[Lowest(key), aKey)
     and the number of elements that fit into this interval in aCount }
-    function  HeadQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
+    function  HeadQuery(const aKey: TKey; out aCount: SizeInt): TValue;
   { returns value of the monoid function on the segment[aIndex, Pred(Count)](indices);
     raises exception if aIndex out of bounds }
-    function  TailQueryI(aIndex: SizeInt): TValue;             //O(LogN)
+    function  TailQueryI(aIndex: SizeInt): TValue;           //O(LogN)
   { returns value of the monoid function on the segment[aKey, Highest(key)] }
-    function  TailQuery(constref aKey: TKey): TValue;          //O(LogN)
+    function  TailQuery(const aKey: TKey): TValue;           //O(LogN)
   { returns value of the monoid function on the segment[aKey, Highest(key)]
     and the number of elements that fit into this interval in aCount }
-    function  TailQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
-    property  Count: SizeInt read GetCount;                    //O(1)
-    property  Height: SizeInt read GetHeight;                  //O(N)
-    property  Entries[aIndex: SizeInt]: TEntry read GetEntry;  //O(LogN)
+    function  TailQuery(const aKey: TKey; out aCount: SizeInt): TValue;
+    property  Count: SizeInt read GetCount;                  //O(1)
+    property  Height: SizeInt read GetHeight;                //O(N)
+    property  Entries[aIndex: SizeInt]: TEntry read GetEntry;//O(LogN)
   { if not contains aKey then read returns TValMonoid.Identity }
     property  Values[const aKey: TKey]: TValue read GetValue write SetValue; default;//O(LogN)
   end;
@@ -294,7 +294,7 @@ type
     procedure CheckInsertRange(aIndex: SizeInt); inline;
     function  GetItem(aIndex: SizeInt): T;
     procedure SetItem(aIndex: SizeInt; const aValue: T);
-    class function  NewNode(constref aValue: T): PNode; static; inline;
+    class function  NewNode(const aValue: T): PNode; static; inline;
     class function  CopyTree(aRoot: PNode): PNode; static;
     class procedure UpdateSize(aNode: PNode); static; inline;
     class procedure SplitNode(aIdx: SizeInt; aRoot: PNode; out L, R: PNode); static;
@@ -307,20 +307,20 @@ type
   public
     class procedure Split(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap;
                           out L, R: TGLiteImplicitTreap); static;
-    function  IsEmpty: Boolean; inline;                   //O(1)
-    procedure Clear;                                      //O(N)
-    function  ToArray: TArray;                            //O(N)
-    function  Add(constref aValue: T): SizeInt;           //O(LogN)
-    procedure Insert(aIndex: SizeInt; constref aValue: T);//O(LogN)
+    function  IsEmpty: Boolean; inline;                //O(1)
+    procedure Clear;                                   //O(N)
+    function  ToArray: TArray;                         //O(N)
+    function  Add(const aValue: T): SizeInt;           //O(LogN)
+    procedure Insert(aIndex: SizeInt; const aValue: T);//O(LogN)
     procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap);
-    function  Delete(aIndex: SizeInt): T;                 //O(LogN)
+    function  Delete(aIndex: SizeInt): T;              //O(LogN)
     procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplicitTreap);
     procedure Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplicitTreap);//O(LogN)
-    procedure Merge(var aTreap: TGLiteImplicitTreap);     //O(LogN)
-    procedure RotateLeft(aDist: SizeInt);                 //O(LogN)
-    procedure RotateRight(aDist: SizeInt);                //O(LogN)
-    property  Count: SizeInt read GetCount;               //O(1)
-    property  Height: SizeInt read GetHeight;             //O(N)
+    procedure Merge(var aTreap: TGLiteImplicitTreap);  //O(LogN)
+    procedure RotateLeft(aDist: SizeInt);              //O(LogN)
+    procedure RotateRight(aDist: SizeInt);             //O(LogN)
+    property  Count: SizeInt read GetCount;            //O(1)
+    property  Height: SizeInt read GetHeight;          //O(N)
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;  //O(LogN)
   end;
 
@@ -362,11 +362,11 @@ type
     procedure CheckInsertRange(aIndex: SizeInt); inline;
     function  GetItem(aIndex: SizeInt): T;
     procedure SetItem(aIndex: SizeInt; const aValue: T);
-    class function  NewNode(constref aValue: T): PNode; static;
+    class function  NewNode(const aValue: T): PNode; static;
     class function  CopyTree(aRoot: PNode): PNode; static;
     class procedure UpdateNode(aNode: PNode); static; inline;
     class procedure UpdateCache(aNode: PNode); static; inline;
-    class procedure UpdateValue(aIndex: SizeInt; aRoot: PNode; constref aValue: T); static;
+    class procedure UpdateValue(aIndex: SizeInt; aRoot: PNode; const aValue: T); static;
     class procedure SplitNode(aIdx: SizeInt; aRoot: PNode; out L, R: PNode); static;
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure DeleteNode(aIndex: SizeInt; var aRoot: PNode; out aValue: T); static;
@@ -377,29 +377,29 @@ type
   public
     class procedure Split(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap;
                           out L, R: TGLiteImplSegmentTreap); static;
-    function  IsEmpty: Boolean; inline;                    //O(1)
-    procedure Clear;                                       //O(N)
-    function  ToArray: TArray;                             //O(N)
-    function  Add(constref aValue: T): SizeInt;            //O(LogN)
-    procedure Insert(aIndex: SizeInt; constref aValue: T); //O(LogN)
+    function  IsEmpty: Boolean; inline;                 //O(1)
+    procedure Clear;                                    //O(N)
+    function  ToArray: TArray;                          //O(N)
+    function  Add(const aValue: T): SizeInt;            //O(LogN)
+    procedure Insert(aIndex: SizeInt; const aValue: T); //O(LogN)
     procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap);       //O(LogN)
-    function  Delete(aIndex: SizeInt): T;                  //O(LogN)
+    function  Delete(aIndex: SizeInt): T;               //O(LogN)
     procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplSegmentTreap);        //O(LogN)
     procedure Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplSegmentTreap);//O(LogN)
-    procedure Merge(var aTreap: TGLiteImplSegmentTreap);   //O(LogN)
-    procedure RotateLeft(aDist: SizeInt);                  //O(LogN)
-    procedure RotateRight(aDist: SizeInt);                 //O(LogN)
+    procedure Merge(var aTreap: TGLiteImplSegmentTreap);//O(LogN)
+    procedure RotateLeft(aDist: SizeInt);               //O(LogN)
+    procedure RotateRight(aDist: SizeInt);              //O(LogN)
   { returns value of the monoid function on the segment[L, R];
     raises exception if L or R out of bounds }
-    function  RangeQuery(L, R: SizeInt): T;                //O(LogN)
+    function  RangeQuery(L, R: SizeInt): T;             //O(LogN)
   { returns value of the monoid function on the segment[0, aIndex];
     raises exception if aIndex out of bounds }
-    function  HeadQuery(aIndex: SizeInt): T;               //O(LogN)
+    function  HeadQuery(aIndex: SizeInt): T;            //O(LogN)
   { returns value of the monoid function on the segment[aIndex, Pred(Count)];
     raises exception if aIndex out of bounds }
-    function  TailQuery(aIndex: SizeInt): T;               //O(LogN)
-    property  Count: SizeInt read GetCount;                //O(1)
-    property  Height: SizeInt read GetHeight;              //O(N)
+    function  TailQuery(aIndex: SizeInt): T;            //O(LogN)
+    property  Count: SizeInt read GetCount;             //O(1)
+    property  Height: SizeInt read GetHeight;           //O(N)
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;     //O(LogN)
   end;
 
@@ -460,7 +460,7 @@ type
     procedure CheckInsertRange(aIndex: SizeInt); inline;
     function  GetItem(aIndex: SizeInt): T;
     procedure SetItem(aIndex: SizeInt; const aValue: T);
-    class function  NewNode(constref aValue: T): PNode; static;
+    class function  NewNode(const aValue: T): PNode; static;
     class function  CopyTree(aRoot: PNode): PNode; static;
     class procedure UpdateNode(aNode: PNode); static; inline;
     class procedure Push(aNode: PNode); static; inline;
@@ -473,33 +473,33 @@ type
   public
     class procedure Split(aIndex: SizeInt; var aTreap: TGLiteImplicitSegTreap;
                           out L, R: TGLiteImplicitSegTreap); static;             //O(LogN)
-    function  IsEmpty: Boolean; inline;                      //O(1)
-    procedure Clear;                                         //O(N)
-    function  ToArray: TArray;                               //O(N)
-    function  Add(constref aValue: T): SizeInt;              //O(LogN)
-    procedure Insert(aIndex: SizeInt; constref aValue: T);   //O(LogN)
+    function  IsEmpty: Boolean; inline;                   //O(1)
+    procedure Clear;                                      //O(N)
+    function  ToArray: TArray;                            //O(N)
+    function  Add(const aValue: T): SizeInt;              //O(LogN)
+    procedure Insert(aIndex: SizeInt; const aValue: T);   //O(LogN)
     procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplicitSegTreap);       //O(LogN)
-    function  Delete(aIndex: SizeInt): T;                    //O(LogN)
-    function  Delete(aIndex, aCount: SizeInt): SizeInt;      //O(LogN)
+    function  Delete(aIndex: SizeInt): T;                 //O(LogN)
+    function  Delete(aIndex, aCount: SizeInt): SizeInt;   //O(LogN)
     procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplicitSegTreap);        //O(LogN)
     procedure Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplicitSegTreap);//O(LogN)
-    procedure Merge(var aTreap: TGLiteImplicitSegTreap);     //O(LogN)
-    procedure RotateLeft(aDist: SizeInt);                    //O(LogN)
-    procedure RotateRight(aDist: SizeInt);                   //O(LogN)
-    procedure Reverse;                                       //O(LogN)
-    procedure Reverse(aFrom, aCount: SizeInt);               //O(LogN)
-    procedure RangeUpdate(L, R: SizeInt; constref aConst: T);//O(LogN)
+    procedure Merge(var aTreap: TGLiteImplicitSegTreap);  //O(LogN)
+    procedure RotateLeft(aDist: SizeInt);                 //O(LogN)
+    procedure RotateRight(aDist: SizeInt);                //O(LogN)
+    procedure Reverse;                                    //O(LogN)
+    procedure Reverse(aFrom, aCount: SizeInt);            //O(LogN)
+    procedure RangeUpdate(L, R: SizeInt; const aConst: T);//O(LogN)
   { returns value of the monoid function on the segment[L, R];
     raises exception if L or R out of bounds }
-    function  RangeQuery(L, R: SizeInt): T;                  //O(LogN)
+    function  RangeQuery(L, R: SizeInt): T;               //O(LogN)
   { returns value of the monoid function on the segment[0, aIndex];
     raises exception if aIndex out of bounds }
-    function  HeadQuery(aIndex: SizeInt): T;                 //O(LogN)
+    function  HeadQuery(aIndex: SizeInt): T;              //O(LogN)
   { returns value of the monoid function on the segment[aIndex, Pred(Count)];
     raises exception if aIndex out of bounds }
-    function  TailQuery(aIndex: SizeInt): T;                 //O(LogN)
-    property  Count: SizeInt read GetCount;                  //O(1)
-    property  Height: SizeInt read GetHeight;                //O(N)
+    function  TailQuery(aIndex: SizeInt): T;              //O(LogN)
+    property  Count: SizeInt read GetCount;               //O(1)
+    property  Height: SizeInt read GetHeight;             //O(N)
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default; //O(LogN)
   end;
 
@@ -520,7 +520,7 @@ begin
   Result := TUtil.GetHeight(FRoot);
 end;
 
-class function TGLiteTreap.NewNode(constref aKey: TKey): PNode;
+class function TGLiteTreap.NewNode(const aKey: TKey): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -552,7 +552,7 @@ begin
     Result := nil;
 end;
 
-class procedure TGLiteTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
+class procedure TGLiteTreap.SplitNode(const aKey: TKey; aRoot: PNode; out L, R: PNode);
 begin
   if aRoot <> nil then
     begin
@@ -612,7 +612,7 @@ begin
 end;
 
 
-class function TGLiteTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean;
+class function TGLiteTreap.RemoveNode(const aKey: TKey; var aRoot: PNode): Boolean;
 var
   Found: PNode;
 begin
@@ -632,7 +632,7 @@ begin
   Result := False;
 end;
 
-class function TGLiteTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
+class function TGLiteTreap.RemoveNode(const aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
 var
   Found: PNode;
 begin
@@ -676,7 +676,7 @@ begin
     aTreap.FRoot := CopyTree(aTreap.FRoot);
 end;
 
-class procedure TGLiteTreap.Split(constref aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap);
+class procedure TGLiteTreap.Split(const aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap);
 begin
   if aTreap.FRoot = nil then
     exit;
@@ -722,14 +722,14 @@ begin
   Result := a;
 end;
 
-function TGLiteTreap.Find(constref aKey: TKey): PNode;
+function TGLiteTreap.Find(const aKey: TKey): PNode;
 begin
   if FRoot <> nil then
     exit(TUtil.FindKey(FRoot, aKey));
   Result := nil;
 end;
 
-function TGLiteTreap.CountOf(constref aKey: TKey): SizeInt;
+function TGLiteTreap.CountOf(const aKey: TKey): SizeInt;
 var
   L, M, R, Gt: PNode;
 begin
@@ -753,7 +753,7 @@ begin
     Result := 0;
 end;
 
-function TGLiteTreap.Add(constref aKey: TKey): PNode;
+function TGLiteTreap.Add(const aKey: TKey): PNode;
 begin
   Result := NewNode(aKey);
   if FRoot <> nil then
@@ -762,7 +762,7 @@ begin
     FRoot := Result;
 end;
 
-function TGLiteTreap.Remove(constref aKey: TKey): Boolean;
+function TGLiteTreap.Remove(const aKey: TKey): Boolean;
 begin
   if FRoot <> nil then
     Result := RemoveNode(aKey, FRoot)
@@ -770,7 +770,7 @@ begin
     Result := False;
 end;
 
-function TGLiteTreap.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteTreap.Remove(const aKey: TKey; out aValue: TValue): Boolean;
 begin
   if FRoot <> nil then
     Result := RemoveNode(aKey, FRoot, aValue)
@@ -778,7 +778,7 @@ begin
     Result := False;
 end;
 
-procedure TGLiteTreap.Split(constref aKey: TKey; out aTreap: TGLiteTreap);
+procedure TGLiteTreap.Split(const aKey: TKey; out aTreap: TGLiteTreap);
 begin
   if FRoot <> nil then
     SplitNode(aKey, FRoot, FRoot, aTreap.FRoot);
@@ -807,7 +807,7 @@ begin
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-class function TGLiteIdxTreap.NewNode(constref aKey: TKey): PNode;
+class function TGLiteIdxTreap.NewNode(const aKey: TKey): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -852,7 +852,7 @@ begin
     end;
 end;
 
-class procedure TGLiteIdxTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
+class procedure TGLiteIdxTreap.SplitNode(const aKey: TKey; aRoot: PNode; out L, R: PNode);
 begin
   if aRoot <> nil then
     begin
@@ -916,7 +916,7 @@ begin
     aRoot := aNode;
 end;
 
-class function TGLiteIdxTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean;
+class function TGLiteIdxTreap.RemoveNode(const aKey: TKey; var aRoot: PNode): Boolean;
 var
   Found: PNode;
 begin
@@ -943,7 +943,7 @@ begin
       end;
 end;
 
-class function TGLiteIdxTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
+class function TGLiteIdxTreap.RemoveNode(const aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
 var
   Found: PNode;
 begin
@@ -994,7 +994,7 @@ begin
     aTreap.FRoot := CopyTree(aTreap.FRoot);
 end;
 
-class procedure TGLiteIdxTreap.Split(constref aKey: TKey; var aTreap: TGLiteIdxTreap;
+class procedure TGLiteIdxTreap.Split(const aKey: TKey; var aTreap: TGLiteIdxTreap;
   out L, R: TGLiteIdxTreap);
 begin
   if aTreap.FRoot = nil then
@@ -1038,19 +1038,19 @@ begin
   Result := a;
 end;
 
-function TGLiteIdxTreap.Find(constref aKey: TKey): PNode;
+function TGLiteIdxTreap.Find(const aKey: TKey): PNode;
 begin
   if FRoot <> nil then
     exit(TUtil.FindKey(FRoot, aKey));
   Result := nil;
 end;
 
-function TGLiteIdxTreap.IndexOf(constref aKey: TKey): SizeInt;
+function TGLiteIdxTreap.IndexOf(const aKey: TKey): SizeInt;
 begin
   Result := TUtil.GetKeyIndex(FRoot, aKey);
 end;
 
-function TGLiteIdxTreap.CountOf(constref aKey: TKey): SizeInt;
+function TGLiteIdxTreap.CountOf(const aKey: TKey): SizeInt;
 var
   L, M, R, Gt: PNode;
 begin
@@ -1074,7 +1074,7 @@ begin
     Result := 0;
 end;
 
-function TGLiteIdxTreap.Add(constref aKey: TKey): PNode;
+function TGLiteIdxTreap.Add(const aKey: TKey): PNode;
 begin
   Result := NewNode(aKey);
   if FRoot <> nil then
@@ -1083,7 +1083,7 @@ begin
     FRoot := Result;
 end;
 
-function TGLiteIdxTreap.Remove(constref aKey: TKey): Boolean;
+function TGLiteIdxTreap.Remove(const aKey: TKey): Boolean;
 begin
   if FRoot <> nil then
     Result := RemoveNode(aKey, FRoot)
@@ -1091,7 +1091,7 @@ begin
     Result := False;
 end;
 
-function TGLiteIdxTreap.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteIdxTreap.Remove(const aKey: TKey; out aValue: TValue): Boolean;
 begin
   if FRoot <> nil then
     Result := RemoveNode(aKey, FRoot, aValue)
@@ -1099,7 +1099,7 @@ begin
     Result := False;
 end;
 
-procedure TGLiteIdxTreap.Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);
+procedure TGLiteIdxTreap.Split(const aKey: TKey; out aTreap: TGLiteIdxTreap);
 begin
   if FRoot <> nil then
     SplitNode(aKey, FRoot, FRoot, aTreap.FRoot);
@@ -1136,7 +1136,7 @@ begin
     Result := TEntry.Create(Key, Value);
 end;
 
-class function TGLiteSegmentTreap.NewNode(constref aKey: TKey; constref aValue: TValue): PNode;
+class function TGLiteSegmentTreap.NewNode(const aKey: TKey; const aValue: TValue): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -1208,8 +1208,8 @@ begin
     end;
 end;
 
-class function TGLiteSegmentTreap.UpdateValue(aRoot: PNode; constref aKey: TKey;
-  constref aValue: TValue): Boolean;
+class function TGLiteSegmentTreap.UpdateValue(aRoot: PNode; const aKey: TKey;
+  const aValue: TValue): Boolean;
 begin
   if aRoot = nil then exit(False);
   if TCmpRel.Less(aKey, aRoot^.Key) then
@@ -1226,7 +1226,7 @@ begin
     UpdateCache(aRoot);
 end;
 
-class procedure TGLiteSegmentTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
+class procedure TGLiteSegmentTreap.SplitNode(const aKey: TKey; aRoot: PNode; out L, R: PNode);
 begin
   if aRoot <> nil then
     begin
@@ -1292,7 +1292,7 @@ begin
     aRoot := aNode;
 end;
 
-class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean;
+class function TGLiteSegmentTreap.RemoveNode(const aKey: TKey; var aRoot: PNode): Boolean;
 var
   Found: PNode;
 begin
@@ -1319,7 +1319,7 @@ begin
       end;
 end;
 
-class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
+class function TGLiteSegmentTreap.RemoveNode(const aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
 var
   Found: PNode;
 begin
@@ -1370,7 +1370,7 @@ begin
     aTreap.FRoot := CopyTree(aTreap.FRoot);
 end;
 
-class procedure TGLiteSegmentTreap.Split(constref aKey: TKey; var aTreap: TGLiteSegmentTreap; out L,
+class procedure TGLiteSegmentTreap.Split(const aKey: TKey; var aTreap: TGLiteSegmentTreap; out L,
   R: TGLiteSegmentTreap);
 begin
   if aTreap.FRoot = nil then
@@ -1414,12 +1414,12 @@ begin
   Result := a;
 end;
 
-function TGLiteSegmentTreap.Contains(constref aKey: TKey): Boolean;
+function TGLiteSegmentTreap.Contains(const aKey: TKey): Boolean;
 begin
   Result := TUtil.FindKey(FRoot, aKey) <> nil;
 end;
 
-function TGLiteSegmentTreap.Find(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteSegmentTreap.Find(const aKey: TKey; out aValue: TValue): Boolean;
 var
   Node: PNode;
 begin
@@ -1435,7 +1435,7 @@ begin
   Result := False;
 end;
 
-function TGLiteSegmentTreap.FindLess(constref aKey: TKey; out aLess: TKey): Boolean;
+function TGLiteSegmentTreap.FindLess(const aKey: TKey; out aLess: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -1451,7 +1451,7 @@ begin
   Result := False;
 end;
 
-function TGLiteSegmentTreap.FindLessOrEqual(constref aKey: TKey; out aLessOrEq: TKey): Boolean;
+function TGLiteSegmentTreap.FindLessOrEqual(const aKey: TKey; out aLessOrEq: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -1467,7 +1467,7 @@ begin
   Result := False;
 end;
 
-function TGLiteSegmentTreap.FindGreater(constref aKey: TKey; out aGreater: TKey): Boolean;
+function TGLiteSegmentTreap.FindGreater(const aKey: TKey; out aGreater: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -1483,7 +1483,7 @@ begin
   Result := False;
 end;
 
-function TGLiteSegmentTreap.FindGreaterOrEqual(constref aKey: TKey; out aGreaterOrEq: TKey): Boolean;
+function TGLiteSegmentTreap.FindGreaterOrEqual(const aKey: TKey; out aGreaterOrEq: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -1499,12 +1499,12 @@ begin
   Result := False;
 end;
 
-function TGLiteSegmentTreap.IndexOf(constref aKey: TKey): SizeInt;
+function TGLiteSegmentTreap.IndexOf(const aKey: TKey): SizeInt;
 begin
   Result := TUtil.GetKeyIndex(FRoot, aKey);
 end;
 
-function TGLiteSegmentTreap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGLiteSegmentTreap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   if FRoot <> nil then
     begin
@@ -1517,12 +1517,12 @@ begin
   Result := True;
 end;
 
-function TGLiteSegmentTreap.Add(constref e: TEntry): Boolean;
+function TGLiteSegmentTreap.Add(const e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
 
-function TGLiteSegmentTreap.Remove(constref aKey: TKey): Boolean;
+function TGLiteSegmentTreap.Remove(const aKey: TKey): Boolean;
 begin
   if FRoot <> nil  then
     Result := RemoveNode(aKey, FRoot)
@@ -1530,7 +1530,7 @@ begin
     Result := False;
 end;
 
-function TGLiteSegmentTreap.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteSegmentTreap.Remove(const aKey: TKey; out aValue: TValue): Boolean;
 begin
   if FRoot <> nil  then
     Result := RemoveNode(aKey, FRoot, aValue)
@@ -1538,7 +1538,7 @@ begin
     Result := False;
 end;
 
-procedure TGLiteSegmentTreap.Split(constref aKey: TKey; out aTreap: TGLiteSegmentTreap);
+procedure TGLiteSegmentTreap.Split(const aKey: TKey; out aTreap: TGLiteSegmentTreap);
 begin
   if FRoot <> nil then
     SplitNode(aKey, FRoot, FRoot, aTreap.FRoot);
@@ -1556,7 +1556,7 @@ begin
   Result := TValMonoid.Identity;
 end;
 
-function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey): TValue;
+function TGLiteSegmentTreap.RangeQuery(const L, R: TKey): TValue;
 var
   pL, pM, pR: PNode;
 begin
@@ -1574,7 +1574,7 @@ begin
     Result := TValMonoid.Identity;
 end;
 
-function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey; out aCount: SizeInt): TValue;
+function TGLiteSegmentTreap.RangeQuery(const L, R: TKey; out aCount: SizeInt): TValue;
 var
   pL, pM, pR: PNode;
 begin
@@ -1605,7 +1605,7 @@ begin
     Result := FRoot^.CacheVal;
 end;
 
-function TGLiteSegmentTreap.HeadQuery(constref aKey: TKey): TValue;
+function TGLiteSegmentTreap.HeadQuery(const aKey: TKey): TValue;
 var
   pL, pR: PNode;
 begin
@@ -1622,7 +1622,7 @@ begin
     Result := TValMonoid.Identity;
 end;
 
-function TGLiteSegmentTreap.HeadQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
+function TGLiteSegmentTreap.HeadQuery(const aKey: TKey; out aCount: SizeInt): TValue;
 var
   pL, pR: PNode;
 begin
@@ -1649,7 +1649,7 @@ begin
   Result := TailQuery(TUtil.GetByIndex(FRoot, aIndex)^.Key);
 end;
 
-function TGLiteSegmentTreap.TailQuery(constref aKey: TKey): TValue;
+function TGLiteSegmentTreap.TailQuery(const aKey: TKey): TValue;
 var
   pL, pR: PNode;
 begin
@@ -1666,7 +1666,7 @@ begin
     Result := TValMonoid.Identity;
 end;
 
-function TGLiteSegmentTreap.TailQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
+function TGLiteSegmentTreap.TailQuery(const aKey: TKey; out aCount: SizeInt): TValue;
 var
   pL, pR: PNode;
 begin
@@ -1723,7 +1723,7 @@ begin
   TUtil.GetByIndex(FRoot, aIndex)^.Value := aValue;
 end;
 
-class function TGLiteImplicitTreap.NewNode(constref aValue: T): PNode;
+class function TGLiteImplicitTreap.NewNode(const aValue: T): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -1901,7 +1901,7 @@ begin
   Result := a;
 end;
 
-function TGLiteImplicitTreap.Add(constref aValue: T): SizeInt;
+function TGLiteImplicitTreap.Add(const aValue: T): SizeInt;
 begin
   Result := TUtil.GetNodeSize(FRoot);
   if FRoot <> nil then
@@ -1910,7 +1910,7 @@ begin
     FRoot := NewNode(aValue);
 end;
 
-procedure TGLiteImplicitTreap.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteImplicitTreap.Insert(aIndex: SizeInt; const aValue: T);
 var
   L, R: PNode;
 begin
@@ -2058,7 +2058,7 @@ begin
   UpdateValue(aIndex, FRoot, aValue);
 end;
 
-class function TGLiteImplSegmentTreap.NewNode(constref aValue: T): PNode;
+class function TGLiteImplSegmentTreap.NewNode(const aValue: T): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -2123,7 +2123,7 @@ begin
     end;
 end;
 
-class procedure TGLiteImplSegmentTreap.UpdateValue(aIndex: SizeInt; aRoot: PNode; constref aValue: T);
+class procedure TGLiteImplSegmentTreap.UpdateValue(aIndex: SizeInt; aRoot: PNode; const aValue: T);
 var
   LSize: SizeInt;
 begin
@@ -2282,7 +2282,7 @@ begin
   Result := a;
 end;
 
-function TGLiteImplSegmentTreap.Add(constref aValue: T): SizeInt;
+function TGLiteImplSegmentTreap.Add(const aValue: T): SizeInt;
 begin
   Result := TUtil.GetNodeSize(FRoot);
   if FRoot <> nil then
@@ -2291,7 +2291,7 @@ begin
     FRoot := NewNode(aValue);
 end;
 
-procedure TGLiteImplSegmentTreap.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteImplSegmentTreap.Insert(aIndex: SizeInt; const aValue: T);
 var
   L, R: PNode;
 begin
@@ -2537,7 +2537,7 @@ begin
   FRoot := MergeNode(MergeNode(L, M), R);
 end;
 
-class function TGLiteImplicitSegTreap.NewNode(constref aValue: T): PNode;
+class function TGLiteImplicitSegTreap.NewNode(const aValue: T): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
@@ -2749,7 +2749,7 @@ begin
   Result := a;
 end;
 
-function TGLiteImplicitSegTreap.Add(constref aValue: T): SizeInt;
+function TGLiteImplicitSegTreap.Add(const aValue: T): SizeInt;
 begin
   Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot);
   if FRoot <> nil then
@@ -2758,7 +2758,7 @@ begin
     FRoot := NewNode(aValue);
 end;
 
-procedure TGLiteImplicitSegTreap.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteImplicitSegTreap.Insert(aIndex: SizeInt; const aValue: T);
 var
   L, R: PNode;
 begin
@@ -2891,7 +2891,7 @@ begin
   FRoot := MergeNode(MergeNode(L, M), R);
 end;
 
-procedure TGLiteImplicitSegTreap.RangeUpdate(L, R: SizeInt; constref aConst: T);
+procedure TGLiteImplicitSegTreap.RangeUpdate(L, R: SizeInt; const aConst: T);
 var
   pL, pM, pR: PNode;
 begin

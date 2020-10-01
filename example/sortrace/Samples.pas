@@ -26,7 +26,7 @@ type
   TVec4 = record
     X, Y, Z, W: Double;
     class function CreateRandom(aRange: Integer): TVec4; static; inline;
-    class function Less(const L, R: TVec4): Boolean; static; inline;
+    class operator < (const L, R: TVec4): Boolean; inline;
   end;
 
   TUIntSample   = array of DWord;
@@ -126,7 +126,7 @@ begin
   end;
 end;
 
-class function TVec4.Less(const L, R: TVec4): Boolean;
+class operator TVec4.<(const L, R: TVec4): Boolean;
 begin
   Result := L.X + L.Y + L.Z + L.W < R.X + R.Y + R.Z + R.W;
 end;
@@ -392,11 +392,6 @@ begin
     Result[I] := TVec4.CreateRandom(200000000);
 end;
 
-function DwLess(constref L, R: DWord): Boolean;
-begin
-  Result := L < R;
-end;
-
 function TSampleClassHelper.RunUInt32Test(Algo: TSortAlgo; aSize: TSampleSize; K: SizeInt): Double;
 type
   TDWordLess = specialize TLess<DWord>;
@@ -420,15 +415,10 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPasPDQSort:         TPDQSort.Sort(Data, @DwLess);
+    saPasPDQSort:         TPDQSort.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
-end;
-
-function SingleLess(constref L, R: Single): Boolean;
-begin
-  Result := L < R;
 end;
 
 function TSampleClassHelper.RunSingleTest(Algo: TSortAlgo; aSize: TSampleSize): Double;
@@ -454,15 +444,10 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPasPDQSort:         TPDQSort.Sort(Data, @SingleLess);
+    saPasPDQSort:         TPDQSort.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
-end;
-
-function DblLess(constref L, R: Double): Boolean;
-begin
-  Result := L < R;
 end;
 
 function TSampleClassHelper.RunDoubleTest(Algo: TSortAlgo; aSize: TSampleSize): Double;
@@ -488,15 +473,10 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPasPDQSort:         TPDQSort.Sort(Data, @DblLess);
+    saPasPDQSort:         TPDQSort.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
-end;
-
-function QwLess(constref L, R: QWord): Boolean;
-begin
-  Result := L < R;
 end;
 
 function TSampleClassHelper.RunUInt64Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
@@ -522,15 +502,10 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPasPDQSort:         TPDQSort.Sort(Data, @QwLess);
+    saPasPDQSort:         TPDQSort.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
-end;
-
-function StrLess(constref L, R: string): Boolean;
-begin
-  Result := L < R;
 end;
 
 function StrCmp(constref L, R: string): Integer;
@@ -567,7 +542,7 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data, specialize TComparer<string>.Construct(@StrCmp));
-    saPasPDQSort:         TPDQSort.Sort(Data, @StrLess);
+    saPasPDQSort:         TPDQSort.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -584,11 +559,6 @@ begin
   Result := Ord(sA > sB) - Ord(sA < sB);
 end;
 
-function Vec4Less(constref A, B: TVec4): Boolean;
-begin
-  Result := A.X + A.Y + A.Z + A.W < B.X + B.Y + B.Z + B.W;
-end;
-
 type
   TVec4Less = record
     class function c(const A, B: TVec4): Boolean; static;
@@ -602,8 +572,8 @@ end;
 
 function TSampleClassHelper.RunVec4Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
 type
-  THelper    = specialize TGArrayHelper<TVec4>;
-  TTimSort   = specialize TGTimSort<TVec4>;
+  THelper    = specialize TGComparableArrayHelper<TVec4>;
+  TTimSort   = specialize TGComparableTimSort<TVec4>;
   TFclUtils  = specialize TOrderingArrayUtils<TVec4Sample, TVec4, TVec4Less>;
   TGcHelper  = specialize TArrayHelper<TVec4>;
   TPDQSort   = specialize TPDQSorter<TVec4>;
@@ -622,7 +592,7 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data, specialize TComparer<TVec4>.Construct(@Vec4Order));
-    saPasPDQSort:         TPDQSort.Sort(Data, @Vec4Less);
+    saPasPDQSort:         TPDQSort.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;

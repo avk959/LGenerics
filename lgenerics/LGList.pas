@@ -142,18 +142,18 @@ type
     procedure DoSetItem(aIndex: SizeInt; const aValue: T); virtual;
     procedure RemoveDuplicates;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
-    function  DoAdd(constref aValue: T): Boolean; override;
-    function  DoInsert(constref aValue: T): SizeInt;
-    function  DoRemove(constref aValue: T): Boolean; override;
-    function  DoExtract(constref aValue: T): Boolean; override;
+    function  DoAdd(const aValue: T): Boolean; override;
+    function  DoInsert(const aValue: T): SizeInt;
+    function  DoRemove(const aValue: T): Boolean; override;
+    function  DoExtract(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
     function  DoExtractIf(aTest: TTest): TArray; override;
     function  DoExtractIf(aTest: TOnTest): TArray; override;
     function  DoExtractIf(aTest: TNestTest): TArray; override;
-    function  SelectDistinctArray(constref a: array of T): TArray;
-    function  DoAddAll(constref a: array of T): SizeInt; override; overload;
+    function  SelectDistinctArray(const a: array of T): TArray;
+    function  DoAddAll(const a: array of T): SizeInt; override; overload;
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt);
@@ -164,19 +164,19 @@ type
     function  DeleteItem(aIndex: SizeInt): T; virtual;
     function  DoDeleteRange(aIndex, aCount: SizeInt): SizeInt; virtual;
     function  GetRecEnumerator: TRecEnumerator; inline; //for internal use
-    function  RightmostLT(constref aValue: T): SizeInt;
-    function  RightmostLE(constref aValue: T): SizeInt;
-    function  LeftmostGT(constref aValue: T): SizeInt;
-    function  LeftmostGE(constref aValue: T): SizeInt;
+    function  RightmostLT(const aValue: T): SizeInt;
+    function  RightmostLE(const aValue: T): SizeInt;
+    function  LeftmostGT(const aValue: T): SizeInt;
+    function  LeftmostGE(const aValue: T): SizeInt;
     property  ElemCount: SizeInt read FCount;
   public
     constructor CreateEmpty;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref a: array of T);
+    constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
     constructor Create(aRejectDuplicates: Boolean);
-    constructor Create(constref a: array of T; aRejectDuplicates: Boolean);
+    constructor Create(const a: array of T; aRejectDuplicates: Boolean);
     constructor Create(e: IEnumerable; aRejectDuplicates: Boolean);
     destructor  Destroy; override;
 
@@ -185,30 +185,30 @@ type
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
   { returns insert position or -1 if element is not inserted }
-    function  Insert(constref aValue: T): SizeInt;
-    function  Contains(constref aValue: T): Boolean; override;
+    function  Insert(const aValue: T): SizeInt;
+    function  Contains(const aValue: T): Boolean; override;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
   { returns the index of the leftmost occurrence of aValue, -1 if there is no such element }
-    function  IndexOf(constref aValue: T): SizeInt;
+    function  IndexOf(const aValue: T): SizeInt;
   { returns the count of occurrences of aValue, 0 if there is no such element }
-    function  CountOf(constref aValue: T): SizeInt;
+    function  CountOf(const aValue: T): SizeInt;
   { returns the leftmost index of the nearest element that is greater then or equal to
     aValue(depending on aInclusive), or -1 if there is no such element }
-    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt;
+    function  IndexOfCeil(const aValue: T; aInclusive: Boolean = True): SizeInt;
   { returns the rightmost index of the nearest element that is TLess then aValue
     (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
-    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt;
+    function  IndexOfFloor(const aValue: T; aInclusive: Boolean = False): SizeInt;
   { enumerates values that are strictly TLess than(if not aInclusive) aHighBound }
-    function  Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable;
+    function  Head(const aHighBound: T; aInclusive: Boolean = False): IEnumerable;
   { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
-    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
+    function  Tail(const aLowBound: T; aInclusive: Boolean = True): IEnumerable;
   { enumerates values that are greater than or equal to aLowBound and strictly TLess than aHighBound(by default)}
-    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
-    function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGBaseSortedList;
-    function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGBaseSortedList;
-    function  SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseSortedList;
+    function  Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
+    function  HeadList(const aHighBound: T; aInclusive: Boolean = False): TGBaseSortedList;
+    function  TailList(const aLowBound: T; aInclusive: Boolean = True): TGBaseSortedList;
+    function  SubList(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseSortedList;
     function  Clone: TGBaseSortedList; override;
     property  RejectDuplicates: Boolean read FRejectDuplicates write SetRejectDuplicates;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -263,9 +263,9 @@ type
     procedure Clear;
     function  EnsureCapacity(aValue: SizeInt): Boolean; inline;
     procedure TrimToFit; inline;
-    function  Add(constref aValue: T): Boolean;
-    function  Contains(constref aValue: T): Boolean;
-    function  Remove(constref aValue: T): Boolean;
+    function  Add(const aValue: T): Boolean;
+    function  Contains(const aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   { by default False }
@@ -283,7 +283,7 @@ type
     PEntry = ^TEntry;
 
     TEntryCmpRel = class
-      class function Less(constref L, R: TEntry): Boolean; static; inline;
+      class function Less(const L, R: TEntry): Boolean; static; inline;
     end;
 
     TEnumerator = record
@@ -320,10 +320,10 @@ type
     procedure Clear; //inline;
     function  EnsureCapacity(aValue: SizeInt): Boolean; inline;
     procedure TrimToFit; inline;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
-    function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
-    function  Add(constref aKey: TKey): PEntry;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+    function  Find(const aKey: TKey; out aPos: SizeInt): PEntry;
+    function  Add(const aKey: TKey): PEntry;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -356,7 +356,7 @@ type
       FLast: SizeInt;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aList: TGLiteSortedList; aLastIndex: SizeInt);
+      constructor Create(const aList: TGLiteSortedList; aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
       property  Current: T read GetCurrent;
     end;
@@ -378,8 +378,8 @@ type
       FLast: SizeInt;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
-      constructor Create(constref aList: TGLiteSortedList; aStartIndex, aLastIndex: SizeInt);
+      constructor Create(const aList: TGLiteSortedList; aStartIndex: SizeInt);
+      constructor Create(const aList: TGLiteSortedList; aStartIndex, aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
       property  Current: T read GetCurrent;
     end;
@@ -415,11 +415,11 @@ type
     function  DeleteItem(aIndex: SizeInt): T; inline;
     procedure RemoveDuplicates;
     procedure SetRejectDuplicates(aValue: Boolean);
-    function  RightmostLT(constref aValue: T): SizeInt;
-    function  RightmostLE(constref aValue: T): SizeInt;
-    function  LeftmostGT(constref aValue: T): SizeInt;
-    function  LeftmostGE(constref aValue: T): SizeInt;
-    function  SelectDistinctArray(constref a: array of T): TArray;
+    function  RightmostLT(const aValue: T): SizeInt;
+    function  RightmostLE(const aValue: T): SizeInt;
+    function  LeftmostGT(const aValue: T): SizeInt;
+    function  LeftmostGE(const aValue: T): SizeInt;
+    function  SelectDistinctArray(const a: array of T): TArray;
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
     function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
     function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
@@ -436,35 +436,35 @@ type
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
-    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
-    function  Add(constref aValue: T): Boolean;
-    function  AddAll(constref a: array of T): SizeInt;
-    function  Remove(constref aValue: T): Boolean;
+    function  FindOrAdd(const aValue: T; out aIndex: SizeInt): Boolean;
+    function  Add(const aValue: T): Boolean;
+    function  AddAll(const a: array of T): SizeInt;
+    function  Remove(const aValue: T): Boolean;
   { returns insert position or -1 if element is not inserted }
-    function  Insert(constref aValue: T): SizeInt;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
+    function  Insert(const aValue: T): SizeInt;
+    function  Contains(const aValue: T): Boolean; inline;
+    function  NonContains(const aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
   { returns the index of the leftmost occurrence of aValue, -1 if there is no such element }
-    function  IndexOf(constref aValue: T): SizeInt;
+    function  IndexOf(const aValue: T): SizeInt;
   { returns the count of occurrences of aValue, 0 if there is no such element }
-    function  CountOf(constref aValue: T): SizeInt;
+    function  CountOf(const aValue: T): SizeInt;
   { returns the leftmost index of the nearest element that is greater then or equal to
     aValue(depending on aInclusive), or -1 if there is no such element }
-    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt; inline;
+    function  IndexOfCeil(const aValue: T; aInclusive: Boolean = True): SizeInt; inline;
   { returns the rightmost index of the nearest element that is less then aValue
     (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
-    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt; inline;
+    function  IndexOfFloor(const aValue: T; aInclusive: Boolean = False): SizeInt; inline;
   { enumerates values that are strictly less than(if not aInclusive) aHighBound }
-    function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
+    function  Head(const aHighBound: T; aInclusive: Boolean = False): THead; inline;
   { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
-    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail;
+    function  Tail(const aLowBound: T; aInclusive: Boolean = True): TTail;
   { enumerates values that are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
-    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange;
-    function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteSortedList;
-    function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteSortedList;
-    function  SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteSortedList;
+    function  Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange;
+    function  HeadList(const aHighBound: T; aInclusive: Boolean = False): TGLiteSortedList;
+    function  TailList(const aLowBound: T; aInclusive: Boolean = True): TGLiteSortedList;
+    function  SubList(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteSortedList;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  RejectDuplicates: Boolean read FRejectDuplicates write SetRejectDuplicates;
@@ -518,8 +518,8 @@ type
       FLast: SizeInt;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aList: TSortedList; aStartIndex: SizeInt);
-      constructor Create(constref aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
+      constructor Create(const aList: TSortedList; aStartIndex: SizeInt);
+      constructor Create(const aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
       property  Current: T read GetCurrent;
     end;
@@ -555,11 +555,11 @@ type
     function  DeleteItem(aIndex: SizeInt): T; inline;
     procedure RemoveDuplicates;
     procedure SetRejectDuplicates(aValue: Boolean);
-    function  RightmostLT(constref aValue: T): SizeInt;
-    function  RightmostLE(constref aValue: T): SizeInt;
-    function  LeftmostGT(constref aValue: T): SizeInt;
-    function  LeftmostGE(constref aValue: T): SizeInt;
-    function  SelectDistinctArray(constref a: array of T): TArray;
+    function  RightmostLT(const aValue: T): SizeInt;
+    function  RightmostLE(const aValue: T): SizeInt;
+    function  LeftmostGT(const aValue: T): SizeInt;
+    function  LeftmostGE(const aValue: T): SizeInt;
+    function  SelectDistinctArray(const a: array of T): TArray;
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
     function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
     function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
@@ -576,35 +576,35 @@ type
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
-    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
-    function  Add(constref aValue: T): Boolean;
-    function  AddAll(constref a: array of T): SizeInt;
-    function  Remove(constref aValue: T): Boolean;
+    function  FindOrAdd(const aValue: T; out aIndex: SizeInt): Boolean;
+    function  Add(const aValue: T): Boolean;
+    function  AddAll(const a: array of T): SizeInt;
+    function  Remove(const aValue: T): Boolean;
   { returns insert position or -1 if element is not inserted }
-    function  Insert(constref aValue: T): SizeInt;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
+    function  Insert(const aValue: T): SizeInt;
+    function  Contains(const aValue: T): Boolean; inline;
+    function  NonContains(const aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
   { returns the index of the leftmost occurrence of aValue, -1 if there is no such element }
-    function  IndexOf(constref aValue: T): SizeInt;
+    function  IndexOf(const aValue: T): SizeInt;
   { returns the count of occurrences of aValue, 0 if there is no such element }
-    function  CountOf(constref aValue: T): SizeInt;
+    function  CountOf(const aValue: T): SizeInt;
   { returns the leftmost index of the nearest element that is greater then or equal to
     aValue(depending on aInclusive), or -1 if there is no such element }
-    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt; inline;
+    function  IndexOfCeil(const aValue: T; aInclusive: Boolean = True): SizeInt; inline;
   { returns the rightmost index of the nearest element that is less then aValue
     (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
-    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt; inline;
+    function  IndexOfFloor(const aValue: T; aInclusive: Boolean = False): SizeInt; inline;
   { enumerates values that are strictly less than(if not aInclusive) aHighBound }
-    function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
+    function  Head(const aHighBound: T; aInclusive: Boolean = False): THead; inline;
   { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
-    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail;
+    function  Tail(const aLowBound: T; aInclusive: Boolean = True): TTail;
   { enumerates values that are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
-    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
-    function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteComparableSortedList;
-    function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteComparableSortedList;
-    function  SubList(constref aLowBound, aHighBound: T;
+    function  Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
+    function  HeadList(const aHighBound: T; aInclusive: Boolean = False): TGLiteComparableSortedList;
+    function  TailList(const aLowBound: T; aInclusive: Boolean = True): TGLiteComparableSortedList;
+    function  SubList(const aLowBound, aHighBound: T;
               aIncludeBounds: TRangeBounds = [rbLow]): TGLiteComparableSortedList;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -677,17 +677,17 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  Find(constref aValue: T; aHash: SizeInt): SizeInt; inline;
-    function  Find(constref aValue: T): SizeInt; inline;
-    function  GetCountOf(constref aValue: T): SizeInt;
-    function  DoAdd(constref aValue: T; aHash: SizeInt): SizeInt; inline;
-    function  DoAdd(constref aValue: T): SizeInt; inline;
-    procedure DoInsert(aIndex: SizeInt; constref aValue: T);
+    function  Find(const aValue: T; aHash: SizeInt): SizeInt; inline;
+    function  Find(const aValue: T): SizeInt; inline;
+    function  GetCountOf(const aValue: T): SizeInt;
+    function  DoAdd(const aValue: T; aHash: SizeInt): SizeInt; inline;
+    function  DoAdd(const aValue: T): SizeInt; inline;
+    procedure DoInsert(aIndex: SizeInt; const aValue: T);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
-    function  DoRemove(constref aValue: T): Boolean;
+    function  DoRemove(const aValue: T): Boolean;
   { returns True if aValue found, False otherwise }
-    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+    function  FindOrAdd(const aValue: T; out aIndex: SizeInt): Boolean;
     class procedure CapacityExceedError(aValue: SizeInt); static;
     class operator Initialize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
@@ -702,24 +702,24 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  Contains(constref aValue: T): Boolean;
-    function  NonContains(constref aValue: T): Boolean;
-    function  IndexOf(constref aValue: T): SizeInt;
-    function  CountOf(constref aValue: T): SizeInt; inline;
+    function  Contains(const aValue: T): Boolean;
+    function  NonContains(const aValue: T): Boolean;
+    function  IndexOf(const aValue: T): SizeInt;
+    function  CountOf(const aValue: T): SizeInt; inline;
   { returns index of the element added }
-    function  Add(constref aValue: T): SizeInt; inline;
-    function  AddAll(constref a: array of T): SizeInt;
+    function  Add(const aValue: T): SizeInt; inline;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
-    function  AddUniq(constref aValue: T): Boolean; inline;
-    function  AddAllUniq(constref a: array of T): SizeInt;
+    function  AddUniq(const aValue: T): Boolean; inline;
+    function  AddAllUniq(const a: array of T): SizeInt;
     function  AddAllUniq(e: IEnumerable): SizeInt;
-    function  AddOrUpdate(constref aValue: T; out aIndex: SizeInt): Boolean; inline;
-    function  AddOrUpdate(constref aValue: T): Boolean; inline;
-    function  AddAllOrUpdate(constref a: array of T): SizeInt;
+    function  AddOrUpdate(const aValue: T; out aIndex: SizeInt): Boolean; inline;
+    function  AddOrUpdate(const aValue: T): Boolean; inline;
+    function  AddAllOrUpdate(const a: array of T): SizeInt;
     function  AddAllOrUpdate(e: IEnumerable): SizeInt;
-    procedure Insert(aIndex: SizeInt; constref aValue: T);
+    procedure Insert(aIndex: SizeInt; const aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
-    function  Remove(constref aValue: T): Boolean; inline;
+    function  Remove(const aValue: T): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -793,16 +793,16 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt; inline;
-    function  Find(constref aKey: TKey): SizeInt; inline;
-    function  GetCountOf(constref aKey: TKey): SizeInt;
-    function  DoAdd(constref e: TEntry): SizeInt;
+    function  Find(const aKey: TKey; aHash: SizeInt): SizeInt; inline;
+    function  Find(const aKey: TKey): SizeInt; inline;
+    function  GetCountOf(const aKey: TKey): SizeInt;
+    function  DoAdd(const e: TEntry): SizeInt;
     function  DoAddHash(aHash: SizeInt): SizeInt;
-    procedure DoInsert(aIndex: SizeInt; constref e: TEntry);
+    procedure DoInsert(aIndex: SizeInt; const e: TEntry);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
-    function  DoRemove(constref aKey: TKey): Boolean;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
+    function  DoRemove(const aKey: TKey): Boolean;
+    function  FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
@@ -817,23 +817,23 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  IndexOf(constref aKey: TKey): SizeInt;
-    function  CountOf(constref aKey: TKey): SizeInt; inline;
-    function  Add(constref e: TEntry): SizeInt; inline;
-    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  Contains(const aKey: TKey): Boolean; inline;
+    function  NonContains(const aKey: TKey): Boolean; inline;
+    function  IndexOf(const aKey: TKey): SizeInt;
+    function  CountOf(const aKey: TKey): SizeInt; inline;
+    function  Add(const e: TEntry): SizeInt; inline;
+    function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
-    function  AddUniq(constref e: TEntry): Boolean; inline;
-    function  AddAllUniq(constref a: array of TEntry): SizeInt;
+    function  AddUniq(const e: TEntry): Boolean; inline;
+    function  AddAllUniq(const a: array of TEntry): SizeInt;
     function  AddAllUniq(e: IEntryEnumerable): SizeInt;
-    function  AddOrUpdate(constref e: TEntry; out aIndex: SizeInt): Boolean; inline;
-    function  AddOrUpdate(constref e: TEntry): Boolean; inline;
-    function  AddAllOrUpdate(constref a: array of TEntry): SizeInt;
+    function  AddOrUpdate(const e: TEntry; out aIndex: SizeInt): Boolean; inline;
+    function  AddOrUpdate(const e: TEntry): Boolean; inline;
+    function  AddAllOrUpdate(const a: array of TEntry): SizeInt;
     function  AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
-    procedure Insert(aIndex: SizeInt; constref e: TEntry);
+    procedure Insert(aIndex: SizeInt; const e: TEntry);
     procedure Delete(aIndex: SizeInt); inline;
-    function  Remove(constref aKey: TKey): Boolean; inline;
+    function  Remove(const aKey: TKey): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
@@ -1130,7 +1130,7 @@ begin
   Inc(FCount);
 end;
 
-function TGBaseSortedList.DoAdd(constref aValue: T): Boolean;
+function TGBaseSortedList.DoAdd(const aValue: T): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -1146,7 +1146,7 @@ begin
   Result := True;
 end;
 
-function TGBaseSortedList.DoInsert(constref aValue: T): SizeInt;
+function TGBaseSortedList.DoInsert(const aValue: T): SizeInt;
 var
   sr: TSearchResult;
 begin
@@ -1162,7 +1162,7 @@ begin
   InsertItem(Result, aValue);
 end;
 
-function TGBaseSortedList.DoRemove(constref aValue: T): Boolean;
+function TGBaseSortedList.DoRemove(const aValue: T): Boolean;
 var
   Removed: SizeInt;
 begin
@@ -1172,7 +1172,7 @@ begin
     DeleteItem(Removed);
 end;
 
-function TGBaseSortedList.DoExtract(constref aValue: T): Boolean;
+function TGBaseSortedList.DoExtract(const aValue: T): Boolean;
 var
   Extracted: SizeInt;
 begin
@@ -1338,7 +1338,7 @@ begin
   Result := h.Final;
 end;
 
-function TGBaseSortedList.SelectDistinctArray(constref a: array of T): TArray;
+function TGBaseSortedList.SelectDistinctArray(const a: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -1358,7 +1358,7 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-function TGBaseSortedList.DoAddAll(constref a: array of T): SizeInt;
+function TGBaseSortedList.DoAddAll(const a: array of T): SizeInt;
 var
   OldCount: SizeInt;
   PSrc: PItem;
@@ -1473,7 +1473,7 @@ begin
   Result.Init(Self);
 end;
 
-function TGBaseSortedList.RightmostLT(constref aValue: T): SizeInt;
+function TGBaseSortedList.RightmostLT(const aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or not TCmpRel.Less(FItems[0], aValue) then
     exit(NULL_INDEX);
@@ -1484,7 +1484,7 @@ begin
     Dec(Result);
 end;
 
-function TGBaseSortedList.RightmostLE(constref aValue: T): SizeInt;
+function TGBaseSortedList.RightmostLE(const aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or TCmpRel.Less(aValue, FItems[0]) then
     exit(NULL_INDEX);
@@ -1495,7 +1495,7 @@ begin
     Dec(Result);
 end;
 
-function TGBaseSortedList.LeftmostGT(constref aValue: T): SizeInt;
+function TGBaseSortedList.LeftmostGT(const aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or not TCmpRel.Less(aValue, FItems[Pred(ElemCount)]) then
     exit(NULL_INDEX);
@@ -1504,7 +1504,7 @@ begin
   Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
 end;
 
-function TGBaseSortedList.LeftmostGE(constref aValue: T): SizeInt;
+function TGBaseSortedList.LeftmostGE(const aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or TCmpRel.Less(FItems[Pred(ElemCount)], aValue) then
     exit(NULL_INDEX);
@@ -1535,7 +1535,7 @@ begin
     CapacityExceedError(aCapacity);
 end;
 
-constructor TGBaseSortedList.Create(constref a: array of T);
+constructor TGBaseSortedList.Create(const a: array of T);
 begin
   FItems := THelper.CreateCopy(a);
   FCount := System.Length(FItems);
@@ -1557,7 +1557,7 @@ begin
   FRejectDuplicates := aRejectDuplicates;
 end;
 
-constructor TGBaseSortedList.Create(constref a: array of T; aRejectDuplicates: Boolean);
+constructor TGBaseSortedList.Create(const a: array of T; aRejectDuplicates: Boolean);
 begin
   FRejectDuplicates := aRejectDuplicates;
   if RejectDuplicates then
@@ -1612,13 +1612,13 @@ begin
     aValue := FItems[Pred(ElemCount)];
 end;
 
-function TGBaseSortedList.Insert(constref aValue: T): SizeInt;
+function TGBaseSortedList.Insert(const aValue: T): SizeInt;
 begin
   CheckInIteration;
   Result := DoInsert(aValue);
 end;
 
-function TGBaseSortedList.Contains(constref aValue: T): Boolean;
+function TGBaseSortedList.Contains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) >= 0;
 end;
@@ -1644,7 +1644,7 @@ begin
   Result := DoDeleteRange(aIndex, aCount);
 end;
 
-function TGBaseSortedList.IndexOf(constref aValue: T): SizeInt;
+function TGBaseSortedList.IndexOf(const aValue: T): SizeInt;
 begin
   if ElemCount > 0 then
     Result := THelper.BinarySearch(FItems[0..Pred(ElemCount)], aValue)
@@ -1652,7 +1652,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGBaseSortedList.CountOf(constref aValue: T): SizeInt;
+function TGBaseSortedList.CountOf(const aValue: T): SizeInt;
 var
   LastIdx, FirstIdx: SizeInt;
 begin
@@ -1668,7 +1668,7 @@ begin
   Result := Succ(LastIdx - FirstIdx);
 end;
 
-function TGBaseSortedList.IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt;
+function TGBaseSortedList.IndexOfCeil(const aValue: T; aInclusive: Boolean): SizeInt;
 begin
   if aInclusive then
     Result := LeftmostGE(aValue)
@@ -1676,7 +1676,7 @@ begin
     Result := LeftmostGT(aValue);
 end;
 
-function TGBaseSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
+function TGBaseSortedList.IndexOfFloor(const aValue: T; aInclusive: Boolean): SizeInt;
 begin
   if aInclusive then
     Result := RightmostLE(aValue)
@@ -1684,13 +1684,13 @@ begin
     Result := RightmostLT(aValue);
 end;
 
-function TGBaseSortedList.Head(constref aHighBound: T; aInclusive: Boolean): IEnumerable;
+function TGBaseSortedList.Head(const aHighBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := THeadEnumerable.Create(Self, IndexOfFloor(aHighBound, aInclusive));
 end;
 
-function TGBaseSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): IEnumerable;
+function TGBaseSortedList.Tail(const aLowBound: T; aInclusive: Boolean): IEnumerable;
 var
   StartIdx: SizeInt;
 begin
@@ -1701,7 +1701,7 @@ begin
   Result := TTailEnumerable.Create(Self, StartIdx);
 end;
 
-function TGBaseSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
+function TGBaseSortedList.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
 var
   StartIdx: SizeInt;
 begin
@@ -1712,7 +1712,7 @@ begin
   Result := TRangeEnumerable.Create(Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
-function TGBaseSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGBaseSortedList;
+function TGBaseSortedList.HeadList(const aHighBound: T; aInclusive: Boolean): TGBaseSortedList;
 var
   HeadCount: SizeInt;
 begin
@@ -1725,7 +1725,7 @@ begin
   THelper.CopyItems(@FItems[0], @Result.FItems[0], HeadCount);
 end;
 
-function TGBaseSortedList.TailList(constref aLowBound: T; aInclusive: Boolean): TGBaseSortedList;
+function TGBaseSortedList.TailList(const aLowBound: T; aInclusive: Boolean): TGBaseSortedList;
 var
   StartIdx: SizeInt;
 begin
@@ -1738,7 +1738,7 @@ begin
   THelper.CopyItems(@FItems[StartIdx], @Result.FItems[0], ElemCount - StartIdx);
 end;
 
-function TGBaseSortedList.SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGBaseSortedList;
+function TGBaseSortedList.SubList(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGBaseSortedList;
 var
   StartIdx, LastIdx, RangeCount: SizeInt;
 begin
@@ -1910,7 +1910,7 @@ begin
   System.SetLength(FItems, Count);
 end;
 
-function TGSortedList2.Add(constref aValue: T): Boolean;
+function TGSortedList2.Add(const aValue: T): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -1926,7 +1926,7 @@ begin
   Result := True;
 end;
 
-function TGSortedList2.Contains(constref aValue: T): Boolean;
+function TGSortedList2.Contains(const aValue: T): Boolean;
 begin
   if Count > 0 then
     Result := THelper.BinarySearch(FItems[0..Pred(Count)], aValue) >= 0
@@ -1934,7 +1934,7 @@ begin
     Result := False;
 end;
 
-function TGSortedList2.Remove(constref aValue: T): Boolean;
+function TGSortedList2.Remove(const aValue: T): Boolean;
 var
   RemoveIdx: SizeInt;
 begin
@@ -1951,7 +1951,7 @@ end;
 
 { TGSortedListTable.TEntryCmpRel }
 
-class function TGSortedListTable.TEntryCmpRel.Less(constref L, R: TEntry): Boolean;
+class function TGSortedListTable.TEntryCmpRel.Less(const L, R: TEntry): Boolean;
 begin
   Result := TCmpRel.Less(L.Key, R.Key);
 end;
@@ -2103,7 +2103,7 @@ begin
   System.SetLength(FItems, Count);
 end;
 
-function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+function TGSortedListTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
   sr: TSearchResult;
   Entry: TEntry;
@@ -2130,7 +2130,7 @@ begin
   e := @FItems[aPos];
 end;
 
-function TGSortedListTable.Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
+function TGSortedListTable.Find(const aKey: TKey; out aPos: SizeInt): PEntry;
 var
   e: TEntry;
 begin
@@ -2144,7 +2144,7 @@ begin
     end;
 end;
 
-function TGSortedListTable.Add(constref aKey: TKey): PEntry;
+function TGSortedListTable.Add(const aKey: TKey): PEntry;
 var
   sr: TSearchResult;
   Entry: TEntry;
@@ -2167,7 +2167,7 @@ begin
     end;
 end;
 
-function TGSortedListTable.Remove(constref aKey: TKey): Boolean;
+function TGSortedListTable.Remove(const aKey: TKey): Boolean;
 var
   e: TEntry;
   RemoveIdx: SizeInt;
@@ -2192,7 +2192,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGLiteSortedList.THeadEnumerator.Create(constref aList: TGLiteSortedList; aLastIndex: SizeInt);
+constructor TGLiteSortedList.THeadEnumerator.Create(const aList: TGLiteSortedList; aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := aLastIndex;
@@ -2225,7 +2225,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGLiteSortedList.TTailEnumerator.Create(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
+constructor TGLiteSortedList.TTailEnumerator.Create(const aList: TGLiteSortedList; aStartIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := Pred(aList.Count);
@@ -2233,7 +2233,7 @@ begin
   FCurrIndex := FStart;
 end;
 
-constructor TGLiteSortedList.TTailEnumerator.Create(constref aList: TGLiteSortedList; aStartIndex,
+constructor TGLiteSortedList.TTailEnumerator.Create(const aList: TGLiteSortedList; aStartIndex,
   aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
@@ -2384,7 +2384,7 @@ begin
     end;
 end;
 
-function TGLiteSortedList.RightmostLT(constref aValue: T): SizeInt;
+function TGLiteSortedList.RightmostLT(const aValue: T): SizeInt;
 begin
   if IsEmpty or not TCmpRel.Less(FBuffer.FItems[0], aValue) then
     exit(NULL_INDEX);
@@ -2395,7 +2395,7 @@ begin
     Dec(Result);
 end;
 
-function TGLiteSortedList.RightmostLE(constref aValue: T): SizeInt;
+function TGLiteSortedList.RightmostLE(const aValue: T): SizeInt;
 begin
   if IsEmpty or TCmpRel.Less(aValue, FBuffer.FItems[0]) then
     exit(NULL_INDEX);
@@ -2406,7 +2406,7 @@ begin
     Dec(Result);
 end;
 
-function TGLiteSortedList.LeftmostGT(constref aValue: T): SizeInt;
+function TGLiteSortedList.LeftmostGT(const aValue: T): SizeInt;
 begin
   if IsEmpty or not TCmpRel.Less(aValue, FBuffer.FItems[Pred(Count)]) then
     exit(NULL_INDEX);
@@ -2415,7 +2415,7 @@ begin
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
 end;
 
-function TGLiteSortedList.LeftmostGE(constref aValue: T): SizeInt;
+function TGLiteSortedList.LeftmostGE(const aValue: T): SizeInt;
 begin
   if (Count = 0) or TCmpRel.Less(FBuffer.FItems[Pred(Count)], aValue) then
     exit(NULL_INDEX);
@@ -2424,7 +2424,7 @@ begin
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
 
-function TGLiteSortedList.SelectDistinctArray(constref a: array of T): TArray;
+function TGLiteSortedList.SelectDistinctArray(const a: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -2523,7 +2523,7 @@ begin
     aValue := FBuffer.FItems[Pred(FBuffer.Count)];
 end;
 
-function TGLiteSortedList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+function TGLiteSortedList.FindOrAdd(const aValue: T; out aIndex: SizeInt): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -2546,7 +2546,7 @@ begin
     end;
 end;
 
-function TGLiteSortedList.Add(constref aValue: T): Boolean;
+function TGLiteSortedList.Add(const aValue: T): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -2562,7 +2562,7 @@ begin
   Result := True;
 end;
 
-function TGLiteSortedList.AddAll(constref a: array of T): SizeInt;
+function TGLiteSortedList.AddAll(const a: array of T): SizeInt;
 var
   OldCount: SizeInt;
   PSrc: PItem;
@@ -2593,7 +2593,7 @@ begin
     THelper.Sort(FBuffer.FItems[0..Pred(Count)])
 end;
 
-function TGLiteSortedList.Remove(constref aValue: T): Boolean;
+function TGLiteSortedList.Remove(const aValue: T): Boolean;
 var
   ToRemove: SizeInt;
 begin
@@ -2603,7 +2603,7 @@ begin
     DeleteItem(ToRemove);
 end;
 
-function TGLiteSortedList.Insert(constref aValue: T): SizeInt;
+function TGLiteSortedList.Insert(const aValue: T): SizeInt;
 var
   sr: TSearchResult;
 begin
@@ -2619,12 +2619,12 @@ begin
   InsertItem(Result, aValue);
 end;
 
-function TGLiteSortedList.Contains(constref aValue: T): Boolean;
+function TGLiteSortedList.Contains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) >= 0;
 end;
 
-function TGLiteSortedList.NonContains(constref aValue: T): Boolean;
+function TGLiteSortedList.NonContains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) < 0;
 end;
@@ -2644,7 +2644,7 @@ begin
     DeleteItem(aIndex);
 end;
 
-function TGLiteSortedList.IndexOf(constref aValue: T): SizeInt;
+function TGLiteSortedList.IndexOf(const aValue: T): SizeInt;
 begin
   if NonEmpty then
     Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue)
@@ -2652,7 +2652,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGLiteSortedList.CountOf(constref aValue: T): SizeInt;
+function TGLiteSortedList.CountOf(const aValue: T): SizeInt;
 var
   LastIdx, FirstIdx: SizeInt;
 begin
@@ -2669,7 +2669,7 @@ begin
   Result := Succ(LastIdx - FirstIdx);
 end;
 
-function TGLiteSortedList.IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt;
+function TGLiteSortedList.IndexOfCeil(const aValue: T; aInclusive: Boolean): SizeInt;
 begin
   if aInclusive then
     Result := LeftmostGE(aValue)
@@ -2677,7 +2677,7 @@ begin
     Result := LeftmostGT(aValue);
 end;
 
-function TGLiteSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
+function TGLiteSortedList.IndexOfFloor(const aValue: T; aInclusive: Boolean): SizeInt;
 begin
   if aInclusive then
     Result := RightmostLE(aValue)
@@ -2685,12 +2685,12 @@ begin
     Result := RightmostLT(aValue);
 end;
 
-function TGLiteSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
+function TGLiteSortedList.Head(const aHighBound: T; aInclusive: Boolean): THead;
 begin
   Result := THead.Create(@Self, IndexOfFloor(aHighBound, aInclusive));
 end;
 
-function TGLiteSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
+function TGLiteSortedList.Tail(const aLowBound: T; aInclusive: Boolean): TTail;
 var
   StartIdx: SizeInt;
 begin
@@ -2700,7 +2700,7 @@ begin
   Result := TTail.Create(@Self, StartIdx);
 end;
 
-function TGLiteSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
+function TGLiteSortedList.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
 var
   StartIdx: SizeInt;
 begin
@@ -2710,7 +2710,7 @@ begin
   Result := TRange.Create(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
-function TGLiteSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGLiteSortedList;
+function TGLiteSortedList.HeadList(const aHighBound: T; aInclusive: Boolean): TGLiteSortedList;
 var
   HeadCount: SizeInt;
 begin
@@ -2723,7 +2723,7 @@ begin
   THelper.CopyItems(@FBuffer.FItems[0], @Result.FBuffer.FItems[0], HeadCount);
 end;
 
-function TGLiteSortedList.TailList(constref aLowBound: T; aInclusive: Boolean): TGLiteSortedList;
+function TGLiteSortedList.TailList(const aLowBound: T; aInclusive: Boolean): TGLiteSortedList;
 var
   StartIdx, TailCount: SizeInt;
 begin
@@ -2737,7 +2737,7 @@ begin
   THelper.CopyItems(@FBuffer.FItems[StartIdx], @Result.FBuffer.FItems[0], TailCount);
 end;
 
-function TGLiteSortedList.SubList(constref aLowBound, aHighBound: T;
+function TGLiteSortedList.SubList(const aLowBound, aHighBound: T;
   aIncludeBounds: TRangeBounds): TGLiteSortedList;
 var
   StartIdx, LastIdx, RangeCount: SizeInt;
@@ -2795,7 +2795,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGLiteComparableSortedList.TTailEnumerator.Create(constref aList: TSortedList; aStartIndex: SizeInt);
+constructor TGLiteComparableSortedList.TTailEnumerator.Create(const aList: TSortedList; aStartIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := Pred(aList.Count);
@@ -2803,7 +2803,7 @@ begin
   FCurrIndex := FStart;
 end;
 
-constructor TGLiteComparableSortedList.TTailEnumerator.Create(constref aList: TSortedList; aStartIndex,
+constructor TGLiteComparableSortedList.TTailEnumerator.Create(const aList: TSortedList; aStartIndex,
   aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
@@ -2953,7 +2953,7 @@ begin
     end;
 end;
 
-function TGLiteComparableSortedList.RightmostLT(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.RightmostLT(const aValue: T): SizeInt;
 begin
   if IsEmpty or not(FBuffer.FItems[0] < aValue) then
     exit(NULL_INDEX);
@@ -2964,7 +2964,7 @@ begin
     Dec(Result);
 end;
 
-function TGLiteComparableSortedList.RightmostLE(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.RightmostLE(const aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue < FBuffer.FItems[0]) then
     exit(NULL_INDEX);
@@ -2975,7 +2975,7 @@ begin
     Dec(Result);
 end;
 
-function TGLiteComparableSortedList.LeftmostGT(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.LeftmostGT(const aValue: T): SizeInt;
 begin
   if IsEmpty or not(aValue < FBuffer.FItems[Pred(Count)]) then
     exit(NULL_INDEX);
@@ -2984,7 +2984,7 @@ begin
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
 end;
 
-function TGLiteComparableSortedList.LeftmostGE(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.LeftmostGE(const aValue: T): SizeInt;
 begin
   if (Count = 0) or (FBuffer.FItems[Pred(Count)] < aValue) then
     exit(NULL_INDEX);
@@ -2993,7 +2993,7 @@ begin
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
 
-function TGLiteComparableSortedList.SelectDistinctArray(constref a: array of T): TArray;
+function TGLiteComparableSortedList.SelectDistinctArray(const a: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -3092,7 +3092,7 @@ begin
     aValue := FBuffer.FItems[Pred(FBuffer.Count)];
 end;
 
-function TGLiteComparableSortedList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+function TGLiteComparableSortedList.FindOrAdd(const aValue: T; out aIndex: SizeInt): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -3115,7 +3115,7 @@ begin
     end;
 end;
 
-function TGLiteComparableSortedList.Add(constref aValue: T): Boolean;
+function TGLiteComparableSortedList.Add(const aValue: T): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -3131,7 +3131,7 @@ begin
   Result := True;
 end;
 
-function TGLiteComparableSortedList.AddAll(constref a: array of T): SizeInt;
+function TGLiteComparableSortedList.AddAll(const a: array of T): SizeInt;
 var
   OldCount: SizeInt;
   PSrc: PItem;
@@ -3162,7 +3162,7 @@ begin
     THelper.Sort(FBuffer.FItems[0..Pred(Count)])
 end;
 
-function TGLiteComparableSortedList.Remove(constref aValue: T): Boolean;
+function TGLiteComparableSortedList.Remove(const aValue: T): Boolean;
 var
   ToRemove: SizeInt;
 begin
@@ -3172,7 +3172,7 @@ begin
     DeleteItem(ToRemove);
 end;
 
-function TGLiteComparableSortedList.Insert(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.Insert(const aValue: T): SizeInt;
 var
   sr: TSearchResult;
 begin
@@ -3188,12 +3188,12 @@ begin
   InsertItem(Result, aValue);
 end;
 
-function TGLiteComparableSortedList.Contains(constref aValue: T): Boolean;
+function TGLiteComparableSortedList.Contains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) >= 0;
 end;
 
-function TGLiteComparableSortedList.NonContains(constref aValue: T): Boolean;
+function TGLiteComparableSortedList.NonContains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) < 0;
 end;
@@ -3213,7 +3213,7 @@ begin
     DeleteItem(aIndex);
 end;
 
-function TGLiteComparableSortedList.IndexOf(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.IndexOf(const aValue: T): SizeInt;
 begin
   if NonEmpty then
     Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue)
@@ -3221,7 +3221,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGLiteComparableSortedList.CountOf(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.CountOf(const aValue: T): SizeInt;
 var
   LastIdx, FirstIdx: SizeInt;
 begin
@@ -3236,7 +3236,7 @@ begin
   Result := Succ(LastIdx - FirstIdx);
 end;
 
-function TGLiteComparableSortedList.IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt;
+function TGLiteComparableSortedList.IndexOfCeil(const aValue: T; aInclusive: Boolean): SizeInt;
 begin
   if aInclusive then
     Result := LeftmostGE(aValue)
@@ -3244,7 +3244,7 @@ begin
     Result := LeftmostGT(aValue);
 end;
 
-function TGLiteComparableSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
+function TGLiteComparableSortedList.IndexOfFloor(const aValue: T; aInclusive: Boolean): SizeInt;
 begin
   if aInclusive then
     Result := RightmostLE(aValue)
@@ -3252,12 +3252,12 @@ begin
     Result := RightmostLT(aValue);
 end;
 
-function TGLiteComparableSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
+function TGLiteComparableSortedList.Head(const aHighBound: T; aInclusive: Boolean): THead;
 begin
   Result := THead.Create(@Self, IndexOfFloor(aHighBound, aInclusive));
 end;
 
-function TGLiteComparableSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
+function TGLiteComparableSortedList.Tail(const aLowBound: T; aInclusive: Boolean): TTail;
 var
   StartIdx: SizeInt;
 begin
@@ -3267,7 +3267,7 @@ begin
   Result := TTail.Create(@Self, StartIdx);
 end;
 
-function TGLiteComparableSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
+function TGLiteComparableSortedList.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
 var
   StartIdx: SizeInt;
 begin
@@ -3277,7 +3277,7 @@ begin
   Result := TRange.Create(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
-function TGLiteComparableSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGLiteComparableSortedList;
+function TGLiteComparableSortedList.HeadList(const aHighBound: T; aInclusive: Boolean): TGLiteComparableSortedList;
 var
   HeadCount: SizeInt;
 begin
@@ -3290,7 +3290,7 @@ begin
   THelper.CopyItems(@FBuffer.FItems[0], @Result.FBuffer.FItems[0], HeadCount);
 end;
 
-function TGLiteComparableSortedList.TailList(constref aLowBound: T; aInclusive: Boolean): TGLiteComparableSortedList;
+function TGLiteComparableSortedList.TailList(const aLowBound: T; aInclusive: Boolean): TGLiteComparableSortedList;
 var
   StartIdx, TailCount: SizeInt;
 begin
@@ -3304,7 +3304,7 @@ begin
   THelper.CopyItems(@FBuffer.FItems[StartIdx], @Result.FBuffer.FItems[0], TailCount);
 end;
 
-function TGLiteComparableSortedList.SubList(constref aLowBound, aHighBound: T;
+function TGLiteComparableSortedList.SubList(const aLowBound, aHighBound: T;
   aIncludeBounds: TRangeBounds): TGLiteComparableSortedList;
 var
   StartIdx, LastIdx, RangeCount: SizeInt;
@@ -3475,7 +3475,7 @@ begin
     InitialAlloc;
 end;
 
-function TGLiteHashList.Find(constref aValue: T; aHash: SizeInt): SizeInt;
+function TGLiteHashList.Find(const aValue: T; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and Pred(Capacity)];
   while Result <> NULL_INDEX do
@@ -3486,12 +3486,12 @@ begin
     end;
 end;
 
-function TGLiteHashList.Find(constref aValue: T): SizeInt;
+function TGLiteHashList.Find(const aValue: T): SizeInt;
 begin
   Result := Find(aValue, TEqRel.HashCode(aValue));
 end;
 
-function TGLiteHashList.GetCountOf(constref aValue: T): SizeInt;
+function TGLiteHashList.GetCountOf(const aValue: T): SizeInt;
 var
   h, I: SizeInt;
 begin
@@ -3506,7 +3506,7 @@ begin
     end;
 end;
 
-function TGLiteHashList.DoAdd(constref aValue: T; aHash: SizeInt): SizeInt;
+function TGLiteHashList.DoAdd(const aValue: T; aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -3519,12 +3519,12 @@ begin
   Inc(FCount);
 end;
 
-function TGLiteHashList.DoAdd(constref aValue: T): SizeInt;
+function TGLiteHashList.DoAdd(const aValue: T): SizeInt;
 begin
   Result := DoAdd(aValue, TEqRel.HashCode(aValue));
 end;
 
-procedure TGLiteHashList.DoInsert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteHashList.DoInsert(aIndex: SizeInt; const aValue: T);
 begin
   if aIndex < Count then
     begin
@@ -3582,7 +3582,7 @@ begin
     end;
 end;
 
-function TGLiteHashList.DoRemove(constref aValue: T): Boolean;
+function TGLiteHashList.DoRemove(const aValue: T): Boolean;
 var
   Removed: SizeInt;
 begin
@@ -3592,7 +3592,7 @@ begin
     DoDelete(Removed);
 end;
 
-function TGLiteHashList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+function TGLiteHashList.FindOrAdd(const aValue: T; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -3707,17 +3707,17 @@ begin
     Clear;
 end;
 
-function TGLiteHashList.Contains(constref aValue: T): Boolean;
+function TGLiteHashList.Contains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) >= 0;
 end;
 
-function TGLiteHashList.NonContains(constref aValue: T): Boolean;
+function TGLiteHashList.NonContains(const aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) < 0;
 end;
 
-function TGLiteHashList.IndexOf(constref aValue: T): SizeInt;
+function TGLiteHashList.IndexOf(const aValue: T): SizeInt;
 begin
   if NonEmpty then
     Result := Find(aValue)
@@ -3725,7 +3725,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGLiteHashList.CountOf(constref aValue: T): SizeInt;
+function TGLiteHashList.CountOf(const aValue: T): SizeInt;
 begin
   if NonEmpty then
     Result := GetCountOf(aValue)
@@ -3733,14 +3733,14 @@ begin
     Result := 0;
 end;
 
-function TGLiteHashList.Add(constref aValue: T): SizeInt;
+function TGLiteHashList.Add(const aValue: T): SizeInt;
 begin
   if Count = Capacity then
     Expand;
   Result := DoAdd(aValue);
 end;
 
-function TGLiteHashList.AddAll(constref a: array of T): SizeInt;
+function TGLiteHashList.AddAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -3760,14 +3760,14 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashList.AddUniq(constref aValue: T): Boolean;
+function TGLiteHashList.AddUniq(const aValue: T): Boolean;
 var
   Dummy: SizeInt;
 begin
   Result := not FindOrAdd(aValue, Dummy);
 end;
 
-function TGLiteHashList.AddAllUniq(constref a: array of T): SizeInt;
+function TGLiteHashList.AddAllUniq(const a: array of T): SizeInt;
 var
   I, Dummy: SizeInt;
 begin
@@ -3787,7 +3787,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashList.AddOrUpdate(constref aValue: T; out aIndex: SizeInt): Boolean;
+function TGLiteHashList.AddOrUpdate(const aValue: T; out aIndex: SizeInt): Boolean;
 begin
   if FindOrAdd(aValue, aIndex) then
     begin
@@ -3798,7 +3798,7 @@ begin
     Result := True;
 end;
 
-function TGLiteHashList.AddOrUpdate(constref aValue: T): Boolean;
+function TGLiteHashList.AddOrUpdate(const aValue: T): Boolean;
 var
   I: SizeInt;
 begin
@@ -3811,7 +3811,7 @@ begin
     Result := True;
 end;
 
-function TGLiteHashList.AddAllOrUpdate(constref a: array of T): SizeInt;
+function TGLiteHashList.AddAllOrUpdate(const a: array of T): SizeInt;
 var
   I, J: SizeInt;
 begin
@@ -3834,7 +3834,7 @@ begin
   Result := Count - Result;
 end;
 
-procedure TGLiteHashList.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteHashList.Insert(aIndex: SizeInt; const aValue: T);
 begin
   if SizeUInt(aIndex) <= SizeUInt(Count) then
     begin
@@ -3854,7 +3854,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGLiteHashList.Remove(constref aValue: T): Boolean;
+function TGLiteHashList.Remove(const aValue: T): Boolean;
 begin
   if NonEmpty then
     Result := DoRemove(aValue)
@@ -4026,7 +4026,7 @@ begin
     InitialAlloc;
 end;
 
-function TGLiteHashList2.Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
+function TGLiteHashList2.Find(const aKey: TKey; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and Pred(Capacity)];
   while Result <> NULL_INDEX do
@@ -4037,12 +4037,12 @@ begin
     end;
 end;
 
-function TGLiteHashList2.Find(constref aKey: TKey): SizeInt;
+function TGLiteHashList2.Find(const aKey: TKey): SizeInt;
 begin
   Result := Find(aKey, TKeyEqRel.HashCode(aKey));
 end;
 
-function TGLiteHashList2.GetCountOf(constref aKey: TKey): SizeInt;
+function TGLiteHashList2.GetCountOf(const aKey: TKey): SizeInt;
 var
   h, I: SizeInt;
 begin
@@ -4057,7 +4057,7 @@ begin
     end;
 end;
 
-function TGLiteHashList2.DoAdd(constref e: TEntry): SizeInt;
+function TGLiteHashList2.DoAdd(const e: TEntry): SizeInt;
 var
   I: SizeInt;
 begin
@@ -4082,7 +4082,7 @@ begin
   Inc(FCount);
 end;
 
-procedure TGLiteHashList2.DoInsert(aIndex: SizeInt; constref e: TEntry);
+procedure TGLiteHashList2.DoInsert(aIndex: SizeInt; const e: TEntry);
 begin
   if aIndex < Count then
     begin
@@ -4136,7 +4136,7 @@ begin
     end;
 end;
 
-function TGLiteHashList2.DoRemove(constref aKey: TKey): Boolean;
+function TGLiteHashList2.DoRemove(const aKey: TKey): Boolean;
 var
   Removed: SizeInt;
 begin
@@ -4146,7 +4146,7 @@ begin
     DoDelete(Removed);
 end;
 
-function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
+function TGLiteHashList2.FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -4260,17 +4260,17 @@ begin
     Clear;
 end;
 
-function TGLiteHashList2.Contains(constref aKey: TKey): Boolean;
+function TGLiteHashList2.Contains(const aKey: TKey): Boolean;
 begin
   Result := IndexOf(aKey) >= 0;
 end;
 
-function TGLiteHashList2.NonContains(constref aKey: TKey): Boolean;
+function TGLiteHashList2.NonContains(const aKey: TKey): Boolean;
 begin
   Result := IndexOf(aKey) < 0;
 end;
 
-function TGLiteHashList2.IndexOf(constref aKey: TKey): SizeInt;
+function TGLiteHashList2.IndexOf(const aKey: TKey): SizeInt;
 begin
   if NonEmpty then
     Result := Find(aKey)
@@ -4278,7 +4278,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGLiteHashList2.CountOf(constref aKey: TKey): SizeInt;
+function TGLiteHashList2.CountOf(const aKey: TKey): SizeInt;
 begin
   if NonEmpty then
     Result := GetCountOf(aKey)
@@ -4286,14 +4286,14 @@ begin
     Result := 0;
 end;
 
-function TGLiteHashList2.Add(constref e: TEntry): SizeInt;
+function TGLiteHashList2.Add(const e: TEntry): SizeInt;
 begin
   if Count = Capacity then
     Expand;
   Result := DoAdd(e);
 end;
 
-function TGLiteHashList2.AddAll(constref a: array of TEntry): SizeInt;
+function TGLiteHashList2.AddAll(const a: array of TEntry): SizeInt;
 var
   I: SizeInt;
 begin
@@ -4313,7 +4313,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
+function TGLiteHashList2.AddUniq(const e: TEntry): Boolean;
 var
   Dummy: SizeInt;
   p: PEntry;
@@ -4323,7 +4323,7 @@ begin
     p^ := e;
 end;
 
-function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
+function TGLiteHashList2.AddAllUniq(const a: array of TEntry): SizeInt;
 var
   I: SizeInt;
 begin
@@ -4343,7 +4343,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashList2.AddOrUpdate(constref e: TEntry; out aIndex: SizeInt): Boolean;
+function TGLiteHashList2.AddOrUpdate(const e: TEntry; out aIndex: SizeInt): Boolean;
 var
   p: PEntry;
 begin
@@ -4351,7 +4351,7 @@ begin
   p^ := e;
 end;
 
-function TGLiteHashList2.AddOrUpdate(constref e: TEntry): Boolean;
+function TGLiteHashList2.AddOrUpdate(const e: TEntry): Boolean;
 var
   Dummy: SizeInt;
   p: PEntry;
@@ -4360,7 +4360,7 @@ begin
   p^ := e;
 end;
 
-function TGLiteHashList2.AddAllOrUpdate(constref a: array of TEntry): SizeInt;
+function TGLiteHashList2.AddAllOrUpdate(const a: array of TEntry): SizeInt;
 var
   I, Dummy: SizeInt;
   p: PEntry;
@@ -4384,7 +4384,7 @@ begin
   Result := Count - Result;
 end;
 
-procedure TGLiteHashList2.Insert(aIndex: SizeInt; constref e: TEntry);
+procedure TGLiteHashList2.Insert(aIndex: SizeInt; const e: TEntry);
 begin
   if SizeUInt(aIndex) <= SizeUInt(Count) then
     begin
@@ -4404,7 +4404,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGLiteHashList2.Remove(constref aKey: TKey): Boolean;
+function TGLiteHashList2.Remove(const aKey: TKey): Boolean;
 begin
   if NonEmpty then
     Result := DoRemove(aKey)

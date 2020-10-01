@@ -88,7 +88,7 @@ type
       FCancelled: Boolean;
       procedure Init(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
       function  TimeToFinish: Boolean; inline;
-      function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+      function  SelectMin(const v: TBoolVector; out aValue: SizeInt): Boolean;
       procedure CheckIsCycle(aNode: SizeInt);
       procedure CheckIsPath(aNode: SizeInt);
       procedure SearchFor(aNode: SizeInt);
@@ -122,11 +122,11 @@ type
     function  GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
-    function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
+    function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
-    function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; override;
+    function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
-    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
     procedure EdgeContracting(aSrc, aDst: SizeInt); override;
   public
@@ -256,32 +256,32 @@ type
   structural management utilities
 ***********************************************************************************************************}
 
-    function  InDegree(constref aVertex: TVertex): SizeInt; inline;
+    function  InDegree(const aVertex: TVertex): SizeInt; inline;
     function  InDegreeI(aIndex: SizeInt): SizeInt;
-    function  OutDegree(constref aVertex: TVertex): SizeInt; inline;
+    function  OutDegree(const aVertex: TVertex): SizeInt; inline;
     function  OutDegreeI(aIndex: SizeInt): SizeInt;
-    function  Degree(constref aVertex: TVertex): SizeInt; inline;
+    function  Degree(const aVertex: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
-    function  Isolated(constref aVertex: TVertex): Boolean; inline;
+    function  Isolated(const aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-    function  IsSource(constref aVertex: TVertex): Boolean; inline;
+    function  IsSource(const aVertex: TVertex): Boolean; inline;
     function  IsSourceI(aIndex: SizeInt): Boolean;
-    function  IsSink(constref aVertex: TVertex): Boolean; inline;
+    function  IsSink(const aVertex: TVertex): Boolean; inline;
     function  IsSinkI(aIndex: SizeInt): Boolean;
     function  SourceCount: SizeInt;
     function  SinkCount: SizeInt;
   { enumerates incoming arcs, slow }
-    function  IncomingArcs(constref aVertex: TVertex): TIncomingArcs;
+    function  IncomingArcs(const aVertex: TVertex): TIncomingArcs;
     function  IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
   { checks whether the aDst is reachable from the aSrc(each vertex is reachable from itself) }
-    function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  PathExists(const aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
   { returns the list of indices of the vertices reachable from aSource(including aSource) }
-    function  ReachableFrom(constref aSource: TVertex): TIntArray; inline;
+    function  ReachableFrom(const aSource: TVertex): TIntArray; inline;
     function  ReachableFromI(aSrcIdx: SizeInt): TIntArray;
   { checks whether exists any cycle in subgraph that reachable from a aSource;
     if True then aCycle will contain indices of the vertices of that cycle }
-    function  ContainsCycle(constref aSource: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  ContainsCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aSrcIdx: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
     function  FindEulerianCycle: TIntArray;
@@ -291,7 +291,7 @@ type
     will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
   { returns array of indices of a strongly connected component that contains aVertex }
-    function  GetStrongComponent(constref aVertex: TVertex): TIntArray; inline;
+    function  GetStrongComponent(const aVertex: TVertex): TIntArray; inline;
     function  GetStrongComponentI(aIndex: SizeInt): TIntArray;
   { creates internal reachability matrix }
     procedure BuildReachabilityMatrix;
@@ -312,40 +312,40 @@ type
     raises an exception if it does not contain the vertex aSource;
     a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable
     from a distinguished root vertex r }
-    function  IsFlowGraph(constref aSource: TVertex): Boolean; inline;
+    function  IsFlowGraph(const aSource: TVertex): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt): Boolean;
   { same as above, and besides, returns a list of unreached vertices in aMissed }
-    function  IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean; inline;
+    function  IsFlowGraph(const aSource: TVertex; out aMissed: TIntArray): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
     raises an exception if it does not contain the vertex aSource;
     each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
     or is unreachable from aSource; used amazingly simple iterative algorithm from
     Cooper, Harvey and Kennedy "A Simple, Fast Dominance Algorithm" }
-    function  FindDomTree(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
+    function  FindDomTree(const aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
     raises an exception if it does not contain the vertex aSource;
     each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
     or is unreachable from aSource; used Georgiadis's Semi-NCA algorithm }
-    function  FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
+    function  FindDomTreeSnca(const aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { returns True if aTree is dominator tree rooted by aSource;
     todo: this checks only necessity but not sufficiency }
     function  IsDomTree(const aTree: TIntArray; constref aSource: TVertex): Boolean; inline;
     function  IsDomTreeI(const aTree: TIntArray; aSrcIdx: SizeInt): Boolean;
   { extracts Dom(aVertex) from dominator tree aTree, including aVertex }
-    function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
+    function  ExtractDomSet(const aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
     function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
   { used iterative algorithm }
-    function  CreateDomTree(constref aSource: TVertex): TDomTree; inline;
+    function  CreateDomTree(const aSource: TVertex): TDomTree; inline;
     function  CreateDomTreeI(aSrcIdx: SizeInt): TDomTree;
   { used Semi-NCA algorithm }
-    function  CreateDomTreeSnca(constref aSource: TVertex): TDomTree; inline;
+    function  CreateDomTreeSnca(const aSource: TVertex): TDomTree; inline;
     function  CreateDomTreeSncaI(aSrcIdx: SizeInt): TDomTree;
   { returns dominance frontiers and dominator tree in aDomTree(used Semi-NCA algorithm);
     raises an exception if it does not contain the vertex aSource }
-    function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TDomTree): TIntMatrix; inline;
+    function  FindDomFrontiers(const aSource: TVertex; out aDomTree: TDomTree): TIntMatrix; inline;
     function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TDomTree): TIntMatrix;
 
 {**********************************************************************************************************
@@ -366,10 +366,10 @@ type
   { returns an array containing in the corresponding components the length of the longest path
     from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc if a graph is acyclic,
     otherwise returns nil }
-    function  DagLongestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function  DagLongestPathsMap(const aSrc: TVertex): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
   { same as above and in aPathTree returns paths or cycle }
-    function  DagLongestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
+    function  DagLongestPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
   { returns an array containing in the corresponding components the length of
     the longest path starting with it(in sense 'edges count'), if a graph is acyclic,
@@ -383,7 +383,7 @@ type
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
     at the end of the timeout False will be returned }
-    function  FindHamiltonCycles(constref aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
+    function  FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
@@ -393,7 +393,7 @@ type
     from the vertex aSrc; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
     the timeout in seconds; at the end of the timeout False will be returned }
-    function  FindHamiltonPaths(constref aSrc: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+    function  FindHamiltonPaths(const aSrc: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonPathsI(aSrcIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
@@ -414,7 +414,7 @@ type
   generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDigraph<TVertex, TDummy, TEqRel>)
   private
     procedure ReadData(aStream: TStream; out aValue: TDummy);
-    procedure WriteData(aStream: TStream; constref aValue: TDummy);
+    procedure WriteData(aStream: TStream; const aValue: TDummy);
   public
     function  Clone: TGFlowChart;
     function  Reverse: TGFlowChart;
@@ -441,7 +441,7 @@ type
 
   TIntFlowChart = class(specialize TGFlowChart<Integer, Integer>)
   protected
-    procedure WriteVertex(aStream: TStream; constref aValue: Integer);
+    procedure WriteVertex(aStream: TStream; const aValue: Integer);
     procedure ReadVertex(aStream: TStream; out aValue: Integer);
   public
     function  Clone: TIntFlowChart;
@@ -460,14 +460,14 @@ type
 
   TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TDummy, Integer>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
+    function DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; override;
   end;
 
   { TStrFlowChart
     warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrFlowChart = class(specialize TGFlowChart<string, string>)
   protected
-    procedure WriteVertex(aStream: TStream; constref aValue: string);
+    procedure WriteVertex(aStream: TStream; const aValue: string);
     procedure ReadVertex(aStream: TStream; out aValue: string);
   public
     function  Clone: TStrFlowChart;
@@ -484,7 +484,7 @@ type
 
   TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TDummy, string>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
+    function DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; override;
   end;
 
   { TGWeightedDigraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -535,7 +535,7 @@ type
   { checks whether exists any negative weight cycle in subgraph that reachable from a aRoot;
     if True then aCycle will contain indices of the vertices of the cycle;
     raises an exception if aRoot does not exist }
-    function ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function ContainsNegCycle(const aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 {**********************************************************************************************************
   class management utilities
@@ -552,38 +552,38 @@ type
     the result contains in the corresponding component the weight of the path to the vertex or
     InfWeight if the vertex is unreachable; used Dijkstra's algorithm;
     raises an exception if aSrc does not exist }
-    function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function MinPathsMap(const aSrc: TVertex): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
-    function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function MinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all arcs MUST be nonnegative;
     returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
     used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
-    function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all arcs MUST be nonnegative; used A* algorithm if aEst <> nil;
     raises an exception if aSrc or aDst does not exist }
-    function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { returns False if exists negative weighted cycle, otherwise returns the vertex path
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
     but InfWeight if aDst unreachable; used BFMT algorithm }
-    function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
+    function FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { returns False if exists negative weight cycle reachable from aSrc,
     otherwise returns the weights of paths of minimal weight from a given vertex to the remaining
     vertices(SSSP); an aWeights will contain in the corresponding component the weight of the path
     to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm;
     raises an exception if aSrc does not exist  }
-    function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPaths returns paths,
     if there is a negative weight cycle, then aPaths will contain that cycle }
-    function FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMap(const aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { creates a matrix of weights of arcs }
     function CreateWeightsMatrix: TWeightMatrix; inline;
@@ -593,11 +593,11 @@ type
     returns index of the vertex from which this cycle is reachable }
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
   { raises an exception if aSrc or aDst does not exist }
-    function ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray; inline;
+    function ExtractMinPath(const aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; const aPaths: TApspMatrix): TIntArray;
   { returns False if is empty or exists negative weight cycle reachable from aVertex,
     otherwise returns True and the weighted eccentricity of the aVertex in aValue }
-    function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
+    function FindEccentricity(const aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and weighted radius and diameter of the graph }
@@ -612,20 +612,20 @@ type
     returns an array containing in the corresponding components the minimum weight of
     the path from aSrc to it, or InfWeight if it is unreachable, if graph is acyclic,
     otherwise returns nil }
-    function DagMinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function DagMinPathsMap(const aSrc: TVertex): TWeightArray; inline;
     function DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths or cycle }
-    function DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function DagMinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { APSP for acyclic graph }
     function FindDagAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
   { returns an array containing in the corresponding components the maximum weight of
     the path from aSrc to it, or NegInfWeight if it is unreachable from aSrc, if graph is acyclic,
     otherwise returns nil }
-    function DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function DagMaxPathsMap(const aSrc: TVertex): TWeightArray; inline;
     function DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths, or cycle }
-    function DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function DagMaxPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { returns an array containing in the corresponding components the maximal weight of
     the path starting with it, if graph is acyclic, otherwise returns nil }
@@ -668,35 +668,35 @@ type
   type
     TNetworkState = (nsOk, nsTrivial, nsInvalidSource, nsInvalidSink, nsNegCapacity, nsSinkUnreachable);
 
-    function GetNetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
+    function GetNetworkState(const aSource, aSink: TVertex): TNetworkState; inline;
     function GetNetworkStateI(aSrcIdx, aSinkIdx: SizeInt): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
     used push/relabel algorithm }
-    function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
+    function FindMaxFlowPr(const aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
     function FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow and flows through the arcs
     in array a, if result = nsOk, 0 and nil otherwise; used push/relabel algorithm }
-    function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    function FindMaxFlowPr(const aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     param aFlow specifies required flow > 0; returns flow through the network
     as (Min(required flow, maximum flow)) in aFlow and flows through the arcs
     in array a if result = nsOk and aFlow > 0, 0 and nil otherwise; used push/relabel algorithm }
-    function FindFlowPr(constref aSource, aSink: TVertex; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    function FindFlowPr(const aSource, aSink: TVertex; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindFlowPrI(aSrcIdx, aSinkIdx: SizeInt; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
     used Dinitz's algorithm with recursive DFS }
-    function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
+    function FindMaxFlowD(const aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
     function FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow and flows through the arcs
     in array a, if result = nsOk, 0 and nil otherwise; used Dinitz's algorithm with recursive DFS }
-    function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    function FindMaxFlowD(const aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
@@ -704,11 +704,11 @@ type
     as (Min(required flow, maximum flow)) in aFlow and flows through the arcs
     in array a if result = nsOk and aFlow > 0, 0 and nil otherwise;
     used Dinitz's algorithm with recursive DFS }
-    function FindFlowD(constref aSource, aSink: TVertex; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    function FindFlowD(const aSource, aSink: TVertex; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindFlowDI(aSrcIdx, aSinkIdx: SizeInt; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
     {  }
-    function IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight; const a: TEdgeArray): Boolean;
+    function IsFeasibleFlow(const aSource, aSink: TVertex; aFlow: TWeight; const a: TEdgeArray): Boolean;
     function IsFeasibleFlowI(aSrcIdx, aSinkIdx: SizeInt; aFlow: TWeight; const a: TEdgeArray): Boolean;
 
   type
@@ -721,12 +721,12 @@ type
   { returns state of the network with aSource as source and aSink as sink;
     returns value of the minimum cut in aValue and vertex partition in aCut,
     if result = nsOk, otherwise 0 and empty partition; used push/relabel algorithm }
-    function FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
+    function FindMinSTCutPr(const aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
     function FindMinSTCutPrI(aSrcIdx, aSinkIdx: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns value of the minimum cut in aValue and vertex partition in aCut,
     if result = nsOk, otherwise 0 and empty partition; used Dinitz's algorithm with recursive DFS }
-    function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
+    function FindMinSTCutD(const aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
     function FindMinSTCutDI(aSrcIdx, aSinkIdx: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   end;
 
@@ -758,12 +758,12 @@ type
     returns mcfOk if aNeedFlow > 0 and network valid and no negative cycle found,
     returns flow = min(aReqFlow, maxflow) in aReqFlow and total flow cost in aTotalCost;
     used Busacker-Gowen's algorithm }
-    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+    function FindMinCostFlowSsp(const aSource, aSink: TVertex; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState; inline;
     function FindMinCostFlowSspI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
-    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
+    function FindMinCostFlowSsp(const aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowSspI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState;
@@ -772,17 +772,17 @@ type
     returns mcfOk if aNeedFlow > 0 and network valid and no negative cycle found,
     returns flow = min(aReqFlow, maxflow) in aReqFlow and total flow cost in aTotalCost;
     used cost scaling algorithm }
-    function FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+    function FindMinCostFlowCs(const aSource, aSink: TVertex; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState; inline;
     function FindMinCostFlowCsI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
-    function FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
+    function FindMinCostFlowCs(const aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowCsI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState;
   {  }
-    function IsMcfFeasible(constref aSource, aSink: TVertex; const aArcFlows: TEdgeArray; aFlow: TWeight;
+    function IsMcfFeasible(const aSource, aSink: TVertex; const aArcFlows: TEdgeArray; aFlow: TWeight;
              aTotalCost: TCost): Boolean; inline;
     function IsMcfFeasibleI(aSrcIdx, aSinkIdx: SizeInt; const aArcFlows: TEdgeArray; aFlow: TWeight;
              aTotalCost: TCost): Boolean;
@@ -867,7 +867,7 @@ begin
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleDigraph.THamiltonSearch.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleDigraph.THamiltonSearch.SelectMin(const v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -1970,7 +1970,7 @@ begin
   Result := TReachabilityMatrix.Create(m, aScIds);
 end;
 
-function TGSimpleDigraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleDigraph.DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
   if Result then
@@ -2007,7 +2007,7 @@ begin
   FReachabilityMatrix.Clear;
 end;
 
-function TGSimpleDigraph.DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
+function TGSimpleDigraph.DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
 begin
   Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
   if Result then
@@ -2029,7 +2029,7 @@ begin
     end;
 end;
 
-function TGSimpleDigraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+function TGSimpleDigraph.DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean;
 var
   p: PAdjItem;
 begin
@@ -2141,7 +2141,7 @@ begin
   end;
 end;
 
-function TGSimpleDigraph.InDegree(constref aVertex: TVertex): SizeInt;
+function TGSimpleDigraph.InDegree(const aVertex: TVertex): SizeInt;
 begin
   Result := InDegreeI(IndexOf(aVertex));
 end;
@@ -2152,7 +2152,7 @@ begin
   Result := FNodeList[aIndex].Tag;
 end;
 
-function TGSimpleDigraph.OutDegree(constref aVertex: TVertex): SizeInt;
+function TGSimpleDigraph.OutDegree(const aVertex: TVertex): SizeInt;
 begin
   Result := OutDegreeI(IndexOf(aVertex));
 end;
@@ -2163,7 +2163,7 @@ begin
   Result := FNodeList[aIndex].AdjList.Count;
 end;
 
-function TGSimpleDigraph.Degree(constref aVertex: TVertex): SizeInt;
+function TGSimpleDigraph.Degree(const aVertex: TVertex): SizeInt;
 begin
   Result := DegreeI(IndexOf(aVertex));
 end;
@@ -2174,7 +2174,7 @@ begin
   Result := FNodeList[aIndex].AdjList.Count + FNodeList[aIndex].Tag;
 end;
 
-function TGSimpleDigraph.Isolated(constref aVertex: TVertex): Boolean;
+function TGSimpleDigraph.Isolated(const aVertex: TVertex): Boolean;
 begin
   Result := Degree(aVertex) = 0;
 end;
@@ -2184,7 +2184,7 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleDigraph.IsSource(constref aVertex: TVertex): Boolean;
+function TGSimpleDigraph.IsSource(const aVertex: TVertex): Boolean;
 begin
   Result := IsSourceI(IndexOf(aVertex));
 end;
@@ -2195,7 +2195,7 @@ begin
   Result := (FNodeList[aIndex].AdjList.Count <> 0) and (FNodeList[aIndex].Tag = 0);
 end;
 
-function TGSimpleDigraph.IsSink(constref aVertex: TVertex): Boolean;
+function TGSimpleDigraph.IsSink(const aVertex: TVertex): Boolean;
 begin
   Result := IsSinkI(IndexOf(aVertex));
 end;
@@ -2226,7 +2226,7 @@ begin
       Inc(Result);
 end;
 
-function TGSimpleDigraph.IncomingArcs(constref aVertex: TVertex): TIncomingArcs;
+function TGSimpleDigraph.IncomingArcs(const aVertex: TVertex): TIncomingArcs;
 begin
   Result := IncomingArcsI(IndexOf(aVertex));
 end;
@@ -2238,7 +2238,7 @@ begin
   Result.FTarget := aIndex;
 end;
 
-function TGSimpleDigraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleDigraph.PathExists(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := PathExistsI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -2254,7 +2254,7 @@ begin
   Result := CheckPathExists(aSrc, aDst);
 end;
 
-function TGSimpleDigraph.ReachableFrom(constref aSource: TVertex): TIntArray;
+function TGSimpleDigraph.ReachableFrom(const aSource: TVertex): TIntArray;
 begin
   Result := ReachableFromI(IndexOf(aSource));
 end;
@@ -2277,7 +2277,7 @@ begin
   Result := Reachable;
 end;
 
-function TGSimpleDigraph.ContainsCycle(constref aSource: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleDigraph.ContainsCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsCycleI(IndexOf(aSource), aCycle);
 end;
@@ -2371,7 +2371,7 @@ begin
     end;
 end;
 
-function TGSimpleDigraph.GetStrongComponent(constref aVertex: TVertex): TIntArray;
+function TGSimpleDigraph.GetStrongComponent(const aVertex: TVertex): TIntArray;
 begin
   Result := GetStrongComponentI(IndexOf(aVertex));
 end;
@@ -2482,7 +2482,7 @@ begin
   Result.Length := J;
 end;
 
-function TGSimpleDigraph.IsFlowGraph(constref aSource: TVertex): Boolean;
+function TGSimpleDigraph.IsFlowGraph(const aSource: TVertex): Boolean;
 begin
   Result := IsFlowGraphI(IndexOf(aSource));
 end;
@@ -2492,7 +2492,7 @@ begin
   Result := BfsTraversalI(aSrcIdx) = VertexCount;
 end;
 
-function TGSimpleDigraph.IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean;
+function TGSimpleDigraph.IsFlowGraph(const aSource: TVertex; out aMissed: TIntArray): Boolean;
 begin
   Result := IsFlowGraphI(IndexOf(aSource), aMissed);
 end;
@@ -2532,7 +2532,7 @@ begin
     aMissed := UnVisited.ToArray;
 end;
 
-function TGSimpleDigraph.FindDomTree(constref aSource: TVertex; out aSize: SizeInt): TIntArray;
+function TGSimpleDigraph.FindDomTree(const aSource: TVertex; out aSize: SizeInt): TIntArray;
 begin
   Result := FindDomTreeI(IndexOf(aSource), aSize);
 end;
@@ -2552,7 +2552,7 @@ begin
   Result[aSrcIdx] := NULL_INDEX;
 end;
 
-function TGSimpleDigraph.FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray;
+function TGSimpleDigraph.FindDomTreeSnca(const aSource: TVertex; out aSize: SizeInt): TIntArray;
 begin
   Result := FindDomTreeSncaI(IndexOf(aSource), aSize);
 end;
@@ -2591,7 +2591,7 @@ begin
   Result := TestIsDomTree(aTree, aSrcIdx);
 end;
 
-function TGSimpleDigraph.ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray;
+function TGSimpleDigraph.ExtractDomSet(const aVertex: TVertex; const aDomTree: TIntArray): TIntArray;
 begin
   Result := ExtractDomSetI(IndexOf(aVertex), aDomTree);
 end;
@@ -2616,7 +2616,7 @@ begin
   Result := DomSet.ToArray;
 end;
 
-function TGSimpleDigraph.CreateDomTree(constref aSource: TVertex): TDomTree;
+function TGSimpleDigraph.CreateDomTree(const aSource: TVertex): TDomTree;
 begin
   Result := CreateDomTreeI(IndexOf(aSource));
 end;
@@ -2631,7 +2631,7 @@ begin
   Result.Init(Tree, aSrcIdx);
 end;
 
-function TGSimpleDigraph.CreateDomTreeSnca(constref aSource: TVertex): TDomTree;
+function TGSimpleDigraph.CreateDomTreeSnca(const aSource: TVertex): TDomTree;
 begin
   Result := CreateDomTreeSncaI(IndexOf(aSource));
 end;
@@ -2646,7 +2646,7 @@ begin
   Result.Init(Tree, aSrcIdx);
 end;
 
-function TGSimpleDigraph.FindDomFrontiers(constref aSource: TVertex; out aDomTree: TDomTree): TIntMatrix;
+function TGSimpleDigraph.FindDomFrontiers(const aSource: TVertex; out aDomTree: TDomTree): TIntMatrix;
 begin
   Result := FindDomFrontiersI(IndexOf(aSource), aDomTree);
 end;
@@ -2760,7 +2760,7 @@ begin
   Result := not CycleExists;
 end;
 
-function TGSimpleDigraph.DagLongestPathsMap(constref aSrc: TVertex): TIntArray;
+function TGSimpleDigraph.DagLongestPathsMap(const aSrc: TVertex): TIntArray;
 begin
   Result := DagLongestPathsMapI(IndexOf(aSrc));
 end;
@@ -2777,7 +2777,7 @@ begin
   Result := GetDagLongestPaths(aSrc);
 end;
 
-function TGSimpleDigraph.DagLongestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
+function TGSimpleDigraph.DagLongestPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
 begin
   Result := DagLongestPathsMapI(IndexOf(aSrc), aPathTree);
 end;
@@ -2818,7 +2818,7 @@ begin
         end;
 end;
 
-function TGSimpleDigraph.FindHamiltonCycles(constref aSource: TVertex; aCount: SizeInt;
+function TGSimpleDigraph.FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt;
   out aCycles: TIntArrayVector; aTimeOut: Integer): Boolean;
 begin
   Result := FindHamiltonCyclesI(IndexOf(aSource), aCount, aCycles, aTimeOut);
@@ -2870,7 +2870,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleDigraph.FindHamiltonPaths(constref aSrc: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+function TGSimpleDigraph.FindHamiltonPaths(const aSrc: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 begin
   Result := FindHamiltonPathsI(IndexOf(aSrc), aCount, aPaths, aTimeOut);
@@ -2939,7 +2939,7 @@ begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TGFlowChart.WriteData(aStream: TStream; constref aValue: TDummy);
+procedure TGFlowChart.WriteData(aStream: TStream; const aValue: TDummy);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
@@ -3044,7 +3044,7 @@ end;
 
 { TIntFlowChart }
 
-procedure TIntFlowChart.WriteVertex(aStream: TStream; constref aValue: Integer);
+procedure TIntFlowChart.WriteVertex(aStream: TStream; const aValue: Integer);
 begin
   aStream.WriteBuffer(NtoLE(aValue), SizeOf(aValue));
 end;
@@ -3117,14 +3117,14 @@ end;
 
 { TIntFlowChartDotWriter }
 
-function TIntFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
+function TIntFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
 begin
   Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]) + ';';
 end;
 
 { TStrFlowChart }
 
-procedure TStrFlowChart.WriteVertex(aStream: TStream; constref aValue: string);
+procedure TStrFlowChart.WriteVertex(aStream: TStream; const aValue: string);
 var
   Len: SizeInt;
   sLen: SmallInt;
@@ -3199,7 +3199,7 @@ end;
 
 { TStrFlowChartDotWriter }
 
-function TStrFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
+function TStrFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
 begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;
@@ -3417,7 +3417,7 @@ begin
   Result := False;
 end;
 
-function TGWeightedDigraph.ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+function TGWeightedDigraph.ContainsNegCycle(const aRoot: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsNegCycleI(IndexOf(aRoot), aCycle);
 end;
@@ -3455,7 +3455,7 @@ begin
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-function TGWeightedDigraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedDigraph.MinPathsMap(const aSrc: TVertex): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc));
 end;
@@ -3469,7 +3469,7 @@ begin
     Result := [TWeight(0)];
 end;
 
-function TGWeightedDigraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.MinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc), aPathTree);
 end;
@@ -3486,7 +3486,7 @@ begin
     end;
 end;
 
-function TGWeightedDigraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+function TGWeightedDigraph.MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
 begin
   Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aWeight);
 end;
@@ -3504,7 +3504,7 @@ begin
     Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedDigraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+function TGWeightedDigraph.MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aEst);
@@ -3526,7 +3526,7 @@ begin
       Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedDigraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
+function TGWeightedDigraph.FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 begin
   Result := FindMinPathI(IndexOf(aSrc), IndexOf(aDst), aPath, aWeight);
@@ -3546,7 +3546,7 @@ begin
     Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
-function TGWeightedDigraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+function TGWeightedDigraph.FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean;
 begin
   Result := FindMinPathsMapI(IndexOf(aSrc), aWeights);
 end;
@@ -3563,7 +3563,7 @@ begin
     end;
 end;
 
-function TGWeightedDigraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
+function TGWeightedDigraph.FindMinPathsMap(const aSrc: TVertex; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 begin
   Result := FindMinPathsMapI(IndexOf(aSrc), aPaths, aWeights);
@@ -3608,7 +3608,7 @@ begin
     end;
 end;
 
-function TGWeightedDigraph.ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
+function TGWeightedDigraph.ExtractMinPath(const aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
 begin
   Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
 end;
@@ -3623,7 +3623,7 @@ begin
     Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
-function TGWeightedDigraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
+function TGWeightedDigraph.FindEccentricity(const aVertex: TVertex; out aValue: TWeight): Boolean;
 begin
   Result := FindEccentricityI(IndexOf(aVertex), aValue);
 end;
@@ -3734,7 +3734,7 @@ begin
   aCenter.Length := J;
 end;
 
-function TGWeightedDigraph.DagMinPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedDigraph.DagMinPathsMap(const aSrc: TVertex): TWeightArray;
 begin
   Result := DagMinPathsMapI(IndexOf(aSrc));
 end;
@@ -3750,7 +3750,7 @@ begin
   GetDagMinPaths(aSrc, Result);
 end;
 
-function TGWeightedDigraph.DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.DagMinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := DagMinPathsMapI(IndexOf(aSrc), aPathTree);
 end;
@@ -3787,7 +3787,7 @@ begin
   Result := True;
 end;
 
-function TGWeightedDigraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedDigraph.DagMaxPathsMap(const aSrc: TVertex): TWeightArray;
 begin
   Result := DagMaxPathsMapI(IndexOf(aSrc));
 end;
@@ -3802,7 +3802,7 @@ begin
   Result := GetDagMaxPaths(aSrc);
 end;
 
-function TGWeightedDigraph.DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.DagMaxPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := DagMaxPathsMapI(IndexOf(aSrc), aPathTree);
 end;
@@ -3889,7 +3889,7 @@ begin
     aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
 end;
 
-function TGDirectInt64Net.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;
+function TGDirectInt64Net.GetNetworkState(const aSource, aSink: TVertex): TNetworkState;
 begin
   Result := GetNetworkStateI(IndexOf(aSource), IndexOf(aSink));
 end;
@@ -3939,7 +3939,7 @@ begin
   Result := nsOk;
 end;
 
-function TGDirectInt64Net.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowPr(const aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
 begin
   Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
@@ -3954,7 +3954,7 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx);
 end;
 
-function TGDirectInt64Net.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowPr(const aSource, aSink: TVertex; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 begin
   Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
@@ -3972,7 +3972,7 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx, a);
 end;
 
-function TGDirectInt64Net.FindFlowPr(constref aSource, aSink: TVertex; var aFlow: TWeight;
+function TGDirectInt64Net.FindFlowPr(const aSource, aSink: TVertex; var aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 begin
   Result := FindFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
@@ -3991,7 +3991,7 @@ begin
     aFlow := Helper.GetFlow(Self, aSrcIdx, aSinkIdx, aFlow, a);
 end;
 
-function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowD(const aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
 begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
@@ -4006,7 +4006,7 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx);
 end;
 
-function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowD(const aSource, aSink: TVertex; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
@@ -4024,7 +4024,7 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx, a);
 end;
 
-function TGDirectInt64Net.FindFlowD(constref aSource, aSink: TVertex; var aFlow: TWeight;
+function TGDirectInt64Net.FindFlowD(const aSource, aSink: TVertex; var aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 begin
   Result := FindFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
@@ -4043,7 +4043,7 @@ begin
     aFlow := Helper.GetFlow(Self, aSrcIdx, aSinkIdx, aFlow, a);
 end;
 
-function TGDirectInt64Net.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
+function TGDirectInt64Net.IsFeasibleFlow(const aSource, aSink: TVertex; aFlow: TWeight;
   const a: TEdgeArray): Boolean;
 begin
   Result := IsFeasibleFlowI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
@@ -4079,7 +4079,7 @@ begin
   Result := True;
 end;
 
-function TGDirectInt64Net.FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutPr(const aSource, aSink: TVertex; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 begin
   Result := FindMinSTCutPrI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
@@ -4107,7 +4107,7 @@ begin
   aCut.T := TmpSet.ToArray;
 end;
 
-function TGDirectInt64Net.FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutD(const aSource, aSink: TVertex; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 begin
   Result := FindMinSTCutDI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
@@ -4163,7 +4163,7 @@ begin
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-function TGCostedInt64Net.FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowSsp(const aSource, aSink: TVertex; var aReqFlow: TWeight;
   out aTotalCost: TCost): TMcfState;
 begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost);
@@ -4185,7 +4185,7 @@ begin
   Result := mcfOk;
 end;
 
-function TGCostedInt64Net.FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowSsp(const aSource, aSink: TVertex; var aReqFlow: TWeight;
   out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost, aArcFlows);
@@ -4208,7 +4208,7 @@ begin
   Result := mcfOk;
 end;
 
-function TGCostedInt64Net.FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowCs(const aSource, aSink: TVertex; var aReqFlow: TWeight;
   out aTotalCost: TCost): TMcfState;
 begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost);
@@ -4230,7 +4230,7 @@ begin
   Result := mcfOk;
 end;
 
-function TGCostedInt64Net.FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowCs(const aSource, aSink: TVertex; var aReqFlow: TWeight;
   out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost, aArcFlows);
@@ -4253,7 +4253,7 @@ begin
   Result := mcfOk;
 end;
 
-function TGCostedInt64Net.IsMcfFeasible(constref aSource, aSink: TVertex; const aArcFlows: TEdgeArray;
+function TGCostedInt64Net.IsMcfFeasible(const aSource, aSink: TVertex; const aArcFlows: TEdgeArray;
   aFlow: TWeight; aTotalCost: TCost): Boolean;
 begin
   Result := IsMcfFeasibleI(IndexOf(aSource), IndexOf(aSink), aArcFlows, aFlow, aTotalCost);

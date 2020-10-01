@@ -159,7 +159,7 @@ type
     procedure DoExecute; override;
   public
     class function Call(aProc: TProcedure; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TProcedure; aEx: IExecutor = nil): TSpawn; static;
+    class function Spawn(const a: array of TProcedure; aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(e: IProcEnumerable; aEx: IExecutor = nil): TSpawn; static;
     constructor Create(aProc: TProcedure);
   end;
@@ -178,7 +178,7 @@ type
     procedure DoExecute; override;
   public
     class function Run(aTask: ITask; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of ITask; aEx: IExecutor = nil): TSpawn; static;
+    class function Spawn(const a: array of ITask; aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(e: ITaskEnumerable; aEx: IExecutor = nil): TSpawn; static;
     constructor Create(aTask: ITask);
   end;
@@ -198,7 +198,7 @@ type
     procedure DoExecute; override;
   public
     class function Run(aTask: ICallable; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of ICallable; aEx: IExecutor = nil): TSpawn; static;
+    class function Spawn(const a: array of ICallable; aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(e: ICallEnumerable; aEx: IExecutor = nil): TSpawn; static;
     constructor Create(aTask: ICallable);
   end;
@@ -218,7 +218,7 @@ type
     procedure DoExecute; override;
   public
     class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
+    class function Spawn(const a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(e: IFunEnumerable; aEx: IExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun);
   end;
@@ -238,7 +238,7 @@ type
     procedure DoExecute; override;
   public
     class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
+    class function Spawn(const a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -257,7 +257,7 @@ type
     procedure DoExecute; override;
   public
     class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(constref a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
+    class function Spawn(const a: array of TFun; aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(e: IFunEnumerable; aEx: IExecutor = nil): TSpawn; static;
     constructor Create(aFun: TFun);
   end;
@@ -281,11 +281,11 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v: T; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(aFun: TFun; constref Args: array of T; aEx: IExecutor = nil): TSpawn; static;
+    class function Call(aFun: TFun; const v: T; aEx: IExecutor = nil): TFuture; static;
+    class function Spawn(aFun: TFun; const Args: array of T; aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(aFun: TFun; e: TParamEnumerable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(constref a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
-    constructor Create(aFun: TFun; constref v: T);
+    class function Spawn(const a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
+    constructor Create(aFun: TFun; const v: T);
   end;
 
   { TGAsyncDyadic incapsulates regular dyadic function (with two arguments) }
@@ -308,16 +308,16 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor = nil): TFuture;
+    class function Call(aFun: TFun; const v1: T1; const v2: T2; aEx: IExecutor = nil): TFuture;
                    static;
-    class function CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor = nil): TFuture;
+    class function CallTup(aFun: TFun; const aTup: TParamTuple; aEx: IExecutor = nil): TFuture;
                    static;
-    class function Spawn(aFun: TFun; constref Args: array of TParamTuple;
+    class function Spawn(aFun: TFun; const Args: array of TParamTuple;
                    aEx: IExecutor = nil): TSpawn; static;
     class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(constref a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
-    constructor Create(aFun: TFun; constref v1: T1; constref v2: T2);
-    constructor Create(aFun: TFun; constref aTup: TParamTuple);
+    class function Spawn(const a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
+    constructor Create(aFun: TFun; const v1: T1; const v2: T2);
+    constructor Create(aFun: TFun; const aTup: TParamTuple);
   end;
 
   { TGAsyncTriadic incapsulates regular triadic function (with three arguments) }
@@ -340,15 +340,15 @@ type
   protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
+    class function Call(aFun: TFun; const v1: T1; const v2: T2; const v3: T3;
                         aEx: IExecutor = nil): TFuture; static;
-    class function CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor = nil): TFuture; static;
-    class function Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IExecutor = nil): TSpawn;
+    class function CallTup(aFun: TFun; const aTup: TParamTuple; aEx: IExecutor = nil): TFuture; static;
+    class function Spawn(aFun: TFun; const Args: array of TParamTuple; aEx: IExecutor = nil): TSpawn;
                    static;
     class function Spawn(aFun: TFun; e: TTupEnumerable; aEx: IExecutor = nil): TSpawn; static;
-    class function Spawn(constref a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
-    constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
-    constructor Create(aFun: TFun; constref aTup: TParamTuple);
+    class function Spawn(const a: array of TCallData; aEx: IExecutor = nil): TSpawn; static;
+    constructor Create(aFun: TFun; const v1: T1; const v2: T2; const v3: T3);
+    constructor Create(aFun: TFun; const aTup: TParamTuple);
   end;
 
 const
@@ -493,9 +493,9 @@ type
   ['{2B1861EE-950B-411C-AA22-91D1B9B071A5}']
     function GetActive: Boolean;
   { blocking method }
-    function Send(constref aValue: T): Boolean;
+    function Send(const aValue: T): Boolean;
   { non blocking method }
-    function TrySend(constref aValue: T): Boolean;
+    function TrySend(const aValue: T): Boolean;
     property Active: Boolean read GetActive;
   end;
 {$POP}
@@ -517,7 +517,7 @@ type
     function  GetWait: Boolean; inline;
     function  GetActive: Boolean; inline;
     function  GetCapacity: SizeInt; inline;
-    procedure SendData(constref aValue: T);
+    procedure SendData(const aValue: T);
     function  ReceiveData: T;
     class function CreateQueue(aCapacity: SizeInt): IQueue; virtual;
   public
@@ -526,9 +526,9 @@ type
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
   { blocking method }
-    function  Send(constref aValue: T): Boolean;
+    function  Send(const aValue: T): Boolean;
   { non blocking method }
-    function  TrySend(constref aValue: T): Boolean;
+    function  TrySend(const aValue: T): Boolean;
   { blocking method }
     function  Receive(out aValue: T): Boolean;
   { non blocking method }
@@ -616,9 +616,9 @@ type
     function  GetHandle: TThreadID;
   protected
   { by default do nothing }
-    procedure HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception); virtual;
+    procedure HandleException(const aMsg: T; aThreed: IWorkThread; e: Exception); virtual;
   { to be overriden in descendants }
-    procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
+    procedure HandleMessage(const aMessage: T; aThread: IWorkThread); virtual; abstract;
     class function CreateChannel(aCapacity: SizeInt): TChannel; virtual;
   public
   { the creation/destruction is not thread-save;
@@ -628,9 +628,9 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
   { blocking method }
-    procedure Send(constref aMessage: T); inline;
+    procedure Send(const aMessage: T); inline;
   { non blocking method }
-    function  TrySend(constref aMessage: T): Boolean; inline;
+    function  TrySend(const aMessage: T): Boolean; inline;
     property  Priority: TThreadPriority read GetPriority write SetPriority;
     property  ThreadID: TThreadID read GetThreadID;
     property  Handle: TThreadID read GetHandle;
@@ -974,7 +974,7 @@ begin
   Result.Start(TGAsyncProc.Create(aProc), aEx);
 end;
 
-class function TGAsyncProc.Spawn(constref a: array of TProcedure; aEx: IExecutor): TSpawn;
+class function TGAsyncProc.Spawn(const a: array of TProcedure; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1019,7 +1019,7 @@ begin
   Result.Start(TAsyncExecutable.Create(aTask), aEx);
 end;
 
-class function TAsyncExecutable.Spawn(constref a: array of ITask; aEx: IExecutor): TSpawn;
+class function TAsyncExecutable.Spawn(const a: array of ITask; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1062,7 +1062,7 @@ begin
   Result.Start(TGAsyncCallable.Create(aTask), aEx);
 end;
 
-class function TGAsyncCallable.Spawn(constref a: array of ICallable; aEx: IExecutor): TSpawn;
+class function TGAsyncCallable.Spawn(const a: array of ICallable; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1105,7 +1105,7 @@ begin
   Result.Start(TGAsyncMethod.Create(aFun), aEx);
 end;
 
-class function TGAsyncMethod.Spawn(constref a: array of TFun; aEx: IExecutor): TSpawn;
+class function TGAsyncMethod.Spawn(const a: array of TFun; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1148,7 +1148,7 @@ begin
   Result.Start(TGAsyncNested.Create(aFun), aEx);
 end;
 
-class function TGAsyncNested.Spawn(constref a: array of TFun; aEx: IExecutor): TSpawn;
+class function TGAsyncNested.Spawn(const a: array of TFun; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1175,7 +1175,7 @@ begin
   Result.Start(TGAsyncNiladic.Create(aFun), aEx);
 end;
 
-class function TGAsyncNiladic.Spawn(constref a: array of TFun; aEx: IExecutor): TSpawn;
+class function TGAsyncNiladic.Spawn(const a: array of TFun; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1213,12 +1213,12 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IExecutor): TFuture;
+class function TGAsyncMonadic.Call(aFun: TFun; const v: T; aEx: IExecutor): TFuture;
 begin
   Result.Start(TGAsyncMonadic.Create(aFun, v), aEx);
 end;
 
-class function TGAsyncMonadic.Spawn(aFun: TFun; constref Args: array of T; aEx: IExecutor): TSpawn;
+class function TGAsyncMonadic.Spawn(aFun: TFun; const Args: array of T; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1243,7 +1243,7 @@ begin
   System.SetLength(Result.Futures, I);
 end;
 
-class function TGAsyncMonadic.Spawn(constref a: array of TCallData; aEx: IExecutor): TSpawn;
+class function TGAsyncMonadic.Spawn(const a: array of TCallData; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1252,7 +1252,7 @@ begin
     Result.Futures[I] := Call(a[I].F1, a[I].F2, aEx);
 end;
 
-constructor TGAsyncMonadic.Create(aFun: TFun; constref v: T);
+constructor TGAsyncMonadic.Create(aFun: TFun; const v: T);
 begin
   inherited Create;
   FCall := TCall.Create(aFun, v);
@@ -1265,17 +1265,17 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor): TFuture;
+class function TGAsyncDyadic.Call(aFun: TFun; const v1: T1; const v2: T2; aEx: IExecutor): TFuture;
 begin
   Result.Start(TGAsyncDyadic.Create(aFun, v1, v2), aEx);
 end;
 
-class function TGAsyncDyadic.CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor): TFuture;
+class function TGAsyncDyadic.CallTup(aFun: TFun; const aTup: TParamTuple; aEx: IExecutor): TFuture;
 begin
   Result.Start(TGAsyncDyadic.Create(aFun, aTup), aEx);
 end;
 
-class function TGAsyncDyadic.Spawn(aFun: TFun; constref Args: array of TParamTuple; aEx: IExecutor
+class function TGAsyncDyadic.Spawn(aFun: TFun; const Args: array of TParamTuple; aEx: IExecutor
   ): TSpawn;
 var
   I: SizeInt;
@@ -1301,7 +1301,7 @@ begin
   System.SetLength(Result.Futures, I);
 end;
 
-class function TGAsyncDyadic.Spawn(constref a: array of TCallData; aEx: IExecutor): TSpawn;
+class function TGAsyncDyadic.Spawn(const a: array of TCallData; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1310,13 +1310,13 @@ begin
     Result.Futures[I] := CallTup(a[I].F1, a[I].F2, aEx);
 end;
 
-constructor TGAsyncDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
+constructor TGAsyncDyadic.Create(aFun: TFun; const v1: T1; const v2: T2);
 begin
   inherited Create;
   FCall := TCall.Create(aFun, v1, v2);
 end;
 
-constructor TGAsyncDyadic.Create(aFun: TFun; constref aTup: TParamTuple);
+constructor TGAsyncDyadic.Create(aFun: TFun; const aTup: TParamTuple);
 begin
   inherited Create;
   FCall := TCall.Create(aFun, aTup);
@@ -1329,18 +1329,18 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncTriadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
+class function TGAsyncTriadic.Call(aFun: TFun; const v1: T1; const v2: T2; const v3: T3;
   aEx: IExecutor): TFuture;
 begin
   Result.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
 end;
 
-class function TGAsyncTriadic.CallTup(aFun: TFun; constref aTup: TParamTuple; aEx: IExecutor): TFuture;
+class function TGAsyncTriadic.CallTup(aFun: TFun; const aTup: TParamTuple; aEx: IExecutor): TFuture;
 begin
   Result.Start(TGAsyncTriadic.Create(aFun, aTup), aEx);
 end;
 
-class function TGAsyncTriadic.Spawn(aFun: TFun; constref Args: array of TParamTuple;
+class function TGAsyncTriadic.Spawn(aFun: TFun; const Args: array of TParamTuple;
   aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
@@ -1366,7 +1366,7 @@ begin
   System.SetLength(Result.Futures, I);
 end;
 
-class function TGAsyncTriadic.Spawn(constref a: array of TCallData; aEx: IExecutor): TSpawn;
+class function TGAsyncTriadic.Spawn(const a: array of TCallData; aEx: IExecutor): TSpawn;
 var
   I: SizeInt;
 begin
@@ -1375,13 +1375,13 @@ begin
     Result.Futures[I] := CallTup(a[I].F1, a[I].F2, aEx);
 end;
 
-constructor TGAsyncTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
+constructor TGAsyncTriadic.Create(aFun: TFun; const v1: T1; const v2: T2; const v3: T3);
 begin
   inherited Create;
   FCall := TCall.Create(aFun, v1, v2, v3);
 end;
 
-constructor TGAsyncTriadic.Create(aFun: TFun; constref aTup: TParamTuple);
+constructor TGAsyncTriadic.Create(aFun: TFun; const aTup: TParamTuple);
 begin
   inherited Create;
   FCall := TCall.Create(aFun, aTup);
@@ -1824,7 +1824,7 @@ begin
   Result := FCapacity;
 end;
 
-procedure TGBlockChannel.SendData(constref aValue: T);
+procedure TGBlockChannel.SendData(const aValue: T);
 begin
   FQueue.Enqueue(aValue);
   System.RtlEventSetEvent(FReadAwait);
@@ -1881,7 +1881,7 @@ begin
   end;
 end;
 
-function TGBlockChannel.Send(constref aValue: T): Boolean;
+function TGBlockChannel.Send(const aValue: T): Boolean;
 begin
   System.RtlEventWaitFor(FWriteAwait);
   System.EnterCriticalSection(FLock);
@@ -1900,7 +1900,7 @@ begin
   end;
 end;
 
-function TGBlockChannel.TrySend(constref aValue: T): Boolean;
+function TGBlockChannel.TrySend(const aValue: T): Boolean;
 begin
   System.EnterCriticalSection(FLock);
   try
@@ -2099,7 +2099,7 @@ begin
     Result := FWorker.Handle;
 end;
 
-procedure TGListenThread.HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
+procedure TGListenThread.HandleException(const aMsg: T; aThreed: IWorkThread; e: Exception);
 begin
   ReleaseExceptionObject;
 end;
@@ -2131,12 +2131,12 @@ begin
   FWorker.Start;
 end;
 
-procedure TGListenThread.Send(constref aMessage: T);
+procedure TGListenThread.Send(const aMessage: T);
 begin
   FChannel.Send(aMessage);
 end;
 
-function TGListenThread.TrySend(constref aMessage: T): Boolean;
+function TGListenThread.TrySend(const aMessage: T): Boolean;
 begin
   Result := FChannel.TrySend(aMessage);
 end;

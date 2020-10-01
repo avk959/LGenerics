@@ -170,12 +170,12 @@ type
 implementation
 {$B-}{$COPERATORS ON}{$WARNINGS OFF}
 
-function IntOdd(constref aValue: Integer): Boolean;
+function IntOdd(const aValue: Integer): Boolean;
 begin
   Result := Odd(aValue);
 end;
 
-function StrOdd(constref aValue: string): Boolean;
+function StrOdd(const aValue: string): Boolean;
 begin
   Result := Odd(StrToInt(System.Copy(aValue, System.Length(aValue), 1)));
 end;

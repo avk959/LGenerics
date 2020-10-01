@@ -251,13 +251,13 @@ type
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
     function  SortComplementByWidth: TIntArray;
     function  SortNodesByDegree(o: TSortOrder): TIntArray;
-    function  CmpByDegree(constref L, R: SizeInt): Boolean;
-    function  CmpIntArrayLen(constref L, R: TIntArray): Boolean;
-    function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
+    function  CmpByDegree(const L, R: SizeInt): Boolean;
+    function  CmpIntArrayLen(const L, R: TIntArray): Boolean;
+    function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
-    function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; override;
+    function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
-    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
     procedure EdgeContracting(aSrc, aDst: SizeInt); override;
   public
@@ -273,7 +273,7 @@ type
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
   { returns graph of connected component that contains aVertex }
-    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; //todo: CreateSeparateGraph ???
+    function  SeparateGraph(const aVertex: TVertex): TGSimpleGraph; //todo: CreateSeparateGraph ???
     function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
   { returns a subgraph induced by the vertices whose indices are contained in the array aVertexList }
     function  InducedSubgraph(const aVertexList: TIntArray): TGSimpleGraph;
@@ -292,9 +292,9 @@ type
   structural management utilities
 ***********************************************************************************************************}
 
-    function  Degree(constref aVertex: TVertex): SizeInt; inline;
+    function  Degree(const aVertex: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
-    function  Isolated(constref aVertex: TVertex): Boolean; inline;
+    function  Isolated(const aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  DistinctEdges: TDistinctEdges;
   { returns adjacency matrix of the complement graph;
@@ -305,13 +305,13 @@ type
     if aOnAddEdge = nil then new edges will use default data value }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
-    function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  PathExists(const aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
   { returns number of vertices(population) in the connected component that contains aVertex }
-    function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
+    function  SeparatePop(const aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
   { returns array of indices of the connected component that contains aVertex }
-    function  GetSeparate(constref aVertex: TVertex): TIntArray; inline;
+    function  GetSeparate(const aVertex: TVertex): TIntArray; inline;
     function  GetSeparateI(aIndex: SizeInt): TIntArray;
   { returns in the result array the vectors of indices of all connected components }
     function  FindSeparates: TIntVectorArray;
@@ -339,7 +339,7 @@ type
   { same as above, recursive variant }
     function  IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
   { returns True if aEmbedding is proper planar embedding }
-    function  IsEmbedding(constref aEmbedding: TPlanarEmbedding): Boolean;
+    function  IsEmbedding(const aEmbedding: TPlanarEmbedding): Boolean;
   { returns degeneracy of graph, -1 if graph is empty;
     the degeneracy of a graph G is the least k, such that every induced subgraph of G contains
     a vertex with degree d <= k }
@@ -350,13 +350,13 @@ type
   { returns array of indices of the k-core(k-cores if graph is not connected) }
     function  KCore(aK: SizeInt): TIntArray;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
-    function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
+    function  LocalClustering(const aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
   { returns count of independent cycles }
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
     in this case aCycle will contain indices of the vertices of the found cycle }
-    function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  ContainsCycle(const aVertex: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
   { checks whether the graph is acyclic; an empty graph is considered acyclic }
     function  IsAcyclic: Boolean;
@@ -372,16 +372,16 @@ type
   { finds a certain system of fundamental cycles }
     function  FindFundamentalCycles: TIntArrayVector;
   { checks whether exists any articulation point that belong to the aVertex connected component }
-    function  ContainsCutVertex(constref aVertex: TVertex): Boolean; inline;
+    function  ContainsCutVertex(const aVertex: TVertex): Boolean; inline;
     function  ContainsCutVertexI(aIndex: SizeInt): Boolean;
   { returns the articulation points that belong to the aVertex connection component, if any,
     otherwise the empty vector }
-    function  FindCutVertices(constref aVertex: TVertex): TIntArray; inline;
+    function  FindCutVertices(const aVertex: TVertex): TIntArray; inline;
     function  FindCutVerticesI(aIndex: SizeInt): TIntArray;
   { removes the articulation points that belong to the aVertex connected component, adding,
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
-    function  RemoveCutVertices(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
+    function  RemoveCutVertices(const aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
     function  RemoveCutVerticesI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether exists any bridge in graph }
     function  ContainsBridge: Boolean;
@@ -391,7 +391,7 @@ type
     function  IsBiconnected: Boolean; inline;
   { returns a vector containing in the corresponding elements the edges
     of found bicomponents (in aVertex connected component) in aComps }
-    procedure FindBicomponents(constref aVertex: TVertex; out aComps: TEdgeArrayVector);
+    procedure FindBicomponents(const aVertex: TVertex; out aComps: TEdgeArrayVector);
     procedure FindBicomponentsI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
   { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
@@ -512,7 +512,7 @@ type
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
     at the end of the timeout False will be returned }
-    function  FindHamiltonCycles(constref aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
+    function  FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
@@ -522,7 +522,7 @@ type
     from the vertex aSrc; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
     the timeout in seconds; at the end of the timeout False will be returned }
-    function  FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+    function  FindHamiltonPaths(const aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
@@ -551,10 +551,10 @@ type
     FOwnsEdges: Boolean;
     procedure ClearObjects;
   protected
-    procedure VertexReplaced(constref v: TVertexClass); override;
+    procedure VertexReplaced(const v: TVertexClass); override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
-    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeClass): Boolean; override;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeClass): Boolean; override;
   public
   type
     TObjectOwns   = (ooOwnsVertices, ooOwnsEdges);
@@ -573,9 +573,9 @@ type
   generic TGChart<TVertex, TEqRel> = class(specialize TGSimpleGraph<TVertex, TDummy, TEqRel>)
   private
     procedure ReadData(aStream: TStream; out aValue: TDummy);
-    procedure WriteData(aStream: TStream; constref aValue: TDummy);
+    procedure WriteData(aStream: TStream; const aValue: TDummy);
   public
-    function  SeparateGraph(constref aVertex: TVertex): TGChart;
+    function  SeparateGraph(const aVertex: TVertex): TGChart;
     function  SeparateGraphI(aIndex: SizeInt): TGChart;
     function  InducedSubgraph(const aVertexList: TIntArray): TGChart;
     function  SubgraphFromTree(const aTree: TIntArray): TGChart;
@@ -592,7 +592,7 @@ type
 
   TIntChart = class(specialize TGChart<Integer, Integer>)
   protected
-    procedure WriteVertex(aStream: TStream; constref aValue: Integer);
+    procedure WriteVertex(aStream: TStream; const aValue: Integer);
     procedure ReadVertex(aStream: TStream; out aValue: Integer);
   public
     procedure LoadDIMACSAscii(const aFileName: string);
@@ -628,14 +628,14 @@ type
 
   TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TDummy, Integer>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
+    function DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; override;
   end;
 
   { TStrChart
     warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrChart = class(specialize TGChart<string, string>)
   protected
-    procedure WriteVertex(aStream: TStream; constref aValue: string);
+    procedure WriteVertex(aStream: TStream; const aValue: string);
     procedure ReadVertex(aStream: TStream; out aValue: string);
   public
     function  SeparateGraph(const aVertex: string): TStrChart;
@@ -656,7 +656,7 @@ type
 
   TStrChartDotWriter = class(specialize TGraphDotWriter<string, TDummy, string>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
+    function DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; override;
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
@@ -706,12 +706,12 @@ type
   { checks whether exists any negative weight cycle in connected component that
     contains a aRoot; if True then aCycle will contain indices of the vertices of the cycle;
     raises an exception if aRoot does not exist }
-    function ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function ContainsNegCycle(const aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-    function SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
+    function SeparateGraph(const aVertex: TVertex): TGWeightedGraph;
     function SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
     function InducedSubgraph(const aVertexList: TIntArray): TGWeightedGraph;
     function SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph;
@@ -726,32 +726,32 @@ type
     the result contains in the corresponding component the weight of the path to the vertex or
     InfWeight if the vertex is unreachable; used Dijkstra's algorithm;
     raises an exception if aSrc does not exist }
-    function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function MinPathsMap(const aSrc: TVertex): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
-    function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function MinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { returns False if exists negative weight cycle reachable from aSrc,
     otherwise returns the weights of paths of minimal weight from a given vertex to the remaining
     vertices(SSSP); an aWeights will contain in the corresponding component the weight of the path
     to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm;
     raises an exception if aSrc does not exist  }
-    function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPathTree returns paths }
-    function FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
   { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges MUST be nonnegative;
     returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
     used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
-    function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
     { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
       the weights of all edges MUST be nonnegative;
       returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
       used bidirectional Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
-    function MinPathBiDir(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+    function MinPathBiDir(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
     function MinPathBiDirI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { returns False if exists negative weight cycle reachable from aSrc,
     otherwise returns the vertex path of minimal weight from a aSrc to aDst in aPath,
@@ -759,17 +759,17 @@ type
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
     but InfWeight if aDst unreachable; used BFMT algorithm;
     raises an exception if aSrc or aDst does not exist }
-    function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
+    function FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all edges MUST be nonnegative; used A* algorithm if aEst <> nil;
     raises an exception if aSrc or aDst does not exist }
-    function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all edges MUST be nonnegative; used NBA* algorithm if aEst <> nil;
     raises an exception if aSrc or aDst does not exist }
-    function MinPathNBAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathNBAStar(const aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathNBAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { creates a matrix of weights of edges }
     function CreateWeightsMatrix: TWeightMatrix; inline;
@@ -779,11 +779,11 @@ type
     returns index of the vertex from which this cycle is reachable }
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
   { raises an exception if aSrc or aDst does not exist }
-    function ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray; inline;
+    function ExtractMinPath(const aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; const aPaths: TApspMatrix): TIntArray;
   { returns False if is empty or exists  negative weight cycle reachable from aVertex,
     otherwise returns True and the weighted eccentricity of the aVertex in aValue }
-    function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
+    function FindEccentricity(const aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and weighted radius and diameter of the graph }
@@ -806,17 +806,17 @@ type
   { TPointsChart }
   TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealWeight, TPoint>)
   protected
-    procedure OnAddEdge(constref aSrc, aDst: TPoint; var aData: TRealWeight);
-    procedure WritePoint(aStream: TStream; constref aValue: TPoint);
+    procedure OnAddEdge(const aSrc, aDst: TPoint; var aData: TRealWeight);
+    procedure WritePoint(aStream: TStream; const aValue: TPoint);
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
-    procedure WriteData(aStream: TStream; constref aValue: TRealWeight);
+    procedure WriteData(aStream: TStream; const aValue: TRealWeight);
     procedure ReadData(aStream: TStream; out aValue: TRealWeight);
   public
-    class function Distance(constref aSrc, aDst: TPoint): ValReal; static;
-    function  AddEdge(constref aSrc, aDst: TPoint): Boolean;
+    class function Distance(const aSrc, aDst: TPoint): ValReal; static;
+    function  AddEdge(const aSrc, aDst: TPoint): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
-    function  RemoveCutPoints(constref aRoot: TPoint; aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  RemoveCutPoints(const aRoot: TPoint; aOnAddEdge: TOnAddEdge = nil): SizeInt;
     function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
     function  SeparateGraph(aVertex: TPoint): TPointsChart;
@@ -829,9 +829,9 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
-    function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
+    function  MinPathAStar(const aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
-    function  MinPathNBAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
+    function  MinPathNBAStar(const aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
     function  MinPathNBAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
   end;
 
@@ -855,7 +855,7 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-    function SeparateGraph(constref aVertex: TVertex): TGInt64Net;
+    function SeparateGraph(const aVertex: TVertex): TGInt64Net;
     function SeparateGraphI(aIndex: SizeInt): TGInt64Net;
     function InducedSubgraph(const aVertexList: TIntArray): TGInt64Net;
     function SubgraphFromTree(const aTree: TIntArray): TGInt64Net;
@@ -3064,17 +3064,17 @@ begin
   TSortByDegreeHelper.Sort(Result, @CmpByDegree, o);
 end;
 
-function TGSimpleGraph.CmpByDegree(constref L, R: SizeInt): Boolean;
+function TGSimpleGraph.CmpByDegree(const L, R: SizeInt): Boolean;
 begin
   Result := AdjLists[L]^.Count < AdjLists[R]^.Count;
 end;
 
-function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): Boolean;
+function TGSimpleGraph.CmpIntArrayLen(const L, R: TIntArray): Boolean;
 begin
   Result := System.Length(L) < System.Length(R);
 end;
 
-function TGSimpleGraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleGraph.DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
   if not Result then
@@ -3111,7 +3111,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
+function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
 begin
   Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
   if Result then
@@ -3141,7 +3141,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+function TGSimpleGraph.DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean;
 var
   p: PAdjItem;
 begin
@@ -3245,7 +3245,7 @@ begin
   Result.AssignGraph(Self);
 end;
 
-function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
+function TGSimpleGraph.SeparateGraph(const aVertex: TVertex): TGSimpleGraph;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
 end;
@@ -3338,7 +3338,7 @@ begin
   end;
 end;
 
-function TGSimpleGraph.Degree(constref aVertex: TVertex): SizeInt;
+function TGSimpleGraph.Degree(const aVertex: TVertex): SizeInt;
 begin
   Result := DegreeI(IndexOf(aVertex));
 end;
@@ -3349,7 +3349,7 @@ begin
   Result := FNodeList[aIndex].AdjList.Count;
 end;
 
-function TGSimpleGraph.Isolated(constref aVertex: TVertex): Boolean;
+function TGSimpleGraph.Isolated(const aVertex: TVertex): Boolean;
 begin
   Result := Degree(aVertex) = 0;
 end;
@@ -3389,7 +3389,7 @@ begin
   Result := MakeConnected(aOnAddEdge);
 end;
 
-function TGSimpleGraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleGraph.PathExists(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := PathExistsI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -3406,7 +3406,7 @@ begin
     Result := True;
 end;
 
-function TGSimpleGraph.SeparatePop(constref aVertex: TVertex): SizeInt;
+function TGSimpleGraph.SeparatePop(const aVertex: TVertex): SizeInt;
 begin
   Result := SeparatePopI(IndexOf(aVertex));
 end;
@@ -3420,7 +3420,7 @@ begin
     Result := VertexCount;
 end;
 
-function TGSimpleGraph.GetSeparate(constref aVertex: TVertex): TIntArray;
+function TGSimpleGraph.GetSeparate(const aVertex: TVertex): TIntArray;
 begin
   Result := GetSeparateI(IndexOf(aVertex));
 end;
@@ -3627,7 +3627,7 @@ begin
   Result := Helper.GraphIsPlanarR(Self, aEmbedding);
 end;
 
-function TGSimpleGraph.IsEmbedding(constref aEmbedding: TPlanarEmbedding): Boolean;
+function TGSimpleGraph.IsEmbedding(const aEmbedding: TPlanarEmbedding): Boolean;
 var
   eSet: TIntEdgeHashSet;
   FaceOk: Boolean;
@@ -3778,7 +3778,7 @@ begin
   Result := InQueue.ToArray;
 end;
 
-function TGSimpleGraph.LocalClustering(constref aVertex: TVertex): ValReal;
+function TGSimpleGraph.LocalClustering(const aVertex: TVertex): ValReal;
 begin
   Result := LocalClusteringI(IndexOf(aVertex));
 end;
@@ -3808,7 +3808,7 @@ begin
   Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
-function TGSimpleGraph.ContainsCycle(constref aVertex: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleGraph.ContainsCycle(const aVertex: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsCycleI(IndexOf(aVertex), aCycle);
 end;
@@ -3949,7 +3949,7 @@ begin
   TIntArrayVectorHelper.Sort(Result, @CmpIntArrayLen);
 end;
 
-function TGSimpleGraph.ContainsCutVertex(constref aVertex: TVertex): Boolean;
+function TGSimpleGraph.ContainsCutVertex(const aVertex: TVertex): Boolean;
 begin
   Result := ContainsCutVertexI(IndexOf(aVertex));
 end;
@@ -3962,7 +3962,7 @@ begin
   Result := CutVertexExists(aIndex);
 end;
 
-function TGSimpleGraph.FindCutVertices(constref aVertex: TVertex): TIntArray;
+function TGSimpleGraph.FindCutVertices(const aVertex: TVertex): TIntArray;
 begin
   Result := FindCutVerticesI(IndexOf(aVertex));
 end;
@@ -3982,7 +3982,7 @@ begin
     Result := nil;
 end;
 
-function TGSimpleGraph.RemoveCutVertices(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleGraph.RemoveCutVertices(const aVertex: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := RemoveCutVerticesI(IndexOf(aVertex), aOnAddEdge);
 end;
@@ -4034,7 +4034,7 @@ begin
     Result := False;
 end;
 
-procedure TGSimpleGraph.FindBicomponents(constref aVertex: TVertex; out aComps: TEdgeArrayVector);
+procedure TGSimpleGraph.FindBicomponents(const aVertex: TVertex; out aComps: TEdgeArrayVector);
 begin
   FindBicomponentsI(IndexOf(aVertex), aComps);
 end;
@@ -4785,7 +4785,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindHamiltonCycles(constref aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
+function TGSimpleGraph.FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 begin
   Result := FindHamiltonCyclesI(IndexOf(aSource), aCount, aCycles, aTimeOut);
@@ -4845,7 +4845,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+function TGSimpleGraph.FindHamiltonPaths(const aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 begin
   Result := FindHamiltonPathsI(IndexOf(aSource), aCount, aPaths, aTimeOut);
@@ -4919,7 +4919,7 @@ begin
       TObject(FNodeList[I].Vertex).Free;
 end;
 
-procedure TGSimpleObjGraph.VertexReplaced(constref v: TVertexClass);
+procedure TGSimpleObjGraph.VertexReplaced(const v: TVertexClass);
 begin
   if OwnsVertices then
     TObject(v).Free;
@@ -4956,7 +4956,7 @@ begin
     Result := inherited DoRemoveEdge(aSrc, aDst)
 end;
 
-function TGSimpleObjGraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeClass): Boolean;
+function TGSimpleObjGraph.DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeClass): Boolean;
 var
   p: PAdjItem;
 begin
@@ -4997,12 +4997,12 @@ begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TGChart.WriteData(aStream: TStream; constref aValue: TDummy);
+procedure TGChart.WriteData(aStream: TStream; const aValue: TDummy);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
 
-function TGChart.SeparateGraph(constref aVertex: TVertex): TGChart;
+function TGChart.SeparateGraph(const aVertex: TVertex): TGChart;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
 end;
@@ -5105,7 +5105,7 @@ end;
 
 { TIntChart }
 
-procedure TIntChart.WriteVertex(aStream: TStream; constref aValue: Integer);
+procedure TIntChart.WriteVertex(aStream: TStream; const aValue: Integer);
 begin
   aStream.WriteBuffer(NtoLE(aValue), SizeOf(aValue));
 end;
@@ -5260,14 +5260,14 @@ end;
 
 { TIntChartDotWriter }
 
-function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
+function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
 begin
   Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]) + ';';
 end;
 
 { TStrChart }
 
-procedure TStrChart.WriteVertex(aStream: TStream; constref aValue: string);
+procedure TStrChart.WriteVertex(aStream: TStream; const aValue: string);
 var
   Len: SizeInt;
   sLen: SmallInt;
@@ -5368,7 +5368,7 @@ end;
 
 { TStrChartDotWriter }
 
-function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
+function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
 begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;
@@ -5599,7 +5599,7 @@ begin
   Result := False;
 end;
 
-function TGWeightedGraph.ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+function TGWeightedGraph.ContainsNegCycle(const aRoot: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsNegCycleI(IndexOf(aRoot), aCycle);
 end;
@@ -5619,7 +5619,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
+function TGWeightedGraph.SeparateGraph(const aVertex: TVertex): TGWeightedGraph;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
 end;
@@ -5657,7 +5657,7 @@ begin
   Result.AssignGraph(Self);
 end;
 
-function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedGraph.MinPathsMap(const aSrc: TVertex): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc));
 end;
@@ -5671,7 +5671,7 @@ begin
     Result := [TWeight(0)];
 end;
 
-function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedGraph.MinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc), aPathTree);
 end;
@@ -5688,7 +5688,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+function TGWeightedGraph.FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean;
 begin
   Result := FindMinPathsMapI(IndexOf(aSrc), aWeights);
 end;
@@ -5705,7 +5705,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray;
+function TGWeightedGraph.FindMinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray;
   out aWeights: TWeightArray): Boolean;
 begin
   Result := FindMinPathsMapI(IndexOf(aSrc), aPathTree, aWeights);
@@ -5725,7 +5725,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
 begin
   Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aWeight);
 end;
@@ -5743,7 +5743,7 @@ begin
     Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedGraph.MinPathBiDir(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinPathBiDir(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
 begin
   Result := MinPathBiDirI(IndexOf(aSrc), IndexOf(aDst), aWeight);
 end;
@@ -5761,7 +5761,7 @@ begin
     Result := BiDijkstraPath(aSrc, aDst, aWeight);
 end;
 
-function TGWeightedGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
+function TGWeightedGraph.FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 begin
   Result := FindMinPathI(IndexOf(aSrc), IndexOf(aDst), aPath, aWeight);
@@ -5781,7 +5781,7 @@ begin
     Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
-function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+function TGWeightedGraph.MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aEst);
@@ -5803,7 +5803,7 @@ begin
       Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedGraph.MinPathNBAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+function TGWeightedGraph.MinPathNBAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 begin
   Result := MinPathNBAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aEst);
@@ -5847,7 +5847,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
+function TGWeightedGraph.ExtractMinPath(const aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
 begin
   Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
 end;
@@ -5862,7 +5862,7 @@ begin
     Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
-function TGWeightedGraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
+function TGWeightedGraph.FindEccentricity(const aVertex: TVertex; out aValue: TWeight): Boolean;
 begin
   Result := FindEccentricityI(IndexOf(aVertex), aValue);
 end;
@@ -6026,12 +6026,12 @@ end;
 
 { TPointsChart }
 
-procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; var aData: TRealWeight);
+procedure TPointsChart.OnAddEdge(const aSrc, aDst: TPoint; var aData: TRealWeight);
 begin
   aData.Weight := aSrc.Distance(aDst);
 end;
 
-procedure TPointsChart.WritePoint(aStream: TStream; constref aValue: TPoint);
+procedure TPointsChart.WritePoint(aStream: TStream; const aValue: TPoint);
 var
   p: TPoint;
 begin
@@ -6047,7 +6047,7 @@ begin
   aValue.Y := LEtoN(aValue.Y);
 end;
 
-procedure TPointsChart.WriteData(aStream: TStream; constref aValue: TRealWeight);
+procedure TPointsChart.WriteData(aStream: TStream; const aValue: TRealWeight);
 var
   Buf: Double;
 begin
@@ -6063,12 +6063,12 @@ begin
   aValue.Weight := Buf;
 end;
 
-class function TPointsChart.Distance(constref aSrc, aDst: TPoint): ValReal;
+class function TPointsChart.Distance(const aSrc, aDst: TPoint): ValReal;
 begin
   Result := aSrc.Distance(aDst);
 end;
 
-function TPointsChart.AddEdge(constref aSrc, aDst: TPoint): Boolean;
+function TPointsChart.AddEdge(const aSrc, aDst: TPoint): Boolean;
 begin
   Result := inherited AddEdge(aSrc, aDst, TRealWeight.Create(aSrc.Distance(aDst)));
 end;
@@ -6086,7 +6086,7 @@ begin
     Result := inherited EnsureConnected(@OnAddEdge);
 end;
 
-function TPointsChart.RemoveCutPoints(constref aRoot: TPoint; aOnAddEdge: TOnAddEdge): SizeInt;
+function TPointsChart.RemoveCutPoints(const aRoot: TPoint; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   if aOnAddEdge <> nil then
     Result := inherited RemoveCutVertices(aRoot, aOnAddEdge)
@@ -6168,7 +6168,7 @@ begin
   inherited LoadFromFile(aFileName, @ReadPoint, @ReadData);
 end;
 
-function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
+function TPointsChart.MinPathAStar(const aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aHeur);
 end;
@@ -6181,7 +6181,7 @@ begin
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
 end;
 
-function TPointsChart.MinPathNBAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
+function TPointsChart.MinPathNBAStar(const aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
 begin
   Result := MinPathNBAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aHeur);
 end;
@@ -6310,7 +6310,7 @@ begin
     end;
 end;
 
-function TGInt64Net.SeparateGraph(constref aVertex: TVertex): TGInt64Net;
+function TGInt64Net.SeparateGraph(const aVertex: TVertex): TGInt64Net;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
 end;

@@ -53,8 +53,8 @@ type
     TObjMultiSet     = specialize TGObjTreeMultiSet<TTestObj>;
     TAutoObjMultiSet = specialize TGAutoRef<TObjMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray;
@@ -139,8 +139,8 @@ type
     TAutoMultiSet    = specialize TGAutoRef<TMultiSet>;
     TRecMultiSet     = class(specialize TGComparableTreeMultiSet<TRec>);
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray;
@@ -199,8 +199,8 @@ type
     TMultiSet        = class(specialize TGRegularTreeMultiSet<Integer>);
     TAutoMultiSet    = specialize TGAutoRef<TMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray;
@@ -259,8 +259,8 @@ type
     TMultiSet        = class(specialize TGDelegatedTreeMultiSet<Integer>);
     TAutoMultiSet    = specialize TGAutoRef<TMultiSet>;
 
-    function IsEven(constref aValue: Integer): Boolean;
-    function ObjIsEven(constref aObj: TTestObj): Boolean;
+    function IsEven(const aValue: Integer): Boolean;
+    function ObjIsEven(const aObj: TTestObj): Boolean;
   published
     procedure TestCreate;
     procedure CreateArray;
@@ -320,12 +320,12 @@ const
   IntArray11: array[1..11] of Integer = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
   IntArray21: array[1..21] of Integer = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
 
-function IsEvenInt(constref aValue: Integer): Boolean;
+function IsEvenInt(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function IsEvenObj(constref aObj: TTestObj): Boolean;
+function IsEvenObj(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -362,12 +362,12 @@ begin
   Result := @IncCount;
 end;
 
-function TBaseTreeMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TBaseTreeMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TBaseTreeMultisetTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TBaseTreeMultisetTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -633,7 +633,7 @@ begin
 end;
 
 procedure TBaseTreeMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -689,7 +689,7 @@ begin
 end;
 
 procedure TBaseTreeMultisetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1176,7 +1176,7 @@ begin
 end;
 
 procedure TBaseTreeMultisetTest.ObjectMultiSetRemoveIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -1260,7 +1260,7 @@ begin
 end;
 
 procedure TBaseTreeMultisetTest.ObjectMultiSetExtractIfNested;
-  function IsEvenNest(constref aObj: TTestObj): Boolean;
+  function IsEvenNest(const aObj: TTestObj): Boolean;
   begin
     Result := not Odd(aObj.Value);
   end;
@@ -1465,12 +1465,12 @@ begin
   b := bi;
 end;
 
-function TComparableTreeMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TComparableTreeMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TComparableTreeMultisetTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TComparableTreeMultisetTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -1754,7 +1754,7 @@ begin
 end;
 
 procedure TComparableTreeMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -1810,7 +1810,7 @@ begin
 end;
 
 procedure TComparableTreeMultisetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2152,12 +2152,12 @@ begin
   AssertTrue(I = 30);
 end;
 
-function TRegularTreeMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TRegularTreeMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TRegularTreeMultisetTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TRegularTreeMultisetTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -2423,7 +2423,7 @@ begin
 end;
 
 procedure TRegularTreeMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2479,7 +2479,7 @@ begin
 end;
 
 procedure TRegularTreeMultisetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -2821,12 +2821,12 @@ begin
   AssertTrue(I = 30);
 end;
 
-function TDelegatedTreeMultisetTest.IsEven(constref aValue: Integer): Boolean;
+function TDelegatedTreeMultisetTest.IsEven(const aValue: Integer): Boolean;
 begin
   Result := not Odd(aValue);
 end;
 
-function TDelegatedTreeMultisetTest.ObjIsEven(constref aObj: TTestObj): Boolean;
+function TDelegatedTreeMultisetTest.ObjIsEven(const aObj: TTestObj): Boolean;
 begin
   Result := not Odd(aObj.Value);
 end;
@@ -3095,7 +3095,7 @@ begin
 end;
 
 procedure TDelegatedTreeMultisetTest.RemoveIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;
@@ -3151,7 +3151,7 @@ begin
 end;
 
 procedure TDelegatedTreeMultisetTest.ExtractIfNested;
-  function IsEvenInt(constref aValue: Integer): Boolean;
+  function IsEvenInt(const aValue: Integer): Boolean;
   begin
     Result := not Odd(aValue);
   end;

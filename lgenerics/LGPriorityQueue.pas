@@ -46,8 +46,8 @@ type
     procedure FixAfterEnqueue(aOldCount: SizeInt); inline;
   public
     procedure AfterConstruction; override;
-    procedure Enqueue(constref aValue: T);// O(logN)
-    function  EnqueueAll(constref a: array of T): SizeInt;
+    procedure Enqueue(const aValue: T);   // O(logN)
+    function  EnqueueAll(const a: array of T): SizeInt;
     function  EnqueueAll(e: IEnumerable): SizeInt;
     function  Dequeue: T;                 // O(logN)
     function  TryDequeue(out aValue: T): Boolean;
@@ -63,7 +63,7 @@ type
     procedure BuildHeap; override;
     procedure SiftDown; override;
     procedure FloatUp(aIndex: SizeInt);  override;
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
   type
     class function Comparator: TLess; static; inline;
@@ -83,7 +83,7 @@ type
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref A: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
@@ -93,7 +93,7 @@ type
 
   generic TGComparableBinHeap<T> = class(specialize TGCustomBinHeap<T>)
   protected
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
     class function Comparator: TLess; static; inline;
   end;
@@ -128,7 +128,7 @@ type
     constructor Create;
     constructor Create(c: TLess);
     constructor Create(aCapacity: SizeInt; c: TLess);
-    constructor Create(constref A: array of T; c: TLess);
+    constructor Create(const A: array of T; c: TLess);
     constructor Create(e: IEnumerable; c: TLess);
     function Comparator: TLess; inline;
   end;
@@ -147,7 +147,7 @@ type
     constructor Create;
     constructor Create(c: TComparator);
     constructor Create(aCapacity: SizeInt; c: TComparator);
-    constructor Create(constref A: array of T; c: TComparator);
+    constructor Create(const A: array of T; c: TComparator);
     constructor Create(e: IEnumerable; c: TComparator);
     function Comparator: TOnLess; inline;
   end;
@@ -175,7 +175,7 @@ type
     procedure FloatUp(aIndex: SizeInt);
     function  DequeueItem: T;
     property  Items: TBuffer.TArray read FBuffer.FItems;
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
   type
     TLess = specialize TGLessCompare<T>;
@@ -189,7 +189,7 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure Enqueue(constref aValue: T); inline;
+    procedure Enqueue(const aValue: T); inline;
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -213,7 +213,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure Enqueue(constref aValue: T);
+    procedure Enqueue(const aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: PQueue;
@@ -240,7 +240,7 @@ type
     procedure SiftDown;
     procedure FloatUp(aIndex: SizeInt);
     function  DequeueItem: T;
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
   type
     TLess = specialize TGLessCompare<T>;
@@ -254,7 +254,7 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure Enqueue(constref aValue: T); inline;
+    procedure Enqueue(const aValue: T); inline;
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -324,17 +324,17 @@ type
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
-    function  NewNode(constref aValue: T): PNode;
+    function  NewNode(const aValue: T): PNode;
     procedure DisposeNode(aNode: PNode); inline;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
-    function  EnqueueArray(constref a: array of T): SizeInt;
+    function  EnqueueArray(const a: array of T): SizeInt;
     function  EnqueueContainer(c: TSpecContainer): SizeInt;
     function  EnqueueEnum(e: IEnumerable): SizeInt;
-    function  DoEnqueue(constref aValue: T): PNode; virtual; abstract;
-    procedure DoUpdate(aNode: PNode; constref aValue: T); virtual; abstract;
+    function  DoEnqueue(const aValue: T): PNode; virtual; abstract;
+    procedure DoUpdate(aNode: PNode; const aValue: T); virtual; abstract;
     function  DoRemove(aNode: PNode): T; virtual; abstract;
     function  DoDequeue: T; virtual; abstract;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; virtual; abstract;
@@ -344,18 +344,18 @@ type
   public
     destructor Destroy; override;
     function  Reverse: IEnumerable; override;
-    procedure Enqueue(constref aValue: T); inline;          // O(1)
-    function  EnqueueAll(constref a: array of T): SizeInt;
+    procedure Enqueue(const aValue: T); inline;             // O(1)
+    function  EnqueueAll(const a: array of T): SizeInt;
     function  EnqueueAll(e: IEnumerable): SizeInt;
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
-    function  Insert(constref aValue: T): THandle; inline;  // O(1)
+    function  Insert(const aValue: T): THandle; inline;     // O(1)
     function  PeekHandle: THandle; inline;                  // O(1)
     function  TryPeekHandle(out aHandle: THandle): Boolean; inline;
     function  ValueOf(aHandle: THandle): T; inline;
-    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1) IncreaseKey
+    procedure Update(aHandle: THandle; const aValue: T); inline; //O(1) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aQueue will remain valid if aQueue has same ClassType }
     function  Merge(aQueue: IPriorityQueue): SizeInt;       // O(1) if aQueue has same ClassType
@@ -368,17 +368,17 @@ type
   protected
     procedure RootMerge(aNode: PNode); inline;
     procedure DoExtract(aNode: PNode);
-    function  DoEnqueue(constref aValue: T): PNode; override;
-    procedure DoUpdate(aNode: PNode; constref aValue: T); override;
+    function  DoEnqueue(const aValue: T): PNode; override;
+    procedure DoUpdate(aNode: PNode; const aValue: T); override;
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
     class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
     class function Comparator: TLess; static; inline;
-    constructor Create(constref A: array of T); overload;
+    constructor Create(const A: array of T); overload;
     constructor Create(e: IEnumerable); overload;
   end;
 
@@ -387,7 +387,7 @@ type
 
   generic TGComparablePairHeap<T> = class(specialize TGCustomPairingHeap<T>)
   protected
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
     class function Comparator: TLess; static; inline;
   end;
@@ -398,15 +398,15 @@ type
   protected
     procedure RootMerge(aNode: PNode); inline;
     procedure DoExtract(aNode: PNode);
-    function  DoEnqueue(constref aValue: T): PNode; override;
-    procedure DoUpdate(aNode: PNode; constref aValue: T); override;
+    function  DoEnqueue(const aValue: T): PNode; override;
+    procedure DoUpdate(aNode: PNode; const aValue: T); override;
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
     class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
   public
-    constructor Create(constref A: array of T); overload;
+    constructor Create(const A: array of T); overload;
     constructor Create(e: IEnumerable); overload;
   end;
 
@@ -416,15 +416,15 @@ type
   protected
     procedure RootMerge(aNode: PNode); inline;
     procedure DoExtract(aNode: PNode);
-    function  DoEnqueue(constref aValue: T): PNode; override;
-    procedure DoUpdate(aNode: PNode; constref aValue: T); override;
+    function  DoEnqueue(const aValue: T): PNode; override;
+    procedure DoUpdate(aNode: PNode; const aValue: T); override;
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
     class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
   public
-    constructor Create(constref A: array of T); overload;
+    constructor Create(const A: array of T); overload;
     constructor Create(e: IEnumerable); overload;
   end;
 
@@ -436,15 +436,15 @@ type
     procedure RootMerge(aNode: PNode); inline;
     function  TwoPassMerge(aNode: PNode): PNode;
     procedure DoExtract(aNode: PNode);
-    function  DoEnqueue(constref aValue: T): PNode; override;
-    procedure DoUpdate(aNode: PNode; constref aValue: T); override;
+    function  DoEnqueue(const aValue: T): PNode; override;
+    procedure DoUpdate(aNode: PNode; const aValue: T); override;
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
   public
     constructor Create;
     constructor Create(c: TLess);
-    constructor Create(constref A: array of T; c: TLess);
+    constructor Create(const A: array of T; c: TLess);
     constructor Create(e: IEnumerable; c: TLess);
     function Comparator: TLess; inline;
   end;
@@ -457,15 +457,15 @@ type
     procedure RootMerge(aNode: PNode); inline;
     function  TwoPassMerge(aNode: PNode): PNode;
     procedure DoExtract(aNode: PNode);
-    function  DoEnqueue(constref aValue: T): PNode; override;
-    procedure DoUpdate(aNode: PNode; constref aValue: T); override;
+    function  DoEnqueue(const aValue: T): PNode; override;
+    procedure DoUpdate(aNode: PNode; const aValue: T); override;
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
   public
     constructor Create;
     constructor Create(c: TOnLess);
-    constructor Create(constref A: array of T; c: TOnLess);
+    constructor Create(const A: array of T; c: TOnLess);
     constructor Create(e: IEnumerable; c: TOnLess);
     function Comparator: TOnLess; inline;
   end;
@@ -534,11 +534,11 @@ type
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
-    function  NewNode(constref aValue: T): PNode;
+    function  NewNode(const aValue: T): PNode;
     procedure DisposeNode(aNode: PNode);
     procedure RootMerge(aNode: PNode); inline;
     function  DequeueItem: T;
-    procedure UpdateNode(aNode: PNode; constref aValue: T);
+    procedure UpdateNode(aNode: PNode; const aValue: T);
     procedure ExtractNode(aNode: PNode);
     function  RemoveNode(aNode: PNode): T;
     procedure CheckEmpty; inline;
@@ -550,7 +550,7 @@ type
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
-    class function  DoCompare(constref L, R: T): Boolean; static;
+    class function  DoCompare(const L, R: T): Boolean; static;
     class function  Ptr2Handle(aNode: PNode): THandle; static; inline;
     class function  Handle2Ptr(h: THandle): PNode; static; inline;
   public
@@ -563,20 +563,20 @@ type
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure Enqueue(constref aValue: T);                  // O(1)
+    procedure Enqueue(const aValue: T);                     // O(1)
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
-    function  Insert(constref aValue: T): THandle; inline;  // O(1)
+    function  Insert(const aValue: T): THandle; inline;     // O(1)
     function  PeekHandle: THandle; inline;                  // O(1)
     function  TryPeekHandle(out aValue: THandle): Boolean; inline;
     function  ValueOf(aHandle: THandle): T; inline;
-    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
-                                                                    //amortized O(logN) DecreaseKey
-    function  Remove(aHandle: THandle): T;                      // amortized O(logN)
+    procedure Update(aHandle: THandle; const aValue: T); inline; //O(1)              IncreaseKey
+                                                                 //amortized O(logN) DecreaseKey
+    function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
-    function  Merge(var aHeap: TGLitePairingHeap): SizeInt;// O(1)
+    function  Merge(var aHeap: TGLitePairingHeap): SizeInt; // O(1)
     property  Count: SizeInt read FCount;
   end;
 
@@ -644,11 +644,11 @@ type
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
-    function  NewNode(constref aValue: T): PNode; inline;
+    function  NewNode(const aValue: T): PNode; inline;
     procedure DisposeNode(aNode: PNode);
     procedure RootMerge(aNode: PNode); inline;
     function  DequeueItem: T;
-    procedure UpdateNode(aNode: PNode; constref aValue: T); inline;
+    procedure UpdateNode(aNode: PNode; const aValue: T); inline;
     procedure ExtractNode(aNode: PNode);
     function  RemoveNode(aNode: PNode): T;
     procedure CheckEmpty; inline;
@@ -660,7 +660,7 @@ type
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
-    class function  DoCompare(constref L, R: T): Boolean; static;
+    class function  DoCompare(const L, R: T): Boolean; static;
     class function  Ptr2Handle(aNode: PNode): THandle; static; inline;
     class function  Handle2Ptr(h: THandle): PNode; static; inline;
   public
@@ -673,17 +673,17 @@ type
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure Enqueue(constref aValue: T);                  // O(1)
+    procedure Enqueue(const aValue: T);                     // O(1)
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
-    function  Insert(constref aValue: T): THandle; inline;  // O(1)
+    function  Insert(const aValue: T): THandle; inline;     // O(1)
     function  PeekHandle: THandle; inline;                  // O(1)
     function  TryPeekHandle(out aValue: THandle): Boolean; inline;
     function  ValueOf(aHandle: THandle): T; inline;
-    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              DecreaseKey
-                                                                    //amortized O(logN) IncreaseKey
+    procedure Update(aHandle: THandle; const aValue: T); inline; //O(1)              DecreaseKey
+                                                                 //amortized O(logN) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
     function  Merge(var aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
@@ -730,7 +730,7 @@ begin
     BuildHeap;
 end;
 
-procedure TGCustomBinHeap.Enqueue(constref aValue: T);
+procedure TGCustomBinHeap.Enqueue(const aValue: T);
 var
   InsertPos: SizeInt;
 begin
@@ -743,7 +743,7 @@ begin
     FloatUp(InsertPos);
 end;
 
-function TGCustomBinHeap.EnqueueAll(constref a: array of T): SizeInt;
+function TGCustomBinHeap.EnqueueAll(const a: array of T): SizeInt;
 var
   OldCount: SizeInt;
 begin
@@ -876,7 +876,7 @@ begin
   TFake(FItems[aIndex]) := v;
 end;
 
-class function TGBaseBinHeap.DoCompare(constref L, R: T): Boolean;
+class function TGBaseBinHeap.DoCompare(const L, R: T): Boolean;
 begin
   Result := TCmpRel.Less(L, R);
 end;
@@ -910,7 +910,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectBinHeap.Create(constref A: array of T; aOwnsObjects: Boolean = True);
+constructor TGObjectBinHeap.Create(const A: array of T; aOwnsObjects: Boolean = True);
 begin
   inherited Create(A);
   FOwnsObjects := aOwnsObjects;
@@ -1000,7 +1000,7 @@ end;
 
 { TGComparableBinHeap }
 
-class function TGComparableBinHeap.DoCompare(constref L, R: T): Boolean;
+class function TGComparableBinHeap.DoCompare(const L, R: T): Boolean;
 begin
   Result := L < R;
 end;
@@ -1179,7 +1179,7 @@ begin
   FLess := c;
 end;
 
-constructor TGRegularBinHeap.Create(constref A: array of T; c: TLess);
+constructor TGRegularBinHeap.Create(const A: array of T; c: TLess);
 begin
   inherited Create(A);
   FLess := c;
@@ -1289,7 +1289,7 @@ begin
   FLess := c;
 end;
 
-constructor TGDelegatedBinHeap.Create(constref A: array of T; c: TComparator);
+constructor TGDelegatedBinHeap.Create(const A: array of T; c: TComparator);
 begin
   inherited Create(A);
   FLess := c;
@@ -1404,7 +1404,7 @@ begin
     FBuffer.FItems[0] := Default(T);
 end;
 
-class function TGLiteBinHeap.DoCompare(constref L, R: T): Boolean;
+class function TGLiteBinHeap.DoCompare(const L, R: T): Boolean;
 begin
   Result := TCmpRel.Less(L, R);
 end;
@@ -1459,7 +1459,7 @@ begin
   FBuffer.TrimToFit;
 end;
 
-procedure TGLiteBinHeap.Enqueue(constref aValue: T);
+procedure TGLiteBinHeap.Enqueue(const aValue: T);
 begin
   FloatUp(FBuffer.PushLast(aValue));
 end;
@@ -1524,7 +1524,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadBinHeap.Enqueue(constref aValue: T);
+procedure TGLiteThreadBinHeap.Enqueue(const aValue: T);
 begin
   DoLock;
   try
@@ -1663,7 +1663,7 @@ begin
     FBuffer.FItems[0] := Default(T);
 end;
 
-class function TGLiteComparableBinHeapMin.DoCompare(constref L, R: T): Boolean;
+class function TGLiteComparableBinHeapMin.DoCompare(const L, R: T): Boolean;
 begin
   Result := L < R;
 end;
@@ -1718,7 +1718,7 @@ begin
   FBuffer.TrimToFit;
 end;
 
-procedure TGLiteComparableBinHeapMin.Enqueue(constref aValue: T);
+procedure TGLiteComparableBinHeapMin.Enqueue(const aValue: T);
 begin
   FloatUp(FBuffer.PushLast(aValue));
 end;
@@ -1926,7 +1926,7 @@ begin
   Assert(aValue = aValue);
 end;
 
-function TGCustomPairingHeap.NewNode(constref aValue: T): PNode;
+function TGCustomPairingHeap.NewNode(const aValue: T): PNode;
 begin
   Result := GetMem(SizeOf(TNode));
   FillChar(Result^, SizeOf(TNode), 0);
@@ -2001,7 +2001,7 @@ begin
       Result := Result^.Sibling;
 end;
 
-function TGCustomPairingHeap.EnqueueArray(constref a: array of T): SizeInt;
+function TGCustomPairingHeap.EnqueueArray(const a: array of T): SizeInt;
 var
   v: T;
 begin
@@ -2073,13 +2073,13 @@ begin
   Result := TReverseEnum.Create(Self);
 end;
 
-procedure TGCustomPairingHeap.Enqueue(constref aValue: T);
+procedure TGCustomPairingHeap.Enqueue(const aValue: T);
 begin
   CheckInIteration;
   DoEnqueue(aValue);
 end;
 
-function TGCustomPairingHeap.EnqueueAll(constref a: array of T): SizeInt;
+function TGCustomPairingHeap.EnqueueAll(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := EnqueueArray(a);
@@ -2132,7 +2132,7 @@ begin
     aValue := FRoot^.Data;
 end;
 
-function TGCustomPairingHeap.Insert(constref aValue: T): THandle;
+function TGCustomPairingHeap.Insert(const aValue: T): THandle;
 begin
   CheckInIteration;
   Result := Ptr2Handle(DoEnqueue(aValue));
@@ -2156,7 +2156,7 @@ begin
   Result := Handle2Ptr(aHandle)^.Data;
 end;
 
-procedure TGCustomPairingHeap.Update(aHandle: THandle; constref aValue: T);
+procedure TGCustomPairingHeap.Update(aHandle: THandle; const aValue: T);
 begin
   CheckInIteration;
   CheckEmpty;
@@ -2216,13 +2216,13 @@ begin
   aNode^.ClearLinks;
 end;
 
-function TGBasePairingHeap.DoEnqueue(constref aValue: T): PNode;
+function TGBasePairingHeap.DoEnqueue(const aValue: T): PNode;
 begin
   Result := NewNode(aValue);
   RootMerge(Result);
 end;
 
-procedure TGBasePairingHeap.DoUpdate(aNode: PNode; constref aValue: T);
+procedure TGBasePairingHeap.DoUpdate(aNode: PNode; const aValue: T);
 begin
   if TCmpRel.Less(aNode^.Data, aValue) then
     begin
@@ -2318,7 +2318,7 @@ begin
   Result := DoMerge(Result, aNode);
 end;
 
-class function TGBasePairingHeap.DoCompare(constref L, R: T): Boolean;
+class function TGBasePairingHeap.DoCompare(const L, R: T): Boolean;
 begin
   Result := TCmpRel.Less(L, R);
 end;
@@ -2328,7 +2328,7 @@ begin
   Result := @DoCompare;
 end;
 
-constructor TGBasePairingHeap.Create(constref A: array of T);
+constructor TGBasePairingHeap.Create(const A: array of T);
 begin
   EnqueueAll(A);
 end;
@@ -2340,7 +2340,7 @@ end;
 
 { TGComparablePairHeap }
 
-class function TGComparablePairHeap.DoCompare(constref L, R: T): Boolean;
+class function TGComparablePairHeap.DoCompare(const L, R: T): Boolean;
 begin
   Result :=  L < R;
 end;
@@ -2375,13 +2375,13 @@ begin
   aNode^.ClearLinks;
 end;
 
-function TGComparablePairHeapMax.DoEnqueue(constref aValue: T): PNode;
+function TGComparablePairHeapMax.DoEnqueue(const aValue: T): PNode;
 begin
   Result := NewNode(aValue);
   RootMerge(Result);
 end;
 
-procedure TGComparablePairHeapMax.DoUpdate(aNode: PNode; constref aValue: T);
+procedure TGComparablePairHeapMax.DoUpdate(aNode: PNode; const aValue: T);
 begin
   if aNode^.Data < aValue then
     begin
@@ -2477,7 +2477,7 @@ begin
   Result := DoMerge(Result, aNode);
 end;
 
-constructor TGComparablePairHeapMax.Create(constref A: array of T);
+constructor TGComparablePairHeapMax.Create(const A: array of T);
 begin
   EnqueueAll(A);
 end;
@@ -2512,13 +2512,13 @@ begin
   aNode^.ClearLinks;
 end;
 
-function TGComparablePairHeapMin.DoEnqueue(constref aValue: T): PNode;
+function TGComparablePairHeapMin.DoEnqueue(const aValue: T): PNode;
 begin
   Result := NewNode(aValue);
   RootMerge(Result);
 end;
 
-procedure TGComparablePairHeapMin.DoUpdate(aNode: PNode; constref aValue: T);
+procedure TGComparablePairHeapMin.DoUpdate(aNode: PNode; const aValue: T);
 begin
   if aValue < aNode^.Data then
     begin
@@ -2614,7 +2614,7 @@ begin
   Result := DoMerge(Result, aNode);
 end;
 
-constructor TGComparablePairHeapMin.Create(constref A: array of T);
+constructor TGComparablePairHeapMin.Create(const A: array of T);
 begin
   EnqueueAll(A);
 end;
@@ -2691,13 +2691,13 @@ begin
   aNode^.ClearLinks;
 end;
 
-function TGRegularPairHeap.DoEnqueue(constref aValue: T): PNode;
+function TGRegularPairHeap.DoEnqueue(const aValue: T): PNode;
 begin
   Result := NewNode(aValue);
   RootMerge(Result);
 end;
 
-procedure TGRegularPairHeap.DoUpdate(aNode: PNode; constref aValue: T);
+procedure TGRegularPairHeap.DoUpdate(aNode: PNode; const aValue: T);
 begin
   if FLess(aNode^.Data, aValue) then
     begin
@@ -2766,7 +2766,7 @@ begin
   FLess := c;
 end;
 
-constructor TGRegularPairHeap.Create(constref A: array of T; c: TLess);
+constructor TGRegularPairHeap.Create(const A: array of T; c: TLess);
 begin
   Create(c);
   EnqueueAll(A);
@@ -2850,13 +2850,13 @@ begin
   aNode^.ClearLinks;
 end;
 
-function TGDelegatedPairHeap.DoEnqueue(constref aValue: T): PNode;
+function TGDelegatedPairHeap.DoEnqueue(const aValue: T): PNode;
 begin
   Result := NewNode(aValue);
   RootMerge(Result);
 end;
 
-procedure TGDelegatedPairHeap.DoUpdate(aNode: PNode; constref aValue: T);
+procedure TGDelegatedPairHeap.DoUpdate(aNode: PNode; const aValue: T);
 begin
   if FLess(aNode^.Data, aValue) then
     begin
@@ -2925,7 +2925,7 @@ begin
   FLess := c;
 end;
 
-constructor TGDelegatedPairHeap.Create(constref A: array of T; c: TOnLess);
+constructor TGDelegatedPairHeap.Create(const A: array of T; c: TOnLess);
 begin
   Create(c);
   EnqueueAll(A);
@@ -3129,7 +3129,7 @@ begin
   FRoot := nil;
 end;
 
-function TGLitePairingHeap.NewNode(constref aValue: T): PNode;
+function TGLitePairingHeap.NewNode(const aValue: T): PNode;
 begin
   Result := GetMem(SizeOf(TNode));
   FillChar(Result^, SizeOf(TNode), 0);
@@ -3166,7 +3166,7 @@ begin
   DisposeNode(OldRoot);
 end;
 
-procedure TGLitePairingHeap.UpdateNode(aNode: PNode; constref aValue: T);
+procedure TGLitePairingHeap.UpdateNode(aNode: PNode; const aValue: T);
 begin
   if TCmpRel.Less(aNode^.Data, aValue) then
     begin
@@ -3301,7 +3301,7 @@ begin
   aNode^.Sibling := nil;
 end;
 
-class function TGLitePairingHeap.DoCompare(constref L, R: T): Boolean;
+class function TGLitePairingHeap.DoCompare(const L, R: T): Boolean;
 begin
   Result := TCmpRel.Less(L, R);
 end;
@@ -3365,7 +3365,7 @@ begin
   Result := Count <> 0;
 end;
 
-procedure TGLitePairingHeap.Enqueue(constref aValue: T);
+procedure TGLitePairingHeap.Enqueue(const aValue: T);
 begin
   RootMerge(NewNode(aValue));
 end;
@@ -3396,7 +3396,7 @@ begin
     aValue := FRoot^.Data;
 end;
 
-function TGLitePairingHeap.Insert(constref aValue: T): THandle;
+function TGLitePairingHeap.Insert(const aValue: T): THandle;
 var
   p: PNode;
 begin
@@ -3423,7 +3423,7 @@ begin
   Result := Handle2Ptr(aHandle)^.Data;
 end;
 
-procedure TGLitePairingHeap.Update(aHandle: THandle; constref aValue: T);
+procedure TGLitePairingHeap.Update(aHandle: THandle; const aValue: T);
 begin
   CheckEmpty;
   UpdateNode(Handle2Ptr(aHandle), aValue);
@@ -3636,7 +3636,7 @@ begin
   FRoot := nil;
 end;
 
-function TGLiteComparablePairHeapMin.NewNode(constref aValue: T): PNode;
+function TGLiteComparablePairHeapMin.NewNode(const aValue: T): PNode;
 begin
   Result := GetMem(SizeOf(TNode));
   FillChar(Result^, SizeOf(TNode), 0);
@@ -3673,7 +3673,7 @@ begin
   DisposeNode(OldRoot);
 end;
 
-procedure TGLiteComparablePairHeapMin.UpdateNode(aNode: PNode; constref aValue: T);
+procedure TGLiteComparablePairHeapMin.UpdateNode(aNode: PNode; const aValue: T);
 begin
   if aValue < aNode^.Data then
     begin
@@ -3809,7 +3809,7 @@ begin
   aNode^.Sibling := nil;
 end;
 
-class function TGLiteComparablePairHeapMin.DoCompare(constref L, R: T): Boolean;
+class function TGLiteComparablePairHeapMin.DoCompare(const L, R: T): Boolean;
 begin
   Result := L < R;
 end;
@@ -3873,7 +3873,7 @@ begin
   Result := Count <> 0;
 end;
 
-procedure TGLiteComparablePairHeapMin.Enqueue(constref aValue: T);
+procedure TGLiteComparablePairHeapMin.Enqueue(const aValue: T);
 begin
   RootMerge(NewNode(aValue));
 end;
@@ -3904,7 +3904,7 @@ begin
     aValue := FRoot^.Data;
 end;
 
-function TGLiteComparablePairHeapMin.Insert(constref aValue: T): THandle;
+function TGLiteComparablePairHeapMin.Insert(const aValue: T): THandle;
 var
   p: PNode;
 begin
@@ -3931,7 +3931,7 @@ begin
   Result := Handle2Ptr(aHandle)^.Data;
 end;
 
-procedure TGLiteComparablePairHeapMin.Update(aHandle: THandle; constref aValue: T);
+procedure TGLiteComparablePairHeapMin.Update(aHandle: THandle; const aValue: T);
 begin
   CheckEmpty;
   UpdateNode(Handle2Ptr(aHandle), aValue);

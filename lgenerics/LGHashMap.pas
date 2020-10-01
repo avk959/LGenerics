@@ -88,10 +88,10 @@ type
     function  GetFillRatio: Single;
     function  GetLoadFactor: Single;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  Find(constref aKey: TKey): PEntry; override;
+    function  Find(const aKey: TKey): PEntry; override;
     //return True if aKey found, otherwise insert (garbage) pair and return False;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean; override;
-    function  DoExtract(constref aKey: TKey; out v: TValue): Boolean; override;
+    function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; override;
+    function  DoExtract(const aKey: TKey; out v: TValue): Boolean; override;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
@@ -241,17 +241,17 @@ type
 
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership); inline;
-    function  DoRemove(constref aKey: TKey): Boolean; override;
+    function  DoRemove(const aKey: TKey): Boolean; override;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
     procedure DoClear; override;
-    function  DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; override;
+    function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
     class function GetClass: TObjectHashMapClass; reintroduce; virtual; abstract;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
@@ -424,7 +424,7 @@ type
     function  GetLoadFactor: Single; inline;
     function  GetValue(const aKey: TKey): TValue; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+    function  SetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
   public
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
@@ -439,27 +439,27 @@ type
   { free unused memory if possible }
     procedure TrimToFit; inline;
   { returns True and aValue mapped to aKey if contains aKey, False otherwise }
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
   { returns value mapped to aKey or aDefault }
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue; inline;
-    function  GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue; inline;
+    function  GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
   { returns True if contains aKey, otherwise adds aKey and returns False }
-    function  FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+    function  FindOrAddMutValue(const aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean; inline;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean; inline;
   { returns True and add e only if not contains e.Key }
-    function  Add(constref e: TEntry): Boolean; inline;
+    function  Add(const e: TEntry): Boolean; inline;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
   { returns True if e.Key added, False otherwise }
-    function  AddOrSetValue(constref e: TEntry): Boolean; inline;
+    function  AddOrSetValue(const e: TEntry): Boolean; inline;
   { will add only entries which keys are absent in map }
     function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
     function  AddAll(constref aMap: TGLiteHashMap): SizeInt;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
+    function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean; inline;
+    function  Contains(const aKey: TKey): Boolean; inline;
+    function  NonContains(const aKey: TKey): Boolean; inline;
     function  FindFirstKey(out aKey: TKey): Boolean; inline;
     function  ContainsAny(const a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
@@ -468,14 +468,14 @@ type
     function  ContainsAll(e: IKeyEnumerable): Boolean;
     function  ContainsAll(constref aMap: TGLiteHashMap): Boolean;
   { returns True if entry removed }
-    function  Remove(constref aKey: TKey): Boolean; inline;
+    function  Remove(const aKey: TKey): Boolean; inline;
     function  RemoveAll(const a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
     function  RemoveAll(constref aMap: TGLiteHashMap): SizeInt;
     function  RemoveIf(aTest: TKeyTest): SizeInt;
     function  RemoveIf(aTest: TOnKeyTest): SizeInt;
     function  RemoveIf(aTest: TNestKeyTest): SizeInt;
-    function  Extract(constref aKey: TKey; out v: TValue): Boolean;
+    function  Extract(const aKey: TKey; out v: TValue): Boolean;
     function  ExtractIf(aTest: TKeyTest): TEntryArray;
     function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
     function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
@@ -577,13 +577,13 @@ type
     FCount: SizeInt;
     FLoadFactor: Single;
     FGlobLock: TMultiReadExclusiveWriteSynchronizer;
-    function  NewNode(constref aKey: TKey; constref aValue: TValue; aHash: SizeInt): PNode;
+    function  NewNode(const aKey: TKey; const aValue: TValue; aHash: SizeInt): PNode;
     procedure FreeNode(aNode: PNode);
     function  GetCapacity: SizeInt;
     procedure ClearChainList;
-    function  LockSlot(constref aKey: TKey; out aHash: SizeInt): SizeInt;
-    function  Find(constref aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
-    function  ExtractNode(constref aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  LockSlot(const aKey: TKey; out aHash: SizeInt): SizeInt;
+    function  Find(const aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  ExtractNode(const aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
     procedure CheckNeedExpand;
     procedure Expand;
     function  GetValue(const aKey: TKey): TValue;
@@ -596,16 +596,16 @@ type
     constructor Create;
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 1.0);
     destructor Destroy; override;
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-    function  Add(constref e: TEntry): Boolean; inline;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;
+    function  Add(const e: TEntry): Boolean; inline;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
-    procedure AddOrSetValue(constref e: TEntry); inline;
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  Contains(constref aKey: TKey): Boolean;
-    function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  Remove(constref aKey: TKey): Boolean; virtual;
+    procedure AddOrSetValue(const e: TEntry); inline;
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
+    function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
+    function  Contains(const aKey: TKey): Boolean;
+    function  Extract(const aKey: TKey; out aValue: TValue): Boolean;
+    function  Remove(const aKey: TKey): Boolean; virtual;
   { Count for estimate purpose only }
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -740,14 +740,14 @@ begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGAbstractHashMap.Find(constref aKey: TKey): PEntry;
+function TGAbstractHashMap.Find(const aKey: TKey): PEntry;
 var
   sr: TSearchResult;
 begin
   Result := FTable.Find(aKey, sr);
 end;
 
-function TGAbstractHashMap.FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+function TGAbstractHashMap.FindOrAdd(const aKey: TKey; out p: PEntry): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -756,7 +756,7 @@ begin
     p^.Key := aKey;
 end;
 
-function TGAbstractHashMap.DoExtract(constref aKey: TKey; out v: TValue): Boolean;
+function TGAbstractHashMap.DoExtract(const aKey: TKey; out v: TValue): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -1173,7 +1173,7 @@ begin
   OwnsValues := moOwnsValues in aOwns;
 end;
 
-function TGCustomObjectHashMap.DoRemove(constref aKey: TKey): Boolean;
+function TGCustomObjectHashMap.DoRemove(const aKey: TKey): Boolean;
 var
   v: TValue;
 begin
@@ -1217,7 +1217,7 @@ begin
   inherited;
 end;
 
-function TGCustomObjectHashMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGCustomObjectHashMap.DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1250,7 +1250,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(constref a: array of TEntry; aOwns: TMapObjOwnership);
+constructor TGCustomObjectHashMap.Create(const a: array of TEntry; aOwns: TMapObjOwnership);
 begin
   inherited Create(a);
   SetOwnership(aOwns);
@@ -1649,7 +1649,7 @@ begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGLiteHashMap.SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGLiteHashMap.SetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1723,7 +1723,7 @@ begin
   FTable.TrimToFit;
 end;
 
-function TGLiteHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGLiteHashMap.TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1733,13 +1733,13 @@ begin
     aValue := p^.Value;
 end;
 
-function TGLiteHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+function TGLiteHashMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
 end;
 
-function TGLiteHashMap.GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
+function TGLiteHashMap.GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
 var
   pe: PEntry;
 begin
@@ -1751,7 +1751,7 @@ begin
   Result := @pe^.Value;
 end;
 
-function TGLiteHashMap.FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+function TGLiteHashMap.FindOrAddMutValue(const aKey: TKey; out p: PValue): Boolean;
 var
   pe: PEntry;
 begin
@@ -1761,7 +1761,7 @@ begin
   p := @pe^.Value;
 end;
 
-function TGLiteHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGLiteHashMap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -1773,7 +1773,7 @@ begin
     end;
 end;
 
-function TGLiteHashMap.Add(constref e: TEntry): Boolean;
+function TGLiteHashMap.Add(const e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
@@ -1787,7 +1787,7 @@ begin
   p^.Value := aValue;
 end;
 
-function TGLiteHashMap.AddOrSetValue(constref e: TEntry): Boolean;
+function TGLiteHashMap.AddOrSetValue(const e: TEntry): Boolean;
 var
   p: PEntry;
 begin
@@ -1834,17 +1834,17 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGLiteHashMap.Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
 begin
   Result := SetValue(aKey, aNewValue);
 end;
 
-function TGLiteHashMap.Contains(constref aKey: TKey): Boolean;
+function TGLiteHashMap.Contains(const aKey: TKey): Boolean;
 begin
   Result := FTable.Find(aKey) <> nil;
 end;
 
-function TGLiteHashMap.NonContains(constref aKey: TKey): Boolean;
+function TGLiteHashMap.NonContains(const aKey: TKey): Boolean;
 begin
   Result := FTable.Find(aKey) = nil;
 end;
@@ -1930,7 +1930,7 @@ begin
   Result := True;
 end;
 
-function TGLiteHashMap.Remove(constref aKey: TKey): Boolean;
+function TGLiteHashMap.Remove(const aKey: TKey): Boolean;
 begin
   Result := FTable.Remove(aKey);
 end;
@@ -2025,7 +2025,7 @@ begin
   Result -= Count;
 end;
 
-function TGLiteHashMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
+function TGLiteHashMap.Extract(const aKey: TKey; out v: TValue): Boolean;
 var
   p: PEntry;
   Pos: SizeInt;
@@ -2157,7 +2157,7 @@ end;
 
 { TGThreadFGHashMap }
 
-function TGThreadFGHashMap.NewNode(constref aKey: TKey; constref aValue: TValue; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.NewNode(const aKey: TKey; const aValue: TValue; aHash: SizeInt): PNode;
 begin
   New(Result);
   Result^.Hash := aHash;
@@ -2213,7 +2213,7 @@ begin
   FSlotList := nil;
 end;
 
-function TGThreadFGHashMap.LockSlot(constref aKey: TKey; out aHash: SizeInt): SizeInt;
+function TGThreadFGHashMap.LockSlot(const aKey: TKey; out aHash: SizeInt): SizeInt;
 begin
   aHash := TKeyEqRel.HashCode(aKey);
   FGlobLock.BeginRead;
@@ -2225,7 +2225,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Find(constref aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.Find(const aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
 begin
@@ -2239,7 +2239,7 @@ begin
   Result := nil;
 end;
 
-function TGThreadFGHashMap.ExtractNode(constref aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.ExtractNode(const aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
   Prev: PNode = nil;
@@ -2366,7 +2366,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGThreadFGHashMap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2388,7 +2388,7 @@ begin
     CheckNeedExpand;
 end;
 
-function TGThreadFGHashMap.Add(constref e: TEntry): Boolean;
+function TGThreadFGHashMap.Add(const e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
@@ -2418,12 +2418,12 @@ begin
     CheckNeedExpand;
 end;
 
-procedure TGThreadFGHashMap.AddOrSetValue(constref e: TEntry);
+procedure TGThreadFGHashMap.AddOrSetValue(const e: TEntry);
 begin
   AddOrSetValue(e.Key, e.Value);
 end;
 
-function TGThreadFGHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGThreadFGHashMap.TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2439,7 +2439,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+function TGThreadFGHashMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2455,7 +2455,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGThreadFGHashMap.Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2471,7 +2471,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Contains(constref aKey: TKey): Boolean;
+function TGThreadFGHashMap.Contains(const aKey: TKey): Boolean;
 var
   SlotIdx, Hash: SizeInt;
 begin
@@ -2483,7 +2483,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Extract(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGThreadFGHashMap.Extract(const aKey: TKey; out aValue: TValue): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2502,7 +2502,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Remove(constref aKey: TKey): Boolean;
+function TGThreadFGHashMap.Remove(const aKey: TKey): Boolean;
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;

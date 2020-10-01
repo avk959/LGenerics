@@ -97,9 +97,9 @@ type
     procedure DoClear; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure DoTrimToFit; override;
-    function  Find(constref aKey: TKey): PMMEntry; override;
-    function  FindOrAdd(constref aKey: TKey): PMMEntry; override;
-    function  DoRemoveKey(constref aKey: TKey): SizeInt; override;
+    function  Find(const aKey: TKey): PMMEntry; override;
+    function  FindOrAdd(const aKey: TKey): PMMEntry; override;
+    function  DoRemoveKey(const aKey: TKey): SizeInt; override;
     function  GetKeys: IKeyEnumerable; override;
     function  GetValues: IValueEnumerable; override;
     function  GetEntries: IEntryEnumerable; override;
@@ -109,10 +109,10 @@ type
     class function MaxLoadFactor: Single; inline;
     class function MinLoadFactor: Single; inline;
     constructor Create;
-    constructor Create(constref a: array of TEntry);
+    constructor Create(const a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; constref a: array of TEntry);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry);
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
@@ -159,9 +159,9 @@ type
       constructor Create;
       destructor Destroy; override;
       function  GetEnumerator: TSpecValueEnumerator; override;
-      function  Contains(constref aValue: TValue): Boolean; override;
-      function  Add(constref aValue: TValue): Boolean; override;
-      function  Remove(constref aValue: TValue): Boolean; override;
+      function  Contains(const aValue: TValue): Boolean; override;
+      function  Add(const aValue: TValue): Boolean; override;
+      function  Remove(const aValue: TValue): Boolean; override;
     end;
 
     function GetUniqueValues: Boolean; override;
@@ -220,9 +220,9 @@ type
       constructor Create(aNodeManager: TNodeManager);
       destructor Destroy; override;
       function  GetEnumerator: TSpecValueEnumerator; override;
-      function  Contains(constref aValue: TValue): Boolean; override;
-      function  Add(constref aValue: TValue): Boolean; override;
-      function  Remove(constref aValue: TValue): Boolean; override;
+      function  Contains(const aValue: TValue): Boolean; override;
+      function  Add(const aValue: TValue): Boolean; override;
+      function  Remove(const aValue: TValue): Boolean; override;
     end;
   var
     FNodeManager: TNodeManager;
@@ -232,10 +232,10 @@ type
     function  CreateValueSet: TAbstractValueSet; override;
   public
     constructor Create;
-    constructor Create(constref a: array of TEntry);
+    constructor Create(const a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; constref a: array of TEntry);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry);
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     destructor  Destroy; override;
   end;
@@ -288,9 +288,9 @@ type
       destructor Destroy; override;
       function  GetEnumerator: TSpecValueEnumerator; override;
       procedure TrimToFit;
-      function  Contains(constref aValue: TValue): Boolean; override;
-      function  Add(constref aValue: TValue): Boolean; override;
-      function  Remove(constref aValue: TValue): Boolean; override;
+      function  Contains(const aValue: TValue): Boolean; override;
+      function  Add(const aValue: TValue): Boolean; override;
+      function  Remove(const aValue: TValue): Boolean; override;
     end;
 
     procedure DoTrimToFit; override;
@@ -363,7 +363,7 @@ type
       FLastIndex,
       FCurrIndex: SizeInt;
       function  GetCurrent: TEntry; inline;
-      procedure Init(constref aMap: TGLiteHashMultiMap);
+      procedure Init(const aMap: TGLiteHashMultiMap);
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
@@ -375,7 +375,7 @@ type
       FLastIndex,
       FCurrIndex: SizeInt;
       function  GetCurrent: TKey; inline;
-      procedure Init(constref aMap: TGLiteHashMultiMap);
+      procedure Init(const aMap: TGLiteHashMultiMap);
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
@@ -387,7 +387,7 @@ type
       FLastIndex,
       FCurrIndex: SizeInt;
       function  GetCurrent: TValue; inline;
-      procedure Init(constref aMap: TGLiteHashMultiMap);
+      procedure Init(const aMap: TGLiteHashMultiMap);
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
@@ -400,7 +400,7 @@ type
       FData: TSearchData;
       FInCycle: Boolean;
       function  GetCurrent: TValue; inline;
-      procedure Init(aMap: PMultiMap;  constref aKey: TKey);
+      procedure Init(aMap: PMultiMap; const aKey: TKey);
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
@@ -427,7 +427,7 @@ type
     private
       FMap: PMultiMap;
       FKey: TKey;
-      procedure Init(aMap: PMultiMap; constref aKey: TKey); inline;
+      procedure Init(aMap: PMultiMap; const aKey: TKey); inline;
     public
       function GetEnumerator: TValueViewEnumerator; inline;
       function ToArray: TValueArray;
@@ -443,12 +443,12 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(constref aKey: TKey; aHash: SizeInt; out sr: TSearchResult): Boolean;
-    function  Find(constref aKey: TKey): PEntry; inline;
-    procedure DoAdd(constref aKey: TKey; constref aValue: TValue);
-    function  CountOf(constref aKey: TKey): SizeInt;
+    function  DoFind(const aKey: TKey; aHash: SizeInt; out sr: TSearchResult): Boolean;
+    function  Find(const aKey: TKey): PEntry; inline;
+    procedure DoAdd(const aKey: TKey; const aValue: TValue);
+    function  CountOf(const aKey: TKey): SizeInt;
     procedure RemoveFromChain(aIndex: SizeInt);
-    procedure DoRemove(constref aPos: TSearchResult);
+    procedure DoRemove(const aPos: TSearchResult);
     function  GetValuesView(const aKey: TKey): TValuesView;
     class constructor Init;
     class operator Initialize(var m: TGLiteHashMultiMap);
@@ -462,21 +462,21 @@ type
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+    function  Contains(const aKey: TKey): Boolean; inline;
+    function  NonContains(const aKey: TKey): Boolean; inline;
+    function  FindFirst(const aKey: TKey; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
-    procedure Add(constref aKey: TKey; constref aValue: TValue);
-    procedure Add(constref e: TEntry); inline;
+    procedure Add(const aKey: TKey; const aValue: TValue);
+    procedure Add(const e: TEntry); inline;
   { returns count of added values }
-    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
-    function  AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
-    function  AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+    function  AddValues(const aKey: TKey; const a: array of TValue): SizeInt;
+    function  AddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
   { returns count of values mapped to aKey }
-    function  ValueCount(constref aKey: TKey): SizeInt;
+    function  ValueCount(const aKey: TKey): SizeInt;
   { returns True and remove first found entry, False otherwise }
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Remove(const aKey: TKey): Boolean;
     function  Keys: TKeys; inline;
     function  Values: TValues; inline;
     property  Count: SizeInt read FCount;
@@ -649,14 +649,14 @@ begin
   FTable.TrimToFit;
 end;
 
-function TGAbstractHashMultiMap.Find(constref aKey: TKey): PMMEntry;
+function TGAbstractHashMultiMap.Find(const aKey: TKey): PMMEntry;
 var
   p: SizeInt;
 begin
   Result := FTable.Find(aKey, p);
 end;
 
-function TGAbstractHashMultiMap.FindOrAdd(constref aKey: TKey): PMMEntry;
+function TGAbstractHashMultiMap.FindOrAdd(const aKey: TKey): PMMEntry;
 var
   p: SizeInt;
 begin
@@ -667,7 +667,7 @@ begin
     end;
 end;
 
-function TGAbstractHashMultiMap.DoRemoveKey(constref aKey: TKey): SizeInt;
+function TGAbstractHashMultiMap.DoRemoveKey(const aKey: TKey): SizeInt;
 var
   Pos: SizeInt;
   p: PMMEntry;
@@ -718,7 +718,7 @@ begin
   FTable := THashTable.Create;
 end;
 
-constructor TGAbstractHashMultiMap.Create(constref a: array of TEntry);
+constructor TGAbstractHashMultiMap.Create(const a: array of TEntry);
 begin
   Create;
   DoAddAll(a);
@@ -735,7 +735,7 @@ begin
   FTable := THashTable.Create(aCapacity);
 end;
 
-constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
+constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt; const a: array of TEntry);
 begin
   Create(aCapacity);
   DoAddAll(a);
@@ -792,14 +792,14 @@ begin
   Result := TEnumerator.Create(FTable);
 end;
 
-function TGHashMultiMap.TValueSet.Contains(constref aValue: TValue): Boolean;
+function TGHashMultiMap.TValueSet.Contains(const aValue: TValue): Boolean;
 var
   p: SizeInt;
 begin
   Result := FTable.Find(aValue, p) <> nil;
 end;
 
-function TGHashMultiMap.TValueSet.Add(constref aValue: TValue): Boolean;
+function TGHashMultiMap.TValueSet.Add(const aValue: TValue): Boolean;
 var
   p: PValEntry;
   Pos: SizeInt;
@@ -809,7 +809,7 @@ begin
     p^.Key := aValue;
 end;
 
-function TGHashMultiMap.TValueSet.Remove(constref aValue: TValue): Boolean;
+function TGHashMultiMap.TValueSet.Remove(const aValue: TValue): Boolean;
 begin
   Result := FTable.Remove(aValue);
   if Result then
@@ -880,12 +880,12 @@ begin
   Result := TEnumerator.Create(FTree);
 end;
 
-function TGTreeMultiMap.TValueSet.Contains(constref aValue: TValue): Boolean;
+function TGTreeMultiMap.TValueSet.Contains(const aValue: TValue): Boolean;
 begin
   Result := FTree.Find(aValue) <> nil;
 end;
 
-function TGTreeMultiMap.TValueSet.Add(constref aValue: TValue): Boolean;
+function TGTreeMultiMap.TValueSet.Add(const aValue: TValue): Boolean;
 var
   p: PNode;
 begin
@@ -894,7 +894,7 @@ begin
     p^.Data.Key := aValue;
 end;
 
-function TGTreeMultiMap.TValueSet.Remove(constref aValue: TValue): Boolean;
+function TGTreeMultiMap.TValueSet.Remove(const aValue: TValue): Boolean;
 begin
   Result := FTree.Remove(aValue);
 end;
@@ -930,7 +930,7 @@ begin
   FNodeManager := TNodeManager.Create;
 end;
 
-constructor TGTreeMultiMap.Create(constref a: array of TEntry);
+constructor TGTreeMultiMap.Create(const a: array of TEntry);
 begin
   FTable := THashTable.Create;
   FNodeManager := TNodeManager.Create;
@@ -950,7 +950,7 @@ begin
   FNodeManager := TNodeManager.Create;
 end;
 
-constructor TGTreeMultiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
+constructor TGTreeMultiMap.Create(aCapacity: SizeInt; const a: array of TEntry);
 begin
   FTable := THashTable.Create(aCapacity);
   FNodeManager := TNodeManager.Create;
@@ -1022,17 +1022,17 @@ begin
   FList.TrimToFit;
 end;
 
-function TGListMultiMap.TValueSet.Contains(constref aValue: TValue): Boolean;
+function TGListMultiMap.TValueSet.Contains(const aValue: TValue): Boolean;
 begin
   Result := FList.Contains(aValue);
 end;
 
-function TGListMultiMap.TValueSet.Add(constref aValue: TValue): Boolean;
+function TGListMultiMap.TValueSet.Add(const aValue: TValue): Boolean;
 begin
   Result := FList.Add(aValue);
 end;
 
-function TGListMultiMap.TValueSet.Remove(constref aValue: TValue): Boolean;
+function TGListMultiMap.TValueSet.Remove(const aValue: TValue): Boolean;
 begin
   Result := FList.Remove(aValue);
   FList.TrimToFit;
@@ -1073,7 +1073,7 @@ begin
   Result := FNodeList[FCurrIndex].Data;
 end;
 
-procedure TGLiteHashMultiMap.TEntryEnumerator.Init(constref aMap: TGLiteHashMultiMap);
+procedure TGLiteHashMultiMap.TEntryEnumerator.Init(const aMap: TGLiteHashMultiMap);
 begin
   FNodeList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
@@ -1098,7 +1098,7 @@ begin
   Result := FNodeList[FCurrIndex].Data.Key;
 end;
 
-procedure TGLiteHashMultiMap.TKeyEnumerator.Init(constref aMap: TGLiteHashMultiMap);
+procedure TGLiteHashMultiMap.TKeyEnumerator.Init(const aMap: TGLiteHashMultiMap);
 begin
   FNodeList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
@@ -1123,7 +1123,7 @@ begin
   Result := FNodeList[FCurrIndex].Data.Value;
 end;
 
-procedure TGLiteHashMultiMap.TValueEnumerator.Init(constref aMap: TGLiteHashMultiMap);
+procedure TGLiteHashMultiMap.TValueEnumerator.Init(const aMap: TGLiteHashMultiMap);
 begin
   FNodeList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
@@ -1148,7 +1148,7 @@ begin
   Result := FMap^.FNodeList[FData.Index].Data.Value;
 end;
 
-procedure TGLiteHashMultiMap.TValueViewEnumerator.Init(aMap: PMultiMap; constref aKey: TKey);
+procedure TGLiteHashMultiMap.TValueViewEnumerator.Init(aMap: PMultiMap; const aKey: TKey);
 begin
   FMap := aMap;
   FKey := aKey;
@@ -1197,7 +1197,7 @@ end;
 
 { TGLiteHashMultiMap.TValuesView }
 
-procedure TGLiteHashMultiMap.TValuesView.Init(aMap: PMultiMap; constref aKey: TKey);
+procedure TGLiteHashMultiMap.TValuesView.Init(aMap: PMultiMap; const aKey: TKey);
 begin
   FMap := aMap;
   FKey := aKey;
@@ -1280,7 +1280,7 @@ begin
     InitialAlloc;
 end;
 
-function TGLiteHashMultiMap.DoFind(constref aKey: TKey; aHash: SizeInt; out sr: TSearchResult): Boolean;
+function TGLiteHashMultiMap.DoFind(const aKey: TKey; aHash: SizeInt; out sr: TSearchResult): Boolean;
 var
   I: SizeInt;
 begin
@@ -1299,7 +1299,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashMultiMap.Find(constref aKey: TKey): PEntry;
+function TGLiteHashMultiMap.Find(const aKey: TKey): PEntry;
 var
   Pos: TSearchResult;
 begin
@@ -1309,7 +1309,7 @@ begin
     Result := nil;
 end;
 
-procedure TGLiteHashMultiMap.DoAdd(constref aKey: TKey; constref aValue: TValue);
+procedure TGLiteHashMultiMap.DoAdd(const aKey: TKey; const aValue: TValue);
 var
   h, I, Pos: SizeInt;
 begin
@@ -1324,7 +1324,7 @@ begin
   Inc(FCount);
 end;
 
-function TGLiteHashMultiMap.CountOf(constref aKey: TKey): SizeInt;
+function TGLiteHashMultiMap.CountOf(const aKey: TKey): SizeInt;
 var
   h, I: SizeInt;
 begin
@@ -1361,7 +1361,7 @@ begin
     end;
 end;
 
-procedure TGLiteHashMultiMap.DoRemove(constref aPos: TSearchResult);
+procedure TGLiteHashMultiMap.DoRemove(const aPos: TSearchResult);
 var
   I, Last: SizeInt;
 begin
@@ -1464,17 +1464,17 @@ begin
     Clear;
 end;
 
-function TGLiteHashMultiMap.Contains(constref aKey: TKey): Boolean;
+function TGLiteHashMultiMap.Contains(const aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGLiteHashMultiMap.NonContains(constref aKey: TKey): Boolean;
+function TGLiteHashMultiMap.NonContains(const aKey: TKey): Boolean;
 begin
   Result := Find(aKey) = nil;
 end;
 
-function TGLiteHashMultiMap.FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+function TGLiteHashMultiMap.FindFirst(const aKey: TKey; out aData: TSearchData): Boolean;
 var
   Pos: TSearchResult;
 begin
@@ -1506,7 +1506,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashMultiMap.ValueCount(constref aKey: TKey): SizeInt;
+function TGLiteHashMultiMap.ValueCount(const aKey: TKey): SizeInt;
 begin
   if NonEmpty then
     Result := CountOf(aKey)
@@ -1514,19 +1514,19 @@ begin
     Result := 0;
 end;
 
-procedure TGLiteHashMultiMap.Add(constref aKey: TKey; constref aValue: TValue);
+procedure TGLiteHashMultiMap.Add(const aKey: TKey; const aValue: TValue);
 begin
   if Count = Capacity then
     Expand;
   DoAdd(aKey, aValue);
 end;
 
-procedure TGLiteHashMultiMap.Add(constref e: TEntry);
+procedure TGLiteHashMultiMap.Add(const e: TEntry);
 begin
   Add(e.Key, e.Value);
 end;
 
-function TGLiteHashMultiMap.AddAll(constref a: array of TEntry): SizeInt;
+function TGLiteHashMultiMap.AddAll(const a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
@@ -1545,7 +1545,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashMultiMap.AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGLiteHashMultiMap.AddValues(const aKey: TKey; const a: array of TValue): SizeInt;
 var
   v: TValue;
 begin
@@ -1554,7 +1554,7 @@ begin
     Add(aKey, v);
 end;
 
-function TGLiteHashMultiMap.AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGLiteHashMultiMap.AddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
 var
   v: TValue;
 begin
@@ -1564,7 +1564,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashMultiMap.Remove(constref aKey: TKey): Boolean;
+function TGLiteHashMultiMap.Remove(const aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin

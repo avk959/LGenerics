@@ -45,8 +45,8 @@ type
     procedure SetItem(aIndex: SizeInt; const aValue: T); virtual;
     function  GetMutable(aIndex: SizeInt): PItem; inline;
     function  GetUncMutable(aIndex: SizeInt): PItem; inline;
-    procedure InsertItem(aIndex: SizeInt; constref aValue: T);
-    function  InsertArray(aIndex: SizeInt; constref a: array of T): SizeInt;
+    procedure InsertItem(aIndex: SizeInt; const aValue: T);
+    function  InsertArray(aIndex: SizeInt; const a: array of T): SizeInt;
     function  InsertContainer(aIndex: SizeInt; aContainer: TSpecContainer): SizeInt;
     function  InsertEnum(aIndex: SizeInt; e: IEnumerable): SizeInt;
     procedure FastSwap(L, R: SizeInt); inline;
@@ -57,21 +57,21 @@ type
     function  DoSplit(aIndex: SizeInt): TGVector;
   public
   { appends aValue and returns it index; will raise ELGUpdateLock if instance in iteration }
-    function  Add(constref aValue: T): SizeInt;
+    function  Add(const aValue: T): SizeInt;
   { appends all elements of array and returns count of added elements;
     will raise ELGUpdateLock if instance in iteration }
-    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
     will raise ELGUpdateLock if instance in iteration}
-    procedure Insert(aIndex: SizeInt; constref aValue: T);
+    procedure Insert(aIndex: SizeInt; const aValue: T);
   { will return False if aIndex out of bounds or instance in iteration }
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
   { inserts all elements of array a into position aIndex and returns count of inserted elements;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
     will raise ELGUpdateLock if instance in iteration }
-    function  InsertAll(aIndex: SizeInt; constref a: array of T): SizeInt;
+    function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
   { inserts all elements of e into position aIndex and returns count of inserted elements;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
     will raise ELGUpdateLock if instance in iteration}
@@ -121,7 +121,7 @@ type
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref A: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
   { will raise EArgumentOutOfRangeException if aIndex out of bounds }
     function  Split(aIndex: SizeInt): TGObjectVector;
@@ -145,8 +145,8 @@ type
     function  Lock: TVector;
     procedure Unlock; inline;
     procedure Clear;
-    function  Add(constref aValue: T): SizeInt;
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+    function  Add(const aValue: T): SizeInt;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
@@ -176,7 +176,7 @@ type
     function  GetMutable(aIndex: SizeInt): PItem; inline;
     function  GetUncMutable(aIndex: SizeInt): PItem; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
-    procedure InsertItem(aIndex: SizeInt; constref aValue: T);
+    procedure InsertItem(aIndex: SizeInt; const aValue: T);
     function  DeleteItem(aIndex: SizeInt): T;
     function  ExtractRange(aIndex, aCount: SizeInt): TArray;
     function  DeleteRange(aIndex, aCount: SizeInt): SizeInt;
@@ -194,15 +194,15 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { appends aValue and returns it index }
-    function  Add(constref aValue: T): SizeInt;
-    function  AddAll(constref a: array of T): SizeInt;
+    function  Add(const aValue: T): SizeInt;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: specialize IGEnumerable<T>): SizeInt;
     function  AddAll(constref aVector: TGLiteVector): SizeInt;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
-    procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
+    procedure Insert(aIndex: SizeInt; const aValue: T); inline;
   { will return False if aIndex out of bounds }
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean; inline;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean; inline;
   { deletes and returns value from position aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  Extract(aIndex: SizeInt): T; inline;
@@ -243,8 +243,8 @@ type
     function  Lock: PVector;
     procedure Unlock; inline;
     procedure Clear;
-    function  Add(constref aValue: T): SizeInt;
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+    function  Add(const aValue: T): SizeInt;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
   end;
 
@@ -288,14 +288,14 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { appends aValue and returns it index }
-    function  Add(constref aValue: T): SizeInt;inline;
-    function  AddAll(constref a: array of T): SizeInt;
+    function  Add(const aValue: T): SizeInt;inline;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(constref aVector: TGLiteObjectVector): SizeInt; inline;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
-    procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
+    procedure Insert(aIndex: SizeInt; const aValue: T); inline;
   { will return False if aIndex out of bounds }
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean; inline;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean; inline;
   { extracts value from position aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  Extract(aIndex: SizeInt): T; inline;
@@ -336,8 +336,8 @@ type
     function  Lock: PVector;
     procedure Unlock; inline;
     procedure Clear;
-    function  Add(constref aValue: T): SizeInt;
-    function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+    function  Add(const aValue: T): SizeInt;
+    function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
@@ -471,8 +471,8 @@ type
     class procedure Reverse(var v: TLiteVector); static; inline;
     class procedure RandomShuffle(v: TVector); static; inline;
     class procedure RandomShuffle(var v: TLiteVector); static; inline;
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TEqualityCompare): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TEqualityCompare): SizeInt;
+    class function  SequentSearch(v: TVector; const aValue: T; c: TEqualityCompare): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; const aValue: T; c: TEqualityCompare): SizeInt;
                     static; inline;
   end;
 
@@ -489,11 +489,11 @@ type
     TLiteVector = specialize TGLiteVector<T>;
     TOptional   = specialize TGOptional<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T): SizeInt; static; inline;
+    class function  SequentSearch(v: TVector; const aValue: T): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; const aValue: T): SizeInt; static; inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T): SizeInt; static; inline;
+    class function  BinarySearch(v: TVector; const aValue: T): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; const aValue: T): SizeInt; static; inline;
   { returns position of minimal value in V, -1 if V is empty }
     class function  IndexOfMin(v: TVector): SizeInt; static; inline;
     class function  IndexOfMin(constref v: TLiteVector): SizeInt; static; inline;
@@ -585,11 +585,11 @@ type
     class procedure RandomShuffle(v: TVector); static; inline;
     class procedure RandomShuffle(var v: TLiteVector); static; inline;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T): SizeInt; static; inline;
+    class function  SequentSearch(v: TVector; const aValue: T): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; const aValue: T): SizeInt; static; inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T): SizeInt; static; inline;
+    class function  BinarySearch(v: TVector; const aValue: T): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; const aValue: T): SizeInt; static; inline;
   { returns position of minimal value in V, -1 if V is empty }
     class function  IndexOfMin(v: TVector): SizeInt; static; inline;
     class function  IndexOfMin(constref v: TLiteVector): SizeInt; static; inline;
@@ -675,11 +675,11 @@ type
     TOptional   = specialize TGOptional<T>;
     TLess       = specialize TGLessCompare<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static; inline;
+    class function  SequentSearch(v: TVector; const aValue: T; c: TLess): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; const aValue: T; c: TLess): SizeInt; static; inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static; inline;
+    class function  BinarySearch(v: TVector; const aValue: T; c: TLess): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; const aValue: T; c: TLess): SizeInt; static; inline;
   { returns position of minimal value in V, -1 if V is empty }
     class function  IndexOfMin(v: TVector; c: TLess): SizeInt; static; inline;
   { returns position of maximal value in V, -1 if V is empty }
@@ -764,11 +764,11 @@ type
     TOptional   = specialize TGOptional<T>;
     TOnLess     = specialize TGOnLessCompare<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
+    class function  SequentSearch(v: TVector; const aValue: T; c: TOnLess): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; const aValue: T; c: TOnLess): SizeInt; static; inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TOnLess): SizeInt; static; inline;
+    class function  BinarySearch(v: TVector; const aValue: T; c: TOnLess): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; const aValue: T; c: TOnLess): SizeInt; static; inline;
   { returns position of minimal value in V, -1 if V is empty }
     class function  IndexOfMin(v: TVector; c: TOnLess): SizeInt; static; inline;
     class function  IndexOfMin(constref v: TLiteVector; c: TOnLess): SizeInt; static; inline;
@@ -857,12 +857,12 @@ type
     TOptional   = specialize TGOptional<T>;
     TLess       = specialize TGNestLessCompare<T>;
   { returns position of aValue in vector V, -1 if not found }
-    class function  SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
-    class function  SequentSearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static;
+    class function  SequentSearch(v: TVector; const aValue: T; c: TLess): SizeInt; static; inline;
+    class function  SequentSearch(constref v: TLiteVector; const aValue: T; c: TLess): SizeInt; static;
                     inline;
   { returns position of aValue in SORTED vector V, -1 if not found }
-    class function  BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt; static; inline;
-    class function  BinarySearch(constref v: TLiteVector; constref aValue: T; c: TLess): SizeInt; static;
+    class function  BinarySearch(v: TVector; const aValue: T; c: TLess): SizeInt; static; inline;
+    class function  BinarySearch(constref v: TLiteVector; const aValue: T; c: TLess): SizeInt; static;
                     inline;
   { returns position of minimal value in V, -1 if V is empty }
     class function  IndexOfMin(v: TVector; c: TLess): SizeInt; static; inline;
@@ -967,7 +967,7 @@ begin
   Result := @FItems[aIndex];
 end;
 
-procedure TGVector.InsertItem(aIndex: SizeInt; constref aValue: T);
+procedure TGVector.InsertItem(aIndex: SizeInt; const aValue: T);
 begin
   if aIndex < ElemCount then
     begin
@@ -982,7 +982,7 @@ begin
     Append(aValue);
 end;
 
-function TGVector.InsertArray(aIndex: SizeInt; constref a: array of T): SizeInt;
+function TGVector.InsertArray(aIndex: SizeInt; const a: array of T): SizeInt;
 begin
   if aIndex < ElemCount then
     begin
@@ -1122,13 +1122,13 @@ begin
   FCount -= RCount;
 end;
 
-function TGVector.Add(constref aValue: T): SizeInt;
+function TGVector.Add(const aValue: T): SizeInt;
 begin
   CheckInIteration;
   Result := Append(aValue);
 end;
 
-function TGVector.AddAll(constref a: array of T): SizeInt;
+function TGVector.AddAll(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := AppendArray(a);
@@ -1146,21 +1146,21 @@ begin
     end;
 end;
 
-procedure TGVector.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGVector.Insert(aIndex: SizeInt; const aValue: T);
 begin
   CheckInIteration;
   CheckInsertIndexRange(aIndex);
   InsertItem(aIndex, aValue);
 end;
 
-function TGVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   Result := not InIteration and IndexInInsertRange(aIndex);
   if Result then
     InsertItem(aIndex, aValue);
 end;
 
-function TGVector.InsertAll(aIndex: SizeInt; constref a: array of T): SizeInt;
+function TGVector.InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
 begin
   CheckInIteration;
   CheckInsertIndexRange(aIndex);
@@ -1301,7 +1301,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectVector.Create(constref A: array of T; aOwnsObjects: Boolean);
+constructor TGObjectVector.Create(const A: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(A);
   FOwnsObjects := aOwnsObjects;
@@ -1371,7 +1371,7 @@ begin
   end;
 end;
 
-function TGThreadVector.Add(constref aValue: T): SizeInt;
+function TGThreadVector.Add(const aValue: T): SizeInt;
 begin
   DoLock;
   try
@@ -1381,7 +1381,7 @@ begin
   end;
 end;
 
-function TGThreadVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGThreadVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   DoLock;
   try
@@ -1447,7 +1447,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-procedure TGLiteVector.InsertItem(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteVector.InsertItem(aIndex: SizeInt; const aValue: T);
 begin
   if aIndex < Count then
     begin
@@ -1567,12 +1567,12 @@ begin
   FBuffer.TrimToFit;
 end;
 
-function TGLiteVector.Add(constref aValue: T): SizeInt;
+function TGLiteVector.Add(const aValue: T): SizeInt;
 begin
   Result := FBuffer.PushLast(aValue);
 end;
 
-function TGLiteVector.AddAll(constref a: array of T): SizeInt;
+function TGLiteVector.AddAll(const a: array of T): SizeInt;
 var
   I, J: SizeInt;
 begin
@@ -1629,7 +1629,7 @@ begin
     end;
 end;
 
-procedure TGLiteVector.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteVector.Insert(aIndex: SizeInt; const aValue: T);
 begin
   if SizeUInt(aIndex) <= SizeUInt(Count) then
     InsertItem(aIndex, aValue)
@@ -1637,7 +1637,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGLiteVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGLiteVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   Result := SizeUInt(aIndex) <= SizeUInt(Count);
   if Result then
@@ -1746,7 +1746,7 @@ begin
   end;
 end;
 
-function TGLiteThreadVector.Add(constref aValue: T): SizeInt;
+function TGLiteThreadVector.Add(const aValue: T): SizeInt;
 begin
   DoLock;
   try
@@ -1756,7 +1756,7 @@ begin
   end;
 end;
 
-function TGLiteThreadVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGLiteThreadVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   DoLock;
   try
@@ -1889,12 +1889,12 @@ begin
   FVector.TrimToFit;
 end;
 
-function TGLiteObjectVector.Add(constref aValue: T): SizeInt;
+function TGLiteObjectVector.Add(const aValue: T): SizeInt;
 begin
   Result := FVector.Add(aValue);
 end;
 
-function TGLiteObjectVector.AddAll(constref a: array of T): SizeInt;
+function TGLiteObjectVector.AddAll(const a: array of T): SizeInt;
 begin
   Result := FVector.AddAll(a);
 end;
@@ -1904,12 +1904,12 @@ begin
   Result := FVector.AddAll(aVector.FVector);
 end;
 
-procedure TGLiteObjectVector.Insert(aIndex: SizeInt; constref aValue: T);
+procedure TGLiteObjectVector.Insert(aIndex: SizeInt; const aValue: T);
 begin
   FVector.Insert(aIndex, aValue);
 end;
 
-function TGLiteObjectVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGLiteObjectVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   Result := FVector.TryInsert(aIndex, aValue);
 end;
@@ -2008,7 +2008,7 @@ begin
   end;
 end;
 
-function TGLiteThreadObjectVector.Add(constref aValue: T): SizeInt;
+function TGLiteThreadObjectVector.Add(const aValue: T): SizeInt;
 begin
   DoLock;
   try
@@ -2018,7 +2018,7 @@ begin
   end;
 end;
 
-function TGLiteThreadObjectVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
+function TGLiteThreadObjectVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   DoLock;
   try
@@ -2762,7 +2762,7 @@ begin
     THelper.RandomShuffle(v.FBuffer.FItems[0..Pred(v.Count)]);
 end;
 
-class function TGVectorHelpUtil.SequentSearch(v: TVector; constref aValue: T; c: TEqualityCompare): SizeInt;
+class function TGVectorHelpUtil.SequentSearch(v: TVector; const aValue: T; c: TEqualityCompare): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -2770,7 +2770,7 @@ begin
     Result := -1;
 end;
 
-class function TGVectorHelpUtil.SequentSearch(constref v: TLiteVector; constref aValue: T;
+class function TGVectorHelpUtil.SequentSearch(constref v: TLiteVector; const aValue: T;
   c: TEqualityCompare): SizeInt;
 begin
   if v.Count > 0 then
@@ -2782,7 +2782,7 @@ end;
 
 { TGBaseVectorHelper }
 
-class function TGBaseVectorHelper.SequentSearch(v: TVector; constref aValue: T): SizeInt;
+class function TGBaseVectorHelper.SequentSearch(v: TVector; const aValue: T): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue)
@@ -2790,7 +2790,7 @@ begin
     Result := -1;
 end;
 
-class function TGBaseVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T): SizeInt;
+class function TGBaseVectorHelper.SequentSearch(constref v: TLiteVector; const aValue: T): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.SequentSearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue)
@@ -2798,7 +2798,7 @@ begin
     Result := -1;
 end;
 
-class function TGBaseVectorHelper.BinarySearch(v: TVector; constref aValue: T): SizeInt;
+class function TGBaseVectorHelper.BinarySearch(v: TVector; const aValue: T): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue)
@@ -2806,7 +2806,7 @@ begin
     Result := -1;
 end;
 
-class function TGBaseVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T): SizeInt;
+class function TGBaseVectorHelper.BinarySearch(constref v: TLiteVector; const aValue: T): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.BinarySearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue)
@@ -3175,7 +3175,7 @@ begin
     THelper.RandomShuffle(v.FBuffer.FItems[0..Pred(v.Count)]);
 end;
 
-class function TGComparableVectorHelper.SequentSearch(v: TVector; constref aValue: T): SizeInt;
+class function TGComparableVectorHelper.SequentSearch(v: TVector; const aValue: T): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue)
@@ -3183,7 +3183,7 @@ begin
     Result := -1;
 end;
 
-class function TGComparableVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T): SizeInt;
+class function TGComparableVectorHelper.SequentSearch(constref v: TLiteVector; const aValue: T): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.SequentSearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue)
@@ -3191,7 +3191,7 @@ begin
     Result := -1;
 end;
 
-class function TGComparableVectorHelper.BinarySearch(v: TVector; constref aValue: T): SizeInt;
+class function TGComparableVectorHelper.BinarySearch(v: TVector; const aValue: T): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue)
@@ -3199,7 +3199,7 @@ begin
     Result := -1;
 end;
 
-class function TGComparableVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T): SizeInt;
+class function TGComparableVectorHelper.BinarySearch(constref v: TLiteVector; const aValue: T): SizeInt;
 begin
   if v.Count > 0 then
     Result := THelper.BinarySearch(v.FBuffer.FItems[0..Pred(v.Count)], aValue)
@@ -3543,7 +3543,7 @@ end;
 
 { TGRegularVectorHelper }
 
-class function TGRegularVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
+class function TGRegularVectorHelper.SequentSearch(v: TVector; const aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3551,7 +3551,7 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T;
+class function TGRegularVectorHelper.SequentSearch(constref v: TLiteVector; const aValue: T;
   c: TLess): SizeInt;
 begin
   if v.Count > 0 then
@@ -3560,7 +3560,7 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
+class function TGRegularVectorHelper.BinarySearch(v: TVector; const aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3568,7 +3568,7 @@ begin
     Result := -1;
 end;
 
-class function TGRegularVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T;
+class function TGRegularVectorHelper.BinarySearch(constref v: TLiteVector; const aValue: T;
   c: TLess): SizeInt;
 begin
 
@@ -3894,7 +3894,7 @@ end;
 
 { TGDelegatedVectorHelper }
 
-class function TGDelegatedVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt;
+class function TGDelegatedVectorHelper.SequentSearch(v: TVector; const aValue: T; c: TOnLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3902,7 +3902,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T;
+class function TGDelegatedVectorHelper.SequentSearch(constref v: TLiteVector; const aValue: T;
   c: TOnLess): SizeInt;
 begin
   if v.Count > 0 then
@@ -3911,7 +3911,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TOnLess): SizeInt;
+class function TGDelegatedVectorHelper.BinarySearch(v: TVector; const aValue: T; c: TOnLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -3919,7 +3919,7 @@ begin
     Result := -1;
 end;
 
-class function TGDelegatedVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T;
+class function TGDelegatedVectorHelper.BinarySearch(constref v: TLiteVector; const aValue: T;
   c: TOnLess): SizeInt;
 begin
   if v.Count > 0 then
@@ -4268,7 +4268,7 @@ end;
 
 { TGNestedVectorHelper }
 
-class function TGNestedVectorHelper.SequentSearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
+class function TGNestedVectorHelper.SequentSearch(v: TVector; const aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.SequentSearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -4276,7 +4276,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.SequentSearch(constref v: TLiteVector; constref aValue: T;
+class function TGNestedVectorHelper.SequentSearch(constref v: TLiteVector; const aValue: T;
   c: TLess): SizeInt;
 begin
   if v.Count > 0 then
@@ -4285,7 +4285,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.BinarySearch(v: TVector; constref aValue: T; c: TLess): SizeInt;
+class function TGNestedVectorHelper.BinarySearch(v: TVector; const aValue: T; c: TLess): SizeInt;
 begin
   if v.ElemCount > 0 then
     Result := THelper.BinarySearch(v.FItems[0..Pred(v.ElemCount)], aValue, c)
@@ -4293,7 +4293,7 @@ begin
     Result := -1;
 end;
 
-class function TGNestedVectorHelper.BinarySearch(constref v: TLiteVector; constref aValue: T;
+class function TGNestedVectorHelper.BinarySearch(constref v: TLiteVector; const aValue: T;
   c: TLess): SizeInt;
 begin
   if v.Count > 0 then

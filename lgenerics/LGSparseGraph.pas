@@ -84,8 +84,8 @@ type
   TIntEdge = packed record
     Source,
     Destination: SizeInt;
-    class function HashCode(constref aValue: TIntEdge): SizeInt; static;
-    class function Equal(constref L, R: TIntEdge): Boolean; static;
+    class function HashCode(const aValue: TIntEdge): SizeInt; static;
+    class function Equal(const L, R: TIntEdge): Boolean; static;
     constructor Create(aSrc, aDst: SizeInt);
     function Key: TIntEdge; inline;
   end;
@@ -149,12 +149,12 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  Contains(aValue: SizeInt): Boolean; inline;
-    function  ContainsAll(constref aList: TGAdjList): Boolean;
+    function  ContainsAll(const aList: TGAdjList): Boolean;
     function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
     function  Find(aDst: SizeInt): PAdjItem;
     function  FindFirst(out aValue: SizeInt): Boolean;
-    function  Add(constref aItem: TAdjItem): Boolean;
-    procedure Append(constref aItem: TAdjItem);
+    function  Add(const aItem: TAdjItem): Boolean;
+    procedure Append(const aItem: TAdjItem);
     function  Remove(aDst: SizeInt): Boolean;
     function  Remove(aDst: SizeInt; out d: T): Boolean;
     property  Count: SizeInt read FCount;
@@ -174,11 +174,11 @@ type
     TAdjItem       = specialize TGAdjItem<TEdgeData>;
     PAdjItem       = ^TAdjItem;
     TVertexArray   = array of TVertex;
-    TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; var aData: TEdgeData) of object;
+    TOnAddEdge     = procedure(const aSrc, aDst: TVertex; var aData: TEdgeData) of object;
     TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
-    TOnWriteVertex = procedure(aStream: TStream; constref aValue: TVertex) of object;
+    TOnWriteVertex = procedure(aStream: TStream; const aValue: TVertex) of object;
     TOnReadData    = procedure(aStream: TStream; out aValue: TEdgeData) of object;
-    TOnWriteData   = procedure(aStream: TStream; constref aValue: TEdgeData) of object;
+    TOnWriteData   = procedure(aStream: TStream; const aValue: TEdgeData) of object;
 
     TAdjacencyMatrix = record
     private
@@ -186,7 +186,7 @@ type
       function GetSize: SizeInt; inline;
       function GetAdjacent(aSrc, aDst: SizeInt): Boolean; inline;
     public
-      constructor Create(constref aMatrix: TSquareBitMatrix);
+      constructor Create(const aMatrix: TSquareBitMatrix);
       function IsEmpty: Boolean; inline;
       property Size: SizeInt read GetSize;
       property Adjacent[aSrc, aDst: SizeInt]: Boolean read GetAdjacent; default;
@@ -208,7 +208,7 @@ type
       Hash,
       Next,
       Tag: SizeInt;
-      procedure Assign(constref aSrc: TNode);
+      procedure Assign(const aSrc: TNode);
     end;
     PNode = ^TNode;
 
@@ -243,13 +243,13 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  Add(constref v: TVertex; aHash: SizeInt): SizeInt;
+    function  Add(const v: TVertex; aHash: SizeInt): SizeInt;
     procedure RemoveFromChain(aIndex: SizeInt);
     procedure Delete(aIndex: SizeInt);
-    function  Remove(constref v: TVertex): Boolean;
-    function  Find(constref v: TVertex): SizeInt;
-    function  Find(constref v: TVertex; aHash: SizeInt): SizeInt;
-    function  FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
+    function  Remove(const v: TVertex): Boolean;
+    function  Find(const v: TVertex): SizeInt;
+    function  Find(const v: TVertex; aHash: SizeInt): SizeInt;
+    function  FindOrAdd(const v: TVertex; out aIndex: SizeInt): Boolean;
   public
   type
     TAdjEnumerator = record
@@ -274,18 +274,19 @@ type
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  CreateAdjItemEnumArray: TAdjItemEnumArray;
-    function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
+    function  PathToNearestFrom(aSrc: SizeInt; const aTargets: TIntArray): TIntArray;
     procedure AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
     procedure AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
-    procedure VertexReplaced(constref {%H-}v: TVertex); virtual;
-    function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
+    {$PUSH}{$WARN 5024 OFF}
+    procedure VertexReplaced(const v: TVertex); virtual;{$POP}
+    function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
-    function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; virtual; abstract;
+    function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; virtual; abstract;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
-    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
     procedure EdgeContracting(aSrc, aDst: SizeInt); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
@@ -298,7 +299,7 @@ type
       Destination: SizeInt; //index of target vertex
       Data: TEdgeData;
       constructor Create(aSrc: SizeInt; aItem: PAdjItem); overload;
-      constructor Create(aSrc, aDst: SizeInt; constref aData: TEdgeData); overload;
+      constructor Create(aSrc, aDst: SizeInt; const aData: TEdgeData); overload;
     end;
 
     TIncidentEdge = record
@@ -397,50 +398,50 @@ type
   structural management utilities
 ***********************************************************************************************************}
   { returns True and vertex index, if it was added, False otherwise }
-    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
-    function  AddVertex(constref aVertex: TVertex): Boolean;
+    function  AddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
+    function  AddVertex(const aVertex: TVertex): Boolean;
   { returns count of added vertices }
     function  AddVertices(const aVertices: TVertexArray): SizeInt;
   { removes vertex aVertex from graph, slow; raises EGraphError if not contains aVertex }
-    procedure RemoveVertex(constref aVertex: TVertex); inline;
+    procedure RemoveVertex(const aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
-    function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
+    function  ContainsVertex(const aVertex: TVertex): Boolean; inline;
   { if does not contain aSrc or aDst vertices, they will be added;
     returns True if the edge is added, False, if such an edge already exists }
-    function  AddEdge(constref aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
+    function  AddEdge(const aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
   { adds edge with default data }
-    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AddEdge(const aSrc, aDst: TVertex): Boolean; inline;
   { returns True if the edge is added, False, if such an edge already exists;
     raises EGraphError if aSrc or aDst out of range }
-    function  AddEdgeI(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
   { if contains an edge (aSrc, aDst) then removes it and returns True,
     otherwise returns False }
-    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  RemoveEdge(const aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
   { if contains an edge (aSrc, aDst) then contracts it and returns True(aSrc remains, aDst removes);
     otherwise returns False, slow }
-    function  ContractEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  ContractEdge(const aSrc, aDst: TVertex): Boolean; inline;
     function  ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  ContainsEdge(const aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  IndexOf(constref aVertex: TVertex): SizeInt;
-    function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  IndexOf(const aVertex: TVertex): SizeInt;
+    function  Adjacent(const aSrc, aDst: TVertex): Boolean; inline;
     function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices of aVertex }
-    function  AdjVertices(constref aVertex: TVertex): TAdjVertices; inline;
+    function  AdjVertices(const aVertex: TVertex): TAdjVertices; inline;
     function  AdjVerticesI(aIndex: SizeInt): TAdjVertices;
   { enumerates incident edges of aVertex }
-    function  IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
+    function  IncidentEdges(const aVertex: TVertex): TIncidentEdges; inline;
     function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
   { enumerates all vertices }
     function  Vertices: TVertices;
   { enumerates all edges }
     function  Edges: TEdges;
-    function  GetEdgeData(constref aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean; inline;
+    function  GetEdgeData(const aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean; inline;
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
-    function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
-    function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+    function  SetEdgeData(const aSrc, aDst: TVertex; const aValue: TEdgeData): Boolean; inline;
+    function  SetEdgeDataI(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see TBitMatrixSizeMax }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -470,11 +471,11 @@ type
     aOnWhite is called after next WHITE vertex found,
     aOnGray is called after visiting an already visited vertex,
     aOnDone is called after vertex done }
-    function DfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
+    function DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt; inline;
     function DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt;
-    function DfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
+    function DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt; inline;
     function DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt;
@@ -485,11 +486,11 @@ type
     aOnWhite is called after next WHITE vertex found,
     aOnGray is called after visiting an already visited vertex,
     aOnDone is called after vertex done }
-    function BfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
+    function BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt; inline;
     function BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt;
-    function BfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
+    function BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt; inline;
     function BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt;
@@ -503,21 +504,21 @@ type
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
-    function ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function ShortestPathLen(const aSrc, aDst: TVertex): SizeInt; inline;
     function ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
-    function ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function ShortestPathsMap(const aSrc: TVertex): TIntArray; inline;
     function ShortestPathsMapI(aSrc: SizeInt): TIntArray;
-    function ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
+    function ShortestPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
     function ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
-    function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
     function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
   { returns the eccentricity of the aVertex;
     returns High(SizeInt), if exists any vertex unreachable from aVertex }
-    function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
+    function Eccentricity(const aVertex: TVertex): SizeInt; inline;
     function EccentricityI(aIndex: SizeInt): SizeInt;
 {**********************************************************************************************************
   properties
@@ -540,7 +541,7 @@ type
     TGraph          = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
     TOnStartWrite   = function(aGraph: TGraph): string of object;
     TOnWriteVertex  = function(aGraph: TGraph; aIndex: SizeInt): string of object;
-    TOnWriteEdge    = function(aGraph: TGraph; constref aEdge: TGraph.TEdge): string of object;
+    TOnWriteEdge    = function(aGraph: TGraph; const aEdge: TGraph.TEdge): string of object;
 
   protected
   const
@@ -557,7 +558,7 @@ type
     FShowTitle: Boolean;
     function  Graph2Dot(aGraph: TGraph): string; virtual;
     procedure WriteEdges(aGraph: TGraph; aList: TStrings) virtual; abstract;
-    function  DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; virtual;
+    function  DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; virtual;
     function  SizeDefined: Boolean;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
@@ -742,17 +743,17 @@ type
   generic TGPoint2D<T> = record
     X, Y: T;
     constructor Create(aX, aY: T);
-    class function Equal(constref L, R: TGPoint2D): Boolean; static; inline;
-    class function HashCode(constref aPoint: TGPoint2D): SizeInt; static; inline;
-    function Distance(constref aPoint: TGPoint2D): ValReal; inline;
+    class function Equal(const L, R: TGPoint2D): Boolean; static; inline;
+    class function HashCode(const aPoint: TGPoint2D): SizeInt; static; inline;
+    function Distance(const aPoint: TGPoint2D): ValReal; inline;
   end;
 
   generic TGPoint3D<T> = record
     X, Y, Z: T;
-    class function Equal(constref L, R: TGPoint3D): Boolean; static; inline;
-    class function HashCode(constref aPoint: TGPoint3D): SizeInt; static; inline;
+    class function Equal(const L, R: TGPoint3D): Boolean; static; inline;
+    class function HashCode(const aPoint: TGPoint3D): SizeInt; static; inline;
     constructor Create(aX, aY, aZ: T);
-    function Distance(constref aPoint: TGPoint3D): ValReal; inline;
+    function Distance(const aPoint: TGPoint3D): ValReal; inline;
   end;
 
   {$I SparseGraphHelpH.inc}
@@ -781,7 +782,7 @@ end;
 
 { TIntEdge }
 
-class function TIntEdge.HashCode(constref aValue: TIntEdge): SizeInt;
+class function TIntEdge.HashCode(const aValue: TIntEdge): SizeInt;
 begin
 {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   {$IF DEFINED (CPU64)}
@@ -796,7 +797,7 @@ begin
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
-class function TIntEdge.Equal(constref L, R: TIntEdge): Boolean;
+class function TIntEdge.Equal(const L, R: TIntEdge): Boolean;
 begin
   Result := (L.Source = R.Source) and (L.Destination = R.Destination);
 end;
@@ -927,7 +928,7 @@ begin
   Result := False;
 end;
 
-function TGAdjList.ContainsAll(constref aList: TGAdjList): Boolean;
+function TGAdjList.ContainsAll(const aList: TGAdjList): Boolean;
 var
   I, J, v: SizeInt;
   Found: Boolean;
@@ -987,7 +988,7 @@ begin
     aValue := FItems[0].Destination;
 end;
 
-function TGAdjList.Add(constref aItem: TAdjItem): Boolean;
+function TGAdjList.Add(const aItem: TAdjItem): Boolean;
 begin
   if Count > 0 then
     Result := DoFind(aItem.Destination) = NULL_INDEX
@@ -1002,7 +1003,7 @@ begin
     end;
 end;
 
-procedure TGAdjList.Append(constref aItem: TAdjItem);
+procedure TGAdjList.Append(const aItem: TAdjItem);
 begin
   if Count >= Capacity then
     Expand;
@@ -1063,7 +1064,7 @@ begin
     raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
-constructor TGSparseGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
+constructor TGSparseGraph.TAdjacencyMatrix.Create(const aMatrix: TSquareBitMatrix);
 begin
   FMatrix := aMatrix;
 end;
@@ -1077,7 +1078,7 @@ end;
 
 { TGSparseGraph.TNode }
 
-procedure TGSparseGraph.TNode.Assign(constref aSrc: TNode);
+procedure TGSparseGraph.TNode.Assign(const aSrc: TNode);
 begin
   Vertex := aSrc.Vertex;
   AdjList := aSrc.AdjList;
@@ -1095,7 +1096,7 @@ begin
   Data := aItem^.Data;
 end;
 
-constructor TGSparseGraph.TEdge.Create(aSrc, aDst: SizeInt; constref aData: TEdgeData);
+constructor TGSparseGraph.TEdge.Create(aSrc, aDst: SizeInt; const aData: TEdgeData);
 begin
   Source := aSrc;
   Destination := aDst;
@@ -1291,7 +1292,7 @@ begin
     raise EGraphError.CreateFmt(SECapacityExceedFmt, [Capacity shl 1]);
 end;
 
-function TGSparseGraph.Add(constref v: TVertex; aHash: SizeInt): SizeInt;
+function TGSparseGraph.Add(const v: TVertex; aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1343,7 +1344,7 @@ begin
     end;
 end;
 
-function TGSparseGraph.Remove(constref v: TVertex): Boolean;
+function TGSparseGraph.Remove(const v: TVertex): Boolean;
 var
   ToRemove: SizeInt;
 begin
@@ -1359,7 +1360,7 @@ begin
   Result := False;
 end;
 
-function TGSparseGraph.Find(constref v: TVertex): SizeInt;
+function TGSparseGraph.Find(const v: TVertex): SizeInt;
 var
   h: SizeInt;
 begin
@@ -1373,7 +1374,7 @@ begin
     end;
 end;
 
-function TGSparseGraph.Find(constref v: TVertex; aHash: SizeInt): SizeInt;
+function TGSparseGraph.Find(const v: TVertex; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and System.High(FChainList)];
   while Result <> NULL_INDEX do
@@ -1384,7 +1385,7 @@ begin
     end;
 end;
 
-function TGSparseGraph.FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGSparseGraph.FindOrAdd(const v: TVertex; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -1497,7 +1498,7 @@ begin
     Result[I] := AdjLists[I]^.GetEnumerator;
 end;
 
-function TGSparseGraph.PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
+function TGSparseGraph.PathToNearestFrom(aSrc: SizeInt; const aTargets: TIntArray): TIntArray;
 var
   Dist,
   Parents: TIntArray;
@@ -1627,11 +1628,11 @@ begin
         aDiameter := Ecc;
     end;
 end;
-
-procedure TGSparseGraph.VertexReplaced(constref v: TVertex);
+{$PUSH}{$WARN 5024 OFF}
+procedure TGSparseGraph.VertexReplaced(const v: TVertex);
 begin
 end;
-
+{$POP}
 class function TGSparseGraph.TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray;
 var
   Cycle: TIntVector;
@@ -1892,12 +1893,12 @@ begin
   end;
 end;
 
-function TGSparseGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+function TGSparseGraph.AddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := DoAddVertex(aVertex, aIndex);
 end;
 
-function TGSparseGraph.AddVertex(constref aVertex: TVertex): Boolean;
+function TGSparseGraph.AddVertex(const aVertex: TVertex): Boolean;
 var
   Dummy: SizeInt;
 begin
@@ -1914,7 +1915,7 @@ begin
   Result := VertexCount - Result;
 end;
 
-procedure TGSparseGraph.RemoveVertex(constref aVertex: TVertex);
+procedure TGSparseGraph.RemoveVertex(const aVertex: TVertex);
 begin
   RemoveVertexI(IndexOf(aVertex));
 end;
@@ -1925,12 +1926,12 @@ begin
   DoRemoveVertex(aIndex);
 end;
 
-function TGSparseGraph.ContainsVertex(constref aVertex: TVertex): Boolean;
+function TGSparseGraph.ContainsVertex(const aVertex: TVertex): Boolean;
 begin
   Result := IndexOf(aVertex) >= 0;
 end;
 
-function TGSparseGraph.AddEdge(constref aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
+function TGSparseGraph.AddEdge(const aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -1939,12 +1940,12 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
-function TGSparseGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.AddEdge(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := AddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
-function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
+function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -1956,7 +1957,7 @@ begin
   Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
 end;
 
-function TGSparseGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.RemoveEdge(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -1969,7 +1970,7 @@ begin
     Result := False;
 end;
 
-function TGSparseGraph.ContractEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.ContractEdge(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := ContractEdgeI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -1984,7 +1985,7 @@ begin
   Result := True;
 end;
 
-function TGSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.ContainsEdge(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := ContainsEdgeI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -1997,7 +1998,7 @@ begin
     Result := False;
 end;
 
-function TGSparseGraph.IndexOf(constref aVertex: TVertex): SizeInt;
+function TGSparseGraph.IndexOf(const aVertex: TVertex): SizeInt;
 begin
   if VertexCount > 0 then
     Result := Find(aVertex)
@@ -2005,7 +2006,7 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.Adjacent(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := AdjacentI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -2018,7 +2019,7 @@ begin
     Result := False;
 end;
 
-function TGSparseGraph.AdjVertices(constref aVertex: TVertex): TAdjVertices;
+function TGSparseGraph.AdjVertices(const aVertex: TVertex): TAdjVertices;
 begin
   Result := AdjVerticesI(IndexOf(aVertex));
 end;
@@ -2030,7 +2031,7 @@ begin
   Result.FSource := aIndex;
 end;
 
-function TGSparseGraph.IncidentEdges(constref aVertex: TVertex): TIncidentEdges;
+function TGSparseGraph.IncidentEdges(const aVertex: TVertex): TIncidentEdges;
 begin
   Result := IncidentEdgesI(IndexOf(aVertex));
 end;
@@ -2052,7 +2053,7 @@ begin
   Result.FGraph := Self;
 end;
 
-function TGSparseGraph.GetEdgeData(constref aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean;
+function TGSparseGraph.GetEdgeData(const aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean;
 begin
   Result := GetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aValue);
 end;
@@ -2072,12 +2073,12 @@ begin
     Result := False;
 end;
 
-function TGSparseGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean;
+function TGSparseGraph.SetEdgeData(const aSrc, aDst: TVertex; const aValue: TEdgeData): Boolean;
 begin
   Result := SetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aValue);
 end;
 
-function TGSparseGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+function TGSparseGraph.SetEdgeDataI(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean;
 begin
   if SizeUInt(aSrc) < SizeUInt(VertexCount) then
     Result := DoSetEdgeData(aSrc, aDst, aValue)
@@ -2247,7 +2248,7 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
@@ -2302,7 +2303,7 @@ begin
   DfsWithVisitors;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
+function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
   aOnDone: TNestNodeDone): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
@@ -2354,7 +2355,7 @@ begin
       end;
 end;
 
-function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
@@ -2403,7 +2404,7 @@ begin
   BfsWithVisitors;
 end;
 
-function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
+function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
   aOnDone: TNestNodeDone): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
@@ -2460,7 +2461,7 @@ begin
       end;
 end;
 
-function TGSparseGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGSparseGraph.ShortestPathLen(const aSrc, aDst: TVertex): SizeInt;
 begin
   Result := ShortestPathLenI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -2499,7 +2500,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-function TGSparseGraph.ShortestPathsMap(constref aSrc: TVertex): TIntArray;
+function TGSparseGraph.ShortestPathsMap(const aSrc: TVertex): TIntArray;
 begin
   Result := ShortestPathsMapI(IndexOf(aSrc));
 end;
@@ -2533,7 +2534,7 @@ begin
     end;
 end;
 
-function TGSparseGraph.ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
+function TGSparseGraph.ShortestPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
 begin
   Result := ShortestPathsMapI(IndexOf(aSrc), aPathTree);
 end;
@@ -2569,7 +2570,7 @@ begin
     end;
 end;
 
-function TGSparseGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGSparseGraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;
 begin
   Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst));
 end;
@@ -2610,7 +2611,7 @@ begin
   Result := nil;
 end;
 
-function TGSparseGraph.Eccentricity(constref aVertex: TVertex): SizeInt;
+function TGSparseGraph.Eccentricity(const aVertex: TVertex): SizeInt;
 begin
   Result := EccentricityI(IndexOf(aVertex));
 end;
@@ -2673,7 +2674,7 @@ begin
   end;
 end;
 
-function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
+function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
 begin
   Assert(aGraph = aGraph);
   Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
@@ -3905,12 +3906,12 @@ end;
 
 { TGPoint2D }
 
-class function TGPoint2D.Equal(constref L, R: TGPoint2D): Boolean;
+class function TGPoint2D.Equal(const L, R: TGPoint2D): Boolean;
 begin
   Result := (L.X = R.X) and (L.Y = R.Y);
 end;
 
-class function TGPoint2D.HashCode(constref aPoint: TGPoint2D): SizeInt;
+class function TGPoint2D.HashCode(const aPoint: TGPoint2D): SizeInt;
 begin
   Result := TxxHash32LE.HashBuf(@aPoint, SizeOf(aPoint));
 end;
@@ -3921,7 +3922,7 @@ begin
   Y := aY;
 end;
 
-function TGPoint2D.Distance(constref aPoint: TGPoint2D): ValReal;
+function TGPoint2D.Distance(const aPoint: TGPoint2D): ValReal;
 begin
   Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
                  (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)));
@@ -3929,12 +3930,12 @@ end;
 
 { TGPoint3D }
 
-class function TGPoint3D.Equal(constref L, R: TGPoint3D): Boolean;
+class function TGPoint3D.Equal(const L, R: TGPoint3D): Boolean;
 begin
   Result := (L.X = R.X) and (L.Y = R.Y) and (L.Z = R.Z);
 end;
 
-class function TGPoint3D.HashCode(constref aPoint: TGPoint3D): SizeInt;
+class function TGPoint3D.HashCode(const aPoint: TGPoint3D): SizeInt;
 begin
   Result := TxxHash32LE.HashBuf(@aPoint, SizeOf(aPoint));
 end;
@@ -3946,7 +3947,7 @@ begin
   Z := aZ;
 end;
 
-function TGPoint3D.Distance(constref aPoint: TGPoint3D): ValReal;
+function TGPoint3D.Distance(const aPoint: TGPoint3D): ValReal;
 begin
   Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
                  (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)) +
@@ -4158,7 +4159,7 @@ begin
     p^.Key := aValue;
 end;
 
-function TIntHashSet.AddAll(constref a: array of SizeInt): SizeInt;
+function TIntHashSet.AddAll(const a: array of SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -4167,7 +4168,7 @@ begin
     Result += Ord(Add(I));
 end;
 
-function TIntHashSet.AddAll(constref s: TIntHashSet): SizeInt;
+function TIntHashSet.AddAll(const s: TIntHashSet): SizeInt;
 var
   I: SizeInt;
 begin
@@ -4183,7 +4184,7 @@ end;
 
 { TOrdIntPair }
 
-class function TOrdIntPair.HashCode(constref aValue: TOrdIntPair): SizeInt;
+class function TOrdIntPair.HashCode(const aValue: TOrdIntPair): SizeInt;
 begin
 {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   {$IF DEFINED (CPU64)}
@@ -4198,7 +4199,7 @@ begin
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
-class function TOrdIntPair.Equal(constref L, R: TOrdIntPair): Boolean;
+class function TOrdIntPair.Equal(const L, R: TOrdIntPair): Boolean;
 begin
   Result := (L.Left = R.Left) and (L.Right = R.Right);
 end;
@@ -4296,7 +4297,7 @@ begin
   FTable.EnsureCapacity(aValue);
 end;
 
-procedure TGJoinableHashList.Add(constref aValue: TEntry);
+procedure TGJoinableHashList.Add(const aValue: TEntry);
 var
   p: PEntry;
   Pos: SizeInt;
@@ -4307,7 +4308,7 @@ begin
     p^ := aValue;
 end;
 
-procedure TGJoinableHashList.AddAll(constref aList: TGJoinableHashList);
+procedure TGJoinableHashList.AddAll(const aList: TGJoinableHashList);
 var
   p: PEntry;
 begin
@@ -4391,7 +4392,7 @@ end;
 
 { TGWeightHelper.TWeightEdge }
 
-class operator TGWeightHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge.<(const L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
@@ -4410,7 +4411,7 @@ end;
 
 { TCostItem }
 
-class operator TCostItem.<(constref L, R: TCostItem): Boolean;
+class operator TCostItem.<(const L, R: TCostItem): Boolean;
 begin
   Result := L.Cost < R.Cost;
 end;
@@ -4423,7 +4424,7 @@ end;
 
 { TGWeightHelper.TWeightItem }
 
-class operator TGWeightHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem.<(const L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
@@ -4436,7 +4437,7 @@ end;
 
 { TGWeightHelper.TRankItem }
 
-class operator TGWeightHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem.<(const L, R: TRankItem): Boolean;
 begin
   Result := L.Rank < R.Rank;
 end;
@@ -5762,7 +5763,7 @@ begin
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
-procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
+procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; const aValue: T);
 var
   InsertIdx: SizeInt;
 begin
@@ -5774,7 +5775,7 @@ begin
   FloatUp(InsertIdx);
 end;
 
-procedure TGBinHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
+procedure TGBinHeapMin.Update(aHandle: SizeInt; const aNewValue: T);
 var
   I: SizeInt;
 begin
@@ -5824,7 +5825,7 @@ begin
   Result := System.Length(FNodeList);
 end;
 
-function TGPairHeapMin.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+function TGPairHeapMin.NewNode(const aValue: T; aHandle: SizeInt): PNode;
 begin
   Result := @FNodeList[aHandle];
   Inc(FCount);
@@ -5985,12 +5986,12 @@ begin
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
-procedure TGPairHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
+procedure TGPairHeapMin.Enqueue(aHandle: SizeInt; const aValue: T);
 begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-procedure TGPairHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
+procedure TGPairHeapMin.Update(aHandle: SizeInt; const aNewValue: T);
 var
   Node: PNode;
 begin
@@ -6043,7 +6044,7 @@ begin
   Result := System.Length(FNodeList);
 end;
 
-function TGPairHeapMax.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+function TGPairHeapMax.NewNode(const aValue: T; aHandle: SizeInt): PNode;
 begin
   Result := @FNodeList[aHandle];
   Inc(FCount);
@@ -6188,12 +6189,12 @@ begin
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
-procedure TGPairHeapMax.Enqueue(aHandle: SizeInt; constref aValue: T);
+procedure TGPairHeapMax.Enqueue(aHandle: SizeInt; const aValue: T);
 begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-procedure TGPairHeapMax.Update(aHandle: SizeInt; constref aNewValue: T);
+procedure TGPairHeapMax.Update(aHandle: SizeInt; const aNewValue: T);
 var
   Node: PNode;
 begin

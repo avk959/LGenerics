@@ -207,8 +207,8 @@ type
     ICollection     = specialize IGCollection<T>;
 
   protected
-    function  DoAdd(constref aValue: T): Boolean; virtual; abstract;
-    function  DoExtract(constref aValue: T): Boolean; virtual; abstract;
+    function  DoAdd(const aValue: T): Boolean; virtual; abstract;
+    function  DoExtract(const aValue: T): Boolean; virtual; abstract;
     function  DoRemoveIf(aTest: TTest): SizeInt; virtual; abstract;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; virtual; abstract;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; virtual; abstract;
@@ -216,28 +216,28 @@ type
     function  DoExtractIf(aTest: TOnTest): TArray; virtual; abstract;
     function  DoExtractIf(aTest: TNestTest): TArray; virtual; abstract;
 
-    function  DoRemove(constref aValue: T): Boolean; virtual;
-    function  DoAddAll(constref a: array of T): SizeInt; virtual; overload;
+    function  DoRemove(const aValue: T): Boolean; virtual;
+    function  DoAddAll(const a: array of T): SizeInt; virtual; overload;
     function  DoAddAll(e: IEnumerable): SizeInt; virtual; abstract; overload;
-    function  DoRemoveAll(constref a: array of T): SizeInt;
+    function  DoRemoveAll(const a: array of T): SizeInt;
     function  DoRemoveAll(e: IEnumerable): SizeInt; virtual;
   public
   { returns True if element added }
-    function  Add(constref aValue: T): Boolean;
+    function  Add(const aValue: T): Boolean;
   { returns count of added elements }
-    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(const a: array of T): SizeInt;
   { returns count of added elements }
     function  AddAll(e: IEnumerable): SizeInt;
-    function  Contains(constref aValue: T): Boolean; virtual; abstract;
-    function  NonContains(constref aValue: T): Boolean;
-    function  ContainsAny(constref a: array of T): Boolean;
+    function  Contains(const aValue: T): Boolean; virtual; abstract;
+    function  NonContains(const aValue: T): Boolean;
+    function  ContainsAny(const a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
-    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(const a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
   { returns True if element removed }
-    function  Remove(constref aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean;
   { returns count of removed elements }
-    function  RemoveAll(constref a: array of T): SizeInt;
+    function  RemoveAll(const a: array of T): SizeInt;
   { returns count of removed elements }
     function  RemoveAll(e: IEnumerable): SizeInt;
   { returns count of removed elements }
@@ -245,7 +245,7 @@ type
     function  RemoveIf(aTest: TOnTest): SizeInt;
     function  RemoveIf(aTest: TNestTest): SizeInt;
   { returns True if element extracted }
-    function  Extract(constref aValue: T): Boolean;
+    function  Extract(const aValue: T): Boolean;
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
@@ -272,9 +272,9 @@ type
     function  LockCollection: ICollection;
     procedure Unlock; inline;
     procedure Clear;
-    function  Contains(constref aValue: T): Boolean;
-    function  Add(constref aValue: T): Boolean;
-    function  Remove(constref aValue: T): Boolean;
+    function  Contains(const aValue: T): Boolean;
+    function  Add(const aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean;
     property  OwnsCollection: Boolean read FOwnsColl;
   end;
 
@@ -307,9 +307,9 @@ type
     procedure EndRead; inline;
     function  WriteCollection: ICollection;
     procedure EndWrite; inline;
-    function  Contains(constref aValue: T): Boolean;
-    function  Add(constref aValue: T): Boolean;
-    function  Remove(constref aValue: T): Boolean;
+    function  Contains(const aValue: T): Boolean;
+    function  Add(const aValue: T): Boolean;
+    function  Remove(const aValue: T): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  OwnsCollection: Boolean read FOwnsColl;
@@ -386,13 +386,13 @@ type
 
   var
     FCount: SizeInt;
-    function  FindEntry(constref aKey: T): PEntry; virtual; abstract;
+    function  FindEntry(const aKey: T): PEntry; virtual; abstract;
     //return True if aKey found, otherwise inserts entry (garbage) and return False;
-    function  FindOrAdd(constref aKey: T; out p: PEntry): Boolean; virtual; abstract;
+    function  FindOrAdd(const aKey: T; out p: PEntry): Boolean; virtual; abstract;
     //returns True only if e removed
-    function  DoSubEntry(constref e: TEntry): Boolean; virtual; abstract;
+    function  DoSubEntry(const e: TEntry): Boolean; virtual; abstract;
     //returns True only if e removed
-    function  DoSymmSubEntry(constref e: TEntry): Boolean; virtual; abstract;
+    function  DoSymmSubEntry(const e: TEntry): Boolean; virtual; abstract;
     function  GetEntryCount: SizeInt; virtual; abstract;
     function  DoDoubleEntryCounters: SizeInt; virtual; abstract;
     function  GetDistinct: IEnumerable; virtual; abstract;  // distinct keys
@@ -400,20 +400,20 @@ type
     procedure DoIntersect(aSet: TSpecMultiSet); virtual; abstract;
 
     function  GetCount: SizeInt; override;
-    procedure DoJoinEntry(constref e: TEntry);
-    procedure DoAddEntry(constref e: TEntry);
+    procedure DoJoinEntry(const e: TEntry);
+    procedure DoAddEntry(const e: TEntry);
     function  GetKeyCount(const aKey: T): SizeInt;
     procedure SetKeyCount(const aKey: T; aValue: SizeInt);
     procedure DoArithAdd(aSet: TSpecMultiSet);
     procedure DoArithSubtract(aSet: TSpecMultiSet);
     procedure DoSymmSubtract(aSet: TSpecMultiSet);
 
-    function  DoAdd(constref aKey: T): Boolean; override;
+    function  DoAdd(const aKey: T): Boolean; override;
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
     function  DoRemoveAll(e: IEnumerable): SizeInt; override;
     property  ElemCount: SizeInt read FCount;
   public
-    function  Contains(constref aValue: T): Boolean; override;
+    function  Contains(const aValue: T): Boolean; override;
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
     function  IsSuperSet(aSet: TSpecMultiSet): Boolean;
@@ -537,10 +537,10 @@ type
     function  _GetRef: TObject;
     function  GetCount: SizeInt;  virtual; abstract;
     function  GetCapacity: SizeInt; virtual; abstract;
-    function  Find(constref aKey: TKey): PEntry; virtual; abstract;
+    function  Find(const aKey: TKey): PEntry; virtual; abstract;
     //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean; virtual; abstract;
-    function  DoExtract(constref aKey: TKey; out v: TValue): Boolean; virtual; abstract;
+    function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; virtual; abstract;
+    function  DoExtract(const aKey: TKey; out v: TValue): Boolean; virtual; abstract;
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; virtual; abstract;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; virtual; abstract;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; virtual; abstract;
@@ -548,7 +548,7 @@ type
     function  DoExtractIf(aTest: TOnKeyTest): TEntryArray; virtual; abstract;
     function  DoExtractIf(aTest: TNestKeyTest): TEntryArray; virtual; abstract;
 
-    function  DoRemove(constref aKey: TKey): Boolean; virtual;
+    function  DoRemove(const aKey: TKey): Boolean; virtual;
     procedure DoClear; virtual; abstract;
     procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure DoTrimToFit; virtual; abstract;
@@ -557,12 +557,12 @@ type
     function  GetEntries: IEntryEnumerable; virtual; abstract;
 
     function  GetValue(const aKey: TKey): TValue; inline;
-    function  DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean; virtual;
-    function  DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; virtual;
+    function  DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; virtual;
-    function  DoAddAll(constref a: array of TEntry): SizeInt;
+    function  DoAddAll(const a: array of TEntry): SizeInt;
     function  DoAddAll(e: IEntryEnumerable): SizeInt;
-    function  DoRemoveAll(constref a: array of TKey): SizeInt;
+    function  DoRemoveAll(const a: array of TKey): SizeInt;
     function  DoRemoveAll(e: IKeyEnumerable): SizeInt;
   public
     function  ToArray: TEntryArray;
@@ -573,37 +573,37 @@ type
   { free unused memory if possible }
     procedure TrimToFit;
   { returns True and aValue mapped to aKey if contains aKey, False otherwise }
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
   { returns value mapped to aKey or aDefault }
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue; inline;
-    function  GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue; inline;
+    function  GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
   { returns True if contains aKey, otherwise adds aKey and returns False }
-    function  FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+    function  FindOrAddMutValue(const aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;
   { returns True and add e only if not contains e.Key }
-    function  Add(constref e: TEntry): Boolean; inline;
+    function  Add(const e: TEntry): Boolean; inline;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
   { returns True if e.Key added, False otherwise }
-    function  AddOrSetValue(constref e: TEntry): Boolean;
+    function  AddOrSetValue(const e: TEntry): Boolean;
   { will add only entries which keys are absent in map }
-    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean;
-    function  ContainsAny(constref a: array of TKey): Boolean;
+    function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
+    function  Contains(const aKey: TKey): Boolean; inline;
+    function  NonContains(const aKey: TKey): Boolean;
+    function  ContainsAny(const a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
-    function  ContainsAll(constref a: array of TKey): Boolean;
+    function  ContainsAll(const a: array of TKey): Boolean;
     function  ContainsAll(e: IKeyEnumerable): Boolean;
-    function  Remove(constref aKey: TKey): Boolean;
-    function  RemoveAll(constref a: array of TKey): SizeInt;
+    function  Remove(const aKey: TKey): Boolean;
+    function  RemoveAll(const a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
     function  RemoveIf(aTest: TKeyTest): SizeInt;
     function  RemoveIf(aTest: TOnKeyTest): SizeInt;
     function  RemoveIf(aTest: TNestKeyTest): SizeInt;
-    function  Extract(constref aKey: TKey; out v: TValue): Boolean;
+    function  Extract(const aKey: TKey; out v: TValue): Boolean;
     function  ExtractIf(aTest: TKeyTest): TEntryArray;
     function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
     function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
@@ -648,15 +648,15 @@ type
     function  WriteMap: IMap;
     procedure EndWrite; inline;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-    procedure AddOrSetValue(const aKey: TKey; constref aValue: TValue);
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;
+    procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
+    function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  Contains(constref aKey: TKey): Boolean;
-    function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
+    function  Contains(const aKey: TKey): Boolean;
+    function  Extract(const aKey: TKey; out aValue: TValue): Boolean;
+    function  Remove(const aKey: TKey): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  OwnsMap: Boolean read FOwnsMap;
@@ -684,9 +684,9 @@ type
     public
       function GetEnumerator: TSpecValueEnumerator; virtual; abstract;
       function ToArray: TValueArray;
-      function Contains(constref aValue: TValue): Boolean; virtual; abstract;
-      function Add(constref aValue: TValue): Boolean; virtual; abstract;
-      function Remove(constref aValue: TValue): Boolean; virtual; abstract;
+      function Contains(const aValue: TValue): Boolean; virtual; abstract;
+      function Add(const aValue: TValue): Boolean; virtual; abstract;
+      function Remove(const aValue: TValue): Boolean; virtual; abstract;
       property Count: SizeInt read GetCount;
     end;
 
@@ -728,24 +728,24 @@ type
     procedure DoClear; virtual; abstract;
     procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure DoTrimToFit; virtual; abstract;
-    function  Find(constref aKey: TKey): PMMEntry; virtual; abstract;
-    function  FindOrAdd(constref aKey: TKey): PMMEntry; virtual; abstract;
-    function  DoRemoveKey(constref aKey: TKey): SizeInt; virtual; abstract;
+    function  Find(const aKey: TKey): PMMEntry; virtual; abstract;
+    function  FindOrAdd(const aKey: TKey): PMMEntry; virtual; abstract;
+    function  DoRemoveKey(const aKey: TKey): SizeInt; virtual; abstract;
     function  GetKeys: IKeyEnumerable; virtual; abstract;
     function  GetValues: IValueEnumerable; virtual; abstract;
     function  GetEntries: IEntryEnumerable; virtual; abstract;
 
-    function  DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
-    function  DoAddAll(constref a: array of TEntry): SizeInt;
+    function  DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
+    function  DoAddAll(const a: array of TEntry): SizeInt;
     function  DoAddAll(e: IEntryEnumerable): SizeInt;
-    function  DoAddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
-    function  DoAddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
-    function  DoRemove(constref aKey: TKey; constref aValue: TValue): Boolean;
-    function  DoRemoveAll(constref a: array of TEntry): SizeInt;
+    function  DoAddValues(const aKey: TKey; const a: array of TValue): SizeInt;
+    function  DoAddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
+    function  DoRemove(const aKey: TKey; const aValue: TValue): Boolean;
+    function  DoRemoveAll(const a: array of TEntry): SizeInt;
     function  DoRemoveAll(e: IEntryEnumerable): SizeInt;
-    function  DoRemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
-    function  DoRemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
-    function  DoRemoveKeys(constref a: array of TKey): SizeInt;
+    function  DoRemoveValues(const aKey: TKey; const a: array of TValue): SizeInt;
+    function  DoRemoveValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
+    function  DoRemoveKeys(const a: array of TKey): SizeInt;
     function  DoRemoveKeys(e: IKeyEnumerable): SizeInt;
   public
     function  IsEmpty: Boolean;
@@ -754,28 +754,28 @@ type
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
 
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  ContainsValue(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  Contains(const aKey: TKey): Boolean; inline;
+    function  ContainsValue(const aKey: TKey; const aValue: TValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if value-collection of an aKey adds aValue }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+    function  Add(const aKey: TKey; const aValue: TValue): Boolean;
   { returns True and add e only if value-collection of an e.Key adds e.Value }
-    function  Add(constref e: TEntry): Boolean;
+    function  Add(const e: TEntry): Boolean;
   { returns count of added values }
-    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
-    function  AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
-    function  AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+    function  AddValues(const aKey: TKey; const a: array of TValue): SizeInt;
+    function  AddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
   { returns True if aKey exists and mapped to aValue; aValue will be removed(and aKey if no more mapped values) }
-    function  Remove(constref aKey: TKey; constref aValue: TValue): Boolean;
-    function  Remove(constref e: TEntry): Boolean;
-    function  RemoveAll(constref a: array of TEntry): SizeInt;
+    function  Remove(const aKey: TKey; const aValue: TValue): Boolean;
+    function  Remove(const e: TEntry): Boolean;
+    function  RemoveAll(const a: array of TEntry): SizeInt;
     function  RemoveAll(e: IEntryEnumerable): SizeInt;
-    function  RemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
-    function  RemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+    function  RemoveValues(const aKey: TKey; const a: array of TValue): SizeInt;
+    function  RemoveValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
   { if aKey exists then removes if with mapped values; returns count of removed values }
-    function  RemoveKey(constref aKey: TKey): SizeInt;
+    function  RemoveKey(const aKey: TKey): SizeInt;
   { returns count of removed values }
-    function  RemoveKeys(constref a: array of TKey): SizeInt;
+    function  RemoveKeys(const a: array of TKey): SizeInt;
   { returns count of removed values }
     function  RemoveKeys(e: IKeyEnumerable): SizeInt;
   { enumerates values mapped to aKey(empty if aKey is missing) }
@@ -784,7 +784,7 @@ type
     function  Values: IValueEnumerable;
     function  Entries: IEntryEnumerable;
   { returns count of values mapped to aKey (similar as multiset)}
-    function  ValueCount(constref aKey: TKey): SizeInt;
+    function  ValueCount(const aKey: TKey): SizeInt;
     property  UniqueValues: Boolean read GetUniqueValues;
     property  Count: SizeInt read FCount;
     property  KeyCount: SizeInt read GetKeyCount;
@@ -801,19 +801,19 @@ type
       Row:    TRow;
       Column: TCol;
       Value:  TValue;
-      constructor Create(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue);
+      constructor Create(const aRow: TRow; const aCol: TCol; const aValue: TValue);
     end;
 
     TColData = record
       Row:   TRow;
       Value: TValue;
-      constructor Create(constref aRow: TRow; constref aValue: TValue);
+      constructor Create(const aRow: TRow; const aValue: TValue);
     end;
 
     TRowData = record
       Column: TCol;
       Value:  TValue;
-      constructor Create(constref aCol: TCol; constref aValue: TValue);
+      constructor Create(const aCol: TCol; const aValue: TValue);
     end;
 
     TSpecTable2D        = TGAbstractTable2D;
@@ -832,13 +832,13 @@ type
       function  GetEnumerator: TRowDataEnumerator;
       function  IsEmpty: Boolean;
       procedure TrimToFit;
-      function  Contains(constref aCol: TCol): Boolean;
-      function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
+      function  Contains(const aCol: TCol): Boolean;
+      function  TryGetValue(const aCol: TCol; out aValue: TValue): Boolean;
       function  GetValueOrDefault(const aCol: TCol): TValue;
     { returns True if not contains aCol was added, False otherwise }
-      function  Add(constref aCol: TCol; constref aValue: TValue): Boolean;
+      function  Add(const aCol: TCol; const aValue: TValue): Boolean;
       procedure AddOrSetValue(const aCol: TCol; const aValue: TValue);
-      function  Remove(constref aCol: TCol): Boolean;
+      function  Remove(const aCol: TCol): Boolean;
       property  Count: SizeInt read GetCount;
       property  Cells[const aCol: TCol]: TValue read GetValueOrDefault write AddOrSetValue; default;
     end;
@@ -855,13 +855,13 @@ type
       function  GetEnumerator: TRowDataEnumerator; virtual; abstract;
       function  IsEmpty: Boolean;
       procedure TrimToFit; virtual; abstract;
-      function  Contains(constref aCol: TCol): Boolean; virtual; abstract;
-      function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; virtual; abstract;
+      function  Contains(const aCol: TCol): Boolean; virtual; abstract;
+      function  TryGetValue(const aCol: TCol; out aValue: TValue): Boolean; virtual; abstract;
       function  GetValueOrDefault(const aCol: TCol): TValue; inline;
     { returns True if not contains aCol was added, False otherwise }
-      function  Add(constref aCol: TCol; constref aValue: TValue): Boolean; virtual; abstract;
+      function  Add(const aCol: TCol; const aValue: TValue): Boolean; virtual; abstract;
       procedure AddOrSetValue(const aCol: TCol; const aValue: TValue); virtual; abstract;
-      function  Remove(constref aCol: TCol): Boolean; virtual; abstract;
+      function  Remove(const aCol: TCol): Boolean; virtual; abstract;
       property  Count: SizeInt read GetCount;
       property  Cells[const aCol: TCol]: TValue read GetValueOrDefault write AddOrSetValue; default;
     end;
@@ -880,10 +880,10 @@ type
   var
     FCellCount: SizeInt;
     function  GetRowCount: SizeInt; virtual; abstract;
-    function  DoFindRow(constref aRow: TRow): PRowEntry; virtual; abstract;
+    function  DoFindRow(const aRow: TRow): PRowEntry; virtual; abstract;
   { returns True if row found, False otherwise }
-    function  DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean; virtual; abstract;
-    function  DoRemoveRow(constref aRow: TRow): SizeInt; virtual; abstract;
+    function  DoFindOrAddRow(const aRow: TRow; out p: PRowEntry): Boolean; virtual; abstract;
+    function  DoRemoveRow(const aRow: TRow): SizeInt; virtual; abstract;
     function  GetColumn(const aCol: TCol): IColDataEnumerable; virtual; abstract;
     function  GetCellData: ICellDataEnumerable; virtual; abstract;
     function  GetColCount(const aRow: TRow): SizeInt;
@@ -897,23 +897,23 @@ type
     procedure Clear; virtual; abstract;
     procedure TrimToFit; virtual; abstract;
     procedure EnsureRowCapacity(aValue: SizeInt); virtual; abstract;
-    function  ContainsRow(constref aRow: TRow): Boolean; inline;
-    function  FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
+    function  ContainsRow(const aRow: TRow): Boolean; inline;
+    function  FindRow(const aRow: TRow; out aMap: IRowMap): Boolean;
   { if not contains aRow then add aRow and returns True, False otherwise }
-    function  AddRow(constref aRow: TRow): Boolean; inline;
-    function  AddRows(constref a: array of TRow): SizeInt;
+    function  AddRow(const aRow: TRow): Boolean; inline;
+    function  AddRows(const a: array of TRow): SizeInt;
   { returns count of the columns in the removed row }
-    function  RemoveRow(constref aRow: TRow): SizeInt; inline;
+    function  RemoveRow(const aRow: TRow): SizeInt; inline;
   { returns count of the removed cells }
-    function  RemoveColumn(constref aCol: TCol): SizeInt;
-    function  ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
-    function  FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
-    function  GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue = Default(TValue)): TValue; inline;
+    function  RemoveColumn(const aCol: TCol): SizeInt;
+    function  ContainsCell(const aRow: TRow; const aCol: TCol): Boolean;
+    function  FindCell(const aRow: TRow; const aCol: TCol; out aValue: TValue): Boolean;
+    function  GetCellDef(const aRow: TRow; const aCol: TCol; aDef: TValue): TValue; inline;
     procedure AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
-    function  AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
-    function  AddCell(constref e: TCellData): Boolean; inline;
-    function  AddCells(constref a: array of TCellData): SizeInt;
-    function  RemoveCell(constref aRow: TRow; constref aCol: TCol): Boolean;
+    function  AddCell(const aRow: TRow; const aCol: TCol; const aValue: TValue): Boolean;
+    function  AddCell(const e: TCellData): Boolean; inline;
+    function  AddCells(const a: array of TCellData): SizeInt;
+    function  RemoveCell(const aRow: TRow; const aCol: TCol): Boolean;
 
     function  Rows: IRowEnumerable; virtual; abstract;
     function  EnumRowMaps: IRowMapEnumerable; virtual; abstract;
@@ -1731,12 +1731,12 @@ end;
 
 { TGAbstractCollection }
 
-function TGAbstractCollection.DoRemove(constref aValue: T): Boolean;
+function TGAbstractCollection.DoRemove(const aValue: T): Boolean;
 begin
   Result := DoExtract(aValue);
 end;
 
-function TGAbstractCollection.DoAddAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.DoAddAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1746,7 +1746,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGAbstractCollection.DoRemoveAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.DoRemoveAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1789,13 +1789,13 @@ begin
     end;
 end;
 
-function TGAbstractCollection.Add(constref aValue: T): Boolean;
+function TGAbstractCollection.Add(const aValue: T): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aValue);
 end;
 
-function TGAbstractCollection.AddAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.AddAll(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
@@ -1813,12 +1813,12 @@ begin
     end;
 end;
 
-function TGAbstractCollection.NonContains(constref aValue: T): Boolean;
+function TGAbstractCollection.NonContains(const aValue: T): Boolean;
 begin
   Result := not Contains(aValue);
 end;
 
-function TGAbstractCollection.ContainsAny(constref a: array of T): Boolean;
+function TGAbstractCollection.ContainsAny(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1850,7 +1850,7 @@ begin
     Result := NonEmpty;
 end;
 
-function TGAbstractCollection.ContainsAll(constref a: array of T): Boolean;
+function TGAbstractCollection.ContainsAll(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1876,13 +1876,13 @@ begin
   Result := True;
 end;
 
-function TGAbstractCollection.Remove(constref aValue: T): Boolean;
+function TGAbstractCollection.Remove(const aValue: T): Boolean;
 begin
   CheckInIteration;
   Result := DoRemove(aValue);
 end;
 
-function TGAbstractCollection.RemoveAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.RemoveAll(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveAll(a);
@@ -1918,7 +1918,7 @@ begin
   Result := DoRemoveIf(aTest);
 end;
 
-function TGAbstractCollection.Extract(constref aValue: T): Boolean;
+function TGAbstractCollection.Extract(const aValue: T): Boolean;
 begin
   CheckInIteration;
   Result := DoExtract(aValue);
@@ -2000,7 +2000,7 @@ begin
   end;
 end;
 
-function TGThreadCollection.Contains(constref aValue: T): Boolean;
+function TGThreadCollection.Contains(const aValue: T): Boolean;
 begin
   Lock;
   try
@@ -2010,7 +2010,7 @@ begin
   end;
 end;
 
-function TGThreadCollection.Add(constref aValue: T): Boolean;
+function TGThreadCollection.Add(const aValue: T): Boolean;
 begin
   Lock;
   try
@@ -2020,7 +2020,7 @@ begin
   end;
 end;
 
-function TGThreadCollection.Remove(constref aValue: T): Boolean;
+function TGThreadCollection.Remove(const aValue: T): Boolean;
 begin
   Lock;
   try
@@ -2105,7 +2105,7 @@ begin
   FRWLock.EndWrite;
 end;
 
-function TGThreadRWCollection.Contains(constref aValue: T): Boolean;
+function TGThreadRWCollection.Contains(const aValue: T): Boolean;
 begin
   FRWLock.BeginRead;
   try
@@ -2115,7 +2115,7 @@ begin
   end;
 end;
 
-function TGThreadRWCollection.Add(constref aValue: T): Boolean;
+function TGThreadRWCollection.Add(const aValue: T): Boolean;
 begin
   FRWLock.BeginWrite;
   try
@@ -2125,7 +2125,7 @@ begin
   end;
 end;
 
-function TGThreadRWCollection.Remove(constref aValue: T): Boolean;
+function TGThreadRWCollection.Remove(const aValue: T): Boolean;
 begin
   FRWLock.BeginWrite;
   try
@@ -2302,7 +2302,7 @@ begin
   Result := FCount;
 end;
 
-procedure TGAbstractMultiSet.DoJoinEntry(constref e: TEntry);
+procedure TGAbstractMultiSet.DoJoinEntry(const e: TEntry);
 var
   p: PEntry;
 begin
@@ -2321,7 +2321,7 @@ begin
 {$POP}
 end;
 
-procedure TGAbstractMultiSet.DoAddEntry(constref e: TEntry);
+procedure TGAbstractMultiSet.DoAddEntry(const e: TEntry);
 var
   p: PEntry;
 begin
@@ -2409,7 +2409,7 @@ begin
     Clear;
 end;
 
-function TGAbstractMultiSet.DoAdd(constref aKey: T): Boolean;
+function TGAbstractMultiSet.DoAdd(const aKey: T): Boolean;
 var
   p: PEntry;
 begin
@@ -2476,7 +2476,7 @@ begin
     end;
 end;
 
-function TGAbstractMultiSet.Contains(constref aValue: T): Boolean;
+function TGAbstractMultiSet.Contains(const aValue: T): Boolean;
 begin
   Result := FindEntry(aValue) <> nil;
 end;
@@ -2704,7 +2704,7 @@ begin
   Result := Self;
 end;
 
-function TGAbstractMap.DoRemove(constref aKey: TKey): Boolean;
+function TGAbstractMap.DoRemove(const aKey: TKey): Boolean;
 var
   v: TValue;
 begin
@@ -2717,7 +2717,7 @@ begin
     raise ELGMapError.Create(SEKeyNotFound);
 end;
 
-function TGAbstractMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGAbstractMap.DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2730,7 +2730,7 @@ begin
   Result := False;
 end;
 
-function TGAbstractMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMap.DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2750,7 +2750,7 @@ begin
   p^.Value := aValue;
 end;
 
-function TGAbstractMap.DoAddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMap.DoAddAll(const a: array of TEntry): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2776,7 +2776,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGAbstractMap.DoRemoveAll(constref a: array of TKey): SizeInt;
+function TGAbstractMap.DoRemoveAll(const a: array of TKey): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2851,7 +2851,7 @@ begin
   DoTrimToFit;
 end;
 
-function TGAbstractMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGAbstractMap.TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2864,13 +2864,13 @@ begin
   Result := False;
 end;
 
-function TGAbstractMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+function TGAbstractMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
 end;
 
-function TGAbstractMap.GetMutValueDef(constref aKey: TKey; constref aDefault: TValue): PValue;
+function TGAbstractMap.GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
 var
   pe: PEntry;
 begin
@@ -2880,7 +2880,7 @@ begin
   Result := @pe^.Value;
 end;
 
-function TGAbstractMap.FindOrAddMutValue(constref aKey: TKey; out p: PValue): Boolean;
+function TGAbstractMap.FindOrAddMutValue(const aKey: TKey; out p: PValue): Boolean;
 var
   pe: PEntry;
 begin
@@ -2889,13 +2889,13 @@ begin
   p := @pe^.Value;
 end;
 
-function TGAbstractMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
 end;
 
-function TGAbstractMap.Add(constref e: TEntry): Boolean;
+function TGAbstractMap.Add(const e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
@@ -2906,13 +2906,13 @@ begin
   DoAddOrSetValue(aKey, aValue);
 end;
 
-function TGAbstractMap.AddOrSetValue(constref e: TEntry): Boolean;
+function TGAbstractMap.AddOrSetValue(const e: TEntry): Boolean;
 begin
   CheckInIteration;
   Result := DoAddOrSetValue(e.Key, e.Value);
 end;
 
-function TGAbstractMap.AddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMap.AddAll(const a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
@@ -2930,23 +2930,23 @@ begin
     end;
 end;
 
-function TGAbstractMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGAbstractMap.Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoSetValue(aKey, aNewValue);
 end;
 
-function TGAbstractMap.Contains(constref aKey: TKey): Boolean;
+function TGAbstractMap.Contains(const aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGAbstractMap.NonContains(constref aKey: TKey): Boolean;
+function TGAbstractMap.NonContains(const aKey: TKey): Boolean;
 begin
   Result := not Contains(aKey);
 end;
 
-function TGAbstractMap.ContainsAny(constref a: array of TKey): Boolean;
+function TGAbstractMap.ContainsAny(const a: array of TKey): Boolean;
 var
   I: SizeInt;
 begin
@@ -2973,7 +2973,7 @@ begin
   Result := False;
 end;
 
-function TGAbstractMap.ContainsAll(constref a: array of TKey): Boolean;
+function TGAbstractMap.ContainsAll(const a: array of TKey): Boolean;
 var
   I: SizeInt;
 begin
@@ -2998,13 +2998,13 @@ begin
   Result := True;
 end;
 
-function TGAbstractMap.Remove(constref aKey: TKey): Boolean;
+function TGAbstractMap.Remove(const aKey: TKey): Boolean;
 begin
   CheckInIteration;
   Result := DoRemove(aKey);
 end;
 
-function TGAbstractMap.RemoveAll(constref a: array of TKey): SizeInt;
+function TGAbstractMap.RemoveAll(const a: array of TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveAll(a);
@@ -3040,7 +3040,7 @@ begin
   Result := DoRemoveIf(aTest);
 end;
 
-function TGAbstractMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
+function TGAbstractMap.Extract(const aKey: TKey; out v: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoExtract(aKey, v);
@@ -3165,7 +3165,7 @@ begin
   FRWLock.EndWrite;
 end;
 
-function TGThreadRWMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGThreadRWMap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   FRWLock.BeginWrite;
   try
@@ -3175,7 +3175,7 @@ begin
   end;
 end;
 
-procedure TGThreadRWMap.AddOrSetValue(const aKey: TKey; constref aValue: TValue);
+procedure TGThreadRWMap.AddOrSetValue(const aKey: TKey; const aValue: TValue);
 begin
   FRWLock.BeginWrite;
   try
@@ -3185,7 +3185,7 @@ begin
   end;
 end;
 
-function TGThreadRWMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGThreadRWMap.TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
 begin
   FRWLock.BeginRead;
   try
@@ -3195,7 +3195,7 @@ begin
   end;
 end;
 
-function TGThreadRWMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+function TGThreadRWMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
 begin
   FRWLock.BeginRead;
   try
@@ -3205,7 +3205,7 @@ begin
   end;
 end;
 
-function TGThreadRWMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGThreadRWMap.Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
 begin
   FRWLock.BeginWrite;
   try
@@ -3215,7 +3215,7 @@ begin
   end;
 end;
 
-function TGThreadRWMap.Contains(constref aKey: TKey): Boolean;
+function TGThreadRWMap.Contains(const aKey: TKey): Boolean;
 begin
   FRWLock.BeginRead;
   try
@@ -3225,7 +3225,7 @@ begin
   end;
 end;
 
-function TGThreadRWMap.Extract(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGThreadRWMap.Extract(const aKey: TKey; out aValue: TValue): Boolean;
 begin
   FRWLock.BeginWrite;
   try
@@ -3235,7 +3235,7 @@ begin
   end;
 end;
 
-function TGThreadRWMap.Remove(constref aKey: TKey): Boolean;
+function TGThreadRWMap.Remove(const aKey: TKey): Boolean;
 begin
   FRWLock.BeginWrite;
   try
@@ -3312,7 +3312,7 @@ end;
 
 { TGAbstractMultiMap }
 
-function TGAbstractMultiMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
 var
   p: PMMEntry;
 begin
@@ -3325,7 +3325,7 @@ begin
   Result := False;
 end;
 
-function TGAbstractMultiMap.DoAddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.DoAddAll(const a: array of TEntry): SizeInt;
 var
   I: SizeInt;
 begin
@@ -3350,7 +3350,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGAbstractMultiMap.DoAddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.DoAddValues(const aKey: TKey; const a: array of TValue): SizeInt;
 var
   p: PMMEntry;
   v: TValue;
@@ -3365,7 +3365,7 @@ begin
     end;
 end;
 
-function TGAbstractMultiMap.DoAddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.DoAddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
 var
   p: PMMEntry;
 begin
@@ -3381,7 +3381,7 @@ begin
   FCount += Result;
 end;
 
-function TGAbstractMultiMap.DoRemove(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.DoRemove(const aKey: TKey; const aValue: TValue): Boolean;
 var
   p: PMMEntry;
 begin
@@ -3397,7 +3397,7 @@ begin
     Result := False;
 end;
 
-function TGAbstractMultiMap.DoRemoveAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.DoRemoveAll(const a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
@@ -3426,7 +3426,7 @@ begin
     e.Discard;
 end;
 
-function TGAbstractMultiMap.DoRemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.DoRemoveValues(const aKey: TKey; const a: array of TValue): SizeInt;
 var
   p: PMMEntry;
   v: TValue;
@@ -3443,7 +3443,7 @@ begin
     end;
 end;
 
-function TGAbstractMultiMap.DoRemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.DoRemoveValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
 var
   p: PMMEntry;
   v: TValue;
@@ -3462,7 +3462,7 @@ begin
     e.FindFirst(v);///////////////
 end;
 
-function TGAbstractMultiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
+function TGAbstractMultiMap.DoRemoveKeys(const a: array of TKey): SizeInt;
 var
   k: TKey;
 begin
@@ -3511,12 +3511,12 @@ begin
   DoTrimToFit;
 end;
 
-function TGAbstractMultiMap.Contains(constref aKey: TKey): Boolean;
+function TGAbstractMultiMap.Contains(const aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGAbstractMultiMap.ContainsValue(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.ContainsValue(const aKey: TKey; const aValue: TValue): Boolean;
 var
   p: PMMEntry;
 begin
@@ -3527,18 +3527,18 @@ begin
     Result := False;
 end;
 
-function TGAbstractMultiMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.Add(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
 end;
 
-function TGAbstractMultiMap.Add(constref e: TEntry): Boolean;
+function TGAbstractMultiMap.Add(const e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
 
-function TGAbstractMultiMap.AddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.AddAll(const a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
@@ -3556,30 +3556,30 @@ begin
     end;
 end;
 
-function TGAbstractMultiMap.AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.AddValues(const aKey: TKey; const a: array of TValue): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddValues(aKey, a);
 end;
 
-function TGAbstractMultiMap.AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.AddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddValues(aKey, e);
 end;
 
-function TGAbstractMultiMap.Remove(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.Remove(const aKey: TKey; const aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoRemove(aKey, aValue);
 end;
 
-function TGAbstractMultiMap.Remove(constref e: TEntry): Boolean;
+function TGAbstractMultiMap.Remove(const e: TEntry): Boolean;
 begin
   Result := Remove(e.Key, e.Value);
 end;
 
-function TGAbstractMultiMap.RemoveAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.RemoveAll(const a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveAll(a);
@@ -3597,13 +3597,13 @@ begin
     end;
 end;
 
-function TGAbstractMultiMap.RemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.RemoveValues(const aKey: TKey; const a: array of TValue): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveValues(aKey, a);
 end;
 
-function TGAbstractMultiMap.RemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.RemoveValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveValues(aKey, e)
@@ -3615,14 +3615,14 @@ begin
     end;
 end;
 
-function TGAbstractMultiMap.RemoveKey(constref aKey: TKey): SizeInt;
+function TGAbstractMultiMap.RemoveKey(const aKey: TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveKey(aKey);
   FCount -= Result;
 end;
 
-function TGAbstractMultiMap.RemoveKeys(constref a: array of TKey): SizeInt;
+function TGAbstractMultiMap.RemoveKeys(const a: array of TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveKeys(a);
@@ -3672,7 +3672,7 @@ begin
   Result := GetEntries;
 end;
 
-function TGAbstractMultiMap.ValueCount(constref aKey: TKey): SizeInt;
+function TGAbstractMultiMap.ValueCount(const aKey: TKey): SizeInt;
 var
   p: PMMEntry;
 begin
@@ -3685,7 +3685,7 @@ end;
 
 { TGAbstractTable2D.TCellData }
 
-constructor TGAbstractTable2D.TCellData.Create(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue);
+constructor TGAbstractTable2D.TCellData.Create(const aRow: TRow; const aCol: TCol; const aValue: TValue);
 begin
   Row := aRow;
   Column := aCol;
@@ -3694,7 +3694,7 @@ end;
 
 { TGAbstractTable2D.TColData }
 
-constructor TGAbstractTable2D.TColData.Create(constref aRow: TRow; constref aValue: TValue);
+constructor TGAbstractTable2D.TColData.Create(const aRow: TRow; const aValue: TValue);
 begin
   Row := aRow;
   Value := aValue;
@@ -3702,7 +3702,7 @@ end;
 
 { TGAbstractTable2D.TRowData }
 
-constructor TGAbstractTable2D.TRowData.Create(constref aCol: TCol; constref aValue: TValue);
+constructor TGAbstractTable2D.TRowData.Create(const aCol: TCol; const aValue: TValue);
 begin
   Column := aCol;
   Value := aValue;
@@ -3758,12 +3758,12 @@ begin
   Result := CellCount <> 0;
 end;
 
-function TGAbstractTable2D.ContainsRow(constref aRow: TRow): Boolean;
+function TGAbstractTable2D.ContainsRow(const aRow: TRow): Boolean;
 begin
   Result := DoFindRow(aRow) <> nil;
 end;
 
-function TGAbstractTable2D.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
+function TGAbstractTable2D.FindRow(const aRow: TRow; out aMap: IRowMap): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3773,14 +3773,14 @@ begin
     aMap := p^.Columns;
 end;
 
-function TGAbstractTable2D.AddRow(constref aRow: TRow): Boolean;
+function TGAbstractTable2D.AddRow(const aRow: TRow): Boolean;
 var
   p: PRowEntry;
 begin
   Result := not DoFindOrAddRow(aRow, p);
 end;
 
-function TGAbstractTable2D.AddRows(constref a: array of TRow): SizeInt;
+function TGAbstractTable2D.AddRows(const a: array of TRow): SizeInt;
 var
   r: TRow;
 begin
@@ -3789,12 +3789,12 @@ begin
     Result += Ord(AddRow(r));
 end;
 
-function TGAbstractTable2D.RemoveRow(constref aRow: TRow): SizeInt;
+function TGAbstractTable2D.RemoveRow(const aRow: TRow): SizeInt;
 begin
   Result := DoRemoveRow(aRow);
 end;
 
-function TGAbstractTable2D.RemoveColumn(constref aCol: TCol): SizeInt;
+function TGAbstractTable2D.RemoveColumn(const aCol: TCol): SizeInt;
 var
   Map: IRowMap;
 begin
@@ -3803,7 +3803,7 @@ begin
     Result += Ord(Map.Remove(aCol));
 end;
 
-function TGAbstractTable2D.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
+function TGAbstractTable2D.ContainsCell(const aRow: TRow; const aCol: TCol): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3814,7 +3814,7 @@ begin
     Result := False;
 end;
 
-function TGAbstractTable2D.FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
+function TGAbstractTable2D.FindCell(const aRow: TRow; const aCol: TCol; out aValue: TValue): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3825,7 +3825,7 @@ begin
     Result := False;
 end;
 
-function TGAbstractTable2D.GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
+function TGAbstractTable2D.GetCellDef(const aRow: TRow; const aCol: TCol; aDef: TValue): TValue;
 begin
   if not FindCell(aRow, aCol, Result) then
     Result := aDef;
@@ -3839,19 +3839,19 @@ begin
   p^.Columns[aCol] := aValue;
 end;
 
-function TGAbstractTable2D.AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
+function TGAbstractTable2D.AddCell(const aRow: TRow; const aCol: TCol; const aValue: TValue): Boolean;
 begin
   Result := not ContainsCell(aRow, aCol);
   if Result then
     AddOrSetCell(aRow, aCol, aValue);
 end;
 
-function TGAbstractTable2D.AddCell(constref e: TCellData): Boolean;
+function TGAbstractTable2D.AddCell(const e: TCellData): Boolean;
 begin
   Result := AddCell(e.Row, e.Column, e.Value);
 end;
 
-function TGAbstractTable2D.AddCells(constref a: array of TCellData): SizeInt;
+function TGAbstractTable2D.AddCells(const a: array of TCellData): SizeInt;
 var
   e: TCellData;
 begin
@@ -3860,7 +3860,7 @@ begin
     Result += Ord(AddCell(e));
 end;
 
-function TGAbstractTable2D.RemoveCell(constref aRow: TRow; constref aCol: TCol): Boolean;
+function TGAbstractTable2D.RemoveCell(const aRow: TRow; const aCol: TCol): Boolean;
 var
   p: PRowEntry;
 begin

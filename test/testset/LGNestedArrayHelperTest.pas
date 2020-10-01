@@ -433,7 +433,7 @@ begin
 end;
 
 {$DEFINE IntCmpMacro :=
-  function IntCmp(constref L, R: Integer): Boolean;
+  function IntCmp(const L, R: Integer): Boolean;
   begin
     Result := L < R;
   end
@@ -3584,7 +3584,7 @@ begin
 end;
 
 {$DEFINE PairCmpMacro :=
-  function PairCmp(constref L, R: TIntPair): Boolean;
+  function PairCmp(const L, R: TIntPair): Boolean;
   begin
     Result := L.Data < R.Data;
   end

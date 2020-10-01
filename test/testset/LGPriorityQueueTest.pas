@@ -46,7 +46,7 @@ type
     TIntHelper               = specialize TGComparableArrayHelper<Integer>;
     TIntArray                = TIntBaseBinHeap.TArray;
     THandleArray             = array of THandle;
-    function LongIntCmp(constref L, R: LongInt): Boolean;
+    function LongIntCmp(const L, R: LongInt): Boolean;
   published
     procedure BaseBinHeap;
     procedure BaseBinHeapReverse;
@@ -137,7 +137,7 @@ begin
   Value := v;
 end;
 
-function TGPriorityQueueTest.LongIntCmp(constref L, R: LongInt): Boolean;
+function TGPriorityQueueTest.LongIntCmp(const L, R: LongInt): Boolean;
 begin
   Result := L < R;
 end;
@@ -347,7 +347,7 @@ begin
   end;
 end;
 
-function CmpLongInt(constref L, R: LongInt): Boolean;
+function CmpLongInt(const L, R: LongInt): Boolean;
 begin
   Result := L < R;
 end;

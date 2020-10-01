@@ -58,7 +58,7 @@ type
     function  GenerateC125Clique: TGraph;
     function  GenerateC125Mis: TGraph;
     function  GenerateQueen6_6: TGraph;
-    procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TDummy);
+    procedure EdgeAdding(const {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TDummy);
     procedure SetFound(const aSet: TIntArray; var {%H-}aCancel: Boolean);
     procedure SetFound2(const aSet: TIntArray; var aCancel: Boolean);
   published
@@ -615,7 +615,7 @@ begin
   Result.AddEdges([{$I queen6_6.inc}]);
 end;
 
-procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; var aData: TDummy);
+procedure TSimpleGraphTest.EdgeAdding(const aSrc, aDst: Integer; var aData: TDummy);
 begin
   Inc(FCallCount);
 end;

@@ -134,8 +134,8 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     function  Contains(aValue: SizeInt): Boolean; inline;
     function  Add(aValue: SizeInt): Boolean;
-    function  AddAll(constref a: array of SizeInt): SizeInt;
-    function  AddAll(constref s: TIntHashSet): SizeInt;
+    function  AddAll(const a: array of SizeInt): SizeInt;
+    function  AddAll(const s: TIntHashSet): SizeInt;
     function  Remove(aValue: SizeInt): Boolean; inline;
     property  Count: SizeInt read GetCount;
   end;
@@ -145,8 +145,8 @@ type
     FLess,
     FGreater: SizeInt;
   public
-    class function HashCode(constref aValue: TOrdIntPair): SizeInt; static;
-    class function Equal(constref L, R: TOrdIntPair): Boolean; static;
+    class function HashCode(const aValue: TOrdIntPair): SizeInt; static;
+    class function Equal(const L, R: TOrdIntPair): Boolean; static;
     constructor Create(L, R: SizeInt);
     function Key: TOrdIntPair;
     property Left: SizeInt read FLess;
@@ -195,8 +195,8 @@ type
   public
     function  GetEnumerator: TEnumerator; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
-    procedure Add(constref aValue: TEntry);
-    procedure AddAll(constref aList: TGJoinableHashList);
+    procedure Add(const aValue: TEntry);
+    procedure AddAll(const aList: TGJoinableHashList);
     procedure Remove(aValue: SizeInt); inline;
     property  Count: SizeInt read GetCount;
   end;
@@ -226,7 +226,7 @@ type
   TCostItem = record
     Index: SizeInt;
     Cost: TCost;
-    class operator < (constref L, R: TCostItem): Boolean; inline;
+    class operator < (const L, R: TCostItem): Boolean; inline;
     constructor Create(aIndex: SizeInt; aCost: TCost);
     property Key: SizeInt read Index;
   end;
@@ -250,7 +250,7 @@ type
       Source,
       Destination: SizeInt;
       Weight:  TWeight;
-      class operator < (constref L, R: TWeightEdge): Boolean; inline;
+      class operator < (const L, R: TWeightEdge): Boolean; inline;
       constructor Create(s, d: SizeInt; w: TWeight);
       function Edge: TIntEdge; inline;
     end;
@@ -258,7 +258,7 @@ type
     TWeightItem = record
       Index: SizeInt;
       Weight: TWeight;
-      class operator < (constref L, R: TWeightItem): Boolean; inline;
+      class operator < (const L, R: TWeightItem): Boolean; inline;
       constructor Create(aIndex: SizeInt; w: TWeight);
       property Key: SizeInt read Index;
     end;
@@ -267,7 +267,7 @@ type
       Index: SizeInt;
       Rank,
       Weight: TWeight;
-      class operator < (constref L, R: TRankItem): Boolean; inline;
+      class operator < (const L, R: TRankItem): Boolean; inline;
       constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
     end;
 
@@ -278,7 +278,7 @@ type
     end;
 
     TGraph        = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
+    TEstimate     = function(const aSrc, aDst: TVertex): TWeight;
     TEdgeArray    = array of TWeightEdge;
     TWeightMatrix = array of array of TWeight;
     TApspMatrix   = array of array of TApspCell;
@@ -428,8 +428,8 @@ type
     function  Dequeue: T; inline; noreturn;
     function  Peek: T; inline; noreturn;
     function  PeekPtr: PItem; inline; noreturn;
-    procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    procedure Update(aHandle: SizeInt; constref aNewValue: T); inline;
+    procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
+    procedure Update(aHandle: SizeInt; const aNewValue: T); inline;
     function  GetItem(aHandle: SizeInt): T; inline;
     function  GetItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
@@ -455,7 +455,7 @@ type
     FRoot: PNode;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+    function  NewNode(const aValue: T; aHandle: SizeInt): PNode;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
     procedure ExtractNode(aNode: PNode);
@@ -475,8 +475,8 @@ type
     function  Dequeue: T; inline; noreturn;
     function  Peek: T; inline; noreturn;
     function  PeekPtr: PItem; inline; noreturn;
-    procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    procedure Update(aHandle: SizeInt; constref aNewValue: T);
+    procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
+    procedure Update(aHandle: SizeInt; const aNewValue: T);
     procedure Remove(aHandle: SizeInt); inline;
     function  GetItem(aHandle: SizeInt): T; inline;
     function  GetItemPtr(aHandle: SizeInt): PItem; inline;
@@ -503,7 +503,7 @@ type
     FRoot: PNode;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+    function  NewNode(const aValue: T; aHandle: SizeInt): PNode;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
     class function  NodeMerge(L, R: PNode): PNode; static;
@@ -522,8 +522,8 @@ type
     function  Dequeue: T; inline; noreturn;
     function  Peek: T; inline; noreturn;
     function  PeekPtr: PItem; inline; noreturn;
-    procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    procedure Update(aHandle: SizeInt; constref aNewValue: T);
+    procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
+    procedure Update(aHandle: SizeInt; const aNewValue: T);
     function  GetItem(aHandle: SizeInt): T; inline;
     function  GetItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;

@@ -425,13 +425,13 @@ const
 
   InOrderDblSrc21: TIntArray21 = (0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10);
 
-function IntCmp(constref L, R: Integer): Boolean;
+function IntCmp(const L, R: Integer): Boolean;
 begin
   Result := L < R;
 end;
 
 
-function PairCmp(constref L, R: TIntPair): Boolean;
+function PairCmp(const L, R: TIntPair): Boolean;
 begin
   Result := L.Data < R.Data;
 end;

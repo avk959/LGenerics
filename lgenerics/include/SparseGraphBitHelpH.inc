@@ -106,18 +106,18 @@ type
     function  Bsf: SizeInt;
   { returns index of the most significant bit }
     function  Bsr: SizeInt;
-    function  Intersecting(constref aValue: TBits256): Boolean;
+    function  Intersecting(const aValue: TBits256): Boolean;
   { returns the number of bits in the intersection with aValue }
-    function  IntersectionPop(constref aValue: TBits256): SizeInt;
-    function  Contains(constref aValue: TBits256): Boolean;
+    function  IntersectionPop(const aValue: TBits256): SizeInt;
+    function  Contains(const aValue: TBits256): Boolean;
   { returns the number of bits that will be added when union with aValue }
-    function  JoinGain(constref aValue: TBits256): SizeInt;
-    procedure Join(constref aValue: TBits256);
-    function  Union(constref aValue: TBits256): TBits256; inline;
-    procedure Subtract(constref aValue: TBits256); inline;
-    function  Difference(constref aValue: TBits256): TBits256;
-    procedure Intersect(constref aValue: TBits256); inline;
-    function  Intersection(constref aValue: TBits256): TBits256;
+    function  JoinGain(const aValue: TBits256): SizeInt;
+    procedure Join(const aValue: TBits256);
+    function  Union(const aValue: TBits256): TBits256; inline;
+    procedure Subtract(const aValue: TBits256); inline;
+    function  Difference(const aValue: TBits256): TBits256;
+    procedure Intersect(const aValue: TBits256); inline;
+    function  Intersection(const aValue: TBits256): TBits256;
   { returns count of set bits }
     function  PopCount: SizeInt;
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;

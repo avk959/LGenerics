@@ -74,7 +74,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aLowBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean);
+      constructor Create(const aLowBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -88,42 +88,42 @@ type
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
-    function  DoAdd(constref aValue: T): Boolean; override;
-    function  DoExtract(constref aValue: T): Boolean; override;
+    function  DoAdd(const aValue: T): Boolean; override;
+    function  DoExtract(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
     function  DoExtractIf(aTest: TTest): TArray; override;
     function  DoExtractIf(aTest: TOnTest): TArray; override;
     function  DoExtractIf(aTest: TNestTest): TArray; override;
-    function  FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
-    function  FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
-    function  FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
-    function  FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestLT(const aPattern: T; out aValue: T): Boolean;
+    function  FindNearestLE(const aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGT(const aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGE(const aPattern: T; out aValue: T): Boolean;
   public
     destructor Destroy; override;
     function Reverse: IEnumerable; override;
-    function Contains(constref aValue: T): Boolean; override;
+    function Contains(const aValue: T): Boolean; override;
     function FindMin(out aValue: T): Boolean;
     function FindMax(out aValue: T): Boolean;
   { returns True if exists element whose value greater then or equal to aValue (depending on aInclusive) }
-    function FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean;
+    function FindCeil(const aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean;
   { returns True if exists element whose value less then aValue (or equal to aValue, depending on aInclusive) }
-    function FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean;
+    function FindFloor(const aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean;
   { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
-    function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; virtual; abstract;
+    function Head(const aHighBound: T; aInclusive: Boolean = False): IEnumerable; virtual; abstract;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
-    function Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
+    function Tail(const aLowBound: T; aInclusive: Boolean = True): IEnumerable;
   { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
-    function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
+    function Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
        virtual; abstract;
   { returns sorted set whose items are strictly less than(if not aInclusive) aHighBound }
-    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TAbstractTreeSet; virtual; abstract;
+    function HeadSet(const aHighBound: T; aInclusive: Boolean = False): TAbstractTreeSet; virtual; abstract;
   { returns sorted set whose items are greater than or equal(if aInclusive) to aLowBound}
-    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TAbstractTreeSet; virtual; abstract;
+    function TailSet(const aLowBound: T; aInclusive: Boolean = True): TAbstractTreeSet; virtual; abstract;
   { returns sorted set whose items are greater than or equal to aLowBound and strictly less than
     aHighBound(by default) }
-    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeSet;
+    function SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeSet;
        virtual; abstract;
   end;
 
@@ -143,31 +143,31 @@ type
       FDone: Boolean;
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
     class function Comparator: TLess; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref a: array of T);
+    constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
     constructor CreateCopy(aSet: TGBaseTreeSet);
     function Clone: TGBaseTreeSet; override;
-    function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
-    function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
+    function Head(const aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
+    function Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
       override;
-    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGBaseTreeSet; override;
-    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGBaseTreeSet; override;
-    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseTreeSet;
+    function HeadSet(const aHighBound: T; aInclusive: Boolean = False): TGBaseTreeSet; override;
+    function TailSet(const aLowBound: T; aInclusive: Boolean = True): TGBaseTreeSet; override;
+    function SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGBaseTreeSet;
       override;
   end;
 
@@ -189,31 +189,31 @@ type
     protected
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
-    class function DoCompare(constref L, R: T): Boolean; static;
+    class function DoCompare(const L, R: T): Boolean; static;
   public
     class function Comparator: TLess; static; inline;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref a: array of T);
+    constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
     constructor CreateCopy(aSet: TGComparableTreeSet);
     function Clone: TGComparableTreeSet; override;
-    function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
-    function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
+    function Head(const aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
+    function Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
       override;
-    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGComparableTreeSet; override;
-    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGComparableTreeSet; override;
-    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGComparableTreeSet;
+    function HeadSet(const aHighBound: T; aInclusive: Boolean = False): TGComparableTreeSet; override;
+    function TailSet(const aLowBound: T; aInclusive: Boolean = True): TGComparableTreeSet; override;
+    function SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGComparableTreeSet;
       override;
   end;
 
@@ -223,14 +223,14 @@ type
   protected
     procedure NodeRemoved(p: PEntry);
     procedure DoClear; override;
-    function  DoRemove(constref aValue: T): Boolean; override;
+    function  DoRemove(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const a: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     constructor CreateCopy(aSet: TGObjectTreeSet);
     function  Clone: TGObjectTreeSet; override;
@@ -256,31 +256,31 @@ type
     protected
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
   public
     constructor Create;
     constructor Create(aLess: TLess);
     constructor Create(aCapacity: SizeInt; aLess: TLess);
-    constructor Create(constref a: array of T; aLess: TLess);
+    constructor Create(const a: array of T; aLess: TLess);
     constructor Create(e: IEnumerable; aLess: TLess);
     constructor CreateCopy(aSet: TGRegularTreeSet);
     function Comparator: TLess; inline;
     function Clone: TGRegularTreeSet; override;
-    function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
-    function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
+    function Head(const aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
+    function Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
       override;
-    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGRegularTreeSet; override;
-    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGRegularTreeSet; override;
-    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGRegularTreeSet;
+    function HeadSet(const aHighBound: T; aInclusive: Boolean = False): TGRegularTreeSet; override;
+    function TailSet(const aLowBound: T; aInclusive: Boolean = True): TGRegularTreeSet; override;
+    function SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGRegularTreeSet;
       override;
   end;
 
@@ -291,7 +291,7 @@ type
   protected
     procedure NodeRemoved(p: PEntry);
     procedure DoClear; override;
-    function  DoRemove(constref aValue: T): Boolean; override;
+    function  DoRemove(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -299,7 +299,7 @@ type
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aLess: TLess; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLess: TLess; aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aLess: TLess; aOwnsObjects: Boolean = True);
+    constructor Create(const a: array of T; aLess: TLess; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aLess: TLess; aOwnsObjects: Boolean = True);
     constructor CreateCopy(aSet: TGObjectRegularTreeSet);
     function  Clone: TGObjectRegularTreeSet; override;
@@ -321,31 +321,31 @@ type
       FDone: Boolean;
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
+      constructor Create(const aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
   public
     constructor Create;
     constructor Create(aLess: TOnLess);
     constructor Create(aCapacity: SizeInt; aLess: TOnLess);
-    constructor Create(constref a: array of T; aLess: TOnLess);
+    constructor Create(const a: array of T; aLess: TOnLess);
     constructor Create(e: IEnumerable; aLess: TOnLess);
     constructor CreateCopy(aSet: TGDelegatedTreeSet);
     function Comparator: TOnLess; inline;
     function Clone: TGDelegatedTreeSet; override;
-    function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
-    function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
+    function Head(const aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
+    function Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
       override;
-    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGDelegatedTreeSet; override;
-    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGDelegatedTreeSet; override;
-    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGDelegatedTreeSet;
+    function HeadSet(const aHighBound: T; aInclusive: Boolean = False): TGDelegatedTreeSet; override;
+    function TailSet(const aLowBound: T; aInclusive: Boolean = True): TGDelegatedTreeSet; override;
+    function SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGDelegatedTreeSet;
       override;
   end;
 
@@ -354,7 +354,7 @@ type
     FOwnsObjects: Boolean;
     procedure NodeRemoved(p: PEntry);
     procedure DoClear; override;
-    function  DoRemove(constref aValue: T): Boolean; override;
+    function  DoRemove(const aValue: T): Boolean; override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -362,7 +362,7 @@ type
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aLess: TOnLess; aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aLess: TOnLess; aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aLess: TOnLess; aOwnsObjects: Boolean = True);
+    constructor Create(const a: array of T; aLess: TOnLess; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aLess: TOnLess; aOwnsObjects: Boolean = True);
     constructor CreateCopy(aSet: TGObjectDelegatedTreeSet);
     function  Clone: TGObjectDelegatedTreeSet; override;
@@ -398,7 +398,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aSet: TGLiteTreeSet);
+      constructor Create(const aSet: TGLiteTreeSet);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -413,7 +413,7 @@ type
       FInCycle: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aSet: TGLiteTreeSet);
+      constructor Create(const aSet: TGLiteTreeSet);
       function  MoveNext: Boolean; inline;
       procedure Reset;
       property  Current: T read GetCurrent;
@@ -427,7 +427,7 @@ type
       FDone: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aSet: TGLiteTreeSet; constref aHighBound: T; aInclusive: Boolean);
+      constructor Create(const aSet: TGLiteTreeSet; const aHighBound: T; aInclusive: Boolean);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -442,7 +442,7 @@ type
       FInCycle: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aSet: TGLiteTreeSet; constref aLowBound: T; aInclusive: Boolean);
+      constructor Create(const aSet: TGLiteTreeSet; const aLowBound: T; aInclusive: Boolean);
       function  MoveNext: Boolean; inline;
       procedure Reset;
       property  Current: T read GetCurrent;
@@ -456,7 +456,7 @@ type
       FDone: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aSet: TGLiteTreeSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+      constructor Create(const aSet: TGLiteTreeSet; const aLowBound, aHighBound: T; aBounds: TRangeBounds);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -476,7 +476,7 @@ type
       FHighBound: T;
       FInclusive: Boolean;
     public
-      constructor Create(aSet: PSet; constref aHighBound: T; aInclusive: Boolean);
+      constructor Create(aSet: PSet; const aHighBound: T; aInclusive: Boolean);
       function GetEnumerator: THeadEnumerator;
     end;
 
@@ -486,7 +486,7 @@ type
       FLowBound: T;
       FInclusive: Boolean;
     public
-      constructor Create(aSet: PSet; constref aLowBound: T; aInclusive: Boolean);
+      constructor Create(aSet: PSet; const aLowBound: T; aInclusive: Boolean);
       function GetEnumerator: TTailEnumerator;
     end;
 
@@ -497,7 +497,7 @@ type
       FHighBound: T;
       FBounds: TRangeBounds;
     public
-      constructor Create(aSet: PSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+      constructor Create(aSet: PSet; const aLowBound, aHighBound: T; aBounds: TRangeBounds);
       function GetEnumerator: TRangeEnumerator;
     end;
 
@@ -505,14 +505,14 @@ type
     FTree: TTree;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
-    function  FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
-    function  FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
-    function  FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
-    function  FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestLT(const aPattern: T; out aValue: T): Boolean;
+    function  FindNearestLE(const aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGT(const aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGE(const aPattern: T; out aValue: T): Boolean;
     function  GetReverseEnumerator: TReverseEnumerator;
-    function  GetHeadEnumerator(constref aHighBound: T; aInclusive: Boolean): THeadEnumerator;
-    function  GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator;
-    function  GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds): TRangeEnumerator;
+    function  GetHeadEnumerator(const aHighBound: T; aInclusive: Boolean): THeadEnumerator;
+    function  GetTailEnumerator(const aLowBound: T; aInclusive: Boolean): TTailEnumerator;
+    function  GetRangeEnumerator(const aLowBound, aHighBound: T; aBounds: TRangeBounds): TRangeEnumerator;
   public
     function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse; inline;
@@ -523,23 +523,23 @@ type
     procedure TrimToFit; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
   { returns True if element added }
-    function  Add(constref aValue: T): Boolean;
+    function  Add(const aValue: T): Boolean;
   { returns count of added elements }
-    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
     function  AddAll(constref aSet: TGLiteTreeSet): SizeInt;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean;
-    function  ContainsAny(constref a: array of T): Boolean;
+    function  Contains(const aValue: T): Boolean; inline;
+    function  NonContains(const aValue: T): Boolean;
+    function  ContainsAny(const a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
     function  ContainsAny(constref aSet: TGLiteTreeSet): Boolean;
-    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(const a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
     function  ContainsAll(constref aSet: TGLiteTreeSet): Boolean;
   { returns True if element removed }
-    function  Remove(constref aValue: T): Boolean; inline;
+    function  Remove(const aValue: T): Boolean; inline;
   { returns count of removed elements }
-    function  RemoveAll(constref a: array of T): SizeInt;
+    function  RemoveAll(const a: array of T): SizeInt;
     function  RemoveAll(e: IEnumerable): SizeInt;
     function  RemoveAll(constref aSet: TGLiteTreeSet): SizeInt;
   { returns count of removed elements }
@@ -547,7 +547,7 @@ type
     function  RemoveIf(aTest: TOnTest): SizeInt;
     function  RemoveIf(aTest: TNestTest): SizeInt;
   { returns True if element extracted }
-    function  Extract(constref aValue: T): Boolean; inline;
+    function  Extract(const aValue: T): Boolean; inline;
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
@@ -565,22 +565,22 @@ type
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
   { returns True if exists element whose value greater then or equal to aValue (depending on aInclusive) }
-    function  FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean; inline;
+    function  FindCeil(const aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean; inline;
   { returns True if exists element whose value less then aValue (or equal to aValue, depending on aInclusive) }
-    function  FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean; inline;
+    function  FindFloor(const aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean; inline;
   { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
-    function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
+    function  Head(const aHighBound: T; aInclusive: Boolean = False): THead; inline;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
-    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail; inline;
+    function  Tail(const aLowBound: T; aInclusive: Boolean = True): TTail; inline;
   { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
-    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
+    function  Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
   { returns sorted set whose items are strictly less than(if not aInclusive) aHighBound }
-    function  HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGLiteTreeSet;
+    function  HeadSet(const aHighBound: T; aInclusive: Boolean = False): TGLiteTreeSet;
   { returns sorted set whose items are greater than or equal(if aInclusive) to aLowBound}
-    function  TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGLiteTreeSet;
+    function  TailSet(const aLowBound: T; aInclusive: Boolean = True): TGLiteTreeSet;
   { returns sorted set whose items are greater than or equal to aLowBound and strictly less than
     aHighBound(by default) }
-    function  SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteTreeSet;
+    function  SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteTreeSet;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     class operator +(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
@@ -589,7 +589,7 @@ type
     class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
     class operator =(constref L, R: TGLiteTreeSet): Boolean; inline;
     class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
+    class operator in(constref aValue: T; const aSet: TGLiteTreeSet): Boolean; inline;
   end;
 
 implementation
@@ -660,7 +660,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGAbstractTreeSet.TTailEnumerable.Create(constref aLowBound: T; aSet: TAbstractTreeSet;
+constructor TGAbstractTreeSet.TTailEnumerable.Create(const aLowBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -715,14 +715,14 @@ begin
   FTree.EnsureCapacity(aValue);
 end;
 
-function TGAbstractTreeSet.DoAdd(constref aValue: T): Boolean;
+function TGAbstractTreeSet.DoAdd(const aValue: T): Boolean;
 var
   p: PNode;
 begin
   Result := not FTree.FindOrAdd(aValue, p);
 end;
 
-function TGAbstractTreeSet.DoExtract(constref aValue: T): Boolean;
+function TGAbstractTreeSet.DoExtract(const aValue: T): Boolean;
 begin
   Result := FTree.Remove(aValue);
 end;
@@ -769,7 +769,7 @@ begin
   Result := e.Final;
 end;
 
-function TGAbstractTreeSet.FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestLT(const aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -779,7 +779,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGAbstractTreeSet.FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestLE(const aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -789,7 +789,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGAbstractTreeSet.FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestGT(const aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -799,7 +799,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGAbstractTreeSet.FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestGE(const aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -822,7 +822,7 @@ begin
   Result := TReverseEnumerable.Create(Self);
 end;
 
-function TGAbstractTreeSet.Contains(constref aValue: T): Boolean;
+function TGAbstractTreeSet.Contains(const aValue: T): Boolean;
 begin
   Result := FTree.Find(aValue) <> nil;
 end;
@@ -847,7 +847,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGAbstractTreeSet.FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
+function TGAbstractTreeSet.FindCeil(const aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestGE(aValue, aCeil)
@@ -855,7 +855,7 @@ begin
     Result := FindNearestGT(aValue, aCeil);
 end;
 
-function TGAbstractTreeSet.FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
+function TGAbstractTreeSet.FindFloor(const aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestLE(aValue, aFloor)
@@ -863,7 +863,7 @@ begin
     Result := FindNearestLT(aValue, aFloor);
 end;
 
-function TGAbstractTreeSet.Tail(constref aLowBound: T; aInclusive: Boolean): IEnumerable;
+function TGAbstractTreeSet.Tail(const aLowBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := TTailEnumerable.Create(aLowBound, Self, aInclusive);
@@ -876,7 +876,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGBaseTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGBaseTreeSet.THeadEnumerable.Create(const aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -910,7 +910,7 @@ end;
 
 { TGBaseTreeSet.TRangeEnumerable }
 
-constructor TGBaseTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGBaseTreeSet.TRangeEnumerable.Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
@@ -921,7 +921,7 @@ end;
 
 { TGBaseTreeSet }
 
-class function TGBaseTreeSet.DoCompare(constref L, R: T): Boolean;
+class function TGBaseTreeSet.DoCompare(const L, R: T): Boolean;
 begin
   Result := TCmpRel.Less(L, R);
 end;
@@ -941,7 +941,7 @@ begin
   FTree := TBaseTree.Create(aCapacity);
 end;
 
-constructor TGBaseTreeSet.Create(constref a: array of T);
+constructor TGBaseTreeSet.Create(const a: array of T);
 begin
   FTree := TBaseTree.Create;
   DoAddAll(a);
@@ -974,19 +974,19 @@ begin
   Result := TGBaseTreeSet.CreateCopy(Self);
 end;
 
-function TGBaseTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): IEnumerable;
+function TGBaseTreeSet.Head(const aHighBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := THeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGBaseTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
+function TGBaseTreeSet.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
 begin
   BeginIteration;
   Result := TRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGBaseTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGBaseTreeSet;
+function TGBaseTreeSet.HeadSet(const aHighBound: T; aInclusive: Boolean): TGBaseTreeSet;
 var
   v: T;
 begin
@@ -995,7 +995,7 @@ begin
     Result.Add(v);
 end;
 
-function TGBaseTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGBaseTreeSet;
+function TGBaseTreeSet.TailSet(const aLowBound: T; aInclusive: Boolean): TGBaseTreeSet;
 var
   v: T;
 begin
@@ -1004,7 +1004,7 @@ begin
     Result.Add(v);
 end;
 
-function TGBaseTreeSet.SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGBaseTreeSet;
+function TGBaseTreeSet.SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGBaseTreeSet;
 var
   v: T;
 begin
@@ -1020,7 +1020,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGComparableTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGComparableTreeSet.THeadEnumerable.Create(const aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -1054,7 +1054,7 @@ end;
 
 { TGComparableTreeSet.TRangeEnumerable }
 
-constructor TGComparableTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGComparableTreeSet.TRangeEnumerable.Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
@@ -1065,7 +1065,7 @@ end;
 
 { TGComparableTreeSet }
 
-class function TGComparableTreeSet.DoCompare(constref L, R: T): Boolean;
+class function TGComparableTreeSet.DoCompare(const L, R: T): Boolean;
 begin
   Result := L < R;
 end;
@@ -1085,7 +1085,7 @@ begin
   FTree := TComparableTree.Create(aCapacity);
 end;
 
-constructor TGComparableTreeSet.Create(constref a: array of T);
+constructor TGComparableTreeSet.Create(const a: array of T);
 begin
   FTree := TComparableTree.Create;
   DoAddAll(a);
@@ -1118,19 +1118,19 @@ begin
   Result := TGComparableTreeSet.CreateCopy(Self);
 end;
 
-function TGComparableTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): IEnumerable;
+function TGComparableTreeSet.Head(const aHighBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := THeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGComparableTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
+function TGComparableTreeSet.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
 begin
   BeginIteration;
   Result := TRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGComparableTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGComparableTreeSet;
+function TGComparableTreeSet.HeadSet(const aHighBound: T; aInclusive: Boolean): TGComparableTreeSet;
 var
   v: T;
 begin
@@ -1139,7 +1139,7 @@ begin
     Result.Add(v);
 end;
 
-function TGComparableTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGComparableTreeSet;
+function TGComparableTreeSet.TailSet(const aLowBound: T; aInclusive: Boolean): TGComparableTreeSet;
 var
   v: T;
 begin
@@ -1148,7 +1148,7 @@ begin
     Result.Add(v);
 end;
 
-function TGComparableTreeSet.SubSet(constref aLowBound, aHighBound: T;
+function TGComparableTreeSet.SubSet(const aLowBound, aHighBound: T;
   aIncludeBounds: TRangeBounds): TGComparableTreeSet;
 var
   v: T;
@@ -1175,7 +1175,7 @@ begin
   inherited;
 end;
 
-function TGObjectTreeSet.DoRemove(constref aValue: T): Boolean;
+function TGObjectTreeSet.DoRemove(const aValue: T): Boolean;
 begin
   Result := inherited DoRemove(aValue);
   if Result and OwnsObjects then
@@ -1218,7 +1218,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectTreeSet.Create(constref a: array of T; aOwnsObjects: Boolean);
+constructor TGObjectTreeSet.Create(const a: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(a);
   FOwnsObjects := aOwnsObjects;
@@ -1248,7 +1248,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGRegularTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGRegularTreeSet.THeadEnumerable.Create(const aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -1283,7 +1283,7 @@ end;
 
 { TGRegularTreeSet.TRangeEnumerable }
 
-constructor TGRegularTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGRegularTreeSet.TRangeEnumerable.Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
@@ -1310,7 +1310,7 @@ begin
   FTree := TRegularTree.Create(aCapacity, aLess);
 end;
 
-constructor TGRegularTreeSet.Create(constref a: array of T; aLess: TLess);
+constructor TGRegularTreeSet.Create(const a: array of T; aLess: TLess);
 begin
   FTree := TRegularTree.Create(aLess);
   DoAddAll(a);
@@ -1337,19 +1337,19 @@ begin
   Result := TGRegularTreeSet.Create(Self, Comparator);
 end;
 
-function TGRegularTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): IEnumerable;
+function TGRegularTreeSet.Head(const aHighBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := THeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGRegularTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
+function TGRegularTreeSet.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
 begin
   BeginIteration;
   Result := TRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGRegularTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGRegularTreeSet;
+function TGRegularTreeSet.HeadSet(const aHighBound: T; aInclusive: Boolean): TGRegularTreeSet;
 var
   v: T;
 begin
@@ -1358,7 +1358,7 @@ begin
     Result.Add(v);
 end;
 
-function TGRegularTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGRegularTreeSet;
+function TGRegularTreeSet.TailSet(const aLowBound: T; aInclusive: Boolean): TGRegularTreeSet;
 var
   v: T;
 begin
@@ -1367,7 +1367,7 @@ begin
     Result.Add(v);
 end;
 
-function TGRegularTreeSet.SubSet(constref aLowBound, aHighBound: T;
+function TGRegularTreeSet.SubSet(const aLowBound, aHighBound: T;
   aIncludeBounds: TRangeBounds): TGRegularTreeSet;
 var
   v: T;
@@ -1394,7 +1394,7 @@ begin
   inherited;
 end;
 
-function TGObjectRegularTreeSet.DoRemove(constref aValue: T): Boolean;
+function TGObjectRegularTreeSet.DoRemove(const aValue: T): Boolean;
 begin
   Result := inherited DoRemove(aValue);
   if Result and OwnsObjects then
@@ -1443,7 +1443,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectRegularTreeSet.Create(constref a: array of T; aLess: TLess; aOwnsObjects: Boolean);
+constructor TGObjectRegularTreeSet.Create(const a: array of T; aLess: TLess; aOwnsObjects: Boolean);
 begin
   inherited Create(a, aLess);
   FOwnsObjects := aOwnsObjects;
@@ -1473,7 +1473,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGDelegatedTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGDelegatedTreeSet.THeadEnumerable.Create(const aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -1508,7 +1508,7 @@ end;
 
 { TGDelegatedTreeSet.TRangeEnumerable }
 
-constructor TGDelegatedTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
+constructor TGDelegatedTreeSet.TRangeEnumerable.Create(const aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
@@ -1535,7 +1535,7 @@ begin
   FTree := TDelegatedTree.Create(aCapacity, aLess);
 end;
 
-constructor TGDelegatedTreeSet.Create(constref a: array of T; aLess: TOnLess);
+constructor TGDelegatedTreeSet.Create(const a: array of T; aLess: TOnLess);
 begin
   FTree := TDelegatedTree.Create(aLess);
   DoAddAll(a);
@@ -1562,19 +1562,19 @@ begin
   Result := TGDelegatedTreeSet.CreateCopy(Self);
 end;
 
-function TGDelegatedTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): IEnumerable;
+function TGDelegatedTreeSet.Head(const aHighBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := THeadEnumerable.Create(aHighBound, Self, aInclusive);
 end;
 
-function TGDelegatedTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
+function TGDelegatedTreeSet.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): IEnumerable;
 begin
   BeginIteration;
   Result := TRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds);
 end;
 
-function TGDelegatedTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGDelegatedTreeSet;
+function TGDelegatedTreeSet.HeadSet(const aHighBound: T; aInclusive: Boolean): TGDelegatedTreeSet;
 var
   v: T;
 begin
@@ -1583,7 +1583,7 @@ begin
     Result.Add(v);
 end;
 
-function TGDelegatedTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGDelegatedTreeSet;
+function TGDelegatedTreeSet.TailSet(const aLowBound: T; aInclusive: Boolean): TGDelegatedTreeSet;
 var
   v: T;
 begin
@@ -1592,7 +1592,7 @@ begin
     Result.Add(v);
 end;
 
-function TGDelegatedTreeSet.SubSet(constref aLowBound, aHighBound: T;
+function TGDelegatedTreeSet.SubSet(const aLowBound, aHighBound: T;
   aIncludeBounds: TRangeBounds): TGDelegatedTreeSet;
 var
   v: T;
@@ -1619,7 +1619,7 @@ begin
   inherited;
 end;
 
-function TGObjectDelegatedTreeSet.DoRemove(constref aValue: T): Boolean;
+function TGObjectDelegatedTreeSet.DoRemove(const aValue: T): Boolean;
 begin
   Result := inherited DoRemove(aValue);
   if Result and OwnsObjects then
@@ -1668,7 +1668,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectDelegatedTreeSet.Create(constref a: array of T;
+constructor TGObjectDelegatedTreeSet.Create(const a: array of T;
   aLess: TOnLess; aOwnsObjects: Boolean);
 begin
   inherited Create(a, aLess);
@@ -1700,7 +1700,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGLiteTreeSet.TEnumerator.Create(constref aSet: TGLiteTreeSet);
+constructor TGLiteTreeSet.TEnumerator.Create(const aSet: TGLiteTreeSet);
 begin
   FEnum := aSet.FTree.GetEnumerator;
 end;
@@ -1722,7 +1722,7 @@ begin
   Result := FNodeList[FCurrNode].Data.Key;
 end;
 
-constructor TGLiteTreeSet.TReverseEnumerator.Create(constref aSet: TGLiteTreeSet);
+constructor TGLiteTreeSet.TReverseEnumerator.Create(const aSet: TGLiteTreeSet);
 begin
   FTree := @aSet.FTree;
   FNodeList := FTree^.NodeList;
@@ -1761,7 +1761,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGLiteTreeSet.THeadEnumerator.Create(constref aSet: TGLiteTreeSet; constref aHighBound: T;
+constructor TGLiteTreeSet.THeadEnumerator.Create(const aSet: TGLiteTreeSet; const aHighBound: T;
   aInclusive: Boolean);
 begin
   FEnum := aSet.FTree.GetEnumerator;
@@ -1794,7 +1794,7 @@ begin
   Result := FNodeList[FCurrNode].Data.Key;
 end;
 
-constructor TGLiteTreeSet.TTailEnumerator.Create(constref aSet: TGLiteTreeSet; constref aLowBound: T;
+constructor TGLiteTreeSet.TTailEnumerator.Create(const aSet: TGLiteTreeSet; const aLowBound: T;
   aInclusive: Boolean);
 begin
   FTree := @aSet.FTree;
@@ -1837,7 +1837,7 @@ begin
   Result := FEnum.Current;
 end;
 
-constructor TGLiteTreeSet.TRangeEnumerator.Create(constref aSet: TGLiteTreeSet; constref aLowBound, aHighBound: T;
+constructor TGLiteTreeSet.TRangeEnumerator.Create(const aSet: TGLiteTreeSet; const aLowBound, aHighBound: T;
   aBounds: TRangeBounds);
 begin
   FEnum := aSet.GetTailEnumerator(aLowBound, rbLow in aBounds);
@@ -1877,7 +1877,7 @@ end;
 
 { TGLiteTreeSet.THead }
 
-constructor TGLiteTreeSet.THead.Create(aSet: PSet; constref aHighBound: T; aInclusive: Boolean);
+constructor TGLiteTreeSet.THead.Create(aSet: PSet; const aHighBound: T; aInclusive: Boolean);
 begin
   FSet := aSet;
   FHighBound := aHighBound;
@@ -1891,7 +1891,7 @@ end;
 
 { TGLiteTreeSet.TTail }
 
-constructor TGLiteTreeSet.TTail.Create(aSet: PSet; constref aLowBound: T; aInclusive: Boolean);
+constructor TGLiteTreeSet.TTail.Create(aSet: PSet; const aLowBound: T; aInclusive: Boolean);
 begin
   FSet := aSet;
   FLowBound := aLowBound;
@@ -1905,7 +1905,7 @@ end;
 
 { TGLiteTreeSet.TRange }
 
-constructor TGLiteTreeSet.TRange.Create(aSet: PSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+constructor TGLiteTreeSet.TRange.Create(aSet: PSet; const aLowBound, aHighBound: T; aBounds: TRangeBounds);
 begin
   FSet := aSet;
   FLowBound := aLowBound;
@@ -1930,7 +1930,7 @@ begin
   Result := FTree.Count;
 end;
 
-function TGLiteTreeSet.FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+function TGLiteTreeSet.FindNearestLT(const aPattern: T; out aValue: T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1940,7 +1940,7 @@ begin
     aValue := FTree.NodeList[I].Data.Key;
 end;
 
-function TGLiteTreeSet.FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+function TGLiteTreeSet.FindNearestLE(const aPattern: T; out aValue: T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1950,7 +1950,7 @@ begin
     aValue := FTree.NodeList[I].Data.Key;
 end;
 
-function TGLiteTreeSet.FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+function TGLiteTreeSet.FindNearestGT(const aPattern: T; out aValue: T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1960,7 +1960,7 @@ begin
     aValue := FTree.NodeList[I].Data.Key;
 end;
 
-function TGLiteTreeSet.FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+function TGLiteTreeSet.FindNearestGE(const aPattern: T; out aValue: T): Boolean;
 var
   I: SizeInt;
 begin
@@ -1975,17 +1975,17 @@ begin
   Result := TReverseEnumerator.Create(Self);
 end;
 
-function TGLiteTreeSet.GetHeadEnumerator(constref aHighBound: T; aInclusive: Boolean): THeadEnumerator;
+function TGLiteTreeSet.GetHeadEnumerator(const aHighBound: T; aInclusive: Boolean): THeadEnumerator;
 begin
   Result := THeadEnumerator.Create(Self, aHighBound, aInclusive);
 end;
 
-function TGLiteTreeSet.GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator;
+function TGLiteTreeSet.GetTailEnumerator(const aLowBound: T; aInclusive: Boolean): TTailEnumerator;
 begin
   Result := TTailEnumerator.Create(Self, aLowBound, aInclusive);
 end;
 
-function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T;
+function TGLiteTreeSet.GetRangeEnumerator(const aLowBound, aHighBound: T;
   aBounds: TRangeBounds): TRangeEnumerator;
 begin
   Result := TRangeEnumerator.Create(Self, aLowBound, aHighBound, aBounds);
@@ -2039,14 +2039,14 @@ begin
   FTree.EnsureCapacity(aValue);
 end;
 
-function TGLiteTreeSet.Add(constref aValue: T): Boolean;
+function TGLiteTreeSet.Add(const aValue: T): Boolean;
 var
   p: PEntry;
 begin
   Result := not FTree.FindOrAdd(aValue, p);
 end;
 
-function TGLiteTreeSet.AddAll(constref a: array of T): SizeInt;
+function TGLiteTreeSet.AddAll(const a: array of T): SizeInt;
 var
   v: T;
 begin
@@ -2083,17 +2083,17 @@ begin
     Result := 0;
 end;
 
-function TGLiteTreeSet.Contains(constref aValue: T): Boolean;
+function TGLiteTreeSet.Contains(const aValue: T): Boolean;
 begin
   Result := FTree.Find(aValue) <> nil;
 end;
 
-function TGLiteTreeSet.NonContains(constref aValue: T): Boolean;
+function TGLiteTreeSet.NonContains(const aValue: T): Boolean;
 begin
   Result := FTree.Find(aValue) = nil;
 end;
 
-function TGLiteTreeSet.ContainsAny(constref a: array of T): Boolean;
+function TGLiteTreeSet.ContainsAny(const a: array of T): Boolean;
 var
   v: T;
 begin
@@ -2127,7 +2127,7 @@ begin
   Result := False;
 end;
 
-function TGLiteTreeSet.ContainsAll(constref a: array of T): Boolean;
+function TGLiteTreeSet.ContainsAll(const a: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -2162,12 +2162,12 @@ begin
   Result := True;
 end;
 
-function TGLiteTreeSet.Remove(constref aValue: T): Boolean;
+function TGLiteTreeSet.Remove(const aValue: T): Boolean;
 begin
   Result := FTree.Remove(aValue);
 end;
 
-function TGLiteTreeSet.RemoveAll(constref a: array of T): SizeInt;
+function TGLiteTreeSet.RemoveAll(const a: array of T): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2275,7 +2275,7 @@ begin
   Result := Result - Count;
 end;
 
-function TGLiteTreeSet.Extract(constref aValue: T): Boolean;
+function TGLiteTreeSet.Extract(const aValue: T): Boolean;
 begin
   Result := FTree.Remove(aValue);
 end;
@@ -2482,7 +2482,7 @@ begin
     aValue := FTree.NodeList[I].Data.Key;
 end;
 
-function TGLiteTreeSet.FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
+function TGLiteTreeSet.FindCeil(const aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestGE(aValue, aCeil)
@@ -2490,7 +2490,7 @@ begin
     Result := FindNearestGT(aValue, aCeil);
 end;
 
-function TGLiteTreeSet.FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
+function TGLiteTreeSet.FindFloor(const aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestLE(aValue, aFloor)
@@ -2498,22 +2498,22 @@ begin
     Result := FindNearestLT(aValue, aFloor);
 end;
 
-function TGLiteTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): THead;
+function TGLiteTreeSet.Head(const aHighBound: T; aInclusive: Boolean): THead;
 begin
   Result := THead.Create(@Self, aHighBound, aInclusive);
 end;
 
-function TGLiteTreeSet.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
+function TGLiteTreeSet.Tail(const aLowBound: T; aInclusive: Boolean): TTail;
 begin
    Result := TTail.Create(@Self, aLowBound, aInclusive);
 end;
 
-function TGLiteTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
+function TGLiteTreeSet.Range(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
 begin
   Result := TRange.Create(@Self, aLowBound, aHighBound, aIncludeBounds);
 end;
 
-function TGLiteTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGLiteTreeSet;
+function TGLiteTreeSet.HeadSet(const aHighBound: T; aInclusive: Boolean): TGLiteTreeSet;
 var
   v: T;
 begin
@@ -2521,7 +2521,7 @@ begin
     Result.Add(v);
 end;
 
-function TGLiteTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGLiteTreeSet;
+function TGLiteTreeSet.TailSet(const aLowBound: T; aInclusive: Boolean): TGLiteTreeSet;
 var
   v: T;
 begin
@@ -2529,7 +2529,7 @@ begin
     Result.Add(v);
 end;
 
-function TGLiteTreeSet.SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGLiteTreeSet;
+function TGLiteTreeSet.SubSet(const aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGLiteTreeSet;
 var
   v: T;
 begin
@@ -2564,7 +2564,7 @@ begin
   Result.SymmetricSubtract(R);
 end;
 
-class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
+class operator TGLiteTreeSet.in(constref aValue: T; const aSet: TGLiteTreeSet): Boolean;
 begin
   Result := aSet.Contains(aValue);
 end;

@@ -98,10 +98,10 @@ type
       procedure ForceCollapseD;
       procedure MergeAtA(aIndex: SizeInt);
       procedure MergeAtD(aIndex: SizeInt);
-      function  GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
       procedure MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
@@ -134,10 +134,10 @@ type
       procedure ForceCollapseD;
       procedure MergeAtA(aIndex: SizeInt);
       procedure MergeAtD(aIndex: SizeInt);
-      function  GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
       procedure MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
@@ -173,10 +173,10 @@ type
       procedure ForceCollapseD;
       procedure MergeAtA(aIndex: SizeInt);
       procedure MergeAtD(aIndex: SizeInt);
-      function  GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
       procedure MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
@@ -212,10 +212,10 @@ type
       procedure ForceCollapseD;
       procedure MergeAtA(aIndex: SizeInt);
       procedure MergeAtD(aIndex: SizeInt);
-      function  GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
       procedure MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
@@ -251,10 +251,10 @@ type
       procedure ForceCollapseD;
       procedure MergeAtA(aIndex: SizeInt);
       procedure MergeAtD(aIndex: SizeInt);
-      function  GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
-      function  GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
+      function  GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
       procedure MergeLoA(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeLoD(Base1, Len1, Base2, Len2: SizeInt);
       procedure MergeHiA(Base1, Len1, Base2, Len2: SizeInt);
@@ -346,7 +346,7 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
     function Add(const aValue: string): Boolean;
-    function AddAll(constref a: array of string): SizeInt;
+    function AddAll(const a: array of string): SizeInt;
     function AddAll(e: IStringEnumerable): SizeInt;
     property FileName: string read FFileName;
     property IsOpen: Boolean read FIsOpen;
@@ -362,8 +362,8 @@ type
     FWorkEnum: TEnumerator;
     function GetCurrent: T; override;
   public
-    class function Construct(constref aEnum: TEnumerator): IEnumerable; static; inline;
-    constructor Create(constref aEnum: TEnumerator);
+    class function Construct(const aEnum: TEnumerator): IEnumerable; static; inline;
+    constructor Create(const aEnum: TEnumerator);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
@@ -388,7 +388,7 @@ type
   generic TGBaseLruCache<TKey, TValue, TKeyEqRel> = class
   public
   type
-    TOnGetValue = function(constref aKey: TKey): TValue of object;
+    TOnGetValue = function(const aKey: TKey): TValue of object;
   protected
   type
     TMap = class(specialize TGBaseOrderedHashMap<TKey, TValue, TKeyEqRel>);
@@ -406,7 +406,7 @@ type
     destructor Destroy; override;
     procedure Clear;
     procedure TrimToFit;
-    function  GetValue(constref aKey: TKey): TValue;
+    function  GetValue(const aKey: TKey): TValue;
     property  SizeLimit: SizeInt read FSizeLimit write SetSizeLimit;
     property  OnGetValue: TOnGetValue read FGetValue;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
@@ -439,9 +439,9 @@ type
     INIT_SIZE = 4;
   class var
     Options: TCmdLineOptions;
-    class procedure ParseOptions;
+    class procedure ParseOptions; static;
   public
-    class function GetOptions: TCmdLineOptions;
+    class function GetOptions: TCmdLineOptions; static;
   end;
 
 function CmdLineOptions: TCmdLineOptions;
@@ -462,13 +462,13 @@ var
       System.SetLength(Options, System.Length(Options) * 2);
   end;
 
-  procedure OptionAdd(constref aOption: TCmdLineOption);
+  procedure OptionAdd(const aOption: TCmdLineOption);
   begin
     ItemAdding;
     Options[Count] := aOption;
     Inc(Count);
   end;
-  function IsKeyValue(constref aOpt: string; out aKey, aValue: string): Boolean;
+  function IsKeyValue(const aOpt: string; out aKey, aValue: string): Boolean;
   var
     I: SizeInt;
     DivPos: SizeInt;
@@ -490,7 +490,7 @@ var
       end;
   end;
 
-  procedure ParseLongOption(constref aValue: string);
+  procedure ParseLongOption(const aValue: string);
   var
     k, v: string;
   begin
@@ -510,7 +510,7 @@ var
     OptionAdd(o);
   end;
 
-  procedure ParseShortOption(constref aValue: string);
+  procedure ParseShortOption(const aValue: string);
   var
     I: SizeInt;
     k, v: string;
@@ -538,7 +538,7 @@ var
           OptionAdd(o);
         end;
   end;
-  procedure ParseOption(constref aValue: string);
+  procedure ParseOption(const aValue: string);
   begin
     if aValue = '' then
       exit;
@@ -547,7 +547,7 @@ var
     else
       ParseShortOption(aValue);
   end;
-  procedure ParseParam(constref aParam: string);
+  procedure ParseParam(const aParam: string);
   begin
     o.Kind := pkArgument;
     o.Key := '';
@@ -835,7 +835,7 @@ begin
     end;
 end;
 
-function TGBaseTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -878,7 +878,7 @@ begin
     end;
 end;
 
-function TGBaseTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -921,7 +921,7 @@ begin
     end;
 end;
 
-function TGBaseTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -964,7 +964,7 @@ begin
     end;
 end;
 
-function TGBaseTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGBaseTimSort.TTimSort.GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -1677,7 +1677,7 @@ begin
     end;
 end;
 
-function TGComparableTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGComparableTimSort.TTimSort.GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -1720,7 +1720,7 @@ begin
     end;
 end;
 
-function TGComparableTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGComparableTimSort.TTimSort.GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -1763,7 +1763,7 @@ begin
     end;
 end;
 
-function TGComparableTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGComparableTimSort.TTimSort.GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -1806,7 +1806,7 @@ begin
     end;
 end;
 
-function TGComparableTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGComparableTimSort.TTimSort.GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
 begin
@@ -2525,7 +2525,7 @@ begin
     end;
 end;
 
-function TGRegularTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGRegularTimSort.TTimSort.GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TLess;
@@ -2570,7 +2570,7 @@ begin
     end;
 end;
 
-function TGRegularTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGRegularTimSort.TTimSort.GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TLess;
@@ -2615,7 +2615,7 @@ begin
     end;
 end;
 
-function TGRegularTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGRegularTimSort.TTimSort.GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TLess;
@@ -2660,7 +2660,7 @@ begin
     end;
 end;
 
-function TGRegularTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGRegularTimSort.TTimSort.GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TLess;
@@ -3389,7 +3389,7 @@ begin
     end;
 end;
 
-function TGDelegatedTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGDelegatedTimSort.TTimSort.GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TOnLess;
@@ -3434,7 +3434,7 @@ begin
     end;
 end;
 
-function TGDelegatedTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGDelegatedTimSort.TTimSort.GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TOnLess;
@@ -3479,7 +3479,7 @@ begin
     end;
 end;
 
-function TGDelegatedTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGDelegatedTimSort.TTimSort.GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TOnLess;
@@ -3524,7 +3524,7 @@ begin
     end;
 end;
 
-function TGDelegatedTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGDelegatedTimSort.TTimSort.GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TOnLess;
@@ -4253,7 +4253,7 @@ begin
     end;
 end;
 
-function TGNestedTimSort.TTimSort.GallopLeftA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGNestedTimSort.TTimSort.GallopLeftA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TNestLess;
@@ -4298,7 +4298,7 @@ begin
     end;
 end;
 
-function TGNestedTimSort.TTimSort.GallopLeftD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGNestedTimSort.TTimSort.GallopLeftD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TNestLess;
@@ -4343,7 +4343,7 @@ begin
     end;
 end;
 
-function TGNestedTimSort.TTimSort.GallopRightA(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGNestedTimSort.TTimSort.GallopRightA(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TNestLess;
@@ -4388,7 +4388,7 @@ begin
     end;
 end;
 
-function TGNestedTimSort.TTimSort.GallopRightD(A: PItem; constref Key: T; Base, Len, Hint: SizeInt): SizeInt;
+function TGNestedTimSort.TTimSort.GallopRightD(A: PItem; const Key: T; Base, Len, Hint: SizeInt): SizeInt;
 var
   Dist, MaxDist, M: SizeInt;
   c: TNestLess;
@@ -5204,7 +5204,7 @@ begin
     System.Writeln(FFile, aValue)
 end;
 
-function TTextFileWriter.AddAll(constref a: array of string): SizeInt;
+function TTextFileWriter.AddAll(const a: array of string): SizeInt;
 var
   s: string;
 begin
@@ -5229,12 +5229,12 @@ begin
   Result := FWorkEnum.Current;
 end;
 
-class function TGetEnumerable.Construct(constref aEnum: TEnumerator): IEnumerable;
+class function TGetEnumerable.Construct(const aEnum: TEnumerator): IEnumerable;
 begin
   Result := TGetEnumerable.Create(aEnum);
 end;
 
-constructor TGetEnumerable.Create(constref aEnum: TEnumerator);
+constructor TGetEnumerable.Create(const aEnum: TEnumerator);
 begin
   inherited Create;
   FEnum := aEnum;
@@ -5350,7 +5350,7 @@ begin
   FMap.TrimToFit;
 end;
 
-function TGBaseLruCache.GetValue(constref aKey: TKey): TValue;
+function TGBaseLruCache.GetValue(const aKey: TKey): TValue;
 begin
   if not FMap.TryGetValue(aKey, Result) then
     begin

@@ -86,10 +86,10 @@ type
     procedure EnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure TrimToFit; virtual; abstract;
   { return True if aKey found, otherwise insert garbage entry and return False }
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; virtual;abstract; overload;
-    function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; virtual; abstract;
-    function  Remove(constref aKey: TKey): Boolean; virtual; abstract;
-    procedure RemoveAt(constref aPos: TSearchResult); virtual; abstract;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; virtual;abstract; overload;
+    function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; virtual; abstract;
+    function  Remove(const aKey: TKey): Boolean; virtual; abstract;
+    procedure RemoveAt(const aPos: TSearchResult); virtual; abstract;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
@@ -149,7 +149,7 @@ type
     procedure Rehash(var aTarget: TNodeList); virtual;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult; virtual;
+    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult; virtual;
     procedure DoRemove(aIndex: SizeInt); virtual; abstract;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
     class constructor Init;
@@ -160,10 +160,10 @@ type
     procedure Clear; override;
     procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
-    function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; override;
-    function  Remove(constref aKey: TKey): Boolean; override;
-    procedure RemoveAt(constref aPos: TSearchResult); override;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
+    function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; override;
+    function  Remove(const aKey: TKey): Boolean; override;
+    procedure RemoveAt(const aPos: TSearchResult); override;
   end;
 
   TLPSeq = class
@@ -198,12 +198,12 @@ type
     FTombstonesCount: SizeInt;
     function  BusyCount: SizeInt; inline;
     procedure Rehash(var aTarget: TNodeList); override;
-    function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult; override;
+    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult; override;
     procedure DoRemove(aIndex: SizeInt); override;
   public
     procedure Clear; override;
     procedure ClearTombstones; inline;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
@@ -311,7 +311,7 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoAdd(aKeyHash: SizeInt): PNode;
-    function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
     procedure Add2Tail(aNode: PNode);
     procedure RemoveFromList(aNode: PNode);
     procedure RemoveNode(aNode: PNode);
@@ -333,10 +333,10 @@ type
     function  GetEnumerator: TEntryEnumerator; override;
     function  GetReverseEnumerator: TReverseEnumerator;
   { return True if aKey found, otherwise insert empty Entry and return False }
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
-    function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; override;
-    function  Remove(constref aKey: TKey): Boolean; override;
-    procedure RemoveAt(constref aPos: TSearchResult); override;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
+    function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; override;
+    function  Remove(const aKey: TKey): Boolean; override;
+    procedure RemoveAt(const aPos: TSearchResult); override;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
@@ -403,8 +403,8 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoAdd(aKeyHash: SizeInt): PNode;
-    function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
-    procedure DoRemove(constref aPos: TSearchResult);
+    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+    procedure DoRemove(const aPos: TSearchResult);
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
   public
     class function DefaultLoadFactor: Single; override;
@@ -422,11 +422,11 @@ type
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
   { returns True if aKey found, otherwise insert empty Entry and return False }
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
-    function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; override;
-    function  Add(constref aKey: TKey): PNode; inline;
-    function  Remove(constref aKey: TKey): Boolean; override;
-    procedure RemoveAt(constref aPos: TSearchResult); override;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
+    function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; override;
+    function  Add(const aKey: TKey): PNode; inline;
+    function  Remove(const aKey: TKey): Boolean; override;
+    procedure RemoveAt(const aPos: TSearchResult); override;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
@@ -499,7 +499,7 @@ type
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
+    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
@@ -522,9 +522,9 @@ type
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
-    function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+    function  Find(const aKey: TKey; out aPos: SizeInt): PEntry;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aPos: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -598,7 +598,7 @@ type
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
+    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     procedure FinalizeList;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
@@ -619,12 +619,12 @@ type
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
   { returns True if aKey found, otherwise insert garbage entry and return False }
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean; inline;
-    function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
-    function  Find(constref aKey: TKey): PEntry; inline;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry): Boolean; inline;
+    function  Find(const aKey: TKey; out aPos: SizeInt): PEntry;
+    function  Find(const aKey: TKey): PEntry; inline;
     function  FindFirstKey(out aKey: TKey): Boolean;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aPos: SizeInt);
     property  Count: SizeInt read FCount;
   { The capacity of the table is the number of elements that can be written without rehashing,
@@ -708,9 +708,9 @@ type
     procedure Expand; inline;
     procedure RemoveFromChain(aIndex: SizeInt);
     procedure FixChain(aOldIndex, aNewIndex: SizeInt);
-    function  DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
+    function  DoFind(const aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
     function  DoAdd(aKeyHash: SizeInt): SizeInt;
-    procedure DoRemove(constref aPos: TSearchResult);
+    procedure DoRemove(const aPos: TSearchResult);
     procedure DoRemoveAt(aIndex: SizeInt);
     procedure FinalizeList;
     class operator Initialize(var ht: TGLiteChainHashTable);
@@ -728,12 +728,12 @@ type
     procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aIndex: SizeInt): Boolean;
-    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean; inline;
-    function  Find(constref aKey: TKey; out aIndex: SizeInt): PEntry;
-    function  Find(constref aKey: TKey): PEntry; inline;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry; out aIndex: SizeInt): Boolean;
+    function  FindOrAdd(const aKey: TKey; out e: PEntry): Boolean; inline;
+    function  Find(const aKey: TKey; out aIndex: SizeInt): PEntry;
+    function  Find(const aKey: TKey): PEntry; inline;
     function  FindFirstKey(out aKey: TKey): Boolean;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -1046,7 +1046,7 @@ begin
     AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-function TGOpenAddressing.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+function TGOpenAddressing.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
   I, Pos, Mask: SizeInt;
 begin
@@ -1136,7 +1136,7 @@ begin
     Clear;
 end;
 
-function TGOpenAddressing.FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
+function TGOpenAddressing.FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
 var
   h: SizeInt;
 begin
@@ -1164,7 +1164,7 @@ begin
   e := @FList[aRes.FoundIndex].Data;
 end;
 
-function TGOpenAddressing.Find(constref aKey: TKey; out aPos: TSearchResult): PEntry;
+function TGOpenAddressing.Find(const aKey: TKey; out aPos: TSearchResult): PEntry;
 begin
   Result := nil;
   if Count > 0 then
@@ -1175,7 +1175,7 @@ begin
     end;
 end;
 
-function TGOpenAddressing.Remove(constref aKey: TKey): Boolean;
+function TGOpenAddressing.Remove(const aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin
@@ -1191,7 +1191,7 @@ begin
   Result := False;
 end;
 
-procedure TGOpenAddressing.RemoveAt(constref aPos: TSearchResult);
+procedure TGOpenAddressing.RemoveAt(const aPos: TSearchResult);
 begin
   if (aPos.FoundIndex >= 0) and (aPos.FoundIndex <= System.High(FList)) then
     DoRemove(aPos.FoundIndex);
@@ -1373,7 +1373,7 @@ begin
   Resize(System.Length(FList));
 end;
 
-function TGOpenAddrTombstones.FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
+function TGOpenAddrTombstones.FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
 var
   h: SizeInt;
 begin
@@ -1494,7 +1494,7 @@ begin
     end;
 end;
 
-function TGOpenAddrTombstones.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+function TGOpenAddrTombstones.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
   I, Pos, Mask: SizeInt;
 begin
@@ -1761,7 +1761,7 @@ begin
   Add2Tail(Result);
 end;
 
-function TGOrderedHashTable.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+function TGOrderedHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
   CurrNode, PrevNode: PNode;
 begin
@@ -1952,7 +1952,7 @@ begin
   Result := TReverseEnumerator.Create(Self);
 end;
 
-function TGOrderedHashTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
+function TGOrderedHashTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
 var
   h: SizeInt;
 begin
@@ -1970,7 +1970,7 @@ begin
   e := @PNode(aRes.Node)^.Data;
 end;
 
-function TGOrderedHashTable.Find(constref aKey: TKey; out aPos: TSearchResult): PEntry;
+function TGOrderedHashTable.Find(const aKey: TKey; out aPos: TSearchResult): PEntry;
 begin
   Result := nil;
   if Count > 0 then
@@ -1981,7 +1981,7 @@ begin
     end;
 end;
 
-function TGOrderedHashTable.Remove(constref aKey: TKey): Boolean;
+function TGOrderedHashTable.Remove(const aKey: TKey): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -1994,7 +1994,7 @@ begin
   Result := False;
 end;
 
-procedure TGOrderedHashTable.RemoveAt(constref aPos: TSearchResult);
+procedure TGOrderedHashTable.RemoveAt(const aPos: TSearchResult);
 var
   CurrNode, PrevNode: PNode;
 begin
@@ -2279,7 +2279,7 @@ begin
   FList[I] := Result;
 end;
 
-function TGChainHashTable.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+function TGChainHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
   CurrNode, PrevNode: PNode;
 begin
@@ -2298,7 +2298,7 @@ begin
   Result.PrevNode := PrevNode;
 end;
 
-procedure TGChainHashTable.DoRemove(constref aPos: TSearchResult);
+procedure TGChainHashTable.DoRemove(const aPos: TSearchResult);
 begin
   if aPos.Node <> nil then
     begin
@@ -2434,7 +2434,7 @@ begin
   Result := TEnumerator.Create(FList);
 end;
 
-function TGChainHashTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
+function TGChainHashTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
 var
   h: SizeInt;
 begin
@@ -2452,7 +2452,7 @@ begin
   e := @PNode(aRes.Node)^.Data;
 end;
 
-function TGChainHashTable.Find(constref aKey: TKey; out aPos: TSearchResult): PEntry;
+function TGChainHashTable.Find(const aKey: TKey; out aPos: TSearchResult): PEntry;
 begin
   if Count > 0 then
     begin
@@ -2466,7 +2466,7 @@ begin
     Result := nil;
 end;
 
-function TGChainHashTable.Add(constref aKey: TKey): PNode;
+function TGChainHashTable.Add(const aKey: TKey): PNode;
 begin
   if FList = nil then
     AllocList(DEFAULT_CONTAINER_CAPACITY);
@@ -2475,7 +2475,7 @@ begin
   Result := DoAdd(TEqRel.HashCode(aKey));
 end;
 
-function TGChainHashTable.Remove(constref aKey: TKey): Boolean;
+function TGChainHashTable.Remove(const aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin
@@ -2485,7 +2485,7 @@ begin
     DoRemove(p);
 end;
 
-procedure TGChainHashTable.RemoveAt(constref aPos: TSearchResult);
+procedure TGChainHashTable.RemoveAt(const aPos: TSearchResult);
 begin
   DoRemove(aPos);
 end;
@@ -2806,7 +2806,7 @@ begin
     AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-function TGHashTableLP.DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
+function TGHashTableLP.DoFind(const aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
@@ -2971,7 +2971,7 @@ begin
     Clear;
 end;
 
-function TGHashTableLP.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+function TGHashTableLP.FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -2999,7 +2999,7 @@ begin
   e := @FList[aPos].Data;
 end;
 
-function TGHashTableLP.Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
+function TGHashTableLP.Find(const aKey: TKey; out aPos: SizeInt): PEntry;
 begin
   Result := nil;
   if Count > 0 then
@@ -3010,7 +3010,7 @@ begin
     end;
 end;
 
-function TGHashTableLP.Remove(constref aKey: TKey): Boolean;
+function TGHashTableLP.Remove(const aKey: TKey): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -3201,7 +3201,7 @@ begin
     AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-function TGLiteHashTableLP.DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
+function TGLiteHashTableLP.DoFind(const aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
@@ -3386,7 +3386,7 @@ begin
     Clear;
 end;
 
-function TGLiteHashTableLP.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+function TGLiteHashTableLP.FindOrAdd(const aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -3414,14 +3414,14 @@ begin
   e := @FList[aPos].Data;
 end;
 
-function TGLiteHashTableLP.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+function TGLiteHashTableLP.FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
 var
   Pos: SizeInt;
 begin
   Result := FindOrAdd(aKey, e, Pos);
 end;
 
-function TGLiteHashTableLP.Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
+function TGLiteHashTableLP.Find(const aKey: TKey; out aPos: SizeInt): PEntry;
 begin
   Result := nil;
   if Count > 0 then
@@ -3432,7 +3432,7 @@ begin
     end;
 end;
 
-function TGLiteHashTableLP.Find(constref aKey: TKey): PEntry;
+function TGLiteHashTableLP.Find(const aKey: TKey): PEntry;
 var
   Pos: SizeInt;
 begin
@@ -3453,7 +3453,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashTableLP.Remove(constref aKey: TKey): Boolean;
+function TGLiteHashTableLP.Remove(const aKey: TKey): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -3639,7 +3639,7 @@ begin
     FChainList[I] := aNewIndex;
 end;
 
-function TGLiteChainHashTable.DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
+function TGLiteChainHashTable.DoFind(const aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
 var
   I: SizeInt;
 begin
@@ -3670,7 +3670,7 @@ begin
   Inc(FCount);
 end;
 
-procedure TGLiteChainHashTable.DoRemove(constref aPos: TSearchResult);
+procedure TGLiteChainHashTable.DoRemove(const aPos: TSearchResult);
 begin
   if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
@@ -3824,7 +3824,7 @@ begin
     Clear;
 end;
 
-function TGLiteChainHashTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aIndex: SizeInt): Boolean;
+function TGLiteChainHashTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
   sr: TSearchResult;
@@ -3845,14 +3845,14 @@ begin
   e := @FNodeList[sr.Index].Data;
 end;
 
-function TGLiteChainHashTable.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+function TGLiteChainHashTable.FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
 var
   Pos: SizeInt;
 begin
   Result := FindOrAdd(aKey, e, Pos);
 end;
 
-function TGLiteChainHashTable.Find(constref aKey: TKey; out aIndex: SizeInt): PEntry;
+function TGLiteChainHashTable.Find(const aKey: TKey; out aIndex: SizeInt): PEntry;
 var
   sr: TSearchResult;
 begin
@@ -3864,7 +3864,7 @@ begin
   aIndex := sr.Index;
 end;
 
-function TGLiteChainHashTable.Find(constref aKey: TKey): PEntry;
+function TGLiteChainHashTable.Find(const aKey: TKey): PEntry;
 var
   Pos: SizeInt;
 begin
@@ -3881,7 +3881,7 @@ begin
   Result := False;
 end;
 
-function TGLiteChainHashTable.Remove(constref aKey: TKey): Boolean;
+function TGLiteChainHashTable.Remove(const aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin

@@ -124,15 +124,15 @@ type
   { swaps the elements of A with the indices L and R;
     raises EArgumentException if L or R is out of bounds }
     class procedure SwapItems(var A: array of T; L, R: SizeInt); static;
-    class function  CreateCopy(constref A: array of T): TArray; static;
-    class function  CreateReverseCopy(constref A: array of T): TArray; static;
-    class function  CreateMerge(constref L, R: array of T): TArray; static;
-    class function  CreateRandomShuffle(constref A: array of T): TArray; static;
-    class function  CreateAndFill(constref aValue: T; aSize: SizeInt): TArray; static;
-    class procedure Fill(var A: array of T; constref aValue: T); static;
+    class function  CreateCopy(const A: array of T): TArray; static;
+    class function  CreateReverseCopy(const A: array of T): TArray; static;
+    class function  CreateMerge(const L, R: array of T): TArray; static;
+    class function  CreateRandomShuffle(const A: array of T): TArray; static;
+    class function  CreateAndFill(const aValue: T; aSize: SizeInt): TArray; static;
+    class procedure Fill(var A: array of T; const aValue: T); static;
   { returns resized array }
     class function  Resize(var A: TArray; aNewSize: SizeInt): TArray; static; inline;
-    class function  Append(var A: TArray; constref aValue: T): SizeInt; static;
+    class function  Append(var A: TArray; const aValue: T): SizeInt; static;
   { if aSrc <> aDst appends aSrc to aDst, sets aSrc to nil and returns count of merged elements,
     otherwise returns 0}
     class function  Merge(var aDst, aSrc: TArray): SizeInt; static;
@@ -153,33 +153,33 @@ type
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
     class procedure RandomShuffle(var A: array of T); static;
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualCompare): SizeInt;
+    class function  SequentSearch(const A: array of T; const aValue: T; c: TEqualCompare): SizeInt;
                     static;
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnEqualCompare): SizeInt;
+    class function  SequentSearch(const A: array of T; const aValue: T; c: TOnEqualCompare): SizeInt;
                     static;
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestEqualCompare): SizeInt;
+    class function  SequentSearch(const A: array of T; const aValue: T; c: TNestEqualCompare): SizeInt;
                     static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TEqualCompare): Boolean; static;
-    class function  Same(constref A, B: array of T; c: TOnEqualCompare): Boolean; static;
-    class function  Same(constref A, B: array of T; c: TNestEqualCompare): Boolean; static;
-    class function  Select(constref A: array of T; aTest: TTest): TArray;
-    class function  Select(constref A: array of T; aTest: TOnTest): TArray;
-    class function  Select(constref A: array of T; aTest: TNestTest): TArray;
+    class function  Same(const A, B: array of T; c: TEqualCompare): Boolean; static;
+    class function  Same(const A, B: array of T; c: TOnEqualCompare): Boolean; static;
+    class function  Same(const A, B: array of T; c: TNestEqualCompare): Boolean; static;
+    class function  Select(const A: array of T; aTest: TTest): TArray;
+    class function  Select(const A: array of T; aTest: TOnTest): TArray;
+    class function  Select(const A: array of T; aTest: TNestTest): TArray;
     { left-associative linear fold }
-    class function  FoldL(constref A: array of T; aFold: TFold; constref v0: T): T; static;
-    class function  FoldL(constref A: array of T; aFold: TFold): TOptional; static;
-    class function  FoldL(constref A: array of T; aFold: TOnFold; constref v0: T): T; static;
-    class function  FoldL(constref A: array of T; aFold: TOnFold): TOptional; static;
-    class function  FoldL(constref A: array of T; aFold: TNestFold; constref v0: T): T; static;
-    class function  FoldL(constref A: array of T; aFold: TNestFold): TOptional; static;
+    class function  FoldL(const A: array of T; aFold: TFold; const v0: T): T; static;
+    class function  FoldL(const A: array of T; aFold: TFold): TOptional; static;
+    class function  FoldL(const A: array of T; aFold: TOnFold; const v0: T): T; static;
+    class function  FoldL(const A: array of T; aFold: TOnFold): TOptional; static;
+    class function  FoldL(const A: array of T; aFold: TNestFold; const v0: T): T; static;
+    class function  FoldL(const A: array of T; aFold: TNestFold): TOptional; static;
   { right-associative linear fold }
-    class function  FoldR(constref A: array of T; aFold: TFold; constref v0: T): T; static;
-    class function  FoldR(constref A: array of T; aFold: TFold): TOptional; static;
-    class function  FoldR(constref A: array of T; aFold: TOnFold; constref v0: T): T; static;
-    class function  FoldR(constref A: array of T; aFold: TOnFold): TOptional; static;
-    class function  FoldR(constref A: array of T; aFold: TNestFold; constref v0: T): T; static;
-    class function  FoldR(constref A: array of T; aFold: TNestFold): TOptional; static;
+    class function  FoldR(const A: array of T; aFold: TFold; const v0: T): T; static;
+    class function  FoldR(const A: array of T; aFold: TFold): TOptional; static;
+    class function  FoldR(const A: array of T; aFold: TOnFold; const v0: T): T; static;
+    class function  FoldR(const A: array of T; aFold: TOnFold): TOptional; static;
+    class function  FoldR(const A: array of T; aFold: TNestFold; const v0: T): T; static;
+    class function  FoldR(const A: array of T; aFold: TNestFold): TOptional; static;
   end;
 
   { TGIndexedHelpUtil
@@ -204,19 +204,19 @@ type
     class procedure Swap(L, R: PItem); static; inline;
     class procedure DoReverse(var e: TIndexed; L, R: SizeInt); static; inline;
   public
-    class function  CreateCopy(constref aEntity: TIndexed; aFrom, aCount: SizeInt): TArray; static;
+    class function  CreateCopy(const aEntity: TIndexed; aFrom, aCount: SizeInt): TArray; static;
     class procedure Reverse(var aEntity: TIndexed); static;
     class procedure Reverse(var aEntity: TIndexed; aFirst, aLast: SizeInt); static;
     class procedure RandomShuffle(var aEntity: TIndexed); static;
-    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+    class function  SequentSearch(const aEntity: TIndexed; const aValue: T;
                     c: TEqualCompare): SizeInt; static;
-    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+    class function  SequentSearch(const aEntity: TIndexed; const aValue: T;
                     c: TOnEqualCompare): SizeInt; static;
-    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+    class function  SequentSearch(const aEntity: TIndexed; const aValue: T;
                     c: TNestEqualCompare): SizeInt; static;
-    class function  Same(constref e1, e2: TIndexed; c: TEqualCompare): Boolean; static;
-    class function  Same(constref e1, e2: TIndexed; c: TOnEqualCompare): Boolean; static;
-    class function  Same(constref e1, e2: TIndexed; c: TNestEqualCompare): Boolean; static;
+    class function  Same(const e1, e2: TIndexed; c: TEqualCompare): Boolean; static;
+    class function  Same(const e1, e2: TIndexed; c: TOnEqualCompare): Boolean; static;
+    class function  Same(const e1, e2: TIndexed; c: TNestEqualCompare): Boolean; static;
   end;
 
   { TGBaseArrayHelper
@@ -261,12 +261,12 @@ type
     class function  CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
@@ -279,27 +279,27 @@ type
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
+    class function  SequentSearch(const A: array of T; const aValue: T): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
+    class function  BinarySearch(const A: array of T; const aValue: T): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult; static;
+    class function  BinarySearchPos(const A: array of T; const aValue: T): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T): SizeInt; static;
+    class function  IndexOfMin(const A: array of T): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T): SizeInt; static;
+    class function  IndexOfMax(const A: array of T): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T): TOptional; static;
+    class function  GetMin(const A: array of T): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T): TOptional; static;
+    class function  GetMax(const A: array of T): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T): Boolean; static;
+    class function  FindMin(const A: array of T; out aValue: T): Boolean; static;
   { returns True and greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T): Boolean; static;
+    class function  FindMax(const A: array of T; out aValue: T): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax, if A is nonempty,
     False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean; static;
+    class function  FindMinMax(const A: array of T; out aMin, aMax: T): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
@@ -311,29 +311,29 @@ type
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean; static;
+    class function  FindNthSmallestND(const A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt): TOptional; static;
+    class function  NthSmallestND(const A: array of T; N: SizeInt): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T): Boolean; static;
+    class function  IsNonDescending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T): Boolean; static;
+    class function  IsStrictAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T): Boolean; static;
+    class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T): Boolean; static;
+    class function  IsStrictDescending(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T): Int64; static;
+    class function  InversionCountND(const A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T): Boolean; static;
+    class function  Same(const A, B: array of T): Boolean; static;
   { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
@@ -346,9 +346,9 @@ type
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sorting, currently it is IntroSort}
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T): TArray; static;
+    class function  SelectDistinct(const A: array of T): TArray; static;
   end;
 
   { TGArrayHelper assumes that type T implements TCmpRel }
@@ -367,16 +367,16 @@ type
   type
     TSortSplit = TUtil.TSortSplit;
 
-    class function  BiSearchLeftA(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+    class function  BiSearchLeftA(const e: TIndexed; L, R: SizeInt; const aValue: T): SizeInt;
                     static;
-    class function  BiSearchLeftD(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+    class function  BiSearchLeftD(const e: TIndexed; L, R: SizeInt; const aValue: T): SizeInt;
                     static;
-    class function  BiSearchRightA(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+    class function  BiSearchRightA(const e: TIndexed; L, R: SizeInt; const aValue: T): SizeInt;
                     static;
-    class function  BiSearchRightD(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt;
+    class function  BiSearchRightD(const e: TIndexed; L, R: SizeInt; const aValue: T): SizeInt;
                     static;
-    class function  DoBinSearch(constref e: TIndexed; L, R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPos(constref e: TIndexed; L, R: SizeInt; constref aValue: T): TSearchResult;
+    class function  DoBinSearch(const e: TIndexed; L, R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearchPos(const e: TIndexed; L, R: SizeInt; const aValue: T): TSearchResult;
                     static;
     class function  CountRun(var e: TIndexed; L, R: SizeInt; o: TSortOrder): SizeInt;
     class procedure InsertionSort(var e: TIndexed; L, R: SizeInt); static;
@@ -385,26 +385,26 @@ type
     class function  QSplitMo9(var e: TIndexed; L, R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(var e: TIndexed; L, R, Ttl: SizeInt); static;
   public
-    class function  SequentSearch(constref aEntity: TIndexed; constref aValue: T): SizeInt; static;
-    class function  BinarySearch(constref aEntity: TIndexed; constref aValue: T): SizeInt; static;
-    class function  BinarySearchPos(constref aEntity: TIndexed; constref aValue: T): TSearchResult; static;
-    class function  IndexOfMin(constref aEntity: TIndexed): SizeInt; static;
-    class function  IndexOfMax(constref aEntity: TIndexed): SizeInt; static;
-    class function  GetMin(constref aEntity: TIndexed): TOptional; static;
-    class function  GetMax(constref aEntity: TIndexed): TOptional; static;
-    class function  FindMin(constref aEntity: TIndexed; out aValue: T): Boolean; static;
-    class function  FindMax(constref aEntity: TIndexed; out aValue: T): Boolean; static;
-    class function  FindMinMax(constref aEntity: TIndexed; out aMin, aMax: T): Boolean; static;
-    class function  FindNthSmallest(constref aEntity: TIndexed; N: SizeInt; out aValue: T): Boolean; static;
-    class function  NthSmallest(constref aEntity: TIndexed; N: SizeInt): TOptional; static;
+    class function  SequentSearch(const aEntity: TIndexed; const aValue: T): SizeInt; static;
+    class function  BinarySearch(const aEntity: TIndexed; const aValue: T): SizeInt; static;
+    class function  BinarySearchPos(const aEntity: TIndexed; const aValue: T): TSearchResult; static;
+    class function  IndexOfMin(const aEntity: TIndexed): SizeInt; static;
+    class function  IndexOfMax(const aEntity: TIndexed): SizeInt; static;
+    class function  GetMin(const aEntity: TIndexed): TOptional; static;
+    class function  GetMax(const aEntity: TIndexed): TOptional; static;
+    class function  FindMin(const aEntity: TIndexed; out aValue: T): Boolean; static;
+    class function  FindMax(const aEntity: TIndexed; out aValue: T): Boolean; static;
+    class function  FindMinMax(const aEntity: TIndexed; out aMin, aMax: T): Boolean; static;
+    class function  FindNthSmallest(const aEntity: TIndexed; N: SizeInt; out aValue: T): Boolean; static;
+    class function  NthSmallest(const aEntity: TIndexed; N: SizeInt): TOptional; static;
     class function  NextPermutation2Asc(var aEntity: TIndexed): Boolean; static;
     class function  NextPermutation2Desc(var aEntity: TIndexed): Boolean; static;
-    class function  InversionCount(constref aEntity: TIndexed): Int64; static;
-    class function  IsNonDescending(constref aEntity: TIndexed): Boolean; static;
-    class function  IsStrictAscending(constref aEntity: TIndexed): Boolean; static;
-    class function  IsNonAscending(constref aEntity: TIndexed): Boolean; static;
-    class function  IsStrictDescending(constref aEntity: TIndexed): Boolean; static;
-    class function  Same(constref e1, e2: TIndexed): Boolean; static;
+    class function  InversionCount(const aEntity: TIndexed): Int64; static;
+    class function  IsNonDescending(const aEntity: TIndexed): Boolean; static;
+    class function  IsStrictAscending(const aEntity: TIndexed): Boolean; static;
+    class function  IsNonAscending(const aEntity: TIndexed): Boolean; static;
+    class function  IsStrictDescending(const aEntity: TIndexed): Boolean; static;
+    class function  Same(const e1, e2: TIndexed): Boolean; static;
     class procedure Sort(var aEntity: TIndexed; o: TSortOrder = soAsc); static;
     class procedure Sort(var aEntity: TIndexed; aFirst, aLast: SizeInt; o: TSortOrder = soAsc); static;
   { copies only distinct values from aEntity }
@@ -456,12 +456,12 @@ type
     class function  CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
@@ -474,27 +474,27 @@ type
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
+    class function  SequentSearch(const A: array of T; const aValue: T): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
+    class function  BinarySearch(const A: array of T; const aValue: T): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult; static;
+    class function  BinarySearchPos(const A: array of T; const aValue: T): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T): SizeInt; static;
+    class function  IndexOfMin(const A: array of T): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T): SizeInt; static;
+    class function  IndexOfMax(const A: array of T): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T): TOptional; static;
+    class function  GetMin(const A: array of T): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T): TOptional; static;
+    class function  GetMax(const A: array of T): TOptional; static;
   { retursn True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T): Boolean; static;
+    class function  FindMin(const A: array of T; out aValue: T): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T): Boolean; static;
+    class function  FindMax(const A: array of T; out aValue: T): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean; static;
+    class function  FindMinMax(const A: array of T; out aMin, aMax: T): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
@@ -506,29 +506,29 @@ type
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean; static;
+    class function  FindNthSmallestND(const A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt): TOptional; static;
+    class function  NthSmallestND(const A: array of T; N: SizeInt): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T): Boolean; static;
+    class function  IsNonDescending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T): Boolean; static;
+    class function  IsStrictAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T): Boolean; static;
+    class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T): Boolean; static;
+    class function  IsStrictDescending(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T): Int64; static;
+    class function  InversionCountND(const A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T): Boolean; static;
+    class function  Same(const A, B: array of T): Boolean; static;
   { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
@@ -541,9 +541,9 @@ type
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T): TArray; static;
+    class function  SelectDistinct(const A: array of T): TArray; static;
   end;
 
   { TGRegularArrayHelper: with regular comparator}
@@ -591,12 +591,12 @@ type
     class function  CountRun(A: PItem; R: SizeInt; c: TLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TLess); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TLess): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TLess): TSearchResult;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T; c: TLess): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T; c: TLess): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; const aValue: T; c: TLess): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; const aValue: T; c: TLess): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T; c: TLess): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T; c: TLess): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TLess); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
@@ -610,28 +610,28 @@ type
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TLess): SizeInt; static;
+    class function  SequentSearch(const A: array of T; const aValue: T; c: TLess): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TLess): SizeInt; static;
+    class function  BinarySearch(const A: array of T; const aValue: T; c: TLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TLess): TSearchResult;
+    class function  BinarySearchPos(const A: array of T; const aValue: T; c: TLess): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T; c: TLess): SizeInt; static;
+    class function  IndexOfMin(const A: array of T; c: TLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T; c: TLess): SizeInt; static;
+    class function  IndexOfMax(const A: array of T; c: TLess): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A <> nil }
-    class function  GetMin(constref A: array of T; c: TLess): TOptional; static;
+    class function  GetMin(const A: array of T; c: TLess): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T; c: TLess): TOptional; static;
+    class function  GetMax(const A: array of T; c: TLess): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T; c: TLess): Boolean; static;
+    class function  FindMin(const A: array of T; out aValue: T; c: TLess): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T; c: TLess): Boolean; static;
+    class function  FindMax(const A: array of T; out aValue: T; c: TLess): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TLess): Boolean; static;
+    class function  FindMinMax(const A: array of T; out aMin, aMax: T; c: TLess): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
@@ -643,29 +643,29 @@ type
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T; c: TLess): Boolean; static;
+    class function  FindNthSmallestND(const A: array of T; N: SizeInt; out aValue: T; c: TLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TLess): TOptional; static;
+    class function  NthSmallestND(const A: array of T; N: SizeInt; c: TLess): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T; c: TLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T; c: TLess): Boolean; static;
+    class function  IsNonDescending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T; c: TLess): Boolean; static;
+    class function  IsStrictAscending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T; c: TLess): Boolean; static;
+    class function  IsNonAscending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T; c: TLess): Boolean; static;
+    class function  IsStrictDescending(const A: array of T; c: TLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T; c: TLess): Int64; static;
+    class function  InversionCountND(const A: array of T; c: TLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TLess): Boolean; static;
+    class function  Same(const A, B: array of T; c: TLess): Boolean; static;
   { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
@@ -678,9 +678,9 @@ type
     class procedure MergeSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T; c: TLess): TArray;
+    class function  SelectDistinct(const A: array of T; c: TLess): TArray;
                     static;
   end;
 
@@ -729,12 +729,12 @@ type
     class function  CountRun(A: PItem; R: SizeInt; c: TOnLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TOnLess): TSearchResult;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
@@ -748,28 +748,28 @@ type
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  SequentSearch(const A: array of T; const aValue: T; c: TOnLess): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TOnLess): SizeInt; static;
+    class function  BinarySearch(const A: array of T; const aValue: T; c: TOnLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TOnLess): TSearchResult;
+    class function  BinarySearchPos(const A: array of T; const aValue: T; c: TOnLess): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T; c: TOnLess): SizeInt; static;
+    class function  IndexOfMin(const A: array of T; c: TOnLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T; c: TOnLess): SizeInt; static;
+    class function  IndexOfMax(const A: array of T; c: TOnLess): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T; c: TOnLess): TOptional; static;
+    class function  GetMin(const A: array of T; c: TOnLess): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T; c: TOnLess): TOptional; static;
+    class function  GetMax(const A: array of T; c: TOnLess): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T; c: TOnLess): Boolean; static;
+    class function  FindMin(const A: array of T; out aValue: T; c: TOnLess): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T; c: TOnLess): Boolean; static;
+    class function  FindMax(const A: array of T; out aValue: T; c: TOnLess): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TOnLess): Boolean; static;
+    class function  FindMinMax(const A: array of T; out aMin, aMax: T; c: TOnLess): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
@@ -781,29 +781,29 @@ type
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TOnLess): Boolean; static;
+    class function  FindNthSmallestND(const A: array of T;N: SizeInt; out aValue: T; c: TOnLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TOnLess): TOptional; static;
+    class function  NthSmallestND(const A: array of T; N: SizeInt; c: TOnLess): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T; c: TOnLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T; c: TOnLess): Boolean; static;
+    class function  IsNonDescending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T; c: TOnLess): Boolean; static;
+    class function  IsStrictAscending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T; c: TOnLess): Boolean; static;
+    class function  IsNonAscending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T; c: TOnLess): Boolean; static;
+    class function  IsStrictDescending(const A: array of T; c: TOnLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T; c: TOnLess): Int64; static;
+    class function  InversionCountND(const A: array of T; c: TOnLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TOnLess): Boolean; static;
+    class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
   { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
@@ -816,9 +816,9 @@ type
     class procedure MergeSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T; c: TOnLess): TArray;
+    class function  SelectDistinct(const A: array of T; c: TOnLess): TArray;
                     static;
   end;
 
@@ -867,16 +867,16 @@ type
     class function  CountRun(A: PItem; R: SizeInt; c: TNestLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): SizeInt;
                     static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TNestLess): TSearchResult;
+    class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
@@ -890,28 +890,28 @@ type
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T; static;
   public
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestLess): SizeInt; static;
+    class function  SequentSearch(const A: array of T; const aValue: T; c: TNestLess): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T; c: TNestLess): SizeInt; static;
+    class function  BinarySearch(const A: array of T; const aValue: T; c: TNestLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TNestLess): TSearchResult;
+    class function  BinarySearchPos(const A: array of T; const aValue: T; c: TNestLess): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T; c: TNestLess): SizeInt; static;
+    class function  IndexOfMin(const A: array of T; c: TNestLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T; c: TNestLess): SizeInt; static;
+    class function  IndexOfMax(const A: array of T; c: TNestLess): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T; c: TNestLess): TOptional; static;
+    class function  GetMin(const A: array of T; c: TNestLess): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T; c: TNestLess): TOptional; static;
+    class function  GetMax(const A: array of T; c: TNestLess): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T; c: TNestLess): Boolean; static;
+    class function  FindMin(const A: array of T; out aValue: T; c: TNestLess): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T; c: TNestLess): Boolean; static;
+    class function  FindMax(const A: array of T; out aValue: T; c: TNestLess): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TNestLess): Boolean; static;
+    class function  FindMinMax(const A: array of T; out aMin, aMax: T; c: TNestLess): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is destructive: changes the order of elements in A }
@@ -923,29 +923,29 @@ type
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TNestLess): Boolean; static;
+    class function  FindNthSmallestND(const A: array of T;N: SizeInt; out aValue: T; c: TNestLess): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TNestLess): TOptional; static;
+    class function  NthSmallestND(const A: array of T; N: SizeInt; c: TNestLess): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T; c: TNestLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T; c: TNestLess): Boolean; static;
+    class function  IsNonDescending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T; c: TNestLess): Boolean; static;
+    class function  IsStrictAscending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T; c: TNestLess): Boolean; static;
+    class function  IsNonAscending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T; c: TNestLess): Boolean; static;
+    class function  IsStrictDescending(const A: array of T; c: TNestLess): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T; c: TNestLess): Int64; static;
+    class function  InversionCountND(const A: array of T; c: TNestLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TNestLess): Boolean; static;
+    class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
   { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
@@ -958,9 +958,9 @@ type
     class procedure MergeSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T; c: TNestLess): TArray;
+    class function  SelectDistinct(const A: array of T; c: TNestLess): TArray;
                     static;
   end;
 
@@ -984,17 +984,17 @@ type
     class function  CountRun(var A: array of T; L, R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
     class procedure UnguardInsertionSort(var A: array of T; L, R: SizeInt); static;
-    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
+    class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoQSort(var A: array of T; L, R: SizeInt); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
-    class function  GetMo9Pivot(constref A: array of T; L, R: SizeInt): T; static;
+    class function  GetMo9Pivot(const A: array of T; L, R: SizeInt): T; static;
     class function  QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(var A: array of T; L, R, Ttl: SizeInt); static;
     class function  DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit; static;
@@ -1013,27 +1013,27 @@ type
     the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
+    class function  SequentSearch(const A: array of T; const aValue: T): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
-    class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
+    class function  BinarySearch(const A: array of T; const aValue: T): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult; static;
+    class function  BinarySearchPos(const A: array of T; const aValue: T): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
-    class function  IndexOfMin(constref A: array of T): SizeInt; static;
+    class function  IndexOfMin(const A: array of T): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
-    class function  IndexOfMax(constref A: array of T): SizeInt; static;
+    class function  IndexOfMax(const A: array of T): SizeInt; static;
   { returns smallest element of A in TOptional.Value if A is nonempty }
-    class function  GetMin(constref A: array of T): TOptional; static;
+    class function  GetMin(const A: array of T): TOptional; static;
   { returns greatest element of A in TOptional.Value if A is nonempty }
-    class function  GetMax(constref A: array of T): TOptional; static;
+    class function  GetMax(const A: array of T): TOptional; static;
   { returns True and smallest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMin(constref A: array of T; out aValue: T): Boolean; static;
+    class function  FindMin(const A: array of T; out aValue: T): Boolean; static;
   { returns True and  greatest element of A in aValue if A is nonempty, False otherwise }
-    class function  FindMax(constref A: array of T; out aValue: T): Boolean; static;
+    class function  FindMax(const A: array of T; out aValue: T): Boolean; static;
   { returns True, smallest element of A in aMin and greatest element of A in aMax,
     if A is nonempty, False otherwise }
-    class function  FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean; static;
+    class function  FindMinMax(const A: array of T; out aMin, aMax: T): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     destructive: changes the order of elements in A }
@@ -1045,29 +1045,29 @@ type
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  FindNthSmallestND(constref  A: array of T; N: SizeInt; out aValue: T): Boolean; static;
+    class function  FindNthSmallestND(const  A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
     is nondestructive: creates a temp copy of A }
-    class function  NthSmallestND(constref  A: array of T; N: SizeInt): TOptional; static;
+    class function  NthSmallestND(const  A: array of T; N: SizeInt): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T): Boolean; static;
   { note: an empty array or single element array is always nondescending }
-    class function  IsNonDescending(constref A: array of T): Boolean; static;
+    class function  IsNonDescending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
-    class function  IsStrictAscending(constref A: array of T): Boolean; static;
+    class function  IsStrictAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is always nonascending }
-    class function  IsNonAscending(constref A: array of T): Boolean; static;
+    class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending}
-    class function  IsStrictDescending(constref A: array of T): Boolean; static;
+    class function  IsStrictDescending(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
-    class function  InversionCountND(constref A: array of T): Int64; static;
+    class function  InversionCountND(const A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T): Boolean; static;
+    class function  Same(const A, B: array of T): Boolean; static;
   { hybrid sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
@@ -1078,9 +1078,9 @@ type
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sorting, currently it is IntroSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(constref A: array of T): TArray; static;
+    class function  SelectDistinct(const A: array of T): TArray; static;
   end;
 
   { TGOrdinalArrayHelper: for ordinal numeric types only }
@@ -1108,7 +1108,7 @@ type
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
   { hybrid sorting, will use counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
-    class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
+    class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
 
   { TGSegmentTree after O(N) preprocessing of a given array of monoid elements allows:
@@ -1376,14 +1376,14 @@ begin
     raise EArgumentException.CreateFmt(SEArrIndexOutOfBoundsFmt, [L]);
 end;
 
-class function TGArrayHelpUtil.CreateCopy(constref A: array of T): TArray;
+class function TGArrayHelpUtil.CreateCopy(const A: array of T): TArray;
 begin
   System.SetLength(Result, System.Length(A));
   if System.Length(Result) > 0 then
     CopyItems(@A[0], PItem(Result), System.Length(Result));
 end;
 
-class function TGArrayHelpUtil.CreateReverseCopy(constref A: array of T): TArray;
+class function TGArrayHelpUtil.CreateReverseCopy(const A: array of T): TArray;
 var
   L, R: SizeInt;
 begin
@@ -1418,7 +1418,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.CreateMerge(constref L, R: array of T): TArray;
+class function TGArrayHelpUtil.CreateMerge(const L, R: array of T): TArray;
 var
   LenL, LenR: SizeInt;
 begin
@@ -1431,13 +1431,13 @@ begin
     CopyItems(@R[0], @Result[LenL], LenR);
 end;
 
-class function TGArrayHelpUtil.CreateRandomShuffle(constref A: array of T): TArray;
+class function TGArrayHelpUtil.CreateRandomShuffle(const A: array of T): TArray;
 begin
   Result := CreateCopy(A);
   RandomShuffle(Result);
 end;
 
-class function TGArrayHelpUtil.CreateAndFill(constref aValue: T; aSize: SizeInt): TArray;
+class function TGArrayHelpUtil.CreateAndFill(const aValue: T; aSize: SizeInt): TArray;
 var
   I: SizeInt;
 begin
@@ -1469,7 +1469,7 @@ begin
   end;
 end;
 
-class procedure TGArrayHelpUtil.Fill(var A: array of T; constref aValue: T);
+class procedure TGArrayHelpUtil.Fill(var A: array of T; const aValue: T);
 var
   I: SizeInt = 0;
 begin
@@ -1503,7 +1503,7 @@ begin
   Result := A;
 end;
 
-class function TGArrayHelpUtil.Append(var A: TArray; constref aValue: T): SizeInt;
+class function TGArrayHelpUtil.Append(var A: TArray; const aValue: T): SizeInt;
 begin
   Result := System.Length(A);
   System.SetLength(A, Succ(Result));
@@ -1631,7 +1631,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.SequentSearch(constref A: array of T; constref aValue: T;
+class function TGArrayHelpUtil.SequentSearch(const A: array of T; const aValue: T;
   c: TEqualCompare): SizeInt;
 begin
   for Result := 0 to System.High(A) do
@@ -1640,7 +1640,7 @@ begin
   Result := -1;
 end;
 
-class function TGArrayHelpUtil.SequentSearch(constref A: array of T; constref aValue: T;
+class function TGArrayHelpUtil.SequentSearch(const A: array of T; const aValue: T;
   c: TOnEqualCompare): SizeInt;
 begin
   for Result := 0 to System.High(A) do
@@ -1649,7 +1649,7 @@ begin
   Result := -1;
 end;
 
-class function TGArrayHelpUtil.SequentSearch(constref A: array of T; constref aValue: T;
+class function TGArrayHelpUtil.SequentSearch(const A: array of T; const aValue: T;
   c: TNestEqualCompare): SizeInt;
 begin
   for Result := 0 to System.High(A) do
@@ -1658,7 +1658,7 @@ begin
   Result := -1;
 end;
 
-class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TEqualCompare): Boolean;
+class function TGArrayHelpUtil.Same(const A, B: array of T; c: TEqualCompare): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -1671,7 +1671,7 @@ begin
   Result := True;
 end;
 
-class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TOnEqualCompare): Boolean;
+class function TGArrayHelpUtil.Same(const A, B: array of T; c: TOnEqualCompare): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -1684,7 +1684,7 @@ begin
   Result := True;
 end;
 
-class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TNestEqualCompare): Boolean;
+class function TGArrayHelpUtil.Same(const A, B: array of T; c: TNestEqualCompare): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -1697,7 +1697,7 @@ begin
   Result := True;
 end;
 
-class function TGArrayHelpUtil.Select(constref A: array of T; aTest: TTest): TArray;
+class function TGArrayHelpUtil.Select(const A: array of T; aTest: TTest): TArray;
 var
   I, Len: SizeInt;
   v: T;
@@ -1719,7 +1719,7 @@ begin
   SetLength(Result, I);
 end;
 
-class function TGArrayHelpUtil.Select(constref A: array of T; aTest: TOnTest): TArray;
+class function TGArrayHelpUtil.Select(const A: array of T; aTest: TOnTest): TArray;
 var
   I, Len: SizeInt;
   v: T;
@@ -1741,7 +1741,7 @@ begin
   SetLength(Result, I);
 end;
 
-class function TGArrayHelpUtil.Select(constref A: array of T; aTest: TNestTest): TArray;
+class function TGArrayHelpUtil.Select(const A: array of T; aTest: TNestTest): TArray;
 var
   I, Len: SizeInt;
   v: T;
@@ -1763,7 +1763,7 @@ begin
   SetLength(Result, I);
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TFold; constref v0: T): T;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold; const v0: T): T;
 var
   v: T;
 begin
@@ -1772,7 +1772,7 @@ begin
     Result := aFold(v, Result);
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TFold): TOptional;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1787,7 +1787,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TOnFold; constref v0: T): T;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TOnFold; const v0: T): T;
 var
   v: T;
 begin
@@ -1796,7 +1796,7 @@ begin
     Result := aFold(v, Result);
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TOnFold): TOptional;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TOnFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1811,7 +1811,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TNestFold; constref v0: T): T;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TNestFold; const v0: T): T;
 var
   v: T;
 begin
@@ -1820,7 +1820,7 @@ begin
     Result := aFold(v, Result);
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TNestFold): TOptional;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TNestFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1835,7 +1835,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TFold; constref v0: T): T;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TFold; const v0: T): T;
 var
   I: SizeInt;
 begin
@@ -1844,7 +1844,7 @@ begin
     Result := aFold(A[I], Result);
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TFold): TOptional;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1859,7 +1859,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TOnFold; constref v0: T): T;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TOnFold; const v0: T): T;
 var
   I: SizeInt;
 begin
@@ -1868,7 +1868,7 @@ begin
     Result := aFold(A[I], Result);
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TOnFold): TOptional;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TOnFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1883,7 +1883,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TNestFold; constref v0: T): T;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TNestFold; const v0: T): T;
 var
   I: SizeInt;
 begin
@@ -1892,7 +1892,7 @@ begin
     Result := aFold(A[I], Result);
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TNestFold): TOptional;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TNestFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1928,7 +1928,7 @@ begin
     end;
 end;
 
-class function TGIndexedHelpUtil.CreateCopy(constref aEntity: TIndexed; aFrom, aCount: SizeInt): TArray;
+class function TGIndexedHelpUtil.CreateCopy(const aEntity: TIndexed; aFrom, aCount: SizeInt): TArray;
 var
   I: SizeInt;
   a: TArray = nil;
@@ -1972,7 +1972,7 @@ begin
     Swap(aEntity.UncMutable[I], aEntity.UncMutable[Random(I+1)]);
 end;
 
-class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+class function TGIndexedHelpUtil.SequentSearch(const aEntity: TIndexed; const aValue: T;
   c: TEqualCompare): SizeInt;
 begin
   for Result := 0 to Pred(aEntity.Count) do
@@ -1981,7 +1981,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+class function TGIndexedHelpUtil.SequentSearch(const aEntity: TIndexed; const aValue: T;
   c: TOnEqualCompare): SizeInt;
 begin
   for Result := 0 to Pred(aEntity.Count) do
@@ -1990,7 +1990,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGIndexedHelpUtil.SequentSearch(constref aEntity: TIndexed; constref aValue: T;
+class function TGIndexedHelpUtil.SequentSearch(const aEntity: TIndexed; const aValue: T;
   c: TNestEqualCompare): SizeInt;
 begin
   for Result := 0 to Pred(aEntity.Count) do
@@ -1999,7 +1999,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGIndexedHelpUtil.Same(constref e1, e2: TIndexed; c: TEqualCompare): Boolean;
+class function TGIndexedHelpUtil.Same(const e1, e2: TIndexed; c: TEqualCompare): Boolean;
 var
   I: SizeInt;
 begin
@@ -2011,7 +2011,7 @@ begin
   Result := True;
 end;
 
-class function TGIndexedHelpUtil.Same(constref e1, e2: TIndexed; c: TOnEqualCompare): Boolean;
+class function TGIndexedHelpUtil.Same(const e1, e2: TIndexed; c: TOnEqualCompare): Boolean;
 var
   I: SizeInt;
 begin
@@ -2023,7 +2023,7 @@ begin
   Result := True;
 end;
 
-class function TGIndexedHelpUtil.Same(constref e1, e2: TIndexed; c: TNestEqualCompare): Boolean;
+class function TGIndexedHelpUtil.Same(const e1, e2: TIndexed; c: TNestEqualCompare): Boolean;
 var
   I: SizeInt;
 begin
@@ -2971,7 +2971,7 @@ begin
       end;
 end;
 
-class function TGBaseArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -2987,7 +2987,7 @@ begin
   Result := R;
 end;
 
-class function TGBaseArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -3003,7 +3003,7 @@ begin
   Result := R;
 end;
 
-class function TGBaseArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -3020,7 +3020,7 @@ begin
 
 end;
 
-class function TGBaseArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -3036,7 +3036,7 @@ begin
   Result := R;
 end;
 
-class function TGBaseArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
@@ -3062,7 +3062,7 @@ begin
         Result := 0;
 end;
 
-class function TGBaseArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+class function TGBaseArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
@@ -3420,7 +3420,7 @@ begin
   Result := A[N];
 end;
 
-class function TGBaseArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.SequentSearch(const A: array of T; const aValue: T): SizeInt;
 begin
   for Result := 0 to System.High(A) do
     if not(TCmpRel.Less(A[Result], aValue) or TCmpRel.Less(aValue, A[Result])) then
@@ -3428,14 +3428,14 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGBaseArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGBaseArrayHelper.BinarySearch(const A: array of T; const aValue: T): SizeInt;
 begin
   Result := System.High(A);
   if Result >= 0 then
     Result := DoBinSearch(@A[0], Result, aValue);
 end;
 
-class function TGBaseArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
+class function TGBaseArrayHelper.BinarySearchPos(const A: array of T; const aValue: T): TSearchResult;
 var
   R: SizeInt;
 begin
@@ -3446,7 +3446,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGBaseArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
+class function TGBaseArrayHelper.IndexOfMin(const A: array of T): SizeInt;
 var
   R, I: SizeInt;
   m: T;
@@ -3467,7 +3467,7 @@ begin
     Result := R;
 end;
 
-class function TGBaseArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
+class function TGBaseArrayHelper.IndexOfMax(const A: array of T): SizeInt;
 var
   R, I: SizeInt;
   m: T;
@@ -3488,7 +3488,7 @@ begin
     Result := R;
 end;
 
-class function TGBaseArrayHelper.GetMin(constref A: array of T): TOptional;
+class function TGBaseArrayHelper.GetMin(const A: array of T): TOptional;
 var
   v: T;
 begin
@@ -3496,7 +3496,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGBaseArrayHelper.GetMax(constref A: array of T): TOptional;
+class function TGBaseArrayHelper.GetMax(const A: array of T): TOptional;
 var
   v: T;
 begin
@@ -3504,7 +3504,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGBaseArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
+class function TGBaseArrayHelper.FindMin(const A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -3520,7 +3520,7 @@ begin
   Result := False;
 end;
 
-class function TGBaseArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
+class function TGBaseArrayHelper.FindMax(const A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -3536,7 +3536,7 @@ begin
   Result := False;
 end;
 
-class function TGBaseArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
+class function TGBaseArrayHelper.FindMinMax(const A: array of T; out aMin, aMax: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -3579,12 +3579,12 @@ begin
     Result.Assign(v);
 end;
 
-class function TGBaseArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean;
+class function TGBaseArrayHelper.FindNthSmallestND(const A: array of T; N: SizeInt; out aValue: T): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue);
 end;
 
-class function TGBaseArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
+class function TGBaseArrayHelper.NthSmallestND(const A: array of T; N: SizeInt): TOptional;
 var
   v: T;
 begin
@@ -3644,7 +3644,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseArrayHelper.IsNonDescending(constref A: array of T): Boolean;
+class function TGBaseArrayHelper.IsNonDescending(const A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -3654,7 +3654,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
+class function TGBaseArrayHelper.IsStrictAscending(const A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -3670,7 +3670,7 @@ begin
     Result := False;
 end;
 
-class function TGBaseArrayHelper.IsNonAscending(constref A: array of T): Boolean;
+class function TGBaseArrayHelper.IsNonAscending(const A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -3680,7 +3680,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
+class function TGBaseArrayHelper.IsStrictDescending(const A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -3740,12 +3740,12 @@ begin
   Result := 0;
 end;
 
-class function TGBaseArrayHelper.InversionCountND(constref A: array of T): Int64;
+class function TGBaseArrayHelper.InversionCountND(const A: array of T): Int64;
 begin
   Result := InversionCount(CreateCopy(A));
 end;
 
-class function TGBaseArrayHelper.Same(constref A, B: array of T): Boolean;
+class function TGBaseArrayHelper.Same(const A, B: array of T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -3827,13 +3827,13 @@ begin
   IntroSort(A, o);
 end;
 
-class function TGBaseArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
+class function TGBaseArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, o);
 end;
 
-class function TGBaseArrayHelper.SelectDistinct(constref A: array of T): TArray;
+class function TGBaseArrayHelper.SelectDistinct(const A: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -3855,8 +3855,8 @@ end;
 
 { TGBaseIndexedHelper }
 
-class function TGBaseIndexedHelper.BiSearchLeftA(constref e: TIndexed; L, R: SizeInt;
-  constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.BiSearchLeftA(const e: TIndexed; L, R: SizeInt;
+  const aValue: T): SizeInt;
 var
   M: SizeInt;
 begin
@@ -3871,8 +3871,8 @@ begin
   Result := R;
 end;
 
-class function TGBaseIndexedHelper.BiSearchLeftD(constref e: TIndexed; L, R: SizeInt;
-  constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.BiSearchLeftD(const e: TIndexed; L, R: SizeInt;
+  const aValue: T): SizeInt;
 var
   M: SizeInt;
 begin
@@ -3887,8 +3887,8 @@ begin
   Result := R;
 end;
 
-class function TGBaseIndexedHelper.BiSearchRightA(constref e: TIndexed; L, R: SizeInt;
-  constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.BiSearchRightA(const e: TIndexed; L, R: SizeInt;
+  const aValue: T): SizeInt;
 var
   M: SizeInt;
 begin
@@ -3903,8 +3903,8 @@ begin
   Result := R;
 end;
 
-class function TGBaseIndexedHelper.BiSearchRightD(constref e: TIndexed; L, R: SizeInt;
-  constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.BiSearchRightD(const e: TIndexed; L, R: SizeInt;
+  const aValue: T): SizeInt;
 var
   M: SizeInt;
 begin
@@ -3919,8 +3919,8 @@ begin
   Result := R;
 end;
 
-class function TGBaseIndexedHelper.DoBinSearch(constref e: TIndexed; L, R: SizeInt;
-  constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.DoBinSearch(const e: TIndexed; L, R: SizeInt;
+  const aValue: T): SizeInt;
 begin
   Result := NULL_INDEX;
   if TCmpRel.Less(e.UncMutable[L]^, e.UncMutable[R]^) then  //ascending
@@ -3946,8 +3946,8 @@ begin
         Result := L;
 end;
 
-class function TGBaseIndexedHelper.DoBinSearchPos(constref e: TIndexed; L, R: SizeInt;
-  constref aValue: T): TSearchResult;
+class function TGBaseIndexedHelper.DoBinSearchPos(const e: TIndexed; L, R: SizeInt;
+  const aValue: T): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
@@ -4179,7 +4179,7 @@ begin
     InsertionSort(e, L, R);
 end;
 
-class function TGBaseIndexedHelper.SequentSearch(constref aEntity: TIndexed; constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.SequentSearch(const aEntity: TIndexed; const aValue: T): SizeInt;
 begin
   for Result := 0 to Pred(aEntity.Count) do
     if not(TCmpRel.Less(aEntity.UncMutable[Result]^, aValue) or
@@ -4188,22 +4188,22 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGBaseIndexedHelper.BinarySearch(constref aEntity: TIndexed; constref aValue: T): SizeInt;
+class function TGBaseIndexedHelper.BinarySearch(const aEntity: TIndexed; const aValue: T): SizeInt;
 begin
   if aEntity.Count > 0 then
     exit(DoBinSearch(aEntity, 0, Pred(aEntity.Count), aValue));
   Result := NULL_INDEX;
 end;
 
-class function TGBaseIndexedHelper.BinarySearchPos(constref aEntity: TIndexed;
-  constref aValue: T): TSearchResult;
+class function TGBaseIndexedHelper.BinarySearchPos(const aEntity: TIndexed;
+  const aValue: T): TSearchResult;
 begin
   if aEntity.Count > 0 then
     exit(DoBinSearchPos(aEntity, 0, Pred(aEntity.Count), aValue));
   Result := TSearchResult.Create(NULL_INDEX, 0);
 end;
 
-class function TGBaseIndexedHelper.IndexOfMin(constref aEntity: TIndexed): SizeInt;
+class function TGBaseIndexedHelper.IndexOfMin(const aEntity: TIndexed): SizeInt;
 var
   R, I: SizeInt;
   m: T;
@@ -4224,7 +4224,7 @@ begin
     Result := R;
 end;
 
-class function TGBaseIndexedHelper.IndexOfMax(constref aEntity: TIndexed): SizeInt;
+class function TGBaseIndexedHelper.IndexOfMax(const aEntity: TIndexed): SizeInt;
 var
   R, I: SizeInt;
   m: T;
@@ -4245,7 +4245,7 @@ begin
     Result := R;
 end;
 
-class function TGBaseIndexedHelper.GetMin(constref aEntity: TIndexed): TOptional;
+class function TGBaseIndexedHelper.GetMin(const aEntity: TIndexed): TOptional;
 var
   v: T;
 begin
@@ -4253,7 +4253,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGBaseIndexedHelper.GetMax(constref aEntity: TIndexed): TOptional;
+class function TGBaseIndexedHelper.GetMax(const aEntity: TIndexed): TOptional;
 var
   v: T;
 begin
@@ -4261,7 +4261,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGBaseIndexedHelper.FindMin(constref aEntity: TIndexed; out aValue: T): Boolean;
+class function TGBaseIndexedHelper.FindMin(const aEntity: TIndexed; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -4277,7 +4277,7 @@ begin
   Result := False;
 end;
 
-class function TGBaseIndexedHelper.FindMax(constref aEntity: TIndexed; out aValue: T): Boolean;
+class function TGBaseIndexedHelper.FindMax(const aEntity: TIndexed; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -4293,7 +4293,7 @@ begin
   Result := False;
 end;
 
-class function TGBaseIndexedHelper.FindMinMax(constref aEntity: TIndexed; out aMin, aMax: T): Boolean;
+class function TGBaseIndexedHelper.FindMinMax(const aEntity: TIndexed; out aMin, aMax: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -4313,7 +4313,7 @@ begin
   Result := False;
 end;
 
-class function TGBaseIndexedHelper.FindNthSmallest(constref aEntity: TIndexed; N: SizeInt;
+class function TGBaseIndexedHelper.FindNthSmallest(const aEntity: TIndexed; N: SizeInt;
   out aValue: T): Boolean;
 begin
   if (aEntity.Count > 0) and (SizeUInt(N) < SizeUInt(aEntity.Count)) then
@@ -4322,7 +4322,7 @@ begin
   Result := False;
 end;
 
-class function TGBaseIndexedHelper.NthSmallest(constref aEntity: TIndexed; N: SizeInt): TOptional;
+class function TGBaseIndexedHelper.NthSmallest(const aEntity: TIndexed; N: SizeInt): TOptional;
 var
   v: T;
 begin
@@ -4376,14 +4376,14 @@ begin
   Result := True;
 end;
 
-class function TGBaseIndexedHelper.InversionCount(constref aEntity: TIndexed): Int64;
+class function TGBaseIndexedHelper.InversionCount(const aEntity: TIndexed): Int64;
 begin
   if aEntity.Count > 1 then
     exit(specialize TGBaseArrayHelper<T, TCmpRel>.InversionCount(CreateCopy(aEntity, 0, aEntity.Count)));
   Result := 0;
 end;
 
-class function TGBaseIndexedHelper.IsNonDescending(constref aEntity: TIndexed): Boolean;
+class function TGBaseIndexedHelper.IsNonDescending(const aEntity: TIndexed): Boolean;
 var
   I: SizeInt;
 begin
@@ -4393,7 +4393,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseIndexedHelper.IsStrictAscending(constref aEntity: TIndexed): Boolean;
+class function TGBaseIndexedHelper.IsStrictAscending(const aEntity: TIndexed): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -4409,7 +4409,7 @@ begin
     Result := False;
 end;
 
-class function TGBaseIndexedHelper.IsNonAscending(constref aEntity: TIndexed): Boolean;
+class function TGBaseIndexedHelper.IsNonAscending(const aEntity: TIndexed): Boolean;
 var
   I: SizeInt;
 begin
@@ -4419,7 +4419,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseIndexedHelper.IsStrictDescending(constref aEntity: TIndexed): Boolean;
+class function TGBaseIndexedHelper.IsStrictDescending(const aEntity: TIndexed): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -4435,7 +4435,7 @@ begin
     Result := False;
 end;
 
-class function TGBaseIndexedHelper.Same(constref e1, e2: TIndexed): Boolean;
+class function TGBaseIndexedHelper.Same(const e1, e2: TIndexed): Boolean;
 var
   I: SizeInt;
 begin
@@ -5430,7 +5430,7 @@ begin
       end;
 end;
 
-class function TGComparableArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -5446,7 +5446,7 @@ begin
   Result := R;
 end;
 
-class function TGComparableArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -5462,7 +5462,7 @@ begin
   Result := R;
 end;
 
-class function TGComparableArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -5478,7 +5478,7 @@ begin
   Result := R;
 end;
 
-class function TGComparableArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -5494,7 +5494,7 @@ begin
   Result := R;
 end;
 
-class function TGComparableArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
@@ -5520,7 +5520,7 @@ begin
         Result := 0;
 end;
 
-class function TGComparableArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+class function TGComparableArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
@@ -5877,7 +5877,7 @@ begin
   Result := A[N];
 end;
 
-class function TGComparableArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.SequentSearch(const A: array of T; const aValue: T): SizeInt;
 begin
   for Result := 0 to System.High(A) do
     if ValEqual(aValue, A[Result]) then
@@ -5885,14 +5885,14 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGComparableArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.BinarySearch(const A: array of T; const aValue: T): SizeInt;
 begin
   Result := System.High(A);
   if Result >= 0 then
     Result := DoBinSearch(@A[0], Result, aValue);
 end;
 
-class function TGComparableArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
+class function TGComparableArrayHelper.BinarySearchPos(const A: array of T; const aValue: T): TSearchResult;
 var
   R: SizeInt;
 begin
@@ -5903,7 +5903,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGComparableArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
+class function TGComparableArrayHelper.IndexOfMin(const A: array of T): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -5924,7 +5924,7 @@ begin
     Result := R;
 end;
 
-class function TGComparableArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
+class function TGComparableArrayHelper.IndexOfMax(const A: array of T): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -5945,7 +5945,7 @@ begin
     Result := R;
 end;
 
-class function TGComparableArrayHelper.GetMin(constref A: array of T): TOptional;
+class function TGComparableArrayHelper.GetMin(const A: array of T): TOptional;
 var
   v: T;
 begin
@@ -5953,7 +5953,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGComparableArrayHelper.GetMax(constref A: array of T): TOptional;
+class function TGComparableArrayHelper.GetMax(const A: array of T): TOptional;
 var
   v: T;
 begin
@@ -5961,7 +5961,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGComparableArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
+class function TGComparableArrayHelper.FindMin(const A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -5976,7 +5976,7 @@ begin
     end;
 end;
 
-class function TGComparableArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
+class function TGComparableArrayHelper.FindMax(const A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -5991,7 +5991,7 @@ begin
     end;
 end;
 
-class function TGComparableArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
+class function TGComparableArrayHelper.FindMinMax(const A: array of T; out aMin, aMax: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -6033,13 +6033,13 @@ begin
     Result.Assign(v);
 end;
 
-class function TGComparableArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt;
+class function TGComparableArrayHelper.FindNthSmallestND(const A: array of T; N: SizeInt;
   out aValue: T): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue);
 end;
 
-class function TGComparableArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
+class function TGComparableArrayHelper.NthSmallestND(const A: array of T; N: SizeInt): TOptional;
 var
   v: T;
 begin
@@ -6099,7 +6099,7 @@ begin
   Result := True;
 end;
 
-class function TGComparableArrayHelper.IsNonDescending(constref A: array of T): Boolean;
+class function TGComparableArrayHelper.IsNonDescending(const A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -6109,7 +6109,7 @@ begin
   Result := True;
 end;
 
-class function TGComparableArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
+class function TGComparableArrayHelper.IsStrictAscending(const A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -6125,7 +6125,7 @@ begin
     Result := False;
 end;
 
-class function TGComparableArrayHelper.IsNonAscending(constref A: array of T): Boolean;
+class function TGComparableArrayHelper.IsNonAscending(const A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -6135,7 +6135,7 @@ begin
   Result := True;
 end;
 
-class function TGComparableArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
+class function TGComparableArrayHelper.IsStrictDescending(const A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -6195,12 +6195,12 @@ begin
   Result := 0;
 end;
 
-class function TGComparableArrayHelper.InversionCountND(constref A: array of T): Int64;
+class function TGComparableArrayHelper.InversionCountND(const A: array of T): Int64;
 begin
   Result := InversionCount(CreateCopy(A));
 end;
 
-class function TGComparableArrayHelper.Same(constref A, B: array of T): Boolean;
+class function TGComparableArrayHelper.Same(const A, B: array of T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -6282,13 +6282,13 @@ begin
   IntroSort(A, o);
 end;
 
-class function TGComparableArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
+class function TGComparableArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, o);
 end;
 
-class function TGComparableArrayHelper.SelectDistinct(constref A: array of T): TArray;
+class function TGComparableArrayHelper.SelectDistinct(const A: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -7262,7 +7262,7 @@ begin
       end;
 end;
 
-class function TGRegularArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
+class function TGRegularArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T;
   c: TLess): SizeInt;
 var
   L, M: SizeInt;
@@ -7279,7 +7279,7 @@ begin
   Result := R;
 end;
 
-class function TGRegularArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
+class function TGRegularArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T;
   c: TLess): SizeInt;
 var
   L, M: SizeInt;
@@ -7296,7 +7296,7 @@ begin
   Result := R;
 end;
 
-class function TGRegularArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
+class function TGRegularArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; const aValue: T;
   c: TLess): SizeInt;
 var
   L, M: SizeInt;
@@ -7313,7 +7313,7 @@ begin
   Result := R;
 end;
 
-class function TGRegularArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
+class function TGRegularArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T;
   c: TLess): SizeInt;
 var
   L, M: SizeInt;
@@ -7330,7 +7330,7 @@ begin
   Result := R;
 end;
 
-class function TGRegularArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
+class function TGRegularArrayHelper.DoBinSearch(A: PItem; R: SizeInt; const aValue: T;
   c: TLess): SizeInt;
 begin
   //here R must be >= 0;
@@ -7357,7 +7357,7 @@ begin
         Result := 0;
 end;
 
-class function TGRegularArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
+class function TGRegularArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T;
   c: TLess): TSearchResult;
 begin
   //here R must be >= 0;
@@ -7716,7 +7716,7 @@ begin
   Result := A[N];
 end;
 
-class function TGRegularArrayHelper.SequentSearch(constref A: array of T; constref aValue: T;
+class function TGRegularArrayHelper.SequentSearch(const A: array of T; const aValue: T;
   c: TLess): SizeInt;
 begin
   for Result := 0 to System.High(A) do
@@ -7725,7 +7725,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGRegularArrayHelper.BinarySearch(constref A: array of T; constref aValue: T;
+class function TGRegularArrayHelper.BinarySearch(const A: array of T; const aValue: T;
   c: TLess): SizeInt;
 begin
   Result := High(A);
@@ -7733,7 +7733,7 @@ begin
     Result := DoBinSearch(@A[0], Result, aValue, c);
 end;
 
-class function TGRegularArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
+class function TGRegularArrayHelper.BinarySearchPos(const A: array of T; const aValue: T;
   c: TLess): TSearchResult;
 var
   R: SizeInt;
@@ -7745,7 +7745,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGRegularArrayHelper.IndexOfMin(constref A: array of T; c: TLess): SizeInt;
+class function TGRegularArrayHelper.IndexOfMin(const A: array of T; c: TLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -7766,7 +7766,7 @@ begin
     Result := R;
 end;
 
-class function TGRegularArrayHelper.IndexOfMax(constref A: array of T; c: TLess): SizeInt;
+class function TGRegularArrayHelper.IndexOfMax(const A: array of T; c: TLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -7787,7 +7787,7 @@ begin
     Result := R;
 end;
 
-class function TGRegularArrayHelper.GetMin(constref A: array of T; c: TLess): TOptional;
+class function TGRegularArrayHelper.GetMin(const A: array of T; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -7795,7 +7795,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGRegularArrayHelper.GetMax(constref A: array of T; c: TLess): TOptional;
+class function TGRegularArrayHelper.GetMax(const A: array of T; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -7803,7 +7803,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGRegularArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TLess): Boolean;
+class function TGRegularArrayHelper.FindMin(const A: array of T; out aValue: T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -7819,7 +7819,7 @@ begin
   Result := False;
 end;
 
-class function TGRegularArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TLess): Boolean;
+class function TGRegularArrayHelper.FindMax(const A: array of T; out aValue: T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -7835,7 +7835,7 @@ begin
   Result := False;
 end;
 
-class function TGRegularArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T; c: TLess): Boolean;
+class function TGRegularArrayHelper.FindMinMax(const A: array of T; out aMin, aMax: T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -7879,13 +7879,13 @@ begin
     Result.Assign(v);
 end;
 
-class function TGRegularArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T;
+class function TGRegularArrayHelper.FindNthSmallestND(const A: array of T; N: SizeInt; out aValue: T;
   c: TLess): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue, c);
 end;
 
-class function TGRegularArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt; c: TLess): TOptional;
+class function TGRegularArrayHelper.NthSmallestND(const A: array of T; N: SizeInt; c: TLess): TOptional;
 var
   v: T;
 begin
@@ -7945,7 +7945,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.IsNonDescending(constref A: array of T; c: TLess): Boolean;
+class function TGRegularArrayHelper.IsNonDescending(const A: array of T; c: TLess): Boolean;
 var
   I: SizeInt;
 begin
@@ -7955,7 +7955,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.IsStrictAscending(constref A: array of T; c: TLess): Boolean;
+class function TGRegularArrayHelper.IsStrictAscending(const A: array of T; c: TLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -7971,7 +7971,7 @@ begin
     Result := False;
 end;
 
-class function TGRegularArrayHelper.IsNonAscending(constref A: array of T; c: TLess): Boolean;
+class function TGRegularArrayHelper.IsNonAscending(const A: array of T; c: TLess): Boolean;
 var
   I: SizeInt;
 begin
@@ -7981,7 +7981,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.IsStrictDescending(constref A: array of T; c: TLess): Boolean;
+class function TGRegularArrayHelper.IsStrictDescending(const A: array of T; c: TLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -8041,12 +8041,12 @@ begin
   Result := 0;
 end;
 
-class function TGRegularArrayHelper.InversionCountND(constref A: array of T; c: TLess): Int64;
+class function TGRegularArrayHelper.InversionCountND(const A: array of T; c: TLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
-class function TGRegularArrayHelper.Same(constref A, B: array of T; c: TLess): Boolean;
+class function TGRegularArrayHelper.Same(const A, B: array of T; c: TLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -8128,13 +8128,13 @@ begin
   IntroSort(A, c, o);
 end;
 
-class function TGRegularArrayHelper.Sorted(constref A: array of T; c: TLess; o: TSortOrder): TArray;
+class function TGRegularArrayHelper.Sorted(const A: array of T; c: TLess; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, c, o);
 end;
 
-class function TGRegularArrayHelper.SelectDistinct(constref A: array of T; c: TLess): TArray;
+class function TGRegularArrayHelper.SelectDistinct(const A: array of T; c: TLess): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -9109,7 +9109,7 @@ begin
       end;
 end;
 
-class function TGDelegatedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
+class function TGDelegatedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T;
   c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
@@ -9126,7 +9126,7 @@ begin
   Result := R;
 end;
 
-class function TGDelegatedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
+class function TGDelegatedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T;
   c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
@@ -9143,7 +9143,7 @@ begin
   Result := R;
 end;
 
-class function TGDelegatedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
+class function TGDelegatedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; const aValue: T;
   c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
@@ -9160,7 +9160,7 @@ begin
   Result := R;
 end;
 
-class function TGDelegatedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
+class function TGDelegatedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T;
   c: TOnLess): SizeInt;
 var
   L, M: SizeInt;
@@ -9177,7 +9177,7 @@ begin
   Result := R;
 end;
 
-class function TGDelegatedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
+class function TGDelegatedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; const aValue: T;
   c: TOnLess): SizeInt;
 begin
   //here R must be >= 0;
@@ -9204,7 +9204,7 @@ begin
         Result := 0;
 end;
 
-class function TGDelegatedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
+class function TGDelegatedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T;
   c: TOnLess): TSearchResult;
 begin
   //here R must be >= 0;
@@ -9565,7 +9565,7 @@ begin
   Result := A[N];
 end;
 
-class function TGDelegatedArrayHelper.SequentSearch(constref A: array of T; constref aValue: T;
+class function TGDelegatedArrayHelper.SequentSearch(const A: array of T; const aValue: T;
   c: TOnLess): SizeInt;
 begin
   for Result := 0 to System.High(A) do
@@ -9574,7 +9574,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGDelegatedArrayHelper.BinarySearch(constref A: array of T; constref aValue: T;
+class function TGDelegatedArrayHelper.BinarySearch(const A: array of T; const aValue: T;
   c: TOnLess): SizeInt;
 begin
   Result := High(A);
@@ -9582,7 +9582,7 @@ begin
     Result := DoBinSearch(@A[0], Result, aValue, c);
 end;
 
-class function TGDelegatedArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
+class function TGDelegatedArrayHelper.BinarySearchPos(const A: array of T; const aValue: T;
   c: TOnLess): TSearchResult;
 var
   R: SizeInt;
@@ -9594,7 +9594,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGDelegatedArrayHelper.IndexOfMin(constref A: array of T; c: TOnLess): SizeInt;
+class function TGDelegatedArrayHelper.IndexOfMin(const A: array of T; c: TOnLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -9615,7 +9615,7 @@ begin
     Result := R;
 end;
 
-class function TGDelegatedArrayHelper.IndexOfMax(constref A: array of T; c: TOnLess): SizeInt;
+class function TGDelegatedArrayHelper.IndexOfMax(const A: array of T; c: TOnLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -9636,7 +9636,7 @@ begin
     Result := R;
 end;
 
-class function TGDelegatedArrayHelper.GetMin(constref A: array of T; c: TOnLess): TOptional;
+class function TGDelegatedArrayHelper.GetMin(const A: array of T; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -9644,7 +9644,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGDelegatedArrayHelper.GetMax(constref A: array of T; c: TOnLess): TOptional;
+class function TGDelegatedArrayHelper.GetMax(const A: array of T; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -9652,7 +9652,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGDelegatedArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.FindMin(const A: array of T; out aValue: T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -9668,7 +9668,7 @@ begin
   Result := False;
 end;
 
-class function TGDelegatedArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.FindMax(const A: array of T; out aValue: T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -9684,7 +9684,7 @@ begin
   Result := False;
 end;
 
-class function TGDelegatedArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T;
+class function TGDelegatedArrayHelper.FindMinMax(const A: array of T; out aMin, aMax: T;
   c: TOnLess): Boolean;
 var
   R, I: SizeInt;
@@ -9729,13 +9729,13 @@ begin
     Result.Assign(v);
 end;
 
-class function TGDelegatedArrayHelper.FindNthSmallestND(constref A: array of T;
+class function TGDelegatedArrayHelper.FindNthSmallestND(const A: array of T;
   N: SizeInt; out aValue: T; c: TOnLess): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue, c);
 end;
 
-class function TGDelegatedArrayHelper.NthSmallestND(constref A: array of T;N: SizeInt; c: TOnLess): TOptional;
+class function TGDelegatedArrayHelper.NthSmallestND(const A: array of T;N: SizeInt; c: TOnLess): TOptional;
 var
   v: T;
 begin
@@ -9795,7 +9795,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.IsNonDescending(constref A: array of T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.IsNonDescending(const A: array of T; c: TOnLess): Boolean;
 var
   I: SizeInt;
 begin
@@ -9805,7 +9805,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.IsStrictAscending(constref A: array of T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.IsStrictAscending(const A: array of T; c: TOnLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -9821,7 +9821,7 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedArrayHelper.IsNonAscending(constref A: array of T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.IsNonAscending(const A: array of T; c: TOnLess): Boolean;
 var
   I: SizeInt;
 begin
@@ -9831,7 +9831,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.IsStrictDescending(constref A: array of T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.IsStrictDescending(const A: array of T; c: TOnLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -9891,12 +9891,12 @@ begin
   Result := 0;
 end;
 
-class function TGDelegatedArrayHelper.InversionCountND(constref A: array of T; c: TOnLess): Int64;
+class function TGDelegatedArrayHelper.InversionCountND(const A: array of T; c: TOnLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
-class function TGDelegatedArrayHelper.Same(constref A, B: array of T; c: TOnLess): Boolean;
+class function TGDelegatedArrayHelper.Same(const A, B: array of T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -9978,13 +9978,13 @@ begin
   IntroSort(A, c, o);
 end;
 
-class function TGDelegatedArrayHelper.Sorted(constref A: array of T; c: TOnLess; o: TSortOrder): TArray;
+class function TGDelegatedArrayHelper.Sorted(const A: array of T; c: TOnLess; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, c, o);
 end;
 
-class function TGDelegatedArrayHelper.SelectDistinct(constref A: array of T; c: TOnLess): TArray;
+class function TGDelegatedArrayHelper.SelectDistinct(const A: array of T; c: TOnLess): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -10959,7 +10959,7 @@ begin
       end;
 end;
 
-class function TGNestedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
+class function TGNestedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T;
   c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
@@ -10976,7 +10976,7 @@ begin
   Result := R;
 end;
 
-class function TGNestedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
+class function TGNestedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T;
   c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
@@ -10993,7 +10993,7 @@ begin
   Result := R;
 end;
 
-class function TGNestedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
+class function TGNestedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; const aValue: T;
   c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
@@ -11010,7 +11010,7 @@ begin
   Result := R;
 end;
 
-class function TGNestedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
+class function TGNestedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T;
   c: TNestLess): SizeInt;
 var
   L, M: SizeInt;
@@ -11027,7 +11027,7 @@ begin
   Result := R;
 end;
 
-class function TGNestedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
+class function TGNestedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; const aValue: T;
   c: TNestLess): SizeInt;
 begin
   //here R must be >= 0;
@@ -11054,7 +11054,7 @@ begin
         Result := 0;
 end;
 
-class function TGNestedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
+class function TGNestedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T;
   c: TNestLess): TSearchResult;
 begin
   //here R must be >= 0;
@@ -11415,7 +11415,7 @@ begin
   Result := A[N];
 end;
 
-class function TGNestedArrayHelper.SequentSearch(constref A: array of T; constref aValue: T;
+class function TGNestedArrayHelper.SequentSearch(const A: array of T; const aValue: T;
   c: TNestLess): SizeInt;
 begin
   for Result := 0 to System.High(A) do
@@ -11424,7 +11424,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGNestedArrayHelper.BinarySearch(constref A: array of T; constref aValue: T;
+class function TGNestedArrayHelper.BinarySearch(const A: array of T; const aValue: T;
   c: TNestLess): SizeInt;
 begin
   Result := High(A);
@@ -11432,7 +11432,7 @@ begin
     Result := DoBinSearch(@A[0], Result, aValue, c);
 end;
 
-class function TGNestedArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
+class function TGNestedArrayHelper.BinarySearchPos(const A: array of T; const aValue: T;
   c: TNestLess): TSearchResult;
 var
   R: SizeInt;
@@ -11444,7 +11444,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGNestedArrayHelper.IndexOfMin(constref A: array of T; c: TNestLess): SizeInt;
+class function TGNestedArrayHelper.IndexOfMin(const A: array of T; c: TNestLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -11465,7 +11465,7 @@ begin
     Result := R;
 end;
 
-class function TGNestedArrayHelper.IndexOfMax(constref A: array of T; c: TNestLess): SizeInt;
+class function TGNestedArrayHelper.IndexOfMax(const A: array of T; c: TNestLess): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -11486,7 +11486,7 @@ begin
     Result := R;
 end;
 
-class function TGNestedArrayHelper.GetMin(constref A: array of T; c: TNestLess): TOptional;
+class function TGNestedArrayHelper.GetMin(const A: array of T; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -11494,7 +11494,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNestedArrayHelper.GetMax(constref A: array of T; c: TNestLess): TOptional;
+class function TGNestedArrayHelper.GetMax(const A: array of T; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -11502,7 +11502,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNestedArrayHelper.FindMin(constref A: array of T; out aValue: T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.FindMin(const A: array of T; out aValue: T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -11518,7 +11518,7 @@ begin
   Result := False;
 end;
 
-class function TGNestedArrayHelper.FindMax(constref A: array of T; out aValue: T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.FindMax(const A: array of T; out aValue: T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -11534,7 +11534,7 @@ begin
   Result := False;
 end;
 
-class function TGNestedArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T;
+class function TGNestedArrayHelper.FindMinMax(const A: array of T; out aMin, aMax: T;
   c: TNestLess): Boolean;
 var
   R, I: SizeInt;
@@ -11579,13 +11579,13 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNestedArrayHelper.FindNthSmallestND(constref A: array of T;
+class function TGNestedArrayHelper.FindNthSmallestND(const A: array of T;
   N: SizeInt; out aValue: T; c: TNestLess): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue, c);
 end;
 
-class function TGNestedArrayHelper.NthSmallestND(constref A: array of T;N: SizeInt; c: TNestLess): TOptional;
+class function TGNestedArrayHelper.NthSmallestND(const A: array of T;N: SizeInt; c: TNestLess): TOptional;
 var
   v: T;
 begin
@@ -11645,7 +11645,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.IsNonDescending(constref A: array of T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.IsNonDescending(const A: array of T; c: TNestLess): Boolean;
 var
   I: SizeInt;
 begin
@@ -11655,7 +11655,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.IsStrictAscending(constref A: array of T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.IsStrictAscending(const A: array of T; c: TNestLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -11671,7 +11671,7 @@ begin
     Result := False;
 end;
 
-class function TGNestedArrayHelper.IsNonAscending(constref A: array of T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.IsNonAscending(const A: array of T; c: TNestLess): Boolean;
 var
   I: SizeInt;
 begin
@@ -11681,7 +11681,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.IsStrictDescending(constref A: array of T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.IsStrictDescending(const A: array of T; c: TNestLess): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -11741,12 +11741,12 @@ begin
   Result := 0;
 end;
 
-class function TGNestedArrayHelper.InversionCountND(constref A: array of T; c: TNestLess): Int64;
+class function TGNestedArrayHelper.InversionCountND(const A: array of T; c: TNestLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
-class function TGNestedArrayHelper.Same(constref A, B: array of T; c: TNestLess): Boolean;
+class function TGNestedArrayHelper.Same(const A, B: array of T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -11828,13 +11828,13 @@ begin
   IntroSort(A, c, o);
 end;
 
-class function TGNestedArrayHelper.Sorted(constref A: array of T; c: TNestLess; o: TSortOrder): TArray;
+class function TGNestedArrayHelper.Sorted(const A: array of T; c: TNestLess; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, c, o);
 end;
 
-class function TGNestedArrayHelper.SelectDistinct(constref A: array of T; c: TNestLess): TArray;
+class function TGNestedArrayHelper.SelectDistinct(const A: array of T; c: TNestLess): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -12356,7 +12356,7 @@ begin
       end;
 end;
 
-class function TGSimpleArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -12372,7 +12372,7 @@ begin
   Result := R;
 end;
 
-class function TGSimpleArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -12388,7 +12388,7 @@ begin
   Result := R;
 end;
 
-class function TGSimpleArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -12404,7 +12404,7 @@ begin
   Result := R;
 end;
 
-class function TGSimpleArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -12420,7 +12420,7 @@ begin
   Result := R;
 end;
 
-class function TGSimpleArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
@@ -12446,7 +12446,7 @@ begin
         Result := 0;
 end;
 
-class function TGSimpleArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+class function TGSimpleArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
@@ -12627,7 +12627,7 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.GetMo9Pivot(constref A: array of T; L, R: SizeInt): T;
+class function TGSimpleArrayHelper.GetMo9Pivot(const A: array of T; L, R: SizeInt): T;
 begin
   if R - L > MEDIAN_OF9_CUTOFF then
     Result := MedianOf3(
@@ -12916,7 +12916,7 @@ begin
     RotateLeft(A, -aDist)
 end;
 
-class function TGSimpleArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.SequentSearch(const A: array of T; const aValue: T): SizeInt;
 begin
   for Result := 0 to System.High(A) do
     if aValue = A[Result] then
@@ -12924,14 +12924,14 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGSimpleArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BinarySearch(const A: array of T; const aValue: T): SizeInt;
 begin
   Result := System.High(A);
   if Result >= 0 then
     Result := DoBinSearch(@A[0], Result, aValue);
 end;
 
-class function TGSimpleArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
+class function TGSimpleArrayHelper.BinarySearchPos(const A: array of T; const aValue: T): TSearchResult;
 var
   R: SizeInt;
 begin
@@ -12942,7 +12942,7 @@ begin
     Result := TSearchResult.Create(R, 0);
 end;
 
-class function TGSimpleArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
+class function TGSimpleArrayHelper.IndexOfMin(const A: array of T): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -12963,7 +12963,7 @@ begin
     Result := R;
 end;
 
-class function TGSimpleArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
+class function TGSimpleArrayHelper.IndexOfMax(const A: array of T): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -12984,7 +12984,7 @@ begin
     Result := R;
 end;
 
-class function TGSimpleArrayHelper.GetMin(constref A: array of T): TOptional;
+class function TGSimpleArrayHelper.GetMin(const A: array of T): TOptional;
 var
   v: T;
 begin
@@ -12992,7 +12992,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGSimpleArrayHelper.GetMax(constref A: array of T): TOptional;
+class function TGSimpleArrayHelper.GetMax(const A: array of T): TOptional;
 var
   v: T;
 begin
@@ -13000,7 +13000,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGSimpleArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindMin(const A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -13015,7 +13015,7 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindMax(const A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -13030,7 +13030,7 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
+class function TGSimpleArrayHelper.FindMinMax(const A: array of T; out aMin, aMax: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -13072,12 +13072,12 @@ begin
     Result.Assign(v);
 end;
 
-class function TGSimpleArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindNthSmallestND(const A: array of T; N: SizeInt; out aValue: T): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue);
 end;
 
-class function TGSimpleArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
+class function TGSimpleArrayHelper.NthSmallestND(const A: array of T; N: SizeInt): TOptional;
 var
   v: T;
 begin
@@ -13131,7 +13131,7 @@ begin
   Result := True;
 end;
 
-class function TGSimpleArrayHelper.IsNonDescending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsNonDescending(const A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -13141,7 +13141,7 @@ begin
   Result := True;
 end;
 
-class function TGSimpleArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsStrictAscending(const A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -13157,7 +13157,7 @@ begin
     Result := False;
 end;
 
-class function TGSimpleArrayHelper.IsNonAscending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsNonAscending(const A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -13167,7 +13167,7 @@ begin
   Result := True;
 end;
 
-class function TGSimpleArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsStrictDescending(const A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -13227,12 +13227,12 @@ begin
   Result := 0;
 end;
 
-class function TGSimpleArrayHelper.InversionCountND(constref A: array of T): Int64;
+class function TGSimpleArrayHelper.InversionCountND(const A: array of T): Int64;
 begin
   Result := InversionCount(CreateCopy(A));
 end;
 
-class function TGSimpleArrayHelper.Same(constref A, B: array of T): Boolean;
+class function TGSimpleArrayHelper.Same(const A, B: array of T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -13302,13 +13302,13 @@ begin
   IntroSort(A, o);
 end;
 
-class function TGSimpleArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
+class function TGSimpleArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, o);
 end;
 
-class function TGSimpleArrayHelper.SelectDistinct(constref A: array of T): TArray;
+class function TGSimpleArrayHelper.SelectDistinct(const A: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -13487,7 +13487,7 @@ begin
     end;
 end;
 
-class function TGOrdinalArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
+class function TGOrdinalArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, o);

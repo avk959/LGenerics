@@ -35,8 +35,8 @@ type
   generic TGQueue<T> = class(specialize TGCustomRingArrayBuffer<T>, specialize IGContainer<T>,
     specialize IGQueue<T>)
   public
-    procedure Enqueue(constref aValue: T); inline;
-    function  EnqueueAll(constref a: array of T): SizeInt;
+    procedure Enqueue(const aValue: T); inline;
+    function  EnqueueAll(const a: array of T): SizeInt;
     function  EnqueueAll(e: IEnumerable): SizeInt; inline;
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
@@ -56,7 +56,7 @@ type
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref A: array of T; aOwnsObjects: Boolean = True);
+    constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
@@ -281,13 +281,13 @@ implementation
 
 { TGQueue }
 
-procedure TGQueue.Enqueue(constref aValue: T);
+procedure TGQueue.Enqueue(const aValue: T);
 begin
   CheckInIteration;
   Append(aValue);
 end;
 
-function TGQueue.EnqueueAll(constref a: array of T): SizeInt;
+function TGQueue.EnqueueAll(const a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := AppendArray(a);
@@ -371,7 +371,7 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-constructor TGObjectQueue.Create(constref A: array of T; aOwnsObjects: Boolean);
+constructor TGObjectQueue.Create(const A: array of T; aOwnsObjects: Boolean);
 begin
   inherited Create(A);
   FOwnsObjects := aOwnsObjects;

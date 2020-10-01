@@ -70,8 +70,8 @@
   protected
     procedure Expand(aValue: SizeInt);
     procedure ItemAdding; inline;
-    function  Append(constref aValue: T): SizeInt; inline;
-    function  AppendArray(constref a: array of T): SizeInt;
+    function  Append(const aValue: T): SizeInt; inline;
+    function  AppendArray(const a: array of T): SizeInt;
     function  AppendEnum(e: IEnumerable): SizeInt;
     function  AppendContainer(aContainer: TSpecContainer): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
@@ -83,7 +83,7 @@
   public
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref a: array of T);
+    constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
     function  Reverse: IEnumerable; override;
     function  ToArray: TArray; override;
@@ -166,7 +166,7 @@
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
-    function  PushLast(constref aValue: T): SizeInt; inline;
+    function  PushLast(const aValue: T): SizeInt; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -213,8 +213,8 @@
     procedure Grow(aValue: SizeInt);
     procedure Shrink;
     procedure ItemAdding; inline;
-    procedure Append(constref aValue: T);
-    function  AppendArray(constref a: array of T): SizeInt;
+    procedure Append(const aValue: T);
+    function  AppendArray(const a: array of T): SizeInt;
     function  AppendContainer(aContainer: TSpecContainer): SizeInt;
     function  AppendEnum(e: IEnumerable): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
@@ -229,7 +229,7 @@
   public
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(constref A: array of T);
+    constructor Create(const A: array of T);
     constructor Create(e: IEnumerable);
     function  Reverse: IEnumerable; override;
   end;
@@ -333,8 +333,8 @@
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
-    procedure PushLast(constref aValue: T);
-    procedure PushFirst(constref aValue: T);
+    procedure PushLast(const aValue: T);
+    procedure PushFirst(const aValue: T);
     function  PopFirst: T;
     function  TryPopFirst(out aValue: T): Boolean;
     function  PopLast: T;
