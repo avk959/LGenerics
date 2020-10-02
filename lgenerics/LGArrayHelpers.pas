@@ -69,6 +69,7 @@ type
     MEDIAN_OF9_CUTOFF           = 511;
     DPQ_INSERTION_SORT_CUTOFF   = 47;
     INTROSORT_LOG_FACTOR        = 2;
+    TRY_INSERT_SORT_LIMIT       = 64;
   type
     //to supress unnecessary refcounting
     TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
@@ -258,6 +259,8 @@ type
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
+    class function  TryInsertSortA(A: PItem; L, R: SizeInt): SizeInt; static;
+    class function  TryInsertSortD(A: PItem; L, R: SizeInt): SizeInt; static;
     class function  CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
@@ -453,6 +456,8 @@ type
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
+    class function  TryInsertSortA(A: PItem; L, R: SizeInt): SizeInt; static;
+    class function  TryInsertSortD(A: PItem; L, R: SizeInt): SizeInt; static;
     class function  CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
@@ -588,6 +593,8 @@ type
       class procedure Sort(aStart, aFinish: PItem; c: TLess); static;
     end;
 
+    class function  TryInsertSortA(A: PItem; L, R: SizeInt; c: TLess): SizeInt; static;
+    class function  TryInsertSortD(A: PItem; L, R: SizeInt; c: TLess): SizeInt; static;
     class function  CountRun(A: PItem; R: SizeInt; c: TLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TLess); static;
@@ -726,6 +733,8 @@ type
       class procedure Sort(aStart, aFinish: PItem; c: TOnLess); static;
     end;
 
+    class function  TryInsertSortA(A: PItem; L, R: SizeInt; c: TOnLess): SizeInt; static;
+    class function  TryInsertSortD(A: PItem; L, R: SizeInt; c: TOnLess): SizeInt; static;
     class function  CountRun(A: PItem; R: SizeInt; c: TOnLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TOnLess); static;
@@ -864,6 +873,8 @@ type
       class procedure Sort(aStart, aFinish: PItem; c: TNestLess); static;
     end;
 
+    class function  TryInsertSortA(A: PItem; L, R: SizeInt; c: TNestLess): SizeInt; static;
+    class function  TryInsertSortD(A: PItem; L, R: SizeInt; c: TNestLess): SizeInt; static;
     class function  CountRun(A: PItem; R: SizeInt; c: TNestLess; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class procedure UnguardInsertionSort(A: PItem; R: SizeInt; c: TNestLess); static;
@@ -981,6 +992,8 @@ type
       class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
+    class function  TryInsertSortA(var A: array of T; L, R: SizeInt): SizeInt; static;
+    class function  TryInsertSortD(var A: array of T; L, R: SizeInt): SizeInt; static;
     class function  CountRun(var A: array of T; L, R: SizeInt; o: TSortOrder): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
     class procedure UnguardInsertionSort(var A: array of T; L, R: SizeInt); static;
@@ -1076,7 +1089,7 @@ type
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is IntroSort }
+  { default sorting, currently it is PDQSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -1097,6 +1110,8 @@ type
     COUNTSORT_CUTOFF = $400000; //todo: ???
   {$ENDIF CPU16}
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
+    class function  TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
+    class function  TryInsertSortD2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonyKind; static;
     class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
@@ -2909,6 +2924,52 @@ end;
 
 { TGBaseArrayHelper }
 
+class function TGBaseArrayHelper.TryInsertSortA(A: PItem; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if TCmpRel.Less(A[I], A[I-1]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not TCmpRel.Less(T(v), A[J-1]);
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
+class function TGBaseArrayHelper.TryInsertSortD(A: PItem; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if TCmpRel.Less(A[I-1], A[I]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not TCmpRel.Less(A[J-1], T(v));
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
 class function TGBaseArrayHelper.CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := 0;
@@ -2916,23 +2977,18 @@ begin
         (TCmpRel.Less(A[Result], A[Succ(Result)])or TCmpRel.Less(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
-    begin
-      Inc(Result);
-      if TCmpRel.Less(A[Pred(Result)], A[Result]) then   // ascending
-        begin
-          while (Result < R) and not TCmpRel.Less(A[Succ(Result)], A[Result]) do
-            Inc(Result);
-          if (Result = R) and (o = soDesc) then
-            DoReverse(A, Result);
-        end
-      else                                               // descending
-        begin
-          while (Result < R) and not TCmpRel.Less(A[Result], A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soAsc) then
-            DoReverse(A, Result);
-        end;
-    end;
+    if TCmpRel.Less(A[Result], A[Succ(Result)]) then   // ascending
+      begin
+        Result := TryInsertSortA(A, Result, R);
+        if (Result = R) and (o = soDesc) then
+          DoReverse(A, Result);
+      end
+    else                                               // descending
+      begin
+        Result := TryInsertSortD(A, Result, R);
+        if (Result = R) and (o = soAsc) then
+          DoReverse(A, Result);
+      end;
 end;
 
 class procedure TGBaseArrayHelper.InsertionSort(A: PItem; R: SizeInt);
@@ -5369,29 +5425,70 @@ end;
 
 { TGComparableArrayHelper }
 
+class function TGComparableArrayHelper.TryInsertSortA(A: PItem; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if A[I] < A[I-1] then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not(T(v) < A[J-1]);
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
+class function TGComparableArrayHelper.TryInsertSortD(A: PItem; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if A[I-1] < A[I] then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not(A[J-1] < T(v));
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
 class function TGComparableArrayHelper.CountRun(A: PItem; R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and ValEqual(A[Result], A[Succ(Result)]) do
     Inc(Result);
   if Result < R then
-    begin
-      Inc(Result);
-      if A[Pred(Result)] < A[Result] then   // ascending
-        begin
-          while (Result < R) and not(A[Succ(Result)] < A[Result]) do
-            Inc(Result);
-          if (Result = R) and (o = soDesc) then
-            DoReverse(A, Result);
-        end
-      else                                  // descending
-        begin
-          while (Result < R) and not(A[Result] < A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soAsc) then
-            DoReverse(A, Result);
-        end;
-    end;
+    if A[Result] < A[Succ(Result)] then   // ascending
+      begin
+        Result := TryInsertSortA(A, Result, R);
+        if (Result = R) and (o = soDesc) then
+          DoReverse(A, Result);
+      end
+    else                                  // descending
+      begin
+        Result := TryInsertSortD(A, Result, R);
+        if (Result = R) and (o = soAsc) then
+          DoReverse(A, Result);
+      end;
 end;
 
 class procedure TGComparableArrayHelper.InsertionSort(A: PItem; R: SizeInt);
@@ -7201,29 +7298,70 @@ end;
 
 { TGRegularArrayHelper }
 
+class function TGRegularArrayHelper.TryInsertSortA(A: PItem; L, R: SizeInt; c: TLess): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if c(A[I], A[I-1]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
+class function TGRegularArrayHelper.TryInsertSortD(A: PItem; L, R: SizeInt; c: TLess): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if c(A[I-1], A[I]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not c(A[J-1], T(v));
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
 class function TGRegularArrayHelper.CountRun(A: PItem; R: SizeInt; c: TLess; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
-    begin
-      Inc(Result);
-      if c(A[Pred(Result)], A[Result]) then   // ascending
-        begin
-          while (Result < R) and not c(A[Succ(Result)], A[Result]) do
-            Inc(Result);
-          if (Result = R) and (o = soDesc) then
-            DoReverse(A, Result);
-        end
-      else                                    // descending
-        begin
-          while (Result < R) and not c(A[Result], A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soAsc) then
-            DoReverse(A, Result);
-        end;
-    end;
+    if c(A[Result], A[Succ(Result)]) then   // ascending
+      begin
+        Result := TryInsertSortA(A, Result, R, c);
+        if (Result = R) and (o = soDesc) then
+          DoReverse(A, Result);
+      end
+    else                                    // descending
+      begin
+        Result := TryInsertSortD(A, Result, R, c);
+        if (Result = R) and (o = soAsc) then
+          DoReverse(A, Result);
+      end;
 end;
 
 class procedure TGRegularArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TLess);
@@ -9048,29 +9186,70 @@ end;
 
 { TGDelegatedArrayHelper }
 
+class function TGDelegatedArrayHelper.TryInsertSortA(A: PItem; L, R: SizeInt; c: TOnLess): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if c(A[I], A[I-1]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
+class function TGDelegatedArrayHelper.TryInsertSortD(A: PItem; L, R: SizeInt; c: TOnLess): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if c(A[I-1], A[I]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not c(A[J-1], T(v));
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
 class function TGDelegatedArrayHelper.CountRun(A: PItem; R: SizeInt; c: TOnLess; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
-    begin
-      Inc(Result);
-      if c(A[Pred(Result)], A[Result]) then   // ascending
-        begin
-          while (Result < R) and not c(A[Succ(Result)], A[Result]) do
-            Inc(Result);
-          if (Result = R) and (o = soDesc) then
-            DoReverse(A, Result);
-        end
-      else                                    // descending
-        begin
-          while (Result < R) and not c(A[Result], A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soAsc) then
-            DoReverse(A, Result);
-        end;
-    end;
+    if c(A[Result], A[Succ(Result)]) then   // ascending
+      begin
+        Result := TryInsertSortA(A, Result, R, c);
+        if (Result = R) and (o = soDesc) then
+          DoReverse(A, Result);
+      end
+    else                                    // descending
+      begin
+        Result := TryInsertSortD(A, Result, R, c);
+        if (Result = R) and (o = soAsc) then
+          DoReverse(A, Result);
+      end;
 end;
 
 class procedure TGDelegatedArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TOnLess);
@@ -10898,29 +11077,70 @@ end;
 
 { TGNestedArrayHelper }
 
+class function TGNestedArrayHelper.TryInsertSortA(A: PItem; L, R: SizeInt; c: TNestLess): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if c(A[I], A[I-1]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not c(T(v), A[J-1]);
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
+class function TGNestedArrayHelper.TryInsertSortD(A: PItem; L, R: SizeInt; c: TNestLess): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: TFake;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if c(A[I-1], A[I]) then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := TFake(A[I]);
+        repeat
+          TFake(A[J]) := TFake(A[J-1]);
+          Dec(J);
+        until (J = 0) or not c(A[J-1], T(v));
+        TFake(A[J]) := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
 class function TGNestedArrayHelper.CountRun(A: PItem; R: SizeInt; c: TNestLess; o: TSortOrder): SizeInt;
 begin
   Result := 0;
   while (Result < R) and not (c(A[Result], A[Succ(Result)]) or c(A[Succ(Result)], A[Result])) do
     Inc(Result);
   if Result < R then
-    begin
-      Inc(Result);
-      if c(A[Pred(Result)], A[Result]) then   // ascending
-        begin
-          while (Result < R) and not c(A[Succ(Result)], A[Result]) do
-            Inc(Result);
-          if (Result = R) and (o = soDesc) then
-            DoReverse(A, Result);
-        end
-      else                                    // descending
-        begin
-          while (Result < R) and not c(A[Result], A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soAsc) then
-            DoReverse(A, Result);
-        end;
-    end;
+    if c(A[Result], A[Succ(Result)]) then   // ascending
+      begin
+        Result := TryInsertSortA(A, Result, R, c);
+        if (Result = R) and (o = soDesc) then
+          DoReverse(A, Result);
+      end
+    else                                    // descending
+      begin
+        Result := TryInsertSortD(A, Result, R, c);
+        if (Result = R) and (o = soAsc) then
+          DoReverse(A, Result);
+      end;
 end;
 
 class procedure TGNestedArrayHelper.InsertionSort(A: PItem; R: SizeInt; c: TNestLess);
@@ -12295,29 +12515,70 @@ end;
 
 { TGSimpleArrayHelper }
 
+class function TGSimpleArrayHelper.TryInsertSortA(var A: array of T; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: T;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if A[I] < A[I-1] then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := A[I];
+        repeat
+          A[J] := A[J-1];
+          Dec(J);
+        until (J = 0) or (v >= A[J-1]);
+        A[J] := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
+class function TGSimpleArrayHelper.TryInsertSortD(var A: array of T; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: T;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if A[I-1] < A[I] then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        J := I;
+        v := A[I];
+        repeat
+          A[J] := A[J-1];
+          Dec(J);
+        until (J = 0) or (v <= A[J-1]);
+        A[J] := v;
+        Dist += I - J;
+      end;
+   Result := R;
+end;
+
 class function TGSimpleArrayHelper.CountRun(var A: array of T; L, R: SizeInt; o: TSortOrder): SizeInt;
 begin
   Result := L;
   while (Result < R) and (A[Result] = A[Succ(Result)]) do
     Inc(Result);
   if Result < R then
-    begin
-      Inc(Result);
-      if A[Pred(Result)] < A[Result] then  // ascending
-        begin
-          while (Result < R) and (A[Result] <= A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soDesc) then
-            DoReverse(A, L, Result);
-        end
-      else                                 // descending
-        begin
-          while (Result < R) and (A[Result] >= A[Succ(Result)]) do
-            Inc(Result);
-          if (Result = R) and (o = soAsc) then
-            DoReverse(A, L, Result);
-        end;
-    end;
+    if A[Result] < A[Succ(Result)] then   // ascending
+      begin
+        Result := TryInsertSortA(A, Result, R);
+        if (Result = R) and (o = soDesc) then
+          DoReverse(A, L, R);
+      end
+    else                                  // descending
+      begin
+        Result := TryInsertSortD(A, Result, R);
+        if (Result = R) and (o = soAsc) then
+          DoReverse(A, L, R);
+      end;
 end;
 
 class procedure TGSimpleArrayHelper.InsertionSort(var A: array of T; L, R: SizeInt);
@@ -13299,7 +13560,7 @@ end;
 
 class procedure TGSimpleArrayHelper.Sort(var A: array of T; o: TSortOrder);
 begin
-  IntroSort(A, o);
+  PDQSort(A, o);
 end;
 
 class function TGSimpleArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
@@ -13355,6 +13616,60 @@ begin
       end;
 end;
 
+class function TGOrdinalArrayHelper.TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: T;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if A[I] < A[I-1] then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        if A[I] < aMin then
+          aMin := A[I];
+        J := I;
+        v := A[I];
+        repeat
+          A[J] := A[J-1];
+          Dec(J);
+        until (J = 0) or (v >= A[J-1]);
+        A[J] := v;
+        Dist += I - J;
+      end
+    else
+      aMax := A[I];
+   Result := R;
+end;
+
+class function TGOrdinalArrayHelper.TryInsertSortD2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt;
+var
+  I, J, Dist: SizeInt;
+  v: T;
+begin
+  Dist := 0;
+  for I := Succ(L) to R do
+    if A[I-1] < A[I] then
+      begin
+        if Dist > TRY_INSERT_SORT_LIMIT then
+          exit(Pred(I));
+        if aMax < A[I] then
+          aMax := A[I];
+        J := I;
+        v := A[I];
+        repeat
+          A[J] := A[J-1];
+          Dec(J);
+        until (J = 0) or (v <= A[J-1]);
+        A[J] := v;
+        Dist += I - J;
+      end
+    else
+      aMin := A[I];
+   Result := R;
+end;
+
 class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonyKind;
 var
   I, R: SizeInt;
@@ -13372,22 +13687,12 @@ begin
       if A[Pred(I)] < A[I] then  // ascending
         begin
           Result := mkAsc;
-          while (I < R) and (A[I] <= A[Succ(I)]) do
-            begin
-              if A[I] > aMaxValue then
-                aMaxValue := A[I];
-              Inc(I);
-            end;
+          I := TryInsertSortA2(A, aMinValue, aMaxValue, I, R);
         end
-      else                      // descending
+      else                       // descending
         begin
           Result := mkDesc;
-          while (I < R) and (A[I] >= A[Succ(I)]) do
-            begin
-              if A[I] < aMinValue then
-                aMinValue := A[I];
-              Inc(I);
-            end;
+          I := TryInsertSortD2(A, aMinValue, aMaxValue, I, R);
         end;
     end;
   if I < R then
@@ -13480,7 +13785,7 @@ begin
           if CountSortAllow(vMin, vMax, Succ(R)) then
             CountSort(A, vMin, vMax)
           else
-            DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTROSORT_LOG_FACTOR);
+            TPDQSort.Sort(@A[0], @A[R] + 1);
           if aOrder = soDesc then
             Reverse(A);
         end;
