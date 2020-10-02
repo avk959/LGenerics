@@ -280,8 +280,7 @@ type
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
-    {$PUSH}{$WARN 5024 OFF}
-    procedure VertexReplaced(const v: TVertex); virtual;{$POP}
+    procedure VertexReplaced(const v: TVertex); virtual;
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; virtual; abstract;
@@ -1628,11 +1627,12 @@ begin
         aDiameter := Ecc;
     end;
 end;
-{$PUSH}{$WARN 5024 OFF}
+
 procedure TGSparseGraph.VertexReplaced(const v: TVertex);
 begin
+{$PUSH}{$C-}Assert(TEqRel.Equal(v, v));{$POP}
 end;
-{$POP}
+
 class function TGSparseGraph.TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray;
 var
   Cycle: TIntVector;
