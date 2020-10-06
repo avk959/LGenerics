@@ -1625,7 +1625,7 @@ begin
     m.Instance.Add(I, I);
   AssertTrue(m.Instance.Count = 100);
   I := 1;
-  for e in m.Instance.Entries do
+  for e in m.Instance do
     begin
       AssertTrue(e.Key = I);
       Inc(I);
@@ -1640,7 +1640,7 @@ begin
   for I := 100 downto 1 do
     m.Instance.Add(I, I);
   I := 100;
-  for e in m.Instance.Entries do
+  for e in m.Instance do
     begin
       AssertTrue(e.Key = I);
       Dec(I);

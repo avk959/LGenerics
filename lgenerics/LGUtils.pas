@@ -100,10 +100,9 @@ type
     class function IsNil(const aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
-    class operator Implicit(constref aValue: T): TGOptional<T>; inline;
-    { For reasons that are still unknown, these operators cause problems in some cases }
-    //class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
-    //class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
+    class operator Implicit(const aValue: T): TGOptional<T>; inline;
+    class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
+    class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
     procedure Assign(const aValue: T);
     function  OrElseDefault: T; inline;
     function  OrElse(const aValue: T): T; inline;
@@ -674,8 +673,9 @@ type
     procedure RetainAll(c: IGCollection<T>);
   end;
 
-  IGReadOnlyCollection<T> = interface(IGEnumerable<T>)
+  IGReadOnlyCollection<T> = interface
   ['{D0DDB482-819A-438B-BF33-B6EF21A6A9A5}']
+    function  GetEnumerator: TGEnumerator<T>;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
@@ -695,17 +695,19 @@ type
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
-  IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
+  IGMap<TKey, TValue> = interface
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
     function  _GetRef: TObject;
+    function  GetEnumerator: TGEnumerator<TGMapEntry<TKey, TValue>>;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
-    function  GetValue(const aKey: TKey): TValue;
     function  IsEmpty: Boolean;
+    function  NonEmpty: Boolean;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
   { free unused memory if possible }
     procedure TrimToFit;
+    function  GetValue(const aKey: TKey): TValue;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
     function  Add(const aKey: TKey; const aValue: TValue): Boolean;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
@@ -720,27 +722,26 @@ type
     procedure RetainAll(aCollection: IGCollection<TKey>);
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
-  { if uncomment it compiles but blocks Lazarus CodeTools }
-    //function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
-    property  Count: SizeInt read GetCount;
-    property  Capacity: SizeInt read GetCapacity;
+    function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
   { reading will raise exception if an aKey is not present in map }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
   IGReadOnlyMap<TKey, TValue> = interface
   ['{08561616-8E8B-4DBA-AEDB-DE14C5FA9403}']
+    function  GetEnumerator: TGEnumerator<TGMapEntry<TKey, TValue>>;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
     function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(const aKey: TKey; const aDefault: TValue = Default(TValue)): TValue;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
     function  Contains(const aKey: TKey): Boolean;
     function  NonContains(const aKey: TKey): Boolean;
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
-  { if uncomment it compiles but blocks Lazarus CodeTools }
-    //function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
+    function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1304,20 +1305,20 @@ begin
   o.FAssigned := False;
 end;
 
-class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
+class operator TGOptional<T>.Implicit(const aValue: T): TGOptional<T>;
 begin
   Result.Assign(aValue);
 end;
 
-//class operator TGOptional<T>.Implicit(constref aOpt: TGOptional<T>): T;
-//begin
-//  Result := aOpt.Value;
-//end;
+class operator TGOptional<T>.Implicit(constref aOpt: TGOptional<T>): T;
+begin
+  Result := aOpt.Value;
+end;
 
-//class operator TGOptional<T>.Explicit(constref aOpt: TGOptional<T>): T;
-//begin
-//  Result := aOpt.Value;
-//end;
+class operator TGOptional<T>.Explicit(constref aOpt: TGOptional<T>): T;
+begin
+  Result := aOpt.Value;
+end;
 
 procedure TGOptional<T>.Assign(const aValue: T);
 begin

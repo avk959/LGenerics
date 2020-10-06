@@ -51,26 +51,28 @@ type
       functor TValueEqRel(value equality relation) must provide:
         class function HashCode([const[ref]] v: TValue): SizeInt;
         class function Equal([const[ref]] L, R: TValue): Boolean;  }
-  generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(TSimpleIterable,
+  generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(
+    specialize TGAbstractContainer<specialize TGMapEntry<TKey, TValue>>,
     specialize IGMap<TKey, TValue>, specialize IGInverseMap<TKey, TValue>,
     specialize IGReadOnlyMap<TKey, TValue>, specialize IGInverseReadOnlyMap<TKey, TValue>)
   {must be  generic TGHashBiMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
-    TSpecBiMap       = specialize TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel>;
-    TEntry           = specialize TGMapEntry<TKey, TValue>;
-    TInverseEntry    = specialize TGMapEntry<TValue, TKey>;
-    IKeyEnumerable   = specialize IGEnumerable<TKey>;
-    IValueEnumerable = specialize IGEnumerable<TValue>;
-    IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    TEntryArray      = specialize TGArray<TEntry>;
-    TKeyCollection   = specialize TGAbstractCollection<TKey>;
-    TValueCollection = specialize TGAbstractCollection<TValue>;
-    IKeyCollection   = specialize IGCollection<TKey>;
-    IValueCollection = specialize IGCollection<TValue>;
-    IInverseMap      = specialize IGInverseMap<TKey, TValue>;
-    IInverseRoMap    = specialize IGInverseReadOnlyMap<TKey, TValue>;
+    TSpecBiMap         = specialize TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel>;
+    TEntry             = specialize TGMapEntry<TKey, TValue>;
+    TInverseEntry      = specialize TGMapEntry<TValue, TKey>;
+    TInverseEnumerator = specialize TGEnumerator<TInverseEntry>;
+    IKeyEnumerable     = specialize IGEnumerable<TKey>;
+    IValueEnumerable   = specialize IGEnumerable<TValue>;
+    IInverseEnumerable = specialize IGEnumerable<TInverseEntry>;
+    TInverseArray      = specialize TGArray<TInverseEntry>;
+    TKeyCollection     = specialize TGAbstractCollection<TKey>;
+    TValueCollection   = specialize TGAbstractCollection<TValue>;
+    IKeyCollection     = specialize IGCollection<TKey>;
+    IValueCollection   = specialize IGCollection<TValue>;
+    IInverseMap        = specialize IGInverseMap<TKey, TValue>;
+    IInverseRoMap      = specialize IGInverseReadOnlyMap<TKey, TValue>;
 
   protected
   type
@@ -119,13 +121,25 @@ type
       procedure Reset; override;
     end;
 
-    TEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
+    TEntryEnumerator = class(TContainerEnumerator)
     protected
-      FOwner: TGHashBiMap;
       FList:  TNodeList;
       FCurrIndex,
       FLastIndex: SizeInt;
       function GetCurrent: TEntry; override;
+    public
+      constructor Create(aMap: TGHashBiMap);
+      function MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+    TInvEntryEnumerator = class(specialize TGEnumerator<TInverseEntry>)
+    protected
+      FOwner: TSpecBiMap;
+      FList:  TNodeList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function GetCurrent: TInverseEntry; override;
     public
       constructor Create(aMap: TGHashBiMap);
       destructor Destroy; override;
@@ -138,9 +152,8 @@ type
     FKeyChains,
     FValueChains: TChainList;
     FCount: SizeInt;
-    function  _GetRef: TObject;
-    function  GetCount: SizeInt; inline;
-    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     procedure InitialAlloc; inline;
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
@@ -155,12 +168,12 @@ type
     function  FindValue(const aValue: TValue): SizeInt; inline;
     procedure DoAddData(const aKey: TKey; const aValue: TValue; aKeyHash, aValHash: SizeInt);
     procedure DoRemove(aIndex: SizeInt);
-    procedure DoClear; virtual;
-    procedure DoEnsureCapacity(aValue: SizeInt);
-    procedure DoTrimToFit;
+    procedure DoClear; override;
+    procedure DoEnsureCapacity(aValue: SizeInt); override;
+    procedure DoTrimToFit; override;
     function  DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
     function  DoAddAll(const a: array of TEntry): SizeInt;
-    function  DoAddAll(e: IEntryEnumerable): SizeInt;
+    function  DoAddAll(e: IEnumerable): SizeInt;
     function  TryAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean;
     function  TryAddOrSetKey(const aValue: TValue; const aKey: TKey): Boolean;
     procedure DoAddOrSetValue(const aKey: TKey; const aValue: TValue);
@@ -179,24 +192,20 @@ type
     procedure DoRetainAllVal({%H-}c: IValueCollection); virtual;
     function  GetKeys: IKeyEnumerable;
     function  GetValues: IValueEnumerable;
-    function  GetEntries: IEntryEnumerable;
+    function  DoGetEnumerator: TSpecEnumerator; override;
   { returns True and add aValue and aKey only if keys do not contain aKey and values do not contain aValue }
     function  AddInverse(const aValue: TValue; const aKey: TKey): Boolean;
     class constructor Init;
   public
     constructor Create;
     constructor Create(const a: array of TEntry);
-    constructor Create(e: IEntryEnumerable);
+    constructor Create(e: IEnumerable);
     constructor Create(aCapacity: SizeInt);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry);
-    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
+    constructor Create(aCapacity: SizeInt; e: IEnumerable);
     constructor CreateCopy(aMap: TGHashBiMap);
     destructor  Destroy; override;
-    function  IsEmpty: Boolean;
-    function  NonEmpty: Boolean;
-    procedure Clear;
-    procedure EnsureCapacity(aValue: SizeInt);
-    procedure TrimToFit;
+    function  GetInvEnumerator: TInverseEnumerator;
     function  Contains(const aKey: TKey): Boolean;
     function  NonContains(const aKey: TKey): Boolean;
     function  ContainsValue(const aValue: TValue): Boolean;
@@ -223,7 +232,7 @@ type
     function  TryAddOrSetKey(const e: TInverseEntry): Boolean;
   { will add only entries which keys and values are not contained in the map }
     function  AddAll(const a: array of TEntry): SizeInt;
-    function  AddAll(e: IEntryEnumerable): SizeInt;
+    function  AddAll(e: IEnumerable): SizeInt;
   { returns True if contains aKey and not contains aNewValue }
     function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
   { returns True if contains aValue and not contains aNewKey }
@@ -243,8 +252,10 @@ type
     function  Clone: TSpecBiMap; virtual;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
-    function  Entries: IEntryEnumerable;
+    function  Entries: IEnumerable;
+    function  InvEntries: IInverseEnumerable;
   private
+    function  IInverseMap.GetEnumerator = GetInvEnumerator;
     function  IInverseMap.Contains      = ContainsValue;
     function  IInverseMap.NonContains   = NonContainsValue;
     function  IInverseMap.GetValue      = GetKey;
@@ -258,13 +269,16 @@ type
     function  IInverseMap.RetainAll     = RetainAll;
     function  IInverseMap.Keys          = Values;
     function  IInverseMap.Values        = Keys;
+    function  IInverseMap.Entries       = InvEntries;
 
-    function  IInverseRoMap.Contains    = ContainsValue;
-    function  IInverseRoMap.TryGetValue = TryGetKey;
-    function  IInverseRoMap.GetValueDef = GetKeyDef;
-    function  IInverseRoMap.Keys        = Values;
-    function  IInverseRoMap.Values      = Keys;
-    function  IInverseRoMap.NonContains = NonContainsValue;
+    function  IInverseRoMap.GetEnumerator = GetInvEnumerator;
+    function  IInverseRoMap.Contains      = ContainsValue;
+    function  IInverseRoMap.TryGetValue   = TryGetKey;
+    function  IInverseRoMap.GetValueDef   = GetKeyDef;
+    function  IInverseRoMap.Keys          = Values;
+    function  IInverseRoMap.Values        = Keys;
+    function  IInverseRoMap.Entries       = InvEntries;
+    function  IInverseRoMap.NonContains   = NonContainsValue;
 
   public
     property  Count: SizeInt read FCount;
@@ -303,10 +317,10 @@ type
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; e: IEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectHashBiMap);
     function  Clone: TGObjectHashBiMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -325,7 +339,7 @@ type
   generic TGObjHashBiMap2<TKey, TValue> = class(specialize TGObjectHashBiMap<TKey, TValue, TKey, TValue>);
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGHashBiMap.TKeyEnumerable }
 
@@ -401,29 +415,22 @@ begin
   FCurrIndex := NULL_INDEX;
 end;
 
-{ TGHashBiMap.TEntryEnumerable }
+{ TGHashBiMap.TEntryEnumerator }
 
-function TGHashBiMap.TEntryEnumerable.GetCurrent: TEntry;
+function TGHashBiMap.TEntryEnumerator.GetCurrent: TEntry;
 begin
   Result := FList[FCurrIndex].Data;
 end;
 
-constructor TGHashBiMap.TEntryEnumerable.Create(aMap: TGHashBiMap);
+constructor TGHashBiMap.TEntryEnumerator.Create(aMap: TGHashBiMap);
 begin
-  inherited Create;
-  FOwner := aMap;
+  inherited Create(aMap);
   FList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
   FCurrIndex := NULL_INDEX;
 end;
 
-destructor TGHashBiMap.TEntryEnumerable.Destroy;
-begin
-  FOwner.EndIteration;
-  inherited;
-end;
-
-function TGHashBiMap.TEntryEnumerable.MoveNext: Boolean;
+function TGHashBiMap.TEntryEnumerator.MoveNext: Boolean;
 begin
   if FCurrIndex < FLastIndex then
     begin
@@ -433,17 +440,49 @@ begin
   Result := False;
 end;
 
-procedure TGHashBiMap.TEntryEnumerable.Reset;
+procedure TGHashBiMap.TEntryEnumerator.Reset;
+begin
+  FCurrIndex := NULL_INDEX;
+end;
+
+{ TGHashBiMap.TInvEntryEnumerator }
+
+function TGHashBiMap.TInvEntryEnumerator.GetCurrent: TInverseEntry;
+begin
+  with FList[FCurrIndex].Data do
+    Result := TInverseEntry.Create(Value, Key);
+end;
+
+constructor TGHashBiMap.TInvEntryEnumerator.Create(aMap: TGHashBiMap);
+begin
+  FOwner := aMap;
+  FList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := NULL_INDEX;
+end;
+
+destructor TGHashBiMap.TInvEntryEnumerator.Destroy;
+begin
+  FOwner.EndIteration;
+  inherited Destroy;
+end;
+
+function TGHashBiMap.TInvEntryEnumerator.MoveNext: Boolean;
+begin
+  if FCurrIndex < FLastIndex then
+    begin
+      Inc(FCurrIndex);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+procedure TGHashBiMap.TInvEntryEnumerator.Reset;
 begin
   FCurrIndex := NULL_INDEX;
 end;
 
 { TGBiMap }
-
-function TGHashBiMap._GetRef: TObject;
-begin
-  Result := Self;
-end;
 
 procedure TGHashBiMap.InitialAlloc;
 begin
@@ -752,7 +791,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGHashBiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
+function TGHashBiMap.DoAddAll(e: IEnumerable): SizeInt;
 begin
   Result := Count;
   with e.GetEnumerator do
@@ -982,9 +1021,9 @@ begin
   Result := TValueEnumerable.Create(Self);
 end;
 
-function TGHashBiMap.GetEntries: IEntryEnumerable;
+function TGHashBiMap.DoGetEnumerator: TSpecEnumerator;
 begin
-  Result := TEntryEnumerable.Create(Self);
+  Result := TEntryEnumerator.Create(Self);
 end;
 
 function TGHashBiMap.AddInverse(const aValue: TValue; const aKey: TKey): Boolean;
@@ -1009,7 +1048,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGHashBiMap.Create(e: IEntryEnumerable);
+constructor TGHashBiMap.Create(e: IEnumerable);
 begin
   Create;
   DoAddAll(e);
@@ -1026,7 +1065,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGHashBiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
+constructor TGHashBiMap.Create(aCapacity: SizeInt; e: IEnumerable);
 begin
   Create(aCapacity);
   DoAddAll(e);
@@ -1046,32 +1085,10 @@ begin
   inherited;
 end;
 
-function TGHashBiMap.IsEmpty: Boolean;
+function TGHashBiMap.GetInvEnumerator: TInverseEnumerator;
 begin
-  Result := Count = 0;
-end;
-
-function TGHashBiMap.NonEmpty: Boolean;
-begin
-  Result := Count > 0;
-end;
-
-procedure TGHashBiMap.Clear;
-begin
-  CheckInIteration;
-  DoClear;
-end;
-
-procedure TGHashBiMap.EnsureCapacity(aValue: SizeInt);
-begin
-  CheckInIteration;
-  DoEnsureCapacity(aValue);
-end;
-
-procedure TGHashBiMap.TrimToFit;
-begin
-  CheckInIteration;
-  DoTrimToFit;
+  BeginIteration;
+  Result := TInvEntryEnumerator.Create(Self);
 end;
 
 function TGHashBiMap.Contains(const aKey: TKey): Boolean;
@@ -1180,7 +1197,7 @@ begin
   Result := DoAddAll(a);
 end;
 
-function TGHashBiMap.AddAll(e: IEntryEnumerable): SizeInt;
+function TGHashBiMap.AddAll(e: IEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoAddAll(e)
@@ -1293,10 +1310,14 @@ begin
   Result := GetValues;
 end;
 
-function TGHashBiMap.Entries: IEntryEnumerable;
+function TGHashBiMap.Entries: IEnumerable;
 begin
-  BeginIteration;
-  Result := GetEntries;
+  Result := Self;
+end;
+
+function TGHashBiMap.InvEntries: IInverseEnumerable;
+begin
+  Result := specialize TGEnumCursor<TInverseEntry>.Create(GetInvEnumerator);
 end;
 
 { TGObjectHashBiMap }
@@ -1444,7 +1465,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectHashBiMap.Create(e: IEntryEnumerable; aOwns: TMapObjOwnership);
+constructor TGObjectHashBiMap.Create(e: IEnumerable; aOwns: TMapObjOwnership);
 begin
   inherited Create(e);
   SetOwnership(aOwns);
@@ -1462,7 +1483,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectHashBiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership);
+constructor TGObjectHashBiMap.Create(aCapacity: SizeInt; e: IEnumerable; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, e);
   SetOwnership(aOwns);

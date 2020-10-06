@@ -69,7 +69,7 @@ type
       procedure Reset; override;
     end;
 
-    TEntryEnumerable = class(TCustomEntryEnumerable)
+    TEntryEnumerator = class(TContainerEnumerator)
     protected
       FEnum: THashTable.TEntryEnumerator;
       function  GetCurrent: TEntry; override;
@@ -95,15 +95,15 @@ type
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
-    function  DoExtractIf(aTest: TKeyTest): TEntryArray; override;
-    function  DoExtractIf(aTest: TOnKeyTest): TEntryArray; override;
-    function  DoExtractIf(aTest: TNestKeyTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TKeyTest): TArray; override;
+    function  DoExtractIf(aTest: TOnKeyTest): TArray; override;
+    function  DoExtractIf(aTest: TNestKeyTest): TArray; override;
     procedure DoClear; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure DoTrimToFit; override;
     function  GetKeys: IKeyEnumerable; override;
     function  GetValues: IValueEnumerable; override;
-    function  GetEntries: IEntryEnumerable; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     class function GetTableClass: THashTableClass; virtual; abstract;
     class function GetClass: THashMapClass; virtual; abstract;
   public
@@ -112,16 +112,16 @@ type
     class function MinLoadFactor: Single; inline;
     constructor Create;
     constructor Create(const a: array of TEntry);
-    constructor Create(e: IEntryEnumerable);
+    constructor Create(e: IEnumerable);
     constructor Create(aCapacity: SizeInt);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry);
-    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
+    constructor Create(aCapacity: SizeInt; e: IEnumerable);
     constructor Create(aLoadFactor: Double);
     constructor Create(aLoadFactor: Single; const a: array of TEntry);
-    constructor Create(aLoadFactor: Single; e: IEntryEnumerable);
+    constructor Create(aLoadFactor: Single; e: IEnumerable);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
     constructor CreateCopy(aMap: TAbstractHashMap);
     destructor Destroy; override;
     function  Clone: TAbstractHashMap; override;
@@ -252,17 +252,17 @@ type
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; e: IEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aLoadFactor: Single; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aLoadFactor: Single; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aLoadFactor: Single; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aLoadFactor: Single; e: IEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry;
                        aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable;
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable;
                        aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGCustomObjectHashMap);
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -679,31 +679,31 @@ begin
   FEnum.Reset;
 end;
 
-{ TGAbstractHashMap.TEntryEnumerable }
+{ TGAbstractHashMap.TEntryEnumerator }
 
-function TGAbstractHashMap.TEntryEnumerable.GetCurrent: TEntry;
+function TGAbstractHashMap.TEntryEnumerator.GetCurrent: TEntry;
 begin
   Result := FEnum.Current^;
 end;
 
-constructor TGAbstractHashMap.TEntryEnumerable.Create(aMap: TAbstractHashMap);
+constructor TGAbstractHashMap.TEntryEnumerator.Create(aMap: TAbstractHashMap);
 begin
   inherited Create(aMap);
   FEnum := aMap.FTable.GetEnumerator;
 end;
 
-destructor TGAbstractHashMap.TEntryEnumerable.Destroy;
+destructor TGAbstractHashMap.TEntryEnumerator.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGAbstractHashMap.TEntryEnumerable.MoveNext: Boolean;
+function TGAbstractHashMap.TEntryEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGAbstractHashMap.TEntryEnumerable.Reset;
+procedure TGAbstractHashMap.TEntryEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
@@ -785,7 +785,7 @@ begin
   Result := FTable.RemoveIf(aTest);
 end;
 
-function TGAbstractHashMap.DoExtractIf(aTest: TKeyTest): TEntryArray;
+function TGAbstractHashMap.DoExtractIf(aTest: TKeyTest): TArray;
 var
   eh: TExtractHelper;
 begin
@@ -794,7 +794,7 @@ begin
   Result := eh.Final;
 end;
 
-function TGAbstractHashMap.DoExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGAbstractHashMap.DoExtractIf(aTest: TOnKeyTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -803,7 +803,7 @@ begin
   Result := e.Final;
 end;
 
-function TGAbstractHashMap.DoExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGAbstractHashMap.DoExtractIf(aTest: TNestKeyTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -837,9 +837,9 @@ begin
   Result := TValueEnumerable.Create(Self);
 end;
 
-function TGAbstractHashMap.GetEntries: IEntryEnumerable;
+function TGAbstractHashMap.DoGetEnumerator: TSpecEnumerator;
 begin
-  Result := TEntryEnumerable.Create(Self);
+  Result := TEntryEnumerator.Create(Self);
 end;
 
 class function TGAbstractHashMap.DefaultLoadFactor: Single;
@@ -868,7 +868,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGAbstractHashMap.Create(e: IEntryEnumerable);
+constructor TGAbstractHashMap.Create(e: IEnumerable);
 begin
   FTable := GetTableClass.Create;
   DoAddAll(e);
@@ -885,7 +885,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGAbstractHashMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
+constructor TGAbstractHashMap.Create(aCapacity: SizeInt; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(e);
@@ -902,7 +902,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGAbstractHashMap.Create(aLoadFactor: Single; e: IEntryEnumerable);
+constructor TGAbstractHashMap.Create(aLoadFactor: Single; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
   DoAddAll(e);
@@ -919,7 +919,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGAbstractHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable);
+constructor TGAbstractHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(e);
@@ -933,7 +933,7 @@ begin
   else
     begin
       FTable := GetTableClass.Create(aMap.Count);
-      DoAddAll(aMap.Entries);
+      DoAddAll(aMap);
     end;
 end;
 
@@ -1256,7 +1256,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(e: IEntryEnumerable; aOwns: TMapObjOwnership);
+constructor TGCustomObjectHashMap.Create(e: IEnumerable; aOwns: TMapObjOwnership);
 begin
   inherited Create(e);
   SetOwnership(aOwns);
@@ -1275,7 +1275,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership);
+constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; e: IEnumerable; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, e);
   SetOwnership(aOwns);
@@ -1294,7 +1294,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(aLoadFactor: Single; e: IEntryEnumerable; aOwns: TMapObjOwnership);
+constructor TGCustomObjectHashMap.Create(aLoadFactor: Single; e: IEnumerable; aOwns: TMapObjOwnership);
 begin
   inherited Create(aLoadFactor, e);
   SetOwnership(aOwns);
@@ -1313,7 +1313,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable;
+constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable;
   aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, aLoadFactor, e);

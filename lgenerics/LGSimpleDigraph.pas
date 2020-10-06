@@ -1311,17 +1311,21 @@ end;
 
 procedure TGSimpleDigraph.AssignReverse(aGraph: TGSimpleDigraph);
 var
-  e: TEdge;
-  v: TVertex;
+  I: SizeInt;
+  p: PAdjItem;
 begin
   Clear;
   EnsureCapacity(aGraph.VertexCount);
   Title := aGraph.Title;
   Description := aGraph.Description;
-  for v in aGraph.Vertices do
-    AddVertex(v);
-  for e in aGraph.Edges do
-    AddEdge(aGraph[e.Destination], aGraph[e.Source], e.Data);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      AddVertex(aGraph.FNodeList[I].Vertex);
+      FNodeList[I].AdjList.EnsureCapacity(aGraph.FNodeList[I].Tag);
+    end;
+  for I := 0 to Pred(aGraph.VertexCount) do
+    for p in aGraph.AdjLists[I]^ do
+      DoAddEdge(p^.Destination, I, p^.Data);
 end;
 
 function TGSimpleDigraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
