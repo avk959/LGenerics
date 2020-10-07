@@ -638,15 +638,13 @@ type
   end;
 
   { TGAbstractMultiMap: multimap abstract ancestor class }
-  generic TGAbstractMultiMap<TKey, TValue> = class abstract(TSimpleIterable)
-  {must be generic TGAbstractMultiMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
+  generic TGAbstractMultiMap<TKey, TValue> = class abstract(
+    specialize TGAbstractContainer<specialize TGMapEntry<TKey, TValue>>)
   public
   type
     TEntry           = specialize TGMapEntry<TKey, TValue>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
-    IEntryEnumerable = specialize IGEnumerable<TEntry>;
     TValueArray      = specialize TGArray<TKey>;
 
   protected
@@ -679,14 +677,6 @@ type
       destructor Destroy; override;
     end;
 
-    TCustomEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
-    protected
-      FOwner: TGAbstractMultiMap;
-    public
-      constructor Create(aMap: TGAbstractMultiMap);
-      destructor Destroy; override;
-    end;
-
     TCustomValueCursor = class(specialize TGEnumCursor<TValue>)
     protected
       FOwner: TGAbstractMultiMap;
@@ -697,38 +687,29 @@ type
 
   var
     FCount: SizeInt;
+    function  GetCount: SizeInt; override;
+    procedure DoClear; override;
     function  GetKeyCount: SizeInt; virtual; abstract;
-    function  GetCapacity: SizeInt; virtual; abstract;
     function  GetUniqueValues: Boolean; virtual; abstract;
-    procedure DoClear; virtual; abstract;
-    procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
-    procedure DoTrimToFit; virtual; abstract;
     function  Find(const aKey: TKey): PMMEntry; virtual; abstract;
     function  FindOrAdd(const aKey: TKey): PMMEntry; virtual; abstract;
     function  DoRemoveKey(const aKey: TKey): SizeInt; virtual; abstract;
     function  GetKeys: IKeyEnumerable; virtual; abstract;
     function  GetValues: IValueEnumerable; virtual; abstract;
-    function  GetEntries: IEntryEnumerable; virtual; abstract;
 
     function  DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
     function  DoAddAll(const a: array of TEntry): SizeInt;
-    function  DoAddAll(e: IEntryEnumerable): SizeInt;
+    function  DoAddAll(e: IEnumerable): SizeInt;
     function  DoAddValues(const aKey: TKey; const a: array of TValue): SizeInt;
     function  DoAddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
     function  DoRemove(const aKey: TKey; const aValue: TValue): Boolean;
     function  DoRemoveAll(const a: array of TEntry): SizeInt;
-    function  DoRemoveAll(e: IEntryEnumerable): SizeInt;
+    function  DoRemoveAll(e: IEnumerable): SizeInt;
     function  DoRemoveValues(const aKey: TKey; const a: array of TValue): SizeInt;
     function  DoRemoveValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
     function  DoRemoveKeys(const a: array of TKey): SizeInt;
     function  DoRemoveKeys(e: IKeyEnumerable): SizeInt;
   public
-    function  IsEmpty: Boolean;
-    function  NonEmpty: Boolean;
-    procedure Clear;
-    procedure EnsureCapacity(aValue: SizeInt);
-    procedure TrimToFit;
-
     function  Contains(const aKey: TKey): Boolean; inline;
     function  ContainsValue(const aKey: TKey; const aValue: TValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if value-collection of an aKey adds aValue }
@@ -737,14 +718,14 @@ type
     function  Add(const e: TEntry): Boolean;
   { returns count of added values }
     function  AddAll(const a: array of TEntry): SizeInt;
-    function  AddAll(e: IEntryEnumerable): SizeInt;
+    function  AddAll(e: IEnumerable): SizeInt;
     function  AddValues(const aKey: TKey; const a: array of TValue): SizeInt;
     function  AddValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
   { returns True if aKey exists and mapped to aValue; aValue will be removed(and aKey if no more mapped values) }
     function  Remove(const aKey: TKey; const aValue: TValue): Boolean;
     function  Remove(const e: TEntry): Boolean;
     function  RemoveAll(const a: array of TEntry): SizeInt;
-    function  RemoveAll(e: IEntryEnumerable): SizeInt;
+    function  RemoveAll(e: IEnumerable): SizeInt;
     function  RemoveValues(const aKey: TKey; const a: array of TValue): SizeInt;
     function  RemoveValues(const aKey: TKey; e: IValueEnumerable): SizeInt;
   { if aKey exists then removes if with mapped values; returns count of removed values }
@@ -757,13 +738,11 @@ type
     function  ValuesView(const aKey: TKey): IValueEnumerable;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
-    function  Entries: IEntryEnumerable;
+    function  Entries: IEnumerable;
   { returns count of values mapped to aKey (similar as multiset)}
     function  ValueCount(const aKey: TKey): SizeInt;
     property  UniqueValues: Boolean read GetUniqueValues;
-    property  Count: SizeInt read FCount;
     property  KeyCount: SizeInt read GetKeyCount;
-    property  Capacity: SizeInt read GetCapacity;
     property  Items[const aKey: TKey]: IValueEnumerable read ValuesView; default;
   end;
 
@@ -3196,20 +3175,6 @@ begin
   inherited;
 end;
 
-{ TGAbstractMultiMap.TCustomEntryEnumerable }
-
-constructor TGAbstractMultiMap.TCustomEntryEnumerable.Create(aMap: TGAbstractMultiMap);
-begin
-  inherited Create;
-  FOwner := aMap;
-end;
-
-destructor TGAbstractMultiMap.TCustomEntryEnumerable.Destroy;
-begin
-  FOwner.EndIteration;
-  inherited;
-end;
-
 { TGAbstractMultiMap.TCustomValueCursor }
 
 constructor TGAbstractMultiMap.TCustomValueCursor.Create(e: TSpecEnumerator; aMap: TGAbstractMultiMap);
@@ -3225,6 +3190,16 @@ begin
 end;
 
 { TGAbstractMultiMap }
+
+function TGAbstractMultiMap.GetCount: SizeInt;
+begin
+  Result := FCount;
+end;
+
+procedure TGAbstractMultiMap.DoClear;
+begin
+  FCount := 0;
+end;
 
 function TGAbstractMultiMap.DoAdd(const aKey: TKey; const aValue: TValue): Boolean;
 var
@@ -3250,7 +3225,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGAbstractMultiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.DoAddAll(e: IEnumerable): SizeInt;
 begin
   Result := Count;
   with e.GetEnumerator do
@@ -3320,7 +3295,7 @@ begin
     Result += Ord(DoRemove(e.Key, e.Value));
 end;
 
-function TGAbstractMultiMap.DoRemoveAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.DoRemoveAll(e: IEnumerable): SizeInt;
 begin
   Result := Count;
   if Result > 0 then
@@ -3396,35 +3371,6 @@ begin
   FCount -= Result;
 end;
 
-function TGAbstractMultiMap.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGAbstractMultiMap.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGAbstractMultiMap.Clear;
-begin
-  CheckInIteration;
-  DoClear;
-  FCount := 0;
-end;
-
-procedure TGAbstractMultiMap.EnsureCapacity(aValue: SizeInt);
-begin
-  CheckInIteration;
-  DoEnsureCapacity(aValue);
-end;
-
-procedure TGAbstractMultiMap.TrimToFit;
-begin
-  CheckInIteration;
-  DoTrimToFit;
-end;
-
 function TGAbstractMultiMap.Contains(const aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
@@ -3458,7 +3404,7 @@ begin
   Result := DoAddAll(a);
 end;
 
-function TGAbstractMultiMap.AddAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.AddAll(e: IEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoAddAll(e)
@@ -3499,7 +3445,7 @@ begin
   Result := DoRemoveAll(a);
 end;
 
-function TGAbstractMultiMap.RemoveAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.RemoveAll(e: IEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveAll(e)
@@ -3580,10 +3526,9 @@ begin
   Result := GetValues;
 end;
 
-function TGAbstractMultiMap.Entries: IEntryEnumerable;
+function TGAbstractMultiMap.Entries: IEnumerable;
 begin
-  BeginIteration;
-  Result := GetEntries;
+  Result := Self;
 end;
 
 function TGAbstractMultiMap.ValueCount(const aKey: TKey): SizeInt;
