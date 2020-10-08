@@ -68,7 +68,7 @@ type
       procedure Reset; override;
     end;
 
-    TEntryEnumerator = class(TContainerEnumerator)
+    TEntryEnumerable = class(TCustomEntryEnumerable)
     protected
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TEntry; override;
@@ -101,24 +101,24 @@ type
     function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
-    function  DoExtractIf(aTest: TKeyTest): TArray; override;
-    function  DoExtractIf(aTest: TOnKeyTest): TArray; override;
-    function  DoExtractIf(aTest: TNestKeyTest): TArray; override;
+    function  DoExtractIf(aTest: TKeyTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TOnKeyTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TNestKeyTest): TEntryArray; override;
     procedure DoClear; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure DoTrimToFit; override;
     function  GetKeys: IKeyEnumerable; override;
     function  GetValues: IValueEnumerable; override;
-    function  DoGetEnumerator: TSpecEnumerator; override;
+    function  GetEntries: IEntryEnumerable; override;
     function  FindNearestLT(const aPattern: TKey; out aKey: TKey): Boolean;
     function  FindNearestLE(const aPattern: TKey; out aKey: TKey): Boolean;
     function  FindNearestGT(const aPattern: TKey; out aKey: TKey): Boolean;
     function  FindNearestGE(const aPattern: TKey; out aKey: TKey): Boolean;
   public
     destructor Destroy; override;
-    function Reverse: IEnumerable; override;
     function ReverseKeys: IKeyEnumerable;
     function ReverseValues: IValueEnumerable;
+    function ReverseEntries: IEntryEnumerable;
     function FindFirstKey(out aKey: TKey): Boolean;
     function FirstKey: TKeyOptional;
     function FindLastKey(out aKey: TKey): Boolean;
@@ -188,7 +188,7 @@ type
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     constructor Create(const a: array of TEntry);
-    constructor Create(e: IEnumerable);
+    constructor Create(e: IEntryEnumerable);
     constructor CreateCopy(aMap: TGBaseTreeMap);
     function Clone: TGBaseTreeMap; override;
     function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
@@ -222,7 +222,7 @@ type
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectTreeMap);
     function  Clone: TGObjectTreeMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -263,7 +263,7 @@ type
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     constructor Create(const a: array of TEntry);
-    constructor Create(e: IEnumerable);
+    constructor Create(e: IEntryEnumerable);
     constructor CreateCopy(aMap: TGComparableTreeMap);
     function Clone: TGComparableTreeMap; override;
     function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
@@ -279,7 +279,7 @@ type
   generic TGRegularTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   public
   type
-    TKeyLess = specialize TGLessCompare<TKey>;
+    TLess = specialize TGLessCompare<TKey>;
 
   protected
   type
@@ -288,7 +288,7 @@ type
     TKeyHeadEnumerable = class(TCustomKeyEnumerable)
     protected
       FEnum: TTree.TEnumerator;
-      FLess: TKeyLess;
+      FLess: TLess;
       FHighBound: TKey;
       FInclusive,
       FDone: Boolean;
@@ -306,12 +306,12 @@ type
 
   public
     constructor Create;
-    constructor Create(aLess: TKeyLess);
-    constructor Create(aCapacity: SizeInt; aLess: TKeyLess);
-    constructor Create(const a: array of TEntry; aLess: TKeyLess);
-    constructor Create(e: IEnumerable; aLess: TKeyLess);
+    constructor Create(aLess: TLess);
+    constructor Create(aCapacity: SizeInt; aLess: TLess);
+    constructor Create(const a: array of TEntry; aLess: TLess);
+    constructor Create(e: IEntryEnumerable; aLess: TLess);
     constructor CreateCopy(aMap: TGRegularTreeMap);
-    function Comparator: TKeyLess; inline;
+    function Comparator: TLess; inline;
     function Clone: TGRegularTreeMap; override;
     function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
     function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
@@ -339,10 +339,10 @@ type
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(c: TKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; c: TKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; c: TKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEnumerable; c: TKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectRegularTreeMap);
     function  Clone: TGObjectRegularTreeMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -353,7 +353,7 @@ type
   generic TGDelegatedTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   public
   type
-    TOnKeyLess = specialize TGOnLessCompare<TKey>;
+    TOnLess = specialize TGOnLessCompare<TKey>;
 
   protected
   type
@@ -362,7 +362,7 @@ type
     TKeyHeadEnumerable = class(TCustomKeyEnumerable)
     protected
       FEnum: TTree.TEnumerator;
-      FLess: TOnKeyLess;
+      FLess: TOnLess;
       FHighBound: TKey;
       FInclusive,
       FDone: Boolean;
@@ -380,12 +380,12 @@ type
 
   public
     constructor Create;
-    constructor Create(aLess: TOnKeyLess);
-    constructor Create(aCapacity: SizeInt; aLess: TOnKeyLess);
-    constructor Create(const a: array of TEntry; aLess: TOnKeyLess);
-    constructor Create(e: IEnumerable; aLess: TOnKeyLess);
+    constructor Create(aLess: TOnLess);
+    constructor Create(aCapacity: SizeInt; aLess: TOnLess);
+    constructor Create(const a: array of TEntry; aLess: TOnLess);
+    constructor Create(e: IEntryEnumerable; aLess: TOnLess);
     constructor CreateCopy(aMap: TGDelegatedTreeMap);
-    function Comparator: TOnKeyLess;
+    function Comparator: TOnLess;
     function Clone: TGDelegatedTreeMap; override;
 
     function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
@@ -414,10 +414,10 @@ type
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
     constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(c: TOnKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; c: TOnKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; c: TOnKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEnumerable; c: TOnKeyLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(const a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor CreateCopy(aMap: TGObjectDelegatedTreeMap);
     function  Clone: TGObjectDelegatedTreeMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -491,14 +491,14 @@ begin
   FEnum.Reset;
 end;
 
-{ TGBaseTreeMap.TEntryEnumerator }
+{ TGBaseTreeMap.TEntryEnumerable }
 
-function TGAbstractTreeMap.TEntryEnumerator.GetCurrent: TEntry;
+function TGAbstractTreeMap.TEntryEnumerable.GetCurrent: TEntry;
 begin
   Result := FEnum.Current^.Data;
 end;
 
-constructor TGAbstractTreeMap.TEntryEnumerator.Create(aMap: TAbstractTreeMap; aReverse: Boolean);
+constructor TGAbstractTreeMap.TEntryEnumerable.Create(aMap: TAbstractTreeMap; aReverse: Boolean);
 begin
   inherited Create(aMap);
   if aReverse then
@@ -507,18 +507,18 @@ begin
     FEnum := aMap.FTree.GetEnumerator;
 end;
 
-destructor TGAbstractTreeMap.TEntryEnumerator.Destroy;
+destructor TGAbstractTreeMap.TEntryEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGAbstractTreeMap.TEntryEnumerator.MoveNext: Boolean;
+function TGAbstractTreeMap.TEntryEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGAbstractTreeMap.TEntryEnumerator.Reset;
+procedure TGAbstractTreeMap.TEntryEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
@@ -612,7 +612,7 @@ begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGAbstractTreeMap.DoExtractIf(aTest: TKeyTest): TArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TKeyTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
@@ -621,7 +621,7 @@ begin
   Result := e.Final;
 end;
 
-function TGAbstractTreeMap.DoExtractIf(aTest: TOnKeyTest): TArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TOnKeyTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
@@ -630,7 +630,7 @@ begin
   Result := e.Final;
 end;
 
-function TGAbstractTreeMap.DoExtractIf(aTest: TNestKeyTest): TArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TNestKeyTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
@@ -664,9 +664,9 @@ begin
   Result := TValueEnumerable.Create(Self);
 end;
 
-function TGAbstractTreeMap.DoGetEnumerator: TSpecEnumerator;
+function TGAbstractTreeMap.GetEntries: IEntryEnumerable;
 begin
-  Result := TEntryEnumerator.Create(Self);
+  Result := TEntryEnumerable.Create(Self);
 end;
 
 function TGAbstractTreeMap.FindNearestLT(const aPattern: TKey; out aKey: TKey): Boolean;
@@ -716,12 +716,6 @@ begin
   inherited;
 end;
 
-function TGAbstractTreeMap.Reverse: IEnumerable;
-begin
-  BeginIteration;
-  Result := specialize TGEnumCursor<TEntry>.Create(TEntryEnumerator.Create(Self, True));
-end;
-
 function TGAbstractTreeMap.ReverseKeys: IKeyEnumerable;
 begin
   BeginIteration;
@@ -732,6 +726,12 @@ function TGAbstractTreeMap.ReverseValues: IValueEnumerable;
 begin
   BeginIteration;
   Result := TValueEnumerable.Create(Self, True);
+end;
+
+function TGAbstractTreeMap.ReverseEntries: IEntryEnumerable;
+begin
+  BeginIteration;
+  Result := TEntryEnumerable.Create(Self, True);
 end;
 
 function TGAbstractTreeMap.FindFirstKey(out aKey: TKey): Boolean;
@@ -926,7 +926,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGBaseTreeMap.Create(e: IEnumerable);
+constructor TGBaseTreeMap.Create(e: IEntryEnumerable);
 begin
   FTree := TBaseTree.Create;
   DoAddAll(e);
@@ -1096,7 +1096,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectTreeMap.Create(e: IEnumerable; aOwns: TMapObjOwnership);
+constructor TGObjectTreeMap.Create(e: IEntryEnumerable; aOwns: TMapObjOwnership);
 begin
   inherited Create(e);
   SetOwnership(aOwns);
@@ -1193,7 +1193,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGComparableTreeMap.Create(e: IEnumerable);
+constructor TGComparableTreeMap.Create(e: IEntryEnumerable);
 begin
   Create;
   DoAddAll(e);
@@ -1314,7 +1314,7 @@ end;
 
 { TGRegularTreeMap }
 
-function TGRegularTreeMap.Comparator: TKeyLess;
+function TGRegularTreeMap.Comparator: TLess;
 begin
   Result := TRegularTree(FTree).Comparator;
 end;
@@ -1324,23 +1324,23 @@ begin
   FTree := TRegularTree.Create(specialize TGDefaults<TKey>.Less);
 end;
 
-constructor TGRegularTreeMap.Create(aLess: TKeyLess);
+constructor TGRegularTreeMap.Create(aLess: TLess);
 begin
   FTree := TRegularTree.Create(aLess);
 end;
 
-constructor TGRegularTreeMap.Create(aCapacity: SizeInt; aLess: TKeyLess);
+constructor TGRegularTreeMap.Create(aCapacity: SizeInt; aLess: TLess);
 begin
   FTree := TRegularTree.Create(aCapacity, aLess);
 end;
 
-constructor TGRegularTreeMap.Create(const a: array of TEntry; aLess: TKeyLess);
+constructor TGRegularTreeMap.Create(const a: array of TEntry; aLess: TLess);
 begin
   Create(aLess);
   DoAddAll(a);
 end;
 
-constructor TGRegularTreeMap.Create(e: IEnumerable; aLess: TKeyLess);
+constructor TGRegularTreeMap.Create(e: IEntryEnumerable; aLess: TLess);
 begin
   Create(aLess);
   DoAddAll(e);
@@ -1499,25 +1499,25 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(c: TKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(aCapacity: SizeInt; c: TKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(const a: array of TEntry; c: TKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(const a: array of TEntry; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(a, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectRegularTreeMap.Create(e: IEnumerable; c: TKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectRegularTreeMap.Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(e, c);
   SetOwnership(aOwns);
@@ -1594,23 +1594,23 @@ begin
   FTree := TDelegatedTree.Create(specialize TGDefaults<TKey>.OnLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(aLess: TOnKeyLess);
+constructor TGDelegatedTreeMap.Create(aLess: TOnLess);
 begin
   FTree := TDelegatedTree.Create(aLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(aCapacity: SizeInt; aLess: TOnKeyLess);
+constructor TGDelegatedTreeMap.Create(aCapacity: SizeInt; aLess: TOnLess);
 begin
   FTree := TDelegatedTree.Create(aCapacity, aLess);
 end;
 
-constructor TGDelegatedTreeMap.Create(const a: array of TEntry; aLess: TOnKeyLess);
+constructor TGDelegatedTreeMap.Create(const a: array of TEntry; aLess: TOnLess);
 begin
   Create(aLess);
   DoAddAll(a);
 end;
 
-constructor TGDelegatedTreeMap.Create(e: IEnumerable; aLess: TOnKeyLess);
+constructor TGDelegatedTreeMap.Create(e: IEntryEnumerable; aLess: TOnLess);
 begin
   Create(aLess);
   DoAddAll(e);
@@ -1621,7 +1621,7 @@ begin
   FTree := TDelegatedTree(aMap.FTree).Clone;
 end;
 
-function TGDelegatedTreeMap.Comparator: TOnKeyLess;
+function TGDelegatedTreeMap.Comparator: TOnLess;
 begin
   Result := TDelegatedTree(FTree).Comparator;
 end;
@@ -1774,25 +1774,25 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(c: TOnKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(aCapacity: SizeInt; c: TOnKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(const a: array of TEntry; c: TOnKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(const a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(a, c);
   SetOwnership(aOwns);
 end;
 
-constructor TGObjectDelegatedTreeMap.Create(e: IEnumerable; c: TOnKeyLess; aOwns: TMapObjOwnership);
+constructor TGObjectDelegatedTreeMap.Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership);
 begin
   inherited Create(e, c);
   SetOwnership(aOwns);

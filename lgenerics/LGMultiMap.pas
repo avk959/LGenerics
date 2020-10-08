@@ -69,7 +69,7 @@ type
       procedure Reset; override;
     end;
 
-    TEntryEnumerator = class(TContainerEnumerator)
+    TEntryEnumerable = class(TCustomEntryEnumerable)
     protected
       FValueEnum: TSpecValueEnumerator;
       FEntryEnum: THashTable.TEnumerator;
@@ -97,12 +97,12 @@ type
     procedure DoClear; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure DoTrimToFit; override;
-    function  DoGetEnumerator: TSpecEnumerator; override;
     function  Find(const aKey: TKey): PMMEntry; override;
     function  FindOrAdd(const aKey: TKey): PMMEntry; override;
     function  DoRemoveKey(const aKey: TKey): SizeInt; override;
     function  GetKeys: IKeyEnumerable; override;
     function  GetValues: IValueEnumerable; override;
+    function  GetEntries: IEntryEnumerable; override;
     function  CreateValueSet: TAbstractValueSet; virtual; abstract;
   public
     class function DefaultLoadFactor: Single; inline;
@@ -110,10 +110,10 @@ type
     class function MinLoadFactor: Single; inline;
     constructor Create;
     constructor Create(const a: array of TEntry);
-    constructor Create(e: IEnumerable);
+    constructor Create(e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry);
-    constructor Create(aCapacity: SizeInt; e: IEnumerable);
+    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
   { The number of keys that can be written without rehashing }
@@ -233,10 +233,10 @@ type
   public
     constructor Create;
     constructor Create(const a: array of TEntry);
-    constructor Create(e: IEnumerable);
+    constructor Create(e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt);
     constructor Create(aCapacity: SizeInt; const a: array of TEntry);
-    constructor Create(aCapacity: SizeInt; e: IEnumerable);
+    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     destructor  Destroy; override;
   end;
 
@@ -557,27 +557,27 @@ begin
   FValueEnum := nil;
 end;
 
-{ TGAbstractHashMultiMap.TEntryEnumerator }
+{ TGAbstractHashMultiMap.TEntryEnumerable }
 
-function TGAbstractHashMultiMap.TEntryEnumerator.GetCurrent: TEntry;
+function TGAbstractHashMultiMap.TEntryEnumerable.GetCurrent: TEntry;
 begin
   Result.Key := FEntryEnum.Current^.Key;
   Result.Value := FValueEnum.Current;
 end;
 
-constructor TGAbstractHashMultiMap.TEntryEnumerator.Create(aMap: TGAbstractHashMultiMap);
+constructor TGAbstractHashMultiMap.TEntryEnumerable.Create(aMap: TGAbstractHashMultiMap);
 begin
   inherited Create(aMap);
   FEntryEnum := aMap.FTable.GetEnumerator;
 end;
 
-destructor TGAbstractHashMultiMap.TEntryEnumerator.Destroy;
+destructor TGAbstractHashMultiMap.TEntryEnumerable.Destroy;
 begin
   FValueEnum.Free;
   inherited;
 end;
 
-function TGAbstractHashMultiMap.TEntryEnumerator.MoveNext: Boolean;
+function TGAbstractHashMultiMap.TEntryEnumerable.MoveNext: Boolean;
 begin
   repeat
     if not Assigned(FValueEnum) then
@@ -592,7 +592,7 @@ begin
   until Result;
 end;
 
-procedure TGAbstractHashMultiMap.TEntryEnumerator.Reset;
+procedure TGAbstractHashMultiMap.TEntryEnumerable.Reset;
 begin
   FEntryEnum.Reset;
   FValueEnum := nil;
@@ -637,7 +637,6 @@ begin
   for p in FTable do
     p^.Values.Free;
   FTable.Clear;
-  inherited;
 end;
 
 procedure TGAbstractHashMultiMap.DoEnsureCapacity(aValue: SizeInt);
@@ -648,11 +647,6 @@ end;
 procedure TGAbstractHashMultiMap.DoTrimToFit;
 begin
   FTable.TrimToFit;
-end;
-
-function TGAbstractHashMultiMap.DoGetEnumerator: TSpecEnumerator;
-begin
-  Result := TEntryEnumerator.Create(Self);
 end;
 
 function TGAbstractHashMultiMap.Find(const aKey: TKey): PMMEntry;
@@ -699,6 +693,11 @@ begin
   Result := TValueEnumerable.Create(Self);
 end;
 
+function TGAbstractHashMultiMap.GetEntries: IEntryEnumerable;
+begin
+  Result := TEntryEnumerable.Create(Self);
+end;
+
 class function TGAbstractHashMultiMap.DefaultLoadFactor: Single;
 begin
   Result := THashTable.DefaultLoadFactor;
@@ -725,7 +724,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGAbstractHashMultiMap.Create(e: IEnumerable);
+constructor TGAbstractHashMultiMap.Create(e: IEntryEnumerable);
 begin
   Create;
   DoAddAll(e);
@@ -742,7 +741,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt; e: IEnumerable);
+constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
 begin
   Create(aCapacity);
   DoAddAll(e);
@@ -938,7 +937,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGTreeMultiMap.Create(e: IEnumerable);
+constructor TGTreeMultiMap.Create(e: IEntryEnumerable);
 begin
   FTable := THashTable.Create;
   FNodeManager := TNodeManager.Create;
@@ -958,7 +957,7 @@ begin
   DoAddAll(a);
 end;
 
-constructor TGTreeMultiMap.Create(aCapacity: SizeInt; e: IEnumerable);
+constructor TGTreeMultiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
 begin
   FTable := THashTable.Create(aCapacity);
   FNodeManager := TNodeManager.Create;

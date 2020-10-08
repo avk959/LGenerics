@@ -100,7 +100,8 @@ type
     class function IsNil(const aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
-    class operator Implicit(const aValue: T): TGOptional<T>; inline;
+    class operator Implicit(constref aValue: T): TGOptional<T>; inline;
+    { For reasons that are still unknown, these operators cause problems in some cases }
     class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
     class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
     procedure Assign(const aValue: T);
@@ -673,9 +674,8 @@ type
     procedure RetainAll(c: IGCollection<T>);
   end;
 
-  IGReadOnlyCollection<T> = interface
+  IGReadOnlyCollection<T> = interface(IGEnumerable<T>)
   ['{D0DDB482-819A-438B-BF33-B6EF21A6A9A5}']
-    function  GetEnumerator: TGEnumerator<T>;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
@@ -695,19 +695,17 @@ type
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
-  IGMap<TKey, TValue> = interface
+  IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
     function  _GetRef: TObject;
-    function  GetEnumerator: TGEnumerator<TGMapEntry<TKey, TValue>>;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
+    function  GetValue(const aKey: TKey): TValue;
     function  IsEmpty: Boolean;
-    function  NonEmpty: Boolean;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
   { free unused memory if possible }
     procedure TrimToFit;
-    function  GetValue(const aKey: TKey): TValue;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
     function  Add(const aKey: TKey; const aValue: TValue): Boolean;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
@@ -723,20 +721,19 @@ type
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
     function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
-  { reading will raise exception if an aKey is not present in map }
-    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
+  { reading will raise exception if an aKey is not present in map }
+    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
   IGReadOnlyMap<TKey, TValue> = interface
   ['{08561616-8E8B-4DBA-AEDB-DE14C5FA9403}']
-    function  GetEnumerator: TGEnumerator<TGMapEntry<TKey, TValue>>;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
     function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue = Default(TValue)): TValue;
     function  Contains(const aKey: TKey): Boolean;
     function  NonContains(const aKey: TKey): Boolean;
     function  Keys: IGEnumerable<TKey>;
@@ -1305,7 +1302,7 @@ begin
   o.FAssigned := False;
 end;
 
-class operator TGOptional<T>.Implicit(const aValue: T): TGOptional<T>;
+class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
 begin
   Result.Assign(aValue);
 end;
