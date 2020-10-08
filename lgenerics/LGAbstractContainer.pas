@@ -476,8 +476,9 @@ type
   { TGAbstractMap: map abstract ancestor class  }
   generic TGAbstractMap<TKey, TValue> = class abstract(TSimpleIterable, specialize IGMap<TKey, TValue>,
     specialize IGReadOnlyMap<TKey, TValue>)
-  {must be  generic TGAbstractMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
+  {must be
+    generic TGAbstractMap<TKey, TValue> = class abstract(
+      specialize TGAbstractContainer<specialize TGMapEntry<TKey, TValue>>), but in 3.2.0 it doesn't compile}
   public
   type
     TSpecMap         = specialize TGAbstractMap<TKey, TValue>;
@@ -664,8 +665,9 @@ type
 
   { TGAbstractMultiMap: multimap abstract ancestor class }
   generic TGAbstractMultiMap<TKey, TValue> = class abstract(TSimpleIterable)
-  {must be generic TGAbstractMultiMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
+  {must be
+    generic TGAbstractMultiMap<TKey, TValue> = class abstract(
+      specialize TGAbstractContainer<specialize TGMapEntry<TKey, TValue>>), but in 3.2.0 it doesn't compile}
   public
   type
     TEntry           = specialize TGMapEntry<TKey, TValue>;
@@ -794,15 +796,14 @@ type
 
   { TGAbstractTable2D: table abstract ancestor class }
   generic TGAbstractTable2D<TRow, TCol, TValue> = class abstract
+  {must be
+    generic TGAbstractTable2D<TRow, TCol, TValue> = class abstract(
+      specialize TGAbstractContainer<specialize TGCell2D<TRow, TCol, TValue>>),
+        but in 3.2.0 it doesn't compile}
   public
   type
 
-    TCellData = record
-      Row:    TRow;
-      Column: TCol;
-      Value:  TValue;
-      constructor Create(const aRow: TRow; const aCol: TCol; const aValue: TValue);
-    end;
+    TCellData = specialize TGCell2D<TRow, TCol, TValue>;
 
     TColData = record
       Row:   TRow;
@@ -3681,15 +3682,6 @@ begin
     Result := p^.Values.Count
   else
     Result := 0;
-end;
-
-{ TGAbstractTable2D.TCellData }
-
-constructor TGAbstractTable2D.TCellData.Create(const aRow: TRow; const aCol: TCol; const aValue: TValue);
-begin
-  Row := aRow;
-  Column := aCol;
-  Value := aValue;
 end;
 
 { TGAbstractTable2D.TColData }

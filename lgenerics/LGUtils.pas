@@ -694,6 +694,13 @@ type
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
+  TGCell2D<TRow, TCol, TValue> = record
+    Row:    TRow;
+    Column: TCol;
+    Value:  TValue;
+    constructor Create(const aRow: TRow; const aCol: TCol; const aValue: TValue);
+  end;
+
   IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
     function  _GetRef: TObject;
@@ -2654,6 +2661,15 @@ end;
 constructor TGMapEntry<TKey, TValue>.Create(constref aKey: TKey; constref aValue: TValue);
 begin
   Key := aKey;
+  Value := aValue;
+end;
+
+{ TGCell2D }
+
+constructor TGCell2D<TRow, TCol, TValue>.Create(const aRow: TRow; const aCol: TCol; const aValue: TValue);
+begin
+  Row := aRow;
+  Column := aCol;
   Value := aValue;
 end;
 
