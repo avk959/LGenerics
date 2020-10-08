@@ -100,9 +100,9 @@ type
     class function IsNil(const aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
-    class operator Implicit(constref aValue: T): TGOptional<T>; inline;
-    class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
-    class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
+    class operator Implicit(const aValue: T): TGOptional<T>; inline;
+    class operator Implicit(const aOpt: TGOptional<T>): T; inline;
+    class operator Explicit(const aOpt: TGOptional<T>): T; inline;
     procedure Assign(const aValue: T);
     function  OrElseDefault: T; inline;
     function  OrElse(const aValue: T): T; inline;
@@ -1301,17 +1301,17 @@ begin
   o.FAssigned := False;
 end;
 
-class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
+class operator TGOptional<T>.Implicit(const aValue: T): TGOptional<T>;
 begin
   Result.Assign(aValue);
 end;
 
-class operator TGOptional<T>.Implicit(constref aOpt: TGOptional<T>): T;
+class operator TGOptional<T>.Implicit(const aOpt: TGOptional<T>): T;
 begin
   Result := aOpt.Value;
 end;
 
-class operator TGOptional<T>.Explicit(constref aOpt: TGOptional<T>): T;
+class operator TGOptional<T>.Explicit(const aOpt: TGOptional<T>): T;
 begin
   Result := aOpt.Value;
 end;
