@@ -101,7 +101,6 @@ type
     class operator Initialize(var o: TGOptional<T>); inline;
   public
     class operator Implicit(constref aValue: T): TGOptional<T>; inline;
-    { For reasons that are still unknown, these operators cause problems in some cases }
     class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
     class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
     procedure Assign(const aValue: T);
