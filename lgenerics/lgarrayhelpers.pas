@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGArrayHelpers;
+unit lgArrayHelpers;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -29,9 +29,9 @@ interface
 uses
 
   SysUtils, math, typinfo,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgStrConst;
 
 type
 

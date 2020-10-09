@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGAsync;
+unit lgAsync;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -28,12 +28,12 @@ interface
 
 uses
   Classes, SysUtils, Math,
-  LGUtils,
-  LGQueue,
-  LGVector,
-  LGPriorityQueue,
-  LGFunction,
-  LGStrConst;
+  lgUtils,
+  lgQueue,
+  lgVector,
+  lgPriorityQueue,
+  lgFunction,
+  lgStrConst;
 
 type
 

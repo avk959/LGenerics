@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGTable2D;
+unit lgTable2D;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -26,12 +26,12 @@ interface
 
 uses
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGAbstractContainer,
-  LGHashTable,
-  LGAvlTree,
-  LGList;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgAbstractContainer,
+  lgHashTable,
+  lgAvlTree,
+  lgList;
 
 type
 

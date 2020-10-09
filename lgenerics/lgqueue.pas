@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGQueue;
+unit lgQueue;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -27,8 +27,8 @@ interface
 
 uses
   SysUtils,
-  LGUtils,
-  LGAbstractContainer;
+  lgUtils,
+  lgAbstractContainer;
 
 type
 

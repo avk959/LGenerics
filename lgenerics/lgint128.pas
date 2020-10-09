@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGInt128;
+unit lgInt128;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
@@ -25,7 +25,7 @@ unit LGInt128;
 
 interface
 uses
-  SysUtils, Math, SysConst, LGUtils;
+  SysUtils, Math, SysConst, lgUtils;
 
 {$IFDEF ENDIAN_BIG}
   {$FATAL Big Endian is not supported }

@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGSimpleGraph;
+unit lgSimpleGraph;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -29,16 +29,16 @@ interface
 
 uses
   Classes, SysUtils, DateUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGArrayHelpers,
-  LGStack,
-  LGVector,
-  LGQueue,
-  LGSparseGraph,
-  LGStrHelpers,
-  LGMiscUtils,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgArrayHelpers,
+  lgStack,
+  lgVector,
+  lgQueue,
+  lgSparseGraph,
+  lgStrHelpers,
+  lgMiscUtils,
+  lgStrConst;
 
 type
   TLineGraph = class; //forward declaration

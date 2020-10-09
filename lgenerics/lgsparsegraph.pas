@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGSparseGraph;
+unit lgSparseGraph;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH TYPEHELPERS}
@@ -29,16 +29,16 @@ interface
 
 uses
   Classes, SysUtils, DateUtils,
-  LGUtils,
-  LGStack,
-  LGQueue,
-  LGVector,
-  LGHashSet,
-  LGHashTable,
-  LGHash,
-  LGArrayHelpers,
-  {%H-}LGHelpers,
-  LGStrConst;
+  lgUtils,
+  lgStack,
+  lgQueue,
+  lgVector,
+  lgHashSet,
+  lgHashTable,
+  lgHash,
+  lgArrayHelpers,
+  {%H-}lgHelpers,
+  lgStrConst;
 
 type
 

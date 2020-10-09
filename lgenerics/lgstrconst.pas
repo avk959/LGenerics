@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGStrConst;
+unit lgStrConst;
 
 {$mode objfpc}{$H+}
 

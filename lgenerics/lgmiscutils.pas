@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGMiscUtils;
+unit lgMiscUtils;
 
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
@@ -30,12 +30,12 @@ interface
 uses
 
   Classes, SysUtils, math,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGArrayHelpers,
-  LGAbstractContainer,
-  LGHashMap,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgArrayHelpers,
+  lgAbstractContainer,
+  lgHashMap,
+  lgStrConst;
 
 type
 

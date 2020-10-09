@@ -18,7 +18,7 @@
 *                                                                           *
 *****************************************************************************}
 
-unit LGHash;
+unit lgHash;
 
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}

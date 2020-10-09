@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGHashTable;
+unit lgHashTable;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -30,9 +30,9 @@ uses
 
   SysUtils,
   math,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgStrConst;
 
 type
 

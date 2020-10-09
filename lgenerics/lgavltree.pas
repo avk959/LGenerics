@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGAvlTree;
+unit lgAvlTree;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -30,9 +30,9 @@ interface
 uses
 
   SysUtils, Math,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgStrConst;
 
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager
 type

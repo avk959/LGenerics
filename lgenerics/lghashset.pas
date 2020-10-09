@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGHashSet;
+unit lgHashSet;
 
 {$MODE OBJFPC}{$H+}
 {$INLINE ON}
@@ -29,11 +29,11 @@ interface
 uses
 
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGAbstractContainer,
-  LGHashTable,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgAbstractContainer,
+  lgHashTable,
+  lgStrConst;
 
 type
 

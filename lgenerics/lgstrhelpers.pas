@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGStrHelpers;
+unit lgStrHelpers;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH TYPEHELPERS}
@@ -28,12 +28,11 @@ interface
 
 uses
 
-  Classes,
-  SysUtils,
-  LGUtils,
-  LGHelpers,
-  LGAbstractContainer,
-  LGMiscUtils,
+  Classes, SysUtils,
+  lgUtils,
+  lgHelpers,
+  lgAbstractContainer,
+  lgMiscUtils,
   regexpr;
 
 type

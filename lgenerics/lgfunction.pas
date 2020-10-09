@@ -16,7 +16,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGFunction;
+unit lgFunction;
 
 {$MODE OBJFPC}{$H+}
 {$INLINE ON}
@@ -28,9 +28,9 @@ interface
 uses
 
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGAbstractContainer;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgAbstractContainer;
 
 type
 

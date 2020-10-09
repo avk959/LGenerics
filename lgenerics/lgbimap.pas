@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGBiMap;
+unit lgBiMap;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -26,10 +26,10 @@ interface
 
 uses
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGAbstractContainer,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgAbstractContainer,
+  lgStrConst;
 
 type
 

@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGUtils;
+unit lgUtils;
 
 {$MODE DELPHI}
 {$INLINE ON}
@@ -30,7 +30,7 @@ uses
   SysUtils,
   Math,
   typinfo,
-  LGStrConst;
+  lgStrConst;
 
 type
 

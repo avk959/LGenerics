@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGHelpers;
+unit lgHelpers;
 
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH TYPEHELPERS}
@@ -31,8 +31,8 @@ uses
   SysUtils,
   typinfo,
   variants,
-  LGUtils,
-  LGHash;
+  lgUtils,
+  lgHash;
 
 type
 

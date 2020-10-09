@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGTreeSet;
+unit lgTreeSet;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -29,10 +29,10 @@ interface
 uses
 
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGAbstractContainer,
-  LGAvlTree;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgAbstractContainer,
+  lgAvlTree;
 
 type
 

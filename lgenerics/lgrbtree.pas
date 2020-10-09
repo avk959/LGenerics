@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGRbTree;
+unit lgRbTree;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
@@ -29,9 +29,9 @@ interface
 
 uses
   SysUtils,
-  LGUtils,
-  LGBstUtils,
-  {%H-}LGHelpers;
+  lgUtils,
+  lgBstUtils,
+  {%H-}lgHelpers;
 
 type
   TNodeColor = 0..1;

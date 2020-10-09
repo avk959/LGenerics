@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGSimpleDigraph;
+unit lgSimpleDigraph;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -28,13 +28,13 @@ interface
 
 uses
   Classes, SysUtils, DateUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGQueue,
-  LGVector,
-  LGHashMap,
-  LGSparseGraph,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgQueue,
+  lgVector,
+  lgHashMap,
+  lgSparseGraph,
+  lgStrConst;
 
 type
   TSortOrder = LGUtils.TSortOrder;

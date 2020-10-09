@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGRootTree;
+unit lgRootTree;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -28,10 +28,10 @@ interface
    
 uses
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGStack,
-  LGQueue;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgStack,
+  lgQueue;
 
 type
   { TGLiteRootedTree }

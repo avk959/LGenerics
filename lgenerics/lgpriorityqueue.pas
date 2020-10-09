@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGPriorityQueue;
+unit lgPriorityQueue;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -28,10 +28,10 @@ interface
 uses
 
   SysUtils,
-  LGUtils,
-  LGHelpers,
-  LGAbstractContainer,
-  LGStrConst;
+  lgUtils,
+  lgHelpers,
+  lgAbstractContainer,
+  lgStrConst;
 
 type
 

@@ -16,7 +16,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGBstUtils;
+unit lgBstUtils;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -27,8 +27,8 @@ interface
 
 uses
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers;
+  lgUtils,
+  {%H-}lgHelpers;
 
 type
 

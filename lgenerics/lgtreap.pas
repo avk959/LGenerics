@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGTreap;
+unit lgTreap;
 
 {$MODE OBJFPC}{$H+}
 {$INLINE ON}
@@ -27,10 +27,10 @@ interface
 
 uses
   SysUtils, Math,
-  LGUtils,
-  LGBstUtils,
-  {%H-}LGHelpers,
-  LGStrConst;
+  lgUtils,
+  lgBstUtils,
+  {%H-}lgHelpers,
+  lgStrConst;
 
 type
   { TGLiteTreap implements randomized Cartesian BST(only);

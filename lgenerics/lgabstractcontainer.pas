@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGAbstractContainer;
+unit lgAbstractContainer;
 
 {$MODE OBJFPC}{$H+}
 {$INLINE ON}
@@ -30,10 +30,10 @@ uses
 
   SysUtils,
   math,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGArrayHelpers,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgArrayHelpers,
+  lgStrConst;
 
 type
 

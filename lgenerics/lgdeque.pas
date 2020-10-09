@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGDeque;
+unit lgDeque;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -28,11 +28,11 @@ interface
 uses
 
   SysUtils,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGArrayHelpers,
-  LGAbstractContainer,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgArrayHelpers,
+  lgAbstractContainer,
+  lgStrConst;
 
 type
 

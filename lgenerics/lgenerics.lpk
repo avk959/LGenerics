@@ -31,216 +31,148 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="5"/>
-    <Files Count="52">
+    <Files Count="35">
       <Item1>
-        <Filename Value="LGAbstractContainer.pas"/>
-        <UnitName Value="LGAbstractContainer"/>
+        <Filename Value="lgabstractcontainer.pas"/>
+        <UnitName Value="lgAbstractContainer"/>
       </Item1>
       <Item2>
-        <Filename Value="LGArrayHelpers.pas"/>
-        <UnitName Value="LGArrayHelpers"/>
+        <Filename Value="lgarrayhelpers.pas"/>
+        <UnitName Value="lgArrayHelpers"/>
       </Item2>
       <Item3>
-        <Filename Value="LGAsync.pas"/>
-        <UnitName Value="LGAsync"/>
+        <Filename Value="lgasync.pas"/>
+        <UnitName Value="lgAsync"/>
       </Item3>
       <Item4>
-        <Filename Value="LGAvlTree.pas"/>
-        <UnitName Value="LGAvlTree"/>
+        <Filename Value="lgavltree.pas"/>
+        <UnitName Value="lgAvlTree"/>
       </Item4>
       <Item5>
-        <Filename Value="LGBiMap.pas"/>
-        <UnitName Value="LGBiMap"/>
+        <Filename Value="lgbimap.pas"/>
+        <UnitName Value="lgBiMap"/>
       </Item5>
       <Item6>
-        <Filename Value="LGDeque.pas"/>
-        <UnitName Value="LGDeque"/>
+        <Filename Value="lgdeque.pas"/>
+        <UnitName Value="lgDeque"/>
       </Item6>
       <Item7>
-        <Filename Value="LGFunction.pas"/>
+        <Filename Value="lgfunction.pas"/>
         <UnitName Value="LGFunction"/>
       </Item7>
       <Item8>
-        <Filename Value="LGHash.pas"/>
-        <UnitName Value="LGHash"/>
+        <Filename Value="lghash.pas"/>
+        <UnitName Value="lgHash"/>
       </Item8>
       <Item9>
-        <Filename Value="LGHashMap.pas"/>
-        <UnitName Value="LGHashMap"/>
+        <Filename Value="lghashmap.pas"/>
+        <UnitName Value="lgHashMap"/>
       </Item9>
       <Item10>
-        <Filename Value="LGHashMultiSet.pas"/>
-        <UnitName Value="LGHashMultiSet"/>
+        <Filename Value="lghashmultiset.pas"/>
+        <UnitName Value="lgHashMultiSet"/>
       </Item10>
       <Item11>
-        <Filename Value="LGHashSet.pas"/>
-        <UnitName Value="LGHashSet"/>
+        <Filename Value="lghashset.pas"/>
+        <UnitName Value="lgHashSet"/>
       </Item11>
       <Item12>
-        <Filename Value="LGHashTable.pas"/>
-        <UnitName Value="LGHashTable"/>
+        <Filename Value="lghashtable.pas"/>
+        <UnitName Value="lgHashTable"/>
       </Item12>
       <Item13>
-        <Filename Value="LGHelpers.pas"/>
-        <UnitName Value="LGHelpers"/>
+        <Filename Value="lghelpers.pas"/>
+        <UnitName Value="lgHelpers"/>
       </Item13>
       <Item14>
-        <Filename Value="LGList.pas"/>
+        <Filename Value="lglist.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGList"/>
       </Item14>
       <Item15>
-        <Filename Value="LGMiscUtils.pas"/>
-        <UnitName Value="LGMiscUtils"/>
+        <Filename Value="lgmiscutils.pas"/>
+        <UnitName Value="lgMiscUtils"/>
       </Item15>
       <Item16>
-        <Filename Value="LGMultiMap.pas"/>
-        <UnitName Value="LGMultiMap"/>
+        <Filename Value="lgmultimap.pas"/>
+        <UnitName Value="lgMultiMap"/>
       </Item16>
       <Item17>
-        <Filename Value="LGPriorityQueue.pas"/>
-        <UnitName Value="LGPriorityQueue"/>
+        <Filename Value="lgpriorityqueue.pas"/>
+        <UnitName Value="lgPriorityQueue"/>
       </Item17>
       <Item18>
-        <Filename Value="LGQueue.pas"/>
-        <UnitName Value="LGQueue"/>
+        <Filename Value="lgqueue.pas"/>
+        <UnitName Value="lgQueue"/>
       </Item18>
       <Item19>
-        <Filename Value="LGSimpleDigraph.pas"/>
-        <UnitName Value="LGSimpleDigraph"/>
+        <Filename Value="lgsimpledigraph.pas"/>
+        <UnitName Value="lgSimpleDigraph"/>
       </Item19>
       <Item20>
-        <Filename Value="LGSimpleGraph.pas"/>
-        <UnitName Value="LGSimpleGraph"/>
+        <Filename Value="lgsimplegraph.pas"/>
+        <UnitName Value="lgSimpleGraph"/>
       </Item20>
       <Item21>
-        <Filename Value="LGSparseGraph.pas"/>
-        <UnitName Value="LGSparseGraph"/>
+        <Filename Value="lgsparsegraph.pas"/>
+        <UnitName Value="lgSparseGraph"/>
       </Item21>
       <Item22>
-        <Filename Value="LGStack.pas"/>
-        <UnitName Value="LGStack"/>
+        <Filename Value="lgstack.pas"/>
+        <UnitName Value="lgStack"/>
       </Item22>
       <Item23>
-        <Filename Value="LGStrConst.pas"/>
-        <UnitName Value="LGStrConst"/>
+        <Filename Value="lgstrconst.pas"/>
+        <UnitName Value="lgStrConst"/>
       </Item23>
       <Item24>
-        <Filename Value="LGStrHelpers.pas"/>
-        <UnitName Value="LGStrHelpers"/>
+        <Filename Value="lgstrhelpers.pas"/>
+        <UnitName Value="lgStrHelpers"/>
       </Item24>
       <Item25>
-        <Filename Value="LGTable2D.pas"/>
-        <UnitName Value="LGTable2D"/>
+        <Filename Value="lgtable2d.pas"/>
+        <UnitName Value="lgTable2D"/>
       </Item25>
       <Item26>
-        <Filename Value="LGTreeMap.pas"/>
-        <UnitName Value="LGTreeMap"/>
+        <Filename Value="lgtreemap.pas"/>
+        <UnitName Value="lgTreeMap"/>
       </Item26>
       <Item27>
-        <Filename Value="LGTreeMultiSet.pas"/>
-        <UnitName Value="LGTreeMultiSet"/>
+        <Filename Value="lgtreemultiset.pas"/>
+        <UnitName Value="lgTreeMultiSet"/>
       </Item27>
       <Item28>
-        <Filename Value="LGTreeSet.pas"/>
-        <UnitName Value="LGTreeSet"/>
+        <Filename Value="lgtreeset.pas"/>
+        <UnitName Value="lgTreeSet"/>
       </Item28>
       <Item29>
-        <Filename Value="LGUtils.pas"/>
-        <UnitName Value="LGUtils"/>
+        <Filename Value="lgutils.pas"/>
+        <UnitName Value="lgUtils"/>
       </Item29>
       <Item30>
-        <Filename Value="LGVector.pas"/>
-        <UnitName Value="LGVector"/>
+        <Filename Value="lgvector.pas"/>
+        <UnitName Value="lgVector"/>
       </Item30>
       <Item31>
-        <Filename Value="include\DynBuffer.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="lgroottree.pas"/>
+        <UnitName Value="lgRootTree"/>
       </Item31>
       <Item32>
-        <Filename Value="include\DynBufferH.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="lgint128.pas"/>
+        <UnitName Value="lgInt128"/>
       </Item32>
       <Item33>
-        <Filename Value="include\Enums.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="lgtreap.pas"/>
+        <UnitName Value="lgTreap"/>
       </Item33>
       <Item34>
-        <Filename Value="include\EnumsH.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="lgbstutils.pas"/>
+        <UnitName Value="lgBstUtils"/>
       </Item34>
       <Item35>
-        <Filename Value="include\GlobMinCut.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="lgrbtree.pas"/>
+        <UnitName Value="lgRbTree"/>
       </Item35>
-      <Item36>
-        <Filename Value="include\GlobMinCutH.inc"/>
-        <Type Value="Include"/>
-      </Item36>
-      <Item37>
-        <Filename Value="include\MaxFlow.inc"/>
-        <Type Value="Include"/>
-      </Item37>
-      <Item38>
-        <Filename Value="include\MaxFlowH.inc"/>
-        <Type Value="Include"/>
-      </Item38>
-      <Item39>
-        <Filename Value="include\Mcf.inc"/>
-        <Type Value="Include"/>
-      </Item39>
-      <Item40>
-        <Filename Value="include\McfH.inc"/>
-        <Type Value="Include"/>
-      </Item40>
-      <Item41>
-        <Filename Value="include\SimpGraphHelp.inc"/>
-        <Type Value="Include"/>
-      </Item41>
-      <Item42>
-        <Filename Value="include\SimpGraphHelpH.inc"/>
-        <Type Value="Include"/>
-      </Item42>
-      <Item43>
-        <Filename Value="include\SparseGraphBitHelp.inc"/>
-        <Type Value="Include"/>
-      </Item43>
-      <Item44>
-        <Filename Value="include\SparseGraphBitHelpH.inc"/>
-        <Type Value="Include"/>
-      </Item44>
-      <Item45>
-        <Filename Value="include\SparseGraphHelpH.inc"/>
-        <Type Value="Include"/>
-      </Item45>
-      <Item46>
-        <Filename Value="include\SparseGraphIntSet.inc"/>
-        <Type Value="Include"/>
-      </Item46>
-      <Item47>
-        <Filename Value="include\SparseGraphIntSetH.inc"/>
-        <Type Value="Include"/>
-      </Item47>
-      <Item48>
-        <Filename Value="LGRootTree.pas"/>
-        <UnitName Value="LGRootTree"/>
-      </Item48>
-      <Item49>
-        <Filename Value="LGInt128.pas"/>
-        <UnitName Value="LGInt128"/>
-      </Item49>
-      <Item50>
-        <Filename Value="LGTreap.pas"/>
-        <UnitName Value="LGTreap"/>
-      </Item50>
-      <Item51>
-        <Filename Value="LGBstUtils.pas"/>
-        <UnitName Value="LGBstUtils"/>
-      </Item51>
-      <Item52>
-        <Filename Value="LGRbTree.pas"/>
-        <UnitName Value="LGRbTree"/>
-      </Item52>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

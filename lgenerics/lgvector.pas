@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGVector;
+unit lgVector;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -30,11 +30,11 @@ uses
 
   SysUtils,
   math,
-  LGUtils,
-  {%H-}LGHelpers,
-  LGArrayHelpers,
-  LGAbstractContainer,
-  LGStrConst;
+  lgUtils,
+  {%H-}lgHelpers,
+  lgArrayHelpers,
+  lgAbstractContainer,
+  lgStrConst;
 
 type
 
