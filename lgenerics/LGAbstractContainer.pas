@@ -351,11 +351,6 @@ type
     procedure SymmetricSubtract(aSet: TSpecSet);
   end;
 
-  generic TGMultiSetEntry<T> = record
-    Key: T;
-    Count: SizeInt; //multiplicity(count of occurrences)
-  end;
-
   { TGAbstractMultiSet: multiSet abstract ancestor class  }
   generic TGAbstractMultiSet<T> = class abstract(specialize TGAbstractCollection<T>)
   public
@@ -2307,7 +2302,6 @@ procedure TGAbstractMultiSet.DoJoinEntry(const e: TEntry);
 var
   p: PEntry;
 begin
-{$PUSH}{$Q+}
   if not FindOrAdd(e.Key, p) then
     begin
       p^.Count := e.Count;
@@ -2319,16 +2313,13 @@ begin
         FCount += e.Count - p^.Count;
         p^.Count := e.Count;
       end;
-{$POP}
 end;
 
 procedure TGAbstractMultiSet.DoAddEntry(const e: TEntry);
 var
   p: PEntry;
 begin
-{$PUSH}{$Q+}
   FCount += e.Count;
-{$POP}
   if not FindOrAdd(e.Key, p) then
     p^.Count := e.Count
   else
@@ -2356,7 +2347,6 @@ begin
   CheckInIteration;
   if aValue > 0 then
     begin
-{$PUSH}{$Q+}
       if FindOrAdd(aKey, p) then
         begin
           FCount += aValue - p^.Count;
@@ -2367,7 +2357,6 @@ begin
           FCount += aValue;
           p^.Count := aValue;
         end;
-{$POP}
     end
   else
     begin  // aValue = 0;
@@ -2414,9 +2403,7 @@ function TGAbstractMultiSet.DoAdd(const aKey: T): Boolean;
 var
   p: PEntry;
 begin
-{$PUSH}{$Q+}
   Inc(FCount);
-{$POP}
   if FindOrAdd(aKey, p) then
     Inc(p^.Count);
   Result := True;

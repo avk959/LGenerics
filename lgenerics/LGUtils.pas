@@ -694,6 +694,11 @@ type
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
+  TGMultiSetEntry<T> = record
+    Key: T;
+    Count: SizeInt;
+  end;
+
   TGCell2D<TRow, TCol, TValue> = record
     Row:    TRow;
     Column: TCol;
