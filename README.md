@@ -8,37 +8,37 @@
   
   - add LGenerics package to project dependencies.
 #### Implemented primitives:
-  - stack(unit LGStack)
-  - queue(unit LGQueue)
-  - deque(unit LGDeque)
-  - vector(unit LGVector)
-  - vector of bits(unit LGVector)
-  - priority queue based on binary heap(unit LGPriorityQueue)
-  - priority queue with key update and melding based on pairing heap(unit LGPriorityQueue)
-  - sorted list(unit LGList)
-  - hashed list - array based list with the ability to fast search by key(unit LGList)  
-  - hashset(unit LGHashSet)
-  - fine-grained concurrent hashset(unit LGHashSet)
-  - sorted set(unit LGTreeSet)
-  - set of arbitrary size(unit LGUtil, TGSet)
-  - hash multiset(unit LGHashMultiSet)
-  - fine-grained concurrent hashmultiset(unit LGHashMultiSet)
-  - sorted multiset(unit LGTreeMultiSet)
-  - hashmap(unit LGHashMap)
-  - fine-grained concurrent hashmap(unit LGHashMap)
-  - sorted map(unit LGTreeMap)
-  - hash multimap(unit LGMultiMap)
-  - tree multimap(unit LGMultiMap)
-  - list miltimap(unit LGMultiMap)
-  - bijective map(unit LGBiMap)
-  - sparse 2D table(unit LGTable2D)
-  - disjoint set(unit LGHashSet)
-  - AVL tree(unit LGAvlTree)
-  - red-black tree(unit LGRbTree)
-  - some treap variants(unit LGTreap)
-  - general rooted tree(unit LGRootTree)
-  - sparse labeled undirected graph(unit LGSimpleGraph)
-  - sparse labeled directed graph(unit LGSimpleDigraph)
+  - stack(unit lgStack)
+  - queue(unit lgQueue)
+  - deque(unit lgDeque)
+  - vector(unit lgVector)
+  - vector of bits(unit lgVector)
+  - priority queue based on binary heap(unit lgPriorityQueue)
+  - priority queue with key update and melding based on pairing heap(unit lgPriorityQueue)
+  - sorted list(unit lgList)
+  - hashed list - array based list with the ability to fast search by key(unit lgList)  
+  - hashset(unit lgHashSet)
+  - fine-grained concurrent hashset(unit lgHashSet)
+  - sorted set(unit lgTreeSet)
+  - set of arbitrary size(unit lgUtil, TGSet)
+  - hash multiset(unit lgHashMultiSet)
+  - fine-grained concurrent hashmultiset(unit lgHashMultiSet)
+  - sorted multiset(unit lgTreeMultiSet)
+  - hashmap(unit lgHashMap)
+  - fine-grained concurrent hashmap(unit lgHashMap)
+  - sorted map(unit lgTreeMap)
+  - hash multimap(unit lgMultiMap)
+  - tree multimap(unit lgMultiMap)
+  - list miltimap(unit lgMultiMap)
+  - bijective map(unit lgBiMap)
+  - sparse 2D table(unit lgTable2D)
+  - disjoint set(unit lgHashSet)
+  - AVL tree(unit lgAvlTree)
+  - red-black tree(unit lgRbTree)
+  - some treap variants(unit lgTreap)
+  - general rooted tree(unit lgRootTree)
+  - sparse labeled undirected graph(unit lgSimpleGraph)
+  - sparse labeled directed graph(unit lgSimpleDigraph)
 
   **features**:
   - extended IEnumearble interface - filtering, mapping, etc.
@@ -82,7 +82,7 @@
     + maximum flow: push/relabel, capacity scaling Dinitz
     + minimum-cost flow: Busacker-Gowen, cost scaling push/relabel algorithm
     + global minimum cut: Stoer–Wagner, Nagamochi-Ibaraki    
-#### Algorithms on arrays and vectors(mostly unit LGArrayHelpers):
+#### Algorithms on arrays and vectors(mostly unit lgArrayHelpers):
   - reverse, right/left cyclic shifts
   - permutations
   - binary search
@@ -93,16 +93,16 @@
   - introsort
   - dual pivot quicksort
   - mergesort
-  - timsort(unit LGMiscUtils)
+  - timsort(unit lgMiscUtils)
   - counting sort
   - translation of Orson Peters' PDQSort algorithm
   - static segment tree
   - ...
 #### Other:
-  - non-cryptogarphic hashes(unit LGHash):
+  - non-cryptogarphic hashes(unit lgHash):
     + Yann Collet's xxHash32, xxHash64
     + Austin Appleby's MurmurHash2, MurmurHash2A, MurmurHash3_x86_32, MurmurHash64A
-  - brief and dirty implementation of futures concept(unit LGAsync)
-  - brief channel implementation(unit LGAsync)
-  - brief implementation of thread pool(unit LGAsync)
-  - 128-bit integers(unit LGInt128)
+  - brief and dirty implementation of futures concept(unit lgAsync)
+  - brief channel implementation(unit lgAsync)
+  - brief implementation of thread pool(unit lgAsync)
+  - 128-bit integers(unit lgInt128)
