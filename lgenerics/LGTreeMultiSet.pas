@@ -635,9 +635,7 @@ begin
       else
         if Node^.Data.Count < e.Count then
           begin
-           {$PUSH}{$Q+}
             FCount -= Node^.Data.Count shl 1 - e.Count;
-           {$POP}
             Node^.Data.Count := e.Count - Node^.Data.Count;
           end
         else  // counts equals
@@ -651,9 +649,7 @@ begin
     begin
       //Node^.Data.Key := e.Key;
       Node^.Data.Count := e.Count;
-      {$PUSH}{$Q+}
       FCount += e.Count;
-      {$POP}
     end;
   Result := False;
 end;
@@ -683,9 +679,7 @@ var
   Node: PNode;
 begin
   Result := ElemCount;
-{$PUSH}{$Q+}
   FCount += Result;
-{$POP}
 with FTree.GetEnumerator do
   try
     while MoveNext do

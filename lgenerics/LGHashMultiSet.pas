@@ -779,9 +779,7 @@ begin
       else
         if p^.Count < e.Count then
           begin
-           {$PUSH}{$Q+}
             FCount -= p^.Count shl 1 - e.Count;
-           {$POP}
             p^.Count := e.Count - p^.Count;
           end
         else  // counts equals
@@ -795,9 +793,7 @@ begin
     begin
       p^.Key := e.Key;
       p^.Count := e.Count;
-      {$PUSH}{$Q+}
       FCount += e.Count;
-      {$POP}
     end;
   Result := False;
 end;
@@ -828,9 +824,7 @@ var
   p: PEntry;
 begin
   Result := ElemCount;
-{$PUSH}{$Q+}
   FCount += ElemCount;
-{$POP}
   with FTable.GetEnumerator do
     try
       while MoveNext do
@@ -1488,7 +1482,6 @@ begin
     raise EArgumentException.Create(SECantAcceptNegCount);
   if aValue > 0 then
     begin
-{$PUSH}{$Q+}
       if FTable.FindOrAdd(aKey, p) then
         begin
           FCount += aValue - p^.Count;
@@ -1500,7 +1493,6 @@ begin
           p^.Key := aKey;
           p^.Count := aValue;
         end;
-{$POP}
     end
   else
     begin  // aValue = 0;
@@ -1729,9 +1721,7 @@ procedure TGLiteHashMultiSet.Add(const aValue: T);
 var
   p: PEntry;
 begin
-{$PUSH}{$Q+}
   Inc(FCount);
-{$POP}
   if FTable.FindOrAdd(aValue, p) then
     Inc(p^.Count)
   else
@@ -2055,7 +2045,6 @@ var
   e: TTblEnumerator;
   p, ps: PEntry;
 begin
-{$PUSH}{$Q+}
   if @aSet = @Self then
     begin
       e := FTable.GetEnumerator;
@@ -2084,7 +2073,6 @@ begin
             p^.Count := ps^.Count;
           end;
     end;
-{$POP}
 end;
 
 procedure TGLiteHashMultiSet.ArithmeticAdd(constref aSet: TGLiteHashMultiSet);
@@ -2092,7 +2080,6 @@ var
   e: TTblEnumerator;
   p, ps: PEntry;
 begin
-{$PUSH}{$Q+}
   if @aSet <> @Self then
     begin
       e := aSet.FTable.GetEnumerator;
@@ -2119,7 +2106,6 @@ begin
           p^.Count += p^.Count;
         end;
     end;
-{$POP}
 end;
 
 procedure TGLiteHashMultiSet.ArithmeticSubtract(constref aSet: TGLiteHashMultiSet);
@@ -2176,9 +2162,7 @@ begin
               else
                 if p^.Count < ps^.Count then
                   begin
-                   {$PUSH}{$Q+}
                     FCount -= p^.Count shl 1 - ps^.Count;
-                   {$POP}
                     p^.Count := ps^.Count - p^.Count;
                   end
                 else  // counts equals
@@ -2191,9 +2175,7 @@ begin
             begin
               p^.Key := ps^.Key;
               p^.Count := ps^.Count;
-              {$PUSH}{$Q+}
               FCount += ps^.Count;
-              {$POP}
             end;
         end;
     end
