@@ -4,7 +4,7 @@ program autoreftest;
 
 uses
   SysUtils,
-  LGUtils;
+  lgUtils;
 
 type
 

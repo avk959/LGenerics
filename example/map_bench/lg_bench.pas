@@ -5,7 +5,7 @@ unit lg_bench;
 interface
 
 uses
-  SysUtils, DateUtils, LGHashMap, LGHash, bench_util;
+  SysUtils, DateUtils, lgHashMap, lgHash, bench_util;
 
   procedure RunHashMapLP(aSeed, aSize, aInterval: Integer; aBenchBy: TBenchBy);
   procedure RunLiteHashMapLP(aSeed, aSize, aInterval: Integer; aBenchBy: TBenchBy);

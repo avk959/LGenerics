@@ -13,7 +13,7 @@ interface
 
 uses
   Classes, SysUtils, TypInfo, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls, ExtCtrls, StdCtrls,
-  Spin, Grids, LGArrayHelpers, Samples;
+  Spin, Grids, lgArrayHelpers, Samples;
 
 type
 

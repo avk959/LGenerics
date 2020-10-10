@@ -8,12 +8,12 @@ program rwstat;
 
 uses
   SysUtils,
-  LGUtils,
-  LGHashSet,
-  LGHashMultiSet,
-  LGHelpers,
-  LGMiscUtils,
-  LGStrHelpers;
+  lgUtils,
+  lgHashSet,
+  lgHashMultiSet,
+  lgHelpers,
+  lgMiscUtils,
+  lgStrHelpers;
 
 type
   TCounter    = specialize TGHashMultiSetLP<string>;

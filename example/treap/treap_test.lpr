@@ -20,8 +20,8 @@ program treap_test;
 
 uses
   SysUtils, DateUtils,
-  LGUtils,
-  LGTreap;
+  lgUtils,
+  lgTreap;
 
 const
   InitSize   = 1000000;

@@ -4,7 +4,7 @@ program presdatabase_lite;
 
 uses
   SysUtils,
-  LGMultiMap;
+  lgMultiMap;
 
 type
 

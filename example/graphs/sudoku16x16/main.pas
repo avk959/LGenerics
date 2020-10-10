@@ -9,10 +9,10 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Grids, Spin, StdCtrls,
-  LGUtils,
-  LGArrayHelpers,
-  LGSparseGraph,
-  LGSimpleGraph;
+  lgUtils,
+  lgArrayHelpers,
+  lgSparseGraph,
+  lgSimpleGraph;
 
 type
 

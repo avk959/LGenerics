@@ -9,6 +9,7 @@ object frmMain: TfrmMain
   DesignTimePPI = 115
   OnCreate = FormCreate
   Position = poScreenCenter
+  LCLVersion = '2.0.10.0'
   object mmInfo: TMemo
     Left = 8
     Height = 592

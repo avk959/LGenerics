@@ -3,7 +3,7 @@ program test_gset;
 {$mode objfpc}
 
 uses
-  SysUtils, DateUtils, LGUtils;
+  SysUtils, DateUtils, lgUtils;
 
 type
   TByteSet  = set of Byte;

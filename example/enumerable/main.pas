@@ -8,10 +8,10 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls, ExtCtrls, Spin, Menus,
-  LGUtils,
-  LGVector,
-  LGHelpers,
-  LGFunction;
+  lgUtils,
+  lgVector,
+  lgHelpers,
+  lgFunction;
 
 type
 

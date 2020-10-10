@@ -24,9 +24,9 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
   DateUtils,
-  LGUtils,
-  LGSparseGraph,
-  LGSimpleGraph;
+  lgUtils,
+  lgSparseGraph,
+  lgSimpleGraph;
 
 type
 

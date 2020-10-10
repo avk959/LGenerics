@@ -4,7 +4,7 @@ program table_test;
 
 uses
   SysUtils,
-  LGTable2D;
+  lgTable2D;
 
 type
   TTable    = specialize TGListTable2D2<string, string, Integer>;

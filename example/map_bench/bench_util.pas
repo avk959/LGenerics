@@ -5,7 +5,7 @@ unit bench_util;
 interface
 
 uses
-  SysUtils, LGUtils, LGArrayHelpers, LGVector;
+  SysUtils, lgUtils, lgArrayHelpers, lgVector;
 
 type
   TMapEntry    = specialize TGMapEntry<string, Integer>;

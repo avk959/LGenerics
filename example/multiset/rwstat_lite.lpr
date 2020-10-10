@@ -9,13 +9,13 @@ program rwstat_lite;
 
 uses
   SysUtils,
-  LGUtils,
-  LGHashSet,
-  LGHashMultiSet,
-  LGHelpers,
-  LGMiscUtils,
-  LGStrHelpers,
-  LGArrayHelpers;
+  lgUtils,
+  lgHashSet,
+  lgHashMultiSet,
+  lgHelpers,
+  lgMiscUtils,
+  lgStrHelpers,
+  lgArrayHelpers;
 
 type
   TCountSpec  = specialize TGLiteHashMultiSetLP<string, string>;

@@ -15,10 +15,10 @@ program queens;
 
 uses
   SysUtils,
-  LGUtils,
-  LGVector,
-  LGSparseGraph,
-  LGSimpleGraph;
+  lgUtils,
+  lgVector,
+  lgSparseGraph,
+  lgSimpleGraph;
 
 type
   TStrArrayVector = specialize TGLiteVector<TStringArray>;

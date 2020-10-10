@@ -10,7 +10,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, Spin,
-  LGUtils, LGSparseGraph, LGSimpleGraph, LGHashSet;
+  lgUtils, lgSparseGraph, lgSimpleGraph, lgHashSet;
 
 type
 

@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls, Spin,
-  LGSparseGraph,
-  LGHashSet;
+  lgSparseGraph,
+  lgHashSet;
 
 type
 
