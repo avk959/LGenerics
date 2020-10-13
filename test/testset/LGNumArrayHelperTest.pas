@@ -379,9 +379,13 @@ type
     procedure SortDesc;
     procedure SortAsc577;
     procedure SortDesc577;
+    procedure RadixSortAsc;
+    procedure RadixSortDesc;
 {$IFDEF CPU64}
     procedure SortInt64Asc;
     procedure SortInt64Desc;
+    procedure RadixSort64Asc;
+    procedure RadixSort65Desc;
 {$ENDIF CPU64}
   end;
 
@@ -3239,6 +3243,31 @@ begin
   THelper.Sort(a, soDesc);
   AssertTrue(THelper.IsNonAscending(a));
 end;
+
+procedure TOrdArrayHelperTest.RadixSortAsc;
+var
+  I: Integer;
+  a: TIntArray;
+begin
+  System.SetLength(a, 1000);
+  for I := 0 to System.High(a) do
+    a[I] := Random(100000) - 50000;
+  THelper.RadixSort(a);
+  AssertTrue(THelper.IsNonDescending(a))
+end;
+
+procedure TOrdArrayHelperTest.RadixSortDesc;
+var
+  I: Integer;
+  a: TIntArray;
+begin
+  System.SetLength(a, 1000);
+  for I := 0 to System.High(a) do
+    a[I] := Random(100000) - 50000;
+  THelper.Sort(a, soDesc);
+  AssertTrue(THelper.IsNonAscending(a));
+end;
+
 {$IFDEF CPU64}
 procedure TOrdArrayHelperTest.SortInt64Asc;
 type
@@ -3286,6 +3315,40 @@ begin
   b := TInt64Helper.Sorted(a, soDesc);
   AssertFalse(TInt64Helper.Same(a, b));
   AssertTrue(TInt64Helper.Same(a1, b));
+end;
+
+procedure TOrdArrayHelperTest.RadixSort64Asc;
+type
+  TInt64Helper = specialize TGOrdinalArrayHelper<Int64>;
+var
+  a, b: array of Int64;
+  I: Integer;
+begin
+  System.SetLength(a, 1000);
+  for I := 0 to System.High(a) do
+    a[I] := Random(10000000000) - 5000000000;
+  b := Copy(a);
+  TInt64Helper.QuickSort(b);
+  AssertTrue(TInt64Helper.IsNonDescending(b));
+  TInt64Helper.RadixSort(a);
+  AssertTrue(TInt64Helper.Same(a, b));
+end;
+
+procedure TOrdArrayHelperTest.RadixSort65Desc;
+type
+  TInt64Helper = specialize TGOrdinalArrayHelper<Int64>;
+var
+  a, b: array of Int64;
+  I: Integer;
+begin
+  System.SetLength(a, 1000);
+  for I := 0 to System.High(a) do
+    a[I] := Random(10000000000) - 5000000000;
+  b := Copy(a);
+  TInt64Helper.QuickSort(b, soDesc);
+  AssertTrue(TInt64Helper.IsNonAscending(b));
+  TInt64Helper.RadixSort(a, soDesc);
+  AssertTrue(TInt64Helper.Same(a, b));
 end;
 {$ENDIF CPU64}
 
