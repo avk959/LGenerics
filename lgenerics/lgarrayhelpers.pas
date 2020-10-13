@@ -1100,29 +1100,32 @@ type
   generic TGOrdinalArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
   private
   type
-    TMonotonyKind = (mkAsc, mkDesc, mkConst, mkNone);
-    TGetAllow     = function(aMin, aMax: T; aLen: SizeInt): Boolean;
+    TMonoKind = (mkAsc, mkDesc, mkConst, mkNone);
+    TGetAllow = function(aMin, aMax: T; aLen: SizeInt): Boolean;
+    TOffsets  = array[0..Pred(SizeOf(T)), Byte] of SizeInt;
 
   const
-  {$IFDEF CPU16}
-    COUNTSORT_CUTOFF = $7fff;
-  {$ELSE CPU16}
-    COUNTSORT_CUTOFF = $400000; //todo: ???
-  {$ENDIF CPU16}
+    INTRO_CUTOFF = 255;
+
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
     class function  TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  TryInsertSortD2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
-    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonyKind; static;
+    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonoKind; static;
     class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
+    class procedure DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder); static;
     class constructor Init;
   class var
+    CFSigned: Boolean;
     CountSortAllow: TGetAllow;
   public
     class function  CreateRange(aFirst, aLast: T): TArray; static;
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
-  { hybrid sorting, will use counting sort if possible }
-    class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
+  { LSD radix sorting }
+    class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
+    class procedure RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  { hybrid sorting, will use counting sort (if possible) or radix sort }
+    class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
 
@@ -13670,7 +13673,7 @@ begin
    Result := R;
 end;
 
-class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonyKind;
+class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonoKind;
 var
   I, R: SizeInt;
 begin
@@ -13711,29 +13714,214 @@ end;
 {$PUSH}{$Q-}{$R-}
 class function TGOrdinalArrayHelper.AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean;
 var
-  Sum: Int64;      //todo: any tuning needed ???
+  Sum: Int64;
 begin
-  Sum := Int64(aMin) + COUNTSORT_CUTOFF;
-  if Sum < aMin then
-    Result := (Int64(aMax) - Int64(aMin)) shr 3 <= aLen
+  if SizeOf(T) > 4 then //todo: more tests needed
+    aLen := aLen div 3
   else
-    Result := (aMax <= Sum) and ((Int64(aMax) - Int64(aMin)) shr 3 <= aLen);
+    aLen := aLen div 6;
+  Sum := Int64(aMin) + aLen;
+  if Sum < Int64(aMin) then
+    Result := (Int64(aMax) - Int64(aMin)) < aLen
+  else
+    Result := Int64(aMax) <= Sum;
 end;
 
 class function TGOrdinalArrayHelper.AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean;
 var
-  Sum: QWord;      //todo: any tuning needed ???
+  Sum: QWord;
 begin
-  Sum := QWord(aMin) + COUNTSORT_CUTOFF;
-  if Sum < aMin then
-    Result := (QWord(aMax) - QWord(aMin)) shr 3 <= aLen
+  if SizeOf(T) > 4 then  //todo: more tests needed
+    aLen := aLen div 3
   else
-    Result := (aMax <= Sum) and ((QWord(aMax) - QWord(aMin)) shr 3 <= aLen);
+    aLen := aLen div 6;
+  Sum := QWord(aMin) + QWord(aLen);
+  if Sum < QWord(aMin) then
+    Result := QWord(aMax) - QWord(aMin) < aLen
+  else
+    Result := QWord(aMax) <= Sum;
 end;
 {$POP}
+class procedure TGOrdinalArrayHelper.DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
+
+  procedure Swap(var L, R: PItem); inline;
+  var
+    p: PItem;
+  begin
+    p := L;
+    L := R;
+    R := p;
+  end;
+
+var
+  Offsets: TOffsets;
+
+  procedure FillOffsets;
+  var
+    Curr: T;
+    I, J: SizeInt;
+  begin
+    Offsets := Default(TOffsets);
+    for I := 0 to System.High(A) do
+      begin
+        Curr := A[I];
+        for J := 0 to Pred(SizeOf(T)) do
+          Inc(Offsets[J, (Curr shr (J * 8)) and $ff]);
+      end;
+  end;
+
+  procedure SortA;
+
+    function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+    var
+      Curr: T;
+      I: SizeInt;
+      Ofs: PSizeInt;
+    begin
+      if Offsets[aNum, 0] = System.Length(A) then exit(False);
+      Ofs := @Offsets[aNum, 0];
+      for I := 1 to 255 do
+        Ofs[I] += Ofs[Pred(I)];
+      aNum := aNum shl 3;
+      for I := System.High(A) downto 0 do
+        begin
+          Curr := aSrc[I];
+          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+          Dec(Ofs[(Curr shr aNum) and $ff]);
+        end;
+      Result := True;
+    end;
+
+    function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+    var
+      Curr: T;
+      I: SizeInt;
+      Ofs: PSizeInt;
+    begin
+      if Offsets[aNum, 0] = System.Length(A) then exit(False);
+      Ofs := @Offsets[aNum, 0];
+      for I := 129 to 255 do
+        Ofs[I] += Ofs[Pred(I)];
+      Ofs[0] += Ofs[255];
+      for I := 1 to 127 do
+        Ofs[I] += Ofs[Pred(I)];
+      aNum := aNum shl 3;
+      for I := System.High(A) downto 0 do
+        begin
+          Curr := aSrc[I];
+          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+          Dec(Ofs[(Curr shr aNum) and $ff]);
+        end;
+      Result := True;
+    end;
+
+  var
+    I: SizeInt;
+    pA, pBuf: PItem;
+  begin
+    pA := @A[0];
+    pBuf := @aBuf[0];
+    if CFSigned then
+      begin
+        for I := 0 to SizeOf(T) - 2 do
+          if SimplePass(pA, pBuf, I) then
+            Swap(pA, pBuf);
+        if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
+          Swap(pA, pBuf);
+      end
+    else
+      for I := 0 to Pred(SizeOf(T)) do
+        if SimplePass(pA, pBuf, I) then
+          Swap(pA, pBuf);
+    if pBuf <> @aBuf[0] then
+      for I := 0 to System.High(A) do
+        A[I] := aBuf[I];
+  end;
+
+  procedure SortD;
+
+    function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+    var
+      Curr: T;
+      I: SizeInt;
+      Ofs: PSizeInt;
+    begin
+      if Offsets[aNum, 0] = System.Length(A) then exit(False);
+      Ofs := @Offsets[aNum, 0];
+      for I := 254 downto 0 do
+        Ofs[I] += Ofs[Succ(I)];
+      aNum := aNum shl 3;
+      for I := System.High(A) downto 0 do
+        begin
+          Curr := aSrc[I];
+          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+          Dec(Ofs[(Curr shr aNum) and $ff]);
+        end;
+      Result := True;
+    end;
+
+    function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+    var
+      Curr: T;
+      I: SizeInt;
+      Ofs: PSizeInt;
+    begin
+      if Offsets[aNum, 0] = System.Length(A) then exit(False);
+      Ofs := @Offsets[aNum, 0];
+      for I := 126 downto 0 do
+        Ofs[I] += Ofs[Succ(I)];
+      Ofs[255] += Ofs[0];
+      for I := 254 downto 128 do
+        Ofs[I] += Ofs[Succ(I)];
+      aNum := aNum shl 3;
+      for I := System.High(A) downto 0 do
+        begin
+          Curr := aSrc[I];
+          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+          Dec(Ofs[(Curr shr aNum) and $ff]);
+        end;
+      Result := True;
+    end;
+
+  var
+    I: SizeInt;
+    pA, pBuf: PItem;
+  begin
+    pA := @A[0];
+    pBuf := @aBuf[0];
+    if CFSigned then
+      begin
+        for I := 0 to SizeOf(T) - 2 do
+          if SimplePass(pA, pBuf, I) then
+            Swap(pA, pBuf);
+        if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
+          Swap(pA, pBuf);
+      end
+    else
+      for I := 0 to Pred(SizeOf(T)) do
+        if SimplePass(pA, pBuf, I) then
+          Swap(pA, pBuf);
+    if pBuf <> @aBuf[0] then
+      for I := 0 to System.High(A) do
+        A[I] := aBuf[I];
+  end;
+begin
+  FillOffsets;
+  if o = soAsc then
+    SortA
+  else
+    SortD;
+end;
+
 class constructor TGOrdinalArrayHelper.Init;
 begin
-  if GetTypeData(System.TypeInfo(T))^.OrdType in [otSByte, otSWord, otSLong, otSQWord] then
+  case GetTypeKind(T) of
+    tkInteger: CFSigned := GetTypeData(TypeInfo(T))^.MinValue < 0;
+    tkInt64:   CFSigned := GetTypeData(TypeInfo(T))^.MinInt64Value < 0;
+  else
+    CFSigned := False;
+  end;
+  if CFSigned then
     CountSortAllow := @AllowCsSigned
   else
     CountSortAllow := @AllowCsUnsigned;
@@ -13758,37 +13946,77 @@ begin
   RandomShuffle(Result);
 end;
 
-class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder);
+class procedure TGOrdinalArrayHelper.RadixSort(var A: array of T; o: TSortOrder);
+var
+  Buf: TArray;
+begin
+  RadixSort(A, Buf, o);
+end;
+
+class procedure TGOrdinalArrayHelper.RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
 var
   R: SizeInt;
-  vMin, vMax: T;
-  MonoKind: TMonotonyKind;
 begin
   R := System.High(A);
   if R > 0 then
     begin
-      if R <= HEAP_INSERTION_SORT_CUTOFF then
+      if R <= INTRO_CUTOFF then
         begin
-          InsertionSort(A, 0, R);
-          if aOrder = soDesc then
-            Reverse(A);
+          if CountRun(A, 0, R, o) < R then
+            begin
+              DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
+              if o = soDesc then
+                DoReverse(A, 0, R);
+            end;
           exit;
         end;
-      MonoKind := Scan(A, vMin, vMax);
-      if MonoKind < mkNone then
+      if CountRun(A, 0, R, o) < R then
         begin
-          if (MonoKind <> mkConst) and (Ord(MonoKind) <> Ord(aOrder)) then
+          if System.Length(aBuf) < System.Length(A) then
+            System.SetLength(aBuf, System.Length(A));
+          DoRadixSort(A, aBuf, o);
+        end;
+    end;
+end;
+
+class procedure TGOrdinalArrayHelper.Sort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+  vMin, vMax: T;
+  Mono: TMonoKind;
+  Buf: TArray;
+begin
+  R := System.High(A);
+  if R > 0 then
+    begin
+      if R <= INTRO_CUTOFF then
+        begin
+          if CountRun(A, 0, R, o) < R then
+            begin
+              DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
+              if o = soDesc then
+                DoReverse(A, 0, R);
+            end;
+          exit;
+        end;
+      Mono := Scan(A, vMin, vMax);
+      if Mono < mkNone then
+        begin
+          if (Mono <> mkConst) and (Ord(Mono) <> Ord(o)) then
             Reverse(A);
         end
       else
-        begin
-          if CountSortAllow(vMin, vMax, Succ(R)) then
-            CountSort(A, vMin, vMax)
-          else
-            TPDQSort.Sort(@A[0], @A[R] + 1);
-          if aOrder = soDesc then
-            Reverse(A);
-        end;
+        if CountSortAllow(vMin, vMax, Succ(R)) then
+          begin
+            CountSort(A, vMin, vMax);
+            if o = soDesc then
+              Reverse(A);
+          end
+        else
+          begin
+            System.SetLength(Buf, System.Length(A));
+            DoRadixSort(A, Buf, o);
+          end;
     end;
 end;
 
