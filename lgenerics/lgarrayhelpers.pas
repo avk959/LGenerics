@@ -13948,7 +13948,7 @@ end;
 
 class procedure TGOrdinalArrayHelper.RadixSort(var A: array of T; o: TSortOrder);
 var
-  Buf: TArray;
+  Buf: TArray = nil;
 begin
   RadixSort(A, Buf, o);
 end;
@@ -13984,7 +13984,7 @@ var
   R: SizeInt;
   vMin, vMax: T;
   Mono: TMonoKind;
-  Buf: TArray;
+  Buf: TArray = nil;
 begin
   R := System.High(A);
   if R > 0 then
