@@ -1113,6 +1113,10 @@ type
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonoKind; static;
     class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
+    class procedure PtrSwap(var L, R: Pointer); static; inline;
+    class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
+    class procedure DoSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
     class procedure DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder); static;
     class constructor Init;
   class var
@@ -13742,175 +13746,176 @@ begin
     Result := QWord(aMax) <= Sum;
 end;
 {$POP}
-class procedure TGOrdinalArrayHelper.DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
+class procedure TGOrdinalArrayHelper.PtrSwap(var L, R: Pointer);
+var
+  tmp: Pointer;
+begin
+  tmp := L;
+  L := R;
+  R := tmp;
+end;
 
-  procedure Swap(var L, R: PItem); inline;
+class procedure TGOrdinalArrayHelper.FillOffsets(const A: array of T; out aOfs: TOffsets);
+var
+  Curr: T;
+  I, J: SizeInt;
+begin
+  aOfs := Default(TOffsets);
+  for I := 0 to System.High(A) do
+    begin
+      Curr := A[I];
+      for J := 0 to Pred(SizeOf(T)) do
+        Inc(aOfs[J, (Curr shr (J * 8)) and $ff]);
+    end;
+end;
+
+class procedure TGOrdinalArrayHelper.DoSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+
+  function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
   var
-    p: PItem;
+    Curr: T;
+    I: SizeInt;
+    Ofs: PSizeInt;
   begin
-    p := L;
-    L := R;
-    R := p;
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 1 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(Curr shr aNum) and $ff]);
+      end;
+    Result := True;
+  end;
+
+  function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  var
+    Curr: T;
+    I: SizeInt;
+    Ofs: PSizeInt;
+  begin
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 129 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    Ofs[0] += Ofs[255];
+    for I := 1 to 127 do
+      Ofs[I] += Ofs[Pred(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(Curr shr aNum) and $ff]);
+      end;
+    Result := True;
   end;
 
 var
-  Offsets: TOffsets;
+  I: SizeInt;
+  pA, pBuf: PItem;
+begin
+  pA := @A[0];
+  pBuf := Pointer(aBuf);
+  if CFSigned then
+    begin
+      for I := 0 to SizeOf(T) - 2 do
+        if SimplePass(pA, pBuf, I) then
+          PtrSwap(pA, pBuf);
+      if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+    end
+  else
+    for I := 0 to Pred(SizeOf(T)) do
+      if SimplePass(pA, pBuf, I) then
+        PtrSwap(pA, pBuf);
+  if pBuf <> Pointer(aBuf) then
+    for I := 0 to System.High(A) do
+      A[I] := aBuf[I];
+end;
 
-  procedure FillOffsets;
+class procedure TGOrdinalArrayHelper.DoSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+
+  function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
   var
     Curr: T;
-    I, J: SizeInt;
+    I: SizeInt;
+    Ofs: PSizeInt;
   begin
-    Offsets := Default(TOffsets);
-    for I := 0 to System.High(A) do
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 254 downto 0 do
+      Ofs[I] += Ofs[Succ(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
       begin
-        Curr := A[I];
-        for J := 0 to Pred(SizeOf(T)) do
-          Inc(Offsets[J, (Curr shr (J * 8)) and $ff]);
+        Curr := aSrc[I];
+        aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(Curr shr aNum) and $ff]);
       end;
+    Result := True;
   end;
 
-  procedure SortA;
-
-    function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
-    var
-      Curr: T;
-      I: SizeInt;
-      Ofs: PSizeInt;
-    begin
-      if Offsets[aNum, 0] = System.Length(A) then exit(False);
-      Ofs := @Offsets[aNum, 0];
-      for I := 1 to 255 do
-        Ofs[I] += Ofs[Pred(I)];
-      aNum := aNum shl 3;
-      for I := System.High(A) downto 0 do
-        begin
-          Curr := aSrc[I];
-          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
-          Dec(Ofs[(Curr shr aNum) and $ff]);
-        end;
-      Result := True;
-    end;
-
-    function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
-    var
-      Curr: T;
-      I: SizeInt;
-      Ofs: PSizeInt;
-    begin
-      if Offsets[aNum, 0] = System.Length(A) then exit(False);
-      Ofs := @Offsets[aNum, 0];
-      for I := 129 to 255 do
-        Ofs[I] += Ofs[Pred(I)];
-      Ofs[0] += Ofs[255];
-      for I := 1 to 127 do
-        Ofs[I] += Ofs[Pred(I)];
-      aNum := aNum shl 3;
-      for I := System.High(A) downto 0 do
-        begin
-          Curr := aSrc[I];
-          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
-          Dec(Ofs[(Curr shr aNum) and $ff]);
-        end;
-      Result := True;
-    end;
-
+  function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
   var
+    Curr: T;
     I: SizeInt;
-    pA, pBuf: PItem;
+    Ofs: PSizeInt;
   begin
-    pA := @A[0];
-    pBuf := @aBuf[0];
-    if CFSigned then
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 126 downto 0 do
+      Ofs[I] += Ofs[Succ(I)];
+    Ofs[255] += Ofs[0];
+    for I := 254 downto 128 do
+      Ofs[I] += Ofs[Succ(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
       begin
-        for I := 0 to SizeOf(T) - 2 do
-          if SimplePass(pA, pBuf, I) then
-            Swap(pA, pBuf);
-        if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
-          Swap(pA, pBuf);
-      end
-    else
-      for I := 0 to Pred(SizeOf(T)) do
-        if SimplePass(pA, pBuf, I) then
-          Swap(pA, pBuf);
-    if pBuf <> @aBuf[0] then
-      for I := 0 to System.High(A) do
-        A[I] := aBuf[I];
+        Curr := aSrc[I];
+        aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(Curr shr aNum) and $ff]);
+      end;
+    Result := True;
   end;
 
-  procedure SortD;
-
-    function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
-    var
-      Curr: T;
-      I: SizeInt;
-      Ofs: PSizeInt;
-    begin
-      if Offsets[aNum, 0] = System.Length(A) then exit(False);
-      Ofs := @Offsets[aNum, 0];
-      for I := 254 downto 0 do
-        Ofs[I] += Ofs[Succ(I)];
-      aNum := aNum shl 3;
-      for I := System.High(A) downto 0 do
-        begin
-          Curr := aSrc[I];
-          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
-          Dec(Ofs[(Curr shr aNum) and $ff]);
-        end;
-      Result := True;
-    end;
-
-    function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
-    var
-      Curr: T;
-      I: SizeInt;
-      Ofs: PSizeInt;
-    begin
-      if Offsets[aNum, 0] = System.Length(A) then exit(False);
-      Ofs := @Offsets[aNum, 0];
-      for I := 126 downto 0 do
-        Ofs[I] += Ofs[Succ(I)];
-      Ofs[255] += Ofs[0];
-      for I := 254 downto 128 do
-        Ofs[I] += Ofs[Succ(I)];
-      aNum := aNum shl 3;
-      for I := System.High(A) downto 0 do
-        begin
-          Curr := aSrc[I];
-          aDst[Pred(Ofs[(Curr shr aNum) and $ff])] := Curr;
-          Dec(Ofs[(Curr shr aNum) and $ff]);
-        end;
-      Result := True;
-    end;
-
-  var
-    I: SizeInt;
-    pA, pBuf: PItem;
-  begin
-    pA := @A[0];
-    pBuf := @aBuf[0];
-    if CFSigned then
-      begin
-        for I := 0 to SizeOf(T) - 2 do
-          if SimplePass(pA, pBuf, I) then
-            Swap(pA, pBuf);
-        if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
-          Swap(pA, pBuf);
-      end
-    else
-      for I := 0 to Pred(SizeOf(T)) do
-        if SimplePass(pA, pBuf, I) then
-          Swap(pA, pBuf);
-    if pBuf <> @aBuf[0] then
-      for I := 0 to System.High(A) do
-        A[I] := aBuf[I];
-  end;
+var
+  I: SizeInt;
+  pA, pBuf: PItem;
 begin
-  FillOffsets;
-  if o = soAsc then
-    SortA
+  pA := @A[0];
+  pBuf := Pointer(aBuf);
+  if CFSigned then
+    begin
+      for I := 0 to SizeOf(T) - 2 do
+        if SimplePass(pA, pBuf, I) then
+          PtrSwap(pA, pBuf);
+      if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+    end
   else
-    SortD;
+    for I := 0 to Pred(SizeOf(T)) do
+      if SimplePass(pA, pBuf, I) then
+        PtrSwap(pA, pBuf);
+  if pBuf <> Pointer(aBuf) then
+    for I := 0 to System.High(A) do
+      A[I] := aBuf[I];
+end;
+
+class procedure TGOrdinalArrayHelper.DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
+var
+  Offsets: TOffsets;
+begin
+  if System.Length(aBuf) < System.Length(A) then
+    System.SetLength(aBuf, System.Length(A));
+  FillOffsets(A, Offsets);
+  if o = soAsc then
+    DoSortA(A, aBuf, Offsets)
+  else
+    DoSortD(A, aBuf, Offsets);
 end;
 
 class constructor TGOrdinalArrayHelper.Init;
@@ -13971,11 +13976,7 @@ begin
           exit;
         end;
       if CountRun(A, 0, R, o) < R then
-        begin
-          if System.Length(aBuf) < System.Length(A) then
-            System.SetLength(aBuf, System.Length(A));
-          DoRadixSort(A, aBuf, o);
-        end;
+        DoRadixSort(A, aBuf, o);
     end;
 end;
 
