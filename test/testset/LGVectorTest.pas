@@ -2,6 +2,7 @@ unit LGVectorTest;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
@@ -15,6 +16,16 @@ uses
   LGMiscUtils;
 
 type
+
+  TMyRec = record
+    Key: Integer;
+    Data: Double;
+    constructor Create(aKey: Integer; aData: Double);
+    class function GetKey(const aRec: TMyRec): Integer; static; inline;
+    class operator < (const L, R: TMyRec): Boolean; inline;
+  end;
+
+  { TGVectorTest }
 
   TGVectorTest = class(TTestCase)
   private
@@ -138,6 +149,9 @@ type
     procedure InIteration;
     procedure IterationDone;
     procedure ObjectVector;
+
+    procedure OrdHelper;
+    procedure RadixHelper;
   end;
 
   { TGLiteVectorTest }
@@ -234,6 +248,9 @@ type
     procedure CallByValue;
 
     procedure ObjectVector;
+
+    procedure OrdHelper;
+    procedure RadixHelper;
   end;
 
   { TBoolVectorTest }
@@ -285,6 +302,24 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+
+{ TMyRec }
+
+constructor TMyRec.Create(aKey: Integer; aData: Double);
+begin
+  Key := aKey;
+  Data := aData;
+end;
+
+class function TMyRec.GetKey(const aRec: TMyRec): Integer;
+begin
+  Result := aRec.Key;
+end;
+
+class operator TMyRec.<(const L, R: TMyRec): Boolean;
+begin
+  Result := L.Key < R.Key;
+end;
 
 { TGVectorTest.TTestObj }
 
@@ -1278,6 +1313,45 @@ begin
   AssertTrue(Counter.Count = 110);
 end;
 
+procedure TGVectorTest.OrdHelper;
+type
+  TOrdHelper = specialize TGOrdVectorHelper<Integer>;
+  THelper    = specialize TGComparableVectorHelper<Integer>;
+var
+  v: TAutoIntVector;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    v.Instance.Add(Random(MaxInt) - MaxInt div 2);
+  TOrdHelper.Sort(v.Instance);
+  AssertTrue(THelper.IsNonDescending(v.Instance));
+  THelper.RandomShuffle(v.Instance);
+  TOrdHelper.Sort(v.Instance, soDesc);
+  AssertTrue(THelper.IsNonAscending(v.Instance));
+end;
+
+procedure TGVectorTest.RadixHelper;
+type
+  TRadixHelper = specialize TGRadixVectorSorter<TMyRec, Integer, TMyRec>;
+  THelper      = specialize TGComparableVectorHelper<TMyRec>;
+  TVector      = specialize TGVector<TMyRec>;
+var
+  v: specialize TGAutoRef<TVector>;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    v.Instance.Add(TMyRec.Create(Random(MaxInt) - MaxInt div 2, Random));
+  TRadixHelper.Sort(v.Instance);
+  AssertTrue(THelper.IsNonDescending(v.Instance));
+  THelper.RandomShuffle(v.Instance);
+  TRadixHelper.Sort(v.Instance, soDesc);
+  AssertTrue(THelper.IsNonAscending(v.Instance));
+end;
+
 { TGLiteVectorTest.TTestObj }
 
 constructor TGLiteVectorTest.TTestObj.Create(aProc: TProc);
@@ -2101,6 +2175,45 @@ begin
   AssertTrue(Counter = 60);
   v := Default(TObjVector);
   AssertTrue(Counter = 100);
+end;
+
+procedure TGLiteVectorTest.OrdHelper;
+type
+  TOrdHelper = specialize TGOrdVectorHelper<Integer>;
+  THelper    = specialize TGComparableVectorHelper<Integer>;
+var
+  v: TIntVector;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    v.Add(Random(MaxInt) - MaxInt div 2);
+  TOrdHelper.Sort(v);
+  AssertTrue(THelper.IsNonDescending(v));
+  THelper.RandomShuffle(v);
+  TOrdHelper.Sort(v, soDesc);
+  AssertTrue(THelper.IsNonAscending(v));
+end;
+
+procedure TGLiteVectorTest.RadixHelper;
+type
+  TRadixHelper = specialize TGRadixVectorSorter<TMyRec, Integer, TMyRec>;
+  THelper      = specialize TGComparableVectorHelper<TMyRec>;
+  TVector      = specialize TGLiteVector<TMyRec>;
+var
+  v: TVector;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    v.Add(TMyRec.Create(Random(MaxInt) - MaxInt div 2, Random));
+  TRadixHelper.Sort(v);
+  AssertTrue(THelper.IsNonDescending(v));
+  THelper.RandomShuffle(v);
+  TRadixHelper.Sort(v, soDesc);
+  AssertTrue(THelper.IsNonAscending(v));
 end;
 
 { TBoolVectorTest }
