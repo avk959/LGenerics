@@ -938,6 +938,42 @@ type
     class function  SelectDistinct(constref v: TLiteVector; c: TLess): TVector.TArray; static; inline;
   end;
 
+  { TGOrdVectorHelper: for ordinal types only }
+  generic TGOrdVectorHelper<T> = class
+  private
+  type
+    THelper = specialize TGOrdinalArrayHelper<T>;
+  public
+  type
+    TVector     = specialize TGVector<T>;
+    TLiteVector = specialize TGLiteVector<T>;
+    TArray = THelper.TArray;
+    class procedure RadixSort(v: TVector; o: TSortOrder = soAsc); static; inline;
+    class procedure RadixSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
+    class procedure RadixSort(v: TVector; var aBuf: TArray; o: TSortOrder = soAsc); static; inline;
+    class procedure RadixSort(var v: TLiteVector; var aBuf: TArray; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(v: TVector; o: TSortOrder = soAsc); static; inline; inline;
+    class procedure Sort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
+  end;
+
+  { TGRadixVectorSorter provides LSD radix sort;
+      TKey is the type for which LSD radix sort is appropriate.
+      TMap must provide class function GetKey([const[ref]] aItem: T): TKey; }
+  generic TGRadixVectorSorter<T, TKey, TMap> = class
+  private
+  type
+    THelper = specialize TGRadixSorter<T, TKey, TMap>;
+  public
+  type
+    TVector     = specialize TGVector<T>;
+    TLiteVector = specialize TGLiteVector<T>;
+    TArray = THelper.TArray;
+    class procedure Sort(v: TVector; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(v: TVector; var aBuf: TArray; o: TSortOrder = soAsc); static; inline;
+    class procedure Sort(var v: TLiteVector; var aBuf: TArray; o: TSortOrder = soAsc); static; inline;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
@@ -4634,6 +4670,75 @@ begin
     Result := THelper.SelectDistinct(v.FBuffer.FItems[0..Pred(v.Count)], c)
   else
     Result := nil;
+end;
+
+{ TGOrdVectorHelper }
+
+class procedure TGOrdVectorHelper.RadixSort(v: TVector; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.RadixSort(v.FItems[0..Pred(v.ElemCount)], o);
+end;
+
+class procedure TGOrdVectorHelper.RadixSort(var v: TLiteVector; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.RadixSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
+end;
+
+class procedure TGOrdVectorHelper.RadixSort(v: TVector; var aBuf: TArray; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.RadixSort(v.FItems[0..Pred(v.ElemCount)], aBuf, o);
+end;
+
+class procedure TGOrdVectorHelper.RadixSort(var v: TLiteVector; var aBuf: TArray; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.RadixSort(v.FBuffer.FItems[0..Pred(v.Count)], aBuf, o);
+end;
+
+class procedure TGOrdVectorHelper.Sort(v: TVector; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.Sort(v.FItems[0..Pred(v.ElemCount)], o);
+end;
+
+class procedure TGOrdVectorHelper.Sort(var v: TLiteVector; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.Sort(v.FBuffer.FItems[0..Pred(v.Count)], o);
+end;
+
+{ TGRadixVectorSorter }
+
+class procedure TGRadixVectorSorter.Sort(v: TVector; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.Sort(v.FItems[0..Pred(v.ElemCount)], o);
+end;
+
+class procedure TGRadixVectorSorter.Sort(var v: TLiteVector; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.Sort(v.FBuffer.FItems[0..Pred(v.Count)], o);
+end;
+
+class procedure TGRadixVectorSorter.Sort(v: TVector; var aBuf: TArray; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.Sort(v.FItems[0..Pred(v.ElemCount)], aBuf, o);
+end;
+
+class procedure TGRadixVectorSorter.Sort(var v: TLiteVector; var aBuf: TArray; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.Sort(v.FBuffer.FItems[0..Pred(v.Count)], aBuf, o);
 end;
 
 end.
