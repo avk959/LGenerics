@@ -1133,6 +1133,36 @@ type
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
 
+  { TGRadixSorter provides LSD radix sort;
+      TKey is the type for which LSD radix sort is appropriate.
+      TMap must provide class function GetKey([const[ref]] aItem: TItem): TKey; }
+  generic TGRadixSorter<TItem, TKey, TMap> = record
+  public
+  type
+    TArray = array of TItem;
+    PItem    = ^TItem;
+
+  private
+  type
+    TOffsets = array[0..Pred(SizeOf(TKey)), 0..255] of SizeInt;
+
+  const
+    INTRO_CUTOFF = 255;
+
+  class var
+    CFSigned: Boolean;
+    class constructor Init;
+    class procedure PtrSwap(var L, R: Pointer); static; inline;
+    class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
+    class procedure DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  public
+    class function  Less(const L, R: TItem): Boolean; static; inline;
+    class procedure Sort(var A: array of TItem; o: TSortOrder = soAsc); static;
+    class procedure Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  end;
+
   { TGSegmentTree after O(N) preprocessing of a given array of monoid elements allows:
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
       - update the array elements in O(log N);
@@ -14027,8 +14057,227 @@ begin
   Sort(Result, o);
 end;
 
-{ TGSegmentTree }
+{ TGRadixSorter }
 
+class constructor TGRadixSorter.Init;
+begin
+  case GetTypeKind(TKey) of
+    tkInteger: CFSigned := GetTypeData(TypeInfo(TKey))^.MinValue < 0;
+    tkInt64: CFSigned := GetTypeData(TypeInfo(TKey))^.MinInt64Value < 0;
+  else
+    CFSigned := False;
+  end;
+end;
+
+class procedure TGRadixSorter.PtrSwap(var L, R: Pointer);
+var
+  tmp: Pointer;
+begin
+  tmp := L;
+  L := R;
+  R := tmp;
+end;
+
+class procedure TGRadixSorter.FillOffsets(const A: array of TItem; out aOfs: TOffsets);
+var
+  Curr: TKey;
+  I, J: SizeInt;
+begin
+  aOfs := Default(TOffsets);
+  for I := 0 to System.High(A) do
+    begin
+      Curr := TMap.GetKey(A[I]);
+      for J := 0 to Pred(SizeOf(TKey)) do
+        Inc(aOfs[J, (Curr shr (J * 8)) and $ff]);
+    end;
+end;
+
+class procedure TGRadixSorter.DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets);
+
+  function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  var
+    Curr: TItem;
+    CurrKey: TKey;
+    I: SizeInt;
+    Ofs: PSizeInt;
+  begin
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 1 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        CurrKey := TMap.GetKey(Curr);
+        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+      end;
+    Result := True;
+  end;
+
+  function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  var
+    Curr: TItem;
+    CurrKey: TKey;
+    I: SizeInt;
+    Ofs: PSizeInt;
+  begin
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 129 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    Ofs[0] += Ofs[255];
+    for I := 1 to 127 do
+      Ofs[I] += Ofs[Pred(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        CurrKey := TMap.GetKey(Curr);
+        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+      end;
+    Result := True;
+  end;
+
+var
+  I: SizeInt;
+  pA, pBuf: PItem;
+begin
+  pA := @A[0];
+  pBuf := Pointer(aBuf);
+  if CFSigned then
+    begin
+      for I := 0 to SizeOf(TKey) - 2 do
+        if SimplePass(pA, pBuf, I) then
+          PtrSwap(pA, pBuf);
+      if SignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+        PtrSwap(pA, pBuf);
+    end
+  else
+    for I := 0 to Pred(SizeOf(TKey)) do
+      if SimplePass(pA, pBuf, I) then
+        PtrSwap(pA, pBuf);
+  if pBuf <> Pointer(aBuf) then
+    for I := 0 to System.High(A) do
+      A[I] := aBuf[I];
+end;
+
+class procedure TGRadixSorter.DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets);
+
+  function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  var
+    Curr: TItem;
+    CurrKey: TKey;
+    I: SizeInt;
+    Ofs: PSizeInt;
+  begin
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 254 downto 0 do
+      Ofs[I] += Ofs[Succ(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        CurrKey := TMap.GetKey(Curr);
+        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+      end;
+    Result := True;
+  end;
+
+  function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  var
+    Curr: TItem;
+    CurrKey: TKey;
+    I: SizeInt;
+    Ofs: PSizeInt;
+  begin
+    if aOfs[aNum, 0] = System.Length(A) then exit(False);
+    Ofs := @aOfs[aNum, 0];
+    for I := 126 downto 0 do
+      Ofs[I] += Ofs[Succ(I)];
+    Ofs[255] += Ofs[0];
+    for I := 254 downto 128 do
+      Ofs[I] += Ofs[Succ(I)];
+    aNum := aNum shl 3;
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        CurrKey := TMap.GetKey(Curr);
+        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
+        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+      end;
+    Result := True;
+  end;
+
+var
+  I: SizeInt;
+  pA, pBuf: PItem;
+begin
+  pA := @A[0];
+  pBuf := Pointer(aBuf);
+  if CFSigned then
+    begin
+      for I := 0 to SizeOf(TKey) - 2 do
+        if SimplePass(pA, pBuf, I) then
+          PtrSwap(pA, pBuf);
+      if SignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+        PtrSwap(pA, pBuf);
+    end
+  else
+    for I := 0 to Pred(SizeOf(TKey)) do
+      if SimplePass(pA, pBuf, I) then
+        PtrSwap(pA, pBuf);
+  if pBuf <> Pointer(aBuf) then
+    for I := 0 to System.High(A) do
+      A[I] := aBuf[I];
+end;
+
+class procedure TGRadixSorter.DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder);
+var
+  Offsets: TOffsets;
+begin
+  FillOffsets(A, Offsets);
+  if System.Length(aBuf) < System.Length(A) then
+    System.SetLength(aBuf, System.Length(A));
+  if o = soAsc then
+    DoSortA(A, aBuf, Offsets)
+  else
+    DoSortD(A, aBuf, Offsets);
+end;
+
+class function TGRadixSorter.Less(const L, R: TItem): Boolean;
+begin
+  Result := TMap.GetKey(L) < TMap.GetKey(R);
+end;
+
+class procedure TGRadixSorter.Sort(var A: array of TItem; o: TSortOrder);
+var
+  Buf: TArray = nil;
+begin
+  Sort(A, Buf, o);
+end;
+
+class procedure TGRadixSorter.Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    begin
+      if R <= INTRO_CUTOFF then
+        begin
+          specialize TGBaseArrayHelper<TItem, TGRadixSorter>.IntroSort(A, o);
+          exit;
+        end;
+      DoSort(A, aBuf, o);
+    end;
+end;
+
+{ TGSegmentTree }
 
 procedure TGSegmentTree.CheckIndexRange(aIndex: SizeInt);
 begin
