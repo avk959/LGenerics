@@ -6,7 +6,7 @@ unit LGSimpleDiGraphTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry,
+  Classes, SysUtils, fpcunit, testregistry, Math,
   LGUtils,
   LGArrayHelpers,
   LGSparseGraph,
@@ -134,6 +134,9 @@ type
     TCostNetRef  = specialize TGAutoRef<TCostNet>;
     THelper      = specialize TGOrdinalArrayHelper<Integer>;
     TSearch      = specialize TGSimpleArrayHelper<SizeInt>;
+    TPoint       = specialize TGPoint2D<Integer>;
+    TPointWeight = specialize TGSimpleWeight<ValReal>;
+    TPointGraph  = specialize TGWeightedDigraph<TPoint, ValReal, TPointWeight, TPoint>;
 
     function  GenerateTestWDigr1: TGraph;
     function  GenerateTestWDigr2: TGraph;
@@ -142,6 +145,8 @@ type
     function  GenerateTestNet2: TNet;
     function  GenerateTestCostNet1: TCostNet;
     function  GenerateTestCostNet2: TCostNet;
+    function  GeneratePointGraph(aVertCount, aEdgeCount: Integer): TPointGraph;
+    class function PointDist(const L, R: TPoint): ValReal; static;
   published
     procedure SetEdgeData;
     procedure ContainsNegWeightEdge;
@@ -154,6 +159,9 @@ type
     procedure FindMinPathsMap4;
     procedure MinPath;
     procedure MinPath1;
+    procedure MinPathBiDir;
+    procedure MinPathAStar;
+    procedure MinPathNbaStar;
     procedure FindMinPath;
     procedure FindMinPath1;
     procedure FindMinPath2;
@@ -2219,6 +2227,38 @@ begin
   Result.AddEdge(5, 6, TCostPair.Create(5, 7));
 end;
 
+function TWeightedDigraphTest.GeneratePointGraph(aVertCount, aEdgeCount: Integer): TPointGraph;
+var
+  I, x, y: Integer;
+  s, d: TPoint;
+begin
+  Result := TPointGraph.Create;
+  if aVertCount < 2 then
+    aVertCount := 2;
+  I := aVertCount * Pred(aVertCount);
+  if aEdgeCount > I then
+    aEdgeCount := I;
+  repeat
+    x := Random(10000);
+    repeat
+      y := Random(10000);
+    until y <> x;
+    Result.AddVertex(TPoint.Create(x, y));
+  until Result.VertexCount = aVertCount;
+  repeat
+    x := Random(aVertCount);
+    repeat
+      y := Random(aVertCount);
+    until y <> x;
+    Result.AddEdgeI(x, y, TPointWeight.Create(Result[x].Distance(Result[y])));
+  until Result.EdgeCount = aEdgeCount;
+end;
+
+class function TWeightedDigraphTest.PointDist(const L, R: TPoint): ValReal;
+begin
+  Result := L.Distance(R);
+end;
+
 procedure TWeightedDigraphTest.SetEdgeData;
 var
   Ref: TRef;
@@ -2446,6 +2486,63 @@ begin
   AssertTrue(p.Length = 5);
   for I in [0, 1, 3, 4, 5] do
     AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.MinPathBiDir;
+var
+  Ref: TRef;
+  RevRef: TRef;
+  g: TGraph;
+  p: TIntArray;
+  I: SizeInt;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  {%H-}RevRef.Instance := g.Reverse;
+  p := g.MinPathBiDir(0, 5, RevRef.Instance, w);
+  AssertTrue(w = 45);
+  AssertTrue(p.Length = 4);
+  for I in [0, 1, 3, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+  g.SetEdgeData(1, 4, TIntWeight.Create(2));
+  RevRef.Instance.SetEdgeData(4, 1, TIntWeight.Create(2));
+  g.SetEdgeData(4, 3, TIntWeight.Create(3));
+  RevRef.Instance.SetEdgeData(3, 4, TIntWeight.Create(3));
+  p := g.MinPathBiDir(0, 5, RevRef.Instance, w);
+  AssertTrue(w = 35);
+  AssertTrue(p.Length = 5);
+  for I in [0, 1, 3, 4, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.MinPathAStar;
+var
+  g: specialize TGAutoRef<TPointGraph>;
+  p, pd: TIntArray;
+  w, wd: ValReal;
+begin
+  {%H-}g.Instance := GeneratePointGraph(200, 1600);
+  pd := g.Instance.MinPathI(0, 199, wd);
+  AssertTrue(pd.Length > 0);
+  p := g.Instance.MinPathAStarI(0, 199, w, @PointDist);
+  AssertTrue(SameValue(wd, w));
+  AssertTrue(THelper.Same(p, pd));
+end;
+
+procedure TWeightedDigraphTest.MinPathNbaStar;
+var
+  g, gRev: specialize TGAutoRef<TPointGraph>;
+  p, pd: TIntArray;
+  w, wd: ValReal;
+begin
+  {%H-}g.Instance := GeneratePointGraph(200, 1600);
+  {%H-}gRev.Instance := g.Instance.Reverse;
+  pd := g.Instance.MinPathI(0, 199, wd);
+  AssertTrue(pd.Length > 0);
+  p := g.Instance.MinPathNbaStarI(0, 199, gRev.Instance, w, @PointDist);
+  AssertTrue(SameValue(wd, w));
+  AssertTrue(THelper.Same(p, pd));
 end;
 
 procedure TWeightedDigraphTest.FindMinPath;
