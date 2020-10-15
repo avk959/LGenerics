@@ -520,6 +520,9 @@ type
     procedure GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
     function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+    function  BiDijkstraPath(aSrc, aDst: SizeInt; gRev: TGWeightedDigraph; out aWeight: TWeight): TIntArray;
+      {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
+    function NBAStar(aSrc, aDst: SizeInt; gRev: TGWeightedDigraph; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -563,11 +566,26 @@ type
     used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
     function MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+    { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+      the weights of all edges MUST be nonnegative;
+      the required aRev is a reverse graph;
+      returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
+      used bidirectional Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
+    function MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph; out aWeight: TWeight): TIntArray;
+    function MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all arcs MUST be nonnegative; used A* algorithm if aEst <> nil;
     raises an exception if aSrc or aDst does not exist }
     function MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+  { finds the path of minimal weight from a aSrc to aDst if it exists;
+    the required aRev is a reverse graph;
+    the weights of all edges MUST be nonnegative; used NBA* algorithm if aEst <> nil;
+    raises an exception if aSrc or aDst does not exist }
+    function MinPathNBAStar(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph; out aWeight: TWeight;
+                            aEst: TEstimate): TIntArray; inline;
+    function MinPathNBAStarI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph; out aWeight: TWeight;
+                            aEst: TEstimate): TIntArray;
   { returns False if exists negative weighted cycle, otherwise returns the vertex path
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
@@ -3363,6 +3381,180 @@ begin
       Stack.Pop;
 end;
 
+function TGWeightedDigraph.BiDijkstraPath(aSrc, aDst: SizeInt; gRev: TGWeightedDigraph;
+  out aWeight: TWeight): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
+var
+  Inst: array[Boolean] of TGWeightedDigraph;
+  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
+  Parents: array[Boolean] of TIntArray;
+  InQueue: array[Boolean] of TBoolVector;
+  Weights: array[Boolean] of TWeightArray;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: PAdjItem;
+  Dir: Boolean = Forwd;
+begin
+  Inst[Forwd] := Self;
+  Inst[Bckwd] := gRev;
+  Weights[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Weights[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
+  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
+  InQueue[Forwd].Capacity := VertexCount;
+  InQueue[Bckwd].Capacity := VertexCount;
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  Parents[Forwd] := CreateIntArray;
+  Parents[Bckwd] := CreateIntArray;
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      Item := Queue[Dir].Dequeue;
+      if Item.Weight + Queue[not Dir].PeekPtr^.Weight > BestWeight then
+        begin
+          aWeight := BestWeight;
+          Result := TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
+          TIntHelper.Reverse(Result[0..Result.Length-2]);
+          exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]));
+        end;
+      Weights[Dir][Item.Index] := Item.Weight;
+      for p in Inst[Dir].AdjLists[Item.Index]^ do
+        if not (Weights[Dir][p^.Key] < TWeight.INF_VALUE) then
+          begin
+            CurrWeight := Item.Weight + p^.Data.Weight;
+            if not InQueue[Dir].UncBits[p^.Key] then
+              begin
+                Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                Parents[Dir][p^.Key] := Item.Index;
+                InQueue[Dir].UncBits[p^.Key] := True;
+              end
+            else
+              if CurrWeight < Queue[Dir].GetItemPtr(p^.Key)^.Weight then
+                begin
+                  Queue[Dir].Update(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                  Parents[Dir][p^.Key] := Item.Index;
+                end;
+            if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
+              begin
+                CurrWeight += Weights[not Dir][p^.Key];
+                if CurrWeight < BestWeight  then
+                  begin
+                    BestWeight := CurrWeight;
+                    MeetPoint := p^.Key;
+                  end;
+              end;
+          end;
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
+    end;
+  aWeight := TWeight.INF_VALUE;
+  Result := nil;
+end;
+
+function TGWeightedDigraph.NBAStar(aSrc, aDst: SizeInt; gRev: TGWeightedDigraph; out aWeight: TWeight;
+  aEst: TEstimate): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
+var
+  Inst: array[Boolean] of TGWeightedDigraph;
+  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
+  Parents: array[Boolean] of TIntArray;
+  Weights: array[Boolean] of TWeightArray;
+  InQueue: array[Boolean] of TBoolVector;
+  Dest: array[Boolean] of TVertex;
+  F: array[Boolean] of TWeight;
+  Reached: TBoolVector;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: PAdjItem;
+  Dir: Boolean = Forwd;
+begin
+  Inst[Forwd] := Self;
+  Inst[Bckwd] := gRev;
+  Parents[Forwd] := CreateIntArray;
+  Parents[Bckwd] := CreateIntArray;
+  Weights[Forwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Weights[Bckwd] := TWeightHelper.CreateWeightArray(VertexCount);
+  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
+  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(VertexCount);
+  Reached.Capacity := VertexCount;
+  InQueue[Forwd].Capacity := VertexCount;
+  InQueue[Bckwd].Capacity := VertexCount;
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  Dest[Forwd] := Items[aDst];
+  Dest[Bckwd] := Items[aSrc];
+  F[Forwd] := aEst(Dest[Forwd], Dest[Bckwd]);
+  F[Bckwd] := F[Forwd];
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, F[Forwd]));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, F[Bckwd]));
+  Weights[Forwd][aSrc] := TWeight(0);
+  Weights[Bckwd][aDst] := TWeight(0);
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
+      Item := Queue[Dir].Dequeue;
+      if Reached.UncBits[Item.Index] then continue;
+      Reached.UncBits[Item.Index] := True;
+      if(Weights[Dir][Item.Index] + aEst(Items[Item.Index], Dest[Dir]) < BestWeight) and
+        (Weights[Dir][Item.Index] - aEst(Items[Item.Index], Dest[not Dir]) + F[not Dir] < BestWeight) then
+        for p in Inst[Dir].AdjLists[Item.Index]^ do // stabilize the node[Item.Index]
+          if not Reached.UncBits[p^.Key] then
+            begin
+              CurrWeight := Weights[Dir][Item.Index] + p^.Data.Weight;
+              if Weights[Dir][p^.Key] > CurrWeight then
+                begin
+                  Weights[Dir][p^.Key] := CurrWeight;
+                  if not InQueue[Dir].UncBits[p^.Key] then
+                    begin
+                      Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(
+                        p^.Key, CurrWeight + aEst(Items[p^.Key], Dest[Dir])));
+                      Parents[Dir][p^.Key] := Item.Index;
+                      InQueue[Dir].UncBits[p^.Key] := True;
+                    end
+                  else
+                    begin
+                      Queue[Dir].Update(p^.Key, TWeightItem.Create(
+                        p^.Key, CurrWeight + aEst(Items[p^.Key], Dest[Dir])));
+                      Parents[Dir][p^.Key] := Item.Index;
+                    end;
+                  if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
+                    begin
+                      CurrWeight += Weights[not Dir][p^.Key];
+                      if CurrWeight < BestWeight  then
+                        begin
+                          BestWeight := CurrWeight;
+                          MeetPoint := p^.Key;
+                        end;
+                    end;
+                end;
+            end;
+      if Queue[Dir].NonEmpty then
+        F[Dir] := Queue[Dir].PeekPtr^.Weight;
+    end;
+
+  if MeetPoint = NULL_INDEX then
+    begin
+      aWeight := TWeight.INF_VALUE;
+      exit(nil);
+    end;
+
+  aWeight := BestWeight;
+  Result := TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  exit(TIntHelper.CreateMerge(TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]));
+end;
+
 class function TGWeightedDigraph.InfWeight: TWeight;
 begin
   Result := TWeight.INF_VALUE;
@@ -3508,6 +3700,26 @@ begin
     Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
+function TGWeightedDigraph.MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
+  out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathBiDirI(IndexOf(aSrc), IndexOf(aDst), aRev, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph;
+  out aWeight: TWeight): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      Result := nil;
+    end
+  else
+    Result := BiDijkstraPath(aSrc, aDst, aRev, aWeight);
+end;
+
 function TGWeightedDigraph.MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 begin
@@ -3528,6 +3740,29 @@ begin
       Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
     else
       Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathNBAStar(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
+  out aWeight: TWeight; aEst: TEstimate): TIntArray;
+begin
+  Result := MinPathNBAStarI(IndexOf(aSrc), IndexOf(aSrc), aRev, aWeight, aEst);
+end;
+
+function TGWeightedDigraph.MinPathNBAStarI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph;
+  out aWeight: TWeight; aEst: TEstimate): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      Result := nil;
+    end
+  else
+    if aEst <> nil then
+      Result := NBAStar(aSrc, aDst, aRev, aWeight, aEst)
+    else
+      Result := BiDijkstraPath(aSrc, aDst, aRev, aWeight);
 end;
 
 function TGWeightedDigraph.FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray;
