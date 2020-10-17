@@ -347,7 +347,7 @@ type
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is IntroSort}
+  { default sorting, currently it is PDQSort}
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -544,7 +544,7 @@ type
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is IntroSort }
+  { default sorting, currently it is PDQSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -683,7 +683,7 @@ type
     class procedure PDQSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is IntroSort }
+  { default sorting, currently it is PDQSort }
     class procedure Sort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -823,7 +823,7 @@ type
     class procedure PDQSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is IntroSort }
+  { default sorting, currently it is PDQSort }
     class procedure Sort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -967,7 +967,7 @@ type
     class procedure PDQSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is IntroSort }
+  { default sorting, currently it is PDQSort }
     class procedure Sort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -3917,7 +3917,7 @@ end;
 
 class procedure TGBaseArrayHelper.Sort(var A: array of T; o: TSortOrder);
 begin
-  IntroSort(A, o);
+  PDQSort(A, o);
 end;
 
 class function TGBaseArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
@@ -6413,7 +6413,7 @@ end;
 
 class procedure TGComparableArrayHelper.Sort(var A: array of T; o: TSortOrder);
 begin
-  IntroSort(A, o);
+  PDQSort(A, o);
 end;
 
 class function TGComparableArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
@@ -8300,7 +8300,7 @@ end;
 
 class procedure TGRegularArrayHelper.Sort(var A: array of T; c: TLess; o: TSortOrder);
 begin
-  IntroSort(A, c, o);
+  PDQSort(A, c, o);
 end;
 
 class function TGRegularArrayHelper.Sorted(const A: array of T; c: TLess; o: TSortOrder): TArray;
@@ -10191,7 +10191,7 @@ end;
 
 class procedure TGDelegatedArrayHelper.Sort(var A: array of T; c: TOnLess; o: TSortOrder);
 begin
-  IntroSort(A, c, o);
+  PDQSort(A, c, o);
 end;
 
 class function TGDelegatedArrayHelper.Sorted(const A: array of T; c: TOnLess; o: TSortOrder): TArray;
@@ -12082,7 +12082,7 @@ end;
 
 class procedure TGNestedArrayHelper.Sort(var A: array of T; c: TNestLess; o: TSortOrder);
 begin
-  IntroSort(A, c, o);
+  PDQSort(A, c, o);
 end;
 
 class function TGNestedArrayHelper.Sorted(const A: array of T; c: TNestLess; o: TSortOrder): TArray;
@@ -13807,8 +13807,13 @@ class procedure TGOrdinalArrayHelper.DoSortA(var A: array of T; var aBuf: TArray
     I: SizeInt;
     Ofs: PSizeInt;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
     Ofs := @aOfs[aNum, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 1 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     aNum := aNum shl 3;
@@ -13827,8 +13832,13 @@ class procedure TGOrdinalArrayHelper.DoSortA(var A: array of T; var aBuf: TArray
     I: SizeInt;
     Ofs: PSizeInt;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
     Ofs := @aOfs[aNum, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 129 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     Ofs[0] += Ofs[255];
@@ -13850,18 +13860,17 @@ var
 begin
   pA := @A[0];
   pBuf := Pointer(aBuf);
+  for I := 0 to SizeOf(T) - 2 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
   if CFSigned then
     begin
-      for I := 0 to SizeOf(T) - 2 do
-        if SimplePass(pA, pBuf, I) then
-          PtrSwap(pA, pBuf);
       if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
     end
   else
-    for I := 0 to Pred(SizeOf(T)) do
-      if SimplePass(pA, pBuf, I) then
-        PtrSwap(pA, pBuf);
+    if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
+      PtrSwap(pA, pBuf);
   if pBuf <> Pointer(aBuf) then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
@@ -13875,8 +13884,13 @@ class procedure TGOrdinalArrayHelper.DoSortD(var A: array of T; var aBuf: TArray
     I: SizeInt;
     Ofs: PSizeInt;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
     Ofs := @aOfs[aNum, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 254 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     aNum := aNum shl 3;
@@ -13895,8 +13909,13 @@ class procedure TGOrdinalArrayHelper.DoSortD(var A: array of T; var aBuf: TArray
     I: SizeInt;
     Ofs: PSizeInt;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
     Ofs := @aOfs[aNum, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 126 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     Ofs[255] += Ofs[0];
@@ -13918,18 +13937,17 @@ var
 begin
   pA := @A[0];
   pBuf := Pointer(aBuf);
+  for I := 0 to SizeOf(T) - 2 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
   if CFSigned then
     begin
-      for I := 0 to SizeOf(T) - 2 do
-        if SimplePass(pA, pBuf, I) then
-          PtrSwap(pA, pBuf);
       if SignedPass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
     end
   else
-    for I := 0 to Pred(SizeOf(T)) do
-      if SimplePass(pA, pBuf, I) then
-        PtrSwap(pA, pBuf);
+    if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
+      PtrSwap(pA, pBuf);
   if pBuf <> Pointer(aBuf) then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
