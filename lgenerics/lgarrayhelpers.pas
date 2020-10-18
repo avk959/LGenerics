@@ -120,6 +120,7 @@ type
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
+    class procedure PtrSwap(var L, R: Pointer); static; inline;
   public
     class procedure Swap(var L, R: T); static; inline;
   { swaps the elements of A with the indices L and R;
@@ -337,17 +338,17 @@ type
     class function  InversionCountND(const A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
+  { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { Pascal translation of Orson Peters' PDQSort algorithm }
+  { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { stable, adaptive mergesort inspired by Java Timsort }
+  { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is PDQSort}
+  { default sorting, currently PDQSort}
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -534,17 +535,17 @@ type
     class function  InversionCountND(const A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
+  { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { Pascal translation of Orson Peters' PDQSort algorithm }
+  { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { stable, adaptive mergesort inspired by Java Timsort }
+  { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is PDQSort }
+  { default sorting, currently PDQSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -673,17 +674,17 @@ type
     class function  InversionCountND(const A: array of T; c: TLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TLess): Boolean; static;
-  { hybrid sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
+  { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { Pascal translation of Orson Peters' PDQSort algorithm }
+  { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { stable, adaptive mergesort inspired by Java Timsort }
+  { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
     class procedure MergeSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is PDQSort }
+  { default sorting, currently PDQSort }
     class procedure Sort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -813,17 +814,17 @@ type
     class function  InversionCountND(const A: array of T; c: TOnLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
-  { hybrid sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
+  { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { Pascal translation of Orson Peters' PDQSort algorithm }
+  { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { stable, adaptive mergesort inspired by Java Timsort }
+  { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
     class procedure MergeSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is PDQSort }
+  { default sorting, currently PDQSort }
     class procedure Sort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -957,17 +958,17 @@ type
     class function  InversionCountND(const A: array of T; c: TNestLess): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
-  { hybrid sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
+  { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { Pascal translation of Orson Peters' PDQSort algorithm }
+  { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { stable, adaptive mergesort inspired by Java Timsort }
+  { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
     class procedure MergeSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is PDQSort }
+  { default sorting, currently PDQSort }
     class procedure Sort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -977,7 +978,10 @@ type
 
   { TGSimpleArrayHelper: for simple types only }
   generic TGSimpleArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
-  private
+  protected
+  const
+    RADIX_CUTOFF = 255;
+
   type
     TPDQSort = object(TPDQSortBase)
     private
@@ -1081,15 +1085,15 @@ type
     class function  InversionCountND(const A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with random pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on introsort with pseudo-median-of-9 pivot selection }
+  { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { Pascal translation of Orson Peters' PDQSort algorithm }
+  { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { default sorting, currently it is PDQSort }
+  { default sorting, currently PDQSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -1104,16 +1108,12 @@ type
     TGetAllow = function(aMin, aMax: T; aLen: SizeInt): Boolean;
     TOffsets  = array[0..Pred(SizeOf(T)), Byte] of SizeInt;
 
-  const
-    INTRO_CUTOFF = 255;
-
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
     class function  TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  TryInsertSortD2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonoKind; static;
     class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
-    class procedure PtrSwap(var L, R: Pointer); static; inline;
     class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
     class procedure DoSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
     class procedure DoSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
@@ -1125,7 +1125,7 @@ type
   public
     class function  CreateRange(aFirst, aLast: T): TArray; static;
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
-  { LSD radix sorting }
+  { LSD radix sorting, requires O(N) auxiliary memory }
     class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
     class procedure RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
   { hybrid sorting, will use counting sort (if possible) or radix sort }
@@ -1133,35 +1133,37 @@ type
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
 
-  { TGRadixSorter provides LSD radix sort;
-      TKey is the type for which LSD radix sort is appropriate.
+  { TGRadixSorter provides stable LSD radix sorting, requires O(N) auxiliary memory;
+      TKey is the type for which LSD radix sort is appropriate(any integer or float type);
       TMap must provide class function GetKey([const[ref]] aItem: TItem): TKey; }
-  generic TGRadixSorter<TItem, TKey, TMap> = record
-  public
-  type
-    TArray = array of TItem;
-    PItem    = ^TItem;
+    generic TGRadixSorter<TItem, TKey, TMap> = record
+    public
+    type
+      TArray = array of TItem;
+      PItem    = ^TItem;
 
-  private
-  type
-    TOffsets = array[0..Pred(SizeOf(TKey)), 0..255] of SizeInt;
+    private
+    type
+      TKeyType  = (ktUInt, ktSInt, ktFloat);
+      TOffsets  = array[0..Pred(SizeOf(TKey)), 0..255] of SizeInt;
+      TKeyBytes = array[0..Pred(SizeOf(TKey))] of Byte;
+      THelper   = specialize TGBaseArrayHelper<TItem, TGRadixSorter>;
 
-  const
-    INTRO_CUTOFF = 255;
+    const
+      RADIX_CUTOFF = 255;
 
-  class var
-    CFSigned: Boolean;
-    class constructor Init;
-    class procedure PtrSwap(var L, R: Pointer); static; inline;
-    class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
-    class procedure DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
-    class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
-    class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
-  public
-    class function  Less(const L, R: TItem): Boolean; static; inline;
-    class procedure Sort(var A: array of TItem; o: TSortOrder = soAsc); static;
-    class procedure Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
-  end;
+    class var
+      CFKeyKind: TKeyType;
+      class constructor Init;
+      class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
+      class procedure DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+      class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+      class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
+    public
+      class function  Less(const L, R: TItem): Boolean; static; inline;
+      class procedure Sort(var A: array of TItem; o: TSortOrder = soAsc); static;
+      class procedure Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
+    end;
 
   { TGSegmentTree after O(N) preprocessing of a given array of monoid elements allows:
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
@@ -1400,6 +1402,15 @@ begin
         TFake(p[R - 2]) := v2;
       end;
   end;
+end;
+
+class procedure TGArrayHelpUtil.PtrSwap(var L, R: Pointer);
+var
+  tmp: Pointer;
+begin
+  tmp := L;
+  L := R;
+  R := tmp;
 end;
 
 class procedure TGArrayHelpUtil.Swap(var L, R: T);
@@ -13776,15 +13787,6 @@ begin
     Result := QWord(aMax) <= Sum;
 end;
 {$POP}
-class procedure TGOrdinalArrayHelper.PtrSwap(var L, R: Pointer);
-var
-  tmp: Pointer;
-begin
-  tmp := L;
-  L := R;
-  R := tmp;
-end;
-
 class procedure TGOrdinalArrayHelper.FillOffsets(const A: array of T; out aOfs: TOffsets);
 var
   Curr: T;
@@ -14013,7 +14015,7 @@ begin
   R := System.High(A);
   if R > 0 then
     begin
-      if R <= INTRO_CUTOFF then
+      if R <= RADIX_CUTOFF then
         begin
           if CountRun(A, 0, R, o) < R then
             begin
@@ -14038,11 +14040,11 @@ begin
   R := System.High(A);
   if R > 0 then
     begin
-      if R <= INTRO_CUTOFF then
+      if R <= RADIX_CUTOFF then
         begin
           if CountRun(A, 0, R, o) < R then
             begin
-              DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
+              TPDQSort.Sort(@A[0], @A[R] + 1);
               if o = soDesc then
                 DoReverse(A, 0, R);
             end;
@@ -14075,86 +14077,137 @@ begin
   Sort(Result, o);
 end;
 
-{ TGRadixSorter }
-
 class constructor TGRadixSorter.Init;
 begin
   case GetTypeKind(TKey) of
-    tkInteger: CFSigned := GetTypeData(TypeInfo(TKey))^.MinValue < 0;
-    tkInt64: CFSigned := GetTypeData(TypeInfo(TKey))^.MinInt64Value < 0;
+    tkInteger:
+      if GetTypeData(TypeInfo(TKey))^.MinValue < 0 then
+        CFKeyKind := ktSInt
+      else
+        CFKeyKind := ktUInt;
+    tkInt64:
+      if GetTypeData(TypeInfo(TKey))^.MinInt64Value < 0 then
+        CFKeyKind := ktSInt
+      else
+        CFKeyKind := ktUInt;
+    tkFloat:
+      case GetTypeData(TypeInfo(TKey))^.FloatType of
+        ftSingle, ftDouble, ftExtended: CFKeyKind := ktFloat;
+        ftCurr, ftComp: CFKeyKind := ktSInt;
+      end
   else
-    CFSigned := False;
+    CFKeyKind := ktUInt;
   end;
-end;
-
-class procedure TGRadixSorter.PtrSwap(var L, R: Pointer);
-var
-  tmp: Pointer;
-begin
-  tmp := L;
-  L := R;
-  R := tmp;
 end;
 
 class procedure TGRadixSorter.FillOffsets(const A: array of TItem; out aOfs: TOffsets);
 var
-  Curr: TKey;
+  Key: TKey;
   I, J: SizeInt;
 begin
   aOfs := Default(TOffsets);
   for I := 0 to System.High(A) do
     begin
-      Curr := TMap.GetKey(A[I]);
+      Key := TMap.GetKey(A[I]);
       for J := 0 to Pred(SizeOf(TKey)) do
-        Inc(aOfs[J, (Curr shr (J * 8)) and $ff]);
+        Inc(aOfs[J, TKeyBytes(Key)[J]]);
     end;
 end;
 
 class procedure TGRadixSorter.DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets);
 
-  function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: TItem;
-    CurrKey: TKey;
-    I: SizeInt;
     Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
-    Ofs := @aOfs[aNum, 0];
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 1 to 255 do
       Ofs[I] += Ofs[Pred(I)];
-    aNum := aNum shl 3;
     for I := System.High(A) downto 0 do
       begin
         Curr := aSrc[I];
-        CurrKey := TMap.GetKey(Curr);
-        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
-        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+        b := TKeyBytes(TMap.GetKey(Curr))[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
       end;
     Result := True;
   end;
 
-  function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  function IntSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: TItem;
-    CurrKey: TKey;
-    I: SizeInt;
     Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
-    Ofs := @aOfs[aNum, 0];
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 129 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     Ofs[0] += Ofs[255];
     for I := 1 to 127 do
       Ofs[I] += Ofs[Pred(I)];
-    aNum := aNum shl 3;
     for I := System.High(A) downto 0 do
       begin
         Curr := aSrc[I];
-        CurrKey := TMap.GetKey(Curr);
-        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
-        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+        b := TKeyBytes(TMap.GetKey(Curr))[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
+      end;
+    Result := True;
+  end;
+
+  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: TItem;
+    Ofs: PSizeInt;
+    I, Save, Sum: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    for I := 254 downto 128 do
+      Ofs[I] += Ofs[Succ(I)];
+    Sum := Ofs[128];
+    for I := 0 to 127 do
+      begin
+        Save := Ofs[I];
+        Ofs[I] := Sum;
+        Sum += Save;
+      end;
+    for I := 0 to System.High(A) do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(TMap.GetKey(Curr))[aIndex];
+        if b < 128 then
+          begin
+            aDst[Ofs[b]] := Curr;
+            Inc(Ofs[b]);
+          end
+        else
+          begin
+            aDst[Pred(Ofs[b])] := Curr;
+            Dec(Ofs[b]);
+          end;
       end;
     Result := True;
   end;
@@ -14165,18 +14218,37 @@ var
 begin
   pA := @A[0];
   pBuf := Pointer(aBuf);
-  if CFSigned then
-    begin
-      for I := 0 to SizeOf(TKey) - 2 do
-        if SimplePass(pA, pBuf, I) then
-          PtrSwap(pA, pBuf);
-      if SignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+{$IFDEF ENDIAN_LITTLE}
+  for I := 0 to SizeOf(TKey) - 2 do
+    if SimplePass(pA, pBuf, I) then
+      THelper.PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    ktUInt:
+      if SimplePass(pA, pBuf, Pred(SizeOf(TKey))) then
+        THelper.PtrSwap(pA, pBuf);
+    ktSInt:
+      if IntSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+        THelper.PtrSwap(pA, pBuf);
+    ktFloat:
+      if FloatSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+        THelper.PtrSwap(pA, pBuf);
+  end;
+{$ELSE ENDIAN_LITTLE}
+  for I := Pred(SizeOf(TKey)) downto 1 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    ktUInt:
+      if SimplePass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
-    end
-  else
-    for I := 0 to Pred(SizeOf(TKey)) do
-      if SimplePass(pA, pBuf, I) then
+    ktSInt:
+      if IntSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
+    ktFloat:
+      if FloatSignedPass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+  end;
+{$ENDIF ENDIAN_LITTLE}
   if pBuf <> Pointer(aBuf) then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
@@ -14184,49 +14256,99 @@ end;
 
 class procedure TGRadixSorter.DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets);
 
-  function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: TItem;
-    CurrKey: TKey;
-    I: SizeInt;
     Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
-    Ofs := @aOfs[aNum, 0];
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 254 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
-    aNum := aNum shl 3;
     for I := System.High(A) downto 0 do
       begin
         Curr := aSrc[I];
-        CurrKey := TMap.GetKey(Curr);
-        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
-        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+        b := TKeyBytes(TMap.GetKey(Curr))[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
       end;
     Result := True;
   end;
 
-  function SignedPass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
+  function IntSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: TItem;
-    CurrKey: TKey;
-    I: SizeInt;
     Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
   begin
-    if aOfs[aNum, 0] = System.Length(A) then exit(False);
-    Ofs := @aOfs[aNum, 0];
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
     for I := 126 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     Ofs[255] += Ofs[0];
     for I := 254 downto 128 do
       Ofs[I] += Ofs[Succ(I)];
-    aNum := aNum shl 3;
     for I := System.High(A) downto 0 do
       begin
         Curr := aSrc[I];
-        CurrKey := TMap.GetKey(Curr);
-        aDst[Pred(Ofs[(CurrKey shr aNum) and $ff])] := Curr;
-        Dec(Ofs[(CurrKey shr aNum) and $ff]);
+        b := TKeyBytes(TMap.GetKey(Curr))[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
+      end;
+    Result := True;
+  end;
+
+  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: TItem;
+    Ofs: PSizeInt;
+    I, Save, Sum: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    Sum := 0;
+    for I := 127 downto 0 do
+      begin
+        Save := Ofs[I];
+        Ofs[I] := Sum;
+        Sum += Save;
+      end;
+    Ofs[128] += Sum;
+    for I := 129 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    for I := 0 to System.High(A) do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(TMap.GetKey(Curr))[aIndex];
+        if b < 128 then
+          begin
+            aDst[Ofs[b]] := Curr;
+            Inc(Ofs[b]);
+          end
+        else
+          begin
+            aDst[Pred(Ofs[b])] := Curr;
+            Dec(Ofs[b]);
+          end;
       end;
     Result := True;
   end;
@@ -14237,18 +14359,37 @@ var
 begin
   pA := @A[0];
   pBuf := Pointer(aBuf);
-  if CFSigned then
-    begin
-      for I := 0 to SizeOf(TKey) - 2 do
-        if SimplePass(pA, pBuf, I) then
-          PtrSwap(pA, pBuf);
-      if SignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+{$IFDEF ENDIAN_LITTLE}
+  for I := 0 to SizeOf(TKey) - 2 do
+    if SimplePass(pA, pBuf, I) then
+      THelper.PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    ktUInt:
+      if SimplePass(pA, pBuf, Pred(SizeOf(TKey))) then
+        THelper.PtrSwap(pA, pBuf);
+    ktSInt:
+      if IntSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+        THelper.PtrSwap(pA, pBuf);
+    ktFloat:
+      if FloatSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+        THelper.PtrSwap(pA, pBuf);
+  end;
+{$ELSE ENDIAN_LITTLE}
+  for I := Pred(SizeOf(TKey)) downto 1 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    ktUInt:
+      if SimplePass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
-    end
-  else
-    for I := 0 to Pred(SizeOf(TKey)) do
-      if SimplePass(pA, pBuf, I) then
+    ktSInt:
+      if IntSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
+    ktFloat:
+      if FloatSignedPass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+  end;
+{$ENDIF ENDIAN_LITTLE}
   if pBuf <> Pointer(aBuf) then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
@@ -14284,11 +14425,13 @@ var
   R: SizeInt;
 begin
   R := System.High(A);
-  if R > 0 then
+  if (R > 0) and (THelper.CountRun(@A[0], R, o) < R) then
     begin
-      if R <= INTRO_CUTOFF then
+      if R <= RADIX_CUTOFF then
         begin
-          specialize TGBaseArrayHelper<TItem, TGRadixSorter>.IntroSort(A, o);
+          THelper.TPDQSort.Sort(@A[0], @A[R] + 1);
+          if o = soDesc then
+            THelper.DoReverse(@A[0], R);
           exit;
         end;
       DoSort(A, aBuf, o);
