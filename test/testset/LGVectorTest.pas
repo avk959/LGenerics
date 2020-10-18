@@ -25,6 +25,14 @@ type
     class operator < (const L, R: TMyRec): Boolean; inline;
   end;
 
+  TMyDblRec = record
+    Key,
+    Data: Double;
+    constructor Create(aKey, aData: Double);
+    class function GetKey(const aRec: TMyDblRec): Double; static; inline;
+    class operator < (const L, R: TMyDblRec): Boolean; inline;
+  end;
+
   { TGVectorTest }
 
   TGVectorTest = class(TTestCase)
@@ -251,6 +259,7 @@ type
 
     procedure OrdHelper;
     procedure RadixHelper;
+    procedure RadixHelperDouble;
   end;
 
   { TBoolVectorTest }
@@ -301,6 +310,7 @@ type
   end;
 
 implementation
+
 {$B-}{$COPERATORS ON}
 
 { TMyRec }
@@ -317,6 +327,24 @@ begin
 end;
 
 class operator TMyRec.<(const L, R: TMyRec): Boolean;
+begin
+  Result := L.Key < R.Key;
+end;
+
+{ TMyDblRec }
+
+constructor TMyDblRec.Create(aKey, aData: Double);
+begin
+  Key := aKey;
+  Data := aData;
+end;
+
+class function TMyDblRec.GetKey(const aRec: TMyDblRec): Double;
+begin
+  Result := aRec.Key;
+end;
+
+class operator TMyDblRec.<(const L, R: TMyDblRec): Boolean;
 begin
   Result := L.Key < R.Key;
 end;
@@ -2209,6 +2237,29 @@ const
 begin
   for I := 1 to TestSize do
     v.Add(TMyRec.Create(Random(MaxInt) - MaxInt div 2, Random));
+  TRadixHelper.Sort(v);
+  AssertTrue(THelper.IsNonDescending(v));
+  THelper.RandomShuffle(v);
+  TRadixHelper.Sort(v, soDesc);
+  AssertTrue(THelper.IsNonAscending(v));
+end;
+
+procedure TGLiteVectorTest.RadixHelperDouble;
+type
+  TRadixHelper = specialize TGRadixVectorSorter<TMyDblRec, Double, TMyDblRec>;
+  THelper      = specialize TGComparableVectorHelper<TMyDblRec>;
+  TVector      = specialize TGLiteVector<TMyDblRec>;
+var
+  v: TVector;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to High(TestSize) do
+    if NextRandomBoolean then
+      v.Add(TMyDblRec.Create(Random * Random(1000), 100.0))
+    else
+      v.Add(TMyDblRec.Create(-Random * Random(1000), 100.0));
   TRadixHelper.Sort(v);
   AssertTrue(THelper.IsNonDescending(v));
   THelper.RandomShuffle(v);
