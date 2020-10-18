@@ -1100,6 +1100,31 @@ type
     class function  SelectDistinct(const A: array of T): TArray; static;
   end;
 
+  { TGNumArrayHelper }
+  generic TGNumArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
+  private
+  type
+    TItemType = (itUInt, itSInt, itFloat);
+    TOffsets  = array[0..Pred(SizeOf(T)), 0..255] of SizeInt;
+    TKeyBytes = array[0..Pred(SizeOf(T))] of Byte;
+
+  class var
+    CFKeyKind: TItemType;
+    class constructor Init;
+    class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
+    class procedure DoRadixSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoRadixSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  public
+  { LSD radix sorting, requires O(N) auxiliary memory }
+    class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
+    class procedure RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  { default sorting, currently RadixSort if length of A > RADIX_CUTOFF + 1,
+    otherwise PDQSort }
+    class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
+    class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
+  end;
+
   { TGOrdinalArrayHelper: for ordinal numeric types only }
   generic TGOrdinalArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
   private
@@ -1160,7 +1185,7 @@ type
       class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
       class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
     public
-      class function  Less(const L, R: TItem): Boolean; static; inline;
+      class function  Less(const L, R: TItem): Boolean; static; //inline;
       class procedure Sort(var A: array of TItem; o: TSortOrder = soAsc); static;
       class procedure Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
     end;
@@ -13635,6 +13660,380 @@ begin
         Result[I] := Result[J];
     end;
   System.SetLength(Result, Succ(I));
+end;
+
+{ TGNumArrayHelper }
+
+class constructor TGNumArrayHelper.Init;
+begin
+  case GetTypeKind(T) of
+    tkInteger:
+      if GetTypeData(TypeInfo(T))^.MinValue < 0 then
+        CFKeyKind := itSInt
+      else
+        CFKeyKind := itUInt;
+    tkInt64:
+      if GetTypeData(TypeInfo(T))^.MinInt64Value < 0 then
+        CFKeyKind := itSInt
+      else
+        CFKeyKind := itUInt;
+    tkFloat:
+      case GetTypeData(TypeInfo(T))^.FloatType of
+        ftSingle, ftDouble, ftExtended: CFKeyKind := itFloat;
+        ftCurr, ftComp: CFKeyKind := itSInt;
+      end
+  else
+    CFKeyKind := itUInt;
+  end;
+end;
+
+class procedure TGNumArrayHelper.FillOffsets(const A: array of T; out aOfs: TOffsets);
+var
+  Curr: T;
+  I, J: SizeInt;
+begin
+  aOfs := Default(TOffsets);
+  for I := 0 to System.High(A) do
+    begin
+      Curr := A[I];
+      for J := 0 to Pred(SizeOf(T)) do
+        Inc(aOfs[J, TKeyBytes(Curr)[J]]);
+    end;
+end;
+
+class procedure TGNumArrayHelper.DoRadixSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+
+  function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: T;
+    Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    for I := 1 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(Curr)[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
+      end;
+    Result := True;
+  end;
+
+  function IntSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: T;
+    Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    for I := 129 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    Ofs[0] += Ofs[255];
+    for I := 1 to 127 do
+      Ofs[I] += Ofs[Pred(I)];
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(Curr)[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
+      end;
+    Result := True;
+  end;
+
+  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: T;
+    Ofs: PSizeInt;
+    I, Save, Sum: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    for I := 254 downto 128 do
+      Ofs[I] += Ofs[Succ(I)];
+    Sum := Ofs[128];
+    for I := 0 to 127 do
+      begin
+        Save := Ofs[I];
+        Ofs[I] := Sum;
+        Sum += Save;
+      end;
+    for I := 0 to System.High(A) do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(Curr)[aIndex];
+        if b < 128 then
+          begin
+            aDst[Ofs[b]] := Curr;
+            Inc(Ofs[b]);
+          end
+        else
+          begin
+            aDst[Pred(Ofs[b])] := Curr;
+            Dec(Ofs[b]);
+          end;
+      end;
+    Result := True;
+  end;
+
+var
+  I: SizeInt;
+  pA, pBuf: PItem;
+begin
+  pA := @A[0];
+  pBuf := Pointer(aBuf);
+{$IFDEF ENDIAN_LITTLE}
+  for I := 0 to SizeOf(T) - 2 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    itUInt:
+      if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+    itSInt:
+      if IntSignedPass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+    itFloat:
+      if FloatSignedPass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+  end;
+{$ELSE ENDIAN_LITTLE}
+  for I := Pred(SizeOf(T)) downto 1 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    ktUInt:
+      if SimplePass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+    ktSInt:
+      if IntSignedPass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+    ktFloat:
+      if FloatSignedPass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+  end;
+{$ENDIF ENDIAN_LITTLE}
+  if pBuf <> Pointer(aBuf) then
+    for I := 0 to System.High(A) do
+      A[I] := aBuf[I];
+end;
+
+class procedure TGNumArrayHelper.DoRadixSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+
+  function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: T;
+    Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    for I := 254 downto 0 do
+      Ofs[I] += Ofs[Succ(I)];
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(Curr)[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
+      end;
+    Result := True;
+  end;
+
+  function IntSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: T;
+    Ofs: PSizeInt;
+    I: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    for I := 126 downto 0 do
+      Ofs[I] += Ofs[Succ(I)];
+    Ofs[255] += Ofs[0];
+    for I := 254 downto 128 do
+      Ofs[I] += Ofs[Succ(I)];
+    for I := System.High(A) downto 0 do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(Curr)[aIndex];
+        aDst[Pred(Ofs[b])] := Curr;
+        Dec(Ofs[b]);
+      end;
+    Result := True;
+  end;
+
+  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  var
+    Curr: T;
+    Ofs: PSizeInt;
+    I, Save, Sum: SizeInt;
+    b: Byte;
+  begin
+    Ofs := @aOfs[aIndex, 0];
+    for I := 0 to 255 do
+      if Ofs[I] <> 0 then
+        if Ofs[I] = System.Length(A) then
+          exit(False)
+        else
+          break;
+    Sum := 0;
+    for I := 127 downto 0 do
+      begin
+        Save := Ofs[I];
+        Ofs[I] := Sum;
+        Sum += Save;
+      end;
+    Ofs[128] += Sum;
+    for I := 129 to 255 do
+      Ofs[I] += Ofs[Pred(I)];
+    for I := 0 to System.High(A) do
+      begin
+        Curr := aSrc[I];
+        b := TKeyBytes(Curr)[aIndex];
+        if b < 128 then
+          begin
+            aDst[Ofs[b]] := Curr;
+            Inc(Ofs[b]);
+          end
+        else
+          begin
+            aDst[Pred(Ofs[b])] := Curr;
+            Dec(Ofs[b]);
+          end;
+      end;
+    Result := True;
+  end;
+
+var
+  I: SizeInt;
+  pA, pBuf: PItem;
+begin
+  pA := @A[0];
+  pBuf := Pointer(aBuf);
+{$IFDEF ENDIAN_LITTLE}
+  for I := 0 to SizeOf(T) - 2 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    itUInt:
+      if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+    itSInt:
+      if IntSignedPass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+    itFloat:
+      if FloatSignedPass(pA, pBuf, Pred(SizeOf(T))) then
+        PtrSwap(pA, pBuf);
+  end;
+{$ELSE ENDIAN_LITTLE}
+  for I := Pred(SizeOf(T)) downto 1 do
+    if SimplePass(pA, pBuf, I) then
+      PtrSwap(pA, pBuf);
+  case CFKeyKind of
+    ktUInt:
+      if SimplePass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+    ktSInt:
+      if IntSignedPass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+    ktFloat:
+      if FloatSignedPass(pA, pBuf, 0) then
+        PtrSwap(pA, pBuf);
+  end;
+{$ENDIF ENDIAN_LITTLE}
+  if pBuf <> Pointer(aBuf) then
+    for I := 0 to System.High(A) do
+      A[I] := aBuf[I];
+end;
+
+class procedure TGNumArrayHelper.DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
+var
+  Offsets: TOffsets;
+begin
+  FillOffsets(A, Offsets);
+  if System.Length(aBuf) < System.Length(A) then
+    System.SetLength(aBuf, System.Length(A));
+  if o = soAsc then
+    DoRadixSortA(A, aBuf, Offsets)
+  else
+    DoRadixSortD(A, aBuf, Offsets);
+end;
+
+class procedure TGNumArrayHelper.RadixSort(var A: array of T; o: TSortOrder);
+var
+  Buf: TArray = nil;
+begin
+  RadixSort(A, Buf, o);
+end;
+
+class procedure TGNumArrayHelper.RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    DoRadixSort(A, aBuf, o);
+end;
+
+class procedure TGNumArrayHelper.Sort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+  Buf: TArray = nil;
+begin
+  R := System.High(A);
+  if (R > 0) and (CountRun(A, 0, R, o) < R) then
+    begin
+      if R <= RADIX_CUTOFF then
+        begin
+          TPDQSort.Sort(@A[0], @A[R] + 1);
+          if o = soDesc then
+            DoReverse(A, 0, R);
+          exit;
+        end;
+      DoRadixSort(A, Buf, o);
+    end;
+end;
+
+class function TGNumArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
+begin
+  Result := CreateCopy(A);
+  Sort(Result, o);
 end;
 
 { TGOrdinalArrayHelper }
