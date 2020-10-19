@@ -559,7 +559,7 @@ type
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
-  { default sort algorithm, currently it is IntroSort}
+  { default sort algorithm, currently PDQSort}
     class procedure Sort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure Sort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
@@ -621,7 +621,7 @@ type
     if N < 0 then N sets to 0; if N > High(V) then N sets to High(V);
     is nondestuctive: creates temp copy of V }
     class function  NthSmallest(v: TVector; N: SizeInt): TOptional; static; inline;
-    class function  NthSmallest(constref v: TLiteVector; N: SizeInt): TOptional; static; inline;
+    class function  NthSmallest(constref v: TLiteVector; N: SizeInt): TOptional; static; inline; //constref ?
   { returns True if permutation towards nondescending state of V has done, False otherwise }
     class function  NextPermutation2Asc(v: TVector): Boolean; static; inline;
     class function  NextPermutation2Asc(var v: TLiteVector): Boolean; static; inline;
@@ -655,7 +655,7 @@ type
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
-  { default sort algorithm, currently it is IntroSort}
+  { default sort algorithm, currently PDQSort}
     class procedure Sort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure Sort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
@@ -744,7 +744,7 @@ type
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
-  { default sort algorithm, currently it is IntroSort}
+  { default sort algorithm, currently PDQSort }
     class procedure Sort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
     class procedure Sort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
@@ -837,7 +837,7 @@ type
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
-  { default sort algorithm, currently it is IntroSort}
+  { default sort algorithm, currently PDQSort }
     class procedure Sort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
     class procedure Sort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
@@ -930,7 +930,7 @@ type
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
-  { default sort algorithm, currently it is IntroSort}
+  { default sort algorithm, currently PDQSort }
     class procedure Sort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
     class procedure Sort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { copies only distinct values from v }
