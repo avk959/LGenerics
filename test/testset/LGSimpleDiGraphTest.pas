@@ -133,6 +133,7 @@ type
     TNetRef      = specialize TGAutoRef<TNet>;
     TCostNetRef  = specialize TGAutoRef<TCostNet>;
     THelper      = specialize TGOrdinalArrayHelper<Integer>;
+    TSIntHelper  = specialize TGOrdinalArrayHelper<SizeInt>;
     TSearch      = specialize TGSimpleArrayHelper<SizeInt>;
     TPoint       = specialize TGPoint2D<Integer>;
     TPointWeight = specialize TGSimpleWeight<ValReal>;
@@ -2230,7 +2231,6 @@ end;
 function TWeightedDigraphTest.GeneratePointGraph(aVertCount, aEdgeCount: Integer): TPointGraph;
 var
   I, x, y: Integer;
-  s, d: TPoint;
 begin
   Result := TPointGraph.Create;
   if aVertCount < 2 then
@@ -2527,7 +2527,7 @@ begin
   AssertTrue(pd.Length > 0);
   p := g.Instance.MinPathAStarI(0, 199, w, @PointDist);
   AssertTrue(SameValue(wd, w));
-  AssertTrue(THelper.Same(p, pd));
+  AssertTrue(TSIntHelper.Same(p, pd));
 end;
 
 procedure TWeightedDigraphTest.MinPathNbaStar;
@@ -2542,7 +2542,7 @@ begin
   AssertTrue(pd.Length > 0);
   p := g.Instance.MinPathNbaStarI(0, 199, gRev.Instance, w, @PointDist);
   AssertTrue(SameValue(wd, w));
-  AssertTrue(THelper.Same(p, pd));
+  AssertTrue(TSIntHelper.Same(p, pd));
 end;
 
 procedure TWeightedDigraphTest.FindMinPath;
