@@ -116,6 +116,8 @@ type
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
                                   aNum: SizeInt; aUseSwaps: Boolean); static;
+    { aBorder MUST be power of 2 }
+      class function AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer; static; inline;
     end;
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
@@ -1310,6 +1312,14 @@ begin
           end;
         TFake(R^) := v;
       end;
+end;
+
+class function TGArrayHelpUtil.TPDQSortBase.AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer;
+var
+  Adr: SizeInt absolute aAdr;
+  Res: SizeInt absolute Result;
+begin
+  Res := Adr + Pred(aBorder) - (Adr + Pred(aBorder)) and Pred(aBorder);
 end;
 
 { TGArrayHelpUtil }
@@ -2647,8 +2657,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -5148,8 +5158,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -7018,8 +7028,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -8907,8 +8917,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -10799,8 +10809,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -12212,8 +12222,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
