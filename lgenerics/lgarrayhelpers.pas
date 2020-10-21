@@ -102,11 +102,11 @@ type
       class function  MinRunLen(aTotalSize: SizeInt): SizeInt; static;
     end;
 
-    TPDQSortBase = object
+    TBlockSortBase = object
     public
     type
       TPart = specialize TGTuple2<PItem, Boolean>;
-    private
+    protected
     const
       BLOCK_SIZE                   = 128;
       CACHE_LINE_SIZE              = 64;
@@ -117,7 +117,7 @@ type
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
                                   aNum: SizeInt; aUseSwaps: Boolean); static;
     { aBorder MUST be power of 2 }
-      class function AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer; static; inline;
+      class function AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer; static;{$ifndef CPU86}inline;{$endif}
     end;
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
@@ -251,15 +251,15 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt); static;
     end;
 
-    TPDQSort = object(TPDQSortBase)
+    TBlockSort = object(TBlockSortBase)
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
+      procedure DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem); static;
+      class procedure PDQSort(aStart, aFinish: PItem); static;
     end;
 
     class function  TryInsertSortA(A: PItem; L, R: SizeInt): SizeInt; static;
@@ -448,15 +448,15 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt); static;
     end;
 
-    TPDQSort = object(TPDQSortBase)
+    TBlockSort = object(TBlockSortBase)
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
+      procedure DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem); static;
+      class procedure PDQSort(aStart, aFinish: PItem); static;
     end;
 
     class function  TryInsertSortA(A: PItem; L, R: SizeInt): SizeInt; static;
@@ -585,15 +585,15 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt; c: TLess); static;
     end;
 
-    TPDQSort = object(TPDQSortBase)
+    TBlockSort = object(TBlockSortBase)
     private
       class procedure Sort3(A, B, D: PItem; c: TLess); static; inline;
       function  PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TLess);
+      procedure DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TLess);
       class function  PartialInsertionSort(aStart, aFinish: PItem; c: TLess): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem; c: TLess); static;
+      class procedure PDQSort(aStart, aFinish: PItem; c: TLess); static;
     end;
 
     class function  TryInsertSortA(A: PItem; L, R: SizeInt; c: TLess): SizeInt; static;
@@ -725,15 +725,15 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt; c: TOnLess); static;
     end;
 
-    TPDQSort = object(TPDQSortBase)
+    TBlockSort = object(TBlockSortBase)
     private
       class procedure Sort3(A, B, D: PItem; c: TOnLess); static; inline;
       function  PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TOnLess);
+      procedure DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TOnLess);
       class function  PartialInsertionSort(aStart, aFinish: PItem; c: TOnLess): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem; c: TOnLess): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem; c: TOnLess); static;
+      class procedure PDQSort(aStart, aFinish: PItem; c: TOnLess); static;
     end;
 
     class function  TryInsertSortA(A: PItem; L, R: SizeInt; c: TOnLess): SizeInt; static;
@@ -865,15 +865,15 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt; c: TNestLess); static;
     end;
 
-    TPDQSort = object(TPDQSortBase)
+    TBlockSort = object(TBlockSortBase)
     private
       class procedure Sort3(A, B, D: PItem; c: TNestLess); static;{$ifndef CPU86}inline;{$endif}//todo: ???
       function  PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TNestLess);
+      procedure DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TNestLess);
       class function  PartialInsertionSort(aStart, aFinish: PItem; c: TNestLess): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem; c: TNestLess): PItem; static;
     public
-      class procedure Sort(aStart, aFinish: PItem; c: TNestLess); static;
+      class procedure PDQSort(aStart, aFinish: PItem; c: TNestLess); static;
     end;
 
     class function  TryInsertSortA(A: PItem; L, R: SizeInt; c: TNestLess): SizeInt; static;
@@ -985,17 +985,17 @@ type
     RADIX_CUTOFF = 255;
 
   type
-    TPDQSort = object(TPDQSortBase)
+    TBlockSort = object(TBlockSortBase)
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
+      procedure DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
                                   aNum: SizeInt; aUseSwaps: Boolean); static;
     public
-      class procedure Sort(aStart, aFinish: PItem); static;
+      class procedure PDQSort(aStart, aFinish: PItem); static;
     end;
 
     class function  TryInsertSortA(var A: array of T; L, R: SizeInt): SizeInt; static;
@@ -1280,9 +1280,9 @@ begin
     Result := aTotalSize;
 end;
 
-{ TGArrayHelpUtil.TPDQSortBase }
+{ TGArrayHelpUtil.TBlockSortBase }
 
-class procedure TGArrayHelpUtil.TPDQSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+class procedure TGArrayHelpUtil.TBlockSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
   aNum: SizeInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
@@ -1314,7 +1314,7 @@ begin
       end;
 end;
 
-class function TGArrayHelpUtil.TPDQSortBase.AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer;
+class function TGArrayHelpUtil.TBlockSortBase.AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer;
 var
   Adr: SizeInt absolute aAdr;
   Res: SizeInt absolute Result;
@@ -2597,9 +2597,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
-{ TGBaseArrayHelper.TPDQSort }
+{ TGBaseArrayHelper.TBlockSort }
 
-class procedure TGBaseArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+class procedure TGBaseArrayHelper.TBlockSort.Sort3(A, B, C: PItem);
 var
   v: TFake;
 begin
@@ -2623,7 +2623,7 @@ begin
     end;
 end;
 
-function TGBaseArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
+function TGBaseArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -2825,7 +2825,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGBaseArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
+procedure TGBaseArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
 var
   PivotPos: PItem;
   v: TFake;
@@ -2929,13 +2929,13 @@ begin
       else
         if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
-      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost);
+      DoPDQSort(aStart, PivotPos, aBadAllowed, aLeftMost);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
 end;
 
-class function TGBaseArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+class function TGBaseArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Limit: SizeInt;
   Curr, Sift: PItem;
@@ -2963,7 +2963,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+class function TGBaseArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -2997,12 +2997,11 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGBaseArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem);
+class procedure TGBaseArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem);
 var
-  Sorter: TPDQSort;
+  Sorter: TBlockSort;
 begin
-  if aStart = aFinish then exit;
-  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGBaseArrayHelper }
@@ -3944,7 +3943,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
-      TPDQSort.Sort(@A[0], @A[R] + 1);
+      TBlockSort.PDQSort(@A[0], @A[R] + 1);
       if o = soDesc then
         Reverse(A);
     end;
@@ -5098,9 +5097,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
-{ TGComparableArrayHelper.TPDQSort }
+{ TGComparableArrayHelper.TBlockSort }
 
-class procedure TGComparableArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+class procedure TGComparableArrayHelper.TBlockSort.Sort3(A, B, C: PItem);
 var
   v: TFake;
 begin
@@ -5124,7 +5123,7 @@ begin
     end;
 end;
 
-function TGComparableArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
+function TGComparableArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -5326,7 +5325,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGComparableArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGComparableArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -5431,13 +5430,13 @@ begin
       else
         if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
-      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost);
+      DoPDQSort(aStart, PivotPos, aBadAllowed, aLeftMost);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
 end;
 
-class function TGComparableArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+class function TGComparableArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Curr, Sift: PItem;
   Limit: SizeInt;
@@ -5465,7 +5464,7 @@ begin
   Result := True;
 end;
 
-class function TGComparableArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+class function TGComparableArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -5499,12 +5498,11 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGComparableArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem);
+class procedure TGComparableArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem);
 var
-  Sorter: TPDQSort;
+  Sorter: TBlockSort;
 begin
-  if aStart = aFinish then exit;
-  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGComparableArrayHelper }
@@ -6441,7 +6439,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
-      TPDQSort.Sort(@A[0], @A[R] + 1);
+      TBlockSort.PDQSort(@A[0], @A[R] + 1);
       if o = soDesc then
         Reverse(A);
     end;
@@ -6968,9 +6966,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
-{ TGRegularArrayHelper.TPDQSort }
+{ TGRegularArrayHelper.TBlockSort }
 
-class procedure TGRegularArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TLess);
+class procedure TGRegularArrayHelper.TBlockSort.Sort3(A, B, D: PItem; c: TLess);
 var
   v: TFake;
 begin
@@ -6994,7 +6992,7 @@ begin
     end;
 end;
 
-function TGRegularArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
+function TGRegularArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -7196,7 +7194,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGRegularArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGRegularArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TLess);
 var
   PivotPos: PItem;
@@ -7304,13 +7302,13 @@ begin
       else
         if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
            PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
-      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
+      DoPDQSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
 end;
 
-class function TGRegularArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
+class function TGRegularArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TLess): Boolean;
 var
   Curr, Sift: PItem;
@@ -7339,7 +7337,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem;
+class function TGRegularArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -7373,12 +7371,11 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGRegularArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TLess);
+class procedure TGRegularArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem; c: TLess);
 var
-  Sorter: TPDQSort;
+  Sorter: TBlockSort;
 begin
-  if aStart = aFinish then exit;
-  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
 
 { TGRegularArrayHelper }
@@ -8330,7 +8327,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      TPDQSort.Sort(@A[0], @A[R] + 1, c);
+      TBlockSort.PDQSort(@A[0], @A[R] + 1, c);
       if o = soDesc then
         Reverse(A);
     end;
@@ -8857,9 +8854,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
-{ TGDelegatedArrayHelper.TPDQSort }
+{ TGDelegatedArrayHelper.TBlockSort }
 
-class procedure TGDelegatedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TOnLess);
+class procedure TGDelegatedArrayHelper.TBlockSort.Sort3(A, B, D: PItem; c: TOnLess);
 var
   v: TFake;
 begin
@@ -8883,7 +8880,7 @@ begin
     end;
 end;
 
-function TGDelegatedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
+function TGDelegatedArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -9085,7 +9082,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGDelegatedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGDelegatedArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TOnLess);
 var
   PivotPos: PItem;
@@ -9193,13 +9190,13 @@ begin
       else
         if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
            PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
-      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
+      DoPDQSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
 end;
 
-class function TGDelegatedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
+class function TGDelegatedArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TOnLess): Boolean;
 var
   Curr, Sift: PItem;
@@ -9228,7 +9225,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem;
+class function TGDelegatedArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem;
   c: TOnLess): PItem;
 var
   Pivot: T;
@@ -9263,12 +9260,11 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGDelegatedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TOnLess);
+class procedure TGDelegatedArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem; c: TOnLess);
 var
-  Sorter: TPDQSort;
+  Sorter: TBlockSort;
 begin
-  if aStart = aFinish then exit;
-  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
 
 { TGDelegatedArrayHelper }
@@ -10222,7 +10218,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      TPDQSort.Sort(@A[0], @A[R] + 1, c);
+      TBlockSort.PDQSort(@A[0], @A[R] + 1, c);
       if o = soDesc then
         Reverse(A);
     end;
@@ -10749,9 +10745,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
-{ TGNestedArrayHelper.TPDQSort }
+{ TGNestedArrayHelper.TBlockSort }
 
-class procedure TGNestedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TNestLess);
+class procedure TGNestedArrayHelper.TBlockSort.Sort3(A, B, D: PItem; c: TNestLess);
 var
   v: TFake;
 begin
@@ -10775,7 +10771,7 @@ begin
     end;
 end;
 
-function TGNestedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
+function TGNestedArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -10977,7 +10973,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGNestedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGNestedArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TNestLess);
 var
   PivotPos: PItem;
@@ -11085,13 +11081,13 @@ begin
       else
         if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
            PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
-      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
+      DoPDQSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
 end;
 
-class function TGNestedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
+class function TGNestedArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TNestLess): Boolean;
 var
   Curr, Sift: PItem;
@@ -11120,7 +11116,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem;
+class function TGNestedArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem;
   c: TNestLess): PItem;
 var
   Pivot: T;
@@ -11155,12 +11151,11 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGNestedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TNestLess);
+class procedure TGNestedArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem; c: TNestLess);
 var
-  Sorter: TPDQSort;
+  Sorter: TBlockSort;
 begin
-  if aStart = aFinish then exit;
-  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
 
 { TGNestedArrayHelper }
@@ -12114,7 +12109,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      TPDQSort.Sort(@A[0], @A[R] + 1, c);
+      TBlockSort.PDQSort(@A[0], @A[R] + 1, c);
       if o = soDesc then
         Reverse(A);
     end;
@@ -12163,9 +12158,9 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-{ TGSimpleArrayHelper.TPDQSort }
+{ TGSimpleArrayHelper.TBlockSort }
 
-class procedure TGSimpleArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+class procedure TGSimpleArrayHelper.TBlockSort.Sort3(A, B, C: PItem);
 var
   v: T;
 begin
@@ -12189,7 +12184,7 @@ begin
     end;
 end;
 
-function TGSimpleArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
+function TGSimpleArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot, v: T;
   First, Last, It, PivotPos: PItem;
@@ -12390,7 +12385,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGSimpleArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGSimpleArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -12495,13 +12490,13 @@ begin
       else
         if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
-      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost);
+      DoPDQSort(aStart, PivotPos, aBadAllowed, aLeftMost);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
 end;
 
-class function TGSimpleArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+class function TGSimpleArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Curr, Sift: PItem;
   Limit: SizeInt;
@@ -12529,7 +12524,7 @@ begin
   Result := True;
 end;
 
-class function TGSimpleArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+class function TGSimpleArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot, v: T;
   First, Last, PivotPos: PItem;
@@ -12562,7 +12557,7 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGSimpleArrayHelper.TPDQSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+class procedure TGSimpleArrayHelper.TBlockSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
   aNum: SizeInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
@@ -12594,12 +12589,11 @@ begin
       end;
 end;
 
-class procedure TGSimpleArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem);
+class procedure TGSimpleArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem);
 var
-  Sorter: TPDQSort;
+  Sorter: TBlockSort;
 begin
-  if aStart = aFinish then exit;
-  {%H-}Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGSimpleArrayHelper }
@@ -13642,7 +13636,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(A, 0, R, o) < R) then
     begin
-      TPDQSort.Sort(@A[0], @A[R] + 1);
+      TBlockSort.PDQSort(@A[0], @A[R] + 1);
       if o = soDesc then
         DoReverse(A, 0, R);
     end;
@@ -14038,7 +14032,7 @@ begin
     begin
       if R <= RADIX_CUTOFF then
         begin
-          TPDQSort.Sort(@A[0], @A[R] + 1);
+          TBlockSort.PDQSort(@A[0], @A[R] + 1);
           if o = soDesc then
             DoReverse(A, 0, R);
           exit;
@@ -14460,7 +14454,7 @@ begin
         begin
           if CountRun(A, 0, R, o) < R then
             begin
-              TPDQSort.Sort(@A[0], @A[R] + 1);
+              TBlockSort.PDQSort(@A[0], @A[R] + 1);
               if o = soDesc then
                 DoReverse(A, 0, R);
             end;
@@ -14845,7 +14839,7 @@ begin
     begin
       if R <= RADIX_CUTOFF then
         begin
-          THelper.TPDQSort.Sort(@A[0], @A[R] + 1);
+          THelper.TBlockSort.PDQSort(@A[0], @A[R] + 1);
           if o = soDesc then
             THelper.DoReverse(@A[0], R);
           exit;
