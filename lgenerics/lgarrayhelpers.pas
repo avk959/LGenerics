@@ -3499,7 +3499,7 @@ begin
       begin
         DoDPQSort(A, Left - 1, aLeftmost);
         DoDPQSort(@A[Right + 1], R - Right - 1, False);
-        if TCmpRel.Less(A[Left], A[Right]) or TCmpRel.Less(A[Right], A[Left]) then
+        if TCmpRel.Less(A[Left], A[Right]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, False);
       end
   else
@@ -5998,7 +5998,7 @@ begin
       begin
         DoDPQSort(A, Left - 1, aLeftmost);
         DoDPQSort(@A[Right + 1], R - Right - 1, False);
-        if ValNotEqual(A[Left], A[Right]) then
+        if A[Left] < A[Right] then
           DoDPQSort(@A[Left + 1], Right - Left - 2, False);
       end
   else
@@ -7880,14 +7880,15 @@ begin
       begin
         DoDPQSort(A, Left - 1, c, aLeftmost);
         DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
-        if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
+        if c(A[Left], A[Right]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
       end
   else
     if R > 0 then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
+      if aLeftmost then
+        InsertionSort(A, R, c)
+      else
+        UnguardInsertionSort(A, R, c);
 end;
 
 class function TGRegularArrayHelper.QSelectR(A: PItem; R, N: SizeInt; c: TLess): T;
@@ -9770,7 +9771,7 @@ begin
       begin
         DoDPQSort(A, Left - 1, c, aLeftmost);
         DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
-        if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
+        if c(A[Left], A[Right]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
       end
   else
@@ -11662,7 +11663,7 @@ begin
       begin
         DoDPQSort(A, Left - 1, c, aLeftmost);
         DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
-        if c(A[Left], A[Right]) or c(A[Right], A[Left]) then
+        if c(A[Left], A[Right]) then
           DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
       end
   else
