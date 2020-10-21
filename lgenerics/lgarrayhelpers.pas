@@ -3432,7 +3432,8 @@ var
   pL, pR, I: SizeInt;
 begin
   pL := Succ(Random(Pred(R shr 1)));
-  pR := Pred(R - Random(Pred(R shr 1)));
+  //pR := Pred(R - Random(Pred(R shr 1)));
+  pR := pL + R shr 1;
 
   if not TCmpRel.Less(A[pR], A[pL]) then
     begin
@@ -5931,7 +5932,8 @@ var
   pL, pR, I: SizeInt;
 begin
   pL := Succ(Random(Pred(R shr 1)));
-  pR := Pred(R - Random(Pred(R shr 1)));
+  //pR := Pred(R - Random(Pred(R shr 1)));
+  pR := pL + R shr 1;
 
   if A[pR] < A[pL] then
     begin
@@ -7812,7 +7814,8 @@ var
   pL, pR, I: SizeInt;
 begin
   pL := Succ(Random(Pred(R shr 1)));
-  pR := Pred(R - Random(Pred(R shr 1)));
+  //pR := Pred(R - Random(Pred(R shr 1)));
+  pR := pL + R shr 1;
 
   if not c(A[pR], A[pL]) then
     begin
@@ -9701,7 +9704,8 @@ var
   pL, pR, I: SizeInt;
 begin
   pL := Succ(Random(Pred(R shr 1)));
-  pR := Pred(R - Random(Pred(R shr 1)));
+  //pR := Pred(R - Random(Pred(R shr 1)));
+  pR := pL + R shr 1;
 
   if not c(A[pR], A[pL]) then
     begin
@@ -11592,7 +11596,8 @@ var
   pL, pR, I: SizeInt;
 begin
   pL := Succ(Random(Pred(R shr 1)));
-  pR := Pred(R - Random(Pred(R shr 1)));
+  //pR := Pred(R - Random(Pred(R shr 1)));
+  pR := pL + R shr 1;
 
   if not c(A[pR], A[pL]) then
     begin
@@ -13026,7 +13031,8 @@ label
   EndLoop;
 begin
   pL := Succ(L + Random(Pred((R - L) shr 1)));
-  pR := Pred(R - Random(Pred((R - L) shr 1)));
+  //pR := Pred(R - Random(Pred((R - L) shr 1)));
+  pR := pL + (R - L) shr 1;
 
   if A[pL] <= A[pR] then
     begin
@@ -13096,15 +13102,15 @@ begin
       begin
         DoDPQSort(A, L, Left - 1);
         DoDPQSort(A, Right + 1, R);
-        if A[Left] <> A[Right] then
+        if A[Left] < A[Right] then
           DoDPQSort(A, Left + 1, Right - 1);
       end
   else
     if R - L > 0 then
-      if L = 0 then
-        InsertionSort(A, L, R)
+      if L <> 0 then
+        UnguardInsertionSort(A, L, R)
       else
-        UnguardInsertionSort(A, L, R);
+        InsertionSort(A, L, R);
 end;
 
 class procedure TGSimpleArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
