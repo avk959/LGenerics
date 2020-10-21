@@ -102,7 +102,7 @@ type
       class function  MinRunLen(aTotalSize: SizeInt): SizeInt; static;
     end;
 
-    TBlockSortBase = object
+    TBlockQSortBase = object
     public
     type
       TPart = specialize TGTuple2<PItem, Boolean>;
@@ -116,8 +116,6 @@ type
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
                                   aNum: SizeInt; aUseSwaps: Boolean); static;
-    { aBorder MUST be power of 2 }
-      class function AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer; static;{$ifndef CPU86}inline;{$endif}
     end;
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
@@ -251,7 +249,7 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt); static;
     end;
 
-    TBlockSort = object(TBlockSortBase)
+    TBlockQSort = object(TBlockQSortBase)
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
@@ -448,7 +446,7 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt); static;
     end;
 
-    TBlockSort = object(TBlockSortBase)
+    TBlockQSort = object(TBlockQSortBase)
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
@@ -585,7 +583,7 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt; c: TLess); static;
     end;
 
-    TBlockSort = object(TBlockSortBase)
+    TBlockQSort = object(TBlockQSortBase)
     private
       class procedure Sort3(A, B, D: PItem; c: TLess); static; inline;
       function  PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
@@ -725,7 +723,7 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt; c: TOnLess); static;
     end;
 
-    TBlockSort = object(TBlockSortBase)
+    TBlockQSort = object(TBlockQSortBase)
     private
       class procedure Sort3(A, B, D: PItem; c: TOnLess); static; inline;
       function  PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
@@ -865,7 +863,7 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt; c: TNestLess); static;
     end;
 
-    TBlockSort = object(TBlockSortBase)
+    TBlockQSort = object(TBlockQSortBase)
     private
       class procedure Sort3(A, B, D: PItem; c: TNestLess); static;{$ifndef CPU86}inline;{$endif}//todo: ???
       function  PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
@@ -985,7 +983,7 @@ type
     RADIX_CUTOFF = 255;
 
   type
-    TBlockSort = object(TBlockSortBase)
+    TBlockQSort = object(TBlockQSortBase)
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
@@ -1280,9 +1278,9 @@ begin
     Result := aTotalSize;
 end;
 
-{ TGArrayHelpUtil.TBlockSortBase }
+{ TGArrayHelpUtil.TBlockQSortBase }
 
-class procedure TGArrayHelpUtil.TBlockSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+class procedure TGArrayHelpUtil.TBlockQSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
   aNum: SizeInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
@@ -1312,14 +1310,6 @@ begin
           end;
         TFake(R^) := v;
       end;
-end;
-
-class function TGArrayHelpUtil.TBlockSortBase.AlignPtr(aAdr: Pointer; aBorder: SizeInt): Pointer;
-var
-  Adr: SizeInt absolute aAdr;
-  Res: SizeInt absolute Result;
-begin
-  Res := Adr + Pred(aBorder) - (Adr + Pred(aBorder)) and Pred(aBorder);
 end;
 
 { TGArrayHelpUtil }
@@ -2597,9 +2587,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
-{ TGBaseArrayHelper.TBlockSort }
+{ TGBaseArrayHelper.TBlockQSort }
 
-class procedure TGBaseArrayHelper.TBlockSort.Sort3(A, B, C: PItem);
+class procedure TGBaseArrayHelper.TBlockQSort.Sort3(A, B, C: PItem);
 var
   v: TFake;
 begin
@@ -2623,7 +2613,7 @@ begin
     end;
 end;
 
-function TGBaseArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem): TPart;
+function TGBaseArrayHelper.TBlockQSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -2657,8 +2647,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -2825,7 +2815,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGBaseArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
+procedure TGBaseArrayHelper.TBlockQSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
 var
   PivotPos: PItem;
   v: TFake;
@@ -2935,7 +2925,7 @@ begin
     end;
 end;
 
-class function TGBaseArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+class function TGBaseArrayHelper.TBlockQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Limit: SizeInt;
   Curr, Sift: PItem;
@@ -2963,7 +2953,7 @@ begin
   Result := True;
 end;
 
-class function TGBaseArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+class function TGBaseArrayHelper.TBlockQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -2997,9 +2987,9 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGBaseArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem);
+class procedure TGBaseArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem);
 var
-  Sorter: TBlockSort;
+  Sorter: TBlockQSort;
 begin
   {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
@@ -3389,17 +3379,11 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(@A[0],
-                @A[Succ(R) shr 3],
-                @A[Succ(R) shr 2]),
-      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
-                @A[Succ(R) shr 1],
-                @A[Succ(R) shr 1 + Succ(R) shr 3]),
-      MedianOf3(@A[R - Succ(R) shr 2],
-                @A[R - Succ(R) shr 3],
-                @A[R]))^
+      MedianOf3(A, @A[R shr 3], @A[R shr 2]),
+      MedianOf3(@A[R shr 1 - R shr 3], @A[R shr 1], @A[R shr 1 + R shr 3]),
+      MedianOf3(@A[R - R shr 2], @A[R - R shr 3], @A[R]))^
   else
-    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R])^;
+    Pivot := MedianOf3(A, @A[R shr 1], @A[R])^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -3943,7 +3927,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
-      TBlockSort.PDQSort(@A[0], @A[R] + 1);
+      TBlockQSort.PDQSort(@A[0], @A[R] + 1);
       if o = soDesc then
         Reverse(A);
     end;
@@ -4279,16 +4263,16 @@ begin
   if R - L > TUtil.MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
       MedianOf3(e.UncMutable[L],
-                e.UncMutable[Succ(R-L) shr 3 + L],
-                e.UncMutable[Succ(R-L) shr 2 + L]),
-      MedianOf3(e.UncMutable[Succ(R-L) shr 1 - Succ(R) shr 3 + L],
-                e.UncMutable[Succ(R-L) shr 1 + L],
-                e.UncMutable[Succ(R-L) shr 1 + Succ(R-L) shr 3 + L]),
-      MedianOf3(e.UncMutable[R - Succ(R-L) shr 2],
-                e.UncMutable[R - Succ(R-L) shr 3],
+                e.UncMutable[(R-L) shr 3 + L],
+                e.UncMutable[(R-L) shr 2 + L]),
+      MedianOf3(e.UncMutable[(R-L) shr 1 - (R) shr 3 + L],
+                e.UncMutable[(R-L) shr 1 + L],
+                e.UncMutable[(R-L) shr 1 + (R-L) shr 3 + L]),
+      MedianOf3(e.UncMutable[R - (R-L) shr 2],
+                e.UncMutable[R - (R-L) shr 3],
                 e.UncMutable[R]))^
   else
-    Pivot := MedianOf3(e.UncMutable[L], e.UncMutable[Succ(R-L) shr 1 + L], e.UncMutable[R])^;
+    Pivot := MedianOf3(e.UncMutable[L], e.UncMutable[(R-L) shr 1 + L], e.UncMutable[R])^;
   pL := Pred(L);
   pR := Succ(R);
   repeat
@@ -5097,9 +5081,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
-{ TGComparableArrayHelper.TBlockSort }
+{ TGComparableArrayHelper.TBlockQSort }
 
-class procedure TGComparableArrayHelper.TBlockSort.Sort3(A, B, C: PItem);
+class procedure TGComparableArrayHelper.TBlockQSort.Sort3(A, B, C: PItem);
 var
   v: TFake;
 begin
@@ -5123,7 +5107,7 @@ begin
     end;
 end;
 
-function TGComparableArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem): TPart;
+function TGComparableArrayHelper.TBlockQSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -5157,8 +5141,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -5325,7 +5309,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGComparableArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGComparableArrayHelper.TBlockQSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -5436,7 +5420,7 @@ begin
     end;
 end;
 
-class function TGComparableArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+class function TGComparableArrayHelper.TBlockQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Curr, Sift: PItem;
   Limit: SizeInt;
@@ -5464,7 +5448,7 @@ begin
   Result := True;
 end;
 
-class function TGComparableArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+class function TGComparableArrayHelper.TBlockQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -5498,9 +5482,9 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGComparableArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem);
+class procedure TGComparableArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem);
 var
-  Sorter: TBlockSort;
+  Sorter: TBlockQSort;
 begin
   {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
@@ -5888,17 +5872,11 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(@A[0],
-                @A[Succ(R) shr 3],
-                @A[Succ(R) shr 2]),
-      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
-                @A[Succ(R) shr 1],
-                @A[Succ(R) shr 1 + Succ(R) shr 3]),
-      MedianOf3(@A[R - Succ(R) shr 2],
-                @A[R - Succ(R) shr 3],
-                @A[R]))^
+      MedianOf3(A, @A[R shr 3], @A[R shr 2]),
+      MedianOf3(@A[R shr 1 - R shr 3], @A[R shr 1], @A[R shr 1 + R shr 3]),
+      MedianOf3(@A[R - R shr 2], @A[R - R shr 3], @A[R]))^
   else
-    Pivot := MedianOf3(@A[0],@ A[Succ(R) shr 1], @A[R])^;
+    Pivot := MedianOf3(A, @A[R shr 1], @A[R])^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -6439,7 +6417,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
-      TBlockSort.PDQSort(@A[0], @A[R] + 1);
+      TBlockQSort.PDQSort(@A[0], @A[R] + 1);
       if o = soDesc then
         Reverse(A);
     end;
@@ -6966,9 +6944,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
-{ TGRegularArrayHelper.TBlockSort }
+{ TGRegularArrayHelper.TBlockQSort }
 
-class procedure TGRegularArrayHelper.TBlockSort.Sort3(A, B, D: PItem; c: TLess);
+class procedure TGRegularArrayHelper.TBlockQSort.Sort3(A, B, D: PItem; c: TLess);
 var
   v: TFake;
 begin
@@ -6992,7 +6970,7 @@ begin
     end;
 end;
 
-function TGRegularArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
+function TGRegularArrayHelper.TBlockQSort.PartitionRight(aStart, aFinish: PItem; c: TLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -7026,8 +7004,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -7194,7 +7172,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGRegularArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGRegularArrayHelper.TBlockQSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TLess);
 var
   PivotPos: PItem;
@@ -7308,7 +7286,7 @@ begin
     end;
 end;
 
-class function TGRegularArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem;
+class function TGRegularArrayHelper.TBlockQSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TLess): Boolean;
 var
   Curr, Sift: PItem;
@@ -7337,7 +7315,7 @@ begin
   Result := True;
 end;
 
-class function TGRegularArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem;
+class function TGRegularArrayHelper.TBlockQSort.PartitionLeft(aStart, aFinish: PItem; c: TLess): PItem;
 var
   Pivot: T;
   v: TFake;
@@ -7371,9 +7349,9 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGRegularArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem; c: TLess);
+class procedure TGRegularArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem; c: TLess);
 var
-  Sorter: TBlockSort;
+  Sorter: TBlockQSort;
 begin
   {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
@@ -7769,17 +7747,11 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(@A[0],
-                @A[Succ(R) shr 3],
-                @A[Succ(R) shr 2], c),
-      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
-                @A[Succ(R) shr 1],
-                @A[Succ(R) shr 1 + Succ(R) shr 3], c),
-      MedianOf3(@A[R - Succ(R) shr 2],
-                @A[R - Succ(R) shr 3],
-                @A[R], c), c)^
+      MedianOf3(A, @A[R shr 3], @A[R shr 2], c),
+      MedianOf3(@A[R shr 1 - R shr 3], @A[R shr 1], @A[R shr 1 + R shr 3], c),
+      MedianOf3(@A[R - R shr 2], @A[R - R shr 3], @A[R], c), c)^
   else
-    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R], c)^;
+    Pivot := MedianOf3(A, @A[R shr 1], @A[R], c)^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -8327,7 +8299,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      TBlockSort.PDQSort(@A[0], @A[R] + 1, c);
+      TBlockQSort.PDQSort(@A[0], @A[R] + 1, c);
       if o = soDesc then
         Reverse(A);
     end;
@@ -8854,9 +8826,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
-{ TGDelegatedArrayHelper.TBlockSort }
+{ TGDelegatedArrayHelper.TBlockQSort }
 
-class procedure TGDelegatedArrayHelper.TBlockSort.Sort3(A, B, D: PItem; c: TOnLess);
+class procedure TGDelegatedArrayHelper.TBlockQSort.Sort3(A, B, D: PItem; c: TOnLess);
 var
   v: TFake;
 begin
@@ -8880,7 +8852,7 @@ begin
     end;
 end;
 
-function TGDelegatedArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
+function TGDelegatedArrayHelper.TBlockQSort.PartitionRight(aStart, aFinish: PItem; c: TOnLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -8914,8 +8886,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -9082,7 +9054,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGDelegatedArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGDelegatedArrayHelper.TBlockQSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TOnLess);
 var
   PivotPos: PItem;
@@ -9196,7 +9168,7 @@ begin
     end;
 end;
 
-class function TGDelegatedArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem;
+class function TGDelegatedArrayHelper.TBlockQSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TOnLess): Boolean;
 var
   Curr, Sift: PItem;
@@ -9225,7 +9197,7 @@ begin
   Result := True;
 end;
 
-class function TGDelegatedArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem;
+class function TGDelegatedArrayHelper.TBlockQSort.PartitionLeft(aStart, aFinish: PItem;
   c: TOnLess): PItem;
 var
   Pivot: T;
@@ -9260,9 +9232,9 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGDelegatedArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem; c: TOnLess);
+class procedure TGDelegatedArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem; c: TOnLess);
 var
-  Sorter: TBlockSort;
+  Sorter: TBlockQSort;
 begin
   {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
@@ -9658,17 +9630,11 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(@A[0],
-                @A[Succ(R) shr 3],
-                @A[Succ(R) shr 2], c),
-      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
-                @A[Succ(R) shr 1],
-                @A[Succ(R) shr 1 + Succ(R) shr 3], c),
-      MedianOf3(@A[R - Succ(R) shr 2],
-                @A[R - Succ(R) shr 3],
-                @A[R], c), c)^
+      MedianOf3(A, @A[R shr 3], @A[R shr 2], c),
+      MedianOf3(@A[R shr 1 - R shr 3], @A[R shr 1], @A[R shr 1 + R shr 3], c),
+      MedianOf3(@A[R - R shr 2], @A[R - R shr 3], @A[R], c), c)^
   else
-    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R], c)^;
+    Pivot := MedianOf3(A, @A[R shr 1], @A[R], c)^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -10218,7 +10184,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      TBlockSort.PDQSort(@A[0], @A[R] + 1, c);
+      TBlockQSort.PDQSort(@A[0], @A[R] + 1, c);
       if o = soDesc then
         Reverse(A);
     end;
@@ -10745,9 +10711,9 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
-{ TGNestedArrayHelper.TBlockSort }
+{ TGNestedArrayHelper.TBlockQSort }
 
-class procedure TGNestedArrayHelper.TBlockSort.Sort3(A, B, D: PItem; c: TNestLess);
+class procedure TGNestedArrayHelper.TBlockQSort.Sort3(A, B, D: PItem; c: TNestLess);
 var
   v: TFake;
 begin
@@ -10771,7 +10737,7 @@ begin
     end;
 end;
 
-function TGNestedArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
+function TGNestedArrayHelper.TBlockQSort.PartitionRight(aStart, aFinish: PItem; c: TNestLess): TPart;
 var
   Pivot: T;
   v: TFake;
@@ -10805,8 +10771,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -10973,7 +10939,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGNestedArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGNestedArrayHelper.TBlockQSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TNestLess);
 var
   PivotPos: PItem;
@@ -11087,7 +11053,7 @@ begin
     end;
 end;
 
-class function TGNestedArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem;
+class function TGNestedArrayHelper.TBlockQSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TNestLess): Boolean;
 var
   Curr, Sift: PItem;
@@ -11116,7 +11082,7 @@ begin
   Result := True;
 end;
 
-class function TGNestedArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem;
+class function TGNestedArrayHelper.TBlockQSort.PartitionLeft(aStart, aFinish: PItem;
   c: TNestLess): PItem;
 var
   Pivot: T;
@@ -11151,9 +11117,9 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGNestedArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem; c: TNestLess);
+class procedure TGNestedArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem; c: TNestLess);
 var
-  Sorter: TBlockSort;
+  Sorter: TBlockQSort;
 begin
   {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
 end;
@@ -11549,17 +11515,11 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(@A[0],
-                @A[Succ(R) shr 3],
-                @A[Succ(R) shr 2], c),
-      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
-                @A[Succ(R) shr 1],
-                @A[Succ(R) shr 1 + Succ(R) shr 3], c),
-      MedianOf3(@A[R - Succ(R) shr 2],
-                @A[R - Succ(R) shr 3],
-                @A[R], c), c)^
+      MedianOf3(A, @A[R shr 3], @A[R shr 2], c),
+      MedianOf3(@A[R shr 1 - R shr 3], @A[R shr 1], @A[R shr 1 + R shr 3], c),
+      MedianOf3(@A[R - R shr 2], @A[R - R shr 3], @A[R], c), c)^
   else
-    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R], c)^;
+    Pivot := MedianOf3(A, @A[R shr 1], @A[R], c)^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -12109,7 +12069,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      TBlockSort.PDQSort(@A[0], @A[R] + 1, c);
+      TBlockQSort.PDQSort(@A[0], @A[R] + 1, c);
       if o = soDesc then
         Reverse(A);
     end;
@@ -12158,9 +12118,9 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-{ TGSimpleArrayHelper.TBlockSort }
+{ TGSimpleArrayHelper.TBlockQSort }
 
-class procedure TGSimpleArrayHelper.TBlockSort.Sort3(A, B, C: PItem);
+class procedure TGSimpleArrayHelper.TBlockQSort.Sort3(A, B, C: PItem);
 var
   v: T;
 begin
@@ -12184,7 +12144,7 @@ begin
     end;
 end;
 
-function TGSimpleArrayHelper.TBlockSort.PartitionRight(aStart, aFinish: PItem): TPart;
+function TGSimpleArrayHelper.TBlockQSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot, v: T;
   First, Last, It, PivotPos: PItem;
@@ -12217,8 +12177,8 @@ begin
       Inc(First);
     end;
 
-  OffsetsL := AlignPtr(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
-  OffsetsR := AlignPtr(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+  OffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  OffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
 
   NumL := 0;
   NumR := 0;
@@ -12385,7 +12345,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGSimpleArrayHelper.TBlockSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
+procedure TGSimpleArrayHelper.TBlockQSort.DoPDQSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -12496,7 +12456,7 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.TBlockSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+class function TGSimpleArrayHelper.TBlockQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
   Curr, Sift: PItem;
   Limit: SizeInt;
@@ -12524,7 +12484,7 @@ begin
   Result := True;
 end;
 
-class function TGSimpleArrayHelper.TBlockSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+class function TGSimpleArrayHelper.TBlockQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot, v: T;
   First, Last, PivotPos: PItem;
@@ -12557,7 +12517,7 @@ begin
   Result := PivotPos;
 end;
 
-class procedure TGSimpleArrayHelper.TBlockSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+class procedure TGSimpleArrayHelper.TBlockQSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
   aNum: SizeInt; aUseSwaps: Boolean);
 var
   L, R: PItem;
@@ -12589,9 +12549,9 @@ begin
       end;
 end;
 
-class procedure TGSimpleArrayHelper.TBlockSort.PDQSort(aStart, aFinish: PItem);
+class procedure TGSimpleArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem);
 var
-  Sorter: TBlockSort;
+  Sorter: TBlockQSort;
 begin
   {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
@@ -12975,12 +12935,12 @@ class function TGSimpleArrayHelper.GetMo9Pivot(const A: array of T; L, R: SizeIn
 begin
   if R - L > MEDIAN_OF9_CUTOFF then
     Result := MedianOf3(
-        MedianOf3(@A[L], @A[L + Succ(R - L) shr 3], @A[L + Succ(R - L) shr 2]),
-        MedianOf3(@A[L + Succ(R - L) shr 1 - Succ(R - L) shr 3], @A[L + Succ(R - L) shr 1],
-                @A[L + Succ(R - L) shr 1 + Succ(R - L) shr 3]),
-        MedianOf3(@A[R - Succ(R - L) shr 2], @A[R - Succ(R - L) shr 3], @A[R]))^
+        MedianOf3(@A[L], @A[L + (R - L) shr 3], @A[L + (R - L) shr 2]),
+        MedianOf3(@A[L + (R - L) shr 1 - (R - L) shr 3], @A[L + (R - L) shr 1],
+                  @A[L + (R - L) shr 1 + (R - L) shr 3]),
+        MedianOf3(@A[R - (R - L) shr 2], @A[R - (R - L) shr 3], @A[R]))^
   else
-    Result := MedianOf3(@A[L], @A[L + Succ(R - L) shr 1], @A[R])^;
+    Result := MedianOf3(@A[L], @A[L + (R - L) shr 1], @A[R])^;
 end;
 
 class function TGSimpleArrayHelper.QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit;
@@ -13636,7 +13596,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(A, 0, R, o) < R) then
     begin
-      TBlockSort.PDQSort(@A[0], @A[R] + 1);
+      TBlockQSort.PDQSort(@A[0], @A[R] + 1);
       if o = soDesc then
         DoReverse(A, 0, R);
     end;
@@ -14032,7 +13992,7 @@ begin
     begin
       if R <= RADIX_CUTOFF then
         begin
-          TBlockSort.PDQSort(@A[0], @A[R] + 1);
+          TBlockQSort.PDQSort(@A[0], @A[R] + 1);
           if o = soDesc then
             DoReverse(A, 0, R);
           exit;
@@ -14454,7 +14414,7 @@ begin
         begin
           if CountRun(A, 0, R, o) < R then
             begin
-              TBlockSort.PDQSort(@A[0], @A[R] + 1);
+              TBlockQSort.PDQSort(@A[0], @A[R] + 1);
               if o = soDesc then
                 DoReverse(A, 0, R);
             end;
@@ -14839,7 +14799,7 @@ begin
     begin
       if R <= RADIX_CUTOFF then
         begin
-          THelper.TBlockSort.PDQSort(@A[0], @A[R] + 1);
+          THelper.TBlockQSort.PDQSort(@A[0], @A[R] + 1);
           if o = soDesc then
             THelper.DoReverse(@A[0], R);
           exit;
