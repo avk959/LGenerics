@@ -2991,7 +2991,7 @@ class procedure TGBaseArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem);
 var
   Sorter: TBlockQSort;
 begin
-  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(LGUtils.NSB(aFinish - aStart)), True);
 end;
 
 { TGBaseArrayHelper }
@@ -5486,7 +5486,7 @@ class procedure TGComparableArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PIt
 var
   Sorter: TBlockQSort;
 begin
-  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(LGUtils.NSB(aFinish - aStart)), True);
 end;
 
 { TGComparableArrayHelper }
@@ -7353,7 +7353,7 @@ class procedure TGRegularArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem;
 var
   Sorter: TBlockQSort;
 begin
-  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(LGUtils.NSB(aFinish - aStart)), True, c);
 end;
 
 { TGRegularArrayHelper }
@@ -9236,7 +9236,7 @@ class procedure TGDelegatedArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PIte
 var
   Sorter: TBlockQSort;
 begin
-  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(LGUtils.NSB(aFinish - aStart)), True, c);
 end;
 
 { TGDelegatedArrayHelper }
@@ -11121,7 +11121,7 @@ class procedure TGNestedArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem; 
 var
   Sorter: TBlockQSort;
 begin
-  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(LGUtils.NSB(aFinish - aStart)), True, c);
 end;
 
 { TGNestedArrayHelper }
@@ -12553,7 +12553,7 @@ class procedure TGSimpleArrayHelper.TBlockQSort.PDQSort(aStart, aFinish: PItem);
 var
   Sorter: TBlockQSort;
 begin
-  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+  {%H-}Sorter.DoPDQSort(aStart, aFinish, Succ(LGUtils.NSB(aFinish - aStart)), True);
 end;
 
 { TGSimpleArrayHelper }
