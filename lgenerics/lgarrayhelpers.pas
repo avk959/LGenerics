@@ -1133,7 +1133,7 @@ type
     TGetAllow = function(aMin, aMax: T; aLen: SizeInt): Boolean;
     TOffsets  = array[0..Pred(SizeOf(T)), Byte] of SizeInt;
 
-    class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
+    class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T; o:  TSortOrder); static;
     class function  TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  TryInsertSortD2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonoKind; static;
@@ -14009,7 +14009,7 @@ end;
 
 { TGOrdinalArrayHelper }
 
-class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: T);
+class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: T; o:  TSortOrder);
 var
   I, J: SizeInt;
   v: T;
@@ -14020,18 +14020,34 @@ begin
 
   for J := 0 to System.High(A) do
     Inc(Counts[A[J] - aMinValue]);
-
-  J := High(A);
-  for I := aMaxValue - aMinValue downto 0 do
-    if Counts[I] > 0 then
-      begin
-        v := T(I) + aMinValue;
-        repeat
-          A[J] := v;
-          Dec(Counts[I]);
-          Dec(J);
-        until Counts[I] = 0;
-      end;
+  if o = soAsc then
+    begin
+      J := High(A);
+      for I := aMaxValue - aMinValue downto 0 do
+        if Counts[I] > 0 then
+          begin
+            v := T(I) + aMinValue;
+            repeat
+              A[J] := v;
+              Dec(Counts[I]);
+              Dec(J);
+            until Counts[I] = 0;
+          end;
+    end
+  else
+    begin
+      J := 0;
+      for I := aMaxValue - aMinValue downto 0 do
+        if Counts[I] > 0 then
+          begin
+            v := T(I) + aMinValue;
+            repeat
+              A[J] := v;
+              Dec(Counts[I]);
+              Inc(J);
+            until Counts[I] = 0;
+          end;
+    end;
 end;
 
 class function TGOrdinalArrayHelper.TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt;
@@ -14428,11 +14444,7 @@ begin
         end
       else
         if CountSortAllow(vMin, vMax, Succ(R)) then
-          begin
-            CountSort(A, vMin, vMax);
-            if o = soDesc then
-              Reverse(A);
-          end
+          CountSort(A, vMin, vMax, o)
         else
           begin
             System.SetLength(Buf, System.Length(A));
