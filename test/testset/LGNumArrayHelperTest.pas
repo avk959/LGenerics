@@ -394,7 +394,9 @@ type
   published
     procedure CreateRange;
     procedure SortAsc;
+    procedure SortAsc1;
     procedure SortDesc;
+    procedure SortDesc1;
     procedure SortAsc577;
     procedure SortDesc577;
     procedure RadixSortAsc;
@@ -3324,6 +3326,20 @@ begin
   AssertTrue(THelper.Same(a, b));
 end;
 
+procedure TOrdArrayHelperTest.SortAsc1;
+var
+  a: TIntArray;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Random(100);
+  THelper.Sort(a);
+  AssertTrue(THelper.IsNonDescending(a));
+end;
+
 procedure TOrdArrayHelperTest.SortDesc;
 var
   a, b: TIntArray;
@@ -3335,6 +3351,20 @@ begin
   AssertFalse(THelper.Same(a, b));
   THelper.Sort(b, soDesc);
   AssertTrue(THelper.Same(a, b));
+end;
+
+procedure TOrdArrayHelperTest.SortDesc1;
+var
+  a: TIntArray;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Random(100);
+  THelper.Sort(a, soDesc);
+  AssertTrue(THelper.IsNonAscending(a));
 end;
 
 procedure TOrdArrayHelperTest.SortAsc577;
