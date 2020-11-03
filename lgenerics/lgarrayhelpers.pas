@@ -14430,7 +14430,7 @@ begin
         begin
           if CountRun(A, 0, R, o) < R then
             begin
-              TBlockQSort.PDQSort(@A[0], @A[R] + 1);
+              DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
               if o = soDesc then
                 DoReverse(A, 0, R);
             end;
