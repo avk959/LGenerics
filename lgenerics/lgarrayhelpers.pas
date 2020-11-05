@@ -13992,7 +13992,7 @@ begin
     begin
       if R <= RADIX_CUTOFF then
         begin
-          TBlockQSort.PDQSort(@A[0], @A[R] + 1);
+          DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
           if o = soDesc then
             DoReverse(A, 0, R);
           exit;
@@ -14811,7 +14811,7 @@ begin
     begin
       if R <= RADIX_CUTOFF then
         begin
-          THelper.TBlockQSort.PDQSort(@A[0], @A[R] + 1);
+          THelper.DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * THelper.INTROSORT_LOG_FACTOR, True);
           if o = soDesc then
             THelper.DoReverse(@A[0], R);
           exit;
