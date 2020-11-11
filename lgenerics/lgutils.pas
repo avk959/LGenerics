@@ -744,7 +744,7 @@ type
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
     function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
-    function  GetValueDef(const aKey: TKey; const aDefault: TValue = Default(TValue)): TValue;
+    function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
     function  Contains(const aKey: TKey): Boolean;
     function  NonContains(const aKey: TKey): Boolean;
     function  Keys: IGEnumerable<TKey>;
