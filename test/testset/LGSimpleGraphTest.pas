@@ -273,6 +273,8 @@ type
     procedure MinPath1;
     procedure MinPathAStar;
     procedure MinPathBiDir;
+    procedure MinPathBiDir2;
+    procedure MinPathBiDir3;
     procedure MinPathNBAStar;
     procedure FindMinPath;
     procedure FindMinPath1;
@@ -4435,6 +4437,41 @@ begin
       AssertTrue(Weight = WEIGHTS_ARRAY[0, I]);
       AssertTrue(THelper.Same(Path, PATHS_FROM_0[I - 1]));
     end;
+end;
+
+procedure TWeightedGraphTest.MinPathBiDir2;
+var
+  g: TRef;
+  Path: TIntArray;
+  Weight: Integer;
+begin
+  {%H-}g.Instance.AddVertex(1);
+  g.Instance.AddVertex(2);
+  g.Instance.AddEdge(1, 2, TIntWeight.Create(5));
+  Path := g.Instance.MinPathBiDir(1, 2, Weight);
+  AssertTrue(THelper.Same(Path, [0, 1]));
+  AssertTrue(Weight = 5);
+end;
+
+procedure TWeightedGraphTest.MinPathBiDir3;
+var
+  g: TRef;
+  Path: TIntArray;
+  Weight: Integer;
+begin
+  {%H-}g.Instance.AddVertex(1);
+  g.Instance.AddVertex(2);
+  g.Instance.AddVertex(3);
+  g.Instance.AddEdge(1, 2, TIntWeight.Create(5));
+  g.Instance.AddEdge(2, 3, TIntWeight.Create(7));
+  Path := g.Instance.MinPathBiDir(1, 3, Weight);
+  AssertTrue(THelper.Same(Path, [0, 1, 2]));
+  AssertTrue(Weight = 12);
+
+  g.Instance.AddEdge(1, 3, TIntWeight.Create(9));
+  Path := g.Instance.MinPathBiDir(1, 3, Weight);
+  AssertTrue(THelper.Same(Path, [0, 2]));
+  AssertTrue(Weight = 9);
 end;
 
 procedure TWeightedGraphTest.MinPathNBAStar;
