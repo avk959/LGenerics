@@ -5173,6 +5173,105 @@ begin
   Result := [];
 end;
 
+class function TGWeightHelper.NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
+  aEst: TEstimate): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
+var
+  Inst: array[Boolean] of TGraph;
+  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
+  Parents: array[Boolean] of TIntArray;
+  Weights: array[Boolean] of TWeightArray;
+  InQueue: array[Boolean] of TBoolVector;
+  Dest: array[Boolean] of TVertex;
+  F: array[Boolean] of TWeight;
+  Reached: TBoolVector;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: TGraph.PAdjItem;
+  Dir: Boolean = Forwd;
+begin
+  Inst[Forwd] := g;
+  Inst[Bckwd] := gRev;
+  Parents[Forwd] := g.CreateIntArray;
+  Parents[Bckwd] := gRev.CreateIntArray;
+  Weights[Forwd] := CreateWeightArray(g.VertexCount);
+  Weights[Bckwd] := CreateWeightArray(gRev.VertexCount);
+  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(g.VertexCount);
+  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(gRev.VertexCount);
+  Reached.Capacity := g.VertexCount;
+  InQueue[Forwd].Capacity := g.VertexCount;
+  InQueue[Bckwd].Capacity := gRev.VertexCount;
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  Dest[Forwd] := g.Items[aDst];
+  Dest[Bckwd] := gRev.Items[aSrc];
+  F[Forwd] := aEst(Dest[Forwd], Dest[Bckwd]);
+  F[Bckwd] := F[Forwd];
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, F[Forwd]));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, F[Bckwd]));
+  Weights[Forwd][aSrc] := TWeight(0);
+  Weights[Bckwd][aDst] := TWeight(0);
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
+      Item := Queue[Dir].Dequeue;
+      if Reached.UncBits[Item.Index] then continue;
+      Reached.UncBits[Item.Index] := True;
+      if(Weights[Dir][Item.Index] + aEst(g.Items[Item.Index], Dest[Dir]) < BestWeight) and
+        (Weights[Dir][Item.Index] - aEst(g.Items[Item.Index], Dest[not Dir]) + F[not Dir] < BestWeight) then
+        for p in Inst[Dir].AdjLists[Item.Index]^ do // stabilize the node[Item.Index]
+          if not Reached.UncBits[p^.Key] then
+            begin
+              CurrWeight := Weights[Dir][Item.Index] + p^.Data.Weight;
+              if Weights[Dir][p^.Key] > CurrWeight then
+                begin
+                  Weights[Dir][p^.Key] := CurrWeight;
+                  if not InQueue[Dir].UncBits[p^.Key] then
+                    begin
+                      Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(
+                        p^.Key, CurrWeight + aEst(g.Items[p^.Key], Dest[Dir])));
+                      Parents[Dir][p^.Key] := Item.Index;
+                      InQueue[Dir].UncBits[p^.Key] := True;
+                    end
+                  else
+                    begin
+                      Queue[Dir].Update(p^.Key, TWeightItem.Create(
+                        p^.Key, CurrWeight + aEst(g.Items[p^.Key], Dest[Dir])));
+                      Parents[Dir][p^.Key] := Item.Index;
+                    end;
+                  if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
+                    begin
+                      CurrWeight += Weights[not Dir][p^.Key];
+                      if CurrWeight < BestWeight  then
+                        begin
+                          BestWeight := CurrWeight;
+                          MeetPoint := p^.Key;
+                        end;
+                    end;
+                end;
+            end;
+      if Queue[Dir].NonEmpty then
+        F[Dir] := Queue[Dir].PeekPtr^.Weight;
+    end;
+
+  if MeetPoint = NULL_INDEX then
+    begin
+      aWeight := TWeight.INF_VALUE;
+      exit(nil);
+    end;
+
+  aWeight := BestWeight;
+  Result := TGraph.TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  Result :=
+    TIntHelper.CreateMerge(TGraph.TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]);
+end;
+
 class function TGWeightHelper.BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
