@@ -276,6 +276,7 @@ type
     procedure MinPathBiDir2;
     procedure MinPathBiDir3;
     procedure MinPathNBAStar;
+    procedure MinPathNBAStar2;
     procedure FindMinPath;
     procedure FindMinPath1;
     procedure FindMinPath2;
@@ -4494,6 +4495,20 @@ begin
       AssertTrue(THelper.Same(NBAStarPath, DijkPath));
       Inc(I);
     end;
+end;
+
+procedure TWeightedGraphTest.MinPathNBAStar2;
+var
+  g: specialize TGAutoRef<TPointsChart>;
+  Path: TIntArray;
+  Weight: ValReal;
+begin
+  {%H-}g.Instance.AddVertex(TPoint.Create(1, 1));
+  g.Instance.AddVertex(TPoint.Create(3, 3));
+  g.Instance.AddEdgeI(0, 1);
+  Path := g.Instance.MinPathNBAStarI(0, 1, Weight);
+  AssertTrue(THelper.Same(Path, [0, 1]));
+  AssertTrue(math.SameValue(Weight, TPoint.Create(1, 1).Distance(TPoint.Create(3, 3))));
 end;
 
 procedure TWeightedGraphTest.FindMinPath;
