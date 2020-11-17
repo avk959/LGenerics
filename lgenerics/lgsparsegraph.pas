@@ -5044,6 +5044,89 @@ begin
   Result := [];
 end;
 
+class function TGWeightHelper.BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt;
+  out aWeight: TWeight): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
+var
+  Inst: array[Boolean] of TGraph;
+  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
+  Parents: array[Boolean] of TIntArray;
+  InQueue: array[Boolean] of TBoolVector;
+  Weights: array[Boolean] of TWeightArray;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: TGraph.PAdjItem;
+  Dir: Boolean = Forwd;
+begin
+  Inst[Forwd] := g;
+  Inst[Bckwd] := gRev;
+  Weights[Forwd] := CreateWeightArray(g.VertexCount);
+  Weights[Bckwd] := CreateWeightArray(gRev.VertexCount);
+  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(g.VertexCount);
+  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(gRev.VertexCount);
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
+  InQueue[Forwd].Capacity := g.VertexCount;
+  InQueue[Bckwd].Capacity := gRev.VertexCount;
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  Parents[Forwd] := g.CreateIntArray;
+  Parents[Bckwd] := gRev.CreateIntArray;
+  Weights[Forwd][aSrc] := TWeight(0);
+  Weights[Bckwd][aDst] := TWeight(0);
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      Item := Queue[Dir].Dequeue;
+      if Item.Weight + Queue[not Dir].PeekPtr^.Weight > BestWeight then
+        break;
+      Weights[Dir][Item.Index] := Item.Weight;
+      for p in Inst[Dir].AdjLists[Item.Index]^ do
+        if not (Weights[Dir][p^.Key] < TWeight.INF_VALUE) then
+          begin
+            CurrWeight := Item.Weight + p^.Data.Weight;
+            if not InQueue[Dir].UncBits[p^.Key] then
+              begin
+                Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                Parents[Dir][p^.Key] := Item.Index;
+                InQueue[Dir].UncBits[p^.Key] := True;
+              end
+            else
+              if CurrWeight < Queue[Dir].GetItemPtr(p^.Key)^.Weight then
+                begin
+                  Queue[Dir].Update(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                  Parents[Dir][p^.Key] := Item.Index;
+                end;
+            if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
+              begin
+                CurrWeight += Weights[not Dir][p^.Key];
+                if CurrWeight < BestWeight  then
+                  begin
+                    BestWeight := CurrWeight;
+                    MeetPoint := p^.Key;
+                  end;
+              end;
+          end;
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
+    end;
+
+  if MeetPoint = NULL_INDEX then
+    begin
+      aWeight := TWeight.INF_VALUE;
+      exit(nil);
+    end;
+
+  aWeight := BestWeight;
+  Result := TGraph.TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  Result :=
+    TIntHelper.CreateMerge(TGraph.TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]);
+end;
+
 class function TGWeightHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 var
