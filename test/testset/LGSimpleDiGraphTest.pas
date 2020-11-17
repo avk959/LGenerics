@@ -165,6 +165,7 @@ type
     procedure MinPathBiDir3;
     procedure MinPathAStar;
     procedure MinPathNbaStar;
+    procedure MinPathNBAStar2;
     procedure FindMinPath;
     procedure FindMinPath1;
     procedure FindMinPath2;
@@ -2587,6 +2588,22 @@ begin
   p := g.Instance.MinPathNbaStarI(0, 199, gRev.Instance, w, @PointDist);
   AssertTrue(SameValue(wd, w));
   AssertTrue(TSIntHelper.Same(p, pd));
+end;
+
+procedure TWeightedDigraphTest.MinPathNBAStar2;
+var
+  g, gRev: specialize TGAutoRef<TPointGraph>;
+  Path: TIntArray;
+  Weight: ValReal;
+begin
+  {%H-}g.Instance.AddVertex(TPoint.Create(1, 1));
+  g.Instance.AddVertex(TPoint.Create(3, 3));
+  g.Instance.AddEdgeI(0, 1, TPointWeight.Create(g.Instance[0].Distance(g.Instance[1])));
+  g.Instance.AddEdgeI(1, 0, TPointWeight.Create(g.Instance[1].Distance(g.Instance[0])));
+  {%H-}gRev.Instance := g.Instance.Reverse;
+  Path := g.Instance.MinPathNBAStarI(0, 1, gRev.Instance, Weight, @PointDist);
+  AssertTrue(TSIntHelper.Same(Path, [0, 1]));
+  AssertTrue(math.SameValue(Weight, TPoint.Create(1, 1).Distance(TPoint.Create(3, 3))));
 end;
 
 procedure TWeightedDigraphTest.FindMinPath;
