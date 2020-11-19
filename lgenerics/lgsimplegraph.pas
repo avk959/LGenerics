@@ -5580,8 +5580,6 @@ begin
 end;
 
 function TGWeightedGraph.MinPathBiDirI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-var
-  d: TEdgeData;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
