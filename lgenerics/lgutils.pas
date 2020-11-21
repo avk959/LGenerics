@@ -201,7 +201,7 @@ type
     property  Instance: T read GetInstance write SetInstance;
   end;
 
-  { TGSharedRef: like TGSharedRefA intended to be shared a single instance by several T entities
+  { TGSharedRef: like TGSharedAutoRef intended to be shared a single instance by several T entities
     using ARC; it does not require T to have a parameterless constructor and does not
     automatically create an instance }
   TGSharedRef<T: class> = record
