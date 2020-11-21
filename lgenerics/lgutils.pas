@@ -175,10 +175,10 @@ type
     property  OwnsInstance: Boolean read FOwnsInstance;
   end;
 
-  { TGSharedRefA(A - Auto create): intended to be shared a single instance by several T entities
+  { TGSharedAutoRef: intended to be shared a single instance by several T entities
     using ARC, the instance will be automatically destroyed when the reference count becomes
     zero; to automatically create an instance, class T must provide default parameterless constructor }
-  TGSharedRefA<T: class, constructor> = record
+  TGSharedAutoRef<T: class, constructor> = record
   private
     FInstance: T;
     FRefCount: PInteger;
@@ -186,15 +186,15 @@ type
     function  GetInstance: T;
     function  GetRefCount: Integer; inline;
     procedure SetInstance(aValue: T);
-    class operator Initialize(var s: TGSharedRefA<T>); inline;
-    class operator Finalize(var s: TGSharedRefA<T>);
-    class operator Copy(constref aSrc: TGSharedRefA<T>; var aDst: TGSharedRefA<T>); inline;
-    class operator AddRef(var s: TGSharedRefA<T>); inline;
+    class operator Initialize(var s: TGSharedAutoRef<T>); inline;
+    class operator Finalize(var s: TGSharedAutoRef<T>);
+    class operator Copy(constref aSrc: TGSharedAutoRef<T>; var aDst: TGSharedAutoRef<T>); inline;
+    class operator AddRef(var s: TGSharedAutoRef<T>); inline;
   public
   type
     TInstance = T;
-    class operator Implicit(var s: TGSharedRefA<T>): T; inline;
-    class operator Explicit(var s: TGSharedRefA<T>): T; inline;
+    class operator Implicit(var s: TGSharedAutoRef<T>): T; inline;
+    class operator Explicit(var s: TGSharedAutoRef<T>): T; inline;
     function  HasInstance: Boolean; inline;
     procedure Release;
     property  RefCount: Integer read GetRefCount;
@@ -1535,7 +1535,7 @@ end;
 
 { TGSharedRefA<T> }
 
-procedure TGSharedRefA<T>.InitInstance(aValue: T);
+procedure TGSharedAutoRef<T>.InitInstance(aValue: T);
 begin
   FInstance := aValue;
   if Assigned(aValue) then
@@ -1545,14 +1545,14 @@ begin
     end;
 end;
 
-function TGSharedRefA<T>.GetInstance: T;
+function TGSharedAutoRef<T>.GetInstance: T;
 begin
   if FRefCount = nil then
     InitInstance(T.Create);
   Result := FInstance;
 end;
 
-function TGSharedRefA<T>.GetRefCount: Integer;
+function TGSharedAutoRef<T>.GetRefCount: Integer;
 begin
   if FRefCount <> nil then
     Result := FRefCount^
@@ -1560,7 +1560,7 @@ begin
     Result := 0;
 end;
 
-procedure TGSharedRefA<T>.SetInstance(aValue: T);
+procedure TGSharedAutoRef<T>.SetInstance(aValue: T);
 begin
   if aValue <> FInstance then
     begin
@@ -1569,18 +1569,18 @@ begin
     end;
 end;
 
-class operator TGSharedRefA<T>.Initialize(var s: TGSharedRefA<T>);
+class operator TGSharedAutoRef<T>.Initialize(var s: TGSharedAutoRef<T>);
 begin
   s.FRefCount := nil;
   s.FInstance := Default(T);
 end;
 
-class operator TGSharedRefA<T>.Finalize(var s: TGSharedRefA<T>);
+class operator TGSharedAutoRef<T>.Finalize(var s: TGSharedAutoRef<T>);
 begin
   s.Release;
 end;
 
-class operator TGSharedRefA<T>.Copy(constref aSrc: TGSharedRefA<T>; var aDst: TGSharedRefA<T>);
+class operator TGSharedAutoRef<T>.Copy(constref aSrc: TGSharedAutoRef<T>; var aDst: TGSharedAutoRef<T>);
 begin
   if @aSrc <> @aDst then
     begin
@@ -1594,28 +1594,28 @@ begin
     end;
 end;
 
-class operator TGSharedRefA<T>.AddRef(var s: TGSharedRefA<T>);
+class operator TGSharedAutoRef<T>.AddRef(var s: TGSharedAutoRef<T>);
 begin
   if s.FRefCount <> nil then
     InterLockedIncrement(s.FRefCount^);
 end;
 
-class operator TGSharedRefA<T>.Implicit(var s: TGSharedRefA<T>): T;
+class operator TGSharedAutoRef<T>.Implicit(var s: TGSharedAutoRef<T>): T;
 begin
   Result := s.Instance;
 end;
 
-class operator TGSharedRefA<T>.Explicit(var s: TGSharedRefA<T>): T;
+class operator TGSharedAutoRef<T>.Explicit(var s: TGSharedAutoRef<T>): T;
 begin
   Result := s.Instance;
 end;
 
-function TGSharedRefA<T>.HasInstance: Boolean;
+function TGSharedAutoRef<T>.HasInstance: Boolean;
 begin
   Result := FRefCount <> nil;
 end;
 
-procedure TGSharedRefA<T>.Release;
+procedure TGSharedAutoRef<T>.Release;
 begin
   if FRefCount <> nil then
     begin
