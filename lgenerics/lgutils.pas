@@ -175,9 +175,9 @@ type
     property  OwnsInstance: Boolean read FOwnsInstance;
   end;
 
-  { TGSharedAutoRef: intended to be shared a single instance by several T entities
-    using ARC, the instance will be automatically destroyed when the reference count becomes
-    zero; to automatically create an instance, class T must provide default parameterless constructor }
+  { TGSharedAutoRef: intended to share a single instance of T by multiple entities using ARC,
+    the instance will be automatically destroyed when the reference count becomes zero;
+    to automatically create an instance, class T must provide default parameterless constructor }
   TGSharedAutoRef<T: class, constructor> = record
   private
     FInstance: T;
@@ -201,8 +201,8 @@ type
     property  Instance: T read GetInstance write SetInstance;
   end;
 
-  { TGSharedRef: like TGSharedAutoRef intended to be shared a single instance by several T entities
-    using ARC; it does not require T to have a parameterless constructor and does not
+  { TGSharedRef: like TGSharedAutoRef intended to share a single instance of T by multiple
+    entities using ARC; it does not require T to have a parameterless constructor and does not
     automatically create an instance }
   TGSharedRef<T: class> = record
   private
