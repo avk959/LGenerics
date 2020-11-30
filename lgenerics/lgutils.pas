@@ -101,8 +101,8 @@ type
     class operator Initialize(var o: TGOptional<T>); inline;
   public
     class operator Implicit(const aValue: T): TGOptional<T>; inline;
-    class operator Implicit(const aOpt: TGOptional<T>): T; inline;
-    class operator Explicit(const aOpt: TGOptional<T>): T; inline;
+    class operator Implicit(const o: TGOptional<T>): T; inline;
+    class operator Explicit(const o: TGOptional<T>): T; inline;
     procedure Assign(const aValue: T);
     function  OrElseDefault: T; inline;
     function  OrElse(const aValue: T): T; inline;
@@ -1289,7 +1289,7 @@ end;
 
 class constructor TGOptional<T>.InitTypeInfo;
 begin
-  CFTypeKind := PTypeInfo(System.TypeInfo(T))^.Kind;
+  CFTypeKind := GetTypeKind(T);
   CFNilable := CFTypeKind in NilableKinds;
 end;
 
@@ -1318,14 +1318,14 @@ begin
   Result.Assign(aValue);
 end;
 
-class operator TGOptional<T>.Implicit(const aOpt: TGOptional<T>): T;
+class operator TGOptional<T>.Implicit(const o: TGOptional<T>): T;
 begin
-  Result := aOpt.Value;
+  Result := o.Value;
 end;
 
-class operator TGOptional<T>.Explicit(const aOpt: TGOptional<T>): T;
+class operator TGOptional<T>.Explicit(const o: TGOptional<T>): T;
 begin
-  Result := aOpt.Value;
+  Result := o.Value;
 end;
 
 procedure TGOptional<T>.Assign(const aValue: T);
