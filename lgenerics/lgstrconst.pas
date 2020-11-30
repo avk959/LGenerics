@@ -25,7 +25,7 @@ interface
 
 resourcestring
 
-  SEOptionalValueEmpty     = 'Optional value is empty';
+  SEOptionalValueEmpty     = 'No value assigned';
   SECopyInadmissible       = 'Copying inadmissible';
   SEOwnRequired            = 'Ownership required';
   SEArgumentTooBigFmt      = 'Argument of %s is too big(%d)';
