@@ -393,13 +393,13 @@ type
     procedure RotateRight(aDist: SizeInt);              //O(LogN)
   { returns value of the monoid function on the segment[L, R];
     raises exception if L or R out of bounds }
-    function  RangeQuery(L, R: SizeInt): T;             //O(LogN)
+    function  RangeQuery(L, R: SizeInt): TResult;       //O(LogN)
   { returns value of the monoid function on the segment[0, aIndex];
     raises exception if aIndex out of bounds }
-    function  HeadQuery(aIndex: SizeInt): T;            //O(LogN)
+    function  HeadQuery(aIndex: SizeInt): TResult;      //O(LogN)
   { returns value of the monoid function on the segment[aIndex, Pred(Count)];
     raises exception if aIndex out of bounds }
-    function  TailQuery(aIndex: SizeInt): T;            //O(LogN)
+    function  TailQuery(aIndex: SizeInt): TResult;      //O(LogN)
     property  Count: SizeInt read GetCount;             //O(1)
     property  Height: SizeInt read GetHeight;           //O(N)
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;     //O(LogN)
@@ -2407,7 +2407,7 @@ begin
   FRoot := MergeNode(R, L);
 end;
 
-function TGLiteImplSegmentTreap.RangeQuery(L, R: SizeInt): T;
+function TGLiteImplSegmentTreap.RangeQuery(L, R: SizeInt): TResult;
 var
   pL, pM, pR: PNode;
 begin
@@ -2430,7 +2430,7 @@ begin
     Result := TMonoid.Identity;
 end;
 
-function TGLiteImplSegmentTreap.HeadQuery(aIndex: SizeInt): T;
+function TGLiteImplSegmentTreap.HeadQuery(aIndex: SizeInt): TResult;
 var
   pL, pR: PNode;
 begin
@@ -2448,7 +2448,7 @@ begin
     Result := FRoot^.CacheVal;
 end;
 
-function TGLiteImplSegmentTreap.TailQuery(aIndex: SizeInt): T;
+function TGLiteImplSegmentTreap.TailQuery(aIndex: SizeInt): TResult;
 var
   pL, pR: PNode;
 begin
