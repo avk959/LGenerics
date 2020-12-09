@@ -121,7 +121,7 @@ type
   private
   type
     TAddMonoid = specialize TGAddMonoid<Integer>;
-    TIntTreap  = specialize TGLiteImplSegmentTreap<Integer, TAddMonoid>;
+    TIntTreap  = specialize TGLiteImplSegmentTreap<Integer, Integer, TAddMonoid>;
     THelper    = specialize TGOrdinalArrayHelper<Integer>;
 
   published
