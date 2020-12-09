@@ -1,6 +1,6 @@
 unit LGTreapTest;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}{$H+}{$modeswitch advancedrecords}
 
 interface
 
@@ -123,6 +123,14 @@ type
     TAddMonoid = specialize TGAddMonoid<Integer>;
     TIntTreap  = specialize TGLiteImplSegmentTreap<Integer, Integer, TAddMonoid>;
     THelper    = specialize TGOrdinalArrayHelper<Integer>;
+    TMinMax = record
+      Min,
+      Max: Integer;
+      class operator := (aValue: Integer): TMinMax;
+      class function Identity: TMinMax; static;
+      class function BinOp(const L, R: TMinMax): TMinMax; static;
+    end;
+    TIntTreapEx = specialize TGLiteImplSegmentTreap<Integer, TMinMax, TMinMax>;
 
   published
     procedure IsEmpty;
@@ -137,8 +145,11 @@ type
     procedure RotateLeft;
     procedure RotateRight;
     procedure RangeQuery;
+    procedure RangeQuery2;
     procedure HeadQuery;
+    procedure HeadQuery2;
     procedure TailQuery;
+    procedure TailQuery2;
     procedure Items;
   end;
 
@@ -1578,6 +1589,35 @@ begin
     AssertTrue(Treap[I] = a[I]);
 end;
 
+{ TLiteImplSegmentTreapTest.TMinMax }
+
+class operator TLiteImplSegmentTreapTest.TMinMax.:=(aValue: Integer): TMinMax;
+begin
+  Result.Min := aValue;
+  Result.Max := aValue;
+end;
+
+class function TLiteImplSegmentTreapTest.TMinMax.Identity: TMinMax;
+begin
+  Result.Min := High(Integer);
+  Result.Max := Low(Integer);
+end;
+
+class function TLiteImplSegmentTreapTest.TMinMax.BinOp(const L, R: TMinMax): TMinMax;
+begin
+  with Result do
+    begin
+      if R.Min < L.Min then
+        Min := R.Min
+      else
+        Min := L.Min;
+      if R.Max > L.Max then
+        Max := R.Max
+      else
+        Max := L.Max;
+    end;
+end;
+
 { TLiteImplSegmentTreapTest }
 
 procedure TLiteImplSegmentTreapTest.IsEmpty;
@@ -1875,6 +1915,62 @@ begin
     end;
 end;
 
+procedure TLiteImplSegmentTreapTest.RangeQuery2;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreapEx;
+  a: array of Integer;
+  I, J, L, R, K, min, max: Integer;
+  mm: TMinMax;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to Pred(TestSize) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  min := High(Integer);
+  max := Low(Integer);
+  for J := 0 to Pred(TestSize) do
+    begin
+      K := a[J];
+      if K < min then
+        min := K;
+      if K > max then
+        max := K;
+      mm := Treap.RangeQuery(0, J);
+      AssertTrue((mm.Max = max) and (mm.Min = min));
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      K := a[I];
+      mm := Treap.RangeQuery(I, I);
+      AssertTrue((mm.Min = K) and (mm.Max = K));
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      min := High(Integer);
+      max := Low(Integer);
+      for J := L to R do
+        begin
+          K := a[J];
+          if K < min then
+            min := K;
+          if K > max then
+            max := K;
+        end;
+      mm := Treap.RangeQuery(L, R);
+      AssertTrue((mm.Min = min) and (mm.Max = max));
+      mm := Treap.RangeQuery(R, L);
+      AssertTrue((mm.Min = High(Integer)) and (mm.Max = Low(Integer)));
+    end;
+end;
+
 procedure TLiteImplSegmentTreapTest.HeadQuery;
 const
   TestSize = 1000;
@@ -1900,6 +1996,40 @@ begin
     end;
 end;
 
+procedure TLiteImplSegmentTreapTest.HeadQuery2;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreapEx;
+  a: array of Integer;
+  I, J, K, min, max: Integer;
+  mm: TMinMax;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      min := High(Integer);
+      max := Low(Integer);
+      for J := 0 to I do
+        begin
+          K := a[J];
+          if K < min then
+            min := K;
+          if K > max then
+            max := K;
+        end;
+      mm := Treap.HeadQuery(I);
+      AssertTrue((mm.Min = min) and (mm.Max = max));
+    end;
+end;
+
 procedure TLiteImplSegmentTreapTest.TailQuery;
 const
   TestSize = 1000;
@@ -1922,6 +2052,40 @@ begin
       for J := I to Pred(TestSize) do
         sum += a[J];
       AssertTrue(Treap.TailQuery(I) = sum);
+    end;
+end;
+
+procedure TLiteImplSegmentTreapTest.TailQuery2;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreapEx;
+  a: array of Integer;
+  I, J, K, min, max: Integer;
+  mm: TMinMax;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      min := High(Integer);
+      max := Low(Integer);
+      for J := I to Pred(TestSize) do
+        begin
+          K := a[J];
+          if K < min then
+            min := K;
+          if K > max then
+            max := K;
+        end;
+      mm := Treap.TailQuery(I);
+      AssertTrue((mm.Min = min) and (mm.Max = max));
     end;
 end;
 
