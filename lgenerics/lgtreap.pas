@@ -329,12 +329,14 @@ type
       - add an element to the array in O(log N);
       - update a single element of an array in O(log N);
       - add an arbitrary range of elements to the array in O(log N);
-      - find the value of the monoid function on an arbitrary range of array elements in O(log N);
+      - find the value: TResult of the monoid function on an arbitrary range
+        of array elements in O(log N);
+      type TResult must provide an assignment operator (TResult := T)
       functor TMonoid must provide:
-        class field/property/function Identity: T; - neutral element of the monoid;
-        associative dyadic function BinOp([const[ref]] L, R: T): T;
+        class field/property/function Identity: TResult; - neutral element of the monoid;
+        associative dyadic function BinOp([const[ref]] L, R: TResult): TResult;
     on assignment and when passed by value, the whole treap is copied; }
-  generic TGLiteImplSegmentTreap<T, TMonoid> = record
+  generic TGLiteImplSegmentTreap<T, TResult, TMonoid> = record
   public
   type
     TArray = array of T;
@@ -348,8 +350,8 @@ type
       Right: PNode;
       Prio: SizeUInt;
       Size: SizeInt;
-      CacheVal,
       Value: T;
+      CacheVal: TResult;
       property Key: SizeInt read Size;
     end;
     TUtil = specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>;
