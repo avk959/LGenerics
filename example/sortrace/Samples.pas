@@ -26,7 +26,7 @@ type
   TVec4 = record
     X, Y, Z, W: Double;
     class function CreateRandom(aRange: Integer): TVec4; static; inline;
-    class operator < (const L, R: TVec4): Boolean; inline;
+    class operator < (const L, R: TVec4): Boolean; //inline; to avoid #0037527
   end;
 
   TUIntSample   = array of DWord;
