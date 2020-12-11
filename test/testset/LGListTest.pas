@@ -204,6 +204,32 @@ type
     procedure PassByValue;
   end;
 
+  { TLiteHashList2Test }
+
+  TLiteHashList2Test = class(TTestCase)
+  private
+  type
+    TEntry       = specialize TGMapEntry<Integer, Integer>;
+    TIntList     = specialize TGLiteHashList2<Integer, TEntry, Integer>;
+    TEntryCursor = specialize TGArrayCursor<TEntry>;
+
+  published
+    procedure Add;
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddUniq;
+    procedure AddUniqArray;
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure GetEnumerator;
+    procedure ToArray;
+    procedure Reverse;
+    procedure IdenticalKeys;
+    procedure IndexOf;
+    procedure CountOf;
+    procedure PassByValue;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$WARNINGS OFF}
 
@@ -2396,6 +2422,7 @@ begin
       AssertTrue(I = IntArray21[J]);
       Dec(J);
     end;
+  AssertTrue(J = 0);
 end;
 
 procedure TLiteHashListTest.IndexOf;
@@ -2547,10 +2574,298 @@ begin
   AssertTrue(lst.IndexOf(2) = -1);
 end;
 
+{ TLiteHashList2Test }
+
+procedure TLiteHashList2Test.Add;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.Add(TEntry.Create(1, 1)) = 0);
+  AssertTrue(lst.Count = 1);
+  AssertTrue(lst.Contains(1));
+  AssertTrue(lst.Add(TEntry.Create(51, 2)) = 1);
+  AssertTrue(lst.Count = 2);
+  AssertTrue(lst.Contains(51));
+  AssertTrue(lst.Add(TEntry.Create(51, 3)) = 2);
+  AssertTrue(lst.Count = 3);
+  AssertTrue(lst.Contains(51));
+  for I := 1 to 100 do
+    AssertTrue(lst.Add(TEntry.Create(I, 42)) = I + 2);
+  AssertTrue(lst.Count = 103);
+  for I := 1 to 100 do
+    AssertTrue(lst.Contains(I));
+end;
+
+procedure TLiteHashList2Test.AddArray;
+var
+  lst: TIntList;
+  I: Integer;
+  a: array of TEntry = nil;
+  e: TEntry;
+begin
+  SetLength(a, 42);
+  for I := 0 to High(a) do
+    a[I] := TEntry.Create(I, I);
+  AssertTrue(lst.AddAll(a) = Length(a));
+  AssertTrue(lst.Count = Length(a));
+  for e in a do
+    AssertTrue(lst.Contains(e.Key));
+end;
+
+procedure TLiteHashList2Test.AddEnum;
+var
+  lst: TIntList;
+  I: Integer;
+  a: array of TEntry = nil;
+  e: TEntry;
+begin
+  SetLength(a, 42);
+  for I := 0 to High(a) do
+    a[I] := TEntry.Create(I, I);
+  AssertTrue(lst.AddAll(TEntryCursor.Create(a)) = Length(a));
+  AssertTrue(lst.Count = Length(a));
+  for e in a do
+    AssertTrue(lst.Contains(e.Key));
+end;
+
+procedure TLiteHashList2Test.AddUniq;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  lst.Add(TEntry.Create(42, 0));
+  AssertTrue(lst.Count = 1);
+  for I := 1 to 42 do
+    AssertFalse(lst.AddUniq(TEntry.Create(42, I)));
+  AssertTrue(lst.Count = 1);
+end;
+
+procedure TLiteHashList2Test.AddUniqArray;
+var
+  lst: TIntList;
+  I: Integer;
+  a: array of TEntry = nil;
+begin
+  SetLength(a, 42);
+  for I := 0 to High(a) do
+    a[I] := TEntry.Create(I, I);
+  AssertTrue(lst.AddAllUniq(a) = Length(a));
+  AssertTrue(lst.Count = Length(a));
+  AssertTrue(lst.AddAllUniq(a) = 0);
+  AssertTrue(lst.Count = Length(a));
+end;
+
+procedure TLiteHashList2Test.Clear;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.Capacity = 0);
+  lst.Clear;
+  AssertTrue(lst.Count = 0);
+  for I := 1 to 42 do
+    lst.Add(TEntry.Create(I, I));
+  AssertTrue(lst.Count = 42);
+  AssertTrue(lst.Capacity > 0);
+  lst.Clear;
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.Capacity = 0);
+end;
+
+procedure TLiteHashList2Test.EnsureCapacity;
+var
+  lst: TIntList;
+begin
+  AssertTrue(lst.Capacity = 0);
+  lst.EnsureCapacity(3);
+  AssertTrue(lst.Capacity = 4);
+  lst.EnsureCapacity(42);
+  AssertTrue(lst.Capacity = 64);
+  lst.EnsureCapacity(63);
+  AssertTrue(lst.Capacity = 64);
+end;
+
+procedure TLiteHashList2Test.GetEnumerator;
+var
+  lst: TIntList;
+  I, J: Integer;
+  a: array of TEntry = nil;
+  e: TEntry;
+begin
+  J := 0;
+  for e in lst do
+    Inc(J);
+  AssertTrue(J = 0);
+  SetLength(a, 42);
+  for I := 0 to High(a) do
+    a[I] := TEntry.Create(I, I);
+  lst.AddAll(a);
+  for e in lst do
+    begin
+      AssertTrue((e.Key = a[J].Key) and (e.Value = a[J].Value));
+      Inc(J);
+    end;
+  AssertTrue(J = lst.Count);
+end;
+
+procedure TLiteHashList2Test.ToArray;
+var
+  lst: TIntList;
+  I: Integer;
+  a, r: array of TEntry;
+begin
+  r := lst.ToArray;
+  AssertTrue(r = nil);
+  SetLength(a, 42);
+  for I := 0 to High(a) do
+    a[I] := TEntry.Create(I, I);
+  lst.AddAll(a);
+  r := lst.ToArray;
+  AssertTrue(Length(r) = Length(a));
+  for I := 0 to High(a) do
+    AssertTrue((r[I].Key = a[I].Key) and (r[I].Value = a[I].Value));
+end;
+
+procedure TLiteHashList2Test.Reverse;
+var
+  lst: TIntList;
+  I: Integer;
+  a: array of TEntry;
+  e: TEntry;
+begin
+  I := 0;
+  for e in lst.Reverse do
+    Inc(I);
+  AssertTrue(I = 0);
+  SetLength(a, 42);
+  for I := 0 to High(a) do
+    a[I] := TEntry.Create(I, I);
+  lst.AddAll(a);
+  I := lst.Count - 1;
+  for e in lst.Reverse do
+    begin
+      AssertTrue((e.Key = a[I].Key) and (e.Value = a[I].Value));
+      Dec(I);
+    end;
+  AssertTrue(I = -1);
+end;
+
+procedure TLiteHashList2Test.IdenticalKeys;
+var
+  lst: TIntList;
+  I: Integer;
+  e: TEntry;
+  s1, s2: set of 1..42;
+begin
+  I := 0;
+  for e in lst.IdenticalKeys(1) do
+    Inc(I);
+  AssertTrue(I = 0);
+  s1 := [];
+  for I := 1 to 42 do
+    begin
+      lst.Add(TEntry.Create(1, I));
+      Include(s1, I);
+    end;
+  AssertTrue(s1 = [1..42]);
+  s2 := [];
+  for I := 1 to 42 do
+    begin
+      lst.Add(TEntry.Create(2, I));
+      Include(s2, I);
+    end;
+  AssertTrue(s2 = [1..42]);
+  I := 0;
+  for e in lst.IdenticalKeys(1) do
+    begin
+      AssertTrue(e.Key = 1);
+      Exclude(s1, e.Value);
+      Inc(I);
+    end;
+  AssertTrue(I = 42);
+  AssertTrue(s1 = []);
+  I := 0;
+  for e in lst.IdenticalKeys(2) do
+    begin
+      AssertTrue(e.Key = 2);
+      Exclude(s2, e.Value);
+      Inc(I);
+    end;
+  AssertTrue(I = 42);
+  AssertTrue(s2 = []);
+end;
+
+procedure TLiteHashList2Test.IndexOf;
+var
+  lst: TIntList;
+  I, J: Integer;
+  e: TEntry;
+begin
+  I := lst.IndexOf(1);
+  AssertTrue(I = -1);
+  for I := 1 to 42 do
+    lst.Add(TEntry.Create(I, I));
+  for I := 1 to 42 do
+    begin
+      J := lst.IndexOf(I);
+      AssertTrue(J = I-1);
+      e := lst[J];
+      AssertTrue((e.Key = I)and(e.Value = I));
+    end;
+end;
+
+procedure TLiteHashList2Test.CountOf;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  for I := 1 to 42 do
+    lst.Add(TEntry.Create(I, I));
+  for I := 1 to 42 do
+   AssertTrue(lst.CountOf(I) = 1);
+  for I := 1 to 42 do
+    lst.Add(TEntry.Create(I, I));
+  for I := 1 to 42 do
+   AssertTrue(lst.CountOf(I) = 2);
+  for I := 1 to 42 do
+    lst.Add(TEntry.Create(I, I));
+  for I := 1 to 42 do
+   AssertTrue(lst.CountOf(I) = 3);
+end;
+
+procedure TLiteHashList2Test.PassByValue;
+  procedure Test(aList: TIntList);
+  begin
+    aList.EnsureCapacity(20);
+    aList.Add(TEntry.Create(6, 6));
+    aList.Add(TEntry.Create(2, 2));
+    AssertTrue(aList.NonEmpty);
+    AssertTrue(aList.Capacity = 32);
+  end;
+var
+  lst: TIntList;
+begin
+  lst.EnsureCapacity(10);
+  AssertTrue(lst.Capacity = 16);
+  AssertTrue(lst.IsEmpty);
+  lst.Add(TEntry.Create(5, 5));
+  lst.Add(TEntry.Create(7, 7));
+  Test(lst);
+  AssertTrue(lst.Count = 2);
+  AssertTrue(lst.IndexOf(2) = -1);
+  AssertTrue(lst.IndexOf(6) = -1);
+  AssertTrue(lst.IndexOf(5) <> -1);
+  AssertTrue(lst.IndexOf(7) <> -1);
+end;
+
 initialization
   RegisterTest(TGSortedListTest);
   RegisterTest(TLiteSortedListTest);
   RegisterTest(TLiteComparableSortedListTest);
   RegisterTest(TLiteHashListTest);
+  RegisterTest(TLiteHashList2Test);
 end.
 
