@@ -450,8 +450,8 @@ var
   I: Integer;
 begin
   {%H-}v.Instance := TIntVector.Create(IntArray21);
-  AssertTrue(Format('21 expected, got %d', [v.Instance.Count]), v.Instance.Count = 21);
-  AssertTrue(v.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Instance.Count = 21);
+  AssertTrue(v.Instance.Capacity = v.Instance.Count);
   for I := 1 to 21 do
     AssertTrue(v{%H-}.Instance[I - 1] = I);
 end;
@@ -463,7 +463,7 @@ var
 begin
   {%H-}v.Instance := TIntVector.Create(TIntHelper.CreateCopy(IntArray21));
   AssertTrue(v.Instance.Count = 21);
-  AssertTrue(v.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Instance.Capacity = v.Instance.Count);
   for I := 1 to 21 do
     AssertTrue(v{%H-}.Instance[I - 1] = I);
 end;
@@ -475,7 +475,7 @@ var
 begin
   {%H-}v.Instance := TIntVector.Create(TIntEnumerable.Create(TIntHelper.CreateCopy(IntArray21)));
   AssertTrue(v.Instance.Count = 21);
-  AssertTrue(v.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Instance.Capacity = lgUtils.RoundUpTwoPower(v.Instance.Count));
   for I := 1 to 21 do
     AssertTrue(v{%H-}.Instance[I - 1] = I);
 end;
@@ -486,7 +486,7 @@ var
 begin
   {%H-}v.Instance := TIntVector.Create(IntArray21);
   AssertTrue(v.Instance.Count = 21);
-  AssertTrue(v.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Instance.Capacity = v.Instance.Count);
   v.Instance.Clear;
   AssertTrue(v.Instance.IsEmpty);
   AssertTrue(v.Instance.Capacity = 0);
@@ -498,7 +498,7 @@ var
 begin
   {%H-}v.Instance := TIntVector.Create(IntArray21);
   AssertTrue(v.Instance.Count = 21);
-  AssertTrue(v.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Instance.Capacity = v.Instance.Count);
   v.Instance.EnsureCapacity(255);
   AssertTrue(v.Instance.Capacity = 256);
   v.Instance.TrimToFit;
@@ -521,7 +521,7 @@ var
 begin
   {%H-}v.Instance := TIntVector.Create(0);
   v.Instance.EnsureCapacity(11);
-  AssertTrue(v.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Instance.Capacity = LGUtils.RoundUpTwoPower(11));
 end;
 
 procedure TGVectorTest.GetItemOfEmpty;
@@ -1436,9 +1436,9 @@ var
   v: TIntVector;
 begin
   {%H-}v.EnsureCapacity(11);
-  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Capacity = LGUtils.RoundUpTwoPower(11));
   v.EnsureCapacity(55);
-  AssertTrue(v.Capacity = 64);
+  AssertTrue(v.Capacity = LGUtils.RoundUpTwoPower(55));
 end;
 
 procedure TGLiteVectorTest.GetItemOfEmpty;
@@ -1621,7 +1621,7 @@ var
 begin
   {%H-}v.AddAll(IntArray21);
   AssertTrue(v.Count = 21);
-  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Capacity = lgUtils.RoundUpTwoPower(v.Count));
   v.Clear;
   AssertTrue(v.IsEmpty);
   AssertTrue(v.Capacity = 0);
@@ -1630,6 +1630,7 @@ end;
 procedure TGLiteVectorTest.MakeEmpty;
 var
   v: TIntVector;
+  c: SizeInt;
 begin
   AssertTrue({%H-}v.IsEmpty);
   AssertTrue(v.Capacity = 0);
@@ -1638,10 +1639,11 @@ begin
   AssertTrue(v.Capacity = 0);
   v.AddAll(IntArray21);
   AssertTrue(v.Count = 21);
-  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  c := v.Capacity;
+  AssertTrue(c = lgUtils.RoundUpTwoPower(v.Count));
   v.MakeEmpty;
   AssertTrue(v.IsEmpty);
-  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Capacity = c);
 end;
 
 procedure TGLiteVectorTest.MakeEmptyStr;
@@ -1670,7 +1672,7 @@ var
 begin
   {%H-}v.AddAll(IntArray21);
   AssertTrue(v.Count = 21);
-  AssertTrue(v.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(v.Capacity = lgUtils.RoundUpTwoPower(v.Count));
   v.EnsureCapacity(250);
   AssertTrue(v.Capacity = 256);
   v.TrimToFit;
