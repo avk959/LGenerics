@@ -755,6 +755,7 @@ type
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     TEntryArray      = array of TEntry;
     PEntry           = ^TEntry;
+    TOnRemove        = specialize TGNestUnaryProc<TEntry>;
 
   private
     FNodeList: TNodeList;
@@ -770,16 +771,17 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  Find(const aKey: TKey; aHash: SizeInt): SizeInt; inline;
-    function  Find(const aKey: TKey): SizeInt; inline;
+    function  FindEntry(const aKey: TKey; aHash: SizeInt): PEntry;
+    function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt; inline;
+    function  DoFind(const aKey: TKey): SizeInt; inline;
     function  GetCountOf(const aKey: TKey): SizeInt;
     function  DoAdd(const e: TEntry): SizeInt;
     function  DoAddHash(aHash: SizeInt): SizeInt;
     procedure DoInsert(aIndex: SizeInt; const e: TEntry);
-    procedure DoDelete(aIndex: SizeInt);
+    procedure DoDelete(aIndex: SizeInt; aOnRemove: TOnRemove);
     procedure RemoveFromChain(aIndex: SizeInt);
-    function  DoRemove(const aKey: TKey): Boolean;
-    function  DoRemoveAll(const aKey: TKey): SizeInt;
+    function  DoRemove(const aKey: TKey; aOnRemove: TOnRemove): Boolean;
+    function  DoRemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
     function  FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
@@ -851,6 +853,7 @@ type
     procedure TrimToFit;
     function  Contains(const aKey: TKey): Boolean; inline;
     function  NonContains(const aKey: TKey): Boolean; inline;
+    function  Find(const aKey: TKey): PEntry; inline;
     function  IndexOf(const aKey: TKey): SizeInt;
     function  CountOf(const aKey: TKey): SizeInt; inline;
     function  Add(const e: TEntry): SizeInt; inline;
@@ -864,9 +867,9 @@ type
     function  AddAllOrUpdate(const a: array of TEntry): SizeInt;
     function  AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; const e: TEntry);
-    procedure Delete(aIndex: SizeInt); inline;
-    function  Remove(const aKey: TKey): Boolean; inline;
-    function  RemoveAll(const aKey: TKey): SizeInt; inline;
+    procedure Delete(aIndex: SizeInt; aOnRemove: TOnRemove = nil); inline;
+    function  Remove(const aKey: TKey; aOnRemove: TOnRemove = nil): Boolean; inline;
+    function  RemoveAll(const aKey: TKey; aOnRemove: TOnRemove = nil): SizeInt; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
@@ -3996,7 +3999,21 @@ begin
     InitialAlloc;
 end;
 
-function TGLiteHashList2.Find(const aKey: TKey; aHash: SizeInt): SizeInt;
+function TGLiteHashList2.FindEntry(const aKey: TKey; aHash: SizeInt): PEntry;
+var
+  I: SizeInt;
+begin
+  I := FChainList[aHash and Pred(Capacity)];
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = aHash) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        exit(@FNodeList[I].Data);
+      I := FNodeList[I].Next;
+    end;
+  Result := nil;
+end;
+
+function TGLiteHashList2.DoFind(const aKey: TKey; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and Pred(Capacity)];
   while Result <> NULL_INDEX do
@@ -4007,9 +4024,9 @@ begin
     end;
 end;
 
-function TGLiteHashList2.Find(const aKey: TKey): SizeInt;
+function TGLiteHashList2.DoFind(const aKey: TKey): SizeInt;
 begin
-  Result := Find(aKey, TKeyEqRel.HashCode(aKey));
+  Result := DoFind(aKey, TKeyEqRel.HashCode(aKey));
 end;
 
 function TGLiteHashList2.GetCountOf(const aKey: TKey): SizeInt;
@@ -4067,9 +4084,11 @@ begin
     DoAdd(e);
 end;
 
-procedure TGLiteHashList2.DoDelete(aIndex: SizeInt);
+procedure TGLiteHashList2.DoDelete(aIndex: SizeInt; aOnRemove: TOnRemove);
 begin
   Dec(FCount);
+  if aOnRemove <> nil then
+    aOnRemove(FNodeList[aIndex].Data);
   if aIndex < Count then
     begin
       FNodeList[aIndex].Data := Default(TEntry);
@@ -4106,27 +4125,27 @@ begin
     end;
 end;
 
-function TGLiteHashList2.DoRemove(const aKey: TKey): Boolean;
+function TGLiteHashList2.DoRemove(const aKey: TKey; aOnRemove: TOnRemove): Boolean;
 var
   ToRemove: SizeInt;
 begin
-  ToRemove := Find(aKey);
+  ToRemove := DoFind(aKey);
   Result := ToRemove >= 0;
   if Result then
-    DoDelete(ToRemove);
+    DoDelete(ToRemove, aOnRemove);
 end;
 
-function TGLiteHashList2.DoRemoveAll(const aKey: TKey): SizeInt;
+function TGLiteHashList2.DoRemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
 var
   ToRemove, h: SizeInt;
 begin
   h := TKeyEqRel.HashCode(aKey);
   Result := Count;
   repeat
-    ToRemove := Find(aKey, h);
+    ToRemove := DoFind(aKey, h);
     if ToRemove >= 0 then
-      DoDelete(ToRemove);
-  until (ToRemove < 0) or (Count = 0);
+      DoDelete(ToRemove, aOnRemove);
+  until (ToRemove = NULL_INDEX) or (Count = 0);
   Result := Result - Count;
 end;
 
@@ -4136,7 +4155,7 @@ var
 begin
   h := TKeyEqRel.HashCode(aKey);
   if Count > 0 then
-    aIndex := Find(aKey, h)
+    aIndex := DoFind(aKey, h)
   else
     aIndex := NULL_INDEX;
   Result := aIndex >= 0;
@@ -4282,7 +4301,7 @@ begin
     end
   else
     begin
-      FCurrIdx := FList^.Find(FKey, FHash);
+      FCurrIdx := FList^.DoFind(FKey, FHash);
       FInLoop := True;
     end;
   Result := FCurrIdx <> NULL_INDEX;
@@ -4383,10 +4402,17 @@ begin
   Result := IndexOf(aKey) < 0;
 end;
 
+function TGLiteHashList2.Find(const aKey: TKey): PEntry;
+begin
+  if NonEmpty then
+    exit(FindEntry(aKey, TKeyEqRel.HashCode(aKey)));
+  Result := nil;
+end;
+
 function TGLiteHashList2.IndexOf(const aKey: TKey): SizeInt;
 begin
   if NonEmpty then
-    Result := Find(aKey)
+    Result := DoFind(aKey)
   else
     Result := NULL_INDEX;
 end;
@@ -4509,26 +4535,26 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-procedure TGLiteHashList2.Delete(aIndex: SizeInt);
+procedure TGLiteHashList2.Delete(aIndex: SizeInt; aOnRemove: TOnRemove);
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
-    DoDelete(aIndex)
+    DoDelete(aIndex, aOnRemove)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGLiteHashList2.Remove(const aKey: TKey): Boolean;
+function TGLiteHashList2.Remove(const aKey: TKey; aOnRemove: TOnRemove): Boolean;
 begin
   if NonEmpty then
-    Result := DoRemove(aKey)
+    Result := DoRemove(aKey, aOnRemove)
   else
     Result := False;
 end;
 
-function TGLiteHashList2.RemoveAll(const aKey: TKey): SizeInt;
+function TGLiteHashList2.RemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
 begin
   if NonEmpty then
-    Result := DoRemoveAll(aKey)
+    Result := DoRemoveAll(aKey, aOnRemove)
   else
     Result := 0;
 end;
