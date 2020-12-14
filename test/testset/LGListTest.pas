@@ -176,10 +176,18 @@ type
     procedure PassByValue;
   end;
 
+  { TLiteHashListTest }
+
   TLiteHashListTest = class(TTestCase)
   private
   type
     TIntList = specialize TGLiteHashList<Integer, Integer>;
+    TStrData    = record
+      Value: string;
+      constructor Create(const aValue: string);
+      class function HashCode(const aValue: TStrData): SizeInt; static;
+      class function Equal(const L, R: TStrData): Boolean; static;
+    end;
 
   published
     procedure Add;
@@ -198,6 +206,7 @@ type
     procedure CountOf;
     procedure Remove;
     procedure Remove_1;
+    procedure Remove_2;
     procedure Insert;
     procedure Delete;
     procedure DeleteOutOfBounds;
@@ -213,6 +222,12 @@ type
     TIntList     = specialize TGLiteHashList2<Integer, TEntry, Integer>;
     TEntryCursor = specialize TGArrayCursor<TEntry>;
 
+    TStrEntry    = record
+      Value: string;
+      constructor Create(const aValue: string);
+      property Key: string read Value;
+    end;
+
   published
     procedure Add;
     procedure AddArray;
@@ -227,6 +242,7 @@ type
     procedure IdenticalKeys;
     procedure IndexOf;
     procedure CountOf;
+    procedure Remove;
     procedure PassByValue;
   end;
 
@@ -375,7 +391,6 @@ var
 begin
   {%H-}lst.Instance := TIntList.Create(IntArray21);
   AssertTrue(lst.Instance.Count = 21);
-  AssertTrue(lst.Instance.Capacity <= DEFAULT_CONTAINER_CAPACITY);
   lst.Instance.EnsureCapacity(255);
   AssertTrue(lst.Instance.Capacity = 256);
   lst.Instance.TrimToFit;
@@ -1020,7 +1035,6 @@ begin
   for I in IntArray21 do
     lst.Add(I);
   AssertTrue(lst.Count = 21);
-  AssertTrue(lst.Capacity <= DEFAULT_CONTAINER_CAPACITY);
   lst.EnsureCapacity(255);
   AssertTrue(lst.Capacity = 256);
   lst.TrimToFit;
@@ -1685,7 +1699,6 @@ begin
   for I in IntArray21 do
     lst.Add(I);
   AssertTrue(lst.Count = 21);
-  AssertTrue(lst.Capacity <= DEFAULT_CONTAINER_CAPACITY);
   lst.EnsureCapacity(255);
   AssertTrue(lst.Capacity = 256);
   lst.TrimToFit;
@@ -2264,6 +2277,23 @@ begin
   AssertTrue(lst[0] = 7);
 end;
 
+{ TLiteHashListTest.TStrData }
+
+constructor TLiteHashListTest.TStrData.Create(const aValue: string);
+begin
+  Value := aValue;
+end;
+
+class function TLiteHashListTest.TStrData.HashCode(const aValue: TStrData): SizeInt;
+begin
+  Result := string.HashCode(aValue.Value);
+end;
+
+class function TLiteHashListTest.TStrData.Equal(const L, R: TStrData): Boolean;
+begin
+  Result := string.Equal(L.Value, R.Value);
+end;
+
 { TLiteHashListTest }
 
 procedure TLiteHashListTest.Add;
@@ -2378,12 +2408,11 @@ var
 begin
   lst.AddAll(IntArray21);
   AssertTrue(lst.Count = 21);
-  AssertTrue(lst.Capacity = DEFAULT_CONTAINER_CAPACITY);
   lst.EnsureCapacity(255);
   AssertTrue(lst.Capacity = 256);
   lst.TrimToFit;
   AssertTrue(lst.Count = 21);
-  AssertTrue(lst.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(lst.Capacity = lgUtils.RoundUpTwoPower(lst.Count));
 end;
 
 procedure TLiteHashListTest.GetEnumerator;
@@ -2488,6 +2517,25 @@ begin
   AssertTrue(lst.IsEmpty);
 end;
 
+procedure TLiteHashListTest.Remove_2;
+var
+  lst: specialize TGLiteHashList<TStrData, TStrData>;
+  I: Integer;
+begin
+  for I := 1 to 100 do
+    lst.Add(TStrData.Create('key ' + I.ToString));
+  AssertTrue(lst.Count = 100);
+  for I := 100 downto 1 do
+    AssertTrue(lst.Remove(TStrData.Create('key ' + I.ToString)));
+  AssertTrue(lst.IsEmpty);
+  for I := 1 to 100 do
+    lst.Add(TStrData.Create('key ' + I.ToString));
+  AssertTrue(lst.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(lst.Remove(TStrData.Create('key ' + I.ToString)));
+  AssertTrue(lst.IsEmpty);
+end;
+
 procedure TLiteHashListTest.Insert;
 var
   lst: TIntList;
@@ -2572,6 +2620,13 @@ begin
   AssertTrue(lst.IsEmpty);
   lst.Add(7);
   AssertTrue(lst.IndexOf(2) = -1);
+end;
+
+{ TLiteHashList2Test.TStrEntry }
+
+constructor TLiteHashList2Test.TStrEntry.Create(const aValue: string);
+begin
+  Value := aValue;
 end;
 
 { TLiteHashList2Test }
@@ -2834,6 +2889,25 @@ begin
     lst.Add(TEntry.Create(I, I));
   for I := 1 to 42 do
    AssertTrue(lst.CountOf(I) = 3);
+end;
+
+procedure TLiteHashList2Test.Remove;
+var
+  lst: specialize TGLiteHashList2<string, TStrEntry, string>;
+  I: Integer;
+begin
+  for I := 1 to 100 do
+    lst.Add(TStrEntry.Create('key ' + I.ToString));
+  AssertTrue(lst.Count = 100);
+  for I := 100 downto 1 do
+    AssertTrue(lst.Remove('key ' + I.ToString));
+  AssertTrue(lst.IsEmpty);
+  for I := 1 to 100 do
+    lst.Add(TStrEntry.Create('key ' + I.ToString));
+  AssertTrue(lst.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(lst.Remove('key ' + I.ToString));
+  AssertTrue(lst.IsEmpty);
 end;
 
 procedure TLiteHashList2Test.PassByValue;
