@@ -841,6 +841,7 @@ type
     public
       function  GetEnumerator: TIdenticEnumerator; inline;
     end;
+
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  ToArray: TEntryArray;
@@ -860,6 +861,7 @@ type
     function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
     function  AddUniq(const e: TEntry): Boolean; inline;
+    function  AddUniq(const e: TEntry; out p: PEntry): Boolean; inline;
     function  AddAllUniq(const a: array of TEntry): SizeInt;
     function  AddAllUniq(e: IEntryEnumerable): SizeInt;
     function  AddOrUpdate(const e: TEntry; out aIndex: SizeInt): Boolean; inline;
@@ -3581,21 +3583,17 @@ end;
 procedure TGLiteHashList.DoDelete(aIndex: SizeInt);
 begin
   Dec(FCount);
+  if IsManagedType(T) then
+    FNodeList[aIndex].Data := Default(T);
   if aIndex < Count then
     begin
-      if IsManagedType(T) then
-        FNodeList[aIndex].Data := Default(T);
       System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * SizeOf(TNode));
       if IsManagedType(T) then
         System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
       Rehash;
     end
   else   // last element
-    begin
-      RemoveFromChain(aIndex);
-      if IsManagedType(T) then
-        System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
-    end;
+    RemoveFromChain(aIndex);
 end;
 
 procedure TGLiteHashList.RemoveFromChain(aIndex: SizeInt);
@@ -4075,7 +4073,8 @@ begin
   if aIndex < Count then
     begin
       System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * SizeOf(TNode));
-      System.FillChar(FNodeList[aIndex].Data, SizeOf(TEntry), 0);
+      if IsManagedType(TEntry) then
+        System.FillChar(FNodeList[aIndex].Data, SizeOf(TEntry), 0);
       FNodeList[aIndex].Hash := TKeyEqRel.HashCode(e.Key);
       FNodeList[aIndex].Data := e;
       Inc(FCount);
@@ -4090,18 +4089,17 @@ begin
   Dec(FCount);
   if aOnRemove <> nil then
     aOnRemove(FNodeList[aIndex].Data);
+  if IsManagedType(TEntry) then
+    FNodeList[aIndex].Data := Default(TEntry);
   if aIndex < Count then
     begin
-      FNodeList[aIndex].Data := Default(TEntry);
       System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * SizeOf(TNode));
-      System.FillChar(FNodeList[Count].Data, SizeOf(TEntry), 0);
+      if IsManagedType(TEntry) then
+        System.FillChar(FNodeList[Count].Data, SizeOf(TEntry), 0);
       Rehash;
     end
   else   // last element
-    begin
-      RemoveFromChain(aIndex);
-      System.FillChar(FNodeList[Count].Data, SizeOf(TEntry), 0);
-    end;
+    RemoveFromChain(aIndex);
 end;
 
 procedure TGLiteHashList2.RemoveFromChain(aIndex: SizeInt);
@@ -4131,9 +4129,12 @@ var
   ToRemove: SizeInt;
 begin
   ToRemove := DoFind(aKey);
-  Result := ToRemove >= 0;
-  if Result then
-    DoDelete(ToRemove, aOnRemove);
+  if ToRemove >= 0 then
+    begin
+      DoDelete(ToRemove, aOnRemove);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteHashList2.DoRemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
@@ -4457,6 +4458,15 @@ function TGLiteHashList2.AddUniq(const e: TEntry): Boolean;
 var
   Dummy: SizeInt;
   p: PEntry;
+begin
+  Result := not FindOrAdd(e.Key, p, Dummy);
+  if Result then
+    p^ := e;
+end;
+
+function TGLiteHashList2.AddUniq(const e: TEntry; out p: PEntry): Boolean;
+var
+  Dummy: SizeInt;
 begin
   Result := not FindOrAdd(e.Key, p, Dummy);
   if Result then
