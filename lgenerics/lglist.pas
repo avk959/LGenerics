@@ -867,6 +867,7 @@ type
     function  AddAllOrUpdate(const a: array of TEntry): SizeInt;
     function  AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; const e: TEntry);
+    function  TryInsert(aIndex: SizeInt; const e: TEntry): Boolean;
     procedure Delete(aIndex: SizeInt; aOnRemove: TOnRemove = nil); inline;
     function  Remove(const aKey: TKey; aOnRemove: TOnRemove = nil): Boolean; inline;
     function  RemoveAll(const aKey: TKey; aOnRemove: TOnRemove = nil): SizeInt; inline;
@@ -4533,6 +4534,18 @@ begin
     end
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGLiteHashList2.TryInsert(aIndex: SizeInt; const e: TEntry): Boolean;
+begin
+  if SizeUInt(aIndex) <= SizeUInt(Count) then
+    begin
+      if Count = Capacity then
+        Expand;
+      DoInsert(aIndex, e);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGLiteHashList2.Delete(aIndex: SizeInt; aOnRemove: TOnRemove);
