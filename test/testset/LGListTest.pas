@@ -2894,19 +2894,20 @@ end;
 procedure TLiteHashList2Test.Remove;
 var
   lst: specialize TGLiteHashList2<string, TStrEntry, string>;
+  e: TStrEntry;
   I: Integer;
 begin
   for I := 1 to 100 do
     lst.Add(TStrEntry.Create('key ' + I.ToString));
   AssertTrue(lst.Count = 100);
   for I := 100 downto 1 do
-    AssertTrue(lst.Remove('key ' + I.ToString));
+    AssertTrue(lst.Remove('key ' + I.ToString, e));
   AssertTrue(lst.IsEmpty);
   for I := 1 to 100 do
     lst.Add(TStrEntry.Create('key ' + I.ToString));
   AssertTrue(lst.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(lst.Remove('key ' + I.ToString));
+    AssertTrue(lst.Remove('key ' + I.ToString, e));
   AssertTrue(lst.IsEmpty);
 end;
 
