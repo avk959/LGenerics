@@ -1098,9 +1098,12 @@ begin
   if IsManagedType(T) then
     FItems[aIndex] := Default(T);
   Dec(FCount);
-  System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-  if IsManagedType(T) then
-    System.FillChar(FItems[ElemCount], SizeOf(T), 0);
+  if aIndex < ElemCount then
+    begin
+      System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
+      if IsManagedType(T) then
+        System.FillChar(FItems[ElemCount], SizeOf(T), 0);
+    end;
 end;
 
 function TGVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
@@ -1504,9 +1507,12 @@ begin
   if IsManagedType(T) then
     FBuffer.FItems[aIndex] := Default(T);
   Dec(FBuffer.FCount);
-  System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
-  if IsManagedType(T) then
-    System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
+  if aIndex < Count then
+    begin
+      System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
+    end;
 end;
 
 function TGLiteVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
