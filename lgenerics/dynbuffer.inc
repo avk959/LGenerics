@@ -358,9 +358,9 @@ end;
 procedure TGLiteDynBuffer.Expand(aValue: SizeInt);
 begin
   //there aValue > Capacity
-  if aValue <= DEFAULT_CONTAINER_CAPACITY then
-    System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
-  else
+  //if aValue <= DEFAULT_CONTAINER_CAPACITY then
+  //  System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
+  //else
     if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
       begin
         aValue := Math.Min(LGUtils.RoundUpTwoPower(aValue), MAX_CONTAINER_SIZE div SizeOf(T));
