@@ -755,7 +755,6 @@ type
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     TEntryArray      = array of TEntry;
     PEntry           = ^TEntry;
-    TOnRemove        = specialize TGNestUnaryProc<TEntry>;
 
   private
     FNodeList: TNodeList;
@@ -778,10 +777,9 @@ type
     function  DoAdd(const e: TEntry): SizeInt;
     function  DoAddHash(aHash: SizeInt): SizeInt;
     procedure DoInsert(aIndex: SizeInt; const e: TEntry);
-    procedure DoDelete(aIndex: SizeInt; aOnRemove: TOnRemove);
+    procedure DoDelete(aIndex: SizeInt; out e: TEntry);
     procedure RemoveFromChain(aIndex: SizeInt);
-    function  DoRemove(const aKey: TKey; aOnRemove: TOnRemove): Boolean;
-    function  DoRemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
+    function  DoRemove(const aKey: TKey; out e: TEntry): Boolean;
     function  FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
@@ -830,6 +828,7 @@ type
       procedure Init(const aKey: TKey; aList: PLiteHashList);
     public
       function  MoveNext: Boolean;
+      procedure Reset;
       property  Current: TEntry read GetCurrent;
     end;
 
@@ -844,6 +843,7 @@ type
 
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetIdenticEnumerator(const aKey: TKey): TIdenticEnumerator; inline;
     function  ToArray: TEntryArray;
     function  Reverse: TReverse; inline;
     function  IdenticalKeys(const aKey: TKey): TIdenticKeys;
@@ -870,9 +870,9 @@ type
     function  AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; const e: TEntry);
     function  TryInsert(aIndex: SizeInt; const e: TEntry): Boolean;
-    procedure Delete(aIndex: SizeInt; aOnRemove: TOnRemove = nil); inline;
-    function  Remove(const aKey: TKey; aOnRemove: TOnRemove = nil): Boolean; inline;
-    function  RemoveAll(const aKey: TKey; aOnRemove: TOnRemove = nil): SizeInt; inline;
+    procedure Delete(aIndex: SizeInt; out e: TEntry); inline;
+    function  TryDelete(aIndex: SizeInt; out e: TEntry): Boolean; inline;
+    function  Remove(const aKey: TKey; out e: TEntry): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
@@ -4084,11 +4084,10 @@ begin
     DoAdd(e);
 end;
 
-procedure TGLiteHashList2.DoDelete(aIndex: SizeInt; aOnRemove: TOnRemove);
+procedure TGLiteHashList2.DoDelete(aIndex: SizeInt; out e: TEntry);
 begin
   Dec(FCount);
-  if aOnRemove <> nil then
-    aOnRemove(FNodeList[aIndex].Data);
+  e := FNodeList[aIndex].Data;
   if IsManagedType(TEntry) then
     FNodeList[aIndex].Data := Default(TEntry);
   if aIndex < Count then
@@ -4124,31 +4123,17 @@ begin
     end;
 end;
 
-function TGLiteHashList2.DoRemove(const aKey: TKey; aOnRemove: TOnRemove): Boolean;
+function TGLiteHashList2.DoRemove(const aKey: TKey; out e: TEntry): Boolean;
 var
   ToRemove: SizeInt;
 begin
   ToRemove := DoFind(aKey);
   if ToRemove >= 0 then
     begin
-      DoDelete(ToRemove, aOnRemove);
+      DoDelete(ToRemove, e);
       exit(True);
     end;
   Result := False;
-end;
-
-function TGLiteHashList2.DoRemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
-var
-  ToRemove, h: SizeInt;
-begin
-  h := TKeyEqRel.HashCode(aKey);
-  Result := Count;
-  repeat
-    ToRemove := DoFind(aKey, h);
-    if ToRemove >= 0 then
-      DoDelete(ToRemove, aOnRemove);
-  until (ToRemove = NULL_INDEX) or (Count = 0);
-  Result := Result - Count;
 end;
 
 function TGLiteHashList2.FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
@@ -4309,6 +4294,12 @@ begin
   Result := FCurrIdx <> NULL_INDEX;
 end;
 
+procedure TGLiteHashList2.TIdenticEnumerator.Reset;
+begin
+  FCurrIdx := NULL_INDEX;
+  FInLoop := False;
+end;
+
 { TGLiteHashList2.TIdenticKeys }
 
 procedure TGLiteHashList2.TIdenticKeys.Init(const aKey: TKey; aList: PLiteHashList);
@@ -4330,6 +4321,11 @@ end;
 function TGLiteHashList2.GetReverseEnumerator: TReverseEnumerator;
 begin
   Result.Init(@Self);
+end;
+
+function TGLiteHashList2.GetIdenticEnumerator(const aKey: TKey): TIdenticEnumerator;
+begin
+  Result{%H-}.Init(aKey, @Self);
 end;
 
 function TGLiteHashList2.ToArray: TEntryArray;
@@ -4558,28 +4554,30 @@ begin
   Result := False;
 end;
 
-procedure TGLiteHashList2.Delete(aIndex: SizeInt; aOnRemove: TOnRemove);
+procedure TGLiteHashList2.Delete(aIndex: SizeInt; out e: TEntry);
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
-    DoDelete(aIndex, aOnRemove)
+    DoDelete(aIndex, e)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGLiteHashList2.Remove(const aKey: TKey; aOnRemove: TOnRemove): Boolean;
+function TGLiteHashList2.TryDelete(aIndex: SizeInt; out e: TEntry): Boolean;
 begin
-  if NonEmpty then
-    Result := DoRemove(aKey, aOnRemove)
-  else
-    Result := False;
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    begin
+      DoDelete(aIndex, e);
+      exit(True);
+    end;
+  Result := False;
 end;
 
-function TGLiteHashList2.RemoveAll(const aKey: TKey; aOnRemove: TOnRemove): SizeInt;
+function TGLiteHashList2.Remove(const aKey: TKey; out e: TEntry): Boolean;
 begin
   if NonEmpty then
-    Result := DoRemoveAll(aKey, aOnRemove)
+    Result := DoRemove(aKey, e)
   else
-    Result := 0;
+    Result := False;
 end;
 
 end.
