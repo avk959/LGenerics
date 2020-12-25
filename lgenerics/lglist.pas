@@ -773,6 +773,8 @@ type
     function  FindEntry(const aKey: TKey; aHash: SizeInt): PEntry;
     function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt; inline;
     function  DoFind(const aKey: TKey): SizeInt; inline;
+    function  HasUniq(const aKey: TKey): Boolean;
+    function  DoFindUniq(const aKey: TKey): PEntry;
     function  GetCountOf(const aKey: TKey): SizeInt;
     function  DoAdd(const e: TEntry): SizeInt;
     function  DoAddHash(aHash: SizeInt): SizeInt;
@@ -850,11 +852,13 @@ type
     procedure Clear;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure EnsureCapacity(aValue: SizeInt);
+    procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit;
     function  Contains(const aKey: TKey): Boolean; inline;
+    function  ContainsUniq(const aKey: TKey): Boolean; inline;
     function  NonContains(const aKey: TKey): Boolean; inline;
     function  Find(const aKey: TKey): PEntry; inline;
+    function  FindUniq(const aKey: TKey): PEntry; inline;
     function  IndexOf(const aKey: TKey): SizeInt;
     function  CountOf(const aKey: TKey): SizeInt; inline;
     function  Add(const e: TEntry): SizeInt; inline;
@@ -4028,6 +4032,43 @@ begin
   Result := DoFind(aKey, TKeyEqRel.HashCode(aKey));
 end;
 
+function TGLiteHashList2.HasUniq(const aKey: TKey): Boolean;
+var
+  I, h, cnt: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FChainList[h and Pred(Capacity)];
+  cnt := 0;
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        begin
+          Inc(cnt);
+          if cnt = 2 then exit(False);
+        end;
+      I := FNodeList[I].Next;
+    end;
+  Result := cnt = 1;
+end;
+
+function TGLiteHashList2.DoFindUniq(const aKey: TKey): PEntry;
+var
+  I, h: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FChainList[h and Pred(Capacity)];
+  Result := nil;
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        begin
+          if Result <> nil then exit(nil);
+          Result := @FNodeList[I].Data;
+        end;
+      I := FNodeList[I].Next;
+    end;
+end;
+
 function TGLiteHashList2.GetCountOf(const aKey: TKey): SizeInt;
 var
   h, I: SizeInt;
@@ -4395,6 +4436,13 @@ begin
   Result := IndexOf(aKey) >= 0;
 end;
 
+function TGLiteHashList2.ContainsUniq(const aKey: TKey): Boolean;
+begin
+  if NonEmpty then
+    exit(HasUniq(aKey));
+  Result := False;
+end;
+
 function TGLiteHashList2.NonContains(const aKey: TKey): Boolean;
 begin
   Result := IndexOf(aKey) < 0;
@@ -4404,6 +4452,13 @@ function TGLiteHashList2.Find(const aKey: TKey): PEntry;
 begin
   if NonEmpty then
     exit(FindEntry(aKey, TKeyEqRel.HashCode(aKey)));
+  Result := nil;
+end;
+
+function TGLiteHashList2.FindUniq(const aKey: TKey): PEntry;
+begin
+  if NonEmpty then
+    exit(DoFindUniq(aKey));
   Result := nil;
 end;
 
