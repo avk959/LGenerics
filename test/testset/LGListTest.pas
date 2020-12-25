@@ -228,6 +228,12 @@ type
       property Key: string read Value;
     end;
 
+    TIntEntry    = record
+      Key: Integer;
+      Value: string;
+      constructor Create(aKey: Integer; const aValue: string);
+    end;
+
   published
     procedure Add;
     procedure AddArray;
@@ -243,6 +249,8 @@ type
     procedure IndexOf;
     procedure CountOf;
     procedure Remove;
+    procedure ContainsUniq;
+    procedure FindUniq;
     procedure PassByValue;
   end;
 
@@ -2629,6 +2637,14 @@ begin
   Value := aValue;
 end;
 
+{ TLiteHashList2Test.TIntEntry }
+
+constructor TLiteHashList2Test.TIntEntry.Create(aKey: Integer; const aValue: string);
+begin
+  Key := aKey;
+  Value := aValue;
+end;
+
 { TLiteHashList2Test }
 
 procedure TLiteHashList2Test.Add;
@@ -2909,6 +2925,46 @@ begin
   for I := 1 to 100 do
     AssertTrue(lst.Remove('key ' + I.ToString, e));
   AssertTrue(lst.IsEmpty);
+end;
+
+procedure TLiteHashList2Test.ContainsUniq;
+var
+  lst: specialize TGLiteHashList2<Integer, TIntEntry, Integer>;
+  I: Integer;
+begin
+  AssertFalse(lst.ContainsUniq(0));
+  for I := 1 to 100 do
+    lst.Add(TIntEntry.Create(I, 'item ' + I.ToString));
+  AssertTrue(lst.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(lst.ContainsUniq(I));
+  AssertFalse(lst.ContainsUniq(0));
+  AssertFalse(lst.ContainsUniq(101));
+  for I := 1 to 100 do
+    lst.Add(TIntEntry.Create(I, 'item ' + I.ToString));
+  for I := 1 to 100 do
+    AssertFalse(lst.ContainsUniq(I));
+end;
+
+procedure TLiteHashList2Test.FindUniq;
+var
+  lst: specialize TGLiteHashList2<Integer, TIntEntry, Integer>;
+  p: ^TIntEntry;
+  I: Integer;
+begin
+  AssertTrue(lst.FindUniq(0) = nil);
+  for I := 1 to 100 do
+    lst.Add(TIntEntry.Create(I, 'item ' + I.ToString));
+  for I := 1 to 100 do
+    begin
+      p := lst.FindUniq(I);
+      AssertTrue(p <> nil);
+      AssertTrue((p^.Key = I) and (p^.Value = 'item ' + I.ToString));
+    end;
+  for I := 1 to 100 do
+    lst.Add(TIntEntry.Create(I, 'item ' + I.ToString));
+  for I := 1 to 100 do
+    AssertTrue(lst.FindUniq(I) = nil);
 end;
 
 procedure TLiteHashList2Test.PassByValue;
