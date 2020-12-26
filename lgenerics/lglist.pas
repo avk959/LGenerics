@@ -782,7 +782,7 @@ type
     procedure DoDelete(aIndex: SizeInt; out e: TEntry);
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(const aKey: TKey; out e: TEntry): Boolean;
-    function  FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
+    function  DoFindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
     class operator AddRef(var hl: TGLiteHashList2);
@@ -858,6 +858,7 @@ type
     function  ContainsUniq(const aKey: TKey): Boolean; inline;
     function  NonContains(const aKey: TKey): Boolean; inline;
     function  Find(const aKey: TKey): PEntry; inline;
+    function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; inline;
     function  FindUniq(const aKey: TKey): PEntry; inline;
     function  IndexOf(const aKey: TKey): SizeInt;
     function  CountOf(const aKey: TKey): SizeInt; inline;
@@ -4177,7 +4178,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashList2.FindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
+function TGLiteHashList2.DoFindOrAdd(const aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -4455,6 +4456,13 @@ begin
   Result := nil;
 end;
 
+function TGLiteHashList2.FindOrAdd(const aKey: TKey; out p: PEntry): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := DoFindOrAdd(aKey, p, Dummy);
+end;
+
 function TGLiteHashList2.FindUniq(const aKey: TKey): PEntry;
 begin
   if NonEmpty then
@@ -4510,7 +4518,7 @@ var
   Dummy: SizeInt;
   p: PEntry;
 begin
-  Result := not FindOrAdd(e.Key, p, Dummy);
+  Result := not DoFindOrAdd(e.Key, p, Dummy);
   if Result then
     p^ := e;
 end;
@@ -4519,7 +4527,7 @@ function TGLiteHashList2.AddUniq(const e: TEntry; out p: PEntry): Boolean;
 var
   Dummy: SizeInt;
 begin
-  Result := not FindOrAdd(e.Key, p, Dummy);
+  Result := not DoFindOrAdd(e.Key, p, Dummy);
   if Result then
     p^ := e;
 end;
@@ -4548,7 +4556,7 @@ function TGLiteHashList2.AddOrUpdate(const e: TEntry; out aIndex: SizeInt): Bool
 var
   p: PEntry;
 begin
-  Result := not FindOrAdd(e.Key, p, aIndex);
+  Result := not DoFindOrAdd(e.Key, p, aIndex);
   p^ := e;
 end;
 
@@ -4557,7 +4565,7 @@ var
   Dummy: SizeInt;
   p: PEntry;
 begin
-  Result := not FindOrAdd(e.Key, p, Dummy);
+  Result := not DoFindOrAdd(e.Key, p, Dummy);
   p^ := e;
 end;
 
@@ -4569,7 +4577,7 @@ begin
   Result := Count;
   for I := 0 to System.High(a) do
     begin
-      FindOrAdd(a[I].Key, p, Dummy);
+      DoFindOrAdd(a[I].Key, p, Dummy);
       p^ := a[I];
     end;
   Result := Count - Result;
