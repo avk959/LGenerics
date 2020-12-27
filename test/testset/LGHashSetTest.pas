@@ -1783,6 +1783,7 @@ var
   c: SizeInt;
 begin
   s.Instance := TSet.Create(0.85, IntArray11);
+  s.Instance.EnsureCapacity(40);
   c := s.Instance.Capacity;
   s.Instance.TrimToFit;
   AssertTrue(s.Instance.Capacity < c);
@@ -2621,6 +2622,7 @@ var
   c: SizeInt;
 begin
   s.Instance := TSet.Create(0.85, IntArray11);
+  s.Instance.EnsureCapacity(40);
   c := s.Instance.Capacity;
   s.Instance.TrimToFit;
   AssertTrue(s.Instance.Capacity >= 11);
@@ -3458,6 +3460,7 @@ var
   c: SizeInt;
 begin
   s.Instance := TSet.Create(IntArray11);
+  s.Instance.EnsureCapacity(40);
   c := s.Instance.Capacity;
   s.Instance.TrimToFit;
   AssertTrue(s.Instance.Capacity < c);
@@ -4274,6 +4277,7 @@ var
   c: SizeInt;
 begin
   s.Instance := TSet.Create(IntArray11);
+  s.Instance.EnsureCapacity(40);
   c := s.Instance.Capacity;
   s.Instance.TrimToFit;
   AssertTrue(s.Instance.Capacity < c);
