@@ -233,7 +233,6 @@ var
 begin
   {%H-}d.Instance := TIntDeque.Create(IntArray21);
   AssertTrue(d.Instance.Count = 21);
-  AssertTrue(d.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(d.Instance.ToArray, IntArray21));
 end;
 
@@ -243,7 +242,6 @@ var
 begin
   {%H-}d.Instance := TIntDeque.Create(TIntHelper.CreateCopy(IntArray21));
   AssertTrue(d.Instance.Count = 21);
-  AssertTrue(d.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(d.Instance.ToArray, IntArray21));
 end;
 
@@ -253,7 +251,6 @@ var
 begin
   {%H-}d.Instance := TIntDeque.Create(TIntEnumerable.Create(TIntHelper.CreateCopy(IntArray21)));
   AssertTrue(d.Instance.Count = 21);
-  AssertTrue(d.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(d.Instance.ToArray, IntArray21));
 end;
 
@@ -592,7 +589,6 @@ var
 begin
   {%H-}d.Instance := TIntDeque.Create(IntArray21[1..19]);
   AssertTrue(d.Instance.Count = 19);
-  AssertTrue(d.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   d.Instance.TrimToFit;
   AssertTrue(d.Instance.Count = 19);
   AssertTrue(d.Instance.Capacity = 19);
@@ -1113,7 +1109,6 @@ begin
   for I in [1..21] do
     {%H-}d.PushLast(I);
   AssertTrue(d.Count = 21);
-  AssertTrue(d.Capacity = DEFAULT_CONTAINER_CAPACITY);
   d.Clear;
   AssertTrue(d.IsEmpty);
   AssertTrue(d.Capacity = 0);
@@ -1171,7 +1166,6 @@ begin
   for I in [1..21] do
     {%H-}d.PushLast(I);
   AssertTrue(d.Count = 21);
-  AssertTrue(d.Capacity = DEFAULT_CONTAINER_CAPACITY);
   d.TrimToFit;
   AssertTrue(d.Count = 21);
   AssertTrue(d.Capacity = 21);
