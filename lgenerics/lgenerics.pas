@@ -8,11 +8,10 @@ unit LGenerics;
 interface
 
 uses
-  lgAbstractContainer, lgArrayHelpers, lgAsync, lgAvlTree, lgBiMap, lgDeque, LGFunction, lgHash, 
-  lgHashMap, lgHashMultiSet, lgHashSet, lgHashTable, lgHelpers, lgMiscUtils, lgMultiMap, lgPriorityQueue, 
-  lgQueue, lgSimpleDigraph, lgSimpleGraph, lgSparseGraph, lgStack, lgStrConst, lgStrHelpers, lgTable2D, 
-  lgTreeMap, lgTreeMultiSet, lgTreeSet, lgUtils, lgVector, lgRootTree, lgInt128, lgTreap, lgBstUtils, 
-  lgRbTree;
+  lgAbstractContainer, lgArrayHelpers, lgAsync, lgAvlTree, lgBiMap, lgDeque, lgFunction, lgHash, lgHashMap, 
+  lgHashMultiSet, lgHashSet, lgHashTable, lgHelpers, lgMiscUtils, lgMultiMap, lgPriorityQueue, lgQueue, 
+  lgSimpleDigraph, lgSimpleGraph, lgSparseGraph, lgStack, lgStrConst, lgStrHelpers, lgTable2D, lgTreeMap, 
+  lgTreeMultiSet, lgTreeSet, lgUtils, lgVector, lgRootTree, lgInt128, lgTreap, lgBstUtils, lgRbTree, lgJson;
 
 implementation
 

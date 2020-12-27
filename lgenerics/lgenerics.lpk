@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="5"/>
-    <Files Count="35">
+    <Files Count="36">
       <Item1>
         <Filename Value="lgabstractcontainer.pas"/>
         <UnitName Value="lgAbstractContainer"/>
@@ -173,6 +173,10 @@
         <Filename Value="lgrbtree.pas"/>
         <UnitName Value="lgRbTree"/>
       </Item35>
+      <Item36>
+        <Filename Value="lgjson.pas"/>
+        <UnitName Value="lgJson"/>
+      </Item36>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
