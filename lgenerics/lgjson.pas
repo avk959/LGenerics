@@ -3010,8 +3010,6 @@ begin
           end
         else
           begin
-            if NextState = 36 then
-              sb.Append(Buf[I]);
             case NextState of
               31: //end object - state = object
                 if Stack[sTop].Mode = pmKey then begin
@@ -3073,23 +3071,26 @@ begin
                   State := AR;
                 end else exit(False);
               36: //string value
-                case Stack[sTop].Mode of
-                  pmKey: begin
-                      KeyValue := sb.ToDecodeString;
-                      State := CO;
-                    end;
-                  pmArray: begin
-                      Stack[sTop].Node.Add(sb.ToDecodeString);
-                      State := OK;
-                    end;
-                  pmObject: begin
-                      Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
-                      State := OK;
-                    end
-                else
-                  Stack[sTop].Node.AsString := sb.ToDecodeString;
-                  Dec(sTop);
-                  State := OK;
+                begin
+                  sb.Append(Buf[I]);
+                  case Stack[sTop].Mode of
+                    pmKey: begin
+                        KeyValue := sb.ToDecodeString;
+                        State := CO;
+                      end;
+                    pmArray: begin
+                        Stack[sTop].Node.Add(sb.ToDecodeString);
+                        State := OK;
+                      end;
+                    pmObject: begin
+                        Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
+                        State := OK;
+                      end
+                  else
+                    Stack[sTop].Node.AsString := sb.ToDecodeString;
+                    Dec(sTop);
+                    State := OK;
+                  end;
                 end;
               37: //OK - comma
                 case Stack[sTop].Mode of
