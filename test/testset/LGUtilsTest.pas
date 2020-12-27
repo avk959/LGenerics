@@ -183,7 +183,7 @@ type
       property OnDestroy: TProc read FProc write FProc;
 
     end;
-    TTestRef = specialize TGSharedRefA<TTestClass>;
+    TTestRef = specialize TGSharedAutoRef<TTestClass>;
 
   var
     FTestRef: TTestRef;
@@ -1476,7 +1476,7 @@ end;
 
 procedure TSharedRefATest.Instance;
 var
-  Ref: specialize TGSharedRefA<TStringList>;
+  Ref: specialize TGSharedAutoRef<TStringList>;
 begin
   AssertTrue(Assigned({%H-}Ref.Instance));
   AssertTrue(Ref.Instance.Count = 0);
@@ -1484,7 +1484,7 @@ end;
 
 procedure TSharedRefATest.Implicit;
 var
-  Ref: specialize TGSharedRefA<TStringList>;
+  Ref: specialize TGSharedAutoRef<TStringList>;
   List: TStringList = nil;
 begin
   List := {%H-}Ref;
@@ -1494,7 +1494,7 @@ end;
 
 procedure TSharedRefATest.Explicit;
 var
-  Ref: specialize TGSharedRefA<TStringList>;
+  Ref: specialize TGSharedAutoRef<TStringList>;
 begin
   AssertTrue(TStringList(Ref).Count = 0);
   AssertTrue(TStringList(Ref).Add('line') = 0);
@@ -1504,7 +1504,7 @@ end;
 
 procedure TSharedRefATest.CopyRefCount;
 var
-  Ref, Ref2: specialize TGSharedRefA<TTestClass>;
+  Ref, Ref2: specialize TGSharedAutoRef<TTestClass>;
 begin
   FCounter := 0;
   AssertTrue({%H-}Ref.RefCount = 0);
@@ -1543,7 +1543,7 @@ end;
 
 procedure TSharedRefATest.PassByValue;
 var
-  Ref: specialize TGSharedRefA<TTestClass>;
+  Ref: specialize TGSharedAutoRef<TTestClass>;
 begin
   TTestClass(Ref).Value := -5;
 
@@ -1571,7 +1571,7 @@ end;
 
 procedure TSharedRefATest.PassAsVar;
 var
-  Ref: specialize TGSharedRefA<TTestClass>;
+  Ref: specialize TGSharedAutoRef<TTestClass>;
 begin
   FCounter := 0;
   TTestClass(Ref).OnDestroy := @IncCounter;
@@ -1584,7 +1584,7 @@ end;
 
 procedure TSharedRefATest.PassAsOut;
 var
-  Ref: specialize TGSharedRefA<TTestClass>;
+  Ref: specialize TGSharedAutoRef<TTestClass>;
 begin
   FCounter := 0;
   TTestClass(Ref).OnDestroy := @IncCounter;
@@ -1598,7 +1598,7 @@ end;
 
 procedure TSharedRefATest.PassAsConst;
 var
-  Ref: specialize TGSharedRefA<TTestClass>;
+  Ref: specialize TGSharedAutoRef<TTestClass>;
 begin
   FCounter := 0;
   TTestClass(Ref).OnDestroy := @IncCounter;
@@ -1610,7 +1610,7 @@ end;
 
 procedure TSharedRefATest.PassAsConstref;
 var
-  Ref: specialize TGSharedRefA<TTestClass>;
+  Ref: specialize TGSharedAutoRef<TTestClass>;
 begin
   FCounter := 0;
   TTestClass(Ref).OnDestroy := @IncCounter;
@@ -1622,7 +1622,7 @@ end;
 
 procedure TSharedRefATest.HasInstance;
 var
-  Ref: specialize TGSharedRefA<TStringList>;
+  Ref: specialize TGSharedAutoRef<TStringList>;
 begin
   AssertFalse({%H-}Ref.HasInstance);
   AssertTrue(TStringList(Ref).Count = 0);
@@ -1633,7 +1633,7 @@ end;
 
 procedure TSharedRefATest.Release;
 var
-  Ref, Ref2: specialize TGSharedRefA<TTestClass>;
+  Ref, Ref2: specialize TGSharedAutoRef<TTestClass>;
 begin
   FCounter := 0;
   AssertTrue({%H-}Ref.RefCount = 0);
