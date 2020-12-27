@@ -31,7 +31,8 @@ uses
   lgAbstractContainer,
   lgQueue,
   lgVector,
-  lgList;
+  lgList,
+  lgStrConst;
 
 type
   TJsValueKind     = (jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
@@ -413,12 +414,6 @@ type
     property  NItems[const aName: string]: TJsonNode read GetByName;
     property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
   end;
-
-resourcestring
-  SECantConvertFmt    = 'Cannot convert %s to %s';
-  SEInvalidJsPtr      = 'Can''t decode JSON Pointer';
-  SECantParseStr      = 'Can''t parse JSON string';
-  SEIdxOutOfBoundsFmt = 'Index out of bounds(%d)';
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -1600,7 +1595,7 @@ end;
 procedure TJsonNode.SetAsJson(const aValue: string);
 begin
   if not Parse(aValue) then
-    raise EJsException.Create(SECantParseStr);
+    raise EJsException.Create(SECantParseJsStr);
 end;
 
 function TJsonNode.GetCount: SizeInt;
@@ -1642,7 +1637,7 @@ end;
 function TJsonNode.GetItem(aIndex: SizeInt): TJsonNode;
 begin
   if SizeUInt(aIndex) >= SizeUInt(Count) then
-    raise EJsException.CreateFmt(SEIdxOutOfBoundsFmt, [aIndex]);
+    raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
   case Kind of
     jvkArray:  exit(FArray^[aIndex]);
     jvkObject: exit(FObject^.Mutable[aIndex]^.Value);
