@@ -6,7 +6,7 @@ uses
   {$IFDEF UNIX}
   cthreads,
   {$ENDIF}
-  Classes, SysUtils, consoletestrunner,
+  LazUtf8, Classes, SysUtils, consoletestrunner,
   LGUtilsTest,
   LGArrayHelpUtilTest,
   LGBaseArrayHelperTest,
@@ -38,7 +38,8 @@ uses
   LGSimpleDiGraphTest,
   LGInt128Test,
   LGTreapTest,
-  LGRbTreeTest;
+  LGRbTreeTest,
+  LGJsonTest;
 
 type
 
