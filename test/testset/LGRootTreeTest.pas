@@ -932,6 +932,7 @@ begin
   Counter := 0;
   Tree.OwnsObjects := False;
   Tree.Root.Value := a[0];
+  Node := Tree.Root;
   for I := 1 to 15 do
     Node := Node.AddChild(a[I]);
   AssertTrue(Tree.Count = 16);
@@ -976,6 +977,7 @@ begin
 
   Tree1.OwnsObjects := False;
   Tree1.Root.Value := a[0];
+  Node := Tree1.Root;
   for I := 1 to 15 do
     Node := Node.AddChild(a[I]);
   AssertTrue(Tree1.Count = 16);

@@ -246,7 +246,6 @@ var
 begin
   {%H-}q.Instance := TIntQueue.Create(IntArray21);
   AssertTrue(q.Instance.Count = 21);
-  AssertTrue(q.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(q.Instance.ToArray, IntArray21));
 end;
 
@@ -256,7 +255,6 @@ var
 begin
   {%H-}q.Instance := TIntQueue.Create(TIntHelper.CreateCopy(IntArray21));
   AssertTrue(q.Instance.Count = 21);
-  AssertTrue(q.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(q.Instance.ToArray, IntArray21));
 end;
 
@@ -266,7 +264,6 @@ var
 begin
   {%H-}q.Instance := TIntQueue.Create(TIntEnumerable.Create(TIntHelper.CreateCopy(IntArray21)));
   AssertTrue(q.Instance.Count = 21);
-  AssertTrue(q.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(q.Instance.ToArray, IntArray21));
 end;
 
@@ -540,7 +537,8 @@ var
 begin
   {%H-}q.Instance := TIntQueue.Create(IntArray21);
   AssertTrue(q.Instance.Count = 21);
-  AssertTrue(q.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  q.Instance.EnsureCapacity(40);
+  AssertTrue(q.Instance.Capacity > q.Instance.Count);
   q.Instance.TrimToFit;
   AssertTrue(q.Instance.Count = 21);
   AssertTrue(q.Instance.Capacity = 21);
@@ -1113,7 +1111,8 @@ begin
   for I in IntArray21 do
     {%H-}q.Enqueue(I);
   AssertTrue(q.Count = 21);
-  AssertTrue(q.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  q.EnsureCapacity(42);
+  AssertTrue(q.Capacity > q.Count);
   q.TrimToFit;
   AssertTrue(q.Count = 21);
   AssertTrue(q.Capacity = 21);

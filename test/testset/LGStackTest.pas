@@ -205,7 +205,6 @@ var
 begin
   {%H-}s.Instance := TIntStack.Create(IntArray21);
   AssertTrue(s.Instance.Count = 21);
-  AssertTrue(s.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(s.Instance.ToArray, IntArray21));
 end;
 
@@ -215,7 +214,6 @@ var
 begin
   {%H-}s.Instance := TIntStack.Create(TIntHelper.CreateCopy(IntArray21));
   AssertTrue(s.Instance.Count = 21);
-  AssertTrue(s.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(s.Instance.ToArray, IntArray21));
 end;
 
@@ -225,7 +223,6 @@ var
 begin
   {%H-}s.Instance := TIntStack.Create(TIntEnumerable.Create(TIntHelper.CreateCopy(IntArray21)));
   AssertTrue(s.Instance.Count = 21);
-  AssertTrue(s.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   AssertTrue(TIntHelper.Same(s.Instance.ToArray, IntArray21));
 end;
 
@@ -430,8 +427,6 @@ begin
   {%H-}s.Instance := TIntStack.Create(IntArray21);
   AssertTrue(s.Instance.TryPeek(v));
   AssertTrue(v = 21);
-  AssertTrue(s.Instance.TryPeek(v));
-  AssertTrue(v = 21);
   for I := 21 downto 1 do
     begin
       AssertTrue(s.Instance.TryPeek(v));
@@ -446,7 +441,6 @@ var
 begin
   {%H-}s.Instance := TIntStack.Create(IntArray21);
   AssertTrue(s.Instance.Count = 21);
-  AssertTrue(s.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   s.Instance.Clear;
   AssertTrue(s.Instance.IsEmpty);
   AssertTrue(s.Instance.Capacity = 0);
@@ -458,7 +452,6 @@ var
 begin
   {%H-}s.Instance := TIntStack.Create(IntArray21);
   AssertTrue(s.Instance.Count = 21);
-  AssertTrue(s.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
   s.Instance.EnsureCapacity(255);
   AssertTrue(s.Instance.Capacity = 256);
   s.Instance.TrimToFit;
@@ -763,7 +756,6 @@ begin
   for I := 1 to 30 do
     {%H-}s.Push(I);
   AssertTrue(s.Count = 30);
-  AssertTrue(s.Capacity = DEFAULT_CONTAINER_CAPACITY);
   s.Clear;
   AssertTrue(s.IsEmpty);
   AssertTrue(s.Capacity = 0);
@@ -777,7 +769,6 @@ begin
   for I := 1 to 30 do
     {%H-}s.Push(I);
   AssertTrue(s.Count = 30);
-  AssertTrue(s.Capacity = DEFAULT_CONTAINER_CAPACITY);
   s.EnsureCapacity(250);
   AssertTrue(s.Capacity = 256);
   s.TrimToFit;

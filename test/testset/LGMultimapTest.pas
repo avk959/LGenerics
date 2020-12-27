@@ -1263,6 +1263,7 @@ var
   c: SizeInt;
 begin
   m.AddAll(Array12);
+  m.EnsureCapacity(40);
   c := m.Capacity;
   m.TrimToFit;
   AssertTrue(m.Capacity < c);
