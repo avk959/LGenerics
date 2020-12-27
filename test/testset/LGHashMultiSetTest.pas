@@ -834,6 +834,7 @@ var
   c: SizeInt;
 begin
   ms.Instance := TMultiSet.Create(0.8, IntArray11);
+  ms.Instance.EnsureCapacity(40);
   c := ms.Instance.Capacity;
   ms.Instance.TrimToFit;
   AssertTrue(ms.Instance.Capacity < c);
@@ -1956,6 +1957,7 @@ var
   c: SizeInt;
 begin
   ms.Instance := TMultiSet.Create(0.8, IntArray11);
+  ms.Instance.EnsureCapacity(40);
   c := ms.Instance.Capacity;
   ms.Instance.TrimToFit;
   AssertTrue(ms.Instance.Capacity < c);
@@ -3081,6 +3083,7 @@ var
   c: SizeInt;
 begin
   ms.Instance := TMultiSet.Create(0.8, IntArray11);
+  ms.Instance.EnsureCapacity(40);
   c := ms.Instance.Capacity;
   ms.Instance.TrimToFit;
   AssertTrue(ms.Instance.Capacity < c);
@@ -4206,6 +4209,7 @@ var
   c: SizeInt;
 begin
   ms.Instance := TMultiSet.Create(0.8, IntArray11);
+  ms.Instance.EnsureCapacity(40);
   c := ms.Instance.Capacity;
   ms.Instance.TrimToFit;
   AssertTrue(ms.Instance.Capacity < c);
@@ -5672,11 +5676,13 @@ end;
 procedure TLiteChainHashMultisetTest.TrimToFit;
 var
   ms: TMultiSet;
+  c: Integer;
 begin
   ms.AddAll(IntArray11);
-  AssertTrue(ms.Capacity = 32);
+  ms.EnsureCapacity(40);
+  c := ms.Capacity;
   ms.TrimToFit;
-  AssertTrue(ms.Capacity = 16);
+  AssertTrue(ms.Capacity < c);
 end;
 
 procedure TLiteChainHashMultisetTest.Add;
