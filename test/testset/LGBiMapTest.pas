@@ -236,6 +236,7 @@ var
   c: SizeInt;
 begin
   m.Instance := TMap.Create(Array12);
+  m.Instance.EnsureCapacity(40);
   c := m.Instance.Capacity;
   m.Instance.TrimToFit;
   AssertTrue(m.Instance.Capacity < c);
