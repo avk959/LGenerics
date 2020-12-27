@@ -48,6 +48,7 @@ var
   CurrFile, fn: string;
   Result: Boolean;
   c: AnsiChar;
+  Total: Integer = 0;
 begin
   AssertTrue('File list not loaded', Assigned(TestFileList));
   for CurrFile in TestFileList do
@@ -56,12 +57,14 @@ begin
       Result := Node.Instance.Parse(Stream.Instance.DataString);
       fn := ExtractFileName(CurrFile);
       c := fn[1];
+      Inc(Total);
       if c = 'y' then
         AssertTrue(fn + ': expected True, but got False', Result)
       else
         if c = 'n' then
           AssertFalse(fn + ': expected False, but got True', Result);
     end;
+  AssertTrue(Total = 288);
 end;
 
 initialization
