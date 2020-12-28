@@ -16,7 +16,8 @@ type
   TTestJson = class(TTestCase)
   private
   published
-    procedure RunSuit;
+    procedure Parser;
+    procedure Validator;
   end;
 
 var
@@ -41,7 +42,7 @@ begin
   TestFileList := FindAllFiles(Dir);
 end;
 
-procedure TTestJson.RunSuit;
+procedure TTestJson.Parser;
 var
   Node: specialize TGAutoRef<TJsonNode>;
   Stream: specialize TGAutoRef<TStringStream>;
@@ -55,6 +56,31 @@ begin
     begin
       Stream.Instance.LoadFromFile(CurrFile);
       Result := Node.Instance.Parse(Stream.Instance.DataString);
+      fn := ExtractFileName(CurrFile);
+      c := fn[1];
+      Inc(Total);
+      if c = 'y' then
+        AssertTrue(fn + ': expected True, but got False', Result)
+      else
+        if c = 'n' then
+          AssertFalse(fn + ': expected False, but got True', Result);
+    end;
+  AssertTrue(Total = 288);
+end;
+
+procedure TTestJson.Validator;
+var
+  Stream: specialize TGAutoRef<TStringStream>;
+  CurrFile, fn: string;
+  Result: Boolean;
+  c: AnsiChar;
+  Total: Integer = 0;
+begin
+  AssertTrue('File list not loaded', Assigned(TestFileList));
+  for CurrFile in TestFileList do
+    begin
+      Stream.Instance.LoadFromFile(CurrFile);
+      Result := TJsonNode.ValidJson(Stream.Instance.DataString);
       fn := ExtractFileName(CurrFile);
       c := fn[1];
       Inc(Total);
