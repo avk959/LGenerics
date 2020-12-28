@@ -3009,166 +3009,164 @@ begin
             State := NextState;
           end
         else
-          begin
-            case NextState of
-              31: //end object - state = object
-                if Stack[sTop].Mode = pmKey then begin
-                  Dec(sTop);
-                  State := OK;
-                end else exit(False);
-              32: //end object
-                if Stack[sTop].Mode = pmObject then begin
-                  if (State = IR) or (State = FS) or (State = E3) then
-                    Stack[sTop].Node.Add(KeyValue, Number);
-                  Dec(sTop);
-                  State := OK;
-                end else exit(False);
-              33: //end array
-                if Stack[sTop].Mode = pmArray then begin
-                  if (State = IR) or (State = FS) or (State = E3) then
-                    Stack[sTop].Node.Add(Number);
-                  Dec(sTop);
-                  State := OK;
-                end else exit(False);
-              34: //begin object
-                if sTop < StackHigh then begin
-                  case Stack[sTop].Mode of
-                    pmNone: begin
-                        Stack[sTop].Node.AsObject;
-                        Stack[sTop].Mode := pmKey;
-                      end;
-                    pmArray: begin
-                        Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
-                        Inc(sTop);
-                      end;
-                    pmObject: begin
-                        Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkObject), pmKey);
-                        Inc(sTop);
-                      end;
-                  else
-                    exit(False);
-                  end;
-                  State := OB;
-                end else exit(False);
-              35: //begin array
-                if sTop < StackHigh then begin
-                  case Stack[sTop].Mode of
-                    pmNone: begin
-                        Stack[sTop].Node.AsArray;
-                        Stack[sTop].Mode := pmArray;
-                      end;
-                    pmArray: begin
-                        Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
-                        Inc(sTop);
-                      end;
-                    pmObject: begin
-                        Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkArray), pmArray);
-                        Inc(sTop);
-                      end;
-                  else
-                    exit(False);
-                  end;
-                  State := AR;
-                end else exit(False);
-              36: //string value
-                begin
-                  sb.Append(Buf[I]);
-                  case Stack[sTop].Mode of
-                    pmKey: begin
-                        KeyValue := sb.ToDecodeString;
-                        State := CO;
-                      end;
-                    pmArray: begin
-                        Stack[sTop].Node.Add(sb.ToDecodeString);
-                        State := OK;
-                      end;
-                    pmObject: begin
-                        Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
-                        State := OK;
-                      end
-                  else
-                    Stack[sTop].Node.AsString := sb.ToDecodeString;
-                    Dec(sTop);
-                    State := OK;
-                  end;
-                end;
-              37: //OK - comma
+          case NextState of
+            31: //end object - state = object
+              if Stack[sTop].Mode = pmKey then begin
+                Dec(sTop);
+                State := OK;
+              end else exit(False);
+            32: //end object
+              if Stack[sTop].Mode = pmObject then begin
+                if (State = IR) or (State = FS) or (State = E3) then
+                  Stack[sTop].Node.Add(KeyValue, Number);
+                Dec(sTop);
+                State := OK;
+              end else exit(False);
+            33: //end array
+              if Stack[sTop].Mode = pmArray then begin
+                if (State = IR) or (State = FS) or (State = E3) then
+                  Stack[sTop].Node.Add(Number);
+                Dec(sTop);
+                State := OK;
+              end else exit(False);
+            34: //begin object
+              if sTop < StackHigh then begin
                 case Stack[sTop].Mode of
-                  pmObject: begin
+                  pmNone: begin
+                      Stack[sTop].Node.AsObject;
                       Stack[sTop].Mode := pmKey;
-                      State := KE;
                     end;
-                  pmArray: State := VA;
-                else
-                  exit(False);
-                end;
-              38: //colon
-                if Stack[sTop].Mode = pmKey then begin
-                  Stack[sTop].Mode := pmObject;
-                  State := VA;
-                end else exit(False);
-              39: //end Number - comma
-                case Stack[sTop].Mode of
                   pmArray: begin
-                      Stack[sTop].Node.Add(Number);
-                      State := VA;
+                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
+                      Inc(sTop);
                     end;
                   pmObject: begin
-                      Stack[sTop].Node.Add(KeyValue, Number);
-                      Stack[sTop].Mode := pmKey;
-                      State := KE;
+                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkObject), pmKey);
+                      Inc(sTop);
                     end;
                 else
                   exit(False);
                 end;
-              40: //end Number - white space
-                begin
-                  case Stack[sTop].Mode of
-                    pmArray:  Stack[sTop].Node.Add(Number);
-                    pmObject: Stack[sTop].Node.Add(KeyValue, Number);
-                  else
-                    //if Stack[sTop].Mode = pmNone then ????
-                    Stack[sTop].Node.AsNumber := Number;
-                    Dec(sTop);
-                  end;
+                State := OB;
+              end else exit(False);
+            35: //begin array
+              if sTop < StackHigh then begin
+                case Stack[sTop].Mode of
+                  pmNone: begin
+                      Stack[sTop].Node.AsArray;
+                      Stack[sTop].Mode := pmArray;
+                    end;
+                  pmArray: begin
+                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
+                      Inc(sTop);
+                    end;
+                  pmObject: begin
+                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkArray), pmArray);
+                      Inc(sTop);
+                    end;
+                else
+                  exit(False);
+                end;
+                State := AR;
+              end else exit(False);
+            36: //string value
+              begin
+                sb.Append(Buf[I]);
+                case Stack[sTop].Mode of
+                  pmKey: begin
+                      KeyValue := sb.ToDecodeString;
+                      State := CO;
+                    end;
+                  pmArray: begin
+                      Stack[sTop].Node.Add(sb.ToDecodeString);
+                      State := OK;
+                    end;
+                  pmObject: begin
+                      Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
+                      State := OK;
+                    end
+                else
+                  Stack[sTop].Node.AsString := sb.ToDecodeString;
+                  Dec(sTop);
                   State := OK;
                 end;
-              41: //true literal
-                begin
-                  case Stack[sTop].Mode of
-                    pmArray:  Stack[sTop].Node.Add(True);
-                    pmObject: Stack[sTop].Node.Add(KeyValue, True);
-                  else
-                    Stack[sTop].Node.AsBoolean := True;
-                    Dec(sTop);
+              end;
+            37: //OK - comma
+              case Stack[sTop].Mode of
+                pmObject: begin
+                    Stack[sTop].Mode := pmKey;
+                    State := KE;
                   end;
-                  State := OK;
-                end;
-              42: //false literal
-                begin
-                  case Stack[sTop].Mode of
-                    pmArray:  Stack[sTop].Node.Add(False);
-                    pmObject: Stack[sTop].Node.Add(KeyValue, False);
-                  else
-                    Stack[sTop].Node.AsBoolean := False;
-                    Dec(sTop);
+                pmArray: State := VA;
+              else
+                exit(False);
+              end;
+            38: //colon
+              if Stack[sTop].Mode = pmKey then begin
+                Stack[sTop].Mode := pmObject;
+                State := VA;
+              end else exit(False);
+            39: //end Number - comma
+              case Stack[sTop].Mode of
+                pmArray: begin
+                    Stack[sTop].Node.Add(Number);
+                    State := VA;
                   end;
-                  State := OK;
-                end;
-              43: //null literal
-                begin
-                  case Stack[sTop].Mode of
-                    pmArray:  Stack[sTop].Node.AddNull;
-                    pmObject: Stack[sTop].Node.AddNull(KeyValue);
-                  else
-                    Stack[sTop].Node.AsNull;
-                    Dec(sTop);
+                pmObject: begin
+                    Stack[sTop].Node.Add(KeyValue, Number);
+                    Stack[sTop].Mode := pmKey;
+                    State := KE;
                   end;
-                  State := OK;
+              else
+                exit(False);
+              end;
+            40: //end Number - white space
+              begin
+                case Stack[sTop].Mode of
+                  pmArray:  Stack[sTop].Node.Add(Number);
+                  pmObject: Stack[sTop].Node.Add(KeyValue, Number);
+                else
+                  //if Stack[sTop].Mode = pmNone then ????
+                  Stack[sTop].Node.AsNumber := Number;
+                  Dec(sTop);
                 end;
-            else
-              exit(False);
-            end;
+                State := OK;
+              end;
+            41: //true literal
+              begin
+                case Stack[sTop].Mode of
+                  pmArray:  Stack[sTop].Node.Add(True);
+                  pmObject: Stack[sTop].Node.Add(KeyValue, True);
+                else
+                  Stack[sTop].Node.AsBoolean := True;
+                  Dec(sTop);
+                end;
+                State := OK;
+              end;
+            42: //false literal
+              begin
+                case Stack[sTop].Mode of
+                  pmArray:  Stack[sTop].Node.Add(False);
+                  pmObject: Stack[sTop].Node.Add(KeyValue, False);
+                else
+                  Stack[sTop].Node.AsBoolean := False;
+                  Dec(sTop);
+                end;
+                State := OK;
+              end;
+            43: //null literal
+              begin
+                case Stack[sTop].Mode of
+                  pmArray:  Stack[sTop].Node.AddNull;
+                  pmObject: Stack[sTop].Node.AddNull(KeyValue);
+                else
+                  Stack[sTop].Node.AsNull;
+                  Dec(sTop);
+                end;
+                State := OK;
+              end;
+          else
+            exit(False);
           end
       else
         exit(False);
