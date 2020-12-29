@@ -19,6 +19,7 @@ type
     procedure Parser;
     procedure Validator;
     procedure JsonPointer;
+    procedure JsonPointer1;
   end;
 
 var
@@ -142,6 +143,21 @@ begin
   AssertTrue(Node.AsNumber = 7);
   AssertTrue(o.Instance.FindPath(TJsonNode.JsonPtrEncode(['m~n']), Node));
   AssertTrue(Node.AsNumber = 8);
+end;
+
+procedure TTestJson.JsonPointer1;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+begin
+  o.Instance.AsJson := '["bar", "baz"]';
+  AssertTrue(o.Instance.IsArray);
+  AssertTrue(o.Instance.Count = 2);
+  AssertTrue(o.Instance.FindPath('/-', Node));
+  AssertTrue(Node.IsNull);
+  Node.AsString := 'foo';
+  AssertTrue(o.Instance.Count.ToString, o.Instance.Count = 3);
+  AssertTrue(o.Instance.Items[2].AsString = 'foo');
 end;
 
 initialization
