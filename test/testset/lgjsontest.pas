@@ -18,6 +18,7 @@ type
   published
     procedure Parser;
     procedure Validator;
+    procedure JsonPointer;
   end;
 
 var
@@ -91,6 +92,56 @@ begin
           AssertFalse(fn + ': expected False, but got True', Result);
     end;
   AssertTrue(Total = 288);
+end;
+
+procedure TTestJson.JsonPointer;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+begin
+  AssertTrue(o.Instance.Parse(
+   '{ '+
+   '  "foo": ["bar", "baz"], '+
+   '  "":     0, '+
+   '  "a/b":  1, '+
+   '  "c%d":  2, '+
+   '  "e^f":  3, '+
+   '  "g|h":  4, '+
+   '  "i\\j": 5, '+
+   '  "k\"l": 6, '+
+   '  " ":    7, '+
+   '  "m~n":  8  '+
+   '} '));
+  AssertTrue(o.Instance.FindPath('', Node));
+  AssertTrue(Node = o.Instance);
+  AssertTrue(o.Instance.FindPath('/foo', Node));
+  AssertTrue(Node.IsArray);
+  AssertTrue(Node.Count = 2);
+  AssertTrue(Node.Items[0].AsString = 'bar');
+  AssertTrue(Node.Items[1].AsString = 'baz');
+  AssertTrue(o.Instance.FindPath('/foo/0', Node));
+  AssertTrue(Node.IsString);
+  AssertTrue(Node.AsString = 'bar');
+  AssertTrue(o.Instance.FindPath('/', Node));
+  AssertTrue(Node.IsNumber);
+  AssertTrue(Node.AsNumber = 0);
+  AssertTrue(o.Instance.FindPath(TJsonNode.JsonPtrEncode(['a/b']), Node));
+  AssertTrue(Node.IsNumber);
+  AssertTrue(Node.AsNumber = 1);
+  AssertTrue(o.Instance.FindPath('/c%d', Node));
+  AssertTrue(Node.AsNumber = 2);
+  AssertTrue(o.Instance.FindPath('/e^f', Node));
+  AssertTrue(Node.AsNumber = 3);
+  AssertTrue(o.Instance.FindPath('/g|h', Node));
+  AssertTrue(Node.AsNumber = 4);
+  AssertTrue(o.Instance.FindPath('/i\j', Node));
+  AssertTrue(Node.AsNumber = 5);
+  AssertTrue(o.Instance.FindPath('/k"l', Node));
+  AssertTrue(Node.AsNumber = 6);
+  AssertTrue(o.Instance.FindPath('/ ', Node));
+  AssertTrue(Node.AsNumber = 7);
+  AssertTrue(o.Instance.FindPath(TJsonNode.JsonPtrEncode(['m~n']), Node));
+  AssertTrue(Node.AsNumber = 8);
 end;
 
 initialization
