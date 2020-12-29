@@ -1673,7 +1673,7 @@ begin
     end
   else
     raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-  Result := nil;
+  Result := Default(TPair);
 end;
 
 function TJsonNode.GetByName(const aName: string): TJsonNode;
@@ -1690,6 +1690,7 @@ var
 begin
   if FindOrAdd(aName, Node) then
     case Node.Kind of
+      jvkUnknown,
       jvkNull:   exit(TJVariant.Null);
       jvkFalse:  exit(False);
       jvkTrue:   exit(True);
