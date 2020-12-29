@@ -1,5 +1,5 @@
 About samples:
 
   artific1.json and artific2.json are artificially generated and have a very simple structure;
-  big.json was found on the net, to be honest I don't remember exactly where;
+  big.json came from https://github.com/json-iterator/test-data
   other files were sourced from the simdjson repository - https://github.com/simdjson/simdjson;  
