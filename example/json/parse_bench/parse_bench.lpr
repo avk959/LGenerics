@@ -1,3 +1,6 @@
+{
+  The benchmark expects the path to the samples folder as a parameter
+}
 program parse_bench;
 {$mode delphi}
 uses
