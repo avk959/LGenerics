@@ -461,7 +461,7 @@ type
     property  Count: SizeInt read GetCount;
   { will raise exception if aIndex out of bounds }
     property  Items[aIndex: SizeInt]: TJsonNode read GetItem;
-  { will raise exception if aIndex out of bounds or instance is not object }
+  { will raise exception if aIndex out of bounds or an instance is not an object }
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { if instance is an object then acts as FindOrAdd, otherwise returns nil }
     property  Named[const aName: string]: TJsonNode read GetByName;
@@ -2873,7 +2873,7 @@ begin
                 begin
                   if I <> System.High(aPath) then
                     exit(False);
-                  aNode := Node.AddNull;
+                  aNode := Node.AddNode(jvkNull);
                   exit(True);
                 end;
               if not (aPath[I][1] in ['0','1','2','3','4','5','6','7','8','9']) then
