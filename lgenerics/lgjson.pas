@@ -465,7 +465,9 @@ type
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { if instance is an object then acts as FindOrAdd, otherwise returns nil }
     property  Named[const aName: string]: TJsonNode read GetByName;
-  { if instance is not an object, it is cleared and becomes an object - be careful }
+  { if GetValue does not find aName, null is returned;
+    if the value found is an array or object, this will raise an exception;
+    SetValue will make an object from an instance - be careful }
     property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
   end;
 
@@ -1688,7 +1690,7 @@ function TJsonNode.GetValue(const aName: string): TJVariant;
 var
   Node: TJsonNode;
 begin
-  if FindOrAdd(aName, Node) then
+  if Find(aName, Node) then
     case Node.Kind of
       jvkUnknown,
       jvkNull:   exit(TJVariant.Null);
