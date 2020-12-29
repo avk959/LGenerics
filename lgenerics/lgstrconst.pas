@@ -76,8 +76,9 @@ resourcestring
   SEInputIsNotProperPermut = 'Input array is not proper permutation';
   SEVertexNonUnique        = 'Vertex label is not unique';
   SECantConvertFmt         = 'Cannot convert %s to %s';
-  SEInvalidJsPtr           = 'Can''t decode JSON Pointer';
-  SECantParseJsStr         = 'Can''t parse JSON string';
+  SEInvalidJsPtr           = 'Cannot decode JSON Pointer';
+  SECantParseJsStr         = 'Cannot parse JSON string';
+  SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
 
 implementation
 
