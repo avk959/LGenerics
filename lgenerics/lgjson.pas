@@ -91,7 +91,8 @@ function JPair(const aName: string; const aValue: TJVariant): TJVarPair; inline;
 type
   { TJsonNode is the entity used to validate, parse, generate, and navigate a json document;
     the lifetime of all nested elements is determined by the document root node;
-    it is this (and only this) node that requires explicit free.
+    it is this (and only this) node that requires explicit free;
+    the current implementation preserves the ordering of elements in objects;
     parser based on Douglas Crockford's JSON_checker approach;  }
   TJsonNode = class
   public
@@ -263,6 +264,7 @@ type
     function  CanArrayInsert(aIndex: SizeInt): Boolean; inline;
     function  CanObjectInsert(aIndex: SizeInt): Boolean; inline;
     function  GetItem(aIndex: SizeInt): TJsonNode;
+    function  GetPair(aIndex: SizeInt): TPair;
     function  GetByName(const aName: string): TJsonNode;
     function  GetValue(const aName: string): TJVariant;
     procedure SetValue(const aName: string; const aValue: TJVariant);
@@ -273,6 +275,7 @@ type
     property  FObject: PJsObject read GetFObject write SetFObject;
   public
   type
+
     TEnumerator = record
     private
       FNode: TJsonNode;
@@ -303,7 +306,8 @@ type
       function GetEnumerator: TTreeEnumerator;
     end;
 
-
+  { validators: aDepth indicates the maximum nesting depth of structures;
+    if aSkipBom is set to True the UTF-8 BOM(and only it) will be ignored }
     class function ValidJson(const s: string; aDepth: Integer = DEF_DEPTH;
                              aSkipBom: Boolean = False): Boolean; static;
     class function ValidJson(aJson: TStream; aDepth: Integer = DEF_DEPTH;
@@ -312,6 +316,8 @@ type
                                  aSkipBom: Boolean = False): Boolean; static;
     class function JsonStringValid(const s: string): Boolean; static;
     class function JsonNumberValid(const s: string): Boolean; static;
+  { returns the parsing result; if the result is True, then in the aRoot parameter
+    it returns the created object, otherwise nil }
     class function TryParse(const s: string; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
     class function TryParse(aStream: TStream; out aRoot: TJsonNode;
@@ -347,7 +353,7 @@ type
     function  GetEnumerator: TEnumerator; inline;
     function  Nodes: INodeEnumerable; inline;
     function  SubTree: TSubTree; inline;
-    function  Pairs: IPairEnumerable; inline;
+    function  Enrties: IPairEnumerable; inline;
     function  Keys: IKeyEnumerable; inline;
     function  IdenticKeys(const aKey: string): IPairEnumerable; inline;
     function  IsNull: Boolean; inline;
@@ -362,17 +368,39 @@ type
     function  IsScalar: Boolean; inline;
     function  IsStruct: Boolean; inline;
     procedure Clear; inline;
-  { tries to load a JSON from string, returns False if failed }
+  { tries to load JSON from a string, in case of failure it returns False,
+    in this case the content of the instance does not change }
     function  Parse(const s: string): Boolean;
+  { adds null to the instance as to an array; if it is not an array,
+    it is cleared and becomes an array - be careful; returns Self }
     function  AddNull: TJsonNode; inline;
+  { adds Boolean value to the instance as to an array; if it is not
+    an array, it is cleared and becomes an array - be careful; returns Self }
     function  Add(aValue: Boolean): TJsonNode; inline;
+  { adds a number to the instance as to an array; if it is not an array,
+    it is cleared and becomes an array - be careful; returns Self }
     function  Add(aValue: Double): TJsonNode; inline;
+  { adds string value to the instance as to an array; if it is not an array,
+    it is cleared and becomes an array - be careful; returns Self }
     function  Add(const aValue: string): TJsonNode; inline;
+  { adds all elements from a to the instance as to an array; if it is not
+    an array, it is cleared and becomes an array - be careful; returns Self }
     function  Add(const a: TJVarArray): TJsonNode;
-    function  Add(const a: TJPairArray): TJsonNode;
+  { adds a new object of the specified kind to the instance as to an array;
+    if an instance is not an array, it is cleared and becomes an array - be careful;
+    returns a new object}
     function  AddNode(aKind: TJsValueKind): TJsonNode; inline;
+  { returns True and the created object in the aNode parameter,
+    if the string s can be parsed; the new object is added as in an array - be careful }
     function  AddJson(const s: string; out aNode: TJsonNode): Boolean;
+  { adds all pairs from a to the instance as to an object; if it is not
+    an object, it is cleared and becomes an object - be careful; returns Self }
+    function  Add(const a: TJPairArray): TJsonNode;
+  { adds pair aName: null to the instance as to an object; if it is not an object,
+    it is cleared and becomes an object - be careful; returns Self }
     function  AddNull(const aName: string): TJsonNode; inline;
+  { adds pair aName: aValue the instance as to an object; if it is not an object,
+    it is cleared and becomes an object - be careful; returns Self }
     function  Add(const aName: string; aValue: Boolean): TJsonNode; inline;
     function  Add(const aName: string; aValue: Double): TJsonNode; inline;
     function  Add(const aName, aValue: string): TJsonNode; inline;
@@ -412,7 +440,8 @@ type
     function  Delete(aIndex: SizeInt): Boolean;
     function  Remove(const aName: string): Boolean;
     function  RemoveAll(const aName: string): SizeInt;
-  { the JSON Pointer (RFC 6901) is assumed to be passed as pascal string }
+  { the JSON Pointer (RFC 6901) is assumed to be passed as pascal string;
+    each node considered self as a root }
     function  FindPath(const aPtr: string; out aNode: TJsonNode): Boolean;
   { an array of path parts is assumed to be passed }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
@@ -430,8 +459,13 @@ type
     property  AsObject: TJsonNode read GetAsObject;
     property  Kind: TJsValueKind read FKind;
     property  Count: SizeInt read GetCount;
+  { will raise exception if aIndex out of bounds }
     property  Items[aIndex: SizeInt]: TJsonNode read GetItem;
-    property  NItems[const aName: string]: TJsonNode read GetByName;
+  { will raise exception if aIndex out of bounds or instance is not object }
+    property  Pairs[aIndex: SizeInt]: TPair read GetPair;
+  { if instance is an object then acts as FindOrAdd, otherwise returns nil }
+    property  Named[const aName: string]: TJsonNode read GetByName;
+  { if instance is not an object, it is cleared and becomes an object - be careful }
     property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
   end;
 
@@ -1629,9 +1663,25 @@ begin
   Result := nil;
 end;
 
+function TJsonNode.GetPair(aIndex: SizeInt): TPair;
+begin
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    case Kind of
+      jvkObject: exit(FObject^.Mutable[aIndex]^);
+    else
+      raise EJsException.Create(SEJsonInstNotObj);
+    end
+  else
+    raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := nil;
+end;
+
 function TJsonNode.GetByName(const aName: string): TJsonNode;
 begin
-  FindOrAdd(aName, Result);
+  if Kind = jvkObject then
+    FindOrAdd(aName, Result)
+  else
+    Result := nil;
 end;
 
 function TJsonNode.GetValue(const aName: string): TJVariant;
@@ -2047,7 +2097,7 @@ begin
   Result.FNode := Self;
 end;
 
-function TJsonNode.Pairs: IPairEnumerable;
+function TJsonNode.Enrties: IPairEnumerable;
 begin
   if (Kind = jvkObject) and (FValue.Ref <> nil) then
     exit(TPairs.Create(TOPairEnumerator.Create(FObject^.GetEnumerator)));
@@ -2270,23 +2320,6 @@ begin
   Result := Self;
 end;
 
-function TJsonNode.Add(const a: TJPairArray): TJsonNode;
-var
-  I: SizeInt;
-begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  for I := 0 to System.High(a) do
-    with a[I] do
-      case Value.Kind of
-        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.CreateNull));
-        vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Boolean(Value))));
-        vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Double(Value))));
-        vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(string(Value))));
-      end;
-  Result := Self;
-end;
-
 function TJsonNode.AddNode(aKind: TJsValueKind): TJsonNode;
 begin
   if AsArray.FValue.Ref = nil then
@@ -2302,6 +2335,23 @@ begin
   Result := TryParse(s, aNode);
   if Result then
     FArray^.Add(aNode);
+end;
+
+function TJsonNode.Add(const a: TJPairArray): TJsonNode;
+var
+  I: SizeInt;
+begin
+  if AsObject.FValue.Ref = nil then
+    FValue.Ref := CreateJsObject;
+  for I := 0 to System.High(a) do
+    with a[I] do
+      case Value.Kind of
+        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.CreateNull));
+        vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Boolean(Value))));
+        vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Double(Value))));
+        vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(string(Value))));
+      end;
+  Result := Self;
 end;
 
 function TJsonNode.AddNull(const aName: string): TJsonNode;
