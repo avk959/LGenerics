@@ -109,3 +109,4 @@
   - brief channel implementation(unit lgAsync)
   - brief implementation of thread pool(unit lgAsync)
   - 128-bit integers(unit lgInt128)
+  - JSON validator/parser/generator(unit lgJson)
