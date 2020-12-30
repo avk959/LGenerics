@@ -93,7 +93,7 @@ type
     the lifetime of all nested elements is determined by the document root node;
     it is this (and only this) node that requires explicit free;
     the current implementation preserves the ordering of elements in objects;
-    parser based on Douglas Crockford's JSON_checker approach;  }
+    validator and parser are based on Douglas Crockford's JSON_checker code }
   TJsonNode = class
   public
   const
@@ -222,6 +222,7 @@ type
     TPairs = specialize TGEnumCursor<TPair>;
     TKeys  = specialize TGEnumCursor<string>;
     TNodes = specialize TGEnumCursor<TJsonNode>;
+
     TValue = record
     case Integer of
       0: (Ref: Pointer);
@@ -273,9 +274,9 @@ type
     property  FString: string read GetFString write SetFString;
     property  FArray: PJsArray read GetFArray write SetFArray;
     property  FObject: PJsObject read GetFObject write SetFObject;
+
   public
   type
-
     TEnumerator = record
     private
       FNode: TJsonNode;
@@ -307,7 +308,7 @@ type
     end;
 
   { validators: aDepth indicates the maximum nesting depth of structures;
-    if aSkipBom is set to True the UTF-8 BOM(and only it) will be ignored }
+    if aSkipBom is set to True then UTF-8 BOM(and only that) will be ignored }
     class function ValidJson(const s: string; aDepth: Integer = DEF_DEPTH;
                              aSkipBom: Boolean = False): Boolean; static;
     class function ValidJson(aJson: TStream; aDepth: Integer = DEF_DEPTH;
@@ -316,8 +317,8 @@ type
                                  aSkipBom: Boolean = False): Boolean; static;
     class function JsonStringValid(const s: string): Boolean; static;
     class function JsonNumberValid(const s: string): Boolean; static;
-  { returns the parsing result; if the result is True, then in the aRoot parameter
-    it returns the created object, otherwise nil }
+  { returns the parsing result; if the result is True, then the created
+    object is returned in the aRoot parameter, otherwise nil is returned }
     class function TryParse(const s: string; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
     class function TryParse(aStream: TStream; out aRoot: TJsonNode;
@@ -388,7 +389,7 @@ type
     function  Add(const a: TJVarArray): TJsonNode;
   { adds a new object of the specified kind to the instance as to an array;
     if an instance is not an array, it is cleared and becomes an array - be careful;
-    returns a new object}
+    returns a new object }
     function  AddNode(aKind: TJsValueKind): TJsonNode; inline;
   { returns True and the created object in the aNode parameter,
     if the string s can be parsed; the new object is added as in an array - be careful }
@@ -399,15 +400,21 @@ type
   { adds pair aName: null to the instance as to an object; if it is not an object,
     it is cleared and becomes an object - be careful; returns Self }
     function  AddNull(const aName: string): TJsonNode; inline;
-  { adds pair aName: aValue the instance as to an object; if it is not an object,
+  { adds pair (aName: aValue) the instance as to an object; if it is not an object,
     it is cleared and becomes an object - be careful; returns Self }
     function  Add(const aName: string; aValue: Boolean): TJsonNode; inline;
     function  Add(const aName: string; aValue: Double): TJsonNode; inline;
     function  Add(const aName, aValue: string): TJsonNode; inline;
     function  Add(const aName: string; const aValue: TJVarArray): TJsonNode;
     function  Add(const aName: string; const aValue: TJPairArray): TJsonNode;
+  { adds a new object of the specified type associated with aName to the instance as to an object;
+    if an instance is not an object, it is cleared and becomes an object - be careful;
+    returns a new object }
     function  AddNode(const aName: string; aKind: TJsValueKind): TJsonNode; inline;
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
+  { adds pair (aName: null) to the instance as to an object and returns True
+    only if aName is unique within an instance, otherwise returns False;
+    if an instance is not an object, it is cleared and becomes an object - be careful }
     function  AddUniqNull(const aName: string): Boolean;
     function  AddUniq(const aName: string; aValue: Boolean): Boolean;
     function  AddUniq(const aName: string; aValue: Double): Boolean;
@@ -464,10 +471,9 @@ type
   { will raise exception if aIndex out of bounds or an instance is not an object }
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { if instance is an object then acts as FindOrAdd, otherwise returns nil }
-    property  Named[const aName: string]: TJsonNode read GetByName;
-  { if GetValue does not find aName, null is returned;
-    if the value found is an array or object, this will raise an exception;
-    SetValue will make an object from an instance - be careful }
+    property  Named[const aName: string]: TJsonNode read GetByName; //todo: need another prop name
+  { if GetValue does not find aName or if the value found is an array or object,
+    it will raise an exception; SetValue will make an object from an instance - be careful }
     property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
   end;
 
@@ -549,6 +555,7 @@ begin
     vkBool:   v.ConvertError('Boolean', 'Double');
     vkString: v.ConvertError('string', 'Double');
   else
+    exit(v.FValue.Num);
   end;
   Result := v.FValue.Num;
 end;
@@ -560,6 +567,7 @@ begin
     vkNumber: v.ConvertError('Double', 'Boolean');
     vkString: v.ConvertError('string', 'Boolean');
   else
+    exit(v.FValue.Bool);
   end;
   Result := v.FValue.Bool;
 end;
@@ -571,6 +579,7 @@ begin
     vkBool:   v.ConvertError('Boolean', 'string');
     vkNumber: v.ConvertError('Double', 'string');
   else
+    exit(string(v.FValue.Ref));
   end;
   Result := string(v.FValue.Ref);
 end;
@@ -927,8 +936,7 @@ begin
   StackHigh := Pred(aStack.Size);
   Stack[0] := pmNone;
   ValidateBufMacro;
-  Result := ((State = IR) or (State = FS) or (State = E3)) and
-             (sTop = 0) and (Stack[0] = pmNone);
+  Result := (State in [IR, FS, E3]) and (sTop = 0) and (Stack[0] = pmNone);
 end;
 
 function ValidateStream(s: TStream; aSkipBom: Boolean; const aStack: TOpenArray): Boolean;
@@ -968,6 +976,7 @@ begin
   Result := ((State = OK) or (State in [IR, FS, E3])) and (sTop = 0) and (Stack[0] = pmNone);
 end;
 {$POP}
+
 { TJsonNode.TStrBuilder }
 
 constructor TJsonNode.TStrBuilder.Create(aCapacity: SizeInt);
@@ -1622,6 +1631,7 @@ begin
     jvkArray:  if FArray <> nil then exit(FArray^.Count);
     jvkObject: if FObject <> nil then exit(FObject^.Count);
   else
+    exit(0);
   end;
   Result := 0;
 end;
@@ -1700,7 +1710,9 @@ begin
       jvkString: exit(Node.AsString);
       jvkArray:  raise EJsException.CreateFmt(SECantConvertFmt, ['Array', 'TJVariant']);
       jvkObject: raise EJsException.CreateFmt(SECantConvertFmt, ['Object', 'TJVariant']);
-    end;
+    end
+  else
+    raise EJsException.Create(SEValueNotFound);
   Result.Clear;
 end;
 
