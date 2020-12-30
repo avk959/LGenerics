@@ -26,7 +26,7 @@ unit lgJson;
 interface
 
 uses
-  Classes, SysUtils,
+  Classes, SysUtils, Math,
   lgUtils,
   lgAbstractContainer,
   lgQueue,
@@ -74,6 +74,7 @@ type
     class operator := (const v: TJVariant): Double; inline;
     class operator := (const v: TJVariant): Boolean; inline;
     class operator := (const v: TJVariant): string; inline;
+    class operator = (const L, R: TJVariant): Boolean; inline;
     procedure Clear;
     function AsBoolean: Boolean; inline;
     function AsNumber: Double; inline;
@@ -582,6 +583,17 @@ begin
     exit(string(v.FValue.Ref));
   end;
   Result := string(v.FValue.Ref);
+end;
+
+class operator TJVariant.= (const L, R: TJVariant): Boolean;
+begin
+  case L.Kind of
+    vkBool:   Result := (R.Kind = vkBool) and (L.FValue.Bool = R.FValue.Bool);
+    vkNumber: Result := (R.Kind = vkNumber) and SameValue(L.FValue.Num, R.FValue.Num);
+    vkString: Result := (R.Kind = vkString) and (string(L.FValue.Ref) = string(R.FValue.Ref));
+  else
+    Result := False;
+  end;
 end;
 
 procedure TJVariant.Clear;
