@@ -21,6 +21,7 @@ type
     procedure JsonPointer;
     procedure JsonPointer1;
     procedure AddUniq;
+    procedure Values;
   end;
 
 var
@@ -174,6 +175,27 @@ begin
   AssertTrue(o.Instance.AddUniq('new key', 42));
   AssertTrue(o.Instance.Count = 2);
   AssertTrue(o.Instance.Find('new key', Node));
+end;
+
+procedure TTestJson.Values;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  User: TJsonNode;
+begin
+  User := o.Instance.AddNode(jvkObject);
+  User['firstName'] := 'John';
+  User['lastName'] := 'Smith';
+  User['age'] := 42;
+  User['married'] := False;
+  User['spouse'] := JNull;
+  AssertTrue(o.Instance.Count = 1);
+  User := o.Instance.Items[0];
+  AssertTrue(User.IsObject);
+  AssertTrue(User['firstName'] = 'John');
+  AssertTrue(User['lastName'] = 'Smith');
+  AssertTrue(User['age'] = 42);
+  AssertFalse(User['married']);
+  AssertTrue(User.Named['spouse'].IsNull);
 end;
 
 initialization
