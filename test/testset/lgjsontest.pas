@@ -20,6 +20,7 @@ type
     procedure Validator;
     procedure JsonPointer;
     procedure JsonPointer1;
+    procedure AddUniq;
   end;
 
 var
@@ -158,6 +159,21 @@ begin
   Node.AsString := 'foo';
   AssertTrue(o.Instance.Count.ToString, o.Instance.Count = 3);
   AssertTrue(o.Instance.Items[2].AsString = 'foo');
+end;
+
+procedure TTestJson.AddUniq;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+begin
+  AssertTrue(o.Instance.AddUniq('key', False));
+  AssertTrue(o.Instance.Find('key', Node));
+  AssertTrue(o.Instance.Count = 1);
+  AssertFalse(o.Instance.AddUniq('key', 'data'));
+  AssertTrue(o.Instance.Count = 1);
+  AssertTrue(o.Instance.AddUniq('new key', 42));
+  AssertTrue(o.Instance.Count = 2);
+  AssertTrue(o.Instance.Find('new key', Node));
 end;
 
 initialization
