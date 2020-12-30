@@ -18,6 +18,7 @@ type
   published
     procedure Parser;
     procedure Validator;
+    procedure Parse;
     procedure JsonPointer;
     procedure JsonPointer1;
     procedure AddUniq;
@@ -95,6 +96,34 @@ begin
           AssertFalse(fn + ': expected False, but got True', Result);
     end;
   AssertTrue(Total = 288);
+end;
+
+procedure TTestJson.Parse;
+const
+  Json =
+    '[{"userid":42,"name":"John","age":30,"online":false,"groups":["talk","humor","cook"],' +
+    '"spouse":null},' +
+    '{"userid":1001,"name":"Thomas","age":42,"online":true,"groups":["talk","games","math","art"],' +
+    '"spouse":"Mary"}]';
+var
+  o: specialize TGAutoRef<TJsonNode>;
+begin
+  AssertTrue(o.Instance.Parse(Json));
+  AssertTrue(o.Instance.AsJson = Json);
+  AssertTrue(o.Instance.IsArray);
+  AssertTrue(o.Instance.Count = 2);
+  AssertTrue(o.Instance.Items[0].IsObject);
+  AssertTrue(o.Instance.Items[0].Count = 6);
+  AssertTrue(o.Instance.Items[0].Contains('online'));
+  AssertFalse(o.Instance.Items[0].Values['online']);
+  AssertTrue(o.Instance.Items[0].Values['age'] = 30);
+  AssertTrue(o.Instance.Items[0].Items[4].Count = 3);
+  AssertTrue(o.Instance.Items[1].IsObject);
+  AssertTrue(o.Instance.Items[1].Contains('online'));
+  AssertTrue(o.Instance.Items[1].Values['online']);
+  AssertTrue(o.Instance.Items[1].Values['age'] = 42);
+  AssertTrue(o.Instance.Items[1].Count = 6);
+  AssertTrue(o.Instance.Items[1].Items[4].Count = 4);
 end;
 
 procedure TTestJson.JsonPointer;
