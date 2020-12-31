@@ -15,10 +15,17 @@ type
 
   TTestJson = class(TTestCase)
   private
+    FNodeCount: Integer;
+    function CreateArrayOfObj: TJsonNode;
   published
     procedure Parser;
     procedure Validator;
     procedure Parse;
+    procedure GetEnumerator;
+    procedure SubTree;
+    procedure Enrties;
+    procedure Names;
+    procedure IdenticNames;
     procedure JsonPointer;
     procedure JsonPointer1;
     procedure AddUniq;
@@ -45,6 +52,59 @@ begin
          DirectorySeparator + 'testset' + DirectorySeparator;
   if not DirectoryExists(Dir) then exit;
   TestFileList := FindAllFiles(Dir);
+end;
+
+function TTestJson.CreateArrayOfObj: TJsonNode;
+var
+  Node, o: TJsonNode;
+  I, J, K: Integer;
+  n: string;
+begin
+  FNodeCount := 1;
+  Node := TJsonNode.Create;
+  for I := 1 to 10 do
+    begin
+      o := Node.AddNode(jvkObject);
+      Inc(FNodeCount);
+      for J := 1 to 50 do
+        begin
+          K := J mod 6;
+          n := 'name ' + K.ToString;
+          case K of
+           0:
+             begin
+               o.Add(n, J);
+               Inc(FNodeCount);
+             end;
+           1:
+             begin
+               o.Add(n, Odd(J));
+               Inc(FNodeCount);
+             end;
+           2:
+             begin
+               o.Add(n, J.ToString);
+               Inc(FNodeCount);
+             end;
+           3:
+             begin
+               o.AddNull(n);
+               Inc(FNodeCount);
+             end;
+           4:
+             begin
+               o.Add(n, [K, Odd(J), 'name', JNull]);
+               FNodeCount += 5;
+             end;
+           5:
+             begin
+               o.Add(n, [JPair('number', J), JPair('known', False), JPair('place', 'none')]);
+               FNodeCount += 4;
+             end;
+          end;
+        end;
+    end;
+  Result := Node;
 end;
 
 procedure TTestJson.Parser;
@@ -124,6 +184,106 @@ begin
   AssertTrue(o.Instance.Items[1].Values['age'] = 42);
   AssertTrue(o.Instance.Items[1].Count = 6);
   AssertTrue(o.Instance.Items[1].Items[4].Count = 4);
+end;
+
+procedure TTestJson.GetEnumerator;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node, Nest: TJsonNode;
+  I, J: Integer;
+begin
+  {%H-}o.Instance := CreateArrayOfObj;
+  I := 0;
+  for Node in o.Instance do
+    begin
+      AssertTrue(Node.IsObject);
+      Inc(I);
+    end;
+  AssertTrue(I = 10);
+  for I := 0 to Pred(o.Instance.Count) do
+    begin
+      Node := o.Instance.Items[I];
+      J := 0;
+      for Nest in Node do
+        Inc(J);
+      AssertTrue(J = 50);
+    end;
+end;
+
+procedure TTestJson.SubTree;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+  I: Integer;
+begin
+  {%H-}o.Instance := CreateArrayOfObj;
+  I := 1;
+  for Node in o.Instance.SubTree do
+    Inc(I);
+  AssertTrue(I = FNodeCount);
+end;
+
+procedure TTestJson.Enrties;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+  e: TJsonNode.TPair;
+  I, J: Integer;
+begin
+  {%H-}o.Instance := CreateArrayOfObj;
+  for I := 0 to Pred(o.Instance.Count) do
+    begin
+      Node := o.Instance.Items[I];
+      J := 0;
+      for e in Node.Enrties do
+        begin
+          AssertTrue(Node.Contains(e.Key));
+          Inc(J);
+        end;
+      AssertTrue(J = 50);
+    end;
+end;
+
+procedure TTestJson.Names;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+  Name: string;
+  I, J: Integer;
+begin
+  {%H-}o.Instance := CreateArrayOfObj;
+  for I := 0 to Pred(o.Instance.Count) do
+    begin
+      Node := o.Instance.Items[I];
+      J := 0;
+      for Name in Node.Names do
+        begin
+          AssertTrue(Node.Contains(Name));
+          Inc(J);
+        end;
+      AssertTrue(J = 50);
+    end;
+end;
+
+procedure TTestJson.IdenticNames;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+  e, ie: TJsonNode.TPair;
+  I, J: Integer;
+begin
+  {%H-}o.Instance := CreateArrayOfObj;
+  for I := 0 to Pred(o.Instance.Count) do
+    begin
+      Node := o.Instance.Items[I];
+      for e in Node.Enrties do
+        begin
+          J := 0;
+          for ie in Node.IdenticNames(e.Key) do
+            Inc(J);
+          AssertTrue(Node.CountOfName(e.Key) = J);
+        end;
+    end;
 end;
 
 procedure TTestJson.JsonPointer;
