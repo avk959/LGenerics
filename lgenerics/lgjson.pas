@@ -2051,8 +2051,9 @@ var
 begin
   if FQueue.TryDequeue(FCurrent) then
     begin
-      for Node in FCurrent do
-        FQueue.Enqueue(Node);
+      if FCurrent.IsStruct then
+        for Node in FCurrent do
+          FQueue.Enqueue(Node);
       exit(True);
     end;
   Result := False;
