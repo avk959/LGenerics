@@ -102,14 +102,8 @@ type
 
   type
     TPair           = specialize TGMapEntry<string, TJsonNode>;
-    TNodeEnumerator = specialize TGEnumerator<TJsonNode>;
-    TPairEnumerator = specialize TGEnumerator<TPair>;
-    TKeyEnumerator  = specialize TGEnumerator<string>;
-    INodeEnumerable = specialize IGEnumerable<TJsonNode>;
-    IPairEnumerable = specialize IGEnumerable<TPair>;
-    IKeyEnumerable  = specialize IGEnumerable<string>;
-
     TNodeArray      = array of TJsonNode;
+    IPairEnumerable = specialize IGEnumerable<TPair>;
 
   private
   class var
@@ -142,21 +136,8 @@ type
       property  Count: SizeInt read FCount;
     end;
 
-    TEmptyNodeEnumerator = class(TNodeEnumerator)
-    protected
-      function  GetCurrent: TJsonNode; override;
-    public
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-    TEmptyKeyEnumerator = class(TKeyEnumerator)
-    protected
-      function  GetCurrent: string; override;
-    public
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
+    TPairEnumerator = specialize TGEnumerator<TPair>;
+    TPairs          = specialize TGEnumCursor<TPair>;
 
     TEmptyPairEnumerator = class(TPairEnumerator)
     protected
@@ -166,51 +147,7 @@ type
       procedure Reset; override;
     end;
 
-    TANodeEnumerator = class(TNodeEnumerator)
-    protected
-      FEnum,
-      FResEnum: TJsArray.TEnumerator;
-      function  GetCurrent: TJsonNode; override;
-    public
-      constructor Create(const aEnum: TJsArray.TEnumerator);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-    TONodeEnumerator = class(TNodeEnumerator)
-    protected
-      FEnum,
-      FResEnum: TJsObject.TEnumerator;
-      function  GetCurrent: TJsonNode; override;
-    public
-      constructor Create(const aEnum: TJsObject.TEnumerator);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-    TOPairEnumerator = class(TPairEnumerator)
-    protected
-      FEnum,
-      FConstEnum: TJsObject.TEnumerator;
-      function  GetCurrent: TPair; override;
-    public
-      constructor Create(const aEnum: TJsObject.TEnumerator);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-    TOKeyEnumerator = class(TKeyEnumerator)
-    protected
-      FEnum,
-      FConstEnum: TJsObject.TEnumerator;
-      function  GetCurrent: string; override;
-    public
-      constructor Create(const aEnum: TJsObject.TEnumerator);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-    TOIdenticEnumerator = class(TPairEnumerator)
+    TIdenticEnumerator = class(TPairEnumerator)
     protected
       FEnum: TJsObject.TIdenticEnumerator;
       function  GetCurrent: TPair; override;
@@ -219,10 +156,6 @@ type
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
-
-    TPairs = specialize TGEnumCursor<TPair>;
-    TKeys  = specialize TGEnumCursor<string>;
-    TNodes = specialize TGEnumCursor<TJsonNode>;
 
     TValue = record
     case Integer of
@@ -270,7 +203,6 @@ type
     function  GetByName(const aName: string): TJsonNode;
     function  GetValue(const aName: string): TJVariant;
     procedure SetValue(const aName: string; const aValue: TJVariant);
-    function  GetClassEnumerator: TNodeEnumerator;
     class constructor Init;
     property  FString: string read GetFString write SetFString;
     property  FArray: PJsArray read GetFArray write SetFArray;
@@ -306,6 +238,40 @@ type
       FNode: TJsonNode;
     public
       function GetEnumerator: TTreeEnumerator;
+    end;
+
+    TEntryEnumerator = record
+    private
+      FNode: TJsonNode;
+      FCurrIndex: SizeInt;
+      function GetCurrent: TPair; inline;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: TPair read GetCurrent;
+    end;
+
+    TEntries = record
+    private
+      FNode: TJsonNode;
+    public
+      function GetEnumerator: TEntryEnumerator;
+    end;
+
+    TNameEnumerator = record
+    private
+      FNode: TJsonNode;
+      FCurrIndex: SizeInt;
+      function GetCurrent: string; inline;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: string read GetCurrent;
+    end;
+
+    TNames = record
+    private
+      FNode: TJsonNode;
+    public
+      function GetEnumerator: TNameEnumerator;
     end;
 
   { validators: aDepth indicates the maximum nesting depth of structures;
@@ -353,11 +319,10 @@ type
     constructor Create(const a: TJPairArray);
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
-    function  Nodes: INodeEnumerable; inline;
     function  SubTree: TSubTree; inline;
-    function  Enrties: IPairEnumerable; inline;
-    function  Keys: IKeyEnumerable; inline;
-    function  IdenticKeys(const aKey: string): IPairEnumerable; inline;
+    function  Enrties: TEntries; inline;
+    function  Names: TNames; inline;
+    function  IdenticNames(const aKey: string): IPairEnumerable; inline;
     function  IsNull: Boolean; inline;
     function  IsFalse: Boolean; inline;
     function  IsTrue: Boolean; inline;
@@ -436,7 +401,7 @@ type
     function  InsertNode(aIndex: SizeInt; const aName: string; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
     function  Contains(const aName: string): Boolean; inline;
     function  ContainsUniq(const aName: string): Boolean; inline;
-    function  IndefOfName(const aName: string): SizeInt; inline;
+    function  IndexOfName(const aName: string): SizeInt; inline;
     function  CountOfName(const aName: string): SizeInt; inline;
     function  Find(const aKey: string; out aValue: TJsonNode): Boolean;
     function  FindOrAdd(const aName: string; out aValue: TJsonNode): Boolean;
@@ -1220,38 +1185,6 @@ begin
   FCount := 0;
 end;
 
-{ TJsonNode.TEmptyNodeEnumerator }
-
-function TJsonNode.TEmptyNodeEnumerator.GetCurrent: TJsonNode;
-begin
-  Result := nil;
-end;
-
-function TJsonNode.TEmptyNodeEnumerator.MoveNext: Boolean;
-begin
-  Result := False;
-end;
-
-procedure TJsonNode.TEmptyNodeEnumerator.Reset;
-begin
-end;
-
-{ TJsonNode.TEmptyKeyEnumerator }
-
-function TJsonNode.TEmptyKeyEnumerator.GetCurrent: string;
-begin
-  Result := '';
-end;
-
-function TJsonNode.TEmptyKeyEnumerator.MoveNext: Boolean;
-begin
-  Result := False;
-end;
-
-procedure TJsonNode.TEmptyKeyEnumerator.Reset;
-begin
-end;
-
 { TJsonNode.TEmptyPairEnumerator }
 
 function TJsonNode.TEmptyPairEnumerator.GetCurrent: TPair;
@@ -1268,116 +1201,24 @@ procedure TJsonNode.TEmptyPairEnumerator.Reset;
 begin
 end;
 
-{ TJsonNode.TANodeEnumerator }
+{ TJsonNode.TIdenticEnumerator }
 
-function TJsonNode.TANodeEnumerator.GetCurrent: TJsonNode;
+function TJsonNode.TIdenticEnumerator.GetCurrent: TPair;
 begin
   Result := FEnum.Current;
 end;
 
-constructor TJsonNode.TANodeEnumerator.Create(const aEnum: TJsArray.TEnumerator);
-begin
-  FEnum := aEnum;
-  FResEnum := aEnum;
-end;
-
-function TJsonNode.TANodeEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TJsonNode.TANodeEnumerator.Reset;
-begin
-  FEnum := FResEnum;
-end;
-
-{ TJsonNode.TONodeEnumerator }
-
-function TJsonNode.TONodeEnumerator.GetCurrent: TJsonNode;
-begin
-  Result := FEnum.Current.Value;
-end;
-
-constructor TJsonNode.TONodeEnumerator.Create(const aEnum: TJsObject.TEnumerator);
-begin
-  FEnum := aEnum;
-  FResEnum := aEnum;
-end;
-
-function TJsonNode.TONodeEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TJsonNode.TONodeEnumerator.Reset;
-begin
-  FEnum := FResEnum;
-end;
-
-{ TJsonNode.TOPairEnumerator }
-
-function TJsonNode.TOPairEnumerator.GetCurrent: TPair;
-begin
-  Result := FEnum.Current;
-end;
-
-constructor TJsonNode.TOPairEnumerator.Create(const aEnum: TJsObject.TEnumerator);
-begin
-  FEnum := aEnum;
-  FConstEnum := aEnum;
-end;
-
-function TJsonNode.TOPairEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TJsonNode.TOPairEnumerator.Reset;
-begin
-  FEnum := FConstEnum;
-end;
-
-{ TJsonNode.TOKeyEnumerator }
-
-function TJsonNode.TOKeyEnumerator.GetCurrent: string;
-begin
-  Result := FEnum.Current.Key;
-end;
-
-constructor TJsonNode.TOKeyEnumerator.Create(const aEnum: TJsObject.TEnumerator);
-begin
-  FEnum := aEnum;
-  FConstEnum := aEnum;
-end;
-
-function TJsonNode.TOKeyEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TJsonNode.TOKeyEnumerator.Reset;
-begin
-  FEnum := FConstEnum;
-end;
-
-{ TJsonNode.TOIdenticEnumerator }
-
-function TJsonNode.TOIdenticEnumerator.GetCurrent: TPair;
-begin
-  Result := FEnum.Current;
-end;
-
-constructor TJsonNode.TOIdenticEnumerator.Create(const aEnum: TJsObject.TIdenticEnumerator);
+constructor TJsonNode.TIdenticEnumerator.Create(const aEnum: TJsObject.TIdenticEnumerator);
 begin
   FEnum := aEnum;
 end;
 
-function TJsonNode.TOIdenticEnumerator.MoveNext: Boolean;
+function TJsonNode.TIdenticEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TJsonNode.TOIdenticEnumerator.Reset;
+procedure TJsonNode.TIdenticEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
@@ -1741,18 +1582,6 @@ begin
   end;
 end;
 
-function TJsonNode.GetClassEnumerator: TNodeEnumerator;
-begin
-  case Kind of
-    jvkArray:
-      if FValue.Ref <> nil then exit(TANodeEnumerator.Create(FArray^.GetEnumerator));
-    jvkObject:
-      if FValue.Ref <> nil then exit(TONodeEnumerator.Create(FObject^.GetEnumerator));
-  else
-  end;
-  Result := TEmptyNodeEnumerator.Create;
-end;
-
 class constructor TJsonNode.Init;
 begin
   FmtSettings := DefaultFormatSettings;
@@ -2114,34 +1943,25 @@ begin
   Result.FCurrIndex := NULL_INDEX;
 end;
 
-function TJsonNode.Nodes: INodeEnumerable;
-begin
-  Result := TNodes.Create(GetClassEnumerator);
-end;
-
 function TJsonNode.SubTree: TSubTree;
 begin
   Result.FNode := Self;
 end;
 
-function TJsonNode.Enrties: IPairEnumerable;
+function TJsonNode.Enrties: TEntries;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(TPairs.Create(TOPairEnumerator.Create(FObject^.GetEnumerator)));
-  Result := TPairs.Create(TEmptyPairEnumerator.Create);
+  Result.FNode := Self;
 end;
 
-function TJsonNode.Keys: IKeyEnumerable;
+function TJsonNode.Names: TNames;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(TKeys.Create(TOKeyEnumerator.Create(FObject^.GetEnumerator)));
-  Result := TKeys.Create(TEmptyKeyEnumerator.Create);
+  Result.FNode := Self;
 end;
 
-function TJsonNode.IdenticKeys(const aKey: string): IPairEnumerable;
+function TJsonNode.IdenticNames(const aKey: string): IPairEnumerable;
 begin
   if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(TPairs.Create(TOIdenticEnumerator.Create(FObject^.GetIdenticEnumerator(aKey))));
+    exit(TPairs.Create(TIdenticEnumerator.Create(FObject^.GetIdenticEnumerator(aKey))));
   Result := TPairs.Create(TEmptyPairEnumerator.Create);
 end;
 
@@ -2248,6 +2068,52 @@ begin
   for Node in FNode do
     Result.FQueue.Enqueue(Node);
   Result.FCurrent := nil;
+end;
+
+{ TJsonNode.TEntryEnumerator }
+
+function TJsonNode.TEntryEnumerator.GetCurrent: TPair;
+begin
+  Result := FNode.FObject^.Mutable[FCurrIndex]^
+end;
+
+function TJsonNode.TEntryEnumerator.MoveNext: Boolean;
+begin
+  if FNode.Kind <> jvkObject then
+    exit(False);
+  Inc(FCurrIndex);
+  Result := FCurrIndex < FNode.Count;
+end;
+
+{ TJsonNode.TEntries }
+
+function TJsonNode.TEntries.GetEnumerator: TEntryEnumerator;
+begin
+  Result.FNode := FNode;
+  Result.FCurrIndex := NULL_INDEX;
+end;
+
+{ TJsonNode.TNameEnumerator }
+
+function TJsonNode.TNameEnumerator.GetCurrent: string;
+begin
+  Result := FNode.FObject^.Mutable[FCurrIndex]^.Key;
+end;
+
+function TJsonNode.TNameEnumerator.MoveNext: Boolean;
+begin
+  if FNode.Kind <> jvkObject then
+    exit(False);
+  Inc(FCurrIndex);
+  Result := FCurrIndex < FNode.Count;
+end;
+
+{ TJsonNode.TNames }
+
+function TJsonNode.TNames.GetEnumerator: TNameEnumerator;
+begin
+  Result.FNode := FNode;
+  Result.FCurrIndex := NULL_INDEX;
 end;
 
 procedure TJsonNode.Clear;
@@ -2688,7 +2554,7 @@ begin
   Result := False;
 end;
 
-function TJsonNode.IndefOfName(const aName: string): SizeInt;
+function TJsonNode.IndexOfName(const aName: string): SizeInt;
 begin
   if (Kind = jvkObject) and (FValue.Ref <> nil) then
     exit(FObject^.IndexOf(aName));
