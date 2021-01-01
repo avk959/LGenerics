@@ -384,7 +384,7 @@ begin
   AssertTrue(User['lastName'] = 'Smith');
   AssertTrue(User['age'] = 42);
   AssertFalse(User['married']);
-  AssertTrue(User.Named['spouse'].IsNull);
+  AssertTrue(User.NItems['spouse'].IsNull);
 end;
 
 initialization

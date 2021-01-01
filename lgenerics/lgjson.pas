@@ -404,6 +404,9 @@ type
     function  IndexOfName(const aName: string): SizeInt; inline;
     function  CountOfName(const aName: string): SizeInt; inline;
     function  Find(const aKey: string; out aValue: TJsonNode): Boolean;
+  { returns True if aName is found, otherwise adds a new pair with
+    Value.Kind = jvkUnknown and returns False;
+    if the instance is not an object, it is cleared and becomes an object - be careful }
     function  FindOrAdd(const aName: string; out aValue: TJsonNode): Boolean;
     function  FindUniq(const aName: string; out aValue: TJsonNode): Boolean;
     function  FindAll(const aName: string): TNodeArray;
@@ -436,8 +439,8 @@ type
     property  Items[aIndex: SizeInt]: TJsonNode read GetItem;
   { will raise exception if aIndex out of bounds or an instance is not an object }
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
-  { if instance is an object then acts as FindOrAdd, otherwise returns nil }
-    property  Named[const aName: string]: TJsonNode read GetByName; //todo: need another prop name
+  { acts as FindOrAdd }
+    property  NItems[const aName: string]: TJsonNode read GetByName; //todo: need another prop name?
   { if GetValue does not find aName or if the value found is an array or object,
     it will raise an exception; SetValue will make an object from an instance - be careful }
     property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
@@ -1543,10 +1546,7 @@ end;
 
 function TJsonNode.GetByName(const aName: string): TJsonNode;
 begin
-  if Kind = jvkObject then
-    FindOrAdd(aName, Result)
-  else
-    Result := nil;
+  FindOrAdd(aName, Result);
 end;
 
 function TJsonNode.GetValue(const aName: string): TJVariant;
