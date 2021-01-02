@@ -203,6 +203,8 @@ type
     function  GetByName(const aName: string): TJsonNode;
     function  GetValue(const aName: string): TJVariant;
     procedure SetValue(const aName: string; const aValue: TJVariant);
+    procedure SetNArray(const aName: string; const aValue: TJVarArray);
+    procedure SetNObject(const aName: string; const aValue: TJPairArray);
     class constructor Init;
     property  FString: string read GetFString write SetFString;
     property  FArray: PJsArray read GetFArray write SetFArray;
@@ -382,11 +384,14 @@ type
     only if aName is unique within an instance, otherwise returns False;
     if an instance is not an object, it is cleared and becomes an object - be careful }
     function  AddUniqNull(const aName: string): Boolean;
+  { adds pair (aName: aValue) to the instance as to an object and returns True
+    only if aName is unique within an instance, otherwise returns False;
+    if an instance is not an object, it is cleared and becomes an object - be careful }
     function  AddUniq(const aName: string; aValue: Boolean): Boolean;
     function  AddUniq(const aName: string; aValue: Double): Boolean;
     function  AddUniq(const aName, aValue: string): Boolean;
-    function  AddUniq(const aName: string;  const aValue: TJVarArray; out aNode: TJsonNode): Boolean;
-    function  AddUniq(const aName: string;  const aValue: TJPairArray; out aNode: TJsonNode): Boolean;
+    function  AddUniq(const aName: string; const aValue: TJVarArray): Boolean;
+    function  AddUniq(const aName: string; const aValue: TJPairArray): Boolean;
     function  AddUniqNode(const aName: string; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
     function  AddUniqJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
     function  InsertNull(aIndex: SizeInt): Boolean;
@@ -444,6 +449,10 @@ type
   { if GetValue does not find aName or if the value found is an array or object,
     it will raise an exception; SetValue will make an object from an instance - be careful }
     property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
+  { will make an object from an instance }
+    property  NArrays[const aName: string]: TJVarArray write SetNArray;
+  { will make an object from an instance }
+    property  NObjects[const aName: string]: TJPairArray write SetNObject;
   end;
 
 implementation
@@ -1582,6 +1591,24 @@ begin
   end;
 end;
 
+procedure TJsonNode.SetNArray(const aName: string; const aValue: TJVarArray);
+var
+  Node: TJsonNode;
+begin
+  if FindOrAdd(aName, Node) then
+    Node.Clear;
+  Node.Add(aValue);
+end;
+
+procedure TJsonNode.SetNObject(const aName: string; const aValue: TJPairArray);
+var
+  Node: TJsonNode;
+begin
+  if FindOrAdd(aName, Node) then
+    Node.Clear;
+  Node.Add(aValue);
+end;
+
 class constructor TJsonNode.Init;
 begin
   FmtSettings := DefaultFormatSettings;
@@ -2369,7 +2396,7 @@ begin
   Result := False;
 end;
 
-function TJsonNode.AddUniq(const aName: string; const aValue: TJVarArray; out aNode: TJsonNode): Boolean;
+function TJsonNode.AddUniq(const aName: string; const aValue: TJVarArray): Boolean;
 var
   p: ^TPair;
 begin
@@ -2377,15 +2404,13 @@ begin
     FValue.Ref := CreateJsObject;
   if FObject^.AddUniq(TPair.Create(aName, nil), p) then
     begin
-      aNode := TJsonNode.Create(aValue);
-      p^.Value := aNode;
+      p^.Value := TJsonNode.Create(aValue);
       exit(True);
     end;
-  aNode := nil;
   Result := False;
 end;
 
-function TJsonNode.AddUniq(const aName: string; const aValue: TJPairArray; out aNode: TJsonNode): Boolean;
+function TJsonNode.AddUniq(const aName: string; const aValue: TJPairArray): Boolean;
 var
   p: ^TPair;
 begin
@@ -2393,11 +2418,9 @@ begin
     FValue.Ref := CreateJsObject;
   if FObject^.AddUniq(TPair.Create(aName, nil), p) then
     begin
-      aNode := TJsonNode.Create(aValue);
-      p^.Value := aNode;
+      p^.Value := TJsonNode.Create(aValue);
       exit(True);
     end;
-  aNode := nil;
   Result := False;
 end;
 
