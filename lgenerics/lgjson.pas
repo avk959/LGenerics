@@ -308,7 +308,7 @@ type
     class function NewNode(aValue: Double): TJsonNode; static; inline;
     class function NewNode(const aValue: string): TJsonNode; static; inline;
     class function NewNode(aKind: TJsValueKind): TJsonNode; static; inline;
-  { parses the JSON string, returns nil in case of failure,
+  { parses the JSON string s, returns nil in case of failure,
     otherwise its representation as TJsonNode }
     class function NewJson(const s: string): TJsonNode; static; inline;
     constructor Create;
@@ -324,7 +324,7 @@ type
     function  SubTree: TSubTree; inline;
     function  Enrties: TEntries; inline;
     function  Names: TNames; inline;
-    function  IdenticNames(const aKey: string): IPairEnumerable; inline;
+    function  IdenticNames(const aName: string): IPairEnumerable; inline;
     function  IsNull: Boolean; inline;
     function  IsFalse: Boolean; inline;
     function  IsTrue: Boolean; inline;
@@ -429,14 +429,21 @@ type
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = 2): string;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
-  { SetAsJson remark: if the parser fails to parse the original string,
+  { GetAsJson returns the most compact representation of an instance as a JSON string;
+    SetAsJson remark: if the parser fails to parse the original string,
     an exception will be raised. }
     property  AsJson: string read GetAsJson write SetAsJson;
+  { converts an instance to null }
     property  AsNull: TJsonNode read GetAsNull;
+  { converts an instance to a Boolean }
     property  AsBoolean: Boolean read GetAsBoolean write SetAsBoolean;
+  { converts an instance to a number }
     property  AsNumber: Double read GetAsNumber write SetAsNumber;
+  { converts an instance to a string }
     property  AsString: string read GetAsString write SetAsString;
+  { converts an instance to an array }
     property  AsArray: TJsonNode read GetAsArray;
+  { converts an instance to an object }
     property  AsObject: TJsonNode read GetAsObject;
     property  Kind: TJsValueKind read FKind;
     property  Count: SizeInt read GetCount;
@@ -1985,10 +1992,10 @@ begin
   Result.FNode := Self;
 end;
 
-function TJsonNode.IdenticNames(const aKey: string): IPairEnumerable;
+function TJsonNode.IdenticNames(const aName: string): IPairEnumerable;
 begin
   if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(TPairs.Create(TIdenticEnumerator.Create(FObject^.GetIdenticEnumerator(aKey))));
+    exit(TPairs.Create(TIdenticEnumerator.Create(FObject^.GetIdenticEnumerator(aName))));
   Result := TPairs.Create(TEmptyPairEnumerator.Create);
 end;
 
