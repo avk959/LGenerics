@@ -565,7 +565,7 @@ end;
 class operator TJVariant.= (const L, R: TJVariant): Boolean;
 begin
   case L.Kind of
-    vkBool:   Result := (R.Kind = vkBool) and (L.FValue.Bool = R.FValue.Bool);
+    vkBool:   Result := (R.Kind = vkBool) and not(L.FValue.Bool xor R.FValue.Bool);
     vkNumber: Result := (R.Kind = vkNumber) and SameValue(L.FValue.Num, R.FValue.Num);
     vkString: Result := (R.Kind = vkString) and (string(L.FValue.Ref) = string(R.FValue.Ref));
   else
