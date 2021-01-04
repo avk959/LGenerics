@@ -352,9 +352,12 @@ type
   { adds string value to the instance as to an array; if it is not an array,
     it is cleared and becomes an array - be careful; returns Self }
     function  Add(const aValue: string): TJsonNode; inline;
-  { adds all elements from a to the instance as to an array; if it is not
-    an array, it is cleared and becomes an array - be careful; returns Self }
+  { adds a new array from the elements of the array a to the instance as in an array;
+    if it is not an array, it is cleared and becomes an array - be careful; returns Self }
     function  Add(const a: TJVarArray): TJsonNode;
+  { adds a new object from the elements of the array a to the instance as to an array;
+    if it is not an array, it is cleared and becomes an array - be careful; returns Self }
+    function  Add(const a: TJPairArray): TJsonNode;
   { adds a new object of the specified kind to the instance as to an array;
     if an instance is not an array, it is cleared and becomes an array - be careful;
     returns a new object }
@@ -362,23 +365,26 @@ type
   { returns True and the created object in the aNode parameter,
     if the string s can be parsed; the new object is added as in an array - be careful }
     function  AddJson(const s: string; out aNode: TJsonNode): Boolean;
-  { adds all pairs from a to the instance as to an object; if it is not
-    an object, it is cleared and becomes an object - be careful; returns Self }
-    function  Add(const a: TJPairArray): TJsonNode;
   { adds pair aName: null to the instance as to an object; if it is not an object,
     it is cleared and becomes an object - be careful; returns Self }
     function  AddNull(const aName: string): TJsonNode; inline;
-  { adds pair (aName: aValue) the instance as to an object; if it is not an object,
+  { adds pair (aName: aValue) to the instance as to an object; if it is not an object,
     it is cleared and becomes an object - be careful; returns Self }
     function  Add(const aName: string; aValue: Boolean): TJsonNode; inline;
     function  Add(const aName: string; aValue: Double): TJsonNode; inline;
     function  Add(const aName, aValue: string): TJsonNode; inline;
+  { adds pair (aName: array from aValue elements) to the instance as to an object;
+    if it is not an object, it is cleared and becomes an object - be careful; returns Self }
     function  Add(const aName: string; const aValue: TJVarArray): TJsonNode;
+  { adds pair (aName: object from aValue elements) to the instance as to an object;
+    if it is not an object, it is cleared and becomes an object - be careful; returns Self }
     function  Add(const aName: string; const aValue: TJPairArray): TJsonNode;
   { adds a new object of the specified type associated with aName to the instance as to an object;
     if an instance is not an object, it is cleared and becomes an object - be careful;
     returns a new object }
     function  AddNode(const aName: string; aKind: TJsValueKind): TJsonNode; inline;
+  { returns True and the created object associated with aName in the aNode parameter,
+    if the string aJson can be parsed; the new object is added as in an object - be careful }
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
   { adds pair (aName: null) to the instance as to an object and returns True
     only if aName is unique within an instance, otherwise returns False;
@@ -392,13 +398,31 @@ type
     function  AddUniq(const aName, aValue: string): Boolean;
     function  AddUniq(const aName: string; const aValue: TJVarArray): Boolean;
     function  AddUniq(const aName: string; const aValue: TJPairArray): Boolean;
+  { adds a new object of the specified type associated with aName to the instance as to an object
+    only if aName is unique within an instance, otherwise returns False;
+    if an instance is not an object, it is cleared and becomes an object - be careful;
+    returns a new object }
     function  AddUniqNode(const aName: string; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
+  { returns True and the created object associated with aName in the aNode parameter,
+    only if aName is unique within an instance and the string aJson can be parsed;
+    the new object is added as in an object - be careful }
     function  AddUniqJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
+  { if aIndex = 0 then acts like AddNull;
+    returns True and inserts null at position aIndex if aIndex is in the range [1..Count]
+    and the instance is an array, otherwise it returns False }
     function  InsertNull(aIndex: SizeInt): Boolean;
+  { if aIndex = 0 then acts like Add(aValue);
+    returns True and inserts aValue at position aIndex if aIndex is in the range [1..Count]
+    and the instance is an array, otherwise it returns False}
     function  Insert(aIndex: SizeInt; aValue: Boolean): Boolean;
     function  Insert(aIndex: SizeInt; aValue: Double): Boolean;
     function  Insert(aIndex: SizeInt; const aValue: string): Boolean;
+  { if aIndex = 0 then acts like AddNode;
+    returns True and inserts new object(aNode) of the specified kind
+    at position aIndex if aIndex is in the range [1..Count]
+    and the instance is an array, otherwise it returns False }
     function  InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
+  { }
     function  InsertNull(aIndex: SizeInt; const aName: string): Boolean;
     function  Insert(aIndex: SizeInt; const aName: string; aValue: Boolean): Boolean;
     function  Insert(aIndex: SizeInt; const aName: string; aValue: Double): Boolean;
@@ -2224,18 +2248,18 @@ begin
 end;
 
 function TJsonNode.Add(const a: TJVarArray): TJsonNode;
-var
-  I: SizeInt;
 begin
   if AsArray.FValue.Ref = nil then
     FValue.Ref := CreateJsArray;
-  for I := 0 to System.High(a) do
-    case a[I].Kind of
-      vkNull:   FArray^.Add(TJsonNode.CreateNull);
-      vkBool:   FArray^.Add(TJsonNode.Create(Boolean(a[I])));
-      vkNumber: FArray^.Add(TJsonNode.Create(Double(a[I])));
-      vkString: FArray^.Add(TJsonNode.Create(string(a[I])));
-    end;
+  FArray^.Add(TJsonNode.Create(a));
+  Result := Self;
+end;
+
+function TJsonNode.Add(const a: TJPairArray): TJsonNode;
+begin
+  if AsArray.FValue.Ref = nil then
+    FValue.Ref := CreateJsArray;
+  FArray^.Add(TJsonNode.Create(a));
   Result := Self;
 end;
 
@@ -2254,23 +2278,6 @@ begin
   Result := TryParse(s, aNode);
   if Result then
     FArray^.Add(aNode);
-end;
-
-function TJsonNode.Add(const a: TJPairArray): TJsonNode;
-var
-  I: SizeInt;
-begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  for I := 0 to System.High(a) do
-    with a[I] do
-      case Value.Kind of
-        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.CreateNull));
-        vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Boolean(Value))));
-        vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Double(Value))));
-        vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(string(Value))));
-      end;
-  Result := Self;
 end;
 
 function TJsonNode.AddNull(const aName: string): TJsonNode;
