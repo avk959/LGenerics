@@ -426,7 +426,7 @@ type
     function  FindPath(const aPtr: string; out aNode: TJsonNode): Boolean;
   { an array of path parts is assumed to be passed }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
-    function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = 2): string;
+    function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = 4): string;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
   { GetAsJson returns the most compact representation of an instance as a JSON string;
@@ -1512,26 +1512,18 @@ function TJsonNode.CanArrayInsert(aIndex: SizeInt): Boolean;
 begin
   if aIndex <> 0 then
     exit((Kind = jvkArray)and(FValue.Ref <> nil)and(SizeUInt(aIndex) <= SizeUInt(FArray^.Count)));
-  if aIndex = 0 then
-    begin
-      if AsArray.FValue.Ref = nil then
-        FValue.Ref := CreateJsArray;
-      exit(True);
-    end;
-  Result := False;
+  if AsArray.FValue.Ref = nil then
+    FValue.Ref := CreateJsArray;
+  Result := True;
 end;
 
 function TJsonNode.CanObjectInsert(aIndex: SizeInt): Boolean;
 begin
   if aIndex <> 0 then
     exit((Kind = jvkObject)and(FValue.Ref <> nil)and(SizeUInt(aIndex) <= SizeUInt(FObject^.Count)));
-  if aIndex = 0 then
-    begin
-      if AsObject.FValue.Ref = nil then
-        FValue.Ref := CreateJsObject;
-      exit(True);
-    end;
-  Result := False;
+  if AsObject.FValue.Ref = nil then
+    FValue.Ref := CreateJsObject;
+  Result := True;
 end;
 
 function TJsonNode.GetItem(aIndex: SizeInt): TJsonNode;
@@ -1550,11 +1542,10 @@ end;
 function TJsonNode.GetPair(aIndex: SizeInt): TPair;
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
-    case Kind of
-      jvkObject: exit(FObject^.Mutable[aIndex]^);
+    if Kind = jvkObject then
+      exit(FObject^.Mutable[aIndex]^)
     else
-      raise EJsException.Create(SEJsonInstNotObj);
-    end
+      raise EJsException.Create(SEJsonInstNotObj)
   else
     raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
   Result := Default(TPair);
@@ -1575,8 +1566,8 @@ begin
       jvkNull:   exit(TJVariant.Null);
       jvkFalse:  exit(False);
       jvkTrue:   exit(True);
-      jvkNumber: exit(Node.AsNumber);
-      jvkString: exit(Node.AsString);
+      jvkNumber: exit(Node.FValue.Num);
+      jvkString: exit(Node.FString);
       jvkArray:  raise EJsException.CreateFmt(SECantConvertFmt, ['Array', 'TJVariant']);
       jvkObject: raise EJsException.CreateFmt(SECantConvertFmt, ['Object', 'TJVariant']);
     end
