@@ -454,6 +454,7 @@ type
   { an array of path parts is assumed to be passed }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = 4): string;
+    function  AsText: string;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
   { GetAsJson returns the most compact representation of an instance as a JSON string;
@@ -793,9 +794,13 @@ const
 
 type
   TBomKind = (bkNone, bkUtf8, bkUtf16, bkUtf32);
+
 const
   UTF8_BOM_LEN = 3;
-
+  S_UNDEF      = 'undefined';
+  S_NULL       = 'null';
+  S_FALSE      = 'false';
+  S_TRUE       = 'true';
 function DetectBom(aBuf: PByte; aBufSize: SizeInt): TBomKind;
 {$PUSH}{$J-}
 const
@@ -1466,9 +1471,9 @@ var
     I, Last: SizeInt;
   begin
     case aInst.Kind of
-      jvkNull:   sb.Append('null');
-      jvkFalse:  sb.Append('false');
-      jvkTrue:   sb.Append('true');
+      jvkNull:   sb.Append(S_NULL);
+      jvkFalse:  sb.Append(S_FALSE);
+      jvkTrue:   sb.Append(S_TRUE);
       jvkNumber: sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
       jvkString: sb.AppendEncode(aInst.FString);
       jvkArray:
@@ -2891,9 +2896,9 @@ var
     I, Last: SizeInt;
   begin
     case aInst.Kind of
-      jvkNull:   sb.Append('null');
-      jvkFalse:  sb.Append('false');
-      jvkTrue:   sb.Append('true');
+      jvkNull:   sb.Append(S_NULL);
+      jvkFalse:  sb.Append(S_FALSE);
+      jvkTrue:   sb.Append(S_TRUE);
       jvkNumber: sb.Append(FloatToStr(aInst.AsNumber, FmtSettings));
       jvkString: AppendString(aInst.FString);
       jvkArray: begin
@@ -2955,6 +2960,20 @@ begin
   HasText := False;
   BuildJson(Self, 0);
   Result := sb.ToString;
+end;
+
+function TJsonNode.AsText: string;
+begin
+  case Kind of
+    jvkUnknown: Result := S_UNDEF;
+    jvkNull:    Result := S_NULL;
+    jvkFalse:   Result := S_FALSE;
+    jvkTrue:    Result := S_TRUE;
+    jvkNumber:  Result := FValue.Num.ToString;
+    jvkString:  Result := FString;
+    jvkArray,
+    jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
+  end;
 end;
 
 procedure TJsonNode.SaveToStream(aStream: TStream);
