@@ -443,6 +443,9 @@ type
     function  FindPair(aIndex: SizeInt; out aValue: TPair): Boolean;
     function  FindName(aIndex: SizeInt; out aName: string): Boolean;
     function  Delete(aIndex: SizeInt): Boolean;
+    function  Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
+    function  Extract(aIndex: SizeInt; out aPair: TPair): Boolean;
+    function  Extract(const aName: string; out aNode: TJsonNode): Boolean;
     function  Remove(const aName: string): Boolean;
     function  RemoveAll(const aName: string): SizeInt;
   { the JSON Pointer (RFC 6901) is assumed to be passed as pascal string;
@@ -1618,7 +1621,10 @@ var
   Node: TJsonNode;
 begin
   if FindOrAdd(aName, Node) then
-    Node.Clear;
+    begin
+      Node.DoClear;
+      Node.FKind := jvkArray;
+    end;
   Node.Add(aValue);
 end;
 
@@ -1627,7 +1633,10 @@ var
   Node: TJsonNode;
 begin
   if FindOrAdd(aName, Node) then
-    Node.Clear;
+    begin
+      Node.DoClear;
+      Node.FKind := jvkObject;
+    end;
   Node.Add(aValue);
 end;
 
@@ -2708,31 +2717,62 @@ end;
 
 function TJsonNode.Delete(aIndex: SizeInt): Boolean;
 var
-  p: TPair;
+  Node: TJsonNode;
 begin
-  if SizeUInt(aIndex) < SizeUInt(Count) then
+  if Extract(aIndex, Node) then
     begin
-      case Kind of
-        jvkArray:  FArray^.Extract(aIndex).Free;
-        jvkObject:
-          begin
-            FObject^.Delete(aIndex, p);
-            p.Value.Free;
-          end;
-      else
-      end;
+      Node.Free;
       exit(True);
     end;
   Result := False;
 end;
 
-function TJsonNode.Remove(const aName: string): Boolean;
+function TJsonNode.Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
+var
+  p: TPair;
+begin
+  aNode := nil;
+  case Kind of
+    jvkArray: exit(FArray^.TryExtract(aIndex, aNode));
+    jvkObject:
+      if (FObject <> nil) and FObject^.TryDelete(aIndex, p) then
+        begin
+          aNode := p.Value;
+          exit(True);
+        end;
+  else
+  end;
+  Result := False;
+end;
+
+function TJsonNode.Extract(aIndex: SizeInt; out aPair: TPair): Boolean;
+begin
+  if (Kind = jvkObject) and (FObject <> nil) and FObject^.TryDelete(aIndex, aPair) then
+    exit(True);
+  aPair := Default(TPair);
+  Result := False;
+end;
+
+function TJsonNode.Extract(const aName: string; out aNode: TJsonNode): Boolean;
 var
   p: TPair;
 begin
   if (Kind = jvkObject) and (FObject <> nil) and FObject^.Remove(aName, p) then
     begin
-      p.Value.Free;
+      aNode := p.Value;
+      exit(True);
+    end;
+  aNode := nil;
+  Result := False;
+end;
+
+function TJsonNode.Remove(const aName: string): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if Extract(aName, Node) then
+    begin
+      Node.Free;
       exit(True);
     end;
   Result := False;
