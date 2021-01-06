@@ -882,6 +882,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
     property  Items[aIndex: SizeInt]: TEntry read GetItem write SetItem; default;
+  { does not checks index range }
     property  Mutable[aIndex: SizeInt]: PEntry read GetMutable;
   end;
 
