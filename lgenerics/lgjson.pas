@@ -2301,13 +2301,12 @@ end;
 function TJsonNode.ArrayAppend(aNode: TJsonNode): TJsonNode;
 var
   I: SizeInt;
-  p: TPair;
   Node: TJsonNode;
 begin
   if AsArray.FValue.Ref = nil then
     FValue.Ref := CreateJsArray;
   case aNode.Kind of
-    jvkNull:  AddNull;
+    jvkNull:   AddNull;
     jvkFalse,
     jvkTrue:   Add(aNode.AsBoolean);
     jvkNumber: Add(aNode.FValue.Num);
@@ -2324,10 +2323,9 @@ begin
         begin
           for I := 0 to Pred(aNode.Count) do
             begin
-              p := aNode.FObject^.Mutable[I]^;
               Node := TJsonNode.Create(jvkObject);
               Node.FValue.Ref := CreateJsObject;
-              Node.FObject^.Add(p);
+              Node.FObject^.Add(aNode.FObject^.Mutable[I]^);
               FArray^.Add(Node);
             end;
           aNode.FObject^.Clear;
