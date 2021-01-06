@@ -368,7 +368,7 @@ type
   { adds all elements from aNode to the instance as to an array;
     if it is not an array, it is cleared and becomes an array - be careful;
     if aNode is a structure it becomes empty; returns Self }
-    function  ArrayAppend(aNode: TJsonNode): TJsonNode;
+    function  Append(aNode: TJsonNode): TJsonNode;
   { adds pair aName: null to the instance as to an object; if it is not an object,
     it is cleared and becomes an object - be careful; returns Self }
     function  AddNull(const aName: string): TJsonNode; inline;
@@ -2298,7 +2298,7 @@ begin
     FArray^.Add(aNode);
 end;
 
-function TJsonNode.ArrayAppend(aNode: TJsonNode): TJsonNode;
+function TJsonNode.Append(aNode: TJsonNode): TJsonNode;
 var
   I: SizeInt;
   Node: TJsonNode;
