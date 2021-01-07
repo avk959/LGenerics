@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   The generic implementation of the conventional red-black tree.          *
 *                                                                           *
-*   Copyright(c) 2019-2020 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2021 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
