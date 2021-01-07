@@ -112,6 +112,7 @@ type
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
+    procedure MakeEmpty; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     procedure Push(const aValue: T); inline;
@@ -448,6 +449,11 @@ end;
 function TGLiteStack.NonEmpty: Boolean;
 begin
   Result := Count > 0;
+end;
+
+procedure TGLiteStack.MakeEmpty;
+begin
+  FBuffer.MakeEmpty;
 end;
 
 procedure TGLiteStack.EnsureCapacity(aValue: SizeInt);
