@@ -32,6 +32,27 @@ type
     procedure Values;
   end;
 
+  { TTestJsonWriter }
+
+  TTestJsonWriter = class(TTestCase)
+  private
+  type
+    TWriter    = specialize TGUniqRef<TJsonWriter>;
+    TStrStream = specialize TGAutoRef<TStringStream>;
+    TNode      = specialize TGUniqRef<TJsonNode>;
+  published
+    procedure AddNull;
+    procedure AddFalse;
+    procedure AddTrue;
+    procedure AddNumber;
+    procedure AddString;
+    procedure AddJson;
+    procedure AddNode;
+    procedure WriteArray;
+    procedure WriteObject;
+    procedure Write;
+  end;
+
 var
   TestFileList: TStringList = nil;
 
@@ -387,10 +408,236 @@ begin
   AssertTrue(User.NItems['spouse'].IsNull);
 end;
 
+{ TTestJsonWriter }
+
+procedure TTestJsonWriter.AddNull;
+  procedure WriteNull(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.AddNull;
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteNull(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkNull);
+  AssertTrue(s = 'null');
+end;
+
+procedure TTestJsonWriter.AddFalse;
+  procedure WriteFalse(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.AddFalse;
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteFalse(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkFalse);
+  AssertTrue(s = 'false');
+end;
+
+procedure TTestJsonWriter.AddTrue;
+  procedure WriteTrue(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.AddTrue;
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteTrue(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkTrue);
+  AssertTrue(s = 'true');
+end;
+
+procedure TTestJsonWriter.AddNumber;
+const
+  Num = -42;
+  procedure WriteNum(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.Add(Num);
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteNum(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkNumber);
+  AssertTrue(s = '-42');
+end;
+
+procedure TTestJsonWriter.AddString;
+const
+  Str = 'string "value"';
+  procedure WriteStr(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.Add(Str);
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteStr(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkString);
+  AssertTrue(s = '"string \"value\""');
+end;
+
+procedure TTestJsonWriter.AddJson;
+const
+  Json = '{"items":["one",42,false],"value":false}';
+  procedure WriteJson(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.AddJson(Json);
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteJson(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
+  AssertTrue(s = Json);
+end;
+
+procedure TTestJsonWriter.AddNode;
+var
+  Node: TNode;
+  procedure WriteNode(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance.Add(Node.Instance);
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+const
+  Json = '{"items":["one",42,false],"value":false}';
+begin
+  {%H-}Node.Instance := TJsonNode.NewJson(Json);
+  WriteNode(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
+  AssertTrue(s = Json);
+end;
+
+procedure TTestJsonWriter.WriteArray;
+  procedure WriteArr(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance
+      .BeginArray
+      .EndArray;
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteArr(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkArray);
+  AssertTrue(s = '[]');
+end;
+
+procedure TTestJsonWriter.WriteObject;
+  procedure WriteObj(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance
+      .BeginObject
+      .EndObject;
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+begin
+  WriteObj(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
+  AssertTrue(s = '{}');
+end;
+
+procedure TTestJsonWriter.Write;
+  procedure WriteObj(aStream: TStream);
+  var
+    Writer: TWriter;
+  begin
+    {%H-}Writer.Instance := TJsonWriter.Create(aStream);
+    Writer.Instance
+      .BeginObject
+        .AddNull('item1')
+        .AddTrue('item2')
+        .AddName('item3')
+          .BeginArray
+            .Add('value')
+            .Add(42)
+            .AddFalse
+              .BeginArray
+                .Add('value1')
+                .Add(42)
+                .AddNull
+             .EndArray
+          .EndArray
+        .AddJson('item4', '["value2", 1001, null]')
+      .EndObject;
+  end;
+var
+  Stream: TStrStream;
+  s: string;
+const
+  Json = '{"item1":null,"item2":true,"item3":["value",42,false,["value1",42,null]],"item4":["value2", 1001, null]}';
+begin
+  WriteObj(Stream.Instance);
+  s := Stream.Instance.DataString;
+  AssertTrue(TJsonNode.ValidJson(s));
+  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
+  AssertTrue(s = Json);
+end;
+
 initialization
 
   LoadFileList;
   RegisterTest(TTestJson);
+  RegisterTest(TTestJsonWriter);
 
 finalization
 
