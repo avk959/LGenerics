@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Tiny JSON parser and utilites that try to follow RFC 8259.              *
 *                                                                           *
-*   Copyright(c) 2020 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2020-2021 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -26,12 +26,13 @@ unit lgJson;
 interface
 
 uses
-  Classes, SysUtils, Math,
+  Classes, SysUtils, Math, BufStream,
   lgUtils,
   lgAbstractContainer,
   lgQueue,
   lgVector,
   lgList,
+  lgStack,
   lgStrConst;
 
 type
@@ -88,6 +89,9 @@ type
 
 function JNull: TJVariant; inline;
 function JPair(const aName: string; const aValue: TJVariant): TJVarPair; inline;
+
+const
+  DEF_INDENT = 4;
 
 type
   { TJsonNode is the entity used to validate, parse, generate, and navigate a json document;
@@ -165,9 +169,8 @@ type
     end;
 
   const
-    ARRAY_INIT_SIZE    = 8;
-    SBUILDER_INIT_SIZE = 256;
-    READ_BUFFER_SIZE   = 65536;
+    ARRAY_INIT_SIZE   = 8;
+    S_BUILD_INIT_SIZE = 256;
 
   var
     FValue: TValue;
@@ -286,6 +289,7 @@ type
                                  aSkipBom: Boolean = False): Boolean; static;
     class function JsonStringValid(const s: string): Boolean; static;
     class function JsonNumberValid(const s: string): Boolean; static;
+    class function LikelyKind(aBuf: PAnsiChar; aSize: SizeInt): TJsValueKind; static;
   { returns the parsing result; if the result is True, then the created
     object is returned in the aRoot parameter, otherwise nil is returned }
     class function TryParse(const s: string; out aRoot: TJsonNode;
@@ -457,7 +461,7 @@ type
     function  FindPath(const aPtr: string; out aNode: TJsonNode): Boolean;
   { an array of path parts is assumed to be passed }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
-    function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = 4): string;
+    function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = DEF_INDENT): string;
     function  AsText: string;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
@@ -492,6 +496,42 @@ type
     property  NArrays[const aName: string]: TJVarArray write SetNArray;
   { will make an object from an instance }
     property  NObjects[const aName: string]: TJPairArray write SetNObject;
+  end;
+
+  { TJsonWriter provides a quick way of producing JSON document;
+    no whitespace is added, so the results is presented in the most compact form;
+    you yourself are responsible for the syntactic correctness of the generated document;
+    each instance of TJsonWriter can produce one JSON document }
+  TJsonWriter = class
+  private
+    FStream: TWriteBufStream;
+    FStack: specialize TGLiteStack<Integer>;
+    FsBuilder: TJsonNode.TStrBuilder;
+    procedure ValueAdding; inline;
+    procedure PairAdding; inline;
+  public
+    class function New(aStream: TStream): TJsonWriter; inline;
+    constructor Create(aStream: TStream);
+    destructor Destroy; override;
+    function AddNull: TJsonWriter;
+    function AddFalse: TJsonWriter;
+    function AddTrue: TJsonWriter;
+    function Add(aValue: Double): TJsonWriter;
+    function Add(const s: string): TJsonWriter;
+    function Add(aValue: TJsonNode): TJsonWriter;
+    function AddJson(const aJson: string): TJsonWriter;
+    function AddName(const aName: string): TJsonWriter;
+    function AddNull(const aName: string): TJsonWriter;
+    function AddFalse(const aName: string): TJsonWriter;
+    function AddTrue(const aName: string): TJsonWriter;
+    function Add(const aName: string; aValue: Double): TJsonWriter;
+    function Add(const aName, aValue: string): TJsonWriter;
+    function Add(const aName: string; aValue: TJsonNode): TJsonWriter;
+    function AddJson(const aName, aJson: string): TJsonWriter;
+    function BeginArray: TJsonWriter;
+    function BeginObject: TJsonWriter;
+    function EndArray: TJsonWriter;
+    function EndObject: TJsonWriter;
   end;
 
 implementation
@@ -665,7 +705,6 @@ const
   chCarRetSym: AnsiChar  = 'r';
   chUnicodeSym: AnsiChar = 'u';
   chZero: AnsiChar       = '0';
-{$POP}
 
   Space  = Integer( 0); //  space
   White  = Integer( 1); //  other whitespace
@@ -795,6 +834,7 @@ const
 {nul    N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__,__,__,__),
 {null   N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,OK,__,__,__,__,__,__,__,__)
   );
+{$POP}
 
 type
   TBomKind = (bkNone, bkUtf8, bkUtf16, bkUtf32);
@@ -805,6 +845,8 @@ const
   S_NULL       = 'null';
   S_FALSE      = 'false';
   S_TRUE       = 'true';
+  RW_BUF_SIZE  = 65536;
+
 function DetectBom(aBuf: PByte; aBufSize: SizeInt): TBomKind;
 {$PUSH}{$J-}
 const
@@ -974,7 +1016,7 @@ end;
 function ValidateStream(s: TStream; aSkipBom: Boolean; const aStack: TOpenArray): Boolean;
 var
   Stack: PParseMode;
-  Buffer: array[0..Pred(TJsonNode.READ_BUFFER_SIZE div SizeOf(SizeUInt))] of SizeUInt;
+  Buffer: array[0..Pred(RW_BUF_SIZE div SizeOf(SizeUInt))] of SizeUInt;
   I, Size: SizeInt;
   NextState, NextClass, StackHigh: Integer;
   State: Integer = GO;
@@ -1517,7 +1559,7 @@ var
     end;
   end;
 begin
-  sb := TStrBuilder.Create(SBUILDER_INIT_SIZE);
+  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   BuildJson(Self);
   Result := sb;
 end;
@@ -1702,7 +1744,8 @@ begin
     end;
 end;
 
-class function TJsonNode.ValidJsonFile(const aFileName: string; aDepth: Integer; aSkipBom: Boolean): Boolean;
+class function TJsonNode.ValidJsonFile(const aFileName: string; aDepth: Integer;
+  aSkipBom: Boolean): Boolean;
 var
   fs: TFileStream;
 begin
@@ -1730,6 +1773,24 @@ begin
   if System.Length(s) < 1 then
     exit(False);
   Result := ValidateNumBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
+end;
+
+class function TJsonNode.LikelyKind(aBuf: PAnsiChar; aSize: SizeInt): TJsValueKind;
+var
+  I: SizeInt;
+begin
+  Result := jvkUnknown;
+  for I := 0 to Pred(aSize) do
+    case aBuf[I] of
+      #9, #10, #13, ' ': ;
+      '"':               exit(jvkString);
+      '-', '0'..'9':     exit(jvkNumber);
+      '[':               exit(jvkArray);
+      '{':               exit(jvkObject);
+      'f':               exit(jvkFalse);
+      'n':               exit(jvkNull);
+      't':               exit(jvkTrue);
+    end;
 end;
 
 function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; forward;
@@ -1833,7 +1894,7 @@ var
   I, J: SizeInt;
 begin
   Result := '';
-  sb := TStrBuilder.Create(SBUILDER_INIT_SIZE);
+  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   for I := 0 to System.High(aPath) do
     begin
       sb.Append('/');
@@ -2994,7 +3055,7 @@ var
     end;
   end;
 begin
-  sb := TStrBuilder.Create(SBUILDER_INIT_SIZE);
+  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   MultiLine := not (jfoSingleLine in aOptions);
   UseTabs := jfoUseTabs in aOptions;
   StrEncode := not (jfoStrAsIs in aOptions);
@@ -3035,8 +3096,8 @@ begin
   end;
 end;
 
+{$PUSH}{$J-}
 const
-
   StateTransitions: array[GO..N3, Space..Etc] of Integer = (
 {
   The state transition table takes the current state and the current symbol,
@@ -3077,7 +3138,7 @@ const
 {nul    N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__,__,__,__),
 {null   N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,43,__,__,__,__,__,__,__,__)
   );
-
+{$POP}
 function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean;
 const
   INF_EXP = QWord($7ff0000000000000);
@@ -3102,7 +3163,7 @@ begin
   StackHigh := Pred(aStack.Size);
   Stack[0].Create(nil, pmNone);
   Stack[1].Create(aNode, pmNone);
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.SBUILDER_INIT_SIZE);
+  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   for I := 0 to Pred(Size) do
     begin
       if Buf[I] < #128 then
@@ -3291,6 +3352,234 @@ begin
       Dec(sTop);
     end;
   Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
+end;
+
+const
+  AN = Integer(7); //array next
+
+{ TJsonWriter }
+
+procedure TJsonWriter.ValueAdding;
+begin
+  case FStack.PeekItem^ of
+    VA: FStack.PeekItem^ := OB;
+    AR: FStack.PeekItem^ := AN;
+    AN: FStream.WriteBuffer(chComma, SizeOf(chComma));
+  else
+  end;
+end;
+
+procedure TJsonWriter.PairAdding;
+begin
+  case FStack.PeekItem^ of
+    OB: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    KE: FStack.PeekItem^ := OB;
+  else
+  end;
+end;
+
+class function TJsonWriter.New(aStream: TStream): TJsonWriter;
+begin
+  Result := TJsonWriter.Create(aStream);
+end;
+
+constructor TJsonWriter.Create(aStream: TStream);
+begin
+  FStream := TWriteBufStream.Create(aStream, RW_BUF_SIZE);
+  FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  FStack.Push(OK);
+end;
+
+destructor TJsonWriter.Destroy;
+begin
+  FStream.Free;
+  inherited;
+end;
+
+function TJsonWriter.AddNull: TJsonWriter;
+begin
+  ValueAdding;
+  FStream.WriteBuffer(S_NULL[1], System.Length(S_NULL));
+  Result := Self;
+end;
+
+function TJsonWriter.AddFalse: TJsonWriter;
+begin
+  ValueAdding;
+  FStream.WriteBuffer(S_FALSE[1], System.Length(S_FALSE));
+  Result := Self;
+end;
+
+function TJsonWriter.AddTrue: TJsonWriter;
+begin
+  ValueAdding;
+  FStream.WriteBuffer(S_TRUE[1], System.Length(S_TRUE));
+  Result := Self;
+end;
+
+function TJsonWriter.Add(aValue: Double): TJsonWriter;
+var
+  num: string;
+begin
+  ValueAdding;
+  num := FloatToStr(aValue, TJsonNode.FmtSettings);
+  FStream.WriteBuffer(Pointer(num)^, System.Length(num));
+  Result := Self;
+end;
+
+function TJsonWriter.Add(const s: string): TJsonWriter;
+begin
+  ValueAdding;
+  FsBuilder.AppendEncode(s);
+  FsBuilder.SaveToStream(FStream);
+  Result := Self;
+end;
+
+function TJsonWriter.Add(aValue: TJsonNode): TJsonWriter;
+var
+  s: string;
+begin
+  ValueAdding;
+  s := aValue.AsJson;
+  FStream.WriteBuffer(Pointer(s)^, System.Length(s));
+  Result := Self;
+end;
+
+function TJsonWriter.AddJson(const aJson: string): TJsonWriter;
+begin
+  ValueAdding;
+  FStream.WriteBuffer(Pointer(aJson)^, System.Length(aJson));
+  Result := Self;
+end;
+
+function TJsonWriter.AddName(const aName: string): TJsonWriter;
+begin
+  case FStack.PeekItem^ of
+    OB: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    KE: FStack.PeekItem^ := VA;
+  else
+  end;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  Result := Self;
+end;
+
+function TJsonWriter.AddNull(const aName: string): TJsonWriter;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FStream.WriteBuffer(S_NULL[1], System.Length(S_NULL));
+  Result := Self;
+end;
+
+function TJsonWriter.AddFalse(const aName: string): TJsonWriter;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FStream.WriteBuffer(S_FALSE[1], System.Length(S_FALSE));
+  Result := Self;
+end;
+
+function TJsonWriter.AddTrue(const aName: string): TJsonWriter;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FStream.WriteBuffer(S_TRUE[1], System.Length(S_TRUE));
+  Result := Self;
+end;
+
+function TJsonWriter.Add(const aName: string; aValue: Double): TJsonWriter;
+var
+  num: string;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  num := FloatToStr(aValue, TJsonNode.FmtSettings);
+  FStream.WriteBuffer(Pointer(num)^, System.Length(num));
+  Result := Self;
+end;
+
+function TJsonWriter.Add(const aName, aValue: string): TJsonWriter;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FsBuilder.AppendEncode(aValue);
+  FsBuilder.SaveToStream(FStream);
+  Result := Self;
+end;
+
+function TJsonWriter.Add(const aName: string; aValue: TJsonNode): TJsonWriter;
+var
+  s: string;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  s := aValue.AsJson;
+  FStream.WriteBuffer(Pointer(s)^, System.Length(s));
+  Result := Self;
+end;
+
+function TJsonWriter.AddJson(const aName, aJson: string): TJsonWriter;
+begin
+  PairAdding;
+  FsBuilder.AppendEncode(aName);
+  FsBuilder.SaveToStream(FStream);
+  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FStream.WriteBuffer(Pointer(aJson)^, System.Length(aJson));
+  Result := Self;
+end;
+
+function TJsonWriter.BeginArray: TJsonWriter;
+begin
+  case FStack.PeekItem^ of
+    VA: FStack.PeekItem^ := OB;
+    AR: FStack.PeekItem^ := AN;
+    AN: FStream.WriteBuffer(chComma, SizeOf(chComma));
+  else
+  end;
+  FStream.WriteBuffer(chOpenSqrBr, SizeOf(chOpenSqrBr));
+  FStack.Push(AR);
+  Result := Self;
+end;
+
+function TJsonWriter.BeginObject: TJsonWriter;
+begin
+  case FStack.PeekItem^ of
+    VA: FStack.PeekItem^ := OB;
+    AR: FStack.PeekItem^ := AN;
+    AN: FStream.WriteBuffer(chComma, SizeOf(chComma));
+  else
+  end;
+  FStream.WriteBuffer(chOpenCurBr, SizeOf(chOpenCurBr));
+  FStack.Push(KE);
+  Result := Self;
+end;
+
+function TJsonWriter.EndArray: TJsonWriter;
+begin
+  FStream.WriteBuffer(chClosSqrBr, SizeOf(chClosSqrBr));
+  FStack.Pop;
+  Result := Self;
+end;
+
+function TJsonWriter.EndObject: TJsonWriter;
+begin
+  FStream.WriteBuffer(chClosCurBr, SizeOf(chClosCurBr));
+  FStack.Pop;
+  Result := Self;
 end;
 
 end.
