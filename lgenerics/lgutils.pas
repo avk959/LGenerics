@@ -1164,9 +1164,8 @@ end;
 function IsTwoPower(aValue: SizeUInt): Boolean;
 begin
   if aValue <> 0 then
-    Result := aValue and Pred(aValue) = 0
-  else
-    Result := False;
+    exit(aValue and Pred(aValue) = 0);
+  Result := False;
 end;
 
 function RoundUpTwoPower(aValue: SizeInt): SizeInt;
