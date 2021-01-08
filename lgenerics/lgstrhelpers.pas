@@ -106,8 +106,8 @@ type
 
   TStringListHelper = class helper for TStringList
   public
-    type
-      IStrEnumerable = specialize IGEnumerable<string>;
+  type
+    IStrEnumerable = specialize IGEnumerable<string>;
 
     function GetEnumerable: IStrEnumerable; inline;
   end;
