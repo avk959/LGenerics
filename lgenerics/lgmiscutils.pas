@@ -595,7 +595,7 @@ end;
 function TGTimSortAnc.TTimSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
 begin
   if aSize > System.Length(FBuffer) then
-    System.SetLength(FBuffer, LGUtils.RoundUpTwoPower(aSize));
+    System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aSize));
   Result := Pointer(FBuffer);
 end;
 
