@@ -819,7 +819,7 @@ type
       function  GetEnumerator: TReverseEnumerator; inline;
     end;
 
-    TIdenticEnumerator = record
+    TEqualEnumerator = record
     private
       FList: PLiteHashList;
       FKey: TKey;
@@ -834,21 +834,21 @@ type
       property  Current: TEntry read GetCurrent;
     end;
 
-    TIdenticKeys = record
+    TEqualKeys = record
     private
       FKey: TKey;
       FList: PLiteHashList;
       procedure Init(const aKey: TKey; aList: PLiteHashList); inline;
     public
-      function  GetEnumerator: TIdenticEnumerator; inline;
+      function  GetEnumerator: TEqualEnumerator; inline;
     end;
 
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
-    function  GetIdenticEnumerator(const aKey: TKey): TIdenticEnumerator; inline;
+    function  GetEqualEnumerator(const aKey: TKey): TEqualEnumerator; inline;
     function  ToArray: TEntryArray;
     function  Reverse: TReverse; inline;
-    function  IdenticalKeys(const aKey: TKey): TIdenticKeys;
+    function  EqualKeys(const aKey: TKey): TEqualKeys;
     procedure Clear;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -4293,14 +4293,14 @@ begin
   Result.Init(FList);
 end;
 
-{ TGLiteHashList2.TIdenticEnumerator }
+{ TGLiteHashList2.TEqualEnumerator }
 
-function TGLiteHashList2.TIdenticEnumerator.GetCurrent: TEntry;
+function TGLiteHashList2.TEqualEnumerator.GetCurrent: TEntry;
 begin
   Result := FList^.FNodeList[FCurrIdx].Data;
 end;
 
-procedure TGLiteHashList2.TIdenticEnumerator.Init(const aKey: TKey; aList: PLiteHashList);
+procedure TGLiteHashList2.TEqualEnumerator.Init(const aKey: TKey; aList: PLiteHashList);
 begin
   FKey := aKey;
   FList := aList;
@@ -4309,7 +4309,7 @@ begin
   FInLoop := False;
 end;
 
-function TGLiteHashList2.TIdenticEnumerator.MoveNext: Boolean;
+function TGLiteHashList2.TEqualEnumerator.MoveNext: Boolean;
 var
   I: SizeInt;
 begin
@@ -4337,21 +4337,21 @@ begin
   Result := FCurrIdx <> NULL_INDEX;
 end;
 
-procedure TGLiteHashList2.TIdenticEnumerator.Reset;
+procedure TGLiteHashList2.TEqualEnumerator.Reset;
 begin
   FCurrIdx := NULL_INDEX;
   FInLoop := False;
 end;
 
-{ TGLiteHashList2.TIdenticKeys }
+{ TGLiteHashList2.TEqualKeys }
 
-procedure TGLiteHashList2.TIdenticKeys.Init(const aKey: TKey; aList: PLiteHashList);
+procedure TGLiteHashList2.TEqualKeys.Init(const aKey: TKey; aList: PLiteHashList);
 begin
   FKey := aKey;
   FList := aList;
 end;
 
-function TGLiteHashList2.TIdenticKeys.GetEnumerator: TIdenticEnumerator;
+function TGLiteHashList2.TEqualKeys.GetEnumerator: TEqualEnumerator;
 begin
   Result.Init(FKey, FList);
 end;
@@ -4366,7 +4366,7 @@ begin
   Result.Init(@Self);
 end;
 
-function TGLiteHashList2.GetIdenticEnumerator(const aKey: TKey): TIdenticEnumerator;
+function TGLiteHashList2.GetEqualEnumerator(const aKey: TKey): TEqualEnumerator;
 begin
   Result{%H-}.Init(aKey, @Self);
 end;
@@ -4385,7 +4385,7 @@ begin
   Result{%H-}.Init(@Self);
 end;
 
-function TGLiteHashList2.IdenticalKeys(const aKey: TKey): TIdenticKeys;
+function TGLiteHashList2.EqualKeys(const aKey: TKey): TEqualKeys;
 begin
   Result{%H-}.Init(aKey, @Self);
 end;
