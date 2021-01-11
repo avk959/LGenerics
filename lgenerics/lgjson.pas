@@ -113,12 +113,12 @@ type
   class var
     FmtSettings: TFormatSettings;
 
-  type
-    TJsArray  = specialize TGLiteVector<TJsonNode>;
-    TJsObject = specialize TGLiteHashList2<string, TPair, string>;
-    PJsArray  = ^TJsArray;
-    PJsObject = ^TJsObject;
+  const
+    ARRAY_INIT_SIZE   = 8;
+    S_BUILD_INIT_SIZE = 256;
+    RW_BUF_SIZE       = 65536;
 
+  type
     TStrBuilder = record
     private
       FBuffer: array of AnsiChar;
@@ -140,8 +140,13 @@ type
       property  Count: SizeInt read FCount;
     end;
 
+    TJsArray        = specialize TGLiteVector<TJsonNode>;
+    TJsObject       = specialize TGLiteHashList2<string, TPair, string>;
+    PJsArray        = ^TJsArray;
+    PJsObject       = ^TJsObject;
     TPairEnumerator = specialize TGEnumerator<TPair>;
     TPairs          = specialize TGEnumCursor<TPair>;
+    TRwBuffer       = array[0..Pred(RW_BUF_SIZE div SizeOf(SizeUInt))] of SizeUInt;
 
     TEmptyPairEnumerator = class(TPairEnumerator)
     protected
@@ -151,12 +156,12 @@ type
       procedure Reset; override;
     end;
 
-    TIdenticEnumerator = class(TPairEnumerator)
+    TEqualEnumerator = class(TPairEnumerator)
     protected
-      FEnum: TJsObject.TIdenticEnumerator;
+      FEnum: TJsObject.TEqualEnumerator;
       function  GetCurrent: TPair; override;
     public
-      constructor Create(const aEnum: TJsObject.TIdenticEnumerator);
+      constructor Create(const aEnum: TJsObject.TEqualEnumerator);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -167,10 +172,6 @@ type
       1: (Num: Double);
       2: (Int: Int64);
     end;
-
-  const
-    ARRAY_INIT_SIZE   = 8;
-    S_BUILD_INIT_SIZE = 256;
 
   var
     FValue: TValue;
@@ -328,7 +329,7 @@ type
     function  SubTree: TSubTree; inline;
     function  Enrties: TEntries; inline;
     function  Names: TNames; inline;
-    function  IdenticNames(const aName: string): IPairEnumerable; inline;
+    function  EqualNames(const aName: string): IPairEnumerable; inline;
     function  IsNull: Boolean; inline;
     function  IsFalse: Boolean; inline;
     function  IsTrue: Boolean; inline;
@@ -534,6 +535,9 @@ type
     function EndObject: TJsonWriter;
   end;
 
+  TParseMode = (pmNone, pmKey, pmArray, pmObject);
+  PParseMode = ^TParseMode;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
@@ -682,10 +686,6 @@ function JPair(const aName: string; const aValue: TJVariant): TJVarPair;
 begin
   Result := TJVarPair.Create(aName, aValue);
 end;
-
-type
-  TParseMode = (pmNone, pmKey, pmArray, pmObject);
-  PParseMode = ^TParseMode;
 
 const
 {$PUSH}{$J-}
@@ -845,7 +845,6 @@ const
   S_NULL       = 'null';
   S_FALSE      = 'false';
   S_TRUE       = 'true';
-  RW_BUF_SIZE  = 65536;
 
 function DetectBom(aBuf: PByte; aBufSize: SizeInt): TBomKind;
 {$PUSH}{$J-}
@@ -883,12 +882,10 @@ end;
 {$DEFINE ValidateBufMacro :=
 for I := 0 to Pred(Size) do
   begin
-    if Buf[I] < 128 then
-      begin
-        NextClass := SymClassTable[Buf[I]];
-        if NextClass = __ then exit(False);
-      end
-    else
+    if Buf[I] < 128 then begin
+      NextClass := SymClassTable[Buf[I]];
+      if NextClass = __ then exit(False);
+    end else
       NextClass := Etc;
     NextState := VldStateTransitions[State, NextClass];
     if NextState >= 0 then
@@ -1016,7 +1013,7 @@ end;
 function ValidateStream(s: TStream; aSkipBom: Boolean; const aStack: TOpenArray): Boolean;
 var
   Stack: PParseMode;
-  Buffer: array[0..Pred(RW_BUF_SIZE div SizeOf(SizeUInt))] of SizeUInt;
+  Buffer: TJsonNode.TRwBuffer;
   I, Size: SizeInt;
   NextState, NextClass, StackHigh: Integer;
   State: Integer = GO;
@@ -1034,7 +1031,6 @@ begin
       bkNone: ;
       bkUtf8:
         begin
-          if not aSkipBom then exit(False);
           Buf += UTF8_BOM_LEN;
           Size -= UTF8_BOM_LEN;
         end;
@@ -1298,24 +1294,24 @@ procedure TJsonNode.TEmptyPairEnumerator.Reset;
 begin
 end;
 
-{ TJsonNode.TIdenticEnumerator }
+{ TJsonNode.TEqualEnumerator }
 
-function TJsonNode.TIdenticEnumerator.GetCurrent: TPair;
+function TJsonNode.TEqualEnumerator.GetCurrent: TPair;
 begin
   Result := FEnum.Current;
 end;
 
-constructor TJsonNode.TIdenticEnumerator.Create(const aEnum: TJsObject.TIdenticEnumerator);
+constructor TJsonNode.TEqualEnumerator.Create(const aEnum: TJsObject.TEqualEnumerator);
 begin
   FEnum := aEnum;
 end;
 
-function TJsonNode.TIdenticEnumerator.MoveNext: Boolean;
+function TJsonNode.TEqualEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TJsonNode.TIdenticEnumerator.Reset;
+procedure TJsonNode.TEqualEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
@@ -1713,7 +1709,6 @@ begin
       bkNone: ;
       bkUtf8:
         begin
-          if not aSkipBom then exit(False);
           Buf += UTF8_BOM_LEN;
           Size -= UTF8_BOM_LEN;
         end;
@@ -1827,8 +1822,6 @@ begin
       bkNone: ;
       bkUtf8:
         begin
-          if not aSkipBom then
-            exit(False);
           Buf += UTF8_BOM_LEN;
           Size -= UTF8_BOM_LEN;
         end;
@@ -1856,7 +1849,7 @@ end;
 class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aDepth: Integer;
   aSkipBom: Boolean): Boolean;
 var
-  s: rawbytestring = '';
+  s: string = '';
 begin
   System.SetLength(s, aStream.Size - aStream.Position);
   aStream.ReadBuffer(Pointer(s)^, System.Length(s));
@@ -1866,7 +1859,7 @@ end;
 class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode; aDepth: Integer;
   aSkipBom: Boolean): Boolean;
 var
-  s: rawbytestring = '';
+  s: string = '';
 begin
   with TStringStream.Create do
     try
@@ -2086,10 +2079,10 @@ begin
   Result.FNode := Self;
 end;
 
-function TJsonNode.IdenticNames(const aName: string): IPairEnumerable;
+function TJsonNode.EqualNames(const aName: string): IPairEnumerable;
 begin
   if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(TPairs.Create(TIdenticEnumerator.Create(FObject^.GetIdenticEnumerator(aName))));
+    exit(TPairs.Create(TEqualEnumerator.Create(FObject^.GetEqualEnumerator(aName))));
   Result := TPairs.Create(TEmptyPairEnumerator.Create);
 end;
 
@@ -2773,7 +2766,7 @@ begin
     begin
       System.SetLength(r, ARRAY_INITIAL_SIZE);
       I := 0;
-      for e in FObject^.IdenticalKeys(aName) do
+      for e in FObject^.EqualKeys(aName) do
         begin
           if I = System.Length(r) then
             System.SetLength(r, I * 2);
@@ -3141,7 +3134,8 @@ const
 {$POP}
 function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean;
 const
-  INF_EXP = QWord($7ff0000000000000);
+  INF_EXP    = QWord($7ff0000000000000);
+  NUM_STATES = Integer(1 shl IR or 1 shl FS or 1 shl E3);
 var
   Stack: PParseNode;
   I: SizeInt;
@@ -3164,198 +3158,192 @@ begin
   Stack[0].Create(nil, pmNone);
   Stack[1].Create(aNode, pmNone);
   sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  for I := 0 to Pred(Size) do
-    begin
-      if Buf[I] < #128 then
-        begin
-          NextClass := SymClassTable[Ord(Buf[I])];
-          if NextClass = __ then exit(False);
-        end
-      else
-        NextClass := Etc;
-      NextState := StateTransitions[State, NextClass];
-      if NextState <> -1 then
-        if NextState < 31 then
+  for I := 0 to Pred(Size) do begin
+    if Buf[I] < #128 then begin
+      NextClass := SymClassTable[Ord(Buf[I])];
+      if NextClass = __ then exit(False);
+    end else
+      NextClass := Etc;
+    NextState := StateTransitions[State, NextClass];
+    if NextState = __ then exit(False);
+    if NextState < 31 then begin
+      if DWord(NextState - ST) < DWord(14) then
+        sb.Append(Buf[I]);
+      State := NextState;
+    end else
+      case NextState of
+        31: //end object - state = object
+          if Stack[sTop].Mode = pmKey then begin
+            Dec(sTop);
+            State := OK;
+          end else exit(False);
+        32: //end object
+          if Stack[sTop].Mode = pmObject then begin
+            //if (State = IR) or (State = FS) or (State = E3) then
+            if Integer(1 shl State) and NUM_STATES <> 0 then
+              Stack[sTop].Node.Add(KeyValue, Number);
+            Dec(sTop);
+            State := OK;
+          end else exit(False);
+        33: //end array
+          if Stack[sTop].Mode = pmArray then begin
+            //if (State = IR) or (State = FS) or (State = E3) then
+            if Integer(1 shl State) and NUM_STATES <> 0 then
+              Stack[sTop].Node.Add(Number);
+            Dec(sTop);
+            State := OK;
+          end else exit(False);
+        34: //begin object
+          if sTop < StackHigh then begin
+            case Stack[sTop].Mode of
+              pmNone: begin
+                  Stack[sTop].Node.AsObject;
+                  Stack[sTop].Mode := pmKey;
+                end;
+              pmArray: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
+                  Inc(sTop);
+                end;
+              pmObject: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkObject), pmKey);
+                  Inc(sTop);
+                end;
+            else
+              exit(False);
+            end;
+            State := OB;
+          end else exit(False);
+        35: //begin array
+          if sTop < StackHigh then begin
+            case Stack[sTop].Mode of
+              pmNone: begin
+                  Stack[sTop].Node.AsArray;
+                  Stack[sTop].Mode := pmArray;
+                end;
+              pmArray: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
+                  Inc(sTop);
+                end;
+              pmObject: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkArray), pmArray);
+                  Inc(sTop);
+                end;
+            else
+              exit(False);
+            end;
+            State := AR;
+          end else exit(False);
+        36: //string value
           begin
-            if DWord(NextState - ST) < DWord(14) then
-              sb.Append(Buf[I]);
-            State := NextState;
-          end
-        else
-          case NextState of
-            31: //end object - state = object
-              if Stack[sTop].Mode = pmKey then begin
-                Dec(sTop);
-                State := OK;
-              end else exit(False);
-            32: //end object
-              if Stack[sTop].Mode = pmObject then begin
-                if (State = IR) or (State = FS) or (State = E3) then
-                  Stack[sTop].Node.Add(KeyValue, Number);
-                Dec(sTop);
-                State := OK;
-              end else exit(False);
-            33: //end array
-              if Stack[sTop].Mode = pmArray then begin
-                if (State = IR) or (State = FS) or (State = E3) then
-                  Stack[sTop].Node.Add(Number);
-                Dec(sTop);
-                State := OK;
-              end else exit(False);
-            34: //begin object
-              if sTop < StackHigh then begin
-                case Stack[sTop].Mode of
-                  pmNone: begin
-                      Stack[sTop].Node.AsObject;
-                      Stack[sTop].Mode := pmKey;
-                    end;
-                  pmArray: begin
-                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
-                      Inc(sTop);
-                    end;
-                  pmObject: begin
-                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkObject), pmKey);
-                      Inc(sTop);
-                    end;
-                else
-                  exit(False);
+            sb.Append(Buf[I]);
+            case Stack[sTop].Mode of
+              pmKey: begin
+                  KeyValue := sb.ToDecodeString;
+                  State := CO;
                 end;
-                State := OB;
-              end else exit(False);
-            35: //begin array
-              if sTop < StackHigh then begin
-                case Stack[sTop].Mode of
-                  pmNone: begin
-                      Stack[sTop].Node.AsArray;
-                      Stack[sTop].Mode := pmArray;
-                    end;
-                  pmArray: begin
-                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
-                      Inc(sTop);
-                    end;
-                  pmObject: begin
-                      Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkArray), pmArray);
-                      Inc(sTop);
-                    end;
-                else
-                  exit(False);
-                end;
-                State := AR;
-              end else exit(False);
-            36: //string value
-              begin
-                sb.Append(Buf[I]);
-                case Stack[sTop].Mode of
-                  pmKey: begin
-                      KeyValue := sb.ToDecodeString;
-                      State := CO;
-                    end;
-                  pmArray: begin
-                      Stack[sTop].Node.Add(sb.ToDecodeString);
-                      State := OK;
-                    end;
-                  pmObject: begin
-                      Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
-                      State := OK;
-                    end
-                else
-                  Stack[sTop].Node.AsString := sb.ToDecodeString;
-                  Dec(sTop);
+              pmArray: begin
+                  Stack[sTop].Node.Add(sb.ToDecodeString);
                   State := OK;
                 end;
+              pmObject: begin
+                  Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
+                  State := OK;
+                end
+            else
+              Stack[sTop].Node.AsString := sb.ToDecodeString;
+              Dec(sTop);
+              State := OK;
+            end;
+          end;
+        37: //OK - comma
+          case Stack[sTop].Mode of
+            pmObject: begin
+                Stack[sTop].Mode := pmKey;
+                State := KE;
               end;
-            37: //OK - comma
-              case Stack[sTop].Mode of
-                pmObject: begin
-                    Stack[sTop].Mode := pmKey;
-                    State := KE;
-                  end;
-                pmArray: State := VA;
-              else
-                exit(False);
-              end;
-            38: //colon
-              if Stack[sTop].Mode = pmKey then begin
-                Stack[sTop].Mode := pmObject;
+            pmArray: State := VA;
+          else
+            exit(False);
+          end;
+        38: //colon
+          if Stack[sTop].Mode = pmKey then begin
+            Stack[sTop].Mode := pmObject;
+            State := VA;
+          end else exit(False);
+        39: //end Number - comma
+          case Stack[sTop].Mode of
+            pmArray: begin
+                Stack[sTop].Node.Add(Number);
                 State := VA;
-              end else exit(False);
-            39: //end Number - comma
-              case Stack[sTop].Mode of
-                pmArray: begin
-                    Stack[sTop].Node.Add(Number);
-                    State := VA;
-                  end;
-                pmObject: begin
-                    Stack[sTop].Node.Add(KeyValue, Number);
-                    Stack[sTop].Mode := pmKey;
-                    State := KE;
-                  end;
-              else
-                exit(False);
               end;
-            40: //end Number - white space
-              begin
-                case Stack[sTop].Mode of
-                  pmArray:  Stack[sTop].Node.Add(Number);
-                  pmObject: Stack[sTop].Node.Add(KeyValue, Number);
-                else
-                  //if Stack[sTop].Mode = pmNone then ????
-                  Stack[sTop].Node.AsNumber := Number;
-                  Dec(sTop);
-                end;
-                State := OK;
-              end;
-            41: //true literal
-              begin
-                case Stack[sTop].Mode of
-                  pmArray:  Stack[sTop].Node.Add(True);
-                  pmObject: Stack[sTop].Node.Add(KeyValue, True);
-                else
-                  Stack[sTop].Node.AsBoolean := True;
-                  Dec(sTop);
-                end;
-                State := OK;
-              end;
-            42: //false literal
-              begin
-                case Stack[sTop].Mode of
-                  pmArray:  Stack[sTop].Node.Add(False);
-                  pmObject: Stack[sTop].Node.Add(KeyValue, False);
-                else
-                  Stack[sTop].Node.AsBoolean := False;
-                  Dec(sTop);
-                end;
-                State := OK;
-              end;
-            43: //null literal
-              begin
-                case Stack[sTop].Mode of
-                  pmArray:  Stack[sTop].Node.AddNull;
-                  pmObject: Stack[sTop].Node.AddNull(KeyValue);
-                else
-                  Stack[sTop].Node.AsNull;
-                  Dec(sTop);
-                end;
-                State := OK;
+            pmObject: begin
+                Stack[sTop].Node.Add(KeyValue, Number);
+                Stack[sTop].Mode := pmKey;
+                State := KE;
               end;
           else
             exit(False);
-          end
+          end;
+        40: //end Number - white space
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.Add(Number);
+              pmObject: Stack[sTop].Node.Add(KeyValue, Number);
+            else
+              //if Stack[sTop].Mode = pmNone then ????
+              Stack[sTop].Node.AsNumber := Number;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+        41: //true literal
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.Add(True);
+              pmObject: Stack[sTop].Node.Add(KeyValue, True);
+            else
+              Stack[sTop].Node.AsBoolean := True;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+        42: //false literal
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.Add(False);
+              pmObject: Stack[sTop].Node.Add(KeyValue, False);
+            else
+              Stack[sTop].Node.AsBoolean := False;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+        43: //null literal
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.AddNull;
+              pmObject: Stack[sTop].Node.AddNull(KeyValue);
+            else
+              Stack[sTop].Node.AsNull;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
       else
         exit(False);
-    end;
-  if State in [IR, FS, E3] then
-    begin
-      if Stack[sTop].Mode <> pmNone then exit(False);
-      Stack[sTop].Node.AsNumber := Number;
-      State := OK;
-      Dec(sTop);
-    end;
+      end
+  end;
+  if Integer(1 shl State) and NUM_STATES <> 0 then begin
+    if Stack[sTop].Mode <> pmNone then exit(False);
+    Stack[sTop].Node.AsNumber := Number;
+    State := OK;
+    Dec(sTop);
+  end;
   Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
 end;
 
 const
-  AN = Integer(7); //array next
+  AN = Integer(7); //Array Next
 
 { TJsonWriter }
 
@@ -3385,7 +3373,7 @@ end;
 
 constructor TJsonWriter.Create(aStream: TStream);
 begin
-  FStream := TWriteBufStream.Create(aStream, RW_BUF_SIZE);
+  FStream := TWriteBufStream.Create(aStream, TJsonNode.RW_BUF_SIZE);
   FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FStack.Push(OK);
 end;
