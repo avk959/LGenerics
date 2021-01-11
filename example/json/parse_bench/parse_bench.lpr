@@ -66,7 +66,6 @@ var
   CurrFile, FileName, JsonText: string;
   I, Score, BestScore, Times: Integer;
   Start: TTime;
-  Success: Boolean;
 begin
   for CurrFile in FileList.Instance do
     begin
@@ -79,12 +78,10 @@ begin
           for I := 1 to RepCount do
             begin
               Times := 0;
-              Success := False;
               Start := Time;
               while MillisecondsBetween(Time, Start) < Interval do
                 begin
-                  Success := Parser.F2(JsonText);
-                  if not Success then
+                  if not Parser.F2(JsonText) then
                     break;
                   Inc(Times);
                 end;
