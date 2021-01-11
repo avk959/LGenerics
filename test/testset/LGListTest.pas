@@ -2832,7 +2832,7 @@ var
   s1, s2: set of 1..42;
 begin
   I := 0;
-  for e in lst.IdenticalKeys(1) do
+  for e in lst.EqualKeys(1) do
     Inc(I);
   AssertTrue(I = 0);
   s1 := [];
@@ -2850,7 +2850,7 @@ begin
     end;
   AssertTrue(s2 = [1..42]);
   I := 0;
-  for e in lst.IdenticalKeys(1) do
+  for e in lst.EqualKeys(1) do
     begin
       AssertTrue(e.Key = 1);
       Exclude(s1, e.Value);
@@ -2859,7 +2859,7 @@ begin
   AssertTrue(I = 42);
   AssertTrue(s1 = []);
   I := 0;
-  for e in lst.IdenticalKeys(2) do
+  for e in lst.EqualKeys(2) do
     begin
       AssertTrue(e.Key = 2);
       Exclude(s2, e.Value);
