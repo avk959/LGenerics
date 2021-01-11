@@ -300,7 +300,7 @@ begin
       for e in Node.Enrties do
         begin
           J := 0;
-          for ie in Node.IdenticNames(e.Key) do
+          for ie in Node.EqualNames(e.Key) do
             Inc(J);
           AssertTrue(Node.CountOfName(e.Key) = J);
         end;
