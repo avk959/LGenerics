@@ -611,9 +611,10 @@ type
     function  ObjectEndOb: Boolean;
     function  NextChunk: TReadState;
     function  GetNextToken: Boolean;
-    function  GetAsBoolean: Boolean;
-    function  GetAsNumber: Double;
-    function  GetAsString: string;
+    function  GetIsNull: Boolean; inline;
+    function  GetAsBoolean: Boolean; inline;
+    function  GetAsNumber: Double; inline;
+    function  GetAsString: string; inline;
     function  GetPath: string;
     property  CopyMode: Boolean read FCopyMode;
   public
@@ -621,7 +622,12 @@ type
     class function IsEndToken(aToken: TTokenKind): Boolean; inline;
     class function IsCleanEndToken(aToken: TTokenKind): Boolean; inline;
     constructor Create(aStream: TStream; aMaxDepth: SizeInt = 512; aSkipBom: Boolean = False);
+  { reads the next token from the stream, returns False if an error is encountered or the end
+    of the stream is reached, otherwise it returns true; on error, the ReadState property
+    will be set to rsError, and upon reaching the end of the stream, to rsEOF}
     function  Read: Boolean;
+  { if the current token is the beginning of the structure, it skips its contents
+    and stops at the closing token, otherwise it just makes one Read }
     procedure Skip;
     procedure Iterate(aFun: TIterateFun);
     procedure Iterate(aFun: TNestIterate);
@@ -634,6 +640,7 @@ type
   { finds a value based on its path - an array of path parts;
     search is possible only from the document root }
     function  FindPath(const aPath: TStringArray): Boolean;
+    property  IsNull: Boolean read GetIsNull;
     property  AsBoolean: Boolean read GetAsBoolean;
     property  AsNumber: Double read GetAsNumber;
     property  AsString: string read GetAsString;
@@ -4022,6 +4029,11 @@ begin
     else exit(False);
     end;
   until False;
+end;
+
+function TJsonReader.GetIsNull: Boolean;
+begin
+  Result := FValue.Kind = vkNull;
 end;
 
 function TJsonReader.GetAsBoolean: Boolean;
