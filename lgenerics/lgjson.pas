@@ -591,12 +591,10 @@ type
     FValue: TJVariant;
     FCopyMode,
     FSkipBom,
-    FInStruct,
     FFirstChunk: Boolean;
     function  GetIndex: SizeInt; inline;
     function  GetStructKind: TStructKind; inline;
     function  GetParentKind: TStructKind; inline;
-    function  GetName: string;
     procedure UpdateArray; inline;
     function  NullValue: Boolean;
     function  FalseValue: Boolean;
@@ -617,7 +615,6 @@ type
     function  GetAsString: string;
     function  GetPath: string;
     property  CopyMode: Boolean read FCopyMode;
-    property  InStruct: Boolean read FInStruct;
   public
     class function IsStartToken(aToken: TTokenKind): Boolean; inline;
     class function IsEndToken(aToken: TTokenKind): Boolean; inline;
@@ -639,7 +636,7 @@ type
     property  AsNumber: Double read GetAsNumber;
     property  AsString: string read GetAsString;
     property  Index: SizeInt read GetIndex;
-    property  Name: string read GetName;
+    property  Name: string read FName;
     property  Value: TJVariant read FValue;
     property  TokenKind: TTokenKind read FToken;
     property  StructKind: TStructKind read GetStructKind;
@@ -3754,18 +3751,13 @@ begin
     Result := skNone;
 end;
 
-function TJsonReader.GetName: string;
-begin
-  if StructKind = skArray then
-    Result := IntToStr(FStack[Depth].CurrIndex)
-  else
-    Result := FName;
-end;
-
 procedure TJsonReader.UpdateArray;
 begin
   if FStack[Depth].Mode = pmArray then
-    Inc(FStack[Depth].CurrIndex);
+    begin
+      FName := IntToStr(FStack[Depth].CurrIndex);
+      Inc(FStack[Depth].CurrIndex);
+    end;
 end;
 
 function TJsonReader.NullValue: Boolean;
@@ -4115,20 +4107,13 @@ begin
       if Depth <> 0 then
         begin
           OldDepth := Pred(Depth);
-          while Read and (OldDepth < Depth) do;
+          while (OldDepth < Depth) and Read do;
         end
       else
         while Read do;
     end
   else
-    begin
-      Read;
-      if (StructKind = skObject) and IsStartToken(TokenKind) then
-        begin
-          OldDepth := Pred(Depth);
-          while Read and (OldDepth < Depth) do
-        end;
-    end;
+    Read;
 end;
 
 procedure TJsonReader.Iterate(aFun: TIterateFun);
@@ -4185,21 +4170,9 @@ end;
 function TJsonReader.MoveNext: Boolean;
 begin
   if ReadState > rsGo then exit(False);
-  if (TokenKind = tkNone) and not Read then
-    exit(False);
+  if not Read then exit(False);
   if IsStartToken(TokenKind) then
-    if InStruct then
-      begin
-        Skip;
-        Result := Read;
-      end
-    else
-      begin
-        FInStruct := True;
-        Result := Read;
-      end
-  else
-    Result := Read;
+    Skip;
 end;
 
 function TJsonReader.Find(const aKey: string): Boolean;
@@ -4213,7 +4186,7 @@ begin
     begin
       if not IsNonNegativeInteger(aKey, Idx) then
         exit(False);
-      if Idx <= Index then
+      if Idx < Index then
         exit(False);
       OldDepth := Depth;
       while (FStack[OldDepth].CurrIndex < Idx) and MoveNext do;
@@ -4221,14 +4194,13 @@ begin
     end
   else
     begin
+      if TokenKind = tkObjectBegin then
+        Read;
       repeat
         if Name = aKey then exit(True);
         if IsStartToken(TokenKind) then
-          begin
-            OldDepth := Pred(Depth);
-            while Read and (OldDepth < Depth) do;
-          end;
-      until not Read;
+          Skip;
+      until not Read or (TokenKind = tkObjectEnd);
       Result := False;
     end;
 end;
@@ -4249,7 +4221,7 @@ begin
     begin
       if not Find(aPath[I]) then
         exit(False);
-      if (I < System.High(aPath)) and IsStartToken(TokenKind) and not Read then
+      if IsEndToken(TokenKind) and not Read then
         exit(False);
     end;
   Result := True;
