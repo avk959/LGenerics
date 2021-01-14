@@ -138,6 +138,7 @@ type
       procedure SaveToStream(aStream: TStream);
       function  ToString: string; inline;
       function  ToDecodeString: string;
+      function  ToPChar: PAnsiChar; inline;
       property  Count: SizeInt read FCount;
     end;
 
@@ -1400,6 +1401,14 @@ begin
   System.SetLength(r, J);
   Result := r;
   FCount := 0;
+end;
+
+function TJsonNode.TStrBuilder.ToPChar: PAnsiChar;
+begin
+  EnsureCapacity(Succ(Count));
+  FBuffer[Count] := #0;
+  MakeEmpty;
+  Result := Pointer(FBuffer);
 end;
 
 { TJsonNode.TEmptyPairEnumerator }
@@ -3280,7 +3289,7 @@ var
   var
     e: Integer;
   begin
-    Val(sb.ToString, Result, e);
+    Val(sb.ToPChar, Result, e);
     if (e <> 0) or (QWord(Result) and INF_EXP = INF_EXP) then
       Abort;
   end;
@@ -3793,7 +3802,7 @@ var
   d: Double;
   e: Integer;
 begin
-  Val(FsBuilder.ToString, d, e);
+  Val(FsBuilder.ToPChar, d, e);
   if (e <> 0) or (QWord(d) and INF_EXP = INF_EXP) then exit(False);
   FValue := d;
   UpdateArray;
