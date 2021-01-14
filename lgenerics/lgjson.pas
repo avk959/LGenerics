@@ -618,6 +618,7 @@ type
   public
     class function IsStartToken(aToken: TTokenKind): Boolean; inline;
     class function IsEndToken(aToken: TTokenKind): Boolean; inline;
+    class function IsCleanEndToken(aToken: TTokenKind): Boolean; inline;
     constructor Create(aStream: TStream; aMaxDepth: SizeInt = 512; aSkipBom: Boolean = False);
     function  Read: Boolean;
     procedure Skip;
@@ -4066,6 +4067,11 @@ begin
   Result := aToken in [tkArrayEnd, tkArrayEndAfterNum, tkObjectEnd, tkObjectEndAfterNum];
 end;
 
+class function TJsonReader.IsCleanEndToken(aToken: TTokenKind): Boolean;
+begin
+  Result := aToken in [tkArrayEnd, tkObjectEnd];
+end;
+
 constructor TJsonReader.Create(aStream: TStream; aMaxDepth: SizeInt; aSkipBom: Boolean);
 begin
   FStream := aStream;
@@ -4170,9 +4176,13 @@ end;
 function TJsonReader.MoveNext: Boolean;
 begin
   if ReadState > rsGo then exit(False);
-  if not Read then exit(False);
+  if not Read then
+    exit(False);
+  if IsCleanEndToken(TokenKind) then
+    exit(False);
   if IsStartToken(TokenKind) then
     Skip;
+  Result := True;
 end;
 
 function TJsonReader.Find(const aKey: string): Boolean;
@@ -4180,8 +4190,10 @@ var
   Idx, OldDepth: SizeInt;
 begin
   if ReadState > rsGo then exit(False);
-  if aKey = '' then exit(MoveNext);
-  if StructKind = skNone then exit(False);
+  if aKey = '' then
+    exit(MoveNext);
+  if StructKind = skNone then
+    exit(False);
   if StructKind = skArray then
     begin
       if not IsNonNegativeInteger(aKey, Idx) then
