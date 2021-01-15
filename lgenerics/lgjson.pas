@@ -540,7 +540,9 @@ type
   TParseMode = (pmNone, pmKey, pmArray, pmObject);
   PParseMode = ^TParseMode;
 
-  { TJsonReader }
+  { TJsonReader provides forward only navigation through the JSON stream
+    with ability to skip some parts of the document; also has the ability
+    to find specific place in JSON by a path from the document root }
   TJsonReader = class
   public
   type
@@ -611,7 +613,7 @@ type
     function  ObjectEndAfterNum: Boolean;
     function  ObjectEndOb: Boolean;
     function  DeferredEnd: Boolean; inline;
-    function  NextChunk: TReadState;
+    function  GetNextChunk: TReadState;
     function  GetNextToken: Boolean;
     function  GetIsNull: Boolean; inline;
     function  GetAsBoolean: Boolean; inline;
@@ -631,6 +633,8 @@ type
   { if the current token is the beginning of the structure, it skips its contents
     and stops at the closing token, otherwise it just does one Read }
     procedure Skip;
+  { iterates over all the JSON items and calls the aFun function for each item,
+    passing Self as a parameter; if aFun returns False, the iteration stops immediately }
     procedure Iterate(aFun: TIterateFun);
     procedure Iterate(aFun: TNestIterate);
     function  CopyStruct(out aStruct: string): Boolean;
@@ -3968,7 +3972,7 @@ begin
   FDeferToken := tkNone;
 end;
 
-function TJsonReader.NextChunk: TReadState;
+function TJsonReader.GetNextChunk: TReadState;
 begin
   if ReadState > rsGo then
     exit(ReadState);
@@ -4007,7 +4011,7 @@ begin
     if DeferToken <> tkNone then exit(DeferredEnd);
     if FPosition >= Pred(FByteCount) then begin
       FPosition := NULL_INDEX;
-      if NextChunk > rsGo then exit(False);
+      if GetNextChunk > rsGo then exit(False);
     end;
     Inc(FPosition);
     c := PChar(@FBuffer)[FPosition];
