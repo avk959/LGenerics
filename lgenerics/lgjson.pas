@@ -77,6 +77,7 @@ type
     class operator := (const v: TJVariant): string; inline;
     class operator = (const L, R: TJVariant): Boolean; inline;
     procedure Clear;
+    procedure SetNull; inline;
     function AsBoolean: Boolean; inline;
     function AsNumber: Double; inline;
     function AsString: string; inline;
@@ -545,6 +546,8 @@ type
     to find specific place in JSON by a path from the document root }
   TJsonReader = class
   public
+  const
+    DEF_DEPTH = 511;
   type
     TIterateFun  = function(aIter: TJsonReader): Boolean of object;
     TNestIterate = function(aIter: TJsonReader): Boolean is nested;
@@ -625,25 +628,39 @@ type
   public
     class function IsStartToken(aToken: TTokenKind): Boolean; static; inline;
     class function IsEndToken(aToken: TTokenKind): Boolean; static; inline;
-    constructor Create(aStream: TStream; aMaxDepth: SizeInt = 512; aSkipBom: Boolean = False);
+    constructor Create(aStream: TStream; aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
   { reads the next token from the stream, returns False if an error is encountered or the end
     of the stream is reached, otherwise it returns true; on error, the ReadState property
     will be set to rsError, and upon reaching the end of the stream, to rsEOF}
     function  Read: Boolean;
-  { if the current token is the beginning of the structure, it skips its contents
-    and stops at the closing token, otherwise it just does one Read }
+  { if the current token is the beginning of a structure, it skips its contents
+    and stops at the closing token, otherwise it just performs one Read }
     procedure Skip;
   { iterates over all the JSON items and calls the aFun function for each item,
     passing Self as a parameter; if aFun returns False, the iteration stops immediately }
     procedure Iterate(aFun: TIterateFun);
     procedure Iterate(aFun: TNestIterate);
+  { if the current token is the beginning of some structure(array or object),
+    it copies this structure "as is" into aStruct and returns True, otherwise returns False }
     function  CopyStruct(out aStruct: string): Boolean;
+  { goes to the next item without trying to go inside the structures;
+    if the next item turns out to be a structure, it is skipped to the closing token;
+    returns False if it cannot move to the next item, otherwise returns True }
     function  MoveNext: Boolean;
+  { tries to find the specified key in the current structure;
+    the key can be a name or a string representation of a non-negative integer;
+    returns true if the key was found, otherwise returns false;
+    in case of a successful search:
+      if the current structure is an array, the search stops just before
+      the element with the specified index;
+      if the current structure is an object and the value is a scalar,
+      the search stops after reading the value,
+      otherwise the search stops at the opening token of the value }
     function  Find(const aKey: string): Boolean;
-  { finds a value based on its path - the JSON Pointer (RFC 6901) as pascal string;
-    search is possible only from the document root }
+  { finds a specific place based on its path - the JSON Pointer (RFC 6901)
+    as a pascal string; search is possible only from the document root }
     function  FindPath(const aPtr: string): Boolean;
-  { finds a value based on its path - an array of path parts;
+  { finds a specific place based on a path - an array of path parts;
     search is possible only from the document root }
     function  FindPath(const aPath: TStringArray): Boolean;
     property  IsNull: Boolean read GetIsNull;
@@ -653,11 +670,12 @@ type
     property  Index: SizeInt read GetIndex;
     property  Name: string read FName;
     property  Value: TJVariant read FValue;
+    property  Path: string read GetPath;
     property  TokenKind: TTokenKind read FToken;
     property  StructKind: TStructKind read GetStructKind;
     property  ParentKind: TStructKind read GetParentKind;
+  { indicates the nesting depth of the current structure starting at one }
     property  Depth: SizeInt read FStackTop;
-    property  Path: string read GetPath;
     property  ReadState: TReadState read FReadState;
     property  SkipBom: Boolean read FSkipBom;
   end;
@@ -790,6 +808,11 @@ procedure TJVariant.Clear;
 begin
   DoClear;
   FKind := vkNull;
+end;
+
+procedure TJVariant.SetNull;
+begin
+  Clear;
 end;
 
 function TJVariant.AsBoolean: Boolean;
@@ -3858,23 +3881,15 @@ end;
 
 function TJsonReader.ArrayBegin: Boolean;
 begin
+  if Depth = FStackHigh then exit(False);
   case FStack[Depth].Mode of
-    pmNone: FStack[Depth].Mode := pmArray;
-    pmArray:
-      begin
-        if Depth = FStackHigh then exit(False);
-        FStack[Succ(Depth)] := TLevel.Create(pmArray, FStack[Depth].CurrIndex);
-        Inc(FStackTop);
-      end;
-    pmObject:
-      begin
-        if Depth = FStackHigh then exit(False);
-        FStack[Succ(Depth)] := TLevel.Create(pmArray, FName);
-        Inc(FStackTop);
-      end;
+    pmNone:   FStack[Succ(Depth)] := TLevel.Create(pmArray);
+    pmArray:  FStack[Succ(Depth)] := TLevel.Create(pmArray, FStack[Depth].CurrIndex);
+    pmObject: FStack[Succ(Depth)] := TLevel.Create(pmArray, FName);
   else
     exit(False);
   end;
+  Inc(FStackTop);
   FToken := tkArrayBegin;
   FState := AR;
   Result := True;
@@ -3882,23 +3897,15 @@ end;
 
 function TJsonReader.ObjectBegin: Boolean;
 begin
+  if Depth = FStackHigh then exit(False);
   case FStack[Depth].Mode of
-    pmNone: FStack[Depth].Mode := pmKey;
-    pmArray:
-      begin
-        if Depth = FStackHigh then exit(False);
-        FStack[Succ(Depth)] := TLevel.Create(pmKey, FStack[Depth].CurrIndex);
-        Inc(FStackTop);
-      end;
-    pmObject:
-      begin
-        if Depth = FStackHigh then exit(False);
-        FStack[Succ(Depth)] := TLevel.Create(pmKey, FName);
-        Inc(FStackTop);
-      end;
+    pmNone:   FStack[Succ(Depth)] := TLevel.Create(pmKey);
+    pmArray:  FStack[Succ(Depth)] := TLevel.Create(pmKey, FStack[Depth].CurrIndex);
+    pmObject: FStack[Succ(Depth)] := TLevel.Create(pmKey, FName);
   else
     exit(False);
   end;
+  Inc(FStackTop);
   FToken := tkObjectBegin;
   FState := OB;
   Result := True;
@@ -3908,8 +3915,7 @@ function TJsonReader.ArrayEnd: Boolean;
 begin
   if FStack[Depth].Mode <> pmArray then
     exit(False);
-  if FStackTop <> 0 then
-    Dec(FStackTop);
+  Dec(FStackTop);
   FToken := tkArrayEnd;
   UpdateArray;
   FState := OK;
@@ -3931,8 +3937,7 @@ function TJsonReader.ObjectEnd: Boolean;
 begin
   if FStack[Depth].Mode <> pmObject then
     exit(False);
-  if FStackTop <> 0 then
-    Dec(FStackTop);
+  Dec(FStackTop);
   FToken := tkObjectEnd;
   UpdateArray;
   FState := OK;
@@ -4059,8 +4064,8 @@ begin
           FStack[Depth].Mode := pmObject;
           FState := VA;
         end else exit(False);
-      39: exit(CommaAfterNum);//end Number - comma
-      40: begin               //end Number - white space
+      39: exit(CommaAfterNum);//end number - comma
+      40: begin               //end number - white space
         FState := OK;
         exit(NumValue);
       end;
@@ -4135,8 +4140,8 @@ begin
   FStream := aStream;
   if aMaxDepth < 32 then
     aMaxDepth := 32;
-  System.SetLength(FStack, aMaxDepth);
-  FStackHigh := Pred(aMaxDepth);
+  System.SetLength(FStack, Succ(aMaxDepth));
+  FStackHigh := aMaxDepth;
   FSkipBom := aSkipBom;
   FFirstChunk := True;
   FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
@@ -4168,13 +4173,8 @@ begin
   if ReadState > rsGo then exit;
   if IsStartToken(TokenKind) then
     begin
-      if Depth <> 0 then
-        begin
-          OldDepth := Pred(Depth);
-          while (OldDepth < Depth) and Read do;
-        end
-      else
-        while Read do;
+      OldDepth := Pred(Depth);
+      while Read and (Depth > OldDepth) do;
     end
   else
     Read;
@@ -4254,29 +4254,31 @@ begin
     exit(False);
   if aKey = '' then
     exit(MoveNext);
-  if StructKind = skNone then
-    exit(False);
-  if StructKind = skArray then
-    begin
-      if not IsNonNegativeInteger(aKey, Idx) then
-        exit(False);
-      if Idx < Index then
-        exit(False);
-      OldDepth := Depth;
-      while (FStack[OldDepth].CurrIndex < Idx) and MoveNext do;
-      Result := FStack[OldDepth].CurrIndex = Idx;
-    end
+  case StructKind of
+    skArray:
+      begin
+        if not IsNonNegativeInteger(aKey, Idx) then
+          exit(False);
+        if Idx < Index then
+          exit(False);
+        OldDepth := Depth;
+        while (FStack[OldDepth].CurrIndex < Idx) and MoveNext do;
+        Result := FStack[OldDepth].CurrIndex = Idx;
+      end;
+    skObject:
+      begin
+        if TokenKind = tkObjectBegin then
+          Read;
+        repeat
+          if Name = aKey then exit(True);
+          if IsStartToken(TokenKind) then
+            Skip;
+        until not Read or (TokenKind = tkObjectEnd); ////////////
+        Result := False;
+      end;
   else
-    begin
-      if TokenKind = tkObjectBegin then
-        Read;
-      repeat
-        if Name = aKey then exit(True);
-        if IsStartToken(TokenKind) then
-          Skip;
-      until not Read or (TokenKind = tkObjectEnd);
-      Result := False;
-    end;
+    exit(False);
+  end;
 end;
 
 function TJsonReader.FindPath(const aPtr: string): Boolean;
