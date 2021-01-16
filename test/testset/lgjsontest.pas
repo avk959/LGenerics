@@ -83,6 +83,7 @@ type
     procedure CopyStruct;
     procedure MoveNext;
     procedure Find;
+    procedure FindPath;
   end;
 
 const
@@ -1086,14 +1087,12 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create('""');
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.Find(''));
-  AssertTrue(Reader.Instance.Value.ToString = '');
+  AssertFalse(Reader.Instance.Find(''));
 
   Stream.Instance := TStringStream.Create('[false, "item", 42, null]');
   Reader.Instance := TJsonReader.Create(Stream.Instance);
   Reader.Instance.Read;
   AssertTrue(Reader.Instance.Find('2'));
-  Reader.Instance.Read;
   AssertTrue(Reader.Instance.Value.ToString = '42');
 
   Stream.Instance := TStringStream.Create('[false, "item", 42, null]');
@@ -1103,7 +1102,6 @@ begin
     Reader.Instance.MoveNext;
   AssertFalse(Reader.Instance.Find('2'));
   AssertTrue(Reader.Instance.Find('3'));
-  Reader.Instance.Read;
   AssertTrue(Reader.Instance.Value.ToString = 'null');
 
   Stream.Instance := TStringStream.Create(TestJson);
@@ -1116,6 +1114,26 @@ begin
   AssertTrue(Reader.Instance.TokenKind = tkArrayBegin);
   AssertTrue(Reader.Instance.CopyStruct(s));
   AssertTrue(s = '["talk","humor","cook"]');
+
+  Stream.Instance := TStringStream.Create(TestJson);
+  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance.Read;
+  AssertTrue(Reader.Instance.Find('1'));
+  AssertTrue(Reader.Instance.CopyStruct(s));
+  AssertTrue(s = TestJson1);
+end;
+
+procedure TTestJsonReader.FindPath;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGUniqRef<TStringStream>;
+  s: string;
+begin
+  {%H-}Stream.Instance := TStringStream.Create(TestJson);
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.FindPath('/1/groups'));
+  AssertTrue(Reader.Instance.CopyStruct(s));
+  AssertTrue(s = '["talk","games","math","art"]');
 end;
 
 initialization
