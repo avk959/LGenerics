@@ -651,8 +651,9 @@ type
     the key can be a name or a string representation of a non-negative integer;
     returns true if the key was found, otherwise returns false;
     in case of a successful search:
-      if the current structure is an array, the search stops just before
-      the element with the specified index;
+      if the current structure is an array and the value is a scalar,
+      the search stops after reading the value with the specified index,
+      otherwise the search stops at the opening token of the value;
       if the current structure is an object and the value is a scalar,
       the search stops after reading the value,
       otherwise the search stops at the opening token of the value }
@@ -4252,8 +4253,6 @@ var
 begin
   if ReadState > rsGo then
     exit(False);
-  if aKey = '' then
-    exit(MoveNext);
   case StructKind of
     skArray:
       begin
@@ -4263,7 +4262,7 @@ begin
           exit(False);
         OldDepth := Depth;
         while (FStack[OldDepth].CurrIndex < Idx) and MoveNext do;
-        Result := FStack[OldDepth].CurrIndex = Idx;
+        Result := (FStack[OldDepth].CurrIndex = Idx) and Read;
       end;
     skObject:
       begin
@@ -4273,7 +4272,7 @@ begin
           if Name = aKey then exit(True);
           if IsStartToken(TokenKind) then
             Skip;
-        until not Read or (TokenKind = tkObjectEnd); ////////////
+        until not Read or (TokenKind = tkObjectEnd);
         Result := False;
       end;
   else
@@ -4290,17 +4289,15 @@ function TJsonReader.FindPath(const aPath: TStringArray): Boolean;
 var
   I: SizeInt;
 begin
-  if ReadState > rsGo then
+  if (ReadState <> rsStart) or (aPath = nil) then
     exit(False);
-  if not (IsStartToken(TokenKind) and (ParentKind = skNone)) then
+  if not Read then
     exit(False);
+  if (System.Length(aPath) = 1) and (aPath[0] = '') then
+    exit(True);
   for I := 0 to System.High(aPath) do
-    begin
-      if not Find(aPath[I]) then
-        exit(False);
-      if IsEndToken(TokenKind) and not Read then
-        exit(False);
-    end;
+    if not Find(aPath[I]) then
+      exit(False);
   Result := True;
 end;
 
