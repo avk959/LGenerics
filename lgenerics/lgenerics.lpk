@@ -58,7 +58,7 @@
       </Item6>
       <Item7>
         <Filename Value="lgfunction.pas"/>
-        <UnitName Value="LGFunction"/>
+        <UnitName Value="lgFunction"/>
       </Item7>
       <Item8>
         <Filename Value="lghash.pas"/>
