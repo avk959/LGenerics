@@ -78,9 +78,13 @@ type
     class operator = (const L, R: TJVariant): Boolean; inline;
     procedure Clear;
     procedure SetNull; inline;
+  { returns a Boolean value of the instance; raises an exception if Kind <> vkBoolean }
     function AsBoolean: Boolean; inline;
+  { returns a numeric value of the instance; raises an exception if Kind <> vkNumber }
     function AsNumber: Double; inline;
+  { returns a string value of the instance; raises an exception if Kind <> vkString }
     function AsString: string; inline;
+  { returns a string representation of the instance }
     function ToString: string; inline;
     property Kind: TJVarKind read FKind;
   end;
@@ -664,18 +668,24 @@ type
   { finds a specific place based on a path - an array of path parts;
     search is possible only from the document root }
     function  FindPath(const aPath: TStringArray): Boolean;
+  { True if current value is Null }
     property  IsNull: Boolean read GetIsNull;
+  { returns the value as a Boolean, raises an exception if kind of the value <> vkBoolean }
     property  AsBoolean: Boolean read GetAsBoolean;
+  { returns the value as a Double, raises an exception if kind of the value <> vkNumber }
     property  AsNumber: Double read GetAsNumber;
+  { returns the value as a string, raises an exception if kind of the value <> vkString }
     property  AsString: string read GetAsString;
+  { indicates the current structure index, or zero if the current structure is an object }
     property  Index: SizeInt read GetIndex;
+  { indicates the current name or index if current structure is an array }
     property  Name: string read FName;
     property  Value: TJVariant read FValue;
     property  Path: string read GetPath;
     property  TokenKind: TTokenKind read FToken;
     property  StructKind: TStructKind read GetStructKind;
     property  ParentKind: TStructKind read GetParentKind;
-  { indicates the nesting depth of the current structure starting at one }
+  { indicates the nesting depth of the current structure, zero based }
     property  Depth: SizeInt read FStackTop;
     property  ReadState: TReadState read FReadState;
     property  SkipBom: Boolean read FSkipBom;
@@ -4139,8 +4149,8 @@ end;
 constructor TJsonReader.Create(aStream: TStream; aMaxDepth: SizeInt; aSkipBom: Boolean);
 begin
   FStream := aStream;
-  if aMaxDepth < 32 then
-    aMaxDepth := 32;
+  if aMaxDepth < 31 then
+    aMaxDepth := 31;
   System.SetLength(FStack, Succ(aMaxDepth));
   FStackHigh := aMaxDepth;
   FSkipBom := aSkipBom;
@@ -4158,9 +4168,20 @@ begin
   if not Result then
     if ReadState = rsEOF then
       begin
+        if Depth <> 0 then
+          begin
+            FReadState := rsError;
+            exit;
+          end;
         if Integer(1 shl FState) and NUM_STATES <> 0 then
-          exit(NumValue);
-        if (FState <> OK) or (Depth <> 0) then
+          begin
+            FState := OK;
+            if NumValue then
+              exit(True)
+            else
+              FReadState := rsError;
+          end;
+        if FState <> OK then
           FReadState := rsError;
       end
     else
