@@ -84,6 +84,7 @@ type
     procedure MoveNext;
     procedure Find;
     procedure FindPath;
+    procedure TestReader;
   end;
 
 const
@@ -185,6 +186,7 @@ begin
   for CurrFile in TestFileList do
     begin
       Stream.Instance.LoadFromFile(CurrFile);
+      Stream.Instance.Position := 0;
       Result := Node.Instance.Parse(Stream.Instance.DataString);
       fn := ExtractFileName(CurrFile);
       c := fn[1];
@@ -210,6 +212,7 @@ begin
   for CurrFile in TestFileList do
     begin
       Stream.Instance.LoadFromFile(CurrFile);
+      Stream.Instance.Position := 0;
       Result := TJsonNode.ValidJson(Stream.Instance.DataString);
       fn := ExtractFileName(CurrFile);
       c := fn[1];
@@ -1134,6 +1137,35 @@ begin
   AssertTrue(Reader.Instance.FindPath('/1/groups'));
   AssertTrue(Reader.Instance.CopyStruct(s));
   AssertTrue(s = '["talk","games","math","art"]');
+end;
+
+procedure TTestJsonReader.TestReader;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGAutoRef<TStringStream>;
+  CurrFile, fn: string;
+  State: TJsonReader.TReadState;
+  c: AnsiChar;
+  Total: Integer = 0;
+begin
+  AssertTrue('File list not loaded', Assigned(TestFileList));
+  for CurrFile in TestFileList do
+    begin
+      Stream.Instance.LoadFromFile(CurrFile);
+      Stream.Instance.Position := 0;
+      Reader.Instance := TJsonReader.Create(Stream.Instance);
+      while Reader.Instance.Read do;
+      State := Reader.Instance.ReadState;
+      fn := ExtractFileName(CurrFile);
+      c := fn[1];
+      Inc(Total);
+      if c = 'y' then
+        AssertTrue(fn + ': expected rsEOF, but got rsError', State = rsEOF)
+      else
+        if c = 'n' then
+          AssertTrue(fn + ': expected rsError, but got rsEOF', State = rsError);
+    end;
+  AssertTrue(Total = 291);
 end;
 
 initialization
