@@ -633,6 +633,7 @@ type
   public
     class function IsStartToken(aToken: TTokenKind): Boolean; static; inline;
     class function IsEndToken(aToken: TTokenKind): Boolean; static; inline;
+    class function IsScalarToken(aToken: TTokenKind): Boolean; static; inline;
     constructor Create(aStream: TStream; aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
   { reads the next token from the stream, returns False if an error is encountered or the end
     of the stream is reached, otherwise it returns true; on error, the ReadState property
@@ -4122,29 +4123,40 @@ begin
 end;
 
 function TJsonReader.GetPath: string;
+  procedure Convert(const s: string);
+  var
+    I: SizeInt;
+  begin
+    for I := 1 to System.Length(s) do
+      case s[I] of
+        '/':
+          begin
+            FsbHelp.Append('~');
+            FsbHelp.Append('1');
+          end;
+        '~':
+          begin
+            FsbHelp.Append('~');
+            FsbHelp.Append('0');
+          end;
+      else
+        FsbHelp.Append(s[I]);
+      end;
+  end;
 var
-  I, J: SizeInt;
+  I: SizeInt;
 begin
   if FStackTop = 0 then
-    exit('/');
-  for I := 1 to FStackTop do
+    exit('');
+  for I := 2 to FStackTop do
     begin
       FsbHelp.Append('/');
-      for J := 1 to System.Length(FStack[I].Path) do
-        case FStack[I].Path[J] of
-          '/':
-            begin
-              FsbHelp.Append('~');
-              FsbHelp.Append('1');
-            end;
-          '~':
-            begin
-              FsbHelp.Append('~');
-              FsbHelp.Append('0');
-            end;
-        else
-          FsbHelp.Append(FStack[I].Path[J]);
-        end;
+      Convert(FStack[I].Path);
+    end;
+  if TokenKind in [tkNull, tkFalse, tkTrue, tkNumber, tkString] then
+    begin
+      FsbHelp.Append('/');
+      Convert(Name);
     end;
   Result := FsbHelp.ToString;
 end;
@@ -4162,6 +4174,11 @@ end;
 class function TJsonReader.IsEndToken(aToken: TTokenKind): Boolean;
 begin
   Result := aToken in [tkArrayEnd, tkObjectEnd];
+end;
+
+class function TJsonReader.IsScalarToken(aToken: TTokenKind): Boolean;
+begin
+  Result := aToken in [tkNull, tkFalse, tkTrue, tkNumber, tkString];
 end;
 
 constructor TJsonReader.Create(aStream: TStream; aMaxDepth: SizeInt; aSkipBom: Boolean);
@@ -4362,11 +4379,11 @@ function TJsonReader.FindPath(const aPath: TStringArray): Boolean;
 var
   I: SizeInt;
 begin
-  if (ReadState <> rsStart) or (aPath = nil) then
+  if ReadState <> rsStart then
     exit(False);
   if not Read then
     exit(False);
-  if (System.Length(aPath) = 1) and (aPath[0] = '') then
+  if aPath = nil then
     exit(True);
   for I := 0 to System.High(aPath) do
     if not Find(aPath[I]) then
