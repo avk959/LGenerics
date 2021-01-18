@@ -65,6 +65,8 @@ type
 
     TIterObj = object
       List: THashList;
+      function OnStruct(aReader: TJsonReader): Boolean;
+      function OnValue(aReader: TJsonReader): Boolean;
       function CountIt(aReader: TJsonReader): Boolean;
     end;
 
@@ -79,7 +81,9 @@ type
     procedure ReadObject;
     procedure Skip;
     procedure Iterate;
+    procedure Iterate1;
     procedure IterateNest;
+    procedure IterateNest1;
     procedure CopyStruct;
     procedure MoveNext;
     procedure Find;
@@ -668,6 +672,17 @@ end;
 
 { TTestJsonReader.TIterObj }
 
+function TTestJsonReader.TIterObj.OnStruct(aReader: TJsonReader): Boolean;
+begin
+  List.Add(TPair.Create(aReader.ParentName, ''));
+  Result := True;
+end;
+
+function TTestJsonReader.TIterObj.OnValue(aReader: TJsonReader): Boolean;
+begin
+  Result := True;
+end;
+
 function TTestJsonReader.TIterObj.CountIt(aReader: TJsonReader): Boolean;
 begin
   List.Add(TPair.Create(aReader.Name, aReader.Value.ToString));
@@ -919,6 +934,28 @@ begin
   AssertTrue(io.List.Find('3')^.Value = 'art');
 end;
 
+procedure TTestJsonReader.Iterate1;
+var
+  io: TIterObj;
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGUniqRef<TStringStream>;
+  I: Integer;
+begin
+  {%H-}Stream.Instance := TStringStream.Create(TestJson);
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance.Iterate(@{%H-}io.OnStruct, @{%H-}io.OnValue);
+  AssertTrue(io.List.Count = 5);
+  for I := 0 to Pred(io.List.Count) do
+    case I of
+      0: AssertTrue(io.List[I].Key = '');
+      1: AssertTrue(io.List[I].Key = '0');
+      2: AssertTrue(io.List[I].Key = 'groups');
+      3: AssertTrue(io.List[I].Key = '1');
+      4: AssertTrue(io.List[I].Key = 'groups');
+    else
+    end;
+end;
+
 procedure TTestJsonReader.IterateNest;
 var
   List: THashList;
@@ -974,6 +1011,36 @@ begin
     AssertTrue((p.Value = 'cook') or (p.Value = 'math'));
   AssertTrue(List.CountOf('3') = 1);
   AssertTrue(List.Find('3')^.Value = 'art');
+end;
+
+procedure TTestJsonReader.IterateNest1;
+var
+  I: Integer = 0;
+  function OnStruct(aReader: TJsonReader): Boolean;
+  begin
+    case I of
+      0: AssertTrue(aReader.ParentName = '');
+      1: AssertTrue(aReader.ParentName = '0');
+      2: AssertTrue(aReader.ParentName = 'groups');
+      3: AssertTrue(aReader.ParentName = '1');
+      4: AssertTrue(aReader.ParentName = 'groups');
+    else
+    end;
+    Inc(I);
+    Result := True;
+  end;
+  function OnValue({%H-}aReader: TJsonReader): Boolean;
+  begin
+    Result := True;
+  end;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGUniqRef<TStringStream>;
+begin
+  {%H-}Stream.Instance := TStringStream.Create(TestJson);
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance.Iterate(@OnStruct, @OnValue);
+  AssertTrue(I = 5);
 end;
 
 procedure TTestJsonReader.CopyStruct;
