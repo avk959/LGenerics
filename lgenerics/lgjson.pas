@@ -644,20 +644,20 @@ type
   { if the current token is the beginning of a structure, it skips its contents
     and stops at the closing token, otherwise it just performs one Read }
     procedure Skip;
-  { iterates over all the JSON items of the current structure and calls the aFun
+  { iterates over all the JSON items in the current structure and calls the aFun
     function for each value item, passing Self as a parameter;
     if aFun returns False, the iteration stops immediately }
     procedure Iterate(aFun: TIterateFun);
-  { iterates over all the JSON items of the current structure and calls the aFun
+  { iterates over all the JSON items in the current structure and calls the aFun
     function for each value item,
     passing Self as a parameter; if aFun returns False, the iteration stops immediately }
     procedure Iterate(aFun: TNestIterate);
-  { iterates over all the JSON items of the current structure and calls the aOnValue
+  { iterates over all the JSON items in the current structure and calls the aOnValue
     function for each value item or aOnStruct function for each struct item
     passing Self as a parameter;
     if the called function returns False, the iteration stops immediately }
     procedure Iterate(aOnStruct, aOnValue: TIterateFun);
-  { iterates over all the JSON items of the current structure and calls the aOnValue
+  { iterates over all the JSON items in the current structure and calls the aOnValue
     function for each value item or aOnStruct function for each struct item
     passing Self as a parameter;
     if the called function returns False, the iteration stops immediately }
