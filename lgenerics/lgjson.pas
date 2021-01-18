@@ -627,6 +627,7 @@ type
     function  GetAsNumber: Double; inline;
     function  GetAsString: string; inline;
     function  GetPath: string;
+    function  GetParentName: string; inline;
     property  CopyMode: Boolean read FCopyMode;
     property  DeferToken: TTokenKind read FDeferToken;
   public
@@ -640,10 +641,20 @@ type
   { if the current token is the beginning of a structure, it skips its contents
     and stops at the closing token, otherwise it just performs one Read }
     procedure Skip;
-  { iterates over all the JSON items and calls the aFun function for each item,
+  { iterates over all the JSON items and calls the aFun function for each value item,
     passing Self as a parameter; if aFun returns False, the iteration stops immediately }
     procedure Iterate(aFun: TIterateFun);
+  { iterates over all the JSON items and calls the aFun function for each value item,
+    passing Self as a parameter; if aFun returns False, the iteration stops immediately }
     procedure Iterate(aFun: TNestIterate);
+  { iterates over all the JSON items and calls the aOnValue function for each value item
+    or aOnStruct function for each struct item passing Self as a parameter;
+    if the called function returns False, the iteration stops immediately }
+    procedure Iterate(aOnStruct, aOnValue: TIterateFun);
+  { iterates over all the JSON items and calls the aOnValue function for each value item
+    or aOnStruct function for each struct item passing Self as a parameter;
+    if the called function returns False, the iteration stops immediately }
+    procedure Iterate(aOnStruct, aOnValue: TNestIterate);
   { if the current token is the beginning of some structure(array or object),
     it copies this structure "as is" into aStruct and returns True, otherwise returns False }
     function  CopyStruct(out aStruct: string): Boolean;
@@ -681,9 +692,11 @@ type
   { indicates the current name or index if current structure is an array }
     property  Name: string read FName;
     property  Value: TJVariant read FValue;
+  { returns current path as JSON pointer }
     property  Path: string read GetPath;
     property  TokenKind: TTokenKind read FToken;
     property  StructKind: TStructKind read GetStructKind;
+    property  ParentName: string read GetParentName;
     property  ParentKind: TStructKind read GetParentKind;
   { indicates the nesting depth of the current structure, zero based }
     property  Depth: SizeInt read FStackTop;
@@ -4136,6 +4149,11 @@ begin
   Result := FsbHelp.ToString;
 end;
 
+function TJsonReader.GetParentName: string;
+begin
+  Result := FStack[Depth].Path;
+end;
+
 class function TJsonReader.IsStartToken(aToken: TTokenKind): Boolean;
 begin
   Result := aToken in [tkArrayBegin, tkObjectBegin];
@@ -4230,6 +4248,40 @@ begin
       tkObjectEnd: ;
     else
       if not aFun(Self) then
+        exit;
+    end;
+end;
+
+procedure TJsonReader.Iterate(aOnStruct, aOnValue: TIterateFun);
+begin
+  while Read do
+    case TokenKind of
+      tkNone,
+      tkArrayEnd,
+      tkObjectEnd: ;
+      tkArrayBegin,
+      tkObjectBegin:
+        if (aOnStruct <> nil) and not aOnStruct(Self) then
+          exit;
+    else
+      if (aOnValue <> nil) and not aOnValue(Self) then
+        exit;
+    end;
+end;
+
+procedure TJsonReader.Iterate(aOnStruct, aOnValue: TNestIterate);
+begin
+  while Read do
+    case TokenKind of
+      tkNone,
+      tkArrayEnd,
+      tkObjectEnd: ;
+      tkArrayBegin,
+      tkObjectBegin:
+        if (aOnStruct <> nil) and not aOnStruct(Self) then
+          exit;
+    else
+      if (aOnValue <> nil) and not aOnValue(Self) then
         exit;
     end;
 end;
