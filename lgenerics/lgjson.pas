@@ -598,6 +598,7 @@ type
     FDeferToken: TTokenKind;
     FName: string;
     FValue: TJVariant;
+    FReadMode,
     FCopyMode,
     FSkipBom,
     FFirstChunk: Boolean;
@@ -628,6 +629,7 @@ type
     function  GetAsString: string; inline;
     function  GetPath: string;
     function  GetParentName: string; inline;
+    property  ReadMode: Boolean read FReadMode;
     property  CopyMode: Boolean read FCopyMode;
     property  DeferToken: TTokenKind read FDeferToken;
   public
@@ -659,11 +661,12 @@ type
   { if the current token is the beginning of some structure(array or object),
     it copies this structure "as is" into aStruct and returns True, otherwise returns False }
     function  CopyStruct(out aStruct: string): Boolean;
-  { goes to the next item without trying to go inside the structures;
+  { moves to the next structure item without trying to enter nested structures;
     if the next item turns out to be a structure, it is skipped to the closing token;
     returns False if it cannot move to the next item, otherwise returns True }
     function  MoveNext: Boolean;
-  { tries to find the specified key in the current structure;
+  { tries to find the specified key in the current structure without trying to enter
+    nested structures;
     the key can be a name or a string representation of a non-negative integer;
     returns true if the key was found, otherwise returns false;
     in case of a successful search:
@@ -3826,14 +3829,16 @@ procedure TJsonReader.UpdateArray;
 begin
   if FStack[Depth].Mode = pmArray then
     begin
-      FName := IntToStr(FStack[Depth].CurrIndex);
+      if ReadMode then
+        FName := IntToStr(FStack[Depth].CurrIndex);
       Inc(FStack[Depth].CurrIndex);
     end;
 end;
 
 function TJsonReader.NullValue: Boolean;
 begin
-  FValue.Clear;
+  if ReadMode then
+    FValue.Clear;
   UpdateArray;
   FState := OK;
   FToken := tkNull;
@@ -3842,7 +3847,8 @@ end;
 
 function TJsonReader.FalseValue: Boolean;
 begin
-  FValue := False;
+  if ReadMode then
+    FValue := False;
   UpdateArray;
   FToken := tkFalse;
   FState := OK;
@@ -3851,7 +3857,8 @@ end;
 
 function TJsonReader.TrueValue: Boolean;
 begin
-  FValue := True;
+  if ReadMode then
+    FValue := True;
   UpdateArray;
   FState := OK;
   FToken := tkTrue;
@@ -3863,10 +3870,13 @@ var
   d: Double;
   e: Integer;
 begin
-  Val(FsBuilder.ToPChar, d, e);
-  if (e <> 0) or (QWord(d) and INF_EXP = INF_EXP) then
-    exit(False);
-  FValue := d;
+  if ReadMode then
+    begin
+      Val(FsBuilder.ToPChar, d, e);
+      if (e <> 0) or (QWord(d) and INF_EXP = INF_EXP) then
+        exit(False);
+      FValue := d;
+    end;
   UpdateArray;
   FToken := tkNumber;
   Result := True;
@@ -3874,7 +3884,8 @@ end;
 
 procedure TJsonReader.NameValue;
 begin
-  FName := FsBuilder.ToDecodeString;
+  if ReadMode then
+    FName := FsBuilder.ToDecodeString;
   FState := CO;
 end;
 
@@ -3897,7 +3908,8 @@ end;
 
 function TJsonReader.StringValue: Boolean;
 begin
-  FValue := FsBuilder.ToDecodeString;
+  if ReadMode then
+    FValue := FsBuilder.ToDecodeString;
   UpdateArray;
   FToken := tkString;
   FState := OK;
@@ -3908,9 +3920,17 @@ function TJsonReader.ArrayBegin: Boolean;
 begin
   if Depth = FStackHigh then exit(False);
   case FStack[Depth].Mode of
-    pmNone:   FStack[Succ(Depth)] := TLevel.Create(pmArray);
-    pmArray:  FStack[Succ(Depth)] := TLevel.Create(pmArray, FStack[Depth].CurrIndex);
-    pmObject: FStack[Succ(Depth)] := TLevel.Create(pmArray, FName);
+    pmNone: FStack[Succ(Depth)] := TLevel.Create(pmArray);
+    pmArray:
+      if ReadMode then
+        FStack[Succ(Depth)] := TLevel.Create(pmArray, FStack[Depth].CurrIndex)
+      else
+        FStack[Succ(Depth)] := TLevel.Create(pmArray);
+    pmObject:
+      if ReadMode then
+        FStack[Succ(Depth)] := TLevel.Create(pmArray, FName)
+      else
+        FStack[Succ(Depth)] := TLevel.Create(pmArray);
   else
     exit(False);
   end;
@@ -3924,9 +3944,17 @@ function TJsonReader.ObjectBegin: Boolean;
 begin
   if Depth = FStackHigh then exit(False);
   case FStack[Depth].Mode of
-    pmNone:   FStack[Succ(Depth)] := TLevel.Create(pmKey);
-    pmArray:  FStack[Succ(Depth)] := TLevel.Create(pmKey, FStack[Depth].CurrIndex);
-    pmObject: FStack[Succ(Depth)] := TLevel.Create(pmKey, FName);
+    pmNone: FStack[Succ(Depth)] := TLevel.Create(pmKey);
+    pmArray:
+      if ReadMode then
+        FStack[Succ(Depth)] := TLevel.Create(pmKey, FStack[Depth].CurrIndex)
+      else
+        FStack[Succ(Depth)] := TLevel.Create(pmKey);
+    pmObject:
+      if ReadMode then
+        FStack[Succ(Depth)] := TLevel.Create(pmKey, FName)
+      else
+        FStack[Succ(Depth)] := TLevel.Create(pmKey);
   else
     exit(False);
   end;
@@ -4054,7 +4082,7 @@ begin
     if NextState = __ then exit(False);
     if CopyMode then FsbHelp.Append(c); //////////
     if NextState < 31 then begin
-      if (DWord(NextState - ST) < DWord(14)) then
+      if (DWord(NextState - ST) < DWord(14)) and ReadMode then
         FsBuilder.Append(c);
       FState := NextState;
     end else
@@ -4071,7 +4099,8 @@ begin
       35: exit(ArrayBegin);   //begin array
       36:                     //string value
         begin
-          FsBuilder.Append(c);
+          if ReadMode then
+            FsBuilder.Append(c);
           if FStack[Depth].Mode = pmKey then NameValue
           else exit(StringValue);
         end;
@@ -4189,6 +4218,7 @@ begin
   System.SetLength(FStack, Succ(aMaxDepth));
   FStackHigh := aMaxDepth;
   FSkipBom := aSkipBom;
+  FReadMode := True;
   FFirstChunk := True;
   FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FsbHelp := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
@@ -4231,7 +4261,12 @@ begin
   if IsStartToken(TokenKind) then
     begin
       OldDepth := Pred(Depth);
-      while Read and (Depth > OldDepth) do;
+      FReadMode := False;
+      try
+        while Read and (Depth > OldDepth) do;
+      finally
+        FReadMode := True;
+      end;
     end
   else
     Read;
