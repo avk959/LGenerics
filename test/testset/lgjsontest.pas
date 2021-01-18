@@ -82,8 +82,10 @@ type
     procedure Skip;
     procedure Iterate;
     procedure Iterate1;
+    procedure Iterate2;
     procedure IterateNest;
     procedure IterateNest1;
+    procedure IterateNest2;
     procedure CopyStruct;
     procedure MoveNext;
     procedure Find;
@@ -956,6 +958,23 @@ begin
     end;
 end;
 
+procedure TTestJsonReader.Iterate2;
+var
+  io: TIterObj;
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGUniqRef<TStringStream>;
+  I: Integer;
+begin
+  {%H-}Stream.Instance := TStringStream.Create(TestJson);
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.FindPath('/0/groups'));
+  Reader.Instance.Iterate(@{%H-}io.CountIt);
+  AssertTrue(io.List.Count = 3);
+  AssertTrue(io.List[0].Value = 'talk');
+  AssertTrue(io.List[1].Value = 'humor');
+  AssertTrue(io.List[2].Value = 'cook');
+end;
+
 procedure TTestJsonReader.IterateNest;
 var
   List: THashList;
@@ -1041,6 +1060,29 @@ begin
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
   Reader.Instance.Iterate(@OnStruct, @OnValue);
   AssertTrue(I = 5);
+end;
+
+procedure TTestJsonReader.IterateNest2;
+var
+  List: THashList;
+  function CountIt(aReader: TJsonReader): Boolean;
+  begin
+    List.Add(TPair.Create(aReader.Name, aReader.Value.ToString));
+    Result := True;
+  end;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGUniqRef<TStringStream>;
+begin
+  {%H-}Stream.Instance := TStringStream.Create(TestJson);
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.FindPath('/1/groups'));
+  Reader.Instance.Iterate(@CountIt);
+  AssertTrue({%H-}List.Count = 4);
+  AssertTrue(List[0].Value = 'talk');
+  AssertTrue(List[1].Value = 'games');
+  AssertTrue(List[2].Value = 'math');
+  AssertTrue(List[3].Value = 'art');
 end;
 
 procedure TTestJsonReader.CopyStruct;
