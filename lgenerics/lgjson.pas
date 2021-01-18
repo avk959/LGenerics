@@ -696,7 +696,7 @@ type
   { indicates the current name or index if current structure is an array }
     property  Name: string read FName;
     property  Value: TJVariant read FValue;
-  { returns current path as JSON pointer }
+  { returns current path as a JSON pointer (RFC 6901) }
     property  Path: string read GetPath;
     property  TokenKind: TTokenKind read FToken;
     property  StructKind: TStructKind read GetStructKind;
