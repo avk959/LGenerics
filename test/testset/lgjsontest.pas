@@ -199,9 +199,9 @@ var
   v: TJVariant;
   Rased: Boolean = False;
 begin
-  v := 1.141;
+  v := Double(1.141);
   AssertTrue(v.Kind = vkNumber);
-  AssertTrue(v.AsNumber = 1.141);
+  AssertTrue(v.AsNumber = Double(1.141));
   try
     v.AsBoolean;
   except
