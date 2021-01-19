@@ -63,30 +63,39 @@ type
     procedure DoClear; inline;
     procedure ConvertError(const aSrc, aDst: string);
   private
+  const
+    MIN_EXACT_INT = Double(-9007199254740991);
+    MAX_EXACT_INT = Double(9007199254740991);
     class operator Initialize(var v: TJVariant);
     class operator Finalize(var v: TJVariant);
     class operator Copy(constref aSrc: TJVariant; var aDst: TJVariant); inline;
     class operator AddRef(var v: TJVariant);
   public
     class function Null: TJVariant; static; inline;
+    class function IsExactInt(aDbl: Double; out aInt: Int64): Boolean; static;
     class operator := (aValue: Double): TJVariant; inline;
     class operator := (aValue: Boolean): TJVariant; inline;
     class operator := (const aValue: string): TJVariant; inline;
     class operator := (const v: TJVariant): Double; inline;
+    class operator := (const v: TJVariant): Int64; inline;
     class operator := (const v: TJVariant): Boolean; inline;
     class operator := (const v: TJVariant): string; inline;
     class operator = (const L, R: TJVariant): Boolean; inline;
     procedure Clear;
     procedure SetNull; inline;
+    function  IsInteger: Boolean; inline;
   { returns a Boolean value of the instance; raises an exception if Kind <> vkBoolean }
-    function AsBoolean: Boolean; inline;
+    function  AsBoolean: Boolean; inline;
   { returns a numeric value of the instance; raises an exception if Kind <> vkNumber }
-    function AsNumber: Double; inline;
+    function  AsNumber: Double; inline;
+  { returns a integer value of the instance; raises an exception if Kind <> vkNumber
+    or value is not exact integer }
+    function  AsInteger: Int64; inline;
   { returns a string value of the instance; raises an exception if Kind <> vkString }
-    function AsString: string; inline;
+    function  AsString: string; inline;
   { returns a string representation of the instance }
-    function ToString: string; inline;
-    property Kind: TJVarKind read FKind;
+    function  ToString: string; inline;
+    property  Kind: TJVarKind read FKind;
   end;
 
   TJVarPair   = specialize TGMapEntry<string, TJVariant>;
@@ -644,23 +653,25 @@ type
   { if the current token is the beginning of a structure, it skips its contents
     and stops at the closing token, otherwise it just performs one Read }
     procedure Skip;
-  { iterates over all the JSON items in the current structure and calls the aFun
-    function for each value item, passing Self as a parameter;
-    if aFun returns False, the iteration stops immediately }
+  { iterates over all items in the current structure and calls the aFun function
+    for each value item, passing Self as a parameter;
+    if aFun returns False, the iteration stops immediately, otherwise it stops
+    at the closing token of the current structure }
     procedure Iterate(aFun: TIterateFun);
-  { iterates over all the JSON items in the current structure and calls the aFun
-    function for each value item,
-    passing Self as a parameter; if aFun returns False, the iteration stops immediately }
+  { iterates over all items in the current structure and calls the aFun function
+    for each value item, passing Self as a parameter;
+    if aFun returns False, the iteration stops immediately, otherwise it stops
+    at the closing token of the current structure }
     procedure Iterate(aFun: TNestIterate);
-  { iterates over all the JSON items in the current structure and calls the aOnValue
-    function for each value item or aOnStruct function for each struct item
-    passing Self as a parameter;
-    if the called function returns False, the iteration stops immediately }
+  { iterates over all items in the current structure and calls the aOnValue function
+    for each value item or aOnStruct function for each struct item, passing Self as
+    a parameter; if the called function returns False, the iteration stops immediately,
+    otherwise it stops at the closing token of the current structure }
     procedure Iterate(aOnStruct, aOnValue: TIterateFun);
-  { iterates over all the JSON items in the current structure and calls the aOnValue
-    function for each value item or aOnStruct function for each struct item
-    passing Self as a parameter;
-    if the called function returns False, the iteration stops immediately }
+  { iterates over all the items in the current structure and calls the aOnValue function
+    for each value item or aOnStruct function for each struct item, passing Self as
+    a parameter; if the called function returns False, the iteration stops immediately,
+    otherwise it stops at the closing token of the current structure }
     procedure Iterate(aOnStruct, aOnValue: TNestIterate);
   { if the current token is the beginning of some structure(array or object),
     it copies this structure "as is" into aStruct and returns True, otherwise returns False }
@@ -768,6 +779,16 @@ begin
   Result.Clear;
 end;
 
+class function TJVariant.IsExactInt(aDbl: Double; out aInt: Int64): Boolean;
+begin
+  if (Frac(aDbl) = 0) and (aDbl >= MIN_EXACT_INT) and (aDbl <= MAX_EXACT_INT) then
+    begin
+      aInt := Trunc(aDbl);
+      exit(True);
+    end;
+  Result := False;
+end;
+
 class operator TJVariant.:=(aValue: Double): TJVariant;
 begin
   Result{%H-}.DoClear;
@@ -799,6 +820,12 @@ begin
     exit(v.FValue.Num);
   end;
   Result := v.FValue.Num;
+end;
+
+class operator TJVariant.:=(const v: TJVariant): Int64;
+begin
+  if not IsExactInt(Double(v), Result) then
+    v.ConvertError('Double', 'Int64');
 end;
 
 class operator TJVariant.:=(const v: TJVariant): Boolean;
@@ -847,6 +874,13 @@ begin
   Clear;
 end;
 
+function  TJVariant.IsInteger: Boolean;
+begin
+  if Kind <> vkNumber then exit(False);
+  Result := (Frac(FValue.Num) = 0) and (FValue.Num >= MIN_EXACT_INT) and
+            (FValue.Num <= MAX_EXACT_INT);
+end;
+
 function TJVariant.AsBoolean: Boolean;
 begin
   Result := Self;
@@ -857,17 +891,28 @@ begin
   Result := Self;
 end;
 
+function TJVariant.AsInteger: Int64;
+begin
+  Result := Self;
+end;
+
 function TJVariant.AsString: string;
 begin
   Result := Self;
 end;
 
 function TJVariant.ToString: string;
+var
+  I: Int64;
 begin
   case Kind of
     vkNull:   Result := JS_NULL;
     vkBool:   Result := BoolToStr(FValue.Bool, JS_TRUE, JS_FALSE);
-    vkNumber: Result := FValue.Num.ToString;
+    vkNumber:
+      if IsExactInt(FValue.Num, I) then
+        Result := I.ToString
+      else
+        Result := FValue.Num.ToString;
     vkString: Result := string(FValue.Ref);
   end;
 end;
