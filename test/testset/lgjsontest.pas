@@ -13,6 +13,19 @@ uses
 
 type
 
+  { TTestJVariant }
+
+  TTestJVariant = class(TTestCase)
+  published
+    procedure TestNull;
+    procedure TestBool;
+    procedure TestString;
+    procedure TestNumber;
+    procedure TestInteger;
+    procedure TestEqual;
+  end;
+
+
   { TTestJson }
 
   TTestJson = class(TTestCase)
@@ -113,9 +126,6 @@ var
 
 implementation
 
-
-{ TTestJson }
-
 procedure LoadFileList;
 var
   Dir: string;
@@ -129,6 +139,127 @@ begin
   if not DirectoryExists(Dir) then exit;
   TestFileList := FindAllFiles(Dir);
 end;
+
+{ TTestJVariant }
+
+procedure TTestJVariant.TestNull;
+var
+  v: TJVariant;
+  Rased: Boolean = False;
+begin
+  AssertTrue({%H-}v.Kind = vkNull);
+  AssertTrue(v.ToString = 'null');
+  try
+    v.AsString;
+  except
+    Rased := True;
+  end;
+  AssertTrue(Rased);
+end;
+
+procedure TTestJVariant.TestBool;
+var
+  v: TJVariant;
+  Rased: Boolean = False;
+begin
+  v := False;
+  AssertTrue(v.Kind = vkBool);
+  AssertFalse(v.AsBoolean);
+  AssertTrue(v.ToString = 'false');
+  v := True;
+  AssertTrue(v.Kind = vkBool);
+  AssertTrue(v.AsBoolean);
+  AssertTrue(v.ToString = 'true');
+  try
+    v.AsString;
+  except
+    Rased := True;
+  end;
+  AssertTrue(Rased);
+end;
+
+procedure TTestJVariant.TestString;
+var
+  v: TJVariant;
+  Rased: Boolean = False;
+begin
+  v := 'string';
+  AssertTrue(v.Kind = vkString);
+  AssertTrue(v.AsString = 'string');
+  try
+    v.AsBoolean;
+  except
+    Rased := True;
+  end;
+  AssertTrue(Rased);
+end;
+
+procedure TTestJVariant.TestNumber;
+var
+  v: TJVariant;
+  Rased: Boolean = False;
+begin
+  v := 1.141;
+  AssertTrue(v.Kind = vkNumber);
+  AssertTrue(v.AsNumber = 1.141);
+  try
+    v.AsBoolean;
+  except
+    Rased := True;
+  end;
+  AssertTrue(Rased);
+end;
+
+procedure TTestJVariant.TestInteger;
+var
+  v: TJVariant;
+  Rased: Boolean = False;
+begin
+  v := 42;
+  AssertTrue(v.Kind = vkNumber);
+  AssertTrue(v.IsInteger);
+  AssertTrue(v.AsInteger = 42);
+  v := Double(10e17);
+  AssertFalse(v.IsInteger);
+  AssertTrue(v.AsNumber = Double(10e17));
+  v := -9007199254740991;
+  AssertTrue(v.IsInteger);
+  AssertTrue(v.AsInteger = -9007199254740991);
+  AssertTrue(v.ToString = '-9007199254740991');
+  try
+    v.AsBoolean;
+  except
+    Rased := True;
+  end;
+  AssertTrue(Rased);
+end;
+
+procedure TTestJVariant.TestEqual;
+var
+  v1, v2: TJVariant;
+begin
+  AssertFalse(v1 = v2);
+  v1 := True;
+  AssertFalse(v1 = v2);
+  v2 := False;
+  AssertFalse(v1 = v2);
+  v2 := True;
+  AssertTrue(v1 = v2);
+  v1 := 'str';
+  AssertFalse(v1 = v2);
+  v2 := 'str';
+  AssertTrue(v1 = v2);
+  v1 := 42;
+  AssertFalse(v1 = v2);
+  v2 := 42;
+  AssertTrue(v1 = v2);
+  v1.SetNull;
+  AssertFalse(v1 = v2);
+  v2.SetNull;
+  AssertFalse(v1 = v2);
+end;
+
+{ TTestJson }
 
 function TTestJson.CreateArrayOfObj: TJsonNode;
 var
@@ -963,7 +1094,6 @@ var
   io: TIterObj;
   Reader: specialize TGUniqRef<TJsonReader>;
   Stream: specialize TGUniqRef<TStringStream>;
-  I: Integer;
 begin
   {%H-}Stream.Instance := TStringStream.Create(TestJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
@@ -1365,6 +1495,7 @@ end;
 initialization
 
   LoadFileList;
+  RegisterTest(TTestJVariant);
   RegisterTest(TTestJson);
   RegisterTest(TTestJsonWriter);
   RegisterTest(TTestJsonReader);
