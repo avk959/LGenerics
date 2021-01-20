@@ -219,6 +219,8 @@ begin
   AssertTrue(v.Kind = vkNumber);
   AssertTrue(v.IsInteger);
   AssertTrue(v.AsInteger = 42);
+  v := 42.42;
+  AssertFalse(v.IsInteger);
   v := Double(10e17);
   AssertFalse(v.IsInteger);
   AssertTrue(v.AsNumber = Double(10e17));
