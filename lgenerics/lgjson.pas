@@ -64,7 +64,6 @@ type
     procedure ConvertError(const aSrc, aDst: string);
   private
   const
-    MIN_EXACT_INT = Double(-9007199254740991);
     MAX_EXACT_INT = Double(9007199254740991);
     class operator Initialize(var v: TJVariant);
     class operator Finalize(var v: TJVariant);
@@ -72,7 +71,7 @@ type
     class operator AddRef(var v: TJVariant);
   public
     class function Null: TJVariant; static; inline;
-    class function IsExactInt(aDbl: Double; out aInt: Int64): Boolean; static;
+    class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; static;
     class operator := (aValue: Double): TJVariant; inline;
     class operator := (aValue: Boolean): TJVariant; inline;
     class operator := (const aValue: string): TJVariant; inline;
@@ -480,6 +479,7 @@ type
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = DEF_INDENT): string;
     function  AsText: string;
+    function  GetValue(out aValue: TJVariant): Boolean;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
   { GetAsJson returns the most compact representation of an instance as a JSON string;
@@ -779,11 +779,11 @@ begin
   Result.Clear;
 end;
 
-class function TJVariant.IsExactInt(aDbl: Double; out aInt: Int64): Boolean;
+class function TJVariant.IsExactInt(aValue: Double; out aIntValue: Int64): Boolean;
 begin
-  if (Frac(aDbl) = 0) and (aDbl >= MIN_EXACT_INT) and (aDbl <= MAX_EXACT_INT) then
+  if (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT) then
     begin
-      aInt := Trunc(aDbl);
+      aIntValue := Trunc(aValue);
       exit(True);
     end;
   Result := False;
@@ -876,9 +876,9 @@ end;
 
 function  TJVariant.IsInteger: Boolean;
 begin
-  if Kind <> vkNumber then exit(False);
-  Result := (Frac(FValue.Num) = 0) and (FValue.Num >= MIN_EXACT_INT) and
-            (FValue.Num <= MAX_EXACT_INT);
+  if Kind <> vkNumber then
+    exit(False);
+  Result := (Frac(FValue.Num) = 0) and (Abs(FValue.Num) <= MAX_EXACT_INT);
 end;
 
 function TJVariant.AsBoolean: Boolean;
@@ -3327,6 +3327,20 @@ begin
     jvkArray,
     jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
   end;
+end;
+
+function TJsonNode.GetValue(out aValue: TJVariant): Boolean;
+begin
+  if not IsScalar then exit(False);
+  case Kind of
+    jvkNull:   aValue.SetNull;
+    jvkFalse:  aValue := False;
+    jvkTrue:   aValue := True;
+    jvkNumber: aValue := FValue.Num;
+    jvkString: aValue := string(FValue.Ref);
+  else
+  end;
+  Result := True;
 end;
 
 procedure TJsonNode.SaveToStream(aStream: TStream);
