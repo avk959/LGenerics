@@ -1367,6 +1367,12 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create(TestJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.FindPath('/0/groups'));
+  AssertTrue(Reader.Instance.Find('1'));
+  AssertTrue(Reader.Instance.Value.AsString = 'humor');
+
+  Stream.Instance := TStringStream.Create(TestJson);
+  Reader.Instance := TJsonReader.Create(Stream.Instance);
   AssertTrue(Reader.Instance.FindPath('/1/groups'));
   AssertTrue(Reader.Instance.CopyStruct(s));
   AssertTrue(s = '["talk","games","math","art"]');
