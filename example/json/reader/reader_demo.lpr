@@ -248,24 +248,16 @@ begin
         end;
       tkArrayBegin:
         begin
+          MakeIndent(Reader.Instance.Depth - 1);
           if Reader.Instance.ParentKind = skObject then
-            begin
-              MakeIndent(Reader.Instance.Depth - 1);
-              WriteLn(Indent, Reader.Instance.ParentName, ': ');
-            end
-          else
-            MakeIndent(Reader.Instance.Depth - 1);
+            WriteLn(Indent, Reader.Instance.ParentName, ': ');
           Write(Indent, '[');
         end;
       tkObjectBegin:
         begin
+          MakeIndent(Reader.Instance.Depth - 1);
           if Reader.Instance.ParentKind = skObject then
-            begin
-              MakeIndent(Reader.Instance.Depth - 1);
-              WriteLn(Indent, Reader.Instance.ParentName, ': ');
-            end
-          else
-            MakeIndent(Reader.Instance.Depth - 1);
+            WriteLn(Indent, Reader.Instance.ParentName, ': ');
           Write(Indent, '{');
         end;
       tkArrayEnd:
