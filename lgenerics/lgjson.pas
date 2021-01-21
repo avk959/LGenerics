@@ -64,7 +64,7 @@ type
     procedure ConvertError(const aSrc, aDst: string);
   private
   const
-    MAX_EXACT_INT = Double(9007199254740991);
+    MAX_EXACT_INT = Double(9007199254740991); //2^53 - 1
     class operator Initialize(var v: TJVariant);
     class operator Finalize(var v: TJVariant);
     class operator Copy(constref aSrc: TJVariant; var aDst: TJVariant); inline;
@@ -3880,12 +3880,11 @@ function TJsonReader.GetParentKind: TStructKind;
 begin
   if Depth > 0 then
     case FStack[Pred(Depth)].Mode of
-      pmArray:  Result := skArray;
+      pmArray:         exit(skArray);
+      pmKey, pmObject: exit(skObject);
     else
-      Result := skObject;
-    end
-  else
-    Result := skNone;
+    end;
+  Result := skNone;
 end;
 
 procedure TJsonReader.UpdateArray;
