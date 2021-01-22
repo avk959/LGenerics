@@ -45,6 +45,7 @@ type
     procedure JsonPointer1;
     procedure AddUniq;
     procedure Values;
+    procedure SkipBom;
   end;
 
   { TTestJsonWriter }
@@ -106,6 +107,7 @@ type
     procedure FindPath1;
     procedure Path;
     procedure TestReader;
+    procedure SkipBom;
   end;
 
 const
@@ -578,6 +580,24 @@ begin
   AssertTrue(User['age'] = 42);
   AssertFalse(User['married']);
   AssertTrue(User.NItems['spouse'].IsNull);
+end;
+
+procedure TTestJson.SkipBom;
+var
+  o: TJsonNode;
+  s: string;
+  Stream: specialize TGAutoRef<TStringStream>;
+begin
+  s := #$EF#$BB#$BF + TestJson;
+  AssertTrue(TJsonNode.ValidJson(s, 10, True));
+  {%H-}Stream.Instance := TStringStream.Create(s);
+  Stream.Instance.Position := 0;
+  AssertTrue(TJsonNode.ValidJson(Stream.Instance, 10, True));
+  AssertTrue(TJsonNode.TryParse(s, o, 10, True));
+  o.Free;
+  Stream.Instance.Position := 0;
+  AssertTrue(TJsonNode.TryParse(Stream.Instance, o, 10, True));
+  o.Free;
 end;
 
 { TTestJsonWriter }
@@ -1498,6 +1518,18 @@ begin
           AssertTrue(fn + ': expected rsError, but got rsEOF', State = rsError);
     end;
   AssertTrue(Total = 291);
+end;
+
+procedure TTestJsonReader.SkipBom;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Stream: specialize TGAutoRef<TStringStream>;
+begin
+  {%H-}Stream.Instance := TStringStream.Create(#$EF#$BB#$BF + TestJson);
+  Stream.Instance.Position := 0;
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance, 10, True);
+  while Reader.Instance.Read do;
+  AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
 
 initialization
