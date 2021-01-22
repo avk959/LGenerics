@@ -4096,6 +4096,7 @@ function TJsonReader.GetNextChunk: TReadState;
 begin
   if ReadState > rsGo then
     exit(ReadState);
+  FPosition := NULL_INDEX;
   FByteCount := FStream.Read(FBuffer, SizeOf(FBuffer));
   if FByteCount = 0 then
     begin
@@ -4108,11 +4109,7 @@ begin
       if SkipBom then
         case DetectBom(@FBuffer, FByteCount) of
           bkNone: ;
-          bkUtf8:
-            begin
-              FPosition += UTF8_BOM_LEN;
-              FByteCount -= UTF8_BOM_LEN;
-            end;
+          bkUtf8: FPosition += UTF8_BOM_LEN;
         else
           FReadState := rsError;
           exit(ReadState);
@@ -4129,10 +4126,8 @@ var
 begin
   repeat
     if DeferToken <> tkNone then exit(DeferredEnd);
-    if FPosition >= Pred(FByteCount) then begin
-      FPosition := NULL_INDEX;
-      if GetNextChunk > rsGo then exit(False);
-    end;
+    if (FPosition >= Pred(FByteCount)) and (GetNextChunk > rsGo) then
+      exit(False);
     Inc(FPosition);
     c := PChar(@FBuffer)[FPosition];
     if c < #128 then begin
