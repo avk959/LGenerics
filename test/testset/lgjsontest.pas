@@ -499,35 +499,35 @@ var
   Node: TJsonNode;
 begin
   AssertTrue(o.Instance.Parse(PathJson));
-  AssertTrue(o.Instance.FindPath('', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From(''), Node));
   AssertTrue(Node = o.Instance);
-  AssertTrue(o.Instance.FindPath('/foo', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/foo'), Node));
   AssertTrue(Node.IsArray);
   AssertTrue(Node.Count = 2);
   AssertTrue(Node.Items[0].AsString = 'bar');
   AssertTrue(Node.Items[1].AsString = 'baz');
-  AssertTrue(o.Instance.FindPath('/foo/0', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/foo/0'), Node));
   AssertTrue(Node.IsString);
   AssertTrue(Node.AsString = 'bar');
-  AssertTrue(o.Instance.FindPath('/', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/'), Node));
   AssertTrue(Node.IsNumber);
   AssertTrue(Node.AsNumber = 0);
-  AssertTrue(o.Instance.FindPath(TJsonNode.JsonPtrEncode(['a/b']), Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From(['a/b']), Node));
   AssertTrue(Node.IsNumber);
   AssertTrue(Node.AsNumber = 1);
-  AssertTrue(o.Instance.FindPath('/c%d', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/c%d'), Node));
   AssertTrue(Node.AsNumber = 2);
-  AssertTrue(o.Instance.FindPath('/e^f', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/e^f'), Node));
   AssertTrue(Node.AsNumber = 3);
-  AssertTrue(o.Instance.FindPath('/g|h', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/g|h'), Node));
   AssertTrue(Node.AsNumber = 4);
-  AssertTrue(o.Instance.FindPath('/i\j', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/i\j'), Node));
   AssertTrue(Node.AsNumber = 5);
-  AssertTrue(o.Instance.FindPath('/k"l', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/k"l'), Node));
   AssertTrue(Node.AsNumber = 6);
-  AssertTrue(o.Instance.FindPath('/ ', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/ '), Node));
   AssertTrue(Node.AsNumber = 7);
-  AssertTrue(o.Instance.FindPath(TJsonNode.JsonPtrEncode(['m~n']), Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From(['m~n']), Node));
   AssertTrue(Node.AsNumber = 8);
 end;
 
@@ -539,7 +539,7 @@ begin
   o.Instance.AsJson := '["bar", "baz"]';
   AssertTrue(o.Instance.IsArray);
   AssertTrue(o.Instance.Count = 2);
-  AssertTrue(o.Instance.FindPath('/-', Node));
+  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/-'), Node));
   AssertTrue(Node.IsNull);
   Node.AsString := 'foo';
   AssertTrue(o.Instance.Count.ToString, o.Instance.Count = 3);
@@ -1119,7 +1119,7 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create(TestJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/0/groups'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/0/groups')));
   Reader.Instance.Iterate(@{%H-}io.CountIt);
   AssertTrue(io.List.Count = 3);
   AssertTrue(io.List[0].Value = 'talk');
@@ -1228,7 +1228,7 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create(TestJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/1/groups'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/1/groups')));
   Reader.Instance.Iterate(@CountIt);
   AssertTrue({%H-}List.Count = 4);
   AssertTrue(List[0].Value = 'talk');
@@ -1387,13 +1387,13 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create(TestJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/0/groups'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/0/groups')));
   AssertTrue(Reader.Instance.Find('1'));
   AssertTrue(Reader.Instance.Value.AsString = 'humor');
 
   Stream.Instance := TStringStream.Create(TestJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/1/groups'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/1/groups')));
   AssertTrue(Reader.Instance.CopyStruct(s));
   AssertTrue(s = '["talk","games","math","art"]');
 end;
@@ -1406,43 +1406,43 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create(PathJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath(''));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('')));
   AssertTrue(Reader.Instance.CopyStruct(s));
   AssertTrue(s = PathJson);
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/foo'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/foo')));
   AssertTrue(Reader.Instance.CopyStruct(s));
   AssertTrue(s = '["bar", "baz"]');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/foo/0'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/foo/0')));
   AssertTrue(Reader.Instance.TokenKind = tkString);
   AssertTrue(Reader.Instance.AsString = 'bar');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/')));
   AssertTrue(Reader.Instance.TokenKind = tkNumber);
   AssertTrue(Reader.Instance.AsNumber = 0);
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath(TJsonNode.JsonPtrEncode(['a/b'])));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From(['a/b'])));
   AssertTrue(Reader.Instance.TokenKind = tkNumber);
   AssertTrue(Reader.Instance.AsNumber = 1);
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/ '));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/ ')));
   AssertTrue(Reader.Instance.TokenKind = tkNumber);
   AssertTrue(Reader.Instance.AsNumber = 7);
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath(TJsonNode.JsonPtrEncode(['m~n'])));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From(['m~n'])));
   AssertTrue(Reader.Instance.TokenKind = tkNumber);
   AssertTrue(Reader.Instance.AsNumber = 8);
 end;
@@ -1451,44 +1451,44 @@ procedure TTestJsonReader.Path;
 var
   Reader: specialize TGUniqRef<TJsonReader>;
   Stream: specialize TGUniqRef<TStringStream>;
-  s: string;
+  ptr: TJsonPtr;
 begin
   {%H-}Stream.Instance := TStringStream.Create(PathJson);
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath(''));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('')));
   AssertTrue(Reader.Instance.Path = '');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/foo'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/foo')));
   AssertTrue(Reader.Instance.Path = '/foo');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/foo/0'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/foo/0')));
   AssertTrue(Reader.Instance.Path = '/foo/0');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/'));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/')));
   AssertTrue(Reader.Instance.Path = '/');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  s := TJsonNode.JsonPtrEncode(['a/b']);
-  AssertTrue(Reader.Instance.FindPath(s));
-  AssertTrue(Reader.Instance.Path = s);
+  ptr := TJsonPtr.From(['a/b']);
+  AssertTrue(Reader.Instance.FindPath(ptr));
+  AssertTrue(Reader.Instance.Path = ptr.ToString);
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  AssertTrue(Reader.Instance.FindPath('/ '));
+  AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/ ')));
   AssertTrue(Reader.Instance.Path = '/ ');
 
   Stream.Instance := TStringStream.Create(PathJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
-  s := TJsonNode.JsonPtrEncode(['m~n']);
-  AssertTrue(Reader.Instance.FindPath(s));
-  AssertTrue(Reader.Instance.Path = s);
+  ptr := TJsonPtr.From(['m~n']);
+  AssertTrue(Reader.Instance.FindPath(ptr));
+  AssertTrue(Reader.Instance.Path = ptr.ToString);
 end;
 
 procedure TTestJsonReader.TestReader;
