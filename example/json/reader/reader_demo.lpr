@@ -164,7 +164,7 @@ procedure FindPath;
   procedure Find(aReader: TJsonReader; const aPath: string);
   begin
     WriteLn('Search path: ', aPath);
-    if aReader.FindPath(aPath) then begin
+    if aReader.FindPath(TJsonPtr.From(aPath)) then begin
       Write('Found item and it is ');
       if aReader.IsStartToken(aReader.TokenKind) then begin
         if aReader.TokenKind = tkArrayBegin then
@@ -202,7 +202,7 @@ begin
   Reader.Instance := TJsonReader.Create(Stream.Instance);
 
   WriteLn('Now let''s try to find the structure at ''/0/items'' and copy it.');
-  if Reader.Instance.FindPath('/0/items') and Reader.Instance.CopyStruct(s) then
+  if Reader.Instance.FindPath(TJsonPtr.From('/0/items')) and Reader.Instance.CopyStruct(s) then
     begin
       WriteLn('done: ');
       WriteLn(s);
