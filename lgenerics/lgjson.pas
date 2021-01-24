@@ -71,7 +71,8 @@ type
     class operator AddRef(var v: TJVariant);
   public
     class function Null: TJVariant; static; inline;
-    class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; static;
+    class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; static; inline;
+    class function IsExactInt(aValue: Double): Boolean; static; inline;
     class operator := (aValue: Double): TJVariant; inline;
     class operator := (aValue: Boolean): TJVariant; inline;
     class operator := (const aValue: string): TJVariant; inline;
@@ -392,6 +393,7 @@ type
     function  IsFalse: Boolean; inline;
     function  IsTrue: Boolean; inline;
     function  IsNumber: Boolean; inline;
+    function  IsInteger: Boolean; inline;
     function  IsString: Boolean; inline;
     function  IsArray: Boolean; inline;
     function  IsObject: Boolean; inline;
@@ -833,6 +835,11 @@ begin
   Result := False;
 end;
 
+class function TJVariant.IsExactInt(aValue: Double): Boolean;
+begin
+  Result := (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT);
+end;
+
 class operator TJVariant.:=(aValue: Double): TJVariant;
 begin
   Result{%H-}.DoClear;
@@ -922,7 +929,7 @@ function  TJVariant.IsInteger: Boolean;
 begin
   if Kind <> vkNumber then
     exit(False);
-  Result := (Frac(FValue.Num) = 0) and (Abs(FValue.Num) <= MAX_EXACT_INT);
+  Result := IsExactInt(FValue.Num);
 end;
 
 function TJVariant.AsBoolean: Boolean;
@@ -1980,6 +1987,7 @@ function TJsonNode.DoBuildJson: TStrBuilder;
 var
   sb: TStrBuilder;
   e: TPair;
+  IVal: Int64;
   procedure BuildJson(aInst: TJsonNode);
   var
     I, Last: SizeInt;
@@ -1988,7 +1996,11 @@ var
       jvkNull:   sb.Append(JS_NULL);
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
-      jvkNumber: sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
+      jvkNumber:
+        if TJVariant.IsExactInt(aInst.FValue.Num, IVal) then
+          sb.Append(IntToStr(IVal))
+        else
+          sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
       jvkString: sb.AppendEncode(aInst.FString);
       jvkArray:
         begin
@@ -2506,6 +2518,13 @@ end;
 function TJsonNode.IsNumber: Boolean;
 begin
   Result := Kind = jvkNumber;
+end;
+
+function TJsonNode.IsInteger: Boolean;
+begin
+  if Kind <> jvkNumber then
+    exit(False);
+  Result := TJVariant.IsExactInt(FValue.Num);
 end;
 
 function TJsonNode.IsString: Boolean;
@@ -3368,6 +3387,7 @@ var
   sb: TStrBuilder;
   Pair: TPair;
   MultiLine, UseTabs, StrEncode, BsdBrace, HasText: Boolean;
+  IVal: Int64;
   procedure NewLine(Pos: Integer); inline;
   begin
     sb.Append(sLineBreak);
@@ -3403,7 +3423,11 @@ var
       jvkNull:   sb.Append(JS_NULL);
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
-      jvkNumber: sb.Append(FloatToStr(aInst.AsNumber, FmtSettings));
+      jvkNumber:
+        if TJVariant.IsExactInt(aInst.FValue.Num, IVal) then
+          sb.Append(IntToStr(IVal))
+        else
+          sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
       jvkString: AppendString(aInst.FString);
       jvkArray: begin
           CheckHasText(aPos);
