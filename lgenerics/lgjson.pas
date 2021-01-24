@@ -127,22 +127,26 @@ type
     end;
 
     class operator = (const L, R: TJsonPtr): Boolean;
-  { constructs a pointer from Pascal string }
+  { constructs a pointer from Pascal string, treats slash("/")
+    as a path delimiter and "~" as a special character }
     constructor From(const s: string);
   { constructs a pointer from path segments as Pascal strings }
     constructor From(const aPath: TStringArray);
-  { constructs a pointer from JSON string }
+  { constructs a pointer from JSON string, treats slash("/")
+    as a path delimiter and "~" as a special character }
     constructor FromAlien(const s: string);
-    function GetEnumerator: TEnumerator; inline;
-    function IsEmpty: Boolean; inline;
-    function NonEmpty: Boolean; inline;
+    function  GetEnumerator: TEnumerator; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear; inline;
+    procedure Append(const aSegment: string); inline;
   { returns a pointer as a Pascal string }
-    function ToString: string; inline;
+    function  ToString: string; inline;
   { returns a pointer as a JSON string }
-    function ToAlien: string;
-    function ToSegments: TStringArray; inline;
-    property Count: SizeInt read GetCount;
-    property Segments[aIndex: SizeInt]: string read GetSegment; default;
+    function  ToAlien: string;
+    function  ToSegments: TStringArray; inline;
+    property  Count: SizeInt read GetCount;
+    property  Segments[aIndex: SizeInt]: string read GetSegment; default;
   end;
 
 const
@@ -337,15 +341,18 @@ type
       function GetEnumerator: TNameEnumerator;
     end;
 
-  { validators: aDepth indicates the maximum nesting depth of structures;
-    if aSkipBom is set to True then UTF-8 BOM(and only that) will be ignored }
+  { checks if the content is well-formed JSON; aDepth indicates the maximum
+    nesting depth of structures; if aSkipBom is set to True then UTF-8 BOM(and only that)
+    will be ignored }
     class function ValidJson(const s: string; aDepth: Integer = DEF_DEPTH;
                              aSkipBom: Boolean = False): Boolean; static;
     class function ValidJson(aJson: TStream; aDepth: Integer = DEF_DEPTH;
                              aSkipBom: Boolean = False): Boolean; static;
     class function ValidJsonFile(const aFileName: string; aDepth: Integer = DEF_DEPTH;
                                  aSkipBom: Boolean = False): Boolean; static;
+  { checks if s represents a valid JSON string }
     class function JsonStringValid(const s: string): Boolean; static;
+  { checks if s represents a valid JSON number }
     class function JsonNumberValid(const s: string): Boolean; static;
     class function LikelyKind(aBuf: PAnsiChar; aSize: SizeInt): TJsValueKind; static;
   { returns the parsing result; if the result is True, then the created
@@ -1111,6 +1118,16 @@ begin
   Result := System.Length(FSegments) <> 0;
 end;
 
+procedure TJsonPtr.Clear;
+begin
+  FSegments := nil;
+end;
+
+procedure TJsonPtr.Append(const aSegment: string);
+begin
+  System.Insert(aSegment, FSegments, Count);
+end;
+
 function TJsonPtr.ToString: string;
 begin
   Result := Encode(FSegments);
@@ -1729,7 +1746,7 @@ function TJsonNode.TStrBuilder.ToPChar: PAnsiChar;
 begin
   EnsureCapacity(Succ(Count));
   FBuffer[Count] := #0;
-  MakeEmpty;
+  FCount := 0;
   Result := Pointer(FBuffer);
 end;
 
