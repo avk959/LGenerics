@@ -378,6 +378,8 @@ type
   { parses the JSON string s, returns nil in case of failure,
     otherwise its representation as TJsonNode }
     class function NewJson(const s: string): TJsonNode; static; inline;
+  { returns the maximum nesting depth of an instance, is recursive }
+    class function MaxNestDepth(aNode: TJsonNode): SizeInt; static;
     constructor Create;
     constructor CreateNull;
     constructor Create(aValue: Boolean);
@@ -526,12 +528,13 @@ type
   { tries to find an element using the path specified as an array of path segments;
     each node considered self as a root }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
+  { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = DEF_INDENT): string;
     function  AsText: string;
     function  GetValue(out aValue: TJVariant): Boolean;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
-  { GetAsJson returns the most compact representation of an instance as a JSON string;
+  { GetAsJson returns the most compact JSON representation of an instance, is recursive;
     SetAsJson remark: if the parser fails to parse the original string,
     an exception will be raised. }
     property  AsJson: string read GetAsJson write SetAsJson;
@@ -2428,6 +2431,28 @@ end;
 class function TJsonNode.NewJson(const s: string): TJsonNode;
 begin
   TryParse(s, Result);
+end;
+
+class function TJsonNode.MaxNestDepth(aNode: TJsonNode): SizeInt;
+var
+  MaxDep: SizeInt = 0;
+  procedure Traverse(aNode: TJsonNode; aLevel: SizeInt);
+  var
+    I: SizeInt;
+  begin
+    if aLevel > MaxDep then
+      MaxDep := aLevel;
+    if aNode.Kind = jvkObject then
+      for I := 0 to Pred(aNode.FObject^.Count) do
+        Traverse(aNode.FObject^.Mutable[I]^.Value, Succ(aLevel))
+    else
+      if aNode.Kind = jvkArray then
+        for I := 0 to Pred(aNode.FArray^.Count) do
+          Traverse(aNode.FArray^.Mutable[I]^, Succ(aLevel));
+  end;
+begin
+  Traverse(aNode, 0);
+  Result := MaxDep;
 end;
 
 constructor TJsonNode.Create;
