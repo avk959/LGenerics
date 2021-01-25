@@ -126,7 +126,10 @@ type
       function MoveNext: Boolean; inline;
       property Current: string read GetCurrent;
     end;
-
+  { checks if a Pascal string s is a well-formed JSON Pointer }
+    class function ValidPtr(const s: string): Boolean; static;
+  { checks if a JSON string s is a well-formed JSON Pointer }
+    class function ValidAlien(const s: string): Boolean; static;
     class operator = (const L, R: TJsonPtr): Boolean;
   { constructs a pointer from Pascal string, treats slash("/")
     as a path delimiter and "~" as a special character }
@@ -978,182 +981,6 @@ begin
   Result := TJVarPair.Create(aName, aValue);
 end;
 
-{ TJsonPtr.TEnumerator }
-
-function TJsonPtr.TEnumerator.GetCurrent: string;
-begin
-  Result := FList[FIndex];
-end;
-
-function TJsonPtr.TEnumerator.MoveNext: Boolean;
-begin
-  if FIndex < System.High(FList) then
-    begin
-      Inc(FIndex);
-      exit(True);
-    end;
-  Result := False;
-end;
-
-{ TJsonPtr }
-
-function TJsonPtr.GetCount: SizeInt;
-begin
-  Result := System.Length(FSegments);
-end;
-
-function TJsonPtr.GetSegment(aIndex: SizeInt): string;
-begin
-  if SizeUInt(aIndex) >= SizeUInt(System.Length(FSegments)) then
-    raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-  Result := FSegments[aIndex];
-end;
-
-function TJsonPtr.Encode(const aSeg: TStringArray): string;
-var
-  sb: TJsonNode.TStrBuilder;
-  I, J: SizeInt;
-begin
-  Result := '';
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  for I := 0 to System.High(aSeg) do
-    begin
-      sb.Append('/');
-      for J := 1 to System.Length(aSeg[I]) do
-        case aSeg[I][J] of
-          '/':
-            begin
-              sb.Append('~');
-              sb.Append('1');
-            end;
-          '~':
-            begin
-              sb.Append('~');
-              sb.Append('0');
-            end;
-        else
-          sb.Append(aSeg[I][J]);
-        end;
-    end;
-  Result := sb.ToString;
-end;
-
-function TJsonPtr.Decode(const s: string): TStringArray;
-var
-  sb: TJsonNode.TStrBuilder;
-  I, J: SizeInt;
-begin
-  if (s = '') or (s[1] <> '/') then
-    exit(nil);
-  if s = '/' then
-    exit(['']);
-  Result := System.Copy(s, 2, System.Length(s)).Split(['/']);
-  sb := TJsonNode.TStrBuilder.Create(System.Length(s));
-  for I := 0 to System.High(Result) do
-    begin
-      J := 1;
-      while J <= System.Length(Result[I]) do
-        if Result[I][J] <> '~' then
-          begin
-            sb.Append(Result[I][J]);
-            Inc(J);
-          end
-        else
-          if J < System.Length(Result[I]) then
-            if Result[I][J + 1] = '0' then
-               begin
-                 sb.Append('~');
-                 J += 2;
-               end
-            else
-              if Result[I][J + 1] = '1' then
-                begin
-                  sb.Append('/');
-                  J += 2;
-                end
-              else
-                raise EJsException.Create(SEInvalidJsPtr)
-          else
-            raise EJsException.Create(SEInvalidJsPtr);
-      Result[I] := sb.ToString;
-    end;
-end;
-
-class operator TJsonPtr.=(const L, R: TJsonPtr): Boolean;
-var
-  I: SizeInt;
-begin
-  if System.Length(L.FSegments) <> System.Length(R.FSegments) then
-    exit(False);
-  for I := 0 to System.High(L.FSegments) do
-    if L.FSegments[I] <> R.FSegments[I] then
-      exit(False);
-  Result := True;
-end;
-
-constructor TJsonPtr.From(const s: string);
-begin
-  FSegments := Decode(s);
-end;
-
-constructor TJsonPtr.From(const aPath: TStringArray);
-begin
-  FSegments := System.Copy(aPath);
-end;
-
-constructor TJsonPtr.FromAlien(const s: string);
-var
-  sb: TJsonNode.TStrBuilder;
-begin
-  sb := TJsonNode.TStrBuilder.Create(s);
-  FSegments := Decode(sb.ToDecodeString);
-end;
-
-function TJsonPtr.GetEnumerator: TEnumerator;
-begin
-  Result.FList := FSegments;
-  Result.FIndex := NULL_INDEX;
-end;
-
-function TJsonPtr.IsEmpty: Boolean;
-begin
-  Result := System.Length(FSegments) = 0;
-end;
-
-function TJsonPtr.NonEmpty: Boolean;
-begin
-  Result := System.Length(FSegments) <> 0;
-end;
-
-procedure TJsonPtr.Clear;
-begin
-  FSegments := nil;
-end;
-
-procedure TJsonPtr.Append(const aSegment: string);
-begin
-  System.Insert(aSegment, FSegments, Count);
-end;
-
-function TJsonPtr.ToString: string;
-begin
-  Result := Encode(FSegments);
-end;
-
-function TJsonPtr.ToAlien: string;
-var
-  sb: TJsonNode.TStrBuilder;
-begin
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  sb.AppendEncode(Encode(FSegments));
-  Result := sb.ToString;
-end;
-
-function TJsonPtr.ToSegments: TStringArray;
-begin
-  Result := System.Copy(FSegments);
-end;
-
 const
 {$PUSH}{$J-}
   chOpenCurBr: AnsiChar  = '{';
@@ -1755,6 +1582,209 @@ begin
   FBuffer[Count] := #0;
   FCount := 0;
   Result := Pointer(FBuffer);
+end;
+
+{ TJsonPtr.TEnumerator }
+
+function TJsonPtr.TEnumerator.GetCurrent: string;
+begin
+  Result := FList[FIndex];
+end;
+
+function TJsonPtr.TEnumerator.MoveNext: Boolean;
+begin
+  if FIndex < System.High(FList) then
+    begin
+      Inc(FIndex);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TJsonPtr }
+
+function TJsonPtr.GetCount: SizeInt;
+begin
+  Result := System.Length(FSegments);
+end;
+
+function TJsonPtr.GetSegment(aIndex: SizeInt): string;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(System.Length(FSegments)) then
+    raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FSegments[aIndex];
+end;
+
+function TJsonPtr.Encode(const aSeg: TStringArray): string;
+var
+  sb: TJsonNode.TStrBuilder;
+  I, J: SizeInt;
+begin
+  Result := '';
+  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  for I := 0 to System.High(aSeg) do
+    begin
+      sb.Append('/');
+      for J := 1 to System.Length(aSeg[I]) do
+        case aSeg[I][J] of
+          '/':
+            begin
+              sb.Append('~');
+              sb.Append('1');
+            end;
+          '~':
+            begin
+              sb.Append('~');
+              sb.Append('0');
+            end;
+        else
+          sb.Append(aSeg[I][J]);
+        end;
+    end;
+  Result := sb.ToString;
+end;
+
+function TJsonPtr.Decode(const s: string): TStringArray;
+var
+  sb: TJsonNode.TStrBuilder;
+  I, J: SizeInt;
+begin
+  if (s = '') then
+    exit(nil);
+  if s[1] <> '/' then
+    raise EJsException.Create(SEInvalidJsPtr);
+  if s = '/' then
+    exit(['']);
+  Result := System.Copy(s, 2, System.Length(s)).Split(['/']);
+  sb := TJsonNode.TStrBuilder.Create(System.Length(s));
+  for I := 0 to System.High(Result) do
+    begin
+      if Result[I][System.Length(Result[I])] = '~' then
+        raise EJsException.Create(SEInvalidJsPtr);
+      J := 1;
+      while J <= System.Length(Result[I]) do
+        if Result[I][J] <> '~' then
+          begin
+            sb.Append(Result[I][J]);
+            Inc(J);
+          end
+        else
+          if Result[I][J + 1] = '0' then
+             begin
+               sb.Append('~');
+               J += 2;
+             end
+          else
+            if Result[I][J + 1] = '1' then
+              begin
+                sb.Append('/');
+                J += 2;
+              end
+            else
+              raise EJsException.Create(SEInvalidJsPtr);
+      Result[I] := sb.ToString;
+    end;
+end;
+
+class function TJsonPtr.ValidPtr(const s: string): Boolean;
+var
+  I: SizeInt;
+begin
+  if s = '' then
+    exit(True);
+  if s[1] <> '/' then
+    exit(False);
+  for I := 2 to Pred(System.Length(s)) do
+    if (s[I] = '~') and not (s[Succ(I)] in ['0'..'1']) then
+      exit(False);
+  if s[System.Length(s)] = '~' then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPtr.ValidAlien(const s: string): Boolean;
+var
+  sb: TJsonNode.TStrBuilder;
+begin
+  if not TJsonNode.JsonStringValid(s) then
+    exit(False);
+  sb := TJsonNode.TStrBuilder.Create(s);
+  Result := ValidPtr(sb.ToDecodeString);
+end;
+
+class operator TJsonPtr.=(const L, R: TJsonPtr): Boolean;
+var
+  I: SizeInt;
+begin
+  if System.Length(L.FSegments) <> System.Length(R.FSegments) then
+    exit(False);
+  for I := 0 to System.High(L.FSegments) do
+    if L.FSegments[I] <> R.FSegments[I] then
+      exit(False);
+  Result := True;
+end;
+
+constructor TJsonPtr.From(const s: string);
+begin
+  FSegments := Decode(s);
+end;
+
+constructor TJsonPtr.From(const aPath: TStringArray);
+begin
+  FSegments := System.Copy(aPath);
+end;
+
+constructor TJsonPtr.FromAlien(const s: string);
+var
+  sb: TJsonNode.TStrBuilder;
+begin
+  sb := TJsonNode.TStrBuilder.Create(s);
+  FSegments := Decode(sb.ToDecodeString);
+end;
+
+function TJsonPtr.GetEnumerator: TEnumerator;
+begin
+  Result.FList := FSegments;
+  Result.FIndex := NULL_INDEX;
+end;
+
+function TJsonPtr.IsEmpty: Boolean;
+begin
+  Result := System.Length(FSegments) = 0;
+end;
+
+function TJsonPtr.NonEmpty: Boolean;
+begin
+  Result := System.Length(FSegments) <> 0;
+end;
+
+procedure TJsonPtr.Clear;
+begin
+  FSegments := nil;
+end;
+
+procedure TJsonPtr.Append(const aSegment: string);
+begin
+  System.Insert(aSegment, FSegments, Count);
+end;
+
+function TJsonPtr.ToString: string;
+begin
+  Result := Encode(FSegments);
+end;
+
+function TJsonPtr.ToAlien: string;
+var
+  sb: TJsonNode.TStrBuilder;
+begin
+  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  sb.AppendEncode(Encode(FSegments));
+  Result := sb.ToString;
+end;
+
+function TJsonPtr.ToSegments: TStringArray;
+begin
+  Result := System.Copy(FSegments);
 end;
 
 { TJsonNode.TEmptyPairEnumerator }
