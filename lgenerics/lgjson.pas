@@ -530,10 +530,10 @@ type
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = DEF_INDENT): string;
-    function  AsText: string;
     function  GetValue(out aValue: TJVariant): Boolean;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
+    function  ToString: string; override;
   { GetAsJson returns the most compact JSON representation of an instance, is recursive;
     SetAsJson remark: if the parser fails to parse the original string,
     an exception will be raised. }
@@ -3545,20 +3545,6 @@ begin
   Result := sb.ToString;
 end;
 
-function TJsonNode.AsText: string;
-begin
-  case Kind of
-    jvkUnknown: Result := JS_UNDEF;
-    jvkNull:    Result := JS_NULL;
-    jvkFalse:   Result := JS_FALSE;
-    jvkTrue:    Result := JS_TRUE;
-    jvkNumber:  Result := FValue.Num.ToString;
-    jvkString:  Result := FString;
-    jvkArray,
-    jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
-  end;
-end;
-
 function TJsonNode.GetValue(out aValue: TJVariant): Boolean;
 begin
   if not IsScalar then exit(False);
@@ -3587,6 +3573,26 @@ begin
     SaveToStream(fs);
   finally
     fs.Free;
+  end;
+end;
+
+function TJsonNode.ToString: string;
+var
+  I64: Int64;
+begin
+  case Kind of
+    jvkUnknown: Result := JS_UNDEF;
+    jvkNull:    Result := JS_NULL;
+    jvkFalse:   Result := JS_FALSE;
+    jvkTrue:    Result := JS_TRUE;
+    jvkNumber:
+      if TJVariant.IsExactInt(FValue.Num, I64) then
+        Result := I64.ToString
+      else
+        Result := FValue.Num.ToString;
+    jvkString:  Result := FString;
+    jvkArray,
+    jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
   end;
 end;
 
