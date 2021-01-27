@@ -46,6 +46,8 @@ type
     procedure AddUniq;
     procedure Values;
     procedure SkipBom;
+    procedure Equal;
+    procedure Clone;
   end;
 
   { TTestJsonWriter }
@@ -598,6 +600,32 @@ begin
   Stream.Instance.Position := 0;
   AssertTrue(TJsonNode.TryParse(Stream.Instance, o, 10, True));
   o.Free;
+end;
+
+procedure TTestJson.Equal;
+var
+  o1, o2: specialize TGAutoRef<TJsonNode>;
+  User: TJsonNode;
+begin
+  AssertTrue(o1.Instance.EqualTo(o2.Instance));
+  AssertTrue(o1.Instance.Parse(TestJson));
+  AssertTrue(o2.Instance.Parse(TestJson));
+  AssertTrue(o1.Instance.EqualTo(o2.Instance));
+  User := o2.Instance.Items[1];
+  User['spouse'] := 'Kate';
+  AssertFalse(o1.Instance.EqualTo(o2.Instance));
+  User['spouse'] := 'Mary';
+  AssertTrue(o1.Instance.EqualTo(o2.Instance));
+end;
+
+procedure TTestJson.Clone;
+var
+  o1, o2: specialize TGAutoRef<TJsonNode>;
+begin
+  AssertTrue(o1.Instance.Parse(TestJson));
+  {%H-}o2.Instance := o1.Instance.Clone;
+  AssertTrue(o1.Instance <> o2.Instance);
+  AssertTrue(o1.Instance.EqualTo(o2.Instance));
 end;
 
 { TTestJsonWriter }
