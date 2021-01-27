@@ -2492,13 +2492,15 @@ var
   begin
     if aLevel > MaxDep then
       MaxDep := aLevel;
-    if aNode.Kind = jvkObject then
-      for I := 0 to Pred(aNode.FObject^.Count) do
-        Traverse(aNode.FObject^.Mutable[I]^.Value, Succ(aLevel))
+    case aNode.Kind of
+      jvkArray:
+       for I := 0 to Pred(aNode.FArray^.Count) do
+         Traverse(aNode.FArray^.UncMutable[I]^, Succ(aLevel));
+      jvkObject:
+       for I := 0 to Pred(aNode.FObject^.Count) do
+         Traverse(aNode.FObject^.Mutable[I]^.Value, Succ(aLevel));
     else
-      if aNode.Kind = jvkArray then
-        for I := 0 to Pred(aNode.FArray^.Count) do
-          Traverse(aNode.FArray^.UncMutable[I]^, Succ(aLevel));
+    end;
   end;
 begin
   Traverse(aNode, 0);
