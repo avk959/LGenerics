@@ -132,12 +132,14 @@ type
     class function ValidAlien(const s: string): Boolean; static;
     class operator = (const L, R: TJsonPtr): Boolean;
   { constructs a pointer from Pascal string, treats slash("/")
-    as a path delimiter and "~" as a special character }
+    as a path delimiter and "~" as a special character;
+    raises an exception if s is not a well-formed JSON Pointer }
     constructor From(const s: string);
   { constructs a pointer from path segments as Pascal strings }
     constructor From(const aPath: TStringArray);
   { constructs a pointer from JSON string, treats slash("/")
-    as a path delimiter and "~" as a special character }
+    as a path delimiter and "~" as a special character;
+    raises an exception if s is not a well-formed JSON Pointer }
     constructor FromAlien(const s: string);
     function  GetEnumerator: TEnumerator; inline;
     function  IsEmpty: Boolean; inline;
@@ -350,7 +352,9 @@ type
     will be ignored }
     class function ValidJson(const s: string; aDepth: Integer = DEF_DEPTH;
                              aSkipBom: Boolean = False): Boolean; static;
-    class function ValidJson(aJson: TStream; aDepth: Integer = DEF_DEPTH;
+    class function ValidJson(aStream: TStream; aDepth: Integer = DEF_DEPTH;
+                             aSkipBom: Boolean = False): Boolean; static;
+    class function ValidJson(aStream: TStream; aCount: SizeInt; aDepth: Integer = DEF_DEPTH;
                              aSkipBom: Boolean = False): Boolean; static;
     class function ValidJsonFile(const aFileName: string; aDepth: Integer = DEF_DEPTH;
                                  aSkipBom: Boolean = False): Boolean; static;
@@ -365,6 +369,8 @@ type
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
     class function TryParse(aStream: TStream; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+    class function TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
+                            aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
     class function TryParseFile(const aFileName: string; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
   { converts a pascal string to a JSON string }
@@ -375,6 +381,7 @@ type
     class function NewNode(aValue: Double): TJsonNode; static; inline;
     class function NewNode(const aValue: string): TJsonNode; static; inline;
     class function NewNode(aKind: TJsValueKind): TJsonNode; static; inline;
+    class function NewNode(aNode: TJsonNode): TJsonNode; static; inline;
   { parses the JSON string s, returns nil in case of failure,
     otherwise its representation as TJsonNode }
     class function NewJson(const s: string): TJsonNode; static; inline;
@@ -388,6 +395,7 @@ type
     constructor Create(aKind: TJsValueKind);
     constructor Create(const a: TJVarArray);
     constructor Create(const a: TJPairArray);
+    constructor Create(aNode: TJsonNode);
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
     function  SubTree: TSubTree; inline;
@@ -407,6 +415,13 @@ type
     function  IsScalar: Boolean; inline;
     function  IsStruct: Boolean; inline;
     procedure Clear; inline;
+  { duplicates an instance, is recursive }
+    function  Clone: TJsonNode; inline;
+  { makes a deep copy of the aNode, is recursive }
+    procedure CopyFrom(aNode: TJsonNode);
+  { checks that an instance is element-wise equal to aNode, is recursive;
+    returns false if any object contains a non-unique key }
+    function  EqualTo(aNode: TJsonNode): Boolean;
   { tries to load JSON from a string, in case of failure it returns False,
     in this case the content of the instance does not change }
     function  Parse(const s: string): Boolean;
@@ -2121,7 +2136,7 @@ function TJsonNode.GetItem(aIndex: SizeInt): TJsonNode;
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
     case Kind of
-      jvkArray:  exit(FArray^.Mutable[aIndex]^);
+      jvkArray:  exit(FArray^.UncMutable[aIndex]^);
       jvkObject: exit(FObject^.Mutable[aIndex]^.Value);
     else
     end
@@ -2241,19 +2256,34 @@ begin
     end;
 end;
 
-class function TJsonNode.ValidJson(aJson: TStream; aDepth: Integer; aSkipBom: Boolean): Boolean;
+class function TJsonNode.ValidJson(aStream: TStream; aDepth: Integer; aSkipBom: Boolean): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseMode;
   DynStack: array of TParseMode = nil;
 begin
   if aDepth < 1 then exit(False);
   if aDepth <= DEF_DEPTH then
-    Result := ValidateStream(aJson, aSkipBom, TOpenArray.Create(@Stack[0], aDepth + 1))
+    Result := ValidateStream(aStream, aSkipBom, TOpenArray.Create(@Stack[0], aDepth + 1))
   else
     begin
       System.SetLength(DynStack, aDepth + 1);
-      Result := ValidateStream(aJson, aSkipBom, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
+      Result := ValidateStream(aStream, aSkipBom, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
     end;
+end;
+
+class function TJsonNode.ValidJson(aStream: TStream; aCount: SizeInt; aDepth: Integer;
+  aSkipBom: Boolean): Boolean;
+var
+  s: string;
+begin
+  with TStringStream.Create do
+    try
+      CopyFrom(aStream, aCount);
+      s := DataString;
+    finally
+      Free;
+    end;
+  Result := ValidJson(s, aDepth, aSkipBom);
 end;
 
 class function TJsonNode.ValidJsonFile(const aFileName: string; aDepth: Integer;
@@ -2373,8 +2403,23 @@ begin
   Result := TryParse(s, aRoot, aDepth, aSkipBom);
 end;
 
-class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode; aDepth: Integer;
-  aSkipBom: Boolean): Boolean;
+class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
+  aDepth: Integer; aSkipBom: Boolean): Boolean;
+var
+  s: string;
+begin
+  with TStringStream.Create do
+    try
+      CopyFrom(aStream, aCount);
+      s := DataString;
+    finally
+      Free;
+    end;
+  Result := TryParse(s, aRoot, aDepth, aSkipBom);
+end;
+
+class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode;
+  aDepth: Integer; aSkipBom: Boolean): Boolean;
 var
   s: string = '';
 begin
@@ -2428,6 +2473,11 @@ begin
   Result := TJsonNode.Create(aKind);
 end;
 
+class function TJsonNode.NewNode(aNode: TJsonNode): TJsonNode;
+begin
+  Result := TJsonNode.Create(aNode);
+end;
+
 class function TJsonNode.NewJson(const s: string): TJsonNode;
 begin
   TryParse(s, Result);
@@ -2448,7 +2498,7 @@ var
     else
       if aNode.Kind = jvkArray then
         for I := 0 to Pred(aNode.FArray^.Count) do
-          Traverse(aNode.FArray^.Mutable[I]^, Succ(aLevel));
+          Traverse(aNode.FArray^.UncMutable[I]^, Succ(aLevel));
   end;
 begin
   Traverse(aNode, 0);
@@ -2519,6 +2569,11 @@ begin
         vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Double(Value))));
         vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(string(Value))));
       end;
+end;
+
+constructor TJsonNode.Create(aNode: TJsonNode);
+begin
+  CopyFrom(aNode);
 end;
 
 destructor TJsonNode.Destroy;
@@ -2622,7 +2677,7 @@ end;
 function TJsonNode.TEnumerator.GetCurrent: TJsonNode;
 begin
   case FNode.Kind of
-    jvkArray:  Result := FNode.FArray^.Mutable[FCurrIndex]^;
+    jvkArray:  Result := FNode.FArray^.UncMutable[FCurrIndex]^;
     jvkObject: Result := FNode.FObject^.Mutable[FCurrIndex]^.Value;
   else
     Result := nil;
@@ -2718,6 +2773,78 @@ procedure TJsonNode.Clear;
 begin
   DoClear;
   FKind := jvkUnknown;
+end;
+
+function TJsonNode.Clone: TJsonNode;
+begin
+  Result := TJsonNode.Create(Self);
+end;
+
+procedure TJsonNode.CopyFrom(aNode: TJsonNode);
+var
+  I: SizeInt;
+begin
+  if aNode = Self then
+    exit;
+  case aNode.Kind of
+    jvkUnknown: Clear;
+    jvkNull:    AsNull;
+    jvkFalse:   AsBoolean := False;
+    jvkTrue:    AsBoolean := True;
+    jvkNumber:  AsNumber :=  aNode.FValue.Num;
+    jvkString:  AsString := aNode.FString;
+    jvkArray:
+      begin
+        AsArray.FArray := CreateJsArray;
+        FArray^.EnsureCapacity(aNode.FArray^.Count);
+        for I := 0 to Pred(aNode.FArray^.Count) do
+          FArray^.Add(aNode.FArray^.UncMutable[I]^.Clone);
+      end;
+    jvkObject:
+      begin
+        AsObject.FObject := CreateJsObject;
+        FObject^.EnsureCapacity(aNode.FObject^.Count);
+        for I := 0 to Pred(aNode.Count) do
+          with aNode.FObject^.Mutable[I]^ do
+            FObject^.Add(TPair.Create(Key, Value.Clone));
+      end;
+  end;
+end;
+
+function TJsonNode.EqualTo(aNode: TJsonNode): Boolean;
+var
+  I: SizeInt;
+  p: ^TPair;
+begin
+  if aNode = Self then
+    exit(True);
+  if (Kind <> aNode.Kind) or (Count <> aNode.Count) then
+    exit(False);
+  case aNode.Kind of
+    jvkUnknown, jvkNull, jvkFalse, jvkTrue: ;
+    jvkNumber:
+      if FValue.Num <> aNode.FValue.Num then
+        exit(False);
+    jvkString:
+      if FString <> aNode.FString then
+        exit(False);
+    jvkArray:
+      for I := 0 to Pred(FArray^.Count) do
+        if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
+          exit(False);
+    jvkObject:
+     for I := 0 to Pred(FObject^.Count) do
+       begin
+         if FObject^.CountOf(FObject^.Mutable[I]^.Key) <> 1 then
+           exit(False);
+         p := aNode.FObject^.Find(FObject^.Mutable[I]^.Key);
+         if p = nil then
+           exit(False);
+         if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
+           exit(False);
+       end;
+  end;
+  Result := True;
 end;
 
 function TJsonNode.Parse(const s: string): Boolean;
