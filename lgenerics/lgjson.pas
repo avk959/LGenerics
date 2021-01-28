@@ -179,7 +179,6 @@ type
     FmtSettings: TFormatSettings;
 
   const
-    ARRAY_INIT_SIZE   = 8;
     S_BUILD_INIT_SIZE = 256;
     RW_BUF_SIZE       = 65536;
 
@@ -1849,7 +1848,6 @@ class function TJsonNode.CreateJsArray: PJsArray;
 begin
   Result := System.GetMem(SizeOf(TJsArray));
   FillChar(Result^, SizeOf(TJsArray), 0);
-  Result^.EnsureCapacity(ARRAY_INIT_SIZE);
 end;
 
 class procedure TJsonNode.FreeJsArray(a: PJsArray);
@@ -2575,6 +2573,7 @@ end;
 
 constructor TJsonNode.Create(aNode: TJsonNode);
 begin
+  Create;
   CopyFrom(aNode);
 end;
 
@@ -2779,7 +2778,8 @@ end;
 
 function TJsonNode.Clone: TJsonNode;
 begin
-  Result := TJsonNode.Create(Self);
+  Result := TJsonNode.Create;
+  Result.CopyFrom(Self);
 end;
 
 procedure TJsonNode.CopyFrom(aNode: TJsonNode);
@@ -2788,6 +2788,7 @@ var
 begin
   if aNode = Self then
     exit;
+  Clear;
   case aNode.Kind of
     jvkUnknown: Clear;
     jvkNull:    AsNull;
@@ -2796,20 +2797,22 @@ begin
     jvkNumber:  AsNumber :=  aNode.FValue.Num;
     jvkString:  AsString := aNode.FString;
     jvkArray:
-      begin
-        AsArray.FArray := CreateJsArray;
-        FArray^.EnsureCapacity(aNode.FArray^.Count);
-        for I := 0 to Pred(aNode.FArray^.Count) do
-          FArray^.Add(aNode.FArray^.UncMutable[I]^.Clone);
-      end;
+      if aNode.Count > 0 then
+        begin
+          AsArray.FArray := CreateJsArray;
+          FArray^.EnsureCapacity(aNode.FArray^.Count);
+          for I := 0 to Pred(aNode.FArray^.Count) do
+            FArray^.Add(aNode.FArray^.UncMutable[I]^.Clone);
+        end;
     jvkObject:
-      begin
-        AsObject.FObject := CreateJsObject;
-        FObject^.EnsureCapacity(aNode.FObject^.Count);
-        for I := 0 to Pred(aNode.Count) do
-          with aNode.FObject^.Mutable[I]^ do
-            FObject^.Add(TPair.Create(Key, Value.Clone));
-      end;
+      if aNode.Count > 0 then
+        begin
+          AsObject.FObject := CreateJsObject;
+          FObject^.EnsureCapacity(aNode.FObject^.Count);
+          for I := 0 to Pred(aNode.Count) do
+            with aNode.FObject^.Mutable[I]^ do
+              FObject^.Add(TPair.Create(Key, Value.Clone));
+        end;
   end;
 end;
 
@@ -2831,20 +2834,24 @@ begin
       if FString <> aNode.FString then
         exit(False);
     jvkArray:
-      for I := 0 to Pred(FArray^.Count) do
-        if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
-          exit(False);
+      if Count > 0 then
+        for I := 0 to Pred(FArray^.Count) do
+          if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
+            exit(False);
     jvkObject:
-     for I := 0 to Pred(FObject^.Count) do
-       begin
-         if FObject^.CountOf(FObject^.Mutable[I]^.Key) <> 1 then
-           exit(False);
-         p := aNode.FObject^.Find(FObject^.Mutable[I]^.Key);
-         if p = nil then
-           exit(False);
-         if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
-           exit(False);
-       end;
+     begin
+       if Count > 0 then
+         for I := 0 to Pred(FObject^.Count) do
+           begin
+             if FObject^.CountOf(FObject^.Mutable[I]^.Key) <> 1 then
+               exit(False);
+             p := aNode.FObject^.Find(FObject^.Mutable[I]^.Key);
+             if p = nil then
+               exit(False);
+             if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
+               exit(False);
+           end;
+     end;
   end;
   Result := True;
 end;
