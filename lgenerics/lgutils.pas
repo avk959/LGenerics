@@ -74,8 +74,8 @@ type
 
 const
   MAX_CONTAINER_SIZE         = Succ(High(SizeInt) shr 2);
-  ARRAY_INITIAL_SIZE         = 16;// * must be power of 2 *
-  DEFAULT_CONTAINER_CAPACITY = 16;// * must be power of 2 *
+  ARRAY_INITIAL_SIZE         = 8;// * must be power of 2 *
+  DEFAULT_CONTAINER_CAPACITY = 8;// * must be power of 2 *
   BOUNDS_BOTH                = TRangeBounds([rbLow, rbHigh]);
   WAIT_INFINITE              = -1;
   {$PUSH}{$J-}
