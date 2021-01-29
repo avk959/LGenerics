@@ -384,8 +384,10 @@ type
   { parses the JSON string s, returns nil in case of failure,
     otherwise its representation as TJsonNode }
     class function NewJson(const s: string): TJsonNode; static; inline;
-  { returns the maximum nesting depth of an instance, is recursive }
+  { returns the maximum nesting depth of aNode, is recursive }
     class function MaxNestDepth(aNode: TJsonNode): SizeInt; static;
+  { returns True if aNode has no non-unique names, is recursive }
+    class function HasUniqueNames(aNode: TJsonNode): Boolean; static;
     constructor Create;
     constructor CreateNull;
     constructor Create(aValue: Boolean);
@@ -2104,6 +2106,7 @@ end;
 function TJsonNode.GetCount: SizeInt;
 begin
   case Kind of
+    jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString: exit(1);
     jvkArray:  if FArray <> nil then exit(FArray^.Count);
     jvkObject: if FObject <> nil then exit(FObject^.Count);
   else
@@ -2473,7 +2476,7 @@ end;
 
 class function TJsonNode.NewNode(aNode: TJsonNode): TJsonNode;
 begin
-  Result := TJsonNode.Create(aNode);
+  Result := aNode.Clone;
 end;
 
 class function TJsonNode.NewJson(const s: string): TJsonNode;
@@ -2490,19 +2493,48 @@ var
   begin
     if aLevel > MaxDep then
       MaxDep := aLevel;
-    case aNode.Kind of
-      jvkArray:
-       for I := 0 to Pred(aNode.FArray^.Count) do
-         Traverse(aNode.FArray^.UncMutable[I]^, Succ(aLevel));
-      jvkObject:
-       for I := 0 to Pred(aNode.FObject^.Count) do
-         Traverse(aNode.FObject^.Mutable[I]^.Value, Succ(aLevel));
-    else
-    end;
+    if aNode.Count > 0 then
+      case aNode.Kind of
+        jvkArray:
+          for I := 0 to Pred(aNode.FArray^.Count) do
+            Traverse(aNode.FArray^.UncMutable[I]^, Succ(aLevel));
+        jvkObject:
+          for I := 0 to Pred(aNode.FObject^.Count) do
+            Traverse(aNode.FObject^.Mutable[I]^.Value, Succ(aLevel));
+      else
+      end;
   end;
 begin
   Traverse(aNode, 0);
   Result := MaxDep;
+end;
+
+class function TJsonNode.HasUniqueNames(aNode: TJsonNode): Boolean;
+  function NamesUnique(aNode: TJsonNode): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if aNode.Count > 0 then
+      case aNode.Kind of
+        jvkArray:
+          for I := 0 to Pred(aNode.FArray^.Count) do
+            if not NamesUnique(aNode.FArray^.UncMutable[I]^) then
+              exit(False);
+        jvkObject:
+          for I := 0 to Pred(aNode.FObject^.Count) do
+            with aNode.FObject^.Mutable[I]^ do
+              begin
+                if not aNode.FObject^.ContainsUniq(Key) then
+                  exit(False);
+                if not NamesUnique(Value) then
+                  exit(False);
+              end;
+      else
+      end;
+    Result := True;
+  end;
+begin
+  Result := NamesUnique(aNode);
 end;
 
 constructor TJsonNode.Create;
@@ -2794,25 +2826,31 @@ begin
     jvkNull:    AsNull;
     jvkFalse:   AsBoolean := False;
     jvkTrue:    AsBoolean := True;
-    jvkNumber:  AsNumber :=  aNode.FValue.Num;
+    jvkNumber:  AsNumber := aNode.FValue.Num;
     jvkString:  AsString := aNode.FString;
     jvkArray:
-      if aNode.Count > 0 then
-        begin
-          AsArray.FArray := CreateJsArray;
-          FArray^.EnsureCapacity(aNode.FArray^.Count);
-          for I := 0 to Pred(aNode.FArray^.Count) do
-            FArray^.Add(aNode.FArray^.UncMutable[I]^.Clone);
-        end;
+     begin
+       AsArray;
+       if aNode.Count > 0 then
+         begin
+           FArray := CreateJsArray;
+           FArray^.EnsureCapacity(aNode.FArray^.Count);
+           for I := 0 to Pred(aNode.FArray^.Count) do
+             FArray^.Add(aNode.FArray^.UncMutable[I]^.Clone);
+         end;
+     end;
     jvkObject:
-      if aNode.Count > 0 then
-        begin
-          AsObject.FObject := CreateJsObject;
-          FObject^.EnsureCapacity(aNode.FObject^.Count);
-          for I := 0 to Pred(aNode.Count) do
-            with aNode.FObject^.Mutable[I]^ do
-              FObject^.Add(TPair.Create(Key, Value.Clone));
-        end;
+     begin
+       AsObject;
+       if aNode.Count > 0 then
+          begin
+            FObject := CreateJsObject;
+            FObject^.EnsureCapacity(aNode.FObject^.Count);
+            for I := 0 to Pred(aNode.Count) do
+              with aNode.FObject^.Mutable[I]^ do
+                FObject^.Add(TPair.Create(Key, Value.Clone));
+          end;
+     end;
   end;
 end;
 
@@ -2828,29 +2866,25 @@ begin
   case aNode.Kind of
     jvkUnknown, jvkNull, jvkFalse, jvkTrue: ;
     jvkNumber:
-      if FValue.Num <> aNode.FValue.Num then
+      if not SameValue(FValue.Num, aNode.FValue.Num) then
         exit(False);
     jvkString:
       if FString <> aNode.FString then
         exit(False);
     jvkArray:
-      if Count > 0 then
-        for I := 0 to Pred(FArray^.Count) do
-          if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
-            exit(False);
+     for I := 0 to Pred(Count) do
+       if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
+         exit(False);
     jvkObject:
      begin
-       if Count > 0 then
-         for I := 0 to Pred(FObject^.Count) do
-           begin
-             if FObject^.CountOf(FObject^.Mutable[I]^.Key) <> 1 then
-               exit(False);
-             p := aNode.FObject^.Find(FObject^.Mutable[I]^.Key);
-             if p = nil then
-               exit(False);
-             if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
-               exit(False);
-           end;
+       for I := 0 to Pred(Count) do
+         begin
+           p := aNode.FObject^.FindUniq(FObject^.Mutable[I]^.Key);
+           if p = nil then
+             exit(False);
+           if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
+             exit(False);
+         end;
      end;
   end;
   Result := True;
