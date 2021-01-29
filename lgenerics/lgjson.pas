@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Tiny JSON parser and utilites that try to follow RFC 8259.              *
+*   JSON parser and utilites that try to follow RFC 8259.                   *
 *                                                                           *
 *   Copyright(c) 2020-2021 A.Koverdyaev(avk)                                *
 *                                                                           *
@@ -418,7 +418,7 @@ type
     procedure Clear; inline;
   { duplicates an instance, is recursive }
     function  Clone: TJsonNode; inline;
-  { makes a deep copy of the aNode, is recursive }
+  { makes a deep copy of the aNode, does not check if aNode is assigned, is recursive }
     procedure CopyFrom(aNode: TJsonNode);
   { checks that an instance is element-wise equal to aNode, is recursive;
     returns false if any object contains a non-unique key }
