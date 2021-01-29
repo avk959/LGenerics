@@ -725,9 +725,6 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
   end;
 
-const
-  HASHLIST_INIT_SIZE = 8;
-
 type
 
   { TGLiteHashList2: array based list with fast searching by key or
@@ -771,13 +768,12 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  FindEntry(const aKey: TKey; aHash: SizeInt): PEntry;
-    function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt; inline;
+    function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt;
     function  DoFind(const aKey: TKey): SizeInt; inline;
-    function  HasUniq(const aKey: TKey): Boolean;
     function  DoFindUniq(const aKey: TKey): PEntry;
     function  GetCountOf(const aKey: TKey): SizeInt;
-    function  DoAdd(const e: TEntry): SizeInt;
-    function  DoAddHash(aHash: SizeInt): SizeInt;
+    function  DoAdd(const e: TEntry): SizeInt; inline;
+    function  DoAddHash(aHash: SizeInt): SizeInt; inline;
     procedure DoInsert(aIndex: SizeInt; const e: TEntry);
     procedure DoDelete(aIndex: SizeInt; out e: TEntry);
     procedure RemoveFromChain(aIndex: SizeInt);
@@ -3553,15 +3549,12 @@ begin
 end;
 
 function TGLiteHashList.DoAdd(const aValue: T; aHash: SizeInt): SizeInt;
-var
-  I: SizeInt;
 begin
   Result := Count;
   FNodeList[Result].Hash := aHash;
-  I := aHash and Pred(Capacity);
   FNodeList[Result].Data := aValue;
-  FNodeList[Result].Next := FChainList[I];
-  FChainList[I] := Result;
+  FNodeList[Result].Next := FChainList[aHash and Pred(Capacity)];
+  FChainList[aHash and Pred(Capacity)] := Result;
   Inc(FCount);
 end;
 
@@ -3962,9 +3955,9 @@ end;
 
 procedure TGLiteHashList2.InitialAlloc;
 begin
-  System.SetLength(FNodeList, HASHLIST_INIT_SIZE);
-  System.SetLength(FChainList, HASHLIST_INIT_SIZE);
-  System.FillChar(FChainList[0], HASHLIST_INIT_SIZE * SizeOf(SizeInt), $ff);
+  System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteHashList2.Rehash;
@@ -4034,25 +4027,6 @@ begin
   Result := DoFind(aKey, TKeyEqRel.HashCode(aKey));
 end;
 
-function TGLiteHashList2.HasUniq(const aKey: TKey): Boolean;
-var
-  I, h, cnt: SizeInt;
-begin
-  h := TKeyEqRel.HashCode(aKey);
-  I := FChainList[h and Pred(Capacity)];
-  cnt := 0;
-  while I <> NULL_INDEX do
-    begin
-      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
-        begin
-          Inc(cnt);
-          if cnt = 2 then exit(False);
-        end;
-      I := FNodeList[I].Next;
-    end;
-  Result := cnt = 1;
-end;
-
 function TGLiteHashList2.DoFindUniq(const aKey: TKey): PEntry;
 var
   I, h: SizeInt;
@@ -4087,27 +4061,21 @@ begin
 end;
 
 function TGLiteHashList2.DoAdd(const e: TEntry): SizeInt;
-var
-  I: SizeInt;
 begin
   Result := Count;
   FNodeList[Result].Hash := TKeyEqRel.HashCode(e.Key);
-  I := FNodeList[Result].Hash and Pred(Capacity);
   FNodeList[Result].Data := e;
-  FNodeList[Result].Next := FChainList[I];
-  FChainList[I] := Result;
+  FNodeList[Result].Next := FChainList[FNodeList[Result].Hash and Pred(Capacity)];
+  FChainList[FNodeList[Result].Hash and Pred(Capacity)] := Result;
   Inc(FCount);
 end;
 
 function TGLiteHashList2.DoAddHash(aHash: SizeInt): SizeInt;
-var
-  I: SizeInt;
 begin
   Result := Count;
   FNodeList[Result].Hash := aHash;
-  I := aHash and Pred(Capacity);
-  FNodeList[Result].Next := FChainList[I];
-  FChainList[I] := Result;
+  FNodeList[Result].Next := FChainList[aHash and Pred(Capacity)];
+  FChainList[aHash and Pred(Capacity)] := Result;
   Inc(FCount);
 end;
 
@@ -4184,11 +4152,10 @@ var
   h: SizeInt;
 begin
   h := TKeyEqRel.HashCode(aKey);
+  aIndex := NULL_INDEX;
   if Count > 0 then
-    aIndex := DoFind(aKey, h)
-  else
-    aIndex := NULL_INDEX;
-  Result := aIndex >= 0;
+    aIndex := DoFind(aKey, h);
+  Result := aIndex <> NULL_INDEX;
   if not Result then
     begin
       if Count = Capacity then
@@ -4441,7 +4408,7 @@ end;
 function TGLiteHashList2.ContainsUniq(const aKey: TKey): Boolean;
 begin
   if NonEmpty then
-    exit(HasUniq(aKey));
+    exit(DoFindUniq(aKey) <> nil);
   Result := False;
 end;
 
