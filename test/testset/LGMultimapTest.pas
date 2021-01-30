@@ -286,8 +286,9 @@ var
 begin
   m.Instance := TMultiMap.Create(Array12);
   c := m.Instance.Capacity;
+  m.Instance.EnsureCapacity(c+1);
+  AssertTrue(m.Instance.Capacity > c);
   m.Instance.TrimToFit;
-  AssertTrue(m.Instance.Capacity < c);
   AssertTrue(m.Instance.Capacity = 8);
 end;
 
@@ -643,8 +644,9 @@ var
 begin
   m.Instance := TMultiMap.Create(Array12);
   c := m.Instance.Capacity;
+  m.Instance.EnsureCapacity(c+1);
+  AssertTrue(m.Instance.Capacity > c);
   m.Instance.TrimToFit;
-  AssertTrue(m.Instance.Capacity < c);
   AssertTrue(m.Instance.Capacity = 8);
 end;
 
@@ -1000,8 +1002,9 @@ var
 begin
   m.Instance := TMultiMap.Create(Array12);
   c := m.Instance.Capacity;
+  m.Instance.EnsureCapacity(c+1);
+  AssertTrue(m.Instance.Capacity > c);
   m.Instance.TrimToFit;
-  AssertTrue(m.Instance.Capacity < c);
   AssertTrue(m.Instance.Capacity = 8);
 end;
 
