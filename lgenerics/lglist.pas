@@ -766,7 +766,7 @@ type
     procedure InitialAlloc;
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
-    procedure Expand;
+    procedure Expand; inline;
     function  FindEntry(const aKey: TKey; aHash: SizeInt): PEntry;
     function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt;
     function  DoFind(const aKey: TKey): SizeInt; inline;
@@ -3982,16 +3982,13 @@ begin
 end;
 
 procedure TGLiteHashList2.Expand;
-var
-  OldCapacity: SizeInt;
 begin
-  OldCapacity := Capacity;
-  if OldCapacity > 0 then
+  if Capacity > 0 then
     begin
-      if OldCapacity < MAX_CONTAINER_SIZE div SizeOf(TNode) then
-        Resize(OldCapacity shl 1)
+      if Capacity < MAX_CONTAINER_SIZE div SizeOf(TNode) then
+        Resize(Capacity shl 1)
       else
-        CapacityExceedError(OldCapacity shl 1);
+        CapacityExceedError(Capacity shl 1);
     end
   else
     InitialAlloc;
