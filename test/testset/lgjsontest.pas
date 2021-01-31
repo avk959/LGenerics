@@ -606,7 +606,12 @@ procedure TTestJson.Equal;
 var
   o1, o2: specialize TGAutoRef<TJsonNode>;
   User: TJsonNode;
+  n1: TJsonNode = nil;
+  n2: TJsonNode = nil;
 begin
+  AssertTrue(n1.EqualTo(n2));
+  AssertTrue(n2.EqualTo(n1));
+  AssertTrue(o1.Instance.EqualTo(o1.Instance));
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
   AssertTrue(o1.Instance.Parse(TestJson));
   AssertTrue(o2.Instance.Parse(TestJson));
