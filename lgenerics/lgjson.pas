@@ -2861,6 +2861,8 @@ var
 begin
   if aNode = Self then
     exit(True);
+  if aNode = nil then
+    exit(Self = nil);
   if (Kind <> aNode.Kind) or (Count <> aNode.Count) then
     exit(False);
   case aNode.Kind of
