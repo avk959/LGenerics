@@ -65,6 +65,7 @@ type
   private
   const
     MAX_EXACT_INT = Double(9007199254740991); //2^53 - 1
+    DBL_FACTOR    = Double(1E12);
     class operator Initialize(var v: TJVariant);
     class operator Finalize(var v: TJVariant);
     class operator Copy(constref aSrc: TJVariant; var aDst: TJVariant); inline;
@@ -73,6 +74,7 @@ type
     class function Null: TJVariant; static; inline;
     class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; static; inline;
     class function IsExactInt(aValue: Double): Boolean; static; inline;
+    class function SameValue(L, R: Double): Boolean; static; inline;
     class operator := (aValue: Double): TJVariant; inline;
     class operator := (aValue: Boolean): TJVariant; inline;
     class operator := (const aValue: string): TJVariant; inline;
@@ -348,7 +350,7 @@ type
       function GetEnumerator: TNameEnumerator;
     end;
 
-  { checks if the content is well-formed JSON; aDepth indicates the maximum
+  { checks if the content is well-formed JSON; aDepth indicates the maximum allowable
     nesting depth of structures; if aSkipBom is set to True then UTF-8 BOM(and only that)
     will be ignored }
     class function ValidJson(const s: string; aDepth: Integer = DEF_DEPTH;
@@ -862,6 +864,11 @@ end;
 class function TJVariant.IsExactInt(aValue: Double): Boolean;
 begin
   Result := (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT);
+end;
+
+class function TJVariant.SameValue(L, R: Double): Boolean;
+begin
+  Result := Abs(L - R) * DBL_FACTOR <= Min(Abs(L), Abs(R));
 end;
 
 class operator TJVariant.:=(aValue: Double): TJVariant;
@@ -2898,7 +2905,7 @@ begin
   case aNode.Kind of
     jvkUnknown, jvkNull, jvkFalse, jvkTrue: ;
     jvkNumber:
-      if not SameValue(FValue.Num, aNode.FValue.Num) then
+      if not TJVariant.SameValue(FValue.Num, aNode.FValue.Num) then
         exit(False);
     jvkString:
       if FString <> aNode.FString then
