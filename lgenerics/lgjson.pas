@@ -63,18 +63,12 @@ type
     procedure DoClear; inline;
     procedure ConvertError(const aSrc, aDst: string);
   private
-  const
-    MAX_EXACT_INT = Double(9007199254740991); //2^53 - 1
-    DBL_FACTOR    = Double(1E12);
     class operator Initialize(var v: TJVariant);
     class operator Finalize(var v: TJVariant);
     class operator Copy(constref aSrc: TJVariant; var aDst: TJVariant); inline;
     class operator AddRef(var v: TJVariant);
   public
     class function Null: TJVariant; static; inline;
-    class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; static; inline;
-    class function IsExactInt(aValue: Double): Boolean; static; inline;
-    class function SameValue(L, R: Double): Boolean; static; inline;
     class operator := (aValue: Double): TJVariant; inline;
     class operator := (aValue: Boolean): TJVariant; inline;
     class operator := (const aValue: string): TJVariant; inline;
@@ -421,7 +415,7 @@ type
     function  IsStruct: Boolean; inline;
     procedure Clear; inline;
   { duplicates an instance, is recursive }
-    function  Clone: TJsonNode; inline;
+    function  Clone: TJsonNode;
   { makes a deep copy of the aNode, does not check if aNode is assigned, is recursive }
     procedure CopyFrom(aNode: TJsonNode);
   { checks that an instance is element-wise equal to aNode, is recursive;
@@ -795,14 +789,41 @@ type
     property  SkipBom: Boolean read FSkipBom;
   end;
 
+
+function IsExactInt(aValue: Double): Boolean; inline;
+function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; inline;
+function SameDouble(L, R: Double): Boolean; inline;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 const
-  JS_UNDEF = 'undefined';
-  JS_NULL  = 'null';
-  JS_FALSE = 'false';
-  JS_TRUE  = 'true';
+  MAX_EXACT_INT  = Double(9007199254740991); //2^53 - 1
+  DBL_CMP_FACTOR = Double(1E12);
+  JS_UNDEF       = 'undefined';
+  JS_NULL        = 'null';
+  JS_FALSE       = 'false';
+  JS_TRUE        = 'true';
+
+function IsExactInt(aValue: Double): Boolean;
+begin
+  Result := (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT);
+end;
+
+function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean;
+begin
+  if IsExactInt(aValue) then
+    begin
+      aIntValue := Trunc(aValue);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function SameDouble(L, R: Double): Boolean;
+begin
+  Result := Abs(L - R) * DBL_CMP_FACTOR <= Min(Abs(L), Abs(R));
+end;
 
 { TJVariant }
 
@@ -849,26 +870,6 @@ end;
 class function TJVariant.Null: TJVariant;
 begin
   Result.Clear;
-end;
-
-class function TJVariant.IsExactInt(aValue: Double; out aIntValue: Int64): Boolean;
-begin
-  if (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT) then
-    begin
-      aIntValue := Trunc(aValue);
-      exit(True);
-    end;
-  Result := False;
-end;
-
-class function TJVariant.IsExactInt(aValue: Double): Boolean;
-begin
-  Result := (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT);
-end;
-
-class function TJVariant.SameValue(L, R: Double): Boolean;
-begin
-  Result := Abs(L - R) * DBL_FACTOR <= Min(Abs(L), Abs(R));
 end;
 
 class operator TJVariant.:=(aValue: Double): TJVariant;
@@ -2082,7 +2083,7 @@ var
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
       jvkNumber:
-        if TJVariant.IsExactInt(aInst.FValue.Num, IVal) then
+        if IsExactInt(aInst.FValue.Num, IVal) then
           sb.Append(IntToStr(IVal))
         else
           sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
@@ -2704,7 +2705,7 @@ function TJsonNode.IsInteger: Boolean;
 begin
   if Kind <> jvkNumber then
     exit(False);
-  Result := TJVariant.IsExactInt(FValue.Num);
+  Result := IsExactInt(FValue.Num);
 end;
 
 function TJsonNode.IsString: Boolean;
@@ -2905,7 +2906,7 @@ begin
   case aNode.Kind of
     jvkUnknown, jvkNull, jvkFalse, jvkTrue: ;
     jvkNumber:
-      if not TJVariant.SameValue(FValue.Num, aNode.FValue.Num) then
+      if not SameDouble(FValue.Num, aNode.FValue.Num) then
         exit(False);
     jvkString:
       if FString <> aNode.FString then
@@ -3688,7 +3689,7 @@ var
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
       jvkNumber:
-        if TJVariant.IsExactInt(aInst.FValue.Num, IVal) then
+        if IsExactInt(aInst.FValue.Num, IVal) then
           sb.Append(IntToStr(IVal))
         else
           sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
@@ -3795,7 +3796,7 @@ begin
     jvkFalse:   Result := JS_FALSE;
     jvkTrue:    Result := JS_TRUE;
     jvkNumber:
-      if TJVariant.IsExactInt(FValue.Num, I64) then
+      if IsExactInt(FValue.Num, I64) then
         Result := I64.ToString
       else
         Result := FValue.Num.ToString;
