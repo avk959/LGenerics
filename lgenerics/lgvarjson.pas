@@ -775,7 +775,9 @@ begin
   Result := Null;
   if not IsVarJson then exit;
   if FNode <> nil then
-    TVarJson(Result).Init(FNode.Clone, True);
+    TVarJson(Result).Init(FNode.Clone, True)
+  else
+    TVarJson(Result).Init(nil, True);
 end;
 
 function TVarJson.AsJson: string;
