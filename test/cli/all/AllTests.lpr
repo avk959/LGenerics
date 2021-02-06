@@ -39,7 +39,8 @@ uses
   LGInt128Test,
   LGTreapTest,
   LGRbTreeTest,
-  LGJsonTest;
+  LGJsonTest,
+  LGVarJsonTest;
 
 type
 
