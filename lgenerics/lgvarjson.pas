@@ -345,7 +345,7 @@ var
 begin
   if aNode = nil then
     begin
-      Variant(aDst) := Unassigned;
+      Variant(aDst) := Null;
       exit;
     end;
   case aNode.Kind of
@@ -429,7 +429,7 @@ begin
   if not CanCast(aValue) then
     VarCastError;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   FNode.FindOrAdd(aName, Node);
   VarToNode(aValue, Node);
 end;
@@ -471,14 +471,14 @@ begin
     begin
       if aIndex <> 0 then
         raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-      Init(TJsonNode.Create, True);
+      FNode := TJsonNode.Create(jvkArray);
     end
   else
     FNode.AsArray;
   if SizeUInt(aIndex) > SizeUInt(FNode.Count) then
     raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
   if aIndex = FNode.Count then
-    FNode.InsertNode(aIndex, Node, jvkArray)
+    FNode.InsertNode(aIndex, Node, jvkUnknown)
   else
     FNode.Find(aIndex, Node);
   VarToNode(aValue, Node);
@@ -531,9 +531,9 @@ begin
   Result := TVPair.Create('', Null);
   if not IsVarJson then exit;
   if (FNode = nil) or (Kind <> jvkObject) then
-    raise EJsException.Create(SEJsonInstNotObj);
+    exit;
   if SizeUInt(aIndex) >= SizeUInt(FNode.Count) then
-    raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+    exit;
   with FNode.Pairs[aIndex] do
     begin
       Result.Key := Key;
@@ -578,7 +578,7 @@ begin
   if not CanCast(aValue) then
     VarCastError;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   Node := FNode.AddNode(jvkUnknown);
   VarToNode(aValue, Node);
   CopyNode(Self, TVarJson(Result));
@@ -590,7 +590,7 @@ var
 begin
   if not IsVarJson then exit(False);
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   Result := FNode.AddJson(aJson, Node);
 end;
 
@@ -606,14 +606,14 @@ begin
     if not CanCast(p.Value) then
       VarCastError;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   Node := FNode.AddNode(jvkUnknown);
   for p in aValue do
     begin
       NestNode := Node.AddNode(p.Key, jvkUnknown);
       VarToNode(p.Value, NestNode);
     end;
-    TVarJson(Result).SetProperty(p.Key, p.Value);
+  TVarJson(Result).SetProperty(p.Key, p.Value);
   CopyNode(Self, TVarJson(Result));
 end;
 
@@ -622,7 +622,7 @@ begin
   Result := Null;
   if not IsVarJson then exit;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   TVarJson(Result).Init(FNode.AddNode(jvkUnknown));
 end;
 
@@ -635,7 +635,7 @@ begin
   if not CanCast(aValue) then
     VarCastError;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   Node := FNode.AddNode(aName, jvkUnknown);
   VarToNode(aValue, Node);
   CopyNode(Self, TVarJson(Result));
@@ -647,7 +647,7 @@ var
 begin
   if not IsVarJson then exit(False);
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   Result := FNode.AddJson(aName, aJson, Node);
 end;
 
@@ -663,7 +663,7 @@ begin
     if not CanCast(p.Value) then
       VarCastError;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   Node := FNode.AddNode(aName, jvkUnknown);
   for p in aValue do
     begin
@@ -679,7 +679,7 @@ begin
   Result := Null;
   if not IsVarJson then exit;
   if FNode = nil then
-    Init(TJsonNode.Create, True);
+    FNode := TJsonNode.Create;
   TVarJson(Result).Init(FNode.AddNode(aName, jvkUnknown));
 end;
 
@@ -762,7 +762,7 @@ begin
     if TVarJson(aValue).FNode <> nil then
       begin
         if FNode = nil then
-          Init(TJsonNode.Create, True);
+          FNode := TJsonNode.Create;
         FNode.CopyFrom(TVarJson(aValue).FNode);
       end
     else
