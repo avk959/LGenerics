@@ -26,7 +26,7 @@ type
     procedure IsInteger;
     procedure HasUniqueNames;
     procedure Clone;
-    procedure ToString;
+    procedure TestToString;
     procedure ToValue;
     procedure AsJson;
     procedure GetItem;
@@ -34,6 +34,8 @@ type
     procedure GetProperty;
     procedure Cast;
     procedure CastTo;
+    procedure SetItem;
+    procedure SetValue;
   end;
 
 const
@@ -162,12 +164,12 @@ begin
   AssertTrue(k.AsJsValueKind = jvkArray);
 end;
 
-procedure TTestVarJson.ToString;
+procedure TTestVarJson.TestToString;
 var
   Json: Variant;
   s: string;
 const
-  c = '[41, "baz", false]';
+  c = '[42, "baz", false]';
 begin
   Json := VarJsonCreate;
   s := Json.ToString;
@@ -279,6 +281,51 @@ begin
   AssertTrue(v.IsInteger);
   v := VarAsType(v, varInteger);
   AssertTrue(v = 1001);
+end;
+
+procedure TTestVarJson.SetItem;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  AssertTrue(Json.Count = 0);
+  Json.SetItem(0, 'baz');
+  k := Json.Kind;
+  AssertTrue(k.AsJsValueKind = jvkArray);
+  AssertTrue(Json.Count = 1);
+  v := Json.GetItem(0);
+  AssertTrue(v.IsJson);
+  AssertTrue(v.IsScalar);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkString);
+  AssertTrue(v.ToString = 'baz');
+  Json := VarJsonCreate(TestJson);
+  v := Json.SetItem(0, VarArrayOf([42, 1001]));
+  AssertTrue(v.Count = 2);
+  k := v.GetItem(0).Kind;
+  AssertTrue(k.AsJsValueKind = jvkArray);
+  AssertTrue(v.GetItem(0).GetItem(1).ToString = '1001');
+end;
+
+procedure TTestVarJson.SetValue;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  AssertTrue(Json.Count = 0);
+  Json.SetValue('bar', 42);
+  AssertTrue(Json.Count = 1);
+  k := Json.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  v := Json.GetValue('bar');
+  AssertTrue(v.IsJson);
+  AssertTrue(v.IsScalar);
+  AssertTrue(v.IsInteger);
+  AssertTrue(v.ToValue = 42);
+  Json := VarJsonCreate(TestJson);
+  v := Json.GetItem(0).SetValue('name', 'Andrew');
+  AssertTrue(v.Count = 6);
+  AssertTrue(Json.GetItem(0).GetValue('name').ToValue = 'Andrew');
 end;
 
 
