@@ -544,28 +544,36 @@ end;
 procedure TVarJson.SetNull;
 begin
   if not IsVarJson then exit;
-  if FNode <> nil then
+  if FNode = nil then
+    FNode := TJsonNode.CreateNull
+  else
     FNode.AsNull;
 end;
 
 procedure TVarJson.SetBoolean(aValue: Boolean);
 begin
   if not IsVarJson then exit;
-  if FNode <> nil then
+  if FNode = nil then
+    FNode := TJsonNode.Create(aValue)
+  else
     FNode.AsBoolean := aValue;
 end;
 
 procedure TVarJson.SetNumber(aValue: Double);
 begin
   if not IsVarJson then exit;
-  if FNode <> nil then
+  if FNode = nil then
+    FNode := TJsonNode.Create(aValue)
+  else
     FNode.AsNumber := aValue;
 end;
 
 procedure TVarJson.SetString(const aValue: string);
 begin
   if not IsVarJson then exit;
-  if FNode <> nil then
+  if FNode = nil then
+    FNode := TJsonNode.Create(aValue)
+  else
     FNode.AsString := aValue;
 end;
 
