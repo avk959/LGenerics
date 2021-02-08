@@ -1236,15 +1236,12 @@ end;
 { TGArrayHelpUtil.TMergeSortBase }
 
 procedure TGArrayHelpUtil.TMergeSortBase.PushRun(aBase, aCount: SizeInt);
-var
-  I: SizeInt;
 begin
-  I := FStackSize;
+  if System.Length(FStack) = FStackSize then
+    System.SetLength(FStack, FStackSize * 2);
+  FStack[FStackSize].Base := aBase;
+  FStack[FStackSize].Count := aCount;
   Inc(FStackSize);
-  if System.Length(FStack) = I then
-    System.SetLength(FStack, I * 2);
-  FStack[I].Base := aBase;
-  FStack[I].Count := aCount;
 end;
 
 function TGArrayHelpUtil.TMergeSortBase.EnsureBufferCapacity(aSize: SizeInt): PItem;
@@ -1258,10 +1255,10 @@ procedure TGArrayHelpUtil.TMergeSortBase.Init(A: PItem);
 begin
   FData := A;
   FStackSize := 0;
-  if System.Length(FBuffer) < MERGE_BUFFER_INIT_SIZE then
-    System.SetLength(FBuffer, MERGE_BUFFER_INIT_SIZE);
-  if System.Length(FStack) < MERGE_STACK_INIT_SIZE then
-    System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
+  FBuffer := nil;
+  FStack := nil;
+  System.SetLength(FBuffer, MERGE_BUFFER_INIT_SIZE);
+  System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
 end;
 
 class function TGArrayHelpUtil.TMergeSortBase.MinRunLen(aTotalSize: SizeInt): SizeInt;
