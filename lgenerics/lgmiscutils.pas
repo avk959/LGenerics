@@ -76,7 +76,7 @@ type
       FStackSize,
       FMinGallop: SizeInt;
       procedure PushRun(aBase, aCount: SizeInt);
-      function  EnsureBufferSize(aSize: SizeInt): PItem; inline;
+      function  EnsureBufferSize(aSize: SizeInt): PItem;
       procedure Init(A: PItem);
       procedure Swap(Base1, Len1, Base2, Len2: SizeInt);
       class function  MinRunLen(aTotalSize: SizeInt): SizeInt; static;
@@ -581,15 +581,12 @@ end;
 { TGTimSortAnc.TTimSortBase }
 
 procedure TGTimSortAnc.TTimSortBase.PushRun(aBase, aCount: SizeInt);
-var
-  I: SizeInt;
 begin
-  I := FStackSize;
+  if System.Length(FStack) = FStackSize then
+    System.SetLength(FStack, FStackSize * 2);
+  FStack[FStackSize].Base := aBase;
+  FStack[FStackSize].Count := aCount;
   Inc(FStackSize);
-  if System.Length(FStack) = I then
-    System.SetLength(FStack, I * 2);
-  FStack[I].Base := aBase;
-  FStack[I].Count := aCount;
 end;
 
 function TGTimSortAnc.TTimSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
@@ -604,10 +601,10 @@ begin
   FData := A;
   FStackSize := 0;
   FMinGallop := MIN_GALLOP;
-  if System.Length(FBuffer) < MERGE_BUFFER_INIT_SIZE then
-    System.SetLength(FBuffer, MERGE_BUFFER_INIT_SIZE);
-  if System.Length(FStack) < MERGE_STACK_INIT_SIZE then
-    System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
+  FBuffer := nil;
+  FStack := nil;
+  System.SetLength(FBuffer, MERGE_BUFFER_INIT_SIZE);
+  System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
 end;
 
 procedure TGTimSortAnc.TTimSortBase.Swap(Base1, Len1, Base2, Len2: SizeInt);
