@@ -131,6 +131,7 @@ type
     class operator = (const L, R: TJsonPtr): Boolean;
   { constructs a pointer from Pascal string, treats slash("/")
     as a path delimiter and "~" as a special character;
+    use it only if the segments do not contain a slash or tilde;
     raises an exception if s is not a well-formed JSON Pointer }
     constructor From(const s: string);
   { constructs a pointer from path segments as Pascal strings }
