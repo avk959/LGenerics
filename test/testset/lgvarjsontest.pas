@@ -41,6 +41,11 @@ type
     procedure SetBool;
     procedure SetNumber;
     procedure SetString;
+    procedure AddItem;
+    procedure AddJsonItem;
+    procedure AddObjItem;
+    procedure AddEmptyItem;
+    procedure AddObjValue;
   end;
 
 const
@@ -407,6 +412,99 @@ begin
   k := Json.Kind;
   AssertTrue(k.AsJsValueKind = jvkString);
   AssertTrue(Json.ToValue = 'baz');
+end;
+
+procedure TTestVarJson.AddItem;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  v := Json.AddItem(42);
+  AssertTrue(v.IsJson);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkArray);
+  AssertTrue(v.Count = 1);
+  v := Json.AddItem('bar');
+  AssertTrue(v.Count = 2);
+  AssertTrue(Json.Count = 2);
+end;
+
+procedure TTestVarJson.AddJsonItem;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  AssertTrue(Json.AddJsonItem('[42, "baz"]'));
+  AssertTrue(Json.Count = 1);
+  v := Json.GetItem(0);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkArray);
+  AssertTrue(v.Count = 2);
+  AssertTrue(Json.AddJsonItem('{"foo":42, "bar":1001}'));
+  AssertTrue(Json.Count = 2);
+  v := Json.GetItem(1);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 2);
+end;
+
+procedure TTestVarJson.AddObjItem;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  v := TVarJson(Json).AddObjItem([TVPair.Create('bar', VarArrayOf([42, 1001])), TVPair.Create('baz', 0)]);
+  AssertTrue(v.IsJson);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkArray);
+  AssertTrue(v.Count = 1);
+  v := v.GetItem(0);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 2);
+  v := TVarJson(Json).AddObjItem([TVPair.Create('foo', 1.41)]);
+  AssertTrue(Json.Count = 2);
+  v := v.GetItem(1);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 1);
+end;
+
+procedure TTestVarJson.AddEmptyItem;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  v := Json.AddEmptyItem;
+  AssertTrue(Json.Count = 1);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkUnknown);
+  v.SetNull;
+  v := Json.GetItem(0);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkNull);
+end;
+
+procedure TTestVarJson.AddObjValue;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  v := TVarJson(Json).AddObjValue('first', [TVPair.Create('bar', VarArrayOf([42, 1001])), TVPair.Create('baz', 0)]);
+  AssertTrue(v.IsJson);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 1);
+  v := v.first;
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 2);
+  v := TVarJson(Json).AddObjValue('second', [TVPair.Create('foo', 1.41)]);
+  AssertTrue(Json.Count = 2);
+  v := v.second;
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 1);
 end;
 
 
