@@ -621,7 +621,6 @@ begin
       NestNode := Node.AddNode(p.Key, jvkUnknown);
       VarToNode(p.Value, NestNode);
     end;
-  TVarJson(Result).SetProperty(p.Key, p.Value);
   CopyNode(Self, TVarJson(Result));
 end;
 
@@ -678,7 +677,6 @@ begin
       NestNode := Node.AddNode(p.Key, jvkUnknown);
       VarToNode(p.Value, NestNode);
     end;
-    TVarJson(Result).SetProperty(p.Key, p.Value);
   CopyNode(Self, TVarJson(Result));
 end;
 
@@ -926,11 +924,6 @@ function TJsonVariant.DoFunction(var aDst: TVarData; const V: TVarData; const aN
 begin
   //VarClear(Variant(aDst));
   case LowerCase(aName) of
-    'addemptyitem':
-      begin
-        Variant(aDst) := TVarJson(V).AddEmptyItem;
-        exit(True);
-      end;
     'addemptyvalue':
       begin
         if System.Length(Args) <> 1 then
@@ -1048,6 +1041,7 @@ function TJsonVariant.GetProperty(var aDst: TVarData; const aData: TVarData;
 begin
   Result := True;
   case LowerCase(aName) of
+    'addemptyitem':   Variant(aDst) := TVarJson(aData).AddEmptyItem;
     'asjson':         Variant(aDst) := TVarJson(aData).AsJson;
     'clone':          Variant(aDst) := TVarJson(aData).Clone;
     'count':          Variant(aDst) := TVarJson(aData).Count;
