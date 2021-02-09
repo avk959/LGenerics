@@ -82,22 +82,28 @@ type
     TMergeSortBase = object
     protected
     const
-      MERGE_STACK_INIT_SIZE  = 16;
-      MERGE_BUFFER_INIT_SIZE = 64;
-      MIN_MERGE_POW          = 5;
-      MIN_MERGE_LEN          = SizeInt(1) shl MIN_MERGE_POW;
+      MERGE_STACK_SIZE  = 64;
+      MERGE_BUFFER_SIZE = 512;
+      MIN_MERGE_POW     = 5;
+      MIN_MERGE_LEN     = SizeInt(1) shl MIN_MERGE_POW;
+
     type
-      TRun       = record
+      TRun      = record
         Base, Count: SizeInt;
       end;
-      TRunArray  = array of TRun;
+      PRun      = ^TRun;
+      TRunArray = array of TRun;
     var
+      FBuffer: array[0..Pred(MERGE_BUFFER_SIZE)] of TFake;
+      FInitStack: array[0..Pred(MERGE_STACK_SIZE)] of TRun;
       FData: PItem; // pointer to data array
-      FBuffer: TFakeArray;
-      FStack: TRunArray;
+      FDynBuffer: TFakeArray;
+      FDynStack: TRunArray;
+      FStack: PRun;
+      FStackCount,
       FStackSize: SizeInt;
       procedure PushRun(aBase, aCount: SizeInt);
-      function  EnsureBufferCapacity(aSize: SizeInt): PItem;
+      function  EnsureBufferSize(aSize: SizeInt): PItem;
       procedure Init(A: PItem);
       class function  MinRunLen(aTotalSize: SizeInt): SizeInt; static;
     end;
@@ -1237,28 +1243,39 @@ end;
 
 procedure TGArrayHelpUtil.TMergeSortBase.PushRun(aBase, aCount: SizeInt);
 begin
-  if System.Length(FStack) = FStackSize then
-    System.SetLength(FStack, FStackSize * 2);
-  FStack[FStackSize].Base := aBase;
-  FStack[FStackSize].Count := aCount;
-  Inc(FStackSize);
+  if FStackCount = FStackSize then
+    begin
+      FStackSize += FStackSize;
+      System.SetLength(FDynStack, FStackSize );
+      if FStack = @FInitStack[0] then
+        System.Move(FInitStack[0], Pointer(FDynStack)^, MERGE_STACK_SIZE * SizeOf(TRun));
+      FStack := Pointer(FDynStack);
+    end;
+  FStack[FStackCount].Base := aBase;
+  FStack[FStackCount].Count := aCount;
+  Inc(FStackCount);
 end;
 
-function TGArrayHelpUtil.TMergeSortBase.EnsureBufferCapacity(aSize: SizeInt): PItem;
+function TGArrayHelpUtil.TMergeSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
 begin
-  if aSize > System.Length(FBuffer) then
-    System.SetLength(FBuffer, LGUtils.RoundUpTwoPower(aSize));
-  Result := Pointer(FBuffer);
+  if aSize > MERGE_BUFFER_SIZE then
+    begin
+      if aSize > System.Length(FDynBuffer) then
+        System.SetLength(FDynBuffer, LGUtils.RoundUpTwoPower(aSize));
+      Result := Pointer(FDynBuffer);
+    end
+  else
+    Result := Pointer(@FBuffer[0]);
 end;
 
 procedure TGArrayHelpUtil.TMergeSortBase.Init(A: PItem);
 begin
   FData := A;
-  FStackSize := 0;
-  FBuffer := nil;
-  FStack := nil;
-  System.SetLength(FBuffer, MERGE_BUFFER_INIT_SIZE);
-  System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
+  FStackCount := 0;
+  FStackSize := MERGE_STACK_SIZE;
+  FDynBuffer := nil;
+  FDynStack := nil;
+  FStack := @FInitStack[0];
 end;
 
 class function TGArrayHelpUtil.TMergeSortBase.MinRunLen(aTotalSize: SizeInt): SizeInt;
@@ -2126,9 +2143,9 @@ procedure TGBaseArrayHelper.TMergeSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -2145,9 +2162,9 @@ procedure TGBaseArrayHelper.TMergeSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -2164,9 +2181,9 @@ procedure TGBaseArrayHelper.TMergeSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -2178,9 +2195,9 @@ procedure TGBaseArrayHelper.TMergeSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -2196,12 +2213,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoA(Base, CountLo, CountHi)
   else
@@ -2216,12 +2233,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoD(Base, CountLo, CountHi)
   else
@@ -2239,7 +2256,7 @@ begin
   LocA := FData;
   if TCmpRel.Less(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
     {$ELSE}
@@ -2295,7 +2312,7 @@ begin
   LocA := FData;
   if TCmpRel.Less(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T)); ///
     {$ELSE}
@@ -2351,7 +2368,7 @@ begin
   LocA := FData;
   if TCmpRel.Less(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));///
     {$ELSE}
@@ -2406,7 +2423,7 @@ begin
   LocA := FData;
   if TCmpRel.Less(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
     {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T)); ///
     {$ELSE}
@@ -2533,7 +2550,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A);
       L := 0;
@@ -2551,9 +2568,7 @@ begin
          ms.CollapseA;
        until L > R;
        ms.ForceCollapseA;
-    end
-  else
-    InsertSortA(A, R, Succ(CountRunAsc(A, R)));
+    end;
 end;
 
 class procedure TGBaseArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt);
@@ -2561,7 +2576,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A);
       L := 0;
@@ -2580,8 +2595,7 @@ begin
        until L > R;
        ms.ForceCollapseD;
     end
-  else
-    InsertSortD(A, R, Succ(CountRunDesc(A, R)));
+  else;
 end;
 
 { TGBaseArrayHelper.TBlockQSort }
@@ -4620,9 +4634,9 @@ procedure TGComparableArrayHelper.TMergeSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -4639,9 +4653,9 @@ procedure TGComparableArrayHelper.TMergeSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -4658,9 +4672,9 @@ procedure TGComparableArrayHelper.TMergeSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -4672,9 +4686,9 @@ procedure TGComparableArrayHelper.TMergeSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -4690,12 +4704,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoA(Base, CountLo, CountHi)
   else
@@ -4710,12 +4724,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoD(Base, CountLo, CountHi)
   else
@@ -4733,7 +4747,7 @@ begin
   LocA := FData;
   if FData[From + CountLo] < FData[Pred(From + CountLo)] then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -4789,7 +4803,7 @@ begin
   LocA := FData;
   if FData[Pred(From + CountLo)] < FData[From + CountLo] then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T)); ///
       {$ELSE}
@@ -4845,7 +4859,7 @@ begin
   LocA := FData;
   if FData[From + CountLo] < FData[Pred(From + CountLo)] then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));///
       {$ELSE}
@@ -4900,7 +4914,7 @@ begin
   LocA := FData;
   if FData[Pred(From + CountLo)] < FData[From + CountLo] then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T)); ///
       {$ELSE}
@@ -5027,7 +5041,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A);
       L := 0;
@@ -5045,9 +5059,7 @@ begin
          ms.CollapseA;
        until L > R;
        ms.ForceCollapseA;
-    end
-  else
-    InsertSortA(A, R, Succ(CountRunAsc(A, R)));
+    end;
 end;
 
 class procedure TGComparableArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt);
@@ -5055,7 +5067,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A);
       L := 0;
@@ -5073,9 +5085,7 @@ begin
          ms.CollapseD;
        until L > R;
        ms.ForceCollapseD;
-    end
-  else
-    InsertSortD(A, R, Succ(CountRunDesc(A, R)));
+    end;
 end;
 
 { TGComparableArrayHelper.TBlockQSort }
@@ -6475,9 +6485,9 @@ procedure TGRegularArrayHelper.TMergeSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -6494,9 +6504,9 @@ procedure TGRegularArrayHelper.TMergeSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -6513,9 +6523,9 @@ procedure TGRegularArrayHelper.TMergeSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -6527,9 +6537,9 @@ procedure TGRegularArrayHelper.TMergeSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -6545,12 +6555,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoA(Base, CountLo, CountHi)
   else
@@ -6565,12 +6575,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoD(Base, CountLo, CountHi)
   else
@@ -6590,7 +6600,7 @@ begin
   c := FLess;
   if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -6648,7 +6658,7 @@ begin
   c := FLess;
   if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -6706,7 +6716,7 @@ begin
   c := FLess;
   if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));
       {$ELSE}
@@ -6763,7 +6773,7 @@ begin
   c := FLess;
   if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));
       {$ELSE}
@@ -6890,7 +6900,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -6908,9 +6918,7 @@ begin
         ms.CollapseA;
       until L > R;
       ms.ForceCollapseA;
-    end
-  else
-    InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
+    end;
 end;
 
 class procedure TGRegularArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TLess);
@@ -6918,7 +6926,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -6936,9 +6944,7 @@ begin
         ms.CollapseD;
       until L > R;
       ms.ForceCollapseD;
-    end
-  else
-    InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
+    end;
 end;
 
 { TGRegularArrayHelper.TBlockQSort }
@@ -8357,9 +8363,9 @@ procedure TGDelegatedArrayHelper.TMergeSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -8376,9 +8382,9 @@ procedure TGDelegatedArrayHelper.TMergeSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -8395,9 +8401,9 @@ procedure TGDelegatedArrayHelper.TMergeSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -8409,9 +8415,9 @@ procedure TGDelegatedArrayHelper.TMergeSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -8427,12 +8433,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoA(Base, CountLo, CountHi)
   else
@@ -8447,12 +8453,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoD(Base, CountLo, CountHi)
   else
@@ -8472,7 +8478,7 @@ begin
   c := FLess;
   if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -8530,7 +8536,7 @@ begin
   c := FLess;
   if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -8588,7 +8594,7 @@ begin
   c := FLess;
   if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));
       {$ELSE}
@@ -8645,7 +8651,7 @@ begin
   c := FLess;
   if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));
       {$ELSE}
@@ -8772,7 +8778,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -8790,9 +8796,7 @@ begin
         ms.CollapseA;
       until L > R;
       ms.ForceCollapseA;
-    end
-  else
-    InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
+    end;
 end;
 
 class procedure TGDelegatedArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TOnLess);
@@ -8800,7 +8804,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -8818,9 +8822,7 @@ begin
         ms.CollapseD;
       until L > R;
       ms.ForceCollapseD;
-    end
-  else
-    InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
+    end;
 end;
 
 { TGDelegatedArrayHelper.TBlockQSort }
@@ -10242,9 +10244,9 @@ procedure TGNestedArrayHelper.TMergeSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -10261,9 +10263,9 @@ procedure TGNestedArrayHelper.TMergeSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -10280,9 +10282,9 @@ procedure TGNestedArrayHelper.TMergeSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -10294,9 +10296,9 @@ procedure TGNestedArrayHelper.TMergeSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -10312,12 +10314,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoA(Base, CountLo, CountHi)
   else
@@ -10332,12 +10334,12 @@ begin
   CountLo := FStack[aIndex].Count;
   CountHi := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := CountLo + CountHi;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if CountLo <= CountHi then
     MergeLoD(Base, CountLo, CountHi)
   else
@@ -10357,7 +10359,7 @@ begin
   c := FLess;
   if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -10415,7 +10417,7 @@ begin
   c := FLess;
   if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountLo);
+      LocB := EnsureBufferSize(CountLo);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From], LocB[0], CountLo * SizeOf(T));
       {$ELSE}
@@ -10473,7 +10475,7 @@ begin
   c := FLess;
   if c(FData[From + CountLo], FData[Pred(From + CountLo)]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));
       {$ELSE}
@@ -10530,7 +10532,7 @@ begin
   c := FLess;
   if c(FData[Pred(From + CountLo)], FData[From + CountLo]) then
     begin
-      LocB := EnsureBufferCapacity(CountHi);
+      LocB := EnsureBufferSize(CountHi);
       {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       System.Move(LocA[From + CountLo], LocB[0], CountHi * SizeOf(T));
       {$ELSE}
@@ -10657,7 +10659,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -10675,9 +10677,7 @@ begin
         ms.CollapseA;
       until L > R;
       ms.ForceCollapseA;
-    end
-  else
-    InsertSortA(A, R, Succ(CountRunAsc(A, R, c)), c);
+    end;
 end;
 
 class procedure TGNestedArrayHelper.TMergeSort.SortDesc(A: PItem; R: SizeInt; c: TNestLess);
@@ -10685,7 +10685,7 @@ var
   RunLen, MinLen, Len, L: SizeInt;
   ms: TMergeSort;
 begin
-  if R >= MIN_MERGE_LEN shl 1 then
+  if R > 0 then
     begin
       ms.Init(A, c);
       MinLen := MinRunLen(R + 1);
@@ -10703,9 +10703,7 @@ begin
         ms.CollapseD;
       until L > R;
       ms.ForceCollapseD;
-    end
-  else
-    InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
+    end;
 end;
 
 { TGNestedArrayHelper.TBlockQSort }
