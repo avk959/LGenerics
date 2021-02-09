@@ -56,23 +56,28 @@ type
     TTimSortBase = object
     protected
     const
-      MERGE_STACK_INIT_SIZE  = 16;
-      MERGE_BUFFER_INIT_SIZE = 64;
-      MIN_MERGE_POW          = 5;
-      MIN_MERGE_LEN          = SizeInt(1) shl MIN_MERGE_POW;
-      MIN_GALLOP             = 7;
+      MERGE_STACK_SIZE  = 64;
+      MERGE_BUFFER_SIZE = 512;
+      MIN_MERGE_POW     = 5;
+      MIN_MERGE_LEN     = SizeInt(1) shl MIN_MERGE_POW;
+      MIN_GALLOP        = 7;
 
     type
       TRun = record
         Base,
         Count: SizeInt;
       end;
-      TRunArray  = array of TRun;
+      PRun      = ^TRun;
+      TRunArray = array of TRun;
 
     var
+      FBuffer: array[0..Pred(MERGE_BUFFER_SIZE)] of TFake;
+      FInitStack: array[0..Pred(MERGE_STACK_SIZE)] of TRun;
       FData: PItem; // pointer to data array
-      FBuffer: TFakeArray;
-      FStack: TRunArray;
+      FDynBuffer: TFakeArray;
+      FDynStack: TRunArray;
+      FStack: PRun;
+      FStackCount,
       FStackSize,
       FMinGallop: SizeInt;
       procedure PushRun(aBase, aCount: SizeInt);
@@ -582,29 +587,40 @@ end;
 
 procedure TGTimSortAnc.TTimSortBase.PushRun(aBase, aCount: SizeInt);
 begin
-  if System.Length(FStack) = FStackSize then
-    System.SetLength(FStack, FStackSize * 2);
-  FStack[FStackSize].Base := aBase;
-  FStack[FStackSize].Count := aCount;
-  Inc(FStackSize);
+  if FStackCount = FStackSize then
+    begin
+      FStackSize += FStackSize;
+      System.SetLength(FDynStack, FStackSize );
+      if FStack = @FInitStack[0] then
+        System.Move(FInitStack[0], Pointer(FDynStack)^, MERGE_STACK_SIZE * SizeOf(TRun));
+      FStack := Pointer(FDynStack);
+    end;
+  FStack[FStackCount].Base := aBase;
+  FStack[FStackCount].Count := aCount;
+  Inc(FStackCount);
 end;
 
 function TGTimSortAnc.TTimSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
 begin
-  if aSize > System.Length(FBuffer) then
-    System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aSize));
-  Result := Pointer(FBuffer);
+  if aSize > MERGE_BUFFER_SIZE then
+    begin
+      if aSize > System.Length(FDynBuffer) then
+        System.SetLength(FDynBuffer, LGUtils.RoundUpTwoPower(aSize));
+      Result := Pointer(FDynBuffer);
+    end
+  else
+    Result := Pointer(@FBuffer[0]);
 end;
 
 procedure TGTimSortAnc.TTimSortBase.Init(A: PItem);
 begin
   FData := A;
-  FStackSize := 0;
+  FStackCount := 0;
+  FStackSize := MERGE_STACK_SIZE;
   FMinGallop := MIN_GALLOP;
-  FBuffer := nil;
-  FStack := nil;
-  System.SetLength(FBuffer, MERGE_BUFFER_INIT_SIZE);
-  System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
+  FDynBuffer := nil;
+  FDynStack := nil;
+  FStack := @FInitStack[0];
 end;
 
 procedure TGTimSortAnc.TTimSortBase.Swap(Base1, Len1, Base2, Len2: SizeInt);
@@ -701,9 +717,9 @@ procedure TGBaseTimSort.TTimSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -720,9 +736,9 @@ procedure TGBaseTimSort.TTimSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -739,9 +755,9 @@ procedure TGBaseTimSort.TTimSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -753,9 +769,9 @@ procedure TGBaseTimSort.TTimSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -772,12 +788,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if TCmpRel.Less(FData[Base2], FData[Pred(Base2)]) then
     begin
       D := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
@@ -807,12 +823,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if TCmpRel.Less(FData[Pred(Base2)], FData[Base2]) then
     begin
       D := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
@@ -1543,9 +1559,9 @@ procedure TGComparableTimSort.TTimSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -1562,9 +1578,9 @@ procedure TGComparableTimSort.TTimSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -1581,9 +1597,9 @@ procedure TGComparableTimSort.TTimSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -1595,9 +1611,9 @@ procedure TGComparableTimSort.TTimSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -1614,12 +1630,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FData[Base2] < FData[Pred(Base2)] then
     begin
       D := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
@@ -1649,12 +1665,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FData[Pred(Base2)] < FData[Base2] then
     begin
       D := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
@@ -2391,9 +2407,9 @@ procedure TGRegularTimSort.TTimSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -2410,9 +2426,9 @@ procedure TGRegularTimSort.TTimSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -2429,9 +2445,9 @@ procedure TGRegularTimSort.TTimSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -2443,9 +2459,9 @@ procedure TGRegularTimSort.TTimSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -2462,12 +2478,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FLess(FData[Base2], FData[Pred(Base2)]) then
     begin
       Dist := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
@@ -2497,12 +2513,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FLess(FData[Pred(Base2)], FData[Base2]) then
     begin
       Dist := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
@@ -3255,9 +3271,9 @@ procedure TGDelegatedTimSort.TTimSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -3274,9 +3290,9 @@ procedure TGDelegatedTimSort.TTimSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -3293,9 +3309,9 @@ procedure TGDelegatedTimSort.TTimSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -3307,9 +3323,9 @@ procedure TGDelegatedTimSort.TTimSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -3326,12 +3342,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FLess(FData[Base2], FData[Pred(Base2)]) then
     begin
       Dist := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
@@ -3361,12 +3377,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FLess(FData[Pred(Base2)], FData[Base2]) then
     begin
       Dist := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
@@ -4119,9 +4135,9 @@ procedure TGNestedTimSort.TTimSort.CollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -4138,9 +4154,9 @@ procedure TGNestedTimSort.TTimSort.CollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count <= FStack[I].Count + FStack[I + 1].Count) then
         begin
           if FStack[I - 1].Count < FStack[I + 1].Count then
@@ -4157,9 +4173,9 @@ procedure TGNestedTimSort.TTimSort.ForceCollapseA;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtA(I - 1)
       else
@@ -4171,9 +4187,9 @@ procedure TGNestedTimSort.TTimSort.ForceCollapseD;
 var
   I: SizeInt;
 begin
-  while FStackSize > 1 do
+  while FStackCount > 1 do
     begin
-      I := FStackSize - 2;
+      I := FStackCount - 2;
       if (I > 0) and (FStack[I - 1].Count < FStack[I + 1].Count) then
         MergeAtD(I - 1)
       else
@@ -4190,12 +4206,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FLess(FData[Base2], FData[Pred(Base2)]) then
     begin
       Dist := GallopRightA(FData, FData[Base2], Base1, Len1, 0);
@@ -4225,12 +4241,12 @@ begin
   Base2 := FStack[aIndex + 1].Base;
   Len2 := FStack[aIndex + 1].Count;
   FStack[aIndex].Count := Len1 + Len2;
-  if aIndex = FStackSize - 3 then
+  if aIndex = FStackCount - 3 then
     begin
       FStack[aIndex + 1].Base := FStack[aIndex + 2].Base;
       FStack[aIndex + 1].Count := FStack[aIndex + 2].Count;
     end;
-  Dec(FStackSize);
+  Dec(FStackCount);
   if FLess(FData[Pred(Base2)], FData[Base2]) then
     begin
       Dist := GallopRightD(FData, FData[Base2], Base1, Len1, 0);
