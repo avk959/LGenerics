@@ -45,7 +45,10 @@ type
     procedure AddJsonItem;
     procedure AddObjItem;
     procedure AddEmptyItem;
+    procedure AddValue;
+    procedure AddJsonValue;
     procedure AddObjValue;
+    procedure AddEmptyValue;
   end;
 
 const
@@ -424,9 +427,11 @@ begin
   k := v.Kind;
   AssertTrue(k.AsJsValueKind = jvkArray);
   AssertTrue(v.Count = 1);
+  AssertTrue(v.GetItem(0).ToValue = 42);
   v := Json.AddItem('bar');
   AssertTrue(v.Count = 2);
   AssertTrue(Json.Count = 2);
+  AssertTrue(v.GetItem(1).ToValue = 'bar');
 end;
 
 procedure TTestVarJson.AddJsonItem;
@@ -485,6 +490,43 @@ begin
   AssertTrue(k.AsJsValueKind = jvkNull);
 end;
 
+procedure TTestVarJson.AddValue;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  v := Json.AddValue('bar', 42);
+  AssertTrue(v.IsJson);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 1);
+  AssertTrue(v.bar.ToValue = 42);
+  v := Json.AddValue('baz', 1001);
+  AssertTrue(v.Count = 2);
+  AssertTrue(Json.Count = 2);
+  AssertTrue(v.baz.ToValue = 1001);
+end;
+
+procedure TTestVarJson.AddJsonValue;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  AssertTrue(Json.AddJsonValue('foo', '[42, "baz"]'));
+  AssertTrue(Json.Count = 1);
+  v := Json.foo;
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkArray);
+  AssertTrue(v.Count = 2);
+  AssertTrue(v.GetItem(0).ToValue = 42);
+  AssertTrue(Json.AddJsonValue('baz', '{"foo":42, "bar":1001}'));
+  AssertTrue(Json.Count = 2);
+  v := Json.baz;
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkObject);
+  AssertTrue(v.Count = 2);
+end;
+
 procedure TTestVarJson.AddObjValue;
 var
   Json, v, k: Variant;
@@ -505,6 +547,21 @@ begin
   k := v.Kind;
   AssertTrue(k.AsJsValueKind = jvkObject);
   AssertTrue(v.Count = 1);
+end;
+
+procedure TTestVarJson.AddEmptyValue;
+var
+  Json, v, k: Variant;
+begin
+  Json := VarJsonCreate;
+  v := Json.AddEmptyValue('bar');
+  AssertTrue(Json.Count = 1);
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkUnknown);
+  v.SetNull;
+  v := Json.bar;
+  k := v.Kind;
+  AssertTrue(k.AsJsValueKind = jvkNull);
 end;
 
 
