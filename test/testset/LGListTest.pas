@@ -241,6 +241,7 @@ type
     procedure AddUniq;
     procedure AddUniqArray;
     procedure Clear;
+    procedure MakeEmpty;
     procedure EnsureCapacity;
     procedure GetEnumerator;
     procedure ToArray;
@@ -2744,6 +2745,25 @@ begin
   lst.Clear;
   AssertTrue(lst.Count = 0);
   AssertTrue(lst.Capacity = 0);
+end;
+
+procedure TLiteHashList2Test.MakeEmpty;
+var
+  lst: TIntList;
+  I, c: Integer;
+begin
+  for I := 1 to 42 do
+    lst.Add(TEntry.Create(I, I));
+  AssertTrue(lst.Count = 42);
+  c := lst.Capacity;
+  AssertTrue(c > 0);
+  lst.MakeEmpty;
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.Capacity = c);
+  for I := 43 to 84 do
+    lst.Add(TEntry.Create(I, I));
+  AssertTrue(lst.Count = 42);
+  AssertTrue(lst.Capacity = c);
 end;
 
 procedure TLiteHashList2Test.EnsureCapacity;
