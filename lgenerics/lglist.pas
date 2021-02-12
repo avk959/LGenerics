@@ -846,6 +846,7 @@ type
     function  Reverse: TReverse; inline;
     function  EqualKeys(const aKey: TKey): TEqualKeys;
     procedure Clear;
+    procedure MakeEmpty;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -4358,6 +4359,17 @@ procedure TGLiteHashList2.Clear;
 begin
   FNodeList := nil;
   FChainList := nil;
+  FCount := 0;
+end;
+
+procedure TGLiteHashList2.MakeEmpty;
+var
+  I: SizeInt;
+begin
+  if Count = 0 then exit;
+  System.FillChar(FChainList[0], System.Length(FChainList) * SizeOf(SizeInt), $ff);
+  for I := 0 to Pred(Count) do
+    FNodeList[I] := Default(TNode);
   FCount := 0;
 end;
 
