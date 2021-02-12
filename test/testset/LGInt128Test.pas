@@ -1113,8 +1113,12 @@ begin
   AssertTrue(TInt128.TryParse('-$ffffffffffffffff', I));
   AssertTrue(I.ToHexString(1) = '8000000000000000FFFFFFFFFFFFFFFF');
 
-  AssertTrue(TInt128.TryParse('340282366920938463463374607431768211455', I));
+  AssertTrue(TInt128.TryParse('170141183460469231731687303715884105727', I));
+  AssertTrue(I = I.MaxValue);
+  AssertTrue(TInt128.TryParse('-170141183460469231731687303715884105727', I));
   AssertTrue(I = I.MinValue);
+  AssertFalse(TInt128.TryParse('170141183460469231731687303715884105728', I));
+  AssertFalse(TInt128.TryParse('-170141183460469231731687303715884105728', I));
 end;
 
 procedure TInt128Test.CompareValue;

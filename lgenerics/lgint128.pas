@@ -2132,7 +2132,7 @@ class function TUInt128.TryDec2Val(const s: shortstring; out aValue: TLimbs128):
 var
   Len, MulCount, StartPos, I: Integer;
 begin
-  Len := Length(s);
+  Len := System.Length(s);
   StartPos := 1;
   MulCount := Len div STR_CONV_BASE_LOG;
   Len -= MulCount * STR_CONV_BASE_LOG;
@@ -4112,7 +4112,7 @@ begin
     IsNeg := sCopy[1] = '-';
     if IsNeg then
       sCopy := System.Copy(sCopy, 2, System.Length(sCopy));
-    if TUInt128.TryParseStr(sCopy, aValue.FLimbs) then
+    if TUInt128.TryParseStr(sCopy, aValue.FLimbs) and (aValue.HiLimbMacro and SIGN_FLAG = 0) then
       begin
         if IsNeg then
           aValue.Negate;
