@@ -40,7 +40,8 @@ uses
   LGTreapTest,
   LGRbTreeTest,
   LGJsonTest,
-  LGVarJsonTest;
+  LGVarJsonTest,
+  lgStrHelpersTest;
 
 type
 
