@@ -101,6 +101,10 @@
   - translation of Orson Peters' PDQSort algorithm
   - static segment tree
   - ...
+#### Algorithms on strings
+  - Boyer-Moore string matching algorithm(in Fast Search variant),
+case sensitive and case insensitive
+  - Boyer-Moore-Horspool-Raita algorithm
 #### Other:
   - non-cryptogarphic hashes(unit lgHash):
     + Yann Collet's xxHash32, xxHash64
