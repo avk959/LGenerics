@@ -103,8 +103,8 @@
   - ...
 #### Algorithms on strings
   - Boyer-Moore string matching algorithm(in Fast Search variant),
-case sensitive and case insensitive
-  - Boyer-Moore-Horspool-Raita algorithm
+case sensitive and case insensitive(unit lgStrHelpers)
+  - Boyer-Moore-Horspool-Raita algorithm(unit lgStrHelpers)
 #### Other:
   - non-cryptogarphic hashes(unit lgHash):
     + Yann Collet's xxHash32, xxHash64
