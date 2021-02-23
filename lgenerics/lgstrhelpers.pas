@@ -149,8 +149,8 @@ type
     procedure FillBc;
     procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
-    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
+    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
   public
   type
     TIntArray = array of SizeInt;
@@ -297,8 +297,8 @@ type
     procedure FillBc;
     procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
-    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
+    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
   public
   type
     TIntArray = array of SizeInt;
