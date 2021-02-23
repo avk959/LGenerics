@@ -148,8 +148,9 @@ type
     FNeedle: string;
     procedure FillBc;
     procedure FillGs;
-    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+    function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
+    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
   public
   type
     TIntArray = array of SizeInt;
@@ -295,8 +296,9 @@ type
     procedure FillMap;
     procedure FillBc;
     procedure FillGs;
-    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+    function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+    function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
+    function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt; inline;
   public
   type
     TIntArray = array of SizeInt;
@@ -321,8 +323,136 @@ type
     function FindMatches(const s: string): TIntArray;
   end;
 
+  function IsValidDotQuadIPv4(const s: string): Boolean;
+  function IsValidDotDecIPv4(const s: string): Boolean;
+
 implementation
 {$Q-}{$B-}{$COPERATORS ON}
+
+{$PUSH}{$WARN 5036 off}
+function IsValidDotQuadIPv4(const s: string): Boolean;
+type
+  TRadix = (raDec, raOct, raHex);
+var
+  I, OctetIdx, CharIdx: Integer;
+  Buf: array[0..3] of AnsiChar;
+  Radix: TRadix;
+  function OctetInRange: Boolean; inline;
+  begin
+    if CharIdx = 0 then exit(False);
+    case Radix of
+      raDec:
+        begin
+          if CharIdx = 4 then exit(False);
+          if CharIdx = 3 then
+            begin
+              if Buf[0] > '2' then exit(False);
+              if Buf[0] = '2' then
+                begin
+                  if Buf[1] > '5' then exit(False);
+                  if (Buf[1] = '5') and (Buf[2] > '5') then exit(False);
+                end;
+            end;
+        end;
+      raOct:
+        if (CharIdx = 4) and (Buf[1] > '3') then exit(False); //377
+      raHex:
+        if CharIdx < 3 then exit(False);
+    end;
+    CharIdx := 0;
+    OctetInRange := True;
+  end;
+var
+  p: PAnsiChar absolute s;
+begin
+  if DWord(System.Length(s) - 7) > DWord(12) then exit(False);
+  OctetIdx := 0;
+  CharIdx := 0;
+  for I := 0 to Pred(System.Length(s)) do
+    if p[I] <> '.' then
+      begin
+        if CharIdx = 4 then exit(False);
+        case p[I] of
+          '0'..'9':
+            begin
+              case CharIdx of
+                0: Radix := raDec;
+                1:
+                  if Buf[0] = '0' then
+                    begin
+                      if p[I] > '7' then exit(False);
+                      Radix := raOct;
+                    end;
+              else
+                if (Radix = raOct) and (p[I] > '7') then exit(False);
+              end;
+            end;
+          'X', 'x':
+            begin
+              if (CharIdx <> 1) or (Buf[0] <> '0') then exit(False);
+              Radix := raHex;
+            end;
+          'A'..'F', 'a'..'f':
+            if Radix <> raHex then exit(False);
+        else
+          exit(False);
+        end;
+        Buf[CharIdx] := p[I];
+        Inc(CharIdx);
+      end
+    else
+      begin
+        if (OctetIdx = 3) or not OctetInRange then exit(False);
+        Inc(OctetIdx);
+      end;
+  Result := (OctetIdx = 3) and OctetInRange;
+end;
+
+function IsValidDotDecIPv4(const s: string): Boolean;
+var
+  I, OctetIdx, CharIdx: Integer;
+  Buf: array[0..3] of AnsiChar;
+  function OctetInRange: Boolean; inline;
+  begin
+    if CharIdx = 0 then exit(False);
+    if CharIdx = 3 then
+      begin
+        if Buf[0] > '2' then exit(False);
+        if Buf[0] = '2' then
+          begin
+            if Buf[1] > '5' then exit(False);
+            if (Buf[1] = '5') and (Buf[2] > '5') then exit(False);
+          end;
+      end;
+    CharIdx := 0;
+    OctetInRange := True;
+  end;
+var
+  p: PAnsiChar absolute s;
+begin
+  if DWord(System.Length(s) - 7) > DWord(8) then exit(False);
+  OctetIdx := 0;
+  CharIdx := 0;
+  for I := 0 to Pred(System.Length(s)) do
+    case p[I] of
+      '0'..'9':
+        begin
+          if CharIdx = 3 then exit(False);
+          if (CharIdx = 1) and (Buf[0] = '0') then exit(False);
+          Buf[CharIdx] := p[I];
+          Inc(CharIdx);
+        end;
+      '.':
+        begin
+          if (OctetIdx = 3) or not OctetInRange then exit(False);
+          Inc(OctetIdx);
+        end
+    else
+      exit(False);
+    end;
+  Result := (OctetIdx = 3) and OctetInRange;
+end;
+{$POP}
 
 { TAnsiStrHelper.TStrEnumerable }
 
@@ -632,83 +762,56 @@ begin
     end;
 end;
 
-function Max(L, R: Integer): Integer; inline;
+function TBmSearch.DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+var
+  J, NeedLast: SizeInt;
+  p: PByte absolute FNeedle;
 begin
-  if L < R then
-    Result := R
-  else
-    Result := L;
+  NeedLast := Pred(System.Length(FNeedle));
+  while I < aHeapLen do
+    begin
+      while (I < aHeapLen) and (aHeap[I] <> p[NeedLast]) do
+        I += FBcShift[aHeap[I]];
+      if I >= aHeapLen then break;
+      J := Pred(NeedLast);
+      Dec(I);
+      while (J <> NULL_INDEX) and (aHeap[I] = p[J]) do
+        begin
+          Dec(I);
+          Dec(J);
+        end;
+      if J = NULL_INDEX then
+        exit(Succ(I))
+      else
+        I += FGsShift[J];
+    end;
+  Result := NULL_INDEX;
 end;
 
 function TBmSearch.FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-var
-  J, NeedLast: SizeInt;
-  p: PByte absolute FNeedle;
 begin
-  NeedLast := Pred(System.Length(FNeedle));
   if I = NULL_INDEX then
-    I += System.Length(FNeedle)
+    Result := DoFind(aHeap, aHeapLen, I + System.Length(FNeedle))
   else
-    I += FGsShift[0];
-  while I < aHeapLen do
-    begin
-      while (I < aHeapLen) and (aHeap[I] <> p[NeedLast]) do
-        I += FBcShift[aHeap[I]];
-      if I >= aHeapLen then break;
-      J := Pred(NeedLast);
-      Dec(I);
-      while (J <> NULL_INDEX) and (aHeap[I] = p[J]) do
-        begin
-          Dec(I);
-          Dec(J);
-        end;
-      if J = NULL_INDEX then
-        exit(Succ(I))
-      else
-        I += FGsShift[J];
-    end;
-  Result := NULL_INDEX;
+    Result := DoFind(aHeap, aHeapLen, I + FGsShift[0]);
 end;
 
 function TBmSearch.Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-var
-  J, NeedLast: SizeInt;
-  p: PByte absolute FNeedle;
 begin
-  NeedLast := Pred(System.Length(FNeedle));
-  I += NeedLast;
-  while I < aHeapLen do
-    begin
-      while (I < aHeapLen) and (aHeap[I] <> p[NeedLast]) do
-        I += FBcShift[aHeap[I]];
-      if I >= aHeapLen then break;
-      J := Pred(NeedLast);
-      Dec(I);
-      while (J <> NULL_INDEX) and (aHeap[I] = p[J]) do
-        begin
-          Dec(I);
-          Dec(J);
-        end;
-      if J = NULL_INDEX then
-        exit(Succ(I))
-      else
-        I += FGsShift[J];
-    end;
-  Result := NULL_INDEX;
+  Result := DoFind(aHeap, aHeapLen, I + Pred(System.Length(FNeedle)));
 end;
 
 constructor TBmSearch.Create(const aPattern: string);
 begin
   FGsShift := nil;
   if aPattern <> '' then
-    FNeedle := System.Copy(aPattern, 1, System.Length(aPattern))
-  else
-    FNeedle := '';
-  if FNeedle <> '' then
     begin
+      FNeedle := System.Copy(aPattern, 1, System.Length(aPattern));
       FillBc;
       FillGs;
-    end;
+    end
+  else
+    FNeedle := '';
 end;
 
 constructor TBmSearch.Create(const aPattern: array of Byte);
@@ -937,11 +1040,12 @@ end;
 constructor TBmhrSearch.Create(const aPattern: string);
 begin
   if aPattern <> '' then
-    FNeedle := System.Copy(aPattern, 1, System.Length(aPattern))
+    begin
+      FNeedle := System.Copy(aPattern, 1, System.Length(aPattern));
+      FillBc;
+    end
   else
     FNeedle := '';
-  if FNeedle <> '' then
-    FillBc;
 end;
 
 constructor TBmhrSearch.Create(const aPattern: array of Byte);
@@ -1121,16 +1225,12 @@ begin
     end;
 end;
 
-function TBmSearchCI.FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+function TBmSearchCI.DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
 var
   J, NeedLast: SizeInt;
   p: PByte absolute FNeedle;
 begin
   NeedLast := Pred(System.Length(FNeedle));
-  if I = NULL_INDEX then
-    I += System.Length(FNeedle)
-  else
-    I += FGsShift[0];
   while I < aHeapLen do
     begin
       while (I < aHeapLen) and (FLoCaseMap[aHeap[I]] <> p[NeedLast]) do
@@ -1151,31 +1251,17 @@ begin
   Result := NULL_INDEX;
 end;
 
-function TBmSearchCI.Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
-var
-  J, NeedLast: SizeInt;
-  p: PByte absolute FNeedle;
+function TBmSearchCI.FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
 begin
-  NeedLast := Pred(System.Length(FNeedle));
-  I += NeedLast;
-  while I < aHeapLen do
-    begin
-      while (I < aHeapLen) and (FLoCaseMap[aHeap[I]] <> p[NeedLast]) do
-        I += FBcShift[FLoCaseMap[aHeap[I]]];
-      if I >= aHeapLen then break;
-      J := Pred(NeedLast);
-      Dec(I);
-      while (J <> NULL_INDEX) and (FLoCaseMap[aHeap[I]] = p[J]) do
-        begin
-          Dec(I);
-          Dec(J);
-        end;
-      if J = NULL_INDEX then
-        exit(Succ(I))
-      else
-        I += FGsShift[J];
-    end;
-  Result := NULL_INDEX;
+  if I = NULL_INDEX then
+    Result := DoFind(aHeap, aHeapLen, I + System.Length(FNeedle))
+  else
+    Result := DoFind(aHeap, aHeapLen, I + FGsShift[0]);
+end;
+
+function TBmSearchCI.Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
+begin
+  Result := DoFind(aHeap, aHeapLen, I + Pred(System.Length(FNeedle)));
 end;
 
 constructor TBmSearchCI.Create(const aPattern: string);
