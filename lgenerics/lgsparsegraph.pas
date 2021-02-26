@@ -47,7 +47,7 @@ type
   TIntArray        = array of SizeInt;
   TIntMatrix       = array of TIntArray;
   TShortArray      = array of ShortInt;
-  TIntHelper       = specialize TGOrdinalArrayHelper<SizeInt>;
+  TIntHelper       = lgArrayHelpers.TSizeIntHelper;
   TIntVector       = specialize TGLiteVector<SizeInt>;
   PIntVector       = ^TIntVector;
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
@@ -4890,20 +4890,13 @@ end;
 { TGWeightHelper }
 
 class function TGWeightHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
-var
-  I: SizeInt;
 begin
-  System.SetLength(Result, aSize);
-  for I := 0 to Pred(aSize) do
-    Result[I] := aValue;
+  Result := TWArrayHelper.CreateAndFill(aValue, aSize);
 end;
 
 class procedure TGWeightHelper.Fill(var a: TWeightArray; aValue: TWeight);
-var
-  I: SizeInt;
 begin
-  for I := 0 to System.High(a) do
-    a[I] := aValue;
+  TWArrayHelper.Fill(a, aValue);
 end;
 
 class function TGWeightHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
@@ -5692,12 +5685,8 @@ begin
 end;
 
 class procedure TGWeightHelper.ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight);
-var
-  I: SizeInt;
 begin
-  System.SetLength(a, aLen);
-  for I := 0 to Pred(aLen) do
-    a[I] := aValue;
+  a := TWArrayHelper.CreateAndFill(aValue, aLen);
 end;
 
 class function TGWeightHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix;

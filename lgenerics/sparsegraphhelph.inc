@@ -237,6 +237,7 @@ type
   type
     TWeightArray  = array of TWeight;
     PWeight       = ^TWeight;
+    TWArrayHelper = specialize TGArrayHelpUtil<TWeight>;
 
   strict private
     class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
