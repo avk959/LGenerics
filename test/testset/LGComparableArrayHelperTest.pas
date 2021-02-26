@@ -289,6 +289,7 @@ type
 
     procedure InversionCount;
     procedure InversionCountND;
+    procedure Lis;
 
     procedure SameOfEmpty;
     procedure SameOfStatic1Success;
@@ -2184,6 +2185,23 @@ begin
   b := TIntHelper.CreateCopy(a);
   AssertTrue(TIntHelper.InversionCountND(b) = BigSize*Pred(BigSize) div 2);
   AssertTrue(TIntHelper.Same(a, b));
+end;
+
+procedure TComparableArrayHelperTest.Lis;
+begin
+  AssertTrue(TIntHelper.Lis([]) = nil);
+  AssertTrue(TIntHelper.Lis([1]) = nil);
+  AssertTrue(TIntHelper.Lis([1, 1]) = nil);
+  AssertTrue(TIntHelper.Lis([2, 1]) = nil);
+  AssertTrue(TIntHelper.Lis([5, 5, 5, 4]) = nil);
+  AssertTrue(TIntHelper.Lis([13, 10, 8, 7, 3, 2]) = nil);
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, 2]), [0, 1]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, -1, 2, 4, 3, 2]), [1, 2, 4]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, -1, 2, 4, 3, 2, 2]), [1, 2, 4]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis(
+    [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15]),
+    //0, 2, 6, 9, 11, 15
+    [0, 4, 6, 9, 13, 15]));
 end;
 
 procedure TComparableArrayHelperTest.SameOfEmpty;

@@ -306,6 +306,7 @@ type
 
     procedure InversionCount;
     procedure InversionCountND;
+    procedure Lis;
 
     procedure SameOfEmpty;
     procedure SameOfStatic1Success;
@@ -441,6 +442,7 @@ type
     procedure SequentSearch;
     procedure IndexOfMin;
     procedure IndexOfMax;
+    procedure Lis;
     procedure Sort;
     procedure Sort2;
   end;
@@ -2324,6 +2326,23 @@ begin
   AssertTrue(TIntHelper.Same(a, b));
 end;
 
+procedure TBaseArrayHelperTest.Lis;
+begin
+  AssertTrue(TIntHelper.Lis([]) = nil);
+  AssertTrue(TIntHelper.Lis([1]) = nil);
+  AssertTrue(TIntHelper.Lis([1, 1]) = nil);
+  AssertTrue(TIntHelper.Lis([2, 1]) = nil);
+  AssertTrue(TIntHelper.Lis([5, 5, 5, 4]) = nil);
+  AssertTrue(TIntHelper.Lis([13, 10, 8, 7, 3, 2]) = nil);
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, 2]), [0, 1]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, -1, 2, 4, 3, 2]), [1, 2, 4]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, -1, 2, 4, 3, 2, 2]), [1, 2, 4]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis(
+    [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15]),
+    //0, 2, 6, 9, 11, 15
+    [0, 4, 6, 9, 13, 15]));
+end;
+
 procedure TBaseArrayHelperTest.SameOfEmpty;
 var
   a, b: TIntArray;
@@ -3831,6 +3850,46 @@ begin
   AssertTrue(TDeqHelper.IndexOfMax(d) = 0);
   TDeqHelper.Reverse(d);
   AssertTrue(TDeqHelper.IndexOfMax(d) = d.Count - 1);
+end;
+
+procedure TBaseIndexedHelperTest.Lis;
+var
+  d: TIntDeque;
+begin
+  AssertTrue(TDeqHelper.Lis(d{%H-}) = nil);
+  d.PushLast(1);
+  AssertTrue(TDeqHelper.Lis(d) = nil);
+  d.PushLast(1);
+  AssertTrue(TDeqHelper.Lis(d) = nil);
+  d.PushFirst(2);
+  AssertTrue(TDeqHelper.Lis(d) = nil);
+  d.Clear;
+  d.PushLast(-1);
+  d.PushLast(2);
+  AssertTrue(TSizeIntHelper.Same(TDeqHelper.Lis(d), [0, 1]));
+  d.PushFirst(1);
+  d.PushLast(4);
+  d.PushLast(3);
+  d.PushLast(2);
+  AssertTrue(TSizeIntHelper.Same(TDeqHelper.Lis(d), [1, 2, 4]));
+  d.Clear;
+  d.PushLast(0);  //0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15
+  d.PushLast(8);
+  d.PushLast(4);
+  d.PushLast(12);
+  d.PushLast(2);
+  d.PushLast(10);
+  d.PushLast(6);
+  d.PushLast(14);
+  d.PushLast(1);
+  d.PushLast(9);
+  d.PushLast(5);
+  d.PushLast(13);
+  d.PushLast(3);
+  d.PushLast(11);
+  d.PushLast(7);
+  d.PushLast(15);                                 //0, 2, 6, 9, 11, 15
+  AssertTrue(TSizeIntHelper.Same(TDeqHelper.Lis(d),[0, 4, 6, 9, 13, 15]));
 end;
 
 procedure TBaseIndexedHelperTest.Sort;
