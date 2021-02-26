@@ -36,6 +36,7 @@ uses
 type
 
   TSortOrder    = LGUtils.TSortOrder;
+  TSizeIntArray = array of SizeInt;
 
   TSearchResult = record
     FoundIndex,
@@ -342,6 +343,9 @@ type
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T): Int64; static;
+  { returns an array of indices of the Longest Increasing Subsequence of A,
+    if any, otherwise returns an empty array }
+    class function  Lis(const A: array of T): TSizeIntArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -414,6 +418,9 @@ type
     class function  IsStrictAscending(const aEntity: TIndexed): Boolean; static;
     class function  IsNonAscending(const aEntity: TIndexed): Boolean; static;
     class function  IsStrictDescending(const aEntity: TIndexed): Boolean; static;
+  { returns an array of indices of the Longest Increasing Subsequence of aEntity,
+    if any, otherwise returns an empty array }
+    class function  Lis(const aEntity: TIndexed): TSizeIntArray; static;
     class function  Same(const e1, e2: TIndexed): Boolean; static;
     class procedure Sort(var aEntity: TIndexed; o: TSortOrder = soAsc); static;
     class procedure Sort(var aEntity: TIndexed; aFirst, aLast: SizeInt; o: TSortOrder = soAsc); static;
@@ -539,6 +546,9 @@ type
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T): Int64; static;
+  { returns an array of indices of the Longest Increasing Subsequence of A,
+    if any, otherwise returns an empty array }
+    class function  Lis(const A: array of T): TSizeIntArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -678,6 +688,9 @@ type
     class function  InversionCount(var A: array of T; c: TLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T; c: TLess): Int64; static;
+  { returns an array of indices of the Longest Increasing Subsequence of A,
+    if any, otherwise returns an empty array }
+    class function  Lis(const A: array of T; c: TLess): TSizeIntArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TLess): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -818,6 +831,9 @@ type
     class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T; c: TOnLess): Int64; static;
+  { returns an array of indices of the Longest Increasing Subsequence of A,
+    if any, otherwise returns an empty array }
+    class function  Lis(const A: array of T; c: TOnLess): TSizeIntArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -962,6 +978,9 @@ type
     class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T; c: TNestLess): Int64; static;
+  { returns an array of indices of the Longest Increasing Subsequence of A,
+    if any, otherwise returns an empty array }
+    class function  Lis(const A: array of T; c: TNestLess): TSizeIntArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -1089,6 +1108,9 @@ type
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T): Int64; static;
+  { returns an array of indices of the Longest Increasing Subsequence of A,
+    if any, otherwise returns an empty array }
+    class function  Lis(const A: array of T): TSizeIntArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -1163,6 +1185,8 @@ type
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
+
+  TSizeIntHelper = specialize TGOrdinalArrayHelper<SizeInt>;
 
   { TGRadixSorter provides stable LSD radix sorting, requires O(N) auxiliary memory;
       TKey is the type for which LSD radix sort is appropriate(any integer or float type);
@@ -3156,7 +3180,6 @@ begin
         L := Succ(M);
     end;
   Result := R;
-
 end;
 
 class function TGBaseArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; const aValue: T): SizeInt;
@@ -3879,6 +3902,60 @@ begin
   Result := InversionCount(CreateCopy(A));
 end;
 
+class function TGBaseArrayHelper.Lis(const A: array of T): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if not TCmpRel.Less(A[TailIdx[M]], v) then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  Len := 1;
+  for I := 1 to System.High(A) do
+    if TCmpRel.Less(A[I], A[TailIdx[0]]) then
+      TailIdx[0] := I
+    else
+      if TCmpRel.Less(A[TailIdx[Pred(Len)]], A[I]) then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(A[I], Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
+end;
+
 class function TGBaseArrayHelper.Same(const A, B: array of T): Boolean;
 var
   R, I: SizeInt;
@@ -4567,6 +4644,60 @@ begin
     end
   else
     Result := False;
+end;
+
+class function TGBaseIndexedHelper.Lis(const aEntity: TIndexed): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if not TCmpRel.Less(aEntity.UncMutable[TailIdx[M]]^, v) then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, aEntity.Count);
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, aEntity.Count);
+  Len := 1;
+  for I := 1 to Pred(aEntity.Count) do
+    if TCmpRel.Less(aEntity.UncMutable[I]^, aEntity.UncMutable[TailIdx[0]]^) then
+      TailIdx[0] := I
+    else
+      if TCmpRel.Less(aEntity.UncMutable[TailIdx[Pred(Len)]]^, aEntity.UncMutable[I]^) then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(aEntity.UncMutable[I]^, Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
 end;
 
 class function TGBaseIndexedHelper.Same(const e1, e2: TIndexed): Boolean;
@@ -6363,6 +6494,60 @@ end;
 class function TGComparableArrayHelper.InversionCountND(const A: array of T): Int64;
 begin
   Result := InversionCount(CreateCopy(A));
+end;
+
+class function TGComparableArrayHelper.Lis(const A: array of T): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if not (A[TailIdx[M]] < v) then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A)+1);
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  Len := 1;
+  for I := 1 to System.High(A) do
+    if A[I] < A[TailIdx[0]] then
+      TailIdx[0] := I
+    else
+      if A[TailIdx[Pred(Len)]] < A[I] then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(A[I], Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
 end;
 
 class function TGComparableArrayHelper.Same(const A, B: array of T): Boolean;
@@ -8241,6 +8426,60 @@ end;
 class function TGRegularArrayHelper.InversionCountND(const A: array of T; c: TLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
+end;
+
+class function TGRegularArrayHelper.Lis(const A: array of T; c: TLess): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if not c(A[TailIdx[M]], v) then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  Len := 1;
+  for I := 1 to System.High(A) do
+    if c(A[I], A[TailIdx[0]]) then
+      TailIdx[0] := I
+    else
+      if c(A[TailIdx[Pred(Len)]], A[I]) then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(A[I], Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
 end;
 
 class function TGRegularArrayHelper.Same(const A, B: array of T; c: TLess): Boolean;
@@ -10124,6 +10363,60 @@ begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
+class function TGDelegatedArrayHelper.Lis(const A: array of T; c: TOnLess): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if not c(A[TailIdx[M]], v) then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  Len := 1;
+  for I := 1 to System.High(A) do
+    if c(A[I], A[TailIdx[0]]) then
+      TailIdx[0] := I
+    else
+      if c(A[TailIdx[Pred(Len)]], A[I]) then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(A[I], Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
+end;
+
 class function TGDelegatedArrayHelper.Same(const A, B: array of T; c: TOnLess): Boolean;
 var
   R, I: SizeInt;
@@ -12005,6 +12298,60 @@ begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
+class function TGNestedArrayHelper.Lis(const A: array of T; c: TNestLess): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if not c(A[TailIdx[M]], v) then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  Len := 1;
+  for I := 1 to System.High(A) do
+    if c(A[I], A[TailIdx[0]]) then
+      TailIdx[0] := I
+    else
+      if c(A[TailIdx[Pred(Len)]], A[I]) then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(A[I], Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
+end;
+
 class function TGNestedArrayHelper.Same(const A, B: array of T; c: TNestLess): Boolean;
 var
   R, I: SizeInt;
@@ -13184,12 +13531,9 @@ begin
 end;
 
 class procedure TGSimpleArrayHelper.Reverse(var A: array of T);
-var
-  R: SizeInt;
 begin
-  R := System.High(A);
-  if R > 0 then
-    DoReverse(A, 0, R);
+  if System.High(A) > 0 then
+    DoReverse(A, 0, System.High(A));
 end;
 
 class procedure TGSimpleArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
@@ -13530,6 +13874,60 @@ end;
 class function TGSimpleArrayHelper.InversionCountND(const A: array of T): Int64;
 begin
   Result := InversionCount(CreateCopy(A));
+end;
+
+class function TGSimpleArrayHelper.Lis(const A: array of T): TSizeIntArray;
+var
+  TailIdx: array of SizeInt = nil;
+  Parents: array of SizeInt = nil;
+  function CeilIdx(const v: T; R: SizeInt): SizeInt;
+  var
+    L, M: SizeInt;
+  begin
+    L := 0;
+    while L < R do
+      begin
+        {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
+        if v <= A[TailIdx[M]] then
+          R := M
+        else
+          L := Succ(M);
+      end;
+    CeilIdx := R;
+  end;
+var
+  r: array of SizeInt = nil;
+  I, Idx, Len: SizeInt;
+begin
+  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  Len := 1;
+  for I := 1 to System.High(A) do
+    if A[I] < A[TailIdx[0]] then
+      TailIdx[0] := I
+    else
+      if A[TailIdx[Pred(Len)]] < A[I] then
+        begin
+          Parents[I] := TailIdx[Pred(Len)];
+          TailIdx[Len] := I;
+          Inc(Len);
+        end
+      else
+        begin
+          Idx := CeilIdx(A[I], Pred(Len));
+          Parents[I] := TailIdx[Pred(Idx)];
+          TailIdx[Idx] := I;
+        end;
+  if Len < 2 then exit(nil);
+  System.SetLength(r, Len);
+  Idx := TailIdx[Pred(Len)];
+  for I := 0 to Pred(Len) do
+    begin
+      r[I] := Idx;
+      Idx := Parents[Idx];
+    end;
+  TSizeIntHelper.Reverse(r);
+  Result := r;
 end;
 
 class function TGSimpleArrayHelper.Same(const A, B: array of T): Boolean;
