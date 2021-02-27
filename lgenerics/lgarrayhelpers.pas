@@ -343,6 +343,9 @@ type
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T): Int64; static;
+  { returns True if aSeq is a subsequence of A, False otherwise;
+    the empty sequence is a subsequence of any other sequence }
+    class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
     class function  Lis(const A: array of T): TSizeIntArray; static;
@@ -546,6 +549,9 @@ type
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T): Int64; static;
+  { returns True if aSeq is a subsequence of A, False otherwise;
+    the empty sequence is a subsequence of any other sequence }
+    class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
     class function  Lis(const A: array of T): TSizeIntArray; static;
@@ -688,6 +694,9 @@ type
     class function  InversionCount(var A: array of T; c: TLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T; c: TLess): Int64; static;
+  { returns True if aSeq is a subsequence of A, False otherwise;
+    the empty sequence is a subsequence of any other sequence }
+    class function  IsSubSequence(const A, aSeq: array of T; c: TLess): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
     class function  Lis(const A: array of T; c: TLess): TSizeIntArray; static;
@@ -831,6 +840,9 @@ type
     class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T; c: TOnLess): Int64; static;
+  { returns True if aSeq is a subsequence of A, False otherwise;
+    the empty sequence is a subsequence of any other sequence }
+    class function  IsSubSequence(const A, aSeq: array of T; c: TOnLess): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
     class function  Lis(const A: array of T; c: TOnLess): TSizeIntArray; static;
@@ -978,6 +990,9 @@ type
     class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T; c: TNestLess): Int64; static;
+  { returns True if aSeq is a subsequence of A, False otherwise;
+    the empty sequence is a subsequence of any other sequence }
+    class function  IsSubSequence(const A, aSeq: array of T; c: TNestLess): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
     class function  Lis(const A: array of T; c: TNestLess): TSizeIntArray; static;
@@ -1108,6 +1123,9 @@ type
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
     class function  InversionCountND(const A: array of T): Int64; static;
+  { returns True if aSeq is a subsequence of A, False otherwise;
+    the empty sequence is a subsequence of any other sequence }
+    class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
     class function  Lis(const A: array of T): TSizeIntArray; static;
@@ -3902,6 +3920,21 @@ begin
   Result := InversionCount(CreateCopy(A));
 end;
 
+class function TGBaseArrayHelper.IsSubSequence(const A, aSeq: array of T): Boolean;
+var
+  I, J: SizeInt;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(A)) and (J < System.Length(aSeq)) do
+    begin
+      if not (TCmpRel.Less(A[I], aSeq[J]) or TCmpRel.Less(A[I], aSeq[J])) then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSeq);
+end;
+
 class function TGBaseArrayHelper.Lis(const A: array of T): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
@@ -6496,6 +6529,21 @@ begin
   Result := InversionCount(CreateCopy(A));
 end;
 
+class function TGComparableArrayHelper.IsSubSequence(const A, aSeq: array of T): Boolean;
+var
+  I, J: SizeInt;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(A)) and (J < System.Length(aSeq)) do
+    begin
+      if not ((A[I] < aSeq[J]) or (aSeq[J] < A[I])) then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSeq);
+end;
+
 class function TGComparableArrayHelper.Lis(const A: array of T): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
@@ -8426,6 +8474,21 @@ end;
 class function TGRegularArrayHelper.InversionCountND(const A: array of T; c: TLess): Int64;
 begin
   Result := InversionCount(CreateCopy(A), c);
+end;
+
+class function TGRegularArrayHelper.IsSubSequence(const A, aSeq: array of T; c: TLess): Boolean;
+var
+  I, J: SizeInt;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(A)) and (J < System.Length(aSeq)) do
+    begin
+      if not (c(A[I], aSeq[J]) or c(A[I], aSeq[J])) then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSeq);
 end;
 
 class function TGRegularArrayHelper.Lis(const A: array of T; c: TLess): TSizeIntArray;
@@ -10363,6 +10426,21 @@ begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
+class function TGDelegatedArrayHelper.IsSubSequence(const A, aSeq: array of T; c: TOnLess): Boolean;
+var
+  I, J: SizeInt;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(A)) and (J < System.Length(aSeq)) do
+    begin
+      if not (c(A[I], aSeq[J]) or c(A[I], aSeq[J])) then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSeq);
+end;
+
 class function TGDelegatedArrayHelper.Lis(const A: array of T; c: TOnLess): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
@@ -12298,6 +12376,21 @@ begin
   Result := InversionCount(CreateCopy(A), c);
 end;
 
+class function TGNestedArrayHelper.IsSubSequence(const A, aSeq: array of T; c: TNestLess): Boolean;
+var
+  I, J: SizeInt;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(A)) and (J < System.Length(aSeq)) do
+    begin
+      if not (c(A[I], aSeq[J]) or c(A[I], aSeq[J])) then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSeq);
+end;
+
 class function TGNestedArrayHelper.Lis(const A: array of T; c: TNestLess): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
@@ -13874,6 +13967,21 @@ end;
 class function TGSimpleArrayHelper.InversionCountND(const A: array of T): Int64;
 begin
   Result := InversionCount(CreateCopy(A));
+end;
+
+class function TGSimpleArrayHelper.IsSubSequence(const A, aSeq: array of T): Boolean;
+var
+  I, J: SizeInt;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(A)) and (J < System.Length(aSeq)) do
+    begin
+      if A[I] = aSeq[J] then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSeq);
 end;
 
 class function TGSimpleArrayHelper.Lis(const A: array of T): TSizeIntArray;
