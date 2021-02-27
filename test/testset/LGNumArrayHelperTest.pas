@@ -275,6 +275,7 @@ type
 
     procedure InversionCount;
     procedure InversionCountND;
+    procedure IsSubSequence;
     procedure Lis;
 
     procedure SameOfEmpty;
@@ -2301,6 +2302,25 @@ begin
   b := TIntHelper.CreateCopy(a);
   AssertTrue(TIntHelper.InversionCountND(b) = BigSize*Pred(BigSize) div 2);
   AssertTrue(TIntHelper.Same(a, b));
+end;
+
+procedure TSimpArrayHelperTest.IsSubSequence;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertTrue(TIntHelper.IsSubSequence(a, b));
+  b := [1];
+  AssertFalse(TIntHelper.IsSubSequence(a, b));
+  a := [1];
+  AssertTrue(TIntHelper.IsSubSequence(a, b));
+  a := [5, 3, 8, 11, 1];
+  b := [3, 11];
+  AssertTrue(TIntHelper.IsSubSequence(a, b));
+  b := [5, 3, 8, 1];
+  AssertTrue(TIntHelper.IsSubSequence(a, b));
+  b := [5, 3, 8, 11, 1, 0];
+  AssertFalse(TIntHelper.IsSubSequence(a, b));
 end;
 
 procedure TSimpArrayHelperTest.Lis;
