@@ -475,6 +475,7 @@ type
     procedure ArithmeticSubtract;
     procedure SymmetricSubtract;
     procedure PassByValue;
+    procedure IsPermutation;
   end;
 
   TLiteEquatableHashMultisetTest = class(TTestCase)
@@ -4111,10 +4112,9 @@ var
   I: Integer;
   lf: Single;
 begin
-  lf := 3.0;
+  lf := Single(3.0);
   ms.Instance := TMultiSet.Create(lf, IntArray11);
   AssertTrue(ms.Instance.Count = 11);
-  AssertTrue(ms.Instance.Capacity >= 11);
   AssertTrue(ms.Instance.LoadFactor = lf);
   for I in IntArray11 do
     AssertTrue(ms.Instance.Contains(I));
@@ -4127,11 +4127,10 @@ var
   e: IIntEnumerable;
   lf: Single;
 begin
-  lf := 3.0;
+  lf := Single(3.0);
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   ms.Instance := TMultiSet.Create(lf, e);
   AssertTrue(ms.Instance.Count = 11);
-  AssertTrue(ms.Instance.Capacity >= 11);
   AssertTrue(ms.Instance.LoadFactor = lf);
   for I in IntArray11 do
     AssertTrue(ms.Instance.Contains(I));
@@ -6179,6 +6178,32 @@ begin
   AssertTrue(ms.NonContains(5));
   AssertTrue(ms.NonContains(10));
   AssertTrue(ms.NonContains(15));
+end;
+
+procedure TLiteChainHashMultisetTest.IsPermutation;
+type
+  THelper = specialize TGOrdinalArrayHelper<Integer>;
+var
+  a, b: array of Integer;
+  I: Integer;
+const
+  TestSize = 100;
+  Range    = 42;
+begin
+  AssertTrue(TMultiSetSpec.IsPermutation(a, b));
+  a := [1];
+  b := [2];
+  AssertFalse(TMultiSetSpec.IsPermutation(a, b));
+  a := [1, 3];
+  b := [3, 1];
+  AssertTrue(TMultiSetSpec.IsPermutation(a, b));
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Random(Range);
+  b := THelper.CreateRandomShuffle(a);
+  AssertTrue(TMultiSetSpec.IsPermutation(a, b));
+  THelper.RandomShuffle(a);
+  AssertTrue(TMultiSetSpec.IsPermutation(b, a));
 end;
 
 
