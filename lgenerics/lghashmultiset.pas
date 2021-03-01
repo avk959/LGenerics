@@ -486,6 +486,8 @@ type
   type
     TMultiSet = specialize TGLiteHashMultiSet
       <T, TEntry, TTable, TTable.TEnumerator, TTable.TRemovableEnumerator>;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function IsPermutation(const A, aPerm: array of T): Boolean; static;
   end;
 
   { TGLiteEquatableHashMultiSet: open addressing hashset with linear probing and
@@ -2181,6 +2183,21 @@ begin
     end
   else
     Clear;
+end;
+
+{ TGLiteChainHashMultiSet }
+
+class function TGLiteChainHashMultiSet.IsPermutation(const A, aPerm: array of T): Boolean;
+var
+  ms: TMultiSet;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  ms.AddAll(A);
+  ms.RemoveAll(aPerm);
+  Result := ms.IsEmpty;
 end;
 
 { TGThreadFGHashMultiSet.TSlot }
