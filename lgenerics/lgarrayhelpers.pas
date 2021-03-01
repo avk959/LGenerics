@@ -331,6 +331,8 @@ type
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T): Boolean; static;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function  IsPermutation(const A, aPerm: array of T): Boolean; static;
   { note: an empty array or single element array is always nondescending }
     class function  IsNonDescending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
@@ -348,7 +350,10 @@ type
     class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
-    class function  Lis(const A: array of T): TSizeIntArray; static;
+    class function  LisI(const A: array of T): TSizeIntArray; static;
+  { returns the Longest Increasing Subsequence of A, if any,
+    otherwise returns an empty array }
+    class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -537,6 +542,8 @@ type
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T): Boolean; static;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function  IsPermutation(const A, aPerm: array of T): Boolean; static;
   { note: an empty array or single element array is always nondescending }
     class function  IsNonDescending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
@@ -554,7 +561,10 @@ type
     class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
-    class function  Lis(const A: array of T): TSizeIntArray; static;
+    class function  LisI(const A: array of T): TSizeIntArray; static;
+  { returns the Longest Increasing Subsequence of A, if any,
+    otherwise returns an empty array }
+    class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -682,6 +692,8 @@ type
     class function  NextPermutation2Asc(var A: array of T; c: TLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T; c: TLess): Boolean; static;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function  IsPermutation(const A, aPerm: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
     class function  IsNonDescending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
@@ -699,7 +711,10 @@ type
     class function  IsSubSequence(const A, aSeq: array of T; c: TLess): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
-    class function  Lis(const A: array of T; c: TLess): TSizeIntArray; static;
+    class function  LisI(const A: array of T; c: TLess): TSizeIntArray; static;
+  { returns the Longest Increasing Subsequence of A, if any,
+    otherwise returns an empty array }
+    class function  Lis(const A: array of T; c: TLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TLess): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -828,6 +843,8 @@ type
     class function  NextPermutation2Asc(var A: array of T; c: TOnLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T; c: TOnLess): Boolean; static;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function  IsPermutation(const A, aPerm: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
     class function  IsNonDescending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
@@ -845,7 +862,10 @@ type
     class function  IsSubSequence(const A, aSeq: array of T; c: TOnLess): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
-    class function  Lis(const A: array of T; c: TOnLess): TSizeIntArray; static;
+    class function  LisI(const A: array of T; c: TOnLess): TSizeIntArray; static;
+  { returns the Longest Increasing Subsequence of A, if any,
+    otherwise returns an empty array }
+    class function  Lis(const A: array of T; c: TOnLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -978,6 +998,8 @@ type
     class function  NextPermutation2Asc(var A: array of T; c: TNestLess): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T; c: TNestLess): Boolean; static;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function  IsPermutation(const A, aPerm: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is always nondescending }
     class function  IsNonDescending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
@@ -995,7 +1017,10 @@ type
     class function  IsSubSequence(const A, aSeq: array of T; c: TNestLess): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
-    class function  Lis(const A: array of T; c: TNestLess): TSizeIntArray; static;
+    class function  LisI(const A: array of T; c: TNestLess): TSizeIntArray; static;
+  { returns the Longest Increasing Subsequence of A, if any,
+    otherwise returns an empty array }
+    class function  Lis(const A: array of T; c: TNestLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -1111,6 +1136,8 @@ type
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
   { returns True if permutation towards nonascending state of A has done, False otherwise }
     class function  NextPermutation2Desc(var A: array of T): Boolean; static;
+  { returns True if aPerm is a combinatorial permutation of the elements of A }
+    class function  IsPermutation(const A, aPerm: array of T): Boolean; static;
   { note: an empty array or single element array is always nondescending }
     class function  IsNonDescending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict ascending }
@@ -1128,7 +1155,10 @@ type
     class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
   { returns an array of indices of the Longest Increasing Subsequence of A,
     if any, otherwise returns an empty array }
-    class function  Lis(const A: array of T): TSizeIntArray; static;
+    class function  LisI(const A: array of T): TSizeIntArray; static;
+  { returns the Longest Increasing Subsequence of A, if any,
+    otherwise returns an empty array }
+    class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
   { hybrid in-place sorting based on quicksort with random pivot selection }
@@ -3819,6 +3849,21 @@ begin
   Result := True;
 end;
 
+class function TGBaseArrayHelper.IsPermutation(const A, aPerm: array of T): Boolean;
+var
+  LocA, LocPerm: TArray;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  LocA := CreateCopy(A);
+  LocPerm := CreateCopy(aPerm);
+  Sort(LocA);
+  Sort(LocPerm);
+  Result := Same(LocA, LocPerm);
+end;
+
 class function TGBaseArrayHelper.IsNonDescending(const A: array of T): Boolean;
 var
   I: SizeInt;
@@ -3935,7 +3980,7 @@ begin
   Result := J = System.Length(aSeq);
 end;
 
-class function TGBaseArrayHelper.Lis(const A: array of T): TSizeIntArray;
+class function TGBaseArrayHelper.LisI(const A: array of T): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
   Parents: array of SizeInt = nil;
@@ -3987,6 +4032,17 @@ begin
     end;
   TSizeIntHelper.Reverse(r);
   Result := r;
+end;
+
+class function TGBaseArrayHelper.Lis(const A: array of T): TArray;
+var
+  LocLis: TSizeIntArray;
+  I: SizeInt;
+begin
+  LocLis := LisI(A);
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := A[LocLis[I]];
 end;
 
 class function TGBaseArrayHelper.Same(const A, B: array of T): Boolean;
@@ -6428,6 +6484,21 @@ begin
   Result := True;
 end;
 
+class function TGComparableArrayHelper.IsPermutation(const A, aPerm: array of T): Boolean;
+var
+  LocA, LocPerm: TArray;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  LocA := CreateCopy(A);
+  LocPerm := CreateCopy(aPerm);
+  Sort(LocA);
+  Sort(LocPerm);
+  Result := Same(LocA, LocPerm);
+end;
+
 class function TGComparableArrayHelper.IsNonDescending(const A: array of T): Boolean;
 var
   I: SizeInt;
@@ -6544,7 +6615,7 @@ begin
   Result := J = System.Length(aSeq);
 end;
 
-class function TGComparableArrayHelper.Lis(const A: array of T): TSizeIntArray;
+class function TGComparableArrayHelper.LisI(const A: array of T): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
   Parents: array of SizeInt = nil;
@@ -6596,6 +6667,17 @@ begin
     end;
   TSizeIntHelper.Reverse(r);
   Result := r;
+end;
+
+class function TGComparableArrayHelper.Lis(const A: array of T): TArray;
+var
+  LocLis: TSizeIntArray;
+  I: SizeInt;
+begin
+  LocLis := LisI(A);
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := A[LocLis[I]];
 end;
 
 class function TGComparableArrayHelper.Same(const A, B: array of T): Boolean;
@@ -8375,6 +8457,21 @@ begin
   Result := True;
 end;
 
+class function TGRegularArrayHelper.IsPermutation(const A, aPerm: array of T; c: TLess): Boolean;
+var
+  LocA, LocPerm: TArray;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  LocA := CreateCopy(A);
+  LocPerm := CreateCopy(aPerm);
+  Sort(LocA, c);
+  Sort(LocPerm, c);
+  Result := Same(LocA, LocPerm, c);
+end;
+
 class function TGRegularArrayHelper.IsNonDescending(const A: array of T; c: TLess): Boolean;
 var
   I: SizeInt;
@@ -8491,7 +8588,7 @@ begin
   Result := J = System.Length(aSeq);
 end;
 
-class function TGRegularArrayHelper.Lis(const A: array of T; c: TLess): TSizeIntArray;
+class function TGRegularArrayHelper.LisI(const A: array of T; c: TLess): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
   Parents: array of SizeInt = nil;
@@ -8543,6 +8640,17 @@ begin
     end;
   TSizeIntHelper.Reverse(r);
   Result := r;
+end;
+
+class function TGRegularArrayHelper.Lis(const A: array of T; c: TLess): TArray;
+var
+  LocLis: TSizeIntArray;
+  I: SizeInt;
+begin
+  LocLis := LisI(A, c);
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := A[LocLis[I]];
 end;
 
 class function TGRegularArrayHelper.Same(const A, B: array of T; c: TLess): Boolean;
@@ -10325,6 +10433,21 @@ begin
   Result := True;
 end;
 
+class function TGDelegatedArrayHelper.IsPermutation(const A, aPerm: array of T; c: TOnLess): Boolean;
+var
+  LocA, LocPerm: TArray;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  LocA := CreateCopy(A);
+  LocPerm := CreateCopy(aPerm);
+  Sort(LocA, c);
+  Sort(LocPerm, c);
+  Result := Same(LocA, LocPerm, c);
+end;
+
 class function TGDelegatedArrayHelper.IsNonDescending(const A: array of T; c: TOnLess): Boolean;
 var
   I: SizeInt;
@@ -10441,7 +10564,7 @@ begin
   Result := J = System.Length(aSeq);
 end;
 
-class function TGDelegatedArrayHelper.Lis(const A: array of T; c: TOnLess): TSizeIntArray;
+class function TGDelegatedArrayHelper.LisI(const A: array of T; c: TOnLess): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
   Parents: array of SizeInt = nil;
@@ -10493,6 +10616,17 @@ begin
     end;
   TSizeIntHelper.Reverse(r);
   Result := r;
+end;
+
+class function TGDelegatedArrayHelper.Lis(const A: array of T; c: TOnLess): TArray;
+var
+  LocLis: TSizeIntArray;
+  I: SizeInt;
+begin
+  LocLis := LisI(A, c);
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := A[LocLis[I]];
 end;
 
 class function TGDelegatedArrayHelper.Same(const A, B: array of T; c: TOnLess): Boolean;
@@ -12275,6 +12409,21 @@ begin
   Result := True;
 end;
 
+class function TGNestedArrayHelper.IsPermutation(const A, aPerm: array of T; c: TNestLess): Boolean;
+var
+  LocA, LocPerm: TArray;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  LocA := CreateCopy(A);
+  LocPerm := CreateCopy(aPerm);
+  Sort(LocA, c);
+  Sort(LocPerm, c);
+  Result := Same(LocA, LocPerm, c);
+end;
+
 class function TGNestedArrayHelper.IsNonDescending(const A: array of T; c: TNestLess): Boolean;
 var
   I: SizeInt;
@@ -12391,7 +12540,7 @@ begin
   Result := J = System.Length(aSeq);
 end;
 
-class function TGNestedArrayHelper.Lis(const A: array of T; c: TNestLess): TSizeIntArray;
+class function TGNestedArrayHelper.LisI(const A: array of T; c: TNestLess): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
   Parents: array of SizeInt = nil;
@@ -12443,6 +12592,17 @@ begin
     end;
   TSizeIntHelper.Reverse(r);
   Result := r;
+end;
+
+class function TGNestedArrayHelper.Lis(const A: array of T; c: TNestLess): TArray;
+var
+  LocLis: TSizeIntArray;
+  I: SizeInt;
+begin
+  LocLis := LisI(A, c);
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := A[LocLis[I]];
 end;
 
 class function TGNestedArrayHelper.Same(const A, B: array of T; c: TNestLess): Boolean;
@@ -13868,6 +14028,21 @@ begin
   Result := True;
 end;
 
+class function TGSimpleArrayHelper.IsPermutation(const A, aPerm: array of T): Boolean;
+var
+  LocA, LocPerm: TArray;
+begin
+  if System.Length(A) = 0 then
+    exit(System.Length(aPerm) = 0);
+  if System.Length(A) <> System.Length(aPerm) then
+    exit(False);
+  LocA := CreateCopy(A);
+  LocPerm := CreateCopy(aPerm);
+  Sort(LocA);
+  Sort(LocPerm);
+  Result := Same(LocA, LocPerm);
+end;
+
 class function TGSimpleArrayHelper.IsNonDescending(const A: array of T): Boolean;
 var
   I: SizeInt;
@@ -13984,7 +14159,7 @@ begin
   Result := J = System.Length(aSeq);
 end;
 
-class function TGSimpleArrayHelper.Lis(const A: array of T): TSizeIntArray;
+class function TGSimpleArrayHelper.LisI(const A: array of T): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
   Parents: array of SizeInt = nil;
@@ -14036,6 +14211,17 @@ begin
     end;
   TSizeIntHelper.Reverse(r);
   Result := r;
+end;
+
+class function TGSimpleArrayHelper.Lis(const A: array of T): TArray;
+var
+  LocLis: TSizeIntArray;
+  I: SizeInt;
+begin
+  LocLis := LisI(A);
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := A[LocLis[I]];
 end;
 
 class function TGSimpleArrayHelper.Same(const A, B: array of T): Boolean;
