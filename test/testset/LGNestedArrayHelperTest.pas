@@ -283,7 +283,8 @@ type
     procedure InversionCount;
     procedure InversionCountND;
     procedure IsSubSequence;
-    procedure Lis;
+    procedure LisI;
+    procedure IsPermutation;
 
     procedure SameOfEmpty;
     procedure SameOfStatic1Success;
@@ -2400,22 +2401,47 @@ begin
   AssertFalse(TIntHelper.IsSubSequence(a, b, @IntCmp));
 end;
 
-procedure TNestedArrayHelperTest.Lis;
+procedure TNestedArrayHelperTest.LisI;
 IntCmpMacro;
 begin
-  AssertTrue(TIntHelper.Lis([], @IntCmp) = nil);
-  AssertTrue(TIntHelper.Lis([1], @IntCmp) = nil);
-  AssertTrue(TIntHelper.Lis([1, 1], @IntCmp) = nil);
-  AssertTrue(TIntHelper.Lis([2, 1], @IntCmp) = nil);
-  AssertTrue(TIntHelper.Lis([5, 5, 5, 4], @IntCmp) = nil);
-  AssertTrue(TIntHelper.Lis([13, 10, 8, 7, 3, 2], @IntCmp) = nil);
-  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, 2], @IntCmp), [0, 1]));
-  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, -1, 2, 4, 3, 2], @IntCmp), [1, 2, 4]));
-  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis([1, -1, 2, 4, 3, 2, 2], @IntCmp), [1, 2, 4]));
-  AssertTrue(TSizeIntHelper.Same(TIntHelper.Lis(
+  AssertTrue(TIntHelper.LisI([], @IntCmp) = nil);
+  AssertTrue(TIntHelper.LisI([1], @IntCmp) = nil);
+  AssertTrue(TIntHelper.LisI([1, 1], @IntCmp) = nil);
+  AssertTrue(TIntHelper.LisI([2, 1], @IntCmp) = nil);
+  AssertTrue(TIntHelper.LisI([5, 5, 5, 4], @IntCmp) = nil);
+  AssertTrue(TIntHelper.LisI([13, 10, 8, 7, 3, 2], @IntCmp) = nil);
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.LisI([1, 2], @IntCmp), [0, 1]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.LisI([1, -1, 2, 4, 3, 2], @IntCmp), [1, 2, 4]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.LisI([1, -1, 2, 4, 3, 2, 2], @IntCmp), [1, 2, 4]));
+  AssertTrue(TSizeIntHelper.Same(TIntHelper.LisI(
     [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15], @IntCmp),
     //0, 2, 6, 9, 11, 15
     [0, 4, 6, 9, 13, 15]));
+end;
+
+procedure TNestedArrayHelperTest.IsPermutation;
+IntCmpMacro;
+var
+  a, b: array of Integer;
+  I: Integer;
+const
+  TestSize = 100;
+  Range    = 42;
+begin
+  AssertTrue(TIntHelper.IsPermutation(a{%H-}, b{%H-}, @IntCmp));
+  a := [1];
+  b := [2];
+  AssertFalse(TIntHelper.IsPermutation(a, b, @IntCmp));
+  a := [1, 3];
+  b := [3, 1];
+  AssertTrue(TIntHelper.IsPermutation(a, b, @IntCmp));
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Random(Range);
+  b := TIntHelper.CreateRandomShuffle(a);
+  AssertTrue(TIntHelper.IsPermutation(a, b, @IntCmp));
+  TIntHelper.RandomShuffle(a);
+  AssertTrue(TIntHelper.IsPermutation(b, a, @IntCmp));
 end;
 
 procedure TNestedArrayHelperTest.SameOfEmpty;
