@@ -1403,62 +1403,69 @@ end;
 class procedure TGArrayHelpUtil.CopyItems(aSrc, aDst: PItem; aCount: SizeInt);
 begin
   if (aDst <> aSrc) and (aCount > 0) then  //else nothing to do
-    if aDst > aSrc then // forward copy
-      begin
-        aSrc += aCount - 1;
-        aDst += aCount - 1;
-        while aCount >= 4 do
-          begin
-            aDst[ 0] := aSrc[ 0];
-            aDst[-1] := aSrc[-1];
-            aDst[-2] := aSrc[-2];
-            aDst[-3] := aSrc[-3];
-            aSrc -= 4;
-            aDst -= 4;
-            aCount -= 4;
-          end;
-        case aCount of
-          1: aDst[0] := aSrc[0];
-          2:
+    begin
+      if IsManagedType(T) then
+        begin
+          if aDst > aSrc then // forward copy
             begin
-              aDst[ 0] := aSrc[ 0];
-              aDst[-1] := aSrc[-1];
-            end;
-          3:
+              aSrc += aCount - 1;
+              aDst += aCount - 1;
+              while aCount >= 4 do
+                begin
+                  aDst[ 0] := aSrc[ 0];
+                  aDst[-1] := aSrc[-1];
+                  aDst[-2] := aSrc[-2];
+                  aDst[-3] := aSrc[-3];
+                  aSrc -= 4;
+                  aDst -= 4;
+                  aCount -= 4;
+                end;
+              case aCount of
+                1: aDst[0] := aSrc[0];
+                2:
+                  begin
+                    aDst[ 0] := aSrc[ 0];
+                    aDst[-1] := aSrc[-1];
+                  end;
+                3:
+                  begin
+                    aDst[ 0] := aSrc[ 0];
+                    aDst[-1] := aSrc[-1];
+                    aDst[-2] := aSrc[-2];
+                  end;
+              end;
+            end
+          else              // backward copy
             begin
-              aDst[ 0] := aSrc[ 0];
-              aDst[-1] := aSrc[-1];
-              aDst[-2] := aSrc[-2];
+              while aCount >= 4 do
+                begin
+                  aDst[0] := aSrc[0];
+                  aDst[1] := aSrc[1];
+                  aDst[2] := aSrc[2];
+                  aDst[3] := aSrc[3];
+                  aSrc += 4;
+                  aDst += 4;
+                  aCount -= 4;
+                end;
+              case aCount of
+                1: aDst[0] := aSrc[0];
+                2:
+                  begin
+                    aDst[0] := aSrc[0];
+                    aDst[1] := aSrc[1];
+                  end;
+                3:
+                  begin
+                    aDst[0] := aSrc[0];
+                    aDst[1] := aSrc[1];
+                    aDst[2] := aSrc[2];
+                  end;
+              end;
             end;
-        end;
-      end
-    else              // backward copy
-      begin
-        while aCount >= 4 do
-          begin
-            aDst[0] := aSrc[0];
-            aDst[1] := aSrc[1];
-            aDst[2] := aSrc[2];
-            aDst[3] := aSrc[3];
-            aSrc += 4;
-            aDst += 4;
-            aCount -= 4;
-          end;
-        case aCount of
-          1: aDst[0] := aSrc[0];
-          2:
-            begin
-              aDst[0] := aSrc[0];
-              aDst[1] := aSrc[1];
-            end;
-          3:
-            begin
-              aDst[0] := aSrc[0];
-              aDst[1] := aSrc[1];
-              aDst[2] := aSrc[2];
-            end;
-        end;
-      end;
+        end
+      else
+        System.Move(aSrc^, aDst^, aCount * SizeOf(T));
+    end;
 end;
 
 class procedure TGArrayHelpUtil.DoReverse(p: PItem; R: SizeInt);
@@ -1554,7 +1561,7 @@ class function TGArrayHelpUtil.CreateCopy(const A: array of T): TArray;
 begin
   System.SetLength(Result, System.Length(A));
   if System.Length(Result) > 0 then
-    CopyItems(@A[0], PItem(Result), System.Length(Result));
+    CopyItems(@A[0], PItem(Result), System.Length(Result))
 end;
 
 class function TGArrayHelpUtil.CreateReverseCopy(const A: array of T): TArray;
