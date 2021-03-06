@@ -14,7 +14,7 @@ type
 
   { TBmSearchTest }
 
-  TBmSearchTest= class(TTestCase)
+  TBmSearchTest = class(TTestCase)
   private
 
   published
@@ -28,7 +28,7 @@ type
 
   { TBmhrSearchTest }
 
-  TBmhrSearchTest= class(TTestCase)
+  TBmhrSearchTest = class(TTestCase)
   private
 
   published
@@ -42,7 +42,7 @@ type
 
   { TBmSearchCITest }
 
-  TBmSearchCITest= class(TTestCase)
+  TBmSearchCITest = class(TTestCase)
   private
 
   published
@@ -50,6 +50,14 @@ type
     procedure Matches;
     procedure NextMatch;
   end;
+
+ { TFunTest }
+
+ TFunTest = class(TTestCase)
+ private
+ published
+   procedure LevenshteinDist;
+ end;
 
 implementation
 
@@ -582,11 +590,36 @@ begin
   AssertTrue(Count = 6);
 end;
 
+{ TFunTest }
+
+procedure TFunTest.LevenshteinDist;
+begin
+  AssertTrue(LevenshteinDistance('', 'hello') = 5);
+  AssertTrue(LevenshteinDistance('hello', '') = 5);
+  AssertTrue(LevenshteinDistance('hello', 'hello') = 0);
+  AssertTrue(LevenshteinDistance('ab', 'aa') = 1);
+  AssertTrue(LevenshteinDistance('aa', 'ab') = 1);
+  AssertTrue(LevenshteinDistance('ab', 'ba') = 2);
+  AssertTrue(LevenshteinDistance('ba', 'ab') = 2);
+  AssertTrue(LevenshteinDistance('ab', 'aaa') = 2);
+  AssertTrue(LevenshteinDistance('a', 'bbb') = 3);
+  AssertTrue(LevenshteinDistance('aababab','abbaa') = 3);
+  AssertTrue(LevenshteinDistance('helli', 'elli') = 1);
+  AssertTrue(LevenshteinDistance('ellia', 'helli') = 2);
+  AssertTrue(LevenshteinDistance('helli', 'ellia') = 2);
+  AssertTrue(LevenshteinDistance('kitten', 'sitten') = 1);
+  AssertTrue(LevenshteinDistance('sitten', 'kitten') = 1);
+  AssertTrue(LevenshteinDistance('kitten', 'sitting') = 3);
+  AssertTrue(LevenshteinDistance('distance', 'difference') = 5);
+  AssertTrue(LevenshteinDistance('levenshtein', 'frankenstein') = 6);
+end;
+
 initialization
 
   RegisterTest(TBmSearchTest);
   RegisterTest(TBmhrSearchTest);
   RegisterTest(TBmSearchCITest);
+  RegisterTest(TFunTest);
 
 end.
 
