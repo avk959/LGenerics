@@ -28,7 +28,7 @@ interface
 
 uses
 
-  Classes, SysUtils, RegExpr,
+  Classes, SysUtils, Math, RegExpr,
   lgUtils,
   lgHelpers,
   lgArrayHelpers,
@@ -109,7 +109,7 @@ type
   type
     IStrEnumerable = specialize IGEnumerable<string>;
 
-    function GetEnumerable: IStrEnumerable; inline;
+    function AsEnumerable: IStrEnumerable; inline;
   end;
 
   { TBmSearch implements Boyer-Moore exact string matching algorithm  in a variant somewhat
@@ -323,13 +323,292 @@ type
     function FindMatches(const s: string): TIntArray;
   end;
 
+
+{ returns True if aSub is a subsequence of aStr, False otherwise }
+  function IsSubSequence(const aStr, aSub: string): Boolean;
+{ returns longest common subsequence(LCS); from Dan Gusfield
+  "Algorithms on Strings, Trees and Sequences", section 12.5 }
+  function LcsGus(const L, R: string): string;
+  function LcsGus(const L, R: array of Byte): TBytes;
+{ returns Levenshtein distance between L and R }
+  function LevenshteinDistance(const L, R: string): SizeInt;
+  function LevenshteinDistance(const L, R: array of Byte): SizeInt;
   function IsValidDotQuadIPv4(const s: string): Boolean;
   function IsValidDotDecIPv4(const s: string): Boolean;
 
 implementation
-{$Q-}{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}
 
 {$PUSH}{$WARN 5036 off}
+function IsSubSequence(const aStr, aSub: string): Boolean;
+var
+  I, J: SizeInt;
+  pStr: PAnsiChar absolute aStr;
+  pSub: PAnsiChar absolute aSub;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
+    begin
+      if pStr[I] = pSub[J] then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSub);
+end;
+
+function GetLcsG(const pL, PR: PByte; const aLenL, aLenR: SizeInt): TBytes;
+type
+  TNode = record
+    Index,
+    Next: SizeInt;
+  end;
+  TNodeList = array of TNode;
+var
+  SeqTbl: array[Byte] of SizeInt;
+  NodeList: TNodeList = nil;
+  Tmp: TSizeIntArray = nil;
+  LocLis: TSizeIntArray;
+  I, J, From, NodeIdx: SizeInt;
+begin
+  From := 0;
+  while (From < aLenL) and (pL[From] = pR[From]) do
+    Inc(From);
+  Result := specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(From)]);
+  if From = aLenL then exit;
+
+  for I := 0 to 255 do
+    SeqTbl[I] := NULL_INDEX;
+
+  System.SetLength(NodeList, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := From to Pred(aLenR) do
+    begin
+      if System.Length(NodeList) = J then
+        System.SetLength(NodeList, J * 2);
+      NodeList[J].Index := I;
+      NodeList[J].Next := SeqTbl[pR[I]];
+      SeqTbl[pR[I]] := J;
+      Inc(J);
+    end;
+
+  System.SetLength(Tmp, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := From to Pred(aLenL) do
+    begin
+      NodeIdx := SeqTbl[pL[I]];
+      while NodeIdx <> NULL_INDEX do
+        begin
+          if System.Length(Tmp) = J then
+            System.SetLength(Tmp, J * 2);
+          Tmp[J] := NodeList[NodeIdx].Index;
+          NodeIdx := NodeList[NodeIdx].Next;
+          Inc(J);
+        end;
+    end;
+  System.SetLength(Tmp, J);
+  if Tmp = nil then exit;
+  NodeList := nil;
+
+  LocLis := TSizeIntHelper.Lis(Tmp);
+  if LocLis = nil then
+    begin
+      System.SetLength(Result, Succ(System.Length(Result)));
+      Result[From] := pR[Tmp[0]];
+      exit;
+    end;
+  Tmp := nil;
+
+  System.SetLength(Result, System.Length(Result) + System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I+From] := pR[LocLis[I]];
+end;
+
+function LcsGus(const L, R: string): string;
+var
+  I: SizeInt;
+  b: TBytes = nil;
+begin
+  Result := '';
+  if (L = '') or (R = '') then exit;
+  if Pointer(L) = Pointer(R) then
+    exit(System.Copy(L, 1, System.Length(L)));
+  if (System.Length(L) = 1) then
+    begin
+      for I := 1 to System.Length(R) do
+        if L[1] = R[I] then
+          exit(L[1]);
+      exit;
+    end
+  else
+    if (System.Length(R) = 1) then
+      begin
+        for I := 1 to System.Length(L) do
+          if R[1] = L[I] then
+            exit(R[1]);
+        exit;
+      end;
+
+  if System.Length(L) <= System.Length(R) then
+    b := GetLcsG(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+  else
+    b := GetLcsG(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+
+  System.SetLength(Result, System.Length(b));
+  System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
+end;
+
+function LcsGus(const L, R: array of Byte): TBytes;
+var
+  I: SizeInt;
+begin
+  Result := nil;
+  if (System.Length(L) = 0) or (System.Length(R) = 0) then
+    exit(nil);
+  if @L[0] = @R[0] then
+    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(L));
+  if System.Length(L) = 1 then
+    begin
+      for I := 0 to Pred(System.Length(R)) do
+        if L[0] = R[I] then
+          exit([L[0]]);
+      exit(nil);
+    end
+  else
+    if System.Length(R) = 1 then
+      begin
+        for I := 0 to Pred(System.Length(L)) do
+          if R[0] = L[I] then
+            exit([R[0]]);
+        exit(nil);
+      end;
+
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsG(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := GetLcsG(@R[0], @L[0], System.Length(R), System.Length(L));
+end;
+
+function MinOf3(const a, b, c: SizeInt): SizeInt; inline;
+begin
+  Result := a;
+  if b < Result then
+    Result := b;
+  if c < Result then
+    Result := c;
+end;
+
+const
+  MAX_STATIC = 1024;
+
+function LevDist(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt = nil;
+  I, J, Prev, Next: SizeInt;
+  Dist: PSizeInt;
+  b: Byte;
+begin
+  //here aLenL <= aLenR and L <> R
+  while pL[Pred(aLenL)] = pR[Pred(aLenR)] do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+    end;
+
+  I := 0;
+  while pL^ = pR^ do
+    begin
+      Inc(pL);
+      Inc(pR);
+      Inc(I);
+    end;
+  aLenL -= I;
+  aLenR -= I;
+
+  if aLenR < MAX_STATIC then
+    Dist := @StBuf[0]
+  else
+    begin
+      System.SetLength(Buf, Succ(aLenR));
+      Dist := Pointer(Buf);
+    end;
+  for I := 0 to aLenR do
+    Dist[I] := I;
+
+  for I := 1 to aLenL do
+    begin
+      Prev := I;
+      b := pL[I-1];
+{$IFDEF CPU64}
+      J := 1;
+      while J < aLenL - 3 do
+        begin
+          if pR[J-1] = b then Next := Dist[J-1]
+          else Next := MinOf3(Dist[J-1]+1, Prev+1, Dist[J]+1);
+          Dist[J-1] := Prev; Prev := Next;
+
+          if pR[J] = b then Next := Dist[J]
+          else Next := MinOf3(Dist[J]+1, Prev+1, Dist[J+1]+1);
+          Dist[J] := Prev; Prev := Next;
+
+          if pR[J+1] = b then Next := Dist[J+1]
+          else Next := MinOf3(Dist[J+1]+1, Prev+1, Dist[J+2]+1);
+          Dist[J+1] := Prev; Prev := Next;
+
+          if pR[J+2] = b then Next := Dist[J+2]
+          else Next := MinOf3(Dist[J+2]+1, Prev+1, Dist[J+3]+1);
+          Dist[J+2] := Prev; Prev := Next;
+
+          J += 4;
+        end;
+      for J := J to aLenR do
+{$ELSE CPU64}
+      for J := 1 to aLenR do
+{$ENDIF}
+        begin
+          if pR[J-1] = b then
+            Next := Dist[J-1]
+          else
+            Next := MinOf3(Dist[J-1]+1, Prev+1, Dist[J]+1);
+          Dist[J-1] := Prev;
+          Prev := Next;
+        end;
+      Dist[aLenR] := Prev;
+    end;
+  Result := Dist[aLenR];
+end;
+
+function LevenshteinDistance(const L, R: string): SizeInt;
+begin
+  if L = '' then
+    exit(System.Length(R))
+  else
+    if R = '' then
+      exit(System.Length(L));
+  if L = R then
+    exit(0);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDist(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+  else
+    Result := LevDist(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+end;
+
+function LevenshteinDistance(const L, R: array of Byte): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if specialize TGOrdinalArrayHelper<Byte>.Same(L, R) then
+    exit(0);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDist(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := LevDist(@R[0], @L[0], System.Length(R), System.Length(L));
+end;
+
 function IsValidDotQuadIPv4(const s: string): Boolean;
 type
   TRadix = (raDec, raOct, raHex);
@@ -647,7 +926,7 @@ end;
 
 { TStringListHelper }
 
-function TStringListHelper.GetEnumerable: IStrEnumerable;
+function TStringListHelper.AsEnumerable: IStrEnumerable;
 begin
   Result := specialize TGClassEnumerable<string, TStringList, TStringsEnumerator>.Create(Self);
 end;
