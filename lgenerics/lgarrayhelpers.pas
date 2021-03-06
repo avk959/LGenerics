@@ -1841,40 +1841,40 @@ end;
 
 class function TGArrayHelpUtil.Same(const A, B: array of T; c: TEqualCompare): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if not c(A[I], B[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if not c(A[I], B[I]) then
+        exit(False);
   Result := True;
 end;
 
 class function TGArrayHelpUtil.Same(const A, B: array of T; c: TOnEqualCompare): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if not c(A[I], B[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if not c(A[I], B[I]) then
+        exit(False);
   Result := True;
 end;
 
 class function TGArrayHelpUtil.Same(const A, B: array of T; c: TNestEqualCompare): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if not c(A[I], B[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if not c(A[I], B[I]) then
+        exit(False);
   Result := True;
 end;
 
@@ -4054,14 +4054,14 @@ end;
 
 class function TGBaseArrayHelper.Same(const A, B: array of T): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if TCmpRel.Less(A[I], B[I]) or TCmpRel.Less(B[I], A[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if TCmpRel.Less(A[I], B[I]) or TCmpRel.Less(B[I], A[I]) then
+        exit(False);
   Result := True;
 end;
 
@@ -6689,14 +6689,14 @@ end;
 
 class function TGComparableArrayHelper.Same(const A, B: array of T): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if ValNotEqual(A[I], B[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if ValNotEqual(A[I], B[I]) then
+        exit(False);
   Result := True;
 end;
 
@@ -8662,14 +8662,14 @@ end;
 
 class function TGRegularArrayHelper.Same(const A, B: array of T; c: TLess): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if c(A[I], B[I]) or c(B[I], A[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if c(A[I], B[I]) or c(B[I], A[I]) then
+        exit(False);
   Result := True;
 end;
 
@@ -10638,14 +10638,14 @@ end;
 
 class function TGDelegatedArrayHelper.Same(const A, B: array of T; c: TOnLess): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if c(A[I], B[I]) or c(B[I], A[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if c(A[I], B[I]) or c(B[I], A[I]) then
+        exit(False);
   Result := True;
 end;
 
@@ -12614,14 +12614,14 @@ end;
 
 class function TGNestedArrayHelper.Same(const A, B: array of T; c: TNestLess): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if c(A[I], B[I]) or c(B[I], A[I]) then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if c(A[I], B[I]) or c(B[I], A[I]) then
+        exit(False);
   Result := True;
 end;
 
@@ -14233,14 +14233,14 @@ end;
 
 class function TGSimpleArrayHelper.Same(const A, B: array of T): Boolean;
 var
-  R, I: SizeInt;
+  I: SizeInt;
 begin
-  R := System.High(A);
-  if System.High(B) <> R then
+  if System.Length(A) <> System.Length(B) then
     exit(False);
-  for I := 0 to R do
-    if A[I] <> B[I] then
-      exit(False);
+  if (System.Length(A) > 0) and (@A[0] <> @B[0]) then
+    for I := 0 to System.High(A) do
+      if A[I] <> B[I] then
+        exit(False);
   Result := True;
 end;
 
