@@ -330,7 +330,7 @@ type
   "Algorithms on Strings, Trees and Sequences", section 12.5 }
   function LcsGus(const L, R: string): string;
   function LcsGus(const L, R: array of Byte): TBytes;
-{ returns Levenshtein distance between L and R }
+{ returns Levenshtein distance between L and R; used a simple dynamic programming algorithm }
   function LevenshteinDistance(const L, R: string): SizeInt;
   function LevenshteinDistance(const L, R: array of Byte): SizeInt;
   function IsValidDotQuadIPv4(const s: string): Boolean;
