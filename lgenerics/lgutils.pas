@@ -1008,8 +1008,9 @@ const
 
 type
   {$DEFINE USE_TGSET_INITIALIZE}
-  { TGSet<T> implements set of arbitrary size(up to High(Cardinal) div 33);
-    T must be of some ordinal type with a range of <= High(Cardinal) div 33 or WideChar }
+  { TGSet<T> implements set of arbitrary size; T must be of some ordinal type
+    with a range not greater than High (Cardinal) div 33;
+    (value (High (Cardinal) div 33) is related to the default stack size ) }
   TGSet<T> = record
   private
   const
