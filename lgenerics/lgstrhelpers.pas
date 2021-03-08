@@ -330,9 +330,17 @@ type
   "Algorithms on Strings, Trees and Sequences", section 12.5 }
   function LcsGus(const L, R: string): string;
   function LcsGus(const L, R: array of Byte): TBytes;
-{ returns Levenshtein distance between L and R; used a simple dynamic programming algorithm }
-  function LevenshteinDistance(const L, R: string): SizeInt;
-  function LevenshteinDistance(const L, R: array of Byte): SizeInt;
+{ returns Levenshtein distance between L and R; used a simple dynamic programming
+  algorithm with O(mn) time, where n and m are the lengths of L and R respectively }
+  function LevDistance(const L, R: string): SizeInt;
+  function LevDistance(const L, R: array of Byte): SizeInt;
+{ returns Levenshtein distance between L and R; Pascal translation of
+  github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
+  a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
+  worst-case time complexity , where n and m are the lengths of L and R respectively
+  and d is the edit distance computed }
+  function LevDistanceMBR(const L, R: string): SizeInt;
+  function LevDistanceMBR(const L, R: array of Byte): SizeInt;
   function IsValidDotQuadIPv4(const s: string): Boolean;
   function IsValidDotDecIPv4(const s: string): Boolean;
 
@@ -579,7 +587,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-function LevenshteinDistance(const L, R: string): SizeInt;
+function LevDistance(const L, R: string): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -594,7 +602,7 @@ begin
     Result := LevDist(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
 end;
 
-function LevenshteinDistance(const L, R: array of Byte): SizeInt;
+function LevDistance(const L, R: array of Byte): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -607,6 +615,169 @@ begin
     Result := LevDist(@L[0], @R[0], System.Length(L), System.Length(R))
   else
     Result := LevDist(@R[0], @L[0], System.Length(R), System.Length(L));
+end;
+
+function LevDistMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+
+  function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;  //avoid it ???
+  var
+    I, MaxRow: SizeInt;
+  begin
+    if aDist = 0 then I := 0
+    else I := MaxOf3(aAbove + 1, aRight + 1, aLeft);
+    MaxRow := Min(aLenL - k, aLenR);
+    while (I < MaxRow) and(pR[I] = pL[I + k]) do
+      Inc(I);
+    FindRow := I;
+  end;
+
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt = nil;
+
+  CurrL, CurrR, LastL, LastR, PrevL, PrevR: PSizeInt;
+  I, Delta, Dist, Diagonal, CurrRight, CurrLeft, Row: SizeInt;
+  tmp: Pointer;
+  Even: Boolean = True;
+begin
+  //here aLenL <= aLenR and L <> R and aLenR - aLenL <= aLimit
+  while pL[Pred(aLenL)] = pR[Pred(aLenR)] do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+    end;
+
+  I := 0;
+  while pL^ = pR^ do
+    begin
+      Inc(pL);
+      Inc(pR);
+      Inc(I);
+    end;
+  aLenL -= I;
+  aLenR -= I;
+
+  Delta := aLenL - aLenR;
+  Dist := -Delta;
+
+  if aLimit < MAX_STATIC div 6 then
+    begin
+      CurrL := @StBuf[0];
+      LastL := @StBuf[Succ(aLimit)];
+      PrevL := @StBuf[Succ(aLimit)*2];
+      CurrR := @StBuf[Succ(aLimit)*3];
+      LastR := @StBuf[Succ(aLimit)*4];
+      PrevR := @StBuf[Succ(aLimit)*5];
+    end
+  else
+    begin
+      System.SetLength(Buf, Succ(aLimit)*6);
+      CurrL := Pointer(Buf);
+      LastL := @Buf[Succ(aLimit)];
+      PrevL := @Buf[Succ(aLimit)*2];
+      CurrR := @Buf[Succ(aLimit)*3];
+      LastR := @Buf[Succ(aLimit)*4];
+      PrevR := @Buf[Succ(aLimit)*5];
+    end;
+
+  for I := 0 to Dist do
+    begin
+      LastR[I] := Dist - I - 1;
+      PrevR[I] := NULL_INDEX;
+    end;
+
+  while True do
+    begin
+      Diagonal := (Dist - Delta) div 2;
+      if Even then
+        LastR[Diagonal] := NULL_INDEX;
+
+      CurrRight := NULL_INDEX;
+
+      while Diagonal > 0 do
+        begin
+          CurrRight :=
+            FindRow( Delta + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
+          CurrR[Diagonal] := CurrRight;
+          Dec(Diagonal);
+        end;
+
+      Diagonal := (Dist + Delta) div 2;
+
+      if Even then
+        begin
+          LastL[Diagonal] := Pred((Dist - Delta) div 2);
+          CurrLeft := NULL_INDEX;
+        end
+      else
+        CurrLeft := (Dist - Delta) div 2;
+
+      while Diagonal > 0 do
+        begin
+          CurrLeft :=
+            FindRow(Delta - Diagonal, Dist - Diagonal, CurrLeft, LastL[Diagonal], PrevL[Diagonal - 1]);
+          CurrL[Diagonal] := CurrLeft;
+          Dec(Diagonal);
+        end;
+
+      Row := FindRow(Delta, Dist, CurrLeft, LastL[0], CurrRight);
+
+      if Row = aLenR then
+        break;
+
+      Inc(Dist);
+      if Dist > aLimit then
+        begin
+          Dist := NULL_INDEX;
+          break;
+        end;
+
+      CurrR[0] := Row;
+      CurrL[0] := Row;
+
+      tmp := PrevL;
+      PrevL := LastL;
+      LastL := CurrL;
+      CurrL := tmp;
+
+      tmp := PrevR;
+      PrevR := LastR;
+      LastR := CurrR;
+      CurrR := tmp;
+
+      Even := not Even;
+    end;
+  Result := Dist;
+end;
+
+function LevDistanceMBR(const L, R: string): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if L = R then
+    exit(0);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDistMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
+  else
+    Result := LevDistMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
+end;
+
+function LevDistanceMBR(const L, R: array of Byte): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if specialize TGOrdinalArrayHelper<Byte>.Same(L, R) then
+    exit(0);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+  else
+    Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
 function IsValidDotQuadIPv4(const s: string): Boolean;
