@@ -1010,7 +1010,7 @@ type
   {$DEFINE USE_TGSET_INITIALIZE}
   { TGSet<T> implements set of arbitrary size; T must be of some ordinal type
     with cardinality not higher than High(Cardinal) div 33;
-    (value (High(Cardinal) div 33) is related to the default stack size ) }
+    (value (High(Cardinal) div 33) is related to the stack size) }
   TGSet<T> = record
   private
   const
@@ -1129,6 +1129,9 @@ type
 
   {.$DEFINE FPC_REV_GE_46953}//uncomment if FPC revision >= 46953
   procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);{$IFDEF FPC_REV_GE_46953}inline;{$ENDIF}
+
+  function MinOf3(a, b, c: SizeInt): SizeInt; inline;
+  function MaxOf3(a, b, c: SizeInt): SizeInt; inline;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3548,6 +3551,24 @@ begin
 begin
   TurnElem(aSet, aElem, AOn);
 {$ENDIF}
+end;
+
+function MinOf3(a, b, c: SizeInt): SizeInt;
+begin
+  Result := a;
+  if b < Result then
+    Result := b;
+  if c < Result then
+    Result := c;
+end;
+
+function MaxOf3(a, b, c: SizeInt): SizeInt;
+begin
+  Result := a;
+  if Result < b then
+    Result := b;
+  if Result < c then
+    Result := c;
 end;
 
 end.
