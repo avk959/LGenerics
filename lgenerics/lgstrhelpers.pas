@@ -330,17 +330,23 @@ type
   "Algorithms on Strings, Trees and Sequences", section 12.5 }
   function LcsGus(const L, R: string): string;
   function LcsGus(const L, R: array of Byte): TBytes;
-{ returns Levenshtein distance between L and R; used a simple dynamic programming
+{ returns the Levenshtein distance between L and R; used a simple dynamic programming
   algorithm with O(mn) time, where n and m are the lengths of L and R respectively }
   function LevDistance(const L, R: string): SizeInt;
   function LevDistance(const L, R: array of Byte): SizeInt;
-{ returns Levenshtein distance between L and R; Pascal translation of
+{ returns the Levenshtein distance between L and R; a Pascal translation of
   github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
-  worst-case time complexity , where n and m are the lengths of L and R respectively
+  worst-case time complexity, where n and m are the lengths of L and R respectively
   and d is the edit distance computed }
   function LevDistanceMBR(const L, R: string): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte): SizeInt;
+{ the same as above; the aLimit parameter indicates the maximum expected distance,
+  if this value is exceeded when calculating the distance, then the function exits
+  immediately and returns -1 }
+  function LevDistanceMBR(const L, R: string; aLimit: SizeInt): SizeInt;
+  function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+
   function IsValidDotQuadIPv4(const s: string): Boolean;
   function IsValidDotDecIPv4(const s: string): Boolean;
 
@@ -778,6 +784,44 @@ begin
     Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
     Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+end;
+
+function LevDistanceMBR(const L, R: string; aLimit: SizeInt): SizeInt;
+begin
+  if aLimit < 0 then
+    aLimit := 0;
+  if Abs(System.Length(L) - System.Length(R)) > aLimit then
+    exit(NULL_INDEX);
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if L = R then
+    exit(0);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDistMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
+  else
+    Result := LevDistMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
+end;
+
+function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+begin
+  if aLimit < 0 then
+    aLimit := 0;
+  if Abs(System.Length(L) - System.Length(R)) > aLimit then
+    exit(NULL_INDEX);
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if specialize TGOrdinalArrayHelper<Byte>.Same(L, R) then
+    exit(0);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+  else
+    Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 function IsValidDotQuadIPv4(const s: string): Boolean;
