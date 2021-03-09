@@ -58,6 +58,7 @@ type
  published
    procedure LevenshteinDist;
    procedure LevenshteinDistMbr;
+   procedure LevenshteinDistMbrLimit;
  end;
 
 implementation
@@ -635,6 +636,29 @@ begin
   AssertTrue(LevDistanceMbr('kitten', 'sitting') = 3);
   AssertTrue(LevDistanceMbr('distance', 'difference') = 5);
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein') = 6);
+end;
+
+procedure TFunTest.LevenshteinDistMbrLimit;
+begin
+  AssertTrue(LevDistanceMbr('', 'hello', 5) = 5);
+  AssertTrue(LevDistanceMbr('', 'hello', 4) = -1);
+  AssertTrue(LevDistanceMbr('ab', 'ba', 2) = 2);
+  AssertTrue(LevDistanceMbr('ba', 'ab', 1) = -1);
+  AssertTrue(LevDistanceMbr('ab', 'aaa', 2) = 2);
+  AssertTrue(LevDistanceMbr('ab', 'aaa', 1) = -1);
+  AssertTrue(LevDistanceMbr('a', 'bbb', 3) = 3);
+  AssertTrue(LevDistanceMbr('a', 'bbb', 2) = -1);
+  AssertTrue(LevDistanceMbr('aababab','abbaa', 3) = 3);
+  AssertTrue(LevDistanceMbr('aababab','abbaa', 2) = -1);
+  AssertTrue(LevDistanceMbr('helli', 'ellia', 2) = 2);
+  AssertTrue(LevDistanceMbr('helli', 'ellia', 1) = -1);
+  AssertTrue(LevDistanceMbr('kitten', 'sitting', 3) = 3);
+  AssertTrue(LevDistanceMbr('kitten', 'sitting', 2) = -1);
+  AssertTrue(LevDistanceMbr('distance', 'difference', 5) = 5);
+  AssertTrue(LevDistanceMbr('distance', 'difference', 4) = -1);
+  AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein') = 6);
+  AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', 6) = 6);
+  AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', 5) = -1);
 end;
 
 initialization
