@@ -656,7 +656,6 @@ begin
   AssertTrue(LevDistanceMbr('kitten', 'sitting', 2) = -1);
   AssertTrue(LevDistanceMbr('distance', 'difference', 5) = 5);
   AssertTrue(LevDistanceMbr('distance', 'difference', 4) = -1);
-  AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein') = 6);
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', 6) = 6);
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', 5) = -1);
 end;
