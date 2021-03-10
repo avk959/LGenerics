@@ -1008,7 +1008,7 @@ const
 
 type
   {$DEFINE USE_TGSET_INITIALIZE}
-  { TGSet<T> implements set of arbitrary size; T must be of some ordinal type
+  { TGSet<T> implements a set of arbitrary size; T must be of some ordinal type
     with cardinality not higher than High(Cardinal) div 33;
     (value (High(Cardinal) div 33) is related to the stack size) }
   TGSet<T> = record
