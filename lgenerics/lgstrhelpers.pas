@@ -277,7 +277,7 @@ type
   type
     PMatcher = ^TBmSearchCI;
 
-    TStrEnumerator = record
+    TEnumerator = record
     private
       FCurrIndex: SizeInt;
       FHeap: string;
@@ -303,17 +303,17 @@ type
   type
     TIntArray = array of SizeInt;
 
-    TStrMatches = record
+    TMatches = record
     private
       FHeap: string;
       FMatcher: PMatcher;
     public
-      function GetEnumerator: TStrEnumerator; inline;
+      function GetEnumerator: TEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
     constructor Create(const aPattern: string);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TStrMatches; inline;
+    function Matches(const s: string): TMatches; inline;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
@@ -1636,14 +1636,14 @@ begin
   System.SetLength(Result, J);
 end;
 
-{ TBmSearchCI.TStrEnumerator }
+{ TBmSearchCI.TEnumerator }
 
-function TBmSearchCI.TStrEnumerator.GetCurrent: SizeInt;
+function TBmSearchCI.TEnumerator.GetCurrent: SizeInt;
 begin
   Result := Succ(FCurrIndex);
 end;
 
-function TBmSearchCI.TStrEnumerator.MoveNext: Boolean;
+function TBmSearchCI.TEnumerator.MoveNext: Boolean;
 var
   I: SizeInt;
 begin
@@ -1659,9 +1659,9 @@ begin
   Result := False;
 end;
 
-{ TBmSearchCI.TStrMatches }
+{ TBmSearchCI.TMatches }
 
-function TBmSearchCI.TStrMatches.GetEnumerator: TStrEnumerator;
+function TBmSearchCI.TMatches.GetEnumerator: TEnumerator;
 begin
   Result.FCurrIndex := NULL_INDEX;
   Result.FHeap := FHeap;
@@ -1779,7 +1779,7 @@ begin
     end;
 end;
 
-function TBmSearchCI.Matches(const s: string): TStrMatches;
+function TBmSearchCI.Matches(const s: string): TMatches;
 begin
   if FNeedle <> '' then
     Result.FHeap := s
