@@ -324,27 +324,30 @@ type
   end;
 
 
-{ returns True if aSub is a subsequence of aStr, False otherwise }
-  function IsSubSequence(const aStr, aSub: string): Boolean;
+{ returns True if aSub is a subsequence of aStr, False otherwise;
+  only suitable for single-byte encodings }
+  function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
 { returns longest common subsequence(LCS); from Dan Gusfield
-  "Algorithms on Strings, Trees and Sequences", section 12.5 }
-  function LcsGus(const L, R: string): string;
+  "Algorithms on Strings, Trees and Sequences", section 12.5;
+  only suitable for single-byte encodings }
+  function LcsGus(const L, R: rawbytestring): string;
   function LcsGus(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
-  algorithm with O(mn) time, where n and m are the lengths of L and R respectively }
-  function LevDistance(const L, R: string): SizeInt;
+  algorithm with O(mn) time, where n and m are the lengths of L and R respectively;
+  only suitable for single-byte encodings }
+  function LevDistance(const L, R: rawbytestring): SizeInt;
   function LevDistance(const L, R: array of Byte): SizeInt;
-{ returns the Levenshtein distance between L and R; a Pascal translation of
-  github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
+{ returns the Levenshtein distance between L and R; a Pascal translation(well, almost :))
+  of github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
   worst-case time complexity, where n and m are the lengths of L and R respectively
-  and d is the edit distance computed }
-  function LevDistanceMBR(const L, R: string): SizeInt;
+  and d is the edit distance computed; only suitable for single-byte encodings }
+  function LevDistanceMBR(const L, R: rawbytestring): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
-  immediately and returns -1 }
-  function LevDistanceMBR(const L, R: string; aLimit: SizeInt): SizeInt;
+  immediately and returns -1; only suitable for single-byte encodings }
+  function LevDistanceMBR(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 
   function IsValidDotQuadIPv4(const s: string): Boolean;
@@ -353,8 +356,7 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{$PUSH}{$WARN 5036 off}
-function IsSubSequence(const aStr, aSub: string): Boolean;
+function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
 var
   I, J: SizeInt;
   pStr: PAnsiChar absolute aStr;
@@ -438,7 +440,7 @@ begin
     Result[I+From] := pR[LocLis[I]];
 end;
 
-function LcsGus(const L, R: string): string;
+function LcsGus(const L, R: rawbytestring): string;
 var
   I: SizeInt;
   b: TBytes = nil;
@@ -593,7 +595,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-function LevDistance(const L, R: string): SizeInt;
+function LevDistance(const L, R: rawbytestring): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -756,7 +758,7 @@ begin
   Result := Dist;
 end;
 
-function LevDistanceMBR(const L, R: string): SizeInt;
+function LevDistanceMBR(const L, R: rawbytestring): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -786,7 +788,7 @@ begin
     Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function LevDistanceMBR(const L, R: string; aLimit: SizeInt): SizeInt;
+function LevDistanceMBR(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
@@ -824,6 +826,7 @@ begin
     Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
+{$PUSH}{$WARN 5036 off}
 function IsValidDotQuadIPv4(const s: string): Boolean;
 type
   TRadix = (raDec, raOct, raHex);
