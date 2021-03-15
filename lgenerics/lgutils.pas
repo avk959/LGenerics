@@ -995,6 +995,9 @@ const
   function  IsTwoPower(aValue: SizeUInt): Boolean; inline;
   { warning: if aValue > MAX_POSITIVE_POW2 then function will return wrong result }
   function  RoundUpTwoPower(aValue: SizeInt): SizeInt;
+  { returns the product L * R if there was no overflow during the multiplication,
+    otherwise returns High(SizeInt)}
+  function  MulSizeInt(L, R: SizeInt): SizeInt; inline;
   function  NextRandomBoolean: Boolean; inline;
   procedure RandomizeBoolean;
   { Bob Jenkins small noncryptographic PRNG
@@ -1184,6 +1187,15 @@ begin
     end
   else
     Result := 2;
+end;
+
+function MulSizeInt(L, R: SizeInt): SizeInt;
+begin
+  if (L = 0) or (R = 0) then
+    exit(0);
+  Result := L * R;
+  if Result div R <> L then
+    exit(High(SizeInt));
 end;
 
 function NextRandomBoolean: Boolean;
