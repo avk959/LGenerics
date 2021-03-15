@@ -330,7 +330,7 @@ type
 { returns longest common subsequence(LCS); from Dan Gusfield
   "Algorithms on Strings, Trees and Sequences", section 12.5;
   only suitable for single-byte encodings }
-  function LcsGus(const L, R: rawbytestring): string;
+  function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
   algorithm with O(mn) time, where n and m are the lengths of L and R respectively;
@@ -440,7 +440,7 @@ begin
     Result[I+From] := pR[LocLis[I]];
 end;
 
-function LcsGus(const L, R: rawbytestring): string;
+function LcsGus(const L, R: rawbytestring): rawbytestring;
 var
   I: SizeInt;
   b: TBytes = nil;
@@ -516,6 +516,23 @@ end;
 
 const
   MAX_STATIC = 1024;
+  HCB_CUTOFF = 511;
+
+function HasCommonBytes(pL, pR: PByte; aLenL, aLenR: SizeInt): Boolean;
+type
+  TBytePos = array[Byte] of Integer;
+var
+  LChars: TBytePos;
+  I: SizeInt;
+begin
+  LChars := Default(TBytePos);
+  for I := 0 to Pred(aLenL) do
+    LChars[pL[I]] := 1;
+  for I := 0 to Pred(aLenR) do
+    if LChars[pR[I]] <> 0 then
+      exit(True);
+  Result := False;
+end;
 
 function LevDist(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 var
@@ -541,6 +558,9 @@ begin
     end;
   aLenL -= I;
   aLenR -= I;
+
+  if (MulSizeInt(aLenL, aLenR) > HCB_CUTOFF) and not HasCommonBytes(pL, pR, aLenL, aLenR) then
+    exit(aLenR);
 
   if aLenR < MAX_STATIC then
     Dist := @StBuf[0]
@@ -632,9 +652,9 @@ function LevDistMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
     I, MaxRow: SizeInt;
   begin
     if aDist = 0 then I := 0
-    else I := MaxOf3(aAbove + 1, aRight + 1, aLeft);
+    else I := MaxOf3(aLeft, aAbove + 1, aRight + 1);
     MaxRow := Min(aLenL - k, aLenR);
-    while (I < MaxRow) and(pR[I] = pL[I + k]) do
+    while (I < MaxRow) and (pR[I] = pL[I + k]) do
       Inc(I);
     FindRow := I;
   end;
@@ -664,6 +684,12 @@ begin
     end;
   aLenL -= I;
   aLenR -= I;
+
+  if (MulSizeInt(aLenL, aLenR) > HCB_CUTOFF) and not HasCommonBytes(pL, pR, aLenL, aLenR) then
+    if aLenR > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(aLenR);
 
   Delta := aLenL - aLenR;
   Dist := -Delta;
