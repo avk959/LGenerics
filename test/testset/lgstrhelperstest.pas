@@ -6,6 +6,7 @@ interface
 
 uses
   Classes, SysUtils, fpcunit, testregistry,
+  lgUtils,
   lgArrayHelpers,
   lgStrHelpers;
 
@@ -592,28 +593,62 @@ begin
   AssertTrue(Count = 6);
 end;
 
+{ the Wagner–Fischer dynamic programming algorithm }
+function LevDistWF(const L, R: rawbytestring): SizeInt;
+var
+  D: array of array of SizeInt;
+  I, J: SizeInt;
+begin
+  SetLength(D, Succ(Length(L)), Succ(Length(R)));
+  for I := 1 to Length(L) do
+    D[I, 0] := I;
+  for I := 1 to Length(R) do
+    D[0, I] := I;
+  for J := 1 to Length(R) do
+    for I := 1 to Length(L) do
+      if L[I] = R[J] then
+        D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1])
+      else
+        D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1] + 1);
+  Result := D[Length(L), Length(R)];
+end;
+
 { TFunTest }
 
 procedure TFunTest.LevenshteinDist;
 begin
+  AssertTrue(LevDistWF('', 'hello') = 5);
   AssertTrue(LevDistance('', 'hello') = 5);
   AssertTrue(LevDistance('hello', '') = 5);
   AssertTrue(LevDistance('hello', 'hello') = 0);
+  AssertTrue(LevDistWF('ab', 'aa') = 1);
   AssertTrue(LevDistance('ab', 'aa') = 1);
   AssertTrue(LevDistance('aa', 'ab') = 1);
   AssertTrue(LevDistance('ab', 'ba') = 2);
   AssertTrue(LevDistance('ba', 'ab') = 2);
+  AssertTrue(LevDistWF('ab', 'aaa') = 2);
   AssertTrue(LevDistance('ab', 'aaa') = 2);
   AssertTrue(LevDistance('a', 'bbb') = 3);
+  AssertTrue(LevDistWF('aababab','abbaa') = 3);
   AssertTrue(LevDistance('aababab','abbaa') = 3);
+  AssertTrue(LevDistWF('helli', 'elli') = 1);
   AssertTrue(LevDistance('helli', 'elli') = 1);
+  AssertTrue(LevDistWF('ellia', 'helli') = 2);
   AssertTrue(LevDistance('ellia', 'helli') = 2);
   AssertTrue(LevDistance('helli', 'ellia') = 2);
+  AssertTrue(LevDistWF('kitten', 'sitten') = 1);
   AssertTrue(LevDistance('kitten', 'sitten') = 1);
   AssertTrue(LevDistance('sitten', 'kitten') = 1);
+  AssertTrue(LevDistWF('kitten', 'sitting') = 3);
   AssertTrue(LevDistance('kitten', 'sitting') = 3);
+  AssertTrue(LevDistWF('distance', 'difference') = 5);
   AssertTrue(LevDistance('distance', 'difference') = 5);
+  AssertTrue(LevDistWF('levenshtein', 'frankenstein') = 6);
   AssertTrue(LevDistance('levenshtein', 'frankenstein') = 6);
+  AssertTrue(LevDistWF('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(LevDistance('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(LevDistWF('aaaaaaa', 'bbbbbbbb') = 8);
+  AssertTrue(LevDistance('aaaaaaa', 'bbbbbbbb') = 8);
 end;
 
 procedure TFunTest.LevenshteinDistMbr;
@@ -636,6 +671,8 @@ begin
   AssertTrue(LevDistanceMbr('kitten', 'sitting') = 3);
   AssertTrue(LevDistanceMbr('distance', 'difference') = 5);
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein') = 6);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb') = 8);
 end;
 
 procedure TFunTest.LevenshteinDistMbrLimit;
@@ -658,6 +695,9 @@ begin
   AssertTrue(LevDistanceMbr('distance', 'difference', 4) = -1);
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', 6) = 6);
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', 5) = -1);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa', 1) = 0);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 8) = 8);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 7) = -1);
 end;
 
 initialization
