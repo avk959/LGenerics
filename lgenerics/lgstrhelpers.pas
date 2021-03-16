@@ -373,7 +373,7 @@ begin
   Result := J = System.Length(aSub);
 end;
 
-function GetLcsG(const pL, PR: PByte; const aLenL, aLenR: SizeInt): TBytes;
+function GetLcsG(pL, PR: PByte; aLenL, aLenR: SizeInt): TBytes;
 type
   TNode = record
     Index,
@@ -381,38 +381,35 @@ type
   end;
   TNodeList = array of TNode;
 var
-  SeqTbl: array[Byte] of SizeInt;
+  MatchList: array[Byte] of SizeInt;
   NodeList: TNodeList = nil;
   Tmp: TSizeIntArray = nil;
   LocLis: TSizeIntArray;
-  I, J, From, NodeIdx: SizeInt;
+  I, J, NodeIdx: SizeInt;
 begin
-  From := 0;
-  while (From < aLenL) and (pL[From] = pR[From]) do
-    Inc(From);
-  Result := specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(From)]);
-  if From = aLenL then exit;
+  Result := nil;
 
   for I := 0 to 255 do
-    SeqTbl[I] := NULL_INDEX;
+    MatchList[I] := NULL_INDEX;
 
   System.SetLength(NodeList, ARRAY_INITIAL_SIZE);
   J := 0;
-  for I := From to Pred(aLenR) do
+  for I := 0 to Pred(aLenR) do
     begin
       if System.Length(NodeList) = J then
         System.SetLength(NodeList, J * 2);
       NodeList[J].Index := I;
-      NodeList[J].Next := SeqTbl[pR[I]];
-      SeqTbl[pR[I]] := J;
+      NodeList[J].Next := MatchList[pR[I]];
+      MatchList[pR[I]] := J;
       Inc(J);
     end;
 
+
   System.SetLength(Tmp, ARRAY_INITIAL_SIZE);
   J := 0;
-  for I := From to Pred(aLenL) do
+  for I := 0 to Pred(aLenL) do
     begin
-      NodeIdx := SeqTbl[pL[I]];
+      NodeIdx := MatchList[pL[I]];
       while NodeIdx <> NULL_INDEX do
         begin
           if System.Length(Tmp) = J then
@@ -423,21 +420,22 @@ begin
         end;
     end;
   System.SetLength(Tmp, J);
+
   if Tmp = nil then exit;
   NodeList := nil;
 
   LocLis := TSizeIntHelper.Lis(Tmp);
   if LocLis = nil then
     begin
-      System.SetLength(Result, Succ(System.Length(Result)));
-      Result[From] := pR[Tmp[0]];
+      System.SetLength(Result, 1);
+      Result[0] := pR[Tmp[0]];
       exit;
     end;
-  Tmp := nil;
 
-  System.SetLength(Result, System.Length(Result) + System.Length(LocLis));
+  Tmp := nil;
+  System.SetLength(Result, System.Length(LocLis));
   for I := 0 to System.High(LocLis) do
-    Result[I+From] := pR[LocLis[I]];
+    Result[I] := pR[LocLis[I]];
 end;
 
 function LcsGus(const L, R: rawbytestring): rawbytestring;
@@ -447,7 +445,7 @@ var
 begin
   Result := '';
   if (L = '') or (R = '') then exit;
-  if Pointer(L) = Pointer(R) then
+  if L = R then
     exit(System.Copy(L, 1, System.Length(L)));
   if (System.Length(L) = 1) then
     begin

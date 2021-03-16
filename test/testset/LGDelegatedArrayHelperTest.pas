@@ -285,6 +285,7 @@ type
     procedure InversionCountND;
     procedure IsSubSequence;
     procedure LisI;
+    procedure LisI2;
     procedure IsPermutation;
 
     procedure SameOfEmpty;
@@ -2203,6 +2204,60 @@ begin
     [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15], @IntCmp),
     //0, 2, 6, 9, 11, 15
     [0, 4, 6, 9, 13, 15]));
+end;
+
+procedure TDelegatedArrayHelperTest.LisI2;
+const
+  TestCount = 100;
+  TestLen   = 100;
+  TestRange = 1001;
+type
+  TIdxRange = 0..Pred(TestLen);
+  TSet = specialize TGSet<TIdxRange>;
+var
+  a, aLis: array of Integer;
+  Lis: array of SizeInt;
+  s, ts, fs: TSet;
+  I, J, K: Integer;
+  Idx, Curr: TIdxRange;
+begin
+  Randomize;
+  SetLength(a, TestLen);
+  for I in TIdxRange do
+    {%H-}fs.Include(I);
+  AssertTrue(fs.Count = 100);
+  for K := 1 to TestCount do
+    begin
+      for I := 0 to High(a) do
+        a[I] := Random(TestRange);
+      Lis := TIntHelper.LisI(a, @IntCmp);
+      for I := 0 to High(Lis) do
+        AssertTrue((Lis[I] >= 0) and (Lis[I] < TestLen));
+      SetLength(aLis, Length(Lis));
+      for I := 0 to High(Lis) do
+        aLis[I] := a[Lis[I]];
+      AssertTrue(TIntHelper.IsStrictAscending(aLis, @IntCmp));
+      s := fs;
+      {%H-}ts.Clear;
+      for I := 0 to High(Lis) do
+        begin
+          ts.Include(Lis[I]);
+          s.Exclude(Lis[I]);
+        end;
+      SetLength(aLis, Length(aLis) + 1);
+      for Idx in s do
+        begin
+          ts.Include(Idx);
+          J := 0;
+          for Curr in ts do
+            begin
+              aLis[J] := a[Curr];
+              Inc(J);
+            end;
+          AssertFalse(TIntHelper.IsStrictAscending(aLis, @IntCmp));
+          ts.Exclude(Idx);
+        end;
+    end;
 end;
 
 procedure TDelegatedArrayHelperTest.IsPermutation;
