@@ -3996,13 +3996,13 @@ var
     L, M: SizeInt;
   begin
     L := 0;
-    while L < Pred(R) do
+    while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
         if not TCmpRel.Less(A[TailIdx[M]], v) then
           R := M
         else
-          L := M;
+          L := Succ(M);
       end;
     CeilIdx := R;
   end;
@@ -6631,13 +6631,13 @@ var
     L, M: SizeInt;
   begin
     L := 0;
-    while L < Pred(R) do
+    while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
         if not (A[TailIdx[M]] < v) then
           R := M
         else
-          L := M;
+          L := Succ(M);
       end;
     CeilIdx := R;
   end;
@@ -8604,13 +8604,13 @@ var
     L, M: SizeInt;
   begin
     L := 0;
-    while L < Pred(R) do
+    while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
         if not c(A[TailIdx[M]], v) then
           R := M
         else
-          L := M;
+          L := Succ(M);
       end;
     CeilIdx := R;
   end;
@@ -10580,13 +10580,13 @@ var
     L, M: SizeInt;
   begin
     L := 0;
-    while L < Pred(R) do
+    while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
         if not c(A[TailIdx[M]], v) then
           R := M
         else
-          L := M;
+          L := Succ(M);
       end;
     CeilIdx := R;
   end;
@@ -12556,13 +12556,13 @@ var
     L, M: SizeInt;
   begin
     L := 0;
-    while L < Pred(R) do
+    while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
         if not c(A[TailIdx[M]], v) then
           R := M
         else
-          L := M;
+          L := Succ(M);
       end;
     CeilIdx := R;
   end;
@@ -14175,13 +14175,13 @@ var
     L, M: SizeInt;
   begin
     L := 0;
-    while L < Pred(R) do
+    while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
         if v <= A[TailIdx[M]] then
           R := M
         else
-          L := M;
+          L := Succ(M);
       end;
     CeilIdx := R;
   end;
