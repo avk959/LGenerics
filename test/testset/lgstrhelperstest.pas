@@ -635,7 +635,7 @@ begin
       else
         D[I, J] := Max(D[I, J-1], D[I-1, J]);
 
-  SetLength(Lcs, Max(Length(L), Length(R)));
+  SetLength(Lcs, D[Length(L), Length(R)]);
   pLcs := Pointer(Lcs);
 
   I := Length(L);
@@ -655,7 +655,6 @@ begin
         Dec(I);
 
   specialize TGSimpleArrayHelper<Char>.Reverse(pLcs[0..Pred(LcsLen)]);
-  SetLength(Lcs, LcsLen);
   Result := Lcs;
 end;
 
