@@ -382,12 +382,36 @@ type
   TNodeList = array of TNode;
 var
   MatchList: array[Byte] of SizeInt;
-  NodeList: TNodeList = nil;
-  Tmp: TSizeIntArray = nil;
+  NodeList: TNodeList;
+  Tmp: TSizeIntArray;
   LocLis: TSizeIntArray;
+  Tail: TBytes = nil;
   I, J, NodeIdx: SizeInt;
 begin
   Result := nil;
+
+  I := 0;
+  while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+      Inc(I);
+    end;
+
+  if I > 0 then
+    Tail := specialize TGSimpleArrayHelper<Byte>.CreateCopy(pL[aLenL..Pred(aLenL + I)]);
+
+  I := 0;
+  while (I < aLenL) and (pL[I] = pR[I]) do
+     Inc(I);
+  if I > 0 then
+    begin
+      Result := specialize TGSimpleArrayHelper<Byte>.CreateCopy(pL[0..Pred(I)]);
+      pL += I;
+      pR += I;
+      aLenL -= I;
+      aLenR -= I;
+    end;
 
   for I := 0 to 255 do
     MatchList[I] := NULL_INDEX;
@@ -403,7 +427,6 @@ begin
       MatchList[pR[I]] := J;
       Inc(J);
     end;
-
 
   System.SetLength(Tmp, ARRAY_INITIAL_SIZE);
   J := 0;
@@ -421,21 +444,27 @@ begin
     end;
   System.SetLength(Tmp, J);
 
-  if Tmp = nil then exit;
-  NodeList := nil;
-
-  LocLis := TSizeIntHelper.Lis(Tmp);
-  if LocLis = nil then
+  if Tmp <> nil then
     begin
-      System.SetLength(Result, 1);
-      Result[0] := pR[Tmp[0]];
-      exit;
-    end;
+      NodeList := nil;
 
-  Tmp := nil;
-  System.SetLength(Result, System.Length(LocLis));
-  for I := 0 to System.High(LocLis) do
-    Result[I] := pR[LocLis[I]];
+      LocLis := TSizeIntHelper.Lis(Tmp);
+      if LocLis = nil then
+        begin
+          System.SetLength(Result, Succ(System.Length(Result)));
+          Result[System.High(Result)] := pR[Tmp[0]];
+        end
+      else
+        begin
+          Tmp := nil;
+          J := System.Length(Result);
+          System.SetLength(Result, J+System.Length(LocLis));
+          for I := 0 to System.High(LocLis) do
+            Result[I+J] := pR[LocLis[I]];
+        end;
+    end;
+  if Tail <> nil then
+    Insert(Tail, Result, System.Length(Result));
 end;
 
 function LcsGus(const L, R: rawbytestring): rawbytestring;
