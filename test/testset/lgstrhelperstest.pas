@@ -5,7 +5,7 @@ unit LGStrHelpersTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry,
+  Classes, SysUtils, fpcunit, testregistry, Math,
   lgUtils,
   lgArrayHelpers,
   lgStrHelpers;
@@ -58,8 +58,11 @@ type
  private
  published
    procedure LevenshteinDist;
+   procedure LevenshteinDist2;
    procedure LevenshteinDistMbr;
+   procedure LevenshteinDistMbr2;
    procedure LevenshteinDistMbrLimit;
+   procedure LcsGusTest;
  end;
 
 implementation
@@ -613,6 +616,482 @@ begin
   Result := D[Length(L), Length(R)];
 end;
 
+{ simple dynamic programming algorithm }
+function LcsDp(const L, R: rawbytestring): rawbytestring;
+var
+  D: array of array of SizeInt;
+  I, J: SizeInt;
+  LcsLen: SizeInt = 0;
+  Lcs: rawbytestring = '';
+  pLcs: PChar;
+begin
+
+  SetLength(D, Succ(Length(L)), Succ(Length(R)));
+
+  for I := 1 to Length(L) do
+    for J := 1 to Length(R) do
+      if L[I] = R[J] then
+        D[I, J] := Succ(D[I-1, J-1])
+      else
+        D[I, J] := Max(D[I, J-1], D[I-1, J]);
+
+  SetLength(Lcs, Max(Length(L), Length(R)));
+  pLcs := Pointer(Lcs);
+
+  I := Length(L);
+  J := Length(R);
+  while (I <> 0) and (J <> 0) do
+    if L[I] = R[J] then
+      begin
+        pLcs[LcsLen] := L[I];
+        Inc(LcsLen);
+        Dec(I);
+        Dec(J);
+      end
+    else
+      if D[I, J-1] > D[I-1, J] then
+        Dec(J)
+      else
+        Dec(I);
+
+  specialize TGSimpleArrayHelper<Char>.Reverse(pLcs[0..Pred(LcsLen)]);
+  SetLength(Lcs, LcsLen);
+  Result := Lcs;
+end;
+
+const
+  TestWords: array of rawbytestring = (
+    'cetology', 'conchotome',
+    'trimetallic', 'upladder',
+    'chromatophil', 'archimandrite',
+    'overrife', 'recurvant',
+    'sasanqua', 'spondylosis',
+    'torpescence', 'coappearance',
+    'starcher', 'strongback',
+    'interception', 'flirtatiousness',
+    'fathomable', 'boulder',
+    'charioted', 'montgolfier',
+    'pharyngoscopy', 'trifoliate',
+    'endogenesis', 'letterin',
+    'turgidly', 'undoubtingness',
+    'pyrheliometry', 'doctrine',
+    'apophantic', 'mediglacial',
+    'transcorporate', 'stentorious',
+    'ingenerately', 'breathseller',
+    'viviparousness', 'secluding',
+    'benefice', 'gonadic',
+    'scripture', 'internalization',
+    'bivariate', 'eatanswill',
+    'martinet', 'dummered',
+    'pretense', 'expurgate',
+    'teredinidae', 'strial',
+    'photoma', 'bellyland',
+    'verbalize', 'deforcement',
+    'didynamic', 'Monumbo',
+    'galliard', 'conchotome',
+    'swashway', 'coupleteer',
+    'miscurvature', 'brokenly',
+    'preconfer', 'sliptopped',
+    'lenitude', 'graupel',
+    'pyralidan', 'unverminous',
+    'pentaglossal', 'matrimonial',
+    'uncasketed', 'cowbane',
+    'extemporaneity', 'bedamp',
+    'syriologist', 'esophagogastroscopy',
+    'inaffectation', 'overassess',
+    'dareful', 'demihag',
+    'commence', 'bilaminate',
+    'petaurine', 'hyperdolichocephaly',
+    'restproof', 'unqueenly',
+    'blattodea', 'retreative',
+    'unframably', 'tentwort',
+    'torotoro', 'peroxy',
+    'overpatriotic', 'metaplasis',
+    'eradicant', 'soever',
+    'cradlesong', 'unbleached',
+    'attache', 'nonsubject',
+    'unparadise', 'morpheme',
+    'hierocratic', 'trophothylax',
+    'battlemented', 'arachin',
+    'lacrym', 'nonevil',
+    'unmutilated', 'overemptiness',
+    'tenaille', 'accommodative',
+    'hygieist', 'overfloat',
+    'caulicule', 'prebaptismal',
+    'subdeacon', 'chrysalidian',
+    'photomechanical', 'microrhabdus',
+    'platymyoid', 'hyraceum',
+    'preomission', 'bicellular',
+    'southernism', 'Semnopithecinae',
+    'mangel', 'acidproof',
+    'coryphaenoid', 'tidiable',
+    'transisthmian', 'Tarkani',
+    'subterjacent', 'betanglement',
+    'keelfat', 'overbrood',
+    'inseparable', 'jhool',
+    'gudesake', 'untilled',
+    'centetid', 'hypopteral',
+    'chirotherian', 'biscuitmaking',
+    'wapper', 'hypergol',
+    'yawn', 'sluggardness',
+    'sterrinck', 'swanny',
+    'obtriangular', 'karyogamic',
+    'odontexesis', 'aspergillum',
+    'exonerative', 'fluorography',
+    'shudder', 'spyism',
+    'stachyose', 'transvaal',
+    'trapfall', 'tillable',
+    'plasmocytoma', 'international',
+    'ungashed', 'cylindrenchyma',
+    'despairer', 'Madreporaria',
+    'subsample', 'odoom',
+    'scuffer', 'anilinophilous',
+    'clamshell', 'lyceal',
+    'overtruthfully', 'emeraude',
+    'plagiocephalism', 'atechnical',
+    'niota', 'mouthbreeder',
+    'transiliac', 'extrasacerdotal',
+    'almsgiving', 'dittographic',
+    'nonmillionaire', 'recorder',
+    'pteridophyte', 'Stikine',
+    'brahmanism', 'overgrain',
+    'histoplasmin', 'chainwale',
+    'chaperone', 'unargumentative',
+    'stooker', 'phyllodium',
+    'sir', 'alliteratively',
+    'clinocephalic', 'tutenag',
+    'compendency', 'unpartial',
+    'uteritis', 'manstealer',
+    'logometrical', 'nitrosococcus',
+    'threadless', 'psilosophy',
+    'ephraimitish', 'polystylar',
+    'metatatic', 'zosteriform',
+    'Phidian', 'Urocerata',
+    'celestina', 'plausibly',
+    'polonaise', 'wheelbird',
+    'carnalness', 'refocillate',
+    'pidjajap', 'shush',
+    'gools', 'anticipatable',
+    'kitcat', 'oversolemnly',
+    'exedent', 'soundful',
+    'cauterization', 'oculated',
+    'haemonchiasis', 'ethmopalatine',
+    'lammas', 'scales',
+    'unforgiver', 'encyclopedial',
+    'unlousy', 'accumbent',
+    'lunare', 'chemisette',
+    'dinitro', 'knavery',
+    'Dipodomyinae', 'counterweighted',
+    'repandousness', 'nonneutral',
+    'heterotelic', 'prickleback',
+    'pukateine', 'demerol',
+    'mokihana', 'inderivative',
+    'alytarch', 'solenostomous',
+    'plumist', 'antipodagron',
+    'mylonitic', 'candlewasting',
+    'fractionating', 'equinus',
+    'hyaloiditis', 'poriferal',
+    'geikia', 'coracobrachialis',
+    'ammonite', 'slanderer',
+    'outskirmish', 'whacker',
+    'subregion', 'marcgraviaceae',
+    'alfur', 'givey',
+    'denitrification', 'unamplified',
+    'pulvilliform', 'disguisedness',
+    'incandescent', 'lumbosacral',
+    'mohock', 'theodosia',
+    'encave', 'pituitous',
+    'resawyer', 'peaceman',
+    'acroparalysis', 'unalterability',
+    'birdcall', 'leglet',
+    'lienogastric', 'callosum',
+    'dianisidin', 'tonant',
+    'controversialist', 'geognosis',
+    'yuckel', 'hexarchy',
+    'unferried', 'antistrophal',
+    'plainness', 'pilgrimwise',
+    'traduce', 'venerable',
+    'treasonably', 'coronaled',
+    'uncircumlocutory', 'oxytone',
+    'bifer', 'nunlike',
+    'beshrew', 'preinspire',
+    'blindstory', 'cerebralization',
+    'eudaemonist', 'antigalactagogue',
+    'pyromucyl', 'overbandy',
+    'wheatear', 'vacanthearted',
+    'uprip', 'cerebellopontile',
+    'wifelike', 'isophasal',
+    'frisca', 'axillae',
+    'wrainstaff', 'beneaped',
+    'sclerodermi', 'overcovetous',
+    'dusty', 'underthrob',
+    'noncorrosive', 'abbreviate',
+    'octans', 'endurance',
+    'quinquefid', 'athlete',
+    'jossakeed', 'clochette',
+    'resistively', 'ulerythema',
+    'undiscernible', 'infusionist',
+    'cerebropathy', 'hyperglycorrhachia',
+    'diorthosis', 'karwar',
+    'lutao', 'myelosyringosis',
+    'unincreased', 'termless',
+    'linenman', 'sacristan',
+    'interatomic', 'limitary',
+    'thunderous', 'sulphogallic',
+    'enantiomorphously', 'strophiolated',
+    'rubbishly', 'semihumorously',
+    'evangelicism', 'thapsia',
+    'majorate', 'seagirt',
+    'imponderous', 'fortuitously',
+    'caravel', 'deuteranomal',
+    'pantomimist', 'puzzleheadedly',
+    'flatterer', 'mikie',
+    'unbelieve', 'preconfiguration',
+    'trochaic', 'anoestrus',
+    'unstaveable', 'treaclewort',
+    'zigzaggedly', 'whereat',
+    'dailiness', 'lophiostomate',
+    'rhinoptera', 'divinatory',
+    'Rosellinia', 'fingerling',
+    'glyptotherium', 'hexaploid',
+    'sagebrush', 'erasure',
+    'isonephelic', 'stepgrandson',
+    'intermorainic', 'Rhinophis',
+    'yellowtop', 'twitterboned',
+    'uninitiate', 'fleeter',
+    'keratitis', 'wrestlerlike',
+    'Eciton', 'neillia',
+    'indeficiently', 'debouch',
+    'daktylon', 'oftness',
+    'chemicomineralogical', 'nonferrous',
+    'cocamama', 'tetraspheric',
+    'parel', 'wailer',
+    'adjustive', 'tannyl',
+    'interramification', 'pyche',
+    'antivibrating', 'primordium',
+    'indemnification', 'semicynical',
+    'suprasensuous', 'toyfulness',
+    'counterslope', 'misfortuner',
+    'sophy', 'athericera',
+    'exhaustively', 'meliaceae',
+    'calceolate', 'Giansar',
+    'mastologist', 'bilker',
+    'harttite', 'garishness',
+    'diffidation', 'Peggy',
+    'eristic', 'saltfat',
+    'unenterable', 'photospectroscopical',
+    'amminolytic', 'nabber',
+    'unministerial', 'polytrichia',
+    'redelegation', 'producibleness',
+    'unpalatial', 'vower',
+    'unwrinkled', 'unfrosted',
+    'assort', 'semiextinct',
+    'metamorphoses', 'middlingish',
+    'interorbitally', 'speechment',
+    'semeia', 'uniplicate',
+    'protoreptilian', 'unoverflowing',
+    'eve', 'myxospongiae',
+    'hypapophysis', 'certificate',
+    'irremissibly', 'grossulaceous',
+    'precritical', 'squaliform',
+    'gorgonacean', 'overheave',
+    'apathy', 'minion',
+    'etypical', 'paleolithoid',
+    'alulet', 'philanthropic',
+    'trammer', 'aerophotography',
+    'photodissociation', 'armament',
+    'amphimictic', 'hendecagonal',
+    'enough', 'micrometrically',
+    'pare', 'cervicoaxillary',
+    'redevelop', 'equidominant',
+    'nighted', 'slogan',
+    'cometographical', 'veinage',
+    'inopercular', 'demitone',
+    'reflection', 'binate',
+    'insection', 'gaskin',
+    'sulbasutra', 'neurepithelium',
+    'nabalitic', 'sachem',
+    'rigger', 'Kolis',
+    'phaeophore', 'stotterel',
+    'kidling', 'Heterodonta',
+    'begem', 'bibliopoly',
+    'switchbacker', 'fairtime',
+    'bounded', 'pentametrist',
+    'brigand', 'dickey',
+    'troggin', 'nonimitative',
+    'distantly', 'metrist',
+    'bitterly', 'ribonucleic',
+    'leiophyllum', 'disadventure',
+    'ternstroemiaceae', 'cystoradiography',
+    'lithectomy', 'yardman',
+    'erection', 'carbonization',
+    'unhomologous', 'Tagaur',
+    'regimentation', 'submammary',
+    'kittenishness', 'Phaeodaria',
+    'forcipiform', 'unculture',
+    'festuca', 'bourtree',
+    'miskenning', 'instanter',
+    'merino', 'staphylinid',
+    'overtariff', 'leeky',
+    'unabidingness', 'Heinrich',
+    'chromocyte', 'hemophile',
+    'bewrayment', 'alterity',
+    'unispinose', 'hart',
+    'reimbursement', 'plumeous',
+    'Embioptera', 'swan',
+    'urography', 'leguan',
+    'montane', 'spong',
+    'stilboestrol', 'astragalar',
+    'vindicate', 'bullishness',
+    'hepatoid', 'phototelegraph',
+    'thalamifloral', 'eaglestone',
+    'psychagogue', 'woodhorse',
+    'tubicen', 'machiavellist',
+    'eurybenthic', 'hoodful',
+    'foreskirt', 'seadrome',
+    'unrefuting', 'nutseed',
+    'elatedness', 'poimenics',
+    'goodeniaceous', 'expulse',
+    'whyever', 'nomography',
+    'coascend', 'pelias',
+    'uromelanin', 'postmuscular',
+    'scandalmongery', 'carbohydrate',
+    'typhloalbuminuria', 'insistingly',
+    'circumintestinal', 'misedit',
+    'indigotic', 'unode',
+    'rathely', 'domestication',
+    'fluffy', 'tooter',
+    'pupilloscope', 'necrologic',
+    'gata', 'unoccluded',
+    'spleuchan', 'helminthous',
+    'plecopterous', 'foreconsider',
+    'archturncoat', 'coagulin',
+    'bowdlerism', 'sulphurous',
+    'howlingly', 'profectional',
+    'Lumbricidae', 'spider',
+    'alphabetics', 'whaleboat',
+    'Carapache', 'adipate',
+    'kissy', 'screechily',
+    'theoastrological', 'wisewoman',
+    'myelomeningitis', 'underadjustment',
+    'transference', 'inhume',
+    'remagnetization', 'schmelz',
+    'pherecratian', 'revirescence',
+    'bookery', 'megotalc',
+    'opercled', 'pipkin',
+    'algebraization', 'peerling',
+    'endocrinopathic', 'ostensibly',
+    'assamites', 'busybody',
+    'faffy', 'unrepiqued',
+    'unigenous', 'cryable',
+    'organing', 'pulegol',
+    'hammochrysos', 'tillerman',
+    'admix', 'correlate',
+    'penance', 'Silvia',
+    'incredulity', 'nimshi',
+    'methodist', 'bowleggedness',
+    'robotry', 'encephalomeningitis',
+    'redsear', 'soldierly',
+    'regreet', 'amadou',
+    'pemican', 'unnebulous',
+    'chloralization', 'septemia',
+    'fullery', 'redock',
+    'neath', 'liverleaf',
+    'impletion', 'agnoetae',
+    'umbones', 'victualless',
+    'hypogonation', 'antilysis',
+    'paranuclear', 'podostomatous',
+    'syncytial', 'renotice',
+    'calcification', 'dollishness',
+    'Cynthiidae', 'Clementina',
+    'plantar', 'palicourea',
+    'columelliform', 'bindingness',
+    'sackful', 'firebote',
+    'garlicwort', 'epithalline',
+    'conformableness', 'velamentous',
+    'utfangethef', 'crocused',
+    'insurmountability', 'granary',
+    'stand', 'shrinelet',
+    'canadite', 'pseudoerysipelas',
+    'ayous', 'adjustment',
+    'countercouchant', 'pneumatophilosophy',
+    'toromona', 'denaturize',
+    'packmanship', 'sanitation',
+    'drawshave', 'giggling',
+    'organism', 'synchronological',
+    'absinthial', 'madidans',
+    'paintable', 'spermoblastic',
+    'perivaginal', 'wharve',
+    'paralytical', 'facinorousness',
+    'criminality', 'Amphirhina',
+    'bedcap', 'strawboard',
+    'idioplasmic', 'Simonian',
+    'exaggerate', 'culicid',
+    'overbrow', 'precancellation',
+    'hyposyllogistic', 'terpsichoreal',
+    'meconophagist', 'fluviatile',
+    'charlatanically', 'unregenerateness',
+    'incombustibleness', 'infrapubian',
+    'monobasic', 'uneasy',
+    'commelinaceae', 'remigial',
+    'psychotic', 'asphodel',
+    'paraphrasian', 'lawyership',
+    'wined', 'uncherishing',
+    'hives', 'compagination',
+    'macroanalysis', 'eldritch',
+    'appearanced', 'anthropogeography',
+    'scoffing', 'mechitaristican',
+    'garboil', 'bricking',
+    'unwrinkleable', 'overrooted',
+    'gimleteyed', 'forecited',
+    'Polab', 'coadore',
+    'recultivation', 'postgeniture',
+    'nonisobaric', 'diopsis',
+    'archminister', 'satelles',
+    'outbred', 'ciliospinal',
+    'stablekeeper', 'rubstone',
+    'sightlily', 'trilocular',
+    'bakula', 'sniggle',
+    'petrify', 'geodiferous',
+    'Hun', 'underhand',
+    'androgynary', 'Japanize',
+    'unreprievably', 'mesmerizer',
+    'hoplomachist', 'ommatophore',
+    'saccharometric', 'dedan',
+    'epactal', 'hubshi',
+    'dislocator', 'magnetic',
+    'thirsting', 'unforewarnedness',
+    'giantlike', 'verificative',
+    'maximed', 'botryoidally',
+    'northerner', 'wraithy',
+    'quisle', 'caretta',
+    'frenchy', 'chlorochromic',
+    'yelk', 'downweighted',
+    'homelessness', 'lithontriptic',
+    'natuary', 'reapplaud',
+    'tapaculo', 'floatman',
+    'superdevotion', 'cella',
+    'revilement', 'adscriptive',
+    'reshun', 'idioplasmatic',
+    'anthropophuism', 'flirtatious',
+    'Benjamite', 'southeastern',
+    'suggestress', 'fascisticize',
+    'eccrisis', 'outfort',
+    'subsistingly', 'tophetize',
+    'pseudonavicular', 'reswim',
+    'ocelli', 'appreciational',
+    'chromatopathia', 'hoarstone',
+    'vaucheria', 'supersupremacy',
+    'evangelical', 'glia',
+    'Dendropogon', 'strangulable',
+    'insnare', 'flightful',
+    'adsignify', 'eudiometry',
+    'unhelpableness', 'posturist',
+    'thargelion', 'adstipulator',
+    'bearableness', 'tactful',
+    'deuteronomic', 'apathetical',
+    'scrollwise', 'microlevel');
+
 { TFunTest }
 
 procedure TFunTest.LevenshteinDist;
@@ -651,6 +1130,20 @@ begin
   AssertTrue(LevDistance('aaaaaaa', 'bbbbbbbb') = 8);
 end;
 
+procedure TFunTest.LevenshteinDist2;
+var
+  I: Integer = 0;
+  d1, d2: Integer;
+begin
+  while I < High(TestWords) do
+    begin
+      d1 := LevDistWF(TestWords[I], TestWords[I+1]);
+      d2 := LevDistance(TestWords[I], TestWords[I+1]);
+      AssertTrue(d1 = d2);
+      I += 2;
+    end;
+end;
+
 procedure TFunTest.LevenshteinDistMbr;
 begin
   AssertTrue(LevDistanceMbr('', 'hello') = 5);
@@ -673,6 +1166,20 @@ begin
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein') = 6);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa') = 0);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb') = 8);
+end;
+
+procedure TFunTest.LevenshteinDistMbr2;
+var
+  I: Integer = 0;
+  d1, d2: Integer;
+begin
+  while I < High(TestWords) do
+    begin
+      d1 := LevDistWF(TestWords[I], TestWords[I+1]);
+      d2 := LevDistanceMbr(TestWords[I], TestWords[I+1]);
+      AssertTrue(d1 = d2);
+      I += 2;
+    end;
 end;
 
 procedure TFunTest.LevenshteinDistMbrLimit;
@@ -698,6 +1205,40 @@ begin
   AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa', 1) = 0);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 8) = 8);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 7) = -1);
+end;
+
+procedure TFunTest.LcsGusTest;
+var
+  s1: string = '';
+  s2: string = '';
+  Lcs, LcsG: string;
+  I: Integer = 0;
+begin
+  AssertTrue(LcsDp(s1, s2) = '');
+  AssertTrue(LcsGus(s1, s2) = '');
+  s1 := 'aa';
+  AssertTrue(LcsDp(s1, s2) = '');
+  AssertTrue(LcsGus(s1, s2) = '');
+  s1 := 'thisisatest';
+  s2 := 'testing123testing';
+  AssertTrue(LcsDp(s1, s2) = 'tsitest');
+  AssertTrue(LcsGus(s1, s2) = 'tsitest');
+  s1 := '1234';
+  s2 := '1224533324';
+  AssertTrue(LcsDp(s1, s2) = '1234');
+  AssertTrue(LcsGus(s1, s2) = '1234');
+  while I < High(TestWords) do
+    begin
+      Lcs := LcsDp(TestWords[I], TestWords[I+1]);
+      LcsG := LcsGus(TestWords[I], TestWords[I+1]);
+      if Lcs <> LcsG then
+        begin
+          AssertTrue(Length(Lcs) = Length(LcsG));
+          AssertTrue(IsSubSequence(TestWords[I], LcsG));
+          AssertTrue(IsSubSequence(TestWords[I+1], LcsG));
+        end;
+      I += 2;
+    end;
 end;
 
 initialization
