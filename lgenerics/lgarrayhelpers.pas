@@ -4032,12 +4032,11 @@ begin
   if Len < 2 then exit(nil);
   System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
-  for I := 0 to Pred(Len) do
+  for I := Pred(Len) downto 0 do
     begin
       r[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
   Result := r;
 end;
 
@@ -6667,12 +6666,11 @@ begin
   if Len < 2 then exit(nil);
   System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
-  for I := 0 to Pred(Len) do
+  for I := Pred(Len) downto 0 do
     begin
       r[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
   Result := r;
 end;
 
@@ -8640,12 +8638,11 @@ begin
   if Len < 2 then exit(nil);
   System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
-  for I := 0 to Pred(Len) do
+  for I := Pred(Len) downto 0 do
     begin
       r[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
   Result := r;
 end;
 
@@ -10616,12 +10613,11 @@ begin
   if Len < 2 then exit(nil);
   System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
-  for I := 0 to Pred(Len) do
+  for I := Pred(Len) downto 0 do
     begin
       r[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
   Result := r;
 end;
 
@@ -12592,12 +12588,11 @@ begin
   if Len < 2 then exit(nil);
   System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
-  for I := 0 to Pred(Len) do
+  for I := Pred(Len) downto 0 do
     begin
       r[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
   Result := r;
 end;
 
@@ -14211,12 +14206,11 @@ begin
   if Len < 2 then exit(nil);
   System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
-  for I := 0 to Pred(Len) do
+  for I := Pred(Len) downto 0 do
     begin
       r[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
   Result := r;
 end;
 
