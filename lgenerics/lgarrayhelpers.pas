@@ -3999,10 +3999,10 @@ var
     while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-        if not TCmpRel.Less(A[TailIdx[M]], v) then
-          R := M
+        if TCmpRel.Less(A[TailIdx[M]], v) then
+          L := Succ(M)
         else
-          L := Succ(M);
+          R := M;
       end;
     CeilIdx := R;
   end;
@@ -4010,7 +4010,7 @@ var
   r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
-  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  System.SetLength(TailIdx, System.Length(A));
   Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
@@ -6633,10 +6633,10 @@ var
     while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-        if not (A[TailIdx[M]] < v) then
-          R := M
+        if A[TailIdx[M]] < v then
+          L := Succ(M)
         else
-          L := Succ(M);
+          R := M;
       end;
     CeilIdx := R;
   end;
@@ -6644,7 +6644,7 @@ var
   r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
-  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A)+1);
+  System.SetLength(TailIdx, System.Length(A));
   Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
@@ -8605,10 +8605,10 @@ var
     while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-        if not c(A[TailIdx[M]], v) then
-          R := M
+        if c(A[TailIdx[M]], v) then
+          L := Succ(M)
         else
-          L := Succ(M);
+          R := M;
       end;
     CeilIdx := R;
   end;
@@ -8616,7 +8616,7 @@ var
   r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
-  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  System.SetLength(TailIdx, System.Length(A));
   Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
@@ -10580,10 +10580,10 @@ var
     while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-        if not c(A[TailIdx[M]], v) then
-          R := M
+        if c(A[TailIdx[M]], v) then
+          L := Succ(M)
         else
-          L := Succ(M);
+          R := M;
       end;
     CeilIdx := R;
   end;
@@ -10591,7 +10591,7 @@ var
   r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
-  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  System.SetLength(TailIdx, System.Length(A));
   Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
@@ -12555,10 +12555,10 @@ var
     while L < R do
       begin
         {$PUSH}{$Q-}{$R-}M := (L + R) shr 1;{$POP}
-        if not c(A[TailIdx[M]], v) then
-          R := M
+        if c(A[TailIdx[M]], v) then
+          L := Succ(M)
         else
-          L := Succ(M);
+          R := M;
       end;
     CeilIdx := R;
   end;
@@ -12566,7 +12566,7 @@ var
   r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
-  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  System.SetLength(TailIdx, System.Length(A));
   Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
@@ -14184,7 +14184,7 @@ var
   r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
-  TailIdx := TSizeIntHelper.CreateAndFill(0, System.Length(A));
+  System.SetLength(TailIdx, System.Length(A));
   Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
