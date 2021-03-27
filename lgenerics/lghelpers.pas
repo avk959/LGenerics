@@ -1320,94 +1320,101 @@ var
   p: PTypeInfo;
 begin
   p := System.TypeInfo(T);
-  case p^.Kind of
-    tkInteger:
-      InitInt(GetTypeData(p));
-    tkChar:
-      begin
-        CFLess := TLess(@CompareChar);
-        CFEqualCompare := TEqualCompare(@CharEqual);
-        CFHashCode := THashCode(@HashChar);
-      end;
-    tkFloat:
-      InitFloat(GetTypeData(p));
-    tkSString:
-      begin
-        CFLess := TLess(@CompareShortStr);
-        CFEqualCompare := TEqualCompare(@ShortStrEqual);
-        CFHashCode := THashCode(@HashShortStr);
-      end;
-    tkLString:
-      begin
-        CFLess := TLess(@CompareLStr);
-        CFEqualCompare := TEqualCompare(@LStrEqual);
-        CFHashCode := THashCode(@HashLStr);
-      end;
-    tkAString:
-      begin
-        CFLess := TLess(@CompareAStr);
-        CFEqualCompare := TEqualCompare(@AStrEqual);
-        CFHashCode := THashCode(@HashAStr);
-      end;
-    tkWString:
-      begin
-        CFLess := TLess(@CompareWStr);
-        CFEqualCompare := TEqualCompare(@WStrEqual);
-        CFHashCode := THashCode(@HashWStr);
-      end;
-    tkVariant:
-      begin
-        CFLess := TLess(@CompareVariant);
-        CFEqualCompare := TEqualCompare(@VariantEqual);
-        CFHashCode := THashCode(@HashVariant);
-      end;
-    tkClass:
-      begin
-        CFLess := TLess(@CompareObj);
-        CFEqualCompare := TEqualCompare(@ObjEqual);
-        CFHashCode := THashCode(@HashObj);
-      end;
-    tkWChar:
-      begin
-        CFLess := TLess(@CompareWChar);
-        CFEqualCompare := TEqualCompare(@WCharEqual);
-        CFHashCode := THashCode(@HashWChar);
-      end;
-    tkInt64:
-      begin
-        CFLess := TLess(@CompareInt64);
-        CFEqualCompare := TEqualCompare(@Int64Equal);
-        CFHashCode := THashCode(@HashInt64);
-      end;
-    tkQWord:
-      begin
-        CFLess := TLess(@CompareQWord);
-        CFEqualCompare := TEqualCompare(@QWordEqual);
-        CFHashCode := THashCode(@HashQWord);
-      end;
-    tkUString:
-      begin
-        CFLess := TLess(@CompareUStr);
-        CFEqualCompare := TEqualCompare(@UStrEqual);
-        CFHashCode := THashCode(@HashUStr);
-      end;
-    tkUChar:
-      begin
-        CFLess := TLess(@CompareWChar);
-        CFEqualCompare := TEqualCompare(@WCharEqual);
-        CFHashCode := THashCode(@HashWChar);
-      end;
-    tkPointer:
-      begin
-        CFLess := TLess(@ComparePointer);
-        CFEqualCompare := TEqualCompare(@PointerEqual);
-        CFHashCode := THashCode(@HashPointer);
-      end;
+  if p <> nil then
+    case p^.Kind of
+      tkInteger:
+        InitInt(GetTypeData(p));
+      tkChar:
+        begin
+          CFLess := TLess(@CompareChar);
+          CFEqualCompare := TEqualCompare(@CharEqual);
+          CFHashCode := THashCode(@HashChar);
+        end;
+      tkFloat:
+        InitFloat(GetTypeData(p));
+      tkSString:
+        begin
+          CFLess := TLess(@CompareShortStr);
+          CFEqualCompare := TEqualCompare(@ShortStrEqual);
+          CFHashCode := THashCode(@HashShortStr);
+        end;
+      tkLString:
+        begin
+          CFLess := TLess(@CompareLStr);
+          CFEqualCompare := TEqualCompare(@LStrEqual);
+          CFHashCode := THashCode(@HashLStr);
+        end;
+      tkAString:
+        begin
+          CFLess := TLess(@CompareAStr);
+          CFEqualCompare := TEqualCompare(@AStrEqual);
+          CFHashCode := THashCode(@HashAStr);
+        end;
+      tkWString:
+        begin
+          CFLess := TLess(@CompareWStr);
+          CFEqualCompare := TEqualCompare(@WStrEqual);
+          CFHashCode := THashCode(@HashWStr);
+        end;
+      tkVariant:
+        begin
+          CFLess := TLess(@CompareVariant);
+          CFEqualCompare := TEqualCompare(@VariantEqual);
+          CFHashCode := THashCode(@HashVariant);
+        end;
+      tkClass:
+        begin
+          CFLess := TLess(@CompareObj);
+          CFEqualCompare := TEqualCompare(@ObjEqual);
+          CFHashCode := THashCode(@HashObj);
+        end;
+      tkWChar:
+        begin
+          CFLess := TLess(@CompareWChar);
+          CFEqualCompare := TEqualCompare(@WCharEqual);
+          CFHashCode := THashCode(@HashWChar);
+        end;
+      tkInt64:
+        begin
+          CFLess := TLess(@CompareInt64);
+          CFEqualCompare := TEqualCompare(@Int64Equal);
+          CFHashCode := THashCode(@HashInt64);
+        end;
+      tkQWord:
+        begin
+          CFLess := TLess(@CompareQWord);
+          CFEqualCompare := TEqualCompare(@QWordEqual);
+          CFHashCode := THashCode(@HashQWord);
+        end;
+      tkUString:
+        begin
+          CFLess := TLess(@CompareUStr);
+          CFEqualCompare := TEqualCompare(@UStrEqual);
+          CFHashCode := THashCode(@HashUStr);
+        end;
+      tkUChar:
+        begin
+          CFLess := TLess(@CompareWChar);
+          CFEqualCompare := TEqualCompare(@WCharEqual);
+          CFHashCode := THashCode(@HashWChar);
+        end;
+      tkPointer:
+        begin
+          CFLess := TLess(@ComparePointer);
+          CFEqualCompare := TEqualCompare(@PointerEqual);
+          CFHashCode := THashCode(@HashPointer);
+        end;
+    else
+      CFLess := TLess(@CompareBin);
+      CFEqualCompare := TEqualCompare(@EqualBin);
+      CFHashCode := THashCode(@HashBin);
+    end
   else
-    CFLess := TLess(@CompareBin);
-    CFEqualCompare := TEqualCompare(@EqualBin);
-    CFHashCode := THashCode(@HashBin);
-  end;
+    begin
+      CFLess := TLess(@CompareBin);
+      CFEqualCompare := TEqualCompare(@EqualBin);
+      CFHashCode := THashCode(@HashBin);
+    end;
 end;
 
 class procedure TGDefaults.InitInt(aData: PTypeData);
