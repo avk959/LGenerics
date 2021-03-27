@@ -1303,7 +1303,7 @@ end;
 
 class constructor TGOptional<T>.InitTypeInfo;
 begin
-  CFTypeKind := GetTypeKind(T);
+  CFTypeKind := System.GetTypeKind(T);
   CFNilable := CFTypeKind in NilableKinds;
 end;
 
