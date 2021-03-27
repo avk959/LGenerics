@@ -29,7 +29,6 @@ uses
 
   SysUtils,
   Math,
-  typinfo,
   lgStrConst;
 
 type
