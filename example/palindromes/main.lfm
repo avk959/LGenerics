@@ -1,0 +1,30 @@
+object Form1: TForm1
+  Left = 352
+  Height = 555
+  Top = 250
+  Width = 604
+  Caption = 'Form1'
+  ClientHeight = 555
+  ClientWidth = 604
+  DesignTimePPI = 115
+  LCLVersion = '2.0.10.0'
+  object Memo1: TMemo
+    Left = 8
+    Height = 488
+    Top = 8
+    Width = 588
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    ScrollBars = ssAutoBoth
+    TabOrder = 0
+  end
+  object Button1: TButton
+    Left = 256
+    Height = 30
+    Top = 512
+    Width = 90
+    Anchors = [akBottom]
+    Caption = 'Button1'
+    OnClick = Button1Click
+    TabOrder = 1
+  end
+end
