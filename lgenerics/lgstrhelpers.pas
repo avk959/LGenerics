@@ -464,7 +464,7 @@ begin
         end;
     end;
   if Tail <> nil then
-    Insert(Tail, Result, System.Length(Result));
+    System.Insert(Tail, Result, System.Length(Result));
 end;
 
 function LcsGus(const L, R: rawbytestring): rawbytestring;
