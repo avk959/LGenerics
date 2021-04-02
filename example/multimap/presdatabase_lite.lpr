@@ -20,7 +20,7 @@ var
   UserInput,
   LastName: string;
   Name: TName;
-  Names: array[0..44] of TName = {$I presidents.inc};
+  Names: array[0..45] of TName = {$I presidents.inc};
 
 {$R *.res}
 
