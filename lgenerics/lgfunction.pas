@@ -30,7 +30,9 @@ uses
   SysUtils,
   lgUtils,
   {%H-}lgHelpers,
-  lgAbstractContainer;
+  lgAbstractContainer,
+  lgVector,
+  lgHashTable;
 
 type
 
@@ -159,6 +161,70 @@ type
     class function Right(e: IXEnumerable; f: TNestFold; const y0: Y): Y; static;
     class function Right(e: IXEnumerable; f: TNestFold): TOptional; static;
   end;
+
+  { TGBaseGrouping groups the input sequence by some key;
+    functor TKeyEqRel must provide:
+      class function HashCode([const[ref]] aKey: TKey): SizeInt;
+      class function Equal([const[ref]] L, R: TKey): Boolean; }
+  generic TGBaseGrouping<T, TKey, TKeyEqRel> = class
+  public
+  type
+    TArray         = array of T;
+    IEnumerable    = specialize IGEnumerable<T>;
+    IGroup         = IEnumerable;
+    IGrouping      = specialize IGEnumerable<IGroup>;
+    TKeyOptional   = specialize TGOptional<TKey>;
+    TKeySelect     = specialize TGMapFunc<T, TKey>;
+    TOnKeySelect   = specialize TGOnMap<T, TKey>;
+    TNestKeySelect = specialize TGNestMap<T, TKey>;
+
+  private
+  type
+    TVector      = specialize TGLiteVector<T>;
+    PVector      = ^TVector;
+    TVecEnum     = TVector.TEnumerator;
+    TEntry       = specialize TGMapEntry<TKey, TVector>;
+    TMap         = specialize TGLiteChainHashTable<TKey, TEntry, TKeyEqRel>;
+
+    TGroup  = class(specialize TGAutoEnumerable<T>)
+    private
+      FEnum: TVecEnum;
+      FVector: PVector;
+    protected
+      function  GetCurrent: T; override;
+    public
+      constructor Create(p: PVector);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+    TGrouping = class(specialize TGAutoEnumerable<IGroup>)
+    private
+      FMap: TMap;
+      FCurrIndex: SizeInt;
+    protected
+      function  GetCurrent: IGroup; override;
+    public
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+  public
+    class function GroupKey(g: IGroup; ks: TKeySelect): TKeyOptional; static;
+    class function GroupKey(g: IGroup; ks: TOnKeySelect): TKeyOptional; static;
+    class function GroupKey(g: IGroup; ks: TNestKeySelect): TKeyOptional; static;
+
+    class function Apply(const a: array of T; ks: TKeySelect): IGrouping; static;
+    class function Apply(e: IEnumerable; ks: TKeySelect): IGrouping; static;
+    class function Apply(const a: array of T; ks: TOnKeySelect): IGrouping; static;
+    class function Apply(e: IEnumerable; ks: TOnKeySelect): IGrouping; static;
+    class function Apply(const a: array of T; ks: TNestKeySelect): IGrouping; static;
+    class function Apply(e: IEnumerable; ks: TNestKeySelect): IGrouping; static;
+  end;
+
+  {TGGrouping groups the input sequence by some key; it assumes
+    that TKey implements TKeyEqRel }
+  generic TGGrouping<T, TKey> = class(specialize TGBaseGrouping<T, TKey, TKey>);
 
   generic TGUnboundGenerator<TState, TResult> = class(specialize TGEnumerable<TResult>)
   public
@@ -673,6 +739,156 @@ begin
   ReduceEnum;
 end;
 {$UNDEF FoldArray}{$UNDEF ReduceArray}{$UNDEF FoldEnum}{$UNDEF ReduceEnum}
+{$POP}
+
+{ TGBaseGrouping.TGroup }
+
+function TGBaseGrouping.TGroup.GetCurrent: T;
+begin
+  Result := FEnum.Current;
+end;
+
+constructor TGBaseGrouping.TGroup.Create(p: PVector);
+begin
+  inherited Create;
+  FVector := p;
+end;
+
+function TGBaseGrouping.TGroup.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGBaseGrouping.TGroup.Reset;
+begin
+  FEnum := FVector^.GetEnumerator;
+end;
+
+{ TGroupingType.TGrouping }
+
+function TGBaseGrouping.TGrouping.GetCurrent: IGroup;
+begin
+  Result := TGroup.Create(@FMap.NodeList[FCurrIndex].Data.Value);
+end;
+
+function TGBaseGrouping.TGrouping.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < Pred(FMap.Count);
+  if Result then
+    Inc(FCurrIndex);
+end;
+
+procedure TGBaseGrouping.TGrouping.Reset;
+begin
+  FCurrIndex := NULL_INDEX;
+end;
+
+{ TGBaseGrouping }
+
+{$PUSH}{$MACRO ON}
+{$DEFINE GroupKeyMacro :=
+  with g.GetEnumerator do
+    if MoveNext then
+      Result.Assign(ks(Current))
+}
+class function TGBaseGrouping.GroupKey(g: IGroup; ks: TKeySelect): TKeyOptional;
+begin
+  GroupKeyMacro;
+end;
+
+class function TGBaseGrouping.GroupKey(g: IGroup; ks: TOnKeySelect): TKeyOptional;
+begin
+  GroupKeyMacro;
+end;
+
+class function TGBaseGrouping.GroupKey(g: IGroup; ks: TNestKeySelect): TKeyOptional;
+begin
+  GroupKeyMacro;
+end;
+{$UNDEF GroupKeyMacro}
+
+{$DEFINE ArrayApplyMacro :=
+  g := TGrouping.Create;
+  for I := 0 to System.High(a) do
+    begin
+      k := ks(a[I]);
+      if not g.FMap.FindOrAdd(k, p) then
+        p^.Key := k;
+      p^.Value.Add(a[I]);
+    end;
+  Result := g
+}
+{$DEFINE EnumApplyMacro :=
+  g := TGrouping.Create;
+  for el in e do
+    begin
+      k := ks(el);
+      if not g.FMap.FindOrAdd(k, p) then
+        p^.Key := k;
+      p^.Value.Add(el);
+    end;
+  Result := g;
+}
+class function TGBaseGrouping.Apply(const a: array of T; ks: TKeySelect): IGrouping;
+var
+  g: TGrouping;
+  I: SizeInt;
+  k: TKey;
+  p: ^TEntry;
+begin
+  ArrayApplyMacro;
+end;
+
+class function TGBaseGrouping.Apply(e: IEnumerable; ks: TKeySelect): IGrouping;
+var
+  g: TGrouping;
+  el: T;
+  k: TKey;
+  p: ^TEntry;
+begin
+  EnumApplyMacro;
+end;
+
+class function TGBaseGrouping.Apply(const a: array of T; ks: TOnKeySelect): IGrouping;
+var
+  g: TGrouping;
+  I: SizeInt;
+  k: TKey;
+  p: ^TEntry;
+begin
+  ArrayApplyMacro;
+end;
+
+class function TGBaseGrouping.Apply(e: IEnumerable; ks: TOnKeySelect): IGrouping;
+var
+  g: TGrouping;
+  el: T;
+  k: TKey;
+  p: ^TEntry;
+begin
+  EnumApplyMacro;
+end;
+
+class function TGBaseGrouping.Apply(const a: array of T; ks: TNestKeySelect): IGrouping;
+var
+  g: TGrouping;
+  I: SizeInt;
+  k: TKey;
+  p: ^TEntry;
+begin
+  ArrayApplyMacro;
+end;
+
+class function TGBaseGrouping.Apply(e: IEnumerable; ks: TNestKeySelect): IGrouping;
+var
+  g: TGrouping;
+  el: T;
+  k: TKey;
+  p: ^TEntry;
+begin
+  EnumApplyMacro;
+end;
+{$UNDEF ArrayApplyMacro}{$UNDEF EnumApplyMacro}
 {$POP}
 
 { TGUnboundGenerator.TEnumerator }
