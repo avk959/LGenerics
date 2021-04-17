@@ -379,21 +379,18 @@ end;
 
 procedure TfrmMain.FindNumbersByLocation;
 type
-  TMapping = specialize TGMapping<TEmployee, string>;
+  TGroping = specialize TGGrouping<TEmployee, string>;
 var
-  s: string;
-  function RightLocation(const e: TEmployee): Boolean;
-  begin
-    Result := e.Location = s;
-  end;
+  g: TGroping.IGroup;
 begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.Select.Total, grouping by location:');
-    for s in TMapping.Apply(FEmployees, @GetLocation).Distinct(@StringCmp) do
-      mmResult.Append(s + #9 + IntToStr(FEmployees.Select(@RightLocation).Total));
+    for g in TGroping.Apply(FEmployees, @GetLocation) do
+      mmResult.Append(TGroping.GroupKey(g, @GetLocation).OrElse('no such location') +
+                      #9 + IntToStr(g.Total));
   finally
     mmResult.Lines.EndUpdate;
   end;
@@ -437,45 +434,44 @@ end;
 
 procedure TfrmMain.SelectMaxByLocation(const aCaption: string; aCmp: TEmployeeCompare);
 type
-  TMapping = specialize TGMapping<TEmployee, string>;
+  TGroping = specialize TGGrouping<TEmployee, string>;
 var
-  s: string;
-  function RightLocation(const e: TEmployee): Boolean;
-  begin
-    Result := e.Location = s;
-  end;
+  g: TGroping.IGroup;
 begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.FindMax of ' + aCaption + ', grouping by location:');
-    for s in TMapping.Apply(FEmployees, @GetLocation).Distinct(@StringCmp) do
-      mmResult.Append(FEmployees.Select(@RightLocation).Max(aCmp).OrElseDefault.ToString);
+    for g in TGroping.Apply(FEmployees, @GetLocation) do
+      mmResult.Append(g.Max(aCmp).OrElseDefault.ToString);
   finally
     mmResult.Lines.EndUpdate;
   end;
 end;
 
 procedure TfrmMain.SelectGenderAndAge(const aGender: string; LoAge, HiAge: Integer);
-var
-  s: string;
+type
+  TGroping = specialize TGGrouping<TEmployee, string>;
   function IsRightEmployee(const e: TEmployee): Boolean;
   begin
-    Result := (e.Location = s) and (e.Gender = aGender) and (e.Age >= LoAge) and (e.Age <= HiAge);
+    Result := (e.Gender = aGender) and (e.Age >= LoAge) and (e.Age <= HiAge);
   end;
 var
+  g: TGroping.IGroup;
   e: TEmployee;
+  s: string;
   Total: Integer;
 begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Lines.Clear;
     mmResult.Append('Executing employees selection by gender and age, grouping by location:');
-    for s in cbLocation.Items do
+    for g in TGroping.Apply(FEmployees, @GetLocation) do
       begin
         Total := 0;
-        for e in FEmployees.Select(@IsRightEmployee) do
+        s := TGroping.GroupKey(g, @GetLocation).OrElse('no such location');
+        for e in g.Select(@IsRightEmployee) do
           begin
             mmResult.Append(e.ToString);
             Inc(Total);
