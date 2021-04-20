@@ -1129,8 +1129,7 @@ type
   otherwise 0 }
   function GDownRange<T>(aFrom, aDownTo: T; aStep: T{$IF FPC_FULLVERSION>=30301}=T(1){$ENDIF}): TGRecDownRange<T>; inline;//Mantis #37380
 
-  {.$DEFINE FPC_REV_GE_46953}//uncomment if FPC revision >= 46953
-  procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);{$IFDEF FPC_REV_GE_46953}inline;{$ENDIF}
+  procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);{$IF FPC_FULLVERSION>=30202}inline;{$ENDIF}
 
   function MinOf3(a, b, c: SizeInt): SizeInt; inline;
   function MaxOf3(a, b, c: SizeInt): SizeInt; inline;
@@ -3542,7 +3541,7 @@ begin
 end;
 
 procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);
-{$IFDEF FPC_REV_GE_46953}
+{$IF FPC_FULLVERSION>=30202}
 begin
   if aOn then
     Include(aSet, aElem)
