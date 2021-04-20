@@ -41,6 +41,7 @@ type
     procedure RangeDouble1;
     procedure DownRangeInt1;
     procedure DownRangeDouble1;
+    procedure TurnSetElem;
   end;
 
   TGOptionalTest = class(TTestCase)
@@ -623,6 +624,20 @@ begin
   for d in specialize GDownRange<Double>(10, 1, 2) do
     Sum += d;
   AssertTrue(Sum = 30);
+end;
+
+procedure TCommonFunctionTest.TurnSetElem;
+type
+  TByteSet = set of Byte;
+var
+  s: TByteSet = [];
+  b: Byte = 42;
+begin
+  AssertFalse(b in s);
+  specialize TurnSetElem<TByteSet, Byte>(s, b, True);
+  AssertTrue(b in s);
+  specialize TurnSetElem<TByteSet, Byte>(s, b, False);
+  AssertFalse(b in s);
 end;
 
 { TGOptionalTest }
