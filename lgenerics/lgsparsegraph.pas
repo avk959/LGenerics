@@ -5415,7 +5415,7 @@ begin
   Queue := Pointer(Buf);
   Parents := Queue + vCount;
   TreePrev := Parents + vCount;
-  TreeNext := TreePrev + vCount; ;
+  TreeNext := TreePrev + vCount;
   Level := TreeNext + vCount;
   InQueue.Capacity := vCount;
   Active.Capacity := vCount;
