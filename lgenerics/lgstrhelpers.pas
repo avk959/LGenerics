@@ -326,7 +326,7 @@ type
 
 { returns True if aSub is a subsequence of aStr, False otherwise;
   only suitable for single-byte encodings }
-  function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
+  function IsSubSequence(const aStr, aSub: rawbytestring): Boolean; inline;
 { returns longest common subsequence(LCS); from Dan Gusfield
   "Algorithms on Strings, Trees and Sequences", section 12.5;
   only suitable for single-byte encodings }
@@ -357,20 +357,9 @@ implementation
 {$B-}{$COPERATORS ON}
 
 function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
-var
-  I, J: SizeInt;
-  pStr: PAnsiChar absolute aStr;
-  pSub: PAnsiChar absolute aSub;
 begin
-  I := 0;
-  J := 0;
-  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
-    begin
-      if pStr[I] = pSub[J] then
-        Inc(J);
-      Inc(I);
-    end;
-  Result := J = System.Length(aSub);
+  Result := specialize TGSimpleArrayHelper<Byte>.IsSubSequence(
+    PByte(aStr)[0..Pred(System.Length(aStr))], PByte(aSub)[0..Pred(System.Length(aSub))]);
 end;
 
 function GetLcsG(pL, PR: PByte; aLenL, aLenR: SizeInt): TBytes;
