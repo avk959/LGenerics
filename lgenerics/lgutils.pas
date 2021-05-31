@@ -2490,7 +2490,7 @@ begin
             if IsManagedType(T) then
               ReallocManaged(aValue)
             else
-              FItems := System.ReallocMem(FItems, aValue * SizeOf(T));;
+              FItems := System.ReallocMem(FItems, aValue * SizeOf(T));
           FLength := aValue;
         end
       else
