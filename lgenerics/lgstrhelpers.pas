@@ -402,8 +402,7 @@ begin
       aLenR -= I;
     end;
 
-  for I := 0 to 255 do
-    MatchList[I] := NULL_INDEX;
+  TSizeIntHelper.Fill(MatchList, NULL_INDEX);
 
   System.SetLength(NodeList, ARRAY_INITIAL_SIZE);
   J := 0;
