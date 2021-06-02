@@ -148,13 +148,18 @@ type
   { returns Levenshtein distance between L and R; used a simple dynamic programming algorithm }
     class function LevDistance(L, R: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function LevDistance(const L, R: array of T): SizeInt; static;
-  {  }
+  { returns the Levenshtein distance between L and R; a Pascal translation of
+    github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
+    a modified version of algorithm described by Berghel and Roach with O(min(aLenL, aLenR)*d)
+    worst-case time complexity, where d is the edit distance computed  }
     class function LevDistanceMBR(L, R: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function LevDistanceMBR(const L, R: array of T): SizeInt; static;
+  { the same as above; the aLimit parameter indicates the maximum expected distance,
+    if this value is exceeded when calculating the distance, then the function exits
+    immediately and returns -1 }
     class function LevDistanceMBR(L, R: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
-  { returns longest common subsequence(LCS) of L and R in a manner similar
-    Hunt-Szymanski algorithm for LCS; inspired by Dan Gusfield'
+  { returns longest common subsequence(LCS) of L and R, inspired by Dan Gusfield'
     "Algorithms on Strings, Trees and Sequences", section 12.5 }
     class function LcsGus(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function LcsGus(const L, R: array of T): TArray; static;
@@ -559,19 +564,26 @@ var
   v: T;
 begin
   //here aLenL <= aLenR and pL <> pR
-  while Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
+  while (aLenL <> 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
+  if aLenL = 0 then
+    exit(aLenR);
+
   I := 0;
-  while Eq(pL^, pR^) do
+  while (I <> aLenL) and Eq(pL^, pR^) do
     begin
       Inc(pL);
       Inc(pR);
       Inc(I);
     end;
+
+  if I = aLenL then
+    exit(aLenR);
+
   aLenL -= I;
   aLenR -= I;
 
@@ -655,19 +667,32 @@ var
   Even: Boolean = True;
 begin
   //here aLenL <= aLenR and pL <> pR and aLenR - aLenL <= aLimit
-  while Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
+  while (aLenL <> 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
+  if aLenL = 0 then
+    if aLenR > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(aLenR);
+
   I := 0;
-  while Eq(pL^, pR^) do
+  while (I <> aLenL) and Eq(pL^, pR^) do
     begin
       Inc(pL);
       Inc(pR);
       Inc(I);
     end;
+
+  if I = aLenL then
+    if aLenR > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(aLenR);
+
   aLenL -= I;
   aLenR -= I;
 
@@ -807,8 +832,6 @@ begin
   else
     if aLenR = 0 then
       exit(aLenL);
-  if THelper.Same(L[0..Pred(aLenL)], R[0..Pred(aLenR)], @Eq) then
-    exit(0);
   if aLenL <= aLenR then
     Result := GetLevDist(L, R, aLenL, aLenR)
   else
@@ -832,8 +855,6 @@ begin
   else
     if aLenR = 0 then
       exit(aLenL);
-  if THelper.Same(L[0..Pred(aLenL)], R[0..Pred(aLenR)], @Eq) then
-    exit(0);
   if aLenL <= aLenR then
     Result := GetLevDistMbr(L, R, aLenL, aLenR, aLenR)
   else
@@ -847,8 +868,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if THelper.Same(L, R, @Eq) then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := GetLevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
@@ -866,8 +885,6 @@ begin
   else
     if aLenR = 0 then
       exit(aLenL);
-  if THelper.Same(L[0..Pred(aLenL)], R[0..Pred(aLenR)], @Eq) then
-    exit(0);
   if aLenL <= aLenR then
     Result := GetLevDistMbr(L, R, aLenL, aLenR, aLimit)
   else
@@ -885,8 +902,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if THelper.Same(L, R, @Eq) then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := GetLevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
