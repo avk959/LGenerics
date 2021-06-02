@@ -327,7 +327,7 @@ type
 { returns True if aSub is a subsequence of aStr, False otherwise;
   only suitable for single-byte encodings }
   function IsSubSequence(const aStr, aSub: rawbytestring): Boolean; inline;
-{ returns the longest common subsequence (LCS) of strings(sequences) L and R;
+{ returns the longest common subsequence(LCS) of strings(sequences) L and R;
   from Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5;
   only suitable for single-byte encodings }
   function LcsGus(const L, R: rawbytestring): rawbytestring;
@@ -564,17 +564,14 @@ var
   b: Byte;
 begin
   //here aLenL <= aLenR and L <> R
-  while (aLenL <> 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
-  if aLenL = 0 then
-    exit(aLenR);
-
   I := 0;
-  while (I <> aLenL) and (pL^ = pR^) do
+  while (I < aLenL) and (pL^ = pR^) do
     begin
       Inc(pL);
       Inc(pR);
@@ -693,20 +690,14 @@ var
   Even: Boolean = True;
 begin
   //here aLenL <= aLenR and L <> R and aLenR - aLenL <= aLimit
-  while (aLenL <> 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
-  if aLenL = 0 then
-    if aLenR > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(aLenR);
-
   I := 0;
-  while (I <> aLenL) and (pL^ = pR^) do
+  while (I < aLenL) and (pL^ = pR^) do
     begin
       Inc(pL);
       Inc(pR);
