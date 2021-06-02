@@ -327,8 +327,8 @@ type
 { returns True if aSub is a subsequence of aStr, False otherwise;
   only suitable for single-byte encodings }
   function IsSubSequence(const aStr, aSub: rawbytestring): Boolean; inline;
-{ returns longest common subsequence(LCS); from Dan Gusfield
-  "Algorithms on Strings, Trees and Sequences", section 12.5;
+{ returns the longest common subsequence (LCS) of strings(sequences) L and R;
+  from Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5;
   only suitable for single-byte encodings }
   function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
@@ -361,6 +361,12 @@ begin
   Result := specialize TGSimpleArrayHelper<Byte>.IsSubSequence(
     PByte(aStr)[0..Pred(System.Length(aStr))], PByte(aSub)[0..Pred(System.Length(aSub))]);
 end;
+
+//procedure FindLis(const a: array of SizeInt; var aLis: array of SizeInt; var aLisLen: SizeInt;
+//  aMaxLen: SizeInt);
+//begin
+//
+//end;
 
 function GetLcsG(pL, PR: PByte; aLenL, aLenR: SizeInt): TBytes;
 type
@@ -558,19 +564,26 @@ var
   b: Byte;
 begin
   //here aLenL <= aLenR and L <> R
-  while pL[Pred(aLenL)] = pR[Pred(aLenR)] do
+  while (aLenL <> 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
+  if aLenL = 0 then
+    exit(aLenR);
+
   I := 0;
-  while pL^ = pR^ do
+  while (I <> aLenL) and (pL^ = pR^) do
     begin
       Inc(pL);
       Inc(pR);
       Inc(I);
     end;
+
+  if I = aLenL then
+    exit(aLenR);
+
   aLenL -= I;
   aLenR -= I;
 
@@ -637,8 +650,6 @@ begin
   else
     if R = '' then
       exit(System.Length(L));
-  if L = R then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := LevDist(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
   else
@@ -652,8 +663,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if specialize TGOrdinalArrayHelper<Byte>.Same(L, R) then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := LevDist(@L[0], @R[0], System.Length(L), System.Length(R))
   else
@@ -684,19 +693,32 @@ var
   Even: Boolean = True;
 begin
   //here aLenL <= aLenR and L <> R and aLenR - aLenL <= aLimit
-  while pL[Pred(aLenL)] = pR[Pred(aLenR)] do
+  while (aLenL <> 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
+  if aLenL = 0 then
+    if aLenR > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(aLenR);
+
   I := 0;
-  while pL^ = pR^ do
+  while (I <> aLenL) and (pL^ = pR^) do
     begin
       Inc(pL);
       Inc(pR);
       Inc(I);
     end;
+
+  if I = aLenL then
+    if aLenR > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(aLenR);
+
   aLenL -= I;
   aLenR -= I;
 
@@ -806,8 +828,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if L = R then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := LevDistMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
   else
@@ -821,8 +841,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if specialize TGOrdinalArrayHelper<Byte>.Same(L, R) then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
@@ -840,8 +858,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if L = R then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := LevDistMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
   else
@@ -859,8 +875,6 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  if specialize TGOrdinalArrayHelper<Byte>.Same(L, R) then
-    exit(0);
   if System.Length(L) <= System.Length(R) then
     Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
