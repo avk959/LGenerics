@@ -564,17 +564,14 @@ var
   v: T;
 begin
   //here aLenL <= aLenR and pL <> pR
-  while (aLenL <> 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
+  while (aLenL > 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
-  if aLenL = 0 then
-    exit(aLenR);
-
   I := 0;
-  while (I <> aLenL) and Eq(pL^, pR^) do
+  while (I < aLenL) and Eq(pL^, pR^) do
     begin
       Inc(pL);
       Inc(pR);
@@ -667,20 +664,14 @@ var
   Even: Boolean = True;
 begin
   //here aLenL <= aLenR and pL <> pR and aLenR - aLenL <= aLimit
-  while (aLenL <> 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
+  while (aLenL > 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
     end;
 
-  if aLenL = 0 then
-    if aLenR > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(aLenR);
-
   I := 0;
-  while (I <> aLenL) and Eq(pL^, pR^) do
+  while (I < aLenL) and Eq(pL^, pR^) do
     begin
       Inc(pL);
       Inc(pR);
