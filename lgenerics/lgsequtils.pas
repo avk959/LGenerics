@@ -133,19 +133,19 @@ type
 
   const
     MAX_STATIC = 1024;
-    HCE_CUTOFF = 1023;
 
     class function Eq(const L, R: T): Boolean; static; inline;
-    class function HasCommonEl(L, R: PItem; aLenL, aLenR: SizeInt): Boolean; static;
     class function GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
-    class function GetLcsG(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
-    class function GetLevDist(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
-    class function GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
+    class function LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
   public
   { returns True if aSub is a subsequence of aSeq, False otherwise }
     class function IsSubSequence(const aSeq, aSub: array of T): Boolean; static;
     class function IsSubSequence(pSeq, pSub: PItem; aSecLen, aSubLen: SizeInt): Boolean; static;
-  { returns Levenshtein distance between L and R; used a simple dynamic programming algorithm }
+  { returns Levenshtein distance between L and R; used a simple dynamic programming algorithm
+    with O(mn) time complexity, where n and m are the lengths of L and R respectively,
+    and O(Max(m, n)) space complexity }
     class function LevDistance(L, R: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function LevDistance(const L, R: array of T): SizeInt; static;
   { returns the Levenshtein distance between L and R; a Pascal translation of
@@ -159,19 +159,22 @@ type
     immediately and returns -1 }
     class function LevDistanceMBR(L, R: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
-  { returns longest common subsequence(LCS) of L and R, inspired by Dan Gusfield'
-    "Algorithms on Strings, Trees and Sequences", section 12.5 }
+  { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
+    with O(RLogN) time complexity, where R is the number of the matching pairs in L and R;
+    inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5; }
     class function LcsGus(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function LcsGus(const L, R: array of T): TArray; static;
   end;
 
 { the responsibility for the correctness and normalization of the strings lies with the user }
   function IsSubSequence(const aStr, aSub: unicodestring): Boolean;
-  function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
-  function LevDistanceUtf8(const L, R: utf8string): SizeInt;
-  function LevDistanceMBRUtf8(const L, R: utf8string): SizeInt;
-  function LevDistanceMBRUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
-  function LcsGusUtf8(const L, R: utf8string): utf8string;
+{ these functions expect UTF-8 encoded strings as parameters; the responsibility
+  for the correctness and normalization of the strings lies with the user }
+  function IsSubSequenceUtf8(const aStr, aSub: ansistring): Boolean;
+  function LevDistanceUtf8(const L, R: ansistring): SizeInt;
+  function LevDistanceMBRUtf8(const L, R: ansistring): SizeInt;
+  function LevDistanceMBRUtf8(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+  function LcsGusUtf8(const L, R: ansistring): ansistring;
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -401,21 +404,6 @@ begin
   Result := TEqRel.Equal(L, R);
 end;
 
-class function TGSeqUtil.HasCommonEl(L, R: PItem; aLenL, aLenR: SizeInt): Boolean;
-var
-  Matches: TMap;
-  I: SizeInt;
-  p: ^TEntry;
-begin
-  for I := 0 to Pred(aLenL) do
-    if not Matches.FindOrAdd(L[I], p) then
-      p^ := TEntry.Create(L[I], 0);
-  for I := 0 to Pred(aLenR) do
-    if Matches.Find(R[I]) <> nil then
-      exit(True);
-  Result := False;
-end;
-
 class function TGSeqUtil.GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
@@ -467,7 +455,7 @@ begin
     end;
 end;
 
-class function TGSeqUtil.GetLcsG(L, R: PItem; aLenL, aLenR: SizeInt): TArray;
+class function TGSeqUtil.LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray;
 var
   MatchList: TMap;
   NodeList: TNodeList;
@@ -476,9 +464,14 @@ var
   Tail: TArray = nil;
   I, J, NodeIdx: SizeInt;
   p: ^TEntry;
+const
+  INIT_SIZE = 256;
 begin
-  //here aLenL <= aLenR and L <> R
+  //here aLenL <= aLenR
   Result := nil;
+
+  if L = R then
+    exit(THelper.CreateCopy(L[0..Pred(aLenL)]));
 
   I := 0;
   while (aLenL >= 0) and TEqRel.Equal(L[Pred(aLenL)], R[Pred(aLenR)]) do
@@ -507,7 +500,7 @@ begin
     if not MatchList.FindOrAdd(L[I], p) then
       p^ := TEntry.Create(L[I], NULL_INDEX);
 
-  System.SetLength(NodeList, ARRAY_INITIAL_SIZE);
+  System.SetLength(NodeList, INIT_SIZE);
   J := 0;
   for I := 0 to Pred(aLenR) do
     begin
@@ -555,7 +548,7 @@ begin
     System.Insert(Tail, Result, System.Length(Result));
 end;
 
-class function TGSeqUtil.GetLevDist(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+class function TGSeqUtil.LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
@@ -563,7 +556,10 @@ var
   Dists: PSizeInt;
   v: T;
 begin
-  //here aLenL <= aLenR and pL <> pR
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
   while (aLenL > 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
@@ -583,9 +579,6 @@ begin
 
   aLenL -= I;
   aLenR -= I;
-
-  if (MulSizeInt(aLenL, aLenR) > HCE_CUTOFF) and not HasCommonEl(pL, pR, aLenL, aLenR) then
-    exit(aLenR);
 
   if aLenR < MAX_STATIC then
     Dists := @StBuf[0]
@@ -640,7 +633,7 @@ begin
   Result := Dists[aLenR];
 end;
 
-class function TGSeqUtil.GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 
   function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;
   var
@@ -663,7 +656,14 @@ var
   tmp: Pointer;
   Even: Boolean = True;
 begin
-  //here aLenL <= aLenR and pL <> pR and aLenR - aLenL <= aLimit
+  //here aLenL <= aLenR
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
   while (aLenL > 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
@@ -679,19 +679,10 @@ begin
     end;
 
   if I = aLenL then
-    if aLenR > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(aLenR);
+    exit(aLenR);
 
   aLenL -= I;
   aLenR -= I;
-
-  if (MulSizeInt(aLenL, aLenR) > HCE_CUTOFF) and not HasCommonEl(pL, pR, aLenL, aLenR) then
-    if aLenR > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(aLenR);
 
   Delta := aLenL - aLenR;
   Dist := -Delta;
@@ -824,9 +815,9 @@ begin
     if aLenR = 0 then
       exit(aLenL);
   if aLenL <= aLenR then
-    Result := GetLevDist(L, R, aLenL, aLenR)
+    Result := LevDistImpl(L, R, aLenL, aLenR)
   else
-    Result := GetLevDist(R, L, aLenR, aLenL);
+    Result := LevDistImpl(R, L, aLenR, aLenL);
 end;
 
 class function TGSeqUtil.LevDistance(const L, R: array of T): SizeInt;
@@ -836,7 +827,10 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  Result := LevDistance(@L[0], @R[0], System.Length(L), System.Length(R));
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDistImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := LevDistImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
 class function TGSeqUtil.LevDistanceMBR(L, R: PItem; aLenL, aLenR: SizeInt): SizeInt;
@@ -847,9 +841,9 @@ begin
     if aLenR = 0 then
       exit(aLenL);
   if aLenL <= aLenR then
-    Result := GetLevDistMbr(L, R, aLenL, aLenR, aLenR)
+    Result := LevDistMbrImpl(L, R, aLenL, aLenR, aLenR)
   else
-    Result := GetLevDistMbr(R, L, aLenR, aLenL, aLenL);
+    Result := LevDistMbrImpl(R, L, aLenR, aLenL, aLenL);
 end;
 
 class function TGSeqUtil.LevDistanceMBR(const L, R: array of T): SizeInt;
@@ -860,96 +854,86 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := GetLevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+    Result := LevDistMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := GetLevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+    Result := LevDistMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
 class function TGSeqUtil.LevDistanceMBR(L, R: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
-  if Abs(aLenL - aLenR) > aLimit then
-    exit(NULL_INDEX);
   if aLenL = 0 then
-    exit(aLenR)
+    if aLenR <= aLimit then
+      exit(aLenR)
+    else
+      exit(NULL_INDEX)
   else
     if aLenR = 0 then
-      exit(aLenL);
+      if aLenL <= aLimit then
+        exit(aLenL)
+      else
+        exit(NULL_INDEX);
   if aLenL <= aLenR then
-    Result := GetLevDistMbr(L, R, aLenL, aLenR, aLimit)
+    Result := LevDistMbrImpl(L, R, aLenL, aLenR, aLimit)
   else
-    Result := GetLevDistMbr(R, L, aLenR, aLenL, aLimit);
+    Result := LevDistMbrImpl(R, L, aLenR, aLenL, aLimit);
 end;
 
 class function TGSeqUtil.LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
-  if Abs(System.Length(L) - System.Length(R)) > aLimit then
-    exit(NULL_INDEX);
   if System.Length(L) = 0 then
-    exit(System.Length(R))
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
   else
     if System.Length(R) = 0 then
-      exit(System.Length(L));
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := GetLevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := LevDistMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := GetLevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := LevDistMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 class function TGSeqUtil.LcsGus(L, R: PItem; aLenL, aLenR: SizeInt): TArray;
 var
   I: SizeInt;
 begin
-  // edge cases
   if (aLenL = 0) or (aLenR = 0) then
     exit(nil);
-
-  if L = R then
-    exit(THelper.CreateCopy(L[0..Pred(Min(aLenL, aLenR))]));
-
-  if aLenL = 1 then
-    begin
-      for I := 0 to Pred(aLenR) do
-        if TEqRel.Equal(L[0], R[I]) then
-          exit([L[0]]);
-      exit(nil);
-    end
-  else
-    if aLenR = 1 then
-      begin
-        for I := 0 to Pred(aLenL) do
-          if TEqRel.Equal(R[0], L[I]) then
-            exit([R[0]]);
-        exit(nil);
-      end;
-
   if aLenL <= aLenR then
-    Result := GetLcsG(L, R, aLenL, aLenR)
+    Result := LcsGusImpl(L, R, aLenL, aLenR)
   else
-    Result := GetLcsG(R, L, aLenR, aLenL);
+    Result := LcsGusImpl(R, L, aLenR, aLenL);
 end;
 
 class function TGSeqUtil.LcsGus(const L, R: array of T): TArray;
 begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
-  Result := LcsGus(@L[0], @R[0], System.Length(L), System.Length(R));
+  if System.Length(L) <= System.Length(R) then
+    Result := LcsGusImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := LcsGusImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
 type
-  TUChar32     = DWord;
-  PChar32     = ^TUChar32;
-  TChar32Seq  = array of TUChar32;
-  TChar32Util = specialize TGSeqUtil<TUChar32, TDwHasher>;
+  TChar32     = DWord;
+  PChar32     = ^TChar32;
+  TChar32Seq  = array of TChar32;
+  TChar32Util = specialize TGSeqUtil<TChar32, TDwHasher>;
   TByte4      = array[0..3] of Byte;
 
 const
   MAX_STATIC = TChar32Util.MAX_STATIC;
 
-function CodePointLen(b: Byte): Integer; inline;
+function CodePointLen(b: Byte): SizeInt; inline;
 begin
   case b of
     0..127   : Result := 1;
@@ -961,21 +945,37 @@ begin
   end;
 end;
 
-function CodePointToChar32(p: PByte; out aSize: Integer): TUChar32;
+function CodePointToChar32(p: PByte; out aSize: SizeInt): TChar32; inline;
 begin
-  aSize := CodePointLen(p^);
-  case aSize of
-    1: Result := p^;
-    2: Result := TUChar32(Integer(p[0] and $1f) shl 6 or (p[1] and $3f));
-    3: Result := TUChar32(Integer(p[0] and $f) shl 12 or Integer(p[1] and $3f) shl 6 or (p[2] and $3f));
-    4: Result := TUChar32(Integer(p[0] and $7) shl 18 or Integer(p[1] and $3f) shl 12 or
-                          Integer(p[2] and $3f) shl 6 or (p[3] and $3f));
+  case p^ of
+    0..127:
+      begin
+        aSize := 1;
+        Result := p^;
+      end;
+    128..223:
+      begin
+        aSize := 2;
+        Result := TChar32(TChar32(p[0] and $1f) shl 6 or (p[1] and $3f));
+      end;
+    224..239:
+      begin
+        aSize := 3;
+        Result := TChar32(TChar32(p[0] and $f) shl 12 or TChar32(p[1] and $3f) shl 6 or (p[2] and $3f));
+      end;
+    240..247:
+      begin
+        aSize := 4;
+        Result := TChar32(TChar32(p[0] and $7) shl 18 or TChar32(p[1] and $3f) shl 12 or
+                          TChar32(p[2] and $3f) shl 6 or (p[3] and $3f));
+      end;
   else
+    aSize := 0;
     Result := 0;
   end;
 end;
 
-function Utf8Len(const s: utf8string): SizeInt;
+function Utf8Len(const s: ansistring): SizeInt;
 var
   I: SizeInt;
   p: PByte absolute s;
@@ -989,14 +989,13 @@ begin
     end;
 end;
 
-function ToChar32Seq(const s: utf8string; aLen: SizeInt): TChar32Seq;
+function ToChar32Seq(const s: ansistring): TChar32Seq;
 var
   r: TChar32Seq = nil;
-  I, J: SizeInt;
-  Len: Integer;
+  I, J, Len: SizeInt;
   p: PByte absolute s;
 begin
-  System.SetLength(r, aLen);
+  System.SetLength(r, System.Length(s));
   I := 0;
   J := 0;
   while I < System.Length(s) do
@@ -1005,27 +1004,22 @@ begin
       Inc(J);
       I += Len;
     end;
+  System.SetLength(r, J);
   Result := r;
 end;
 
-function ToChar32Seq(const s: utf8string): TChar32Seq;
-begin
-  Result := ToChar32Seq(s, Utf8Len(s));
-end;
-
-procedure SaveChar32Seq(const s: utf8string; out a: array of TUChar32);
+procedure ToChar32Seq(const s: ansistring; out a: array of TChar32; out aLen: SizeInt);
 var
-  I, J: SizeInt;
-  Len: Integer;
+  I, Size: SizeInt;
   p: PByte absolute s;
 begin
   I := 0;
-  J := 0;
+  aLen := 0;
   while I < System.Length(s) do
     begin
-      a[J] := CodePointToChar32(@p[I], Len);
-      Inc(J);
-      I += Len;
+      a[aLen] := CodePointToChar32(@p[I], Size);
+      Inc(aLen);
+      I += Size;
     end;
 end;
 
@@ -1046,10 +1040,9 @@ begin
   Result := J = System.Length(aSub);
 end;
 
-function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
+function IsSubSequenceUtf8(const aStr, aSub: ansistring): Boolean;
 var
-  I, J: SizeInt;
-  LenStr, LenSub: Integer;
+  I, J, LenStr, LenSub: SizeInt;
   vStr, vSub: DWord;
   pStr: PByte absolute aStr;
   pSub: PByte absolute aSub;
@@ -1070,106 +1063,106 @@ begin
   Result := J = System.Length(aSub);
 end;
 
-function LevDistanceUtf8(const L, R: utf8string): SizeInt;
+function LevDistanceUtf8(const L, R: ansistring): SizeInt;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TUChar32;
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
   RBuf: TChar32Seq = nil;
   LenL, LenR: SizeInt;
   pL, pR: PChar32;
 begin
-  LenL := Utf8Len(L);
-  if LenL <= MAX_STATIC then
+  if System.Length(L) <= MAX_STATIC then
     begin
-      SaveChar32Seq(L, LBufSt);
+      ToChar32Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
     end
   else
     begin
-      LBuf := ToChar32Seq(L, LenL);
+      LBuf := ToChar32Seq(L);
+      LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
-  LenR := Utf8Len(R);
-  if LenR <= MAX_STATIC then
+  if System.Length(R) <= MAX_STATIC then
     begin
-      SaveChar32Seq(R, RBufSt);
+      ToChar32Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
     end
   else
     begin
-      RBuf := ToChar32Seq(R, LenR);
+      RBuf := ToChar32Seq(R);
+      LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   Result := TChar32Util.LevDistance(pL, pR, LenL, LenR);
 end;
 
-function LevDistanceMBRUtf8(const L, R: utf8string): SizeInt;
+function LevDistanceMBRUtf8(const L, R: ansistring): SizeInt;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TUChar32;
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
   RBuf: TChar32Seq = nil;
   LenL, LenR: SizeInt;
   pL, pR: PChar32;
 begin
-  LenL := Utf8Len(L);
-  if LenL <= MAX_STATIC then
+  if System.Length(L) <= MAX_STATIC then
     begin
-      SaveChar32Seq(L, LBufSt);
+      ToChar32Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
     end
   else
     begin
-      LBuf := ToChar32Seq(L, LenL);
+      LBuf := ToChar32Seq(L);
+      LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
-  LenR := Utf8Len(R);
-  if LenR <= MAX_STATIC then
+  if System.Length(R) <= MAX_STATIC then
     begin
-      SaveChar32Seq(R, RBufSt);
+      ToChar32Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
     end
   else
     begin
-      RBuf := ToChar32Seq(R, LenR);
+      RBuf := ToChar32Seq(R);
+      LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   Result := TChar32Util.LevDistanceMBR(pL, pR, LenL, LenR);
 end;
 
-function LevDistanceMBRUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
+function LevDistanceMBRUtf8(const L, R: ansistring; aLimit: SizeInt): SizeInt;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TUChar32;
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
   RBuf: TChar32Seq = nil;
   LenL, LenR: SizeInt;
   pL, pR: PChar32;
 begin
-  LenL := Utf8Len(L);
-  if LenL <= MAX_STATIC then
+  if System.Length(L) <= MAX_STATIC then
     begin
-      SaveChar32Seq(L, LBufSt);
+      ToChar32Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
     end
   else
     begin
-      LBuf := ToChar32Seq(L, LenL);
+      LBuf := ToChar32Seq(L);
+      LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
-  LenR := Utf8Len(R);
-  if LenR <= MAX_STATIC then
+  if System.Length(R) <= MAX_STATIC then
     begin
-      SaveChar32Seq(R, RBufSt);
+      ToChar32Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
     end
   else
     begin
-      RBuf := ToChar32Seq(R, LenR);
+      RBuf := ToChar32Seq(R);
+      LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   Result := TChar32Util.LevDistanceMBR(pL, pR, LenL, LenR, aLimit);
 end;
 
-function Char32ToUtf8Char(c32: TUChar32; out aBytes: TByte4): Integer;
+function Char32ToUtf8Char(c32: TChar32; out aBytes: TByte4): Integer;
 begin
   case c32 of
     0..127:
@@ -1203,7 +1196,7 @@ begin
   end;
 end;
 
-function Char32Utf8Len(c32: TUChar32): Integer; inline;
+function Char32Utf8Len(c32: TChar32): Integer; inline;
 begin
   case c32 of
     0..127:          Result := 1;
@@ -1224,11 +1217,11 @@ begin
     Result += Char32Utf8Len(r[I]);
 end;
 
-function Char32SeqToUtf8(const aSeq: TChar32Seq): utf8string;
+function Char32SeqToUtf8(const aSeq: TChar32Seq): ansistring;
 var
   s: string = '';
   I, J: SizeInt;
-  Curr: TUChar32;
+  Curr: TChar32;
   Len: Integer;
   p: PByte;
 begin
@@ -1272,34 +1265,34 @@ begin
   Result := s;
 end;
 
-function LcsGusUtf8(const L, R: utf8string): utf8string;
+function LcsGusUtf8(const L, R: ansistring): ansistring;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TUChar32;
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
   RBuf: TChar32Seq = nil;
   LenL, LenR: SizeInt;
   pL, pR: PChar32;
 begin
-  LenL := Utf8Len(L);
-  if LenL <= MAX_STATIC then
+  if System.Length(L) <= MAX_STATIC then
     begin
-      SaveChar32Seq(L, LBufSt);
+      ToChar32Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
     end
   else
     begin
-      LBuf := ToChar32Seq(L, LenL);
+      LBuf := ToChar32Seq(L);
+      LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
-  LenR := Utf8Len(R);
-  if LenR <= MAX_STATIC then
+  if System.Length(R) <= MAX_STATIC then
     begin
-      SaveChar32Seq(R, RBufSt);
+      ToChar32Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
     end
   else
     begin
-      RBuf := ToChar32Seq(R, LenR);
+      RBuf := ToChar32Seq(R);
+      LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   Result := Char32SeqToUtf8(TChar32Util.LcsGus(pL, pR, LenL, LenR));
