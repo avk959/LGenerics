@@ -1239,34 +1239,34 @@ type
   { TGRadixSorter provides stable LSD radix sorting, requires O(N) auxiliary memory;
       TKey is the type for which LSD radix sort is appropriate(any integer or float type);
       TMap must provide class function GetKey([const[ref]] aItem: TItem): TKey; }
-    generic TGRadixSorter<TItem, TKey, TMap> = record
-    public
-    type
-      TArray = array of TItem;
-      PItem    = ^TItem;
+  generic TGRadixSorter<TItem, TKey, TMap> = record
+  public
+  type
+    TArray = array of TItem;
+    PItem    = ^TItem;
 
-    private
-    type
-      TKeyType  = (ktUInt, ktSInt, ktFloat);
-      TOffsets  = array[0..Pred(SizeOf(TKey)), 0..255] of SizeInt;
-      TKeyBytes = array[0..Pred(SizeOf(TKey))] of Byte;
-      THelper   = specialize TGBaseArrayHelper<TItem, TGRadixSorter>;
+  private
+  type
+    TKeyType  = (ktUInt, ktSInt, ktFloat);
+    TOffsets  = array[0..Pred(SizeOf(TKey)), 0..255] of SizeInt;
+    TKeyBytes = array[0..Pred(SizeOf(TKey))] of Byte;
+    THelper   = specialize TGBaseArrayHelper<TItem, TGRadixSorter>;
 
-    const
-      RADIX_CUTOFF = 255;
+  const
+    RADIX_CUTOFF = 255;
 
-    class var
-      CFKeyKind: TKeyType;
-      class constructor Init;
-      class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
-      class procedure DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
-      class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
-      class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
-    public
-      class function  Less(const L, R: TItem): Boolean; static; //inline;
-      class procedure Sort(var A: array of TItem; o: TSortOrder = soAsc); static;
-      class procedure Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
-    end;
+  class var
+    CFKeyKind: TKeyType;
+    class constructor Init;
+    class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
+    class procedure DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  public
+    class function  Less(const L, R: TItem): Boolean; static; //inline;
+    class procedure Sort(var A: array of TItem; o: TSortOrder = soAsc); static;
+    class procedure Sort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
+  end;
 
   { TGSegmentTree after O(N) preprocessing of a given array of monoid elements allows:
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
