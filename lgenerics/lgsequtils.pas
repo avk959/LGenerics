@@ -598,20 +598,16 @@ begin
       J := 1;
       while J < aLenL - 3 do
         begin
-          if Eq(pR[J-1], v) then Next := Dists[J-1]
-          else Next := MinOf3(Dists[J-1]+1, Prev+1, Dists[J]+1);
+          Next := MinOf3(Dists[J-1]+SizeInt(Eq(pR[J-1], v)), Prev+1, Dists[J]+1);
           Dists[J-1] := Prev; Prev := Next;
 
-          if Eq(pR[J], v) then Next := Dists[J]
-          else Next := MinOf3(Dists[J]+1, Prev+1, Dists[J+1]+1);
+          Next := MinOf3(Dists[J]+SizeInt(Eq(pR[J], v)), Prev+1, Dists[J+1]+1);
           Dists[J] := Prev; Prev := Next;
 
-          if Eq(pR[J+1], v) then Next := Dists[J+1]
-          else Next := MinOf3(Dists[J+1]+1, Prev+1, Dists[J+2]+1);
+          Next := MinOf3(Dists[J+1]+SizeInt(Eq(pR[J+1], v)), Prev+1, Dists[J+2]+1);
           Dists[J+1] := Prev; Prev := Next;
 
-          if Eq(pR[J+2], v) then Next := Dists[J+2]
-          else Next := MinOf3(Dists[J+2]+1, Prev+1, Dists[J+3]+1);
+          Next := MinOf3(Dists[J+2]+SizeInt(Eq(pR[J+2], v)), Prev+1, Dists[J+3]+1);
           Dists[J+2] := Prev; Prev := Next;
 
           J += 4;
@@ -754,10 +750,7 @@ begin
 
       Inc(Dist);
       if Dist > aLimit then
-        begin
-          Dist := NULL_INDEX;
-          break;
-        end;
+        exit(NULL_INDEX);
 
       CurrR[0] := Row;
       CurrL[0] := Row;
@@ -902,8 +895,6 @@ begin
 end;
 
 class function TGSeqUtil.LcsGus(L, R: PItem; aLenL, aLenR: SizeInt): TArray;
-var
-  I: SizeInt;
 begin
   if (aLenL = 0) or (aLenR = 0) then
     exit(nil);
