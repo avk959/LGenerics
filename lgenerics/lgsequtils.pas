@@ -680,6 +680,9 @@ begin
   aLenL -= I;
   aLenR -= I;
 
+  if aLimit > aLenR then
+    aLimit := aLenR;
+
   Delta := aLenL - aLenR;
   Dist := -Delta;
 
