@@ -553,7 +553,7 @@ var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
   I, J, Prev, Next: SizeInt;
-  Dists: PSizeInt;
+  Dist: PSizeInt;
   v: T;
 begin
   //here aLenL <= aLenR
@@ -581,14 +581,14 @@ begin
   aLenR -= I;
 
   if aLenR < MAX_STATIC then
-    Dists := @StBuf[0]
+    Dist := @StBuf[0]
   else
     begin
       System.SetLength(Buf, Succ(aLenR));
-      Dists := Pointer(Buf);
+      Dist := Pointer(Buf);
     end;
   for I := 0 to aLenR do
-    Dists[I] := I;
+    Dist[I] := I;
 
   for I := 1 to aLenL do
     begin
@@ -598,17 +598,17 @@ begin
       J := 1;
       while J < aLenL - 3 do
         begin
-          Next := MinOf3(Dists[J-1]+SizeInt(Eq(pR[J-1], v)), Prev+1, Dists[J]+1);
-          Dists[J-1] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J-1]+SizeInt(Eq(pR[J-1], v)), Prev+1, Dist[J]+1);
+          Dist[J-1] := Prev; Prev := Next;
 
-          Next := MinOf3(Dists[J]+SizeInt(Eq(pR[J], v)), Prev+1, Dists[J+1]+1);
-          Dists[J] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J]+SizeInt(Eq(pR[J], v)), Prev+1, Dist[J+1]+1);
+          Dist[J] := Prev; Prev := Next;
 
-          Next := MinOf3(Dists[J+1]+SizeInt(Eq(pR[J+1], v)), Prev+1, Dists[J+2]+1);
-          Dists[J+1] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J+1]+SizeInt(Eq(pR[J+1], v)), Prev+1, Dist[J+2]+1);
+          Dist[J+1] := Prev; Prev := Next;
 
-          Next := MinOf3(Dists[J+2]+SizeInt(Eq(pR[J+2], v)), Prev+1, Dists[J+3]+1);
-          Dists[J+2] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J+2]+SizeInt(Eq(pR[J+2], v)), Prev+1, Dist[J+3]+1);
+          Dist[J+2] := Prev; Prev := Next;
 
           J += 4;
         end;
@@ -618,15 +618,15 @@ begin
 {$ENDIF}
         begin
           if Eq(pR[J-1], v) then
-            Next := Dists[J-1]
+            Next := Dist[J-1]
           else
-            Next := MinOf3(Dists[J-1]+1, Prev+1, Dists[J]+1);
-          Dists[J-1] := Prev;
+            Next := Succ(MinOf3(Dist[J-1], Prev, Dist[J]));
+          Dist[J-1] := Prev;
           Prev := Next;
         end;
-      Dists[aLenR] := Prev;
+      Dist[aLenR] := Prev;
     end;
-  Result := Dists[aLenR];
+  Result := Dist[aLenR];
 end;
 
 class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
@@ -648,7 +648,7 @@ var
   Buf: array of SizeInt = nil;
 
   CurrL, CurrR, LastL, LastR, PrevL, PrevR: PSizeInt;
-  I, Delta, Dist, Diagonal, CurrRight, CurrLeft, Row: SizeInt;
+  I, DMain, Dist, Diagonal, CurrRight, CurrLeft, Row: SizeInt;
   tmp: Pointer;
   Even: Boolean = True;
 begin
@@ -683,8 +683,8 @@ begin
   if aLimit > aLenR then
     aLimit := aLenR;
 
-  Delta := aLenL - aLenR;
-  Dist := -Delta;
+  DMain := aLenL - aLenR;
+  Dist := -DMain;
 
   if aLimit < MAX_STATIC div 6 then
     begin
@@ -712,64 +712,66 @@ begin
       PrevR[I] := NULL_INDEX;
     end;
 
-  while True do
-    begin
-      Diagonal := (Dist - Delta) div 2;
-      if Even then
-        LastR[Diagonal] := NULL_INDEX;
+  repeat
 
-      CurrRight := NULL_INDEX;
+    Diagonal := (Dist - DMain) div 2;
+    if Even then
+      LastR[Diagonal] := NULL_INDEX;
 
-      while Diagonal > 0 do
-        begin
-          CurrRight :=
-            FindRow( Delta + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
-          CurrR[Diagonal] := CurrRight;
-          Dec(Diagonal);
-        end;
+    CurrRight := NULL_INDEX;
 
-      Diagonal := (Dist + Delta) div 2;
+    while Diagonal > 0 do
+      begin
+        CurrRight :=
+          FindRow( DMain + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
+        CurrR[Diagonal] := CurrRight;
+        Dec(Diagonal);
+      end;
 
-      if Even then
-        begin
-          LastL[Diagonal] := Pred((Dist - Delta) div 2);
-          CurrLeft := NULL_INDEX;
-        end
-      else
-        CurrLeft := (Dist - Delta) div 2;
+    Diagonal := (Dist + DMain) div 2;
 
-      while Diagonal > 0 do
-        begin
-          CurrLeft :=
-            FindRow(Delta - Diagonal, Dist - Diagonal, CurrLeft, LastL[Diagonal], PrevL[Diagonal - 1]);
-          CurrL[Diagonal] := CurrLeft;
-          Dec(Diagonal);
-        end;
+    if Even then
+      begin
+        LastL[Diagonal] := Pred((Dist - DMain) div 2);
+        CurrLeft := NULL_INDEX;
+      end
+    else
+      CurrLeft := (Dist - DMain) div 2;
 
-      Row := FindRow(Delta, Dist, CurrLeft, LastL[0], CurrRight);
+    while Diagonal > 0 do
+      begin
+        CurrLeft :=
+          FindRow(DMain - Diagonal, Dist - Diagonal, CurrLeft, LastL[Diagonal], PrevL[Diagonal - 1]);
+        CurrL[Diagonal] := CurrLeft;
+        Dec(Diagonal);
+      end;
 
-      if Row = aLenR then
-        break;
+    Row := FindRow(DMain, Dist, CurrLeft, LastL[0], CurrRight);
 
-      Inc(Dist);
-      if Dist > aLimit then
-        exit(NULL_INDEX);
+    if Row = aLenR then
+      break;
 
-      CurrR[0] := Row;
-      CurrL[0] := Row;
+    Inc(Dist);
+    if Dist > aLimit then
+      exit(NULL_INDEX);
 
-      tmp := PrevL;
-      PrevL := LastL;
-      LastL := CurrL;
-      CurrL := tmp;
+    CurrR[0] := Row;
+    CurrL[0] := Row;
 
-      tmp := PrevR;
-      PrevR := LastR;
-      LastR := CurrR;
-      CurrR := tmp;
+    tmp := PrevL;
+    PrevL := LastL;
+    LastL := CurrL;
+    CurrL := tmp;
 
-      Even := not Even;
-    end;
+    tmp := PrevR;
+    PrevR := LastR;
+    LastR := CurrR;
+    CurrR := tmp;
+
+    Even := not Even;
+
+  until False;
+
   Result := Dist;
 end;
 
