@@ -575,7 +575,7 @@ begin
     end;
 
   if I = aLenL then
-    exit(aLenR);
+    exit(aLenR - I);
 
   aLenL -= I;
   aLenR -= I;
@@ -598,16 +598,16 @@ begin
       J := 1;
       while J < aLenL - 3 do
         begin
-          Next := MinOf3(Dist[J-1]+SizeInt(Eq(pR[J-1], v)), Prev+1, Dist[J]+1);
+          Next := MinOf3(Dist[J-1]+SizeInt(not Eq(pR[J-1], v)), Prev+1, Dist[J]+1);
           Dist[J-1] := Prev; Prev := Next;
 
-          Next := MinOf3(Dist[J]+SizeInt(Eq(pR[J], v)), Prev+1, Dist[J+1]+1);
+          Next := MinOf3(Dist[J]+SizeInt(not Eq(pR[J], v)), Prev+1, Dist[J+1]+1);
           Dist[J] := Prev; Prev := Next;
 
-          Next := MinOf3(Dist[J+1]+SizeInt(Eq(pR[J+1], v)), Prev+1, Dist[J+2]+1);
+          Next := MinOf3(Dist[J+1]+SizeInt(not Eq(pR[J+1], v)), Prev+1, Dist[J+2]+1);
           Dist[J+1] := Prev; Prev := Next;
 
-          Next := MinOf3(Dist[J+2]+SizeInt(Eq(pR[J+2], v)), Prev+1, Dist[J+3]+1);
+          Next := MinOf3(Dist[J+2]+SizeInt(not Eq(pR[J+2], v)), Prev+1, Dist[J+3]+1);
           Dist[J+2] := Prev; Prev := Next;
 
           J += 4;
@@ -675,7 +675,7 @@ begin
     end;
 
   if I = aLenL then
-    exit(aLenR);
+    exit(aLenR - I);
 
   aLenL -= I;
   aLenR -= I;
