@@ -598,17 +598,17 @@ begin
       J := 1;
       while J < aLenL - 3 do
         begin
-          Next := MinOf3(Dist[J-1]+SizeInt(not Eq(pR[J-1], v)), Prev+1, Dist[J]+1);
-          Dist[J-1] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J-1]+Ord(not Eq(pR[J-1], v)), Prev+1, Dist[J]+1);
+          Dist[J-1] := Prev;
 
-          Next := MinOf3(Dist[J]+SizeInt(not Eq(pR[J], v)), Prev+1, Dist[J+1]+1);
-          Dist[J] := Prev; Prev := Next;
+          Prev := MinOf3(Dist[J]+Ord(not Eq(pR[J], v)), Next+1, Dist[J+1]+1);
+          Dist[J] := Next;
 
-          Next := MinOf3(Dist[J+1]+SizeInt(not Eq(pR[J+1], v)), Prev+1, Dist[J+2]+1);
-          Dist[J+1] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J+1]+Ord(not Eq(pR[J+1], v)), Prev+1, Dist[J+2]+1);
+          Dist[J+1] := Prev;
 
-          Next := MinOf3(Dist[J+2]+SizeInt(not Eq(pR[J+2], v)), Prev+1, Dist[J+3]+1);
-          Dist[J+2] := Prev; Prev := Next;
+          Prev := MinOf3(Dist[J+2]+Ord(not Eq(pR[J+2], v)), Next+1, Dist[J+3]+1);
+          Dist[J+2] := Next;
 
           J += 4;
         end;
