@@ -1127,6 +1127,8 @@ begin
   AssertTrue(LevDistance('aaaaaaa', 'aaaaaaa') = 0);
   AssertTrue(LevDistWF('aaaaaaa', 'bbbbbbbb') = 8);
   AssertTrue(LevDistance('aaaaaaa', 'bbbbbbbb') = 8);
+  AssertTrue(LevDistWF('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(LevDistance('aaabbaaaa', 'aaaaaaa') = 2);
 end;
 
 procedure TFunTest.LevenshteinDist2;
@@ -1165,6 +1167,7 @@ begin
   AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein') = 6);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa') = 0);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb') = 8);
+  AssertTrue(LevDistanceMbr('aaabbaaaa', 'aaaaaaa') = 2);
 end;
 
 procedure TFunTest.LevenshteinDistMbr2;
