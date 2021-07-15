@@ -123,7 +123,7 @@ type
     TStrEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: string;
+      FHeap: ansistring;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -145,7 +145,7 @@ type
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
-    FNeedle: string;
+    FNeedle: ansistring;
     procedure FillBc;
     procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -172,24 +172,24 @@ type
       function GetEnumerator: TByteEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: string);
+    constructor Create(const aPattern: ansistring);
     constructor Create(const aPattern: array of Byte);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TStrMatches; inline;
+    function Matches(const s: ansistring): TStrMatches; inline;
   { returns an enumerator of indices(0-based) of all occurrences of pattern in a }
     function Matches(const a: array of Byte): TByteMatches;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: ansistring; aOffset: SizeInt = 1): SizeInt;
   { returns the index of the next occurrence of the pattern in a,
     starting at index aOffset(0-based) or -1 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
     function NextMatch(const a: array of Byte; aOffset: SizeInt = 0): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: string): TIntArray;
+    function FindMatches(const s: ansistring): TIntArray;
   { returns in an array the indices(0-based) of all occurrences of the pattern in a }
     function FindMatches(const a: array of Byte): TIntArray;
   end;
@@ -204,7 +204,7 @@ type
     TStrEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: string;
+      FHeap: ansistring;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -224,7 +224,7 @@ type
     end;
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
-    FNeedle: string;
+    FNeedle: ansistring;
     procedure FillBc;
     function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -249,24 +249,24 @@ type
       function GetEnumerator: TByteEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: string);
+    constructor Create(const aPattern: ansistring);
     constructor Create(const aPattern: array of Byte);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TStrMatches; inline;
+    function Matches(const s: ansistring): TStrMatches; inline;
   { returns an enumerator of indices(0-based) of all occurrences of pattern in a }
     function Matches(const a: array of Byte): TByteMatches;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: ansistring; aOffset: SizeInt = 1): SizeInt;
   { returns the index of the next occurrence of the pattern in a,
     starting at index aOffset(0-based) or -1 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
     function NextMatch(const a: array of Byte; aOffset: SizeInt = 0): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: string): TIntArray;
+    function FindMatches(const s: ansistring): TIntArray;
   { returns in an array the indices(0-based) of all occurrences of the pattern in a }
     function FindMatches(const a: array of Byte): TIntArray;
   end;
@@ -280,7 +280,7 @@ type
     TEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: string;
+      FHeap: ansistring;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -292,7 +292,7 @@ type
     FLoCaseMap: array[Byte] of Byte;
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
-    FNeedle: string;
+    FNeedle: ansistring;
     procedure FillMap;
     procedure FillBc;
     procedure FillGs;
@@ -311,64 +311,67 @@ type
       function GetEnumerator: TEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: string);
+    constructor Create(const aPattern: ansistring);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TMatches; inline;
+    function Matches(const s: ansistring): TMatches; inline;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: ansistring; aOffset: SizeInt = 1): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: string): TIntArray;
+    function FindMatches(const s: ansistring): TIntArray;
   end;
 
+{the following functions with string parameters are only suitable for single-byte encodings }
 
-{ returns True if aSub is a subsequence of aStr, False otherwise;
-  only suitable for single-byte encodings }
-  function IsSubSequence(const aStr, aSub: rawbytestring): Boolean; inline;
-{ returns the longest common subsequence(LCS) of strings(sequences) L and R;
-  from Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5;
-  only suitable for single-byte encodings }
-  function LcsGus(const L, R: rawbytestring): rawbytestring;
+{ returns True if aSub is a subsequence of aStr, False otherwise }
+  function IsSubSequence(const aStr, aSub: ansistring): Boolean; inline;
+{ returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
+  with O(RLogN) time complexity, where R is the number of the matching pairs in L and R;
+  inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
+  function LcsGus(const L, R: ansistring): ansistring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
-  algorithm with O(mn) time, where n and m are the lengths of L and R respectively;
-  only suitable for single-byte encodings }
-  function LevDistance(const L, R: rawbytestring): SizeInt;
+  algorithm with O(mn) time complexity, where n and m are the lengths of L and R respectively,
+  and O(Max(m, n)) space complexity }
+  function LevDistance(const L, R: ansistring): SizeInt;
   function LevDistance(const L, R: array of Byte): SizeInt;
 { returns the Levenshtein distance between L and R; a Pascal translation(well, almost :))
   of github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
   worst-case time complexity, where n and m are the lengths of L and R respectively
-  and d is the edit distance computed; only suitable for single-byte encodings }
-  function LevDistanceMBR(const L, R: rawbytestring): SizeInt;
+  and d is the edit distance computed }
+  function LevDistanceMBR(const L, R: ansistring): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
-  immediately and returns -1; only suitable for single-byte encodings }
-  function LevDistanceMBR(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+  immediately and returns -1 }
+  function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+{ returns the Levenshtein distance between L and R; uses Myers's bit-vector algorithm }
+  function LevDistanceMyers(const L, R: ansistring): SizeInt;
+  function LevDistanceMyers(const L, R: array of Byte): SizeInt;
+{ the same as above; the aLimit parameter indicates the maximum expected distance,
+  if this value is exceeded when calculating the distance, then the function exits
+  immediately and returns -1 }
+  function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+  function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 
-  function IsValidDotQuadIPv4(const s: string): Boolean;
-  function IsValidDotDecIPv4(const s: string): Boolean;
+  function IsValidDotQuadIPv4(const s: ansistring): Boolean;
+  function IsValidDotDecIPv4(const s: ansistring): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}
 
-function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
+function IsSubSequence(const aStr, aSub: ansistring): Boolean;
 begin
   Result := specialize TGSimpleArrayHelper<Byte>.IsSubSequence(
     PByte(aStr)[0..Pred(System.Length(aStr))], PByte(aSub)[0..Pred(System.Length(aSub))]);
 end;
 
-//procedure FindLis(const a: array of SizeInt; var aLis: array of SizeInt; var aLisLen: SizeInt;
-//  aMaxLen: SizeInt);
-//begin
-//
-//end;
-
-function GetLcsG(pL, PR: PByte; aLenL, aLenR: SizeInt): TBytes;
+{$PUSH}{$WARN 5057 OFF}
+function LcsGusImpl(pL, PR: PByte; aLenL, aLenR: SizeInt): TBytes;
 type
   TNode = record
     Index,
@@ -382,8 +385,13 @@ var
   LocLis: TSizeIntArray;
   Tail: TBytes = nil;
   I, J, NodeIdx: SizeInt;
+const
+  INIT_SIZE = 256;
 begin
   Result := nil;
+
+  if pL = pR then
+    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
 
   I := 0;
   while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
@@ -410,7 +418,7 @@ begin
 
   TSizeIntHelper.Fill(MatchList, NULL_INDEX);
 
-  System.SetLength(NodeList, ARRAY_INITIAL_SIZE);
+  System.SetLength(NodeList, INIT_SIZE);
   J := 0;
   for I := 0 to Pred(aLenR) do
     begin
@@ -422,7 +430,7 @@ begin
       Inc(J);
     end;
 
-  System.SetLength(Tmp, ARRAY_INITIAL_SIZE);
+  System.SetLength(Tmp, INIT_SIZE);
   J := 0;
   for I := 0 to Pred(aLenL) do
     begin
@@ -460,102 +468,37 @@ begin
   if Tail <> nil then
     System.Insert(Tail, Result, System.Length(Result));
 end;
+{$POP}
 
-function LcsGus(const L, R: rawbytestring): rawbytestring;
+function LcsGus(const L, R: ansistring): ansistring;
 var
-  I: SizeInt;
-  b: TBytes = nil;
+  b: TBytes;
 begin
   Result := '';
-  if (L = '') or (R = '') then exit;
-  if L = R then
-    exit(System.Copy(L, 1, System.Length(L)));
-  if (System.Length(L) = 1) then
-    begin
-      for I := 1 to System.Length(R) do
-        if L[1] = R[I] then
-          exit(L[1]);
-      exit;
-    end
-  else
-    if (System.Length(R) = 1) then
-      begin
-        for I := 1 to System.Length(L) do
-          if R[1] = L[I] then
-            exit(R[1]);
-        exit;
-      end;
-
+  if (L = '') or (R = '') then
+    exit;
   if System.Length(L) <= System.Length(R) then
-    b := GetLcsG(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+    b := LcsGusImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
   else
-    b := GetLcsG(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
-
+    b := LcsGusImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
   System.SetLength(Result, System.Length(b));
   System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
 end;
 
 function LcsGus(const L, R: array of Byte): TBytes;
-var
-  I: SizeInt;
 begin
-  Result := nil;
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
-  if @L[0] = @R[0] then
-    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(L));
-  if System.Length(L) = 1 then
-    begin
-      for I := 0 to Pred(System.Length(R)) do
-        if L[0] = R[I] then
-          exit([L[0]]);
-      exit(nil);
-    end
-  else
-    if System.Length(R) = 1 then
-      begin
-        for I := 0 to Pred(System.Length(L)) do
-          if R[0] = L[I] then
-            exit([R[0]]);
-        exit(nil);
-      end;
-
   if System.Length(L) <= System.Length(R) then
-    Result := GetLcsG(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := LcsGusImpl(@L[0], @R[0], System.Length(L), System.Length(R))
   else
-    Result := GetLcsG(@R[0], @L[0], System.Length(R), System.Length(L));
-end;
-
-function MinOf3(const a, b, c: SizeInt): SizeInt; inline;
-begin
-  Result := a;
-  if b < Result then
-    Result := b;
-  if c < Result then
-    Result := c;
+    Result := LcsGusImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
 const
   MAX_STATIC = 1024;
-  HCB_CUTOFF = 511;
 
-function HasCommonBytes(pL, pR: PByte; aLenL, aLenR: SizeInt): Boolean;
-type
-  TBytePos = array[Byte] of Integer;
-var
-  LChars: TBytePos;
-  I: SizeInt;
-begin
-  LChars := Default(TBytePos);
-  for I := 0 to Pred(aLenL) do
-    LChars[pL[I]] := 1;
-  for I := 0 to Pred(aLenR) do
-    if LChars[pR[I]] <> 0 then
-      exit(True);
-  Result := False;
-end;
-
-function LevDist(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+function LevDistanceDpImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
@@ -563,7 +506,10 @@ var
   Dist: PSizeInt;
   b: Byte;
 begin
-  //here aLenL <= aLenR and L <> R
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
   while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
@@ -579,13 +525,10 @@ begin
     end;
 
   if I = aLenL then
-    exit(aLenR);
+    exit(aLenR - I);
 
   aLenL -= I;
   aLenR -= I;
-
-  if (MulSizeInt(aLenL, aLenR) > HCB_CUTOFF) and not HasCommonBytes(pL, pR, aLenL, aLenR) then
-    exit(aLenR);
 
   if aLenR < MAX_STATIC then
     Dist := @StBuf[0]
@@ -605,21 +548,17 @@ begin
       J := 1;
       while J < aLenL - 3 do
         begin
-          if pR[J-1] = b then Next := Dist[J-1]
-          else Next := MinOf3(Dist[J-1]+1, Prev+1, Dist[J]+1);
-          Dist[J-1] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J-1]+Ord(pR[J-1]<>b), Prev+1, Dist[J]+1);
+          Dist[J-1] := Prev;
 
-          if pR[J] = b then Next := Dist[J]
-          else Next := MinOf3(Dist[J]+1, Prev+1, Dist[J+1]+1);
-          Dist[J] := Prev; Prev := Next;
+          Prev := MinOf3(Dist[J]+Ord(pR[J]<>b), Next+1, Dist[J+1]+1);
+          Dist[J] := Next;
 
-          if pR[J+1] = b then Next := Dist[J+1]
-          else Next := MinOf3(Dist[J+1]+1, Prev+1, Dist[J+2]+1);
-          Dist[J+1] := Prev; Prev := Next;
+          Next := MinOf3(Dist[J+1]+Ord(pR[J+1]<>b), Prev+1, Dist[J+2]+1);
+          Dist[J+1] := Prev;
 
-          if pR[J+2] = b then Next := Dist[J+2]
-          else Next := MinOf3(Dist[J+2]+1, Prev+1, Dist[J+3]+1);
-          Dist[J+2] := Prev; Prev := Next;
+          Prev := MinOf3(Dist[J+2]+Ord(pR[J+2]<>b), Next+1, Dist[J+3]+1);
+          Dist[J+2] := Next;
 
           J += 4;
         end;
@@ -631,7 +570,7 @@ begin
           if pR[J-1] = b then
             Next := Dist[J-1]
           else
-            Next := MinOf3(Dist[J-1]+1, Prev+1, Dist[J]+1);
+            Next := Succ(MinOf3(Dist[J-1], Prev, Dist[J]));
           Dist[J-1] := Prev;
           Prev := Next;
         end;
@@ -640,17 +579,17 @@ begin
   Result := Dist[aLenR];
 end;
 
-function LevDistance(const L, R: rawbytestring): SizeInt;
+function LevDistance(const L, R: ansistring): SizeInt;
 begin
-  if L = '' then
+  if System.Length(L) = 0 then
     exit(System.Length(R))
   else
-    if R = '' then
+    if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDist(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+    Result := LevDistanceDpImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
   else
-    Result := LevDist(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+    Result := LevDistanceDpImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
 end;
 
 function LevDistance(const L, R: array of Byte): SizeInt;
@@ -661,19 +600,21 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDist(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := LevDistanceDpImpl(@L[0], @R[0], System.Length(L), System.Length(R))
   else
-    Result := LevDist(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := LevDistanceDpImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
-function LevDistMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+function LevDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 
-  function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;  //avoid it ???
+  function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;
   var
     I, MaxRow: SizeInt;
   begin
-    if aDist = 0 then I := 0
-    else I := MaxOf3(aLeft, aAbove + 1, aRight + 1);
+    if aDist = 0 then
+      I := 0
+    else
+      I := MaxOf3(aLeft, aAbove + 1, aRight + 1);
     MaxRow := Min(aLenL - k, aLenR);
     while (I < MaxRow) and (pR[I] = pL[I + k]) do
       Inc(I);
@@ -685,11 +626,17 @@ var
   Buf: array of SizeInt = nil;
 
   CurrL, CurrR, LastL, LastR, PrevL, PrevR: PSizeInt;
-  I, Delta, Dist, Diagonal, CurrRight, CurrLeft, Row: SizeInt;
+  I, DMain, Dist, Diagonal, CurrRight, CurrLeft, Row: SizeInt;
   tmp: Pointer;
   Even: Boolean = True;
 begin
-  //here aLenL <= aLenR and L <> R and aLenR - aLenL <= aLimit
+  //here aLenL <= aLenR
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
   while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
@@ -705,22 +652,16 @@ begin
     end;
 
   if I = aLenL then
-    if aLenR > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(aLenR);
+    exit(aLenR - I);
 
   aLenL -= I;
   aLenR -= I;
 
-  if (MulSizeInt(aLenL, aLenR) > HCB_CUTOFF) and not HasCommonBytes(pL, pR, aLenL, aLenR) then
-    if aLenR > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(aLenR);
+  if aLimit > aLenR then
+    aLimit := aLenR;
 
-  Delta := aLenL - aLenR;
-  Dist := -Delta;
+  DMain := aLenL - aLenR;
+  Dist := -DMain;
 
   if aLimit < MAX_STATIC div 6 then
     begin
@@ -748,81 +689,80 @@ begin
       PrevR[I] := NULL_INDEX;
     end;
 
-  while True do
-    begin
-      Diagonal := (Dist - Delta) div 2;
-      if Even then
-        LastR[Diagonal] := NULL_INDEX;
+  repeat
 
-      CurrRight := NULL_INDEX;
+    Diagonal := (Dist - DMain) div 2;
+    if Even then
+      LastR[Diagonal] := NULL_INDEX;
 
-      while Diagonal > 0 do
-        begin
-          CurrRight :=
-            FindRow( Delta + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
-          CurrR[Diagonal] := CurrRight;
-          Dec(Diagonal);
-        end;
+    CurrRight := NULL_INDEX;
 
-      Diagonal := (Dist + Delta) div 2;
+    while Diagonal > 0 do
+      begin
+        CurrRight :=
+          FindRow( DMain + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
+        CurrR[Diagonal] := CurrRight;
+        Dec(Diagonal);
+      end;
 
-      if Even then
-        begin
-          LastL[Diagonal] := Pred((Dist - Delta) div 2);
-          CurrLeft := NULL_INDEX;
-        end
-      else
-        CurrLeft := (Dist - Delta) div 2;
+    Diagonal := (Dist + DMain) div 2;
 
-      while Diagonal > 0 do
-        begin
-          CurrLeft :=
-            FindRow(Delta - Diagonal, Dist - Diagonal, CurrLeft, LastL[Diagonal], PrevL[Diagonal - 1]);
-          CurrL[Diagonal] := CurrLeft;
-          Dec(Diagonal);
-        end;
+    if Even then
+      begin
+        LastL[Diagonal] := Pred((Dist - DMain) div 2);
+        CurrLeft := NULL_INDEX;
+      end
+    else
+      CurrLeft := (Dist - DMain) div 2;
 
-      Row := FindRow(Delta, Dist, CurrLeft, LastL[0], CurrRight);
+    while Diagonal > 0 do
+      begin
+        CurrLeft :=
+          FindRow(DMain - Diagonal, Dist - Diagonal, CurrLeft, LastL[Diagonal], PrevL[Diagonal - 1]);
+        CurrL[Diagonal] := CurrLeft;
+        Dec(Diagonal);
+      end;
 
-      if Row = aLenR then
-        break;
+    Row := FindRow(DMain, Dist, CurrLeft, LastL[0], CurrRight);
 
-      Inc(Dist);
-      if Dist > aLimit then
-        begin
-          Dist := NULL_INDEX;
-          break;
-        end;
+    if Row = aLenR then
+      break;
 
-      CurrR[0] := Row;
-      CurrL[0] := Row;
+    Inc(Dist);
+    if Dist > aLimit then
+      exit(NULL_INDEX);
 
-      tmp := PrevL;
-      PrevL := LastL;
-      LastL := CurrL;
-      CurrL := tmp;
+    CurrR[0] := Row;
+    CurrL[0] := Row;
 
-      tmp := PrevR;
-      PrevR := LastR;
-      LastR := CurrR;
-      CurrR := tmp;
+    tmp := PrevL;
+    PrevL := LastL;
+    LastL := CurrL;
+    CurrL := tmp;
 
-      Even := not Even;
-    end;
+    tmp := PrevR;
+    PrevR := LastR;
+    LastR := CurrR;
+    CurrR := tmp;
+
+    Even := not Even;
+
+  until False;
+
   Result := Dist;
 end;
 
-function LevDistanceMBR(const L, R: rawbytestring): SizeInt;
+function LevDistanceMBR(const L, R: ansistring): SizeInt;
 begin
-  if System.Length(L) = 0 then
+  if L = '' then
     exit(System.Length(R))
   else
-    if System.Length(R) = 0 then
+    if R = '' then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
+    Result := LevDistanceMbrImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := LevDistMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
+    Result := LevDistanceMbrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
 end;
 
 function LevDistanceMBR(const L, R: array of Byte): SizeInt;
@@ -833,47 +773,682 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+    Result := LevDistanceMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+    Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function LevDistanceMBR(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
-  if Abs(System.Length(L) - System.Length(R)) > aLimit then
-    exit(NULL_INDEX);
-  if System.Length(L) = 0 then
-    exit(System.Length(R))
+  if L = '' then
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
   else
-    if System.Length(R) = 0 then
-      exit(System.Length(L));
+    if R = '' then
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
+    Result := LevDistanceMbrImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
   else
-    Result := LevDistMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
+    Result := LevDistanceMbrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
 end;
 
 function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
-  if Abs(System.Length(L) - System.Length(R)) > aLimit then
-    exit(NULL_INDEX);
+  if System.Length(L) = 0 then
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if System.Length(R) = 0 then
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  if System.Length(L) <= System.Length(R) then
+    Result := LevDistanceMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+  else
+    Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+end;
+
+{$PUSH}{$WARN 5057 OFF}{$WARN 5036 OFF}{$Q-}{$R-}
+{ in terms of the Hyyrö's
+  "Explaining and Extending the Bit-parallel Approximate String Matching Algorithm of Myers" }
+function LevDistMyersD(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Pm: array[Byte] of DWord;
+  PmI, Hp, Hn, Vp, Vn, D0: DWord;
+  I: SizeInt;
+begin
+  System.FillChar(Pm, SizeOf(Pm), 0);
+  for I := 0 to Pred(aLenL) do
+    Pm[pL[I]] := Pm[pL[I]] or QWord(1) shl I;
+
+  Result := aLenL;
+  Vn := 0;
+  Vp := High(DWord);
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      PmI := Pm[pR[I]];
+      D0 := (((PmI and Vp) + Vp) xor Vp) or PmI or Vn;
+      Hp := Vn or not(D0 or Vp);
+      Hn := D0 and Vp;
+      Vp := Hn shl 1 or not(D0 or Hp shl 1 or 1);
+      Vn := D0 and (Hp shl 1 or 1);
+      if Hn and (DWord(1) shl Pred(aLenL)) <> 0 then
+        Dec(Result)
+      else
+        if Hp and (DWord(1) shl Pred(aLenL)) <> 0 then
+          Inc(Result);
+      //Result -= SizeInt((Hn and (DWord(1) shl Pred(aLenL))) shr Pred(aLenL));
+      //Result += SizeInt((Hp and (DWord(1) shl Pred(aLenL))) shr Pred(aLenL));
+    end;
+end;
+
+function LevDistMyersD(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Pm: array[Byte] of DWord;
+  PmI, HPos, HNeg, VPos, VNeg, D0: DWord;
+  I: SizeInt;
+begin
+  System.FillChar(Pm, SizeOf(Pm), 0);
+  for I := 0 to Pred(aLenL) do
+    Pm[pL[I]] := Pm[pL[I]] or QWord(1) shl I;
+
+  Result := aLenL;
+  aLimit += aLenR - aLenL;
+  VNeg := 0;
+  VPos := High(DWord);
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      PmI := Pm[pR[I]];
+      D0 := (((PmI and VPos) + VPos) xor VPos) or PmI or VNeg;
+      HPos := VNeg or not(D0 or VPos);
+      HNeg := D0 and VPos;
+      VPos := HNeg shl 1 or not(D0 or HPos shl 1 or 1);
+      VNeg := D0 and (HPos shl 1 or 1);
+      if HNeg and (QWord(1) shl Pred(aLenL)) <> 0 then
+        Dec(Result)
+      else
+        begin
+          if HPos and (QWord(1) shl Pred(aLenL)) <> 0 then
+            begin
+              Inc(Result);
+              aLimit -= 2;
+            end
+          else
+            Dec(aLimit);
+          if aLimit < 0 then
+            exit(NULL_INDEX);
+        end;
+    end;
+end;
+
+function LevDistMyersQ(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Pm: array[Byte] of QWord;
+  PmI, Hp, Hv, Vp, Vn, D0: QWord;
+  I: SizeInt;
+begin
+  System.FillChar(Pm, SizeOf(Pm), 0);
+  for I := 0 to Pred(aLenL) do
+    Pm[pL[I]] := Pm[pL[I]] or QWord(1) shl I;
+
+  Result := aLenL;
+  Vn := 0;
+  Vp := High(QWord);
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      PmI := Pm[pR[I]];
+      D0 := (((PmI and Vp) + Vp) xor Vp) or PmI or Vn;
+      Hp := Vn or not(D0 or Vp);
+      Hv := D0 and Vp;
+      Vp := Hv shl 1 or not(D0 or Hp shl 1 or 1);
+      Vn := D0 and (Hp shl 1 or 1);
+      if Hv and (QWord(1) shl Pred(aLenL)) <> 0 then
+        Dec(Result)
+      else
+        if Hp and (QWord(1) shl Pred(aLenL)) <> 0 then
+          Inc(Result);
+    end;
+end;
+
+function LevDistMyersQ(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Pm: array[Byte] of QWord;
+  PmI, HPos, HNeg, VPos, VNeg, D0: QWord;
+  I: SizeInt;
+begin
+  System.FillChar(Pm, SizeOf(Pm), 0);
+  for I := 0 to Pred(aLenL) do
+    Pm[pL[I]] := Pm[pL[I]] or QWord(1) shl I;
+
+  Result := aLenL;
+  aLimit += aLenR - aLenL;
+  VNeg := 0;
+  VPos := High(QWord);
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      PmI := Pm[pR[I]];
+      D0 := (((PmI and VPos) + VPos) xor VPos) or PmI or VNeg;
+      HPos := VNeg or not(D0 or VPos);
+      HNeg := D0 and VPos;
+      VPos := HNeg shl 1 or not(D0 or HPos shl 1 or 1);
+      VNeg := D0 and (HPos shl 1 or 1);
+      if HNeg and (QWord(1) shl Pred(aLenL)) <> 0 then
+        Dec(Result)
+      else
+        begin
+          if HPos and (QWord(1) shl Pred(aLenL)) <> 0 then
+            begin
+              Inc(Result);
+              aLimit -= 2;
+            end
+          else
+            Dec(aLimit);
+          if aLimit < 0 then
+            exit(NULL_INDEX);
+        end;
+    end;
+end;
+
+const
+  BLOCK_SIZE = BitSizeOf(QWord);
+  BSIZE_MASK = Pred(BLOCK_SIZE);
+  BSIZE_LOG  = 6;
+
+{ in terms of Myers }
+function LevDistMyersDQ(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Peq: array[Byte] of array[0..1] of QWord;
+  Eq0, Eq1, Ph, Mh, Pv0, Mv0, Pv1, Mv1, Xv, Xh, Hin: QWord;
+  I: SizeInt;
+begin
+  System.FillChar(Peq, SizeOf(Peq), 0);
+  for I := 0 to Pred(BLOCK_SIZE) do
+    Peq[pL[I]][0] := Peq[pL[I]][0] or QWord(1) shl I;
+  for I := BLOCK_SIZE to Pred(aLenL) do
+    Peq[pL[I]][1] := Peq[pL[I]][1] or QWord(1) shl (I - BLOCK_SIZE);
+
+  Result := aLenL;
+  Pv0 := High(QWord);
+  Pv1 := High(QWord);
+  Mv0 := 0;
+  Mv1 := 0;
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      Eq0 := Peq[pR[I]][0];
+      Eq1 := Peq[pR[I]][1];
+      ///////////////////////
+      Xv := Mv0 or Eq0;
+      Xh := ((Pv0 and Eq0 + Pv0) xor Pv0) or Eq0;
+      Ph := Mv0 or not(Xh or Pv0);
+      Mh := Pv0 and Xh;
+      Hin := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+      Ph := Ph shl 1 or 1;
+      Pv0 := Mh shl 1 or not(Xv or Ph);
+      Mv0 := Xv and Ph;
+      ///////////////////////
+      Xv := Mv1 or Eq1;
+      Eq1 := Eq1 or Hin shr BSIZE_MASK;
+      Xh := ((Pv1 and Eq1 + Pv1) xor Pv1) or Eq1;
+      Ph := Mv1 or not(Xh or Pv1);
+      Mh := Pv1 and Xh;
+      ///////////////////////
+      if Mh and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+        Dec(Result)
+      else
+        if Ph and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+          Inc(Result);
+      ///////////////////////
+      Ph := Ph shl 1 or (Hin + 1) shr 1;
+      Pv1 := (Mh shl 1 or Hin shr BSIZE_MASK) or not(Xv or Ph);
+      Mv1 := Xv and Ph;
+    end;
+end;
+
+function LevDistMyersDQ(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Peq: array[Byte] of array[0..1] of QWord;
+  Eq0, Eq1, Ph, Mh, Pv0, Mv0, Pv1, Mv1, Xv, Xh, Hin: QWord;
+  I: SizeInt;
+begin
+  System.FillChar(Peq, SizeOf(Peq), 0);
+  for I := 0 to Pred(BLOCK_SIZE) do
+    Peq[pL[I]][0] := Peq[pL[I]][0] or QWord(1) shl I;
+  for I := BLOCK_SIZE to Pred(aLenL) do
+    Peq[pL[I]][1] := Peq[pL[I]][1] or QWord(1) shl (I - BLOCK_SIZE);
+
+  Result := aLenL;
+  aLimit += aLenR - aLenL;
+  Pv0 := High(QWord);
+  Pv1 := High(QWord);
+  Mv0 := 0;
+  Mv1 := 0;
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      Eq0 := Peq[pR[I]][0];
+      Eq1 := Peq[pR[I]][1];
+      ///////////////////////
+      Xv := Mv0 or Eq0;
+      Xh := ((Pv0 and Eq0 + Pv0) xor Pv0) or Eq0;
+      Ph := Mv0 or not(Xh or Pv0);
+      Mh := Pv0 and Xh;
+      Hin := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+      Ph := Ph shl 1 or 1;
+      Pv0 := Mh shl 1 or not(Xv or Ph);
+      Mv0 := Xv and Ph;
+      ///////////////////////
+      Xv := Mv1 or Eq1;
+      Eq1 := Eq1 or Hin shr BSIZE_MASK;
+      Xh := ((Pv1 and Eq1 + Pv1) xor Pv1) or Eq1;
+      Ph := Mv1 or not(Xh or Pv1);
+      Mh := Pv1 and Xh;
+      ///////////////////////
+      if Mh and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+        Dec(Result)
+      else
+        begin
+          if Ph and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+            begin
+              Inc(Result);
+              aLimit -= 2;
+            end
+          else
+            Dec(aLimit);
+          if aLimit < 0 then
+            exit(NULL_INDEX);
+        end;
+      ///////////////////////
+      Ph := Ph shl 1 or (Hin + 1) shr 1;
+      Pv1 := (Mh shl 1 or Hin shr BSIZE_MASK) or not(Xv or Ph);
+      Mv1 := Xv and Ph;
+    end;
+end;
+
+{ recodes sequences to determine alphabet size and minimize memory usage;
+  returns the size of the alphabet }
+function RecodeSeq(pL, pR: PByte; aLenL, aLenR: SizeInt; out aBuffer: TBytes): SizeInt;
+var
+  InTable: array[Byte] of Boolean;
+  CodeTable: array[Byte] of Byte;
+  I: SizeInt;
+  b: Byte;
+begin
+  System.FillChar(InTable, SizeOf(InTable), 0);
+  System.SetLength(aBuffer, aLenL + aLenR);
+  Result := 0;
+  for I := 0 to Pred(aLenL) do
+    begin
+      b := pL[I];
+      if not InTable[b] then
+        begin
+          CodeTable[b] := Result;
+          Inc(Result);
+          InTable[b] := True;
+        end;
+      aBuffer[I] := CodeTable[b];
+    end;
+  for I := aLenL to Pred(aLenL + aLenR) do
+    begin
+      b := pR[I-aLenL];
+      if not InTable[b] then
+        begin
+          CodeTable[b] := Result;
+          Inc(Result);
+          InTable[b] := True;
+        end;
+      aBuffer[I] := CodeTable[b];
+    end;
+end;
+
+type
+  TPeq = record
+    Peq: array of PQWord;
+    Buffer: array of QWord;
+    BlockCount: SizeInt;
+  end;
+
+procedure CreatePeq(aSeq: PByte; aSeqLen, AlphabetSize: SizeInt; out aPeq: TPeq);
+var
+  I, J, BCount, LastRow, Pad: SizeInt;
+begin
+  LastRow := aSeqLen and BSIZE_MASK;
+  BCount := aSeqLen shr BSIZE_LOG + Ord(LastRow <> 0);
+  aPeq.BlockCount := BCount;
+  System.SetLength(aPeq.Peq, AlphabetSize);
+
+  System.SetLength(aPeq.Buffer, BCount * AlphabetSize);
+  if LastRow <> 0 then
+    Pad := System.High(QWord) shl LastRow
+  else
+    Pad := 0;
+  J := 0;
+  with aPeq do
+    for I := 0 to Pred(AlphabetSize) do
+      begin
+        Peq[I] := @Buffer[J];
+        Peq[I][Pred(BCount)] := Pad; ////////////???
+        J += BCount;
+      end;
+  with aPeq do
+    for I := 0 to Pred(aSeqLen) do
+      Peq[aSeq[I]][I shr BSIZE_LOG] := Peq[aSeq[I]][I shr BSIZE_LOG] or QWord(1) shl (I and BSIZE_MASK);
+end;
+
+type
+  TBlock = record
+    P,
+    M: QWord;
+    Score: SizeInt;
+  end;
+
+{ with some imrovements from:
+  Martin Sosic and Mile Sikic, "Edlib: a C/C 11 library for fast, exact sequence
+  alignment using edit distance" }
+function LevDistMyersCutoff(const aPeq: TPeq; pR: PByte; aLenL, aLenR, K: SizeInt): SizeInt;
+  function ReadBlockCell(const aBlock: TBlock; aIndex: SizeInt): SizeInt;
+  var
+    I: SizeInt;
+  begin
+    Result := aBlock.Score;
+    for I := BSIZE_MASK downto Succ(aIndex) do
+      if aBlock.P and (QWord(1) shl I) <> 0 then
+        Dec(Result)
+      else
+        if aBlock.M and (QWord(1) shl I) <> 0 then
+          Inc(Result);
+  end;
+var
+  Blocks: array of TBlock;
+  Eq, Xv, Xh, Pv, Mv, Ph, Mh, HIn, HOut: QWord;
+  I, J, First, Last: SizeInt;
+begin
+  //here aLenL <= aLenR and K >= aLenR - aLenL
+  K := Math.Min(k, aLenR);
+  First := 0;
+  I := Succ(Math.Min(K, (K - aLenR + aLenL) div 2));
+  Last := Pred(Math.Min(aPeq.BlockCount, I shr BSIZE_LOG + Ord(I and BSIZE_MASK <> 0)));
+  System.SetLength(Blocks, aPeq.BlockCount);
+  Result := NULL_INDEX;
+
+  for I := First to Last do
+    with Blocks[I] do
+      begin
+        P := System.High(QWord);
+        Score := BLOCK_SIZE * Succ(I);
+      end;
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      HOut := 1;
+      for J := First to Last do
+        begin
+          HIn := HOut;
+          Eq := aPeq.Peq[pR[I]][J];
+          Pv := Blocks[J].P;
+          Mv := Blocks[J].M;
+          Xv := Mv or Eq;
+          Eq := Eq or HIn shr BSIZE_MASK;
+          Xh := ((Pv and Eq + Pv) xor Pv) or Eq;
+          Ph := Mv or not(Xh or Pv);
+          Mh := Pv and Xh;
+
+          HOut := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+
+          Ph := Ph shl 1 or (HIn + 1) shr 1;
+
+          Blocks[J].P := (Mh shl 1 or HIn shr BSIZE_MASK) or not(Xv or Ph);
+          Blocks[J].M := Xv and Ph;
+          Blocks[J].Score += SizeInt(HOut);
+        end;
+      // adjust last block
+      if (Last < Pred(aPeq.BlockCount)) and
+         (K-Blocks[Last].Score+BSIZE_MASK-aLenR+aLenL+I >= Last*BLOCK_SIZE) then
+        begin
+          Inc(Last);
+          HIn := HOut;
+          Eq := aPeq.Peq[pR[I]][Last];
+          Pv := System.High(QWord);
+          Mv := 0;
+          Xv := Mv or Eq;
+          Eq := Eq or HIn shr BSIZE_MASK;
+          Xh := ((Pv and Eq + Pv) xor Pv) or Eq;
+          Ph := Mv or not(Xh or Pv);
+          Mh := Pv and Xh;
+
+          HOut := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+
+          Ph := Ph shl 1 or (HIn + 1) shr 1;
+
+          Blocks[Last].P := (Mh shl 1 or HIn shr BSIZE_MASK) or not(Xv or Ph);
+          Blocks[Last].M := Xv and Ph;
+          Blocks[Last].Score := Blocks[Last-1].Score - SizeInt(HIn) + BLOCK_SIZE + SizeInt(HOut);
+        end
+      else
+        while (Last >= First) and ((Blocks[Last].Score >= K + BLOCK_SIZE) or
+              (K-Blocks[Last].Score+BSIZE_MASK-aLenR+aLenL+I+1 < Last*BLOCK_SIZE)) do
+          Dec(Last);
+      // adjust first block
+      while (First <= Last) and ((Blocks[First].Score >= K + BLOCK_SIZE) or
+            (Blocks[First].Score-K-aLenR+aLenL+I > (First+1)*BLOCK_SIZE-1)) do
+        Inc(First);
+
+      if Last < First then exit;
+    end;
+
+  if Last = Pred(aPeq.BlockCount) then
+    begin
+      I := Pred(aLenL and BSIZE_MASK);
+      if I < 0 then I += BLOCK_SIZE;
+      J := ReadBlockCell(Blocks[Last], I);
+      if J <= K then
+        Result := J;
+    end;
+end;
+{$POP}
+
+function LevDistMyers(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Peq: TPeq;
+  Buffer: TBytes;
+  AlphabetSize, Limit: SizeInt;
+begin
+  //here aLenL <= aLenR
+  AlphabetSize := RecodeSeq(pL, pR, aLenL, aLenR, Buffer);
+  CreatePeq(Pointer(Buffer), aLenL, AlphabetSize, Peq);
+  Limit := Math.Max(BLOCK_SIZE, aLenR - aLenL);
+  repeat
+    Result := LevDistMyersCutoff(Peq, @Buffer[aLenL], aLenL, aLenR, Limit);
+    Limit += Limit;
+  until Result <> NULL_INDEX;
+end;
+
+function LevDistMyers(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Peq: TPeq;
+  Buffer: TBytes;
+  AlphabetSize: SizeInt;
+begin
+  AlphabetSize := RecodeSeq(pL, pR, aLenL, aLenR, Buffer);
+  CreatePeq(Pointer(Buffer), aLenL, AlphabetSize, Peq);
+  Result := LevDistMyersCutoff(Peq, @Buffer[aLenL], aLenL, aLenR, aLimit);
+end;
+
+function GetLevDistMyers(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+    end;
+
+  I := 0;
+  while (I < aLenL) and (pL^ = pR^) do
+    begin
+      Inc(pL);
+      Inc(pR);
+      Inc(I);
+    end;
+
+  if I = aLenL then
+    exit(aLenR - I);
+
+  aLenL -= I;
+  aLenR -= I;
+
+  case aLenL of
+    1..BitSizeOf(DWord):
+      Result := LevDistMyersD(pL, pR, aLenL, aLenR);
+    BitSizeOf(DWord)+1..BitSizeOf(QWord):
+      Result := LevDistMyersQ(pL, pR, aLenL, aLenR);
+    BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+      Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
+  else
+    Result := LevDistMyers(pL, pR, aLenL, aLenR);
+  end;
+end;
+
+function LevDistanceMyers(const L, R: ansistring): SizeInt;
+begin
+  if L = '' then
+    exit(System.Length(R))
+  else
+    if R = '' then
+      exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLevDistMyers(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+  else
+    Result := GetLevDistMyers(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+end;
+
+function LevDistanceMyers(const L, R: array of Byte): SizeInt;
+begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := GetLevDistMyers(@L[0], @R[0], System.Length(L), System.Length(R))
   else
-    Result := LevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
-{$PUSH}{$WARN 5036 off}
-function IsValidDotQuadIPv4(const s: string): Boolean;
+function GetLevDistMyers(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+    end;
+
+  I := 0;
+  while (I < aLenL) and (pL^ = pR^) do
+    begin
+      Inc(pL);
+      Inc(pR);
+      Inc(I);
+    end;
+
+  if I = aLenL then
+    exit(aLenR - I);
+
+  if aLimit = 0 then  //////////
+    exit(NULL_INDEX); //////////
+
+  aLenL -= I;
+  aLenR -= I;
+
+  if aLimit > aLenR then
+    aLimit := aLenR;
+
+  case aLenL of
+    1..BitSizeOf(DWord):
+      Result := LevDistMyersD(pL, pR, aLenL, aLenR, aLimit);
+    BitSizeOf(DWord)+1..BitSizeOf(QWord):
+      Result := LevDistMyersQ(pL, pR, aLenL, aLenR, aLimit);
+    BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+      Result := LevDistMyersDQ(pL, pR, aLenL, aLenR, aLimit);
+  else
+    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLimit);
+  end;
+end;
+
+function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+begin
+  if aLimit < 0 then
+    aLimit := 0;
+  if L = '' then
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if R = '' then
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLevDistMyers(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetLevDistMyers(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
+end;
+
+function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+begin
+  if aLimit < 0 then
+    aLimit := 0;
+  if System.Length(L) = 0 then
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if System.Length(R) = 0 then
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLevDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+end;
+
+{$PUSH}{$WARN 5036 OFF}
+function IsValidDotQuadIPv4(const s: ansistring): Boolean;
 type
   TRadix = (raDec, raOct, raHex);
 var
@@ -951,7 +1526,7 @@ begin
   Result := (OctetIdx = 3) and OctetInRange;
 end;
 
-function IsValidDotDecIPv4(const s: string): Boolean;
+function IsValidDotDecIPv4(const s: ansistring): Boolean;
 var
   I, OctetIdx, CharIdx: Integer;
   Buf: array[0..3] of AnsiChar;
