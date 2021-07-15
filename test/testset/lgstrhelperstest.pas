@@ -61,7 +61,16 @@ type
    procedure LevenshteinDist2;
    procedure LevenshteinDistMbr;
    procedure LevenshteinDistMbr2;
-   procedure LevenshteinDistMbrLimit;
+   procedure LevenshteinDistMbrBounded;
+   procedure LevenshteinDistMyersD;
+   procedure LevenshteinDistMyersD2;
+   procedure LevenshteinDistMyersQ;
+   procedure LevenshteinDistMyersDQ;
+   procedure LevenshteinDistMyersLong;
+   procedure LevenshteinDistMyersDBounded;
+   procedure LevenshteinDistMyersQBounded;
+   procedure LevenshteinDistMyersDQBounded;
+   procedure LevenshteinDistMyersLongBounded;
    procedure LcsGusTest;
  end;
 
@@ -1184,7 +1193,7 @@ begin
     end;
 end;
 
-procedure TFunTest.LevenshteinDistMbrLimit;
+procedure TFunTest.LevenshteinDistMbrBounded;
 begin
   AssertTrue(LevDistanceMbr('', 'hello', 5) = 5);
   AssertTrue(LevDistanceMbr('', 'hello', 4) = -1);
@@ -1207,6 +1216,175 @@ begin
   AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa', 1) = 0);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 8) = 8);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 7) = -1);
+end;
+
+procedure TFunTest.LevenshteinDistMyersD;
+begin
+  AssertTrue(LevDistanceMyers('', 'hello') = 5);
+  AssertTrue(LevDistanceMyers('hello', '') = 5);
+  AssertTrue(LevDistanceMyers('hello', 'hello') = 0);
+  AssertTrue(LevDistanceMyers('ab', 'aa') = 1);
+  AssertTrue(LevDistanceMyers('aa', 'ab') = 1);
+  AssertTrue(LevDistanceMyers('ab', 'ba') = 2);
+  AssertTrue(LevDistanceMyers('ba', 'ab') = 2);
+  AssertTrue(LevDistanceMyers('ab', 'aaa') = 2);
+  AssertTrue(LevDistanceMyers('a', 'bbb') = 3);
+  AssertTrue(LevDistanceMyers('aababab','abbaa') = 3);
+  AssertTrue(LevDistanceMyers('helli', 'elli') = 1);
+  AssertTrue(LevDistanceMyers('ellia', 'helli') = 2);
+  AssertTrue(LevDistanceMyers('helli', 'ellia') = 2);
+  AssertTrue(LevDistanceMyers('kitten', 'sitten') = 1);
+  AssertTrue(LevDistanceMyers('sitten', 'kitten') = 1);
+  AssertTrue(LevDistanceMyers('kitten', 'sitting') = 3);
+  AssertTrue(LevDistanceMyers('distance', 'difference') = 5);
+  AssertTrue(LevDistanceMyers('levenshtein', 'frankenstein') = 6);
+  AssertTrue(LevDistanceMyers('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(LevDistanceMyers('aaaaaaa', 'bbbbbbbb') = 8);
+  AssertTrue(LevDistanceMyers('aaabbaaaa', 'aaaaaaa') = 2);
+end;
+
+procedure TFunTest.LevenshteinDistMyersD2;
+var
+  I: Integer = 0;
+begin
+  while I < High(TestWords) do
+    begin
+      AssertTrue(LevDistanceMyers(TestWords[I], TestWords[I+1]) = LevDistWF(TestWords[I], TestWords[I+1]));
+      I += 2;
+    end;
+end;
+
+procedure TFunTest.LevenshteinDistMyersQ;
+const
+  s1  = 'Please my friend wait outside of the house';
+  s2  = 'I want to buy a onesie… but know it won''t suit me';
+  s3  = 'I will never be this young again. Ever. Oh damn…';
+  s4  = 'I really want to go to work, but I am too sick to drive';
+  s5  = 'The shooter says goodbye to his love';
+  s6  = 'He didn''t want to go to the dentist, yet he went anyway';
+  s7  = 'He ran out of money, so he had to stop playing poker';
+  s8  = 'I am counting my calories, yet I really want dessert';
+  s9  = 'It was getting dark, and we weren''t there yet';
+  s10 = 'They got there early, and they got really good seats';
+  s11 = 'The quick brown fox jumps over the lazy dog';
+  s12 = 'I checked to make sure that he was still alive';
+  s13 = 'She only paints with bold colors; she does not like pastels';
+  s14 = 'A song can make or ruin a person''s day if they let it get to them';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2) = LevDistWF(s1, s2));
+  AssertTrue(LevDistanceMyers(s3, s4) = LevDistWF(s3, s4));
+  AssertTrue(LevDistanceMyers(s5, s6) = LevDistWF(s5, s6));
+  AssertTrue(LevDistanceMyers(s7, s8) = LevDistWF(s7, s8));
+  AssertTrue(LevDistanceMyers(s9, s10) = LevDistWF(s9, s10));
+  AssertTrue(LevDistanceMyers(s11, s12) = LevDistWF(s11, s12));
+  AssertTrue(LevDistanceMyers(s13, s14) = LevDistWF(s13, s14));
+end;
+
+procedure TFunTest.LevenshteinDistMyersDQ;
+const
+  s1  = 'Please my friend wait outside of the house. Yeah, I think it''s a good environment for learning English';
+  s2  = 'I want to buy a onesie… but know it won''t suit me. I often see the time 11:11 or 12:34 on clocks';
+  s3  = 'I will never be this young again. Ever. Oh damn… Cats are good pets, for they are clean and are not noisy';
+  s4  = 'I really want to go to work, but I am too sick to drive. She always speaks to him in a loud voice';
+  s5  = 'The shooter says goodbye to his love. The body may perhaps compensates for the loss of a true metaphysics';
+  s6  = 'He didn''t want to go to the dentist, yet he went anyway. The memory we used to share is no longer coherent';
+  s7  = 'He ran out of money, so he had to stop playing poker. The waves were crashing on the shore; it was a lovely sight';
+  s8  = 'I am counting my calories, yet I really want dessert. Check back tomorrow; I will see if the book has arrived';
+  s9  = 'It was getting dark, and we weren''t there yet. Everyone was busy, so I went to the movie alone';
+  s10 = 'They got there early, and they got really good seats. I really want to go to work, but I am too sick to drive';
+  s11 = 'The quick brown fox jumps over the lazy dog. The old apple revels in its authority';
+  s12 = 'I checked to make sure that he was still alive. Lets all be unique together until we realise we are all the same';
+  s13 = 'She only paints with bold colors; she does not like pastels. She was too short to see over the fence';
+  s14 = 'A song can make or ruin a person''s day if they let it get to them. We need to rent a room for our party';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2) = LevDistWF(s1, s2));
+  AssertTrue(LevDistanceMyers(s3, s4) = LevDistWF(s3, s4));
+  AssertTrue(LevDistanceMyers(s5, s6) = LevDistWF(s5, s6));
+  AssertTrue(LevDistanceMyers(s7, s8) = LevDistWF(s7, s8));
+  AssertTrue(LevDistanceMyers(s9, s10) = LevDistWF(s9, s10));
+  AssertTrue(LevDistanceMyers(s11, s12) = LevDistWF(s11, s12));
+  AssertTrue(LevDistanceMyers(s13, s14) = LevDistWF(s13, s14));
+end;
+
+procedure TFunTest.LevenshteinDistMyersLong;
+const
+  s1  = 'Please my friend wait outside of the house. Yeah, I think it''s a good environment for learning English. So how do controls work??';
+  s2  = 'I want to buy a onesie… but know it won''t suit me. I often see the time 11:11 or 12:34 on clocks. Also watch out for the Kylix articles';
+  s3  = 'I will never be this young again. Ever. Oh damn… Cats are good pets, for they are clean and are not noisy. Why exact about Delphi?';
+  s4  = 'I really want to go to work, but I am too sick to drive. She always speaks to him in a loud voice. First and fore most this is not a tutorial';
+  s5  = 'The shooter says goodbye to his love. The body may perhaps compensates for the loss of a true metaphysics. My next article will be more informative with respect to programming';
+  s6  = 'He didn''t want to go to the dentist, yet he went anyway. The memory we used to share is no longer coherent. eatures appear to be missing – like the help hints for the tool bar';
+  s7  = 'He ran out of money, so he had to stop playing poker. The waves were crashing on the shore; it was a lovely sight. It''s not much trouble because I don''t shut off my computer very often';
+  s8  = 'I am counting my calories, yet I really want dessert. Check back tomorrow; I will see if the book has arrived. You can then open a terminal window and type either of the names';
+  s9  = 'It was getting dark, and we weren''t there yet. Everyone was busy, so I went to the movie alone. I am sure that someone out in the world knows what was needed but I sort of shotgun the process!';
+  s10 = 'They got there early, and they got really good seats. I really want to go to work, but I am too sick to drive. I ran into many issues that I believe would have stopped others dead in their tracks';
+  s11 = 'The quick brown fox jumps over the lazy dog. The old apple revels in its authority. In fact I think most of the other Linux distributions by default do not install the development libraries at all';
+  s12 = 'I checked to make sure that he was still alive. Lets all be unique together until we realise we are all the same. The Levenshtein distance is a string metric for measuring the difference between two sequences';
+  s13 = 'She only paints with bold colors; she does not like pastels. She was too short to see over the fence. My Mum tries to be cool by saying that she likes all the same things that I do';
+  s14 = 'A song can make or ruin a person''s day if they let it get to them. We need to rent a room for our party. When I was little I had a car door slammed shut on my hand. I still remember it quite vividly';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2) = LevDistWF(s1, s2));
+  AssertTrue(LevDistanceMyers(s3, s4) = LevDistWF(s3, s4));
+  AssertTrue(LevDistanceMyers(s5, s6) = LevDistWF(s5, s6));
+  AssertTrue(LevDistanceMyers(s7, s8) = LevDistWF(s7, s8));
+  AssertTrue(LevDistanceMyers(s9, s10) = LevDistWF(s9, s10));
+  AssertTrue(LevDistanceMyers(s11, s12) = LevDistWF(s11, s12));
+  AssertTrue(LevDistanceMyers(s13, s14) = LevDistWF(s13, s14));
+end;
+
+procedure TFunTest.LevenshteinDistMyersDBounded;
+begin
+  AssertTrue(LevDistanceMyers('cetology', '_cetol_ogy_', 4) = 3);
+  AssertTrue(LevDistanceMyers('cetology', '_cetol_ogy_', 3) = 3);
+  AssertTrue(LevDistanceMyers('cetology', '_cetol_ogy_', 2) = -1);
+  AssertTrue(LevDistanceMyers('recurvant', '_rec_urv_ant_', 5) = 4);
+  AssertTrue(LevDistanceMyers('recurvant', '_rec_urv_ant_', 4) = 4);
+  AssertTrue(LevDistanceMyers('recurvant', '_rec_urv_ant_', 3) = -1);
+end;
+
+procedure TFunTest.LevenshteinDistMyersQBounded;
+const
+  s1  = 'Please my friend wait outside of the house';
+  s2  = '_Please my friend wait_outside of the house_';
+  s3  = 'I want to buy a onesie… but know it won''t suit me';
+  s4  = '_I want to_buy a onesie… but_know it_won''t suit me_';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2, 4) = 3);
+  AssertTrue(LevDistanceMyers(s1, s2, 3) = 3);
+  AssertTrue(LevDistanceMyers(s1, s2, 2) = -1);
+  AssertTrue(LevDistanceMyers(s3, s4, 6) = 5);
+  AssertTrue(LevDistanceMyers(s3, s4, 5) = 5);
+  AssertTrue(LevDistanceMyers(s3, s4, 4) = -1);
+end;
+
+procedure TFunTest.LevenshteinDistMyersDQBounded;
+const
+  s1  = 'I really want to go to work, but I am too sick to drive. She always speaks to him in a loud voice';
+  s2  = '_I really want to go to work, but I am too sick to drive._She always speaks to him in a loud voice_';
+  s3  = 'The shooter says goodbye to his love. The body may perhaps compensates for the loss of a true metaphysics';
+  s4  = '_The shooter says goodbye_to his love. The body may perhaps_compensates_for the loss of a true metaphysics_';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2, 4) = 3);
+  AssertTrue(LevDistanceMyers(s1, s2, 3) = 3);
+  AssertTrue(LevDistanceMyers(s1, s2, 2) = -1);
+  AssertTrue(LevDistanceMyers(s3, s4, 6) = 5);
+  AssertTrue(LevDistanceMyers(s3, s4, 5) = 5);
+  AssertTrue(LevDistanceMyers(s3, s4, 4) = -1);
+end;
+
+procedure TFunTest.LevenshteinDistMyersLongBounded;
+const
+  s1  = 'Please my friend wait outside of the house. Yeah, I think it''s a good environment for learning English. So how do controls work??';
+  s2  = '_Please my friend wait outside of the house. Yeah, I think it''s a good environment for learning English._So how do controls work???';
+  s3  = 'It was getting dark, and we weren''t there yet. Everyone was busy, so I went to the movie alone. I am sure that someone out in the world knows what was needed but I sort of shotgun the process!';
+  s4  = '_It was getting dark, and we weren''t there yet. Everyone was busy, so_I went to the movie alone._I am sure that someone_out in the world knows what was needed but I sort of shotgun the process!!';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2, 4) = 3);
+  AssertTrue(LevDistanceMyers(s1, s2, 3) = 3);
+  AssertTrue(LevDistanceMyers(s1, s2, 2) = -1);
+  AssertTrue(LevDistanceMyers(s3, s4, 6) = 5);
+  AssertTrue(LevDistanceMyers(s3, s4, 5) = 5);
+  AssertTrue(LevDistanceMyers(s3, s4, 4) = -1);
 end;
 
 procedure TFunTest.LcsGusTest;
