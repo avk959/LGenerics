@@ -19,9 +19,11 @@ type
   private
   type
 
-    TIntHelper  = specialize TGArrayHelpUtil<Integer>;
-    TCompHelper = specialize TGComparableArrayHelper<Integer>;
-    TIntArray   = specialize TGArray<Integer>;
+    TIntHelper    = specialize TGArrayHelpUtil<Integer>;
+    TStrHelper    = specialize TGArrayHelpUtil<string>;
+    TCompHelper   = specialize TGComparableArrayHelper<Integer>;
+    TCmpStrHelper = specialize TGComparableArrayHelper<string>;
+    TIntArray     = specialize TGArray<Integer>;
 
   const
     ReverseIntSrc10: array[2..11] of Integer = (-1, -29, 0, 13, 1, -199, 21, 117, -15, 10);
@@ -65,6 +67,14 @@ type
     procedure MergeOfDst7SrcEmpty;
     procedure MergeOfDst7Src7;
     procedure MergeOfSelf;
+
+    procedure ConcatEmpty;
+    procedure ConcatSomeEmpty;
+    procedure Concat1;
+    procedure Concat3;
+    procedure Concat4;
+    procedure Concat5;
+    procedure ConcatStr;
 
     procedure SplitEmpty;
     procedure SplitWrongIndex;
@@ -458,6 +468,68 @@ begin
   a := TIntHelper.CreateCopy(IntSrc10);
   AssertTrue(TIntHelper.Merge(a, a) = 0);
   AssertTrue(System.Length(a) = 10);
+end;
+
+procedure TArrayHelpUtilTest.ConcatEmpty;
+var
+  a: array of TIntArray = nil;
+  r: TIntArray;
+begin
+  r := TIntHelper.Concat(a);
+  AssertTrue(r = nil);
+end;
+
+procedure TArrayHelpUtilTest.ConcatSomeEmpty;
+var
+  r: TIntArray;
+begin
+  r := TIntHelper.Concat([nil, nil, nil, nil]);
+  AssertTrue(r = nil);
+end;
+
+procedure TArrayHelpUtilTest.Concat1;
+var
+  r: TIntArray;
+begin
+  r := TIntHelper.Concat([[1,2,3,4,5,6]]);
+  AssertTrue(Length(r) = 6);
+  AssertTrue(TCompHelper.Same(r, [1,2,3,4,5,6]));
+end;
+
+procedure TArrayHelpUtilTest.Concat3;
+var
+  r: TIntArray;
+begin
+  r := TIntHelper.Concat([nil, [1,2,3], [4,5,6]]);
+  AssertTrue(Length(r) = 6);
+  AssertTrue(TCompHelper.Same(r, [1,2,3,4,5,6]));
+end;
+
+procedure TArrayHelpUtilTest.Concat4;
+var
+  r: TIntArray;
+begin
+  r := TIntHelper.Concat([nil, [1,2,3], [4,5,6], nil]);
+  AssertTrue(Length(r) = 6);
+  AssertTrue(TCompHelper.Same(r, [1,2,3,4,5,6]));
+end;
+
+procedure TArrayHelpUtilTest.Concat5;
+var
+  r: TIntArray;
+begin
+  r := TIntHelper.Concat([nil, [1,2,3], nil, [4,5,6], nil]);
+  AssertTrue(Length(r) = 6);
+  AssertTrue(TCompHelper.Same(r, [1,2,3,4,5,6]));
+end;
+
+procedure TArrayHelpUtilTest.ConcatStr;
+var
+  r: array of string;
+begin
+  r := TStrHelper.Concat([nil, ['aaa','bbb','ccc'], nil, ['ddd','eee','ggg'], nil]);
+  AssertTrue(Length(r) = 6);
+  AssertTrue(TCmpStrHelper.Same(r, ['aaa','bbb','ccc','ddd','eee','ggg']));
 end;
 
 procedure TArrayHelpUtilTest.SplitEmpty;
