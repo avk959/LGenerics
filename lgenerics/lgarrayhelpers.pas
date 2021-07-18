@@ -145,6 +145,8 @@ type
   { if aSrc <> aDst appends aSrc to aDst, sets aSrc to nil and returns count of merged elements,
     otherwise returns 0}
     class function  Merge(var aDst, aSrc: TArray): SizeInt; static;
+  { concatenates the elements of all components of array A into a single array }
+    class function  Concat(const A: array of TArray): TArray; static;
   { returns array of elements of A starting at aIndex(0-based) to High(A);
     length of A becomes aIndex;
     if A = nil or aIndex > High(A), then Result is empty }
@@ -1700,23 +1702,32 @@ begin
       Result := System.Length(aSrc);
       if Result > 0 then
         begin
-          if aDst <> aSrc then
-            begin
-              DstLen := System.Length(aDst);
-              System.SetLength(aDst, DstLen + Result);
-              System.Move(aSrc[0], aDst[DstLen], SizeOf(T) * Result);
-              System.FillChar(aSrc[0], SizeOf(T) * Result, 0);
-              System.SetLength(aSrc, 0);
-            end
-          else
-            begin
-              System.SetLength(aDst, Result shl 1);
-              CopyItems(@aSrc[0], @aDst[Result], Result);
-            end;
+          DstLen := System.Length(aDst);
+          System.SetLength(aDst, DstLen + Result);
+          System.Move(aSrc[0], aDst[DstLen], SizeOf(T) * Result);
+          if IsManagedType(T) then
+            System.FillChar(aSrc[0], SizeOf(T) * Result, 0);
+          System.SetLength(aSrc, 0);
         end;
     end
   else
     Result := 0;
+end;
+
+class function TGArrayHelpUtil.Concat(const A: array of TArray): TArray;
+var
+  I, J: SizeInt;
+begin
+  Result := nil;
+  J := 0;
+  for I := 0 to System.High(A) do
+    begin
+      if System.Length(Result) <= J + System.Length(A[I]) then
+        System.SetLength(Result, lgUtils.RoundUpTwoPower(J + System.Length(A[I])));
+      CopyItems(Pointer(A[I]), @Result[J], System.Length(A[I]));
+      J += System.Length(A[I]);
+    end;
+  System.SetLength(Result, J);
 end;
 
 class function TGArrayHelpUtil.Split(var A: TArray; aIndex: SizeInt): TArray;
@@ -1733,7 +1744,8 @@ begin
       RLen := ALen - aIndex;
       System.SetLength(Result, RLen);
       System.Move(A[aIndex], Result[0], SizeOf(T) * RLen);
-      System.FillChar(A[aIndex], SizeOf(T) * RLen, 0);
+      if IsManagedType(T) then
+        System.FillChar(A[aIndex], SizeOf(T) * RLen, 0);
       System.SetLength(A, aIndex);
     end
   else
@@ -1759,7 +1771,8 @@ begin
           Len -= aCount;
           if Len - aIndex > 0 then
             System.Move(A[aIndex + aCount], A[aIndex], SizeOf(T) * (Len - aIndex));
-          System.FillChar(A[Len], SizeOf(T) * aCount, 0);
+          if IsManagedType(T) then
+            System.FillChar(A[Len], SizeOf(T) * aCount, 0);
           System.SetLength(A, Len);
         end;
     end
@@ -1880,68 +1893,56 @@ end;
 
 class function TGArrayHelpUtil.Select(const A: array of T; aTest: TTest): TArray;
 var
-  I, Len: SizeInt;
-  v: T;
+  I, J: SizeInt;
 begin
-  Len := ARRAY_INITIAL_SIZE;
-  SetLength(Result, ARRAY_INITIAL_SIZE);
-  I := 0;
-  for v in A do
-    if aTest(v) then
+  if System.Length(A) = 0 then exit(nil);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := 0 to System.High(A) do
+    if aTest(A[I]) then
       begin
-        if I = Len then
-          begin
-            Len += Len;
-            SetLength(Result, Len);
-          end;
-        Result[I] := v;
-        Inc(I);
+        if System.Length(Result) = I then
+          System.SetLength(Result, I + I);
+        Result[J] := A[I];
+        Inc(J);
       end;
-  SetLength(Result, I);
+  SetLength(Result, J);
 end;
 
 class function TGArrayHelpUtil.Select(const A: array of T; aTest: TOnTest): TArray;
 var
-  I, Len: SizeInt;
-  v: T;
+  I, J: SizeInt;
 begin
-  Len := ARRAY_INITIAL_SIZE;
-  SetLength(Result, ARRAY_INITIAL_SIZE);
-  I := 0;
-  for v in A do
-    if aTest(v) then
+  if System.Length(A) = 0 then exit(nil);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := 0 to System.High(A) do
+    if aTest(A[I]) then
       begin
-        if I = Len then
-          begin
-            Len += Len;
-            SetLength(Result, Len);
-          end;
-        Result[I] := v;
-        Inc(I);
+        if System.Length(Result) = I then
+          System.SetLength(Result, I + I);
+        Result[J] := A[I];
+        Inc(J);
       end;
-  SetLength(Result, I);
+  SetLength(Result, J);
 end;
 
 class function TGArrayHelpUtil.Select(const A: array of T; aTest: TNestTest): TArray;
 var
-  I, Len: SizeInt;
-  v: T;
+  I, J: SizeInt;
 begin
-  Len := ARRAY_INITIAL_SIZE;
-  SetLength(Result, ARRAY_INITIAL_SIZE);
-  I := 0;
-  for v in A do
-    if aTest(v) then
+  if System.Length(A) = 0 then exit(nil);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := 0 to System.High(A) do
+    if aTest(A[I]) then
       begin
-        if I = Len then
-          begin
-            Len += Len;
-            SetLength(Result, Len);
-          end;
-        Result[I] := v;
-        Inc(I);
+        if System.Length(Result) = I then
+          System.SetLength(Result, I + I);
+        Result[J] := A[I];
+        Inc(J);
       end;
-  SetLength(Result, I);
+  SetLength(Result, J);
 end;
 
 class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold; const v0: T): T;
