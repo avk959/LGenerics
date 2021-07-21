@@ -952,18 +952,18 @@ begin
     128..223:
       begin
         aSize := 2;
-        Result := TChar32(TChar32(p[0] and $1f) shl 6 or (p[1] and $3f));
+        Result := TChar32(TChar32(p[0] and $1f) shl 6 or TChar32(p[1] and $3f));
       end;
     224..239:
       begin
         aSize := 3;
-        Result := TChar32(TChar32(p[0] and $f) shl 12 or TChar32(p[1] and $3f) shl 6 or (p[2] and $3f));
+        Result := TChar32(TChar32(p[0] and $f) shl 12 or TChar32(p[1] and $3f) shl 6 or TChar32(p[2] and $3f));
       end;
     240..247:
       begin
         aSize := 4;
         Result := TChar32(TChar32(p[0] and $7) shl 18 or TChar32(p[1] and $3f) shl 12 or
-                          TChar32(p[2] and $3f) shl 6 or (p[3] and $3f));
+                          TChar32(p[2] and $3f) shl 6 or TChar32(p[3] and $3f));
       end;
   else
     aSize := 0;
