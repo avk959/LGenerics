@@ -28,7 +28,7 @@ interface
 
 uses
 
-  Classes, SysUtils, Math, RegExpr, StrUtils,///////////
+  Classes, SysUtils, Math, RegExpr,
   lgUtils,
   lgHelpers,
   lgArrayHelpers,
