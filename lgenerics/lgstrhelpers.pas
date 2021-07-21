@@ -28,11 +28,12 @@ interface
 
 uses
 
-  Classes, SysUtils, Math, RegExpr,
+  Classes, SysUtils, Math, RegExpr, StrUtils,///////////
   lgUtils,
   lgHelpers,
   lgArrayHelpers,
   lgAbstractContainer,
+  lgVector,
   lgMiscUtils;
 
 type
@@ -332,6 +333,11 @@ type
   inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
   function LcsGus(const L, R: ansistring): ansistring;
   function LcsGus(const L, R: array of Byte): TBytes;
+{ recursive, returns the longest common subsequence(LCS) of sequences L and R;
+  uses Kumar-Rangan LCS algorithm with space complexity O(n) and time complexity O(n(m-p)), where
+  m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed }
+  function LcsKR(const L, R: ansistring): ansistring;
+  function LcsKR(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
   algorithm with O(mn) time complexity, where n and m are the lengths of L and R respectively,
   and O(Max(m, n)) space complexity }
@@ -349,7 +355,9 @@ type
   immediately and returns -1 }
   function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
-{ returns the Levenshtein distance between L and R; uses Myers's bit-vector algorithm }
+{ returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
+  with O(dn/w) time complexity, where n is Max(Length(L), Length(R)), d is edit distance,
+  and w is computer word size. }
   function LevDistanceMyers(const L, R: ansistring): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
@@ -371,7 +379,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-function LcsGusImpl(pL, PR: PByte; aLenL, aLenR: SizeInt): TBytes;
+function LcsGusImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
 type
   TNode = record
     Index,
@@ -383,37 +391,39 @@ var
   NodeList: TNodeList;
   Tmp: TSizeIntArray;
   LocLis: TSizeIntArray;
-  Tail: TBytes = nil;
-  I, J, NodeIdx: SizeInt;
+  I, J, HeadLen, TailLen, NodeIdx: SizeInt;
 const
-  INIT_SIZE = 256;
+  INIT_SIZE = 256; //???
 begin
+  //here aLenL <= aLenR
   Result := nil;
 
   if pL = pR then
     exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
 
-  I := 0;
+  TailLen := 0;
   while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
-      Inc(I);
+      Inc(TailLen);
     end;
 
-  if I > 0 then
-    Tail := specialize TGSimpleArrayHelper<Byte>.CreateCopy(pL[aLenL..Pred(aLenL + I)]);
+  HeadLen := 0;
+  while (HeadLen < aLenL) and (pL[HeadLen] = pR[HeadLen]) do
+    Inc(HeadLen);
 
-  I := 0;
-  while (I < aLenL) and (pL[I] = pR[I]) do
-     Inc(I);
-  if I > 0 then
+  pL += HeadLen;
+  pR += HeadLen;
+  aLenL -= HeadLen;
+  aLenR -= HeadLen;
+
+  if aLenL = 0 then
     begin
-      Result := specialize TGSimpleArrayHelper<Byte>.CreateCopy(pL[0..Pred(I)]);
-      pL += I;
-      pR += I;
-      aLenL -= I;
-      aLenR -= I;
+      System.SetLength(Result, HeadLen + TailLen);
+      System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
+      System.Move((pL + aLenL)^, Result[HeadLen], TailLen);
+      exit;
     end;
 
   TSizeIntHelper.Fill(MatchList, NULL_INDEX);
@@ -453,20 +463,29 @@ begin
       LocLis := TSizeIntHelper.Lis(Tmp);
       if LocLis = nil then
         begin
-          System.SetLength(Result, Succ(System.Length(Result)));
-          Result[System.High(Result)] := pR[Tmp[0]];
+          System.SetLength(Result, Succ(HeadLen + TailLen));
+          Result[HeadLen] := pR[Tmp[0]];
+          System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
+          System.Move((pL + aLenL)^, Result[Succ(HeadLen)], TailLen);
         end
       else
         begin
           Tmp := nil;
           J := System.Length(Result);
-          System.SetLength(Result, J+System.Length(LocLis));
+          System.SetLength(Result, HeadLen + System.Length(LocLis) + TailLen);
           for I := 0 to System.High(LocLis) do
-            Result[I+J] := pR[LocLis[I]];
+            Result[I+HeadLen] := pR[LocLis[I]];
+          System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
+          System.Move((pL + aLenL)^, Result[HeadLen + System.Length(LocLis)], TailLen);
         end;
+    end
+  else
+    begin
+      System.SetLength(Result, HeadLen + TailLen);
+      if Result = nil then exit;
+      System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
+      System.Move((pL + aLenL)^, Result[HeadLen], TailLen);
     end;
-  if Tail <> nil then
-    System.Insert(Tail, Result, System.Length(Result));
 end;
 {$POP}
 
@@ -497,6 +516,235 @@ end;
 
 const
   MAX_STATIC = 1024;
+
+{$PUSH}{$WARN 5089 OFF}
+{
+ S. Kiran Kumar and C. Pandu Rangan(1987) "A Linear Space Algorithm for the LCS Problem"
+}
+function LcsKrImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
+type
+  TByteVector = specialize TGLiteVector<Byte>;
+var
+  LocLcs: TByteVector;
+  R1, R2, LL, LL1, LL2: PSizeInt;
+  R, S: SizeInt;
+  procedure FillOne(LFirst, RFirst, RLast: SizeInt; DirectOrd: Boolean);
+  var
+    I, J, LoR, PosR, Tmp: SizeInt;
+  begin
+    J := 1;
+    I := S;
+    if DirectOrd then begin
+      R2[0] := RLast - RFirst + 2;
+      while I > 0 do begin
+        if J > R then LoR := 0 else LoR := R1[J];
+        PosR := R2[J - 1] - 1;
+        while (PosR > LoR) and (pL[LFirst+(I-1)] <> pR[RFirst+(PosR-1)]) do
+          Dec(PosR);
+        Tmp := Math.Max(LoR, PosR);
+        if Tmp = 0 then break;
+        R2[J] := Tmp;
+        Dec(I);
+        Inc(J);
+      end;
+    end else begin
+      R2[0] := RFirst - RLast + 2;
+      while I > 0 do begin
+        if J > R then LoR := 0 else LoR := R1[J];
+        PosR := R2[J - 1] - 1;
+        while (PosR > LoR) and (pL[LFirst-(I-1)] <> pR[RFirst-(PosR-1)]) do
+          Dec(PosR);
+        Tmp := Math.Max(LoR, PosR);
+        if Tmp = 0 then break;
+        R2[J] := Tmp;
+        Dec(I);
+        Inc(J);
+      end;
+    end;
+    R := Pred(J);
+  end;
+  procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; DirectOrd: Boolean);
+  var
+    P: SizeInt;
+  begin
+    if DirectOrd then
+      S := Succ(LLast - LFirst)
+    else
+      S := Succ(LFirst - LLast);
+    P := S - Waste;
+    R := 0;
+    while S >= P do
+      begin
+        FillOne(LFirst, RFirst, RLast, DirectOrd);
+        System.Move(R2^, R1^, Succ(R) * SizeOf(SizeInt));
+        Dec(S);
+      end;
+    System.Move(R1^, L^, Succ(R) * SizeOf(SizeInt));
+  end;
+  procedure SolveBaseCase(LFirst, LLast, RFirst, RLast, LcsLen: SizeInt);
+  var
+    I: SizeInt;
+  begin
+    CalMid(LFirst, LLast, RFirst, RLast, Succ(LLast - LFirst - LcsLen), LL, True);
+    I := 0;
+    while (I < LcsLen) and (pL[LFirst+I] = pR[RFirst+LL[LcsLen-I]-1]) do
+      begin
+        LocLcs.Add(pL[LFirst+I]);
+        Inc(I);
+      end;
+    Inc(I);
+    while I <= LLast - LFirst do
+      begin
+        LocLcs.Add(pL[LFirst+I]);
+        Inc(I);
+      end;
+  end;
+  procedure FindPerfectCut(LFirst, LLast, RFirst, RLast, LcsLen: SizeInt; out U, V: SizeInt);
+  var
+    I, LocR1, LocR2, K, W: SizeInt;
+  begin
+    W := Succ(LLast - LFirst - LcsLen) div 2;
+    CalMid(LLast, LFirst, RLast, RFirst, W, LL1, False);
+    LocR1 := R;
+    for I := 0 to LocR1 do
+      LL1[I] := RLast - RFirst + 2 - LL1[I];
+    CalMid(LFirst, LLast, RFirst, RLast, W, LL2, True);
+    LocR2 := R;
+    K := Math.Max(LocR1, LocR2);
+    while K > 0 do
+      begin
+        if (K <= LocR1) and (LcsLen - K <= LocR2) and (LL1[K] < LL2[LcsLen - K]) then
+          break;
+        Dec(K);
+      end;
+    U := K + W;
+    V := LL1[K];
+  end;
+  procedure Lcs(LFirst, LLast, RFirst, RLast, LcsLen: SizeInt);
+  var
+    U, V, W: SizeInt;
+  begin
+    if (LLast < LFirst) or (RLast < RFirst) or (LcsLen < 1) then exit;
+    if Succ(LLast - LFirst - LcsLen) < 2 then
+      SolveBaseCase(LFirst, LLast, RFirst, RLast, LcsLen)
+    else
+      begin
+        FindPerfectCut(LFirst, LLast, RFirst, RLast, LcsLen, U, V);
+        W := Succ(LLast - LFirst - LcsLen) div 2;
+        Lcs(LFirst, Pred(LFirst + U), RFirst, Pred(RFirst + V), U - W);
+        Lcs(LFirst + U, LLast, RFirst + V, RLast, LcsLen + W - U);
+      end;
+  end;
+  function GetLcsLen: SizeInt;
+  begin
+    R := 0;
+    S := Succ(aLenL);
+    while S > R do
+      begin
+        Dec(S);
+        FillOne(0, 0, Pred(aLenR), True);
+        System.Move(R2^, R1^, Succ(R) * SizeOf(SizeInt));
+      end;
+    Result := S;
+  end;
+  procedure ProcessLcs;
+  begin
+    Lcs(0, Pred(aLenL), 0, Pred(aLenR), GetLcsLen());
+  end;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt;
+  HeadLen, TailLen, MidLen: SizeInt;
+begin
+  //here aLenL <= aLenR
+  Result := nil;
+
+  if pL = pR then
+    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
+
+  TailLen := 0;
+  while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+      Inc(TailLen);
+    end;
+
+  HeadLen := 0;
+  while (HeadLen < aLenL) and (pL[HeadLen] = pR[HeadLen]) do
+    Inc(HeadLen);
+
+  pL += HeadLen;
+  pR += HeadLen;
+  aLenL -= HeadLen;
+  aLenR -= HeadLen;
+
+  if aLenL = 0 then
+    begin
+      System.SetLength(Result, HeadLen + TailLen);
+      System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
+      System.Move((pL + aLenL)^, Result[HeadLen], TailLen);
+      exit;
+    end;
+
+  if MAX_STATIC >= Succ(aLenR)*5 then
+    begin
+      R1 := @StBuf[0];
+      R2 := @StBuf[Succ(aLenR)];
+      LL := @StBuf[Succ(aLenR)*2];
+      LL1 := @StBuf[Succ(aLenR)*3];
+      LL2 := @StBuf[Succ(aLenR)*4];
+    end
+  else
+    begin
+      System.SetLength(Buf, Succ(aLenR)*5);
+      R1 := @Buf[0];
+      R2 := @Buf[Succ(aLenR)];
+      LL := @Buf[Succ(aLenR)*2];
+      LL1 := @Buf[Succ(aLenR)*3];
+      LL2 := @Buf[Succ(aLenR)*4];
+    end;
+
+  LocLcs.EnsureCapacity(aLenL);
+
+  ProcessLcs;
+
+  MidLen := LocLcs.Count;
+
+  System.SetLength(Result, HeadLen + MidLen + TailLen);
+  if Result = nil then exit;
+
+  if MidLen > 0 then
+    System.Move(LocLcs.UncMutable[0]^, Result[HeadLen], MidLen);
+  System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
+  System.Move((pL + aLenL)^, Result[HeadLen + MidLen], TailLen);
+end;
+{$POP}
+
+function LcsKR(const L, R: ansistring): ansistring;
+var
+  b: TBytes;
+begin
+  Result := '';
+  if (L = '') or (R = '') then
+    exit;
+  if System.Length(L) <= System.Length(R) then
+    b := LcsKrImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+  else
+    b := LcsKrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+  System.SetLength(Result, System.Length(b));
+  System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
+end;
+
+function LcsKR(const L, R: array of Byte): TBytes;
+begin
+  if (System.Length(L) = 0) or (System.Length(R) = 0) then
+    exit(nil);
+  if System.Length(L) <= System.Length(R) then
+    Result := LcsKrImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := LcsKrImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+end;
 
 function LevDistanceDpImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 var
@@ -821,8 +1069,12 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}{$WARN 5036 OFF}{$Q-}{$R-}
-{ in terms of the Hyyrö's
-  "Explaining and Extending the Bit-parallel Approximate String Matching Algorithm of Myers" }
+{
+  Myers, G.(1999) "A fast bit-vector algorithm for approximate string matching based on dynamic programming"
+  Heikki Hyyrö(2001) "Explaining and extending the bit-parallel approximate string matching algorithm of Myers"
+  Martin Šošić, Mile Šikić(2017) "Edlib: a C/C++ library for fast, exact sequence alignment using edit distance"
+  }
+{ in terms of Hyyrö }
 function LevDistMyersD(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 var
   Pm: array[Byte] of DWord;
@@ -1082,7 +1334,7 @@ begin
 end;
 
 { recodes sequences to determine alphabet size and minimize memory usage;
-  returns the size of the alphabet }
+  returns the size of the new alphabet and recoded sequences in aBuffer }
 function RecodeSeq(pL, pR: PByte; aLenL, aLenR: SizeInt; out aBuffer: TBytes): SizeInt;
 var
   InTable: array[Byte] of Boolean;
@@ -1158,9 +1410,10 @@ type
     Score: SizeInt;
   end;
 
-{ with some imrovements from:
-  Martin Sosic and Mile Sikic, "Edlib: a C/C 11 library for fast, exact sequence
-  alignment using edit distance" }
+{
+  with some imrovements from:
+  Martin Šošić, Mile Šikić, "Edlib: a C/C 11 library for fast, exact sequence alignment using edit distance"
+}
 function LevDistMyersCutoff(const aPeq: TPeq; pR: PByte; aLenL, aLenR, K: SizeInt): SizeInt;
   function ReadBlockCell(const aBlock: TBlock; aIndex: SizeInt): SizeInt;
   var
