@@ -72,6 +72,7 @@ type
    procedure LevenshteinDistMyersDQBounded;
    procedure LevenshteinDistMyersLongBounded;
    procedure LcsGusTest;
+   procedure LcsKRTest;
  end;
 
 implementation
@@ -1396,17 +1397,26 @@ var
 begin
   AssertTrue(LcsDp(s1, s2) = '');
   AssertTrue(LcsGus(s1, s2) = '');
+
   s1 := 'aa';
   AssertTrue(LcsDp(s1, s2) = '');
   AssertTrue(LcsGus(s1, s2) = '');
+
   s1 := 'thisisatest';
   s2 := 'testing123testing';
   AssertTrue(LcsDp(s1, s2) = 'tsitest');
   AssertTrue(LcsGus(s1, s2) = 'tsitest');
+
   s1 := '1234';
   s2 := '1224533324';
   AssertTrue(LcsDp(s1, s2) = '1234');
   AssertTrue(LcsGus(s1, s2) = '1234');
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  AssertTrue(LcsDp(s1, s2) = '01236789');
+  AssertTrue(LcsGus(s1, s2) = '01236789');
+
   while I < High(TestWords) do
     begin
       Lcs := LcsDp(TestWords[I], TestWords[I+1]);
@@ -1416,6 +1426,49 @@ begin
           AssertTrue(Length(Lcs) = Length(LcsG));
           AssertTrue(IsSubSequence(TestWords[I], LcsG));
           AssertTrue(IsSubSequence(TestWords[I+1], LcsG));
+        end;
+      I += 2;
+    end;
+end;
+
+procedure TFunTest.LcsKRTest;
+var
+  s1: string = '';
+  s2: string = '';
+  Lcs, LcsK: string;
+  I: Integer = 0;
+begin
+  AssertTrue(LcsDp(s1, s2) = '');
+  AssertTrue(LcsKR(s1, s2) = '');
+
+  s1 := 'aa';
+  AssertTrue(LcsDp(s1, s2) = '');
+  AssertTrue(LcsKR(s1, s2) = '');
+
+  s1 := 'thisisatest';
+  s2 := 'testing123testing';
+  AssertTrue(LcsDp(s1, s2) = 'tsitest');
+  AssertTrue(LcsKR(s1, s2) = 'tsitest');
+
+  s1 := '1234';
+  s2 := '1224533324';
+  AssertTrue(LcsDp(s1, s2) = '1234');
+  AssertTrue(LcsKR(s1, s2) = '1234');
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  AssertTrue(LcsDp(s1, s2) = '01236789');
+  AssertTrue(LcsKR(s1, s2) = '01236789');
+
+  while I < High(TestWords) do
+    begin
+      Lcs := LcsDp(TestWords[I], TestWords[I+1]);
+      LcsK := LcsKR(TestWords[I], TestWords[I+1]);
+      if Lcs <> LcsK then
+        begin
+          AssertTrue(Length(Lcs) = Length(LcsK));
+          AssertTrue(IsSubSequence(TestWords[I], LcsK));
+          AssertTrue(IsSubSequence(TestWords[I+1], LcsK));
         end;
       I += 2;
     end;
