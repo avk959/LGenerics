@@ -71,6 +71,10 @@ type
    procedure LevenshteinDistMyersQBounded;
    procedure LevenshteinDistMyersDQBounded;
    procedure LevenshteinDistMyersLongBounded;
+   procedure LevenshteinDistMyersDBounded2;
+   procedure LevenshteinDistMyersQBounded2;
+   procedure LevenshteinDistMyersDQBounded2;
+   procedure LevenshteinDistMyersLongBounded2;
    procedure LcsGusTest;
    procedure LcsKRTest;
  end;
@@ -1386,6 +1390,45 @@ begin
   AssertTrue(LevDistanceMyers(s3, s4, 6) = 5);
   AssertTrue(LevDistanceMyers(s3, s4, 5) = 5);
   AssertTrue(LevDistanceMyers(s3, s4, 4) = -1);
+end;
+
+procedure TFunTest.LevenshteinDistMyersDBounded2;
+begin
+  AssertTrue(LevDistanceMyers('cetology', '_cetol_ogy_', -2) = 3);
+  AssertTrue(LevDistanceMyers('recurvant', '_rec_urv_ant_', -1) = 4);
+end;
+
+procedure TFunTest.LevenshteinDistMyersQBounded2;
+const
+  s1  = 'Please my friend wait outside of the house';
+  s2  = '_Please my friend wait_outside of the house_';
+  s3  = 'I want to buy a onesie… but know it won''t suit me';
+  s4  = '_I want to_buy a onesie… but_know it_won''t suit me_';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2, -2) = 3);
+  AssertTrue(LevDistanceMyers(s3, s4, -1) = 5);
+end;
+
+procedure TFunTest.LevenshteinDistMyersDQBounded2;
+const
+  s1  = 'I really want to go to work, but I am too sick to drive. She always speaks to him in a loud voice';
+  s2  = '_I really want to go to work, but I am too sick to drive._She always speaks to him in a loud voice_';
+  s3  = 'The shooter says goodbye to his love. The body may perhaps compensates for the loss of a true metaphysics';
+  s4  = '_The shooter says goodbye_to his love. The body may perhaps_compensates_for the loss of a true metaphysics_';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2, -4) = 3);
+  AssertTrue(LevDistanceMyers(s3, s4, -5) = 5);
+end;
+
+procedure TFunTest.LevenshteinDistMyersLongBounded2;
+const
+  s1  = 'Please my friend wait outside of the house. Yeah, I think it''s a good environment for learning English. So how do controls work??';
+  s2  = '_Please my friend wait outside of the house. Yeah, I think it''s a good environment for learning English._So how do controls work???';
+  s3  = 'It was getting dark, and we weren''t there yet. Everyone was busy, so I went to the movie alone. I am sure that someone out in the world knows what was needed but I sort of shotgun the process!';
+  s4  = '_It was getting dark, and we weren''t there yet. Everyone was busy, so_I went to the movie alone._I am sure that someone_out in the world knows what was needed but I sort of shotgun the process!!';
+begin
+  AssertTrue(LevDistanceMyers(s1, s2, -4) = 3);
+  AssertTrue(LevDistanceMyers(s3, s4, -6) = 5);
 end;
 
 procedure TFunTest.LcsGusTest;
