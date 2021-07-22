@@ -356,13 +356,13 @@ type
   function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
-  with O(dn/w) time complexity, where n is Max(Length(L), Length(R)), d is edit distance,
-  and w is computer word size. }
+  with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
+  d is edit distance computed, and w is the size of a computer word. }
   function LevDistanceMyers(const L, R: ansistring): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
-  immediately and returns -1 }
+  immediately and returns -1; if aLimit < 0 it will be computed dynamically }
   function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 
@@ -1516,7 +1516,7 @@ begin
 end;
 {$POP}
 
-function LevDistMyers(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+function LevDistMyersDyn(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 var
   Peq: TPeq;
   Buffer: TBytes;
@@ -1579,7 +1579,7 @@ begin
     BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
       Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
   else
-    Result := LevDistMyers(pL, pR, aLenL, aLenR);
+    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLenR);
   end;
 end;
 
@@ -1614,7 +1614,7 @@ var
   I: SizeInt;
 begin
   //here aLenL <= aLenR
-  if aLenR - aLenL > aLimit then
+  if (aLimit >= 0) and (aLenR - aLenL > aLimit) then
     exit(NULL_INDEX);
 
   if pL = pR then
@@ -1646,22 +1646,32 @@ begin
   if aLimit > aLenR then
     aLimit := aLenR;
 
-  case aLenL of
-    1..BitSizeOf(DWord):
-      Result := LevDistMyersD(pL, pR, aLenL, aLenR, aLimit);
-    BitSizeOf(DWord)+1..BitSizeOf(QWord):
-      Result := LevDistMyersQ(pL, pR, aLenL, aLenR, aLimit);
-    BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
-      Result := LevDistMyersDQ(pL, pR, aLenL, aLenR, aLimit);
+  if aLimit > 0 then
+    case aLenL of
+      1..BitSizeOf(DWord):
+        Result := LevDistMyersD(pL, pR, aLenL, aLenR, aLimit);
+      BitSizeOf(DWord)+1..BitSizeOf(QWord):
+        Result := LevDistMyersQ(pL, pR, aLenL, aLenR, aLimit);
+      BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+        Result := LevDistMyersDQ(pL, pR, aLenL, aLenR, aLimit);
+    else
+      Result := LevDistMyers(pL, pR, aLenL, aLenR, aLimit);
+    end
   else
-    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLimit);
-  end;
+    case aLenL of
+      1..BitSizeOf(DWord):
+        Result := LevDistMyersD(pL, pR, aLenL, aLenR);
+      BitSizeOf(DWord)+1..BitSizeOf(QWord):
+        Result := LevDistMyersQ(pL, pR, aLenL, aLenR);
+      BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+        Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
+    else
+      Result := LevDistMyersDyn(pL, pR, aLenL, aLenR);
+    end;
 end;
 
 function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then
-    aLimit := 0;
   if L = '' then
     if System.Length(R) <= aLimit then
       exit(System.Length(R))
@@ -1681,8 +1691,6 @@ end;
 
 function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then
-    aLimit := 0;
   if System.Length(L) = 0 then
     if System.Length(R) <= aLimit then
       exit(System.Length(R))
