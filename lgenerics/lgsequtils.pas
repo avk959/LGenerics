@@ -677,6 +677,9 @@ begin
   if I = aLenL then
     exit(aLenR - I);
 
+  if aLimit = 0 then  //////////
+    exit(NULL_INDEX); //////////
+
   aLenL -= I;
   aLenR -= I;
 
