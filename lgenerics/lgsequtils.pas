@@ -129,12 +129,14 @@ type
     TNodeList = array of TNode;
     TEntry    = specialize TGMapEntry<T, SizeInt>;
     TMap      = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
-    THelper   = specialize TGArrayHelpUtil<T>;
+    THelper   = class(specialize TGArrayHelpUtil<T>);
 
   const
     MAX_STATIC = 1024;
 
     class function Eq(const L, R: T): Boolean; static; inline;
+    class function SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
+    class function SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
     class function LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
@@ -404,6 +406,32 @@ begin
   Result := TEqRel.Equal(L, R);
 end;
 
+class function TGSeqUtil.SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt;
+begin
+  //implied aLenL <= aLenR
+  Result := 0;
+
+  while (Result < aLenL) and TEqRel.Equal(pL[Result], pR[Result]) do
+    Inc(Result);
+
+  pL += Result;
+  pR += Result;
+  aLenL -= Result;
+  aLenR -= Result;
+end;
+
+class function TGSeqUtil.SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt;
+begin
+  //implied aLenL <= aLenR
+  Result := 0;
+  while (aLenL >= 0) and TEqRel.Equal(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+      Inc(Result);
+    end;
+end;
+
 class function TGSeqUtil.GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray;
 var
   TailIdx: array of SizeInt = nil;
@@ -460,9 +488,8 @@ var
   MatchList: TMap;
   NodeList: TNodeList;
   Tmp: TSizeIntArray;
-  Lis: TSizeIntArray;
-  Tail: TArray = nil;
-  I, J, NodeIdx: SizeInt;
+  LocLis: TSizeIntArray;
+  I, J, PrefixLen, SuffixLen, NodeIdx: SizeInt;
   p: ^TEntry;
 const
   INIT_SIZE = 256;
@@ -473,27 +500,15 @@ begin
   if L = R then
     exit(THelper.CreateCopy(L[0..Pred(aLenL)]));
 
-  I := 0;
-  while (aLenL >= 0) and TEqRel.Equal(L[Pred(aLenL)], R[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-      Inc(I);
-    end;
+  SuffixLen := SkipSuffix(L, R, aLenL, aLenR);
+  PrefixLen := SkipPrefix(L, R, aLenL, aLenR);
 
-  if I > 0 then
-    Tail := THelper.CreateCopy(L[aLenL..Pred(aLenL + I)]);
-
-  I := 0;
-  while (I < aLenL) and TEqRel.Equal(L[I], R[I]) do
-     Inc(I);
-  if I > 0 then
+  if aLenL = 0 then
     begin
-      Result := THelper.CreateCopy(L[0..Pred(I)]);
-      L += I;
-      R += I;
-      aLenL -= I;
-      aLenR -= I;
+      System.SetLength(Result, PrefixLen + SuffixLen);
+      THelper.CopyItems(L - PrefixLen, Pointer(Result), PrefixLen);
+      THelper.CopyItems(L + aLenL, @Result[PrefixLen], SuffixLen);
+      exit;
     end;
 
   for I := 0 to Pred(aLenL) do
@@ -536,16 +551,26 @@ begin
   if Tmp <> nil then
     begin
       NodeList := nil;
-      Lis := GetLis(Tmp, aLenL);
+      LocLis := GetLis(Tmp, aLenL);
       Tmp := nil;
       J := System.Length(Result);
-      System.SetLength(Result, J + System.Length(Lis));
-      for I := 0 to System.High(Lis) do
-        Result[I+J] := R[Lis[I]];
-    end;
+      System.SetLength(Result, J + System.Length(LocLis));
+      for I := 0 to System.High(LocLis) do
+        Result[I+J] := R[LocLis[I]];
 
-  if Tail <> nil then
-    System.Insert(Tail, Result, System.Length(Result));
+      System.SetLength(Result, PrefixLen + System.Length(LocLis) + SuffixLen);
+      for I := 0 to System.High(LocLis) do
+        Result[I+PrefixLen] := R[LocLis[I]];
+      THelper.CopyItems(L - PrefixLen, Pointer(Result), PrefixLen);
+      THelper.CopyItems(L + aLenL, @Result[PrefixLen+System.Length(LocLis)], SuffixLen);
+    end
+  else
+    begin
+      System.SetLength(Result, PrefixLen + SuffixLen);
+      if Result = nil then exit;
+      THelper.CopyItems(L - PrefixLen, Pointer(Result), PrefixLen);
+      THelper.CopyItems(L + aLenL, @Result[PrefixLen], SuffixLen);
+    end;
 end;
 
 class function TGSeqUtil.LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
@@ -560,25 +585,11 @@ begin
   if pL = pR then
     exit(aLenR - aLenL);
 
-  while (aLenL > 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-    end;
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
 
-  I := 0;
-  while (I < aLenL) and Eq(pL^, pR^) do
-    begin
-      Inc(pL);
-      Inc(pR);
-      Inc(I);
-    end;
-
-  if I = aLenL then
-    exit(aLenR - I);
-
-  aLenL -= I;
-  aLenR -= I;
+  if aLenL = 0 then
+    exit(aLenR);
 
   if aLenR < MAX_STATIC then
     Dist := @StBuf[0]
@@ -660,28 +671,14 @@ begin
   if pL = pR then
     exit(aLenR - aLenL);
 
-  while (aLenL > 0) and Eq(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-    end;
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
 
-  I := 0;
-  while (I < aLenL) and Eq(pL^, pR^) do
-    begin
-      Inc(pL);
-      Inc(pR);
-      Inc(I);
-    end;
-
-  if I = aLenL then
-    exit(aLenR - I);
+  if aLenL = 0 then
+    exit(aLenR);
 
   if aLimit = 0 then  //////////
     exit(NULL_INDEX); //////////
-
-  aLenL -= I;
-  aLenR -= I;
 
   if aLimit > aLenR then
     aLimit := aLenR;
