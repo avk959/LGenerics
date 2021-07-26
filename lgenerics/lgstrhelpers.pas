@@ -34,7 +34,9 @@ uses
   lgArrayHelpers,
   lgAbstractContainer,
   lgVector,
-  lgMiscUtils;
+  lgMiscUtils,
+  lgStrConst;
+
 
 type
 
@@ -329,7 +331,7 @@ type
 { returns True if aSub is a subsequence of aStr, False otherwise }
   function IsSubSequence(const aStr, aSub: ansistring): Boolean; inline;
 { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
-  with O(RLogN) time complexity, where R is the number of the matching pairs in L and R;
+  with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
   inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
   function LcsGus(const L, R: ansistring): ansistring;
   function LcsGus(const L, R: array of Byte): TBytes;
@@ -378,6 +380,35 @@ begin
     PByte(aStr)[0..Pred(System.Length(aStr))], PByte(aSub)[0..Pred(System.Length(aSub))]);
 end;
 
+function SkipPrefix(var pL, pR: PByte; var aLenL, aLenR: SizeInt): SizeInt; inline;
+begin
+  //implied aLenL <= aLenR
+  Result := 0;
+
+  while (Result < aLenL) and (pL[Result] = pR[Result]) do
+    Inc(Result);
+
+  pL += Result;
+  pR += Result;
+  aLenL -= Result;
+  aLenR -= Result;
+end;
+
+function SkipSuffix(pL, pR: PByte; var aLenL, aLenR: SizeInt): SizeInt; inline;
+begin
+  //implied aLenL <= aLenR
+  Result := 0;
+  while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+    begin
+      Dec(aLenL);
+      Dec(aLenR);
+      Inc(Result);
+    end;
+end;
+
+const
+  MAX_STATIC = 1024;
+
 {$PUSH}{$WARN 5057 OFF}
 function LcsGusImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
 type
@@ -391,7 +422,7 @@ var
   NodeList: TNodeList;
   Tmp: TSizeIntArray;
   LocLis: TSizeIntArray;
-  I, J, HeadLen, TailLen, NodeIdx: SizeInt;
+  I, J, PrefixLen, SuffixLen, NodeIdx: SizeInt;
 const
   INIT_SIZE = 256; //???
 begin
@@ -401,28 +432,14 @@ begin
   if pL = pR then
     exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
 
-  TailLen := 0;
-  while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-      Inc(TailLen);
-    end;
-
-  HeadLen := 0;
-  while (HeadLen < aLenL) and (pL[HeadLen] = pR[HeadLen]) do
-    Inc(HeadLen);
-
-  pL += HeadLen;
-  pR += HeadLen;
-  aLenL -= HeadLen;
-  aLenR -= HeadLen;
+  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
+  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
 
   if aLenL = 0 then
     begin
-      System.SetLength(Result, HeadLen + TailLen);
-      System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
-      System.Move((pL + aLenL)^, Result[HeadLen], TailLen);
+      System.SetLength(Result, PrefixLen + SuffixLen);
+      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
       exit;
     end;
 
@@ -461,30 +478,30 @@ begin
       NodeList := nil;
 
       LocLis := TSizeIntHelper.Lis(Tmp);
+
       if LocLis = nil then
         begin
-          System.SetLength(Result, Succ(HeadLen + TailLen));
-          Result[HeadLen] := pR[Tmp[0]];
-          System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
-          System.Move((pL + aLenL)^, Result[Succ(HeadLen)], TailLen);
+          System.SetLength(Result, Succ(PrefixLen + SuffixLen));
+          Result[PrefixLen] := pR[Tmp[0]];
+          System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+          System.Move((pL + aLenL)^, Result[Succ(PrefixLen)], SuffixLen);
         end
       else
         begin
           Tmp := nil;
-          J := System.Length(Result);
-          System.SetLength(Result, HeadLen + System.Length(LocLis) + TailLen);
+          System.SetLength(Result, PrefixLen + System.Length(LocLis) + SuffixLen);
           for I := 0 to System.High(LocLis) do
-            Result[I+HeadLen] := pR[LocLis[I]];
-          System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
-          System.Move((pL + aLenL)^, Result[HeadLen + System.Length(LocLis)], TailLen);
+            Result[I+PrefixLen] := pR[LocLis[I]];
+          System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+          System.Move((pL + aLenL)^, Result[PrefixLen + System.Length(LocLis)], SuffixLen);
         end;
     end
   else
     begin
-      System.SetLength(Result, HeadLen + TailLen);
+      System.SetLength(Result, PrefixLen + SuffixLen);
       if Result = nil then exit;
-      System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
-      System.Move((pL + aLenL)^, Result[HeadLen], TailLen);
+      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
     end;
 end;
 {$POP}
@@ -513,9 +530,6 @@ begin
   else
     Result := LcsGusImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
-
-const
-  MAX_STATIC = 1024;
 
 {$PUSH}{$WARN 5089 OFF}
 {
@@ -566,6 +580,7 @@ var
   procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; DirectOrd: Boolean);
   var
     P: SizeInt;
+    Tmp: Pointer;
   begin
     if DirectOrd then
       S := Succ(LLast - LFirst)
@@ -573,12 +588,13 @@ var
       S := Succ(LFirst - LLast);
     P := S - Waste;
     R := 0;
-    while S >= P do
-      begin
-        FillOne(LFirst, RFirst, RLast, DirectOrd);
-        System.Move(R2^, R1^, Succ(R) * SizeOf(SizeInt));
-        Dec(S);
-      end;
+    while S >= P do begin
+      FillOne(LFirst, RFirst, RLast, DirectOrd);
+      Tmp := R2;
+      R2 := R1;
+      R1 := Tmp;
+      Dec(S);
+    end;
     System.Move(R1^, L^, Succ(R) * SizeOf(SizeInt));
   end;
   procedure SolveBaseCase(LFirst, LLast, RFirst, RLast, LcsLen: SizeInt);
@@ -587,17 +603,15 @@ var
   begin
     CalMid(LFirst, LLast, RFirst, RLast, Succ(LLast - LFirst - LcsLen), LL, True);
     I := 0;
-    while (I < LcsLen) and (pL[LFirst+I] = pR[RFirst+LL[LcsLen-I]-1]) do
-      begin
-        LocLcs.Add(pL[LFirst+I]);
-        Inc(I);
-      end;
+    while (I < LcsLen) and (pL[LFirst+I] = pR[RFirst+LL[LcsLen-I]-1]) do begin
+      LocLcs.Add(pL[LFirst+I]);
+      Inc(I);
+    end;
     Inc(I);
-    while I <= LLast - LFirst do
-      begin
-        LocLcs.Add(pL[LFirst+I]);
-        Inc(I);
-      end;
+    while I <= LLast - LFirst do begin
+      LocLcs.Add(pL[LFirst+I]);
+      Inc(I);
+    end;
   end;
   procedure FindPerfectCut(LFirst, LLast, RFirst, RLast, LcsLen: SizeInt; out U, V: SizeInt);
   var
@@ -607,16 +621,14 @@ var
     CalMid(LLast, LFirst, RLast, RFirst, W, LL1, False);
     LocR1 := R;
     for I := 0 to LocR1 do
-      LL1[I] := RLast - RFirst + 2 - LL1[I];
+      LL1[I] := RLast - RFirst - LL1[I] + 2;
     CalMid(LFirst, LLast, RFirst, RLast, W, LL2, True);
     LocR2 := R;
     K := Math.Max(LocR1, LocR2);
-    while K > 0 do
-      begin
-        if (K <= LocR1) and (LcsLen - K <= LocR2) and (LL1[K] < LL2[LcsLen - K]) then
-          break;
-        Dec(K);
-      end;
+    while K > 0 do begin
+      if (K <= LocR1) and (LcsLen - K <= LocR2) and (LL1[K] < LL2[LcsLen - K]) then break;
+      Dec(K);
+    end;
     U := K + W;
     V := LL1[K];
   end;
@@ -627,24 +639,26 @@ var
     if (LLast < LFirst) or (RLast < RFirst) or (LcsLen < 1) then exit;
     if Succ(LLast - LFirst - LcsLen) < 2 then
       SolveBaseCase(LFirst, LLast, RFirst, RLast, LcsLen)
-    else
-      begin
-        FindPerfectCut(LFirst, LLast, RFirst, RLast, LcsLen, U, V);
-        W := Succ(LLast - LFirst - LcsLen) div 2;
-        Lcs(LFirst, Pred(LFirst + U), RFirst, Pred(RFirst + V), U - W);
-        Lcs(LFirst + U, LLast, RFirst + V, RLast, LcsLen + W - U);
-      end;
+    else begin
+      FindPerfectCut(LFirst, LLast, RFirst, RLast, LcsLen, U, V);
+      W := Succ(LLast - LFirst - LcsLen) div 2;
+      Lcs(LFirst, Pred(LFirst + U), RFirst, Pred(RFirst + V), U - W);
+      Lcs(LFirst + U, LLast, RFirst + V, RLast, LcsLen + W - U);
+    end;
   end;
   function GetLcsLen: SizeInt;
+  var
+    Tmp: Pointer;
   begin
     R := 0;
     S := Succ(aLenL);
-    while S > R do
-      begin
-        Dec(S);
-        FillOne(0, 0, Pred(aLenR), True);
-        System.Move(R2^, R1^, Succ(R) * SizeOf(SizeInt));
-      end;
+    while S > R do begin
+      Dec(S);
+      FillOne(0, 0, Pred(aLenR), True);
+      Tmp := R2;
+      R2 := R1;
+      R1 := Tmp;
+    end;
     Result := S;
   end;
   procedure ProcessLcs;
@@ -654,7 +668,7 @@ var
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt;
-  HeadLen, TailLen, MidLen: SizeInt;
+  PrefixLen, SuffixLen: SizeInt;
 begin
   //here aLenL <= aLenR
   Result := nil;
@@ -662,28 +676,14 @@ begin
   if pL = pR then
     exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
 
-  TailLen := 0;
-  while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-      Inc(TailLen);
-    end;
-
-  HeadLen := 0;
-  while (HeadLen < aLenL) and (pL[HeadLen] = pR[HeadLen]) do
-    Inc(HeadLen);
-
-  pL += HeadLen;
-  pR += HeadLen;
-  aLenL -= HeadLen;
-  aLenR -= HeadLen;
+  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
+  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
 
   if aLenL = 0 then
     begin
-      System.SetLength(Result, HeadLen + TailLen);
-      System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
-      System.Move((pL + aLenL)^, Result[HeadLen], TailLen);
+      System.SetLength(Result, PrefixLen + SuffixLen);
+      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
       exit;
     end;
 
@@ -708,16 +708,15 @@ begin
   LocLcs.EnsureCapacity(aLenL);
 
   ProcessLcs;
+  Buf := nil;
 
-  MidLen := LocLcs.Count;
-
-  System.SetLength(Result, HeadLen + MidLen + TailLen);
+  System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
   if Result = nil then exit;
 
-  if MidLen > 0 then
-    System.Move(LocLcs.UncMutable[0]^, Result[HeadLen], MidLen);
-  System.Move((pL - HeadLen)^, Pointer(Result)^, HeadLen);
-  System.Move((pL + aLenL)^, Result[HeadLen + MidLen], TailLen);
+  if LocLcs.NonEmpty then
+    System.Move(LocLcs.UncMutable[0]^, Result[PrefixLen], LocLcs.Count);
+  System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+  System.Move((pL + aLenL)^, Result[PrefixLen + LocLcs.Count], SuffixLen);
 end;
 {$POP}
 
@@ -758,25 +757,12 @@ begin
   if pL = pR then
     exit(aLenR - aLenL);
 
-  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-    end;
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
 
-  I := 0;
-  while (I < aLenL) and (pL^ = pR^) do
-    begin
-      Inc(pL);
-      Inc(pR);
-      Inc(I);
-    end;
+  if aLenL = 0 then
+    exit(aLenR);
 
-  if I = aLenL then
-    exit(aLenR - I);
-
-  aLenL -= I;
-  aLenR -= I;
 
   if aLenR < MAX_STATIC then
     Dist := @StBuf[0]
@@ -885,25 +871,11 @@ begin
   if pL = pR then
     exit(aLenR - aLenL);
 
-  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-    end;
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
 
-  I := 0;
-  while (I < aLenL) and (pL^ = pR^) do
-    begin
-      Inc(pL);
-      Inc(pR);
-      Inc(I);
-    end;
-
-  if I = aLenL then
-    exit(aLenR - I);
-
-  aLenL -= I;
-  aLenR -= I;
+  if aLenL = 0 then
+    exit(aLenR);
 
   if aLimit > aLenR then
     aLimit := aLenR;
@@ -1544,32 +1516,16 @@ begin
 end;
 
 function GetLevDistMyers(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
-var
-  I: SizeInt;
 begin
   //here aLenL <= aLenR
   if pL = pR then
     exit(aLenR - aLenL);
 
-  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-    end;
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
 
-  I := 0;
-  while (I < aLenL) and (pL^ = pR^) do
-    begin
-      Inc(pL);
-      Inc(pR);
-      Inc(I);
-    end;
-
-  if I = aLenL then
-    exit(aLenR - I);
-
-  aLenL -= I;
-  aLenR -= I;
+  if aLenL = 0 then
+    exit(aLenR);
 
   case aLenL of
     1..BitSizeOf(DWord):
@@ -1579,7 +1535,7 @@ begin
     BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
       Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
   else
-    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLenR);
+    Result := LevDistMyersDyn(pL, pR, aLenL, aLenR);
   end;
 end;
 
@@ -1610,64 +1566,39 @@ begin
 end;
 
 function GetLevDistMyers(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
-var
-  I: SizeInt;
 begin
   //here aLenL <= aLenR
-  if (aLimit >= 0) and (aLenR - aLenL > aLimit) then
+  if aLimit < 0 then
+    exit(GetLevDistMyers(pL, pR, aLenL, aLenR));
+
+  if aLenR - aLenL > aLimit then
     exit(NULL_INDEX);
 
   if pL = pR then
     exit(aLenR - aLenL);
 
-  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
-    begin
-      Dec(aLenL);
-      Dec(aLenR);
-    end;
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
 
-  I := 0;
-  while (I < aLenL) and (pL^ = pR^) do
-    begin
-      Inc(pL);
-      Inc(pR);
-      Inc(I);
-    end;
-
-  if I = aLenL then
-    exit(aLenR - I);
+  if aLenL = 0 then
+    exit(aLenR);
 
   if aLimit = 0 then  //////////
     exit(NULL_INDEX); //////////
 
-  aLenL -= I;
-  aLenR -= I;
-
   if aLimit > aLenR then
     aLimit := aLenR;
 
-  if aLimit > 0 then
-    case aLenL of
-      1..BitSizeOf(DWord):
-        Result := LevDistMyersD(pL, pR, aLenL, aLenR, aLimit);
-      BitSizeOf(DWord)+1..BitSizeOf(QWord):
-        Result := LevDistMyersQ(pL, pR, aLenL, aLenR, aLimit);
-      BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
-        Result := LevDistMyersDQ(pL, pR, aLenL, aLenR, aLimit);
-    else
-      Result := LevDistMyers(pL, pR, aLenL, aLenR, aLimit);
-    end
+  case aLenL of
+    1..BitSizeOf(DWord):
+      Result := LevDistMyersD(pL, pR, aLenL, aLenR, aLimit);
+    BitSizeOf(DWord)+1..BitSizeOf(QWord):
+      Result := LevDistMyersQ(pL, pR, aLenL, aLenR, aLimit);
+    BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+      Result := LevDistMyersDQ(pL, pR, aLenL, aLenR, aLimit);
   else
-    case aLenL of
-      1..BitSizeOf(DWord):
-        Result := LevDistMyersD(pL, pR, aLenL, aLenR);
-      BitSizeOf(DWord)+1..BitSizeOf(QWord):
-        Result := LevDistMyersQ(pL, pR, aLenL, aLenR);
-      BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
-        Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
-    else
-      Result := LevDistMyersDyn(pL, pR, aLenL, aLenR);
-    end;
+    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLimit);
+  end;
 end;
 
 function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
