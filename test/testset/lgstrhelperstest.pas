@@ -1143,6 +1143,8 @@ begin
   AssertTrue(LevDistance('aaaaaaa', 'bbbbbbbb') = 8);
   AssertTrue(LevDistWF('aaabbaaaa', 'aaaaaaa') = 2);
   AssertTrue(LevDistance('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(LevDistance('a', 'a') = 0);
+  AssertTrue(LevDistance('a', 'b') = 1);
 end;
 
 procedure TFunTest.LevenshteinDist2;
@@ -1182,6 +1184,8 @@ begin
   AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa') = 0);
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb') = 8);
   AssertTrue(LevDistanceMbr('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(LevDistanceMbr('a', 'a') = 0);
+  AssertTrue(LevDistanceMbr('a', 'b') = 1);
 end;
 
 procedure TFunTest.LevenshteinDistMbr2;
@@ -1246,6 +1250,8 @@ begin
   AssertTrue(LevDistanceMyers('aaaaaaa', 'aaaaaaa') = 0);
   AssertTrue(LevDistanceMyers('aaaaaaa', 'bbbbbbbb') = 8);
   AssertTrue(LevDistanceMyers('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(LevDistanceMyers('a', 'a') = 0);
+  AssertTrue(LevDistanceMyers('a', 'b') = 1);
 end;
 
 procedure TFunTest.LevenshteinDistMyersD2;
@@ -1445,6 +1451,9 @@ begin
   AssertTrue(LcsDp(s1, s2) = '');
   AssertTrue(LcsGus(s1, s2) = '');
 
+  AssertTrue(LcsGus('a', 'a') = 'a');
+  AssertTrue(LcsGus('a', 'b') = '');
+
   s1 := 'thisisatest';
   s2 := 'testing123testing';
   AssertTrue(LcsDp(s1, s2) = 'tsitest');
@@ -1487,6 +1496,9 @@ begin
   s1 := 'aa';
   AssertTrue(LcsDp(s1, s2) = '');
   AssertTrue(LcsKR(s1, s2) = '');
+
+  AssertTrue(LcsKR('a', 'a') = 'a');
+  AssertTrue(LcsKR('a', 'b') = '');
 
   s1 := 'thisisatest';
   s2 := 'testing123testing';
