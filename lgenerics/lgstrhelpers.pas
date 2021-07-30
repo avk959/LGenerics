@@ -336,12 +336,18 @@ type
   function LcsGus(const L, R: ansistring): ansistring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Kumar-Rangan LCS algorithm with space complexity O(n) and time complexity O(n(m-p)), where
+  uses Kumar-Rangan' algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
   m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed }
   function LcsKR(const L, R: ansistring): ansistring;
   function LcsKR(const L, R: array of Byte): TBytes;
+{ recursive, returns the longest common subsequence(LCS) of sequences L and R;
+  uses Myers' algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
+  n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
+  for L and R (d = m + n - 2*l, where l is the lenght of the LCS) }
+  function LcsMyers(const L, R: ansistring): ansistring;
+  function LcsMyers(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
-  algorithm with O(mn) time complexity, where n and m are the lengths of L and R respectively,
+  algorithm with O(mn) time complexity, where m and n are the lengths of L and R respectively,
   and O(Max(m, n)) space complexity }
   function LevDistance(const L, R: ansistring): SizeInt;
   function LevDistance(const L, R: array of Byte): SizeInt;
@@ -357,7 +363,7 @@ type
   immediately and returns -1 }
   function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
-{ returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
+{ returns the Levenshtein distance between L and R; uses the Myers' bit-vector algorithm
   with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
   d is edit distance computed, and w is the size of a computer word. }
   function LevDistanceMyers(const L, R: ansistring): SizeInt;
@@ -577,10 +583,17 @@ var
     end;
     R := Pred(J);
   end;
+  procedure Swap(var L, R: Pointer); inline;
+  var
+    Tmp: Pointer;
+  begin
+    Tmp := L;
+    L := R;
+    R := Tmp;
+  end;
   procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; DirectOrd: Boolean);
   var
     P: SizeInt;
-    Tmp: Pointer;
   begin
     if DirectOrd then
       S := Succ(LLast - LFirst)
@@ -590,9 +603,7 @@ var
     R := 0;
     while S >= P do begin
       FillOne(LFirst, RFirst, RLast, DirectOrd);
-      Tmp := R2;
-      R2 := R1;
-      R1 := Tmp;
+      Swap(R2, R1);
       Dec(S);
     end;
     System.Move(R1^, L^, Succ(R) * SizeOf(SizeInt));
@@ -647,17 +658,13 @@ var
     end;
   end;
   function GetLcsLen: SizeInt;
-  var
-    Tmp: Pointer;
   begin
     R := 0;
     S := Succ(aLenL);
     while S > R do begin
       Dec(S);
       FillOne(0, 0, Pred(aLenR), True);
-      Tmp := R2;
-      R2 := R1;
-      R1 := Tmp;
+      Swap(R2, R1);
     end;
     Result := S;
   end;
@@ -743,6 +750,197 @@ begin
     Result := LcsKrImpl(@L[0], @R[0], System.Length(L), System.Length(R))
   else
     Result := LcsKrImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+end;
+
+type
+  TSnake = record
+    StartRow, StartCol,
+    EndRow, EndCol: SizeInt;
+    procedure SetStartCell(aRow, aCol: SizeInt); inline;
+    procedure SetEndCell(aRow, aCol: SizeInt); inline;
+  end;
+
+procedure TSnake.SetStartCell(aRow, aCol: SizeInt);
+begin
+  StartRow := aRow;
+  StartCol := aCol;
+end;
+
+procedure TSnake.SetEndCell(aRow, aCol: SizeInt);
+begin
+  EndRow := aRow;
+  EndCol := aCol;
+end;
+
+{$PUSH}{$WARN 5089 OFF}{$WARN 5037 OFF}
+function LcsMyersImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
+type
+  TByteVector = specialize TGLiteVector<Byte>;
+var
+  LocLcs: TByteVector;
+  V0, V1: PSizeInt;
+  function FindMiddleShake(LFirst, LLast, RFirst, RLast: SizeInt; out aSnake: TSnake): SizeInt;
+  var
+    LenL, LenR, Delta, Mid, D, K, Row, Col: SizeInt;
+    ForV, RevV: PSizeInt;
+    OddDelta: Boolean;
+  begin
+    LenL := Succ(LLast - LFirst);
+    LenR := Succ(RLast - RFirst);
+    Delta := LenL - LenR;
+    OddDelta := Odd(Delta);
+    Mid := (LenL + LenR) div 2 + Ord(OddDelta);
+    ForV := @V0[Succ(Mid)];
+    RevV := @V1[Succ(Mid)];
+    ForV[1] := 0;
+    RevV[1] := 0;
+    for D := 0 to Mid do
+      begin
+        K := -D;
+        while K <= D do
+          begin
+            if (K = -D) or ((K <> D) and (ForV[K - 1] < ForV[K + 1])) then
+              Row := ForV[K + 1]
+            else
+              Row := ForV[K - 1] + 1;
+            Col := Row - K;
+            aSnake.SetStartCell(LFirst + Row, RFirst + Col);
+            while (Row < LenL) and (Col < LenR) and (pL[LFirst + Row] = pR[RFirst + Col]) do
+              begin
+                Inc(Row);
+                Inc(Col);
+              end;
+            ForV[K] := Row;
+            if OddDelta and (K >= Delta - D + 1) and (K <= D + Delta - 1) and
+               (Row + RevV[Delta - K] >= LenL)  then
+                begin
+                  aSnake.SetEndCell(LFirst + Row, RFirst + Col);
+                  exit(Pred(D * 2));
+                end;
+            K += 2;
+          end;
+
+        K := -D;
+
+        while K <= D do
+          begin
+            if (K = -D) or ((K <> D) and (RevV[K - 1] < RevV[K + 1])) then
+              Row := RevV[K + 1]
+            else
+              Row := RevV[K - 1] + 1;
+            Col := Row - K;
+            aSnake.SetEndCell(Succ(LLast - Row), Succ(RLast - Col));
+            while (Row < LenL) and (Col < LenR) and (pL[LLast-Row] = pR[RLast-Col]) do
+              begin
+                Inc(Row);
+                Inc(Col);
+              end;
+            RevV[K] := Row;
+            if not OddDelta and (K <= D + Delta) and (K >= Delta - D) and
+              (Row + ForV[Delta - K] >= LenL) then
+                begin
+                  aSnake.SetStartCell(Succ(LLast - Row), Succ(RLast - Col));
+                  exit(D * 2);
+                end;
+            K += 2;
+          end;
+      end;
+    raise Exception.Create('Internal error in ' + {$I %CURRENTROUTINE%});
+    Result := NULL_INDEX;
+  end;
+  procedure Lcs(LFirst, LLast, RFirst, RLast: SizeInt);
+  var
+    Snake: TSnake;
+    I: SizeInt;
+  begin
+    if (LLast < LFirst) or (RLast < RFirst) then exit;
+    if FindMiddleShake(LFirst, LLast, RFirst, RLast, Snake) > 1 then
+      begin
+        Lcs(LFirst, Pred(Snake.StartRow), RFirst, Pred(Snake.StartCol));
+        for I := Snake.StartRow to Pred(Snake.EndRow) do
+          LocLcs.Add(pL[I]);
+        Lcs(Snake.EndRow, LLast, Snake.EndCol, RLast);
+      end
+    else
+      if LLast - LFirst < RLast - RFirst then
+        for I := LFirst to LLast do
+          LocLcs.Add(pL[I])
+      else
+        for I := RFirst to RLast do
+          LocLcs.Add(pR[I]);
+  end;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt;
+  PrefixLen, SuffixLen: SizeInt;
+begin
+  //here aLenL <= aLenR
+  Result := nil;
+
+  if pL = pR then
+    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
+
+  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
+  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    begin
+      System.SetLength(Result, PrefixLen + SuffixLen);
+      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
+      exit;
+    end;
+
+  if MAX_STATIC >= (aLenL+aLenR+2)*2 then
+    begin
+      V0 := @StBuf[0];
+      V1 := @StBuf[(aLenL+aLenR+2)];
+    end
+  else
+    begin
+      System.SetLength(Buf, (aLenL+aLenR+2)*2);
+      V0 := @Buf[0];
+      V1 := @Buf[(aLenL+aLenR+2)];
+    end;
+
+  LocLcs.EnsureCapacity(aLenL);
+
+  Lcs(0, Pred(aLenL), 0, Pred(aLenR));
+  Buf := nil;
+
+  System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
+  if Result = nil then exit;
+
+  if LocLcs.NonEmpty then
+    System.Move(LocLcs.UncMutable[0]^, Result[PrefixLen], LocLcs.Count);
+  System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
+  System.Move((pL + aLenL)^, Result[PrefixLen + LocLcs.Count], SuffixLen);
+end;
+{$POP}
+
+function LcsMyers(const L, R: ansistring): ansistring;
+var
+  b: TBytes;
+begin
+  Result := '';
+  if (L = '') or (R = '') then
+    exit;
+  if System.Length(L) <= System.Length(R) then
+    b := LcsMyersImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+  else
+    b := LcsMyersImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+  System.SetLength(Result, System.Length(b));
+  System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
+end;
+
+function LcsMyers(const L, R: array of Byte): TBytes;
+begin
+  if (System.Length(L) = 0) or (System.Length(R) = 0) then
+    exit(nil);
+  if System.Length(L) <= System.Length(R) then
+    Result := LcsMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := LcsMyersImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
 function LevDistanceDpImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
