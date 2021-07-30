@@ -77,6 +77,7 @@ type
    procedure LevenshteinDistMyersLongBounded2;
    procedure LcsGusTest;
    procedure LcsKRTest;
+   procedure LcsMyersTest;
  end;
 
 implementation
@@ -1524,6 +1525,52 @@ begin
           AssertTrue(Length(Lcs) = Length(LcsK));
           AssertTrue(IsSubSequence(TestWords[I], LcsK));
           AssertTrue(IsSubSequence(TestWords[I+1], LcsK));
+        end;
+      I += 2;
+    end;
+end;
+
+procedure TFunTest.LcsMyersTest;
+var
+  s1: string = '';
+  s2: string = '';
+  Lcs, LcsM: string;
+  I: Integer = 0;
+begin
+  AssertTrue(LcsDp(s1, s2) = '');
+  AssertTrue(LcsMyers(s1, s2) = '');
+
+  s1 := 'aa';
+  AssertTrue(LcsDp(s1, s2) = '');
+  AssertTrue(LcsMyers(s1, s2) = '');
+
+  AssertTrue(LcsKR('a', 'a') = 'a');
+  AssertTrue(LcsMyers('a', 'b') = '');
+
+  s1 := 'thisisatest';
+  s2 := 'testing123testing';
+  AssertTrue(LcsDp(s1, s2) = 'tsitest');
+  AssertTrue(LcsMyers(s1, s2) = 'tsitest');
+
+  s1 := '1234';
+  s2 := '1224533324';
+  AssertTrue(LcsDp(s1, s2) = '1234');
+  AssertTrue(LcsMyers(s1, s2) = '1234');
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  AssertTrue(LcsDp(s1, s2) = '01236789');
+  AssertTrue(LcsMyers(s1, s2) = '01236789');
+
+  while I < High(TestWords) do
+    begin
+      Lcs := LcsDp(TestWords[I], TestWords[I+1]);
+      LcsM := LcsMyers(TestWords[I], TestWords[I+1]);
+      if Lcs <> LcsM then
+        begin
+          AssertTrue(Length(Lcs) = Length(LcsM));
+          AssertTrue(IsSubSequence(TestWords[I], LcsM));
+          AssertTrue(IsSubSequence(TestWords[I+1], LcsM));
         end;
       I += 2;
     end;
