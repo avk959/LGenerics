@@ -78,6 +78,8 @@ type
    procedure LcsGusTest;
    procedure LcsKRTest;
    procedure LcsMyersTest;
+   procedure SimRatioLevTest;
+   procedure SimRatioLevExTest;
  end;
 
 implementation
@@ -1574,6 +1576,35 @@ begin
         end;
       I += 2;
     end;
+end;
+
+const
+  DblOne  = Double(1.0);
+  DblZero = Double(0.0);
+
+procedure TFunTest.SimRatioLevTest;
+begin
+  AssertTrue(SameValue(SimRatioLev('', ''), DblOne));
+  AssertTrue(SameValue(SimRatioLev('aaa', ''), DblZero));
+  AssertTrue(SameValue(SimRatioLev('', 'bbb'), DblZero));
+  AssertTrue(SameValue(SimRatioLev('aaa', 'bbb'), DblZero));
+  AssertTrue(SameValue(SimRatioLev('abc', 'abc'), DblOne));
+end;
+
+procedure TFunTest.SimRatioLevExTest;
+begin
+  AssertTrue(SameValue(SimRatioLevEx('', ''), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('aaa', ''), DblZero));
+  AssertTrue(SameValue(SimRatioLevEx('', 'bbb'), DblZero));
+  AssertFalse(SameValue(SimRatioLevEx('Hello world', ' Hello world ', []), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('Hello world', ' Hello world ', [' ']), DblOne));
+  AssertFalse(SameValue(SimRatioLevEx('Hello world', ' hello world ', [' ']), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('Hello world', ' hello world ', [' '], [soIgnoreCase]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('Hello world', 'another Hello world ', [' '], [soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('Hello, world!', ' hello world ', [' ',',','!'], [soIgnoreCase]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('World hello', ' Hello world ', [' '], [soIgnoreCase, soWordSort]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('World hello', ' Hello world, hello', [' ',','], [soIgnoreCase, soWordSet]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', [' ',','], [soIgnoreCase, soWordSet, soPartial]), DblOne));
 end;
 
 initialization
