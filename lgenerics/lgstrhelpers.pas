@@ -22,6 +22,7 @@ unit lgStrHelpers;
 {$mode objfpc}{$H+}
 {$MODESWITCH TYPEHELPERS}
 {$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
 {$INLINE ON}
 
 interface
@@ -343,7 +344,7 @@ type
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
   uses Myers' algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
   n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
-  for L and R (d = m + n - 2*l, where l is the lenght of the LCS) }
+  for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
   function LcsMyers(const L, R: ansistring): ansistring;
   function LcsMyers(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
@@ -356,16 +357,16 @@ type
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
   worst-case time complexity, where n and m are the lengths of L and R respectively
   and d is the edit distance computed }
-  function LevDistanceMBR(const L, R: ansistring): SizeInt;
-  function LevDistanceMBR(const L, R: array of Byte): SizeInt;
+  function LevDistanceMbr(const L, R: ansistring): SizeInt;
+  function LevDistanceMbr(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1 }
-  function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
-  function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+  function LevDistanceMbr(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+  function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Levenshtein distance between L and R; uses the Myers' bit-vector algorithm
   with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
-  d is edit distance computed, and w is the size of a computer word. }
+  d is edit distance computed, and w is the size of a computer word }
   function LevDistanceMyers(const L, R: ansistring): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
@@ -373,6 +374,30 @@ type
   immediately and returns -1; if aLimit < 0 it will be computed dynamically }
   function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+
+{ similarity ratio using Levenshtein distance }
+  function SimRatioLev(const L, R: ansistring): Double;
+  function SimRatioLev(const L, R: array of Byte): Double;
+
+type
+  TSimOption  = (
+    soWordSort,  // lexicographic sorting of words is required
+    soWordSet,   // lexicographic sorting of words with discarding of non-unique words is required
+    soPartial,   // maximum similarity is required when alternately comparing a shorter
+                 // string with all parts of the same length of a longer string
+    soIgnoreCase);
+
+  TStrSimOptions = set of TSimOption;
+
+const
+  DEF_STOP_CHARS = [#0..#32];
+
+{ similarity ratio using Levenshtein distance with some conditional transformations of the input data;
+  partly inspired by FuzzyWuzzy }
+  function SimRatioLevEx(const L, R: ansistring;
+                         const aStopChars: TSysCharSet = DEF_STOP_CHARS;
+                         const aOptions: TStrSimOptions = []): Double;
+
 
   function IsValidDotQuadIPv4(const s: ansistring): Boolean;
   function IsValidDotDecIPv4(const s: ansistring): Boolean;
@@ -404,7 +429,7 @@ function SkipSuffix(pL, pR: PByte; var aLenL, aLenR: SizeInt): SizeInt; inline;
 begin
   //implied aLenL <= aLenR
   Result := 0;
-  while (aLenL >= 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
+  while (aLenL > 0) and (pL[Pred(aLenL)] = pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
@@ -668,10 +693,6 @@ var
     end;
     Result := S;
   end;
-  procedure ProcessLcs;
-  begin
-    Lcs(0, Pred(aLenL), 0, Pred(aLenR), GetLcsLen());
-  end;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt;
@@ -714,7 +735,7 @@ begin
 
   LocLcs.EnsureCapacity(aLenL);
 
-  ProcessLcs;
+  Lcs(0, Pred(aLenL), 0, Pred(aLenR), GetLcsLen());
   Buf := nil;
 
   System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
@@ -773,6 +794,9 @@ begin
 end;
 
 {$PUSH}{$WARN 5089 OFF}{$WARN 5037 OFF}
+{
+  Eugene W. Myers(1986) "An O(ND) Difference Algorithm and Its Variations"
+}
 function LcsMyersImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
 type
   TByteVector = specialize TGLiteVector<Byte>;
@@ -811,8 +835,8 @@ var
                 Inc(Col);
               end;
             ForV[K] := Row;
-            if OddDelta and (K >= Delta - D + 1) and (K <= D + Delta - 1) and
-               (Row + RevV[Delta - K] >= LenL)  then
+            if OddDelta and (K >= Delta - D + 1) and (K <= Delta + D - 1) and
+               (Row + RevV[Delta - K] >= LenL) then
                 begin
                   aSnake.SetEndCell(LFirst + Row, RFirst + Col);
                   exit(Pred(D * 2));
@@ -821,7 +845,6 @@ var
           end;
 
         K := -D;
-
         while K <= D do
           begin
             if (K = -D) or ((K <> D) and (RevV[K - 1] < RevV[K + 1])) then
@@ -1170,7 +1193,7 @@ begin
   Result := Dist;
 end;
 
-function LevDistanceMBR(const L, R: ansistring): SizeInt;
+function LevDistanceMbr(const L, R: ansistring): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -1183,7 +1206,7 @@ begin
     Result := LevDistanceMbrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function LevDistanceMBR(const L, R: array of Byte): SizeInt;
+function LevDistanceMbr(const L, R: array of Byte): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -1196,7 +1219,7 @@ begin
     Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function LevDistanceMBR(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+function LevDistanceMbr(const L, R: ansistring; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
@@ -1217,7 +1240,7 @@ begin
     Result := LevDistanceMbrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
 end;
 
-function LevDistanceMBR(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
@@ -1280,7 +1303,7 @@ end;
 function LevDistMyersD(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 var
   Pm: array[Byte] of DWord;
-  PmI, HPos, HNeg, VPos, VNeg, D0: DWord;
+  PmI, Hp, Hn, Vp, Vn, D0: DWord;
   I: SizeInt;
 begin
   System.FillChar(Pm, SizeOf(Pm), 0);
@@ -1289,22 +1312,22 @@ begin
 
   Result := aLenL;
   aLimit += aLenR - aLenL;
-  VNeg := 0;
-  VPos := High(DWord);
+  Vn := 0;
+  Vp := High(DWord);
 
   for I := 0 to Pred(aLenR) do
     begin
       PmI := Pm[pR[I]];
-      D0 := (((PmI and VPos) + VPos) xor VPos) or PmI or VNeg;
-      HPos := VNeg or not(D0 or VPos);
-      HNeg := D0 and VPos;
-      VPos := HNeg shl 1 or not(D0 or HPos shl 1 or 1);
-      VNeg := D0 and (HPos shl 1 or 1);
-      if HNeg and (QWord(1) shl Pred(aLenL)) <> 0 then
+      D0 := (((PmI and Vp) + Vp) xor Vp) or PmI or Vn;
+      Hp := Vn or not(D0 or Vp);
+      Hn := D0 and Vp;
+      Vp := Hn shl 1 or not(D0 or Hp shl 1 or 1);
+      Vn := D0 and (Hp shl 1 or 1);
+      if Hn and (DWord(1) shl Pred(aLenL)) <> 0 then
         Dec(Result)
       else
         begin
-          if HPos and (QWord(1) shl Pred(aLenL)) <> 0 then
+          if Hp and (DWord(1) shl Pred(aLenL)) <> 0 then
             begin
               Inc(Result);
               aLimit -= 2;
@@ -1350,7 +1373,7 @@ end;
 function LevDistMyersQ(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 var
   Pm: array[Byte] of QWord;
-  PmI, HPos, HNeg, VPos, VNeg, D0: QWord;
+  PmI, Hp, Hn, Vp, Vn, D0: QWord;
   I: SizeInt;
 begin
   System.FillChar(Pm, SizeOf(Pm), 0);
@@ -1359,22 +1382,22 @@ begin
 
   Result := aLenL;
   aLimit += aLenR - aLenL;
-  VNeg := 0;
-  VPos := High(QWord);
+  Vn := 0;
+  Vp := High(QWord);
 
   for I := 0 to Pred(aLenR) do
     begin
       PmI := Pm[pR[I]];
-      D0 := (((PmI and VPos) + VPos) xor VPos) or PmI or VNeg;
-      HPos := VNeg or not(D0 or VPos);
-      HNeg := D0 and VPos;
-      VPos := HNeg shl 1 or not(D0 or HPos shl 1 or 1);
-      VNeg := D0 and (HPos shl 1 or 1);
-      if HNeg and (QWord(1) shl Pred(aLenL)) <> 0 then
+      D0 := (((PmI and Vp) + Vp) xor Vp) or PmI or Vn;
+      Hp := Vn or not(D0 or Vp);
+      Hn := D0 and Vp;
+      Vp := Hn shl 1 or not(D0 or Hp shl 1 or 1);
+      Vn := D0 and (Hp shl 1 or 1);
+      if Hn and (QWord(1) shl Pred(aLenL)) <> 0 then
         Dec(Result)
       else
         begin
-          if HPos and (QWord(1) shl Pred(aLenL)) <> 0 then
+          if Hp and (QWord(1) shl Pred(aLenL)) <> 0 then
             begin
               Inc(Result);
               aLimit -= 2;
@@ -1548,7 +1571,8 @@ type
 
 procedure CreatePeq(aSeq: PByte; aSeqLen, AlphabetSize: SizeInt; out aPeq: TPeq);
 var
-  I, J, BCount, LastRow, Pad: SizeInt;
+  I, J, BCount, LastRow: SizeInt;
+  Pad: QWord;
 begin
   LastRow := aSeqLen and BSIZE_MASK;
   BCount := aSeqLen shr BSIZE_LOG + Ord(LastRow <> 0);
@@ -1581,8 +1605,8 @@ type
   end;
 
 {
-  with some imrovements from:
-  Martin Šošić, Mile Šikić, "Edlib: a C/C 11 library for fast, exact sequence alignment using edit distance"
+  with some imrovements from Martin Šošić, Mile Šikić:
+    "Edlib: a C/C 11 library for fast, exact sequence alignment using edit distance"
 }
 function LevDistMyersCutoff(const aPeq: TPeq; pR: PByte; aLenL, aLenR, K: SizeInt): SizeInt;
   function ReadBlockCell(const aBlock: TBlock; aIndex: SizeInt): SizeInt;
@@ -1835,6 +1859,176 @@ begin
     Result := GetLevDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
     Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+end;
+
+function SimRatioLev(const L, R: ansistring): Double;
+var
+  MaxLen: SizeInt;
+begin
+  if (L = '') and (R = '') then
+    exit(Double(1.0));
+  MaxLen := Math.Max(System.Length(L), System.Length(R));
+  Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
+end;
+
+function SimRatioLev(const L, R: array of Byte): Double;
+var
+  MaxLen: SizeInt;
+begin
+  if (System.Length(L) = 0) and (System.Length(R) = 0) then
+    exit(Double(1.0));
+  MaxLen := Math.Max(System.Length(L), System.Length(R));
+  Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
+end;
+
+function SimRatioLevEx(const L, R: ansistring; const aStopChars: TSysCharSet;
+  const aOptions: TStrSimOptions): Double;
+type
+  TWord   = record Start, Len: SizeInt end;
+  THelper = specialize TGNestedArrayHelper<TWord>;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of TWord;
+  function Transform(const s: ansistring): ansistring;
+  var
+    p: PAnsiChar absolute s;
+    function Less(const L, R: TWord): Boolean;
+    var
+      c: Integer;
+    begin
+      c := CompareMemRange(@p[L.Start], @p[R.Start], Math.Min(L.Len, R.Len));
+      if c = 0 then
+        exit(L.Len < R.Len);
+      Less := c < 0;
+    end;
+    function Equal(const L, R: TWord): Boolean;
+    begin
+      if L.Len <> R.Len then exit(False);
+      Result := CompareMemRange(@p[L.Start], @p[R.Start], L.Len) = 0;
+    end;
+  var
+    Words: ^TWord;
+    r: ansistring;
+    I, J, PartCount, CurrLen, CurrStart: SizeInt;
+    pr: PAnsiChar;
+    Buf: array of TWord;
+  begin
+    if System.Length(s) div 2 + System.Length(s) and 1 <= MAX_STATIC then
+      Words := @StBuf[0]
+    else
+      begin
+        System.SetLength(Buf, System.Length(s) div 2 + System.Length(s) and 1);
+        Words := Pointer(Buf);
+      end;
+
+    CurrLen := 0;
+    PartCount := 0;
+    for I := 0 to Pred(System.Length(s)) do
+      if p[I] in aStopChars then
+        begin
+          if CurrLen <> 0 then
+            begin
+              Words[PartCount].Start := CurrStart;
+              Words[PartCount].Len := CurrLen;
+              CurrLen := 0;
+              Inc(PartCount);
+            end;
+        end
+      else
+        begin
+          if CurrLen = 0 then
+            CurrStart := I;
+          Inc(CurrLen);
+        end;
+    if CurrLen <> 0 then
+      begin
+        Words[PartCount].Start := CurrStart;
+        Words[PartCount].Len := CurrLen;
+        Inc(PartCount);
+      end;
+
+    if soWordSet in aOptions then
+      begin
+        THelper.Sort(Words[0..Pred(PartCount)], @Less);
+
+        System.SetLength(r, System.Length(s));
+        pr := Pointer(r);
+        CurrLen := 0;
+        I := 0;
+        while I < PartCount do
+          begin
+            CurrLen += Words[I].Len;
+            for J := 0 to Pred(Words[I].Len) do
+              pr[J] := p[Words[I].Start + J];
+            pr += Words[I].Len;
+            J := Succ(I);
+            while (J < PartCount) and Equal(Words[I], Words[J]) do
+              Inc(J);
+            I := J;
+          end;
+        System.SetLength(r, CurrLen);
+      end
+    else
+      begin
+        if soWordSort in aOptions then
+          THelper.Sort(Words[0..Pred(PartCount)], @Less);
+
+        System.SetLength(r, System.Length(s));
+        pr := Pointer(r);
+        CurrLen := 0;
+        for I := 0 to Pred(PartCount) do
+          begin
+            CurrLen += Words[I].Len;
+            for J := 0 to Pred(Words[I].Len) do
+              pr[J] := p[Words[I].Start + J];
+            pr += Words[I].Len;
+          end;
+        System.SetLength(r, CurrLen);
+      end;
+
+    Transform := r;
+  end;
+var
+  s, LocL, LocR: ansistring;
+  I, MinLen, MaxLen: SizeInt;
+begin
+  if soIgnoreCase in aOptions then
+    begin
+      LocL := Transform(AnsiUpperCase(L));
+      LocR := Transform(AnsiUpperCase(R));
+    end
+  else
+    begin
+      LocL := Transform(L);
+      LocR := Transform(R);
+    end;
+
+  if LocL = '' then
+    if LocR = '' then
+      exit(Double(1.0))
+    else
+      exit(0.0)
+  else
+    if LocR = '' then
+      exit(0.0);
+
+  if soPartial in aOptions then
+    begin
+      MinLen := Math.Min(System.Length(LocL), System.Length(LocR));
+      MaxLen := Math.Max(System.Length(LocL), System.Length(LocR));
+      if System.Length(LocR) < System.Length(LocL) then
+        begin
+          s := LocL;
+          LocL := LocR;
+          LocR := s;
+        end;
+      Result := Double(0.0);
+      for I := 0 to MaxLen - MinLen do
+        Result := Math.Max(Result,
+          SimRatioLev(PByte(LocL)[0..Pred(System.Length(LocL))],
+                      PByte(LocR)[I..I+Pred(System.Length(LocL))]));
+    end
+  else
+    Result := SimRatioLev(LocL, LocR);
 end;
 
 {$PUSH}{$WARN 5036 OFF}
