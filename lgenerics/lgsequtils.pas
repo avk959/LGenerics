@@ -174,8 +174,8 @@ type
   for the correctness and normalization of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: ansistring): Boolean;
   function LevDistanceUtf8(const L, R: ansistring): SizeInt;
-  function LevDistanceMBRUtf8(const L, R: ansistring): SizeInt;
-  function LevDistanceMBRUtf8(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+  function LevDistanceMbrUtf8(const L, R: ansistring): SizeInt;
+  function LevDistanceMbrUtf8(const L, R: ansistring; aLimit: SizeInt): SizeInt;
   function LcsGusUtf8(const L, R: ansistring): ansistring;
 
 implementation
@@ -424,7 +424,7 @@ class function TGSeqUtil.SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): S
 begin
   //implied aLenL <= aLenR
   Result := 0;
-  while (aLenL >= 0) and TEqRel.Equal(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
+  while (aLenL > 0) and TEqRel.Equal(pL[Pred(aLenL)], pR[Pred(aLenR)]) do
     begin
       Dec(aLenL);
       Dec(aLenR);
@@ -1092,7 +1092,7 @@ begin
   Result := TChar32Util.LevDistance(pL, pR, LenL, LenR);
 end;
 
-function LevDistanceMBRUtf8(const L, R: ansistring): SizeInt;
+function LevDistanceMbrUtf8(const L, R: ansistring): SizeInt;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
@@ -1125,7 +1125,7 @@ begin
   Result := TChar32Util.LevDistanceMBR(pL, pR, LenL, LenR);
 end;
 
-function LevDistanceMBRUtf8(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+function LevDistanceMbrUtf8(const L, R: ansistring; aLimit: SizeInt): SizeInt;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
