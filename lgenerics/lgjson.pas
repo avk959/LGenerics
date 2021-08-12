@@ -2861,7 +2861,7 @@ begin
     exit;
   Clear;
   case aNode.Kind of
-    jvkUnknown: Clear;
+    jvkUnknown: ;
     jvkNull:    AsNull;
     jvkFalse:   AsBoolean := False;
     jvkTrue:    AsBoolean := True;
