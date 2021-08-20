@@ -4250,8 +4250,6 @@ end;
 function TryPChar2DoubleDef(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
-const
-  INF_EXP = QWord($7ff0000000000000);
 begin
   Val(p, aValue, Code);
   Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);

@@ -837,10 +837,10 @@ var
             ForV[K] := Row;
             if OddDelta and (K >= Delta - D + 1) and (K <= Delta + D - 1) and
                (Row + RevV[Delta - K] >= LenL) then
-                begin
-                  aSnake.SetEndCell(LFirst + Row, RFirst + Col);
-                  exit(Pred(D * 2));
-                end;
+              begin
+                aSnake.SetEndCell(LFirst + Row, RFirst + Col);
+                exit(Pred(D * 2));
+              end;
             K += 2;
           end;
 
@@ -861,10 +861,10 @@ var
             RevV[K] := Row;
             if not OddDelta and (K <= D + Delta) and (K >= Delta - D) and
               (Row + ForV[Delta - K] >= LenL) then
-                begin
-                  aSnake.SetStartCell(Succ(LLast - Row), Succ(RLast - Col));
-                  exit(D * 2);
-                end;
+              begin
+                aSnake.SetStartCell(Succ(LLast - Row), Succ(RLast - Col));
+                exit(D * 2);
+              end;
             K += 2;
           end;
       end;
@@ -1920,6 +1920,7 @@ var
         Words := Pointer(Buf);
       end;
 
+    CurrStart := 0;
     CurrLen := 0;
     PartCount := 0;
     for I := 0 to Pred(System.Length(s)) do
@@ -2006,10 +2007,10 @@ begin
     if LocR = '' then
       exit(Double(1.0))
     else
-      exit(0.0)
+      exit(Double(0.0))
   else
     if LocR = '' then
-      exit(0.0);
+      exit(Double(0.0));
 
   if soPartial in aOptions then
     begin
@@ -2533,7 +2534,7 @@ begin
   if FNeedle <> '' then
     Result.FHeap := s
   else
-   Result.FHeap := '';
+    Result.FHeap := '';
   Result.FMatcher := @Self;
 end;
 
@@ -2767,7 +2768,7 @@ begin
   if FNeedle <> '' then
     Result.FHeap := s
   else
-   Result.FHeap := '';
+    Result.FHeap := '';
   Result.FMatcher := @Self;
 end;
 
@@ -2992,7 +2993,7 @@ begin
   if FNeedle <> '' then
     Result.FHeap := s
   else
-   Result.FHeap := '';
+    Result.FHeap := '';
   Result.FMatcher := @Self;
 end;
 
