@@ -1012,7 +1012,7 @@ begin
 end;
 
 const
-{$PUSH}{$J-}
+{$PUSH}{$J-}{$WARN 2005 OFF}
   chOpenCurBr: AnsiChar  = '{';
   chClosCurBr: AnsiChar  = '}';
   chOpenSqrBr: AnsiChar  = '[';
@@ -3806,23 +3806,24 @@ begin
     jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
   end;
 end;
-
+{
+  A Pascal port of the Eisel-Lemire decimal-to-double approximation algorithm;
+  https://github.com/lemire/fast_double_parser
+}
 type
   TOWord = record
     Lo, Hi: QWord;
   end;
-
 {$PUSH}{$Q-}{$R-}{$J-}
 const
-  ELDBL_LOW_POWER  = -325;
-  ELDBL_HIGH_POWER = 308;
+  ELDBL_LOWEST_POWER  = -325;
+  ELDBL_HIGHEST_POWER = 308;
 
   TEN_POWER: array[0..22] of Double = (
     1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
     1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22);
 
-
-  EL_MANTIS_64: array[ELDBL_LOW_POWER..ELDBL_HIGH_POWER] of QWord = (
+  EL_MANTIS_64: array[ELDBL_LOWEST_POWER..ELDBL_HIGHEST_POWER] of QWord = (
     QWord($a5ced43b7e3e9188), QWord($cf42894a5dce35ea), QWord($818995ce7aa0e1b2), QWord($a1ebfb4219491a1f),
     QWord($ca66fa129f9b60a6), QWord($fd00b897478238d0), QWord($9e20735e8cb16382), QWord($c5a890362fddbc62),
     QWord($f712b443bbd52b7b), QWord($9a6bb0aa55653b2d), QWord($c1069cd4eabe89f8), QWord($f148440a256e2c76),
@@ -3983,7 +3984,7 @@ const
     QWord($baa718e68396cffd), QWord($e950df20247c83fd), QWord($91d28b7416cdd27e), QWord($b6472e511c81471d),
     QWord($e3d8f9e563a198e5), QWord($8e679c2f5e44ff8f));
 
-  EL_MANTIS_128: array[ELDBL_LOW_POWER..ELDBL_HIGH_POWER] of QWord = (
+  EL_MANTIS_128: array[ELDBL_LOWEST_POWER..ELDBL_HIGHEST_POWER] of QWord = (
     QWord($419ea3bd35385e2d), QWord($52064cac828675b9), QWord($7343efebd1940993), QWord($1014ebe6c5f90bf8),
     QWord($d41a26e077774ef6), QWord($8920b098955522b4), QWord($55b46e5f5d5535b0), QWord($eb2189f734aa831d),
     QWord($a5e9ec7501d523e4), QWord($47b233c92125366e), QWord($999ec0bb696e840a), QWord($c00670ea43ca250d),
@@ -4144,6 +4145,7 @@ const
     QWord($d30560258f54e6ba), QWord($47c6b82ef32a2069), QWord($4cdc331d57fa5441), QWord($e0133fe4adf8e952),
     QWord($58180fddd97723a6), QWord($570f09eaa7ea7648));
 
+
 procedure UMul64To128(const x, y: QWord; out aProd: TOWord);
 {$IF DEFINED(CPUX64)}{$ASMMODE INTEL} assembler; nostackframe;
 asm
@@ -4162,10 +4164,10 @@ end;
 asm
   mul   x3, x0, x1
   umulh x4, x0, x1
-  str   x3, [x2  ]
-  str   x4, [x2,8]
+  str   x3, [x2]
+  str   x4, [x2,#8]
 end;
-{$ELSE }
+{$ELSE}
 var
   p00, p01, mid: QWord;
 begin
@@ -4175,7 +4177,7 @@ begin
   aProd.Lo := mid shl 32 or DWord(p00);
   aProd.Hi := (x shr 32) * (y shr 32) + mid shr 32 + p01 shr 32;
 end;
-{$ENDIF CPUX64}
+{$ENDIF}
 
 function TryBuildDoubleEiselLemire(aMan: QWord; const aPow10: Int64; aNeg: Boolean; out aValue: Double): Boolean; inline;
 var
@@ -4206,7 +4208,7 @@ begin
     end;
 
   Exponent := SarInt64((152170 + 65536) * aPow10, 16) + 1024 + 63;
-  LzCount := Pred(BitSizeOf(QWord)) - ShortInt(BsrQWord(aMan));
+  LzCount := Pred(BitSizeOf(QWord)) - BsrQWord(aMan);
   aMan := aMan shl LzCount;
 
   UMul64To128(aMan, EL_MANTIS_64[aPow10], Prod);
@@ -4218,7 +4220,7 @@ begin
       UMul64To128(aMan, EL_MANTIS_128[aPow10], Prod);
       Mid := ProdLo + Prod.Hi;
       ProdHi += Ord(Mid < ProdLo);
-      if(Mid + 1 = 0)and(ProdHi and $1FF = $1FF)and(Prod.Lo + aMan < Prod.Lo)then
+      if(Succ(Mid) = 0)and(ProdHi and $1FF = $1FF)and(Prod.Lo + aMan < Prod.Lo)then
         exit(False);
       ProdLo := Mid;
     end;
@@ -4255,6 +4257,8 @@ begin
   Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
 end;
 
+{ TryPChar2DoubleFast is a relaxed decimal string-to-double parser;
+  it expects a valid null-terminated JSON number representation to be passed as the P parameter }
 function TryPChar2DoubleFast(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Man: QWord;
@@ -4265,74 +4269,90 @@ var
 const
   Decimals: array['0'..'9'] of QWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  if p^ = #0 then exit(False);
+  if p^ = #0 then
+    exit(False);
   pOld := p;
   IsNeg := False;
-  if p^ = '-' then begin
-    Inc(p);
-    IsNeg := True;
-  end;
-  if p^ = '0' then begin
-    Man := 0;
-    Inc(p);
-    pDigStart := p;
-  end else begin
-    pDigStart := p;
-    Man := Decimals[p^];
-    Inc(p);
-  end;
-  while p^ in ['0'..'9'] do begin
-    Man := Man * 10 + Decimals[p^];
-    Inc(p);
-  end;
-  Pow10 := 0;
-  if p^ = '.' then begin
-    Inc(p);
-    pTemp := p;
-    while p^ in ['0'..'9'] do begin
+  if p^ = '-' then
+    begin
+      Inc(p);
+      IsNeg := True;
+    end;
+  if p^ = '0' then
+    begin
+      Man := 0;
+      Inc(p);
+      pDigStart := p;
+    end
+  else
+    begin
+      pDigStart := p;
+      Man := Decimals[p^];
+      Inc(p);
+    end;
+  while p^ in ['0'..'9'] do
+    begin
       Man := Man * 10 + Decimals[p^];
       Inc(p);
     end;
-    Pow10 := pTemp - p;
-    DigCount := p - pDigStart - 1;
-  end else
+  Pow10 := 0;
+  if p^ = '.' then
+    begin
+      Inc(p);
+      pTemp := p;
+      while p^ in ['0'..'9'] do
+        begin
+          Man := Man * 10 + Decimals[p^];
+          Inc(p);
+        end;
+      Pow10 := pTemp - p;
+      DigCount := p - pDigStart - 1;
+    end
+  else
     DigCount := p - pDigStart;
-  if p^ in ['e', 'E'] then begin
-    PowIsNeg := False;
-    Inc(p);
-    if p^ = '-' then begin
-      PowIsNeg := True;
+  if p^ in ['e', 'E'] then
+    begin
+      PowIsNeg := False;
       Inc(p);
-    end else
-      if p^ = '+' then
-        Inc(p);
-    PowVal := Int64(Decimals[p^]);
-    Inc(p);
-    while p^ in ['0'..'9'] do begin
-      if PowVal < $100000000 then
-        PowVal := PowVal * 10 + Decimals[p^];
+      if p^ = '-' then
+        begin
+          PowIsNeg := True;
+          Inc(p);
+        end
+      else
+        if p^ = '+' then
+          Inc(p);
+      PowVal := Int64(Decimals[p^]);
       Inc(p);
+      while p^ in ['0'..'9'] do
+        begin
+          if PowVal < $100000000 then
+            PowVal := PowVal * 10 + Decimals[p^];
+          Inc(p);
+        end;
+      if PowIsNeg then
+        Pow10 -= PowVal
+      else
+        Pow10 += PowVal;
     end;
-    if PowIsNeg then Pow10 -= PowVal
-    else Pow10 += PowVal;
-  end;
-  if DigCount >= 19 then begin
-    pTemp := pDigStart;
-    while pTemp^ in ['0', '.'] do
-      Inc(pTemp);
-    DigCount -= pTemp - pDigStart;
-    if DigCount >= 19 then
-      exit(TryPChar2DoubleDef(pOld, aValue));
-  end;
-  if (Pow10 < ELDBL_LOW_POWER) or (Pow10 > ELDBL_HIGH_POWER) then
+  if DigCount >= 19 then
+    begin
+      pTemp := pDigStart;
+      while pTemp^ in ['0', '.'] do
+        Inc(pTemp);
+      DigCount -= pTemp - pDigStart;
+      if DigCount >= 19 then
+        exit(TryPChar2DoubleDef(pOld, aValue));
+    end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
     exit(TryPChar2DoubleDef(pOld, aValue));
-  if not TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
-    exit(TryPChar2DoubleDef(pOld, aValue));
-  Result := True;
+  if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
+    exit(True);
+  Result := TryPChar2DoubleDef(pOld, aValue);
 end;
 {$POP}
 
-{$PUSH}{$J-}
+{$PUSH}{$J-}{$WARN 2005 OFF}
 const
   StateTransitions: array[GO..N3, Space..Etc] of Integer = (
 {
@@ -4899,7 +4919,6 @@ end;
 function TJsonReader.NumValue: Boolean;
 var
   d: Double;
-  e: Integer;
 begin
   if ReadMode then
     begin
