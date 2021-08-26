@@ -4134,11 +4134,7 @@ end;
 
 class function TInt128.HashCode(const aValue: TInt128): SizeInt;
 begin
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-  Result := TxxHash32LE.HashBuf(@aValue.GetNormLimbs, SizeOf(aValue));
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := TxxHash32LE.HashGuid(TGuid(aValue.GetNormLimbs));
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
 function TInt128.Lo: QWord;
