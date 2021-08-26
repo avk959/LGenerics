@@ -4164,8 +4164,7 @@ end;
 asm
   mul   x3, x0, x1
   umulh x4, x0, x1
-  str   x3, [x2]
-  str   x4, [x2,#8]
+  stp   x3, x4, [x2]
 end;
 {$ELSE}
 var
