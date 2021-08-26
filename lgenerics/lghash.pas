@@ -23,6 +23,7 @@ unit lgHash;
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
 {$INLINE ON}
+{.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  for test purpose only}
 
 interface
 
@@ -30,7 +31,12 @@ type
 
   { TxxHash32LE: little endian implementation of Yann Collet's xxHash32 }
   TxxHash32LE = record
-    class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  private
+    class function HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
+  public
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+    class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
     class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
@@ -40,7 +46,12 @@ type
 
   { TxxHash64LE: little endian implementation of Yann Collet's xxHash64 }
   TxxHash64LE = record
-    class function HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord = 0): QWord; static;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  private
+    class function HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord = 0): QWord; static;
+  public
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+    class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord = 0): QWord; static;
     class function HashStr(const aValue: string; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
     class function HashDWord(aValue: DWord; aSeed: QWord = 0): QWord; static;
@@ -63,7 +74,12 @@ type
 
   { TMurmur2LE: little endian implementation of Austin Appleby's MurmurHash2 }
   TMurmur2LE = class(TMurmur)
-    class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  private
+    class function HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
+  public
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+    class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
     class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
@@ -73,7 +89,12 @@ type
 
   { TMurmur2aLE: little endian implementation of Austin Appleby's MurmurHash2A }
   TMurmur2aLE = class(TMurmur)
-    class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  private
+    class function HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
+  public
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+    class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
     class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
@@ -83,7 +104,12 @@ type
 
   { TMurmur3LE: little endian implementation of Austin Appleby's MurmurHash3_x86_32 }
   TMurmur3LE = class(TMurmur)
-    class function HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord; static;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  private
+    class function HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
+  public
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+    class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
     class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
@@ -93,7 +119,12 @@ type
 
   { TMurmur64aLE: little endian implementation of Austin Appleby's MurmurHash64A }
   TMurmur64aLE = class(TMurmur)
-    class function HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord = 0): QWord; static;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  private
+    class function HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord = 0): QWord; static;
+  public
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+    class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord = 0): QWord; static;
     class function HashStr(const aValue: string; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
     class function HashDWord(aValue: DWord; aSeed: QWord = 0): QWord; static;
@@ -105,12 +136,11 @@ type
   function JdkHash(aValue: DWord): DWord; inline;
   function JdkHashQ(aValue: QWord): DWord; inline;
   { FNV1A_JesteressM: slightly modified FNV1A_Hash_Jesteress from http://www.sanmayce.com/Fastest_Hash}
-  function FNV1A_JesteressM(aBuffer: Pointer; aCount: Integer; aSeed: DWord = 0): DWord;
+  function FNV1A_JesteressM(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord;
 
 implementation
 
 {$Q-}{$R-}{$B-}{$COPERATORS ON}{$MACRO ON}
-{.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  for test purpose only}
 
 function JdkHashW(aValue: Word): Word;
 begin
@@ -129,16 +159,16 @@ begin
   Result := JdkHash(aValue xor aValue shr 32);
 end;
 
-function FNV1A_JesteressM(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+function FNV1A_JesteressMUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   p: PByte absolute aBuffer;
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   buf: array[0..15] of DWord;
 begin
   Result := DWord(2166136261) + DWord(aCount) + aSeed;
   while aCount > Pred(SizeOf(buf)) do
     begin
-      System.Move(p^, buf{%H-}, SizeOf(buf));
+      System.Move(p^, buf, SizeOf(buf));
       Result := (Result xor (RolDWord(buf[ 0], 5) xor buf[ 1])) * DWord(709607);
       Result := (Result xor (RolDWord(buf[ 2], 5) xor buf[ 3])) * DWord(709607);
       Result := (Result xor (RolDWord(buf[ 4], 5) xor buf[ 5])) * DWord(709607);
@@ -152,7 +182,7 @@ begin
     end;
   if aCount <> 0 then
     begin
-      System.Move(p^, buf{%H-}, aCount);
+      System.Move(p^, buf, aCount);
       p := @buf;
       while aCount > 7 do
         begin
@@ -173,8 +203,18 @@ begin
       if aCount and 1 <> 0 then
         Result := (Result xor p^) * DWord(709607);
     end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
+  Result := Result xor Result shr 16;
+end;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+function FNV1A_JesteressM(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
+var
+  p: PByte absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 3 <> 0 then
+    exit(FNV1A_JesteressMUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := DWord(2166136261) + DWord(aCount) + aSeed;
   while aCount > 7 do
     begin
@@ -194,15 +234,14 @@ begin
     end;
   if aCount and 1 <> 0 then
     Result := (Result xor p^) * DWord(709607);
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := Result xor Result shr 16;
 end;
 
 {$DEFINE c1 := DWord($9e3779b1)}{$DEFINE c2 := DWord($85ebca77)}{$DEFINE c3 := DWord($c2b2ae3d)}
 {$DEFINE c4 := DWord($27d4eb2f)}{$DEFINE c5 := DWord($165667b1)}
 
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash32LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+class function TxxHash32LE.HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   v1, v2, v3, v4: DWord;
   buf: array[0..3] of DWord;
@@ -217,7 +256,7 @@ begin
       v4 := aSeed - c1;
       while aCount >= 16 do
         begin
-          System.Move(p^, buf{%H-}, 16);
+          System.Move(p^, buf, 16);
           v1 := RolDWord(v1 + buf[0] * c2, 13) * c1;
           v2 := RolDWord(v2 + buf[1] * c2, 13) * c1;
           v3 := RolDWord(v3 + buf[2] * c2, 13) * c1;
@@ -278,12 +317,17 @@ begin
   Result := (Result xor Result shr 13) * c3;
   Result :=  Result xor Result shr 16;
 end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash32LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+class function TxxHash32LE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   v1, v2, v3, v4: DWord;
   p: PDWord absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 3 <> 0 then
+    exit(HashBufUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := DWord(aCount);
   if aCount >= 16 then
     begin
@@ -346,7 +390,6 @@ begin
   Result := (Result xor Result shr 13) * c3;
   Result :=  Result xor Result shr 16;
 end;
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 class function TxxHash32LE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
@@ -402,8 +445,9 @@ end;
 {$DEFINE c1 := QWord($9e3779b185ebca87)}{$DEFINE c2 := QWord($c2b2ae3d27d4eb4f)}
 {$DEFINE c3 := QWord($165667b19e3779f9)}{$DEFINE c4 := QWord($85ebca77c2b2ae63)}
 {$DEFINE c5 := QWord($27d4eb2f165667c5)}{$DEFINE c6 := QWord($60ea27eeadc0b5d6)} //c1+c2
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash64LE.HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord): QWord;
+
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+class function TxxHash64LE.HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
 var
   v1, v2, v3, v4: QWord;
   buf: array[0..3] of QWord;
@@ -417,7 +461,7 @@ begin
       v4 := aSeed - c1;
       aSeed := QWord(aCount);
       repeat
-        System.Move(p^, buf{%H-}, 32);
+        System.Move(p^, buf, 32);
         v1 := RolQWord(v1 + c2 * buf[0], 31) * c1;
         v2 := RolQWord(v2 + c2 * buf[1], 31) * c1;
         v3 := RolQWord(v3 + c2 * buf[2], 31) * c1;
@@ -488,12 +532,17 @@ begin
   Result := (Result xor Result shr 29) * c3;
   Result :=  Result xor Result shr 32;
 end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash64LE.HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord): QWord;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+class function TxxHash64LE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
 var
   v1, v2, v3, v4: QWord;
   p: PByte absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 7 <> 0 then
+    exit(HashBufUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   if aCount >= 32 then
     begin
       v1 := aSeed + c6;//c1 + c2; due to #0036356
@@ -567,7 +616,6 @@ begin
   Result := (Result xor Result shr 29) * c3;
   Result :=  Result xor Result shr 32;
 end;
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 class function TxxHash64LE.HashStr(const aValue: string; aSeed: QWord): QWord;
 begin
@@ -600,7 +648,7 @@ begin
 end;
 
 {$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TxxHash64LE.HashGuid(constref aValue: TGuid; aSeed: QWord): QWord; inline;
+class function TxxHash64LE.HashGuid(const aValue: TGuid; aSeed: QWord): QWord; inline;
 begin
   Result := HashBuf(@aValue, SizeOf(aValue), aSeed);
 end;
@@ -619,8 +667,9 @@ end;
 { TMurmur2LE }
 
 {$DEFINE m32 := DWord($5bd1e995)}
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur2LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+class function TMurmur2LE.HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
   buf: array[0..3] of DWord;
@@ -629,7 +678,7 @@ begin
   Result := aSeed xor DWord(aCount);
   while aCount >= 16 do
     begin
-      System.Move(p^, buf{%H-}, 16);
+      System.Move(p^, buf, 16);
       k1 := buf[ 0] * m32;
       k2 := buf[ 1] * m32;
       k3 := buf[ 2] * m32;
@@ -678,12 +727,17 @@ begin
   Result := (Result xor Result shr 13) * m32;
   Result :=  Result xor Result shr 15;
 end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur2LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+class function TMurmur2LE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
   p: PDWord absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 3 <> 0 then
+    exit(HashBufUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := aSeed xor DWord(aCount);
   while aCount >= 16 do
     begin
@@ -736,7 +790,6 @@ begin
   Result := (Result xor Result shr 13) * m32;
   Result :=  Result xor Result shr 15;
 end;
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 class function TMurmur2LE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
@@ -786,8 +839,8 @@ end;
 
 { TMurmur2aLE }
 
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur2aLE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+class function TMurmur2aLE.HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
   buf: array[0..3] of DWord;
@@ -797,7 +850,7 @@ begin
   aSeed := DWord(aCount) * m32;
   while aCount >= 16 do
     begin
-      System.Move(p^, buf{%H-}, 16);
+      System.Move(p^, buf, 16);
       k1 := buf[0] * m32;
       k2 := buf[1] * m32;
       k3 := buf[2] * m32;
@@ -849,12 +902,17 @@ begin
   Result := (Result xor Result shr 13) * m32;
   Result :=  Result xor Result shr 15;
 end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur2aLE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+class function TMurmur2aLE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
   p: PDWord absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 3 <> 0 then
+    exit(HashBufUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := aSeed;
   aSeed := DWord(aCount) * m32;
   while aCount >= 16 do
@@ -911,7 +969,6 @@ begin
   Result := (Result xor Result shr 13) * m32;
   Result :=  Result xor Result shr 15;
 end;
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 class function TMurmur2aLE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
@@ -974,8 +1031,9 @@ end;
 
 {$DEFINE c1 := DWord($cc9e2d51)}{$DEFINE c2 := DWord($1b873593)}{$DEFINE c3 := DWord($e6546b64)}
 {$DEFINE c4 := DWord($85ebca6b)}{$DEFINE c5 := DWord($c2b2ae35)}
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur3LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+class function TMurmur3LE.HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
   buf: array[0..3] of DWord;
@@ -985,7 +1043,7 @@ begin
   aSeed := DWord(aCount);
   while aCount >= 16 do
     begin
-      System.Move(p^, buf{%H-}, 16);
+      System.Move(p^, buf, 16);
       k1 := RolDWord(buf[0] * c1, 15) * c2;
       k2 := RolDWord(buf[1] * c1, 15) * c2;
       k3 := RolDWord(buf[2] * c1, 15) * c2;
@@ -1036,12 +1094,17 @@ begin
   Result := (Result xor Result shr 13) * c5;
   Result :=  Result xor Result shr 16;
 end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur3LE.HashBuf(aBuffer: Pointer; aCount: Integer; aSeed: DWord): DWord;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+class function TMurmur3LE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
 var
   k1, k2, k3, k4: DWord;
   p: PDWord absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 3 <> 0 then
+    exit(HashBufUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := aSeed;
   aSeed := DWord(aCount);
   while aCount >= 16 do
@@ -1095,7 +1158,6 @@ begin
   Result := (Result xor Result shr 13) * c5;
   Result := Result xor Result shr 16;
 end;
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 class function TMurmur3LE.HashStr(const aValue: string; aSeed: DWord): DWord;
 begin
@@ -1145,13 +1207,14 @@ begin
   Result := (Result xor Result shr 13) * c5;
   Result := Result xor Result shr 16;
 end;
-{$UNDEF c1}{$UNDEF c2}{$UNDEF c3}{$UNDEF}{$UNDEF c5}
+{$UNDEF c1}{$UNDEF c2}{$UNDEF c3}{$UNDEF c4}{$UNDEF c5}
 
 { TMurmur64aLE }
 
 {$DEFINE m64 := QWord($c6a4a7935bd1e995)}
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur64aLE.HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord): QWord;
+
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 5057 OFF}
+class function TMurmur64aLE.HashBufUnalign(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
 var
   k1, k2, k3, k4: QWord;
   buf: array[0..3] of QWord;
@@ -1160,7 +1223,7 @@ begin
   Result := aSeed xor (QWord(aCount) * m64);
   while aCount >= 32 do
     begin
-      System.Move(p^, buf{%H-}, 32);
+      System.Move(p^, buf, 32);
       k1 := buf[0] * m64;
       k2 := buf[1] * m64;
       k3 := buf[2] * m64;
@@ -1210,12 +1273,17 @@ begin
   Result := (Result xor Result shr 47) * m64;
   Result :=  Result xor Result shr 47;
 end;
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur64aLE.HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord): QWord;
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+
+class function TMurmur64aLE.HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
 var
   k1, k2, k3, k4: QWord;
   p: PQWord absolute aBuffer;
 begin
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}{$PUSH}{$WARN 4055 OFF}
+  if SizeUInt(aBuffer) and 7 <> 0 then
+    exit(HashBufUnalign(aBuffer, aCount, aSeed));
+{$POP}{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := aSeed xor (QWord(aCount) * m64);
   while aCount >= 32 do
     begin
@@ -1272,7 +1340,6 @@ begin
   Result := (Result xor Result shr 47) * m64;
   Result :=  Result xor Result shr 47;
 end;
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 class function TMurmur64aLE.HashStr(const aValue: string; aSeed: QWord): QWord;
 begin
@@ -1302,7 +1369,7 @@ begin
 end;
 
 {$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-class function TMurmur64aLE.HashGuid(constref aValue: TGuid; aSeed: QWord): QWord;
+class function TMurmur64aLE.HashGuid(const aValue: TGuid; aSeed: QWord): QWord;
 begin
   Result := HashBuf(@aValue, SizeOf(aValue), aSeed);
 end;
