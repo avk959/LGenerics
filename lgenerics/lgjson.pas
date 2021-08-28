@@ -4256,8 +4256,8 @@ begin
   Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
 end;
 
-{ TryPChar2DoubleFast is a relaxed decimal string-to-double parser;
-  it expects a valid null-terminated JSON number representation to be passed as the P parameter }
+{ TryPChar2DoubleFast is a relaxed parser, it expects a valid null-terminated
+  JSON number representation to be passed as the P parameter }
 function TryPChar2DoubleFast(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Man: QWord;
