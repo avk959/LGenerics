@@ -371,6 +371,15 @@ type
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
     class function TryParseFile(const aFileName: string; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+  { returns the document root node if parsing is successful, nil otherwise }
+    class function Load(const s: string; aDepth: Integer = DEF_DEPTH;
+                        aSkipBom: Boolean = False): TJsonNode; static;
+    class function Load(aStream: TStream; aDepth: Integer = DEF_DEPTH;
+                        aSkipBom: Boolean = False): TJsonNode; static;
+    class function Load(aStream: TStream; aCount: SizeInt; aDepth: Integer = DEF_DEPTH;
+                        aSkipBom: Boolean = False): TJsonNode; static;
+    class function LoadFromFile(const aFileName: string; aDepth: Integer = DEF_DEPTH;
+                               aSkipBom: Boolean = False): TJsonNode; static;
   { converts a pascal string to a JSON string }
     class function PasStrToJson(const s: string): string; static;
     class function NewNode: TJsonNode; static; inline;
@@ -380,8 +389,7 @@ type
     class function NewNode(const aValue: string): TJsonNode; static; inline;
     class function NewNode(aKind: TJsValueKind): TJsonNode; static; inline;
     class function NewNode(aNode: TJsonNode): TJsonNode; static; inline;
-  { parses the JSON string s, returns nil in case of failure,
-    otherwise its representation as TJsonNode }
+  { returns the document root node if parsing is successful, nil otherwise }
     class function NewJson(const s: string): TJsonNode; static; inline;
   { returns the maximum nesting depth of aNode, is recursive }
     class function MaxNestDepth(aNode: TJsonNode): SizeInt; static;
@@ -2145,11 +2153,9 @@ end;
 function TJsonNode.GetCount: SizeInt;
 begin
   case Kind of
-    jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString: exit(1);
     jvkArray:  if FArray <> nil then exit(FArray^.Count);
     jvkObject: if FObject <> nil then exit(FObject^.Count);
   else
-    exit(0);
   end;
   Result := 0;
 end;
@@ -2471,6 +2477,26 @@ begin
       Free;
     end;
   Result := TryParse(s, aRoot, aDepth, aSkipBom);
+end;
+
+class function TJsonNode.Load(const s: string; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+begin
+  TryParse(s, Result, aDepth, aSkipBom);
+end;
+
+class function TJsonNode.Load(aStream: TStream; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+begin
+  TryParse(aStream, Result, aDepth, aSkipBom);
+end;
+
+class function TJsonNode.Load(aStream: TStream; aCount: SizeInt; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+begin
+  TryParse(aStream, aCount, Result, aDepth, aSkipBom);
+end;
+
+class function TJsonNode.LoadFromFile(const aFileName: string; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+begin
+  TryParseFile(aFileName, Result, aDepth, aSkipBom);
 end;
 
 class function TJsonNode.PasStrToJson(const s: string): string;
