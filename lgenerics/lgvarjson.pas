@@ -123,7 +123,8 @@ type
     through DispInvoke only for their intended purpose }
     function  Clone: Variant;
     function  AsJson: string;
-    function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = DEF_INDENT): string;
+    function  FormatJson(aOptions: TJsFormatOptions = []; aOffs: Integer = 0;
+                         aIndent: Integer = DEF_INDENT): string;
     function  ToString: string;
     function  ToValue: Variant;
     property  Kind: TJsValueKind read GetKind;
@@ -793,11 +794,11 @@ begin
   Result := FNode.AsJson;
 end;
 
-function TVarJson.FormatJson(aOptions: TJsFormatOptions; aIndent: Integer): string;
+function TVarJson.FormatJson(aOptions: TJsFormatOptions; aOffs, aIndent: Integer): string;
 begin
   if not IsVarJson or (FNode = nil) then
     exit('');
-  Result := FNode.FormatJson(aOptions, aIndent);
+  Result := FNode.FormatJson(aOptions, aOffs, aIndent);
 end;
 
 function TVarJson.ToString: string;
