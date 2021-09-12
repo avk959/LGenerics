@@ -37,10 +37,11 @@ uses
 
 type
   TJsValueKind     = (jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
-  TJsFormatOption  = (jfoSingleLine, // all arrays and objects in single line
-                      jfoEgyptBrace, // egyptian braces(default Allman)
-                      jfoUseTabs,    // tabs instead of spaces.
-                      jfoStrAsIs);   // do not encode Pascal strings as JSON strings
+  TJsFormatOption  = (jfoSingleLine,      // the entire document on one line
+                      jfoSingleLineArray, // each array on one line excluding the root
+                      jfoEgyptBrace,      // egyptian braces(default Allman)
+                      jfoUseTabs,         // tabs instead of spaces.
+                      jfoStrAsIs);        // do not encode Pascal strings as JSON strings
   TJsFormatOptions = set of TJsFormatOption;
   EJsException     = class(Exception);
 
@@ -552,7 +553,8 @@ type
     each node considered self as a root }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
   { returns a formatted JSON representation of an instance, is recursive }
-    function  FormatJson(aOptions: TJsFormatOptions = []; aIndent: Integer = DEF_INDENT): string;
+    function  FormatJson(aOptions: TJsFormatOptions = []; aOffset: Integer = 0;
+                         aIndentSize: Integer = DEF_INDENT): string;
     function  GetValue(out aValue: TJVariant): Boolean;
     procedure SaveToStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
@@ -2797,13 +2799,20 @@ end;
 
 function TJsonNode.TTreeEnumerator.MoveNext: Boolean;
 var
-  Node: TJsonNode;
+  I: SizeInt;
 begin
   if FQueue.TryDequeue(FCurrent) then
     begin
-      if FCurrent.IsStruct then
-        for Node in FCurrent do
-          FQueue.Enqueue(Node);
+      if FCurrent.Count <> 0 then
+        case FCurrent.Kind of
+          jvkArray:
+            for I := 0 to Pred(FCurrent.FArray^.Count) do
+              FQueue.Enqueue(FCurrent.FArray^.UncMutable[I]^);
+          jvkObject:
+            for I := 0 to Pred(FCurrent.FObject^.Count) do
+              FQueue.Enqueue(FCurrent.FObject^.Mutable[I]^.Value);
+        else
+        end;
       exit(True);
     end;
   Result := False;
@@ -3674,11 +3683,11 @@ begin
   Result := Node <> nil;
 end;
 
-function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndent: Integer): string;
+function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aOffset, aIndentSize: Integer): string;
 var
   sb: TStrBuilder;
   Pair: TPair;
-  MultiLine, UseTabs, StrEncode, BsdBrace, HasText: Boolean;
+  MultiLine, UseTabs, StrEncode, BsdBrace, HasText, OneLineArray: Boolean;
   IVal: Int64;
   procedure NewLine(Pos: Integer); inline;
   begin
@@ -3710,7 +3719,10 @@ var
   procedure BuildJson(aInst: TJsonNode; aPos: Integer);
   var
     I, Last: SizeInt;
+    IsRoot, OldMultiLine: Boolean;
   begin
+    IsRoot := False;
+    OldMultiLine := MultiLine;
     case aInst.Kind of
       jvkNull:   sb.Append(JS_NULL);
       jvkFalse:  sb.Append(JS_FALSE);
@@ -3721,43 +3733,50 @@ var
         else
           sb.Append(FloatToStr(aInst.FValue.Num, FmtSettings));
       jvkString: AppendString(aInst.FString);
-      jvkArray: begin
+      jvkArray:
+        begin
+          if OneLineArray then
+            if HasText then
+              MultiLine := False
+            else
+              IsRoot := True;
           CheckHasText(aPos);
           sb.Append(chOpenSqrBr);
           if aInst.FArray <> nil then begin
             Last := Pred(aInst.FArray^.Count);
             for I := 0 to Last do begin
               if aInst.FArray^.UncMutable[I]^.IsScalar and MultiLine then
-                NewLine(aPos + aIndent);
-              BuildJson(aInst.FArray^.UncMutable[I]^, aPos + aIndent);
+                NewLine(aPos + aIndentSize);
+              BuildJson(aInst.FArray^.UncMutable[I]^, aPos + aIndentSize);
               if I <> Last then begin
                 sb.Append(chComma);
-                if not MultiLine or
-                  (aInst.FArray^.UncMutable[I+1]^.IsStruct and not BsdBrace) then
+                if not MultiLine or (aInst.FArray^.UncMutable[I+1]^.IsStruct and not BsdBrace) then
                   sb.Append(chSpace);
               end;
             end;
           end;
-          if MultiLine then NewLine(aPos);
+          if MultiLine or IsRoot then NewLine(aPos);
           sb.Append(chClosSqrBr);
+          if OneLineArray and not IsRoot then
+            MultiLine := OldMultiLine;
         end;
-      jvkObject: begin
+      jvkObject:
+        begin
           CheckHasText(aPos);
           sb.Append(chOpenCurBr);
           if aInst.FObject <> nil then begin
             Last := Pred(aInst.FObject^.Count);
             for I := 0 to Last do begin
-              if MultiLine then NewLine(aPos + aIndent);
+              if MultiLine then NewLine(aPos + aIndentSize);
               Pair := aInst.FObject^.Mutable[I]^;
               AppendString(Pair.Key);
               sb.Append(chColon);
-              if Pair.Value.IsScalar or not MultiLine then begin
+              if Pair.Value.IsScalar or not MultiLine or(OneLineArray and Pair.Value.IsArray) then begin
                 sb.Append(chSpace);
                 BuildJson(Pair.Value, aPos);
-              end
-              else begin
+              end else begin
                 if not BsdBrace then sb.Append(chSpace);
-                BuildJson(Pair.Value, aPos + aIndent);
+                BuildJson(Pair.Value, aPos + aIndentSize);
               end;
               if I <> Last then begin
                 sb.Append(chComma);
@@ -3773,12 +3792,18 @@ var
   end;
 begin
   sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
-  MultiLine := not (jfoSingleLine in aOptions);
+  MultiLine := not(jfoSingleLine in aOptions);
+  OneLineArray := (jfoSingleLineArray in aOptions) and MultiLine;
   UseTabs := jfoUseTabs in aOptions;
-  StrEncode := not (jfoStrAsIs in aOptions);
-  BsdBrace := not (jfoEgyptBrace in aOptions);
+  StrEncode := not(jfoStrAsIs in aOptions);
+  BsdBrace := not(jfoEgyptBrace in aOptions);
   HasText := False;
-  BuildJson(Self, 0);
+  aOffset := Math.Max(aOffset, 0);
+  if UseTabs then
+    sb.Append(#9, aOffset)
+  else
+    sb.Append(chSpace, aOffset);
+  BuildJson(Self, aOffset);
   Result := sb.ToString;
 end;
 
@@ -3840,11 +3865,46 @@ type
   TOWord = record
     Lo, Hi: QWord;
   end;
-{$PUSH}{$Q-}{$R-}{$J-}
+
 const
   ELDBL_LOWEST_POWER  = -325;
   ELDBL_HIGHEST_POWER = 308;
 
+{$PUSH}{$Q-}{$R-}{$J-}
+procedure UMul64Full(const x, y: QWord; out aProd: TOWord);
+{$IF DEFINED(CPUX64)}{$ASMMODE INTEL} assembler; nostackframe;
+asm
+{$IFDEF MSWINDOWS}
+  mov rax, rcx
+  mul rdx
+{$ELSE MSWINDOWS}
+  mov rax, rdi
+  mov r8,  rdx
+  mul rsi
+{$ENDIF MSWINDOWS}
+  mov qword ptr[r8  ], rax
+  mov qword ptr[r8+8], rdx
+end;
+{$ELSEIF DEFINED(CPUAARCH64)} assembler; nostackframe;
+asm
+  mul   x3, x0, x1
+  umulh x4, x0, x1
+  stp   x3, x4, [x2]
+end;
+{$ELSE}
+var
+  p00, p01, mid: QWord;
+begin
+  p00 := QWord(DWord(x)) * DWord(y);
+  p01 := DWord(x) * (y shr 32);
+  mid := (x shr 32) * DWord(y) + p00 shr 32 + DWord(p01);
+  aProd.Lo := mid shl 32 or DWord(p00);
+  aProd.Hi := (x shr 32) * (y shr 32) + mid shr 32 + p01 shr 32;
+end;
+{$ENDIF}
+
+function TryBuildDoubleEiselLemire(aMan: QWord; const aPow10: Int64; aNeg: Boolean; out aValue: Double): Boolean; inline;
+const
   TEN_POWER: array[0..22] of Double = (
     1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
     1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22);
@@ -4170,41 +4230,6 @@ const
     QWord($8038d51cb897789c), QWord($e0470a63e6bd56c3), QWord($1858ccfce06cac74), QWord($f37801e0c43ebc8),
     QWord($d30560258f54e6ba), QWord($47c6b82ef32a2069), QWord($4cdc331d57fa5441), QWord($e0133fe4adf8e952),
     QWord($58180fddd97723a6), QWord($570f09eaa7ea7648));
-
-
-procedure UMul64To128(const x, y: QWord; out aProd: TOWord);
-{$IF DEFINED(CPUX64)}{$ASMMODE INTEL} assembler; nostackframe;
-asm
-{$IFDEF MSWINDOWS}
-  mov rax, rcx
-  mul rdx
-{$ELSE MSWINDOWS}
-  mov rax, rdi
-  mov r8,  rdx
-  mul rsi
-{$ENDIF MSWINDOWS}
-  mov qword ptr[r8  ], rax
-  mov qword ptr[r8+8], rdx
-end;
-{$ELSEIF DEFINED(CPUAARCH64)} assembler; nostackframe;
-asm
-  mul   x3, x0, x1
-  umulh x4, x0, x1
-  stp   x3, x4, [x2]
-end;
-{$ELSE}
-var
-  p00, p01, mid: QWord;
-begin
-  p00 := QWord(DWord(x)) * DWord(y);
-  p01 := DWord(x) * (y shr 32);
-  mid := (x shr 32) * DWord(y) + p00 shr 32 + DWord(p01);
-  aProd.Lo := mid shl 32 or DWord(p00);
-  aProd.Hi := (x shr 32) * (y shr 32) + mid shr 32 + p01 shr 32;
-end;
-{$ENDIF}
-
-function TryBuildDoubleEiselLemire(aMan: QWord; const aPow10: Int64; aNeg: Boolean; out aValue: Double): Boolean; inline;
 var
   ProdLo, ProdHi, Mid, MsBit, Mantissa: QWord;
   Exponent: Int64;
@@ -4236,16 +4261,16 @@ begin
   LzCount := Pred(BitSizeOf(QWord)) - BsrQWord(aMan);
   aMan := aMan shl LzCount;
 
-  UMul64To128(aMan, EL_MANTIS_64[aPow10], Prod);
+  UMul64Full(aMan, EL_MANTIS_64[aPow10], Prod);
   ProdLo := Prod.Lo;
   ProdHi := Prod.Hi;
 
-  if(ProdHi and $1FF = $1FF)and(ProdLo + aMan < ProdLo)then
+  if (ProdHi and $1FF = $1FF) and (ProdLo + aMan < ProdLo) then
     begin
-      UMul64To128(aMan, EL_MANTIS_128[aPow10], Prod);
+      UMul64Full(aMan, EL_MANTIS_128[aPow10], Prod);
       Mid := ProdLo + Prod.Hi;
       ProdHi += Ord(Mid < ProdLo);
-      if(Succ(Mid) = 0)and(ProdHi and $1FF = $1FF)and(Prod.Lo + aMan < Prod.Lo)then
+      if (Succ(Mid) = 0) and (ProdHi and $1FF = $1FF) and (Prod.Lo + aMan < Prod.Lo) then
         exit(False);
       ProdLo := Mid;
     end;
@@ -4254,7 +4279,7 @@ begin
   Mantissa := ProdHi shr (MsBit + 9);
   LzCount += Ord(MsBit xor 1);
 
-  if(ProdLo = 0)and(ProdHi and $1FF = 0)and(Mantissa and 3 = 1)then
+  if (ProdLo = 0) and (ProdHi and $1FF = 0) and (Mantissa and 3 = 1) then
     exit(False);
 
   Mantissa := (Mantissa + Mantissa and 1) shr 1;
