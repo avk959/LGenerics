@@ -25,6 +25,20 @@ type
     procedure TestEqual;
   end;
 
+  { TTestDouble2Str }
+
+  TTestDouble2Str = class(TTestCase)
+  published
+    procedure Basic;
+    procedure Bounds;
+    procedure Subnormal;
+    procedure MinMax;
+    procedure Regression;
+    procedure LooksLikePow5;
+    procedure OutputLength;
+    procedure MinMaxShift;
+  end;
+
 
   { TTestJson }
 
@@ -263,6 +277,158 @@ begin
   AssertFalse(v1 = v2);
   v2.SetNull;
   AssertFalse(v1 = v2);
+end;
+
+{ TTestDouble2Str }
+
+procedure TTestDouble2Str.Basic;
+var
+  d: Double;
+begin
+  AssertTrue(Double2Str(0.0) = '0');
+  PQWord(@d)^ := QWord($8000000000000000);
+  AssertTrue(Double2Str(d) = '-0');
+  AssertTrue(Double2Str(Double.PositiveInfinity) = 'Infinity');
+  AssertTrue(Double2Str(Double.NegativeInfinity) = '-Infinity');
+  AssertTrue(Double2Str(Double.NaN) = 'NaN');
+end;
+
+procedure TTestDouble2Str.Bounds;
+begin
+  AssertTrue(Double2Str(1e0) = '1');
+  AssertTrue(Double2Str(-1e0) = '-1');
+  AssertTrue(Double2Str(1.0e7) = '10000000');
+  AssertTrue(Double2Str(-1.0e7) = '-10000000');
+  AssertTrue(Double2Str(9007199254740991) = '9007199254740991');
+  AssertTrue(Double2Str(-9007199254740980) = '-9007199254740980');
+  AssertTrue(Double2Str(9007199254740992) = '9007199254740992.0');
+  AssertTrue(Double2Str(999999999999999.8) = '999999999999999.8');
+  AssertTrue(Double2Str(999999999999999.8e1) = '9999999999999998.0');
+  AssertTrue(Double2Str(9.999999999999998e-3) = '0.009999999999999998');
+  AssertTrue(Double2Str(999999999999999.8e2) = '9.999999999999998E16');
+  AssertTrue(Double2Str(9.9999999999e15) = '9999999999900000.0');
+end;
+
+procedure TTestDouble2Str.Subnormal;
+begin
+  AssertTrue(Double2Str(2.2250738585072014E-308) = '2.2250738585072014E-308');
+  AssertTrue(Double2Str(4.9406564584e-312) = '4.9406564584E-312');
+end;
+
+procedure TTestDouble2Str.MinMax;
+begin
+  AssertTrue(Double2Str(5e-324) = '5E-324');
+  AssertTrue(Double2Str(1.7976931348623157e308) = '1.7976931348623157E308');
+end;
+
+procedure TTestDouble2Str.Regression;
+begin
+  AssertTrue(Double2Str(-2.1098088986959632e16) = '-2.109808898695963E16');
+  AssertTrue(Double2Str(4.940656e-318) = '4.940656E-318');
+  AssertTrue(Double2Str(1.18575755e-316) = '1.18575755E-316');
+  AssertTrue(Double2Str(2.989102097996e-312) = '2.989102097996E-312');
+  AssertTrue(Double2Str(9.0608011534336e15) = '9060801153433600.0');
+  AssertTrue(Double2Str(4.708356024711512e18) = '4.708356024711512E18');
+  AssertTrue(Double2Str(9.409340012568248e18) = '9.409340012568248E18');
+  AssertTrue(Double2Str(1.2345678e0) = '1.2345678');
+  AssertTrue(Double2Str(1.9430376160308388e16) = '1.9430376160308388E16');
+  AssertTrue(Double2Str(-6.9741824662760956e19) = '-6.9741824662760956E19');
+  AssertTrue(Double2Str(4.3816050601147837e18) = '4.3816050601147837E18');
+  AssertTrue(Double2Str(1.8531501765868567e21) = '1.8531501765868567E21');
+  AssertTrue(Double2Str(-3.347727380279489e33) = '-3.347727380279489E33');
+end;
+
+procedure TTestDouble2Str.LooksLikePow5;
+var
+  d: Double;
+begin
+  PQWord(@d)^ := QWord($4830f0cf064dd592);
+  AssertTrue(Double2Str(d) = '5.764607523034235E39');
+  PQWord(@d)^ := QWord($4840f0cf064dd592);
+  AssertTrue(Double2Str(d) = '1.152921504606847E40');
+  PQWord(@d)^ := QWord($4850f0cf064dd592);
+  AssertTrue(Double2Str(d) = '2.305843009213694E40');
+end;
+
+procedure TTestDouble2Str.OutputLength;
+begin
+  AssertTrue(Double2Str(1.2) = '1.2');
+  AssertTrue(Double2Str(1.23) = '1.23');
+  AssertTrue(Double2Str(1.234) = '1.234');
+  AssertTrue(Double2Str(1.2345) = '1.2345');
+  AssertTrue(Double2Str(1.23456) = '1.23456');
+  AssertTrue(Double2Str(1.234567) = '1.234567');
+  AssertTrue(Double2Str(1.23456789) = '1.23456789');
+  AssertTrue(Double2Str(1.234567895) = '1.234567895');
+  AssertTrue(Double2Str(1.2345678950) = '1.234567895');
+  AssertTrue(Double2Str(1.2345678901) = '1.2345678901');
+  AssertTrue(Double2Str(1.23456789012) = '1.23456789012');
+  AssertTrue(Double2Str(1.234567890123) = '1.234567890123');
+  AssertTrue(Double2Str(1.2345678901234) = '1.2345678901234');
+  AssertTrue(Double2Str(1.23456789012345) = '1.23456789012345');
+  AssertTrue(Double2Str(1.234567890123456) = '1.234567890123456');
+  AssertTrue(Double2Str(1.2345678901234567) = '1.2345678901234567');
+
+  AssertTrue(Double2Str(4.294967294) = '4.294967294');
+  AssertTrue(Double2Str(4.294967295) = '4.294967295');
+  AssertTrue(Double2Str(4.294967296) = '4.294967296');
+  AssertTrue(Double2Str(4.294967297) = '4.294967297');
+  AssertTrue(Double2Str(4.294967298) = '4.294967298');
+end;
+
+procedure TTestDouble2Str.MinMaxShift;
+  function IEEEParts2Double(const aIsNeg: Boolean; const aExp, aMantis: QWord): Double;
+  begin
+    PQWord(@Result)^ := QWord(aIsNeg) shl 63 or aExp shl 52 or aMantis;
+  end;
+const
+  MaxMantissa = Pred(QWord(1) shl 53);
+begin
+  // 32-bit opt-size=0:  49 <= dist <= 50
+  // 32-bit opt-size=1:  30 <= dist <= 50
+  // 64-bit opt-size=0:  50 <= dist <= 50
+  // 64-bit opt-size=1:  30 <= dist <= 50
+  AssertTrue(Double2Str(IEEEParts2Double(False, 4, 0)) = '1.7800590868057611E-307');
+  // 32-bit opt-size=0:  49 <= dist <= 49
+  // 32-bit opt-size=1:  28 <= dist <= 49
+  // 64-bit opt-size=0:  50 <= dist <= 50
+  // 64-bit opt-size=1:  28 <= dist <= 50
+  AssertTrue(Double2Str(IEEEParts2Double(False, 6, MaxMantissa)) = '2.8480945388892175E-306');
+  // 32-bit opt-size=0:  52 <= dist <= 53
+  // 32-bit opt-size=1:   2 <= dist <= 53
+  // 64-bit opt-size=0:  53 <= dist <= 53
+  // 64-bit opt-size=1:   2 <= dist <= 53
+  AssertTrue(Double2Str(IEEEParts2Double(False, 41, 0)) = '2.446494580089078E-296');
+  // 32-bit opt-size=0:  52 <= dist <= 52
+  // 32-bit opt-size=1:   2 <= dist <= 52
+  // 64-bit opt-size=0:  53 <= dist <= 53
+  // 64-bit opt-size=1:   2 <= dist <= 53
+  AssertTrue(Double2Str(IEEEParts2Double(False, 40, MaxMantissa)) = '4.8929891601781557E-296');
+  // 32-bit opt-size=0:  57 <= dist <= 58
+  // 32-bit opt-size=1:  57 <= dist <= 58
+  // 64-bit opt-size=0:  58 <= dist <= 58
+  // 64-bit opt-size=1:  58 <= dist <= 58
+  AssertTrue(Double2Str(IEEEParts2Double(False, 1077, 0)) = '1.8014398509481984E16');
+  // 32-bit opt-size=0:  57 <= dist <= 57
+  // 32-bit opt-size=1:  57 <= dist <= 57
+  // 64-bit opt-size=0:  58 <= dist <= 58
+  // 64-bit opt-size=1:  58 <= dist <= 58
+  AssertTrue(Double2Str(IEEEParts2Double(False, 1076, MaxMantissa)) = '3.6028797018963964E16');
+  // 32-bit opt-size=0:  51 <= dist <= 52
+  // 32-bit opt-size=1:  51 <= dist <= 59
+  // 64-bit opt-size=0:  52 <= dist <= 52
+  // 64-bit opt-size=1:  52 <= dist <= 59
+  AssertTrue(Double2Str(IEEEParts2Double(False, 307, 0)) = '2.900835519859558E-216');
+  // 32-bit opt-size=0:  51 <= dist <= 51
+  // 32-bit opt-size=1:  51 <= dist <= 59
+  // 64-bit opt-size=0:  52 <= dist <= 52
+  // 64-bit opt-size=1:  52 <= dist <= 59
+  AssertTrue(Double2Str(IEEEParts2Double(False, 306, MaxMantissa)) = '5.801671039719115E-216');
+  // 32-bit opt-size=0:  49 <= dist <= 49
+  // 32-bit opt-size=1:  44 <= dist <= 49
+  // 64-bit opt-size=0:  50 <= dist <= 50
+  // 64-bit opt-size=1:  44 <= dist <= 50
+  AssertTrue(Double2Str(IEEEParts2Double(False, 934 ,QWord($000FA7161A4D6E0C))) = '3.196104012172126E-27');
 end;
 
 { TTestJson }
@@ -1569,6 +1735,7 @@ initialization
 
   LoadFileList;
   RegisterTest(TTestJVariant);
+  RegisterTest(TTestDouble2Str);
   RegisterTest(TTestJson);
   RegisterTest(TTestJsonWriter);
   RegisterTest(TTestJsonReader);
