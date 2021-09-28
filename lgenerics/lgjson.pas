@@ -39,6 +39,7 @@ type
   TJsValueKind     = (jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
   TJsFormatOption  = (jfoSingleLine,      // the entire document on one line
                       jfoSingleLineArray, // each array on one line excluding the root
+                      jfoSingleLineObject,// each object on one line excluding the root
                       jfoEgyptBrace,      // egyptian braces(default Allman)
                       jfoUseTabs,         // tabs instead of spaces.
                       jfoStrAsIs);        // do not encode Pascal strings as JSON strings
@@ -4598,7 +4599,7 @@ var
   sb: TStrBuilder;
   Pair: TPair;
   s: shortstring;
-  MultiLine, UseTabs, StrEncode, BsdBrace, HasText, OneLineArray: Boolean;
+  MultiLine, UseTabs, StrEncode, BsdBrace, HasText, OneLineArray, OneLineObject: Boolean;
   procedure NewLine(Pos: Integer); inline;
   begin
     sb.Append(sLineBreak);
@@ -4672,16 +4673,22 @@ var
         end;
       jvkObject:
         begin
-          CheckHasText(aPos, False);
+          if OneLineObject then
+            if HasText then
+              MultiLine := False
+            else
+              IsRoot := True;
+          CheckHasText(aPos, IsRoot);
           sb.Append(chOpenCurBr);
           if aInst.FObject <> nil then begin
             Last := Pred(aInst.FObject^.Count);
             for I := 0 to Last do begin
-              if MultiLine then NewLine(aPos + aIndentSize);
+              if MultiLine or IsRoot then NewLine(aPos + aIndentSize);
               Pair := aInst.FObject^.Mutable[I]^;
               AppendString(Pair.Key);
               sb.Append(chColon);
-              if Pair.Value.IsScalar or not MultiLine or(OneLineArray and Pair.Value.IsArray) then begin
+              if Pair.Value.IsScalar or not MultiLine or
+                (OneLineArray and Pair.Value.IsArray)or(OneLineObject and Pair.Value.IsObject) then begin
                 sb.Append(chSpace);
                 BuildJson(Pair.Value, aPos);
               end else begin
@@ -4694,8 +4701,10 @@ var
               end;
             end;
           end;
-          if MultiLine then NewLine(aPos);
+          if MultiLine or IsRoot then NewLine(aPos);
           sb.Append(chClosCurBr);
+          if OneLineObject and not IsRoot then
+            MultiLine := OldMultiLine;
         end;
     else
     end;
@@ -4704,6 +4713,7 @@ begin
   sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   MultiLine := not(jfoSingleLine in aOptions);
   OneLineArray := (jfoSingleLineArray in aOptions) and MultiLine;
+  OneLineObject := (jfoSingleLineObject in aOptions) and MultiLine;
   UseTabs := jfoUseTabs in aOptions;
   StrEncode := not(jfoStrAsIs in aOptions);
   BsdBrace := not(jfoEgyptBrace in aOptions);
