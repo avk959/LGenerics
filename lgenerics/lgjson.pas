@@ -2159,11 +2159,13 @@ begin
 end;
 {$ENDIF}
 
+{ for internal use only }
 function RShift128(const aLo, aHi: QWord; aShift: Integer): QWord; inline;
 begin
   Result := aLo shr aShift or aHi shl (64 - aShift);
 end;
 
+{ for internal use only }
 function MulShift64(const aM: QWord; aMul: PQWord; aJ: Integer): QWord; inline;
 type
   TQWord2 = array[0..1] of QWord;
@@ -2179,6 +2181,7 @@ begin
   Result := RShift128(Lo, o.Hi + QWord(Lo < o.Lo), aJ - 64);
 end;
 
+{ for internal use only }
 function MulShiftAll64(const aM: QWord; aMul: PQWord; aJ: Integer; out aVP, aVM: QWord; aMMShift: DWord): QWord; inline;
 begin
   aVP := MulShift64(aM * 4 + 2, aMul, aJ);
@@ -2186,6 +2189,7 @@ begin
   Result := MulShift64(aM * 4, aMul, aJ);
 end;
 
+{ for internal use only }
 function Pow5Factor(aValue: QWord): DWord; inline;
 const
   Inv5  = QWord(14757395258967641293);
@@ -2199,36 +2203,43 @@ begin
   until False;
 end;
 
+{ for internal use only }
 function MultipleOfPowerOf5(const aValue: QWord; aP: DWord): Boolean; inline;
 begin
   Result := Pow5Factor(aValue) >= aP;
 end;
 
+{ for internal use only }
 function MultipleOfPowerOf2(const aValue: QWord; aP: DWord): Boolean; inline;
 begin
   Result := aValue and Pred(QWord(1) shl aP) = 0;
 end;
 
+{ for internal use only }
 function Log10Pow2(e: Integer): Integer; inline;
 begin
   Result := (DWord(e) * QWord(169464822037455)) shr 49;
 end;
 
+{ for internal use only }
 function Log10Pow5(e: Integer): Integer; inline;
 begin
   Result := (DWord(e) * QWord(196742565691928)) shr 48;
 end;
 
+{ for internal use only }
 function Pow5Bits(e: Integer): Integer; inline;
 begin
   Result := Succ(Integer((QWord(e) * QWord(163391164108059)) shr 46));
 end;
 
+{ for internal use only }
 function Log2Pow5(e: Integer): Integer; inline;
 begin
  Result := (DWord(e) * DWord(1217359)) shr 19;
 end;
 
+{ for internal use only }
 function GetDecimalLen(const aValue: QWord): Integer; inline;
 begin
   case aValue of
@@ -2253,6 +2264,38 @@ begin
   end;
 end;
 
+{ for internal use only }
+function QWord2DecimalStr(V: QWord; p: PChar2): DWord;
+var
+  Q: QWord;
+begin
+{$IFDEF CPU64}
+  repeat
+    Q := V div 100;
+    if Q = 0 then break;
+    p^ := MOD100_TBL[V - Q * 100];
+    V := Q;
+    Dec(p);
+  until False;
+{$ELSE}
+  while V > System.High(DWord) do
+    begin
+      Q := V div 100;
+      p^ := MOD100_TBL[V - Q * 100];
+      V := Q;
+      Dec(p);
+    end;
+  repeat
+    Q := DWord(V) div 100;
+    if DWord(Q) = 0 then break;
+    p^ := MOD100_TBL[DWord(V) - DWord(Q) * 100];
+    V := DWord(Q);
+    Dec(p);
+  until False;
+{$ENDIF}
+  Result := V;
+end;
+
 const
   MOD100_TBL: array[0..99] of TChar2 = (
     '00', '01', '02', '03', '04', '05', '06', '07', '08', '09',
@@ -2266,18 +2309,20 @@ const
     '80', '81', '82', '83', '84', '85', '86', '87', '88', '89',
     '90', '91', '92', '93', '94', '95', '96', '97', '98', '99');
 
-procedure Int2Str(const aValue: Int64; out s: shortstring);
+{ for internal use only }
+procedure Int2Str(const aValue: Int64; out s: shortstring); inline;
 var
-  V, Q: QWord;
-  Len: Integer;
-  pCurr: PChar2;
+  V: QWord;
+  Start, Len: Integer;
 begin
+  Start := 1;
   if aValue < 0 then
     begin
       V := QWord(-aValue);
       Len := GetDecimalLen(V);
       System.SetLength(s, Succ(Len));
-      s[1] := '-';
+      s[Start] := '-';
+      Inc(Start);
     end
   else
     begin
@@ -2285,35 +2330,10 @@ begin
       Len := GetDecimalLen(V);
       System.SetLength(s, Len);
     end;
-  pCurr := @s[Pred(System.Length(s))];
-{$IFDEF CPU64}
-  repeat
-    Q := V div 100;
-    if Q = 0 then break;
-    pCurr^ := MOD100_TBL[V - Q * 100];
-    V := Q;
-    Dec(pCurr);
-  until False;
-{$ELSE}
-   while V > System.High(DWord) do
-     begin
-       Q := V div 100;
-       pCurr^ := MOD100_TBL[V - Q * 100];
-       V := Q;
-       Dec(pCurr);
-     end;
-  repeat
-    Q := DWord(V) div 100;
-    if DWord(Q) = 0 then break;
-    pCurr^ := MOD100_TBL[DWord(V) - DWord(Q) * 100];
-    V := DWord(Q);
-    Dec(pCurr);
-  until False;
-{$ENDIF}
   if Boolean(Len and 1) then
-    pCurr^[1] := MOD100_TBL[V][1]
+    s[Start] := MOD100_TBL[QWord2DecimalStr(V, @s[Pred(System.Length(s))])][1]
   else
-    pCurr^ := MOD100_TBL[V];
+    PChar2(@s[Start])^ := MOD100_TBL[QWord2DecimalStr(V, @s[Pred(System.Length(s))])];
 end;
 {
   Ulf Adams, "Ryū: Fast Float-to-String Conversion",
@@ -2802,37 +2822,6 @@ type
       end;
     Result.Exponent := e10 + Removed;
   end;
-
-  function Val2Buf(V: QWord; p: PChar2): DWord;
-  var
-    Q: QWord;
-  begin
-{$IFDEF CPU64}
-    repeat
-      Q := V div 100;
-      if Q = 0 then break;
-      p^ := MOD100_TBL[V - Q * 100];
-      V := Q;
-      Dec(p);
-    until False;
-{$ELSE}
-    while V > System.High(DWord) do
-      begin
-        Q := V div 100;
-        p^ := MOD100_TBL[V - Q * 100];
-        V := Q;
-        Dec(p);
-      end;
-    repeat
-      Q := DWord(V) div 100;
-      if DWord(Q) = 0 then break;
-      p^ := MOD100_TBL[DWord(V) - DWord(Q) * 100];
-      V := DWord(Q);
-      Dec(p);
-    until False;
-{$ENDIF}
-    Result := V;
-  end;
 var
   Dr: TDecimalRep;
   Bits, IeeeMantissa, OutVal: QWord;
@@ -2893,10 +2882,10 @@ begin
           Anchor := Succ(Len);
           Inc(Len, Succ(OutLen));
           if Boolean(OutLen and 1) then
-            s[Anchor] := MOD100_TBL[Val2Buf(OutVal, @s[Len-1])][1]
+            s[Anchor] := MOD100_TBL[QWord2DecimalStr(OutVal, @s[Len-1])][1]
           else
             begin
-              c2 := MOD100_TBL[Val2Buf(OutVal, @s[Len-1])];
+              c2 := MOD100_TBL[QWord2DecimalStr(OutVal, @s[Len-1])];
               s[Anchor] := c2[0];
               s[Anchor+2] := c2[1];
             end;
@@ -2945,9 +2934,9 @@ begin
         I := Succ(Len);
         Inc(Len, OutLen);
         if Boolean(OutLen and 1) then
-          s[I] := MOD100_TBL[Val2Buf(OutVal, @s[Len-1])][1]
+          s[I] := MOD100_TBL[QWord2DecimalStr(OutVal, @s[Len-1])][1]
         else
-          PChar2(@s[I])^ := MOD100_TBL[Val2Buf(OutVal, @s[Len-1])];
+          PChar2(@s[I])^ := MOD100_TBL[QWord2DecimalStr(OutVal, @s[Len-1])];
       end
     else
       if Exponent < Pred(OutLen) then
@@ -2955,9 +2944,9 @@ begin
           Exponent += Succ(Len);
           Inc(Len);
           if Boolean(OutLen and 1) then
-            Tmp[0] := MOD100_TBL[Val2Buf(OutVal, @Tmp[OutLen-2])][1]
+            Tmp[0] := MOD100_TBL[QWord2DecimalStr(OutVal, @Tmp[OutLen-2])][1]
           else
-            PChar2(@Tmp[0])^ := MOD100_TBL[Val2Buf(OutVal, @Tmp[OutLen-2])];
+            PChar2(@Tmp[0])^ := MOD100_TBL[QWord2DecimalStr(OutVal, @Tmp[OutLen-2])];
           for I := Len to Exponent do
             s[I] := Tmp[I - Len];
           s[Exponent+1] := aDecimalSeparator;
@@ -2970,9 +2959,9 @@ begin
           I := Succ(Len);
           Len += OutLen;
           if Boolean(OutLen and 1) then
-            s[I] := MOD100_TBL[Val2Buf(OutVal, @s[Len-1])][1]
+            s[I] := MOD100_TBL[QWord2DecimalStr(OutVal, @s[Len-1])][1]
           else
-            PChar2(@s[I])^ := MOD100_TBL[Val2Buf(OutVal, @s[Len-1])];
+            PChar2(@s[I])^ := MOD100_TBL[QWord2DecimalStr(OutVal, @s[Len-1])];
           for I := Succ(Len) to Len + Succ(Exponent - OutLen) do
             s[I] := '0';
           Len += Succ(Exponent - OutLen);
