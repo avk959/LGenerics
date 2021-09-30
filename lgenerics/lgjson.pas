@@ -197,7 +197,7 @@ type
       procedure Append(const s: string); inline;
       procedure AppendEncode(const s: string);
       procedure Append(const s: shortstring); inline;
-      procedure SaveToStream(aStream: TStream);
+      procedure SaveToStream(aStream: TStream); inline;
       function  ToString: string; inline;
       function  ToDecodeString: string;
       function  ToPChar: PAnsiChar; inline;
@@ -546,14 +546,17 @@ type
   { tries to find an element using the path specified as a JSON Pointer;
     each node considered self as a root }
     function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+    function  FindPath(const aPtr: TJsonPtr): TJsonNode; inline;
   { tries to find an element using the path specified as an array of path segments;
     each node considered self as a root }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
+    function  FindPath(const aPath: array of string): TJsonNode; inline;
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aOffset: Integer = 0;
                          aIndentSize: Integer = DEF_INDENT): string;
     function  GetValue(out aValue: TJVariant): Boolean;
-    procedure SaveToStream(aStream: TStream);
+  { returns the number of bytes written }
+    function  SaveToStream(aStream: TStream): SizeInt; inline;
     procedure SaveToFile(const aFileName: string);
     function  ToString: string; override;
   { GetAsJson returns the most compact JSON representation of an instance, is recursive;
@@ -601,7 +604,9 @@ type
     procedure ValueAdding; inline;
     procedure PairAdding; inline;
   public
-    class function New(aStream: TStream): TJsonWriter; inline;
+    class function New(aStream: TStream): TJsonWriter; static; inline;
+  { returns the number of bytes written }
+    class function WriteJson(aStream: TStream; aNode: TJsonNode): SizeInt; static;
     constructor Create(aStream: TStream);
     destructor Destroy; override;
     function AddNull: TJsonWriter;
@@ -609,7 +614,7 @@ type
     function AddTrue: TJsonWriter;
     function Add(aValue: Double): TJsonWriter;
     function Add(const s: string): TJsonWriter;
-    function Add(aValue: TJsonNode): TJsonWriter;
+    function Add(aValue: TJsonNode): TJsonWriter; inline;
     function AddJson(const aJson: string): TJsonWriter;
     function AddName(const aName: string): TJsonWriter;
     function AddNull(const aName: string): TJsonWriter;
@@ -617,7 +622,7 @@ type
     function AddTrue(const aName: string): TJsonWriter;
     function Add(const aName: string; aValue: Double): TJsonWriter;
     function Add(const aName, aValue: string): TJsonWriter;
-    function Add(const aName: string; aValue: TJsonNode): TJsonWriter;
+    function Add(const aName: string; aValue: TJsonNode): TJsonWriter; inline;
     function AddJson(const aName, aJson: string): TJsonWriter;
     function BeginArray: TJsonWriter;
     function BeginObject: TJsonWriter;
@@ -4526,6 +4531,11 @@ begin
   Result := FindPath(aPtr.ToSegments, aNode);
 end;
 
+function TJsonNode.FindPath(const aPtr: TJsonPtr): TJsonNode;
+begin
+  FindPath(aPtr, Result);
+end;
+
 function IsNonNegativeInteger(const s: string; out aInt: SizeInt): Boolean;
 begin
   if s = '' then exit(False);
@@ -4583,7 +4593,12 @@ begin
   Result := Node <> nil;
 end;
 
-function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aOffset, aIndentSize: Integer): string;
+function TJsonNode.FindPath(const aPath: array of string): TJsonNode;
+begin
+  FindPath(aPath, Result);
+end;
+
+function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aOffset: Integer; aIndentSize: Integer): string;
 var
   sb: TStrBuilder;
   Pair: TPair;
@@ -4730,9 +4745,9 @@ begin
   Result := True;
 end;
 
-procedure TJsonNode.SaveToStream(aStream: TStream);
+function TJsonNode.SaveToStream(aStream: TStream): SizeInt;
 begin
-  DoBuildJson.SaveToStream(aStream);
+  Result := TJsonWriter.WriteJson(aStream, Self);
 end;
 
 procedure TJsonNode.SaveToFile(const aFileName: string);
@@ -5347,7 +5362,7 @@ begin
     if NextState = __ then exit(False);
     if NextState < 31 then begin
       if DWord(NextState - ST) < DWord(14) then
-        sb.Append(Buf[I]);
+        sb.Append(Buf[I]); /////////////////////
       State := NextState;
     end else
       case NextState of
@@ -5547,6 +5562,54 @@ begin
   Result := TJsonWriter.Create(aStream);
 end;
 
+class function TJsonWriter.WriteJson(aStream: TStream; aNode: TJsonNode): SizeInt;
+var
+  Writer: TJsonWriter = nil;
+  p: TJsonNode.TPair;
+  procedure WriteNode(aInst: TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    case aInst.Kind of
+      jvkNull:   Writer.AddNull;
+      jvkFalse:  Writer.AddFalse;
+      jvkTrue:   Writer.AddTrue;
+      jvkNumber: Writer.Add(aInst.FValue.Num);
+      jvkString: Writer.Add(aInst.FString);
+      jvkArray:
+        begin
+          Writer.BeginArray;
+          if aInst.FArray <> nil then
+            for I := 0 to Pred(aInst.FArray^.Count) do
+              WriteNode(aInst.FArray^.UncMutable[I]^);
+          Writer.EndArray;
+        end;
+      jvkObject:
+        begin
+          Writer.BeginObject;
+          if aInst.FObject <> nil then
+            for I := 0 to Pred(aInst.FObject^.Count) do
+              begin
+                p := aInst.FObject^.Mutable[I]^;
+                Writer.AddName(p.Key);
+                WriteNode(p.Value);
+              end;
+          Writer.EndObject;
+        end;
+    else
+    end;
+  end;
+begin
+  Result := aStream.Position;
+  Writer := TJsonWriter.Create(aStream);
+  try
+    WriteNode(aNode);
+  finally
+    Writer.Free;
+  end;
+  Result := aStream.Position - Result;
+end;
+
 constructor TJsonWriter.Create(aStream: TStream);
 begin
   FStream := TWriteBufStream.Create(aStream, TJsonNode.RW_BUF_SIZE);
@@ -5600,13 +5663,8 @@ begin
 end;
 
 function TJsonWriter.Add(aValue: TJsonNode): TJsonWriter;
-var
-  s: string;
 begin
-  ValueAdding;
-  s := aValue.AsJson;
-  FStream.WriteBuffer(Pointer(s)^, System.Length(s));
-  Result := Self;
+  Result := AddJson(aValue.AsJson);
 end;
 
 function TJsonWriter.AddJson(const aJson: string): TJsonWriter;
@@ -5664,10 +5722,10 @@ var
   num: shortstring;
 begin
   PairAdding;
+  Double2Str(aValue, num);
   FsBuilder.AppendEncode(aName);
   FsBuilder.SaveToStream(FStream);
   FStream.WriteBuffer(chColon, SizeOf(chColon));
-  Double2Str(aValue, num);
   FStream.WriteBuffer(num[1], System.Length(num));
   Result := Self;
 end;
@@ -5684,16 +5742,8 @@ begin
 end;
 
 function TJsonWriter.Add(const aName: string; aValue: TJsonNode): TJsonWriter;
-var
-  s: string;
 begin
-  PairAdding;
-  FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
-  s := aValue.AsJson;
-  FStream.WriteBuffer(Pointer(s)^, System.Length(s));
-  Result := Self;
+  Result := AddJson(aName, aValue.AsJson);
 end;
 
 function TJsonWriter.AddJson(const aName, aJson: string): TJsonWriter;
