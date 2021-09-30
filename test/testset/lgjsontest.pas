@@ -62,6 +62,7 @@ type
     procedure SkipBom;
     procedure Equal;
     procedure Clone;
+    procedure TestSave2Stream;
   end;
 
   { TTestJsonWriter }
@@ -797,6 +798,17 @@ begin
   {%H-}o2.Instance := o1.Instance.Clone;
   AssertTrue(o1.Instance <> o2.Instance);
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
+end;
+
+procedure TTestJson.TestSave2Stream;
+var
+  o1, o2: specialize TGAutoRef<TJsonNode>;
+  Stream: specialize TGAutoRef<TStringStream>;
+begin
+  o1.Instance.Parse(TestJson);
+  AssertTrue(o1.Instance.SaveToStream(Stream.Instance) = Length(TestJson));
+  AssertTrue(o2.Instance.Parse(Stream.Instance.DataString));
+  AssertTrue(o2.Instance.EqualTo(o1.Instance));
 end;
 
 { TTestJsonWriter }
