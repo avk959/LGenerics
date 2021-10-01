@@ -197,7 +197,7 @@ type
       procedure Append(const s: string); inline;
       procedure AppendEncode(const s: string);
       procedure Append(const s: shortstring); inline;
-      procedure SaveToStream(aStream: TStream); inline;
+      function  SaveToStream(aStream: TStream): SizeInt; inline;
       function  ToString: string; inline;
       function  ToDecodeString: string;
       function  ToPChar: PAnsiChar; inline;
@@ -543,14 +543,14 @@ type
     function  Extract(const aName: string; out aNode: TJsonNode): Boolean;
     function  Remove(const aName: string): Boolean;
     function  RemoveAll(const aName: string): SizeInt;
-  { tries to find an element using the path specified as a JSON Pointer;
+  { tries to find an element using a path specified as a JSON Pointer;
     each node considered self as a root }
     function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPtr: TJsonPtr): TJsonNode; inline;
-  { tries to find an element using the path specified as an array of path segments;
+  { tries to find an element using a path specified as an array of path segments;
     each node considered self as a root }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
-    function  FindPath(const aPath: array of string): TJsonNode; inline;
+    function  FindPath(const aPath: array of string): TJsonNode;
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aOffset: Integer = 0;
                          aIndentSize: Integer = DEF_INDENT): string;
@@ -1482,9 +1482,10 @@ begin
   FCount += System.Length(s);
 end;
 
-procedure TJsonNode.TStrBuilder.SaveToStream(aStream: TStream);
+function TJsonNode.TStrBuilder.SaveToStream(aStream: TStream): SizeInt;
 begin
   aStream.WriteBuffer(Pointer(FBuffer)^, Count);
+  Result := Count;
   FCount := 0;
 end;
 
@@ -1540,7 +1541,7 @@ end;
 
 function TJsonNode.TStrBuilder.ToDecodeString: string;
 var
-  r: string = '';
+  r: string;
   I, J, Last: SizeInt;
   pR: PAnsiChar;
   c4: TChar4;
@@ -4747,7 +4748,7 @@ end;
 
 function TJsonNode.SaveToStream(aStream: TStream): SizeInt;
 begin
-  Result := TJsonWriter.WriteJson(aStream, Self);
+  Result := DoBuildJson.SaveToStream(aStream);
 end;
 
 procedure TJsonNode.SaveToFile(const aFileName: string);
@@ -4756,7 +4757,8 @@ var
 begin
   fs := TFileStream.Create(aFileName, fmOpenWrite or fmCreate);
   try
-    SaveToStream(fs);
+    //SaveToStream(fs);
+    TJsonWriter.WriteJson(fs, Self);
   finally
     fs.Free;
   end;
@@ -5522,7 +5524,7 @@ begin
           end;
       else
         exit(False);
-      end
+      end;
   end;
   if Integer(1 shl State) and NUM_STATES <> 0 then begin
     if Stack[sTop].Mode <> pmNone then exit(False);
