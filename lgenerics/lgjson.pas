@@ -175,6 +175,33 @@ type
     TNodeArray      = array of TJsonNode;
     IPairEnumerable = specialize IGEnumerable<TPair>;
 
+    TIterContext = record
+      Level,
+      Index: SizeInt;
+      Key: string;
+      Parent: TJsonNode;
+      constructor Init(aLevel, aIndex: SizeInt; aParent: TJsonNode);
+      constructor Init(aLevel: SizeInt; const aKey: string; aParent: TJsonNode);
+      constructor Init(aParent: TJsonNode);
+    end;
+
+    TIterateFun  = function(const aContext: TIterContext; aNode: TJsonNode): Boolean;
+    TOnIterate   = function(const aContext: TIterContext; aNode: TJsonNode): Boolean of object;
+    TNestIterate = function(const aContext: TIterContext; aNode: TJsonNode): Boolean is nested;
+
+    TVisitNode = record
+      Level,
+      Index: SizeInt;
+      Key: string;
+      Parent,
+      Node: TJsonNode;
+      constructor Init(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
+      constructor Init(aLevel: SizeInt; const aKey: string; aParent, aNode: TJsonNode);
+      constructor Init(aNode: TJsonNode);
+    end;
+
+    INodeEnumerable = specialize IGEnumerable<TVisitNode>;
+
   private
   const
     S_BUILD_INIT_SIZE = 256;
@@ -277,6 +304,25 @@ type
     property  FArray: PJsArray read GetFArray write SetFArray;
     property  FObject: PJsObject read GetFObject write SetFObject;
 
+  type
+    TNodeEnumerator = class(specialize TGEnumerator<TVisitNode>)
+    private
+    type
+      TQueue = specialize TGLiteQueue<TVisitNode>;
+    var
+      FQueue: TQueue;
+      FStart,
+      FCurrent: TVisitNode;
+    protected
+      function  GetCurrent: TVisitNode; override;
+    public
+      constructor Create(aNode: TJsonNode);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+  private
+     function GetNodeEnumerable: INodeEnumerable;
   public
   type
     TEnumerator = record
@@ -296,9 +342,9 @@ type
     var
       FQueue: TQueue;
       FCurrent: TJsonNode;
-      function  GetCurrent: TJsonNode; inline;
+      function GetCurrent: TJsonNode; inline;
     public
-      function  MoveNext: Boolean;
+      function MoveNext: Boolean;
       property Current: TJsonNode read GetCurrent;
     end;
 
@@ -431,6 +477,11 @@ type
   { tries to load JSON from a string, in case of failure it returns False,
     in this case the content of the instance does not change }
     function  Parse(const s: string): Boolean;
+  { Recursively traverses the document tree in a Preorder manner, calling aFunc on each node.
+    Exits immediately if aFunc returns False }
+    procedure Iterate(aFunc: TIterateFun);
+    procedure Iterate(aFunc: TOnIterate);
+    procedure Iterate(aFunc: TNestIterate);
   { adds null to the instance as to an array; if it is not an array,
     it is cleared and becomes an array - be careful; returns Self }
     function  AddNull: TJsonNode; inline;
@@ -575,6 +626,8 @@ type
     property  AsArray: TJsonNode read GetAsArray;
   { converts an instance to an object }
     property  AsObject: TJsonNode read GetAsObject;
+  { traverses the document tree in BFS manner, level by level }
+    property  AsEnumerable: INodeEnumerable read GetNodeEnumerable;
     property  Kind: TJsValueKind read FKind;
     property  Count: SizeInt read GetCount;
   { will raise exception if aIndex out of bounds }
@@ -1385,6 +1438,61 @@ begin
 end;
 {$POP}
 
+{ TJsonNode.TIterContext }
+
+constructor TJsonNode.TIterContext.Init(aLevel, aIndex: SizeInt; aParent: TJsonNode);
+begin
+  Level := aLevel;
+  Index := aIndex;
+  Key := '';
+  Parent := aParent;
+end;
+
+constructor TJsonNode.TIterContext.Init(aLevel: SizeInt; const aKey: string; aParent: TJsonNode);
+begin
+  Level := aLevel;
+  Index := NULL_INDEX;
+  Key := aKey;
+  Parent := aParent;
+end;
+
+constructor TJsonNode.TIterContext.Init(aParent: TJsonNode);
+begin
+  Level := 0;
+  Index := NULL_INDEX;
+  Key := '';
+  Parent := aParent;
+end;
+
+{ TJsonNode.TVisitNode }
+
+constructor TJsonNode.TVisitNode.Init(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
+begin
+  Level := aLevel;
+  Index := aIndex;
+  Key := '';
+  Parent := aParent;
+  Node := aNode;
+end;
+
+constructor TJsonNode.TVisitNode.Init(aLevel: SizeInt; const aKey: string; aParent, aNode: TJsonNode);
+begin
+  Level := aLevel;
+  Index := NULL_INDEX;
+  Key := aKey;
+  Parent := aParent;
+  Node := aNode;
+end;
+
+constructor TJsonNode.TVisitNode.Init(aNode: TJsonNode);
+begin
+  Level := 0;
+  Index := NULL_INDEX;
+  Key := '';
+  Parent := nil;
+  Node := aNode;
+end;
+
 { TJsonNode.TStrBuilder }
 
 constructor TJsonNode.TStrBuilder.Create(aCapacity: SizeInt);
@@ -1898,6 +2006,12 @@ end;
 procedure TJsonNode.TEqualEnumerator.Reset;
 begin
   FEnum.Reset;
+end;
+
+procedure TJsonNode.TNodeEnumerator.Reset;
+begin
+  FQueue.Clear;
+  FQueue.Enqueue(FStart);
 end;
 
 { TJsonNode }
@@ -3179,6 +3293,48 @@ begin
   Node.Add(aValue);
 end;
 
+{ TJsonNode.TNodeEnumerator }
+
+function TJsonNode.TNodeEnumerator.GetCurrent: TVisitNode;
+begin
+  Result := FCurrent;
+end;
+
+constructor TJsonNode.TNodeEnumerator.Create(aNode: TJsonNode);
+begin
+  FStart := TVisitNode.Init(aNode);
+  FQueue.Enqueue(FStart);
+end;
+
+function TJsonNode.TNodeEnumerator.MoveNext: Boolean;
+var
+  I: SizeInt;
+begin
+  if FQueue.TryDequeue(FCurrent) then
+    begin
+      case FCurrent.Node.Kind of
+        jvkArray:
+          if FCurrent.Node.FArray <> nil then
+            for I := 0 to Pred(FCurrent.Node.FArray^.Count) do
+              FQueue.Enqueue(TVisitNode.Init(
+                 Succ(FCurrent.Level), I, FCurrent.Node, FCurrent.Node.FArray^.UncMutable[I]^));
+        jvkObject:
+          if FCurrent.Node.FObject <> nil then
+            for I := 0 to Pred(FCurrent.Node.FObject^.Count) do
+              with FCurrent.Node.FObject^.Mutable[I]^ do
+                FQueue.Enqueue(TVisitNode.Init(Succ(FCurrent.Level), Key, FCurrent.Node, Value));
+      else
+      end;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TJsonNode.GetNodeEnumerable: INodeEnumerable;
+begin
+  Result := specialize TGEnumCursor<TVisitNode>.Create(TNodeEnumerator.Create(Self));
+end;
+
 class function TJsonNode.ValidJson(const s: string; aDepth: Integer; aSkipBom: Boolean): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseMode;
@@ -3913,6 +4069,108 @@ begin
   finally
     Node.Free;
   end;
+end;
+
+procedure TJsonNode.Iterate(aFunc: TIterateFun);
+var
+  Done: Boolean = False;
+  procedure DoIterate(const aCtx: TIterContext; aNode: lgJson.TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    if Done then exit;
+    Done := not aFunc(aCtx, aNode);
+    if Done then exit;
+    case aNode.Kind of
+      jvkArray:
+        if aNode.FArray <> nil then
+          for I := 0 to Pred(aNode.FArray^.Count) do
+            begin
+              DoIterate(TIterContext.Init(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              if Done then exit;
+            end;
+      jvkObject:
+        if aNode.FObject <> nil then
+          for I := 0 to Pred(aNode.FObject^.Count) do
+            with aNode.FObject^.Mutable[I]^ do
+              begin
+                DoIterate(TIterContext.Init(Succ(aCtx.Level), Key, aNode), Value);
+                if Done then exit;
+              end;
+    else
+    end;
+  end;
+begin
+  if aFunc = nil then exit;
+  DoIterate(TIterContext.Init(nil), Self);
+end;
+
+procedure TJsonNode.Iterate(aFunc: TOnIterate);
+var
+  Done: Boolean = False;
+  procedure DoIterate(const aCtx: TIterContext; aNode: lgJson.TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    if Done then exit;
+    Done := not aFunc(aCtx, aNode);
+    if Done then exit;
+    case aNode.Kind of
+      jvkArray:
+        if aNode.FArray <> nil then
+          for I := 0 to Pred(aNode.FArray^.Count) do
+            begin
+              DoIterate(TIterContext.Init(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              if Done then exit;
+            end;
+      jvkObject:
+        if aNode.FObject <> nil then
+          for I := 0 to Pred(aNode.FObject^.Count) do
+            with aNode.FObject^.Mutable[I]^ do
+              begin
+                DoIterate(TIterContext.Init(Succ(aCtx.Level), Key, aNode), Value);
+                if Done then exit;
+              end;
+    else
+    end;
+  end;
+begin
+  if aFunc = nil then exit;
+  DoIterate(TIterContext.Init(nil), Self);
+end;
+
+procedure TJsonNode.Iterate(aFunc: TNestIterate);
+var
+  Done: Boolean = False;
+  procedure DoIterate(const aCtx: TIterContext; aNode: lgJson.TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    if Done then exit;
+    Done := not aFunc(aCtx, aNode);
+    if Done then exit;
+    case aNode.Kind of
+      jvkArray:
+        if aNode.FArray <> nil then
+          for I := 0 to Pred(aNode.FArray^.Count) do
+            begin
+              DoIterate(TIterContext.Init(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              if Done then exit;
+            end;
+      jvkObject:
+        if aNode.FObject <> nil then
+          for I := 0 to Pred(aNode.FObject^.Count) do
+            with aNode.FObject^.Mutable[I]^ do
+              begin
+                DoIterate(TIterContext.Init(Succ(aCtx.Level), Key, aNode), Value);
+                if Done then exit;
+              end;
+    else
+    end;
+  end;
+begin
+  if aFunc = nil then exit;
+  DoIterate(TIterContext.Init(nil), Self);
 end;
 
 function TJsonNode.AddNull: TJsonNode;
