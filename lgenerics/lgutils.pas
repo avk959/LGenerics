@@ -491,6 +491,8 @@ type
   IGEnumerable<T> = interface(IObjInstance)
   ['{92F9FDFC-BEA4-4968-A033-7A90C05DDA60}']
     function  GetEnumerator: TGEnumerator<T>;
+  { If any method of the IGEnumerable instance is not called, there will be a memory leak;
+    just call Discard for preventing this }
     procedure Discard;
   { enumerates elements in reverse order }
     function  Reverse: IGEnumerable<T>;
