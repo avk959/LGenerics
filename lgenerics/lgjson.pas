@@ -178,25 +178,24 @@ type
     TIterContext = record
       Level,
       Index: SizeInt;
-      Key: string;
+      Name: string;
       Parent: TJsonNode;
       constructor Init(aLevel, aIndex: SizeInt; aParent: TJsonNode);
-      constructor Init(aLevel: SizeInt; const aKey: string; aParent: TJsonNode);
+      constructor Init(aLevel: SizeInt; const aName: string; aParent: TJsonNode);
       constructor Init(aParent: TJsonNode);
     end;
 
-    TIterateFun  = function(const aContext: TIterContext; aNode: TJsonNode): Boolean;
     TOnIterate   = function(const aContext: TIterContext; aNode: TJsonNode): Boolean of object;
     TNestIterate = function(const aContext: TIterContext; aNode: TJsonNode): Boolean is nested;
 
     TVisitNode = record
       Level,
       Index: SizeInt;
-      Key: string;
+      Name: string;
       Parent,
       Node: TJsonNode;
       constructor Init(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
-      constructor Init(aLevel: SizeInt; const aKey: string; aParent, aNode: TJsonNode);
+      constructor Init(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
       constructor Init(aNode: TJsonNode);
     end;
 
@@ -477,9 +476,8 @@ type
   { tries to load JSON from a string, in case of failure it returns False,
     in this case the content of the instance does not change }
     function  Parse(const s: string): Boolean;
-  { Recursively traverses the document tree in a Preorder manner, calling aFunc on each node.
-    Exits immediately if aFunc returns False }
-    procedure Iterate(aFunc: TIterateFun);
+  { Recursively traverses the document tree in a Preorder manner, calling aFunc on each node;
+    exits immediately if aFunc returns False }
     procedure Iterate(aFunc: TOnIterate);
     procedure Iterate(aFunc: TNestIterate);
   { adds null to the instance as to an array; if it is not an array,
@@ -694,7 +692,7 @@ type
   const
     DEF_DEPTH = 511;
   type
-    TIterateFun  = function(aIter: TJsonReader): Boolean of object;
+    TOnIterate   = function(aIter: TJsonReader): Boolean of object;
     TNestIterate = function(aIter: TJsonReader): Boolean is nested;
 
     TReadState = (rsStart, rsGo, rsEOF, rsError);
@@ -789,21 +787,13 @@ type
     for each value item, passing Self as a parameter;
     if aFun returns False, the iteration stops immediately, otherwise it stops
     at the closing token of the current structure }
-    procedure Iterate(aFun: TIterateFun);
-  { iterates over all items in the current structure and calls the aFun function
-    for each value item, passing Self as a parameter;
-    if aFun returns False, the iteration stops immediately, otherwise it stops
-    at the closing token of the current structure }
+    procedure Iterate(aFun: TOnIterate);
     procedure Iterate(aFun: TNestIterate);
   { iterates over all items in the current structure and calls the aOnValue function
     for each value item or aOnStruct function for each struct item, passing Self as
     a parameter; if the called function returns False, the iteration stops immediately,
     otherwise it stops at the closing token of the current structure }
-    procedure Iterate(aOnStruct, aOnValue: TIterateFun);
-  { iterates over all the items in the current structure and calls the aOnValue function
-    for each value item or aOnStruct function for each struct item, passing Self as
-    a parameter; if the called function returns False, the iteration stops immediately,
-    otherwise it stops at the closing token of the current structure }
+    procedure Iterate(aOnStruct, aOnValue: TOnIterate);
     procedure Iterate(aOnStruct, aOnValue: TNestIterate);
   { if the current token is the beginning of some structure(array or object),
     it copies this structure "as is" into aStruct and returns True, otherwise returns False }
@@ -1444,15 +1434,15 @@ constructor TJsonNode.TIterContext.Init(aLevel, aIndex: SizeInt; aParent: TJsonN
 begin
   Level := aLevel;
   Index := aIndex;
-  Key := '';
+  Name := '';
   Parent := aParent;
 end;
 
-constructor TJsonNode.TIterContext.Init(aLevel: SizeInt; const aKey: string; aParent: TJsonNode);
+constructor TJsonNode.TIterContext.Init(aLevel: SizeInt; const aName: string; aParent: TJsonNode);
 begin
   Level := aLevel;
   Index := NULL_INDEX;
-  Key := aKey;
+  Name := aName;
   Parent := aParent;
 end;
 
@@ -1460,7 +1450,7 @@ constructor TJsonNode.TIterContext.Init(aParent: TJsonNode);
 begin
   Level := 0;
   Index := NULL_INDEX;
-  Key := '';
+  Name := '';
   Parent := aParent;
 end;
 
@@ -1470,16 +1460,16 @@ constructor TJsonNode.TVisitNode.Init(aLevel, aIndex: SizeInt; aParent, aNode: T
 begin
   Level := aLevel;
   Index := aIndex;
-  Key := '';
+  Name := '';
   Parent := aParent;
   Node := aNode;
 end;
 
-constructor TJsonNode.TVisitNode.Init(aLevel: SizeInt; const aKey: string; aParent, aNode: TJsonNode);
+constructor TJsonNode.TVisitNode.Init(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
 begin
   Level := aLevel;
   Index := NULL_INDEX;
-  Key := aKey;
+  Name := aName;
   Parent := aParent;
   Node := aNode;
 end;
@@ -1488,7 +1478,7 @@ constructor TJsonNode.TVisitNode.Init(aNode: TJsonNode);
 begin
   Level := 0;
   Index := NULL_INDEX;
-  Key := '';
+  Name := '';
   Parent := nil;
   Node := aNode;
 end;
@@ -4071,40 +4061,6 @@ begin
   end;
 end;
 
-procedure TJsonNode.Iterate(aFunc: TIterateFun);
-var
-  Done: Boolean = False;
-  procedure DoIterate(const aCtx: TIterContext; aNode: lgJson.TJsonNode);
-  var
-    I: SizeInt;
-  begin
-    if Done then exit;
-    Done := not aFunc(aCtx, aNode);
-    if Done then exit;
-    case aNode.Kind of
-      jvkArray:
-        if aNode.FArray <> nil then
-          for I := 0 to Pred(aNode.FArray^.Count) do
-            begin
-              DoIterate(TIterContext.Init(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
-              if Done then exit;
-            end;
-      jvkObject:
-        if aNode.FObject <> nil then
-          for I := 0 to Pred(aNode.FObject^.Count) do
-            with aNode.FObject^.Mutable[I]^ do
-              begin
-                DoIterate(TIterContext.Init(Succ(aCtx.Level), Key, aNode), Value);
-                if Done then exit;
-              end;
-    else
-    end;
-  end;
-begin
-  if aFunc = nil then exit;
-  DoIterate(TIterContext.Init(nil), Self);
-end;
-
 procedure TJsonNode.Iterate(aFunc: TOnIterate);
 var
   Done: Boolean = False;
@@ -6548,7 +6504,7 @@ begin
     Read;
 end;
 
-procedure TJsonReader.Iterate(aFun: TIterateFun);
+procedure TJsonReader.Iterate(aFun: TOnIterate);
 var
   OldDepth: SizeInt;
 begin
@@ -6590,7 +6546,7 @@ begin
     end;
 end;
 
-procedure TJsonReader.Iterate(aOnStruct, aOnValue: TIterateFun);
+procedure TJsonReader.Iterate(aOnStruct, aOnValue: TOnIterate);
 var
   OldDepth: SizeInt;
 begin
