@@ -3087,8 +3087,10 @@ function Double2Str(aValue: Double; aDecimalSeparator: AnsiChar): string;
 var
   s: shortstring;
 begin
+  Result := '';
   Double2Str(aValue, s, aDecimalSeparator);
-  Result := s;
+  System.SetLength(Result, System.Length(s));
+  System.Move(s[1], Pointer(Result)^, System.Length(s));
 end;
 
 function Double2StrDef(aValue: Double): string;
