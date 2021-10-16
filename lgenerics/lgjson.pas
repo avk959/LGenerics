@@ -2934,7 +2934,8 @@ type
   end;
 var
   Dr: TDecimalRep;
-  Bits, IeeeMantissa, OutVal: QWord;
+  Bits: QWord absolute aValue;
+  IeeeMantissa, OutVal: QWord;
   IeeeExp: DWord;
   Len, OutLen, I, Anchor, Exponent: Integer;
   I64: Int64;
@@ -2942,7 +2943,6 @@ var
   Tmp: array[0..21] of AnsiChar;
   IsNeg: Boolean;
 begin
-  Bits := PQWord(@aValue)^;
   IsNeg := Boolean(Bits shr (DBL_MANTISSA_BITS + DBL_EXPONENT_BITS));
   IeeeMantissa := Bits and DBL_MANTISSA_MASK;
   IeeeExp := DWord((Bits shr DBL_MANTISSA_BITS) and DBL_EXPONENT_MASK);
