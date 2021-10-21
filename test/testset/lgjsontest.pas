@@ -39,6 +39,15 @@ type
     procedure MinMaxShift;
   end;
 
+  { TTestTryStr2Double }
+
+  TTestTryStr2Double = class(TTestCase)
+    procedure Basic;
+    procedure Misc;
+    procedure IbmFpgen;
+    procedure Roundtrip;
+  end;
+
 
   { TTestJson }
 
@@ -140,10 +149,12 @@ const
 
   PathJson = '{"foo": ["bar", "baz"], "": 0,"a/b": 1,"c%d": 2,"e^f": 3, "g|h": 4,' +
              ' "i\\j": 5, "k\"l": 6, " ": 7, "m~n": 8}';
-var
-  TestFileList: TStringList = nil;
 
 implementation
+
+var
+  TestFileList: TStringList = nil;
+  TestDir: string = '';
 
 procedure LoadFileList;
 var
@@ -153,8 +164,8 @@ begin
   while (Dir <> '') and (ExtractFileName(Dir) <> 'test') do
     Dir := ExcludeTrailingPathDelimiter(ExtractFilePath(Dir));
   if Dir = '' then exit;
-  Dir := Dir + DirectorySeparator + 'json_testset' +
-         DirectorySeparator + 'testset' + DirectorySeparator;
+  TestDir := Dir + DirectorySeparator + 'json_testset' + DirectorySeparator;
+  Dir := TestDir + 'testset' + DirectorySeparator;
   if not DirectoryExists(Dir) then exit;
   TestFileList := FindAllFiles(Dir);
 end;
@@ -430,6 +441,122 @@ begin
   // 64-bit opt-size=0:  50 <= dist <= 50
   // 64-bit opt-size=1:  44 <= dist <= 50
   AssertTrue(Double2Str(IEEEParts2Double(False, 934 ,QWord($000FA7161A4D6E0C))) = '3.196104012172126E-27');
+end;
+
+{ TTestTryStr2Double }
+
+procedure TTestTryStr2Double.Basic;
+var
+  d: Double;
+  q: QWord absolute d;
+begin
+  AssertFalse(TryStr2Double('Nan', d));
+  AssertFalse(TryStr2Double('Infinity', d));
+  AssertFalse(TryStr2Double('-Infinity', d));
+  AssertFalse(TryStr2Double('-', d));
+  AssertFalse(TryStr2Double('+', d));
+  AssertFalse(TryStr2Double('.', d));
+  AssertFalse(TryStr2Double('0.', d));
+  AssertFalse(TryStr2Double('.0', d));
+  AssertFalse(TryStr2Double('-02.0', d));
+  AssertFalse(TryStr2Double('+2.0', d));
+  AssertFalse(TryStr2Double(' -2.0', d));
+  AssertFalse(TryStr2Double('-2.0 ', d));
+  AssertFalse(TryStr2Double('2.0e', d));
+  AssertFalse(TryStr2Double('.e', d));
+  AssertFalse(TryStr2Double('2.0e-', d));
+
+  AssertTrue(TryStr2Double('0', d));
+  AssertTrue(d = 0);
+
+  AssertTrue(TryStr2Double('-0', d));
+  AssertTrue(q.ToHexString(16), q and (QWord(1) shl 63) <> 0);
+  AssertTrue(q and Pred(QWord(1) shl 63) = 0);
+
+  AssertTrue(TryStr2Double('-0.0', d));
+  AssertTrue(q.ToHexString(16), q and (QWord(1) shl 63) <> 0);
+  AssertTrue(q and Pred(QWord(1) shl 63) = 0);
+
+  AssertTrue(TryStr2Double('0e+42949672970', d));
+  AssertTrue(d = 0);
+
+  AssertTrue(TryStr2Double('5e0016', d));
+  AssertTrue(Double2Str(d) = '5E16');
+end;
+
+procedure TTestTryStr2Double.Misc;
+var
+  d: Double;
+begin
+  AssertTrue(TryStr2Double('1.421085474167199e-14', d));
+  AssertTrue(Double2Str(d) = '1.421085474167199E-14');
+
+  AssertTrue(TryStr2Double('1421085474167e7', d));
+  AssertTrue(Double2Str(d), Double2Str(d) = '1.421085474167E19');
+
+end;
+
+procedure TTestTryStr2Double.IbmFpgen;
+var
+  Lines: specialize TGAutoRef<TStringList>;
+
+  function Test(const s: string): Boolean;
+  var
+    d: Double;
+    q: QWord absolute d;
+    v: QWord;
+    I: Integer;
+    HexPart, FloatPart: string;
+  begin
+    HexPart := '$' + Copy(s, 15, 16);
+    FloatPart := Copy(s, 32, Length(s) - 31);
+    Val(HexPart, v, I);
+    if I <> 0 then exit(False);
+    if not TryStr2Double(FloatPart, d) then exit(False);
+    Result := q = v;
+  end;
+var
+  ErrCount: Integer = 0;
+  s, TestFile: string;
+begin
+  TestFile := TestDir + 'ibm-fpgen.txt';
+  AssertTrue('Test file not found', FileExists(TestFile));
+  Lines.Instance.LoadFromFile(TestFile);
+  AssertTrue(Lines.Instance.Count = 102792) ;
+  for s in Lines.Instance do
+    Inc(ErrCount, Ord(not Test(s)));
+  AssertTrue('Total errors: ' + ErrCount.ToString, ErrCount = 0);
+end;
+
+function  NextRandomDouble: Double;
+var
+  q: QWord;
+  d: Double absolute q;
+const
+  InfExp = QWord($7ff0000000000000);
+begin
+  repeat
+    q := BJNextRandom64;
+  until (q and InfExp <> InfExp) and (q and InfExp <> 0);
+  Result := d;
+end;
+
+procedure TTestTryStr2Double.Roundtrip;
+var
+  d, d1: Double;
+  s: string;
+  I: Integer;
+const
+  TestSize = 1000000;
+begin
+  BJRandomize64;
+  for I := 1 to TestSize do
+    begin
+      d := NextRandomDouble;
+      s := Double2Str(d);
+      AssertTrue(TryStr2Double(s, d1));
+      AssertTrue(d = d1);
+    end;
 end;
 
 { TTestJson }
@@ -1748,6 +1875,7 @@ initialization
   LoadFileList;
   RegisterTest(TTestJVariant);
   RegisterTest(TTestDouble2Str);
+  RegisterTest(TTestTryStr2Double);
   RegisterTest(TTestJson);
   RegisterTest(TTestJsonWriter);
   RegisterTest(TTestJsonReader);
