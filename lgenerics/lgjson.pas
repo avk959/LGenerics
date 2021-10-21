@@ -859,6 +859,11 @@ type
   function  Double2Str(aValue: Double; aDecimalSeparator: AnsiChar = '.'): string;
 { uses DefaultFormatSettins.DecimalSeparator as aDecimalSeparator }
   function  Double2StrDef(aValue: Double): string;
+{ mostly RFC 8259 compliant: does not accept leading and trailing spaces, leading plus,
+  thousand separators, leading zeros, and special values(i.e. NaN, Inf, etc) and
+  expects a period as a decimal separator;
+  if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
+  function  TryStr2Double(const s: string; out aValue: Double): Boolean; inline;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -5343,20 +5348,20 @@ var
 begin
   if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= 9007199254740991) then
     begin
-      aValue := Double(aMantissa);
+      aValue := aMantissa;
       if aPow10 < 0 then
         aValue /= TEN_POWER[-aPow10]
       else
         aValue *= TEN_POWER[aPow10];
       if aNeg then
-        aValue := -aValue;
+        PQWord(@aValue)^ := QWord(aValue) or QWord(1) shl 63;
       exit(True);
     end;
 
   if aMantissa = 0 then
     begin
       if aNeg then
-        aValue := Double(-0.0)
+        PQWord(@aValue)^ := QWord(1) shl 63
       else
         aValue := Double(0.0);
       exit(True);
@@ -5404,7 +5409,7 @@ begin
   Result := True;
 end;
 
-function TryPChar2DoubleDef(p: PAnsiChar; out aValue: Double): Boolean;
+function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
 begin
@@ -5444,11 +5449,11 @@ begin
       pDigStart := p;
       Man := Digits[p^];
       Inc(p);
-    end;
-  while p^ in ['0'..'9'] do
-    begin
-      Man := Man * 10 + Digits[p^];
-      Inc(p);
+      while p^ in ['0'..'9'] do
+        begin
+          Man := Man * 10 + Digits[p^];
+          Inc(p);
+        end;
     end;
   Pow10 := 0;
   if p^ = '.' then
@@ -5497,15 +5502,129 @@ begin
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
       if DigCount >= 19 then
-        exit(TryPChar2DoubleDef(pOld, aValue));
+        exit(TryPChar2DoubleFallBack(pOld, aValue));
     end;
   if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    exit(TryPChar2DoubleDef(pOld, aValue));
+    exit(TryPChar2DoubleFallBack(pOld, aValue));
   if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
     exit(True);
-  Result := TryPChar2DoubleDef(pOld, aValue);
+  Result := TryPChar2DoubleFallBack(pOld, aValue);
+end;
+
+function TryPChar2DblFallBack(p: PAnsiChar; out aValue: Double): Boolean;
+var
+  Code: Integer;
+begin
+  Val(p, aValue, Code);
+  Result := Code = 0;
+end;
+
+{ TryPChar2Double }
+function TryPChar2Double(p: PAnsiChar; out aValue: Double): Boolean;
+var
+  Man: QWord;
+  Pow10, PowVal: Int64;
+  DigCount: Integer;
+  pOld, pDigStart, pTemp: PAnsiChar;
+  IsNeg, PowIsNeg: Boolean;
+const
+  Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+begin
+  if p^ = #0 then
+    exit(False);
+  pOld := p;
+  IsNeg := False;
+  if p^ = '-' then
+    begin
+      Inc(p);
+      IsNeg := True;
+    end;
+  if p^ = '0' then
+    begin
+      Inc(p);
+      if p^ in ['0'..'9'] then exit(False);
+      Man := 0;
+      pDigStart := p;
+    end
+  else
+    begin
+      if not(p^ in ['0'..'9']) then exit(False);
+      pDigStart := p;
+      Man := Digits[p^];
+      Inc(p);
+      while p^ in ['0'..'9'] do
+        begin
+          Man := Man * 10 + Digits[p^];
+          Inc(p);
+        end;
+    end;
+  Pow10 := 0;
+  if p^ = '.' then
+    begin
+      Inc(p);
+      if not(p^ in ['0'..'9']) then exit(False);
+      pTemp := p;
+      while p^ in ['0'..'9'] do
+        begin
+          Man := Man * 10 + Digits[p^];
+          Inc(p);
+        end;
+      Pow10 := SizeInt(pTemp - p);
+      DigCount := p - pDigStart - 1;
+    end
+  else
+    DigCount := p - pDigStart;
+  if p^ in ['e', 'E'] then
+    begin
+      PowIsNeg := False;
+      Inc(p);
+      if p^ = '-' then
+        begin
+          PowIsNeg := True;
+          Inc(p);
+        end
+      else
+        if p^ = '+' then
+          Inc(p);
+      if not(p^ in ['0'..'9']) then exit(False);
+      PowVal := Integer(Digits[p^]);
+      Inc(p);
+      while p^ in ['0'..'9'] do
+        begin
+          if PowVal < $100000000 then
+            PowVal := PowVal * 10 + Integer(Digits[p^]);
+          Inc(p);
+        end;
+      if PowIsNeg then
+        Pow10 -= PowVal
+      else
+        Pow10 += PowVal;
+    end;
+  ////////////////////////////
+  if p^ <> #0 then exit(False);
+  ////////////////////////////
+
+  if DigCount >= 19 then
+    begin
+      pTemp := pDigStart;
+      while pTemp^ in ['0', '.'] do
+        Inc(pTemp);
+      DigCount -= pTemp - pDigStart;
+      if DigCount >= 19 then
+        exit(TryPChar2DblFallBack(pOld, aValue));
+    end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    exit(TryPChar2DblFallBack(pOld, aValue));
+  if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
+    exit(True);
+  Result := TryPChar2DblFallBack(pOld, aValue);
 end;
 {$POP}
+
+function TryStr2Double(const s: string; out aValue: Double): Boolean;
+begin
+  Result := TryPChar2Double(PAnsiChar(s), aValue);
+end;
 
 {$PUSH}{$J-}{$WARN 2005 OFF}
 const
