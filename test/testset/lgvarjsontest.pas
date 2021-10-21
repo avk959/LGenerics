@@ -108,7 +108,7 @@ var
   Json: Variant;
 begin
   Json := VarJsonCreate(Variant('baz'));
-  AssertTrue(Json.Count = 1);
+  AssertTrue(Json.Count = 0);
   Json := VarJsonCreate(TestJson);
   AssertTrue(Json.Count = 2);
 end;

@@ -241,7 +241,7 @@ var
 begin
   {%H-}s.Instance := TIntStack.Create(0);
   s.Instance.EnsureCapacity(11);
-  AssertTrue(s.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(s.Instance.Capacity = LGUtils.RoundUpTwoPower(11));
 end;
 
 procedure TGStackTest.IsEmpty;
@@ -550,7 +550,7 @@ begin
   s.EnsureCapacity(0);
   AssertTrue(s.Capacity = 0);
   s.EnsureCapacity(11);
-  AssertTrue(s.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(s.Capacity = LGUtils.RoundUpTwoPower(11));
 end;
 
 procedure TLiteStackTest.Push;

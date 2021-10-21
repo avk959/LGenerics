@@ -269,7 +269,7 @@ var
 begin
   {%H-}d.Instance := TIntDeque.Create(0);
   d.Instance.EnsureCapacity(11);
-  AssertTrue(d.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(d.Instance.Capacity = LGUtils.RoundUpTwoPower(11));
   d.Instance.EnsureCapacity(200);
   AssertTrue(d.Instance.Capacity = 256);
 end;
@@ -919,7 +919,7 @@ var
   d: TIntDeque;
 begin
   {%H-}d.EnsureCapacity(11);
-  AssertTrue(d.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(d.Capacity = LGUtils.RoundUpTwoPower(11));
   d.EnsureCapacity(200);
   AssertTrue(d.Capacity = 256);
 end;

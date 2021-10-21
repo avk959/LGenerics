@@ -4182,7 +4182,6 @@ begin
   lf := 3.0;
   s.Instance := TSet.Create(lf, IntArray11);
   AssertTrue(s.Instance.Count = 11);
-  AssertTrue(s.Instance.Capacity >= 11);
   AssertTrue(s.Instance.LoadFactor = lf);
   for I in IntArray11 do
     AssertTrue(s.Instance.Contains(I));
@@ -4199,7 +4198,6 @@ begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   s.Instance := TSet.Create(lf, e);
   AssertTrue(s.Instance.Count = 11);
-  AssertTrue(s.Instance.Capacity >= 11);
   AssertTrue(s.Instance.LoadFactor = lf);
   for I in IntArray11 do
     AssertTrue(s.Instance.Contains(I));

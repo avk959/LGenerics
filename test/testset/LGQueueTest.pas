@@ -282,7 +282,7 @@ var
 begin
   {%H-}q.Instance := TIntQueue.Create(0);
   q.Instance.EnsureCapacity(11);
-  AssertTrue(q.Instance.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(q.Instance.Capacity = LGUtils.RoundUpTwoPower(11));
 end;
 
 procedure TGQueueTest.Enqueue;
@@ -829,7 +829,7 @@ begin
   q.EnsureCapacity(0);
   AssertTrue(q.Capacity = 0);
   q.EnsureCapacity(11);
-  AssertTrue(q.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  AssertTrue(q.Capacity = LGUtils.RoundUpTwoPower(11));
   q.EnsureCapacity(250);
   AssertTrue(q.Capacity = 256);
 end;
