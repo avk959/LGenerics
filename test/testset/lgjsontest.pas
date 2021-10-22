@@ -45,6 +45,7 @@ type
     procedure Basic;
     procedure Misc;
     procedure IbmFpgen;
+    procedure IbmFpgen2;
     procedure Roundtrip;
   end;
 
@@ -508,12 +509,16 @@ var
     I: Integer;
     HexPart, FloatPart: string;
   begin
-    HexPart := '$' + Copy(s, 15, 16);
-    FloatPart := Copy(s, 32, Length(s) - 31);
-    Val(HexPart, v, I);
-    if I <> 0 then exit(False);
-    if not TryStr2Double(FloatPart, d) then exit(False);
-    Result := q = v;
+    Result := False;
+    try
+      HexPart := '$' + Copy(s, 15, 16);
+      FloatPart := Copy(s, 32, Length(s) - 31);
+      Val(HexPart, v, I);
+      if I <> 0 then exit;
+      if not TryStr2Double(FloatPart, d) then exit;
+      Result := q = v;
+    except
+    end;
   end;
 var
   ErrCount: Integer = 0;
@@ -522,9 +527,54 @@ begin
   TestFile := TestDir + 'ibm-fpgen.txt';
   AssertTrue('Test file not found', FileExists(TestFile));
   Lines.Instance.LoadFromFile(TestFile);
-  AssertTrue(Lines.Instance.Count = 102792) ;
+  AssertTrue(Lines.Instance.Count = 102792);
   for s in Lines.Instance do
     Inc(ErrCount, Ord(not Test(s)));
+  AssertTrue('Total errors: ' + ErrCount.ToString, ErrCount = 0);
+end;
+
+procedure TTestTryStr2Double.IbmFpgen2;
+var
+  Lines: specialize TGAutoRef<TStringList>;
+
+  function TryVal(const s: string; out v: Double): Boolean;
+  var
+    c: Integer;
+  begin
+    Val(s, v, c);
+    Result := c = 0;
+  end;
+
+  function Test(const s: string): Boolean;
+  var
+    d: Double;
+    q: QWord absolute d;
+    v: QWord;
+    I: Integer;
+    HexPart, FloatPart: string;
+  begin
+    Result := False;
+    try
+      HexPart := '$' + Copy(s, 15, 16);
+      FloatPart := Copy(s, 32, Length(s) - 31);
+      Val(HexPart, v, I);
+      if I <> 0 then exit;
+      if not TryVal(FloatPart, d) then exit;
+      Result := q = v;
+    except
+    end;
+  end;
+var
+  ErrCount: Integer = 0;
+  s, TestFile: string;
+begin
+  TestFile := TestDir + 'ibm-fpgen.txt';
+  AssertTrue('Test file not found', FileExists(TestFile));
+  Lines.Instance.LoadFromFile(TestFile);
+  AssertTrue(Lines.Instance.Count = 102792);
+  for s in Lines.Instance do
+    if not Test(s) then
+      Inc(ErrCount);
   AssertTrue('Total errors: ' + ErrCount.ToString, ErrCount = 0);
 end;
 
