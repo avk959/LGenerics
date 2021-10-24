@@ -601,8 +601,8 @@ type
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPath: array of string): TJsonNode;
   { returns a formatted JSON representation of an instance, is recursive }
-    function  FormatJson(aOptions: TJsFormatOptions = []; aOffset: Integer = 0;
-                         aIndentSize: Integer = DEF_INDENT): string;
+    function  FormatJson(aOptions: TJsFormatOptions = []; aIndentSize: Integer = DEF_INDENT;
+                         aOffset: Integer = 0): string;
     function  GetValue(out aValue: TJVariant): Boolean;
   { returns the number of bytes written }
     function  SaveToStream(aStream: TStream): SizeInt; inline;
@@ -4820,7 +4820,7 @@ begin
   FindPath(aPath, Result);
 end;
 
-function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aOffset: Integer; aIndentSize: Integer): string;
+function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize, aOffset: Integer): string;
 var
   sb: TStrBuilder;
   Pair: TPair;
@@ -4986,19 +4986,13 @@ begin
 end;
 
 function TJsonNode.ToString: string;
-var
-  I64: Int64;
 begin
   case Kind of
     jvkUnknown: Result := JS_UNDEF;
     jvkNull:    Result := JS_NULL;
     jvkFalse:   Result := JS_FALSE;
     jvkTrue:    Result := JS_TRUE;
-    jvkNumber:
-      if IsExactInt(FValue.Num, I64) then
-        Result := I64.ToString
-      else
-        Result := FValue.Num.ToString;
+    jvkNumber:  Result := Double2StrDef(FValue.Num);
     jvkString:  Result := FString;
     jvkArray,
     jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
