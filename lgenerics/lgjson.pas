@@ -3513,7 +3513,7 @@ end;
 class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
   aDepth: Integer; aSkipBom: Boolean): Boolean;
 var
-  s: string;
+  s: string = '';
 begin
   with TStringStream.Create do
     try
@@ -3530,10 +3530,10 @@ class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonN
 var
   s: string = '';
 begin
-  with TStringStream.Create do
+  with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
     try
-      LoadFromFile(aFileName);
-      s := DataString;
+      System.SetLength(s, Size);
+      ReadBuffer(Pointer(s)^, System.Length(s)); //todo: Size > MaxInt ???
     finally
       Free;
     end;
