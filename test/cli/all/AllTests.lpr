@@ -41,6 +41,7 @@ uses
   LGRbTreeTest,
   LGJsonTest,
   LGVarJsonTest,
+  LGJsonConfTest,
   lgStrHelpersTest;
 
 type
