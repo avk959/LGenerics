@@ -1,0 +1,9 @@
+DoubleToShort  1216
+Str            1918
+FloatToText    4321
+Double2Str     858
+DoubleToStr        2480
+Str                2752
+FloatToStr         3588
+RyuDoubleToString  2589
+Double2Str         1482

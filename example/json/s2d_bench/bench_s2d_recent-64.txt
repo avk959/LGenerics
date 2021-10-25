@@ -1,0 +1,20 @@
+uniform.txt
+read 5000000 lines
+total size 109829099 bytes
+Val                    3310                6692
+Val                    rejected: 0         
+ConvertStringToDouble  1350                2886
+ConvertStringToDouble  rejected: 0
+TryStr2Double          936                 2152
+TryStr2Double          rejected: 0
+fast_double_parser::parse_number  760
+citylots.txt
+read 5250126 lines
+total size 99166601 bytes
+Val                    2558                5818
+Val                    rejected: 0
+ConvertStringToDouble  1060                2512
+ConvertStringToDouble  rejected: 0
+TryStr2Double          639                 1825
+TryStr2Double          rejected: 0
+fast_double_parser::parse_number  360
