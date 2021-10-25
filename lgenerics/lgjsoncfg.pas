@@ -106,8 +106,8 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 resourcestring
-  SEInvalidJsonFile = '"%s" is not a valid JSON configuration file';
-  SECouldNotOpenKey = 'Could not open key "%s"';
+  SlgEInvalidJsonFile = '"%s" is not a valid JSON configuration file';
+  SlgECouldNotOpenKey = 'Could not open key "%s"';
 
 { TJsonConf }
 
@@ -149,7 +149,7 @@ begin
     end
   else
     Node.Free;
-  raise EJsonConfError.CreateFmt(SEInvalidJsonFile,[aFileName]);
+  raise EJsonConfError.CreateFmt(SlgEInvalidJsonFile,[aFileName]);
 end;
 
 procedure TJsonConf.Loaded;
@@ -296,7 +296,7 @@ begin
     else
       FCurrNode := FindObj(aPath, aForceKey);
   if FCurrNode = nil then
-    raise EJsonConfError.CreateFmt(SECouldNotOpenKey, [aPath]);
+    raise EJsonConfError.CreateFmt(SlgECouldNotOpenKey, [aPath]);
 end;
 
 function TJsonConf.TryOpenKey(const aPath: string; aForceKey: Boolean): Boolean;
