@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="5"/>
-    <Files Count="38">
+    <Files Count="39">
       <Item1>
         <Filename Value="lgabstractcontainer.pas"/>
         <UnitName Value="lgAbstractContainer"/>
@@ -185,6 +185,10 @@
         <Filename Value="lgsequtils.pas"/>
         <UnitName Value="lgSeqUtils"/>
       </Item38>
+      <Item39>
+        <Filename Value="lgjsoncfg.pas"/>
+        <UnitName Value="lgjsoncfg"/>
+      </Item39>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
