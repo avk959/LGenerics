@@ -108,8 +108,9 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 resourcestring
-  SlgEInvalidJsonFile = '"%s" is not a valid JSON configuration file';
-  SlgECouldNotOpenKey = 'Could not open key "%s"';
+  SlgEInvalidJsonFileFmt = '"%s" is not a valid JSON configuration file';
+  SlgECouldNotOpenKeyFmt = 'Could not open key "%s"';
+  SlgDuplicateNameFmt    = 'Duplicate object member: "%s"';
 
 { TJsonConf }
 
@@ -151,7 +152,7 @@ begin
     end
   else
     Node.Free;
-  raise EJsonConfError.CreateFmt(SlgEInvalidJsonFile,[aFileName]);
+  raise EJsonConfError.CreateFmt(SlgEInvalidJsonFileFmt,[aFileName]);
 end;
 
 procedure TJsonConf.Loaded;
@@ -298,7 +299,7 @@ begin
     else
       FCurrNode := FindObj(aPath, aForceKey);
   if FCurrNode = nil then
-    raise EJsonConfError.CreateFmt(SlgECouldNotOpenKey, [aPath]);
+    raise EJsonConfError.CreateFmt(SlgECouldNotOpenKeyFmt, [aPath]);
 end;
 
 function TJsonConf.TryOpenKey(const aPath: string; aForceKey: Boolean): Boolean;
@@ -513,12 +514,16 @@ begin
     if AsObject then
       n := p.AddNode(Key, jvkObject)
     else
-      n := p.AddNode(Key, jvkArray);
+      n := p.AddNode(Key, jvkArray)
+  else
+    if not AsObject then
+      n.Clear;
   if AsObject then
     for I := 0 to Pred(aValue.Count) do
       begin
         aValue.GetNameValue(I, Key, Value);
-        n.Add(Key, Value);
+        if not n.AddUniq(Key, Value) then
+          raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
       end
   else
     for Value in aValue do
@@ -530,11 +535,13 @@ procedure TJsonConf.SetValue(const aPath: string; const aValue: TJVarArray);
 var
   n, p: TJsonNode;
   I: SizeInt;
-  Key, Value: string;
+  k: string;
 begin
-  n := FindValue(aPath, p, Key);
+  n := FindValue(aPath, p, k);
   if n = nil then
-    n := p.AddNode(Key, jvkArray);
+    n := p.AddNode(k, jvkArray)
+  else
+    n.Clear;
   for I := 0 to System.High(aValue) do
     case aValue[I].Kind of
       vkNull:   n.AddNull;
@@ -549,18 +556,23 @@ procedure TJsonConf.SetValue(const aPath: string; const aValue: TJPairArray);
 var
   n, p: TJsonNode;
   I: SizeInt;
-  Key, Value: string;
+  k: string;
+  Ok: Boolean;
 begin
-  n := FindValue(aPath, p, Key);
+  n := FindValue(aPath, p, k);
   if n = nil then
-    n := p.AddNode(Key, jvkObject);
+    n := p.AddNode(k, jvkObject);
   for I := 0 to System.High(aValue) do
     with aValue[I] do
-      case Value.Kind of
-        vkNull:   n.AddNull(Key);
-        vkBool:   n.Add(Key, Boolean(Value));
-        vkNumber: n.Add(Key, Double(Value));
-        vkString: n.Add(Key, string(Value));
+      begin
+        case Value.Kind of
+          vkNull:   Ok := n.AddUniqNull(Key);
+          vkBool:   Ok := n.AddUniq(Key, Boolean(Value));
+          vkNumber: Ok := n.AddUniq(Key, Double(Value));
+          vkString: Ok := n.AddUniq(Key, string(Value));
+        end;
+        if not Ok then
+          raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
       end;
   FModified := True;
 end;
