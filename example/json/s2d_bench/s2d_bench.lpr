@@ -1,3 +1,6 @@
+{
+  the program expects uniform.txt and citylots.txt files in the same folder as the binary;
+}
 program s2d_bench;
 
 {$mode objfpc}{$H+}
