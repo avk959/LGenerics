@@ -86,6 +86,8 @@ type
     procedure SetValue(const aPath: string; aValue: Boolean);
     procedure SetValue(const aPath: string; aValue: Double);
     procedure SetValue(const aPath: string; aValue: TStrings; AsObject: Boolean = False);
+    procedure SetValue(const aPath: string; const aValue: TJVarArray);
+    procedure SetValue(const aPath: string; const aValue: TJPairArray);
 
     procedure SetDeleteValue(const aPath: string; const aValue, aDefValue: string);
     procedure SetDeleteValue(const aPath: string; aValue, aDefValue: Integer);
@@ -521,6 +523,45 @@ begin
   else
     for Value in aValue do
       n.Add(Value);
+  FModified := True;
+end;
+
+procedure TJsonConf.SetValue(const aPath: string; const aValue: TJVarArray);
+var
+  n, p: TJsonNode;
+  I: SizeInt;
+  Key, Value: string;
+begin
+  n := FindValue(aPath, p, Key);
+  if n = nil then
+    n := p.AddNode(Key, jvkArray);
+  for I := 0 to System.High(aValue) do
+    case aValue[I].Kind of
+      vkNull:   n.AddNull;
+      vkBool:   n.Add(Boolean(aValue[I]));
+      vkNumber: n.Add(Double(aValue[I]));
+      vkString: n.Add(string(aValue[I]));
+    end;
+  FModified := True;
+end;
+
+procedure TJsonConf.SetValue(const aPath: string; const aValue: TJPairArray);
+var
+  n, p: TJsonNode;
+  I: SizeInt;
+  Key, Value: string;
+begin
+  n := FindValue(aPath, p, Key);
+  if n = nil then
+    n := p.AddNode(Key, jvkObject);
+  for I := 0 to System.High(aValue) do
+    with aValue[I] do
+      case Value.Kind of
+        vkNull:   n.AddNull(Key);
+        vkBool:   n.Add(Key, Boolean(Value));
+        vkNumber: n.Add(Key, Double(Value));
+        vkString: n.Add(Key, string(Value));
+      end;
   FModified := True;
 end;
 
