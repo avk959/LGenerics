@@ -32,6 +32,8 @@ const
 
 type
   EJsonConfError = class(Exception);
+  TConfigOption  = (coOverriteDuplicates);
+  TConfigOptions = set of TConfigOption;
 
   { TJsonConf }
 
@@ -40,6 +42,7 @@ type
     FFileName: string;
     FFormatIndentSize: Integer;
     FFormatOptions: TJsFormatOptions;
+    FOptions: TConfigOptions;
     FFormatted: Boolean;
     FCurrNode: TJsonNode;
     procedure DoSetFileName(const aFileName: string; aForceReload: Boolean);
@@ -70,7 +73,7 @@ type
     procedure CloseKey;
     procedure ResetKey;
     procedure EnumSubKeys(const aPath: string; aList: TStrings);
-    Procedure EnumValues(const aPath: string; aList: TStrings);
+    procedure EnumValues(const aPath: string; aList: TStrings);
 
     function  GetValue(const aPath: string; const aDefault: string): string;
     function  GetValue(const aPath: string; aDefault: Integer): Integer;
@@ -79,6 +82,7 @@ type
     function  GetValue(const aPath: string; aDefault: Double): Double;
     function  GetValue(const aPath: string; aValue: TStrings; const aDefault: string): Boolean;
     function  GetValue(const aPath: string; aValue: TStrings; const aDefault: TStrings): Boolean;
+    function  GetValue(const aPath: string; const aDefault: TJVarArray): TJVarArray;
 
     procedure SetValue(const aPath: string; const aValue: string);
     procedure SetValue(const aPath: string; aValue: Integer);
@@ -102,6 +106,7 @@ type
     property  Formatted: Boolean read FFormatted write FFormatted;
     property  FormatOptions: TJsFormatOptions read FFormatoptions write FFormatOptions default DEF_FORMAT;
     property  FormatIndentSize: Integer read FFormatIndentSize write FFormatIndentSize default DEF_INDENT;
+    property  Options: TConfigOptions read FOptions write FOptions;
   end;
 
 implementation
@@ -434,6 +439,29 @@ begin
     aValue.Assign(aDefault);
 end;
 
+function TJsonConf.GetValue(const aPath: string; const aDefault: TJVarArray): TJVarArray;
+var
+  n, v: TJsonNode;
+  I: SizeInt;
+begin
+  Result := nil;
+  n := FindElem(StripSlash(APath), False, True);
+  if (n <> nil) and n.IsArray then
+    begin
+      System.SetLength(Result, n.Count);
+      I := 0;
+      for v in n do
+        if v.Kind in VALUE_KINDS then
+          begin
+            v.GetValue(Result[I]);
+            Inc(I);
+          end;
+      System.SetLength(Result, I);
+      exit;
+    end;
+  Result := aDefault;
+end;
+
 procedure TJsonConf.SetValue(const aPath: string; const aValue: string);
 var
   n, p: TJsonNode;
@@ -517,14 +545,26 @@ begin
       n := p.AddNode(Key, jvkArray)
   else
     if not AsObject then
-      n.Clear;
-  if AsObject then
-    for I := 0 to Pred(aValue.Count) do
       begin
-        aValue.GetNameValue(I, Key, Value);
-        if not n.AddUniq(Key, Value) then
-          raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
+        n.Clear;
+        n.AsArray;
       end
+    else
+      n.AsObject;
+  if AsObject then
+    if coOverriteDuplicates in Options then
+      for I := 0 to Pred(aValue.Count) do
+        begin
+          aValue.GetNameValue(I, Key, Value);
+          n[Key] := Value;
+        end
+    else
+      for I := 0 to Pred(aValue.Count) do
+        begin
+          aValue.GetNameValue(I, Key, Value);
+          if not n.AddUniq(Key, Value) then
+            raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
+        end
   else
     for Value in aValue do
       n.Add(Value);
@@ -539,15 +579,18 @@ var
 begin
   n := FindValue(aPath, p, k);
   if n = nil then
-    n := p.AddNode(k, jvkArray)
+    p.Add(k, aValue)
   else
-    n.Clear;
-  for I := 0 to System.High(aValue) do
-    case aValue[I].Kind of
-      vkNull:   n.AddNull;
-      vkBool:   n.Add(Boolean(aValue[I]));
-      vkNumber: n.Add(Double(aValue[I]));
-      vkString: n.Add(string(aValue[I]));
+    begin
+      n.Clear;
+      n.AsArray;
+      for I := 0 to System.High(aValue) do
+        case aValue[I].Kind of
+          vkNull:   ;
+          vkBool:   n.Add(Boolean(aValue[I]));
+          vkNumber: n.Add(Double(aValue[I]));
+          vkString: n.Add(string(aValue[I]));
+        end;
     end;
   FModified := True;
 end;
@@ -561,19 +604,26 @@ var
 begin
   n := FindValue(aPath, p, k);
   if n = nil then
-    n := p.AddNode(k, jvkObject);
-  for I := 0 to System.High(aValue) do
-    with aValue[I] do
-      begin
-        case Value.Kind of
-          vkNull:   Ok := n.AddUniqNull(Key);
-          vkBool:   Ok := n.AddUniq(Key, Boolean(Value));
-          vkNumber: Ok := n.AddUniq(Key, Double(Value));
-          vkString: Ok := n.AddUniq(Key, string(Value));
+    n := p.AddNode(k, jvkObject)
+  else
+    n.AsObject;
+  if coOverriteDuplicates in Options then
+    for I := 0 to System.High(aValue) do
+      with aValue[I] do
+        n[Key] := Value
+  else
+    for I := 0 to System.High(aValue) do
+      with aValue[I] do
+        begin
+          case Value.Kind of
+            vkNull:   Ok := n.AddUniqNull(Key);
+            vkBool:   Ok := n.AddUniq(Key, Boolean(Value));
+            vkNumber: Ok := n.AddUniq(Key, Double(Value));
+            vkString: Ok := n.AddUniq(Key, string(Value));
+          end;
+          if not Ok then
+            raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
         end;
-        if not Ok then
-          raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
-      end;
   FModified := True;
 end;
 
