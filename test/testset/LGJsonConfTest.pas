@@ -7,6 +7,7 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   lgUtils,
+  lgJson,
   lgJsonCfg;
 
 type
@@ -25,6 +26,9 @@ type
     procedure TestClear;
     procedure TestOpenKey;
     procedure TestStrings;
+    procedure TestVarArray;
+    procedure TestPairArray;
+    procedure TestDuplicates;
   end;
 
 implementation
@@ -261,6 +265,127 @@ begin
     Conf.SetValue('a', Int64(1));
     Conf.GetValue('a', List.Instance, '');
     AssertStrings('Int64', List.Instance, ['1']);
+  finally
+    ClearConf(Conf, True);
+  end;
+end;
+
+procedure TTestJsonConf.TestVarArray;
+var
+  Conf: TJsonConf;
+  a: TJVarArray;
+begin
+  Conf := CreateConf('test.json');
+  try
+    a := Conf.GetValue('/a', [1]);
+    AssertEquals('GetValue, default length', 1, Length(a));
+    AssertEquals('GetValue, default value', 1, Int64(a[0]));
+    Conf.SetValue('/a', [42, False, 'item']);
+    a := Conf.GetValue('/a', []);
+    AssertEquals('GetValue, length', 3, Length(a));
+    AssertEquals('GetValue, item[0], Kind', Integer(vkNumber), Integer(a[0].Kind));
+    AssertEquals('GetValue, item[0], Value', 42, Int64(a[0]));
+    AssertEquals('GetValue, item[1], Kind', Integer(vkBool), Integer(a[1].Kind));
+    AssertEquals('GetValue, item[1], Value', False, Boolean(a[1]));
+    AssertEquals('GetValue, item[2], Kind', Integer(vkString), Integer(a[2].Kind));
+    AssertEquals('GetValue, item[2], Value', 'item', string(a[2]));
+    Conf.SetValue('/a', TJVarArray(nil));
+    a := Conf.GetValue('/a', [1]);
+    AssertEquals('GetValue after set empty, length', 0, Length(a));
+  finally
+    ClearConf(Conf, True);
+  end;
+end;
+
+procedure TTestJsonConf.TestPairArray;
+var
+  Conf: TJsonConf;
+  I: Integer;
+  I64: Int64;
+begin
+  Conf := CreateConf('test.json');
+  try
+    Conf.SetValue('/a', 1);
+    Conf.SetValue('/b', [JPair('c', MaxInt), JPair('d', -9007199254740991)]);
+    I := Conf.GetValue('/a', Integer(0));
+    AssertEquals('GetValue a', 1, I);
+    I := Conf.GetValue('/b', Integer(-1));
+    AssertEquals('GetValue b', -1, I);
+    I := Conf.GetValue('/b/c', Integer(0));
+    AssertEquals('GetValue b/c', MaxInt, I);
+    I64 := Conf.GetValue('/b/d', Int64(0));
+    AssertEquals('GetValue b/c', -9007199254740991, I64);
+  finally
+    ClearConf(Conf, True);
+  end;
+end;
+
+procedure TTestJsonConf.TestDuplicates;
+var
+  Conf: TJsonConf;
+  List: specialize TGAutoRef<TStringList>;
+  I: Integer;
+  s: string;
+  Raised: Boolean = False;
+begin
+  Conf := CreateConf('test.json');
+  try
+    Conf.SetValue('/a', [JPair('b', 42), JPair('c', 1001)]);
+    List.Instance.Add('b=-1');
+    List.Instance.Add('c=42');
+    try
+      Conf.SetValue('a', List.Instance, True);
+    except
+      on e: EJsonConfError do
+        Raised := True;
+    end;
+    AssertEquals('SetValue(List), exception on duplicates', True, Raised);
+    I := Conf.GetValue('a/b', Integer(0));
+    AssertEquals('GetValue a/b after exception', 42, I);
+    I := Conf.GetValue('a/c', Integer(0));
+    AssertEquals('GetValue a/b after exception', 1001, I);
+
+    Conf.Options := [coOverriteDuplicates];
+    Raised := False;
+    try
+      Conf.SetValue('a', List.Instance, True);
+    except
+      on e: EJsonConfError do
+        Raised := True;
+    end;
+    AssertEquals('SetValue(List), exception on duplicates with option', False, Raised);
+    List.Clear;
+    s := Conf.GetValue('a/b', '');
+    AssertEquals('GetValue a/b after overrite', '-1', s);
+    s := Conf.GetValue('a/c', '');
+    AssertEquals('GetValue a/b after overrite', '42', s);
+
+    Conf.Options := [];
+    try
+      Conf.SetValue('a', [JPair('b', 42), JPair('c', 1001)]);
+    except
+      on e: EJsonConfError do
+        Raised := True;
+    end;
+    AssertEquals('SetValue(Array), exception on duplicates', True, Raised);
+    s := Conf.GetValue('a/b', '');
+    AssertEquals('GetValue a/b after exception', '-1', s);
+    s := Conf.GetValue('a/c', '');
+    AssertEquals('GetValue a/b after exception', '42', s);
+
+    Conf.Options := [coOverriteDuplicates];
+    Raised := False;
+    try
+      Conf.SetValue('a', [JPair('b', 42), JPair('c', 1001)]);
+    except
+      on e: EJsonConfError do
+        Raised := True;
+    end;
+    AssertEquals('SetValue(Array), exception on duplicates with option', False, Raised);
+    I := Conf.GetValue('a/b', Integer(0));
+    AssertEquals('GetValue a/b after overrite', 42, I);
+    I := Conf.GetValue('a/c', Integer(0));
+    AssertEquals('GetValue a/b after overrite', 1001, I);
   finally
     ClearConf(Conf, True);
   end;
