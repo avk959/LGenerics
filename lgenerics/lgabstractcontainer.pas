@@ -895,6 +895,7 @@ type
     procedure EnsureRowCapacity(aValue: SizeInt); virtual; abstract;
     function  ContainsRow(const aRow: TRow): Boolean; inline;
     function  FindRow(const aRow: TRow; out aMap: IRowMap): Boolean;
+    function  FindOrAddRow(const aRow: TRow): IRowMap;
   { if not contains aRow then add aRow and returns True, False otherwise }
     function  AddRow(const aRow: TRow): Boolean; inline;
     function  AddRows(const a: array of TRow): SizeInt;
@@ -3750,6 +3751,14 @@ begin
   Result := p <> nil;
   if Result then
     aMap := p^.Columns;
+end;
+
+function TGAbstractTable2D.FindOrAddRow(const aRow: TRow): IRowMap;
+var
+  p: PRowEntry;
+begin
+  DoFindOrAddRow(aRow, p);
+  Result := p^.Columns;
 end;
 
 function TGAbstractTable2D.AddRow(const aRow: TRow): Boolean;
