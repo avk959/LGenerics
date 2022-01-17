@@ -403,7 +403,7 @@ const
   function IsValidDotDecIPv4(const s: ansistring): Boolean;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 function IsSubSequence(const aStr, aSub: ansistring): Boolean;
 begin
@@ -2024,9 +2024,12 @@ begin
         end;
       Result := Double(0.0);
       for I := 0 to MaxLen - MinLen do
-        Result := Math.Max(Result,
-          SimRatioLev(PByte(LocL)[0..Pred(System.Length(LocL))],
-                      PByte(LocR)[I..I+Pred(System.Length(LocL))]));
+        begin
+          Result := Math.Max(Result,
+            SimRatioLev(PByte(LocL)[0..Pred(System.Length(LocL))],
+                        PByte(LocR)[I..I+Pred(System.Length(LocL))]));
+          if Result = Double(1.0) then break;
+        end;
     end
   else
     Result := SimRatioLev(LocL, LocR);
