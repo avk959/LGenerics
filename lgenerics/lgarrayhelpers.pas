@@ -125,6 +125,18 @@ type
                                   aNum: SizeInt; aUseSwaps: Boolean); static;
     end;
 
+    TReverseEnumerator = record
+    private
+      FCurrent,
+      FFirst: PItem;
+      function GetCurrent: T; inline;
+    public
+      constructor Create(aFirst, aLast: PItem);
+      function GetEnumerator: TReverseEnumerator;inline;
+      function MoveNext: Boolean; inline;
+      property Current: T read GetCurrent;
+    end;
+
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
@@ -156,6 +168,7 @@ type
     if aCount > length A then Result is truncated }
     class function  Extract(var A: TArray; aIndex, aCount: SizeInt): TArray; static;
     class procedure Reverse(var A: array of T); static;
+    class function  ReverseOrder(const A: array of T): TReverseEnumerator; static;
   { cyclic shift of array elements by aDist positions to the left;
     the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateLeft(var A: array of T; aDist: SizeInt); static;
@@ -1197,7 +1210,7 @@ type
   { LSD radix sorting, requires O(N) auxiliary memory }
     class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
     class procedure RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
-  { default sorting, currently RadixSort if length of A > RADIX_CUTOFF + 1,
+  { default sorting, currently RadixSort if length of A > RADIX_CUTOFF,
     otherwise PDQSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
@@ -1398,6 +1411,34 @@ begin
           end;
         TFake(R^) := v;
       end;
+end;
+
+{ TGArrayHelpUtil.TReverseEnumerator }
+
+function TGArrayHelpUtil.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FCurrent^;
+end;
+
+constructor TGArrayHelpUtil.TReverseEnumerator.Create(aFirst, aLast: PItem);
+begin
+  FFirst := aFirst;
+  FCurrent := aLast;
+end;
+
+function TGArrayHelpUtil.TReverseEnumerator.GetEnumerator: TReverseEnumerator;
+begin
+  Result := Self;
+end;
+
+function TGArrayHelpUtil.TReverseEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent > FFirst then
+    begin
+      Dec(FCurrent);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGArrayHelpUtil }
@@ -1784,6 +1825,14 @@ class procedure TGArrayHelpUtil.Reverse(var A: array of T);
 begin
   if System.High(A) > 0 then
     DoReverse(@A[0], System.High(A));
+end;
+
+class function TGArrayHelpUtil.ReverseOrder(const A: array of T): TReverseEnumerator;
+begin
+  if System.Length(A) <> 0 then
+    Result := TReverseEnumerator.Create(@A[0], PItem(@A[System.High(A)]) + 1)
+  else
+    Result := TReverseEnumerator.Create(nil, nil);
 end;
 
 class procedure TGArrayHelpUtil.RotateLeft(var A: array of T; aDist: SizeInt);
