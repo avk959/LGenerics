@@ -99,6 +99,8 @@ type
     procedure ReverseStatic10;
     procedure ReverseDyn10;
 
+    procedure ReverseOrder;
+
     procedure RotateIllegal;
     procedure RotateStatic;
     procedure RotateDyn;
@@ -733,6 +735,38 @@ begin
   a := TIntHelper.CreateCopy(IntSrc10);
   TIntHelper.Reverse(a);
   AssertTrue(TCompHelper.Same(ReverseIntSrc10, a));
+end;
+
+procedure TArrayHelpUtilTest.ReverseOrder;
+var
+  a: TIntArray = nil;
+  b: array[-1..5] of Integer = (-1, 0, 1, 2, 3, 4, 5);
+  I, J, Count: Integer;
+begin
+  Count := 0;
+  for I in TIntHelper.ReverseOrder(a) do
+    Inc(Count);
+  AssertTrue(Count = 0);
+
+  J := High(b);
+  for I in TIntHelper.ReverseOrder(b) do
+    begin
+      AssertTrue(I = b[J]);
+      Dec(J);
+      Inc(Count);
+    end;
+  AssertTrue(Count = Length(b));
+
+  a := [0, 1, 2, 3, 4, 5];
+  Count := 0;
+  J := High(a);
+  for I in TIntHelper.ReverseOrder(a) do
+    begin
+      AssertTrue(I = a[J]);
+      Dec(J);
+      Inc(Count);
+    end;
+  AssertTrue(Count = Length(a));
 end;
 
 procedure TArrayHelpUtilTest.RotateIllegal;
