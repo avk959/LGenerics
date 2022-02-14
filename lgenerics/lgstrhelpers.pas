@@ -41,7 +41,7 @@ uses
 
 type
 
-  TAnsiStrHelper = type helper(TAStrHelper) for ansistring
+  TAnsiStrHelper = type helper(TAStrHelper) for string
   private
   type
     TStrEnumerable = class(specialize TGAutoEnumerable<string>)
@@ -66,9 +66,9 @@ type
   const
     WhiteSpaces = [#0..' '];
     AsciiDelimiters = [#0..#255] - ['a'..'z', 'A'..'Z', '0'..'9', '_'];
-    function StripWhiteSpaces: ansistring; inline;
-    function StripChar(aChar: AnsiChar): ansistring;
-    function StripChars(constref aChars: TSysCharSet): ansistring;
+    function StripWhiteSpaces: string; inline;
+    function StripChar(aChar: AnsiChar): string;
+    function StripChars(constref aChars: TSysCharSet): string;
     // only single byte delimiters allowed
     function Words(constref aDelimiters: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
   end;
@@ -127,7 +127,7 @@ type
     TStrEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: ansistring;
+      FHeap: string;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -149,7 +149,7 @@ type
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
-    FNeedle: ansistring;
+    FNeedle: string;
     procedure FillBc;
     procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -176,24 +176,24 @@ type
       function GetEnumerator: TByteEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: ansistring);
+    constructor Create(const aPattern: string);
     constructor Create(const aPattern: array of Byte);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: ansistring): TStrMatches; inline;
+    function Matches(const s: string): TStrMatches; inline;
   { returns an enumerator of indices(0-based) of all occurrences of pattern in a }
     function Matches(const a: array of Byte): TByteMatches;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: ansistring; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
   { returns the index of the next occurrence of the pattern in a,
     starting at index aOffset(0-based) or -1 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
     function NextMatch(const a: array of Byte; aOffset: SizeInt = 0): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: ansistring): TIntArray;
+    function FindMatches(const s: string): TIntArray;
   { returns in an array the indices(0-based) of all occurrences of the pattern in a }
     function FindMatches(const a: array of Byte): TIntArray;
   end;
@@ -208,7 +208,7 @@ type
     TStrEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: ansistring;
+      FHeap: string;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -228,7 +228,7 @@ type
     end;
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
-    FNeedle: ansistring;
+    FNeedle: string;
     procedure FillBc;
     function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -253,29 +253,33 @@ type
       function GetEnumerator: TByteEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: ansistring);
+    constructor Create(const aPattern: string);
     constructor Create(const aPattern: array of Byte);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: ansistring): TStrMatches; inline;
+    function Matches(const s: string): TStrMatches; inline;
   { returns an enumerator of indices(0-based) of all occurrences of pattern in a }
     function Matches(const a: array of Byte): TByteMatches;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: ansistring; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
   { returns the index of the next occurrence of the pattern in a,
     starting at index aOffset(0-based) or -1 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
     function NextMatch(const a: array of Byte; aOffset: SizeInt = 0): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: ansistring): TIntArray;
+    function FindMatches(const s: string): TIntArray;
   { returns in an array the indices(0-based) of all occurrences of the pattern in a }
     function FindMatches(const a: array of Byte): TIntArray;
   end;
 
-  { TBmSearchCI implements case insensitive variant of TBmSearch }
+  TCaseMapTable = array[Byte] of Byte;
+  TLoCaseMapFun = function(c: Char): Char;
+
+  { TBmSearchCI implements case insensitive variant of TBmSearch;
+    for single-byte encodings only }
   TBmSearchCI = record
   private
   type
@@ -284,7 +288,7 @@ type
     TEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: ansistring;
+      FHeap: string;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -293,11 +297,13 @@ type
     end;
 
   var
-    FLoCaseMap: array[Byte] of Byte;
+    FLoCaseMap: TCaseMapTable;
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
-    FNeedle: ansistring;
+    FNeedle: string;
     procedure FillMap;
+    procedure FillMap(aMap: TLoCaseMapFun);
+    procedure FillMap(const aTable: TCaseMapTable);
     procedure FillBc;
     procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -315,68 +321,73 @@ type
       function GetEnumerator: TEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: ansistring);
+    constructor Create(const aPattern: string);
+  { initializes the algorithm with a search pattern and custom case map }
+    constructor Create(const aPattern: string; aMap: TLoCaseMapFun);
+    constructor Create(const aPattern: string; const aTable: TCaseMapTable);
+  { sets a new search pattern; it is assumed that the algorithm was previously initialized }
+    procedure Update(const aPattern: string);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: ansistring): TMatches; inline;
+    function Matches(const s: string): TMatches; inline;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: ansistring; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: ansistring): TIntArray;
+    function FindMatches(const s: string): TIntArray;
   end;
 
 {the following functions with string parameters are only suitable for single-byte encodings }
 
 { returns True if aSub is a subsequence of aStr, False otherwise }
-  function IsSubSequence(const aStr, aSub: ansistring): Boolean; inline;
+  function IsSubSequence(const aStr, aSub: string): Boolean; inline;
 { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
   with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
   inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
-  function LcsGus(const L, R: ansistring): ansistring;
+  function LcsGus(const L, R: string): string;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
   uses Kumar-Rangan' algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
   m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed }
-  function LcsKR(const L, R: ansistring): ansistring;
+  function LcsKR(const L, R: string): string;
   function LcsKR(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
   uses Myers' algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
   n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
   for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
-  function LcsMyers(const L, R: ansistring): ansistring;
+  function LcsMyers(const L, R: string): string;
   function LcsMyers(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
   algorithm with O(mn) time complexity, where m and n are the lengths of L and R respectively,
   and O(Max(m, n)) space complexity }
-  function LevDistance(const L, R: ansistring): SizeInt;
+  function LevDistance(const L, R: string): SizeInt;
   function LevDistance(const L, R: array of Byte): SizeInt;
 { returns the Levenshtein distance between L and R; a Pascal translation(well, almost :))
   of github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
   worst-case time complexity, where n and m are the lengths of L and R respectively
   and d is the edit distance computed }
-  function LevDistanceMbr(const L, R: ansistring): SizeInt;
+  function LevDistanceMbr(const L, R: string): SizeInt;
   function LevDistanceMbr(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1 }
-  function LevDistanceMbr(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+  function LevDistanceMbr(const L, R: string; aLimit: SizeInt): SizeInt;
   function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Levenshtein distance between L and R; uses the Myers' bit-vector algorithm
   with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
   d is edit distance computed, and w is the size of a computer word }
-  function LevDistanceMyers(const L, R: ansistring): SizeInt;
+  function LevDistanceMyers(const L, R: string): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1; if aLimit < 0 it will be computed dynamically }
-  function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+  function LevDistanceMyers(const L, R: string; aLimit: SizeInt): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 
 { similarity ratio using Levenshtein distance }
-  function SimRatioLev(const L, R: ansistring): Double;
+  function SimRatioLev(const L, R: string): Double;
   function SimRatioLev(const L, R: array of Byte): Double;
 
 type
@@ -394,18 +405,18 @@ const
 
 { similarity ratio using Levenshtein distance with some conditional transformations of the input data;
   partly inspired by FuzzyWuzzy }
-  function SimRatioLevEx(const L, R: ansistring;
+  function SimRatioLevEx(const L, R: string;
                          const aStopChars: TSysCharSet = DEF_STOP_CHARS;
                          const aOptions: TStrSimOptions = []): Double;
 
 
-  function IsValidDotQuadIPv4(const s: ansistring): Boolean;
-  function IsValidDotDecIPv4(const s: ansistring): Boolean;
+  function IsValidDotQuadIPv4(const s: string): Boolean;
+  function IsValidDotDecIPv4(const s: string): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
-function IsSubSequence(const aStr, aSub: ansistring): Boolean;
+function IsSubSequence(const aStr, aSub: string): Boolean;
 begin
   Result := specialize TGSimpleArrayHelper<Byte>.IsSubSequence(
     PByte(aStr)[0..Pred(System.Length(aStr))], PByte(aSub)[0..Pred(System.Length(aSub))]);
@@ -537,7 +548,7 @@ begin
 end;
 {$POP}
 
-function LcsGus(const L, R: ansistring): ansistring;
+function LcsGus(const L, R: string): string;
 var
   b: TBytes;
 begin
@@ -748,7 +759,7 @@ begin
 end;
 {$POP}
 
-function LcsKR(const L, R: ansistring): ansistring;
+function LcsKR(const L, R: string): string;
 var
   b: TBytes;
 begin
@@ -941,7 +952,7 @@ begin
 end;
 {$POP}
 
-function LcsMyers(const L, R: ansistring): ansistring;
+function LcsMyers(const L, R: string): string;
 var
   b: TBytes;
 begin
@@ -1034,7 +1045,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-function LevDistance(const L, R: ansistring): SizeInt;
+function LevDistance(const L, R: string): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -1193,7 +1204,7 @@ begin
   Result := Dist;
 end;
 
-function LevDistanceMbr(const L, R: ansistring): SizeInt;
+function LevDistanceMbr(const L, R: string): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -1219,7 +1230,7 @@ begin
     Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function LevDistanceMbr(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+function LevDistanceMbr(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
@@ -1761,7 +1772,7 @@ begin
   end;
 end;
 
-function LevDistanceMyers(const L, R: ansistring): SizeInt;
+function LevDistanceMyers(const L, R: string): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -1823,7 +1834,7 @@ begin
   end;
 end;
 
-function LevDistanceMyers(const L, R: ansistring; aLimit: SizeInt): SizeInt;
+function LevDistanceMyers(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
   if L = '' then
     if System.Length(R) <= aLimit then
@@ -1861,7 +1872,7 @@ begin
     Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
-function SimRatioLev(const L, R: ansistring): Double;
+function SimRatioLev(const L, R: string): Double;
 var
   MaxLen: SizeInt;
 begin
@@ -1881,14 +1892,14 @@ begin
   Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
 end;
 
-function SimRatioLevEx(const L, R: ansistring; const aStopChars: TSysCharSet;
+function SimRatioLevEx(const L, R: string; const aStopChars: TSysCharSet;
   const aOptions: TStrSimOptions): Double;
 type
   TWord   = record Start, Len: SizeInt end;
   THelper = specialize TGNestedArrayHelper<TWord>;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of TWord;
-  function Transform(const s: ansistring): ansistring;
+  function Transform(const s: string): string;
   var
     p: PAnsiChar absolute s;
     function Less(const L, R: TWord): Boolean;
@@ -1907,7 +1918,7 @@ var
     end;
   var
     Words: ^TWord;
-    r: ansistring;
+    r: string;
     I, J, PartCount, CurrLen, CurrStart: SizeInt;
     pr: PAnsiChar;
     Buf: array of TWord;
@@ -1989,7 +2000,7 @@ var
     Transform := r;
   end;
 var
-  s, LocL, LocR: ansistring;
+  s, LocL, LocR: string;
   I, MinLen, MaxLen: SizeInt;
 begin
   if soIgnoreCase in aOptions then
@@ -2036,7 +2047,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5036 OFF}
-function IsValidDotQuadIPv4(const s: ansistring): Boolean;
+function IsValidDotQuadIPv4(const s: string): Boolean;
 type
   TRadix = (raDec, raOct, raHex);
 var
@@ -2114,7 +2125,7 @@ begin
   Result := (OctetIdx = 3) and OctetInRange;
 end;
 
-function IsValidDotDecIPv4(const s: ansistring): Boolean;
+function IsValidDotDecIPv4(const s: string): Boolean;
 var
   I, OctetIdx, CharIdx: Integer;
   Buf: array[0..3] of AnsiChar;
@@ -2214,12 +2225,12 @@ end;
 
 { TAnsiStrHelper }
 
-function TAnsiStrHelper.StripWhiteSpaces: ansistring;
+function TAnsiStrHelper.StripWhiteSpaces: string;
 begin
   Result := StripChars(WhiteSpaces);
 end;
 
-function TAnsiStrHelper.StripChar(aChar: AnsiChar): ansistring;
+function TAnsiStrHelper.StripChar(aChar: AnsiChar): string;
 var
   I, J: SizeInt;
   pRes, pSelf: PAnsiChar;
@@ -2243,7 +2254,7 @@ begin
   SetLength(Result, J);
 end;
 
-function TAnsiStrHelper.StripChars(constref aChars: TSysCharSet): ansistring;
+function TAnsiStrHelper.StripChars(constref aChars: TSysCharSet): string;
 var
   I, J: SizeInt;
   pRes, pSelf: PAnsiChar;
@@ -2887,7 +2898,20 @@ var
   I: Integer;
 begin
   for I := 0 to 255 do
-    FLoCaseMap[I] := Ord(AnsiLowerCase(Char(I))[1]);
+    FLoCaseMap[I] := Ord(LowerCase(Char(I)));
+end;
+
+procedure TBmSearchCI.FillMap(aMap: TLoCaseMapFun);
+var
+  I: Integer;
+begin
+  for I := 0 to 255 do
+    FLoCaseMap[I] := Ord(aMap(Char(I)));
+end;
+
+procedure TBmSearchCI.FillMap(const aTable: TCaseMapTable);
+begin
+  FLoCaseMap := aTable;
 end;
 
 procedure TBmSearchCI.FillBc;
@@ -2980,6 +3004,62 @@ begin
   FGsShift := nil;
   FNeedle := '';
   FillMap;
+  if aPattern <> '' then
+    begin
+      System.SetLength(FNeedle, System.Length(aPattern));
+      p := PByte(FNeedle);
+      for I := 1 to System.Length(aPattern) do
+        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+      FillBc;
+      FillGs;
+    end;
+end;
+
+constructor TBmSearchCI.Create(const aPattern: string; aMap: TLoCaseMapFun);
+var
+  I: Integer;
+  p: PByte;
+begin
+  FGsShift := nil;
+  FNeedle := '';
+  FillMap(aMap);
+  if aPattern <> '' then
+    begin
+      System.SetLength(FNeedle, System.Length(aPattern));
+      p := PByte(FNeedle);
+      for I := 1 to System.Length(aPattern) do
+        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+      FillBc;
+      FillGs;
+    end;
+end;
+
+constructor TBmSearchCI.Create(const aPattern: string; const aTable: TCaseMapTable);
+var
+  I: Integer;
+  p: PByte;
+begin
+  FGsShift := nil;
+  FNeedle := '';
+  FillMap(aTable);
+  if aPattern <> '' then
+    begin
+      System.SetLength(FNeedle, System.Length(aPattern));
+      p := PByte(FNeedle);
+      for I := 1 to System.Length(aPattern) do
+        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+      FillBc;
+      FillGs;
+    end;
+end;
+
+procedure TBmSearchCI.Update(const aPattern: string);
+var
+  I: Integer;
+  p: PByte;
+begin
+  FGsShift := nil;
+  FNeedle := '';
   if aPattern <> '' then
     begin
       System.SetLength(FNeedle, System.Length(aPattern));
