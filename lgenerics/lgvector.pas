@@ -2291,7 +2291,7 @@ begin
     begin
       msb := aRange and INT_SIZE_MASK;
       aRange := aRange shr INT_SIZE_LOG  + Ord(msb <> 0);
-      if aRange <> Length(FBits) then
+      if aRange <> System.Length(FBits) then
         System.SetLength(FBits, aRange);
       System.FillChar(Pointer(FBits)^, aRange * SizeOf(SizeUInt), $ff);
       if msb <> 0 then
