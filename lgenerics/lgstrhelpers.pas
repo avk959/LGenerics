@@ -127,7 +127,7 @@ type
     TStrEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: string;
+      FHeap: rawbytestring;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -149,7 +149,7 @@ type
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
-    FNeedle: string;
+    FNeedle: rawbytestring;
     procedure FillBc;
     procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -161,7 +161,7 @@ type
 
     TStrMatches = record
     private
-      FHeap: string;
+      FHeap: rawbytestring;
       FMatcher: PMatcher;
     public
       function GetEnumerator: TStrEnumerator; inline;
@@ -176,24 +176,24 @@ type
       function GetEnumerator: TByteEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: string);
+    constructor Create(const aPattern: rawbytestring);
     constructor Create(const aPattern: array of Byte);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TStrMatches; inline;
+    function Matches(const s: rawbytestring): TStrMatches; inline;
   { returns an enumerator of indices(0-based) of all occurrences of pattern in a }
     function Matches(const a: array of Byte): TByteMatches;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: rawbytestring; aOffset: SizeInt = 1): SizeInt;
   { returns the index of the next occurrence of the pattern in a,
     starting at index aOffset(0-based) or -1 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
     function NextMatch(const a: array of Byte; aOffset: SizeInt = 0): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: string): TIntArray;
+    function FindMatches(const s: rawbytestring): TIntArray;
   { returns in an array the indices(0-based) of all occurrences of the pattern in a }
     function FindMatches(const a: array of Byte): TIntArray;
   end;
@@ -208,7 +208,7 @@ type
     TStrEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: string;
+      FHeap: rawbytestring;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -228,7 +228,7 @@ type
     end;
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
-    FNeedle: string;
+    FNeedle: rawbytestring;
     procedure FillBc;
     function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -238,7 +238,7 @@ type
 
     TStrMatches = record
     private
-      FHeap: string;
+      FHeap: rawbytestring;
       FMatcher: PMatcher;
     public
       function GetEnumerator: TStrEnumerator; inline;
@@ -253,24 +253,24 @@ type
       function GetEnumerator: TByteEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: string);
+    constructor Create(const aPattern: rawbytestring);
     constructor Create(const aPattern: array of Byte);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TStrMatches; inline;
+    function Matches(const s: rawbytestring): TStrMatches; inline;
   { returns an enumerator of indices(0-based) of all occurrences of pattern in a }
     function Matches(const a: array of Byte): TByteMatches;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: rawbytestring; aOffset: SizeInt = 1): SizeInt;
   { returns the index of the next occurrence of the pattern in a,
     starting at index aOffset(0-based) or -1 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
     function NextMatch(const a: array of Byte; aOffset: SizeInt = 0): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: string): TIntArray;
+    function FindMatches(const s: rawbytestring): TIntArray;
   { returns in an array the indices(0-based) of all occurrences of the pattern in a }
     function FindMatches(const a: array of Byte): TIntArray;
   end;
@@ -288,7 +288,7 @@ type
     TEnumerator = record
     private
       FCurrIndex: SizeInt;
-      FHeap: string;
+      FHeap: rawbytestring;
       FMatcher: PMatcher;
       function GetCurrent: SizeInt; inline;
     public
@@ -300,7 +300,7 @@ type
     FLoCaseMap: TCaseMapTable;
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
-    FNeedle: string;
+    FNeedle: rawbytestring;
     procedure FillMap;
     procedure FillMap(aMap: TLoCaseMapFun);
     procedure FillMap(const aTable: TCaseMapTable);
@@ -315,87 +315,98 @@ type
 
     TMatches = record
     private
-      FHeap: string;
+      FHeap: rawbytestring;
       FMatcher: PMatcher;
     public
       function GetEnumerator: TEnumerator; inline;
     end;
   { initializes the algorithm with a search pattern }
-    constructor Create(const aPattern: string);
+    constructor Create(const aPattern: rawbytestring);
   { initializes the algorithm with a search pattern and custom case map }
-    constructor Create(const aPattern: string; aMap: TLoCaseMapFun);
-    constructor Create(const aPattern: string; const aTable: TCaseMapTable);
+    constructor Create(const aPattern: rawbytestring; aMap: TLoCaseMapFun);
+    constructor Create(const aPattern: rawbytestring; const aTable: TCaseMapTable);
   { sets a new search pattern; it is assumed that the algorithm was previously initialized }
-    procedure Update(const aPattern: string);
+    procedure Update(const aPattern: rawbytestring);
   { returns an enumerator of indices(1-based) of all occurrences of pattern in s }
-    function Matches(const s: string): TMatches; inline;
+    function Matches(const s: rawbytestring): TMatches; inline;
   { returns the index of the next occurrence of the pattern in s,
     starting at index aOffset(1-based) or 0 if there is no occurrence;
     to get the index of the next occurrence, you need to pass in aOffset
     the index of the previous occurrence, increased by one }
-    function NextMatch(const s: string; aOffset: SizeInt = 1): SizeInt;
+    function NextMatch(const s: rawbytestring; aOffset: SizeInt = 1): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
-    function FindMatches(const s: string): TIntArray;
+    function FindMatches(const s: rawbytestring): TIntArray;
   end;
 
-{the following functions with string parameters are only suitable for single-byte encodings }
+{ the following functions are only suitable for single-byte encodings }
 
 { returns True if aSub is a subsequence of aStr, False otherwise }
-  function IsSubSequence(const aStr, aSub: string): Boolean; inline;
+  function IsSubSequence(const aStr, aSub: rawbytestring): Boolean; inline;
 { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
   with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
-  inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
-  function LcsGus(const L, R: string): string;
+  inspired by Dan Gusfield "Algorithms on rawbytestrings, Trees and Sequences", section 12.5 }
+  function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
   uses Kumar-Rangan' algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
   m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed }
-  function LcsKR(const L, R: string): string;
+  function LcsKR(const L, R: rawbytestring): rawbytestring;
   function LcsKR(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
   uses Myers' algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
   n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
   for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
-  function LcsMyers(const L, R: string): string;
+  function LcsMyers(const L, R: rawbytestring): rawbytestring;
   function LcsMyers(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
   algorithm with O(mn) time complexity, where m and n are the lengths of L and R respectively,
   and O(Max(m, n)) space complexity }
-  function LevDistance(const L, R: string): SizeInt;
+  function LevDistance(const L, R: rawbytestring): SizeInt;
   function LevDistance(const L, R: array of Byte): SizeInt;
 { returns the Levenshtein distance between L and R; a Pascal translation(well, almost :))
   of github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
   worst-case time complexity, where n and m are the lengths of L and R respectively
   and d is the edit distance computed }
-  function LevDistanceMbr(const L, R: string): SizeInt;
+  function LevDistanceMbr(const L, R: rawbytestring): SizeInt;
   function LevDistanceMbr(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1 }
-  function LevDistanceMbr(const L, R: string; aLimit: SizeInt): SizeInt;
+  function LevDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Levenshtein distance between L and R; uses the Myers' bit-vector algorithm
   with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
   d is edit distance computed, and w is the size of a computer word }
-  function LevDistanceMyers(const L, R: string): SizeInt;
+  function LevDistanceMyers(const L, R: rawbytestring): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1; if aLimit < 0 it will be computed dynamically }
-  function LevDistanceMyers(const L, R: string; aLimit: SizeInt): SizeInt;
+  function LevDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 
 { similarity ratio using Levenshtein distance }
-  function SimRatioLev(const L, R: string): Double;
+  function SimRatioLev(const L, R: rawbytestring): Double;
   function SimRatioLev(const L, R: array of Byte): Double;
 
 type
+{ must convert the string to a single case, no matter which one }
+  TSimCaseMap = function(const s: rawbytestring): rawbytestring;
+  TSimLess    = function(const L, R: array of Char): Boolean;
+
+  TSimMode = (
+    smSimple,         // tokenization only
+    smWordSort,       // lexicographic sorting of tokens
+    smWordSet,        // lexicographic sorting of tokens with discarding of non-unique ones
+    smWordSetCombi    { - treat tokens as a sorted set,
+                        - construct two strings of the form <intersection><difference>
+                        - take the max ratio of these two strings in various combinations }
+    );
+
   TSimOption  = (
-    soWordSort,  // lexicographic sorting of words is required
-    soWordSet,   // lexicographic sorting of words with discarding of non-unique words is required
-    soPartial,   // maximum similarity is required when alternately comparing a shorter
-                 // string with all parts of the same length of a longer string
+    soPartial,        // maximum similarity is required when alternately comparing a shorter
+                      // string with all parts of the same length of a longer string
     soIgnoreCase);
 
   TStrSimOptions = set of TSimOption;
@@ -404,19 +415,21 @@ const
   DEF_STOP_CHARS = [#0..#32];
 
 { similarity ratio using Levenshtein distance with some conditional transformations of the input data;
-  partly inspired by FuzzyWuzzy }
-  function SimRatioLevEx(const L, R: string;
+  inspired by FuzzyWuzzy }
+  function SimRatioLevEx(const L, R: rawbytestring;
+                         aMode: TSimMode = smSimple;
                          const aStopChars: TSysCharSet = DEF_STOP_CHARS;
-                         const aOptions: TStrSimOptions = []): Double;
+                         const aOptions: TStrSimOptions = [];
+                         aCaseMap: TSimCaseMap = nil;
+                         aLess: TSimLess = nil): Double;
 
-
-  function IsValidDotQuadIPv4(const s: string): Boolean;
-  function IsValidDotDecIPv4(const s: string): Boolean;
+  function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
+  function IsValidDotDecIPv4(const s: rawbytestring): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
-function IsSubSequence(const aStr, aSub: string): Boolean;
+function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
 begin
   Result := specialize TGSimpleArrayHelper<Byte>.IsSubSequence(
     PByte(aStr)[0..Pred(System.Length(aStr))], PByte(aSub)[0..Pred(System.Length(aSub))]);
@@ -548,7 +561,7 @@ begin
 end;
 {$POP}
 
-function LcsGus(const L, R: string): string;
+function LcsGus(const L, R: rawbytestring): rawbytestring;
 var
   b: TBytes;
 begin
@@ -759,7 +772,7 @@ begin
 end;
 {$POP}
 
-function LcsKR(const L, R: string): string;
+function LcsKR(const L, R: rawbytestring): rawbytestring;
 var
   b: TBytes;
 begin
@@ -952,7 +965,7 @@ begin
 end;
 {$POP}
 
-function LcsMyers(const L, R: string): string;
+function LcsMyers(const L, R: rawbytestring): rawbytestring;
 var
   b: TBytes;
 begin
@@ -1045,7 +1058,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-function LevDistance(const L, R: string): SizeInt;
+function LevDistance(const L, R: rawbytestring): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -1204,7 +1217,7 @@ begin
   Result := Dist;
 end;
 
-function LevDistanceMbr(const L, R: string): SizeInt;
+function LevDistanceMbr(const L, R: rawbytestring): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -1230,7 +1243,7 @@ begin
     Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function LevDistanceMbr(const L, R: string; aLimit: SizeInt): SizeInt;
+function LevDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := 0;
@@ -1306,8 +1319,6 @@ begin
       else
         if Hp and (DWord(1) shl Pred(aLenL)) <> 0 then
           Inc(Result);
-      //Result -= SizeInt((Hn and (DWord(1) shl Pred(aLenL))) shr Pred(aLenL));
-      //Result += SizeInt((Hp and (DWord(1) shl Pred(aLenL))) shr Pred(aLenL));
     end;
 end;
 
@@ -1772,7 +1783,7 @@ begin
   end;
 end;
 
-function LevDistanceMyers(const L, R: string): SizeInt;
+function LevDistanceMyers(const L, R: rawbytestring): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -1834,7 +1845,7 @@ begin
   end;
 end;
 
-function LevDistanceMyers(const L, R: string; aLimit: SizeInt): SizeInt;
+function LevDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
 begin
   if L = '' then
     if System.Length(R) <= aLimit then
@@ -1872,7 +1883,7 @@ begin
     Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
-function SimRatioLev(const L, R: string): Double;
+function SimRatioLev(const L, R: rawbytestring): Double;
 var
   MaxLen: SizeInt;
 begin
@@ -1892,127 +1903,358 @@ begin
   Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
 end;
 
-function SimRatioLevEx(const L, R: string; const aStopChars: TSysCharSet;
-  const aOptions: TStrSimOptions): Double;
+{$PUSH}{$WARN 5089 OFF}
+function SimRatioLevEx(const L, R: rawbytestring; aMode: TSimMode; const aStopChars: TSysCharSet;
+  const aOptions: TStrSimOptions; aCaseMap: TSimCaseMap; aLess: TSimLess): Double;
 type
-  TWord   = record Start, Len: SizeInt end;
-  THelper = specialize TGNestedArrayHelper<TWord>;
+  TWord      = record Start: PChar; Len: SizeInt end;
+  PWord      = ^TWord;
+  TWordArray = array of TWord;
+  TSplitFun  = function(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray;
+                        aForceDyn: Boolean): PWord is nested;
+  THelper    = specialize TGNestedArrayHelper<TWord>;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of TWord;
-  function Transform(const s: string): string;
+
+  function SplitMerge(const s: rawbytestring): rawbytestring;
   var
-    p: PAnsiChar absolute s;
+    I, J: SizeInt;
+    pS, pR: PChar;
+    NewWord: Boolean;
+  begin
+    if aStopChars = [] then exit(s);
+    System.SetLength(Result, System.Length(s));
+    pS := Pointer(s);
+    pR := Pointer(Result);
+    I := 0;
+    while (I < System.Length(s)) and (pS[I] in aStopChars) do Inc(I);
+    J := 0;
+    NewWord := False;
+    for I := I to Pred(System.Length(s)) do
+      if pS[I] in aStopChars then
+        NewWord := True
+      else
+        begin
+          if NewWord then
+            begin
+              pR[J] := ' ';
+              Inc(J);
+              NewWord := False;
+            end;
+          pR[J] := pS[I];
+          Inc(J);
+        end;
+    System.SetLength(Result, J);
+  end;
+
+  function SplitAndSort(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    p: PChar absolute s;
     function Less(const L, R: TWord): Boolean;
+    begin
+      Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
+    end;
+    function LessDef(const L, R: TWord): Boolean;
     var
       c: Integer;
     begin
-      c := CompareMemRange(@p[L.Start], @p[R.Start], Math.Min(L.Len, R.Len));
+      c := CompareMemRange(L.Start, R.Start, Math.Min(L.Len, R.Len));
       if c = 0 then
         exit(L.Len < R.Len);
-      Less := c < 0;
-    end;
-    function Equal(const L, R: TWord): Boolean;
-    begin
-      if L.Len <> R.Len then exit(False);
-      Result := CompareMemRange(@p[L.Start], @p[R.Start], L.Len) = 0;
+      LessDef := c < 0;
     end;
   var
-    Words: ^TWord;
-    r: string;
-    I, J, PartCount, CurrLen, CurrStart: SizeInt;
-    pr: PAnsiChar;
-    Buf: array of TWord;
+    Words: PWord;
+    I, Count, CurrLen: SizeInt;
+    CurrStart: PChar;
   begin
-    if System.Length(s) div 2 + System.Length(s) and 1 <= MAX_STATIC then
-      Words := @StBuf[0]
-    else
+    if aForceDyn or (System.Length(s) div 2 + System.Length(s) and 1 > MAX_STATIC) then
       begin
-        System.SetLength(Buf, System.Length(s) div 2 + System.Length(s) and 1);
-        Words := Pointer(Buf);
-      end;
+        System.SetLength(aBuf, System.Length(s) div 2 + System.Length(s) and 1);
+        Words := Pointer(aBuf);
+      end
+    else
+      Words := @StBuf[0];
 
-    CurrStart := 0;
+    CurrStart := p;
     CurrLen := 0;
-    PartCount := 0;
+    Count := 0;
     for I := 0 to Pred(System.Length(s)) do
       if p[I] in aStopChars then
         begin
-          if CurrLen <> 0 then
-            begin
-              Words[PartCount].Start := CurrStart;
-              Words[PartCount].Len := CurrLen;
-              CurrLen := 0;
-              Inc(PartCount);
-            end;
+          if CurrLen = 0 then continue;
+          Words[Count].Start := CurrStart;
+          Words[Count].Len := CurrLen;
+          CurrLen := 0;
+          Inc(Count);
         end
       else
         begin
           if CurrLen = 0 then
-            CurrStart := I;
+            CurrStart := @p[I];
           Inc(CurrLen);
         end;
     if CurrLen <> 0 then
       begin
-        Words[PartCount].Start := CurrStart;
-        Words[PartCount].Len := CurrLen;
-        Inc(PartCount);
+        Words[Count].Start := CurrStart;
+        Words[Count].Len := CurrLen;
+        Inc(Count);
       end;
+    if aLess <> nil then
+      THelper.Sort(Words[0..Pred(Count)], @Less)
+    else
+      THelper.Sort(Words[0..Pred(Count)], @LessDef);
+    aCount := Count;
+    Result := Words;
+  end;
 
-    if soWordSet in aOptions then
+  function SplitMerge(const s: rawbytestring; aSplit: TSplitFun): rawbytestring;
+  var
+    Words: PWord;
+    Buf: TWordArray = nil;
+    I, J, Count, Len: SizeInt;
+    pR: PChar;
+  begin
+    Words := aSplit(s, Count, Buf, False);
+    System.SetLength(Result, System.Length(s));
+    pR := Pointer(Result);
+    Len := 0;
+    for I := 0 to Pred(Count) do
       begin
-        THelper.Sort(Words[0..Pred(PartCount)], @Less);
-
-        System.SetLength(r, System.Length(s));
-        pr := Pointer(r);
-        CurrLen := 0;
-        I := 0;
-        while I < PartCount do
+        if I > 0 then
           begin
-            CurrLen += Words[I].Len;
-            for J := 0 to Pred(Words[I].Len) do
-              pr[J] := p[Words[I].Start + J];
-            pr += Words[I].Len;
-            J := Succ(I);
-            while (J < PartCount) and Equal(Words[I], Words[J]) do
-              Inc(J);
-            I := J;
+            Len += Words[I].Len + 1;
+            pR^ := ' ';
+            Inc(pR);
+          end
+        else
+          Len += Words[I].Len;
+        for J := 0 to Pred(Words[I].Len) do
+          with Words[I] do
+            pR[J] := Start[J];
+        pR += Words[I].Len;
+      end;
+    System.SetLength(Result, Len);
+  end;
+
+  function SplitMergeSorted(const s: rawbytestring): rawbytestring; inline;
+  begin
+    Result := SplitMerge(s, @SplitAndSort);
+  end;
+
+  function SplitSortedSet(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+    function Equal(const L, R: TWord): Boolean;
+    begin
+      if L.Len <> R.Len then exit(False);
+      Result := CompareMemRange(L.Start, R.Start, L.Len) = 0;
+    end;
+  var
+    I, J, Count: SizeInt;
+  begin
+    Result := SplitAndSort(s, Count, aBuf, aForceDyn);
+    I := 0;
+    J := 0;
+    while I < Count do
+      begin
+        if I <> J then
+          Result[J] := Result[I];
+        Inc(I);
+        while (I < Count) and Equal(Result[I], Result[J]) do Inc(I);
+        Inc(J);
+      end;
+    aCount := J;
+  end;
+
+  function SplitMergeSortedSet(const s: rawbytestring): rawbytestring; inline;
+  begin
+    Result := SplitMerge(s, @SplitSortedSet);
+  end;
+
+  function SimPartial(const L, R: rawbytestring): Double;
+  var
+    I: SizeInt;
+  begin
+    Result := Double(0.0);
+    if System.Length(L) <= System.Length(R) then
+      for I := 0 to System.Length(R) - System.Length(L) do
+        begin
+          Result := Math.Max(Result,
+            SimRatioLev(PByte(L)[0..Pred(System.Length(L))],
+                        PByte(R)[I..I+Pred(System.Length(L))]));
+          if Result = Double(1.0) then break;
+        end
+    else
+      for I := 0 to System.Length(L) - System.Length(R) do
+        begin
+          Result := Math.Max(Result,
+            SimRatioLev(PByte(R)[0..Pred(System.Length(R))],
+                        PByte(L)[I..I+Pred(System.Length(R))]));
+          if Result = Double(1.0) then break;
+        end;
+  end;
+
+  function Merge(aSrcLen: SizeInt; aWords: PWord; const aIndices: TBoolVector): rawbytestring;
+  var
+    I, J, Len: SizeInt;
+    pR: PChar;
+    NotFirst: Boolean;
+  begin
+    System.SetLength(Result, aSrcLen);
+    pR := Pointer(Result);
+    NotFirst := False;
+    Len := 0;
+    for I in aIndices do
+      begin
+        if NotFirst then
+          begin
+            Len += aWords[I].Len + 1;
+            pR^ := ' ';
+            Inc(pR);
+          end
+        else
+          begin
+            Len += aWords[I].Len;
+            NotFirst := True;
           end;
-        System.SetLength(r, CurrLen);
+        for J := 0 to Pred(aWords[I].Len) do
+          with aWords[I] do
+            pR[J] := Start[J];
+        pR += aWords[I].Len;
+      end;
+    System.SetLength(Result, Len);
+  end;
+
+  function WordSetPairwize(const L, R: rawbytestring): Double;
+    function Less(const L, R: TWord): Boolean;
+    begin
+      Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
+    end;
+    function LessDef(const L, R: TWord): Boolean;
+    var
+      c: Integer;
+    begin
+      c := CompareMemRange(L.Start, R.Start, Math.Min(L.Len, R.Len));
+      if c = 0 then
+        exit(L.Len < R.Len);
+      LessDef := c < 0;
+    end;
+  var
+    WordsL, WordsR: PWord;
+    BufL, BufR: TWordArray;
+    IntersectIdx, DiffIdxL, DiffIdxR: TBoolVector;
+    I, J, CountL, CountR: SizeInt;
+    Intersection, SetL, SetR: rawbytestring;
+  begin
+    WordsL := SplitSortedSet(L, CountL, BufL, False);
+    WordsR := SplitSortedSet(R, CountR, BufR, True);
+    IntersectIdx.EnsureCapacity(CountL);
+    DiffIdxL.InitRange(CountL);
+    DiffIdxR.InitRange(CountR);
+
+    if aLess <> nil then
+      for I := 0 to Pred(CountL) do
+        begin
+          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @Less);
+          if J <> NULL_INDEX then
+            begin
+              IntersectIdx[I] := True;
+              DiffIdxL[I] := False;
+              DiffIdxR[J] := False;
+            end;
+        end
+    else
+      for I := 0 to Pred(CountL) do
+        begin
+          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @LessDef);
+          if J <> NULL_INDEX then
+            begin
+              IntersectIdx[I] := True;
+              DiffIdxL[I] := False;
+              DiffIdxR[J] := False;
+            end;
+        end;
+
+    Intersection := Merge(System.Length(L), WordsL, IntersectIdx);
+    SetL := Merge(System.Length(L), WordsL, DiffIdxL);
+    SetR := Merge(System.Length(R), WordsR, DiffIdxR);
+
+    if SetL <> '' then
+      SetL := Intersection + ' ' + SetL
+    else
+      SetL := Intersection;
+    if SetR <> '' then
+      SetR := Intersection + ' ' + SetR
+    else
+      SetR := Intersection;
+
+    if soPartial in aOptions then
+      begin
+        Result := SimPartial(Intersection, SetL);
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, SimPartial(Intersection, SetR));
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, SimPartial(SetL, SetR));
       end
     else
       begin
-        if soWordSort in aOptions then
-          THelper.Sort(Words[0..Pred(PartCount)], @Less);
-
-        System.SetLength(r, System.Length(s));
-        pr := Pointer(r);
-        CurrLen := 0;
-        for I := 0 to Pred(PartCount) do
-          begin
-            CurrLen += Words[I].Len;
-            for J := 0 to Pred(Words[I].Len) do
-              pr[J] := p[Words[I].Start + J];
-            pr += Words[I].Len;
-          end;
-        System.SetLength(r, CurrLen);
+        Result := SimRatioLev(Intersection, SetL);
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, SimRatioLev(Intersection, SetR));
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, SimRatioLev(SetL, SetR));
       end;
-
-    Transform := r;
   end;
+
 var
-  s, LocL, LocR: string;
-  I, MinLen, MaxLen: SizeInt;
+  LocL, LocR: rawbytestring;
 begin
+  if L = '' then
+    if R = '' then
+      exit(Double(1.0))
+    else
+      exit(Double(0.0))
+  else
+    if R = '' then
+      exit(Double(0.0));
+
   if soIgnoreCase in aOptions then
-    begin
-      LocL := Transform(AnsiUpperCase(L));
-      LocR := Transform(AnsiUpperCase(R));
-    end
+    if aCaseMap <> nil then
+      begin
+        LocL := aCaseMap(L);
+        LocR := aCaseMap(R);
+      end
+    else
+      begin
+        LocL := LowerCase(L);
+        LocR := LowerCase(R);
+      end
   else
     begin
-      LocL := Transform(L);
-      LocR := Transform(R);
+      LocL := L;
+      LocR := R;
     end;
+
+  if LocL = LocR then exit(1.0);
+
+  case aMode of
+    smSimple:
+      begin
+        LocL := SplitMerge(LocL);
+        LocR := SplitMerge(LocR);
+      end;
+    smWordSort:
+      begin
+        LocL := SplitMergeSorted(LocL);
+        LocR := SplitMergeSorted(LocR);
+      end;
+    smWordSet:
+      begin
+        LocL := SplitMergeSortedSet(LocL);
+        LocR := SplitMergeSortedSet(LocR);
+      end;
+  else
+    exit(WordSetPairwize(LocL, LocR));
+  end;
 
   if LocL = '' then
     if LocR = '' then
@@ -2024,30 +2266,14 @@ begin
       exit(Double(0.0));
 
   if soPartial in aOptions then
-    begin
-      MinLen := Math.Min(System.Length(LocL), System.Length(LocR));
-      MaxLen := Math.Max(System.Length(LocL), System.Length(LocR));
-      if System.Length(LocR) < System.Length(LocL) then
-        begin
-          s := LocL;
-          LocL := LocR;
-          LocR := s;
-        end;
-      Result := Double(0.0);
-      for I := 0 to MaxLen - MinLen do
-        begin
-          Result := Math.Max(Result,
-            SimRatioLev(PByte(LocL)[0..Pred(System.Length(LocL))],
-                        PByte(LocR)[I..I+Pred(System.Length(LocL))]));
-          if Result = Double(1.0) then break;
-        end;
-    end
+    Result := SimPartial(LocL, LocR)
   else
     Result := SimRatioLev(LocL, LocR);
 end;
+{$POP}
 
 {$PUSH}{$WARN 5036 OFF}
-function IsValidDotQuadIPv4(const s: string): Boolean;
+function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
 type
   TRadix = (raDec, raOct, raHex);
 var
@@ -2125,7 +2351,7 @@ begin
   Result := (OctetIdx = 3) and OctetInRange;
 end;
 
-function IsValidDotDecIPv4(const s: string): Boolean;
+function IsValidDotDecIPv4(const s: rawbytestring): Boolean;
 var
   I, OctetIdx, CharIdx: Integer;
   Buf: array[0..3] of AnsiChar;
@@ -2362,7 +2588,7 @@ begin
   Result := TStrEnumerable.Create(FRegex, aValue);
 end;
 
-{ TStringListHelper }
+{ TЫringListHelper }
 
 function TStringListHelper.AsEnumerable: IStrEnumerable;
 begin
@@ -2518,7 +2744,7 @@ begin
   Result := DoFind(aHeap, aHeapLen, I + Pred(System.Length(FNeedle)));
 end;
 
-constructor TBmSearch.Create(const aPattern: string);
+constructor TBmSearch.Create(const aPattern: rawbytestring);
 begin
   FGsShift := nil;
   if aPattern <> '' then
@@ -2543,7 +2769,7 @@ begin
     end;
 end;
 
-function TBmSearch.Matches(const s: string): TStrMatches;
+function TBmSearch.Matches(const s: rawbytestring): TStrMatches;
 begin
   if FNeedle <> '' then
     Result.FHeap := s
@@ -2565,7 +2791,7 @@ begin
   Result.FMatcher := @Self;
 end;
 
-function TBmSearch.NextMatch(const s: string; aOffset: SizeInt): SizeInt;
+function TBmSearch.NextMatch(const s: rawbytestring; aOffset: SizeInt): SizeInt;
 begin
   if (FNeedle = '') or (s = '') then exit(0);
   if aOffset < 1 then
@@ -2581,7 +2807,7 @@ begin
   Result := Find(@a[0], System.Length(a), aOffset);
 end;
 
-function TBmSearch.FindMatches(const s: string): TIntArray;
+function TBmSearch.FindMatches(const s: rawbytestring): TIntArray;
 var
   I, J: SizeInt;
 begin
@@ -2756,7 +2982,7 @@ begin
   Result := Find(aHeap, aHeapLen, I);
 end;
 
-constructor TBmhrSearch.Create(const aPattern: string);
+constructor TBmhrSearch.Create(const aPattern: rawbytestring);
 begin
   if aPattern <> '' then
     begin
@@ -2777,7 +3003,7 @@ begin
     end;
 end;
 
-function TBmhrSearch.Matches(const s: string): TStrMatches;
+function TBmhrSearch.Matches(const s: rawbytestring): TStrMatches;
 begin
   if FNeedle <> '' then
     Result.FHeap := s
@@ -2799,7 +3025,7 @@ begin
   Result.FMatcher := @Self;
 end;
 
-function TBmhrSearch.NextMatch(const s: string; aOffset: SizeInt): SizeInt;
+function TBmhrSearch.NextMatch(const s: rawbytestring; aOffset: SizeInt): SizeInt;
 begin
   if (FNeedle = '') or (s = '') then exit(0);
   if aOffset < 1 then
@@ -2815,7 +3041,7 @@ begin
   Result := Find(@a[0], System.Length(a), aOffset);
 end;
 
-function TBmhrSearch.FindMatches(const s: string): TIntArray;
+function TBmhrSearch.FindMatches(const s: rawbytestring): TIntArray;
 var
   I, J: SizeInt;
 begin
@@ -2996,7 +3222,7 @@ begin
   Result := DoFind(aHeap, aHeapLen, I + Pred(System.Length(FNeedle)));
 end;
 
-constructor TBmSearchCI.Create(const aPattern: string);
+constructor TBmSearchCI.Create(const aPattern: rawbytestring);
 var
   I: Integer;
   p: PByte;
@@ -3015,7 +3241,7 @@ begin
     end;
 end;
 
-constructor TBmSearchCI.Create(const aPattern: string; aMap: TLoCaseMapFun);
+constructor TBmSearchCI.Create(const aPattern: rawbytestring; aMap: TLoCaseMapFun);
 var
   I: Integer;
   p: PByte;
@@ -3034,7 +3260,7 @@ begin
     end;
 end;
 
-constructor TBmSearchCI.Create(const aPattern: string; const aTable: TCaseMapTable);
+constructor TBmSearchCI.Create(const aPattern: rawbytestring; const aTable: TCaseMapTable);
 var
   I: Integer;
   p: PByte;
@@ -3053,7 +3279,7 @@ begin
     end;
 end;
 
-procedure TBmSearchCI.Update(const aPattern: string);
+procedure TBmSearchCI.Update(const aPattern: rawbytestring);
 var
   I: Integer;
   p: PByte;
@@ -3071,7 +3297,7 @@ begin
     end;
 end;
 
-function TBmSearchCI.Matches(const s: string): TMatches;
+function TBmSearchCI.Matches(const s: rawbytestring): TMatches;
 begin
   if FNeedle <> '' then
     Result.FHeap := s
@@ -3080,7 +3306,7 @@ begin
   Result.FMatcher := @Self;
 end;
 
-function TBmSearchCI.NextMatch(const s: string; aOffset: SizeInt): SizeInt;
+function TBmSearchCI.NextMatch(const s: rawbytestring; aOffset: SizeInt): SizeInt;
 begin
   if (FNeedle = '') or (s = '') then exit(0);
   if aOffset < 1 then
@@ -3088,7 +3314,7 @@ begin
   Result := Succ(Find(PByte(s), System.Length(s), Pred(aOffset)));
 end;
 
-function TBmSearchCI.FindMatches(const s: string): TIntArray;
+function TBmSearchCI.FindMatches(const s: rawbytestring): TIntArray;
 var
   I, J: SizeInt;
 begin
