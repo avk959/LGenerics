@@ -399,9 +399,9 @@ type
     smSimple,         // tokenization only
     smWordSort,       // lexicographic sorting of tokens
     smWordSet,        // lexicographic sorting of tokens with discarding of non-unique ones
-    smWordSetCombi    { - treat tokens as a sorted set,
-                        - construct two strings of the form <intersection><difference>
-                        - take the max ratio of these two strings in various combinations }
+    smWordSetCombi     { tokens are treated as a sorted set,
+                         two strings are constructed in the form <intersection><difference>,
+                         max ratio of these two strings in certain combinations is taken }
     );
 
   TSimOption  = (
