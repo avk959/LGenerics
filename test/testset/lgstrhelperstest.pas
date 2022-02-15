@@ -572,7 +572,12 @@ const
 
 function ToLower1251(c: Char): Char;
 begin
-  Result := Win1251LoMap[c];
+  case c of
+    #$a8:       Result := #$b8;
+    #$c0..#$df: Result := Chr(Ord(c) + 32);
+  else
+    Result := LowerCase(c);
+  end;
 end;
 
 procedure TBmSearchCITest.FindMatches1251;
@@ -582,7 +587,6 @@ var
   a: array of SizeInt = nil;
   Text, Pattern, Pattern2: string1251;
   Tbl: TCaseMapTable;
-  cp: Word;
 const
   Text1: string = 'Мой дядя самых честных правил, Когда не в шутку занемог, Он уважать себя заставил И лучше выдумать не мог. Его пример другим наука; Но, боже мой, какая скука...';
   Pat1: string = 'МоГ';
@@ -594,43 +598,31 @@ begin
   AssertTrue(Length(Text) = 160);
   AssertTrue(Length(Pattern) = 3);
   AssertTrue(Length(Pattern2) = 5);
-  cp := DefaultSystemCodePage;
-  try
-    SetMultiByteConversionCodePage(1251);
 
-    m := TBmSearchCI.Create(Pattern, @ToLower1251);
-    a := m.FindMatches(Text);
-    AssertTrue(Length(a) = 2);
-    AssertTrue(a[0] = 53);
-    AssertTrue(a[1] = 103);
+  m := TBmSearchCI.Create(Pattern, @ToLower1251);
+  a := m.FindMatches(Text);
+  AssertTrue(Length(a) = 2);
+  AssertTrue(a[0] = 53);
+  AssertTrue(a[1] = 103);
 
-    m.Update(Pattern2);
-    a := m.FindMatches(Text);
-    AssertTrue(Length(a) = 1);
-    AssertTrue(a[0] = 32);
-  finally
-    SetMultiByteConversionCodePage(cp);
-  end;
+  m.Update(Pattern2);
+  a := m.FindMatches(Text);
+  AssertTrue(Length(a) = 1);
+  AssertTrue(a[0] = 32);
 
   for I := 0 to High(Tbl) do
     Tbl[I] := Ord(Win1251LoMap[Chr(I)]);
-  cp := DefaultSystemCodePage;
-  try
-    SetMultiByteConversionCodePage(1251);
 
-    m := TBmSearchCI.Create(Pattern, Tbl);
-    a := m.FindMatches(Text);
-    AssertTrue(Length(a) = 2);
-    AssertTrue(a[0] = 53);
-    AssertTrue(a[1] = 103);
+  m := TBmSearchCI.Create(Pattern, Tbl);
+  a := m.FindMatches(Text);
+  AssertTrue(Length(a) = 2);
+  AssertTrue(a[0] = 53);
+  AssertTrue(a[1] = 103);
 
-    m.Update(Pattern2);
-    a := m.FindMatches(Text);
-    AssertTrue(Length(a) = 1);
-    AssertTrue(a[0] = 32);
-  finally
-    SetMultiByteConversionCodePage(cp);
-  end;
+  m.Update(Pattern2);
+  a := m.FindMatches(Text);
+  AssertTrue(Length(a) = 1);
+  AssertTrue(a[0] = 32);
 end;
 
 procedure TBmSearchCITest.Matches;
@@ -1689,15 +1681,21 @@ begin
   AssertTrue(SameValue(SimRatioLevEx('', ''), DblOne));
   AssertTrue(SameValue(SimRatioLevEx('aaa', ''), DblZero));
   AssertTrue(SameValue(SimRatioLevEx('', 'bbb'), DblZero));
-  AssertFalse(SameValue(SimRatioLevEx('Hello world', ' Hello world ', []), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('Hello world', ' Hello world ', [' ']), DblOne));
-  AssertFalse(SameValue(SimRatioLevEx('Hello world', ' hello world ', [' ']), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('Hello world', ' hello world ', [' '], [soIgnoreCase]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('Hello world', 'another Hello world ', [' '], [soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('Hello, world!', ' hello world ', [' ',',','!'], [soIgnoreCase]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('World hello', ' Hello world ', [' '], [soIgnoreCase, soWordSort]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('World hello', ' Hello world, hello', [' ',','], [soIgnoreCase, soWordSet]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', [' ',','], [soIgnoreCase, soWordSet, soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('Hello world', ' Hello world '), DblOne));
+  AssertFalse(SameValue(SimRatioLevEx('Hello world', ' hello world '), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevEx('Hello world', ' hello world ', smSimple, [' '], [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevEx('Hello world', 'another Hello world ', smSimple, [' '], [soPartial]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevEx('Hello, world!', ' hello world ', smSimple, [' ',',','!'], [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevEx('World hello', ' Hello world ', smWordSort, [' '], [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevEx('World hello', ' Hello world, hello', smWordSet, [' ',','], [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', smWordSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smWordSetCombi), DblOne));
 end;
 
 initialization
