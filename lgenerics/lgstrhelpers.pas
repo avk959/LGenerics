@@ -276,7 +276,7 @@ type
   end;
 
   TCaseMapTable = array[Byte] of Byte;
-{ must convert the string to a single case, no matter which one }
+{ must convert the chars to a single case, no matter which one }
   TCaseMapFun = function(c: Char): Char;
 
   { TBmSearchCI implements case insensitive variant of TBmSearch;
