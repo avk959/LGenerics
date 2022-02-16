@@ -276,7 +276,8 @@ type
   end;
 
   TCaseMapTable = array[Byte] of Byte;
-  TLoCaseMapFun = function(c: Char): Char;
+{ must convert the string to a single case, no matter which one }
+  TCaseMapFun = function(c: Char): Char;
 
   { TBmSearchCI implements case insensitive variant of TBmSearch;
     for single-byte encodings only }
@@ -297,12 +298,12 @@ type
     end;
 
   var
-    FLoCaseMap: TCaseMapTable;
+    FCaseMap: TCaseMapTable;
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
     FNeedle: rawbytestring;
     procedure FillMap;
-    procedure FillMap(aMap: TLoCaseMapFun);
+    procedure FillMap(aMap: TCaseMapFun);
     procedure FillMap(const aTable: TCaseMapTable);
     procedure FillBc;
     procedure FillGs;
@@ -323,7 +324,7 @@ type
   { initializes the algorithm with a search pattern }
     constructor Create(const aPattern: rawbytestring);
   { initializes the algorithm with a search pattern and custom case map }
-    constructor Create(const aPattern: rawbytestring; aMap: TLoCaseMapFun);
+    constructor Create(const aPattern: rawbytestring; aMap: TCaseMapFun);
     constructor Create(const aPattern: rawbytestring; const aTable: TCaseMapTable);
   { sets a new search pattern; it is assumed that the algorithm was previously initialized }
     procedure Update(const aPattern: rawbytestring);
@@ -3126,20 +3127,20 @@ var
   I: Integer;
 begin
   for I := 0 to 255 do
-    FLoCaseMap[I] := Ord(LowerCase(Char(I)));
+    FCaseMap[I] := Ord(LowerCase(Char(I)));
 end;
 
-procedure TBmSearchCI.FillMap(aMap: TLoCaseMapFun);
+procedure TBmSearchCI.FillMap(aMap: TCaseMapFun);
 var
   I: Integer;
 begin
   for I := 0 to 255 do
-    FLoCaseMap[I] := Ord(aMap(Char(I)));
+    FCaseMap[I] := Ord(aMap(Char(I)));
 end;
 
 procedure TBmSearchCI.FillMap(const aTable: TCaseMapTable);
 begin
-  FLoCaseMap := aTable;
+  FCaseMap := aTable;
 end;
 
 procedure TBmSearchCI.FillBc;
@@ -3193,12 +3194,12 @@ begin
   NeedLast := Pred(System.Length(FNeedle));
   while I < aHeapLen do
     begin
-      while (I < aHeapLen) and (FLoCaseMap[aHeap[I]] <> p[NeedLast]) do
-        I += FBcShift[FLoCaseMap[aHeap[I]]];
+      while (I < aHeapLen) and (FCaseMap[aHeap[I]] <> p[NeedLast]) do
+        I += FBcShift[FCaseMap[aHeap[I]]];
       if I >= aHeapLen then break;
       J := Pred(NeedLast);
       Dec(I);
-      while (J <> NULL_INDEX) and (FLoCaseMap[aHeap[I]] = p[J]) do
+      while (J <> NULL_INDEX) and (FCaseMap[aHeap[I]] = p[J]) do
         begin
           Dec(I);
           Dec(J);
@@ -3237,13 +3238,13 @@ begin
       System.SetLength(FNeedle, System.Length(aPattern));
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
-        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+        p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
       FillBc;
       FillGs;
     end;
 end;
 
-constructor TBmSearchCI.Create(const aPattern: rawbytestring; aMap: TLoCaseMapFun);
+constructor TBmSearchCI.Create(const aPattern: rawbytestring; aMap: TCaseMapFun);
 var
   I: Integer;
   p: PByte;
@@ -3256,7 +3257,7 @@ begin
       System.SetLength(FNeedle, System.Length(aPattern));
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
-        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+        p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
       FillBc;
       FillGs;
     end;
@@ -3275,7 +3276,7 @@ begin
       System.SetLength(FNeedle, System.Length(aPattern));
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
-        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+        p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
       FillBc;
       FillGs;
     end;
@@ -3293,7 +3294,7 @@ begin
       System.SetLength(FNeedle, System.Length(aPattern));
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
-        p[Pred(I)] := FLoCaseMap[Ord(aPattern[I])];
+        p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
       FillBc;
       FillGs;
     end;
