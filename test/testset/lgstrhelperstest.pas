@@ -11,13 +11,13 @@ uses
   lgStrHelpers;
 
 type
-  THelper = specialize TGComparableArrayHelper<SizeInt>;
+  THelper    = specialize TGComparableArrayHelper<SizeInt>;
+  string1251 = type ansistring(1251);
 
   { TBmSearchTest }
 
   TBmSearchTest = class(TTestCase)
   private
-
   published
     procedure FindMatches;
     procedure FindMatchesBytes;
@@ -31,7 +31,6 @@ type
 
   TBmhrSearchTest = class(TTestCase)
   private
-
   published
     procedure FindMatches;
     procedure FindMatchesBytes;
@@ -44,8 +43,6 @@ type
   { TBmSearchCITest }
   TBmSearchCITest = class(TTestCase)
   private
-  type
-    string1251 = type ansistring(1251);
   published
     procedure FindMatches;
     procedure FindMatches1251;
@@ -81,6 +78,7 @@ type
    procedure LcsMyersTest;
    procedure SimRatioLevTest;
    procedure SimRatioLevExTest;
+   procedure SimRatioLevExTest1251;
  end;
 
 implementation
@@ -1696,6 +1694,77 @@ begin
   AssertTrue(
     SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', smWordSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
   AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smWordSetCombi), DblOne));
+end;
+
+const
+  Win1251CollRu: array[Char] of Byte = (
+    $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0a, $0b, $0c, $0d, $0e, $0f,
+    $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $1a, $1b, $1c, $1d, $1e, $1f,
+    $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $2a, $2b, $2c, $2d, $2e, $2f,
+    $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $3a, $3b, $3c, $3d, $3e, $3f,
+  //64    A    B    C    D    E    F    G    H    I    J    K    L    M   N     O
+    $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4a, $4b, $4c, $4d, $4e, $4f,
+  // P    Q    R    S    T    U    V    W    X    Y    Z
+    $50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5a, $5b, $5c, $5d, $5e, $5f,
+  //      a    b    c    d    e    f    g    h    i    j    k    l    m    n    o
+    $60, $61, $62, $63, $64, $65, $66, $67, $68, $69, $6a, $6b, $6c, $6d, $6e, $6f,
+  // p    q    r    s    t    u    v    w    x    y    z
+    $70, $71, $72, $73, $74, $75, $76, $77, $78, $79, $7a, $7b, $7c, $7d, $7e, $7f,
+    $80, $81, $82, $83, $84, $85, $86, $87, $88, $89, $8a, $8b, $8c, $8d, $8e, $8f,
+    $90, $91, $92, $93, $94, $95, $96, $97, $98, $99, $9a, $9b, $9c, $9d, $9e, $9f,
+  //                                          Ё
+    $a0, $a1, $a2, $a3, $a4, $a5, $a6, $a7, $c4, $a8, $a9, $aa, $ab, $ac, $ad, $ae,
+  //                                          ё
+    $af, $b0, $b1, $b2, $b3, $b4, $b5, $b6, $e5, $b7, $b8, $b9, $ba, $bb, $bc, $bd,
+  // А    Б    В    Г    Д    Е    Ж    З    И    Й    К    Л    М    Н    О    П
+    $be, $bf, $c0, $c1, $c2, $c3, $c5, $c6, $c7, $c8, $c9, $ca, $cb, $cc, $cd, $ce,
+  // Р    С    Т    У    Ф    Х    Ц    Ч    Ш    Щ    Ъ    Ы    Ь    Э    Ю    Я
+    $cf, $d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7, $d8, $d9, $da, $db, $dc, $dd, $de,
+  // а    б    в    г    д    е    ж    з    и    й    к    л    м    н    о    п
+    $df, $e0, $e1, $e2, $e3, $e4, $e6, $e7, $e8, $e9, $ea, $eb, $ec, $ed, $ee, $ef,
+  // р    с    т    у    ф    х    ц    ч    ш    щ    ъ    ы    ь    э    ю    я
+    $f0, $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8, $f9, $fa, $fb, $fc, $fd, $fe, $ff);
+
+function Less1251(const L, R: array of Char): Boolean;
+var
+  I, c: SizeInt;
+begin
+  for I := 0 to Math.Min(High(L), High(R)) do
+    begin
+      c := SizeInt(Win1251CollRu[L[I]]) - SizeInt(Win1251CollRu[R[I]]);
+      if c <> 0 then exit(c < 0);
+    end;
+  Result := Length(L) < Length(R);
+end;
+
+function LoCase1251(const s: rawbytestring): rawbytestring;
+var
+  I: SizeInt;
+  p: PChar absolute s;
+  pR: PChar absolute Result;
+begin
+  SetLength(Result, Length(s));
+  for I := 0 to Pred(Length(s)) do
+    pR[I] := Win1251LoMap[p[I]];
+end;
+
+procedure TFunTest.SimRatioLevExTest1251;
+var
+  I: SizeInt;
+  R: Double;
+  Pat1, Pat2: string1251;
+const
+  s1: string = 'В зале стояла нарядная настоящая душистая елка до самого потолка';
+  s2: string = 'До Ёлка зАле НАСТОЯЩАЯ потолка в дуШИСтая стояла наряДНАЯ самого';
+begin
+  Pat1 := s1;
+  Pat2 := s2;
+  R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase]);
+  AssertTrue(R.ToString, R < 0.45);
+  R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase], @LoCase1251);
+  AssertTrue(R.ToString, R > 0.8);
+  R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase], @LoCase1251, @Less1251);
+  AssertTrue(R.ToString, R > 0.98);
 end;
 
 initialization
