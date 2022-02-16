@@ -398,8 +398,8 @@ type
   TSimMode = (
     smSimple,         // tokenization only
     smWordSort,       // lexicographic sorting of tokens
-    smWordSet,        // lexicographic sorting of tokens with discarding of non-unique ones
-    smWordSetCombi     { tokens are treated as a sorted set,
+    smWordSet,        // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
+    smWordSetCombi     { tokens are converted to a sorted set,
                          two strings are constructed in the form <intersection><difference>,
                          max ratio of these two strings in certain combinations is taken }
     );
@@ -409,7 +409,7 @@ type
                       // string with all parts of the same length of a longer string
     soIgnoreCase);
 
-  TStrSimOptions = set of TSimOption;
+  TSimOptions = set of TSimOption;
 
 const
   DEF_STOP_CHARS = [#0..#32];
@@ -419,7 +419,7 @@ const
   function SimRatioLevEx(const L, R: rawbytestring;
                          aMode: TSimMode = smSimple;
                          const aStopChars: TSysCharSet = DEF_STOP_CHARS;
-                         const aOptions: TStrSimOptions = [];
+                         const aOptions: TSimOptions = [];
                          aCaseMap: TSimCaseMap = nil;
                          aLess: TSimLess = nil): Double;
 
@@ -1905,7 +1905,7 @@ end;
 
 {$PUSH}{$WARN 5089 OFF}
 function SimRatioLevEx(const L, R: rawbytestring; aMode: TSimMode; const aStopChars: TSysCharSet;
-  const aOptions: TStrSimOptions; aCaseMap: TSimCaseMap; aLess: TSimLess): Double;
+  const aOptions: TSimOptions; aCaseMap: TSimCaseMap; aLess: TSimLess): Double;
 type
   TWord      = record Start: PChar; Len: SizeInt end;
   PWord      = ^TWord;
@@ -2075,6 +2075,15 @@ var
     I: SizeInt;
   begin
     Result := Double(0.0);
+    if L = '' then
+      if R = '' then
+        exit(Double(1.0))
+      else
+        exit
+    else
+      if R = '' then
+        exit;
+
     if System.Length(L) <= System.Length(R) then
       for I := 0 to System.Length(R) - System.Length(L) do
         begin
@@ -2134,8 +2143,7 @@ var
       c: Integer;
     begin
       c := CompareMemRange(L.Start, R.Start, Math.Min(L.Len, R.Len));
-      if c = 0 then
-        exit(L.Len < R.Len);
+      if c = 0 then exit(L.Len < R.Len);
       LessDef := c < 0;
     end;
   var
@@ -2178,14 +2186,17 @@ var
     SetL := Merge(System.Length(L), WordsL, DiffIdxL);
     SetR := Merge(System.Length(R), WordsR, DiffIdxR);
 
-    if SetL <> '' then
-      SetL := Intersection + ' ' + SetL
-    else
-      SetL := Intersection;
-    if SetR <> '' then
-      SetR := Intersection + ' ' + SetR
-    else
-      SetR := Intersection;
+    if Intersection <> '' then
+      begin
+        if SetL <> '' then
+          SetL := Intersection + ' ' + SetL
+        else
+          SetL := Intersection;
+        if SetR <> '' then
+          SetR := Intersection + ' ' + SetR
+        else
+          SetR := Intersection;
+      end;
 
     if soPartial in aOptions then
       begin
@@ -2255,15 +2266,6 @@ begin
   else
     exit(WordSetPairwize(LocL, LocR));
   end;
-
-  if LocL = '' then
-    if LocR = '' then
-      exit(Double(1.0))
-    else
-      exit(Double(0.0))
-  else
-    if LocR = '' then
-      exit(Double(0.0));
 
   if soPartial in aOptions then
     Result := SimPartial(LocL, LocR)
