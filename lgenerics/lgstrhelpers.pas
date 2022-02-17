@@ -349,12 +349,12 @@ type
   function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Kumar-Rangan' algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
+  uses Kumar-Rangan algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
   m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed }
   function LcsKR(const L, R: rawbytestring): rawbytestring;
   function LcsKR(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Myers' algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
+  uses Myers algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
   n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
   for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
   function LcsMyers(const L, R: rawbytestring): rawbytestring;
