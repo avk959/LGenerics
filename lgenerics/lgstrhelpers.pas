@@ -424,6 +424,15 @@ const
                          aCaseMap: TSimCaseMap = nil;
                          aLess: TSimLess = nil): Double;
 
+{ the LCS edit distance allows only two operations: insertion and deletion; uses slightly
+  modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
+  from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
+  function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
+{ the same as above; the aLimit parameter indicates the maximum expected distance,
+  if this value is exceeded when calculating the distance, then the function exits
+  immediately and returns -1 }
+  function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+
   function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
   function IsValidDotDecIPv4(const s: rawbytestring): Boolean;
 
@@ -1948,23 +1957,29 @@ var
     System.SetLength(Result, J);
   end;
 
+  function Less(const L, R: TWord): Boolean;
+  begin
+    Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
+  end;
+
+  function LessDef(const L, R: TWord): Boolean;
+  var
+    c: Integer;
+  begin
+    c := CompareByte(L.Start^, R.Start^, Math.Min(L.Len, R.Len));
+    if c = 0 then exit(L.Len < R.Len);
+    LessDef := c < 0;
+  end;
+
+  function Equal(const L, R: TWord): Boolean;
+  begin
+    if L.Len <> R.Len then exit(False);
+    Result := CompareByte(L.Start^, R.Start^, L.Len) = 0;
+  end;
+
   function SplitAndSort(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
   var
     p: PChar absolute s;
-    function Less(const L, R: TWord): Boolean;
-    begin
-      Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
-    end;
-    function LessDef(const L, R: TWord): Boolean;
-    var
-      c: Integer;
-    begin
-      c := CompareMemRange(L.Start, R.Start, Math.Min(L.Len, R.Len));
-      if c = 0 then
-        exit(L.Len < R.Len);
-      LessDef := c < 0;
-    end;
-  var
     Words: PWord;
     I, Count, CurrLen: SizeInt;
     CurrStart: PChar;
@@ -2044,11 +2059,6 @@ var
   end;
 
   function SplitSortedSet(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
-    function Equal(const L, R: TWord): Boolean;
-    begin
-      if L.Len <> R.Len then exit(False);
-      Result := CompareMemRange(L.Start, R.Start, L.Len) = 0;
-    end;
   var
     I, J, Count: SizeInt;
   begin
@@ -2135,18 +2145,6 @@ var
   end;
 
   function WordSetPairwize(const L, R: rawbytestring): Double;
-    function Less(const L, R: TWord): Boolean;
-    begin
-      Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
-    end;
-    function LessDef(const L, R: TWord): Boolean;
-    var
-      c: Integer;
-    begin
-      c := CompareMemRange(L.Start, R.Start, Math.Min(L.Len, R.Len));
-      if c = 0 then exit(L.Len < R.Len);
-      LessDef := c < 0;
-    end;
   var
     WordsL, WordsR: PWord;
     BufL, BufR: TWordArray;
@@ -2272,6 +2270,131 @@ begin
     Result := SimPartial(LocL, LocR)
   else
     Result := SimRatioLev(LocL, LocR);
+end;
+{$POP}
+
+{$PUSH}{$WARN 5057 OFF}
+function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
+var
+  pL: PByte absolute L;
+  pR: PByte absolute R;
+  I, J, M, N, D, K, HiK: SizeInt;
+  V: PSizeInt;
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt = nil;
+begin
+  M := System.Length(L);
+  N := System.Length(R);
+
+  if M = 0 then
+    exit(N)
+  else
+    if N = 0 then
+      exit(M);
+
+  if M + N < Pred(MAX_STATIC) then
+    begin
+      System.FillChar(StBuf, (M + N + 2) * SizeOf(SizeInt), 0);
+      V := @StBuf[Succ(M)];
+    end
+  else
+    begin
+      System.SetLength(Buf, M + N + 2);
+      V := @Buf[Succ(M)];
+    end;
+
+
+  for D := 0 to M + N do
+    begin
+      K := -(D - 2 * Math.Max(0, D - M));
+      HiK := D - 2 * Math.Max(0, D - N);
+      while K <= HiK do
+        begin
+          if (K = -D) or ((K <> D) and (V[K - 1] < V[K + 1])) then
+            J := V[K + 1]
+          else
+            J := V[K - 1] + 1;
+          I := J - K;
+          while (J < N) and (I < M) and (pL[I] = pR[J]) do
+            begin
+              Inc(J);
+              Inc(I);
+            end;
+          if (I = M) and (J = N) then exit(D);
+          V[K] := J;
+          K += 2;
+        end;
+    end;
+
+  Result := NULL_INDEX; //we should never come here
+end;
+
+function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+var
+  pL: PByte absolute L;
+  pR: PByte absolute R;
+  I, J, M, N, D, K, HiK: SizeInt;
+  V: PSizeInt;
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt = nil;
+begin
+  if aLimit < 0 then aLimit := 0;
+  if aLimit = 0 then
+    begin
+      if L = R then exit(0);
+      exit(NULL_INDEX);
+    end;
+
+  M := System.Length(L);
+  N := System.Length(R);
+
+  if M = 0 then
+    if N > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(N)
+  else
+    if N = 0 then
+      if M > aLimit then
+        exit(NULL_INDEX)
+      else
+        exit(M);
+
+  if M + N < Pred(MAX_STATIC) then
+    begin
+      System.FillChar(StBuf, (M + N + 2) * SizeOf(SizeInt), 0);
+      V := @StBuf[Succ(M)];
+    end
+  else
+    begin
+      System.SetLength(Buf, M + N + 2);
+      V := @Buf[Succ(M)];
+    end;
+
+  for D := 0 to M + N do
+    begin
+      K := -(D - 2 * Math.Max(0, D - M));
+      HiK := D - 2 * Math.Max(0, D - N);
+      while K <= HiK do
+        begin
+          if (K = -D) or ((K <> D) and (V[K - 1] < V[K + 1])) then
+            J := V[K + 1]
+          else
+            J := V[K - 1] + 1;
+          I := J - K;
+          while (J < N) and (I < M) and (pL[I] = pR[J]) do
+            begin
+              Inc(J);
+              Inc(I);
+            end;
+          if (I = M) and (J = N) then exit(D);
+          V[K] := J;
+          K += 2;
+        end;
+      if D = aLimit then break;
+    end;
+
+  Result := NULL_INDEX;
 end;
 {$POP}
 
