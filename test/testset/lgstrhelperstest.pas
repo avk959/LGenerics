@@ -79,6 +79,9 @@ type
    procedure SimRatioLevTest;
    procedure SimRatioLevExTest;
    procedure SimRatioLevExTest1251;
+   procedure LcsDistMyers;
+   procedure LcsDistMyers2;
+   procedure LcsDistMyersBounded;
  end;
 
 implementation
@@ -1765,6 +1768,134 @@ begin
   AssertTrue(R.ToString, R > 0.8);
   R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase], @LoCase1251, @Less1251);
   AssertTrue(R.ToString, R > 0.98);
+end;
+
+function LcsDistDp(const L, R: rawbytestring): SizeInt;
+var
+  D: array of array of SizeInt;
+  I, J: SizeInt;
+begin
+  SetLength(D, Succ(Length(L)), Succ(Length(R)));
+  for I := 1 to Length(L) do
+    D[I, 0] := I;
+  for I := 1 to Length(R) do
+    D[0, I] := I;
+  for J := 1 to Length(R) do
+    for I := 1 to Length(L) do
+      if L[I] = R[J] then
+        D[I, J] := D[I-1, J-1]
+      else
+        D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1] + 2);
+  Result := D[Length(L), Length(R)];
+end;
+
+procedure TFunTest.LcsDistMyers;
+begin
+  AssertTrue(LcsDistDp('', 'hello') = 5);
+  AssertTrue(LcsDistanceMyers('', 'hello') = 5);
+  AssertTrue(LcsDistanceMyers('hello', '') = 5);
+
+  AssertTrue(LcsDistanceMyers('hello', 'hello') = 0);
+
+  AssertTrue(LcsDistDp('ab', 'aa') = 2);
+  AssertTrue(LcsDistanceMyers('ab', 'aa') = 2);
+  AssertTrue(LcsDistanceMyers('aa', 'ab') = 2);
+
+  AssertTrue(LcsDistDp('ab', 'ba') = 2);
+  AssertTrue(LcsDistanceMyers('ab', 'ba') = 2);
+  AssertTrue(LcsDistanceMyers('ba', 'ab') = 2);
+
+  AssertTrue(LcsDistDp('ab', 'aaa') = 3);
+  AssertTrue(LcsDistanceMyers('ab', 'aaa') = 3);
+  AssertTrue(LcsDistanceMyers('aaa', 'ab') = 3);
+
+  AssertTrue(LcsDistDp('a', 'bbb') = 4);
+  AssertTrue(LcsDistanceMyers('a', 'bbb') = 4);
+  AssertTrue(LcsDistanceMyers('bbb', 'a') = 4);
+
+  AssertTrue(LcsDistDp('aababab','abbaa') = 4);
+  AssertTrue(LcsDistanceMyers('aababab','abbaa') = 4);
+  AssertTrue(LcsDistanceMyers('abbaa', 'aababab') = 4);
+
+  AssertTrue(LcsDistDp('helli', 'elli') = 1);
+  AssertTrue(LcsDistanceMyers('helli', 'elli') = 1);
+  AssertTrue(LcsDistanceMyers('elli', 'helli') = 1);
+
+  AssertTrue(LcsDistDp('ellia', 'helli') = 2);
+  AssertTrue(LcsDistanceMyers('ellia', 'helli') = 2);
+  AssertTrue(LcsDistanceMyers('helli', 'ellia') = 2);
+
+  AssertTrue(LcsDistDp('kitten', 'sitten') = 2);
+  AssertTrue(LcsDistanceMyers('kitten', 'sitten') = 2);
+  AssertTrue(LcsDistanceMyers('sitten', 'kitten') = 2);
+
+  AssertTrue(LcsDistDp('kitten', 'sitting') = 5);
+  AssertTrue(LcsDistanceMyers('kitten', 'sitting') = 5);
+  AssertTrue(LcsDistanceMyers('sitting', 'kitten') = 5);
+
+  AssertTrue(LcsDistDp('distance', 'difference') = 8);
+  AssertTrue(LcsDistanceMyers('distance', 'difference') = 8);
+  AssertTrue(LcsDistanceMyers('difference', 'distance') = 8);
+
+  AssertTrue(LcsDistDp('levenshtein', 'frankenstein') = 9);
+  AssertTrue(LcsDistanceMyers('levenshtein', 'frankenstein') = 9);
+  AssertTrue(LcsDistanceMyers('frankenstein', 'levenshtein') = 9);
+
+
+  AssertTrue(LcsDistDp('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'aaaaaaa') = 0);
+
+  AssertTrue(LcsDistDp('aaaaaaa', 'bbbbbbbb') = 15);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'bbbbbbbb') = 15);
+  AssertTrue(LcsDistanceMyers('bbbbbbbb', 'aaaaaaa') = 15);
+
+  AssertTrue(LcsDistDp('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(LcsDistanceMyers('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'aaabbaaaa') = 2);
+
+  AssertTrue(LcsDistanceMyers('b', 'a') = 2);
+  AssertTrue(LcsDistanceMyers('a', 'b') = 2);
+end;
+
+procedure TFunTest.LcsDistMyers2;
+var
+  I: Integer = 0;
+  d1, d2, d3: Integer;
+begin
+  while I < High(TestWords) do
+    begin
+      d1 := LcsDistDp(TestWords[I], TestWords[I+1]);
+      d2 := LcsDistanceMyers(TestWords[I], TestWords[I+1]);
+      d3 :=
+        Length(TestWords[I]) + Length(TestWords[I+1]) - 2 * Length(LcsKR(TestWords[I], TestWords[I+1]));
+      AssertTrue((d1 = d2) and (d2 = d3));
+      I += 2;
+    end;
+end;
+
+procedure TFunTest.LcsDistMyersBounded;
+begin
+  AssertTrue(LcsDistanceMyers('', 'hello', 5) = 5);
+  AssertTrue(LcsDistanceMyers('', 'hello', 4) = -1);
+  AssertTrue(LcsDistanceMyers('ab', 'ba', 2) = 2);
+  AssertTrue(LcsDistanceMyers('ba', 'ab', 1) = -1);
+  AssertTrue(LcsDistanceMyers('ab', 'aaa', 3) = 3);
+  AssertTrue(LcsDistanceMyers('ab', 'aaa', 2) = -1);
+  AssertTrue(LcsDistanceMyers('a', 'bbb', 4) = 4);
+  AssertTrue(LcsDistanceMyers('a', 'bbb', 3) = -1);
+  AssertTrue(LcsDistanceMyers('aababab','abbaa', 4) = 4);
+  AssertTrue(LcsDistanceMyers('aababab','abbaa', 3) = -1);
+  AssertTrue(LcsDistanceMyers('helli', 'ellia', 2) = 2);
+  AssertTrue(LcsDistanceMyers('helli', 'ellia', 1) = -1);
+  AssertTrue(LcsDistanceMyers('kitten', 'sitting', 5) = 5);
+  AssertTrue(LcsDistanceMyers('kitten', 'sitting', 4) = -1);
+  AssertTrue(LcsDistanceMyers('distance', 'difference', 8) = 8);
+  AssertTrue(LcsDistanceMyers('distance', 'difference', 7) = -1);
+  AssertTrue(LcsDistanceMyers('levenshtein', 'frankenstein', 9) = 9);
+  AssertTrue(LcsDistanceMyers('levenshtein', 'frankenstein', 8) = -1);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'aaaaaaa', 1) = 0);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'bbbbbbbb', 15) = 15);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'bbbbbbbb', 14) = -1);
 end;
 
 initialization
