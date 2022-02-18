@@ -185,6 +185,11 @@ type
 
 { the responsibility for the correctness and normalization of the strings lies with the user }
   function IsSubSequence(const aStr, aSub: unicodestring): Boolean;
+
+{ Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
+  function Utf8ValidateDfa(const s: utf8string): Boolean;
+{ }
+  function Utf8Validate(const s: utf8string): Boolean;
 { these functions expect UTF-8 encoded strings as parameters; the responsibility
   for the correctness and normalization of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
@@ -1245,7 +1250,7 @@ begin
     128..223 : Result := 2;
     224..239 : Result := 3;
   else
-    //240..247
+    //240..256
     Result := 4;
   end;
 end;
@@ -1255,25 +1260,25 @@ begin
   case p^ of
     0..127:
       begin
-        aSize := 1;
         Result := p^;
+        aSize := 1;
       end;
     128..223:
       begin
-        aSize := 2;
         Result := TChar32(TChar32(p[0] and $1f) shl 6 or TChar32(p[1] and $3f));
+        aSize := 2;
       end;
     224..239:
       begin
-        aSize := 3;
         Result := TChar32(TChar32(p[0] and $f) shl 12 or TChar32(p[1] and $3f) shl 6 or
                   TChar32(p[2] and $3f));
+        aSize := 3;
       end;
   else
-    //240..247
-    aSize := 4;
+    //240..256
     Result := TChar32(TChar32(p[0] and $7) shl 18 or TChar32(p[1] and $3f) shl 12 or
                       TChar32(p[2] and $3f) shl 6 or TChar32(p[3] and $3f));
+    aSize := 4;
   end;
 end;
 
@@ -1341,6 +1346,137 @@ begin
     end;
   Result := J = System.Length(aSub);
 end;
+
+{ see http://bjoern.hoehrmann.de/utf-8/decoder/dfa; optimized version based on Rich Felker's variant }
+{$PUSH}{$J-}
+const
+  UTF8_D: array[Byte] of Byte = (
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+      1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,
+      7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+      8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+     10,3,3,3,3,3,3,3,3,3,3,3,3,4,3,3, 11,6,6,6,5,8,8,8,8,8,8,8,8,8,8,8);
+
+  UTF8_S: array[0..107] of Byte = (
+      0,12,24,36,60,96,84,12,12,12,48,72, 12,12,12,12,12,12,12,12,12,12,12,12,
+     12, 0,12,12,12,12,12, 0,12, 0,12,12, 12,24,12,12,12,12,12,24,12,24,12,12,
+     12,12,12,12,12,12,12,24,12,12,12,12, 12,24,12,12,12,12,12,12,12,24,12,12,
+     12,12,12,12,12,12,12,36,12,36,12,12, 12,36,12,12,12,12,12,36,12,36,12,12,
+     12,36,12,12,12,12,12,12,12,12,12,12);
+{$POP}
+
+function Utf8ValidateDfa(const s: utf8string): Boolean;
+var
+  I, State: SizeInt;
+  p: PByte absolute s;
+const
+  UTF8_REJECT = 12;
+begin
+  State := 0;
+  for I := 0 to System.Length(s) do
+    begin
+      State := UTF8_S[State + UTF8_D[p[I]]];
+      if State = UTF8_REJECT then exit(False);
+    end;
+  Result := True;
+end;
+
+{
+  The Unicode Standard, Version 14.0, Table 3-7. Well-Formed UTF-8 Byte Sequences
+
+    +--------------------+------------+-------------+------------+-------------+
+    | Code Points        | First Byte | Second Byte | Third Byte | Fourth Byte |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+0000..U+007F     | 00..7F     |             |            |             |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+0080..U+07FF     | C2..DF     | 80..BF      |            |             |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+0800..U+0FFF     | E0         | A0..BF      | 80..BF     |             |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+1000..U+CFFF     | E1..EC     | 80..BF      | 80..BF     |             |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+D000..U+D7FF     | ED         | 80..9F      | 80..BF     |             |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+E000..U+FFFF     | EE..EF     | 80..BF      | 80..BF     |             |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+10000..U+3FFFF   | F0         | 90..BF      | 80..BF     | 80..BF      |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+40000..U+FFFFF   | F1..F3     | 80..BF      | 80..BF     | 80..BF      |
+    +--------------------+------------+-------------+------------+-------------+
+    | U+100000..U+10FFFF | F4         | 80..8F      | 80..BF     | 80..BF      |
+    +--------------------+------------+-------------+------------+-------------+
+}
+function Utf8Validate(const s: utf8string): Boolean;
+var
+  Len, Done: SizeInt;
+  p: PByte;
+begin
+  if s = '' then exit(True);
+  Done := 0;
+  Len := System.Length(s);
+  p := Pointer(s);
+  while Done < Len do
+    case p^ of
+      0..$7f:
+        begin
+          Inc(Done);
+          Inc(p);
+        end;
+      $c2..$df:
+        begin
+          if (Done > Len - 2) or not(p[1] in [$80..$bf]) then exit(False);
+          Done += 2;
+          p += 2;
+        end;
+      $e0:
+        begin
+          if (Done > Len - 3) or not((p[1] in [$a0..$bf])and(p[2] in [$80..$bf])) then exit(False);
+          Done += 3;
+          p += 3;
+        end;
+      $e1..$ec, $ee..$ef:
+        begin
+          if (Done > Len - 3) or not((p[1] in [$80..$bf])and(p[2] in [$80..$bf])) then exit(False);
+          Done += 3;
+          p += 3;
+        end;
+      $ed:
+        begin
+          if (Done > Len - 3) or not((p[1] in [$80..$9f])and(p[2] in [$80..$bf])) then exit(False);
+          Done += 3;
+          p += 3;
+        end;
+      $f0:
+        begin
+          if (Done > Len - 4) or not(((p[1] in [$90..$bf])and(p[2] in [$80..$bf])and
+                                      (p[3] in [$80..$bf]))) then exit(False);
+          Done += 4;
+          p += 4;
+        end;
+      $f1..$f3:
+        begin
+          if (Done > Len - 4) or not((p[1] in [$80..$bf])and(p[2] in [$80..$bf])and
+                                     (p[3] in [$80..$bf])) then exit(False);
+          Done += 4;
+          p += 4;
+        end;
+      $f4:
+        begin
+          if (Done > Len - 4) or not((p[1] in [$80..$8f])and(p[2] in [$80..$bf])and
+                                     (p[3] in [$80..$bf])) then exit(False);
+          Done += 4;
+          p += 4;
+        end;
+    else
+      exit(False);
+    end;
+  Result := True;
+end;
+
+
 
 function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
 var
@@ -1448,16 +1584,13 @@ begin
         aBytes[2] := Byte(c32 and $3f) or $80;
         Result := 3;
       end;
-    $10000..$10ffff:
-      begin
-        aBytes[0] := Byte(c32 shr 18) or $f0;
-        aBytes[1] := Byte(c32 shr 12) and $3f or $80;
-        aBytes[2] := Byte(c32 shr  6) and $3f or $80;
-        aBytes[3] := Byte(c32 and $3f) or $80;
-        Result := 4;
-      end
   else
-    Result := 0;
+    // $10000..$10ffff:
+    aBytes[0] := Byte(c32 shr 18) or $f0;
+    aBytes[1] := Byte(c32 shr 12) and $3f or $80;
+    aBytes[2] := Byte(c32 shr  6) and $3f or $80;
+    aBytes[3] := Byte(c32 and $3f) or $80;
+    Result := 4;
   end;
 end;
 
@@ -1467,9 +1600,9 @@ begin
     0..127:          Result := 1;
     128..$7ff:       Result := 2;
     $800..$ffff:     Result := 3;
-    $10000..$10ffff: Result := 4;
   else
-    Result := 0;
+    // $10000..$10ffff
+    Result := 4;
   end;
 end;
 
@@ -1482,7 +1615,7 @@ begin
     Result += Char32Utf8Len(r[I]);
 end;
 
-function Char32SeqToUtf8(const aSeq: TChar32Seq): ansistring;
+function Char32SeqToUtf8(const aSeq: TChar32Seq): utf8string;
 var
   s: string = '';
   I, J: SizeInt;
@@ -1515,14 +1648,12 @@ begin
             p[I+1] := Byte(Curr shr 6) and $3f or $80;
             p[I+2] := Byte(Curr and $3f) or $80;
           end;
-        4:
-          begin
-            p[I  ] := Byte(Curr shr 18) or $f0;
-            p[I+1] := Byte(Curr shr 12) and $3f or $80;
-            p[I+2] := Byte(Curr shr  6) and $3f or $80;
-            p[I+3] := Byte(Curr and $3f) or $80;
-          end;
       else
+        // 4
+        p[I  ] := Byte(Curr shr 18) or $f0;
+        p[I+1] := Byte(Curr shr 12) and $3f or $80;
+        p[I+2] := Byte(Curr shr  6) and $3f or $80;
+        p[I+3] := Byte(Curr and $3f) or $80;
       end;
       I += Len;
     end;
