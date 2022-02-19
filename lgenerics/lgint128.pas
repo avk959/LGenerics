@@ -1943,7 +1943,7 @@ begin
   aDigs[0] := a[3];
   aDigs[1] := 0;
   vQ := vA div d;
-  q[3] := TLimb(vQ);
+  Q[3] := TLimb(vQ);
   vA -= vQ * QWord(d);
 
   aDigs[1] := aDigs[0];
@@ -3730,21 +3730,19 @@ end;
 
 class function TInt128.DivShortR(a: PInt128; d: Integer): Integer;
 var
+  tmp: TUInt128;
   aNeg: Boolean;
 begin
-  aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
-  try
-    if d > 0 then
-      Result := Integer(PUInt128(a)^ mod DWord(d))
-    else
-      Result := Integer(PUInt128(a)^ mod -DWord(d));
-    if aNeg then
-      Result := -Result;
-  finally
-    if aNeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
-  end;
+  tmp := TUInt128(a^);
+  aNeg := tmp.HiLimbMacro and SIGN_FLAG <> 0;
+  if aNeg then
+    tmp.HiLimbMacro := tmp.HiLimbMacro and SIGN_MASK;
+  if d > 0 then
+    Result := Integer(tmp mod DWord(d))
+  else
+    Result := Integer(tmp mod DWord(-d));
+  if aNeg then
+    Result := -Result;
 end;
 
 class operator TInt128.=(const L, R: TInt128): Boolean;
