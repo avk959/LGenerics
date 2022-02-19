@@ -1753,7 +1753,6 @@ end;
 
 procedure TFunTest.SimRatioLevExTest1251;
 var
-  I: SizeInt;
   R: Double;
   Pat1, Pat2: string1251;
 const
