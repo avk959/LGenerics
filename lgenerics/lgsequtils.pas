@@ -151,6 +151,7 @@ type
     class function LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
   public
   { returns True if aSub is a subsequence of aSeq, False otherwise }
     class function IsSubSequence(const aSeq, aSub: array of T): Boolean; static;
@@ -167,6 +168,14 @@ type
     if this value is exceeded when calculating the distance, then the function exits
     immediately and returns -1 }
     class function LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
+  { the LCS edit distance allows only two operations: insertion and deletion; uses slightly
+    modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
+    from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
+    class function LcsDistanceMyers(const L, R: array of T): SizeInt; static;
+  { the same as above; the aLimit parameter indicates the maximum expected distance,
+    if this value is exceeded when calculating the distance, then the function exits
+    immediately and returns -1 }
+    class function LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
     with O(RLogN) time complexity, where R is the number of the matching pairs in L and R;
     inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5; }
@@ -188,14 +197,17 @@ type
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: utf8string): Boolean;
-{ }
+{ branchy range validator based on Table 3-7 of Unicode Standard }
   function Utf8Validate(const s: utf8string): Boolean;
-{ these functions expect UTF-8 encoded strings as parameters; the responsibility
-  for the correctness and normalization of the strings lies with the user }
+{ these functions expect UTF-8 encoded strings as parameters;
+  the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
   function LevDistanceUtf8(const L, R: utf8string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: utf8string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
+
+  function LcsDistanceMyersUtf8(const L, R: utf8string): SizeInt; inline;
+  function LcsDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
   function LcsGusUtf8(const L, R: utf8string): utf8string; inline;
   function LcsKRUtf8(const L, R: utf8string): utf8string; inline;
   function LcsMyersUtf8(const L, R: utf8string): utf8string; inline;
@@ -1141,6 +1153,50 @@ begin
   Result := Dist;
 end;
 
+class function TGSeqUtil.LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  I, J, D, K, HiK: SizeInt;
+  V: PSizeInt;
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt = nil;
+begin
+  if aLenL + aLenR < Pred(MAX_STATIC) then
+    begin
+      System.FillChar(StBuf, (aLenL + aLenR + 2) * SizeOf(SizeInt), 0);
+      V := @StBuf[Succ(aLenL)];
+    end
+  else
+    begin
+      System.SetLength(Buf, aLenL + aLenR + 2);
+      V := @Buf[Succ(aLenL)];
+    end;
+
+  for D := 0 to aLenL + aLenR do
+    begin
+      K := -(D - 2 * Math.Max(0, D - aLenL));
+      HiK := D - 2 * Math.Max(0, D - aLenR);
+      while K <= HiK do
+        begin
+          if (K = -D) or ((K <> D) and (V[K - 1] < V[K + 1])) then
+            J := V[K + 1]
+          else
+            J := V[K - 1] + 1;
+          I := J - K;
+          while (J < aLenR) and (I < aLenL) and Eq(pL[I], pR[J]) do
+            begin
+              Inc(J);
+              Inc(I);
+            end;
+          if (I = aLenL) and (J = aLenR) then exit(D);
+          V[K] := J;
+          K += 2;
+        end;
+      if D = aLimit then break;
+    end;
+
+  Result := NULL_INDEX;
+end;
+
 class function TGSeqUtil.IsSubSequence(const aSeq, aSub: array of T): Boolean;
 var
   I, J: SizeInt;
@@ -1201,6 +1257,35 @@ begin
     Result := LevDistMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
     Result := LevDistMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+end;
+
+class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  Result := LcsDistMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R),
+    System.Length(L) + System.Length(R));
+end;
+
+class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt;
+begin
+  if aLimit < 0 then
+    aLimit := 0;
+  if System.Length(L) = 0 then
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if System.Length(R) = 0 then
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  Result := LcsDistMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit);
 end;
 
 class function TGSeqUtil.LcsGus(const L, R: array of T): TArray;
@@ -1539,12 +1624,12 @@ begin
     dfsDyn:        Result := TChar32Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfsMbr:        Result := TChar32Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfsMyers:      Result := -1;
-    dfsMyersLcs:   Result := -1;
+    dfsMyersLcs:   Result := TChar32Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfsMbrBound:   Result := TChar32Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfsMyersBound: Result := -1;
   else
     //dfsMyersLcsBound
-    Result := -1;
+    Result := TChar32Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   end;
 end;
 
@@ -1561,6 +1646,16 @@ end;
 function LevDistanceMbrUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfsMbrBound);
+end;
+
+function LcsDistanceMyersUtf8(const L, R: utf8string): SizeInt;
+begin
+  Result := GenericDistanceUtf8(L, R, -1, dfsMyersLcs);
+end;
+
+function LcsDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
+begin
+  Result := GenericDistanceUtf8(L, R, aLimit, dfsMyersLcsBound);
 end;
 
 function Char32ToUtf8Char(c32: TChar32; out aBytes: TByte4): Integer;
@@ -1664,7 +1759,7 @@ end;
 type
   TLcsFunSpec = (lfsGus, lfsKR, lfsMyers);
 
-function LcsGenegicUtf8(const L, R: utf8string; aFun: TLcsFunSpec): utf8string;
+function LcsGenegicUtf8(const L, R: utf8string; aSpec: TLcsFunSpec): utf8string;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
   LBuf: TChar32Seq = nil;
@@ -1694,7 +1789,7 @@ begin
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
-  case aFun of
+  case aSpec of
     lfsGus: Result := Char32SeqToUtf8(TChar32Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
     lfsKR:  Result := Char32SeqToUtf8(TChar32Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   else
