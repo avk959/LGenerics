@@ -15,6 +15,11 @@ type
   published
     procedure ValidateDfa;
     procedure Validate;
+    procedure LevenshteinDist;
+    procedure LevenshteinDistMbr;
+    procedure LevenshteinDistMbrBounded;
+    procedure LcsDistMyers;
+    procedure LcsDistMyersBounded;
   end;
 
 implementation
@@ -100,8 +105,10 @@ var
 begin
   AssertTrue(Utf8ValidateDfa(Ascii));
   AssertFalse(Utf8ValidateDfa(NotAscii));
+
   for s in WellFormed do
     AssertTrue(Utf8ValidateDfa(s));
+
   for s in MalFormed do
     AssertFalse(Utf8ValidateDfa(s));
 end;
@@ -112,10 +119,455 @@ var
 begin
   AssertTrue(Utf8Validate(Ascii));
   AssertFalse(Utf8Validate(NotAscii));
+
   for s in WellFormed do
     AssertTrue(Utf8Validate(s));
+
   for s in MalFormed do
     AssertFalse(Utf8Validate(s));
+end;
+
+procedure TTestUtf8Utils.LevenshteinDist;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LevDistanceUtf8(s1, s1) = 0);
+  AssertTrue(LevDistanceUtf8(s2, s2) = 0);
+  AssertTrue(LevDistanceUtf8(s1, s2) = 6);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 4);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 5);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 8);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+end;
+
+procedure TTestUtf8Utils.LevenshteinDistMbr;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LevDistanceMbrUtf8(s1, s1) = 0);
+  AssertTrue(LevDistanceMbrUtf8(s2, s2) = 0);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 6);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 4);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 5);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 8);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 2);
+end;
+
+procedure TTestUtf8Utils.LevenshteinDistMbrBounded;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 6);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, 5) = -1);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 0) = -1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 1) = -1);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 1) = -1);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 2) = -1);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 2) = -1);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 0) = -1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 1) = -1);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 0) = -1);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 2) = -1);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 4);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 3) = -1);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 5);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 4) = -1);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 8);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 7) = -1);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 1) = -1);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 0) = -1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, 1) = -1);
+end;
+
+procedure TTestUtf8Utils.LcsDistMyers;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s1) = 0);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s2) = 0);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 6);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 3);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 4);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 4);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 4);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 4);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 1);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 5);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 5);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 8);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 8);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 8);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 8);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 15);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 15);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
+end;
+
+procedure TTestUtf8Utils.LcsDistMyersBounded;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 6);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 5) = -1);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 1) = -1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 1) = -1);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 3);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 2) = -1);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 4);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 3) = -1);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 4);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 3) = -1);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 1);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 0) = -1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 1) = -1);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 1) = -1);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 5);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 4) = -1);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 8);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 7) = -1);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 8);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 7) = -1);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 15);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 14) = -1);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 1) = -1);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, 1) = -1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, 1) = -1);
 end;
 
 

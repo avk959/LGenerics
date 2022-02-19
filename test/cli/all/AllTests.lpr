@@ -42,7 +42,8 @@ uses
   LGJsonTest,
   LGVarJsonTest,
   LGJsonConfTest,
-  lgStrHelpersTest;
+  lgStrHelpersTest,
+  lgSeqUtilsTest;
 
 type
 
