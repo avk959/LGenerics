@@ -37,7 +37,7 @@ type
   public
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
     class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
-    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: rawbytestring; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
@@ -52,7 +52,7 @@ type
   public
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
     class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord = 0): QWord; static;
-    class function HashStr(const aValue: string; aSeed: QWord = 0): QWord; static; inline;
+    class function HashStr(const aValue: rawbytestring; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
     class function HashDWord(aValue: DWord; aSeed: QWord = 0): QWord; static;
     class function HashQWord(aValue: QWord; aSeed: QWord = 0): QWord; static;
@@ -80,7 +80,7 @@ type
   public
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
     class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
-    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: rawbytestring; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
@@ -95,7 +95,7 @@ type
   public
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
     class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
-    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: rawbytestring; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
@@ -110,7 +110,7 @@ type
   public
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
     class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord; static;
-    class function HashStr(const aValue: string; aSeed: DWord = 0): DWord; static; inline;
+    class function HashStr(const aValue: rawbytestring; aSeed: DWord = 0): DWord; static; inline;
     class function HashWord(aValue: Word; aSeed: DWord = 0): DWord; static;
     class function HashDWord(aValue: DWord; aSeed: DWord = 0): DWord; static;
     class function HashQWord(aValue: QWord; aSeed: DWord = 0): DWord; static;
@@ -125,7 +125,7 @@ type
   public
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
     class function HashBuf(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord = 0): QWord; static;
-    class function HashStr(const aValue: string; aSeed: QWord = 0): QWord; static; inline;
+    class function HashStr(const aValue: rawbytestring; aSeed: QWord = 0): QWord; static; inline;
     class function HashWord(aValue: Word; aSeed: QWord = 0): QWord; static;
     class function HashDWord(aValue: DWord; aSeed: QWord = 0): QWord; static;
     class function HashQWord(aValue: QWord; aSeed: QWord = 0): QWord; static;
@@ -391,7 +391,7 @@ begin
   Result :=  Result xor Result shr 16;
 end;
 
-class function TxxHash32LE.HashStr(const aValue: string; aSeed: DWord): DWord;
+class function TxxHash32LE.HashStr(const aValue: rawbytestring; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -617,7 +617,7 @@ begin
   Result :=  Result xor Result shr 32;
 end;
 
-class function TxxHash64LE.HashStr(const aValue: string; aSeed: QWord): QWord;
+class function TxxHash64LE.HashStr(const aValue: rawbytestring; aSeed: QWord): QWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -791,7 +791,7 @@ begin
   Result :=  Result xor Result shr 15;
 end;
 
-class function TMurmur2LE.HashStr(const aValue: string; aSeed: DWord): DWord;
+class function TMurmur2LE.HashStr(const aValue: rawbytestring; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -970,7 +970,7 @@ begin
   Result :=  Result xor Result shr 15;
 end;
 
-class function TMurmur2aLE.HashStr(const aValue: string; aSeed: DWord): DWord;
+class function TMurmur2aLE.HashStr(const aValue: rawbytestring; aSeed: DWord): DWord;
 begin
   Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
 end;
@@ -1159,7 +1159,7 @@ begin
   Result := Result xor Result shr 16;
 end;
 
-class function TMurmur3LE.HashStr(const aValue: string; aSeed: DWord): DWord;
+class function TMurmur3LE.HashStr(const aValue: rawbytestring; aSeed: DWord): DWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
@@ -1341,7 +1341,7 @@ begin
   Result :=  Result xor Result shr 47;
 end;
 
-class function TMurmur64aLE.HashStr(const aValue: string; aSeed: QWord): QWord;
+class function TMurmur64aLE.HashStr(const aValue: rawbytestring; aSeed: QWord): QWord;
 begin
   Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
