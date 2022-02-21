@@ -139,19 +139,50 @@ type
       procedure SetEndCell(aRow, aCol: SizeInt); inline;
     end;
 
+    TQEntry  = specialize TGMapEntry<T, QWord>;
+    TQMap    = specialize TGLiteChainHashTable<T, TQEntry, TEqRel>;
+    TDQValue = array[0..1] of QWord;
+    TDQEntry = specialize TGMapEntry<T, TDQValue>;
+    TDQMap   = specialize TGLiteChainHashTable<T, TDQEntry, TEqRel>;
+    TPQEntry = specialize TGMapEntry<T, PQWord>;
+    TPQMap   = specialize TGLiteChainHashTable<T, TPQEntry, TEqRel>;
+    TPeq     = record
+      Map: TPQMap;
+      Buffer: array of QWord;
+      BlockCount: SizeInt;
+    end;
+    TBlock   = record
+      P,
+      M: QWord;
+      Score: SizeInt;
+    end;
+
   const
     MAX_STATIC = 1024;
+    BLOCK_SIZE = BitSizeOf(QWord);
+    BSIZE_MASK = Pred(BLOCK_SIZE);
+    BSIZE_LOG  = 6;
 
-    class function Eq(const L, R: T): Boolean; static; inline;
-    class function SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
-    class function SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
-    class function GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
-    class function LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
-    class function LcsKRImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
-    class function LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
-    class function LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
-    class function LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  Eq(const L, R: T): Boolean; static; inline;
+    class function  SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
+    class function  SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
+    class function  GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
+    class function  LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
+    class function  LcsKRImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
+    class function  LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
+    class function  LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LevDistMyersDQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  LevDistMyersDQ(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class procedure CreatePeq(aSeq: PItem; aSeqLen: SizeInt; out aPeq: TPeq); static;
+    class function  LevDistMyersCutoff(const aPeq: TPeq; pR: PItem; aLenL, aLenR, K: SizeInt): SizeInt; static;
+    class function  LevDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  LevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
   public
   { returns True if aSub is a subsequence of aSeq, False otherwise }
     class function IsSubSequence(const aSeq, aSub: array of T): Boolean; static;
@@ -168,6 +199,14 @@ type
     if this value is exceeded when calculating the distance, then the function exits
     immediately and returns -1 }
     class function LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
+  { returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
+    with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
+    d is edit distance computed, and w is the size of a computer word }
+    class function LevDistanceMyers(const L, R: array of T): SizeInt; static;
+  { the same as above; the aLimit parameter indicates the maximum expected distance,
+    if this value is exceeded when calculating the distance, then the function exits
+    immediately and returns -1; if aLimit < 0 it will be computed dynamically }
+    class function LevDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { the LCS edit distance allows only two operations: insertion and deletion; uses slightly
     modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
     from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
@@ -205,7 +244,8 @@ type
   function LevDistanceUtf8(const L, R: utf8string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: utf8string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
-
+  function LevDistanceMyersUtf8(const L, R: utf8string): SizeInt; inline;
+  function LevDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
   function LcsDistanceMyersUtf8(const L, R: utf8string): SizeInt; inline;
   function LcsDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
   function LcsGusUtf8(const L, R: utf8string): utf8string; inline;
@@ -414,7 +454,6 @@ begin
 end;
 
 { TDwHasher }
-
 class function TDwHasher.HashCode(aValue: DWord): SizeInt;
 begin
   Result := JdkHash(aValue);
@@ -1153,6 +1192,475 @@ begin
   Result := Dist;
 end;
 
+class function TGSeqUtil.LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Map: TQMap;
+  PmI, Hp, Hv, Vp, Vn, D0: QWord;
+  I: SizeInt;
+  p: ^TQEntry;
+begin
+  //here aLenL <= aLenR
+  Map.EnsureCapacity(aLenL);
+  for I := 0 to Pred(aLenL) do
+    begin
+      if not Map.FindOrAdd(pL[I], p) then
+        p^.Key := pL[I];
+      p^.Value := p^.Value or (QWord(1) shl I);
+    end;
+
+
+  Result := aLenL;
+  Vn := 0;
+  Vp := High(QWord);
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      p := Map.Find(pR[I]);
+      if p <> nil then
+        PmI := p^.Value
+      else
+        PmI := 0;
+      D0 := (((PmI and Vp) + Vp) xor Vp) or PmI or Vn;
+      Hp := Vn or not(D0 or Vp);
+      Hv := D0 and Vp;
+      Vp := Hv shl 1 or not(D0 or Hp shl 1 or 1);
+      Vn := D0 and (Hp shl 1 or 1);
+      if Hv and (QWord(1) shl Pred(aLenL)) <> 0 then
+        Dec(Result)
+      else
+        if Hp and (QWord(1) shl Pred(aLenL)) <> 0 then
+          Inc(Result);
+    end;
+end;
+
+class function TGSeqUtil.LevDistMyersQ(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Map: TQMap;
+  PmI, Hp, Hn, Vp, Vn, D0: QWord;
+  I: SizeInt;
+  p: ^TQEntry;
+begin
+  //here aLenL <= aLenR
+  Map.EnsureCapacity(aLenL);
+  for I := 0 to Pred(aLenL) do
+    begin
+      if not Map.FindOrAdd(pL[I], p) then
+        p^.Key := pL[I];
+      p^.Value := p^.Value or (QWord(1) shl I);
+    end;
+
+  Result := aLenL;
+  aLimit += aLenR - aLenL;
+  Vn := 0;
+  Vp := High(QWord);
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      p := Map.Find(pR[I]);
+      if p <> nil then
+        PmI := p^.Value
+      else
+        PmI := 0;
+      D0 := (((PmI and Vp) + Vp) xor Vp) or PmI or Vn;
+      Hp := Vn or not(D0 or Vp);
+      Hn := D0 and Vp;
+      Vp := Hn shl 1 or not(D0 or Hp shl 1 or 1);
+      Vn := D0 and (Hp shl 1 or 1);
+      if Hn and (QWord(1) shl Pred(aLenL)) <> 0 then
+        Dec(Result)
+      else
+        begin
+          if Hp and (QWord(1) shl Pred(aLenL)) <> 0 then
+            begin
+              Inc(Result);
+              aLimit -= 2;
+            end
+          else
+            Dec(aLimit);
+          if aLimit < 0 then
+            exit(NULL_INDEX);
+        end;
+    end;
+end;
+
+class function TGSeqUtil.LevDistMyersDQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Map: TDqMap;
+  Eq0, Eq1, Ph, Mh, Pv0, Mv0, Pv1, Mv1, Xv, Xh, Hin: QWord;
+  I: SizeInt;
+  p: ^TDqEntry;
+begin
+  //here aLenL <= aLenR
+  Map.EnsureCapacity(aLenL);
+  for I := 0 to Pred(BLOCK_SIZE) do
+    begin
+      if not Map.FindOrAdd(pL[I], p) then
+        p^.Key := pL[I];
+      p^.Value[0] := p^.Value[0] or (QWord(1) shl I);
+    end;
+  for I := BLOCK_SIZE to Pred(aLenL) do
+    begin
+      if not Map.FindOrAdd(pL[I], p) then
+        p^.Key := pL[I];
+      p^.Value[1] := p^.Value[1] or (QWord(1) shl I);
+    end;
+
+  Result := aLenL;
+  Pv0 := High(QWord);
+  Pv1 := High(QWord);
+  Mv0 := 0;
+  Mv1 := 0;
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      p := Map.Find(pR[I]);
+      if p <> nil then
+        begin
+          Eq0 := p^.Value[0];
+          Eq1 := p^.Value[1];
+        end
+      else
+        begin
+          Eq0 := 0;
+          Eq1 := 0;
+        end;
+      ///////////////////////
+      Xv := Mv0 or Eq0;
+      Xh := ((Pv0 and Eq0 + Pv0) xor Pv0) or Eq0;
+      Ph := Mv0 or not(Xh or Pv0);
+      Mh := Pv0 and Xh;
+      Hin := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+      Ph := Ph shl 1 or 1;
+      Pv0 := Mh shl 1 or not(Xv or Ph);
+      Mv0 := Xv and Ph;
+      ///////////////////////
+      Xv := Mv1 or Eq1;
+      Eq1 := Eq1 or Hin shr BSIZE_MASK;
+      Xh := ((Pv1 and Eq1 + Pv1) xor Pv1) or Eq1;
+      Ph := Mv1 or not(Xh or Pv1);
+      Mh := Pv1 and Xh;
+      ///////////////////////
+      if Mh and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+        Dec(Result)
+      else
+        if Ph and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+          Inc(Result);
+      ///////////////////////
+      Ph := Ph shl 1 or (Hin + 1) shr 1;
+      Pv1 := (Mh shl 1 or Hin shr BSIZE_MASK) or not(Xv or Ph);
+      Mv1 := Xv and Ph;
+    end;
+end;
+
+class function TGSeqUtil.LevDistMyersDQ(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Map: TDqMap;
+  Eq0, Eq1, Ph, Mh, Pv0, Mv0, Pv1, Mv1, Xv, Xh, Hin: QWord;
+  I: SizeInt;
+  p: ^TDqEntry;
+begin
+  //here aLenL <= aLenR
+  Map.EnsureCapacity(aLenL);
+  for I := 0 to Pred(BLOCK_SIZE) do
+    begin
+      if not Map.FindOrAdd(pL[I], p) then
+        p^.Key := pL[I];
+      p^.Value[0] := p^.Value[0] or (QWord(1) shl I);
+    end;
+  for I := BLOCK_SIZE to Pred(aLenL) do
+    begin
+      if not Map.FindOrAdd(pL[I], p) then
+        p^.Key := pL[I];
+      p^.Value[1] := p^.Value[1] or (QWord(1) shl I);
+    end;
+
+  Result := aLenL;
+  Pv0 := High(QWord);
+  Pv1 := High(QWord);
+  Mv0 := 0;
+  Mv1 := 0;
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      p := Map.Find(pR[I]);
+      if p <> nil then
+        begin
+          Eq0 := p^.Value[0];
+          Eq1 := p^.Value[1];
+        end
+      else
+        begin
+          Eq0 := 0;
+          Eq1 := 0;
+        end;
+      ///////////////////////
+      Xv := Mv0 or Eq0;
+      Xh := ((Pv0 and Eq0 + Pv0) xor Pv0) or Eq0;
+      Ph := Mv0 or not(Xh or Pv0);
+      Mh := Pv0 and Xh;
+      Hin := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+      Ph := Ph shl 1 or 1;
+      Pv0 := Mh shl 1 or not(Xv or Ph);
+      Mv0 := Xv and Ph;
+      ///////////////////////
+      Xv := Mv1 or Eq1;
+      Eq1 := Eq1 or Hin shr BSIZE_MASK;
+      Xh := ((Pv1 and Eq1 + Pv1) xor Pv1) or Eq1;
+      Ph := Mv1 or not(Xh or Pv1);
+      Mh := Pv1 and Xh;
+      ///////////////////////
+      if Mh and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+        Dec(Result)
+      else
+        begin
+          if Ph and (QWord(1) shl Pred(aLenL - BLOCK_SIZE)) <> 0 then
+            begin
+              Inc(Result);
+              aLimit -= 2;
+            end
+          else
+            Dec(aLimit);
+          if aLimit < 0 then
+            exit(NULL_INDEX);
+        end;
+      ///////////////////////
+      Ph := Ph shl 1 or (Hin + 1) shr 1;
+      Pv1 := (Mh shl 1 or Hin shr BSIZE_MASK) or not(Xv or Ph);
+      Mv1 := Xv and Ph;
+    end;
+end;
+
+class procedure TGSeqUtil.CreatePeq(aSeq: PItem; aSeqLen: SizeInt; out aPeq: TPeq);
+var
+  I, J, BCount, LastRow: SizeInt;
+  Pad: QWord;
+  p: ^TPQEntry;
+begin
+  with aPeq.Map do
+    begin
+      EnsureCapacity(Math.Min(256, aSeqLen));
+      for I := 0 to Pred(aSeqLen) do
+        if not FindOrAdd(aSeq[I], p) then
+          p^.Key := aSeq[I];
+    end;
+
+  LastRow := aSeqLen and BSIZE_MASK;
+  BCount := aSeqLen shr BSIZE_LOG + Ord(LastRow <> 0);
+  aPeq.BlockCount := BCount;
+
+  System.SetLength(aPeq.Buffer, BCount * aPeq.Map.Count);
+  if LastRow <> 0 then
+    Pad := System.High(QWord) shl LastRow
+  else
+    Pad := 0;
+
+  J := 0;
+  with aPeq do
+    begin
+      for p in Map do
+        begin
+          p^.Value := @Buffer[J];
+          p^.Value[Pred(BCount)] := Pad;
+          J += BCount;
+        end;
+
+      for I := 0 to Pred(aSeqLen) do
+        begin
+          p := Map.Find(aSeq[I]);
+          p^.Value[I shr BSIZE_LOG] := p^.Value[I shr BSIZE_LOG] or QWord(1) shl (I and BSIZE_MASK);
+        end;
+    end;
+end;
+
+class function TGSeqUtil.LevDistMyersCutoff(const aPeq: TPeq; pR: PItem; aLenL, aLenR, K: SizeInt): SizeInt;
+  function ReadBlockCell(const aBlock: TBlock; aIndex: SizeInt): SizeInt;
+  var
+    I: SizeInt;
+  begin
+    Result := aBlock.Score;
+    for I := BSIZE_MASK downto Succ(aIndex) do
+      if aBlock.P and (QWord(1) shl I) <> 0 then
+        Dec(Result)
+      else
+        if aBlock.M and (QWord(1) shl I) <> 0 then
+          Inc(Result);
+  end;
+
+var
+  Blocks: array of TBlock = nil;
+  Equ, Xv, Xh, Pv, Mv, Ph, Mh, HIn, HOut: QWord;
+  I, J, First, Last: SizeInt;
+  p: ^TPQEntry;
+begin
+  K := Math.Min(k, aLenR);
+  First := 0;
+  I := Succ(Math.Min(K, (K - aLenR + aLenL) div 2));
+  Last := Pred(Math.Min(aPeq.BlockCount, I shr BSIZE_LOG + Ord(I and BSIZE_MASK <> 0)));
+  System.SetLength(Blocks, aPeq.BlockCount);
+  Result := NULL_INDEX;
+
+  for I := First to Last do
+    with Blocks[I] do
+      begin
+        P := System.High(QWord);
+        Score := BLOCK_SIZE * Succ(I);
+      end;
+
+  for I := 0 to Pred(aLenR) do
+    begin
+      HOut := 1;
+      for J := First to Last do
+        begin
+          HIn := HOut;
+          p := aPeq.Map.Find(pR[I]);
+          if p <> nil then
+            Equ := p^.Value[J]
+          else
+            Equ := 0;
+          Pv := Blocks[J].P;
+          Mv := Blocks[J].M;
+          Xv := Mv or Equ;
+          Equ := Equ or HIn shr BSIZE_MASK;
+          Xh := ((Pv and Equ + Pv) xor Pv) or Equ;
+          Ph := Mv or not(Xh or Pv);
+          Mh := Pv and Xh;
+
+          HOut := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+
+          Ph := Ph shl 1 or (HIn + 1) shr 1;
+
+          Blocks[J].P := (Mh shl 1 or HIn shr BSIZE_MASK) or not(Xv or Ph);
+          Blocks[J].M := Xv and Ph;
+          Blocks[J].Score += SizeInt(HOut);
+        end;
+      // adjust last block
+      if (Last < Pred(aPeq.BlockCount)) and
+         (K-Blocks[Last].Score+BSIZE_MASK-aLenR+aLenL+I >= Last*BLOCK_SIZE) then
+        begin
+          Inc(Last);
+          HIn := HOut;
+          p := aPeq.Map.Find(pR[I]);
+          if p <> nil then
+            Equ := p^.Value[Last]
+          else
+            Equ := 0;
+          Pv := System.High(QWord);
+          Mv := 0;
+          Xv := Mv or Equ;
+          Equ := Equ or HIn shr BSIZE_MASK;
+          Xh := ((Pv and Equ + Pv) xor Pv) or Equ;
+          Ph := Mv or not(Xh or Pv);
+          Mh := Pv and Xh;
+
+          HOut := Ph shr BSIZE_MASK - Mh shr BSIZE_MASK;
+
+          Ph := Ph shl 1 or (HIn + 1) shr 1;
+
+          Blocks[Last].P := (Mh shl 1 or HIn shr BSIZE_MASK) or not(Xv or Ph);
+          Blocks[Last].M := Xv and Ph;
+          Blocks[Last].Score := Blocks[Last-1].Score - SizeInt(HIn) + BLOCK_SIZE + SizeInt(HOut);
+        end
+      else
+        while (Last >= First) and ((Blocks[Last].Score >= K + BLOCK_SIZE) or
+              (K-Blocks[Last].Score+BSIZE_MASK-aLenR+aLenL+I+1 < Last*BLOCK_SIZE)) do
+          Dec(Last);
+      // adjust first block
+      while (First <= Last) and ((Blocks[First].Score >= K + BLOCK_SIZE) or
+            (Blocks[First].Score-K-aLenR+aLenL+I > (First+1)*BLOCK_SIZE-1)) do
+        Inc(First);
+
+      if Last < First then exit;
+    end;
+
+  if Last = Pred(aPeq.BlockCount) then
+    begin
+      I := Pred(aLenL and BSIZE_MASK);
+      if I < 0 then I += BLOCK_SIZE;
+      J := ReadBlockCell(Blocks[Last], I);
+      if J <= K then
+        Result := J;
+    end;
+end;
+
+class function TGSeqUtil.LevDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+var
+  Peq: TPeq;
+  Limit: SizeInt;
+begin
+  //here aLenL <= aLenR
+  CreatePeq(pL, aLenL, Peq);
+  Limit := Math.Max(BLOCK_SIZE, aLenR - aLenL);
+  repeat
+    Result := LevDistMyersCutoff(Peq, pR, aLenL, aLenR, Limit);
+    Limit += Limit;
+  until Result <> NULL_INDEX;
+end;
+
+class function TGSeqUtil.LevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  Peq: TPeq;
+begin
+  //here aLenL <= aLenR
+  CreatePeq(pL, aLenL, Peq);
+  Result := LevDistMyersCutoff(Peq, pR, aLenL, aLenR, aLimit);
+end;
+
+class function TGSeqUtil.GetLevDistMyers(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  case aLenL of
+    1..BitSizeOf(QWord):
+      Result := LevDistMyersQ(pL, pR, aLenL, aLenR);
+    BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+      Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
+  else
+    Result := LevDistMyersDyn(pL, pR, aLenL, aLenR);
+  end;
+end;
+
+class function TGSeqUtil.GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLimit < 0 then
+    exit(GetLevDistMyers(pL, pR, aLenL, aLenR));
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  if aLimit = 0 then
+    exit(NULL_INDEX);
+
+  if aLimit > aLenR then
+    aLimit := aLenR;
+
+  case aLenL of
+    1..BitSizeOf(QWord):
+      Result := LevDistMyersQ(pL, pR, aLenL, aLenR, aLimit);
+    BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
+      Result := LevDistMyersDQ(pL, pR, aLenL, aLenR, aLimit);
+  else
+    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLimit);
+  end;
+end;
+
 class function TGSeqUtil.LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 var
   I, J, D, K, HiK: SizeInt;
@@ -1259,6 +1767,38 @@ begin
     Result := LevDistMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
+class function TGSeqUtil.LevDistanceMyers(const L, R: array of T): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLevDistMyers(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L));
+end;
+
+class function TGSeqUtil.LevDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    if System.Length(R) <= aLimit then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if System.Length(R) = 0 then
+      if System.Length(L) <= aLimit then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLevDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+end;
+
 class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T): SizeInt;
 begin
   if System.Length(L) = 0 then
@@ -1326,7 +1866,8 @@ type
   TByte4      = array[0..3] of Byte;
 
 const
-  MAX_STATIC = TChar32Util.MAX_STATIC;
+  MAX_STATIC       = TChar32Util.MAX_STATIC;
+  UNICODE_BAD_CHAR = $fffd;
 
 function CodePointLen(b: Byte): SizeInt; inline;
 begin
@@ -1340,7 +1881,7 @@ begin
   end;
 end;
 
-function CodePointToChar32(p: PByte; out aSize: SizeInt): TChar32; inline;
+function CodePointToChar32(p: PByte; out aSize: SizeInt): TChar32; //inline;
 begin
   case p^ of
     0..127:
@@ -1623,10 +2164,10 @@ begin
   case aSpec of
     dfsDyn:        Result := TChar32Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfsMbr:        Result := TChar32Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfsMyers:      Result := -1;
+    dfsMyers:      Result := TChar32Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfsMyersLcs:   Result := TChar32Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfsMbrBound:   Result := TChar32Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
-    dfsMyersBound: Result := -1;
+    dfsMyersBound: Result := TChar32Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
     //dfsMyersLcsBound
     Result := TChar32Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
@@ -1646,6 +2187,16 @@ end;
 function LevDistanceMbrUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfsMbrBound);
+end;
+
+function LevDistanceMyersUtf8(const L, R: utf8string): SizeInt;
+begin
+  Result := GenericDistanceUtf8(L, R, -1, dfsMyers);
+end;
+
+function LevDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
+begin
+  Result := GenericDistanceUtf8(L, R, aLimit, dfsMyersBound);
 end;
 
 function LcsDistanceMyersUtf8(const L, R: utf8string): SizeInt;
