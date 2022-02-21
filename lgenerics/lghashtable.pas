@@ -847,7 +847,7 @@ const
   SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
 
 implementation
-{$Q-}{$B-}{$COPERATORS ON}{$POINTERMATH ON}
+{$Q-}{$R-}{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGAbstractHashTable }
 
