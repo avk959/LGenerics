@@ -237,9 +237,9 @@ type
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
-  function Utf8ValidateDfa(const s: utf8string): Boolean;
+  function Utf8ValidateDfa(const s: rawbytestring): Boolean;
 { branchy range validator based on Table 3-7 of Unicode Standard }
-  function Utf8Validate(const s: utf8string): Boolean;
+  function Utf8Validate(const s: rawbytestring): Boolean;
 { these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
@@ -1869,90 +1869,196 @@ const
   MAX_STATIC       = TUcs4Util.MAX_STATIC;
   UNICODE_BAD_CHAR = $fffd;
 
-function CodePointLen(b: Byte): SizeInt; inline;
-begin
-  case b of
-    0..127   : Result := 1;
-    128..223 : Result := 2;
-    224..239 : Result := 3;
-  else
-    //240..256
-    Result := 4;
-  end;
-end;
-
-function CodePointToUcs4Char(p: PByte; out aSize: SizeInt): Ucs4Char; //inline;
+function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
 begin
   case p^ of
-    0..127:
-      begin
-        Result := p^;
-        aSize := 1;
-      end;
-    128..223:
-      begin
-        Result := Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f));
-        aSize := 2;
-      end;
-    224..239:
-      begin
-        Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
-                  Ucs4Char(p[2] and $3f));
-        aSize := 3;
-      end;
+    0..$7f: Result := 1;
+    $c2..$df:
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then
+        Result := 2
+      else
+        Result := 1;
+    $e0:
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then
+        Result := 3
+      else
+        Result := 1;
+    $e1..$ec, $ee..$ef:
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then
+        Result := 3
+      else
+        Result := 1;
+    $ed:
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then
+        Result := 3
+      else
+        Result := 1;
+    $f0:
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
+        Result := 4
+      else
+        Result := 1;
+    $f1..$f3:
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
+        Result := 4
+      else
+        Result := 1;
+    $f4:
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
+        Result := 4
+      else
+        Result := 1;
   else
-    //240..256
-    Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-                      Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
-    aSize := 4;
+    Result := 1;
   end;
 end;
 
-function Utf8Len(const s: utf8string): SizeInt;
+function CodePointToUcs4Char(p: PByte; aStrLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; //inline;
+begin
+  case p^ of
+    0..$7f:
+      begin
+        Result := p^;
+        aPtSize := 1;
+      end;
+    $c2..$df:
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f));
+          aPtSize := 2;
+        end
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+    $e0:
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
+                    Ucs4Char(p[2] and $3f));
+          aPtSize := 3;
+        end
+
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+    $e1..$ec, $ee..$ef:
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
+                    Ucs4Char(p[2] and $3f));
+          aPtSize := 3;
+        end
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+    $ed:
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
+                    Ucs4Char(p[2] and $3f));
+          aPtSize := 3;
+        end
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+    $f0:
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+                             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
+          aPtSize := 4;
+        end
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+    $f1..$f3:
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+                             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
+          aPtSize := 4
+        end
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+    $f4:
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
+        begin
+          Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+                             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
+          aPtSize := 4;
+        end
+      else
+        begin
+          Result := UNICODE_BAD_CHAR;
+          aPtSize := 1;
+        end;
+  else
+    aPtSize := 1;
+    Result := UNICODE_BAD_CHAR;
+  end;
+end;
+
+function Utf8Len(const s: rawbytestring): SizeInt;
 var
-  I: SizeInt;
+  I, StrLen: SizeInt;
   p: PByte absolute s;
 begin
+  StrLen := System.Length(s);
   Result := 0;
   I := 0;
-  while I < System.Length(s) do
+  while I < StrLen do
     begin
-      I += CodePointLen(p[I]);;
+      I += Utf8CodePointLen(@p[I], StrLen - I);
       Inc(Result);
     end;
 end;
 
-function ToUcs4Seq(const s: utf8string): TUcs4Seq;
+function Utf8ToUcs4Seq(const s: rawbytestring): TUcs4Seq;
 var
   r: TUcs4Seq = nil;
-  I, J, Len: SizeInt;
+  I, J, PtSize, StrLen: SizeInt;
   p: PByte absolute s;
 begin
   System.SetLength(r, System.Length(s));
+  StrLen := System.Length(s);
   I := 0;
   J := 0;
-  while I < System.Length(s) do
+  while I < StrLen do
     begin
-      r[J] := CodePointToUcs4Char(@p[I], Len);
+      r[J] := CodePointToUcs4Char(@p[I], StrLen - I, PtSize);
       Inc(J);
-      I += Len;
+      I += PtSize;
     end;
   System.SetLength(r, J);
   Result := r;
 end;
 
-procedure ToUcs4Seq(const s: utf8string; out a: array of Ucs4Char; out aLen: SizeInt);
+procedure Utf8ToUcs4Seq(const s: rawbytestring; aPtr: PUcs4Char; out aLen: SizeInt);
 var
-  I, Size: SizeInt;
+  I, PtSize, StrLen: SizeInt;
   p: PByte absolute s;
 begin
+  StrLen := System.Length(s);
   I := 0;
   aLen := 0;
-  while I < System.Length(s) do
+  while I < StrLen do
     begin
-      a[aLen] := CodePointToUcs4Char(@p[I], Size);
+      aPtr[aLen] := CodePointToUcs4Char(@p[I], StrLen - I, PtSize);
       Inc(aLen);
-      I += Size;
+      I += PtSize;
     end;
 end;
 
@@ -1994,7 +2100,7 @@ const
      12,36,12,12,12,12,12,12,12,12,12,12);
 {$POP}
 
-function Utf8ValidateDfa(const s: utf8string): Boolean;
+function Utf8ValidateDfa(const s: rawbytestring): Boolean;
 var
   I, State: SizeInt;
   p: PByte absolute s;
@@ -2035,7 +2141,7 @@ end;
     | U+100000..U+10FFFF | F4         | 80..8F      | 80..BF     | 80..BF      |
     +--------------------+------------+-------------+------------+-------------+
 }
-function Utf8Validate(const s: utf8string): Boolean;
+function Utf8Validate(const s: rawbytestring): Boolean;
 var
   Len, Done: SizeInt;
   p: PByte;
@@ -2077,8 +2183,8 @@ begin
         end;
       $f0:
         begin
-          if (Done > Len - 4) or not(((p[1] in [$90..$bf])and(p[2] in [$80..$bf])and
-                                      (p[3] in [$80..$bf]))) then exit(False);
+          if (Done > Len - 4) or not((p[1] in [$90..$bf])and(p[2] in [$80..$bf])and
+                                      (p[3] in [$80..$bf])) then exit(False);
           Done += 4;
           p += 4;
         end;
@@ -2106,25 +2212,27 @@ end;
 
 function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
 var
-  I, J, LenStr, LenSub: SizeInt;
-  vStr, vSub: DWord;
+  I, J, PtSizeStr, PtSizeSub, LenStr, LenSub: SizeInt;
+  vStr, vSub: Ucs4Char;
   pStr: PByte absolute aStr;
   pSub: PByte absolute aSub;
 begin
+  LenStr := System.Length(aStr);
+  LenSub := System.Length(aSub);
   I := 0;
   J := 0;
-  vSub := CodePointToUcs4Char(pSub, LenSub);
-  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
+  vSub := CodePointToUcs4Char(pSub, LenSub, PtSizeSub);
+  while (I < LenStr) and (J < LenSub) do
     begin
-      vStr := CodePointToUcs4Char(@pStr[I], LenStr);
+      vStr := CodePointToUcs4Char(@pStr[I], LenStr - I, PtSizeStr);
       if vStr = vSub then
         begin
-          Inc(J, LenSub);
-          vSub := CodePointToUcs4Char(@pSub[J], LenSub);
+          Inc(J, PtSizeSub);
+          vSub := CodePointToUcs4Char(@pSub[J], LenSub - J, PtSizeSub);
         end;
-      Inc(I, LenStr);
+      Inc(I, PtSizeStr);
     end;
-  Result := J = System.Length(aSub);
+  Result := J = LenSub;
 end;
 
 type
@@ -2141,23 +2249,23 @@ var
 begin
   if System.Length(L) <= MAX_STATIC then
     begin
-      ToUcs4Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
+      Utf8ToUcs4Seq(L, pL, LenL);
     end
   else
     begin
-      LBuf := ToUcs4Seq(L);
+      LBuf := Utf8ToUcs4Seq(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
-      ToUcs4Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
+      Utf8ToUcs4Seq(R, pR, LenR);
     end
   else
     begin
-      RBuf := ToUcs4Seq(R);
+      RBuf := Utf8ToUcs4Seq(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -2240,7 +2348,7 @@ begin
   end;
 end;
 
-function Char32Utf8Len(c: Ucs4Char): Integer; inline;
+function Ucs4CharUtf8Len(c: Ucs4Char): Integer; inline;
 begin
   case c of
     0..127:          Result := 1;
@@ -2258,10 +2366,10 @@ var
 begin
   Result := 0;
   for I := 0 to System.High(r) do
-    Result += Char32Utf8Len(r[I]);
+    Result += Ucs4CharUtf8Len(r[I]);
 end;
 
-function Char32SeqToUtf8(const aSeq: TUcs4Seq): utf8string;
+function Ucs4SeqToUtf8(const aSeq: TUcs4Seq): utf8string;
 var
   s: string = '';
   I, J: SizeInt;
@@ -2275,7 +2383,7 @@ begin
   for J := 0 to System.High(aSeq) do
     begin
       Curr := aSeq[J];
-      Len := Char32Utf8Len(Curr);
+      Len := Ucs4CharUtf8Len(Curr);
       if System.Length(s) < I + Len then
         begin
           System.SetLength(s, (I + Len)*2);
@@ -2320,31 +2428,31 @@ var
 begin
   if System.Length(L) <= MAX_STATIC then
     begin
-      ToUcs4Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
+      Utf8ToUcs4Seq(L, pL, LenL);
     end
   else
     begin
-      LBuf := ToUcs4Seq(L);
+      LBuf := Utf8ToUcs4Seq(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
-      ToUcs4Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
+      Utf8ToUcs4Seq(R, pR, LenR);
     end
   else
     begin
-      RBuf := ToUcs4Seq(R);
+      RBuf := Utf8ToUcs4Seq(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    lfsGus: Result := Char32SeqToUtf8(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
-    lfsKR:  Result := Char32SeqToUtf8(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    lfsGus: Result := Ucs4SeqToUtf8(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    lfsKR:  Result := Ucs4SeqToUtf8(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   else
-    Result := Char32SeqToUtf8(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    Result := Ucs4SeqToUtf8(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   end;
 end;
 
