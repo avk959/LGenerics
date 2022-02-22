@@ -235,6 +235,13 @@ type
 
 { the responsibility for the correctness and normalization of the strings lies with the user }
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
+  function LevDistanceUtf16(const L, R: unicodestring): SizeInt; inline;
+  function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
+  function LevDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+  function LevDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
+  function LevDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+  function LcsDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
+  function LcsDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: rawbytestring): Boolean;
@@ -1869,6 +1876,192 @@ const
   MAX_STATIC       = TUcs4Util.MAX_STATIC;
   UNICODE_BAD_CHAR = $fffd;
 
+procedure Utf16ToUcs4Seq(const s: unicodestring; pSeq: PUcs4Char; out aSeqLen: SizeInt);
+var
+  I, Len: SizeInt;
+  p: PWideChar;
+  c: Ucs4Char;
+begin
+  Len := System.Length(s);
+  p := Pointer(s);
+  aSeqLen := 0;
+  I := 0;
+  while I < Len do
+    begin
+      c := Ucs4Char(p[I]);
+      if (c <= $d7ff) or (c >= $e000) then
+        pSeq[aSeqLen] := c
+      else
+        if (c <= $dbff) and (I < Len-1) and (p[I+1] >= #$dc00)and(p[I+1] <= #$dfff) then
+          begin
+            pSeq[aSeqLen] := (c - $d7c0) shl 10 + (Ucs4Char(p[I+1]) xor $dc00);
+            Inc(I);
+          end
+        else { invalid surrogate pair }
+          pSeq[aSeqLen] := UNICODE_BAD_CHAR;
+      Inc(I);
+      Inc(aSeqLen);
+    end;
+end;
+
+procedure Utf16ToUcs4Seq(const s: unicodestring; out aSeq: TUcs4Seq);
+var
+  I, Len, Count: SizeInt;
+  p: PWideChar;
+  c: Ucs4Char;
+begin
+  Len := System.Length(s);
+  p := Pointer(s);
+  System.SetLength(aSeq, Len);
+  Count := 0;
+  I := 0;
+  while I < Len do
+    begin
+      c := Ucs4Char(p[I]);
+      if (c <= $d7ff) or (c >= $e000) then
+        aSeq[Count] := c
+      else
+        if (c <= $dbff) and (I < Len-1) and (p[I+1] >= #$dc00)and(p[I+1] <= #$dfff) then
+          begin
+            aSeq[Count] := (c - $d7c0) shl 10 + (Ucs4Char(p[I+1]) xor $dc00);
+            Inc(I);
+          end
+        else { invalid surrogate pair }
+          aSeq[Count] := UNICODE_BAD_CHAR;
+      Inc(I);
+      Inc(Count);
+    end;
+  System.SetLength(aSeq, Count);
+end;
+
+function Ucs4SeqToUtf16(const aSeq: array of Ucs4Char) : unicodestring;
+var
+  I, Len: SizeInt;
+  c: Ucs4Char;
+  p: PWideChar;
+begin
+  Len := 0;
+  for I := 0 to System.High(aSeq) do
+    Len += Succ(Ord((aSeq[I] > $ffff) and (DWord(aSeq[I]) <= $10ffff)));
+  System.SetLength(Result, Len);
+  p := Pointer(Result);
+  for I := 0 to System.High(aSeq) do
+    begin
+      c := aSeq[I];
+      if c <= $ffff then
+        p^ := WideChar(c)
+      else
+        if (DWord(c) <= $10ffff) then
+          begin
+            p^ := WideChar(c shr 10 + $d7c0);
+            p[1] := WideChar(c and $3ff + $dc00);
+            Inc(p);
+          end
+        else  { invalid code point }
+          p^ := WideChar(UNICODE_BAD_CHAR);
+      Inc(p);
+    end;
+end;
+
+function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
+var
+  I, J: SizeInt;
+  pStr: PUnicodeChar absolute aStr;
+  pSub: PUnicodeChar absolute aSub;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
+    begin
+      if pStr[I] = pSub[J] then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSub);
+end;
+
+type
+  TDistFunSpecUtf16 = (
+    dfsuDyn, dfsuMbr, dfsuMyers, dfsuMyersLcs, dfsuMbrBound, dfsuMyersBound, dfsuMyersLcsBound);
+
+function GenericDistanceUtf16(const L, R: unicodestring; aLimit: SizeInt; aSpec: TDistFunSpecUtf16): SizeInt;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
+begin
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf16ToUcs4Seq(L, pL, LenL);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(L, LBuf);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf16ToUcs4Seq(R, pR, LenR);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(R, RBuf);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  case aSpec of
+    dfsuDyn:        Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsuMbr:        Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsuMyers:      Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsuMyersLcs:   Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsuMbrBound:   Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfsuMyersBound: Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+  else
+    //dfsuMyersLcsBound
+    Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+  end;
+end;
+
+function LevDistanceUtf16(const L, R: unicodestring): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, -1, dfsuDyn);
+end;
+
+function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, -1, dfsuMbr);
+end;
+
+function LevDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, aLimit, dfsuMbrBound);
+end;
+
+function LevDistanceMyersUtf16(const L, R: unicodestring): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, -1, dfsuMyers);
+end;
+
+function LevDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, aLimit, dfsuMyersBound);
+end;
+
+function LcsDistanceMyersUtf16(const L, R: unicodestring): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, -1, dfsuMyersLcs);
+end;
+
+function LcsDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
+begin
+  Result := GenericDistanceUtf16(L, R, aLimit, dfsuMyersLcsBound);
+end;
+
 function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
 begin
   case p^ of
@@ -2060,23 +2253,6 @@ begin
       Inc(aLen);
       I += PtSize;
     end;
-end;
-
-function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
-var
-  I, J: SizeInt;
-  pStr: PUnicodeChar absolute aStr;
-  pSub: PUnicodeChar absolute aSub;
-begin
-  I := 0;
-  J := 0;
-  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
-    begin
-      if pStr[I] = pSub[J] then
-        Inc(J);
-      Inc(I);
-    end;
-  Result := J = System.Length(aSub);
 end;
 
 { see http://bjoern.hoehrmann.de/utf-8/decoder/dfa; optimized version based on Rich Felker's variant }
