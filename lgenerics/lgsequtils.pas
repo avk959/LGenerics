@@ -233,7 +233,7 @@ type
 
   TUcs4Seq = array of Ucs4Char;
 
-{ the responsibility for the correctness and normalization of the strings lies with the user }
+{ the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
   function LevDistanceUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
