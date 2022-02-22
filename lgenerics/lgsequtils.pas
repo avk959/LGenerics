@@ -103,10 +103,10 @@ type
     class function Equal(L, R: UnicodeChar): Boolean; static; inline;
   end;
 
-  { TDwHasher }
-  TDwHasher = record
-    class function HashCode(aValue: DWord): SizeInt; static; inline;
-    class function Equal(L, R: DWord): Boolean; static; inline;
+  { TUcs4Hasher }
+  TUcs4Hasher = record
+    class function HashCode(aValue: Ucs4Char): SizeInt; static; inline;
+    class function Equal(L, R: Ucs4Char): Boolean; static; inline;
   end;
 
   { TGSeqUtil provides several algorithms for arbitrary sequences
@@ -231,8 +231,10 @@ type
     class function LcsMyers(const L, R: array of T): TArray; static;
   end;
 
+  TUcs4Seq = array of Ucs4Char;
+
 { the responsibility for the correctness and normalization of the strings lies with the user }
-  function IsSubSequence(const aStr, aSub: unicodestring): Boolean;
+  function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: utf8string): Boolean;
@@ -453,13 +455,13 @@ begin
   Result := L = R;
 end;
 
-{ TDwHasher }
-class function TDwHasher.HashCode(aValue: DWord): SizeInt;
+{ TUcs4Hasher }
+class function TUcs4Hasher.HashCode(aValue: Ucs4Char): SizeInt;
 begin
-  Result := JdkHash(aValue);
+  Result := JdkHash(DWord(aValue));
 end;
 
-class function TDwHasher.Equal(L, R: DWord): Boolean;
+class function TUcs4Hasher.Equal(L, R: Ucs4Char): Boolean;
 begin
   Result := L = R;
 end;
@@ -1859,14 +1861,12 @@ begin
 end;
 
 type
-  TChar32     = DWord;
-  PChar32     = ^TChar32;
-  TChar32Seq  = array of TChar32;
-  TChar32Util = specialize TGSeqUtil<TChar32, TDwHasher>;
-  TByte4      = array[0..3] of Byte;
+  PUcs4Char = ^Ucs4Char;
+  TUcs4Util = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
+  TByte4    = array[0..3] of Byte;
 
 const
-  MAX_STATIC       = TChar32Util.MAX_STATIC;
+  MAX_STATIC       = TUcs4Util.MAX_STATIC;
   UNICODE_BAD_CHAR = $fffd;
 
 function CodePointLen(b: Byte): SizeInt; inline;
@@ -1881,7 +1881,7 @@ begin
   end;
 end;
 
-function CodePointToChar32(p: PByte; out aSize: SizeInt): TChar32; //inline;
+function CodePointToUcs4Char(p: PByte; out aSize: SizeInt): Ucs4Char; //inline;
 begin
   case p^ of
     0..127:
@@ -1891,19 +1891,19 @@ begin
       end;
     128..223:
       begin
-        Result := TChar32(TChar32(p[0] and $1f) shl 6 or TChar32(p[1] and $3f));
+        Result := Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f));
         aSize := 2;
       end;
     224..239:
       begin
-        Result := TChar32(TChar32(p[0] and $f) shl 12 or TChar32(p[1] and $3f) shl 6 or
-                  TChar32(p[2] and $3f));
+        Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
+                  Ucs4Char(p[2] and $3f));
         aSize := 3;
       end;
   else
     //240..256
-    Result := TChar32(TChar32(p[0] and $7) shl 18 or TChar32(p[1] and $3f) shl 12 or
-                      TChar32(p[2] and $3f) shl 6 or TChar32(p[3] and $3f));
+    Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+                      Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
     aSize := 4;
   end;
 end;
@@ -1922,9 +1922,9 @@ begin
     end;
 end;
 
-function ToChar32Seq(const s: utf8string): TChar32Seq;
+function ToUcs4Seq(const s: utf8string): TUcs4Seq;
 var
-  r: TChar32Seq = nil;
+  r: TUcs4Seq = nil;
   I, J, Len: SizeInt;
   p: PByte absolute s;
 begin
@@ -1933,7 +1933,7 @@ begin
   J := 0;
   while I < System.Length(s) do
     begin
-      r[J] := CodePointToChar32(@p[I], Len);
+      r[J] := CodePointToUcs4Char(@p[I], Len);
       Inc(J);
       I += Len;
     end;
@@ -1941,7 +1941,7 @@ begin
   Result := r;
 end;
 
-procedure ToChar32Seq(const s: utf8string; out a: array of TChar32; out aLen: SizeInt);
+procedure ToUcs4Seq(const s: utf8string; out a: array of Ucs4Char; out aLen: SizeInt);
 var
   I, Size: SizeInt;
   p: PByte absolute s;
@@ -1950,13 +1950,13 @@ begin
   aLen := 0;
   while I < System.Length(s) do
     begin
-      a[aLen] := CodePointToChar32(@p[I], Size);
+      a[aLen] := CodePointToUcs4Char(@p[I], Size);
       Inc(aLen);
       I += Size;
     end;
 end;
 
-function IsSubSequence(const aStr, aSub: unicodestring): Boolean;
+function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
 var
   I, J: SizeInt;
   pStr: PUnicodeChar absolute aStr;
@@ -2007,7 +2007,7 @@ begin
       State := UTF8_S[State + UTF8_D[p[I]]];
       if State = UTF8_REJECT then exit(False);
     end;
-  Result := True;
+  Result := State = 0;
 end;
 
 {
@@ -2113,14 +2113,14 @@ var
 begin
   I := 0;
   J := 0;
-  vSub := CodePointToChar32(pSub, LenSub);
+  vSub := CodePointToUcs4Char(pSub, LenSub);
   while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
     begin
-      vStr := CodePointToChar32(@pStr[I], LenStr);
+      vStr := CodePointToUcs4Char(@pStr[I], LenStr);
       if vStr = vSub then
         begin
           Inc(J, LenSub);
-          vSub := CodePointToChar32(@pSub[J], LenSub);
+          vSub := CodePointToUcs4Char(@pSub[J], LenSub);
         end;
       Inc(I, LenStr);
     end;
@@ -2133,44 +2133,44 @@ type
 
 function GenericDistanceUtf8(const L, R: utf8string; aLimit: SizeInt; aSpec: TDistanceFunSpec): SizeInt;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
-  LBuf: TChar32Seq = nil;
-  RBuf: TChar32Seq = nil;
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
   LenL, LenR: SizeInt;
-  pL, pR: PChar32;
+  pL, pR: PUcs4Char;
 begin
   if System.Length(L) <= MAX_STATIC then
     begin
-      ToChar32Seq(L, LBufSt, LenL);
+      ToUcs4Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
     end
   else
     begin
-      LBuf := ToChar32Seq(L);
+      LBuf := ToUcs4Seq(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
-      ToChar32Seq(R, RBufSt, LenR);
+      ToUcs4Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
     end
   else
     begin
-      RBuf := ToChar32Seq(R);
+      RBuf := ToUcs4Seq(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    dfsDyn:        Result := TChar32Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfsMbr:        Result := TChar32Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfsMyers:      Result := TChar32Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfsMyersLcs:   Result := TChar32Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfsMbrBound:   Result := TChar32Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
-    dfsMyersBound: Result := TChar32Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfsDyn:        Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsMbr:        Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsMyers:      Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsMyersLcs:   Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfsMbrBound:   Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfsMyersBound: Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
     //dfsMyersLcsBound
-    Result := TChar32Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   end;
 end;
 
@@ -2209,40 +2209,40 @@ begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfsMyersLcsBound);
 end;
 
-function Char32ToUtf8Char(c32: TChar32; out aBytes: TByte4): Integer;
+function Char32ToUtf8Char(c: Ucs4Char; out aBytes: TByte4): Integer;
 begin
-  case c32 of
+  case c of
     0..127:
       begin
-        aBytes[0] := Byte(c32);
+        aBytes[0] := Byte(c);
         Result := 1;
       end;
     128..$7ff:
       begin
-        aBytes[0] := Byte(c32 shr 6 or $c0);
-        aBytes[1] := Byte(c32 and $3f or $80);
+        aBytes[0] := Byte(c shr 6 or $c0);
+        aBytes[1] := Byte(c and $3f or $80);
         Result := 2;
       end;
     $800..$ffff:
       begin
-        aBytes[0] := Byte(c32 shr 12 or $e0);
-        aBytes[1] := Byte(c32 shr 6) and $3f or $80;
-        aBytes[2] := Byte(c32 and $3f) or $80;
+        aBytes[0] := Byte(c shr 12 or $e0);
+        aBytes[1] := Byte(c shr 6) and $3f or $80;
+        aBytes[2] := Byte(c and $3f) or $80;
         Result := 3;
       end;
   else
     // $10000..$10ffff:
-    aBytes[0] := Byte(c32 shr 18) or $f0;
-    aBytes[1] := Byte(c32 shr 12) and $3f or $80;
-    aBytes[2] := Byte(c32 shr  6) and $3f or $80;
-    aBytes[3] := Byte(c32 and $3f) or $80;
+    aBytes[0] := Byte(c shr 18) or $f0;
+    aBytes[1] := Byte(c shr 12) and $3f or $80;
+    aBytes[2] := Byte(c shr  6) and $3f or $80;
+    aBytes[3] := Byte(c and $3f) or $80;
     Result := 4;
   end;
 end;
 
-function Char32Utf8Len(c32: TChar32): Integer; inline;
+function Char32Utf8Len(c: Ucs4Char): Integer; inline;
 begin
-  case c32 of
+  case c of
     0..127:          Result := 1;
     128..$7ff:       Result := 2;
     $800..$ffff:     Result := 3;
@@ -2252,7 +2252,7 @@ begin
   end;
 end;
 
-function Char32SeqUtf8Len(const r: TChar32Seq): SizeInt;
+function Char32SeqUtf8Len(const r: TUcs4Seq): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2261,11 +2261,11 @@ begin
     Result += Char32Utf8Len(r[I]);
 end;
 
-function Char32SeqToUtf8(const aSeq: TChar32Seq): utf8string;
+function Char32SeqToUtf8(const aSeq: TUcs4Seq): utf8string;
 var
   s: string = '';
   I, J: SizeInt;
-  Curr: TChar32;
+  Curr: Ucs4Char;
   Len: Integer;
   p: PByte;
 begin
@@ -2312,39 +2312,39 @@ type
 
 function LcsGenegicUtf8(const L, R: utf8string; aSpec: TLcsFunSpec): utf8string;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of TChar32;
-  LBuf: TChar32Seq = nil;
-  RBuf: TChar32Seq = nil;
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
   LenL, LenR: SizeInt;
-  pL, pR: PChar32;
+  pL, pR: PUcs4Char;
 begin
   if System.Length(L) <= MAX_STATIC then
     begin
-      ToChar32Seq(L, LBufSt, LenL);
+      ToUcs4Seq(L, LBufSt, LenL);
       pL := @LBufSt[0];
     end
   else
     begin
-      LBuf := ToChar32Seq(L);
+      LBuf := ToUcs4Seq(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
-      ToChar32Seq(R, RBufSt, LenR);
+      ToUcs4Seq(R, RBufSt, LenR);
       pR := @RBufSt[0];
     end
   else
     begin
-      RBuf := ToChar32Seq(R);
+      RBuf := ToUcs4Seq(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    lfsGus: Result := Char32SeqToUtf8(TChar32Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
-    lfsKR:  Result := Char32SeqToUtf8(TChar32Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    lfsGus: Result := Char32SeqToUtf8(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    lfsKR:  Result := Char32SeqToUtf8(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   else
-    Result := Char32SeqToUtf8(TChar32Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    Result := Char32SeqToUtf8(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   end;
 end;
 
