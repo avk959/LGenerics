@@ -1696,7 +1696,7 @@ begin
     SameValue(SimRatioLevEx('World hello', ' Hello world, hello', smWordSet, [' ',','], [soIgnoreCase]), DblOne));
   AssertTrue(
     SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', smWordSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smWordSetCombi), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smWordSetEx), DblOne));
 end;
 
 const

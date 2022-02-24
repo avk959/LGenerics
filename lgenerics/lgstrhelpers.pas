@@ -354,7 +354,7 @@ type
   function LcsKR(const L, R: rawbytestring): rawbytestring;
   function LcsKR(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Myers algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
+  uses Myers algorithm for LCS with space complexity O(m+n) and time complexity O((m+n)*d), where
   n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
   for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
   function LcsMyers(const L, R: rawbytestring): rawbytestring;
@@ -400,7 +400,7 @@ type
     smSimple,         // tokenization only
     smWordSort,       // lexicographic sorting of tokens
     smWordSet,        // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
-    smWordSetCombi     { tokens are converted to a sorted set,
+    smWordSetEx        { tokens are converted to a sorted set,
                          two strings are constructed in the form <intersection><difference>,
                          max ratio of these two strings in certain combinations is taken }
     );
