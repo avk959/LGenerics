@@ -9,12 +9,13 @@ uses
 
 type
 
-  { TTestUtf8Utils }
+  { TTestUnicodeUtils }
 
-  TTestUtf8Utils= class(TTestCase)
+  TTestUnicodeUtils = class(TTestCase)
   published
     procedure ValidateDfa;
     procedure Validate;
+
     procedure LevenshteinDistUtf8;
     procedure LevenshteinDistMbrUtf8;
     procedure LevenshteinDistMbrBoundedUtf8;
@@ -26,6 +27,9 @@ type
     procedure LevenshteinDistMyersLongBoundedUtf8;
     procedure LcsDistMyersUtf8;
     procedure LcsDistMyersBoundedUtf8;
+    procedure LcsGusUtf8Test;
+    procedure LcsKRUtf8Test;
+    procedure LcsMyersUtf8Test;
 
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
@@ -38,6 +42,9 @@ type
     procedure LevenshteinDistMyersLongBoundedUtf16;
     procedure LcsDistMyersUtf16;
     procedure LcsDistMyersBoundedUtf16;
+    procedure LcsGusUtf16Test;
+    procedure LcsKRUtf16Test;
+    procedure LcsMyersUtf168Test;
   end;
 
 implementation
@@ -117,7 +124,7 @@ const
     #$ed#$af#$bf#$ed#$bf#$bf
   );
 
-procedure TTestUtf8Utils.ValidateDfa;
+procedure TTestUnicodeUtils.ValidateDfa;
 var
   s: string;
 begin
@@ -131,7 +138,7 @@ begin
     AssertFalse(Utf8ValidateDfa(s));
 end;
 
-procedure TTestUtf8Utils.Validate;
+procedure TTestUnicodeUtils.Validate;
 var
   s: string;
 begin
@@ -145,7 +152,7 @@ begin
     AssertFalse(Utf8Validate(s));
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistUtf8;
 var
   s1, s2: string;
 begin
@@ -236,7 +243,7 @@ begin
   AssertTrue(LevDistanceUtf8(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMbrUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMbrUtf8;
 var
   s1, s2: string;
 begin
@@ -327,7 +334,7 @@ begin
   AssertTrue(LevDistanceMbrUtf8(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMbrBoundedUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMbrBoundedUtf8;
 var
   s1, s2: string;
 begin
@@ -412,7 +419,7 @@ begin
   AssertTrue(LevDistanceMbrUtf8(s2, s1, 1) = -1);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMyersUtf8;
 var
   s1, s2: string;
 begin
@@ -503,7 +510,7 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersDQUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMyersDQUtf8;
 const
   s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
   s2:  string = 'Dieu, quelle virulente sortie! – отвечал, нисколько не смутясь такою встречей';
@@ -529,7 +536,7 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s13, s14) = LevDistanceUtf8(s13, s14));
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersLongUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMyersLongUtf8;
 const
   s1:  string = 'Этого не обещаю. Вы знаете, как осаждают Кутузова с тех пор, как он назначен главнокомандующим. Он мне сам говорил, что все московские барыни сговорились отдать ему всех своих детей в адъютанты';
   s2:  string = 'Нет, обещайте, обещайте, Basile, – сказала вслед ему Анна Михайловна, с улыбкой молодой кокетки, которая когда-то, должно быть, была ей свойственна, а теперь так не шла к ее истощенному лицу.';
@@ -555,7 +562,7 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s13, s14) = LevDistanceUtf8(s13, s14));
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersBoundedUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMyersBoundedUtf8;
 var
   s1, s2: string;
 begin
@@ -640,7 +647,7 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s2, s1, 1) = -1);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersDQBoundedUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMyersDQBoundedUtf8;
 const
   s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
   s2:  string = 'Dieu, quelle virulente sortie![4] – отвечал, нисколько не смутясь такою встречей';
@@ -666,7 +673,7 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersLongBoundedUtf8;
+procedure TTestUnicodeUtils.LevenshteinDistMyersLongBoundedUtf8;
 const
   s1:  string = 'Этого не обещаю. Вы знаете, как осаждают Кутузова с тех пор, как он назначен главнокомандующим. Он мне сам говорил, что все московские барыни сговорились отдать ему всех своих детей в адъютанты';
   s2:  string = 'Нет, обещайте, обещайте, Basile, – сказала вслед ему Анна Михайловна, с улыбкой молодой кокетки, которая когда-то, должно быть, была ей свойственна, а теперь так не шла к ее истощенному лицу.';
@@ -692,7 +699,7 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
 end;
 
-procedure TTestUtf8Utils.LcsDistMyersUtf8;
+procedure TTestUnicodeUtils.LcsDistMyersUtf8;
 var
   s1, s2: string;
 begin
@@ -783,7 +790,7 @@ begin
   AssertTrue(LcsDistanceMyersUtf8(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LcsDistMyersBoundedUtf8;
+procedure TTestUnicodeUtils.LcsDistMyersBoundedUtf8;
 var
   s1, s2: string;
 begin
@@ -868,8 +875,101 @@ begin
   AssertTrue(LcsDistanceMyersUtf8(s2, s1, 1) = -1);
 end;
 
+procedure TTestUnicodeUtils.LcsGusUtf8Test;
+var
+  s1: string = '';
+  s2: string = '';
+  s: string;
+begin
+  AssertTrue(LcsGusUtf8(s1, s2) = '');
+
+  s1 := 'аа';
+  AssertTrue(LcsGusUtf8(s1, s2) = '');
+
+  s2 := 'аб';
+  s := 'а';
+  AssertTrue(LcsGusUtf8(s1, s2) = s);
+
+  s1 := 'тесть';
+  s2 := 'это просто тест';
+  s := 'тест';
+  AssertTrue(LcsGusUtf8(s1, s2) = s);
+
+  s1 := '1234';
+  s2 := '1224533324';
+  s := '1234';
+  AssertTrue(LcsGusUtf8(s1, s2) = s);
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  s := '01236789';
+  AssertTrue(LcsGusUtf8(s1, s2) = s);
+end;
+
+procedure TTestUnicodeUtils.LcsKRUtf8Test;
+var
+  s1: string = '';
+  s2: string = '';
+  s: string;
+begin
+  AssertTrue(LcsKRUtf8(s1, s2) = '');
+
+  s1 := 'аа';
+  AssertTrue(LcsKRUtf8(s1, s2) = '');
+
+  s2 := 'аб';
+  s := 'а';
+  AssertTrue(LcsKRUtf8(s1, s2) = s);
+
+  s1 := 'тесть';
+  s2 := 'это просто тест';
+  s := 'тест';
+  AssertTrue(LcsKRUtf8(s1, s2) = s);
+
+  s1 := '1234';
+  s2 := '1224533324';
+  s := '1234';
+  AssertTrue(LcsKRUtf8(s1, s2) = s);
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  s := '01236789';
+  AssertTrue(LcsKRUtf8(s1, s2) = s);
+end;
+
+procedure TTestUnicodeUtils.LcsMyersUtf8Test;
+var
+  s1: string = '';
+  s2: string = '';
+  s: string;
+begin
+  AssertTrue(LcsMyersUtf8(s1, s2) = '');
+
+  s1 := 'аа';
+  AssertTrue(LcsMyersUtf8(s1, s2) = '');
+
+  s2 := 'аб';
+  s := 'а';
+  AssertTrue(LcsMyersUtf8(s1, s2) = s);
+
+  s1 := 'тесть';
+  s2 := 'это просто тест';
+  s := 'тест';
+  AssertTrue(LcsMyersUtf8(s1, s2) = s);
+
+  s1 := '1234';
+  s2 := '1224533324';
+  s := '1234';
+  AssertTrue(LcsMyersUtf8(s1, s2) = s);
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  s := '01236789';
+  AssertTrue(LcsMyersUtf8(s1, s2) = s);
+end;
+
 {$WARN 4104 OFF}
-procedure TTestUtf8Utils.LevenshteinDistUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistUtf16;
 var
   s1, s2: string;
 begin
@@ -960,7 +1060,7 @@ begin
   AssertTrue(LevDistanceUtf16(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMbrUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMbrUtf16;
 var
   s1, s2: string;
 begin
@@ -1051,7 +1151,7 @@ begin
   AssertTrue(LevDistanceMbrUtf16(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMbrBoundedUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMbrBoundedUtf16;
 var
   s1, s2: string;
 begin
@@ -1136,7 +1236,7 @@ begin
   AssertTrue(LevDistanceMbrUtf16(s2, s1, 1) = -1);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMyersUtf16;
 var
   s1, s2: string;
 begin
@@ -1227,7 +1327,7 @@ begin
   AssertTrue(LevDistanceMyersUtf16(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersDQUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMyersDQUtf16;
 const
   s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
   s2:  string = 'Dieu, quelle virulente sortie! – отвечал, нисколько не смутясь такою встречей';
@@ -1253,7 +1353,7 @@ begin
   AssertTrue(LevDistanceMyersUtf16(s13, s14) = LevDistanceUtf8(s13, s14));
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersLongUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMyersLongUtf16;
 const
   s1:  string = 'Этого не обещаю. Вы знаете, как осаждают Кутузова с тех пор, как он назначен главнокомандующим. Он мне сам говорил, что все московские барыни сговорились отдать ему всех своих детей в адъютанты';
   s2:  string = 'Нет, обещайте, обещайте, Basile, – сказала вслед ему Анна Михайловна, с улыбкой молодой кокетки, которая когда-то, должно быть, была ей свойственна, а теперь так не шла к ее истощенному лицу.';
@@ -1279,7 +1379,7 @@ begin
   AssertTrue(LevDistanceMyersUtf16(s13, s14) = LevDistanceUtf8(s13, s14));
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersBoundedUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMyersBoundedUtf16;
 var
   s1, s2: string;
 begin
@@ -1364,7 +1464,7 @@ begin
   AssertTrue(LevDistanceMyersUtf16(s2, s1, 1) = -1);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersDQBoundedUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMyersDQBoundedUtf16;
 const
   s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
   s2:  string = 'Dieu, quelle virulente sortie![4] – отвечал, нисколько не смутясь такою встречей';
@@ -1390,7 +1490,7 @@ begin
   AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
 end;
 
-procedure TTestUtf8Utils.LevenshteinDistMyersLongBoundedUtf16;
+procedure TTestUnicodeUtils.LevenshteinDistMyersLongBoundedUtf16;
 const
   s1:  string = 'Этого не обещаю. Вы знаете, как осаждают Кутузова с тех пор, как он назначен главнокомандующим. Он мне сам говорил, что все московские барыни сговорились отдать ему всех своих детей в адъютанты';
   s2:  string = 'Нет, обещайте, обещайте, Basile, – сказала вслед ему Анна Михайловна, с улыбкой молодой кокетки, которая когда-то, должно быть, была ей свойственна, а теперь так не шла к ее истощенному лицу.';
@@ -1416,7 +1516,7 @@ begin
   AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
 end;
 
-procedure TTestUtf8Utils.LcsDistMyersUtf16;
+procedure TTestUnicodeUtils.LcsDistMyersUtf16;
 var
   s1, s2: string;
 begin
@@ -1507,7 +1607,7 @@ begin
   AssertTrue(LcsDistanceMyersUtf16(s2, s1) = 2);
 end;
 
-procedure TTestUtf8Utils.LcsDistMyersBoundedUtf16;
+procedure TTestUnicodeUtils.LcsDistMyersBoundedUtf16;
 var
   s1, s2: string;
 begin
@@ -1592,11 +1692,104 @@ begin
   AssertTrue(LcsDistanceMyersUtf16(s2, s1, 1) = -1);
 end;
 
+procedure TTestUnicodeUtils.LcsGusUtf16Test;
+var
+  s1: string = '';
+  s2: string = '';
+  s: string;
+begin
+  AssertTrue(LcsGusUtf16(s1, s2) = '');
+
+  s1 := 'аа';
+  AssertTrue(LcsGusUtf16(s1, s2) = '');
+
+  s2 := 'аб';
+  s := 'а';
+  AssertTrue(LcsGusUtf16(s1, s2) = s);
+
+  s1 := 'тесть';
+  s2 := 'это просто тест';
+  s := 'тест';
+  AssertTrue(LcsGusUtf16(s1, s2) = s);
+
+  s1 := '1234';
+  s2 := '1224533324';
+  s := '1234';
+  AssertTrue(LcsGusUtf16(s1, s2) = s);
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  s := '01236789';
+  AssertTrue(LcsGusUtf16(s1, s2) = s);
+end;
+
+procedure TTestUnicodeUtils.LcsKRUtf16Test;
+var
+  s1: string = '';
+  s2: string = '';
+  s: string;
+begin
+  AssertTrue(LcsKRUtf16(s1, s2) = '');
+
+  s1 := 'аа';
+  AssertTrue(LcsKRUtf16(s1, s2) = '');
+
+  s2 := 'аб';
+  s := 'а';
+  AssertTrue(LcsKRUtf16(s1, s2) = s);
+
+  s1 := 'тесть';
+  s2 := 'это просто тест';
+  s := 'тест';
+  AssertTrue(LcsKRUtf16(s1, s2) = s);
+
+  s1 := '1234';
+  s2 := '1224533324';
+  s := '1234';
+  AssertTrue(LcsKRUtf16(s1, s2) = s);
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  s := '01236789';
+  AssertTrue(LcsKRUtf16(s1, s2) = s);
+end;
+
+procedure TTestUnicodeUtils.LcsMyersUtf168Test;
+var
+  s1: string = '';
+  s2: string = '';
+  s: string;
+begin
+  AssertTrue(LcsMyersUtf16(s1, s2) = '');
+
+  s1 := 'аа';
+  AssertTrue(LcsMyersUtf16(s1, s2) = '');
+
+  s2 := 'аб';
+  s := 'а';
+  AssertTrue(LcsMyersUtf16(s1, s2) = s);
+
+  s1 := 'тесть';
+  s2 := 'это просто тест';
+  s := 'тест';
+  AssertTrue(LcsMyersUtf16(s1, s2) = s);
+
+  s1 := '1234';
+  s2 := '1224533324';
+  s := '1234';
+  AssertTrue(LcsMyersUtf16(s1, s2) = s);
+
+  s1 := '01236789';
+  s2 := '01234445556789';
+  s := '01236789';
+  AssertTrue(LcsMyersUtf16(s1, s2) = s);
+end;
+
 
 
 initialization
 
-  RegisterTest(TTestUtf8Utils);
+  RegisterTest(TTestUnicodeUtils);
 
 end.
 
