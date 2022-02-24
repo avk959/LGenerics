@@ -225,7 +225,7 @@ type
     S. Kiran Kumar and C. Pandu Rangan(1987) "A Linear Space Algorithm for the LCS Problem" }
     class function LcsKR(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-    uses Myers algorithm for LCS with space complexity O(n) and time complexity O((m+n)*d), where
+    uses Myers algorithm for LCS with space complexity O(m+n) and time complexity O((m+n)*d), where
     n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
     for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
     class function LcsMyers(const L, R: array of T): TArray; static;
@@ -242,6 +242,9 @@ type
   function LevDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
   function LcsDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
   function LcsDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+  function LcsGusUtf16(const L, R: unicodestring): unicodestring; inline;
+  function LcsKRUtf16(const L, R: unicodestring): unicodestring; inline;
+  function LcsMyersUtf16(const L, R: unicodestring): unicodestring; inline;
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: rawbytestring): Boolean;
@@ -2062,6 +2065,62 @@ begin
   Result := GenericDistanceUtf16(L, R, aLimit, dfsuMyersLcsBound);
 end;
 
+type
+  TLcsFunSpecUtf16 = (lfsuGus, lfsuKR, lfsuMyers);
+
+  function LcsGenegicUtf16(const L, R: unicodestring; aSpec: TLcsFunSpecUtf16): unicodestring;
+  var
+    LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+    LBuf: TUcs4Seq = nil;
+    RBuf: TUcs4Seq = nil;
+    LenL, LenR: SizeInt;
+    pL, pR: PUcs4Char;
+  begin
+    if System.Length(L) <= MAX_STATIC then
+      begin
+        pL := @LBufSt[0];
+        Utf16ToUcs4Seq(L, pL, LenL);
+      end
+    else
+      begin
+        Utf16ToUcs4Seq(L, LBuf);
+        LenL := System.Length(LBuf);
+        pL := Pointer(LBuf);
+      end;
+    if System.Length(R) <= MAX_STATIC then
+      begin
+        pR := @RBufSt[0];
+        Utf16ToUcs4Seq(R, pR, LenR);
+      end
+    else
+      begin
+        Utf16ToUcs4Seq(R, RBuf);
+        LenR := System.Length(RBuf);
+        pR := Pointer(RBuf);
+      end;
+    case aSpec of
+      lfsuGus: Result := Ucs4SeqToUtf16(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+      lfsuKR:  Result := Ucs4SeqToUtf16(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    else
+      Result := Ucs4SeqToUtf16(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    end;
+  end;
+
+function LcsGusUtf16(const L, R: unicodestring): unicodestring;
+begin
+  Result := LcsGenegicUtf16(L, R, lfsuGus);
+end;
+
+function LcsKRUtf16(const L, R: unicodestring): unicodestring;
+begin
+  Result := LcsGenegicUtf16(L, R, lfsuKR);
+end;
+
+function LcsMyersUtf16(const L, R: unicodestring): unicodestring;
+begin
+  Result := LcsGenegicUtf16(L, R, lfsuMyers);
+end;
+
 function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
 begin
   case p^ of
@@ -2383,7 +2442,6 @@ begin
     end;
   Result := True;
 end;
-
 
 
 function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
