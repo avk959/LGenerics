@@ -1691,12 +1691,12 @@ begin
   AssertTrue(
     SameValue(SimRatioLevEx('Hello, world!', ' hello world ', smSimple, [' ',',','!'], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('World hello', ' Hello world ', smWordSort, [' '], [soIgnoreCase]), DblOne));
+    SameValue(SimRatioLevEx('World hello', ' Hello world ', smTokenSort, [' '], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('World hello', ' Hello world, hello', smWordSet, [' ',','], [soIgnoreCase]), DblOne));
+    SameValue(SimRatioLevEx('World hello', ' Hello world, hello', smTokenSet, [' ',','], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', smWordSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smWordSetEx), DblOne));
+    SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', smTokenSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smTokenSetEx), DblOne));
 end;
 
 const
@@ -1761,11 +1761,11 @@ const
 begin
   Pat1 := s1;
   Pat2 := s2;
-  R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase]);
+  R := SimRatioLevEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase]);
   AssertTrue(R.ToString, R < 0.45);
-  R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase], @LoCase1251);
+  R := SimRatioLevEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], @LoCase1251);
   AssertTrue(R.ToString, R > 0.8);
-  R := SimRatioLevEx(Pat1, Pat2, smWordSort, [' '], [soIgnoreCase], @LoCase1251, @Less1251);
+  R := SimRatioLevEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], @LoCase1251, @Less1251);
   AssertTrue(R.ToString, R > 0.98);
 end;
 

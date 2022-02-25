@@ -398,9 +398,9 @@ type
 
   TSimMode = (
     smSimple,         // tokenization only
-    smWordSort,       // lexicographic sorting of tokens
-    smWordSet,        // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
-    smWordSetEx        { tokens are converted to a sorted set,
+    smTokenSort,      // lexicographic sorting of tokens
+    smTokenSet,       // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
+    smTokenSetEx       { tokens are converted to a sorted set,
                          two strings are constructed in the form <intersection><difference>,
                          max ratio of these two strings in certain combinations is taken }
     );
@@ -2252,12 +2252,12 @@ begin
         LocL := SplitMerge(LocL);
         LocR := SplitMerge(LocR);
       end;
-    smWordSort:
+    smTokenSort:
       begin
         LocL := SplitMergeSorted(LocL);
         LocR := SplitMergeSorted(LocR);
       end;
-    smWordSet:
+    smTokenSet:
       begin
         LocL := SplitMergeSortedSet(LocL);
         LocR := SplitMergeSortedSet(LocR);
