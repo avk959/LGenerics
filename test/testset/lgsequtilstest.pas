@@ -5,13 +5,18 @@ unit lgSeqUtilsTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, lgSeqUtils;
+  Classes, SysUtils, fpcunit, testregistry, lgSeqUtils, Math;
 
 type
 
   { TTestUnicodeUtils }
 
   TTestUnicodeUtils = class(TTestCase)
+  private
+  const
+    DblOne  = Double(1.0);
+    DblZero = Double(0.0);
+
   published
     procedure ValidateDfa;
     procedure Validate;
@@ -30,6 +35,7 @@ type
     procedure LcsGusUtf8Test;
     procedure LcsKRUtf8Test;
     procedure LcsMyersUtf8Test;
+    procedure SimRatioUtf8;
 
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
@@ -44,7 +50,8 @@ type
     procedure LcsDistMyersBoundedUtf16;
     procedure LcsGusUtf16Test;
     procedure LcsKRUtf16Test;
-    procedure LcsMyersUtf168Test;
+    procedure LcsMyersUtf16Test;
+    procedure SimRatioUtf16;
   end;
 
 implementation
@@ -968,6 +975,27 @@ begin
   AssertTrue(LcsMyersUtf8(s1, s2) = s);
 end;
 
+procedure TTestUnicodeUtils.SimRatioUtf8;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := '';
+  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblOne));
+
+  s2 := 'ббб';
+  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblZero));
+  AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblZero));
+
+  s1 := 'ааа';
+  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblZero));
+  AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblZero));
+
+  s1 := 'ббб';
+  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblOne));
+  AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblOne));
+end;
+
 {$WARN 4104 OFF}
 procedure TTestUnicodeUtils.LevenshteinDistUtf16;
 var
@@ -1754,7 +1782,7 @@ begin
   AssertTrue(LcsKRUtf16(s1, s2) = s);
 end;
 
-procedure TTestUnicodeUtils.LcsMyersUtf168Test;
+procedure TTestUnicodeUtils.LcsMyersUtf16Test;
 var
   s1: string = '';
   s2: string = '';
@@ -1783,6 +1811,27 @@ begin
   s2 := '01234445556789';
   s := '01236789';
   AssertTrue(LcsMyersUtf16(s1, s2) = s);
+end;
+
+procedure TTestUnicodeUtils.SimRatioUtf16;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := '';
+  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblOne));
+
+  s2 := 'ббб';
+  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblZero));
+  AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblZero));
+
+  s1 := 'ааа';
+  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblZero));
+  AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblZero));
+
+  s1 := 'ббб';
+  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblOne));
+  AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblOne));
 end;
 
 
