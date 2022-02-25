@@ -245,6 +245,8 @@ type
   function LcsGusUtf16(const L, R: unicodestring): unicodestring; inline;
   function LcsKRUtf16(const L, R: unicodestring): unicodestring; inline;
   function LcsMyersUtf16(const L, R: unicodestring): unicodestring; inline;
+{ similarity ratio using Levenshtein distance }
+  function SimRatioLevUtf16(const L, R: unicodestring): Double;
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: rawbytestring): Boolean;
@@ -263,6 +265,8 @@ type
   function LcsGusUtf8(const L, R: utf8string): utf8string; inline;
   function LcsKRUtf8(const L, R: utf8string): utf8string; inline;
   function LcsMyersUtf8(const L, R: utf8string): utf8string; inline;
+{ similarity ratio using Levenshtein distance }
+  function SimRatioLevUtf8(const L, R: utf8string): Double;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -2068,43 +2072,43 @@ end;
 type
   TLcsFunSpecUtf16 = (lfsuGus, lfsuKR, lfsuMyers);
 
-  function LcsGenegicUtf16(const L, R: unicodestring; aSpec: TLcsFunSpecUtf16): unicodestring;
-  var
-    LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
-    LBuf: TUcs4Seq = nil;
-    RBuf: TUcs4Seq = nil;
-    LenL, LenR: SizeInt;
-    pL, pR: PUcs4Char;
-  begin
-    if System.Length(L) <= MAX_STATIC then
-      begin
-        pL := @LBufSt[0];
-        Utf16ToUcs4Seq(L, pL, LenL);
-      end
-    else
-      begin
-        Utf16ToUcs4Seq(L, LBuf);
-        LenL := System.Length(LBuf);
-        pL := Pointer(LBuf);
-      end;
-    if System.Length(R) <= MAX_STATIC then
-      begin
-        pR := @RBufSt[0];
-        Utf16ToUcs4Seq(R, pR, LenR);
-      end
-    else
-      begin
-        Utf16ToUcs4Seq(R, RBuf);
-        LenR := System.Length(RBuf);
-        pR := Pointer(RBuf);
-      end;
-    case aSpec of
-      lfsuGus: Result := Ucs4SeqToUtf16(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
-      lfsuKR:  Result := Ucs4SeqToUtf16(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
-    else
-      Result := Ucs4SeqToUtf16(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+function LcsGenegicUtf16(const L, R: unicodestring; aSpec: TLcsFunSpecUtf16): unicodestring;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
+begin
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf16ToUcs4Seq(L, pL, LenL);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(L, LBuf);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
     end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf16ToUcs4Seq(R, pR, LenR);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(R, RBuf);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  case aSpec of
+    lfsuGus: Result := Ucs4SeqToUtf16(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    lfsuKR:  Result := Ucs4SeqToUtf16(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+  else
+    Result := Ucs4SeqToUtf16(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   end;
+end;
 
 function LcsGusUtf16(const L, R: unicodestring): unicodestring;
 begin
@@ -2119,6 +2123,44 @@ end;
 function LcsMyersUtf16(const L, R: unicodestring): unicodestring;
 begin
   Result := LcsGenegicUtf16(L, R, lfsuMyers);
+end;
+
+function SimRatioLevUtf16(const L, R: unicodestring): Double;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR, MaxLen: SizeInt;
+  pL, pR: PUcs4Char;
+begin
+  if (L = '') and (R = '') then exit(Double(1.0));
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf16ToUcs4Seq(L, pL, LenL);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(L, LBuf);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf16ToUcs4Seq(R, pR, LenR);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(R, RBuf);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  if LenL >= LenR then
+    MaxLen := LenL
+  else
+    MaxLen := LenR;
+  Result := Double(MaxLen - TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]))/Double(MaxLen);
 end;
 
 function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
@@ -2703,6 +2745,44 @@ end;
 function LcsMyersUtf8(const L, R: utf8string): utf8string;
 begin
   Result := LcsGenegicUtf8(L, R, lfsMyers);
+end;
+
+function SimRatioLevUtf8(const L, R: utf8string): Double;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR, MaxLen: SizeInt;
+  pL, pR: PUcs4Char;
+begin
+  if (L = '') and (R = '') then exit(Double(1.0));
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf8ToUcs4Seq(L, pL, LenL);
+    end
+  else
+    begin
+      LBuf := Utf8ToUcs4Seq(L);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf8ToUcs4Seq(R, pR, LenR);
+    end
+  else
+    begin
+      RBuf := Utf8ToUcs4Seq(R);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  if LenL >= LenR then
+    MaxLen := LenL
+  else
+    MaxLen := LenR;
+  Result := Double(MaxLen - TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]))/Double(MaxLen);
 end;
 
 end.
