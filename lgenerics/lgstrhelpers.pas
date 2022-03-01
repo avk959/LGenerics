@@ -376,9 +376,9 @@ type
   immediately and returns -1 }
   function LevDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
-{ returns the Levenshtein distance between L and R; uses the Myers' bit-vector algorithm
-  with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
-  d is edit distance computed, and w is the size of a computer word }
+{ returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
+  with O(dn/w) time complexity, where n is Max(|L|, |R|), d is edit distance computed,
+  and w is the size of a computer word }
   function LevDistanceMyers(const L, R: rawbytestring): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
@@ -396,26 +396,10 @@ type
   TSimCaseMap = function(const s: rawbytestring): rawbytestring;
   TSimLess    = function(const L, R: array of Char): Boolean;
 
-  TSimMode = (
-    smSimple,         // tokenization only
-    smTokenSort,      // lexicographic sorting of tokens
-    smTokenSet,       // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
-    smTokenSetEx       { tokens are converted to a sorted set,
-                         two strings are constructed in the form <intersection><difference>,
-                         max ratio of these two strings in certain combinations is taken }
-    );
-
-  TSimOption  = (
-    soPartial,        // maximum similarity is required when alternately comparing a shorter
-                      // string with all parts of the same length of a longer string
-    soIgnoreCase);
-
-  TSimOptions = set of TSimOption;
-
 const
   DEF_STOP_CHARS = [#0..#32];
 
-{ similarity ratio using Levenshtein distance with some conditional transformations of the input data;
+{ similarity ratio using the Levenshtein distance with some preprocessing of the input text;
   inspired by FuzzyWuzzy }
   function SimRatioLevEx(const L, R: rawbytestring;
                          aMode: TSimMode = smSimple;
@@ -423,7 +407,6 @@ const
                          const aOptions: TSimOptions = [];
                          aCaseMap: TSimCaseMap = nil;
                          aLess: TSimLess = nil): Double;
-
 { the LCS edit distance allows only two operations: insertion and deletion; uses slightly
   modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
   from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
@@ -2218,14 +2201,6 @@ var
 var
   LocL, LocR: rawbytestring;
 begin
-  if L = '' then
-    if R = '' then
-      exit(Double(1.0))
-    else
-      exit(Double(0.0))
-  else
-    if R = '' then
-      exit(Double(0.0));
 
   if soIgnoreCase in aOptions then
     if aCaseMap <> nil then
@@ -2243,8 +2218,6 @@ begin
       LocL := L;
       LocR := R;
     end;
-
-  if LocL = LocR then exit(1.0);
 
   case aMode of
     smSimple:

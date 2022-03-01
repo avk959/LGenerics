@@ -1136,6 +1136,23 @@ type
   function MinOf3(a, b, c: SizeInt): SizeInt; inline;
   function MaxOf3(a, b, c: SizeInt): SizeInt; inline;
 
+type
+  TSimMode = (
+    smSimple,         // tokenization only
+    smTokenSort,      // lexicographic sorting of tokens
+    smTokenSet,       // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
+    smTokenSetEx       { tokens are converted to a sorted set,
+                         two strings are constructed in the form <intersection><difference>,
+                         max ratio of these two strings in certain combinations is taken }
+    );
+
+  TSimOption  = (
+    soPartial,        // maximum similarity is required when alternately comparing a shorter
+                      // string with all parts of the same length of a longer string
+    soIgnoreCase);
+
+  TSimOptions = set of TSimOption;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
