@@ -5,7 +5,7 @@ unit lgSeqUtilsTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, lgSeqUtils, Math;
+  Classes, SysUtils, fpcunit, testregistry, lgUtils, lgSeqUtils, Math;
 
 type
 
@@ -36,6 +36,7 @@ type
     procedure LcsKRUtf8Test;
     procedure LcsMyersUtf8Test;
     procedure SimRatioUtf8;
+    procedure SimRatioExUtf8;
 
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
@@ -52,6 +53,7 @@ type
     procedure LcsKRUtf16Test;
     procedure LcsMyersUtf16Test;
     procedure SimRatioUtf16;
+    procedure SimRatioExUtf16;
   end;
 
 implementation
@@ -996,6 +998,28 @@ begin
   AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblOne));
 end;
 
+procedure TTestUnicodeUtils.SimRatioExUtf8;
+begin
+  AssertTrue(SameValue(SimRatioLevExUtf8('', '', [' ']), DblOne));
+  AssertTrue(SimRatioLevExUtf8('aaa', '', [' ']).ToString, SameValue(SimRatioLevExUtf8('aaa', '', [' ']), DblZero));
+  AssertTrue(SameValue(SimRatioLevExUtf8('', 'bbb', [' ']), DblZero));
+  AssertTrue(SameValue(SimRatioLevExUtf8('Hello world', ' Hello world ', [' ']), DblOne));
+  AssertFalse(SameValue(SimRatioLevExUtf8('Hello world', ' hello world ', [' ']), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf8('Hello world', ' hello world ', [' '], smSimple, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf8('Hello world', 'another Hello world ', [' '], smSimple, [soPartial]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf8('Hello, world!', ' hello world ', [' ',',','!'], smSimple, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf8('World hello', ' Hello world ', [' '], smTokenSort, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf8('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf8('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioLevExUtf8('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx), DblOne));
+end;
+
 {$WARN 4104 OFF}
 procedure TTestUnicodeUtils.LevenshteinDistUtf16;
 var
@@ -1832,6 +1856,28 @@ begin
   s1 := 'ббб';
   AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblOne));
   AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblOne));
+end;
+
+procedure TTestUnicodeUtils.SimRatioExUtf16;
+begin
+  AssertTrue(SameValue(SimRatioLevExUtf16('', '', [' ']), DblOne));
+  AssertTrue(SimRatioLevExUtf16('aaa', '', [' ']).ToString, SameValue(SimRatioLevExUtf16('aaa', '', [' ']), DblZero));
+  AssertTrue(SameValue(SimRatioLevExUtf16('', 'bbb', [' ']), DblZero));
+  AssertTrue(SameValue(SimRatioLevExUtf16('Hello world', ' Hello world ', [' ']), DblOne));
+  AssertFalse(SameValue(SimRatioLevExUtf16('Hello world', ' hello world ', [' ']), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf16('Hello world', ' hello world ', [' '], smSimple, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf16('Hello world', 'another Hello world ', [' '], smSimple, [soPartial]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf16('Hello, world!', ' hello world ', [' ',',','!'], smSimple, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf16('World hello', ' Hello world ', [' '], smTokenSort, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf16('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]), DblOne));
+  AssertTrue(
+    SameValue(SimRatioLevExUtf16('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioLevExUtf16('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx), DblOne));
 end;
 
 
