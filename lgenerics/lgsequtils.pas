@@ -21,13 +21,15 @@ unit lgSeqUtils;
 
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ARRAYOPERATORS}
 {$INLINE ON}
 
 interface
 
 uses
 
-  Classes, SysUtils, Math, UnicodeData,
+  Classes, SysUtils, Math,
   lgUtils,
   {%H-}lgHelpers,
   lgArrayHelpers,
@@ -192,7 +194,7 @@ type
     class function LevDistance(const L, R: array of T): SizeInt; static;
   { returns the Levenshtein distance between L and R; a Pascal translation of
     github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
-    a modified version of algorithm described by Berghel and Roach with O(min(aLenL, aLenR)*d)
+    a modified version of algorithm described by Berghel and Roach with O(min(|L|,|R|))*d)
     worst-case time complexity, where d is the edit distance computed  }
     class function LevDistanceMBR(const L, R: array of T): SizeInt; static;
   { the same as above; the aLimit parameter indicates the maximum expected distance,
@@ -216,7 +218,7 @@ type
     immediately and returns -1 }
     class function LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
-    with O(RLogN) time complexity, where R is the number of the matching pairs in L and R;
+    with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
     inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5; }
     class function LcsGus(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
@@ -229,9 +231,12 @@ type
     n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
     for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
     class function LcsMyers(const L, R: array of T): TArray; static;
+  { similarity ratio using the Levenshtein distance }
+    class function SimRatioLev(const L, R: array of T): Double; static;
   end;
 
-  TUcs4Seq = array of Ucs4Char;
+  TUcs4Seq  = array of Ucs4Char;
+  TUcs4Less = function(const L, R: array of Ucs4Char): Boolean;
 
 { the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
@@ -245,8 +250,14 @@ type
   function LcsGusUtf16(const L, R: unicodestring): unicodestring; inline;
   function LcsKRUtf16(const L, R: unicodestring): unicodestring; inline;
   function LcsMyersUtf16(const L, R: unicodestring): unicodestring; inline;
-{ similarity ratio using Levenshtein distance }
   function SimRatioLevUtf16(const L, R: unicodestring): Double;
+{ similarity ratio using the Levenshtein distance with some preprocessing of the input text;
+  elements from aStopChars must be code points otherwise they will be ignored  }
+  function SimRatioLevExUtf16(const L, R: unicodestring;
+                              const aStopChars: array of unicodestring;
+                              aMode: TSimMode = smSimple;
+                              const aOptions: TSimOptions = [];
+                              aLess: TUcs4Less = nil): Double;
 
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: rawbytestring): Boolean;
@@ -254,19 +265,23 @@ type
   function Utf8Validate(const s: rawbytestring): Boolean;
 { these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness of the strings lies with the user }
-  function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
-  function LevDistanceUtf8(const L, R: utf8string): SizeInt; inline;
-  function LevDistanceMbrUtf8(const L, R: utf8string): SizeInt; inline;
-  function LevDistanceMbrUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
-  function LevDistanceMyersUtf8(const L, R: utf8string): SizeInt; inline;
-  function LevDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
-  function LcsDistanceMyersUtf8(const L, R: utf8string): SizeInt; inline;
-  function LcsDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt; inline;
-  function LcsGusUtf8(const L, R: utf8string): utf8string; inline;
-  function LcsKRUtf8(const L, R: utf8string): utf8string; inline;
-  function LcsMyersUtf8(const L, R: utf8string): utf8string; inline;
-{ similarity ratio using Levenshtein distance }
-  function SimRatioLevUtf8(const L, R: utf8string): Double;
+  function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
+  function LevDistanceUtf8(const L, R: string): SizeInt; inline;
+  function LevDistanceMbrUtf8(const L, R: string): SizeInt; inline;
+  function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function LevDistanceMyersUtf8(const L, R: string): SizeInt; inline;
+  function LevDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function LcsDistanceMyersUtf8(const L, R: string): SizeInt; inline;
+  function LcsDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function LcsGusUtf8(const L, R: string): string; inline;
+  function LcsKRUtf8(const L, R: string): string; inline;
+  function LcsMyersUtf8(const L, R: string): string; inline;
+  function SimRatioLevUtf8(const L, R: string): Double;
+  function SimRatioLevExUtf8(const L, R: string;
+                             const aStopChars: array of string;
+                             aMode: TSimMode = smSimple;
+                             const aOptions: TSimOptions = [];
+                             aLess: TUcs4Less = nil): Double;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -1874,10 +1889,22 @@ begin
     Result := LcsMyersImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
+class function TGSeqUtil.SimRatioLev(const L, R: array of T): Double;
+var
+  MaxLen: SizeInt;
+begin
+  if (System.Length(L) = 0) and (System.Length(R) = 0) then
+    exit(Double(1.0));
+  MaxLen := Math.Max(System.Length(L), System.Length(R));
+  Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
+end;
+
 type
-  PUcs4Char = ^Ucs4Char;
-  TUcs4Util = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
-  TByte4    = array[0..3] of Byte;
+  PUcs4Char    = ^Ucs4Char;
+  TUcs4Util    = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
+  TByte4       = array[0..3] of Byte;
+  TUcs4Rec     = record Key: Ucs4Char end;
+  TUcs4CharSet = specialize TGLiteChainHashTable<Ucs4Char, TUcs4Rec, TUcs4Hasher>;
 
 const
   MAX_STATIC       = TUcs4Util.MAX_STATIC;
@@ -2130,10 +2157,9 @@ var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
   RBuf: TUcs4Seq = nil;
-  LenL, LenR, MaxLen: SizeInt;
+  LenL, LenR: SizeInt;
   pL, pR: PUcs4Char;
 begin
-  if (L = '') and (R = '') then exit(Double(1.0));
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
@@ -2156,12 +2182,437 @@ begin
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
-  if LenL >= LenR then
-    MaxLen := LenL
-  else
-    MaxLen := LenR;
-  Result := Double(MaxLen - TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]))/Double(MaxLen);
+  Result := TUcs4Util.SimRatioLev(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
 end;
+
+{$PUSH}{$WARN 5089 OFF}
+function SimRatioLevGeneric(const L, R: array of Ucs4Char; constref aStopChars: TUcs4CharSet;
+  aMode: TSimMode; aPartial: Boolean; aLess: TUcs4Less): Double;
+type
+  TWord       = record Start: PUcs4Char; Len: SizeInt end;
+  PWord       = ^TWord;
+  TWordArray  = array of TWord;
+  TSplitFun   = function(const s: array of Ucs4Char; out aCount: SizeInt; out aBuf: TWordArray;
+                         aForceDyn: Boolean): PWord is nested;
+  THelper     = specialize TGNestedArrayHelper<TWord>;
+  TUcs4Helper = specialize TGArrayHelpUtil<Ucs4Char>;
+const
+  UCS4_SPACE: Ucs4Char = 32;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of TWord;
+
+  function SplitMerge(const s: array of Ucs4Char): TUcs4Seq;
+  var
+    I, J: SizeInt;
+    pS, pR: PUcs4Char;
+    NewWord: Boolean;
+  begin
+    if aStopChars.Count = 0 then exit(TUcs4Helper.CreateCopy(s));
+    if System.Length(s) = 0 then exit(nil);
+    System.SetLength(Result, System.Length(s));
+    pS := @s[0];
+    pR := Pointer(Result);
+    I := 0;
+    while (I < System.Length(s)) and (aStopChars.Find(pS[I]) <> nil) do Inc(I);
+    J := 0;
+    NewWord := False;
+    for I := I to System.High(s) do
+      if aStopChars.Find(pS[I]) <> nil then
+        NewWord := True
+      else
+        begin
+          if NewWord then
+            begin
+              pR[J] := UCS4_SPACE;
+              Inc(J);
+              NewWord := False;
+            end;
+          pR[J] := pS[I];
+          Inc(J);
+        end;
+    System.SetLength(Result, J);
+  end;
+
+  function Less(const L, R: TWord): Boolean;
+  begin
+    Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
+  end;
+
+  function LessDef(const L, R: TWord): Boolean;
+  var
+    I: SizeInt;
+  begin
+    for I := 0 to Pred(Math.Min(L.Len, R.Len)) do
+      if L.Start[I] <> R.Start[I] then exit(L.Start[I] < R.Start[I]);
+    LessDef := L.Len < R.Len;
+  end;
+
+  function Equal(const L, R: TWord): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if L.Len <> R.Len then exit(False);
+    for I := 0 to Pred(L.Len) do
+      if L.Start[I] <> R.Start[I] then exit(False);
+    Equal := True;
+  end;
+
+  function SplitAndSort(const s: array of Ucs4Char; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    p: PUcs4Char;
+    Words: PWord;
+    I, Count, CurrLen: SizeInt;
+    CurrStart: PUcs4Char;
+  begin
+    if aForceDyn or (System.Length(s) div 2 + System.Length(s) and 1 > MAX_STATIC) then
+      begin
+        System.SetLength(aBuf, System.Length(s) div 2 + System.Length(s) and 1);
+        Words := Pointer(aBuf);
+      end
+    else
+      Words := @StBuf[0];
+
+    if System.Length(s) <> 0 then
+      p := @s[0]
+    else
+      p := nil;
+    CurrStart := p;
+    CurrLen := 0;
+    Count := 0;
+    for I := 0 to System.High(s) do
+      if aStopChars.Find(p[I]) <> nil then
+        begin
+          if CurrLen = 0 then continue;
+          Words[Count].Start := CurrStart;
+          Words[Count].Len := CurrLen;
+          CurrLen := 0;
+          Inc(Count);
+        end
+      else
+        begin
+          if CurrLen = 0 then
+            CurrStart := @p[I];
+          Inc(CurrLen);
+        end;
+    if CurrLen <> 0 then
+      begin
+        Words[Count].Start := CurrStart;
+        Words[Count].Len := CurrLen;
+        Inc(Count);
+      end;
+    if aLess <> nil then
+      THelper.Sort(Words[0..Pred(Count)], @Less)
+    else
+      THelper.Sort(Words[0..Pred(Count)], @LessDef);
+    aCount := Count;
+    Result := Words;
+  end;
+
+  function SplitMerge(const s: array of Ucs4Char; aSplit: TSplitFun): TUcs4Seq;
+  var
+    Words: PWord;
+    Buf: TWordArray = nil;
+    I, J, Count, Len: SizeInt;
+    pR: PUcs4Char;
+  begin
+    Words := aSplit(s, Count, Buf, False);
+    System.SetLength(Result, System.Length(s));
+    pR := Pointer(Result);
+    Len := 0;
+    for I := 0 to Pred(Count) do
+      begin
+        if I > 0 then
+          begin
+            Len += Words[I].Len + 1;
+            pR^ := UCS4_SPACE;
+            Inc(pR);
+          end
+        else
+          Len += Words[I].Len;
+        for J := 0 to Pred(Words[I].Len) do
+          with Words[I] do
+            pR[J] := Start[J];
+        pR += Words[I].Len;
+      end;
+    System.SetLength(Result, Len);
+  end;
+
+  function SplitMergeSorted(const s: array of Ucs4Char): TUcs4Seq;
+  begin
+    Result := SplitMerge(s, @SplitAndSort);
+  end;
+
+  function SplitSortedSet(const s: array of Ucs4Char; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    I, J, Count: SizeInt;
+  begin
+    Result := SplitAndSort(s, Count, aBuf, aForceDyn);
+    I := 0;
+    J := 0;
+    while I < Count do
+      begin
+        if I <> J then
+          Result[J] := Result[I];
+        Inc(I);
+        while (I < Count) and Equal(Result[I], Result[J]) do Inc(I);
+        Inc(J);
+      end;
+    aCount := J;
+  end;
+
+  function SplitMergeSortedSet(const s: array of Ucs4Char): TUcs4Seq;
+  begin
+    Result := SplitMerge(s, @SplitSortedSet);
+  end;
+
+  function SimPartial(const L, R: TUcs4Seq): Double;
+  var
+    I: SizeInt;
+  begin
+    Result := Double(0.0);
+    if L = nil then
+      if R = nil then
+        exit(Double(1.0))
+      else
+        exit
+    else
+      if R = nil then
+        exit;
+
+    if System.Length(L) <= System.Length(R) then
+      for I := 0 to System.Length(R) - System.Length(L) do
+        begin
+          Result := Math.Max(Result,
+            TUcs4Util.SimRatioLev(PUcs4Char(L)[0..System.High(L)],
+                                  PUcs4Char(R)[I..I+System.High(L)]));
+          if Result = Double(1.0) then break;
+        end
+    else
+      for I := 0 to System.Length(L) - System.Length(R) do
+        begin
+          Result := Math.Max(Result,
+            TUcs4Util.SimRatioLev(PUcs4Char(R)[0..System.High(R)],
+                                  PUcs4Char(L)[I..I+System.High(R)]));
+          if Result = Double(1.0) then break;
+        end;
+  end;
+
+  function Merge(aSrcLen: SizeInt; aWords: PWord; const aIndices: TBoolVector): TUcs4Seq;
+  var
+    I, J, Len: SizeInt;
+    pR: PUcs4Char;
+    NotFirst: Boolean;
+  begin
+    System.SetLength(Result, aSrcLen);
+    pR := Pointer(Result);
+    NotFirst := False;
+    Len := 0;
+    for I in aIndices do
+      begin
+        if NotFirst then
+          begin
+            Len += aWords[I].Len + 1;
+            pR^ := UCS4_SPACE;
+            Inc(pR);
+          end
+        else
+          begin
+            Len += aWords[I].Len;
+            NotFirst := True;
+          end;
+        for J := 0 to Pred(aWords[I].Len) do
+          with aWords[I] do
+            pR[J] := Start[J];
+        pR += aWords[I].Len;
+      end;
+    System.SetLength(Result, Len);
+  end;
+
+  function WordSetPairwize(const L, R: array of Ucs4Char): Double;
+  var
+    WordsL, WordsR: PWord;
+    BufL, BufR: TWordArray;
+    IntersectIdx, DiffIdxL, DiffIdxR: TBoolVector;
+    I, J, CountL, CountR: SizeInt;
+    Intersection, SetL, SetR: TUcs4Seq;
+  begin
+    WordsL := SplitSortedSet(L, CountL, BufL, False);
+    WordsR := SplitSortedSet(R, CountR, BufR, True);
+    IntersectIdx.EnsureCapacity(CountL);
+    DiffIdxL.InitRange(CountL);
+    DiffIdxR.InitRange(CountR);
+
+    if aLess <> nil then
+      for I := 0 to Pred(CountL) do
+        begin
+          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @Less);
+          if J <> NULL_INDEX then
+            begin
+              IntersectIdx[I] := True;
+              DiffIdxL[I] := False;
+              DiffIdxR[J] := False;
+            end;
+        end
+    else
+      for I := 0 to Pred(CountL) do
+        begin
+          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @LessDef);
+          if J <> NULL_INDEX then
+            begin
+              IntersectIdx[I] := True;
+              DiffIdxL[I] := False;
+              DiffIdxR[J] := False;
+            end;
+        end;
+
+    Intersection := Merge(System.Length(L), WordsL, IntersectIdx);
+    SetL := Merge(System.Length(L), WordsL, DiffIdxL);
+    SetR := Merge(System.Length(R), WordsR, DiffIdxR);
+
+    if Intersection <> nil then
+      begin
+        if SetL <> nil then
+          SetL := Intersection + [UCS4_SPACE] + SetL
+        else
+          SetL := Intersection;
+        if SetR <> nil then
+          SetR := Intersection + [UCS4_SPACE] + SetR
+        else
+          SetR := Intersection;
+      end;
+
+    if aPartial then
+      begin
+        Result := SimPartial(Intersection, SetL);
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, SimPartial(Intersection, SetR));
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, SimPartial(SetL, SetR));
+      end
+    else
+      begin
+        Result := TUcs4Util.SimRatioLev(Intersection, SetL);
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, TUcs4Util.SimRatioLev(Intersection, SetR));
+        if Result = Double(1.0) then exit;
+        Result := Math.Max(Result, TUcs4Util.SimRatioLev(SetL, SetR));
+      end;
+  end;
+
+var
+  LocL, LocR: TUcs4Seq;
+begin
+
+  case aMode of
+    smSimple:
+      begin
+        LocL := SplitMerge(L);
+        LocR := SplitMerge(R);
+      end;
+    smTokenSort:
+      begin
+        LocL := SplitMergeSorted(L);
+        LocR := SplitMergeSorted(R);
+      end;
+    smTokenSet:
+      begin
+        LocL := SplitMergeSortedSet(L);
+        LocR := SplitMergeSortedSet(R);
+      end;
+  else
+    exit(WordSetPairwize(L, R));
+  end;
+
+  if aPartial then
+    Result := SimPartial(LocL, LocR)
+  else
+    Result := TUcs4Util.SimRatioLev(LocL, LocR);
+end;
+{$POP}
+
+function IsSingleCodePointUtf16(const s: unicodestring; out aPt: Ucs4Char): Boolean;
+var
+  Len: SizeInt;
+  p: PWideChar;
+  c: Ucs4Char;
+begin
+  if (s = '') or (System.Length(s) > 2) then exit(False);
+  Len := System.Length(s);
+  p := PWideChar(s);
+  c := Ucs4Char(p^);
+  if (c <= $d7ff) or (c >= $e000) then
+    aPt := c
+  else
+    if (c <= $dbff) and (Len > 1) and (p[1] >= #$dc00)and(p[1] <= #$dfff) then
+      begin
+        aPt := (c - $d7c0) shl 10 + (Ucs4Char(p[1]) xor $dc00);
+        Dec(Len);
+      end
+    else
+      aPt := UNICODE_BAD_CHAR;
+  Dec(Len);
+  Result := Len = 0;
+end;
+
+{$PUSH}{$WARN 5036 OFF}
+function SimRatioLevExUtf16(const L, R: unicodestring; const aStopChars: array of unicodestring; aMode: TSimMode;
+  const aOptions: TSimOptions; aLess: TUcs4Less): Double;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
+
+  StopChars: TUcs4CharSet;
+  LocL, LocR: unicodestring;
+  I: SizeInt;
+  c: Ucs4Char;
+  p: TUcs4CharSet.PEntry;
+begin
+
+  if soIgnoreCase in aOptions then
+    begin
+      LocL := LowerCase(L);
+      LocR := LowerCase(R);
+    end
+  else
+    begin
+      LocL := L;
+      LocR := R;
+    end;
+
+  for I := 0 to System.High(aStopChars) do
+    if IsSingleCodePointUtf16(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
+      p^.Key := c;
+
+  if System.Length(LocL) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf16ToUcs4Seq(LocL, pL, LenL);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(LocL, LBuf);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(LocR) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf16ToUcs4Seq(LocR, pR, LenR);
+    end
+  else
+    begin
+      Utf16ToUcs4Seq(LocR, RBuf);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+
+  Result :=
+    SimRatioLevGeneric(pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLess);
+end;
+{$POP}
 
 function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
 begin
@@ -2233,7 +2684,6 @@ begin
                     Ucs4Char(p[2] and $3f));
           aPtSize := 3;
         end
-
       else
         begin
           Result := UNICODE_BAD_CHAR;
@@ -2486,7 +2936,7 @@ begin
 end;
 
 
-function IsSubSequenceUtf8(const aStr, aSub: utf8string): Boolean;
+function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
 var
   I, J, PtSizeStr, PtSizeSub, LenStr, LenSub: SizeInt;
   vStr, vSub: Ucs4Char;
@@ -2515,7 +2965,7 @@ type
   TDistanceFunSpec = (
     dfsDyn, dfsMbr, dfsMyers, dfsMyersLcs, dfsMbrBound, dfsMyersBound, dfsMyersLcsBound);
 
-function GenericDistanceUtf8(const L, R: utf8string; aLimit: SizeInt; aSpec: TDistanceFunSpec): SizeInt;
+function GenericDistanceUtf8(const L, R: string; aLimit: SizeInt; aSpec: TDistanceFunSpec): SizeInt;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
@@ -2558,42 +3008,42 @@ begin
   end;
 end;
 
-function LevDistanceUtf8(const L, R: utf8string): SizeInt;
+function LevDistanceUtf8(const L, R: string): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, -1, dfsDyn);
 end;
 
-function LevDistanceMbrUtf8(const L, R: utf8string): SizeInt;
+function LevDistanceMbrUtf8(const L, R: string): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, -1, dfsMbr);
 end;
 
-function LevDistanceMbrUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
+function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfsMbrBound);
 end;
 
-function LevDistanceMyersUtf8(const L, R: utf8string): SizeInt;
+function LevDistanceMyersUtf8(const L, R: string): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, -1, dfsMyers);
 end;
 
-function LevDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
+function LevDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfsMyersBound);
 end;
 
-function LcsDistanceMyersUtf8(const L, R: utf8string): SizeInt;
+function LcsDistanceMyersUtf8(const L, R: string): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, -1, dfsMyersLcs);
 end;
 
-function LcsDistanceMyersUtf8(const L, R: utf8string; aLimit: SizeInt): SizeInt;
+function LcsDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfsMyersLcsBound);
 end;
 
-function Char32ToUtf8Char(c: Ucs4Char; out aBytes: TByte4): Integer;
+function Ucs4CharToUtf8Char(c: Ucs4Char; out aBytes: TByte4): Integer;
 begin
   case c of
     0..127:
@@ -2645,7 +3095,7 @@ begin
     Result += Ucs4CharUtf8Len(r[I]);
 end;
 
-function Ucs4SeqToUtf8(const aSeq: TUcs4Seq): utf8string;
+function Ucs4SeqToUtf8(const aSeq: TUcs4Seq): string;
 var
   s: string = '';
   I, J: SizeInt;
@@ -2694,7 +3144,7 @@ end;
 type
   TLcsFunSpec = (lfsGus, lfsKR, lfsMyers);
 
-function LcsGenegicUtf8(const L, R: utf8string; aSpec: TLcsFunSpec): utf8string;
+function LcsGenegicUtf8(const L, R: string; aSpec: TLcsFunSpec): string;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
@@ -2732,30 +3182,29 @@ begin
   end;
 end;
 
-function LcsGusUtf8(const L, R: utf8string): utf8string;
+function LcsGusUtf8(const L, R: string): string;
 begin
   Result := LcsGenegicUtf8(L, R, lfsGus);
 end;
 
-function LcsKRUtf8(const L, R: utf8string): utf8string;
+function LcsKRUtf8(const L, R: string): string;
 begin
   Result := LcsGenegicUtf8(L, R, lfsKR);
 end;
 
-function LcsMyersUtf8(const L, R: utf8string): utf8string;
+function LcsMyersUtf8(const L, R: string): string;
 begin
   Result := LcsGenegicUtf8(L, R, lfsMyers);
 end;
 
-function SimRatioLevUtf8(const L, R: utf8string): Double;
+function SimRatioLevUtf8(const L, R: string): Double;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
   RBuf: TUcs4Seq = nil;
-  LenL, LenR, MaxLen: SizeInt;
+  LenL, LenR: SizeInt;
   pL, pR: PUcs4Char;
 begin
-  if (L = '') and (R = '') then exit(Double(1.0));
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
@@ -2778,11 +3227,74 @@ begin
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
-  if LenL >= LenR then
-    MaxLen := LenL
+  Result := TUcs4Util.SimRatioLev(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+end;
+
+function IsSingleCodePointUtf8(const s: rawbytestring; out aPt: Ucs4Char): Boolean;
+var
+  PtLen, sLen: SizeInt;
+begin
+  sLen := System.Length(s);
+  aPt := CodePointToUcs4Char(Pointer(s), sLen, PtLen);
+  Result := sLen = PtLen;
+end;
+
+function SimRatioLevExUtf8(const L, R: string; const aStopChars: array of string; aMode: TSimMode;
+  const aOptions: TSimOptions; aLess: TUcs4Less): Double;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
+
+  StopChars: TUcs4CharSet;
+  LocL, LocR: string;
+  I: SizeInt;
+  c: Ucs4Char;
+  p: TUcs4CharSet.PEntry;
+begin
+
+  if soIgnoreCase in aOptions then
+    begin
+      LocL := AnsiLowerCase(L);
+      LocR := AnsiLowerCase(R);
+    end
   else
-    MaxLen := LenR;
-  Result := Double(MaxLen - TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]))/Double(MaxLen);
+    begin
+      LocL := L;
+      LocR := R;
+    end;
+
+  for I := 0 to System.High(aStopChars) do
+    if IsSingleCodePointUtf8(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
+      p^.Key := c;
+
+  if System.Length(LocL) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf8ToUcs4Seq(LocL, pL, LenL);
+    end
+  else
+    begin
+      LBuf := Utf8ToUcs4Seq(LocL);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(LocR) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf8ToUcs4Seq(LocR, pR, LenR);
+    end
+  else
+    begin
+      RBuf := Utf8ToUcs4Seq(LocR);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+
+  Result :=
+    SimRatioLevGeneric(pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLess);
 end;
 
 end.
