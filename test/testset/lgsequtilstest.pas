@@ -56,6 +56,17 @@ type
     procedure SimRatioExUtf16;
   end;
 
+  { TTestSeqUtils }
+
+  TTestSeqUtils = class(TTestCase)
+  private
+  type
+    TIntSeqUtil = specialize TGSeqUtil<Integer, Integer>;
+    TIntArray   = array of Integer;
+  published
+    procedure TestDiff;
+  end;
+
 implementation
 
 const
@@ -1880,11 +1891,71 @@ begin
   AssertTrue(SameValue(SimRatioLevExUtf16('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx), DblOne));
 end;
 
+{ TTestSeqUtils }
+
+procedure TTestSeqUtils.TestDiff;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+  d: TIntSeqUtil.TDiff;
+  I: TIntSeqUtil.TChange;
+  J: Integer;
+begin
+  d := TIntSeqUtil.Diff(a, b);
+  AssertTrue(d.Unchanged = nil);
+  AssertTrue(d.Deleted = nil);
+  AssertTrue(d.Inserted = nil);
+
+  a := [1, 2, 3];
+  d := TIntSeqUtil.Diff(a, b);
+  AssertTrue(d.Unchanged = nil);
+  AssertTrue(d.Inserted = nil);
+  AssertTrue(Length(d.Deleted) = 1);
+  I := d.Deleted[0];
+  AssertTrue((I.FromIndex = 0)and(I.Count = 3)and(I.LcsIndex = -1));
+
+  b := [1, 2, 3];
+  a := nil;
+  d := TIntSeqUtil.Diff(a, b);
+  AssertTrue(d.Unchanged = nil);
+  AssertTrue(d.Deleted = nil);
+  AssertTrue(Length(d.Inserted) = 1);
+  I := d.Inserted[0];
+  AssertTrue((I.FromIndex = 0)and(I.Count = 3)and(I.LcsIndex = -1));
+
+  a := [3, 4, 5];
+  d := TIntSeqUtil.Diff(a, b);
+  AssertTrue(Length(d.Unchanged) = 1);
+  AssertTrue(d.Unchanged[0] = 3);
+  AssertTrue(Length(d.Deleted) = 1);
+  I := d.Deleted[0];
+  AssertTrue((I.FromIndex = 1)and(I.Count = 2)and(I.LcsIndex = -1));
+  AssertTrue(Length(d.Inserted) = 1);
+  I := d.Inserted[0];
+  AssertTrue((I.FromIndex = 0)and(I.Count = 2)and(I.LcsIndex = 0));
+
+  a := [3,3,3,4,3,3,3,4];
+  b := [4,3,3,3,3,3,3];
+  d := TIntSeqUtil.Diff(a, b);
+  AssertTrue(Length(d.Unchanged) = 6);
+  for J := 0 to High(d.Unchanged) do
+    AssertTrue(d.Unchanged[J] = 3);
+  AssertTrue(Length(d.Deleted) = 2);
+  I := d.Deleted[0];
+  AssertTrue((I.FromIndex = 3)and(I.Count = 1)and(I.LcsIndex = 3));
+  I := d.Deleted[1];
+  AssertTrue((I.FromIndex = 7)and(I.Count = 1)and(I.LcsIndex = -1));
+  AssertTrue(Length(d.Inserted) = 1);
+  I := d.Inserted[0];
+  AssertTrue((I.FromIndex = 0)and(I.Count = 1)and(I.LcsIndex = 0));
+end;
+
 
 
 initialization
 
   RegisterTest(TTestUnicodeUtils);
+  RegisterTest(TTestSeqUtils);
 
 end.
 
