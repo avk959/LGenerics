@@ -120,6 +120,18 @@ type
   type
     TArray = array of T;
     PItem = ^T;
+    TChange = record
+      FromIndex,
+      Count,
+      LcsIndex: SizeInt;
+      constructor Create(aFrom, aCount, aLcsIdx: SizeInt);
+    end;
+    TChangeList = array of TChange;
+    TDiff = record
+      Unchanged: TArray;
+      Deleted: TChangeList;
+      Inserted: TChangeList;
+    end;
 
   private
   type
@@ -133,6 +145,7 @@ type
     TEntry    = specialize TGMapEntry<T, SizeInt>;
     TMap      = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
     TVector   = specialize TGLiteVector<T>;
+    TChVector = specialize TGLiteVector<TChange>;
     THelper   = class(specialize TGArrayHelpUtil<T>);
     TSnake    = record
       StartRow, StartCol,
@@ -233,6 +246,10 @@ type
     class function LcsMyers(const L, R: array of T): TArray; static;
   { similarity ratio using the Levenshtein distance }
     class function SimRatioLev(const L, R: array of T): Double; static;
+  type
+    TLcsAlgo = (laGus, laKr, laMyers);
+
+    class function Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
   end;
 
   TUcs4Seq  = array of Ucs4Char;
@@ -493,6 +510,15 @@ end;
 class function TUcs4Hasher.Equal(L, R: Ucs4Char): Boolean;
 begin
   Result := L = R;
+end;
+
+{ TGSeqUtil.TChange }
+
+constructor TGSeqUtil.TChange.Create(aFrom, aCount, aLcsIdx: SizeInt);
+begin
+  FromIndex := aFrom;
+  Count := aCount;
+  LcsIndex := aLcsIdx;
 end;
 
 { TGSeqUtil.TNode }
@@ -1899,6 +1925,52 @@ begin
   Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
 end;
 
+class function TGSeqUtil.Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TDiff;
+var
+  Lcs: TArray;
+  I, SrcIdx, TrgIdx, Count: SizeInt;
+  v: T;
+  Del, Ins: TChVector;
+begin
+  case aLcsAlgo of
+    laGus: Lcs := LcsGus(aSource, aTarget);
+    laKr:  Lcs := LcsKr(aSource, aTarget);
+  else// laMyers
+    Lcs := LcsMyers(aSource, aTarget);
+  end;
+  SrcIdx := 0;
+  TrgIdx := 0;
+  for I := 0 to System.High(Lcs) do
+    begin
+      v := Lcs[I];
+      if not Eq(v, aSource[SrcIdx]) then
+        begin
+          Count := 0;
+          repeat Inc(Count);
+          until Eq(v, aSource[SrcIdx + Count]);
+          Del.Add(TChange.Create(SrcIdx, Count, I));
+          SrcIdx += Count;
+        end;
+      if not Eq(v, aTarget[TrgIdx]) then
+        begin
+          Count := 0;
+          repeat Inc(Count);
+          until Eq(v, aTarget[TrgIdx + Count]);
+          Ins.Add(TChange.Create(TrgIdx, Count, I));
+          TrgIdx += Count;
+        end;
+      Inc(SrcIdx);
+      Inc(TrgIdx);
+    end;
+  if SrcIdx < System.Length(aSource) then
+    Del.Add(TChange.Create(SrcIdx, System.Length(aSource) - SrcIdx, NULL_INDEX));
+  if TrgIdx < System.Length(aTarget) then
+    Ins.Add(TChange.Create(TrgIdx, System.Length(aTarget) - TrgIdx, NULL_INDEX));
+  Result.Unchanged := Lcs;
+  Result.Deleted := Del.ToArray;
+  Result.Inserted := Ins.ToArray;
+end;
+
 type
   PUcs4Char    = ^Ucs4Char;
   TUcs4Util    = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
@@ -2096,10 +2168,7 @@ begin
   Result := GenericDistanceUtf16(L, R, aLimit, dfsuMyersLcsBound);
 end;
 
-type
-  TLcsFunSpecUtf16 = (lfsuGus, lfsuKR, lfsuMyers);
-
-function LcsGenegicUtf16(const L, R: unicodestring; aSpec: TLcsFunSpecUtf16): unicodestring;
+function LcsGenegicUtf16(const L, R: unicodestring; aSpec: TUcs4Util.TLcsAlgo): unicodestring;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
@@ -2130,8 +2199,8 @@ begin
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    lfsuGus: Result := Ucs4SeqToUtf16(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
-    lfsuKR:  Result := Ucs4SeqToUtf16(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    laGus: Result := Ucs4SeqToUtf16(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    laKR:  Result := Ucs4SeqToUtf16(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   else
     Result := Ucs4SeqToUtf16(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   end;
@@ -2139,17 +2208,17 @@ end;
 
 function LcsGusUtf16(const L, R: unicodestring): unicodestring;
 begin
-  Result := LcsGenegicUtf16(L, R, lfsuGus);
+  Result := LcsGenegicUtf16(L, R, laGus);
 end;
 
 function LcsKRUtf16(const L, R: unicodestring): unicodestring;
 begin
-  Result := LcsGenegicUtf16(L, R, lfsuKR);
+  Result := LcsGenegicUtf16(L, R, laKR);
 end;
 
 function LcsMyersUtf16(const L, R: unicodestring): unicodestring;
 begin
-  Result := LcsGenegicUtf16(L, R, lfsuMyers);
+  Result := LcsGenegicUtf16(L, R, laMyers);
 end;
 
 function SimRatioLevUtf16(const L, R: unicodestring): Double;
@@ -3141,10 +3210,7 @@ begin
   Result := s;
 end;
 
-type
-  TLcsFunSpec = (lfsGus, lfsKR, lfsMyers);
-
-function LcsGenegicUtf8(const L, R: string; aSpec: TLcsFunSpec): string;
+function LcsGenegicUtf8(const L, R: string; aSpec: TUcs4Util.TLcsAlgo): string;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
@@ -3175,8 +3241,8 @@ begin
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    lfsGus: Result := Ucs4SeqToUtf8(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
-    lfsKR:  Result := Ucs4SeqToUtf8(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    laGus: Result := Ucs4SeqToUtf8(TUcs4Util.LcsGus(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
+    laKR:  Result := Ucs4SeqToUtf8(TUcs4Util.LcsKR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   else
     Result := Ucs4SeqToUtf8(TUcs4Util.LcsMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]));
   end;
@@ -3184,17 +3250,17 @@ end;
 
 function LcsGusUtf8(const L, R: string): string;
 begin
-  Result := LcsGenegicUtf8(L, R, lfsGus);
+  Result := LcsGenegicUtf8(L, R, laGus);
 end;
 
 function LcsKRUtf8(const L, R: string): string;
 begin
-  Result := LcsGenegicUtf8(L, R, lfsKR);
+  Result := LcsGenegicUtf8(L, R, laKR);
 end;
 
 function LcsMyersUtf8(const L, R: string): string;
 begin
-  Result := LcsGenegicUtf8(L, R, lfsMyers);
+  Result := LcsGenegicUtf8(L, R, laMyers);
 end;
 
 function SimRatioLevUtf8(const L, R: string): Double;
