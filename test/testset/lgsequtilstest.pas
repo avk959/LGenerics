@@ -5,7 +5,7 @@ unit lgSeqUtilsTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, lgUtils, lgSeqUtils, Math;
+  Classes, SysUtils, fpcunit, testregistry, lgUtils, lgSeqUtils, Math, LazUtf8;
 
 type
 
@@ -37,6 +37,7 @@ type
     procedure LcsMyersUtf8Test;
     procedure SimRatioUtf8;
     procedure SimRatioExUtf8;
+    procedure FuzzySearchEdp;
 
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
@@ -1029,6 +1030,62 @@ begin
   AssertTrue(
     SameValue(SimRatioLevExUtf8('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]), DblOne));
   AssertTrue(SameValue(SimRatioLevExUtf8('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx), DblOne));
+end;
+
+procedure TTestUnicodeUtils.FuzzySearchEdp;
+var
+  p, p1: string;
+  I, J, Len, k: Integer;
+const
+  Text: string = 'The Levenshtein distance can also be computed between two longer strings, but the cost to compute it, which is roughly proportional to the product of the two string lengths, makes this impractical';
+begin
+  p := '';
+  k := 0;
+  J := 0;
+  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  p := 'can';
+  k := 3;
+  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  p := 'Levenhstein';
+  k := 2;
+  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+    begin
+      Len := Min(Utf8Length(p), I);
+      p1 := Utf8Copy(Text, Succ(I - Len), Len);
+      AssertTrue(LevDistanceMbrUtf8(p, p1) <= k);
+      Inc(J);
+    end;
+  AssertTrue(J = 1);
+
+  p := 'strung';
+  k := 1;
+  J := 0;
+  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+    begin
+      Len := Min(Utf8Length(p), I);
+      p1 := Utf8Copy(Text, Succ(I - Len), Len);
+      AssertTrue(LevDistanceMbrUtf8(p, p1) <= k);
+      Inc(J);
+    end;
+  AssertTrue(J = 2);
+
+  p := 'lung';
+  k := 1;
+  J := 0;
+  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+    begin
+      Len := Min(Utf8Length(p), I);
+      p1 := Utf8Copy(Text, Succ(I - Len), Len);
+      AssertTrue(LevDistanceMbrUtf8(p, p1) <= k);
+      Inc(J);
+    end;
+  AssertTrue(J = 2);
 end;
 
 {$WARN 4104 OFF}
