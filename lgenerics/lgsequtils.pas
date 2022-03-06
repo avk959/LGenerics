@@ -53,6 +53,7 @@ type
     PMatcher = ^TGBmSearch;
 
     TEnumerator = record
+    private
       FCurrIndex,
       FHeapLen: SizeInt;
       FHeap: PItem;
@@ -299,6 +300,43 @@ type
                              aMode: TSimMode = smSimple;
                              const aOptions: TSimOptions = [];
                              aLess: TUcs4Less = nil): Double;
+
+type
+  { TFuzzySearchEdp: approximate string matching with k differences;
+    uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN) time complexity }
+  TFuzzySearchEdp = record
+  private
+  type
+    TEnumerator = record
+    private
+      FPattern: TUcs4Seq;
+      FText: string;
+      FD: array of SizeInt;
+      FK,
+      FTop,
+      FPointIndex,
+      FTextIndex: SizeInt;
+      function GetCurrent: SizeInt; inline;
+    public
+      function MoveNext: Boolean;
+      property Current: SizeInt read GetCurrent;
+    end;
+
+    TMatches = record
+    private
+      FPattern,
+      FText: string;
+      FK: SizeInt;
+    public
+      function GetEnumerator: TEnumerator;
+    end;
+
+  public
+  { expects UTF-8 encoded strings as parameters; returns an enumerator of indexes
+    of code points(1-based) in aText such that there is an index I such that
+    LevenshteinDistance(aPattern, aText[I..Current]) <= K; K MUST be less then |aPattern| }
+    class function Matches(const aPattern, aText: string; K: SizeInt): TMatches; static;
+  end;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3361,6 +3399,76 @@ begin
 
   Result :=
     SimRatioLevGeneric(pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLess);
+end;
+
+{ TFuzzySearchEdp.TEnumerator }
+
+function TFuzzySearchEdp.TEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FPointIndex;
+end;
+
+function TFuzzySearchEdp.TEnumerator.MoveNext: Boolean;
+var
+  TextLen, I, PtLen, Cost, Err: SizeInt;
+  c: Ucs4Char;
+begin
+  TextLen := System.Length(FText);
+  if FTextIndex > TextLen then exit(False);
+  while FTextIndex <= TextLen do
+    begin
+      c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), PtLen);
+      FTextIndex += PtLen;
+      Inc(FPointIndex);
+      Cost := 0;
+      for I := 1 to FTop do
+        begin
+          if FPattern[I-1] = c then
+            Err := Cost
+          else
+            Err := Succ(lgUtils.MinOf3(FD[I-1], FD[I], Cost));
+          Cost := FD[I];
+          FD[I] := Err;
+        end;
+      while FD[FTop] > FK do Dec(FTop);
+      if FTop = System.Length(FPattern) then
+        exit(True)
+      else
+        Inc(FTop);
+    end;
+  Result := False;
+end;
+
+{ TFuzzySearchEdp.TMatches }
+
+function TFuzzySearchEdp.TMatches.GetEnumerator: TEnumerator;
+var
+  I: Integer;
+begin
+  Result.FTextIndex := 1;
+  Result.FPointIndex := 0;
+  if FK < 0 then FK := 0;
+  if FK >= Utf8Len(FPattern) then
+    begin
+      Result.FText := '';
+      exit;
+    end;
+  Result.FPattern := Utf8ToUcs4Seq(FPattern);
+  Result.FK := FK;
+  Result.FTop := Succ(FK);
+  Result.FText := FText;
+  System.SetLength(Result.FD, System.Length(Result.FPattern));
+  for I := 1 to System.High(Result.FD) do
+    Result.FD[I] := I;
+end;
+
+{ TFuzzySearchEdp }
+
+class function TFuzzySearchEdp.Matches(const aPattern, aText: string; K: SizeInt): TMatches;
+begin
+  Result.FPattern := aPattern;
+  Result.FText := aText;
+  Result.FK := K;
 end;
 
 end.
