@@ -100,11 +100,24 @@
   - radix sort
   - translation of Orson Peters' PDQSort algorithm
   - static segment tree
+  - longest increasing subsequence
   - ...
-#### Algorithms on strings
-  - Boyer-Moore string matching algorithm(in Fast Search variant),
-case sensitive and case insensitive(unit lgStrHelpers)
-  - Boyer-Moore-Horspool-Raita algorithm(unit lgStrHelpers)
+#### Algorithms on strings and sequences(units lgStrHelpers, lgSeqUtils)
+  - Boyer-Moore string matching algorithm(in Fast Search variant), case sensitive and case insensitive
+  - Boyer-Moore-Horspool-Raita algorithm
+  - longest common subsequence of two sequences:
+    + reducing the LCS problem to LIS
+    + Kumar-Rangan algorithm for LCS
+    + Myers algorithm for LCS
+  - the Levenshtein distance:
+    + simple DP algorithm
+    + modified Berghel-Roach algorithm
+    + Myers bit-vector algorithm with cut-off heuristic
+  - LCS distance:
+    + Myers algorithm for LCS distance
+  - fuzzy string matching(k differences)
+    + Ukkonen EDP algorithm
+  - fuzzy string matching with preprocessing(something similar to fuzzywuzzy)
 #### Other:
   - non-cryptogarphic hashes(unit lgHash):
     + Yann Collet's xxHash32, xxHash64
