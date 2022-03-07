@@ -21,6 +21,7 @@ type
     procedure ValidateDfa;
     procedure Validate;
 
+    procedure Utf8ToUcs4;
     procedure LevenshteinDistUtf8;
     procedure LevenshteinDistMbrUtf8;
     procedure LevenshteinDistMbrBoundedUtf8;
@@ -39,6 +40,7 @@ type
     procedure SimRatioExUtf8;
     procedure FuzzySearchEdp;
 
+    procedure Utf16ToUcs4;
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
     procedure LevenshteinDistMbrBoundedUtf16;
@@ -171,6 +173,32 @@ begin
 
   for s in MalFormed do
     AssertFalse(Utf8Validate(s));
+end;
+
+procedure TTestUnicodeUtils.Utf8ToUcs4;
+const
+  s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
+  s2:  string = 'Dieu, quelle virulente sortie![4] – отвечал, нисколько не смутясь такою встречей';
+  s3:  string = 'Вы не видали еще, – или: – вы не знакомы с ma tante? – говорила Анна Павловна';
+  s4:  string = 'Il va se faire tuer. Dites-moi, pourquoi cette vilaine guerre, – сказала она князю Василию';
+  s5:  string = 'Да, я слышал про его план вечного мира, и это очень интересно, но едва ли возможно…';
+  s6:  string = 'шепнула Анна Павловна одному. – Le vicomte est un parfait conteur, – проговорила она другому';
+  s7:  string = 'Княжна облокотила свою открытую полную руку на столик и не нашла нужным что-либо сказать';
+  s8:  string = 'Le charmant Hippolyte поражал своим необыкновенным сходством с сестрою-красавицею';
+  s9:  string = 'Ce n’est pas une histoire de revenants? – сказал он, усевшись подле княгини и торопливо пристроив к глазам свой лорнет';
+  s10: string = '悲しい時間！ おお魅力！';
+begin
+  AssertTrue('empty string', Ucs4SeqToUtf8(Utf8StrToUcs4Seq('')) = '');
+  AssertTrue('s1', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s1)) = s1);
+  AssertTrue('s2', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s2)) = s2);
+  AssertTrue('s3', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s3)) = s3);
+  AssertTrue('s4', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s4)) = s4);
+  AssertTrue('s5', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s5)) = s5);
+  AssertTrue('s6', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s6)) = s6);
+  AssertTrue('s7', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s7)) = s7);
+  AssertTrue('s8', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s8)) = s8);
+  AssertTrue('s9', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s9)) = s9);
+  AssertTrue('s10', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s10)) = s10);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistUtf8;
@@ -1089,6 +1117,32 @@ begin
 end;
 
 {$WARN 4104 OFF}
+procedure TTestUnicodeUtils.Utf16ToUcs4;
+const
+  s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
+  s2:  string = 'Dieu, quelle virulente sortie![4] – отвечал, нисколько не смутясь такою встречей';
+  s3:  string = 'Вы не видали еще, – или: – вы не знакомы с ma tante? – говорила Анна Павловна';
+  s4:  string = 'Il va se faire tuer. Dites-moi, pourquoi cette vilaine guerre, – сказала она князю Василию';
+  s5:  string = 'Да, я слышал про его план вечного мира, и это очень интересно, но едва ли возможно…';
+  s6:  string = 'шепнула Анна Павловна одному. – Le vicomte est un parfait conteur, – проговорила она другому';
+  s7:  string = 'Княжна облокотила свою открытую полную руку на столик и не нашла нужным что-либо сказать';
+  s8:  string = 'Le charmant Hippolyte поражал своим необыкновенным сходством с сестрою-красавицею';
+  s9:  string = 'Ce n’est pas une histoire de revenants? – сказал он, усевшись подле княгини и торопливо пристроив к глазам свой лорнет';
+  s10: string = '悲しい時間！ おお魅力！';
+begin
+  AssertTrue('empty string', Ucs4SeqToUtf16(Utf16ToUcs4Seq('')) = '');
+  AssertTrue('s1', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s1)) = s1);
+  AssertTrue('s2', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s2)) = s2);
+  AssertTrue('s3', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s3)) = s3);
+  AssertTrue('s4', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s4)) = s4);
+  AssertTrue('s5', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s5)) = s5);
+  AssertTrue('s6', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s6)) = s6);
+  AssertTrue('s7', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s7)) = s7);
+  AssertTrue('s8', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s8)) = s8);
+  AssertTrue('s9', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s9)) = s9);
+  AssertTrue('s10', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s10)) = s10);
+end;
+
 procedure TTestUnicodeUtils.LevenshteinDistUtf16;
 var
   s1, s2: string;
