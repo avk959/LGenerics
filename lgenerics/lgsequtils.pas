@@ -258,7 +258,7 @@ type
 
 { the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
-  function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq; inline;
+  function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
   function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
   function LevDistanceUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
@@ -286,7 +286,7 @@ type
 { these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
-  function Utf8StrToUcs4Seq(const s: string): TUcs4Seq; inline;
+  function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
   function LevDistanceUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: string): SizeInt; inline;
@@ -2023,7 +2023,7 @@ const
   MAX_STATIC       = TUcs4Util.MAX_STATIC;
   UNICODE_BAD_CHAR = $fffd;
 
-procedure Utf16ToUcs4Seq(const s: unicodestring; pSeq: PUcs4Char; out aSeqLen: SizeInt);
+procedure Utf16ToUcs4SeqImpl(const s: unicodestring; pSeq: PUcs4Char; out aSeqLen: SizeInt);
 var
   I, Len: SizeInt;
   p: PWideChar;
@@ -2051,7 +2051,7 @@ begin
     end;
 end;
 
-procedure Utf16ToUcs4Seq(const s: unicodestring; out aSeq: TUcs4Seq);
+procedure Utf16ToUcs4SeqImpl(const s: unicodestring; out aSeq: TUcs4Seq);
 var
   I, Len, Count: SizeInt;
   p: PWideChar;
@@ -2079,6 +2079,28 @@ begin
       Inc(Count);
     end;
   System.SetLength(aSeq, Count);
+end;
+
+function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
+var
+  I, J: SizeInt;
+  pStr: PUnicodeChar absolute aStr;
+  pSub: PUnicodeChar absolute aSub;
+begin
+  I := 0;
+  J := 0;
+  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
+    begin
+      if pStr[I] = pSub[J] then
+        Inc(J);
+      Inc(I);
+    end;
+  Result := J = System.Length(aSub);
+end;
+
+function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
+begin
+  Utf16ToUcs4SeqImpl(s, Result);
 end;
 
 function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
@@ -2110,28 +2132,6 @@ begin
     end;
 end;
 
-function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
-var
-  I, J: SizeInt;
-  pStr: PUnicodeChar absolute aStr;
-  pSub: PUnicodeChar absolute aSub;
-begin
-  I := 0;
-  J := 0;
-  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
-    begin
-      if pStr[I] = pSub[J] then
-        Inc(J);
-      Inc(I);
-    end;
-  Result := J = System.Length(aSub);
-end;
-
-function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
-begin
-  Utf16ToUcs4Seq(s, Result);
-end;
-
 type
   TDistFunSpecUtf16 = (
     dfsuDyn, dfsuMbr, dfsuMyers, dfsuMyersLcs, dfsuMbrBound, dfsuMyersBound, dfsuMyersLcsBound);
@@ -2147,22 +2147,22 @@ begin
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf16ToUcs4Seq(L, pL, LenL);
+      Utf16ToUcs4SeqImpl(L, pL, LenL);
     end
   else
     begin
-      Utf16ToUcs4Seq(L, LBuf);
+      Utf16ToUcs4SeqImpl(L, LBuf);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf16ToUcs4Seq(R, pR, LenR);
+      Utf16ToUcs4SeqImpl(R, pR, LenR);
     end
   else
     begin
-      Utf16ToUcs4Seq(R, RBuf);
+      Utf16ToUcs4SeqImpl(R, RBuf);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -2225,22 +2225,22 @@ begin
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf16ToUcs4Seq(L, pL, LenL);
+      Utf16ToUcs4SeqImpl(L, pL, LenL);
     end
   else
     begin
-      Utf16ToUcs4Seq(L, LBuf);
+      Utf16ToUcs4SeqImpl(L, LBuf);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf16ToUcs4Seq(R, pR, LenR);
+      Utf16ToUcs4SeqImpl(R, pR, LenR);
     end
   else
     begin
-      Utf16ToUcs4Seq(R, RBuf);
+      Utf16ToUcs4SeqImpl(R, RBuf);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -2278,22 +2278,22 @@ begin
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf16ToUcs4Seq(L, pL, LenL);
+      Utf16ToUcs4SeqImpl(L, pL, LenL);
     end
   else
     begin
-      Utf16ToUcs4Seq(L, LBuf);
+      Utf16ToUcs4SeqImpl(L, LBuf);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf16ToUcs4Seq(R, pR, LenR);
+      Utf16ToUcs4SeqImpl(R, pR, LenR);
     end
   else
     begin
-      Utf16ToUcs4Seq(R, RBuf);
+      Utf16ToUcs4SeqImpl(R, RBuf);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -2704,22 +2704,22 @@ begin
   if System.Length(LocL) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf16ToUcs4Seq(LocL, pL, LenL);
+      Utf16ToUcs4SeqImpl(LocL, pL, LenL);
     end
   else
     begin
-      Utf16ToUcs4Seq(LocL, LBuf);
+      Utf16ToUcs4SeqImpl(LocL, LBuf);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(LocR) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf16ToUcs4Seq(LocR, pR, LenR);
+      Utf16ToUcs4SeqImpl(LocR, pR, LenR);
     end
   else
     begin
-      Utf16ToUcs4Seq(LocR, RBuf);
+      Utf16ToUcs4SeqImpl(LocR, RBuf);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -2885,7 +2885,7 @@ begin
     end;
 end;
 
-function Utf8ToUcs4Seq(const s: rawbytestring): TUcs4Seq;
+function Utf8ToUcs4SeqImpl(const s: rawbytestring): TUcs4Seq;
 var
   r: TUcs4Seq = nil;
   I, J, PtSize, StrLen: SizeInt;
@@ -2905,7 +2905,7 @@ begin
   Result := r;
 end;
 
-procedure Utf8ToUcs4Seq(const s: rawbytestring; aPtr: PUcs4Char; out aLen: SizeInt);
+procedure Utf8ToUcs4SeqImpl(const s: rawbytestring; aPtr: PUcs4Char; out aLen: SizeInt);
 var
   I, PtSize, StrLen: SizeInt;
   p: PByte absolute s;
@@ -3076,9 +3076,9 @@ begin
   Result := J = LenSub;
 end;
 
-function Utf8StrToUcs4Seq(const s: string): TUcs4Seq;
+function Utf8ToUcs4Seq(const s: string): TUcs4Seq;
 begin
-  Result := Utf8ToUcs4Seq(s);
+  Result := Utf8ToUcs4SeqImpl(s);
 end;
 
 type
@@ -3096,22 +3096,22 @@ begin
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf8ToUcs4Seq(L, pL, LenL);
+      Utf8ToUcs4SeqImpl(L, pL, LenL);
     end
   else
     begin
-      LBuf := Utf8ToUcs4Seq(L);
+      LBuf := Utf8ToUcs4SeqImpl(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf8ToUcs4Seq(R, pR, LenR);
+      Utf8ToUcs4SeqImpl(R, pR, LenR);
     end
   else
     begin
-      RBuf := Utf8ToUcs4Seq(R);
+      RBuf := Utf8ToUcs4SeqImpl(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -3272,22 +3272,22 @@ begin
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf8ToUcs4Seq(L, pL, LenL);
+      Utf8ToUcs4SeqImpl(L, pL, LenL);
     end
   else
     begin
-      LBuf := Utf8ToUcs4Seq(L);
+      LBuf := Utf8ToUcs4SeqImpl(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf8ToUcs4Seq(R, pR, LenR);
+      Utf8ToUcs4SeqImpl(R, pR, LenR);
     end
   else
     begin
-      RBuf := Utf8ToUcs4Seq(R);
+      RBuf := Utf8ToUcs4SeqImpl(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -3325,22 +3325,22 @@ begin
   if System.Length(L) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf8ToUcs4Seq(L, pL, LenL);
+      Utf8ToUcs4SeqImpl(L, pL, LenL);
     end
   else
     begin
-      LBuf := Utf8ToUcs4Seq(L);
+      LBuf := Utf8ToUcs4SeqImpl(L);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(R) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf8ToUcs4Seq(R, pR, LenR);
+      Utf8ToUcs4SeqImpl(R, pR, LenR);
     end
   else
     begin
-      RBuf := Utf8ToUcs4Seq(R);
+      RBuf := Utf8ToUcs4SeqImpl(R);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -3390,22 +3390,22 @@ begin
   if System.Length(LocL) <= MAX_STATIC then
     begin
       pL := @LBufSt[0];
-      Utf8ToUcs4Seq(LocL, pL, LenL);
+      Utf8ToUcs4SeqImpl(LocL, pL, LenL);
     end
   else
     begin
-      LBuf := Utf8ToUcs4Seq(LocL);
+      LBuf := Utf8ToUcs4SeqImpl(LocL);
       LenL := System.Length(LBuf);
       pL := Pointer(LBuf);
     end;
   if System.Length(LocR) <= MAX_STATIC then
     begin
       pR := @RBufSt[0];
-      Utf8ToUcs4Seq(LocR, pR, LenR);
+      Utf8ToUcs4SeqImpl(LocR, pR, LenR);
     end
   else
     begin
-      RBuf := Utf8ToUcs4Seq(LocR);
+      RBuf := Utf8ToUcs4SeqImpl(LocR);
       LenR := System.Length(RBuf);
       pR := Pointer(RBuf);
     end;
@@ -3466,7 +3466,7 @@ begin
       Result.FText := '';
       exit;
     end;
-  Result.FPattern := Utf8ToUcs4Seq(FPattern);
+  Result.FPattern := Utf8ToUcs4SeqImpl(FPattern);
   Result.FK := FK;
   Result.FTop := Succ(FK);
   Result.FText := FText;
