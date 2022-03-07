@@ -258,6 +258,8 @@ type
 
 { the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
+  function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq; inline;
+  function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
   function LevDistanceUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
@@ -284,6 +286,8 @@ type
 { these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
+  function Utf8StrToUcs4Seq(const s: string): TUcs4Seq; inline;
+  function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
   function LevDistanceUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
@@ -2010,7 +2014,6 @@ begin
 end;
 
 type
-  PUcs4Char    = ^Ucs4Char;
   TUcs4Util    = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
   TByte4       = array[0..3] of Byte;
   TUcs4Rec     = record Key: Ucs4Char end;
@@ -2078,20 +2081,20 @@ begin
   System.SetLength(aSeq, Count);
 end;
 
-function Ucs4SeqToUtf16(const aSeq: array of Ucs4Char) : unicodestring;
+function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
 var
   I, Len: SizeInt;
   c: Ucs4Char;
   p: PWideChar;
 begin
   Len := 0;
-  for I := 0 to System.High(aSeq) do
-    Len += Succ(Ord((aSeq[I] > $ffff) and (DWord(aSeq[I]) <= $10ffff)));
+  for I := 0 to System.High(s) do
+    Len += Succ(Ord((s[I] > $ffff) and (DWord(s[I]) <= $10ffff)));
   System.SetLength(Result, Len);
   p := Pointer(Result);
-  for I := 0 to System.High(aSeq) do
+  for I := 0 to System.High(s) do
     begin
-      c := aSeq[I];
+      c := s[I];
       if c <= $ffff then
         p^ := WideChar(c)
       else
@@ -2122,6 +2125,11 @@ begin
       Inc(I);
     end;
   Result := J = System.Length(aSub);
+end;
+
+function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
+begin
+  Utf16ToUcs4Seq(s, Result);
 end;
 
 type
@@ -3068,6 +3076,11 @@ begin
   Result := J = LenSub;
 end;
 
+function Utf8StrToUcs4Seq(const s: string): TUcs4Seq;
+begin
+  Result := Utf8ToUcs4Seq(s);
+end;
+
 type
   TDistanceFunSpec = (
     dfsDyn, dfsMbr, dfsMyers, dfsMyersLcs, dfsMbrBound, dfsMyersBound, dfsMyersLcsBound);
@@ -3202,25 +3215,25 @@ begin
     Result += Ucs4CharUtf8Len(r[I]);
 end;
 
-function Ucs4SeqToUtf8(const aSeq: TUcs4Seq): string;
+function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
 var
-  s: string = '';
+  r: string = '';
   I, J: SizeInt;
   Curr: Ucs4Char;
   Len: Integer;
   p: PByte;
 begin
-  System.SetLength(s, System.Length(aSeq));
-  p := Pointer(s);
+  System.SetLength(r, System.Length(s));
+  p := Pointer(r);
   I := 0;
-  for J := 0 to System.High(aSeq) do
+  for J := 0 to System.High(s) do
     begin
-      Curr := aSeq[J];
+      Curr := s[J];
       Len := Ucs4CharUtf8Len(Curr);
-      if System.Length(s) < I + Len then
+      if System.Length(r) < I + Len then
         begin
-          System.SetLength(s, (I + Len)*2);
-          p := Pointer(s);
+          System.SetLength(r, (I + Len)*2);
+          p := Pointer(r);
         end;
       case Len of
         1: p[I] := Byte(Curr);
@@ -3244,8 +3257,8 @@ begin
       end;
       I += Len;
     end;
-  System.SetLength(s, I);
-  Result := s;
+  System.SetLength(r, I);
+  Result := r;
 end;
 
 function LcsGenegicUtf8(const L, R: string; aSpec: TUcs4Util.TLcsAlgo): string;
