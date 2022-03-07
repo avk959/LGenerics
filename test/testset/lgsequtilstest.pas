@@ -188,17 +188,17 @@ const
   s9:  string = 'Ce n’est pas une histoire de revenants? – сказал он, усевшись подле княгини и торопливо пристроив к глазам свой лорнет';
   s10: string = '悲しい時間！ おお魅力！';
 begin
-  AssertTrue('empty string', Ucs4SeqToUtf8(Utf8StrToUcs4Seq('')) = '');
-  AssertTrue('s1', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s1)) = s1);
-  AssertTrue('s2', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s2)) = s2);
-  AssertTrue('s3', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s3)) = s3);
-  AssertTrue('s4', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s4)) = s4);
-  AssertTrue('s5', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s5)) = s5);
-  AssertTrue('s6', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s6)) = s6);
-  AssertTrue('s7', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s7)) = s7);
-  AssertTrue('s8', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s8)) = s8);
-  AssertTrue('s9', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s9)) = s9);
-  AssertTrue('s10', Ucs4SeqToUtf8(Utf8StrToUcs4Seq(s10)) = s10);
+  AssertTrue('empty string', Ucs4SeqToUtf8(Utf8ToUcs4Seq('')) = '');
+  AssertTrue('s1', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s1)) = s1);
+  AssertTrue('s2', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s2)) = s2);
+  AssertTrue('s3', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s3)) = s3);
+  AssertTrue('s4', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s4)) = s4);
+  AssertTrue('s5', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s5)) = s5);
+  AssertTrue('s6', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s6)) = s6);
+  AssertTrue('s7', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s7)) = s7);
+  AssertTrue('s8', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s8)) = s8);
+  AssertTrue('s9', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s9)) = s9);
+  AssertTrue('s10', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s10)) = s10);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistUtf8;
