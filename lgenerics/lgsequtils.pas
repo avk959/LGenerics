@@ -2016,6 +2016,11 @@ end;
 type
   TUcs4Util    = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
   TByte4       = array[0..3] of Byte;
+  TByte3       = array[0..2] of Byte;
+  TByte2       = array[0..1] of Byte;
+  PByte4       = ^TByte4;
+  PByte3       = ^TByte3;
+  PByte2       = ^TByte2;
   TUcs4Rec     = record Key: Ucs4Char end;
   TUcs4CharSet = specialize TGLiteChainHashTable<Ucs4Char, TUcs4Rec, TUcs4Hasher>;
 
@@ -3177,20 +3182,24 @@ begin
         aBytes[1] := Byte(c and $3f or $80);
         Result := 2;
       end;
-    $800..$ffff:
+    $800..$d7ff, $e000..$ffff:
       begin
         aBytes[0] := Byte(c shr 12 or $e0);
         aBytes[1] := Byte(c shr 6) and $3f or $80;
         aBytes[2] := Byte(c and $3f) or $80;
         Result := 3;
       end;
+    $10000..$10ffff:
+      begin
+        aBytes[0] := Byte(c shr 18) or $f0;
+        aBytes[1] := Byte(c shr 12) and $3f or $80;
+        aBytes[2] := Byte(c shr  6) and $3f or $80;
+        aBytes[3] := Byte(c and $3f) or $80;
+        Result := 4;
+      end;
   else
-    // $10000..$10ffff:
-    aBytes[0] := Byte(c shr 18) or $f0;
-    aBytes[1] := Byte(c shr 12) and $3f or $80;
-    aBytes[2] := Byte(c shr  6) and $3f or $80;
-    aBytes[3] := Byte(c and $3f) or $80;
-    Result := 4;
+    aBytes[0] := Ord('?');
+    Result := 1;
   end;
 end;
 
@@ -3199,10 +3208,11 @@ begin
   case c of
     0..127:          Result := 1;
     128..$7ff:       Result := 2;
-    $800..$ffff:     Result := 3;
+    $800..$d7ff,
+    $e000..$ffff:    Result := 3;
+    $10000..$10ffff: Result := 4;
   else
-    // $10000..$10ffff
-    Result := 4;
+    Result := 1;
   end;
 end;
 
@@ -3222,6 +3232,7 @@ var
   Curr: Ucs4Char;
   Len: Integer;
   p: PByte;
+  Bytes: TByte4;
 begin
   System.SetLength(r, System.Length(s));
   p := Pointer(r);
@@ -3229,7 +3240,7 @@ begin
   for J := 0 to System.High(s) do
     begin
       Curr := s[J];
-      Len := Ucs4CharUtf8Len(Curr);
+      Len := Ucs4CharToUtf8Char(Curr, Bytes);
       if System.Length(r) < I + Len then
         begin
           System.SetLength(r, (I + Len)*2);
@@ -3237,23 +3248,11 @@ begin
         end;
       case Len of
         1: p[I] := Byte(Curr);
-        2:
-          begin
-            p[I  ] := Byte(Curr shr 6 or $c0);
-            p[I+1] := Byte(Curr and $3f or $80);
-          end;
-        3:
-          begin
-            p[I  ] := Byte(Curr shr 12 or $e0);
-            p[I+1] := Byte(Curr shr 6) and $3f or $80;
-            p[I+2] := Byte(Curr and $3f) or $80;
-          end;
+        2: PByte2(@p[I])^ := PByte2(@Bytes)^;
+        3: PByte3(@p[I])^ := PByte3(@Bytes)^;
       else
         // 4
-        p[I  ] := Byte(Curr shr 18) or $f0;
-        p[I+1] := Byte(Curr shr 12) and $3f or $80;
-        p[I+2] := Byte(Curr shr  6) and $3f or $80;
-        p[I+3] := Byte(Curr and $3f) or $80;
+        PByte4(@p[I])^ := Bytes;
       end;
       I += Len;
     end;
