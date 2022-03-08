@@ -37,7 +37,6 @@ uses
 type
 
   TGGuidHelper = record helper(TGuidHelper) for TGUID
-  type
     class function HashCode(const aValue: TGUID): SizeInt; static; inline;
     class function Equal(const L, R: TGUID): Boolean; static; inline;
     class function Less(const L, R: TGUID): Boolean; static; inline;

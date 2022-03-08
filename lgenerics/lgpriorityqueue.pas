@@ -65,7 +65,6 @@ type
     procedure FloatUp(aIndex: SizeInt);  override;
     class function DoCompare(const L, R: T): Boolean; static;
   public
-  type
     class function Comparator: TLess; static; inline;
   end;
 
