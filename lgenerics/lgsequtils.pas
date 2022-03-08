@@ -307,6 +307,7 @@ type
 
 type
   { TFuzzySearchEdp: approximate string matching with k differences;
+    expects UTF-8 encoded strings as parameters;
     uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN) time complexity }
   TFuzzySearchEdp = record
   private
@@ -314,8 +315,8 @@ type
     TEnumerator = record
     private
       FPattern: TUcs4Seq;
-      FText: string;
       FD: array of SizeInt;
+      FText: string;
       FK,
       FTop,
       FPointIndex,
@@ -328,18 +329,21 @@ type
 
     TMatches = record
     private
-      FPattern,
-      FText: string;
+      FSearch: ^TFuzzySearchEdp;
       FK: SizeInt;
+      FText: string;
     public
       function GetEnumerator: TEnumerator;
     end;
-
+  var
+    FPattern: TUcs4Seq;
+    FD: array of SizeInt;
   public
-  { expects UTF-8 encoded strings as parameters; returns an enumerator of indexes
-    of code points(1-based) in aText such that there is an index I such that
-    LevenshteinDistance(aPattern, aText[I..Current]) <= K; K MUST be less then |aPattern| }
-    class function Matches(const aPattern, aText: string; K: SizeInt): TMatches; static;
+    constructor Create(const aPattern: string);
+  { returns an enumerator of indexes of code points(1-based) in aText such that
+    there is an index I such that LevenshteinDistance(aPattern, aText[I..Current]) <= K;
+    K MUST be less then |aPattern| }
+    function Matches(const aText: string; K: SizeInt): TMatches;
   end;
 
 implementation
@@ -3459,28 +3463,38 @@ var
 begin
   Result.FTextIndex := 1;
   Result.FPointIndex := 0;
-  if FK < 0 then FK := 0;
-  if FK >= Utf8Len(FPattern) then
+  if FK >= System.Length(FSearch^.FPattern) then
     begin
       Result.FText := '';
       exit;
     end;
-  Result.FPattern := Utf8ToUcs4SeqImpl(FPattern);
+  Result.FPattern := FSearch^.FPattern;
   Result.FK := FK;
   Result.FTop := Succ(FK);
   Result.FText := FText;
-  System.SetLength(Result.FD, System.Length(Result.FPattern));
-  for I := 1 to System.High(Result.FD) do
-    Result.FD[I] := I;
+  with FSearch^ do
+    for I := 1 to System.High(FD) do
+      FD[I] := I;
+  Result.FD := FSearch^.FD;
 end;
 
 { TFuzzySearchEdp }
 
-class function TFuzzySearchEdp.Matches(const aPattern, aText: string; K: SizeInt): TMatches;
+constructor TFuzzySearchEdp.Create(const aPattern: string);
 begin
-  Result.FPattern := aPattern;
+  FPattern := nil;
+  FD := nil;
+  if aPattern = '' then exit;
+  FPattern := Utf8ToUcs4Seq(aPattern);
+  System.SetLength(FD, Succ(System.Length(FPattern)));
+end;
+
+function TFuzzySearchEdp.Matches(const aText: string; K: SizeInt): TMatches;
+begin
   Result.FText := aText;
+  if K < 0 then K := 0;
   Result.FK := K;
+  Result.FSearch := @Self;
 end;
 
 end.
