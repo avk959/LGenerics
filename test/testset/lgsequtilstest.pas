@@ -1064,25 +1064,29 @@ procedure TTestUnicodeUtils.FuzzySearchEdp;
 var
   p, p1: string;
   I, J, Len, k: Integer;
+  m: TFuzzySearchEdp;
 const
   Text: string = 'The Levenshtein distance can also be computed between two longer strings, but the cost to compute it, which is roughly proportional to the product of the two string lengths, makes this impractical';
 begin
   p := '';
   k := 0;
   J := 0;
-  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+  m := TFuzzySearchEdp.Create(p);
+  for I in m.Matches(Text, k) do
     Inc(J);
   AssertTrue(J = 0);
 
   p := 'can';
   k := 3;
-  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+  m := TFuzzySearchEdp.Create(p);
+  for I in m.Matches(Text, k) do
     Inc(J);
   AssertTrue(J = 0);
 
   p := 'Levenhstein';
   k := 2;
-  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+  m := TFuzzySearchEdp.Create(p);
+  for I in m.Matches(Text, k) do
     begin
       Len := Min(Utf8Length(p), I);
       p1 := Utf8Copy(Text, Succ(I - Len), Len);
@@ -1094,7 +1098,8 @@ begin
   p := 'strung';
   k := 1;
   J := 0;
-  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+  m := TFuzzySearchEdp.Create(p);
+  for I in m.Matches(Text, k) do
     begin
       Len := Min(Utf8Length(p), I);
       p1 := Utf8Copy(Text, Succ(I - Len), Len);
@@ -1106,7 +1111,8 @@ begin
   p := 'lung';
   k := 1;
   J := 0;
-  for I in TFuzzySearchEdp.Matches(p, Text, k) do
+  m := TFuzzySearchEdp.Create(p);
+  for I in m.Matches(Text, k) do
     begin
       Len := Min(Utf8Length(p), I);
       p1 := Utf8Copy(Text, Succ(I - Len), Len);
