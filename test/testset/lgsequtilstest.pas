@@ -2015,56 +2015,52 @@ var
   a: TIntArray = nil;
   b: TIntArray = nil;
   d: TIntSeqUtil.TDiff;
-  I: TIntSeqUtil.TChange;
-  J: Integer;
+  I: Integer;
 begin
   d := TIntSeqUtil.Diff(a, b);
-  AssertTrue(d.Unchanged = nil);
-  AssertTrue(d.Deleted = nil);
-  AssertTrue(d.Inserted = nil);
+  AssertTrue(d.SourceChanges = nil);
+  AssertTrue(d.TargetChanges = nil);
 
   a := [1, 2, 3];
   d := TIntSeqUtil.Diff(a, b);
-  AssertTrue(d.Unchanged = nil);
-  AssertTrue(d.Inserted = nil);
-  AssertTrue(Length(d.Deleted) = 1);
-  I := d.Deleted[0];
-  AssertTrue((I.FromIndex = 0)and(I.Count = 3)and(I.LcsIndex = -1));
+  AssertTrue(Length(d.SourceChanges) = Length(a));
+  AssertTrue(d.TargetChanges = nil);
+  for I := 0 to High(d.SourceChanges) do
+    AssertTrue(d.SourceChanges[I]);
 
   b := [1, 2, 3];
   a := nil;
   d := TIntSeqUtil.Diff(a, b);
-  AssertTrue(d.Unchanged = nil);
-  AssertTrue(d.Deleted = nil);
-  AssertTrue(Length(d.Inserted) = 1);
-  I := d.Inserted[0];
-  AssertTrue((I.FromIndex = 0)and(I.Count = 3)and(I.LcsIndex = -1));
+  AssertTrue(Length(d.TargetChanges) = Length(b));
+  AssertTrue(d.SourceChanges = nil);
+  for I := 0 to High(d.TargetChanges) do
+    AssertTrue(d.TargetChanges[I]);
 
-  a := [3, 4, 5];
+  a := [4, 5, 6];
   d := TIntSeqUtil.Diff(a, b);
-  AssertTrue(Length(d.Unchanged) = 1);
-  AssertTrue(d.Unchanged[0] = 3);
-  AssertTrue(Length(d.Deleted) = 1);
-  I := d.Deleted[0];
-  AssertTrue((I.FromIndex = 1)and(I.Count = 2)and(I.LcsIndex = -1));
-  AssertTrue(Length(d.Inserted) = 1);
-  I := d.Inserted[0];
-  AssertTrue((I.FromIndex = 0)and(I.Count = 2)and(I.LcsIndex = 0));
 
-  a := [3,3,3,4,3,3,3,4];
-  b := [4,3,3,3,3,3,3];
+  AssertTrue(Length(d.SourceChanges) = Length(a));
+  AssertTrue(Length(d.TargetChanges) = Length(b));
+  for I := 0 to High(d.SourceChanges) do
+    AssertTrue(d.SourceChanges[I]);
+  for I := 0 to High(d.TargetChanges) do
+    AssertTrue(d.TargetChanges[I]);
+
+  a := [3,3,3,4,3,3,3,4,3,5,7];
+  b := [4,3,3,3,3,3,3,3,5];
   d := TIntSeqUtil.Diff(a, b);
-  AssertTrue(Length(d.Unchanged) = 6);
-  for J := 0 to High(d.Unchanged) do
-    AssertTrue(d.Unchanged[J] = 3);
-  AssertTrue(Length(d.Deleted) = 2);
-  I := d.Deleted[0];
-  AssertTrue((I.FromIndex = 3)and(I.Count = 1)and(I.LcsIndex = 3));
-  I := d.Deleted[1];
-  AssertTrue((I.FromIndex = 7)and(I.Count = 1)and(I.LcsIndex = -1));
-  AssertTrue(Length(d.Inserted) = 1);
-  I := d.Inserted[0];
-  AssertTrue((I.FromIndex = 0)and(I.Count = 1)and(I.LcsIndex = 0));
+  AssertTrue(Length(d.SourceChanges) = Length(a));
+  AssertTrue(Length(d.TargetChanges) = Length(b));
+  for I := 0 to High(a) do
+    if I in [3,7,10] then
+      AssertTrue(d.SourceChanges[I])
+    else
+      AssertFalse(d.SourceChanges[I]);
+  for I := 0 to High(b) do
+    if I = 0 then
+      AssertTrue(d.TargetChanges[I])
+    else
+      AssertFalse(d.TargetChanges[I]);
 end;
 
 
