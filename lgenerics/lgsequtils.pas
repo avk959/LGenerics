@@ -121,17 +121,9 @@ type
   type
     TArray = array of T;
     PItem = ^T;
-    TChange = record
-      FromIndex,
-      Count,
-      LcsIndex: SizeInt;
-      constructor Create(aFrom, aCount, aLcsIdx: SizeInt);
-    end;
-    TChangeList = array of TChange;
     TDiff = record
-      Unchanged: TArray;
-      Deleted: TChangeList;
-      Inserted: TChangeList;
+      SourceChanges,                   //here True indicates deletion
+      TargetChanges: array of Boolean; //here True indicates insertion
     end;
 
   private
@@ -146,7 +138,6 @@ type
     TEntry    = specialize TGMapEntry<T, SizeInt>;
     TMap      = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
     TVector   = specialize TGLiteVector<T>;
-    TChVector = specialize TGLiteVector<TChange>;
     THelper   = class(specialize TGArrayHelpUtil<T>);
     TSnake    = record
       StartRow, StartCol,
@@ -556,15 +547,6 @@ end;
 class function TUcs4Hasher.Equal(L, R: Ucs4Char): Boolean;
 begin
   Result := L = R;
-end;
-
-{ TGSeqUtil.TChange }
-
-constructor TGSeqUtil.TChange.Create(aFrom, aCount, aLcsIdx: SizeInt);
-begin
-  FromIndex := aFrom;
-  Count := aCount;
-  LcsIndex := aLcsIdx;
 end;
 
 { TGSeqUtil.TNode }
@@ -1974,9 +1956,10 @@ end;
 class function TGSeqUtil.Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TDiff;
 var
   Lcs: TArray;
-  I, SrcIdx, TrgIdx, Count: SizeInt;
+  I, SrcIdx, TrgIdx: SizeInt;
   v: T;
-  Del, Ins: TChVector;
+  Del: array of Boolean = nil;
+  Ins: array of Boolean = nil;
 begin
   case aLcsAlgo of
     laGus: Lcs := LcsGus(aSource, aTarget);
@@ -1984,37 +1967,32 @@ begin
   else// laMyers
     Lcs := LcsMyers(aSource, aTarget);
   end;
+  System.SetLength(Del, System.Length(aSource));
+  System.SetLength(Ins, System.Length(aTarget));
   SrcIdx := 0;
   TrgIdx := 0;
   for I := 0 to System.High(Lcs) do
     begin
       v := Lcs[I];
-      if not Eq(v, aSource[SrcIdx]) then
+      while not Eq(v, aSource[SrcIdx]) do
         begin
-          Count := 0;
-          repeat Inc(Count);
-          until Eq(v, aSource[SrcIdx + Count]);
-          Del.Add(TChange.Create(SrcIdx, Count, I));
-          SrcIdx += Count;
+          Del[SrcIdx] := True;
+          Inc(SrcIdx)
         end;
-      if not Eq(v, aTarget[TrgIdx]) then
+      while not Eq(v, aTarget[TrgIdx]) do
         begin
-          Count := 0;
-          repeat Inc(Count);
-          until Eq(v, aTarget[TrgIdx + Count]);
-          Ins.Add(TChange.Create(TrgIdx, Count, I));
-          TrgIdx += Count;
+          Ins[TrgIdx] := True;
+          Inc(TrgIdx)
         end;
       Inc(SrcIdx);
       Inc(TrgIdx);
     end;
-  if SrcIdx < System.Length(aSource) then
-    Del.Add(TChange.Create(SrcIdx, System.Length(aSource) - SrcIdx, NULL_INDEX));
-  if TrgIdx < System.Length(aTarget) then
-    Ins.Add(TChange.Create(TrgIdx, System.Length(aTarget) - TrgIdx, NULL_INDEX));
-  Result.Unchanged := Lcs;
-  Result.Deleted := Del.ToArray;
-  Result.Inserted := Ins.ToArray;
+  for I := SrcIdx to System.High(Del) do
+    Del[I] := True;
+  for I := TrgIdx to System.High(Ins) do
+    Ins[I] := True;
+  Result.SourceChanges := Del;
+  Result.TargetChanges := Ins;
 end;
 
 type
