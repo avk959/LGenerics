@@ -247,7 +247,7 @@ type
   TUcs4Seq  = array of Ucs4Char;
   TUcs4Less = function(const L, R: array of Ucs4Char): Boolean;
 
-{ the responsibility for the correctness of the strings lies with the user }
+{ the responsibility for the correctness and normalization of the strings lies with the user }
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
   function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
   function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
@@ -275,7 +275,7 @@ type
 { branchy range validator based on Table 3-7 of Unicode Standard }
   function Utf8Validate(const s: rawbytestring): Boolean;
 { these functions expect UTF-8 encoded strings as parameters;
-  the responsibility for the correctness of the strings lies with the user }
+  the responsibility for the correctness and normalization of the strings lies with the user }
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
@@ -2068,21 +2068,47 @@ begin
   System.SetLength(aSeq, Count);
 end;
 
+function Utf16ToUcs4Char(p: PWideChar; aStrLen: SizeInt; out aLen: SizeInt): Ucs4Char;
+var
+  c: Ucs4Char;
+begin
+  c := Ucs4Char(p^);
+  aLen := 1;
+  if (c <= $d7ff) or (c >= $e000) then
+    Result := c
+  else
+    if (c <= $dbff) and (aStrLen > 1) and (p[1] >= #$dc00)and(p[1] <= #$dfff) then
+      begin
+        Result := (c - $d7c0) shl 10 + (Ucs4Char(p[1]) xor $dc00);
+        Inc(aLen);
+      end
+    else
+      Result := UNICODE_BAD_CHAR;
+end;
+
 function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
 var
-  I, J: SizeInt;
-  pStr: PUnicodeChar absolute aStr;
-  pSub: PUnicodeChar absolute aSub;
+  I, J, PtStrSize, PtSubSize, LenStr, LenSub: SizeInt;
+  cStr, cSub: Ucs4Char;
+  pStr: PWideChar absolute aStr;
+  pSub: PWideChar absolute aSub;
 begin
+  LenStr := System.Length(aStr);
+  LenSub := System.Length(aSub);
   I := 0;
   J := 0;
-  while (I < System.Length(aStr)) and (J < System.Length(aSub)) do
+  cSub := Utf16ToUcs4Char(pSub, LenSub, PtSubSize);
+  while (I < LenStr) and (J < LenSub) do
     begin
-      if pStr[I] = pSub[J] then
-        Inc(J);
-      Inc(I);
+      cStr := Utf16ToUcs4Char(@pStr[I], LenStr - I, PtStrSize);
+      if cStr = cSub then
+        begin
+          Inc(J, PtSubSize);
+          cSub := Utf16ToUcs4Char(@pSub[J], LenSub - J, PtSubSize);
+        end;
+      Inc(I, PtStrSize);
     end;
-  Result := J = System.Length(aSub);
+  Result := J = LenSub;
 end;
 
 function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
@@ -3041,7 +3067,7 @@ end;
 function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
 var
   I, J, PtSizeStr, PtSizeSub, LenStr, LenSub: SizeInt;
-  vStr, vSub: Ucs4Char;
+  cStr, cSub: Ucs4Char;
   pStr: PByte absolute aStr;
   pSub: PByte absolute aSub;
 begin
@@ -3049,14 +3075,14 @@ begin
   LenSub := System.Length(aSub);
   I := 0;
   J := 0;
-  vSub := CodePointToUcs4Char(pSub, LenSub, PtSizeSub);
+  cSub := CodePointToUcs4Char(pSub, LenSub, PtSizeSub);
   while (I < LenStr) and (J < LenSub) do
     begin
-      vStr := CodePointToUcs4Char(@pStr[I], LenStr - I, PtSizeStr);
-      if vStr = vSub then
+      cStr := CodePointToUcs4Char(@pStr[I], LenStr - I, PtSizeStr);
+      if cStr = cSub then
         begin
           Inc(J, PtSizeSub);
-          vSub := CodePointToUcs4Char(@pSub[J], LenSub - J, PtSizeSub);
+          cSub := CodePointToUcs4Char(@pSub[J], LenSub - J, PtSizeSub);
         end;
       Inc(I, PtSizeStr);
     end;
