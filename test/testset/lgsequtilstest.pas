@@ -22,6 +22,7 @@ type
     procedure Validate;
 
     procedure Utf8ToUcs4;
+    procedure SubSequenceUtf16;
     procedure LevenshteinDistUtf8;
     procedure LevenshteinDistMbrUtf8;
     procedure LevenshteinDistMbrBoundedUtf8;
@@ -41,6 +42,7 @@ type
     procedure FuzzySearchEdp;
 
     procedure Utf16ToUcs4;
+    procedure SubSequenceUtf8;
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
     procedure LevenshteinDistMbrBoundedUtf16;
@@ -199,6 +201,25 @@ begin
   AssertTrue('s8', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s8)) = s8);
   AssertTrue('s9', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s9)) = s9);
   AssertTrue('s10', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s10)) = s10);
+end;
+
+procedure TTestUnicodeUtils.SubSequenceUtf16;
+var
+  Ucs4Seq: TUcs4Seq;
+  s: unicodestring;
+begin
+  s := '';
+  AssertTrue(IsSubSequenceUtf16(s, ''));
+  AssertFalse(IsSubSequenceUtf16(s, 'a'));
+  s := 'a';
+  AssertTrue(IsSubSequenceUtf16(s, ''));
+  Ucs4Seq := [$41, $10331, $43, $10333, $45, $10334, $47, $10336]; //ascii + Gothic letters
+  s := Ucs4SeqToUtf16(Ucs4Seq);
+  AssertTrue(IsSubSequenceUtf16(s, Copy(s, 2, Length(s))));
+  AssertFalse(IsSubSequenceUtf16(s, Copy(s, 3, Length(s))));
+  AssertTrue(IsSubSequenceUtf16(s, Copy(s, 4, Length(s))));
+  AssertTrue(IsSubSequenceUtf16(s, Copy(s, 5, Length(s))));
+  AssertFalse(IsSubSequenceUtf16(s, Copy(s, 6, Length(s))));
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistUtf8;
@@ -1147,6 +1168,27 @@ begin
   AssertTrue('s8', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s8)) = s8);
   AssertTrue('s9', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s9)) = s9);
   AssertTrue('s10', Ucs4SeqToUtf16(Utf16ToUcs4Seq(s10)) = s10);
+end;
+
+procedure TTestUnicodeUtils.SubSequenceUtf8;
+var
+  Ucs4Seq: TUcs4Seq;
+  s: string;
+begin
+  s := '';
+  AssertTrue(IsSubSequenceUtf8(s, ''));
+  AssertFalse(IsSubSequenceUtf8(s, 'a'));
+  s := 'a';
+  AssertTrue(IsSubSequenceUtf8(s, ''));
+  Ucs4Seq := [$41, $10331, $43, $10333, $45, $10334, $47, $10336]; //ascii + Gothic letters
+  s := Ucs4SeqToUtf8(Ucs4Seq);
+  AssertTrue(IsSubSequenceUtf8(s, Copy(s, 2, Length(s))));
+  AssertFalse(IsSubSequenceUtf8(s, Copy(s, 3, Length(s))));
+  AssertFalse(IsSubSequenceUtf8(s, Copy(s, 4, Length(s))));
+  AssertTrue(IsSubSequenceUtf8(s, Utf8Copy(s, 3, 4)));
+  AssertTrue(IsSubSequenceUtf8(s, Copy(s, 6, Length(s))));
+  AssertTrue(IsSubSequenceUtf8(s, Copy(s, 7, Length(s))));
+  AssertFalse(IsSubSequenceUtf8(s, Copy(s, 8, Length(s))));
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistUtf16;
