@@ -2093,6 +2093,7 @@ var
   pStr: PWideChar absolute aStr;
   pSub: PWideChar absolute aSub;
 begin
+  if aSub = '' then exit(True);
   LenStr := System.Length(aStr);
   LenSub := System.Length(aSub);
   I := 0;
@@ -3071,6 +3072,7 @@ var
   pStr: PByte absolute aStr;
   pSub: PByte absolute aSub;
 begin
+  if aSub = '' then exit(True);
   LenStr := System.Length(aStr);
   LenSub := System.Length(aSub);
   I := 0;
