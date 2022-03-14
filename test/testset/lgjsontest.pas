@@ -1905,7 +1905,7 @@ begin
         if c = 'n' then
           AssertTrue(fn + ': expected rsError, but got rsEOF', State = rsError);
     end;
-  AssertTrue(Total = 291);
+  AssertTrue(Total = 294);
 end;
 
 procedure TTestJsonReader.SkipBom;
