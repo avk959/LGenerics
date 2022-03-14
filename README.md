@@ -75,9 +75,9 @@
     + local search TSP approximations, BnB TSP solver
   - minimum spanning trees: Prims's and Kruskal's algorithms
   - single source shortest paths: 
-    + Dijkstra with pairing heap, A*, Bellman-Ford-Moor with Tarjan's subtree disassembly(BFMT)
+    + Dijkstra with pairing heap, Bellman-Ford-Moor with Tarjan's subtree disassembly(BFMT)
   - single pair shortest paths:
-    + Dijkstra with binary heap, bidirection Dijkstra, A*, NBA* 
+    + Dijkstra with binary heap, BFMT, bidirection Dijkstra, A*, NBA* 
   - all pairs shortest paths: 
     + Floyd–Warshall, Johnson, BFMT  
   - networks:
