@@ -1693,7 +1693,7 @@ begin
             I += 2;
             Inc(J);
           end;
-        'u', 'U':
+        'u':
           begin
             c4 := UxSeqToUtf8(PChar4(@FBuffer[I+2])^);
             case c4[3] of
