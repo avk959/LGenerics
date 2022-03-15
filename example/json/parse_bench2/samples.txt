@@ -1,4 +1,0 @@
-About samples:
-
-  big.json came from https://github.com/json-iterator/test-data
-  other files were sourced from the simdjson repository - https://github.com/simdjson/simdjson;  
