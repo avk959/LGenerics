@@ -5663,6 +5663,8 @@ const
 {null   N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,43,__,__,__,__,__,__,__,__)
   );
 {$POP}
+
+{$PUSH}{$WARN 5089 OFF}
 function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean;
 var
   Stack: PParseNode;
@@ -5863,6 +5865,7 @@ begin
   end;
   Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
 end;
+{$POP}
 
 const
   AN = Integer(7); //Array Next
