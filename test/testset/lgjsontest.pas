@@ -688,7 +688,7 @@ begin
         if c = 'n' then
           AssertFalse(fn + ': expected False, but got True', Result);
     end;
-  AssertTrue(Total = 294);
+  AssertTrue(Total = 295);
 end;
 
 procedure TTestJson.Validator;
@@ -714,7 +714,7 @@ begin
         if c = 'n' then
           AssertFalse(fn + ': expected False, but got True', Result);
     end;
-  AssertTrue(Total = 294);
+  AssertTrue(Total = 295);
 end;
 
 procedure TTestJson.Parse;
@@ -1905,7 +1905,7 @@ begin
         if c = 'n' then
           AssertTrue(fn + ': expected rsError, but got rsEOF', State = rsError);
     end;
-  AssertTrue(Total = 294);
+  AssertTrue(Total = 295);
 end;
 
 procedure TTestJsonReader.SkipBom;
