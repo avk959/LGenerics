@@ -354,7 +354,7 @@ type
     class function  IsStrictAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is always nonascending }
     class function  IsNonAscending(const A: array of T): Boolean; static;
-  { note: an empty array or single element array is never strict descending}
+  { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
@@ -363,11 +363,10 @@ type
   { returns True if aSeq is a subsequence of A, False otherwise;
     the empty sequence is a subsequence of any other sequence }
     class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
-  { returns an array of indices of the Longest Increasing Subsequence of A,
-    if any, otherwise returns an empty array }
+  { returns an array of indices of some  Longest Increasing Subsequence of A,
+    if any, otherwise returns nil; uses O(N*Log(N)) algorithm }
     class function  LisI(const A: array of T): TSizeIntArray; static;
-  { returns the Longest Increasing Subsequence of A, if any,
-    otherwise returns an empty array }
+  { returns some Longest Increasing Subsequence of A, if any, otherwise returns nil }
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
@@ -565,7 +564,7 @@ type
     class function  IsStrictAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is always nonascending }
     class function  IsNonAscending(const A: array of T): Boolean; static;
-  { note: an empty array or single element array is never strict descending}
+  { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
@@ -574,11 +573,10 @@ type
   { returns True if aSeq is a subsequence of A, False otherwise;
     the empty sequence is a subsequence of any other sequence }
     class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
-  { returns an array of indices of the Longest Increasing Subsequence of A,
-    if any, otherwise returns an empty array }
+  { returns an array of indices of some Longest Increasing Subsequence of A,
+    if any, otherwise returns nil; uses O(N*Log(N)) algorithm }
     class function  LisI(const A: array of T): TSizeIntArray; static;
-  { returns the Longest Increasing Subsequence of A, if any,
-    otherwise returns an empty array }
+  { returns some Longest Increasing Subsequence of A, if any, otherwise returns nil }
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
@@ -715,7 +713,7 @@ type
     class function  IsStrictAscending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
     class function  IsNonAscending(const A: array of T; c: TLess): Boolean; static;
-  { note: an empty array or single element array is never strict descending}
+  { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TLess): Int64; static;
@@ -724,11 +722,10 @@ type
   { returns True if aSeq is a subsequence of A, False otherwise;
     the empty sequence is a subsequence of any other sequence }
     class function  IsSubSequence(const A, aSeq: array of T; c: TLess): Boolean; static;
-  { returns an array of indices of the Longest Increasing Subsequence of A,
-    if any, otherwise returns an empty array }
+  { returns an array of indices of some Longest Increasing Subsequence of A,
+    if any, otherwise returns nil; uses O(N*Log(N)) algorithm }
     class function  LisI(const A: array of T; c: TLess): TSizeIntArray; static;
-  { returns the Longest Increasing Subsequence of A, if any,
-    otherwise returns an empty array }
+  { returns some Longest Increasing Subsequence of A, if any, otherwise returns nil }
     class function  Lis(const A: array of T; c: TLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TLess): Boolean; static;
@@ -866,7 +863,7 @@ type
     class function  IsStrictAscending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
     class function  IsNonAscending(const A: array of T; c: TOnLess): Boolean; static;
-  { note: an empty array or single element array is never strict descending}
+  { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TOnLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
@@ -875,11 +872,10 @@ type
   { returns True if aSeq is a subsequence of A, False otherwise;
     the empty sequence is a subsequence of any other sequence }
     class function  IsSubSequence(const A, aSeq: array of T; c: TOnLess): Boolean; static;
-  { returns an array of indices of the Longest Increasing Subsequence of A,
-    if any, otherwise returns an empty array }
+  { returns an array of indices of some Longest Increasing Subsequence of A,
+    if any, otherwise returns nil; uses O(N*Log(N)) algorithm }
     class function  LisI(const A: array of T; c: TOnLess): TSizeIntArray; static;
-  { returns the Longest Increasing Subsequence of A, if any,
-    otherwise returns an empty array }
+  { returns some Longest Increasing Subsequence of A, if any, otherwise returns nil }
     class function  Lis(const A: array of T; c: TOnLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
@@ -1021,7 +1017,7 @@ type
     class function  IsStrictAscending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is always nonascending }
     class function  IsNonAscending(const A: array of T; c: TNestLess): Boolean; static;
-  { note: an empty array or single element array is never strict descending}
+  { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TNestLess): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
@@ -1030,11 +1026,10 @@ type
   { returns True if aSeq is a subsequence of A, False otherwise;
     the empty sequence is a subsequence of any other sequence }
     class function  IsSubSequence(const A, aSeq: array of T; c: TNestLess): Boolean; static;
-  { returns an array of indices of the Longest Increasing Subsequence of A,
-    if any, otherwise returns an empty array }
+  { returns an array of indices of some Longest Increasing Subsequence of A,
+    if any, otherwise returns nil; uses O(N*Log(N)) algorithm }
     class function  LisI(const A: array of T; c: TNestLess): TSizeIntArray; static;
-  { returns the Longest Increasing Subsequence of A, if any,
-    otherwise returns an empty array }
+  { returns some Longest Increasing Subsequence of A, if any, otherwise returns nil }
     class function  Lis(const A: array of T; c: TNestLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
@@ -1159,7 +1154,7 @@ type
     class function  IsStrictAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is always nonascending }
     class function  IsNonAscending(const A: array of T): Boolean; static;
-  { note: an empty array or single element array is never strict descending}
+  { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T): Int64; static;
@@ -1168,11 +1163,10 @@ type
   { returns True if aSeq is a subsequence of A, False otherwise;
     the empty sequence is a subsequence of any other sequence }
     class function  IsSubSequence(const A, aSeq: array of T): Boolean; static;
-  { returns an array of indices of the Longest Increasing Subsequence of A,
-    if any, otherwise returns an empty array }
+  { returns an array of indices of some Longest Increasing Subsequence of A,
+    if any, otherwise returns nil; uses O(N*Log(N)) algorithm }
     class function  LisI(const A: array of T): TSizeIntArray; static;
-  { returns the Longest Increasing Subsequence of A, if any,
-    otherwise returns an empty array }
+  { returns some Longest Increasing Subsequence of A, if any, otherwise returns nil }
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
@@ -4191,14 +4185,12 @@ end;
 
 class function TGBaseArrayHelper.SelectDistinct(const A: array of T): TArray;
 var
-  I, J, Hi: SizeInt;
+  I, J: SizeInt;
 begin
   Result := Sorted(A);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
+  if System.High(Result) < 1 then exit;
   I := 0;
-  for J := 1 to Hi do
+  for J := 1 to System.High(Result) do
     begin
       if not (TCmpRel.Less(Result[I], Result[J]) or TCmpRel.Less(Result[J], Result[I])) then
         continue;
@@ -6825,14 +6817,12 @@ end;
 
 class function TGComparableArrayHelper.SelectDistinct(const A: array of T): TArray;
 var
-  I, J, Hi: SizeInt;
+  I, J: SizeInt;
 begin
   Result := Sorted(A);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
+  if System.High(Result) < 1 then exit;
   I := 0;
-  for J := 1 to Hi do
+  for J := 1 to System.High(Result) do
     begin
       if ValEqual(Result[I], Result[J]) then
         continue;
@@ -8797,14 +8787,12 @@ end;
 
 class function TGRegularArrayHelper.SelectDistinct(const A: array of T; c: TLess): TArray;
 var
-  I, J, Hi: SizeInt;
+  I, J: SizeInt;
 begin
   Result := Sorted(A, c);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
+  if System.High(Result) < 1 then exit;
   I := 0;
-  for J := 1 to Hi do
+  for J := 1 to System.High(Result) do
     begin
       if not(c(Result[I], Result[J]) or c(Result[J], Result[I])) then
         continue;
@@ -10772,14 +10760,12 @@ end;
 
 class function TGDelegatedArrayHelper.SelectDistinct(const A: array of T; c: TOnLess): TArray;
 var
-  I, J, Hi: SizeInt;
+  I, J: SizeInt;
 begin
   Result := Sorted(A, c);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
+  if System.High(Result) < 1 then exit;
   I := 0;
-  for J := 1 to Hi do
+  for J := 1 to System.High(Result) do
     begin
       if not(c(Result[I], Result[J]) or c(Result[J], Result[I])) then
         continue;
@@ -12747,14 +12733,12 @@ end;
 
 class function TGNestedArrayHelper.SelectDistinct(const A: array of T; c: TNestLess): TArray;
 var
-  I, J, Hi: SizeInt;
+  I, J: SizeInt;
 begin
   Result := Sorted(A, c);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
+  if System.High(Result) < 1 then exit;
   I := 0;
-  for J := 1 to Hi do
+  for J := 1 to System.High(Result) do
     begin
       if not(c(Result[I], Result[J]) or c(Result[J], Result[I])) then
         continue;
@@ -14353,14 +14337,12 @@ end;
 
 class function TGSimpleArrayHelper.SelectDistinct(const A: array of T): TArray;
 var
-  I, J, Hi: SizeInt;
+  I, J: SizeInt;
 begin
   Result := Sorted(A);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
+  if System.High(Result) < 1 then exit;
   I := 0;
-  for J := 1 to Hi do
+  for J := 1 to System.High(Result) do
     begin
       if Result[I] = Result[J] then
         continue;
