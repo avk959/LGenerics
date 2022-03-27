@@ -368,6 +368,7 @@ type
     procedure DualPivotQuickSortDescOfDyn577RandomZeroes;
 
     procedure PDQSortTest;
+    procedure SelectDistinctTest;
   end;
 
   { TNumArrayHelperTest }
@@ -3310,6 +3311,32 @@ begin
   TIntHelper.Reverse(b);
   TIntHelper.PDQSort(a, soDesc);
   AssertTrue(TIntHelper.Same(a, b));
+end;
+
+procedure TSimpArrayHelperTest.SelectDistinctTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray;
+begin
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(b = nil);
+
+  a := [42];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 1);
+  AssertTrue(b[0] = 42);
+
+  a := [1001, 42];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 2);
+  AssertTrue(b[0] = 42);
+  AssertTrue(b[1] = 1001);
+
+  a := [1001, 42, 1001, 42, 42, 1001];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 2);
+  AssertTrue(b[0] = 42);
+  AssertTrue(b[1] = 1001);
 end;
 
 { TNumArrayHelperTest }

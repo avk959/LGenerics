@@ -412,6 +412,7 @@ type
     procedure TimSortAscStableTest;
     procedure TimSortDescStableTest;
     procedure TimSortBug;  //mantis #0037527
+    procedure SelectDistinctTest;
   end;
 
 implementation
@@ -3719,6 +3720,32 @@ begin
   if not Present then
     AssertTrue(specialize TGComparableArrayHelper<TVec4>.IsNonDescending(a));
   AssertFalse('still present', Present);
+end;
+
+procedure TComparableArrayHelperTest.SelectDistinctTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray;
+begin
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(b = nil);
+
+  a := [42];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 1);
+  AssertTrue(b[0] = 42);
+
+  a := [1001, 42];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 2);
+  AssertTrue(b[0] = 42);
+  AssertTrue(b[1] = 1001);
+
+  a := [1001, 42, 1001, 42, 42, 1001];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 2);
+  AssertTrue(b[0] = 42);
+  AssertTrue(b[1] = 1001);
 end;
 
 initialization

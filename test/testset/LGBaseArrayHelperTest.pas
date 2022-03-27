@@ -428,6 +428,7 @@ type
     procedure TimSortTest;
     procedure TimSortAscStableTest;
     procedure TimSortDescStableTest;
+    procedure SelectDistinctTest;
   end;
 
   { TBaseIndexedHelperTest }
@@ -3835,6 +3836,32 @@ begin
     Dec(v);
     I := J;
   until v < 0;
+end;
+
+procedure TBaseArrayHelperTest.SelectDistinctTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray;
+begin
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(b = nil);
+
+  a := [42];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 1);
+  AssertTrue(b[0] = 42);
+
+  a := [1001, 42];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 2);
+  AssertTrue(b[0] = 42);
+  AssertTrue(b[1] = 1001);
+
+  a := [1001, 42, 1001, 42, 42, 1001];
+  b := TIntHelper.SelectDistinct(a);
+  AssertTrue(Length(b) = 2);
+  AssertTrue(b[0] = 42);
+  AssertTrue(b[1] = 1001);
 end;
 
 { TBaseIndexedHelperTest }
