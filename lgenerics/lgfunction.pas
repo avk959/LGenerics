@@ -127,10 +127,19 @@ type
     class function Apply(e: IEnumerableX; f: TNestMap): IEnumerableY; static; inline;
   end;
 
+  generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGMapFunc<X, Y>): specialize IGEnumerable<Y>; inline;
+  generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGOnMap<X, Y>): specialize IGEnumerable<Y>; inline;
+  generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGNestMap<X, Y>): specialize IGEnumerable<Y>; inline;
+  generic function GMap<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGMapFunc<X, Y>): specialize IGEnumerable<Y>; inline;
+  generic function GMap<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnMap<X, Y>): specialize IGEnumerable<Y>; inline;
+  generic function GMap<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestMap<X, Y>): specialize IGEnumerable<Y>; inline;
+
+type
+
   generic TGFolding<X, Y> = class
   public
   type
-    IXEnumerable = specialize IGEnumerable<X>;
+    IEnumerableX = specialize IGEnumerable<X>;
     TFold        = specialize TGFold<X, Y>;
     TOnFold      = specialize TGOnFold<X, Y>;
     TNestFold    = specialize TGNestFold<X, Y>;
@@ -142,25 +151,52 @@ type
     class function Left(const a: array of X; f: TOnFold): TOptional; static;
     class function Left(const a: array of X; f: TNestFold; const y0: Y): Y; static;
     class function Left(const a: array of X; f: TNestFold): TOptional; static;
-    class function Left(e: IXEnumerable; f: TFold; const y0: Y): Y; static;
-    class function Left(e: IXEnumerable; f: TFold): TOptional; static;
-    class function Left(e: IXEnumerable; f: TOnFold; const y0: Y): Y; static;
-    class function Left(e: IXEnumerable; f: TOnFold): TOptional; static;
-    class function Left(e: IXEnumerable; f: TNestFold; const y0: Y): Y; static;
-    class function Left(e: IXEnumerable; f: TNestFold): TOptional; static;
+    class function Left(e: IEnumerableX; f: TFold; const y0: Y): Y; static;
+    class function Left(e: IEnumerableX; f: TFold): TOptional; static;
+    class function Left(e: IEnumerableX; f: TOnFold; const y0: Y): Y; static;
+    class function Left(e: IEnumerableX; f: TOnFold): TOptional; static;
+    class function Left(e: IEnumerableX; f: TNestFold; const y0: Y): Y; static;
+    class function Left(e: IEnumerableX; f: TNestFold): TOptional; static;
     class function Right(const a: array of X; f: TFold; const y0: Y): Y; static;
     class function Right(const a: array of X; f: TFold): TOptional; static;
     class function Right(const a: array of X; f: TOnFold; const y0: Y): Y; static;
     class function Right(const a: array of X; f: TOnFold): TOptional; static;
     class function Right(const a: array of X; f: TNestFold; const y0: Y): Y; static;
     class function Right(const a: array of X; f: TNestFold): TOptional; static;
-    class function Right(e: IXEnumerable; f: TFold; const y0: Y): Y; static;
-    class function Right(e: IXEnumerable; f: TFold): TOptional; static;
-    class function Right(e: IXEnumerable; f: TOnFold; const y0: Y): Y; static;
-    class function Right(e: IXEnumerable; f: TOnFold): TOptional; static;
-    class function Right(e: IXEnumerable; f: TNestFold; const y0: Y): Y; static;
-    class function Right(e: IXEnumerable; f: TNestFold): TOptional; static;
+    class function Right(e: IEnumerableX; f: TFold; const y0: Y): Y; static;
+    class function Right(e: IEnumerableX; f: TFold): TOptional; static;
+    class function Right(e: IEnumerableX; f: TOnFold; const y0: Y): Y; static;
+    class function Right(e: IEnumerableX; f: TOnFold): TOptional; static;
+    class function Right(e: IEnumerableX; f: TNestFold; const y0: Y): Y; static;
+    class function Right(e: IEnumerableX; f: TNestFold): TOptional; static;
   end;
+
+  generic function GFoldL<X, Y>(const a: array of X; f: specialize TGFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldL<X, Y>(const a: array of X; f: specialize TGFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldL<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldL<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldL<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldL<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldR<X, Y>(const a: array of X; f: specialize TGFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldR<X, Y>(const a: array of X; f: specialize TGFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldR<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldR<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldR<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldR<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>; inline;
+  generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>; const y0: Y): Y; inline;
+  generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>; inline;
+
+type
 
   { TGBaseGrouping groups the input sequence by some key;
     functor TKeyEqRel must provide:
@@ -209,6 +245,20 @@ type
       procedure Reset; override;
     end;
 
+    TFlatEnum = class(specialize TGAutoEnumerable<T>)
+    private
+      FMap: TMap;
+      FCurrList: PVector;
+      FMapIndex,
+      FListIndex: SizeInt;
+    protected
+      procedure UpdateList; inline;
+      function  GetCurrent: T; override;
+    public
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
   public
     class function GroupKey(g: IGroup; ks: TKeySelect): TKeyOptional; static;
     class function GroupKey(g: IGroup; ks: TOnKeySelect): TKeyOptional; static;
@@ -220,6 +270,13 @@ type
     class function Apply(e: IEnumerable; ks: TOnKeySelect): IGrouping; static;
     class function Apply(const a: array of T; ks: TNestKeySelect): IGrouping; static;
     class function Apply(e: IEnumerable; ks: TNestKeySelect): IGrouping; static;
+
+    class function Flat(const a: array of T; ks: TKeySelect): IEnumerable; static;
+    class function Flat(e: IEnumerable; ks: TKeySelect): IEnumerable; static;
+    class function Flat(const a: array of T; ks: TOnKeySelect): IEnumerable; static;
+    class function Flat(e: IEnumerable; ks: TOnKeySelect): IEnumerable; static;
+    class function Flat(const a: array of T; ks: TNestKeySelect): IEnumerable; static;
+    class function Flat(e: IEnumerable; ks: TNestKeySelect): IEnumerable; static;
   end;
 
   {TGGrouping groups the input sequence by some key; it assumes
@@ -497,6 +554,36 @@ begin
   Result := TEnumNestedMap.Create(e, f);
 end;
 
+generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGMapFunc<X, Y>): specialize IGEnumerable<Y>;
+begin
+  Result := specialize TGMapping<X, Y>.Apply(a, f);
+end;
+
+generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGOnMap<X, Y>): specialize IGEnumerable<Y>;
+begin
+  Result := specialize TGMapping<X, Y>.Apply(a, f);
+end;
+
+generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGNestMap<X, Y>): specialize IGEnumerable<Y>;
+begin
+  Result := specialize TGMapping<X, Y>.Apply(a, f);
+end;
+
+generic function GMap<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGMapFunc<X, Y>): specialize IGEnumerable<Y>;
+begin
+  Result := specialize TGMapping<X, Y>.Apply(e, f);
+end;
+
+generic function GMap<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnMap<X, Y>): specialize IGEnumerable<Y>;
+begin
+  Result := specialize TGMapping<X, Y>.Apply(e, f);
+end;
+
+generic function GMap<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestMap<X, Y>): specialize IGEnumerable<Y>;
+begin
+  Result := specialize TGMapping<X, Y>.Apply(e, f);
+end;
+
 { TGFolding }
 {$PUSH}{$MACRO ON}
 {$DEFINE FoldArray :=
@@ -507,10 +594,9 @@ end;
 {$DEFINE ReduceArray :=
   if System.Length(a) > 0 then
     begin
-      v := a[0];
-      for I := 1 to System.High(a) do
-        v := f(a[I], v);
-      Result := v;
+      Result := Default(Y);
+      for I := 0 to System.High(a) do
+        Result := f(a[I], Result);
     end
 }
 class function TGFolding.Left(const a: array of X; f: TFold; const y0: Y): Y;
@@ -522,7 +608,6 @@ end;
 
 class function TGFolding.Left(const a: array of X; f: TFold): TOptional;
 var
-  v: X;
   I: SizeInt;
 begin
   ReduceArray;
@@ -537,7 +622,6 @@ end;
 
 class function TGFolding.Left(const a: array of X; f: TOnFold): TOptional;
 var
-  v: X;
   I: SizeInt;
 begin
   ReduceArray;
@@ -552,11 +636,11 @@ end;
 
 class function TGFolding.Left(const a: array of X; f: TNestFold): TOptional;
 var
-  v: X;
   I: SizeInt;
 begin
   ReduceArray;
 end;
+
 {$DEFINE FoldEnum :=
   Result := y0;
   with e.GetEnumerator do
@@ -572,51 +656,44 @@ end;
     try
       if MoveNext then
         begin
-          v := Current;
+          Result := f(Current, Default(Y));
           while MoveNext do
-            v := f(Current, v);
-          Result := v;
+            Result := f(Current, Result);
         end;
     finally
       Free;
     end
 }
-class function TGFolding.Left(e: IXEnumerable; f: TFold; const y0: Y): Y;
+class function TGFolding.Left(e: IEnumerableX; f: TFold; const y0: Y): Y;
 begin
   FoldEnum;
 end;
 
-class function TGFolding.Left(e: IXEnumerable; f: TFold): TOptional;
-var
-  v: X;
+class function TGFolding.Left(e: IEnumerableX; f: TFold): TOptional;
 begin
   ReduceEnum;
 end;
 
-class function TGFolding.Left(e: IXEnumerable; f: TOnFold; const y0: Y): Y;
+class function TGFolding.Left(e: IEnumerableX; f: TOnFold; const y0: Y): Y;
 begin
   FoldEnum;
 end;
 
-class function TGFolding.Left(e: IXEnumerable; f: TOnFold): TOptional;
-var
-  v: X;
+class function TGFolding.Left(e: IEnumerableX; f: TOnFold): TOptional;
 begin
   ReduceEnum;
 end;
 
-class function TGFolding.Left(e: IXEnumerable; f: TNestFold; const y0: Y): Y;
+class function TGFolding.Left(e: IEnumerableX; f: TNestFold; const y0: Y): Y;
 begin
   FoldEnum;
 end;
 
-class function TGFolding.Left(e: IXEnumerable; f: TNestFold): TOptional;
-var
-  v: X;
+class function TGFolding.Left(e: IEnumerableX; f: TNestFold): TOptional;
 begin
   ReduceEnum;
 end;
-{$PUSH}{$MACRO ON}
+
 {$DEFINE FoldArray :=
   Result := y0;
   for I := System.High(a) downto 0 do
@@ -625,16 +702,13 @@ end;
 {$DEFINE ReduceArray :=
   if System.Length(a) > 0 then
     begin
-      I := System.High(a);
-      v := a[I];
-      for I := Pred(I) downto 0 do
-        v := f(a[I], v);
-      Result := v;
+      Result := Default(Y);
+      for I := System.High(a) downto 0 do
+        Result := f(a[I], Result);
     end
 }
 class function TGFolding.Right(const a: array of X; f: TFold; const y0: Y): Y;
 var
-  v: X;
   I: SizeInt;
 begin
   FoldArray;
@@ -642,7 +716,6 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TFold): TOptional;
 var
-  v: X;
   I: SizeInt;
 begin
   ReduceArray;
@@ -650,7 +723,6 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TOnFold; const y0: Y): Y;
 var
-  v: X;
   I: SizeInt;
 begin
   FoldArray;
@@ -658,7 +730,6 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TOnFold): TOptional;
 var
-  v: X;
   I: SizeInt;
 begin
   ReduceArray;
@@ -666,7 +737,6 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TNestFold; const y0: Y): Y;
 var
-  v: X;
   I: SizeInt;
 begin
   FoldArray;
@@ -674,17 +744,17 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TNestFold): TOptional;
 var
-  v: X;
   I: SizeInt;
 begin
   ReduceArray;
 end;
+
 {$DEFINE FoldEnum :=
   Result := y0;
-  with e.GetEnumerator do
+  with e.Reverse.GetEnumerator do
     try
       while MoveNext do
-        Result := f(v, Result)
+        Result := f(Current, Result)
     finally
       Free;
     end
@@ -694,52 +764,165 @@ end;
     try
       if MoveNext then
         begin
-          v := Current;
+          Result := f(Current, Default(Y));
           while MoveNext do
-            v := f(Current, v);
-          Result := v;
+            Result := f(Current, Result);
         end;
     finally
       Free;
     end
 }
-class function TGFolding.Right(e: IXEnumerable; f: TFold; const y0: Y): Y;
+class function TGFolding.Right(e: IEnumerableX; f: TFold; const y0: Y): Y;
 begin
   FoldEnum;
 end;
 
-class function TGFolding.Right(e: IXEnumerable; f: TFold): TOptional;
-var
-  v: X;
+class function TGFolding.Right(e: IEnumerableX; f: TFold): TOptional;
 begin
   ReduceEnum;
 end;
 
-class function TGFolding.Right(e: IXEnumerable; f: TOnFold; const y0: Y): Y;
+class function TGFolding.Right(e: IEnumerableX; f: TOnFold; const y0: Y): Y;
 begin
   FoldEnum;
 end;
 
-class function TGFolding.Right(e: IXEnumerable; f: TOnFold): TOptional;
-var
-  v: X;
+class function TGFolding.Right(e: IEnumerableX; f: TOnFold): TOptional;
 begin
   ReduceEnum;
 end;
 
-class function TGFolding.Right(e: IXEnumerable; f: TNestFold; const y0: Y): Y;
+class function TGFolding.Right(e: IEnumerableX; f: TNestFold; const y0: Y): Y;
 begin
   FoldEnum;
 end;
 
-class function TGFolding.Right(e: IXEnumerable; f: TNestFold): TOptional;
-var
-  v: X;
+class function TGFolding.Right(e: IEnumerableX; f: TNestFold): TOptional;
 begin
   ReduceEnum;
 end;
 {$UNDEF FoldArray}{$UNDEF ReduceArray}{$UNDEF FoldEnum}{$UNDEF ReduceEnum}
 {$POP}
+
+generic function GFoldL<X, Y>(const a: array of X; f: specialize TGFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Left(a, f, y0);
+end;
+
+generic function GFoldL<X, Y>(const a: array of X; f: specialize TGFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Left(a, f);
+end;
+
+generic function GFoldL<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Left(a, f, y0);
+end;
+
+generic function GFoldL<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>):  specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Left(a, f);
+end;
+
+generic function GFoldL<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Left(a, f, y0);
+end;
+
+generic function GFoldL<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>):  specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Left(a, f);
+end;
+
+generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Left(e, f, y0);
+end;
+
+generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>):  specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Left(e, f);
+end;
+
+generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Left(e, f, y0);
+end;
+
+generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Left(e, f);
+end;
+
+generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Left(e, f, y0);
+end;
+
+generic function GFoldL<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Left(e, f);
+end;
+
+generic function GFoldR<X, Y>(const a: array of X; f: specialize TGFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Right(a, f, y0);
+end;
+
+generic function GFoldR<X, Y>(const a: array of X; f: specialize TGFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Right(a, f);
+end;
+
+generic function GFoldR<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Right(a, f, y0);
+end;
+
+generic function GFoldR<X, Y>(const a: array of X; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Right(a, f);
+end;
+
+generic function GFoldR<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Right(a, f, y0);
+end;
+
+generic function GFoldR<X, Y>(const a: array of X; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Right(a, f);
+end;
+
+generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Right(e, f, y0);
+end;
+
+generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Right(e, f);
+end;
+
+generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Right(e, f, y0);
+end;
+
+generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGOnFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Right(e, f);
+end;
+
+generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>; const y0: Y): Y;
+begin
+  Result := specialize TGFolding<X, Y>.Right(e, f, y0);
+end;
+
+generic function GFoldR<X, Y>(e: specialize IGEnumerable<X>; f: specialize TGNestFold<X, Y>): specialize TGOptional<Y>;
+begin
+  Result := specialize TGFolding<X, Y>.Right(e, f);
+end;
 
 { TGBaseGrouping.TGroup }
 
@@ -780,7 +963,43 @@ end;
 
 procedure TGBaseGrouping.TGrouping.Reset;
 begin
-  FCurrIndex := NULL_INDEX;
+  FCurrIndex := 0;
+end;
+
+{ TGBaseGrouping.TFlatEnum }
+
+procedure TGBaseGrouping.TFlatEnum.UpdateList;
+begin
+  FCurrList := @FMap.NodeList[FMapIndex].Data.Value;
+  FListIndex := NULL_INDEX;
+end;
+
+function TGBaseGrouping.TFlatEnum.GetCurrent: T;
+begin
+  Result := FCurrList^.UncMutable[FListIndex]^;
+end;
+
+function TGBaseGrouping.TFlatEnum.MoveNext: Boolean;
+begin
+  if FCurrList = nil then
+    begin
+      if FMap.Count = 0 then exit(False);
+      UpdateList;
+    end;
+  if FListIndex >= Pred(FCurrList^.Count) then
+    begin
+      if FMapIndex >= Pred(FMap.Count) then exit(False);
+      Inc(FMapIndex);
+      UpdateList;
+    end;
+  Inc(FListIndex);
+  Result := True;
+end;
+
+procedure TGBaseGrouping.TFlatEnum.Reset;
+begin
+  FMapIndex := 0;
+  FCurrList := nil;
 end;
 
 { TGBaseGrouping }
@@ -827,7 +1046,7 @@ end;
         p^.Key := k;
       p^.Value.Add(el);
     end;
-  Result := g;
+  Result := g
 }
 class function TGBaseGrouping.Apply(const a: array of T; ks: TKeySelect): IGrouping;
 var
@@ -889,6 +1108,90 @@ begin
   EnumApplyMacro;
 end;
 {$UNDEF ArrayApplyMacro}{$UNDEF EnumApplyMacro}
+
+{$DEFINE ArrayFlatMacro :=
+  f := TFlatEnum.Create;
+  for I := 0 to System.High(a) do
+    begin
+      k := ks(a[I]);
+      if not f.FMap.FindOrAdd(k, p) then
+        p^.Key := k;
+      p^.Value.Add(a[I]);
+    end;
+  Result := f
+}
+{$DEFINE EnumFlatMacro :=
+  f := TFlatEnum.Create;
+  for el in e do
+    begin
+      k := ks(el);
+      if not f.FMap.FindOrAdd(k, p) then
+        p^.Key := k;
+      p^.Value.Add(el);
+    end;
+  Result := f
+}
+
+class function TGBaseGrouping.Flat(const a: array of T; ks: TKeySelect): IEnumerable;
+var
+  f: TFlatEnum;
+  I: SizeInt;
+  k: TKey;
+  p: ^TEntry;
+begin
+  ArrayFlatMacro;
+end;
+
+class function TGBaseGrouping.Flat(e: IEnumerable; ks: TKeySelect): IEnumerable;
+var
+  f: TFlatEnum;
+  el: T;
+  k: TKey;
+  p: ^TEntry;
+begin
+  EnumFlatMacro;
+end;
+
+class function TGBaseGrouping.Flat(const a: array of T; ks: TOnKeySelect): IEnumerable;
+var
+  f: TFlatEnum;
+  I: SizeInt;
+  k: TKey;
+  p: ^TEntry;
+begin
+  ArrayFlatMacro;
+end;
+
+class function TGBaseGrouping.Flat(e: IEnumerable; ks: TOnKeySelect): IEnumerable;
+var
+  f: TFlatEnum;
+  el: T;
+  k: TKey;
+  p: ^TEntry;
+begin
+  EnumFlatMacro;
+end;
+
+class function TGBaseGrouping.Flat(const a: array of T; ks: TNestKeySelect): IEnumerable;
+var
+  f: TFlatEnum;
+  I: SizeInt;
+  k: TKey;
+  p: ^TEntry;
+begin
+  ArrayFlatMacro;
+end;
+
+class function TGBaseGrouping.Flat(e: IEnumerable; ks: TNestKeySelect): IEnumerable;
+var
+  f: TFlatEnum;
+  el: T;
+  k: TKey;
+  p: ^TEntry;
+begin
+  EnumFlatMacro;
+end;
+{$UNDEF ArrayFlatMacro}{$UNDEF EnumFlatMacro}
 {$POP}
 
 { TGUnboundGenerator.TEnumerator }
