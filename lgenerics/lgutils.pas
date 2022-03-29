@@ -552,11 +552,11 @@ type
     procedure ForEach(aCallback: TGUnaryMethod<T>); overload;
     procedure ForEach(aCallback: TGNestUnaryProc<T>); overload;
   { left-associative linear fold }
-    function  Fold(f: TGFold<T, T>; constref v0: T): T; overload;
+    function  Fold(f: TGFold<T, T>; const v0: T): T; overload;
     function  Fold(f: TGFold<T, T>): TGOptional<T>; overload;
-    function  Fold(f: TGOnFold<T, T>; constref v0: T): T; overload;
+    function  Fold(f: TGOnFold<T, T>; const v0: T): T; overload;
     function  Fold(f: TGOnFold<T, T>): TGOptional<T>; overload;
-    function  Fold(f: TGNestFold<T, T>; constref v0: T): T; overload;
+    function  Fold(f: TGNestFold<T, T>; const v0: T): T; overload;
     function  Fold(f: TGNestFold<T, T>): TGOptional<T>; overload;
   end;
 
