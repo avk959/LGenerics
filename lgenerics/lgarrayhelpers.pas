@@ -190,19 +190,25 @@ type
     class function  Select(const A: array of T; aTest: TTest): TArray;
     class function  Select(const A: array of T; aTest: TOnTest): TArray;
     class function  Select(const A: array of T; aTest: TNestTest): TArray;
-    { left-associative linear fold }
-    class function  FoldL(const A: array of T; aFold: TFold; const v0: T): T; static;
+  { left-associative linear fold }
+    class function  FoldL(const A: array of T; aFold: TFold; const aInitVal: T): T; static;
+  { result is assigned only if A is not empty; uses Default(T) as the initial value }
     class function  FoldL(const A: array of T; aFold: TFold): TOptional; static;
-    class function  FoldL(const A: array of T; aFold: TOnFold; const v0: T): T; static;
+    class function  FoldL(const A: array of T; aFold: TOnFold; const aInitVal: T): T; static;
+  { result is assigned only if A is not empty; uses Default(T) as the initial value }
     class function  FoldL(const A: array of T; aFold: TOnFold): TOptional; static;
-    class function  FoldL(const A: array of T; aFold: TNestFold; const v0: T): T; static;
+    class function  FoldL(const A: array of T; aFold: TNestFold; const aInitVal: T): T; static;
+  { result is assigned only if A is not empty; uses Default(T) as the initial value }
     class function  FoldL(const A: array of T; aFold: TNestFold): TOptional; static;
   { right-associative linear fold }
-    class function  FoldR(const A: array of T; aFold: TFold; const v0: T): T; static;
+    class function  FoldR(const A: array of T; aFold: TFold; const aInitVal: T): T; static;
+  { result is assigned only if A is not empty; uses Default(T) as the initial value }
     class function  FoldR(const A: array of T; aFold: TFold): TOptional; static;
-    class function  FoldR(const A: array of T; aFold: TOnFold; const v0: T): T; static;
+    class function  FoldR(const A: array of T; aFold: TOnFold; const aInitVal: T): T; static;
+  { result is assigned only if A is not empty; uses Default(T) as the initial value }
     class function  FoldR(const A: array of T; aFold: TOnFold): TOptional; static;
-    class function  FoldR(const A: array of T; aFold: TNestFold; const v0: T): T; static;
+    class function  FoldR(const A: array of T; aFold: TNestFold; const aInitVal: T): T; static;
+  { result is assigned only if A is not empty; uses Default(T) as the initial value }
     class function  FoldR(const A: array of T; aFold: TNestFold): TOptional; static;
   end;
 
@@ -1988,148 +1994,130 @@ begin
   SetLength(Result, J);
 end;
 
-class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold; const v0: T): T;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold; const aInitVal: T): T;
 var
   v: T;
 begin
-  Result := v0;
+  Result := aInitVal;
   for v in A do
     Result := aFold(v, Result);
 end;
 
 class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold): TOptional;
 var
-  I, Last: SizeInt;
   v: T;
+  I: SizeInt;
 begin
-  Last := System.High(A);
-  if Last >= 0 then
-    begin
-      v := A[0];
-      for I := 1 to Last do
-        v := aFold(A[I], v);
-      Result.Assign(v);
-    end;
+  if System.High(A) < 0 then exit(Default(TOptional));
+  v := Default(T);
+  for I := 0 to System.High(A) do
+    v := aFold(A[I], v);
+  Result.Assign(v);
 end;
 
-class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TOnFold; const v0: T): T;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TOnFold; const aInitVal: T): T;
 var
   v: T;
 begin
-  Result := v0;
+  Result := aInitVal;
   for v in A do
     Result := aFold(v, Result);
 end;
 
 class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TOnFold): TOptional;
 var
-  I, Last: SizeInt;
   v: T;
+  I: SizeInt;
 begin
-  Last := System.High(A);
-  if Last >= 0 then
-    begin
-      v := A[0];
-      for I := 1 to Last do
-        v := aFold(A[I], v);
-      Result.Assign(v);
-    end;
+  if System.High(A) < 0 then exit(Default(TOptional));
+  v := Default(T);
+  for I := 0 to System.High(A) do
+    v := aFold(A[I], v);
+  Result.Assign(v);
 end;
 
-class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TNestFold; const v0: T): T;
+class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TNestFold; const aInitVal: T): T;
 var
   v: T;
 begin
-  Result := v0;
+  Result := aInitVal;
   for v in A do
     Result := aFold(v, Result);
 end;
 
 class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TNestFold): TOptional;
 var
-  I, Last: SizeInt;
   v: T;
+  I: SizeInt;
 begin
-  Last := System.High(A);
-  if Last >= 0 then
-    begin
-      v := A[0];
-      for I := 1 to Last do
-        v := aFold(A[I], v);
-      Result.Assign(v);
-    end;
+  if System.High(A) < 0 then exit(Default(TOptional));
+  v := Default(T);
+  for I := 0 to System.High(A) do
+    v := aFold(A[I], v);
+  Result.Assign(v);
 end;
 
-class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TFold; const v0: T): T;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TFold; const aInitVal: T): T;
 var
   I: SizeInt;
 begin
-  Result := v0;
+  Result := aInitVal;
   for I := System.High(A) downto 0 do
     Result := aFold(A[I], Result);
 end;
 
 class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TFold): TOptional;
 var
-  I, Last: SizeInt;
   v: T;
+  I: SizeInt;
 begin
-  Last := System.High(A);
-  if Last >= 0 then
-    begin
-      v := A[Last];
-      for I := Pred(Last) downto 0 do
-        v := aFold(A[I], v);
-      Result.Assign(v);
-    end;
+  if System.High(A) < 0 then exit(Default(TOptional));
+  v := Default(T);
+  for I := System.High(A) downto 0 do
+    v := aFold(A[I], v);
+  Result.Assign(v);
 end;
 
-class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TOnFold; const v0: T): T;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TOnFold; const aInitVal: T): T;
 var
   I: SizeInt;
 begin
-  Result := v0;
+  Result := aInitVal;
   for I := System.High(A) downto 0 do
     Result := aFold(A[I], Result);
 end;
 
 class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TOnFold): TOptional;
 var
-  I, Last: SizeInt;
   v: T;
+  I: SizeInt;
 begin
-  Last := System.High(A);
-  if Last >= 0 then
-    begin
-      v := A[Last];
-      for I := Pred(Last) downto 0 do
-        v := aFold(A[I], v);
-      Result.Assign(v);
-    end;
+  if System.High(A) < 0 then exit(Default(TOptional));
+  v := Default(T);
+  for I := System.High(A) downto 0 do
+    v := aFold(A[I], v);
+  Result.Assign(v);
 end;
 
-class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TNestFold; const v0: T): T;
+class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TNestFold; const aInitVal: T): T;
 var
   I: SizeInt;
 begin
-  Result := v0;
+  Result := aInitVal;
   for I := System.High(A) downto 0 do
     Result := aFold(A[I], Result);
 end;
 
 class function TGArrayHelpUtil.FoldR(const A: array of T; aFold: TNestFold): TOptional;
 var
-  I, Last: SizeInt;
   v: T;
+  I: SizeInt;
 begin
-  Last := System.High(A);
-  if Last >= 0 then
-    begin
-      v := A[Last];
-      for I := Pred(Last) downto 0 do
-        v := aFold(A[I], v);
-      Result.Assign(v);
-    end;
+  if System.High(A) < 0 then exit(Default(TOptional));
+  v := Default(T);
+  for I := System.High(A) downto 0 do
+    v := aFold(A[I], v);
+  Result.Assign(v);
 end;
 
 { TGIndexedHelpUtil }
