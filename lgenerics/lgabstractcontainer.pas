@@ -127,11 +127,14 @@ type
     procedure ForEach(aCallback: TUnaryMethod);
     procedure ForEach(aCallback: TNestUnaryProc);
   { left-associative linear fold }
-    function  Fold(aFold: TFold; constref v0: T): T;
+    function  Fold(aFold: TFold; const aInitVal: T): T;
+  { result is assigned only if the instance is not empty; uses Default(T) as the initial value }
     function  Fold(aFold: TFold): TOptional;
-    function  Fold(aFold: TOnFold; constref v0: T): T;
+    function  Fold(aFold: TOnFold; const aInitVal: T): T;
+  { result is assigned only if the instance is not empty; uses Default(T) as the initial value }
     function  Fold(aFold: TOnFold): TOptional;
-    function  Fold(aFold: TNestFold; constref v0: T): T;
+    function  Fold(aFold: TNestFold; const aInitVal: T): T;
+  {result is assigned only if the instance is not empty; uses Default(T) as the initial value }
     function  Fold(aFold: TNestFold): TOptional;
   end;
 
@@ -1504,9 +1507,9 @@ begin
     end;
 end;
 
-function TGEnumerable.Fold(aFold: TFold; constref v0: T): T;
+function TGEnumerable.Fold(aFold: TFold; const aInitVal: T): T;
 begin
-  Result := v0;
+  Result := aInitVal;
   with GetEnumerator do
     try
       while MoveNext do
@@ -1524,7 +1527,7 @@ begin
     try
       if MoveNext then
         begin
-          v := Current;
+          v := aFold(Current, Default(T));
           while MoveNext do
             v := aFold(Current, v);
           Result.Assign(v);
@@ -1534,9 +1537,9 @@ begin
     end;
 end;
 
-function TGEnumerable.Fold(aFold: TOnFold; constref v0: T): T;
+function TGEnumerable.Fold(aFold: TOnFold; const aInitVal: T): T;
 begin
-  Result := v0;
+  Result := aInitVal;
   with GetEnumerator do
     try
       while MoveNext do
@@ -1554,7 +1557,7 @@ begin
     try
       if MoveNext then
         begin
-          v := Current;
+          v := aFold(Current, Default(T));
           while MoveNext do
             v := aFold(Current, v);
           Result.Assign(v);
@@ -1564,9 +1567,9 @@ begin
     end;
 end;
 
-function TGEnumerable.Fold(aFold: TNestFold; constref v0: T): T;
+function TGEnumerable.Fold(aFold: TNestFold; const aInitVal: T): T;
 begin
-  Result := v0;
+  Result := aInitVal;
   with GetEnumerator do
     try
       while MoveNext do
@@ -1584,7 +1587,7 @@ begin
     try
       if MoveNext then
         begin
-          v := Current;
+          v := aFold(Current, Default(T));
           while MoveNext do
             v := aFold(Current, v);
           Result.Assign(v);
