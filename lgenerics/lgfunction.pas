@@ -216,13 +216,13 @@ type
 
   private
   type
-    TVector      = specialize TGLiteVector<T>;
-    PVector      = ^TVector;
-    TVecEnum     = TVector.TEnumerator;
-    TEntry       = specialize TGMapEntry<TKey, TVector>;
-    TMap         = specialize TGLiteChainHashTable<TKey, TEntry, TKeyEqRel>;
+    TVector  = specialize TGLiteVector<T>;
+    PVector  = ^TVector;
+    TVecEnum = TVector.TEnumerator;
+    TEntry   = specialize TGMapEntry<TKey, TVector>;
+    TMap     = specialize TGLiteChainHashTable<TKey, TEntry, TKeyEqRel>;
 
-    TGroup  = class(specialize TGAutoEnumerable<T>)
+    TGroup = class(specialize TGAutoEnumerable<T>)
     private
       FEnum: TVecEnum;
       FVector: PVector;
@@ -592,12 +592,11 @@ end;
     Result := f(v, Result)
 }
 {$DEFINE ReduceArray :=
-  if System.Length(a) > 0 then
-    begin
-      Result := Default(Y);
-      for I := 0 to System.High(a) do
-        Result := f(a[I], Result);
-    end
+  if System.High(a) < 0 then exit(Default(TOptional));
+  v := Default(Y);
+  for I := 0 to System.High(a) do
+    v := f(a[I], v);
+  Result.Assign(v)
 }
 class function TGFolding.Left(const a: array of X; f: TFold; const y0: Y): Y;
 var
@@ -608,6 +607,7 @@ end;
 
 class function TGFolding.Left(const a: array of X; f: TFold): TOptional;
 var
+  v: Y;
   I: SizeInt;
 begin
   ReduceArray;
@@ -622,6 +622,7 @@ end;
 
 class function TGFolding.Left(const a: array of X; f: TOnFold): TOptional;
 var
+  v: Y;
   I: SizeInt;
 begin
   ReduceArray;
@@ -636,6 +637,7 @@ end;
 
 class function TGFolding.Left(const a: array of X; f: TNestFold): TOptional;
 var
+  v: Y;
   I: SizeInt;
 begin
   ReduceArray;
@@ -656,10 +658,13 @@ end;
     try
       if MoveNext then
         begin
-          Result := f(Current, Default(Y));
+          v := f(Current, Default(Y));
           while MoveNext do
-            Result := f(Current, Result);
-        end;
+            v := f(Current, v);
+          Result.Assign(v);
+        end
+      else
+        Result := Default(TOptional);
     finally
       Free;
     end
@@ -670,6 +675,8 @@ begin
 end;
 
 class function TGFolding.Left(e: IEnumerableX; f: TFold): TOptional;
+var
+  v: Y;
 begin
   ReduceEnum;
 end;
@@ -680,6 +687,8 @@ begin
 end;
 
 class function TGFolding.Left(e: IEnumerableX; f: TOnFold): TOptional;
+var
+  v: Y;
 begin
   ReduceEnum;
 end;
@@ -690,6 +699,8 @@ begin
 end;
 
 class function TGFolding.Left(e: IEnumerableX; f: TNestFold): TOptional;
+var
+  v: Y;
 begin
   ReduceEnum;
 end;
@@ -700,12 +711,11 @@ end;
     Result := f(a[I], Result)
 }
 {$DEFINE ReduceArray :=
-  if System.Length(a) > 0 then
-    begin
-      Result := Default(Y);
-      for I := System.High(a) downto 0 do
-        Result := f(a[I], Result);
-    end
+  if System.High(a) < 0 then exit(Default(TOptional));
+  v := Default(Y);
+  for I := System.High(a) downto 0 do
+    v := f(a[I], v);
+  Result.Assign(v);
 }
 class function TGFolding.Right(const a: array of X; f: TFold; const y0: Y): Y;
 var
@@ -716,6 +726,7 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TFold): TOptional;
 var
+  v: Y;
   I: SizeInt;
 begin
   ReduceArray;
@@ -730,6 +741,7 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TOnFold): TOptional;
 var
+  v: Y;
   I: SizeInt;
 begin
   ReduceArray;
@@ -744,6 +756,7 @@ end;
 
 class function TGFolding.Right(const a: array of X; f: TNestFold): TOptional;
 var
+  v: Y;
   I: SizeInt;
 begin
   ReduceArray;
@@ -764,10 +777,13 @@ end;
     try
       if MoveNext then
         begin
-          Result := f(Current, Default(Y));
+          v := f(Current, Default(Y));
           while MoveNext do
-            Result := f(Current, Result);
-        end;
+            v := f(Current, v);
+          Result.Assign(v);
+        end
+      else
+        Result := Default(TOptional);
     finally
       Free;
     end
@@ -778,6 +794,8 @@ begin
 end;
 
 class function TGFolding.Right(e: IEnumerableX; f: TFold): TOptional;
+var
+  v: Y;
 begin
   ReduceEnum;
 end;
@@ -788,6 +806,8 @@ begin
 end;
 
 class function TGFolding.Right(e: IEnumerableX; f: TOnFold): TOptional;
+var
+  v: Y;
 begin
   ReduceEnum;
 end;
@@ -798,6 +818,8 @@ begin
 end;
 
 class function TGFolding.Right(e: IEnumerableX; f: TNestFold): TOptional;
+var
+  v: Y;
 begin
   ReduceEnum;
 end;
