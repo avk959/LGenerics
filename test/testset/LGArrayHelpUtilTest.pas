@@ -61,6 +61,7 @@ type
 
     procedure AppendToEmpty;
     procedure Append;
+    procedure Replace;
 
     procedure MergeOfBothEmpty;
     procedure MergeOfDstEmptySrc7;
@@ -418,6 +419,42 @@ begin
   TIntHelper.Append(a, 7);
   AssertTrue(System.Length(a) = 8);
   for I := 0 to 7 do
+    AssertTrue(a[I] = I);
+end;
+
+procedure TArrayHelpUtilTest.Replace;
+var
+  a, b: TIntArray;
+  I, cnt: Integer;
+begin
+  a := nil;
+  b := TIntArray.Create(0,1,2,3,4,5);
+  cnt := TIntHelper.ReplaceWith(a, b);
+  AssertTrue(a = nil);
+  AssertTrue(cnt = 0);
+
+  a := TIntArray.Create(0,1,2,3,4,5);
+  b := nil;
+  TIntHelper.ReplaceWith(a, b);
+  AssertTrue(Length(a) = 6);
+  for I := 0 to High(a) do
+    AssertTrue(a[I] = I);
+  AssertTrue(cnt = 0);
+
+  b := [6, 7, 8];
+  cnt := TIntHelper.ReplaceWith(a[0..3], b);
+  AssertTrue(Length(a) = 6);
+  AssertTrue(cnt = 3);
+  for I := 0 to High(b) do
+    AssertTrue(a[I] = b[I]);
+  for I := Length(b) to High(a) do
+    AssertTrue(a[I] = I);
+
+  b := [0,1,2,8,9];
+  cnt := TIntHelper.ReplaceWith(a[0..2], b);
+  AssertTrue(Length(a) = 6);
+  AssertTrue(cnt = 3);
+  for I := 0 to High(a) do
     AssertTrue(a[I] = I);
 end;
 
