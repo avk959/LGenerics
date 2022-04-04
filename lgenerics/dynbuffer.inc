@@ -277,6 +277,13 @@ begin
     AppendEnum(e);
 end;
 
+constructor TGCustomArrayContainer.From(var a: TArray);
+begin
+  FItems := a;
+  FCount := System.Length(a);
+  a := nil;
+end;
+
 function TGCustomArrayContainer.Reverse: IEnumerable;
 begin
   BeginIteration;

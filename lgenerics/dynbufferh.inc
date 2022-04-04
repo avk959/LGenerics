@@ -85,6 +85,8 @@
     constructor Create(aCapacity: SizeInt);
     constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
+  { consumes an array a; after the constructor finishes, the value of a is nil }
+    constructor From(var a: TArray);
     function  Reverse: IEnumerable; override;
     function  ToArray: TArray; override;
   end;
