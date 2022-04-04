@@ -116,6 +116,7 @@ type
     procedure FillcbGender;
     function  GetLocation(const e: TEmployee): string;
     function  GenderIsMale(const e: TEmployee): Boolean;
+    procedure Append(const e: TEmployee);
 
     procedure ShowAllRecords;
     procedure ExecSimpleQuery(SkipCount, LimitCount: SizeInt; aCmp: TEmployeeCompare);
@@ -292,24 +293,24 @@ begin
   Result := e.Gender = 'Male';
 end;
 
+procedure TfrmMain.Append(const e: TEmployee);
+begin
+  mmResult.Append(e.ToString);
+end;
+
 procedure TfrmMain.ShowAllRecords;
-var
-  e: TEmployee;
 begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Clear;
     mmResult.Append('');
-    for e in FEmployees do
-      mmResult.Append(e.ToString);
+    FEmployees.ForEach(@Append);
   finally
     mmResult.Lines.EndUpdate;
   end;
 end;
 
 procedure TfrmMain.ExecSimpleQuery(SkipCount, LimitCount: SizeInt; aCmp: TEmployeeCompare);
-var
-  e: TEmployee;
 begin
   mmResult.Lines.BeginUpdate;
   try
@@ -328,8 +329,10 @@ begin
     mmResult.Append(FEmployees.Max(aCmp).OrElseDefault.ToString);
 
     mmResult.Append('Executing FEmployees.Skip(SkipCount).Limit(LimitCount):');
-    for e in FEmployees.Skip(SkipCount).Limit(LimitCount) do
-      mmResult.Append(e.ToString);
+    FEmployees
+     .Skip(SkipCount)
+     .Limit(LimitCount)
+     .ForEach(@Append);
   finally
     mmResult.Lines.EndUpdate;
   end;
@@ -358,20 +361,16 @@ begin
 end;
 
 procedure TfrmMain.SelectByLocation(const aLocation: string);
-  function RightLocation(const e: TEmployee): Boolean;
-  begin
-    Result := e.Location = aLocation;
-  end;
-var
-  e: TEmployee;
+  function RightLocation(const e: TEmployee): Boolean; begin Result := e.Location = aLocation end;
 begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.Select(@RightLocation), where Location = ' + aLocation);
-    for e in FEmployees.Select(@RightLocation) do
-      mmResult.Append(e.ToString);
+    FEmployees
+     .Select(@RightLocation)
+     .ForEach(@Append);
   finally
     mmResult.Lines.EndUpdate;
   end;
@@ -397,10 +396,7 @@ begin
 end;
 
 procedure TfrmMain.SelectMinMaxByLocation(const aLocation: string; aCmp: TEmployeeCompare);
-  function RightLocation(const e: TEmployee): Boolean;
-  begin
-    Result := e.Location = aLocation;
-  end;
+  function RightLocation(const e: TEmployee): Boolean; begin Result := e.Location = aLocation end;
 begin
   mmResult.Lines.BeginUpdate;
   try
@@ -417,16 +413,15 @@ begin
 end;
 
 procedure TfrmMain.Sort(const aCaption: string; aCmp: TEmployeeCompare);
-var
-  e: TEmployee;
 begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.Sorted ' + aCaption);
-    for e in FEmployees.Sorted(aCmp) do
-      mmResult.Append(e.ToString);
+    FEmployees
+     .Sorted(aCmp)
+     .ForEach(@Append);
   finally
     mmResult.Lines.EndUpdate;
   end;
@@ -459,9 +454,9 @@ type
   end;
 var
   g: TGroping.IGroup;
-  e: TEmployee;
   s: string;
   Total: Integer;
+  procedure AppendNest(const e: TEmployee); begin mmResult.Append(e.ToString); Inc(Total) end;
 begin
   mmResult.Lines.BeginUpdate;
   try
@@ -471,11 +466,8 @@ begin
       begin
         Total := 0;
         s := TGroping.GroupKey(g, @GetLocation).OrElse('no such location');
-        for e in g.Select(@IsRightEmployee) do
-          begin
-            mmResult.Append(e.ToString);
-            Inc(Total);
-          end;
+        g.Select(@IsRightEmployee)
+         .ForEach(@AppendNest);
         mmResult.Append('Total by ' + s + #9 + Total.ToString + LineEnding);
       end;
   finally
