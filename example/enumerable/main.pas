@@ -133,7 +133,7 @@ type
 
 var
   frmMain: TfrmMain;
-  Employees: array[0..199] of TEmployee = ({$I data.inc});
+  Employees: array of TEmployee = ({$I data.inc});
 
 implementation
 
@@ -153,7 +153,7 @@ end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  FEmployees := TEmployees.Create(Employees);
+  FEmployees := TEmployees.From(Employees);
   FillcbCmpKind;
   FillcbLocation;
   FillcbGender;
@@ -420,7 +420,7 @@ begin
 
     mmResult.Append('Executing FEmployees.Sorted ' + aCaption);
     FEmployees
-     .Sorted(aCmp)
+     .Sorted(aCmp, True)
      .ForEach(@Append);
   finally
     mmResult.Lines.EndUpdate;
