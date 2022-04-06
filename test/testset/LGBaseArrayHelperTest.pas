@@ -303,6 +303,7 @@ type
     procedure IsStrictDescendingOfDyn10Equal;
     procedure IsStrictDescendingOfDyn21Success;
     procedure IsStrictDescendingOfDyn21Unsuccess;
+    procedure IsPrefixTest;
 
     procedure InversionCount;
     procedure InversionCountND;
@@ -2286,6 +2287,29 @@ end;
 procedure TBaseArrayHelperTest.IsStrictDescendingOfDyn21Unsuccess;
 begin
   AssertFalse(TIntHelper.IsStrictDescending(TIntHelper.CreateReverseCopy(InOrderDblSrc21)));
+end;
+
+procedure TBaseArrayHelperTest.IsPrefixTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertFalse(TIntHelper.IsPrefix(a, b));
+
+  b := [1,2,3];
+  AssertFalse(TIntHelper.IsPrefix(a, b));
+
+  a := [1,2,3,4];
+  AssertFalse(TIntHelper.IsPrefix(a, b));
+
+  a := [1,2,4];
+  AssertFalse(TIntHelper.IsPrefix(a, b));
+
+  a := [1,2,3];
+  AssertTrue(TIntHelper.IsPrefix(a, b));
+
+  a := [1,2];
+  AssertTrue(TIntHelper.IsPrefix(a, b));
 end;
 
 procedure TBaseArrayHelperTest.InversionCount;
