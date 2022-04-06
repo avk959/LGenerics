@@ -888,7 +888,7 @@ begin
   AssertTrue(o.Instance.FindPath(TJsonPtr.From('/-'), Node));
   AssertTrue(Node.IsNull);
   Node.AsString := 'foo';
-  AssertTrue(o.Instance.Count.ToString, o.Instance.Count = 3);
+  AssertTrue(o.Instance.Count = 3);
   AssertTrue(o.Instance.Items[2].AsString = 'foo');
 end;
 
