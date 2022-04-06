@@ -29,6 +29,7 @@ uses
   Classes, SysUtils, Math, BufStream,
   lgUtils,
   lgAbstractContainer,
+  lgArrayHelpers,
   lgQueue,
   lgVector,
   lgList,
@@ -111,7 +112,7 @@ type
     FSegments: TStringArray;
     function GetCount: SizeInt; inline;
     function GetSegment(aIndex: SizeInt): string; inline;
-    class function Encode(const aSegs: TStringArray): string; static;
+    class function Encode(const aSegs: array of string): string; static;
     class function Decode(const s: string): TStringArray; static;
   public
   type
@@ -135,7 +136,7 @@ type
     returns False if aPtr is not a well-formed JSON Pointer }
     class function TryGetSegments(const aPtr: string; out aSegs: TStringArray): Boolean; static;
   { converts a sequence of segments into a JSON pointer }
-    class function ToPointer(const aSegments: TStringArray): string; static;
+    class function ToPointer(const aSegments: array of string): string; static;
     class operator = (const L, R: TJsonPtr): Boolean;
   { constructs a pointer from Pascal string, treats slash("/")
     as a path delimiter and "~" as a special character;
@@ -143,7 +144,7 @@ type
     raises an EJsException if s is not a well-formed JSON Pointer }
     constructor From(const s: string);
   { constructs a pointer from path segments as Pascal strings }
-    constructor From(const aPath: TStringArray);
+    constructor From(const aPath: array of string);
   { constructs a pointer from JSON string, treats slash("/")
     as a path delimiter and "~" as a special character;
     raises an exception if s is not a well-formed JSON Pointer }
@@ -418,6 +419,7 @@ type
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
     class function TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+  { note: the responsibility for the existence of the file lies with the user }
     class function TryParseFile(const aFileName: string; out aRoot: TJsonNode;
                             aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
   { returns the document root node if parsing is successful, nil otherwise }
@@ -427,6 +429,7 @@ type
                         aSkipBom: Boolean = False): TJsonNode; static;
     class function Load(aStream: TStream; aCount: SizeInt; aDepth: Integer = DEF_DEPTH;
                         aSkipBom: Boolean = False): TJsonNode; static;
+  { note: the responsibility for the existence of the file lies with the user }
     class function LoadFromFile(const aFileName: string; aDepth: Integer = DEF_DEPTH;
                                aSkipBom: Boolean = False): TJsonNode; static;
   { converts a pascal string to a JSON string }
@@ -1771,7 +1774,7 @@ begin
   Result := FSegments[aIndex];
 end;
 
-class function TJsonPtr.Encode(const aSegs: TStringArray): string;
+class function TJsonPtr.Encode(const aSegs: array of string): string;
 var
   sb: TJsonNode.TStrBuilder;
   I, J: SizeInt;
@@ -1901,7 +1904,7 @@ begin
   end;
 end;
 
-class function TJsonPtr.ToPointer(const aSegments: TStringArray): string;
+class function TJsonPtr.ToPointer(const aSegments: array of string): string;
 begin
   Result := Encode(aSegments);
 end;
@@ -1923,9 +1926,9 @@ begin
   FSegments := Decode(s);
 end;
 
-constructor TJsonPtr.From(const aPath: TStringArray);
+constructor TJsonPtr.From(const aPath: array of string);
 begin
-  FSegments := System.Copy(aPath);
+  FSegments := specialize TGArrayHelpUtil<string>.CreateCopy(aPath);
 end;
 
 constructor TJsonPtr.FromAlien(const s: string);
@@ -4778,7 +4781,7 @@ function IsNonNegativeInteger(const s: string; out aInt: SizeInt): Boolean;
 begin
   if s = '' then exit(False);
   if System.Length(s) = 1 then
-    if s[1] in ['0','1','2','3','4','5','6','7','8','9'] then
+    if s[1] in ['0'..'9'] then
       begin
         aInt := StrToInt(s);
         exit(True)
@@ -4786,7 +4789,7 @@ begin
     else
       exit(False);
   //leading zeros are not allowed
-  if not (s[1] in ['1','2','3','4','5','6','7','8','9']) then
+  if not (s[1] in ['1'..'9']) then
     exit(False);
   aInt := StrToIntDef(s, NULL_INDEX);
   Result := aInt <> NULL_INDEX;
@@ -4842,6 +4845,7 @@ var
   Pair: TPair;
   s: shortstring;
   MultiLine, UseTabs, StrEncode, BsdBrace, HasText, OneLineArray, OneLineObject: Boolean;
+  Node: TJsonNode;
   procedure NewLine(Pos: Integer); inline;
   begin
     sb.Append(sLineBreak);
@@ -4898,8 +4902,12 @@ var
           if aInst.FArray <> nil then begin
             Last := Pred(aInst.FArray^.Count);
             for I := 0 to Last do begin
-              if (aInst.FArray^.UncMutable[I]^.IsScalar and MultiLine) or IsRoot then
-                NewLine(aPos + aIndentSize);
+              Node := aInst.FArray^.UncMutable[I]^;
+              if (Node.IsScalar and MultiLine) or IsRoot then
+                NewLine(aPos + aIndentSize)
+              else
+                if (I = 0) and (Node.IsStruct and not BsdBrace and MultiLine)then
+                  NewLine(aPos + aIndentSize);
               BuildJson(aInst.FArray^.UncMutable[I]^, aPos + aIndentSize);
               if I <> Last then begin
                 sb.Append(chComma);
@@ -4927,10 +4935,11 @@ var
             for I := 0 to Last do begin
               if MultiLine or IsRoot then NewLine(aPos + aIndentSize);
               Pair := aInst.FObject^.Mutable[I]^;
+              Node := Pair.Value;
               AppendString(Pair.Key);
               sb.Append(chColon);
-              if Pair.Value.IsScalar or not MultiLine or
-                (OneLineArray and Pair.Value.IsArray)or(OneLineObject and Pair.Value.IsObject) then begin
+              if Node.IsScalar or not MultiLine or (OneLineArray and Node.IsArray) or
+                (OneLineObject and Node.IsObject) then begin
                 sb.Append(chSpace);
                 BuildJson(Pair.Value, aPos);
               end else begin
