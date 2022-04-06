@@ -128,13 +128,19 @@ type
     class function ValidPtr(const s: string): Boolean; static;
   { checks if a JSON string s is a well-formed JSON Pointer }
     class function ValidAlien(const s: string): Boolean; static;
-    class function ToSegments(const s: string): TStringArray; static;
-    class function ToString(const a: TStringArray): string; static;
+  { converts a JSON pointer instance aPtr into a sequence of segments;
+    raises an EJsException if aPtr is not a well-formed JSON Pointer }
+    class function ToSegments(const aPtr: string): TStringArray; static;
+  { tres to convert a JSON pointer instance aPtr into a sequence of segments;
+    returns False if aPtr is not a well-formed JSON Pointer }
+    class function TryGetSegments(const aPtr: string; out aSegs: TStringArray): Boolean; static;
+  { converts a sequence of segments into a JSON pointer }
+    class function ToPointer(const aSegments: TStringArray): string; static;
     class operator = (const L, R: TJsonPtr): Boolean;
   { constructs a pointer from Pascal string, treats slash("/")
     as a path delimiter and "~" as a special character;
     use it only if the segments do not contain a slash or tilde;
-    raises an exception if s is not a well-formed JSON Pointer }
+    raises an EJsException if s is not a well-formed JSON Pointer }
     constructor From(const s: string);
   { constructs a pointer from path segments as Pascal strings }
     constructor From(const aPath: TStringArray);
@@ -1880,14 +1886,24 @@ begin
   Result := ValidPtr(sb.ToDecodeString);
 end;
 
-class function TJsonPtr.ToSegments(const s: string): TStringArray;
+class function TJsonPtr.ToSegments(const aPtr: string): TStringArray;
 begin
-  Result := Decode(s);
+  Result := Decode(aPtr);
 end;
 
-class function TJsonPtr.ToString(const a: TStringArray): string;
+class function TJsonPtr.TryGetSegments(const aPtr: string; out aSegs: TStringArray): Boolean;
 begin
-  Result := Encode(a);
+  try
+    aSegs := Decode(aPtr);
+    Result := True;
+  except
+    Result := False;
+  end;
+end;
+
+class function TJsonPtr.ToPointer(const aSegments: TStringArray): string;
+begin
+  Result := Encode(aSegments);
 end;
 
 class operator TJsonPtr.=(const L, R: TJsonPtr): Boolean;
@@ -4007,20 +4023,20 @@ begin
       if FString <> aNode.FString then
         exit(False);
     jvkArray:
-     for I := 0 to Pred(Count) do
-       if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
-         exit(False);
+      for I := 0 to Pred(Count) do
+        if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
+          exit(False);
     jvkObject:
-     begin
-       for I := 0 to Pred(Count) do
-         begin
-           p := aNode.FObject^.FindUniq(FObject^.Mutable[I]^.Key);
-           if p = nil then
-             exit(False);
-           if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
-             exit(False);
-         end;
-     end;
+      begin
+        for I := 0 to Pred(Count) do
+          begin
+            p := aNode.FObject^.FindUniq(FObject^.Mutable[I]^.Key);
+            if p = nil then
+              exit(False);
+            if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
+              exit(False);
+          end;
+      end;
   end;
   Result := True;
 end;
