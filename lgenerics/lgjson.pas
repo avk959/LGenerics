@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSON parser and utilites that try to follow RFC 8259.                   *
 *                                                                           *
-*   Copyright(c) 2020-2021 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2020-2022 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -602,10 +602,16 @@ type
     function  Remove(const aName: string): Boolean;
     function  RemoveAll(const aName: string): SizeInt;
   { tries to find an element using a path specified as a JSON Pointer;
-    each node considered self as a root }
+    if non-unique keys are encountered in the search path, the search terminates
+    immediately and returns False; the "-" element has a special sense only if it is
+    the last segment of the path, otherwise it is treated as a string;
+    each node considered self as a root; }
     function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPtr: TJsonPtr): TJsonNode; inline;
   { tries to find an element using a path specified as an array of path segments;
+    if non-unique keys are encountered in the search path, the search terminates
+    immediately and returns False; the "-" element has a special sense only if it is
+    the last segment of the path, otherwise it is treated as a string;
     each node considered self as a root }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPath: array of string): TJsonNode;
@@ -4808,28 +4814,24 @@ begin
   Node := Self;
   aNode := nil;
   for I := 0 to System.High(aPath) do
-    begin
-      if aPath[I] = '' then
-         exit(Node.FindUniq('', aNode));
-      if Node.IsArray then
-        begin
-          if aPath[I] = '-' then
-            begin
-              if I <> System.High(aPath) then
-                exit(False);
-              aNode := Node.AddNode(jvkNull);
-              exit(True);
-            end
-          else
-            if not IsNonNegativeInteger(aPath[I], Idx) then
+    if Node.IsArray then
+      begin
+        if aPath[I] = '-' then
+          begin
+            if I <> System.High(aPath) then
               exit(False);
-          if not Node.Find(Idx, Node) then
+            aNode := Node.AddNode(jvkNull);
+            exit(True);
+          end
+        else
+          if not IsNonNegativeInteger(aPath[I], Idx) then
             exit(False);
-        end
-      else
-        if Node.IsObject and not Node.FindUniq(aPath[I], Node) then
+        if not Node.Find(Idx, Node) then
           exit(False);
-    end;
+      end
+    else
+      if not Node.FindUniq(aPath[I], Node) then
+        exit(False);
   aNode := Node;
   Result := Node <> nil;
 end;
