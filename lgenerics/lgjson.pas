@@ -4894,11 +4894,13 @@ var
       jvkString: AppendString(aInst.FString);
       jvkArray:
         begin
-          if OneLineArray then
+          if OneLineArray or OneLineObject then
             if HasText then
-              MultiLine := False
+              if OneLineArray then
+                MultiLine := False else
             else
-              IsRoot := True;
+              if OneLineArray or OneLineObject then
+                IsRoot := True;
           CheckHasText(aPos, IsRoot);
           sb.Append(chOpenSqrBr);
           if aInst.FArray <> nil then begin
@@ -4925,11 +4927,12 @@ var
         end;
       jvkObject:
         begin
-          if OneLineObject then
             if HasText then
-              MultiLine := False
+              if OneLineObject then
+                MultiLine := False else
             else
-              IsRoot := True;
+              if OneLineArray or OneLineObject then
+                IsRoot := True;
           CheckHasText(aPos, IsRoot);
           sb.Append(chOpenCurBr);
           if aInst.FObject <> nil then begin
@@ -4962,7 +4965,7 @@ var
     else
     end;
   end;
-begin
+begin //todo: make it somehow easier?
   sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   MultiLine := not(jfoSingleLine in aOptions);
   OneLineArray := (jfoSingleLineArray in aOptions) and MultiLine;
