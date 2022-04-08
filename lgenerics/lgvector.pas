@@ -92,6 +92,8 @@ type
     procedure Delete(aIndex: SizeInt);
   { will return False if aIndex out of bounds or instance in iteration }
     function  TryDelete(aIndex: SizeInt): Boolean;
+    function  DeleteLast: Boolean; inline;
+    function  DeleteLast(out aValue: T): Boolean; inline;
   { deletes aCount elements(if possible) starting from aIndex and returns those count;
     will raise ELGListError if aIndex out of bounds;
     will raise ELGUpdateLock if instance in iteration}
@@ -211,6 +213,8 @@ type
   { extracts aCount elements(if possible) starting from aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
+    function  DeleteLast: Boolean; inline;
+    function  DeleteLast(out aValue: T): Boolean; inline;
   { deletes aCount elements(if possible) starting from aIndex;
     returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
@@ -308,6 +312,8 @@ type
     procedure Delete(aIndex: SizeInt); inline;
   { will return False if aIndex out of bounds }
     function  TryDelete(aIndex: SizeInt): Boolean; inline;
+    function  DeleteLast: Boolean; inline;
+    function  DeleteLast(out aValue: T): Boolean; inline;
   { deletes aCount elements(if possible) starting from aIndex;
     returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
@@ -1248,6 +1254,26 @@ begin
     DeleteItem(aIndex);
 end;
 
+function TGVector.DeleteLast: Boolean;
+begin
+  if not InIteration and (ElemCount > 0) then
+    begin
+      DeleteItem(Pred(ElemCount));
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGVector.DeleteLast(out aValue: T): Boolean;
+begin
+  if not InIteration and (ElemCount > 0) then
+    begin
+      aValue := ExtractItem(Pred(ElemCount));
+      exit(True);
+    end;
+  Result := False;
+end;
+
 function TGVector.DeleteAll(aIndex, aCount: SizeInt): SizeInt;
 begin
   CheckInIteration;
@@ -1709,6 +1735,26 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
+function TGLiteVector.DeleteLast: Boolean;
+begin
+  if NonEmpty then
+    begin
+      DeleteItem(Pred(Count));
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGLiteVector.DeleteLast(out aValue: T): Boolean;
+begin
+  if NonEmpty then
+    begin
+      aValue := DeleteItem(Pred(Count));
+      exit(True);
+    end;
+  Result := False;
+end;
+
 function TGLiteVector.DeleteAll(aIndex, aCount: SizeInt): SizeInt;
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
@@ -1987,6 +2033,20 @@ begin
   Result := FVector.TryExtract(aIndex, v);
   if Result and OwnsObjects then
     v.Free;
+end;
+
+function TGLiteObjectVector.DeleteLast: Boolean;
+var
+  v: T;
+begin
+  Result := FVector.DeleteLast(v);
+  if Result and OwnsObjects then
+    v.Free;
+end;
+
+function TGLiteObjectVector.DeleteLast(out aValue: T): Boolean;
+begin
+  Result := FVector.DeleteLast(aValue);
 end;
 
 function TGLiteObjectVector.DeleteAll(aIndex, aCount: SizeInt): SizeInt;
