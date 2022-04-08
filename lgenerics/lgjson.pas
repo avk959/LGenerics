@@ -34,6 +34,7 @@ uses
   lgVector,
   lgList,
   lgStack,
+  lgHash,
   lgStrConst;
 
 type
@@ -482,6 +483,7 @@ type
   { checks that an instance is element-wise equal to aNode, is recursive;
     returns false if any object contains a non-unique key }
     function  EqualTo(aNode: TJsonNode): Boolean;
+    function  HashCode: SizeInt;
   { tries to load JSON from a string, in case of failure it returns False,
     in this case the content of the instance does not change }
     function  Parse(const s: string): Boolean;
@@ -4050,6 +4052,41 @@ begin
   Result := True;
 end;
 
+function TJsonNode.HashCode: SizeInt;
+const
+  MAGIC = SizeInt(161803398); //golden ratio
+var
+  I: SizeInt;
+  p: TPair;
+begin
+  if Self = nil then
+    exit(161803398);
+  case Kind of
+    jvkUnknown: Result := MAGIC + 1;
+    jvkNull:    Result := MAGIC + 3;
+    jvkFalse:   Result := MAGIC + 7;
+    jvkTrue:    Result := MAGIC + 17;
+    jvkNumber:  Result := TxxHash32LE.HashDWord(PDWord(@FValue.Num)^, DWord(MAGIC));
+    jvkString:  Result := TxxHash32LE.HashStr(FString, DWord(MAGIC));
+    jvkArray:
+      begin
+        Result := MAGIC + 31;
+        for I := 0 to Pred(Count) do
+          Result := Result xor FArray^.UncMutable[I]^.HashCode;
+      end;
+    jvkObject:
+      begin
+        Result := MAGIC + 67;
+        for I := 0 to Pred(Count) do
+          begin
+            p := FObject^.Mutable[I]^;
+            Result := Result xor TxxHash32LE.HashStr(p.Key, DWord(MAGIC));
+            Result := Result xor p.Value.HashCode;
+          end;
+      end;
+  end;
+end;
+
 function TJsonNode.Parse(const s: string): Boolean;
 var
   Node: TJsonNode;
@@ -4841,7 +4878,7 @@ begin
   FindPath(aPath, Result);
 end;
 
-function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize, aOffset: Integer): string;
+function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize: Integer; aOffset: Integer): string;
 var
   sb: TStrBuilder;
   Pair: TPair;
