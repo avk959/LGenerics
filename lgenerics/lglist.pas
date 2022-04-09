@@ -771,6 +771,7 @@ type
     function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt;
     function  DoFind(const aKey: TKey): SizeInt; inline;
     function  DoFindUniq(const aKey: TKey): PEntry;
+    function  TestHasUniq(aIndex: SizeInt): Boolean;
     function  GetCountOf(const aKey: TKey): SizeInt;
     function  DoAdd(const e: TEntry): SizeInt; inline;
     function  DoAddHash(aHash: SizeInt): SizeInt; inline;
@@ -870,6 +871,7 @@ type
     function  AddOrUpdate(const e: TEntry): Boolean; inline;
     function  AddAllOrUpdate(const a: array of TEntry): SizeInt;
     function  AddAllOrUpdate(e: IEntryEnumerable): SizeInt;
+    function  HasUniqKey(aIndex: SizeInt): Boolean; inline;
     procedure Insert(aIndex: SizeInt; const e: TEntry);
     function  TryInsert(aIndex: SizeInt; const e: TEntry): Boolean;
     procedure Delete(aIndex: SizeInt; out e: TEntry); inline;
@@ -4043,6 +4045,27 @@ begin
     end;
 end;
 
+function TGLiteHashList2.TestHasUniq(aIndex: SizeInt): Boolean;
+var
+  I, h, cnt: SizeInt;
+  k: TKey;
+begin
+  h := FNodeList[aIndex].Hash;
+  k := FNodeList[aIndex].Data.Key;
+  I := FChainList[h and Pred(Capacity)];
+  cnt := 0;
+  while I <> NULL_INDEX do
+    begin
+      if (I = aIndex)or((FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, k)) then
+        begin
+          if cnt = 1 then exit(False);
+          Inc(cnt);
+        end;
+      I := FNodeList[I].Next;
+    end;
+  Result := True;
+end;
+
 function TGLiteHashList2.GetCountOf(const aKey: TKey): SizeInt;
 var
   h, I: SizeInt;
@@ -4568,6 +4591,13 @@ begin
   for Entry in e do
     AddOrUpdate(Entry);
   Result := Count - Result;
+end;
+
+function TGLiteHashList2.HasUniqKey(aIndex: SizeInt): Boolean;
+begin
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    exit(TestHasUniq(aIndex));
+  Result := False;
 end;
 
 procedure TGLiteHashList2.Insert(aIndex: SizeInt; const e: TEntry);
