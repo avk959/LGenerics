@@ -279,6 +279,7 @@ type
     procedure IsStrictDescendingOfDyn21Success;
     procedure IsStrictDescendingOfDyn21Unsuccess;
     procedure IsPrefixTest;
+    procedure IsSuffixTest;
 
     procedure InversionCount;
     procedure InversionCountND;
@@ -2148,6 +2149,29 @@ begin
 
   a := [1,2];
   AssertTrue(TIntHelper.IsPrefix(a, b, @IntCmp));
+end;
+
+procedure TRegularArrayHelperTest.IsSuffixTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertFalse(TIntHelper.IsSuffix(a, b, @IntCmp));
+
+  b := [1,2,3];
+  AssertFalse(TIntHelper.IsSuffix(a, b, @IntCmp));
+
+  a := [0,1,2,3];
+  AssertFalse(TIntHelper.IsSuffix(a, b, @IntCmp));
+
+  a := [1,0,3];
+  AssertFalse(TIntHelper.IsSuffix(a, b, @IntCmp));
+
+  a := [1,2,3];
+  AssertTrue(TIntHelper.IsSuffix(a, b, @IntCmp));
+
+  a := [2,3];
+  AssertTrue(TIntHelper.IsSuffix(a, b, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.InversionCount;
