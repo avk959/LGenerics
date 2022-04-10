@@ -35,6 +35,7 @@ uses
   lgList,
   lgStack,
   lgHash,
+  lgSeqUtils,
   lgStrConst;
 
 type
@@ -512,7 +513,7 @@ type
   { adds a new object of the specified kind to the instance as to an array;
     if an instance is not an array, it is cleared and becomes an array - be careful;
     returns a new object }
-    function  AddNode(aKind: TJsValueKind): TJsonNode; inline;
+    function  AddNode(aKind: TJsValueKind = jvkUnknown): TJsonNode; inline;
   { returns True and the created object in the aNode parameter,
     if the string s can be parsed; the new object is added as in an array - be careful }
     function  AddJson(const s: string; out aNode: TJsonNode): Boolean;
@@ -537,7 +538,7 @@ type
   { adds a new object of the specified type associated with aName to the instance as to an object;
     if an instance is not an object, it is cleared and becomes an object - be careful;
     returns a new object }
-    function  AddNode(const aName: string; aKind: TJsValueKind): TJsonNode; inline;
+    function  AddNode(const aName: string; aKind: TJsValueKind = jvkUnknown): TJsonNode; inline;
   { returns True and the created object associated with aName in the aNode parameter,
     if the string aJson can be parsed; the new object is added as to an object - be careful }
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
@@ -587,6 +588,7 @@ type
     function  ContainsUniq(const aName: string): Boolean; inline;
     function  IndexOfName(const aName: string): SizeInt; inline;
     function  CountOfName(const aName: string): SizeInt; inline;
+    function  HasUniqName(aIndex: SizeInt): Boolean; inline;
     function  Find(const aKey: string; out aValue: TJsonNode): Boolean;
   { returns True if aName is found, otherwise adds a new pair with
     Value.Kind = jvkUnknown and returns False;
@@ -658,6 +660,122 @@ type
     property  NArrays[const aName: string]: TJVarArray write SetNArray;
   { will make an object from an instance }
     property  NObjects[const aName: string]: TJPairArray write SetNObject;
+  end;
+
+  TPatchResult = (prOk, prPatchMiss, prTargetMiss, prMalformPatch, prFail);
+  TDiffResult  = (drOk, drSourceMiss, drTargetMiss, drFail);
+
+  { TJsonPatch provides support for JSON Patch(RFC 6902, see also http://jsonpatch.com/);
+    JSON Patch is a format for expressing a sequence of operations to apply to
+    a target JSON document, it supports ADD, REMOVE, REPLACE, MOVE, COPY, and TEST
+    operations; in the current implementation, the application of the patch tries to be
+    atomic, that is, if any error occurs, the contents of the target does not change }
+  TJsonPatch = class
+  private
+  type
+    TStrHelper = specialize TGSimpleArrayHelper<string>;
+    TStrVector = specialize TGLiteVector<string>;
+    THasher    = record
+      class function Equal(L, R: TJsonNode): Boolean; static;
+      class function HashCode(aValue: TJsonNode): SizeInt; static;
+    end;
+    TDifUtil   = specialize TGSeqUtil<TJsonNode, THasher>;
+
+  const
+    OP_KEY      = 'op';
+    VAL_KEY     = 'value';
+    PATH_KEY    = 'path';
+    FROM_KEY    = 'from';
+    ADD_KEY     = 'add';
+    COPY_KEY    = 'copy';
+    MOVE_KEY    = 'move';
+    REMOVE_KEY  = 'remove';
+    REPLACE_KEY = 'replace';
+    TEST_KEY    = 'test';
+  var
+    FNode: TJsonNode;
+    FLoaded,
+    FValidated: Boolean;
+    class function  FindOp(aNode: TJsonNode; var aOpNode: TJsonNode): Boolean; static; inline;
+    class function  TestPathValue(aNode: TJsonNode): Boolean; static; inline;
+    class function  TestPath(aNode: TJsonNode): Boolean; static; inline;
+    class function  TestMovePaths(aNode: TJsonNode): Boolean; static; inline;
+    class function  TestCopyPaths(aNode: TJsonNode): Boolean; static; inline;
+    class function  GetValAndPath(aNode: TJsonNode; var aValNode: TJsonNode;
+                                  out aPath: TStringArray): Boolean; static; inline;
+    class function  GetMovePaths(aNode: TJsonNode; var aPathNode: TJsonNode;
+                                 out aFrom, aTo: TStringArray): Boolean; static; //inline;
+    class function  GetCopyPaths(aNode: TJsonNode; var aPathNode: TJsonNode;
+                                 out aFrom, aTo: TStringArray): Boolean; static; inline;
+    class function  GetPath(aNode: TJsonNode; var aPathNode: TJsonNode; out aPath: TStringArray): Boolean; static; inline;
+    class procedure MoveNode(aSrc, aDst: TJsonNode); static; inline;
+    class function  TryAdd(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
+    class function  TryRemove(aNode: TJsonNode; const aPath: TStringArray): Boolean; static;
+    class function  TryExtract(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
+    class function  TryCopy(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
+    class function  TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; inline;
+    class function  TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; //inline;
+    function GetAsJson: string;
+    function SeemsValidPatch(aNode: TJsonNode): Boolean;
+    function ApplyValidated(aNode: TJsonNode): TPatchResult;
+  public
+  const
+    MIME_TYPE = 'application/json-patch+json';
+    DEF_DEPTH = TJsonNode.DEF_DEPTH;
+  { creates a patch that converts aSource to aTarget  }
+    class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode): TDiffResult; static;
+    class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch): TDiffResult; static;
+    class function Diff(const aSource, aTarget: string; out aDiff: TJsonNode): TDiffResult; static;
+    class function Diff(const aSource, aTarget: string; out aDiff: TJsonPatch): TDiffResult; static;
+    class function Diff(const aSource, aTarget: string; out aDiff: string): TDiffResult; static;
+  { tries to load a patch content from s, returns False if s is malformed JSON }
+    class function TryLoadPatch(const s: string; out p: TJsonPatch): Boolean; static;
+  { returns TJsonPatch instance if s is well-formed JSON, otherwise returns NIL }
+    class function LoadPatch(const s: string): TJsonPatch; static; inline;
+  { tries to load a patch content from file, returns False if file contains malformed JSON;
+    note: the responsibility for the existence of the file lies with the user }
+    class function TryLoadPatchFile(const aFileName: string; out p: TJsonPatch): Boolean; static;
+  { returns TJsonPatch instance if file contains well-formed JSON, otherwise returns NIL;
+    note: the responsibility for the existence of the file lies with the user }
+    class function LoadPatchFile(const aFileName: string): TJsonPatch; static; inline;
+  { returns the result of applying the content of p to a JSON document given as a string aTarget;
+    on any result other than prOk, the contents of the aTarget does not change }
+    class function Patch(p: TJsonPatch; var aTarget: string): TPatchResult; static; inline;
+  { returns the result of applying a patch given as a string aPatch, to a JSON document
+    given as a string aTarget;
+    on any result other than prOk, the contents of the aTarget does not change }
+    class function Patch(const aPatch: string; var aTarget: string): TPatchResult; static;
+    class function Patch(const aPatch: string; aTarget: TJsonNode): TPatchResult; static;
+  { returns the result of applying the content of P to the JSON document contained in the file;
+    on any result other than prOk, the contents of the file does not change;
+    note: the responsibility for the existence of the file lies with the user }
+    class function PatchFile(p: TJsonPatch; const aTargetFileName: string): TPatchResult; static;
+  { returns the result of applying a patch given as a string aPatch, to a JSON document
+    contained in the file;
+    on any result other than prOk, the contents of the file does not change;
+    note: the responsibility for the existence of the file lies with the user }
+    class function PatchFile(const aPatch: string; const aTargetFileName: string): TPatchResult; static;
+
+    destructor Destroy; override;
+    procedure Clear; inline;
+  { tries to load content from s, returns False if s is malformed JSON }
+    function  TryLoad(const s: string): Boolean;
+    function  TryLoad(aStream: TStream; aCount: SizeInt): Boolean;
+  { tries to load content from file, returns False if file contains malformed JSON;
+    note: the responsibility for the existence of the file lies with the user }
+    function  TryLoadFile(const aFileName: string): Boolean;
+    procedure Load(aNode: TJsonNode);
+  { returns True if the content looks like a JSON patch }
+    function  Validate: Boolean; inline;
+  { returns the result of applying the content to the aNode; any operation will fail
+    if the search path contains keys that are not unique within the corresponding object;
+    on any result other than prOk, the contents of the aNode does not change }
+    function  Apply(aTarget: TJsonNode): TPatchResult;
+    function  Apply(var aTarget: string): TPatchResult;
+    function  TryAsJson(out aJson: string): Boolean;
+    property  Loaded: Boolean read FLoaded;
+    property  Validated: Boolean read FValidated;
+    property  AsJson: string read GetAsJson;
   end;
 
   { TJsonWriter provides a quick way of producing JSON document;
@@ -3205,9 +3323,9 @@ end;
 function TJsonNode.GetCount: SizeInt;
 begin
   case Kind of
+    jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString: ;
     jvkArray:  if FArray <> nil then exit(FArray^.Count);
     jvkObject: if FObject <> nil then exit(FObject^.Count);
-  else
   end;
   Result := 0;
 end;
@@ -4019,10 +4137,13 @@ var
   I: SizeInt;
   p: ^TPair;
 begin
+  if Self = nil then
+    exit(aNode = nil)
+  else
+    if aNode = nil then
+      exit(False);
   if aNode = Self then
     exit(True);
-  if aNode = nil then
-    exit(Self = nil);
   if (Kind <> aNode.Kind) or (Count <> aNode.Count) then
     exit(False);
   case aNode.Kind of
@@ -4060,7 +4181,7 @@ var
   p: TPair;
 begin
   if Self = nil then
-    exit(161803398);
+    exit(MAGIC);
   case Kind of
     jvkUnknown: Result := MAGIC + 1;
     jvkNull:    Result := MAGIC + 3;
@@ -4080,8 +4201,7 @@ begin
         for I := 0 to Pred(Count) do
           begin
             p := FObject^.Mutable[I]^;
-            Result := Result xor TxxHash32LE.HashStr(p.Key, DWord(MAGIC));
-            Result := Result xor p.Value.HashCode;
+            Result := Result xor TxxHash32LE.HashStr(p.Key, DWord(MAGIC)) xor p.Value.HashCode;
           end;
       end;
   end;
@@ -4618,6 +4738,13 @@ begin
   Result := 0;
 end;
 
+function TJsonNode.HasUniqName(aIndex: SizeInt): Boolean;
+begin
+  if (Kind = jvkObject) and (FValue.Ref <> nil) then
+    exit(FObject^.HasUniqKey(aIndex));
+  Result := False;
+end;
+
 function TJsonNode.Find(const aKey: string; out aValue: TJsonNode): Boolean;
 var
   p: ^TPair;
@@ -5065,6 +5192,896 @@ begin
     jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
   end;
 end;
+
+{ TJsonPatch.THasher }
+
+class function TJsonPatch.THasher.Equal(L, R: TJsonNode): Boolean;
+begin
+  Result := L.EqualTo(R);
+end;
+
+class function TJsonPatch.THasher.HashCode(aValue: TJsonNode): SizeInt;
+begin
+  Result := aValue.HashCode;
+end;
+
+{ TJsonPatch }
+
+class function TJsonPatch.FindOp(aNode: TJsonNode; var aOpNode: TJsonNode): Boolean;
+begin
+  if not aNode.IsObject or (aNode.Count = 0) then
+    exit(False);
+  if not(aNode.FindUniq(OP_KEY, aOpNode) and aOpNode.IsString) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.TestPathValue(aNode: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if not(aNode.FindUniq(PATH_KEY, Node) and Node.IsString) then
+    exit(False);
+  if not TJsonPtr.ValidPtr(Node.AsString) then
+    exit(False);
+  if not aNode.FindUniq(VAL_KEY, Node) or (Node.Kind = jvkUnknown) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.TestPath(aNode: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if not(aNode.FindUniq(PATH_KEY, Node) and Node.IsString) then
+    exit(False);
+  if not TJsonPtr.ValidPtr(Node.AsString) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.TestMovePaths(aNode: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+  PathFrom, PathTo: TStringArray;
+begin
+  if not(aNode.FindUniq(FROM_KEY, Node) and Node.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(Node.AsString, PathFrom) then
+    exit(False);
+  if not(aNode.FindUniq(PATH_KEY, Node) and Node.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(Node.AsString, PathTo) then
+    exit(False);
+  if TStrHelper.IsPrefix(PathFrom, PathTo) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.TestCopyPaths(aNode: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if not(aNode.FindUniq(FROM_KEY, Node) and Node.IsString) then
+    exit(False);
+  if not TJsonPtr.ValidPtr(Node.AsString) then
+    exit(False);
+  if not(aNode.FindUniq(PATH_KEY, Node) and Node.IsString) then
+    exit(False);
+  if not TJsonPtr.ValidPtr(Node.AsString) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.GetValAndPath(aNode: TJsonNode; var aValNode: TJsonNode;
+  out aPath: TStringArray): Boolean;
+begin
+  if not(aNode.FindUniq(PATH_KEY, aValNode) and aValNode.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(aValNode.AsString, aPath) then
+    exit(False);
+  if not aNode.FindUniq(VAL_KEY, aValNode) or (aValNode.Kind = jvkUnknown) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.GetMovePaths(aNode: TJsonNode; var aPathNode: TJsonNode;
+  out aFrom, aTo: TStringArray): Boolean;
+begin
+  if not(aNode.FindUniq(FROM_KEY, aPathNode) and aPathNode.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(aPathNode.AsString, aFrom) then
+    exit(False);
+  if not(aNode.FindUniq(PATH_KEY, aPathNode) and aPathNode.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(aPathNode.AsString, aTo) then
+    exit(False);
+  if (System.Length(aFrom) < System.Length(aTo)) and TStrHelper.IsPrefix(aFrom, aTo) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.GetCopyPaths(aNode: TJsonNode; var aPathNode: TJsonNode;
+  out aFrom, aTo: TStringArray): Boolean;
+begin
+  if not(aNode.FindUniq(FROM_KEY, aPathNode) and aPathNode.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(aPathNode.AsString, aFrom) then
+    exit(False);
+  if not(aNode.FindUniq(PATH_KEY, aPathNode) and aPathNode.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(aPathNode.AsString, aTo) then
+    exit(False);
+  Result := True;
+end;
+
+class function TJsonPatch.GetPath(aNode: TJsonNode; var aPathNode: TJsonNode;
+  out aPath: TStringArray): Boolean;
+begin
+  if not(aNode.FindUniq(PATH_KEY, aPathNode) and aPathNode.IsString) then
+    exit(False);
+  if not TJsonPtr.TryGetSegments(aPathNode.AsString, aPath) then
+    exit(False);
+  Result := True;
+end;
+
+class procedure TJsonPatch.MoveNode(aSrc, aDst: TJsonNode);
+begin
+  aDst.Clear;
+  aDst.FValue := aSrc.FValue;
+  aDst.FKind := aSrc.FKind;
+  aSrc.FValue.Int := 0;
+  aSrc.FKind := jvkUnknown;
+end;
+
+{$PUSH}{$WARN 5036 OFF}
+class function TJsonPatch.TryAdd(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
+var
+  Node, ValNode: TJsonNode;
+  Idx: SizeInt;
+  Key: string;
+begin
+  if aPath = nil then
+    begin
+      aNode.CopyFrom(aValue);
+      exit(True);
+    end;
+  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], Node) then
+    exit(False);
+  if not Node.IsStruct then
+    exit(False);
+  Key := aPath[System.High(aPath)];
+  if Key = '-' then
+    begin
+      if not Node.IsArray then
+        exit(False);
+      Node.AddNode(aValue.Kind).CopyFrom(aValue);
+      Result := True;
+    end
+  else
+    begin
+      if not Node.IsStruct then
+        exit(False);
+      if Node.IsArray then
+        begin
+          if not IsNonNegativeInteger(Key, Idx) then
+            exit(False);
+          Result := Node.InsertNode(Idx, ValNode, aValue.Kind);
+          if Result then
+            ValNode.CopyFrom(aValue);
+        end
+      else
+        begin
+          if Node.CountOfName(Key) > 1 then
+            exit(False);
+          Node.FindOrAdd(Key, ValNode);
+          ValNode.CopyFrom(aValue);
+          Result := True;
+        end;
+    end;
+end;
+{$POP}
+
+class function TJsonPatch.TryRemove(aNode: TJsonNode; const aPath: TStringArray): Boolean;
+var
+  Node: TJsonNode;
+  Idx: SizeInt;
+  Key: string;
+begin
+  if aPath = nil then
+    exit(False);
+  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], Node) then
+    exit(False);
+  if not Node.IsStruct then
+    exit(False);
+  Key := aPath[System.High(aPath)];
+  if Node.IsArray then
+    begin
+      if not IsNonNegativeInteger(Key, Idx) then
+        exit(False);
+      Result := Node.Delete(Idx);
+    end
+  else
+    begin
+      if not Node.ContainsUniq(Key) then
+        exit(False);
+      Result := Node.Remove(Key);
+    end;
+end;
+
+class function TJsonPatch.TryExtract(aNode: TJsonNode; const aPath: TStringArray;
+  out aValue: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+  Idx: SizeInt;
+  Key: string;
+begin
+  if aPath = nil then
+    exit(False);
+  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], Node) then
+    exit(False);
+  if not Node.IsStruct then
+    exit(False);
+  Key := aPath[System.High(aPath)];
+  if Node.IsArray then
+    begin
+      if not IsNonNegativeInteger(Key, Idx) then
+        exit(False);
+      Result := Node.Extract(Idx, aValue);
+    end
+  else
+    begin
+      if not Node.ContainsUniq(Key) then
+        exit(False);
+      Result := Node.Extract(Key, aValue);
+    end;
+end;
+
+class function TJsonPatch.TryCopy(aNode: TJsonNode; const aPath: TStringArray;
+  out aValue: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if not aNode.FindPath(aPath, Node) then
+    exit(False);
+  aValue := Node.Clone;
+  Result := True;
+end;
+
+class function TJsonPatch.TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if not aNode.FindPath(aPath, Node) then
+    exit(False);
+  Node.CopyFrom(aValue);
+  Result := True;
+end;
+
+class function TJsonPatch.TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
+var
+  Node: TJsonNode;
+begin
+  if not aNode.FindPath(aPath, Node) then
+    exit(False);
+  Result := Node.EqualTo(aValue);
+end;
+
+function TJsonPatch.GetAsJson: string;
+begin
+  if Loaded then
+    exit(FNode.AsJson);
+  Result :='';
+end;
+
+function TJsonPatch.SeemsValidPatch(aNode: TJsonNode): Boolean;
+var
+  CurrNode, TmpNode: TJsonNode;
+  I: SizeInt;
+begin
+  if (aNode = nil) or not aNode.IsArray then
+    exit(False);
+  for I := 0 to Pred(aNode.Count) do
+    begin
+      CurrNode := aNode.Items[I];
+      if not FindOp(CurrNode, TmpNode) then
+        exit(False);
+      case TmpNode.AsString of
+        ADD_KEY, REPLACE_KEY, TEST_KEY:
+          if not TestPathValue(CurrNode) then
+            exit(False);
+        COPY_KEY:
+          if not TestCopyPaths(CurrNode) then
+            exit(False);
+        MOVE_KEY:
+          if not TestMovePaths(CurrNode) then
+            exit(False);
+        REMOVE_KEY:
+          if not TestPath(CurrNode) then
+            exit(False);
+      else
+        exit(False);
+      end;
+    end;
+  Result := True;
+end;
+
+{$PUSH}{$WARN 5089 OFF}{$WARN 5036 OFF}
+function TJsonPatch.ApplyValidated(aNode: TJsonNode): TPatchResult;
+var
+  CopyNode, CurrNode, TmpNode: TJsonNode;
+  I: SizeInt;
+  PathFrom, PathTo: TStringArray;
+  CopyRef: specialize TGUniqRef<TJsonNode>;
+begin
+  CopyRef.Instance := aNode.Clone;
+  CopyNode := CopyRef;
+  for I := 0 to Pred(FNode.Count) do
+    begin
+      CurrNode := FNode.Items[I];
+      FindOp(CurrNode, TmpNode);
+      case TmpNode.AsString of
+        ADD_KEY:
+          begin
+            GetValAndPath(CurrNode, TmpNode, PathFrom);
+            if not TryAdd(CopyNode, TmpNode, PathFrom) then
+              exit(prFail);
+          end;
+        COPY_KEY:
+          begin
+            GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo);
+            if not TryCopy(CopyNode, PathFrom, TmpNode) then
+              exit(prFail);
+            if not TryAdd(CopyNode, TmpNode, PathTo) then
+              exit(prFail);
+          end;
+        MOVE_KEY:
+          begin
+            GetMovePaths(CurrNode, TmpNode, PathFrom, PathTo);
+            if not TryExtract(CopyNode, PathFrom, TmpNode) then
+              exit(prFail);
+            if not TryAdd(CopyNode, TmpNode, PathTo) then
+              exit(prFail);
+          end;
+        REMOVE_KEY:
+          begin
+            if not GetPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryRemove(CopyNode, PathFrom) then
+              exit(prFail);
+          end;
+        REPLACE_KEY:
+          begin
+            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryReplace(CopyNode, TmpNode, PathFrom) then
+              exit(prFail);
+          end;
+        TEST_KEY:
+          begin
+            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryTest(CopyNode, TmpNode, PathFrom) then
+              exit(prFail);
+          end;
+      else
+        exit(prMalformPatch);
+      end;
+    end;
+  MoveNode(CopyNode, aNode);
+  Result := prOk;
+end;
+{$POP}
+
+const
+  FIRST_INTS_HIGH = 99;
+  FIRST_INTS: array[0..FIRST_INTS_HIGH] of string = (
+     '0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9', '10', '11',
+    '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23',
+    '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35',
+    '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
+    '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
+    '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71',
+    '72', '73', '74', '75', '76', '77', '78', '79', '80', '81', '82', '83',
+    '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95',
+    '96', '97', '98', '99');
+
+class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode): TDiffResult;
+var
+  Path: TStrVector;
+
+  function GetCurrPath: string; inline;
+  begin
+    Result := TJsonPtr.ToPointer(Path.UncMutable[0][0..Pred(Path.Count)]);
+  end;
+
+  procedure PushReplace(const aKey: string; aValue: TJsonNode); inline;
+  begin
+    Path.Add(aKey);
+    aDiff.AddNode(jvkObject)
+      .Add(OP_KEY, REPLACE_KEY)
+      .Add(PATH_KEY, GetCurrPath)
+      .AddNode(VAL_KEY).CopyFrom(aValue);
+    Path.DeleteLast;
+  end;
+
+  procedure PushReplace(aValue: TJsonNode); inline;
+  begin
+    aDiff.AddNode(jvkObject)
+      .Add(OP_KEY, REPLACE_KEY)
+      .Add(PATH_KEY, GetCurrPath)
+      .AddNode(VAL_KEY).CopyFrom(aValue);
+  end;
+
+  procedure PushAdd(const aKey: string; aValue: TJsonNode); inline;
+  begin
+    Path.Add(aKey);
+    aDiff.AddNode(jvkObject)
+      .Add(OP_KEY, ADD_KEY)
+      .Add(PATH_KEY, GetCurrPath)
+      .AddNode(VAL_KEY).CopyFrom(aValue);
+    Path.DeleteLast;
+  end;
+
+  procedure PushRemove(const aKey: string); inline;
+  begin
+    Path.Add(aKey);
+    aDiff.AddNode(jvkObject)
+      .Add(OP_KEY, REMOVE_KEY)
+      .Add(PATH_KEY, GetCurrPath);
+    Path.DeleteLast;
+  end;
+
+  function Int2Str(aValue: SizeInt): string; inline;
+  begin
+    if aValue <= FIRST_INTS_HIGH then
+      Result := FIRST_INTS[aValue]
+    else
+      Result := aValue.ToString;
+  end;
+
+  procedure DoDiff(aSrc, aDst: TJsonNode); forward;
+
+var
+  Cancel: Boolean = False;
+
+  procedure DoArrayDiff(aSrc, aDst: TJsonNode);
+  var
+    LocDiff: TDifUtil.TDiff;
+    I, DelIdx, InsIdx, DelLen, InsLen: SizeInt;
+    Del, Ins: array of Boolean;
+  begin
+    if aSrc.Count = 0 then begin
+      for I := 0 to Pred(aDst.Count) do
+        PushAdd(Int2Str(I), aDst.Items[I]);
+      exit;
+    end else
+      if aDst.Count = 0 then begin
+        for I := 0 to Pred(aSrc.Count) do
+          PushRemove(Int2Str(I));
+        exit;
+      end;
+
+    LocDiff := TDifUtil.Diff(aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],
+                             aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
+    Del := LocDiff.SourceChanges;
+    Ins := LocDiff.TargetChanges;
+    DelLen := System.Length(Del);
+    InsLen := System.Length(Ins);
+    DelIdx := 0;
+    InsIdx := 0;
+    repeat
+      while(DelIdx < DelLen)and Del[DelIdx]and(InsIdx < InsLen)and Ins[InsIdx]do begin
+        Path.Add(Int2Str(DelIdx)); //replacements
+        /////////////
+        DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]);
+        /////////////
+        if Cancel then exit;
+        Path.DeleteLast;
+        Del[DelIdx] := False;
+        Inc(DelIdx);
+        Ins[InsIdx] := False;
+        Inc(InsIdx);
+      end;
+      while (DelIdx < DelLen) and Del[DelIdx] do
+        Inc(DelIdx);
+      while (InsIdx < InsLen) and Ins[InsIdx] do
+        Inc(InsIdx);
+      Inc(DelIdx);
+      Inc(InsIdx);
+    until (DelIdx >= DelLen) and (InsIdx >= InsLen);
+
+    for DelIdx := Pred(DelLen) downto 0 do
+      if Del[DelIdx] then
+        PushRemove(Int2Str(DelIdx));
+
+    for InsIdx := 0 to Pred(InsLen) do
+      if Ins[InsIdx] then
+        PushAdd(Int2Str(InsIdx), aDst.Items[InsIdx]);
+  end;
+
+  procedure DoObjectDiff(aSrc, aDst: TJsonNode);
+  var
+    p: TJsonNode.TPair;
+    Node: TJsonNode;
+    I: SizeInt;
+  begin
+    for I := 0 to Pred(aSrc.Count) do begin
+      if not aSrc.FObject^.HasUniqKey(I) then begin
+        Cancel := True;
+        exit;
+      end;
+      p := aSrc.FObject^.Mutable[I]^;
+      if aDst.Find(p.Key, Node) then  //todo: IndexOfName() ???
+        if aDst.ContainsUniq(p.Key) then begin
+          Path.Add(p.Key);
+          /////////////
+          DoDiff(p.Value, Node);
+          /////////////
+          if Cancel then
+            exit;
+          Path.DeleteLast;
+        end else begin
+          Cancel := True;
+          exit;
+        end
+      else
+        PushRemove(p.Key);
+    end;
+    for I := 0 to Pred(aDst.Count) do begin
+      p := aDst.FObject^.Mutable[I]^;
+      if not aSrc.Contains(p.Key) then begin
+        if not aDst.HasUniqName(I) then begin
+          Cancel := True;
+          exit;
+        end;
+        PushAdd(p.Key, p.Value);
+      end;
+    end;
+  end;
+
+  procedure DoDiff(aSrc, aDst: TJsonNode);
+  begin
+    if Cancel then
+      exit;
+
+    if aSrc.Kind <> aDst.Kind then begin
+      PushReplace(aDst);
+      exit;
+    end;
+
+    case aSrc.Kind of
+      jvkNull, jvkFalse, jvkTrue: ;
+      jvkNumber:
+        if not SameDouble(aSrc.AsNumber, aDst.AsNumber) then
+          PushReplace(aDst);
+      jvkString:
+        if aSrc.AsString <> aDst.AsString then
+          PushReplace(aDst);
+      jvkArray: DoArrayDiff(aSrc, aDst);
+      jvkObject: DoObjectDiff(aSrc, aDst);
+    otherwise
+      Cancel := True;
+    end;
+  end;
+begin //todo: need options to create value checks for replacements and removes?
+      //todo: how to improve processing of arrays of structures?
+  if (aSource = nil) or (aSource.Kind = jvkUnknown) then
+    exit(drSourceMiss)
+  else
+    if (aTarget = nil) or (aTarget.Kind = jvkUnknown) then
+      exit(drTargetMiss);
+
+  aDiff := TJsonNode.Create;
+  aDiff.AsArray;
+
+  DoDiff(aSource, aTarget);
+
+  if Cancel then
+    begin
+      FreeAndNil(aDiff);
+      exit(drFail);
+    end;
+  Result := drOk;
+end;
+
+class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch): TDiffResult;
+var
+  Node: TJsonNode = nil;
+begin
+  Result := Diff(aSource, aTarget, Node);
+  if Result = drOk then
+    begin
+      aDiff := TJsonPatch.Create;
+      aDiff.FNode := Node;
+      aDiff.FLoaded := True;
+    end;
+end;
+
+{$PUSH}{$WARN 5089 OFF}
+class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: TJsonNode): TDiffResult;
+var
+  Src, Dst: specialize TGUniqRef<TJsonNode>;
+begin
+  Src.Instance := TJsonNode.Load(aSource);
+  Dst.Instance := TJsonNode.Load(aTarget);
+  Result := Diff(Src.Instance, Dst.Instance, aDiff);
+end;
+
+class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: TJsonPatch): TDiffResult;
+var
+  Node: TJsonNode = nil;
+begin
+  Result := Diff(aSource, aTarget, Node);
+  if Result = drOk then
+    begin
+      aDiff := TJsonPatch.Create;
+      aDiff.FNode := Node;
+      aDiff.FLoaded := True;
+    end;
+end;
+
+class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: string): TDiffResult;
+var
+  Src, Dst: specialize TGUniqRef<TJsonNode>;
+  Node: TJsonNode;
+begin
+  Src.Instance := TJsonNode.Load(aSource);
+  Dst.Instance := TJsonNode.Load(aTarget);
+  Result := Diff(Src.Instance, Dst.Instance, Node);
+  if Result = drOk then
+    begin
+      aDiff := Node.AsJson;
+      Node.Free;
+    end;
+end;
+
+class function TJsonPatch.TryLoadPatch(const s: string; out p: TJsonPatch): Boolean;
+begin
+  p := TJsonPatch.Create;
+  if not p.TryLoad(s) then
+    begin
+      FreeAndNil(p);
+      exit(False);
+    end;
+  Result := True;
+end;
+
+class function TJsonPatch.LoadPatch(const s: string): TJsonPatch;
+begin
+  TryLoadPatch(s, Result);
+end;
+
+class function TJsonPatch.TryLoadPatchFile(const aFileName: string; out p: TJsonPatch): Boolean;
+begin
+  p := TJsonPatch.Create;
+  try
+    Result := p.TryLoadFile(aFileName);
+  except
+    Result := False;
+    FreeAndNil(p);
+    raise;
+  end;
+  if not Result then
+    FreeAndNil(p);
+end;
+
+class function TJsonPatch.LoadPatchFile(const aFileName: string): TJsonPatch;
+begin
+  TryLoadPatchFile(aFileName, Result);
+end;
+
+class function TJsonPatch.Patch(p: TJsonPatch; var aTarget: string): TPatchResult;
+begin
+  Result := p.Apply(aTarget);
+end;
+
+class function TJsonPatch.Patch(const aPatch: string; var aTarget: string): TPatchResult;
+var
+  LocPatch: specialize TGAutoRef<TJsonPatch>;
+begin
+  if not LocPatch.Instance.TryLoad(aPatch) then
+    exit(prPatchMiss);
+  Result := Patch(LocPatch.Instance, aTarget);
+end;
+
+class function TJsonPatch.Patch(const aPatch: string; aTarget: TJsonNode): TPatchResult;
+var
+  LocPatch: specialize TGAutoRef<TJsonPatch>;
+begin
+  if not LocPatch.Instance.TryLoad(aPatch) then
+    exit(prPatchMiss);
+  Result := LocPatch.Instance.Apply(aTarget);
+end;
+
+class function TJsonPatch.PatchFile(p: TJsonPatch; const aTargetFileName: string): TPatchResult;
+var
+  LocTarget: specialize TGUniqRef<TJsonNode>;
+begin
+  LocTarget.Instance := TJsonNode.LoadFromFile(aTargetFileName);
+  if not LocTarget.HasInstance then
+    exit(prTargetMiss);
+  Result := p.Apply(LocTarget.Instance);
+  if Result = prOk then
+    LocTarget.Instance.SaveToFile(aTargetFileName);
+end;
+
+class function TJsonPatch.PatchFile(const aPatch: string; const aTargetFileName: string): TPatchResult;
+var
+  LocPatch: specialize TGAutoRef<TJsonPatch>;
+begin
+  if not LocPatch.Instance.TryLoad(aPatch) then
+    exit(prPatchMiss);
+  Result := PatchFile(LocPatch.Instance, aTargetFileName);
+end;
+{$POP}
+
+destructor TJsonPatch.Destroy;
+begin
+  FNode.Free;
+  inherited;
+end;
+
+procedure TJsonPatch.Clear;
+begin
+  FreeAndNil(FNode);
+  FLoaded := False;
+  FValidated := False;
+end;
+
+function TJsonPatch.TryLoad(const s: string): Boolean;
+var
+  Node: TJsonNode = nil;
+begin
+  if not TJsonNode.TryParse(s, Node) then
+    exit(False);
+  Clear;
+  FNode := Node;
+  FLoaded := True;
+  Result := True;
+end;
+
+function TJsonPatch.TryLoad(aStream: TStream; aCount: SizeInt): Boolean;
+var
+  Node: TJsonNode = nil;
+begin
+  if not TJsonNode.TryParse(aStream, aCount, Node) then
+    exit(False);
+  Clear;
+  FNode := Node;
+  FLoaded := True;
+  Result := True;
+end;
+
+function TJsonPatch.TryLoadFile(const aFileName: string): Boolean;
+var
+  Node: TJsonNode = nil;
+begin
+  if not TJsonNode.TryParseFile(aFileName, Node) then
+    exit(False);
+  Clear;
+  FNode := Node;
+  FLoaded := True;
+  Result := True;
+end;
+
+procedure TJsonPatch.Load(aNode: TJsonNode);
+begin
+  Clear;
+  FNode := aNode.Clone;
+  FLoaded := True;
+end;
+
+function TJsonPatch.Validate: Boolean;
+begin
+  if not Loaded then
+    exit(False);
+  FValidated := SeemsValidPatch(FNode);
+  Result := FValidated;
+end;
+
+{$PUSH}{$WARN 5089 OFF}
+function TJsonPatch.Apply(aTarget: TJsonNode): TPatchResult;
+var
+  CopyNode, CurrNode, TmpNode: TJsonNode;
+  I: SizeInt;
+  PathFrom, PathTo: TStringArray;
+  CopyRef: specialize TGUniqRef<TJsonNode>;
+begin
+  if not Loaded then
+    exit(prPatchMiss);
+  if (aTarget = nil) or (aTarget.Kind = jvkUnknown) then
+    exit(prTargetMiss);
+  if Validated then
+    exit(ApplyValidated(aTarget));
+  if not FNode.IsArray then
+    exit(prMalformPatch);
+  CopyRef.Instance := aTarget.Clone;
+  CopyNode := CopyRef;
+  for I := 0 to Pred(FNode.Count) do
+    begin
+      CurrNode := FNode.Items[I];
+      if not FindOp(CurrNode, TmpNode) then
+        exit(prMalformPatch);
+      case TmpNode.AsString of
+        ADD_KEY:
+          begin
+            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryAdd(CopyNode, TmpNode, PathFrom) then
+              exit(prFail);
+          end;
+        COPY_KEY:
+          begin
+            if not GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo) then
+              exit(prMalformPatch);
+            if not TryCopy(CopyNode, PathFrom, TmpNode) then
+              exit(prFail);
+            if not TryAdd(CopyNode, TmpNode, PathTo) then
+              exit(prFail);
+          end;
+        MOVE_KEY:
+          begin
+            if not GetMovePaths(CurrNode, TmpNode, PathFrom, PathTo) then
+              exit(prMalformPatch);
+            if TStrHelper.Same(PathFrom, PathTo) then
+              continue;
+            if not TryExtract(CopyNode, PathFrom, TmpNode) then
+              exit(prFail);
+            if not TryAdd(CopyNode, TmpNode, PathTo) then
+              exit(prFail);
+          end;
+        REMOVE_KEY:
+          begin
+            if not GetPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryRemove(CopyNode, PathFrom) then
+              exit(prFail);
+          end;
+        REPLACE_KEY:
+          begin
+            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryReplace(CopyNode, TmpNode, PathFrom) then
+              exit(prFail);
+          end;
+        TEST_KEY:
+          begin
+            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+              exit(prMalformPatch);
+            if not TryTest(CopyNode, TmpNode, PathFrom) then
+              exit(prFail);
+          end;
+      else
+        exit(prMalformPatch);
+      end;
+    end;
+  MoveNode(CopyNode, aTarget);
+  Result := prOk;
+end;
+
+function TJsonPatch.Apply(var aTarget: string): TPatchResult;
+var
+  LocTarget: specialize TGUniqRef<TJsonNode>;
+begin
+  LocTarget.Instance := TJsonNode.Load(aTarget);
+  if not LocTarget.HasInstance then
+    exit(prTargetMiss);
+  Result := Apply(LocTarget.Instance);
+  if Result = prOk then
+    aTarget := LocTarget.Instance.AsJson;
+end;
+
+{$POP}
+
+function TJsonPatch.TryAsJson(out aJson: string): Boolean;
+begin
+  if not Loaded then
+    exit(False);
+  aJson := FNode.AsJson;
+  Result := True;
+end;
+
 {
   A Pascal port of the Eisel-Lemire decimal-to-double approximation algorithm;
   https://github.com/lemire/fast_double_parser
