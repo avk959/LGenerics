@@ -6065,8 +6065,6 @@ var
   LocTarget: specialize TGUniqRef<TJsonNode>;
 begin
   LocTarget.Instance := TJsonNode.Load(aTarget);
-  if not LocTarget.HasInstance then
-    exit(prTargetMiss);
   Result := Apply(LocTarget.Instance);
   if Result = prOk then
     aTarget := LocTarget.Instance.AsJson;
