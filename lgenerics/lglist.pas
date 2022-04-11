@@ -3960,7 +3960,7 @@ procedure TGLiteHashList2.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
   System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FChainList)^, System.Length(FChainList) * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteHashList2.Rehash;
@@ -3968,7 +3968,7 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FChainList)^, Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
