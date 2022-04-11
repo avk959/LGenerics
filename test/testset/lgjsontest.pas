@@ -137,6 +137,34 @@ type
     procedure SkipBom;
   end;
 
+  { TTestJsonPatch }
+
+  TTestJsonPatch = class(TTestCase)
+  private
+  const
+    sSource1 = '"bar"';
+    sTarget1 = '"baz"';
+    sSource2 = '{"foo": [1, 3, [2, "wat"]], "boo": ["bar", "baz"]}';
+    sTarget2 = '{"foo": [1, 2, 3, [2, 3, "wat"], 9], "boo": ["bar", "ozz", "baz"], "zoo": "boom"}';
+    sPatch1  = '[{"op": "replace", "path": "", "value": "baz"}]';
+    sPatch2  =
+               '[{"op": "add", "path": "/foo/2/1", "value": 3,"fizz": 42}, ' +
+               ' {"op": "add", "path": "/foo/1", "value": 2, "oops":"pop"},' +
+               ' {"op": "add", "path": "/foo/4", "value": 9},              ' +
+               ' {"op": "add", "path": "/boo/1", "value": "ozz"},          ' +
+               ' {"op": "add", "path": "/zoo", "value": "boom"}]';
+    sPatch3  = '[{"op": "add", "path": "", "value": "baz"}]';
+
+    sBadPatch1 = '{"op": "add", "path": "", "value": "baz"}';
+    sBadPatch2 = '[{"op": "pop", "path": "", "value": "baz"}]';
+    sBadPatch3 = '[{"op": "add", "path": "", "value": "baz","op": "test"}]';
+  published
+    procedure PatchBasic;
+    procedure PatchTests;
+    procedure DiffBasic;
+    procedure DiffTests;
+  end;
+
 const
   TestJson =
     '[{"userid":42,"name":"John","age":30,"online":false,"groups":["talk","humor","cook"],' +
@@ -155,9 +183,13 @@ implementation
 
 var
   TestFileList: TStringList = nil;
+  TestPatchList: TStringList = nil;
   TestDir: string = '';
+const
+  ParseDir = 'parsing';
+  PatchDir = 'patch';
 
-procedure LoadFileList;
+procedure LoadFileLists;
 var
   Dir: string;
 begin
@@ -166,9 +198,12 @@ begin
     Dir := ExcludeTrailingPathDelimiter(ExtractFilePath(Dir));
   if Dir = '' then exit;
   TestDir := Dir + DirectorySeparator + 'json_testset' + DirectorySeparator;
-  Dir := TestDir + 'testset' + DirectorySeparator;
-  if not DirectoryExists(Dir) then exit;
-  TestFileList := FindAllFiles(Dir);
+  Dir := TestDir + ParseDir + DirectorySeparator;
+  if DirectoryExists(Dir) then;
+    TestFileList := FindAllFiles(Dir);
+  Dir := TestDir + PatchDir + DirectorySeparator;
+  if DirectoryExists(Dir) then;
+    TestPatchList := FindAllFiles(Dir);
 end;
 
 { TTestJVariant }
@@ -1920,19 +1955,194 @@ begin
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
 
+{ TTestJsonPatch }
+
+procedure TTestJsonPatch.PatchBasic;
+var
+  Target, Expect: specialize TGUniqRef<TJsonNode>;
+  Patch: specialize TGAutoRef<TJsonPatch>;
+  s: string;
+begin
+  s := '';
+  AssertTrue(Patch.Instance.Apply(s) = prPatchMiss);
+  AssertTrue(s = '');
+
+  AssertFalse(Patch.Instance.TryLoad('[.]'));
+
+  AssertTrue(Patch.Instance.TryLoad(sBadPatch1));
+  AssertFalse(Patch.Instance.Validate);
+  AssertTrue('1', Patch.Instance.Apply(s) = prTargetMiss);
+
+  s := sSource1;
+  AssertTrue(Patch.Instance.Apply(s) = prMalformPatch);
+
+  AssertTrue(Patch.Instance.TryLoad(sBadPatch2));
+  AssertFalse(Patch.Instance.Validate);
+  AssertTrue(Patch.Instance.Apply(s) = prMalformPatch);
+
+  AssertTrue(Patch.Instance.TryLoad(sBadPatch3));
+  AssertFalse(Patch.Instance.Validate);
+  AssertTrue(Patch.Instance.Apply(s) = prMalformPatch);
+
+  AssertTrue(Patch.Instance.TryLoad(sPatch1));
+  AssertTrue(Patch.Instance.Apply(s) = prOk);
+  AssertTrue(s = sTarget1);
+
+  s := sSource1;
+  AssertTrue(Patch.Instance.TryLoad(sPatch3));
+  AssertTrue(Patch.Instance.Apply(s) = prOk);
+  AssertTrue(s = sTarget1);
+
+  {%H-}Target.Instance := TJsonNode.NewJson(sSource2);
+  AssertTrue(Assigned(Target.Instance));
+  {%H-}Expect.Instance := TJsonNode.NewJson(sTarget2);
+  AssertTrue(Assigned(Expect.Instance));
+  AssertTrue(Patch.Instance.TryLoad(sPatch2));
+  AssertTrue(Patch.Instance.Apply(Target.Instance) = prOk);
+  AssertTrue(Target.Instance.EqualTo(Expect.Instance));
+end;
+
+procedure TTestJsonPatch.PatchTests;
+var
+  TestSet, CurrDoc: specialize TGUniqRef<TJsonNode>;
+  CurrPatch: specialize TGAutoRef<TJsonPatch>;
+  CurrTest, Expect, Node: TJsonNode;
+  CurrFile, FileName, msg, sRet: string;
+  I: Integer;
+  Ret: TPatchResult;
+const
+  Fmt = '%s[%d]: %s';
+  DocNotFound = 'Source document not found';
+  TstNotObj   = 'Test instance is not an an object';
+  PatchNotFound = 'Patch not found';
+  ExpectNotFound = 'Expected document not found';
+  UnexpectFmt = 'Unexpected Patch return(%s)';
+  Unexpect = 'Result of applying the patch does not match the expected';
+begin
+  //trying to run tests from https://github.com/json-patch/json-patch-tests;
+  AssertTrue('File list not loaded', Assigned(TestPatchList));
+  AssertTrue('File list is empty', TestPatchList.Count > 0);
+  for FileName in TestPatchList do
+    begin
+      CurrFile := ExtractFileName(FileName);
+      TestSet.Instance := TJsonNode.LoadFromFile(FileName);
+      AssertTrue('Failed to load file ' + CurrFile, Assigned(TestSet.Instance));
+      AssertTrue(CurrFile + ': test set is not an array', TestSet.Instance.IsArray);
+      for I := 0 to Pred(TestSet.Instance.Count) do
+        begin
+          CurrTest := TestSet.Instance.Items[I];
+          AssertTrue(Format(Fmt, [CurrFile, I, TstNotObj]), CurrTest.IsObject);
+          AssertTrue(Format(Fmt, [CurrFile, I, DocNotFound]), CurrTest.Find('doc', Node));
+          CurrDoc.Instance := Node.Clone;
+          AssertTrue(Format(Fmt, [CurrFile, I, PatchNotFound]), CurrTest.Find('patch', Node));
+          CurrPatch.Instance.Load(Node);
+          if CurrTest.Find('error', Node) then
+            begin
+              Ret := CurrPatch.Instance.Apply(CurrDoc.Instance);
+              WriteStr(sRet, Ret);
+              msg := Format(Fmt, [CurrFile, I, Format(UnexpectFmt, [sRet])]);
+              AssertTrue(msg, Ret <> prOk);
+            end
+          else
+            begin
+              AssertTrue(Format(Fmt, [CurrFile, I, ExpectNotFound]), CurrTest.Find('expected', Expect));
+              Ret := CurrPatch.Instance.Apply(CurrDoc.Instance);
+              WriteStr(sRet, Ret);
+              msg := Format(Fmt, [CurrFile, I, Format(UnexpectFmt, [sRet])]);
+              AssertTrue(msg, Ret = prOk);
+              AssertTrue(Format(Fmt, [CurrFile, I, Unexpect]), CurrDoc.Instance.EqualTo(Expect));
+            end;
+        end;
+    end;
+end;
+
+procedure TTestJsonPatch.DiffBasic;
+var
+  Source, Target, Diff: specialize TGUniqRef<TJsonNode>;
+  Node: TJsonNode = nil;
+begin
+  AssertTrue(TJsonPatch.Diff({%H-}Source.Instance, {%H-}Target.Instance, Node) = drSourceMiss);
+
+  Source.Instance := TJsonNode.NewJson(sSource1);
+  AssertTrue(TJsonPatch.Diff(Source.Instance, Target.Instance, Node) = drTargetMiss);
+
+  Target.Instance := TJsonNode.NewJson(sTarget1);
+  AssertTrue(TJsonPatch.Diff(Source.Instance, Target.Instance, Node) = drOk);
+  {%H-}Diff.Instance := Node;
+  AssertTrue(TJsonPatch.Patch(Diff.Instance.AsJson, Source.Instance) = prOk);
+  AssertTrue(Source.Instance.EqualTo(Target.Instance));
+
+  Source.Instance := TJsonNode.NewJson(sSource2);
+  Target.Instance := TJsonNode.NewJson(sTarget2);
+  AssertTrue(TJsonPatch.Diff(Source.Instance, Target.Instance, Node) = drOk);
+  Diff.Instance := Node;
+  AssertTrue(TJsonPatch.Patch(Diff.Instance.AsJson, Source.Instance) = prOk);
+  AssertTrue(Source.Instance.EqualTo(Target.Instance));
+end;
+
+procedure TTestJsonPatch.DiffTests;
+var
+  TestSet, CurrDoc: specialize TGUniqRef<TJsonNode>;
+  CurrPatch: specialize TGUniqRef<TJsonPatch>;
+  Patch: TJsonPatch;
+  CurrTest, Expect, Node: TJsonNode;
+  CurrFile, FileName, msg, sRet: string;
+  I: Integer;
+  Ret: TDiffResult;
+const
+  Fmt = '%s[%d]: %s';
+  DocNotFound = 'Source document not found';
+  TstNotObj   = 'Test instance is not an an object';
+  ExpectNotFound = 'Expected document not found';
+  UnexpectFmt = 'Unexpected Diff return(%s)';
+  PatchFails  = 'Generated patch not working';
+  Unexpect = 'Result of applying the patch does not match the expected';
+begin
+  //trying use test data from https://github.com/json-patch/json-patch-tests;
+  AssertTrue('File list not loaded', Assigned(TestPatchList));
+  AssertTrue('File list is empty', TestPatchList.Count > 0);
+  for FileName in TestPatchList do
+    begin
+      CurrFile := ExtractFileName(FileName);
+      TestSet.Instance := TJsonNode.LoadFromFile(FileName);
+      AssertTrue('Failed to load file ' + CurrFile, Assigned(TestSet.Instance));
+      AssertTrue(CurrFile + ': test set is not an array', TestSet.Instance.IsArray);
+      for I := 0 to Pred(TestSet.Instance.Count) do
+        begin
+          CurrTest := TestSet.Instance.Items[I];
+          AssertTrue(Format(Fmt, [CurrFile, I, TstNotObj]), CurrTest.IsObject);
+          if CurrTest.Find('error', Node) then
+            continue;
+          AssertTrue(Format(Fmt, [CurrFile, I, DocNotFound]), CurrTest.Find('doc', Node));
+          CurrDoc.Instance := Node.Clone;
+          AssertTrue(Format(Fmt, [CurrFile, I, ExpectNotFound]), CurrTest.Find('expected', Expect));
+          Ret := TJsonPatch.Diff(CurrDoc.Instance, Expect, Patch);
+          WriteStr(sRet, Ret);
+          msg := Format(Fmt, [CurrFile, I, Format(UnexpectFmt, [sRet])]);
+          AssertTrue(msg, Ret = drOk);
+          CurrPatch.Instance := Patch;
+          AssertTrue(Format(Fmt, [CurrFile, I, PatchFails]),
+                     CurrPatch.Instance.Apply(CurrDoc.Instance) = prOk);
+          AssertTrue(Format(Fmt, [CurrFile, I, Unexpect]), CurrDoc.Instance.EqualTo(Expect));
+        end;
+    end;
+end;
+
 initialization
 
-  LoadFileList;
+  LoadFileLists;
   RegisterTest(TTestJVariant);
   RegisterTest(TTestDouble2Str);
   RegisterTest(TTestTryStr2Double);
   RegisterTest(TTestJson);
   RegisterTest(TTestJsonWriter);
   RegisterTest(TTestJsonReader);
+  RegisterTest(TTestJsonPatch);
 
 finalization
 
   TestFileList.Free;
+  TestPatchList.Free;
 
 end.
 
