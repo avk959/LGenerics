@@ -513,7 +513,7 @@ type
   { adds a new object of the specified kind to the instance as to an array;
     if an instance is not an array, it is cleared and becomes an array - be careful;
     returns a new object }
-    function  AddNode(aKind: TJsValueKind = jvkUnknown): TJsonNode; inline;
+    function  AddNode(aKind: TJsValueKind = jvkUnknown): TJsonNode; //inline;
   { returns True and the created object in the aNode parameter,
     if the string s can be parsed; the new object is added as in an array - be careful }
     function  AddJson(const s: string; out aNode: TJsonNode): Boolean;
@@ -538,7 +538,7 @@ type
   { adds a new object of the specified type associated with aName to the instance as to an object;
     if an instance is not an object, it is cleared and becomes an object - be careful;
     returns a new object }
-    function  AddNode(const aName: string; aKind: TJsValueKind = jvkUnknown): TJsonNode; inline;
+    function  AddNode(const aName: string; aKind: TJsValueKind = jvkUnknown): TJsonNode; //inline;
   { returns True and the created object associated with aName in the aNode parameter,
     if the string aJson can be parsed; the new object is added as to an object - be careful }
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
@@ -692,7 +692,7 @@ type
     REMOVE_KEY  = 'remove';
     REPLACE_KEY = 'replace';
     TEST_KEY    = 'test';
-  var
+  private
     FNode: TJsonNode;
     FLoaded,
     FValidated: Boolean;
@@ -4093,43 +4093,38 @@ begin
 end;
 
 procedure TJsonNode.CopyFrom(aNode: TJsonNode);
-var
-  I: SizeInt;
+  procedure DoCopy(aSrc, aDst: TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    case aSrc.Kind of
+      jvkUnknown: ;
+      jvkNull:    aDst.AsNull;
+      jvkFalse:   aDst.AsBoolean := False;
+      jvkTrue:    aDst.AsBoolean := True;
+      jvkNumber:  aDst.AsNumber := aSrc.FValue.Num;
+      jvkString:  aDst.AsString := aSrc.FString;
+      jvkArray:
+        begin
+          aDst.AsArray;
+          for I := 0 to Pred(aSrc.Count) do
+            DoCopy(aSrc.Items[I], aDst.AddNode);
+        end;
+      jvkObject:
+       begin
+         aDst.AsObject;
+         for I := 0 to Pred(aSrc.Count) do
+           with aSrc.Pairs[I] do
+             DoCopy(Value, aDst.AddNode(Key));
+       end;
+    end;
+  end;
+
 begin
   if aNode = Self then
     exit;
   Clear;
-  case aNode.Kind of
-    jvkUnknown: ;
-    jvkNull:    AsNull;
-    jvkFalse:   AsBoolean := False;
-    jvkTrue:    AsBoolean := True;
-    jvkNumber:  AsNumber := aNode.FValue.Num;
-    jvkString:  AsString := aNode.FString;
-    jvkArray:
-     begin
-       AsArray;
-       if aNode.Count > 0 then
-         begin
-           FArray := CreateJsArray;
-           FArray^.EnsureCapacity(aNode.FArray^.Count);
-           for I := 0 to Pred(aNode.FArray^.Count) do
-             FArray^.Add(aNode.FArray^.UncMutable[I]^.Clone);
-         end;
-     end;
-    jvkObject:
-     begin
-       AsObject;
-       if aNode.Count > 0 then
-          begin
-            FObject := CreateJsObject;
-            FObject^.EnsureCapacity(aNode.FObject^.Count);
-            for I := 0 to Pred(aNode.Count) do
-              with aNode.FObject^.Mutable[I]^ do
-                FObject^.Add(TPair.Create(Key, Value.Clone));
-          end;
-     end;
-  end;
+  DoCopy(aNode, Self);
 end;
 
 function TJsonNode.EqualTo(aNode: TJsonNode): Boolean;
@@ -5330,8 +5325,8 @@ begin
   aDst.Clear;
   aDst.FValue := aSrc.FValue;
   aDst.FKind := aSrc.FKind;
-  aSrc.FValue.Int := 0;
   aSrc.FKind := jvkUnknown;
+  aSrc.FValue.Int := 0;
 end;
 
 {$PUSH}{$WARN 5036 OFF}
@@ -5440,17 +5435,18 @@ end;
 class function TJsonPatch.TryCopy(aNode: TJsonNode; const aPath: TStringArray;
   out aValue: TJsonNode): Boolean;
 var
-  Node: TJsonNode;
+  Node: TJsonNode = nil;
 begin
   if not aNode.FindPath(aPath, Node) then
     exit(False);
-  aValue := Node.Clone;
+  aValue := TJsonNode.Create;//Node.Clone;
+  aValue.CopyFrom(Node);
   Result := True;
 end;
 
 class function TJsonPatch.TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var
-  Node: TJsonNode;
+  Node: TJsonNode = nil;
 begin
   if not aNode.FindPath(aPath, Node) then
     exit(False);
@@ -5460,7 +5456,7 @@ end;
 
 class function TJsonPatch.TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var
-  Node: TJsonNode;
+  Node: TJsonNode = nil;
 begin
   if not aNode.FindPath(aPath, Node) then
     exit(False);
@@ -5986,7 +5982,6 @@ var
   CopyNode, CurrNode, TmpNode: TJsonNode;
   I: SizeInt;
   PathFrom, PathTo: TStringArray;
-  CopyRef: specialize TGUniqRef<TJsonNode>;
 begin
   if not Loaded then
     exit(prPatchMiss);
@@ -5996,68 +5991,71 @@ begin
     exit(ApplyValidated(aTarget));
   if not FNode.IsArray then
     exit(prMalformPatch);
-  CopyRef.Instance := aTarget.Clone;
-  CopyNode := CopyRef;
-  for I := 0 to Pred(FNode.Count) do
-    begin
-      CurrNode := FNode.Items[I];
-      if not FindOp(CurrNode, TmpNode) then
-        exit(prMalformPatch);
-      case TmpNode.AsString of
-        ADD_KEY:
-          begin
-            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
-              exit(prMalformPatch);
-            if not TryAdd(CopyNode, TmpNode, PathFrom) then
-              exit(prFail);
-          end;
-        COPY_KEY:
-          begin
-            if not GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo) then
-              exit(prMalformPatch);
-            if not TryCopy(CopyNode, PathFrom, TmpNode) then
-              exit(prFail);
-            if not TryAdd(CopyNode, TmpNode, PathTo) then
-              exit(prFail);
-          end;
-        MOVE_KEY:
-          begin
-            if not GetMovePaths(CurrNode, TmpNode, PathFrom, PathTo) then
-              exit(prMalformPatch);
-            if TStrHelper.Same(PathFrom, PathTo) then
-              continue;
-            if not TryExtract(CopyNode, PathFrom, TmpNode) then
-              exit(prFail);
-            if not TryAdd(CopyNode, TmpNode, PathTo) then
-              exit(prFail);
-          end;
-        REMOVE_KEY:
-          begin
-            if not GetPath(CurrNode, TmpNode, PathFrom) then
-              exit(prMalformPatch);
-            if not TryRemove(CopyNode, PathFrom) then
-              exit(prFail);
-          end;
-        REPLACE_KEY:
-          begin
-            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
-              exit(prMalformPatch);
-            if not TryReplace(CopyNode, TmpNode, PathFrom) then
-              exit(prFail);
-          end;
-        TEST_KEY:
-          begin
-            if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
-              exit(prMalformPatch);
-            if not TryTest(CopyNode, TmpNode, PathFrom) then
-              exit(prFail);
-          end;
-      else
-        exit(prMalformPatch);
+  CopyNode := aTarget.Clone;
+  try
+    for I := 0 to Pred(FNode.Count) do
+      begin
+        CurrNode := FNode.Items[I];
+        if not FindOp(CurrNode, TmpNode) then
+          exit(prMalformPatch);
+        case TmpNode.AsString of
+          ADD_KEY:
+            begin
+              if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+                exit(prMalformPatch);
+              if not TryAdd(CopyNode, TmpNode, PathFrom) then
+                exit(prFail);
+            end;
+          COPY_KEY:
+            begin
+              if not GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo) then
+                exit(prMalformPatch);
+              if not TryCopy(CopyNode, PathFrom, TmpNode) then
+                exit(prFail);
+              if not TryAdd(CopyNode, TmpNode, PathTo) then
+                exit(prFail);
+            end;
+          MOVE_KEY:
+            begin
+              if not GetMovePaths(CurrNode, TmpNode, PathFrom, PathTo) then
+                exit(prMalformPatch);
+              if TStrHelper.Same(PathFrom, PathTo) then
+                continue;
+              if not TryExtract(CopyNode, PathFrom, TmpNode) then
+                exit(prFail);
+              if not TryAdd(CopyNode, TmpNode, PathTo) then
+                exit(prFail);
+            end;
+          REMOVE_KEY:
+            begin
+              if not GetPath(CurrNode, TmpNode, PathFrom) then
+                exit(prMalformPatch);
+              if not TryRemove(CopyNode, PathFrom) then
+                exit(prFail);
+            end;
+          REPLACE_KEY:
+            begin
+              if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+                exit(prMalformPatch);
+              if not TryReplace(CopyNode, TmpNode, PathFrom) then
+                exit(prFail);
+            end;
+          TEST_KEY:
+            begin
+              if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+                exit(prMalformPatch);
+              if not TryTest(CopyNode, TmpNode, PathFrom) then
+                exit(prFail);
+            end;
+        else
+          exit(prMalformPatch);
+        end;
       end;
-    end;
-  MoveNode(CopyNode, aTarget);
-  Result := prOk;
+    MoveNode(CopyNode, aTarget);
+    Result := prOk;
+  finally
+    CopyNode.Free;
+  end;
 end;
 
 function TJsonPatch.Apply(var aTarget: string): TPatchResult;
