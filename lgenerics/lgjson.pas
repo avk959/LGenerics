@@ -4096,6 +4096,7 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
   procedure DoCopy(aSrc, aDst: TJsonNode);
   var
     I: SizeInt;
+    Node: TJsonNode;
   begin
     case aSrc.Kind of
       jvkUnknown: ;
@@ -4107,15 +4108,35 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
       jvkArray:
         begin
           aDst.AsArray;
-          for I := 0 to Pred(aSrc.Count) do
-            DoCopy(aSrc.Items[I], aDst.AddNode);
+          if aSrc.Count > 0 then
+            begin
+              aDst.FArray := CreateJsArray;
+              aDst.FArray^.EnsureCapacity(aSrc.FArray^.Count);
+              for I := 0 to Pred(aSrc.FArray^.Count) do
+                begin
+                  Node := TJsonNode.Create;
+                  DoCopy(aSrc.FArray^.UncMutable[I]^, Node);
+                  aDst.FArray^.Add(Node);
+                end;
+            end;
         end;
       jvkObject:
        begin
          aDst.AsObject;
-         for I := 0 to Pred(aSrc.Count) do
-           with aSrc.Pairs[I] do
-             DoCopy(Value, aDst.AddNode(Key));
+         if aSrc.Count > 0 then
+           begin
+             aDst.FObject := CreateJsObject;
+             aDst.FObject^.EnsureCapacity(aSrc.FObject^.Count);
+             for I := 0 to Pred(aSrc.FObject^.Count) do
+               begin
+                 Node := TJsonNode.Create;
+                 with aSrc.FObject^.Mutable[I]^ do
+                   begin
+                     DoCopy(Value, Node);
+                     aDst.FObject^.Add(TPair.Create(Key, Node));
+                   end;
+               end;
+           end;
        end;
     end;
   end;
@@ -5741,10 +5762,11 @@ var
     if Cancel then
       exit;
 
-    if aSrc.Kind <> aDst.Kind then begin
-      PushReplace(aDst);
-      exit;
-    end;
+    if aSrc.Kind <> aDst.Kind then
+      begin
+        PushReplace(aDst);
+        exit;
+      end;
 
     case aSrc.Kind of
       jvkNull, jvkFalse, jvkTrue: ;
@@ -5769,15 +5791,16 @@ begin //todo: need options to create value checks for replacements and removes?
       exit(drTargetMiss);
 
   aDiff := TJsonNode.Create;
-  aDiff.AsArray;
-
-  DoDiff(aSource, aTarget);
-
-  if Cancel then
-    begin
-      FreeAndNil(aDiff);
-      exit(drFail);
-    end;
+  try
+    aDiff.AsArray;
+    DoDiff(aSource, aTarget);
+  finally
+    if Cancel then
+      begin
+        FreeAndNil(aDiff);
+        exit(drFail);
+      end;
+  end;
   Result := drOk;
 end;
 
