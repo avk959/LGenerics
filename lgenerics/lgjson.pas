@@ -664,6 +664,8 @@ type
 
   TPatchResult = (prOk, prPatchMiss, prTargetMiss, prMalformPatch, prFail);
   TDiffResult  = (drOk, drSourceMiss, drTargetMiss, drFail);
+  TDiffOption  = (doEmitTestOnRemove, doEmitTestOnReplace, doEnableMove);
+  TDiffOptions = set of TDiffOption;
 
   { TJsonPatch provides support for JSON Patch(RFC 6902, see also http://jsonpatch.com/);
     JSON Patch is a format for expressing a sequence of operations to apply to
@@ -674,6 +676,7 @@ type
   private
   type
     TStrHelper = specialize TGSimpleArrayHelper<string>;
+    TStrUtil   = specialize TGSeqUtil<string, string>;
     TStrVector = specialize TGLiteVector<string>;
     THasher    = record
       class function Equal(L, R: TJsonNode): Boolean; static;
@@ -723,11 +726,16 @@ type
     MIME_TYPE = 'application/json-patch+json';
     DEF_DEPTH = TJsonNode.DEF_DEPTH;
   { creates a patch that converts aSource to aTarget  }
-    class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode): TDiffResult; static;
-    class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch): TDiffResult; static;
-    class function Diff(const aSource, aTarget: string; out aDiff: TJsonNode): TDiffResult; static;
-    class function Diff(const aSource, aTarget: string; out aDiff: TJsonPatch): TDiffResult; static;
-    class function Diff(const aSource, aTarget: string; out aDiff: string): TDiffResult; static;
+    class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode;
+                        aOptions: TDiffOptions = []): TDiffResult; static;
+    class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch;
+                        aOptions: TDiffOptions = []): TDiffResult; static;
+    class function Diff(const aSource, aTarget: string; out aDiff: TJsonNode;
+                        aOptions: TDiffOptions = []): TDiffResult; static;
+    class function Diff(const aSource, aTarget: string; out aDiff: TJsonPatch;
+                        aOptions: TDiffOptions = []): TDiffResult; static;
+    class function Diff(const aSource, aTarget: string; out aDiff: string;
+                        aOptions: TDiffOptions = []): TDiffResult; static;
   { tries to load a patch content from s, returns False if s is malformed JSON }
     class function TryLoadPatch(const s: string; out p: TJsonPatch): Boolean; static;
   { returns TJsonPatch instance if s is well-formed JSON, otherwise returns NIL }
@@ -4164,12 +4172,8 @@ begin
     exit(False);
   case aNode.Kind of
     jvkUnknown, jvkNull, jvkFalse, jvkTrue: ;
-    jvkNumber:
-      if not SameDouble(FValue.Num, aNode.FValue.Num) then
-        exit(False);
-    jvkString:
-      if FString <> aNode.FString then
-        exit(False);
+    jvkNumber: exit(SameDouble(FValue.Num, aNode.FValue.Num));
+    jvkString: exit(FString = aNode.FString);
     jvkArray:
       for I := 0 to Pred(Count) do
         if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
@@ -4194,7 +4198,6 @@ const
   MAGIC = SizeInt(161803398); //golden ratio
 var
   I: SizeInt;
-  p: TPair;
 begin
   if Self = nil then
     exit(MAGIC);
@@ -4215,10 +4218,8 @@ begin
       begin
         Result := MAGIC + 67;
         for I := 0 to Pred(Count) do
-          begin
-            p := FObject^.Mutable[I]^;
-            Result := Result xor TxxHash32LE.HashStr(p.Key, DWord(MAGIC)) xor p.Value.HashCode;
-          end;
+          with FObject^.Mutable[I]^ do
+            Result := Result xor TxxHash32LE.HashStr(Key, DWord(MAGIC)) xor Value.HashCode;
       end;
   end;
 end;
@@ -5269,7 +5270,7 @@ begin
     exit(False);
   if not TJsonPtr.TryGetSegments(Node.AsString, PathTo) then
     exit(False);
-  if TStrHelper.IsPrefix(PathFrom, PathTo) then
+  if TStrUtil.IsPrefix(PathFrom, PathTo) then
     exit(False);
   Result := True;
 end;
@@ -5312,7 +5313,7 @@ begin
     exit(False);
   if not TJsonPtr.TryGetSegments(aPathNode.AsString, aTo) then
     exit(False);
-  if (System.Length(aFrom) < System.Length(aTo)) and TStrHelper.IsPrefix(aFrom, aTo) then
+  if (System.Length(aFrom) < System.Length(aTo)) and TStrUtil.IsPrefix(aFrom, aTo) then
     exit(False);
   Result := True;
 end;
@@ -5603,31 +5604,51 @@ const
     '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95',
     '96', '97', '98', '99');
 
-class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode): TDiffResult;
+class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode;
+  aOptions: TDiffOptions): TDiffResult;
 var
   Path: TStrVector;
+  TestRemove, TestReplace: Boolean;
 
   function GetCurrPath: string; inline;
   begin
     Result := TJsonPtr.ToPointer(Path.UncMutable[0][0..Pred(Path.Count)]);
   end;
 
-  procedure PushReplace(const aKey: string; aValue: TJsonNode); inline;
+  procedure PushTest(const aPath: string; aValue: TJsonNode); inline;
+  begin
+    aDiff.AddNode(jvkObject)
+      .Add(OP_KEY, TEST_KEY)
+      .Add(PATH_KEY, aPath)
+      .AddNode(VAL_KEY).CopyFrom(aValue);
+  end;
+
+  procedure PushReplace(const aKey: string; aOldValue, aNewValue: TJsonNode);
+  var
+    CurrPath: string;
   begin
     Path.Add(aKey);
+    CurrPath := GetCurrPath;
+    if TestReplace then
+      PushTest(CurrPath, aOldValue);
     aDiff.AddNode(jvkObject)
       .Add(OP_KEY, REPLACE_KEY)
-      .Add(PATH_KEY, GetCurrPath)
-      .AddNode(VAL_KEY).CopyFrom(aValue);
+      .Add(PATH_KEY, CurrPath)
+      .AddNode(VAL_KEY).CopyFrom(aNewValue);
     Path.DeleteLast;
   end;
 
-  procedure PushReplace(aValue: TJsonNode); inline;
+  procedure PushReplace(aOldValue, aNewValue: TJsonNode);
+  var
+    CurrPath: string;
   begin
+    CurrPath := GetCurrPath;
+    if TestReplace then
+      PushTest(CurrPath, aOldValue);
     aDiff.AddNode(jvkObject)
       .Add(OP_KEY, REPLACE_KEY)
-      .Add(PATH_KEY, GetCurrPath)
-      .AddNode(VAL_KEY).CopyFrom(aValue);
+      .Add(PATH_KEY, CurrPath)
+      .AddNode(VAL_KEY).CopyFrom(aNewValue);
   end;
 
   procedure PushAdd(const aKey: string; aValue: TJsonNode); inline;
@@ -5640,12 +5661,17 @@ var
     Path.DeleteLast;
   end;
 
-  procedure PushRemove(const aKey: string); inline;
+  procedure PushRemove(const aKey: string; aValue: TJsonNode);
+  var
+    CurrPath: string;
   begin
     Path.Add(aKey);
+    CurrPath := GetCurrPath;
+    if TestRemove then
+      PushTest(CurrPath, aValue);
     aDiff.AddNode(jvkObject)
       .Add(OP_KEY, REMOVE_KEY)
-      .Add(PATH_KEY, GetCurrPath);
+      .Add(PATH_KEY, CurrPath);
     Path.DeleteLast;
   end;
 
@@ -5675,7 +5701,7 @@ var
     end else
       if aDst.Count = 0 then begin
         for I := 0 to Pred(aSrc.Count) do
-          PushRemove(Int2Str(I));
+          PushRemove(Int2Str(I), aSrc.Items[I]);
         exit;
       end;
 
@@ -5710,7 +5736,7 @@ var
 
     for DelIdx := Pred(DelLen) downto 0 do
       if Del[DelIdx] then
-        PushRemove(Int2Str(DelIdx));
+        PushRemove(Int2Str(DelIdx), aSrc.Items[DelIdx]);
 
     for InsIdx := 0 to Pred(InsLen) do
       if Ins[InsIdx] then
@@ -5743,7 +5769,7 @@ var
           exit;
         end
       else
-        PushRemove(p.Key);
+        PushRemove(p.Key, p.Value);
     end;
     for I := 0 to Pred(aDst.Count) do begin
       p := aDst.FObject^.Mutable[I]^;
@@ -5764,7 +5790,7 @@ var
 
     if aSrc.Kind <> aDst.Kind then
       begin
-        PushReplace(aDst);
+        PushReplace(aSrc, aDst);
         exit;
       end;
 
@@ -5772,28 +5798,110 @@ var
       jvkNull, jvkFalse, jvkTrue: ;
       jvkNumber:
         if not SameDouble(aSrc.AsNumber, aDst.AsNumber) then
-          PushReplace(aDst);
+          PushReplace(aSrc, aDst);
       jvkString:
         if aSrc.AsString <> aDst.AsString then
-          PushReplace(aDst);
+          PushReplace(aSrc, aDst);
       jvkArray: DoArrayDiff(aSrc, aDst);
       jvkObject: DoObjectDiff(aSrc, aDst);
     otherwise
       Cancel := True;
     end;
   end;
-begin //todo: need options to create value checks for replacements and removes?
-      //todo: how to improve processing of arrays of structures?
+
+type
+  TUseOp = (uoAdd, uoRemove, uoOther);
+
+  function GetUseOp(aNode: TJsonNode): TUseOp;
+  var
+    Node: TJsonNode;
+  begin
+    aNode.Find(OP_KEY, Node);
+    case Node.AsString of
+      ADD_KEY:     Result := uoAdd;
+      REMOVE_KEY:  Result := uoRemove;
+    else
+      Result := uoOther;
+    end;
+  end;
+
+  function IsPrefixPath(const aFrom, aTo: string): Boolean; inline;
+  begin
+    if aFrom = aTo then exit(False);
+    Result := TStrUtil.IsPrefix(TJsonPtr.ToSegments(aFrom), TJsonPtr.ToSegments(aTo));
+  end;
+
+  procedure TryRemoveAdd2Move(aSrc, aDst: TJsonNode);
+  var
+    Cmd, NextCmd, Value, Tmp: TJsonNode;
+    RemovePath, AddPath: string;
+    I, J: SizeInt;
+  begin
+    I := 0;
+    while I < aDiff.Count do begin
+      Cmd := aDiff.Items[I];
+      case GetUseOp(Cmd) of
+        uoAdd: begin
+            Cmd.Find(VAL_KEY, Value);
+            for J := Succ(I) to Pred(aDiff.Count) do begin
+              NextCmd := aDiff.Items[J];
+              if GetUseOp(NextCmd) = uoRemove then begin
+                NextCmd.Find(PATH_KEY, Tmp);
+                RemovePath := Tmp.AsString;
+                if aSrc.FindPath(TJsonPtr.From(RemovePath)).EqualTo(Value) then begin
+                  Cmd[OP_KEY] := MOVE_KEY;
+                  Cmd[FROM_KEY] := RemovePath;
+                  Cmd.Remove(VAL_KEY);
+                  aDiff.Delete(J);
+                  break;
+                end;
+              end;
+            end;
+          end;
+        uoRemove: begin
+            Cmd.Find(PATH_KEY, Tmp);
+            RemovePath := Tmp.AsString;
+            aSrc.FindPath(TJsonPtr.From(RemovePath), Value);
+            for J := Succ(I) to Pred(aDiff.Count) do begin
+              NextCmd := aDiff.Items[J];
+              if GetUseOp(NextCmd) = uoAdd then begin
+                NextCmd.Find(PATH_KEY, Tmp);
+                AddPath := Tmp.AsString;
+                if aDst.FindPath(TJsonPtr.From(AddPath)).EqualTo(Value) then begin
+                  if IsPrefixPath(RemovePath, AddPath) then continue;
+                  Cmd[OP_KEY] := MOVE_KEY;
+                  Cmd[FROM_KEY] := RemovePath;
+                  Cmd[PATH_KEY] := AddPath;
+                  Cmd.Remove(VAL_KEY);
+                  aDiff.Delete(J);
+                  break;
+                end;
+              end;
+            end;
+          end;
+      else
+      end;
+      Inc(I);
+    end;
+  end;
+
+begin //todo: how to improve processing of arrays of structures?
+
   if (aSource = nil) or (aSource.Kind = jvkUnknown) then
     exit(drSourceMiss)
   else
     if (aTarget = nil) or (aTarget.Kind = jvkUnknown) then
       exit(drTargetMiss);
 
+  TestRemove := doEmitTestOnRemove in aOptions;
+  TestReplace := doEmitTestOnReplace in aOptions;
+
   aDiff := TJsonNode.Create;
   try
     aDiff.AsArray;
     DoDiff(aSource, aTarget);
+    if not Cancel and (doEnableMove in aOptions) then
+      TryRemoveAdd2Move(aSource, aTarget);
   finally
     if Cancel then
       begin
@@ -5804,11 +5912,12 @@ begin //todo: need options to create value checks for replacements and removes?
   Result := drOk;
 end;
 
-class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch): TDiffResult;
+class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch;
+  aOptions: TDiffOptions): TDiffResult;
 var
   Node: TJsonNode = nil;
 begin
-  Result := Diff(aSource, aTarget, Node);
+  Result := Diff(aSource, aTarget, Node, aOptions);
   if Result = drOk then
     begin
       aDiff := TJsonPatch.Create;
@@ -5818,20 +5927,22 @@ begin
 end;
 
 {$PUSH}{$WARN 5089 OFF}
-class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: TJsonNode): TDiffResult;
+class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: TJsonNode;
+  aOptions: TDiffOptions): TDiffResult;
 var
   Src, Dst: specialize TGUniqRef<TJsonNode>;
 begin
   Src.Instance := TJsonNode.Load(aSource);
   Dst.Instance := TJsonNode.Load(aTarget);
-  Result := Diff(Src.Instance, Dst.Instance, aDiff);
+  Result := Diff(Src.Instance, Dst.Instance, aDiff, aOptions);
 end;
 
-class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: TJsonPatch): TDiffResult;
+class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: TJsonPatch;
+  aOptions: TDiffOptions): TDiffResult;
 var
   Node: TJsonNode = nil;
 begin
-  Result := Diff(aSource, aTarget, Node);
+  Result := Diff(aSource, aTarget, Node, aOptions);
   if Result = drOk then
     begin
       aDiff := TJsonPatch.Create;
@@ -5840,14 +5951,15 @@ begin
     end;
 end;
 
-class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: string): TDiffResult;
+class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: string;
+  aOptions: TDiffOptions): TDiffResult;
 var
   Src, Dst: specialize TGUniqRef<TJsonNode>;
   Node: TJsonNode;
 begin
   Src.Instance := TJsonNode.Load(aSource);
   Dst.Instance := TJsonNode.Load(aTarget);
-  Result := Diff(Src.Instance, Dst.Instance, Node);
+  Result := Diff(Src.Instance, Dst.Instance, Node, aOptions);
   if Result = drOk then
     begin
       aDiff := Node.AsJson;
