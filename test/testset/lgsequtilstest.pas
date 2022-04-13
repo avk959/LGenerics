@@ -69,6 +69,10 @@ type
     TIntSeqUtil = specialize TGSeqUtil<Integer, Integer>;
     TIntArray   = array of Integer;
   published
+    procedure IsPrefixTest;
+    procedure IsSuffixTest;
+    procedure PrefixLenTest;
+    procedure SuffixLenTest;
     procedure TestDiff;
   end;
 
@@ -2051,6 +2055,102 @@ begin
 end;
 
 { TTestSeqUtils }
+
+procedure TTestSeqUtils.IsPrefixTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertFalse(TIntSeqUtil.IsPrefix(a, b));
+
+  b := [1,2,3];
+  AssertFalse(TIntSeqUtil.IsPrefix(a, b));
+
+  a := [1,2,3,4];
+  AssertFalse(TIntSeqUtil.IsPrefix(a, b));
+
+  a := [1,2,4];
+  AssertFalse(TIntSeqUtil.IsPrefix(a, b));
+
+  a := [1,2,3];
+  AssertTrue(TIntSeqUtil.IsPrefix(a, b));
+
+  a := [1,2];
+  AssertTrue(TIntSeqUtil.IsPrefix(a, b));
+
+  a := [1,2,3,4];
+  AssertTrue(TIntSeqUtil.IsPrefix(a, a));
+  AssertTrue(TIntSeqUtil.IsPrefix(a[0..2], a));
+end;
+
+procedure TTestSeqUtils.IsSuffixTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertFalse(TIntSeqUtil.IsSuffix(a, b));
+
+  b := [1,2,3];
+  AssertFalse(TIntSeqUtil.IsSuffix(a, b));
+
+  a := [0,1,2,3];
+  AssertFalse(TIntSeqUtil.IsSuffix(a, b));
+
+  a := [1,0,3];
+  AssertFalse(TIntSeqUtil.IsSuffix(a, b));
+
+  a := [1,2,3];
+  AssertTrue(TIntSeqUtil.IsSuffix(a, b));
+
+  a := [2,3];
+  AssertTrue(TIntSeqUtil.IsSuffix(a, b));
+
+  a := [0,1,2,3];
+  AssertTrue(TIntSeqUtil.IsSuffix(a, a));
+  AssertTrue(TIntSeqUtil.IsSuffix(a[1..3], a));
+end;
+
+procedure TTestSeqUtils.PrefixLenTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertTrue(TIntSeqUtil.CommonPrefixLen(a, b) = 0);
+
+  b := [1,2,3];
+  AssertTrue(TIntSeqUtil.CommonPrefixLen(a, b) = 0);
+
+  a := [1,2,3,4];
+  AssertTrue(TIntSeqUtil.CommonPrefixLen(a, b) = 3);
+
+  a := [1,2,4];
+  AssertTrue(TIntSeqUtil.CommonPrefixLen(a, b) = 2);
+
+  a := [1,2,3,4];
+  AssertTrue(TIntSeqUtil.CommonPrefixLen(a, a) = 4);
+  AssertTrue(TIntSeqUtil.CommonPrefixLen(a[0..2], a) = 3);
+end;
+
+procedure TTestSeqUtils.SuffixLenTest;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+begin
+  AssertTrue(TIntSeqUtil.CommonSuffixLen(a, b) = 0);
+
+  b := [1,2,3];
+  AssertTrue(TIntSeqUtil.CommonSuffixLen(a, b) = 0);
+
+  a := [0,1,2,3];
+  AssertTrue(TIntSeqUtil.CommonSuffixLen(a, b) = 3);
+
+  a := [1,0,3];
+  AssertTrue(TIntSeqUtil.CommonSuffixLen(a, b) = 1);
+
+  a := [0,1,2,3];
+  AssertTrue(TIntSeqUtil.CommonSuffixLen(a, a) = 4);
+  AssertTrue(TIntSeqUtil.CommonSuffixLen(a[1..3], a) = 3);
+end;
 
 procedure TTestSeqUtils.TestDiff;
 var
