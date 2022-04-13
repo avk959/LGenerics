@@ -163,6 +163,9 @@ type
     procedure PatchTests;
     procedure DiffBasic;
     procedure DiffTests;
+    procedure DiffEmitTestOnRemove;
+    procedure DiffEmitTestOnReplace;
+    procedure DiffEnableMove;
   end;
 
 const
@@ -2126,6 +2129,100 @@ begin
           AssertTrue(Format(Fmt, [CurrFile, I, Unexpect]), CurrDoc.Instance.EqualTo(Expect));
         end;
     end;
+end;
+
+procedure TTestJsonPatch.DiffEmitTestOnRemove;
+var
+  Source, Target, Diff, Test: specialize TGUniqRef<TJsonNode>;
+  Patch: specialize TGAutoRef<TJsonPatch>;
+  Node: TJsonNode;
+  Ret: TDiffResult;
+const
+  sSource = '{"foo": [1, "fizz", 3], "boo": ["bar", "baz"]}';
+  sTarget = '{"foo": [1, 3], "boo": ["baz"]}';
+begin
+  {%H-}Source.Instance := TJsonNode.NewJson(sSource);
+  {%H-}Target.Instance := TJsonNode.NewJson(sTarget);
+  Ret := TJsonPatch.Diff(Source.Instance, Target.Instance, Node);
+  AssertTrue('Diff failed', Ret = drOk);
+  {%H-}Diff.Instance := Node;
+  AssertTrue('Unexpected diff count', Node.Count = 2);
+  Ret := TJsonPatch.Diff(Source.Instance, Target.Instance, Node, [doEmitTestOnRemove]);
+  AssertTrue('Diff with option failed', Ret = drOk);
+  Diff.Instance := Node;
+  AssertTrue('Unexpected diff count with option', Node.Count = 4);
+  {%H-}Test.Instance := Source.Instance.Clone;
+  Patch.Instance.Load(Diff.Instance);
+  AssertTrue('Patching1 failed', Patch.Instance.Apply(Test.Instance) = prOk);
+  AssertTrue('Patching1 wrong', Test.Instance.EqualTo(Target.Instance));
+
+  Test.Instance := Source.Instance.Clone;
+  Test.Instance.FindPath(TJsonPtr.From('/foo/1')).AsString := 'fuzz';
+  AssertTrue('Unexpected patching2 result', Patch.Instance.Apply(Test.Instance) = prFail);
+
+  Test.Instance := Source.Instance.Clone;
+  Test.Instance.FindPath(TJsonPtr.From('/boo/0')).AsString := 'ber';
+  AssertTrue('Unexpected patching3 result', Patch.Instance.Apply(Test.Instance) = prFail);
+end;
+
+procedure TTestJsonPatch.DiffEmitTestOnReplace;
+var
+  Source, Target, Diff, Test: specialize TGUniqRef<TJsonNode>;
+  Patch: specialize TGAutoRef<TJsonPatch>;
+  Node: TJsonNode;
+  Ret: TDiffResult;
+const
+  sSource = '{"foo": [1, "fizz", 3], "boo": ["bar", "baz"]}';
+  sTarget = '{"foo": [1, "fuzz", 3], "boo": ["ber", "baz"]}';
+begin
+  {%H-}Source.Instance := TJsonNode.NewJson(sSource);
+  {%H-}Target.Instance := TJsonNode.NewJson(sTarget);
+  Ret := TJsonPatch.Diff(Source.Instance, Target.Instance, Node);
+  AssertTrue('Diff failed', Ret = drOk);
+  {%H-}Diff.Instance := Node;
+  AssertTrue('Unexpected diff count', Node.Count = 2);
+  Ret := TJsonPatch.Diff(Source.Instance, Target.Instance, Node, [doEmitTestOnReplace]);
+  AssertTrue('Diff with option failed', Ret = drOk);
+  Diff.Instance := Node;
+  AssertTrue('Unexpected diff count with option', Node.Count = 4);
+  {%H-}Test.Instance := Source.Instance.Clone;
+  Patch.Instance.Load(Diff.Instance);
+  AssertTrue('Patching1 failed', Patch.Instance.Apply(Test.Instance) = prOk);
+  AssertTrue('Patching1 wrong', Test.Instance.EqualTo(Target.Instance));
+
+  Test.Instance := Source.Instance.Clone;
+  Test.Instance.FindPath(TJsonPtr.From('/foo/1')).AsString := 'fiz';
+  AssertTrue('Unexpected patching2 result', Patch.Instance.Apply(Test.Instance) = prFail);
+
+  Test.Instance := Source.Instance.Clone;
+  Test.Instance.FindPath(TJsonPtr.From('/boo/0')).AsString := 'bir';
+  AssertTrue('Unexpected patching3 result', Patch.Instance.Apply(Test.Instance) = prFail);
+end;
+
+procedure TTestJsonPatch.DiffEnableMove;
+var
+  Source, Target, Diff, Test: specialize TGUniqRef<TJsonNode>;
+  Patch: specialize TGAutoRef<TJsonPatch>;
+  Node: TJsonNode;
+  Ret: TDiffResult;
+const
+  sSource = '{"foo": [1, "fizz", 3], "boo": ["bar", "baz", "fizz"]}';
+  sTarget = '{"foo": [1, 3, "fizz"], "boo": ["baz", "fizz"], "ozz": "bar"}';
+begin
+  {%H-}Source.Instance := TJsonNode.NewJson(sSource);
+  {%H-}Target.Instance := TJsonNode.NewJson(sTarget);
+  Ret := TJsonPatch.Diff(Source.Instance, Target.Instance, Node);
+  AssertTrue('Diff failed', Ret = drOk);
+  {%H-}Diff.Instance := Node;
+  AssertTrue('Unexpected diff count', Node.Count = 4);
+  Ret := TJsonPatch.Diff(Source.Instance, Target.Instance, Node, [doEnableMove]);
+  AssertTrue('Diff with option failed', Ret = drOk);
+  Diff.Instance := Node;
+  AssertTrue('Unexpected diff count with option', Node.Count = 2);
+  {%H-}Test.Instance := Source.Instance.Clone;
+  Patch.Instance.Load(Diff.Instance);
+  AssertTrue('Patching failed', Patch.Instance.Apply(Test.Instance) = prOk);
+  AssertTrue('Patching wrong', Test.Instance.EqualTo(Target.Instance));
 end;
 
 initialization
