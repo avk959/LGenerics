@@ -365,10 +365,6 @@ type
     class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
-  { returns True if A is a prefix of B; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const A, B: array of T): Boolean; static;
-  { returns True if A is a suffix of B; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const A, B: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -579,10 +575,6 @@ type
     class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
-  { returns True if A is a prefix of B; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const A, B: array of T): Boolean; static;
-  { returns True if A is a suffix of B; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const A, B: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -732,10 +724,6 @@ type
     class function  IsNonAscending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TLess): Boolean; static;
-  { returns True if A is a prefix of B; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const A, B: array of T; c: TLess): Boolean; static;
-  { returns True if A is a suffix of B; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const A, B: array of T; c: TLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -886,10 +874,6 @@ type
     class function  IsNonAscending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TOnLess): Boolean; static;
-  { returns True if A is a prefix of B; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const A, B: array of T; c: TOnLess): Boolean; static;
-  { returns True if A is a suffix of B; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const A, B: array of T; c: TOnLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -1044,10 +1028,6 @@ type
     class function  IsNonAscending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TNestLess): Boolean; static;
-  { returns True if A is a prefix of B; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const A, B: array of T; c: TNestLess): Boolean; static;
-  { returns True if A is a suffix of B; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const A, B: array of T; c: TNestLess): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -1185,10 +1165,6 @@ type
     class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
-  { returns True if A is a prefix of B; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const A, B: array of T): Boolean; static;
-  { returns True if A is a suffix of B; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const A, B: array of T): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -3989,34 +3965,6 @@ begin
     Result := False;
 end;
 
-class function TGBaseArrayHelper.IsPrefix(const A, B: array of T): Boolean;
-var
-  I: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  for I := 0 to System.High(A) do
-    if TCmpRel.Less(A[I], B[I]) or TCmpRel.Less(B[I], A[I]) then
-      exit(False);
-  Result := True;
-end;
-
-class function TGBaseArrayHelper.IsSuffix(const A, B: array of T): Boolean;
-var
-  I, J: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  J := System.High(B);
-  for I := System.High(A) downto 0 do
-    begin
-      if TCmpRel.Less(A[I], B[J]) or TCmpRel.Less(B[J], A[I]) then
-        exit(False);
-      Dec(J);
-    end;
-  Result := True;
-end;
-
 class function TGBaseArrayHelper.InversionCount(var A: array of T): Int64;
 var
   Buf: TArray;
@@ -6649,34 +6597,6 @@ begin
     Result := False;
 end;
 
-class function TGComparableArrayHelper.IsPrefix(const A, B: array of T): Boolean;
-var
-  I: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  for I := 0 to System.High(A) do
-    if (A[I] < B[I]) or (B[I] < A[I]) then
-      exit(False);
-  Result := True;
-end;
-
-class function TGComparableArrayHelper.IsSuffix(const A, B: array of T): Boolean;
-var
-  I, J: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  J := System.High(B);
-  for I := System.High(A) downto 0 do
-    begin
-      if (A[I] < B[J]) or (B[J] < A[I]) then
-        exit(False);
-      Dec(J);
-    end;
-  Result := True;
-end;
-
 class function TGComparableArrayHelper.InversionCount(var A: array of T): Int64;
 var
   Buf: TArray;
@@ -8645,34 +8565,6 @@ begin
     end
   else
     Result := False;
-end;
-
-class function TGRegularArrayHelper.IsPrefix(const A, B: array of T; c: TLess): Boolean;
-var
-  I: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  for I := 0 to System.High(A) do
-    if c(A[I], B[I]) or c(B[I], A[I]) then
-      exit(False);
-  Result := True;
-end;
-
-class function TGRegularArrayHelper.IsSuffix(const A, B: array of T; c: TLess): Boolean;
-var
-  I, J: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  J := System.High(B);
-  for I := System.High(A) downto 0 do
-    begin
-      if c(A[I], B[J]) or c(B[J], A[I]) then
-        exit(False);
-      Dec(J);
-    end;
-  Result := True;
 end;
 
 class function TGRegularArrayHelper.InversionCount(var A: array of T; c: TLess): Int64;
@@ -10648,34 +10540,6 @@ begin
     Result := False;
 end;
 
-class function TGDelegatedArrayHelper.IsPrefix(const A, B: array of T; c: TOnLess): Boolean;
-var
-  I: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  for I := 0 to System.High(A) do
-    if c(A[I], B[I]) or c(B[I], A[I]) then
-      exit(False);
-  Result := True;
-end;
-
-class function TGDelegatedArrayHelper.IsSuffix(const A, B: array of T; c: TOnLess): Boolean;
-var
-  I, J: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  J := System.High(B);
-  for I := System.High(A) downto 0 do
-    begin
-      if c(A[I], B[J]) or c(B[J], A[I]) then
-        exit(False);
-      Dec(J);
-    end;
-  Result := True;
-end;
-
 class function TGDelegatedArrayHelper.InversionCount(var A: array of T; c: TOnLess): Int64;
 var
   Buf: TArray;
@@ -12649,34 +12513,6 @@ begin
     Result := False;
 end;
 
-class function TGNestedArrayHelper.IsPrefix(const A, B: array of T; c: TNestLess): Boolean;
-var
-  I: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  for I := 0 to System.High(A) do
-    if c(A[I], B[I]) or c(B[I], A[I]) then
-      exit(False);
-  Result := True;
-end;
-
-class function TGNestedArrayHelper.IsSuffix(const A, B: array of T; c: TNestLess): Boolean;
-var
-  I, J: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  J := System.High(B);
-  for I := System.High(A) downto 0 do
-    begin
-      if c(A[I], B[J]) or c(B[J], A[I]) then
-        exit(False);
-      Dec(J);
-    end;
-  Result := True;
-end;
-
 class function TGNestedArrayHelper.InversionCount(var A: array of T; c: TNestLess): Int64;
 var
   Buf: TArray;
@@ -14291,34 +14127,6 @@ begin
     end
   else
     Result := False;
-end;
-
-class function TGSimpleArrayHelper.IsPrefix(const A, B: array of T): Boolean;
-var
-  I: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  for I := 0 to System.High(A) do
-    if A[I] <> B[I] then
-      exit(False);
-  Result := True;
-end;
-
-class function TGSimpleArrayHelper.IsSuffix(const A, B: array of T): Boolean;
-var
-  I, J: SizeInt;
-begin
-  if (System.Length(A) = 0) or (System.Length(A) > System.Length(B)) then
-    exit(False);
-  J := System.High(B);
-  for I := System.High(A) downto 0 do
-    begin
-      if A[I] <> B[J] then
-        exit(False);
-      Dec(J);
-    end;
-  Result := True;
 end;
 
 class function TGSimpleArrayHelper.InversionCount(var A: array of T): Int64;

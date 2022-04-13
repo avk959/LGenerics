@@ -193,6 +193,14 @@ type
   public
   { returns True if aSub is a subsequence of aSeq, False otherwise }
     class function IsSubSequence(const aSeq, aSub: array of T): Boolean; static;
+  { returns True if L is a prefix of R; an empty array cannot be a prefix of any other array }
+    class function  IsPrefix(const L, R: array of T): Boolean; static;
+  { returns True if L is a suffix of R; an empty array cannot be a suffix of any other array }
+    class function  IsSuffix(const L, R: array of T): Boolean; static;
+  { returns the length of the common prefix L and R }
+    class function CommonPrefixLen(const L, R: array of T): SizeInt; static;
+  { returns the length of the common suffix L and R }
+    class function CommonSuffixLen(const L, R: array of T): SizeInt; static;
   { returns Levenshtein distance between L and R; used a simple dynamic programming algorithm
     with O(mn) time complexity, where n and m are the lengths of L and R respectively,
     and O(Max(m, n)) space complexity }
@@ -1803,6 +1811,60 @@ begin
       Inc(I);
     end;
   Result := J = System.Length(aSub);
+end;
+
+class function TGSeqUtil.IsPrefix(const L, R: array of T): Boolean;
+var
+  I: SizeInt;
+begin
+  if (System.Length(L) = 0) or (System.Length(L) > System.Length(R)) then
+    exit(False);
+  for I := 0 to System.High(L) do
+    if not TEqRel.Equal(L[I], R[I]) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGSeqUtil.IsSuffix(const L, R: array of T): Boolean;
+var
+  I, J: SizeInt;
+begin
+  if (System.Length(L) = 0) or (System.Length(L) > System.Length(R)) then
+    exit(False);
+  J := System.High(R);
+  for I := System.High(L) downto 0 do
+    begin
+      if not TEqRel.Equal(L[I], R[J]) then
+        exit(False);
+      Dec(J);
+    end;
+  Result := True;
+end;
+
+class function TGSeqUtil.CommonPrefixLen(const L, R: array of T): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := Math.Min(System.Length(L), System.Length(R));
+  for I := 0 to Pred(Result) do
+    if not TEqRel.Equal(L[I], R[I]) then
+      exit(I);
+end;
+
+class function TGSeqUtil.CommonSuffixLen(const L, R: array of T): SizeInt;
+var
+  I, LIdx, RIdx: SizeInt;
+begin
+  LIdx := System.High(L);
+  RIdx := System.High(R);
+  for I := 0 to Math.Min(LIdx, RIdx) do
+    begin
+      if not TEqRel.Equal(L[LIdx], R[RIdx]) then
+        exit(I);
+      Dec(LIdx);
+      Dec(RIdx);
+    end;
+  Result := Math.Min(System.Length(L), System.Length(R));
 end;
 
 class function TGSeqUtil.LevDistance(const L, R: array of T): SizeInt;
