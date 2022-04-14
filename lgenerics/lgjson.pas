@@ -750,6 +750,8 @@ type
   { returns the result of applying the content of p to a JSON document given as a string aTarget;
     on any result other than prOk, the contents of the aTarget does not change }
     class function Patch(p: TJsonPatch; var aTarget: string): TPatchResult; static; inline;
+  { returns the result of applying the content of p to a JSON document given as a string aTarget }
+    class function Patch(p: TJsonNode; var aTarget: string): TPatchResult;
   { returns the result of applying a patch given as a string aPatch, to a JSON document
     given as a string aTarget;
     on any result other than prOk, the contents of the aTarget does not change }
@@ -6008,13 +6010,21 @@ begin
   Result := p.Apply(aTarget);
 end;
 
+class function TJsonPatch.Patch(p: TJsonNode; var aTarget: string): TPatchResult;
+var
+  LocPatch: specialize TGAutoRef<TJsonPatch>;
+begin
+  LocPatch.Instance.Load(p);
+  Result := LocPatch.Instance.Apply(aTarget);
+end;
+
 class function TJsonPatch.Patch(const aPatch: string; var aTarget: string): TPatchResult;
 var
   LocPatch: specialize TGAutoRef<TJsonPatch>;
 begin
   if not LocPatch.Instance.TryLoad(aPatch) then
     exit(prPatchMiss);
-  Result := Patch(LocPatch.Instance, aTarget);
+  Result := LocPatch.Instance.Apply(aTarget);
 end;
 
 class function TJsonPatch.Patch(const aPatch: string; aTarget: TJsonNode): TPatchResult;
