@@ -127,5 +127,6 @@
   - brief implementation of thread pool(unit lgAsync)
   - 128-bit integers(unit lgInt128)
   - JSON validator/parser/generator(unit lgJson)
+  - JSON Patch/Diff(unit lgJson)
   - Eisel-Lemire fast string-to-double conversion algorithm(unit lgJson)
   - Ryū double-to-string conversion algorithm(unit lgJson)
