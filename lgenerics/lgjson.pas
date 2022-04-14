@@ -28,6 +28,7 @@ interface
 uses
   Classes, SysUtils, Math, BufStream,
   lgUtils,
+  lgHelpers,
   lgAbstractContainer,
   lgArrayHelpers,
   lgQueue,
@@ -4171,8 +4172,8 @@ begin
   if (Kind <> aNode.Kind) or (Count <> aNode.Count) then
     exit(False);
   case aNode.Kind of
-    jvkUnknown, jvkNull, jvkFalse, jvkTrue: ;
-    jvkNumber: exit(SameDouble(FValue.Num, aNode.FValue.Num));
+    jvkUnknown, jvkNull, jvkFalse, jvkTrue: ; //todo: jvkUnknown ???
+    jvkNumber: exit(FValue.Num = aNode.FValue.Num);
     jvkString: exit(FString = aNode.FString);
     jvkArray:
       for I := 0 to Pred(Count) do
@@ -4206,8 +4207,8 @@ begin
     jvkNull:    Result := MAGIC + 3;
     jvkFalse:   Result := MAGIC + 7;
     jvkTrue:    Result := MAGIC + 17;
-    jvkNumber:  Result := TxxHash32LE.HashDWord(PDWord(@FValue.Num)^, DWord(MAGIC));
-    jvkString:  Result := TxxHash32LE.HashStr(FString, DWord(MAGIC));
+    jvkNumber:  Result := Double.HashCode(FValue.Num);
+    jvkString:  Result := string.HashCode(FString);
     jvkArray:
       begin
         Result := MAGIC + 31;
@@ -5677,7 +5678,7 @@ var
 
   function Int2Str(aValue: SizeInt): string; inline;
   begin
-    if aValue <= FIRST_INTS_HIGH then
+    if SizeUInt(aValue) <= SizeUInt(FIRST_INTS_HIGH) then
       Result := FIRST_INTS[aValue]
     else
       Result := aValue.ToString;
@@ -5797,7 +5798,7 @@ var
     case aSrc.Kind of
       jvkNull, jvkFalse, jvkTrue: ;
       jvkNumber:
-        if not SameDouble(aSrc.AsNumber, aDst.AsNumber) then
+        if aSrc.AsNumber <> aDst.AsNumber then
           PushReplace(aSrc, aDst);
       jvkString:
         if aSrc.AsString <> aDst.AsString then
