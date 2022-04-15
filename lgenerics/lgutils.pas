@@ -991,6 +991,8 @@ const
 
   function  BsfSizeUInt(aValue: SizeUInt): ShortInt; inline;
   function  BsrSizeUInt(aValue: SizeUInt): ShortInt; inline;
+  function  RolSizeInt(aValue: SizeInt; aDist: Byte): SizeInt; inline;
+  function  RorSizeInt(aValue: SizeInt; aDist: Byte): SizeInt; inline;
   { returns number of significant bits of aValue }
   function  NSB(aValue: SizeUInt): SizeInt; inline;
   function  IsTwoPower(aValue: SizeUInt): Boolean; inline;
@@ -1177,6 +1179,28 @@ begin
   Result := ShortInt(BsrDWord(aValue));
 {$ELSE}
   Result := ShortInt(BsrWord(aValue));
+{$ENDIF}
+end;
+
+function RolSizeInt(aValue: SizeInt; aDist: Byte): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := SizeInt(RolQWord(QWord(aValue), aDist));
+{$ELSEIF DEFINED(CPU32)}
+  Result := SizeInt(RolDWord(DWord(aValue), aDist));
+{$ELSE}
+  Result := SizeInt(RolWord(Word(aValue), aDist));
+{$ENDIF}
+end;
+
+function RorSizeInt(aValue: SizeInt; aDist: Byte): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := SizeInt(RorQWord(QWord(aValue), aDist));
+{$ELSEIF DEFINED(CPU32)}
+  Result := SizeInt(RorDWord(DWord(aValue), aDist));
+{$ELSE}
+  Result := SizeInt(RorWord(Word(aValue), aDist));
 {$ENDIF}
 end;
 
