@@ -35,7 +35,6 @@ uses
   lgVector,
   lgList,
   lgStack,
-  lgHash,
   lgSeqUtils,
   lgStrConst;
 
@@ -450,6 +449,8 @@ type
     class function MaxNestDepth(aNode: TJsonNode): SizeInt; static;
   { returns True if aNode has no non-unique names, is recursive }
     class function HasUniqueNames(aNode: TJsonNode): Boolean; static;
+    class function Equal(L, R: TJsonNode): Boolean; static;
+    class function HashCode(aNode: TJsonNode): SizeInt; static;
     constructor Create;
     constructor CreateNull;
     constructor Create(aValue: Boolean);
@@ -679,11 +680,7 @@ type
     TStrHelper = specialize TGSimpleArrayHelper<string>;
     TStrUtil   = specialize TGSeqUtil<string, string>;
     TStrVector = specialize TGLiteVector<string>;
-    THasher    = record
-      class function Equal(L, R: TJsonNode): Boolean; static;
-      class function HashCode(aValue: TJsonNode): SizeInt; static;
-    end;
-    TDifUtil   = specialize TGSeqUtil<TJsonNode, THasher>;
+    TDifUtil   = specialize TGSeqUtil<TJsonNode, TJsonNode>;
 
   const
     OP_KEY      = 'op';
@@ -3799,14 +3796,14 @@ class function TJsonNode.HasUniqueNames(aNode: TJsonNode): Boolean;
     if aNode.Count > 0 then
       case aNode.Kind of
         jvkArray:
-          for I := 0 to Pred(aNode.FArray^.Count) do
+          for I := 0 to Pred(aNode.Count) do
             if not NamesUnique(aNode.FArray^.UncMutable[I]^) then
               exit(False);
         jvkObject:
-          for I := 0 to Pred(aNode.FObject^.Count) do
+          for I := 0 to Pred(aNode.Count) do
             with aNode.FObject^.Mutable[I]^ do
               begin
-                if not aNode.FObject^.ContainsUniq(Key) then
+                if not aNode.FObject^.HasUniqKey(I) then
                   exit(False);
                 if not NamesUnique(Value) then
                   exit(False);
@@ -3817,6 +3814,16 @@ class function TJsonNode.HasUniqueNames(aNode: TJsonNode): Boolean;
   end;
 begin
   Result := NamesUnique(aNode);
+end;
+
+class function TJsonNode.Equal(L, R: TJsonNode): Boolean;
+begin
+  Result := L.EqualTo(R);
+end;
+
+class function TJsonNode.HashCode(aNode: TJsonNode): SizeInt;
+begin
+  Result := aNode.HashCode;
 end;
 
 constructor TJsonNode.Create;
@@ -4196,6 +4203,7 @@ begin
   Result := True;
 end;
 
+{$PUSH}{$Q-}{$R-}
 function TJsonNode.HashCode: SizeInt;
 const
   MAGIC = SizeInt(161803398); //golden ratio
@@ -4215,17 +4223,18 @@ begin
       begin
         Result := MAGIC + 31;
         for I := 0 to Pred(Count) do
-          Result := Result xor FArray^.UncMutable[I]^.HashCode;
+          Result := RolSizeInt(Result + I, 13) xor FArray^.UncMutable[I]^.HashCode;
       end;
     jvkObject:
       begin
-        Result := MAGIC + 67;
+        Result := RolSizeInt(MAGIC + 67, 11);
         for I := 0 to Pred(Count) do
           with FObject^.Mutable[I]^ do
-            Result := Result xor TxxHash32LE.HashStr(Key, DWord(MAGIC)) xor Value.HashCode;
+            Result := Result xor string.HashCode(Key) xor Value.HashCode;
       end;
   end;
 end;
+{$POP}
 
 function TJsonNode.Parse(const s: string): Boolean;
 var
@@ -5211,18 +5220,6 @@ begin
     jvkArray,
     jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
   end;
-end;
-
-{ TJsonPatch.THasher }
-
-class function TJsonPatch.THasher.Equal(L, R: TJsonNode): Boolean;
-begin
-  Result := L.EqualTo(R);
-end;
-
-class function TJsonPatch.THasher.HashCode(aValue: TJsonNode): SizeInt;
-begin
-  Result := aValue.HashCode;
 end;
 
 { TJsonPatch }
