@@ -132,7 +132,7 @@ type
     property  IsScalar: Boolean read GetIsScalar;
     property  IsStruct: Boolean read GetIsStruct;
     property  IsInteger: Boolean read GetIsInteger;
-    property  HasUniqueNames: Boolean read GetHasUniqueNames;
+    property  DupeNamesFree: Boolean read GetHasUniqueNames;
     property  Values[const aName: string]: Variant read GetValueProp write SetValueProp; default;
     property  Items[aIndex: SizeInt]: Variant read GetItemProp write SetItemProp;
     property  Pairs[aIndex: SizeInt]: TVPair read GetPair;
@@ -524,7 +524,7 @@ function TVarJson.GetHasUniqueNames: Boolean;
 begin
   if not IsVarJson or (FNode = nil) then
     exit(True);
-  Result := TJsonNode.HasUniqueNames(FNode);
+  Result := TJsonNode.DupeNamesFree(FNode);
 end;
 
 function TVarJson.GetPair(aIndex: SizeInt): TVPair;
@@ -1047,7 +1047,7 @@ begin
     'clone':          Variant(aDst) := TVarJson(aData).Clone;
     'count':          Variant(aDst) := TVarJson(aData).Count;
     'formatjson':     Variant(aDst) := TVarJson(aData).AsJson;
-    'hasuniquenames': Variant(aDst) := TVarJson(aData).HasUniqueNames;
+    'dupenamesfree':  Variant(aDst) := TVarJson(aData).DupeNamesFree;
     'isinteger':      Variant(aDst) := TVarJson(aData).IsInteger;
     'isscalar':       Variant(aDst) := TVarJson(aData).IsScalar;
     'isstruct':       Variant(aDst) := TVarJson(aData).IsStruct;

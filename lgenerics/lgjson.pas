@@ -448,7 +448,7 @@ type
   { returns the maximum nesting depth of aNode, is recursive }
     class function MaxNestDepth(aNode: TJsonNode): SizeInt; static;
   { returns True if aNode has no non-unique names, is recursive }
-    class function HasUniqueNames(aNode: TJsonNode): Boolean; static;
+    class function DupeNamesFree(aNode: TJsonNode): Boolean; static;
     class function Equal(L, R: TJsonNode): Boolean; static;
     class function HashCode(aNode: TJsonNode): SizeInt; static;
     constructor Create;
@@ -3788,7 +3788,7 @@ begin
   Result := MaxDep;
 end;
 
-class function TJsonNode.HasUniqueNames(aNode: TJsonNode): Boolean;
+class function TJsonNode.DupeNamesFree(aNode: TJsonNode): Boolean;
   function NamesUnique(aNode: TJsonNode): Boolean;
   var
     I: SizeInt;
