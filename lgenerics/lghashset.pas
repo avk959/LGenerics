@@ -379,7 +379,7 @@ type
     procedure Clear; inline;
     procedure TrimToFit; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
-  { returns True if element added }
+  { returns True if the element is added }
     function  Add(const aValue: T): Boolean; inline;
   { returns count of added elements }
     function  AddAll(const a: array of T): SizeInt;
@@ -394,7 +394,7 @@ type
     function  ContainsAll(const a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
     function  ContainsAll(constref aSet: TGLiteHashSet): Boolean;
-  { returns True if element removed }
+  { returns True if the element is removed }
     function  Remove(const aValue: T): Boolean; inline;
   { returns count of removed elements }
     function  RemoveAll(const a: array of T): SizeInt;
@@ -404,7 +404,7 @@ type
     function  RemoveIf(aTest: TTest): SizeInt;
     function  RemoveIf(aTest: TOnTest): SizeInt;
     function  RemoveIf(aTest: TNestTest): SizeInt;
-  { returns True if element extracted }
+  { returns True if the element is extracted }
     function  Extract(const aValue: T): Boolean; inline;
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
