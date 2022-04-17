@@ -607,13 +607,6 @@ type
     function  Extract(const aName: string; out aNode: TJsonNode): Boolean;
     function  Remove(const aName: string): Boolean;
     function  RemoveAll(const aName: string): SizeInt;
-  { tries to find an element using a path specified as a JSON Pointer;
-    if non-unique keys are encountered in the search path, the search terminates
-    immediately and returns False; the "-" element has a special sense only if it is
-    the last segment of the path, otherwise it is treated as a string;
-    each node considered self as a root; }
-    function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
-    function  FindPath(const aPtr: TJsonPtr): TJsonNode; inline;
   { tries to find an element using a path specified as an array of path segments;
     if non-unique keys are encountered in the search path, the search terminates
     immediately and returns False; the "-" element has a special sense only if it is
@@ -621,6 +614,16 @@ type
     each node considered self as a root }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPath: array of string): TJsonNode;
+  { tries to find an element using a path specified as a JSON Pointer wrapper;
+    if non-unique keys are encountered in the search path, the search terminates
+    immediately and returns False; the "-" element has a special sense only if it is
+    the last segment of the path, otherwise it is treated as a string;
+    each node considered self as a root; }
+    function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+    function  FindPath(const aPtr: TJsonPtr): TJsonNode; inline;
+  { tries to find the element using the path given by the JSON pointer as a Pascal string }
+    function  FindPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean;
+    function  FindPathPtr(const aPtr: string): TJsonNode; inline;
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndentSize: Integer = DEF_INDENT;
                          aOffset: Integer = 0): string;
@@ -911,6 +914,7 @@ type
     function  GetAsString: string; inline;
     function  GetPath: string;
     function  GetParentName: string; inline;
+    function  GetParentIndex: SizeInt; inline;
     property  ReadMode: Boolean read FReadMode;
     property  CopyMode: Boolean read FCopyMode;
     property  DeferToken: TTokenKind read FDeferToken;
@@ -981,6 +985,7 @@ type
     property  TokenKind: TTokenKind read FToken;
     property  StructKind: TStructKind read GetStructKind;
     property  ParentName: string read GetParentName;
+    property  ParentIndex: SizeInt read GetParentIndex;
     property  ParentKind: TStructKind read GetParentKind;
   { indicates the nesting depth of the current structure, zero based }
     property  Depth: SizeInt read FStackTop;
@@ -1937,44 +1942,32 @@ begin
   Result := sb.ToString;
 end;
 
+{$PUSH}{$WARN 5089 OFF}{$WARN 5036 OFF}
 class function TJsonPtr.Decode(const s: string): TStringArray;
 var
-  sbSrc, sbDst: TJsonNode.TStrBuilder;
-  Segs: TStringArray = nil;
-  I: SizeInt;
-  J: SizeInt = 0;
-  procedure AddSegment;
-  var
-    II: SizeInt;
+  pSeg: PAnsiChar;
+  SegIdx: Integer;
+  procedure AppendChar(c: AnsiChar); inline;
   begin
-    if sbSrc.NonEmpty then
-      begin
-        if sbSrc.FBuffer[Pred(sbSrc.Count)] = '~' then
-          raise EJsException.Create(SEInvalidJsPtr);
-        II := 0;
-        while II < sbSrc.Count do
-          if sbSrc.FBuffer[II] = '~' then
-            begin
-              case sbSrc.FBuffer[II+1] of
-                '0': sbDst.Append('~');
-                '1': sbDst.Append('/');
-              else
-                raise EJsException.Create(SEInvalidJsPtr);
-              end;
-              II += 2;
-            end
-          else
-            begin
-              sbDst.Append(sbSrc.FBuffer[II]);
-              Inc(II);
-            end;
-        sbSrc.MakeEmpty;
-      end;
-    if J = System.Length(Segs) then
+    pSeg[SegIdx] := c;
+    Inc(SegIdx);
+  end;
+var
+  CurrSeg: string;
+  Segs: TStringArray;
+  J: SizeInt;
+  procedure AddSegment; inline;
+  begin
+    System.SetLength(CurrSeg, SegIdx);
+    SegIdx := 0;
+    if System.Length(Segs) = J then
       System.SetLength(Segs, J * 2);
-    Segs[J] := sbDst.ToString;
+    Segs[J] := CurrSeg;
     Inc(J);
   end;
+var
+  I, Len: SizeInt;
+  c: AnsiChar;
 begin
   Result := nil;
   if (s = '') then
@@ -1983,19 +1976,46 @@ begin
     raise EJsException.Create(SEInvalidJsPtr);
   if s = '/' then
     exit(['']);
+  Len := System.Length(s);
+  if s[Len] = '~' then
+    raise EJsException.Create(SEInvalidJsPtr);
+
   System.SetLength(Segs, ARRAY_INITIAL_SIZE);
-  sbSrc := TJsonNode.TStrBuilder.Create(System.Length(s));
-  sbDst := TJsonNode.TStrBuilder.Create(System.Length(s));
+  System.SetLength(CurrSeg, Len - 1);
+  pSeg := Pointer(CurrSeg);
   J := 0;
-  for I := 2 to System.Length(s) do
-    if s[I] = '/' then
-      AddSegment
-    else
-      sbSrc.Append(s[I]);
+  SegIdx := 0;
+  I := 2;
+  while I <= Len do
+    begin
+      c := s[I];
+      case c of
+        '/':
+          begin
+            AddSegment;
+            System.SetLength(CurrSeg, Len - I);
+            pSeg := Pointer(CurrSeg);
+          end;
+        '~':
+          begin
+            case s[I+1] of
+              '0': AppendChar('~');
+              '1': AppendChar('/');
+            else
+              raise EJsException.Create(SEInvalidJsPtr);
+            end;
+            Inc(I);
+          end
+      else
+        AppendChar(c);
+      end;
+      Inc(I);
+    end;
   AddSegment;
   System.SetLength(Segs, J);
   Result := Segs;
 end;
+{$POP}
 
 class function TJsonPtr.ValidPtr(const s: string): Boolean;
 var
@@ -2532,6 +2552,38 @@ begin
   end;
 end;
 
+function SizeUIntDecimalLen(const aValue: SizeUInt): Integer; inline;
+begin
+{$IF DEFINED(CPU64)}
+  Result := GetDecimalLen(aValue);
+{$ELSEIF DEFINED(CPU32)}
+  case aValue of
+    0..9: Result := 1;
+    10..99: Result := 2;
+    100..999: Result := 3;
+    1000..9999: Result := 4;
+    10000..99999: Result := 5;
+    100000..999999: Result := 6;
+    1000000..9999999: Result := 7;
+    10000000..99999999: Result := 8;
+    100000000..999999999: Result := 9;
+  else
+    Result := 10;
+  end;
+{$ELSEIF DEFINED(CPU16)}
+  case aValue of
+    0..9: Result := 1;
+    10..99: Result := 2;
+    100..999: Result := 3;
+    1000..9999: Result := 4;
+  else
+    Result := 5;
+  end;
+{$ELSE}
+  {$FATAL Not supported}
+{$ENDIF}
+end;
+
 const
   MOD100_TBL: array[0..99] of TChar2 = (
     '00', '01', '02', '03', '04', '05', '06', '07', '08', '09',
@@ -2544,6 +2596,18 @@ const
     '70', '71', '72', '73', '74', '75', '76', '77', '78', '79',
     '80', '81', '82', '83', '84', '85', '86', '87', '88', '89',
     '90', '91', '92', '93', '94', '95', '96', '97', '98', '99');
+
+  FIRST_UINTS_HIGH = 99;
+  FIRST_UINTS: array[0..FIRST_UINTS_HIGH] of string = (
+     '0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9', '10', '11',
+    '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23',
+    '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35',
+    '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
+    '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
+    '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71',
+    '72', '73', '74', '75', '76', '77', '78', '79', '80', '81', '82', '83',
+    '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95',
+    '96', '97', '98', '99');
 
 { for internal use only }
 function QWord2DecimalStr(V: QWord; p: PChar2): DWord;
@@ -2578,7 +2642,7 @@ begin
 end;
 
 { for internal use only }
-procedure Int2Str(const aValue: Int64; out s: shortstring); inline;
+procedure Int64_ToStr(const aValue: Int64; out s: shortstring); inline;
 var
   V: QWord;
   Start, Len: Integer;
@@ -2603,6 +2667,35 @@ begin
   else
     PChar2(@s[Start])^ := MOD100_TBL[QWord2DecimalStr(V, @s[Pred(System.Length(s))])];
 end;
+
+function SizeUInt2DecimalStr(V: SizeUInt; p: PChar2): SizeUInt;
+var
+  Q: SizeUInt;
+begin
+  repeat
+    Q := V div 100;
+    if Q = 0 then break;
+    p^ := MOD100_TBL[V - Q * 100];
+    V := Q;
+    Dec(p);
+  until False;
+  Result := V;
+end;
+
+function SizeUInt2Str(V: SizeUInt): string;
+var
+  Len: Integer;
+begin
+  if V <= FIRST_UINTS_HIGH then exit(FIRST_UINTS[V]);
+  Len := SizeUIntDecimalLen(V);
+  System.SetLength(Result, Len);
+  if Boolean(Len and 1) then
+    Result[1] := MOD100_TBL[QWord2DecimalStr(V, @Result[Pred(Len)])][1]
+  else
+    PChar2(@Result[1])^ := MOD100_TBL[QWord2DecimalStr(V, @Result[Pred(Len)])];
+end;
+
+
 {
   Ulf Adams, "Ryū: Fast Float-to-String Conversion",
   https://github.com/ulfjack/ryu,
@@ -3128,7 +3221,7 @@ begin
 
   if IsExactInt(aValue, I64) then
     begin
-      Int2Str(I64, s);
+      Int64_ToStr(I64, s);
       exit;
     end;
 
@@ -4961,36 +5054,70 @@ begin
   Result := 0;
 end;
 
-function TJsonNode.FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+function Str2IntOrNull(const s: string): SizeInt;
+const
+  Digits: array['0'..'9'] of SizeUInt = (0,1,2,3,4,5,6,7,8,9);
+  TestVal: SizeUInt =
+{$IF DEFINED(CPU64)}
+  SizeUInt(10000000000000000000);
+{$ELSEIF DEFINED(CPU32)}
+  SizeUInt(1000000000);
+{$ELSEIF DEFINED(CPU16)}
+  SizeUInt(10000);
+{$ELSE}
+  {$FATAL Not supported}
+{$ENDIF}
+  MaxLen: Integer =
+{$IF DEFINED(CPU64)}
+  20;
+{$ELSEIF DEFINED(CPU32)}
+  10;
+{$ELSEIF DEFINED(CPU16)}
+  5;
+{$ELSE}
+  {$FATAL Not supported}
+{$ENDIF}
+var
+  I: Integer;
+  r: SizeUInt;
+  c: AnsiChar;
 begin
-  if aPtr.IsEmpty then
+  if (s = '') or (System.Length(s) > MaxLen) then
+    exit(NULL_INDEX);
+  c := s[1];
+  //leading zeros or spaces are not allowed
+  if not(c in ['1'..'9']) then
+    exit(NULL_INDEX);
+  r := Digits[c];
+  for I := 2 to System.Length(s) do
     begin
-      aNode := Self;
-      exit(True);
+      c := s[I];
+      if not(c in ['0'..'9']) then
+        exit(NULL_INDEX);
+      r := r * 10 + Digits[c];
     end;
-  Result := FindPath(aPtr.ToSegments, aNode);
-end;
-
-function TJsonNode.FindPath(const aPtr: TJsonPtr): TJsonNode;
-begin
-  FindPath(aPtr, Result);
+  if (System.Length(s) = MaxLen) and (r < TestVal) then
+    exit(NULL_INDEX);
+  if r > System.High(SizeInt) then
+    exit(NULL_INDEX);
+  Result := SizeInt(r);
 end;
 
 function IsNonNegativeInteger(const s: string; out aInt: SizeInt): Boolean;
+const
+  Digits: array['0'..'9'] of SizeInt = (0,1,2,3,4,5,6,7,8,9);
 begin
   if s = '' then exit(False);
   if System.Length(s) = 1 then
-    if s[1] in ['0'..'9'] then
-      begin
-        aInt := StrToInt(s);
-        exit(True)
-      end
-    else
+    begin
+      if s[1] in ['0'..'9'] then
+        begin
+          aInt := Digits[s[1]];
+          exit(True)
+        end;
       exit(False);
-  //leading zeros are not allowed
-  if not (s[1] in ['1'..'9']) then
-    exit(False);
-  aInt := StrToIntDef(s, NULL_INDEX);
+    end;
+  aInt := Str2IntOrNull(s);
   Result := aInt <> NULL_INDEX;
 end;
 
@@ -5032,6 +5159,43 @@ end;
 function TJsonNode.FindPath(const aPath: array of string): TJsonNode;
 begin
   FindPath(aPath, Result);
+end;
+
+function TJsonNode.FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+begin
+  if aPtr.IsEmpty then
+    begin
+      aNode := Self;
+      exit(True);
+    end;
+  Result := FindPath(aPtr.ToSegments, aNode);
+end;
+
+function TJsonNode.FindPath(const aPtr: TJsonPtr): TJsonNode;
+begin
+  FindPath(aPtr, Result);
+end;
+
+function TJsonNode.FindPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean;
+var
+  Segments: TStringArray = nil;
+begin
+  if aPtr = '' then
+    begin
+      aNode := Self;
+      exit(True);
+    end;
+  if not TJsonPtr.TryGetSegments(aPtr, Segments) then
+    begin
+      aNode := nil;
+      exit(False);
+    end;
+  Result := FindPath(Segments, aNode);
+end;
+
+function TJsonNode.FindPathPtr(const aPtr: string): TJsonNode;
+begin
+  FindPathPtr(aPtr, Result);
 end;
 
 function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize: Integer; aOffset: Integer): string;
@@ -5591,19 +5755,6 @@ begin
 end;
 {$POP}
 
-const
-  FIRST_INTS_HIGH = 99;
-  FIRST_INTS: array[0..FIRST_INTS_HIGH] of string = (
-     '0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9', '10', '11',
-    '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23',
-    '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35',
-    '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
-    '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
-    '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71',
-    '72', '73', '74', '75', '76', '77', '78', '79', '80', '81', '82', '83',
-    '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95',
-    '96', '97', '98', '99');
-
 class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode;
   aOptions: TDiffOptions): TDiffResult;
 var
@@ -5675,14 +5826,6 @@ var
     Path.DeleteLast;
   end;
 
-  function Int2Str(aValue: SizeInt): string; inline;
-  begin
-    if SizeUInt(aValue) <= SizeUInt(FIRST_INTS_HIGH) then
-      Result := FIRST_INTS[aValue]
-    else
-      Result := aValue.ToString;
-  end;
-
   procedure DoDiff(aSrc, aDst: TJsonNode); forward;
 
 var
@@ -5696,12 +5839,12 @@ var
   begin
     if aSrc.Count = 0 then begin
       for I := 0 to Pred(aDst.Count) do
-        PushAdd(Int2Str(I), aDst.Items[I]);
+        PushAdd(SizeUInt2Str(I), aDst.Items[I]);
       exit;
     end else
       if aDst.Count = 0 then begin
         for I := 0 to Pred(aSrc.Count) do
-          PushRemove(Int2Str(I), aSrc.Items[I]);
+          PushRemove(SizeUInt2Str(I), aSrc.Items[I]);
         exit;
       end;
 
@@ -5715,7 +5858,7 @@ var
     InsIdx := 0;
     repeat
       while(DelIdx < DelLen)and Del[DelIdx]and(InsIdx < InsLen)and Ins[InsIdx]do begin
-        Path.Add(Int2Str(DelIdx)); //replacements
+        Path.Add(SizeUInt2Str(DelIdx)); //replacements
         /////////////
         DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]);
         /////////////
@@ -5736,11 +5879,11 @@ var
 
     for DelIdx := Pred(DelLen) downto 0 do
       if Del[DelIdx] then
-        PushRemove(Int2Str(DelIdx), aSrc.Items[DelIdx]);
+        PushRemove(SizeUInt2Str(DelIdx), aSrc.Items[DelIdx]);
 
     for InsIdx := 0 to Pred(InsLen) do
       if Ins[InsIdx] then
-        PushAdd(Int2Str(InsIdx), aDst.Items[InsIdx]);
+        PushAdd(SizeUInt2Str(InsIdx), aDst.Items[InsIdx]);
   end;
 
   procedure DoObjectDiff(aSrc, aDst: TJsonNode);
@@ -7372,7 +7515,7 @@ end;
 constructor TJsonReader.TLevel.Create(aMode: TParseMode; aIndex: SizeInt);
 begin
   Mode := aMode;
-  Path := IntToStr(aIndex);
+  Path := SizeUInt2Str(aIndex);
   CurrIndex := 0;
 end;
 
@@ -7410,7 +7553,7 @@ begin
   if FStack[Depth].Mode = pmArray then
     begin
       if ReadMode then
-        FName := IntToStr(FStack[Depth].CurrIndex);
+        FName := SizeUInt2Str(FStack[Depth].CurrIndex);
       Inc(FStack[Depth].CurrIndex);
     end;
 end;
@@ -7766,6 +7909,11 @@ end;
 function TJsonReader.GetParentName: string;
 begin
   Result := FStack[Depth].Path;
+end;
+
+function TJsonReader.GetParentIndex: SizeInt;
+begin
+  Result := FStack[Depth].CurrIndex;
 end;
 
 class function TJsonReader.IsStartToken(aToken: TTokenKind): Boolean;
