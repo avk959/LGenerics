@@ -108,7 +108,7 @@ function JPair(const aName: string; const aValue: TJVariant): TJVarPair; inline;
 
 type
 
-  { TJsonPtr represents JSON Pointer(RFC 6901) }
+  { TJsonPtr: wrapper over JSON Pointer(RFC 6901) functionality }
   TJsonPtr = record
   private
     FSegments: TStringArray;
@@ -1012,6 +1012,10 @@ type
   expects a period as a decimal separator;
   if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
   function  TryStr2Double(const s: string; out aValue: Double): Boolean; inline;
+{ returns True and the value of the number in aInt if the string s is a non-negative integer
+  in decimal notation, otherwise returns False;
+  leading and trailing spaces and leading zeros are not allowed }
+  function  IsNonNegativeInt(const s: string; out aInt: SizeInt): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -5103,7 +5107,7 @@ begin
   Result := SizeInt(r);
 end;
 
-function IsNonNegativeInteger(const s: string; out aInt: SizeInt): Boolean;
+function IsNonNegativeInt(const s: string; out aInt: SizeInt): Boolean;
 const
   Digits: array['0'..'9'] of SizeInt = (0,1,2,3,4,5,6,7,8,9);
 begin
@@ -5144,7 +5148,7 @@ begin
             exit(True);
           end
         else
-          if not IsNonNegativeInteger(aPath[I], Idx) then
+          if not IsNonNegativeInt(aPath[I], Idx) then
             exit(False);
         if not Node.Find(Idx, Node) then
           exit(False);
@@ -5545,7 +5549,7 @@ begin
         exit(False);
       if Node.IsArray then
         begin
-          if not IsNonNegativeInteger(Key, Idx) then
+          if not IsNonNegativeInt(Key, Idx) then
             exit(False);
           Result := Node.InsertNode(Idx, ValNode, aValue.Kind);
           if Result then
@@ -5578,7 +5582,7 @@ begin
   Key := aPath[System.High(aPath)];
   if Node.IsArray then
     begin
-      if not IsNonNegativeInteger(Key, Idx) then
+      if not IsNonNegativeInt(Key, Idx) then
         exit(False);
       Result := Node.Delete(Idx);
     end
@@ -5606,7 +5610,7 @@ begin
   Key := aPath[System.High(aPath)];
   if Node.IsArray then
     begin
-      if not IsNonNegativeInteger(Key, Idx) then
+      if not IsNonNegativeInt(Key, Idx) then
         exit(False);
       Result := Node.Extract(Idx, aValue);
     end
@@ -8122,7 +8126,7 @@ begin
   case StructKind of
     skArray:
       begin
-        if not IsNonNegativeInteger(aKey, Idx) then
+        if not IsNonNegativeInt(aKey, Idx) then
           exit(False);
         if Idx < Index then
           exit(False);
