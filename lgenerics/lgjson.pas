@@ -5058,6 +5058,7 @@ begin
   Result := 0;
 end;
 
+{$PUSH}{$Q-}{$R-}
 function Str2IntOrNull(const s: string): SizeInt;
 const
   Digits: array['0'..'9'] of SizeUInt = (0,1,2,3,4,5,6,7,8,9);
@@ -5106,6 +5107,7 @@ begin
     exit(NULL_INDEX);
   Result := SizeInt(r);
 end;
+{$POP}
 
 function IsNonNegativeInt(const s: string; out aInt: SizeInt): Boolean;
 const
