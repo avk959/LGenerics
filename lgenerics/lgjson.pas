@@ -6058,11 +6058,10 @@ begin //todo: how to improve processing of arrays of structures?
       TryRemoveAdd2Move(aSource, aTarget);
   finally
     if Cancel then
-      begin
-        FreeAndNil(aDiff);
-        exit(drFail);
-      end;
+      FreeAndNil(aDiff);
   end;
+  if Cancel then
+    exit(drFail);
   Result := drOk;
 end;
 
