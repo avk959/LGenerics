@@ -708,16 +708,16 @@ type
     class function  GetValAndPath(aNode: TJsonNode; var aValNode: TJsonNode;
                                   out aPath: TStringArray): Boolean; static; inline;
     class function  GetMovePaths(aNode: TJsonNode; var aPathNode: TJsonNode;
-                                 out aFrom, aTo: TStringArray): Boolean; static; //inline;
+                                 out aFrom, aTo: TStringArray): Boolean; static;
     class function  GetCopyPaths(aNode: TJsonNode; var aPathNode: TJsonNode;
-                                 out aFrom, aTo: TStringArray): Boolean; static; inline;
-    class function  GetPath(aNode: TJsonNode; var aPathNode: TJsonNode; out aPath: TStringArray): Boolean; static; inline;
+                                 out aFrom, aTo: TStringArray): Boolean; static;
+    class function  GetPath(aNode: TJsonNode; var aPathNode: TJsonNode; out aPath: TStringArray): Boolean; static; //inline;
     class procedure MoveNode(aSrc, aDst: TJsonNode); static; inline;
     class function  TryAdd(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
     class function  TryRemove(aNode: TJsonNode; const aPath: TStringArray): Boolean; static;
     class function  TryExtract(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
     class function  TryCopy(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
-    class function  TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; inline;
+    class function  TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; //inline;
     class function  TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; //inline;
     function GetAsJson: string;
     function SeemsValidPatch(aNode: TJsonNode): Boolean;
@@ -778,9 +778,9 @@ type
     procedure Load(aNode: TJsonNode);
   { returns True if the content looks like a JSON patch }
     function  Validate: Boolean; inline;
-  { returns the result of applying the content to the aNode; any operation will fail
+  { returns the result of applying the content to the aTarget; any operation will fail
     if the search path contains keys that are not unique within the corresponding object;
-    on any result other than prOk, the contents of the aNode does not change }
+    on any result other than prOk, the contents of the aTarget does not change }
     function  Apply(aTarget: TJsonNode): TPatchResult;
     function  Apply(var aTarget: string): TPatchResult;
     function  TryAsJson(out aJson: string): Boolean;
@@ -5701,6 +5701,7 @@ var
   I: SizeInt;
   PathFrom, PathTo: TStringArray;
   CopyRef: specialize TGUniqRef<TJsonNode>;
+  BoolRes: Boolean;
 begin
   CopyRef.Instance := aNode.Clone;
   CopyNode := CopyRef;
@@ -5720,7 +5721,9 @@ begin
             GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo);
             if not TryCopy(CopyNode, PathFrom, TmpNode) then
               exit(prFail);
-            if not TryAdd(CopyNode, TmpNode, PathTo) then
+            BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
+            TmpNode.Free;
+            if not BoolRes then
               exit(prFail);
           end;
         MOVE_KEY:
@@ -5728,7 +5731,9 @@ begin
             GetMovePaths(CurrNode, TmpNode, PathFrom, PathTo);
             if not TryExtract(CopyNode, PathFrom, TmpNode) then
               exit(prFail);
-            if not TryAdd(CopyNode, TmpNode, PathTo) then
+            BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
+            TmpNode.Free;
+            if not BoolRes then
               exit(prFail);
           end;
         REMOVE_KEY:
@@ -6274,6 +6279,7 @@ var
   CopyNode, CurrNode, TmpNode: TJsonNode;
   I: SizeInt;
   PathFrom, PathTo: TStringArray;
+  BoolRes: Boolean;
 begin
   if not Loaded then
     exit(prPatchMiss);
@@ -6304,7 +6310,9 @@ begin
                 exit(prMalformPatch);
               if not TryCopy(CopyNode, PathFrom, TmpNode) then
                 exit(prFail);
-              if not TryAdd(CopyNode, TmpNode, PathTo) then
+              BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
+              TmpNode.Free;
+              if not BoolRes then
                 exit(prFail);
             end;
           MOVE_KEY:
@@ -6315,7 +6323,9 @@ begin
                 continue;
               if not TryExtract(CopyNode, PathFrom, TmpNode) then
                 exit(prFail);
-              if not TryAdd(CopyNode, TmpNode, PathTo) then
+              BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
+              TmpNode.Free;
+              if not BoolRes then
                 exit(prFail);
             end;
           REMOVE_KEY:
