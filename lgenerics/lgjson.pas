@@ -711,14 +711,17 @@ type
                                  out aFrom, aTo: TStringArray): Boolean; static;
     class function  GetCopyPaths(aNode: TJsonNode; var aPathNode: TJsonNode;
                                  out aFrom, aTo: TStringArray): Boolean; static;
-    class function  GetPath(aNode: TJsonNode; var aPathNode: TJsonNode; out aPath: TStringArray): Boolean; static; //inline;
+    class function  GetPath(aNode: TJsonNode; var aPathNode: TJsonNode; out aPath: TStringArray): Boolean; static;
+    class function  FindExistStruct(aNode: TJsonNode; const aPath: TStringArray; out aStruct: TJsonNode;
+                                    out aStructKey: string): Boolean; static; inline;
     class procedure MoveNode(aSrc, aDst: TJsonNode); static; inline;
+    class function  FindCopyValue(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
     class function  TryAdd(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
     class function  TryRemove(aNode: TJsonNode; const aPath: TStringArray): Boolean; static;
     class function  TryExtract(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
-    class function  TryCopy(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
-    class function  TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; //inline;
-    class function  TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static; //inline;
+    class function  TryMove(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
+    class function  TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
+    class function  TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
     function GetAsJson: string;
     function SeemsValidPatch(aNode: TJsonNode): Boolean;
     function ApplyValidated(aNode: TJsonNode): TPatchResult;
@@ -5512,6 +5515,19 @@ begin
   Result := True;
 end;
 
+class function TJsonPatch.FindExistStruct(aNode: TJsonNode; const aPath: TStringArray; out aStruct: TJsonNode;
+  out aStructKey: string): Boolean;
+begin
+  if aPath = nil then
+    exit(False);
+  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], aStruct) then
+    exit(False);
+  if not aStruct.IsStruct then
+    exit(False);
+  aStructKey := aPath[System.High(aPath)];
+  Result := True;
+end;
+
 class procedure TJsonPatch.MoveNode(aSrc, aDst: TJsonNode);
 begin
   aDst.Clear;
@@ -5521,10 +5537,30 @@ begin
   aSrc.FValue.Int := 0;
 end;
 
+class function TJsonPatch.FindCopyValue(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean;
+var
+  Node: TJsonNode;
+  Idx: SizeInt;
+  Key: string;
+begin
+  if aPath = nil then
+    exit(False);
+  if not FindExistStruct(aNode, aPath, Node, Key) then
+    exit(False);
+  if Node.IsArray then
+    begin
+      if not IsNonNegativeInt(Key, Idx) then
+        exit(False);
+      Result := Node.Find(Idx, aValue);
+    end
+  else
+    Result := Node.FindUniq(Key, aValue);
+end;
+
 {$PUSH}{$WARN 5036 OFF}
 class function TJsonPatch.TryAdd(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var
-  Node, ValNode: TJsonNode;
+  Node: TJsonNode;
   Idx: SizeInt;
   Key: string;
 begin
@@ -5533,38 +5569,33 @@ begin
       aNode.CopyFrom(aValue);
       exit(True);
     end;
-  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], Node) then
+  if not FindExistStruct(aNode, aPath, Node, Key) then
     exit(False);
-  if not Node.IsStruct then
-    exit(False);
-  Key := aPath[System.High(aPath)];
-  if Key = '-' then
+  if Node.IsArray then
     begin
-      if not Node.IsArray then
+      if Key = '-' then
+        begin
+          Node.AddNode(aValue.Kind).CopyFrom(aValue);
+          exit(True);
+        end;
+      if not IsNonNegativeInt(Key, Idx) then
         exit(False);
-      Node.AddNode(aValue.Kind).CopyFrom(aValue);
-      Result := True;
+      Result := Node.InsertNode(Idx, Node, aValue.Kind);
+      if Result then
+        Node.CopyFrom(aValue);
     end
   else
     begin
-      if not Node.IsStruct then
-        exit(False);
-      if Node.IsArray then
-        begin
-          if not IsNonNegativeInt(Key, Idx) then
-            exit(False);
-          Result := Node.InsertNode(Idx, ValNode, aValue.Kind);
-          if Result then
-            ValNode.CopyFrom(aValue);
-        end
+      Idx := Node.IndexOfName(Key);
+      if Idx = NULL_INDEX then
+        Node.AddNode(Key).CopyFrom(aValue)
       else
         begin
-          if Node.CountOfName(Key) > 1 then
+          if not Node.FObject^.HasUniqKey(Idx) then
             exit(False);
-          Node.FindOrAdd(Key, ValNode);
-          ValNode.CopyFrom(aValue);
-          Result := True;
+          Node.FObject^.Mutable[Idx]^.Value.CopyFrom(aValue);
         end;
+      Result := True;
     end;
 end;
 {$POP}
@@ -5575,13 +5606,8 @@ var
   Idx: SizeInt;
   Key: string;
 begin
-  if aPath = nil then
+  if not FindExistStruct(aNode, aPath, Node, Key) then
     exit(False);
-  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], Node) then
-    exit(False);
-  if not Node.IsStruct then
-    exit(False);
-  Key := aPath[System.High(aPath)];
   if Node.IsArray then
     begin
       if not IsNonNegativeInt(Key, Idx) then
@@ -5603,13 +5629,8 @@ var
   Idx: SizeInt;
   Key: string;
 begin
-  if aPath = nil then
+  if not FindExistStruct(aNode, aPath, Node, Key) then
     exit(False);
-  if not aNode.FindPath(aPath[0..Pred(System.High(aPath))], Node) then
-    exit(False);
-  if not Node.IsStruct then
-    exit(False);
-  Key := aPath[System.High(aPath)];
   if Node.IsArray then
     begin
       if not IsNonNegativeInt(Key, Idx) then
@@ -5624,26 +5645,75 @@ begin
     end;
 end;
 
-class function TJsonPatch.TryCopy(aNode: TJsonNode; const aPath: TStringArray;
-  out aValue: TJsonNode): Boolean;
+class function TJsonPatch.TryMove(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var
-  Node: TJsonNode = nil;
+  Node: TJsonNode;
+  Idx: SizeInt;
+  Key: string;
 begin
-  if not aNode.FindPath(aPath, Node) then
+  if not FindExistStruct(aNode, aPath, Node, Key) then
     exit(False);
-  aValue := TJsonNode.Create;//Node.Clone;
-  aValue.CopyFrom(Node);
+  if Node.IsArray then
+    begin
+      if Key = '-' then
+        begin
+          if Node.FArray = nil then
+            Node.FArray := Node.CreateJsArray;
+          Node.FArray^.Insert(Node.Count, aValue);
+          exit(True);
+        end;
+      if not IsNonNegativeInt(Key, Idx) then
+        exit(False);
+      if not Node.CanArrayInsert(Idx) then
+        exit(False);
+      Node.FArray^.Insert(Idx, aValue);
+    end
+  else
+    begin
+      Idx := Node.IndexOfName(Key);
+      if Idx = NULL_INDEX then
+        begin
+          if Node.FObject = nil then
+            Node.FObject := Node.CreateJsObject;
+          Node.FObject^.Add(TJsonNode.TPair.Create(Key, aValue));
+        end
+      else
+        begin
+          if not Node.FObject^.HasUniqKey(Idx) then
+            exit(False);
+          with Node.FObject^.Mutable[Idx]^ do
+            begin
+              Value.Free;
+              Value := aValue;
+            end;
+        end;
+    end;
   Result := True;
 end;
 
 class function TJsonPatch.TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var
-  Node: TJsonNode = nil;
+  Node: TJsonNode;
+  Idx: SizeInt;
+  Key: string;
 begin
-  if not aNode.FindPath(aPath, Node) then
+  if aPath = nil then
+    begin
+      aNode.CopyFrom(aValue);
+      exit(True);
+    end;
+  if not FindExistStruct(aNode, aPath, Node, Key) then
     exit(False);
-  Node.CopyFrom(aValue);
-  Result := True;
+  if Node.IsArray then
+    begin
+      if not IsNonNegativeInt(Key, Idx) then
+        exit(False);
+      Result := Node.Find(Idx, Node);
+    end
+  else
+    Result := Node.FindUniq(Key, Node);
+  if Result then
+    Node.CopyFrom(aValue);
 end;
 
 class function TJsonPatch.TryTest(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
@@ -5659,7 +5729,7 @@ function TJsonPatch.GetAsJson: string;
 begin
   if Loaded then
     exit(FNode.AsJson);
-  Result :='';
+  Result := '';
 end;
 
 function TJsonPatch.SeemsValidPatch(aNode: TJsonNode): Boolean;
@@ -5701,7 +5771,6 @@ var
   I: SizeInt;
   PathFrom, PathTo: TStringArray;
   CopyRef: specialize TGUniqRef<TJsonNode>;
-  BoolRes: Boolean;
 begin
   CopyRef.Instance := aNode.Clone;
   CopyNode := CopyRef;
@@ -5719,11 +5788,9 @@ begin
         COPY_KEY:
           begin
             GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo);
-            if not TryCopy(CopyNode, PathFrom, TmpNode) then
+            if not FindCopyValue(CopyNode, PathFrom, TmpNode) then
               exit(prFail);
-            BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
-            TmpNode.Free;
-            if not BoolRes then
+            if not TryAdd(CopyNode, TmpNode, PathTo) then
               exit(prFail);
           end;
         MOVE_KEY:
@@ -5731,10 +5798,11 @@ begin
             GetMovePaths(CurrNode, TmpNode, PathFrom, PathTo);
             if not TryExtract(CopyNode, PathFrom, TmpNode) then
               exit(prFail);
-            BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
-            TmpNode.Free;
-            if not BoolRes then
-              exit(prFail);
+            if not TryMove(CopyNode, TmpNode, PathTo) then
+              begin
+                TmpNode.Free;
+                exit(prFail);
+              end;
           end;
         REMOVE_KEY:
           begin
@@ -6278,7 +6346,6 @@ var
   CopyNode, CurrNode, TmpNode: TJsonNode;
   I: SizeInt;
   PathFrom, PathTo: TStringArray;
-  BoolRes: Boolean;
 begin
   if not Loaded then
     exit(prPatchMiss);
@@ -6298,20 +6365,18 @@ begin
         case TmpNode.AsString of
           ADD_KEY:
             begin
-              if not GetValAndPath(CurrNode, TmpNode, PathFrom) then
+              if not GetValAndPath(CurrNode, TmpNode, PathTo) then
                 exit(prMalformPatch);
-              if not TryAdd(CopyNode, TmpNode, PathFrom) then
+              if not TryAdd(CopyNode, TmpNode, PathTo) then
                 exit(prFail);
             end;
           COPY_KEY:
             begin
               if not GetCopyPaths(CurrNode, TmpNode, PathFrom, PathTo) then
                 exit(prMalformPatch);
-              if not TryCopy(CopyNode, PathFrom, TmpNode) then
+              if not FindCopyValue(CopyNode, PathFrom, TmpNode) then
                 exit(prFail);
-              BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
-              TmpNode.Free;
-              if not BoolRes then
+              if not TryAdd(CopyNode, TmpNode, PathTo) then
                 exit(prFail);
             end;
           MOVE_KEY:
@@ -6322,16 +6387,17 @@ begin
                 continue;
               if not TryExtract(CopyNode, PathFrom, TmpNode) then
                 exit(prFail);
-              BoolRes := TryAdd(CopyNode, TmpNode, PathTo);
-              TmpNode.Free;
-              if not BoolRes then
-                exit(prFail);
+              if not TryMove(CopyNode, TmpNode, PathTo) then
+                begin
+                  TmpNode.Free;
+                  exit(prFail);
+                end;
             end;
           REMOVE_KEY:
             begin
-              if not GetPath(CurrNode, TmpNode, PathFrom) then
+              if not GetPath(CurrNode, TmpNode, PathTo) then
                 exit(prMalformPatch);
-              if not TryRemove(CopyNode, PathFrom) then
+              if not TryRemove(CopyNode, PathTo) then
                 exit(prFail);
             end;
           REPLACE_KEY:
