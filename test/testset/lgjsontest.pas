@@ -158,8 +158,11 @@ type
     sBadPatch1 = '{"op": "add", "path": "", "value": "baz"}';
     sBadPatch2 = '[{"op": "pop", "path": "", "value": "baz"}]';
     sBadPatch3 = '[{"op": "add", "path": "", "value": "baz","op": "test"}]';
+    sBadPatch4 = '[{"op": "copy", "path": "/boo/1", "from": "/foo/2/-"}]';
+    sBadPatch5 = '[{"op": "move", "path": "/boo/1", "from": "/foo/2/-"}]';
   published
     procedure PatchBasic;
+    procedure PatchBasic1;
     procedure PatchTests;
     procedure DiffBasic;
     procedure DiffTests;
@@ -2000,9 +2003,27 @@ begin
   AssertTrue(Assigned(Target.Instance));
   {%H-}Expect.Instance := TJsonNode.NewJson(sTarget2);
   AssertTrue(Assigned(Expect.Instance));
+
   AssertTrue(Patch.Instance.TryLoad(sPatch2));
   AssertTrue(Patch.Instance.Apply(Target.Instance) = prOk);
   AssertTrue(Target.Instance.EqualTo(Expect.Instance));
+end;
+
+procedure TTestJsonPatch.PatchBasic1;
+var
+  Target, Expect: specialize TGUniqRef<TJsonNode>;
+  Patch: specialize TGAutoRef<TJsonPatch>;
+begin
+  {%H-}Target.Instance := TJsonNode.NewJson(sSource2);
+  AssertTrue(Assigned(Target.Instance));
+  {%H-}Expect.Instance := TJsonNode.NewJson(sTarget2);
+  AssertTrue(Assigned(Expect.Instance));
+
+  AssertTrue(Patch.Instance.TryLoad(sBadPatch4));
+  AssertTrue(Patch.Instance.Apply(Target.Instance) = prFail);
+
+  AssertTrue(Patch.Instance.TryLoad(sBadPatch5));
+  AssertTrue(Patch.Instance.Apply(Target.Instance) = prFail);
 end;
 
 procedure TTestJsonPatch.PatchTests;
