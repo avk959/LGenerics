@@ -871,11 +871,12 @@ type
     end;
 
   var
-    FBuffer: TJsonNode.TRwBuffer;
+    FBuffer: PAnsiChar;
     FStack: array of TLevel;
     FsBuilder,
     FsbHelp: TJsonNode.TStrBuilder;
     FStream: TStream;
+    FBufSize,
     FByteCount,
     FPosition,
     FStackTop,
@@ -922,10 +923,16 @@ type
     property  CopyMode: Boolean read FCopyMode;
     property  DeferToken: TTokenKind read FDeferToken;
   public
+  const
+    DEF_BUF_SIZE = 16384;
+    MIN_BUF_SIZE = 1024;
+
     class function IsStartToken(aToken: TTokenKind): Boolean; static; inline;
     class function IsEndToken(aToken: TTokenKind): Boolean; static; inline;
     class function IsScalarToken(aToken: TTokenKind): Boolean; static; inline;
-    constructor Create(aStream: TStream; aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
+    constructor Create(aStream: TStream; aBufSize: SizeInt = DEF_BUF_SIZE;
+                       aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
+    destructor Destroy; override;
   { reads the next token from the stream, returns False if an error is encountered or the end
     of the stream is reached, otherwise it returns true; on error, the ReadState property
     will be set to rsError, and upon reaching the end of the stream, to rsEOF}
@@ -7837,7 +7844,7 @@ begin
   if ReadState > rsGo then
     exit(ReadState);
   FPosition := NULL_INDEX;
-  FByteCount := FStream.Read(FBuffer, SizeOf(FBuffer));
+  FByteCount := FStream.Read(FBuffer^, FBufSize);
   if FByteCount = 0 then
     begin
       FReadState := rsEOF;
@@ -7847,7 +7854,7 @@ begin
     begin
       FFirstChunk := False;
       if SkipBom then
-        case DetectBom(@FBuffer, FByteCount) of
+        case DetectBom(PByte(FBuffer), FByteCount) of
           bkNone: ;
           bkUtf8: FPosition += UTF8_BOM_LEN;
         else
@@ -7869,7 +7876,7 @@ begin
     if (FPosition >= Pred(FByteCount)) and (GetNextChunk > rsGo) then
       exit(False);
     Inc(FPosition);
-    c := PChar(@FBuffer)[FPosition];
+    c := FBuffer[FPosition];
     if c < #128 then begin
       NextClass := SymClassTable[Ord(c)];
       if NextClass = __ then exit(False);
@@ -8012,9 +8019,13 @@ begin
   Result := aToken in [tkNull, tkFalse, tkTrue, tkNumber, tkString];
 end;
 
-constructor TJsonReader.Create(aStream: TStream; aMaxDepth: SizeInt; aSkipBom: Boolean);
+constructor TJsonReader.Create(aStream: TStream; aBufSize: SizeInt; aMaxDepth: SizeInt; aSkipBom: Boolean);
 begin
   FStream := aStream;
+  if aBufSize < MIN_BUF_SIZE then
+    aBufSize := MIN_BUF_SIZE;
+  FBufSize := aBufSize;
+  FBuffer := System.Getmem(FBufSize);
   if aMaxDepth < 31 then
     aMaxDepth := 31;
   System.SetLength(FStack, Succ(aMaxDepth));
@@ -8025,6 +8036,12 @@ begin
   FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FsbHelp := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FStack[0] := TLevel.Create(pmNone);
+end;
+
+destructor TJsonReader.Destroy;
+begin
+  System.Freemem(FBuffer);
+  inherited;
 end;
 
 function TJsonReader.Read: Boolean;
