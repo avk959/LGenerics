@@ -1956,7 +1956,7 @@ var
 begin
   {%H-}Stream.Instance := TStringStream.Create(#$EF#$BB#$BF + TestJson);
   Stream.Instance.Position := 0;
-  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance, 10, True);
+  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance, 512, 10, True);
   while Reader.Instance.Read do;
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
