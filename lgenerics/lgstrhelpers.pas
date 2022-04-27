@@ -1016,28 +1016,7 @@ begin
     begin
       Prev := I;
       b := pL[I-1];
-{$IFDEF CPU64}
-      J := 1;
-      while J < aLenL - 3 do
-        begin
-          Next := MinOf3(Dist[J-1]+Ord(pR[J-1]<>b), Prev+1, Dist[J]+1);
-          Dist[J-1] := Prev;
-
-          Prev := MinOf3(Dist[J]+Ord(pR[J]<>b), Next+1, Dist[J+1]+1);
-          Dist[J] := Next;
-
-          Next := MinOf3(Dist[J+1]+Ord(pR[J+1]<>b), Prev+1, Dist[J+2]+1);
-          Dist[J+1] := Prev;
-
-          Prev := MinOf3(Dist[J+2]+Ord(pR[J+2]<>b), Next+1, Dist[J+3]+1);
-          Dist[J+2] := Next;
-
-          J += 4;
-        end;
-      for J := J to aLenR do
-{$ELSE CPU64}
       for J := 1 to aLenR do
-{$ENDIF}
         begin
           if pR[J-1] = b then
             Next := Dist[J-1]
