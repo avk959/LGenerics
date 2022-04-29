@@ -734,6 +734,8 @@ type
                         aOptions: TDiffOptions = []): TDiffResult; static;
     class function Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch;
                         aOptions: TDiffOptions = []): TDiffResult; static;
+    class function Diff(aSource, aTarget: TJsonNode; out aDiff: string;
+                        aOptions: TDiffOptions = []): TDiffResult; static;
     class function Diff(const aSource, aTarget: string; out aDiff: TJsonNode;
                         aOptions: TDiffOptions = []): TDiffResult; static;
     class function Diff(const aSource, aTarget: string; out aDiff: TJsonPatch;
@@ -5912,12 +5914,9 @@ var
     Path.DeleteLast;
   end;
 
-  procedure DoDiff(aSrc, aDst: TJsonNode); forward;
+  function DoDiff(aSrc, aDst: TJsonNode): Boolean; forward;
 
-var
-  Cancel: Boolean = False;
-
-  procedure DoArrayDiff(aSrc, aDst: TJsonNode);
+  function DoArrayDiff(aSrc, aDst: TJsonNode): Boolean;
   var
     LocDiff: TDifUtil.TDiff;
     I, DelIdx, InsIdx, DelLen, InsLen: SizeInt;
@@ -5926,12 +5925,12 @@ var
     if aSrc.Count = 0 then begin
       for I := 0 to Pred(aDst.Count) do
         PushAdd(SizeUInt2Str(I), aDst.Items[I]);
-      exit;
+      exit(True);
     end else
       if aDst.Count = 0 then begin
         for I := 0 to Pred(aSrc.Count) do
           PushRemove(SizeUInt2Str(I), aSrc.Items[I]);
-        exit;
+        exit(True);
       end;
 
     LocDiff := TDifUtil.Diff(aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],
@@ -5946,9 +5945,9 @@ var
       while(DelIdx < DelLen)and Del[DelIdx]and(InsIdx < InsLen)and Ins[InsIdx]do begin
         Path.Add(SizeUInt2Str(DelIdx)); //replacements
         /////////////
-        DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]);
+        if not DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]) then
+          exit(False);
         /////////////
-        if Cancel then exit;
         Path.DeleteLast;
         Del[DelIdx] := False;
         Inc(DelIdx);
@@ -5970,71 +5969,67 @@ var
     for InsIdx := 0 to Pred(InsLen) do
       if Ins[InsIdx] then
         PushAdd(SizeUInt2Str(InsIdx), aDst.Items[InsIdx]);
+    Result := True
   end;
 
-  procedure DoObjectDiff(aSrc, aDst: TJsonNode);
+  function DoObjectDiff(aSrc, aDst: TJsonNode): Boolean;
   var
     p: TJsonNode.TPair;
     Node: TJsonNode;
     I: SizeInt;
   begin
     for I := 0 to Pred(aSrc.Count) do begin
-      if not aSrc.FObject^.HasUniqKey(I) then begin
-        Cancel := True;
-        exit;
-      end;
+      if not aSrc.FObject^.HasUniqKey(I) then
+        exit(False);
       p := aSrc.FObject^.Mutable[I]^;
       if aDst.Find(p.Key, Node) then  //todo: IndexOfName() ???
         if aDst.ContainsUniq(p.Key) then begin
           Path.Add(p.Key);
           /////////////
-          DoDiff(p.Value, Node);
+          if not DoDiff(p.Value, Node) then
+            exit(False);
           /////////////
-          if Cancel then
-            exit;
           Path.DeleteLast;
-        end else begin
-          Cancel := True;
-          exit;
-        end
+        end else
+          exit(False)
       else
         PushRemove(p.Key, p.Value);
     end;
     for I := 0 to Pred(aDst.Count) do begin
       p := aDst.FObject^.Mutable[I]^;
       if not aSrc.Contains(p.Key) then begin
-        if not aDst.HasUniqName(I) then begin
-          Cancel := True;
-          exit;
-        end;
+        if not aDst.HasUniqName(I) then
+          exit(False);
         PushAdd(p.Key, p.Value);
       end;
     end;
+    Result := True;
   end;
 
-  procedure DoDiff(aSrc, aDst: TJsonNode);
+  function DoDiff(aSrc, aDst: TJsonNode): Boolean;
   begin
-    if Cancel then
-      exit;
-
     if aSrc.Kind <> aDst.Kind then
       begin
         PushReplace(aSrc, aDst);
-        exit;
+        exit(True);
       end;
 
     case aSrc.Kind of
-      jvkNull, jvkFalse, jvkTrue: ;
-      jvkNumber:
-        if aSrc.AsNumber <> aDst.AsNumber then
-          PushReplace(aSrc, aDst);
-      jvkString:
-        if aSrc.AsString <> aDst.AsString then
-          PushReplace(aSrc, aDst);
-      jvkArray: DoArrayDiff(aSrc, aDst);
-      jvkObject: DoObjectDiff(aSrc, aDst);
+      jvkNull, jvkFalse, jvkTrue: Result := True;
+      jvkNumber: begin
+          if aSrc.AsNumber <> aDst.AsNumber then
+            PushReplace(aSrc, aDst);
+          Result := True;
+        end;
+      jvkString: begin
+          if aSrc.AsString <> aDst.AsString then
+            PushReplace(aSrc, aDst);
+          Result := True;
+        end;
+      jvkArray: Result := DoArrayDiff(aSrc, aDst);
+      jvkObject: Result := DoObjectDiff(aSrc, aDst);
     otherwise
-      Cancel := True;
+      exit(False);
     end;
   end;
 
@@ -6114,7 +6109,12 @@ type
     end;
   end;
 
+var
+  Success: Boolean;
+
 begin //todo: how to improve processing of arrays of structures?
+
+  aDiff := nil;
 
   if (aSource = nil) or (aSource.Kind = jvkUnknown) then
     exit(drSourceMiss)
@@ -6128,16 +6128,17 @@ begin //todo: how to improve processing of arrays of structures?
   aDiff := TJsonNode.Create;
   try
     aDiff.AsArray;
-    DoDiff(aSource, aTarget);
-    if not Cancel and (doEnableMove in aOptions) then
+    Success := DoDiff(aSource, aTarget);
+    if Success and (doEnableMove in aOptions) then
       TryRemoveAdd2Move(aSource, aTarget);
   finally
-    if Cancel then
+    if not Success then
       FreeAndNil(aDiff);
   end;
-  if Cancel then
-    exit(drFail);
-  Result := drOk;
+  if Success then
+    Result := drOk
+  else
+    Result := drFail;
 end;
 
 class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch;
@@ -6151,6 +6152,20 @@ begin
       aDiff := TJsonPatch.Create;
       aDiff.FNode := Node;
       aDiff.FLoaded := True;
+    end;
+end;
+
+class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: string;
+  aOptions: TDiffOptions): TDiffResult;
+var
+  Node: TJsonNode = nil;
+begin
+  aDiff := '';
+  Result := Diff(aSource, aTarget, Node, aOptions);
+  if Result = drOk then
+    begin
+      aDiff := Node.AsJson;
+      Node.Free;
     end;
 end;
 
@@ -6183,16 +6198,10 @@ class function TJsonPatch.Diff(const aSource, aTarget: string; out aDiff: string
   aOptions: TDiffOptions): TDiffResult;
 var
   Src, Dst: specialize TGUniqRef<TJsonNode>;
-  Node: TJsonNode;
 begin
   Src.Instance := TJsonNode.Load(aSource);
   Dst.Instance := TJsonNode.Load(aTarget);
-  Result := Diff(Src.Instance, Dst.Instance, Node, aOptions);
-  if Result = drOk then
-    begin
-      aDiff := Node.AsJson;
-      Node.Free;
-    end;
+  Result := Diff(Src.Instance, Dst.Instance, aDiff, aOptions);
 end;
 
 class function TJsonPatch.TryLoadPatch(const s: string; out p: TJsonPatch): Boolean;
