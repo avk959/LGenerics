@@ -669,7 +669,19 @@ type
 
   TPatchResult = (prOk, prPatchMiss, prTargetMiss, prMalformPatch, prFail);
   TDiffResult  = (drOk, drSourceMiss, drTargetMiss, drFail);
-  TDiffOption  = (doEmitTestOnRemove, doEmitTestOnReplace, doEnableMove);
+
+  TDiffOption  = (
+    doEmitTestOnRemove,   { generate test operations that check that the target's values to be
+                            removed are exactly equal to the expected ones }
+
+    doEmitTestOnReplace,  { generate test operations that check that the target's values to be
+                            replaced are exactly equal to the expected ones }
+
+    doDisableArrayReplace,//leave only deletions and insertions available in arrays
+
+    doEnableMove          { replace successive ADD/REMOVE (or vice versa) operations applied
+                            to the same value with a single MOVE operation }
+    );
   TDiffOptions = set of TDiffOption;
 
   { TJsonPatch provides support for JSON Patch(RFC 6902, see also http://jsonpatch.com/);
@@ -683,7 +695,7 @@ type
     TStrHelper = specialize TGSimpleArrayHelper<string>;
     TStrUtil   = specialize TGSeqUtil<string, string>;
     TStrVector = specialize TGLiteVector<string>;
-    TDifUtil   = specialize TGSeqUtil<TJsonNode, TJsonNode>;
+    TDiffUtil  = specialize TGSeqUtil<TJsonNode, TJsonNode>;
 
   const
     OP_KEY      = 'op';
@@ -5847,7 +5859,7 @@ class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode
   aOptions: TDiffOptions): TDiffResult;
 var
   Path: TStrVector;
-  TestRemove, TestReplace: Boolean;
+  TestRemove, TestReplace, UseArrayReplace: Boolean;
 
   function GetCurrPath: string; inline;
   begin
@@ -5918,7 +5930,7 @@ var
 
   function DoArrayDiff(aSrc, aDst: TJsonNode): Boolean;
   var
-    LocDiff: TDifUtil.TDiff;
+    LocDiff: TDiffUtil.TDiff;
     I, DelIdx, InsIdx, DelLen, InsLen: SizeInt;
     Del, Ins: array of Boolean;
   begin
@@ -5933,34 +5945,37 @@ var
         exit(True);
       end;
 
-    LocDiff := TDifUtil.Diff(aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],
-                             aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
+    LocDiff := TDiffUtil.Diff(aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],
+                              aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
     Del := LocDiff.SourceChanges;
     Ins := LocDiff.TargetChanges;
     DelLen := System.Length(Del);
     InsLen := System.Length(Ins);
-    DelIdx := 0;
-    InsIdx := 0;
-    repeat
-      while(DelIdx < DelLen)and Del[DelIdx]and(InsIdx < InsLen)and Ins[InsIdx]do begin
-        Path.Add(SizeUInt2Str(DelIdx)); //replacements
-        /////////////
-        if not DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]) then
-          exit(False);
-        /////////////
-        Path.DeleteLast;
-        Del[DelIdx] := False;
-        Inc(DelIdx);
-        Ins[InsIdx] := False;
-        Inc(InsIdx);
+    if UseArrayReplace then
+      begin
+        DelIdx := 0;
+        InsIdx := 0;
+        repeat
+          while(DelIdx < DelLen)and Del[DelIdx]and(InsIdx < InsLen)and Ins[InsIdx]do begin
+            Path.Add(SizeUInt2Str(DelIdx)); //replacements
+            /////////////
+            if not DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]) then
+              exit(False);
+            /////////////
+            Path.DeleteLast;
+            Del[DelIdx] := False;
+            Inc(DelIdx);
+            Ins[InsIdx] := False;
+            Inc(InsIdx);
+          end;
+          while (DelIdx < DelLen) and Del[DelIdx] do
+            Inc(DelIdx);
+          while (InsIdx < InsLen) and Ins[InsIdx] do
+            Inc(InsIdx);
+          Inc(DelIdx);
+          Inc(InsIdx);
+        until (DelIdx >= DelLen) and (InsIdx >= InsLen);
       end;
-      while (DelIdx < DelLen) and Del[DelIdx] do
-        Inc(DelIdx);
-      while (InsIdx < InsLen) and Ins[InsIdx] do
-        Inc(InsIdx);
-      Inc(DelIdx);
-      Inc(InsIdx);
-    until (DelIdx >= DelLen) and (InsIdx >= InsLen);
 
     for DelIdx := Pred(DelLen) downto 0 do
       if Del[DelIdx] then
@@ -5969,7 +5984,8 @@ var
     for InsIdx := 0 to Pred(InsLen) do
       if Ins[InsIdx] then
         PushAdd(SizeUInt2Str(InsIdx), aDst.Items[InsIdx]);
-    Result := True
+
+    Result := True;
   end;
 
   function DoObjectDiff(aSrc, aDst: TJsonNode): Boolean;
@@ -6008,11 +6024,10 @@ var
 
   function DoDiff(aSrc, aDst: TJsonNode): Boolean;
   begin
-    if aSrc.Kind <> aDst.Kind then
-      begin
-        PushReplace(aSrc, aDst);
-        exit(True);
-      end;
+    if aSrc.Kind <> aDst.Kind then begin
+      PushReplace(aSrc, aDst);
+      exit(True);
+    end;
 
     case aSrc.Kind of
       jvkNull, jvkFalse, jvkTrue: Result := True;
@@ -6110,7 +6125,7 @@ type
   end;
 
 var
-  Success: Boolean;
+  Success: Boolean = False;
 
 begin //todo: how to improve processing of arrays of structures?
 
@@ -6124,6 +6139,7 @@ begin //todo: how to improve processing of arrays of structures?
 
   TestRemove := doEmitTestOnRemove in aOptions;
   TestReplace := doEmitTestOnReplace in aOptions;
+  UseArrayReplace := not (doDisableArrayReplace in aOptions);
 
   aDiff := TJsonNode.Create;
   try
