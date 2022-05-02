@@ -1064,8 +1064,8 @@ type
   generic TGSimpleArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   protected
   const
-    RADIX_CUTOFF = 255;
-
+    RADIX_CUTOFF   = 255;
+    RADIX_BUF_SIZE = 1024;
   type
     TBlockQSort = object(TBlockQSortBase)
     private
@@ -1206,8 +1206,8 @@ type
     CFKeyKind: TItemType;
     class constructor Init;
     class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
-    class procedure DoRadixSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
-    class procedure DoRadixSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
+    class procedure DoRxSortD(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
   public
   { LSD radix sorting, requires O(N) auxiliary memory }
@@ -1234,13 +1234,14 @@ type
     class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
     class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
-    class procedure DoSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
-    class procedure DoSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
+    class procedure DoRxSortD(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder); static;
     class constructor Init;
   class var
-    CFSigned: Boolean;
     CountSortAllow: TGetAllow;
+    CFItemSize: Integer;
+    CFSigned: Boolean;
   public
     class function  CreateRange(aFirst, aLast: T): TArray; static;
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
@@ -1271,14 +1272,14 @@ type
     THelper   = specialize TGBaseArrayHelper<TItem, TGRadixSorter>;
 
   const
-    RADIX_CUTOFF = 255;
-
+    RADIX_CUTOFF   = 255;
+    RADIX_BUF_SIZE = 1024;
   class var
     CFKeyKind: TKeyType;
     class constructor Init;
     class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
-    class procedure DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
-    class procedure DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets); static;
+    class procedure DoSortA(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets); static;
+    class procedure DoSortD(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;
   public
     class function  Less(const L, R: TItem): Boolean; static; //inline;
@@ -3906,6 +3907,8 @@ begin
     exit(System.Length(aPerm) = 0);
   if System.Length(A) <> System.Length(aPerm) then
     exit(False);
+  if Same(A, aPerm) then
+    exit(True);
   LocA := CreateCopy(A);
   LocPerm := CreateCopy(aPerm);
   Sort(LocA);
@@ -6538,6 +6541,8 @@ begin
     exit(System.Length(aPerm) = 0);
   if System.Length(A) <> System.Length(aPerm) then
     exit(False);
+  if Same(A, aPerm) then
+    exit(True);
   LocA := CreateCopy(A);
   LocPerm := CreateCopy(aPerm);
   Sort(LocA);
@@ -8508,6 +8513,8 @@ begin
     exit(System.Length(aPerm) = 0);
   if System.Length(A) <> System.Length(aPerm) then
     exit(False);
+  if Same(A, aPerm, c) then
+    exit(True);
   LocA := CreateCopy(A);
   LocPerm := CreateCopy(aPerm);
   Sort(LocA, c);
@@ -10481,6 +10488,8 @@ begin
     exit(System.Length(aPerm) = 0);
   if System.Length(A) <> System.Length(aPerm) then
     exit(False);
+  if Same(A, aPerm, c) then
+    exit(True);
   LocA := CreateCopy(A);
   LocPerm := CreateCopy(aPerm);
   Sort(LocA, c);
@@ -12454,6 +12463,8 @@ begin
     exit(System.Length(aPerm) = 0);
   if System.Length(A) <> System.Length(aPerm) then
     exit(False);
+  if Same(A, aPerm, c) then
+    exit(True);
   LocA := CreateCopy(A);
   LocPerm := CreateCopy(aPerm);
   Sort(LocA, c);
@@ -14070,6 +14081,8 @@ begin
     exit(System.Length(aPerm) = 0);
   if System.Length(A) <> System.Length(aPerm) then
     exit(False);
+  if Same(A, aPerm) then
+    exit(True);
   LocA := CreateCopy(A);
   LocPerm := CreateCopy(aPerm);
   Sort(LocA);
@@ -14381,7 +14394,7 @@ var
   Curr: T;
   I, J: SizeInt;
 begin
-  aOfs := Default(TOffsets);
+  System.FillChar(aOfs, SizeOf(aOfs), 0);
   for I := 0 to System.High(A) do
     begin
       Curr := A[I];
@@ -14390,7 +14403,7 @@ begin
     end;
 end;
 
-class procedure TGNumArrayHelper.DoRadixSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+class procedure TGNumArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets);
 
   function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
@@ -14493,7 +14506,7 @@ var
   pA, pBuf: PItem;
 begin
   pA := @A[0];
-  pBuf := Pointer(aBuf);
+  pBuf := aBuf;
 {$IFDEF ENDIAN_LITTLE}
   for I := 0 to SizeOf(T) - 2 do
     if SimplePass(pA, pBuf, I) then
@@ -14525,12 +14538,12 @@ begin
         PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
-  if pBuf <> Pointer(aBuf) then
+  if pBuf <> aBuf then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
 end;
 
-class procedure TGNumArrayHelper.DoRadixSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+class procedure TGNumArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; var aOfs: TOffsets);
 
   function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
@@ -14634,7 +14647,7 @@ var
   pA, pBuf: PItem;
 begin
   pA := @A[0];
-  pBuf := Pointer(aBuf);
+  pBuf := aBuf;
 {$IFDEF ENDIAN_LITTLE}
   for I := 0 to SizeOf(T) - 2 do
     if SimplePass(pA, pBuf, I) then
@@ -14666,7 +14679,7 @@ begin
         PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
-  if pBuf <> Pointer(aBuf) then
+  if pBuf <> aBuf then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
 end;
@@ -14674,14 +14687,26 @@ end;
 class procedure TGNumArrayHelper.DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
 var
   Offsets: TOffsets;
+  StBuf: array[0..Pred(RADIX_BUF_SIZE)] of T;
+  pBuf: PItem;
 begin
-  FillOffsets(A, Offsets);
   if System.Length(aBuf) < System.Length(A) then
-    System.SetLength(aBuf, System.Length(A));
-  if o = soAsc then
-    DoRadixSortA(A, aBuf, Offsets)
+    if System.Length(A) <= RADIX_BUF_SIZE then
+      pBuf := @StBuf[0]
+    else
+      begin
+        System.SetLength(aBuf, System.Length(A));
+        pBuf := Pointer(aBuf);
+      end
   else
-    DoRadixSortD(A, aBuf, Offsets);
+    pBuf := Pointer(aBuf);
+
+  FillOffsets(A, Offsets);
+
+  if o = soAsc then
+    DoRxSortA(A, pBuf, Offsets)
+  else
+    DoRxSortD(A, pBuf, Offsets);
 end;
 
 class procedure TGNumArrayHelper.RadixSort(var A: array of T; o: TSortOrder);
@@ -14731,10 +14756,10 @@ class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMa
 var
   I, J: SizeInt;
   v: T;
-  Counts: array of SizeInt;
+  Counts: array of SizeInt = nil;
 begin
   System.SetLength(Counts, Succ(aMaxValue - aMinValue));
-  System.FillChar(Counts[0], Succ(aMaxValue - aMinValue) * SizeOf(SizeInt), 0);
+  //System.FillChar(Counts[0], Succ(aMaxValue - aMinValue) * SizeOf(SizeInt), 0);
 
   for J := 0 to System.High(A) do
     Inc(Counts[A[J] - aMinValue]);
@@ -14865,8 +14890,8 @@ class function TGOrdinalArrayHelper.AllowCsSigned(aMin, aMax: T; aLen: SizeInt):
 var
   Sum: Int64;
 begin
-  if SizeOf(T) > 4 then //todo: more tests needed
-    aLen := aLen div 3
+  if CFItemSize > 4 then
+    aLen := aLen div 3 //todo: more tests needed
   else
     aLen := aLen div 6;
   Sum := Int64(aMin) + aLen;
@@ -14880,8 +14905,8 @@ class function TGOrdinalArrayHelper.AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt
 var
   Sum: QWord;
 begin
-  if SizeOf(T) > 4 then  //todo: more tests needed
-    aLen := aLen div 3
+  if CFItemSize > 4 then
+    aLen := aLen div 3 //todo: more tests needed
   else
     aLen := aLen div 6;
   Sum := QWord(aMin) + QWord(aLen);
@@ -14896,7 +14921,7 @@ var
   Curr: T;
   I, J: SizeInt;
 begin
-  aOfs := Default(TOffsets);
+  System.FillChar(aOfs, SizeOf(aOfs), 0);
   for I := 0 to System.High(A) do
     begin
       Curr := A[I];
@@ -14905,7 +14930,7 @@ begin
     end;
 end;
 
-class procedure TGOrdinalArrayHelper.DoSortA(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+class procedure TGOrdinalArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets);
 
   function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
   var
@@ -14982,7 +15007,7 @@ begin
       A[I] := aBuf[I];
 end;
 
-class procedure TGOrdinalArrayHelper.DoSortD(var A: array of T; var aBuf: TArray; var aOfs: TOffsets);
+class procedure TGOrdinalArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; var aOfs: TOffsets);
 
   function SimplePass(aSrc, aDst: PItem; aNum: SizeInt): Boolean;
   var
@@ -15042,7 +15067,7 @@ var
   pA, pBuf: PItem;
 begin
   pA := @A[0];
-  pBuf := Pointer(aBuf);
+  pBuf := aBuf;
   for I := 0 to SizeOf(T) - 2 do
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
@@ -15054,7 +15079,7 @@ begin
   else
     if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
       PtrSwap(pA, pBuf);
-  if pBuf <> Pointer(aBuf) then
+  if pBuf <> aBuf then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
 end;
@@ -15062,14 +15087,26 @@ end;
 class procedure TGOrdinalArrayHelper.DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder);
 var
   Offsets: TOffsets;
+  StBuf: array[0..Pred(RADIX_BUF_SIZE)] of T;
+  pBuf: PItem;
 begin
   if System.Length(aBuf) < System.Length(A) then
-    System.SetLength(aBuf, System.Length(A));
-  FillOffsets(A, Offsets);
-  if o = soAsc then
-    DoSortA(A, aBuf, Offsets)
+    if System.Length(A) <= RADIX_BUF_SIZE then
+      pBuf := @StBuf[0]
+    else
+      begin
+        System.SetLength(aBuf, System.Length(A));
+        pBuf := Pointer(aBuf);
+      end
   else
-    DoSortD(A, aBuf, Offsets);
+    pBuf := Pointer(aBuf);
+
+  FillOffsets(A, Offsets);
+
+  if o = soAsc then
+    DoRxSortA(A, pBuf, Offsets)
+  else
+    DoRxSortD(A, pBuf, Offsets);
 end;
 
 class constructor TGOrdinalArrayHelper.Init;
@@ -15084,6 +15121,7 @@ begin
     CountSortAllow := @AllowCsSigned
   else
     CountSortAllow := @AllowCsUnsigned;
+  CFItemSize := SizeOf(T);
 end;
 
 class function TGOrdinalArrayHelper.CreateRange(aFirst, aLast: T): TArray;
@@ -15205,7 +15243,7 @@ var
   Key: TKey;
   I, J: SizeInt;
 begin
-  aOfs := Default(TOffsets);
+  System.FillChar(aOfs, SizeOf(aOfs), 0);
   for I := 0 to System.High(A) do
     begin
       Key := TMap.GetKey(A[I]);
@@ -15214,7 +15252,7 @@ begin
     end;
 end;
 
-class procedure TGRadixSorter.DoSortA(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets);
+class procedure TGRadixSorter.DoSortA(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets);
 
   function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
@@ -15317,7 +15355,7 @@ var
   pA, pBuf: PItem;
 begin
   pA := @A[0];
-  pBuf := Pointer(aBuf);
+  pBuf := aBuf;
 {$IFDEF ENDIAN_LITTLE}
   for I := 0 to SizeOf(TKey) - 2 do
     if SimplePass(pA, pBuf, I) then
@@ -15349,12 +15387,12 @@ begin
         PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
-  if pBuf <> Pointer(aBuf) then
+  if pBuf <> aBuf then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
 end;
 
-class procedure TGRadixSorter.DoSortD(var A: array of TItem; var aBuf: TArray; var aOfs: TOffsets);
+class procedure TGRadixSorter.DoSortD(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets);
 
   function SimplePass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
@@ -15458,7 +15496,7 @@ var
   pA, pBuf: PItem;
 begin
   pA := @A[0];
-  pBuf := Pointer(aBuf);
+  pBuf := aBuf;
 {$IFDEF ENDIAN_LITTLE}
   for I := 0 to SizeOf(TKey) - 2 do
     if SimplePass(pA, pBuf, I) then
@@ -15490,7 +15528,7 @@ begin
         PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
-  if pBuf <> Pointer(aBuf) then
+  if pBuf <> aBuf then
     for I := 0 to System.High(A) do
       A[I] := aBuf[I];
 end;
@@ -15498,14 +15536,26 @@ end;
 class procedure TGRadixSorter.DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder);
 var
   Offsets: TOffsets;
+  StBuf: array[0..Pred(RADIX_BUF_SIZE)] of TItem;
+  pBuf: PItem;
 begin
-  FillOffsets(A, Offsets);
   if System.Length(aBuf) < System.Length(A) then
-    System.SetLength(aBuf, System.Length(A));
-  if o = soAsc then
-    DoSortA(A, aBuf, Offsets)
+    if System.Length(A) <= RADIX_BUF_SIZE then
+      pBuf := @StBuf[0]
+    else
+      begin
+        System.SetLength(aBuf, System.Length(A));
+        pBuf := Pointer(aBuf);
+      end
   else
-    DoSortD(A, aBuf, Offsets);
+    pBuf := Pointer(aBuf);
+
+  FillOffsets(A, Offsets);
+
+  if o = soAsc then
+    DoSortA(A, pBuf, Offsets)
+  else
+    DoSortD(A, pBuf, Offsets);
 end;
 
 class function TGRadixSorter.Less(const L, R: TItem): Boolean;
