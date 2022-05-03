@@ -74,6 +74,8 @@ type
     procedure PrefixLenTest;
     procedure SuffixLenTest;
     procedure TestDiff;
+    procedure SameTest;
+    procedure IsPermutationTest;
   end;
 
 implementation
@@ -2203,6 +2205,57 @@ begin
       AssertTrue(d.TargetChanges[I])
     else
       AssertFalse(d.TargetChanges[I]);
+end;
+
+procedure TTestSeqUtils.SameTest;
+var
+  a, b: TIntArray;
+begin
+  a := nil;
+  b := nil;
+  AssertTrue(TIntSeqUtil.Same(a, b));
+
+  a := [42];
+  AssertFalse(TIntSeqUtil.Same(a, b));
+
+  b := [42];
+  AssertTrue(TIntSeqUtil.Same(a, b));
+
+  a := [42, 1001];
+  b := [42, 1001, 42];
+  AssertFalse(TIntSeqUtil.Same(a, b));
+
+  a := [42, 1001, 42];
+  AssertTrue(TIntSeqUtil.Same(a, b));
+end;
+
+procedure TTestSeqUtils.IsPermutationTest;
+var
+  a, b: TIntArray;
+begin
+  a := nil;
+  b := nil;
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [42];
+  AssertFalse(TIntSeqUtil.IsPermutation(a, b));
+
+  b := [42];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [42, 1001];
+  b := [7, 1001, 42];
+  AssertFalse(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [1001, 42, 7];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  b := [1001, 7, 42];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [1001, 42, 7, 7];
+  b := [7, 1001, 7, 42];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
 end;
 
 
