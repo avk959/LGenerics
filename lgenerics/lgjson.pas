@@ -1698,8 +1698,8 @@ end;
 
 procedure TJsonNode.TStrBuilder.EnsureCapacity(aCapacity: SizeInt);
 begin
-  if aCapacity <= System.Length(FBuffer) then exit;
-  System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aCapacity));
+  if aCapacity > System.Length(FBuffer) then
+    System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aCapacity));
 end;
 
 procedure TJsonNode.TStrBuilder.Append(c: AnsiChar);
