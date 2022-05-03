@@ -35,7 +35,8 @@ uses
   lgArrayHelpers,
   lgVector,
   lgHashTable,
-  lgHash;
+  lgHash,
+  lgHashMultiSet;
 
 type
   { TGBmSearch implements the Boyer-Moore exact pattern matching algorithm for
@@ -163,6 +164,8 @@ type
       M: QWord;
       Score: SizeInt;
     end;
+    TMultiSetType = specialize TGLiteChainHashMultiSet<T, TEqRel>;
+    TMultiSet     = TMultiSetType.TMultiSet;
 
   const
     MAX_STATIC = 1024;
@@ -170,7 +173,6 @@ type
     BSIZE_MASK = Pred(BLOCK_SIZE);
     BSIZE_LOG  = 6;
 
-    class function  Eq(const L, R: T): Boolean; static; inline;
     class function  SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
@@ -191,6 +193,10 @@ type
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
   public
+  { returns True if L and R are identical sequence of elements }
+    class function Same(const L, R: array of T): Boolean; static;
+  { returns True if L is a combinatorial permutation of the elements of R(or vise versa) }
+    class function IsPermutation(const L, R: array of T): Boolean; static;
   { returns True if aSub is a subsequence of aSeq, False otherwise }
     class function IsSubSequence(const aSeq, aSub: array of T): Boolean; static;
   { returns True if L is a prefix of R; an empty array cannot be a prefix of any other array }
@@ -567,11 +573,6 @@ end;
 
 { TGSeqUtil }
 
-class function TGSeqUtil.Eq(const L, R: T): Boolean;
-begin
-  Result := TEqRel.Equal(L, R);
-end;
-
 class function TGSeqUtil.SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt;
 begin
   //implied aLenL <= aLenR
@@ -759,7 +760,7 @@ var
         else
           LoR := R1[J];
         PosR := R2[J - 1] - 1;
-        while (PosR > LoR) and not Eq(pL[LFirst+(I-1)], pR[RFirst+(PosR-1)]) do
+        while (PosR > LoR) and not TEqRel.Equal(pL[LFirst+(I-1)], pR[RFirst+(PosR-1)]) do
           Dec(PosR);
         Tmp := Math.Max(LoR, PosR);
         if Tmp = 0 then break;
@@ -775,7 +776,7 @@ var
         else
           LoR := R1[J];
         PosR := R2[J - 1] - 1;
-        while (PosR > LoR) and not Eq(pL[LFirst-(I-1)], pR[RFirst-(PosR-1)]) do
+        while (PosR > LoR) and not TEqRel.Equal(pL[LFirst-(I-1)], pR[RFirst-(PosR-1)]) do
           Dec(PosR);
         Tmp := Math.Max(LoR, PosR);
         if Tmp = 0 then break;
@@ -817,7 +818,7 @@ var
   begin
     CalMid(LFirst, LLast, RFirst, RLast, Succ(LLast - LFirst - LcsLen), LL, True);
     I := 0;
-    while (I < LcsLen) and Eq(pL[LFirst+I], pR[RFirst+LL[LcsLen-I]-1]) do begin
+    while (I < LcsLen) and TEqRel.Equal(pL[LFirst+I], pR[RFirst+LL[LcsLen-I]-1]) do begin
       LocLcs.Add(pL[LFirst+I]);
       Inc(I);
     end;
@@ -971,7 +972,7 @@ var
               Row := ForV[K - 1] + 1;
             Col := Row - K;
             aSnake.SetStartCell(LFirst + Row, RFirst + Col);
-            while (Row < LenL) and (Col < LenR) and Eq(pL[LFirst + Row], pR[RFirst + Col]) do
+            while (Row < LenL) and (Col < LenR) and TEqRel.Equal(pL[LFirst + Row], pR[RFirst + Col]) do
               begin
                 Inc(Row);
                 Inc(Col);
@@ -995,7 +996,7 @@ var
               Row := RevV[K - 1] + 1;
             Col := Row - K;
             aSnake.SetEndCell(Succ(LLast - Row), Succ(RLast - Col));
-            while (Row < LenL) and (Col < LenR) and Eq(pL[LLast-Row], pR[RLast-Col]) do
+            while (Row < LenL) and (Col < LenR) and TEqRel.Equal(pL[LLast-Row], pR[RLast-Col]) do
               begin
                 Inc(Row);
                 Inc(Col);
@@ -1117,7 +1118,7 @@ begin
       v := pL[I-1];
       for J := 1 to aLenR do
         begin
-          if Eq(pR[J-1], v) then
+          if TEqRel.Equal(pR[J-1], v) then
             Next := Dist[J-1]
           else
             Next := Succ(MinOf3(Dist[J-1], Prev, Dist[J]));
@@ -1138,7 +1139,7 @@ class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: Siz
     if aDist = 0 then I := 0
     else I := MaxOf3(aLeft, aAbove + 1, aRight + 1);
     MaxRow := Min(aLenL - k, aLenR);
-    while (I < MaxRow) and Eq(pR[I], pL[I + k]) do
+    while (I < MaxRow) and TEqRel.Equal(pR[I], pL[I + k]) do
       Inc(I);
     FindRow := I;
   end;
@@ -1762,7 +1763,7 @@ begin
           else
             J := V[K - 1] + 1;
           I := J - K;
-          while (J < aLenR) and (I < aLenL) and Eq(pL[I], pR[J]) do
+          while (J < aLenR) and (I < aLenL) and TEqRel.Equal(pL[I], pR[J]) do
             begin
               Inc(J);
               Inc(I);
@@ -1775,6 +1776,34 @@ begin
     end;
 
   Result := NULL_INDEX;
+end;
+
+class function TGSeqUtil.Same(const L, R: array of T): Boolean;
+var
+  I: SizeInt;
+begin
+  if System.Length(L) <> System.Length(R) then
+    exit(False);
+  if (System.Length(L) > 0) and (@L[0] <> @R[0]) then
+    for I := 0 to System.High(L) do
+      if not TEqRel.Equal(L[I], R[I]) then
+        exit(False);
+  Result := True;
+end;
+
+class function TGSeqUtil.IsPermutation(const L, R: array of T): Boolean;
+var
+  LCounter, RCounter: TMultiSet;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R) = 0);
+  if System.Length(L) <> System.Length(R) then
+    exit(False);
+  if Same(L, R) then
+    exit(True);
+  LCounter.AddAll(L);
+  RCounter.AddAll(R);
+  Result := LCounter.IsEqual(RCounter);
 end;
 
 class function TGSeqUtil.IsSubSequence(const aSeq, aSub: array of T): Boolean;
@@ -2015,12 +2044,12 @@ begin
   for I := 0 to System.High(Lcs) do
     begin
       v := Lcs[I];
-      while not Eq(v, aSource[SrcIdx]) do
+      while not TEqRel.Equal(v, aSource[SrcIdx]) do
         begin
           Del[SrcIdx] := True;
           Inc(SrcIdx)
         end;
-      while not Eq(v, aTarget[TrgIdx]) do
+      while not TEqRel.Equal(v, aTarget[TrgIdx]) do
         begin
           Ins[TrgIdx] := True;
           Inc(TrgIdx)
