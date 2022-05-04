@@ -855,6 +855,12 @@ type
     procedure SetEndCell(aRow, aCol: SizeInt); inline;
   end;
 
+procedure TSnake.SetStartCell(aRow, aCol: SizeInt);
+begin
+  StartRow := aRow;
+  StartCol := aCol;
+end;
+
 procedure TSnake.SetEndCell(aRow, aCol: SizeInt);
 begin
   EndRow := aRow;
@@ -2552,12 +2558,6 @@ begin
   Result := CompareByte(L.Ptr^, R.Ptr^, L.Count) = 0;
 end;
 
-procedure TSnake.SetStartCell(aRow, aCol: SizeInt);
-begin
-  StartRow := aRow;
-  StartCol := aCol;
-end;
-
 { TAnsiStrHelper.TStrEnumerable }
 
 function TAnsiStrHelper.TStrEnumerable.GetCurrent: string;
@@ -2909,7 +2909,7 @@ begin
   Result := TStrEnumerable.Create(FRegex, aValue);
 end;
 
-{ TЫringListHelper }
+{ TSringListHelper }
 
 function TStringListHelper.AsEnumerable: IStrEnumerable;
 begin
