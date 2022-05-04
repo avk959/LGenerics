@@ -40,37 +40,94 @@ uses
 
 
 type
+  TStrSlice = record
+    Ptr: PAnsiChar;
+    Count: SizeInt;
+    constructor Init(p: PAnsiChar; aCount: SizeInt);
+    class operator := (const s: string): TStrSlice; inline;
+    class operator := (const s: TStrSlice): string; inline;
+    class operator = (const L, R: TStrSlice): Boolean; inline;
+  end;
 
   TAnsiStrHelper = type helper(TAStrHelper) for string
   private
   type
     TStrEnumerable = class(specialize TGAutoEnumerable<string>)
-    private
-      FString: string;
+    strict private
+      FValue: string;
       FStartIndex,
-      FCurrLen,
-      FCurrIndex: SizeInt;
-      FDelimiters: TSysCharSet;
+      FLastIndex: SizeInt;
+      FStopChars: TSysCharSet;
     protected
       function  GetCurrent: string; override;
     public
-      constructor Create(const aValue: string; const aDelimiters: TSysCharSet);
+      constructor Create(const aValue: string; const aStopChars: TSysCharSet);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+    TSliceEnumerable = class(specialize TGAutoEnumerable<TStrSlice>)
+    strict private
+      FValue: string;
+      FStartIndex,
+      FLastIndex: SizeInt;
+      FStopChars: TSysCharSet;
+    protected
+      function  GetCurrent: TStrSlice; override;
+    public
+      constructor Create(const aValue: string; const aStopChars: TSysCharSet);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
   public
   type
-    IStrEnumerable = specialize IGEnumerable<string>;
+    IStrEnumerable   = specialize IGEnumerable<string>;
+    ISliceEnumerable = specialize IGEnumerable<TStrSlice>;
+
+    TWordSliceEnumerator = record
+    strict private
+      FValue: string;
+      FStartIndex,
+      FLastIndex: SizeInt;
+      FStopChars: TSysCharSet;
+    private
+      procedure Init(const aValue: string; const aStopChars: TSysCharSet); inline;
+      function  GetCurrent: TStrSlice; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: TStrSlice read GetCurrent;
+    end;
+
+    TWordSliceEnum = record
+    strict private
+      FValue: string;
+      FStopChars: TSysCharSet;
+    private
+      procedure Init(const aValue: string; const aStopChars: TSysCharSet); inline;
+    public
+      function GetEnumerator: TWordSliceEnumerator; inline;
+      function ToArray: specialize TGArray<TStrSlice>;
+    end;
 
   const
-    WhiteSpaces = [#0..' '];
+    WhiteSpaces     = [#0..' '];
     AsciiDelimiters = [#0..#255] - ['a'..'z', 'A'..'Z', '0'..'9', '_'];
+  { Join2 is similar to Join() from SysUtils, but does not raise exceptions, returning
+    an empty string in such cases; it seems to be noticeably faster than the original }
+    class function Join2(const aSeparator: string; const aValues: array of string): string; static;
+    class function Join2(const aSeparator: string; const aValues: array of string;
+                         aFrom, aCount: SizeInt): string; static;
+    class function Join(const aSeparator: string; const aValues: array of TStrSlice): string; static; overload;
+    class function Join(const aSeparator: string; const aValues: array of TStrSlice;
+                         aFrom, aCount: SizeInt): string; static; overload;
     function StripWhiteSpaces: string; inline;
     function StripChar(aChar: AnsiChar): string;
-    function StripChars(constref aChars: TSysCharSet): string;
+    function StripChars(const aChars: TSysCharSet): string;
     // only single byte delimiters allowed
-    function Words(constref aDelimiters: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
+    function Words(const aStopChars: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
+    function WordSlices(const aStopChars: TSysCharSet = AsciiDelimiters): ISliceEnumerable; inline;
+    function WordSliceEnum(const aStopChars: TSysCharSet = AsciiDelimiters): TWordSliceEnum; inline;
   end;
 
   TRegexMatch = class
@@ -797,12 +854,6 @@ type
     procedure SetStartCell(aRow, aCol: SizeInt); inline;
     procedure SetEndCell(aRow, aCol: SizeInt); inline;
   end;
-
-procedure TSnake.SetStartCell(aRow, aCol: SizeInt);
-begin
-  StartRow := aRow;
-  StartCol := aCol;
-end;
 
 procedure TSnake.SetEndCell(aRow, aCol: SizeInt);
 begin
@@ -2475,59 +2526,239 @@ begin
 end;
 {$POP}
 
+{ TStrSlice }
+
+constructor TStrSlice.Init(p: PAnsiChar; aCount: SizeInt);
+begin
+  Ptr := p;
+  Count := Math.Max(0, aCount);
+end;
+
+class operator TStrSlice.:=(const s: string): TStrSlice;
+begin
+  Result := TStrSlice.Init(Pointer(s), System.length(s));
+end;
+
+class operator TStrSlice.:=(const s: TStrSlice): string;
+begin
+  System.SetLength(Result, s.Count);
+  System.Move(s.Ptr^, Pointer(Result)^, s.Count);
+end;
+
+class operator TStrSlice.=(const L, R: TStrSlice): Boolean;
+begin
+  if L.Count <> R.Count then
+    exit(False);
+  Result := CompareByte(L.Ptr^, R.Ptr^, L.Count) = 0;
+end;
+
+procedure TSnake.SetStartCell(aRow, aCol: SizeInt);
+begin
+  StartRow := aRow;
+  StartCol := aCol;
+end;
+
 { TAnsiStrHelper.TStrEnumerable }
 
 function TAnsiStrHelper.TStrEnumerable.GetCurrent: string;
 begin
-  Result := System.Copy(FString, FStartIndex, FCurrLen);
+  Result := System.Copy(FValue, FStartIndex, FLastIndex - FStartIndex);
 end;
 
-constructor TAnsiStrHelper.TStrEnumerable.Create(const aValue: string; const aDelimiters: TSysCharSet);
+constructor TAnsiStrHelper.TStrEnumerable.Create(const aValue: string; const aStopChars: TSysCharSet);
 begin
   inherited Create;
-  FString := aValue;
-  FDelimiters := aDelimiters;
+  FValue := aValue;
+  FStopChars := aStopChars;
   FStartIndex := 1;
-  FCurrLen := 0;
-  FCurrIndex := 0;
+  FLastIndex := 0;
 end;
 
+{$PUSH}{$MACRO ON}
 function TAnsiStrHelper.TStrEnumerable.MoveNext: Boolean;
 var
-  I, Len: SizeInt;
+  I, Start: SizeInt;
 begin
-  Len := 0;
-  for I := Succ(FCurrIndex) to System.Length(FString) do
-    if not (FString[I] in FDelimiters) then
-      begin
-        if Len = 0 then
-          FStartIndex := I;
-        Inc(Len);
-      end
-    else
-      if Len <> 0 then
-        begin
-          FCurrIndex := I;
-          FCurrLen := Len;
-          exit(True);
-        end;
-  FCurrIndex := System.Length(FString);
-  if Len <> 0 then
+{$DEFINE MoveBodyMacro :=
+  Start := 0;
+  for I := Succ(FLastIndex) to System.Length(FValue) do
     begin
-      FCurrLen := Len;
+      if FValue[I] in FStopChars then
+        if Start <> 0 then
+           break else
+      else
+        if Start = 0 then
+          Start := I;
+      Inc(FLastIndex);
+    end;
+  if Start <> 0 then
+    begin
+      Inc(FLastIndex);
+      FStartIndex := Start;
       exit(True);
     end;
-  Result := False;
+  Result := False
+}
+  MoveBodyMacro;
 end;
 
 procedure TAnsiStrHelper.TStrEnumerable.Reset;
 begin
   FStartIndex := 1;
-  FCurrLen := 0;
-  FCurrIndex := 0;
+  FLastIndex := 0;
+end;
+
+{ TAnsiStrHelper.TSliceEnumerable }
+
+function TAnsiStrHelper.TSliceEnumerable.GetCurrent: TStrSlice;
+begin
+  Result.Init(@FValue[FStartIndex], FLastIndex - FStartIndex);
+end;
+
+constructor TAnsiStrHelper.TSliceEnumerable.Create(const aValue: string; const aStopChars: TSysCharSet);
+begin
+  inherited Create;
+  FValue := aValue;
+  FStopChars := aStopChars;
+  FStartIndex := 1;
+  FLastIndex := 0;
+end;
+
+function TAnsiStrHelper.TSliceEnumerable.MoveNext: Boolean;
+var
+  I, Start: SizeInt;
+begin
+  MoveBodyMacro;
+end;
+
+procedure TAnsiStrHelper.TSliceEnumerable.Reset;
+begin
+  FStartIndex := 1;
+  FLastIndex := 0;
+end;
+
+{ TAnsiStrHelper.TWordSliceEnumerator }
+
+procedure TAnsiStrHelper.TWordSliceEnumerator.Init(const aValue: string; const aStopChars: TSysCharSet);
+begin
+  FValue := aValue;
+  FStopChars := aStopChars;
+  FStartIndex := 1;
+  FLastIndex := 0;
+end;
+
+function TAnsiStrHelper.TWordSliceEnumerator.GetCurrent: TStrSlice;
+begin
+  Result.Init(@FValue[FStartIndex], FLastIndex - FStartIndex);
+end;
+
+function TAnsiStrHelper.TWordSliceEnumerator.MoveNext: Boolean;
+var
+  I, Start: SizeInt;
+begin
+  MoveBodyMacro;
+end;
+{$POP}
+
+{ TAnsiStrHelper.TWordSliceEnum }
+
+procedure TAnsiStrHelper.TWordSliceEnum.Init(const aValue: string; const aStopChars: TSysCharSet);
+begin
+  FValue := aValue;
+  FStopChars := aStopChars;
+end;
+
+{$PUSH}{$WARN 5092 OFF}
+function TAnsiStrHelper.TWordSliceEnum.GetEnumerator: TWordSliceEnumerator;
+begin
+  Result.Init(FValue, FStopChars);
+end;
+{$POP}
+
+function TAnsiStrHelper.TWordSliceEnum.ToArray: specialize TGArray<TStrSlice>;
+var
+  I: SizeInt;
+begin
+  I := 0;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with GetEnumerator do
+    while MoveNext do
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I + I);
+        Result[I] := Current;
+        Inc(I);
+      end;
+  System.SetLength(Result, I);
 end;
 
 { TAnsiStrHelper }
+
+class function TAnsiStrHelper.Join2(const aSeparator: string; const aValues: array of string): string;
+begin
+  Result := Join2(aSeparator, aValues, 0, System.Length(aValues));
+end;
+
+class function TAnsiStrHelper.Join2(const aSeparator: string; const aValues: array of string;
+  aFrom, aCount: SizeInt): string;
+var
+  I, Len, Last: SizeInt;
+  p: PAnsiChar;
+begin
+  if (System.High(aValues) < 0) or (aFrom > System.High(aValues)) or (aCount <= 0) then
+    exit('');
+  if aFrom < 0 then
+    aFrom := 0;
+  Last := Math.Min(Pred(aFrom + aCount), System.High(aValues));
+  Len := 0;
+  for I := aFrom to Last do
+    Len += System.Length(aValues[I]);
+  System.SetLength(Result, Len + System.Length(aSeparator) * (Last - aFrom));
+  Len := System.Length(aSeparator);
+  p := Pointer(Result);
+  System.Move(Pointer(aValues[aFrom])^, p^, System.Length(aValues[aFrom]));
+  p += System.Length(aValues[aFrom]);
+  for I := Succ(aFrom) to Last do
+    begin
+      System.Move(Pointer(aSeparator)^, p^, Len);
+      p += Len;
+      System.Move(Pointer(aValues[I])^, p^, System.Length(aValues[I]));
+      p += System.Length(aValues[I]);
+    end;
+end;
+
+class function TAnsiStrHelper.Join(const aSeparator: string; const aValues: array of TStrSlice): string;
+begin
+  Result := Join(aSeparator, aValues, 0, System.Length(aValues));
+end;
+
+class function TAnsiStrHelper.Join(const aSeparator: string; const aValues: array of TStrSlice;
+  aFrom, aCount: SizeInt): string;
+var
+  I, Len, Last: SizeInt;
+  p: PAnsiChar;
+begin
+  if (System.High(aValues) < 0) or (aFrom > System.High(aValues)) or (aCount <= 0) then
+    exit('');
+  if aFrom < 0 then
+    aFrom := 0;
+  Last := Math.Min(Pred(aFrom + aCount), System.High(aValues));
+  Len := 0;
+  for I := aFrom to Last do
+    Len += aValues[I].Count;
+  System.SetLength(Result, Len + System.Length(aSeparator) * (Last - aFrom));
+  Len := System.Length(aSeparator);
+  p := Pointer(Result);
+  System.Move(aValues[aFrom].Ptr^, p^, aValues[aFrom].Count);
+  p += aValues[aFrom].Count;
+  for I := Succ(aFrom) to Last do
+    begin
+      System.Move(Pointer(aSeparator)^, p^, Len);
+      p += Len;
+      System.Move(aValues[I].Ptr^, p^, aValues[I].Count);
+      p += aValues[I].Count;
+    end;
+end;
 
 function TAnsiStrHelper.StripWhiteSpaces: string;
 begin
@@ -2558,7 +2789,7 @@ begin
   SetLength(Result, J);
 end;
 
-function TAnsiStrHelper.StripChars(constref aChars: TSysCharSet): string;
+function TAnsiStrHelper.StripChars(const aChars: TSysCharSet): string;
 var
   I, J: SizeInt;
   pRes, pSelf: PAnsiChar;
@@ -2582,16 +2813,28 @@ begin
   SetLength(Result, J);
 end;
 
-function TAnsiStrHelper.Words(constref aDelimiters: TSysCharSet): IStrEnumerable;
+function TAnsiStrHelper.Words(const aStopChars: TSysCharSet): IStrEnumerable;
 begin
-  Result := TStrEnumerable.Create(Self, aDelimiters);
+  Result := TStrEnumerable.Create(Self, aStopChars);
 end;
+
+function TAnsiStrHelper.WordSlices(const aStopChars: TSysCharSet): ISliceEnumerable;
+begin
+  Result := TSliceEnumerable.Create(Self, aStopChars);
+end;
+
+{$PUSH}{$WARN 5092 OFF}
+function TAnsiStrHelper.WordSliceEnum(const aStopChars: TSysCharSet): TWordSliceEnum;
+begin
+  Result.Init(Self, aStopChars);
+end;
+{$POP}
 
 { TRegexMatch.TStrEnumerable }
 
 function TRegexMatch.TStrEnumerable.GetCurrent: string;
 begin
-  Result := FRegex.Match[0];
+  Result := string(FRegex.Match[0]);
 end;
 
 constructor TRegexMatch.TStrEnumerable.Create(aRegex: TRegExpr; const s: string);
@@ -2608,7 +2851,7 @@ begin
   else
     begin
       FInCycle := True;
-      Result := FRegex.Exec(FInputString);
+      Result := FRegex.Exec(RegExpr.RegExprString(FInputString));
     end;
 end;
 
@@ -2621,22 +2864,22 @@ end;
 
 function TRegexMatch.GetExpression: string;
 begin
-  Result := FRegex.Expression;
+  Result := string(FRegex.Expression);
 end;
 
 function TRegexMatch.GetModifierStr: string;
 begin
-  Result := FRegex.ModifierStr;
+  Result := string(FRegex.ModifierStr);
 end;
 
 procedure TRegexMatch.SetExpression(aValue: string);
 begin
-  FRegex.Expression := aValue;
+  FRegex.Expression := RegExpr.RegExprString(aValue);
 end;
 
 procedure TRegexMatch.SetModifierStr(aValue: string);
 begin
-  FRegex.ModifierStr := aValue;
+  FRegex.ModifierStr := RegExpr.RegExprString(aValue);
 end;
 
 constructor TRegexMatch.Create;
@@ -2646,13 +2889,13 @@ end;
 
 constructor TRegexMatch.Create(const aRegExpression: string);
 begin
-  FRegex := TRegExpr.Create(aRegExpression);
+  FRegex := TRegExpr.Create(RegExpr.RegExprString(aRegExpression));
 end;
 
 constructor TRegexMatch.Create(const aRegExpression, aModifierStr: string);
 begin
-  FRegex := TRegExpr.Create(aRegExpression);
-  FRegex.ModifierStr := aModifierStr;
+  FRegex := TRegExpr.Create(RegExpr.RegExprString(aRegExpression));
+  FRegex.ModifierStr := RegExpr.RegExprString(aModifierStr);
 end;
 
 destructor TRegexMatch.Destroy;
