@@ -47,6 +47,7 @@ type
     class operator := (const s: string): TStrSlice; inline;
     class operator := (const s: TStrSlice): string; inline;
     class operator = (const L, R: TStrSlice): Boolean; inline;
+    class operator = (const L: TStrSlice; const R: string): Boolean; inline;
   end;
 
   TAnsiStrHelper = type helper(TAStrHelper) for string
@@ -121,6 +122,8 @@ type
     class function Join(const aSeparator: string; const aValues: array of TStrSlice): string; static; overload;
     class function Join(const aSeparator: string; const aValues: array of TStrSlice;
                          aFrom, aCount: SizeInt): string; static; overload;
+    class function Join(const aSeparator: string; aValues: IStrEnumerable): string; static; overload;
+    class function Join(const aSeparator: string; aValues: ISliceEnumerable): string; static; overload;
     function StripWhiteSpaces: string; inline;
     function StripChar(aChar: AnsiChar): string;
     function StripChars(const aChars: TSysCharSet): string;
@@ -2558,6 +2561,13 @@ begin
   Result := CompareByte(L.Ptr^, R.Ptr^, L.Count) = 0;
 end;
 
+class operator TStrSlice.=(const L: TStrSlice; const R: string): Boolean;
+begin
+  if L.Count <> System.Length(R) then
+    exit(False);
+  Result := CompareByte(L.Ptr^, Pointer(R)^, L.Count) = 0;
+end;
+
 { TAnsiStrHelper.TStrEnumerable }
 
 function TAnsiStrHelper.TStrEnumerable.GetCurrent: string;
@@ -2758,6 +2768,84 @@ begin
       System.Move(aValues[I].Ptr^, p^, aValues[I].Count);
       p += aValues[I].Count;
     end;
+end;
+
+class function TAnsiStrHelper.Join(const aSeparator: string; aValues: IStrEnumerable): string;
+var
+  s: string;
+  p: PAnsiChar;
+  CharCount: SizeInt;
+  procedure EnsureCapacity(aValue: SizeInt); inline;
+  begin
+    if aValue > System.Length(s) then
+      begin
+        System.SetLength(s, lgUtils.RoundUpTwoPower(aValue));
+        p := Pointer(s);
+      end;
+  end;
+  procedure Append(const s: string); inline;
+  begin
+    EnsureCapacity(CharCount + System.Length(s));
+    System.Move(Pointer(s)^, p[CharCount], System.Length(s));
+    CharCount += System.Length(s);
+  end;
+begin
+  CharCount := 0;
+  with aValues.GetEnumerator do
+    try
+      if MoveNext then
+        begin
+          Append(Current);
+          while MoveNext do
+            begin
+              Append(aSeparator);
+              Append(Current);
+            end;
+        end;
+    finally
+      Free;
+    end;
+  System.SetLength(s, CharCount);
+  Result := s;
+end;
+
+class function TAnsiStrHelper.Join(const aSeparator: string; aValues: ISliceEnumerable): string;
+var
+  s: string;
+  p: PAnsiChar;
+  CharCount: SizeInt;
+  procedure EnsureCapacity(aValue: SizeInt); inline;
+  begin
+    if aValue > System.Length(s) then
+      begin
+        System.SetLength(s, lgUtils.RoundUpTwoPower(aValue));
+        p := Pointer(s);
+      end;
+  end;
+  procedure Append(const s: TStrSlice); inline;
+  begin
+    EnsureCapacity(CharCount + s.Count);
+    System.Move(s.Ptr^, p[CharCount], s.Count);
+    CharCount += s.Count;
+  end;
+begin
+  CharCount := 0;
+  with aValues.GetEnumerator do
+    try
+      if MoveNext then
+        begin
+          Append(Current);
+          while MoveNext do
+            begin
+              Append(aSeparator);
+              Append(Current);
+            end;
+        end;
+    finally
+      Free;
+    end;
+  System.SetLength(s, CharCount);
+  Result := s;
 end;
 
 function TAnsiStrHelper.StripWhiteSpaces: string;
