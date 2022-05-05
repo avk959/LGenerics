@@ -121,7 +121,7 @@ type
                          aFrom, aCount: SizeInt): string; static;
     class function Join(const aSeparator: string; const aValues: array of TStrSlice): string; static; overload;
     class function Join(const aSeparator: string; const aValues: array of TStrSlice;
-                         aFrom, aCount: SizeInt): string; static; overload;
+                        aFrom, aCount: SizeInt): string; static; overload;
     class function Join(const aSeparator: string; aValues: IStrEnumerable): string; static; overload;
     class function Join(const aSeparator: string; aValues: ISliceEnumerable): string; static; overload;
     function StripWhiteSpaces: string; inline;
@@ -405,7 +405,7 @@ type
   function IsSubSequence(const aStr, aSub: rawbytestring): Boolean; inline;
 { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
   with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
-  inspired by Dan Gusfield "Algorithms on rawbytestrings, Trees and Sequences", section 12.5 }
+  inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
   function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
@@ -2540,7 +2540,7 @@ end;
 constructor TStrSlice.Init(p: PAnsiChar; aCount: SizeInt);
 begin
   Ptr := p;
-  Count := Math.Max(0, aCount);
+  Count := aCount;
 end;
 
 class operator TStrSlice.:=(const s: string): TStrSlice;
