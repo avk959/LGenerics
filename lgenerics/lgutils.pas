@@ -3328,7 +3328,7 @@ end;
 
 procedure TGSet<T>.Clear;
 begin
-  FBits := Default(TBits);
+  System.FillChar(FBits, SizeOf(FBits), 0);
 end;
 
 procedure TGSet<T>.Include(aValue: T);
