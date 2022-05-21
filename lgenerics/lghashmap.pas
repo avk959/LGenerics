@@ -41,11 +41,11 @@ type
   generic TGAbstractHashMap<TKey, TValue> = class abstract(specialize TGAbstractMap<TKey, TValue>)
   protected
   type
-    TAbstractHashMap      = specialize TGAbstractHashMap<TKey, TValue>;
-    THashMapClass        = class of TAbstractHashMap;
-    THashTable           = specialize TGAbstractHashTable<TKey, TEntry>;
-    THashTableClass      = class of THashTable;
-    TSearchResult        = THashTable.TSearchResult;
+    TAbstractHashMap = specialize TGAbstractHashMap<TKey, TValue>;
+    THashMapClass    = class of TAbstractHashMap;
+    THashTable       = specialize TGAbstractHashTable<TKey, TEntry>;
+    THashTableClass  = class of THashTable;
+    TSearchResult    = THashTable.TSearchResult;
 
     TKeyEnumerable = class(TCustomKeyEnumerable)
     protected
