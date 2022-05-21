@@ -752,8 +752,7 @@ type
     class procedure Sort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(const A: array of T; c: TLess): TArray;
-                    static;
+    class function  SelectDistinct(const A: array of T; c: TLess): TArray; static;
   end;
 
   { TGDelegatedArrayHelper: with delegated comparator}
@@ -827,8 +826,7 @@ type
     class function  BinarySearch(const A: array of T; const aValue: T; c: TOnLess): SizeInt; static;
   { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex }
-    class function  BinarySearchPos(const A: array of T; const aValue: T; c: TOnLess): TSearchResult;
-                    static;
+    class function  BinarySearchPos(const A: array of T; const aValue: T; c: TOnLess): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
     class function  IndexOfMin(const A: array of T; c: TOnLess): SizeInt; static;
   { returns 0-based position of maximal value in A, -1 if A is empty }
@@ -902,8 +900,7 @@ type
     class procedure Sort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TOnLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(const A: array of T; c: TOnLess): TArray;
-                    static;
+    class function  SelectDistinct(const A: array of T; c: TOnLess): TArray; static;
   end;
 
   { TGNestedArrayHelper: with nested comparator}
@@ -1056,8 +1053,7 @@ type
     class procedure Sort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; c: TNestLess; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
-    class function  SelectDistinct(const A: array of T; c: TNestLess): TArray;
-                    static;
+    class function  SelectDistinct(const A: array of T; c: TNestLess): TArray; static;
   end;
 
   { TGSimpleArrayHelper: for simple types only }
@@ -1217,6 +1213,8 @@ type
     otherwise PDQSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
+  { copies only distinct values from A }
+    class function  SelectDistinct(const A: array of T): TArray; static;
   end;
 
   { TGOrdinalArrayHelper: for ordinal numeric types only }
@@ -1251,6 +1249,8 @@ type
   { hybrid sorting, will use counting sort (if possible) or radix sort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
+  { copies only distinct values from A }
+    class function  SelectDistinct(const A: array of T): TArray; static;
   end;
 
   TSizeIntHelper = specialize TGOrdinalArrayHelper<SizeInt>;
@@ -14750,6 +14750,24 @@ begin
   Sort(Result, o);
 end;
 
+class function TGNumArrayHelper.SelectDistinct(const A: array of T): TArray;
+var
+  I, J: SizeInt;
+begin
+  Result := Sorted(A);
+  if System.High(Result) < 1 then exit;
+  I := 0;
+  for J := 1 to System.High(Result) do
+    begin
+      if Result[I] = Result[J] then
+        continue;
+      Inc(I);
+      if J > I then
+        Result[I] := Result[J];
+    end;
+  System.SetLength(Result, Succ(I));
+end;
+
 { TGOrdinalArrayHelper }
 
 class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: T; o:  TSortOrder);
@@ -15213,6 +15231,24 @@ class function TGOrdinalArrayHelper.Sorted(const A: array of T; o: TSortOrder): 
 begin
   Result := CreateCopy(A);
   Sort(Result, o);
+end;
+
+class function TGOrdinalArrayHelper.SelectDistinct(const A: array of T): TArray;
+var
+  I, J: SizeInt;
+begin
+  Result := Sorted(A);
+  if System.High(Result) < 1 then exit;
+  I := 0;
+  for J := 1 to System.High(Result) do
+    begin
+      if Result[I] = Result[J] then
+        continue;
+      Inc(I);
+      if J > I then
+        Result[I] := Result[J];
+    end;
+  System.SetLength(Result, Succ(I));
 end;
 
 class constructor TGRadixSorter.Init;
