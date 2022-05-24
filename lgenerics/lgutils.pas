@@ -3478,7 +3478,7 @@ end;
 class operator TGSet<T>.Implicit(aValue: T): TGSet<T>;
 begin
 {$IFNDEF USE_TGSET_INITIALIZE}
-  Result.FBits := Default(TBits);
+  System.FillChar(Result.FBits, SizeOf(TBits), 0);
 {$ENDIF}
   Result{%H-}.Include(aValue);
 end;
@@ -3486,7 +3486,7 @@ end;
 class operator TGSet<T>.Explicit(aValue: T): TGSet<T>;
 begin
 {$IFNDEF USE_TGSET_INITIALIZE}
-  Result.FBits := Default(TBits);
+  System.FillChar(Result.FBits, SizeOf(TBits), 0);
 {$ENDIF}
   Result{%H-}.Include(aValue);
 end;
@@ -3496,7 +3496,7 @@ var
   I: Integer;
 begin
 {$IFNDEF USE_TGSET_INITIALIZE}
-  Result.FBits := Default(TBits);
+  System.FillChar(Result.FBits, SizeOf(TBits), 0);
 {$ENDIF}
   for I := 0 to System.High(a) do
     Result{%H-}.Include(a[I]);
@@ -3507,7 +3507,7 @@ var
   I: Integer;
 begin
 {$IFNDEF USE_TGSET_INITIALIZE}
-  Result.FBits := Default(TBits);
+  System.FillChar(Result.FBits, SizeOf(TBits), 0);
 {$ENDIF}
   for I := 0 to System.High(a) do
     Result{%H-}.Include(a[I]);
