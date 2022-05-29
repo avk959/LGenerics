@@ -67,8 +67,6 @@ type
     procedure AssignNilInterfaceRaw;
     procedure AssignArray;
     procedure AssignNilArray;
-    procedure OrElseDefaultInt;
-    procedure OrElseDefaultStr;
     procedure OrElseInt;
     procedure OrElseStr;
     procedure OrElseRaiseInt;
@@ -730,22 +728,6 @@ var
 begin
   o := nil;
   AssertTrue(o.Assigned);
-end;
-
-procedure TGOptionalTest.OrElseDefaultInt;
-var
-  o: TOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  AssertTrue(o.OrElseDefault = 0);
-end;
-
-procedure TGOptionalTest.OrElseDefaultStr;
-var
-  o: TStrOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  AssertTrue(o.OrElseDefault = '');
 end;
 
 procedure TGOptionalTest.OrElseInt;
