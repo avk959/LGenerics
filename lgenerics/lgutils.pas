@@ -103,7 +103,6 @@ type
     class operator Implicit(const o: TGOptional<T>): T; inline;
     class operator Explicit(const o: TGOptional<T>): T; inline;
     procedure Assign(const aValue: T);
-    function  OrElseDefault: T; inline;
     function  OrElse(const aValue: T): T; inline;
     function  OrElseRaise(e: ExceptClass; const aMsg: string = ''): T; inline;
     property  Assigned: Boolean read FAssigned;
@@ -1390,14 +1389,6 @@ begin
     exit;
   FValue := aValue;
   FAssigned := True;
-end;
-
-function TGOptional<T>.OrElseDefault: T;
-begin
-  if Assigned then
-    Result := FValue
-  else
-    Result := Default(T);
 end;
 
 function TGOptional<T>.OrElse(const aValue: T): T;
