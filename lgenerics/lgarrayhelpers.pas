@@ -193,6 +193,9 @@ type
     class function  Select(const A: array of T; aTest: TTest): TArray;
     class function  Select(const A: array of T; aTest: TOnTest): TArray;
     class function  Select(const A: array of T; aTest: TNestTest): TArray;
+    class procedure RemoveIf(var A: TArray; aTest: TTest);
+    class procedure RemoveIf(var A: TArray; aTest: TOnTest);
+    class procedure RemoveIf(var A: TArray; aTest: TNestTest);
   { left-associative linear fold }
     class function  FoldL(const A: array of T; aFold: TFold; const aInitVal: T): T; static;
   { result is assigned only if A is not empty; uses Default(T) as the initial value }
@@ -1956,13 +1959,11 @@ var
   I, J: SizeInt;
 begin
   if System.Length(A) = 0 then exit(nil);
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  System.SetLength(Result, System.Length(A));
   J := 0;
   for I := 0 to System.High(A) do
     if aTest(A[I]) then
       begin
-        if System.Length(Result) = I then
-          System.SetLength(Result, I + I);
         Result[J] := A[I];
         Inc(J);
       end;
@@ -1974,13 +1975,11 @@ var
   I, J: SizeInt;
 begin
   if System.Length(A) = 0 then exit(nil);
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  System.SetLength(Result, System.Length(A));
   J := 0;
   for I := 0 to System.High(A) do
     if aTest(A[I]) then
       begin
-        if System.Length(Result) = I then
-          System.SetLength(Result, I + I);
         Result[J] := A[I];
         Inc(J);
       end;
@@ -1992,17 +1991,60 @@ var
   I, J: SizeInt;
 begin
   if System.Length(A) = 0 then exit(nil);
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  System.SetLength(Result, System.Length(A));
   J := 0;
   for I := 0 to System.High(A) do
     if aTest(A[I]) then
       begin
-        if System.Length(Result) = I then
-          System.SetLength(Result, I + I);
         Result[J] := A[I];
         Inc(J);
       end;
   SetLength(Result, J);
+end;
+
+class procedure TGArrayHelpUtil.RemoveIf(var A: TArray; aTest: TTest);
+var
+  I, J: SizeInt;
+begin
+  if System.Length(A) = 0 then exit;
+  J := 0;
+  for I := 0 to System.High(A) do
+    begin
+      if aTest(A[I]) then continue;
+      if I <> J then
+        A[J] := A[I];
+      Inc(J);
+    end;
+end;
+
+class procedure TGArrayHelpUtil.RemoveIf(var A: TArray; aTest: TOnTest);
+var
+  I, J: SizeInt;
+begin
+  if System.Length(A) = 0 then exit;
+  J := 0;
+  for I := 0 to System.High(A) do
+    begin
+      if aTest(A[I]) then continue;
+      if I <> J then
+        A[J] := A[I];
+      Inc(J);
+    end;
+end;
+
+class procedure TGArrayHelpUtil.RemoveIf(var A: TArray; aTest: TNestTest);
+var
+  I, J: SizeInt;
+begin
+  if System.Length(A) = 0 then exit;
+  J := 0;
+  for I := 0 to System.High(A) do
+    begin
+      if aTest(A[I]) then continue;
+      if I <> J then
+        A[J] := A[I];
+      Inc(J);
+    end;
 end;
 
 class function TGArrayHelpUtil.FoldL(const A: array of T; aFold: TFold; const aInitVal: T): T;
