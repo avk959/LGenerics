@@ -190,12 +190,12 @@ type
     class function  Same(const A, B: array of T; c: TEqualCompare): Boolean; static;
     class function  Same(const A, B: array of T; c: TOnEqualCompare): Boolean; static;
     class function  Same(const A, B: array of T; c: TNestEqualCompare): Boolean; static;
-    class function  Select(const A: array of T; aTest: TTest): TArray;
-    class function  Select(const A: array of T; aTest: TOnTest): TArray;
-    class function  Select(const A: array of T; aTest: TNestTest): TArray;
-    class procedure RemoveIf(var A: TArray; aTest: TTest);
-    class procedure RemoveIf(var A: TArray; aTest: TOnTest);
-    class procedure RemoveIf(var A: TArray; aTest: TNestTest);
+    class function  Select(const A: array of T; aTest: TTest): TArray; static;
+    class function  Select(const A: array of T; aTest: TOnTest): TArray; static;
+    class function  Select(const A: array of T; aTest: TNestTest): TArray; static;
+    class procedure RemoveIf(var A: TArray; aTest: TTest); static;
+    class procedure RemoveIf(var A: TArray; aTest: TOnTest); static;
+    class procedure RemoveIf(var A: TArray; aTest: TNestTest); static;
   { left-associative linear fold }
     class function  FoldL(const A: array of T; aFold: TFold; const aInitVal: T): T; static;
   { result is assigned only if A is not empty; uses Default(T) as the initial value }
