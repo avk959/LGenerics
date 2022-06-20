@@ -402,7 +402,10 @@ type
     function  FindCenter: TIntArray;
   { returns array of indices of the peripheral vertices, if graph is connected, nil otherwise }
     function  FindPeripheral: TIntArray;
-
+  { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
+    path, or an empty array if the path does not exists }
+    function ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
+    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
     type
       //vertex partition
       TCut = record
@@ -1321,13 +1324,19 @@ begin
   if FNodeList[aIndex].Tag = aIndex then
     exit(aIndex);
   Result := SeparateTag(FNodeList[aIndex].Tag);
-  FNodeList[aIndex].Tag := Result;
 end;
 
 function TGSimpleGraph.SeparateJoin(L, R: SizeInt): Boolean;
+  function GetSeparateTag(aIndex: SizeInt): SizeInt;
+  begin
+    if FNodeList[aIndex].Tag = aIndex then
+      exit(aIndex);
+    Result := GetSeparateTag(FNodeList[aIndex].Tag);
+    FNodeList[aIndex].Tag := Result;
+  end;
 begin
-  L := SeparateTag(L);
-  R := SeparateTag(R);
+  L := GetSeparateTag(L);
+  R := GetSeparateTag(R);
   if L = R then
     exit(False);
   if NextRandomBoolean then
@@ -1431,7 +1440,7 @@ begin
   Tag := aGraph.SeparateTag(aIndex);
   J := 0;
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.FNodeList[I].Tag = Tag then
+    if aGraph.SeparateTag(I) = Tag then
       begin
         v[J] := I;
         Inc(J);
@@ -4114,6 +4123,22 @@ begin
   Result.Length := J;
 end;
 
+function TGSimpleGraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;
+begin
+  Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGSimpleGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    exit(nil);
+  Result := GetShortestPath(aSrc, aDst);
+end;
+
 function TGSimpleGraph.MinCut: SizeInt;
 var
   Helper: TNISimpMinCutHelper;
@@ -5568,10 +5593,14 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
-      Result := nil;
-    end
-  else
-    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+      exit(nil);
+    end;
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.MinPathBiDir(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -5586,6 +5615,11 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    begin
+      aWeight := InfWeight;
       exit(nil);
     end;
   Result := TWeightHelper.BiDijkstraPath(Self, Self, aSrc, aDst, aWeight);
@@ -5605,10 +5639,15 @@ begin
     begin
       aWeight := TWeight(0);
       aPath := nil;
-      Result := True;
-    end
-  else
-    Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
+      exit(True);
+    end;
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    begin
+      aWeight := InfWeight;
+      aPath := nil;
+      exit(False);
+    end;
+  Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedGraph.MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -5624,13 +5663,17 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
-      Result := nil;
-    end
+      exit(nil);
+    end;
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  if aEst <> nil then
+    Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
-    if aEst <> nil then
-      Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
-    else
-      Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.MinPathNBAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -5646,6 +5689,11 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    begin
+      aWeight := InfWeight;
       exit(nil);
     end;
   if aEst <> nil then

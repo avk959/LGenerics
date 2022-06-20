@@ -280,6 +280,9 @@ type
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
+  { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
+    empty if path does not exists; does not checks indices }
+    function  GetShortestPath(aSrc, aDst: SizeInt): TIntArray;
     procedure VertexReplaced(const v: TVertex); virtual;
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
@@ -500,21 +503,12 @@ type
 {**********************************************************************************************************
   shortest path problem utilities
 ***********************************************************************************************************}
-
-  { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
-    -1 if the path does not exist }
-    function ShortestPathLen(const aSrc, aDst: TVertex): SizeInt; inline;
-    function ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
     function ShortestPathsMap(const aSrc: TVertex): TIntArray; inline;
     function ShortestPathsMapI(aSrc: SizeInt): TIntArray;
     function ShortestPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
     function ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
-  { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
-    empty if path does not exists }
-    function ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
-    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
   { returns the eccentricity of the aVertex;
     returns High(SizeInt), if exists any vertex unreachable from aVertex }
     function Eccentricity(const aVertex: TVertex): SizeInt; inline;
@@ -1628,6 +1622,40 @@ begin
     end;
 end;
 
+function TGSparseGraph.GetShortestPath(aSrc, aDst: SizeInt): TIntArray;
+var
+  Queue: TIntArray;
+  Parents: TIntArray;
+  Curr: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  System.SetLength(Queue, VertexCount);
+  Parents := CreateIntArray;
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  Parents[aSrc] := aSrc;
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[Curr]^ do
+        if Parents[p^.Destination] = NULL_INDEX then
+          begin
+            Parents[p^.Destination] := Curr;
+            if p^.Destination = aDst then
+              begin
+                Parents[aSrc] := NULL_INDEX;
+                exit(TreePathTo(Parents, aDst));
+              end;
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+          end;
+    end;
+  Result := nil;
+end;
+
 procedure TGSparseGraph.VertexReplaced(const v: TVertex);
 begin
 {$PUSH}{$C-}Assert(TEqRel.Equal(v, v));{$POP}
@@ -2461,45 +2489,6 @@ begin
       end;
 end;
 
-function TGSparseGraph.ShortestPathLen(const aSrc, aDst: TVertex): SizeInt;
-begin
-  Result := ShortestPathLenI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGSparseGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
-var
-  Queue: TIntArray;
-  Dist: TIntArray;
-  d: SizeInt;
-  p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  System.SetLength(Queue, VertexCount);
-  {%H-}Dist := CreateIntArray;
-  Dist[aSrc] := 0;
-  Queue[qTail] := aSrc;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      aSrc := Queue[qHead];
-      Inc(qHead);
-      if aSrc = aDst then
-        exit(Dist[aSrc]);
-      d := Succ(Dist[aSrc]);
-      for p in AdjLists[aSrc]^ do
-        if Dist[p^.Destination] = NULL_INDEX then
-          begin
-            Queue[qTail] := p^.Destination;
-            Inc(qTail);
-            Dist[p^.Destination] := d;
-          end;
-    end;
-  Result := NULL_INDEX;
-end;
-
 function TGSparseGraph.ShortestPathsMap(const aSrc: TVertex): TIntArray;
 begin
   Result := ShortestPathsMapI(IndexOf(aSrc));
@@ -2568,47 +2557,6 @@ begin
             aPathTree[p^.Destination] := aSrc;
           end;
     end;
-end;
-
-function TGSparseGraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;
-begin
-  Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGSparseGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-var
-  Queue: TIntArray;
-  Parents: TIntArray;
-  Curr: SizeInt;
-  p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  System.SetLength(Queue, VertexCount);
-  Parents := CreateIntArray;
-  Queue[qTail] := aSrc;
-  Inc(qTail);
-  Parents[aSrc] := aSrc;
-  while qHead < qTail do
-    begin
-      Curr := Queue[qHead];
-      Inc(qHead);
-      if Curr = aDst then
-        begin
-          Parents[aSrc] := NULL_INDEX;
-          exit(TreePathTo(Parents, aDst));
-        end;
-      for p in AdjLists[Curr]^ do
-        if Parents[p^.Destination] = NULL_INDEX then
-          begin
-            Queue[qTail] := p^.Destination;
-            Inc(qTail);
-            Parents[p^.Destination] := Curr;
-          end;
-    end;
-  Result := nil;
 end;
 
 function TGSparseGraph.Eccentricity(const aVertex: TVertex): SizeInt;

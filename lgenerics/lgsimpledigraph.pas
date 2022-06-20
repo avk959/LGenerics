@@ -304,6 +304,10 @@ type
     function  FindCenter: TIntArray;
   { returns array of indices of the peripheral vertices, if graph is strongly connected, nil otherwise }
     function  FindPeripheral: TIntArray;
+  { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
+    path, or an empty array if the path does not exists }
+    function ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
+    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 {**********************************************************************************************************
   flowgraph utilities
 ***********************************************************************************************************}
@@ -2501,6 +2505,22 @@ begin
   Result.Length := J;
 end;
 
+function TGSimpleDigraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;
+begin
+  Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGSimpleDigraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    exit(nil);
+  Result := GetShortestPath(aSrc, aDst);
+end;
+
 function TGSimpleDigraph.IsFlowGraph(const aSource: TVertex): Boolean;
 begin
   Result := IsFlowGraphI(IndexOf(aSource));
@@ -3517,10 +3537,14 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
-      Result := nil;
-    end
-  else
-    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDigraph.MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
@@ -3541,6 +3565,11 @@ begin
       aWeight := TWeight(0);
       exit(nil);
     end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
   Result := TWeightHelper.BiDijkstraPath(Self, aRev, aSrc, aDst, aWeight);
 end;
 
@@ -3557,13 +3586,17 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
-      Result := nil;
-    end
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  if aEst <> nil then
+    Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
-    if aEst <> nil then
-      Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
-    else
-      Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDigraph.MinPathNBAStar(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
@@ -3580,6 +3613,11 @@ begin
   if aSrc = aDst then
     begin
       aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
       exit(nil);
     end;
   if aEst <> nil then
@@ -3602,10 +3640,15 @@ begin
     begin
       aWeight := TWeight(0);
       aPath := nil;
-      Result := True;
-    end
-  else
-    Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
+      exit(True);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      aPath := nil;
+      exit(False);
+    end;
+  Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedDigraph.FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean;
