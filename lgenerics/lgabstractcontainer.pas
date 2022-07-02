@@ -102,6 +102,7 @@ type
     function  Sorted(c: TLess; aStable: Boolean = False): IEnumerable;
     function  Sorted(c: TOnLess; aStable: Boolean = False): IEnumerable;
     function  Sorted(c: TNestLess; aStable: Boolean = False): IEnumerable;
+    function  Sorted(aSort: specialize TGSortProc<T>; o: TSortOrder = soAsc): IEnumerable;
     function  Select(aTest: TTest): IEnumerable; inline;
     function  Select(aTest: TOnTest): IEnumerable; inline;
     function  Select(aTest: TNestTest): IEnumerable; inline;
@@ -1294,6 +1295,17 @@ begin
     specialize TGNestedArrayHelper<T>.MergeSort(a, c)
   else
     specialize TGNestedArrayHelper<T>.Sort(a, c);
+  Result := specialize TGArrayCursor<T>.Create(a);
+end;
+
+function TGEnumerable.Sorted(aSort: specialize TGSortProc<T>; o: TSortOrder): IEnumerable;
+var
+  a: TArray;
+begin
+  if aSort = nil then
+    raise EArgumentNilException.Create(SESortProcNotAssigned);
+  a := ToArray;
+  aSort(a, o);
   Result := specialize TGArrayCursor<T>.Create(a);
 end;
 

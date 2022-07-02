@@ -62,6 +62,8 @@ type
   TGOnFold<X, Y>        = function(const L: X; const R: Y): Y of object;
   TGNestFold<X, Y>      = function(const L: X; const R: Y): Y is nested;
 
+  TGSortProc<T>         = procedure(var A: array of T; o: TSortOrder = soAsc);
+
   ELGCapacityExceed     = class(Exception);
   ELGAccessEmpty        = class(Exception);
   ELGOptional           = class(Exception);
@@ -526,6 +528,7 @@ type
     function  Sorted(c: TGLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Sorted(c: TGOnLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Sorted(c: TGNestLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
+    function  Sorted(aProc: TGSortProc<T>; o: TSortOrder = soAsc): IGEnumerable<T>; overload;
     function  Select(p: TGTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGOnTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGNestTest<T>): IGEnumerable<T>; overload;

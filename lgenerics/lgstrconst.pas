@@ -79,6 +79,7 @@ resourcestring
   SEInvalidJsPtr           = 'Invalid JSON Pointer instance';
   SECantParseJsStr         = 'Cannot parse JSON string';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
+  SESortProcNotAssigned    = 'Sorting procedure not assigned';
 
 implementation
 
