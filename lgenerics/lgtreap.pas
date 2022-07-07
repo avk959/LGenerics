@@ -505,8 +505,15 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default; //O(LogN)
   end;
 
+  function NextRandomQWord: QWord; inline;
+
 implementation
 {$B-}{$COPERATORS ON}
+
+function NextRandomQWord: QWord;
+begin
+  Result := SmNextRandom;
+end;
 
 { TGLiteTreap }
 
@@ -527,7 +534,7 @@ begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FKey := aKey;
-  Result^.FPrio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.FPrio := SizeUInt(NextRandomQWord);
 end;
 
 class function TGLiteTreap.CopyTree(aRoot: PNode): PNode;
@@ -814,7 +821,7 @@ begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FKey := aKey;
-  Result^.FPrio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.FPrio := SizeUInt(NextRandomQWord);
   Result^.FSize := 1;
 end;
 
@@ -1143,7 +1150,7 @@ begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.Key := aKey;
-  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.Prio := SizeUInt(NextRandomQWord);
   Result^.Size := 1;
   Result^.CacheVal := aValue;
   Result^.Value := aValue;
@@ -1729,7 +1736,7 @@ class function TGLiteImplicitTreap.NewNode(const aValue: T): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
-  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.Prio := SizeUInt(NextRandomQWord);
   Result^.Size := 1;
   Result^.Value := aValue;
 end;
@@ -2064,7 +2071,7 @@ class function TGLiteImplSegmentTreap.NewNode(const aValue: T): PNode;
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
-  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.Prio := SizeUInt(NextRandomQWord);
   Result^.Size := 1;
   Result^.CacheVal := aValue;
   Result^.Value := aValue;
@@ -2544,7 +2551,7 @@ begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FSize := 1;
-  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.Prio := SizeUInt(NextRandomQWord);
   Result^.AddVal := TMonoid.ZeroConst;
   Result^.CacheVal := aValue;
   Result^.Value := aValue;
