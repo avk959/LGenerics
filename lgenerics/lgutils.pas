@@ -975,9 +975,6 @@ type
   end;
 {$POP}
 
-var
-  BoolRandSeed: DWord = 0;
-
 const
 {$IF DEFINED(CPU64)}
   INT_SIZE_LOG  = 6;
@@ -1003,8 +1000,12 @@ const
   { returns the product L * R if there was no overflow during the multiplication,
     otherwise returns High(SizeInt)}
   function  MulSizeInt(L, R: SizeInt): SizeInt; inline;
-  function  NextRandomBoolean: Boolean; inline;
+
+var
+  BoolRandSeed: DWord = 0;
   procedure RandomizeBoolean;
+  function  NextRandomBoolean: Boolean; inline;
+
   { Bob Jenkins small noncryptographic PRNG
     http://www.burtleburtle.net/bob/rand/smallprng.html }
   procedure BJSetSeed(aSeed: DWord);
@@ -1013,6 +1014,12 @@ const
   procedure BJRandomize64;
   function  BJNextRandom: DWord;
   function  BJNextRandom64: QWord;
+
+  {Splitmix64 PRNG}
+var
+  SmRandSeed: QWord = 0;
+  procedure SmRandomize;
+  function  SmNextRandom: QWord; inline;
 
 type
   {$DEFINE USE_TGSET_INITIALIZE}
@@ -1241,15 +1248,15 @@ begin
     exit(High(SizeInt));
 end;
 
+procedure RandomizeBoolean;
+begin
+  BoolRandSeed := DWord(GetTickCount64);
+end;
+
 function NextRandomBoolean: Boolean;
 begin
   BoolRandSeed := BoolRandSeed * DWord(1103515245) + DWord(12345);
   Result := Odd(BoolRandSeed shr 16);
-end;
-
-procedure RandomizeBoolean;
-begin
-  BoolRandSeed := DWord(GetTickCount64);
 end;
 
 var
@@ -1334,6 +1341,21 @@ begin
   s64 := e + p64;
   Result := s64;
 end;
+
+procedure SmRandomize;
+begin
+  SmRandSeed := GetTickCount64;
+end;
+
+function SmNextRandom: QWord;
+begin
+  Result := SmRandSeed + QWord($9e3779b97f4a7c15);
+  SmRandSeed := Result;
+  Result := (Result xor (Result shr 30)) * QWord($bf58476d1ce4e5b9);
+  Result := (Result xor (Result shr 27)) * QWord($94d049bb133111eb);
+  Result := Result xor (Result shr 31);
+end;
+
 {$POP}
 
 { TGOptional }
