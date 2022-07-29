@@ -160,7 +160,7 @@ end;
 begin
   Solver := {%H-}Ref;
   Solver.Solve;
-  Writeln('Press any key to exit');
+  Writeln('Press Enter to exit');
   Readln;
 end.
 
