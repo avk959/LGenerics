@@ -61,7 +61,7 @@ type
 
     procedure AppendToEmpty;
     procedure Append;
-    procedure Replace;
+    procedure CopyFrom;
 
     procedure MergeOfBothEmpty;
     procedure MergeOfDstEmptySrc7;
@@ -422,27 +422,28 @@ begin
     AssertTrue(a[I] = I);
 end;
 
-procedure TArrayHelpUtilTest.Replace;
+procedure TArrayHelpUtilTest.CopyFrom;
+  function Eq(const L, R: Integer): Boolean; begin Eq := L = R end;
 var
   a, b: TIntArray;
   I, cnt: Integer;
 begin
   a := nil;
   b := TIntArray.Create(0,1,2,3,4,5);
-  cnt := TIntHelper.ReplaceWith(a, b);
+  cnt := TIntHelper.CopyFrom(b, a);
   AssertTrue(a = nil);
   AssertTrue(cnt = 0);
 
   a := TIntArray.Create(0,1,2,3,4,5);
   b := nil;
-  TIntHelper.ReplaceWith(a, b);
+  TIntHelper.CopyFrom(b, a);
   AssertTrue(Length(a) = 6);
   for I := 0 to High(a) do
     AssertTrue(a[I] = I);
   AssertTrue(cnt = 0);
 
   b := [6, 7, 8];
-  cnt := TIntHelper.ReplaceWith(a[0..3], b);
+  cnt := TIntHelper.CopyFrom(b, a[0..3]);
   AssertTrue(Length(a) = 6);
   AssertTrue(cnt = 3);
   for I := 0 to High(b) do
@@ -451,10 +452,26 @@ begin
     AssertTrue(a[I] = I);
 
   b := [0,1,2,8,9];
-  cnt := TIntHelper.ReplaceWith(a[0..2], b);
+  cnt := TIntHelper.CopyFrom(b[2..4], a[0..2]);
   AssertTrue(Length(a) = 6);
   AssertTrue(cnt = 3);
-  for I := 0 to High(a) do
+  AssertTrue(TIntHelper.Same(b[2..4], a[0..2], @Eq));
+  for I := 3 to High(a) do
+    AssertTrue(a[I] = I);
+
+  cnt := TIntHelper.CopyFrom(a[4..6], a[0..2]);
+  AssertTrue(Length(a) = 6);
+  AssertTrue(cnt = 3);
+  AssertTrue(TIntHelper.Same(a[4..6], a[0..2], @Eq));
+  for I := 3 to High(a) do
+    AssertTrue(a[I] = I);
+
+  a := TIntArray.Create(0,1,2,3,4,5);
+  cnt := TIntHelper.CopyFrom(a[0..2], a[4..6]);
+  AssertTrue(Length(a) = 6);
+  AssertTrue(cnt = 3);
+  AssertTrue(TIntHelper.Same(a[4..6], a[0..2], @Eq));
+  for I := 0 to 3 do
     AssertTrue(a[I] = I);
 end;
 
