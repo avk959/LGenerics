@@ -154,9 +154,9 @@ type
   { returns resized array }
     class function  Resize(var A: TArray; aNewSize: SizeInt): TArray; static; inline;
     class function  Append(var A: TArray; const aValue: T): SizeInt; static;
-  { replaces Min(Length(A), Length(B)) elements from A with elements from B;
-    returns the number of replaced elements }
-    class function  ReplaceWith(var A: array of T; const B: array of T): SizeInt; static;
+  { copies with replacement Min(Length(aSource), Length(aTarget)) elements from aSource to
+    aTarget; returns the number of copied elements }
+    class function  CopyFrom(const aSource: array of T; var aTarget: array of T): SizeInt; static;
   { if aSrc <> aDst appends aSrc to aDst, sets aSrc to nil and returns count of merged elements,
     otherwise returns 0}
     class function  Merge(var aDst, aSrc: TArray): SizeInt; static;
@@ -1741,11 +1741,11 @@ begin
   A[Result] := aValue;
 end;
 
-class function TGArrayHelpUtil.ReplaceWith(var A: array of T; const B: array of T): SizeInt;
+class function TGArrayHelpUtil.CopyFrom(const aSource: array of T; var aTarget: array of T): SizeInt;
 begin
-  Result := Math.Min(System.Length(A), System.Length(B));
+  Result := Math.Min(System.Length(aSource), System.Length(aTarget));
   if Result > 0 then
-    CopyItems(@A[0], @B[0], Result);
+    CopyItems(@aSource[0], @aTarget[0], Result);
 end;
 
 class function TGArrayHelpUtil.Merge(var aDst, aSrc: TArray): SizeInt;
