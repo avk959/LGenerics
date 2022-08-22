@@ -6822,9 +6822,10 @@ var
   LzCount: Integer;
   Prod: TOWord;
 begin
+{$IFDEF CPU64}
   if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= 9007199254740991) then
     begin
-      aValue := aMantissa;
+      aValue := Double(aMantissa);
       if aPow10 < 0 then
         aValue /= TEN_POWER[-aPow10]
       else
@@ -6833,7 +6834,7 @@ begin
         PQWord(@aValue)^ := QWord(aValue) or QWord(1) shl 63;
       exit(True);
     end;
-
+{$ENDIF CPU64}
   if aMantissa = 0 then
     begin
       if aNeg then
@@ -6889,8 +6890,12 @@ function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
 begin
-  Val(p, aValue, Code);
-  Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
+  try
+    Val(p, aValue, Code);
+    Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
+  except
+    Result := False;
+  end;
 end;
 
 { TryPChar2DoubleFast is a relaxed parser, it expects a valid null-terminated
@@ -6991,8 +6996,18 @@ function TryPChar2DblFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
 begin
-  Val(p, aValue, Code);
-  Result := Code = 0;
+  try
+    Val(p, aValue, Code);
+    Result := Code = 0;
+  except
+    on e: EOverflow do  //todo: ???
+      begin
+        PQWord(@aValue)^ := INF_EXP;
+        Result := True;
+      end;
+    on e: Exception do
+      Result := False;
+  end;
 end;
 
 { TryPChar2Double }
