@@ -6941,7 +6941,7 @@ begin
           Man := Man * 10 + Digits[p^];
           Inc(p);
         end;
-      Pow10 := SizeInt(pTemp - p);
+      Pow10 := -Int64(p - pTemp);
       DigCount := p - pDigStart - 1;
     end
   else
@@ -7045,7 +7045,7 @@ begin
           Man := Man * 10 + Digits[p^];
           Inc(p);
         end;
-      Pow10 := SizeInt(pTemp - p);
+      Pow10 := -Int64(p - pTemp);
       DigCount := p - pDigStart - 1;
     end
   else
