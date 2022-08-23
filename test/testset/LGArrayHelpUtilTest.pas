@@ -62,6 +62,7 @@ type
     procedure AppendToEmpty;
     procedure Append;
     procedure CopyFrom;
+    procedure CopyFromStatic;
 
     procedure MergeOfBothEmpty;
     procedure MergeOfDstEmptySrc7;
@@ -459,20 +460,44 @@ begin
   for I := 3 to High(a) do
     AssertTrue(a[I] = I);
 
-  cnt := TIntHelper.CopyFrom(a[4..6], a[0..2]);
+  cnt := TIntHelper.CopyFrom(a[3..5], a[0..2]);
   AssertTrue(Length(a) = 6);
   AssertTrue(cnt = 3);
-  AssertTrue(TIntHelper.Same(a[4..6], a[0..2], @Eq));
+  AssertTrue(TIntHelper.Same(a[3..5], a[0..2], @Eq));
   for I := 3 to High(a) do
     AssertTrue(a[I] = I);
 
-  a := TIntArray.Create(0,1,2,3,4,5);
-  cnt := TIntHelper.CopyFrom(a[0..2], a[4..6]);
+  a := [0,1,2,3,4,5];
+  cnt := TIntHelper.CopyFrom(a[0..2], a[1..3]);
   AssertTrue(Length(a) = 6);
   AssertTrue(cnt = 3);
-  AssertTrue(TIntHelper.Same(a[4..6], a[0..2], @Eq));
-  for I := 0 to 3 do
+  AssertTrue(a[0] = 0);
+  for I := 1 to 3 do
+    AssertTrue(a[I] = Pred(I));
+  for I := 4 to 5 do
     AssertTrue(a[I] = I);
+end;
+
+procedure TArrayHelpUtilTest.CopyFromStatic;
+type
+  TArray = array[1..10] of string;
+var
+  a: TArray;
+  I: Integer;
+begin
+  for I := Low(a) to High(a) do
+    a[I] := I.ToString;
+  AssertTrue(TStrHelper.CopyFrom(a[Succ(Low(a))..High(a)], a) = Pred(Length(a)));
+  for I := Low(a) to Pred(High(a)) do
+    AssertTrue(a[I] = Succ(I).ToString);
+  AssertTrue(a[High(a)] = High(a).ToString);
+
+  for I := Low(a) to High(a) do
+    a[I] := I.ToString;
+  AssertTrue(TStrHelper.CopyFrom(a, a[Succ(Low(a))..High(a)]) = Pred(Length(a)));
+  for I := Succ(Low(a)) to High(a) do
+    AssertTrue(a[I] = Pred(I).ToString);
+  AssertTrue(a[Low(a)] = Low(a).ToString);
 end;
 
 procedure TArrayHelpUtilTest.MergeOfBothEmpty;
