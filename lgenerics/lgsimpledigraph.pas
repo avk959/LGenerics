@@ -1751,6 +1751,7 @@ function TGSimpleDigraph.TopoSort(out a: TIntArray): Boolean;
 var
   Stack: TSimpleStack;
   PreOrd: TIntArray;
+  InStack: TBoolVector;
   AdjEnums: TAdjEnumArray;
   PreCounter, PostCounter, I, Curr, Next: SizeInt;
 begin
@@ -1758,6 +1759,7 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   a := CreateIntArray;
   PreOrd := CreateIntArray;
+  InStack.Capacity := VertexCount;
   PreCounter := 0;
   PostCounter := Pred(VertexCount);
   for I := 0 to Pred(VertexCount) do
@@ -1766,6 +1768,7 @@ begin
         PreOrd[I] := PreCounter;
         Inc(PreCounter);
         Stack.Push(I);
+        InStack.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
@@ -1775,9 +1778,10 @@ begin
                   PreOrd[Next] := PreCounter;
                   Inc(PreCounter);
                   Stack.Push(Next);
+                  InStack.UncBits[Next] := True;
                 end
               else
-                if (PreOrd[Curr] >= PreOrd[Next]) and (a[Next] = NULL_INDEX) then
+                if (PreOrd[Curr] >= PreOrd[Next]) and InStack[Next] then
                   begin
                     a := nil;
                     exit(False);
@@ -1785,7 +1789,9 @@ begin
             end
           else
             begin
-              a[PostCounter] := Stack.Pop;
+              Next := Stack.Pop;
+              a[PostCounter] := Next;
+              InStack[Next] := False;
               Dec(PostCounter);
             end;
       end;
