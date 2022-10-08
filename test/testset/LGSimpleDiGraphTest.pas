@@ -1885,6 +1885,16 @@ begin
   AssertTrue(g.IsTopoSorted(Sorted));
   AssertTrue(g.TopologicalSort(Sorted, soDesc));
   AssertTrue(g.IsTopoSorted(Sorted, soDesc));
+  g.AddEdge(4, 12);
+  AssertTrue(g.TopologicalSort(Sorted));
+  AssertTrue(g.IsTopoSorted(Sorted));
+  AssertTrue(g.TopologicalSort(Sorted, soDesc));
+  AssertTrue(g.IsTopoSorted(Sorted, soDesc));
+  g.AddEdge(4, 5);
+  AssertTrue(g.TopologicalSort(Sorted));
+  AssertTrue(g.IsTopoSorted(Sorted));
+  AssertTrue(g.TopologicalSort(Sorted, soDesc));
+  AssertTrue(g.IsTopoSorted(Sorted, soDesc));
   g.AddEdge(4, 0);
   AssertFalse(g.TopologicalSort(Sorted));
 end;
