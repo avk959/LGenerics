@@ -1351,33 +1351,31 @@ function TGSimpleDigraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boole
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  InStack: TBoolVector;
-  PreOrd, Parents: TIntArray;
-  Counter, Next: SizeInt;
+  Visited, InStack: TBoolVector;
+  Parents: TIntArray;
+  Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
-  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   InStack.Capacity := VertexCount;
-  PreOrd[aRoot] := 0;
-  Counter := 1;
+  Visited.Capacity := VertexCount;
   Stack.Push(aRoot);
   InStack.UncBits[aRoot] := True;
+  Visited.UncBits[aRoot] := True;
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
         Next := AdjEnums[aRoot].Current;
-        if PreOrd[Next] = NULL_INDEX then
+        if not Visited.UncBits[Next] then
           begin
             Parents[Next] := aRoot;
-            PreOrd[Next] := Counter;
             InStack.UncBits[Next] := True;
-            Inc(Counter);
+            Visited.UncBits[Next] := True;
             Stack.Push(Next);
           end
         else
-          if (PreOrd[aRoot] >= PreOrd[Next]) and InStack.UncBits[Next] then
+          if InStack.UncBits[Next] then
             begin
               aCycle := TreeExtractCycle(Parents, Next, aRoot);
               exit(True);
@@ -1392,35 +1390,31 @@ function TGSimpleDigraph.CycleExists: Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  InStack: TBoolVector;
-  PreOrd: TIntArray;
-  Counter, I, Curr, Next: SizeInt;
+  Visited, InStack: TBoolVector;
+  I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
-  PreOrd := CreateIntArray;
   InStack.Capacity := VertexCount;
-  Counter := 0;
+  Visited.Capacity := VertexCount;
   for I := 0 to Pred(VertexCount) do
-    if PreOrd[I] = NULL_INDEX then
+    if not Visited.UncBits[I] then
       begin
-        PreOrd[I] := Counter;
-        Inc(Counter);
         Stack.Push(I);
+        Visited.UncBits[I] := True;
         InStack.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if PreOrd[Next] = NULL_INDEX then
+              if not Visited.UncBits[Next] then
                 begin
-                  PreOrd[Next] := Counter;
+                  Visited.UncBits[Next] := True;
                   InStack.UncBits[Next] := True;
-                  Inc(Counter);
                   Stack.Push(Next);
                 end
               else
-                if (PreOrd[Curr] >= PreOrd[Next]) and InStack.UncBits[Next] then
+                if InStack.UncBits[Next] then
                   exit(True);
             end
           else
@@ -1750,38 +1744,34 @@ end;
 function TGSimpleDigraph.TopoSort(out a: TIntArray): Boolean;
 var
   Stack: TSimpleStack;
-  PreOrd: TIntArray;
-  InStack: TBoolVector;
+  Visited, InStack: TBoolVector;
   AdjEnums: TAdjEnumArray;
-  PreCounter, PostCounter, I, Curr, Next: SizeInt;
+  Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   a := CreateIntArray;
-  PreOrd := CreateIntArray;
   InStack.Capacity := VertexCount;
-  PreCounter := 0;
-  PostCounter := Pred(VertexCount);
+  Visited.Capacity := VertexCount;
+  Counter := Pred(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    if PreOrd[I] = NULL_INDEX then
+    if not Visited.UncBits[I] then
       begin
-        PreOrd[I] := PreCounter;
-        Inc(PreCounter);
         Stack.Push(I);
         InStack.UncBits[I] := True;
+        Visited.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if PreOrd[Next] = NULL_INDEX then
+              if not Visited.UncBits[Next] then
                 begin
-                  PreOrd[Next] := PreCounter;
-                  Inc(PreCounter);
                   Stack.Push(Next);
                   InStack.UncBits[Next] := True;
+                  Visited.UncBits[Next] := True;
                 end
               else
-                if (PreOrd[Curr] >= PreOrd[Next]) and InStack[Next] then
+                if InStack[Next] then
                   begin
                     a := nil;
                     exit(False);
@@ -1790,9 +1780,9 @@ begin
           else
             begin
               Next := Stack.Pop;
-              a[PostCounter] := Next;
+              a[Counter] := Next;
               InStack[Next] := False;
-              Dec(PostCounter);
+              Dec(Counter);
             end;
       end;
   Result := True;
