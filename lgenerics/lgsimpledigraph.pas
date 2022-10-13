@@ -361,7 +361,7 @@ type
     soDesc - on the contrary, from right to left }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
   { returns True and array of vertex indices in topological order in aSorted,
-    if a graph is acyclic, False and nil otherwise;
+    if a graph is acyclic, False and first found cycle otherwise;
     sort order soAsc implies that all arcs are directed from left to right,
     soDesc - from right to left }
     function  TopologicalSort(out aSorted: TIntArray; aOrder: TSortOrder = soAsc): Boolean;
@@ -1745,12 +1745,14 @@ function TGSimpleDigraph.TopoSort(out a: TIntArray): Boolean;
 var
   Stack: TSimpleStack;
   Visited, InStack: TBoolVector;
+  Parents: TIntArray;
   AdjEnums: TAdjEnumArray;
   Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
-  a := CreateIntArray;
+  a.Length := VertexCount;
+  Parents := CreateIntArray;
   InStack.Capacity := VertexCount;
   Visited.Capacity := VertexCount;
   Counter := Pred(VertexCount);
@@ -1767,13 +1769,14 @@ begin
               if not Visited.UncBits[Next] then
                 begin
                   Stack.Push(Next);
+                  Parents[Next] := Curr;
                   InStack.UncBits[Next] := True;
                   Visited.UncBits[Next] := True;
                 end
               else
                 if InStack[Next] then
                   begin
-                    a := nil;
+                    a := TreeExtractCycle(Parents, Next, Curr);
                     exit(False);
                   end;
             end
