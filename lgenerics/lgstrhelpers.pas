@@ -210,8 +210,6 @@ type
     FBcShift: array[Byte] of Integer; //bad character shifts
     FGsShift: array of Integer;       //good suffix shifts
     FNeedle: rawbytestring;
-    procedure FillBc;
-    procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -289,7 +287,6 @@ type
   var
     FBcShift: array[Byte] of Integer; //bad character shifts
     FNeedle: rawbytestring;
-    procedure FillBc;
     function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
   public
@@ -365,8 +362,6 @@ type
     procedure FillMap;
     procedure FillMap(aMap: TCaseMapFun);
     procedure FillMap(const aTable: TCaseMapTable);
-    procedure FillBc;
-    procedure FillGs;
     function  DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  FindNext(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
     function  Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
@@ -3069,50 +3064,49 @@ begin
   Result.FMatcher := FMatcher;
 end;
 
-{ TBmSearch }
+type
+  TBcTableType = array[Byte] of Integer;
 
-procedure TBmSearch.FillBc;
+procedure FillBcTable(pNeedle: PByte; aLen: Integer; var aTable: TBcTableType);
 var
-  I, Len: Integer;
-  p: PByte absolute FNeedle;
+  I: Integer;
 begin
-  Len := System.Length(FNeedle);
-  specialize TGArrayHelpUtil<Integer>.Fill(FBcShift, Len);
-  for I := 0 to Len - 2 do
-    FBcShift[p[I]] := Pred(Len - I);
+  specialize TGArrayHelpUtil<Integer>.Fill(aTable, aLen);
+  for I := 0 to aLen - 2 do
+    aTable[pNeedle[I]] := Pred(aLen - I);
 end;
 
-procedure TBmSearch.FillGs;
+procedure FillGsTable(pNeedle: PByte; aLen: Integer; out aTable: specialize TGArray<Integer>);
 var
-  I, J, LastPrefix, Len: Integer;
+  I, J, LastPrefix: Integer;
   IsPrefix: Boolean;
-  p: PByte absolute FNeedle;
 begin
-  Len := System.Length(FNeedle);
-  SetLength(FGsShift, Len);
-  LastPrefix := Pred(Len);
-  for I := Pred(Len) downto 0 do
+  SetLength(aTable, aLen);
+  LastPrefix := Pred(aLen);
+  for I := Pred(aLen) downto 0 do
     begin
       IsPrefix := True;
-      for J := 0 to Len - I - 2 do
-        if (p[J] <> p[J + Succ(I)]) then
+      for J := 0 to aLen - I - 2 do
+        if (pNeedle[J] <> pNeedle[J + Succ(I)]) then
           begin
             IsPrefix := False;
             break;
           end;
       if IsPrefix then
         LastPrefix := Succ(I);
-      FGsShift[I] := LastPrefix + Len - Succ(I);
+      aTable[I] := LastPrefix + aLen - Succ(I);
     end;
-  for I := 0 to Len - 2 do
+  for I := 0 to aLen - 2 do
     begin
       J := 0;
-      while (p[I - J] = p[Pred(Len - J)]) and (J < I) do
+      while (pNeedle[I - J] = pNeedle[Pred(aLen - J)]) and (J < I) do
         Inc(J);
-      if p[I - J] <> p[Pred(Len - J)] then
-        FGsShift[Pred(Len - J)] := Pred(Len + J - I);
+      if pNeedle[I - J] <> pNeedle[Pred(aLen - J)] then
+        aTable[Pred(aLen - J)] := Pred(aLen + J - I);
     end;
 end;
+
+{ TBmSearch }
 
 function TBmSearch.DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
 var
@@ -3158,9 +3152,9 @@ begin
   FGsShift := nil;
   if aPattern <> '' then
     begin
-      FNeedle := System.Copy(aPattern, 1, System.Length(aPattern));
-      FillBc;
-      FillGs;
+      FNeedle := aPattern;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
+      FillGsTable(Pointer(FNeedle), System.Length(FNeedle), FGsShift);
     end
   else
     FNeedle := '';
@@ -3173,8 +3167,8 @@ begin
   if System.Length(aPattern) <> 0 then
     begin
       System.Move(aPattern[0], Pointer(FNeedle)^, System.Length(aPattern));
-      FillBc;
-      FillGs;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
+      FillGsTable(Pointer(FNeedle), System.Length(FNeedle), FGsShift);
     end;
 end;
 
@@ -3327,17 +3321,6 @@ end;
 
 { TBmhrSearch }
 
-procedure TBmhrSearch.FillBc;
-var
-  I, Len: Integer;
-  p: PByte absolute FNeedle;
-begin
-  Len := System.Length(FNeedle);
-  specialize TGArrayHelpUtil<Integer>.Fill(FBcShift, Len);
-  for I := 0 to Len - 2 do
-    FBcShift[p[I]] := Pred(Len - I);
-end;
-
 function TBmhrSearch.Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
 var
   NeedLast, J: Integer;
@@ -3395,8 +3378,8 @@ constructor TBmhrSearch.Create(const aPattern: rawbytestring);
 begin
   if aPattern <> '' then
     begin
-      FNeedle := System.Copy(aPattern, 1, System.Length(aPattern));
-      FillBc;
+      FNeedle := aPattern;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
     end
   else
     FNeedle := '';
@@ -3408,7 +3391,7 @@ begin
   if System.Length(aPattern) <> 0 then
     begin
       System.Move(aPattern[0], Pointer(FNeedle)^, System.Length(aPattern));
-      FillBc;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
     end;
 end;
 
@@ -3549,49 +3532,6 @@ begin
   FCaseMap := aTable;
 end;
 
-procedure TBmSearchCI.FillBc;
-var
-  I, Len: Integer;
-  p: PByte absolute FNeedle;
-begin
-  Len := System.Length(FNeedle);
-  specialize TGArrayHelpUtil<Integer>.Fill(FBcShift, Len);
-  for I := 0 to Len - 2 do
-    FBcShift[p[I]] := Pred(Len - I);
-end;
-
-procedure TBmSearchCI.FillGs;
-var
-  I, J, LastPrefix, Len: Integer;
-  IsPrefix: Boolean;
-  p: PByte absolute FNeedle;
-begin
-  Len := System.Length(FNeedle);
-  SetLength(FGsShift, Len);
-  LastPrefix := Pred(Len);
-  for I := Pred(Len) downto 0 do
-    begin
-      IsPrefix := True;
-      for J := 0 to Len - I - 2 do
-        if (p[J] <> p[J + Succ(I)]) then
-          begin
-            IsPrefix := False;
-            break;
-          end;
-      if IsPrefix then
-        LastPrefix := Succ(I);
-      FGsShift[I] := LastPrefix + Len - Succ(I);
-    end;
-  for I := 0 to Len - 2 do
-    begin
-      J := 0;
-      while (p[I - J] = p[Pred(Len - J)]) and (J < I) do
-        Inc(J);
-      if p[I - J] <> p[Pred(Len - J)] then
-        FGsShift[Pred(Len - J)] := Pred(Len + J - I);
-    end;
-end;
-
 function TBmSearchCI.DoFind(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
 var
   J, NeedLast: SizeInt;
@@ -3645,8 +3585,8 @@ begin
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
         p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
-      FillBc;
-      FillGs;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
+      FillGsTable(Pointer(FNeedle), System.Length(FNeedle), FGsShift);
     end;
 end;
 
@@ -3664,8 +3604,8 @@ begin
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
         p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
-      FillBc;
-      FillGs;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
+      FillGsTable(Pointer(FNeedle), System.Length(FNeedle), FGsShift);
     end;
 end;
 
@@ -3683,8 +3623,8 @@ begin
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
         p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
-      FillBc;
-      FillGs;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
+      FillGsTable(Pointer(FNeedle), System.Length(FNeedle), FGsShift);
     end;
 end;
 
@@ -3701,8 +3641,8 @@ begin
       p := PByte(FNeedle);
       for I := 1 to System.Length(aPattern) do
         p[Pred(I)] := FCaseMap[Ord(aPattern[I])];
-      FillBc;
-      FillGs;
+      FillBcTable(Pointer(FNeedle), System.Length(FNeedle), FBcShift);
+      FillGsTable(Pointer(FNeedle), System.Length(FNeedle), FGsShift);
     end;
 end;
 
