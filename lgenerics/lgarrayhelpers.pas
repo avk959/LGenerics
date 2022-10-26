@@ -1776,13 +1776,14 @@ begin
   Result := nil;
   J := 0;
   for I := 0 to System.High(A) do
+    J += System.Length(A[I]);
+  System.SetLength(Result, J);
+  J := 0;
+  for I := 0 to System.High(A) do
     begin
-      if System.Length(Result) <= J + System.Length(A[I]) then
-        System.SetLength(Result, lgUtils.RoundUpTwoPower(J + System.Length(A[I])));
       CopyItems(Pointer(A[I]), @Result[J], System.Length(A[I]));
       J += System.Length(A[I]);
     end;
-  System.SetLength(Result, J);
 end;
 
 class function TGArrayHelpUtil.Split(var A: TArray; aIndex: SizeInt): TArray;
@@ -4098,7 +4099,7 @@ var
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
-  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  System.SetLength(Parents, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
     if TCmpRel.Less(A[I], A[TailIdx[0]]) then
@@ -6732,7 +6733,7 @@ var
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
-  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  System.SetLength(Parents, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
     if A[I] < A[TailIdx[0]] then
@@ -8704,7 +8705,7 @@ var
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
-  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  System.SetLength(Parents, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
     if c(A[I], A[TailIdx[0]]) then
@@ -10679,7 +10680,7 @@ var
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
-  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  System.SetLength(Parents, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
     if c(A[I], A[TailIdx[0]]) then
@@ -12654,7 +12655,7 @@ var
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
-  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  System.SetLength(Parents, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
     if c(A[I], A[TailIdx[0]]) then
@@ -14272,7 +14273,7 @@ var
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
-  Parents := TSizeIntHelper.CreateAndFill(NULL_INDEX, System.Length(A));
+  System.SetLength(Parents, System.Length(A));
   Len := 1;
   for I := 1 to System.High(A) do
     if A[I] < A[TailIdx[0]] then
