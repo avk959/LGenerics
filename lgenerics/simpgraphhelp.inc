@@ -1057,7 +1057,7 @@ end;
 
 { TGSimpleGraph.TGreedyColorRlf.TNode }
 
-class operator TGSimpleGraph.TGreedyColorRlf.TNode.<(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColorRlf.TNode.<(const L, R: TNode): Boolean;
 begin
   if L.WDegree <> R.WDegree then
     Result := L.WDegree < R.WDegree

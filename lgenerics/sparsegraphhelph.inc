@@ -174,7 +174,7 @@ type
   TIntNode = record
     Index,
     Data: SizeInt;
-    class operator < (constref L, R: TIntNode): Boolean; inline;
+    class operator < (const L, R: TIntNode): Boolean; inline;
     constructor Create(aIndex, aData: SizeInt);
   end;
 

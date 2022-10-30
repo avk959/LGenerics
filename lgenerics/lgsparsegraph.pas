@@ -4214,7 +4214,7 @@ end;
 
 { TIntNode }
 
-class operator TIntNode.<(constref L, R: TIntNode): Boolean;
+class operator TIntNode.<(const L, R: TIntNode): Boolean;
 begin
   if L.Data = R.Data then
     Result := L.Index < R.Index
