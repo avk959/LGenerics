@@ -430,9 +430,9 @@ type
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  TryPeek(out aValue: T): Boolean; inline;
     function  TryPeekPtr(out aValue: PItem): Boolean; inline;
-    function  Dequeue: T; inline; noreturn;
-    function  Peek: T; inline; noreturn;
-    function  PeekPtr: PItem; inline; noreturn;
+    function  Dequeue: T; inline;
+    function  Peek: T; inline;
+    function  PeekPtr: PItem; inline;
     procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
     procedure Update(aHandle: SizeInt; const aNewValue: T); inline;
     function  GetItem(aHandle: SizeInt): T; inline;
@@ -477,9 +477,9 @@ type
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  TryPeek(out aValue: T): Boolean; inline;
     function  TryPeekPtr(out aValue: PItem): Boolean; inline;
-    function  Dequeue: T; inline; noreturn;
-    function  Peek: T; inline; noreturn;
-    function  PeekPtr: PItem; inline; noreturn;
+    function  Dequeue: T; inline;
+    function  Peek: T; inline;
+    function  PeekPtr: PItem; inline;
     procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
     procedure Update(aHandle: SizeInt; const aNewValue: T);
     procedure Remove(aHandle: SizeInt); inline;
@@ -524,9 +524,9 @@ type
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  TryPeek(out aValue: T): Boolean; inline;
     function  TryPeekPtr(out aValue: PItem): Boolean; inline;
-    function  Dequeue: T; inline; noreturn;
-    function  Peek: T; inline; noreturn;
-    function  PeekPtr: PItem; inline; noreturn;
+    function  Dequeue: T; inline;
+    function  Peek: T; inline;
+    function  PeekPtr: PItem; inline;
     procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
     procedure Update(aHandle: SizeInt; const aNewValue: T);
     function  GetItem(aHandle: SizeInt): T; inline;

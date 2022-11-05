@@ -5852,34 +5852,29 @@ end;
 
 function TGBinHeapMin.Dequeue: T;
 begin
-  if Count <> 0 then
-    begin
-      Dec(FCount);
-      Result := FHeap[0];
-      FHeap[0] := FHeap[Count];
-      FHandle2Index[FIndex2Handle[Count]] := 0;
-      FIndex2Handle[0] := FIndex2Handle[Count];
-      FHeap[Count] := Default(T);
-      SiftDown(0);
-    end
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Dec(FCount);
+  Result := FHeap[0];
+  FHeap[0] := FHeap[Count];
+  FHandle2Index[FIndex2Handle[Count]] := 0;
+  FIndex2Handle[0] := FIndex2Handle[Count];
+  FHeap[Count] := Default(T);
+  SiftDown(0);
 end;
 
 function TGBinHeapMin.Peek: T;
 begin
-  if Count <> 0 then
-    Result := FHeap[0]
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := FHeap[0];
 end;
 
 function TGBinHeapMin.PeekPtr: PItem;
 begin
-  if Count <> 0 then
-    Result := @FHeap[0]
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := @FHeap[0]
 end;
 
 procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; const aValue: T);
@@ -6083,26 +6078,23 @@ end;
 
 function TGPairHeapMin.Dequeue: T;
 begin
-  if Count <> 0 then
-    Result := DequeueItem
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := DequeueItem;
 end;
 
 function TGPairHeapMin.Peek: T;
 begin
-  if Count <> 0 then
-    Result := FRoot^.Data
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := FRoot^.Data;
 end;
 
 function TGPairHeapMin.PeekPtr: PItem;
 begin
-  if Count <> 0 then
-    Result := @FRoot^.Data
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := @FRoot^.Data;
 end;
 
 procedure TGPairHeapMin.Enqueue(aHandle: SizeInt; const aValue: T);
@@ -6286,26 +6278,23 @@ end;
 
 function TGPairHeapMax.Dequeue: T;
 begin
-  if Count <> 0 then
-    Result := DequeueItem
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := DequeueItem;
 end;
 
 function TGPairHeapMax.Peek: T;
 begin
-  if Count <> 0 then
-    Result := FRoot^.Data
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := FRoot^.Data;
 end;
 
 function TGPairHeapMax.PeekPtr: PItem;
 begin
-  if Count <> 0 then
-    Result := @FRoot^.Data
-  else
+  if Count = 0 then
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
+  Result := @FRoot^.Data;
 end;
 
 procedure TGPairHeapMax.Enqueue(aHandle: SizeInt; const aValue: T);
