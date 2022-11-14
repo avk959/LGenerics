@@ -615,6 +615,7 @@ begin
     for I := 0 to System.High(aValue) do
       with aValue[I] do
         begin
+          Ok := False;
           case Value.Kind of
             vkNull:   Ok := n.AddUniqNull(Key);
             vkBool:   Ok := n.AddUniq(Key, Boolean(Value));
