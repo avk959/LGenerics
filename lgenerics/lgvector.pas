@@ -422,6 +422,7 @@ type
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
     procedure SwapBits(var aVector: TBoolVector);
+    procedure CopyBits(const aVector: TBoolVector; aCount: SizeInt);
     function  All: Boolean;
   { returns the lowest index of the set bit, -1, if no bit is set }
     function  Bsf: SizeInt;
@@ -2442,6 +2443,24 @@ begin
   tmp := Pointer(FBits);
   Pointer(FBits) := Pointer(aVector.FBits);
   Pointer(aVector.FBits) := tmp;
+end;
+
+procedure TBoolVector.CopyBits(const aVector: TBoolVector; aCount: SizeInt);
+var
+  I, J: SizeInt;
+const
+  MASK = System.High(SizeUInt);
+  BIT_SIZE = BitSizeOf(SizeUInt);
+begin
+  if aCount > aVector.Capacity then aCount := aVector.Capacity; //todo: exception ???
+  if (aCount < 1) or (Pointer(FBits) = Pointer(aVector.FBits)) then exit;
+  EnsureCapacity(aCount);
+  J := aCount shr INT_SIZE_LOG;
+  for I := 0 to Pred(J) do
+    FBits[I] := aVector.FBits[I];
+  I := aCount and INT_SIZE_MASK;
+  if I <> 0 then
+    FBits[J] := FBits[J] and (MASK shl I) or aVector.FBits[J] and (MASK shr (BIT_SIZE - I));
 end;
 
 function TBoolVector.All: Boolean;
