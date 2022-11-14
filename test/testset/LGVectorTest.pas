@@ -287,6 +287,7 @@ type
     procedure IsEmpty;
     procedure NonEmpty;
     procedure SwapBits;
+    procedure CopyBits;
     procedure All;
     procedure Bsf;
     procedure Bsr;
@@ -2554,6 +2555,34 @@ begin
   v2.SwapBits(v1);
   AssertTrue(v1[31]);
   AssertTrue(v2[11]);
+end;
+
+procedure TBoolVectorTest.CopyBits;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.InitRange(124);
+  v1.CopyBits(v2{%H-}, 42);
+  AssertTrue(v1.PopCount = 124);
+  v2.EnsureCapacity(124);
+  v1.CopyBits(v2, 1);
+  AssertTrue(v1.PopCount = 123);
+  v1.CopyBits(v2, 42);
+  AssertTrue(v1.PopCount = 82);
+  v1.CopyBits(v2, 63);
+  AssertTrue(v1.PopCount = 61);
+  v1.CopyBits(v2, 64);
+  AssertTrue(v1.PopCount = 60);
+  v1.CopyBits(v2, 65);
+  AssertTrue(v1.PopCount = 59);
+  v1.CopyBits(v2, 123);
+  AssertTrue(v1.PopCount = 1);
+  v1.CopyBits(v2, 130);
+  AssertTrue(v1.PopCount = 0);
+  v1.Clear;
+  v2.InitRange(42);
+  v1.CopyBits(v2, 12);
+  AssertTrue(v1.PopCount = 12);
 end;
 
 procedure TBoolVectorTest.All;
