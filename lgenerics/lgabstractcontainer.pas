@@ -465,13 +465,6 @@ type
     property  InIteration: Boolean read GetInIteration;
   end;
 
-  TMapObjectOwns   = (moOwnsKeys, moOwnsValues);
-  TMapObjOwnership = set of TMapObjectOwns;
-
-  const
-    OWNS_BOTH = [moOwnsKeys, moOwnsValues];
-
-  type
   { TGAbstractMap: map abstract ancestor class  }
   generic TGAbstractMap<TKey, TValue> = class abstract(TSimpleIterable, specialize IGMap<TKey, TValue>,
     specialize IGReadOnlyMap<TKey, TValue>)
@@ -488,7 +481,7 @@ type
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     TEntryArray      = specialize TGArray<TEntry>;
     TKeyArray        = specialize TGArray<TKey>;
-    TKeyTest         = specialize TGTest<TKey>;
+    TKeyTest         = specialize TGTest<TKey>; ///////
     TOnKeyTest       = specialize TGOnTest<TKey>;
     TNestKeyTest     = specialize TGNestTest<TKey>;
     TKeyOptional     = specialize TGOptional<TKey>;

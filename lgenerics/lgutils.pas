@@ -697,6 +697,13 @@ type
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
+  TMapObjectOwns   = (moOwnsKeys, moOwnsValues);
+  TMapObjOwnership = set of TMapObjectOwns;
+
+const
+  OWNS_BOTH = [moOwnsKeys, moOwnsValues];
+
+type
   TGMultiSetEntry<T> = record
     Key: T;
     Count: SizeInt;
