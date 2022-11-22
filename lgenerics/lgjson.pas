@@ -903,8 +903,7 @@ type
     FValue: TJVariant;
     FReadMode,
     FCopyMode,
-    FSkipBom,
-    FFirstChunk: Boolean;
+    FSkipBom: Boolean;
     function  GetIndex: SizeInt; inline;
     function  GetStructKind: TStructKind; inline;
     function  GetParentKind: TStructKind; inline;
@@ -7893,9 +7892,8 @@ begin
       FReadState := rsEOF;
       exit(ReadState);
     end;
-  if FFirstChunk then
+  if ReadState = rsStart then
     begin
-      FFirstChunk := False;
       if SkipBom then
         case DetectBom(PByte(FBuffer), FByteCount) of
           bkNone: ;
@@ -8075,7 +8073,6 @@ begin
   FStackHigh := aMaxDepth;
   FSkipBom := aSkipBom;
   FReadMode := True;
-  FFirstChunk := True;
   FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FsbHelp := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FStack[0] := TLevel.Create(pmNone);
