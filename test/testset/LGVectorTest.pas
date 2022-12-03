@@ -46,6 +46,7 @@ type
     TStrArray      = specialize TGArray<string>;
     TIntEnumerable = specialize TGArrayCursor<Integer>;
     TIntHelper     = specialize TGComparableArrayHelper<Integer>;
+    TStrHelper     = specialize TGComparableArrayHelper<string>;
     TObjProc       = procedure of object;
 
     TTestObj = class
@@ -153,6 +154,9 @@ type
     procedure SplitInt_1;
     procedure SplitInt_2;
     procedure SplitStr;
+
+    procedure Merge;
+    procedure MergeStr;
 
     procedure InIteration;
     procedure IterationDone;
@@ -1253,6 +1257,48 @@ begin
     AssertTrue(v{%H-}.Instance[I] = 'string ' + I.ToString);
   for I := 0 to 11 do
     AssertTrue(e{%H-}.Instance[I] = 'string ' + (I + 9).ToString);
+end;
+
+procedure TGVectorTest.Merge;
+var
+  vs, vd: TAutoIntVector;
+const
+  a1: TIntArray = (1,2,3);
+  a2: TIntArray = (4,5,6);
+  Expect: TIntArray = (1,2,3,4,5,6);
+begin
+  AssertTrue(vd.Instance.Merge(vs.Instance) = 0);
+  AssertTrue(vd.Instance.IsEmpty);
+  AssertTrue(vd.Instance.AddAll(a1) = 3);
+  AssertTrue(vd.Instance.Merge(vs.Instance) = 0);
+  AssertTrue(vd.Instance.Count = 3);
+  AssertTrue(vs.Instance.AddAll(a2) = 3);
+  AssertTrue(vs.Instance.Count = 3);
+  AssertTrue(vd.Instance.Merge(vs.Instance) = 3);
+  AssertTrue(vd.Instance.Count = 6);
+  AssertTrue(vs.Instance.IsEmpty);
+  AssertTrue(TIntHelper.Same(Expect, vd.Instance.ToArray));
+end;
+
+procedure TGVectorTest.MergeStr;
+var
+  vs, vd: TAutoStrVector;
+const
+  a1: TStrArray = ('11','22','33');
+  a2: TStrArray = ('44','55','66');
+  Expect: TStrArray = ('11','22','33','44','55','66');
+begin
+  AssertTrue(vd.Instance.Merge(vs.Instance) = 0);
+  AssertTrue(vd.Instance.IsEmpty);
+  AssertTrue(vd.Instance.AddAll(a1) = 3);
+  AssertTrue(vd.Instance.Merge(vs.Instance) = 0);
+  AssertTrue(vd.Instance.Count = 3);
+  AssertTrue(vs.Instance.AddAll(a2) = 3);
+  AssertTrue(vs.Instance.Count = 3);
+  AssertTrue(vd.Instance.Merge(vs.Instance) = 3);
+  AssertTrue(vd.Instance.Count = 6);
+  AssertTrue(vs.Instance.IsEmpty);
+  AssertTrue(TStrHelper.Same(Expect, vd.Instance.ToArray));
 end;
 
 procedure TGVectorTest.InIteration;
