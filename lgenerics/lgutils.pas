@@ -1171,8 +1171,63 @@ type
 
   TSimOptions = set of TSimOption;
 
+  TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
+
+const
+  UTF16_BOM_LEN = 2;
+  UTF8_BOM_LEN  = 3;
+  UTF32_BOM_LEN = 4;
+{$PUSH}{$J-}
+  ENCODING_NAMES: array[TBomKind] of string = (
+    '','UTF-8', 'UTF-16LE', 'UTF-16BE', 'UTF-32LE', 'UTF-32BE');
+{$POP}
+
+  function DetectBom(aBuffer: PByte; aBufSize: SizeInt): TBomKind;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+
+function DetectBom(aBuffer: PByte; aBufSize: SizeInt): TBomKind;
+{$PUSH}{$J-}
+const
+  U16LE: array[0..1] of Byte = ($ff, $fe);
+  U16BE: array[0..1] of Byte = ($fe, $ff);
+  UTF8:  array[0..2] of Byte  =($ef, $bb, $bf);
+  U32LE: array[0..3] of Byte = ($ff, $fe, $00, $00);
+  U32BE: array[0..3] of Byte = ($00, $00, $fe, $ff);
+{$POP}
+  function IsUtf16LE(p: PByte): Boolean; inline;
+  begin
+    Result := (p[0] xor U16LE[0]) or (p[1] xor U16LE[1]) = 0;
+  end;
+  function IsUtf16BE(p: PByte): Boolean; inline;
+  begin
+    Result := (p[0] xor U16BE[0]) or (p[1] xor U16BE[1]) = 0;
+  end;
+  function IsUtf8(p: PByte): Boolean; inline;
+  begin
+    Result := (p[0] xor UTF8[0]) or (p[1] xor UTF8[1]) or (p[2] xor UTF8[2]) = 0;
+  end;
+  function IsUtf32LE(p: PByte): Boolean; inline;
+  begin
+    Result := (p[0] xor U32LE[0]) or (p[1] xor U32LE[1]) or (p[2] xor U32LE[2]) or (p[3] xor U32LE[3]) = 0;
+  end;
+  function IsUtf32BE(p: PByte): Boolean; inline;
+  begin
+    Result := (p[0] xor U32BE[0]) or (p[1] xor U32BE[1]) or (p[2] xor U32BE[2]) or (p[3] xor U32BE[3]) = 0;
+  end;
+begin
+  if aBufSize >= UTF16_BOM_LEN then
+    if IsUtf16LE(aBuffer) then exit(bkUtf16LE)
+    else
+      if IsUtf16BE(aBuffer) then exit(bkUtf16BE);
+  if (aBufSize >= UTF8_BOM_LEN) and IsUtf8(aBuffer) then exit(bkUtf8);
+  if (aBufSize >= UTF32_BOM_LEN) then
+    if IsUtf32LE(aBuffer) then exit(bkUtf32LE)
+    else
+      if IsUtf32BE(aBuffer) then exit(bkUtf32BE);
+  Result := bkNone;
+end;
 
 {$PUSH}{$Q-}{$R-}
 
