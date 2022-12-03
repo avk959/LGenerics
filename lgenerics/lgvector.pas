@@ -63,17 +63,17 @@ type
     function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
   { inserts aValue into position aIndex;
-    will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed);
     will raise ELGUpdateLock if instance in iteration}
     procedure Insert(aIndex: SizeInt; const aValue: T);
   { will return False if aIndex out of bounds or instance in iteration }
     function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
   { inserts all elements of array a into position aIndex and returns count of inserted elements;
-    will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed);
     will raise ELGUpdateLock if instance in iteration }
     function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
   { inserts all elements of e into position aIndex and returns count of inserted elements;
-    will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed);
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed);
     will raise ELGUpdateLock if instance in iteration}
     function  InsertAll(aIndex: SizeInt; e: IEnumerable): SizeInt;
   { extracts value from position aIndex;
@@ -103,6 +103,9 @@ type
     function  Split(aIndex: SizeInt): TGVector;
   { will return False if aIndex out of bounds or instance in iteration }
     function  TrySplit(aIndex: SizeInt; out aValue: TGVector): Boolean;
+  { if aSource <> Self, moves all elements of aVector to the end of its own list,
+    causing aSource to become empty; returns the number of moved elements }
+    function  Merge(aSource: TGVector; aThenFree: Boolean = False): SizeInt;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
     property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
   { does not checks aIndex range }
@@ -1294,6 +1297,24 @@ begin
   Result := not InIteration and IndexInRange(aIndex);
   if Result then
     aValue := DoSplit(aIndex);
+end;
+
+function TGVector.Merge(aSource: TGVector; aThenFree: Boolean): SizeInt;
+begin
+  Result := 0;
+  if aSource = Self then exit;
+  CheckInIteration;
+  if aSource.ElemCount > 0 then
+    begin
+      Result += aSource.ElemCount;
+      DoEnsureCapacity(ElemCount + Result);
+      System.Move(aSource.FItems[0], FItems[ElemCount], SizeOf(TItem)*Result);
+      if IsManagedType(TItem) then
+        System.FillChar(aSource.FItems[0], SizeOf(TItem)*Result, 0);
+      aSource.FCount := 0;
+      FCount += Result;
+      if aThenFree then aSource.Free;
+    end;
 end;
 
 { TGObjectVector }
