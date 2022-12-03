@@ -218,7 +218,7 @@ type
   type
     TStrBuilder = record
     private
-      FBuffer: array of AnsiChar;
+      FBuffer: specialize TGDynArray<AnsiChar>;
       FCount: SizeInt;
     public
       constructor Create(aCapacity: SizeInt);
@@ -1399,45 +1399,9 @@ const
   );
 {$POP}
 
-type
-  TBomKind = (bkNone, bkUtf8, bkUtf16, bkUtf32);
-
 const
-  UTF8_BOM_LEN = 3;
   INF_EXP      = QWord($7ff0000000000000);
   NUM_STATES   = Integer(1 shl ZE or 1 shl IR or 1 shl FS or 1 shl E3);
-
-function DetectBom(aBuf: PByte; aBufSize: SizeInt): TBomKind;
-{$PUSH}{$J-}
-const
-  U16LE: array[0..1] of Byte = ($FF, $FE);
-  U16BE: array[0..1] of Byte = ($FE, $FF);
-  UTF8:  array[0..2] of Byte  =($EF, $BB, $BF);
-  U32LE: array[0..3] of Byte = ($FF, $FE, $00, $00);
-  U32BE: array[0..3] of Byte = ($00, $00, $FE, $FF);
-{$POP}
-  function IsUtf16(p: PByte): Boolean;
-  begin
-    Result := ((p[0] xor U16LE[0]) or (p[1] xor U16LE[1]) = 0) or
-              ((p[0] xor U16BE[0]) or (p[1] xor U16BE[1]) = 0);
-  end;
-  function IsUtf8(p: PByte): Boolean;
-  begin
-    Result := (p[0] xor UTF8[0]) or (p[1] xor UTF8[1]) or (p[2] xor UTF8[2]) = 0;
-  end;
-  function IsUtf32(p: PByte): Boolean;
-  begin
-    Result := ((p[0] xor U32LE[0]) or (p[1] xor U32LE[1]) or
-               (p[2] xor U32LE[2]) or (p[3] xor U32LE[3]) = 0) or
-              ((p[0] xor U32BE[0]) or (p[1] xor U32BE[1]) or
-               (p[2] xor U32BE[2]) or (p[3] xor U32BE[3]) = 0);
-  end;
-begin
-  if (aBufSize >= 2) and IsUtf16(aBuf) then exit(bkUtf16);
-  if (aBufSize >= 3) and IsUtf8(aBuf) then exit(bkUtf8);
-  if (aBufSize >= 4) and IsUtf32(aBuf) then exit(bkUtf32);
-  Result := bkNone;
-end;
 
 {$PUSH}{$MACRO ON}
 {$DEFINE ValidateBufMacro :=
@@ -1668,16 +1632,16 @@ end;
 constructor TJsonNode.TStrBuilder.Create(aCapacity: SizeInt);
 begin
   if aCapacity > 0 then
-    System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aCapacity))
+    FBuffer.Length := lgUtils.RoundUpTwoPower(aCapacity)
   else
-    System.SetLength(FBuffer, DEFAULT_CONTAINER_CAPACITY);
+    FBuffer.Length := DEFAULT_CONTAINER_CAPACITY;
   FCount := 0;
 end;
 
 constructor TJsonNode.TStrBuilder.Create(const s: string);
 begin
-  System.SetLength(FBuffer, System.Length(s));
-  System.Move(Pointer(s)^, Pointer(FBuffer)^, System.Length(s));
+  FBuffer.Length := System.Length(s);
+  System.Move(Pointer(s)^, FBuffer.Ptr^, System.Length(s));
 end;
 
 function TJsonNode.TStrBuilder.IsEmpty: Boolean;
@@ -1697,8 +1661,8 @@ end;
 
 procedure TJsonNode.TStrBuilder.EnsureCapacity(aCapacity: SizeInt);
 begin
-  if aCapacity > System.Length(FBuffer) then
-    System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aCapacity));
+  if aCapacity > FBuffer.Length then
+    FBuffer.Length := lgUtils.RoundUpTwoPower(aCapacity);
 end;
 
 procedure TJsonNode.TStrBuilder.Append(c: AnsiChar);
@@ -1711,14 +1675,14 @@ end;
 procedure TJsonNode.TStrBuilder.Append(c: AnsiChar; aCount: SizeInt);
 begin
   EnsureCapacity(Count + aCount);
-  FillChar(FBuffer[Count], aCount, c);
+  FillChar(FBuffer.Ptr[Count], aCount, c);
   FCount += aCount;
 end;
 
 procedure TJsonNode.TStrBuilder.Append(const s: string);
 begin
   EnsureCapacity(Count + System.Length(s));
-  System.Move(Pointer(s)^, FBuffer[Count], System.Length(s));
+  System.Move(Pointer(s)^, FBuffer.Ptr[Count], System.Length(s));
   FCount += System.Length(s);
 end;
 
@@ -1756,13 +1720,13 @@ end;
 procedure TJsonNode.TStrBuilder.Append(const s: shortstring);
 begin
   EnsureCapacity(Count + System.Length(s));
-  System.Move(s[1], FBuffer[Count], System.Length(s));
+  System.Move(s[1], FBuffer.Ptr[Count], System.Length(s));
   FCount += System.Length(s);
 end;
 
 function TJsonNode.TStrBuilder.SaveToStream(aStream: TStream): SizeInt;
 begin
-  aStream.WriteBuffer(Pointer(FBuffer)^, Count);
+  aStream.WriteBuffer(FBuffer.Ptr^, Count);
   Result := Count;
   FCount := 0;
 end;
@@ -1770,7 +1734,7 @@ end;
 function TJsonNode.TStrBuilder.ToString: string;
 begin
   System.SetLength(Result, Count);
-  System.Move(Pointer(FBuffer)^, Pointer(Result)^, Count);
+  System.Move(FBuffer.Ptr^, Pointer(Result)^, Count);
   FCount := 0;
 end;
 
@@ -1870,7 +1834,7 @@ begin
           end;
         'u':
           begin
-            c4 := UxSeqToUtf8(PChar4(@FBuffer[I+2])^);
+            c4 := UxSeqToUtf8(PChar4(@FBuffer.Ptr[I+2])^);
             case c4[3] of
               #1:
                 begin
@@ -1906,7 +1870,7 @@ begin
   EnsureCapacity(Succ(Count));
   FBuffer[Count] := #0;
   FCount := 0;
-  Result := Pointer(FBuffer);
+  Result := FBuffer.Ptr;
 end;
 
 { TJsonPtr.TEnumerator }
