@@ -130,6 +130,8 @@ type
   { raises exception if resolving failed }
     function  Value: T;
     function  GetValue: TOptional;
+  { one-time function }
+    function  FatalException: Exception;
     property  State: TAsyncTaskState read GetState;
   end;
 
@@ -923,11 +925,17 @@ begin
 end;
 
 function TGFuture.Value: T;
+var
+  e: Exception;
 begin
   Resolve;
   case FTask.State of
-    atsFatal:
-      raise ELGFuture.Create(SEResultUnknownFatal);
+    atsFatal: begin
+        e := FatalException;
+        if e = nil then
+          e := ELGFuture.Create(SEResultUnknownFatal);
+        raise e;
+      end;
     atsCancelled:
       raise ELGFuture.Create(SEResultUnknownCancel);
   else
@@ -939,6 +947,11 @@ function TGFuture.GetValue: TOptional;
 begin
   if WaitFor < atsFatal then
     Result.Assign(FTask.Result);
+end;
+
+function TGFuture.FatalException: Exception;
+begin
+  Result := FTask.FatalException;
 end;
 
 { TGSpawn }
