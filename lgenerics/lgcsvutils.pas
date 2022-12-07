@@ -189,7 +189,7 @@ type
     function  SetCsvText(const aValue: string; const aMask: array of Boolean): TCsvDoc;
   { loads document from stream, aBufSize indicates the desired buffer size, if aBufSize
     is less than 1, the buffer size is set equal to the stream size; if aOwnsStream is set
-    to True, the CsvDoc is responsible for destroying source stream }
+    to True, the CsvDoc is responsible for destroying source stream; returns Self }
     function  LoadFromStream(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean): TCsvDoc;
   { loads only masked columns(i.e. aMask[Col]=True) from the stream, ignoring the ColCountPolicy
     property; issues, if any, are only logged for masked columns; if aMask is empty,
@@ -197,25 +197,27 @@ type
     function  LoadFromStream(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean;
                              const aMask: array of Boolean): TCsvDoc;
     function  LoadFromStream(aSource: TStream): TCsvDoc;
-  { see above for the purpose of the aMask parameter; if aMask is empty, all columns are loaded }
+  { the same as above using the field mask }
     function  LoadFromStream(aSource: TStream; const aMask: array of Boolean): TCsvDoc;
-  {
-    may have a side effect: the size of the default thread pool may change }
+  { will try to load document from a stream in multi-threaded mode; may have a side effect:
+    the size of the default thread pool may change; returns Self }
     function  LoadFromStreamMT(aSource: TStream; aThreadLimit: Integer = 0): TCsvDoc; experimental;
-  {  }
+  { the same as above using the field mask }
     function  LoadFromStreamMT(aSource: TStream; const aMask: array of Boolean;
                                aThreadLimit: Integer = 0): TCsvDoc; experimental;
+  { loads document from file; returns Self }
     function  LoadFromFile(const aFileName: string): TCsvDoc;
-  {  }
+  { the same as above using the field mask }
     function  LoadFromFile(const aFileName: string; const aMask: array of Boolean): TCsvDoc;
-  {  }
+  { will try to load document from file in multi-threaded mode; may have a side effect:
+    the size of the default thread pool may change; returns Self }
     function  LoadFromFileMT(const aFileName: string; aThreadLimit: Integer = 0): TCsvDoc; experimental;
-  {  }
+  { the same as above using the field mask }
     function  LoadFromFileMT(const aFileName: string; const aMask: array of Boolean;
                              aThreadLimit: Integer = 0): TCsvDoc; experimental;
-  { loads the document directly from aSrcBuffer }
+  { loads the document directly from aSrcBuffer; returns Self }
     function  LoadBuffer(aSrcBuffer: PChar; aCount: SizeInt): TCsvDoc;
-  { see above for the purpose of the aMask parameter; if aMask is empty, all columns are loaded }
+  { the same as above using the field mask }
     function  LoadBuffer(aSrcBuffer: PChar; aCount: SizeInt; const aMask: array of Boolean): TCsvDoc;
   { returns the number of bytes written }
     function  SaveToStream(aStream: TStream; aBufSize: SizeInt): SizeInt;
@@ -2530,6 +2532,7 @@ begin
     FStream := TWriteBufStream.Create(aStream);
   FLineBreak := GetLineBreak(LineEndStyle);
   FSpecChars := [chLF, chCR, Delimiter, QuoteMark];
+  FCellBuf.Reset(TCsvReader.DEFAULT_CAP);
 end;
 
 constructor TCsvWriter.Create(aStream: TStream);
