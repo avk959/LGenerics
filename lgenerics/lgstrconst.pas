@@ -80,6 +80,18 @@ resourcestring
   SECantParseJsStr         = 'Cannot parse JSON string';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
+  SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
+  SEColIndexOutOfBoundsFmt = 'Column index out of bounds(%d)';
+  SEDirtyQuoteFmt          = 'Irrelevant quotation mark in non-quoted cell [%d, %d]';
+  SEHangingQuoteFmt        = 'Extra or missing quotation mark in quoted cell [%d, %d]';
+  SEBareQuoteFmt           = 'Unescaped quotation mark in quoted cell [%d, %d]';
+  SEColCountFmt            = 'Number of cells(%d) in row #%d does not match header';
+  SEEncodingNotSuppFmt     = 'Encoding %s not supported';
+  SEInvalidDelimiterFmt    = 'Invalid delimiter mark(#%u)';
+  SEInvalidQuoteMarkFmt    = 'Invalid quotation mark(#%u)';
+  SEInvalidCommentMarkFmt  = 'Invalid comment mark(#%u)';
+  SEEmptyDoc               = 'Document contains no data';
+  SEReadCsvErrorFmt        = '%s'  + LineEnding + 'near <%s>';
 
 implementation
 
