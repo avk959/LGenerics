@@ -43,7 +43,8 @@ uses
   LGVarJsonTest,
   LGJsonConfTest,
   lgStrHelpersTest,
-  lgSeqUtilsTest;
+  lgSeqUtilsTest,
+  lgCsvUtilsTest;
 
 type
 
