@@ -83,7 +83,7 @@ resourcestring
   SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
   SEColIndexOutOfBoundsFmt = 'Column index out of bounds(%d)';
   SEDirtyQuoteFmt          = 'Irrelevant quotation mark in non-quoted cell [%d, %d]';
-  SEHangingQuoteFmt        = 'Extra or missing quotation mark in quoted cell [%d, %d]';
+  SEHangQuoteFmt           = 'Extra or missing quotation mark in quoted cell [%d, %d]';
   SEBareQuoteFmt           = 'Unescaped quotation mark in quoted cell [%d, %d]';
   SEColCountFmt            = 'Number of cells(%d) in row #%d does not match header';
   SEEncodingNotSuppFmt     = 'Encoding %s not supported';
