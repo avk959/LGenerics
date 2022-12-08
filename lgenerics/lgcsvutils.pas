@@ -199,9 +199,8 @@ type
     function  LoadFromStream(aSource: TStream): TCsvDoc;
   { the same as above using the field mask }
     function  LoadFromStream(aSource: TStream; const aMask: array of Boolean): TCsvDoc;
-  { will try to load document from a stream in multi-threaded mode; aThreadLimit sets the
-    limit on the number of threads, any value less than 1 implies TThread.ProcessorCount;
-    may have a side effect: the size of the default thread pool may change; returns Self }
+  { will try to load document from a stream in multi-threaded mode; aThreadLimit sets the limit
+    on the number of threads, any value less than 1 implies TThread.ProcessorCount; returns Self }
     function  LoadFromStreamMT(aSource: TStream; aThreadLimit: Integer = 0): TCsvDoc; experimental;
   { the same as above using the field mask }
     function  LoadFromStreamMT(aSource: TStream; const aMask: array of Boolean;
@@ -1068,7 +1067,6 @@ begin
   end;
   ChunkSize := aCount div ChunkCount;
 
-  TDefaultExecutor.EnsureThreadCount(ChunkCount);
   System.SetLength(Futures, ChunkCount);
   p := aBuffer;
   pEnd := aBuffer + aCount;
@@ -1076,10 +1074,10 @@ begin
     pCurr := aBuffer + ChunkSize*Succ(I);
     //here some trick that may or may not work sometimes?
     pCurr += SkipDocRow(aMaster, TChrSlice.Make(pCurr, pEnd - pCurr), 2);
-    Futures[I] := TTask.Call(@LoadBuffer2Doc, aMaster,  p, pCurr - p, DefaultExecutor);
+    Futures[I] := TTask.Call(@LoadBuffer2Doc, aMaster,  p, pCurr - p);
     p := pCurr;
   end;
-  Futures[Pred(ChunkCount)] := TTask.Call(@LoadBuffer2Doc, aMaster, p, pEnd - p, DefaultExecutor);
+  Futures[Pred(ChunkCount)] := TTask.Call(@LoadBuffer2Doc, aMaster, p, pEnd - p);
 
   Futures[0].WaitFor;
   CheckFuture(Futures[0]);
@@ -1155,7 +1153,6 @@ begin
 
   m := THelper.CreateCopy(aMask);
 
-  TDefaultExecutor.EnsureThreadCount(ChunkCount);
   System.SetLength(Futures, ChunkCount);
   p := aBuffer;
   pEnd := aBuffer + aCount;
@@ -1163,11 +1160,11 @@ begin
     pCurr := aBuffer + ChunkSize*(I+1);
     //here some trick that may or may not work sometimes?
     pCurr += SkipDocRow(aMaster, TChrSlice.Make(pCurr, pEnd - pCurr), 2);
-    Futures[I] := TTask.Call(@LoadBufferMask, aMaster, TChrSlice.Make(p, pCurr - p), m, DefaultExecutor);
+    Futures[I] := TTask.Call(@LoadBufferMask, aMaster, TChrSlice.Make(p, pCurr - p), m);
     p := pCurr;
   end;
   Futures[Pred(ChunkCount)] :=
-    TTask.Call(@LoadBufferMask, aMaster, TChrSlice.Make(p, pEnd - p), m, DefaultExecutor);
+    TTask.Call(@LoadBufferMask, aMaster, TChrSlice.Make(p, pEnd - p), m);
 
   Futures[0].WaitFor;
   CheckFuture(Futures[0]);
