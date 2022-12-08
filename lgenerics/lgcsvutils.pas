@@ -132,7 +132,7 @@ type
     TColCountPolicy = (ccpAccept, ccpIgnore, ccpError);
 
   const
-    MT_MIN_CHUNK_SIZE = SizeInt($400000); //todo: ???
+    MT_MIN_CHUNK_SIZE = SizeInt($400000); //todo: need some tweaking
 
   private
   type
@@ -199,8 +199,9 @@ type
     function  LoadFromStream(aSource: TStream): TCsvDoc;
   { the same as above using the field mask }
     function  LoadFromStream(aSource: TStream; const aMask: array of Boolean): TCsvDoc;
-  { will try to load document from a stream in multi-threaded mode; may have a side effect:
-    the size of the default thread pool may change; returns Self }
+  { will try to load document from a stream in multi-threaded mode; aThreadLimit sets the
+    limit on the number of threads, any value less than 1 implies TThread.ProcessorCount;
+    may have a side effect: the size of the default thread pool may change; returns Self }
     function  LoadFromStreamMT(aSource: TStream; aThreadLimit: Integer = 0): TCsvDoc; experimental;
   { the same as above using the field mask }
     function  LoadFromStreamMT(aSource: TStream; const aMask: array of Boolean;
@@ -209,8 +210,7 @@ type
     function  LoadFromFile(const aFileName: string): TCsvDoc;
   { the same as above using the field mask }
     function  LoadFromFile(const aFileName: string; const aMask: array of Boolean): TCsvDoc;
-  { will try to load document from file in multi-threaded mode; may have a side effect:
-    the size of the default thread pool may change; returns Self }
+  { will try to load document from file in multi-threaded mode; returns Self }
     function  LoadFromFileMT(const aFileName: string; aThreadLimit: Integer = 0): TCsvDoc; experimental;
   { the same as above using the field mask }
     function  LoadFromFileMT(const aFileName: string; const aMask: array of Boolean;
