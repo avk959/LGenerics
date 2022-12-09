@@ -306,9 +306,9 @@ type
     class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
-    class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
+    class function  QSplit(A: PItem; R: SizeInt): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
@@ -382,7 +382,7 @@ type
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid in-place sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
@@ -516,9 +516,9 @@ type
     class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
-    class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
+    class function  QSplit(A: PItem; R: SizeInt): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
@@ -592,7 +592,7 @@ type
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid in-place sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
@@ -664,9 +664,9 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T; c: TLess): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TLess); static;
-    class function  QSplitR(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TLess): PItem; static; inline;
+    class function  QSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
@@ -741,7 +741,7 @@ type
     class function  Lis(const A: array of T; c: TLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TLess): Boolean; static;
-  { hybrid in-place sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
     class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
@@ -813,9 +813,9 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T; c: TOnLess): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnLess); static;
-    class function  QSplitR(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem; static; inline;
+    class function  QSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
@@ -889,7 +889,7 @@ type
     class function  Lis(const A: array of T; c: TOnLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
-  { hybrid in-place sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
     class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
@@ -965,9 +965,9 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T; c: TNestLess): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestLess); static;
-    class function  QSplitR(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem; static; inline;
+    class function  QSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
+    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
@@ -1042,7 +1042,7 @@ type
     class function  Lis(const A: array of T; c: TNestLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
-  { hybrid in-place sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
     class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
@@ -1091,9 +1091,9 @@ type
     class function  DoBinSearch(A: PItem; R: SizeInt; const aValue: T): SizeInt; static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
-    class function  QSplitR(var A: array of T; L, R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(var A: array of T; L, R: SizeInt); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
+    class function  QSplit(var A: array of T; L, R: SizeInt): TSortSplit; static;
+    class procedure DoQSort(var A: array of T; L, R: SizeInt); static;
     class function  GetMo9Pivot(const A: array of T; L, R: SizeInt): T; static;
     class function  QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(var A: array of T; L, R, Ttl: SizeInt); static;
@@ -1178,7 +1178,7 @@ type
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid in-place sorting based on quicksort with random pivot selection }
+  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
@@ -3477,50 +3477,6 @@ begin
     InsertionSort(A, R);
 end;
 
-class function TGBaseArrayHelper.QSplitR(A: PItem; R: SizeInt): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := A[Succ(Random(Pred(R)))];
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not TCmpRel.Less(A[pL], Pivot);
-    repeat Dec(pR) until not TCmpRel.Less(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGBaseArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplitR(A, R) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R)
-    else
-      UnguardInsertionSort(A, R);
-end;
-
 class function TGBaseArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
   Result := p2;
@@ -3544,6 +3500,50 @@ begin
             Result := p1;
         end;
     end;
+end;
+
+class function TGBaseArrayHelper.QSplit(A: PItem; R: SizeInt): TSortSplit;
+var
+  Pivot: T;
+  v: TFake;
+  pL, pR: SizeInt;
+begin
+  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1])^;
+  pL := -1;
+  pR := Succ(R);
+  repeat
+    repeat Inc(pL) until not TCmpRel.Less(A[pL], Pivot);
+    repeat Dec(pR) until not TCmpRel.Less(Pivot, A[pR]);
+    if pL > pR then break;
+    v := TFake(A[pL]);
+    TFake(A[pL]) := TFake(A[pR]);
+    TFake(A[pR]) := v;
+  until False;
+  Result.Left := pR;
+  Result.Right := pL;
+end;
+
+class procedure TGBaseArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
+begin
+  while R > QUICK_INSERTION_SORT_CUTOFF do
+    with QSplit(A, R) do
+      if Left <= R - Right then
+        begin
+          DoQSort(A, Left, aLeftmost);
+          A := @A[Right];
+          R -= Right;
+          aLeftmost := False;
+        end
+      else
+        begin
+          DoQSort(@A[Right], R - Right, False);
+          R := Left;
+        end;
+  if R > 0 then
+    if aLeftmost then
+      InsertionSort(A, R)
+    else
+      UnguardInsertionSort(A, R);
 end;
 
 class function TGBaseArrayHelper.QSplitMo9(A: PItem; R: SizeInt): TSortSplit;
@@ -6114,50 +6114,6 @@ begin
     InsertionSort(A, R);
 end;
 
-class function TGComparableArrayHelper.QSplitR(A: PItem; R: SizeInt): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := A[Succ(Random(Pred(R)))]; //shouldn't be first or last
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not(A[pL] < Pivot);
-    repeat Dec(pR) until not(Pivot < A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGComparableArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplitR(A, R) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R)
-    else
-      UnguardInsertionSort(A, R);
-end;
-
 class function TGComparableArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
   Result := p2;
@@ -6181,6 +6137,50 @@ begin
             Result := p1;
         end;
     end;
+end;
+
+class function TGComparableArrayHelper.QSplit(A: PItem; R: SizeInt): TSortSplit;
+var
+  Pivot: T;
+  v: TFake;
+  pL, pR: SizeInt;
+begin
+  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1])^;
+  pL := -1;
+  pR := Succ(R);
+  repeat
+    repeat Inc(pL) until not(A[pL] < Pivot);
+    repeat Dec(pR) until not(Pivot < A[pR]);
+    if pL > pR then break;
+    v := TFake(A[pL]);
+    TFake(A[pL]) := TFake(A[pR]);
+    TFake(A[pR]) := v;
+  until False;
+  Result.Left := pR;
+  Result.Right := pL;
+end;
+
+class procedure TGComparableArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
+begin
+  while R > QUICK_INSERTION_SORT_CUTOFF do
+    with QSplit(A, R) do
+      if Left <= R - Right then
+        begin
+          DoQSort(A, Left, aLeftmost);
+          A := @A[Right];
+          R -= Right;
+          aLeftmost := False;
+        end
+      else
+        begin
+          DoQSort(@A[Right], R - Right, False);
+          R := Left;
+        end;
+  if R > 0 then
+    if aLeftmost then
+      InsertionSort(A, R)
+    else
+      UnguardInsertionSort(A, R);
 end;
 
 class function TGComparableArrayHelper.QSplitMo9(A: PItem; R: SizeInt): TSortSplit;
@@ -8079,50 +8079,6 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGRegularArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TLess): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := A[Succ(Random(Pred(R)))]; //shouldn't be first or last
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not c(A[pL], Pivot);
-    repeat Dec(pR) until not c(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplitR(A, R, c) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, c, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, c, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
-end;
-
 class function TGRegularArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TLess): PItem;
 begin
   Result := p2;
@@ -8146,6 +8102,50 @@ begin
             Result := p1;
         end;
     end;
+end;
+
+class function TGRegularArrayHelper.QSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit;
+var
+  Pivot: T;
+  v: TFake;
+  pL, pR: SizeInt;
+begin
+  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1], c)^;
+  pL := -1;
+  pR := Succ(R);
+  repeat
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
+    if pL > pR then break;
+    v := TFake(A[pL]);
+    TFake(A[pL]) := TFake(A[pR]);
+    TFake(A[pR]) := v;
+  until False;
+  Result.Left := pR;
+  Result.Right := pL;
+end;
+
+class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean);
+begin
+  while R > QUICK_INSERTION_SORT_CUTOFF do
+    with QSplit(A, R, c) do
+      if Left <= R - Right then
+        begin
+          DoQSort(A, Left, c, aLeftmost);
+          A := @A[Right];
+          R -= Right;
+          aLeftmost := False;
+        end
+      else
+        begin
+          DoQSort(@A[Right], R - Right, c, False);
+          R := Left;
+        end;
+  if R > 0 then
+    if aLeftmost then
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGRegularArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit;
@@ -10052,50 +10052,6 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGDelegatedArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := A[Succ(Random(Pred(R)))]; //shouldn't be first or last
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not c(A[pL], Pivot);
-    repeat Dec(pR) until not c(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplitR(A, R, c) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, c, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, c, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
-end;
-
 class function TGDelegatedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem;
 begin
   Result := p2;
@@ -10119,6 +10075,50 @@ begin
             Result := p1;
         end;
     end;
+end;
+
+class function TGDelegatedArrayHelper.QSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
+var
+  Pivot: T;
+  v: TFake;
+  pL, pR: SizeInt;
+begin
+  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1], c)^;
+  pL := -1;
+  pR := Succ(R);
+  repeat
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
+    if pL > pR then break;
+    v := TFake(A[pL]);
+    TFake(A[pL]) := TFake(A[pR]);
+    TFake(A[pR]) := v;
+  until False;
+  Result.Left := pR;
+  Result.Right := pL;
+end;
+
+class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean);
+begin
+  while R > QUICK_INSERTION_SORT_CUTOFF do
+    with QSplit(A, R, c) do
+      if Left <= R - Right then
+        begin
+          DoQSort(A, Left, c, aLeftmost);
+          A := @A[Right];
+          R -= Right;
+          aLeftmost := False;
+        end
+      else
+        begin
+          DoQSort(@A[Right], R - Right, c, False);
+          R := Left;
+        end;
+  if R > 0 then
+    if aLeftmost then
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGDelegatedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
@@ -12027,50 +12027,6 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGNestedArrayHelper.QSplitR(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := A[Succ(Random(Pred(R)))]; //shouldn't be first or last
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not c(A[pL], Pivot);
-    repeat Dec(pR) until not c(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplitR(A, R, c) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, c, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, c, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
-end;
-
 class function TGNestedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem;
 begin
   Result := p2;
@@ -12094,6 +12050,50 @@ begin
             Result := p1;
         end;
     end;
+end;
+
+class function TGNestedArrayHelper.QSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
+var
+  Pivot: T;
+  v: TFake;
+  pL, pR: SizeInt;
+begin
+  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1], c)^;
+  pL := -1;
+  pR := Succ(R);
+  repeat
+    repeat Inc(pL) until not c(A[pL], Pivot);
+    repeat Dec(pR) until not c(Pivot, A[pR]);
+    if pL > pR then break;
+    v := TFake(A[pL]);
+    TFake(A[pL]) := TFake(A[pR]);
+    TFake(A[pR]) := v;
+  until False;
+  Result.Left := pR;
+  Result.Right := pL;
+end;
+
+class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean);
+begin
+  while R > QUICK_INSERTION_SORT_CUTOFF do
+    with QSplit(A, R, c) do
+      if Left <= R - Right then
+        begin
+          DoQSort(A, Left, c, aLeftmost);
+          A := @A[Right];
+          R -= Right;
+          aLeftmost := False;
+        end
+      else
+        begin
+          DoQSort(@A[Right], R - Right, c, False);
+          R := Left;
+        end;
+  if R > 0 then
+    if aLeftmost then
+      InsertionSort(A, R, c)
+    else
+      UnguardInsertionSort(A, R, c);
 end;
 
 class function TGNestedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
@@ -13543,52 +13543,6 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.QSplitR(var A: array of T; L, R: SizeInt): TSortSplit;
-var
-  v, Pivot: T;
-begin
-  Pivot := A[Succ(L + Random(Pred(R - L)))]; //shouldn't be first or last
-  Dec(L);
-  Inc(R);
-  repeat
-    repeat Inc(L); until A[L] >= Pivot;
-    repeat Dec(R); until A[R] <= Pivot;
-    //if L > R then
-    //  break;
-    v := A[L];
-    A[L] := A[R];
-    A[R] := v;
-  //until False;
-  until L > R;
-  v := A[L];
-  A[L] := A[R];
-  A[R] := v;
-
-  Result.Left := R;
-  Result.Right := L;
-end;
-
-class procedure TGSimpleArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
-begin
-  while R - L > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplitR(A, L, R) do
-      if Left - L <= R - Right then
-        begin
-          DoQSort(A, L, Left);
-          L := Right;
-        end
-      else
-        begin
-          DoQSort(A, Right, R);
-          R := Left;
-        end;
-  if R - L > 0 then
-    if L = 0 then
-      InsertionSort(A, L, R)
-    else
-      UnguardInsertionSort(A, L, R);
-end;
-
 class function TGSimpleArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
   Result := p2;
@@ -13612,6 +13566,47 @@ begin
             Result := p1;
         end;
     end;
+end;
+
+class function TGSimpleArrayHelper.QSplit(var A: array of T; L, R: SizeInt): TSortSplit;
+var
+  v, Pivot: T;
+begin
+  Pivot := MedianOf3(@A[L+1], @A[L+(R-L)shr 1], @A[R-1])^;
+  Dec(L);
+  Inc(R);
+  repeat
+    repeat Inc(L); until A[L] >= Pivot;
+    repeat Dec(R); until A[R] <= Pivot;
+    if L > R then
+      break;
+    v := A[L];
+    A[L] := A[R];
+    A[R] := v;
+  until False;
+  Result.Left := R;
+  Result.Right := L;
+end;
+
+class procedure TGSimpleArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
+begin
+  while R - L > QUICK_INSERTION_SORT_CUTOFF do
+    with QSplit(A, L, R) do
+      if Left - L <= R - Right then
+        begin
+          DoQSort(A, L, Left);
+          L := Right;
+        end
+      else
+        begin
+          DoQSort(A, Right, R);
+          R := Left;
+        end;
+  if R - L > 0 then
+    if L = 0 then
+      InsertionSort(A, L, R)
+    else
+      UnguardInsertionSort(A, L, R);
 end;
 
 class function TGSimpleArrayHelper.GetMo9Pivot(const A: array of T; L, R: SizeInt): T;
