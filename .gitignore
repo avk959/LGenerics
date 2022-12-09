@@ -22,4 +22,5 @@ link.res
 *.map
 *.exp
 *.dbg
+*.ini
 
