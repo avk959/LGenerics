@@ -459,13 +459,11 @@ type
     FColIndex: SizeInt;
     FLineBreak: string;
     FSpecChars: TSysCharset;
-    FInRow: Boolean;
     function  GetLineBreak(les: TLineEndStyle): string; inline;
     procedure DoWriteEol; inline;
     procedure DoWriteCell(const s: string);
     procedure DoWriteRow(const r: TStringArray); inline;
     function  WriteDoc(aDoc: TCsvDoc): SizeInt;
-    property  InRow: Boolean read FInRow;
   protected
     procedure SetDelimiterChar(d: Char); override;
     procedure SetQuoteChar(qc: Char); override;
@@ -2434,7 +2432,6 @@ begin
   FCellBuf.Write2Stream(FStream);
   Inc(FRowIndex);
   FColIndex := NULL_INDEX;
-  FInRow := False;
 end;
 
 procedure TCsvWriter.DoWriteCell(const s: string);
@@ -2442,10 +2439,8 @@ var
   I: SizeInt;
   NeedQuotes: Boolean;
 begin
-  if InRow then
-    FCellBuf.Append(Delimiter)
-  else
-    FInRow := True;
+  if ColIndex >= 0 then
+    FCellBuf.Append(Delimiter);
   NeedQuotes := QuotePolicy = qpForce;
   if not NeedQuotes then
     for I := 1 to System.Length(s) do
@@ -2467,7 +2462,7 @@ procedure TCsvWriter.DoWriteRow(const r: TStringArray);
 var
   I: SizeInt;
 begin
-  if InRow then
+  if ColIndex >= 0 then
     DoWriteEol;
   for I := 0 to System.High(r) do
     DoWriteCell(r[I]);
@@ -2527,6 +2522,7 @@ begin
     FStream := TWriteBufStream.Create(aStream, aBufSize)
   else
     FStream := TWriteBufStream.Create(aStream);
+  FColIndex := NULL_INDEX;
   FLineBreak := GetLineBreak(LineEndStyle);
   FSpecChars := [chLF, chCR, Delimiter, QuoteMark];
   FCellBuf.Reset(TCsvReader.DEFAULT_CAP);
