@@ -233,6 +233,7 @@ type
       procedure AppendEncode(const s: string);
       procedure Append(const s: shortstring); inline;
       function  SaveToStream(aStream: TStream): SizeInt; inline;
+      function  WriteToStream(aStream: TStream): SizeInt; inline;
       function  ToString: string; inline;
       function  ToDecodeString: string;
       function  ToPChar: PAnsiChar; inline;
@@ -840,8 +841,8 @@ type
     function AddJson(const aName, aJson: string): TJsonWriter;
     function BeginArray: TJsonWriter;
     function BeginObject: TJsonWriter;
-    function EndArray: TJsonWriter;
-    function EndObject: TJsonWriter;
+    function EndArray: TJsonWriter; inline;
+    function EndObject: TJsonWriter; inline;
   end;
 
   TParseMode = (pmNone, pmKey, pmArray, pmObject);
@@ -1728,6 +1729,12 @@ function TJsonNode.TStrBuilder.SaveToStream(aStream: TStream): SizeInt;
 begin
   aStream.WriteBuffer(FBuffer.Ptr^, Count);
   Result := Count;
+  FCount := 0;
+end;
+
+function TJsonNode.TStrBuilder.WriteToStream(aStream: TStream): SizeInt;
+begin
+  Result := aStream.Write(FBuffer.Ptr^, Count);
   FCount := 0;
 end;
 
@@ -7337,7 +7344,7 @@ begin
   case FStack.PeekItem^ of
     VA: FStack.PeekItem^ := OB;
     AR: FStack.PeekItem^ := AN;
-    AN: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    AN: FStream.Write(chComma, SizeOf(chComma));
   else
   end;
 end;
@@ -7345,7 +7352,7 @@ end;
 procedure TJsonWriter.PairAdding;
 begin
   case FStack.PeekItem^ of
-    OB: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    OB: FStream.Write(chComma, SizeOf(chComma));
     KE: FStack.PeekItem^ := OB;
   else
   end;
@@ -7420,21 +7427,21 @@ end;
 function TJsonWriter.AddNull: TJsonWriter;
 begin
   ValueAdding;
-  FStream.WriteBuffer(JS_NULL[1], System.Length(JS_NULL));
+  FStream.Write(JS_NULL[1], System.Length(JS_NULL));
   Result := Self;
 end;
 
 function TJsonWriter.AddFalse: TJsonWriter;
 begin
   ValueAdding;
-  FStream.WriteBuffer(JS_FALSE[1], System.Length(JS_FALSE));
+  FStream.Write(JS_FALSE[1], System.Length(JS_FALSE));
   Result := Self;
 end;
 
 function TJsonWriter.AddTrue: TJsonWriter;
 begin
   ValueAdding;
-  FStream.WriteBuffer(JS_TRUE[1], System.Length(JS_TRUE));
+  FStream.Write(JS_TRUE[1], System.Length(JS_TRUE));
   Result := Self;
 end;
 
@@ -7444,7 +7451,7 @@ var
 begin
   ValueAdding;
   Double2Str(aValue, num);
-  FStream.WriteBuffer(num[1], System.Length(num));
+  FStream.Write(num[1], System.Length(num));
   Result := Self;
 end;
 
@@ -7452,7 +7459,7 @@ function TJsonWriter.Add(const s: string): TJsonWriter;
 begin
   ValueAdding;
   FsBuilder.AppendEncode(s);
-  FsBuilder.SaveToStream(FStream);
+  FsBuilder.WriteToStream(FStream);
   Result := Self;
 end;
 
@@ -7471,13 +7478,13 @@ end;
 function TJsonWriter.AddName(const aName: string): TJsonWriter;
 begin
   case FStack.PeekItem^ of
-    OB: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    OB: FStream.Write(chComma, SizeOf(chComma));
     KE: FStack.PeekItem^ := VA;
   else
   end;
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
   Result := Self;
 end;
 
@@ -7485,9 +7492,9 @@ function TJsonWriter.AddNull(const aName: string): TJsonWriter;
 begin
   PairAdding;
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
-  FStream.WriteBuffer(JS_NULL[1], System.Length(JS_NULL));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
+  FStream.Write(JS_NULL[1], System.Length(JS_NULL));
   Result := Self;
 end;
 
@@ -7495,9 +7502,9 @@ function TJsonWriter.AddFalse(const aName: string): TJsonWriter;
 begin
   PairAdding;
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
-  FStream.WriteBuffer(JS_FALSE[1], System.Length(JS_FALSE));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
+  FStream.Write(JS_FALSE[1], System.Length(JS_FALSE));
   Result := Self;
 end;
 
@@ -7505,9 +7512,9 @@ function TJsonWriter.AddTrue(const aName: string): TJsonWriter;
 begin
   PairAdding;
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
-  FStream.WriteBuffer(JS_TRUE[1], System.Length(JS_TRUE));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
+  FStream.Write(JS_TRUE[1], System.Length(JS_TRUE));
   Result := Self;
 end;
 
@@ -7518,9 +7525,9 @@ begin
   PairAdding;
   Double2Str(aValue, num);
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
-  FStream.WriteBuffer(num[1], System.Length(num));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
+  FStream.Write(num[1], System.Length(num));
   Result := Self;
 end;
 
@@ -7528,10 +7535,10 @@ function TJsonWriter.Add(const aName, aValue: string): TJsonWriter;
 begin
   PairAdding;
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
   FsBuilder.AppendEncode(aValue);
-  FsBuilder.SaveToStream(FStream);
+  FsBuilder.WriteToStream(FStream);
   Result := Self;
 end;
 
@@ -7544,9 +7551,9 @@ function TJsonWriter.AddJson(const aName, aJson: string): TJsonWriter;
 begin
   PairAdding;
   FsBuilder.AppendEncode(aName);
-  FsBuilder.SaveToStream(FStream);
-  FStream.WriteBuffer(chColon, SizeOf(chColon));
-  FStream.WriteBuffer(Pointer(aJson)^, System.Length(aJson));
+  FsBuilder.WriteToStream(FStream);
+  FStream.Write(chColon, SizeOf(chColon));
+  FStream.Write(Pointer(aJson)^, System.Length(aJson));
   Result := Self;
 end;
 
@@ -7555,10 +7562,10 @@ begin
   case FStack.PeekItem^ of
     VA: FStack.PeekItem^ := OB;
     AR: FStack.PeekItem^ := AN;
-    AN: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    AN: FStream.Write(chComma, SizeOf(chComma));
   else
   end;
-  FStream.WriteBuffer(chOpenSqrBr, SizeOf(chOpenSqrBr));
+  FStream.Write(chOpenSqrBr, SizeOf(chOpenSqrBr));
   FStack.Push(AR);
   Result := Self;
 end;
@@ -7568,24 +7575,24 @@ begin
   case FStack.PeekItem^ of
     VA: FStack.PeekItem^ := OB;
     AR: FStack.PeekItem^ := AN;
-    AN: FStream.WriteBuffer(chComma, SizeOf(chComma));
+    AN: FStream.Write(chComma, SizeOf(chComma));
   else
   end;
-  FStream.WriteBuffer(chOpenCurBr, SizeOf(chOpenCurBr));
+  FStream.Write(chOpenCurBr, SizeOf(chOpenCurBr));
   FStack.Push(KE);
   Result := Self;
 end;
 
 function TJsonWriter.EndArray: TJsonWriter;
 begin
-  FStream.WriteBuffer(chClosSqrBr, SizeOf(chClosSqrBr));
+  FStream.Write(chClosSqrBr, SizeOf(chClosSqrBr));
   FStack.Pop;
   Result := Self;
 end;
 
 function TJsonWriter.EndObject: TJsonWriter;
 begin
-  FStream.WriteBuffer(chClosCurBr, SizeOf(chClosCurBr));
+  FStream.Write(chClosCurBr, SizeOf(chClosCurBr));
   FStack.Pop;
   Result := Self;
 end;
