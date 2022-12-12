@@ -440,6 +440,7 @@ type
     procedure TrimToFit; inline;
   { returns True and aValue mapped to aKey if contains aKey, False otherwise }
     function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+    function  TryGetMutValue(const aKey: TKey; out aValue: PValue): Boolean;
   { returns value mapped to aKey or aDefault }
     function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue; inline;
     function  GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
@@ -1731,6 +1732,16 @@ begin
   Result := p <> nil;
   if Result then
     aValue := p^.Value;
+end;
+
+function TGLiteHashMap.TryGetMutValue(const aKey: TKey; out aValue: PValue): Boolean;
+var
+  p: PEntry;
+begin
+  p := FTable.Find(aKey);
+  Result := p <> nil;
+  if Result then
+    aValue := @p^.Value;
 end;
 
 function TGLiteHashMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
