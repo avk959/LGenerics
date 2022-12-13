@@ -863,6 +863,58 @@ type
       class function WriteJson(aStream: TStream; aNode: TJsonNode): SizeInt; static;
     end;
 
+    { TJsonStrWriter writes JSON directly to string }
+    TJsonStrWriter = class
+    private
+    const
+      STACK_INIT_SIZE = 128;
+      MIN_BUF_SIZE    = 1024;
+    var
+      FData: string;
+      FStack: specialize TGDynArray<Integer>;
+      FBufPtr: PChar;
+      FBufPos,
+      FStackTop: Integer;
+      function  GetData: string; inline;
+      procedure StackPush(aValue: Integer); inline;
+      function  StackTop: Integer; inline;
+      procedure StackPop; inline;
+      procedure EnsureCapacity(aValue: SizeInt); inline;
+      procedure DoWrite(p: PChar; aCount: SizeInt); inline;
+      procedure DoWriteChar(c: Char); inline;
+      procedure DoWriteChar2(c1, c2: Char); inline;
+      procedure DoWriteStr(p: PChar; aCount: SizeInt);
+      procedure ValueAdding; inline;
+      procedure PairAdding; inline;
+    public
+    const
+      DEFAULT_LEN = 32768;
+      class function New(aInitLen: SizeInt = DEFAULT_LEN): TJsonStrWriter; static; inline;
+      constructor Create(aInitLen: SizeInt = DEFAULT_LEN);
+      function AddNull: TJsonStrWriter;
+      function AddFalse: TJsonStrWriter;
+      function AddTrue: TJsonStrWriter;
+      function Add(aValue: Double): TJsonStrWriter;
+      function Add(const s: string): TJsonStrWriter;
+      function Add(aValue: TJsonNode): TJsonStrWriter; inline;
+      function AddJson(const aJson: string): TJsonStrWriter;
+      function AddName(const aName: string): TJsonStrWriter;
+      function AddNull(const aName: string): TJsonStrWriter;
+      function AddFalse(const aName: string): TJsonStrWriter;
+      function AddTrue(const aName: string): TJsonStrWriter;
+      function Add(const aName: string; aValue: Double): TJsonStrWriter;
+      function Add(const aName, aValue: string): TJsonStrWriter;
+      function Add(const aName: string; aValue: TJsonNode): TJsonStrWriter; inline;
+      function AddJson(const aName, aJson: string): TJsonStrWriter;
+      function BeginArray: TJsonStrWriter;
+      function BeginObject: TJsonStrWriter;
+      function EndArray: TJsonStrWriter; inline;
+      function EndObject: TJsonStrWriter; inline;
+    { one-time function }
+      property DataString: string read GetData;
+      class function WriteJson(aNode: TJsonNode; aInitLen: SizeInt = DEFAULT_LEN): string; static;
+    end;
+
   TParseMode = (pmNone, pmKey, pmArray, pmObject);
   PParseMode = ^TParseMode;
 
@@ -7728,6 +7780,345 @@ begin
     Writer.Free;
   end;
   Result := aStream.Position - Result;
+end;
+
+{ TJsonStrWriter }
+
+procedure TJsonStrWriter.StackPush(aValue: Integer);
+begin
+  Inc(FStackTop);
+  if FStackTop = FStack.Length then
+    FStack.Length := FStackTop * 2;
+  FStack[FStackTop] := aValue;
+end;
+
+function TJsonStrWriter.GetData: string;
+begin
+  System.SetLength(FData, FBufPos);
+  Result := FData;
+  FData := '';
+  FBufPtr := nil;
+end;
+
+function TJsonStrWriter.StackTop: Integer;
+begin
+  Result := FStack[FStackTop];
+end;
+
+procedure TJsonStrWriter.StackPop;
+begin
+  Dec(FStackTop);
+end;
+
+procedure TJsonStrWriter.EnsureCapacity(aValue: SizeInt);
+begin
+  if System.Length(FData) < aValue then
+    begin
+      System.SetLength(FData, lgUtils.RoundUpTwoPower(aValue));
+      FBufPtr := PChar(FData);
+    end;
+end;
+
+procedure TJsonStrWriter.DoWrite(p: PChar; aCount: SizeInt);
+begin
+  if aCount < 1 then exit;
+  EnsureCapacity(FBufPos + aCount);
+  System.Move(p^, FBufPtr[FBufPos], aCount);
+  FBufPos += aCount;
+end;
+
+procedure TJsonStrWriter.DoWriteChar(c: Char);
+begin
+  EnsureCapacity(Succ(FBufPos));
+  FBufPtr[FBufPos] := c;
+  Inc(FBufPos);
+end;
+
+procedure TJsonStrWriter.DoWriteChar2(c1, c2: Char);
+begin
+  EnsureCapacity(FBufPos+2);
+  FBufPtr[FBufPos] := c1;
+  FBufPtr[FBufPos+1] := c2;
+  FBufPos += 2;
+end;
+
+procedure TJsonStrWriter.DoWriteStr(p: PChar; aCount: SizeInt);
+const
+  HexChars: PChar = '0123456789ABCDEF';
+var
+  pEnd: PChar;
+begin
+  pEnd := p + aCount;
+  DoWriteChar('"');
+  while p < pEnd do begin
+    case p^ of
+      #0..#7, #11, #14..#31:
+        begin
+           DoWriteChar2(chEscapeSym, chUnicodeSym);
+           DoWriteChar2(chZero, chZero);
+           DoWriteChar2(HexChars[Ord(p^) shr  4], HexChars[Ord(p^) and 15]);
+        end;
+      #8 : DoWriteChar2(chEscapeSym, chBackSpSym); //backspace
+      #9 : DoWriteChar2(chEscapeSym, chTabSym);    //tab
+      #10: DoWriteChar2(chEscapeSym, chLineSym);   //line feed
+      #12: DoWriteChar2(chEscapeSym, chFormSym);   //form feed
+      #13: DoWriteChar2(chEscapeSym, chCarRetSym); //carriage return
+      '"': DoWriteChar2(chEscapeSym, '"');         //quote
+      '\': DoWriteChar2(chEscapeSym, '\');         //backslash
+    else
+      DoWriteChar(p^);
+    end;
+    Inc(p);
+  end;
+  DoWriteChar('"');
+end;
+
+procedure TJsonStrWriter.ValueAdding;
+begin
+  case StackTop of
+    VA: FStack[FStackTop] := OB;
+    AR: FStack[FStackTop] := AN;
+    AN: DoWriteChar(chComma);
+  else
+  end;
+end;
+
+procedure TJsonStrWriter.PairAdding;
+begin
+  case StackTop of
+    OB: DoWriteChar(chComma);
+    KE: FStack[FStackTop] := OB;
+  else
+  end;
+end;
+
+class function TJsonStrWriter.New(aInitLen: SizeInt): TJsonStrWriter;
+begin
+  Result := TJsonStrWriter.Create(aInitLen);
+end;
+
+constructor TJsonStrWriter.Create(aInitLen: SizeInt);
+begin
+  if aInitLen < MIN_BUF_SIZE then
+    aInitLen := MIN_BUF_SIZE
+  else
+    aInitLen := lgUtils.RoundUpTwoPower(aInitLen);
+  System.SetLength(FData, aInitLen);
+  FBufPtr := PChar(FData);
+  FStack.Length := STACK_INIT_SIZE;
+  StackPush(OK);
+end;
+
+function TJsonStrWriter.AddNull: TJsonStrWriter;
+begin
+  ValueAdding;
+  DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddFalse: TJsonStrWriter;
+begin
+  ValueAdding;
+  DoWrite(@JS_FALSE[1], System.Length(JS_FALSE));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddTrue: TJsonStrWriter;
+begin
+  ValueAdding;
+  DoWrite(@JS_TRUE[1], System.Length(JS_TRUE));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(aValue: Double): TJsonStrWriter;
+var
+  num: shortstring;
+begin
+  ValueAdding;
+  Double2Str(aValue, num);
+  DoWrite(@num[1], System.Length(num));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const s: string): TJsonStrWriter;
+begin
+  ValueAdding;
+  DoWriteStr(Pointer(s), System.Length(s));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(aValue: TJsonNode): TJsonStrWriter;
+begin
+  Result := AddJson(aValue.AsJson);
+end;
+
+function TJsonStrWriter.AddJson(const aJson: string): TJsonStrWriter;
+begin
+  ValueAdding;
+  DoWrite(Pointer(aJson), System.Length(aJson));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddName(const aName: string): TJsonStrWriter;
+begin
+  case StackTop of
+    OB: DoWriteChar(chComma);
+    KE: FStack[FStackTop] := VA;
+  else
+  end;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddNull(const aName: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddFalse(const aName: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@JS_FALSE[1], System.Length(JS_FALSE));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddTrue(const aName: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@JS_TRUE[1], System.Length(JS_TRUE));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const aName: string; aValue: Double): TJsonStrWriter;
+var
+  num: shortstring;
+begin
+  PairAdding;
+  Double2Str(aValue, num);
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@num[1], System.Length(num));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const aName, aValue: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWriteStr(Pointer(aValue), System.Length(aValue));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const aName: string; aValue: TJsonNode): TJsonStrWriter;
+begin
+  Result := AddJson(aName, aValue.AsJson);
+end;
+
+function TJsonStrWriter.AddJson(const aName, aJson: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(Pointer(aJson), System.Length(aJson));
+  Result := Self;
+end;
+
+function TJsonStrWriter.BeginArray: TJsonStrWriter;
+begin
+  case StackTop of
+    VA: FStack[FStackTop] := OB;
+    AR: FStack[FStackTop] := AN;
+    AN: DoWriteChar(chComma);
+  else
+  end;
+  DoWriteChar(chOpenSqrBr);
+  StackPush(AR);
+  Result := Self;
+end;
+
+function TJsonStrWriter.BeginObject: TJsonStrWriter;
+begin
+  case StackTop of
+    VA: FStack[FStackTop] := OB;
+    AR: FStack[FStackTop] := AN;
+    AN: DoWriteChar(chComma);
+  else
+  end;
+  DoWriteChar(chOpenCurBr);
+  StackPush(KE);
+  Result := Self;
+end;
+
+function TJsonStrWriter.EndArray: TJsonStrWriter;
+begin
+  DoWriteChar(chClosSqrBr);
+  StackPop;
+  Result := Self;
+end;
+
+function TJsonStrWriter.EndObject: TJsonStrWriter;
+begin
+  DoWriteChar(chClosCurBr);
+  StackPop;
+  Result := Self;
+end;
+
+class function TJsonStrWriter.WriteJson(aNode: TJsonNode; aInitLen: SizeInt): string;
+var
+  Writer: TJsonStrWriter = nil;
+  p: TJsonNode.TPair;
+  procedure WriteNode(aInst: TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    case aInst.Kind of
+      jvkNull:   Writer.AddNull;
+      jvkFalse:  Writer.AddFalse;
+      jvkTrue:   Writer.AddTrue;
+      jvkNumber: Writer.Add(aInst.FValue.Num);
+      jvkString: Writer.Add(aInst.FString);
+      jvkArray:
+        begin
+          Writer.BeginArray;
+          if aInst.FArray <> nil then
+            for I := 0 to Pred(aInst.FArray^.Count) do
+              WriteNode(aInst.FArray^.UncMutable[I]^);
+          Writer.EndArray;
+        end;
+      jvkObject:
+        begin
+          Writer.BeginObject;
+          if aInst.FObject <> nil then
+            for I := 0 to Pred(aInst.FObject^.Count) do
+              begin
+                p := aInst.FObject^.Mutable[I]^;
+                Writer.AddName(p.Key);
+                WriteNode(p.Value);
+              end;
+          Writer.EndObject;
+        end;
+    else
+    end;
+  end;
+begin
+  Result := '';
+  Writer := TJsonStrWriter.Create(aInitLen);
+  try
+    WriteNode(aNode);
+    Result := Writer.DataString;
+  finally
+    Writer.Free;
+  end;
 end;
 
 { TJsonReader.TLevel }
