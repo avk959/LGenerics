@@ -875,7 +875,7 @@ type
       FBufPtr: PChar;
       FBufPos,
       FStackTop: Integer;
-      function  GetData: string; inline;
+      function  GetJson: string; inline;
       procedure StackPush(aValue: Integer); inline;
       function  StackTop: Integer; inline;
       procedure StackPop; inline;
@@ -891,6 +891,7 @@ type
       DEFAULT_LEN = 32768;
       class function New(aInitLen: SizeInt = DEFAULT_LEN): TJsonStrWriter; static; inline;
       constructor Create(aInitLen: SizeInt = DEFAULT_LEN);
+      procedure Reset(aInitLen: SizeInt = DEFAULT_LEN);
       function AddNull: TJsonStrWriter;
       function AddFalse: TJsonStrWriter;
       function AddTrue: TJsonStrWriter;
@@ -911,7 +912,7 @@ type
       function EndArray: TJsonStrWriter; inline;
       function EndObject: TJsonStrWriter; inline;
     { one-time function }
-      property DataString: string read GetData;
+      property JsonString: string read GetJson;
       class function WriteJson(aNode: TJsonNode; aInitLen: SizeInt = DEFAULT_LEN): string; static;
     end;
 
@@ -7792,7 +7793,7 @@ begin
   FStack[FStackTop] := aValue;
 end;
 
-function TJsonStrWriter.GetData: string;
+function TJsonStrWriter.GetJson: string;
 begin
   System.SetLength(FData, FBufPos);
   Result := FData;
@@ -7899,13 +7900,20 @@ end;
 
 constructor TJsonStrWriter.Create(aInitLen: SizeInt);
 begin
+  Reset(aInitLen);
+end;
+
+procedure TJsonStrWriter.Reset(aInitLen: SizeInt);
+begin
   if aInitLen < MIN_BUF_SIZE then
     aInitLen := MIN_BUF_SIZE
   else
     aInitLen := lgUtils.RoundUpTwoPower(aInitLen);
   System.SetLength(FData, aInitLen);
   FBufPtr := PChar(FData);
-  FStack.Length := STACK_INIT_SIZE;
+  if FStack.Length < STACK_INIT_SIZE then
+    FStack.Length := STACK_INIT_SIZE;
+  FStackTop := NULL_INDEX;
   StackPush(OK);
 end;
 
@@ -8115,7 +8123,7 @@ begin
   Writer := TJsonStrWriter.Create(aInitLen);
   try
     WriteNode(aNode);
-    Result := Writer.DataString;
+    Result := Writer.JsonString;
   finally
     Writer.Free;
   end;
