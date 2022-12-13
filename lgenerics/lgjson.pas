@@ -26,7 +26,7 @@ unit lgJson;
 interface
 
 uses
-  Classes, SysUtils, Math, BufStream,
+  Classes, SysUtils, Math,
   lgUtils,
   lgHelpers,
   lgAbstractContainer,
@@ -34,7 +34,6 @@ uses
   lgQueue,
   lgVector,
   lgList,
-  lgStack,
   lgSeqUtils,
   lgStrConst;
 
@@ -815,6 +814,7 @@ type
     private
     const
       STACK_INIT_SIZE = 128;
+      MIN_BUF_SIZE    = 1024;
     var
       FStream: TStream;
       FBuffer: specialize TGDynArray<Char>;
@@ -829,12 +829,17 @@ type
       function  BufAvail: Integer; inline;
       procedure DoWrite(p: PChar; aCount: SizeInt);
       procedure DoWriteChar(c: Char); inline;
+      procedure DoWriteChar2(c1, c2: Char); inline;
       procedure DoWriteStr(p: PChar; aCount: SizeInt);
       procedure ValueAdding; inline;
       procedure PairAdding; inline;
     public
+      class function New(aStream: TStream; aBufferSize: Integer): TJsonWriter; static; inline;
       class function New(aStream: TStream): TJsonWriter; static; inline;
+      constructor Create(aStream: TStream; aBufferSize: Integer);
       constructor Create(aStream: TStream);
+      destructor Destroy; override;
+      procedure Flush; inline;
       function AddNull: TJsonWriter;
       function AddFalse: TJsonWriter;
       function AddTrue: TJsonWriter;
@@ -1703,20 +1708,22 @@ end;
 procedure TJsonNode.TStrBuilder.AppendEncode(const s: string);
 var
   I: SizeInt;
+  c: Char;
 const
   HexChars: PChar = '0123456789ABCDEF';
 begin
   Append('"');
-  for I := 1 to System.Length(s) do
-    case s[I] of
+  for I := 1 to System.Length(s) do begin
+    c := s[I];
+    case c of
       #0..#7, #11, #14..#31:
         begin
            Append(chEscapeSym);
            Append(chUnicodeSym);
            Append(chZero);
            Append(chZero);
-           Append(HexChars[Ord(s[I]) shr  4]);
-           Append(HexChars[Ord(s[I]) and 15]);
+           Append(HexChars[Ord(c) shr  4]);
+           Append(HexChars[Ord(c) and 15]);
         end;
       #8 : begin Append(chEscapeSym); Append(chBackSpSym) end; //backspace
       #9 : begin Append(chEscapeSym); Append(chTabSym) end;    //tab
@@ -1726,8 +1733,9 @@ begin
       '"': begin Append(chEscapeSym); Append('"') end;         //quote
       '\': begin Append(chEscapeSym); Append('\') end;         //backslash
     else
-      Append(s[I]);
+      Append(c);
     end;
+  end;
   Append('"');
 end;
 
@@ -7404,11 +7412,29 @@ begin
     FlushBuffer;
 end;
 
+procedure TJsonWriter.DoWriteChar2(c1, c2: Char);
+begin
+  if BufAvail > 1 then
+    begin
+      FBufPtr[FBufPos] := c1;
+      FBufPtr[FBufPos+1] := c2;
+      FBufPos += 2;
+      if FBufPos = FBuffer.Length then
+        FlushBuffer;
+    end
+  else
+    begin
+      DoWriteChar(c1);
+      FBufPtr[FBufPos] := c2;
+      Inc(FBufPos);
+    end;
+end;
+
 procedure TJsonWriter.DoWriteStr(p: PChar; aCount: SizeInt);
-var
-  pEnd: PChar;
 const
   HexChars: PChar = '0123456789ABCDEF';
+var
+  pEnd: PChar;
 begin
   pEnd := p + aCount;
   DoWriteChar('"');
@@ -7416,20 +7442,17 @@ begin
     case p^ of
       #0..#7, #11, #14..#31:
         begin
-           DoWriteChar(chEscapeSym);
-           DoWriteChar(chUnicodeSym);
-           DoWriteChar(chZero);
-           DoWriteChar(chZero);
-           DoWriteChar(HexChars[Ord(p^) shr  4]);
-           DoWriteChar(HexChars[Ord(p^) and 15]);
+           DoWriteChar2(chEscapeSym, chUnicodeSym);
+           DoWriteChar2(chZero, chZero);
+           DoWriteChar2(HexChars[Ord(p^) shr  4], HexChars[Ord(p^) and 15]);
         end;
-      #8 : begin DoWriteChar(chEscapeSym); DoWriteChar(chBackSpSym) end; //backspace
-      #9 : begin DoWriteChar(chEscapeSym); DoWriteChar(chTabSym) end;    //tab
-      #10: begin DoWriteChar(chEscapeSym); DoWriteChar(chLineSym) end;   //line feed
-      #12: begin DoWriteChar(chEscapeSym); DoWriteChar(chFormSym) end;   //form feed
-      #13: begin DoWriteChar(chEscapeSym); DoWriteChar(chCarRetSym) end; //carriage return
-      '"': begin DoWriteChar(chEscapeSym); DoWriteChar('"') end;         //quote
-      '\': begin DoWriteChar(chEscapeSym); DoWriteChar('\') end;         //backslash
+      #8 : DoWriteChar2(chEscapeSym, chBackSpSym); //backspace
+      #9 : DoWriteChar2(chEscapeSym, chTabSym);    //tab
+      #10: DoWriteChar2(chEscapeSym, chLineSym);   //line feed
+      #12: DoWriteChar2(chEscapeSym, chFormSym);   //form feed
+      #13: DoWriteChar2(chEscapeSym, chCarRetSym); //carriage return
+      '"': DoWriteChar2(chEscapeSym, '"');         //quote
+      '\': DoWriteChar2(chEscapeSym, '\');         //backslash
     else
       DoWriteChar(p^);
     end;
@@ -7457,18 +7480,42 @@ begin
   end;
 end;
 
+class function TJsonWriter.New(aStream: TStream; aBufferSize: Integer): TJsonWriter;
+begin
+  Result := TJsonWriter.Create(aStream, aBufferSize);
+end;
+
 class function TJsonWriter.New(aStream: TStream): TJsonWriter;
 begin
   Result := TJsonWriter.Create(aStream);
 end;
 
-constructor TJsonWriter.Create(aStream: TStream);
+constructor TJsonWriter.Create(aStream: TStream; aBufferSize: Integer);
 begin
   FStream := aStream;
-  FBuffer.Length := TJsonNode.RW_BUF_SIZE;
+  FBuffer.Length := Math.Max(aBufferSize, MIN_BUF_SIZE);
   FStack.Length := STACK_INIT_SIZE;
   FBufPtr := FBuffer.Ptr;
+  FStackTop := NULL_INDEX;
   StackPush(OK);
+end;
+
+constructor TJsonWriter.Create(aStream: TStream);
+begin
+  Create(aStream, TJsonNode.RW_BUF_SIZE);
+end;
+
+destructor TJsonWriter.Destroy;
+begin
+  if FBufPos > 0 then
+    FlushBuffer;
+  inherited;
+end;
+
+procedure TJsonWriter.Flush;
+begin
+  if FBufPos > 0 then
+    FlushBuffer;
 end;
 
 function TJsonWriter.AddNull: TJsonWriter;
