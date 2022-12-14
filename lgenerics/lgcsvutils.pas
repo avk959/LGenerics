@@ -1496,7 +1496,7 @@ end;
 
 procedure TCsvReader.TStrBuffer.AppendCrLf;
 begin
-  EnsureCapacity(Count + 1);
+  EnsureCapacity(Count + 2);
   FItems[Count] := chCR;
   FItems[Count + 1] := chLF;
   Inc(FCount, 2)
