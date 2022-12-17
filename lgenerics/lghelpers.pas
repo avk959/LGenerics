@@ -369,7 +369,6 @@ type
 implementation
 {$Q-}{$R-}{$B-}{$COPERATORS ON}{$MACRO ON}
 {$DEFINE HashFunc := TxxHash32LE}
-{.$DEFINE HashFunc := TMurmur3LE}
 
 class function TGGuidHelper.HashCode(const aValue: TGUID): SizeInt;
 begin
