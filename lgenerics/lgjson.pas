@@ -839,7 +839,7 @@ type
       constructor Create(aStream: TStream; aBufferSize: Integer);
       constructor Create(aStream: TStream);
       destructor Destroy; override;
-      procedure Flush; inline;
+      procedure Flush;
       function AddNull: TJsonWriter;
       function AddFalse: TJsonWriter;
       function AddTrue: TJsonWriter;
@@ -886,6 +886,7 @@ type
       procedure DoWriteStr(p: PChar; aCount: SizeInt);
       procedure ValueAdding; inline;
       procedure PairAdding; inline;
+      procedure NameAdding; inline;
     public
     const
       DEFAULT_LEN = 32768;
@@ -897,16 +898,26 @@ type
       function AddTrue: TJsonStrWriter;
       function Add(aValue: Double): TJsonStrWriter;
       function Add(const s: string): TJsonStrWriter;
+      function Add(const s: shortstring): TJsonStrWriter;
       function Add(aValue: TJsonNode): TJsonStrWriter; inline;
       function AddJson(const aJson: string): TJsonStrWriter;
       function AddName(const aName: string): TJsonStrWriter;
+      function AddName(const aName: shortstring): TJsonStrWriter;
       function AddNull(const aName: string): TJsonStrWriter;
+      function AddNull(const aName: shortstring): TJsonStrWriter;
       function AddFalse(const aName: string): TJsonStrWriter;
+      function AddFalse(const aName: shortstring): TJsonStrWriter;
       function AddTrue(const aName: string): TJsonStrWriter;
+      function AddTrue(const aName: shortstring): TJsonStrWriter;
       function Add(const aName: string; aValue: Double): TJsonStrWriter;
+      function Add(const aName: shortstring; aValue: Double): TJsonStrWriter;
       function Add(const aName, aValue: string): TJsonStrWriter;
+      function Add(const aName, aValue: shortstring): TJsonStrWriter;
+      function Add(const aName: string; aValue: shortstring): TJsonStrWriter;
+      function Add(const aName: shortstring; aValue: string): TJsonStrWriter;
       function Add(const aName: string; aValue: TJsonNode): TJsonStrWriter; inline;
       function AddJson(const aName, aJson: string): TJsonStrWriter;
+      function AddJson(const aName: shortstring; aJson: string): TJsonStrWriter;
       function BeginArray: TJsonStrWriter;
       function BeginObject: TJsonStrWriter;
       function EndArray: TJsonStrWriter; inline;
@@ -7560,8 +7571,7 @@ end;
 
 destructor TJsonWriter.Destroy;
 begin
-  if FBufPos > 0 then
-    FlushBuffer;
+  Flush;
   inherited;
 end;
 
@@ -7893,6 +7903,15 @@ begin
   end;
 end;
 
+procedure TJsonStrWriter.NameAdding;
+begin
+  case StackTop of
+    OB: DoWriteChar(chComma);
+    KE: FStack[FStackTop] := VA;
+  else
+  end;
+end;
+
 class function TJsonStrWriter.New(aInitLen: SizeInt): TJsonStrWriter;
 begin
   Result := TJsonStrWriter.Create(aInitLen);
@@ -7955,6 +7974,13 @@ begin
   Result := Self;
 end;
 
+function TJsonStrWriter.Add(const s: shortstring): TJsonStrWriter;
+begin
+  ValueAdding;
+  DoWriteStr(@s[1], System.Length(s));
+  Result := Self;
+end;
+
 function TJsonStrWriter.Add(aValue: TJsonNode): TJsonStrWriter;
 begin
   Result := AddJson(aValue.AsJson);
@@ -7969,12 +7995,16 @@ end;
 
 function TJsonStrWriter.AddName(const aName: string): TJsonStrWriter;
 begin
-  case StackTop of
-    OB: DoWriteChar(chComma);
-    KE: FStack[FStackTop] := VA;
-  else
-  end;
+  NameAdding;
   DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddName(const aName: shortstring): TJsonStrWriter;
+begin
+  NameAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
   DoWriteChar(chColon);
   Result := Self;
 end;
@@ -7983,6 +8013,15 @@ function TJsonStrWriter.AddNull(const aName: string): TJsonStrWriter;
 begin
   PairAdding;
   DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddNull(const aName: shortstring): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
   DoWriteChar(chColon);
   DoWrite(@JS_NULL[1], System.Length(JS_NULL));
   Result := Self;
@@ -7997,10 +8036,28 @@ begin
   Result := Self;
 end;
 
+function TJsonStrWriter.AddFalse(const aName: shortstring): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@JS_FALSE[1], System.Length(JS_FALSE));
+  Result := Self;
+end;
+
 function TJsonStrWriter.AddTrue(const aName: string): TJsonStrWriter;
 begin
   PairAdding;
   DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@JS_TRUE[1], System.Length(JS_TRUE));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddTrue(const aName: shortstring): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
   DoWriteChar(chColon);
   DoWrite(@JS_TRUE[1], System.Length(JS_TRUE));
   Result := Self;
@@ -8018,10 +8075,49 @@ begin
   Result := Self;
 end;
 
+function TJsonStrWriter.Add(const aName: shortstring; aValue: Double): TJsonStrWriter;
+var
+  num: shortstring;
+begin
+  PairAdding;
+  Double2Str(aValue, num);
+  DoWriteStr(@aName[1], System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(@num[1], System.Length(num));
+  Result := Self;
+end;
+
 function TJsonStrWriter.Add(const aName, aValue: string): TJsonStrWriter;
 begin
   PairAdding;
   DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWriteStr(Pointer(aValue), System.Length(aValue));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const aName, aValue: shortstring): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
+  DoWriteChar(chColon);
+  DoWriteStr(@aValue[1], System.Length(aValue));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const aName: string; aValue: shortstring): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWriteStr(@aValue[1], System.Length(aValue));
+  Result := Self;
+end;
+
+function TJsonStrWriter.Add(const aName: shortstring; aValue: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
   DoWriteChar(chColon);
   DoWriteStr(Pointer(aValue), System.Length(aValue));
   Result := Self;
@@ -8036,6 +8132,15 @@ function TJsonStrWriter.AddJson(const aName, aJson: string): TJsonStrWriter;
 begin
   PairAdding;
   DoWriteStr(Pointer(aName), System.Length(aName));
+  DoWriteChar(chColon);
+  DoWrite(Pointer(aJson), System.Length(aJson));
+  Result := Self;
+end;
+
+function TJsonStrWriter.AddJson(const aName: shortstring; aJson: string): TJsonStrWriter;
+begin
+  PairAdding;
+  DoWriteStr(@aName[1], System.Length(aName));
   DoWriteChar(chColon);
   DoWrite(Pointer(aJson), System.Length(aJson));
   Result := Self;
