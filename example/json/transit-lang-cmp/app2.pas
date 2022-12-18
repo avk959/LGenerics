@@ -5,7 +5,7 @@
 }
 program trascal;
 
-{$mode objfpc}{$h+}{$modeswitch typehelpers}
+{$mode objfpc}{$h+}
 
 uses
 {$ifdef UNIX}
