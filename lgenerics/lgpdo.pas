@@ -203,16 +203,17 @@ var
       Writer.AddFalse;
   end;
   procedure WriteField(aTypeInfo, aData: Pointer); forward;
-  procedure WritePdo(aData: Pointer; const aFieldMap: TPdoFieldMap);
+  procedure WriteRegistered(aData: Pointer; const aFieldMap: TPdoFieldMap);
   var
     I: Integer;
   begin
     Writer.BeginObject;
     for I := 0 to System.High(aFieldMap) do
-      begin
-        Writer.AddName(aFieldMap[I].Name);
-        WriteField(aFieldMap[I].Info, PByte(aData) + aFieldMap[I].Offset);
-      end;
+      if aFieldMap[I].Name <> '' then
+        begin
+          Writer.AddName(aFieldMap[I].Name);
+          WriteField(aFieldMap[I].Info, PByte(aData) + aFieldMap[I].Offset);
+        end;
     Writer.EndObject;
   end;
   procedure WriteUnregRecord(aTypeInfo, aData: Pointer);
@@ -240,7 +241,7 @@ var
     FieldMap := GetPdoFieldMap(aTypeInfo);
     if FieldMap <> nil then
       begin
-        WritePdo(aData, FieldMap);
+        WriteRegistered(aData, FieldMap);
         exit;
       end;
     WriteUnregRecord(aTypeInfo, aData);
@@ -266,7 +267,7 @@ var
         begin
           for I := 0 to Pred(Count) do
             begin
-              WritePdo(Arr, FieldMap);
+              WriteRegistered(Arr, FieldMap);
               Arr += ElSize;
             end;
           exit;
@@ -300,7 +301,7 @@ var
         begin
           for I := 0 to Pred(DynArraySize(Arr)) do
             begin
-              WritePdo(Arr, FieldMap);
+              WriteRegistered(Arr, FieldMap);
               Arr += ElSize;
             end;
           exit;
