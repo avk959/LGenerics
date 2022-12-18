@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="5">
     <PathDelim Value="\"/>
     <Name Value="LGenerics"/>
     <Type Value="RunTimeOnly"/>
@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="5"/>
-    <Files Count="40">
+    <Files Count="41">
       <Item1>
         <Filename Value="lgabstractcontainer.pas"/>
         <UnitName Value="lgAbstractContainer"/>
@@ -193,7 +193,12 @@
         <Filename Value="lgcsvutils.pas"/>
         <UnitName Value="lgCsvUtils"/>
       </Item40>
+      <Item41>
+        <Filename Value="lgpdo.pas"/>
+        <UnitName Value="lgPdo"/>
+      </Item41>
     </Files>
+    <CompatibilityMode Value="True"/>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
     </UsageOptions>
