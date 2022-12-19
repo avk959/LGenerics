@@ -44,7 +44,8 @@ uses
   LGJsonConfTest,
   lgStrHelpersTest,
   lgSeqUtilsTest,
-  lgCsvUtilsTest;
+  lgCsvUtilsTest,
+  lgPdoTest;
 
 type
 
