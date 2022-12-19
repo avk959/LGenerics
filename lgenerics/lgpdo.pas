@@ -29,12 +29,13 @@ uses
 { PDO - Plain Data Object - just regular record(or array of records) which fields are
   represented by numeric(note that they are stored as Double), boolean or string types
   or PDO or arrays of PDO;
-  of static arrays, only one-dimensional arrays are currently supported(arrays having more
+  as for static arrays, only one-dimensional arrays are currently supported(arrays having more
   dimensions are written as one-dimensional) }
 
 { converts PDO to JSON; unsupported data types will be written as "unknown data";
-  fields of unregistered records will be named as "field1, field2, ...";}
-  function PdoToJson(aTypeInfo: Pointer; const aPdo): string;
+  fields of unregistered records will be named as "field1, field2, ..."; it also assumes
+  that the strings are UTF-8 encoded }
+  function PdoToJson(aTypeInfo: Pointer; const aValue): string;
 { the type being registered must be a record; associates the field names aFieldNames with
   the record fields by their indexes; to exclude a field from serialization, it is sufficient
   to specify its name as an empty string; to avoid name mapping errors, it makes sense to use
@@ -151,7 +152,7 @@ const
     tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkArray,
     tkRecord, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
 
-function PdoToJson(aTypeInfo: Pointer; const aPdo): string;
+function PdoToJson(aTypeInfo: Pointer; const aValue): string;
 var
   Writer: TJsonStrWriter;
   procedure WriteInteger(aTypData: PTypeData; aData: Pointer); inline;
@@ -203,7 +204,7 @@ var
       Writer.AddFalse;
   end;
   procedure WriteField(aTypeInfo, aData: Pointer); forward;
-  procedure WriteRegistered(aData: Pointer; const aFieldMap: TPdoFieldMap);
+  procedure WriteRegRecord(aData: Pointer; const aFieldMap: TPdoFieldMap);
   var
     I: Integer;
   begin
@@ -241,7 +242,7 @@ var
     FieldMap := GetPdoFieldMap(aTypeInfo);
     if FieldMap <> nil then
       begin
-        WriteRegistered(aData, FieldMap);
+        WriteRegRecord(aData, FieldMap);
         exit;
       end;
     WriteUnregRecord(aTypeInfo, aData);
@@ -267,7 +268,7 @@ var
         begin
           for I := 0 to Pred(Count) do
             begin
-              WriteRegistered(Arr, FieldMap);
+              WriteRegRecord(Arr, FieldMap);
               Arr += ElSize;
             end;
           exit;
@@ -301,7 +302,7 @@ var
         begin
           for I := 0 to Pred(DynArraySize(Arr)) do
             begin
-              WriteRegistered(Arr, FieldMap);
+              WriteRegRecord(Arr, FieldMap);
               Arr += ElSize;
             end;
           exit;
@@ -319,7 +320,7 @@ var
   var
     pTypData: PTypeData;
   begin
-    if not (PTypeInfo(aTypeInfo)^.Kind in SupportedKinds) then
+    if not (PTypeInfo(aTypeInfo)^.Kind in SupportedKinds) then //todo: tkVariant ???
       begin
         Writer.Add(UnknownData);
         exit;
@@ -335,23 +336,23 @@ var
       tkSString:
         Writer.Add(PShortString(aData)^);
       tkLString, tkAString:
-        Writer.Add(PString(aData)^);
+        Writer.Add(PString(aData)^);  ////////////
       tkWString:
-        Writer.Add(string(PWideString(aData)^));
+        Writer.Add(string(PWideString(aData)^)); //////////////
       tkArray:
         WriteArray(aTypeInfo, aData);
       tkRecord:
         WriteRecord(aTypeInfo, aData);
       tkWChar:
-        Writer.Add(string(widestring(PWideChar(aData)^)));
+        Writer.Add(string(widestring(PWideChar(aData)^))); //////////
       tkBool:
         WriteBool(pTypData, aData);
       tkDynArray:
         WriteDynArray(aTypeInfo, aData);
       tkUString:
-        Writer.Add(string(PUnicodeString(aData)^));
+        Writer.Add(string(PUnicodeString(aData)^)); ///////////
       tkUChar:
-        Writer.Add(string(unicodestring(PUnicodeChar(aData)^)));
+        Writer.Add(string(unicodestring(PUnicodeChar(aData)^)));/////////
     else
     end;
   end;
@@ -361,7 +362,7 @@ begin
   Result := '';
   if aTypeInfo = nil then exit;
   Writer := WriterRef;
-  WriteField(aTypeInfo, @aPdo);
+  WriteField(aTypeInfo, @aValue);
   Result := Writer.JsonString;
 end;
 
