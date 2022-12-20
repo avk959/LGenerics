@@ -28,13 +28,14 @@ uses
 
 { PDO - Plain Data Object - just regular record(or array of records) which fields are
   represented by numeric(note that they are stored as Double), boolean or string types
-  or PDO or arrays of PDO;
+  or PDO or arrays of PDO(also some limited support of Variant);
   as for static arrays, only one-dimensional arrays are currently supported(arrays having more
   dimensions are written as one-dimensional) }
 
 { converts PDO to JSON; unsupported data types will be written as "unknown data";
   fields of unregistered records will be named as "field1, field2, ..."; it also assumes
   that the strings are UTF-8 encoded }
+  generic function PdoToJson<T>(const aValue: T): string;
   function PdoToJson(aTypeInfo: Pointer; const aValue): string;
 { the type being registered must be a record; associates the field names aFieldNames with
   the record fields by their indexes; to exclude a field from serialization, it is sufficient
@@ -47,7 +48,7 @@ uses
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, TypInfo, lgUtils, lgHashMap, lgJson;
+  Math, TypInfo, Variants, lgUtils, lgHashMap, lgJson;
 
 type
   TPdoField = record
@@ -145,19 +146,24 @@ begin
   end;
 end;
 
+generic function PdoToJson<T>(const aValue: T): string;
+begin
+  Result := PdoToJson(TypeInfo(T), aValue);
+end;
+
 const
-  UnknownData = 'unknown data';
-  FieldAlias  = 'field';
+  UnknownAlias = 'unknown data';
+  FieldAlias   = 'field';
   SupportedKinds = [
-    tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkArray,
-    tkRecord, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
+    tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkVariant,
+    tkArray, tkRecord, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
 
 function PdoToJson(aTypeInfo: Pointer; const aValue): string;
 var
   Writer: TJsonStrWriter;
   procedure WriteInteger(aTypData: PTypeData; aData: Pointer); inline;
   var
-    d: Double;
+    d: Double;  //
   begin
     case aTypData^.OrdType of
       otSByte:  d := PShortInt(aData)^;
@@ -316,21 +322,56 @@ var
       Writer.EndArray;
     end;
   end;
-  procedure WriteField(aTypeInfo, aData: Pointer);
+  procedure WriteVariant(const v: Variant);
   var
-    pTypData: PTypeData;
+    I: SizeInt;
+    d: Double;
   begin
-    if not (PTypeInfo(aTypeInfo)^.Kind in SupportedKinds) then //todo: tkVariant ???
+    if VarIsArray(v) then
       begin
-        Writer.Add(UnknownData);
+        Writer.BeginArray;
+        for I := VarArrayLowBound(v, 1) to VarArrayHighBound(v, 1) do
+          WriteVariant(v[I]);
+        Writer.EndArray;
         exit;
       end;
-    pTypData := GetTypeData(PTypeInfo(aTypeInfo));
+    if VarIsEmpty(v) or VarIsNull(v) then
+      begin
+        Writer.AddNull;
+        exit;
+      end;
+    case VarType(v) of
+      varSmallInt, varInteger, varSingle, varShortInt, varDouble, varCurrency,
+      varDate, varByte, varWord, varLongWord, varInt64, varDecimal, varQWord:
+        begin
+          d := v;
+          Writer.Add(d);
+        end;
+      varBoolean:
+        if Boolean(v) then
+          Writer.AddTrue
+        else
+          Writer.AddFalse;
+      varOleStr,
+      varString,
+      varUString:
+        Writer.Add(string(v));
+    else
+      Writer.Add(UnknownAlias);
+    end;
+  end;
+  procedure WriteField(aTypeInfo, aData: Pointer);
+  begin
+    if not (PTypeInfo(aTypeInfo)^.Kind in SupportedKinds) then
+      begin
+        Writer.Add(UnknownAlias);
+        exit;
+      end;
     case PTypeInfo(aTypeInfo)^.Kind of
       tkInteger, tkInt64, tkQWord:
-        WriteInteger(pTypData, aData);
+        WriteInteger(GetTypeData(PTypeInfo(aTypeInfo)), aData);
       tkFloat:
-        WriteFloat(pTypData, aData);
+        WriteFloat(GetTypeData(PTypeInfo(aTypeInfo)), aData);
       tkChar:
         Writer.Add(string(PChar(aData)^));
       tkSString:
@@ -339,6 +380,8 @@ var
         Writer.Add(PString(aData)^);  ////////////
       tkWString:
         Writer.Add(string(PWideString(aData)^)); //////////////
+      tkVariant:
+        WriteVariant(PVariant(aData)^);
       tkArray:
         WriteArray(aTypeInfo, aData);
       tkRecord:
@@ -346,7 +389,7 @@ var
       tkWChar:
         Writer.Add(string(widestring(PWideChar(aData)^))); //////////
       tkBool:
-        WriteBool(pTypData, aData);
+        WriteBool(GetTypeData(PTypeInfo(aTypeInfo)), aData);
       tkDynArray:
         WriteDynArray(aTypeInfo, aData);
       tkUString:
