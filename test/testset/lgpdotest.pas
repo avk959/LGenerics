@@ -52,6 +52,15 @@ type
     end;
     TSimpleArray = array of TSimple;
 
+    TMyObj = class(TCollectionItem)
+    private
+      FName: string;
+      FValue: Variant;
+    published
+      property name: string read FName write FName;
+      property value: Variant read FValue write FValue;
+    end;
+
   published
     procedure Unregistered;
     procedure UnregisteredDynArray;
@@ -73,6 +82,9 @@ type
     procedure TestVariantUStr;
     procedure TestVarArray;
     procedure TestVarArray1;
+    procedure TestObject;
+    procedure TestObject1;
+    procedure TestCollection;
   end;
 
 implementation
@@ -435,6 +447,55 @@ const
 begin
   v := VarArrayOf([42, 'abracadabra', False, VarArrayOf(['foo', Null, 1001])]);
   s := PdoToJson(TypeInfo(v), v);
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.TestObject;
+var
+  o: TObject = nil;
+  s: string;
+const
+  Expect = 'null';
+begin
+  s := PdoToJson(TypeInfo(o), o);
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.TestObject1;
+var
+  o: TMyObj = nil;
+  s: string;
+const
+  Expect = '{"name":"just a name","value":42}';
+begin
+  o := TMyObj.Create(nil);
+  o.Name := 'just a name';
+  o.Value := 42;
+  s := PdoToJson(TypeInfo(o), o);
+  o.Free;
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.TestCollection;
+var
+  c: TCollection;
+  s: string;
+const
+  Expect = '[{"name":"just a name","value":42},{"name":"another name","value":1001}]';
+begin
+  c := TCollection.Create(TMyObj);
+  with TMyObj(c.Add) do
+    begin
+      Name := 'just a name';
+      Value := 42;
+    end;
+  with TMyObj(c.Add) do
+    begin
+      Name := 'another name';
+      Value := 1001;
+    end;
+  s := PdoToJson(TypeInfo(c), c);
+  c.Free;
   AssertTrue(s = Expect);
 end;
 
