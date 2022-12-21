@@ -24,11 +24,11 @@ unit lgPdo;
 interface
 
 uses
-  SysUtils;
+  Classes, SysUtils;
 
 { PDO - Plain Data Object - just regular record(or array of records) which fields are
   represented by numeric(note that they are stored as Double), boolean or string types
-  or PDO or arrays of PDO(also some limited support of Variant);
+  or TObject or PDO or arrays of PDO(also some limited support of Variant) or TCollection;
   as for static arrays, only one-dimensional arrays are currently supported(arrays having more
   dimensions are written as one-dimensional) }
 
@@ -45,10 +45,17 @@ uses
   function RegisteredPdo(aTypeInfo: Pointer; out aFieldNames: TStringArray): Boolean;
   function UnRegisterPdo(aTypeInfo: Pointer): Boolean;
 
+const
+  UNKNOWN_ALIAS = 'unknown data';
+  FIELD_ALIAS   = 'field';
+  SUPPORT_KINDS = [
+    tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkVariant, tkArray,
+    tkRecord, tkClass, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, TypInfo, Variants, lgUtils, lgHashMap, lgJson;
+  Math, TypInfo, Variants, RttiUtils, lgUtils, lgHashMap, lgJson;
 
 type
   TPdoField = record
@@ -151,13 +158,6 @@ begin
   Result := PdoToJson(TypeInfo(T), aValue);
 end;
 
-const
-  UnknownAlias = 'unknown data';
-  FieldAlias   = 'field';
-  SupportedKinds = [
-    tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkVariant,
-    tkArray, tkRecord, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
-
 function PdoToJson(aTypeInfo: Pointer; const aValue): string;
 var
   Writer: TJsonStrWriter;
@@ -183,7 +183,7 @@ var
   begin
     case aTypData^.FloatType of
       ftSingle:   d := PSingle(aData)^;
-      ftDouble:   d := PSingle(aData)^;
+      ftDouble:   d := PDouble(aData)^;
       ftExtended: d := PExtended(aData)^;
       ftComp:     d := PComp(aData)^;
       ftCurr:     d := PCurrency(aData)^;
@@ -235,7 +235,7 @@ var
     Writer.BeginObject;
     for I := 0 to Pred(pTypData^.TotalFieldCount) do
       begin
-        Writer.AddName(FieldAlias + Succ(I).ToString);
+        Writer.AddName(FIELD_ALIAS + Succ(I).ToString);
         WriteField(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
         Inc(pManField);
       end;
@@ -357,14 +357,93 @@ var
       varUString:
         Writer.Add(string(v));
     else
-      Writer.Add(UnknownAlias);
+      Writer.Add(UNKNOWN_ALIAS);
+    end;
+  end;
+  procedure WriteClass(o: TObject); forward;
+  procedure WriteObjProp(o: TObject; aPropInfo: PPropInfo);
+  var
+    pTypInfo: PTypeInfo;
+    I: Int64;
+    e: Extended;
+    p: Pointer;
+  begin
+    pTypInfo := aPropInfo^.PropType;
+    case pTypInfo^.Kind of
+      tkInteger, tkChar, tkWChar, tkBool, tkInt64, tkQWord, tkUChar:
+        begin
+          I := GetOrdProp(o, aPropInfo);
+          WriteField(pTypInfo, @I);
+        end;
+      tkFloat:
+        begin
+          e := GetFloatProp(o, aPropInfo);
+          WriteField(pTypInfo, @e);
+        end;
+      tkSString, tkLString, tkAString:
+        begin
+          p := Pointer(GetStrProp(o, aPropInfo));
+          WriteField(pTypInfo, @p);
+        end;
+      tkWString:
+        begin
+          p := Pointer(GetWideStrProp(o, aPropInfo));
+          WriteField(pTypInfo, @p);
+        end;
+      tkVariant: WriteVariant(GetVariantProp(o, aPropInfo));
+      tkClass: WriteClass(GetObjectProp(o, aPropInfo));
+      tkDynArray:
+        begin
+          p := GetDynArrayProp(o, aPropInfo);
+          WriteField(pTypInfo, @p);
+        end;
+      tkUString:
+        begin
+          p := Pointer(GetUnicodeStrProp(o, aPropInfo));
+          WriteField(pTypInfo, @p);
+        end;
+    else
+      Writer.Add(UNKNOWN_ALIAS);
+    end;
+  end;
+  procedure WriteClass(o: TObject);
+  var
+    I: SizeInt;
+    c: TCollection;
+    Props: TPropInfoList;
+  begin
+    if o = nil then
+      begin
+        Writer.AddNull;
+        exit;
+      end;
+    if o is TCollection then
+      begin
+        c := TCollection(o);
+        Writer.BeginArray;
+        for I := 0 to Pred(c.Count) do
+          WriteClass(c.Items[I]);
+        Writer.EndArray;
+        exit;
+      end;
+    Props := TPropInfoList.Create(o, tkProperties, False);
+    try
+      Writer.BeginObject;
+      for I := 0 to Pred(Props.Count) do
+        begin
+          Writer.AddName(Props[I]^.Name);
+          WriteObjProp(o, Props[I]);
+        end;
+      Writer.EndObject;
+    finally
+      Props.Free;
     end;
   end;
   procedure WriteField(aTypeInfo, aData: Pointer);
   begin
-    if not (PTypeInfo(aTypeInfo)^.Kind in SupportedKinds) then
+    if not (PTypeInfo(aTypeInfo)^.Kind in SUPPORT_KINDS) then
       begin
-        Writer.Add(UnknownAlias);
+        Writer.Add(UNKNOWN_ALIAS);
         exit;
       end;
     case PTypeInfo(aTypeInfo)^.Kind of
@@ -373,7 +452,7 @@ var
       tkFloat:
         WriteFloat(GetTypeData(PTypeInfo(aTypeInfo)), aData);
       tkChar:
-        Writer.Add(string(PChar(aData)^));
+        Writer.Add(string(PChar(aData)^)); //////////////
       tkSString:
         Writer.Add(PShortString(aData)^);
       tkLString, tkAString:
@@ -386,6 +465,8 @@ var
         WriteArray(aTypeInfo, aData);
       tkRecord:
         WriteRecord(aTypeInfo, aData);
+      tkClass:
+        WriteClass(TObject(aData^));
       tkWChar:
         Writer.Add(string(widestring(PWideChar(aData)^))); //////////
       tkBool:
