@@ -1,11 +1,12 @@
 unit lgPdoTest;
 
 {$MODE OBJFPC}{$H+}{$OPTIMIZATION NOORDERFIELDS}
+{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, lgPdo, lgArrayHelpers, Variants;
+  Classes, SysUtils, Variants, fpcunit, testregistry, lgPdo, lgArrayHelpers;
 
 type
   { TTestPdoRegister }
@@ -45,20 +46,32 @@ type
       MySString: string[20];
       MyQWord: QWord;
     end;
-
     TSimple = record
       a: Integer;
       b: string;
+      class procedure WriteJson(r: Pointer; aWriter: TJsonStrWriter); static;
     end;
     TSimpleArray = array of TSimple;
 
-    TMyObj = class(TCollectionItem)
+    TMyItem = class(TCollectionItem)
     private
       FName: string;
       FValue: Variant;
     published
       property name: string read FName write FName;
       property value: Variant read FValue write FValue;
+    end;
+
+    TMyObj = object
+    private
+      FName: string;
+      FValue: Integer;
+      FFlag: Boolean;
+      class procedure WriteJson(o: Pointer; aWriter: TJsonStrWriter); static;
+    public
+      property Name: string read FName write FName;
+      property Value: Integer read FValue write FValue;
+      property Flag: Boolean read FFlag write FFlag;
     end;
 
   published
@@ -85,6 +98,8 @@ type
     procedure TestObject;
     procedure TestObject1;
     procedure TestCollection;
+    procedure CustomRecordProc;
+    procedure CustomObjectProc;
   end;
 
 implementation
@@ -119,31 +134,32 @@ var
   intf: IInterface;
   r: TRec;
 begin
-  AssertFalse(RegisterPdo(TypeInfo(si), a));
-  AssertFalse(RegisterPdo(TypeInfo(b), a));
-  AssertFalse(RegisterPdo(TypeInfo(smi), a));
-  AssertFalse(RegisterPdo(TypeInfo(w), a));
-  AssertFalse(RegisterPdo(TypeInfo(i), a));
-  AssertFalse(RegisterPdo(TypeInfo(dw), a));
-  AssertFalse(RegisterPdo(TypeInfo(i64), a));
-  AssertFalse(RegisterPdo(TypeInfo(qw), a));
-  AssertFalse(RegisterPdo(TypeInfo(bo), a));
-  AssertFalse(RegisterPdo(TypeInfo(b8), a));
-  AssertFalse(RegisterPdo(TypeInfo(b16), a));
-  AssertFalse(RegisterPdo(TypeInfo(b32), a));
-  AssertFalse(RegisterPdo(TypeInfo(b64), a));
-  AssertFalse(RegisterPdo(TypeInfo(bb), a));
-  AssertFalse(RegisterPdo(TypeInfo(wb), a));
-  AssertFalse(RegisterPdo(TypeInfo(lb), a));
-  AssertFalse(RegisterPdo(TypeInfo(qwb), a));
-  AssertFalse(RegisterPdo(TypeInfo(c), a));
-  AssertFalse(RegisterPdo(TypeInfo(s), a));
-  AssertFalse(RegisterPdo(TypeInfo(ss), a));
-  AssertFalse(RegisterPdo(TypeInfo(o), a));
-  AssertFalse(RegisterPdo(TypeInfo(lst), a));
-  AssertFalse(RegisterPdo(TypeInfo(intf), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(si), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(b), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(smi), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(w), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(i), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(dw), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(i64), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(qw), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(bo), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(b8), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(b16), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(b32), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(b64), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(bb), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(wb), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(lb), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(qwb), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(c), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(s), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(ss), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(o), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(lst), a));
+  AssertFalse(RegisterRecordFields(TypeInfo(intf), a));
 
-  AssertTrue(RegisterPdo(TypeInfo(r), a));
+  AssertTrue(RegisterRecordFields(TypeInfo(r), a));
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
 end;
 
 procedure TTestPdoRegister.Registered;
@@ -155,9 +171,16 @@ const
   Expect: TStringArray = ('one', 'two', 'three');
 begin
   a := ['dummy'];
-  AssertFalse(RegisteredPdo(TypeInfo(r2), a));
+  AssertFalse(RegisteredRecordFields(TypeInfo(r2), a));
   AssertTrue(a = nil);
-  AssertTrue(RegisteredPdo(TypeInfo(r1), a));
+  a := ['dummy'];
+  AssertFalse(RegisteredRecordFields(TypeInfo(r1), a));
+  AssertTrue(a = nil);
+  a := ['one', 'two', 'three','four'];
+  AssertTrue(RegisterRecordFields(TypeInfo(r1), a));
+  AssertFalse(RegisteredRecordFields(TypeInfo(r2), a));
+  AssertTrue(a = nil);
+  AssertTrue(RegisteredRecordFields(TypeInfo(r1), a));
   AssertTrue(specialize TGComparableArrayHelper<string>.Same(a, Expect));
 end;
 
@@ -169,6 +192,43 @@ begin
   AssertFalse(UnRegisterPdo(TypeInfo(r2)));
   AssertTrue(UnRegisterPdo(TypeInfo(r1)));
   AssertFalse(UnRegisterPdo(TypeInfo(r1)));
+end;
+
+{ TTestPdoToJson.TSimple }
+
+class procedure TTestPdoToJson.TSimple.WriteJson(r: Pointer; aWriter: TJsonStrWriter);
+type
+  PSimple = ^TSimple;
+begin
+  with PSimple(r)^ do
+    aWriter
+      .BeginObject
+        .Add('field a', a)
+        .Add('field b', b)
+      .EndObject;
+end;
+
+{ TItem }
+
+class procedure TTestPdoToJson.TMyObj.WriteJson(o: Pointer; aWriter: TJsonStrWriter);
+type
+  PMyObj = ^TMyObj;
+const
+  cName  = 'name';
+  cValue = 'value';
+  cFlag  = 'flag';
+begin
+  with PMyObj(o)^ do begin
+    aWriter
+      .BeginObject
+        .Add(cName, Name)
+        .Add(cValue, Value);
+    if Flag then
+      aWriter.AddTrue(cFlag)
+    else
+      aWriter.AddTrue(cFlag);
+    aWriter .EndObject;
+  end;
 end;
 
 procedure TTestPdoToJson.Unregistered;
@@ -260,7 +320,7 @@ begin
   r.MyStr := 'just string';
   r.MySString := 'short string';
   r.MyQWord := 9007199254740991;
-  AssertTrue(RegisterPdo(TypeInfo(r), fm));
+  AssertTrue(RegisterRecordFields(TypeInfo(r), fm));
   s := PdoToJson(TypeInfo(r), r);
   AssertTrue(s = Expect);
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
@@ -281,7 +341,7 @@ begin
   r.MyStr := 'just string';
   r.MySString := 'short string';
   r.MyQWord := 9007199254740991;
-  AssertTrue(RegisterPdo(TypeInfo(r), fm));
+  AssertTrue(RegisterRecordFields(TypeInfo(r), fm));
   s := PdoToJson(TypeInfo(r), r);
   AssertTrue(s = Expect);
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
@@ -295,7 +355,7 @@ var
 const
   Expect = '[{"a":42,"b":"str1"},{"a":1001,"b":"str2"}]';
 begin
-  AssertTrue(RegisterPdo(TypeInfo(TSimple), b));
+  AssertTrue(RegisterRecordFields(TypeInfo(TSimple), b));
   s := PdoToJson(TypeInfo(a), a);
   AssertTrue(s = Expect);
   AssertTrue(UnRegisterPdo(TypeInfo(TSimple)));
@@ -314,7 +374,7 @@ const
   Expect = '[[{"a":42,"b":"str1"},{"a":1001,"b":"str2"}],' +
            '[{"a":12,"b":"str3"},{"a":1024,"b":"str4"}]]';
 begin
-  AssertTrue(RegisterPdo(TypeInfo(TSimple), b));
+  AssertTrue(RegisterRecordFields(TypeInfo(TSimple), b));
   s := PdoToJson(TypeInfo(a), a);
   AssertTrue(s, s = Expect);
   AssertTrue(UnRegisterPdo(TypeInfo(TSimple)));
@@ -463,12 +523,12 @@ end;
 
 procedure TTestPdoToJson.TestObject1;
 var
-  o: TMyObj = nil;
+  o: TMyItem = nil;
   s: string;
 const
   Expect = '{"name":"just a name","value":42}';
 begin
-  o := TMyObj.Create(nil);
+  o := TMyItem.Create(nil);
   o.Name := 'just a name';
   o.Value := 42;
   s := PdoToJson(TypeInfo(o), o);
@@ -483,19 +543,50 @@ var
 const
   Expect = '[{"name":"just a name","value":42},{"name":"another name","value":1001}]';
 begin
-  c := TCollection.Create(TMyObj);
-  with TMyObj(c.Add) do
+  c := TCollection.Create(TMyItem);
+  with TMyItem(c.Add) do
     begin
       Name := 'just a name';
       Value := 42;
     end;
-  with TMyObj(c.Add) do
+  with TMyItem(c.Add) do
     begin
       Name := 'another name';
       Value := 1001;
     end;
   s := PdoToJson(TypeInfo(c), c);
   c.Free;
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.CustomRecordProc;
+var
+  r: TSimple;
+  s: string;
+const
+  Expect = '{"field a":42,"field b":"string value"}';
+begin
+  AssertTrue(RegisterRecordJsonProc(TypeInfo(r), @TSimple.WriteJson));
+  r.a := 42;
+  r.b := 'string value';
+  s := PdoToJson(TypeInfo(r), r);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.CustomObjectProc;
+var
+  o: TMyObj;
+  s: string;
+const
+  Expect = '{"name":"just name","value":42,"flag":true}';
+begin
+  AssertTrue(RegisterObjectJsonProc(TypeInfo(o), @TMyObj.WriteJson));
+  o.Name := 'just name';
+  o.Value := 42;
+  o.Flag := True;
+  s := PdoToJson(TypeInfo(o), o);
+  AssertTrue(UnRegisterPdo(TypeInfo(o)));
   AssertTrue(s = Expect);
 end;
 
