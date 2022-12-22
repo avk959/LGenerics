@@ -19,54 +19,115 @@
 *****************************************************************************}
 unit lgPdo;
 
-{$MODE OBJFPC}{$H+}
+{$MODE OBJFPC}{$H+}{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils, TypInfo, lgJson;
 
-{ PDO - Plain Data Object - just regular record(or array of records) which fields are
-  represented by numeric(note that they are stored as Double), boolean or string types
-  or TObject or PDO or arrays of PDO(also some limited support of Variant) or TCollection;
-  as for static arrays, only one-dimensional arrays are currently supported(arrays having more
-  dimensions are written as one-dimensional) }
+{ PDO - Plain Data Object, currently supported:
+   - numeric, boolean or string types, some limited support of Variant;
+   - regular records, it is possible to register a list of field names or a custom callback;
+   - classes, using published properties or by registering a custom callback;
+   - object, only by registering a serialization callback;
+   - static arrays of PDO(only one-dimensional, multidimensional arrays are written as one-dimensional);
+   - dynamic arrays of PDO;
+   - variant arrays(currently only one-dimensional);
+}
 
-{ converts PDO to JSON; unsupported data types will be written as "unknown data";
-  fields of unregistered records will be named as "field1, field2, ..."; it also assumes
-  that the strings are UTF-8 encoded }
+{ converts PDO to JSON; unsupported data types will be written as "unknown data"(see UNKNOWN_ALIAS);
+  fields of unregistered records will be named as "field1, field2, ..."(see FIELD_ALIAS) }
   generic function PdoToJson<T>(const aValue: T): string;
-  function PdoToJson(aTypeInfo: Pointer; const aValue): string;
-{ the type being registered must be a record; associates the field names aFieldNames with
-  the record fields by their indexes; to exclude a field from serialization, it is sufficient
-  to specify its name as an empty string; to avoid name mapping errors, it makes sense to use
-  the $OPTIMIZATION NOORDERFIELDS directive in the record declaration }
-  function RegisterPdo(aTypeInfo: Pointer; const aFieldNames: TStringArray): Boolean;
-  function RegisteredPdo(aTypeInfo: Pointer; out aFieldNames: TStringArray): Boolean;
-  function UnRegisterPdo(aTypeInfo: Pointer): Boolean;
+  function PdoToJson(aTypeInfo: PTypeInfo; const aValue): string;
+  { the type being registered must be a record; associates the field names aFieldNames with
+    the record fields by their indexes; to exclude a field from serialization, it is sufficient
+    to specify its name as an empty string; to avoid name mapping errors, it makes sense to use
+    the $OPTIMIZATION NOORDERFIELDS directive in the record declaration; returns True on
+    successful registration }
+  function RegisterRecordFields(aTypeInfo: PTypeInfo; const aFieldNames: TStringArray): Boolean;
+  function RegisteredRecordFields(aTypeInfo: PTypeInfo; out aFieldNames: TStringArray): Boolean;
+  function UnRegisterPdo(aTypeInfo: PTypeInfo): Boolean;
+
+type
+  TJsonStrWriter   = lgJson.TJsonStrWriter;
+  TClassJsonProc   = procedure(o: TObject; aWriter: TJsonStrWriter);
+  TPointerJsonProc = procedure(r: Pointer; aWriter: TJsonStrWriter);
+
+{ associates a custom JSON serialization procedure with a type; the type must be a class, only
+  one procedure can be associated with each class; returns True if registration is successful }
+  function RegisterClassJsonProc(aTypeInfo: PTypeInfo; aProc: TClassJsonProc): Boolean;
+{ associates a custom JSON serialization procedure with a type; the type must be a record, only one
+  procedure can be associated with each record type; returns True if registration is successful }
+  function RegisterRecordJsonProc(aTypeInfo: PTypeInfo; aProc: TPointerJsonProc): Boolean;
+{ associates a custom JSON serialization procedure with a type; the type must be an object, only one
+  procedure can be associated with each object type; returns True if registration is successful }
+  function RegisterObjectJsonProc(aTypeInfo: PTypeInfo; aProc: TPointerJsonProc): Boolean;
+  function RegisteredPdoProc(aTypeInfo: Pointer): Boolean;
 
 const
   UNKNOWN_ALIAS = 'unknown data';
   FIELD_ALIAS   = 'field';
   SUPPORT_KINDS = [
     tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkVariant, tkArray,
-    tkRecord, tkClass, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
+    tkRecord, tkClass, tkObject, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, TypInfo, Variants, RttiUtils, lgUtils, lgHashMap, lgJson;
+  Math, Variants, RttiUtils, lgUtils, lgHashMap;
 
 type
-  TPdoField = record
+  TRecField = record
     Name: string;
     Offset: Integer;
     Info: PTypeInfo;
   end;
 
-  TPdoFieldMap  = array of TPdoField;
-  TPdoCacheType = specialize TGLiteChainHashMap<Pointer, TPdoFieldMap, Pointer>;
+  TRecFieldMap = array of TRecField;
+  TEntryKind   = (ekRecFieldMap, ekClassJsonProc, ekRecJsonProc, ekObjJsonProc);
+
+  TPdoCacheEntry = record
+    FieldMap: TRecFieldMap;
+    CustomProc: Pointer;
+    Kind: TEntryKind;
+    constructor Create(const aFieldMap: TRecFieldMap);
+    constructor CreateClass(aProc: TClassJsonProc);
+    constructor CreateRec(aProc: TPointerJsonProc);
+    constructor CreateObj(aProc: TPointerJsonProc);
+  end;
+  PPdoCacheEntry = ^TPdoCacheEntry;
+
+  TPdoCacheType = specialize TGLiteChainHashMap<Pointer, TPdoCacheEntry, Pointer>;
   TPdoCache     = TPdoCacheType.TMap;
+
+constructor TPdoCacheEntry.Create(const aFieldMap: TRecFieldMap);
+begin
+  FieldMap := aFieldMap;
+  CustomProc := nil;
+  Kind := ekRecFieldMap;
+end;
+
+constructor TPdoCacheEntry.CreateClass(aProc: TClassJsonProc);
+begin
+  FieldMap := nil;
+  CustomProc := aProc;
+  Kind := ekClassJsonProc;
+end;
+
+constructor TPdoCacheEntry.CreateRec(aProc: TPointerJsonProc);
+begin
+  FieldMap := nil;
+  CustomProc := aProc;
+  Kind := ekRecJsonProc;
+end;
+
+constructor TPdoCacheEntry.CreateObj(aProc: TPointerJsonProc);
+begin
+  FieldMap := nil;
+  CustomProc := aProc;
+  Kind := ekObjJsonProc;
+end;
 
 var
   GlobLock: TRtlCriticalSection;
@@ -76,7 +137,7 @@ function AddPdo(aTypeInfo: Pointer; const aFieldNames: TStringArray): Boolean;
 var
   pTypData: PTypeData;
   pManField: PManagedField;
-  FieldMap: TPdoFieldMap;
+  FieldMap: TRecFieldMap;
   I, Count: Integer;
 begin
   Result := False;
@@ -99,55 +160,114 @@ begin
   end;
   EnterCriticalSection(GlobLock);
   try
-    Result := PdoCache.Add(aTypeInfo, FieldMap);
+    Result := PdoCache.Add(aTypeInfo, TPdoCacheEntry.Create(FieldMap));
   finally
     LeaveCriticalSection(GlobLock);
   end;
 end;
 
-function GetPdoFieldMap(aTypeInfo: Pointer): TPdoFieldMap;
+function GetPdoEntry(aTypeInfo: Pointer; out e: TPdoCacheEntry): Boolean;
 begin
-  Result := nil;
   EnterCriticalSection(GlobLock);
   try
-    PdoCache.TryGetValue(aTypeInfo, Result);
+    Result := PdoCache.TryGetValue(aTypeInfo, e);
   finally
     LeaveCriticalSection(GlobLock);
   end;
 end;
 
-function RegisterPdo(aTypeInfo: Pointer; const aFieldNames: TStringArray): Boolean;
+function RegisterRecordFields(aTypeInfo: PTypeInfo; const aFieldNames: TStringArray): Boolean;
 begin
   if aTypeInfo = nil then exit(False);
-  if PTypeInfo(aTypeInfo)^.Kind <> tkRecord then exit(False);
+  if aTypeInfo^.Kind <> tkRecord then exit(False);
   Result := AddPdo(aTypeInfo, aFieldNames);
 end;
 
-function RegisteredPdo(aTypeInfo: Pointer; out aFieldNames: TStringArray): Boolean;
+function RegisteredRecordFields(aTypeInfo: PTypeInfo; out aFieldNames: TStringArray): Boolean;
 var
-  FieldMap: TPdoFieldMap;
+  pe: PPdoCacheEntry;
+  FieldMap: TRecFieldMap;
   I: Integer;
 begin
   aFieldNames := nil;
+  pe := nil;
+  FieldMap := nil;
+  Result := False;
   EnterCriticalSection(GlobLock);
   try
-    Result := PdoCache.TryGetValue(aTypeInfo, FieldMap);
+    if not PdoCache.TryGetMutValue(aTypeInfo, pe) then exit;
+    if pe^.Kind <> ekRecFieldMap then exit;
+    FieldMap := pe^.FieldMap;
   finally
     LeaveCriticalSection(GlobLock);
   end;
-  if Result then
+  if FieldMap <> nil then
     begin
       System.SetLength(aFieldNames, System.Length(FieldMap));
       for I := 0 to System.High(FieldMap) do
         aFieldNames[I] := FieldMap[I].Name;
+      Result := True;
     end;
 end;
 
-function UnRegisterPdo(aTypeInfo: Pointer): Boolean;
+function UnRegisterPdo(aTypeInfo: PTypeInfo): Boolean;
 begin
   EnterCriticalSection(GlobLock);
   try
     Result := PdoCache.Remove(aTypeInfo);
+  finally
+    LeaveCriticalSection(GlobLock);
+  end;
+end;
+
+function RegisterClassJsonProc(aTypeInfo: PTypeInfo; aProc: TClassJsonProc): Boolean;
+begin
+  if aTypeInfo = nil then exit(False);
+  if aTypeInfo^.Kind <> tkClass then exit(False);
+  if aProc = nil then exit(False);
+  EnterCriticalSection(GlobLock);
+  try
+    Result := PdoCache.Add(aTypeInfo, TPdoCacheEntry.CreateClass(aProc));
+  finally
+    LeaveCriticalSection(GlobLock);
+  end;
+end;
+
+function RegisterRecordJsonProc(aTypeInfo: PTypeInfo; aProc: TPointerJsonProc): Boolean;
+begin
+  if aTypeInfo = nil then exit(False);
+  if aTypeInfo^.Kind <> tkRecord then exit(False);
+  if aProc = nil then exit(False);
+  EnterCriticalSection(GlobLock);
+  try
+    Result := PdoCache.Add(aTypeInfo, TPdoCacheEntry.CreateRec(aProc));
+  finally
+    LeaveCriticalSection(GlobLock);
+  end;
+end;
+
+function RegisterObjectJsonProc(aTypeInfo: PTypeInfo; aProc: TPointerJsonProc): Boolean;
+begin
+  if aTypeInfo = nil then exit(False);
+  if aTypeInfo^.Kind <> tkObject then exit(False);
+  if aProc = nil then exit(False);
+  EnterCriticalSection(GlobLock);
+  try
+    Result := PdoCache.Add(aTypeInfo, TPdoCacheEntry.CreateObj(aProc));
+  finally
+    LeaveCriticalSection(GlobLock);
+  end;
+end;
+
+function RegisteredPdoProc(aTypeInfo: Pointer): Boolean;
+var
+  pe: PPdoCacheEntry;
+begin
+  pe := nil;
+  EnterCriticalSection(GlobLock);
+  try
+    if not PdoCache.TryGetMutValue(aTypeInfo, pe) then exit(False);
+    Result := pe^.Kind <> ekRecFieldMap;
   finally
     LeaveCriticalSection(GlobLock);
   end;
@@ -158,12 +278,12 @@ begin
   Result := PdoToJson(TypeInfo(T), aValue);
 end;
 
-function PdoToJson(aTypeInfo: Pointer; const aValue): string;
+function PdoToJson(aTypeInfo: PTypeInfo; const aValue): string;
 var
   Writer: TJsonStrWriter;
   procedure WriteInteger(aTypData: PTypeData; aData: Pointer); inline;
   var
-    d: Double;  //
+    d: Double;
   begin
     case aTypData^.OrdType of
       otSByte:  d := PShortInt(aData)^;
@@ -209,8 +329,8 @@ var
     else
       Writer.AddFalse;
   end;
-  procedure WriteField(aTypeInfo, aData: Pointer); forward;
-  procedure WriteRegRecord(aData: Pointer; const aFieldMap: TPdoFieldMap);
+  procedure WriteField(aTypeInfo: PTypeInfo; aData: Pointer); forward;
+  procedure WriteRegRecord(aData: Pointer; const aFieldMap: TRecFieldMap);
   var
     I: Integer;
   begin
@@ -223,7 +343,7 @@ var
         end;
     Writer.EndObject;
   end;
-  procedure WriteUnregRecord(aTypeInfo, aData: Pointer);
+  procedure WriteUnregRecord(aTypeInfo: PTypeInfo; aData: Pointer);
   var
     pTypData: PTypeData;
     pManField: PManagedField;
@@ -241,21 +361,29 @@ var
       end;
     Writer.EndObject;
   end;
-  procedure WriteRecord(aTypeInfo, aData: Pointer); inline;
+  procedure WriteRecord(aTypeInfo: PTypeInfo; aData: Pointer); inline;
   var
-    FieldMap: TPdoFieldMap;
+    e: TPdoCacheEntry;
   begin
-    FieldMap := GetPdoFieldMap(aTypeInfo);
-    if FieldMap <> nil then
-      begin
-        WriteRegRecord(aData, FieldMap);
-        exit;
+    if GetPdoEntry(aTypeInfo, e) then
+      case e.Kind of
+        ekRecFieldMap:
+          begin
+            WriteRegRecord(aData, e.FieldMap);
+            exit;
+          end;
+        ekRecJsonProc:
+          begin
+            TPointerJsonProc(e.CustomProc)(aData, Writer);
+            exit
+          end;
+      else
       end;
     WriteUnregRecord(aTypeInfo, aData);
   end;
-  procedure WriteArray(aTypeInfo, aData: Pointer);
+  procedure WriteArray(aTypeInfo: PTypeInfo; aData: Pointer);
   var
-    FieldMap: TPdoFieldMap;
+    e: TPdoCacheEntry;
     pTypData: PTypeData;
     ElSize: SizeUInt;
     ElType: PTypeInfo;
@@ -269,14 +397,23 @@ var
     Arr := aData;
     Writer.BeginArray;
     try
-      FieldMap := GetPdoFieldMap(ElType);
-      if FieldMap <> nil then
+      if GetPdoEntry(ElType, e) then
         begin
-          for I := 0 to Pred(Count) do
-            begin
-              WriteRegRecord(Arr, FieldMap);
-              Arr += ElSize;
-            end;
+          case e.Kind of
+            ekRecFieldMap:
+              for I := 0 to Pred(Count) do
+                begin
+                  WriteRegRecord(Arr, e.FieldMap);
+                  Arr += ElSize;
+                end;
+            ekRecJsonProc:
+              for I := 0 to Pred(Count) do
+                begin
+                  TPointerJsonProc(e.CustomProc)(Arr, Writer);
+                  Arr += ElSize;
+                end;
+          else
+          end;
           exit;
         end;
       for I := 0 to Pred(Count) do
@@ -288,9 +425,9 @@ var
       Writer.EndArray;
     end;
   end;
-  procedure WriteDynArray(aTypeInfo, aData: Pointer);
+  procedure WriteDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
   var
-    FieldMap: TPdoFieldMap;
+    e: TPdoCacheEntry;
     pTypData: PTypeData;
     ElSize: SizeUInt;
     ElType: PTypeInfo;
@@ -303,14 +440,23 @@ var
     Arr := Pointer(aData^);
     Writer.BeginArray;
     try
-      FieldMap := GetPdoFieldMap(ElType);
-      if FieldMap <> nil then
+      if GetPdoEntry(ElType, e) then
         begin
-          for I := 0 to Pred(DynArraySize(Arr)) do
-            begin
-              WriteRegRecord(Arr, FieldMap);
-              Arr += ElSize;
-            end;
+          case e.Kind of
+            ekRecFieldMap:
+              for I := 0 to Pred(DynArraySize(Arr)) do
+                begin
+                  WriteRegRecord(Arr, e.FieldMap);
+                  Arr += ElSize;
+                end;
+            ekRecJsonProc:
+              for I := 0 to Pred(DynArraySize(Arr)) do
+                begin
+                  TPointerJsonProc(e.CustomProc)(Arr, Writer);
+                  Arr += ElSize;
+                end;
+          else
+          end;
           exit;
         end;
       for I := 0 to Pred(DynArraySize(Arr)) do
@@ -360,8 +506,8 @@ var
       Writer.Add(UNKNOWN_ALIAS);
     end;
   end;
-  procedure WriteClass(o: TObject); forward;
-  procedure WriteObjProp(o: TObject; aPropInfo: PPropInfo);
+  procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject); forward;
+  procedure WriteClassProp(o: TObject; aPropInfo: PPropInfo);
   var
     pTypInfo: PTypeInfo;
     I: Int64;
@@ -391,7 +537,7 @@ var
           WriteField(pTypInfo, @p);
         end;
       tkVariant: WriteVariant(GetVariantProp(o, aPropInfo));
-      tkClass: WriteClass(GetObjectProp(o, aPropInfo));
+      tkClass: WriteClass(aPropInfo^.PropType, GetObjectProp(o, aPropInfo));
       tkDynArray:
         begin
           p := GetDynArrayProp(o, aPropInfo);
@@ -406,24 +552,49 @@ var
       Writer.Add(UNKNOWN_ALIAS);
     end;
   end;
-  procedure WriteClass(o: TObject);
+  procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject);
   var
-    I: SizeInt;
+    I, J: SizeInt;
     c: TCollection;
     Props: TPropInfoList;
+    e: TPdoCacheEntry;
   begin
     if o = nil then
       begin
         Writer.AddNull;
         exit;
       end;
+    if GetPdoEntry(aTypeInfo, e) and (e.Kind = ekClassJsonProc) then
+      begin
+        TClassJsonProc(e.CustomProc)(o, Writer);
+        exit;
+      end;
     if o is TCollection then
       begin
         c := TCollection(o);
-        Writer.BeginArray;
-        for I := 0 to Pred(c.Count) do
-          WriteClass(c.Items[I]);
-        Writer.EndArray;
+        if c.Count = 0 then
+          begin
+            Writer.BeginArray;
+            Writer.EndArray;
+            exit;
+          end;
+        Props := TPropInfoList.Create(c.Items[0], tkProperties, False);
+        try
+          Writer.BeginArray;
+          for I := 0 to Pred(c.Count) do
+            begin
+              Writer.BeginObject;
+              for J := 0 to Pred(Props.Count) do
+                begin
+                  Writer.AddName(Props[J]^.Name);
+                  WriteClassProp(c.Items[I], Props[J]);
+                end;
+              Writer.EndObject;
+            end;
+          Writer.EndArray;
+        finally
+          Props.Free;
+        end;
         exit;
       end;
     Props := TPropInfoList.Create(o, tkProperties, False);
@@ -432,25 +603,34 @@ var
       for I := 0 to Pred(Props.Count) do
         begin
           Writer.AddName(Props[I]^.Name);
-          WriteObjProp(o, Props[I]);
+          WriteClassProp(o, Props[I]);
         end;
       Writer.EndObject;
     finally
       Props.Free;
     end;
   end;
-  procedure WriteField(aTypeInfo, aData: Pointer);
+  procedure WriteObject(aTypeInfo, aData: Pointer);
+  var
+    e: TPdoCacheEntry;
   begin
-    if not (PTypeInfo(aTypeInfo)^.Kind in SUPPORT_KINDS) then
+    if GetPdoEntry(aTypeInfo, e) and (e.Kind = ekObjJsonProc) then
+      TPointerJsonProc(e.CustomProc)(aData, Writer)
+    else
+      Writer.Add(UNKNOWN_ALIAS);
+  end;
+  procedure WriteField(aTypeInfo: PTypeInfo; aData: Pointer);
+  begin
+    if not (aTypeInfo^.Kind in SUPPORT_KINDS) then
       begin
         Writer.Add(UNKNOWN_ALIAS);
         exit;
       end;
-    case PTypeInfo(aTypeInfo)^.Kind of
+    case aTypeInfo^.Kind of
       tkInteger, tkInt64, tkQWord:
-        WriteInteger(GetTypeData(PTypeInfo(aTypeInfo)), aData);
+        WriteInteger(GetTypeData(aTypeInfo), aData);
       tkFloat:
-        WriteFloat(GetTypeData(PTypeInfo(aTypeInfo)), aData);
+        WriteFloat(GetTypeData(aTypeInfo), aData);
       tkChar:
         Writer.Add(string(PChar(aData)^)); //////////////
       tkSString:
@@ -466,11 +646,13 @@ var
       tkRecord:
         WriteRecord(aTypeInfo, aData);
       tkClass:
-        WriteClass(TObject(aData^));
+        WriteClass(aTypeInfo, TObject(aData^));
+      tkObject:
+        WriteObject(aTypeInfo, aData);
       tkWChar:
         Writer.Add(string(widestring(PWideChar(aData)^))); //////////
       tkBool:
-        WriteBool(GetTypeData(PTypeInfo(aTypeInfo)), aData);
+        WriteBool(GetTypeData(aTypeInfo), aData);
       tkDynArray:
         WriteDynArray(aTypeInfo, aData);
       tkUString:
