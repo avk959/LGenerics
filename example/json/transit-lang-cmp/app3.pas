@@ -165,8 +165,8 @@ begin
 end;
 
 begin
-  RegisterPdo(TypeInfo(TScheduleItem), ['arrival_time', 'departure_time', 'stop_id']);
-  RegisterPdo(TypeInfo(TResponseItem), ['route_id', 'service_id', 'trip_id', 'schedules']);
+  RegisterRecordFields(TypeInfo(TScheduleItem), ['arrival_time', 'departure_time', 'stop_id']);
+  RegisterRecordFields(TypeInfo(TResponseItem), ['route_id', 'service_id', 'trip_id', 'schedules']);
 
   GetStopTimes(StopTimeIdxMap, Schedules);
   GetTrips(TripIdxMap, Trips);
