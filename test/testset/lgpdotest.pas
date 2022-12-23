@@ -90,6 +90,7 @@ type
     procedure AChar;
     procedure WChar;
     procedure UChar;
+    procedure Enum;
     procedure TestVariantShortInt;
     procedure TestVariantNull;
     procedure TestVariantUStr;
@@ -100,6 +101,7 @@ type
     procedure TestCollection;
     procedure CustomRecordProc;
     procedure CustomObjectProc;
+    procedure Strings;
   end;
 
 implementation
@@ -450,6 +452,19 @@ begin
   AssertTrue(s = Expect);
 end;
 
+procedure TTestPdoToJson.Enum;
+type
+  TMyEnum = (meOne, meTwo, meThree, meFour);
+var
+  a: array of TMyEnum = (meOne, meOne, meFour, meTwo, meThree);
+  s: string;
+const
+  Expect = '["meOne","meOne","meFour","meTwo","meThree"]';
+begin
+  s := PdoToJson(TypeInfo(a), a);
+  AssertTrue(s = Expect);
+end;
+
 procedure TTestPdoToJson.TestVariantShortInt;
 var
   v: Variant;
@@ -587,6 +602,20 @@ begin
   o.Flag := True;
   s := PdoToJson(TypeInfo(o), o);
   AssertTrue(UnRegisterPdo(TypeInfo(o)));
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.Strings;
+var
+  sl: TStringList;
+  s: string;
+const
+  Expect = '["one","two","three","four"]';
+begin
+  sl := TStringList.Create;
+  sl.AddStrings(['one','two','three','four']);
+  s := PdoToJson(TypeInfo(sl), sl);
+  sl.Free;
   AssertTrue(s = Expect);
 end;
 
