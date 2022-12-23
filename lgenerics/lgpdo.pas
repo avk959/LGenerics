@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Plain Data Objects and serialization.                                   *
+*   Plain Data Objects  and its export.                                     *
 *                                                                           *
 *   Copyright(c) 2022 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -26,10 +26,13 @@ interface
 uses
   Classes, SysUtils, TypInfo, lgJson;
 
-{ PDO - Plain Data Object, currently supported:
+{ PDO - Plain Data Objects is a conventional collective name for Pascal data structures
+  that can be user-transparently exported to another format(currently, only JSON):
    - numeric, boolean or string types, some limited support of Variant;
+   - enumerations are exported in string form(as the name of the corresponding constant)
    - regular records, it is possible to register a list of field names or a custom callback;
-   - classes, using published properties or by registering a custom callback;
+   - classes, using published properties or by registering a custom callback,
+     TStrings and TCollection as a special case;
    - object, only by registering a serialization callback;
    - static arrays of PDO(only one-dimensional, multidimensional arrays are written as one-dimensional);
    - dynamic arrays of PDO;
@@ -55,7 +58,7 @@ type
   TPointerJsonProc = procedure(r: Pointer; aWriter: TJsonStrWriter);
 
 { associates a custom JSON serialization procedure with a type; the type must be a class, only
-  one procedure can be associated with each class; returns True if registration is successful }
+  one procedure can be associated with each class type; returns True if registration is successful }
   function RegisterClassJsonProc(aTypeInfo: PTypeInfo; aProc: TClassJsonProc): Boolean;
 { associates a custom JSON serialization procedure with a type; the type must be a record, only one
   procedure can be associated with each record type; returns True if registration is successful }
@@ -69,8 +72,9 @@ const
   UNKNOWN_ALIAS = 'unknown data';
   FIELD_ALIAS   = 'field';
   SUPPORT_KINDS = [
-    tkInteger, tkChar, tkFloat, tkSString, tkLString, tkAString, tkWString, tkVariant, tkArray,
-    tkRecord, tkClass, tkObject, tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
+    tkInteger, tkChar, tkEnumeration, tkFloat, tkSString, tkLString, tkAString,
+    tkWString, tkVariant, tkArray, tkRecord, tkClass, tkObject, tkWChar, tkBool,
+    tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -296,6 +300,19 @@ var
       otUQWord: d := PQWord(aData)^;
     end;
     Writer.Add(d);
+  end;
+  function GetOrdValue(aTypData: PTypeData; aData: Pointer): Int64; inline;
+  begin
+    case aTypData^.OrdType of
+      otSByte:  Result := PShortInt(aData)^;
+      otUByte:  Result := Int64(PByte(aData)^);
+      otSWord:  Result := PSmallInt(aData)^;
+      otUWord:  Result := Int64(PWord(aData)^);
+      otSLong:  Result := PLongInt(aData)^;
+      otULong:  Result := Int64(PDword(aData)^);
+      otSQWord: Result := PInt64(aData)^;
+      otUQWord: Result := Int64(PQWord(aData)^);
+    end;
   end;
   procedure WriteFloat(aTypData: PTypeData; aData: Pointer); inline;
   var
@@ -597,6 +614,15 @@ var
         end;
         exit;
       end;
+    if o is TStrings then
+      begin
+        Writer.BeginArray;
+        with TStrings(o) do
+        for I := 0 to Pred(Count) do
+          Writer.Add(Strings[I]);
+        Writer.EndArray;
+        exit;
+      end;
     Props := TPropInfoList.Create(o, tkProperties, False);
     try
       Writer.BeginObject;
@@ -633,6 +659,8 @@ var
         WriteFloat(GetTypeData(aTypeInfo), aData);
       tkChar:
         Writer.Add(string(PChar(aData)^)); //////////////
+      tkEnumeration:
+        Writer.Add(GetEnumName(aTypeInfo, GetOrdValue(GetTypeData(aTypeInfo), aData)));
       tkSString:
         Writer.Add(PShortString(aData)^);
       tkLString, tkAString:
