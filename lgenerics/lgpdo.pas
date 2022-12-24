@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Plain Data Objects  and its export.                                     *
+*   Plain Data Objects and its export.                                      *
 *                                                                           *
 *   Copyright(c) 2022 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -27,13 +27,14 @@ uses
   Classes, SysUtils, TypInfo, lgJson;
 
 { PDO - Plain Data Objects is a conventional collective name for Pascal data structures
-  that can be user-transparently exported to another format(currently, only JSON):
+  that can be user-transparently(well, almost) exported to another format(currently, only JSON):
    - numeric, boolean or string types, some limited support of Variant;
-   - enumerations are exported in string form(as the name of the corresponding constant)
+   - enumerations(are exported in string form as the name of the corresponding constant);
+   - sets(are exported as an array of its element);
    - regular records, it is possible to register a list of field names or a custom callback;
-   - classes, using published properties or by registering a custom callback,
-     TStrings and TCollection as a special case;
-   - object, only by registering a serialization callback;
+   - classes, using published properties or by registering a custom callback(TStrings and
+     TCollection as a special case);
+   - objects(only by registering a serialization callback);
    - static arrays of PDO(only one-dimensional, multidimensional arrays are written as one-dimensional);
    - dynamic arrays of PDO;
    - variant arrays(currently only one-dimensional);
@@ -72,14 +73,14 @@ const
   UNKNOWN_ALIAS = 'unknown data';
   FIELD_ALIAS   = 'field';
   SUPPORT_KINDS = [
-    tkInteger, tkChar, tkEnumeration, tkFloat, tkSString, tkLString, tkAString,
-    tkWString, tkVariant, tkArray, tkRecord, tkClass, tkObject, tkWChar, tkBool,
-    tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
+    tkInteger, tkChar, tkEnumeration, tkFloat, tkSet, tkSString, tkLString,
+    tkAString, tkWString, tkVariant, tkArray, tkRecord, tkClass, tkObject,
+    tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, Variants, RttiUtils, lgUtils, lgHashMap;
+  Math, Variants, lgUtils, lgHashMap;
 
 type
   TRecField = record
@@ -384,19 +385,12 @@ var
   begin
     if GetPdoEntry(aTypeInfo, e) then
       case e.Kind of
-        ekRecFieldMap:
-          begin
-            WriteRegRecord(aData, e.FieldMap);
-            exit;
-          end;
-        ekRecJsonProc:
-          begin
-            TPointerJsonProc(e.CustomProc)(aData, Writer);
-            exit
-          end;
+        ekRecFieldMap: WriteRegRecord(aData, e.FieldMap);
+        ekRecJsonProc: TPointerJsonProc(e.CustomProc)(aData, Writer);
       else
-      end;
-    WriteUnregRecord(aTypeInfo, aData);
+      end
+    else
+      WriteUnregRecord(aTypeInfo, aData);
   end;
   procedure WriteArray(aTypeInfo: PTypeInfo; aData: Pointer);
   var
@@ -413,34 +407,29 @@ var
     ElSize := pTypData^.ArrayData.Size div Count;
     Arr := aData;
     Writer.BeginArray;
-    try
-      if GetPdoEntry(ElType, e) then
-        begin
-          case e.Kind of
-            ekRecFieldMap:
-              for I := 0 to Pred(Count) do
-                begin
-                  WriteRegRecord(Arr, e.FieldMap);
-                  Arr += ElSize;
-                end;
-            ekRecJsonProc:
-              for I := 0 to Pred(Count) do
-                begin
-                  TPointerJsonProc(e.CustomProc)(Arr, Writer);
-                  Arr += ElSize;
-                end;
-          else
-          end;
-          exit;
-        end;
+    if GetPdoEntry(ElType, e) then
+      case e.Kind of
+        ekRecFieldMap:
+          for I := 0 to Pred(Count) do
+            begin
+              WriteRegRecord(Arr, e.FieldMap);
+              Arr += ElSize;
+            end;
+        ekRecJsonProc:
+          for I := 0 to Pred(Count) do
+            begin
+              TPointerJsonProc(e.CustomProc)(Arr, Writer);
+              Arr += ElSize;
+            end;
+      else
+      end
+    else
       for I := 0 to Pred(Count) do
         begin
           WriteField(ElType, Arr);
           Arr += ElSize;
         end;
-    finally
-      Writer.EndArray;
-    end;
+    Writer.EndArray;
   end;
   procedure WriteDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
   var
@@ -456,34 +445,29 @@ var
     ElType := pTypData^.ElType2;
     Arr := Pointer(aData^);
     Writer.BeginArray;
-    try
-      if GetPdoEntry(ElType, e) then
-        begin
-          case e.Kind of
-            ekRecFieldMap:
-              for I := 0 to Pred(DynArraySize(Arr)) do
-                begin
-                  WriteRegRecord(Arr, e.FieldMap);
-                  Arr += ElSize;
-                end;
-            ekRecJsonProc:
-              for I := 0 to Pred(DynArraySize(Arr)) do
-                begin
-                  TPointerJsonProc(e.CustomProc)(Arr, Writer);
-                  Arr += ElSize;
-                end;
-          else
-          end;
-          exit;
-        end;
+    if GetPdoEntry(ElType, e) then
+      case e.Kind of
+        ekRecFieldMap:
+          for I := 0 to Pred(DynArraySize(Arr)) do
+            begin
+              WriteRegRecord(Arr, e.FieldMap);
+              Arr += ElSize;
+            end;
+        ekRecJsonProc:
+          for I := 0 to Pred(DynArraySize(Arr)) do
+            begin
+              TPointerJsonProc(e.CustomProc)(Arr, Writer);
+              Arr += ElSize;
+            end;
+      else
+      end
+    else
       for I := 0 to Pred(DynArraySize(Arr)) do
         begin
           WriteField(ElType, Arr);
           Arr += ElSize;
         end;
-    finally
-      Writer.EndArray;
-    end;
+    Writer.EndArray;
   end;
   procedure WriteVariant(const v: Variant);
   var
@@ -523,6 +507,7 @@ var
       Writer.Add(UNKNOWN_ALIAS);
     end;
   end;
+  procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer); forward;
   procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject); forward;
   procedure WriteClassProp(o: TObject; aPropInfo: PPropInfo);
   var
@@ -543,6 +528,11 @@ var
           e := GetFloatProp(o, aPropInfo);
           WriteField(pTypInfo, @e);
         end;
+      tkSet:
+         begin
+           I := GetOrdProp(o, aPropInfo);
+           WriteSet(pTypInfo, @I);
+         end;
       tkSString, tkLString, tkAString:
         begin
           p := Pointer(GetStrProp(o, aPropInfo));
@@ -571,72 +561,64 @@ var
   end;
   procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject);
   var
-    I, J: SizeInt;
+    I, J, PropCount: SizeInt;
     c: TCollection;
-    Props: TPropInfoList;
+    pProps: PPropList;
+    pInfo: PPropInfo;
     e: TPdoCacheEntry;
   begin
     if o = nil then
-      begin
-        Writer.AddNull;
-        exit;
-      end;
-    if GetPdoEntry(aTypeInfo, e) and (e.Kind = ekClassJsonProc) then
-      begin
-        TClassJsonProc(e.CustomProc)(o, Writer);
-        exit;
-      end;
-    if o is TCollection then
-      begin
-        c := TCollection(o);
-        if c.Count = 0 then
-          begin
+      Writer.AddNull
+    else
+      if GetPdoEntry(aTypeInfo, e) and (e.Kind = ekClassJsonProc) then
+        TClassJsonProc(e.CustomProc)(o, Writer)
+      else
+        if o is TCollection then begin
+          c := TCollection(o);
+          if c.Count = 0 then begin
             Writer.BeginArray;
             Writer.EndArray;
-            exit;
-          end;
-        Props := TPropInfoList.Create(c.Items[0], tkProperties, False);
-        try
-          Writer.BeginArray;
-          for I := 0 to Pred(c.Count) do
-            begin
-              Writer.BeginObject;
-              for J := 0 to Pred(Props.Count) do
-                begin
-                  Writer.AddName(Props[J]^.Name);
-                  WriteClassProp(c.Items[I], Props[J]);
+          end else begin
+            Writer.BeginArray;
+            PropCount := GetPropList(c.ItemClass, pProps);
+            try
+              for I := 0 to Pred(c.Count) do begin
+                Writer.BeginObject;
+                for J := 0 to Pred(PropCount) do begin
+                  pInfo := pProps^[J];
+                  Writer.AddName(pInfo^.Name);
+                  WriteClassProp(c.Items[I], pInfo);
                 end;
-              Writer.EndObject;
+                Writer.EndObject;
+              end;
+            finally
+              FreeMem(pProps);
             end;
-          Writer.EndArray;
-        finally
-          Props.Free;
-        end;
-        exit;
-      end;
-    if o is TStrings then
-      begin
-        Writer.BeginArray;
-        with TStrings(o) do
-        for I := 0 to Pred(Count) do
-          Writer.Add(Strings[I]);
-        Writer.EndArray;
-        exit;
-      end;
-    Props := TPropInfoList.Create(o, tkProperties, False);
-    try
-      Writer.BeginObject;
-      for I := 0 to Pred(Props.Count) do
-        begin
-          Writer.AddName(Props[I]^.Name);
-          WriteClassProp(o, Props[I]);
-        end;
-      Writer.EndObject;
-    finally
-      Props.Free;
-    end;
+            Writer.EndArray;
+          end;
+        end else
+          if o is TStrings then begin
+            Writer.BeginArray;
+            with TStrings(o) do
+              for I := 0 to Pred(Count) do
+                Writer.Add(Strings[I]);
+            Writer.EndArray;
+          end else begin
+            PropCount := GetPropList(o, pProps);
+            try
+              Writer.BeginObject;
+              for I := 0 to Pred(PropCount) do begin
+                pInfo := pProps^[I];
+                Writer.AddName(pInfo^.Name);
+                WriteClassProp(o, pInfo);
+              end;
+              Writer.EndObject;
+            finally
+              FreeMem(pProps);
+            end;
+          end;
   end;
-  procedure WriteObject(aTypeInfo, aData: Pointer);
+  procedure WriteObject(aTypeInfo, aData: Pointer); inline;
   var
     e: TPdoCacheEntry;
   begin
@@ -644,6 +626,47 @@ var
       TPointerJsonProc(e.CustomProc)(aData, Writer)
     else
       Writer.Add(UNKNOWN_ALIAS);
+  end;
+  procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer);
+  var
+    I, CurrVal, Offset, RestBytes, CurrSize: Integer;
+    pElType: PTypeInfo;
+    pIntData: PInteger;
+    ElKind: TTypeKind;
+    s: string[3];
+  begin
+    with GetTypeData(aTypeInfo)^ do
+      begin
+        pElType := CompType;
+        RestBytes := SetSize;
+        ElKind := CompType^.Kind;
+      end;
+    pIntData := aData;
+    Result := '';
+    Offset := 0;
+    Writer.BeginArray;
+    while RestBytes > 0 do
+      begin
+        CurrSize := Math.Min(RestBytes, SizeOf(Integer));
+        for I := 0 to Pred(CurrSize * 8) do            //todo: BsfDWord() ???
+          if (Integer(1) shl I) and pIntData^ <> 0 then
+            begin
+              CurrVal := I + Offset;
+              case ElKind of
+                tkChar: begin
+                    s := Char(CurrVal);
+                    Writer.Add(s);
+                  end;
+                tkEnumeration: Writer.Add(GetEnumName(pElType, CurrVal));
+              else
+                Writer.Add(CurrVal);
+              end;
+            end;
+        RestBytes -= CurrSize;
+        Offset += CurrSize * 8;
+        Inc(pIntData);
+      end;
+    Writer.EndArray;
   end;
   procedure WriteField(aTypeInfo: PTypeInfo; aData: Pointer);
   begin
@@ -661,6 +684,8 @@ var
         Writer.Add(string(PChar(aData)^)); //////////////
       tkEnumeration:
         Writer.Add(GetEnumName(aTypeInfo, GetOrdValue(GetTypeData(aTypeInfo), aData)));
+      tkSet:
+        WriteSet(aTypeInfo, aData);
       tkSString:
         Writer.Add(PShortString(aData)^);
       tkLString, tkAString:
