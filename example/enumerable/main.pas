@@ -317,16 +317,16 @@ begin
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.First:');
-    mmResult.Append(FEmployees.First.OrElseDefault.ToString);
+    mmResult.Append(FEmployees.First.OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Last:');
-    mmResult.Append(FEmployees.Last.OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Last.OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Min:');
-    mmResult.Append(FEmployees.Min(aCmp).OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Min(aCmp).OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Max:');
-    mmResult.Append(FEmployees.Max(aCmp).OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Max(aCmp).OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Skip(SkipCount).Limit(LimitCount):');
     FEmployees
@@ -345,16 +345,16 @@ begin
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.Skip(SkipCount).Limit(LimitCount).First:');
-    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).First.OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).First.OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Skip(SkipCount).Limit(LimitCount).Last:');
-    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).Last.OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).Last.OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Skip(SkipCount).Limit(LimitCount).Min:');
-    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).Min(aCmp).OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).Min(aCmp).OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Skip(SkipCount).Limit(LimitCount).Max:');
-    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).Max(aCmp).OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Skip(SkipCount).Limit(LimitCount).Max(aCmp).OrElse(Default(TEmployee)).ToString);
   finally
     mmResult.Lines.EndUpdate;
   end;
@@ -403,10 +403,10 @@ begin
     mmResult.Lines.Clear;
 
     mmResult.Append('Executing FEmployees.Select(@RightLocation).Min, where Location = ' + aLocation);
-    mmResult.Append(FEmployees.Select(@RightLocation).Min(aCmp).OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Select(@RightLocation).Min(aCmp).OrElse(Default(TEmployee)).ToString);
 
     mmResult.Append('Executing FEmployees.Select(@RightLocation).Max, where Location = ' + aLocation);
-    mmResult.Append(FEmployees.Select(@RightLocation).Max(aCmp).OrElseDefault.ToString);
+    mmResult.Append(FEmployees.Select(@RightLocation).Max(aCmp).OrElse(Default(TEmployee)).ToString);
   finally
     mmResult.Lines.EndUpdate;
   end;
@@ -439,7 +439,7 @@ begin
 
     mmResult.Append('Executing FEmployees.FindMax of ' + aCaption + ', grouping by location:');
     for g in TGroping.Apply(FEmployees, @GetLocation) do
-      mmResult.Append(g.Max(aCmp).OrElseDefault.ToString);
+      mmResult.Append(g.Max(aCmp).OrElse(Default(TEmployee)).ToString);
   finally
     mmResult.Lines.EndUpdate;
   end;
