@@ -5352,7 +5352,7 @@ var
             Last := Pred(aInst.FArray^.Count);
             for I := 0 to Last do begin
               Node := aInst.FArray^.UncMutable[I]^;
-              if (Node.IsScalar and MultiLine) or IsRoot then
+              if (Node.IsScalar and MultiLine) or (IsRoot and not BsdBrace)then /////////
                 NewLine(aPos + aIndentSize)
               else
                 if (I = 0) and (Node.IsStruct and not BsdBrace and MultiLine)then
