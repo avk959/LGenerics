@@ -74,6 +74,25 @@ type
       property Flag: Boolean read FFlag write FFlag;
     end;
 
+    TMyEnum   = (meZero, meOne, meTwo, meThree, meFour, meFive, meSix);
+    TMySet    = set of TMyEnum;
+    TByteSet  = set of Byte;
+    TSmallSet = set of 0..31;
+
+    TMyEnumSet = class(TCollectionItem)
+    private
+      FSet: TMySet;
+    published
+      property setValue: TMySet read FSet write FSet;
+    end;
+
+    TMySmallSet = class(TCollectionItem)
+    private
+      FSet: TSmallSet;
+    published
+      property setValue: TSmallSet read FSet write FSet;
+    end;
+
   published
     procedure Unregistered;
     procedure UnregisteredDynArray;
@@ -91,7 +110,12 @@ type
     procedure WChar;
     procedure UChar;
     procedure Enum;
-    procedure TestVariantShortInt;
+    procedure EnumSet;
+    procedure CharSet;
+    procedure ByteSet;
+    procedure PublishedSet;
+    procedure PublishedSet1;
+    procedure TestVariantInt;
     procedure TestVariantNull;
     procedure TestVariantUStr;
     procedure TestVarArray;
@@ -453,8 +477,6 @@ begin
 end;
 
 procedure TTestPdoToJson.Enum;
-type
-  TMyEnum = (meOne, meTwo, meThree, meFour);
 var
   a: array of TMyEnum = (meOne, meOne, meFour, meTwo, meThree);
   s: string;
@@ -465,7 +487,83 @@ begin
   AssertTrue(s = Expect);
 end;
 
-procedure TTestPdoToJson.TestVariantShortInt;
+procedure TTestPdoToJson.EnumSet;
+var
+  ms: TMySet = [meSix, meZero, meTwo, meFive];
+  s: string;
+const
+  Expect = '["meZero","meTwo","meFive","meSix"]';
+begin
+  s := PdoToJson(TypeInfo(ms), ms);
+  AssertTrue(s = Expect);
+  ms := [];
+  s := PdoToJson(TypeInfo(ms), ms);
+  AssertTrue(s = '[]');
+end;
+
+procedure TTestPdoToJson.CharSet;
+var
+  cs: TSysCharset = ['b', 'f', 'k', 'q', 'x', 'D'];
+  s: string;
+const
+  Expect = '["D","b","f","k","q","x"]';
+begin
+  s := PdoToJson(TypeInfo(cs), cs);
+  AssertTrue(s = Expect);
+  cs := [];
+  s := PdoToJson(TypeInfo(cs), cs);
+  AssertTrue(s = '[]');
+end;
+
+procedure TTestPdoToJson.ByteSet;
+var
+  bs: TByteSet = [0, 67, 101, 255, 11, 42];
+  s: string;
+const
+  Expect = '[0,11,42,67,101,255]';
+begin
+  s := PdoToJson(TypeInfo(bs), bs);
+  AssertTrue(s = Expect);
+  bs := [];
+  s := PdoToJson(TypeInfo(bs), bs);
+  AssertTrue(s = '[]');
+end;
+
+procedure TTestPdoToJson.PublishedSet;
+var
+  ms: TMyEnumSet;
+  s: string;
+const
+  Expect = '{"setValue":["meZero","meTwo","meFive","meSix"]}';
+begin
+  ms := TMyEnumSet.Create(nil);
+  ms.setValue := [meSix, meZero, meTwo, meFive];
+  s := PdoToJson(TypeInfo(ms), ms);
+  AssertTrue(s = Expect);
+  ms.setValue := [];
+  s := PdoToJson(TypeInfo(ms), ms);
+  ms.Free;
+  AssertTrue(s = '{"setValue":[]}');
+end;
+
+procedure TTestPdoToJson.PublishedSet1;
+var
+  ss: TMySmallSet;
+  s: string;
+const
+  Expect = '{"setValue":[0,7,13,17,23,29,31]}';
+begin
+  ss := TMySmallSet.Create(nil);
+  ss.setValue := [0, 23, 29, 31, 7, 13, 17];
+  s := PdoToJson(TypeInfo(ss), ss);
+  AssertTrue(s = Expect);
+  ss.setValue := [];
+  s := PdoToJson(TypeInfo(ss), ss);
+  ss.Free;
+  AssertTrue(s = '{"setValue":[]}');
+end;
+
+procedure TTestPdoToJson.TestVariantInt;
 var
   v: Variant;
   s: string;
