@@ -388,6 +388,7 @@ var
         ekRecFieldMap: WriteRegRecord(aData, e.FieldMap);
         ekRecJsonProc: TPointerJsonProc(e.CustomProc)(aData, Writer);
       else
+        //???
       end
     else
       WriteUnregRecord(aTypeInfo, aData);
@@ -422,6 +423,7 @@ var
               Arr += ElSize;
             end;
       else
+        //???
       end
     else
       for I := 0 to Pred(Count) do
@@ -460,6 +462,7 @@ var
               Arr += ElSize;
             end;
       else
+        //???
       end
     else
       for I := 0 to Pred(DynArraySize(Arr)) do
@@ -474,17 +477,17 @@ var
     I: SizeInt;
     d: Double;
   begin
+    if VarIsEmpty(v) or VarIsNull(v) then
+      begin
+        Writer.AddNull;
+        exit;
+      end;
     if VarIsArray(v) then
       begin
         Writer.BeginArray;
         for I := VarArrayLowBound(v, 1) to VarArrayHighBound(v, 1) do
           WriteVariant(v[I]);
         Writer.EndArray;
-        exit;
-      end;
-    if VarIsEmpty(v) or VarIsNull(v) then
-      begin
-        Writer.AddNull;
         exit;
       end;
     case VarType(v) of
