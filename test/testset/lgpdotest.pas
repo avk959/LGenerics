@@ -120,8 +120,8 @@ type
     procedure TestVariantUStr;
     procedure TestVarArray;
     procedure TestVarArray1;
-    procedure TestObject;
-    procedure TestObject1;
+    procedure TestClass;
+    procedure TestClass1;
     procedure TestCollection;
     procedure CustomRecordProc;
     procedure CustomObjectProc;
@@ -623,7 +623,7 @@ begin
   AssertTrue(s = Expect);
 end;
 
-procedure TTestPdoToJson.TestObject;
+procedure TTestPdoToJson.TestClass;
 var
   o: TObject = nil;
   s: string;
@@ -634,7 +634,7 @@ begin
   AssertTrue(s = Expect);
 end;
 
-procedure TTestPdoToJson.TestObject1;
+procedure TTestPdoToJson.TestClass1;
 var
   o: TMyItem = nil;
   s: string;
