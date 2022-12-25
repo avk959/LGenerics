@@ -594,7 +594,7 @@ function JsonNode2Data(aNode: TJsonNode): TJsonData;
     I: SizeInt;
   begin
     case aNode.Kind of
-      jvkUnknown: Result := TJsonData.Create;
+      jvkUnknown: raise EJsException.Create(SEUnknownJsNodeKind);
       jvkNull:    Result := CreateJson;
       jvkFalse:   Result := CreateJson(False);
       jvkTrue:    Result := CreateJson(True);
@@ -616,9 +616,14 @@ function JsonNode2Data(aNode: TJsonNode): TJsonData;
     end;
   end;
 begin
-  if aNode = nil then
-    exit(nil);
-  Result := CopyNode(aNode);
+  Result := nil;
+  if aNode = nil then exit;
+  try
+    Result := CopyNode(aNode);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 {$POP}
 
@@ -629,7 +634,7 @@ function JsonData2Node(aData: TJsonData): TJsonNode;
     e: TJsonEnum;
   begin
     case aSrc.JSONType of
-      jtUnknown: ;
+      jtUnknown: raise EJsException.Create(SEUnknownJsDataType);
       jtNull:    aDst.AsNull;
       jtBoolean: aDst.AsBoolean := aSrc.AsBoolean;
       jtNumber:  aDst.AsNumber := aSrc.AsFloat;
@@ -652,7 +657,12 @@ begin
   if aData = nil then
     exit(nil);
   Result := TJsonNode.Create;
-  CopyData(aData, Result);
+  try
+    CopyData(aData, Result);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 { TGTimSortAnc.TTimSortBase }
