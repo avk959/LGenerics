@@ -78,6 +78,8 @@ resourcestring
   SECantConvertFmt         = 'Cannot convert %s to %s';
   SEInvalidJsPtr           = 'Invalid JSON Pointer instance';
   SECantParseJsStr         = 'Cannot parse JSON string';
+  SEUnknownJsNodeKind      = 'Unknown JsonNode  kind';
+  SEUnknownJsDataType      = 'Unknown JsonData  type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
   SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
