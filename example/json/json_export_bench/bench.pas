@@ -6,7 +6,7 @@ program bench;
 {$MODE OBJFPC}{$H+}{$MODESWITCH ADVANCEDRECORDS}
 
 uses
-  Windows, Classes, SysUtils, lgPdo, FpJsonRtti, EpikTimer;
+  Classes, SysUtils, lgPdo, FpJsonRtti, EpikTimer;
 
 function RandomString(aLength: SizeInt): string;
 const
