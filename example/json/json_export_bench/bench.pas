@@ -211,6 +211,5 @@ begin
   Run;
   TestColl.Free;
   Timer.Free;
-  readln;
 end.
 
