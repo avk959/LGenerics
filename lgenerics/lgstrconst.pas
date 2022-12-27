@@ -94,6 +94,8 @@ resourcestring
   SEInvalidCommentMarkFmt  = 'Invalid comment mark(#%u)';
   SEEmptyDoc               = 'Document contains no data';
   SEReadCsvErrorFmt        = '%s'  + LineEnding + 'near <%s>';
+  SEVarNotSupportFmt       = 'Variant type(%u) is not supported';
+  SETypeNotSupportFmt      = 'Type "%s"("%s") is not supported';
 
 implementation
 
