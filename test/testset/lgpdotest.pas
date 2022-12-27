@@ -46,6 +46,7 @@ type
       MySString: string[20];
       MyQWord: QWord;
     end;
+
     TSimple = record
       a: Integer;
       b: string;
@@ -60,6 +61,15 @@ type
     published
       property name: string read FName write FName;
       property value: Variant read FValue write FValue;
+    end;
+
+    TMyItemClass = class of TMyItem;
+
+    TMyClass = class
+    private
+      FName: string;
+    public
+      property name: string read FName write FName;
     end;
 
     TMyObj = object
@@ -120,11 +130,15 @@ type
     procedure TestVariantUStr;
     procedure TestVarArray;
     procedure TestVarArray1;
+    procedure UnsupportVariant;
+    procedure UnsupportType;
     procedure TestClass;
     procedure TestClass1;
+    procedure UnregisteredClass;
     procedure TestCollection;
     procedure CustomRecordProc;
     procedure CustomObjectProc;
+    procedure UnregisteredObject;
     procedure Strings;
   end;
 
@@ -623,6 +637,46 @@ begin
   AssertTrue(s = Expect);
 end;
 
+procedure TTestPdoToJson.UnsupportVariant;
+var
+  v: Variant;
+  s: string;
+  I: IInterface;
+  Raised: Boolean = False;
+const
+  Expect = '"unknown data"';
+begin
+  v := I;
+  s := PdoToJson(TypeInfo(v), v);
+  AssertTrue(s = Expect);
+  try
+    s := PdoToJson(TypeInfo(v), v, True);
+  except
+    on e: EJsonExport do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoToJson.UnsupportType;
+var
+  c: TMyItemClass;
+  s: string;
+  Raised: Boolean = False;
+const
+  Expect = '"unknown data"';
+begin
+  s := PdoToJson(TypeInfo(c), c);
+  AssertTrue(s = Expect);
+  try
+    s := PdoToJson(TypeInfo(c), c, True);
+  except
+    on e: EJsonExport do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
 procedure TTestPdoToJson.TestClass;
 var
   o: TObject = nil;
@@ -644,6 +698,20 @@ begin
   o := TMyItem.Create(nil);
   o.Name := 'just a name';
   o.Value := 42;
+  s := PdoToJson(TypeInfo(o), o);
+  o.Free;
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.UnregisteredClass;
+var
+  o: TMyClass = nil;
+  s: string;
+const
+  Expect = '{}';
+begin
+  o := TMyClass.Create;
+  o.Name := 'just a name';
   s := PdoToJson(TypeInfo(o), o);
   o.Free;
   AssertTrue(s = Expect);
@@ -701,6 +769,28 @@ begin
   s := PdoToJson(TypeInfo(o), o);
   AssertTrue(UnRegisterPdo(TypeInfo(o)));
   AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoToJson.UnregisteredObject;
+var
+  o: TMyObj;
+  s: string;
+  Raised: Boolean = False;
+const
+  Expect = '"unknown data"';
+begin
+  o.Name := 'just name';
+  o.Value := 42;
+  o.Flag := True;
+  s := PdoToJson(TypeInfo(o), o);
+  AssertTrue(s = Expect);
+  try
+    s := PdoToJson(TypeInfo(o), o, True);
+  except
+    on e: EJsonExport do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
 end;
 
 procedure TTestPdoToJson.Strings;
