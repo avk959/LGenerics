@@ -40,10 +40,11 @@ uses
    - variant arrays(currently only one-dimensional);
 }
 
-{ converts PDO to JSON; unsupported data types will be written as "unknown data"(see UNKNOWN_ALIAS);
+{ converts PDO to JSON; if aStrict is False unsupported data types will be written as
+  "unknown data"(see UNKNOWN_ALIAS), otherwise an exception will be raised;
   fields of unregistered records will be named as "field1, field2, ..."(see FIELD_ALIAS) }
-  generic function PdoToJson<T>(const aValue: T): string;
-  function PdoToJson(aTypeInfo: PTypeInfo; const aValue): string;
+  generic function PdoToJson<T>(const aValue: T; aStrict: Boolean = False): string;
+  function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aStrict: Boolean = False): string;
   { the type being registered must be a record; associates the field names aFieldNames with
     the record fields by their indexes; to exclude a field from serialization, it is sufficient
     to specify its name as an empty string; to avoid name mapping errors, it makes sense to use
@@ -54,6 +55,7 @@ uses
   function UnRegisterPdo(aTypeInfo: PTypeInfo): Boolean;
 
 type
+  EJsonExport      = class(Exception);
   TJsonStrWriter   = lgJson.TJsonStrWriter;
   TClassJsonProc   = procedure(o: TObject; aWriter: TJsonStrWriter);
   TPointerJsonProc = procedure(r: Pointer; aWriter: TJsonStrWriter);
@@ -80,7 +82,7 @@ const
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, Variants, lgUtils, lgHashMap;
+  Math, Variants, lgUtils, lgHashMap, lgStrConst;
 
 type
   TRecField = record
@@ -278,12 +280,12 @@ begin
   end;
 end;
 
-generic function PdoToJson<T>(const aValue: T): string;
+generic function PdoToJson<T>(const aValue: T; aStrict: Boolean = False): string;
 begin
-  Result := PdoToJson(TypeInfo(T), aValue);
+  Result := PdoToJson(TypeInfo(T), aValue, aStrict);
 end;
 
-function PdoToJson(aTypeInfo: PTypeInfo; const aValue): string;
+function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aStrict: Boolean): string;
 var
   Writer: TJsonStrWriter;
   procedure WriteInteger(aTypData: PTypeData; aData: Pointer); inline;
@@ -507,11 +509,20 @@ var
       varUString:
         Writer.Add(string(v));
     else
+      if aStrict then
+        raise EJsonExport.CreateFmt(SEVarNotSupportFmt, [VarType(v)]);
       Writer.Add(UNKNOWN_ALIAS);
     end;
   end;
   procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer); forward;
   procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject); forward;
+  function UnknownAlias(aTypeInfo: PTypeInfo): string;
+  begin
+    if aStrict then
+      raise EJsonExport.CreateFmt(SETypeNotSupportFmt,
+        [aTypeInfo^.Name, GetEnumName(TypeInfo(TTypeKind), Integer(aTypeInfo^.Kind))]);
+    Result := UNKNOWN_ALIAS;
+  end;
   procedure WriteClassProp(o: TObject; aPropInfo: PPropInfo);
   var
     pTypInfo: PTypeInfo;
@@ -559,7 +570,7 @@ var
           WriteField(pTypInfo, @p);
         end;
     else
-      Writer.Add(UNKNOWN_ALIAS);
+      Writer.Add(UnknownAlias(pTypInfo));
     end;
   end;
   procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject);
@@ -606,7 +617,7 @@ var
               for I := 0 to Pred(Count) do
                 Writer.Add(Strings[I]);
             Writer.EndArray;
-          end else begin
+          end else begin // todo: if PropCount = 0 ???
             PropCount := GetPropList(o, pProps);
             try
               Writer.BeginObject;
@@ -628,7 +639,7 @@ var
     if GetPdoEntry(aTypeInfo, e) and (e.Kind = ekObjJsonProc) then
       TPointerJsonProc(e.CustomProc)(aData, Writer)
     else
-      Writer.Add(UNKNOWN_ALIAS);
+      Writer.Add(UnknownAlias(aTypeInfo));
   end;
   procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer);
   var
@@ -675,7 +686,7 @@ var
   begin
     if not (aTypeInfo^.Kind in SUPPORT_KINDS) then
       begin
-        Writer.Add(UNKNOWN_ALIAS);
+        Writer.Add(UnknownAlias(aTypeInfo));
         exit;
       end;
     case aTypeInfo^.Kind of
