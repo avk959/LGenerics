@@ -69,7 +69,7 @@ type
 { associates a custom JSON serialization procedure with a type; the type must be an object, only one
   procedure can be associated with each object type; returns True if registration is successful }
   function RegisterObjectJsonProc(aTypeInfo: PTypeInfo; aProc: TPointerJsonProc): Boolean;
-  function RegisteredPdoProc(aTypeInfo: Pointer): Boolean;
+  function RegisteredPdoProc(aTypeInfo: PTypeInfo): Boolean;
 
 const
   UNKNOWN_ALIAS = 'unknown data';
@@ -144,7 +144,7 @@ function AddPdo(aTypeInfo: Pointer; const aFieldNames: TStringArray): Boolean;
 var
   pTypData: PTypeData;
   pManField: PManagedField;
-  FieldMap: TRecFieldMap;
+  FieldMap: TRecFieldMap = nil;
   I, Count: Integer;
 begin
   Result := False;
@@ -266,7 +266,7 @@ begin
   end;
 end;
 
-function RegisteredPdoProc(aTypeInfo: Pointer): Boolean;
+function RegisteredPdoProc(aTypeInfo: PTypeInfo): Boolean;
 var
   pe: PPdoCacheEntry;
 begin
@@ -285,6 +285,7 @@ begin
   Result := PdoToJson(TypeInfo(T), aValue, aStrict);
 end;
 
+{$PUSH}{$WARN 5089 OFF}
 function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aStrict: Boolean): string;
 var
   Writer: TJsonStrWriter;
@@ -387,13 +388,19 @@ var
   begin
     if GetPdoEntry(aTypeInfo, e) then
       case e.Kind of
-        ekRecFieldMap: WriteRegRecord(aData, e.FieldMap);
-        ekRecJsonProc: TPointerJsonProc(e.CustomProc)(aData, Writer);
+        ekRecFieldMap:
+          begin
+            WriteRegRecord(aData, e.FieldMap);
+            exit;
+          end;
+        ekRecJsonProc:
+          begin
+            TPointerJsonProc(e.CustomProc)(aData, Writer);
+            exit;
+          end;
       else
-        //???
-      end
-    else
-      WriteUnregRecord(aTypeInfo, aData);
+      end;
+    WriteUnregRecord(aTypeInfo, aData);
   end;
   procedure WriteArray(aTypeInfo: PTypeInfo; aData: Pointer);
   var
@@ -410,29 +417,35 @@ var
     ElSize := pTypData^.ArrayData.Size div Count;
     Arr := aData;
     Writer.BeginArray;
-    if GetPdoEntry(ElType, e) then
+    if (ElType^.Kind = tkRecord) and GetPdoEntry(ElType, e) then
       case e.Kind of
         ekRecFieldMap:
-          for I := 0 to Pred(Count) do
-            begin
-              WriteRegRecord(Arr, e.FieldMap);
-              Arr += ElSize;
-            end;
+          begin
+            for I := 0 to Pred(Count) do
+              begin
+                WriteRegRecord(Arr, e.FieldMap);
+                Arr += ElSize;
+              end;
+            Writer.EndArray;
+            exit;
+          end;
         ekRecJsonProc:
-          for I := 0 to Pred(Count) do
-            begin
-              TPointerJsonProc(e.CustomProc)(Arr, Writer);
-              Arr += ElSize;
-            end;
+          begin
+            for I := 0 to Pred(Count) do
+              begin
+                TPointerJsonProc(e.CustomProc)(Arr, Writer);
+                Arr += ElSize;
+              end;
+            Writer.EndArray;
+            exit;
+          end;
       else
-        //???
-      end
-    else
-      for I := 0 to Pred(Count) do
-        begin
-          WriteField(ElType, Arr);
-          Arr += ElSize;
-        end;
+      end;
+    for I := 0 to Pred(Count) do
+      begin
+        WriteField(ElType, Arr);
+        Arr += ElSize;
+      end;
     Writer.EndArray;
   end;
   procedure WriteDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
@@ -449,29 +462,35 @@ var
     ElType := pTypData^.ElType2;
     Arr := Pointer(aData^);
     Writer.BeginArray;
-    if GetPdoEntry(ElType, e) then
+    if (ElType^.Kind = tkRecord) and GetPdoEntry(ElType, e) then
       case e.Kind of
         ekRecFieldMap:
-          for I := 0 to Pred(DynArraySize(Arr)) do
-            begin
-              WriteRegRecord(Arr, e.FieldMap);
-              Arr += ElSize;
-            end;
+          begin
+            for I := 0 to Pred(DynArraySize(Arr)) do
+              begin
+                WriteRegRecord(Arr, e.FieldMap);
+                Arr += ElSize;
+              end;
+            Writer.EndArray;
+            exit;
+          end;
         ekRecJsonProc:
-          for I := 0 to Pred(DynArraySize(Arr)) do
-            begin
-              TPointerJsonProc(e.CustomProc)(Arr, Writer);
-              Arr += ElSize;
-            end;
+          begin
+            for I := 0 to Pred(DynArraySize(Arr)) do
+              begin
+                TPointerJsonProc(e.CustomProc)(Arr, Writer);
+                Arr += ElSize;
+              end;
+            Writer.EndArray;
+            exit;
+          end;
       else
-        //???
-      end
-    else
-      for I := 0 to Pred(DynArraySize(Arr)) do
-        begin
-          WriteField(ElType, Arr);
-          Arr += ElSize;
-        end;
+      end;
+    for I := 0 to Pred(DynArraySize(Arr)) do
+      begin
+        WriteField(ElType, Arr);
+        Arr += ElSize;
+      end;
     Writer.EndArray;
   end;
   procedure WriteVariant(const v: Variant);
@@ -639,7 +658,7 @@ var
     if GetPdoEntry(aTypeInfo, e) and (e.Kind = ekObjJsonProc) then
       TPointerJsonProc(e.CustomProc)(aData, Writer)
     else
-      Writer.Add(UnknownAlias(aTypeInfo));
+      Writer.Add(UnknownAlias(aTypeInfo));// todo: empty object ???
   end;
   procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer);
   var
@@ -738,6 +757,7 @@ begin
   WriteField(aTypeInfo, @aValue);
   Result := Writer.JsonString;
 end;
+{$POP}
 
 initialization
   InitCriticalSection(GlobLock);
