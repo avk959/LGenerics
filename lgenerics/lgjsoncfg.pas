@@ -556,7 +556,7 @@ begin
       for I := 0 to Pred(aValue.Count) do
         begin
           aValue.GetNameValue(I, Key, Value);
-          n[Key] := Value;
+          n[Key].AsString := Value;
         end
     else
       for I := 0 to Pred(aValue.Count) do
@@ -610,7 +610,7 @@ begin
   if coOverriteDuplicates in Options then
     for I := 0 to System.High(aValue) do
       with aValue[I] do
-        n[Key] := Value
+        n[Key].Value := Value
   else
     for I := 0 to System.High(aValue) do
       with aValue[I] do
