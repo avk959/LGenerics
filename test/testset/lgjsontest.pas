@@ -113,9 +113,13 @@ type
 
   published
     procedure Read;
+    procedure Read1;
     procedure ReadStr;
+    procedure ReadStr1;
     procedure ReadNum;
+    procedure ReadNum1;
     procedure ReadNull;
+    procedure ReadNull1;
     procedure ReadTrue;
     procedure ReadFalse;
     procedure ReadArray;
@@ -135,6 +139,7 @@ type
     procedure Path;
     procedure TestReader;
     procedure SkipBom;
+    procedure SkipBom1;
   end;
 
   { TTestJsonPatch }
@@ -769,13 +774,13 @@ begin
   AssertTrue(o.Instance.Items[0].IsObject);
   AssertTrue(o.Instance.Items[0].Count = 6);
   AssertTrue(o.Instance.Items[0].Contains('online'));
-  AssertFalse(o.Instance.Items[0].Values['online']);
-  AssertTrue(o.Instance.Items[0].Values['age'] = 30);
+  AssertFalse(o.Instance.Items[0]['online'].Value);
+  AssertTrue(o.Instance.Items[0]['age'].Value = 30);
   AssertTrue(o.Instance.Items[0].Items[4].Count = 3);
   AssertTrue(o.Instance.Items[1].IsObject);
   AssertTrue(o.Instance.Items[1].Contains('online'));
-  AssertTrue(o.Instance.Items[1].Values['online']);
-  AssertTrue(o.Instance.Items[1].Values['age'] = 42);
+  AssertTrue(o.Instance.Items[1]['online'].Value);
+  AssertTrue(o.Instance.Items[1]['age'].Value = 42);
   AssertTrue(o.Instance.Items[1].Count = 6);
   AssertTrue(o.Instance.Items[1].Items[4].Count = 4);
 end;
@@ -954,19 +959,19 @@ var
   User: TJsonNode;
 begin
   User := o.Instance.AddNode(jvkObject);
-  User['firstName'] := 'John';
-  User['lastName'] := 'Smith';
-  User['age'] := 42;
-  User['married'] := False;
-  User['spouse'] := JNull;
+  User['firstName'].Value := 'John';
+  User['lastName'].Value := 'Smith';
+  User['age'].Value := 42;
+  User['married'].Value := False;
+  User['spouse'].Value := JNull;
   AssertTrue(o.Instance.Count = 1);
   User := o.Instance.Items[0];
   AssertTrue(User.IsObject);
-  AssertTrue(User['firstName'] = 'John');
-  AssertTrue(User['lastName'] = 'Smith');
-  AssertTrue(User['age'] = 42);
-  AssertFalse(User['married']);
-  AssertTrue(User.NItems['spouse'].IsNull);
+  AssertTrue(User['firstName'].Value = 'John');
+  AssertTrue(User['lastName'].Value = 'Smith');
+  AssertTrue(User['age'].Value = 42);
+  AssertFalse(User['married'].Value);
+  AssertTrue(User['spouse'].IsNull);
 end;
 
 procedure TTestJson.SkipBom;
@@ -1002,9 +1007,9 @@ begin
   AssertTrue(o2.Instance.Parse(TestJson));
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
   User := o2.Instance.Items[1];
-  User['spouse'] := 'Kate';
+  User['spouse'].Value := 'Kate';
   AssertFalse(o1.Instance.EqualTo(o2.Instance));
-  User['spouse'] := 'Mary';
+  User['spouse'].Value := 'Mary';
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
 end;
 
@@ -1269,7 +1274,7 @@ end;
 
 function TTestJsonReader.TIterObj.CountIt(aReader: TJsonReader): Boolean;
 begin
-  List.Add(TPair.Create(aReader.Name, aReader.Value.ToString));
+  List.Add(TPair.Create(aReader.Name, aReader.ValueToString));
   Result := True;
 end;
 
@@ -1286,6 +1291,24 @@ begin
   AssertTrue(Reader.Instance.ReadState = rsError);
   Stream.Instance := TStringStream.Create('" "');
   Reader.Instance := TJsonReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = tkString);
+  AssertTrue(Reader.Instance.AsString = ' ');
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = rsEOF);
+end;
+
+procedure TTestJsonReader.Read1;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  s: string;
+begin
+  s := '';
+  {%H-}Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = rsError);
+  s := '" "';
+  Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = tkString);
   AssertTrue(Reader.Instance.AsString = ' ');
@@ -1312,6 +1335,25 @@ begin
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
 
+procedure TTestJsonReader.ReadStr1;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  s: string;
+begin
+   s := #13'""'#9#10;
+  {%H-}Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = tkString);
+  AssertTrue(Reader.Instance.AsString = '');
+  s := '"\"\"\"\""';
+  Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = tkString);
+  AssertTrue(Reader.Instance.AsString = '""""');
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = rsEOF);
+end;
+
 procedure TTestJsonReader.ReadNum;
 var
   Reader: specialize TGUniqRef<TJsonReader>;
@@ -1322,6 +1364,23 @@ begin
   AssertFalse(Reader.Instance.Read);
   Stream.Instance := TStringStream.Create('42');
   Reader.Instance := TJsonReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = tkNumber);
+  AssertTrue(Reader.Instance.AsNumber = 42);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = rsEOF);
+end;
+
+procedure TTestJsonReader.ReadNum1;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  s: string;
+begin
+  s := '01';
+  {%H-}Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
+  AssertFalse(Reader.Instance.Read);
+  s := '42';
+  Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = tkNumber);
   AssertTrue(Reader.Instance.AsNumber = 42);
@@ -1346,6 +1405,23 @@ begin
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
 
+procedure TTestJsonReader.ReadNull1;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  s: string;
+begin
+  s := 'Null';
+  {%H-}Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
+  AssertFalse(Reader.Instance.Read);
+  s := 'null';
+  Reader.Instance := TJsonReader.Create(Pointer(s), Length(s));
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = tkNull);
+  AssertTrue(Reader.Instance.IsNull);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = rsEOF);
+end;
+
 procedure TTestJsonReader.ReadTrue;
 var
   Reader: specialize TGUniqRef<TJsonReader>;
@@ -1358,7 +1434,7 @@ begin
   Reader.Instance := TJsonReader.Create(Stream.Instance);
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = tkTrue);
-  AssertTrue(Reader.Instance.Value.AsBoolean);
+  AssertTrue(Reader.Instance.AsBoolean);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
@@ -1375,7 +1451,7 @@ begin
   Reader.Instance := TJsonReader.Create(Stream.Instance);
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = tkFalse);
-  AssertFalse(Reader.Instance.Value.AsBoolean);
+  AssertFalse(Reader.Instance.AsBoolean);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
@@ -1561,7 +1637,7 @@ var
   List: THashList;
   function CountIt(aReader: TJsonReader): Boolean;
   begin
-    List.Add(TPair.Create(aReader.Name, aReader.Value.ToString));
+    List.Add(TPair.Create(aReader.Name, aReader.ValueToString));
     Result := True;
   end;
 var
@@ -1648,7 +1724,7 @@ var
   List: THashList;
   function CountIt(aReader: TJsonReader): Boolean;
   begin
-    List.Add(TPair.Create(aReader.Name, aReader.Value.ToString));
+    List.Add(TPair.Create(aReader.Name, aReader.ValueToString));
     Result := True;
   end;
 var
@@ -1723,7 +1799,7 @@ begin
   Stream.Instance := TStringStream.Create('0');
   Reader.Instance := TJsonReader.Create(Stream.Instance);
   AssertTrue(Reader.Instance.MoveNext);
-  AssertTrue((Reader.Instance.Name = '') and (Reader.Instance.Value.ToString = '0'));
+  AssertTrue((Reader.Instance.Name = '') and (Reader.Instance.ValueToString = '0'));
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 
   Stream.Instance := TStringStream.Create('{}');
@@ -1778,7 +1854,7 @@ begin
   Reader.Instance := TJsonReader.Create(Stream.Instance);
   Reader.Instance.Read;
   AssertTrue(Reader.Instance.Find('2'));
-  AssertTrue(Reader.Instance.Value.ToString = '42');
+  AssertTrue(Reader.Instance.ValueToString = '42');
 
   Stream.Instance := TStringStream.Create('[false, "item", 42, null]');
   Reader.Instance := TJsonReader.Create(Stream.Instance);
@@ -1787,14 +1863,14 @@ begin
     Reader.Instance.MoveNext;
   AssertFalse(Reader.Instance.Find('2'));
   AssertTrue(Reader.Instance.Find('3'));
-  AssertTrue(Reader.Instance.Value.ToString = 'null');
+  AssertTrue(Reader.Instance.ValueToString = 'null');
 
   Stream.Instance := TStringStream.Create(TestJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
   Reader.Instance.Read;
   Reader.Instance.Read;
   AssertTrue(Reader.Instance.Find('name'));
-  AssertTrue(Reader.Instance.Value.ToString = 'John');
+  AssertTrue(Reader.Instance.ValueToString = 'John');
   AssertTrue(Reader.Instance.Find('groups'));
   AssertTrue(Reader.Instance.TokenKind = tkArrayBegin);
   AssertTrue(Reader.Instance.CopyStruct(s));
@@ -1818,7 +1894,7 @@ begin
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
   AssertTrue(Reader.Instance.FindPath(TJsonPtr.From('/0/groups')));
   AssertTrue(Reader.Instance.Find('1'));
-  AssertTrue(Reader.Instance.Value.AsString = 'humor');
+  AssertTrue(Reader.Instance.ValueToString = 'humor');
 
   Stream.Instance := TStringStream.Create(TestJson);
   Reader.Instance := TJsonReader.Create(Stream.Instance);
@@ -1957,6 +2033,17 @@ begin
   {%H-}Stream.Instance := TStringStream.Create(#$EF#$BB#$BF + TestJson);
   Stream.Instance.Position := 0;
   {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance, 512, 10, True);
+  while Reader.Instance.Read do;
+  AssertTrue(Reader.Instance.ReadState = rsEOF);
+end;
+
+procedure TTestJsonReader.SkipBom1;
+var
+  Reader: specialize TGUniqRef<TJsonReader>;
+  s: string;
+begin
+  s := #$EF#$BB#$BF + TestJson;
+  {%H-}Reader.Instance := TJsonReader.Create(Pointer(s), Length(s), 10, True);
   while Reader.Instance.Read do;
   AssertTrue(Reader.Instance.ReadState = rsEOF);
 end;
