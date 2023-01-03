@@ -303,11 +303,11 @@ type
     function  CanObjectInsert(aIndex: SizeInt): Boolean; inline;
     function  GetItem(aIndex: SizeInt): TJsonNode;
     function  GetPair(aIndex: SizeInt): TPair;
-    function  GetByName(const aName: string): TJsonNode;
-    function  GetValue(const aName: string): TJVariant;
-    procedure SetValue(const aName: string; const aValue: TJVariant);
-    procedure SetNArray(const aName: string; const aValue: TJVarArray);
-    procedure SetNObject(const aName: string; const aValue: TJPairArray);
+    function  GetNItem(const aName: string): TJsonNode;
+    function  GetValue: TJVariant;
+    procedure SetValue(const aValue: TJVariant);
+    procedure SetVarArray(const a: TJVarArray);
+    procedure SetPairArray(const a: TJPairArray);
     property  FString: string read GetFString write SetFString;
     property  FArray: PJsArray read GetFArray write SetFArray;
     property  FObject: PJsObject read GetFObject write SetFObject;
@@ -657,14 +657,10 @@ type
   { will raise exception if aIndex out of bounds or an instance is not an object }
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { acts as FindOrAdd }
-    property  NItems[const aName: string]: TJsonNode read GetByName; //todo: need another prop name?
-  { if GetValue does not find aName or if the value found is an array or object,
-    it will raise an exception; SetValue will make an object from an instance - be careful }
-    property  Values[const aName: string]: TJVariant read GetValue write SetValue; default;
-  { will make an object from an instance }
-    property  NArrays[const aName: string]: TJVarArray write SetNArray;
-  { will make an object from an instance }
-    property  NObjects[const aName: string]: TJPairArray write SetNObject;
+    property  NItems[const aName: string]: TJsonNode read GetNItem; default;
+    property  Value: TJVariant read GetValue write SetValue;
+    property  VArr: TJVarArray write SetVarArray;
+    property  PArr: TJPairArray write SetPairArray;
   end;
 
   TPatchResult = (prOk, prPatchMiss, prTargetMiss, prMalformPatch, prFail);
@@ -810,122 +806,122 @@ type
     no whitespace is added, so the results is presented in the most compact form;
     you yourself are responsible for the syntactic correctness of the generated document;
     each instance of TJsonWriter can produce one JSON document }
-    TJsonWriter = class
-    private
-    const
-      STACK_INIT_SIZE = 128;
-      MIN_BUF_SIZE    = 1024;
-    var
-      FStream: TStream;
-      FBuffer: specialize TGDynArray<Char>;
-      FStack: specialize TGDynArray<Integer>;
-      FBufPtr: PChar;
-      FBufPos,
-      FStackTop: Integer;
-      procedure StackPush(aValue: Integer); inline;
-      function  StackTop: Integer; inline;
-      procedure StackPop; inline;
-      procedure FlushBuffer; inline;
-      function  BufAvail: Integer; inline;
-      procedure DoWrite(p: PChar; aCount: SizeInt);
-      procedure DoWriteChar(c: Char); inline;
-      procedure DoWriteChar2(c1, c2: Char); inline;
-      procedure DoWriteStr(p: PChar; aCount: SizeInt);
-      procedure ValueAdding; inline;
-      procedure PairAdding; inline;
-    public
-      class function New(aStream: TStream; aBufferSize: Integer): TJsonWriter; static; inline;
-      class function New(aStream: TStream): TJsonWriter; static; inline;
-      constructor Create(aStream: TStream; aBufferSize: Integer);
-      constructor Create(aStream: TStream);
-      destructor Destroy; override;
-      procedure Flush;
-      function AddNull: TJsonWriter;
-      function AddFalse: TJsonWriter;
-      function AddTrue: TJsonWriter;
-      function Add(aValue: Double): TJsonWriter;
-      function Add(const s: string): TJsonWriter;
-      function Add(aValue: TJsonNode): TJsonWriter; inline;
-      function AddJson(const aJson: string): TJsonWriter;
-      function AddName(const aName: string): TJsonWriter;
-      function AddNull(const aName: string): TJsonWriter;
-      function AddFalse(const aName: string): TJsonWriter;
-      function AddTrue(const aName: string): TJsonWriter;
-      function Add(const aName: string; aValue: Double): TJsonWriter;
-      function Add(const aName, aValue: string): TJsonWriter;
-      function Add(const aName: string; aValue: TJsonNode): TJsonWriter; inline;
-      function AddJson(const aName, aJson: string): TJsonWriter;
-      function BeginArray: TJsonWriter;
-      function BeginObject: TJsonWriter;
-      function EndArray: TJsonWriter; inline;
-      function EndObject: TJsonWriter; inline;
-    { returns the number of bytes written }
-      class function WriteJson(aStream: TStream; aNode: TJsonNode): SizeInt; static;
-    end;
+  TJsonWriter = class
+  private
+  const
+    STACK_INIT_SIZE = 128;
+    MIN_BUF_SIZE    = 1024;
+  var
+    FStream: TStream;
+    FBuffer: specialize TGDynArray<Char>;
+    FStack: specialize TGDynArray<Integer>;
+    FBufPtr: PChar;
+    FBufPos,
+    FStackTop: Integer;
+    procedure StackPush(aValue: Integer); inline;
+    function  StackTop: Integer; inline;
+    procedure StackPop; inline;
+    procedure FlushBuffer; inline;
+    function  BufAvail: Integer; inline;
+    procedure DoWrite(p: PChar; aCount: SizeInt);
+    procedure DoWriteChar(c: Char); inline;
+    procedure DoWriteChar2(c1, c2: Char); inline;
+    procedure DoWriteStr(p: PChar; aCount: SizeInt);
+    procedure ValueAdding; inline;
+    procedure PairAdding; inline;
+  public
+    class function New(aStream: TStream; aBufferSize: Integer): TJsonWriter; static; inline;
+    class function New(aStream: TStream): TJsonWriter; static; inline;
+    constructor Create(aStream: TStream; aBufferSize: Integer);
+    constructor Create(aStream: TStream);
+    destructor Destroy; override;
+    procedure Flush;
+    function AddNull: TJsonWriter;
+    function AddFalse: TJsonWriter;
+    function AddTrue: TJsonWriter;
+    function Add(aValue: Double): TJsonWriter;
+    function Add(const s: string): TJsonWriter;
+    function Add(aValue: TJsonNode): TJsonWriter; inline;
+    function AddJson(const aJson: string): TJsonWriter;
+    function AddName(const aName: string): TJsonWriter;
+    function AddNull(const aName: string): TJsonWriter;
+    function AddFalse(const aName: string): TJsonWriter;
+    function AddTrue(const aName: string): TJsonWriter;
+    function Add(const aName: string; aValue: Double): TJsonWriter;
+    function Add(const aName, aValue: string): TJsonWriter;
+    function Add(const aName: string; aValue: TJsonNode): TJsonWriter; inline;
+    function AddJson(const aName, aJson: string): TJsonWriter;
+    function BeginArray: TJsonWriter;
+    function BeginObject: TJsonWriter;
+    function EndArray: TJsonWriter; inline;
+    function EndObject: TJsonWriter; inline;
+  { returns the number of bytes written }
+    class function WriteJson(aStream: TStream; aNode: TJsonNode): SizeInt; static;
+  end;
 
-    { TJsonStrWriter writes JSON directly to string }
-    TJsonStrWriter = class
-    private
-    const
-      STACK_INIT_SIZE = 128;
-      MIN_BUF_SIZE    = 1024;
-    var
-      FData: string;
-      FStack: specialize TGDynArray<Integer>;
-      FBufPtr: PChar;
-      FBufPos,
-      FStackTop: Integer;
-      function  GetJson: string; inline;
-      procedure StackPush(aValue: Integer); inline;
-      function  StackTop: Integer; inline;
-      procedure StackPop; inline;
-      procedure EnsureCapacity(aValue: SizeInt); inline;
-      procedure DoWrite(p: PChar; aCount: SizeInt); inline;
-      procedure DoWriteChar(c: Char); inline;
-      procedure DoWriteChar2(c1, c2: Char); inline;
-      procedure DoWriteStr(p: PChar; aCount: SizeInt);
-      procedure ValueAdding; inline;
-      procedure PairAdding; inline;
-      procedure NameAdding; inline;
-    public
-    const
-      DEFAULT_LEN = 32768;
-      class function New(aInitLen: SizeInt = DEFAULT_LEN): TJsonStrWriter; static; inline;
-      constructor Create(aInitLen: SizeInt = DEFAULT_LEN);
-      procedure Reset(aInitLen: SizeInt = DEFAULT_LEN);
-      function AddNull: TJsonStrWriter;
-      function AddFalse: TJsonStrWriter;
-      function AddTrue: TJsonStrWriter;
-      function Add(aValue: Double): TJsonStrWriter;
-      function Add(const s: string): TJsonStrWriter;
-      function Add(const s: shortstring): TJsonStrWriter;
-      function Add(aValue: TJsonNode): TJsonStrWriter; inline;
-      function AddJson(const aJson: string): TJsonStrWriter;
-      function AddName(const aName: string): TJsonStrWriter;
-      function AddName(const aName: shortstring): TJsonStrWriter;
-      function AddNull(const aName: string): TJsonStrWriter;
-      function AddNull(const aName: shortstring): TJsonStrWriter;
-      function AddFalse(const aName: string): TJsonStrWriter;
-      function AddFalse(const aName: shortstring): TJsonStrWriter;
-      function AddTrue(const aName: string): TJsonStrWriter;
-      function AddTrue(const aName: shortstring): TJsonStrWriter;
-      function Add(const aName: string; aValue: Double): TJsonStrWriter;
-      function Add(const aName: shortstring; aValue: Double): TJsonStrWriter;
-      function Add(const aName, aValue: string): TJsonStrWriter;
-      function Add(const aName, aValue: shortstring): TJsonStrWriter;
-      function Add(const aName: string; aValue: shortstring): TJsonStrWriter;
-      function Add(const aName: shortstring; aValue: string): TJsonStrWriter;
-      function Add(const aName: string; aValue: TJsonNode): TJsonStrWriter; inline;
-      function AddJson(const aName, aJson: string): TJsonStrWriter;
-      function AddJson(const aName: shortstring; aJson: string): TJsonStrWriter;
-      function BeginArray: TJsonStrWriter;
-      function BeginObject: TJsonStrWriter;
-      function EndArray: TJsonStrWriter; inline;
-      function EndObject: TJsonStrWriter; inline;
-    { one-time function }
-      property JsonString: string read GetJson;
-      class function WriteJson(aNode: TJsonNode; aInitLen: SizeInt = DEFAULT_LEN): string; static;
-    end;
+  { TJsonStrWriter writes JSON directly to string }
+  TJsonStrWriter = class
+  private
+  const
+    STACK_INIT_SIZE = 128;
+    MIN_BUF_SIZE    = 1024;
+  var
+    FData: string;
+    FStack: specialize TGDynArray<Integer>;
+    FBufPtr: PChar;
+    FBufPos,
+    FStackTop: Integer;
+    function  GetJson: string; inline;
+    procedure StackPush(aValue: Integer); inline;
+    function  StackTop: Integer; inline;
+    procedure StackPop; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure DoWrite(p: PChar; aCount: SizeInt); inline;
+    procedure DoWriteChar(c: Char); inline;
+    procedure DoWriteChar2(c1, c2: Char); inline;
+    procedure DoWriteStr(p: PChar; aCount: SizeInt);
+    procedure ValueAdding; inline;
+    procedure PairAdding; inline;
+    procedure NameAdding; inline;
+  public
+  const
+    DEFAULT_LEN = 32768;
+    class function New(aInitLen: SizeInt = DEFAULT_LEN): TJsonStrWriter; static; inline;
+    constructor Create(aInitLen: SizeInt = DEFAULT_LEN);
+    procedure Reset(aInitLen: SizeInt = DEFAULT_LEN);
+    function AddNull: TJsonStrWriter;
+    function AddFalse: TJsonStrWriter;
+    function AddTrue: TJsonStrWriter;
+    function Add(aValue: Double): TJsonStrWriter;
+    function Add(const s: string): TJsonStrWriter;
+    function Add(const s: shortstring): TJsonStrWriter;
+    function Add(aValue: TJsonNode): TJsonStrWriter; inline;
+    function AddJson(const aJson: string): TJsonStrWriter;
+    function AddName(const aName: string): TJsonStrWriter;
+    function AddName(const aName: shortstring): TJsonStrWriter;
+    function AddNull(const aName: string): TJsonStrWriter;
+    function AddNull(const aName: shortstring): TJsonStrWriter;
+    function AddFalse(const aName: string): TJsonStrWriter;
+    function AddFalse(const aName: shortstring): TJsonStrWriter;
+    function AddTrue(const aName: string): TJsonStrWriter;
+    function AddTrue(const aName: shortstring): TJsonStrWriter;
+    function Add(const aName: string; aValue: Double): TJsonStrWriter;
+    function Add(const aName: shortstring; aValue: Double): TJsonStrWriter;
+    function Add(const aName, aValue: string): TJsonStrWriter;
+    function Add(const aName, aValue: shortstring): TJsonStrWriter;
+    function Add(const aName: string; aValue: shortstring): TJsonStrWriter;
+    function Add(const aName: shortstring; aValue: string): TJsonStrWriter;
+    function Add(const aName: string; aValue: TJsonNode): TJsonStrWriter; inline;
+    function AddJson(const aName, aJson: string): TJsonStrWriter;
+    function AddJson(const aName: shortstring; aJson: string): TJsonStrWriter;
+    function BeginArray: TJsonStrWriter;
+    function BeginObject: TJsonStrWriter;
+    function EndArray: TJsonStrWriter; inline;
+    function EndObject: TJsonStrWriter; inline;
+  { one-time function }
+    property JsonString: string read GetJson;
+    class function WriteJson(aNode: TJsonNode; aInitLen: SizeInt = DEFAULT_LEN): string; static;
+  end;
 
   TParseMode = (pmNone, pmKey, pmArray, pmObject);
   PParseMode = ^TParseMode;
@@ -972,7 +968,7 @@ type
     FStack: array of TLevel;
     FsBuilder,
     FsbHelp: TJsonNode.TStrBuilder;
-    FStream: TStream;
+    FSrcStream: TStream;
     FBufSize,
     FByteCount,
     FPosition,
@@ -982,11 +978,14 @@ type
     FReadState: TReadState;
     FToken,
     FDeferToken: TTokenKind;
-    FName: string;
-    FValue: TJVariant;
+    FName,
+    FStrValue: string;
+    FBoolValue: Boolean;
+    FNumValue: Double;
     FReadMode,
     FCopyMode,
-    FSkipBom: Boolean;
+    FSkipBom,
+    FBufferSource: Boolean;
     function  GetIndex: SizeInt; inline;
     function  GetStructKind: TStructKind; inline;
     function  GetParentKind: TStructKind; inline;
@@ -1006,15 +1005,18 @@ type
     function  ObjectEndAfterNum: Boolean;
     function  ObjectEndOb: Boolean;
     function  DeferredEnd: Boolean; inline;
+    function  ReadFirstChunk: TReadState;
     function  GetNextChunk: TReadState;
     function  GetNextToken: Boolean;
     function  GetIsNull: Boolean; inline;
     function  GetAsBoolean: Boolean; inline;
     function  GetAsNumber: Double; inline;
     function  GetAsString: string; inline;
+    function  GetToString: string;
     function  GetPath: string;
     function  GetParentName: string; inline;
     function  GetParentIndex: SizeInt; inline;
+    procedure Init(aMaxDepth: SizeInt; aSkipBom: Boolean);
     property  ReadMode: Boolean read FReadMode;
     property  CopyMode: Boolean read FCopyMode;
     property  DeferToken: TTokenKind read FDeferToken;
@@ -1028,6 +1030,8 @@ type
     class function IsScalarToken(aToken: TTokenKind): Boolean; static; inline;
     constructor Create(aStream: TStream; aBufSize: SizeInt = DEF_BUF_SIZE;
                        aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
+    constructor Create(aBuffer: PChar; aCount: SizeInt;  aMaxDepth: SizeInt = DEF_DEPTH;
+                       aSkipBom: Boolean = False);
     destructor Destroy; override;
   { reads the next token from the stream, returns False if an error is encountered or the end
     of the stream is reached, otherwise it returns true; on error, the ReadState property
@@ -1085,7 +1089,7 @@ type
     property  Index: SizeInt read GetIndex;
   { indicates the current name or index if current structure is an array }
     property  Name: string read FName;
-    property  Value: TJVariant read FValue;
+    property  ValueToString: string read GetToString;
   { returns current path as a JSON pointer (RFC 6901) }
     property  Path: string read GetPath;
     property  TokenKind: TTokenKind read FToken;
@@ -3560,66 +3564,66 @@ begin
   Result := Default(TPair);
 end;
 
-function TJsonNode.GetByName(const aName: string): TJsonNode;
+function TJsonNode.GetNItem(const aName: string): TJsonNode;
 begin
   FindOrAdd(aName, Result);
 end;
 
-function TJsonNode.GetValue(const aName: string): TJVariant;
-var
-  Node: TJsonNode;
+function TJsonNode.GetValue: TJVariant;
 begin
-  if Find(aName, Node) then
-    case Node.Kind of
-      jvkUnknown,
-      jvkNull:   exit(TJVariant.Null);
-      jvkFalse:  exit(False);
-      jvkTrue:   exit(True);
-      jvkNumber: exit(Node.FValue.Num);
-      jvkString: exit(Node.FString);
-      jvkArray:  raise EJsException.CreateFmt(SECantConvertFmt, ['Array', 'TJVariant']);
-      jvkObject: raise EJsException.CreateFmt(SECantConvertFmt, ['Object', 'TJVariant']);
-    end
-  else
-    raise EJsException.Create(SEValueNotFound);
-  Result.Clear;
-end;
-
-procedure TJsonNode.SetValue(const aName: string; const aValue: TJVariant);
-var
-  Node: TJsonNode;
-begin
-  FindOrAdd(aName, Node);
-  case aValue.Kind of
-    vkNull:   Node.AsNull;
-    vkBool:   Node.AsBoolean := aValue.AsBoolean;
-    vkNumber: Node.AsNumber := aValue.AsNumber;
-    vkString: Node.AsString := aValue.AsString;
+   case Kind of
+    jvkUnknown,
+    jvkNull:   exit(TJVariant.Null);
+    jvkFalse:  exit(False);
+    jvkTrue:   exit(True);
+    jvkNumber: exit(FValue.Num);
+    jvkString: exit(FString);
+    jvkArray:  raise EJsException.CreateFmt(SECantConvertFmt, ['Array', 'TJVariant']);
+    jvkObject: raise EJsException.CreateFmt(SECantConvertFmt, ['Object', 'TJVariant']);
   end;
 end;
 
-procedure TJsonNode.SetNArray(const aName: string; const aValue: TJVarArray);
-var
-  Node: TJsonNode;
+procedure TJsonNode.SetValue(const aValue: TJVariant);
 begin
-  if FindOrAdd(aName, Node) then
-    begin
-      Node.DoClear;
-      Node.FKind := jvkArray;
-    end;
-  Node.Add(aValue);
+  case aValue.Kind of
+    vkNull:   AsNull;
+    vkBool:   AsBoolean := aValue.AsBoolean;
+    vkNumber: AsNumber := aValue.AsNumber;
+    vkString: AsString := aValue.AsString;
+  end;
 end;
 
-procedure TJsonNode.SetNObject(const aName: string; const aValue: TJPairArray);
+procedure TJsonNode.SetVarArray(const a: TJVarArray);
 var
-  Node: TJsonNode;
+  I: SizeInt;
 begin
-  if FindOrAdd(aName, Node) then
-    begin
-      Node.DoClear;
-      Node.FKind := jvkObject;
+  DoClear;
+  FValue.Ref := CreateJsArray;
+  FKind := jvkArray;
+  for I := 0 to System.High(a) do
+    case a[I].Kind of
+      vkNull:   FArray^.Add(TJsonNode.CreateNull);
+      vkBool:   FArray^.Add(TJsonNode.Create(a[I].AsBoolean));
+      vkNumber: FArray^.Add(TJsonNode.Create(a[I].AsNumber));
+      vkString: FArray^.Add(TJsonNode.Create(a[I].AsString));
     end;
-  Node.Add(aValue);
+end;
+
+procedure TJsonNode.SetPairArray(const a: TJPairArray);
+var
+  I: SizeInt;
+begin
+  DoClear;
+  FValue.Ref := CreateJsObject;
+  FKind := jvkObject;
+  for I := 0 to System.High(a) do
+    with a[I] do
+      case Value.Kind of
+        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.CreateNull));
+        vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsBoolean)));
+        vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsNumber)));
+        vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsString)));
+      end;
 end;
 
 { TJsonNode.TNodeEnumerator }
@@ -4041,34 +4045,13 @@ begin
 end;
 
 constructor TJsonNode.Create(const a: TJVarArray);
-var
-  I: SizeInt;
 begin
-  FValue.Ref := CreateJsArray;
-  FKind := jvkArray;
-  for I := 0 to System.High(a) do
-    case a[I].Kind of
-      vkNull:   FArray^.Add(TJsonNode.CreateNull);
-      vkBool:   FArray^.Add(TJsonNode.Create(Boolean(a[I])));
-      vkNumber: FArray^.Add(TJsonNode.Create(Double(a[I])));
-      vkString: FArray^.Add(TJsonNode.Create(string(a[I])));
-    end;
+  SetVarArray(a);
 end;
 
 constructor TJsonNode.Create(const a: TJPairArray);
-var
-  I: SizeInt;
 begin
-  FValue.Ref := CreateJsObject;
-  FKind := jvkObject;
-  for I := 0 to System.High(a) do
-    with a[I] do
-      case Value.Kind of
-        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.CreateNull));
-        vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Boolean(Value))));
-        vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Double(Value))));
-        vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(string(Value))));
-      end;
+  SetPairArray(a);
 end;
 
 constructor TJsonNode.Create(aNode: TJsonNode);
@@ -6130,7 +6113,7 @@ type
 
   procedure TryRemoveAdd2Move(aSrc, aDst: TJsonNode);
   var
-    Cmd, NextCmd, Value, Tmp: TJsonNode;
+    Cmd, NextCmd, Value, Tmp, n: TJsonNode;
     RemovePath, AddPath: string;
     I, J: SizeInt;
   begin
@@ -6146,8 +6129,8 @@ type
                 NextCmd.Find(PATH_KEY, Tmp);
                 RemovePath := Tmp.AsString;
                 if aSrc.FindPath(TJsonPtr.From(RemovePath)).EqualTo(Value) then begin
-                  Cmd[OP_KEY] := MOVE_KEY;
-                  Cmd[FROM_KEY] := RemovePath;
+                  Cmd[OP_KEY].AsString := MOVE_KEY;
+                  Cmd[FROM_KEY].AsString := RemovePath;
                   Cmd.Remove(VAL_KEY);
                   aDiff.Delete(J);
                   break;
@@ -6166,9 +6149,9 @@ type
                 AddPath := Tmp.AsString;
                 if aDst.FindPath(TJsonPtr.From(AddPath)).EqualTo(Value) then begin
                   if IsPrefixPath(RemovePath, AddPath) then continue;
-                  Cmd[OP_KEY] := MOVE_KEY;
-                  Cmd[FROM_KEY] := RemovePath;
-                  Cmd[PATH_KEY] := AddPath;
+                  Cmd[OP_KEY].AsString := MOVE_KEY;
+                  Cmd[FROM_KEY].AsString := RemovePath;
+                  Cmd[PATH_KEY].AsString := AddPath;
                   Cmd.Remove(VAL_KEY);
                   aDiff.Delete(J);
                   break;
@@ -8298,8 +8281,6 @@ end;
 
 function TJsonReader.NullValue: Boolean;
 begin
-  if ReadMode then
-    FValue.Clear;
   UpdateArray;
   FState := OK;
   FToken := tkNull;
@@ -8308,8 +8289,7 @@ end;
 
 function TJsonReader.FalseValue: Boolean;
 begin
-  if ReadMode then
-    FValue := False;
+  FBoolValue := False;
   UpdateArray;
   FToken := tkFalse;
   FState := OK;
@@ -8318,8 +8298,7 @@ end;
 
 function TJsonReader.TrueValue: Boolean;
 begin
-  if ReadMode then
-    FValue := True;
+  FBoolValue := True;
   UpdateArray;
   FState := OK;
   FToken := tkTrue;
@@ -8334,7 +8313,7 @@ begin
     begin
       if not TryPChar2DoubleFast(FsBuilder.ToPChar, d) then
         exit(False);
-      FValue := d;
+      FNumValue := d;
     end;
   UpdateArray;
   FToken := tkNumber;
@@ -8368,7 +8347,7 @@ end;
 function TJsonReader.StringValue: Boolean;
 begin
   if ReadMode then
-    FValue := FsBuilder.ToDecodeString;
+    FStrValue := FsBuilder.ToDecodeString;
   UpdateArray;
   FToken := tkString;
   FState := OK;
@@ -8489,29 +8468,45 @@ begin
   FDeferToken := tkNone;
 end;
 
+function TJsonReader.ReadFirstChunk: TReadState;
+begin
+  FPosition := NULL_INDEX;
+  if not FBufferSource then
+    FByteCount := FSrcStream.Read(FBuffer^, FBufSize);
+  if (FBufSize = 0) or (FByteCount = 0) then begin
+    FReadState := rsError;
+    exit(rsError);
+  end;
+  if SkipBom then
+    case DetectBom(PByte(FBuffer), FByteCount) of
+      bkNone: ;
+      bkUtf8: FPosition += UTF8_BOM_LEN;
+    else
+      FReadState := rsError;
+      exit(ReadState);
+    end;
+  FReadState := rsGo;
+  Result := rsGo;
+end;
+
 function TJsonReader.GetNextChunk: TReadState;
 begin
   if ReadState > rsGo then
     exit(ReadState);
-  FPosition := NULL_INDEX;
-  FByteCount := FStream.Read(FBuffer^, FBufSize);
-  if FByteCount = 0 then
-    begin
-      FReadState := rsEOF;
-      exit(ReadState);
-    end;
-  if ReadState = rsStart then
-    begin
-      if SkipBom then
-        case DetectBom(PByte(FBuffer), FByteCount) of
-          bkNone: ;
-          bkUtf8: FPosition += UTF8_BOM_LEN;
-        else
-          FReadState := rsError;
-          exit(ReadState);
-        end;
-      FReadState := rsGo;
-    end;
+  case ReadState of
+    rsStart: exit(ReadFirstChunk);
+    rsGo:
+      if not FBufferSource then
+        begin
+          FPosition := NULL_INDEX;
+          FByteCount := FSrcStream.Read(FBuffer^, FBufSize);
+          if FByteCount = 0 then
+            FReadState := rsEof;
+        end
+      else
+        FReadState := rsEof;
+  else
+  end;
   Result := ReadState;
 end;
 
@@ -8586,22 +8581,34 @@ end;
 
 function TJsonReader.GetIsNull: Boolean;
 begin
-  Result := FValue.Kind = vkNull;
+  Result := FToken = tkNull;
 end;
 
 function TJsonReader.GetAsBoolean: Boolean;
 begin
-  Result := FValue;
+  Result := FBoolValue;
 end;
 
 function TJsonReader.GetAsNumber: Double;
 begin
-  Result := FValue;
+  Result := FNumValue;
 end;
 
 function TJsonReader.GetAsString: string;
 begin
-  Result := FValue;
+  Result := FStrValue;
+end;
+
+function TJsonReader.GetToString: string;
+begin
+  case TokenKind of
+    tkFalse,
+    tkTrue:   Result := BoolToStr(FBoolValue, JS_TRUE, JS_FALSE);
+    tkNumber: Result := Double2StrDef(FNumValue);
+    tkString: Result := FStrValue;
+  else
+    Result := JS_NULL;
+  end;
 end;
 
 function TJsonReader.GetPath: string;
@@ -8653,6 +8660,19 @@ begin
   Result := FStack[Depth].CurrIndex;
 end;
 
+procedure TJsonReader.Init(aMaxDepth: SizeInt; aSkipBom: Boolean);
+begin
+  if aMaxDepth < 31 then
+    aMaxDepth := 31;
+  System.SetLength(FStack, Succ(aMaxDepth));
+  FStackHigh := aMaxDepth;
+  FSkipBom := aSkipBom;
+  FReadMode := True;
+  FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  FsbHelp := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  FStack[0] := TLevel.Create(pmNone);
+end;
+
 class function TJsonReader.IsStartToken(aToken: TTokenKind): Boolean;
 begin
   Result := aToken in [tkArrayBegin, tkObjectBegin];
@@ -8670,25 +8690,28 @@ end;
 
 constructor TJsonReader.Create(aStream: TStream; aBufSize: SizeInt; aMaxDepth: SizeInt; aSkipBom: Boolean);
 begin
-  FStream := aStream;
+  FSrcStream := aStream;
   if aBufSize < MIN_BUF_SIZE then
     aBufSize := MIN_BUF_SIZE;
   FBufSize := aBufSize;
   FBuffer := System.Getmem(FBufSize);
-  if aMaxDepth < 31 then
-    aMaxDepth := 31;
-  System.SetLength(FStack, Succ(aMaxDepth));
-  FStackHigh := aMaxDepth;
-  FSkipBom := aSkipBom;
-  FReadMode := True;
-  FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  FsbHelp := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  FStack[0] := TLevel.Create(pmNone);
+  Init(aMaxDepth, aSkipBom);
+end;
+
+constructor TJsonReader.Create(aBuffer: PChar; aCount: SizeInt; aMaxDepth: SizeInt; aSkipBom: Boolean);
+begin
+  FBufferSource := True;
+  FBufSize := aCount;
+  FBuffer := aBuffer;
+  FByteCount := aCount;
+  FPosition := aCount;
+  Init(aMaxDepth, aSkipBom);
 end;
 
 destructor TJsonReader.Destroy;
 begin
-  System.Freemem(FBuffer);
+  if not FBufferSource then
+    System.Freemem(FBuffer);
   inherited;
 end;
 
