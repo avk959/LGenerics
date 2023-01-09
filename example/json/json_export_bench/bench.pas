@@ -129,7 +129,7 @@ end;
 
 procedure RegisterCallback;
 begin
-  RegisterRecordJsonProc(TypeInfo(TMyRec), @TMyRec.JsonWrite);
+  RegisterRecordStoreProc(TypeInfo(TMyRec), @TMyRec.JsonWrite);
 end;
 
 procedure UnRegister;
