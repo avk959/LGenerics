@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Common string resources.                                                *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -94,8 +94,27 @@ resourcestring
   SEInvalidCommentMarkFmt  = 'Invalid comment mark(#%u)';
   SEEmptyDoc               = 'Document contains no data';
   SEReadCsvErrorFmt        = '%s'  + LineEnding + 'near <%s>';
-  SEVarNotSupportFmt       = 'Variant type(%u) is not supported';
-  SETypeNotSupportFmt      = 'Type "%s"("%s") is not supported';
+  SEVariantNotSupportFmt   = 'Variant type(%u) is not supported';
+  SEPdoTypeNotSupportFmt   = 'Type "%s"("%s") is not supported';
+  SEUnsupportPdoKindFmt    = 'Unsupported istance kind(%s)';
+  SEUnsupportPdoTypeFmt    = 'Unsupported istance type(%s)';
+  SEUnexpectJsonEnd        = 'Unexpected end of JSON';
+  SEInvalidJsonInst        = 'Invalid JSON instance';
+  SEUnexpectJsonTokenFmt   = 'Expected JSON token kind "%s", but got "%s"';
+  SEUnexpectJsonTokenFmt2  = 'Expected JSON token kind "%s" or "%s", but got "%s"';
+  SEJsonStrNotMatchEnumFmt = 'JSON string "%s" does not match any %s enumeration value';
+  SEUnexpectJsonStrLenFmt  = 'JSON string length(%d) does not match SizeOf(Char)';
+  SECantReadJson2VarFmt    = 'Can not assign JSON type "%s" to Variant instance';
+  SEJsonStrExceedSSLenFmt  = 'Length of the JSON string(%d) exceeds the maximum ShortString length(%u)';
+  SECantAssignJsonNumFmt   = 'Can not assign JSON float number to instance of kind "%s"'; //???
+  SEPdoRangeErrorFmt       = 'JSON value out of %s range(%d)';
+  SEPdoOverflowErrorFmt    = 'JSON value leads to %s overflow(%e)';
+  SEStrLenNotMatchSizeFmt  = '%s length(%d) does not match size of %s';
+  SERecordFieldNotFoundFmt = '%s record field "%s" not found';
+  SEClassPropNotFoundFmt   = '%s class property "%s" not found';
+  SEJsonNullsNotAcceptable = 'JSON null values are not acceptable';
+  SEJsonArraySizeNotFitFmt = 'JSON array size does not match the size of static PDO array(%d)';
+  SEUnssignedClassInstFmt  = 'Unassigned class instance(%s)';
 
 implementation
 
