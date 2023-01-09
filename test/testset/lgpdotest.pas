@@ -652,7 +652,7 @@ begin
   try
     s := PdoToJson(TypeInfo(v), v, True);
   except
-    on e: EJsonExport do
+    on e: EPdoStoreJson do
       Raised := True;
   end;
   AssertTrue(Raised);
@@ -671,7 +671,7 @@ begin
   try
     s := PdoToJson(TypeInfo(c), c, True);
   except
-    on e: EJsonExport do
+    on e: EPdoStoreJson do
       Raised := True;
   end;
   AssertTrue(Raised);
@@ -747,7 +747,7 @@ var
 const
   Expect = '{"field a":42,"field b":"string value"}';
 begin
-  AssertTrue(RegisterRecordJsonProc(TypeInfo(r), @TSimple.WriteJson));
+  AssertTrue(RegisterRecordStoreProc(TypeInfo(r), @TSimple.WriteJson));
   r.a := 42;
   r.b := 'string value';
   s := PdoToJson(TypeInfo(r), r);
@@ -762,7 +762,7 @@ var
 const
   Expect = '{"name":"just name","value":42,"flag":true}';
 begin
-  AssertTrue(RegisterObjectJsonProc(TypeInfo(o), @TMyObj.WriteJson));
+  AssertTrue(RegisterObjectStoreProc(TypeInfo(o), @TMyObj.WriteJson));
   o.Name := 'just name';
   o.Value := 42;
   o.Flag := True;
@@ -787,7 +787,7 @@ begin
   try
     s := PdoToJson(TypeInfo(o), o, True);
   except
-    on e: EJsonExport do
+    on e: EPdoStoreJson do
       Raised := True;
   end;
   AssertTrue(Raised);
