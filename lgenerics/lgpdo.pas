@@ -754,7 +754,6 @@ const
         ElKind := CompType^.Kind;
       end;
     pIntData := aData;
-    Result := '';
     Offset := 0;
     Writer.BeginArray;
     while RestBytes > 0 do
