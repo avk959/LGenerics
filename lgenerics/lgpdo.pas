@@ -1454,6 +1454,7 @@ type
   begin
     if Reader.TokenKind <> tkArrayBegin then
       Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+    aCol.Clear;
     GetPropMap(aCol.ItemClass, Map);
     repeat
       ReadNext;
@@ -1468,6 +1469,7 @@ type
   begin
     if Reader.TokenKind <> tkArrayBegin then
       Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+    aStrings.Clear;
     repeat
       ReadNext;
       if Reader.TokenKind = tkArrayEnd then break;
