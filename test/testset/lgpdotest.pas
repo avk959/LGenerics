@@ -32,6 +32,8 @@ type
     procedure UnRegister;
   end;
 
+  TMyEnum = (meZero, meOne, meTwo, meThree, meFour, meFive, meSix);
+
   { TTestPdoToJson }
 
   TTestPdoToJson = class(TTestCase)
@@ -84,7 +86,6 @@ type
       property Flag: Boolean read FFlag write FFlag;
     end;
 
-    TMyEnum   = (meZero, meOne, meTwo, meThree, meFour, meFive, meSix);
     TMySet    = set of TMyEnum;
     TByteSet  = set of Byte;
     TSmallSet = set of 0..31;
@@ -140,6 +141,61 @@ type
     procedure CustomObjectProc;
     procedure UnregisteredObject;
     procedure Strings;
+  end;
+
+  { TTestPdoLoadJson }
+
+  TTestPdoLoadJson = class(TTestCase)
+  private
+  type
+    TMySet    = set of TMyEnum;
+    TByteSet  = set of Byte;
+    TSmallSet = set of 0..31;
+
+  published
+    procedure LoadChar;
+    procedure LoadCharError;
+    procedure LoadCharError1;
+    procedure LoadCharError2;
+    procedure LoadWChar;
+    procedure LoadWCharError;
+    procedure LoadWCharError1;
+    procedure LoadInteger;
+    procedure LoadIntegerError;
+    procedure LoadIntegerError1;
+    procedure LoadIntegerError2;
+    procedure LoadInt64;
+    procedure LoadInt64Error;
+    procedure LoadInt64Error1;
+    procedure LoadSString;
+    procedure LoadSString1;
+    procedure LoadSStringError;
+    procedure LoadSStringError1;
+    procedure LoadString;
+    procedure LoadString1;
+    procedure LoadString2;
+    procedure LoadStringError;
+    procedure LoadVariantNull;
+    procedure LoadVariantBool;
+    procedure LoadVariantInt;
+    procedure LoadVariantFloat;
+    procedure LoadVariantStr;
+    procedure LoadVariantArray;
+    procedure LoadVariantError;
+    procedure LoadEnum;
+    procedure LoadEnumError;
+    procedure LoadNullSet;
+    procedure LoadEnumSet;
+    procedure LoadEnumSetError;
+    procedure LoadCharSet;
+    procedure LoadCharSetError;
+    procedure LoadByteSet;
+    procedure LoadByteSetError;
+    procedure LoadStringsNull;
+    procedure LoadStringsEmpty;
+    procedure LoadStrings;
+    procedure LoadStrings1;
+    procedure LoadStringsError;
   end;
 
 implementation
@@ -807,8 +863,612 @@ begin
   AssertTrue(s = Expect);
 end;
 
+{ TTestPdoLoadJson }
+
+procedure TTestPdoLoadJson.LoadChar;
+var
+  c: Char = ' ';
+const
+  Json = '"z"';
+begin
+  PdoLoadJson(TypeInfo(c), c, Json);
+  AssertTrue(c = 'z');
+end;
+
+procedure TTestPdoLoadJson.LoadCharError;
+var
+  c: Char = ' ';
+  Raised: Boolean = False;
+const
+  Json = '"yz"';
+begin
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadCharError1;
+var
+  c: Char = ' ';
+  Raised: Boolean = False;
+const
+  Json = 'null';
+begin
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadCharError2;
+var
+  c: Char = ' ';
+  Raised: Boolean = False;
+const
+  Json = '7';
+begin
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadWChar;
+var
+  c: WideChar = ' ';
+  Json: string;
+begin
+  Json := '"' + 'Ю' + '"';
+  PdoLoadJson(TypeInfo(c), c, Json);
+  AssertTrue(string(c) = 'Ю');
+end;
+
+procedure TTestPdoLoadJson.LoadWCharError;
+var
+  c: WideChar = ' ';
+  Json: string;
+  Raised: Boolean = False;
+begin
+  Json := '"' + 'ЮЯ' + '"';
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadWCharError1;
+var
+  c: WideChar = ' ';
+  Raised: Boolean = False;
+const
+  Json = 'null';
+begin
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadInteger;
+var
+  I: Integer = 0;
+const
+  Json = '-1001';
+begin
+  PdoLoadJson(TypeInfo(I), I, Json);
+  AssertTrue(I = -1001);
+end;
+
+procedure TTestPdoLoadJson.LoadIntegerError;
+var
+  I: Integer = 0;
+  Raised: Boolean = False;
+const
+  Json = '3.1416';
+begin
+  try
+    PdoLoadJson(TypeInfo(I), I, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadIntegerError1;
+var
+  I: Integer = 0;
+  Raised: Boolean = False;
+const
+  Json = 'null';
+begin
+  try
+    PdoLoadJson(TypeInfo(I), I, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadIntegerError2;
+var
+  I: Integer = 0;
+  Raised: Boolean = False;
+const
+  Json = '[]';
+begin
+  try
+    PdoLoadJson(TypeInfo(I), I, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadInt64;
+var
+  I: Int64 = 0;
+const
+  Json = '-9007199254740991';
+begin
+  PdoLoadJson(TypeInfo(I), I, Json);
+  AssertTrue(I = -9007199254740991);
+end;
+
+procedure TTestPdoLoadJson.LoadInt64Error;
+var
+  I: Int64 = 0;
+  Raised: Boolean = False;
+const
+  Json = '43.1';
+begin
+  try
+    PdoLoadJson(TypeInfo(I), I, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadInt64Error1;
+var
+  I: Int64 = 0;
+  Raised: Boolean = False;
+const
+  Json = 'null';
+begin
+  try
+    PdoLoadJson(TypeInfo(I), I, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadSString;
+var
+  s: string[20];
+const
+  Json = '"abcdefgh"';
+  Expect = 'abcdefgh';
+begin
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoLoadJson.LoadSString1;
+var
+  s: string[10] = 'abcd';
+const
+  Json = 'null';
+begin
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = '');
+end;
+
+procedure TTestPdoLoadJson.LoadSStringError;
+var
+  s: string[10];
+  Raised: Boolean = False;
+const
+  Json = '"abcdefghijk"';
+begin
+  try
+    PdoLoadJson(TypeInfo(s), s, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadSStringError1;
+var
+  s: string[10];
+  Raised: Boolean = False;
+const
+  Json = '42';
+begin
+  try
+    PdoLoadJson(TypeInfo(s), s, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadString;
+var
+  s: string = '';
+const
+  Json = '"abcdefgh"';
+  Expect = 'abcdefgh';
+begin
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = Expect);
+end;
+
+procedure TTestPdoLoadJson.LoadString1;
+var
+  s: string = 'abcd';
+const
+  Json = 'null';
+begin
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = '');
+end;
+
+procedure TTestPdoLoadJson.LoadString2;
+var
+  s: string = 'abcd';
+const
+  Json = '""';
+begin
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = '');
+end;
+
+procedure TTestPdoLoadJson.LoadStringError;
+var
+  s: string;
+  Raised: Boolean = False;
+const
+  Json = '{}';
+begin
+  try
+    PdoLoadJson(TypeInfo(s), s, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadVariantNull;
+var
+  v: Variant;
+const
+  Json = 'null';
+begin
+  v := 42;
+  PdoLoadJson(TypeInfo(v), v, Json);
+  AssertTrue(VarIsNull(v));
+end;
+
+procedure TTestPdoLoadJson.LoadVariantBool;
+var
+  v: Variant;
+const
+  Json = 'true';
+begin
+  v := 42;
+  PdoLoadJson(TypeInfo(v), v, Json);
+  AssertTrue(VarIsBool(v));
+  AssertTrue(v);
+end;
+
+procedure TTestPdoLoadJson.LoadVariantInt;
+var
+  v: Variant;
+const
+  Json = '42';
+begin
+  PdoLoadJson(TypeInfo(v), v, Json);
+  AssertTrue(VarIsOrdinal(v));
+  AssertTrue(v = 42);
+end;
+
+procedure TTestPdoLoadJson.LoadVariantFloat;
+var
+  v: Variant;
+const
+  Json = '3.1416';
+begin
+  PdoLoadJson(TypeInfo(v), v, Json);
+  AssertTrue(VarIsFloat(v));
+  AssertTrue(VarSameValue(v, 3.1416));
+end;
+
+procedure TTestPdoLoadJson.LoadVariantStr;
+var
+  v: Variant;
+const
+  Json = '"Just string"';
+begin
+  PdoLoadJson(TypeInfo(v), v, Json);
+  AssertTrue(VarIsStr(v));
+  AssertTrue(v = 'Just string');
+end;
+
+procedure TTestPdoLoadJson.LoadVariantArray;
+var
+  v: Variant;
+  I, J: Integer;
+const
+  Json = '[42, "str", null, [], false]';
+begin
+  PdoLoadJson(TypeInfo(v), v, Json);
+  AssertTrue(VarIsArray(v));
+  AssertTrue(VarArrayDimCount(v) = 1);
+  J := 0;
+  for I := VarArrayLowBound(v, 1) to VarArrayHighBound(v, 1) do
+    begin
+      case J of
+        0:
+          begin
+            AssertTrue(VarIsOrdinal(v[I]));
+            AssertTrue(v[I] = 42);
+          end;
+        1:
+          begin
+            AssertTrue(VarIsStr(v[I]));
+            AssertTrue(v[I] = 'str');
+          end;
+        2:
+          AssertTrue(VarIsNull(v[I]));
+        3:
+          AssertTrue(VarIsArray(v[I]));
+        4:
+          begin
+            AssertTrue(VarIsBool(v[I]));
+            AssertFalse(v[I]);
+          end;
+      else
+      end;
+      Inc(J);
+    end;
+end;
+
+procedure TTestPdoLoadJson.LoadVariantError;
+var
+  v: Variant;
+  Raised: Boolean = False;
+const
+  Json = '{}';
+begin
+  try
+    PdoLoadJson(TypeInfo(v), v, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadEnum;
+var
+  e: TMyEnum;
+const
+  Json = '"meFive"';
+begin
+  PdoLoadJson(TypeInfo(e), e, Json);
+  AssertTrue(e = meFive);
+end;
+
+procedure TTestPdoLoadJson.LoadEnumError;
+var
+  e: TMyEnum;
+  Raised: Boolean = False;
+const
+  Json = '"meSeven"';
+begin
+  try
+    PdoLoadJson(TypeInfo(e), e, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadNullSet;
+var
+  s: TMySet;
+const
+  Json = 'null';
+begin
+  s := [meOne, meTwo];
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = []);
+end;
+
+procedure TTestPdoLoadJson.LoadEnumSet;
+var
+  s: TMySet;
+const
+  Json = '["meFive", "meFour", "meZero"]';
+begin
+  s := [meOne, meTwo];
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = [meZero, meFour, meFive]);
+end;
+
+procedure TTestPdoLoadJson.LoadEnumSetError;
+var
+  s: TMySet;
+  Raised: Boolean = False;
+const
+  Json = '["meFive", "meFour", "meZero", "meNull"]';
+begin
+  try
+    PdoLoadJson(TypeInfo(s), s, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadCharSet;
+var
+  s: TSysCharset;
+const
+  Json = '["x", "y", "z"]';
+begin
+  s := ['a', 'b'];
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = ['x', 'y', 'z']);
+end;
+
+procedure TTestPdoLoadJson.LoadCharSetError;
+var
+  s: TSysCharset;
+  Raised: Boolean = False;
+const
+  Json = '["x", "y", "z", "ab"]';
+begin
+  try
+    PdoLoadJson(TypeInfo(s), s, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadByteSet;
+var
+  s: TByteSet;
+const
+  Json = '[1, 42, 101]';
+begin
+  s := [0, 7];
+  PdoLoadJson(TypeInfo(s), s, Json);
+  AssertTrue(s = [1, 42, 101]);
+end;
+
+procedure TTestPdoLoadJson.LoadByteSetError;
+var
+  s: TSysCharset;
+  Raised: Boolean = False;
+const
+  Json = '[1, 42, 101, 1001]';
+begin
+  try
+    PdoLoadJson(TypeInfo(s), s, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadStringsNull;
+var
+  sl: TStringList;
+const
+  Json = 'null';
+begin
+  sl := TStringList.Create;
+  PdoLoadJson(TypeInfo(sl), sl, Json);
+  AssertTrue(sl = nil);
+end;
+
+procedure TTestPdoLoadJson.LoadStringsEmpty;
+var
+  sl: TStringList;
+const
+  Json = '[]';
+begin
+  sl := TStringList.Create;
+  sl.Add('item');
+  PdoLoadJson(TypeInfo(sl), sl, Json);
+  AssertTrue(sl.Count = 0);
+  sl.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadStrings;
+var
+  sl: TStringList;
+const
+  Json = '["one", "two", "three"]';
+begin
+  sl := TStringList.Create;
+  sl.Add('item');
+  PdoLoadJson(TypeInfo(sl), sl, Json);
+  AssertTrue(sl.Count = 3);
+  AssertTrue(sl[0] = 'one');
+  AssertTrue(sl[1] = 'two');
+  AssertTrue(sl[2] = 'three');
+  sl.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadStrings1;
+var
+  sl: TStringList = nil;
+const
+  Json = '["one", "two", "three"]';
+begin
+  PdoLoadJson(TypeInfo(sl), sl, Json, [jroTryCreateClassInst]);
+  AssertTrue(sl.Count = 3);
+  AssertTrue(sl[0] = 'one');
+  AssertTrue(sl[1] = 'two');
+  AssertTrue(sl[2] = 'three');
+  sl.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadStringsError;
+var
+  sl: TStringList;
+  Raised: Boolean = False;
+const
+  Json = '42';
+begin
+  sl := TStringList.Create;
+  try
+    PdoLoadJson(TypeInfo(sl), sl, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  sl.Free;
+  AssertTrue(Raised);
+end;
+
 initialization
   RegisterTest(TTestPdoRegister);
   RegisterTest(TTestPdoToJson);
+  RegisterTest(TTestPdoLoadJson);
 end.
 
