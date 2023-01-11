@@ -152,6 +152,23 @@ type
     TByteSet  = set of Byte;
     TSmallSet = set of 0..31;
 
+    TMyItem = class(TCollectionItem)
+    private
+      FName: string;
+      FValue: Integer;
+    published
+      property name: string read FName write FName;
+      property value: Integer read FValue write FValue;
+    end;
+
+    TMyRec = record
+      IntValue: Integer;
+      BoolValue: Boolean;
+      StrValue: string;
+      SStrValue: string[20];
+      EnumValue: TMyEnum;
+    end;
+
   published
     procedure LoadChar;
     procedure LoadCharError;
@@ -196,6 +213,14 @@ type
     procedure LoadStrings;
     procedure LoadStrings1;
     procedure LoadStringsError;
+    procedure LoadCollectionNull;
+    procedure LoadCollection;
+    procedure LoadCollectionSkipProp;
+    procedure LoadCollectionUnknownPropError;
+    procedure LoadCollectionIgnoreCase;
+    procedure LoadCollectionCaseError;
+    procedure LoadRecordField;
+    procedure LoadRecordFieldSkipProp;
   end;
 
 implementation
@@ -1464,6 +1489,138 @@ begin
   end;
   sl.Free;
   AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadCollectionNull;
+var
+  c: TCollection;
+const
+  Json = 'null';
+begin
+  c := TCollection.Create(TMyItem);
+  PdoLoadJson(TypeInfo(c), c, Json);
+  AssertTrue(c = nil);
+end;
+
+procedure TTestPdoLoadJson.LoadCollection;
+var
+  c: TCollection;
+  Item: TMyItem;
+const
+  Json = '[{"name":"name1","value":42},{"name":"name2","value":1001}]';
+begin
+  c := TCollection.Create(TMyItem);
+  PdoLoadJson(TypeInfo(c), c, Json);
+  AssertTrue(c.Count = 2);
+  Item := TMyItem(c.Items[0]);
+  AssertTrue((Item.Name = 'name1') and (Item.Value = 42));
+  Item := TMyItem(c.Items[1]);
+  AssertTrue((Item.Name = 'name2') and (Item.Value = 1001));
+  c.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadCollectionSkipProp;
+var
+  c: TCollection;
+  Item: TMyItem;
+const
+  Json = '[{"name":"name1","value":42,"items":[1,2]},{"name":"name2","value":1001,"items":[3,4]}]';
+begin
+  c := TCollection.Create(TMyItem);
+  PdoLoadJson(TypeInfo(c), c, Json, [jroSkipUnknownProps]);
+  AssertTrue(c.Count = 2);
+  Item := TMyItem(c.Items[0]);
+  AssertTrue((Item.Name = 'name1') and (Item.Value = 42));
+  Item := TMyItem(c.Items[1]);
+  AssertTrue((Item.Name = 'name2') and (Item.Value = 1001));
+  c.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadCollectionUnknownPropError;
+var
+  c: TCollection;
+  Raised: Boolean = False;
+const
+  Json = '[{"name":"name1","value":42,"items":[1,2]},{"name":"name2","value":1001,"items":[3,4]}]';
+begin
+  c := TCollection.Create(TMyItem);
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  c.Free;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadCollectionIgnoreCase;
+var
+  c: TCollection;
+  Item: TMyItem;
+const
+  Json = '[{"Name":"name1","Value":42},{"Name":"name2","Value":1001}]';
+begin
+  c := TCollection.Create(TMyItem);
+  PdoLoadJson(TypeInfo(c), c, Json, [jroIgnoreNameCase]);
+  AssertTrue(c.Count = 2);
+  Item := TMyItem(c.Items[0]);
+  AssertTrue((Item.Name = 'name1') and (Item.Value = 42));
+  Item := TMyItem(c.Items[1]);
+  AssertTrue((Item.Name = 'name2') and (Item.Value = 1001));
+  c.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadCollectionCaseError;
+var
+  c: TCollection;
+  Raised: Boolean = False;
+const
+  Json = '[{"Name":"name1","Value":42,"items":[1,2]},{"Name":"name2","Value":1001,"items":[3,4]}]';
+begin
+  c := TCollection.Create(TMyItem);
+  try
+    PdoLoadJson(TypeInfo(c), c, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  c.Free;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadRecordField;
+var
+  r: TMyRec;
+const
+  Json = '{"intValue":42,"enumValue":"meTwo","sstrValue":"ssrting9","strValue":"string1","boolValue":true}';
+begin
+  r := Default(TMyRec);
+  AssertTrue(RegisterRecordFields(TypeInfo(r), ['intValue','boolValue','strValue','sstrValue','enumValue']));
+  PdoLoadJson(TypeInfo(r), r, Json);
+  AssertTrue(r.IntValue = 42);
+  AssertTrue(r.BoolValue);
+  AssertTrue(r.StrValue = 'string1');
+  AssertTrue(r.SStrValue = 'ssrting9');
+  AssertTrue(r.EnumValue = meTwo);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+end;
+
+procedure TTestPdoLoadJson.LoadRecordFieldSkipProp;
+var
+  r: TMyRec;
+const
+  Json = '{"intValue":42,"enumValue":"meTwo","sstrValue":"ssrting9","strValue":"string1","boolValue":true,"anyValue":false}';
+begin
+  r := Default(TMyRec);
+  AssertTrue(RegisterRecordFields(TypeInfo(r), ['intValue','boolValue','strValue','sstrValue','enumValue']));
+  PdoLoadJson(TypeInfo(r), r, Json, [jroSkipUnknownProps]);
+  AssertTrue(r.IntValue = 42);
+  AssertTrue(r.BoolValue);
+  AssertTrue(r.StrValue = 'string1');
+  AssertTrue(r.SStrValue = 'ssrting9');
+  AssertTrue(r.EnumValue = meTwo);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
 end;
 
 initialization
