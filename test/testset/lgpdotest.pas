@@ -6,7 +6,7 @@ unit lgPdoTest;
 interface
 
 uses
-  Classes, SysUtils, Variants, fpcunit, testregistry, lgPdo, lgArrayHelpers;
+  Classes, SysUtils, Variants, fpcunit, testregistry, lgPdo, lgArrayHelpers, lgJson;
 
 type
   { TTestPdoRegister }
@@ -165,8 +165,14 @@ type
       IntValue: Integer;
       BoolValue: Boolean;
       StrValue: string;
-      SStrValue: string[20];
+      SStrValue: string[10];
       EnumValue: TMyEnum;
+    end;
+
+    TTestRec = record
+      Key: string;
+      Value: Integer;
+      class procedure LoadJson(p: Pointer; aReader: TJsonReader; const aOptions: TJsonReadOptions); static;
     end;
 
   published
@@ -219,8 +225,15 @@ type
     procedure LoadCollectionUnknownPropError;
     procedure LoadCollectionIgnoreCase;
     procedure LoadCollectionCaseError;
-    procedure LoadRecordField;
-    procedure LoadRecordFieldSkipProp;
+    procedure LoadRecordFields;
+    procedure LoadRecordFieldsSkipProp;
+    procedure LoadRecordFieldsIgnoreCase;
+    procedure LoadRecordFieldsError;
+    procedure LoadRecordFieldsLenError;
+    procedure LoadRecordProc;
+    procedure LoadRecordProcIgnoreCase;
+    procedure LoadRecordProcSkipProp;
+    procedure LoadRecordProcRangeError;
   end;
 
 implementation
@@ -886,6 +899,86 @@ begin
   s := PdoToJson(TypeInfo(sl), sl);
   sl.Free;
   AssertTrue(s = Expect);
+end;
+
+{ TTestPdoLoadJson.TTestRec }
+
+class procedure TTestPdoLoadJson.TTestRec.LoadJson(p: Pointer; aReader: TJsonReader; const aOptions: TJsonReadOptions);
+type
+  PTestRec = ^TTestRec;
+var
+  pRec: PTestRec absolute p;
+  d: Double = 0;
+  I: Int64 = 0;
+  KeyFound, ValueFound: Boolean;
+begin
+  if aReader.TokenKind <> tkObjectBegin then
+    raise EPdoLoadJson.Create('Unexpected TokenKind on begin record');
+  KeyFound := False;
+  ValueFound:= False;
+  repeat
+    aReader.Read;
+    if aReader.TokenKind = tkObjectEnd then break;
+    if jroIgnoreNameCase in aOptions then
+      case LowerCase(aReader.Name) of
+        'key':
+          begin
+            if aReader.TokenKind = tkString then
+              pRec^.Key := aReader.AsString
+            else
+              if (aReader.TokenKind = tkNull) and not(jroRejectNulls in aOptions)then
+                pRec^.Key := ''
+              else
+                raise EPdoLoadJson.Create('Unexpected TokenKind when read Key');
+            KeyFound := True;
+          end;
+        'value':
+          if aReader.TokenKind = tkNumber then
+            begin
+              d := aReader.AsNumber;
+              ValueFound:= True;
+            end
+          else
+            raise EPdoLoadJson.Create('Unexpected TokenKind when read Value');
+      else
+        if not(jroSkipUnknownProps in aOptions) then
+          raise EPdoLoadJson.Create('Unknown field name');
+      end
+    else
+      case aReader.Name of
+        'Key':
+          begin
+            if aReader.TokenKind = tkString then
+              pRec^.Key := aReader.AsString
+            else
+              if (aReader.TokenKind = tkNull) and not(jroRejectNulls in aOptions)then
+                pRec^.Key := ''
+              else
+                raise EPdoLoadJson.Create('Unexpected TokenKind when read Key');
+            KeyFound := True;
+          end;
+        'Value':
+          if aReader.TokenKind = tkNumber then
+            begin
+              d := aReader.AsNumber;
+              ValueFound:= True;
+            end
+          else
+            raise EPdoLoadJson.Create('Unexpected TokenKind when read Value');
+      else
+        if not(jroSkipUnknownProps in aOptions) then
+          raise EPdoLoadJson.Create('Unknown field name');
+      end;
+  until False;
+  if not KeyFound then
+    raise EPdoLoadJson.Create('Key not found');
+  if not ValueFound then
+    raise EPdoLoadJson.Create('Value not found');
+  if not IsExactInt(d, I) then
+    raise EPdoLoadJson.Create('Value is not integer');
+  if (jroRangeOverflowCheck in aOptions) and ((I < Low(Integer)) or (I > High(Integer))) then
+    raise EPdoLoadJson.Create('Range error');
+  pRec^.Value := I;
 end;
 
 { TTestPdoLoadJson }
@@ -1589,7 +1682,7 @@ begin
   AssertTrue(Raised);
 end;
 
-procedure TTestPdoLoadJson.LoadRecordField;
+procedure TTestPdoLoadJson.LoadRecordFields;
 var
   r: TMyRec;
 const
@@ -1606,7 +1699,7 @@ begin
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
 end;
 
-procedure TTestPdoLoadJson.LoadRecordFieldSkipProp;
+procedure TTestPdoLoadJson.LoadRecordFieldsSkipProp;
 var
   r: TMyRec;
 const
@@ -1621,6 +1714,122 @@ begin
   AssertTrue(r.SStrValue = 'ssrting9');
   AssertTrue(r.EnumValue = meTwo);
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
+end;
+
+procedure TTestPdoLoadJson.LoadRecordFieldsIgnoreCase;
+var
+  r: TMyRec;
+const
+  Json = '{"IntValue":42,"EnUmValue":"meTwo","SstRValue":"ssrting9","sTrValue":"string1","bOOlValue":true}';
+begin
+  r := Default(TMyRec);
+  AssertTrue(RegisterRecordFields(TypeInfo(r), ['intValue','boolValue','strValue','sstrValue','enumValue']));
+  PdoLoadJson(TypeInfo(r), r, Json, [jroIgnoreNameCase]);
+  AssertTrue(r.IntValue = 42);
+  AssertTrue(r.BoolValue);
+  AssertTrue(r.StrValue = 'string1');
+  AssertTrue(r.SStrValue = 'ssrting9');
+  AssertTrue(r.EnumValue = meTwo);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+end;
+
+procedure TTestPdoLoadJson.LoadRecordFieldsError;
+var
+  r: TMyRec;
+  Raised: Boolean = False;
+const
+  Json = '{"IntValue":42,"enumValue":"meTwo","sstrValue":"ssrting9","strValue":"string1","boolValue":true}';
+begin
+  r := Default(TMyRec);
+  AssertTrue(RegisterRecordFields(TypeInfo(r), ['intValue','boolValue','strValue','sstrValue','enumValue']));
+  try
+    PdoLoadJson(TypeInfo(r), r, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadRecordFieldsLenError;
+var
+  r: TMyRec;
+  Raised: Boolean = False;
+const
+  Json = '{"intValue":42,"enumValue":"meTwo","sstrValue":"ssrting9142","strValue":"string1","boolValue":true}';
+begin
+  r := Default(TMyRec);
+  AssertTrue(RegisterRecordFields(TypeInfo(r), ['intValue','boolValue','strValue','sstrValue','enumValue']));
+  try
+    PdoLoadJson(TypeInfo(r), r, Json);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadRecordProc;
+var
+  r: TTestRec;
+const
+  Json = '{"Key":"key1","Value":42}';
+begin
+  r := Default(TTestRec);
+  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  PdoLoadJson(TypeInfo(r), r, Json);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(r.Key = 'key1');
+  AssertTrue(r.Value = 42);
+end;
+
+procedure TTestPdoLoadJson.LoadRecordProcIgnoreCase;
+var
+  r: TTestRec;
+const
+  Json = '{"KEY":"key1","VALUE":42}';
+begin
+  r := Default(TTestRec);
+  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  PdoLoadJson(TypeInfo(r), r, Json, [jroIgnoreNameCase]);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(r.Key = 'key1');
+  AssertTrue(r.Value = 42);
+end;
+
+procedure TTestPdoLoadJson.LoadRecordProcSkipProp;
+var
+  r: TTestRec;
+const
+  Json = '{"Key":"key1","Blah":null,"Value":42}';
+begin
+  r := Default(TTestRec);
+  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  PdoLoadJson(TypeInfo(r), r, Json, [jroSkipUnknownProps]);
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(r.Key = 'key1');
+  AssertTrue(r.Value = 42);
+end;
+
+procedure TTestPdoLoadJson.LoadRecordProcRangeError;
+var
+  r: TTestRec;
+  Raised: Boolean = False;
+const
+  Json = '{"Key":"key1","Value":2147483648}';
+begin
+  r := Default(TTestRec);
+  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  try
+    PdoLoadJson(TypeInfo(r), r, Json, [jroRangeOverflowCheck]);
+  except
+    on e: EPdoLoadJson do
+      Raised := True;
+  end;
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
+  AssertTrue(Raised);
 end;
 
 initialization
