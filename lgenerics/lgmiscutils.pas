@@ -362,8 +362,8 @@ type
     property OutFile: PText read GetFile;
   end;
 
-  { TGetEnumerable: TEnumerator must be a value type }
-  generic TGetEnumerable<T, TEnumerator> = class(specialize TGAutoEnumerable<T>)
+  { TGWrapEnumerable: TEnumerator must be a value type }
+  generic TGWrapEnumerable<T, TEnumerator> = class(specialize TGAutoEnumerable<T>)
   protected
     FEnum,
     FWorkEnum: TEnumerator;
@@ -434,8 +434,32 @@ type
   function JsonNode2Data(aNode: TJsonNode): TJsonData;
   function JsonData2Node(aData: TJsonData): TJsonNode;
 
+type
+  TStrOption  = (
+    soUseLocale,         {}
+    soShowRecFieldAlias);{}
+  TStrOptions = set of TStrOption;
+
+{ returns a string representation of aValue with the following restrictions:
+    - interfaces are not supported;
+    - objects are always displayed as unknown entities, due to the lack of RTTI;
+    - static arrays are always displayed as one-dimensional ones;
+    - variant arrays are only supported one-dimensional;
+    - classes show only published properties;
+  legend:
+    - string and character values are enclosed in quotes;
+    - structures(records, objects and classes) are enclosed in parentheses;
+    - arrays are enclosed in square brackets;
+    - sets are enclosed in curly braces;
+    - unknown entities are displayed as a type name followed by its address }
+  generic function Stringify<T>(const aValue: T; const aOptions: TStrOptions = []): string;
+  function Stringify(aTypInfo: PTypeInfo; const aValue; const aOptions: TStrOptions = []): string;
+
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
+
+uses
+  TypInfo, Variants;
 
 type
 
@@ -664,6 +688,478 @@ begin
     raise;
   end;
 end;
+
+type
+  TStrBuilder = record
+  strict private
+  const
+  {$PUSH}{$J-}
+    chQuote: Char      = '''';
+  {$POP}
+  var
+    FItems: specialize TGDynArray<Char>;
+    FCount: SizeInt;
+  public
+    procedure Reset(aCapacity: SizeInt);
+    procedure EnsureCapacity(aCapacity: SizeInt); inline;
+    procedure Append(c: Char); inline;
+    procedure Append(const s: string); inline;
+    procedure Append(const s: shortstring); inline;
+    procedure AppendAsChar(c: Char); inline;
+    procedure AppendAsStr(const s: shortstring); inline;
+    procedure AppendAsStr(const s: string); inline;
+    function  ToString: string; inline;
+    property  Count: SizeInt read FCount;
+  end;
+
+procedure TStrBuilder.Reset(aCapacity: SizeInt);
+begin
+  if aCapacity > 0 then
+    FItems.Length := lgUtils.RoundUpTwoPower(aCapacity)
+  else
+    FItems.Length := DEFAULT_CONTAINER_CAPACITY;
+  FCount := 0;
+end;
+
+procedure TStrBuilder.EnsureCapacity(aCapacity: SizeInt);
+begin
+  if aCapacity > FItems.Length then
+    FItems.Length := lgUtils.RoundUpTwoPower(aCapacity);
+end;
+
+procedure TStrBuilder.Append(c: Char);
+begin
+  EnsureCapacity(Count + 1);
+  FItems[Count] := c;
+  Inc(FCount);
+end;
+
+procedure TStrBuilder.Append(const s: string);
+begin
+  EnsureCapacity(Count + System.Length(s));
+  System.Move(Pointer(s)^, FItems.Ptr[Count], System.Length(s));
+  FCount += System.Length(s);
+end;
+
+procedure TStrBuilder.Append(const s: shortstring);
+begin
+  EnsureCapacity(Count + System.Length(s));
+  System.Move(s[1], FItems.Ptr[Count], System.Length(s));
+  FCount += System.Length(s);
+end;
+
+procedure TStrBuilder.AppendAsChar(c: Char);
+begin
+  Append(chQuote);
+  Append(c);
+  Append(chQuote);
+end;
+
+procedure TStrBuilder.AppendAsStr(const s: shortstring);
+begin
+  Append(chQuote);
+  Append(s);
+  Append(chQuote);
+end;
+
+procedure TStrBuilder.AppendAsStr(const s: string);
+begin
+  Append(chQuote);
+  Append(s);
+  Append(chQuote);
+end;
+
+function TStrBuilder.ToString: string;
+begin
+  if Count = 0 then exit('');
+  System.SetLength(Result, Count);
+  System.Move(FItems.Ptr^, Pointer(Result)^, Count);
+  FCount := 0;
+end;
+
+generic function Stringify<T>(const aValue: T; const aOptions: TStrOptions): string;
+begin
+  Result := Stringify(TypeInfo(T), aValue, aOptions);
+end;
+
+{$PUSH}{$WARN 5091 OFF}
+function Stringify(aTypInfo: PTypeInfo; const aValue; const aOptions: TStrOptions): string;
+var
+  FormatSettings: TFormatSettings;
+  sb: TStrBuilder;
+const
+{$PUSH}{$J-}
+  cArrayBegin: Char  = '[';
+  cArrayEnd: Char    = ']';
+  cStructBegin: Char = '(';
+  cStructEnd: Char   = ')';
+  cSetBegin: Char    = '{';
+  cSetEnd: Char      = '}';
+  cComma: Char       = ',';
+  cColon: Char       = ':';
+  cSpace: Char       = ' ';
+{$POP}
+  sNull              = 'Null';
+  sUnassigned        = 'Unassigned';
+  sNil               = 'Nil';
+  sTrue              = 'True';
+  sFalse             = 'False';
+  sField             = 'field';
+  sDateTimeFormat    = 'yyyy"-"mm"-"dd"T"hh":"nn":"ss';
+  sDateFormat        = 'yyyy"-"mm"-"dd';
+  sTimeFormat        = 'hh":"nn":"ss.zzz';
+  procedure StrInteger(aTypData: PTypeData; aData: Pointer); inline;
+  begin
+    case aTypData^.OrdType of
+      otSByte:  sb.Append(IntToStr(PShortInt(aData)^));
+      otUByte:  sb.Append(IntToStr(PByte(aData)^));
+      otSWord:  sb.Append(IntToStr(PSmallInt(aData)^));
+      otUWord:  sb.Append(IntToStr(PWord(aData)^));
+      otSLong:  sb.Append(IntToStr(PLongInt(aData)^));
+      otULong:  sb.Append(IntToStr(PDWord(aData)^));
+      otSQWord: sb.Append(IntToStr(PInt64(aData)^));
+      otUQWord: sb.Append(IntToStr(PQWord(aData)^));
+    end;
+  end;
+  procedure StrBool(aTypData: PTypeData; aData: Pointer); inline;
+  var
+    b: Boolean;
+  begin
+    case aTypData^.OrdType of
+      otSByte:  b := PShortInt(aData)^ > 0;
+      otUByte:  b := PByte(aData)^ > 0;
+      otSWord:  b := PSmallInt(aData)^ > 0;
+      otUWord:  b := PWord(aData)^ > 0;
+      otSLong:  b := PLongInt(aData)^ > 0;
+      otULong:  b := PDword(aData)^ > 0;
+      otSQWord: b := PInt64(aData)^ > 0;
+      otUQWord: b := PQWord(aData)^ > 0;
+    end;
+    if b then sb.Append(sTrue) else sb.Append(sFalse);
+  end;
+  function GetDateTimeToStr(dt: TDateTime): string; inline;
+  begin
+    if soUseLocale in aOptions then
+      GetDateTimeToStr := DateTimeToStr(dt)
+    else
+      GetDateTimeToStr := FormatDateTime(sDateTimeFormat, dt);
+  end;
+  function GetDateToStr(dd: TDate): string; inline;
+  begin
+    if soUseLocale in aOptions then
+      GetDateToStr := DateToStr(dd)
+    else
+      GetDateToStr := FormatDateTime(sDateFormat, dd);
+  end;
+  function GetTimeToStr(tt: TTime): string; inline;
+  begin
+    if soUseLocale in aOptions then
+      GetTimeToStr := TimeToStr(tt)
+    else
+      GetTimeToStr := FormatDateTime(sTimeFormat, tt);
+  end;
+  procedure StrFloat(aTypeInfo: PTypeInfo; aData: Pointer); inline;
+  begin
+    case GetTypeData(aTypeInfo)^.FloatType of
+      ftSingle:   sb.Append(FloatToStr(PSingle(aData)^, FormatSettings));
+      ftDouble:
+        if aTypeInfo = TypeInfo(TDateTime) then
+          sb.Append(GetTimeToStr(TDateTime(aData^)))
+        else
+          if aTypeInfo = TypeInfo(TDate) then
+            sb.Append(GetDateToStr(TDate(aData^)))
+          else
+            if aTypeInfo = TypeInfo(TTime) then
+              sb.Append(GetTimeToStr(TTime(aData^)))
+            else
+              sb.Append(FloatToStr(PDouble(aData)^, FormatSettings));
+      ftExtended: sb.Append(FloatToStr(PExtended(aData)^, FormatSettings));
+      ftComp:     sb.Append(FloatToStr(PComp(aData)^, FormatSettings));
+      ftCurr:     sb.Append(CurrToStr(PCurrency(aData)^, FormatSettings));
+    end;
+  end;
+  function GetOrdValue(aTypData: PTypeData; aData: Pointer): Int64; inline;
+  begin
+    case aTypData^.OrdType of
+      otSByte:  Result := PShortInt(aData)^;
+      otUByte:  Result := Int64(PByte(aData)^);
+      otSWord:  Result := PSmallInt(aData)^;
+      otUWord:  Result := Int64(PWord(aData)^);
+      otSLong:  Result := PLongInt(aData)^;
+      otULong:  Result := Int64(PDword(aData)^);
+      otSQWord: Result := PInt64(aData)^;
+      otUQWord: Result := Int64(PQWord(aData)^);
+    end;
+  end;
+  procedure StrUnknown(aTypeInfo: PTypeInfo; aData: Pointer); inline;
+  begin
+    sb.Append(Format('%s@%p', [aTypeInfo^.Name, aData]));
+  end;
+  procedure AppendCommaDelimiter; inline;
+  begin
+    sb.Append(cComma);
+    sb.Append(cSpace);
+  end;
+  procedure AppendColonDelimiter; inline;
+  begin
+    sb.Append(cColon);
+    sb.Append(cSpace);
+  end;
+  procedure StrVariant(const v: Variant);
+  var
+    I, LowBnd: SizeInt;
+  begin
+    if VarIsEmpty(v) then begin
+      sb.Append(sUnassigned);
+      exit;
+    end else
+    if VarIsNull(v) then begin
+      sb.Append(sNull);
+      exit;
+    end;
+    if VarIsArray(v) then begin
+      sb.Append(cArrayBegin);
+      LowBnd := VarArrayLowBound(v, 1);
+      for I := LowBnd to VarArrayHighBound(v, 1) do begin
+        if I <> LowBnd then AppendCommaDelimiter;
+        StrVariant(v[I]);
+      end;
+      sb.Append(cArrayEnd);
+      exit;
+    end;
+    case VarType(v) of
+      varSmallInt, varInteger, varShortInt, varByte, varWord, varLongWord, varInt64, varDecimal,
+      varQWord:    sb.Append(VarToStr(v));
+      varSingle:   sb.Append(FloatToStr(Single(v), FormatSettings));
+      varDouble:   sb.Append(FloatToStr(Double(v), FormatSettings));
+      varCurrency: sb.Append(CurrToStr(Currency(v), FormatSettings));
+      varDate:     sb.Append(GetDateTimeToStr(TDateTime(v)));
+      varBoolean:  if Boolean(v) then sb.Append(sTrue) else sb.Append(sFalse);
+      varOleStr, varString,
+      varUString:  sb.AppendAsStr(VarToStr(v));
+    else
+      StrUnknown(TypeInfo(v), @v);
+    end;
+  end;
+  procedure StrValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
+  procedure StrRecord(aTypeInfo: PTypeInfo; aData: Pointer);
+  var
+    pTypData: PTypeData;
+    pManField: PManagedField;
+    I: Integer;
+  begin
+    pTypData := GetTypeData(aTypeInfo);
+    pManField := PManagedField(
+      AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+    sb.Append(cStructBegin);
+    for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
+      if I <> 0 then AppendCommaDelimiter;
+      if soShowRecFieldAlias in aOptions then begin
+        sb.Append(sField + IntToStr(I+1));
+        AppendColonDelimiter;
+      end;
+      StrValue(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
+      Inc(pManField);
+    end;
+    sb.Append(cStructEnd);
+  end;
+  procedure StrArray(aTypeInfo: PTypeInfo; aData: Pointer);
+  var
+    pTypData: PTypeData;
+    ElSize: SizeUInt;
+    ElType: PTypeInfo;
+    Arr: PByte;
+    I, Count: SizeInt;
+  begin
+    pTypData := GetTypeData(aTypeInfo);
+    ElType := pTypData^.ArrayData.ElType;
+    Count := pTypData^.ArrayData.ElCount;
+    ElSize := pTypData^.ArrayData.Size div Count;
+    Arr := aData;
+    sb.Append(cArrayBegin);
+    for I := 0 to Pred(Count) do begin
+      if I <> 0 then AppendCommaDelimiter;
+      StrValue(ElType, Arr);
+      Arr += ElSize;
+    end;
+    sb.Append(cArrayEnd);
+  end;
+  procedure StrDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
+  var
+    pTypData: PTypeData;
+    ElSize: SizeUInt;
+    ElType: PTypeInfo;
+    Arr: PByte;
+    I: SizeInt;
+  begin
+    pTypData := GetTypeData(aTypeInfo);
+    ElSize := pTypData^.elSize;
+    ElType := pTypData^.ElType2;
+    Arr := Pointer(aData^);
+    sb.Append(cArrayBegin);
+    for I := 0 to Pred(DynArraySize(Arr)) do begin
+      if I <> 0 then AppendCommaDelimiter;
+      StrValue(ElType, Arr);
+      Arr += ElSize;
+    end;
+    sb.Append(cArrayEnd);
+  end;
+  procedure StrSet(aTypeInfo: PTypeInfo; aData: Pointer);
+  var
+    I, CurrVal, Offset, RestBytes, CurrSize: Integer;
+    pElType: PTypeInfo;
+    pIntData: PInteger;
+    ElKind: TTypeKind;
+    c: Char;
+    NotFirst: Boolean;
+  begin
+    with GetTypeData(aTypeInfo)^ do begin
+      pElType := CompType;
+      RestBytes := SetSize;
+      ElKind := CompType^.Kind;
+    end;
+    pIntData := aData;
+    Offset := 0;
+    NotFirst := False;
+    sb.Append(cSetBegin);
+    while RestBytes > 0 do begin
+      CurrSize := Math.Min(RestBytes, SizeOf(Integer));
+      for I := 0 to Pred(CurrSize * 8) do
+        if (Integer(1) shl I) and pIntData^ <> 0 then begin
+          CurrVal := I + Offset;
+          if NotFirst then AppendCommaDelimiter else NotFirst := True;
+          case ElKind of
+            tkChar: begin
+                c := Char(CurrVal);
+                sb.AppendAsChar(c);
+              end;
+            tkEnumeration: sb.Append(GetEnumName(pElType, CurrVal));
+          else
+            sb.Append(IntToStr(CurrVal));
+          end;
+        end;
+      RestBytes -= CurrSize;
+      Offset += CurrSize * 8;
+      Inc(pIntData);
+    end;
+    sb.Append(cSetEnd);
+  end;
+  procedure StrClass(o: TObject); forward;
+  procedure StrClassProp(o: TObject; aPropInfo: PPropInfo);
+  var
+    pTypInfo: PTypeInfo;
+    I: Int64;
+    e: Extended;
+    p: Pointer;
+  begin
+    pTypInfo := aPropInfo^.PropType;
+    case pTypInfo^.Kind of
+      tkInteger, tkChar, tkEnumeration, tkWChar, tkBool, tkInt64, tkQWord, tkUChar:
+        begin
+          I := GetOrdProp(o, aPropInfo);
+          StrValue(pTypInfo, @I);
+        end;
+      tkFloat: begin
+          e := GetFloatProp(o, aPropInfo);
+          StrValue(pTypInfo, @e);
+        end;
+      tkSet: begin
+           I := GetOrdProp(o, aPropInfo);
+           StrValue(pTypInfo, @I);
+         end;
+      tkSString, tkLString, tkAString:
+        begin
+          p := Pointer(GetStrProp(o, aPropInfo));
+          StrValue(pTypInfo, @p);
+        end;
+      tkWString: begin
+          p := Pointer(GetWideStrProp(o, aPropInfo));
+          StrValue(pTypInfo, @p);
+        end;
+      tkVariant: StrVariant(GetVariantProp(o, aPropInfo));
+      tkClass: StrClass(GetObjectProp(o, aPropInfo));
+      tkDynArray: begin
+          p := GetDynArrayProp(o, aPropInfo);
+          StrValue(pTypInfo, @p);
+        end;
+      tkUString: begin
+          p := Pointer(GetUnicodeStrProp(o, aPropInfo));
+          StrValue(pTypInfo, @p);
+        end;
+    else
+      StrUnknown(pTypInfo, nil);
+    end;
+  end;
+  procedure StrClass(o: TObject);
+  var
+    I, PropCount: SizeInt;
+    pProps: PPropList;
+    pInfo: PPropInfo;
+    NotFirst: Boolean;
+  begin
+    sb.Append(cStructBegin);
+    if o <> nil then begin
+      PropCount := GetPropList(o, pProps);
+      NotFirst := False;
+      try
+        for I := 0 to Pred(PropCount) do begin
+          pInfo := pProps^[I];
+          if not IsReadableProp(pInfo) then continue;
+          if NotFirst then AppendCommaDelimiter else NotFirst := True;
+          sb.Append(pInfo^.Name);
+          AppendColonDelimiter;
+          StrClassProp(o, pInfo);
+        end;
+      finally FreeMem(pProps) end;
+    end else sb.Append(sNil);
+    sb.Append(cStructEnd);
+  end;
+  procedure StrValue(aTypeInfo: PTypeInfo; aData: Pointer);
+  begin
+    case aTypeInfo^.Kind of
+      tkInteger, tkInt64, tkQWord:
+                     StrInteger(GetTypeData(aTypeInfo), aData);
+      tkChar:        sb.AppendAsChar(PChar(aData)^);
+      tkEnumeration: sb.Append(GetEnumName(aTypeInfo, GetOrdValue(GetTypeData(aTypeInfo), aData)));
+      tkFloat:       StrFloat(aTypeInfo, aData);
+      tkSet:         StrSet(aTypeInfo, aData);
+      tkSString:     sb.AppendAsStr(PShortString(aData)^);
+      tkLString,
+      tkAString:     sb.AppendAsStr(PString(aData)^);
+      tkWString:     sb.AppendAsStr(string(PWideString(aData)^));
+      tkVariant:     StrVariant(PVariant(aData)^);
+      tkArray:       StrArray(aTypeInfo, aData);
+      tkRecord:      StrRecord(aTypeInfo, aData);
+      tkClass:       StrClass(TObject(aData^));
+      tkObject:
+        begin
+          sb.Append(cStructBegin);
+          StrUnknown(aTypeInfo, aData);
+          sb.Append(cStructEnd);
+        end;
+      tkWChar:       sb.AppendAsStr(string(widestring(WideChar(aData^))));
+      tkBool:        StrBool(GetTypeData(aTypeInfo), aData);
+      tkDynArray:    StrDynArray(aTypeInfo, aData);
+      tkUString:     sb.AppendAsStr(string(PUnicodeString(aData)^));
+      tkUChar:       sb.AppendAsStr(string(unicodestring(UnicodeChar(aData^))));
+    else
+      StrUnknown(aTypeInfo, aData);
+    end;
+  end;
+const
+  INIT_LEN = 128;
+begin
+  FormatSettings := DefaultFormatSettings;
+  if not(soUseLocale in aOptions) then
+    begin
+      FormatSettings.ThousandSeparator := ' ';
+      FormatSettings.DecimalSeparator := '.';
+    end;
+  sb.Reset(INIT_LEN);
+  StrValue(aTypInfo, @aValue);
+  Result := sb.ToString;
+end;
+{$POP}
 
 { TGTimSortAnc.TTimSortBase }
 
@@ -5318,31 +5814,31 @@ begin
     Result += Ord(Add(s));
 end;
 
-{ TGetEnumerable }
+{ TGWrapEnumerable }
 
-function TGetEnumerable.GetCurrent: T;
+function TGWrapEnumerable.GetCurrent: T;
 begin
   Result := FWorkEnum.Current;
 end;
 
-class function TGetEnumerable.Construct(const aEnum: TEnumerator): IEnumerable;
+class function TGWrapEnumerable.Construct(const aEnum: TEnumerator): IEnumerable;
 begin
-  Result := TGetEnumerable.Create(aEnum);
+  Result := TGWrapEnumerable.Create(aEnum);
 end;
 
-constructor TGetEnumerable.Create(const aEnum: TEnumerator);
+constructor TGWrapEnumerable.Create(const aEnum: TEnumerator);
 begin
   inherited Create;
   FEnum := aEnum;
   FWorkEnum := aEnum;
 end;
 
-function TGetEnumerable.MoveNext: Boolean;
+function TGWrapEnumerable.MoveNext: Boolean;
 begin
   Result := FWorkEnum.MoveNext;
 end;
 
-procedure TGetEnumerable.Reset;
+procedure TGWrapEnumerable.Reset;
 begin
   FWorkEnum := FEnum;
 end;
