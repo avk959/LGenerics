@@ -161,6 +161,17 @@ type
       property value: Integer read FValue write FValue;
     end;
 
+    TMyClass = class(TPersistent)
+    private
+      FName: string;
+      FValue: TMyClass;
+    public
+      destructor Destroy; override;
+    published
+      property name: string read FName write FName;
+      property value: TMyClass read FValue write FValue;
+    end;
+
     TMyRec = record
       IntValue: Integer;
       BoolValue: Boolean;
@@ -225,6 +236,8 @@ type
     procedure LoadCollectionUnknownPropError;
     procedure LoadCollectionIgnoreCase;
     procedure LoadCollectionCaseError;
+    procedure LoadClass;
+    procedure LoadClassArray;
     procedure LoadRecordFields;
     procedure LoadRecordFieldsSkipProp;
     procedure LoadRecordFieldsIgnoreCase;
@@ -899,6 +912,14 @@ begin
   s := PdoToJson(TypeInfo(sl), sl);
   sl.Free;
   AssertTrue(s = Expect);
+end;
+
+{ TTestPdoLoadJson.TMyClass }
+
+destructor TTestPdoLoadJson.TMyClass.Destroy;
+begin
+  FValue.Free;
+  inherited;
 end;
 
 { TTestPdoLoadJson.TTestRec }
@@ -1680,6 +1701,49 @@ begin
   end;
   c.Free;
   AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadClass;
+var
+  c: TMyClass = nil;
+const
+  Json = '{"name":"root name","value":{"name":"name1","value":{"name":"name2","value":null}}}';
+begin
+  PdoLoadJson(TypeInfo(c), c, Json, [jroTryCreateClassInst]);
+  AssertTrue(c <> nil);
+  AssertTrue(c.Name = 'root name');
+  AssertTrue(c.Value <> nil);
+  AssertTrue(c.Value.Name = 'name1');
+  AssertTrue(c.Value.Value <> nil);
+  AssertTrue(c.Value.Value.Name = 'name2');
+  AssertTrue(c.Value.Value.Value = nil);
+  c.Free;
+end;
+
+procedure TTestPdoLoadJson.LoadClassArray;
+var
+  a: array of TMyClass = nil;
+const
+  Json = '[{"name":"root name","value":{"name":"name1","value":{"name":"name2","value":null}}},'+
+         '{"name":"root name1","value":{"name":"name3","value":{"name":"name4","value":null}}}]';
+begin
+  PdoLoadJson(TypeInfo(a), a, Json, [jroTryCreateClassInst]);
+  AssertTrue(Length(a) = 2);
+  AssertTrue(a[0].Name = 'root name');
+  AssertTrue(a[0].Value <> nil);
+  AssertTrue(a[0].Value.Name = 'name1');
+  AssertTrue(a[0].Value.Value <> nil);
+  AssertTrue(a[0].Value.Value.Name = 'name2');
+  AssertTrue(a[0].Value.Value.Value = nil);
+
+  AssertTrue(a[1].Name = 'root name1');
+  AssertTrue(a[1].Value <> nil);
+  AssertTrue(a[1].Value.Name = 'name3');
+  AssertTrue(a[1].Value.Value <> nil);
+  AssertTrue(a[1].Value.Value.Name = 'name4');
+  AssertTrue(a[1].Value.Value.Value = nil);
+  a[0].Free;
+  a[1].Free;
 end;
 
 procedure TTestPdoLoadJson.LoadRecordFields;
