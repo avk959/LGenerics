@@ -757,7 +757,7 @@ begin
   s := PdoToJson(TypeInfo(v), v);
   AssertTrue(s = Expect);
   try
-    s := PdoToJson(TypeInfo(v), v, True);
+    s := PdoToJson(TypeInfo(v), v, 0, True);
   except
     on e: EPdoStoreJson do
       Raised := True;
@@ -776,7 +776,7 @@ begin
   s := PdoToJson(TypeInfo(c), c);
   AssertTrue(s = Expect);
   try
-    s := PdoToJson(TypeInfo(c), c, True);
+    s := PdoToJson(TypeInfo(c), c, 0, True);
   except
     on e: EPdoStoreJson do
       Raised := True;
@@ -892,7 +892,7 @@ begin
   s := PdoToJson(TypeInfo(o), o);
   AssertTrue(s = Expect);
   try
-    s := PdoToJson(TypeInfo(o), o, True);
+    s := PdoToJson(TypeInfo(o), o, 0, True);
   except
     on e: EPdoStoreJson do
       Raised := True;
