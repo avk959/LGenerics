@@ -40,11 +40,16 @@ uses
    - variant arrays(currently only one-dimensional);
 }
 
+const
+  DEFAULT_LEN = lgJson.TJsonStrWriter.DEFAULT_LEN;
+
 { stores PDO in JSON; if aStrict is False unsupported data types will be written as
   "unknown data"(see UNKNOWN_ALIAS), otherwise an exception will be raised;
   fields of unregistered records will be named as "field1, field2, ..."(see FIELD_ALIAS) }
-  generic function PdoToJson<T>(const aValue: T; aStrict: Boolean = False): string;
-  function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aStrict: Boolean = False): string;
+  function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer = DEFAULT_LEN;
+                                aStrict: Boolean = False): string;
+  generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer = DEFAULT_LEN;
+                                aStrict: Boolean = False): string;
   { the type being registered must be a record; associates the field names aFieldNames with
     the record fields by their indexes; to exclude a field from serialization, it is sufficient
     to specify its name as an empty string; to avoid name mapping errors, it makes sense to use
@@ -348,13 +353,13 @@ begin
   end;
 end;
 
-generic function PdoToJson<T>(const aValue: T; aStrict: Boolean = False): string;
+generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer; aStrict: Boolean = False): string;
 begin
-  Result := PdoToJson(TypeInfo(T), aValue, aStrict);
+  Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen, aStrict);
 end;
 
 {$PUSH}{$WARN 5089 OFF}
-function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aStrict: Boolean): string;
+function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer; aStrict: Boolean): string;
 var
   Writer: TJsonStrWriter;
   procedure WriteInteger(aTypData: PTypeData; aData: Pointer); inline;
@@ -805,10 +810,11 @@ const
     end;
   end;
 var
-  WriterRef: specialize TGAutoRef<TJsonStrWriter>;
+  WriterRef: specialize TGUniqRef<TJsonStrWriter>;
 begin
   Result := '';
   if aTypeInfo = nil then exit;
+  WriterRef.Instance := TJsonStrWriter.Create(aInitWriterLen);
   Writer := WriterRef;
   WriteField(aTypeInfo, @aValue);
   Result := Writer.JsonString;
