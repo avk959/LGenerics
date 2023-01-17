@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="5"/>
-    <Files Count="41">
+    <Files Count="42">
       <Item1>
         <Filename Value="lgabstractcontainer.pas"/>
         <UnitName Value="lgAbstractContainer"/>
@@ -197,6 +197,10 @@
         <Filename Value="lgpdo.pas"/>
         <UnitName Value="lgPdo"/>
       </Item41>
+      <Item42>
+        <Filename Value="lgjsontypedef.pas"/>
+        <UnitName Value="lgJsonTypeDef"/>
+      </Item42>
     </Files>
     <CompatibilityMode Value="True"/>
     <UsageOptions>
