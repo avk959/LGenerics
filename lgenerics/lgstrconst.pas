@@ -78,8 +78,8 @@ resourcestring
   SECantConvertFmt         = 'Cannot convert %s to %s';
   SEInvalidJsPtr           = 'Invalid JSON Pointer instance';
   SECantParseJsStr         = 'Cannot parse JSON string';
-  SEUnknownJsNodeKind      = 'Unknown JsonNode  kind';
-  SEUnknownJsDataType      = 'Unknown JsonData  type';
+  SEUnknownJsNodeKind      = 'Unknown JsonNode kind';
+  SEUnknownJsDataType      = 'Unknown JsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
   SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
@@ -115,6 +115,36 @@ resourcestring
   SEJsonNullsNotAcceptable = 'JSON null values are not acceptable';
   SEJsonArraySizeNotFitFmt = 'JSON array size does not match the size of static PDO array(%d)';
   SEUnssignedClassInstFmt  = 'Unassigned class instance(%s)';
+//JTD consts
+  SECantLoadJsStream         = 'Cannot load JSON stream';
+  SECantLoadJsFile           = 'Cannot load JSON file';
+  SESchemaNotObjectFmt       = 'JTD schema must be an object, but got "%s"';
+  SEJtdRefNotStrFmt          = 'Ref form must be a string, but got "%s"';
+  SEJtdEnumNotArrayFmt       = 'Enum form must be an array, but got "%s"';
+  SEEnumMustNotEmpty         = 'Enum must not be empty';
+  SEEnumElemNotStrFmt        = 'Enum''s elements must be a string, but got "%s"';
+  SEPropsNotObjectFmt        = 'Properties form must be an object, but got "%s"';
+  SEAddtPropsNotBoolFmt      = 'AdditionalProperties must be a boolean, but got "%s"';
+  SEValuesNotObjectFmt       = 'Values form must be an object, but got "%s"';
+  SEDiscriminNotStrFmt       = 'Discriminator must be a string, but got "%s"';
+  SEMappingNotObjectFmt      = 'Mapping must be an object, but got "%s"';
+  SEDefsNotObjectFmt         = 'Definitions must be an object, but got "%s"';
+  SENullableNotBoolFmt       = 'Nullable must be a boolean, but got "%s"';
+  SEMetaNotObjectFmt         = 'Metadata must be an object, but got "%s"';
+  SEUnknownKeywordFmt        = 'Unknown keyword(%s)';
+  SEIrrelevantFormKwdFmt     = 'Irrelevant form keyword(%s)';
+  SESchemaKeysNotUniq        = 'JTD schema contains non-unique keys';
+  SEKindAforeAssigned        = 'Property Kind is already assigned';
+  SENonUniqEnumElemFmt       = 'Non-unique enum''s element(%s)';
+  SENonRootSchemaDefs        = 'Non-root schema cannot have definitions';
+  SEJtdInvalidForm           = 'Invalid JTD form';
+  SEJtdNonRootDefs           = 'Non-root definitions';
+  SERefDefNonExistent        = 'Reference to non-existent definition';
+  SEPropsOptPropsKeyShare    = 'Properties share keys with optionalProperties';
+  SEMappingIsNullable        = 'Mapping value is nullable';
+  SEMappingNotPropForm       = 'Mapping value is not a properties form';
+  SEDiscrMapPropsKeyShare    = 'Discriminator shares key with mapping properties';
+  SEDiscrMapOptPropsKeyShare = 'Discriminator shares key with mapping optionalProperties';
 
 implementation
 
