@@ -47,7 +47,7 @@ const
   "unknown data"(see UNKNOWN_ALIAS), otherwise an exception will be raised;
   fields of unregistered records will be named as "field1, field2, ..."(see FIELD_ALIAS) }
   function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer = DEFAULT_LEN;
-                                aStrict: Boolean = False): string;
+                     aStrict: Boolean = False): string;
   generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer = DEFAULT_LEN;
                                 aStrict: Boolean = False): string;
   { the type being registered must be a record; associates the field names aFieldNames with
