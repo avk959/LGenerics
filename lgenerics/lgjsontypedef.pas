@@ -954,6 +954,7 @@ var
           end;
           SchemaPathPop;
         end;
+        SchemaPathPop;
       end;
       if not aSchema.AdditionalProperties then
         for Prop in aInst.Names do
