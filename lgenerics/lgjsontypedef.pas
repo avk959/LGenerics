@@ -64,7 +64,6 @@ type
 
   { TJtdSchema: represents a JSON Type Definition schema }
   TJtdSchema = class
-  private
   public
   type
     TMetaDataMap = specialize TGObjHashMapLP<string, TJsonNode>;
@@ -125,9 +124,9 @@ type
     function  GetSignature: TSignature;
     procedure Verify(aRoot: TJtdSchema);
     procedure LoadNode(aNode: TJsonNode);
-    class function  GetKeyword(const aWord: string; out aValue: TKeyword): Boolean; inline;
-    class function  GetFormKind(const aSgn: TSignature): TFormKind;
-    class procedure LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode); static;
+    class function  GetKeyword(const aKey: string; out aValue: TKeyword): Boolean; inline;
+    class function  GetFormKind(const aSgn: TSignature): TFormKind; static;
+    class procedure DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode); static;
   public
     class function TryLoad(aJson: TJsonNode; out aSchema: TJtdSchema): Boolean; static;
     class function TryLoad(const aJson: string; out aSchema: TJtdSchema): Boolean; static;
@@ -160,12 +159,15 @@ type
   const
     INSTANCE_PATH = 'instancePath';
     SCHEMA_PATH   = 'schemaPath';
-  var
-    InstancePath,
-    SchemaPath: string;// actually JSON pointers
-    class function Equals(const L, R: TValidateError): Boolean; static; inline;
+  strict private
+    FInstPath,
+    FSchemaPath: string;// actually JSON pointers
+  public
+    class function Equal(const L, R: TValidateError): Boolean; static; inline;
     class function HashCode(const aValue: TValidateError): SizeInt; static; inline;
     constructor Make(const aInstPath, aSchemaPath: array of string);
+    property InstancePath: string read FInstPath;
+    property SchemaPath: string read FSchemaPath;
   end;
 
   TJtdErrorList = array of TValidateError;
@@ -180,10 +182,10 @@ const
 
 type
   TJtdValidateResult = (
-    jvrOk, jrvParamLimitViolation, jvrNonUniqKeys, jvrMaxErrorsExceed, jvrMaxDepthExceed, jvrErrors);
+    jvrOk, jrvInvalidParam, jvrNonUniqKeys, jvrMaxErrorsExceed, jvrMaxDepthExceed, jvrErrors);
 
 { validates aInstance against aSchema;
-  returns jrvParamLimitViolation if aMaxErrors or aMaxDepth is less than 1,
+  returns jrvInvalidParam if aMaxErrors or aMaxDepth is less than 1,
   otherwise returns jvrNonUniqKeys if aInstance contains non-unique keys,
   otherwise returns jvrMaxErrorsExceed if the number errors exceeds aMaxErrors,
   otherwise returns jvrMaxDepthExceed if the number of references followed exceeds aMaxDepth,
@@ -404,13 +406,13 @@ end;
 procedure TJtdSchema.LoadNode(aNode: TJsonNode);
 begin
   Clear;
-  LoadSchemaNode(Self, aNode);
+  DoLoadSchema(Self, aNode);
   Verify(Self);
 end;
 
-class function TJtdSchema.GetKeyword(const aWord: string; out aValue: TKeyword): Boolean;
+class function TJtdSchema.GetKeyword(const aKey: string; out aValue: TKeyword): Boolean;
 begin
-  Result := CFKeywords.TryGetValue(aWord, aValue);
+  Result := CFKeywords.TryGetValue(aKey, aValue);
 end;
 
 class function TJtdSchema.GetFormKind(const aSgn: TSignature): TFormKind;
@@ -430,7 +432,7 @@ begin
                   Result := fkNone;
 end;
 
-class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
+class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
   function JsKind2Str(aValue: TJsValueKind): string;
   begin
     Result := GetEnumName(TypeInfo(TJsValueKind), Integer(aValue));
@@ -444,7 +446,7 @@ class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
     aSchema.FKind := fkRef;
     aSchema.FStrValue := aNode.AsString;
   end;
-  procedure LoadType(aSchema: TJtdSchema; aNode: TJsonNode);
+  procedure LoadType(aSchema: TJtdSchema; aNode: TJsonNode); inline;
   var
     kw: TKeyword;
   begin
@@ -500,8 +502,8 @@ class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
     aSchema.FProps := TJtdSchemaMap.Create;
     for p in aNode.Enrties do begin
       s := TJtdSchema.Create;
-      LoadSchema(s, p.Value);
       aSchema.FProps.Add(p.Key, s);
+      LoadSchema(s, p.Value);
     end;
   end;
   procedure LoadOptProps(aSchema: TJtdSchema; aNode: TJsonNode);
@@ -517,8 +519,8 @@ class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
     aSchema.FVarInst := TJtdSchemaMap.Create;
     for p in aNode.Enrties do begin
       s := TJtdSchema.Create;
-      LoadSchema(s, p.Value);
       TJtdSchemaMap(aSchema.FVarInst).Add(p.Key, s);
+      LoadSchema(s, p.Value);
     end;
   end;
   procedure LoadAddProps(aSchema: TJtdSchema; aNode: TJsonNode); inline;
@@ -562,8 +564,8 @@ class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
      aSchema.FVarInst := TJtdSchemaMap.Create;
      for p in aNode.Enrties do begin
        s := TJtdSchema.Create;
-       LoadSchema(s, p.Value);
        TJtdSchemaMap(aSchema.FVarInst).Add(p.Key, s);
+       LoadSchema(s, p.Value);
      end;
   end;
   procedure LoadDefs(aSchema: TJtdSchema; aNode: TJsonNode);
@@ -578,8 +580,8 @@ class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
     aSchema.FDefs := TJtdSchemaMap.Create;
     for p in aNode.Enrties do begin
       s := TJtdSchema.Create;
-      LoadSchema(s, p.Value);
       aSchema.FDefs.Add(p.Key, s);
+      LoadSchema(s, p.Value);
     end;
   end;
   procedure LoadNullable(aSchema: TJtdSchema; aNode: TJsonNode); inline;
@@ -611,7 +613,7 @@ class procedure TJtdSchema.LoadSchemaNode(aRoot: TJtdSchema; aNode: TJsonNode);
       if not GetKeyword(p.Key, kw) then
         raise EJtdSchemaLoad.CreateFmt(SEUnknownKeywordFmt, [p.Key]);
       if not(kw.Kind = kkProp) then
-        raise EJtdSchemaLoad.CreateFmt(SEUnknownKeywordFmt, [p.Key]);
+        raise EJtdSchemaLoad.CreateFmt(SEUnknownSchemaPropFmt, [p.Key]);
       case kw.SProp of
         spRef:                  LoadRef(aSchema, p.Value);
         spType:                 LoadType(aSchema, p.Value);
@@ -773,7 +775,7 @@ end;
 
 { TValidateError }
 
-class function TValidateError.Equals(const L, R: TValidateError): Boolean;
+class function TValidateError.Equal(const L, R: TValidateError): Boolean;
 begin
   Result := (L.InstancePath = R.InstancePath) and (L.SchemaPath = R.SchemaPath);
 end;
@@ -785,8 +787,8 @@ end;
 
 constructor TValidateError.Make(const aInstPath, aSchemaPath: array of string);
 begin
-  InstancePath := TJsonPtr.ToPointer(aInstPath);
-  SchemaPath := TJsonPtr.ToPointer(aSchemaPath);
+  FInstPath := TJsonPtr.ToPointer(aInstPath);
+  FSchemaPath := TJsonPtr.ToPointer(aSchemaPath);
 end;
 
 { TErrorListHelper }
@@ -824,18 +826,18 @@ var
   InstancePath: TStrList;
   SchemaPath: TSchemaList;
   ErrorList: TJtdErrorList = nil;
-  ErrorPos: Integer = 0;
+  ErrListPos: SizeInt = 0;
   Root: TJtdSchema = nil;
   procedure PushError;
   var
     pList: ^TStrList;
   begin
-    if ErrorPos = aMaxErrors then raise EMaxErrorExceed.Create('');
+    if ErrListPos = aMaxErrors then raise EMaxErrorExceed.Create('');
     pList := SchemaPath.UncMutable[Pred(SchemaPath.Count)];
-    ErrorList[ErrorPos] := TValidateError.Make(
+    ErrorList[ErrListPos] := TValidateError.Make(
       InstancePath.UncMutable[0][0..Pred(InstancePath.Count)],
       pList^.UncMutable[0][0..Pred(pList^.Count)]);
-    Inc(ErrorPos);
+    Inc(ErrListPos);
   end;
   procedure SchemaPathPushRoot; inline;
   begin
@@ -923,7 +925,7 @@ var
   end;
   procedure DoProps(aInst: TJsonNode; aSchema: TJtdSchema; const aParentTag: string = '');
   var
-    e: specialize TGMapEntry<string, TJtdSchema>;
+    e: TJtdSchemaMap.TEntry;
     Node: TJsonNode;
     Prop: string;
   begin
@@ -1044,7 +1046,7 @@ var
 begin
   aErrList := nil;
   if not TJsonNode.DupeNamesFree(aInstance) then exit(jvrNonUniqKeys);
-  if (aMaxErrors < 1) or (aMaxDepth < 1) then exit(jrvParamLimitViolation);
+  if (aMaxErrors < 1) or (aMaxDepth < 1) then exit(jrvInvalidParam);
   Result := jvrOk;
   System.SetLength(ErrorList, aMaxErrors);
   Root := aSchema;
@@ -1056,11 +1058,10 @@ begin
     on EMaxErrorExceed do Result := jvrMaxErrorsExceed;
     on Exception do raise;
   end;
-  System.SetLength(ErrorList, ErrorPos);
+  System.SetLength(ErrorList, ErrListPos);
   aErrList := ErrorList;
-  if Result = jvrOk then
-    if aErrList <> nil then
-      Result := jvrErrors;
+  if (Result = jvrOk) and (aErrList <> nil) then
+    Result := jvrErrors;
 end;
 
 end.
