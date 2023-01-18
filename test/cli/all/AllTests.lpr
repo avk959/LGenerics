@@ -45,7 +45,8 @@ uses
   lgStrHelpersTest,
   lgSeqUtilsTest,
   lgCsvUtilsTest,
-  lgPdoTest;
+  lgPdoTest,
+  lgJtdTest;
 
 type
 

@@ -1450,7 +1450,7 @@ var
 begin
   for I := 0 to Pred(aCount) do
     v.Add(I);
-  Result := specialize TGetEnumerable<Integer, TIntVector.TEnumerator>.Construct(v.GetEnumerator);
+  Result := specialize TGWrapEnumerable<Integer, TIntVector.TEnumerator>.Construct(v.GetEnumerator);
 end;
 
 function TGLiteVectorTest.GetReverseEnum(aCount: Integer): IIntEnum;
@@ -1461,7 +1461,7 @@ begin
   for I := 0 to Pred(aCount) do
     v.Add(I);
   Result :=
-    specialize TGetEnumerable<Integer, TIntVector.TReverseEnumerator>.Construct(v.GetReverseEnumerator);
+    specialize TGWrapEnumerable<Integer, TIntVector.TReverseEnumerator>.Construct(v.GetReverseEnumerator);
 end;
 
 procedure TGLiteVectorTest.IsEmpty;
