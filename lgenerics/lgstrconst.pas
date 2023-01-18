@@ -132,6 +132,7 @@ resourcestring
   SENullableNotBoolFmt       = 'Nullable must be a boolean, but got "%s"';
   SEMetaNotObjectFmt         = 'Metadata must be an object, but got "%s"';
   SEUnknownKeywordFmt        = 'Unknown keyword(%s)';
+  SEUnknownSchemaPropFmt     = 'Unknown schema property(%s)';
   SEIrrelevantFormKwdFmt     = 'Irrelevant form keyword(%s)';
   SESchemaKeysNotUniq        = 'JTD schema contains non-unique keys';
   SEKindAforeAssigned        = 'Property Kind is already assigned';
