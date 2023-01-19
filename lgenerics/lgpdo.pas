@@ -1298,13 +1298,13 @@ type
       case ElType^.Kind of
         tkRecord:
           if e.Kind = ekRecFieldMap then
-            ReadMappedRec(ElType, PByte(aData^) + I * ElSize, Map)
+            ReadMappedRec(ElType, PByte(aData^) + SizeUInt(I) * ElSize, Map)
           else
-            TJson2PointerProc(e.CustomProc)(PByte(aData^) + I * ElSize, Reader, aOptions);
+            TJson2PointerProc(e.CustomProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions);
         tkObject:
-          TJson2PointerProc(e.CustomProc)(PByte(aData^) + I * ElSize, Reader, aOptions);
+          TJson2PointerProc(e.CustomProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions);
       else
-        ReadValue(ElType, PByte(aData^) + I * ElSize);
+        ReadValue(ElType, PByte(aData^) + SizeUInt(I) * ElSize);
       end;
     until False;
     DynArraySetLength(Pointer(aData^), aTypeInfo, 1, @I);
