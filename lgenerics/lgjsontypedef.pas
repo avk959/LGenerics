@@ -1,7 +1,8 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   JSON Type Definition - a schema language for JSON(aka RFC 8927).        *
+*   Implementation of JSON Type Definition(aka RFC 8927) specifications,    *
+*   a lightweight schema definition language for JSON documents.            *
 *                                                                           *
 *   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
 *                                                                           *
