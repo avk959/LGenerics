@@ -1,6 +1,6 @@
 unit lgJtdTest;
 
-{$mode objfpc}{$H+}
+{$MODE OBJFPC}{$H+}{$WARN 5089 OFF}
 
 interface
 
@@ -26,6 +26,8 @@ type
     function  EqualErrors(aExpect, aActual: TJsonNode): Boolean;
   published
     procedure TestInvalidSchemas;
+    procedure TestMaxDepth;
+    procedure TestMaxErrors;
     procedure TestValidation;
   end;
 
@@ -61,6 +63,47 @@ begin
   AssertTrue('Unexpected number of samples(' + IntToStr(I) + ')', I = 49);
 end;
 
+procedure TJtdTest.TestMaxDepth;
+var
+  Schema: TJtdSchema;
+  SchemaRef: specialize TGUniqRef<TJtdSchema>;
+  InstRef: specialize TGUniqRef<TJsonNode>;
+  eList: TJtdErrorList = nil;
+const
+  SchemaJson = '{"definitions":{"loop":{"ref":"loop"}},"ref":"loop"}';
+  InstanceJson = '[null]';
+begin
+  AssertTrue('Can not load schema', TJtdSchema.TryLoad(SchemaJson, Schema));
+  SchemaRef.Instance := Schema;
+  InstRef.Instance := TJsonNode.NewJson(InstanceJson);
+  AssertTrue('Can not load instance', InstRef.Instance <> nil);
+  AssertTrue('Expected result "jrvInvalidParam" did not occur',
+             Validate(InstRef.Instance, Schema, eList, 1, 0) = jrvInvalidParam);
+  AssertTrue('Expected result "jrvInvalidParam" did not occur',
+             Validate(InstRef.Instance, Schema, eList, 1, 42) = jvrMaxDepthExceed);
+end;
+
+procedure TJtdTest.TestMaxErrors;
+var
+  Schema: TJtdSchema;
+  SchemaRef: specialize TGUniqRef<TJtdSchema>;
+  InstRef: specialize TGUniqRef<TJsonNode>;
+  eList: TJtdErrorList = nil;
+const
+  SchemaJson = '{"elements":{"type":"int32"}}';
+  InstanceJson = '["a",true,null,{},[]]';
+begin
+  AssertTrue('Can not load schema', TJtdSchema.TryLoad(SchemaJson, Schema));
+  SchemaRef.Instance := Schema;
+  InstRef.Instance := TJsonNode.NewJson(InstanceJson);
+  AssertTrue('Can not load instance', InstRef.Instance <> nil);
+  AssertTrue('Expected result "jrvInvalidParam" did not occur',
+             Validate(InstRef.Instance, Schema, eList, 0) = jrvInvalidParam);
+  AssertTrue('Expected result "jvrMaxErrorsExceed" did not occur',
+             Validate(InstRef.Instance, Schema, eList, 4) = jvrMaxErrorsExceed);
+  AssertTrue(Length(eList) = 4);
+end;
+
 procedure TJtdTest.TestValidation;
 var
   FileName: string;
@@ -82,9 +125,19 @@ begin
     begin
       Inc(I);
     {$IF FPC_FULLVERSION < 30300}
-       if (I >= 198) and (I <= 202) then continue;//TryISOStrToDateTime() in FPC-3.2.2 can not parse it
+      case p.Key of //TryISOStrToDateTime() in FPC-3.2.2 can not parse it
+        'timestamp type schema - 1985-04-12T23:20:50.52Z',
+        'timestamp type schema - 1990-12-31T23:59:60Z',
+        'timestamp type schema - 1990-12-31T15:59:60-08:00',
+        'timestamp type schema - 1937-01-01T12:00:27.87+00:20': continue;
+      else
+      end;
     {$ELSE }
-      if (I = 200) or (I = 201) then continue;//TryISOStrToDateTime() doesn't like leap seconds
+      case p.Key of   //TryISOStrToDateTime() doesn't like leap seconds
+        'timestamp type schema - 1990-12-31T23:59:60Z',
+        'timestamp type schema - 1990-12-31T15:59:60-08:00': continue;
+      else
+      end;
     {$ENDIF}
       AssertTrue('Can not find schema in "'+p.Key+'"', p.Value.Find('schema', SchemaNode));
       AssertTrue('Can not load schema "'+p.Key+'"', TJtdSchema.TryLoad(SchemaNode, Schema));
@@ -196,7 +249,6 @@ begin
       Result := True;
     end;
 end;
-
 
 initialization
 
