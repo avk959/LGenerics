@@ -198,7 +198,7 @@ type
   { todo: make it extensible using metadata? }
 
 {
-  returns True if s is valid Rfc8927TimeStamp, False otherwise;
+  returns True if s is a valid Rfc8927TimeStamp, False otherwise;
   allows leading and trailing spaces;
 
     QUOTE from RFC 8927:
