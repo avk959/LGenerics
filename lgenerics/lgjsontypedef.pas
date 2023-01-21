@@ -1207,7 +1207,7 @@ begin
   ///////////////////
   I := 19;
   if p[I] = '.' then begin // maybe second fraction
-    if I = Pred(aCount) then exit(False);
+    if (I = Pred(aCount)) or not (p[I+1] in ['0'..'9']) then exit(False);
     Inc(I);
     J := 0;
     while (I < aCount) and (p[I] in ['0'..'9']) do begin
