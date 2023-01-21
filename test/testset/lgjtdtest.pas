@@ -129,10 +129,12 @@ var
 begin
   s := '1998-05-20T21:40:61,333Z';
   AssertFalse('Accepts a comma as the fractional second separator', IsRfc8927TimeStamp(s));
-  s := '1998-05-20T21:40:61.Z';
+  s := '1998-05-20T21:40:59.Z';
   AssertFalse('Accepts the fractional part of a second without any digits', IsRfc8927TimeStamp(s));
-  s := '1998-05-20T23:59:60.1g8Z';
+  s := '1998-05-20T23:59:40.1g8Z';
   AssertFalse('Accepts garbage fraction of a second', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35.128';
+  AssertFalse('Accepts the value without the "Z" character', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdTest.TestInvalidSchemas;
