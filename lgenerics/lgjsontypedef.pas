@@ -70,10 +70,10 @@ type
     TMetaDataMap = specialize TGObjHashMapLP<string, TJsonNode>;
     TStringSet   = specialize TGHashSetLP<string>;
     TFormKind    = (fkNone, fkEmpty, fkRef, fkType, fkEnum, fkElements, fkProperties, fkValues, fkDiscriminator);
-  private
-  type
     TJtdType     = (jtNone, jtBool, jtFloat32, jtFloat64, jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32,
                     jtString, jtTimeStamp);
+  private
+  type
     TSchemaProp  = (spRef, spType, spEnum, spElements, spProperties, spOptionalProperties, spAdditionalProperties,
                     spValues, spDiscriminator, spMapping, spDefinitions, spNullable, spMetaData);
     TSignProp    = spRef..spMapping;
@@ -195,6 +195,26 @@ type
   returns the list of TValidateError in aErrList in conformance with the JSON Typedef specification }
   function Validate(aInstance: TJsonNode; aSchema: TJtdSchema; out aErrList: TJtdErrorList;
                     aMaxErrors: Integer = DEFAULT_ERRORS; aMaxDepth: Integer = DEFAULT_DEPTH): TJtdValidateResult;
+  { todo: make it extensible using metadata? }
+
+{
+  returns True if s is valid Rfc8927TimeStamp, False otherwise;
+  allows leading and trailing spaces;
+
+    QUOTE from RFC 8927:
+      timestamp:
+        a JSON string that follows the standard format described in [RFC3339],
+        as refined by Section 3.3 of [RFC4287]
+
+    QUOTE from RFC 4287, Section 3.3:
+      A Date construct is an element whose content MUST conform to the
+      "date-time" production in [RFC3339]. In addition, an uppercase "T"
+      character MUST be used to separate date and time, and an uppercase
+      "Z" character MUST be present in the absence of a numeric time zone offset.
+
+}
+  function IsRfc8927TimeStamp(const s: string): Boolean;
+  function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -895,7 +915,7 @@ var
       jtTimeStamp:
         if not aInst.IsString then PushError
         else
-          if not TryISOStrToDateTime(aInst.AsString, d) then PushError;//todo: need replacement ???
+          if not IsRfc8927TimeStamp(aInst.AsString) then PushError;//todo: need replacement ???
     else
       raise EJtdSchemaValidate.CreateFmt(SEJtdValidationInternalFmt, [2]);
     end;
@@ -1064,6 +1084,183 @@ begin
   aErrList := ErrorList;
   if (Result = jvrOk) and (aErrList <> nil) then
     Result := jvrErrors;
+end;
+
+function DaysPerMonth(aMonth: Word; aLeapYear: Boolean): Word; inline;
+begin
+  case aMonth of
+    1, 3, 5, 7, 8, 10, 12:
+      Result := 31;
+    2:
+      if aLeapYear then
+        Result := 29
+      else Result := 28;
+    4, 6, 9, 11:
+      Result := 30;
+  else
+    Result := 0;
+  end;
+end;
+
+function RealLeapSecond06(aYear: Word): Boolean; inline;
+begin
+  case aYear of
+    1972, 1981, 1982, 1983, 1985, 1992, 1993, 1994, 1997, 2012, 2015:
+      Result := True;
+  else
+    Result := False;
+  end;
+end;
+
+function RealLeapSecond12(aYear: Word): Boolean; inline;
+begin
+  case aYear of
+    1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979,
+    1987, 1989, 1990, 1995, 1998, 2005, 2008, 2016:
+      Result := True;
+  else
+    Result := False;
+  end;
+end;
+
+type
+  TDtFragments = record
+    Year,
+    Month,
+    MDay,
+    Hour,
+    Minute,
+    Second: Word;
+    TZOffset: SmallInt; // local offset in minutes
+    SecFraction: array[0..7] of Char;// decimal digits of the fractional part of a second
+                                     // in the order in which they appear
+  end;
+
+function ValidTimeStamp(p: PChar; aCount: SizeInt; out aFrags: TDtFragments): Boolean;
+var
+  I, J: Integer;
+  Val: Word;
+const
+  Digits: array['0'..'9'] of Word = (0,1,2,3,4,5,6,7,8,9);
+begin
+  if aCount < 20 then exit(False);
+// Year
+  if p[0] in ['0'..'9'] then Val := Digits[p[0]] else exit(False);
+  if p[1] in ['0'..'9'] then Val := Val*10 + Digits[p[1]] else exit(False);
+  if p[2] in ['0'..'9'] then Val := Val*10 + Digits[p[2]] else exit(False);
+  if p[3] in ['0'..'9'] then Val := Val*10 + Digits[p[3]] else exit(False);
+  aFrags.Year := Val;
+  //////////////
+  if p[4] <> '-' then exit(False);
+  //////////////
+// Month
+  if p[5] in ['0'..'1'] then Val := Digits[p[5]] else exit(False);
+  if p[6] in ['0'..'9'] then Val := Val*10 + Digits[p[6]] else exit(False);
+  if (Val = 0) or (Val > 12) then exit(False);
+  aFrags.Month := Val;
+  /////////////
+  if p[7] <> '-' then exit(False);
+  /////////////
+// MDay
+  if p[8] in ['0'..'3'] then Val := Digits[p[8]] else exit(False);
+  if p[9] in ['0'..'9'] then Val := Val*10 + Digits[p[9]] else exit(False);
+  if (Val = 0) or (Val > DaysPerMonth(aFrags.Month, IsLeapYear(aFrags.Year))) then exit(False);
+  aFrags.MDay := Val;
+  /////////////
+  if p[10] <> 'T' then exit(False);
+  /////////////
+// Hour
+  if p[11] in ['0'..'2'] then Val := Digits[p[11]] else exit(False);
+  if p[12] in ['0'..'9'] then Val := Val*10 + Digits[p[12]] else exit(False);
+  if Val > 23 then exit(False);
+  aFrags.Hour := Val;
+  ///////////////
+  if p[13] <> ':' then exit(False);
+  ///////////////
+// Minute
+  if p[14] in ['0'..'5'] then Val := Digits[p[14]] else exit(False);
+  if p[15] in ['0'..'9'] then Val := Val*10 + Digits[p[15]] else exit(False);
+  if Val > 59 then exit(False);
+  aFrags.Minute := Val;
+  ///////////////
+  if p[16] <> ':' then exit(False);
+  ///////////////
+// Second
+  if p[17] in ['0'..'6'] then Val := Digits[p[17]] else exit(False);
+  if p[18] in ['0'..'9'] then Val := Val*10 + Digits[p[18]] else exit(False);
+  if Val > 60 then exit(False);
+  if Val = 60 then begin //positive leap second?
+    if (aFrags.Year > 2016) or (aFrags.Hour <> 23) or (aFrags.Minute <> 59) then exit(False);
+    if aFrags.Month = 6 then begin
+      if aFrags.MDay <> 30 then exit(False);
+      if not RealLeapSecond06(aFrags.Year) then exit(False);
+    end else
+      if aFrags.Month = 12 then begin
+        if aFrags.MDay <> 31 then exit(False);
+        if not RealLeapSecond12(aFrags.Year) then exit(False);
+      end else exit(False);
+  end;
+  aFrags.Second := Val;
+  ////////////////////
+  FillChar(aFrags.SecFraction, SizeOf(aFrags.SecFraction), '0');
+  aFrags.TZOffset := 0;
+  ///////////////////
+  I := 19;
+  if p[I] = '.' then begin // maybe second fraction
+    if I = Pred(aCount) then exit(False);
+    Inc(I);
+    J := 0;
+    while (I < aCount) and (p[I] in ['0'..'9']) do begin
+      if J < System.Length(aFrags.SecFraction[J]) then begin
+        aFrags.SecFraction[J] := p[I];
+        Inc(J);
+      end;
+      Inc(I);
+    end;
+  end;
+
+  if I = aCount then exit(False)
+  else
+    if (I = Pred(aCount)) and (p[I] = 'Z') then exit(True);
+
+  if not (p[I] in ['+', '-']) then exit(False);
+  Inc(I);
+  if aCount - I <> 5 then exit(False);
+//local offset
+  if p[I] in ['0'..'9'] then Val := Digits[p[I]] else exit(False);
+  if p[I+1] in ['0'..'9'] then Val := Val*10 + Digits[p[I+1]] else exit(False);
+  if Val > 23 then exit(False);
+  aFrags.TZOffset := Integer(Val) * 60;
+  if p[I+2] <> ':' then exit(False);
+  if p[I+3] in ['0'..'9'] then Val := Digits[p[I+3]] else exit(False);
+  if p[I+4] in ['0'..'9'] then Val := Val*10 + Digits[p[I+4]] else exit(False);
+  if Val > 59 then exit(False);
+  aFrags.TZOffset += Integer(Val);
+
+  if p[I-1] = '-' then
+    aFrags.TZOffset := -aFrags.TZOffset;
+
+  Result := True;
+end;
+
+function IsRfc8927TimeStamp(const s: string): Boolean;
+begin
+  Result := IsRfc8927TimeStamp(Pointer(s), System.Length(s));
+end;
+
+function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
+var
+  Fragments: TDtFragments;
+begin
+  while (aCount > 0) and (p^ in [#9, ' ']) do begin
+    Inc(p);
+    Dec(aCount);
+  end;
+
+  while (aCount > 0) and (p[Pred(aCount)] in [#9, ' ']) do
+    Dec(aCount);
+
+  Result := ValidTimeStamp(p, aCount, Fragments);
 end;
 
 end.
