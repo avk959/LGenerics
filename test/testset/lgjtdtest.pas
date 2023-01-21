@@ -20,7 +20,8 @@ type
     procedure IsRfc8927TimeStamp_InvalidDay;
     procedure IsRfc8927TimeStamp_InvalidHour;
     procedure IsRfc8927TimeStamp_InvalidMinute;
-    procedure IsRfc8927TimeStamp_InvalidSeconde;
+    procedure IsRfc8927TimeStamp_InvalidSecond;
+    procedure IsRfc8927TimeStamp_InvalidSecFraction;
   end;
 
   { TJtdTest }
@@ -56,19 +57,19 @@ begin
   AssertFalse('Accepts three-digit year', IsRfc8927TimeStamp(s));
   s := '$101-09-20T13:19:15Z';
   AssertFalse('Accepts garbage year', IsRfc8927TimeStamp(s));
-  s := '2101:09-20T13:19:15';
-  AssertFalse('Accepts colon as date delimiter', IsRfc8927TimeStamp(s));
+  s := '2101:09-20T13:19:15Z';
+  AssertFalse('Accepts colon as a date separator', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidMonth;
 var
   s: string;
 begin
-  s := '2001-19-20T13:19:15';
+  s := '2001-19-20T13:19:15Z';
   AssertFalse('Accepts a month value greater than 12', IsRfc8927TimeStamp(s));
-  s := '2001-00-20T13:19:15';
+  s := '2001-00-20T13:19:15Z';
   AssertFalse('Accepts zero month value', IsRfc8927TimeStamp(s));
-  s := '2011-1a-20T13:19:15';
+  s := '2011-1a-20T13:19:15Z';
   AssertFalse('Accepts garbage month', IsRfc8927TimeStamp(s));
 end;
 
@@ -76,15 +77,15 @@ procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidDay;
 var
   s: string;
 begin
-  s := '2001-09-40T13:19:15';
+  s := '2001-09-40T13:19:15Z';
   AssertFalse('Accepts a day value greater than 31', IsRfc8927TimeStamp(s));
-  s := '2001-09-31T13:19:15';
+  s := '2001-09-31T13:19:15Z';
   AssertFalse('Accepts a day value greater than day in month', IsRfc8927TimeStamp(s));
-  s := '2001-02-00T13:19:15';
+  s := '2001-02-00T13:19:15Z';
   AssertFalse('Accepts zero day value', IsRfc8927TimeStamp(s));
-  s := '2001-02-29T13:19:15';
+  s := '2001-02-29T13:19:15Z';
   AssertFalse('Accepts 29 as the value of the day in February of a non-leap year', IsRfc8927TimeStamp(s));
-  s := '2011-10-2#T13:19:15';
+  s := '2011-10-2#T13:19:15Z';
   AssertFalse('Accepts garbage day', IsRfc8927TimeStamp(s));
 end;
 
@@ -92,34 +93,46 @@ procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidHour;
 var
   s: string;
 begin
-  s := '2014-03-20T33:19:15';
+  s := '2014-03-20T33:19:15Z';
   AssertFalse('Accepts a hour value greater than 23', IsRfc8927TimeStamp(s));
-  s := '2014-03-20Tf3:19:15';
+  s := '2014-03-20Tf3:19:15Z';
   AssertFalse('Accepts garbage hour', IsRfc8927TimeStamp(s));
-   s := '2014-03-20T13-19:15';
-  AssertFalse('Accepts dash as time delimiter', IsRfc8927TimeStamp(s));
+   s := '2014-03-20T13-19:15Z';
+  AssertFalse('Accepts dash as a time separator', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidMinute;
 var
   s: string;
 begin
-  s := '2004-05-20T21:60:15';
+  s := '2004-05-20T21:60:15Z';
   AssertFalse('Accepts a minute value greater than 59', IsRfc8927TimeStamp(s));
-  s := '2004-05-20T12:o9:15';
+  s := '2004-05-20T12:o9:15Z';
   AssertFalse('Accepts garbage minute', IsRfc8927TimeStamp(s));
 end;
 
-procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidSeconde;
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidSecond;
 var
   s: string;
 begin
-  s := '1998-05-20T21:40:61';
+  s := '1998-05-20T21:40:61Z';
   AssertFalse('Accepts a second value greater than 60', IsRfc8927TimeStamp(s));
-  s := '1998-05-20T21:40:t9';
+  s := '1998-05-20T21:40:t9Z';
   AssertFalse('Accepts garbage second', IsRfc8927TimeStamp(s));
-  s := '1998-05-20T23:59:60';
+  s := '1998-05-20T23:59:60Z';
   AssertFalse('Accepts a non-existent leap second', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidSecFraction;
+var
+  s: string;
+begin
+  s := '1998-05-20T21:40:61,333Z';
+  AssertFalse('Accepts a comma as the fractional second separator', IsRfc8927TimeStamp(s));
+  s := '1998-05-20T21:40:61.Z';
+  AssertFalse('Accepts the fractional part of a second without any digits', IsRfc8927TimeStamp(s));
+  s := '1998-05-20T23:59:60.1g8Z';
+  AssertFalse('Accepts garbage fraction of a second', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdTest.TestInvalidSchemas;
