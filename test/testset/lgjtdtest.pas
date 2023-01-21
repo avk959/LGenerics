@@ -10,6 +10,19 @@ uses
 
 type
 
+  { TJtdUtilsTest }
+
+  TJtdUtilsTest = class(TTestCase)
+  protected
+  published
+    procedure IsRfc8927TimeStamp_InvalidYear;
+    procedure IsRfc8927TimeStamp_InvalidMonth;
+    procedure IsRfc8927TimeStamp_InvalidDay;
+    procedure IsRfc8927TimeStamp_InvalidHour;
+    procedure IsRfc8927TimeStamp_InvalidMinute;
+    procedure IsRfc8927TimeStamp_InvalidSeconde;
+  end;
+
   { TJtdTest }
 
   TJtdTest = class(TTestCase)
@@ -32,6 +45,82 @@ type
   end;
 
 implementation
+
+{ TJtdUtilsTest }
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidYear;
+var
+  s: string;
+begin
+  s := '101-09-20T13:19:15.01Z';
+  AssertFalse('Accepts three-digit year', IsRfc8927TimeStamp(s));
+  s := '$101-09-20T13:19:15Z';
+  AssertFalse('Accepts garbage year', IsRfc8927TimeStamp(s));
+  s := '2101:09-20T13:19:15';
+  AssertFalse('Accepts colon as date delimiter', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidMonth;
+var
+  s: string;
+begin
+  s := '2001-19-20T13:19:15';
+  AssertFalse('Accepts a month value greater than 12', IsRfc8927TimeStamp(s));
+  s := '2001-00-20T13:19:15';
+  AssertFalse('Accepts zero month value', IsRfc8927TimeStamp(s));
+  s := '2011-1a-20T13:19:15';
+  AssertFalse('Accepts garbage month', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidDay;
+var
+  s: string;
+begin
+  s := '2001-09-40T13:19:15';
+  AssertFalse('Accepts a day value greater than 31', IsRfc8927TimeStamp(s));
+  s := '2001-09-31T13:19:15';
+  AssertFalse('Accepts a day value greater than day in month', IsRfc8927TimeStamp(s));
+  s := '2001-02-00T13:19:15';
+  AssertFalse('Accepts zero day value', IsRfc8927TimeStamp(s));
+  s := '2001-02-29T13:19:15';
+  AssertFalse('Accepts 29 as the value of the day in February of a non-leap year', IsRfc8927TimeStamp(s));
+  s := '2011-10-2#T13:19:15';
+  AssertFalse('Accepts garbage day', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidHour;
+var
+  s: string;
+begin
+  s := '2014-03-20T33:19:15';
+  AssertFalse('Accepts a hour value greater than 23', IsRfc8927TimeStamp(s));
+  s := '2014-03-20Tf3:19:15';
+  AssertFalse('Accepts garbage hour', IsRfc8927TimeStamp(s));
+   s := '2014-03-20T13-19:15';
+  AssertFalse('Accepts dash as time delimiter', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidMinute;
+var
+  s: string;
+begin
+  s := '2004-05-20T21:60:15';
+  AssertFalse('Accepts a minute value greater than 59', IsRfc8927TimeStamp(s));
+  s := '2004-05-20T12:o9:15';
+  AssertFalse('Accepts garbage minute', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidSeconde;
+var
+  s: string;
+begin
+  s := '1998-05-20T21:40:61';
+  AssertFalse('Accepts a second value greater than 60', IsRfc8927TimeStamp(s));
+  s := '1998-05-20T21:40:t9';
+  AssertFalse('Accepts garbage second', IsRfc8927TimeStamp(s));
+  s := '1998-05-20T23:59:60';
+  AssertFalse('Accepts a non-existent leap second', IsRfc8927TimeStamp(s));
+end;
 
 procedure TJtdTest.TestInvalidSchemas;
 var
@@ -124,21 +213,8 @@ begin
   for p in SampleList.Enrties do
     begin
       Inc(I);
-    {$IF FPC_FULLVERSION < 30300}
-      case p.Key of //TryISOStrToDateTime() in FPC-3.2.2 can not parse it
-        'timestamp type schema - 1985-04-12T23:20:50.52Z',
-        'timestamp type schema - 1990-12-31T23:59:60Z',
-        'timestamp type schema - 1990-12-31T15:59:60-08:00',
-        'timestamp type schema - 1937-01-01T12:00:27.87+00:20': continue;
-      else
-      end;
-    {$ELSE }
-      case p.Key of   //TryISOStrToDateTime() doesn't like leap seconds
-        'timestamp type schema - 1990-12-31T23:59:60Z',
-        'timestamp type schema - 1990-12-31T15:59:60-08:00': continue;
-      else
-      end;
-    {$ENDIF}
+      if p.Key = 'timestamp type schema - 1990-12-31T15:59:60-08:00' then
+        continue;//is not real leap second
       AssertTrue('Can not find schema in "'+p.Key+'"', p.Value.Find('schema', SchemaNode));
       AssertTrue('Can not load schema "'+p.Key+'"', TJtdSchema.TryLoad(SchemaNode, Schema));
       try
@@ -251,8 +327,7 @@ begin
 end;
 
 initialization
-
+  RegisterTest(TJtdUtilsTest);
   RegisterTest(TJtdTest);
-
 end.
 
