@@ -22,6 +22,8 @@ type
     procedure IsRfc8927TimeStamp_InvalidMinute;
     procedure IsRfc8927TimeStamp_InvalidSecond;
     procedure IsRfc8927TimeStamp_InvalidSecFraction;
+    procedure IsRfc8927TimeStamp_InvalidOffset;
+    procedure IsRfc8927TimeStamp_InvalidMisc;
   end;
 
   { TJtdTest }
@@ -135,6 +137,34 @@ begin
   AssertFalse('Accepts garbage fraction of a second', IsRfc8927TimeStamp(s));
   s := '2018-06-20T23:59:35.128';
   AssertFalse('Accepts the value without the "Z" character', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidOffset;
+var
+  s: string;
+begin
+  s := '2018-06-20T23:59:35 08:11';
+  AssertFalse('Accepts a space as an local offset separator', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35+24:11';
+  AssertFalse('Accepts a local offset hours grater than 23', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35+24:11';
+  AssertFalse('Accepts a local offset hours value greater than 23', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35-04:60';
+  AssertFalse('Accepts a local offset minutes value greater than 59', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35+$4:60';
+  AssertFalse('Accepts garbage local offset', IsRfc8927TimeStamp(s));
+end;
+
+procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidMisc;
+var
+  s: string;
+begin
+  s := '2018-06-20u23:59:35Z';
+  AssertFalse('Accepts an arbitrary character as the date/time separator', IsRfc8927TimeStamp(s));
+  s := '2018-06-20t23:59:35Z';
+  AssertFalse('Accepts lower case "t" as the date/time separator', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35z';
+  AssertFalse('Accepts lower case "z" as Zulu time zone', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdTest.TestInvalidSchemas;
