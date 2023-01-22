@@ -1122,6 +1122,7 @@ type
   expects a period as a decimal separator;
   if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
   function  TryStr2Double(const s: string; out aValue: Double): Boolean; inline;
+  function  TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean; inline;
 { returns True and the value of the number in aInt if the string s is a non-negative integer
   in decimal notation, otherwise returns False;
   leading and trailing spaces and leading zeros are not allowed }
@@ -7153,6 +7154,11 @@ end;
 function TryStr2Double(const s: string; out aValue: Double): Boolean;
 begin
   Result := TryPChar2Double(PAnsiChar(s), aValue);
+end;
+
+function TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean;
+begin
+  Result := TryPChar2Double(p, aValue);
 end;
 
 {$PUSH}{$J-}{$WARN 2005 OFF}
