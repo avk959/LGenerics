@@ -198,7 +198,7 @@ type
   { todo: make it extensible using metadata? }
 
 {
-  returns True if s is a valid Rfc8927TimeStamp, False otherwise;
+  returns True if s is a valid Rfc8927-formatted timestamp, False otherwise;
   allows leading and trailing spaces;
 
     QUOTE from RFC 8927:
@@ -215,6 +215,18 @@ type
 }
   function IsRfc8927TimeStamp(const s: string): Boolean;
   function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
+{ returns True and UTC date/time value in d if s is a valid Rfc8927-formatted timestamp,
+  False otherwise }
+  function TryRfc8927TimeStampToUTC(const s: string; out d: TDateTime): Boolean;
+  function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out d: TDateTime): Boolean;
+{ returns True and UTC date/time value in ts if s is a valid Rfc8927-formatted timestamp,
+  False otherwise }
+  function TryRfc8927TimeStampToUTC(const s: string; out ts: TTimeStamp): Boolean;
+  function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out ts: TTimeStamp): Boolean;
+{ converts a date/time value to a Rfc8927-formatted timestamp;
+  assumes that the date/time value is in the UTC time zone }
+  function UTCToRfc8927TimeStamp(aUtc: TDateTime): string;
+  function UTCToRfc8927TimeStamp(const aUtc: TTimeStamp): string;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -1086,22 +1098,6 @@ begin
     Result := jvrErrors;
 end;
 
-function DaysPerMonth(aMonth: Word; aLeapYear: Boolean): Word; inline;
-begin
-  case aMonth of
-    1, 3, 5, 7, 8, 10, 12:
-      Result := 31;
-    2:
-      if aLeapYear then
-        Result := 29
-      else Result := 28;
-    4, 6, 9, 11:
-      Result := 30;
-  else
-    Result := 0;
-  end;
-end;
-
 function RealLeapSecond06(aYear: Word): Boolean; inline;
 begin
   case aYear of
@@ -1132,10 +1128,12 @@ type
     Minute,
     Second: Word;
     TZOffset: SmallInt; // local offset in minutes
-    SecFraction: array[0..7] of Char;// decimal digits of the fractional part of a second
-                                     // in the order in which they appear
+    HasSecFrac: Boolean;
+    SecFraction: array[-2..9] of Char;// decimal digits of the fractional part of a second
+                                      // in the order in which they appear (starting from index 0)
   end;
 
+{$J-}
 function ValidTimeStamp(p: PChar; aCount: SizeInt; out aFrags: TDtFragments): Boolean;
 var
   I, J: Integer;
@@ -1164,7 +1162,7 @@ begin
 // MDay
   if p[8] in ['0'..'3'] then Val := Digits[p[8]] else exit(False);
   if p[9] in ['0'..'9'] then Val := Val*10 + Digits[p[9]] else exit(False);
-  if (Val = 0) or (Val > DaysPerMonth(aFrags.Month, IsLeapYear(aFrags.Year))) then exit(False);
+  if (Val = 0) or (Val > MonthDays[IsLeapYear(aFrags.Year), aFrags.Month]) then exit(False);
   aFrags.MDay := Val;
   /////////////
   if p[10] <> 'T' then exit(False);
@@ -1202,7 +1200,7 @@ begin
   end;
   aFrags.Second := Val;
   ////////////////////
-  FillChar(aFrags.SecFraction, SizeOf(aFrags.SecFraction), '0');
+  aFrags.HasSecFrac := False;
   aFrags.TZOffset := 0;
   ///////////////////
   I := 19;
@@ -1210,8 +1208,10 @@ begin
     if (I = Pred(aCount)) or not (p[I+1] in ['0'..'9']) then exit(False);
     Inc(I);
     J := 0;
+    aFrags.HasSecFrac := True;
+    FillChar(aFrags.SecFraction, SizeOf(aFrags.SecFraction), '0');
     while (I < aCount) and (p[I] in ['0'..'9']) do begin
-      if J < System.Length(aFrags.SecFraction[J]) then begin
+      if J < System.High(aFrags.SecFraction) then begin
         aFrags.SecFraction[J] := p[I];
         Inc(J);
       end;
@@ -1230,14 +1230,14 @@ begin
   if p[I] in ['0'..'9'] then Val := Digits[p[I]] else exit(False);
   if p[I+1] in ['0'..'9'] then Val := Val*10 + Digits[p[I+1]] else exit(False);
   if Val > 23 then exit(False);
-  aFrags.TZOffset := Integer(Val) * 60;
+  aFrags.TZOffset := SmallInt(Val) * 60;
   if p[I+2] <> ':' then exit(False);
   if p[I+3] in ['0'..'9'] then Val := Digits[p[I+3]] else exit(False);
   if p[I+4] in ['0'..'9'] then Val := Val*10 + Digits[p[I+4]] else exit(False);
   if Val > 59 then exit(False);
-  aFrags.TZOffset += Integer(Val);
+  aFrags.TZOffset += SmallInt(Val);
 
-  if p[I-1] = '-' then
+  if p[I-1] = '+' then
     aFrags.TZOffset := -aFrags.TZOffset;
 
   Result := True;
@@ -1248,9 +1248,7 @@ begin
   Result := IsRfc8927TimeStamp(Pointer(s), System.Length(s));
 end;
 
-function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
-var
-  Fragments: TDtFragments;
+procedure SkipSpaces(var p: PChar; var aCount: SizeInt); inline;
 begin
   while (aCount > 0) and (p^ in [#9, ' ']) do begin
     Inc(p);
@@ -1259,8 +1257,176 @@ begin
 
   while (aCount > 0) and (p[Pred(aCount)] in [#9, ' ']) do
     Dec(aCount);
+end;
 
-  Result := ValidTimeStamp(p, aCount, Fragments);
+function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
+var
+  Dummy: TDtFragments;
+begin
+  SkipSpaces(p, aCount);
+  Result := ValidTimeStamp(p, aCount, Dummy);
+end;
+
+function TryRfc8927TimeStampToUTC(const s: string; out d: TDateTime): Boolean;
+begin
+  Result := TryRfc8927TimeStampToUTC(Pointer(s), System.Length(s), d);
+end;
+
+function DTFragmentsToUtc(var aFrag: TDtFragments): TDateTime;
+var
+  LTime: TDateTime;
+  SecFrac: Double;
+  c, y: DWord;
+begin
+{ code from SysUtils.TryEncodeDate }
+  if aFrag.Month > 2 then Dec(aFrag.Month, 3)
+  else begin
+    Inc(aFrag.Month, 9);
+    Dec(aFrag.Year);
+  end;
+  c := aFrag.Year div 100;
+  y := aFrag.Year - 100 * c;
+  Result := (146097*c) shr 2 + (1461*y) shr 2 + (153*DWord(aFrag.Month) + 2) div 5 + DWord(aFrag.MDay);
+  Result -= 693900;
+{ code from SysUtils.TryEncodeTime }
+  LTime := TDateTime(DWord(aFrag.Hour)*3600000+DWord(aFrag.Minute)*60000+DWord(aFrag.Second)*1000)/MSecsPerDay;
+
+  if aFrag.HasSecFrac then begin
+    aFrag.SecFraction[Succ(System.Low(aFrag.SecFraction))] := '.';
+    aFrag.SecFraction[System.High(aFrag.SecFraction)] := #0;
+    if not TryStr2Double(@aFrag.SecFraction[System.Low(aFrag.SecFraction)], SecFrac) then
+      SecFrac := 0; //???
+    LTime += SecFrac * OneSecond;
+  end;
+
+  Result += LTime;
+
+  if aFrag.TZOffset <> 0 then
+    Result := IncMinute(Result, aFrag.TZOffset);
+end;
+
+function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out d: TDateTime): Boolean;
+var
+  Frag: TDtFragments;
+begin
+  SkipSpaces(p, aCount);
+  if ValidTimeStamp(p, aCount, Frag) then
+    begin
+      d := DTFragmentsToUtc(Frag);
+      exit(True);
+    end;
+  d := 0;
+  Result := False;
+end;
+
+function TryRfc8927TimeStampToUTC(const s: string; out ts: TTimeStamp): Boolean;
+begin
+  Result := TryRfc8927TimeStampToUTC(Pointer(s), System.Length(s), ts);
+end;
+
+function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out ts: TTimeStamp): Boolean;
+var
+  Frag: TDtFragments;
+  LeapSec: Boolean;
+begin
+  SkipSpaces(p, aCount);
+  if ValidTimeStamp(p, aCount, Frag) then
+    begin
+      LeapSec := Frag.Second = 60;
+      Dec(Frag.Second, Ord(LeapSec));
+      ts := DateTimeToTimeStamp(DTFragmentsToUtc(Frag));
+      if LeapSec then
+        ts.Time += MSecsPerSec;
+      exit(True);
+    end;
+  ts := Default(TTimeStamp);
+  Result := False;
+end;
+
+function EncodeRfc8927Ts(Year, Month, MDay, Hour, Minute, Second, MilliSecond: Word): string;
+var
+  Quot: Word;
+  p: PChar;
+const
+  Digits: array[0..9] of Char = ('0','1','2','3','4','5','6','7','8','9');
+begin
+  Result := '';
+
+  if MilliSecond <> 0 then
+    System.SetLength(Result, 24)
+  else
+    System.SetLength(Result, 20);
+  p := Pointer(Result);
+
+  Quot := Year div 10;
+  p[3] := Digits[Year - Quot * 10];
+  Year := Quot;
+  Quot := Year div 10;
+  p[2] := Digits[Year - Quot * 10];
+  Year := Quot;
+  Quot := Year div 10;
+  p[1] := Digits[Year - Quot * 10];
+  p[0] := Digits[Quot];
+  p[4] := '-';
+
+  Quot := Month div 10;
+  p[6] := Digits[Month - Quot * 10];
+  p[5] := Digits[Quot];
+  p[7] := '-';
+
+  Quot := MDay div 10;
+  p[9] := Digits[MDay - Quot * 10];
+  p[8] := Digits[Quot];
+  p[10] := 'T';
+
+  Quot := Hour div 10;
+  p[12] := Digits[Hour - Quot * 10];
+  p[11] := Digits[Quot];
+  p[13] := ':';
+
+  Quot := Minute div 10;
+  p[15] := Digits[Minute - Quot * 10];
+  p[14] := Digits[Quot];
+  p[16] := ':';
+
+  Quot := Second div 10;
+  p[18] := Digits[Second - Quot * 10];
+  p[17] := Digits[Quot];
+
+  if MilliSecond <> 0 then begin
+    p[19] := '.';
+    Quot := MilliSecond div 10;
+    p[22] := Digits[MilliSecond - Quot * 10];
+    MilliSecond := Quot;
+    Quot := MilliSecond div 10;
+    p[21] := Digits[MilliSecond - Quot * 10];
+    p[20] := Digits[Quot];
+    p[23] := 'Z';
+  end else p[19] := 'Z';
+end;
+
+function UTCToRfc8927TimeStamp(aUtc: TDateTime): string;
+var
+  Year, Month, MDay, Hour, Minute, Second, MilliSecond: Word;
+begin
+  DecodeDate(aUtc, Year, Month, MDay);
+  DecodeTime(aUtc, Hour, Minute, Second, MilliSecond);
+  Result := EncodeRfc8927Ts(Year, Month, MDay, Hour, Minute, Second, MilliSecond);
+end;
+
+function UTCToRfc8927TimeStamp(const aUtc: TTimeStamp): string;
+var
+  Year, Month, MDay, Hour, Minute, Second, MilliSecond: Word;
+  LeapSec: Boolean;
+begin
+  DecodeDate(TDateTime(aUtc.Date - DateDelta), Year, Month, MDay);
+  LeapSec := aUtc.Time >= MSecsPerDay;
+  if LeapSec then
+    DecodeTime(TDateTime(aUtc.Time - MSecsPerSec)/MSecsPerDay, Hour, Minute, Second, MilliSecond)
+  else
+    DecodeTime(TDateTime(aUtc.Time)/MSecsPerDay, Hour, Minute, Second, MilliSecond);
+  Inc(Second, Ord(LeapSec));
+  Result := EncodeRfc8927Ts(Year, Month, MDay, Hour, Minute, Second, MilliSecond);
 end;
 
 end.
