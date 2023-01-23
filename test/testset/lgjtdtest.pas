@@ -14,6 +14,8 @@ type
 
   TJtdUtilsTest = class(TTestCase)
   protected
+    function RandomDateTime: TDateTime;
+    function EqualTs(const L, R: TTimeStamp): Boolean;
   published
     procedure IsRfc8927TimeStamp_InvalidYear;
     procedure IsRfc8927TimeStamp_InvalidMonth;
@@ -24,6 +26,8 @@ type
     procedure IsRfc8927TimeStamp_InvalidSecFraction;
     procedure IsRfc8927TimeStamp_InvalidOffset;
     procedure IsRfc8927TimeStamp_InvalidMisc;
+    procedure RoundTrip_TDateTime;
+    procedure RoundTrip_TTimeStamp;
   end;
 
   { TJtdTest }
@@ -50,6 +54,20 @@ type
 implementation
 
 { TJtdUtilsTest }
+
+function TJtdUtilsTest.RandomDateTime: TDateTime;
+var
+  d1, d2: TDateTime;
+begin
+  d1 := EncodeDate(Succ(Random(9999)), Succ(Random(12)), Succ(Random(28)));
+  d2 := EncodeTime(Random(24), Random(60), Random(60), Random(1000));
+  Result := ComposeDateTime(d1, d2);
+end;
+
+function TJtdUtilsTest.EqualTs(const L, R: TTimeStamp): Boolean;
+begin
+  Result := (L.Date = R.Date) and (L.Time = R.Time);
+end;
 
 procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidYear;
 var
@@ -121,8 +139,6 @@ begin
   AssertFalse('Accepts a second value greater than 60', IsRfc8927TimeStamp(s));
   s := '1998-05-20T21:40:t9Z';
   AssertFalse('Accepts garbage second', IsRfc8927TimeStamp(s));
-  s := '1998-05-20T23:59:60Z';
-  AssertFalse('Accepts a non-existent leap second', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidSecFraction;
@@ -135,8 +151,6 @@ begin
   AssertFalse('Accepts the fractional part of a second without any digits', IsRfc8927TimeStamp(s));
   s := '1998-05-20T23:59:40.1g8Z';
   AssertFalse('Accepts garbage fraction of a second', IsRfc8927TimeStamp(s));
-  s := '2018-06-20T23:59:35.128';
-  AssertFalse('Accepts the value without the "Z" character', IsRfc8927TimeStamp(s));
 end;
 
 procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidOffset;
@@ -159,12 +173,51 @@ procedure TJtdUtilsTest.IsRfc8927TimeStamp_InvalidMisc;
 var
   s: string;
 begin
+  s := '2018-06-20 23:59:35Z';
+  AssertFalse('Accepts a space as the date/time separator', IsRfc8927TimeStamp(s));
   s := '2018-06-20u23:59:35Z';
   AssertFalse('Accepts an arbitrary character as the date/time separator', IsRfc8927TimeStamp(s));
   s := '2018-06-20t23:59:35Z';
   AssertFalse('Accepts lower case "t" as the date/time separator', IsRfc8927TimeStamp(s));
   s := '2018-06-20T23:59:35z';
   AssertFalse('Accepts lower case "z" as Zulu time zone', IsRfc8927TimeStamp(s));
+  s := '2018-06-20T23:59:35.128';
+  AssertFalse('Accepts the value without the "Z" character', IsRfc8927TimeStamp(s));
+
+end;
+
+procedure TJtdUtilsTest.RoundTrip_TDateTime;
+var
+  d, d2: TDateTime;
+  s: string;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    begin
+      d := RandomDateTime;
+      s := UTCToRfc8927TimeStamp(d);
+      AssertTrue(TryRfc8927TimeStampToUTC(s, d2));
+      AssertTrue(d2 = d);
+    end;
+end;
+
+procedure TJtdUtilsTest.RoundTrip_TTimeStamp;
+var
+  ts, ts2: TTimeStamp;
+  s: string;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    begin
+      ts := DateTimeToTimeStamp(RandomDateTime);
+      s := UTCToRfc8927TimeStamp(ts);
+      AssertTrue(TryRfc8927TimeStampToUTC(s, ts2));
+      AssertTrue(EqualTs(ts2, ts));
+    end;
 end;
 
 procedure TJtdTest.TestInvalidSchemas;
@@ -258,8 +311,6 @@ begin
   for p in SampleList.Enrties do
     begin
       Inc(I);
-      if p.Key = 'timestamp type schema - 1990-12-31T15:59:60-08:00' then
-        continue;//is not real leap second
       AssertTrue('Can not find schema in "'+p.Key+'"', p.Value.Find('schema', SchemaNode));
       AssertTrue('Can not load schema "'+p.Key+'"', TJtdSchema.TryLoad(SchemaNode, Schema));
       try
@@ -372,6 +423,7 @@ begin
 end;
 
 initialization
+  Randomize;
   RegisterTest(TJtdUtilsTest);
   RegisterTest(TJtdTest);
 end.
