@@ -211,7 +211,6 @@ type
       "date-time" production in [RFC3339]. In addition, an uppercase "T"
       character MUST be used to separate date and time, and an uppercase
       "Z" character MUST be present in the absence of a numeric time zone offset.
-
 }
   function IsRfc8927TimeStamp(const s: string): Boolean;
   function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
@@ -1098,27 +1097,6 @@ begin
     Result := jvrErrors;
 end;
 
-function RealLeapSecond06(aYear: Word): Boolean; inline;
-begin
-  case aYear of
-    1972, 1981, 1982, 1983, 1985, 1992, 1993, 1994, 1997, 2012, 2015:
-      Result := True;
-  else
-    Result := False;
-  end;
-end;
-
-function RealLeapSecond12(aYear: Word): Boolean; inline;
-begin
-  case aYear of
-    1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979,
-    1987, 1989, 1990, 1995, 1998, 2005, 2008, 2016:
-      Result := True;
-  else
-    Result := False;
-  end;
-end;
-
 type
   TDtFragments = record
     Year,
@@ -1187,17 +1165,6 @@ begin
   if p[17] in ['0'..'6'] then Val := Digits[p[17]] else exit(False);
   if p[18] in ['0'..'9'] then Val := Val*10 + Digits[p[18]] else exit(False);
   if Val > 60 then exit(False);
-  if Val = 60 then begin //positive leap second?
-    if (aFrags.Year > 2016) or (aFrags.Hour <> 23) or (aFrags.Minute <> 59) then exit(False);
-    if aFrags.Month = 6 then begin
-      if aFrags.MDay <> 30 then exit(False);
-      if not RealLeapSecond06(aFrags.Year) then exit(False);
-    end else
-      if aFrags.Month = 12 then begin
-        if aFrags.MDay <> 31 then exit(False);
-        if not RealLeapSecond12(aFrags.Year) then exit(False);
-      end else exit(False);
-  end;
   aFrags.Second := Val;
   ////////////////////
   aFrags.HasSecFrac := False;
@@ -1299,7 +1266,10 @@ begin
     LTime += SecFrac * OneSecond;
   end;
 
-  Result += LTime;
+  if Result < 0 then
+    Result := Trunc(Result) - Abs(Frac(LTime))
+  else
+    Result := Trunc(Result) + Abs(Frac(LTime));
 
   if aFrag.TZOffset <> 0 then
     Result := IncMinute(Result, aFrag.TZOffset);
