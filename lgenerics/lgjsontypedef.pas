@@ -215,11 +215,11 @@ type
   function IsRfc8927TimeStamp(const s: string): Boolean;
   function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
 { returns True and UTC date/time value in d if s is a valid Rfc8927-formatted timestamp,
-  False otherwise }
+  False otherwise; allows leading and trailing spaces; }
   function TryRfc8927TimeStampToUTC(const s: string; out d: TDateTime): Boolean;
   function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out d: TDateTime): Boolean;
 { returns True and UTC date/time value in ts if s is a valid Rfc8927-formatted timestamp,
-  False otherwise }
+  False otherwise; allows leading and trailing spaces; }
   function TryRfc8927TimeStampToUTC(const s: string; out ts: TTimeStamp): Boolean;
   function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out ts: TTimeStamp): Boolean;
 { converts a date/time value to a Rfc8927-formatted timestamp;
@@ -1453,7 +1453,7 @@ var
   LeapSec: Boolean;
 begin
   DecodeDate(TDateTime(aUtc.Date - DateDelta), Year, Month, MDay);
-  LeapSec := aUtc.Time >= MSecsPerDay;
+  LeapSec := (aUtc.Time >= MSecsPerDay) and (aUtc.Time < MSecsPerDay + MSecsPerSec);
   if LeapSec then
     DecodeTime(TDateTime(aUtc.Time - MSecsPerSec)/MSecsPerDay, Hour, Minute, Second, MilliSecond)
   else
