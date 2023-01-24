@@ -26,6 +26,7 @@ type
     procedure IsRfc8927TimeStamp_InvalidSecFraction;
     procedure IsRfc8927TimeStamp_InvalidOffset;
     procedure IsRfc8927TimeStamp_InvalidMisc;
+    procedure Rfc8927TimeStamp_LS;
     procedure RoundTrip_TDateTime;
     procedure RoundTrip_TTimeStamp;
   end;
@@ -184,6 +185,24 @@ begin
   s := '2018-06-20T23:59:35.128';
   AssertFalse('Accepts the value without the "Z" character', IsRfc8927TimeStamp(s));
 
+end;
+
+procedure TJtdUtilsTest.Rfc8927TimeStamp_LS;
+var
+  ts: TTimeStamp;
+  s: string;
+begin
+  s := '1995-12-31T23:59:60Z';
+  AssertTrue(TryRfc8927TimeStampToUTC(s, ts));
+  AssertTrue(UTCToRfc8927TimeStamp(ts) = s);
+  s := '2015-06-30T23:59:60Z';
+  AssertTrue(TryRfc8927TimeStampToUTC(s, ts));
+  AssertTrue(UTCToRfc8927TimeStamp(ts) = s);
+  s := '2012-06-30T23:59:60Z';
+  AssertTrue(TryRfc8927TimeStampToUTC(s, ts));
+  AssertTrue(UTCToRfc8927TimeStamp(ts) = s);
+  s := '2014-06-30T23:59:60Z';
+  AssertFalse(TryRfc8927TimeStampToUTC(s, ts));
 end;
 
 procedure TJtdUtilsTest.RoundTrip_TDateTime;
