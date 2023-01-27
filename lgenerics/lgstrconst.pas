@@ -107,6 +107,7 @@ resourcestring
   SEJsonStrNotMatchEnumFmt = 'JSON string "%s" does not match any %s enumeration value';
   SEUnexpectJsonStrLenFmt  = 'JSON string length(%d) does not match SizeOf(Char)';
   SECantReadJson2VarFmt    = 'Can not assign JSON type "%s" to Variant instance';
+  SECantReadJsonNullFmt    = 'Can not assign JSON Null to %s instance';
   SEJsonStrExceedSSLenFmt  = 'Length of the JSON string(%d) exceeds the maximum ShortString length(%u)';
   SECantAssignJsonNumFmt   = 'Can not assign JSON float number to instance of kind "%s"'; //???
   SEPdoRangeErrorFmt       = 'JSON value out of %s range(%d)';
@@ -117,6 +118,7 @@ resourcestring
   SEJsonNullsNotAcceptable = 'JSON null values are not acceptable';
   SEJsonArraySizeNotFitFmt = 'JSON array size does not match the size of static PDO array(%d)';
   SEUnassignClassInstFmt   = 'Unassigned class instance(%s)';
+  SECallbackFalseRetFmt    = 'Castom callback returned False when reading %s';
 //JTD consts
   SECantLoadJsStream         = 'Cannot load JSON stream';
   SECantLoadJsFile           = 'Cannot load JSON file';
