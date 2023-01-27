@@ -926,7 +926,7 @@ var
       jtTimeStamp:
         if not aInst.IsString then PushError
         else
-          if not IsRfc8927TimeStamp(aInst.AsString) then PushError;//todo: need replacement ???
+          if not IsRfc8927TimeStamp(aInst.AsString) then PushError;
     else
       raise EJtdSchemaValidate.CreateFmt(SEJtdValidationInternalFmt, [2]);
     end;
