@@ -864,7 +864,7 @@ const
       ftSingle:   sb.Append(FloatToStr(PSingle(aData)^, FormatSettings));
       ftDouble:
         if aTypeInfo = TypeInfo(TDateTime) then
-          sb.Append(GetTimeToStr(TDateTime(aData^)))
+          sb.Append(GetDateTimeToStr(TDateTime(aData^)))
         else
           if aTypeInfo = TypeInfo(TDate) then
             sb.Append(GetDateToStr(TDate(aData^)))
