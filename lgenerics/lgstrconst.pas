@@ -82,6 +82,7 @@ resourcestring
   SEUnknownJsDataType      = 'Unknown JsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
+//CSV consts
   SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
   SEColIndexOutOfBoundsFmt = 'Column index out of bounds(%d)';
   SEDirtyQuoteFmt          = 'Irrelevant quotation mark in non-quoted cell [%d, %d]';
@@ -94,6 +95,7 @@ resourcestring
   SEInvalidCommentMarkFmt  = 'Invalid comment mark(#%u)';
   SEEmptyDoc               = 'Document contains no data';
   SEReadCsvErrorFmt        = '%s'  + LineEnding + 'near <%s>';
+//PDO consts
   SEVariantNotSupportFmt   = 'Variant type(%u) is not supported';
   SEPdoTypeNotSupportFmt   = 'Type "%s"("%s") is not supported';
   SEUnsupportPdoKindFmt    = 'Unsupported istance kind(%s)';
@@ -114,7 +116,7 @@ resourcestring
   SEClassPropNotFoundFmt   = '%s class property "%s" not found';
   SEJsonNullsNotAcceptable = 'JSON null values are not acceptable';
   SEJsonArraySizeNotFitFmt = 'JSON array size does not match the size of static PDO array(%d)';
-  SEUnssignedClassInstFmt  = 'Unassigned class instance(%s)';
+  SEUnassignClassInstFmt   = 'Unassigned class instance(%s)';
 //JTD consts
   SECantLoadJsStream         = 'Cannot load JSON stream';
   SECantLoadJsFile           = 'Cannot load JSON file';

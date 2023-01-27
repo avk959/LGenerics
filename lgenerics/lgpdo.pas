@@ -1499,7 +1499,7 @@ type
         // or the class may not have a parameterless constructor
         TObject(aData^) := GetTypeData(aTypeInfo)^.ClassType.Create
       else
-        Error(Format(SEUnssignedClassInstFmt, [aTypeInfo^.Name]));
+        Error(Format(SEUnassignClassInstFmt, [aTypeInfo^.Name]));
     o := TObject(aData^);
     if (GetPdoEntry(aTypeInfo, e) and (e.Kind = ekJson2Class)) then begin
       TJson2ClassProc(e.CustomProc)(o, Reader, aOptions);
