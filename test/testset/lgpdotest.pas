@@ -183,7 +183,7 @@ type
     TTestRec = record
       Key: string;
       Value: Integer;
-      class procedure LoadJson(p: Pointer; aReader: TJsonReader; const aOptions: TJsonReadOptions); static;
+      class function LoadJson(p: Pointer; aReader: TJsonReader; const aOptions: TJsonReadOptions): Boolean; static;
     end;
 
   published
@@ -924,7 +924,8 @@ end;
 
 { TTestPdoLoadJson.TTestRec }
 
-class procedure TTestPdoLoadJson.TTestRec.LoadJson(p: Pointer; aReader: TJsonReader; const aOptions: TJsonReadOptions);
+class function TTestPdoLoadJson.TTestRec.LoadJson(p: Pointer; aReader: TJsonReader;
+  const aOptions: TJsonReadOptions): Boolean;
 type
   PTestRec = ^TTestRec;
 var
@@ -933,8 +934,7 @@ var
   I: Int64 = 0;
   KeyFound, ValueFound: Boolean;
 begin
-  if aReader.TokenKind <> tkObjectBegin then
-    raise EPdoLoadJson.Create('Unexpected TokenKind on begin record');
+  if aReader.TokenKind <> tkObjectBegin then exit(False);
   KeyFound := False;
   ValueFound:= False;
   repeat
@@ -949,8 +949,7 @@ begin
             else
               if (aReader.TokenKind = tkNull) and not(jroRejectNulls in aOptions)then
                 pRec^.Key := ''
-              else
-                raise EPdoLoadJson.Create('Unexpected TokenKind when read Key');
+              else exit(False);
             KeyFound := True;
           end;
         'value':
@@ -959,11 +958,9 @@ begin
               d := aReader.AsNumber;
               ValueFound:= True;
             end
-          else
-            raise EPdoLoadJson.Create('Unexpected TokenKind when read Value');
+          else exit(False);
       else
-        if not(jroSkipUnknownProps in aOptions) then
-          raise EPdoLoadJson.Create('Unknown field name');
+        if not(jroSkipUnknownProps in aOptions) then exit(False);
       end
     else
       case aReader.Name of
@@ -974,8 +971,7 @@ begin
             else
               if (aReader.TokenKind = tkNull) and not(jroRejectNulls in aOptions)then
                 pRec^.Key := ''
-              else
-                raise EPdoLoadJson.Create('Unexpected TokenKind when read Key');
+              else exit(False);
             KeyFound := True;
           end;
         'Value':
@@ -984,22 +980,17 @@ begin
               d := aReader.AsNumber;
               ValueFound:= True;
             end
-          else
-            raise EPdoLoadJson.Create('Unexpected TokenKind when read Value');
+          else exit(False);
       else
-        if not(jroSkipUnknownProps in aOptions) then
-          raise EPdoLoadJson.Create('Unknown field name');
+        if not(jroSkipUnknownProps in aOptions) then exit(False);
       end;
   until False;
-  if not KeyFound then
-    raise EPdoLoadJson.Create('Key not found');
-  if not ValueFound then
-    raise EPdoLoadJson.Create('Value not found');
-  if not IsExactInt(d, I) then
-    raise EPdoLoadJson.Create('Value is not integer');
+  if not(KeyFound and ValueFound) then exit(False);
+  if not IsExactInt(d, I) then exit(False);
   if (jroRangeOverflowCheck in aOptions) and ((I < Low(Integer)) or (I > High(Integer))) then
-    raise EPdoLoadJson.Create('Range error');
+    exit(False);
   pRec^.Value := I;
+  Result := True;
 end;
 
 { TTestPdoLoadJson }
