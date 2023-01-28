@@ -100,7 +100,7 @@ type
                              raises an exception by default }
   TJsonReadOptions = set of TJsonReadOption;
 
-{ loads PDO directly from JSON; records MUST have some form of registration;
+{ loads PDO directly from JSON; records and objects MUST have some form of registration;
   raises EPdoLoadJson in any unexpected cases }
   generic procedure PdoLoadJson<T>(var aValue: T; const aJson: string; const aOptions: TJsonReadOptions = [];
                                    aMaxDepth: Integer = DEFAULT_DEPTH; aSkipBom: Boolean = False);
@@ -109,8 +109,9 @@ type
                         aMaxDepth: Integer = DEFAULT_DEPTH; aSkipBom: Boolean = False);
 
 type
-  TJson2ClassProc   = procedure(o: TObject; aReader: TJsonReader; const aOpts: TJsonReadOptions);
-  TJson2PointerProc = procedure(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions);
+{ if the callback returns False then EPdoLoadJson will be raised }
+  TJson2ClassProc   = function(o: TObject; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+  TJson2PointerProc = function(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 
   function RegisterClassLoadProc(aTypeInfo: PTypeInfo; aProc: TJson2ClassProc): Boolean;
   function RegisterRecordLoadProc(aTypeInfo: PTypeInfo; aProc: TJson2PointerProc): Boolean;
@@ -1091,13 +1092,13 @@ var
     I: Integer;
     e: TPdoCacheEntry;
   begin
-    if Reader.TokenKind <> tkObjectBegin then
-      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
     if not GetPdoEntry(aTypeInfo, e) then
       Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
     case e.Kind of
       ekRecFieldMap:
         begin
+          if Reader.TokenKind <> tkObjectBegin then
+            Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
           CopyFieldMap(e.FieldMap);
           repeat
             ReadNext;
@@ -1115,7 +1116,8 @@ var
           until False;
         end;
       ekJson2Record:
-        TJson2PointerProc(e.CustomProc)(aData, Reader, aOptions);
+        if not TJson2PointerProc(e.CustomProc)(aData, Reader, aOptions) then
+          Error(Format(SECallbackFalseRetFmt, [aTypeInfo^.Name]));
     else
       Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
     end;
@@ -1230,9 +1232,11 @@ type
           if e.Kind = ekRecFieldMap then
             ReadMappedRec(ElType, Arr, Map)
           else
-            TJson2PointerProc(e.CustomProc)(Arr, Reader, aOptions);
+            if not TJson2PointerProc(e.CustomProc)(Arr, Reader, aOptions) then
+              Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
         tkObject:
-          TJson2PointerProc(e.CustomProc)(Arr, Reader, aOptions);
+          if not TJson2PointerProc(e.CustomProc)(Arr, Reader, aOptions) then
+            Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
       else
         ReadValue(ElType, Arr);
       end;
@@ -1300,9 +1304,11 @@ type
           if e.Kind = ekRecFieldMap then
             ReadMappedRec(ElType, PByte(aData^) + SizeUInt(I) * ElSize, Map)
           else
-            TJson2PointerProc(e.CustomProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions);
+            if not TJson2PointerProc(e.CustomProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions) then
+              Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
         tkObject:
-          TJson2PointerProc(e.CustomProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions);
+          if not TJson2PointerProc(e.CustomProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions) then
+            Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
       else
         ReadValue(ElType, PByte(aData^) + SizeUInt(I) * ElSize);
       end;
@@ -1502,7 +1508,8 @@ type
         Error(Format(SEUnassignClassInstFmt, [aTypeInfo^.Name]));
     o := TObject(aData^);
     if (GetPdoEntry(aTypeInfo, e) and (e.Kind = ekJson2Class)) then begin
-      TJson2ClassProc(e.CustomProc)(o, Reader, aOptions);
+      if not TJson2ClassProc(e.CustomProc)(o, Reader, aOptions) then
+        Error(Format(SECallbackFalseRetFmt, [aTypeInfo^.Name]));
       exit;
     end;
     if o is TCollection then
@@ -1517,11 +1524,10 @@ type
   var
     e: TPdoCacheEntry;
   begin
-    if Reader.TokenKind <> tkObjectBegin then
-      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
     if not(GetPdoEntry(aTypeInfo, e) and (e.Kind = ekJson2Object)) then
       Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
-    TJson2PointerProc(e.CustomProc)(aData, Reader, aOptions);
+    if not TJson2PointerProc(e.CustomProc)(aData, Reader, aOptions) then
+      Error(Format(SECallbackFalseRetFmt, [aTypeInfo^.Name]));
   end;
   procedure ReadSString(aTypeInfo: PTypeInfo; aData: Pointer);
   var
