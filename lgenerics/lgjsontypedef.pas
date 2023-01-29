@@ -68,7 +68,7 @@ type
   public
   type
     TMetaDataMap = specialize TGObjHashMapLP<string, TJsonNode>;
-    TStringSet   = specialize TGHashSetLP<string>;
+    TStringSet   = specialize TGOrderedHashSet<string>;
     TFormKind    = (fkNone, fkEmpty, fkRef, fkType, fkEnum, fkElements, fkProperties, fkValues, fkDiscriminator);
     TJtdType     = (jtNone, jtBool, jtFloat32, jtFloat64, jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32,
                     jtString, jtTimeStamp);
