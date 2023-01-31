@@ -463,7 +463,7 @@ type
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
     function  SubTree: TSubTree; inline;
-    function  Enrties: TEntries; inline;
+    function  Entries: TEntries; inline;
     function  Names: TNames; inline;
     function  EqualNames(const aName: string): IPairEnumerable; inline;
     function  IsNull: Boolean; inline;
@@ -4078,7 +4078,7 @@ begin
   Result.FNode := Self;
 end;
 
-function TJsonNode.Enrties: TEntries;
+function TJsonNode.Entries: TEntries;
 begin
   Result.FNode := Self;
 end;

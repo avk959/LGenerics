@@ -532,7 +532,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       raise EJtdSchemaLoad.CreateFmt(SEPropsNotObjectFmt, [JsKind2Str(aNode.Kind)]);
     aSchema.FKind := fkProperties;
     aSchema.FProps := TJtdSchemaMap.Create;
-    for p in aNode.Enrties do begin
+    for p in aNode.Entries do begin
       s := TJtdSchema.Create;
       aSchema.FProps.Add(p.Key, s);
       LoadSchema(s, p.Value);
@@ -549,7 +549,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       raise EJtdSchemaLoad.CreateFmt(SEPropsNotObjectFmt, [JsKind2Str(aNode.Kind)]);
     aSchema.FKind := fkProperties;
     aSchema.FVarInst := TJtdSchemaMap.Create;
-    for p in aNode.Enrties do begin
+    for p in aNode.Entries do begin
       s := TJtdSchema.Create;
       TJtdSchemaMap(aSchema.FVarInst).Add(p.Key, s);
       LoadSchema(s, p.Value);
@@ -594,7 +594,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       raise EJtdSchemaLoad.CreateFmt(SEMappingNotObjectFmt, [JsKind2Str(aNode.Kind)]);
      aSchema.FKind := fkDiscriminator;
      aSchema.FVarInst := TJtdSchemaMap.Create;
-     for p in aNode.Enrties do begin
+     for p in aNode.Entries do begin
        s := TJtdSchema.Create;
        TJtdSchemaMap(aSchema.FVarInst).Add(p.Key, s);
        LoadSchema(s, p.Value);
@@ -610,7 +610,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
     if not aNode.IsObject then
       raise EJtdSchemaLoad.CreateFmt(SEDefsNotObjectFmt, [JsKind2Str(aNode.Kind)]);
     aSchema.FDefs := TJtdSchemaMap.Create;
-    for p in aNode.Enrties do begin
+    for p in aNode.Entries do begin
       s := TJtdSchema.Create;
       aSchema.FDefs.Add(p.Key, s);
       LoadSchema(s, p.Value);
@@ -629,7 +629,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
     if not aNode.IsObject then
       raise EJtdSchemaLoad.CreateFmt(SEMetaNotObjectFmt, [JsKind2Str(aNode.Kind)]);
     aSchema.FMetadata := TMetaDataMap.Create([moOwnsValues]);
-    for p in aNode.Enrties do
+    for p in aNode.Entries do
       aSchema.FMetadata.Add(p.Key, p.Value.Clone);
   end;
   procedure LoadSchema(aSchema: TJtdSchema; aNode: TJsonNode);
@@ -641,7 +641,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       raise EJtdSchemaLoad.CreateFmt(SESchemaNotObjectFmt, [JsKind2Str(aNode.Kind)]);
     aSchema.FKind := fkEmpty;
     if aNode.Count = 0 then exit;
-    for p in aNode.Enrties do begin
+    for p in aNode.Entries do begin
       if not GetKeyword(p.Key, kw) then
         raise EJtdSchemaLoad.CreateFmt(SEUnknownKeywordFmt, [p.Key]);
       if not(kw.Kind = kkProp) then
@@ -1012,7 +1012,7 @@ var
   begin
     SchemaPathPush(aSchema.JTD_PROPS[spValues]);
     if aInst.IsObject then
-      for p in aInst.Enrties do begin
+      for p in aInst.Entries do begin
         InstancePath.Add(p.Key);
         DoValidate(p.Value, aSchema.Values);
         InstancePath.DeleteLast;

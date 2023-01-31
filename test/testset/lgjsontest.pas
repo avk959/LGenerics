@@ -834,7 +834,7 @@ begin
     begin
       Node := o.Instance.Items[I];
       J := 0;
-      for e in Node.Enrties do
+      for e in Node.Entries do
         begin
           AssertTrue(Node.Contains(e.Key));
           Inc(J);
@@ -875,7 +875,7 @@ begin
   for I := 0 to Pred(o.Instance.Count) do
     begin
       Node := o.Instance.Items[I];
-      for e in Node.Enrties do
+      for e in Node.Entries do
         begin
           J := 0;
           for ie in Node.EqualNames(e.Key) do

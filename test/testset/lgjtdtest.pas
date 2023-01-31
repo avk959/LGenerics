@@ -255,7 +255,7 @@ begin
   AssertTrue('Can not parse file "' + INVALID_SCHEMAS + '"', TJsonNode.TryParseFile(FileName, SampleList));
   NodeRef.Instance := SampleList;
   I := 0;
-  for p in SampleList.Enrties do
+  for p in SampleList.Entries do
     begin
       Inc(I);
       Loaded := False;
@@ -327,7 +327,7 @@ begin
   NodeRef.Instance := SampleList;
   NormalizeErrors(SampleList);
   I := 0;
-  for p in SampleList.Enrties do
+  for p in SampleList.Entries do
     begin
       Inc(I);
       AssertTrue('Can not find schema in "'+p.Key+'"', p.Value.Find('schema', SchemaNode));
@@ -377,7 +377,7 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then exit;
-  for p in aNode.Enrties do
+  for p in aNode.Entries do
     begin
       if not p.Value.IsObject then continue;
       if not p.Value.Find('errors', Errors) then continue;

@@ -420,7 +420,7 @@ begin
             if v.Kind in VALUE_KINDS then
               aValue.Add(v.ToString);
         jvkObject:
-          for p in n.Enrties do
+          for p in n.Entries do
             if p.Value.Kind in VALUE_KINDS then
               aValue.Add(p.Key + '=' + p.Value.ToString);
       else
