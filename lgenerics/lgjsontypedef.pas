@@ -52,6 +52,7 @@ type
     TValues     = TMap.TValues;
   strict private
     FMap: TMap;
+    function GetCount: SizeInt; inline;
     function GetItem(const aKey: string): TJtdSchema; inline;
   public
     destructor Destroy; override;
@@ -60,6 +61,7 @@ type
     function Values: TValues; inline;
     function Contains(const aKey: string): Boolean; inline;
     function Add(const aKey: string; aValue: TJtdSchema): Boolean; inline;
+    property Count: SizeInt read GetCount;
     property Items[const aKey: string]: TJtdSchema read GetItem; default;
   end;
 
@@ -214,16 +216,16 @@ type
 }
   function IsRfc8927TimeStamp(const s: string): Boolean;
   function IsRfc8927TimeStamp(p: PChar; aCount: SizeInt): Boolean;
-{ returns True and UTC date/time value in d if s is a valid Rfc8927-formatted timestamp,
+{ returns True and UTC date-time value in d if s is a valid Rfc8927-formatted timestamp,
   False otherwise; allows leading and trailing spaces; }
   function TryRfc8927TimeStampToUTC(const s: string; out d: TDateTime): Boolean;
   function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out d: TDateTime): Boolean;
-{ returns True and UTC date/time value in ts if s is a valid Rfc8927-formatted timestamp,
+{ returns True and UTC date-time value in ts if s is a valid Rfc8927-formatted timestamp,
   False otherwise; allows leading and trailing spaces; }
   function TryRfc8927TimeStampToUTC(const s: string; out ts: TTimeStamp): Boolean;
   function TryRfc8927TimeStampToUTC(p: PChar; aCount: SizeInt; out ts: TTimeStamp): Boolean;
-{ converts a date/time value to a Rfc8927-formatted timestamp;
-  assumes that the date/time value is in the UTC time zone }
+{ converts a date-time value to a Rfc8927-formatted timestamp;
+  assumes that the date-time value is in the UTC time zone }
   function UTCToRfc8927TimeStamp(aUtc: TDateTime): string;
   function UTCToRfc8927TimeStamp(const aUtc: TTimeStamp): string;
 
@@ -241,6 +243,11 @@ resourcestring
 function TJtdSchemaMap.GetItem(const aKey: string): TJtdSchema;
 begin
   if not FMap.TryGetValue(aKey, Result) then Result := nil;
+end;
+
+function TJtdSchemaMap.GetCount: SizeInt;
+begin
+  Result := FMap.Count;
 end;
 
 destructor TJtdSchemaMap.Destroy;
@@ -590,15 +597,15 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
   begin
     if not (aSchema.Kind in [fkEmpty, fkDiscriminator]) then
       raise EJtdSchemaLoad.Create(SEKindAforeAssigned);
-     if not aNode.IsObject then
+    if not aNode.IsObject then
       raise EJtdSchemaLoad.CreateFmt(SEMappingNotObjectFmt, [JsKind2Str(aNode.Kind)]);
-     aSchema.FKind := fkDiscriminator;
-     aSchema.FVarInst := TJtdSchemaMap.Create;
-     for p in aNode.Entries do begin
-       s := TJtdSchema.Create;
-       TJtdSchemaMap(aSchema.FVarInst).Add(p.Key, s);
-       LoadSchema(s, p.Value);
-     end;
+    aSchema.FKind := fkDiscriminator;
+    aSchema.FVarInst := TJtdSchemaMap.Create;
+    for p in aNode.Entries do begin
+      s := TJtdSchema.Create;
+      TJtdSchemaMap(aSchema.FVarInst).Add(p.Key, s);
+      LoadSchema(s, p.Value);
+    end;
   end;
   procedure LoadDefs(aSchema: TJtdSchema; aNode: TJsonNode);
   var
