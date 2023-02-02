@@ -528,7 +528,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
     aSchema.FKind := fkElements;
     LoadSchema(TJtdSchema(aSchema.FVarInst), aNode);
   end;
-  procedure LoadProps(aSchema: TJtdSchema; aNode: TJsonNode);
+  procedure LoadProperties(aSchema: TJtdSchema; aNode: TJsonNode);
   var
     p: TJsonNode.TPair;
     s: TJtdSchema;
@@ -545,7 +545,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       LoadSchema(s, p.Value);
     end;
   end;
-  procedure LoadOptProps(aSchema: TJtdSchema; aNode: TJsonNode);
+  procedure LoadOptionalProperties(aSchema: TJtdSchema; aNode: TJsonNode);
   var
     p: TJsonNode.TPair;
     s: TJtdSchema;
@@ -562,7 +562,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       LoadSchema(s, p.Value);
     end;
   end;
-  procedure LoadAddProps(aSchema: TJtdSchema; aNode: TJsonNode); inline;
+  procedure LoadAdditionalProperties(aSchema: TJtdSchema; aNode: TJsonNode); inline;
   begin
     if not (aSchema.Kind in [fkEmpty, fkProperties]) then
       raise EJtdSchemaLoad.Create(SEKindAforeAssigned);
@@ -581,7 +581,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
     aSchema.FVarInst := TJtdSchema.Create;
     LoadSchema(TJtdSchema(aSchema.FVarInst), aNode);
   end;
-  procedure LoadDiscr(aSchema: TJtdSchema; aNode: TJsonNode); inline;
+  procedure LoadDiscriminator(aSchema: TJtdSchema; aNode: TJsonNode); inline;
   begin
     if not (aSchema.Kind in [fkEmpty, fkDiscriminator]) then
       raise EJtdSchemaLoad.Create(SEKindAforeAssigned);
@@ -607,7 +607,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       LoadSchema(s, p.Value);
     end;
   end;
-  procedure LoadDefs(aSchema: TJtdSchema; aNode: TJsonNode);
+  procedure LoadDefinitions(aSchema: TJtdSchema; aNode: TJsonNode);
   var
     p: TJsonNode.TPair;
     s: TJtdSchema;
@@ -629,7 +629,7 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
       raise EJtdSchemaLoad.CreateFmt(SENullableNotBoolFmt, [JsKind2Str(aNode.Kind)]);
     aSchema.FNullable := aNode.AsBoolean;
   end;
-  procedure LoadMeta(aSchema: TJtdSchema; aNode: TJsonNode);
+  procedure LoadMetadata(aSchema: TJtdSchema; aNode: TJsonNode);
   var
     p: TJsonNode.TPair;
   begin
@@ -658,15 +658,15 @@ class procedure TJtdSchema.DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode);
         spType:                 LoadType(aSchema, p.Value);
         spEnum:                 LoadEnum(aSchema, p.Value);
         spElements:             LoadElements(aSchema, p.Value);
-        spProperties:           LoadProps(aSchema, p.Value);
-        spOptionalProperties:   LoadOptProps(aSchema, p.Value);
-        spAdditionalProperties: LoadAddProps(aSchema, p.Value);
+        spProperties:           LoadProperties(aSchema, p.Value);
+        spOptionalProperties:   LoadOptionalProperties(aSchema, p.Value);
+        spAdditionalProperties: LoadAdditionalProperties(aSchema, p.Value);
         spValues:               LoadValues(aSchema, p.Value);
-        spDiscriminator:        LoadDiscr(aSchema, p.Value);
+        spDiscriminator:        LoadDiscriminator(aSchema, p.Value);
         spMapping:              LoadMapping(aSchema, p.Value);
-        spDefinitions:          LoadDefs(aSchema, p.Value);
+        spDefinitions:          LoadDefinitions(aSchema, p.Value);
         spNullable:             LoadNullable(aSchema, p.Value);
-        spMetaData:             LoadMeta(aSchema, p.Value);
+        spMetaData:             LoadMetadata(aSchema, p.Value);
       end;
     end;
   end;
