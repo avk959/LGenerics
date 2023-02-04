@@ -228,8 +228,10 @@ type
       procedure EnsureCapacity(aCapacity: SizeInt); inline;
       procedure Append(c: AnsiChar); inline;
       procedure Append(c: AnsiChar; aCount: SizeInt);
+      procedure Append(p: PAnsiChar; aCount: SizeInt);
       procedure Append(const s: string); inline;
       procedure AppendEncode(const s: string);
+      procedure AppendEncodeAscii(const s: string);
       procedure Append(const s: shortstring); inline;
       function  SaveToStream(aStream: TStream): SizeInt; inline;
       function  WriteToStream(aStream: TStream): SizeInt; inline;
@@ -436,6 +438,7 @@ type
                                aSkipBom: Boolean = False): TJsonNode; static;
   { converts a pascal string to a JSON string }
     class function PasStrToJson(const s: string): string; static;
+    class function PasStrToJsonAscii(const s: string): string; static;
   { converts a JSON string to a pascal string }
     class function JsonStrToPas(const s: string): string; static;
     class function NewNode: TJsonNode; static; inline;
@@ -1765,8 +1768,17 @@ end;
 
 procedure TJsonNode.TStrBuilder.Append(c: AnsiChar; aCount: SizeInt);
 begin
+  if aCount < 1 then exit;
   EnsureCapacity(Count + aCount);
   FillChar(FBuffer.Ptr[Count], aCount, c);
+  FCount += aCount;
+end;
+
+procedure TJsonNode.TStrBuilder.Append(p: PAnsiChar; aCount: SizeInt);
+begin
+  if aCount < 1 then exit;
+  EnsureCapacity(Count + aCount);
+  System.Move(p^, FBuffer.Ptr[Count], aCount);
   FCount += aCount;
 end;
 
@@ -1777,12 +1789,13 @@ begin
   FCount += System.Length(s);
 end;
 
+const
+  HEX_CHARS_TBL: PAnsiChar = '0123456789ABCDEF';
+
 procedure TJsonNode.TStrBuilder.AppendEncode(const s: string);
 var
   I: SizeInt;
-  c: Char;
-const
-  HexChars: PChar = '0123456789ABCDEF';
+  c: AnsiChar;
 begin
   Append('"');
   for I := 1 to System.Length(s) do begin
@@ -1794,8 +1807,8 @@ begin
            Append(chUnicodeSym);
            Append(chZero);
            Append(chZero);
-           Append(HexChars[Ord(c) shr  4]);
-           Append(HexChars[Ord(c) and 15]);
+           Append(HEX_CHARS_TBL[Ord(c) shr  4]);
+           Append(HEX_CHARS_TBL[Ord(c) and 15]);
         end;
       #8 : begin Append(chEscapeSym); Append(chBackSpSym) end; //backspace
       #9 : begin Append(chEscapeSym); Append(chTabSym) end;    //tab
@@ -1806,6 +1819,143 @@ begin
       '\': begin Append(chEscapeSym); Append('\') end;         //backslash
     else
       Append(c);
+    end;
+  end;
+  Append('"');
+end;
+
+function Utf8Char2Ucs4(p: PByte; aStrLen: Integer; out u4: DWord): Integer;
+const
+  REPLACE_CHAR = $fffd;
+begin
+  case p^ of
+    0..$7f:
+      begin u4 := p^; Result := 1; end;
+    $c2..$df:
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
+        u4 := DWord(DWord(p[0] and $1f) shl 6 or DWord(p[1] and $3f));
+        Result := 2;
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+    $e0:
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+        u4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        Result := 3;
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+    $e1..$ec, $ee..$ef:
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+        u4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        Result := 3;
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+    $ed:
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+        u4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        Result := 3;
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+    $f0:
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        u4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
+        Result := 4;
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+    $f1..$f3:
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        u4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
+        Result := 4
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+    $f4:
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        u4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
+        Result := 4;
+      end else begin
+        u4 := REPLACE_CHAR; Result := 1;
+      end;
+  else
+    Result := 1;
+    u4 := REPLACE_CHAR;
+  end;
+end;
+
+function Utf8ToEscapedAscii(var pUtf8Char: PAnsiChar; aLen: Integer; pBuffer: PAnsiChar): Integer;
+var
+  ul, uh: DWord;
+begin
+  Inc(pUtf8Char, Utf8Char2Ucs4(PByte(pUtf8Char), aLen, uh));
+  ul := 0;
+  if uh > $ffff then
+    if uh <= $10ffff then begin
+      ul := uh and $3ff + $dc00;
+      uh := uh shr 10 + $d7c0;
+    end else
+      uh := $fffd; //unicode replacement character
+  Result := 6;
+  pBuffer[0] := chEscapeSym;
+  pBuffer[1] := chUnicodeSym;
+  pBuffer[2] := HEX_CHARS_TBL[uh shr 12];
+  pBuffer[3] := HEX_CHARS_TBL[(uh shr  8) and $f];
+  pBuffer[4] := HEX_CHARS_TBL[(uh shr  4) and $f];
+  pBuffer[5] := HEX_CHARS_TBL[uh and $f];
+  if ul <> 0 then begin
+    Result += 6;
+    pBuffer[ 6] := chEscapeSym;
+    pBuffer[ 7] := chUnicodeSym;
+    pBuffer[ 8] := HEX_CHARS_TBL[ul shr 12];
+    pBuffer[ 9] := HEX_CHARS_TBL[(ul shr  8) and $f];
+    pBuffer[10] := HEX_CHARS_TBL[(ul shr  4) and $f];
+    pBuffer[11] := HEX_CHARS_TBL[ul and $f];
+  end;
+end;
+
+procedure TJsonNode.TStrBuilder.AppendEncodeAscii(const s: string);
+var
+  c: AnsiChar;
+  p, pEnd: PAnsiChar;
+  Len: Integer;
+  Buffer: array[0..15] of AnsiChar;
+begin
+  Append('"');
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  while p < pEnd do begin
+    c := p^;
+    if c < #128 then begin
+      case c of
+        #0..#7, #11, #14..#31:
+          begin
+             Append(chEscapeSym);
+             Append(chUnicodeSym);
+             Append(chZero);
+             Append(chZero);
+             Append(HEX_CHARS_TBL[Ord(c) shr  4]);
+             Append(HEX_CHARS_TBL[Ord(c) and 15]);
+          end;
+        #8 : begin Append(chEscapeSym); Append(chBackSpSym) end; //backspace
+        #9 : begin Append(chEscapeSym); Append(chTabSym) end;    //tab
+        #10: begin Append(chEscapeSym); Append(chLineSym) end;   //line feed
+        #12: begin Append(chEscapeSym); Append(chFormSym) end;   //form feed
+        #13: begin Append(chEscapeSym); Append(chCarRetSym) end; //carriage return
+        '"': begin Append(chEscapeSym); Append('"') end;         //quote - 34
+        '\': begin Append(chEscapeSym); Append('\') end;         //backslash - 92
+        #32..#33, #35..#91, #93..#127: Append(c);
+      else
+      end;
+      Inc(p);
+    end else begin
+      Len := Utf8ToEscapedAscii(p, pEnd - p, @Buffer);
+      Append(@Buffer, Len);
     end;
   end;
   Append('"');
@@ -3876,6 +4026,15 @@ var
 begin
   sb := TStrBuilder.Create(System.Length(s)*2);
   sb.AppendEncode(s);
+  Result := sb.ToString;
+end;
+
+class function TJsonNode.PasStrToJsonAscii(const s: string): string;
+var
+  sb: TStrBuilder;
+begin
+  sb := TStrBuilder.Create(System.Length(s)*2);
+  sb.AppendEncodeAscii(s);
   Result := sb.ToString;
 end;
 
