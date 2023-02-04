@@ -150,6 +150,10 @@ resourcestring
   SEMappingNotPropForm       = 'Mapping value is not a properties form';
   SEDiscrMapPropsKeyShare    = 'Discriminator shares key with mapping properties';
   SEDiscrMapOptPropsKeyShare = 'Discriminator shares key with mapping optionalProperties';
+  SEErrorWhenReadClassFmt    = 'Error when read %s JSON data';
+  SERequiredJPropNotFoundFmt = '%s: required JSON property "%s" not found';
+  SEStrNotEnumElemFmt        = '"%s" is not an element of the %s enumeration';
+  SEUnknownPropFoundFmt      = '%s: found unknown property "%s"';
 
 implementation
 
