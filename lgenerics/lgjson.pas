@@ -330,7 +330,7 @@ type
     end;
 
   private
-     function GetNodeEnumerable: INodeEnumerable;
+    function GetNodeEnumerable: INodeEnumerable;
   public
   type
     TEnumerator = record
@@ -436,6 +436,8 @@ type
                                aSkipBom: Boolean = False): TJsonNode; static;
   { converts a pascal string to a JSON string }
     class function PasStrToJson(const s: string): string; static;
+  { converts a JSON string to a pascal string }
+    class function JsonStrToPas(const s: string): string; static;
     class function NewNode: TJsonNode; static; inline;
     class function NewNull: TJsonNode; static; inline;
     class function NewNode(aValue: Boolean): TJsonNode; static; inline;
@@ -1729,6 +1731,7 @@ end;
 constructor TJsonNode.TStrBuilder.Create(const s: string);
 begin
   FBuffer.Length := System.Length(s);
+  FCount := System.Length(s);
   System.Move(Pointer(s)^, FBuffer.Ptr^, System.Length(s));
 end;
 
@@ -1843,39 +1846,15 @@ type
   PChar3 = ^TChar3;
   PChar4 = ^TChar4;
 
-function UxSeqToUtf8(const uSeq: TChar4): TChar4; inline;
+function HexCh4ToDWord(const aSeq: TChar4): DWord; inline;
 const
-  xV: array['0'..'f'] of DWord = (
+  x: array['0'..'f'] of DWord = (
    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,15,15,15,15,15,15,
   15,10,11,12,13,14,15,15,15,15,15,15,15,15,15,15,
   15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
   15,10,11,12,13,14,15);
-var
-  cPt: DWord;
 begin
-  cPt := xV[uSeq[0]] shl 12 or xV[uSeq[1]] shl 8 or xV[uSeq[2]] shl 4 or xV[uSeq[3]];
-  case cPt of
-    0..$7f:
-      begin
-        Result[0] := AnsiChar(cPt);
-        Result[3] := #1;
-      end;
-    $80..$7ff:
-      begin
-        Result[0] := AnsiChar((cPt shr  6) + $c0);
-        Result[1] := AnsiChar((cPt and $3f) + $80);
-        Result[3] := #2;
-      end;
-    $800..$ffff:
-      begin
-        Result[0] := AnsiChar((cPt shr 12) + $e0);
-        Result[1] := AnsiChar(((cPt shr 6) and $3f) + $80);
-        Result[2] := AnsiChar((cPt and $3f) + $80);
-        Result[3] := #3;
-      end;
-  else
-    Result[3] := #0;
-  end;
+  Result := x[aSeq[0]] shl 12 or x[aSeq[1]] shl 8 or x[aSeq[2]] shl 4 or x[aSeq[3]];
 end;
 
 function TJsonNode.TStrBuilder.ToDecodeString: string;
@@ -1884,6 +1863,7 @@ var
   I, J, Last: SizeInt;
   pR: PAnsiChar;
   c4: TChar4;
+  uh, ul: DWord;
 begin
   System.SetLength(r, Count);
   Last := Pred(Count);
@@ -1891,66 +1871,59 @@ begin
   J := 0;
   pR := PAnsiChar(r);
   while I < Last do
-    if FBuffer[I] <> '\' then
-      begin
-        pR[J] := FBuffer[I];
-        Inc(I);
-        Inc(J);
-      end
-    else
+    if FBuffer[I] <> '\' then begin
+      pR[J] := FBuffer[I];
+      Inc(I);
+      Inc(J);
+    end else
       case FBuffer[Succ(I)] of
-        'b':
-          begin
-            pR[J] := #8;
-            I += 2;
-            Inc(J);
-          end;
-        'f':
-          begin
-            pR[J] := #12;
-            I += 2;
-            Inc(J);
-          end;
-        'n':
-          begin
-            pR[J] := #10;
-            I += 2;
-            Inc(J);
-          end;
-        'r':
-          begin
-            pR[J] := #13;
-            I += 2;
-            Inc(J);
-          end;
-        't':
-          begin
-            pR[J] := #9;
-            I += 2;
-            Inc(J);
-          end;
+        'b': begin pR[J] := #8;  I += 2; Inc(J); end;
+        'f': begin pR[J] := #12; I += 2; Inc(J); end;
+        'n': begin pR[J] := #10; I += 2; Inc(J); end;
+        'r': begin pR[J] := #13; I += 2; Inc(J); end;
+        't': begin pR[J] := #9;  I += 2; Inc(J); end;
         'u':
           begin
-            c4 := UxSeqToUtf8(PChar4(@FBuffer.Ptr[I+2])^);
-            case c4[3] of
-              #1:
-                begin
-                  pR[J] := c4[0];
-                  Inc(J);
-                end;
-              #2:
-                begin
-                  PChar2(@pR[J])^ := PChar2(@c4[0])^;
+            uh := HexCh4ToDWord(PChar4(@FBuffer.Ptr[I+2])^);
+            I += 6;
+            case uh of
+              0..$7f: begin pR[J] := Char(uh); Inc(J); end;
+              $80..$7ff: begin
+                  pR[J] := Char((uh shr 6) or $c0);
+                  pR[J+1] := Char((uh and $3f) or $80);
                   J += 2;
                 end;
-              #3:
-                begin
-                  PChar3(@pR[J])^ := PChar3(@c4[0])^;
+              $800..$d7ff,$e000..$ffff: begin
+                  pR[J] := Char((uh shr 12) or $e0);
+                  pR[J+1] := Char((uh shr 6) and $3f or $80);
+                  pR[J+2] := Char((uh and $3f) or $80);
                   J += 3;
+                end;
+              $d800..$dbff: // high surrogate
+                if (Last - I >= 5) and (FBuffer[I] = '\') and (FBuffer[I+1] = 'u') then begin
+                  ul := HexCh4ToDWord(PChar4(@FBuffer.Ptr[I+2])^);
+                  if (ul >= $dc00) and (ul <= $dfff) then begin
+                    I += 6;
+                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
+                    pR[J] := Char(ul shr 18 or $f0);
+                    pR[J+1] := Char((ul shr 12) and $3f or $80);
+                    pR[J+2] := Char((ul shr 6) and $3f or $80);
+                    pR[J+3] := Char(ul and $3f or $80);
+                    J += 4;
+                  end else begin
+                    pR[J] := '?';
+                    Inc(J);
+                  end;
+                end else begin
+                  pR[J] := '?';
+                  Inc(J);
+                end;
+              $dc00..$dfff: begin // low surrogate
+                  pR[J] := '?';
+                  Inc(J);
                 end;
             else
             end;
-            I += 6;
           end;
       else
         pR[J] := FBuffer[Succ(I)];
@@ -3901,10 +3874,17 @@ class function TJsonNode.PasStrToJson(const s: string): string;
 var
   sb: TStrBuilder;
 begin
-  Result := '';
   sb := TStrBuilder.Create(System.Length(s)*2);
   sb.AppendEncode(s);
   Result := sb.ToString;
+end;
+
+class function TJsonNode.JsonStrToPas(const s: string): string;
+var
+  sb: TStrBuilder;
+begin
+  sb := TStrBuilder.Create(s);
+  Result := sb.ToDecodeString;
 end;
 
 class function TJsonNode.NewNode: TJsonNode;
