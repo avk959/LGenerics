@@ -30,12 +30,10 @@ uses
   supported metadata keywors:
     description,
     enumDescription,
-    preferredName.
-
-    todo: propsDescription ???
+    preferredName
+    propsDescription
 }
 type
-  //EJtdCodegen   = class(Exception);
   TFormKind = TJtdSchema.TFormKind;
   TJtdType  = TJtdSchema.TJtdType;
 
@@ -172,6 +170,7 @@ type
     property  UnitName: string read FUnitName write FUnitName;
   { some additional text that will be placed in the unit header }
     property  CustomHeader: string read FCustomHeader write FCustomHeader;
+  { whether to display comments, the default is True }
     property  ShowComments: Boolean read FComments write FComments;
   end;
 
@@ -1488,7 +1487,7 @@ begin
         break;
       end;
   if aSchema.Metadata <> nil then
-    if not aSchema.Metadata.TryGetValue(PROP_DESCRIPTION_TAG, PropsDesr) and PropsDesr.IsObject then
+    if not(aSchema.Metadata.TryGetValue(PROP_DESCRIPTION_TAG, PropsDesr) and PropsDesr.IsObject) then
       PropsDesr := nil;
   if aSchema.Properties <> nil then
     PropList := FindPropInfo(aSchema.Properties);
