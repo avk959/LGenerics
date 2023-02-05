@@ -438,7 +438,9 @@ type
                                aSkipBom: Boolean = False): TJsonNode; static;
   { converts a pascal string to a JSON string }
     class function PasStrToJson(const s: string): string; static;
-    class function PasStrToJsonAscii(const s: string): string; static;
+  { converts a pascal string to a JSON string, all code points except [#32...#127]
+    are replaced by their uXXXX codes }
+    class function PasStrToAsciiJson(const s: string): string; static;
   { converts a JSON string to a pascal string }
     class function JsonStrToPas(const s: string): string; static;
     class function NewNode: TJsonNode; static; inline;
@@ -1824,72 +1826,61 @@ begin
   Append('"');
 end;
 
-function Utf8Char2Ucs4(p: PByte; aStrLen: Integer; out u4: DWord): Integer;
+function Utf8Char2Ucs4(p: PByte; aStrLen: Integer; out aUcs4: DWord): Integer;
 const
   REPLACE_CHAR = $fffd;
+  procedure ExitBadChar; inline;
+  begin
+    aUcs4 := REPLACE_CHAR; Result := 1
+  end;
 begin
   case p^ of
     0..$7f:
-      begin u4 := p^; Result := 1; end;
+      begin aUcs4 := p^; Result := 1; end;
     $c2..$df:
       if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
-        u4 := DWord(DWord(p[0] and $1f) shl 6 or DWord(p[1] and $3f));
+        aUcs4 := DWord(DWord(p[0] and $1f) shl 6 or DWord(p[1] and $3f));
         Result := 2;
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
     $e0:
       if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
-        u4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
         Result := 3;
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
     $e1..$ec, $ee..$ef:
       if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
-        u4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
         Result := 3;
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
     $ed:
       if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
-        u4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
         Result := 3;
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
     $f0:
       if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        u4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
                            DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
         Result := 4;
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
     $f1..$f3:
       if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        u4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
                            DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
         Result := 4
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
     $f4:
       if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        u4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
                            DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
         Result := 4;
-      end else begin
-        u4 := REPLACE_CHAR; Result := 1;
-      end;
+      end else ExitBadChar;
   else
-    Result := 1;
-    u4 := REPLACE_CHAR;
+    ExitBadChar;
   end;
 end;
 
-function Utf8ToEscapedAscii(var pUtf8Char: PAnsiChar; aLen: Integer; pBuffer: PAnsiChar): Integer;
+function Utf8ToUnicodeHex(var pUtf8Char: PAnsiChar; aLen: Integer; pBuffer: PAnsiChar): Integer;
 var
   ul, uh: DWord;
 begin
@@ -1899,8 +1890,7 @@ begin
     if uh <= $10ffff then begin
       ul := uh and $3ff + $dc00;
       uh := uh shr 10 + $d7c0;
-    end else
-      uh := $fffd; //unicode replacement character
+    end else uh := $fffd; //unicode replacement character
   Result := 6;
   pBuffer[0] := chEscapeSym;
   pBuffer[1] := chUnicodeSym;
@@ -1935,10 +1925,8 @@ begin
       case c of
         #0..#7, #11, #14..#31:
           begin
-             Append(chEscapeSym);
-             Append(chUnicodeSym);
-             Append(chZero);
-             Append(chZero);
+             Append(chEscapeSym); Append(chUnicodeSym);
+             Append(chZero); Append(chZero);
              Append(HEX_CHARS_TBL[Ord(c) shr  4]);
              Append(HEX_CHARS_TBL[Ord(c) and 15]);
           end;
@@ -1954,7 +1942,7 @@ begin
       end;
       Inc(p);
     end else begin
-      Len := Utf8ToEscapedAscii(p, pEnd - p, @Buffer);
+      Len := Utf8ToUnicodeHex(p, pEnd - p, @Buffer);
       Append(@Buffer, Len);
     end;
   end;
@@ -4029,7 +4017,7 @@ begin
   Result := sb.ToString;
 end;
 
-class function TJsonNode.PasStrToJsonAscii(const s: string): string;
+class function TJsonNode.PasStrToAsciiJson(const s: string): string;
 var
   sb: TStrBuilder;
 begin
