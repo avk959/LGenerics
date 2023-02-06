@@ -136,6 +136,12 @@ end;
 {$PUSH}{$WARN 5057 OFF}
 procedure TPropertiesWithDescription.DoReadJson(aReader: TJsonReader);
 begin
+  if aReader.TokenKind <> tkObjectBegin then ReadError;
+  Clear;
+  repeat
+    if not aReader.Read then ReadError;
+    if aReader.TokenKind = tkObjectEnd then break;
+  until False;
 end;
 {$POP}
 
@@ -165,6 +171,12 @@ end;
 {$PUSH}{$WARN 5057 OFF}
 procedure TBar.DoReadJson(aReader: TJsonReader);
 begin
+  if aReader.TokenKind <> tkObjectBegin then ReadError;
+  Clear;
+  repeat
+    if not aReader.Read then ReadError;
+    if aReader.TokenKind = tkObjectEnd then break;
+  until False;
 end;
 {$POP}
 
