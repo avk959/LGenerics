@@ -705,14 +705,16 @@ begin
     if Props <> nil then
       aText.Add(Format('  Flags: array[0..%d] of Boolean;', [System.High(Props)]));
     aText.Add('  I: Integer;');
-    aText.Add('begin');
-    aText.Add('  if aReader.TokenKind <> tkObjectBegin then ReadError;');
-    aText.Add('  Clear;');
-    if Props <> nil then
-      aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
-    aText.Add('  repeat');
-    aText.Add('    if not aReader.Read then ReadError;');
-    aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
+  end;
+  aText.Add('begin');
+  aText.Add('  if aReader.TokenKind <> tkObjectBegin then ReadError;');
+  aText.Add('  Clear;');
+  if Props <> nil then
+    aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
+  aText.Add('  repeat');
+  aText.Add('    if not aReader.Read then ReadError;');
+  aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
+  if (Props <> nil) or (OptionalProps <> nil) then begin
     if AsciiNames then
       aText.Add('    case aReader.Name of')
     else
@@ -736,18 +738,17 @@ begin
     if not AdditionalProps then
       aText.Add('      UnknownProp(aReader.Name);');
     aText.Add('    end;');
-    aText.Add('  until False;');
-    if FProps <> nil then begin
-      aText.Add('  for I := 0 to System.High(Flags) do');
-      aText.Add('    if not Flags[I] then');
-      aText.Add('      case I of');
-      for I := 0 to System.High(Props) do
-        aText.Add(Format('        %d: PropNotFound(''%s'');', [I, Props[I].JsonPropName]));
-      aText.Add('      else');
-      aText.Add('      end;');
-    end;
-  end else
-    aText.Add('begin');
+  end;
+  aText.Add('  until False;');
+  if FProps <> nil then begin
+    aText.Add('  for I := 0 to System.High(Flags) do');
+    aText.Add('    if not Flags[I] then');
+    aText.Add('      case I of');
+    for I := 0 to System.High(Props) do
+      aText.Add(Format('        %d: PropNotFound(''%s'');', [I, Props[I].JsonPropName]));
+    aText.Add('      else');
+    aText.Add('      end;');
+  end;
   aText.Add('end;');
   aText.Add('{$POP}');
   aText.Add('');
@@ -870,15 +871,13 @@ procedure TJtdVarTemplate.WritePropDescription(const aDescr, aTagValue: string; 
   aComment: Boolean);
 var
   s: string;
-const
-  Matches = 'matches the tag';
 begin
   if not aComment then exit;
   if aDescr = '' then
-    aText.Add(Format('  { %s "%s" }', [Matches, aTagValue]))
+    aText.Add(Format('  { matches the "%s" tag }', [aTagValue]))
   else begin
     s := WrapText(aDescr, LineEnding + '    ', [' ', '-', #9], 70) + LineEnding +
-      Format('    %s "%s"', [Matches, aTagValue]);
+      Format('    matches the "%s" tag', [aTagValue]);
     aText.Add(Format('  { %s }', [s]));
   end;
 end;
