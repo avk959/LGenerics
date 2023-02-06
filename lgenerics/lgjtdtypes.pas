@@ -36,15 +36,16 @@ type
 
   TJtdEntity = class abstract
   protected
-    procedure ReadError;
-    procedure Error(const aMessage: string);
     procedure DoReadJson(aNode: TJsonNode); virtual; abstract;
     procedure DoReadJson(aReader: TJsonReader); virtual; abstract;
     procedure DoWriteJson(aWriter: TJsonStrWriter); virtual; abstract;
+    class procedure ReadError;
+    class procedure Error(const aMessage: string);
   public
     class function GetJtdClass: TJtdEntityClass; virtual;
     class function ReadJson(aNode: TJsonNode): TJtdEntity;
     class function ReadJson(aReader: TJsonReader): TJtdEntity;
+    class function ReadJson(const aJson: string): TJtdEntity;
     constructor Create; virtual;
     function  IsNull: Boolean; inline;
     function  NotNull: Boolean; inline;
@@ -278,12 +279,12 @@ implementation
 uses
   TypInfo, Math, lgStrConst;
 
-procedure TJtdEntity.ReadError;
+class procedure TJtdEntity.ReadError;
 begin
   raise EJtdReadJson.CreateFmt(SEErrorWhenReadClassFmt, [GetJtdClass.ClassName]);
 end;
 
-procedure TJtdEntity.Error(const aMessage: string);
+class procedure TJtdEntity.Error(const aMessage: string);
 begin
   raise EJtdEntity.Create(aMessage);
 end;
@@ -360,9 +361,23 @@ end;
 
 class function TJtdEntity.ReadJson(aReader: TJsonReader): TJtdEntity;
 begin
+  if (aReader.ReadState = rsStart) and not aReader.Read then
+    ReadError;
   if aReader.TokenKind = tkNull then exit(nil);
   Result := GetJtdClass.Create;
   Result.DoReadJson(aReader);
+end;
+
+class function TJtdEntity.ReadJson(const aJson: string): TJtdEntity;
+var
+  Reader: TJsonReader;
+begin
+  Reader := TJsonReader.Create(Pointer(aJson), System.Length(aJson));
+  try
+    Result := ReadJson(Reader);
+  finally
+    Reader.Free;
+  end;
 end;
 
 procedure TJtdEntity.WriteJson(aWriter: TJsonStrWriter);
@@ -620,7 +635,7 @@ end;
 
 procedure TJtdString.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> aReader.TTokenKind.tkString then ReadError;
+  if aReader.TokenKind <> TJsonReader.TTokenKind.tkString then ReadError;
   FValue := aReader.AsString;
 end;
 
@@ -648,7 +663,7 @@ procedure TJtdDateTimeUTC.DoReadJson(aReader: TJsonReader);
 var
   d: TDateTime;
 begin
-  if not((aReader.TokenKind = aReader.TTokenKind.tkString) and
+  if not((aReader.TokenKind = TJsonReader.TTokenKind.tkString) and
           TryRfc8927TimeStampToUTC(aReader.AsString, d)) then ReadError;
   FValue := d;
 end;
