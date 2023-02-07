@@ -27,7 +27,9 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "normalword" JSON property }
     property Normalword: TJtdString read FNormalword write SetNormalword;
+  { refers to "json" JSON property }
     property Json: TJtdString read FJson write SetJson;
   end;
 
@@ -52,11 +54,17 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "id" JSON property }
     property Id: TJtdString read FId write SetId;
+  { refers to "http" JSON property }
     property Http: TJtdString read FHttp write SetHttp;
+  { refers to "utf8" JSON property }
     property Utf8: TJtdString read FUtf8 write SetUtf8;
+  { refers to "word_with_trailing_initialism_id" JSON property }
     property WordWithTrailingInitialismId: TJtdString read FWordWithTrailingInitialismId write SetWordWithTrailingInitialismId;
+  { refers to "word_with_embedded_id_initialism" JSON property }
     property WordWithEmbeddedIdInitialism: TJtdString read FWordWithEmbeddedIdInitialism write SetWordWithEmbeddedIdInitialism;
+  { refers to "nested_id_initialism" JSON property }
     property NestedIdInitialism: TNestedIdInitialism read FNestedIdInitialism write SetNestedIdInitialism;
   end;
 

@@ -39,13 +39,21 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "" JSON property }
     property EmptyName: TJtdString read FEmptyName write SetEmptyName;
+  { refers to "$foo" JSON property }
     property P_foo: TJtdString read FP_foo write SetP_foo;
+  { refers to "_foo" JSON property }
     property _foo: TJtdString read F_foo write Set_foo;
+  { refers to "0foo" JSON property }
     property P0foo: TJtdString read FP0foo write SetP0foo;
+  { refers to "foo0bar" JSON property }
     property Foo0bar: TJtdString read FFoo0bar write SetFoo0bar;
+  { refers to "foo bar" JSON property }
     property Foo_bar: TJtdString read FFoo_bar write SetFoo_bar;
+  { refers to "foo\nbar" JSON property }
     property Foo_bar1: TJtdString read FFoo_bar1 write SetFoo_bar1;
+  { refers to "foo\uFDFDbar" JSON property }
     property Foo___bar: TJtdString read FFoo___bar write SetFoo___bar;
   end;
 

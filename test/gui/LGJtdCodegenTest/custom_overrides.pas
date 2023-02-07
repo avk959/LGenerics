@@ -73,9 +73,9 @@ type
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
     class function GetJtdClass: TJtdEntityClass; override;
-  { matches the tag "bar" }
+  { matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
-  { matches the tag "baz" }
+  { matches the "baz" tag }
     property Baz: TBaz read GetBaz write SetBaz;
   end;
 
@@ -100,11 +100,17 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "override_type_expr" JSON property }
     property OverrideTypeExpr: TJtdString read FOverrideTypeExpr write SetOverrideTypeExpr;
+  { refers to "override_elements_container" JSON property }
     property OverrideElementsContainer: TOverrideElementsContainer read FOverrideElementsContainer write SetOverrideElementsContainer;
+  { refers to "override_values_container" JSON property }
     property OverrideValuesContainer: TOverrideValuesContainer read FOverrideValuesContainer write SetOverrideValuesContainer;
+  { refers to "override_type_enum" JSON property }
     property OverrideTypeEnum: TOverrideTypeEnumElem read FOverrideTypeEnum write SetOverrideTypeEnum;
+  { refers to "override_type_properties" JSON property }
     property OverrideTypeProperties: TOverrideTypeProperties read FOverrideTypeProperties write SetOverrideTypeProperties;
+  { refers to "override_type_discriminator" JSON property }
     property OverrideTypeDiscriminator: TOverrideTypeDiscriminator read FOverrideTypeDiscriminator write SetOverrideTypeDiscriminator;
   end;
 

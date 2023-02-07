@@ -25,6 +25,7 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "baz" JSON property }
     property Baz: TJtdString read FBaz write SetBaz;
   end;
 
@@ -39,6 +40,7 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "quuz" JSON property }
     property Quuz: TJtdString read FQuuz write SetQuuz;
   end;
 
@@ -53,9 +55,9 @@ type
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
     class function GetJtdClass: TJtdEntityClass; override;
-  { matches the tag "BAR_BAZ" }
+  { matches the "BAR_BAZ" tag }
     property BarBaz: TBarBaz read GetBarBaz write SetBarBaz;
-  { matches the tag "QUUX" }
+  { matches the "QUUX" tag }
     property QUUX: TQUUX read GetQUUX write SetQUUX;
   end;
 

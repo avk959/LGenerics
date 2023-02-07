@@ -31,7 +31,9 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "for" JSON property }
     property For_: TFor_String read FFor_ write SetFor_;
+  { refers to "object" JSON property }
     property Object_: TObject_String read FObject_ write SetObject_;
   end;
 

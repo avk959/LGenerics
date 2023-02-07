@@ -39,9 +39,13 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "foo" JSON property }
     property Foo: TJtdBool read FFoo write SetFoo;
+  { refers to "bar" JSON property }
     property Bar: TJtdString read FBar write SetBar;
+  { refers to "baz" JSON property }
     property Baz: TBaz read FBaz write SetBaz;
+  { refers to "quux" JSON property }
     property Quux: TQuux read FQuux write SetQuux;
   end;
 

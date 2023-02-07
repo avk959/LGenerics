@@ -64,7 +64,7 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
   { A description for discriminator variant
-    matches the tag "bar" }
+    matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
   end;
 
@@ -93,17 +93,19 @@ type
     acts which have outraged the conscience of mankind, and the advent of 
     a world in which human beings shall enjoy freedom of speech and belief 
     and freedom from fear and want has been proclaimed as the highest aspiration 
-    of the common people, }
+    of the common people, refers to "long_description" JSON property }
     property LongDescription: TJtdString read FLongDescription write SetLongDescription;
-  { A description for ref }
+  { A description for ref; refers to "ref_with_description" JSON property }
     property RefWithDescription: TBazString read FRefWithDescription write SetRefWithDescription;
-  { A description for string }
+  { A description for string; refers to "string_with_description" JSON property }
     property StringWithDescription: TJtdString read FStringWithDescription write SetStringWithDescription;
-  { A description for enum }
+  { A description for enum; refers to "enum_with_description" JSON property }
     property EnumWithDescription: TEnumWithDescriptionElem read FEnumWithDescription write SetEnumWithDescription;
-  { A description for properties }
+  { A description for properties; refers to "properties_with_description" 
+    JSON property }
     property PropertiesWithDescription: TPropertiesWithDescription read FPropertiesWithDescription write SetPropertiesWithDescription;
-  { A description for discriminator }
+  { A description for discriminator; refers to "discriminator_with_description" 
+    JSON property }
     property DiscriminatorWithDescription: TDiscriminatorWithDescription read FDiscriminatorWithDescription write SetDiscriminatorWithDescription;
   end;
 

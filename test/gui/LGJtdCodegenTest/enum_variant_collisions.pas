@@ -32,7 +32,7 @@ end;
 
 class function TEnumVariantCollisions.IsEnumElement(const aValue: string): Boolean;
 begin
-  case TJsonNode.PasStrToAsciiJson(aValue) of
+  case aValue of
     'foo',
     'Foo',
     'FOO': Result := True;

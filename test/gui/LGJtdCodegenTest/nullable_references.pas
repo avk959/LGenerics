@@ -40,11 +40,17 @@ type
   public
     class function GetJtdClass: TJtdEntityClass; override;
     procedure Clear; override;
+  { refers to "notnull_string" JSON property }
     property NotnullString: TNotnullStringString read FNotnullString write SetNotnullString;
+  { refers to "null_string" JSON property }
     property NullString: TNullStringString read FNullString write SetNullString;
+  { refers to "notnull_ref_notnull_string" JSON property }
     property NotnullRefNotnullString: TNotnullStringString read FNotnullRefNotnullString write SetNotnullRefNotnullString;
+  { refers to "null_ref_notnull_string" JSON property }
     property NullRefNotnullString: TNotnullStringString read FNullRefNotnullString write SetNullRefNotnullString;
+  { refers to "notnull_ref_null_string" JSON property }
     property NotnullRefNullString: TNullStringString read FNotnullRefNullString write SetNotnullRefNullString;
+  { refers to "null_ref_null_string" JSON property }
     property NullRefNullString: TNullStringString read FNullRefNullString write SetNullRefNullString;
   end;
 
