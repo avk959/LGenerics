@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   A set of classes handy when generating code from a JTD schema.          *                                            *
+*   A set of classes handy when generating code from JTD schemas.           *                                            *
 *                                                                           *
 *   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -24,7 +24,7 @@ unit lgJtdTypes;
 interface
 
 uses
-  Classes, SysUtils, lgUtils, lgVector, lgHashMap, lgJson, lgJsonTypeDef;
+  Classes, SysUtils, lgUtils, lgVector, lgHashMap, lgJson;
 
 type
 
@@ -80,7 +80,7 @@ type
     property Value: T read FValue write FValue;
   end;
 
-  { TJtdBool can contain boolean value }
+  { TJtdBool may contain boolean value }
   TJtdBool = class sealed(specialize TJtdValue<Boolean>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
@@ -254,7 +254,7 @@ type
     procedure UnknownProp(const aJsonPropName: string);
   end;
 
-  TJtdVariant = class abstract(TJtdEntity)
+  TJtdVariant = class abstract(TJtdEntity)//todo: what about enumeration based one ???
   protected
     FTag: string;
     FInstance: TJtdEntity;
@@ -271,13 +271,13 @@ type
   end;
 
   resourcestring
-    SEInternJtdVariantError    = 'Internal TJtdVariant error';
+    SEInternJtdVariantError = 'Internal TJtdVariant error';
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  TypInfo, Math, lgStrConst;
+  TypInfo, Math, lgJsonTypeDef, lgStrConst;
 
 class procedure TJtdEntity.ReadError;
 begin
