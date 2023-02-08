@@ -131,14 +131,17 @@ type
     class function  GetFormKind(const aSgn: TSignature): TFormKind; static;
     class procedure DoLoadSchema(aRoot: TJtdSchema; aNode: TJsonNode); static;
   public
-    class function TryLoad(aJson: TJsonNode; out aSchema: TJtdSchema): Boolean; static;
+  { returns True and the loaded schema in the aSchema parameter in case of successful loading,
+    otherwise returns False }
+    class function TryLoad(aNode: TJsonNode; out aSchema: TJtdSchema): Boolean; static;
     class function TryLoad(const aJson: string; out aSchema: TJtdSchema): Boolean; static;
     class function TryLoadFromStream(aStream: TStream; out aSchema: TJtdSchema): Boolean; static;
     class function TryLoadFromFile(const aFileName: string; out aSchema: TJtdSchema): Boolean; static;
     destructor Destroy; override;
     procedure Clear;
-  {  }
-    procedure Load(aJson: TJsonNode);
+  { loads the schema from the contents of aNode; raises an exception if something went wrong }
+    procedure Load(aNode: TJsonNode);
+  { loads the schema directly from its string representation; raises an exception if something went wrong }
     procedure Load(const aJson: string; aMaxDepth: Integer = DEF_DEPTH);
     procedure LoadFromStream(aStream: TStream; aMaxDepth: Integer = DEF_DEPTH);
     procedure LoadFromFile(const aFileName: string; aMaxDepth: Integer = DEF_DEPTH);
@@ -674,15 +677,15 @@ begin
   LoadSchema(aRoot, aNode);
 end;
 
-class function TJtdSchema.TryLoad(aJson: TJsonNode; out aSchema: TJtdSchema): Boolean;
+class function TJtdSchema.TryLoad(aNode: TJsonNode; out aSchema: TJtdSchema): Boolean;
 var
-  Schema: TJtdSchema = nil;
+  Schema: TJtdSchema;
 begin
   Result := False;
   aSchema := nil;
   Schema := TJtdSchema.Create;
   try
-    Schema.Load(aJson);
+    Schema.Load(aNode);
     aSchema := Schema;
     Result := True;
   except
@@ -692,7 +695,7 @@ end;
 
 class function TJtdSchema.TryLoad(const aJson: string; out aSchema: TJtdSchema): Boolean;
 var
-  Schema: TJtdSchema = nil;
+  Schema: TJtdSchema;
 begin
   Result := False;
   aSchema := nil;
@@ -708,7 +711,7 @@ end;
 
 class function TJtdSchema.TryLoadFromStream(aStream: TStream; out aSchema: TJtdSchema): Boolean;
 var
-  Schema: TJtdSchema = nil;
+  Schema: TJtdSchema;
 begin
   Result := False;
   aSchema := nil;
@@ -760,11 +763,11 @@ begin
   FAddProps := False;
 end;
 
-procedure TJtdSchema.Load(aJson: TJsonNode);
+procedure TJtdSchema.Load(aNode: TJsonNode);
 begin
-  if not TJsonNode.DupeNamesFree(aJson) then
+  if not TJsonNode.DupeNamesFree(aNode) then
     raise EJtdSchemaLoad.Create(SESchemaKeysNotUniq);
-  LoadNode(aJson);
+  LoadNode(aNode);
 end;
 
 procedure TJtdSchema.Load(const aJson: string; aMaxDepth: Integer);
