@@ -1208,7 +1208,7 @@ type
           if not(GetPdoEntry(ElType, e)and(e.Kind in [ekRecFieldMap, ekJson2Record])) then
             Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
           if e.Kind = ekRecFieldMap then with e do
-            for I := 0 to System.Length(FieldMap) do
+            for I := 0 to System.High(FieldMap) do
               with FieldMap[I] do
                 if Name <> '' then
                   if IgnoreNameCase then
@@ -1273,7 +1273,7 @@ type
           if not(GetPdoEntry(ElType, e)and(e.Kind in [ekRecFieldMap, ekJson2Record])) then
             Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
           if e.Kind = ekRecFieldMap then with e do
-            for I := 0 to System.Length(FieldMap) do
+            for I := 0 to System.High(FieldMap) do
               with FieldMap[I] do
                 if Name <> '' then
                   if IgnoreNameCase then
