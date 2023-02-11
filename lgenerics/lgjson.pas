@@ -2000,7 +2000,6 @@ var
   r: string;
   I, J, Last: SizeInt;
   pR: PAnsiChar;
-  c4: TChar4;
   uh, ul: DWord;
 begin
   System.SetLength(r, Count);
@@ -6241,7 +6240,7 @@ type
 
   procedure TryRemoveAdd2Move(aSrc, aDst: TJsonNode);
   var
-    Cmd, NextCmd, Value, Tmp, n: TJsonNode;
+    Cmd, NextCmd, Value, Tmp: TJsonNode;
     RemovePath, AddPath: string;
     I, J: SizeInt;
   begin
