@@ -39,14 +39,58 @@ uses
 
 type
   TJsValueKind     = (jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
-  TJsFormatOption  = (jfoSingleLine,      // the entire document on one line
-                      jfoSingleLineArray, // each array on one line excluding the root
-                      jfoSingleLineObject,// each object on one line excluding the root
-                      jfoEgyptBrace,      // egyptian braces(default Allman)
-                      jfoUseTabs,         // tabs instead of spaces.
-                      jfoStrAsIs);        // do not encode Pascal strings as JSON strings
+  TJsFormatOption  = (jfoSingleLine,      { the entire document on one line }
+                      jfoSingleLineArray, { any array is written in one line, as long as it contains
+                                            only scalar elements and their number is strictly less than
+                                            OneLineArrayBound(see TJsonFormatStyle below) }
+                      jfoSingleLineObject,{ any object is written to one line if it contains only pairs
+                                            with scalar values and the number of pairs is strictly less than
+                                            OneLineObjectBound (see TJsonFormatStyle below) }
+                      jfoEgyptBrace,      { egyptian braces(by default Allman) }
+                      jfoUseTabs,         { tabs instead of spaces }
+                      jfoStrAsIs);        { do not encode Pascal strings as JSON strings }
   TJsFormatOptions = set of TJsFormatOption;
   EJsException     = class(Exception);
+
+  TJsLineBreak     = (jlbLF, jlbCRLF);
+
+  TJsonFormatStyle = record
+    Options: TJsFormatOptions;
+    IndentSize,
+    IndentAfterComma,
+    IndentBeforeColon,
+    IndentAfterColon,
+    OneLineArrayBound,
+    OneLineObjectBound: Integer;
+    LineBreak: TJsLineBreak;
+    constructor Make(const aOptions: TJsFormatOptions);
+    constructor Make(aIndentSize: Integer);
+    constructor Make(const aOptions: TJsFormatOptions; aIndentSize: Integer);
+    constructor Make(aLineBreak: TJsLineBreak);
+    constructor Make(const aOptions: TJsFormatOptions; aLineBreak: TJsLineBreak);
+    constructor Make(const aOptions: TJsFormatOptions; aIndentSize: Integer; aLineBreak: TJsLineBreak);
+    constructor Make(const aOptions: TJsFormatOptions; aIndentSize, aIndentAfterComma: Integer;
+                     aIndentBeforeColon: Integer = 0;
+                     aIndentAfterColon: Integer = 1;
+                     aOneLineArrayBound: Integer = 8;
+                     aOneLineObjectBound: Integer = 4;
+                     aLineBreak: TJsLineBreak = {$IFDEF WINDOWS}jlbCRLF{$ELSE}jlbLF{$ENDIF});
+  end;
+
+{$PUSH}{$J-}
+const
+  DefaultJsonFmtStyle: TJsonFormatStyle = (
+    Options: [jfoSingleLineArray, jfoSingleLineObject, jfoEgyptBrace];
+    IndentSize: 4;
+    IndentAfterComma: 1;
+    IndentBeforeColon: 0;
+    IndentAfterColon: 1;
+    OneLineArrayBound: 8;
+    OneLineObjectBound: 4;
+    LineBreak: {$IFDEF WINDOWS}jlbCRLF{$ELSE}jlbLF{$ENDIF});
+{$POP}
+
+type
 
   TJVarKind = (vkNull, vkBool, vkNumber, vkString);
 
@@ -634,10 +678,16 @@ type
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndentSize: Integer = DEF_INDENT;
                          aOffset: Integer = 0): string;
+    function  FormatJson(const aStyle: TJsonFormatStyle; aOffset: Integer = 0): string;
     function  GetValue(out aValue: TJVariant): Boolean;
-  { returns the number of bytes written }
+  { saves content to stream; returns the number of bytes written }
     function  SaveToStream(aStream: TStream): SizeInt; inline;
+  { saves content to stream with formatting; returns the number of bytes written }
+    function  SaveToStream(aStream: TStream; aStyle: TJsonFormatStyle): SizeInt;
+  { saves content to file }
     procedure SaveToFile(const aFileName: string);
+  { saves content to file with formatting }
+    procedure SaveToFile(const aFileName: string; aStyle: TJsonFormatStyle);
     function  ToString: string; override;
   { GetAsJson returns the most compact JSON representation of an instance, is recursive;
     SetAsJson remark: if the parser fails to parse the original string,
@@ -1145,6 +1195,9 @@ const
   JS_NULL        = 'null';
   JS_FALSE       = 'false';
   JS_TRUE        = 'true';
+{$PUSH}{$J-}
+  ssLineBreaks: array[TJsLineBreak] of string[2] = (#10, #13#10);
+{$POP}
 
 function IsExactInt(aValue: Double): Boolean;
 begin
@@ -1164,6 +1217,63 @@ end;
 function SameDouble(L, R: Double): Boolean;
 begin
   Result := Abs(L - R) * DBL_CMP_FACTOR <= Min(Abs(L), Abs(R));
+end;
+
+{ TJsonFormatStyle }
+
+constructor TJsonFormatStyle.Make(const aOptions: TJsFormatOptions);
+begin
+  Self := DefaultJsonFmtStyle;
+  Options := aOptions;
+end;
+
+constructor TJsonFormatStyle.Make(aIndentSize: Integer);
+begin
+  Self := DefaultJsonFmtStyle;
+  IndentSize := aIndentSize;
+end;
+
+constructor TJsonFormatStyle.Make(const aOptions: TJsFormatOptions; aIndentSize: Integer);
+begin
+  Self := DefaultJsonFmtStyle;
+  Options := aOptions;
+  IndentSize := aIndentSize;
+end;
+
+constructor TJsonFormatStyle.Make(aLineBreak: TJsLineBreak);
+begin
+  Self := DefaultJsonFmtStyle;
+  LineBreak := aLineBreak;
+end;
+
+constructor TJsonFormatStyle.Make(const aOptions: TJsFormatOptions; aLineBreak: TJsLineBreak);
+begin
+  Self := DefaultJsonFmtStyle;
+  Options := aOptions;
+  LineBreak := aLineBreak;
+end;
+
+constructor TJsonFormatStyle.Make(const aOptions: TJsFormatOptions; aIndentSize: Integer;
+  aLineBreak: TJsLineBreak);
+begin
+  Self := DefaultJsonFmtStyle;
+  Options := aOptions;
+  IndentSize := aIndentSize;
+  LineBreak := aLineBreak;
+end;
+
+constructor TJsonFormatStyle.Make(const aOptions: TJsFormatOptions; aIndentSize, aIndentAfterComma,
+  aIndentBeforeColon, aIndentAfterColon, aOneLineArrayBound, aOneLineObjectBound: Integer;
+  aLineBreak: TJsLineBreak);
+begin
+  Options := aOptions;
+  IndentSize := aIndentSize;
+  IndentAfterComma := aIndentAfterComma;
+  IndentBeforeColon := aIndentBeforeColon;
+  IndentAfterColon := aIndentAfterColon;
+  OneLineArrayBound := aOneLineArrayBound;
+  OneLineObjectBound := aOneLineObjectBound;
+  LineBreak := aLineBreak;
 end;
 
 { TJVariant }
@@ -1981,7 +2091,6 @@ type
   TChar3 = array[0..2] of AnsiChar;
   TChar4 = array[0..3] of AnsiChar;
   PChar2 = ^TChar2;
-  PChar3 = ^TChar3;
   PChar4 = ^TChar4;
 
 function HexCh4ToDWord(const aSeq: TChar4): DWord; inline;
@@ -5397,15 +5506,57 @@ begin
 end;
 
 function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize: Integer; aOffset: Integer): string;
+begin
+  Result := FormatJson(TJsonFormatStyle.Make(aOptions, aIndentSize), aOffset);
+end;
+
+function TJsonNode.FormatJson(const aStyle: TJsonFormatStyle; aOffset: Integer): string;
 var
   sb: TStrBuilder;
-  Pair: TPair;
   s: shortstring;
-  MultiLine, UseTabs, StrEncode, BsdBrace, HasText, OneLineArray, OneLineObject: Boolean;
-  Node: TJsonNode;
-  procedure NewLine(Pos: Integer); inline;
+  LineBreak: string[2];
+  UseTabs, StrEncode, BsdBrace, OneLineArray, OneLineObject: Boolean;
+  function CanOneLineArray(aNode: TJsonNode): Boolean;
+  var
+    I: Integer;
   begin
-    sb.Append(sLineBreak);
+    if not OneLineArray or (aNode.Count >= aStyle.OneLineArrayBound) then
+      exit(False);
+    for I := 0 to Pred(aNode.Count) do
+      if not aNode.Items[I].IsScalar then
+        exit(False);
+    Result := True;
+  end;
+  function CanOneLineObject(aNode: TJsonNode): Boolean;
+  var
+    I: Integer;
+  begin
+    if not OneLineObject or (aNode.Count >= aStyle.OneLineObjectBound) then
+      exit(False);
+    for I := 0 to Pred(aNode.Count) do
+      if not aNode.Items[I].IsScalar then
+        exit(False);
+    Result := True;
+  end;
+  function CanOneLine(aNode: TJsonNode): Boolean; inline;
+  begin
+    if aNode.IsScalar then
+      Result := True
+    else
+      if aNode.IsArray then
+        Result := CanOneLineArray(aNode)
+      else
+        Result := CanOneLineObject(aNode);
+  end;
+  procedure AppendNumber(aNum: Double); inline;
+  begin
+    Double2Str(aNum, s);
+    sb.Append(s);
+  end;
+  procedure NewLine(Pos: Integer; aCondition: Boolean); inline;
+  begin
+    if not aCondition then exit;
+    sb.Append(LineBreak);
     if UseTabs then
       sb.Append(#9, Pos)
     else
@@ -5422,119 +5573,188 @@ var
         sb.Append(chQuote);
       end;
   end;
-  procedure CheckHasText(Pos: Integer; aRoot: Boolean); inline;
+  procedure AppendScalar(aNode: TJsonNode); inline;
   begin
-    if HasText then
-      if (MultiLine or aRoot) and BsdBrace then
-        NewLine(Pos) else
-    else
-      HasText := True;
-  end;
-  procedure BuildJson(aInst: TJsonNode; aPos: Integer);
-  var
-    I, Last: SizeInt;
-    IsRoot, OldMultiLine: Boolean;
-  begin
-    IsRoot := False;
-    OldMultiLine := MultiLine;
-    case aInst.Kind of
+    case aNode.Kind of
+      jvkUnknown: raise EJsException.Create(SEUnknownJsNodeKind);
       jvkNull:   sb.Append(JS_NULL);
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
-      jvkNumber:
-        begin
-          Double2Str(aInst.FValue.Num, s);
-          sb.Append(s);
-        end;
-      jvkString: AppendString(aInst.FString);
-      jvkArray:
-        begin
-          if OneLineArray or OneLineObject then
-            if HasText then
-              if OneLineArray then
-                MultiLine := False else
-            else
-              if OneLineArray or OneLineObject then
-                IsRoot := True;
-          CheckHasText(aPos, IsRoot);
-          sb.Append(chOpenSqrBr);
-          if aInst.FArray <> nil then begin
-            Last := Pred(aInst.FArray^.Count);
-            for I := 0 to Last do begin
-              Node := aInst.FArray^.UncMutable[I]^;
-              if (Node.IsScalar and MultiLine) or (IsRoot and not BsdBrace)then /////////
-                NewLine(aPos + aIndentSize)
-              else
-                if (I = 0) and (Node.IsStruct and not BsdBrace and MultiLine)then
-                  NewLine(aPos + aIndentSize);
-              BuildJson(aInst.FArray^.UncMutable[I]^, aPos + aIndentSize);
-              if I <> Last then begin
-                sb.Append(chComma);
-                if not MultiLine or (aInst.FArray^.UncMutable[I+1]^.IsStruct and not BsdBrace) then
-                  sb.Append(chSpace);
-              end;
-            end;
-          end;
-          if MultiLine or IsRoot then NewLine(aPos);
-          sb.Append(chClosSqrBr);
-          if OneLineArray and not IsRoot then
-            MultiLine := OldMultiLine;
-        end;
-      jvkObject:
-        begin
-            if HasText then
-              if OneLineObject then
-                MultiLine := False else
-            else
-              if OneLineArray or OneLineObject then
-                IsRoot := True;
-          CheckHasText(aPos, IsRoot);
-          sb.Append(chOpenCurBr);
-          if aInst.FObject <> nil then begin
-            Last := Pred(aInst.FObject^.Count);
-            for I := 0 to Last do begin
-              if MultiLine or IsRoot then NewLine(aPos + aIndentSize);
-              Pair := aInst.FObject^.Mutable[I]^;
-              Node := Pair.Value;
-              AppendString(Pair.Key);
-              sb.Append(chColon);
-              if Node.IsScalar or not MultiLine or (OneLineArray and Node.IsArray) or
-                (OneLineObject and Node.IsObject) then begin
-                sb.Append(chSpace);
-                BuildJson(Pair.Value, aPos);
-              end else begin
-                if not BsdBrace then sb.Append(chSpace);
-                BuildJson(Pair.Value, aPos + aIndentSize);
-              end;
-              if I <> Last then begin
-                sb.Append(chComma);
-                if not MultiLine then sb.Append(chSpace);
-              end;
-            end;
-          end;
-          if MultiLine or IsRoot then NewLine(aPos);
-          sb.Append(chClosCurBr);
-          if OneLineObject and not IsRoot then
-            MultiLine := OldMultiLine;
-        end;
+      jvkNumber: AppendNumber(aNode.AsNumber);
+      jvkString: AppendString(aNode.AsString);
     else
     end;
   end;
-begin //todo: make it somehow easier?
+  procedure AppendComma; inline;
+  begin
+    sb.Append(chComma);
+    sb.Append(chSpace, aStyle.IndentAfterComma);
+  end;
+  procedure AppendKey(const aKey: string; aValue: TJsonNode = nil); inline;
+  begin
+    AppendString(aKey);
+    sb.Append(chSpace, aStyle.IndentBeforeColon);
+    sb.Append(chColon);
+    if aValue <> nil then begin
+      if CanOneLine(aValue) then
+        sb.Append(chSpace, aStyle.IndentAfterColon);
+    end else
+      sb.Append(chSpace, aStyle.IndentAfterColon);
+  end;
+  procedure DoFormat(aNode: TJsonNode; aPos: Integer; IsRoot: Boolean = False);
+  var
+    I, Last: Integer;
+    p: TJsonNode.TPair;
+    MultiLine: Boolean;
+    c: AnsiChar;
+  begin
+    if aNode.Kind < jvkArray then
+      AppendScalar(aNode)
+    else
+      case aNode.Kind of
+        jvkArray:
+          begin
+            MultiLine := not CanOneLineArray(aNode);
+            if sb.NonEmpty then
+              NewLine(
+                aPos, not IsRoot and MultiLine and (sb.FBuffer[sb.FBuffer.High] in [chOpenSqrBr, chOpenCurBr]));
+            sb.Append(chOpenSqrBr);
+            Last := Pred(aNode.Count);
+            for I := 0 to Last do begin
+              NewLine(aPos + aStyle.IndentSize, MultiLine and CanOneLine(aNode.Items[I]));
+              if I = 0 then
+                DoFormat(aNode.Items[I], aPos + aStyle.IndentSize)
+              else
+                DoFormat(aNode.Items[I], aPos + aStyle.IndentSize);
+              if I < Last then AppendComma;
+            end;
+            NewLine(aPos, MultiLine);
+            sb.Append(chClosSqrBr);
+          end;
+        jvkObject:
+          begin
+            MultiLine := not CanOneLineObject(aNode);
+            if sb.NonEmpty then
+              NewLine(
+                aPos, not IsRoot and MultiLine and (sb.FBuffer[sb.FBuffer.High] in [chOpenSqrBr, chOpenCurBr]));
+            sb.Append(chOpenCurBr);
+            Last := Pred(aNode.Count);
+            for I := 0 to Last do begin
+              NewLine(aPos + aStyle.IndentSize, MultiLine);
+              p := aNode.Pairs[I];
+              AppendKey(p.Key);
+              DoFormat(p.Value, aPos + aStyle.IndentSize);
+              if I < Last then AppendComma;
+            end;
+            NewLine(aPos, MultiLine);
+            sb.Append(chClosCurBr);
+          end;
+      else
+      end;
+  end;
+  procedure FormatBsd(aNode: TJsonNode; aPos: Integer; IsRoot: Boolean = False);
+  var
+    I, Last: Integer;
+    p: TJsonNode.TPair;
+    MultiLine: Boolean;
+  begin
+    if aNode.Kind < jvkArray then
+      AppendScalar(aNode)
+    else
+      case aNode.Kind of
+        jvkArray:
+          begin
+            MultiLine := not CanOneLineArray(aNode);
+            NewLine(aPos, not IsRoot and MultiLine);
+            sb.Append(chOpenSqrBr);
+            Last := Pred(aNode.Count);
+            for I := 0 to Last do begin
+              NewLine(aPos + aStyle.IndentSize, MultiLine);
+              FormatBsd(aNode.Items[I], aPos + aStyle.IndentSize);
+              if I < Last then begin
+                sb.Append(chComma);
+                if not MultiLine then sb.Append(chSpace, aStyle.IndentAfterComma);
+              end;
+            end;
+            NewLine(aPos, MultiLine);
+            sb.Append(chClosSqrBr);
+          end;
+        jvkObject:
+          begin
+            MultiLine := not CanOneLineObject(aNode);
+            NewLine(aPos, not IsRoot and MultiLine);
+            sb.Append(chOpenCurBr);
+            Last := Pred(aNode.Count);
+            for I := 0 to Last do begin
+              NewLine(aPos + aStyle.IndentSize, MultiLine);
+              p := aNode.Pairs[I];
+              AppendKey(p.Key, p.Value);
+              FormatBsd(p.Value, aPos + aStyle.IndentSize);
+              if I < Last then begin
+                sb.Append(chComma);
+                if not MultiLine then sb.Append(chSpace, aStyle.IndentAfterComma);
+              end;
+            end;
+            NewLine(aPos, MultiLine);
+            sb.Append(chClosCurBr);
+          end;
+      else
+      end;
+  end;
+  procedure FormatSingleLine(aNode: TJsonNode);
+  var
+    I, Last: Integer;
+    p: TJsonNode.TPair;
+  begin
+    if aNode.Kind < jvkArray then
+      AppendScalar(aNode)
+    else
+      case aNode.Kind of
+        jvkArray:
+          begin
+            sb.Append(chOpenSqrBr);
+            Last := Pred(aNode.Count);
+            for I := 0 to Last do begin
+              FormatSingleLine(aNode.Items[I]);
+              if I < Last then AppendComma;
+            end;
+            sb.Append(chClosSqrBr);
+          end;
+        jvkObject:
+          begin
+            sb.Append(chOpenCurBr);
+            Last := Pred(aNode.Count);
+            for I := 0 to Last do begin
+              p := aNode.Pairs[I];
+              AppendKey(p.Key);
+              FormatSingleLine(p.Value);
+              if I < Last then AppendComma;
+            end;
+            sb.Append(chClosCurBr);
+          end;
+      else
+      end;
+  end;
+begin
   sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
-  MultiLine := not(jfoSingleLine in aOptions);
-  OneLineArray := (jfoSingleLineArray in aOptions) and MultiLine;
-  OneLineObject := (jfoSingleLineObject in aOptions) and MultiLine;
-  UseTabs := jfoUseTabs in aOptions;
-  StrEncode := not(jfoStrAsIs in aOptions);
-  BsdBrace := not(jfoEgyptBrace in aOptions);
-  HasText := False;
+  LineBreak := ssLineBreaks[aStyle.LineBreak];
+  OneLineArray := jfoSingleLineArray in aStyle.Options;
+  OneLineObject := jfoSingleLineObject in aStyle.Options;
+  UseTabs := jfoUseTabs in aStyle.Options;
+  StrEncode := not(jfoStrAsIs in aStyle.Options);
+  BsdBrace := not(jfoEgyptBrace in aStyle.Options);
   aOffset := Math.Max(aOffset, 0);
   if UseTabs then
     sb.Append(#9, aOffset)
   else
     sb.Append(chSpace, aOffset);
-  BuildJson(Self, aOffset);
+  if jfoSingleLine in aStyle.Options then
+    FormatSingleLine(Self)
+  else
+    if BsdBrace then
+      FormatBsd(Self, aOffset, True)
+    else
+      DoFormat(Self, aOffset, False);
   Result := sb.ToString;
 end;
 
@@ -5557,6 +5777,15 @@ begin
   Result := DoBuildJson.SaveToStream(aStream);
 end;
 
+function TJsonNode.SaveToStream(aStream: TStream; aStyle: TJsonFormatStyle): SizeInt;
+var
+  s: string;
+begin
+  s := FormatJson(aStyle);
+  Result := System.Length(s);
+  aStream.WriteBuffer(Pointer(s), Result);
+end;
+
 procedure TJsonNode.SaveToFile(const aFileName: string);
 var
   fs: TFileStream = nil;
@@ -5565,6 +5794,18 @@ begin
   try
     //SaveToStream(fs);
     TJsonWriter.WriteJson(fs, Self);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TJsonNode.SaveToFile(const aFileName: string; aStyle: TJsonFormatStyle);
+var
+  fs: TFileStream = nil;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenWrite or fmCreate);
+  try
+    SaveToStream(fs, aStyle);
   finally
     fs.Free;
   end;
