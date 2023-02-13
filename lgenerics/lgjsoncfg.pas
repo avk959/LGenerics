@@ -28,7 +28,7 @@ uses
   Classes, SysUtils, lgUtils, lgJson;
 
 const
-  DEF_FORMAT = [jfoSingleLineArray, jfoEgyptBrace];
+  DEF_FORMAT = [jfoSingleLineArray, jfoSingleLineObject, jfoEgyptBrace];
 
 type
   EJsonConfError = class(Exception);
@@ -285,7 +285,7 @@ begin
       if Formatted then
         begin
           fs.Instance := TFileStream.Create(FileName, fmCreate);
-          s := FRoot.FormatJson(Formatoptions, FormatIndentSize);
+          s := FRoot.FormatJson(FormatOptions, FormatIndentSize);
           fs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
         end
       else
