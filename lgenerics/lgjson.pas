@@ -683,11 +683,11 @@ type
   { saves content to stream in compact form; returns the number of bytes written }
     function  SaveToStream(aStream: TStream): SizeInt; inline;
   { saves content to stream with formatting; returns the number of bytes written }
-    function  SaveToStream(aStream: TStream; aStyle: TJsonFormatStyle): SizeInt;
+    function  SaveToStream(aStream: TStream; const aStyle: TJsonFormatStyle): SizeInt;
   { saves content to file in compact form }
     procedure SaveToFile(const aFileName: string);
   { saves content to file with formatting }
-    procedure SaveToFile(const aFileName: string; aStyle: TJsonFormatStyle);
+    procedure SaveToFile(const aFileName: string; const aStyle: TJsonFormatStyle);
     function  ToString: string; override;
   { GetAsJson returns the most compact JSON representation of an instance, is recursive;
     SetAsJson remark: if the parser fails to parse the original string,
@@ -2088,7 +2088,6 @@ end;
 
 type
   TChar2 = array[0..1] of AnsiChar;
-  TChar3 = array[0..2] of AnsiChar;
   TChar4 = array[0..3] of AnsiChar;
   PChar2 = ^TChar2;
   PChar4 = ^TChar4;
@@ -5777,7 +5776,7 @@ begin
   Result := DoBuildJson.SaveToStream(aStream);
 end;
 
-function TJsonNode.SaveToStream(aStream: TStream; aStyle: TJsonFormatStyle): SizeInt;
+function TJsonNode.SaveToStream(aStream: TStream; const aStyle: TJsonFormatStyle): SizeInt;
 var
   s: string;
 begin
@@ -5799,7 +5798,7 @@ begin
   end;
 end;
 
-procedure TJsonNode.SaveToFile(const aFileName: string; aStyle: TJsonFormatStyle);
+procedure TJsonNode.SaveToFile(const aFileName: string; const aStyle: TJsonFormatStyle);
 var
   fs: TFileStream = nil;
 begin
