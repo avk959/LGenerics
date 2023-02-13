@@ -680,11 +680,11 @@ type
                          aOffset: Integer = 0): string;
     function  FormatJson(const aStyle: TJsonFormatStyle; aOffset: Integer = 0): string;
     function  GetValue(out aValue: TJVariant): Boolean;
-  { saves content to stream; returns the number of bytes written }
+  { saves content to stream in compact form; returns the number of bytes written }
     function  SaveToStream(aStream: TStream): SizeInt; inline;
   { saves content to stream with formatting; returns the number of bytes written }
     function  SaveToStream(aStream: TStream; aStyle: TJsonFormatStyle): SizeInt;
-  { saves content to file }
+  { saves content to file in compact form }
     procedure SaveToFile(const aFileName: string);
   { saves content to file with formatting }
     procedure SaveToFile(const aFileName: string; aStyle: TJsonFormatStyle);
