@@ -247,6 +247,7 @@ type
     procedure LoadRecordProcIgnoreCase;
     procedure LoadRecordProcSkipProp;
     procedure LoadRecordProcRangeError;
+    procedure LoadArrayRecordFields;
   end;
 
 implementation
@@ -1885,6 +1886,34 @@ begin
   end;
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
   AssertTrue(Raised);
+end;
+
+procedure TTestPdoLoadJson.LoadArrayRecordFields;
+var
+  r: TMyRec;
+  a: array of TMyRec = nil;
+const
+  Json = '[{"intValue":42,"enumValue":"meTwo","sstrValue":"ssrting9","strValue":"string1","boolValue":true},'+
+         '{"enumValue":"meFive","intValue":1001,"sstrValue":"string","strValue":"string2","boolValue":false}]';
+begin
+  r := Default(TMyRec);
+  AssertTrue(RegisterRecordFields(TypeInfo(r), ['intValue','boolValue','strValue','sstrValue','enumValue']));
+  PdoLoadJson(TypeInfo(a), a, Json);
+  AssertTrue(Length(a) = 2);
+
+  AssertTrue(a[0].IntValue = 42);
+  AssertTrue(a[0].BoolValue);
+  AssertTrue(a[0].StrValue = 'string1');
+  AssertTrue(a[0].SStrValue = 'ssrting9');
+  AssertTrue(a[0].EnumValue = meTwo);
+
+  AssertTrue(a[1].IntValue = 1001);
+  AssertFalse(a[1].BoolValue);
+  AssertTrue(a[1].StrValue = 'string2');
+  AssertTrue(a[1].SStrValue = 'string');
+  AssertTrue(a[1].EnumValue = meFive);
+
+  AssertTrue(UnRegisterPdo(TypeInfo(r)));
 end;
 
 initialization
