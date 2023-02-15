@@ -31,22 +31,29 @@ const
   DEF_FORMAT = [jfoSingleLineArray, jfoSingleLineObject, jfoEgyptBrace];
 
 type
-  EJsonConfError = class(Exception);
-  TConfigOption  = (coOverriteDuplicates);
-  TConfigOptions = set of TConfigOption;
+  EJsonConfError   = class(Exception);
+  TConfigOption    = (coOverriteDuplicates);
+  TConfigOptions   = set of TConfigOption;
+  TJsonFormatStyle = lgJson.TJsonFormatStyle;
+  TJsLineBreak     = lgJson.TJsLineBreak;
 
   { TJsonConf }
 
   TJsonConf = class(TComponent)
   private
     FFileName: string;
-    FFormatIndentSize: Integer;
-    FFormatOptions: TJsFormatOptions;
+    FFormatStyle: TJsonFormatStyle;
     FOptions: TConfigOptions;
     FFormatted: Boolean;
     FCurrNode: TJsonNode;
     procedure DoSetFileName(const aFileName: string; aForceReload: Boolean);
+    function  GetFormatIndentSize: Integer;
+    function  GetFormatOptions: TJsFormatOptions;
+    function  GetLineBreak: TJsLineBreak;
     procedure SetFileName(const aFileName: string);
+    procedure SetFormatIndentSize(AValue: Integer);
+    procedure SetFormatOptions(const AValue: TJsFormatOptions);
+    procedure SetLineBreak(AValue: TJsLineBreak);
     function  StripSlash(const P: string) : string;
   protected
   const
@@ -101,11 +108,13 @@ type
     procedure DeletePath(const aPath: string);
     procedure DeleteValue(const aPath: string);
     property  Modified: Boolean read FModified;
+    property  FormatStyle: TJsonFormatStyle read FFormatStyle write FFormatStyle;
   published
     property  FileName: string read FFileName write SetFileName;
     property  Formatted: Boolean read FFormatted write FFormatted;
-    property  FormatOptions: TJsFormatOptions read FFormatoptions write FFormatOptions default DEF_FORMAT;
-    property  FormatIndentSize: Integer read FFormatIndentSize write FFormatIndentSize default DEF_INDENT;
+    property  FormatOptions: TJsFormatOptions read GetFormatOptions write SetFormatOptions default DEF_FORMAT;
+    property  FormatIndentSize: Integer read GetFormatIndentSize write SetFormatIndentSize default DEF_INDENT;
+    property  LineBreak: TJsLineBreak read GetLineBreak write SetLineBreak default {$IFDEF WINDOWS}jlbCRLF{$ELSE}jlbLF{$ENDIF};
     property  Options: TConfigOptions read FOptions write FOptions;
   end;
 
@@ -131,9 +140,39 @@ begin
     LoadFromFile(aFileName);
 end;
 
+function TJsonConf.GetFormatIndentSize: Integer;
+begin
+  Result := FFormatStyle.IndentSize;
+end;
+
+function TJsonConf.GetFormatOptions: TJsFormatOptions;
+begin
+  Result := FFormatStyle.Options;
+end;
+
+function TJsonConf.GetLineBreak: TJsLineBreak;
+begin
+  Result := FFormatStyle.LineBreak;
+end;
+
 procedure TJsonConf.SetFileName(const aFileName: string);
 begin
   DoSetFileName(aFileName, False);
+end;
+
+procedure TJsonConf.SetFormatIndentSize(AValue: Integer);
+begin
+  FFormatStyle.IndentSize := AValue;
+end;
+
+procedure TJsonConf.SetFormatOptions(const AValue: TJsFormatOptions);
+begin
+  FFormatStyle.Options := AValue;
+end;
+
+procedure TJsonConf.SetLineBreak(AValue: TJsLineBreak);
+begin
+  FFormatStyle.LineBreak := AValue;
 end;
 
 function TJsonConf.StripSlash(const P: string): string;
@@ -248,8 +287,7 @@ begin
   inherited Create(AOwner);
   FRoot := TJsonNode.Create;
   FCurrNode := FRoot;
-  FFormatOptions := DEF_FORMAT;
-  FFormatIndentsize := DEF_INDENT;
+  FFormatStyle := lgJson.DefaultJsonFmtStyle;
 end;
 
 destructor TJsonConf.Destroy;
@@ -274,26 +312,19 @@ begin
   FCurrNode := FRoot;
   FModified := False;
 end;
-{$PUSH}{$WARN 5089 OFF}
+
 procedure TJsonConf.Flush;
-var
-  fs: specialize TGUniqRef<TFileStream>;
-  s: string;
 begin
   if Modified then
     begin
       if Formatted then
-        begin
-          fs.Instance := TFileStream.Create(FileName, fmCreate);
-          s := FRoot.FormatJson(FormatOptions, FormatIndentSize);
-          fs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
-        end
+        FRoot.SaveToFile(FileName, FormatStyle)
       else
         FRoot.SaveToFile(FileName);
       FModified := False;
     end;
 end;
-{$POP}
+
 procedure TJsonConf.OpenKey(const aPath: string; aForceKey: Boolean);
 begin
   if aPath = '' then
