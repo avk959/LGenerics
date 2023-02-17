@@ -5605,7 +5605,6 @@ var
     I, Last: Integer;
     p: TJsonNode.TPair;
     MultiLine: Boolean;
-    c: AnsiChar;
   begin
     if aNode.Kind < jvkArray then
       AppendScalar(aNode)
@@ -5621,10 +5620,7 @@ var
             Last := Pred(aNode.Count);
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine and CanOneLine(aNode.Items[I]));
-              if I = 0 then
-                DoFormat(aNode.Items[I], aPos + aStyle.IndentSize)
-              else
-                DoFormat(aNode.Items[I], aPos + aStyle.IndentSize);
+              DoFormat(aNode.Items[I], aPos + aStyle.IndentSize);
               if I < Last then AppendComma;
             end;
             NewLine(aPos, MultiLine);
@@ -5651,7 +5647,7 @@ var
       else
       end;
   end;
-  procedure FormatBsd(aNode: TJsonNode; aPos: Integer; IsRoot: Boolean = False);
+  procedure FormatBsd(aNode: TJsonNode; aPos: Integer; aNewLine: Boolean; IsRoot: Boolean = False);
   var
     I, Last: Integer;
     p: TJsonNode.TPair;
@@ -5664,12 +5660,12 @@ var
         jvkArray:
           begin
             MultiLine := not CanOneLineArray(aNode);
-            NewLine(aPos, not IsRoot and MultiLine);
+            NewLine(aPos, not IsRoot and MultiLine and aNewLine);
             sb.Append(chOpenSqrBr);
             Last := Pred(aNode.Count);
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine);
-              FormatBsd(aNode.Items[I], aPos + aStyle.IndentSize);
+              FormatBsd(aNode.Items[I], aPos + aStyle.IndentSize, False);
               if I < Last then begin
                 sb.Append(chComma);
                 if not MultiLine then sb.Append(chSpace, aStyle.IndentAfterComma);
@@ -5681,14 +5677,14 @@ var
         jvkObject:
           begin
             MultiLine := not CanOneLineObject(aNode);
-            NewLine(aPos, not IsRoot and MultiLine);
+            NewLine(aPos, not IsRoot and MultiLine and aNewLine);
             sb.Append(chOpenCurBr);
             Last := Pred(aNode.Count);
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine);
               p := aNode.Pairs[I];
               AppendKey(p.Key, p.Value);
-              FormatBsd(p.Value, aPos + aStyle.IndentSize);
+              FormatBsd(p.Value, aPos + aStyle.IndentSize, True);
               if I < Last then begin
                 sb.Append(chComma);
                 if not MultiLine then sb.Append(chSpace, aStyle.IndentAfterComma);
@@ -5751,7 +5747,7 @@ begin
     FormatSingleLine(Self)
   else
     if BsdBrace then
-      FormatBsd(Self, aOffset, True)
+      FormatBsd(Self, aOffset, False, True)
     else
       DoFormat(Self, aOffset, False);
   Result := sb.ToString;
