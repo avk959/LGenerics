@@ -1,3 +1,6 @@
+{
+  This program uses x86/x86_64 asm (to be precise, the rdtscp instruction)
+}
 program map_bench;
 
 {$mode objfpc}{$H+}
