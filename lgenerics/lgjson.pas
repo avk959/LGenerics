@@ -5566,11 +5566,7 @@ var
     if StrEncode then
       sb.AppendEncode(s)
     else
-      begin
-        sb.Append(chQuote);
-        sb.Append(s);
-        sb.Append(chQuote);
-      end;
+      sb.Append(s);
   end;
   procedure AppendScalar(aNode: TJsonNode); inline;
   begin
