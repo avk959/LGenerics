@@ -1,6 +1,7 @@
 {
   This is a simple comparison of the performance of Dijkstra and A* algorithms
   on a random graph of points in a plane.
+  Uses x86/x86_64 asm (to be precise, the rdtscp instruction)
 }
 unit main;
 
