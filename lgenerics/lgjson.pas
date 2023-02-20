@@ -5774,7 +5774,7 @@ var
 begin
   s := FormatJson(aStyle);
   Result := System.Length(s);
-  aStream.WriteBuffer(Pointer(s), Result);
+  aStream.WriteBuffer(Pointer(s)^, Result);
 end;
 
 procedure TJsonNode.SaveToFile(const aFileName: string);
