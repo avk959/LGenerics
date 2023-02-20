@@ -47,7 +47,7 @@ begin
     ', depth: ', aReader.Depth,
     ', struct: ', StructName(aReader.StructKind),
     ', name: ', aReader.Name,
-    ', value: ', aReader.Value.ToString
+    ', value: ', aReader.ValueToString
     );
 end;
 /////////////////////////////////////////////////////////
@@ -89,8 +89,8 @@ begin
       tkNull:   WriteLn('null');
       tkFalse:  WriteLn('false');
       tkTrue:   WriteLn('true');
-      tkNumber: WriteLn('number ', Reader.Instance.Value.ToString);
-      tkString: WriteLn('string ', Reader.Instance.Value.ToString);
+      tkNumber: WriteLn('number ', Reader.Instance.ValueToString);
+      tkString: WriteLn('string ', Reader.Instance.ValueToString);
     else
     end;
   end else begin
@@ -109,7 +109,7 @@ end;
 procedure Iterate;
   function PrintValue(aReader: TJsonReader): Boolean;
   begin
-    WriteLn(aReader.Name, ': ', aReader.Value.ToString);
+    WriteLn(aReader.Name, ': ', aReader.ValueToString);
     Result := True;
   end;
 begin
@@ -142,7 +142,7 @@ const
   begin
     SetLength(Indent, IndentSize * aReader.Depth);
     FillChar(Pointer(Indent)^, Length(Indent), 32);
-    WriteLn(Indent, aReader.Name, ': ', aReader.Value.ToString);
+    WriteLn(Indent, aReader.Name, ': ', aReader.ValueToString);
     Result := True;
   end;
 begin
@@ -158,7 +158,7 @@ end;
 procedure FindPath;
   function PrintValue(aReader: TJsonReader): Boolean;
   begin
-    WriteLn(aReader.Name, ': ', aReader.Value.ToString);
+    WriteLn(aReader.Name, ': ', aReader.ValueToString);
     Result := True;
   end;
   procedure Find(aReader: TJsonReader; const aPath: string);
@@ -174,7 +174,7 @@ procedure FindPath;
         WriteLn('Now iterate over it:');
         aReader.Iterate(PrintValue);
       end else
-        WriteLn('a value: ', aReader.Value.ToString);
+        WriteLn('a value: ', aReader.ValueToString);
     end else
       WriteLn('Nothing was found in the specified path.');
   end;
@@ -242,9 +242,9 @@ begin
         begin
           MakeIndent(Reader.Instance.Depth);
           if Reader.Instance.StructKind = skArray then
-            Write(Indent, Reader.Instance.Value.ToString)
+            Write(Indent, Reader.Instance.ValueToString)
           else
-            Write(Indent, Reader.Instance.Name, ': ', Reader.Instance.Value.ToString);
+            Write(Indent, Reader.Instance.Name, ': ', Reader.Instance.ValueToString);
         end;
       tkArrayBegin:
         begin

@@ -181,7 +181,7 @@ var
   n: specialize TGAutoRef<TJsonNode>;
   s: string;
 begin
-  RegisterRecordJsonProc(TypeInfo(TPerson), @TPerson.WriteJson);
+  RegisterRecordStoreProc(TypeInfo(TPerson), @TPerson.WriteJson);
   RegisterRecordFields(TypeInfo(TMember), ['memberId', 'meta', 'person', 'registerDate', 'friends', 'groups']);
   RegisterRecordFields(TypeInfo(TCommunity), ['name', 'slogan', 'groupList', 'memberList']);
 
@@ -192,6 +192,6 @@ begin
   if not n.Instance.Parse(s) then
     WriteLn('Oops, something went wrong :(')
   else
-    WriteLn(n.Instance.FormatJson([jfoEgyptBrace]));
+    WriteLn(n.Instance.FormatJson([jfoEgyptBrace])); readln
 end.
 
