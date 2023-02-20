@@ -1,5 +1,6 @@
 {
   the program expects uniform.txt and citylots.txt files in the same folder as the binary;
+  program uses PasDblStrUtils from: https://github.com/BeRo1985/pasdblstrutils
 }
 program s2d_bench;
 
