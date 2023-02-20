@@ -55,7 +55,7 @@ type
     function  NotNull: Boolean; inline;
     procedure LoadJson(aNode: TJsonNode);
     procedure LoadJson(const aJson: string);
-    procedure LoadFromStream(aStream: TStream; aSkipBom: Boolean = False; BufSize: SizeInt = DEF_BUF_SIZE;
+    procedure LoadFromStream(aStream: TStream; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                              aMaxDepth: SizeInt = DEF_DEPTH);
     procedure LoadFromFile(const aFileName: string; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                            aMaxDepth: SizeInt = DEF_DEPTH);
