@@ -26,10 +26,6 @@ interface
 uses
   Classes, SysUtils, lgUtils, lgVector, lgHashMap, lgJson;
 
-const
-  DEFAULT_DEPTH    = TJsonReader.DEF_DEPTH;
-  DEFAULT_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
-
 type
 
   EJtdReadJson = class(Exception);
@@ -39,6 +35,10 @@ type
   TJtdEntityClass = class of TJtdEntity;
 
   TJtdEntity = class abstract
+  public
+  const
+    DEF_DEPTH    = TJsonReader.DEF_DEPTH;
+    DEF_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
   protected
     procedure DoReadJson(aNode: TJsonNode); virtual; abstract;
     procedure DoReadJson(aReader: TJsonReader); virtual; abstract;
@@ -55,10 +55,10 @@ type
     function  NotNull: Boolean; inline;
     procedure LoadJson(aNode: TJsonNode);
     procedure LoadJson(const aJson: string);
-    procedure LoadFromStream(aStream: TStream; aSkipBom: Boolean = False;
-      aBufSize: SizeInt = DEFAULT_BUF_SIZE; aMaxDepth: SizeInt = DEFAULT_DEPTH);
-    procedure LoadFromFile(const aFileName: string; aSkipBom: Boolean = False;
-      aBufSize: SizeInt = DEFAULT_BUF_SIZE; aMaxDepth: SizeInt = DEFAULT_DEPTH);
+    procedure LoadFromStream(aStream: TStream; aSkipBom: Boolean = False; BufSize: SizeInt = DEF_BUF_SIZE;
+                             aMaxDepth: SizeInt = DEF_DEPTH);
+    procedure LoadFromFile(const aFileName: string; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
+                           aMaxDepth: SizeInt = DEF_DEPTH);
     procedure WriteJson(aWriter: TJsonStrWriter);
     function  AsJson: string;
   end;
