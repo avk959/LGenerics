@@ -26,6 +26,10 @@ interface
 uses
   Classes, SysUtils, lgUtils, lgVector, lgHashMap, lgJson;
 
+const
+  DEFAULT_DEPTH    = TJsonReader.DEF_DEPTH;
+  DEFAULT_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
+
 type
 
   EJtdReadJson = class(Exception);
@@ -51,8 +55,10 @@ type
     function  NotNull: Boolean; inline;
     procedure LoadJson(aNode: TJsonNode);
     procedure LoadJson(const aJson: string);
-    procedure LoadFromStream(aStream: TStream);
-    procedure LoadFromFile(const aFileName: string);
+    procedure LoadFromStream(aStream: TStream; aSkipBom: Boolean = False;
+      aBufSize: SizeInt = DEFAULT_BUF_SIZE; aMaxDepth: SizeInt = DEFAULT_DEPTH);
+    procedure LoadFromFile(const aFileName: string; aSkipBom: Boolean = False;
+      aBufSize: SizeInt = DEFAULT_BUF_SIZE; aMaxDepth: SizeInt = DEFAULT_DEPTH);
     procedure WriteJson(aWriter: TJsonStrWriter);
     function  AsJson: string;
   end;
@@ -327,11 +333,11 @@ begin
   end;
 end;
 
-procedure TJtdEntity.LoadFromStream(aStream: TStream);
+procedure TJtdEntity.LoadFromStream(aStream: TStream; aSkipBom: Boolean; aBufSize, aMaxDepth: SizeInt);
 var
   Reader: TJsonReader;
 begin
-  Reader := TJsonReader.Create(aStream);
+  Reader := TJsonReader.Create(aStream, aBufSize, aMaxDepth, aSkipBom);
   try
     if not Reader.Read then ReadError;
     DoReadJson(Reader);
@@ -340,13 +346,13 @@ begin
   end;
 end;
 
-procedure TJtdEntity.LoadFromFile(const aFileName: string);
+procedure TJtdEntity.LoadFromFile(const aFileName: string; aSkipBom: Boolean; aBufSize, aMaxDepth: SizeInt);
 var
   fs: TStream;
 begin
   fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
   try
-    LoadFromStream(fs);
+    LoadFromStream(fs, aSkipBom, aBufSize, aMaxDepth);
   finally
     fs.Free;
   end;
