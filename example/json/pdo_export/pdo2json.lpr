@@ -192,6 +192,6 @@ begin
   if not n.Instance.Parse(s) then
     WriteLn('Oops, something went wrong :(')
   else
-    WriteLn(n.Instance.FormatJson([jfoEgyptBrace])); readln
+    WriteLn(n.Instance.FormatJson([jfoEgyptBrace]));
 end.
 
