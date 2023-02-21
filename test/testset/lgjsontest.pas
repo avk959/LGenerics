@@ -981,14 +981,14 @@ var
   Stream: specialize TGAutoRef<TStringStream>;
 begin
   s := #$EF#$BB#$BF + TestJson;
-  AssertTrue(TJsonNode.ValidJson(s, 10, True));
+  AssertTrue(TJsonNode.ValidJson(s, True));
   {%H-}Stream.Instance := TStringStream.Create(s);
   Stream.Instance.Position := 0;
-  AssertTrue(TJsonNode.ValidJson(Stream.Instance, 10, True));
-  AssertTrue(TJsonNode.TryParse(s, o, 10, True));
+  AssertTrue(TJsonNode.ValidJson(Stream.Instance, True));
+  AssertTrue(TJsonNode.TryParse(s, o, True));
   o.Free;
   Stream.Instance.Position := 0;
-  AssertTrue(TJsonNode.TryParse(Stream.Instance, o, 10, True));
+  AssertTrue(TJsonNode.TryParse(Stream.Instance, o, True));
   o.Free;
 end;
 
