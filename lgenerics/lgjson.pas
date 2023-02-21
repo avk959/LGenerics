@@ -446,14 +446,12 @@ type
   { checks if the content is well-formed JSON; aDepth indicates the maximum allowable
     nesting depth of structures; if aSkipBom is set to True then UTF-8 BOM(and only that)
     will be ignored }
-    class function ValidJson(const s: string; aDepth: Integer = DEF_DEPTH;
-                             aSkipBom: Boolean = False): Boolean; static;
-    class function ValidJson(aStream: TStream; aDepth: Integer = DEF_DEPTH;
-                             aSkipBom: Boolean = False): Boolean; static;
-    class function ValidJson(aStream: TStream; aCount: SizeInt; aDepth: Integer = DEF_DEPTH;
-                             aSkipBom: Boolean = False): Boolean; static;
-    class function ValidJsonFile(const aFileName: string; aDepth: Integer = DEF_DEPTH;
-                                 aSkipBom: Boolean = False): Boolean; static;
+    class function ValidJson(const s: string; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
+    class function ValidJson(aStream: TStream; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
+    class function ValidJson(aStream: TStream; aCount: SizeInt; aSkipBom: Boolean = False;
+                             aDepth: Integer = DEF_DEPTH): Boolean; static;
+    class function ValidJsonFile(const aFileName: string; aSkipBom: Boolean = False;
+                                 aDepth: Integer = DEF_DEPTH): Boolean; static;
   { checks if s represents a valid JSON string }
     class function JsonStringValid(const s: string): Boolean; static;
   { checks if s represents a valid JSON number }
@@ -462,24 +460,22 @@ type
   { returns the parsing result; if the result is True, then the created
     object is returned in the aRoot parameter, otherwise nil is returned }
     class function TryParse(const s: string; out aRoot: TJsonNode;
-                            aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+                            aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
     class function TryParse(aStream: TStream; out aRoot: TJsonNode;
-                            aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+                            aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
     class function TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
-                            aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+                            aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
   { note: the responsibility for the existence of the file lies with the user }
     class function TryParseFile(const aFileName: string; out aRoot: TJsonNode;
-                            aDepth: Integer = DEF_DEPTH; aSkipBom: Boolean = False): Boolean; static;
+                            aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
   { returns the document root node if parsing is successful, nil otherwise }
-    class function Load(const s: string; aDepth: Integer = DEF_DEPTH;
-                        aSkipBom: Boolean = False): TJsonNode; static;
-    class function Load(aStream: TStream; aDepth: Integer = DEF_DEPTH;
-                        aSkipBom: Boolean = False): TJsonNode; static;
-    class function Load(aStream: TStream; aCount: SizeInt; aDepth: Integer = DEF_DEPTH;
-                        aSkipBom: Boolean = False): TJsonNode; static;
+    class function Load(const s: string; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
+    class function Load(aStream: TStream; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
+    class function Load(aStream: TStream; aCount: SizeInt; aSkipBom: Boolean = False;
+                        aDepth: Integer = DEF_DEPTH): TJsonNode; static;
   { note: the responsibility for the existence of the file lies with the user }
-    class function LoadFromFile(const aFileName: string; aDepth: Integer = DEF_DEPTH;
-                               aSkipBom: Boolean = False): TJsonNode; static;
+    class function LoadFromFile(const aFileName: string; aSkipBom: Boolean = False;
+                                aDepth: Integer = DEF_DEPTH): TJsonNode; static;
   { converts a pascal string to a JSON string }
     class function PasStrToJson(const s: string): string; static;
   { converts a pascal string to a JSON string, all code points except [#32...#127]
@@ -3887,7 +3883,7 @@ begin
   Result := specialize TGEnumCursor<TVisitNode>.Create(TNodeEnumerator.Create(Self));
 end;
 
-class function TJsonNode.ValidJson(const s: string; aDepth: Integer; aSkipBom: Boolean): Boolean;
+class function TJsonNode.ValidJson(const s: string; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseMode;
   DynStack: array of TParseMode = nil;
@@ -3918,7 +3914,7 @@ begin
     end;
 end;
 
-class function TJsonNode.ValidJson(aStream: TStream; aDepth: Integer; aSkipBom: Boolean): Boolean;
+class function TJsonNode.ValidJson(aStream: TStream; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseMode;
   DynStack: array of TParseMode = nil;
@@ -3933,8 +3929,7 @@ begin
     end;
 end;
 
-class function TJsonNode.ValidJson(aStream: TStream; aCount: SizeInt; aDepth: Integer;
-  aSkipBom: Boolean): Boolean;
+class function TJsonNode.ValidJson(aStream: TStream; aCount: SizeInt; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   s: string;
 begin
@@ -3945,17 +3940,16 @@ begin
     finally
       Free;
     end;
-  Result := ValidJson(s, aDepth, aSkipBom);
+  Result := ValidJson(s, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.ValidJsonFile(const aFileName: string; aDepth: Integer;
-  aSkipBom: Boolean): Boolean;
+class function TJsonNode.ValidJsonFile(const aFileName: string; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   fs: TFileStream;
 begin
   fs := TFileStream.Create(aFileName, fmOpenRead);
   try
-    Result := ValidJson(fs, aDepth, aSkipBom);
+    Result := ValidJson(fs, aSkipBom, aDepth);
   finally
     fs.Free;
   end;
@@ -4013,8 +4007,7 @@ begin
   Mode := aMode;
 end;
 
-class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aDepth: Integer;
-  aSkipBom: Boolean): Boolean;
+class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseNode;
   DynStack: array of TParseNode = nil;
@@ -4055,18 +4048,17 @@ begin
     FreeAndNil(aRoot);
 end;
 
-class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aDepth: Integer;
-  aSkipBom: Boolean): Boolean;
+class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
   System.SetLength(s, aStream.Size - aStream.Position);
   aStream.ReadBuffer(Pointer(s)^, System.Length(s));
-  Result := TryParse(s, aRoot, aDepth, aSkipBom);
+  Result := TryParse(s, aRoot, aSkipBom, aDepth);
 end;
 
 class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
-  aDepth: Integer; aSkipBom: Boolean): Boolean;
+  aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
@@ -4077,11 +4069,11 @@ begin
     finally
       Free;
     end;
-  Result := TryParse(s, aRoot, aDepth, aSkipBom);
+  Result := TryParse(s, aRoot, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode;
-  aDepth: Integer; aSkipBom: Boolean): Boolean;
+class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
@@ -4092,27 +4084,27 @@ begin
     finally
       Free;
     end;
-  Result := TryParse(s, aRoot, aDepth, aSkipBom);
+  Result := TryParse(s, aRoot, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.Load(const s: string; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+class function TJsonNode.Load(const s: string; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
 begin
-  TryParse(s, Result, aDepth, aSkipBom);
+  TryParse(s, Result, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.Load(aStream: TStream; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+class function TJsonNode.Load(aStream: TStream; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
 begin
-  TryParse(aStream, Result, aDepth, aSkipBom);
+  TryParse(aStream, Result, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.Load(aStream: TStream; aCount: SizeInt; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+class function TJsonNode.Load(aStream: TStream; aCount: SizeInt; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
 begin
-  TryParse(aStream, aCount, Result, aDepth, aSkipBom);
+  TryParse(aStream, aCount, Result, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.LoadFromFile(const aFileName: string; aDepth: Integer; aSkipBom: Boolean): TJsonNode;
+class function TJsonNode.LoadFromFile(const aFileName: string; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
 begin
-  TryParseFile(aFileName, Result, aDepth, aSkipBom);
+  TryParseFile(aFileName, Result, aSkipBom, aDepth);
 end;
 
 class function TJsonNode.PasStrToJson(const s: string): string;
