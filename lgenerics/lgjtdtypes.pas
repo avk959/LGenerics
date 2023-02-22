@@ -242,15 +242,23 @@ type
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+  { enumerates all pairs (aKey, aValue) }
     function  GetEnumerator: TJtdMapEnumerator; inline;
+  { enumerates all keys }
     function  Keys: TJtdMapKeys; inline;
+  { enumerates all values }
     function  Values: TJtdMapValues; inline;
     procedure Clear; override;
     function  Contains(const aKey: string): Boolean; inline;
+  { returns True and adds the (aKey, aValue) pair only if the instance does not contain aKey }
     function  Add(const aKey: string; aValue: T): Boolean; inline;
     procedure AddOrSetValue(const aKey: string; aValue: T);
+  { returns True and aValue mapped to aKey if contains aKey,
+    False otherwise, in this case aValue is undefined }
     function  TryGetValue(const aKey: string; out aValue: T): Boolean; inline;
     function  Remove(const aKey: string): Boolean;
+  { GetItem getter returns nil if aKey is not present in the instance, which is the same
+    as when aKey is present but the value is null; be careful }
     property  Items[const aKey: string]: T read GetItem write AddOrSetValue; default;
   end;
 
