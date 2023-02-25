@@ -1083,7 +1083,7 @@ type
     class function IsScalarToken(aToken: TTokenKind): Boolean; static; inline;
     constructor Create(aStream: TStream; aBufSize: SizeInt = DEF_BUF_SIZE;
                        aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
-    constructor Create(aBuffer: PChar; aCount: SizeInt;  aMaxDepth: SizeInt = DEF_DEPTH;
+    constructor Create(aBuffer: PChar; aCount: SizeInt; aMaxDepth: SizeInt = DEF_DEPTH;
                        aSkipBom: Boolean = False);
     destructor Destroy; override;
   { reads the next token from the stream, returns False if an error is encountered or the end
@@ -1562,7 +1562,7 @@ const
   The state transition table takes the current state and the current symbol,
   and returns either a new state or an action. An action is represented as a
   negative number. A JSON text is accepted if at the end of the text the
-  state is OK and if the mode is MODE_DONE.
+  state is OK and if the mode is pmNone.
 
              white                                      1-9                                   ABCDF  etc
          space |  {  }  [  ]  :  ,  "  \  /  +  -  .  0  |  a  b  c  d  e  f  l  n  r  s  t  u  |  E  | }
@@ -5572,10 +5572,11 @@ var
     else
     end;
   end;
-  procedure AppendComma; inline;
+  procedure AppendComma(aMultiLine: Boolean = False); inline;
   begin
     sb.Append(chComma);
-    sb.Append(chSpace, aStyle.IndentAfterComma);
+    if not aMultiline then
+      sb.Append(chSpace, aStyle.IndentAfterComma);
   end;
   procedure AppendKey(const aKey: string; aValue: TJsonNode = nil); inline;
   begin
@@ -5609,7 +5610,7 @@ var
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine and CanOneLine(aNode.Items[I]));
               DoFormat(aNode.Items[I], aPos + aStyle.IndentSize);
-              if I < Last then AppendComma;
+              if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
             sb.Append(chClosSqrBr);
@@ -5627,7 +5628,7 @@ var
               p := aNode.Pairs[I];
               AppendKey(p.Key);
               DoFormat(p.Value, aPos + aStyle.IndentSize);
-              if I < Last then AppendComma;
+              if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
             sb.Append(chClosCurBr);
@@ -5654,10 +5655,7 @@ var
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine);
               FormatBsd(aNode.Items[I], aPos + aStyle.IndentSize, False);
-              if I < Last then begin
-                sb.Append(chComma);
-                if not MultiLine then sb.Append(chSpace, aStyle.IndentAfterComma);
-              end;
+              if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
             sb.Append(chClosSqrBr);
@@ -5673,10 +5671,7 @@ var
               p := aNode.Pairs[I];
               AppendKey(p.Key, p.Value);
               FormatBsd(p.Value, aPos + aStyle.IndentSize, True);
-              if I < Last then begin
-                sb.Append(chComma);
-                if not MultiLine then sb.Append(chSpace, aStyle.IndentAfterComma);
-              end;
+              if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
             sb.Append(chClosCurBr);
