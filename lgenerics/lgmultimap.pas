@@ -323,7 +323,7 @@ type
     IValueEnumerable = specialize IGEnumerable<TValue>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    TValueArray      = specialize TGArray<TKey>;
+    TValueArray      = specialize TGArray<TValue>;
 
   private
   type
