@@ -125,7 +125,7 @@ resourcestring
   SESchemaNotObjectFmt       = 'JTD schema must be an object, but got "%s"';
   SEJtdRefNotStrFmt          = 'Ref form must be a string, but got "%s"';
   SEJtdEnumNotArrayFmt       = 'Enum form must be an array, but got "%s"';
-  SEEnumMustNotEmpty         = 'Enum must not be empty';
+  SEEnumMustNotEmpty         = 'Enum must be non-empty';
   SEEnumElemNotStrFmt        = 'Enum''s elements must be a string, but got "%s"';
   SEPropsNotObjectFmt        = 'Properties form must be an object, but got "%s"';
   SEAddtPropsNotBoolFmt      = 'AdditionalProperties must be a boolean, but got "%s"';
