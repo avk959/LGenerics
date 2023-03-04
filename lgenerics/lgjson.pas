@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSON parser and utilites that try to follow RFC 8259.                   *
 *                                                                           *
-*   Copyright(c) 2020-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2020-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -4203,6 +4203,7 @@ class function TJsonNode.DupeNamesFree(aNode: TJsonNode): Boolean;
   var
     I: SizeInt;
   begin
+    if aNode.Kind = jvkUnknown then exit(False);
     if aNode.Count > 0 then
       case aNode.Kind of
         jvkArray:
