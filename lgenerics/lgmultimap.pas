@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic multimap implementations.                                       *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1478,6 +1478,7 @@ function TGLiteHashMultiMap.FindFirst(const aKey: TKey; out aData: TSearchData):
 var
   Pos: TSearchResult;
 begin
+  if IsEmpty then exit(False);
   aData.Key := aKey;
   aData.Hash := TKeyEqRel.HashCode(aKey);
   Result := DoFind(aKey, aData.Hash, Pos);
@@ -1495,6 +1496,7 @@ end;
 
 function TGLiteHashMultiMap.FindNext(var aData: TSearchData): Boolean;
 begin
+  if IsEmpty then exit(False);
   while aData.Next >= 0 do
     begin
       aData.Index := aData.Next;
