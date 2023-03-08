@@ -481,6 +481,9 @@ begin
     for v in m.Instance[k] do
       Inc(I);
   AssertTrue(I = 0);
+  for v in m.Instance['a'] do
+    Inc(I);
+  AssertTrue(I = 0);
   m.Instance.AddAll(Array12);
   I := 0;
   for k in m.Instance.Keys do
@@ -838,6 +841,9 @@ begin
   for k in m.Instance.Keys do
     for v in m.Instance[k] do
       Inc(I);
+  AssertTrue(I = 0);
+  for v in m.Instance['a'] do
+    Inc(I);
   AssertTrue(I = 0);
   m.Instance.AddAll(Array12);
   I := 0;
@@ -1208,6 +1214,9 @@ begin
     for v in m.Instance[k] do
       Inc(I);
   AssertTrue(I = 0);
+  for v in m.Instance['a'] do
+    Inc(I);
+  AssertTrue(I = 0);
   m.Instance.AddAll(Array12);
   I := 0;
   for k in m.Instance.Keys do
@@ -1381,6 +1390,9 @@ begin
   for k in m.Keys do
     for v in m[k] do
       Inc(I);
+  AssertTrue(I = 0);
+  for v in m['a'] do
+    Inc(I);
   AssertTrue(I = 0);
   m.AddAll(Array12);
   I := 0;
