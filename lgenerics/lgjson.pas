@@ -441,6 +441,7 @@ type
       FNode: TJsonNode;
     public
       function GetEnumerator: TNameEnumerator;
+      function ToArray: TStringArray;
     end;
 
   { checks if the content is well-formed JSON; aDepth indicates the maximum allowable
@@ -4486,6 +4487,22 @@ function TJsonNode.TNames.GetEnumerator: TNameEnumerator;
 begin
   Result.FNode := FNode;
   Result.FCurrIndex := NULL_INDEX;
+end;
+
+function TJsonNode.TNames.ToArray: TStringArray;
+var
+  I: SizeInt = 0;
+begin
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with GetEnumerator do
+    while MoveNext do
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I + I);
+        Result[I] := Current;
+        Inc(I);
+      end;
+  System.SetLength(Result, I);
 end;
 
 procedure TJsonNode.Clear;
