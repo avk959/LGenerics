@@ -132,6 +132,7 @@
   - JSON Type Definition schemas(unit lgJsonTypeDef)
     + validating a JSON document against a JTD schema(unit lgJsonTypeDef)
     + generating Pascal code from a JTD schema(unit lgJtdCodegen)
+    + inferring JTD schemas from example data(lgJtdInfer)
   - CSV document processing(unit lgCsvUtils)
   - Eisel-Lemire fast string-to-double conversion algorithm(unit lgJson)
   - Ryū double-to-string conversion algorithm(unit lgJson)
