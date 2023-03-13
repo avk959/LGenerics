@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="5"/>
-    <Files Count="44">
+    <Files Count="45">
       <Item1>
         <Filename Value="lgabstractcontainer.pas"/>
         <UnitName Value="lgAbstractContainer"/>
@@ -209,6 +209,10 @@
         <Filename Value="lgjtdtypes.pas"/>
         <UnitName Value="lgJtdTypes"/>
       </Item44>
+      <Item45>
+        <Filename Value="lgjtdinfer.pas"/>
+        <UnitName Value="lgJtdInfer"/>
+      </Item45>
     </Files>
     <CompatibilityMode Value="True"/>
     <UsageOptions>
