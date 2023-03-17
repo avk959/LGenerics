@@ -14,7 +14,6 @@ object frmInferDlg: TfrmInferDlg
   OnDestroy = FormDestroy
   OnShow = FormShow
   ShowHint = True
-  LCLVersion = '2.3.0.0'
   object pnTop: TPanel
     Left = 0
     Height = 388
@@ -193,7 +192,6 @@ object frmInferDlg: TfrmInferDlg
           Title.Caption = 'Path'
           Width = 167
         end>
-      FadeUnfocusedSelection = True
       FixedCols = 0
       Flat = True
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goColSizing, goEditing, goAutoAddRows, goAlwaysShowEditor, goColSpanning, goDblClickAutoSize, goSmoothScroll, goFixedColSizing, goCellHints, goCellEllipsis, goAutoAddRowsSkipContentCheck, goRowHighlight]
