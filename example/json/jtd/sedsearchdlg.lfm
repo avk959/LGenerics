@@ -1,0 +1,144 @@
+object frmSearchDlg: TfrmSearchDlg
+  Left = 628
+  Height = 282
+  Top = 165
+  Width = 398
+  BorderIcons = [biSystemMenu]
+  ClientHeight = 282
+  ClientWidth = 398
+  Color = clBtnFace
+  DesignTimePPI = 115
+  Font.Color = clWindowText
+  Font.Height = -14
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  OnShow = FormShow
+  object Label1: TLabel
+    Left = 10
+    Height = 19
+    Top = 14
+    Width = 64
+    Caption = '&Search for:'
+    Color = clDefault
+    ParentColor = False
+  end
+  object cbSearchText: TComboBox
+    Left = 112
+    Height = 27
+    Top = 10
+    Width = 276
+    Anchors = [akTop, akRight]
+    ItemHeight = 19
+    TabOrder = 0
+  end
+  object gbSearchOptions: TGroupBox
+    Left = 8
+    Height = 176
+    Top = 48
+    Width = 184
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Caption = 'Options'
+    ChildSizing.LeftRightSpacing = 6
+    ChildSizing.TopBottomSpacing = 6
+    ChildSizing.HorizontalSpacing = 6
+    ChildSizing.VerticalSpacing = 6
+    ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+    ChildSizing.EnlargeVertical = crsHomogenousChildResize
+    ChildSizing.Layout = cclLeftToRightThenTopToBottom
+    ChildSizing.ControlsPerLine = 1
+    ClientHeight = 152
+    ClientWidth = 180
+    TabOrder = 1
+    TabStop = True
+    object cbSearchCaseSensitive: TCheckBox
+      Left = 6
+      Height = 24
+      Top = 6
+      Width = 168
+      Caption = 'Case sensitivity'
+      TabOrder = 0
+    end
+    object cbSearchWholeWords: TCheckBox
+      Left = 6
+      Height = 23
+      Top = 36
+      Width = 168
+      Caption = 'Whole words only'
+      TabOrder = 1
+    end
+    object cbSearchFromCursor: TCheckBox
+      Left = 6
+      Height = 23
+      Top = 65
+      Width = 168
+      Caption = 'Search from caret'
+      TabOrder = 2
+    end
+    object cbSearchSelectedOnly: TCheckBox
+      Left = 6
+      Height = 23
+      Top = 94
+      Width = 168
+      Caption = 'Selected text only'
+      TabOrder = 3
+    end
+    object cbRegularExpression: TCheckBox
+      Left = 6
+      Height = 23
+      Top = 123
+      Width = 168
+      Caption = 'Regular expression'
+      TabOrder = 4
+    end
+  end
+  object rgSearchDirection: TRadioGroup
+    Left = 204
+    Height = 88
+    Top = 48
+    Width = 184
+    Anchors = [akTop, akRight, akBottom]
+    AutoFill = True
+    Caption = 'Direction'
+    ChildSizing.LeftRightSpacing = 6
+    ChildSizing.TopBottomSpacing = 6
+    ChildSizing.HorizontalSpacing = 6
+    ChildSizing.VerticalSpacing = 6
+    ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+    ChildSizing.EnlargeVertical = crsHomogenousChildResize
+    ChildSizing.ShrinkHorizontal = crsScaleChilds
+    ChildSizing.ShrinkVertical = crsScaleChilds
+    ChildSizing.Layout = cclLeftToRightThenTopToBottom
+    ChildSizing.ControlsPerLine = 1
+    ClientHeight = 64
+    ClientWidth = 180
+    ItemIndex = 0
+    Items.Strings = (
+      'Forward'
+      'Backward'
+    )
+    TabOrder = 2
+  end
+  object btnOK: TButton
+    Left = 188
+    Height = 28
+    Top = 244
+    Width = 90
+    Anchors = [akRight, akBottom]
+    Caption = 'OK'
+    Default = True
+    ModalResult = 1
+    TabOrder = 3
+  end
+  object btnCancel: TButton
+    Left = 296
+    Height = 28
+    Top = 244
+    Width = 90
+    Anchors = [akRight, akBottom]
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 4
+  end
+end

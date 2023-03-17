@@ -1,0 +1,313 @@
+object frmInferDlg: TfrmInferDlg
+  Left = 367
+  Height = 684
+  Top = 250
+  Width = 669
+  BorderIcons = [biSystemMenu]
+  Caption = 'frmInferDlg'
+  ClientHeight = 684
+  ClientWidth = 669
+  DesignTimePPI = 115
+  Font.Height = -14
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  ShowHint = True
+  LCLVersion = '2.3.0.0'
+  object pnTop: TPanel
+    Left = 0
+    Height = 388
+    Top = 0
+    Width = 669
+    Align = alTop
+    ClientHeight = 388
+    ClientWidth = 669
+    TabOrder = 0
+    object Splitter1: TSplitter
+      Left = 205
+      Height = 386
+      Top = 1
+      Width = 6
+    end
+    object pnTopLeft: TPanel
+      Left = 1
+      Height = 386
+      Top = 1
+      Width = 204
+      Align = alLeft
+      BevelOuter = bvNone
+      ClientHeight = 386
+      ClientWidth = 204
+      TabOrder = 1
+      object tbSelectItemsCmd: TToolBar
+        Left = 0
+        Height = 31
+        Top = 355
+        Width = 204
+        Align = alBottom
+        EdgeBorders = []
+        Images = frmMain.ilSampleTrees
+        TabOrder = 0
+        object ToolButton1: TToolButton
+          Left = 1
+          Top = 0
+          Action = acAddSamples
+        end
+        object ToolButton2: TToolButton
+          Left = 29
+          Top = 0
+          Action = acDeleteSample
+        end
+      end
+      object lbxSamples: TListBox
+        Left = 0
+        Height = 355
+        Hint = 'Sample list'
+        Top = 0
+        Width = 204
+        Align = alClient
+        ItemHeight = 0
+        OnSelectionChange = lbxSamplesSelectionChange
+        TabOrder = 1
+      end
+    end
+    object pnTopRight: TPanel
+      Left = 211
+      Height = 386
+      Top = 1
+      Width = 457
+      Align = alClient
+      BevelOuter = bvNone
+      ClientHeight = 386
+      ClientWidth = 457
+      TabOrder = 2
+      object pnCurrPath: TPanel
+        Left = 0
+        Height = 28
+        Hint = 'Current path|Current path in the sample; double click will copy the path to the clipboard'
+        Top = 358
+        Width = 457
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 0
+        OnDblClick = pnCurrPathDblClick
+      end
+      object tvSampleStruct: TTreeView
+        Left = 0
+        Height = 358
+        Top = 0
+        Width = 457
+        Align = alClient
+        AutoExpand = True
+        HideSelection = False
+        Images = frmMain.ilSampleTrees
+        Indent = 28
+        PopupMenu = ppmTree
+        ReadOnly = True
+        SeparatorColor = clSilver
+        TabOrder = 1
+        OnSelectionChanged = tvSampleStructSelectionChanged
+        Options = [tvoAutoExpand, tvoAutoItemHeight, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+        TreeLineColor = clSilver
+        TreeLinePenStyle = psSolid
+      end
+    end
+  end
+  object Splitter2: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 5
+    Top = 388
+    Width = 669
+    Align = alTop
+    ResizeAnchor = akTop
+  end
+  object pnBottom: TPanel
+    Left = 0
+    Height = 291
+    Top = 393
+    Width = 669
+    Align = alClient
+    ClientHeight = 291
+    ClientWidth = 669
+    TabOrder = 2
+    object Label1: TLabel
+      Left = 300
+      Height = 19
+      Top = 10
+      Width = 47
+      Anchors = [akTop]
+      Caption = 'Hint list'
+    end
+    object sgHints: TStringGrid
+      Left = 0
+      Height = 208
+      Top = 40
+      Width = 669
+      AlternateColor = 15724527
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      AutoFillColumns = True
+      ColCount = 4
+      Columns = <      
+        item
+          ButtonStyle = cbsPickList
+          PickList.Strings = (
+            'Default Number Type'
+            'Enumeration'
+            'Map'
+            'Discriminator'
+            'Additional Properties Allowed'
+            'Nullable'
+          )
+          SizePriority = 0
+          Title.Alignment = taCenter
+          Title.Caption = 'Hint kind'
+          Width = 167
+        end      
+        item
+          ButtonStyle = cbsPickList
+          PickList.Strings = (
+            'Int8'
+            'UInt8'
+            'Int16'
+            'UInt16'
+            'Int32'
+            'UInt32'
+            'Float32'
+            'Float64'
+          )
+          SizePriority = 0
+          Title.Alignment = taCenter
+          Title.Caption = 'Number type'
+          Width = 167
+        end      
+        item
+          SizePriority = 0
+          Title.Alignment = taCenter
+          Title.Caption = 'Item list'
+          Width = 167
+        end      
+        item
+          Title.Alignment = taCenter
+          Title.Caption = 'Path'
+          Width = 167
+        end>
+      FadeUnfocusedSelection = True
+      FixedCols = 0
+      Flat = True
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goColSizing, goEditing, goAutoAddRows, goAlwaysShowEditor, goColSpanning, goDblClickAutoSize, goSmoothScroll, goFixedColSizing, goCellHints, goCellEllipsis, goAutoAddRowsSkipContentCheck, goRowHighlight]
+      RowCount = 2
+      TabOrder = 0
+      TitleStyle = tsNative
+      UseXORFeatures = True
+      OnGetCellHint = sgHintsGetCellHint
+      ColWidths = (
+        167
+        167
+        167
+        167
+      )
+    end
+    object btOk: TButton
+      Left = 472
+      Height = 30
+      Top = 254
+      Width = 90
+      Anchors = [akRight, akBottom]
+      Caption = 'Ok'
+      Default = True
+      ModalResult = 1
+      TabOrder = 1
+    end
+    object btCancel: TButton
+      Left = 572
+      Height = 30
+      Top = 254
+      Width = 90
+      Anchors = [akRight, akBottom]
+      Cancel = True
+      Caption = 'Cancel'
+      ModalResult = 2
+      TabOrder = 2
+    end
+  end
+  object OdSamples: TOpenDialog
+    Title = 'Select JSON samples'
+    DefaultExt = '.json'
+    Filter = 'JSON files|*.json|Any files|*.*'
+    FilterIndex = 0
+    Options = [ofAllowMultiSelect, ofPathMustExist, ofFileMustExist, ofNoNetworkButton, ofEnableSizing, ofViewDetail]
+    Left = 568
+    Top = 300
+  end
+  object alInferActions: TActionList
+    Images = frmMain.ilSampleTrees
+    Left = 356
+    Top = 296
+    object acAddSamples: TAction
+      Category = 'File'
+      Caption = 'Add samples...'
+      Hint = 'Add more samples'
+      ImageIndex = 7
+      OnExecute = acAddSamplesExecute
+      ShortCut = 16429
+    end
+    object acDeleteSample: TAction
+      Category = 'File'
+      Caption = 'Delete sample'
+      Hint = 'Delete selected sample'
+      ImageIndex = 8
+      OnExecute = acDeleteSampleExecute
+      OnUpdate = acDeleteSampleUpdate
+      ShortCut = 16430
+    end
+    object acNodeExpand: TAction
+      Category = 'Tree'
+      Caption = 'Expand'
+      ImageIndex = 16
+      OnExecute = acNodeExpandExecute
+      OnUpdate = acNodeExpandUpdate
+      ShortCut = 24645
+    end
+    object acNodeCollapse: TAction
+      Category = 'Tree'
+      Caption = 'Collapse'
+      ImageIndex = 17
+      OnExecute = acNodeCollapseExecute
+      OnUpdate = acNodeCollapseUpdate
+      ShortCut = 24643
+    end
+    object acCopyPath: TAction
+      Category = 'Tree'
+      Caption = 'Copy path'
+      ImageIndex = 18
+      OnExecute = acCopyPathExecute
+      OnUpdate = acCopyPathUpdate
+      ShortCut = 49219
+    end
+    object acDeleteRow: TAction
+      Category = 'Grid'
+      Caption = 'Delete row'
+      OnExecute = acDeleteRowExecute
+      ShortCut = 24622
+    end
+  end
+  object ppmTree: TPopupMenu
+    Images = frmMain.ilSampleTrees
+    Left = 464
+    Top = 300
+    object ppmExpand: TMenuItem
+      Action = acNodeExpand
+    end
+    object MenuItem1: TMenuItem
+      Action = acNodeCollapse
+    end
+    object Separator1: TMenuItem
+      Caption = '-'
+    end
+    object ppmCopyPath: TMenuItem
+      Action = acCopyPath
+    end
+  end
+end

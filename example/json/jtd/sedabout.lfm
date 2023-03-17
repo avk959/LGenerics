@@ -1,0 +1,63 @@
+object frmAbout: TfrmAbout
+  Left = 367
+  Height = 197
+  Top = 250
+  Width = 276
+  AlphaBlend = True
+  BorderIcons = [biSystemMenu]
+  Caption = 'frmAbout'
+  ClientHeight = 197
+  ClientWidth = 276
+  DesignTimePPI = 115
+  Font.Height = -14
+  OnClick = FormClick
+  OnCreate = FormCreate
+  Position = poMainFormCenter
+  object Label1: TLabel
+    Left = 8
+    Height = 102
+    Top = 8
+    Width = 258
+    Alignment = taCenter
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    AutoSize = False
+    Caption = 'Toy JTD schema editor just for testing JSON Typedef functionality.'#13#10#13#10'Most of the app icons came with Lazarus Icon Collection.'
+    Font.Height = -14
+    ParentFont = False
+    ShowAccelChar = False
+    WordWrap = True
+    OnClick = FormClick
+  end
+  object Label2: TLabel
+    AnchorSideLeft.Control = btClose
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = Label1
+    AnchorSideTop.Side = asrBottom
+    Left = 44
+    Height = 19
+    Top = 122
+    Width = 184
+    Alignment = taCenter
+    Anchors = [akBottom]
+    BorderSpacing.Top = 6
+    Caption = '[ JSON Type Definition home ]'
+    Font.Height = -14
+    ParentFont = False
+    OnClick = Label2Click
+    OnMouseEnter = Label2MouseEnter
+    OnMouseLeave = Label2MouseLeave
+  end
+  object btClose: TButton
+    AnchorSideRight.Side = asrCenter
+    Left = 92
+    Height = 30
+    Top = 158
+    Width = 90
+    Anchors = [akBottom]
+    BorderSpacing.Bottom = 6
+    Caption = 'Close'
+    Default = True
+    ModalResult = 1
+    TabOrder = 0
+  end
+end

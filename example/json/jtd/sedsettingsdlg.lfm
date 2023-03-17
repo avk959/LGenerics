@@ -1,0 +1,1386 @@
+object frmSettingsDlg: TfrmSettingsDlg
+  Left = 367
+  Height = 636
+  Top = 250
+  Width = 458
+  BorderIcons = [biSystemMenu]
+  Caption = 'Settings'
+  ClientHeight = 636
+  ClientWidth = 458
+  DesignTimePPI = 115
+  Font.Height = -14
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  ShowHint = True
+  object pnButtons: TPanel
+    Left = 0
+    Height = 42
+    Top = 594
+    Width = 458
+    Align = alBottom
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 42
+    ClientWidth = 458
+    TabOrder = 0
+    object btCancel: TButton
+      Left = 362
+      Height = 30
+      Top = 6
+      Width = 90
+      Align = alRight
+      AutoSize = True
+      BorderSpacing.Around = 6
+      Caption = 'Cancel'
+      Constraints.MinHeight = 30
+      Constraints.MinWidth = 90
+      ModalResult = 2
+      TabOrder = 1
+    end
+    object btOk: TButton
+      Left = 266
+      Height = 30
+      Top = 6
+      Width = 90
+      Align = alRight
+      AutoSize = True
+      BorderSpacing.Around = 6
+      Caption = 'Ok'
+      Constraints.MinHeight = 30
+      Constraints.MinWidth = 90
+      Default = True
+      ModalResult = 1
+      TabOrder = 0
+    end
+  end
+  object pnMain: TPanel
+    Left = 0
+    Height = 594
+    Top = 0
+    Width = 458
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 594
+    ClientWidth = 458
+    TabOrder = 1
+    object pnPreview: TPanel
+      Left = 0
+      Height = 176
+      Top = 418
+      Width = 458
+      Align = alClient
+      ClientHeight = 176
+      ClientWidth = 458
+      TabOrder = 0
+      inline sePreview: TSynEdit
+        Left = 1
+        Height = 174
+        Top = 1
+        Width = 456
+        Align = alClient
+        Font.Height = -14
+        Font.Name = 'Courier New'
+        Font.Pitch = fpFixed
+        Font.Quality = fqCleartypeNatural
+        ParentColor = False
+        ParentFont = False
+        TabOrder = 0
+        TabStop = False
+        Gutter.Width = 65
+        Gutter.MouseActions = <>
+        RightGutter.Width = 0
+        RightGutter.MouseActions = <>
+        Keystrokes = <        
+          item
+            Command = ecUp
+            ShortCut = 38
+          end        
+          item
+            Command = ecSelUp
+            ShortCut = 8230
+          end        
+          item
+            Command = ecScrollUp
+            ShortCut = 16422
+          end        
+          item
+            Command = ecDown
+            ShortCut = 40
+          end        
+          item
+            Command = ecSelDown
+            ShortCut = 8232
+          end        
+          item
+            Command = ecScrollDown
+            ShortCut = 16424
+          end        
+          item
+            Command = ecLeft
+            ShortCut = 37
+          end        
+          item
+            Command = ecSelLeft
+            ShortCut = 8229
+          end        
+          item
+            Command = ecWordLeft
+            ShortCut = 16421
+          end        
+          item
+            Command = ecSelWordLeft
+            ShortCut = 24613
+          end        
+          item
+            Command = ecRight
+            ShortCut = 39
+          end        
+          item
+            Command = ecSelRight
+            ShortCut = 8231
+          end        
+          item
+            Command = ecWordRight
+            ShortCut = 16423
+          end        
+          item
+            Command = ecSelWordRight
+            ShortCut = 24615
+          end        
+          item
+            Command = ecPageDown
+            ShortCut = 34
+          end        
+          item
+            Command = ecSelPageDown
+            ShortCut = 8226
+          end        
+          item
+            Command = ecPageBottom
+            ShortCut = 16418
+          end        
+          item
+            Command = ecSelPageBottom
+            ShortCut = 24610
+          end        
+          item
+            Command = ecPageUp
+            ShortCut = 33
+          end        
+          item
+            Command = ecSelPageUp
+            ShortCut = 8225
+          end        
+          item
+            Command = ecPageTop
+            ShortCut = 16417
+          end        
+          item
+            Command = ecSelPageTop
+            ShortCut = 24609
+          end        
+          item
+            Command = ecLineStart
+            ShortCut = 36
+          end        
+          item
+            Command = ecSelLineStart
+            ShortCut = 8228
+          end        
+          item
+            Command = ecEditorTop
+            ShortCut = 16420
+          end        
+          item
+            Command = ecSelEditorTop
+            ShortCut = 24612
+          end        
+          item
+            Command = ecLineEnd
+            ShortCut = 35
+          end        
+          item
+            Command = ecSelLineEnd
+            ShortCut = 8227
+          end        
+          item
+            Command = ecEditorBottom
+            ShortCut = 16419
+          end        
+          item
+            Command = ecSelEditorBottom
+            ShortCut = 24611
+          end        
+          item
+            Command = ecToggleMode
+            ShortCut = 45
+          end        
+          item
+            Command = ecCopy
+            ShortCut = 16429
+          end        
+          item
+            Command = ecPaste
+            ShortCut = 8237
+          end        
+          item
+            Command = ecDeleteChar
+            ShortCut = 46
+          end        
+          item
+            Command = ecCut
+            ShortCut = 8238
+          end        
+          item
+            Command = ecDeleteLastChar
+            ShortCut = 8
+          end        
+          item
+            Command = ecDeleteLastChar
+            ShortCut = 8200
+          end        
+          item
+            Command = ecDeleteLastWord
+            ShortCut = 16392
+          end        
+          item
+            Command = ecUndo
+            ShortCut = 32776
+          end        
+          item
+            Command = ecRedo
+            ShortCut = 40968
+          end        
+          item
+            Command = ecLineBreak
+            ShortCut = 13
+          end        
+          item
+            Command = ecSelectAll
+            ShortCut = 16449
+          end        
+          item
+            Command = ecCopy
+            ShortCut = 16451
+          end        
+          item
+            Command = ecBlockIndent
+            ShortCut = 24649
+          end        
+          item
+            Command = ecLineBreak
+            ShortCut = 16461
+          end        
+          item
+            Command = ecInsertLine
+            ShortCut = 16462
+          end        
+          item
+            Command = ecDeleteWord
+            ShortCut = 16468
+          end        
+          item
+            Command = ecBlockUnindent
+            ShortCut = 24661
+          end        
+          item
+            Command = ecPaste
+            ShortCut = 16470
+          end        
+          item
+            Command = ecCut
+            ShortCut = 16472
+          end        
+          item
+            Command = ecDeleteLine
+            ShortCut = 16473
+          end        
+          item
+            Command = ecDeleteEOL
+            ShortCut = 24665
+          end        
+          item
+            Command = ecUndo
+            ShortCut = 16474
+          end        
+          item
+            Command = ecRedo
+            ShortCut = 24666
+          end        
+          item
+            Command = ecGotoMarker0
+            ShortCut = 16432
+          end        
+          item
+            Command = ecGotoMarker1
+            ShortCut = 16433
+          end        
+          item
+            Command = ecGotoMarker2
+            ShortCut = 16434
+          end        
+          item
+            Command = ecGotoMarker3
+            ShortCut = 16435
+          end        
+          item
+            Command = ecGotoMarker4
+            ShortCut = 16436
+          end        
+          item
+            Command = ecGotoMarker5
+            ShortCut = 16437
+          end        
+          item
+            Command = ecGotoMarker6
+            ShortCut = 16438
+          end        
+          item
+            Command = ecGotoMarker7
+            ShortCut = 16439
+          end        
+          item
+            Command = ecGotoMarker8
+            ShortCut = 16440
+          end        
+          item
+            Command = ecGotoMarker9
+            ShortCut = 16441
+          end        
+          item
+            Command = ecSetMarker0
+            ShortCut = 24624
+          end        
+          item
+            Command = ecSetMarker1
+            ShortCut = 24625
+          end        
+          item
+            Command = ecSetMarker2
+            ShortCut = 24626
+          end        
+          item
+            Command = ecSetMarker3
+            ShortCut = 24627
+          end        
+          item
+            Command = ecSetMarker4
+            ShortCut = 24628
+          end        
+          item
+            Command = ecSetMarker5
+            ShortCut = 24629
+          end        
+          item
+            Command = ecSetMarker6
+            ShortCut = 24630
+          end        
+          item
+            Command = ecSetMarker7
+            ShortCut = 24631
+          end        
+          item
+            Command = ecSetMarker8
+            ShortCut = 24632
+          end        
+          item
+            Command = ecSetMarker9
+            ShortCut = 24633
+          end        
+          item
+            Command = EcFoldLevel1
+            ShortCut = 41009
+          end        
+          item
+            Command = EcFoldLevel2
+            ShortCut = 41010
+          end        
+          item
+            Command = EcFoldLevel3
+            ShortCut = 41011
+          end        
+          item
+            Command = EcFoldLevel4
+            ShortCut = 41012
+          end        
+          item
+            Command = EcFoldLevel5
+            ShortCut = 41013
+          end        
+          item
+            Command = EcFoldLevel6
+            ShortCut = 41014
+          end        
+          item
+            Command = EcFoldLevel7
+            ShortCut = 41015
+          end        
+          item
+            Command = EcFoldLevel8
+            ShortCut = 41016
+          end        
+          item
+            Command = EcFoldLevel9
+            ShortCut = 41017
+          end        
+          item
+            Command = EcFoldLevel0
+            ShortCut = 41008
+          end        
+          item
+            Command = EcFoldCurrent
+            ShortCut = 41005
+          end        
+          item
+            Command = EcUnFoldCurrent
+            ShortCut = 41003
+          end        
+          item
+            Command = EcToggleMarkupWord
+            ShortCut = 32845
+          end        
+          item
+            Command = ecNormalSelect
+            ShortCut = 24654
+          end        
+          item
+            Command = ecColumnSelect
+            ShortCut = 24643
+          end        
+          item
+            Command = ecLineSelect
+            ShortCut = 24652
+          end        
+          item
+            Command = ecTab
+            ShortCut = 9
+          end        
+          item
+            Command = ecShiftTab
+            ShortCut = 8201
+          end        
+          item
+            Command = ecMatchBracket
+            ShortCut = 24642
+          end        
+          item
+            Command = ecColSelUp
+            ShortCut = 40998
+          end        
+          item
+            Command = ecColSelDown
+            ShortCut = 41000
+          end        
+          item
+            Command = ecColSelLeft
+            ShortCut = 40997
+          end        
+          item
+            Command = ecColSelRight
+            ShortCut = 40999
+          end        
+          item
+            Command = ecColSelPageDown
+            ShortCut = 40994
+          end        
+          item
+            Command = ecColSelPageBottom
+            ShortCut = 57378
+          end        
+          item
+            Command = ecColSelPageUp
+            ShortCut = 40993
+          end        
+          item
+            Command = ecColSelPageTop
+            ShortCut = 57377
+          end        
+          item
+            Command = ecColSelLineStart
+            ShortCut = 40996
+          end        
+          item
+            Command = ecColSelLineEnd
+            ShortCut = 40995
+          end        
+          item
+            Command = ecColSelEditorTop
+            ShortCut = 57380
+          end        
+          item
+            Command = ecColSelEditorBottom
+            ShortCut = 57379
+          end>
+        MouseActions = <>
+        MouseTextActions = <>
+        MouseSelActions = <>
+        Options = [eoBracketHighlight, eoNoCaret, eoNoSelection]
+        Options2 = []
+        VisibleSpecialChars = [vscSpace, vscTabAtLast]
+        ReadOnly = True
+        SelectedColor.BackPriority = 50
+        SelectedColor.ForePriority = 50
+        SelectedColor.FramePriority = 50
+        SelectedColor.BoldPriority = 50
+        SelectedColor.ItalicPriority = 50
+        SelectedColor.UnderlinePriority = 50
+        SelectedColor.StrikeOutPriority = 50
+        BracketHighlightStyle = sbhsBoth
+        BracketMatchColor.Background = clNone
+        BracketMatchColor.Foreground = clRed
+        BracketMatchColor.Style = [fsBold]
+        FoldedCodeColor.Background = clNone
+        FoldedCodeColor.Foreground = clGray
+        FoldedCodeColor.FrameColor = clGray
+        MouseLinkColor.Background = clNone
+        MouseLinkColor.Foreground = clBlue
+        LineHighlightColor.Background = clNone
+        LineHighlightColor.Foreground = clNone
+        OnSpecialLineColors = sePreviewSpecialLineColors
+        inline SynLeftGutterPartList1: TSynGutterPartList
+          object SynGutterMarks1: TSynGutterMarks
+            Width = 29
+            MouseActions = <>
+          end
+          object SynGutterLineNumber1: TSynGutterLineNumber
+            Width = 17
+            MouseActions = <>
+            MarkupInfo.Background = clBtnFace
+            MarkupInfo.Foreground = clNone
+            DigitCount = 2
+            ShowOnlyLineNumbersMultiplesOf = 1
+            ZeroStart = False
+            LeadingZeros = False
+          end
+          object SynGutterChanges1: TSynGutterChanges
+            Width = 5
+            MouseActions = <>
+            ModifiedColor = 59900
+            SavedColor = clGreen
+          end
+          object SynGutterSeparator1: TSynGutterSeparator
+            Width = 2
+            MouseActions = <>
+            MarkupInfo.Background = clWhite
+            MarkupInfo.Foreground = clGray
+          end
+          object SynGutterCodeFolding1: TSynGutterCodeFolding
+            Width = 12
+            MouseActions = <>
+            MarkupInfo.Background = clNone
+            MarkupInfo.Foreground = clGray
+            MouseActionsExpanded = <>
+            MouseActionsCollapsed = <>
+          end
+        end
+      end
+    end
+    object spltExample: TSplitter
+      Cursor = crVSplit
+      Left = 0
+      Height = 6
+      Top = 412
+      Width = 458
+      Align = alTop
+      ResizeAnchor = akTop
+    end
+    object pnTop: TPanel
+      Left = 0
+      Height = 412
+      Top = 0
+      Width = 458
+      Align = alTop
+      BevelOuter = bvNone
+      ClientHeight = 412
+      ClientWidth = 458
+      TabOrder = 2
+      object PageControl1: TPageControl
+        Left = 0
+        Height = 412
+        Top = 0
+        Width = 458
+        ActivePage = TabSheet1
+        Align = alClient
+        TabIndex = 0
+        TabOrder = 0
+        object TabSheet1: TTabSheet
+          Caption = 'Editor settings'
+          ClientHeight = 380
+          ClientWidth = 450
+          object GroupBox1: TGroupBox
+            Left = 4
+            Height = 249
+            Top = 12
+            Width = 439
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Font'
+            ClientHeight = 225
+            ClientWidth = 435
+            TabOrder = 0
+            object Label1: TLabel
+              Left = 8
+              Height = 19
+              Hint = 'this is hint'
+              Top = 8
+              Width = 66
+              Caption = 'Font name'
+              Color = clDefault
+              ParentColor = False
+            end
+            object Label2: TLabel
+              Left = 8
+              Height = 19
+              Top = 46
+              Width = 54
+              Caption = 'Font size'
+              Color = clDefault
+              ParentColor = False
+            end
+            object sedFontSize: TSpinEdit
+              Left = 200
+              Height = 27
+              Top = 44
+              Width = 222
+              Alignment = taRightJustify
+              Anchors = [akTop, akRight]
+              AutoSize = False
+              MaxValue = 30
+              MinValue = 4
+              OnChange = sedFontSizeChange
+              TabStop = False
+              TabOrder = 2
+              Value = 4
+            end
+            object Label3: TLabel
+              Left = 8
+              Height = 19
+              Top = 82
+              Width = 105
+              Caption = 'Extra line spacing'
+              Color = clDefault
+              ParentColor = False
+            end
+            object sedLineSpace: TSpinEdit
+              Left = 200
+              Height = 27
+              Top = 80
+              Width = 222
+              Alignment = taRightJustify
+              Anchors = [akTop, akRight]
+              AutoSize = False
+              MaxValue = 3
+              MinValue = -2
+              OnChange = sedLineSpaceChange
+              TabStop = False
+              TabOrder = 3
+            end
+            object Label4: TLabel
+              Left = 8
+              Height = 19
+              Top = 118
+              Width = 140
+              Caption = 'Extra character spacing'
+              Color = clDefault
+              ParentColor = False
+            end
+            object sedCharSpace: TSpinEdit
+              Left = 200
+              Height = 27
+              Top = 116
+              Width = 222
+              Alignment = taRightJustify
+              Anchors = [akTop, akRight]
+              AutoSize = False
+              MaxValue = 3
+              MinValue = -2
+              OnChange = sedCharSpaceChange
+              TabStop = False
+              TabOrder = 4
+            end
+            object Label11: TLabel
+              Left = 8
+              Height = 19
+              Top = 156
+              Width = 66
+              Caption = 'Right edge'
+              Color = clDefault
+              ParentColor = False
+            end
+            object sedRightEdge: TSpinEdit
+              Left = 200
+              Height = 27
+              Top = 154
+              Width = 222
+              Alignment = taRightJustify
+              Anchors = [akTop, akRight]
+              MaxValue = 256
+              MinValue = 40
+              OnChange = sedRightEdgeChange
+              TabStop = False
+              TabOrder = 5
+              Value = 132
+            end
+            object edFontName: TEdit
+              Left = 200
+              Height = 27
+              Top = 6
+              Width = 185
+              Alignment = taRightJustify
+              Anchors = [akTop, akRight]
+              OnChange = edFontNameChange
+              ReadOnly = True
+              TabStop = False
+              TabOrder = 1
+            end
+            object btShowDialog: TButton
+              AnchorSideTop.Control = edFontName
+              AnchorSideBottom.Control = edFontName
+              AnchorSideBottom.Side = asrBottom
+              Left = 392
+              Height = 27
+              Top = 6
+              Width = 30
+              Anchors = [akTop, akRight, akBottom]
+              Caption = '...'
+              OnClick = btShowDialogClick
+              TabOrder = 0
+            end
+          end
+          object GroupBox2: TGroupBox
+            Left = 4
+            Height = 106
+            Top = 248
+            Width = 439
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Line number'
+            ClientHeight = 82
+            ClientWidth = 435
+            TabOrder = 1
+            object Label5: TLabel
+              Left = 8
+              Height = 19
+              Top = 8
+              Width = 155
+              Caption = 'Show every N-th number'
+              Color = clDefault
+              ParentColor = False
+            end
+            object sedNthNumber: TSpinEdit
+              Left = 200
+              Height = 27
+              Top = 6
+              Width = 222
+              Alignment = taRightJustify
+              Anchors = [akTop, akRight]
+              AutoSize = False
+              MaxValue = 100
+              MinValue = 1
+              OnChange = sedNthNumberChange
+              TabStop = False
+              TabOrder = 0
+              Value = 1
+            end
+            object Label6: TLabel
+              Left = 8
+              Height = 19
+              Top = 48
+              Width = 111
+              Caption = 'Line number color'
+              Color = clDefault
+              ParentColor = False
+            end
+            object clbLineNumberColor: TColorBox
+              Left = 200
+              Height = 26
+              Top = 48
+              Width = 222
+              NoneColorColor = clNone
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbCustomColor, cbPrettyNames, cbCustomColors]
+              Anchors = [akTop, akRight]
+              ItemHeight = 20
+              OnChange = clbLineNumberColorChange
+              TabOrder = 1
+              TabStop = False
+            end
+          end
+        end
+        object TabSheet2: TTabSheet
+          Caption = 'Highlighting'
+          ClientHeight = 380
+          ClientWidth = 450
+          object Label7: TLabel
+            Left = 16
+            Height = 19
+            Top = 8
+            Width = 149
+            Caption = 'Current line background'
+            Color = clDefault
+            ParentColor = False
+          end
+          object clbCurrLine: TColorBox
+            Left = 240
+            Height = 26
+            Top = 6
+            Width = 200
+            DefaultColorColor = clNone
+            Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+            Anchors = [akTop, akRight]
+            ItemHeight = 20
+            OnChange = clbCurrLineChange
+            TabOrder = 5
+            TabStop = False
+          end
+          object GroupBox3: TGroupBox
+            Left = 8
+            Height = 92
+            Hint = 'JTD keywords|Standard JTD keywords: "type", "properties", "enum", etc'
+            Top = 80
+            Width = 200
+            Caption = 'Keyword'
+            ClientHeight = 68
+            ClientWidth = 196
+            TabOrder = 0
+            object clbKeyword: TColorBox
+              Left = 4
+              Height = 26
+              Top = 4
+              Width = 186
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+              ItemHeight = 20
+              OnChange = clbColorChange
+              TabOrder = 1
+              TabStop = False
+            end
+            object chbKeywordBold: TCheckBox
+              Left = 8
+              Height = 23
+              Top = 40
+              Width = 48
+              Caption = 'Bold'
+              OnChange = chbFontStyleChange
+              TabOrder = 2
+              TabStop = False
+            end
+            object chbKeywordItalic: TCheckBox
+              Left = 96
+              Height = 23
+              Top = 40
+              Width = 49
+              Caption = 'Italic'
+              OnChange = chbFontStyleChange
+              TabOrder = 0
+              TabStop = False
+            end
+          end
+          object GroupBox4: TGroupBox
+            Left = 240
+            Height = 92
+            Hint = 'JTD custom types|Custom types(defined in "definitions" section) and elements of enums'
+            Top = 80
+            Width = 200
+            Anchors = [akTop, akRight]
+            Caption = 'Identifier'
+            ClientHeight = 68
+            ClientWidth = 196
+            TabOrder = 1
+            object clbIdentifier: TColorBox
+              Left = 4
+              Height = 26
+              Top = 4
+              Width = 186
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+              ItemHeight = 20
+              OnChange = clbColorChange
+              TabOrder = 2
+              TabStop = False
+            end
+            object chbIdentBold: TCheckBox
+              Left = 8
+              Height = 23
+              Top = 40
+              Width = 48
+              Caption = 'Bold'
+              OnChange = chbFontStyleChange
+              TabOrder = 1
+              TabStop = False
+            end
+            object chbIdentItalic: TCheckBox
+              Left = 96
+              Height = 23
+              Top = 40
+              Width = 49
+              Caption = 'Italic'
+              OnChange = chbFontStyleChange
+              TabOrder = 0
+              TabStop = False
+            end
+          end
+          object GroupBox5: TGroupBox
+            Left = 8
+            Height = 92
+            Hint = 'Predefined JTD primive types as "int8" or "timestamp" and also false and true'
+            Top = 180
+            Width = 200
+            Caption = 'Reserved word'
+            ClientHeight = 68
+            ClientWidth = 196
+            TabOrder = 2
+            object clbReserved: TColorBox
+              Left = 4
+              Height = 26
+              Top = 4
+              Width = 186
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+              ItemHeight = 20
+              OnChange = clbColorChange
+              TabOrder = 2
+              TabStop = False
+            end
+            object chbReservBold: TCheckBox
+              Left = 12
+              Height = 23
+              Top = 40
+              Width = 48
+              Caption = 'Bold'
+              OnChange = chbFontStyleChange
+              TabOrder = 1
+              TabStop = False
+            end
+            object chbReservItalic: TCheckBox
+              Left = 96
+              Height = 23
+              Top = 40
+              Width = 49
+              Caption = 'Italic'
+              OnChange = chbFontStyleChange
+              TabOrder = 0
+              TabStop = False
+            end
+          end
+          object GroupBox6: TGroupBox
+            Left = 240
+            Height = 92
+            Hint = 'Property names, descriptions, comments, etc'
+            Top = 180
+            Width = 200
+            Anchors = [akTop, akRight]
+            Caption = 'Attribute'
+            ClientHeight = 68
+            ClientWidth = 196
+            TabOrder = 3
+            object clbAttri: TColorBox
+              Left = 4
+              Height = 26
+              Top = 4
+              Width = 186
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+              ItemHeight = 20
+              OnChange = clbColorChange
+              TabOrder = 2
+              TabStop = False
+            end
+            object chbAttriBold: TCheckBox
+              Left = 8
+              Height = 23
+              Top = 40
+              Width = 48
+              Caption = 'Bold'
+              OnChange = chbFontStyleChange
+              TabOrder = 1
+              TabStop = False
+            end
+            object chbAttriItalic: TCheckBox
+              Left = 96
+              Height = 23
+              Top = 40
+              Width = 49
+              Caption = 'Italic'
+              OnChange = chbFontStyleChange
+              TabOrder = 0
+              TabStop = False
+            end
+          end
+          object GroupBox7: TGroupBox
+            Left = 8
+            Height = 92
+            Hint = 'Implementation defined keywords, such as "description" or "preferredName"'
+            Top = 280
+            Width = 200
+            Caption = 'Custom keyword'
+            ClientHeight = 68
+            ClientWidth = 196
+            TabOrder = 4
+            object clbCustomKey: TColorBox
+              Left = 4
+              Height = 26
+              Top = 4
+              Width = 186
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+              ItemHeight = 20
+              OnChange = clbColorChange
+              TabOrder = 2
+              TabStop = False
+            end
+            object chbCustKeyBold: TCheckBox
+              Left = 8
+              Height = 23
+              Top = 40
+              Width = 48
+              Caption = 'Bold'
+              OnChange = chbFontStyleChange
+              TabOrder = 1
+              TabStop = False
+            end
+            object chbCustKeyItalic: TCheckBox
+              Left = 96
+              Height = 23
+              Top = 40
+              Width = 49
+              Caption = 'Italic'
+              OnChange = chbFontStyleChange
+              TabOrder = 0
+              TabStop = False
+            end
+          end
+          object GroupBox8: TGroupBox
+            Left = 240
+            Height = 92
+            Hint = 'Symbols - comma, colon, brackets'
+            Top = 280
+            Width = 200
+            Anchors = [akTop, akRight]
+            Caption = 'Symbol'
+            ClientHeight = 68
+            ClientWidth = 196
+            TabOrder = 6
+            object clbSymbol: TColorBox
+              Left = 4
+              Height = 26
+              Top = 4
+              Width = 186
+              Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+              ItemHeight = 20
+              OnChange = clbColorChange
+              TabOrder = 2
+              TabStop = False
+            end
+            object chbSymbolBold: TCheckBox
+              Left = 8
+              Height = 23
+              Top = 40
+              Width = 48
+              Caption = 'Bold'
+              OnChange = chbFontStyleChange
+              TabOrder = 1
+              TabStop = False
+            end
+            object chbSymbolItalic: TCheckBox
+              Left = 96
+              Height = 23
+              Top = 40
+              Width = 49
+              Caption = 'Italic'
+              OnChange = chbFontStyleChange
+              TabOrder = 0
+              TabStop = False
+            end
+          end
+          object Label20: TLabel
+            Left = 16
+            Height = 19
+            Top = 44
+            Width = 132
+            Caption = 'Error line background'
+          end
+          object clbErrorLine: TColorBox
+            Left = 240
+            Height = 26
+            Top = 42
+            Width = 200
+            DefaultColorColor = clNone
+            Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+            Anchors = [akTop, akRight]
+            ItemHeight = 20
+            OnChange = clbErrorLineChange
+            TabOrder = 7
+            TabStop = False
+          end
+        end
+        object TabSheet3: TTabSheet
+          Caption = 'JSON format'
+          ClientHeight = 380
+          ClientWidth = 450
+          object chgFmtOptions: TCheckGroup
+            Left = 4
+            Height = 124
+            Top = 8
+            Width = 442
+            Anchors = [akTop, akLeft, akRight]
+            AutoFill = True
+            Caption = 'Options'
+            ChildSizing.LeftRightSpacing = 6
+            ChildSizing.TopBottomSpacing = 6
+            ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+            ChildSizing.EnlargeVertical = crsHomogenousChildResize
+            ChildSizing.ShrinkHorizontal = crsScaleChilds
+            ChildSizing.ShrinkVertical = crsScaleChilds
+            ChildSizing.Layout = cclLeftToRightThenTopToBottom
+            ChildSizing.ControlsPerLine = 2
+            ClientHeight = 100
+            ClientWidth = 438
+            Columns = 2
+            Items.Strings = (
+              'jfoSingleLine'
+              'jfoSingleLineArray'
+              'jfoSingleLineObject'
+              'jfoEgyptBrace'
+              'jfoUseTabs'
+              'jfoStrAsIs'
+            )
+            OnItemClick = chgFmtOptionsItemClick
+            TabOrder = 0
+            Data = {
+              06000000020202020202
+            }
+          end
+          object Label13: TLabel
+            Left = 12
+            Height = 19
+            Top = 144
+            Width = 66
+            Caption = 'Indent size'
+          end
+          object Label14: TLabel
+            Left = 12
+            Height = 19
+            Top = 176
+            Width = 121
+            Caption = 'Indent after comma'
+          end
+          object Label15: TLabel
+            Left = 12
+            Height = 19
+            Top = 208
+            Width = 120
+            Caption = 'Indent before colon'
+          end
+          object Label16: TLabel
+            Left = 12
+            Height = 19
+            Top = 240
+            Width = 109
+            Caption = 'Indent after colon'
+          end
+          object Label17: TLabel
+            Left = 12
+            Height = 19
+            Top = 272
+            Width = 126
+            Caption = 'Oneline array bound'
+          end
+          object Label18: TLabel
+            Left = 12
+            Height = 19
+            Top = 304
+            Width = 132
+            Caption = 'Oneline object bound'
+          end
+          object Label19: TLabel
+            Left = 12
+            Height = 19
+            Top = 336
+            Width = 94
+            Caption = 'Line break type'
+          end
+          object sedOnelineArrayBound: TSpinEdit
+            Left = 201
+            Height = 27
+            Top = 270
+            Width = 236
+            Anchors = [akTop, akRight]
+            AutoSelect = False
+            AutoSize = False
+            MaxValue = 16
+            MinValue = 1
+            OnChange = sedAnyChange
+            TabStop = False
+            TabOrder = 5
+            Value = 8
+          end
+          object sedIndentAfterColon: TSpinEdit
+            Left = 201
+            Height = 27
+            Top = 236
+            Width = 236
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 8
+            OnChange = sedAnyChange
+            TabStop = False
+            TabOrder = 4
+            Value = 1
+          end
+          object sedIndentBeforeColon: TSpinEdit
+            Left = 201
+            Height = 27
+            Top = 206
+            Width = 236
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 8
+            OnChange = sedAnyChange
+            TabStop = False
+            TabOrder = 3
+          end
+          object sedIndentAfterComma: TSpinEdit
+            Left = 201
+            Height = 27
+            Top = 174
+            Width = 236
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 8
+            OnChange = sedAnyChange
+            TabStop = False
+            TabOrder = 2
+            Value = 1
+          end
+          object sedIndent: TSpinEdit
+            Left = 201
+            Height = 27
+            Top = 142
+            Width = 236
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 8
+            MinValue = 1
+            OnChange = sedAnyChange
+            TabStop = False
+            TabOrder = 1
+            Value = 4
+          end
+          object sedOnelineObjectBound: TSpinEdit
+            Left = 201
+            Height = 27
+            Top = 302
+            Width = 236
+            Anchors = [akTop, akRight]
+            AutoSelect = False
+            AutoSize = False
+            MaxValue = 16
+            MinValue = 1
+            OnChange = sedAnyChange
+            TabStop = False
+            TabOrder = 6
+            Value = 5
+          end
+          object cbLineBreak: TComboBox
+            Left = 201
+            Height = 27
+            Top = 334
+            Width = 234
+            Anchors = [akTop, akRight]
+            AutoSelect = False
+            AutoSize = False
+            ItemHeight = 19
+            Items.Strings = (
+              ''
+            )
+            Style = csDropDownList
+            TabOrder = 7
+            TabStop = False
+          end
+        end
+        object TabSheet4: TTabSheet
+          Caption = 'Miscellaneous'
+          ClientHeight = 380
+          ClientWidth = 450
+          object Label9: TLabel
+            Left = 8
+            Height = 19
+            Top = 16
+            Width = 130
+            Caption = 'Maximum recent files'
+          end
+          object chbFormatted: TCheckBox
+            Left = 228
+            Height = 20
+            Top = 56
+            Width = 21
+            Anchors = [akTop, akRight]
+            OnChange = chbFormattedChange
+            TabOrder = 1
+            TabStop = False
+          end
+          object Label8: TLabel
+            Left = 8
+            Height = 19
+            Top = 56
+            Width = 147
+            Caption = 'Keep settings formatted'
+          end
+          object spedMaxRecent: TSpinEdit
+            Left = 228
+            Height = 27
+            Top = 14
+            Width = 208
+            Anchors = [akTop, akRight]
+            MaxValue = 100
+            MinValue = 1
+            OnChange = spedMaxRecentChange
+            TabStop = False
+            TabOrder = 2
+            Value = 1
+          end
+          object Label10: TLabel
+            Left = 8
+            Height = 19
+            Top = 100
+            Width = 111
+            Caption = 'Allow UTF-8 BOM'
+          end
+          object chbBom: TCheckBox
+            Left = 228
+            Height = 20
+            Top = 100
+            Width = 21
+            Anchors = [akTop, akRight]
+            OnChange = chbFormattedChange
+            TabOrder = 0
+            TabStop = False
+          end
+          object Label12: TLabel
+            Left = 8
+            Height = 19
+            Top = 148
+            Width = 80
+            Caption = 'Success color'
+          end
+          object clbSuccessColor: TColorBox
+            Left = 228
+            Height = 26
+            Top = 146
+            Width = 200
+            DefaultColorColor = clNone
+            Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbIncludeDefault, cbCustomColor, cbPrettyNames, cbCustomColors]
+            Anchors = [akTop, akRight]
+            ItemHeight = 20
+            OnChange = clbSuccessColorChange
+            TabOrder = 3
+            TabStop = False
+          end
+        end
+      end
+    end
+  end
+  object FD: TFontDialog
+    Font.Pitch = fpFixed
+    Font.Quality = fqCleartype
+    MinFontSize = 0
+    MaxFontSize = 0
+    Options = [fdTrueTypeOnly, fdFixedPitchOnly, fdForceFontExist, fdWysiwyg, fdScalableOnly]
+    Left = 20
+    Top = 600
+  end
+end

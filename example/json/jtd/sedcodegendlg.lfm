@@ -1,0 +1,149 @@
+object frmCodegenDlg: TfrmCodegenDlg
+  Left = 367
+  Height = 310
+  Top = 250
+  Width = 399
+  BorderIcons = [biSystemMenu]
+  Caption = 'frmCodegenDlg'
+  ClientHeight = 310
+  ClientWidth = 399
+  DesignTimePPI = 115
+  Font.Height = -14
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  ShowHint = True
+  object Label1: TLabel
+    Left = 16
+    Height = 19
+    Top = 8
+    Width = 100
+    Caption = 'Current schema:'
+  end
+  object lbCurrSchemaName: TLabel
+    Left = 160
+    Height = 19
+    Top = 8
+    Width = 229
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = False
+    Caption = 'lbCurrSchemaName'
+  end
+  object btOk: TButton
+    Left = 198
+    Height = 30
+    Top = 270
+    Width = 90
+    Anchors = [akRight, akBottom]
+    Caption = 'Ok'
+    Default = True
+    ModalResult = 1
+    TabOrder = 0
+  end
+  object Label2: TLabel
+    Left = 16
+    Height = 19
+    Top = 48
+    Width = 102
+    Caption = 'Root class name:'
+  end
+  object edClassName: TEdit
+    Left = 160
+    Height = 27
+    Top = 44
+    Width = 229
+    Anchors = [akTop, akLeft, akRight]
+    TabOrder = 1
+  end
+  object edUnitName: TEdit
+    Left = 160
+    Height = 27
+    Top = 88
+    Width = 229
+    Anchors = [akTop, akLeft, akRight]
+    TabOrder = 2
+  end
+  object Label3: TLabel
+    Left = 16
+    Height = 19
+    Top = 92
+    Width = 67
+    Caption = 'Unit name:'
+  end
+  object fneDestFile: TFileNameEdit
+    Left = 160
+    Height = 27
+    Top = 216
+    Width = 229
+    DialogKind = dkSave
+    DialogTitle = 'Save unit as'
+    DialogOptions = [ofOverwritePrompt, ofNoNetworkButton, ofEnableSizing, ofViewDetail]
+    Filter = 'Pascal unit files|*.pas|Any files|*.*'
+    FilterIndex = 0
+    DefaultExt = '.pas'
+    HideDirectories = False
+    ButtonHint = 'Select unit file name...'
+    ButtonWidth = 28
+    NumGlyphs = 1
+    Anchors = [akTop, akLeft, akRight]
+    MaxLength = 0
+    TabOrder = 3
+    OnButtonClick = fneDestFileButtonClick
+  end
+  object Label4: TLabel
+    Left = 16
+    Height = 19
+    Top = 220
+    Width = 88
+    Caption = 'Unit file name:'
+  end
+  object sbtPreview: TSpeedButton
+    Left = 361
+    Height = 28
+    Hint = 'Preview...'
+    Top = 172
+    Width = 28
+    Anchors = [akTop, akRight]
+    Images = frmMain.ilMainImages
+    ImageIndex = 24
+    OnClick = PreviewClick
+  end
+  object edCustomHeader: TEdit
+    Left = 161
+    Height = 27
+    Top = 132
+    Width = 228
+    Anchors = [akTop, akLeft, akRight]
+    TabOrder = 4
+  end
+  object Label5: TLabel
+    Left = 16
+    Height = 19
+    Top = 136
+    Width = 97
+    Caption = 'Custom header:'
+  end
+  object chbComments: TCheckBox
+    Left = 160
+    Height = 23
+    Top = 176
+    Width = 194
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = False
+    Caption = 'Enable comments in code'
+    Checked = True
+    State = cbChecked
+    TabOrder = 5
+  end
+  object ntCancel: TButton
+    Left = 298
+    Height = 30
+    Top = 270
+    Width = 90
+    Anchors = [akRight, akBottom]
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 6
+  end
+end
