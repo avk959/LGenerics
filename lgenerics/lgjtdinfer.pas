@@ -62,6 +62,7 @@ type
       constructor Make(aDefNumType: TNumberType);
       constructor Make(const aPath: TStringArray; aDefNumType: TNumberType);
       constructor MakeEnum(const aEnumList, aPath: TStringArray);
+      constructor MakeEnum(const aPath: TStringArray);
       constructor MakeMap(const aPath: TStringArray);
       constructor MakeVariant(const aPath: TStringArray);
       constructor MakeAddProps(const aPath: TStringArray);
@@ -190,6 +191,14 @@ begin
   Kind := hkUseEnum;
   NumberType := ntNone;
   EnumList := aEnumList;
+  Path := aPath;
+end;
+
+constructor TJtdInferer.THint.MakeEnum(const aPath: TStringArray);
+begin
+  Kind := hkUseEnum;
+  NumberType := ntNone;
+  EnumList := nil;
   Path := aPath;
 end;
 
