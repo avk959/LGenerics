@@ -10,7 +10,7 @@ uses
 
 type
 
-  THintList = array of TJtdInferer.THint;
+  THintList = array of TJtdInferrer.THint;
 
   { TfrmInferDlg }
 
@@ -330,8 +330,8 @@ function TfrmInferDlg.GetHintList: THintList;
 var
   I, Idx: Integer;
   s: string;
-  h: TJtdInferer.THint;
-  List: specialize TGLiteVector<TJtdInferer.THint>;
+  h: TJtdInferrer.THint;
+  List: specialize TGLiteVector<TJtdInferrer.THint>;
 begin
   if sgHints.RowCount < 2 then exit(nil);
   for I := 1 to Pred(sgHints.RowCount) do
@@ -339,7 +339,7 @@ begin
       s := sgHints.Cells[0, I];
       Idx := sgHints.Columns[0].PickList.IndexOf(s);
       if Idx < 0 then continue;
-      h.Kind := TJtdInferer.THintKind(Succ(Idx));
+      h.Kind := TJtdInferrer.THintKind(Succ(Idx));
       s := sgHints.Cells[1, I];
       if s <> '' then
         begin
@@ -347,7 +347,7 @@ begin
           if Idx < 0 then
             h.NumberType := ntNone
           else
-            h.NumberType := TJtdInferer.TNumberType(Succ(Idx));
+            h.NumberType := TJtdInferrer.TNumberType(Succ(Idx));
         end
       else
         h.NumberType := ntNone;

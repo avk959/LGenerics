@@ -850,7 +850,7 @@ end;
 procedure TfrmMain.acNewFromSampleExecute(Sender: TObject);
 var
   SampleFiles, Samples: TStringArray;
-  Hints: array of TJtdInferer.THint;
+  Hints: array of TJtdInferrer.THint;
   I: Integer;
   Schema: TJsonNode;
 begin
@@ -881,7 +881,7 @@ begin
       finally
         Free;
       end;
-    Schema := TJtdInferer.Infer(Samples, Hints);
+    Schema := TJtdInferrer.Infer(Samples, Hints);
     seJsonEdit.BeginUpdate;
     try
       seJsonEdit.Lines.Text := Schema.FormatJson(GetAppConf.JsonFormatStyle);

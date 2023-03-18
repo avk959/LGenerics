@@ -4,7 +4,7 @@ object frmMain: TfrmMain
   Top = 250
   Width = 890
   Caption = 'frmMain'
-  ClientHeight = 609
+  ClientHeight = 585
   ClientWidth = 890
   DesignTimePPI = 115
   Menu = mmuMain
@@ -15,6 +15,7 @@ object frmMain: TfrmMain
   OnResize = FormResize
   OnShow = FormShow
   ShowHint = True
+  LCLVersion = '2.3.0.0'
   object stbMainStatus: TStatusBar
     Left = 0
     Height = 28
@@ -750,7 +751,7 @@ object frmMain: TfrmMain
           end
           object ToolButton13: TToolButton
             Left = 29
-            Height = 26
+            Height = 8
             Top = 2
             Caption = 'ToolButton13'
             Style = tbsSeparator
@@ -762,7 +763,7 @@ object frmMain: TfrmMain
           end
           object ToolButton14: TToolButton
             Left = 65
-            Height = 26
+            Height = 8
             Top = 2
             Caption = 'ToolButton14'
             Style = tbsSeparator
@@ -849,7 +850,7 @@ object frmMain: TfrmMain
       end
       object ToolButton3: TToolButton
         Left = 71
-        Height = 26
+        Height = 5
         Top = 0
         Caption = 'ToolButton3'
         Style = tbsDivider
@@ -866,7 +867,7 @@ object frmMain: TfrmMain
       end
       object ToolButton6: TToolButton
         Left = 132
-        Height = 26
+        Height = 5
         Hint = 'Save schema as|Save current schema as'
         Top = 0
         Caption = 'Save as ...'
@@ -880,7 +881,7 @@ object frmMain: TfrmMain
       end
       object ToolButton8: TToolButton
         Left = 165
-        Height = 26
+        Height = 8
         Hint = 'Exit|Exit application'
         Top = 0
         Caption = 'Exit'
@@ -940,7 +941,7 @@ object frmMain: TfrmMain
       end
       object ToolButton12: TToolButton
         Left = 29
-        Height = 26
+        Height = 8
         Top = 0
         Caption = 'ToolButton12'
         Style = tbsSeparator

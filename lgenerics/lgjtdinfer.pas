@@ -27,11 +27,11 @@ uses
   SysUtils, Math, lgVector, lgMultiMap, lgJson, lgJsonTypeDef;
 
 type
-  { TJtdInferer: tries to generate a JSON Typedef schema from the example data; if the result
+  { TJtdInferrer: tries to generate a JSON Typedef schema from the example data; if the result
     can be improved with an Enum, Values, or Discriminator schema, just give it appropriate hints;
     there is currently no any analogue for the wildcard when specifying a path, so it is important that
     the path in the hint points to the very first occurrence of the interesting object }
-  TJtdInferer = class
+  TJtdInferrer = class
   public
   type
 
@@ -42,11 +42,11 @@ type
       hkDefNumberType,  { suggests the default numeric type in the THint.NumberType field;
                           if no THint.Path is specified, the hint refers to the whole sample,
                           otherwise, only to the specified element;
-                          by default TJtdInferer will guess the narrowest number type }
+                          by default TJtdInferrer will guess the narrowest number type }
       hkUseEnum,        { hints that the string value pointed to by THint.Path is an element of an enumeration;
                           the complete list of elements may be specified in the THint.EnumList field }
       hkUseMap,         { suggests treating the JSON object pointed to by the THint.Path as a Dictionary;
-                          by default TJtdInferer will treat the JSON object as a Record(Properties form) }
+                          by default TJtdInferrer will treat the JSON object as a Record(Properties form) }
       hkUseVariant,     { suggests treating the JSON object whose element is pointed to by THint.Path as
                           a Tagged Union(or Variant, if you prefer) for which this element is a discriminator;
                           specified element must be of type String }
@@ -168,9 +168,9 @@ implementation
 uses
   lgStrConst;
 
-{ TJtdInferer.THint }
+{ TJtdInferrer.THint }
 
-constructor TJtdInferer.THint.Make(aDefNumType: TNumberType);
+constructor TJtdInferrer.THint.Make(aDefNumType: TNumberType);
 begin
   Kind := hkDefNumberType;
   NumberType := aDefNumType;
@@ -178,7 +178,7 @@ begin
   Path := nil;
 end;
 
-constructor TJtdInferer.THint.Make(const aPath: TStringArray; aDefNumType: TNumberType);
+constructor TJtdInferrer.THint.Make(const aPath: TStringArray; aDefNumType: TNumberType);
 begin
   Kind := hkDefNumberType;
   NumberType := aDefNumType;
@@ -186,7 +186,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.Enum(const aEnumList, aPath: TStringArray);
+constructor TJtdInferrer.THint.Enum(const aEnumList, aPath: TStringArray);
 begin
   Kind := hkUseEnum;
   NumberType := ntNone;
@@ -194,7 +194,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.Enum(const aPath: TStringArray);
+constructor TJtdInferrer.THint.Enum(const aPath: TStringArray);
 begin
   Kind := hkUseEnum;
   NumberType := ntNone;
@@ -202,7 +202,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.Map(const aPath: TStringArray);
+constructor TJtdInferrer.THint.Map(const aPath: TStringArray);
 begin
   Kind := hkUseMap;
   NumberType := ntNone;
@@ -210,7 +210,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.Variant(const aPath: TStringArray);
+constructor TJtdInferrer.THint.Variant(const aPath: TStringArray);
 begin
   Kind := hkUseVariant;
   NumberType := ntNone;
@@ -218,7 +218,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.AddProps(const aPath: TStringArray);
+constructor TJtdInferrer.THint.AddProps(const aPath: TStringArray);
 begin
   Kind := hkAdditionalProps;
   NumberType := ntNone;
@@ -226,7 +226,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.Nullable(const aPath: TStringArray);
+constructor TJtdInferrer.THint.Nullable(const aPath: TStringArray);
 begin
   Kind := hkNullable;
   NumberType := ntNone;
@@ -234,9 +234,9 @@ begin
   Path := aPath;
 end;
 
-{ TJtdInferer }
+{ TJtdInferrer }
 
-class function TJtdInferer.GetNumType(const aValue: string): TNumberType;
+class function TJtdInferrer.GetNumType(const aValue: string): TNumberType;
 begin
   case aValue[1] of
     'f':
@@ -274,13 +274,13 @@ begin
   end;
 end;
 
-class function TJtdInferer.ContainsNum(aValue: Double; aType: TNumberType): Boolean;
+class function TJtdInferrer.ContainsNum(aValue: Double; aType: TNumberType): Boolean;
 begin
   if NUM_TYPES[aType].IsInt and (Frac(aValue) <> 0.0) then exit(False);
   Result := (aValue >= NUM_TYPES[aType].MinValue) and (aValue <= NUM_TYPES[aType].MaxValue);
 end;
 
-class function TJtdInferer.ContainsType(L, R: TNumberType): Boolean;
+class function TJtdInferrer.ContainsType(L, R: TNumberType): Boolean;
 begin
   if L = R then
     Result := True
@@ -298,7 +298,7 @@ begin
 end;
 
 
-class function TJtdInferer.RefineNumType(aValue: Double; aCurrType: TNumberType): TNumberType;
+class function TJtdInferrer.RefineNumType(aValue: Double; aCurrType: TNumberType): TNumberType;
 var
   nt: TNumberType;
 begin
@@ -311,7 +311,7 @@ begin
   Result := ntFloat64;
 end;
 
-class function TJtdInferer.GetStrType(const aValue: string): TStrType;
+class function TJtdInferrer.GetStrType(const aValue: string): TStrType;
 begin
   case aValue[1] of
     's':
@@ -329,7 +329,7 @@ begin
   end;
 end;
 
-class function TJtdInferer.RefineStrType(const aValue: string; aCurrType: TStrType): TStrType;
+class function TJtdInferrer.RefineStrType(const aValue: string; aCurrType: TStrType): TStrType;
 begin
   case aCurrType of
     stNone:
@@ -346,19 +346,19 @@ begin
   end;
 end;
 
-class function TJtdInferer.GetFormKind(aNode: TJsonNode): TFormKind;
+class function TJtdInferrer.GetFormKind(aNode: TJsonNode): TFormKind;
 begin
   Result := TFormKind(Trunc(aNode.AsObject[FORM_KIND_KEY].AsNumber));
 end;
 
-class procedure TJtdInferer.SetFormKind(aNode: TJsonNode; aKind: TFormKind);
+class procedure TJtdInferrer.SetFormKind(aNode: TJsonNode; aKind: TFormKind);
 begin
   if aKind = fkEmpty then
     aNode.Clear;
   aNode[FORM_KIND_KEY].AsNumber := Integer(aKind);
 end;
 
-class procedure TJtdInferer.MovePropToOptional(aNode: TJsonNode; const aProp: string);
+class procedure TJtdInferrer.MovePropToOptional(aNode: TJsonNode; const aProp: string);
 var
   Node, n: TJsonNode;
 begin
@@ -370,7 +370,7 @@ begin
     end;
 end;
 
-class procedure TJtdInferer.CorrectEnumList(aNode: TJsonNode);
+class procedure TJtdInferrer.CorrectEnumList(aNode: TJsonNode);
 var
   n: TJsonNode;
   a: TStringArray;
@@ -384,7 +384,7 @@ begin
     end;
 end;
 
-class procedure TJtdInferer.ClearAssistInfo(aNode: TJsonNode);
+class procedure TJtdInferrer.ClearAssistInfo(aNode: TJsonNode);
 var
   n: TJsonNode;
 begin
@@ -402,7 +402,7 @@ begin
     end;
 end;
 
-procedure TJtdInferer.DoInferBool(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferBool(aSchema, aSample: TJsonNode);
 var
   Hint: PHint;
 begin
@@ -424,7 +424,7 @@ begin
   end;
 end;
 
-procedure TJtdInferer.DoInferNumber(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferNumber(aSchema, aSample: TJsonNode);
 var
   Hint: PHint;
   NumType, CurrNumType: TNumberType;
@@ -463,7 +463,7 @@ begin
   end;
 end;
 
-procedure TJtdInferer.DoInferString(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferString(aSchema, aSample: TJsonNode);
 var
   Hint, UseHint: PHint;
 begin
@@ -497,7 +497,7 @@ begin
   end;
 end;
 
-procedure TJtdInferer.DoInitEnum(aSchema, aSample: TJsonNode; aHint: PHint);
+procedure TJtdInferrer.DoInitEnum(aSchema, aSample: TJsonNode; aHint: PHint);
 var
   s: string;
   n: TJsonNode;
@@ -510,7 +510,7 @@ begin
   n.AddUniqNull(aSample.AsString);
 end;
 
-procedure TJtdInferer.DoInferArray(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferArray(aSchema, aSample: TJsonNode);
 var
   Hint: PHint;
   s, n: TJsonNode;
@@ -535,7 +535,7 @@ begin
   end;
 end;
 
-procedure TJtdInferer.DoInferObject(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferObject(aSchema, aSample: TJsonNode);
 var
   Hint, UseHint: PHint;
   n: TJsonNode;
@@ -582,7 +582,7 @@ begin
   end;
 end;
 
-procedure TJtdInferer.DoInitMap(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInitMap(aSchema, aSample: TJsonNode);
 var
   s, n: TJsonNode;
 begin
@@ -592,7 +592,7 @@ begin
     DoInfer(s, n);
 end;
 
-procedure TJtdInferer.DoInferMap(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferMap(aSchema, aSample: TJsonNode);
 var
   s, n: TJsonNode;
 begin
@@ -601,7 +601,7 @@ begin
     DoInfer(s, n);
 end;
 
-function TJtdInferer.DoInitVariant(aSchema, aSample: TJsonNode; aHint: PHint): TJsonNode;
+function TJtdInferrer.DoInitVariant(aSchema, aSample: TJsonNode; aHint: PHint): TJsonNode;
 var
   n: TJsonNode;
   discr, v: string;
@@ -618,7 +618,7 @@ begin
   Result := aSchema[MAPPING_KEY][v].AsObject;
 end;
 
-procedure TJtdInferer.DoInferVariant(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInferVariant(aSchema, aSample: TJsonNode);
 var
   n: TJsonNode;
   discr, v: string;
@@ -634,7 +634,7 @@ begin
     SetFormKind(aSchema, fkEmpty);
 end;
 
-procedure TJtdInferer.DoInitProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
+procedure TJtdInferrer.DoInitProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
 var
   p: TJsonNode.TPair;
   s: TJsonNode;
@@ -647,7 +647,7 @@ begin
     DoInfer(s[p.Key].AsObject, p.Value);
 end;
 
-procedure TJtdInferer.DoInferProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
+procedure TJtdInferrer.DoInferProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
 var
   p: TJsonNode.TPair;
   s, n: TJsonNode;
@@ -665,7 +665,7 @@ begin
       DoInfer(aSchema[OPT_PROPS_KEY][p.Key].AsObject, p.Value);
 end;
 
-procedure TJtdInferer.DoInfer(aSchema, aSample: TJsonNode);
+procedure TJtdInferrer.DoInfer(aSchema, aSample: TJsonNode);
 begin
   case aSample.Kind of
     jvkNull:
@@ -684,9 +684,9 @@ begin
   end;
 end;
 
-class function TJtdInferer.Infer(const aSamples: array of string; const aHints: array of THint): TJsonNode;
+class function TJtdInferrer.Infer(const aSamples: array of string; const aHints: array of THint): TJsonNode;
 begin
-  with TJtdInferer.Create(aSamples, aHints) do
+  with TJtdInferrer.Create(aSamples, aHints) do
     try
       Result := Execute;
     finally
@@ -694,7 +694,7 @@ begin
     end;
 end;
 
-class function TJtdInferer.InferJson(const aSamples: array of string; const aHints: array of THint): string;
+class function TJtdInferrer.InferJson(const aSamples: array of string; const aHints: array of THint): string;
 var
   Schema: TJsonNode;
 begin
@@ -707,7 +707,7 @@ begin
   end;
 end;
 
-constructor TJtdInferer.Create(const aSamples: array of string; const aHints: array of THint);
+constructor TJtdInferrer.Create(const aSamples: array of string; const aHints: array of THint);
 var
   I: SizeInt;
   h: THint;
@@ -739,7 +739,7 @@ begin
       end;
 end;
 
-destructor TJtdInferer.Destroy;
+destructor TJtdInferrer.Destroy;
 var
   Node: TJsonNode;
 begin
@@ -748,7 +748,7 @@ begin
   inherited;
 end;
 
-function TJtdInferer.Execute: TJsonNode;
+function TJtdInferrer.Execute: TJsonNode;
 var
   Node, Pointed: TJsonNode;
   I, J: SizeInt;
