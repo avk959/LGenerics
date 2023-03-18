@@ -61,12 +61,12 @@ type
       Path: TStringArray;
       constructor Make(aDefNumType: TNumberType);
       constructor Make(const aPath: TStringArray; aDefNumType: TNumberType);
-      constructor MakeEnum(const aEnumList, aPath: TStringArray);
-      constructor MakeEnum(const aPath: TStringArray);
-      constructor MakeMap(const aPath: TStringArray);
-      constructor MakeVariant(const aPath: TStringArray);
-      constructor MakeAddProps(const aPath: TStringArray);
-      constructor MakeNullable(const aPath: TStringArray);
+      constructor Enum(const aEnumList, aPath: TStringArray);
+      constructor Enum(const aPath: TStringArray);
+      constructor Map(const aPath: TStringArray);
+      constructor Variant(const aPath: TStringArray);
+      constructor AddProps(const aPath: TStringArray);
+      constructor Nullable(const aPath: TStringArray);
     end;
 
   const
@@ -186,7 +186,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.MakeEnum(const aEnumList, aPath: TStringArray);
+constructor TJtdInferer.THint.Enum(const aEnumList, aPath: TStringArray);
 begin
   Kind := hkUseEnum;
   NumberType := ntNone;
@@ -194,7 +194,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.MakeEnum(const aPath: TStringArray);
+constructor TJtdInferer.THint.Enum(const aPath: TStringArray);
 begin
   Kind := hkUseEnum;
   NumberType := ntNone;
@@ -202,7 +202,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.MakeMap(const aPath: TStringArray);
+constructor TJtdInferer.THint.Map(const aPath: TStringArray);
 begin
   Kind := hkUseMap;
   NumberType := ntNone;
@@ -210,7 +210,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.MakeVariant(const aPath: TStringArray);
+constructor TJtdInferer.THint.Variant(const aPath: TStringArray);
 begin
   Kind := hkUseVariant;
   NumberType := ntNone;
@@ -218,7 +218,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.MakeAddProps(const aPath: TStringArray);
+constructor TJtdInferer.THint.AddProps(const aPath: TStringArray);
 begin
   Kind := hkAdditionalProps;
   NumberType := ntNone;
@@ -226,7 +226,7 @@ begin
   Path := aPath;
 end;
 
-constructor TJtdInferer.THint.MakeNullable(const aPath: TStringArray);
+constructor TJtdInferer.THint.Nullable(const aPath: TStringArray);
 begin
   Kind := hkNullable;
   NumberType := ntNone;
