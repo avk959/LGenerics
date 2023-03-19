@@ -71,6 +71,7 @@ type
 
   const
     DEFAULT_NUM_TYPE = ntInt8;
+    DEF_DEPTH        = TJsonNode.DEF_DEPTH;
 
   private
   type
@@ -124,6 +125,8 @@ type
     FSampleList: TStringArray;
     FNodeList: array of TJsonNode;
     FDefNumType: TNumberType;
+    FMaxDepth: Integer;
+    FBom: Boolean;
     class function  GetNumType(const aValue: string): TNumberType; static; inline;
     class function  ContainsNum(aValue: Double; aType: TNumberType): Boolean; static; inline;
   { returns True if type L contains type R }
@@ -153,13 +156,17 @@ type
   public
   { aSamples specifies a set of examples as JSON values(i.e. as strings);
     returns the resulting schema as a DOM structure }
-    class function Infer(const aSamples: array of string; const aHints: array of THint): TJsonNode;
+    class function Infer(const aSamples: array of string; const aHints: array of THint;
+                         aSkipBom: Boolean = False; aMaxDepth: Integer = DEF_DEPTH): TJsonNode;
   { aSamples specifies a set of examples as JSON values(i.e. as strings);
     returns the resulting schema as a JSON value(i.e. as text) }
-    class function InferJson(const aSamples: array of string; const aHints: array of THint): string;
+    class function InferJson(const aSamples: array of string; const aHints: array of THint;
+                             aSkipBom: Boolean = False; aMaxDepth: Integer = DEF_DEPTH): string;
     constructor Create(const aSamples: array of string; const aHints: array of THint);
     destructor Destroy; override;
     function Execute: TJsonNode;
+    property MaxDepth: Integer read FMaxDepth write FMaxDepth;
+    property SkipBom: Boolean read FBom write FBom;
   end;
 
 implementation
@@ -684,23 +691,27 @@ begin
   end;
 end;
 
-class function TJtdInferrer.Infer(const aSamples: array of string; const aHints: array of THint): TJsonNode;
+class function TJtdInferrer.Infer(const aSamples: array of string; const aHints: array of THint;
+  aSkipBom: Boolean; aMaxDepth: Integer): TJsonNode;
 begin
   with TJtdInferrer.Create(aSamples, aHints) do
     try
+      SkipBom := aSkipBom;
+      MaxDepth := aMaxDepth;
       Result := Execute;
     finally
       Free;
     end;
 end;
 
-class function TJtdInferrer.InferJson(const aSamples: array of string; const aHints: array of THint): string;
+class function TJtdInferrer.InferJson(const aSamples: array of string; const aHints: array of THint;
+  aSkipBom: Boolean; aMaxDepth: Integer): string;
 var
   Schema: TJsonNode;
 begin
   Result := '';
   try
-    Schema := Infer(aSamples, aHints);
+    Schema := Infer(aSamples, aHints, aSkipBom, aMaxDepth);
     Result := Schema.AsJson;
   finally
     Schema.Free;
@@ -713,6 +724,7 @@ var
   h: THint;
 begin
   FDefNumType := DEFAULT_NUM_TYPE;
+  FMaxDepth := DEF_DEPTH;
   System.SetLength(FSampleList, System.Length(aSamples));
   for I := 0 to System.High(aSamples) do
     FSampleList[I] := aSamples[I];
@@ -756,7 +768,7 @@ begin
   System.SetLength(FNodeList, System.Length(FSampleList));
   J := 0;
   for I := 0 to System.High(FSampleList) do
-    if TJsonNode.TryParse(FSampleList[I], Node) then
+    if TJsonNode.TryParse(FSampleList[I], Node, SkipBom, MaxDepth) then
       begin
         FNodeList[J] := Node;
         Inc(J);
