@@ -675,6 +675,12 @@ type
   { tries to find the element using the path given by the JSON pointer as a Pascal string }
     function  FindPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean;
     function  FindPathPtr(const aPtr: string): TJsonNode; inline;
+  { returns True and the path to aNode in the instance subtree if instance subtree contains aNode,
+    othewise returns False and nil; is recursive }
+    function  TryGetPath(aNode: TJsonNode; out aPath: TStringArray): Boolean;
+  { returns True and JSON Pointer to aNode in the instance subtree if instance subtree
+    contains aNode, othewise returns False; }
+    function  TryGetPtr(aNode: TJsonNode; out aPtr: string): Boolean;
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndentSize: Integer = DEF_INDENT;
                          aOffset: Integer = 0): string;
@@ -1136,11 +1142,11 @@ type
     function  FindPath(const aPath: TStringArray): Boolean;
   { True if current value is Null }
     property  IsNull: Boolean read GetIsNull;
-  { returns the value as a Boolean, raises an exception if kind of the value <> vkBoolean }
+  { returns the current boolean value }
     property  AsBoolean: Boolean read GetAsBoolean;
-  { returns the value as a Double, raises an exception if kind of the value <> vkNumber }
+  { returns the current number value }
     property  AsNumber: Double read GetAsNumber;
-  { returns the value as a string, raises an exception if kind of the value <> vkString }
+  { returns the current string value }
     property  AsString: string read GetAsString;
   { indicates the current structure index, or zero if the current structure is an object }
     property  Index: SizeInt read GetIndex;
@@ -5522,6 +5528,56 @@ begin
   FindPathPtr(aPtr, Result);
 end;
 
+function TJsonNode.TryGetPath(aNode: TJsonNode; out aPath: TStringArray): Boolean;
+var
+  PathHolder: specialize TGLiteVector<string>;
+  Path: TStringArray;
+  function DoGetPath(CurrNode: TJsonNode): Boolean;
+  var
+    I: SizeInt;
+    p: ^TPair;
+  begin
+    if CurrNode = aNode then
+      begin
+        Path := PathHolder.ToArray;
+        exit(True);
+      end;
+    case CurrNode.Kind of
+      jvkArray:
+        for I := 0 to Pred(CurrNode.Count) do
+          begin
+            PathHolder.Add(SizeUInt2Str(I));
+            if DoGetPath(CurrNode.FArray^.UncMutable[I]^) then exit(True);
+            PathHolder.DeleteLast;
+          end;
+      jvkObject:
+        for I := 0 to Pred(CurrNode.Count) do
+          begin
+            p := CurrNode.FObject^.Mutable[I];
+            PathHolder.Add(p^.Key);
+            if DoGetPath(p^.Value) then exit(True);
+            PathHolder.DeleteLast;
+          end;
+    else
+    end;
+    Result := False;
+  end;
+begin
+  Path := nil;
+  Result := DoGetPath(Self);
+  aPath := Path;
+end;
+
+function TJsonNode.TryGetPtr(aNode: TJsonNode; out aPtr: string): Boolean;
+var
+  Path: TStringArray = nil;
+begin
+  aPtr := '';
+  Result := TryGetPath(aNode, Path);
+  if Result then
+    aPtr := TJsonPtr.ToPointer(Path);
+end;
+
 function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize: Integer; aOffset: Integer): string;
 begin
   Result := FormatJson(TJsonFormatStyle.Make(aOptions, aIndentSize), aOffset);
@@ -8979,8 +9035,8 @@ end;
 function TJsonReader.GetToString: string;
 begin
   case TokenKind of
-    tkFalse,
-    tkTrue:   Result := BoolToStr(FBoolValue, JS_TRUE, JS_FALSE);
+    tkFalse:  Result := JS_FALSE;
+    tkTrue:   Result := JS_TRUE;
     tkNumber: Result := Double2StrDef(FNumValue);
     tkString: Result := FStrValue;
   else
