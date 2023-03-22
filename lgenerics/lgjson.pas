@@ -151,6 +151,8 @@ function JPair(const aName: string; const aValue: TJVariant): TJVarPair; inline;
 
 type
 
+  TJsonNode = class;
+
   { TJsonPtr: wrapper over JSON Pointer(RFC 6901) functionality }
   TJsonPtr = record
   private
@@ -204,6 +206,7 @@ type
   { returns a pointer as a JSON string }
     function  ToAlien: string;
     function  ToSegments: TStringArray; inline;
+    function  Match(aRoot: TJsonNode; out aNode: TJsonNode): Boolean; inline;
     property  Count: SizeInt read GetCount;
     property  Segments[aIndex: SizeInt]: string read GetSegment; default;
   end;
@@ -2439,6 +2442,11 @@ end;
 function TJsonPtr.ToSegments: TStringArray;
 begin
   Result := System.Copy(FSegments);
+end;
+
+function TJsonPtr.Match(aRoot: TJsonNode; out aNode: TJsonNode): Boolean;
+begin
+  Result := aRoot.FindPath(FSegments, aNode);
 end;
 
 { TJsonNode.TEmptyPairEnumerator }
