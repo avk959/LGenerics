@@ -451,7 +451,7 @@ type
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
   { sets length to aCount and fills array by aCount values aValue }
-    procedure Fill(aCount: SizeInt; constref aValue: T);
+    procedure Fill(aCount: SizeInt; const aValue: T);
     function  CreateCopy(aFromIndex, aCount: SizeInt): TGDynArray<T>;
     procedure Clear;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -2757,7 +2757,7 @@ begin
   Result := Length <> 0;
 end;
 
-procedure TGDynArray<T>.Fill(aCount: SizeInt; constref aValue: T);
+procedure TGDynArray<T>.Fill(aCount: SizeInt; const aValue: T);
 begin
   Clear;
   if aCount < 1 then
