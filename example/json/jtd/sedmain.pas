@@ -742,7 +742,7 @@ var
   vr: TValidateResult;
   txt: string;
 begin
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     Application.ProcessMessages;
     txt := seJsonEdit.Text;
@@ -766,7 +766,7 @@ begin
         end;
       end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
   if not vr.IsValid then
     begin
@@ -808,7 +808,7 @@ end;
 procedure TfrmMain.acInstanceTreeCollapseExecute(Sender: TObject);
 begin
   if tvInstanceTree.Items.Count = 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     tvInstanceTree.BeginUpdate;
     try
@@ -817,7 +817,7 @@ begin
       tvInstanceTree.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -829,7 +829,7 @@ end;
 procedure TfrmMain.acInstanceTreeExpandExecute(Sender: TObject);
 begin
   if tvInstanceTree.Items.Count = 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     tvInstanceTree.BeginUpdate;
     try
@@ -838,7 +838,7 @@ begin
       tvInstanceTree.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -867,7 +867,7 @@ begin
   //////////////
   CurrentFile := '';
   ////////////////////
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     Application.ProcessMessages;
     SetLength(Samples, Length(SampleFiles));
@@ -894,7 +894,7 @@ begin
       seJsonEdit.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
   if seJsonEdit.CanSetFocus then
     seJsonEdit.SetFocus;
@@ -983,12 +983,12 @@ end;
 
 procedure TfrmMain.acSyntaxCheckExecute(Sender: TObject);
 begin
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     Application.ProcessMessages;
     LoadNewSource;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -1135,7 +1135,7 @@ end;
 procedure TfrmMain.acSchemaTreeCollapseExecute(Sender: TObject);
 begin
   if tvSchemaTree.Items.Count = 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     tvSchemaTree.BeginUpdate;
     try
@@ -1144,7 +1144,7 @@ begin
       tvSchemaTree.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -1156,7 +1156,7 @@ end;
 procedure TfrmMain.acSchemaTreeExpandExecute(Sender: TObject);
 begin
   if tvSchemaTree.Items.Count = 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     tvSchemaTree.BeginUpdate;
     try
@@ -1165,7 +1165,7 @@ begin
       tvSchemaTree.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -1468,7 +1468,7 @@ procedure TfrmMain.TryLoadSchemaFile(const aFileName: string);
 var
   Msg: string;
 begin
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     Application.ProcessMessages;
     AddRecentFile(aFileName);
@@ -1489,7 +1489,7 @@ begin
     end;
     LoadNewSource;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 

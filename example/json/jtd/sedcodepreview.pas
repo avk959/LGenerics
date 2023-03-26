@@ -56,7 +56,7 @@ end;
 
 procedure TfrmUnitPreview.SetPreviewText(const aValue: string);
 begin
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     sedUnitPreview.BeginUpdate;
     try
@@ -65,7 +65,7 @@ begin
       sedUnitPreview.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 

@@ -165,7 +165,7 @@ end;
 procedure TfrmInferDlg.acNodeCollapseExecute(Sender: TObject);
 begin
   if tvSampleStruct.Items.Count = 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     tvSampleStruct.BeginUpdate;
     try
@@ -174,7 +174,7 @@ begin
       tvSampleStruct.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -186,7 +186,7 @@ end;
 procedure TfrmInferDlg.acNodeExpandExecute(Sender: TObject);
 begin
   if tvSampleStruct.Items.Count = 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     tvSampleStruct.BeginUpdate;
     try
@@ -195,7 +195,7 @@ begin
       tvSampleStruct.EndUpdate;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
@@ -235,7 +235,7 @@ begin
   end;
   FreeAndNil(FCurrJson);
   if lbxSamples.ItemIndex < 0 then exit;
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     if not TJsonNode.TryParseFile(FSampleList[lbxSamples.ItemIndex], FCurrJson) then
       begin
@@ -245,7 +245,7 @@ begin
       end;
     LoadPreview(ExtractFileNameOnly(lbxSamples.Items[lbxSamples.ItemIndex]));
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 

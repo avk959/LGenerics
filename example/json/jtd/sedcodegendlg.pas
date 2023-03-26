@@ -171,7 +171,7 @@ var
   Schema: TJtdSchema;
 begin
   Result := '';
-  Screen.Cursor := crHourGlass;
+  Screen.BeginWaitCursor;
   try
     Schema := TJtdSchema.Create;
     try
@@ -191,7 +191,7 @@ begin
       Schema.Free;
     end;
   finally
-    Screen.Cursor := crDefault;
+    Screen.EndWaitCursor;
   end;
 end;
 
