@@ -2,7 +2,7 @@
 
   Collection of generic algorithms and data structures entirely written in/for FPC and Lazarus. 
   Started as a self-education project, it now seems quite comfortable and fast.
-  In order to use it (FPC 3.2 and higher and Lazarus 1.9.0 and higher):
+  In order to use it (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   
   - open and compile package lgenerics/LGenerics.lpk.
   
