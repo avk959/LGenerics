@@ -159,7 +159,7 @@ type
     ToolButton9: TToolButton;
     tvInstanceTree: TTreeView;
     tsSource: TTabSheet;
-    tsStruct: TTabSheet;
+    tsValidate: TTabSheet;
     tvSchemaTree: TTreeView;
     procedure acAboutExecute(Sender: TObject);
     procedure acAppExitExecute(Sender: TObject);
@@ -232,7 +232,7 @@ type
     procedure stbMainStatusResize(Sender: TObject);
     procedure tbtOpenArrowClick(Sender: TObject);
     procedure tsSourceShow(Sender: TObject);
-    procedure tsStructShow(Sender: TObject);
+    procedure tsValidateShow(Sender: TObject);
   private
   type
     TSourceState       = (ssUnknown, ssInvalidJson, ssInvalidSchema, ssValidSchema);
@@ -485,9 +485,9 @@ begin
       seJsonEdit.SetFocus;
 end;
 
-procedure TfrmMain.tsStructShow(Sender: TObject);
+procedure TfrmMain.tsValidateShow(Sender: TObject);
 begin
-  if pcMainPages.ActivePage = tsStruct then
+  if pcMainPages.ActivePage = tsValidate then
     if tvSchemaTree.CanSetFocus then
       tvSchemaTree.SetFocus;
 end;
@@ -918,7 +918,7 @@ end;
 
 procedure TfrmMain.acOpenInstanceUpdate(Sender: TObject);
 begin
-  acOpenInstance.Enabled := (pcMainPages.ActivePage = tsStruct) and (tvSchemaTree.Items.Count <> 0);
+  acOpenInstance.Enabled := (pcMainPages.ActivePage = tsValidate) and (tvSchemaTree.Items.Count <> 0);
 end;
 
 procedure TfrmMain.acQuotesExecute(Sender: TObject);
@@ -978,7 +978,7 @@ end;
 
 procedure TfrmMain.acStartValidateUpdate(Sender: TObject);
 begin
-  acStartValidate.Enabled := (pcMainPages.ActivePage = tsStruct) and(tvInstanceTree.Items.Count <> 0);
+  acStartValidate.Enabled := (pcMainPages.ActivePage = tsValidate) and(tvInstanceTree.Items.Count <> 0);
 end;
 
 procedure TfrmMain.acSyntaxCheckExecute(Sender: TObject);
@@ -1150,7 +1150,7 @@ end;
 
 procedure TfrmMain.acSchemaTreeCollapseUpdate(Sender: TObject);
 begin
-  acSchemaTreeCollapse.Enabled := (pcMainPages.ActivePage = tsStruct) and (tvSchemaTree.Items.Count <> 0);
+  acSchemaTreeCollapse.Enabled := (pcMainPages.ActivePage = tsValidate) and (tvSchemaTree.Items.Count <> 0);
 end;
 
 procedure TfrmMain.acSchemaTreeExpandExecute(Sender: TObject);
@@ -1171,7 +1171,7 @@ end;
 
 procedure TfrmMain.acSchemaTreeExpandUpdate(Sender: TObject);
 begin
-  acSchemaTreeExpand.Enabled := (pcMainPages.ActivePage = tsStruct) and (tvSchemaTree.Items.Count <> 0);
+  acSchemaTreeExpand.Enabled := (pcMainPages.ActivePage = tsValidate) and (tvSchemaTree.Items.Count <> 0);
 end;
 
 procedure TfrmMain.acUndoExecute(Sender: TObject);
