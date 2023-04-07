@@ -1190,6 +1190,7 @@ type
   in decimal notation, otherwise returns False;
   leading and trailing spaces and leading zeros are not allowed }
   function  IsNonNegativeInt(const s: string; out aInt: SizeInt): Boolean;
+  function  SizeInt2Str(aValue: SizeInt): string; inline;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3010,9 +3011,17 @@ begin
   Len := SizeUIntDecimalLen(V);
   System.SetLength(Result, Len);
   if Boolean(Len and 1) then
-    Result[1] := MOD100_TBL[QWord2DecimalStr(V, @Result[Pred(Len)])][1]
+    Result[1] := MOD100_TBL[SizeUInt2DecimalStr(V, @Result[Pred(Len)])][1]
   else
     PChar2(@Result[1])^ := MOD100_TBL[QWord2DecimalStr(V, @Result[Pred(Len)])];
+end;
+
+function SizeInt2Str(aValue: SizeInt): string;
+begin
+  if aValue >= 0 then
+    Result := SizeUInt2Str(SizeUInt(aValue))
+  else
+    Result := IntToStr(aValue);
 end;
 
 
@@ -7879,6 +7888,7 @@ begin
       System.Move(p^, FBufPtr[FBufPos], Avail);
       FBufPos += Avail;
       aCount -= Avail;
+      p += Avail;
       if FBufPos = FBuffer.Length then
         FlushBuffer;
     end;
