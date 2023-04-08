@@ -163,8 +163,10 @@ type
 
   TValidateError = record
   const
-    INSTANCE_PATH = 'instancePath';
-    SCHEMA_PATH   = 'schemaPath';
+  {$PUSH}{$J-}
+    INSTANCE_PATH: string = 'instancePath';
+    SCHEMA_PATH: string   = 'schemaPath';
+  {$POP}
   strict private
     FInstPath,
     FSchemaPath: string;// actually JSON pointers
