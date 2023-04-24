@@ -12,7 +12,8 @@ uses
   lgHashMultiSet, lgHashSet, lgHashTable, lgHelpers, lgMiscUtils, lgMultiMap, lgPriorityQueue, lgQueue, 
   lgSimpleDigraph, lgSimpleGraph, lgSparseGraph, lgStack, lgStrConst, lgStrHelpers, lgTable2D, lgTreeMap, 
   lgTreeMultiSet, lgTreeSet, lgUtils, lgVector, lgRootTree, lgInt128, lgTreap, lgBstUtils, lgRbTree, lgJson, 
-  lgVarJson, lgSeqUtils, lgJsonCfg, lgCsvUtils, lgPdo, lgJsonTypeDef, lgJtdCodegen, lgJtdTypes, lgJtdInfer;
+  lgVarJson, lgSeqUtils, lgJsonCfg, lgCsvUtils, lgPdo, lgJsonTypeDef, lgJtdCodegen, lgJtdTypes, lgJtdInfer, 
+  lgJsonPath;
 
 implementation
 
