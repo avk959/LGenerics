@@ -290,6 +290,7 @@ type
   function Utf8Validate(const s: rawbytestring): Boolean;
 { these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness and normalization of the strings lies with the user }
+  function Utf8StrLen(const s: string): SizeInt; inline;
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
@@ -3134,6 +3135,10 @@ begin
   Result := True;
 end;
 
+function Utf8StrLen(const s: string): SizeInt;
+begin
+  Result := Utf8Len(s);
+end;
 
 function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
 var
