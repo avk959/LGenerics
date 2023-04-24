@@ -154,6 +154,42 @@ resourcestring
   SERequiredJPropNotFoundFmt = '%s: required JSON property "%s" not found';
   SEStrNotEnumElemFmt        = '"%s" is not an element of the %s enumeration';
   SEUnknownPropFoundFmt      = '%s: found unknown property "%s"';
+//JSONPath consts
+  SEJPathPosErrorFmt       = 'Position %d: %s';
+  SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
+  SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';
+  SEJPathInvalidIntFmt     = '%s is an invalid integer';
+  SEJPathInvalidNumFmt     = '%s is an invalid number';
+  SEJPathIntRangeFmt       = 'integer value out of range(%s)';
+  SEJPathUnknownSymFmt     = 'unknown symbol "%s"';
+  SEJPathInternalParseFmt  = 'Internal parser error: "%s"';
+  SEJPathQueryIsEmpty      = 'Query is empty';
+  SEJPathRootMiss          = 'Query must start with a root identifier( $ )';
+  SEJPathMalformQuery      = 'Malformed query string';
+  SEJPathCantEndWithDot    = 'query cannot end with a dot';
+  SEJPathCloseBracketMiss  = 'missing closing bracket';
+  SEJPathCloseParenMiss    = 'missing closing parenthesis';
+  SEJPathOperandMiss       = 'missing operand';
+  SEJPathFunParamMiss      = 'missing function parameter(s)';
+  SEJPathEndDblQuoteMiss   = 'missing closing double quote';
+  SEJPathEndQuoteMiss      = 'missing closing quote';
+  SEJPathNameFirstChar     = 'name-first char';
+  SEJPathTrailingComma     = 'trailing comma';
+  SEJPathLeadingComma      = 'leading comma';
+  SEJPathEmptySegment      = 'empty segment';
+  SEJPathDotOrLB           = 'dot or left bracket';
+  SEJPathNameEscapable     = 'quote or escapable';
+  SEJPathEqualSign         = 'equal sign';
+  SEJPathPipeSign          = 'pipe symbol';
+  SEJPathAmpersand         = 'ampersand';
+  SEJPathDqNameEscapable   = 'double quote or escapable';
+  SEJPathNoEnoughUniElems  = 'insufficient hex digits in Unicode character entry';
+  SEInvalidUnicodeEntry    = 'invalid Unicode character entry';
+  SEJPathNoEnoughSurrElems = 'insufficient elements in Unicode surrogate pair';
+  SEJPathInvalidHiSurr     = 'invalid Unicode high surrogate';
+  SEJPathInvalidLoSurr     = 'invalid Unicode low surrogate';
+  SEJPathIntegerExpect     = 'colon, comma or right bracket';
+  SEJPathUnexpectQueryEnd  = 'unexpected query end';
 
 implementation
 
