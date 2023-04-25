@@ -2328,7 +2328,7 @@ begin
   until not(CurrChar in (DEC_DIGITS + ['.', 'E', 'e', '-', '+']));
   s := MakeString(Start,  FLook - Start);
   if not TryStr2Double(s, FNumValue) then
-    Fail(SEJPathPosErrorFmt, [Position, SEJPathInvalidNumFmt]);
+    Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidNumFmt, [s])]);
   FToken := jtkNumber;
 end;
 
@@ -3134,10 +3134,24 @@ end;
 procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
+  b, e: Boolean;
 begin
   aResult := False;
   if not FindMatchParams(aList, Input, Regex) then exit;
-  Regex := '^' + Regex + '$';
+  if Regex = '' then
+    Regex := '^$'
+  else
+    begin
+      b := Regex[1] <> '^';
+      e := Regex[System.Length(Regex)] <> '$';
+      if b and e then
+        Regex := '^' + Regex + '$'
+      else
+        if b then
+          Regex := '^' + Regex
+        else
+          Regex := Regex + '$';
+    end;
   aResult := TryExecRegex(Input, Regex, [rroModifierS]);
 end;
 
