@@ -1,0 +1,62 @@
+{
+  "tests": [
+    {
+      "name": "count function",
+      "selector": "$[?count(@..*)>2]",
+      "document": [
+        {
+          "a": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "a": [
+            1
+          ],
+          "d": "f"
+        },
+        {
+          "a": 1,
+          "d": "f"
+        }
+      ],
+      "result": [
+        {
+          "a": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "a": [
+            1
+          ],
+          "d": "f"
+        }
+      ]
+    },
+    {
+      "name": "non-array/string arg",
+      "selector": "$[?count(1)>2]",
+      "invalid_selector": true
+    },
+    {
+      "name": "result must be compared",
+      "selector": "$[?count(@..*)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "no params",
+      "selector": "$[?count()==1]",
+      "invalid_selector": true
+    },
+    {
+      "name": "too many params",
+      "selector": "$[?count(@.a,@.b)==1]",
+      "invalid_selector": true
+    }
+  ]
+}
