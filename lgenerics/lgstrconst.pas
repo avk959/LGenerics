@@ -155,9 +155,14 @@ resourcestring
   SEStrNotEnumElemFmt        = '"%s" is not an element of the %s enumeration';
   SEUnknownPropFoundFmt      = '%s: found unknown property "%s"';
 //JSONPath consts
+  SEJLeadWSNotAllow        = 'Leading spaces are not allowed';
+  SEJTrailWSNotAllow       = 'Trailing spaces are not allowed';
+  SEJPathCantEndWithDot    = 'Query cannot end with a dot';
   SEJPathPosErrorFmt       = 'Position %d: %s';
   SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
   SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';
+  SEJPathInvalidStrCharFmt = 'invalid string character(#%u)';
+  SEJPathBoolFunRequired   = 'logical function required';
   SEJPathInvalidIntFmt     = '%s is an invalid integer';
   SEJPathInvalidNumFmt     = '%s is an invalid number';
   SEJPathIntRangeFmt       = 'integer value out of range(%s)';
@@ -166,17 +171,19 @@ resourcestring
   SEJPathQueryIsEmpty      = 'Query is empty';
   SEJPathRootMiss          = 'Query must start with a root identifier( $ )';
   SEJPathMalformQuery      = 'Malformed query string';
-  SEJPathCantEndWithDot    = 'query cannot end with a dot';
   SEJPathCloseBracketMiss  = 'missing closing bracket';
   SEJPathCloseParenMiss    = 'missing closing parenthesis';
   SEJPathOperandMiss       = 'missing operand';
-  SEJPathFunParamMiss      = 'missing function parameter(s)';
+  SEJPathFunParamMissFmt   = 'missing %s() parameter(s)';
+  SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
+  SEJPathQueryParamNeedFmt = 'need query as %s() parameter';
   SEJPathEndDblQuoteMiss   = 'missing closing double quote';
   SEJPathEndQuoteMiss      = 'missing closing quote';
   SEJPathNameFirstChar     = 'name-first char';
   SEJPathTrailingComma     = 'trailing comma';
   SEJPathLeadingComma      = 'leading comma';
   SEJPathEmptySegment      = 'empty segment';
+  SEJPathCommaOrRB         = 'comma or right bracket';
   SEJPathDotOrLB           = 'dot or left bracket';
   SEJPathNameEscapable     = 'quote or escapable';
   SEJPathEqualSign         = 'equal sign';
@@ -190,6 +197,8 @@ resourcestring
   SEJPathInvalidLoSurr     = 'invalid Unicode low surrogate';
   SEJPathIntegerExpect     = 'colon, comma or right bracket';
   SEJPathUnexpectQueryEnd  = 'unexpected query end';
+  SEJPathNonSingularQuery  = 'non-singular query in comparison expression';
+  SEJPathBoolFunInComp     = 'logical function in comparison expression';
 
 implementation
 
