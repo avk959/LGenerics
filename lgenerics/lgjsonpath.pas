@@ -408,13 +408,11 @@ class operator TJpValue.=(const L, R: TJpValue): Boolean;
 begin
   Result := False;
   if L.ValType = R.ValType then
-    begin
-      case L.ValType of
-        jvtNull, jvtFalse, jvtTrue: Result := True;
-        jvtString: Result := L.StrValue = R.StrValue;
-        jvtNumber: Result := L.NumValue = R.NumValue;
-        jvtNode:   Result := L.NodeValue.EqualTo(R.NodeValue);
-      end
+    case L.ValType of
+      jvtNull, jvtFalse, jvtTrue: Result := True;
+      jvtString: Result := L.StrValue = R.StrValue;
+      jvtNumber: Result := L.NumValue = R.NumValue;
+      jvtNode:   Result := L.NodeValue.EqualTo(R.NodeValue);
     end
   else
     if L.ValType = jvtNode then
@@ -544,12 +542,12 @@ begin
   Result := False;
   if L.InstType = R.InstType then
     case L.InstType of
-      jitNothing:  Result := True;
-      jitValue: Result := L.Value = R.Value;
+      jitNothing: Result := True;
+      jitValue:   Result := L.Value = R.Value;
+      jitLogical: Result := False;
       jitNodeList:
         if L.NodeList = nil then
           Result := R.NodeList = nil;
-    else
     end;
 end;
 
@@ -833,7 +831,6 @@ type
 
   { TJpConstExpr }
   TJpConstExpr = class(TJpExpression)
-  strict protected
   public
     constructor CreateNull;
     constructor Create(b: Boolean);
@@ -902,38 +899,40 @@ type
     property IsSingular: Boolean read FSingular;
   end;
 
+  TJpCompareExpr = class(TJpBinaryExpr);
+
   { TJpEqualExpr }
-  TJpEqualExpr = class(TJpBinaryExpr)
+  TJpEqualExpr = class(TJpCompareExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpNotEqualExpr }
-  TJpNotEqualExpr = class(TJpBinaryExpr)
+  TJpNotEqualExpr = class(TJpCompareExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpLessThanExpr }
-  TJpLessThanExpr = class(TJpBinaryExpr)
+  TJpLessThanExpr = class(TJpCompareExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpLessOrEqualExpr }
-  TJpLessOrEqualExpr = class(TJpBinaryExpr)
+  TJpLessOrEqualExpr = class(TJpCompareExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpGreaterThanExpr }
-  TJpGreaterThanExpr = class(TJpBinaryExpr)
+  TJpGreaterThanExpr = class(TJpCompareExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpGreaterOrEqualExpr }
-  TJpGreaterOrEqualExpr = class(TJpBinaryExpr)
+  TJpGreaterOrEqualExpr = class(TJpCompareExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
@@ -1027,7 +1026,7 @@ type
     procedure Slice(aSegment: TSegment; const aStart: TOptionalInt);
     function  ExprLevel0(aSkip: Boolean): TJpExpression;
     function  ExprLevel1(aSkip: Boolean): TJpExpression;
-    procedure CheckCompExpr(aExpr: TJpExpression); inline;
+    procedure CheckCompOperand(aExpr: TJpExpression); inline;
     function  ExprLevel2(aSkip: Boolean): TJpExpression;
     function  ExprLevel3(aSkip: Boolean): TJpExpression;
     function  ExprLevel4: TJpExpression;
@@ -2080,9 +2079,9 @@ begin
     if Len > MAX_DIGITS then exit(iprRange);
   end;
 {$IF DEFINED(CPU32)}
-  if (Len = MAX_DIGITS) and (v < TEST_BOUND) then exit(piOverflow);
+  if (Len = MAX_DIGITS) and (v < TEST_BOUND) then exit(iprRange);
   if (IsNeg and (v > SizeUInt(System.High(SizeInt))+1)) or (v > System.High(SizeInt)) then
-    exit(piOverflow);
+    exit(iprRange);
 {$ELSEIF DEFINED(CPU64)}
   if v > 9007199254740991 then
     exit(iprRange); //integer value MUST be within the range of exact values
@@ -2667,13 +2666,16 @@ begin
   end;
 end;
 
-procedure TJpQueryParser.CheckCompExpr(aExpr: TJpExpression);
+procedure TJpQueryParser.CheckCompOperand(aExpr: TJpExpression);
 begin
   if (aExpr is TJpRelQueryExpr) and not TJpRelQueryExpr(aExpr).IsSingular then
-    Fail(SEJPathPosErrorFmt, [SEJPathNonSingularQuery])
+    Fail(SEJPathPosErrorFmt, [Position, SEJPathNonSingularQuery])
   else
     if (aExpr is TJpFunctionExpr) and (TJpFunctionExpr(aExpr).ResultType = jitLogical) then
-      Fail(SEJPathPosErrorFmt, [SEJPathBoolFunInComp]);
+      Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolFunInComp])
+    else
+      if aExpr is TJpCompareExpr then
+        Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolExprInComp]);
 end;
 
 function TJpQueryParser.ExprLevel2(aSkip: Boolean): TJpExpression;
@@ -2682,7 +2684,7 @@ begin
   try
     while CurrToken in COMPARISONS do
       begin
-        CheckCompExpr(Result);
+        CheckCompOperand(Result);
         case CurrToken of
           jtkLess:      Result := TJpLessThanExpr.Create(Result, ExprLevel3(True));
           jtkGreater:   Result := TJpGreaterThanExpr.Create(Result, ExprLevel3(True));
@@ -2739,7 +2741,7 @@ begin
     end;
     NextToken;
   end else
-    Fail(SEJPathPosErrorFmt, [Position, SEJPathOperandMiss]);
+    Fail(SEJPathPosErrorFmt, [Position, SEJPathOperandMiss]); // ???
 end;
 
 function TJpQueryParser.SubQueryExpr: TJpExpression;
@@ -2782,7 +2784,7 @@ begin
   System.SetLength(ParamList, System.Length(FunDef.ParamDefs));
   I := 0;
   try
-    repeat
+    while CurrToken <> jtkRParen do begin
       e := ExprLevel0(False);
       ParamList[I] := e;
       if I > System.High(FunDef.ParamDefs) then
@@ -2792,13 +2794,12 @@ begin
       if I < System.High(ParamList) then
         if CurrToken <> jtkComma then
           Fail(SEJPathPosUnexpectFmt, [Position, CurrChar])
-        else
-          begin
-            SkipChar;
-            NextToken;
-          end;
+        else begin
+          SkipChar;
+          NextToken;
+        end;
       Inc(I);
-    until CurrToken = jtkRParen;
+    end;
     if I < System.Length(ParamList) then
       Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathFunParamMissFmt, [FunName])]);
     Result := TJpFunctionExpr.Create(ParamList, FunDef.OnExecute, FunDef.ResultType);
@@ -2817,10 +2818,10 @@ begin
   SkipChar;
   NextToken;
   e := ExprLevel0(False);
-  if (e is TJpFunctionExpr) and (TJpFunctionExpr(e).ResultType <> jitLogical) then
+  if (e is TJpFunctionExpr) and (TJpFunctionExpr(e).ResultType <> jitLogical) or (e is TJpConstExpr) then
     begin
       e.Free;
-      Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolFunRequired]);
+      Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolExprExpected]);
     end;
   Result := TJpFilter.Create(e);
 end;
@@ -3095,36 +3096,22 @@ end;
 procedure CallLengthFun(const aList: TJpParamList; out aResult: TJpInstance);
 begin
   aResult := TJpInstance.Nothing;
-  if System.Length(aList) = 1 then
-    case aList[0].InstType of
-      jitValue:
-        with aList[0].Value do
-          case ValType of
-            jvtString:
-              aResult := Utf8StrLen(StrValue);
-            jvtNode:
-              if NodeValue <> nil then
-                case NodeValue.Kind of
-                  jvkString:
-                    aResult := Utf8StrLen(NodeValue.AsString);
-                  jvkArray, jvkObject:
-                    aResult := NodeValue.Count;
-                else
-                end;
-          else
-          end;
-      jitNodeList:
-        if System.Length(aList[0].NodeList) = 1 then
-          with aList[0].NodeList[0] do
-            case Kind of
+  if (System.Length(aList) = 1) and (aList[0].InstType = jitValue) then
+    with aList[0].Value do
+      case ValType of
+        jvtString:
+          aResult := Utf8StrLen(StrValue);
+        jvtNode:
+          if NodeValue <> nil then
+            case NodeValue.Kind of
               jvkString:
-                aResult := Utf8StrLen(AsString);
-              jvkArray,jvkObject:
-                aResult := Count;
+                aResult := Utf8StrLen(NodeValue.AsString);
+              jvkArray, jvkObject:
+                aResult := NodeValue.Count;
             else
             end;
-    else
-    end;
+      else
+      end;
 end;
 
 procedure CallValueFun(const aList: TJpParamList; out aResult: TJpInstance);
@@ -3165,43 +3152,28 @@ end;
 
 function GetString(const aInst: TJpInstance; out s: string): Boolean;
 begin
-  case aInst.InstType of
-    jitValue:
-      case aInst.Value.ValType of
-        jvtString:
+  if aInst.InstType = jitValue then
+    case aInst.Value.ValType of
+      jvtString:
+        begin
+          s := aInst.Value.StrValue;
+          exit(True);
+        end;
+      jvtNode:
+        if (aInst.Value.NodeValue <> nil) and (aInst.Value.NodeValue.IsString) then
           begin
-            s := aInst.Value.StrValue;
+            s := aInst.Value.NodeValue.AsString;
             exit(True);
           end;
-        jvtNode:
-          if (aInst.Value.NodeValue <> nil) and (aInst.Value.NodeValue.IsString) then
-            begin
-              s := aInst.Value.NodeValue.AsString;
-              exit(True);
-            end;
-      else
-      end;
-    jitNodeList:
-      if (System.Length(aInst.NodeList) = 1) and aInst.NodeList[0].IsString then
-        begin
-          s := aInst.NodeList[0].AsString;
-          exit(True);
-        end
-  else
-  end;
+    else
+    end;
   Result := False;
 end;
 
 function FindMatchParams(const aList: TJpParamList; out aInput, aRegex: string): Boolean;
 begin
   if System.Length(aList) = 2 then
-    begin
-      if not GetString(aList[0], aInput) then
-        exit(False);
-      if not GetString(aList[1], aRegex) then
-        exit(False);
-      Result := True;
-    end
+    Result := GetString(aList[0], aInput) and GetString(aList[1], aRegex)
   else
     Result := (False);
 end;
