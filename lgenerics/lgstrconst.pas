@@ -162,7 +162,7 @@ resourcestring
   SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
   SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';
   SEJPathInvalidStrCharFmt = 'invalid string character(#%u)';
-  SEJPathBoolFunRequired   = 'logical function required';
+  SEJPathBoolExprExpected  = 'logical expression expected';
   SEJPathInvalidIntFmt     = '%s is an invalid integer';
   SEJPathInvalidNumFmt     = '%s is an invalid number';
   SEJPathIntRangeFmt       = 'integer value out of range(%s)';
@@ -197,8 +197,9 @@ resourcestring
   SEJPathInvalidLoSurr     = 'invalid Unicode low surrogate';
   SEJPathIntegerExpect     = 'colon, comma or right bracket';
   SEJPathUnexpectQueryEnd  = 'unexpected query end';
-  SEJPathNonSingularQuery  = 'non-singular query in comparison expression';
-  SEJPathBoolFunInComp     = 'logical function in comparison expression';
+  SEJPathNonSingularQuery  = 'non-singular query as comparison operand';
+  SEJPathBoolFunInComp     = 'logical function as comparison operand';
+  SEJPathBoolExprInComp    = 'logical expression as comparison operand';
 
 implementation
 
