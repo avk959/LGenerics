@@ -873,14 +873,16 @@ type
     property Right: TJpExpression read FRight;
   end;
 
-  { TJpAndPredicate }
-  TJpAndPredicate = class(TJpBinaryExpr)
+  TJpLogicExpr = class(TJpBinaryExpr);
+
+  { TJpAndExpr }
+  TJpAndExpr = class(TJpLogicExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
-  { TJpOrPredicate }
-  TJpOrPredicate = class(TJpBinaryExpr)
+  { TJpOrExpr }
+  TJpOrExpr = class(TJpLogicExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
@@ -899,40 +901,40 @@ type
     property IsSingular: Boolean read FSingular;
   end;
 
-  TJpCompareExpr = class(TJpBinaryExpr);
+  TJpComparisonExpr = class(TJpBinaryExpr);
 
   { TJpEqualExpr }
-  TJpEqualExpr = class(TJpCompareExpr)
+  TJpEqualExpr = class(TJpComparisonExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpNotEqualExpr }
-  TJpNotEqualExpr = class(TJpCompareExpr)
+  TJpNotEqualExpr = class(TJpComparisonExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpLessThanExpr }
-  TJpLessThanExpr = class(TJpCompareExpr)
+  TJpLessThanExpr = class(TJpComparisonExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpLessOrEqualExpr }
-  TJpLessOrEqualExpr = class(TJpCompareExpr)
+  TJpLessOrEqualExpr = class(TJpComparisonExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpGreaterThanExpr }
-  TJpGreaterThanExpr = class(TJpCompareExpr)
+  TJpGreaterThanExpr = class(TJpComparisonExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
   { TJpGreaterOrEqualExpr }
-  TJpGreaterOrEqualExpr = class(TJpCompareExpr)
+  TJpGreaterOrEqualExpr = class(TJpComparisonExpr)
   strict protected
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
@@ -984,16 +986,18 @@ type
     DEC_DIGITS     = ['0'..'9'];
     MINUS_OR_DIGIT = DEC_DIGITS + ['-'];
     WHITE_SPACE    = [#9, #10, #13, ' '];
-    NAME_FIRST     = ['A'..'Z', 'a'..'z', '_', #$c2..#$f4];
-    NAME_CHAR      = NAME_FIRST + ['0'..'9', #$8f..#$f3];
+    NAME_FIRST     = ['A'..'Z', 'a'..'z', '_', #$80..#$ff];
+    NAME_CHAR      = NAME_FIRST + ['0'..'9'];
     HEX_DIGITS     = ['0'..'9', 'A', 'B', 'C', 'D', 'E', 'F', 'a', 'b', 'c', 'd', 'e', 'f'];
     FUN_NAME_FIRST = ['a'..'z'];
     FUN_NAME_CHAR  = FUN_NAME_FIRST + ['0'..'9', '_'];
+    MAX_DEPTH      = 128;
   var
     FQuery: string;
     FPath: TJsonPathQuery;
     FLook,
     FLast: PAnsiChar;
+    FDepth: SizeInt;
     FStrValue: string;
     FNumValue: Double;
     FFunDef: TJpFunctionDef;
@@ -1024,6 +1028,7 @@ type
     procedure ParseInt(out aValue: SizeInt);
     procedure IndexOrSlice(aSegment: TSegment); inline;
     procedure Slice(aSegment: TSegment; const aStart: TOptionalInt);
+    procedure CheckBoolOperand(aExpr: TJpExpression); inline;
     function  ExprLevel0(aSkip: Boolean): TJpExpression;
     function  ExprLevel1(aSkip: Boolean): TJpExpression;
     procedure CheckCompOperand(aExpr: TJpExpression); inline;
@@ -1883,7 +1888,7 @@ end;
 
 { TAndPredicate }
 
-procedure TJpAndPredicate.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
+procedure TJpAndExpr.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
 begin
   if not Left.Apply(aCtx) then
     v := False
@@ -1893,7 +1898,7 @@ end;
 
 { TOrPredicate }
 
-procedure TJpOrPredicate.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
+procedure TJpOrExpr.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
 begin
   if Left.Apply(aCtx) then
     v := True
@@ -2416,7 +2421,10 @@ begin
         begin
           aPath.AddChildSegment.AddWildcard;
           SkipCharThenWS;
-        end;
+        end
+      else
+        if CurrChar <> '[' then
+          Fail(SEJPathPosUnexpectFmt, [Position, CurrChar]);
     end;
 end;
 
@@ -2434,6 +2442,8 @@ begin
   else
     if CurrChar in NAME_FIRST then //leading spaces in shorthand name are not allowed
       ShorthandName(aPath)
+    else
+      Fail(SEJPathPosUnexpectFmt, [Position, CurrChar]);
   end;
 end;
 
@@ -2642,47 +2652,76 @@ begin
 end;
 {$POP}
 
+procedure TJpQueryParser.CheckBoolOperand(aExpr: TJpExpression);
+begin
+  if aExpr is TJpConstExpr then
+    Fail(SEJPathUnexpectLogicFmt, [Position, SEJPathLiteral])
+  else
+    if (aExpr is TJpFunctionExpr) and (TJpFunctionExpr(aExpr).ResultType <> jitLogical) then
+      Fail(SEJPathUnexpectLogicFmt, [Position, SEJPathNonLogicFun]);
+end;
+
 function TJpQueryParser.ExprLevel0(aSkip: Boolean): TJpExpression;
 begin
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   Result := ExprLevel1(aSkip);
   try
-    while CurrToken = jtkBoolOr do
-      Result := TJpOrPredicate.Create(Result, ExprLevel0(True));
+    if CurrToken = jtkBoolOr then
+      begin
+        CheckBoolOperand(Result);
+        repeat
+          Result := TJpOrExpr.Create(Result, ExprLevel0(True));
+          CheckBoolOperand(TJpBinaryExpr(Result).Right);
+        until CurrToken <> jtkBoolOr;
+      end;
   except
     Result.Free;
     raise;
   end;
+  Dec(FDepth);
 end;
 
 function TJpQueryParser.ExprLevel1(aSkip: Boolean): TJpExpression;
 begin
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   Result := ExprLevel2(aSkip);
   try
-    while CurrToken = jtkBoolAnd do
-      Result := TJpAndPredicate.Create(Result, ExprLevel1(True));
+    if CurrToken = jtkBoolAnd then
+      begin
+        CheckBoolOperand(Result);
+        repeat
+          Result := TJpAndExpr.Create(Result, ExprLevel1(True));
+          CheckBoolOperand(TJpBinaryExpr(Result).Right);
+        until CurrToken <> jtkBoolAnd;
+      end;
   except
     Result.Free;
     raise;
   end;
+  Dec(FDepth);
 end;
 
 procedure TJpQueryParser.CheckCompOperand(aExpr: TJpExpression);
 begin
   if (aExpr is TJpRelQueryExpr) and not TJpRelQueryExpr(aExpr).IsSingular then
-    Fail(SEJPathPosErrorFmt, [Position, SEJPathNonSingularQuery])
+    Fail(SEJPathUnexpectCompFmt, [Position, SEJPathNonSingularQuery])
   else
     if (aExpr is TJpFunctionExpr) and (TJpFunctionExpr(aExpr).ResultType = jitLogical) then
-      Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolFunInComp])
+      Fail(SEJPathUnexpectCompFmt, [Position, SEJPathLogicFun])
     else
-      if aExpr is TJpCompareExpr then
-        Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolExprInComp]);
+      if aExpr is TJpComparisonExpr then
+        Fail(SEJPathUnexpectCompFmt, [Position, SEJPathComparison]);
 end;
 
 function TJpQueryParser.ExprLevel2(aSkip: Boolean): TJpExpression;
 begin
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   Result := ExprLevel3(aSkip);
   try
-    while CurrToken in COMPARISONS do
+    if CurrToken in COMPARISONS then
       begin
         CheckCompOperand(Result);
         case CurrToken of
@@ -2694,60 +2733,87 @@ begin
           jtkGreatOrEq: Result := TJpGreaterOrEqualExpr.Create(Result, ExprLevel3(True));
         else
         end;
+        CheckCompOperand(TJpBinaryExpr(Result).Right);
       end;
   except
     Result.Free;
     raise;
   end;
+  Dec(FDepth);
 end;
 
 function TJpQueryParser.ExprLevel3(aSkip: Boolean): TJpExpression;
+var
+  e: TJpExpression;
 begin
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   if aSkip then
     NextToken;
   if CurrToken = jtkBoolNot then
-    Result := TJpNotPredicate.Create(ExprLevel3(True))
+    begin
+      e := ExprLevel3(True);
+      if e is TJpConstExpr then
+        begin
+          e.Free;
+          Fail(SEJPathUnexpectLogicFmt, [Position, SEJPathLiteral]);
+        end
+      else
+        if (e is TJpFunctionExpr) and (TJpFunctionExpr(e).ResultType <> jitLogical) then
+          begin
+            e.Free;
+            Fail(SEJPathUnexpectLogicFmt, [Position, SEJPathNonLogicFun]);
+          end;
+      Result := TJpNotPredicate.Create(e);
+    end
   else
     Result := ExprLevel4;
+  Dec(FDepth);
 end;
 
 function TJpQueryParser.ExprLevel4: TJpExpression;
 begin
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   Result := nil;
-  if CurrToken in LITERALS + [jtkFunction, jtkLParen, jtkRootId, jtkCurrId] then begin
-    case CurrToken of
-      jtkLParen: begin
-          Result := ExprLevel0(True);
-          if CurrToken <> jtkRParen then begin
-            Result.Free;
-            Fail(SEJPathPosErrorFmt, [Position, SEJPathCloseParenMiss]);
+  try
+    if CurrToken in LITERALS + [jtkFunction, jtkLParen, jtkRootId, jtkCurrId] then begin
+      case CurrToken of
+        jtkLParen: begin
+            Result := ExprLevel0(True);
+            if CurrToken <> jtkRParen then
+              Fail(SEJPathPosErrorFmt, [Position, SEJPathCloseParenMiss]);
           end;
-        end;
-      jtkRootId,
-      jtkCurrId: Result := SubQueryExpr;
-      jtkFunction: begin
-          Result := FunctionExpr;
-          if CurrToken <> jtkRParen then begin
-            Result.Free;
-            Fail(SEJPathPosErrorFmt, [Position, SEJPathCloseParenMiss]);
+        jtkRootId,
+        jtkCurrId: Result := SubQueryExpr;
+        jtkFunction: begin
+            Result := FunctionExpr;
+            if CurrToken <> jtkRParen then
+              Fail(SEJPathPosErrorFmt, [Position, SEJPathCloseParenMiss]);
           end;
-        end;
-      jtkNull:   Result := TJpConstExpr.CreateNull;
-      jtkFalse:  Result := TJpConstExpr.Create(False);
-      jtkTrue:   Result := TJpConstExpr.Create(True);
-      jtkString: Result := TJpConstExpr.Create(FStrValue);
-      jtkNumber: Result := TJpConstExpr.Create(FNumValue);
-    else
-    end;
-    NextToken;
-  end else
-    Fail(SEJPathPosErrorFmt, [Position, SEJPathOperandMiss]); // ???
+        jtkNull:   Result := TJpConstExpr.CreateNull;
+        jtkFalse:  Result := TJpConstExpr.Create(False);
+        jtkTrue:   Result := TJpConstExpr.Create(True);
+        jtkString: Result := TJpConstExpr.Create(FStrValue);
+        jtkNumber: Result := TJpConstExpr.Create(FNumValue);
+      else
+      end;
+      NextToken;
+    end else
+      Fail(SEJPathPosErrorFmt, [Position, SEJPathOperandMiss]); // ???
+  except
+    Result.Free;
+    raise;
+  end;
+  Dec(FDepth);
 end;
 
 function TJpQueryParser.SubQueryExpr: TJpExpression;
 var
   Path: TRelPathQuery;
 begin
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   if CurrToken = jtkRootId then
     Path := TRelPathQuery.Create(jpiRoot)
   else
@@ -2761,11 +2827,12 @@ begin
           BracketSegment(Path);
         SkipWhiteSpace;
       end;
-     Result := TJpRelQueryExpr.Create(Path);
+    Result := TJpRelQueryExpr.Create(Path);
   except
     Path.Free;
     raise;
   end;
+  Dec(FDepth);
 end;
 
 function TJpQueryParser.FunctionExpr: TJpExpression;
@@ -2777,6 +2844,8 @@ var
   I: SizeInt;
 begin
   Assert(CurrChar = '(');
+  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  Inc(FDepth);
   SkipChar;
   NextToken;
   FunDef := FFunDef;
@@ -2808,6 +2877,7 @@ begin
       e.Free;
     raise;
   end;
+  Dec(FDepth);
 end;
 
 function TJpQueryParser.GetFilter: TJpFilter;
@@ -2821,7 +2891,7 @@ begin
   if (e is TJpFunctionExpr) and (TJpFunctionExpr(e).ResultType <> jitLogical) or (e is TJpConstExpr) then
     begin
       e.Free;
-      Fail(SEJPathPosErrorFmt, [Position, SEJPathBoolExprExpected]);
+      Fail(SEJPathPosErrorFmt, [Position, SEJPathLogicExprExpect]);
     end;
   Result := TJpFilter.Create(e);
 end;
