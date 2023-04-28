@@ -24,6 +24,7 @@ const
   MATCH_TEST   = 'match.json';
   SEARCH_TEST  = 'search.json';
   VALUE_TEST   = 'value.json';
+  REGRESS_TEST = 'regress.json';
 
 var
   TestDir: string = '';
@@ -51,6 +52,7 @@ type
     procedure TestMatchFun;
     procedure TestSearchFun;
     procedure TestValueFun;
+    procedure TestMore;
   end;
 
 implementation
@@ -242,6 +244,55 @@ begin
   AssertTrue(TestSet.Instance.Find('tests', Tests));
   AssertTrue(Tests.IsArray);
   RunTestSet(Tests);
+end;
+
+procedure TTestJsonPath.TestMore;
+var
+  TestSet: specialize TGAutoRef<TJsonNode>;
+  Tests, CurrTest, Doc, Expect, Invalid: TJsonNode;
+  GotOut: TJpValueList;
+  TstName, Query: string;
+  Path: IJsonPath;
+begin
+  AssertTrue(DirectoryExists(TestDir));
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + REGRESS_TEST);
+  AssertTrue(TestSet.Instance <> nil);
+  AssertTrue(TestSet.Instance.Find('queries', Tests));
+  AssertTrue(Tests.IsArray);
+
+  for CurrTest in Tests do
+    begin
+      AssertTrue(CurrTest.IsObject);
+      Query := CurrTest['selector'].AsString;
+      TstName := CurrTest['id'].AsString;
+      if CurrTest.Find('should_be', Expect) then
+        begin
+          if Expect.IsString and (Expect.AsString = 'NOT_SUPPORTED') then
+            AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path))
+          else
+            begin
+              AssertTrue(FalseReject(TstName, Query), ParseJsonPath(Query, Path));
+              Doc := CurrTest['document'];
+              GotOut := Path.MatchValues(Doc);
+              AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
+            end;
+        end
+      else
+        if CurrTest.Find('consensus', Expect) then
+          begin
+            if Expect.IsString and (Expect.AsString = 'NOT_SUPPORTED') then
+              AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path))
+            else
+              begin
+                AssertTrue(FalseReject(TstName, Query), ParseJsonPath(Query, Path));
+                Doc := CurrTest['document'];
+                GotOut := Path.MatchValues(Doc);
+                AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
+              end;
+          end
+        else
+          AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path));
+    end;
 end;
 
 procedure FindTestDir;
