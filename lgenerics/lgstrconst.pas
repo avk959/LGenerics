@@ -158,25 +158,25 @@ resourcestring
   SEJLeadWSNotAllow        = 'Leading spaces are not allowed';
   SEJTrailWSNotAllow       = 'Trailing spaces are not allowed';
   SEJPathCantEndWithDot    = 'Query cannot end with a dot';
+  SEJPathQueryIsEmpty      = 'Query is empty';
+  SEJPathRootMiss          = 'Query must start with a root identifier( $ )';
+  SEJPathMaxDepthExceed    = 'Maximum recursion depth exceeded';
   SEJPathPosErrorFmt       = 'Position %d: %s';
   SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
   SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';
   SEJPathInvalidStrCharFmt = 'invalid string character(#%u)';
-  SEJPathBoolExprExpected  = 'logical expression expected';
   SEJPathInvalidIntFmt     = '%s is an invalid integer';
   SEJPathInvalidNumFmt     = '%s is an invalid number';
   SEJPathIntRangeFmt       = 'integer value out of range(%s)';
-  SEJPathUnknownSymFmt     = 'unknown symbol "%s"';
+  SEJPathUnknownSymFmt     = 'unrecognized symbol "%s"';
   SEJPathInternalParseFmt  = 'Internal parser error: "%s"';
-  SEJPathQueryIsEmpty      = 'Query is empty';
-  SEJPathRootMiss          = 'Query must start with a root identifier( $ )';
   SEJPathMalformQuery      = 'Malformed query string';
   SEJPathCloseBracketMiss  = 'missing closing bracket';
   SEJPathCloseParenMiss    = 'missing closing parenthesis';
   SEJPathOperandMiss       = 'missing operand';
   SEJPathFunParamMissFmt   = 'missing %s() parameter(s)';
   SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
-  SEJPathQueryParamNeedFmt = 'need query as %s() parameter';
+  SEJPathQueryParamNeedFmt = '%s() expected a query as the current parameter';
   SEJPathEndDblQuoteMiss   = 'missing closing double quote';
   SEJPathEndQuoteMiss      = 'missing closing quote';
   SEJPathNameFirstChar     = 'name-first char';
@@ -197,9 +197,14 @@ resourcestring
   SEJPathInvalidLoSurr     = 'invalid Unicode low surrogate';
   SEJPathIntegerExpect     = 'colon, comma or right bracket';
   SEJPathUnexpectQueryEnd  = 'unexpected query end';
-  SEJPathNonSingularQuery  = 'non-singular query as comparison operand';
-  SEJPathBoolFunInComp     = 'logical function as comparison operand';
-  SEJPathBoolExprInComp    = 'logical expression as comparison operand';
+  SEJPathNonSingularQuery  = 'non-singular query';
+  SEJPathLogicFun          = 'logical function';
+  SEJPathNonLogicFun       = 'non-logical function';
+  SEJPathComparison        = 'comparison';
+  SEJPathLiteral           = 'literal';
+  SEJPathUnexpectCompFmt   = 'Position %d: unexpected %s in comparison expression';
+  SEJPathUnexpectLogicFmt  = 'Position %d: unexpected %s in logical expression';
+  SEJPathLogicExprExpect   = 'logical expression expected';
 
 implementation
 
