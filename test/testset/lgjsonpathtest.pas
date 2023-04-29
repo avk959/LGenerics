@@ -249,7 +249,7 @@ end;
 procedure TTestJsonPath.TestMore;
 var
   TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests, CurrTest, Doc, Expect, Invalid: TJsonNode;
+  Tests, CurrTest, Doc, Expect: TJsonNode;
   GotOut: TJpValueList;
   TstName, Query: string;
   Path: IJsonPath;
