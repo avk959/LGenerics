@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   JSONPath: query expressions for JSON.                                   *
+*   JSONPath implementation: query expressions for JSON.                    *
 *                                                                           *
 *   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -58,7 +58,7 @@ uses
   1   - logical OR   ||
 
   The implementation tries to be compliant with
-    https://www.ietf.org/archive/id/draft-ietf-jsonpath-base-13.html
+    https://datatracker.ietf.org/doc/draft-ietf-jsonpath-base
 }
 type
   { TJpNode represents JSONPath Node - a value along with its location within the root }
@@ -135,12 +135,12 @@ type
 /////////////////////////////////////////////////////
 
 type
-  TJpValueType = (jvtNull, jvtFalse, jvtTrue, jvtString, jvtNumber, jvtNode);
+  TJpValueType = (jvtNothing, jvtNull, jvtFalse, jvtTrue, jvtString, jvtNumber, jvtNode);
 
   { TJpValue }
   TJpValue = record
-    procedure SetNull; inline;
     function AsBoolean: Boolean; inline;
+    class function Nothing: TJpValue; static; inline;
     class function ValNull: TJpValue; static; inline;
     class function ValFalse: TJpValue; static; inline;
     class function ValTrue: TJpValue; static; inline;
@@ -164,12 +164,11 @@ type
       1: (NodeValue: TJsonNode);
   end;
 
-  TJpInstanceType = (jitNothing, jitValue, jitLogical, jitNodeList);
+  TJpInstanceType = (jitLogical, jitValue, jitNodeList);
 
   { TJpInstance }
   TJpInstance = record
     function AsBoolean: Boolean; inline;
-    class function Nothing: TJpInstance; static; inline;
     class operator := (const s: string): TJpInstance; inline;
     class operator := (d: Double): TJpInstance; inline;
     class operator := (const v: TJpValue): TJpInstance; inline;
@@ -200,6 +199,8 @@ type
     constructor Make(const aDefs: TJpFunParamDefs; aResType: TJpInstanceType; aOnExec: TJpFunctionCall);
   end;
 
+{ the function name must contain only lowercase letters from the range a-z, decimal numbers,
+  underscores, and must begin with a letter }
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
 implementation
@@ -360,11 +361,6 @@ end;
 
 { TJpValue }
 
-procedure TJpValue.SetNull;
-begin
-  ValType := jvtNull;
-end;
-
 function TJpValue.AsBoolean: Boolean;
 begin
   case ValType of
@@ -373,6 +369,11 @@ begin
   else
     Result := False;
   end;
+end;
+
+class function TJpValue.Nothing: TJpValue;
+begin
+  Result.ValType := jvtNothing;
 end;
 
 class function TJpValue.ValNull: TJpValue;
@@ -390,26 +391,56 @@ begin
   Result.ValType := jvtTrue;
 end;
 
+class operator TJpValue.:=(b: Boolean): TJpValue;
+begin
+  if b then
+    Result.ValType := jvtTrue
+  else
+    Result.ValType := jvtFalse;
+end;
+
+class operator TJpValue.:=(const s: string): TJpValue;
+begin
+  Result.ValType := jvtString;
+  Result.StrValue := s;
+end;
+
+class operator TJpValue.:=(d: Double): TJpValue;
+begin
+  Result.ValType := jvtNumber;
+  Result.NumValue := d;
+end;
+
+class operator TJpValue.:=(aNode: TJsonNode): TJpValue;
+begin
+  if aNode <> nil then
+    begin
+      Result.ValType := jvtNode;
+      Result.NodeValue := aNode;
+    end
+  else
+    Result.ValType := jvtNothing;
+end;
+
 class operator TJpValue.=(const L: TJpValue; R: TJsonNode): Boolean;
 begin
-  if R = nil then
-    exit((L.ValType = jvtNode) and (L.NodeValue = nil));
+  if R = nil then exit(L.ValType = jvtNothing);
   case L.ValType of
-    jvtNull:   Result := R.IsNull;
-    jvtFalse:  Result := R.IsFalse;
-    jvtTrue:   Result := R.IsTrue;
-    jvtString: Result := R.IsString and (L.StrValue = R.AsString);
-    jvtNumber: Result := R.IsNumber and (L.NumValue = R.AsNumber);
-    jvtNode:   Result := L.NodeValue.EqualTo(R);
+    jvtNothing: Result := False;
+    jvtNull:    Result := R.IsNull;
+    jvtFalse:   Result := R.IsFalse;
+    jvtTrue:    Result := R.IsTrue;
+    jvtString:  Result := R.IsString and (L.StrValue = R.AsString);
+    jvtNumber:  Result := R.IsNumber and (L.NumValue = R.AsNumber);
+    jvtNode:    Result := L.NodeValue.EqualTo(R);
   end;
 end;
 
 class operator TJpValue.=(const L, R: TJpValue): Boolean;
 begin
-  Result := False;
   if L.ValType = R.ValType then
     case L.ValType of
-      jvtNull, jvtFalse, jvtTrue: Result := True;
+      jvtNothing, jvtNull, jvtFalse, jvtTrue: Result := True;
       jvtString: Result := L.StrValue = R.StrValue;
       jvtNumber: Result := L.NumValue = R.NumValue;
       jvtNode:   Result := L.NodeValue.EqualTo(R.NodeValue);
@@ -419,17 +450,15 @@ begin
       Result := R = L.NodeValue
     else
       if R.ValType= jvtNode then
-        Result := L = R.NodeValue;
+        Result := L = R.NodeValue
+      else
+        Result := False;
 end;
 
 class operator TJpValue.<(const L: TJpValue; R: TJsonNode): Boolean;
 begin
   Result := False;
-  if R = nil then
-    exit
-  else
-    if (L.ValType = jvtNode) and (L.NodeValue = nil) then
-      exit;
+  if R = nil then exit;
   case L.ValType of
      jvtString: Result := R.IsString and (AnsiCompareStr(L.StrValue, R.AsString) < 0);
      jvtNumber: Result := R.IsNumber and (L.NumValue < R.AsNumber);
@@ -494,32 +523,6 @@ begin
   Result := (R < L) or (R = L);
 end;
 
-class operator TJpValue.:=(b: Boolean): TJpValue;
-begin
-  if b then
-    Result.ValType := jvtTrue
-  else
-    Result.ValType := jvtFalse;
-end;
-
-class operator TJpValue.:=(const s: string): TJpValue;
-begin
-  Result.ValType := jvtString;
-  Result.StrValue := s;
-end;
-
-class operator TJpValue.:=(d: Double): TJpValue;
-begin
-  Result.ValType := jvtNumber;
-  Result.NumValue := d;
-end;
-
-class operator TJpValue.:=(aNode: TJsonNode): TJpValue;
-begin
-  Result.ValType := jvtNode;
-  Result.NodeValue := aNode;
-end;
-
 { TJpInstance }
 
 function TJpInstance.AsBoolean: Boolean;
@@ -532,17 +535,11 @@ begin
   end;
 end;
 
-class function TJpInstance.Nothing: TJpInstance;
-begin
-  Result.InstType := jitNothing;
-end;
-
 class operator TJpInstance.=(const L, R: TJpInstance): Boolean;
 begin
   Result := False;
   if L.InstType = R.InstType then
     case L.InstType of
-      jitNothing: Result := True;
       jitValue:   Result := L.Value = R.Value;
       jitLogical: Result := False;
       jitNodeList:
@@ -825,8 +822,8 @@ type
     FValue: TJpInstance;
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); virtual;
   public
-    function  GetValue(const aCtx: TJpFilterContext): TJpInstance; virtual;
-    function  Apply(const aCtx: TJpFilterContext): Boolean; virtual;
+    function GetValue(const aCtx: TJpFilterContext): TJpInstance; virtual;
+    function Apply(const aCtx: TJpFilterContext): Boolean; virtual;
   end;
 
   { TJpConstExpr }
@@ -844,10 +841,8 @@ type
     FIdent: TJpIdentifier;
   public
     constructor Create(aId: TJpIdentifier);
-    function GetNodeCount(const aCtx: TJpFilterContext): SizeInt; inline;
     function GetFirstNode(const aCtx: TJpFilterContext): TJsonNode; inline;
-    function AsNodeList(const aCtx: TJpFilterContext): TJpValueList; inline;
-    function AsBoolean(const aCtx: TJpFilterContext): Boolean; inline;
+    function GetNodeList(const aCtx: TJpFilterContext): TJpValueList; inline;
   end;
 
   { TJpNotPredicate }
@@ -1036,6 +1031,7 @@ type
     function  ExprLevel3(aSkip: Boolean): TJpExpression;
     function  ExprLevel4: TJpExpression;
     function  SubQueryExpr: TJpExpression;
+    procedure CheckFunParam(const aFunName: string; aType: TJpInstanceType; aExpr: TJpExpression);
     function  FunctionExpr: TJpExpression;
     function  GetFilter: TJpFilter;
     procedure BracketSegment(aPath: TJsonPathQuery);
@@ -1821,14 +1817,6 @@ begin
   FIdent := aId;
 end;
 
-function TRelPathQuery.GetNodeCount(const aCtx: TJpFilterContext): SizeInt;
-begin
-  if FIdent = jpiRoot then
-    Result := GetCount(aCtx.Root)
-  else
-    Result := GetCount(aCtx.Current);
-end;
-
 function TRelPathQuery.GetFirstNode(const aCtx: TJpFilterContext): TJsonNode;
 begin
   if FIdent = jpiRoot then
@@ -1837,20 +1825,12 @@ begin
     Result := GetFirst(aCtx.Current);
 end;
 
-function TRelPathQuery.AsNodeList(const aCtx: TJpFilterContext): TJpValueList;
+function TRelPathQuery.GetNodeList(const aCtx: TJpFilterContext): TJpValueList;
 begin
   if FIdent = jpiRoot then
     Result := Apply(aCtx.Root)
   else
     Result := Apply(aCtx.Current);
-end;
-
-function TRelPathQuery.AsBoolean(const aCtx: TJpFilterContext): Boolean;
-begin
-  if FIdent = jpiRoot then
-    Result := TestExists(aCtx.Root)
-  else
-    Result := TestExists(aCtx.Current);
 end;
 
 { TNotPredicate }
@@ -1913,7 +1893,7 @@ begin
   if IsSingular then
     v := FPath.GetFirstNode(aCtx)
   else
-    v := FPath.AsNodeList(aCtx);
+    v := FPath.GetNodeList(aCtx);
 end;
 
 constructor TJpRelQueryExpr.Create(aPath: TRelPathQuery);
@@ -1932,7 +1912,7 @@ function TJpRelQueryExpr.Apply(const aCtx: TJpFilterContext): Boolean;
 begin
   Eval(aCtx, FValue);
   if IsSingular then
-    Result := FValue.Value.NodeValue <> nil
+    Result := FValue.Value.ValType <> jvtNothing
   else
     Result := FValue.NodeList <> nil;
 end;
@@ -2712,7 +2692,10 @@ begin
       Fail(SEJPathUnexpectCompFmt, [Position, SEJPathLogicFun])
     else
       if aExpr is TJpComparisonExpr then
-        Fail(SEJPathUnexpectCompFmt, [Position, SEJPathComparison]);
+        Fail(SEJPathUnexpectCompFmt, [Position, SEJPathComparison])
+      else
+        if (aExpr is TJpLogicExpr) or (aExpr is TJpNotPredicate) then
+          Fail(SEJPathUnexpectCompFmt, [Position, SEJPathLogicExpr]);
 end;
 
 function TJpQueryParser.ExprLevel2(aSkip: Boolean): TJpExpression;
@@ -2835,6 +2818,26 @@ begin
   Dec(FDepth);
 end;
 
+procedure TJpQueryParser.CheckFunParam(const aFunName: string; aType: TJpInstanceType; aExpr: TJpExpression);
+var
+  WellTyped: Boolean;
+begin
+  case aType of
+    jitLogical:
+      if aExpr is TJpFunctionExpr then
+        WellTyped := TJpFunctionExpr(aExpr).ResultType = jitLogical
+      else
+        WellTyped := not(aExpr is TJpConstExpr);
+    jitValue:
+      WellTyped := ((aExpr is TJpRelQueryExpr) and TJpRelQueryExpr(aExpr).IsSingular) or
+                   (aExpr is TJpConstExpr);
+    jitNodeList:
+      WellTyped := aExpr is TJpRelQueryExpr;
+  end;
+  if not WellTyped then
+    Fail(SEJPathParamMismatchFmt, [Position, aFunName]);
+end;
+
 function TJpQueryParser.FunctionExpr: TJpExpression;
 var
   FunDef: TJpFunctionDef;
@@ -2858,8 +2861,7 @@ begin
       ParamList[I] := e;
       if I > System.High(FunDef.ParamDefs) then
         Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathFunParamExtraFmt, [FunName])]);
-      if (FunDef.ParamDefs[I] = jitNodeList) and not(e is TJpRelQueryExpr) then
-        Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathQueryParamNeedFmt, [FunName])]);
+      CheckFunParam(FunName, FunDef.ParamDefs[I], e);
       if I < System.High(ParamList) then
         if CurrToken <> jtkComma then
           Fail(SEJPathPosUnexpectFmt, [Position, CurrChar])
@@ -3165,36 +3167,34 @@ end;
 
 procedure CallLengthFun(const aList: TJpParamList; out aResult: TJpInstance);
 begin
-  aResult := TJpInstance.Nothing;
+  aResult := TJpValue.Nothing;
   if (System.Length(aList) = 1) and (aList[0].InstType = jitValue) then
     with aList[0].Value do
       case ValType of
         jvtString:
           aResult := Utf8StrLen(StrValue);
         jvtNode:
-          if NodeValue <> nil then
-            case NodeValue.Kind of
-              jvkString:
-                aResult := Utf8StrLen(NodeValue.AsString);
-              jvkArray, jvkObject:
-                aResult := NodeValue.Count;
-            else
-            end;
+          case NodeValue.Kind of
+            jvkString:
+              aResult := Utf8StrLen(NodeValue.AsString);
+            jvkArray, jvkObject:
+              aResult := NodeValue.Count;
+          else
+          end;
       else
       end;
 end;
 
 procedure CallValueFun(const aList: TJpParamList; out aResult: TJpInstance);
 begin
-  aResult := TJpInstance.Nothing;
+  aResult := TJpValue.Nothing;
   if System.Length(aList) = 1 then
     case aList[0].InstType of
       jitNodeList:
         if System.Length(aList[0].NodeList) = 1 then
           aResult := aList[0].NodeList[0];
       jitValue:
-        if aList[0].Value.NodeValue <> nil then
-          aResult := aList[0].Value.NodeValue;
+        aResult := aList[0].Value.NodeValue;
     else
     end;
 end;
@@ -3230,7 +3230,7 @@ begin
           exit(True);
         end;
       jvtNode:
-        if (aInst.Value.NodeValue <> nil) and (aInst.Value.NodeValue.IsString) then
+        if aInst.Value.NodeValue.IsString then
           begin
             s := aInst.Value.NodeValue.AsString;
             exit(True);
@@ -3251,25 +3251,10 @@ end;
 procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
-  b, e: Boolean;
 begin
   aResult := False;
   if not FindMatchParams(aList, Input, Regex) then exit;
-  if Regex = '' then
-    Regex := '^$'
-  else
-    begin
-      b := Regex[1] <> '^';
-      e := Regex[System.Length(Regex)] <> '$';
-      if b and e then
-        Regex := '^' + Regex + '$'
-      else
-        if b then
-          Regex := '^' + Regex
-        else
-          Regex := Regex + '$';
-    end;
-  aResult := TryExecRegex(Input, Regex, [rroModifierS]);
+  aResult := TryExecRegex(Input, '^' + Regex + '$', [rroModifierS]);
 end;
 
 procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
