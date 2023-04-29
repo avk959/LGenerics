@@ -174,9 +174,6 @@ resourcestring
   SEJPathCloseBracketMiss  = 'missing closing bracket';
   SEJPathCloseParenMiss    = 'missing closing parenthesis';
   SEJPathOperandMiss       = 'missing operand';
-  SEJPathFunParamMissFmt   = 'missing %s() parameter(s)';
-  SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
-  SEJPathQueryParamNeedFmt = '%s() expected a query as the current parameter';
   SEJPathEndDblQuoteMiss   = 'missing closing double quote';
   SEJPathEndQuoteMiss      = 'missing closing quote';
   SEJPathNameFirstChar     = 'name-first char';
@@ -199,12 +196,16 @@ resourcestring
   SEJPathUnexpectQueryEnd  = 'unexpected query end';
   SEJPathNonSingularQuery  = 'non-singular query';
   SEJPathLogicFun          = 'logical function';
+  SEJPathLogicExpr         = 'logical expression';
   SEJPathNonLogicFun       = 'non-logical function';
   SEJPathComparison        = 'comparison';
   SEJPathLiteral           = 'literal';
   SEJPathUnexpectCompFmt   = 'Position %d: unexpected %s in comparison expression';
   SEJPathUnexpectLogicFmt  = 'Position %d: unexpected %s in logical expression';
   SEJPathLogicExprExpect   = 'logical expression expected';
+  SEJPathFunParamMissFmt   = 'missing %s() parameter(s)';
+  SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
+  SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch';
 
 implementation
 
