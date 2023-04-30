@@ -160,7 +160,7 @@ resourcestring
   SEJPathCantEndWithDot    = 'Query cannot end with a dot';
   SEJPathQueryIsEmpty      = 'Query is empty';
   SEJPathRootMiss          = 'Query must start with a root identifier( $ )';
-  SEJPathMaxDepthExceed    = 'Maximum recursion depth exceeded';
+  SEJPathMaxDepthExceed    = 'Maximum recursion depth of the parser is exceeded';
   SEJPathPosErrorFmt       = 'Position %d: %s';
   SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
   SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';
