@@ -113,10 +113,10 @@ begin
       Query := CurrTest['selector'].AsString;
       TstName := CurrTest['name'].AsString;
       if CurrTest.Find('invalid_selector', Invalid) then
-        AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path))
+        AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path))
       else
         begin
-          AssertTrue(FalseReject(TstName, Query), ParseJsonPath(Query, Path));
+          AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
           Doc := CurrTest['document'];
           Expect := CurrTest['result'];
           GotOut := Path.MatchValues(Doc);
@@ -268,10 +268,10 @@ begin
       if CurrTest.Find('should_be', Expect) then
         begin
           if Expect.IsString and (Expect.AsString = 'NOT_SUPPORTED') then
-            AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path))
+            AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path))
           else
             begin
-              AssertTrue(FalseReject(TstName, Query), ParseJsonPath(Query, Path));
+              AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
               Doc := CurrTest['document'];
               GotOut := Path.MatchValues(Doc);
               AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
@@ -281,17 +281,17 @@ begin
         if CurrTest.Find('consensus', Expect) then
           begin
             if Expect.IsString and (Expect.AsString = 'NOT_SUPPORTED') then
-              AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path))
+              AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path))
             else
               begin
-                AssertTrue(FalseReject(TstName, Query), ParseJsonPath(Query, Path));
+                AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
                 Doc := CurrTest['document'];
                 GotOut := Path.MatchValues(Doc);
                 AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
               end;
           end
         else
-          AssertFalse(FalseAccept(TstName, Query), ParseJsonPath(Query, Path));
+          AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path));
     end;
 end;
 
