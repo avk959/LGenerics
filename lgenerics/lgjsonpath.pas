@@ -114,25 +114,27 @@ type
   end;
 {$POP}
 
-{ Parses a JSONPath aQuery expression, which must be a well-formed UTF-8 string starting
+{ parses a JSONPath aQuery expression, which must be a well-formed UTF-8 string starting
   with the root identifier, leading and trailing spaces are not allowed;
   returns nil if aQuery is invalid, in which case the aMsg parameter contains an error message }
-  function JsonPathParse(const aQuery: string; out aMsg: string): IJsonPath;
-{ same as above, but for the case where the content of the error message is of no interest }
-  function ParseJsonPath(const aQuery: string; out aPath: IJsonPath): Boolean;
-{ applies a aQuery to the JSON value aRoot; returns False if aQuery is invalid, in this case,
+  function JpParseQuery(const aQuery: string; out aMsg: string): IJsonPath;
+
+{ returns True and IJsonPath in aPath if aQuery was successfully parsed, otherwise returns False }
+  function JpParseQuery(const aQuery: string; out aPath: IJsonPath): Boolean;
+
+
+{ applies a aQuery to the JSON value aRoot; returns False if aQuery is invalid, in which case,
   the aMsg parameter contains an error message }
   function JsonPathMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpValueList;
                         out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JsonPathMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpValueList): Boolean;
 { applies a query aQuery to the JSON value aRoot and returns only the first match;
-  returns False if aQuery is invalid, in this case, the aMsg parameter contains an error message }
+  returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
   function JsonPathMatchFirst(const aQuery: string; aRoot: TJsonNode; out aNode: TJsonNode; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JsonPathMatchFirst(const aQuery: string; aRoot: TJsonNode; out aNode: TJsonNode): Boolean;
 
-/////////////////////////////////////////////////////
 
 type
   TJpValueType = (jvtNothing, jvtNull, jvtFalse, jvtTrue, jvtString, jvtNumber, jvtNode);
@@ -199,8 +201,8 @@ type
     constructor Make(const aDefs: TJpFunParamDefs; aResType: TJpInstanceType; aOnExec: TJpFunctionCall);
   end;
 
-{ the function name must contain only lowercase letters from the range a-z, decimal numbers,
-  underscores, and must begin with a letter }
+{ allows to register custom function; the function name must contain only lowercase letters
+  from the range a-z, decimal numbers, underscores, and must begin with a letter }
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
 implementation
@@ -940,6 +942,7 @@ type
   TJpFunctionExpr = class(TJpExpression)
   strict protected
     FParamList: TJpExprList;
+    FArgumentList: TJpParamList;
     FFunCall: TJpFunctionCall;
     FResultType: TJpInstanceType;
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
@@ -1331,20 +1334,19 @@ begin
   if Done then exit;
   case aSel.Kind of
     skIndex:
-      if aRoot.Kind = jvkArray then
-        begin
-          I := aSel.Index;
-          if I < 0 then
-            I += aRoot.Count;
-          if aRoot.Find(I, LValue) then
-            if aSel.NextSegment = nil then
-              AddMatch(LValue)
-            else
-              ApplySegment(aSel.NextSegment, LValue);
-        end;
+      if aRoot.Kind = jvkArray then begin
+        I := aSel.Index;
+        if I < 0 then
+          I += aRoot.Count;
+        if aRoot.Find(I, LValue) then
+          if aSel.NextSegment = nil then
+            AddMatch(LValue)
+          else
+            ApplySegment(aSel.NextSegment, LValue);
+      end;
 
     skName:
-      if (aRoot.Kind = jvkObject) and aRoot.Find(aSel.Name, LValue) then
+      if aRoot.Find(aSel.Name, LValue) then
         if aSel.NextSegment = nil then
           AddMatch(LValue)
         else
@@ -1611,23 +1613,22 @@ begin
   if Done then exit;
   case aSel.Kind of
     skIndex:
-      if aRoot.Kind = jvkArray then
-        begin
-          I := aSel.Index;
-          if I < 0 then
-            I += aRoot.Count;
-          if aRoot.Find(I, LValue) then begin
-            PathPush(I);
-            if aSel.NextSegment = nil then
-              AddMatchWithPath(LValue)
-            else
-              ApplySegmentWithPath(aSel.NextSegment, LValue);
-            PathPop;
-          end;
+      if aRoot.Kind = jvkArray then begin
+        I := aSel.Index;
+        if I < 0 then
+          I += aRoot.Count;
+        if aRoot.Find(I, LValue) then begin
+          PathPush(I);
+          if aSel.NextSegment = nil then
+            AddMatchWithPath(LValue)
+          else
+            ApplySegmentWithPath(aSel.NextSegment, LValue);
+          PathPop;
         end;
+      end;
 
     skName:
-      if (aRoot.Kind = jvkObject) and aRoot.Find(aSel.Name, LValue) then begin
+      if aRoot.Find(aSel.Name, LValue) then begin
         PathPush(aSel.Name);
         if aSel.NextSegment = nil then
           AddMatchWithPath(LValue)
@@ -1963,18 +1964,17 @@ end;
 
 procedure TJpFunctionExpr.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
 var
-  Params: TJpParamList = nil;
   I: SizeInt;
 begin
-  System.SetLength(Params, System.Length(FParamList));
   for I := 0 to System.High(FParamList) do
-    Params[I] := FParamList[I].GetValue(aCtx);
-  FFunCall(Params, v);
+    FArgumentList[I] := FParamList[I].GetValue(aCtx);
+  FFunCall(FArgumentList, v);
 end;
 
 constructor TJpFunctionExpr.Create(const aParams: TJpExprList; aFun: TJpFunctionCall; aResult: TJpInstanceType);
 begin
   FParamList := aParams;
+  System.SetLength(FArgumentList, System.Length(FParamList));
   FFunCall := aFun;
   FResultType := aResult;
 end;
@@ -2008,13 +2008,8 @@ end;
 
 function TJpFilter.Apply(aNode: TJsonNode): Boolean;
 begin
-  if FExpr <> nil then  ///////////////// ?????
-    begin
-      FContext.Current := aNode;
-      Result := FExpr.Apply(FContext);
-    end
-  else
-    Result := False;
+  FContext.Current := aNode;
+  Result := FExpr.Apply(FContext);
 end;
 
 { TJpParser }
@@ -3085,7 +3080,7 @@ begin
   Result := True;
 end;
 
-function JsonPathParse(const aQuery: string; out aMsg: string): IJsonPath;
+function JpParseQuery(const aQuery: string; out aMsg: string): IJsonPath;
 var
   Matcher: TJpMatcher;
 begin
@@ -3101,11 +3096,11 @@ begin
     end;
 end;
 
-function ParseJsonPath(const aQuery: string; out aPath: IJsonPath): Boolean;
+function JpParseQuery(const aQuery: string; out aPath: IJsonPath): Boolean;
 var
   msg: string;
 begin
-  aPath := JsonPathParse(aQuery, msg);
+  aPath := JpParseQuery(aQuery, msg);
   Result := aPath <> nil;
 end;
 
@@ -3254,7 +3249,7 @@ var
 begin
   aResult := False;
   if not FindMatchParams(aList, Input, Regex) then exit;
-  aResult := TryExecRegex(Input, '^' + Regex + '$', [rroModifierS]);
+  aResult := TryExecRegex(Input, '^(' + Regex + ')$', [rroModifierS]);
 end;
 
 procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
