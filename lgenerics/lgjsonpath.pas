@@ -105,8 +105,7 @@ type
   { returns True and the first matching element along with its location
     (empty object if no matches) as JSON if aRoot is valid JSON, False otherwise. }
     function  MatchFirst(const aRoot: string; out aNode: string): Boolean;
-  { returns the first element that matches its internal, previously parsed JSONPath query if any;
-    otherwise returns NIL }
+  { returns the first matching element if any, otherwise returns NIL }
     function  MatchFirstValue(aRoot: TJsonNode): TJsonNode;
   { returns True and first matching element as JSON (an empty string if no matches)
     if aRoot is valid JSON, False otherwise }
@@ -2487,7 +2486,7 @@ begin
   SkipChar;
   CheckEof;
   Start := FLook;
-  while not Eof do
+  repeat
     case CurrChar of
       #0..#31:
         Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
@@ -2497,10 +2496,11 @@ begin
         begin
           SkipChar;
           QuoteNameEscape;
-        end
+        end;
     else
       SkipChar;
     end;
+  until Eof;
   if Eof then
     Fail(SEJPathPosErrorFmt, [Position, SEJPathEndQuoteMiss]);
   Result := StrDecode(Start, FLook - Start);
@@ -2531,7 +2531,7 @@ begin
   SkipChar;
   CheckEof;
   Start := FLook;
-  while not Eof do
+  repeat
     case CurrChar of
       #0..#31:
         Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
@@ -2541,10 +2541,11 @@ begin
         begin
           SkipChar;
           DblQuoteNameEscape;
-        end
+        end;
     else
       SkipChar;
     end;
+  until Eof;
   if Eof then
     Fail(SEJPathPosErrorFmt, [Position, SEJPathEndDblQuoteMiss]);
   Result := StrDecode(Start, FLook - Start);
@@ -2721,8 +2722,6 @@ begin
 end;
 
 function TJpQueryParser.ExprLevel3(aSkip: Boolean): TJpExpression;
-var
-  e: TJpExpression;
 begin
   if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
   Inc(FDepth);
@@ -2730,19 +2729,14 @@ begin
     NextToken;
   if CurrToken = jtkBoolNot then
     begin
-      e := ExprLevel3(True);
-      if e is TJpConstExpr then
-        begin
-          e.Free;
-          Fail(SEJPathUnexpectLogicFmt, [Position, SEJPathLiteral]);
-        end
-      else
-        if (e is TJpFunctionExpr) and (TJpFunctionExpr(e).ResultType <> jitLogical) then
-          begin
-            e.Free;
-            Fail(SEJPathUnexpectLogicFmt, [Position, SEJPathNonLogicFun]);
-          end;
-      Result := TJpNotPredicate.Create(e);
+      Result := ExprLevel3(True);
+      try
+        CheckBoolOperand(Result);
+        Result := TJpNotPredicate.Create(Result);
+      except
+        Result.Free;
+        raise;
+      end;
     end
   else
     Result := ExprLevel4;
