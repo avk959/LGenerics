@@ -3209,7 +3209,7 @@ begin
   end;
 end;
 
-function GetString(const aInst: TJpInstance; out s: string): Boolean;
+function IsStringInst(const aInst: TJpInstance; out s: string): Boolean;
 begin
   if aInst.InstType = jitValue then
     case aInst.Value.ValType of
@@ -3232,7 +3232,7 @@ end;
 function FindMatchParams(const aList: TJpParamList; out aInput, aRegex: string): Boolean;
 begin
   if System.Length(aList) = 2 then
-    Result := GetString(aList[0], aInput) and GetString(aList[1], aRegex)
+    Result := IsStringInst(aList[0], aInput) and IsStringInst(aList[1], aRegex)
   else
     Result := (False);
 end;
@@ -3241,22 +3241,23 @@ procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  aResult := False;
-  if not FindMatchParams(aList, Input, Regex) then exit;
-  aResult := TryExecRegex(Input, '^(' + Regex + ')$', [rroModifierS]);
+  if FindMatchParams(aList, Input, Regex) then
+    aResult := TryExecRegex(Input, '^(?:' + Regex + ')$', [rroModifierS])
+  else
+    aResult := False;
 end;
 
 procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  aResult := False;
-  if not FindMatchParams(aList, Input, Regex) then exit;
-  aResult := TryExecRegex(Input, Regex, [rroModifierS]);
+  if FindMatchParams(aList, Input, Regex) then
+    aResult := TryExecRegex(Input, Regex, [rroModifierS])
+  else
+    aResult := False;
 end;
 
 type
-
   TFunCacheType = specialize TGLiteChainHashMap<string, TJpFunctionDef, string>;
   TFunCache     = TFunCacheType.TMap;
 
