@@ -204,6 +204,15 @@ type
   from the range a-z, decimal numbers, underscores, and must begin with a letter }
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
+type
+  TJpRegexMatch = function(const aInput, aRegex: string): Boolean;
+
+var
+{ must return True if the regular expression(second atrgument) matches the entire input string }
+  JpRegexMatch: TJpRegexMatch = nil;
+{ must return True if the regular expression(second argument) matches some substring of the input string }
+  JpRegexSearch: TJpRegexMatch = nil;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
@@ -3105,14 +3114,11 @@ var
 begin
   aMsg := '';
   aList := nil;
-  if Matcher.Instance.TryParseQuery(aQuery) then
-    begin
-      aList := Matcher.Instance.MatchValues(aRoot);
-      exit(True);
-    end
+  Result := Matcher.Instance.TryParseQuery(aQuery);
+  if Result then
+    aList := Matcher.Instance.MatchValues(aRoot)
   else
     aMsg := Matcher.Instance.Message;
-  Result := False;
 end;
 
 function JsonPathMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpValueList): Boolean;
@@ -3129,14 +3135,11 @@ var
 begin
   aMsg := '';
   aNode := nil;
-  if Matcher.Instance.TryParseQuery(aQuery) then
-    begin
-      aNode := Matcher.Instance.MatchFirstValue(aRoot);
-      exit(True);
-    end
+  Result := Matcher.Instance.TryParseQuery(aQuery);
+  if Result then
+    aNode := Matcher.Instance.MatchFirstValue(aRoot)
   else
     aMsg := Matcher.Instance.Message;
-  Result := False;
 end;
 
 function JsonPathMatchFirst(const aQuery: string; aRoot: TJsonNode; out aNode: TJsonNode): Boolean;
@@ -3188,17 +3191,12 @@ begin
     end;
 end;
 
-function TryExecRegex(const aInput, aRegex: string; aOptions: TRegexReplaceOptions): Boolean;
+function DefaultRegexMatch(const aInput, aRegex: string): Boolean;
 begin
   try
     with TRegExpr.Create do
       try
-        ModifierI := (rroModifierI in aOptions);
-        ModifierR := (rroModifierR in aOptions);
-        ModifierS := (rroModifierS in aOptions);
-        ModifierG := (rroModifierG in aOptions);
-        ModifierM := (rroModifierM in aOptions);
-        ModifierX := (rroModifierX in aOptions);
+        ModifierR := False;
         Expression := aRegex;
         Result := Exec(aInput);
       finally
@@ -3209,7 +3207,7 @@ begin
   end;
 end;
 
-function IsStringInst(const aInst: TJpInstance; out s: string): Boolean;
+function IsStringInst(const aInst: TJpInstance; out s: string): Boolean; inline;
 begin
   if aInst.InstType = jitValue then
     case aInst.Value.ValType of
@@ -3229,20 +3227,15 @@ begin
   Result := False;
 end;
 
-function FindMatchParams(const aList: TJpParamList; out aInput, aRegex: string): Boolean;
-begin
-  if System.Length(aList) = 2 then
-    Result := IsStringInst(aList[0], aInput) and IsStringInst(aList[1], aRegex)
-  else
-    Result := (False);
-end;
-
 procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  if FindMatchParams(aList, Input, Regex) then
-    aResult := TryExecRegex(Input, '^(?:' + Regex + ')$', [rroModifierS])
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
+    if JpRegexMatch = nil then
+      aResult := DefaultRegexMatch(Input, '^(?:' + Regex + ')$')
+    else
+      aResult := JpRegexMatch(Input, Regex)
   else
     aResult := False;
 end;
@@ -3251,8 +3244,11 @@ procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  if FindMatchParams(aList, Input, Regex) then
-    aResult := TryExecRegex(Input, Regex, [rroModifierS])
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
+    if JpRegexSearch = nil then
+      aResult := DefaultRegexMatch(Input, Regex)
+    else
+      aResult := JpRegexSearch(Input, Regex)
   else
     aResult := False;
 end;
