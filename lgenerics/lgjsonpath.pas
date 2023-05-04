@@ -1529,7 +1529,6 @@ begin
       #13:  begin PChar2(p)^ := '\r'; p += 2; Len += 2; end;
       '\':  begin PChar2(p)^ := '\\'; p += 2; Len += 2; end;
       '''': begin PChar2(p)^ := '\'''; p += 2; Len += 2; end;
-      '"':  begin PChar2(p)^ := '\"'; p += 2; Len += 2; end;
     else
       p^ := s[I];
       Inc(p); Inc(Len);
