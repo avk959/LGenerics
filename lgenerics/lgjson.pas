@@ -2713,6 +2713,13 @@ asm
   umulh x4, x0, x1
   stp   x3, x4, [x2]
 end;
+{$ELSEIF DEFINED(CPULOONGARCH64)} assembler; nostackframe;
+asm
+  mul.d   t0, a0, a1
+  mulh.du t1, a0, a1
+  st.d    t0, a2
+  st.d    t1, a2, 8
+end;
 {$ELSEIF DEFINED(CPUX86)}{$ASMMODE INTEL} assembler; nostackframe;
 asm
   sub   esp, 16
