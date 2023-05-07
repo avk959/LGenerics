@@ -291,6 +291,7 @@ type
 { these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness and normalization of the strings lies with the user }
   function Utf8StrLen(const s: string): SizeInt; inline;
+  function Utf8CodePointLength(p: PAnsiChar; aByteCount: SizeInt): SizeInt;
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
@@ -2817,45 +2818,29 @@ end;
 function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
 begin
   case p^ of
-    0..$7f: Result := 1;
+    0..$7f: ;
     $c2..$df:
-      if (aStrLen > 1) and (p[1] in [$80..$bf]) then
-        Result := 2
-      else
-        Result := 1;
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then exit(2);
     $e0:
-      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then
-        Result := 3
-      else
-        Result := 1;
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then exit(3);
     $e1..$ec, $ee..$ef:
-      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then
-        Result := 3
-      else
-        Result := 1;
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then exit(3);
     $ed:
-      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then
-        Result := 3
-      else
-        Result := 1;
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then exit(3);
     $f0:
-      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
-        Result := 4
-      else
-        Result := 1;
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then exit(4);
     $f1..$f3:
-      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
-        Result := 4
-      else
-        Result := 1;
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then exit(4);
     $f4:
-      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
-        Result := 4
-      else
-        Result := 1;
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then exit(4);
   else
-    Result := 1;
   end;
+  Result := 1;
+end;
+
+function Utf8CodePointLength(p: PAnsiChar; aByteCount: SizeInt): SizeInt;
+begin
+  Result := Utf8CodePointLen(PByte(p), aByteCount);
 end;
 
 function CodePointToUcs4Char(p: PByte; aStrLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; //inline;
@@ -2865,17 +2850,14 @@ begin
       begin
         Result := p^;
         aPtSize := 1;
+        exit;
       end;
     $c2..$df:
       if (aStrLen > 1) and (p[1] in [$80..$bf]) then
         begin
           Result := Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f));
           aPtSize := 2;
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          exit;
         end;
     $e0:
       if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then
@@ -2883,11 +2865,7 @@ begin
           Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
                     Ucs4Char(p[2] and $3f));
           aPtSize := 3;
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          exit;
         end;
     $e1..$ec, $ee..$ef:
       if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then
@@ -2895,11 +2873,7 @@ begin
           Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
                     Ucs4Char(p[2] and $3f));
           aPtSize := 3;
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          exit;
         end;
     $ed:
       if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then
@@ -2907,11 +2881,7 @@ begin
           Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
                     Ucs4Char(p[2] and $3f));
           aPtSize := 3;
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          exit;
         end;
     $f0:
       if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
@@ -2919,23 +2889,15 @@ begin
           Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
                              Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
           aPtSize := 4;
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          exit;
         end;
     $f1..$f3:
       if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
         begin
           Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
                              Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
-          aPtSize := 4
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          aPtSize := 4;
+          exit;
         end;
     $f4:
       if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
@@ -2943,16 +2905,12 @@ begin
           Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
                              Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
           aPtSize := 4;
-        end
-      else
-        begin
-          Result := UNICODE_BAD_CHAR;
-          aPtSize := 1;
+          exit;
         end;
   else
-    aPtSize := 1;
-    Result := UNICODE_BAD_CHAR;
   end;
+  aPtSize := 1;
+  Result := UNICODE_BAD_CHAR;
 end;
 
 function Utf8Len(const s: rawbytestring): SizeInt;
