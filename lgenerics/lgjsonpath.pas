@@ -204,14 +204,36 @@ type
   from the range a-z, decimal numbers, underscores, and must begin with a letter }
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
+
+{ to enable the external regex engine }
 type
   TJpRegexMatch = function(const aInput, aRegex: string): Boolean;
 
 var
 { must return True if the regular expression(second atrgument) matches the entire input string }
   JpRegexMatch: TJpRegexMatch = nil;
-{ must return True if the regular expression(second argument) matches some substring of the input string }
+{ must return True if the regular expression matches some substring of the input string }
   JpRegexSearch: TJpRegexMatch = nil;
+
+{ I-Regexp checker: https://datatracker.ietf.org/doc/draft-ietf-jsonpath-iregexp}
+type
+
+  TIRegexpCheck = (
+     ircOk,               { it seems OK }
+     ircInvalidQuantifier,{ invalid quantifier }
+     ircMissingRBrace,    { missing closing brace }
+     ircMissingRParen,    { missing closing parenthesis }
+     ircMissingRBracket,  { missing closing bracket }
+     ircUnexpectedEnd,    { unexpected end of expression }
+     ircUnexpectMetachar, { expected normal char, but got metachar }
+     ircInvalidCCChar,    { expected CC_CHAR or SingleCharEsc }
+     ircInescapable,      { expected SingleCharEsc }
+     ircInvalidUCategory, { invalid Unicode category }
+     ircMaxDepthExceed,   { maximum recursion depth exceeded }
+     ircExtraChars        { not at end of regexp after parsing last branch }
+     );
+
+  function IRegexpCheck(const aRegex: string; out aErrPos: SizeInt): TIRegexpCheck;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3146,6 +3168,279 @@ var
   msg: string;
 begin
   Result := JsonPathMatchFirst(aQuery, aRoot, aNode, msg);
+end;
+
+function IRegexpCheck(const aRegex: string; out aErrPos: SizeInt): TIRegexpCheck;
+const
+  NORMAL_CHARS    = [#0..#$27, #$2c, #$2d, #$2f..#$3e, #$40..#$5a, #$5e..#$7a, #$7e..#$ff];
+  CC_CHAR         = [#0..#$2c, #$2e..#$5a, #$5e..#$ff];
+  META_CHARS      = ['.', '*', '+', '?', '(', ')', '|', '{', '}', '[', '\', ']'];
+  ESCAPABLE_CHARS = META_CHARS + ['-', '^', 'n', 'r', 't'];
+  U_CATEGORIES    = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
+  U_LETTER_PROPS  = ['l', 'm', 'o', 't', 'u'];
+  U_MARK_PROPS    = ['c', 'e', 'n'];
+  U_NUMBER_PROPS  = ['d', 'l', 'o'];
+  U_PUNCTUA_PROPS = ['c', 'd', 'e', 'f', 'i', 'o', 's'];
+  U_SEPARAT_PROPS = ['l', 'p', 's'];
+  U_SYMBOL_PROPS  = ['c', 'k', 'm', 'o'];
+  U_OTHER_PROPS   = ['c', 'f', 'n', 'o'];
+  DIGITS          = ['0'..'9'];
+var
+  pCurr: PAnsiChar = nil;
+  pEnd: PAnsiChar = nil;
+
+  function Error(aState: TIRegexpCheck): TIRegexpCheck; inline;
+  begin
+    aErrPos := Succ(pCurr - PAnsiChar(aRegex));
+    Result := aState;
+  end;
+
+  function Eof: Boolean; inline;
+  begin
+    Result := pCurr >= pEnd;
+  end;
+
+  function CheckChar: TIRegexpCheck; inline;
+  begin
+    if Eof then
+      exit(Error(ircUnexpectedEnd))
+    else
+      if pCurr^ in META_CHARS then
+        exit(Error(ircUnexpectMetachar));
+    while not Eof and (pCurr^ in NORMAL_CHARS) do
+      pCurr += Utf8CodePointLength(pCurr, pEnd - pCurr);
+    Result := ircOk;
+  end;
+
+  function CheckCategory: TIRegexpCheck; inline;
+  var
+    c: AnsiChar;
+  begin
+    if Eof then exit(Error(ircInvalidUCategory));
+    if pCurr^ in U_CATEGORIES then begin
+      c := pCurr^;
+      Inc(pCurr);
+      if Eof then
+        exit(Error(ircInvalidUCategory))
+      else
+        if pCurr^ = '}' then begin
+          Inc(pCurr); exit(ircOk);
+        end;
+      case c of
+        'C':
+          if not (pCurr^ in U_OTHER_PROPS) then exit(Error(ircInvalidUCategory));
+        'L':
+          if not (pCurr^ in U_LETTER_PROPS) then exit(Error(ircInvalidUCategory));
+        'M':
+          if not (pCurr^ in U_MARK_PROPS) then exit(Error(ircInvalidUCategory));
+        'N':
+          if not (pCurr^ in U_NUMBER_PROPS) then exit(Error(ircInvalidUCategory));
+        'P':
+          if not (pCurr^ in U_PUNCTUA_PROPS) then exit(Error(ircInvalidUCategory));
+        'S':
+          if not (pCurr^ in U_SYMBOL_PROPS) then exit(Error(ircInvalidUCategory));
+        'Z':
+          if not (pCurr^ in U_SEPARAT_PROPS) then exit(Error(ircInvalidUCategory));
+      else
+      end;
+      Inc(pCurr);
+      if Eof or (pCurr^ <> '}') then exit(Error(ircMissingRBrace));
+      Inc(pCurr);
+      Result := ircOk;
+    end else
+      Result := Error(ircInvalidUCategory);
+  end;
+
+  function CheckEscape: TIRegexpCheck; inline;
+  begin
+    if Eof then exit(Error(ircUnexpectedEnd));
+    if pCurr^ in ESCAPABLE_CHARS then begin
+      Inc(pCurr);
+      Result := ircOk;
+    end else
+      if pCurr^ in ['P', 'p'] then begin
+        Inc(pCurr);
+        if Eof then
+          exit(Error(ircUnexpectedEnd))
+        else
+          if pCurr^ <> '{' then
+            exit(Error(ircInvalidUCategory));
+        Inc(pCurr);
+        Result := CheckCategory;
+      end else
+        Result := Error(ircInescapable);
+  end;
+
+  function CheckCCChar: TIRegexpCheck; inline;
+  begin
+    if pCurr^ = '\' then begin
+      Inc(pCurr);
+      if Eof then exit(Error(ircUnexpectedEnd));
+      if pCurr^ in ESCAPABLE_CHARS then begin
+        Inc(pCurr);
+        Result := ircOk;
+      end else
+        Result := Error(ircInescapable);
+    end else
+      if pCurr^ in CC_CHAR then begin
+        pCurr += Utf8CodePointLength(pCurr, pEnd - pCurr);
+        Result := ircOk;
+      end else
+        Result := Error(ircInvalidCCChar);
+  end;
+
+  function CheckCharRange: TIRegexpCheck; inline;
+  begin
+    Result := CheckCCChar;
+    if (Result = ircOk) and (pCurr^ = '-') then begin
+      Inc(pCurr);
+      if pCurr^ <> ']' then
+        Result := CheckCCChar;
+    end;
+  end;
+
+  function CheckCCE1: TIRegexpCheck;
+  begin
+    if Eof then exit(Error(ircUnexpectedEnd));
+    if (pCurr^ = '\') and (pCurr[1] in ['P', 'p']) then begin
+      pCurr += 2;
+      if Eof or (pCurr^ <> '{') then exit(Error(ircInvalidUCategory));
+      Inc(pCurr);
+      Result := CheckCategory;
+    end else
+      if (pCurr^ = '-') and (pCurr[1] = ']') then begin
+        Inc(pCurr);
+        Result := ircOk;
+      end else
+        Result := CheckCharRange;
+  end;
+
+  function CheckCharClassExpr: TIRegexpCheck;
+  begin
+    if pCurr^ = '^' then Inc(pCurr);
+    if pCurr^ = '-' then Inc(pCurr);
+    repeat
+      Result := CheckCCE1;
+      if Result <> ircOk then exit;
+      if Eof then exit(Error(ircMissingRBracket));
+      if pCurr^ = ']' then begin
+        Inc(pCurr); break;
+      end;
+    until False;
+  end;
+
+  function CheckQuantifier: TIRegexpCheck;
+  begin
+    Result := ircOk;
+    case pCurr^ of
+      '?', '*', '+': Inc(pCurr);
+      '{':
+        begin
+          Inc(pCurr);
+          if pCurr^ in DIGITS then begin
+            repeat Inc(pCurr);
+            until not(pCurr^ in DIGITS);
+            case pCurr^ of
+              '}': Inc(pCurr);
+              ',':
+                begin
+                  Inc(pCurr);
+                  if pCurr^ in DIGITS then begin
+                    repeat Inc(pCurr);
+                    until not(pCurr^ in DIGITS);
+                    if pCurr^ = '}' then
+                      Inc(pCurr)
+                    else
+                      exit(Error(ircMissingRBrace));
+                  end else
+                    exit(Error(ircInvalidQuantifier));
+                end;
+            else
+              exit(Error(ircInvalidQuantifier));
+            end;
+          end else
+            exit(Error(ircInvalidQuantifier));
+        end;
+    else
+    end;
+  end;
+
+  function CheckExpr: TIRegexpCheck; forward;
+
+  function CheckAtom: TIRegexpCheck;
+  begin
+    case pCurr^ of
+      '(':
+        begin
+          Inc(pCurr);
+          if Eof then exit(Error(ircMissingRParen));
+          if pCurr^ = ')' then begin // empty regexp
+            Inc(pCurr); exit(ircOk);
+          end;
+          Result := CheckExpr;
+          if Result > ircOk then exit;
+          if Eof or (pCurr^ <> ')') then exit(Error(ircMissingRParen));
+          Inc(pCurr);
+        end;
+      '.':
+        begin
+          Result := ircOk;
+          Inc(pCurr);
+        end;
+      '[':
+        begin
+          Inc(pCurr);
+          Result := CheckCharClassExpr;
+        end;
+      '\':
+        begin
+          Inc(pCurr);
+          Result := CheckEscape;
+        end;
+    else
+      Result := CheckChar;
+    end;
+  end;
+
+  function CheckBranch: TIRegexpCheck;
+  begin
+    repeat
+      if pCurr^ = '|' then exit(ircOk); //zero pieces in a branch
+      Result := CheckAtom;
+      if Result = ircOk then
+        Result := CheckQuantifier;
+      if (Result <> ircOk) or Eof then exit;
+    until not (pCurr^ in (NORMAL_CHARS + ['(', '.', '[', '\']));
+  end;
+
+var
+  Depth: Integer = 0;
+const
+  MAX_DEPTH = 128;
+
+  function CheckExpr: TIRegexpCheck;
+  begin
+    if Depth = MAX_DEPTH then exit(Error(ircMaxDepthExceed));
+    Inc(Depth);
+    repeat
+      Result := CheckBranch;
+      if Result <> ircOk then exit;
+      if pCurr^ = '|' then
+        Inc(pCurr)
+      else
+        break;
+    until Eof;
+    Dec(Depth);
+  end;
+
+begin
+  aErrPos := 0;
+  if aRegex = '' then exit(ircOk);
+  pCurr := PAnsiChar(aRegex);
+  pEnd := pCurr + System.Length(aRegex);
+  Result := CheckExpr;
+  if (Result = ircOk) and (pCurr < pEnd) then
+    Result := Error(ircExtraChars);
 end;
 
 procedure CallCountFun(const aList: TJpParamList; out aResult: TJpInstance);
