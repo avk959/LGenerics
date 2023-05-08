@@ -32,30 +32,67 @@ uses
 
   Basic elements:
 
-  $               - root node identifier
-  @               - current node identifier (valid only within filter selectors)
-  [<selectors>]   - child segment: selects zero or more children of a node;
-                    contains one or more selectors, separated by commas
-  .name           - shorthand for ['name'] (or ["name"])
-  .*              - shorthand for [*]
-  ..[<selectors>] - descendant segment: selects zero or more descendants of a node;
-                    contains one or more selectors, separated by commas
-  ..name          - shorthand for ..['name']
-  ..*             - shorthand for ..[*]
-  'name'          - name selector: selects a named child of an object
-  *               - wildcard selector: selects all children of a node
-  42              - index selector: selects an indexed child of an array (from 0)
-  0:42:5          - array slice selector: start:end:step for arrays
-  ?<logical-expr> - filter selector: selects particular children using a logical expression
-  length(@.foo)   - function extension: invokes a function in a filter expression
+    $               - root node identifier
+    @               - current node identifier (valid only within filter selectors)
+    [<selectors>]   - child segment: selects zero or more children of a node;
+                      contains one or more selectors, separated by commas
+    .name           - shorthand for ['name'] (or ["name"])
+    .*              - shorthand for [*]
+    ..[<selectors>] - descendant segment: selects zero or more descendants of a node;
+                      contains one or more selectors, separated by commas
+    ..name          - shorthand for ..['name']
+    ..*             - shorthand for ..[*]
+    'name'          - name selector: selects a named child of an object
+    *               - wildcard selector: selects all children of a node
+    42              - index selector: selects an indexed child of an array (from 0)
+    0:42:5          - array slice selector: start:end:step for arrays
+    ?<logical-expr> - filter selector: selects particular children using a logical expression
+    length(@.foo)   - function extension: invokes a function in a filter expression
 
-  Operators supported in filter expressions in descending order of precedence:
+  Operators supported in the filter expressions in descending order of precedence:
 
-  5   - grouping   ( ... )
-  4   - logical NOT   !
-  3   - relations   ==, !=, <, >, <=, >=
-  2   - logical AND  &&
-  1   - logical OR   ||
+    5   - grouping   ( ... )
+    4   - logical NOT   !
+    3   - relations   ==, !=, <, >, <=, >=
+    2   - logical AND  &&
+    1   - logical OR   ||
+
+  Built-in functions:
+
+    length(Arg) -
+      Arg type must be ValueType(jitValue in this implementation);
+      result type is ValueType;
+        if Arg is a string, the result is the Utf8 length of that string;
+        if Arg is an Array, the result is the number of elements in the Array;
+        if Arg is an Object, the result is the number of pairs in the Object;
+        for any other argument value, the result is jvtNothing.
+
+    count(Arg) -
+      Arg type must be Nodes(jitNodeList in this implementation);
+      result type is ValueType;
+        the result is the number of nodes in the Nodelist;
+
+    match(Input, Regex) -
+      Input type must be ValueType(string, to be more precise);
+      Regex type must be ValueType(string);
+      result type is LogicalType(jitLogical in this implementation);
+        returns a boolean True if Input is a string, and Regex is a string,
+        and the regular expression Regex matches the entire Input value,
+        otherwise returns boolean False;
+        it is also possible to activate the I-Regexp checker;
+
+    search(Input, Regex) -
+      Input type must be ValueType(string);
+      Regex type must be ValueType(string);
+      result type is LogicalType;
+        returns a boolean True if Input is a string, and Regex is a string,
+        and the regular expression Regex matches some substring of the Input value,
+        otherwise returns boolean False;
+
+    value(Arg) -
+      Arg type must be Nodes;
+      if the argument contains a single node, the result is the value of the node;
+      If the argument is empty or contains multiple nodes, the result is jvtNothing;
 
   The implementation tries to be compliant with
     https://datatracker.ietf.org/doc/draft-ietf-jsonpath-base
@@ -205,7 +242,9 @@ type
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
 
-{ to enable the external regex engine }
+{ to enable an external regular expression engine, if any of the global
+  variables listed below is assigned, the corresponding function will be used
+  instead of the default function }
 type
   TJpRegexMatch = function(const aInput, aRegex: string): Boolean;
 
@@ -215,7 +254,7 @@ var
 { must return True if the regular expression matches some substring of the input string }
   JpRegexSearch: TJpRegexMatch = nil;
 
-{ I-Regexp checker: https://datatracker.ietf.org/doc/draft-ietf-jsonpath-iregexp}
+{ I-Regexp checker: https://datatracker.ietf.org/doc/draft-ietf-jsonpath-iregexp }
 type
 
   TIRegexpCheck = (
@@ -234,6 +273,10 @@ type
      );
 
   function IRegexpCheck(const aRegex: string; out aErrPos: SizeInt): TIRegexpCheck;
+
+{ if uncomment define, the regexes in the arguments of built-in functions
+  will be checked for I-Regexp conformance }
+{ $DEFINE JP_IREGEXP_CHECK}
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -3378,7 +3421,7 @@ var
             Inc(pCurr); exit(ircOk);
           end;
           Result := CheckExpr;
-          if Result > ircOk then exit;
+          if Result <> ircOk then exit;
           if Eof or (pCurr^ <> ')') then exit(Error(ircMissingRParen));
           Inc(pCurr);
         end;
@@ -3445,10 +3488,13 @@ end;
 
 procedure CallCountFun(const aList: TJpParamList; out aResult: TJpInstance);
 begin
-  if (System.Length(aList) = 1) and (aList[0].InstType = jitNodeList) then
-    aResult := System.Length(aList[0].NodeList)
-  else
-    aResult := 0;
+  aResult := 0;
+  if System.Length(aList) = 1 then
+    if aList[0].InstType = jitNodeList then
+      aResult := System.Length(aList[0].NodeList)
+    else
+      if (aList[0].InstType = jitValue) and (aList[0].Value.ValType = jvtNode) then
+        aResult := 1;
 end;
 
 procedure CallLengthFun(const aList: TJpParamList; out aResult: TJpInstance);
@@ -3521,11 +3567,20 @@ begin
   Result := False;
 end;
 
+function IRegexpCheck(const s: string): Boolean; inline;
+var
+  I: SizeInt;
+begin
+  Result := IRegexpCheck(s, I) = ircOk;
+end;
+
+{$PUSH}{$WARN 5091 OFF}
 procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and
+    IsStringInst(aList[1], Regex){$IFDEF JP_IREGEXP_CHECK}and IRegexpCheck(Regex){$ENDIF}then
     if JpRegexMatch = nil then
       aResult := DefaultRegexMatch(Input, '^(?:' + Regex + ')$')
     else
@@ -3538,7 +3593,8 @@ procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and
+    IsStringInst(aList[1], Regex){$IFDEF JP_IREGEXP_CHECK}and IRegexpCheck(Regex){$ENDIF}then
     if JpRegexSearch = nil then
       aResult := DefaultRegexMatch(Input, Regex)
     else
@@ -3546,6 +3602,7 @@ begin
   else
     aResult := False;
 end;
+{$POP}
 
 type
   TFunCacheType = specialize TGLiteChainHashMap<string, TJpFunctionDef, string>;
