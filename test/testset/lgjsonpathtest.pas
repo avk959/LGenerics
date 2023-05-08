@@ -53,6 +53,8 @@ type
     procedure TestSearchFun;
     procedure TestValueFun;
     procedure TestMore;
+    procedure IRegexpPass;
+    procedure IRegexpFail;
   end;
 
 implementation
@@ -293,6 +295,117 @@ begin
         else
           AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path));
     end;
+end;
+
+procedure TTestJsonPath.IRegexpPass;
+const
+  Samples: TStringArray = (
+  // branches
+    'a|b', 'a|b', 'a|', '|', '||',
+  // atom
+    'a(a)a', '(b)(ab)c', 'a'#0'b', 'a'#3'b',  'a'#7'b', 'a'#11'b', 'a'#22'b',
+    'ab(c(de(f(gh)?i){2}jk)+lmn)*op(rs){1,4}',
+  // unicode category
+    '\p{C}', '\p{Cc}', '\p{Cf}', '\p{Cn}', '\p{Co}', '\p{L}', '\p{Ll}', '\p{Lm}', '\p{Lo}',
+    '\p{Lt}', '\p{Lu}', '\p{M}', '\p{Mc}', '\p{Me}', '\p{Mn}', '\p{N}', '\p{Nd}', '\p{Nl}',
+    '\p{No}', '\p{P}', '\p{Pc}', '\p{Pd}', '\p{Pe}', '\p{Pf}', '\p{Pi}', '\p{Po}', '\p{Ps}',
+    '\p{Z}', '\p{Zl}', '\p{Zp}', '\p{Zs}', '\p{S}', '\p{Sc}', '\p{Sk}', '\p{Sm}', '\p{So}',
+  // caret
+    'a^b', 'a^\^b',
+  // char class expr
+    '[\p{L}]', '[\p{M}]', '[\p{Lo}\p{Me}]',
+    '[^-a]', '[^a-]', '[^-a-]', '[^-a-b]', '[^-^-^]', '[\p{So}]', '[^-\p{Mn}-]', '[^--]', '[--]',
+    '[a^]', '[a^a]', '[^a^]', '[^^a^]', '[^a^a]',
+  // singleCharEsc in char class expr
+    '[\(]', '[\)]', '[\*]', '[\+]', '[\-]', '[\.]', '[\?]', '[\?]', '[\[]',
+    '[\\]', '[\]]', '[\^]', '[\n]', '[\r]', '[\t]', '[\{]', '[\|]', '[\}]',
+    '[\(\*\+\)]', '[\(\-\.\)]', '[\(\?\)]', '[\n\r\t]',
+  // leading or trailing hyphen
+    '[-a]', '[a-]', '[-a-]', '[-a-b]', '[-a-bc-]',
+  // escape
+    '\.', '\?', '\(', '\)', '\*', '\+', '\[', '\]', '\{', '\}', '\|', '\n', '\r', '\t',
+    '[\r\n\t]', '[^\r\n\t]', '[^\r-\n\t-]',
+  // dot
+    '.', '..', '.*', '.?', '.+',
+  // singleCharEsc
+    '\(', '\)', '\*', '\+', '\-', '\.', '\?', '\?', '\[', '\\', '\]',
+   '\^', '\n', '\r', '\t', '\{', '\|', '\}',
+   '\(\*\+\)', '\(\-\.\)', '\(\?\)', '\n\r\t',
+  // parens
+    '(a)', '(a)+', '(a){2}', '(a){2,3}', '()', 'a()', '(0*)*1',
+  // quantifiers
+    'a*', 'a+', 'a?', 'a{2}', 'a{2,3}',
+  // Appendix A
+    '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*)?', '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}',
+    '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}', '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|',
+    '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|', '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|',
+    '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|', '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}',
+    '[0-9a-fA-F]*', '[aeiouy]*', '[A-Z][a-z]*', '\*', '[^\*].*',
+    '[a-zA-Z_][a-zA-Z0-9\-_.]*', '.|..|[^xX].*|.[^mM].*|..[^lL].*', '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*)?',
+    '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}', '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*)?',
+    '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-', '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}',
+    '[0-9\\.]*', '[0-9a-fA-F:\.]*', '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}',
+    '([0-9a-fA-F]){2}(:([0-9a-fA-F]){2}){0,254}', '([0-9a-fA-F]){2}(:([0-9a-fA-F]){2}){4,31}',
+    '[0-9a-fA-F]*', '[a-zA-Z_][a-zA-Z0-9\-_.]*', '[xX][mM][lL].*', '[A-Z]{2}', '\*',
+    '[0-9]{8}\.[0-9]{6}', '(2((2[4-9])|(3[0-9]))\.).*', '(([fF]{2}[0-9a-fA-F]{2}):).*',
+    '[A-Z]{2}', '\*', '[^\*].*', '[0-9\.]*', '[a-zA-Z_][a-zA-Z0-9\-_.]*',
+    '.|..|[^xX].*|.[^mM].*|..[^lL].*', '/?([a-zA-Z0-9\-_.]+)(/[a-zA-Z0-9\-_.]+)*',
+    '([a-zA-Z0-9\-_.]+:)*', '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){7}'
+  );
+  Fmt = 'Total = %d, but Passed = %d';
+var
+  s: string;
+  Total, Passed: Integer;
+  I: SizeInt;
+begin
+  Total := 0;
+  Passed := 0;
+  for s in Samples do
+    begin
+      Inc(Total);
+      Inc(Passed, Ord(IRegexpCheck(s, I) = ircOk));
+    end;
+  AssertTrue(Format(Fmt, [Total, Passed]), Total = Passed);
+end;
+
+procedure TTestJsonPath.IRegexpFail;
+const
+  Samples: TStringArray = (
+  // branch
+    '|?',
+  // unicode category
+    '\p{Cx}', '\p{Lx}', '\p{Mx}', '\p{Nx}', '\p{Px}', '\p{Zx}', '\p{Sx}', '\p', '\p{', '\p{}',
+  // char class expr
+    '[\a]', '[\0]', '[\,]', '[',']', '[^]', '[a--b]', '[a-z-A-Z]', '[--a]', '[^\p{Cc}-\p{Me}]',
+  // escape
+    '\a', '\0', '\,',
+  // parens
+    '(', ')', '(a', 'a)',
+  // quantifiers
+    '*', '+', '?', 'a**', 'a++', 'a??', '{', '}', '{}', '{,}', '{4,}',
+    '{,2}', 'a{', 'a}', 'a{}', 'a{,}', 'a{4,}', 'a{,2}',
+  // Appendix A
+    '\p{IsBasicLatin}{0,255}', '\S(.*\S)?', '(([0-1](\.[1-3]?[0-9]))|(2\.(0|([1-9]\d*))))',
+    '\d*(\.\d*){1,127}', '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?', '\S+', '\S(.*\S)?',
+    '(([0-1](\.[1-3]?[0-9]))|(2\.(0|([1-9]\d*))))', '\d*(\.\d*){1,127}',
+    '\d{4}-\d{2}-\d{2}T\\d{2}:\d{2}:\d{2}(\.\d+)?', '\d{2}:\d{2}:\d{2}(\.\d+)?',
+    '\d{2}:\d{2}:\d{2}(\.\d+)?', '\d{4}-\d{2}-\d{2}', 'Z|[\+\-]\d{2}:\d{2}',
+    '\d{4}-\d{2}-\d{2}', '\d{4}-\d{2}-\d{2}', '[\S ]+'
+  );
+  Fmt = 'Total = %d, but Failed = %d';
+var
+  s: string;
+  Total, Failed: Integer;
+  I: SizeInt;
+begin
+  Total := 0;
+  Failed := 0;
+  for s in Samples do
+    begin
+      Inc(Total);
+      Inc(Failed, Ord(IRegexpCheck(s, I) <> ircOk));
+    end;
+  AssertTrue(Format(Fmt, [Total, Failed]), Total = Failed);
 end;
 
 procedure FindTestDir;
