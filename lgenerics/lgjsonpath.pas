@@ -3396,7 +3396,10 @@ var
                     else
                       exit(Error(ircMissingRBrace));
                   end else
-                    exit(Error(ircInvalidQuantifier));
+                    if pCurr^ = '}' then
+                      Inc(pCurr)
+                    else
+                      exit(Error(ircInvalidQuantifier));
                 end;
             else
               exit(Error(ircInvalidQuantifier));
