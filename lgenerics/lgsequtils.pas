@@ -3465,15 +3465,14 @@ end;
 
 function TFuzzySearchEdp.TEnumerator.MoveNext: Boolean;
 var
-  TextLen, I, PtLen, Cost, Err: SizeInt;
+  TextLen, I, Cost, Err: SizeInt;
   c: Ucs4Char;
 begin
   TextLen := System.Length(FText);
-  if FTextIndex > TextLen then exit(False);
   while FTextIndex <= TextLen do
     begin
-      c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), PtLen);
-      FTextIndex += PtLen;
+      c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), I);
+      FTextIndex += I;
       Inc(FPointIndex);
       Cost := 0;
       for I := 1 to FTop do
