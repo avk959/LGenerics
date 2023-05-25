@@ -1318,8 +1318,8 @@ type
   procedure ReadClassProp(o: TObject; aPropInfo: PPropInfo);
   var
     pTypInfo: PTypeInfo;
-    I: Int64;
-    e: Extended;
+    I: Int64 = 0;
+    e: Extended = 0;
     v: Variant;
     ss: shortstring;
     p: Pointer = nil;
@@ -1597,7 +1597,8 @@ type
   end;
   procedure ReadSet(aTypeInfo: PTypeInfo; aData: Pointer);
   var
-    I, Size, MaxBit: Integer;
+    I: Int64 = 0;
+    Size, MaxBit: Integer;
     pElType: PTypeInfo;
     pIntData: PInteger;
     ElKind: TTypeKind;
