@@ -2848,65 +2848,47 @@ begin
   case p^ of
     0..$7f:
       begin
-        Result := p^;
         aPtSize := 1;
-        exit;
+        exit(p^);
       end;
     $c2..$df:
-      if (aStrLen > 1) and (p[1] in [$80..$bf]) then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f));
-          aPtSize := 2;
-          exit;
-        end;
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
+        aPtSize := 2;
+        exit(Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f)));
+      end;
     $e0:
-      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
-                    Ucs4Char(p[2] and $3f));
-          aPtSize := 3;
-          exit;
-        end;
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2] and $3f)));
+      end;
     $e1..$ec, $ee..$ef:
-      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
-                    Ucs4Char(p[2] and $3f));
-          aPtSize := 3;
-          exit;
-        end;
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+      end;
     $ed:
-      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
-                    Ucs4Char(p[2] and $3f));
-          aPtSize := 3;
-          exit;
-        end;
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+      end;
     $f0:
-      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-                             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
-          aPtSize := 4;
-          exit;
-        end;
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
     $f1..$f3:
-      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-                             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
-          aPtSize := 4;
-          exit;
-        end;
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
     $f4:
-      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then
-        begin
-          Result := Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-                             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f));
-          aPtSize := 4;
-          exit;
-        end;
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
   else
   end;
   aPtSize := 1;
@@ -2987,15 +2969,15 @@ const
 
 function Utf8ValidateDfa(const s: rawbytestring): Boolean;
 var
-  I, State: SizeInt;
-  p: PByte absolute s;
+  I: SizeInt;
+  State: Byte;
 const
   UTF8_REJECT = 12;
 begin
   State := 0;
-  for I := 0 to System.Length(s) do
+  for I := 1 to System.Length(s) do
     begin
-      State := UTF8_S[State + UTF8_D[p[I]]];
+      State := UTF8_S[State + UTF8_D[Byte(s[I])]];
       if State = UTF8_REJECT then exit(False);
     end;
   Result := State = 0;
@@ -3028,63 +3010,47 @@ end;
 }
 function Utf8Validate(const s: rawbytestring): Boolean;
 var
-  Len, Done: SizeInt;
-  p: PByte;
+  p, pEnd: PByte;
 begin
   if s = '' then exit(True);
-  Done := 0;
-  Len := System.Length(s);
   p := Pointer(s);
-  while Done < Len do
+  pEnd := p + System.Length(s);
+  while p < pEnd do
     case p^ of
-      0..$7f:
-        begin
-          Inc(Done);
-          Inc(p);
-        end;
+      0..$7f: Inc(p);
       $c2..$df:
         begin
-          if (Done > Len - 2) or not(p[1] in [$80..$bf]) then exit(False);
-          Done += 2;
+          if not(p[1] in [$80..$bf]) then exit(False);
           p += 2;
         end;
       $e0:
         begin
-          if (Done > Len - 3) or not((p[1] in [$a0..$bf])and(p[2] in [$80..$bf])) then exit(False);
-          Done += 3;
+          if not((p[1] in [$a0..$bf])and(p[2] in [$80..$bf])) then exit(False);
           p += 3;
         end;
       $e1..$ec, $ee..$ef:
         begin
-          if (Done > Len - 3) or not((p[1] in [$80..$bf])and(p[2] in [$80..$bf])) then exit(False);
-          Done += 3;
+          if not((p[1] in [$80..$bf])and(p[2] in [$80..$bf])) then exit(False);
           p += 3;
         end;
       $ed:
         begin
-          if (Done > Len - 3) or not((p[1] in [$80..$9f])and(p[2] in [$80..$bf])) then exit(False);
-          Done += 3;
+          if not((p[1] in [$80..$9f])and(p[2] in [$80..$bf])) then exit(False);
           p += 3;
         end;
       $f0:
         begin
-          if (Done > Len - 4) or not((p[1] in [$90..$bf])and(p[2] in [$80..$bf])and
-                                      (p[3] in [$80..$bf])) then exit(False);
-          Done += 4;
+          if not((p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf]))then exit(False);
           p += 4;
         end;
       $f1..$f3:
         begin
-          if (Done > Len - 4) or not((p[1] in [$80..$bf])and(p[2] in [$80..$bf])and
-                                     (p[3] in [$80..$bf])) then exit(False);
-          Done += 4;
+          if not((p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf]))then exit(False);
           p += 4;
         end;
       $f4:
         begin
-          if (Done > Len - 4) or not((p[1] in [$80..$8f])and(p[2] in [$80..$bf])and
-                                     (p[3] in [$80..$bf])) then exit(False);
-          Done += 4;
+          if not((p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf]))then exit(False);
           p += 4;
         end;
     else
