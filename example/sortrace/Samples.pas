@@ -13,15 +13,15 @@ uses
 
 type
 
-  TSortAlgo     = (saQuickSort, saIntroSort, saDualPivotQuickSort, saPDQSort, saMergeSort, saTimSort,
-                   saFclSort,{ fcl-stl TOrderingArrayUtils.Sort }
-                   saGCSort, { Generics.Collections TArrayHelper.Sort }
-                   saPasPDQSort { Akira1364's Pascal translation of PDQSort from
-                                  https://github.com/Akira13641/PasPDQSort });
-  TSampleSize   = (ss1K, ss2K, ss5K, ss10K, ss20K, ss50K, ss01M, ss02M, ss05M, ss1M, ss2M, ss5M, ss10M);
-  TSampleClass  = (scRandomUInt, scRandomUInt64, scRandomSingle, scRandomDouble, scRandomStr8,
-                   scRandomVec4, scKLimited, scKEqualTeeth, scKEvenTeeth, scKSharpTeeth, scKDistance,
-                   scKExchange);
+  TSortAlgo    = (saQuickSort, saIntroSort, saDualPivotQuickSort, saPDQSort, saMergeSort, saTimSort,
+                  saFclSort,{ fcl-stl TOrderingArrayUtils.Sort }
+                  saGCSort, { Generics.Collections TArrayHelper.Sort }
+                  saPasPDQSort { Akira1364's Pascal translation of PDQSort from
+                                 https://github.com/Akira13641/PasPDQSort });
+  TSampleSize  = (ss1K, ss2K, ss5K, ss10K, ss20K, ss50K, ss01M, ss02M, ss05M, ss1M, ss2M, ss5M, ss10M);
+  TSampleClass = (scRandomUInt, scRandomUInt64, scRandomSingle, scRandomDouble, scRandomStr8,
+                  scRandomVec4, scKLimited, scKEqualTeeth, scKEvenTeeth, scKSharpTeeth, scKDistance,
+                  scKExchange);
 
   TVec4 = record
     X, Y, Z, W: Double;
@@ -508,7 +508,7 @@ begin
   Result := Timer.Elapsed;
 end;
 
-function StrCmp(constref L, R: string): Integer;
+function StrCmp({$IF FPC_FULLVERSION>=30301}const{$ELSE}constref{$ENDIF} L, R: string): Integer;
 begin
   if L > R then
     Result := 1
@@ -548,7 +548,7 @@ begin
   Result := Timer.Elapsed;
 end;
 
-function Vec4Order(constref A, B: TVec4): Int32;
+function Vec4Order({$IF FPC_FULLVERSION>=30301}const{$ELSE}constref{$ENDIF} A, B: TVec4): Int32;
 var
   sA, sB: Double;
 begin
