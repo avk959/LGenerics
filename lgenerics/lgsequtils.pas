@@ -200,9 +200,9 @@ type
   { returns True if aSub is a subsequence of aSeq, False otherwise }
     class function IsSubSequence(const aSeq, aSub: array of T): Boolean; static;
   { returns True if L is a prefix of R; an empty array cannot be a prefix of any other array }
-    class function  IsPrefix(const L, R: array of T): Boolean; static;
+    class function IsPrefix(const L, R: array of T): Boolean; static;
   { returns True if L is a suffix of R; an empty array cannot be a suffix of any other array }
-    class function  IsSuffix(const L, R: array of T): Boolean; static;
+    class function IsSuffix(const L, R: array of T): Boolean; static;
   { returns the length of the common prefix L and R }
     class function CommonPrefixLen(const L, R: array of T): SizeInt; static;
   { returns the length of the common suffix L and R }
