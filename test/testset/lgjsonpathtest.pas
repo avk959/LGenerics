@@ -112,15 +112,17 @@ begin
   for CurrTest in aTestSet do
     begin
       AssertTrue(CurrTest.IsObject);
-      Query := CurrTest['selector'].AsString;
-      TstName := CurrTest['name'].AsString;
+      AssertTrue(CurrTest.Find('selector', Doc));
+      Query := Doc.AsString;
+      AssertTrue(CurrTest.Find('name', Doc));
+      TstName := Doc.AsString;
       if CurrTest.Find('invalid_selector', Invalid) then
         AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path))
       else
         begin
           AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
-          Doc := CurrTest['document'];
-          Expect := CurrTest['result'];
+          AssertTrue(CurrTest.Find('document', Doc));
+          AssertTrue(CurrTest.Find('result', Expect));
           GotOut := Path.MatchValues(Doc);
           AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
         end;
@@ -265,8 +267,10 @@ begin
   for CurrTest in Tests do
     begin
       AssertTrue(CurrTest.IsObject);
-      Query := CurrTest['selector'].AsString;
-      TstName := CurrTest['id'].AsString;
+      AssertTrue(CurrTest.Find('selector', Doc));
+      Query := Doc.AsString;
+      AssertTrue(CurrTest.Find('id', Doc));
+      TstName := Doc.AsString;
       if CurrTest.Find('should_be', Expect) then
         begin
           if Expect.IsString and (Expect.AsString = 'NOT_SUPPORTED') then
@@ -274,7 +278,7 @@ begin
           else
             begin
               AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
-              Doc := CurrTest['document'];
+              AssertTrue(CurrTest.Find('document', Doc));
               GotOut := Path.MatchValues(Doc);
               AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
             end;
@@ -287,7 +291,7 @@ begin
             else
               begin
                 AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
-                Doc := CurrTest['document'];
+                AssertTrue(CurrTest.Find('document', Doc));
                 GotOut := Path.MatchValues(Doc);
                 AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
               end;
