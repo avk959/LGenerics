@@ -1520,56 +1520,18 @@ end;
 
 class procedure TGArrayHelpUtil.DoReverse(p: PItem; R: SizeInt);
 var
-  v0, v1, v2, v3: TFake;
-  L: SizeInt;
+  pR: PItem;
+  v: TFake;
 begin
-  L := 0;
-  while R - L >= 7 do
+  pR := @p[R];
+  while p < pR do
     begin
-      v0 := TFake(p[L    ]);
-      v1 := TFake(p[L + 1]);
-      v2 := TFake(p[L + 2]);
-      v3 := TFake(p[L + 3]);
-      TFake(p[L    ]) := TFake(p[R    ]);
-      TFake(p[L + 1]) := TFake(p[R - 1]);
-      TFake(p[L + 2]) := TFake(p[R - 2]);
-      TFake(p[L + 3]) := TFake(p[R - 3]);
-      TFake(p[R    ]) := v0;
-      TFake(p[R - 1]) := v1;
-      TFake(p[R - 2]) := v2;
-      TFake(p[R - 3]) := v3;
-      L += 4;
-      R -= 4;
+      v := TFake(p^);
+      TFake(p^) := TFake(pR^);
+      TFake(pR^) := v;
+      Inc(p);
+      Dec(pR);
     end;
-  case R - L of
-    1..2:
-      begin
-        v0 := TFake(p[L]);
-        TFake(p[L]) := TFake(p[R]);
-        TFake(p[R]) := v0;
-      end;
-    3..4:
-      begin
-        v0 := TFake(p[L    ]);
-        v1 := TFake(p[L + 1]);
-        TFake(p[L    ]) := TFake(p[R    ]);
-        TFake(p[L + 1]) := TFake(p[R - 1]);
-        TFake(p[R    ]) := v0;
-        TFake(p[R - 1]) := v1;
-      end;
-    5..6:
-      begin
-        v0 := TFake(p[L    ]);
-        v1 := TFake(p[L + 1]);
-        v2 := TFake(p[L + 2]);
-        TFake(p[L    ]) := TFake(p[R    ]);
-        TFake(p[L + 1]) := TFake(p[R - 1]);
-        TFake(p[L + 2]) := TFake(p[R - 2]);
-        TFake(p[R    ]) := v0;
-        TFake(p[R - 1]) := v1;
-        TFake(p[R - 2]) := v2;
-      end;
-  end;
 end;
 
 class procedure TGArrayHelpUtil.PtrSwap(var L, R: Pointer);
