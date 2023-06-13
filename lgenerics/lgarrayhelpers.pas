@@ -368,6 +368,8 @@ type
     class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
+  { returns True if array A is somehow sorted; an empty array is considered sorted }
+    class function  IsSorted(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -578,6 +580,8 @@ type
     class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
+  { returns True if array A is somehow sorted; an empty array is considered sorted }
+    class function  IsSorted(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -727,6 +731,8 @@ type
     class function  IsNonAscending(const A: array of T; c: TLess): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TLess): Boolean; static;
+  { returns True if array A is somehow sorted; an empty array is considered sorted }
+    class function  IsSorted(const A: array of T; c: TLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -875,6 +881,8 @@ type
     class function  IsNonAscending(const A: array of T; c: TOnLess): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TOnLess): Boolean; static;
+  { returns True if array A is somehow sorted; an empty array is considered sorted }
+    class function  IsSorted(const A: array of T; c: TOnLess): Boolean; static;
   { returns the number of inversions in A, sorts an array }
     class function  InversionCount(var A: array of T; c: TOnLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -1028,6 +1036,8 @@ type
     class function  IsNonAscending(const A: array of T; c: TNestLess): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T; c: TNestLess): Boolean; static;
+  { returns True if array A is somehow sorted; an empty array is considered sorted }
+    class function  IsSorted(const A: array of T; c: TNestLess): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T; c: TNestLess): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -1164,6 +1174,8 @@ type
     class function  IsNonAscending(const A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending }
     class function  IsStrictDescending(const A: array of T): Boolean; static;
+  { returns True if array A is somehow sorted; an empty array is considered sorted }
+    class function  IsSorted(const A: array of T): Boolean; static;
   { returns the number of inversions in A, sorts array }
     class function  InversionCount(var A: array of T): Int64; static;
   { returns the number of inversions in A, nondestructive }
@@ -3970,6 +3982,28 @@ begin
     Result := False;
 end;
 
+class function TGBaseArrayHelper.IsSorted(const A: array of T): Boolean;
+var
+  I, Last: SizeInt;
+begin
+  if System.Length(A) < 3 then exit(True);
+  Last := System.High(A);
+  I := 0;
+  while (I < Last) and not(TCmpRel.Less(A[I], A[I+1]) or TCmpRel.Less(A[I+1], A[I])) do
+    Inc(I);
+  if I < Last then
+    begin
+      Inc(I);
+      if TCmpRel.Less(A[I-1], A[I]) then // asc
+        while (I < Last) and not TCmpRel.Less(A[I+1], A[I]) do
+          Inc(I)
+      else                               // desc
+        while (I < Last) and not TCmpRel.Less(A[I], A[I+1]) do
+          Inc(I);
+    end;
+  Result := I = Last;
+end;
+
 class function TGBaseArrayHelper.InversionCount(var A: array of T): Int64;
 var
   Buf: TArray;
@@ -6598,6 +6632,28 @@ begin
     Result := False;
 end;
 
+class function TGComparableArrayHelper.IsSorted(const A: array of T): Boolean;
+var
+  I, Last: SizeInt;
+begin
+  if System.Length(A) < 3 then exit(True);
+  Last := System.High(A);
+  I := 0;
+  while (I < Last) and ValEqual(A[I], A[I+1]) do
+    Inc(I);
+  if I < Last then
+    begin
+      Inc(I);
+      if A[I-1] < A[I] then // asc
+        while (I < Last) and not(A[I+1] < A[I]) do
+          Inc(I)
+      else                  // desc
+        while (I < Last) and not(A[I] < A[I+1]) do
+          Inc(I);
+    end;
+  Result := I = Last;
+end;
+
 class function TGComparableArrayHelper.InversionCount(var A: array of T): Int64;
 var
   Buf: TArray;
@@ -8565,6 +8621,28 @@ begin
     end
   else
     Result := False;
+end;
+
+class function TGRegularArrayHelper.IsSorted(const A: array of T; c: TLess): Boolean;
+var
+  I, Last: SizeInt;
+begin
+  if System.Length(A) < 3 then exit(True);
+  Last := System.High(A);
+  I := 0;
+  while (I < Last) and not(c(A[I], A[I+1]) or c(A[I+1], A[I])) do
+    Inc(I);
+  if I < Last then
+    begin
+      Inc(I);
+      if c(A[I-1], A[I]) then // asc
+        while (I < Last) and not c(A[I+1], A[I]) do
+          Inc(I)
+      else                    // desc
+        while (I < Last) and not c(A[I], A[I+1]) do
+          Inc(I);
+    end;
+  Result := I = Last;
 end;
 
 class function TGRegularArrayHelper.InversionCount(var A: array of T; c: TLess): Int64;
@@ -10539,6 +10617,28 @@ begin
     Result := False;
 end;
 
+class function TGDelegatedArrayHelper.IsSorted(const A: array of T; c: TOnLess): Boolean;
+var
+  I, Last: SizeInt;
+begin
+  if System.Length(A) < 3 then exit(True);
+  Last := System.High(A);
+  I := 0;
+  while (I < Last) and not(c(A[I], A[I+1]) or c(A[I+1], A[I])) do
+    Inc(I);
+  if I < Last then
+    begin
+      Inc(I);
+      if c(A[I-1], A[I]) then // asc
+        while (I < Last) and not c(A[I+1], A[I]) do
+          Inc(I)
+      else                    // desc
+        while (I < Last) and not c(A[I], A[I+1]) do
+          Inc(I);
+    end;
+  Result := I = Last;
+end;
+
 class function TGDelegatedArrayHelper.InversionCount(var A: array of T; c: TOnLess): Int64;
 var
   Buf: TArray;
@@ -12511,6 +12611,28 @@ begin
     Result := False;
 end;
 
+class function TGNestedArrayHelper.IsSorted(const A: array of T; c: TNestLess): Boolean;
+var
+  I, Last: SizeInt;
+begin
+  if System.Length(A) < 3 then exit(True);
+  Last := System.High(A);
+  I := 0;
+  while (I < Last) and not(c(A[I], A[I+1]) or c(A[I+1], A[I])) do
+    Inc(I);
+  if I < Last then
+    begin
+      Inc(I);
+      if c(A[I-1], A[I]) then // asc
+        while (I < Last) and not c(A[I+1], A[I]) do
+          Inc(I)
+      else                    // desc
+        while (I < Last) and not c(A[I], A[I+1]) do
+          Inc(I);
+    end;
+  Result := I = Last;
+end;
+
 class function TGNestedArrayHelper.InversionCount(var A: array of T; c: TNestLess): Int64;
 var
   Buf: TArray;
@@ -14119,6 +14241,28 @@ begin
     end
   else
     Result := False;
+end;
+
+class function TGSimpleArrayHelper.IsSorted(const A: array of T): Boolean;
+var
+  I, Last: SizeInt;
+begin
+  if System.Length(A) < 3 then exit(True);
+  Last := System.High(A);
+  I := 0;
+  while (I < Last) and (A[I] = A[I+1]) do
+    Inc(I);
+  if I < Last then
+    begin
+      Inc(I);
+      if A[I-1] < A[I] then // asc
+        while (I < Last) and (A[I] <= A[I+1]) do
+          Inc(I)
+      else                  // desc
+        while (I < Last) and (A[I] >= A[I+1]) do
+          Inc(I);
+    end;
+  Result := I = Last;
 end;
 
 class function TGSimpleArrayHelper.InversionCount(var A: array of T): Int64;
