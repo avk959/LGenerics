@@ -3310,21 +3310,18 @@ begin
       if TCmpRel.Less(aValue, A[0]) or TCmpRel.Less(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue);
-      if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
-        Result := R;
     end
   else
-    if TCmpRel.Less(A[R], A[0]) then   //descending
+    if TCmpRel.Less(A[R], A[0]) then  //descending
       begin
         if TCmpRel.Less(A[0], aValue) or TCmpRel.Less(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue);
-        if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
-          Result := R;
       end
-    else           //constant
-      if not(TCmpRel.Less(A[0], aValue) or TCmpRel.Less(aValue, A[0])) then
-        Result := 0;
+    else  //constant
+      R := 0;
+  if not(TCmpRel.Less(A[R], aValue) or TCmpRel.Less(aValue, A[R])) then
+    Result := R;
 end;
 
 class function TGBaseArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult;
@@ -4282,8 +4279,6 @@ begin
       if TCmpRel.Less(aValue, e.UncMutable[L]^) or TCmpRel.Less(e.UncMutable[R]^, aValue) then
         exit;
       R := BiSearchLeftA(e, L, R, aValue);
-      if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
-        Result := R;
     end
   else
     if TCmpRel.Less(e.UncMutable[R]^, e.UncMutable[L]^) then //descending
@@ -4292,12 +4287,11 @@ begin
            TCmpRel.Less(aValue, e.UncMutable[R]^) then
           exit;
         R := BiSearchLeftD(e, L, R, aValue);
-        if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
-          Result := R;
       end
     else //constant
-      if not(TCmpRel.Less(e.UncMutable[L]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[L]^)) then
-        Result := L;
+      R := L;
+  if not(TCmpRel.Less(e.UncMutable[R]^, aValue) or TCmpRel.Less(aValue, e.UncMutable[R]^)) then
+    Result := R;
 end;
 
 class function TGBaseIndexedHelper.DoBinSearchPos(const e: TIndexed; L, R: SizeInt;
@@ -5947,8 +5941,6 @@ begin
       if (aValue < A[0]) or (A[R] < aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue);
-      if ValEqual(A[R], aValue) then
-        Result := R;
     end
   else
     if A[R] < A[0] then //descending
@@ -5956,12 +5948,11 @@ begin
         if (A[0] < aValue) or (aValue < A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue);
-        if ValEqual(A[R], aValue) then
-          Result := R;
       end
-    else               //constant
-      if ValEqual(A[0], aValue) then
-        Result := 0;
+    else                //constant
+      R := 0;
+  if ValEqual(A[R], aValue) then
+    Result := R;
 end;
 
 class function TGComparableArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult;
@@ -7909,8 +7900,6 @@ begin
       if c(aValue, A[0]) or c(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue, c);
-      if not(c(A[R], aValue) or c(aValue, A[R])) then
-        Result := R;
     end
   else
     if c(A[R], A[0]) then  //descending
@@ -7918,12 +7907,11 @@ begin
         if c(A[0], aValue) or c(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue, c);
-        if not(c(A[R], aValue) or c(aValue, A[R])) then
-          Result := R;
       end
-    else           //constant
-      if not(c(A[0], aValue) or c(aValue, A[0])) then
-        Result := 0;
+    else   //constant
+      R := 0;
+  if not(c(A[R], aValue) or c(aValue, A[R])) then
+    Result := R;
 end;
 
 class function TGRegularArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T;
@@ -9882,8 +9870,6 @@ begin
       if c(aValue, A[0]) or c(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue, c);
-      if not(c(A[R], aValue) or c(aValue, A[R])) then
-        Result := R;
     end
   else
     if c(A[R], A[0]) then  //descending
@@ -9891,12 +9877,11 @@ begin
         if c(A[0], aValue) or c(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue, c);
-        if not(c(A[R], aValue) or c(aValue, A[R])) then
-          Result := R;
       end
-    else           //constant
-      if not(c(A[0], aValue) or c(aValue, A[0])) then
-        Result := 0;
+    else  //constant
+      R := 0;
+  if not(c(A[R], aValue) or c(aValue, A[R])) then
+    Result := R;
 end;
 
 class function TGDelegatedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T;
@@ -11857,8 +11842,6 @@ begin
       if c(aValue, A[0]) or c(A[R], aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue, c);
-      if not(c(A[R], aValue) or c(aValue, A[R])) then
-        Result := R;
     end
   else
     if c(A[R], A[0]) then  //descending
@@ -11866,12 +11849,11 @@ begin
         if c(A[0], aValue) or c(aValue, A[R]) then
           exit;
         R := BiSearchLeftD(A, R, aValue, c);
-        if not(c(A[R], aValue) or c(aValue, A[R])) then
-          Result := R;
       end
-    else           //constant
-      if not(c(A[0], aValue) or c(aValue, A[0])) then
-        Result := 0;
+    else  //constant
+      R := 0;
+  if not(c(A[R], aValue) or c(aValue, A[R])) then
+    Result := R;
 end;
 
 class function TGNestedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T;
@@ -13378,8 +13360,6 @@ begin
       if (A[0] > aValue) or (A[R] < aValue) then
         exit;
       R := BiSearchLeftA(A, R, aValue);
-      if A[R] = aValue then
-        Result := R;
     end
   else
     if A[R] < A[0] then  //descending
@@ -13387,12 +13367,11 @@ begin
         if (A[0] < aValue) or (A[R] > aValue) then
           exit;
         R := BiSearchLeftD(A, R, aValue);
-        if A[R] = aValue then
-          Result := R;
       end
-    else              //constant
-      if A[0] = aValue then
-        Result := 0;
+    else  //constant
+      R := 0;
+  if A[R] = aValue then
+    Result := R;
 end;
 
 class function TGSimpleArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult;
