@@ -398,7 +398,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: T; inline;
     public
-      constructor Create(const aSet: TGLiteTreeSet);
+      constructor Create(aSet: PSet);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -413,7 +413,7 @@ type
       FInCycle: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(const aSet: TGLiteTreeSet);
+      constructor Create(aSet: PSet);
       function  MoveNext: Boolean; inline;
       procedure Reset;
       property  Current: T read GetCurrent;
@@ -427,7 +427,7 @@ type
       FDone: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(const aSet: TGLiteTreeSet; const aHighBound: T; aInclusive: Boolean);
+      constructor Create(aSet: PSet; const aHighBound: T; aInclusive: Boolean);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -442,7 +442,7 @@ type
       FInCycle: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(const aSet: TGLiteTreeSet; const aLowBound: T; aInclusive: Boolean);
+      constructor Create(aSet: PSet; const aLowBound: T; aInclusive: Boolean);
       function  MoveNext: Boolean; inline;
       procedure Reset;
       property  Current: T read GetCurrent;
@@ -456,7 +456,7 @@ type
       FDone: Boolean;
       function  GetCurrent: T; inline;
     public
-      constructor Create(const aSet: TGLiteTreeSet; const aLowBound, aHighBound: T; aBounds: TRangeBounds);
+      constructor Create(aSet: PSet; const aLowBound, aHighBound: T; aBounds: TRangeBounds);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -1700,9 +1700,9 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGLiteTreeSet.TEnumerator.Create(const aSet: TGLiteTreeSet);
+constructor TGLiteTreeSet.TEnumerator.Create(aSet: PSet);
 begin
-  FEnum := aSet.FTree.GetEnumerator;
+  FEnum := aSet^.FTree.GetEnumerator;
 end;
 
 function TGLiteTreeSet.TEnumerator.MoveNext: Boolean;
@@ -1722,9 +1722,9 @@ begin
   Result := FNodeList[FCurrNode].Data.Key;
 end;
 
-constructor TGLiteTreeSet.TReverseEnumerator.Create(const aSet: TGLiteTreeSet);
+constructor TGLiteTreeSet.TReverseEnumerator.Create(aSet: PSet);
 begin
-  FTree := @aSet.FTree;
+  FTree := @aSet^.FTree;
   FNodeList := FTree^.NodeList;
   FFirstNode := FTree^.Highest;
   FInCycle := False;
@@ -1761,10 +1761,10 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGLiteTreeSet.THeadEnumerator.Create(const aSet: TGLiteTreeSet; const aHighBound: T;
+constructor TGLiteTreeSet.THeadEnumerator.Create(aSet: PSet; const aHighBound: T;
   aInclusive: Boolean);
 begin
-  FEnum := aSet.FTree.GetEnumerator;
+  FEnum := aSet^.FTree.GetEnumerator;
   FHighBound := aHighBound;
   FInclusive := aInclusive;
   FDone := False;
@@ -1794,10 +1794,10 @@ begin
   Result := FNodeList[FCurrNode].Data.Key;
 end;
 
-constructor TGLiteTreeSet.TTailEnumerator.Create(const aSet: TGLiteTreeSet; const aLowBound: T;
+constructor TGLiteTreeSet.TTailEnumerator.Create(aSet: PSet; const aLowBound: T;
   aInclusive: Boolean);
 begin
-  FTree := @aSet.FTree;
+  FTree := @aSet^.FTree;
   FNodeList := FTree^.NodeList;
   if aInclusive then
     FFirstNode := FTree^.FindGreaterOrEqual(aLowBound)
@@ -1837,10 +1837,10 @@ begin
   Result := FEnum.Current;
 end;
 
-constructor TGLiteTreeSet.TRangeEnumerator.Create(const aSet: TGLiteTreeSet; const aLowBound, aHighBound: T;
+constructor TGLiteTreeSet.TRangeEnumerator.Create(aSet: PSet; const aLowBound, aHighBound: T;
   aBounds: TRangeBounds);
 begin
-  FEnum := aSet.GetTailEnumerator(aLowBound, rbLow in aBounds);
+  FEnum := aSet^.GetTailEnumerator(aLowBound, rbLow in aBounds);
   FHighBound := aHighBound;
   FInclusive := rbHigh in aBounds;
   FDone := False;
@@ -1972,28 +1972,28 @@ end;
 
 function TGLiteTreeSet.GetReverseEnumerator: TReverseEnumerator;
 begin
-  Result := TReverseEnumerator.Create(Self);
+  Result := TReverseEnumerator.Create(@Self);
 end;
 
 function TGLiteTreeSet.GetHeadEnumerator(const aHighBound: T; aInclusive: Boolean): THeadEnumerator;
 begin
-  Result := THeadEnumerator.Create(Self, aHighBound, aInclusive);
+  Result := THeadEnumerator.Create(@Self, aHighBound, aInclusive);
 end;
 
 function TGLiteTreeSet.GetTailEnumerator(const aLowBound: T; aInclusive: Boolean): TTailEnumerator;
 begin
-  Result := TTailEnumerator.Create(Self, aLowBound, aInclusive);
+  Result := TTailEnumerator.Create(@Self, aLowBound, aInclusive);
 end;
 
 function TGLiteTreeSet.GetRangeEnumerator(const aLowBound, aHighBound: T;
   aBounds: TRangeBounds): TRangeEnumerator;
 begin
-  Result := TRangeEnumerator.Create(Self, aLowBound, aHighBound, aBounds);
+  Result := TRangeEnumerator.Create(@Self, aLowBound, aHighBound, aBounds);
 end;
 
 function TGLiteTreeSet.GetEnumerator: TEnumerator;
 begin
-  Result := TEnumerator.Create(Self);
+  Result := TEnumerator.Create(@Self);
 end;
 
 function TGLiteTreeSet.Reverse: TReverse;
