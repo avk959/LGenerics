@@ -42,25 +42,19 @@ type
     class function Less(const L, R: TGUID): Boolean; static; inline;
   end;
 
-  TStrHelper = type helper for string
-    class function HashCode(const aValue: string): SizeInt; static; inline;
-    class function Equal(const L, R: string): Boolean; static; inline;
-    class function Less(const L, R: string): Boolean; static; inline;
-  end;
-
-  TAStrHelper = type helper(TStringHelper) for ansistring
+  TAStrHelper = type helper({$IF FPC_FULLVERSION>=30301}TAnsiStringHelper{$ELSE}TStringHelper{$ENDIF}) for ansistring
     class function HashCode(const aValue: ansistring): SizeInt; static; inline;
     class function Equal(const L, R: ansistring): Boolean; static; inline;
     class function Less(const L, R: ansistring): Boolean; static;
   end;
 
-  TWStrHelper = type helper for widestring
+  TWStrHelper = type helper{$IF FPC_FULLVERSION>=30301}(TWideStringHelper){$ENDIF} for widestring
     class function HashCode(const aValue: widestring): SizeInt; static; inline;
     class function Equal(const L, R: widestring): Boolean; static; inline;
     class function Less(const L, R: widestring): Boolean; static;
   end;
 
-  TUStrHelper = type helper for unicodestring
+  TUStrHelper = type helper{$IF FPC_FULLVERSION>=30301}(TUnicodeStringHelper){$ENDIF} for unicodestring
     class function HashCode(const aValue: unicodestring): SizeInt; static; inline;
     class function Equal(const L, R: unicodestring): Boolean; static; inline;
     class function Less(const L, R: unicodestring): Boolean; static;
@@ -392,23 +386,6 @@ end;
 class function TGGuidHelper.Less(const L, R: TGUID): Boolean;
 begin
   Result := CompareMemRange(@L, @R, SizeOf(TGUID)) < 0;
-end;
-
-{ TStrHelper }
-
-class function TStrHelper.HashCode(const aValue: string): SizeInt;
-begin
-  Result := HashFunc.HashStr(aValue);
-end;
-
-class function TStrHelper.Equal(const L, R: string): Boolean;
-begin
-  Result := L = R;
-end;
-
-class function TStrHelper.Less(const L, R: string): Boolean;
-begin
-  Result := CompareStr(L, R) < 0;
 end;
 
 class function TAStrHelper.HashCode(const aValue: ansistring): SizeInt;
