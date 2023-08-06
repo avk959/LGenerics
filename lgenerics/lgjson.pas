@@ -5338,7 +5338,9 @@ var
 begin
   aNode := nil;
   case Kind of
-    jvkArray: exit(FArray^.TryExtract(aIndex, aNode));
+    jvkArray:
+      if FArray <> nil then
+        exit(FArray^.TryExtract(aIndex, aNode));
     jvkObject:
       if (FObject <> nil) and FObject^.TryDelete(aIndex, p) then
         begin
