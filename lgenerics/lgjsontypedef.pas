@@ -20,7 +20,10 @@
 *****************************************************************************}
 unit lgJsonTypeDef;
 
-{$MODE OBJFPC}{$H+}{$MODESWITCH ADVANCEDRECORDS}{$MODESWITCH TYPEHELPERS}
+{$MODE OBJFPC}{$H+}
+{$OBJECTCHECKS OFF}
+{$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH TYPEHELPERS}
 
 interface
 

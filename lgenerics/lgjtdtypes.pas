@@ -20,6 +20,7 @@
 unit lgJtdTypes;
 
 {$MODE OBJFPC}{$H+}
+{$OBJECTCHECKS OFF}
 
 interface
 
