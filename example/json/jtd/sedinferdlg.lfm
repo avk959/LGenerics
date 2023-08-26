@@ -263,7 +263,7 @@ object frmInferDlg: TfrmInferDlg
     object acNodeExpand: TAction
       Category = 'Tree'
       Caption = 'Expand'
-      ImageIndex = 16
+      ImageIndex = 17
       OnExecute = acNodeExpandExecute
       OnUpdate = acNodeExpandUpdate
       ShortCut = 24645
@@ -271,7 +271,7 @@ object frmInferDlg: TfrmInferDlg
     object acNodeCollapse: TAction
       Category = 'Tree'
       Caption = 'Collapse'
-      ImageIndex = 17
+      ImageIndex = 18
       OnExecute = acNodeCollapseExecute
       OnUpdate = acNodeCollapseUpdate
       ShortCut = 24643
@@ -279,7 +279,7 @@ object frmInferDlg: TfrmInferDlg
     object acCopyPath: TAction
       Category = 'Tree'
       Caption = 'Copy path'
-      ImageIndex = 18
+      ImageIndex = 20
       OnExecute = acCopyPathExecute
       OnUpdate = acCopyPathUpdate
       ShortCut = 49219

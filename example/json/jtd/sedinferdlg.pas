@@ -381,79 +381,78 @@ begin
 end;
 
 procedure TfrmInferDlg.LoadPreview(const aRootName: string);
-  procedure VisitNode(aNode: TTreeNode; aJson: TJsonNode);
+  procedure VisitNode(aParent: TTreeNode; aNode: TJsonNode);
   var
     TreeNode: TTreeNode;
-    jNode: TJsonNode;
     p: TJsonNode.TPair;
+    k: TJsValueKind;
     I: Integer;
   begin
-    case aJson.Kind of
-      jvkUnknown:
-        begin
-          TreeNode := tvSampleStruct.Items.AddChild(aNode, '???');
-          TreeNode.ImageIndex := 0;
-          aNode.ImageIndex := 0;
-        end;
-      jvkNull:
-        begin
-          TreeNode := tvSampleStruct.Items.AddChild(aNode, 'null');
-          TreeNode.ImageIndex := 1;
-          aNode.ImageIndex := 1;
-        end;
-      jvkFalse:
-        begin
-          TreeNode := tvSampleStruct.Items.AddChild(aNode, 'false');
-          TreeNode.ImageIndex := 2;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 2;
-        end;
-      jvkTrue:
-        begin
-          TreeNode := tvSampleStruct.Items.AddChild(aNode, 'true');
-          TreeNode.ImageIndex := 2;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 2;
-        end;
-      jvkNumber:
-        begin
-          TreeNode := tvSampleStruct.Items.AddChild(aNode, aJson.ToString);
-          TreeNode.ImageIndex := 3;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 3;
-        end;
-      jvkString:
-        begin
-          TreeNode := tvSampleStruct.Items.AddChild(aNode, aJson.ToString);
-          TreeNode.ImageIndex := 4;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 4;
-        end;
-      jvkArray:
-        begin
-          aNode.ImageIndex := 5;
-          for I := 0 to Pred(aJson.Count) do
+    k := aNode.Kind;
+    TreeNode := nil;
+    if k < jvkArray then
+      begin
+        case k of
+          jvkUnknown:
             begin
-              jNode := aJson.Items[I];
-              TreeNode := tvSampleStruct.Items.AddChild(aNode, I.ToString);
-              VisitNode(TreeNode, jNode);
+              TreeNode := tvSampleStruct.Items.AddChild(aParent, '???');
+              TreeNode.ImageIndex := 0;
             end;
-        end;
-      jvkObject:
-        begin
-          aNode.ImageIndex := 6;
-          for p in aJson.Entries do
+          jvkNull:
             begin
-              TreeNode := tvSampleStruct.Items.AddChild(aNode, p.Key);
-              TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-              VisitNode(TreeNode, p.Value);
+              TreeNode := tvSampleStruct.Items.AddChild(aParent, 'null');
+              TreeNode.ImageIndex := 1;
             end;
+          jvkFalse:
+            begin
+              TreeNode := tvSampleStruct.Items.AddChild(aParent, 'false');
+              TreeNode.ImageIndex := 2;
+            end;
+          jvkTrue:
+            begin
+              TreeNode := tvSampleStruct.Items.AddChild(aParent, 'true');
+              TreeNode.ImageIndex := 2;
+            end;
+          jvkNumber:
+            begin
+              TreeNode := tvSampleStruct.Items.AddChild(aParent, aNode.ToString);
+              TreeNode.ImageIndex := 3;
+            end;
+          jvkString:
+            begin
+              TreeNode := tvSampleStruct.Items.AddChild(aParent, aNode.ToString);
+              TreeNode.ImageIndex := 4;
+            end;
+        else
         end;
-    end;
-    aNode.SelectedIndex := aNode.ImageIndex + 9;
+        TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
+      end
+    else
+      case k of
+        jvkArray:
+          begin
+            aParent.ImageIndex := 5;
+            aParent.SelectedIndex := aParent.ImageIndex + 10;
+            for I := 0 to Pred(aNode.Count) do
+              VisitNode(tvSampleStruct.Items.AddChild(aParent, I.ToString), aNode.Items[I]);
+          end;
+        jvkObject:
+          begin
+            aParent.ImageIndex := 6;
+            aParent.SelectedIndex := aParent.ImageIndex + 10;
+            for p in aNode.Entries do
+              begin
+                TreeNode := tvSampleStruct.Items.AddChild(aParent, p.Key);
+                TreeNode.ImageIndex := 9;
+                TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
+                VisitNode(TreeNode, p.Value);
+              end;
+          end;
+      else
+      end;
   end;
 var
-Root: TTreeNode;
+  Root: TTreeNode;
 begin
   CurrPath := '/';
   tvSampleStruct.BeginUpdate;

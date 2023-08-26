@@ -727,12 +727,12 @@ end;
 
 procedure TfrmMain.acFindNextUpdate(Sender: TObject);
 begin
-  acFindNext.Enabled := FSearcing;
+  acFindNext.Enabled := (pcMainPages.ActivePage = tsSource) and FSearcing;
 end;
 
 procedure TfrmMain.acFindUpdate(Sender: TObject);
 begin
-  acFind.Enabled := acSelectAll.Enabled;
+  acFind.Enabled := (pcMainPages.ActivePage = tsSource) and acSelectAll.Enabled;
 end;
 
 procedure TfrmMain.acFormatExecute(Sender: TObject);
@@ -1269,11 +1269,13 @@ begin
 end;
 
 procedure TfrmMain.LoadSchemaTreeView;
+
   function GetImageIndex(const aKey: string): Integer;
   begin
     case aKey of
       'additionalProperties': Result := 1;
       'boolean':              Result := 2;
+      'definitions':          Result := 18;
       'discriminator':        Result := 3;
       'elements':             Result := 4;
       'enum':                 Result := 5;
@@ -1290,15 +1292,17 @@ procedure TfrmMain.LoadSchemaTreeView;
       'ref':                  Result := 12;
       'string':               Result := 13;
       'timestamp':            Result := 14;
+      'true':                 Result := 17;
       'type':                 Result := 15;
       'uint8',
       'uint16',
       'uint32':               Result := 6;
       'values':               Result := 16;
     else
-      Result := 17;
+      Result := 19;
     end;
   end;
+
   procedure VisitNode(aNode: TTreeNode; aSchema: TJsonNode);
   var
     p: TJsonNode.TPair;
@@ -1307,28 +1311,28 @@ procedure TfrmMain.LoadSchemaTreeView;
     n: TJsonNode;
   begin
     case aSchema.Kind of
-      jvkObject:
-        for p in aSchema.Entries do
-          begin
-            Node := tvSchemaTree.Items.AddChild(aNode, p.Key);
-            Node.ImageIndex := GetImageIndex(p.Key);
-            Node.SelectedIndex := Node.ImageIndex + 19;
-            FSchema2TreeMap.Add(p.Value, Node);
-            VisitNode(Node, p.Value);
-          end;
       jvkArray:
         for I := 0 to Pred(aSchema.Count) do
           begin
             n := aSchema.Items[I];
             Node := tvSchemaTree.Items.AddChild(aNode, I.ToString);
-            Node.ImageIndex := 18;
-            Node.SelectedIndex := Node.ImageIndex + 19;
+            Node.ImageIndex := 20;
+            Node.SelectedIndex := Node.ImageIndex + 21;
             VisitNode(Node, n);
+          end;
+      jvkObject:
+        for p in aSchema.Entries do
+          begin
+            Node := tvSchemaTree.Items.AddChild(aNode, p.Key);
+            Node.ImageIndex := GetImageIndex(p.Key);
+            Node.SelectedIndex := Node.ImageIndex + 21;
+            FSchema2TreeMap.Add(p.Value, Node);
+            VisitNode(Node, p.Value);
           end;
     else
       Node := tvSchemaTree.Items.AddChild(aNode, aSchema.ToString);
       Node.ImageIndex := GetImageIndex(aSchema.ToString);
-      Node.SelectedIndex := Node.ImageIndex + 19;
+      Node.SelectedIndex := Node.ImageIndex + 21;
       FSchema2TreeMap.Add(aSchema, Node);
     end;
   end;
@@ -1343,7 +1347,7 @@ begin
     tvSchemaTree.AutoExpand := False;
     Root := tvSchemaTree.Items.Add(nil, SchemaName);
     Root.ImageIndex := 0;
-    Root.SelectedIndex := 19;
+    Root.SelectedIndex := 21;
     FSchema2TreeMap.Add(FCurrJson, Root);
     VisitNode(Root, FCurrJson);
     tvSchemaTree.AutoExpand := True;
@@ -1685,83 +1689,75 @@ begin
 end;
 
 procedure TfrmMain.LoadInstanceTreeView(const aRootName: string);
-  procedure VisitNode(aNode: TTreeNode; aJson: TJsonNode);
+  procedure VisitNode(aParent: TTreeNode; aNode: TJsonNode);
   var
     TreeNode: TTreeNode;
-    jNode: TJsonNode;
     p: TJsonNode.TPair;
+    k: TJsValueKind;
     I: Integer;
   begin
-    case aJson.Kind of
-      jvkUnknown:
-        begin
-          TreeNode := tvInstanceTree.Items.AddChild(aNode, '???');
-          TreeNode.ImageIndex := 0;
-          aNode.ImageIndex := 0;
-        end;
-      jvkNull:
-        begin
-          TreeNode := tvInstanceTree.Items.AddChild(aNode, 'null');
-          TreeNode.ImageIndex := 1;
-          aNode.ImageIndex := 1;
-          FInstance2TreeMap.Add(aJson, TreeNode);
-        end;
-      jvkFalse:
-        begin
-          TreeNode := tvInstanceTree.Items.AddChild(aNode, 'false');
-          TreeNode.ImageIndex := 2;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 2;
-          FInstance2TreeMap.Add(aJson, TreeNode);
-        end;
-      jvkTrue:
-        begin
-          TreeNode := tvInstanceTree.Items.AddChild(aNode, 'true');
-          TreeNode.ImageIndex := 2;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 2;
-          FInstance2TreeMap.Add(aJson, TreeNode);
-        end;
-      jvkNumber:
-        begin
-          TreeNode := tvInstanceTree.Items.AddChild(aNode, aJson.ToString);
-          TreeNode.ImageIndex := 3;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 3;
-          FInstance2TreeMap.Add(aJson, TreeNode);
-        end;
-      jvkString:
-        begin
-          TreeNode := tvInstanceTree.Items.AddChild(aNode, aJson.ToString);
-          TreeNode.ImageIndex := 4;
-          TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-          aNode.ImageIndex := 4;
-          FInstance2TreeMap.Add(aJson, TreeNode);
-        end;
-      jvkArray:
-        begin
-          aNode.ImageIndex := 5;
-          FInstance2TreeMap.Add(aJson, aNode);
-          for I := 0 to Pred(aJson.Count) do
+    k := aNode.Kind;
+    TreeNode := nil;
+    if k < jvkArray then
+      begin
+        case k of
+          jvkUnknown:
             begin
-              jNode := aJson.Items[I];
-              TreeNode := tvInstanceTree.Items.AddChild(aNode, I.ToString);
-              VisitNode(TreeNode, jNode);
+              TreeNode := tvInstanceTree.Items.AddChild(aParent, '???');
+              TreeNode.ImageIndex := 0;
             end;
-        end;
-      jvkObject:
-        begin
-          aNode.ImageIndex := 6;
-          FInstance2TreeMap.Add(aJson, aNode);
-          for p in aJson.Entries do
+          jvkNull:
             begin
-              TreeNode := tvInstanceTree.Items.AddChild(aNode, p.Key);
-              TreeNode.SelectedIndex := TreeNode.ImageIndex + 9;
-              VisitNode(TreeNode, p.Value);
+              TreeNode := tvInstanceTree.Items.AddChild(aParent, 'null');
+              TreeNode.ImageIndex := 1;
             end;
+          jvkFalse:
+            begin
+              TreeNode := tvInstanceTree.Items.AddChild(aParent, 'false');
+              TreeNode.ImageIndex := 2;
+            end;
+          jvkTrue:
+            begin
+              TreeNode := tvInstanceTree.Items.AddChild(aParent, 'true');
+              TreeNode.ImageIndex := 2;
+            end;
+          jvkNumber:
+            begin
+              TreeNode := tvInstanceTree.Items.AddChild(aParent, aNode.ToString);
+              TreeNode.ImageIndex := 3;
+            end;
+          jvkString:
+            begin
+              TreeNode := tvInstanceTree.Items.AddChild(aParent, aNode.ToString);
+              TreeNode.ImageIndex := 4;
+            end;
+        else
         end;
-    end;
-    aNode.SelectedIndex := aNode.ImageIndex + 9;
+        TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
+      end
+    else
+      case k of
+        jvkArray:
+          begin
+            aParent.ImageIndex := 5;
+            aParent.SelectedIndex := aParent.ImageIndex + 10;
+            for I := 0 to Pred(aNode.Count) do
+              VisitNode(tvInstanceTree.Items.AddChild(aParent, I.ToString), aNode.Items[I]);
+          end;
+        jvkObject:
+          begin
+            aParent.ImageIndex := 6;
+            aParent.SelectedIndex := aParent.ImageIndex + 10;
+            for p in aNode.Entries do
+              begin
+                TreeNode := tvInstanceTree.Items.AddChild(aParent, p.Key);
+                TreeNode.ImageIndex := 9;
+                TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
+                VisitNode(TreeNode, p.Value);
+              end;
+          end;
+      else
+      end;
   end;
 var
   Root: TTreeNode;
