@@ -1524,9 +1524,7 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Less(FItems[Pred(ElemCount)], aValue) then
     exit(Pred(ElemCount));
-  Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
-  if not(TCmpRel.Less(FItems[Result], aValue) or TCmpRel.Less(aValue, FItems[Result])) then
-    Dec(Result);
+  Result := Pred(THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue));
 end;
 
 function TGBaseSortedList.RightmostLE(const aValue: T): SizeInt;
@@ -1536,8 +1534,6 @@ begin
   if not TCmpRel.Less(aValue, FItems[Pred(ElemCount)]) then
     exit(Pred(ElemCount));
   Result := THelper.BiSearchRightA(@FItems[0], Pred(ElemCount), aValue);
-  if TCmpRel.Less(aValue, FItems[Result]) then
-    Dec(Result);
 end;
 
 function TGBaseSortedList.LeftmostGT(const aValue: T): SizeInt;
@@ -1546,7 +1542,7 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Less(aValue, FItems[0]) then
     exit(0);
-  Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
+  Result := Succ(THelper.BiSearchRightA(@FItems[0], Pred(ElemCount), aValue));
 end;
 
 function TGBaseSortedList.LeftmostGE(const aValue: T): SizeInt;
@@ -2435,9 +2431,7 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Less(FBuffer.FItems[Pred(Count)], aValue) then
      exit(Pred(Count));
-  Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if not(TCmpRel.Less(FBuffer.FItems[Result], aValue) or TCmpRel.Less(aValue, FBuffer.FItems[Result])) then
-    Dec(Result);
+  Result := Pred(THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue));
 end;
 
 function TGLiteSortedList.RightmostLE(const aValue: T): SizeInt;
@@ -2447,8 +2441,6 @@ begin
   if not TCmpRel.Less(aValue, FBuffer.FItems[Pred(Count)]) then
     exit(Pred(Count));
   Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if TCmpRel.Less(aValue, FBuffer.FItems[Result]) then
-    Dec(Result);
 end;
 
 function TGLiteSortedList.LeftmostGT(const aValue: T): SizeInt;
@@ -2457,7 +2449,7 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Less(aValue, FBuffer.FItems[0]) then
     exit(0);
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  Result := Succ(THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue));
 end;
 
 function TGLiteSortedList.LeftmostGE(const aValue: T): SizeInt;
@@ -3004,9 +2996,7 @@ begin
     exit(NULL_INDEX);
   if FBuffer.FItems[Pred(Count)] < aValue then
      exit(Pred(Count));
-  Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if THelper.ValEqual(FBuffer.FItems[Result], aValue) then
-    Dec(Result);
+  Result := Pred(THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue));
 end;
 
 function TGLiteComparableSortedList.RightmostLE(const aValue: T): SizeInt;
@@ -3016,8 +3006,6 @@ begin
   if not(aValue < FBuffer.FItems[Pred(Count)]) then
     exit(Pred(Count));
   Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
-  if aValue < FBuffer.FItems[Result] then
-    Dec(Result);
 end;
 
 function TGLiteComparableSortedList.LeftmostGT(const aValue: T): SizeInt;
@@ -3026,7 +3014,7 @@ begin
     exit(NULL_INDEX);
   if aValue < FBuffer.FItems[0] then
     exit(0);
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  Result := Succ(THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue));
 end;
 
 function TGLiteComparableSortedList.LeftmostGE(const aValue: T): SizeInt;
