@@ -44,6 +44,7 @@ type
   published
     procedure TestBasic;
     procedure TestFilter;
+    procedure TestFilterGarbage;
     procedure TestIndex;
     procedure TestName;
     procedure TestSlice;
@@ -152,6 +153,21 @@ begin
   AssertTrue(TestSet.Instance.Find('tests', Tests));
   AssertTrue(Tests.IsArray);
   RunTestSet(Tests);
+end;
+
+procedure TTestJsonPath.TestFilterGarbage;
+var
+  I: IJsonPath;
+begin
+  AssertFalse(JpParseQuery('$[?@.name == "value")]', I));
+  AssertFalse(JpParseQuery('$[?@.name == "value"0]', I));
+  AssertFalse(JpParseQuery('$[?@.name == "value"(]', I));
+  AssertFalse(JpParseQuery('$[?@.name == "value" null]', I));
+
+  AssertFalse(JpParseQuery('$.list[?@.name == "value")]', I));
+  AssertFalse(JpParseQuery('$.list[?@.name == "value"0]', I));
+  AssertFalse(JpParseQuery('$.list[?@.name == "value"(]', I));
+  AssertFalse(JpParseQuery('$.list[?@.name == "value" null]', I));
 end;
 
 procedure TTestJsonPath.TestIndex;
