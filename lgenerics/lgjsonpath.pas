@@ -2981,6 +2981,11 @@ begin
   SkipChar;
   NextToken;
   e := ExprLevel0(False);
+  if not(CurrToken in [jtkComma, jtkRBracket]) then
+    begin
+      e.Free;
+      Fail(SEJPathPosErrorFmt, [Position, SEJPathTrailFiltGarbage]);
+    end;
   if (e is TJpFunctionExpr) and (TJpFunctionExpr(e).ResultType <> jitLogical) or (e is TJpConstExpr) then
     begin
       e.Free;
