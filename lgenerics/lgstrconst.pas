@@ -206,6 +206,7 @@ resourcestring
   SEJPathFunParamMissFmt   = 'missing %s() parameter(s)';
   SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
   SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch';
+  SEJPathTrailFiltGarbage  = 'trailing garbage in filter expression';
 
 implementation
 
