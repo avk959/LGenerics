@@ -194,6 +194,7 @@ resourcestring
   SEJPathInvalidLoSurr     = 'invalid Unicode low surrogate';
   SEJPathIntegerExpect     = 'colon, comma or right bracket';
   SEJPathUnexpectQueryEnd  = 'unexpected query end';
+  SEJPathUnexpectTokenFmt  = 'unexpected token <%s>';
   SEJPathNonSingularQuery  = 'non-singular query';
   SEJPathLogicFun          = 'logical function';
   SEJPathLogicExpr         = 'logical expression';
@@ -205,7 +206,7 @@ resourcestring
   SEJPathLogicExprExpect   = 'logical expression expected';
   SEJPathFunParamMissFmt   = 'missing %s() parameter(s)';
   SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
-  SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch';
+  SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch(%d)';
   SEJPathTrailFiltGarbage  = 'trailing garbage in filter expression';
 
 implementation
