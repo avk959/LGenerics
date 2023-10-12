@@ -292,6 +292,8 @@ type
   the responsibility for the correctness and normalization of the strings lies with the user }
   function Utf8StrLen(const s: string): SizeInt; inline;
   function Utf8CodePointLength(p: PAnsiChar; aByteCount: SizeInt): SizeInt;
+  function Utf8ToLower(const s: string): string;
+  function Utf8ToUpper(const s: string): string;
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
@@ -355,6 +357,8 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+uses
+  Character, UnicodeData;
 
 { TGBmSearch.TEnumerator }
 
@@ -2774,8 +2778,8 @@ begin
 
   if soIgnoreCase in aOptions then
     begin
-      LocL := LowerCase(L);
-      LocR := LowerCase(R);
+      LocL := TCharacter.ToLower(L, [TCharacterOption.coIgnoreInvalidSequence]);
+      LocR := TCharacter.ToLower(R, [TCharacterOption.coIgnoreInvalidSequence]);
     end
   else
     begin
@@ -3062,6 +3066,111 @@ end;
 function Utf8StrLen(const s: string): SizeInt;
 begin
   Result := Utf8Len(s);
+end;
+
+procedure Ucs4Char2Utf8Buffer(var aBuf: PByte; c: DWord);
+begin
+  case c of
+    0..127:
+      begin
+        aBuf[0] := Byte(c);
+        Inc(aBuf);
+      end;
+    128..$7ff:
+      begin
+        aBuf[0] := Byte(c shr 6 or $c0);
+        aBuf[1] := Byte(c and $3f or $80);
+        aBuf += 2;
+      end;
+    $800..$d7ff, $e000..$ffff:
+      begin
+        aBuf[0] := Byte(c shr 12 or $e0);
+        aBuf[1] := Byte(c shr 6) and $3f or $80;
+        aBuf[2] := Byte(c and $3f) or $80;
+        aBuf += 3;
+      end;
+    $10000..$10ffff:
+      begin
+        aBuf[0] := Byte(c shr 18) or $f0;
+        aBuf[1] := Byte(c shr 12) and $3f or $80;
+        aBuf[2] := Byte(c shr  6) and $3f or $80;
+        aBuf[3] := Byte(c and $3f) or $80;
+        aBuf += 4;
+      end;
+  else
+    aBuf[0] := Ord('?');
+    Inc(aBuf);
+  end;
+end;
+
+function Utf8ToLower(const s: string): string;
+var
+  pv, pr, pEnd: PByte;
+  LoC: DWord;
+  PtSize: SizeInt;
+  r : string;
+begin
+  if s = '' then exit('');
+  System.SetLength(r, System.Length(s) * 2);// * 2 ???
+  pv := PByte(s);
+  pEnd := pv + System.Length(s);
+  pr := PByte(r);
+  PtSize := 0;
+  while pv < pEnd do
+    begin
+      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, pEnd - pv, PtSize))^.SimpleLowerCase;
+      if LoC = 0 then
+        begin
+          case PtSize of
+            1: pr^ := pv^;
+            2: PByte2(pr)^ := PByte2(pv)^;
+            3: PByte3(pr)^ := PByte3(pv)^;
+            4: PByte4(pr)^ := PByte4(pv)^;
+          else
+          end;
+          pr += PtSize;
+        end
+      else
+        Ucs4Char2Utf8Buffer(pr, LoC);
+      pv += PtSize;
+    end;
+  System.SetLength(r, pr - PByte(r));
+  Result := r;
+end;
+
+function Utf8ToUpper(const s: string): string;
+var
+  pv, pr, pEnd: PByte;
+  LoC: DWord;
+  PtSize: SizeInt;
+  r : string;
+begin
+  if s = '' then exit('');
+  System.SetLength(r, System.Length(s) * 2);
+  pv := PByte(s);
+  pEnd := pv + System.Length(s);
+  pr := PByte(r);
+  PtSize := 0;
+  while pv < pEnd do
+    begin
+      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, pEnd - pv, PtSize))^.SimpleUpperCase;
+      if LoC = 0 then
+        begin
+          case PtSize of
+            1: pr^ := pv^;
+            2: PByte2(pr)^ := PByte2(pv)^;
+            3: PByte3(pr)^ := PByte3(pv)^;
+            4: PByte4(pr)^ := PByte4(pv)^;
+          else
+          end;
+          pr += PtSize;
+        end
+      else
+        Ucs4Char2Utf8Buffer(pr, LoC);
+      pv += PtSize;
+    end;
+  System.SetLength(r, pr - PByte(r));
+  Result := r;
 end;
 
 function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
@@ -3382,8 +3491,8 @@ begin
 
   if soIgnoreCase in aOptions then
     begin
-      LocL := AnsiLowerCase(L);
-      LocR := AnsiLowerCase(R);
+      LocL := Utf8ToLower(L);
+      LocR := Utf8ToLower(R);
     end
   else
     begin
