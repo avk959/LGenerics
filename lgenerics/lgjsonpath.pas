@@ -29,9 +29,12 @@ uses
   SysUtils, lgUtils, lgJson;
 
 {
+  https://datatracker.ietf.org/doc/draft-ietf-jsonpath-base
+  ---------------------------------------------------------------------------------------
 
-  Basic elements:
+      Basic elements:
 
+  ---------------------------------------------------------------------------------------
     $               - root node identifier
     @               - current node identifier (valid only within filter selectors)
     [<selectors>]   - child segment: selects zero or more children of a node;
@@ -48,55 +51,187 @@ uses
     0:42:5          - array slice selector: start:end:step for arrays
     ?<logical-expr> - filter selector: selects particular children using a logical expression
     length(@.foo)   - function extension: invokes a function in a filter expression
+  ---------------------------------------------------------------------------------------
 
-  Operators supported in the filter expressions in descending order of precedence:
+      Operators supported in the filter expressions in descending order of precedence:
 
-    5   - grouping   ( ... )
-    4   - logical NOT   !
-    3   - relations   ==, !=, <, >, <=, >=
-    2   - logical AND  &&
-    1   - logical OR   ||
+  ---------------------------------------------------------------------------------------
+    5 - grouping   ( ... )
+    4 - logical NOT   !
+    3 - relations   ==, !=, <, >, <=, >=
+    2 - logical AND  &&
+    1 - logical OR   ||
+  ---------------------------------------------------------------------------------------
 
-  Built-in functions:
+      Built-in functions:
 
-    length(Arg) -
-      Arg type must be ValueType(jitValue in this implementation);
-      result type is ValueType;
-        if Arg is a string, the result is the Utf8 length of that string;
-        if Arg is an Array, the result is the number of elements in the Array;
-        if Arg is an Object, the result is the number of pairs in the Object;
-        for any other argument value, the result is jvtNothing.
+  ---------------------------------------------------------------------------------------
+    length(Arg)
+      Arg type must be a ValueType(jitValue in this implementation);
+      result type is a ValueType;
+        if Arg is a string, returns the Utf8 length of that string;
+        if Arg is an Array, returns the number of its elements;
+        if Arg is an Object, returns the number of its pairs;
+        for any other argument value returns Nothing(jvtNothing);
 
-    count(Arg) -
-      Arg type must be Nodes(jitNodeList in this implementation);
-      result type is ValueType;
-        the result is the number of nodes in the Nodelist;
+    count(Arg)
+      the Arg type must be a Nodes(jitNodeList in this implementation);
+      result type is a ValueType;
+        returns the number of nodes in the Nodelist;
 
-    match(Input, Regex) -
-      Input type must be ValueType(string, to be more precise);
-      Regex type must be ValueType(string);
-      result type is LogicalType(jitLogical in this implementation);
-        returns a boolean True if Input is a string, and Regex is a string,
-        and the regular expression Regex matches the entire Input value,
-        otherwise returns boolean False;
-        it is also possible to activate the I-Regexp checker;
+    match(Input, Regex)
+      Input type must be a ValueType;
+      Regex type must be a ValueType;
+      result type is a LogicalType(jitLogical in this implementation);
+        returns boolean True if Input is a string and Regex is a string
+        and the regular expression Regex matches the entire Input value;
 
-    search(Input, Regex) -
-      Input type must be ValueType(string);
-      Regex type must be ValueType(string);
-      result type is LogicalType;
-        returns a boolean True if Input is a string, and Regex is a string,
-        and the regular expression Regex matches some substring of the Input value,
-        otherwise returns boolean False;
+    search(Input, Regex)
+      Input type must be a ValueType;
+      Regex type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Input is a string and Regex is a string
+        and the regular expression Regex matches some substring of the Input value;
 
-    value(Arg) -
-      Arg type must be Nodes;
-      if the argument contains a single node, the result is the value of the node;
-      If the argument is empty or contains multiple nodes, the result is jvtNothing;
+    value(Arg)
+      Arg type must be a Nodes;
+      if the argument contains a single node, returns value of that node;
+      if the argument is empty or contains multiple nodes, returns Nothing;
+  ---------------------------------------------------------------------------------------
 
-  The implementation tries to be compliant with
-    https://datatracker.ietf.org/doc/draft-ietf-jsonpath-base
+      Supplemental(non-standard) functions:
+
+  ---------------------------------------------------------------------------------------
+
+    key()
+      result type is a ValueType;
+        returns Index(number) or Name(string) of the current node;
+
+    param(Arg) -- useful for repeated use of a query without reparsing
+      Arg type must be a ValueType;
+      result type is a ValueType;
+        if Arg is a string and a parameter with that name is defined, returns its value,
+        otherwise returns Nothing;
+
+    is_boolean(Arg)
+      Arg type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is a boolean value;
+
+    is_number(Arg)
+      Arg type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is a number;
+
+    is_integer(Arg)
+      Arg type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is a number and is an exact integer;
+
+    is_string(Arg)
+      Arg type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is string value;
+
+    is_array(Arg)
+      Arg type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is array;
+
+    is_object(Arg)
+      Arg type must be ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is array;
+
+    contains(Input, Pattern)
+      Input type must be a ValueType;
+      Pattern type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Input is a string and Pattern is a string
+        and Pattern is substring of the Input value;
+
+    contains_text(Input, Pattern)
+      case insensitive version of contains()
+
+    same_text(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg1 is a string and Pattern is a string
+        and Arg1 is the same as Arg2(case insensitive);
+
+    starts_with(Input, Pattern)
+      Input type must be a ValueType;
+      Pattern type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Input is a string and Pattern is a string
+        and Input starts with a Pattern value;
+
+    ends_with(Input, Pattern)
+      Input type must be a ValueType;
+      Pattern type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Input is a string and Pattern is a string
+        and Input ends with a Pattern value;
+
+    to_upper(Arg)
+      Arg type must be a ValueType;
+      result type is a ValueType;
+        if Arg is a string, returns it in uppercase, otherwise returns Nothing;
+
+    to_lower(Arg)
+      Arg type must be a ValueType;
+      result type is a ValueType;
+        if Arg is a string, returns it in lowercase, otherwise returns Nothing;
+
+    concat(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a ValueType;
+        if Arg1 is a string and Arg2 is a string, returns their concatenation,
+        otherwise returns Nothing;
+
+    min(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a ValueType;
+        if Arg1 is a string and Arg2 is a string, or if Arg1 is a number and Arg2 is a number,
+        returns their minimum value, otherwise returns Nothing;
+
+    max(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a ValueType;
+        if Arg1 is a string and Arg2 is a string, or if Arg1 is a number and Arg2 is a number,
+        returns their maximum value, otherwise returns Nothing;
+
+    abs(Arg)
+      Arg type must be a ValueType;
+      result type is a ValueType;
+        if Arg is a number, returns it absolute value, otherwise returns Nothing;
+
+    sum(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a ValueType;
+        if Arg1 is a number and Arg2 is a number, returns their sum value,
+        otherwise returns Nothing;
+
+    diff(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a ValueType;
+        if Arg1 is a number and Arg2 is a number, returns the differense Arg1 - Arg2,
+        otherwise returns Nothing;
+
+    prod(Arg1, Arg2)
+      Arg1 type must be a ValueType;
+      Arg2 type must be a ValueType;
+      result type is a ValueType;
+        if Arg1 is a number and Arg2 is a number, returns their product,
+        otherwise returns Nothing;
 }
+
 type
   { TJpNode represents JSONPath Node - a value along with its location within the root }
   TJpNode = record
@@ -125,13 +260,44 @@ type
     function AsJson: string;
   end;
 
+  TJpValueType = (jvtNothing, jvtNull, jvtFalse, jvtTrue, jvtString, jvtNumber, jvtNode);
+
+  { TJpValue }
+  TJpValue = record
+    function AsBoolean: Boolean; inline;
+    class function Nothing: TJpValue; static; inline;
+    class function NullValue: TJpValue; static; inline;
+    class function FalseValue: TJpValue; static; inline;
+    class function TrueValue: TJpValue; static; inline;
+    class operator := (b: Boolean): TJpValue; inline;
+    class operator := (const s: string): TJpValue; inline;
+    class operator := (d: Double): TJpValue; inline;
+    class operator := (aNode: TJsonNode): TJpValue; inline;
+    class operator  = (const L: TJpValue; R: TJsonNode): Boolean;
+    class operator  = (const L, R: TJpValue): Boolean;
+    class operator  < (const L: TJpValue; R: TJsonNode): Boolean;
+    class operator  < (L: TJsonNode; const R: TJpValue): Boolean;
+    class operator  < (const L, R: TJpValue): Boolean;
+    class operator <= (const L, R: TJpValue): Boolean; inline;
+    class operator  > (const L, R: TJpValue): Boolean; inline;
+    class operator >= (const L, R: TJpValue): Boolean; inline;
+  public
+    ValType: TJpValueType;
+    StrValue: string;
+    case Byte of
+      0: (NumValue: Double);
+      1: (NodeValue: TJsonNode);
+  end;
+
 {$PUSH}{$INTERFACES COM}
   IJsonPath = interface
   ['{3D2794A4-F950-40DA-A611-51F7B37A6C11}']
+    procedure SetParam(const aName: string; const aValue: TJpValue);
+    function  GetParam(const aName: string): TJpValue;
   { returns NodeList that matches its internal, previously parsed JSONPath query }
     function  Match(aRoot: TJsonNode): TJpNodeList;
   { returns True and NodeList as JSON if aRoot is valid JSON, False otherwise }
-    function  Match(const aRoot: string; out aNodeList: string): boolean;
+    function  Match(const aRoot: string; out aNodeList: string): Boolean;
   { returns an array of TJsonNode that matches its internal, previously parsed JSONPath query }
     function  MatchValues(aRoot: TJsonNode): TJpValueList;
   { returns True and an array of JSON values if aRoot is valid JSON, False otherwise }
@@ -147,6 +313,8 @@ type
   { returns True and first matching element as JSON (an empty string if no matches)
     if aRoot is valid JSON, False otherwise }
     function  MatchFirstValue(const aRoot: string; out aValue: string): Boolean;
+  { allows to define parameters and set their values }
+    property  Params[const aName: string]: TJpValue read GetParam write SetParam;
   end;
 {$POP}
 
@@ -154,10 +322,11 @@ type
   with the root identifier, leading and trailing spaces are not allowed;
   returns nil if aQuery is invalid, in which case the aMsg parameter contains an error message }
   function JpParseQuery(const aQuery: string; out aMsg: string): IJsonPath;
-
 { returns True and IJsonPath in aPath if aQuery was successfully parsed, otherwise returns False }
   function JpParseQuery(const aQuery: string; out aPath: IJsonPath): Boolean;
-
+{ returns True and IJsonPath in aPath if aQuery was successfully parsed,
+  otherwise returns False and aMsg parameter contains an error message }
+  function JpParseQuery(const aQuery: string; out aPath: IJsonPath; out aMsg: string): Boolean;
 
 { tries to apply aQuery to JSON value aRoot; returns False if aQuery is invalid, in which case
   the aMsg parameter contains an error message, otherwise returns the NodeList in the aList parameter }
@@ -203,35 +372,6 @@ type
 
 
 type
-  TJpValueType = (jvtNothing, jvtNull, jvtFalse, jvtTrue, jvtString, jvtNumber, jvtNode);
-
-  { TJpValue }
-  TJpValue = record
-    function AsBoolean: Boolean; inline;
-    class function Nothing: TJpValue; static; inline;
-    class function ValNull: TJpValue; static; inline;
-    class function ValFalse: TJpValue; static; inline;
-    class function ValTrue: TJpValue; static; inline;
-    class operator := (b: Boolean): TJpValue; inline;
-    class operator := (const s: string): TJpValue; inline;
-    class operator := (d: Double): TJpValue; inline;
-    class operator := (aNode: TJsonNode): TJpValue; inline;
-    class operator  = (const L: TJpValue; R: TJsonNode): Boolean;
-    class operator  = (const L, R: TJpValue): Boolean;
-    class operator  < (const L: TJpValue; R: TJsonNode): Boolean;
-    class operator  < (L: TJsonNode; const R: TJpValue): Boolean;
-    class operator  < (const L, R: TJpValue): Boolean;
-    class operator <= (const L, R: TJpValue): Boolean; inline;
-    class operator  > (const L, R: TJpValue): Boolean; inline;
-    class operator >= (const L, R: TJpValue): Boolean; inline;
-  public
-    ValType: TJpValueType;
-    StrValue: string;
-    case Byte of
-      0: (NumValue: Double);
-      1: (NodeValue: TJsonNode);
-  end;
-
   TJpInstanceType = (jitLogical, jitValue, jitNodeList);
 
   { TJpInstance }
@@ -304,15 +444,11 @@ type
 
   function IRegexpCheck(const aRegex: string; out aErrPos: SizeInt): TIRegexpCheck;
 
-{ if uncomment define, the regexes in the arguments of built-in functions
-  will be checked for I-Regexp conformance }
-{ $DEFINE JP_IREGEXP_CHECK}
-
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  Math, RegExpr, lgVector, lgHashMap, lgSeqUtils, lgStrConst;
+  Math, RegExpr, lgVector, lgHashMap, lgSeqUtils, lgStrConst, UnicodeData;
 
 type
   { TStrBuilder }
@@ -481,17 +617,17 @@ begin
   Result.ValType := jvtNothing;
 end;
 
-class function TJpValue.ValNull: TJpValue;
+class function TJpValue.NullValue: TJpValue;
 begin
   Result.ValType := jvtNull;
 end;
 
-class function TJpValue.ValFalse: TJpValue;
+class function TJpValue.FalseValue: TJpValue;
 begin
   Result.ValType := jvtFalse;
 end;
 
-class function TJpValue.ValTrue: TJpValue;
+class function TJpValue.TrueValue: TJpValue;
 begin
   Result.ValType := jvtTrue;
 end;
@@ -852,6 +988,8 @@ type
     procedure AddSelector(aFilter: TJpFilter); override;
   end;
 
+  TJpOnGetParam = function(const aName: string; out aValue: TJpValue): Boolean of object;
+
   { TJsonPathQuery }
   TJsonPathQuery = class
   strict protected
@@ -863,6 +1001,7 @@ type
     FRoot,
     FFirst: TJsonNode;
     FCount: SizeInt;
+    FOnGetParam: TJpOnGetParam;
     FApplyKind: TApplyKind;
     FDone: Boolean;
     procedure AddMatch(aNode: TJsonNode); inline;
@@ -881,6 +1020,7 @@ type
     function Apply(aRoot: TJsonNode): TJpValueList;
     function GetFirst(aRoot: TJsonNode): TJsonNode;
     function TestExists(aRoot: TJsonNode): Boolean; inline;
+    property OnGetParam: TJpOnGetParam read FOnGetParam write FOnGetParam;
   end;
 
   TChar2 = array[0..1] of AnsiChar;
@@ -914,10 +1054,18 @@ type
   end;
 
   TJpIdentifier = (jpiRoot, jpiCurrent);
+  TJpKeyKind    = (jkkNone, jkkIndex, jkkName);
+  TJpContextKey = record
+    Kind: TJpKeyKind;
+    Index: SizeInt;
+    Name: string;
+  end;
 
   TJpFilterContext = record
     Root,
     Current: TJsonNode;
+    Key: TJpContextKey;
+    OnGetParam: TJpOnGetParam;
   end;
 
   { TJpExpression }
@@ -1054,17 +1202,35 @@ type
     property ResultType: TJpInstanceType read FResultType;
   end;
 
+  { TJpKeyFunction }
+  TJpKeyFunction = class(TJpFunctionExpr)
+  strict protected
+    procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
+  end;
+
+  { TJpParamFunction }
+  TJpParamFunction = class(TJpFunctionExpr)
+  strict protected
+    procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
+  end;
+
   { TJpFilter }
   TJpFilter = class
   strict private
     FContext: TJpFilterContext;
     FExpr: TJpExpression;
+    procedure SetIndex(aValue: SizeInt);
+    procedure SetName(const aValue: string);
+    procedure SetOnGetParam(aValue: TJpOnGetParam);
     procedure SetRoot(aValue: TJsonNode);
   public
     constructor Create(aExpr: TJpExpression);
     destructor Destroy; override;
     function Apply(aNode: TJsonNode): Boolean;
     property Root: TJsonNode write SetRoot;
+    property Index: SizeInt write SetIndex;
+    property Name: string write SetName;
+    property OnGetParam: TJpOnGetParam write SetOnGetParam;
   end;
 
 type
@@ -1078,8 +1244,7 @@ type
     TJpTokenKind = (
       jtkLParen, jtkRParen, jtkBoolOr,  jtkBoolAnd, jtkBoolNot, jtkLess, jtkGreater, jtkEqual,
       jtkNotEqual, jtkLessOrEq,  jtkGreatOrEq, jtkNull, jtkFalse, jtkTrue, jtkString, jtkNumber,
-      jtkFunction, jtkRootId, jtkCurrId, jtkComma, jtkRBracket
-    );
+      jtkFunction, jtkRootId, jtkCurrId, jtkComma, jtkRBracket);
   const
     LITERALS       = [jtkNull, jtkFalse, jtkTrue, jtkString, jtkNumber];
     COMPARISONS    = [jtkLess, jtkGreater, jtkEqual, jtkNotEqual, jtkLessOrEq,  jtkGreatOrEq];
@@ -1092,6 +1257,11 @@ type
     FUN_NAME_FIRST = ['a'..'z'];
     FUN_NAME_CHAR  = FUN_NAME_FIRST + ['0'..'9', '_'];
     MAX_DEPTH      = 512;
+  {$PUSH}{$J-}
+    TOKENS: array[TJpTokenKind] of string = (
+      '(', ')', '||',  '&&', '!', '<', '>', '==', '!=', '<=',  '>=', 'null', 'false', 'true',
+      'string', 'number', 'function', '$', '@', ',', ']');
+  {$POP}
   var
     FQuery: string;
     FPath: TJsonPathQuery;
@@ -1136,7 +1306,7 @@ type
     function  ExprLevel3(aSkip: Boolean): TJpExpression;
     function  ExprLevel4: TJpExpression;
     function  SubQueryExpr: TJpExpression;
-    procedure CheckFunParam(const aFunName: string; aType: TJpInstanceType; aExpr: TJpExpression);
+    function  CheckFunParam(aType: TJpInstanceType; aExpr: TJpExpression): Boolean; inline;
     function  FunctionExpr: TJpExpression;
     function  GetFilter: TJpFilter;
     procedure BracketSegment(aPath: TJsonPathQuery);
@@ -1151,11 +1321,18 @@ type
   { TJpMatcher }
   TJpMatcher = class(TInterfacedObject, IJsonPath)
   strict private
+  type
+    TMapSpec = specialize TGLiteChainHashMap<string, TJpValue, string>;
+  var
     FPath: TJsonSpecPathQuery;
+    FParams: TMapSpec.TMap;
     FMessage: string;
   public
     constructor Create;
     destructor Destroy; override;
+    procedure SetParam(const aName: string; const aValue: TJpValue);
+    function  GetParam(const aName: string): TJpValue;
+    function  TryGetParam(const aName: string; out aValue: TJpValue): Boolean;
     function  TryParseQuery(const aQuery: string): Boolean;
     function  Match(aRoot: TJsonNode): TJpNodeList;
     function  Match(const aRoot: string; out aNodeList: string): boolean;
@@ -1431,7 +1608,7 @@ end;
 procedure TJsonPathQuery.ApplySelector(aSel: TSelector; aRoot: TJsonNode; aDesc: Boolean);
 var
   I: SizeInt;
-  LValue: TJsonNode;
+  LNode: TJsonNode;
 begin
   if Done then exit;
   case aSel.Kind of
@@ -1440,26 +1617,26 @@ begin
         I := aSel.Index;
         if I < 0 then
           I += aRoot.Count;
-        if aRoot.Find(I, LValue) then
+        if aRoot.Find(I, LNode) then
           if aSel.NextSegment = nil then
-            AddMatch(LValue)
+            AddMatch(LNode)
           else
-            ApplySegment(aSel.NextSegment, LValue);
+            ApplySegment(aSel.NextSegment, LNode);
       end;
 
     skName:
-      if aRoot.Find(aSel.Name, LValue) then
+      if aRoot.Find(aSel.Name, LNode) then
         if aSel.NextSegment = nil then
-          AddMatch(LValue)
+          AddMatch(LNode)
         else
-          ApplySegment(aSel.NextSegment, LValue);
+          ApplySegment(aSel.NextSegment, LNode);
 
     skWildcard:
-      for LValue in aRoot do begin
+      for LNode in aRoot do begin
         if aSel.NextSegment = nil then
-          AddMatch(LValue)
+          AddMatch(LNode)
         else
-          ApplySegment(aSel.NextSegment, LValue);
+          ApplySegment(aSel.NextSegment, LNode);
         if Done then exit;
       end;
 
@@ -1469,22 +1646,42 @@ begin
 
     skFilter:
       begin
-        aSel.Filter.Root := FRoot;
-        for LValue in aRoot do
-          if aSel.Filter.Apply(LValue) then begin
-            if aSel.NextSegment = nil then
-              AddMatch(LValue)
-            else
-              ApplySegment(aSel.NextSegment, LValue);
-            if Done then exit;
-          end;
+        with aSel.Filter do begin
+          Root := FRoot;
+          OnGetParam := Self.OnGetParam;
+        end;
+        case aRoot.Kind of
+          jvkArray:
+            for I := 0 to Pred(aRoot.Count) do begin
+              aSel.Filter.Index := I;
+              LNode := aRoot.Items[I];
+              if aSel.Filter.Apply(LNode) then
+                if aSel.NextSegment = nil then
+                  AddMatch(LNode)
+                else
+                  ApplySegment(aSel.NextSegment, LNode);
+              if Done then exit;
+            end;
+          jvkObject:
+            for I := 0 to Pred(aRoot.Count) do
+              with aRoot.Pairs[I] do begin
+                aSel.Filter.Name := Key;
+                if aSel.Filter.Apply(Value) then
+                  if aSel.NextSegment = nil then
+                    AddMatch(Value)
+                  else
+                    ApplySegment(aSel.NextSegment, Value);
+                if Done then exit;
+              end;
+        else
+        end;
       end;
   else
   end;
   if aDesc then
-    for LValue in aRoot do begin
+    for LNode in aRoot do begin
       if Done then exit;
-      ApplySelector(aSel, LValue, True);
+      ApplySelector(aSel, LNode, True);
     end;
 end;
 
@@ -1709,7 +1906,7 @@ end;
 procedure TJsonSpecPathQuery.ApplySelectorWithPath(aSel: TSelector; aRoot: TJsonNode; aDesc: Boolean);
 var
   I: SizeInt;
-  LValue: TJsonNode;
+  LNode: TJsonNode;
 begin
   if Done then exit;
   case aSel.Kind of
@@ -1718,23 +1915,23 @@ begin
         I := aSel.Index;
         if I < 0 then
           I += aRoot.Count;
-        if aRoot.Find(I, LValue) then begin
+        if aRoot.Find(I, LNode) then begin
           PathPush(I);
           if aSel.NextSegment = nil then
-            AddMatchWithPath(LValue)
+            AddMatchWithPath(LNode)
           else
-            ApplySegmentWithPath(aSel.NextSegment, LValue);
+            ApplySegmentWithPath(aSel.NextSegment, LNode);
           PathPop;
         end;
       end;
 
     skName:
-      if aRoot.Find(aSel.Name, LValue) then begin
+      if aRoot.Find(aSel.Name, LNode) then begin
         PathPush(aSel.Name);
         if aSel.NextSegment = nil then
-          AddMatchWithPath(LValue)
+          AddMatchWithPath(LNode)
         else
-          ApplySegmentWithPath(aSel.NextSegment, LValue);
+          ApplySegmentWithPath(aSel.NextSegment, LNode);
         PathPop;
       end;
 
@@ -1770,17 +1967,21 @@ begin
 
     skFilter:
       begin
-        aSel.Filter.Root := FRoot;
+        with aSel.Filter do begin
+          Root := FRoot;
+          OnGetParam := Self.OnGetParam;
+        end;
         case aRoot.Kind of
           jvkArray:
             for I := 0 to Pred(aRoot.Count) do begin
               PathPush(I);
-              LValue := aRoot.Items[I];
-              if aSel.Filter.Apply(LValue) then
+              aSel.Filter.Index := I;
+              LNode := aRoot.Items[I];
+              if aSel.Filter.Apply(LNode) then
                 if aSel.NextSegment = nil then
-                  AddMatchWithPath(LValue)
+                  AddMatchWithPath(LNode)
                 else
-                  ApplySegmentWithPath(aSel.NextSegment, LValue);
+                  ApplySegmentWithPath(aSel.NextSegment, LNode);
               PathPop;
               if Done then exit;
             end;
@@ -1788,6 +1989,7 @@ begin
             for I := 0 to Pred(aRoot.Count) do
               with aRoot.Pairs[I] do begin
                 PathPush(Key);
+                aSel.Filter.Name := Key;
                 if aSel.Filter.Apply(Value) then
                   if aSel.NextSegment = nil then
                     AddMatchWithPath(Value)
@@ -1890,15 +2092,15 @@ end;
 
 constructor TJpConstExpr.CreateNull;
 begin
-  FValue := TJpValue.ValNull;
+  FValue := TJpValue.NullValue;
 end;
 
 constructor TJpConstExpr.Create(b: Boolean);
 begin
   if b then
-    FValue := TJpValue.ValTrue
+    FValue := TJpValue.TrueValue
   else
-    FValue := TJpValue.ValFalse;
+    FValue := TJpValue.FalseValue;
 end;
 
 constructor TJpConstExpr.Create(const s: string);
@@ -1921,6 +2123,7 @@ end;
 
 function TRelPathQuery.GetFirstNode(const aCtx: TJpFilterContext): TJsonNode;
 begin
+  OnGetParam := aCtx.OnGetParam;
   if FIdent = jpiRoot then
     Result := GetFirst(aCtx.Root)
   else
@@ -1929,6 +2132,7 @@ end;
 
 function TRelPathQuery.GetNodeList(const aCtx: TJpFilterContext): TJpValueList;
 begin
+  OnGetParam := aCtx.OnGetParam;
   if FIdent = jpiRoot then
     Result := Apply(aCtx.Root)
   else
@@ -2089,11 +2293,60 @@ begin
   inherited;
 end;
 
+{ TJpKeyFunction }
+
+procedure TJpKeyFunction.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
+begin
+  case aCtx.Key.Kind of
+    jkkIndex: v := aCtx.Key.Index;
+    jkkName:  v := aCtx.Key.Name;
+  else
+    v := TJpValue.Nothing;
+  end;
+end;
+
+{ TJpParamFunction }
+
+procedure TJpParamFunction.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
+var
+  Inst: TJpInstance;
+  Param: TJpValue;
+begin
+  if (aCtx.OnGetParam <> nil) and (System.Length(FParamList) = 1) then
+    begin
+      Inst := FParamList[0].GetValue(aCtx);
+      if (Inst.InstType = jitValue) and (Inst.Value.ValType = jvtString) and
+          aCtx.OnGetParam(Inst.Value.StrValue, Param) then
+        v := Param
+      else
+        v := TJpValue.Nothing;
+    end
+  else
+    v := TJpValue.Nothing;
+end;
+
 { TJpFilter }
 
 procedure TJpFilter.SetRoot(aValue: TJsonNode);
 begin
   FContext.Root := aValue;
+end;
+
+procedure TJpFilter.SetIndex(aValue: SizeInt);
+begin
+  FContext.Key.Kind := jkkIndex;
+  FContext.Key.Index := aValue;
+end;
+
+procedure TJpFilter.SetName(const aValue: string);
+begin
+  FContext.Key.Kind := jkkName;
+  FContext.Key.Name := aValue;
+end;
+
+procedure TJpFilter.SetOnGetParam(aValue: TJpOnGetParam);
+begin
+  FContext.OnGetParam := aValue;
 end;
 
 constructor TJpFilter.Create(aExpr: TJpExpression);
@@ -2458,7 +2711,7 @@ begin
   Start := FLook;
   repeat
     SkipChar;
-  until not(CurrChar in FUN_NAME_CHAR);
+  until not(CurrChar in FUN_NAME_CHAR); //FUN_NAME_CHAR + ['A'..'Z'] ???
   s := MakeString(Start, FLook - Start);
   SkipWhiteSpace;
   if (CurrChar = '(') and FindFunctionDef(s, FFunDef) then
@@ -2874,7 +3127,7 @@ begin
       end;
       NextToken;
     end else
-      Fail(SEJPathPosErrorFmt, [Position, SEJPathOperandMiss]); // ???
+      Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathUnexpectTokenFmt, [TOKENS[CurrToken]])]);
   except
     Result.Free;
     raise;
@@ -2909,24 +3162,21 @@ begin
   Dec(FDepth);
 end;
 
-procedure TJpQueryParser.CheckFunParam(const aFunName: string; aType: TJpInstanceType; aExpr: TJpExpression);
-var
-  WellTyped: Boolean;
+function TJpQueryParser.CheckFunParam(aType: TJpInstanceType; aExpr: TJpExpression): Boolean;
 begin
   case aType of
     jitLogical:
       if aExpr is TJpFunctionExpr then
-        WellTyped := TJpFunctionExpr(aExpr).ResultType = jitLogical
+        Result := TJpFunctionExpr(aExpr).ResultType = jitLogical
       else
-        WellTyped := not(aExpr is TJpConstExpr);
+        Result := not(aExpr is TJpConstExpr);
     jitValue:
-      WellTyped := ((aExpr is TJpRelQueryExpr) and TJpRelQueryExpr(aExpr).IsSingular) or
+      Result := (aExpr is TJpRelQueryExpr) and TJpRelQueryExpr(aExpr).IsSingular or
+                   (aExpr is TJpFunctionExpr) and (TJpFunctionExpr(aExpr).ResultType = jitValue) or
                    (aExpr is TJpConstExpr);
     jitNodeList:
-      WellTyped := aExpr is TJpRelQueryExpr;
+      Result := aExpr is TJpRelQueryExpr;
   end;
-  if not WellTyped then
-    Fail(SEJPathParamMismatchFmt, [Position, aFunName]);
 end;
 
 function TJpQueryParser.FunctionExpr: TJpExpression;
@@ -2940,10 +3190,10 @@ begin
   Assert(CurrChar = '(');
   if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
   Inc(FDepth);
-  SkipChar;
-  NextToken;
   FunDef := FFunDef;
   FunName := FStrValue;
+  SkipChar;
+  NextToken;
   System.SetLength(ParamList, System.Length(FunDef.ParamDefs));
   I := 0;
   try
@@ -2952,10 +3202,11 @@ begin
       ParamList[I] := e;
       if I > System.High(FunDef.ParamDefs) then
         Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathFunParamExtraFmt, [FunName])]);
-      CheckFunParam(FunName, FunDef.ParamDefs[I], e);
+      if not CheckFunParam(FunDef.ParamDefs[I], e) then
+        Fail(SEJPathParamMismatchFmt, [Position, FunName, Succ(I)]);
       if I < System.High(ParamList) then
         if CurrToken <> jtkComma then
-          Fail(SEJPathPosUnexpectFmt, [Position, CurrChar])
+          Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathUnexpectTokenFmt, [TOKENS[CurrToken]])])
         else begin
           SkipChar;
           NextToken;
@@ -2964,7 +3215,12 @@ begin
     end;
     if I < System.Length(ParamList) then
       Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathFunParamMissFmt, [FunName])]);
-    Result := TJpFunctionExpr.Create(ParamList, FunDef.OnExecute, FunDef.ResultType);
+    case FunName of
+      'key':   Result := TJpKeyFunction.Create(ParamList, nil, FunDef.ResultType);
+      'param': Result := TJpParamFunction.Create(ParamList, nil, FunDef.ResultType);
+    else
+      Result := TJpFunctionExpr.Create(ParamList, FunDef.OnExecute, FunDef.ResultType);
+    end;
   except
     for e in ParamList do
       e.Free;
@@ -3097,6 +3353,22 @@ begin
   inherited;
 end;
 
+procedure TJpMatcher.SetParam(const aName: string; const aValue: TJpValue);
+begin
+  FParams.AddOrSetValue(aName, aValue);
+end;
+
+function TJpMatcher.GetParam(const aName: string): TJpValue;
+begin
+  if not FParams.TryGetValue(aName, Result) then
+    Result := TJpValue.Nothing;
+end;
+
+function TJpMatcher.TryGetParam(const aName: string; out aValue: TJpValue): Boolean;
+begin
+  Result := FParams.TryGetValue(aName, aValue);
+end;
+
 function TJpMatcher.TryParseQuery(const aQuery: string): Boolean;
 begin
   Result := False;
@@ -3114,7 +3386,9 @@ begin
     finally
       Free;
     end;
-  if not Result then
+  if Result then
+    FPath.OnGetParam := @TryGetParam
+  else
     FPath.Clear;
 end;
 
@@ -3202,6 +3476,12 @@ var
   Dummy: string;
 begin
   aPath := JpParseQuery(aQuery, Dummy);
+  Result := aPath <> nil;
+end;
+
+function JpParseQuery(const aQuery: string; out aPath: IJsonPath; out aMsg: string): Boolean;
+begin
+  aPath := JpParseQuery(aQuery, aMsg);
   Result := aPath <> nil;
 end;
 
@@ -3709,6 +3989,8 @@ begin
     with TRegExpr.Create do
       try
         ModifierR := False;
+        ModifierS := False;
+        ModifierG := False;
         Expression := aRegex;
         Result := Exec(aInput);
       finally
@@ -3719,6 +4001,7 @@ begin
   end;
 end;
 
+{$PUSH}{$WARN 6060 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
 function IsStringInst(const aInst: TJpInstance; out s: string): Boolean; inline;
 begin
   if aInst.InstType = jitValue then
@@ -3739,20 +4022,43 @@ begin
   Result := False;
 end;
 
-function IRegexpCheck(const s: string): Boolean; inline;
-var
-  I: SizeInt;
+function IsNumberInst(const aInst: TJpInstance; out n: Double): Boolean; inline;
 begin
-  Result := IRegexpCheck(s, I) = ircOk;
+  if aInst.InstType = jitValue then
+    case aInst.Value.ValType of
+      jvtNumber:
+        begin
+          n := aInst.Value.NumValue;
+          exit(True);
+        end;
+      jvtNode:
+        if aInst.Value.NodeValue.IsNumber then
+          begin
+            n := aInst.Value.NodeValue.AsNumber;
+            exit(True);
+          end;
+    else
+    end;
+  Result := False;
 end;
 
-{$PUSH}{$WARN 5091 OFF}
+function IsBoolInst(const aInst: TJpInstance): Boolean; inline;
+begin
+  if aInst.InstType = jitValue then
+    case aInst.Value.ValType of
+      jvtFalse,
+      jvtTrue: exit(True);
+      jvtNode: exit(aInst.Value.NodeValue.IsBoolean);
+    else
+    end;
+  Result := False;
+end;
+{ match() }
 procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and
-    IsStringInst(aList[1], Regex){$IFDEF JP_IREGEXP_CHECK}and IRegexpCheck(Regex){$ENDIF}then
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
     if JpRegexMatch = nil then
       aResult := DefaultRegexMatch(Input, '^(?:' + Regex + ')$')
     else
@@ -3760,19 +4066,228 @@ begin
   else
     aResult := False;
 end;
-
+{ search() }
 procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
 var
   Input, Regex: string;
 begin
-  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and
-    IsStringInst(aList[1], Regex){$IFDEF JP_IREGEXP_CHECK}and IRegexpCheck(Regex){$ENDIF}then
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
     if JpRegexSearch = nil then
       aResult := DefaultRegexMatch(Input, Regex)
     else
       aResult := JpRegexSearch(Input, Regex)
   else
     aResult := False;
+end;
+{ is_boolean() }
+procedure CallIsBoolean(const aList: TJpParamList; out aResult: TJpInstance);
+begin
+  aResult := (System.Length(aList) = 1) and IsBoolInst(aList[0]);
+end;
+{ is_number() }
+procedure CallIsNumber(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  d: Double;
+begin
+  aResult := (System.Length(aList) = 1) and IsNumberInst(aList[0], d);
+end;
+{ is_integer() }
+procedure CallIsInteger(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  d: Double;
+begin
+  aResult := (System.Length(aList) = 1) and IsNumberInst(aList[0], d) and IsExactInt(d);
+end;
+{ is_string() }
+procedure CallIsString(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  s: string;
+begin
+  aResult := (System.Length(aList) = 1) and IsStringInst(aList[0], s);
+end;
+{ is_array() }
+procedure CallIsArray(const aList: TJpParamList; out aResult: TJpInstance);
+begin
+  aResult := (System.Length(aList) = 1) and (aList[0].InstType = jitValue) and
+             (aList[0].Value.ValType = jvtNode) and aList[0].Value.NodeValue.IsArray;
+end;
+{ is_object() }
+procedure CallIsObject(const aList: TJpParamList; out aResult: TJpInstance);
+begin
+  aResult := (System.Length(aList) = 1) and (aList[0].InstType = jitValue) and
+             (aList[0].Value.ValType = jvtNode) and aList[0].Value.NodeValue.IsObject;
+end;
+{ contains() -- case sensitive }
+procedure CallContains(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  aResult := (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and
+              IsStringInst(aList[1], Pattern) and (Pos(Pattern, InText) > 0);
+end;
+{ contains_text() -- case insensitive }
+procedure CallContainsText(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  aResult :=
+    (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
+    (Pos(LgSeqUtils.Utf8ToLower(Pattern), LgSeqUtils.Utf8ToLower(InText)) > 0)
+end;
+{ same_text() -- case insensitive }
+procedure CallSameText(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  aResult :=
+    (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
+    (LgSeqUtils.Utf8ToLower(InText) = LgSeqUtils.Utf8ToLower(Pattern))
+end;
+{ starts_with() -- case sensitive }
+procedure CallStartsWith(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  aResult :=
+    (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
+     InText.StartsWith(Pattern);
+end;
+{ ends_with() -- case sensitive }
+procedure CallEndsWith(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  aResult :=
+    (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
+     InText.EndsWith(Pattern);
+end;
+{ to_upper() }
+procedure CallToUpper(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  s: string;
+begin
+  if (System.Length(aList) = 1) and IsStringInst(aList[0], s) then
+    aResult := LgSeqUtils.Utf8ToUpper(s)
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ to_lower() }
+procedure CallToLower(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  s: string;
+begin
+  if (System.Length(aList) = 1) and IsStringInst(aList[0], s) then
+    aResult := LgSeqUtils.Utf8ToLower(s)
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ concat() }
+procedure CallConcat(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  L, R: string;
+begin
+  if (System.Length(aList) = 2) and IsStringInst(aList[0], L) and IsStringInst(aList[1], R) then
+    aResult := L + R
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ min() }
+procedure CallMin(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  s1, s2: string;
+  d1, d2: Double;
+begin
+  if System.Length(aList) = 2 then
+    begin
+      if IsStringInst(aList[0], s1) and IsStringInst(aList[1], s2) then
+        begin
+          if s1 <= s2 then
+            aResult := s1
+          else
+            aResult := s2
+        end
+      else
+        if IsNumberInst(aList[0], d1) and IsNumberInst(aList[1], d2) then
+          begin
+            if d1 <= d2 then
+              aResult := d1
+            else
+              aResult := d2
+          end
+        else
+          aResult := TJpValue.Nothing;
+    end
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ max() }
+procedure CallMax(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  s1, s2: string;
+  d1, d2: Double;
+begin
+  if System.Length(aList) = 2 then
+    begin
+      if IsStringInst(aList[0], s1) and IsStringInst(aList[1], s2) then
+        begin
+          if s1 >= s2 then
+            aResult := s1
+          else
+            aResult := s2
+        end
+      else
+        if IsNumberInst(aList[0], d1) and IsNumberInst(aList[1], d2) then
+          begin
+            if d1 >= d2 then
+              aResult := d1
+            else
+              aResult := d2
+          end
+        else
+          aResult := TJpValue.Nothing;
+    end
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ abs() }
+procedure CallAbs(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  d: Double;
+begin
+  if (System.Length(aList) = 1) and IsNumberInst(aList[0], d) then
+    aResult := System.Abs(d)
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ sum() }
+procedure CallSum(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  a, b: Double;
+begin
+  if (System.Length(aList) = 2) and IsNumberInst(aList[0], a) and IsNumberInst(aList[1], b) then
+    aResult := a + b
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ diff() }
+procedure CallDiff(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  a, b: Double;
+begin
+  if (System.Length(aList) = 2) and IsNumberInst(aList[0], a) and IsNumberInst(aList[1], b) then
+    aResult := a - b
+  else
+    aResult := TJpValue.Nothing;
+end;
+{ prod() }
+procedure CallProd(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  a, b: Double;
+begin
+  if (System.Length(aList) = 2) and IsNumberInst(aList[0], a) and IsNumberInst(aList[1], b) then
+    aResult := a * b
+  else
+    aResult := TJpValue.Nothing;
 end;
 {$POP}
 
@@ -3829,11 +4344,34 @@ end;
 
 procedure RegisterBuiltIns;
 begin
-  FunCache.Add('count', TJpFunctionDef.Make([jitNodeList], jitValue, @CallCountFun));
-  FunCache.Add('length', TJpFunctionDef.Make([jitValue], jitValue, @CallLengthFun));
-  FunCache.Add('value', TJpFunctionDef.Make([jitNodeList], jitValue, @CallValueFun));
-  FunCache.Add('match', TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallMatchFun));
-  FunCache.Add('search', TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallSearchFun));
+  FunCache.Add('count',        TJpFunctionDef.Make([jitNodeList], jitValue, @CallCountFun));
+  FunCache.Add('length',       TJpFunctionDef.Make([jitValue], jitValue, @CallLengthFun));
+  FunCache.Add('value',        TJpFunctionDef.Make([jitNodeList], jitValue, @CallValueFun));
+  FunCache.Add('match',        TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallMatchFun));
+  FunCache.Add('search',       TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallSearchFun));
+  //////////////////
+  FunCache.Add('key',          TJpFunctionDef.Make(nil, jitValue, nil));
+  FunCache.Add('param',        TJpFunctionDef.Make([jitValue], jitValue, nil));
+  FunCache.Add('is_boolean',   TJpFunctionDef.Make([jitValue], jitLogical, @CallIsBoolean));
+  FunCache.Add('is_number',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsNumber));
+  FunCache.Add('is_integer',   TJpFunctionDef.Make([jitValue], jitLogical, @CallIsInteger));
+  FunCache.Add('is_string',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsString));
+  FunCache.Add('is_array',     TJpFunctionDef.Make([jitValue], jitLogical, @CallIsArray));
+  FunCache.Add('is_object',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsObject));
+  FunCache.Add('contains',     TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallContains));
+  FunCache.Add('contains_text',TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallContainsText));
+  FunCache.Add('same_text',    TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallSameText));
+  FunCache.Add('starts_with',  TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallStartsWith));
+  FunCache.Add('ends_with',    TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallEndsWith));
+  FunCache.Add('to_upper',     TJpFunctionDef.Make([jitValue], jitValue, @CallToUpper));
+  FunCache.Add('to_lower',     TJpFunctionDef.Make([jitValue], jitValue, @CallToLower));
+  FunCache.Add('concat',       TJpFunctionDef.Make([jitValue, jitValue], jitValue, @CallConcat));
+  FunCache.Add('min',          TJpFunctionDef.Make([jitValue, jitValue], jitValue, @CallMin));
+  FunCache.Add('max',          TJpFunctionDef.Make([jitValue, jitValue], jitValue, @CallMax));
+  FunCache.Add('abs',          TJpFunctionDef.Make([jitValue], jitValue, @CallAbs));
+  FunCache.Add('sum',          TJpFunctionDef.Make([jitValue, jitValue], jitValue, @CallSum));
+  FunCache.Add('diff',         TJpFunctionDef.Make([jitValue, jitValue], jitValue, @CallDiff));
+  FunCache.Add('prod',         TJpFunctionDef.Make([jitValue, jitValue], jitValue, @CallProd));
 end;
 
 initialization
