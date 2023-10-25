@@ -160,24 +160,9 @@
       ]
     },
     {
-      "name": "multiple selectors with whitespace",
-      "selector": "$[ 0 , 1 ]",
-      "document": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9
-      ],
-      "result": [
-        0,
-        1
-      ]
+      "name": "multiple selectors, space instead of comma",
+      "selector": "$[0 2]",
+      "invalid_selector": true
     },
     {
       "name": "multiple selectors, name and index, array data",
@@ -253,6 +238,115 @@
       ]
     },
     {
+      "name": "multiple selectors, duplicate index",
+      "selector": "$[1,1]",
+      "document": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "result": [
+        1,
+        1
+      ]
+    },
+    {
+      "name": "multiple selectors, wildcard and index",
+      "selector": "$[*,1]",
+      "document": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "result": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        1
+      ]
+    },
+    {
+      "name": "multiple selectors, wildcard and name",
+      "selector": "$[*,'a']",
+      "document": {
+        "a": "A",
+        "b": "B"
+      },
+      "result": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "name": "multiple selectors, wildcard and slice",
+      "selector": "$[*,0:2]",
+      "document": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "result": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        0,
+        1
+      ]
+    },
+    {
+      "name": "multiple selectors, multiple wildcards",
+      "selector": "$[*,*]",
+      "document": [
+        0,
+        1,
+        2
+      ],
+      "result": [
+        0,
+        1,
+        2,
+        0,
+        1,
+        2
+      ]
+    },
+    {
       "name": "empty segment",
       "selector": "$[]",
       "invalid_selector": true
@@ -321,7 +415,7 @@
     },
     {
       "name": "descendant segment, multiple selectors",
-      "selector" : "$..['a', 'd']",
+      "selector" : "$..['a','d']",
       "document" : [{"a": "b", "d": "e"}, {"a":"c", "d": "f"}],
       "result": [
         "b",

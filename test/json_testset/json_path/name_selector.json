@@ -667,6 +667,30 @@
       "name": "single quotes, incomplete escape",
       "selector": "$['\\']",
       "invalid_selector": true
+    },
+    {
+      "name": "double quotes, empty",
+      "selector": "$[\"\"]",
+      "document": {
+        "a": "A",
+        "b": "B",
+        "": "C"
+      },
+      "result": [
+        "C"
+      ]
+    },
+    {
+      "name": "single quotes, empty",
+      "selector": "$['']",
+      "document": {
+        "a": "A",
+        "b": "B",
+        "": "C"
+      },
+      "result": [
+        "C"
+      ]
     }
   ]
 }

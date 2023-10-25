@@ -477,6 +477,299 @@
         [0, 1, 2],
         [42]
       ]
+    },
+    {
+      "name": "relative non-singular query, index, equal",
+      "selector": "$[?(@[0, 0]==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, index, not equal",
+      "selector": "$[?(@[0, 0]!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, index, less-or-equal",
+      "selector": "$[?(@[0, 0]<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, name, equal",
+      "selector": "$[?(@['a', 'a']==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, name, not equal",
+      "selector": "$[?(@['a', 'a']!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, name, less-or-equal",
+      "selector": "$[?(@['a', 'a']<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, combined, equal",
+      "selector": "$[?(@[0, '0']==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, combined, not equal",
+      "selector": "$[?(@[0, '0']!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, combined, less-or-equal",
+      "selector": "$[?(@[0, '0']<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, wildcard, equal",
+      "selector": "$[?(@.*==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, wildcard, not equal",
+      "selector": "$[?(@.*!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, wildcard, less-or-equal",
+      "selector": "$[?(@.*<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, slice, equal",
+      "selector": "$[?(@[0:0]==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, slice, not equal",
+      "selector": "$[?(@[0:0]!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "relative non-singular query, slice, less-or-equal",
+      "selector": "$[?(@[0:0]<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, index, equal",
+      "selector": "$[?($[0, 0]==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, index, not equal",
+      "selector": "$[?($[0, 0]!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, index, less-or-equal",
+      "selector": "$[?($[0, 0]<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, name, equal",
+      "selector": "$[?($['a', 'a']==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, name, not equal",
+      "selector": "$[?($['a', 'a']!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, name, less-or-equal",
+      "selector": "$[?($['a', 'a']<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, combined, equal",
+      "selector": "$[?($[0, '0']==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, combined, not equal",
+      "selector": "$[?($[0, '0']!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, combined, less-or-equal",
+      "selector": "$[?($[0, '0']<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, wildcard, equal",
+      "selector": "$[?($.*==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, wildcard, not equal",
+      "selector": "$[?($.*!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, wildcard, less-or-equal",
+      "selector": "$[?($.*<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, slice, equal",
+      "selector": "$[?($[0:0]==42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, slice, not equal",
+      "selector": "$[?($[0:0]!=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "absolute non-singular query, slice, less-or-equal",
+      "selector": "$[?($[0:0]<=42)]",
+      "invalid_selector": true
+    },
+    {
+      "name": "multiple selectors",
+      "selector" : "$[?@.a,?@.b]",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}],
+      "result": [
+        {"a": "b", "d": "e"},
+        {"b": "c", "d": "f"}
+      ]
+    },
+    {
+      "name": "multiple selectors, comparison",
+      "selector" : "$[?@.a=='b',?@.b=='x']",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}],
+      "result": [
+        {"a": "b", "d": "e"}
+      ]
+    },
+    {
+      "name": "multiple selectors, overlapping",
+      "selector" : "$[?@.a,?@.d]",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}],
+      "result": [
+        {"a": "b", "d": "e"},
+        {"a": "b", "d": "e"},
+        {"b": "c", "d": "f"}
+      ]
+    },
+    {
+      "name": "multiple selectors, filter and index",
+      "selector" : "$[?@.a,1]",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}],
+      "result": [
+        {"a": "b", "d": "e"},
+        {"b": "c", "d": "f"}
+      ]
+    },
+    {
+      "name": "multiple selectors, filter and wildcard",
+      "selector" : "$[?@.a,*]",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}],
+      "result": [
+        {"a": "b", "d": "e"},
+        {"a": "b", "d": "e"},
+        {"b": "c", "d": "f"}
+      ]
+    },
+    {
+      "name": "multiple selectors, filter and slice",
+      "selector" : "$[?@.a,1:]",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}, {"g": "h"}],
+      "result": [
+        {"a": "b", "d": "e"},
+        {"b": "c", "d": "f"},
+        {"g": "h"}
+      ]
+    },
+    {
+      "name": "multiple selectors, comparison filter, index and slice",
+      "selector" : "$[1, ?@.a=='b', 1:]",
+      "document" : [{"a": "b", "d": "e"}, {"b": "c", "d": "f"}],
+      "result": [
+        {"b": "c", "d": "f"},
+        {"a": "b", "d": "e"},
+        {"b": "c", "d": "f"}
+      ]
+    },
+    {
+      "name": "equals number, zero and negative zero",
+      "selector" : "$[?@.a==-0]",
+      "document" : [{"a": 0, "d": "e"}, {"a":0.1, "d": "f"}, {"a":"0", "d": "g"}],
+      "result": [
+        {"a": 0, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, with and without decimal fraction",
+      "selector" : "$[?@.a==1.0]",
+      "document" : [{"a": 1, "d": "e"}, {"a":2, "d": "f"}, {"a":"1", "d": "g"}],
+      "result": [
+        {"a": 1, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, exponent",
+      "selector" : "$[?@.a==1e2]",
+      "document" : [{"a": 100, "d": "e"}, {"a":100.1, "d": "f"}, {"a":"100", "d": "g"}],
+      "result": [
+        {"a": 100, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, positive exponent",
+      "selector" : "$[?@.a==1e+2]",
+      "document" : [{"a": 100, "d": "e"}, {"a":100.1, "d": "f"}, {"a":"100", "d": "g"}],
+      "result": [
+        {"a": 100, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, negative exponent",
+      "selector" : "$[?@.a==1e-2]",
+      "document" : [{"a": 0.01, "d": "e"}, {"a":0.02, "d": "f"}, {"a":"0.01", "d": "g"}],
+      "result": [
+        {"a": 0.01, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, decimal fraction",
+      "selector" : "$[?@.a==1.1]",
+      "document" : [{"a": 1.1, "d": "e"}, {"a":1.0, "d": "f"}, {"a":"1.1", "d": "g"}],
+      "result": [
+        {"a": 1.1, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, decimal fraction, no fractional digit",
+      "selector" : "$[?@.a==1.]",
+      "invalid_selector": true
+    },
+    {
+      "name": "equals number, decimal fraction, exponent",
+      "selector" : "$[?@.a==1.1e2]",
+      "document" : [{"a": 110, "d": "e"}, {"a":110.1, "d": "f"}, {"a":"110", "d": "g"}],
+      "result": [
+        {"a": 110, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, decimal fraction, positive exponent",
+      "selector" : "$[?@.a==1.1e+2]",
+      "document" : [{"a": 110, "d": "e"}, {"a":110.1, "d": "f"}, {"a":"110", "d": "g"}],
+      "result": [
+        {"a": 110, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals number, decimal fraction, negative exponent",
+      "selector" : "$[?@.a==1.1e-2]",
+      "document" : [{"a": 0.011, "d": "e"}, {"a":0.012, "d": "f"}, {"a":"0.011", "d": "g"}],
+      "result": [
+        {"a": 0.011, "d": "e"}
+      ]
     }
   ]
 }

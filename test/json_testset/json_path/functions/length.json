@@ -29,8 +29,26 @@
       "result": []
     },
     {
-      "name": "non-array/string arg",
+      "name": "number arg",
       "selector" : "$[?length(1)>=2]",
+      "document" : [{"d": "f"}],
+      "result": []
+    },
+    {
+      "name": "true arg",
+      "selector" : "$[?length(true)>=2]",
+      "document" : [{"d": "f"}],
+      "result": []
+    },
+    {
+      "name": "false arg",
+      "selector" : "$[?length(false)>=2]",
+      "document" : [{"d": "f"}],
+      "result": []
+    },
+    {
+      "name": "null arg",
+      "selector" : "$[?length(null)>=2]",
       "document" : [{"d": "f"}],
       "result": []
     },
