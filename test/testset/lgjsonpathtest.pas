@@ -11,24 +11,31 @@ uses
   LgJsonPath;
 
 const
-  TEST_DIR     = 'json_testset';
-  SPEC_DIR     = 'json_path';
-  FUNC_DIR     = 'functions';
-  BASIC_TEST   = 'basic.json';
-  FILTER_TEST  = 'filter.json';
-  INDEX_TEST   = 'index_selector.json';
-  NAME_TEST    = 'name_selector.json';
-  SLICE_TEST   = 'slice_selector.json';
-  COUNT_TEST   = 'count.json';
-  LENGTH_TEST  = 'length.json';
-  MATCH_TEST   = 'match.json';
-  SEARCH_TEST  = 'search.json';
-  VALUE_TEST   = 'value.json';
-  REGRESS_TEST = 'regress.json';
+  TEST_DIR       = 'json_testset';
+  SPEC_DIR       = 'json_path';
+  FUNC_DIR       = 'functions';
+  WS_DIR         = 'whitespace';
+  BASIC_TEST     = 'basic.json';
+  FILTER_TEST    = 'filter.json';
+  INDEX_TEST     = 'index_selector.json';
+  NAME_TEST      = 'name_selector.json';
+  SLICE_TEST     = 'slice_selector.json';
+  COUNT_TEST     = 'count.json';
+  LENGTH_TEST    = 'length.json';
+  MATCH_TEST     = 'match.json';
+  SEARCH_TEST    = 'search.json';
+  VALUE_TEST     = 'value.json';
+  REGRESS_TEST   = 'regress.json';
+  WS_FILTER_TEST = 'filter.json';
+  WS_FUNC_TEST   = 'functions.json';
+  WS_OPER_TEST   = 'operators.json';
+  WS_SELECT_TEST = 'selectors.json';
+  WS_SLICE_TEST  = 'slice.json';
 
 var
   TestDir: string = '';
   FunTestDir: string = '';
+  WsTestDir: string = '';
 
 type
 
@@ -53,6 +60,11 @@ type
     procedure TestMatchFun;
     procedure TestSearchFun;
     procedure TestValueFun;
+    procedure TestFilterWs;
+    procedure TestFunctionWs;
+    procedure TestOperatorWs;
+    procedure TestSelectorWs;
+    procedure TestSliceWs;
     procedure TestMore;
     procedure IRegexpPass;
     procedure IRegexpFail;
@@ -266,6 +278,66 @@ begin
   RunTestSet(Tests);
 end;
 
+procedure TTestJsonPath.TestFilterWs;
+var
+  TestSet: specialize TGAutoRef<TJsonNode>;
+  Tests: TJsonNode;
+begin
+  AssertTrue(DirectoryExists(WsTestDir));
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_FILTER_TEST);
+  AssertTrue(TestSet.Instance.Find('tests', Tests));
+  AssertTrue(Tests.IsArray);
+  RunTestSet(Tests);
+end;
+
+procedure TTestJsonPath.TestFunctionWs;
+var
+  TestSet: specialize TGAutoRef<TJsonNode>;
+  Tests: TJsonNode;
+begin
+  AssertTrue(DirectoryExists(WsTestDir));
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_FUNC_TEST);
+  AssertTrue(TestSet.Instance.Find('tests', Tests));
+  AssertTrue(Tests.IsArray);
+  RunTestSet(Tests);
+end;
+
+procedure TTestJsonPath.TestOperatorWs;
+var
+  TestSet: specialize TGAutoRef<TJsonNode>;
+  Tests: TJsonNode;
+begin
+  AssertTrue(DirectoryExists(WsTestDir));
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_OPER_TEST);
+  AssertTrue(TestSet.Instance.Find('tests', Tests));
+  AssertTrue(Tests.IsArray);
+  RunTestSet(Tests);
+end;
+
+procedure TTestJsonPath.TestSelectorWs;
+var
+  TestSet: specialize TGAutoRef<TJsonNode>;
+  Tests: TJsonNode;
+begin
+  AssertTrue(DirectoryExists(WsTestDir));
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_SELECT_TEST);
+  AssertTrue(TestSet.Instance.Find('tests', Tests));
+  AssertTrue(Tests.IsArray);
+  RunTestSet(Tests);
+end;
+
+procedure TTestJsonPath.TestSliceWs;
+var
+  TestSet: specialize TGAutoRef<TJsonNode>;
+  Tests: TJsonNode;
+begin
+  AssertTrue(DirectoryExists(WsTestDir));
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_SLICE_TEST);
+  AssertTrue(TestSet.Instance.Find('tests', Tests));
+  AssertTrue(Tests.IsArray);
+  RunTestSet(Tests);
+end;
+
 procedure TTestJsonPath.TestMore;
 var
   TestSet: specialize TGAutoRef<TJsonNode>;
@@ -444,6 +516,9 @@ begin
       Dir := Dir + FUNC_DIR + DirectorySeparator;
       if DirectoryExists(Dir) then
         FunTestDir := Dir;
+      Dir := TestDir + WS_DIR + DirectorySeparator;
+      if DirectoryExists(Dir) then
+        WsTestDir := Dir;
     end;
 end;
 
