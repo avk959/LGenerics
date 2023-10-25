@@ -84,14 +84,14 @@ uses
       Regex type must be a ValueType;
       result type is a LogicalType(jitLogical in this implementation);
         returns boolean True if Input is a string and Regex is a string
-        and the regular expression Regex matches the entire Input value;
+        and the regular expression Regex matches the entire Input value(according to RFC 9485);
 
     search(Input, Regex)
       Input type must be a ValueType;
       Regex type must be a ValueType;
       result type is a LogicalType;
         returns boolean True if Input is a string and Regex is a string
-        and the regular expression Regex matches some substring of the Input value;
+        and the regular expression Regex matches some substring of the Input value(according to RFC 9485);
 
     value(Arg)
       Arg type must be a Nodes;
@@ -99,7 +99,8 @@ uses
       if the argument is empty or contains multiple nodes, returns Nothing;
   ---------------------------------------------------------------------------------------
 
-      Supplemental(non-standard) functions:
+      Supplemental(non-standard) functions, their names and semantics may change
+      in the future if such functions appear in the specifications:
 
   ---------------------------------------------------------------------------------------
 
@@ -2529,9 +2530,26 @@ begin
 end;
 {$POP}
 
+function Utf8StrPosFast(pStart, pCurr: PByte): SizeInt;
+begin
+  Result := 0;
+  while pStart < pCurr do
+    begin
+      case pStart^ of
+        $c2..$df: pStart += 2;
+        $e0..$ed: pStart += 3;
+        $f0..$f4: pStart += 4;
+      else
+        Inc(pStart);
+      end;
+      Inc(Result);
+    end;
+end;
+
 function TJpQueryParser.GetPos: SizeInt;
 begin
-  Result := Succ(FLook - PAnsiChar(FQuery));
+  //Result := Succ(FLook - PAnsiChar(FQuery));
+  Result := Succ(Utf8StrPosFast(PByte(FQuery), PByte(FLook)));
 end;
 
 function TJpQueryParser.Eof: Boolean;
@@ -2711,9 +2729,8 @@ begin
   Start := FLook;
   repeat
     SkipChar;
-  until not(CurrChar in FUN_NAME_CHAR); //FUN_NAME_CHAR + ['A'..'Z'] ???
+  until not(CurrChar in FUN_NAME_CHAR);
   s := MakeString(Start, FLook - Start);
-  SkipWhiteSpace;
   if (CurrChar = '(') and FindFunctionDef(s, FFunDef) then
     begin
       FToken := jtkFunction;
@@ -2939,7 +2956,11 @@ begin
       Slice(aSegment, oi);
     end
   else
-    aSegment.AddSelector(Idx);
+    begin
+      if not(CurrChar in [',', ']']) then
+        Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+      aSegment.AddSelector(Idx);
+    end;
 end;
 
 {$PUSH}{$WARN 5089 OFF}
@@ -2976,7 +2997,6 @@ begin
   else
   end;
   SkipWhiteSpace;
-  CheckEof;
   if not(CurrChar in [',', ']']) then
     Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
   aSegment.AddSelector(s);
@@ -3218,6 +3238,7 @@ begin
     case FunName of
       'key':   Result := TJpKeyFunction.Create(ParamList, nil, FunDef.ResultType);
       'param': Result := TJpParamFunction.Create(ParamList, nil, FunDef.ResultType);
+      //match and search ???
     else
       Result := TJpFunctionExpr.Create(ParamList, FunDef.OnExecute, FunDef.ResultType);
     end;
@@ -3255,6 +3276,7 @@ procedure TJpQueryParser.BracketSegment(aPath: TJsonPathQuery);
 var
   Segment: TSegment;
   oi: TOptionalInt;
+  s: string;
   Done: Boolean = False;
 begin
   Assert(CurrChar = '[');
@@ -3263,9 +3285,24 @@ begin
   while not Done do begin
     CheckEof;
     case CurrChar of
-      '''': Segment.AddSelector(GetQuoteName);
-      '"':  Segment.AddSelector(GetDblQuoteName);
-      '*':  begin Segment.AddWildcard; SkipCharThenWS; end;
+      '''': begin
+          s := GetQuoteName;
+          if not(CurrChar in [',', ']']) then
+            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+          Segment.AddSelector(s);
+        end;
+      '"': begin
+          s := GetDblQuoteName;
+          if not(CurrChar in [',', ']']) then
+            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+          Segment.AddSelector(s);
+        end;
+      '*': begin
+          SkipCharThenWS;
+          if not(CurrChar in [',', ']']) then
+            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+          Segment.AddWildcard;
+        end;
       '-', '0'..'9': IndexOrSlice(Segment);
       ':': Slice(Segment, oi);
       ',':
@@ -4096,7 +4133,7 @@ procedure CallIsInteger(const aList: TJpParamList; out aResult: TJpInstance);
 var
   d: Double;
 begin
-  aResult := (System.Length(aList) = 1) and IsNumberInst(aList[0], d) and IsExactInt(d);
+  aResult := (System.Length(aList) = 1) and IsNumberInst(aList[0], d) and LgJson.IsExactInt(d);
 end;
 { is_string() }
 procedure CallIsString(const aList: TJpParamList; out aResult: TJpInstance);
@@ -4123,7 +4160,7 @@ var
   InText, Pattern: string;
 begin
   aResult := (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and
-              IsStringInst(aList[1], Pattern) and (Pos(Pattern, InText) > 0);
+              IsStringInst(aList[1], Pattern) and (System.Pos(Pattern, InText) > 0);
 end;
 { contains_text() -- case insensitive }
 procedure CallContainsText(const aList: TJpParamList; out aResult: TJpInstance);
@@ -4132,7 +4169,7 @@ var
 begin
   aResult :=
     (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
-    (Pos(LgSeqUtils.Utf8ToLower(Pattern), LgSeqUtils.Utf8ToLower(InText)) > 0)
+    (System.Pos(LgSeqUtils.Utf8ToLower(Pattern), LgSeqUtils.Utf8ToLower(InText)) > 0)
 end;
 { same_text() -- case insensitive }
 procedure CallSameText(const aList: TJpParamList; out aResult: TJpInstance);
