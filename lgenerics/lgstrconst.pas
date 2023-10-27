@@ -82,7 +82,7 @@ resourcestring
   SEUnknownJsDataType      = 'Unknown JsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
-//CSV consts
+//CSV
   SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
   SEColIndexOutOfBoundsFmt = 'Column index out of bounds(%d)';
   SEDirtyQuoteFmt          = 'Irrelevant quotation mark in non-quoted cell [%d, %d]';
@@ -95,7 +95,7 @@ resourcestring
   SEInvalidCommentMarkFmt  = 'Invalid comment mark(#%u)';
   SEEmptyDoc               = 'Document contains no data';
   SEReadCsvErrorFmt        = '%s'  + LineEnding + 'near <%s>';
-//PDO consts
+//PDO
   SEVariantNotSupportFmt   = 'Variant type(%u) is not supported';
   SEPdoTypeNotSupportFmt   = 'Type "%s"("%s") is not supported';
   SEUnsupportPdoKindFmt    = 'Unsupported istance kind(%s)';
@@ -119,7 +119,7 @@ resourcestring
   SEJsonArraySizeNotFitFmt = 'JSON array size does not match the size of static PDO array(%d)';
   SEUnassignClassInstFmt   = 'Unassigned class instance(%s)';
   SECallbackFalseRetFmt    = 'Castom callback returned False when reading %s';
-//JTD consts
+//JTD
   SECantLoadJsStream         = 'Cannot load JSON stream';
   SECantLoadJsFile           = 'Cannot load JSON file';
   SESchemaNotObjectFmt       = 'JTD schema must be an object, but got "%s"';
@@ -154,7 +154,7 @@ resourcestring
   SERequiredJPropNotFoundFmt = '%s: required JSON property "%s" not found';
   SEStrNotEnumElemFmt        = '"%s" is not an element of the %s enumeration';
   SEUnknownPropFoundFmt      = '%s: found unknown property "%s"';
-//JSONPath consts
+//JSONPath
   SEJLeadWSNotAllow        = 'Leading spaces are not allowed';
   SEJTrailWSNotAllow       = 'Trailing spaces are not allowed';
   SEJPathCantEndWithDot    = 'Query cannot end with a dot';
@@ -208,6 +208,23 @@ resourcestring
   SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
   SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch(%d)';
   SEJPathTrailFiltGarbage  = 'trailing garbage in filter expression';
+//I-Regexp
+  SEIreInternalErrorFmt    = 'Internal exception %s with message "%s"';
+  SEIreTrailGarbage        = 'Trailing garbage';
+  SEIreMaxDepthExceed      = 'max recursion depth exceeded';
+  SEIreRParenMiss          = 'Missing right paren';
+  SEIreRBracketMiss        = 'Missing right bracket';
+  SEIreRBraceMiss          = 'Missing right brace';
+  SEIreUnexpectEnd         = 'Unexpected expression end';
+  SEIreInvalidUCategory    = 'Invalid Unicode category';
+  SEIreEmptyCharClassExpr  = 'Empty charclass expression';
+  SEIreExpectNormalChar    = 'Expected normal char, but got metachar';
+  SEIreExpectEscapable     = 'Escapable character expected';
+  SEIreExpectCCChar        = 'CCChar expected';
+  SEIreInvalidCharRange    = 'Invalid character range';
+  SEIreInvalidRangeQuant   = 'Invalid range quantifier';
+  SEIreRangeQuantTooBig    = 'Range quantifier limit exceeded';
+  SEIreRangeQuantMess      = 'Max is less than Min in range quantifier';
 
 implementation
 
