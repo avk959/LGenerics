@@ -392,6 +392,8 @@ end;
 procedure TTestJsonPath.IRegexpPass;
 const
   Samples: TStringArray = (
+  // empty
+    '',
   // branches
     'a|b', 'a|b', 'a|', '|', '||',
   // atom
@@ -416,7 +418,7 @@ const
     '[-a]', '[a-]', '[-a-]', '[-a-b]', '[-a-bc-]',
   // escape
     '\.', '\?', '\(', '\)', '\*', '\+', '\[', '\]', '\{', '\}', '\|', '\n', '\r', '\t',
-    '[\r\n\t]', '[^\r\n\t]', '[^\r-\n\t-]',
+    '[\r\n\t]', '[^\r\n\t]', '[^\n-\r\t-]',
   // dot
     '.', '..', '.*', '.?', '.+',
   // singleCharEsc
@@ -424,9 +426,10 @@ const
    '\^', '\n', '\r', '\t', '\{', '\|', '\}',
    '\(\*\+\)', '\(\-\.\)', '\(\?\)', '\n\r\t',
   // parens
-    '(a)', '(a)+', '(a){2}', '(a){2,3}', '()', 'a()', '(0*)*1',
+    '(a)', '(a)+', '(a){2}', '(a){2,3}', '()', 'a()', '(0*)*1', '((((((((((((((((((((x))))))))))))))))))))',
+    '(|||)',
   // quantifiers
-    'a*', 'a+', 'a?', 'a{2}', 'a{2,3}', 'a{4,}',
+    'a*', 'a+', 'a?', 'a{2}', 'a{2,3}', 'a{4,}', 'a{0,}', 'a{0,0}', 'a{1,1}', '(|)*', '(|){0,3}',
   // Appendix A
     '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*)?', '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}',
     '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}', '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|',
@@ -446,7 +449,7 @@ const
   );
   Fmt = 'Total = %d, but Passed = %d';
 var
-  s: string;
+  s, Msg: string;
   Total, Passed: Integer;
   I: SizeInt;
 begin
@@ -455,7 +458,7 @@ begin
   for s in Samples do
     begin
       Inc(Total);
-      Inc(Passed, Ord(IRegexpCheck(s, I) = ircOk));
+      Inc(Passed, Ord(IRegexpCheck(s, Msg)));
     end;
   AssertTrue(Format(Fmt, [Total, Passed]), Total = Passed);
 end;
@@ -469,10 +472,11 @@ const
     '\p{Cx}', '\p{Lx}', '\p{Mx}', '\p{Nx}', '\p{Px}', '\p{Zx}', '\p{Sx}', '\p', '\p{', '\p{}',
   // char class expr
     '[\a]', '[\0]', '[\,]', '[',']', '[^]', '[a--b]', '[a-z-A-Z]', '[--a]', '[^\p{Cc}-\p{Me}]',
+    '[c-a]', '[^z-x]',
   // escape
     '\a', '\0', '\,',
   // parens
-    '(', ')', '(a', 'a)',
+    '(', ')', '(a', 'a)', '((ab)a',
   // quantifiers
     '*', '+', '?', 'a**', 'a++', 'a??', '{', '}', '{}', '{,}', '{4,}', '{,2}', 'a{', 'a}', 'a{}',
     'a{,}', 'a{,2}',
@@ -486,7 +490,7 @@ const
   );
   Fmt = 'Total = %d, but Failed = %d';
 var
-  s: string;
+  s, Msg: string;
   Total, Failed: Integer;
   I: SizeInt;
 begin
@@ -495,7 +499,7 @@ begin
   for s in Samples do
     begin
       Inc(Total);
-      Inc(Failed, Ord(IRegexpCheck(s, I) <> ircOk));
+      Inc(Failed, Ord(not IRegexpCheck(s, Msg)));
     end;
   AssertTrue(Format(Fmt, [Total, Failed]), Total = Failed);
 end;
