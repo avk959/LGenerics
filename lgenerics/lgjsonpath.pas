@@ -93,6 +93,10 @@ uses
         returns boolean True if Input is a string and Regex is a string
         and the regular expression Regex matches some substring of the Input value(according to RFC 9485);
 
+    NOTE: all backslashes in regular expressions specified as a literal in a JSONPath query
+          need to be doubled(excluding sequences like \uxxxx).
+
+
     value(Arg)
       Arg type must be a Nodes;
       if the argument contains a single node, returns value of that node;
@@ -412,44 +416,14 @@ type
   from the range a-z, decimal numbers, underscores, and must begin with a letter }
   function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 
-
-{ to enable an external regular expression engine, if any of the global
-  variables listed below is assigned, the corresponding function will be used
-  instead of the default function }
-type
-  TJpRegexMatch = function(const aInput, aRegex: string): Boolean;
-
-var
-{ must return True if the regular expression(second argument) matches the entire input string }
-  JpRegexMatch: TJpRegexMatch = nil;
-{ must return True if the regular expression matches some substring of the input string }
-  JpRegexSearch: TJpRegexMatch = nil;
-
-{ I-Regexp checker: https://datatracker.ietf.org/doc/draft-ietf-jsonpath-iregexp }
-type
-
-  TIRegexpCheck = (
-     ircOk,               { it seems OK }
-     ircInvalidQuantifier,{ invalid quantifier }
-     ircMissingRBrace,    { missing closing brace }
-     ircMissingRParen,    { missing closing parenthesis }
-     ircMissingRBracket,  { missing closing bracket }
-     ircUnexpectedEnd,    { unexpected end of expression }
-     ircUnexpectMetachar, { expected normal char, but got metachar }
-     ircInvalidCCChar,    { expected CC_CHAR or SingleCharEsc }
-     ircInescapable,      { expected SingleCharEsc }
-     ircInvalidUCategory, { invalid Unicode category }
-     ircMaxDepthExceed,   { maximum recursion depth exceeded }
-     ircExtraChars        { not at end of regexp after parsing last branch }
-     );
-
-  function IRegexpCheck(const aRegex: string; out aErrPos: SizeInt): TIRegexpCheck;
+{ I-Regexp checker: just in case }
+  function IRegexpCheck(const aRegex: string; out aMsg: string): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  Math, RegExpr, lgVector, lgHashMap, lgSeqUtils, lgStrConst, UnicodeData;
+  Math, lgVector, lgHashMap, lgSeqUtils, lgStrConst, Character, UnicodeData;
 
 type
   { TStrBuilder }
@@ -1215,6 +1189,37 @@ type
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   end;
 
+  TIRegexp = class;
+
+  { TJpRegex }
+  TJpRegex = class abstract(TJpFunctionExpr)
+  strict protected
+    FMatcher: TIRegexp;
+    FBadRegex: Boolean;
+    procedure CheckRegexLiteral;
+    function  DoEval: Boolean; virtual; abstract;
+    procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
+  public
+    destructor Destroy; override;
+    procedure AfterConstruction; override;
+  end;
+
+  { TJpReMatch }
+  TJpReMatch = class(TJpRegex)
+  strict protected
+    function  TryMatch: Boolean;
+    function  TryMatchParsed: Boolean;
+    function  DoEval: Boolean; override;
+  end;
+
+  { TJpReSearch }
+  TJpReSearch = class(TJpRegex)
+  strict protected
+    function  TrySearch: Boolean;
+    function  TrySearchParsed: Boolean;
+    function  DoEval: Boolean; override;
+  end;
+
   { TJpFilter }
   TJpFilter = class
   strict private
@@ -1343,6 +1348,207 @@ type
     function  MatchFirst(const aRoot: string; out aNode: string): Boolean;
     function  MatchFirstValue(aRoot: TJsonNode): TJsonNode;
     function  MatchFirstValue(const aRoot: string; out aValue: string): Boolean;
+    property  Message: string read FMessage;
+  end;
+
+  { TIRegexp }
+  TIRegexp = class
+  public
+  const
+    Q_RANGE_LIMIT   = 512;
+    Q_RANGE_EXACT   = Integer(-1);
+    Q_RANGE_MAX_ANY = Integer(-2);
+    MAX_QRANGE_LEN  = 3;
+    MAX_REC_DEPTH   = 512;
+  strict private
+  const
+    DISABLE_MOVE    = Integer(-1);
+    NORMAL_CHARS    = [#0..#$27, #$2c, #$2d, #$2f..#$3e, #$40..#$5a, #$5e..#$7a, #$7e..#$ff];
+    CC_CHARS        = [#0..#$2c, #$2e..#$5a, #$5e..#$ff];
+    META_CHARS      = ['.', '*', '+', '?', '(', ')', '|', '{', '}', '[', '\', ']'];
+    ESCAPABLE_CHARS = META_CHARS + ['-', '^', 'n', 'r', 't'];
+    UCATEGORY_CHARS = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
+    DIGITS          = ['0'..'9'];
+  type
+    ERegexParse = class(Exception);
+    TUCategoryKind = (
+      uckCategory, uckLetter, uckMark, uckNumber, uckPunctuation, uckSeparator, uckSymbol, uckOther);
+
+    TUCategory = record
+    strict private
+      FKind: TUCategoryKind;
+      FCategory: TUnicodeCategory;
+      FComplement: Boolean;
+    public
+      constructor Make(aKind: TUCategoryKind; aComplement: Boolean = False);
+      constructor Make(c: TUnicodeCategory; aComplement: Boolean = False);
+      function Match(c: Ucs4Char): Boolean; inline;
+    end;
+
+    TCceItemKind = (cikChar, cikCategory, cikCharRange);
+
+    PCceItem = ^TCceItem;
+    TCceItem = record
+      constructor Make(c: TUCategory);
+      constructor Make(c: Ucs4Char);
+      constructor Make(aLo, aHi: Ucs4Char);
+      function Match(c: Ucs4Char): Boolean; inline;
+      case Kind: TCceItemKind of
+        cikChar:      (UChar: Ucs4Char);
+        cikCategory:  (UCategory: TUCategory);
+        cikCharRange: (CLow, CHigh: Ucs4Char);
+    end;
+
+    PCCStore = ^TCCStore;
+    TCCStore = record
+    strict private
+    type
+      TItems = specialize TGDynArray<TCceItem>;
+    const
+      INIT_LEN = 128;  // power of 2
+    var
+      FItems: TItems;
+      FCount: Integer;
+      procedure Expand; inline;
+      function  GetItems: PCceItem; inline;
+    public
+      procedure Init; inline;
+      function  Add(const aValue: TCceItem): Integer;
+      property  Count: Integer read FCount;
+      property  Items: PCceItem read GetItems;
+    end;
+
+    TCharClassExpr = record
+    strict private
+      FFirst,
+      FLast: Integer;
+      FStore: PCCStore;
+      FComplement: Boolean;
+    public
+      procedure Init(aStore: PCCStore; aComplement: Boolean = False); inline;
+      procedure Add(const aItem: TCceItem); inline;
+      function  Match(c: Ucs4Char): Boolean;
+    end;
+
+    TCharClassKind = (cckWildcard, cckChar, cckCategory, cckClassExpr);
+
+    TCharClass = record
+      constructor Make(aKind: TCharClassKind);
+      constructor Make(c: Ucs4Char);
+      constructor Make(const c: TUCategory);
+      constructor Make(const e: TCharClassExpr);
+      function Match(c: Ucs4Char): Boolean; inline;
+      case Kind: TCharClassKind of
+        cckChar:      (VChar: Ucs4Char);
+        cckCategory:  (VCategory: TUCategory);
+        cckClassExpr: (VExpr: TCharClassExpr);
+    end;
+
+    TNodeKind  = (nkSplit, nkMove, nkMatch, nkFinal);
+
+    PNfaNode = ^TNfaNode;
+    TNfaNode = record
+      Next1,
+      Next2: Integer;
+      Step: QWord;
+      Matcher: TCharClass;
+      Kind: TNodeKind;
+      function Match(c: Ucs4Char): Boolean; inline;
+    end;
+
+    TNfaTable = record
+    strict private
+    type
+      TItems = specialize TGDynArray<TNfaNode>;
+    const
+      INIT_LEN = 64;  //power of 2
+    var
+      FItems: TItems;
+      FCount: Integer;
+      procedure Expand; inline;
+      function  GetItem(aIndex: Integer): PNfaNode; inline;
+    public
+      procedure Init; inline;
+      procedure AddRange(aCount: Integer);
+      function  AddNode(out aIndex: Integer): PNfaNode; inline;
+      property  Items[aIndex: Integer]: PNfaNode read GetItem; default;
+      property  Count: Integer read FCount;
+    end;
+
+    PReStack = ^TReStack;
+    TReStack = record
+    strict private
+    type
+      TItems = specialize TGDynArray<Integer>;
+    const
+      INIT_LEN = 64;  // power of 2
+    var
+      FItems: TItems;
+      FCount: Integer;
+      procedure Expand; inline;
+    public
+      function  Reset: PReStack; inline;
+      function  NonEmpty: Boolean; inline;
+      procedure Push(aValue: Integer); inline;
+      function  TryPop(out aValue: Integer): Boolean; inline;
+      property  Count: Integer read FCount;
+    end;
+
+  var
+    FTable: TNfaTable;
+    FCCStore: TCCStore;
+    FStack1,
+    FStack2: TReStack;
+    FStep: QWord;
+    FExpression,
+    FMessage: string;
+    FLook,
+    FEnd: PAnsiChar;
+    FStartNode,
+    FFinalNode,
+    FDepth: Integer;
+    FParseOk: Boolean;
+    procedure Fail(const aMessage: string); inline;
+    function  Eof: Boolean; inline;
+    procedure CheckEof(const aMessage: string); inline;
+    procedure SkipChar; inline;
+    function  CurrChar: AnsiChar; inline;
+    function  NextChar: AnsiChar; inline;
+    function  AddFinal: Integer;
+    function  AddMatch(const aClass: TCharClass; var aFinal: Integer): Integer;
+    function  AddMove(var aFinal: Integer): Integer;
+    function  AddSplit(aNext1, aNext2: Integer): Integer;
+    procedure Patch(aNode: Integer; aKind: TNodeKind; aNext1, aNext2: Integer);
+    function  GetChar: Ucs4Char; inline;
+    function  ParseNormalChar: Ucs4Char;
+    function  ParseUCategory: TUCategory;
+    function  ParseCharEsc: Ucs4Char;
+    function  ParseCcChar: Ucs4Char;
+    function  ParseCceItem: TCceItem;
+    function  ParseCharClassExpr: TCharClassExpr;
+    procedure ParseAtom(var aStart, aFinal: Integer);
+    procedure MakeQuestion(var aStart, aFinal: Integer);
+    procedure MakeStar(var aStart, aFinal: Integer);
+    procedure MakePlus(var aStart, aFinal: Integer);
+    procedure CopyFragment(var aStart, aFinal: Integer; aFrom, aCount: Integer);
+    procedure MakeQuantRange(var aStart, aFinal: Integer; aMin, aMax, aFragStart: Integer);
+    procedure ParseQuantRange(var aStart, aFinal: Integer; aFragStart: Integer);
+    procedure ParseQuantifier(var aStart, aFinal: Integer; aFragStart: Integer);
+    procedure ParseBranch(var aStart, aFinal: Integer);
+    procedure ParseExpr(var aStart, aFinal: Integer);
+    procedure TryParse;
+    procedure Parse;
+    procedure ShrinkNfa;
+    procedure PushEclose(aNode: Integer; aStack: PReStack);
+    class function  Str2Int(p: PAnsiChar; aCount: Integer; out aValue: Integer): Boolean; static;
+    class procedure PtrSwap(var L, R: Pointer); static; inline;
+  public
+    constructor Create(const aExpr: string);
+    procedure AfterConstruction; override;
+    function  Match(const aText: string): Boolean;
+    function  Search(const aText: string): Boolean;
+    property  Expression: string read FExpression;
+    property  ParseOk: Boolean read FParseOk;
     property  Message: string read FMessage;
   end;
 
@@ -2326,6 +2532,136 @@ begin
     v := TJpValue.Nothing;
 end;
 
+function IsStringInst(const aInst: TJpInstance; out s: string): Boolean; inline;
+begin
+  if aInst.InstType = jitValue then
+    case aInst.Value.ValType of
+      jvtString:
+        begin
+          s := aInst.Value.StrValue;
+          exit(True);
+        end;
+      jvtNode:
+        if aInst.Value.NodeValue.IsString then
+          begin
+            s := aInst.Value.NodeValue.AsString;
+            exit(True);
+          end;
+    else
+    end;
+  Result := False;
+end;
+
+{ tJpRegex }
+
+procedure TJpRegex.CheckRegexLiteral;
+var
+  Regex: string;
+begin
+  if (System.Length(FParamList) = 2) and (FParamList[1] is TJpConstExpr) then begin
+    if IsStringInst(FParamList[1].GetValue(Default(TJpFilterContext)), Regex) then begin
+      FMatcher := TIRegexp.Create(Regex);
+      if not FMatcher.ParseOk then begin
+        FreeAndNil(FMatcher);
+        FBadRegex := True;
+      end;
+    end else
+      FBadRegex := True;
+  end;
+end;
+
+procedure TJpRegex.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
+begin
+  if FMatcher = nil then begin
+    if FBadRegex then begin
+      v := False;
+      exit;
+    end;
+    FArgumentList[0] := FParamList[0].GetValue(aCtx);
+    FArgumentList[1] := FParamList[1].GetValue(aCtx);
+  end else
+    FArgumentList[0] := FParamList[0].GetValue(aCtx);
+  v := DoEval;
+end;
+
+destructor TJpRegex.Destroy;
+begin
+  FMatcher.Free;
+  inherited;
+end;
+
+procedure TJpRegex.AfterConstruction;
+begin
+  inherited;
+  CheckRegexLiteral;
+end;
+
+{ TJpReMatch }
+
+function TJpReMatch.TryMatch: Boolean;
+var
+  Input: string = '';
+  Regex: string = '';
+begin
+  Result := False;
+  if IsStringInst(FArgumentList[0], Input) and IsStringInst(FArgumentList[1], Regex) then
+    with TIRegexp.Create(Regex) do
+      try
+        if ParseOk then Result := Match(Input);
+      finally
+        Free;
+      end;
+end;
+
+function TJpReMatch.TryMatchParsed: Boolean;
+var
+  Input: string = '';
+begin
+  if not IsStringInst(FArgumentList[0], Input) then exit(False);
+  Result := FMatcher.Match(Input);
+end;
+
+function TJpReMatch.DoEval: Boolean;
+begin
+  if FMatcher = nil then
+    Result := TryMatch
+  else
+    Result := TryMatchParsed;
+end;
+
+{ TJpReSearch }
+
+function TJpReSearch.TrySearch: Boolean;
+var
+  Input: string = '';
+  Regex: string = '';
+begin
+  Result := False;
+  if IsStringInst(FArgumentList[0], Input) and IsStringInst(FArgumentList[1], Regex) then
+    with TIRegexp.Create(Regex) do
+      try
+        if ParseOk then Result := Search(Input);
+      finally
+        Free;
+      end;
+end;
+
+function TJpReSearch.TrySearchParsed: Boolean;
+var
+  Input: string = '';
+begin
+  if not IsStringInst(FArgumentList[0], Input) then exit(False);
+  Result := FMatcher.Search(Input);
+end;
+
+function TJpReSearch.DoEval: Boolean;
+begin
+  if FMatcher = nil then
+    Result := TrySearch
+  else
+    Result := TrySearchParsed;
+end;
+
 { TJpFilter }
 
 procedure TJpFilter.SetRoot(aValue: TJsonNode);
@@ -2860,12 +3196,9 @@ begin
   Start := FLook;
   repeat
     case CurrChar of
-      #0..#31:
-        Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
-      '''':
-        break;
-      '\':
-        begin
+      #0..#31: Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
+      '''': break;
+      '\': begin
           SkipChar;
           QuoteNameEscape;
         end;
@@ -2873,8 +3206,7 @@ begin
       SkipChar;
     end;
   until Eof;
-  if Eof then
-    Fail(SEJPathPosErrorFmt, [Position, SEJPathEndQuoteMiss]);
+  if Eof then Fail(SEJPathPosErrorFmt, [Position, SEJPathEndQuoteMiss]);
   Result := StrDecode(Start, FLook - Start);
   SkipCharThenWS;
 end;
@@ -2905,12 +3237,9 @@ begin
   Start := FLook;
   repeat
     case CurrChar of
-      #0..#31:
-        Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
-      '"':
-        break;
-      '\':
-        begin
+      #0..#31: Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
+      '"': break;
+      '\': begin
           SkipChar;
           DblQuoteNameEscape;
         end;
@@ -2918,8 +3247,7 @@ begin
       SkipChar;
     end;
   until Eof;
-  if Eof then
-    Fail(SEJPathPosErrorFmt, [Position, SEJPathEndDblQuoteMiss]);
+  if Eof then Fail(SEJPathPosErrorFmt, [Position, SEJPathEndDblQuoteMiss]);
   Result := StrDecode(Start, FLook - Start);
   SkipCharThenWS;
 end;
@@ -3236,9 +3564,10 @@ begin
     if I < System.Length(ParamList) then
       Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathFunParamMissFmt, [FunName])]);
     case FunName of
-      'key':   Result := TJpKeyFunction.Create(ParamList, nil, FunDef.ResultType);
-      'param': Result := TJpParamFunction.Create(ParamList, nil, FunDef.ResultType);
-      //match and search ???
+      'key':    Result := TJpKeyFunction.Create(ParamList, nil, FunDef.ResultType);
+      'match':  Result := TJpReMatch.Create(ParamList, nil, FunDef.ResultType);
+      'param':  Result := TJpParamFunction.Create(ParamList, nil, FunDef.ResultType);
+      'search': Result := TJpReSearch.Create(ParamList, nil, FunDef.ResultType);
     else
       Result := TJpFunctionExpr.Create(ParamList, FunDef.OnExecute, FunDef.ResultType);
     end;
@@ -3492,6 +3821,1134 @@ begin
   Result := True;
 end;
 
+const
+  LETTER_CATEGORIES =
+    [TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
+     TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucModifierLetter,
+     TUnicodeCategory.ucOtherLetter];
+
+  MARK_CATEGORIES =
+    [TUnicodeCategory.ucNonSpacingMark, TUnicodeCategory.ucCombiningMark, TUnicodeCategory.ucEnclosingMark];
+
+  NUMBER_CATEGORIES =
+    [TUnicodeCategory.ucDecimalNumber, TUnicodeCategory.ucLetterNumber, TUnicodeCategory.ucOtherNumber];
+
+  PUNCTUATION_CATEGORIES =
+    [TUnicodeCategory.ucConnectPunctuation, TUnicodeCategory.ucDashPunctuation,
+     TUnicodeCategory.ucOpenPunctuation, TUnicodeCategory.ucClosePunctuation,
+     TUnicodeCategory.ucInitialPunctuation, TUnicodeCategory.ucFinalPunctuation,
+     TUnicodeCategory.ucOtherPunctuation];
+
+  SEPARATOR_CATEGORIES =
+    [TUnicodeCategory.ucSpaceSeparator, TUnicodeCategory.ucLineSeparator, TUnicodeCategory.ucParagraphSeparator];
+
+  SYMBOL_CATEGORIES =
+    [TUnicodeCategory.ucMathSymbol, TUnicodeCategory.ucCurrencySymbol,
+     TUnicodeCategory.ucModifierSymbol, TUnicodeCategory.ucOtherSymbol];
+
+  OTHER_CATEGORIES =
+    [TUnicodeCategory.ucControl, TUnicodeCategory.ucFormat,
+     TUnicodeCategory.ucPrivateUse, TUnicodeCategory.ucUnassigned];
+
+  UNICODE_BAD_CHAR = $fffd;
+
+function CpToUcs4Fast(p: PByte; out aPtSize: Integer): Ucs4Char; inline;
+begin
+  case p^ of
+    0..$7f: begin
+        Result := p^;
+        aPtSize := 1;
+      end;
+    $c2..$df: begin
+        Result := Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f);
+        aPtSize := 2;
+      end;
+    $e0..$ed: begin
+        Result := Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
+                  Ucs4Char(p[2] and $3f);
+        aPtSize := 3;
+      end;
+    $f0..$f4: begin
+        Result := Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+                  Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f);
+        aPtSize := 4;
+      end;
+  else
+    Result := UNICODE_BAD_CHAR;
+    Inc(p);
+  end;
+end;
+
+function CpToUcs4Fast(var p: PByte): Ucs4Char; inline;
+begin
+  case p^ of
+    0..$7f: begin
+        Result := p^;
+        Inc(p);
+      end;
+    $c2..$df: begin
+        Result := Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f);
+        p += 2;
+      end;
+    $e0..$ed: begin
+        Result := Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
+                  Ucs4Char(p[2] and $3f);
+        p += 3;
+      end;
+    $f0..$f4: begin
+        Result := Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+                  Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f);
+        p += 4;
+      end;
+  else
+    Result := UNICODE_BAD_CHAR;
+    Inc(p);
+  end;
+end;
+
+function CpToUcs4Char(p: PByte; aStrLen: SizeInt; out aPtSize: Integer): Ucs4Char;
+begin
+  case p^ of
+    0..$7f:begin
+        aPtSize := 1;
+        exit(p^);
+      end;
+    $c2..$df:
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
+        aPtSize := 2;
+        exit(Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f)));
+      end;
+    $e0:
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2] and $3f)));
+      end;
+    $e1..$ec, $ee..$ef:
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+      end;
+    $ed:
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+      end;
+    $f0:
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
+    $f1..$f3:
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
+    $f4:
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
+  else
+  end;
+  aPtSize := 1;
+  Result := UNICODE_BAD_CHAR;
+end;
+
+procedure SkipUtf8CpFast(var p: PByte); inline;
+begin
+  case p^ of
+    $c2..$df: p += 2;
+    $e0..$ed: p += 3;
+    $f0..$f4: p += 4;
+  else
+    Inc(p);
+  end;
+end;
+
+{ TIRegexp.TUCategory }
+
+constructor TIRegexp.TUCategory.Make(aKind: TUCategoryKind; aComplement: Boolean);
+begin
+  FKind := aKind;
+  FComplement := aComplement;
+end;
+
+constructor TIRegexp.TUCategory.Make(c: TUnicodeCategory; aComplement: Boolean);
+begin
+  FKind := uckCategory;
+  FCategory := c;
+  FComplement := aComplement;
+end;
+
+function TIRegexp.TUCategory.Match(c: Ucs4Char): Boolean;
+begin
+  case FKind of
+    uckCategory:    Result := (TUnicodeCategory(GetProps(c)^.Category) = FCategory) xor FComplement;
+    uckLetter:      Result := (TUnicodeCategory(GetProps(c)^.Category) in LETTER_CATEGORIES) xor FComplement;
+    uckMark:        Result := (TUnicodeCategory(GetProps(c)^.Category) in MARK_CATEGORIES) xor FComplement;
+    uckNumber:      Result := (TUnicodeCategory(GetProps(c)^.Category) in NUMBER_CATEGORIES) xor FComplement;
+    uckPunctuation: Result := (TUnicodeCategory(GetProps(c)^.Category) in PUNCTUATION_CATEGORIES) xor FComplement;
+    uckSeparator:   Result := (TUnicodeCategory(GetProps(c)^.Category) in SEPARATOR_CATEGORIES) xor FComplement;
+    uckSymbol:      Result := (TUnicodeCategory(GetProps(c)^.Category) in SYMBOL_CATEGORIES) xor FComplement;
+    uckOther:       Result := (TUnicodeCategory(GetProps(c)^.Category) in OTHER_CATEGORIES) xor FComplement;
+  end;
+end;
+
+{ TIRegexp.TCceItem }
+
+constructor TIRegexp.TCceItem.Make(c: TUCategory);
+begin
+  Kind := cikCategory;
+  UCategory := c;
+end;
+
+constructor TIRegexp.TCceItem.Make(c: Ucs4Char);
+begin
+  Kind := cikChar;
+  UChar := c;
+end;
+
+constructor TIRegexp.TCceItem.Make(aLo, aHi: Ucs4Char);
+begin
+  Kind := cikCharRange;
+  CLow := aLo;
+  CHigh := aHi;
+end;
+
+function TIRegexp.TCceItem.Match(c: Ucs4Char): Boolean;
+begin
+  case Kind of
+    cikChar:      Result := UChar = c;
+    cikCategory:  Result := UCategory.Match(c);
+    cikCharRange: Result := (c >= CLow) and (c <= CHigh);
+  end;
+end;
+
+{ TIRegexp.TCCStore }
+
+procedure TIRegexp.TCCStore.Expand;
+begin
+  FItems.Length := FItems.Length * 2;
+end;
+
+function TIRegexp.TCCStore.GetItems: PCceItem;
+begin
+  Result := FItems.Ptr;
+end;
+
+procedure TIRegexp.TCCStore.Init;
+begin
+  FItems.Length := INIT_LEN;
+  FCount := 0;
+end;
+
+function TIRegexp.TCCStore.Add(const aValue: TCceItem): Integer;
+begin
+  if Count = FItems.Length then Expand;
+  Result := Count;
+  FItems.Ptr[Count] := aValue;
+  Inc(FCount);
+end;
+
+{ TIRegexp.TCharClassExpr }
+
+procedure TIRegexp.TCharClassExpr.Init(aStore: PCCStore; aComplement: Boolean);
+begin
+  FStore := aStore;
+  FFirst := NULL_INDEX;
+  FLast := NULL_INDEX;
+  FComplement := aComplement;
+end;
+
+procedure TIRegexp.TCharClassExpr.Add(const aItem: TCceItem);
+begin
+  FLast := FStore^.Add(aItem);
+  if FFirst = NULL_INDEX then
+    FFirst := FLast;
+end;
+
+function TIRegexp.TCharClassExpr.Match(c: Ucs4Char): Boolean;
+var
+  I: Integer;
+  p: PCceItem;
+begin
+  p := FStore^.Items;
+  if FComplement then
+    begin
+      for I := FFirst to FLast do
+        if p[I].Match(c) then exit(False);
+      Result := True;
+    end
+  else
+    begin
+      for I := FFirst to FLast do
+        if p[I].Match(c) then exit(True);
+      Result := False;
+    end;
+end;
+
+{ TIRegexp.TCharClass }
+
+constructor TIRegexp.TCharClass.Make(aKind: TCharClassKind);
+begin
+  Kind := aKind;
+end;
+
+constructor TIRegexp.TCharClass.Make(c: Ucs4Char);
+begin
+  Kind := cckChar;
+  VChar := c;
+end;
+
+constructor TIRegexp.TCharClass.Make(const c: TUCategory);
+begin
+  Kind := cckCategory;
+  VCategory := c;
+end;
+
+constructor TIRegexp.TCharClass.Make(const e: TCharClassExpr);
+begin
+  Kind := cckClassExpr;
+  VExpr := e;
+end;
+
+function TIRegexp.TCharClass.Match(c: Ucs4Char): Boolean;
+begin
+  case Kind  of
+    cckWildcard:  Result := (c <> 10) and (c <> 13);
+    cckChar:      Result := VChar = c;
+    cckCategory:  Result := VCategory.Match(c);
+    cckClassExpr: Result := VExpr.Match(c);
+  end;
+end;
+
+{ TIRegexp.TNfaNode }
+
+function TIRegexp.TNfaNode.Match(c: Ucs4Char): Boolean;
+begin
+  Result := Matcher.Match(c);
+end;
+
+{ TIRegexp.TNfaTable }
+
+procedure TIRegexp.TNfaTable.Expand;
+begin
+  FItems.Length := FItems.Length * 2;
+end;
+
+function TIRegexp.TNfaTable.GetItem(aIndex: Integer): PNfaNode;
+begin
+  Result := @FItems.Ptr[aIndex];
+end;
+
+procedure TIRegexp.TNfaTable.Init;
+begin
+  FItems.Length := INIT_LEN;
+  FCount := 0;
+end;
+
+procedure TIRegexp.TNfaTable.AddRange(aCount: Integer);
+var
+  I: Integer;
+begin
+  if aCount < 1 then exit;
+  aCount += Count;
+  if FItems.Length < aCount then
+    FItems.Length := LgUtils.RoundUpTwoPower(aCount);
+  for I := Count to Pred(aCount) do
+    FItems.Ptr[I].Step := 0;
+  FCount := aCount;
+end;
+
+function TIRegexp.TNfaTable.AddNode(out aIndex: Integer): PNfaNode;
+begin
+  if Count = FItems.Length then Expand;
+  Result := @FItems.Ptr[Count];
+  aIndex := Count;
+  Result^.Step := 0;
+  Inc(FCount);
+end;
+
+{ TIRegexp.TReStack }
+
+procedure TIRegexp.TReStack.Expand;
+begin
+  FItems.Length := FItems.Length * 2;
+end;
+
+function TIRegexp.TReStack.Reset: PReStack;
+begin
+  if FItems.Length = 0 then
+    FItems.Length := INIT_LEN;
+  FCount := 0;
+  Result := @Self;
+end;
+
+function TIRegexp.TReStack.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TIRegexp.TReStack.Push(aValue: Integer);
+begin
+  if Count = FItems.Length then Expand;
+  FItems.Ptr[Count] := aValue;
+  Inc(FCount);
+end;
+
+function TIRegexp.TReStack.TryPop(out aValue: Integer): Boolean;
+begin
+  if Count = 0 then exit(False);
+  aValue := FItems.Ptr[Pred(Count)];
+  Dec(FCount);
+  Result := True;
+end;
+
+{ TIRegexp }
+
+procedure TIRegexp.Fail(const aMessage: string);
+begin
+  raise ERegexParse.Create(aMessage);
+end;
+
+function TIRegexp.Eof: Boolean;
+begin
+  Result := FLook >= FEnd;
+end;
+
+procedure TIRegexp.CheckEof(const aMessage: string);
+begin
+  if FLook >= FEnd then Fail(aMessage);
+end;
+
+procedure TIRegexp.SkipChar;
+begin
+  Inc(FLook);
+end;
+
+function TIRegexp.CurrChar: AnsiChar;
+begin
+  Result := FLook^;
+end;
+
+function TIRegexp.NextChar: AnsiChar;
+begin
+  Result := FLook[1];
+end;
+
+function TIRegexp.AddFinal: Integer;
+begin
+  with FTable.AddNode(Result)^ do
+    begin
+      Kind := nkFinal;
+      Next1 := DISABLE_MOVE;
+      Next2 := DISABLE_MOVE;
+    end;
+end;
+
+function TIRegexp.AddMatch(const aClass: TCharClass; var aFinal: Integer): Integer;
+begin
+  aFinal := AddFinal;
+  with FTable.AddNode(Result)^ do
+    begin
+      Kind := nkMatch;
+      Matcher := aClass;
+      Next1 := aFinal;
+      Next2 := DISABLE_MOVE;
+    end;
+end;
+
+function TIRegexp.AddMove(var aFinal: Integer): Integer;
+begin
+  aFinal := AddFinal;
+  with FTable.AddNode(Result)^ do
+    begin
+      Kind := nkMove;
+      Next1 := aFinal;
+      Next2 := DISABLE_MOVE;
+    end;
+end;
+
+function TIRegexp.AddSplit(aNext1, aNext2: Integer): Integer;
+begin
+  with FTable.AddNode(Result)^ do
+    begin
+      Kind := nkSplit;
+      Next1 := aNext1;
+      Next2 := aNext2;
+    end;
+end;
+
+procedure TIRegexp.Patch(aNode: Integer; aKind: TNodeKind; aNext1, aNext2: Integer);
+begin
+  with FTable[aNode]^ do
+    begin
+      Kind := aKind;
+      Next1 := aNext1;
+      Next2 := aNext2;
+    end;
+end;
+
+function TIRegexp.GetChar: Ucs4Char;
+begin
+  Result := CpToUcs4Fast(PByte(FLook));
+end;
+
+function TIRegexp.ParseNormalChar: Ucs4Char;
+begin
+  CheckEof(SEIreUnexpectEnd);
+  if CurrChar in META_CHARS then Fail(SEIreExpectNormalChar);
+  Result := GetChar;
+end;
+
+function TIRegexp.ParseUCategory: TUCategory;
+var
+  c: AnsiChar;
+  IsComplement: Boolean;
+begin
+  Assert(CurrChar in ['P', 'p']);
+  IsComplement := CurrChar = 'P';
+  SkipChar;
+  if Eof or (CurrChar <> '{') then Fail(SEIreInvalidUCategory);
+  SkipChar;
+  if not(CurrChar in UCATEGORY_CHARS) then Fail(SEIreInvalidUCategory);
+  c := CurrChar;
+  SkipChar;
+  if Eof then Fail(SEIreInvalidUCategory);
+  if CurrChar = '}' then begin
+    SkipChar;
+    case c of
+      'C': exit(TUCategory.Make(uckOther, IsComplement));
+      'L': exit(TUCategory.Make(uckLetter, IsComplement));
+      'M': exit(TUCategory.Make(uckMark, IsComplement));
+      'N': exit(TUCategory.Make(uckNumber, IsComplement));
+      'P': exit(TUCategory.Make(uckPunctuation, IsComplement));
+      'S': exit(TUCategory.Make(uckSymbol, IsComplement));
+    else //'Z'
+      exit(TUCategory.Make(uckSeparator, IsComplement));
+    end;
+  end;
+  Result := Default(TUCategory);
+  case c of
+    'C':
+      case CurrChar of
+        'c': Result := TUCategory.Make(TUnicodeCategory.ucControl, IsComplement);
+        'f': Result := TUCategory.Make(TUnicodeCategory.ucFormat, IsComplement);
+        'n': Result := TUCategory.Make(TUnicodeCategory.ucUnassigned, IsComplement);
+        'o': Result := TUCategory.Make(TUnicodeCategory.ucPrivateUse, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+    'L':
+      case CurrChar of
+        'l': Result := TUCategory.Make(TUnicodeCategory.ucLowercaseLetter, IsComplement);
+        'm': Result := TUCategory.Make(TUnicodeCategory.ucModifierLetter, IsComplement);
+        'o': Result := TUCategory.Make(TUnicodeCategory.ucOtherLetter, IsComplement);
+        't': Result := TUCategory.Make(TUnicodeCategory.ucTitlecaseLetter, IsComplement);
+        'u': Result := TUCategory.Make(TUnicodeCategory.ucUppercaseLetter, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+    'M':
+      case CurrChar of
+        'c': Result := TUCategory.Make(TUnicodeCategory.ucCombiningMark, IsComplement);
+        'e': Result := TUCategory.Make(TUnicodeCategory.ucEnclosingMark, IsComplement);
+        'n': Result := TUCategory.Make(TUnicodeCategory.ucNonSpacingMark, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+    'N':
+      case CurrChar of
+        'd': Result := TUCategory.Make(TUnicodeCategory.ucDecimalNumber, IsComplement);
+        'l': Result := TUCategory.Make(TUnicodeCategory.ucLetterNumber, IsComplement);
+        'o': Result := TUCategory.Make(TUnicodeCategory.ucOtherNumber, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+    'P':
+      case CurrChar of
+        'c': Result := TUCategory.Make(TUnicodeCategory.ucConnectPunctuation, IsComplement);
+        'd': Result := TUCategory.Make(TUnicodeCategory.ucDashPunctuation, IsComplement);
+        'e': Result := TUCategory.Make(TUnicodeCategory.ucClosePunctuation, IsComplement);
+        'f': Result := TUCategory.Make(TUnicodeCategory.ucFinalPunctuation, IsComplement);
+        'i': Result := TUCategory.Make(TUnicodeCategory.ucInitialPunctuation, IsComplement);
+        'o': Result := TUCategory.Make(TUnicodeCategory.ucOtherPunctuation, IsComplement);
+        's': Result := TUCategory.Make(TUnicodeCategory.ucOpenPunctuation, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+    'S':
+      case CurrChar of
+        'c': Result := TUCategory.Make(TUnicodeCategory.ucCurrencySymbol, IsComplement);
+        'k': Result := TUCategory.Make(TUnicodeCategory.ucModifierSymbol, IsComplement);
+        'm': Result := TUCategory.Make(TUnicodeCategory.ucMathSymbol, IsComplement);
+        'o': Result := TUCategory.Make(TUnicodeCategory.ucOtherSymbol, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+    'Z':
+      case CurrChar of
+        'l': Result := TUCategory.Make(TUnicodeCategory.ucLineSeparator, IsComplement);
+        'p': Result := TUCategory.Make(TUnicodeCategory.ucParagraphSeparator, IsComplement);
+        's': Result := TUCategory.Make(TUnicodeCategory.ucSpaceSeparator, IsComplement);
+      else
+        Fail(SEIreInvalidUCategory);
+      end;
+  else
+  end;
+  SkipChar;
+  if Eof or (CurrChar <> '}') then Fail(SEIreRBraceMiss);
+  SkipChar;
+end;
+
+function TIRegexp.ParseCharEsc: Ucs4Char; //SingleCharEsc
+begin
+  CheckEof(SEIreUnexpectEnd);
+  if not(CurrChar in ESCAPABLE_CHARS) then Fail(SEIreExpectEscapable);
+  case CurrChar of
+    't': begin
+        SkipChar;
+        Result := 9;
+      end;
+    'n': begin
+        SkipChar;
+        Result := 10;
+      end;
+    'r': begin
+        SkipChar;
+        Result := 13;
+      end;
+  else
+    Result := GetChar;
+  end;
+end;
+
+function TIRegexp.ParseCcChar: Ucs4Char; //CCchar
+begin
+  CheckEof(SEIreRBracketMiss);
+  if CurrChar = '\' then begin
+    SkipChar;
+    Result := ParseCharEsc;
+  end else begin
+    if not(CurrChar in CC_CHARS) then Fail(SEIreExpectCCChar);
+    Result := GetChar;
+  end;
+end;
+
+function TIRegexp.ParseCceItem: TCceItem; //CCE1
+var
+  Lo, Hi: Ucs4Char;
+begin
+  case CurrChar of
+    '\': begin
+        if NextChar in ['P', 'p'] then begin
+          SkipChar;
+          exit(TCceItem.Make(ParseUCategory));
+        end else
+          Lo := ParseCcChar;
+      end;
+    '-':
+      if NextChar = ']' then begin
+        SkipChar;
+        exit(TCceItem.Make(Ucs4Char('-')));
+      end else
+        Fail(SEIreExpectCCChar);
+  else
+    Lo := ParseCcChar;
+  end;
+  if (CurrChar = '-') and (NextChar <> ']') then begin
+      SkipChar;
+      Hi := ParseCcChar;
+      if Hi < Lo then Fail(SEIreInvalidCharRange);
+      Result := TCceItem.Make(Lo, Hi);
+  end else
+    Result := TCceItem.Make(Lo);
+end;
+
+{$PUSH}{$WARN 5059 OFF}
+function TIRegexp.ParseCharClassExpr: TCharClassExpr;
+begin
+  CheckEof(SEIreRBracketMiss);
+  if CurrChar = ']' then Fail(SEIreEmptyCharClassExpr);
+  if CurrChar = '^' then begin
+    SkipChar;
+    if CurrChar = ']' then Fail(SEIreEmptyCharClassExpr);
+    Result.Init(@FCCStore, True);
+  end else
+    Result.Init(@FCCStore);
+  if CurrChar = '-' then begin
+    Result.Add(TCceItem.Make(Ucs4Char('-')));
+    SkipChar;
+  end;
+  while CurrChar <> ']' do begin
+    CheckEof(SEIreRBracketMiss);
+    Result.Add(ParseCceItem);
+  end;
+  SkipChar;
+end;
+{$POP}
+
+procedure TIRegexp.ParseAtom(var aStart, aFinal: Integer);
+begin
+  if FDepth = MAX_REC_DEPTH then Fail(SEIreMaxDepthExceed);
+  Inc(FDepth);
+
+  if Eof then begin // empty atom
+    aStart := AddMove(aFinal);
+    exit;
+  end;
+  case CurrChar of
+    '|': aStart := AddMove(aFinal);// empty atom
+    '(': begin
+        SkipChar;
+        if Eof then Fail(SEIreRParenMiss);
+        if CurrChar = ')' then begin // empty expression
+          SkipChar;
+          aStart := AddMove(aFinal);
+          exit;
+        end;
+        ParseExpr(aStart, aFinal);
+        if CurrChar <> ')' then Fail(SEIreRParenMiss);
+        SkipChar;
+      end;
+    '.':  begin
+        SkipChar;
+        aStart := AddMatch(TCharClass.Make(cckWildcard), aFinal);
+      end;
+    '[':  begin
+        SkipChar;
+        aStart := AddMatch(TCharClass.Make(ParseCharClassExpr), aFinal);
+      end;
+    '\': begin
+        SkipChar;
+        if CurrChar in ['P', 'p'] then
+          aStart := AddMatch(TCharClass.Make(ParseUCategory), aFinal)
+        else
+          aStart := AddMatch(TCharClass.Make(ParseCharEsc), aFinal);
+      end;
+  else
+    aStart := AddMatch(TCharClass.Make(ParseNormalChar), aFinal);
+  end;
+
+  Dec(FDepth);
+end;
+
+procedure TIRegexp.MakeQuestion(var aStart, aFinal: Integer);
+begin
+  aStart := AddSplit(aStart, aFinal);
+end;
+
+procedure TIRegexp.MakeStar(var aStart, aFinal: Integer);
+var
+  Fin: Integer;
+begin
+  Fin := AddFinal;
+  Patch(aFinal, nkSplit, Fin, aStart);
+  aStart := aFinal;
+  aFinal := Fin;
+end;
+
+procedure TIRegexp.MakePlus(var aStart, aFinal: Integer);
+var
+  Fin: Integer;
+begin
+  Fin := AddFinal;
+  Patch(aFinal, nkSplit, Fin, aStart);
+  aFinal := Fin;
+end;
+
+procedure TIRegexp.CopyFragment(var aStart, aFinal: Integer; aFrom, aCount: Integer);
+var
+  I: Integer;
+begin
+  if aCount < 1 then exit;
+  FTable.AddRange(aCount);
+  for I := aFrom to Pred(aFrom + aCount) do
+    with FTable[I]^ do
+      case Kind of
+        nkSplit: Patch(I + aCount, Kind, Next1 + aCount, Next2 + aCount);
+        nkMove:  Patch(I + aCount, Kind, Next1 + aCount, DISABLE_MOVE);
+        nkMatch: begin
+            Patch(I + aCount, Kind, Next1 + aCount, DISABLE_MOVE);
+            FTable[I + aCount]^.Matcher := Matcher;
+          end;
+        nkFinal: Patch(I + aCount, Kind, DISABLE_MOVE, DISABLE_MOVE);
+      end;
+  aStart += aCount;
+  aFinal += aCount;
+end;
+
+{$PUSH}{$MACRO ON}
+{$DEFINE AppendCopyFragMacro :=
+  Fin := aFinal;
+  CopyFragment(aStart, aFinal, aFragStart, Len);
+  Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+  aFragStart += Len
+}
+procedure TIRegexp.MakeQuantRange(var aStart, aFinal: Integer; aMin, aMax, aFragStart: Integer);
+var
+  I, First, Fin, Len: Integer;
+begin
+  case aMin of
+    0:
+      case aMax of
+        Q_RANGE_MAX_ANY:
+          MakeStar(aStart, aFinal);
+        Q_RANGE_EXACT, 0:
+          Patch(aStart, nkMove, aFinal, DISABLE_MOVE); // discard fragment ???
+        1: MakeQuestion(aStart, aFinal);
+      else
+        MakeQuestion(aStart, aFinal);
+        First := aStart;
+        Len := FTable.Count - aFragStart;
+        for I := 1 to Pred(aMax) do begin
+          AppendCopyFragMacro;
+        end;
+        aStart := First;
+      end;
+    1:
+      case aMax of
+        Q_RANGE_MAX_ANY:
+          MakePlus(aStart, aFinal);
+        Q_RANGE_EXACT, 1: ; // just ignore
+      else
+        First := aStart;
+        Len := FTable.Count - aFragStart;
+        Fin := aFinal;
+        CopyFragment(aStart, aFinal, aFragStart, Len);
+        aFragStart += Len;
+        MakeQuestion(aStart, aFinal);
+        Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+        Len := FTable.Count - aFragStart;
+        for I := 1 to aMax - 2 do begin
+          AppendCopyFragMacro;
+        end;
+        aStart := First;
+      end;
+  else
+    First := aStart;
+    Len := FTable.Count - aFragStart;
+    for I := 1 to Pred(aMin) do begin
+      AppendCopyFragMacro;
+    end;
+    if (aMin = aMax) or (aMax = Q_RANGE_EXACT) then begin
+      aStart := First;
+      exit;
+    end;
+    Fin := aFinal;
+    if aMax = Q_RANGE_MAX_ANY then
+      MakePlus(aStart, aFinal)
+    else begin
+      MakeQuestion(aStart, aFinal);
+      Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+      Len := FTable.Count - aFragStart;
+      for I := 1 to aMax - aMin do begin
+        AppendCopyFragMacro;
+      end;
+    end;
+    aStart := First;
+  end;
+end;
+{$UNDEF AppendCopyFragMacro}{$POP}
+
+procedure TIRegexp.ParseQuantRange(var aStart, aFinal: Integer; aFragStart: Integer);
+var
+  NumStart: PChar;
+  VMin, VMax: Integer;
+begin
+  Assert(CurrChar = '{');
+  SkipChar;
+  if not(CurrChar in DIGITS) then Fail(SEIreInvalidRangeQuant);
+  NumStart := FLook;
+  repeat
+    SkipChar;
+  until not(CurrChar in DIGITS);
+  if not Str2Int(NumStart, FLook - NumStart, VMin) then Fail(SEIreRangeQuantTooBig);
+  CheckEof(SEIreRBraceMiss);
+  if VMin > Q_RANGE_LIMIT then Fail(SEIreRangeQuantTooBig);
+  case CurrChar of
+    '}': begin
+        SkipChar;
+        VMax := Q_RANGE_EXACT;
+      end;
+    ',':
+      begin
+        SkipChar;
+        if CurrChar in DIGITS then begin
+          NumStart := FLook;
+          repeat
+            SkipChar;
+          until not(CurrChar in DIGITS);
+          if not Str2Int(NumStart, FLook - NumStart, VMax) then Fail(SEIreRangeQuantTooBig);
+          CheckEof(SEIreRBraceMiss);
+          if VMax > Q_RANGE_LIMIT then Fail(SEIreRangeQuantTooBig);
+          if VMin > VMax then Fail(SEIreRangeQuantMess);
+          if CurrChar <> '}' then Fail(SEIreRBraceMiss);
+          SkipChar;
+        end else begin
+          if CurrChar <> '}' then Fail(SEIreRBraceMiss);
+          SkipChar;
+          VMax := Q_RANGE_MAX_ANY;
+        end;
+      end;
+  else
+    Fail(SEIreInvalidRangeQuant);
+  end;
+  MakeQuantRange(aStart, aFinal, VMin, VMax, aFragStart);
+end;
+
+procedure TIRegexp.ParseQuantifier(var aStart, aFinal: Integer; aFragStart: Integer);
+begin
+  case CurrChar of
+    '?': begin
+        SkipChar;
+        MakeQuestion(aStart, aFinal);
+      end;
+    '*': begin
+        SkipChar;
+        MakeStar(aStart, aFinal);
+      end;
+    '+': begin
+        SkipChar;
+        MakePlus(aStart, aFinal);
+      end;
+    '{': ParseQuantRange(aStart, aFinal, aFragStart);
+  else
+  end;
+end;
+
+procedure TIRegexp.ParseBranch(var aStart, aFinal: Integer);
+var
+  Start, Fin: Integer;
+  FragStart: Integer;
+begin
+  if FDepth = MAX_REC_DEPTH then Fail(SEIreMaxDepthExceed);
+  Inc(FDepth);
+
+  FragStart := FTable.Count;
+  ParseAtom(aStart, aFinal);
+  ParseQuantifier(aStart, aFinal, FragStart);
+  if not Eof and (CurrChar in (NORMAL_CHARS + ['(', '.', '[', '\'])) then begin
+    Start := aStart;
+    Fin := aFinal;
+    ParseBranch(aStart, aFinal);
+    Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+    aStart := Start;
+  end;
+
+  Dec(FDepth);
+end;
+
+procedure TIRegexp.ParseExpr(var aStart, aFinal: Integer);
+var
+  Start, Fin: Integer;
+begin
+  if FDepth = MAX_REC_DEPTH then Fail(SEIreMaxDepthExceed);
+  Inc(FDepth);
+
+  ParseBranch(aStart, aFinal);
+  if CurrChar = '|' then begin
+    SkipChar;
+    if CurrChar <> ')' then begin
+      Start := aStart;
+      Fin := aFinal;
+      ParseExpr(aStart, aFinal);
+      aStart := AddSplit(Start, aStart);
+      Patch(Fin, nkMove, aFinal, DISABLE_MOVE);
+    end;
+  end;
+
+  Dec(FDepth);
+end;
+
+procedure TIRegexp.TryParse;
+begin
+  FLook := Pointer(FExpression);
+  FEnd := FLook + System.Length(FExpression);
+  ParseExpr(FStartNode, FFinalNode);
+  if not Eof then begin
+    FStartNode := NULL_INDEX;
+    FFinalNode := NULL_INDEX;
+    Fail(SEIreTrailGarbage);
+  end;
+end;
+
+constructor TIRegexp.Create(const aExpr: string);
+begin
+  inherited Create;
+  FExpression := aExpr;
+  UniqueString(FExpression);
+end;
+
+procedure TIRegexp.AfterConstruction;
+begin
+  inherited;
+  Parse;
+end;
+
+procedure TIRegexp.Parse;
+begin
+  if Expression = '' then begin
+    FParseOk := True;
+    exit;
+  end;
+  FTable.Init;
+  FCCStore.Init;
+  try
+    TryParse;
+    FParseOk := True;
+    ShrinkNfa;
+  except
+    on e: ERegexParse do FMessage := e.Message;
+    on e: Exception do FMessage := Format(SEIreInternalErrorFmt, [e.ClassName, e.Message]);
+  end;
+end;
+
+procedure TIRegexp.ShrinkNfa;
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(FTable.Count) do
+    with FTable[I]^ do
+      case Kind of
+        nkSplit: begin
+            while FTable[Next1]^.Kind = nkMove do
+              Next1 := FTable[Next1]^.Next1;
+            while FTable[Next2]^.Kind = nkMove do
+              Next2 := FTable[Next2]^.Next1;
+          end;
+        nkMatch:
+          while FTable[Next1]^.Kind = nkMove do
+            Next1 := FTable[Next1]^.Next1;
+      else
+      end;
+end;
+
+procedure TIRegexp.PushEclose(aNode: Integer; aStack: PReStack);
+begin
+  with FTable[aNode]^ do
+    if Step <> FStep then begin
+      Step := FStep;
+      case Kind of
+        nkSplit: begin
+            PushEclose(Next1, aStack);
+            PushEclose(Next2, aStack);
+          end;
+        nkMatch, nkFinal:
+          aStack^.Push(aNode);
+      else
+      end;
+    end;
+end;
+
+{$PUSH}{$Q-}{$R-}
+class function TIRegexp.Str2Int(p: PAnsiChar; aCount: Integer; out aValue: Integer): Boolean;
+var
+  I: Integer;
+begin
+  if aCount < 1 then exit(False);
+  I := 0;
+  while (I < aCount) and (p[I] = '0') do
+    Inc(I);
+  if I = aCount then begin
+    aValue := 0;
+    exit(True);
+  end else
+    if aCount - I > MAX_QRANGE_LEN then
+      exit(False);
+  aValue := Ord(p[I]) - Ord('0');
+  for I := Succ(I) to Pred(aCount) do
+    aValue := aValue * 10 + Ord(p[I]) - Ord('0');
+  Result := True;
+end;
+{$POP}
+
+class procedure TIRegexp.PtrSwap(var L, R: Pointer);
+var
+  p: Pointer;
+begin
+  p := L;
+  L := R;
+  R := p;
+end;
+
+{$PUSH}{$WARN 5036 OFF}
+function TIRegexp.Match(const aText: string): Boolean;
+var
+  pStack, pNextStack: PReStack;
+  p, pEnd: PByte;
+  I, Len: Integer;
+  c: Ucs4Char;
+begin
+  if Expression = '' then exit(aText = '');
+  if not ParseOk then exit(False);
+  pStack := FStack1.Reset;
+  pNextStack := FStack2.Reset;
+  p := PByte(aText);
+  pEnd := p + System.Length(aText);
+  Inc(FStep);
+  PushEclose(FStartNode, pNextStack);
+  while (p < pEnd) and pNextStack^.NonEmpty do begin
+    PtrSwap(pStack, pNextStack);
+    Inc(FStep);
+    c := CpToUcs4Char(p, pEnd - p, Len);
+    p += Len;
+    while pStack^.TryPop(I) do
+      with FTable[I]^ do
+        if (Kind = nkMatch) and Match(c) then
+          PushEclose(Next1, pNextStack);
+  end;
+  while pNextStack^.TryPop(I) do
+    if FTable[I]^.Kind = nkFinal then
+      exit(True);
+  Result := False;
+end;
+
+function TIRegexp.Search(const aText: string): Boolean;
+var
+  pStack, pNextStack: PReStack;
+  p, pCurr, pEnd: PByte;
+  I: Integer;
+  c: Ucs4Char;
+begin
+  if Expression = '' then exit(True);
+  if not ParseOk then exit(False);
+  if not Utf8Validate(aText) then exit(False); ///////////
+  pStack := FStack1.Reset;
+  pNextStack := FStack2.Reset;
+  p := PByte(aText);
+  pEnd := p + System.Length(aText);
+  while p < pEnd do begin
+    pCurr := p;
+    Inc(FStep);
+    PushEclose(FStartNode, pNextStack);
+    while (pCurr < pEnd) and pNextStack^.NonEmpty do begin
+      PtrSwap(pStack, pNextStack);
+      Inc(FStep);
+      c := CpToUcs4Fast(pCurr);
+      while pStack^.TryPop(I) do
+        with FTable[I]^ do
+          case Kind of
+            nkMatch:
+              if Match(c) then
+                PushEclose(Next1, pNextStack);
+            nkFinal: exit(True);
+          else
+          end;
+    end;
+    while pNextStack^.TryPop(I) do
+      if FTable[I]^.Kind = nkFinal then exit(True);
+    SkipUtf8CpFast(p);
+  end;
+  while pNextStack^.TryPop(I) do
+    if FTable[I]^.Kind = nkFinal then exit(True);
+  Result := False;
+end;
+{$POP}
+
 function JpParseQuery(const aQuery: string; out aMsg: string): IJsonPath;
 var
   Matcher: TJpMatcher;
@@ -3699,280 +5156,17 @@ begin
   Result := JpMatchFirstValue(aQuery, aRoot, aNode, Dummy);
 end;
 
-function IRegexpCheck(const aRegex: string; out aErrPos: SizeInt): TIRegexpCheck;
-const
-  NORMAL_CHARS    = [#0..#$27, #$2c, #$2d, #$2f..#$3e, #$40..#$5a, #$5e..#$7a, #$7e..#$ff];
-  CC_CHAR         = [#0..#$2c, #$2e..#$5a, #$5e..#$ff];
-  META_CHARS      = ['.', '*', '+', '?', '(', ')', '|', '{', '}', '[', '\', ']'];
-  ESCAPABLE_CHARS = META_CHARS + ['-', '^', 'n', 'r', 't'];
-  U_CATEGORIES    = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
-  U_LETTER_PROPS  = ['l', 'm', 'o', 't', 'u'];
-  U_MARK_PROPS    = ['c', 'e', 'n'];
-  U_NUMBER_PROPS  = ['d', 'l', 'o'];
-  U_PUNCTUA_PROPS = ['c', 'd', 'e', 'f', 'i', 'o', 's'];
-  U_SEPARAT_PROPS = ['l', 'p', 's'];
-  U_SYMBOL_PROPS  = ['c', 'k', 'm', 'o'];
-  U_OTHER_PROPS   = ['c', 'f', 'n', 'o'];
-  DIGITS          = ['0'..'9'];
-var
-  pCurr: PAnsiChar = nil;
-  pEnd: PAnsiChar = nil;
-
-  function Error(aState: TIRegexpCheck): TIRegexpCheck; inline;
-  begin
-    aErrPos := Succ(pCurr - PAnsiChar(aRegex));
-    Result := aState;
-  end;
-
-  function Eof: Boolean; inline;
-  begin
-    Result := pCurr >= pEnd;
-  end;
-
-  function CheckChar: TIRegexpCheck; inline;
-  begin
-    if Eof then
-      exit(Error(ircUnexpectedEnd))
-    else
-      if pCurr^ in META_CHARS then
-        exit(Error(ircUnexpectMetachar));
-    while not Eof and (pCurr^ in NORMAL_CHARS) do
-      pCurr += Utf8CodePointLength(pCurr, pEnd - pCurr);
-    Result := ircOk;
-  end;
-
-  function CheckCategory: TIRegexpCheck; inline;
-  var
-    c: AnsiChar;
-  begin
-    if Eof then exit(Error(ircInvalidUCategory));
-    if pCurr^ in U_CATEGORIES then begin
-      c := pCurr^;
-      Inc(pCurr);
-      if Eof then
-        exit(Error(ircInvalidUCategory))
-      else
-        if pCurr^ = '}' then begin
-          Inc(pCurr); exit(ircOk);
-        end;
-      case c of
-        'C':
-          if not (pCurr^ in U_OTHER_PROPS) then exit(Error(ircInvalidUCategory));
-        'L':
-          if not (pCurr^ in U_LETTER_PROPS) then exit(Error(ircInvalidUCategory));
-        'M':
-          if not (pCurr^ in U_MARK_PROPS) then exit(Error(ircInvalidUCategory));
-        'N':
-          if not (pCurr^ in U_NUMBER_PROPS) then exit(Error(ircInvalidUCategory));
-        'P':
-          if not (pCurr^ in U_PUNCTUA_PROPS) then exit(Error(ircInvalidUCategory));
-        'S':
-          if not (pCurr^ in U_SYMBOL_PROPS) then exit(Error(ircInvalidUCategory));
-        'Z':
-          if not (pCurr^ in U_SEPARAT_PROPS) then exit(Error(ircInvalidUCategory));
-      else
-      end;
-      Inc(pCurr);
-      if Eof or (pCurr^ <> '}') then exit(Error(ircMissingRBrace));
-      Inc(pCurr);
-      Result := ircOk;
-    end else
-      Result := Error(ircInvalidUCategory);
-  end;
-
-  function CheckEscape: TIRegexpCheck; inline;
-  begin
-    if Eof then exit(Error(ircUnexpectedEnd));
-    if pCurr^ in ESCAPABLE_CHARS then begin
-      Inc(pCurr);
-      Result := ircOk;
-    end else
-      if pCurr^ in ['P', 'p'] then begin
-        Inc(pCurr);
-        if Eof then
-          exit(Error(ircUnexpectedEnd))
-        else
-          if pCurr^ <> '{' then
-            exit(Error(ircInvalidUCategory));
-        Inc(pCurr);
-        Result := CheckCategory;
-      end else
-        Result := Error(ircInescapable);
-  end;
-
-  function CheckCCChar: TIRegexpCheck; inline;
-  begin
-    if pCurr^ = '\' then begin
-      Inc(pCurr);
-      if Eof then exit(Error(ircUnexpectedEnd));
-      if pCurr^ in ESCAPABLE_CHARS then begin
-        Inc(pCurr);
-        Result := ircOk;
-      end else
-        Result := Error(ircInescapable);
-    end else
-      if pCurr^ in CC_CHAR then begin
-        pCurr += Utf8CodePointLength(pCurr, pEnd - pCurr);
-        Result := ircOk;
-      end else
-        Result := Error(ircInvalidCCChar);
-  end;
-
-  function CheckCharRange: TIRegexpCheck; inline;
-  begin
-    Result := CheckCCChar;
-    if (Result = ircOk) and (pCurr^ = '-') then begin
-      Inc(pCurr);
-      if pCurr^ <> ']' then
-        Result := CheckCCChar;
-    end;
-  end;
-
-  function CheckCCE1: TIRegexpCheck;
-  begin
-    if Eof then exit(Error(ircUnexpectedEnd));
-    if (pCurr^ = '\') and (pCurr[1] in ['P', 'p']) then begin
-      pCurr += 2;
-      if Eof or (pCurr^ <> '{') then exit(Error(ircInvalidUCategory));
-      Inc(pCurr);
-      Result := CheckCategory;
-    end else
-      if (pCurr^ = '-') and (pCurr[1] = ']') then begin
-        Inc(pCurr);
-        Result := ircOk;
-      end else
-        Result := CheckCharRange;
-  end;
-
-  function CheckCharClassExpr: TIRegexpCheck;
-  begin
-    if pCurr^ = '^' then Inc(pCurr);
-    if pCurr^ = '-' then Inc(pCurr);
-    repeat
-      Result := CheckCCE1;
-      if Result <> ircOk then exit;
-      if Eof then exit(Error(ircMissingRBracket));
-      if pCurr^ = ']' then begin
-        Inc(pCurr); break;
-      end;
-    until False;
-  end;
-
-  function CheckQuantifier: TIRegexpCheck;
-  begin
-    Result := ircOk;
-    case pCurr^ of
-      '?', '*', '+': Inc(pCurr);
-      '{':
-        begin
-          Inc(pCurr);
-          if pCurr^ in DIGITS then begin
-            repeat Inc(pCurr);
-            until not(pCurr^ in DIGITS);
-            case pCurr^ of
-              '}': Inc(pCurr);
-              ',':
-                begin
-                  Inc(pCurr);
-                  if pCurr^ in DIGITS then begin
-                    repeat Inc(pCurr);
-                    until not(pCurr^ in DIGITS);
-                    if pCurr^ = '}' then
-                      Inc(pCurr)
-                    else
-                      exit(Error(ircMissingRBrace));
-                  end else
-                    if pCurr^ = '}' then
-                      Inc(pCurr)
-                    else
-                      exit(Error(ircInvalidQuantifier));
-                end;
-            else
-              exit(Error(ircInvalidQuantifier));
-            end;
-          end else
-            exit(Error(ircInvalidQuantifier));
-        end;
-    else
-    end;
-  end;
-
-  function CheckExpr: TIRegexpCheck; forward;
-
-  function CheckAtom: TIRegexpCheck;
-  begin
-    case pCurr^ of
-      '(':
-        begin
-          Inc(pCurr);
-          if Eof then exit(Error(ircMissingRParen));
-          if pCurr^ = ')' then begin // empty regexp
-            Inc(pCurr); exit(ircOk);
-          end;
-          Result := CheckExpr;
-          if Result <> ircOk then exit;
-          if Eof or (pCurr^ <> ')') then exit(Error(ircMissingRParen));
-          Inc(pCurr);
-        end;
-      '.':
-        begin
-          Result := ircOk;
-          Inc(pCurr);
-        end;
-      '[':
-        begin
-          Inc(pCurr);
-          Result := CheckCharClassExpr;
-        end;
-      '\':
-        begin
-          Inc(pCurr);
-          Result := CheckEscape;
-        end;
-    else
-      Result := CheckChar;
-    end;
-  end;
-
-  function CheckBranch: TIRegexpCheck;
-  begin
-    repeat
-      if pCurr^ = '|' then exit(ircOk); //zero pieces in a branch
-      Result := CheckAtom;
-      if Result = ircOk then
-        Result := CheckQuantifier;
-      if (Result <> ircOk) or Eof then exit;
-    until not (pCurr^ in (NORMAL_CHARS + ['(', '.', '[', '\']));
-  end;
-
-var
-  Depth: Integer = 0;
-const
-  MAX_DEPTH = 512;
-
-  function CheckExpr: TIRegexpCheck;
-  begin
-    if Depth = MAX_DEPTH then exit(Error(ircMaxDepthExceed));
-    Inc(Depth);
-    repeat
-      Result := CheckBranch;
-      if Result <> ircOk then exit;
-      if pCurr^ = '|' then
-        Inc(pCurr)
-      else
-        break;
-    until Eof;
-    Dec(Depth);
-  end;
-
+function IRegexpCheck(const aRegex: string; out aMsg: string): Boolean;
 begin
-  aErrPos := 0;
-  if aRegex = '' then exit(ircOk);
-  pCurr := PAnsiChar(aRegex);
-  pEnd := pCurr + System.Length(aRegex);
-  Result := CheckExpr;
-  if (Result = ircOk) and (pCurr < pEnd) then
-    Result := Error(ircExtraChars);
+  Result := False;
+  with TIRegexp.Create(aRegex) do
+    try
+      Result := ParseOk;
+      if not Result then
+        aMsg := Message;
+    finally
+      Free;
+    end;
 end;
 
 procedure CallCountFun(const aList: TJpParamList; out aResult: TJpInstance);
@@ -4020,45 +5214,7 @@ begin
     end;
 end;
 
-function DefaultRegexMatch(const aInput, aRegex: string): Boolean;
-begin
-  try
-    with TRegExpr.Create do
-      try
-        ModifierR := False;
-        ModifierS := False;
-        ModifierG := False;
-        Expression := aRegex;
-        Result := Exec(aInput);
-      finally
-        Free;
-      end;
-  except
-    Result := False;
-  end;
-end;
-
 {$PUSH}{$WARN 6060 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
-function IsStringInst(const aInst: TJpInstance; out s: string): Boolean; inline;
-begin
-  if aInst.InstType = jitValue then
-    case aInst.Value.ValType of
-      jvtString:
-        begin
-          s := aInst.Value.StrValue;
-          exit(True);
-        end;
-      jvtNode:
-        if aInst.Value.NodeValue.IsString then
-          begin
-            s := aInst.Value.NodeValue.AsString;
-            exit(True);
-          end;
-    else
-    end;
-  Result := False;
-end;
-
 function IsNumberInst(const aInst: TJpInstance; out n: Double): Boolean; inline;
 begin
   if aInst.InstType = jitValue then
@@ -4089,32 +5245,6 @@ begin
     else
     end;
   Result := False;
-end;
-{ match() }
-procedure CallMatchFun(const aList: TJpParamList; out aResult: TJpInstance);
-var
-  Input, Regex: string;
-begin
-  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
-    if JpRegexMatch = nil then
-      aResult := DefaultRegexMatch(Input, '^(?:' + Regex + ')$')
-    else
-      aResult := JpRegexMatch(Input, Regex)
-  else
-    aResult := False;
-end;
-{ search() }
-procedure CallSearchFun(const aList: TJpParamList; out aResult: TJpInstance);
-var
-  Input, Regex: string;
-begin
-  if (System.Length(aList) = 2) and IsStringInst(aList[0], Input) and IsStringInst(aList[1], Regex) then
-    if JpRegexSearch = nil then
-      aResult := DefaultRegexMatch(Input, Regex)
-    else
-      aResult := JpRegexSearch(Input, Regex)
-  else
-    aResult := False;
 end;
 { is_boolean() }
 procedure CallIsBoolean(const aList: TJpParamList; out aResult: TJpInstance);
@@ -4384,8 +5514,8 @@ begin
   FunCache.Add('count',        TJpFunctionDef.Make([jitNodeList], jitValue, @CallCountFun));
   FunCache.Add('length',       TJpFunctionDef.Make([jitValue], jitValue, @CallLengthFun));
   FunCache.Add('value',        TJpFunctionDef.Make([jitNodeList], jitValue, @CallValueFun));
-  FunCache.Add('match',        TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallMatchFun));
-  FunCache.Add('search',       TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallSearchFun));
+  FunCache.Add('match',        TJpFunctionDef.Make([jitValue, jitValue], jitLogical, nil));
+  FunCache.Add('search',       TJpFunctionDef.Make([jitValue, jitValue], jitLogical, nil));
   //////////////////
   FunCache.Add('key',          TJpFunctionDef.Make(nil, jitValue, nil));
   FunCache.Add('param',        TJpFunctionDef.Make([jitValue], jitValue, nil));
