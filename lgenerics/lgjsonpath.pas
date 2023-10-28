@@ -1207,17 +1207,17 @@ type
   { TJpReMatch }
   TJpReMatch = class(TJpRegex)
   strict protected
-    function  TryMatch: Boolean;
-    function  TryMatchParsed: Boolean;
-    function  DoEval: Boolean; override;
+    function TryMatch: Boolean;
+    function TryMatchParsed: Boolean;
+    function DoEval: Boolean; override;
   end;
 
   { TJpReSearch }
   TJpReSearch = class(TJpRegex)
   strict protected
-    function  TrySearch: Boolean;
-    function  TrySearchParsed: Boolean;
-    function  DoEval: Boolean; override;
+    function TrySearch: Boolean;
+    function TrySearchParsed: Boolean;
+    function DoEval: Boolean; override;
   end;
 
   { TJpFilter }
@@ -2604,13 +2604,14 @@ var
   Regex: string = '';
 begin
   Result := False;
-  if IsStringInst(FArgumentList[0], Input) and IsStringInst(FArgumentList[1], Regex) then
-    with TIRegexp.Create(Regex) do
-      try
-        if ParseOk then Result := Match(Input);
-      finally
-        Free;
-      end;
+  if IsStringInst(FArgumentList[0], Input) and
+     IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then
+  with TIRegexp.Create(Regex) do
+    try
+      if ParseOk then Result := Match(Input);
+    finally
+      Free;
+    end;
 end;
 
 function TJpReMatch.TryMatchParsed: Boolean;
@@ -2637,7 +2638,8 @@ var
   Regex: string = '';
 begin
   Result := False;
-  if IsStringInst(FArgumentList[0], Input) and IsStringInst(FArgumentList[1], Regex) then
+  if IsStringInst(FArgumentList[0], Input) and
+     IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then
     with TIRegexp.Create(Regex) do
       try
         if ParseOk then Result := Search(Input);
@@ -4916,7 +4918,7 @@ var
 begin
   if Expression = '' then exit(True);
   if not ParseOk then exit(False);
-  if not Utf8Validate(aText) then exit(False); ///////////
+  if not Utf8Validate(aText) then exit(False); //???
   pStack := FStack1.Reset;
   pNextStack := FStack2.Reset;
   p := PByte(aText);
@@ -5158,7 +5160,7 @@ end;
 
 function IRegexpCheck(const aRegex: string; out aMsg: string): Boolean;
 begin
-  Result := False;
+  if not Utf8Validate(aRegex) then exit(False);
   with TIRegexp.Create(aRegex) do
     try
       Result := ParseOk;
