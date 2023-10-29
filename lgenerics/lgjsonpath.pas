@@ -112,7 +112,7 @@ uses
       result type is a ValueType;
         returns Index(number) or Name(string) of the current node;
 
-    param(Arg) -- useful for repeated use of a query without reparsing
+    param(Arg) -- useful for repeated use of a query without reparsing, see IJsonPath.Params[]
       Arg type must be a ValueType;
       result type is a ValueType;
         if Arg is a string and a parameter with that name is defined, returns its value,
@@ -235,6 +235,9 @@ uses
       result type is a ValueType;
         if Arg1 is a number and Arg2 is a number, returns their product,
         otherwise returns Nothing;
+
+  -----------------------------------------------------------------------------------
+
 }
 
 type
@@ -4778,19 +4781,6 @@ begin
   end;
 end;
 
-constructor TIRegexp.Create(const aExpr: string);
-begin
-  inherited Create;
-  FExpression := aExpr;
-  UniqueString(FExpression);
-end;
-
-procedure TIRegexp.AfterConstruction;
-begin
-  inherited;
-  Parse;
-end;
-
 procedure TIRegexp.Parse;
 begin
   if Expression = '' then begin
@@ -4804,8 +4794,10 @@ begin
     FParseOk := True;
     ShrinkNfa;
   except
-    on e: ERegexParse do FMessage := e.Message;
-    on e: Exception do FMessage := Format(SEIreInternalErrorFmt, [e.ClassName, e.Message]);
+    on e: ERegexParse do
+      FMessage := e.Message;
+    on e: Exception do
+      FMessage := Format(SEIreInternalErrorFmt, [e.ClassName, e.Message]);
   end;
 end;
 
@@ -4875,6 +4867,19 @@ begin
   p := L;
   L := R;
   R := p;
+end;
+
+constructor TIRegexp.Create(const aExpr: string);
+begin
+  inherited Create;
+  FExpression := aExpr;
+  UniqueString(FExpression);
+end;
+
+procedure TIRegexp.AfterConstruction;
+begin
+  inherited;
+  Parse;
 end;
 
 {$PUSH}{$WARN 5036 OFF}
