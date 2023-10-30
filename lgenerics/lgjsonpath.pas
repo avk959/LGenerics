@@ -4928,10 +4928,10 @@ begin
   pNextStack := FStack2.Reset;
   p := PByte(aText);
   pEnd := p + System.Length(aText);
+  Inc(FStep);
+  PushEclose(FStartNode, pNextStack);
   while p < pEnd do begin
     pCurr := p;
-    Inc(FStep);
-    PushEclose(FStartNode, pNextStack);
     while (pCurr < pEnd) and pNextStack^.NonEmpty do begin
       PtrSwap(pStack, pNextStack);
       Inc(FStep);
@@ -4949,6 +4949,10 @@ begin
     while pNextStack^.TryPop(I) do
       if FTable[I]^.Kind = nkFinal then exit(True);
     SkipUtf8CpFast(p);
+    if p < pEnd then begin
+      Inc(FStep);
+      PushEclose(FStartNode, pNextStack);
+    end;
   end;
   while pNextStack^.TryPop(I) do
     if FTable[I]^.Kind = nkFinal then exit(True);
