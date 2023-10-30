@@ -1416,6 +1416,7 @@ type
       function  GetItems: PCceItem; inline;
     public
       procedure Init; inline;
+      procedure TrimToFit;
       function  Add(const aValue: TCceItem): Integer;
       property  Count: Integer read FCount;
       property  Items: PCceItem read GetItems;
@@ -1470,12 +1471,14 @@ type
       FCount: Integer;
       procedure Expand; inline;
       function  GetItem(aIndex: Integer): PNfaNode; inline;
+      procedure SetCount(aValue: Integer);
     public
       procedure Init; inline;
+      procedure TrimToFit;
       procedure AddRange(aCount: Integer);
       function  AddNode(out aIndex: Integer): PNfaNode; inline;
       property  Items[aIndex: Integer]: PNfaNode read GetItem; default;
-      property  Count: Integer read FCount;
+      property  Count: Integer read FCount write SetCount;
     end;
 
     PReStack = ^TReStack;
@@ -1510,6 +1513,7 @@ type
     FStartNode,
     FFinalNode,
     FDepth: Integer;
+    FCompact,
     FParseOk: Boolean;
     procedure Fail(const aMessage: string); inline;
     function  Eof: Boolean; inline;
@@ -1542,12 +1546,14 @@ type
     procedure TryParse;
     procedure Parse;
     procedure ShrinkNfa;
+    procedure RenumberNfa;
     procedure PushEclose(aNode: Integer; aStack: PReStack);
     class function  Str2Int(p: PAnsiChar; aCount: Integer; out aValue: Integer): Boolean; static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
   public
-    constructor Create(const aExpr: string);
+    constructor Create(const aExpr: string; aCompact: Boolean = False);
     procedure AfterConstruction; override;
+    procedure TrimToFit;
     function  Match(const aText: string): Boolean;
     function  Search(const aText: string): Boolean;
     property  Expression: string read FExpression;
@@ -2561,16 +2567,15 @@ procedure TJpRegex.CheckRegexLiteral;
 var
   Regex: string;
 begin
-  if (System.Length(FParamList) = 2) and (FParamList[1] is TJpConstExpr) then begin
+  if (System.Length(FParamList) = 2) and (FParamList[1] is TJpConstExpr) then
     if IsStringInst(FParamList[1].GetValue(Default(TJpFilterContext)), Regex) then begin
-      FMatcher := TIRegexp.Create(Regex);
+      FMatcher := TIRegexp.Create(Regex, True);
       if not FMatcher.ParseOk then begin
         FreeAndNil(FMatcher);
         FBadRegex := True;
       end;
     end else
       FBadRegex := True;
-  end;
 end;
 
 procedure TJpRegex.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
@@ -4050,6 +4055,11 @@ begin
   FCount := 0;
 end;
 
+procedure TIRegexp.TCCStore.TrimToFit;
+begin
+  FItems.Length := Count;
+end;
+
 function TIRegexp.TCCStore.Add(const aValue: TCceItem): Integer;
 begin
   if Count = FItems.Length then Expand;
@@ -4149,10 +4159,20 @@ begin
   Result := @FItems.Ptr[aIndex];
 end;
 
+procedure TIRegexp.TNfaTable.SetCount(aValue: Integer);
+begin
+  FCount := Math.Max(aValue, 0);
+end;
+
 procedure TIRegexp.TNfaTable.Init;
 begin
   FItems.Length := INIT_LEN;
   FCount := 0;
+end;
+
+procedure TIRegexp.TNfaTable.TrimToFit;
+begin
+  FItems.Length := Count;
 end;
 
 procedure TIRegexp.TNfaTable.AddRange(aCount: Integer);
@@ -4793,6 +4813,10 @@ begin
     TryParse;
     FParseOk := True;
     ShrinkNfa;
+    if FCompact then begin
+      RenumberNfa;
+      TrimToFit;
+    end;
   except
     on e: ERegexParse do
       FMessage := e.Message;
@@ -4819,6 +4843,35 @@ begin
             Next1 := FTable[Next1]^.Next1;
       else
       end;
+end;
+
+procedure TIRegexp.RenumberNfa;
+var
+  NewIndex: specialize TGDynArray<Integer>;
+  I, J: Integer;
+begin
+  NewIndex.Length := FTable.Count;
+  J := 0;
+  for I := 0 to Pred(FTable.Count) do begin
+    NewIndex[I] := J;
+    if FTable[I]^.Kind = nkMove then continue;
+    if I <> J then
+      FTable[J]^ := FTable[I]^;
+    Inc(J);
+  end;
+  FTable.Count := J;
+  for I := 0 to Pred(J) do
+    with FTable[I]^ do
+      case Kind of
+        nkSplit: begin
+            Next1 := NewIndex[Next1];
+            Next2 := NewIndex[Next2];
+          end;
+        nkMatch: Next1 := NewIndex[Next1];
+      else
+      end;
+  FStartNode := NewIndex[FStartNode];
+  FFinalNode := NewIndex[FFinalNode];
 end;
 
 procedure TIRegexp.PushEclose(aNode: Integer; aStack: PReStack);
@@ -4869,17 +4922,24 @@ begin
   R := p;
 end;
 
-constructor TIRegexp.Create(const aExpr: string);
+constructor TIRegexp.Create(const aExpr: string; aCompact: Boolean);
 begin
   inherited Create;
   FExpression := aExpr;
   UniqueString(FExpression);
+  FCompact := aCompact;
 end;
 
 procedure TIRegexp.AfterConstruction;
 begin
   inherited;
   Parse;
+end;
+
+procedure TIRegexp.TrimToFit;
+begin
+  FCCStore.TrimToFit;
+  FTable.TrimToFit;
 end;
 
 {$PUSH}{$WARN 5036 OFF}
