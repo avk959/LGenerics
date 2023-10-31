@@ -1354,7 +1354,7 @@ type
     property  Message: string read FMessage;
   end;
 
-  { TIRegexp }
+  { TIRegexp: simple I-Regexp engine; just direct Thompson NFA simulation }
   TIRegexp = class
   public
   const
@@ -4434,10 +4434,6 @@ begin
   CheckEof(SEIreUnexpectEnd);
   if not(CurrChar in ESCAPABLE_CHARS) then Fail(SEIreExpectEscapable);
   case CurrChar of
-    't': begin
-        SkipChar;
-        Result := 9;
-      end;
     'n': begin
         SkipChar;
         Result := 10;
@@ -4445,6 +4441,10 @@ begin
     'r': begin
         SkipChar;
         Result := 13;
+      end;
+    't': begin
+        SkipChar;
+        Result := 9;
       end;
   else
     Result := GetChar;
