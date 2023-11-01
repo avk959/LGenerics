@@ -451,7 +451,6 @@ const
 var
   s, Msg: string;
   Total, Passed: Integer;
-  I: SizeInt;
 begin
   Total := 0;
   Passed := 0;
@@ -492,7 +491,6 @@ const
 var
   s, Msg: string;
   Total, Failed: Integer;
-  I: SizeInt;
 begin
   Total := 0;
   Failed := 0;
