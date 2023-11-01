@@ -164,7 +164,7 @@ resourcestring
   SEJPathPosErrorFmt       = 'Position %d: %s';
   SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
   SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';
-  SEJPathInvalidStrCharFmt = 'invalid string character(#%u)';
+  SEJPathIllegalStrCharFmt = 'illegal character(#%u)';
   SEJPathInvalidIntFmt     = '%s is an invalid integer';
   SEJPathInvalidNumFmt     = '%s is an invalid number';
   SEJPathIntRangeFmt       = 'integer value out of range(%s)';
@@ -209,6 +209,7 @@ resourcestring
   SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch(%d)';
   SEJPathTrailFiltGarbage  = 'trailing garbage in filter expression';
 //I-Regexp
+  SEIreBadExprEncoding     = 'Bad expression encoding';
   SEIreInternalErrorFmt    = 'Internal exception %s with message "%s"';
   SEIreTrailGarbage        = 'Trailing garbage';
   SEIreMaxDepthExceed      = 'max recursion depth exceeded';
