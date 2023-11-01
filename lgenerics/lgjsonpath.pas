@@ -1373,8 +1373,8 @@ type
     UCATEGORY_CHARS = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
     DIGITS          = ['0'..'9'];
   type
-    ERegexParse = class(Exception);
-    TUCategoryKind = (
+    ERegexParse     = class(Exception);
+    TUCategoryKind  = (
       uckCategory, uckLetter, uckMark, uckNumber, uckPunctuation, uckSeparator, uckSymbol, uckOther);
 
     TUCategory = record
@@ -1509,7 +1509,7 @@ type
     FExpression,
     FMessage: string;
     FLook,
-    FEnd: PAnsiChar;
+    FExprEnd: PAnsiChar;
     FStartNode,
     FFinalNode,
     FDepth: Integer;
@@ -3206,7 +3206,7 @@ begin
   Start := FLook;
   repeat
     case CurrChar of
-      #0..#31: Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
+      #0..#31: Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathIllegalStrCharFmt, [Ord(CurrChar)])]);
       '''': break;
       '\': begin
           SkipChar;
@@ -3247,7 +3247,7 @@ begin
   Start := FLook;
   repeat
     case CurrChar of
-      #0..#31: Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathInvalidStrCharFmt, [Ord(CurrChar)])]);
+      #0..#31: Fail(SEJPathPosErrorFmt, [Position, Format(SEJPathIllegalStrCharFmt, [Ord(CurrChar)])]);
       '"': break;
       '\': begin
           SkipChar;
@@ -3862,120 +3862,94 @@ const
 
   UNICODE_BAD_CHAR = $fffd;
 
-function CpToUcs4Fast(p: PByte; out aPtSize: Integer): Ucs4Char; inline;
+function CpToUcs4Char(var p: PByte; aStrLen: SizeInt): Ucs4Char; inline;
 begin
   case p^ of
     0..$7f: begin
-        Result := p^;
-        aPtSize := 1;
-      end;
-    $c2..$df: begin
-        Result := Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f);
-        aPtSize := 2;
-      end;
-    $e0..$ed: begin
-        Result := Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
-                  Ucs4Char(p[2] and $3f);
-        aPtSize := 3;
-      end;
-    $f0..$f4: begin
-        Result := Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-                  Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f);
-        aPtSize := 4;
-      end;
-  else
-    Result := UNICODE_BAD_CHAR;
-    Inc(p);
-  end;
-end;
-
-function CpToUcs4Fast(var p: PByte): Ucs4Char; inline;
-begin
-  case p^ of
-    0..$7f: begin
-        Result := p^;
         Inc(p);
-      end;
-    $c2..$df: begin
-        Result := Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f);
-        p += 2;
-      end;
-    $e0..$ed: begin
-        Result := Ucs4Char(p[0] and $f) shl 12 or Ucs4Char(p[1] and $3f) shl 6 or
-                  Ucs4Char(p[2] and $3f);
-        p += 3;
-      end;
-    $f0..$f4: begin
-        Result := Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-                  Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f);
-        p += 4;
-      end;
-  else
-    Result := UNICODE_BAD_CHAR;
-    Inc(p);
-  end;
-end;
-
-function CpToUcs4Char(p: PByte; aStrLen: SizeInt; out aPtSize: Integer): Ucs4Char;
-begin
-  case p^ of
-    0..$7f:begin
-        aPtSize := 1;
-        exit(p^);
+        exit(p[-1]);
       end;
     $c2..$df:
       if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
-        aPtSize := 2;
-        exit(Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f)));
+        p += 2;
+        exit(Ucs4Char(Ucs4Char(p[-2] and $1f) shl 6 or Ucs4Char(p[-1] and $3f)));
       end;
     $e0:
       if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
-        aPtSize := 3;
-        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2] and $3f)));
+        p += 3;
+        exit(Ucs4Char(Ucs4Char(p[-3]and $f)shl 12 or Ucs4Char(p[-2]and $3f)shl 6 or Ucs4Char(p[-1] and $3f)));
       end;
     $e1..$ec, $ee..$ef:
       if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
-        aPtSize := 3;
-        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+        p += 3;
+        exit(Ucs4Char(Ucs4Char(p[-3]and $f)shl 12 or Ucs4Char(p[-2]and $3f)shl 6 or Ucs4Char(p[-1]and $3f)));
       end;
     $ed:
       if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
-        aPtSize := 3;
-        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+        p += 3;
+        exit(Ucs4Char(Ucs4Char(p[-3]and $f)shl 12 or Ucs4Char(p[-2]and $3f)shl 6 or Ucs4Char(p[-1]and $3f)));
       end;
     $f0:
       if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        aPtSize := 4;
-        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+        p += 4;
+        exit(Ucs4Char(Ucs4Char(p[-4] and $7) shl 18 or Ucs4Char(p[-3] and $3f) shl 12 or
+             Ucs4Char(p[-2] and $3f) shl 6 or Ucs4Char(p[-1] and $3f)));
       end;
     $f1..$f3:
       if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        aPtSize := 4;
-        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+        p += 4;
+        exit(Ucs4Char(Ucs4Char(p[-4] and $7) shl 18 or Ucs4Char(p[-3] and $3f) shl 12 or
+             Ucs4Char(p[-2] and $3f) shl 6 or Ucs4Char(p[-1] and $3f)));
       end;
     $f4:
       if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        aPtSize := 4;
-        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
-             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+        p += 4;
+        exit(Ucs4Char(Ucs4Char(p[-4] and $7) shl 18 or Ucs4Char(p[-3] and $3f) shl 12 or
+             Ucs4Char(p[-2] and $3f) shl 6 or Ucs4Char(p[-1] and $3f)));
       end;
   else
   end;
-  aPtSize := 1;
+  Inc(p);
   Result := UNICODE_BAD_CHAR;
 end;
 
-procedure SkipUtf8CpFast(var p: PByte); inline;
+procedure SkipUtf8Cp(var p: PByte; aStrLen: SizeInt); inline;
 begin
   case p^ of
-    $c2..$df: p += 2;
-    $e0..$ed: p += 3;
-    $f0..$f4: p += 4;
+    0..$7f: begin
+        Inc(p); exit;
+      end;
+    $c2..$df:
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
+        p += 2; exit;
+      end;
+    $e0:
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+        p += 3; exit;
+      end;
+    $e1..$ec, $ee..$ef:
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+        p += 3; exit;
+      end;
+    $ed:
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+        p += 3; exit;
+      end;
+    $f0:
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        p += 4; exit;
+      end;
+    $f1..$f3:
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        p += 4; exit;
+      end;
+    $f4:
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        p += 4; exit;
+      end;
   else
-    Inc(p);
   end;
+  Inc(p);
 end;
 
 { TIRegexp.TUCategory }
@@ -4241,12 +4215,12 @@ end;
 
 function TIRegexp.Eof: Boolean;
 begin
-  Result := FLook >= FEnd;
+  Result := FLook >= FExprEnd;
 end;
 
 procedure TIRegexp.CheckEof(const aMessage: string);
 begin
-  if FLook >= FEnd then Fail(aMessage);
+  if FLook >= FExprEnd then Fail(aMessage);
 end;
 
 procedure TIRegexp.SkipChar;
@@ -4319,7 +4293,7 @@ end;
 
 function TIRegexp.GetChar: Ucs4Char;
 begin
-  Result := CpToUcs4Fast(PByte(FLook));
+  Result := CpToUcs4Char(PByte(FLook), FExprEnd - FLook);
 end;
 
 function TIRegexp.ParseNormalChar: Ucs4Char;
@@ -4791,8 +4765,9 @@ end;
 
 procedure TIRegexp.TryParse;
 begin
+  if not Utf8Validate(Expression) then Fail(SEIreBadExprEncoding);
   FLook := Pointer(FExpression);
-  FEnd := FLook + System.Length(FExpression);
+  FExprEnd := FLook + System.Length(Expression);
   ParseExpr(FStartNode, FFinalNode);
   if not Eof then begin
     FStartNode := NULL_INDEX;
@@ -4947,7 +4922,7 @@ function TIRegexp.Match(const aText: string): Boolean;
 var
   pStack, pNextStack: PReStack;
   p, pEnd: PByte;
-  I, Len: Integer;
+  I: Integer;
   c: Ucs4Char;
 begin
   if Expression = '' then exit(aText = '');
@@ -4961,8 +4936,7 @@ begin
   while (p < pEnd) and pNextStack^.NonEmpty do begin
     PtrSwap(pStack, pNextStack);
     Inc(FStep);
-    c := CpToUcs4Char(p, pEnd - p, Len);
-    p += Len;
+    c := CpToUcs4Char(p, pEnd - p);
     while pStack^.TryPop(I) do
       with FTable[I]^ do
         if (Kind = nkMatch) and Match(c) then
@@ -4983,7 +4957,6 @@ var
 begin
   if Expression = '' then exit(True);
   if not ParseOk then exit(False);
-  if not Utf8Validate(aText) then exit(False); //???
   pStack := FStack1.Reset;
   pNextStack := FStack2.Reset;
   p := PByte(aText);
@@ -4995,7 +4968,7 @@ begin
     while (pCurr < pEnd) and pNextStack^.NonEmpty do begin
       PtrSwap(pStack, pNextStack);
       Inc(FStep);
-      c := CpToUcs4Fast(pCurr);
+      c := CpToUcs4Char(pCurr, pEnd - pCurr);
       while pStack^.TryPop(I) do
         with FTable[I]^ do
           case Kind of
@@ -5008,7 +4981,7 @@ begin
     end;
     while pNextStack^.TryPop(I) do
       if FTable[I]^.Kind = nkFinal then exit(True);
-    SkipUtf8CpFast(p);
+    SkipUtf8Cp(p, pEnd - p);
     if p < pEnd then begin
       Inc(FStep);
       PushEclose(FStartNode, pNextStack);
