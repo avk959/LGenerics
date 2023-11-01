@@ -5202,7 +5202,6 @@ end;
 
 function IRegexpCheck(const aRegex: string; out aMsg: string): Boolean;
 begin
-  if not Utf8Validate(aRegex) then exit(False);
   with TIRegexp.Create(aRegex) do
     try
       Result := ParseOk;
