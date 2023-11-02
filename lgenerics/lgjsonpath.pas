@@ -4765,7 +4765,6 @@ end;
 
 procedure TIRegexp.TryParse;
 begin
-  if not Utf8Validate(Expression) then Fail(SEIreBadExprEncoding);
   FLook := Pointer(FExpression);
   FExprEnd := FLook + System.Length(Expression);
   ParseExpr(FStartNode, FFinalNode);
@@ -4780,6 +4779,10 @@ procedure TIRegexp.Parse;
 begin
   if Expression = '' then begin
     FParseOk := True;
+    exit;
+  end;
+  if not Utf8Validate(Expression) then begin
+    FMessage := SEIreBadExprEncoding;
     exit;
   end;
   FTable.Init;
