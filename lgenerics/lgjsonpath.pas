@@ -1547,13 +1547,13 @@ type
     procedure Parse;
     procedure ShrinkNfa;
     procedure RenumberNfa;
+    procedure TrimToFit;
     procedure PushEclose(aNode: Integer; aStack: PReStack);
     class function  Str2Int(p: PAnsiChar; aCount: Integer; out aValue: Integer): Boolean; static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
   public
     constructor Create(const aExpr: string; aCompact: Boolean = False);
     procedure AfterConstruction; override;
-    procedure TrimToFit;
     function  Match(const aText: string): Boolean;
     function  Search(const aText: string): Boolean;
     property  Expression: string read FExpression;
@@ -4849,6 +4849,12 @@ begin
   FFinalNode := NewIndex[FFinalNode];
 end;
 
+procedure TIRegexp.TrimToFit;
+begin
+  FCCStore.TrimToFit;
+  FTable.TrimToFit;
+end;
+
 procedure TIRegexp.PushEclose(aNode: Integer; aStack: PReStack);
 begin
   with FTable[aNode]^ do
@@ -4909,12 +4915,6 @@ procedure TIRegexp.AfterConstruction;
 begin
   inherited;
   Parse;
-end;
-
-procedure TIRegexp.TrimToFit;
-begin
-  FCCStore.TrimToFit;
-  FTable.TrimToFit;
 end;
 
 {$PUSH}{$WARN 5036 OFF}
