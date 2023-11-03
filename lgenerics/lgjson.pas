@@ -4429,8 +4429,8 @@ end;
 
 function TJsonNode.TEnumerator.MoveNext: Boolean;
 begin
-  Inc(FCurrIndex);
-  Result := FCurrIndex < FNode.Count;
+  Result := FCurrIndex < Pred(FNode.Count);
+  Inc(FCurrIndex, Ord(Result));
 end;
 
 { TJsonNode.TTreeEnumerator }
