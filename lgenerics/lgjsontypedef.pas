@@ -33,7 +33,6 @@ uses
 type
   EJtdSchemaLoad     = class(Exception);
   EJtdSchemaVerify   = class(Exception);
-  EJtdSchemaValidate = class(Exception);
 
 const
   DEF_DEPTH = TJsonNode.DEF_DEPTH;
@@ -193,19 +192,23 @@ const
 
 type
   TJtdValidateResult = (
-    jvrOk, jrvInvalidParam, jvrNonUniqKeys, jvrMaxErrorsExceed, jvrMaxDepthExceed, jvrErrors);
-
-{ validates aInstance against aSchema;
-  returns jrvInvalidParam if aMaxErrors or aMaxDepth is less than 1,
-  otherwise returns jvrNonUniqKeys if aInstance contains non-unique keys,
-  otherwise returns jvrMaxErrorsExceed if the number errors exceeds aMaxErrors,
-  otherwise returns jvrMaxDepthExceed if the number of references followed exceeds aMaxDepth,
-  otherwise returns jvrErrors if errors are found,
-  otherwise returns jvrOk;
-  returns the list of TValidateError in aErrList in conformance with the JSON Typedef specification }
+      jvrOk,              { validation success }
+      jrvInvalidParam,    { aMaxErrors or aMaxDepth is less than 1 }
+      jvrInvalidSchema,   { aSchema is not assigned or aSchema.Kind = fkNone }
+      jvrInvalidInstance, { aInstance is not assigned or aInstance.Kind = jvkUnknown }
+      jvrNonUniqKeys,     { aInstance contains non-unique keys }
+      jvrInternalError,   { oops, an unexpected exception during validation }
+      jvrMaxErrorsExceed, { the number of errors exceeds aMaxErrors }
+      jvrMaxDepthExceed,  { the number of references followed exceeds aMaxDepth }
+      jvrErrors           { there are validation errors }
+  );
+{
+  validates the JSON instance aInstance against the JTD schema aSchema;
+  aMaxErrors specifies the maximum number of validation errors to return;
+  aMaxDepth specifies the maximum number of refs to recursively follow before returning jvrMaxDepthExceed;
+  returns the list of TValidateError in aErrList, if any, according to the JSON Typedef specification }
   function Validate(aInstance: TJsonNode; aSchema: TJtdSchema; out aErrList: TJtdErrorList;
                     aMaxErrors: Integer = DEFAULT_ERRORS; aMaxDepth: Integer = DEFAULT_DEPTH): TJtdValidateResult;
-  { todo: make it extensible using metadata? }
 
 {
   returns True if s is a valid Rfc8927-formatted timestamp, False otherwise;
@@ -242,9 +245,6 @@ implementation
 
 uses
   TypInfo, Math, DateUtils, lgUtils, lgVector, lgHash, lgStrConst;
-
-resourcestring
-  SEJtdValidationInternalFmt = 'Internal validation error %d';
 
 { TJtdSchemaMap }
 
@@ -935,7 +935,7 @@ var
               jtInt32:  if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then PushError;
               jtUInt32: if (I < 0) or (I > System.High(DWord)) then PushError;
             else
-              raise EJtdSchemaValidate.CreateFmt(SEJtdValidationInternalFmt, [1]);
+              raise Exception.Create('');
             end;
       jtString: if not aInst.IsString then PushError;
       jtTimeStamp:
@@ -943,7 +943,7 @@ var
         else
           if not IsRfc8927TimeStamp(aInst.AsString) then PushError;
     else
-      raise EJtdSchemaValidate.CreateFmt(SEJtdValidationInternalFmt, [2]);
+      raise Exception.Create('');
     end;
     SchemaPathPop;
   end;
@@ -1088,13 +1088,15 @@ var
       fkValues:        DoValues(aInst, aSchema);
       fkDiscriminator: DoDiscr(aInst, aSchema);
     else
-      raise EJtdSchemaValidate.CreateFmt(SEJtdValidationInternalFmt, [3]);
+      raise Exception.Create('');
     end;
   end;
 begin
   aErrList := nil;
-  if not TJsonNode.DupeNamesFree(aInstance) then exit(jvrNonUniqKeys);
   if (aMaxErrors < 1) or (aMaxDepth < 1) then exit(jrvInvalidParam);
+  if (aSchema = nil) or (aSchema.Kind = fkNone) then exit(jvrInvalidSchema);
+  if (aInstance = nil) or (aInstance.Kind = jvkUnknown) then exit(jvrInvalidInstance);
+  if not TJsonNode.DupeNamesFree(aInstance) then exit(jvrNonUniqKeys);
   Result := jvrOk;
   System.SetLength(ErrorList, aMaxErrors);
   Root := aSchema;
@@ -1104,7 +1106,7 @@ begin
   except
     on EMaxDepthExceed do Result := jvrMaxDepthExceed;
     on EMaxErrorExceed do Result := jvrMaxErrorsExceed;
-    on Exception do raise;
+    on Exception do Result := jvrInternalError;
   end;
   System.SetLength(ErrorList, ErrListPos);
   aErrList := ErrorList;
