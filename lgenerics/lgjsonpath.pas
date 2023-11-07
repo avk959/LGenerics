@@ -1194,33 +1194,25 @@ type
 
   TIRegexp = class;
 
-  { TJpRegex }
-  TJpRegex = class abstract(TJpFunctionExpr)
+  { TJpReMatch }
+  TJpReMatch = class(TJpFunctionExpr)
   strict protected
     FMatcher: TIRegexp;
     FBadRegex: Boolean;
+    function  CreateMatcher(const aRegex: string; aLiteral: Boolean): TIRegexp; virtual;
     procedure CheckRegexLiteral;
-    function  DoEval: Boolean; virtual; abstract;
+    function  TryMatch: Boolean;
+    function  TryMatchParsed: Boolean;
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
   public
     destructor Destroy; override;
     procedure AfterConstruction; override;
   end;
 
-  { TJpReMatch }
-  TJpReMatch = class(TJpRegex)
-  strict protected
-    function TryMatch: Boolean;
-    function TryMatchParsed: Boolean;
-    function DoEval: Boolean; override;
-  end;
-
   { TJpReSearch }
-  TJpReSearch = class(TJpRegex)
+  TJpReSearch = class(TJpReMatch)
   strict protected
-    function TrySearch: Boolean;
-    function TrySearchParsed: Boolean;
-    function DoEval: Boolean; override;
+    function CreateMatcher(const aRegex: string; aLiteral: Boolean): TIRegexp; override;
   end;
 
   { TJpFilter }
@@ -1363,7 +1355,7 @@ type
     Q_RANGE_MAX_ANY = Integer(-2);
     MAX_QRANGE_LEN  = 3;
     MAX_REC_DEPTH   = 512;
-  strict private
+  private
   const
     DISABLE_MOVE    = Integer(-1);
     NORMAL_CHARS    = [#0..#$27, #$2c, #$2d, #$2f..#$3e, #$40..#$5a, #$5e..#$7a, #$7e..#$ff];
@@ -1373,7 +1365,6 @@ type
     UCATEGORY_CHARS = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
     DIGITS          = ['0'..'9'];
   type
-    ERegexParse     = class(Exception);
     TUCategoryKind  = (
       uckCategory, uckLetter, uckMark, uckNumber, uckPunctuation, uckSeparator, uckSymbol, uckOther);
 
@@ -1434,7 +1425,7 @@ type
       function  Match(c: Ucs4Char): Boolean;
     end;
 
-    TCharClassKind = (cckWildcard, cckChar, cckCategory, cckClassExpr);
+    TCharClassKind = (cckAnyChar, cckWildcard, cckChar, cckCategory, cckClassExpr);
 
     TCharClass = record
       constructor Make(aKind: TCharClassKind);
@@ -1476,7 +1467,7 @@ type
       procedure Init; inline;
       procedure TrimToFit;
       procedure AddRange(aCount: Integer);
-      function  AddNode(out aIndex: Integer): PNfaNode; inline;
+      function  AddNode: Integer; inline;
       property  Items[aIndex: Integer]: PNfaNode read GetItem; default;
       property  Count: Integer read FCount write SetCount;
     end;
@@ -1513,7 +1504,7 @@ type
     FStartNode,
     FFinalNode,
     FDepth: Integer;
-    FCompact,
+    FIsLiteral,
     FParseOk: Boolean;
     function  Fail(const aMessage: string): Boolean; inline;
     function  Eof: Boolean; inline;
@@ -1521,10 +1512,10 @@ type
     function  CurrChar: AnsiChar; inline;
     function  NextChar: AnsiChar; inline;
     function  AddFinal: Integer;
-    function  AddMatch(const aClass: TCharClass; var aFinal: Integer): Integer;
-    function  AddMove(var aFinal: Integer): Integer;
+    function  AddMatch(const aClass: TCharClass; out aFinal: Integer): Integer;
+    function  AddMove(out aFinal: Integer): Integer;
     function  AddSplit(aNext1, aNext2: Integer): Integer;
-    procedure Patch(aNode: Integer; aKind: TNodeKind; aNext1, aNext2: Integer);
+    procedure Patch(aNode: Integer; aKind: TNodeKind; aNext1: Integer; aNext2: Integer = DISABLE_MOVE);
     function  GetChar: Ucs4Char; inline;
     function  ParseNormalChar(out c: Ucs4Char): Boolean;
     function  GetNormalChar(out cc: TCharClass): Boolean;
@@ -1545,7 +1536,7 @@ type
     function  ParseQuantifier(var aStart, aFinal: Integer; aFragStart: Integer): Boolean;
     function  ParseBranch(var aStart, aFinal: Integer): Boolean;
     function  ParseExpr(var aStart, aFinal: Integer): Boolean;
-    procedure TryParse;
+    function  TryParse: Boolean; virtual;
     procedure Parse;
     procedure ShrinkNfa;
     procedure RenumberNfa;
@@ -1554,13 +1545,20 @@ type
     class function  Str2Int(p: PAnsiChar; aCount: Integer; out aValue: Integer): Boolean; static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
   public
-    constructor Create(const aExpr: string; aCompact: Boolean = False);
+    constructor Create(const aExpr: string; aLiteral: Boolean);
     procedure AfterConstruction; override;
-    function  Match(const aText: string): Boolean;
-    function  Search(const aText: string): Boolean;
+    function  Match(const aText: string): Boolean; virtual;
     property  Expression: string read FExpression;
     property  ParseOk: Boolean read FParseOk;
     property  Message: string read FMessage;
+  end;
+
+  { TIRegexpSearch }
+  TIRegexpSearch = class(TIRegexp)
+  private
+    function TryParse: Boolean; override;
+  public
+    function Match(const aText: string): Boolean; override;
   end;
 
 { TSlice }
@@ -2563,15 +2561,20 @@ begin
   Result := False;
 end;
 
-{ tJpRegex }
+{ TJpReMatch }
 
-procedure TJpRegex.CheckRegexLiteral;
+function TJpReMatch.CreateMatcher(const aRegex: string; aLiteral: Boolean): TIRegexp;
+begin
+  Result := TIRegexp.Create(aRegex, aLiteral);
+end;
+
+procedure TJpReMatch.CheckRegexLiteral;
 var
   Regex: string;
 begin
   if (System.Length(FParamList) = 2) and (FParamList[1] is TJpConstExpr) then
     if IsStringInst(FParamList[1].GetValue(Default(TJpFilterContext)), Regex) then begin
-      FMatcher := TIRegexp.Create(Regex, True);
+      FMatcher := CreateMatcher(Regex, True);
       if not FMatcher.ParseOk then begin
         FreeAndNil(FMatcher);
         FBadRegex := True;
@@ -2579,34 +2582,6 @@ begin
     end else
       FBadRegex := True;
 end;
-
-procedure TJpRegex.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
-begin
-  if FMatcher = nil then begin
-    if FBadRegex then begin
-      v := False;
-      exit;
-    end;
-    FArgumentList[0] := FParamList[0].GetValue(aCtx);
-    FArgumentList[1] := FParamList[1].GetValue(aCtx);
-  end else
-    FArgumentList[0] := FParamList[0].GetValue(aCtx);
-  v := DoEval;
-end;
-
-destructor TJpRegex.Destroy;
-begin
-  FMatcher.Free;
-  inherited;
-end;
-
-procedure TJpRegex.AfterConstruction;
-begin
-  inherited;
-  CheckRegexLiteral;
-end;
-
-{ TJpReMatch }
 
 function TJpReMatch.TryMatch: Boolean;
 var
@@ -2616,7 +2591,7 @@ begin
   Result := False;
   if IsStringInst(FArgumentList[0], Input) and
      IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then
-  with TIRegexp.Create(Regex) do
+  with CreateMatcher(Regex, False) do
     try
       if ParseOk then Result := Match(Input);
     finally
@@ -2632,46 +2607,40 @@ begin
   Result := FMatcher.Match(Input);
 end;
 
-function TJpReMatch.DoEval: Boolean;
+procedure TJpReMatch.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
 begin
+  if FMatcher = nil then begin
+    if FBadRegex then begin
+      v := False;
+      exit;
+    end;
+    FArgumentList[0] := FParamList[0].GetValue(aCtx);
+    FArgumentList[1] := FParamList[1].GetValue(aCtx);
+  end else
+    FArgumentList[0] := FParamList[0].GetValue(aCtx);
   if FMatcher = nil then
-    Result := TryMatch
+    v := TryMatch
   else
-    Result := TryMatchParsed;
+    v := TryMatchParsed;
+end;
+
+destructor TJpReMatch.Destroy;
+begin
+  FMatcher.Free;
+  inherited;
+end;
+
+procedure TJpReMatch.AfterConstruction;
+begin
+  inherited;
+  CheckRegexLiteral;
 end;
 
 { TJpReSearch }
 
-function TJpReSearch.TrySearch: Boolean;
-var
-  Input: string = '';
-  Regex: string = '';
+function TJpReSearch.CreateMatcher(const aRegex: string; aLiteral: Boolean): TIRegexp;
 begin
-  Result := False;
-  if IsStringInst(FArgumentList[0], Input) and
-     IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then
-    with TIRegexp.Create(Regex) do
-      try
-        if ParseOk then Result := Search(Input);
-      finally
-        Free;
-      end;
-end;
-
-function TJpReSearch.TrySearchParsed: Boolean;
-var
-  Input: string = '';
-begin
-  if not IsStringInst(FArgumentList[0], Input) then exit(False);
-  Result := FMatcher.Search(Input);
-end;
-
-function TJpReSearch.DoEval: Boolean;
-begin
-  if FMatcher = nil then
-    Result := TrySearch
-  else
-    Result := TrySearchParsed;
+  Result := TIRegexpSearch.Create(aRegex, aLiteral);
 end;
 
 { TJpFilter }
@@ -3915,45 +3884,6 @@ begin
   Result := UNICODE_BAD_CHAR;
 end;
 
-procedure SkipUtf8Cp(var p: PByte; aStrLen: SizeInt); inline;
-begin
-  case p^ of
-    0..$7f: begin
-        Inc(p); exit;
-      end;
-    $c2..$df:
-      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
-        p += 2; exit;
-      end;
-    $e0:
-      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
-        p += 3; exit;
-      end;
-    $e1..$ec, $ee..$ef:
-      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
-        p += 3; exit;
-      end;
-    $ed:
-      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
-        p += 3; exit;
-      end;
-    $f0:
-      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        p += 4; exit;
-      end;
-    $f1..$f3:
-      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        p += 4; exit;
-      end;
-    $f4:
-      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        p += 4; exit;
-      end;
-  else
-  end;
-  Inc(p);
-end;
-
 { TIRegexp.TUCategory }
 
 constructor TIRegexp.TUCategory.Make(aKind: TUCategoryKind; aComplement: Boolean);
@@ -4109,6 +4039,7 @@ end;
 function TIRegexp.TCharClass.Match(c: Ucs4Char): Boolean;
 begin
   case Kind  of
+    cckAnyChar:   Result := True;
     cckWildcard:  Result := (c <> 10) and (c <> 13);
     cckChar:      Result := VChar = c;
     cckCategory:  Result := VCategory.Match(c);
@@ -4164,12 +4095,11 @@ begin
   FCount := aCount;
 end;
 
-function TIRegexp.TNfaTable.AddNode(out aIndex: Integer): PNfaNode;
+function TIRegexp.TNfaTable.AddNode: Integer;
 begin
   if Count = FItems.Length then Expand;
-  Result := @FItems.Ptr[Count];
-  aIndex := Count;
-  Result^.Step := 0;
+  Result := Count;
+  FItems.Ptr[Count].Step := 0;
   Inc(FCount);
 end;
 
@@ -4238,7 +4168,8 @@ end;
 
 function TIRegexp.AddFinal: Integer;
 begin
-  with FTable.AddNode(Result)^ do
+  Result := FTable.AddNode;
+  with FTable[Result]^ do
     begin
       Kind := nkFinal;
       Next1 := DISABLE_MOVE;
@@ -4246,10 +4177,11 @@ begin
     end;
 end;
 
-function TIRegexp.AddMatch(const aClass: TCharClass; var aFinal: Integer): Integer;
+function TIRegexp.AddMatch(const aClass: TCharClass; out aFinal: Integer): Integer;
 begin
+  Result := FTable.AddNode;
   aFinal := AddFinal;
-  with FTable.AddNode(Result)^ do
+  with FTable[Result]^ do
     begin
       Kind := nkMatch;
       Matcher := aClass;
@@ -4258,10 +4190,11 @@ begin
     end;
 end;
 
-function TIRegexp.AddMove(var aFinal: Integer): Integer;
+function TIRegexp.AddMove(out aFinal: Integer): Integer;
 begin
+  Result := FTable.AddNode;
   aFinal := AddFinal;
-  with FTable.AddNode(Result)^ do
+  with FTable[Result]^ do
     begin
       Kind := nkMove;
       Next1 := aFinal;
@@ -4271,7 +4204,8 @@ end;
 
 function TIRegexp.AddSplit(aNext1, aNext2: Integer): Integer;
 begin
-  with FTable.AddNode(Result)^ do
+  Result := FTable.AddNode;
+  with FTable[Result]^ do
     begin
       Kind := nkSplit;
       Next1 := aNext1;
@@ -4279,7 +4213,7 @@ begin
     end;
 end;
 
-procedure TIRegexp.Patch(aNode: Integer; aKind: TNodeKind; aNext1, aNext2: Integer);
+procedure TIRegexp.Patch(aNode: Integer; aKind: TNodeKind; aNext1: Integer; aNext2: Integer);
 begin
   with FTable[aNode]^ do
     begin
@@ -4426,10 +4360,6 @@ begin
   if Eof then exit(Fail(SEIreUnexpectEnd));
   if not(CurrChar in ESCAPABLE_CHARS) then exit(Fail(SEIreExpectEscapable));
   case CurrChar of
-    't': begin
-        SkipChar;
-        c := 9;
-      end;
     'n': begin
         SkipChar;
         c := 10;
@@ -4437,6 +4367,10 @@ begin
     'r': begin
         SkipChar;
         c := 13;
+      end;
+    't': begin
+        SkipChar;
+        c := 9;
       end;
   else
     c := GetChar;
@@ -4501,7 +4435,7 @@ begin
   Result := True;
 end;
 
-{$PUSH}{$WARN 5059 OFF}
+{$PUSH}{$WARN 5036 OFF}
 function TIRegexp.ParseCharClassExpr(out cc: TCharClass): Boolean;
 var
   e: TCharClassExpr;
@@ -4616,12 +4550,12 @@ begin
     with FTable[I]^ do
       case Kind of
         nkSplit: Patch(I + aCount, Kind, Next1 + aCount, Next2 + aCount);
-        nkMove:  Patch(I + aCount, Kind, Next1 + aCount, DISABLE_MOVE);
+        nkMove:  Patch(I + aCount, Kind, Next1 + aCount);
         nkMatch: begin
-            Patch(I + aCount, Kind, Next1 + aCount, DISABLE_MOVE);
+            Patch(I + aCount, Kind, Next1 + aCount);
             FTable[I + aCount]^.Matcher := Matcher;
           end;
-        nkFinal: Patch(I + aCount, Kind, DISABLE_MOVE, DISABLE_MOVE);
+        nkFinal: Patch(I + aCount, Kind, DISABLE_MOVE);
       end;
   aStart += aCount;
   aFinal += aCount;
@@ -4631,7 +4565,7 @@ end;
 {$DEFINE AppendCopyFragMacro :=
   Fin := aFinal;
   CopyFragment(aStart, aFinal, aFragStart, Len);
-  Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+  Patch(Fin, nkMove, aStart);
   aFragStart += Len
 }
 procedure TIRegexp.MakeQuantRange(var aStart, aFinal: Integer; aMin, aMax, aFragStart: Integer);
@@ -4644,7 +4578,7 @@ begin
         Q_RANGE_MAX_ANY:
           MakeStar(aStart, aFinal);
         Q_RANGE_EXACT, 0:
-          Patch(aStart, nkMove, aFinal, DISABLE_MOVE); // discard fragment ???
+          Patch(aStart, nkMove, aFinal); // discard fragment ???
         1: MakeQuestion(aStart, aFinal);
       else
         MakeQuestion(aStart, aFinal);
@@ -4667,7 +4601,7 @@ begin
         CopyFragment(aStart, aFinal, aFragStart, Len);
         aFragStart += Len;
         MakeQuestion(aStart, aFinal);
-        Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+        Patch(Fin, nkMove, aStart);
         Len := FTable.Count - aFragStart;
         for I := 1 to aMax - 2 do begin
           AppendCopyFragMacro;
@@ -4689,7 +4623,7 @@ begin
       MakePlus(aStart, aFinal)
     else begin
       MakeQuestion(aStart, aFinal);
-      Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+      Patch(Fin, nkMove, aStart);
       Len := FTable.Count - aFragStart;
       for I := 1 to aMax - aMin do begin
         AppendCopyFragMacro;
@@ -4783,7 +4717,7 @@ begin
     Start := aStart;
     Fin := aFinal;
     if not ParseBranch(aStart, aFinal) then exit(False);
-    Patch(Fin, nkMove, aStart, DISABLE_MOVE);
+    Patch(Fin, nkMove, aStart);
     aStart := Start;
   end;
 
@@ -4806,7 +4740,7 @@ begin
       Fin := aFinal;
       if not ParseExpr(aStart, aFinal) then exit(False);
       aStart := AddSplit(Start, aStart);
-      Patch(Fin, nkMove, aFinal, DISABLE_MOVE);
+      Patch(Fin, nkMove, aFinal);
     end;
   end;
 
@@ -4814,7 +4748,7 @@ begin
   Result := True;
 end;
 
-procedure TIRegexp.TryParse;
+function TIRegexp.TryParse: Boolean;
 begin
   FLook := Pointer(FExpression);
   FExprEnd := FLook + System.Length(FExpression);
@@ -4823,6 +4757,7 @@ begin
     FParseOk := False;
     FMessage := SEIreTrailGarbage;
   end;
+  Result := FParseOk;
 end;
 
 procedure TIRegexp.Parse;
@@ -4831,17 +4766,16 @@ begin
     FParseOk := True;
     exit;
   end;
-  if not Utf8Validate(Expression) then begin
+  if not(FIsLiteral or Utf8Validate(Expression)) then begin
     FMessage := SEIreBadExprEncoding;
     exit;
   end;
   FTable.Init;
   FCCStore.Init;
   try
-    TryParse;
-    if ParseOk then begin
+    if TryParse then begin
       ShrinkNfa;
-      if FCompact then begin
+      if FIsLiteral then begin
         RenumberNfa;
         TrimToFit;
       end;
@@ -4957,12 +4891,12 @@ begin
   R := p;
 end;
 
-constructor TIRegexp.Create(const aExpr: string; aCompact: Boolean);
+constructor TIRegexp.Create(const aExpr: string; aLiteral: Boolean);
 begin
   inherited Create;
   FExpression := aExpr;
   UniqueString(FExpression);
-  FCompact := aCompact;
+  FIsLiteral := aLiteral;
 end;
 
 procedure TIRegexp.AfterConstruction;
@@ -4997,15 +4931,31 @@ begin
           PushEclose(Next1, pNextStack);
   end;
   while pNextStack^.TryPop(I) do
-    if FTable[I]^.Kind = nkFinal then
-      exit(True);
+    if FTable[I]^.Kind = nkFinal then exit(True);
   Result := False;
 end;
+{$POP}
 
-function TIRegexp.Search(const aText: string): Boolean;
+{ TIRegexpSearch }
+
+function TIRegexpSearch.TryParse: Boolean;
+var
+  Start, Fin: Integer;
+begin
+  Result := inherited;
+  if Result then begin
+    Start := AddMatch(TCharClass.Make(cckAnyChar), Fin);
+    MakeStar(Start, Fin);
+    Patch(Fin, nkMove, FStartNode);
+    FStartNode := Start;
+  end;
+end;
+
+{$PUSH}{$WARN 5036 OFF}
+function TIRegexpSearch.Match(const aText: string): Boolean;
 var
   pStack, pNextStack: PReStack;
-  p, pCurr, pEnd: PByte;
+  p, pEnd: PByte;
   I: Integer;
   c: Ucs4Char;
 begin
@@ -5017,29 +4967,17 @@ begin
   pEnd := p + System.Length(aText);
   Inc(FStep);
   PushEclose(FStartNode, pNextStack);
-  while p < pEnd do begin
-    pCurr := p;
-    while (pCurr < pEnd) and pNextStack^.NonEmpty do begin
-      PtrSwap(pStack, pNextStack);
-      Inc(FStep);
-      c := CpToUcs4Char(pCurr, pEnd - pCurr);
-      while pStack^.TryPop(I) do
-        with FTable[I]^ do
-          case Kind of
-            nkMatch:
-              if Match(c) then
-                PushEclose(Next1, pNextStack);
-            nkFinal: exit(True);
-          else
-          end;
-    end;
-    while pNextStack^.TryPop(I) do
-      if FTable[I]^.Kind = nkFinal then exit(True);
-    SkipUtf8Cp(p, pEnd - p);
-    if p < pEnd then begin
-      Inc(FStep);
-      PushEclose(FStartNode, pNextStack);
-    end;
+  while (p < pEnd) and pNextStack^.NonEmpty do begin
+    PtrSwap(pStack, pNextStack);
+    Inc(FStep);
+    c := CpToUcs4Char(p, pEnd - p);
+    while pStack^.TryPop(I) do
+      with FTable[I]^ do
+        case Kind of
+          nkMatch: if Match(c) then PushEclose(Next1, pNextStack);
+          nkFinal: exit(True);
+        else
+        end;
   end;
   while pNextStack^.TryPop(I) do
     if FTable[I]^.Kind = nkFinal then exit(True);
@@ -5256,7 +5194,7 @@ end;
 
 function IRegexpCheck(const aRegex: string; out aMsg: string): Boolean;
 begin
-  with TIRegexp.Create(aRegex) do
+  with TIRegexp.Create(aRegex, False) do
     try
       Result := ParseOk;
       if not Result then
