@@ -1351,12 +1351,12 @@ type
   public
   const
     Q_RANGE_LIMIT   = 512;
-    Q_RANGE_EXACT   = Integer(-1);
-    Q_RANGE_MAX_ANY = Integer(-2);
     MAX_QRANGE_LEN  = 3;
     MAX_REC_DEPTH   = 512;
   private
   const
+    Q_RANGE_EXACT   = Integer(-1);
+    Q_RANGE_MAX_ANY = Integer(-2);
     DISABLE_MOVE    = Integer(-1);
     NORMAL_CHARS    = [#0..#$27, #$2c, #$2d, #$2f..#$3e, #$40..#$5a, #$5e..#$7a, #$7e..#$ff];
     CC_CHARS        = [#0..#$2c, #$2e..#$5a, #$5e..#$ff];
@@ -4051,7 +4051,8 @@ end;
 
 function TIRegexp.TNfaNode.Match(c: Ucs4Char): Boolean;
 begin
-  Result := Matcher.Match(c);
+  if Kind = nkMatch then exit(Matcher.Match(c));
+  Result := False;
 end;
 
 { TIRegexp.TNfaTable }
