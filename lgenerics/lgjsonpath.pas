@@ -1198,12 +1198,13 @@ type
   TJpReMatch = class(TJpFunctionExpr)
   strict protected
     FMatcher: TIRegexp;
-    FBadRegex: Boolean;
+    FLiteralRe: Boolean;
     function  CreateMatcher(const aRegex: string; aLiteral: Boolean): TIRegexp; virtual;
     procedure CheckRegexLiteral;
     function  TryMatch: Boolean;
     function  TryMatchParsed: Boolean;
     procedure Eval(const aCtx: TJpFilterContext; var v: TJpInstance); override;
+    property  LiteralRegex: Boolean read FLiteralRe;
   public
     destructor Destroy; override;
     procedure AfterConstruction; override;
@@ -1346,7 +1347,7 @@ type
     property  Message: string read FMessage;
   end;
 
-  { TIRegexp: simple I-Regexp engine; just direct ε-NFA simulation }
+  { TIRegexp: simple I-Regexp engine, just direct Thompson NFA simulation }
   TIRegexp = class
   public
   const
@@ -1396,17 +1397,15 @@ type
     PCCStore = ^TCCStore;
     TCCStore = record
     strict private
-    type
-      TItems = specialize TGDynArray<TCceItem>;
     const
       INIT_LEN = 128;  // power of 2
     var
-      FItems: TItems;
+      FItems: specialize TGDynArray<TCceItem>;
       FCount: Integer;
       procedure Expand; inline;
       function  GetItems: PCceItem; inline;
     public
-      procedure Init; inline;
+      procedure Reset; inline;
       procedure TrimToFit;
       function  Add(const aValue: TCceItem): Integer;
       property  Count: Integer read FCount;
@@ -1451,36 +1450,35 @@ type
       function Match(c: Ucs4Char): Boolean; inline;
     end;
 
+    TIntDynArray = specialize TGDynArray<Integer>;
+
     TNfaTable = record
     strict private
-    type
-      TItems = specialize TGDynArray<TNfaNode>;
     const
       INIT_LEN = 64;  //power of 2
     var
-      FItems: TItems;
+      FItems: specialize TGDynArray<TNfaNode>;
       FCount: Integer;
       procedure Expand; inline;
       function  GetItem(aIndex: Integer): PNfaNode; inline;
-      procedure SetCount(aValue: Integer);
     public
-      procedure Init; inline;
+      procedure Reset; inline;
       procedure TrimToFit;
       procedure AddRange(aCount: Integer);
       function  AddNode: Integer; inline;
+      procedure Shrink;
+      procedure Renumber(var aNewIndex: TIntDynArray);
       property  Items[aIndex: Integer]: PNfaNode read GetItem; default;
-      property  Count: Integer read FCount write SetCount;
+      property  Count: Integer read FCount;
     end;
 
     PReStack = ^TReStack;
     TReStack = record
     strict private
-    type
-      TItems = specialize TGDynArray<Integer>;
     const
       INIT_LEN = 64;  // power of 2
     var
-      FItems: TItems;
+      FItems: TIntDynArray;
       FCount: Integer;
       procedure Expand; inline;
     public
@@ -1504,7 +1502,7 @@ type
     FStartNode,
     FFinalNode,
     FDepth: Integer;
-    FIsLiteral,
+    FLiteralExpr,
     FParseOk: Boolean;
     function  Fail(const aMessage: string): Boolean; inline;
     function  Eof: Boolean; inline;
@@ -1538,9 +1536,9 @@ type
     function  ParseExpr(var aStart, aFinal: Integer): Boolean;
     function  TryParse: Boolean; virtual;
     procedure Parse;
-    procedure ShrinkNfa;
     procedure RenumberNfa;
     procedure TrimToFit;
+    procedure SetExpression(const aValue: string);
     procedure PushEclose(aNode: Integer; aStack: PReStack);
     class function  Str2Int(p: PAnsiChar; aCount: Integer; out aValue: Integer): Boolean; static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
@@ -1548,7 +1546,7 @@ type
     constructor Create(const aExpr: string; aLiteral: Boolean);
     procedure AfterConstruction; override;
     function  Match(const aText: string): Boolean; virtual;
-    property  Expression: string read FExpression;
+    property  Expression: string read FExpression write SetExpression;
     property  ParseOk: Boolean read FParseOk;
     property  Message: string read FMessage;
   end;
@@ -2572,15 +2570,14 @@ procedure TJpReMatch.CheckRegexLiteral;
 var
   Regex: string;
 begin
-  if (System.Length(FParamList) = 2) and (FParamList[1] is TJpConstExpr) then
+  if (System.Length(FParamList) = 2) and (FParamList[1] is TJpConstExpr) then begin
+    FLiteralRe := True;
     if IsStringInst(FParamList[1].GetValue(Default(TJpFilterContext)), Regex) then begin
       FMatcher := CreateMatcher(Regex, True);
-      if not FMatcher.ParseOk then begin
+      if not FMatcher.ParseOk then
         FreeAndNil(FMatcher);
-        FBadRegex := True;
-      end;
-    end else
-      FBadRegex := True;
+    end;
+  end;
 end;
 
 function TJpReMatch.TryMatch: Boolean;
@@ -2589,14 +2586,14 @@ var
   Regex: string = '';
 begin
   Result := False;
-  if IsStringInst(FArgumentList[0], Input) and
-     IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then
-  with CreateMatcher(Regex, False) do
-    try
-      if ParseOk then Result := Match(Input);
-    finally
-      Free;
-    end;
+  if IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then begin
+    if FMatcher = nil then
+      FMatcher := CreateMatcher(Regex, False)
+    else
+      FMatcher.Expression := Regex;
+    if FMatcher.ParseOk and IsStringInst(FArgumentList[0], Input) then
+      Result := FMatcher.Match(Input);
+  end;
 end;
 
 function TJpReMatch.TryMatchParsed: Boolean;
@@ -2609,19 +2606,18 @@ end;
 
 procedure TJpReMatch.Eval(const aCtx: TJpFilterContext; var v: TJpInstance);
 begin
-  if FMatcher = nil then begin
-    if FBadRegex then begin
+  if LiteralRegex then begin
+    if FMatcher = nil then begin
       v := False;
       exit;
     end;
     FArgumentList[0] := FParamList[0].GetValue(aCtx);
-    FArgumentList[1] := FParamList[1].GetValue(aCtx);
-  end else
-    FArgumentList[0] := FParamList[0].GetValue(aCtx);
-  if FMatcher = nil then
-    v := TryMatch
-  else
     v := TryMatchParsed;
+  end else begin
+    FArgumentList[0] := FParamList[0].GetValue(aCtx);
+    FArgumentList[1] := FParamList[1].GetValue(aCtx);
+    v := TryMatch;
+  end;
 end;
 
 destructor TJpReMatch.Destroy;
@@ -3955,9 +3951,10 @@ begin
   Result := FItems.Ptr;
 end;
 
-procedure TIRegexp.TCCStore.Init;
+procedure TIRegexp.TCCStore.Reset;
 begin
-  FItems.Length := INIT_LEN;
+  if FItems.IsEmpty then
+    FItems.Length := INIT_LEN;
   FCount := 0;
 end;
 
@@ -4051,8 +4048,7 @@ end;
 
 function TIRegexp.TNfaNode.Match(c: Ucs4Char): Boolean;
 begin
-  if Kind = nkMatch then exit(Matcher.Match(c));
-  Result := False;
+  Result := Matcher.Match(c);
 end;
 
 { TIRegexp.TNfaTable }
@@ -4067,14 +4063,10 @@ begin
   Result := @FItems.Ptr[aIndex];
 end;
 
-procedure TIRegexp.TNfaTable.SetCount(aValue: Integer);
+procedure TIRegexp.TNfaTable.Reset;
 begin
-  FCount := Math.Max(aValue, 0);
-end;
-
-procedure TIRegexp.TNfaTable.Init;
-begin
-  FItems.Length := INIT_LEN;
+  if FItems.IsEmpty then
+    FItems.Length := INIT_LEN;
   FCount := 0;
 end;
 
@@ -4102,6 +4094,56 @@ begin
   Result := Count;
   FItems.Ptr[Count].Step := 0;
   Inc(FCount);
+end;
+
+procedure TIRegexp.TNfaTable.Shrink;
+var
+  I: Integer;
+  Item: PNfaNode;
+begin
+  Item := FItems.Ptr;
+  for I := 0 to Pred(Count) do
+    with Item[I] do
+      case Kind of
+        nkSplit: begin
+            while Item[Next1].Kind = nkMove do
+              Next1 := Item[Next1].Next1;
+            while Item[Next2].Kind = nkMove do
+              Next2 := Item[Next2].Next1;
+          end;
+        nkMatch:
+          while Item[Next1].Kind = nkMove do
+            Next1 := Item[Next1].Next1;
+      else
+      end;
+end;
+
+procedure TIRegexp.TNfaTable.Renumber(var aNewIndex: TIntDynArray);
+var
+  I, J: Integer;
+  Item: PNfaNode;
+begin
+  aNewIndex.Length := Count;
+  Item := FItems.Ptr;
+  J := 0;
+  for I := 0 to Pred(Count) do begin
+    aNewIndex[I] := J;
+    if Item[I].Kind = nkMove then continue;
+    if I <> J then
+      Item[J] := Item[I];
+    Inc(J);
+  end;
+  FCount := J;
+  for I := 0 to Pred(J) do
+    with Item[I] do
+      case Kind of
+        nkSplit: begin
+            Next1 := aNewIndex[Next1];
+            Next2 := aNewIndex[Next2];
+          end;
+        nkMatch: Next1 := aNewIndex[Next1];
+      else
+      end;
 end;
 
 { TIRegexp.TReStack }
@@ -4767,16 +4809,16 @@ begin
     FParseOk := True;
     exit;
   end;
-  if not(FIsLiteral or Utf8Validate(Expression)) then begin
+  if not(FLiteralExpr or Utf8Validate(Expression)) then begin
     FMessage := SEIreBadExprEncoding;
     exit;
   end;
-  FTable.Init;
-  FCCStore.Init;
+  FTable.Reset;
+  FCCStore.Reset;
   try
     if TryParse then begin
-      ShrinkNfa;
-      if FIsLiteral then begin
+      FTable.Shrink;
+      if FLiteralExpr then begin
         RenumberNfa;
         TrimToFit;
       end;
@@ -4789,59 +4831,29 @@ begin
   end;
 end;
 
-procedure TIRegexp.ShrinkNfa;
-var
-  I: Integer;
-begin
-  for I := 0 to Pred(FTable.Count) do
-    with FTable[I]^ do
-      case Kind of
-        nkSplit: begin
-            while FTable[Next1]^.Kind = nkMove do
-              Next1 := FTable[Next1]^.Next1;
-            while FTable[Next2]^.Kind = nkMove do
-              Next2 := FTable[Next2]^.Next1;
-          end;
-        nkMatch:
-          while FTable[Next1]^.Kind = nkMove do
-            Next1 := FTable[Next1]^.Next1;
-      else
-      end;
-end;
-
+{$PUSH}{$WARN 5091 OFF}
 procedure TIRegexp.RenumberNfa;
 var
-  NewIndex: specialize TGDynArray<Integer>;
-  I, J: Integer;
+  NewIndex: TIntDynArray;
 begin
-  NewIndex.Length := FTable.Count;
-  J := 0;
-  for I := 0 to Pred(FTable.Count) do begin
-    NewIndex[I] := J;
-    if FTable[I]^.Kind = nkMove then continue;
-    if I <> J then
-      FTable[J]^ := FTable[I]^;
-    Inc(J);
-  end;
-  FTable.Count := J;
-  for I := 0 to Pred(J) do
-    with FTable[I]^ do
-      case Kind of
-        nkSplit: begin
-            Next1 := NewIndex[Next1];
-            Next2 := NewIndex[Next2];
-          end;
-        nkMatch: Next1 := NewIndex[Next1];
-      else
-      end;
+  FTable.Renumber(NewIndex);
   FStartNode := NewIndex[FStartNode];
   FFinalNode := NewIndex[FFinalNode];
 end;
+{$POP}
 
 procedure TIRegexp.TrimToFit;
 begin
   FCCStore.TrimToFit;
   FTable.TrimToFit;
+end;
+
+procedure TIRegexp.SetExpression(const aValue: string);
+begin
+  if aValue = Expression then exit;
+  FExpression := aValue;
+  UniqueString(FExpression);
+  Parse;
 end;
 
 procedure TIRegexp.PushEclose(aNode: Integer; aStack: PReStack);
@@ -4897,7 +4909,7 @@ begin
   inherited Create;
   FExpression := aExpr;
   UniqueString(FExpression);
-  FIsLiteral := aLiteral;
+  FLiteralExpr := aLiteral;
 end;
 
 procedure TIRegexp.AfterConstruction;
@@ -5332,7 +5344,7 @@ end;
 procedure CallContainsText(const aList: TJpParamList; out aResult: TJpInstance);
 var
   InText, Pattern: string;
-begin
+begin  // todo: Utf8ToLower(InText) ???
   aResult :=
     (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
     (System.Pos(LgSeqUtils.Utf8ToLower(Pattern), LgSeqUtils.Utf8ToLower(InText)) > 0)
