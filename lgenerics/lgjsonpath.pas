@@ -2586,12 +2586,13 @@ var
   Regex: string = '';
 begin
   Result := False;
+  if not IsStringInst(FArgumentList[0], Input) then exit;
   if IsStringInst(FArgumentList[1], Regex) and Utf8Validate(Regex) then begin
     if FMatcher = nil then
       FMatcher := CreateMatcher(Regex, False)
     else
       FMatcher.Expression := Regex;
-    if FMatcher.ParseOk and IsStringInst(FArgumentList[0], Input) then
+    if FMatcher.ParseOk then
       Result := FMatcher.Match(Input);
   end;
 end;
