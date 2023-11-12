@@ -495,7 +495,7 @@ type
 
     TExtractHelper = object
     private
-      FCurrIndex: SizeInt;
+      FCount: SizeInt;
       FExtracted: TEntryArray;
     public
       procedure OnExtract(p: PEntry);
@@ -2631,25 +2631,22 @@ end;
 { TGAbstractMap.TExtractHelper }
 
 procedure TGAbstractMap.TExtractHelper.OnExtract(p: PEntry);
-var
-  c: SizeInt;
 begin
-  c := System.Length(FExtracted);
-  if FCurrIndex = c then
-    System.SetLength(FExtracted, c shl 1);
-  FExtracted[FCurrIndex] := p^;
-  Inc(FCurrIndex);
+  if FCount = System.Length(FExtracted) then
+    System.SetLength(FExtracted, FCount * 2);
+  FExtracted[FCount] := p^;
+  Inc(FCount);
 end;
 
 procedure TGAbstractMap.TExtractHelper.Init;
 begin
-  FCurrIndex := 0;
+  FCount := 0;
   System.SetLength(FExtracted, ARRAY_INITIAL_SIZE);
 end;
 
 function TGAbstractMap.TExtractHelper.Final: TEntryArray;
 begin
-  System.SetLength(FExtracted, FCurrIndex);
+  System.SetLength(FExtracted, FCount);
   Result := FExtracted;
 end;
 
