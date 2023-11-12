@@ -83,15 +83,15 @@ uses
       Input type must be a ValueType;
       Regex type must be a ValueType;
       result type is a LogicalType(jitLogical in this implementation);
-        returns boolean True if Input is a string and Regex is a string
-        and the regular expression Regex matches the entire Input value(according to RFC 9485);
+        returns boolean True if Input is a string and Regex is a string and the regular
+        expression Regex matches the entire(implicitly anchored) Input value(according to RFC 9485);
 
     search(Input, Regex)
       Input type must be a ValueType;
       Regex type must be a ValueType;
       result type is a LogicalType;
-        returns boolean True if Input is a string and Regex is a string
-        and the regular expression Regex matches some substring of the Input value(according to RFC 9485);
+        returns boolean True if Input is a string and Regex is a string and the regular
+        expression Regex matches some substring of the Input value(according to RFC 9485);
 
     NOTE: all backslashes in regular expressions specified as a literal in a JSONPath query
           need to be doubled(excluding sequences like \uxxxx).
@@ -253,6 +253,8 @@ type
     Value: TJsonNode;
     constructor Make(const aPath: string; aValue: TJsonNode);
     function AsJson: string;
+  { splits Path into segments; returns an empty array if Path is not a valid normalized path }
+    function PathToSegments: TStringArray;
   end;
 
   {TJpNodeList represent a JSONPath Nodelist }
@@ -503,6 +505,87 @@ begin
   else
     Result := Format(Fmt, [NODE_PATH, Path, NODE_VALUE, Value.AsJson]);
 end;
+
+{$PUSH}{$WARN 5089 OFF}{$WARN 5094 OFF}{$WARN 5036 OFF}
+function TJpNode.PathToSegments: TStringArray;
+  function Hex2Byte(c: AnsiChar): Byte; inline;
+  begin
+    case c of
+      '0'..'9': Result := Ord(c) - Ord('0');
+      'A'..'F': Result := Ord(c) - Ord('A') + 10;
+      'a'..'f': Result := Ord(c) - Ord('a') + 10;
+    else
+      Result := $f;
+    end;
+  end;
+var
+  List: specialize TGLiteVector<string>;
+  sb: TStrBuilder;
+  p, pEnd: PAnsiChar;
+const
+  HexChars = ['0'..'9','A'..'F','a'..'f'];
+begin
+  if System.Length(Path) < 1 then exit(nil);
+  if (Path[1] <> '$') or (System.Length(Path) = 1) then exit(nil);
+  p := Pointer(Path);
+  pEnd := p + System.Length(Path);
+  Inc(p);
+  if p >= pEnd then exit(nil);
+  sb.Create(64);
+  repeat
+    if p^ <> '[' then exit(nil);
+    Inc(p);
+    case p^ of
+      '0'..'9': begin
+          repeat
+            sb.Append(p^);
+            Inc(p);
+          until not(p^ in ['0'..'9']);
+          if p^ <> ']' then exit(nil);
+          List.Add(sb.ToString);
+          Inc(p);
+        end;
+      '''': begin
+         Inc(p);
+         if p >= pEnd then exit(nil);
+         while p^ <> '''' do begin
+           if p^ = '\' then begin
+             if p > pEnd - 2 then exit(nil);
+             Inc(p);
+             case p^ of
+               'b': begin sb.Append(#8); Inc(p); end;
+               'f': begin sb.Append(#12); Inc(p); end;
+               'n': begin sb.Append(#10); Inc(p); end;
+               'r': begin sb.Append(#13); Inc(p); end;
+               't': begin sb.Append(#9); Inc(p); end;
+               'u': begin
+                 if (p > pEnd - 5) or (p[1] <> '0') or (p[2] <> '0') or
+                     not ((p[3] in HexChars) and (p[3] in HexChars)) then exit(nil);
+                 sb.Append(AnsiChar(Hex2Byte(p[3]) shl 4 or Hex2Byte(p[4])));
+                 p += 5;
+               end
+             else
+               sb.Append(p^);
+               Inc(p);
+             end;
+           end else begin
+             sb.Append(p^);
+             Inc(p);
+           end;
+           if p >= pEnd then exit(nil);
+         end;
+         Inc(p);
+         if p^ <> ']' then exit(nil);
+         Inc(p);
+         List.Add(sb.ToString);
+       end;
+    else
+      exit(nil);
+    end;
+  until p >= pEnd;
+  Result := List.ToArray;
+end;
+{$POP}
 
 { TJpNodeListHelper }
 {$PUSH}{$WARN 6058 OFF}
@@ -3264,7 +3347,7 @@ begin
   else
     begin
       if not(CurrChar in [',', ']']) then
-        Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+        Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB, CurrChar]);
       aSegment.AddSelector(Idx);
     end;
 end;
@@ -3304,7 +3387,7 @@ begin
   end;
   SkipWhiteSpace;
   if not(CurrChar in [',', ']']) then
-    Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+    Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB, CurrChar]);
   aSegment.AddSelector(s);
 end;
 {$POP}
@@ -3595,19 +3678,19 @@ begin
       '''': begin
           s := GetQuoteName;
           if not(CurrChar in [',', ']']) then
-            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB, CurrChar]);
           Segment.AddSelector(s);
         end;
       '"': begin
           s := GetDblQuoteName;
           if not(CurrChar in [',', ']']) then
-            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB, CurrChar]);
           Segment.AddSelector(s);
         end;
       '*': begin
           SkipCharThenWS;
           if not(CurrChar in [',', ']']) then
-            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB]);
+            Fail(SEJPathPosExpectFmt, [Position, SEJPathCommaOrRB, CurrChar]);
           Segment.AddWildcard;
         end;
       '-', '0'..'9': IndexOrSlice(Segment);
