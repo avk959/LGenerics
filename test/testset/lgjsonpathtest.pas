@@ -68,6 +68,7 @@ type
     procedure TestMore;
     procedure IRegexpPass;
     procedure IRegexpFail;
+    procedure JpNodeToSegments;
   end;
 
 implementation
@@ -500,6 +501,59 @@ begin
       Inc(Failed, Ord(not IRegexpCheck(s, Msg)));
     end;
   AssertTrue(Format(Fmt, [Total, Failed]), Total = Failed);
+end;
+
+procedure TTestJsonPath.JpNodeToSegments;
+var
+  Json: specialize TGAutoRef<TJsonNode>;
+  List: TJpNodeList;
+  Path: TStringArray;
+  Node: TJpNode;
+  Found: TJsonNode;
+const
+  SourceJson =
+    '{ "store": {                              ' +
+    '    "book": [                             ' +
+    '      { "category": "reference",          ' +
+    '        "author": "Nigel Rees",           ' +
+    '        "title": "Sayings of the Century",' +
+    '        "price": 8.95                     ' +
+    '      },                                  ' +
+    '      { "category": "fiction",            ' +
+    '        "author": "Evelyn Waugh",         ' +
+    '        "title": "Sword of Honour",       ' +
+    '        "price": 12.99                    ' +
+    '      },                                  ' +
+    '      { "category": "fiction",            ' +
+    '        "author": "Herman Melville",      ' +
+    '        "title": "Moby Dick",             ' +
+    '        "isbn": "0-553-21311-3",          ' +
+    '        "price": 8.99                     ' +
+    '      },                                  ' +
+    '      { "category": "fiction",            ' +
+    '        "author": "J. R. R. Tolkien",     ' +
+    '        "title": "The Lord of the Rings", ' +
+    '        "isbn": "0-395-19395-8",          ' +
+    '        "price": 22.99                    ' +
+    '      }                                   ' +
+    '    ],                                    ' +
+    '    "bicycle": {                          ' +
+    '      "color": "red",                     ' +
+    '      "price": 399                        ' +
+    '    }                                     ' +
+    '  }                                       ' +
+    '}                                         ';
+
+begin
+  Json.Instance.AsJson := SourceJson;
+  AssertTrue(JpMatch('$..*', Json.Instance, List));
+  for Node in List do
+    begin
+      Path := Node.PathToSegments;
+      AssertTrue(Path <> nil);
+      AssertTrue(Json.Instance.FindPath(Path, Found));
+      AssertTrue(Found = Node.Value);
+    end;
 end;
 
 procedure FindTestDir;
