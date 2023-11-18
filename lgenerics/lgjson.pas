@@ -2114,7 +2114,7 @@ function TJsonNode.TStrBuilder.ToDecodeString: string;
 var
   r: string;
   I, J, Last: SizeInt;
-  pR: PAnsiChar;
+  pR, pBuf: PAnsiChar;
   uh, ul: DWord;
 begin
   System.SetLength(r, Count);
@@ -2122,13 +2122,14 @@ begin
   I := 1;
   J := 0;
   pR := PAnsiChar(r);
+  pBuf := FBuffer.Ptr;
   while I < Last do
-    if FBuffer[I] <> '\' then begin
-      pR[J] := FBuffer[I];
+    if pBuf[I] <> '\' then begin
+      pR[J] := pBuf[I];
       Inc(I);
       Inc(J);
     end else
-      case FBuffer[Succ(I)] of
+      case pBuf[Succ(I)] of
         'b': begin pR[J] := #8;  I += 2; Inc(J); end;
         'f': begin pR[J] := #12; I += 2; Inc(J); end;
         'n': begin pR[J] := #10; I += 2; Inc(J); end;
@@ -2136,28 +2137,28 @@ begin
         't': begin pR[J] := #9;  I += 2; Inc(J); end;
         'u':
           begin
-            uh := HexCh4ToDWord(PChar4(@FBuffer.Ptr[I+2])^);
+            uh := HexCh4ToDWord(PChar4(@pBuf[I+2])^);
             I += 6;
             case uh of
               0..$7f: begin pR[J] := Char(uh); Inc(J); end;
               $80..$7ff: begin
-                  pR[J] := Char((uh shr 6) or $c0);
+                  pR[ J ] := Char((uh shr 6) or $c0);
                   pR[J+1] := Char((uh and $3f) or $80);
                   J += 2;
                 end;
               $800..$d7ff,$e000..$ffff: begin
-                  pR[J] := Char((uh shr 12) or $e0);
+                  pR[ J ] := Char((uh shr 12) or $e0);
                   pR[J+1] := Char((uh shr 6) and $3f or $80);
                   pR[J+2] := Char((uh and $3f) or $80);
                   J += 3;
                 end;
               $d800..$dbff: // high surrogate
-                if (Last - I >= 5) and (FBuffer[I] = '\') and (FBuffer[I+1] = 'u') then begin
-                  ul := HexCh4ToDWord(PChar4(@FBuffer.Ptr[I+2])^);
+                if (Last - I >= 5) and (pBuf[I] = '\') and (pBuf[I+1] = 'u') then begin
+                  ul := HexCh4ToDWord(PChar4(@pBuf[I+2])^);
                   if (ul >= $dc00) and (ul <= $dfff) then begin
                     I += 6;
                     ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
-                    pR[J] := Char(ul shr 18 or $f0);
+                    pR[ J ] := Char(ul shr 18 or $f0);
                     pR[J+1] := Char((ul shr 12) and $3f or $80);
                     pR[J+2] := Char((ul shr 6) and $3f or $80);
                     pR[J+3] := Char(ul and $3f or $80);
@@ -2178,7 +2179,7 @@ begin
             end;
           end;
       else
-        pR[J] := FBuffer[Succ(I)];
+        pR[J] := pBuf[Succ(I)];
         I += 2;
         Inc(J)
       end;
@@ -4576,23 +4577,23 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
             end;
         end;
       jvkObject:
-       begin
-         aDst.AsObject;
-         if aSrc.Count > 0 then
-           begin
-             aDst.FObject := CreateJsObject;
-             aDst.FObject^.EnsureCapacity(aSrc.FObject^.Count);
-             for I := 0 to Pred(aSrc.FObject^.Count) do
-               begin
-                 Node := TJsonNode.Create;
-                 with aSrc.FObject^.Mutable[I]^ do
-                   begin
-                     DoCopy(Value, Node);
-                     aDst.FObject^.Add(TPair.Create(Key, Node));
-                   end;
-               end;
-           end;
-       end;
+        begin
+          aDst.AsObject;
+          if aSrc.Count > 0 then
+            begin
+              aDst.FObject := CreateJsObject;
+              aDst.FObject^.EnsureCapacity(aSrc.FObject^.Count);
+              for I := 0 to Pred(aSrc.FObject^.Count) do
+                begin
+                  Node := TJsonNode.Create;
+                  with aSrc.FObject^.Mutable[I]^ do
+                    begin
+                      DoCopy(Value, Node);
+                      aDst.FObject^.Add(TPair.Create(Key, Node));
+                    end;
+                end;
+            end;
+        end;
     end;
   end;
 
