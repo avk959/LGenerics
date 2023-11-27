@@ -226,7 +226,7 @@ uses
       Arg1 type must be a ValueType;
       Arg2 type must be a ValueType;
       result type is a ValueType;
-        if Arg1 is a number and Arg2 is a number, returns the differense Arg1 - Arg2,
+        if Arg1 is a number and Arg2 is a number, returns the difference Arg1 - Arg2,
         otherwise returns Nothing;
 
     prod(Arg1, Arg2)
