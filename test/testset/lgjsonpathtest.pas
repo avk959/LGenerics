@@ -71,6 +71,26 @@ type
     procedure JpNodeToSegments;
   end;
 
+  { TTestAuxFun }
+
+  TTestAuxFun = class(TTestCase)
+  private
+  type
+    TTestData = record
+      Value,
+      Query,
+      ExpectOut: string;
+    end;
+    TTestList = array of TTestData;
+  const
+    JsonFmt   = 'Item[%d]: invalid JSON';
+    QueryFmt  = 'Item[%d]: invalid query';
+    ExpectFmt = 'Item[%d]: expected "%s", but got "%s"';
+  published
+    procedure TestKey;
+    procedure TestParam;
+  end;
+
 implementation
 
 function TTestJsonPath.FalseReject(const aName, aQuery: string): string;
@@ -556,6 +576,95 @@ begin
     end;
 end;
 
+{ TTestAuxFun }
+
+procedure TTestAuxFun.TestKey;
+var
+  Root: specialize TGAutoRef<TJsonNode>;
+  ErrList: specialize TGAutoRef<TStringList>;
+  Path: IJsonPath;
+  vList: string;
+  I: Integer;
+const
+  TestList: TTestList = (
+    (Value: '["a", 42]';                          Query: '$[?key()==2]';   ExpectOut: '[]'),
+    (Value: '["a", [2], 42]';                     Query: '$[?key()==2]';   ExpectOut: '[42]'),
+    (Value: '[null, false, [2]]';                 Query: '$[?key()==2]';   ExpectOut: '[[2]]'),
+    (Value: '[null, false, {"key":"value"}]';     Query: '$[?key()==2]';   ExpectOut: '[{"key":"value"}]'),
+    (Value: '[null, false, {"key":"value"}]';     Query: '$[?key()=="a"]'; ExpectOut: '[]'),
+    (Value: '{"a_":"value","b":[null],"c":[42]}'; Query: '$[?key()=="a"]'; ExpectOut: '[]'),
+    (Value: '{"aa":"value","a":42,"b":[null]}';   Query: '$[?key()=="a"]'; ExpectOut: '[42]')
+  );
+begin
+  for I := 0 to High(TestList) do begin
+    if not Root.Instance.Parse(TestList[I].Value) then begin
+      ErrList.Instance.Add(Format(JsonFmt, [I]));
+      continue;
+    end;
+    if not JpParseQuery(TestList[I].Query, Path) then begin
+      ErrList.Instance.Add(Format(QueryFmt, [I]));
+      continue;
+    end;
+    vList := Path.MatchValues(Root.Instance).AsJson;
+    if vList <> TestList[I].ExpectOut then
+      ErrList.Instance.Add(Format(ExpectFmt, [I, TestList[I].ExpectOut, vList]));
+  end;
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestParam;
+var
+  Root: specialize TGAutoRef<TJsonNode>;
+  ErrList: specialize TGAutoRef<TStringList>;
+  Path: IJsonPath;
+  Query, Expect, vList: string;
+const
+  Json = '[null,42,true,"key"]';
+begin
+  if Root.Instance.Parse(Json) then begin
+    Query := '$[?@==param("parValue")]';
+    if JpParseQuery(Query, Path) then begin
+      Expect := '[]';
+      vList := Path.MatchValues(Root.Instance).AsJson;// 0
+      if vList <> Expect then
+        ErrList.Instance.Add(Format(ExpectFmt, [0, Expect, vList]));
+
+      Path.Params['parValue'] := TJpValue.Nothing;
+      vList := Path.MatchValues(Root.Instance).AsJson;// 1
+      if vList <> Expect then
+        ErrList.Instance.Add(Format(ExpectFmt, [1, Expect, vList]));
+
+      Path.Params['parValue'] := TJpValue.NullValue;
+      Expect := '[null]';
+      vList := Path.MatchValues(Root.Instance).AsJson;// 2
+      if vList <> Expect then
+        ErrList.Instance.Add(Format(ExpectFmt, [2, Expect, vList]));
+
+      Path.Params['parValue'] := TJpValue.TrueValue;
+      Expect := '[true]';
+      vList := Path.MatchValues(Root.Instance).AsJson;// 3
+      if vList <> Expect then
+        ErrList.Instance.Add(Format(ExpectFmt, [3, Expect, vList]));
+
+      Path.Params['parValue'] := 42;
+      Expect := '[42]';
+      vList := Path.MatchValues(Root.Instance).AsJson;// 4
+      if vList <> Expect then
+        ErrList.Instance.Add(Format(ExpectFmt, [4, Expect, vList]));
+
+      Path.Params['parValue'] := 'key';
+      Expect := '["key"]';
+      vList := Path.MatchValues(Root.Instance).AsJson;// 5
+      if vList <> Expect then
+        ErrList.Instance.Add(Format(ExpectFmt, [5, Expect, vList]));
+    end else
+      ErrList.Instance.Add('Invalid query');
+  end else
+    ErrList.Instance.Add('Invalid JSON');
+
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
 procedure FindTestDir;
 var
   Dir: string;
@@ -582,6 +691,7 @@ initialization
 
   FindTestDir;
   RegisterTest(TTestJsonPath);
+  RegisterTest(TTestAuxFun);
 
 end.
 
