@@ -81,14 +81,21 @@ type
       Query,
       ExpectOut: string;
     end;
-    TTestList = array of TTestData;
+    TTestSet = array of TTestData;
   const
     JsonFmt   = 'Item[%d]: invalid JSON';
     QueryFmt  = 'Item[%d]: invalid query';
     ExpectFmt = 'Item[%d]: expected "%s", but got "%s"';
+    procedure RunTestSet(const aTestSet: TTestSet; aErrList: TStrings);
   published
     procedure TestKey;
     procedure TestParam;
+    procedure TestIsBoolean;
+    procedure TestIsNumber;
+    procedure TestIsInteger;
+    procedure TestIsString;
+    procedure TestIsArray;
+    procedure TestIsObject;
   end;
 
 implementation
@@ -578,15 +585,35 @@ end;
 
 { TTestAuxFun }
 
-procedure TTestAuxFun.TestKey;
+procedure TTestAuxFun.RunTestSet(const aTestSet: TTestSet; aErrList: TStrings);
 var
   Root: specialize TGAutoRef<TJsonNode>;
-  ErrList: specialize TGAutoRef<TStringList>;
   Path: IJsonPath;
   vList: string;
   I: Integer;
+begin
+  for I := 0 to High(aTestSet) do begin
+    if not Root.Instance.Parse(aTestSet[I].Value) then
+      begin
+        aErrList.Add(Format(JsonFmt, [I]));
+        continue;
+      end;
+    if not JpParseQuery(aTestSet[I].Query, Path) then
+      begin
+        aErrList.Add(Format(QueryFmt, [I]));
+        continue;
+      end;
+    vList := Path.MatchValues(Root.Instance).AsJson;
+    if vList <> aTestSet[I].ExpectOut then
+      aErrList.Add(Format(ExpectFmt, [I, aTestSet[I].ExpectOut, vList]));
+  end;
+end;
+
+procedure TTestAuxFun.TestKey;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
 const
-  TestList: TTestList = (
+  Tests: TTestSet = (
     (Value: '["a", 42]';                          Query: '$[?key()==2]';   ExpectOut: '[]'),
     (Value: '["a", [2], 42]';                     Query: '$[?key()==2]';   ExpectOut: '[42]'),
     (Value: '[null, false, [2]]';                 Query: '$[?key()==2]';   ExpectOut: '[[2]]'),
@@ -596,19 +623,7 @@ const
     (Value: '{"aa":"value","a":42,"b":[null]}';   Query: '$[?key()=="a"]'; ExpectOut: '[42]')
   );
 begin
-  for I := 0 to High(TestList) do begin
-    if not Root.Instance.Parse(TestList[I].Value) then begin
-      ErrList.Instance.Add(Format(JsonFmt, [I]));
-      continue;
-    end;
-    if not JpParseQuery(TestList[I].Query, Path) then begin
-      ErrList.Instance.Add(Format(QueryFmt, [I]));
-      continue;
-    end;
-    vList := Path.MatchValues(Root.Instance).AsJson;
-    if vList <> TestList[I].ExpectOut then
-      ErrList.Instance.Add(Format(ExpectFmt, [I, TestList[I].ExpectOut, vList]));
-  end;
+  RunTestSet(Tests, ErrList.Instance);
   AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
 end;
 
@@ -662,6 +677,119 @@ begin
   end else
     ErrList.Instance.Add('Invalid JSON');
 
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsBoolean;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '["a", 42, null]';         Query: '$[?is_boolean(@)]';     ExpectOut: '[]'),
+    (Value: '["a", 42, null, true]';   Query: '$[?is_boolean(@)]';     ExpectOut: '[true]'),
+    (Value: '[null, false, [2], {}]';  Query: '$[?is_boolean(@)]';     ExpectOut: '[false]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[]'),
+    (Value: '[{"a":null},{"a":true}]'; Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[{"a":true}]'),
+    (Value: '[[],[42,"a"],[0,null]]';  Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[]'),
+    (Value: '[[],[42,"a"],[0,true]]';  Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[[0,true]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsNumber;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '["a", false, null]';       Query: '$[?is_number(@)]';     ExpectOut: '[]'),
+    (Value: '["a", 42, null, true]';    Query: '$[?is_number(@)]';     ExpectOut: '[42]'),
+    (Value: '[null, 2E25, [2], {}]';    Query: '$[?is_number(@)]';     ExpectOut: '[2E25]'),
+    (Value: '[{"a":null},{"a":"b"}]';   Query: '$[?@[?is_number(@)]]'; ExpectOut: '[]'),
+    (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_number(@)]]'; ExpectOut: '[{"a":27.456}]'),
+    (Value: '[[],[[],"a"],["",null]]';  Query: '$[?@[?is_number(@)]]'; ExpectOut: '[]'),
+    (Value: '[[],[-0.03,"a"],[true]]';  Query: '$[?@[?is_number(@)]]'; ExpectOut: '[[-0.03,"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsInteger;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '["a", false, null]';           Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
+    (Value: '["a", 42.001, null, true]';    Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
+    (Value: '["a", 42, null, true]';        Query: '$[?is_integer(@)]';     ExpectOut: '[42]'),
+    (Value: '[null, 2.0E15, [2], {}]';      Query: '$[?is_integer(@)]';     ExpectOut: '[2000000000000000]'),
+    (Value: '[null, -2.0E15, [2], {}]';     Query: '$[?is_integer(@)]';     ExpectOut: '[-2000000000000000]'),
+    (Value: '[9007199254740992,0.14]';      Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
+    (Value: '[-9007199254740992,3.72]';     Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
+    (Value: '[9007199254740991.00,23.77]';  Query: '$[?is_integer(@)]';     ExpectOut: '[9007199254740991]'),
+    (Value: '[-9007199254740991.00,13.22]'; Query: '$[?is_integer(@)]';     ExpectOut: '[-9007199254740991]'),
+    (Value: '[[],[2.111,"a"],["",33.3E0]]'; Query: '$[?@[?is_integer(@)]]'; ExpectOut: '[]'),
+    (Value: '[[],[2.111,"a"],["",33.3E1]]'; Query: '$[?@[?is_integer(@)]]'; ExpectOut: '[["",333]]'),
+    (Value: '[{"a":"b"},{"a":27.1330E3}]';  Query: '$[?@[?is_integer(@)]]'; ExpectOut: '[{"a":27133}]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsString;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, null]';        Query: '$[?is_string(@)]';     ExpectOut: '[]'),
+    (Value: '["a", 42, null, true]';    Query: '$[?is_string(@)]';     ExpectOut: '["a"]'),
+    (Value: '[null, "", [2], {}]';      Query: '$[?is_string(@)]';     ExpectOut: '[""]'),
+    (Value: '[{"a":null},{"a":42}]';    Query: '$[?@[?is_string(@)]]'; ExpectOut: '[]'),
+    (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_string(@)]]'; ExpectOut: '[{"a":"b"}]'),
+    (Value: '[[],[[],12],[0,null]]';    Query: '$[?@[?is_string(@)]]'; ExpectOut: '[]'),
+    (Value: '[[],[[],"a"],[12,null]]';  Query: '$[?@[?is_string(@)]]'; ExpectOut: '[[[],"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsArray;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, {}]';         Query: '$[?is_array(@)]';     ExpectOut: '[]'),
+    (Value: '[[],42,true,"a"]';        Query: '$[?is_array(@)]';     ExpectOut: '[[]]'),
+    (Value: '[null, "", [{}], {}]';    Query: '$[?is_array(@)]';     ExpectOut: '[[{}]]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_array(@)]]'; ExpectOut: '[]'),
+    (Value: '[{"a":"b"},{"a":[]}]';    Query: '$[?@[?is_array(@)]]'; ExpectOut: '[{"a":[]}]'),
+    (Value: '[{},[{},12],[0,null]]';   Query: '$[?@[?is_array(@)]]'; ExpectOut: '[]'),
+    (Value: '[{},[[],"a"],[12,null]]'; Query: '$[?@[?is_array(@)]]'; ExpectOut: '[[[],"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsObject;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, []]';         Query: '$[?is_object(@)]';     ExpectOut: '[]'),
+    (Value: '[{},42,true,"a"]';        Query: '$[?is_object(@)]';     ExpectOut: '[{}]'),
+    (Value: '[null, [{}], {"a":0}]';   Query: '$[?is_object(@)]';     ExpectOut: '[{"a":0}]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_object(@)]]'; ExpectOut: '[]'),
+    (Value: '[{"a":"b"},{"a":{}}]';    Query: '$[?@[?is_object(@)]]'; ExpectOut: '[{"a":{}}]'),
+    (Value: '[{},[[],12],[0,null]]';   Query: '$[?@[?is_object(@)]]'; ExpectOut: '[]'),
+    (Value: '[{},[{},"a"],[12,null]]'; Query: '$[?@[?is_object(@)]]'; ExpectOut: '[[{},"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
   AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
 end;
 
