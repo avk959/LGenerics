@@ -79,7 +79,7 @@ type
     TTestData = record
       Value,
       Query,
-      ExpectOut: string;
+      Expected: string;
     end;
     TTestSet = array of TTestData;
   const
@@ -96,6 +96,13 @@ type
     procedure TestIsString;
     procedure TestIsArray;
     procedure TestIsObject;
+    procedure TestContains;
+    procedure TestContainsText;
+    procedure TestSameText;
+    procedure TestStartsWith;
+    procedure TestEndsWith;
+    procedure TestToUpper;
+    procedure TestToLower;
   end;
 
 implementation
@@ -604,8 +611,8 @@ begin
         continue;
       end;
     vList := Path.MatchValues(Root.Instance).AsJson;
-    if vList <> aTestSet[I].ExpectOut then
-      aErrList.Add(Format(ExpectFmt, [I, aTestSet[I].ExpectOut, vList]));
+    if vList <> aTestSet[I].Expected then
+      aErrList.Add(Format(ExpectFmt, [I, aTestSet[I].Expected, vList]));
   end;
 end;
 
@@ -614,13 +621,13 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '["a", 42]';                          Query: '$[?key()==2]';   ExpectOut: '[]'),
-    (Value: '["a", [2], 42]';                     Query: '$[?key()==2]';   ExpectOut: '[42]'),
-    (Value: '[null, false, [2]]';                 Query: '$[?key()==2]';   ExpectOut: '[[2]]'),
-    (Value: '[null, false, {"key":"value"}]';     Query: '$[?key()==2]';   ExpectOut: '[{"key":"value"}]'),
-    (Value: '[null, false, {"key":"value"}]';     Query: '$[?key()=="a"]'; ExpectOut: '[]'),
-    (Value: '{"a_":"value","b":[null],"c":[42]}'; Query: '$[?key()=="a"]'; ExpectOut: '[]'),
-    (Value: '{"aa":"value","a":42,"b":[null]}';   Query: '$[?key()=="a"]'; ExpectOut: '[42]')
+    (Value: '["a", 42]';                          Query: '$[?key()==2]';   Expected: '[]'),
+    (Value: '["a", [2], 42]';                     Query: '$[?key()==2]';   Expected: '[42]'),
+    (Value: '[null, false, [2]]';                 Query: '$[?key()==2]';   Expected: '[[2]]'),
+    (Value: '[null, false, {"key":"value"}]';     Query: '$[?key()==2]';   Expected: '[{"key":"value"}]'),
+    (Value: '[null, false, {"key":"value"}]';     Query: '$[?key()=="a"]'; Expected: '[]'),
+    (Value: '{"a_":"value","b":[null],"c":[42]}'; Query: '$[?key()=="a"]'; Expected: '[]'),
+    (Value: '{"aa":"value","a":42,"b":[null]}';   Query: '$[?key()=="a"]'; Expected: '[42]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
@@ -685,13 +692,13 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '["a", 42, null]';         Query: '$[?is_boolean(@)]';     ExpectOut: '[]'),
-    (Value: '["a", 42, null, true]';   Query: '$[?is_boolean(@)]';     ExpectOut: '[true]'),
-    (Value: '[null, false, [2], {}]';  Query: '$[?is_boolean(@)]';     ExpectOut: '[false]'),
-    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[]'),
-    (Value: '[{"a":null},{"a":true}]'; Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[{"a":true}]'),
-    (Value: '[[],[42,"a"],[0,null]]';  Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[]'),
-    (Value: '[[],[42,"a"],[0,true]]';  Query: '$[?@[?is_boolean(@)]]'; ExpectOut: '[[0,true]]')
+    (Value: '["a", 42, null]';         Query: '$[?is_boolean(@)]';     Expected: '[]'),
+    (Value: '["a", 42, null, true]';   Query: '$[?is_boolean(@)]';     Expected: '[true]'),
+    (Value: '[null, false, [2], {}]';  Query: '$[?is_boolean(@)]';     Expected: '[false]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_boolean(@)]]'; Expected: '[]'),
+    (Value: '[{"a":null},{"a":true}]'; Query: '$[?@[?is_boolean(@)]]'; Expected: '[{"a":true}]'),
+    (Value: '[[],[42,"a"],[0,null]]';  Query: '$[?@[?is_boolean(@)]]'; Expected: '[]'),
+    (Value: '[[],[42,"a"],[0,true]]';  Query: '$[?@[?is_boolean(@)]]'; Expected: '[[0,true]]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
@@ -703,13 +710,13 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '["a", false, null]';       Query: '$[?is_number(@)]';     ExpectOut: '[]'),
-    (Value: '["a", 42, null, true]';    Query: '$[?is_number(@)]';     ExpectOut: '[42]'),
-    (Value: '[null, 2E25, [2], {}]';    Query: '$[?is_number(@)]';     ExpectOut: '[2E25]'),
-    (Value: '[{"a":null},{"a":"b"}]';   Query: '$[?@[?is_number(@)]]'; ExpectOut: '[]'),
-    (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_number(@)]]'; ExpectOut: '[{"a":27.456}]'),
-    (Value: '[[],[[],"a"],["",null]]';  Query: '$[?@[?is_number(@)]]'; ExpectOut: '[]'),
-    (Value: '[[],[-0.03,"a"],[true]]';  Query: '$[?@[?is_number(@)]]'; ExpectOut: '[[-0.03,"a"]]')
+    (Value: '["a", false, null]';       Query: '$[?is_number(@)]';     Expected: '[]'),
+    (Value: '["a", 42, null, true]';    Query: '$[?is_number(@)]';     Expected: '[42]'),
+    (Value: '[null, 2E25, [2], {}]';    Query: '$[?is_number(@)]';     Expected: '[2E25]'),
+    (Value: '[{"a":null},{"a":"b"}]';   Query: '$[?@[?is_number(@)]]'; Expected: '[]'),
+    (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_number(@)]]'; Expected: '[{"a":27.456}]'),
+    (Value: '[[],[[],"a"],["",null]]';  Query: '$[?@[?is_number(@)]]'; Expected: '[]'),
+    (Value: '[[],[-0.03,"a"],[true]]';  Query: '$[?@[?is_number(@)]]'; Expected: '[[-0.03,"a"]]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
@@ -721,18 +728,18 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '["a", false, null]';           Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
-    (Value: '["a", 42.001, null, true]';    Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
-    (Value: '["a", 42, null, true]';        Query: '$[?is_integer(@)]';     ExpectOut: '[42]'),
-    (Value: '[null, 2.0E15, [2], {}]';      Query: '$[?is_integer(@)]';     ExpectOut: '[2000000000000000]'),
-    (Value: '[null, -2.0E15, [2], {}]';     Query: '$[?is_integer(@)]';     ExpectOut: '[-2000000000000000]'),
-    (Value: '[9007199254740992,0.14]';      Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
-    (Value: '[-9007199254740992,3.72]';     Query: '$[?is_integer(@)]';     ExpectOut: '[]'),
-    (Value: '[9007199254740991.00,23.77]';  Query: '$[?is_integer(@)]';     ExpectOut: '[9007199254740991]'),
-    (Value: '[-9007199254740991.00,13.22]'; Query: '$[?is_integer(@)]';     ExpectOut: '[-9007199254740991]'),
-    (Value: '[[],[2.111,"a"],["",33.3E0]]'; Query: '$[?@[?is_integer(@)]]'; ExpectOut: '[]'),
-    (Value: '[[],[2.111,"a"],["",33.3E1]]'; Query: '$[?@[?is_integer(@)]]'; ExpectOut: '[["",333]]'),
-    (Value: '[{"a":"b"},{"a":27.1330E3}]';  Query: '$[?@[?is_integer(@)]]'; ExpectOut: '[{"a":27133}]')
+    (Value: '["a", false, null]';           Query: '$[?is_integer(@)]';     Expected: '[]'),
+    (Value: '["a", 42.001, null, true]';    Query: '$[?is_integer(@)]';     Expected: '[]'),
+    (Value: '["a", 42, null, true]';        Query: '$[?is_integer(@)]';     Expected: '[42]'),
+    (Value: '[null, 2.0E15, [2], {}]';      Query: '$[?is_integer(@)]';     Expected: '[2000000000000000]'),
+    (Value: '[null, -2.0E15, [2], {}]';     Query: '$[?is_integer(@)]';     Expected: '[-2000000000000000]'),
+    (Value: '[9007199254740992,0.14]';      Query: '$[?is_integer(@)]';     Expected: '[]'),
+    (Value: '[-9007199254740992,3.72]';     Query: '$[?is_integer(@)]';     Expected: '[]'),
+    (Value: '[9007199254740991.00,23.77]';  Query: '$[?is_integer(@)]';     Expected: '[9007199254740991]'),
+    (Value: '[-9007199254740991.00,13.22]'; Query: '$[?is_integer(@)]';     Expected: '[-9007199254740991]'),
+    (Value: '[[],[2.111,"a"],["",33.3E0]]'; Query: '$[?@[?is_integer(@)]]'; Expected: '[]'),
+    (Value: '[[],[2.111,"a"],["",33.3E1]]'; Query: '$[?@[?is_integer(@)]]'; Expected: '[["",333]]'),
+    (Value: '[{"a":"b"},{"a":27.1330E3}]';  Query: '$[?@[?is_integer(@)]]'; Expected: '[{"a":27133}]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
@@ -744,13 +751,13 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '[42, false, null]';        Query: '$[?is_string(@)]';     ExpectOut: '[]'),
-    (Value: '["a", 42, null, true]';    Query: '$[?is_string(@)]';     ExpectOut: '["a"]'),
-    (Value: '[null, "", [2], {}]';      Query: '$[?is_string(@)]';     ExpectOut: '[""]'),
-    (Value: '[{"a":null},{"a":42}]';    Query: '$[?@[?is_string(@)]]'; ExpectOut: '[]'),
-    (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_string(@)]]'; ExpectOut: '[{"a":"b"}]'),
-    (Value: '[[],[[],12],[0,null]]';    Query: '$[?@[?is_string(@)]]'; ExpectOut: '[]'),
-    (Value: '[[],[[],"a"],[12,null]]';  Query: '$[?@[?is_string(@)]]'; ExpectOut: '[[[],"a"]]')
+    (Value: '[42, false, null]';        Query: '$[?is_string(@)]';     Expected: '[]'),
+    (Value: '["a", 42, null, true]';    Query: '$[?is_string(@)]';     Expected: '["a"]'),
+    (Value: '[null, "", [2], {}]';      Query: '$[?is_string(@)]';     Expected: '[""]'),
+    (Value: '[{"a":null},{"a":42}]';    Query: '$[?@[?is_string(@)]]'; Expected: '[]'),
+    (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_string(@)]]'; Expected: '[{"a":"b"}]'),
+    (Value: '[[],[[],12],[0,null]]';    Query: '$[?@[?is_string(@)]]'; Expected: '[]'),
+    (Value: '[[],[[],"a"],[12,null]]';  Query: '$[?@[?is_string(@)]]'; Expected: '[[[],"a"]]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
@@ -762,13 +769,13 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '[42, false, {}]';         Query: '$[?is_array(@)]';     ExpectOut: '[]'),
-    (Value: '[[],42,true,"a"]';        Query: '$[?is_array(@)]';     ExpectOut: '[[]]'),
-    (Value: '[null, "", [{}], {}]';    Query: '$[?is_array(@)]';     ExpectOut: '[[{}]]'),
-    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_array(@)]]'; ExpectOut: '[]'),
-    (Value: '[{"a":"b"},{"a":[]}]';    Query: '$[?@[?is_array(@)]]'; ExpectOut: '[{"a":[]}]'),
-    (Value: '[{},[{},12],[0,null]]';   Query: '$[?@[?is_array(@)]]'; ExpectOut: '[]'),
-    (Value: '[{},[[],"a"],[12,null]]'; Query: '$[?@[?is_array(@)]]'; ExpectOut: '[[[],"a"]]')
+    (Value: '[42, false, {}]';         Query: '$[?is_array(@)]';     Expected: '[]'),
+    (Value: '[[],42,true,"a"]';        Query: '$[?is_array(@)]';     Expected: '[[]]'),
+    (Value: '[null, "", [{}], {}]';    Query: '$[?is_array(@)]';     Expected: '[[{}]]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_array(@)]]'; Expected: '[]'),
+    (Value: '[{"a":"b"},{"a":[]}]';    Query: '$[?@[?is_array(@)]]'; Expected: '[{"a":[]}]'),
+    (Value: '[{},[{},12],[0,null]]';   Query: '$[?@[?is_array(@)]]'; Expected: '[]'),
+    (Value: '[{},[[],"a"],[12,null]]'; Query: '$[?@[?is_array(@)]]'; Expected: '[[[],"a"]]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
@@ -780,13 +787,118 @@ var
   ErrList: specialize TGAutoRef<TStringList>;
 const
   Tests: TTestSet = (
-    (Value: '[42, false, []]';         Query: '$[?is_object(@)]';     ExpectOut: '[]'),
-    (Value: '[{},42,true,"a"]';        Query: '$[?is_object(@)]';     ExpectOut: '[{}]'),
-    (Value: '[null, [{}], {"a":0}]';   Query: '$[?is_object(@)]';     ExpectOut: '[{"a":0}]'),
-    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_object(@)]]'; ExpectOut: '[]'),
-    (Value: '[{"a":"b"},{"a":{}}]';    Query: '$[?@[?is_object(@)]]'; ExpectOut: '[{"a":{}}]'),
-    (Value: '[{},[[],12],[0,null]]';   Query: '$[?@[?is_object(@)]]'; ExpectOut: '[]'),
-    (Value: '[{},[{},"a"],[12,null]]'; Query: '$[?@[?is_object(@)]]'; ExpectOut: '[[{},"a"]]')
+    (Value: '[42, false, []]';         Query: '$[?is_object(@)]';     Expected: '[]'),
+    (Value: '[{},42,true,"a"]';        Query: '$[?is_object(@)]';     Expected: '[{}]'),
+    (Value: '[null, [{}], {"a":0}]';   Query: '$[?is_object(@)]';     Expected: '[{"a":0}]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_object(@)]]'; Expected: '[]'),
+    (Value: '[{"a":"b"},{"a":{}}]';    Query: '$[?@[?is_object(@)]]'; Expected: '[{"a":{}}]'),
+    (Value: '[{},[[],12],[0,null]]';   Query: '$[?@[?is_object(@)]]'; Expected: '[]'),
+    (Value: '[{},[{},"a"],[12,null]]'; Query: '$[?@[?is_object(@)]]'; Expected: '[[{},"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestContains;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "dnaz"]';           Query: '$[?contains(@, "an")]';         Expected: '[]'),
+    (Value: '["in", "one", "nand"]';         Query: '$[?contains(@, "an")]';         Expected: '["nand"]'),
+    (Value: '{"один":[42],"два":[0]}';       Query: '$..[?contains(key(),"ди")]';    Expected: '[[42]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?contains(@, "10")]].код'; Expected: '["010"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestContainsText;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "dnaz"]';           Query: '$[?contains_text(@, "an")]';         Expected: '[]'),
+    (Value: '["in", "one", "nand"]';         Query: '$[?contains_text(@, "An")]';         Expected: '["nand"]'),
+    (Value: '{"один":[42],"два":[0]}';       Query: '$..[?contains_text(key(),"ДИ")]';    Expected: '[[42]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?contains_text(@, "10")]].код'; Expected: '["010"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestSameText;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "dnaz"]';           Query: '$[?same_text(@, "dna")]';         Expected: '[]'),
+    (Value: '["in", "one", "nand"]';         Query: '$[?same_text(@, "nAnD")]';        Expected: '["nand"]'),
+    (Value: '{"один":[42],"два":[0]}';       Query: '$..[?same_text(key(),"оДИн")]';   Expected: '[[42]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?same_text(@, "010")]].код'; Expected: '["010"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestStartsWith;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "value"]';          Query: '$[?starts_with(@, "vo")]';         Expected: '[]'),
+    (Value: '["tar", "sto", "topic"]';       Query: '$[?starts_with(@, "to")]';         Expected: '["topic"]'),
+    (Value: '{"один":[42],"два":[0]}';       Query: '$..[?starts_with(key(),"дв")]';    Expected: '[[0]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?starts_with(@, "01")]].код'; Expected: '["010"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestEndsWith;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "value"]';          Query: '$[?ends_with(@, "un")]';         Expected: '[]'),
+    (Value: '["osp", "sto", "first"]';       Query: '$[?ends_with(@, "st")]';         Expected: '["first"]'),
+    (Value: '{"один":[42],"два":[0]}';       Query: '$..[?ends_with(key(),"ин")]';    Expected: '[[42]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?ends_with(@, "00")]].код'; Expected: '["000"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestToUpper;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "value"]';          Query: '$[?to_upper(@)=="FIRST"]';       Expected: '[]'),
+    (Value: '["firsp", "forst", "first"]';   Query: '$[?to_upper(@)== "FIRST"]';      Expected: '["first"]'),
+    (Value: '{"один":[42],"два":[0]}';       Query: '$..[?to_upper(key())=="ОДИН"]';  Expected: '[[42]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?to_upper(@)=="000"]].код'; Expected: '["000"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestToLower;
+var
+  ErrList: specialize TGAutoRef<TStringList>;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, "value"]';          Query: '$[?to_lower(@)=="first"]';       Expected: '[]'),
+    (Value: '["Firsp", "Forst", "First"]';   Query: '$[?to_lower(@)== "first"]';      Expected: '["First"]'),
+    (Value: '{"Один":[42],"Два":[0]}';       Query: '$..[?to_lower(key())=="один"]';  Expected: '[[42]]'),
+    (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?to_lower(@)=="010"]].код'; Expected: '["010"]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
