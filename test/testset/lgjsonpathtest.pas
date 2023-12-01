@@ -76,6 +76,7 @@ type
   TTestAuxFun = class(TTestCase)
   private
   type
+    TAutoStrList = specialize TGAutoRef<TStringList>;
     TTestData = record
       Value,
       Query,
@@ -103,6 +104,11 @@ type
     procedure TestEndsWith;
     procedure TestToUpper;
     procedure TestToLower;
+    procedure TestConcat;
+    procedure TestMin;
+    procedure TestMax;
+    procedure TestAbs;
+    procedure TestSum;
   end;
 
 implementation
@@ -618,7 +624,7 @@ end;
 
 procedure TTestAuxFun.TestKey;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '["a", 42]';                          Query: '$[?key()==2]';   Expected: '[]'),
@@ -637,7 +643,7 @@ end;
 procedure TTestAuxFun.TestParam;
 var
   Root: specialize TGAutoRef<TJsonNode>;
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
   Path: IJsonPath;
   Query, Expect, vList: string;
 const
@@ -689,7 +695,7 @@ end;
 
 procedure TTestAuxFun.TestIsBoolean;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '["a", 42, null]';         Query: '$[?is_boolean(@)]';     Expected: '[]'),
@@ -707,7 +713,7 @@ end;
 
 procedure TTestAuxFun.TestIsNumber;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '["a", false, null]';       Query: '$[?is_number(@)]';     Expected: '[]'),
@@ -725,7 +731,7 @@ end;
 
 procedure TTestAuxFun.TestIsInteger;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '["a", false, null]';           Query: '$[?is_integer(@)]';     Expected: '[]'),
@@ -748,7 +754,7 @@ end;
 
 procedure TTestAuxFun.TestIsString;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, null]';        Query: '$[?is_string(@)]';     Expected: '[]'),
@@ -766,7 +772,7 @@ end;
 
 procedure TTestAuxFun.TestIsArray;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, {}]';         Query: '$[?is_array(@)]';     Expected: '[]'),
@@ -784,7 +790,7 @@ end;
 
 procedure TTestAuxFun.TestIsObject;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, []]';         Query: '$[?is_object(@)]';     Expected: '[]'),
@@ -802,7 +808,7 @@ end;
 
 procedure TTestAuxFun.TestContains;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "dnaz"]';           Query: '$[?contains(@, "an")]';         Expected: '[]'),
@@ -817,7 +823,7 @@ end;
 
 procedure TTestAuxFun.TestContainsText;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "dnaz"]';           Query: '$[?contains_text(@, "an")]';         Expected: '[]'),
@@ -832,7 +838,7 @@ end;
 
 procedure TTestAuxFun.TestSameText;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "dnaz"]';           Query: '$[?same_text(@, "dna")]';         Expected: '[]'),
@@ -847,7 +853,7 @@ end;
 
 procedure TTestAuxFun.TestStartsWith;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "value"]';          Query: '$[?starts_with(@, "vo")]';         Expected: '[]'),
@@ -862,7 +868,7 @@ end;
 
 procedure TTestAuxFun.TestEndsWith;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "value"]';          Query: '$[?ends_with(@, "un")]';         Expected: '[]'),
@@ -877,7 +883,7 @@ end;
 
 procedure TTestAuxFun.TestToUpper;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "value"]';          Query: '$[?to_upper(@)=="FIRST"]';       Expected: '[]'),
@@ -892,13 +898,141 @@ end;
 
 procedure TTestAuxFun.TestToLower;
 var
-  ErrList: specialize TGAutoRef<TStringList>;
+  ErrList: TAutoStrList;
 const
   Tests: TTestSet = (
     (Value: '[42, false, "value"]';          Query: '$[?to_lower(@)=="first"]';       Expected: '[]'),
     (Value: '["Firsp", "Forst", "First"]';   Query: '$[?to_lower(@)== "first"]';      Expected: '["First"]'),
     (Value: '{"Один":[42],"Два":[0]}';       Query: '$..[?to_lower(key())=="один"]';  Expected: '[[42]]'),
     (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?to_lower(@)=="010"]].код'; Expected: '["010"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestConcat;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": null, "b": "aabb","c": "aabb"},' +
+          '{"a": "aabb", "b": false, "c": "aabb"},' +
+          '{"a": "aabb", "d": "", "c": "aabb"},' +
+          '{"a": "a", "b": "abb", "d": "aabb"},' +
+          '{"a": "aab", "b": "ba", "c": "aabb"},' +
+          '{"a": "aa", "b": "bb", "c": "aabb"}' +
+        ']';
+      Query: '$[?concat(@.a, @.b) == @.c].a';
+      Expected: '["aa"]'
+    )
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestMin;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": 1, "b": null,"c": 1},' +
+          '{"a": 2, "b": "a", "c": 2},' +
+          '{"a": 3, "d": 42, "c": 3},' +
+          '{"a": 4, "b": 0, "c": 4},' +
+          '{"a": 5, "b": 42, "c": 5},' +
+          '{"a": 6, "b": "a", "c": "a"},' +
+          '{"a": 6, "b": "a", "c": 6},' +
+          '{"a": "a", "b": "b", "c": "b"},' +
+          '{"a": "a", "b": "b", "c": "a"}' +
+        ']';
+      Query: '$[?min(@.a, @.b) == @.c].c';
+      Expected: '[5,"a"]'
+    )
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestMax;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": 1, "b": null,"c": 1},' +
+          '{"a": 2, "b": "a", "c": 2},' +
+          '{"a": 3, "d": 42, "c": 3},' +
+          '{"a": 4, "b": 42, "c": 42},' +
+          '{"a": 5, "b": 42, "c": 5},' +
+          '{"a": 6, "b": "a", "c": "a"},' +
+          '{"a": 6, "b": "a", "c": 6},' +
+          '{"a": "a", "b": "b", "c": "b"},' +
+          '{"a": "a", "b": "b", "c": "a"}' +
+        ']';
+      Query: '$[?max(@.a, @.b) == @.c].c';
+      Expected: '[42,"b"]'
+    )
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestAbs;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": null,  "b": 42},' +
+          '{"a": false, "b": 42},' +
+          '{"a": "a", "b": 42},' +
+          '{"a": [], "b": 42},' +
+          '{"a": {}, "b": 42},' +
+          '{"a": 42.0, "b": 42},' +
+          '{"a": -42.0, "b": 42}' +
+        ']';
+      Query: '$[?abs(@.a) == @.b].a';
+      Expected: '[42,-42]'
+    )
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestSum;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": 1, "b": null,"c": 1},' +
+          '{"a": "a", "b": 2, "c": 2},' +
+          '{"a": 3, "d": 42, "c": 45},' +
+          '{"a": "a", "b": "b", "c": "ab"},' +
+          '{"a": 5, "b": 42, "c": 46},' +
+          '{"a": 6.0, "b": 42.0, "c": 48},' +
+          '{"a": 7.5, "b": 8.5, "c": 16}' +
+        ']';
+      Query: '$[?sum(@.a, @.b) == @.c].c';
+      Expected: '[48,16]'
+    )
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
