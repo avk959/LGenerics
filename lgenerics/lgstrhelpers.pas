@@ -29,7 +29,7 @@ interface
 
 uses
 
-  Classes, SysUtils, Math, RegExpr,
+  Classes, SysUtils, Math, uRegExpr,
   lgUtils,
   lgHelpers,
   lgArrayHelpers,
@@ -153,8 +153,8 @@ type
     FRegex: TRegExpr;
     function  GetExpression: string;
     function  GetModifierStr: string;
-    procedure SetExpression(aValue: string);
-    procedure SetModifierStr(aValue: string);
+    procedure SetExpression(const aValue: string);
+    procedure SetModifierStr(const aValue: string);
   public
   type
     IStrEnumerable = specialize IGEnumerable<string>;
@@ -2934,7 +2934,7 @@ begin
   else
     begin
       FInCycle := True;
-      Result := FRegex.Exec(RegExpr.RegExprString(FInputString));
+      Result := FRegex.Exec(uRegExpr.RegExprString(FInputString));
     end;
 end;
 
@@ -2955,14 +2955,14 @@ begin
   Result := string(FRegex.ModifierStr);
 end;
 
-procedure TRegexMatch.SetExpression(aValue: string);
+procedure TRegexMatch.SetExpression(const aValue: string);
 begin
-  FRegex.Expression := RegExpr.RegExprString(aValue);
+  FRegex.Expression := uRegExpr.RegExprString(aValue);
 end;
 
-procedure TRegexMatch.SetModifierStr(aValue: string);
+procedure TRegexMatch.SetModifierStr(const aValue: string);
 begin
-  FRegex.ModifierStr := RegExpr.RegExprString(aValue);
+  FRegex.ModifierStr := uRegExpr.RegExprString(aValue);
 end;
 
 constructor TRegexMatch.Create;
@@ -2972,13 +2972,13 @@ end;
 
 constructor TRegexMatch.Create(const aRegExpression: string);
 begin
-  FRegex := TRegExpr.Create(RegExpr.RegExprString(aRegExpression));
+  FRegex := TRegExpr.Create(uRegExpr.RegExprString(aRegExpression));
 end;
 
 constructor TRegexMatch.Create(const aRegExpression, aModifierStr: string);
 begin
-  FRegex := TRegExpr.Create(RegExpr.RegExprString(aRegExpression));
-  FRegex.ModifierStr := RegExpr.RegExprString(aModifierStr);
+  FRegex := TRegExpr.Create(uRegExpr.RegExprString(aRegExpression));
+  FRegex.ModifierStr := uRegExpr.RegExprString(aModifierStr);
 end;
 
 destructor TRegexMatch.Destroy;
