@@ -109,6 +109,8 @@ type
     procedure TestMax;
     procedure TestAbs;
     procedure TestSum;
+    procedure TestDiff;
+    procedure TestProd;
   end;
 
 implementation
@@ -1032,6 +1034,58 @@ const
         ']';
       Query: '$[?sum(@.a, @.b) == @.c].c';
       Expected: '[48,16]'
+    )
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestDiff;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": 1, "b": null,"c": 1},' +
+          '{"a": 2, "b": "a", "c": 2},' +
+          '{"a": 3, "d": 42, "c": -39},' +
+          '{"a": "b", "b": "a", "c": 1},' +
+          '{"a": 42, "b": 5, "c": 38},' +
+          '{"a": 42.0, "b": 6.0, "c": 36},' +
+          '{"a": 7, "b": 42, "c": -35},' +
+          '{"a": 9.5, "b": 6.5, "c": 3}' +
+        ']';
+      Query: '$[?diff(@.a, @.b) == @.c].c';
+      Expected: '[36,-35,3]'
+    )
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestProd;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (
+      Value:
+        '[' +
+          '{"a": 1, "b": null,"c": 0},' +
+          '{"a": 2, "b": "a", "c": "a"},' +
+          '{"a": 3, "d": 2, "c": 6},' +
+          '{"a": "b", "b": "a", "c": "ab"},' +
+          '{"a": 2, "b": 5, "c": 11},' +
+          '{"a": 2.0, "b": 6.0, "c": 12},' +
+          '{"a": 7, "b": -2, "c": -14},' +
+          '{"a": 3.5, "b": 2.5, "c": 8.75}' +
+        ']';
+      Query: '$[?prod(@.a, @.b) == @.c].c';
+      Expected: '[12,-14,8.75]'
     )
   );
 begin
