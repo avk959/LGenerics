@@ -114,8 +114,8 @@ type
   const
     WhiteSpaces     = [#0..' '];
     AsciiDelimiters = [#0..#255] - ['a'..'z', 'A'..'Z', '0'..'9', '_'];
-  { Join2 is similar to Join() from SysUtils, but does not raise exceptions, returning
-    an empty string in such cases; it seems to be noticeably faster than the original }
+  { Join2 is similar to Join() from SysUtils, but does not raise exceptions,
+    returning an empty string in such cases }
     class function Join2(const aSeparator: string; const aValues: array of string): string; static;
     class function Join2(const aSeparator: string; const aValues: array of string;
                          aFrom, aCount: SizeInt): string; static;
