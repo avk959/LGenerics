@@ -38,7 +38,7 @@ uses
   lgStrConst;
 
 type
-  TJsValueKind     = (jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
+  TJsValueKind     = (jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
   TJsFormatOption  = (jfoSingleLine,      { the entire document on one line }
                       jfoSingleLineArray, { any array is written in one line, as long as it contains
                                             only scalar elements and their number is strictly less than
@@ -487,12 +487,11 @@ type
     class function PasStrToAsciiJson(const s: string): string; static;
   { converts a JSON string to a pascal string }
     class function JsonStrToPas(const s: string): string; static;
-    class function NewNode: TJsonNode; static; inline;
     class function NewNull: TJsonNode; static; inline;
     class function NewNode(aValue: Boolean): TJsonNode; static; inline;
     class function NewNode(aValue: Double): TJsonNode; static; inline;
     class function NewNode(const aValue: string): TJsonNode; static; inline;
-    class function NewNode(aKind: TJsValueKind): TJsonNode; static; inline;
+    class function NewNode(aKind: TJsValueKind = jvkNull): TJsonNode; static; inline;
     class function NewNode(aNode: TJsonNode): TJsonNode; static; inline;
   { returns the document root node if parsing is successful, nil otherwise }
     class function NewJson(const s: string): TJsonNode; static; inline;
@@ -502,15 +501,13 @@ type
     class function DupeNamesFree(aNode: TJsonNode): Boolean; static;
     class function Equal(L, R: TJsonNode): Boolean; static;
     class function HashCode(aNode: TJsonNode): SizeInt; static;
-    constructor Create;
-    constructor CreateNull;
-    constructor Create(aValue: Boolean);
-    constructor Create(aValue: Double);
-    constructor Create(const aValue: string);
-    constructor Create(aKind: TJsValueKind);
-    constructor Create(const a: TJVarArray);
-    constructor Create(const a: TJPairArray);
-    constructor Create(aNode: TJsonNode);
+    constructor Create(aValue: Boolean); overload;
+    constructor Create(aValue: Double); overload;
+    constructor Create(const aValue: string); overload;
+    constructor Create(aKind: TJsValueKind); overload;
+    constructor Create(const a: TJVarArray); overload;
+    constructor Create(const a: TJPairArray); overload;
+    constructor Create(aNode: TJsonNode); overload;
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
     function  SubTree: TSubTree; inline;
@@ -566,7 +563,7 @@ type
   { adds a new object of the specified kind to the instance as to an array;
     if an instance is not an array, it is cleared and becomes an array - be careful;
     returns a new object }
-    function  AddNode(aKind: TJsValueKind = jvkUnknown): TJsonNode; //inline;
+    function  AddNode(aKind: TJsValueKind = jvkNull): TJsonNode; //inline;
   { returns True and the created object in the aNode parameter,
     if the string s can be parsed; the new object is added as in an array - be careful }
     function  AddJson(const s: string; out aNode: TJsonNode): Boolean;
@@ -591,7 +588,7 @@ type
   { adds a new object of the specified type associated with aName to the instance as to an object;
     if an instance is not an object, it is cleared and becomes an object - be careful;
     returns a new object }
-    function  AddNode(const aName: string; aKind: TJsValueKind = jvkUnknown): TJsonNode; //inline;
+    function  AddNode(const aName: string; aKind: TJsValueKind = jvkNull): TJsonNode; //inline;
   { returns True and the created object associated with aName in the aNode parameter,
     if the string aJson can be parsed; the new object is added as to an object - be careful }
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
@@ -1198,7 +1195,6 @@ implementation
 const
   MAX_EXACT_INT  = Double(9007199254740991); //2^53 - 1
   DBL_CMP_FACTOR = Double(1E12);
-  JS_UNDEF       = 'undefined';
   JS_NULL        = 'null';
   JS_FALSE       = 'false';
   JS_TRUE        = 'true';
@@ -3761,9 +3757,11 @@ end;
 function TJsonNode.GetCount: SizeInt;
 begin
   case Kind of
-    jvkUnknown, jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString: ;
-    jvkArray:  if FArray <> nil then exit(FArray^.Count);
-    jvkObject: if FObject <> nil then exit(FObject^.Count);
+    jvkArray:
+      if FArray <> nil then exit(FArray^.Count);
+    jvkObject:
+      if FObject <> nil then exit(FObject^.Count);
+  else
   end;
   Result := 0;
 end;
@@ -3819,7 +3817,6 @@ end;
 function TJsonNode.GetValue: TJVariant;
 begin
    case Kind of
-    jvkUnknown,
     jvkNull:   exit(TJVariant.Null);
     jvkFalse:  exit(False);
     jvkTrue:   exit(True);
@@ -3849,7 +3846,7 @@ begin
   FKind := jvkArray;
   for I := 0 to System.High(a) do
     case a[I].Kind of
-      vkNull:   FArray^.Add(TJsonNode.CreateNull);
+      vkNull:   FArray^.Add(TJsonNode.Create);
       vkBool:   FArray^.Add(TJsonNode.Create(a[I].AsBoolean));
       vkNumber: FArray^.Add(TJsonNode.Create(a[I].AsNumber));
       vkString: FArray^.Add(TJsonNode.Create(a[I].AsString));
@@ -3866,7 +3863,7 @@ begin
   for I := 0 to System.High(a) do
     with a[I] do
       case Value.Kind of
-        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.CreateNull));
+        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.Create));
         vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsBoolean)));
         vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsNumber)));
         vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsString)));
@@ -4009,7 +4006,7 @@ class function TJsonNode.LikelyKind(aBuf: PAnsiChar; aSize: SizeInt): TJsValueKi
 var
   I: SizeInt;
 begin
-  Result := jvkUnknown;
+  Result := jvkNull;
   for I := 0 to Pred(aSize) do
     case aBuf[I] of
       #9, #10, #13, ' ': ;
@@ -4165,14 +4162,9 @@ begin
   Result := sb.ToDecodeString;
 end;
 
-class function TJsonNode.NewNode: TJsonNode;
-begin
-  Result := TJsonNode.Create;
-end;
-
 class function TJsonNode.NewNull: TJsonNode;
 begin
-  Result := TJsonNode.CreateNull;
+  Result := TJsonNode.Create;
 end;
 
 class function TJsonNode.NewNode(aValue: Boolean): TJsonNode;
@@ -4235,7 +4227,6 @@ class function TJsonNode.DupeNamesFree(aNode: TJsonNode): Boolean;
   var
     I: SizeInt;
   begin
-    if aNode.Kind = jvkUnknown then exit(False);
     if aNode.Count > 0 then
       case aNode.Kind of
         jvkArray:
@@ -4267,16 +4258,6 @@ end;
 class function TJsonNode.HashCode(aNode: TJsonNode): SizeInt;
 begin
   Result := aNode.HashCode;
-end;
-
-constructor TJsonNode.Create;
-begin
-  Assert(Kind = jvkUnknown);
-end;
-
-constructor TJsonNode.CreateNull;
-begin
-  FKind := jvkNull;
 end;
 
 constructor TJsonNode.Create(aValue: Boolean);
@@ -4539,7 +4520,7 @@ end;
 procedure TJsonNode.Clear;
 begin
   DoClear;
-  FKind := jvkUnknown;
+  FKind := jvkNull;
 end;
 
 function TJsonNode.Clone: TJsonNode;
@@ -4555,7 +4536,6 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
     Node: TJsonNode;
   begin
     case aSrc.Kind of
-      jvkUnknown: ;
       jvkNull:    aDst.AsNull;
       jvkFalse:   aDst.AsBoolean := False;
       jvkTrue:    aDst.AsBoolean := True;
@@ -4619,7 +4599,6 @@ begin
   if (Kind <> aNode.Kind) or (Count <> aNode.Count) then
     exit(False);
   case aNode.Kind of
-    jvkUnknown, jvkNull, jvkFalse, jvkTrue: ; //todo: jvkUnknown ???
     jvkNumber: exit(FValue.Num = aNode.FValue.Num);
     jvkString: exit(FString = aNode.FString);
     jvkArray:
@@ -4637,6 +4616,7 @@ begin
               exit(False);
           end;
       end;
+  else
   end;
   Result := True;
 end;
@@ -4651,7 +4631,6 @@ begin
   if Self = nil then
     exit(MAGIC);
   case Kind of
-    jvkUnknown: Result := MAGIC + 1;
     jvkNull:    Result := MAGIC + 3;
     jvkFalse:   Result := MAGIC + 7;
     jvkTrue:    Result := MAGIC + 17;
@@ -4710,7 +4689,7 @@ begin
     else
       FKind := Node.Kind;
     end;
-    Node.FKind := jvkUnknown;
+    Node.FKind := jvkNull;
     Result := True;
   finally
     Node.Free;
@@ -4789,7 +4768,7 @@ function TJsonNode.AddNull: TJsonNode;
 begin
   if AsArray.FValue.Ref = nil then
     FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.CreateNull);
+  FArray^.Add(TJsonNode.Create);
   Result := Self;
 end;
 
@@ -4892,7 +4871,7 @@ function TJsonNode.AddNull(const aName: string): TJsonNode;
 begin
   if AsObject.FValue.Ref = nil then
     FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.CreateNull));
+  FObject^.Add(TPair.Create(aName, TJsonNode.Create));
   Result := Self;
 end;
 
@@ -4961,7 +4940,7 @@ begin
     FValue.Ref := CreateJsObject;
   if FObject^.AddUniq(TPair.Create(aName, nil), p) then
     begin
-      p^.Value := TJsonNode.CreateNull;
+      p^.Value := TJsonNode.Create;
       exit(True);
     end;
   Result := False;
@@ -5076,7 +5055,7 @@ function TJsonNode.InsertNull(aIndex: SizeInt): Boolean;
 begin
   if CanArrayInsert(aIndex) then
     begin
-      FArray^.Insert(aIndex, TJsonNode.CreateNull);
+      FArray^.Insert(aIndex, TJsonNode.Create);
       exit(True);
     end;
   Result := False;
@@ -5128,7 +5107,7 @@ function TJsonNode.InsertNull(aIndex: SizeInt; const aName: string): Boolean;
 begin
   if CanObjectInsert(aIndex) then
     begin
-      FObject^.Insert(aIndex, TPair.Create(aName, TJsonNode.CreateNull));
+      FObject^.Insert(aIndex, TPair.Create(aName, TJsonNode.Create));
       exit(True);
     end;
   Result := False;
@@ -5664,7 +5643,6 @@ var
   procedure AppendScalar(aNode: TJsonNode); inline;
   begin
     case aNode.Kind of
-      jvkUnknown: raise EJsException.Create(SEUnknownJsNodeKind);
       jvkNull:   sb.Append(JS_NULL);
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
@@ -5893,7 +5871,6 @@ end;
 function TJsonNode.ToString: string;
 begin
   case Kind of
-    jvkUnknown: Result := JS_UNDEF;
     jvkNull:    Result := JS_NULL;
     jvkFalse:   Result := JS_FALSE;
     jvkTrue:    Result := JS_TRUE;
@@ -5923,7 +5900,7 @@ begin
     exit(False);
   if not TJsonPtr.ValidPtr(Node.AsString) then
     exit(False);
-  if not aNode.FindUniq(VAL_KEY, Node) or (Node.Kind = jvkUnknown) then
+  if not aNode.FindUniq(VAL_KEY, Node) then
     exit(False);
   Result := True;
 end;
@@ -5979,7 +5956,7 @@ begin
     exit(False);
   if not TJsonPtr.TryGetSegments(aValNode.AsString, aPath) then
     exit(False);
-  if not aNode.FindUniq(VAL_KEY, aValNode) or (aValNode.Kind = jvkUnknown) then
+  if not aNode.FindUniq(VAL_KEY, aValNode) then
     exit(False);
   Result := True;
 end;
@@ -6042,7 +6019,7 @@ begin
   aDst.Clear;
   aDst.FValue := aSrc.FValue;
   aDst.FKind := aSrc.FKind;
-  aSrc.FKind := jvkUnknown;
+  aSrc.FKind := jvkNull;
   aSrc.FValue.Int := 0;
 end;
 
@@ -6619,10 +6596,10 @@ begin //todo: how to improve processing of arrays of structures?
 
   aDiff := nil;
 
-  if (aSource = nil) or (aSource.Kind = jvkUnknown) then
+  if aSource = nil then
     exit(drSourceMiss)
   else
-    if (aTarget = nil) or (aTarget.Kind = jvkUnknown) then
+    if aTarget = nil then
       exit(drTargetMiss);
 
   TestRemove := doEmitTestOnRemove in aOptions;
@@ -6869,7 +6846,7 @@ var
 begin
   if not Loaded then
     exit(prPatchMiss);
-  if (aTarget = nil) or (aTarget.Kind = jvkUnknown) then
+  if aTarget = nil then
     exit(prTargetMiss);
   if Validated then
     exit(ApplyValidated(aTarget));
