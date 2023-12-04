@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="7"/>
-    <Files Count="46">
+    <Files Count="45">
       <Item1>
         <Filename Value="lgabstractcontainer.pas"/>
         <UnitName Value="lgAbstractContainer"/>
@@ -178,45 +178,41 @@
         <UnitName Value="lgJson"/>
       </Item36>
       <Item37>
-        <Filename Value="lgvarjson.pas"/>
-        <UnitName Value="lgVarJson"/>
-      </Item37>
-      <Item38>
         <Filename Value="lgsequtils.pas"/>
         <UnitName Value="lgSeqUtils"/>
-      </Item38>
-      <Item39>
+      </Item37>
+      <Item38>
         <Filename Value="lgjsoncfg.pas"/>
         <UnitName Value="lgJsonCfg"/>
-      </Item39>
-      <Item40>
+      </Item38>
+      <Item39>
         <Filename Value="lgcsvutils.pas"/>
         <UnitName Value="lgCsvUtils"/>
-      </Item40>
-      <Item41>
+      </Item39>
+      <Item40>
         <Filename Value="lgpdo.pas"/>
         <UnitName Value="lgPdo"/>
-      </Item41>
-      <Item42>
+      </Item40>
+      <Item41>
         <Filename Value="lgjsontypedef.pas"/>
         <UnitName Value="lgJsonTypeDef"/>
-      </Item42>
-      <Item43>
+      </Item41>
+      <Item42>
         <Filename Value="lgjtdcodegen.pas"/>
         <UnitName Value="lgJtdCodegen"/>
-      </Item43>
-      <Item44>
+      </Item42>
+      <Item43>
         <Filename Value="lgjtdtypes.pas"/>
         <UnitName Value="lgJtdTypes"/>
-      </Item44>
-      <Item45>
+      </Item43>
+      <Item44>
         <Filename Value="lgjtdinfer.pas"/>
         <UnitName Value="lgJtdInfer"/>
-      </Item45>
-      <Item46>
+      </Item44>
+      <Item45>
         <Filename Value="lgjsonpath.pas"/>
         <UnitName Value="lgJsonPath"/>
-      </Item46>
+      </Item45>
     </Files>
     <CompatibilityMode Value="True"/>
     <UsageOptions>
