@@ -40,7 +40,6 @@ uses
   LGTreapTest,
   LGRbTreeTest,
   LGJsonTest,
-  LGVarJsonTest,
   LGJsonConfTest,
   lgStrHelpersTest,
   lgSeqUtilsTest,
