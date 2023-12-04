@@ -195,7 +195,7 @@ type
       jvrOk,              { validation success }
       jrvInvalidParam,    { aMaxErrors or aMaxDepth is less than 1 }
       jvrInvalidSchema,   { aSchema is not assigned or aSchema.Kind = fkNone }
-      jvrInvalidInstance, { aInstance is not assigned or aInstance.Kind = jvkUnknown }
+      jvrInvalidInstance, { aInstance is not assigned }
       jvrNonUniqKeys,     { aInstance contains non-unique keys }
       jvrInternalError,   { oops, an unexpected exception during validation }
       jvrMaxErrorsExceed, { the number of errors exceeds aMaxErrors }
@@ -1095,7 +1095,7 @@ begin
   aErrList := nil;
   if (aMaxErrors < 1) or (aMaxDepth < 1) then exit(jrvInvalidParam);
   if (aSchema = nil) or (aSchema.Kind = fkNone) then exit(jvrInvalidSchema);
-  if (aInstance = nil) or (aInstance.Kind = jvkUnknown) then exit(jvrInvalidInstance);
+  if aInstance = nil then exit(jvrInvalidInstance);
   if not TJsonNode.DupeNamesFree(aInstance) then exit(jvrNonUniqKeys);
   Result := jvrOk;
   System.SetLength(ErrorList, aMaxErrors);

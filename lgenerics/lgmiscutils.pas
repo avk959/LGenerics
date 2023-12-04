@@ -618,7 +618,6 @@ function JsonNode2Data(aNode: TJsonNode): TJsonData;
     I: SizeInt;
   begin
     case aNode.Kind of
-      jvkUnknown: raise EJsException.Create(SEUnknownJsNodeKind);
       jvkNull:    Result := CreateJson;
       jvkFalse:   Result := CreateJson(False);
       jvkTrue:    Result := CreateJson(True);
