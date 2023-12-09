@@ -2,7 +2,7 @@ unit LGJsonTest;
 
 {$mode objfpc}{$H+}
 {$modeswitch nestedprocvars}
-
+{$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined}
 interface
 
 uses
@@ -67,7 +67,7 @@ type
     procedure IdenticNames;
     procedure JsonPointer;
     procedure JsonPointer1;
-    procedure AddUniq;
+    procedure TestTryAdd;
     procedure Values;
     procedure SkipBom;
     procedure Equal;
@@ -938,17 +938,17 @@ begin
   AssertTrue(o.Instance.Items[2].AsString = 'foo');
 end;
 
-procedure TTestJson.AddUniq;
+procedure TTestJson.TestTryAdd;
 var
   o: specialize TGAutoRef<TJsonNode>;
   Node: TJsonNode;
 begin
-  AssertTrue(o.Instance.AddUniq('key', False));
+  AssertTrue(o.Instance.TryAdd('key', False));
   AssertTrue(o.Instance.Find('key', Node));
   AssertTrue(o.Instance.Count = 1);
-  AssertFalse(o.Instance.AddUniq('key', 'data'));
+  AssertFalse(o.Instance.TryAdd('key', 'data'));
   AssertTrue(o.Instance.Count = 1);
-  AssertTrue(o.Instance.AddUniq('new key', 42));
+  AssertTrue(o.Instance.TryAdd('new key', 42));
   AssertTrue(o.Instance.Count = 2);
   AssertTrue(o.Instance.Find('new key', Node));
 end;
