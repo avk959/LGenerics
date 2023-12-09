@@ -1701,11 +1701,6 @@ procedure TfrmMain.LoadInstanceTreeView(const aRootName: string);
     if k < jvkArray then
       begin
         case k of
-          jvkUnknown:
-            begin
-              TreeNode := tvInstanceTree.Items.AddChild(aParent, '???');
-              TreeNode.ImageIndex := 0;
-            end;
           jvkNull:
             begin
               TreeNode := tvInstanceTree.Items.AddChild(aParent, 'null');
@@ -1731,7 +1726,6 @@ procedure TfrmMain.LoadInstanceTreeView(const aRootName: string);
               TreeNode := tvInstanceTree.Items.AddChild(aParent, aNode.ToString);
               TreeNode.ImageIndex := 4;
             end;
-        else
         end;
         TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
       end

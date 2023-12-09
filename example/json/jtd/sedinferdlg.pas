@@ -393,11 +393,6 @@ procedure TfrmInferDlg.LoadPreview(const aRootName: string);
     if k < jvkArray then
       begin
         case k of
-          jvkUnknown:
-            begin
-              TreeNode := tvSampleStruct.Items.AddChild(aParent, '???');
-              TreeNode.ImageIndex := 0;
-            end;
           jvkNull:
             begin
               TreeNode := tvSampleStruct.Items.AddChild(aParent, 'null');
@@ -423,7 +418,6 @@ procedure TfrmInferDlg.LoadPreview(const aRootName: string);
               TreeNode := tvSampleStruct.Items.AddChild(aParent, aNode.ToString);
               TreeNode.ImageIndex := 4;
             end;
-        else
         end;
         TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
       end
