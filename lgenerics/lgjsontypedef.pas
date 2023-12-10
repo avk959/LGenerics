@@ -770,7 +770,7 @@ end;
 
 procedure TJtdSchema.Load(aNode: TJsonNode);
 begin
-  if not TJsonNode.DupeNamesFree(aNode) then
+  if not TJsonNode.DuplicateFree(aNode) then
     raise EJtdSchemaLoad.Create(SESchemaKeysNotUniq);
   LoadNode(aNode);
 end;
@@ -782,7 +782,7 @@ begin
   if not TJsonNode.TryParse(aJson, Node, False, aMaxDepth) then
     raise EJtdSchemaLoad.Create(SECantParseJsStr);
   try
-    if not TJsonNode.DupeNamesFree(Node) then
+    if not TJsonNode.DuplicateFree(Node) then
       raise EJtdSchemaLoad.Create(SESchemaKeysNotUniq);
     LoadNode(Node);
   finally
@@ -797,7 +797,7 @@ begin
   if not TJsonNode.TryParse(aStream, Node, False, aMaxDepth) then
     raise EJtdSchemaLoad.Create(SECantLoadJsStream);
   try
-    if not TJsonNode.DupeNamesFree(Node) then
+    if not TJsonNode.DuplicateFree(Node) then
       raise EJtdSchemaLoad.Create(SESchemaKeysNotUniq);
     LoadNode(Node);
   finally
@@ -812,7 +812,7 @@ begin
   if not TJsonNode.TryParseFile(aFileName, Node, False, aMaxDepth) then
     raise EJtdSchemaLoad.Create(SECantLoadJsFile);
   try
-    if not TJsonNode.DupeNamesFree(Node) then
+    if not TJsonNode.DuplicateFree(Node) then
       raise EJtdSchemaLoad.Create(SESchemaKeysNotUniq);
     LoadNode(Node);
   finally
@@ -1096,7 +1096,7 @@ begin
   if (aMaxErrors < 1) or (aMaxDepth < 1) then exit(jrvInvalidParam);
   if (aSchema = nil) or (aSchema.Kind = fkNone) then exit(jvrInvalidSchema);
   if aInstance = nil then exit(jvrInvalidInstance);
-  if not TJsonNode.DupeNamesFree(aInstance) then exit(jvrNonUniqKeys);
+  if not TJsonNode.DuplicateFree(aInstance) then exit(jvrNonUniqKeys);
   Result := jvrOk;
   System.SetLength(ErrorList, aMaxErrors);
   Root := aSchema;

@@ -593,7 +593,7 @@ begin
       for I := 0 to Pred(aValue.Count) do
         begin
           aValue.GetNameValue(I, Key, Value);
-          if not n.AddUniq(Key, Value) then
+          if not n.TryAdd(Key, Value) then
             raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
         end
   else
@@ -647,11 +647,11 @@ begin
       with aValue[I] do
         begin
           case Value.Kind of
-            vkNull:   Ok := n.AddUniqNull(Key);
-            vkBool:   Ok := n.AddUniq(Key, Boolean(Value));
-            vkNumber: Ok := n.AddUniq(Key, Double(Value));
+            vkNull:   Ok := n.TryAddNull(Key);
+            vkBool:   Ok := n.TryAdd(Key, Boolean(Value));
+            vkNumber: Ok := n.TryAdd(Key, Double(Value));
           else // vkString
-            Ok := n.AddUniq(Key, string(Value));
+            Ok := n.TryAdd(Key, string(Value));
           end;
           if not Ok then
             raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);

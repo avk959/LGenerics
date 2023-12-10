@@ -492,7 +492,7 @@ begin
         end;
     fkEmpty: ;
     fkEnum:
-      aSchema[ENUM_KEY].AddUniqNull(aSample.AsString);
+      aSchema[ENUM_KEY].TryAddNull(aSample.AsString);
     fkType:
       if GetStrType(aSchema[TYPE_KEY].AsString) = stNone then
         SetFormKind(aSchema, fkEmpty)
@@ -513,8 +513,8 @@ begin
   n := aSchema[ENUM_KEY];
   if aHint <> nil then
     for s in aHint^.EnumList do
-      n.AddUniqNull(s);
-  n.AddUniqNull(aSample.AsString);
+      n.TryAddNull(s);
+  n.TryAddNull(aSample.AsString);
 end;
 
 procedure TJtdInferrer.DoInferArray(aSchema, aSample: TJsonNode);
@@ -777,7 +777,7 @@ begin
   FSchema := TJsonNode.NewNode(jvkObject);
   for Node in FNodeList do
     begin
-      if not TJsonNode.DupeNamesFree(Node) then  /////
+      if not TJsonNode.DuplicateFree(Node) then  /////
         exit(FSchema);
       for I := 0 to Pred(FHintList.Count) do
         if Node.FindPath(FHintList.UncMutable[I]^.Path, Pointed) then
