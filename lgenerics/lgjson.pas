@@ -705,6 +705,7 @@ type
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { acts as FindOrAdd }
     property  NItems[const aName: string]: TJsonNode read GetNItem; default;
+  { note: GetValue() will raise an exception if the instance is not a scalar }
     property  Value: TJVariant read GetValue write SetValue;
     property  VArr: TJVarArray write SetVarArray;
     property  PArr: TJPairArray write SetPairArray;
@@ -1339,9 +1340,8 @@ begin
   case v.Kind of
     vkNull:   v.ConvertError('null', 'Double');
     vkBool:   v.ConvertError('Boolean', 'Double');
+    vkNumber: ;
     vkString: v.ConvertError('string', 'Double');
-  else
-    exit(v.FValue.Num);
   end;
   Result := v.FValue.Num;
 end;
@@ -1356,10 +1356,9 @@ class operator TJVariant.:=(const v: TJVariant): Boolean;
 begin
   case v.Kind of
     vkNull:   v.ConvertError('null', 'Boolean');
+    vkBool:   ;
     vkNumber: v.ConvertError('Double', 'Boolean');
     vkString: v.ConvertError('string', 'Boolean');
-  else
-    exit(v.FValue.Bool);
   end;
   Result := v.FValue.Bool;
 end;
@@ -1370,8 +1369,7 @@ begin
     vkNull:   v.ConvertError('null', 'string');
     vkBool:   v.ConvertError('Boolean', 'string');
     vkNumber: v.ConvertError('Double', 'string');
-  else
-    exit(string(v.FValue.Ref));
+    vkString: ;
   end;
   Result := string(v.FValue.Ref);
 end;
@@ -1379,11 +1377,10 @@ end;
 class operator TJVariant.= (const L, R: TJVariant): Boolean;
 begin
   case L.Kind of
+    vkNull:   Result := R.Kind = vkNull;
     vkBool:   Result := (R.Kind = vkBool) and not(L.FValue.Bool xor R.FValue.Bool);
     vkNumber: Result := (R.Kind = vkNumber) and SameValue(L.FValue.Num, R.FValue.Num);
     vkString: Result := (R.Kind = vkString) and (string(L.FValue.Ref) = string(R.FValue.Ref));
-  else
-    Result := False;
   end;
 end;
 
@@ -3816,9 +3813,9 @@ procedure TJsonNode.SetValue(const aValue: TJVariant);
 begin
   case aValue.Kind of
     vkNull:   AsNull;
-    vkBool:   AsBoolean := aValue.AsBoolean;
-    vkNumber: AsNumber := aValue.AsNumber;
-    vkString: AsString := aValue.AsString;
+    vkBool:   AsBoolean := Boolean(aValue);
+    vkNumber: AsNumber := Double(aValue);
+    vkString: AsString := string(aValue);
   end;
 end;
 
