@@ -2438,7 +2438,7 @@ var
     System.SetLength(Result, J);
   end;
 
-  function Less(const L, R: TWord): Boolean;
+  function Less(const L, R: TWord): Boolean; inline;
   begin
     Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
   end;
@@ -2633,7 +2633,7 @@ var
     System.SetLength(Result, Len);
   end;
 
-  function WordSetPairwize(const L, R: array of Ucs4Char): Double;
+  function WordSetPairwise(const L, R: array of Ucs4Char): Double;
   var
     WordsL, WordsR: PWord;
     BufL, BufR: TWordArray;
@@ -2688,11 +2688,8 @@ var
 
     if aPartial then
       begin
-        Result := SimPartial(Intersection, SetL);
-        if Result = Double(1.0) then exit;
-        Result := Math.Max(Result, SimPartial(Intersection, SetR));
-        if Result = Double(1.0) then exit;
-        Result := Math.Max(Result, SimPartial(SetL, SetR));
+        if Intersection <> nil then exit(Double(1.0));
+        Result := SimPartial(SetL, SetR);
       end
     else
       begin
@@ -2725,7 +2722,7 @@ begin
         LocR := SplitMergeSortedSet(R);
       end;
   else
-    exit(WordSetPairwize(L, R));
+    exit(WordSetPairwise(L, R));
   end;
 
   if aPartial then
