@@ -456,12 +456,13 @@ const
 
 { similarity ratio using the Levenshtein distance with some preprocessing of the input text;
   inspired by FuzzyWuzzy }
-  function SimRatioLevEx(const L, R: rawbytestring;
-                         aMode: TSimMode = smSimple;
-                         const aStopChars: TSysCharSet = DEF_STOP_CHARS;
-                         const aOptions: TSimOptions = [];
-                         aCaseMap: TSimCaseMap = nil;
-                         aLess: TSimLess = nil): Double;
+  function SimRatioLevEx(
+    const L, R: rawbytestring;
+    aMode: TSimMode = smSimple;
+    const aStopChars: TSysCharSet = DEF_STOP_CHARS;
+    const aOptions: TSimOptions = [];
+    aCaseMap: TSimCaseMap = nil;
+    aLess: TSimLess = nil): Double;
 { the LCS edit distance allows only two operations: insertion and deletion; uses slightly
   modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
   from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
@@ -1974,14 +1975,14 @@ var
     System.SetLength(Result, J);
   end;
 
-  function Less(const L, R: TWord): Boolean;
+  function Less(const L, R: TWord): Boolean; inline;
   begin
     Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
   end;
 
   function LessDef(const L, R: TWord): Boolean;
   var
-    c: Integer;
+    c: SizeInt;
   begin
     c := CompareByte(L.Start^, R.Start^, Math.Min(L.Len, R.Len));
     if c = 0 then exit(L.Len < R.Len);
@@ -2102,16 +2103,13 @@ var
   var
     I: SizeInt;
   begin
-    Result := Double(0.0);
     if L = '' then
-      if R = '' then
-        exit(Double(1.0))
-      else
-        exit
+      if R = '' then exit(Double(1.0))
+      else exit(Double(0.0))
     else
-      if R = '' then
-        exit;
+      if R = '' then exit(Double(0.0));
 
+    Result := Double(0.0);
     if System.Length(L) <= System.Length(R) then
       for I := 0 to System.Length(R) - System.Length(L) do
         begin
@@ -2161,7 +2159,7 @@ var
     System.SetLength(Result, Len);
   end;
 
-  function WordSetPairwize(const L, R: rawbytestring): Double;
+  function WordSetPairwise(const L, R: rawbytestring): Double;
   var
     WordsL, WordsR: PWord;
     BufL, BufR: TWordArray;
@@ -2216,11 +2214,8 @@ var
 
     if soPartial in aOptions then
       begin
-        Result := SimPartial(Intersection, SetL);
-        if Result = Double(1.0) then exit;
-        Result := Math.Max(Result, SimPartial(Intersection, SetR));
-        if Result = Double(1.0) then exit;
-        Result := Math.Max(Result, SimPartial(SetL, SetR));
+        if Intersection <> '' then exit(Double(1.0));
+        Result := SimPartial(SetL, SetR);
       end
     else
       begin
@@ -2270,7 +2265,7 @@ begin
         LocR := SplitMergeSortedSet(LocR);
       end;
   else
-    exit(WordSetPairwize(LocL, LocR));
+    exit(WordSetPairwise(LocL, LocR));
   end;
 
   if soPartial in aOptions then
