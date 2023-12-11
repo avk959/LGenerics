@@ -4018,7 +4018,8 @@ begin
   Mode := aMode;
 end;
 
-class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aSkipBom: Boolean; aDepth: Integer): Boolean;
+class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseNode;
   DynStack: array of TParseNode = nil;
@@ -4059,13 +4060,16 @@ begin
     FreeAndNil(aRoot);
 end;
 
-class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aSkipBom: Boolean; aDepth: Integer): Boolean;
+class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
+{$PUSH}{$Q+}{$R+}
   System.SetLength(s, aStream.Size - aStream.Position);
+{$POP}
   aStream.ReadBuffer(Pointer(s)^, System.Length(s));
-  Result := TryParse(s, aRoot, aSkipBom, aDepth);
+  Result := TryParse(aStream, aRoot, aSkipBom, aDepth);
 end;
 
 class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
@@ -4073,13 +4077,10 @@ class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: 
 var
   s: string = '';
 begin
-  with TStringStream.Create do
-    try
-      CopyFrom(aStream, aCount);
-      s := DataString;
-    finally
-      Free;
-    end;
+{$PUSH}{$Q+}{$R+}
+  System.SetLength(s, aCount);
+{$POP}
+  aStream.ReadBuffer(Pointer(s)^, aCount);
   Result := TryParse(s, aRoot, aSkipBom, aDepth);
 end;
 
@@ -4090,8 +4091,10 @@ var
 begin
   with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
     try
+    {$PUSH}{$Q+}{$R+}
       System.SetLength(s, Size);
-      ReadBuffer(Pointer(s)^, System.Length(s)); //todo: Size > MaxInt ???
+    {$POP}
+      ReadBuffer(Pointer(s)^, System.Length(s));
     finally
       Free;
     end;
