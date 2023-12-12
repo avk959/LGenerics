@@ -1954,7 +1954,7 @@ begin
       sdaDefault,
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LevDistanceMyers(L, R);
+      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -1965,9 +1965,9 @@ begin
         Dist := LevDistanceMbr(L, R, Limit)
       else
         Dist := LevDistanceMyers(L, R, Limit);
-    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
-    sdaLcsMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
@@ -1991,7 +1991,7 @@ begin
       sdaDefault,
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LevDistanceMyers(L, R);
+      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -2002,9 +2002,9 @@ begin
         Dist := LevDistanceMbr(L, R, Limit)
       else
         Dist := LevDistanceMyers(L, R, Limit);
-    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
-    sdaLcsMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
