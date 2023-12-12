@@ -1157,20 +1157,23 @@ type
 
 type
   TSimMode = (
-    smSimple,         // tokenization only
-    smTokenSort,      // lexicographic sorting of tokens
-    smTokenSet,       // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
-    smTokenSetEx       { tokens are converted to a sorted set,
-                         two strings are constructed in the form <intersection><difference>,
-                         max ratio of these two strings in certain combinations is taken }
+    smSimple,       // tokenization only
+    smTokenSort,    // lexicographic sorting of tokens
+    smTokenSet,     // lexicographic sorting of tokens with discarding of non-unique ones(sorted set)
+    smTokenSetEx     { tokens are converted to a sorted set,
+                       two strings are constructed in the form <intersection><difference>,
+                       max ratio of these two strings in certain combinations is taken }
     );
 
   TSimOption  = (
-    soPartial,        // maximum similarity is required when alternately comparing a shorter
-                      // string with all parts of the same length of a longer string
+    soPartial,       { maximum similarity is required when alternately comparing a shorter
+                      string with all parts of the same length of a longer string }
     soIgnoreCase);
 
   TSimOptions = set of TSimOption;
+
+  TSeqDistanceAlgo = (sdaDefault, sdaLevMBR, sdaLevMyers, sdaLcsMyers);
+
 
   TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
 
