@@ -445,6 +445,11 @@ type
 { similarity ratio using Levenshtein distance }
   function SimRatioLev(const L, R: rawbytestring): Double;
   function SimRatioLev(const L, R: array of Byte): Double;
+{ returns similarity ratio using specified distance algorithm; aLimit specifies
+  the lower bound of the required similarity(0<=aLimit<=1.0), if the obtained value
+  is less than the specified value, zero will be returned }
+  function SimRatio(const L, R: rawbytestring; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
+  function SimRatio(const L, R: array of Byte; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
 
 type
 { must convert the string to a single case, no matter which one }
@@ -467,10 +472,12 @@ const
   modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
   from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
   function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
+  function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1 }
   function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+  function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 
   function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
   function IsValidDotDecIPv4(const s: rawbytestring): Boolean;
@@ -1931,6 +1938,80 @@ begin
   Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
 end;
 
+function SimRatio(const L, R: rawbytestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
+var
+  Len, Limit, Dist: SizeInt;
+begin
+  if (L = '') and (R = '') then exit(Double(1.0));
+  if aLimit < 0 then aLimit := Double(0);
+  if aLimit > 1 then aLimit := Double(1);
+  if Algo = sdaLcsMyers then
+    Len := System.Length(L) + System.Length(R)
+  else
+    Len := Math.Max(System.Length(L), System.Length(R));
+  if aLimit = Double(0) then begin
+    case Algo of
+      sdaDefault,
+      sdaLevMyers: Dist := LevDistanceMyers(L, R);
+      sdaLevMBR:   Dist := LevDistanceMbr(L, R);
+      sdaLcsMyers: Dist := LevDistanceMyers(L, R);
+    end;
+    exit(Double(Len - Dist)/Double(Len));
+  end;
+  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  case Algo of
+    sdaDefault:
+      if aLimit > Double(0.90) then
+        Dist := LevDistanceMbr(L, R, Limit)
+      else
+        Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
+    sdaLcsMyers: Dist := LevDistanceMyers(L, R, Limit);
+  end;
+  if Dist <> NULL_INDEX then
+    Result := Double(Len - Dist)/Double(Len)
+  else
+    Result := 0;
+end;
+
+function SimRatio(const L, R: array of Byte; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
+var
+  Len, Limit, Dist: SizeInt;
+begin
+  if (System.Length(L) = 0) and (System.Length(R) = 0) then exit(Double(1.0));
+  if aLimit < 0 then aLimit := Double(0);
+  if aLimit > 1 then aLimit := Double(1);
+  if Algo = sdaLcsMyers then
+    Len := System.Length(L) + System.Length(R)
+  else
+    Len := Math.Max(System.Length(L), System.Length(R));
+  if aLimit = Double(0) then begin
+    case Algo of
+      sdaDefault,
+      sdaLevMyers: Dist := LevDistanceMyers(L, R);
+      sdaLevMBR:   Dist := LevDistanceMbr(L, R);
+      sdaLcsMyers: Dist := LevDistanceMyers(L, R);
+    end;
+    exit(Double(Len - Dist)/Double(Len));
+  end;
+  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  case Algo of
+    sdaDefault:
+      if aLimit > Double(0.90) then
+        Dist := LevDistanceMbr(L, R, Limit)
+      else
+        Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
+    sdaLcsMyers: Dist := LevDistanceMyers(L, R, Limit);
+  end;
+  if Dist <> NULL_INDEX then
+    Result := Double(Len - Dist)/Double(Len)
+  else
+    Result := 0;
+end;
+
 {$PUSH}{$WARN 5089 OFF}
 function SimRatioLevEx(const L, R: rawbytestring; aMode: TSimMode; const aStopChars: TSysCharSet;
   const aOptions: TSimOptions; aCaseMap: TSimCaseMap; aLess: TSimLess): Double;
@@ -2276,23 +2357,13 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
+function LcsDistMyersImpl(pL, pR: PByte; M{lenL}, N{lenR}: SizeInt): SizeInt;
 var
-  pL: PByte absolute L;
-  pR: PByte absolute R;
-  I, J, M, N, D, K, HiK: SizeInt;
+  I, J, D, K, HiK: SizeInt;
   V: PSizeInt;
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
 begin
-  M := System.Length(L);
-  N := System.Length(R);
-
-  if M = 0 then
-    exit(N)
-  else
-    if N = 0 then
-      exit(M);
 
   if M + N < Pred(MAX_STATIC) then
     begin
@@ -2304,7 +2375,6 @@ begin
       System.SetLength(Buf, M + N + 2);
       V := @Buf[Succ(M)];
     end;
-
 
   for D := 0 to M + N do
     begin
@@ -2330,37 +2400,46 @@ begin
 
   Result := NULL_INDEX; //we should never come here
 end;
+{$POP}
 
-function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
 var
   pL: PByte absolute L;
   pR: PByte absolute R;
-  I, J, M, N, D, K, HiK: SizeInt;
+  M, N: SizeInt;
+begin
+  M := System.Length(L);
+  N := System.Length(R);
+  if M = 0 then
+    exit(N)
+  else
+    if N = 0 then
+      exit(M);
+  Result := LcsDistMyersImpl(pL, pR, M, N);
+end;
+
+function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
+var
+  M, N: SizeInt;
+begin
+  M := System.Length(L);
+  N := System.Length(R);
+  if M = 0 then
+    exit(N)
+  else
+    if N = 0 then
+      exit(M);
+  Result := LcsDistMyersImpl(@L[0], @R[0], M, N);
+end;
+
+{$PUSH}{$WARN 5057 OFF}
+function LcsDistMyersImplLim(pL, pR: PByte; M{lenL}, N{lenR}, aLimit: SizeInt): SizeInt;
+var
+  I, J, D, K, HiK: SizeInt;
   V: PSizeInt;
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
 begin
-  if aLimit < 0 then aLimit := 0;
-  if aLimit = 0 then
-    begin
-      if L = R then exit(0);
-      exit(NULL_INDEX);
-    end;
-
-  M := System.Length(L);
-  N := System.Length(R);
-
-  if M = 0 then
-    if N > aLimit then
-      exit(NULL_INDEX)
-    else
-      exit(N)
-  else
-    if N = 0 then
-      if M > aLimit then
-        exit(NULL_INDEX)
-      else
-        exit(M);
 
   if M + N < Pred(MAX_STATIC) then
     begin
@@ -2399,6 +2478,55 @@ begin
   Result := NULL_INDEX;
 end;
 {$POP}
+
+function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+var
+  pL: PByte absolute L;
+  pR: PByte absolute R;
+  M, N: SizeInt;
+begin
+  if aLimit < 0 then aLimit := 0;
+  if aLimit = 0 then
+    begin
+      if L = R then exit(0);
+      exit(NULL_INDEX);
+    end;
+  M := System.Length(L);
+  N := System.Length(R);
+  if M = 0 then
+    if N > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(N)
+  else
+    if N = 0 then
+      if M > aLimit then
+        exit(NULL_INDEX)
+      else
+        exit(M);
+  Result := LcsDistMyersImplLim(pL, pR, M, N, aLimit);
+end;
+
+function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+var
+  M, N: SizeInt;
+begin
+  if aLimit < 0 then aLimit := 0;
+  M := System.Length(L);  N := System.Length(R);
+  if (aLimit = 0) and (M <> N) then exit(NULL_INDEX);
+  if M = 0 then
+    if N > aLimit then
+      exit(NULL_INDEX)
+    else
+      exit(N)
+  else
+    if N = 0 then
+      if M > aLimit then
+        exit(NULL_INDEX)
+      else
+        exit(M);
+  Result := LcsDistMyersImplLim(@L[0], @R[0], M, N, aLimit);
+end;
 
 {$PUSH}{$WARN 5036 OFF}
 function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
