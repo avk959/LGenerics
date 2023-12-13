@@ -15109,6 +15109,7 @@ var
   I: T;
   J: SizeInt = 0;
 begin
+  if aLast < aFirst then Swap(aLast, aFirst); ////
   System.SetLength(Result, Succ(aLast - aFirst));
   for I := aFirst to aLast do
     begin
