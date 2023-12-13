@@ -654,9 +654,10 @@ begin
   if (Props <> nil) or (OptionalProps <> nil) then begin
     aText.Add('var');
     aText.Add('  p: TJsonNode.TPair;');
-    if Props <> nil then
+    if Props <> nil then begin
       aText.Add(Format('  Flags: array[0..%d] of Boolean;', [System.High(Props)]));
-    aText.Add('  I: Integer;');
+      aText.Add('  I: Integer;');
+    end;
     aText.Add('begin');
     aText.Add('  if not aNode.IsObject then ReadError;');
     aText.Add('  Clear;');
@@ -708,10 +709,9 @@ var
 begin
   aText.Add('{$PUSH}{$WARN 5057 OFF}');
   aText.Add(Format('procedure %s.DoReadJson(aReader: TJsonReader);', [TypeName]));
-  if (Props <> nil) or (OptionalProps <> nil) then begin
+  if Props <> nil then begin
     aText.Add('var');
-    if Props <> nil then
-      aText.Add(Format('  Flags: array[0..%d] of Boolean;', [System.High(Props)]));
+    aText.Add(Format('  Flags: array[0..%d] of Boolean;', [System.High(Props)]));
     aText.Add('  I: Integer;');
   end;
   aText.Add('begin');
