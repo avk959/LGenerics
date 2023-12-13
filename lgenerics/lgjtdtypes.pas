@@ -40,6 +40,8 @@ type
   const
     DEF_DEPTH    = TJsonReader.DEF_DEPTH;
     DEF_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
+  private
+    FIsNull: Boolean;
   protected
     procedure DoReadJson(aNode: TJsonNode); virtual; abstract;
     procedure DoReadJson(aReader: TJsonReader); virtual; abstract;
@@ -52,8 +54,8 @@ type
     class function ReadJson(aReader: TJsonReader): TJtdEntity;
     class function ReadJson(const aJson: string): TJtdEntity;
     constructor Create; virtual;
+    constructor CreateNull; virtual;
     function  IsNull: Boolean; inline;
-    function  NotNull: Boolean; inline;
     procedure LoadJson(aNode: TJsonNode);
     procedure LoadJson(const aJson: string);
     procedure LoadFromStream(aStream: TStream; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
@@ -314,14 +316,15 @@ begin
   inherited;
 end;
 
-function TJtdEntity.IsNull: Boolean;
+constructor TJtdEntity.CreateNull;
 begin
-  Result := Self = nil;
+  inherited Create;
+  FIsNull := True;
 end;
 
-function TJtdEntity.NotNull: Boolean;
+function TJtdEntity.IsNull: Boolean;
 begin
-  Result := Self <> nil;
+  Result := (Self = nil) or FIsNull;
 end;
 
 procedure TJtdEntity.LoadJson(aNode: TJsonNode);
@@ -369,7 +372,7 @@ end;
 
 class function TJtdEntity.ReadJson(aNode: TJsonNode): TJtdEntity;
 begin
-  if aNode.IsNull then exit(nil);
+  if aNode.IsNull then exit(GetJtdClass.CreateNull);
   Result := GetJtdClass.Create;
   Result.DoReadJson(aNode);
 end;
@@ -378,7 +381,7 @@ class function TJtdEntity.ReadJson(aReader: TJsonReader): TJtdEntity;
 begin
   if (aReader.ReadState = rsStart) and not aReader.Read then
     ReadError;
-  if aReader.TokenKind = tkNull then exit(nil);
+  if aReader.TokenKind = tkNull then exit(GetJtdClass.CreateNull);
   Result := GetJtdClass.Create;
   Result.DoReadJson(aReader);
 end;
@@ -397,7 +400,7 @@ end;
 
 procedure TJtdEntity.WriteJson(aWriter: TJsonStrWriter);
 begin
-  if Self = nil then
+  if Self.IsNull then
     aWriter.AddNull
   else
     DoWriteJson(aWriter);
