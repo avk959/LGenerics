@@ -779,9 +779,9 @@ begin
   for I := 0 to System.High(OptionalProps) do begin
     aText.Add(Format('  if %s <> nil then begin', [OptionalProps[I].PropName]));
     if HasAsciiNames then
-      aText.Add(Format('  aWriter.AddName(''%s'');', [OptionalProps[I].JsonPropName]))
+      aText.Add(Format('    aWriter.AddName(''%s'');', [OptionalProps[I].JsonPropName]))
     else
-      aText.Add(Format('  aWriter.AddName(TJsonNode.JsonStrToPas(''%s''));', [OptionalProps[I].JsonPropName]));
+      aText.Add(Format('    aWriter.AddName(TJsonNode.JsonStrToPas(''%s''));', [OptionalProps[I].JsonPropName]));
     aText.Add(Format('    %s.WriteJson(aWriter);', [OptionalProps[I].PropName]));
     aText.Add('  end;');
   end;
