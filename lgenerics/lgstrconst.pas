@@ -48,6 +48,8 @@ resourcestring
   SEInputShouldAtLeastFmt  = 'Parameter "%s" should be at least %d';
   SEValueAlreadyExist      = 'Value already exists';
   SEKeyAlreadyExist        = 'Key already exists';
+  SETKeyTypeMustBeClass    = 'TKey must be a class type';
+  SETValueTypeMustBeClass  = 'TValue must be a class type';
   SEResultUnknownFatal     = 'Result is unknown due to fatal exception';
   SEResultUnknownCancel    = 'Result is unknown due to task cancelled';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
