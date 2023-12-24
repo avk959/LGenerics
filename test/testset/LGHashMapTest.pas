@@ -586,7 +586,8 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(e);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
     AssertTrue(m.Instance.Contains(e[I].Key));
@@ -883,7 +884,8 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(e);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
     AssertTrue(m.Instance.Contains(e[I].Key));
@@ -1131,7 +1133,8 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(e);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
     AssertTrue(m.Instance.Contains(e[I].Key));
@@ -1379,7 +1382,8 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(e);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
     AssertTrue(m.Instance.Contains(e[I].Key));
@@ -1790,7 +1794,8 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(e);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = TestSize);
   for I := 0 to System.High(e) do
     AssertTrue(m.Instance.Contains(e[I].Key));
@@ -1820,7 +1825,8 @@ begin
   TestSize := 100;//must be even
   eArray := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(eArray);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(eArray);
   AssertTrue(m.Instance.Count = TestSize);
   for I := 0 to Pred(TestSize div 2) do
     begin
@@ -1854,7 +1860,8 @@ begin
   TestSize := 100;//must be even
   eArray := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
-  {%H-}m.Instance.AddAll(eArray);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
+  m.Instance.AddAll(eArray);
   AssertTrue(m.Instance.Count = TestSize);
   J := TestSize;
   for I := 1 to TestSize div 2  do
@@ -2145,7 +2152,8 @@ end;
 
 procedure TLiteHashMapLPTest.GetOrAddMutValue2;
 type
-  TMap = specialize TGLiteHashMapLP<Integer, string, Integer>.TMap;
+  TMapType = specialize TGLiteHashMapLP<Integer, string, Integer>;
+  TMap = TMapType.TMap;
 var
   Map: TMap;
   p: ^string;
