@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hashmap implementations.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -229,12 +229,15 @@ type
     function Clone: TGOrderedHashMap; override;
   end;
 
-  { TGCustomObjectHashMap
-      note: for equality comparison of (TValue as TObject) used TObjectHelper from LGHelpers }
+  { TGCustomObjectHashMap: common abstract object hashmap ancestor class;
+    an attempt to set ownership of keys or values will raise an exception
+    if the corresponding type is not a class type }
   generic TGCustomObjectHashMap<TKey, TValue> = class abstract(specialize TGAbstractHashMap<TKey, TValue>)
   private
     FOwnsKeys: Boolean;
     FOwnsValues: Boolean;
+    procedure SetOwnsKeys(aValue: Boolean);
+    procedure SetOwnsValues(aValue: Boolean);
   protected
   type
     TObjectHashMapClass = class of TGCustomObjectHashMap;
@@ -250,23 +253,21 @@ type
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
     class function GetClass: TObjectHashMapClass; reintroduce; virtual; abstract;
   public
-    constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aLoadFactor: Single; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aLoadFactor: Single; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aLoadFactor: Single; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry;
-                       aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable;
-                       aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aOwns: TMapObjOwnership = []);
+    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership);
+    constructor Create(aLoadFactor: Single; aOwns: TMapObjOwnership);
+    constructor Create(aLoadFactor: Single; const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(aLoadFactor: Single; e: IEntryEnumerable; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable; aOwns: TMapObjOwnership);
     constructor CreateCopy(aMap: TGCustomObjectHashMap);
-    property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
-    property  OwnsValues: Boolean read FOwnsValues write FOwnsValues;
+    property OwnsKeys: Boolean read FOwnsKeys write SetOwnsKeys;
+    property OwnsValues: Boolean read FOwnsValues write SetOwnsValues;
   end;
 
   generic TGObjectHashMapLP<TKey, TValue, TKeyEqRel> = class(specialize TGCustomObjectHashMap<TKey, TValue>)
@@ -1160,12 +1161,28 @@ end;
 
 { TGCustomObjectHashMap }
 
+procedure TGCustomObjectHashMap.SetOwnsKeys(aValue: Boolean);
+begin
+  if FOwnsKeys = aValue then exit;
+  if aValue and (System.GetTypeKind(TKey) <> tkClass) then
+    raise ELGObjectMapError.Create(SETKeyTypeMustBeClass);
+  FOwnsKeys := aValue;
+end;
+
+procedure TGCustomObjectHashMap.SetOwnsValues(aValue: Boolean);
+begin
+  if FOwnsValues = aValue then exit;
+  if aValue and (System.GetTypeKind(TValue) <> tkClass) then
+    raise ELGObjectMapError.Create(SETValueTypeMustBeClass);
+  FOwnsValues := aValue;
+end;
+
 procedure TGCustomObjectHashMap.EntryRemoving(p: PEntry);
 begin
   if OwnsKeys then
-    TObject(p^.Key).Free;
+    TObject((@p^.Key)^).Free;
   if OwnsValues then
-    TObject(p^.Value).Free;
+    TObject((@p^.Value)^).Free;
 end;
 
 procedure TGCustomObjectHashMap.SetOwnership(aOwns: TMapObjOwnership);
@@ -1182,9 +1199,9 @@ begin
   if Result then
     begin
       if OwnsKeys then
-        TObject(aKey).Free;
+        TObject((@aKey)^).Free;
       if OwnsValues then
-        TObject(v).Free;
+        TObject((@v)^).Free;
     end;
 end;
 
@@ -1211,9 +1228,9 @@ begin
     for p in FTable do
       begin
         if OwnsKeys then
-          TObject(p^.Key).Free;
+          TObject((@p^.Key)^).Free;
         if OwnsValues then
-          TObject(p^.Value).Free;
+          TObject((@p^.Value)^).Free;
       end;
   inherited;
 end;
@@ -1226,8 +1243,8 @@ begin
   Result := p <> nil;
   if Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aNewValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aNewValue)^)) then
+        TObject((@p^.Value)^).Free;
       p^.Value := aNewValue;
     end;
 end;
@@ -1239,8 +1256,8 @@ begin
   Result := not FindOrAdd(aKey, p);
   if not Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aValue)^)) then
+        TObject((@p^.Value)^).Free;
     end;
   p^.Value := aValue;
 end;
