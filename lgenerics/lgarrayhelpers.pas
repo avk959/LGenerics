@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic helper utils for arrays.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -178,6 +178,7 @@ type
   { cyclic shift of array elements by aDist positions to the right;
     the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
+  { performs a random permutation of the elements of array A }
     class procedure RandomShuffle(var A: array of T); static;
   { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(const A: array of T; const aValue: T; c: TEqualCompare): SizeInt;
