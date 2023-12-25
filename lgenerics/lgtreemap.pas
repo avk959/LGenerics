@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sorted map implementations on top of AVL tree.                  *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -31,7 +31,8 @@ uses
   lgUtils,
   {%H-}lgHelpers,
   lgAbstractContainer,
-  lgAvlTree;
+  lgAvlTree,
+  lgStrConst;
 
 type
 
@@ -203,12 +204,14 @@ type
   { TGTreeMap implements sorted map; it assumes that type TKey implements TKeyCmpRel}
   generic TGTreeMap<TKey, TValue> = class(specialize TGBaseTreeMap<TKey, TValue, TKey>);
 
-  { TGObjectTreeMap
-    note: for equality comparision of Values used TObjectHelper from LGHelpers }
+  { TGObjectTreeMap: an attempt to set ownership of keys or values will raise an exception
+    if the corresponding type is not a class type }
   generic TGObjectTreeMap<TKey, TValue, TKeyCmpRel> = class(specialize TGBaseTreeMap<TKey, TValue, TKeyCmpRel>)
   protected
     FOwnsKeys: Boolean;
     FOwnsValues: Boolean;
+    procedure SetOwnsKeys(aValue: Boolean);
+    procedure SetOwnsValues(aValue: Boolean);
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
     function  DoRemove(const aKey: TKey): Boolean; override;
@@ -219,14 +222,14 @@ type
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
-    constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aOwns: TMapObjOwnership = []);
+    constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership);
+    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership);
     constructor CreateCopy(aMap: TGObjectTreeMap);
-    function  Clone: TGObjectTreeMap; override;
-    property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
-    property  OwnsValues: Boolean read FOwnsValues write FOwnsValues;
+    function Clone: TGObjectTreeMap; override;
+    property OwnsKeys: Boolean read FOwnsKeys write SetOwnsKeys;
+    property OwnsValues: Boolean read FOwnsValues write SetOwnsValues;
   end;
 
   generic TGObjTreeMap<TKey, TValue> = class(specialize TGObjectTreeMap<TKey, TValue, TKey>);
@@ -267,12 +270,10 @@ type
     constructor CreateCopy(aMap: TGComparableTreeMap);
     function Clone: TGComparableTreeMap; override;
     function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
-    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
-      override;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable; override;
     function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TGComparableTreeMap; override;
     function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TGComparableTreeMap; override;
-    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGComparableTreeMap;
-      override;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGComparableTreeMap; override;
   end;
 
   { TGRegularTreeMap implements sorted map with regular comparator }
@@ -314,20 +315,20 @@ type
     function Comparator: TLess; inline;
     function Clone: TGRegularTreeMap; override;
     function Head(const aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; override;
-    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
-      override;
+    function Range(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable; override;
     function HeadMap(const aHighBound: TKey; aInclusive: Boolean = False): TGRegularTreeMap; override;
     function TailMap(const aLowBound: TKey; aInclusive: Boolean = True): TGRegularTreeMap; override;
-    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGRegularTreeMap;
-      override;
+    function SubMap(const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TGRegularTreeMap; override;
   end;
 
-  { TGObjectRegularTreeMap
-    note: for equality comparision of Values used TObjectHelper from LGHelpers }
+  { TGObjectRegularTreeMap: an attempt to set ownership of keys or values will raise an exception
+    if the corresponding type is not a class type }
   generic TGObjectRegularTreeMap<TKey, TValue> = class(specialize TGRegularTreeMap<TKey, TValue>)
   protected
     FOwnsKeys: Boolean;
     FOwnsValues: Boolean;
+    procedure SetOwnsKeys(aValue: Boolean);
+    procedure SetOwnsValues(aValue: Boolean);
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
     function  DoRemove(const aKey: TKey): Boolean; override;
@@ -338,15 +339,15 @@ type
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
-    constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aOwns: TMapObjOwnership = []);
+    constructor Create(c: TLess; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; c: TLess; aOwns: TMapObjOwnership);
+    constructor Create(const a: array of TEntry; c: TLess; aOwns: TMapObjOwnership);
+    constructor Create(e: IEntryEnumerable; c: TLess; aOwns: TMapObjOwnership);
     constructor CreateCopy(aMap: TGObjectRegularTreeMap);
-    function  Clone: TGObjectRegularTreeMap; override;
-    property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
-    property  OwnsValues: Boolean read FOwnsValues write FOwnsValues;
+    function Clone: TGObjectRegularTreeMap; override;
+    property OwnsKeys: Boolean read FOwnsKeys write SetOwnsKeys;
+    property OwnsValues: Boolean read FOwnsValues write SetOwnsValues;
   end;
 
   { TGDelegatedTreeMap implements sorted map with delegated comparator }
@@ -397,12 +398,14 @@ type
       override;
   end;
 
-  { TGObjectDelegatedTreeMap
-    note: for equality comparision of Values used TObjectHelper from LGHelpers }
+  { TGObjectDelegatedTreeMap: an attempt to set ownership of keys or values will raise an exception
+    if the corresponding type is not a class type }
   generic TGObjectDelegatedTreeMap<TKey, TValue> = class(specialize TGDelegatedTreeMap<TKey, TValue>)
   protected
     FOwnsKeys: Boolean;
     FOwnsValues: Boolean;
+    procedure SetOwnsKeys(aValue: Boolean);
+    procedure SetOwnsValues(aValue: Boolean);
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
     function  DoRemove(const aKey: TKey): Boolean; override;
@@ -413,15 +416,15 @@ type
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
   public
-    constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aOwns: TMapObjOwnership = []);
+    constructor Create(c: TOnLess; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; c: TOnLess; aOwns: TMapObjOwnership);
+    constructor Create(const a: array of TEntry; c: TOnLess; aOwns: TMapObjOwnership);
+    constructor Create(e: IEntryEnumerable; c: TOnLess; aOwns: TMapObjOwnership);
     constructor CreateCopy(aMap: TGObjectDelegatedTreeMap);
     function  Clone: TGObjectDelegatedTreeMap; override;
-    property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
-    property  OwnsValues: Boolean read FOwnsValues write FOwnsValues;
+    property  OwnsKeys: Boolean read FOwnsKeys write SetOwnsKeys;
+    property  OwnsValues: Boolean read FOwnsValues write SetOwnsValues;
   end;
 
 implementation
@@ -993,18 +996,34 @@ end;
 
 { TGObjectTreeMap }
 
+procedure TGObjectTreeMap.SetOwnsKeys(aValue: Boolean);
+begin
+  if FOwnsKeys = aValue then exit;
+  if aValue and (System.GetTypeKind(TKey) <> tkClass) then
+    raise ELGObjectMapError.Create(SETKeyTypeMustBeClass);
+  FOwnsKeys := aValue;
+end;
+
+procedure TGObjectTreeMap.SetOwnsValues(aValue: Boolean);
+begin
+  if FOwnsValues = aValue then exit;
+  if aValue and (System.GetTypeKind(TValue) <> tkClass) then
+    raise ELGObjectMapError.Create(SETValueTypeMustBeClass);
+  FOwnsValues := aValue;
+end;
+
 procedure TGObjectTreeMap.EntryRemoving(p: PEntry);
 begin
   if OwnsKeys then
-    TObject(p^.Key).Free;
+    TObject((@p^.Key)^).Free;
   if OwnsValues then
-    TObject(p^.Value).Free;
+    TObject((@p^.Value)^).Free;
 end;
 
 procedure TGObjectTreeMap.SetOwnership(aOwns: TMapObjOwnership);
 begin
-  FOwnsKeys := moOwnsKeys in aOwns;
-  FOwnsValues := moOwnsValues in aOwns;
+  OwnsKeys := moOwnsKeys in aOwns;
+  OwnsValues := moOwnsValues in aOwns;
 end;
 
 function TGObjectTreeMap.DoRemove(const aKey: TKey): Boolean;
@@ -1015,9 +1034,9 @@ begin
   if Result then
     begin
       if OwnsKeys then
-        TObject(aKey).Free;
+        TObject((@aKey)^).Free;
       if OwnsValues then
-        TObject(v).Free;
+        TObject((@v)^).Free;
     end;
 end;
 
@@ -1044,9 +1063,9 @@ begin
     for Node in FTree do
       begin
         if OwnsKeys then
-          TObject(Node^.Data.Key).Free;
+          TObject((@Node^.Data.Key)^).Free;
         if OwnsValues then
-          TObject(Node^.Data.Value).Free;
+          TObject((@Node^.Data.Value)^).Free;
       end;
   inherited;
 end;
@@ -1059,8 +1078,8 @@ begin
   Result := p <> nil;
   if Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aNewValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aNewValue)^)) then
+        TObject((@p^.Value)^).Free;
       p^.Value := aNewValue;
     end;
 end;
@@ -1072,8 +1091,8 @@ begin
   Result := not FindOrAdd(aKey, p);
   if not Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aValue)^)) then
+        TObject((@p^.Value)^).Free;
     end;
   p^.Value := aValue;
 end;
@@ -1408,12 +1427,28 @@ end;
 
 { TGObjectRegularTreeMap }
 
+procedure TGObjectRegularTreeMap.SetOwnsKeys(aValue: Boolean);
+begin
+  if FOwnsKeys = aValue then exit;
+  if aValue and (System.GetTypeKind(TKey) <> tkClass) then
+    raise ELGObjectMapError.Create(SETKeyTypeMustBeClass);
+  FOwnsKeys := aValue;
+end;
+
+procedure TGObjectRegularTreeMap.SetOwnsValues(aValue: Boolean);
+begin
+  if FOwnsValues = aValue then exit;
+  if aValue and (System.GetTypeKind(TValue) <> tkClass) then
+    raise ELGObjectMapError.Create(SETValueTypeMustBeClass);
+  FOwnsValues := aValue;
+end;
+
 procedure TGObjectRegularTreeMap.EntryRemoving(p: PEntry);
 begin
   if OwnsKeys then
-    TObject(p^.Key).Free;
+    TObject((@p^.Key)^).Free;
   if OwnsValues then
-    TObject(p^.Value).Free;
+    TObject((@p^.Value)^).Free;
 end;
 
 procedure TGObjectRegularTreeMap.SetOwnership(aOwns: TMapObjOwnership);
@@ -1430,9 +1465,9 @@ begin
   if Result then
     begin
       if OwnsKeys then
-        TObject(aKey).Free;
+        TObject((@aKey)^).Free;
       if OwnsValues then
-        TObject(v).Free;
+        TObject((@v)^).Free;
     end;
 end;
 
@@ -1459,9 +1494,9 @@ begin
     for Node in FTree do
       begin
         if OwnsKeys then
-          TObject(Node^.Data.Key).Free;
+          TObject((@Node^.Data.Key)^).Free;
         if OwnsValues then
-          TObject(Node^.Data.Value).Free;
+          TObject((@Node^.Data.Value)^).Free;
       end;
   inherited;
 end;
@@ -1474,8 +1509,8 @@ begin
   Result := p <> nil;
   if Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aNewValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aNewValue)^)) then
+        TObject((@p^.Value)^).Free;
       p^.Value := aNewValue;
     end;
 end;
@@ -1487,8 +1522,8 @@ begin
   Result := not FindOrAdd(aKey, p);
   if not Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aValue)^)) then
+        TObject((@p^.Value)^).Free;
     end;
   p^.Value := aValue;
 end;
@@ -1683,12 +1718,28 @@ end;
 
 { TGObjectDelegatedTreeMap }
 
+procedure TGObjectDelegatedTreeMap.SetOwnsKeys(aValue: Boolean);
+begin
+  if FOwnsKeys = aValue then exit;
+  if aValue and (System.GetTypeKind(TKey) <> tkClass) then
+    raise ELGObjectMapError.Create(SETKeyTypeMustBeClass);
+  FOwnsKeys := aValue;
+end;
+
+procedure TGObjectDelegatedTreeMap.SetOwnsValues(aValue: Boolean);
+begin
+  if FOwnsValues = aValue then exit;
+  if aValue and (System.GetTypeKind(TValue) <> tkClass) then
+    raise ELGObjectMapError.Create(SETValueTypeMustBeClass);
+  FOwnsValues := aValue;
+end;
+
 procedure TGObjectDelegatedTreeMap.EntryRemoving(p: PEntry);
 begin
   if OwnsKeys then
-    TObject(p^.Key).Free;
+    TObject((@p^.Key)^).Free;
   if OwnsValues then
-    TObject(p^.Value).Free;
+    TObject((@p^.Value)^).Free;
 end;
 
 procedure TGObjectDelegatedTreeMap.SetOwnership(aOwns: TMapObjOwnership);
@@ -1705,9 +1756,9 @@ begin
   if Result then
     begin
       if OwnsKeys then
-        TObject(aKey).Free;
+        TObject((@aKey)^).Free;
       if OwnsValues then
-        TObject(v).Free;
+        TObject((@v)^).Free;
     end;
 end;
 
@@ -1734,9 +1785,9 @@ begin
     for Node in FTree do
       begin
         if OwnsKeys then
-          TObject(Node^.Data.Key).Free;
+          TObject((@Node^.Data.Key)^).Free;
         if OwnsValues then
-          TObject(Node^.Data.Value).Free;
+          TObject((@Node^.Data.Value)^).Free;
       end;
   inherited;
 end;
@@ -1749,8 +1800,8 @@ begin
   Result := p <> nil;
   if Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aNewValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aNewValue)^)) then
+        TObject((@p^.Value)^).Free;
       p^.Value := aNewValue;
     end;
 end;
@@ -1762,8 +1813,8 @@ begin
   Result := not FindOrAdd(aKey, p);
   if not Result then
     begin
-      if OwnsValues and not TObject.Equal(TObject(p^.Value), TObject(aValue)) then
-        TObject(p^.Value).Free;
+      if OwnsValues and (TObject((@p^.Value)^) <> TObject((@aValue)^)) then
+        TObject((@p^.Value)^).Free;
     end;
   p^.Value := aValue;
 end;
