@@ -478,6 +478,7 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
   m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
@@ -1205,6 +1206,7 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
   m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
@@ -1568,6 +1570,7 @@ begin
   TestSize := 100;
   e := CreateObjArray(Counter, TestSize);
   AssertTrue(Counter.Count = 0);
+  {%H-}m.Instance := TObjMap.Create(OWNS_BOTH);
   m.Instance.AddAll(e);
   AssertTrue(m.Instance.Count = 100);
   for I := 0 to System.High(e) do
