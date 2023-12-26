@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic bijective map implementation on top of hash table.              *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -309,6 +309,8 @@ type
   private
     FOwnsKeys: Boolean;
     FOwnsValues: Boolean;
+    procedure SetOwnsKeys(aValue: Boolean);
+    procedure SetOwnsValues(aValue: Boolean);
   protected
     procedure SetOwnership(aOwns: TMapObjOwnership); inline;
     procedure DoClear; override;
@@ -319,12 +321,12 @@ type
     procedure DoRetainAll({%H-}c: IKeyCollection); override;
     procedure DoRetainAllVal({%H-}c: IValueCollection); override;
   public
-    constructor Create(aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aOwns: TMapObjOwnership = []);
+    constructor Create(const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership);
+    constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership);
     constructor CreateCopy(aMap: TGObjectHashBiMap);
     function  Clone: TGObjectHashBiMap; override;
     property  OwnsKeys: Boolean read FOwnsKeys write FOwnsKeys;
@@ -332,12 +334,12 @@ type
   end;
 
   { TGObjHashBiMapK assumes that TKey implements TKeyEqRel }
-  generic TGObjHashBiMapK<TKey, TValue, TValueEqRel> = class(specialize
-    TGObjectHashBiMap<TKey, TValue, TKey, TValueEqRel>);
+  generic TGObjHashBiMapK<TKey, TValue, TValueEqRel> = class(
+    specialize TGObjectHashBiMap<TKey, TValue, TKey, TValueEqRel>);
 
   { TGObjHashBiMapV assumes that TValue implements TValueEqRel }
-  generic TGObjHashBiMapV<TKey, TValue, TKeyEqRel> = class(specialize
-    TGObjectHashBiMap<TKey, TValue, TKeyEqRel, TValue>);
+  generic TGObjHashBiMapV<TKey, TValue, TKeyEqRel> = class(
+    specialize TGObjectHashBiMap<TKey, TValue, TKeyEqRel, TValue>);
 
   { TGObjHashBiMap2 assumes that TKey implements TKeyEqRel and TValue implements TValueEqRel }
   generic TGObjHashBiMap2<TKey, TValue> = class(specialize TGObjectHashBiMap<TKey, TValue, TKey, TValue>);
@@ -1363,6 +1365,22 @@ end;
 
 { TGObjectHashBiMap }
 
+procedure TGObjectHashBiMap.SetOwnsKeys(aValue: Boolean);
+begin
+  if FOwnsKeys = aValue then exit;
+  if aValue and (System.GetTypeKind(TKey) <> tkClass) then
+    raise ELGObjectMapError.Create(SETKeyTypeMustBeClass);
+  FOwnsKeys := aValue;
+end;
+
+procedure TGObjectHashBiMap.SetOwnsValues(aValue: Boolean);
+begin
+  if FOwnsValues = aValue then exit;
+  if aValue and (System.GetTypeKind(TValue) <> tkClass) then
+    raise ELGObjectMapError.Create(SETValueTypeMustBeClass);
+  FOwnsValues := aValue;
+end;
+
 procedure TGObjectHashBiMap.SetOwnership(aOwns: TMapObjOwnership);
 begin
   OwnsKeys := moOwnsKeys in aOwns;
@@ -1377,9 +1395,9 @@ begin
     for I := 0 to Pred(Count) do
       begin
         if OwnsKeys then
-          TObject(FNodeList[I].Data.Key).Free;
+          TObject((@FNodeList[I].Data.Key)^).Free;
         if OwnsValues then
-          TObject(FNodeList[I].Data.Value).Free;
+          TObject((@FNodeList[I].Data.Value)^).Free;
       end;
   inherited;
 end;
@@ -1392,9 +1410,9 @@ begin
   if Result then
     begin
       if OwnsKeys then
-        TObject(aKey).Free;
+        TObject((@aKey)^).Free;
       if OwnsValues then
-        TObject(v).Free;
+        TObject((@v)^).Free;
     end;
 end;
 
@@ -1406,9 +1424,9 @@ begin
   if Result then
     begin
       if OwnsKeys then
-        TObject(k).Free;
+        TObject((@k)^).Free;
       if OwnsValues then
-        TObject(aValue).Free;
+        TObject((@aValue)^).Free;
     end;
 end;
 
@@ -1428,7 +1446,7 @@ begin
       J := h and Pred(Capacity);
       FNodeList[I].ValueHash := h;
       if OwnsValues then
-        TObject(FNodeList[I].Data.Value).Free;
+        TObject((@FNodeList[I].Data.Value)^).Free;
       FNodeList[I].Data.Value := aNewValue;
       FNodeList[I].NextValue := FValueChains[J];
       FValueChains[J] := I;
@@ -1452,7 +1470,7 @@ begin
       J := h and Pred(Capacity);
       FNodeList[I].KeyHash := h;
       if OwnsKeys then
-        TObject(FNodeList[I].Data.Key).Free;
+        TObject((@FNodeList[I].Data.Key)^).Free;
       FNodeList[I].Data.Key := aNewKey;
       FNodeList[I].NextKey := FKeyChains[J];
       FKeyChains[J] := I;
@@ -1468,9 +1486,9 @@ begin
     if c.NonContains(FNodeList[I].Data.Key) then
       begin
         if OwnsKeys then
-          TObject(FNodeList[I].Data.Key).Free;
+          TObject((@FNodeList[I].Data.Key)^).Free;
         if OwnsValues then
-          TObject(FNodeList[I].Data.Value).Free;
+          TObject((@FNodeList[I].Data.Value)^).Free;
         DoRemove(I);
       end
     else
@@ -1485,9 +1503,9 @@ begin
     if c.NonContains(FNodeList[I].Data.Value) then
       begin
         if OwnsKeys then
-          TObject(FNodeList[I].Data.Key).Free;
+          TObject((@FNodeList[I].Data.Key)^).Free;
         if OwnsValues then
-          TObject(FNodeList[I].Data.Value).Free;
+          TObject((@FNodeList[I].Data.Value)^).Free;
         DoRemove(I);
       end
     else
