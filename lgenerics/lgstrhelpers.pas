@@ -1,9 +1,9 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Some useful string helpers.                                             *
+*   Some useful string routines.                                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -441,13 +441,19 @@ type
   immediately and returns -1; if aLimit < 0 it will be computed dynamically }
   function LevDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
-
-{ similarity ratio using Levenshtein distance }
-  function SimRatioLev(const L, R: rawbytestring): Double;
-  function SimRatioLev(const L, R: array of Byte): Double;
-{ returns similarity ratio using specified distance algorithm; aLimit specifies
-  the lower bound of the required similarity(0<=aLimit<=1.0), if the obtained value
-  is less than the specified value, zero will be returned }
+{ the LCS edit distance allows only two operations: insertion and deletion; uses slightly
+  modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
+  from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
+  function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
+  function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
+{ the same as above; the aLimit parameter indicates the maximum expected distance,
+  if this value is exceeded when calculating the distance, then the function exits
+  immediately and returns -1 }
+  function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+  function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+{ returns similarity ratio using specified distance algorithm;
+  aLimit specifies the lower bound of the required similarity(0.0 <= aLimit <= 1.0),
+  if the obtained value is less than the specified one, zero will be returned }
   function SimRatio(const L, R: rawbytestring; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
   function SimRatio(const L, R: array of Byte; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
 
@@ -459,25 +465,31 @@ type
 const
   DEF_STOP_CHARS = [#0..#32];
 
-{ similarity ratio using the Levenshtein distance with some preprocessing of the input text;
-  inspired by FuzzyWuzzy }
-  function SimRatioLevEx(
+{ returns the similarity ratio computed using the specified distance algorithm with some
+  preprocessing of the input text; inspired by FuzzyWuzzy }
+  function SimRatioEx(
     const L, R: rawbytestring;
     aMode: TSimMode = smSimple;
     const aStopChars: TSysCharSet = DEF_STOP_CHARS;
     const aOptions: TSimOptions = [];
+    aLimit: Double = Double(0);
+    Algo: TSeqDistanceAlgo = sdaDefault;
     aCaseMap: TSimCaseMap = nil;
-    aLess: TSimLess = nil): Double;
-{ the LCS edit distance allows only two operations: insertion and deletion; uses slightly
-  modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
-  from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
-  function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
-  function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
-{ the same as above; the aLimit parameter indicates the maximum expected distance,
-  if this value is exceeded when calculating the distance, then the function exits
-  immediately and returns -1 }
-  function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
-  function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+    aLess: TSimLess = nil
+  ): Double;
+{ each item in the resulting array will contain the similarity ratio between aPattern
+  and the corresponding item in the aValues array }
+  function SimRatioList(
+    const aPattern: rawbytestring;
+    const aValues: array of rawbytestring;
+    aMode: TSimMode = smSimple;
+    const aStopChars: TSysCharSet = DEF_STOP_CHARS;
+    const aOptions: TSimOptions = [];
+    aLimit: Double = Double(0);
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aCaseMap: TSimCaseMap = nil;
+    aLess: TSimLess = nil
+  ): specialize TGArray<Double>;
 
   function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
   function IsValidDotDecIPv4(const s: rawbytestring): Boolean;
@@ -1918,444 +1930,6 @@ begin
     Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
-function SimRatioLev(const L, R: rawbytestring): Double;
-var
-  MaxLen: SizeInt;
-begin
-  if (L = '') and (R = '') then
-    exit(Double(1.0));
-  MaxLen := Math.Max(System.Length(L), System.Length(R));
-  Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
-end;
-
-function SimRatioLev(const L, R: array of Byte): Double;
-var
-  MaxLen: SizeInt;
-begin
-  if (System.Length(L) = 0) and (System.Length(R) = 0) then
-    exit(Double(1.0));
-  MaxLen := Math.Max(System.Length(L), System.Length(R));
-  Result := Double(MaxLen - LevDistanceMyers(L, R)) / Double(MaxLen);
-end;
-
-function SimRatio(const L, R: rawbytestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
-var
-  Len, Limit, Dist: SizeInt;
-begin
-  if (L = '') and (R = '') then exit(Double(1.0));
-  if aLimit < 0 then aLimit := Double(0);
-  if aLimit > 1 then aLimit := Double(1);
-  if Algo = sdaLcsMyers then
-    Len := System.Length(L) + System.Length(R)
-  else
-    Len := Math.Max(System.Length(L), System.Length(R));
-  if aLimit = Double(0) then begin
-    case Algo of
-      sdaDefault,
-      sdaLevMyers: Dist := LevDistanceMyers(L, R);
-      sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
-    end;
-    exit(Double(Len - Dist)/Double(Len));
-  end;
-  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
-  case Algo of
-    sdaDefault:
-      if aLimit > Double(0.90) then
-        Dist := LevDistanceMbr(L, R, Limit)
-      else
-        Dist := LevDistanceMyers(L, R, Limit);
-    sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
-    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
-    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
-  end;
-  if Dist <> NULL_INDEX then
-    Result := Double(Len - Dist)/Double(Len)
-  else
-    Result := 0;
-end;
-
-function SimRatio(const L, R: array of Byte; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
-var
-  Len, Limit, Dist: SizeInt;
-begin
-  if (System.Length(L) = 0) and (System.Length(R) = 0) then exit(Double(1.0));
-  if aLimit < 0 then aLimit := Double(0);
-  if aLimit > 1 then aLimit := Double(1);
-  if Algo = sdaLcsMyers then
-    Len := System.Length(L) + System.Length(R)
-  else
-    Len := Math.Max(System.Length(L), System.Length(R));
-  if aLimit = Double(0) then begin
-    case Algo of
-      sdaDefault,
-      sdaLevMyers: Dist := LevDistanceMyers(L, R);
-      sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
-    end;
-    exit(Double(Len - Dist)/Double(Len));
-  end;
-  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
-  case Algo of
-    sdaDefault:
-      if aLimit > Double(0.90) then
-        Dist := LevDistanceMbr(L, R, Limit)
-      else
-        Dist := LevDistanceMyers(L, R, Limit);
-    sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
-    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
-    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
-  end;
-  if Dist <> NULL_INDEX then
-    Result := Double(Len - Dist)/Double(Len)
-  else
-    Result := 0;
-end;
-
-{$PUSH}{$WARN 5089 OFF}
-function SimRatioLevEx(const L, R: rawbytestring; aMode: TSimMode; const aStopChars: TSysCharSet;
-  const aOptions: TSimOptions; aCaseMap: TSimCaseMap; aLess: TSimLess): Double;
-type
-  TWord      = record Start: PChar; Len: SizeInt end;
-  PWord      = ^TWord;
-  TWordArray = array of TWord;
-  TSplitFun  = function(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray;
-                        aForceDyn: Boolean): PWord is nested;
-  THelper    = specialize TGNestedArrayHelper<TWord>;
-var
-  StBuf: array[0..Pred(MAX_STATIC)] of TWord;
-
-  function SplitMerge(const s: rawbytestring): rawbytestring;
-  var
-    I, J: SizeInt;
-    pS, pR: PChar;
-    NewWord: Boolean;
-  begin
-    if aStopChars = [] then exit(s);
-    System.SetLength(Result, System.Length(s));
-    pS := Pointer(s);
-    pR := Pointer(Result);
-    I := 0;
-    while (I < System.Length(s)) and (pS[I] in aStopChars) do Inc(I);
-    J := 0;
-    NewWord := False;
-    for I := I to Pred(System.Length(s)) do
-      if pS[I] in aStopChars then
-        NewWord := True
-      else
-        begin
-          if NewWord then
-            begin
-              pR[J] := ' ';
-              Inc(J);
-              NewWord := False;
-            end;
-          pR[J] := pS[I];
-          Inc(J);
-        end;
-    System.SetLength(Result, J);
-  end;
-
-  function Less(const L, R: TWord): Boolean; inline;
-  begin
-    Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
-  end;
-
-  function LessDef(const L, R: TWord): Boolean;
-  var
-    c: SizeInt;
-  begin
-    c := CompareByte(L.Start^, R.Start^, Math.Min(L.Len, R.Len));
-    if c = 0 then exit(L.Len < R.Len);
-    LessDef := c < 0;
-  end;
-
-  function Equal(const L, R: TWord): Boolean;
-  begin
-    if L.Len <> R.Len then exit(False);
-    Result := CompareByte(L.Start^, R.Start^, L.Len) = 0;
-  end;
-
-  function SplitAndSort(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
-  var
-    p: PChar absolute s;
-    Words: PWord;
-    I, Count, CurrLen: SizeInt;
-    CurrStart: PChar;
-  begin
-    if aForceDyn or (System.Length(s) div 2 + System.Length(s) and 1 > MAX_STATIC) then
-      begin
-        System.SetLength(aBuf, System.Length(s) div 2 + System.Length(s) and 1);
-        Words := Pointer(aBuf);
-      end
-    else
-      Words := @StBuf[0];
-
-    CurrStart := p;
-    CurrLen := 0;
-    Count := 0;
-    for I := 0 to Pred(System.Length(s)) do
-      if p[I] in aStopChars then
-        begin
-          if CurrLen = 0 then continue;
-          Words[Count].Start := CurrStart;
-          Words[Count].Len := CurrLen;
-          CurrLen := 0;
-          Inc(Count);
-        end
-      else
-        begin
-          if CurrLen = 0 then
-            CurrStart := @p[I];
-          Inc(CurrLen);
-        end;
-    if CurrLen <> 0 then
-      begin
-        Words[Count].Start := CurrStart;
-        Words[Count].Len := CurrLen;
-        Inc(Count);
-      end;
-    if aLess <> nil then
-      THelper.Sort(Words[0..Pred(Count)], @Less)
-    else
-      THelper.Sort(Words[0..Pred(Count)], @LessDef);
-    aCount := Count;
-    Result := Words;
-  end;
-
-  function SplitMerge(const s: rawbytestring; aSplit: TSplitFun): rawbytestring;
-  var
-    Words: PWord;
-    Buf: TWordArray = nil;
-    I, J, Count, Len: SizeInt;
-    pR: PChar;
-  begin
-    Words := aSplit(s, Count, Buf, False);
-    System.SetLength(Result, System.Length(s));
-    pR := Pointer(Result);
-    Len := 0;
-    for I := 0 to Pred(Count) do
-      begin
-        if I > 0 then
-          begin
-            Len += Words[I].Len + 1;
-            pR^ := ' ';
-            Inc(pR);
-          end
-        else
-          Len += Words[I].Len;
-        for J := 0 to Pred(Words[I].Len) do
-          with Words[I] do
-            pR[J] := Start[J];
-        pR += Words[I].Len;
-      end;
-    System.SetLength(Result, Len);
-  end;
-
-  function SplitMergeSorted(const s: rawbytestring): rawbytestring; inline;
-  begin
-    Result := SplitMerge(s, @SplitAndSort);
-  end;
-
-  function SplitSortedSet(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
-  var
-    I, J, Count: SizeInt;
-  begin
-    Result := SplitAndSort(s, Count, aBuf, aForceDyn);
-    I := 0;
-    J := 0;
-    while I < Count do
-      begin
-        if I <> J then
-          Result[J] := Result[I];
-        Inc(I);
-        while (I < Count) and Equal(Result[I], Result[J]) do Inc(I);
-        Inc(J);
-      end;
-    aCount := J;
-  end;
-
-  function SplitMergeSortedSet(const s: rawbytestring): rawbytestring; inline;
-  begin
-    Result := SplitMerge(s, @SplitSortedSet);
-  end;
-
-  function SimPartial(const L, R: rawbytestring): Double;
-  var
-    I: SizeInt;
-  begin
-    if L = '' then
-      if R = '' then exit(Double(1.0))
-      else exit(Double(0.0))
-    else
-      if R = '' then exit(Double(0.0));
-
-    Result := Double(0.0);
-    if System.Length(L) <= System.Length(R) then
-      for I := 0 to System.Length(R) - System.Length(L) do
-        begin
-          Result := Math.Max(Result,
-            SimRatioLev(PByte(L)[0..Pred(System.Length(L))],
-                        PByte(R)[I..I+Pred(System.Length(L))]));
-          if Result = Double(1.0) then break;
-        end
-    else
-      for I := 0 to System.Length(L) - System.Length(R) do
-        begin
-          Result := Math.Max(Result,
-            SimRatioLev(PByte(R)[0..Pred(System.Length(R))],
-                        PByte(L)[I..I+Pred(System.Length(R))]));
-          if Result = Double(1.0) then break;
-        end;
-  end;
-
-  function Merge(aSrcLen: SizeInt; aWords: PWord; const aIndices: TBoolVector): rawbytestring;
-  var
-    I, J, Len: SizeInt;
-    pR: PChar;
-    NotFirst: Boolean;
-  begin
-    System.SetLength(Result, aSrcLen);
-    pR := Pointer(Result);
-    NotFirst := False;
-    Len := 0;
-    for I in aIndices do
-      begin
-        if NotFirst then
-          begin
-            Len += aWords[I].Len + 1;
-            pR^ := ' ';
-            Inc(pR);
-          end
-        else
-          begin
-            Len += aWords[I].Len;
-            NotFirst := True;
-          end;
-        for J := 0 to Pred(aWords[I].Len) do
-          with aWords[I] do
-            pR[J] := Start[J];
-        pR += aWords[I].Len;
-      end;
-    System.SetLength(Result, Len);
-  end;
-
-  function WordSetPairwise(const L, R: rawbytestring): Double;
-  var
-    WordsL, WordsR: PWord;
-    BufL, BufR: TWordArray;
-    IntersectIdx, DiffIdxL, DiffIdxR: TBoolVector;
-    I, J, CountL, CountR: SizeInt;
-    Intersection, SetL, SetR: rawbytestring;
-  begin
-    WordsL := SplitSortedSet(L, CountL, BufL, False);
-    WordsR := SplitSortedSet(R, CountR, BufR, True);
-    IntersectIdx.EnsureCapacity(CountL);
-    DiffIdxL.InitRange(CountL);
-    DiffIdxR.InitRange(CountR);
-
-    if aLess <> nil then
-      for I := 0 to Pred(CountL) do
-        begin
-          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @Less);
-          if J <> NULL_INDEX then
-            begin
-              IntersectIdx[I] := True;
-              DiffIdxL[I] := False;
-              DiffIdxR[J] := False;
-            end;
-        end
-    else
-      for I := 0 to Pred(CountL) do
-        begin
-          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @LessDef);
-          if J <> NULL_INDEX then
-            begin
-              IntersectIdx[I] := True;
-              DiffIdxL[I] := False;
-              DiffIdxR[J] := False;
-            end;
-        end;
-
-    Intersection := Merge(System.Length(L), WordsL, IntersectIdx);
-    SetL := Merge(System.Length(L), WordsL, DiffIdxL);
-    SetR := Merge(System.Length(R), WordsR, DiffIdxR);
-
-    if Intersection <> '' then
-      begin
-        if SetL <> '' then
-          SetL := Intersection + ' ' + SetL
-        else
-          SetL := Intersection;
-        if SetR <> '' then
-          SetR := Intersection + ' ' + SetR
-        else
-          SetR := Intersection;
-      end;
-
-    if soPartial in aOptions then
-      begin
-        if Intersection <> '' then exit(Double(1.0));
-        Result := SimPartial(SetL, SetR);
-      end
-    else
-      begin
-        Result := SimRatioLev(Intersection, SetL);
-        if Result = Double(1.0) then exit;
-        Result := Math.Max(Result, SimRatioLev(Intersection, SetR));
-        if Result = Double(1.0) then exit;
-        Result := Math.Max(Result, SimRatioLev(SetL, SetR));
-      end;
-  end;
-
-var
-  LocL, LocR: rawbytestring;
-begin
-
-  if soIgnoreCase in aOptions then
-    if aCaseMap <> nil then
-      begin
-        LocL := aCaseMap(L);
-        LocR := aCaseMap(R);
-      end
-    else
-      begin
-        LocL := LowerCase(L);
-        LocR := LowerCase(R);
-      end
-  else
-    begin
-      LocL := L;
-      LocR := R;
-    end;
-
-  case aMode of
-    smSimple:
-      begin
-        LocL := SplitMerge(LocL);
-        LocR := SplitMerge(LocR);
-      end;
-    smTokenSort:
-      begin
-        LocL := SplitMergeSorted(LocL);
-        LocR := SplitMergeSorted(LocR);
-      end;
-    smTokenSet:
-      begin
-        LocL := SplitMergeSortedSet(LocL);
-        LocR := SplitMergeSortedSet(LocR);
-      end;
-  else
-    exit(WordSetPairwise(LocL, LocR));
-  end;
-
-  if soPartial in aOptions then
-    Result := SimPartial(LocL, LocR)
-  else
-    Result := SimRatioLev(LocL, LocR);
-end;
-{$POP}
-
 {$PUSH}{$WARN 5057 OFF}
 function LcsDistMyersImpl(pL, pR: PByte; M{lenL}, N{lenR}: SizeInt): SizeInt;
 var
@@ -2527,6 +2101,724 @@ begin
         exit(M);
   Result := LcsDistMyersImplLim(@L[0], @R[0], M, N, aLimit);
 end;
+
+function SimRatio(const L, R: rawbytestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
+var
+  Len, Limit, Dist: SizeInt;
+begin
+  if (L = '') and (R = '') then exit(Double(1.0));
+  if aLimit < 0 then aLimit := Double(0);
+  if aLimit > 1 then aLimit := Double(1);
+  if Algo = sdaLcsMyers then
+    Len := System.Length(L) + System.Length(R)
+  else
+    Len := Math.Max(System.Length(L), System.Length(R));
+  if aLimit = Double(0) then begin
+    case Algo of
+      sdaDefault,
+      sdaLevMyers: Dist := LevDistanceMyers(L, R);
+      sdaLevMBR:   Dist := LevDistanceMbr(L, R);
+      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+    end;
+    exit(Double(Len - Dist)/Double(Len));
+  end;
+  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  case Algo of
+    sdaDefault:
+      if aLimit > Double(0.90) then  //todo: more precise ???
+        Dist := LevDistanceMbr(L, R, Limit)
+      else
+        Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
+    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+  end;
+  if Dist <> NULL_INDEX then
+    Result := Double(Len - Dist)/Double(Len)
+  else
+    Result := Double(0);
+end;
+
+function SimRatio(const L, R: array of Byte; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
+var
+  Len, Limit, Dist: SizeInt;
+begin
+  if (System.Length(L) = 0) and (System.Length(R) = 0) then exit(Double(1.0));
+  if aLimit < 0 then aLimit := Double(0);
+  if aLimit > 1 then aLimit := Double(1);
+  if Algo = sdaLcsMyers then
+    Len := System.Length(L) + System.Length(R)
+  else
+    Len := Math.Max(System.Length(L), System.Length(R));
+  if aLimit = Double(0) then begin
+    case Algo of
+      sdaDefault,
+      sdaLevMyers: Dist := LevDistanceMyers(L, R);
+      sdaLevMBR:   Dist := LevDistanceMbr(L, R);
+      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+    end;
+    exit(Double(Len - Dist)/Double(Len));
+  end;
+  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  case Algo of
+    sdaDefault:
+      if aLimit > Double(0.90) then //todo: more precise ???
+        Dist := LevDistanceMbr(L, R, Limit)
+      else
+        Dist := LevDistanceMyers(L, R, Limit);
+    sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
+    sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
+    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+  end;
+  if Dist <> NULL_INDEX then
+    Result := Double(Len - Dist)/Double(Len)
+  else
+    Result := Double(0);
+end;
+
+{$PUSH}{$WARN 5089 OFF}
+function SimRatioEx(const L, R: rawbytestring; aMode: TSimMode; const aStopChars: TSysCharSet;
+  const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo; aCaseMap: TSimCaseMap;
+  aLess: TSimLess): Double;
+type
+  TWord      = record Start: PChar; Len: SizeInt end;
+  PWord      = ^TWord;
+  TWordArray = array of TWord;
+  TSplitFun  = function(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray;
+                        aForceDyn: Boolean): PWord is nested;
+  THelper    = specialize TGNestedArrayHelper<TWord>;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of TWord;
+
+  function SplitMerge(const s: rawbytestring): rawbytestring;
+  var
+    I, J: SizeInt;
+    pS, pR: PChar;
+    NewWord: Boolean;
+  begin
+    if aStopChars = [] then exit(s);
+    System.SetLength(Result, System.Length(s));
+    pS := Pointer(s);
+    pR := Pointer(Result);
+    I := 0;
+    while (I < System.Length(s)) and (pS[I] in aStopChars) do Inc(I);
+    J := 0;
+    NewWord := False;
+    for I := I to Pred(System.Length(s)) do
+      if pS[I] in aStopChars then
+        NewWord := True
+      else begin
+        if NewWord then begin
+          pR[J] := ' ';
+          Inc(J);
+          NewWord := False;
+        end;
+        pR[J] := pS[I];
+        Inc(J);
+      end;
+    System.SetLength(Result, J);
+  end;
+
+  function Less(const L, R: TWord): Boolean; inline;
+  begin
+    Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
+  end;
+
+  function LessDef(const L, R: TWord): Boolean;
+  var
+    c: SizeInt;
+  begin
+    c := CompareByte(L.Start^, R.Start^, Math.Min(L.Len, R.Len));
+    if c = 0 then exit(L.Len < R.Len);
+    LessDef := c < 0;
+  end;
+
+  function Equal(const L, R: TWord): Boolean;
+  begin
+    if L.Len <> R.Len then exit(False);
+    Result := CompareByte(L.Start^, R.Start^, L.Len) = 0;
+  end;
+
+  function SplitAndSort(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    p: PChar absolute s;
+    Words: PWord;
+    I, Count, CurrLen: SizeInt;
+    CurrStart: PChar;
+  begin
+    if aForceDyn or (System.Length(s) div 2 + System.Length(s) and 1 > MAX_STATIC) then begin
+      System.SetLength(aBuf, System.Length(s) div 2 + System.Length(s) and 1);
+      Words := Pointer(aBuf);
+    end else
+      Words := @StBuf[0];
+
+    CurrStart := p;
+    CurrLen := 0;
+    Count := 0;
+    for I := 0 to Pred(System.Length(s)) do
+      if p[I] in aStopChars then begin
+        if CurrLen = 0 then continue;
+        Words[Count].Start := CurrStart;
+        Words[Count].Len := CurrLen;
+        CurrLen := 0;
+        Inc(Count);
+      end else begin
+        if CurrLen = 0 then
+          CurrStart := @p[I];
+        Inc(CurrLen);
+      end;
+    if CurrLen <> 0 then begin
+      Words[Count].Start := CurrStart;
+      Words[Count].Len := CurrLen;
+      Inc(Count);
+    end;
+    if aLess <> nil then
+      THelper.Sort(Words[0..Pred(Count)], @Less)
+    else
+      THelper.Sort(Words[0..Pred(Count)], @LessDef);
+    aCount := Count;
+    Result := Words;
+  end;
+
+  function SplitMerge(const s: rawbytestring; aSplit: TSplitFun): rawbytestring;
+  var
+    Words: PWord;
+    Buf: TWordArray = nil;
+    I, J, Count, Len: SizeInt;
+    pR: PChar;
+  begin
+    Words := aSplit(s, Count, Buf, False);
+    System.SetLength(Result, System.Length(s));
+    pR := Pointer(Result);
+    Len := 0;
+    for I := 0 to Pred(Count) do begin
+      if I > 0 then begin
+        Len += Words[I].Len + 1;
+        pR^ := ' ';
+        Inc(pR);
+      end else
+        Len += Words[I].Len;
+      for J := 0 to Pred(Words[I].Len) do
+        with Words[I] do
+          pR[J] := Start[J];
+      pR += Words[I].Len;
+    end;
+    System.SetLength(Result, Len);
+  end;
+
+  function SplitMergeSorted(const s: rawbytestring): rawbytestring; inline;
+  begin
+    Result := SplitMerge(s, @SplitAndSort);
+  end;
+
+  function SplitSortedSet(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    I, J, Count: SizeInt;
+  begin
+    Result := SplitAndSort(s, Count, aBuf, aForceDyn);
+    I := 0;
+    J := 0;
+    while I < Count do begin
+      if I <> J then
+        Result[J] := Result[I];
+      Inc(I);
+      while (I < Count) and Equal(Result[I], Result[J]) do Inc(I);
+      Inc(J);
+    end;
+    aCount := J;
+  end;
+
+  function SplitMergeSortedSet(const s: rawbytestring): rawbytestring; inline;
+  begin
+    Result := SplitMerge(s, @SplitSortedSet);
+  end;
+
+  function SimPartial(const L, R: rawbytestring): Double;
+  var
+    I: SizeInt;
+  begin
+    if L = '' then
+      if R = '' then exit(Double(1.0))
+      else exit(Double(0.0))
+    else
+      if R = '' then exit(Double(0.0));
+
+    Result := Double(0.0);
+    if System.Length(L) <= System.Length(R) then
+      for I := 0 to System.Length(R) - System.Length(L) do begin
+        Result := Math.Max(
+          Result,
+          SimRatio(PByte(L)[0..Pred(System.Length(L))], PByte(R)[I..I+Pred(System.Length(L))], aLimit, Algo));
+        if Result = Double(1.0) then break;
+      end
+    else
+      for I := 0 to System.Length(L) - System.Length(R) do begin
+        Result := Math.Max(
+          Result,
+          SimRatio(PByte(R)[0..Pred(System.Length(R))], PByte(L)[I..I+Pred(System.Length(R))], aLimit, Algo));
+        if Result = Double(1.0) then break;
+      end;
+  end;
+
+  function Merge(aSrcLen: SizeInt; aWords: PWord; const aIndices: TBoolVector): rawbytestring;
+  var
+    I, J, Len: SizeInt;
+    pR: PChar;
+    NotFirst: Boolean;
+  begin
+    System.SetLength(Result, aSrcLen);
+    pR := Pointer(Result);
+    NotFirst := False;
+    Len := 0;
+    for I in aIndices do begin
+      if NotFirst then begin
+        Len += aWords[I].Len + 1;
+        pR^ := ' ';
+        Inc(pR);
+      end else begin
+        Len += aWords[I].Len;
+        NotFirst := True;
+      end;
+      for J := 0 to Pred(aWords[I].Len) do
+        with aWords[I] do
+          pR[J] := Start[J];
+      pR += aWords[I].Len;
+    end;
+    System.SetLength(Result, Len);
+  end;
+
+  function SimWordSetPairwise(const L, R: rawbytestring): Double;
+  var
+    WordsL, WordsR: PWord;
+    BufL, BufR: TWordArray;
+    IntersectIdx, DiffIdxL, DiffIdxR: TBoolVector;
+    I, J, CountL, CountR: SizeInt;
+    Intersection, SetL, SetR: rawbytestring;
+  begin
+    WordsL := SplitSortedSet(L, CountL, BufL, False);
+    WordsR := SplitSortedSet(R, CountR, BufR, True);
+    IntersectIdx.EnsureCapacity(CountL);
+    DiffIdxL.InitRange(CountL);
+    DiffIdxR.InitRange(CountR);
+
+    if aLess <> nil then
+      for I := 0 to Pred(CountL) do begin
+        J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @Less);
+        if J <> NULL_INDEX then begin
+          IntersectIdx[I] := True;
+          DiffIdxL[I] := False;
+          DiffIdxR[J] := False;
+        end;
+      end
+    else
+      for I := 0 to Pred(CountL) do begin
+        J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @LessDef);
+        if J <> NULL_INDEX then begin
+          IntersectIdx[I] := True;
+          DiffIdxL[I] := False;
+          DiffIdxR[J] := False;
+        end;
+      end;
+
+    Intersection := Merge(System.Length(L), WordsL, IntersectIdx);
+    if (Intersection <> '') and (soPartial in aOptions) then exit(Double(1.0)); ///////
+    SetL := Merge(System.Length(L), WordsL, DiffIdxL);
+    SetR := Merge(System.Length(R), WordsR, DiffIdxR);
+
+    if Intersection <> '' then begin
+      if SetL <> '' then
+        SetL := Intersection + ' ' + SetL
+      else
+        SetL := Intersection;
+      if SetR <> '' then
+        SetR := Intersection + ' ' + SetR
+      else
+        SetR := Intersection;
+    end;
+
+    if soPartial in aOptions then
+      Result := SimPartial(SetL, SetR) /////////
+    else begin
+      Result := SimRatio(Intersection, SetL, aLimit, Algo);
+      if Result = Double(1.0) then exit;
+      Result := Math.Max(Result, SimRatio(Intersection, SetR, aLimit, Algo));
+      if Result = Double(1.0) then exit;
+      Result := Math.Max(Result, SimRatio(SetL, SetR, aLimit, Algo));
+    end;
+  end;
+
+var
+  LocL, LocR: rawbytestring;
+begin
+
+  if soIgnoreCase in aOptions then
+    if aCaseMap <> nil then begin
+      LocL := aCaseMap(L);
+      LocR := aCaseMap(R);
+    end else begin
+      LocL := LowerCase(L);
+      LocR := LowerCase(R);
+    end
+  else begin
+    LocL := L;
+    LocR := R;
+  end;
+
+  case aMode of
+    smSimple:
+      if soPartial in aOptions then
+        Result := SimPartial(SplitMerge(LocL), SplitMerge(LocR))
+      else
+        Result := SimRatio(SplitMerge(LocL), SplitMerge(LocR), aLimit, Algo);
+    smTokenSort:
+      if soPartial in aOptions then
+        Result := SimPartial(SplitMergeSorted(LocL), SplitMergeSorted(LocR))
+      else
+        Result := SimRatio(SplitMergeSorted(LocL), SplitMergeSorted(LocR), aLimit, Algo);
+    smTokenSet:
+      if soPartial in aOptions then
+        Result := SimPartial(SplitMergeSortedSet(LocL), SplitMergeSortedSet(LocR))
+      else
+        Result := SimRatio(SplitMergeSortedSet(LocL), SplitMergeSortedSet(LocR), aLimit, Algo);
+  else // smTokenSetEx
+    Result := SimWordSetPairwise(LocL, LocR);
+  end;
+end;
+
+function SimRatioList(const aPattern: rawbytestring; const aValues: array of rawbytestring; aMode: TSimMode;
+  const aStopChars: TSysCharSet; const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo;
+  aCaseMap: TSimCaseMap; aLess: TSimLess): specialize TGArray<Double>;
+type
+  TWord      = record Start: PChar; Len: SizeInt end;
+  PWord      = ^TWord;
+  TWordArray = array of TWord;
+  TSplitFun  = function(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray;
+                        aForceDyn: Boolean): PWord is nested;
+  THelper    = specialize TGNestedArrayHelper<TWord>;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of TWord;
+
+  function SplitMerge(const s: rawbytestring): rawbytestring;
+  var
+    I, J: SizeInt;
+    pS, pR: PChar;
+    NewWord: Boolean;
+  begin
+    if aStopChars = [] then exit(s);
+    System.SetLength(Result, System.Length(s));
+    pS := Pointer(s);
+    pR := Pointer(Result);
+    I := 0;
+    while (I < System.Length(s)) and (pS[I] in aStopChars) do Inc(I);
+    J := 0;
+    NewWord := False;
+    for I := I to Pred(System.Length(s)) do
+      if pS[I] in aStopChars then
+        NewWord := True
+      else begin
+        if NewWord then begin
+          pR[J] := ' ';
+          Inc(J);
+          NewWord := False;
+        end;
+        pR[J] := pS[I];
+        Inc(J);
+      end;
+    System.SetLength(Result, J);
+  end;
+
+  function Less(const L, R: TWord): Boolean; inline;
+  begin
+    Result := aLess(L.Start[0..Pred(L.Len)], R.Start[0..Pred(R.Len)]);
+  end;
+
+  function LessDef(const L, R: TWord): Boolean;
+  var
+    c: SizeInt;
+  begin
+    c := CompareByte(L.Start^, R.Start^, Math.Min(L.Len, R.Len));
+    if c = 0 then exit(L.Len < R.Len);
+    LessDef := c < 0;
+  end;
+
+  function Equal(const L, R: TWord): Boolean;
+  begin
+    if L.Len <> R.Len then exit(False);
+    Result := CompareByte(L.Start^, R.Start^, L.Len) = 0;
+  end;
+
+  function SplitAndSort(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    p: PChar absolute s;
+    Words: PWord;
+    I, Count, CurrLen: SizeInt;
+    CurrStart: PChar;
+  begin
+    if aForceDyn or (System.Length(s) div 2 + System.Length(s) and 1 > MAX_STATIC) then begin
+      System.SetLength(aBuf, System.Length(s) div 2 + System.Length(s) and 1);
+      Words := Pointer(aBuf);
+    end else
+      Words := @StBuf[0];
+
+    CurrStart := p;
+    CurrLen := 0;
+    Count := 0;
+    for I := 0 to Pred(System.Length(s)) do
+      if p[I] in aStopChars then begin
+        if CurrLen = 0 then continue;
+        Words[Count].Start := CurrStart;
+        Words[Count].Len := CurrLen;
+        CurrLen := 0;
+        Inc(Count);
+      end else begin
+        if CurrLen = 0 then
+          CurrStart := @p[I];
+        Inc(CurrLen);
+      end;
+    if CurrLen <> 0 then begin
+      Words[Count].Start := CurrStart;
+      Words[Count].Len := CurrLen;
+      Inc(Count);
+    end;
+    if aLess <> nil then
+      THelper.Sort(Words[0..Pred(Count)], @Less)
+    else
+      THelper.Sort(Words[0..Pred(Count)], @LessDef);
+    aCount := Count;
+    Result := Words;
+  end;
+
+  function SplitMerge(const s: rawbytestring; aSplit: TSplitFun): rawbytestring;
+  var
+    Words: PWord;
+    Buf: TWordArray = nil;
+    I, J, Count, Len: SizeInt;
+    pR: PChar;
+  begin
+    Words := aSplit(s, Count, Buf, False);
+    System.SetLength(Result, System.Length(s));
+    pR := Pointer(Result);
+    Len := 0;
+    for I := 0 to Pred(Count) do begin
+      if I > 0 then begin
+        Len += Words[I].Len + 1;
+        pR^ := ' ';
+        Inc(pR);
+      end else
+        Len += Words[I].Len;
+      for J := 0 to Pred(Words[I].Len) do
+        with Words[I] do
+          pR[J] := Start[J];
+      pR += Words[I].Len;
+    end;
+    System.SetLength(Result, Len);
+  end;
+
+  function SplitMergeSorted(const s: rawbytestring): rawbytestring; inline;
+  begin
+    Result := SplitMerge(s, @SplitAndSort);
+  end;
+
+  function SplitSortedSet(const s: rawbytestring; out aCount: SizeInt; out aBuf: TWordArray; aForceDyn: Boolean): PWord;
+  var
+    I, J, Count: SizeInt;
+  begin
+    Result := SplitAndSort(s, Count, aBuf, aForceDyn);
+    I := 0;
+    J := 0;
+    while I < Count do begin
+      if I <> J then
+        Result[J] := Result[I];
+      Inc(I);
+      while (I < Count) and Equal(Result[I], Result[J]) do Inc(I);
+      Inc(J);
+    end;
+    aCount := J;
+  end;
+
+  function SplitMergeSortedSet(const s: rawbytestring): rawbytestring; inline;
+  begin
+    Result := SplitMerge(s, @SplitSortedSet);
+  end;
+
+  function SimPartial(const L, R: rawbytestring): Double;
+  var
+    I: SizeInt;
+  begin
+    if L = '' then
+      if R = '' then exit(Double(1.0))
+      else exit(Double(0.0))
+    else
+      if R = '' then exit(Double(0.0));
+
+    Result := Double(0.0);
+    if System.Length(L) <= System.Length(R) then
+      for I := 0 to System.Length(R) - System.Length(L) do begin
+        Result := Math.Max(
+          Result,
+          SimRatio(PByte(L)[0..Pred(System.Length(L))], PByte(R)[I..I+Pred(System.Length(L))], aLimit, Algo));
+        if Result = Double(1.0) then break;
+      end
+    else
+      for I := 0 to System.Length(L) - System.Length(R) do begin
+        Result := Math.Max(
+          Result,
+          SimRatio(PByte(R)[0..Pred(System.Length(R))], PByte(L)[I..I+Pred(System.Length(R))], aLimit, Algo));
+        if Result = Double(1.0) then break;
+      end;
+  end;
+
+  function Merge(aSrcLen: SizeInt; aWords: PWord; const aIndices: TBoolVector): rawbytestring;
+  var
+    I, J, Len: SizeInt;
+    pR: PChar;
+    NotFirst: Boolean;
+  begin
+    System.SetLength(Result, aSrcLen);
+    pR := Pointer(Result);
+    NotFirst := False;
+    Len := 0;
+    for I in aIndices do begin
+      if NotFirst then begin
+        Len += aWords[I].Len + 1;
+        pR^ := ' ';
+        Inc(pR);
+      end else begin
+        Len += aWords[I].Len;
+        NotFirst := True;
+      end;
+      for J := 0 to Pred(aWords[I].Len) do
+        with aWords[I] do
+          pR[J] := Start[J];
+      pR += aWords[I].Len;
+    end;
+    System.SetLength(Result, Len);
+  end;
+
+  function ToProperCase(const s: rawbytestring): rawbytestring;
+  begin
+    if soIgnoreCase in aOptions then
+      if aCaseMap <> nil then
+        Result := aCaseMap(s)
+      else
+        Result := LowerCase(s)
+    else
+      Result := s;
+  end;
+
+var
+  r: array of Double;
+
+  procedure SimWordSetsPairwise;
+  var
+    WordsL, WordsR: PWord;
+    BufL, BufR: TWordArray;
+    IntersectIdx, DiffIdxL, DiffIdxR: TBoolVector;
+    I, J, K, CountL, CountR: SizeInt;
+    Pattern, Value, Intersection, SetL, SetR: rawbytestring;
+  begin
+    Pattern := ToProperCase(aPattern);
+    WordsL := SplitSortedSet(Pattern, CountL, BufL, False);
+    IntersectIdx.EnsureCapacity(CountL);
+
+    for K := 0 to System.High(aValues) do begin
+      Value := ToProperCase(aValues[K]);
+      WordsR := SplitSortedSet(Value, CountR, BufR, True);
+      IntersectIdx.ClearBits;
+      DiffIdxL.InitRange(CountL);
+      DiffIdxR.InitRange(CountR);
+
+      if aLess <> nil then
+        for I := 0 to Pred(CountL) do begin
+          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @Less);
+          if J <> NULL_INDEX then begin
+            IntersectIdx[I] := True;
+            DiffIdxL[I] := False;
+            DiffIdxR[J] := False;
+          end;
+        end
+      else
+        for I := 0 to Pred(CountL) do begin
+          J := THelper.BinarySearch(WordsR[0..Pred(CountR)], WordsL[I], @LessDef);
+          if J <> NULL_INDEX then begin
+            IntersectIdx[I] := True;
+            DiffIdxL[I] := False;
+            DiffIdxR[J] := False;
+          end;
+        end;
+
+      Intersection := Merge(System.Length(Pattern), WordsL, IntersectIdx);
+      if (Intersection <> '') and (soPartial in aOptions) then begin
+        r[K] := Double(1.0);
+        continue;
+      end;
+      SetL := Merge(System.Length(Pattern), WordsL, DiffIdxL);
+      SetR := Merge(System.Length(Value), WordsR, DiffIdxR);
+
+      if Intersection <> '' then begin
+        if SetL <> '' then
+          SetL := Intersection + ' ' + SetL
+        else
+          SetL := Intersection;
+        if SetR <> '' then
+          SetR := Intersection + ' ' + SetR
+        else
+          SetR := Intersection;
+      end;
+
+      if soPartial in aOptions then
+        r[K] := SimPartial(SetL, SetR)
+      else begin
+        r[K] := SimRatio(Intersection, SetL, aLimit, Algo);
+        if r[K] < Double(1.0) then begin
+          r[K] := Math.Max(r[K], SimRatio(Intersection, SetR, aLimit, Algo));
+          if r[K] < Double(1.0) then
+            r[K] := Math.Max(r[K], SimRatio(SetL, SetR, aLimit, Algo));
+        end;
+      end;
+    end;
+  end;
+
+var
+  LPattern: rawbytestring;
+  I: SizeInt;
+begin
+  if System.Length(aValues) = 0 then exit(nil);
+  System.SetLength(r, System.Length(aValues));
+
+  if aMode in [smSimple..smTokenSet] then begin
+    case aMode of
+      smSimple:     LPattern := SplitMerge(ToProperCase(aPattern));
+      smTokenSort:  LPattern := SplitMergeSorted(ToProperCase(aPattern));
+      smTokenSet:   LPattern := SplitMergeSortedSet(ToProperCase(aPattern));
+    else
+    end;
+    for I := 0 to System.High(aValues) do begin
+      case aMode of
+        smSimple:
+          if soPartial in aOptions then
+            r[I] := SimPartial(LPattern, SplitMerge(ToProperCase(aValues[I])))
+          else
+            r[I] := SimRatio(LPattern, SplitMerge(ToProperCase(aValues[I])), aLimit, Algo);
+        smTokenSort:
+          if soPartial in aOptions then
+            r[I] := SimPartial(LPattern, SplitMergeSorted(ToProperCase(aValues[I])))
+          else
+            r[I] := SimRatio(LPattern, SplitMergeSorted(ToProperCase(aValues[I])), aLimit, Algo);
+        smTokenSet:
+          if soPartial in aOptions then
+            r[I] := SimPartial(LPattern, SplitMergeSortedSet(ToProperCase(aValues[I])))
+          else
+            r[I] := SimRatio(LPattern, SplitMergeSortedSet(ToProperCase(aValues[I])), aLimit, Algo);
+      else
+      end;
+    end;
+  end else
+    SimWordSetsPairwise;
+
+  Result := r;
+end;
+{$POP}
 
 {$PUSH}{$WARN 5036 OFF}
 function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
