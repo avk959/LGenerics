@@ -76,7 +76,7 @@ type
    procedure LcsGusTest;
    procedure LcsKRTest;
    procedure LcsMyersTest;
-   procedure SimRatioLevTest;
+   procedure SimRatioTest;
    procedure SimRatioLevExTest;
    procedure SimRatioLevExTest1251;
    procedure LcsDistMyers;
@@ -1668,35 +1668,35 @@ const
   DblOne  = Double(1.0);
   DblZero = Double(0.0);
 
-procedure TFunTest.SimRatioLevTest;
+procedure TFunTest.SimRatioTest;
 begin
-  AssertTrue(SameValue(SimRatioLev('', ''), DblOne));
-  AssertTrue(SameValue(SimRatioLev('aaa', ''), DblZero));
-  AssertTrue(SameValue(SimRatioLev('', 'bbb'), DblZero));
-  AssertTrue(SameValue(SimRatioLev('aaa', 'bbb'), DblZero));
-  AssertTrue(SameValue(SimRatioLev('abc', 'abc'), DblOne));
+  AssertTrue(SameValue(SimRatio('', ''), DblOne));
+  AssertTrue(SameValue(SimRatio('aaa', ''), DblZero));
+  AssertTrue(SameValue(SimRatio('', 'bbb'), DblZero));
+  AssertTrue(SameValue(SimRatio('aaa', 'bbb'), DblZero));
+  AssertTrue(SameValue(SimRatio('abc', 'abc'), DblOne));
 end;
 
 procedure TFunTest.SimRatioLevExTest;
 begin
-  AssertTrue(SameValue(SimRatioLevEx('', ''), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('aaa', ''), DblZero));
-  AssertTrue(SameValue(SimRatioLevEx('', 'bbb'), DblZero));
-  AssertTrue(SameValue(SimRatioLevEx('Hello world', ' Hello world '), DblOne));
-  AssertFalse(SameValue(SimRatioLevEx('Hello world', ' hello world '), DblOne));
+  AssertTrue(SameValue(SimRatioEx('', ''), DblOne));
+  AssertTrue(SameValue(SimRatioEx('aaa', ''), DblZero));
+  AssertTrue(SameValue(SimRatioEx('', 'bbb'), DblZero));
+  AssertTrue(SameValue(SimRatioEx('Hello world', ' Hello world '), DblOne));
+  AssertFalse(SameValue(SimRatioEx('Hello world', ' hello world '), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('Hello world', ' hello world ', smSimple, [' '], [soIgnoreCase]), DblOne));
+    SameValue(SimRatioEx('Hello world', ' hello world ', smSimple, [' '], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('Hello world', 'another Hello world ', smSimple, [' '], [soPartial]), DblOne));
+    SameValue(SimRatioEx('Hello world', 'another Hello world ', smSimple, [' '], [soPartial]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('Hello, world!', ' hello world ', smSimple, [' ',',','!'], [soIgnoreCase]), DblOne));
+    SameValue(SimRatioEx('Hello, world!', ' hello world ', smSimple, [' ',',','!'], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('World hello', ' Hello world ', smTokenSort, [' '], [soIgnoreCase]), DblOne));
+    SameValue(SimRatioEx('World hello', ' Hello world ', smTokenSort, [' '], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('World hello', ' Hello world, hello', smTokenSet, [' ',','], [soIgnoreCase]), DblOne));
+    SameValue(SimRatioEx('World hello', ' Hello world, hello', smTokenSet, [' ',','], [soIgnoreCase]), DblOne));
   AssertTrue(
-    SameValue(SimRatioLevEx('World hello', ' Hello another world, hello', smTokenSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioLevEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smTokenSetEx), DblOne));
+    SameValue(SimRatioEx('World hello', ' Hello another world, hello', smTokenSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
+  AssertTrue(SameValue(SimRatioEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smTokenSetEx), DblOne));
 end;
 
 const
@@ -1743,12 +1743,10 @@ end;
 function LoCase1251(const s: rawbytestring): rawbytestring;
 var
   I: SizeInt;
-  p: PChar absolute s;
-  pR: PChar absolute Result;
 begin
   SetLength(Result, Length(s));
-  for I := 0 to Pred(Length(s)) do
-    pR[I] := Win1251LoMap[p[I]];
+  for I := 1 to Length(s) do
+    Result[I] := Win1251LoMap[s[I]];
 end;
 
 procedure TFunTest.SimRatioLevExTest1251;
@@ -1761,11 +1759,11 @@ const
 begin
   Pat1 := s1;
   Pat2 := s2;
-  R := SimRatioLevEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase]);
+  R := SimRatioEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase]);
   AssertTrue(R.ToString, R < 0.45);
-  R := SimRatioLevEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], @LoCase1251);
+  R := SimRatioEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], 0, sdaDefault, @LoCase1251);
   AssertTrue(R.ToString, R > 0.8);
-  R := SimRatioLevEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], @LoCase1251, @Less1251);
+  R := SimRatioEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], 0, sdaDefault, @LoCase1251, @Less1251);
   AssertTrue(R.ToString, R > 0.98);
 end;
 
