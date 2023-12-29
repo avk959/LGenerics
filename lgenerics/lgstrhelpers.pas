@@ -477,8 +477,8 @@ const
     aCaseMap: TSimCaseMap = nil;
     aLess: TSimLess = nil
   ): Double;
-{ each item in the resulting array will contain the similarity ratio between aPattern
-  and the corresponding item in the aValues array }
+{ returns an array, each element of which contains the similarity ratio between
+  aPattern and the corresponding element in the aValues array }
   function SimRatioList(
     const aPattern: rawbytestring;
     const aValues: array of rawbytestring;
@@ -490,6 +490,25 @@ const
     aCaseMap: TSimCaseMap = nil;
     aLess: TSimLess = nil
   ): specialize TGArray<Double>;
+
+type
+  TRbStrRatio = record
+    Value: rawbytestring;
+    Ratio: Double;
+  end;
+{ returns an array of pairs sorted by descending similarity ratio and containing only those
+  strings whose similarity ratio is not less than the specified boundary aLimit }
+  function SelectSimilar(
+    const aPattern: rawbytestring;
+    const aValues: array of rawbytestring;
+    aLimit: Double;
+    aMode: TSimMode = smSimple;
+    const aStopChars: TSysCharSet = DEF_STOP_CHARS;
+    const aOptions: TSimOptions = [];
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aCaseMap: TSimCaseMap = nil;
+    aLess: TSimLess = nil
+  ): specialize TGArray<TRbStrRatio>;
 
   function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
   function IsValidDotDecIPv4(const s: rawbytestring): Boolean;
@@ -2821,6 +2840,35 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5036 OFF}
+
+function SelectSimilar(const aPattern: rawbytestring; const aValues: array of rawbytestring; aLimit: Double;
+  aMode: TSimMode; const aStopChars: TSysCharSet; const aOptions: TSimOptions; Algo: TSeqDistanceAlgo;
+  aCaseMap: TSimCaseMap; aLess: TSimLess): specialize TGArray<TRbStrRatio>;
+  function Less(const L, R: TRbStrRatio): Boolean;
+  begin
+    Result := L.Ratio < R.Ratio;
+  end;
+var
+  ratios: array of Double;
+  r: array of TRbStrRatio;
+  I, J: SizeInt;
+begin
+  ratios := SimRatioList(aPattern, aValues, aMode, aStopChars, aOptions, aLimit, Algo, aCaseMap, aLess);
+  System.SetLength(r, System.Length(ratios));
+  J := 0;
+  for I := 0 to System.High(ratios) do
+    if ratios[I] > Double(0) then begin
+      with r[J] do begin
+        Value := aValues[I];
+        Ratio := ratios[I];
+      end;
+      Inc(J);
+    end;
+  System.SetLength(r, J);
+  specialize TGNestedArrayHelper<TRbStrRatio>.Sort(r, @Less, soDesc);
+  Result := r;
+end;
+
 function IsValidDotQuadIPv4(const s: rawbytestring): Boolean;
 type
   TRadix = (raDec, raOct, raHex);
