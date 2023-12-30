@@ -68,7 +68,7 @@ begin
       for J := 1 to RepCount do begin
         I := 0;
         while I < High(CurrSet.Data) do begin
-          s := SimRatioLevExUtf8(CurrSet.Data[I], CurrSet.Data[I+1], [' '], smTokenSetEx);
+          s := SimRatioExUtf8(CurrSet.Data[I], CurrSet.Data[I+1], [' '], smTokenSetEx);
           Inc(I, 2);
         end;
       end;
