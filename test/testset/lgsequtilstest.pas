@@ -37,8 +37,8 @@ type
     procedure LcsGusUtf8Test;
     procedure LcsKRUtf8Test;
     procedure LcsMyersUtf8Test;
-    procedure SimRatioUtf8;
-    procedure SimRatioExUtf8;
+    procedure SimRatioUtf8Test;
+    procedure SimRatioExUtf8Test;
     procedure FuzzySearchEdp;
 
     procedure Utf16ToUcs4;
@@ -57,8 +57,8 @@ type
     procedure LcsGusUtf16Test;
     procedure LcsKRUtf16Test;
     procedure LcsMyersUtf16Test;
-    procedure SimRatioUtf16;
-    procedure SimRatioExUtf16;
+    procedure SimRatioUtf16Test;
+    procedure SimRatioExUtf16Test;
   end;
 
   { TTestSeqUtils }
@@ -1044,47 +1044,41 @@ begin
   AssertTrue(LcsMyersUtf8(s1, s2) = s);
 end;
 
-procedure TTestUnicodeUtils.SimRatioUtf8;
+procedure TTestUnicodeUtils.SimRatioUtf8Test;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := '';
-  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblOne));
+  AssertTrue(SimRatioUtf8(s1, s2) = DblOne);
 
   s2 := 'ббб';
-  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblZero));
-  AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblZero));
+  AssertTrue(SimRatioUtf8(s1, s2) = DblZero);
+  AssertTrue(SimRatioUtf8(s2, s1) = DblZero);
 
   s1 := 'ааа';
-  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblZero));
-  AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblZero));
+  AssertTrue(SimRatioUtf8(s1, s2) = DblZero);
+  AssertTrue(SimRatioUtf8(s2, s1) = DblZero);
 
   s1 := 'ббб';
-  AssertTrue(SameValue(SimRatioLevUtf8(s1, s2), DblOne));
-  AssertTrue(SameValue(SimRatioLevUtf8(s2, s1), DblOne));
+  AssertTrue(SimRatioUtf8(s1, s2) = DblOne);
+  AssertTrue(SimRatioUtf8(s2, s1) = DblOne);
 end;
 
-procedure TTestUnicodeUtils.SimRatioExUtf8;
+procedure TTestUnicodeUtils.SimRatioExUtf8Test;
 begin
-  AssertTrue(SameValue(SimRatioLevExUtf8('', '', [' ']), DblOne));
-  AssertTrue(SimRatioLevExUtf8('aaa', '', [' ']).ToString, SameValue(SimRatioLevExUtf8('aaa', '', [' ']), DblZero));
-  AssertTrue(SameValue(SimRatioLevExUtf8('', 'bbb', [' ']), DblZero));
-  AssertTrue(SameValue(SimRatioLevExUtf8('Hello world', ' Hello world ', [' ']), DblOne));
-  AssertFalse(SameValue(SimRatioLevExUtf8('Hello world', ' hello world ', [' ']), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf8('Hello world', ' hello world ', [' '], smSimple, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf8('Hello world', 'another Hello world ', [' '], smSimple, [soPartial]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf8('Hello, world!', ' hello world ', [' ',',','!'], smSimple, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf8('World hello', ' Hello world ', [' '], smTokenSort, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf8('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf8('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioLevExUtf8('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx), DblOne));
+  AssertTrue(SimRatioExUtf8('', '', [' ']) = DblOne);
+  AssertTrue(SimRatioExUtf8('aaa', '', [' ']) = DblZero);
+  AssertTrue(SimRatioExUtf8('', 'bbb', [' ']) = DblZero);
+  AssertTrue(SimRatioExUtf8('Hello world', ' Hello world ', [' ']) = DblOne);
+  AssertFalse(SimRatioExUtf8('Hello world', ' hello world ', [' ']) = DblOne);
+  AssertTrue(SimRatioExUtf8('Hello world', ' hello world ', [' '], smSimple, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf8('Hello world', 'another Hello world ', [' '], smSimple, [soPartial]) = DblOne);
+  AssertTrue(SimRatioExUtf8('Hello, world!', ' hello world ', [' ',',','!'], smSimple, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf8('World hello', ' Hello world ', [' '], smTokenSort, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf8('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf8('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]) = DblOne);
+  AssertTrue(SimRatioExUtf8('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx) = DblOne);
 end;
 
 procedure TTestUnicodeUtils.FuzzySearchEdp;
@@ -2013,47 +2007,41 @@ begin
   AssertTrue(LcsMyersUtf16(s1, s2) = s);
 end;
 
-procedure TTestUnicodeUtils.SimRatioUtf16;
+procedure TTestUnicodeUtils.SimRatioUtf16Test;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := '';
-  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblOne));
+  AssertTrue(SimRatioUtf16(s1, s2) = DblOne);
 
   s2 := 'ббб';
-  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblZero));
-  AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblZero));
+  AssertTrue(SimRatioUtf16(s1, s2) = DblZero);
+  AssertTrue(SimRatioUtf16(s2, s1) = DblZero);
 
   s1 := 'ааа';
-  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblZero));
-  AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblZero));
+  AssertTrue(SimRatioUtf16(s1, s2) = DblZero);
+  AssertTrue(SimRatioUtf16(s2, s1) = DblZero);
 
   s1 := 'ббб';
-  AssertTrue(SameValue(SimRatioLevUtf16(s1, s2), DblOne));
-  AssertTrue(SameValue(SimRatioLevUtf16(s2, s1), DblOne));
+  AssertTrue(SimRatioUtf16(s1, s2) = DblOne);
+  AssertTrue(SimRatioUtf16(s2, s1) = DblOne);
 end;
 
-procedure TTestUnicodeUtils.SimRatioExUtf16;
+procedure TTestUnicodeUtils.SimRatioExUtf16Test;
 begin
-  AssertTrue(SameValue(SimRatioLevExUtf16('', '', [' ']), DblOne));
-  AssertTrue(SimRatioLevExUtf16('aaa', '', [' ']).ToString, SameValue(SimRatioLevExUtf16('aaa', '', [' ']), DblZero));
-  AssertTrue(SameValue(SimRatioLevExUtf16('', 'bbb', [' ']), DblZero));
-  AssertTrue(SameValue(SimRatioLevExUtf16('Hello world', ' Hello world ', [' ']), DblOne));
-  AssertFalse(SameValue(SimRatioLevExUtf16('Hello world', ' hello world ', [' ']), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf16('Hello world', ' hello world ', [' '], smSimple, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf16('Hello world', 'another Hello world ', [' '], smSimple, [soPartial]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf16('Hello, world!', ' hello world ', [' ',',','!'], smSimple, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf16('World hello', ' Hello world ', [' '], smTokenSort, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf16('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioLevExUtf16('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioLevExUtf16('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx), DblOne));
+  AssertTrue(SimRatioExUtf16('', '', [' ']) = DblOne);
+  AssertTrue(SimRatioExUtf16('aaa', '', [' ']) = DblZero);
+  AssertTrue(SimRatioExUtf16('', 'bbb', [' ']) = DblZero);
+  AssertTrue(SimRatioExUtf16('Hello world', ' Hello world ', [' ']) = DblOne);
+  AssertFalse(SimRatioExUtf16('Hello world', ' hello world ', [' ']) = DblOne);
+  AssertTrue(SimRatioExUtf16('Hello world', ' hello world ', [' '], smSimple, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf16('Hello world', 'another Hello world ', [' '], smSimple, [soPartial]) = DblOne);
+  AssertTrue(SimRatioExUtf16('Hello, world!', ' hello world ', [' ',',','!'], smSimple, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf16('World hello', ' Hello world ', [' '], smTokenSort, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf16('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioExUtf16('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]) = DblOne);
+  AssertTrue(SimRatioExUtf16('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx) = DblOne);
 end;
 
 { TTestSeqUtils }
