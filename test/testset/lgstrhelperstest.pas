@@ -1670,33 +1670,27 @@ const
 
 procedure TFunTest.SimRatioTest;
 begin
-  AssertTrue(SameValue(SimRatio('', ''), DblOne));
-  AssertTrue(SameValue(SimRatio('aaa', ''), DblZero));
-  AssertTrue(SameValue(SimRatio('', 'bbb'), DblZero));
-  AssertTrue(SameValue(SimRatio('aaa', 'bbb'), DblZero));
-  AssertTrue(SameValue(SimRatio('abc', 'abc'), DblOne));
+  AssertTrue(SimRatio('', '') = DblOne);
+  AssertTrue(SimRatio('aaa', '') = DblZero);
+  AssertTrue(SimRatio('', 'bbb') = DblZero);
+  AssertTrue(SimRatio('aaa', 'bbb') = DblZero);
+  AssertTrue(SimRatio('abc', 'abc') = DblOne);
 end;
 
 procedure TFunTest.SimRatioLevExTest;
 begin
-  AssertTrue(SameValue(SimRatioEx('', ''), DblOne));
-  AssertTrue(SameValue(SimRatioEx('aaa', ''), DblZero));
-  AssertTrue(SameValue(SimRatioEx('', 'bbb'), DblZero));
-  AssertTrue(SameValue(SimRatioEx('Hello world', ' Hello world '), DblOne));
-  AssertFalse(SameValue(SimRatioEx('Hello world', ' hello world '), DblOne));
-  AssertTrue(
-    SameValue(SimRatioEx('Hello world', ' hello world ', smSimple, [' '], [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioEx('Hello world', 'another Hello world ', smSimple, [' '], [soPartial]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioEx('Hello, world!', ' hello world ', smSimple, [' ',',','!'], [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioEx('World hello', ' Hello world ', smTokenSort, [' '], [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioEx('World hello', ' Hello world, hello', smTokenSet, [' ',','], [soIgnoreCase]), DblOne));
-  AssertTrue(
-    SameValue(SimRatioEx('World hello', ' Hello another world, hello', smTokenSet, [' ',','], [soIgnoreCase, soPartial]), DblOne));
-  AssertTrue(SameValue(SimRatioEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smTokenSetEx), DblOne));
+  AssertTrue(SimRatioEx('', '') = DblOne);
+  AssertTrue(SimRatioEx('aaa', '') = DblZero);
+  AssertTrue(SimRatioEx('', 'bbb') = DblZero);
+  AssertTrue(SimRatioEx('Hello world', ' Hello world ') = DblOne);
+  AssertFalse(SimRatioEx('Hello world', ' hello world ') = DblOne);
+  AssertTrue(SimRatioEx('Hello world', ' hello world ', smSimple, [' '], [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioEx('Hello world', 'another Hello world ', smSimple, [' '], [soPartial]) = DblOne);
+  AssertTrue(SimRatioEx('Hello, world!', ' hello world ', smSimple, [' ',',','!'], [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioEx('World hello', ' Hello world ', smTokenSort, [' '], [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioEx('World hello', ' Hello world, hello', smTokenSet, [' ',','], [soIgnoreCase]) = DblOne);
+  AssertTrue(SimRatioEx('World hello', ' Hello another world, hello', smTokenSet, [' ',','], [soIgnoreCase, soPartial]) = DblOne);
+  AssertTrue(SimRatioEx('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', smTokenSetEx) = DblOne);
 end;
 
 const
