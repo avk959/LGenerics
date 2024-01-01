@@ -2846,7 +2846,7 @@ function SelectSimilar(const aPattern: rawbytestring; const aValues: array of ra
   aCaseMap: TSimCaseMap; aLess: TSimLess): specialize TGArray<TRbStrRatio>;
   function Less(const L, R: TRbStrRatio): Boolean;
   begin
-    Result := L.Ratio < R.Ratio;
+    Result := R.Ratio < L.Ratio;
   end;
 var
   ratios: array of Double;
@@ -2865,7 +2865,7 @@ begin
       Inc(J);
     end;
   System.SetLength(r, J);
-  specialize TGNestedArrayHelper<TRbStrRatio>.Sort(r, @Less, soDesc);
+  specialize TGNestedArrayHelper<TRbStrRatio>.Sort(r, @Less);
   Result := r;
 end;
 
