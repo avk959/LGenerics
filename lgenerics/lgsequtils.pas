@@ -327,7 +327,38 @@ type
     const aOptions: TSimOptions = [];
     aLimit: Double = Double(0);
     Algo: TSeqDistanceAlgo = sdaDefault;
-    aLess: TUcs4Less = nil): Double;
+    aLess: TUcs4Less = nil
+  ): Double;
+{ returns an array, each element of which contains the similarity ratio between
+  aPattern and the corresponding element in the aValues array }
+  function SimRatioListUtf8(
+    const aPattern: string;
+    const aValues: array of string;
+    const aStopChars: array of string;
+    aMode: TSimMode = smSimple;
+    const aOptions: TSimOptions = [];
+    aLimit: Double = Double(0);
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aLess: TUcs4Less = nil
+  ): specialize TGArray<Double>;
+type
+  TStringRatio = record
+    Value: string;
+    Ratio: Double;
+  end;
+{ returns an array of pairs sorted by descending similarity ratio and containing only those
+  strings whose similarity ratio is not less than the specified boundary aLimit }
+  function SelectSimilarUtf8(
+    const aPattern: string;
+    const aValues: array of string;
+    const aStopChars: array of string;
+    aLimit: Double;
+    aMode: TSimMode = smSimple;
+    const aOptions: TSimOptions = [];
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aLess: TUcs4Less = nil
+  ): specialize TGArray<TStringRatio>;
+
 type
   { TFuzzySearchEdp: approximate string matching with k differences;
     expects UTF-8 encoded strings as parameters;
@@ -1395,7 +1426,7 @@ begin
     begin
       if not Map.FindOrAdd(pL[I], p) then
         p^.Key := pL[I];
-      p^.Value[1] := p^.Value[1] or (QWord(1) shl I);
+      p^.Value[1] := p^.Value[1] or (QWord(1) shl (I - BLOCK_SIZE));
     end;
 
   Result := aLenL;
@@ -1464,10 +1495,11 @@ begin
     begin
       if not Map.FindOrAdd(pL[I], p) then
         p^.Key := pL[I];
-      p^.Value[1] := p^.Value[1] or (QWord(1) shl I);
+      p^.Value[1] := p^.Value[1] or (QWord(1) shl (I - BLOCK_SIZE));
     end;
 
   Result := aLenL;
+  aLimit += aLenR - aLenL;
   Pv0 := High(QWord);
   Pv1 := High(QWord);
   Mv0 := 0;
@@ -2067,7 +2099,7 @@ begin
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
   else
-    Result := 0;
+    Result := Double(0);
 end;
 
 class function TGSeqUtil.Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TDiff;
@@ -2575,7 +2607,7 @@ var
       else exit(Double(0))
     else
       if R = nil then exit(Double(0));
-
+    Result := Double(0);
     if System.Length(L) <= System.Length(R) then
       for I := 0 to System.Length(R) - System.Length(L) do begin
         Result := Math.Max(
@@ -3482,12 +3514,11 @@ var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
   RBuf: TUcs4Seq = nil;
-  LenL, LenR: SizeInt;
+  LenL, LenR, I: SizeInt;
   pL, pR: PUcs4Char;
 
   StopChars: TUcs4CharSet;
   LocL, LocR: string;
-  I: SizeInt;
   c: Ucs4Char;
   p: TUcs4CharSet.PEntry;
 begin
@@ -3533,6 +3564,99 @@ begin
   Result :=
     SimRatioGeneric(
       pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLimit, Algo, aLess);
+end;
+
+function SimRatioListUtf8(const aPattern: string; const aValues: array of string;
+  const aStopChars: array of string; aMode: TSimMode; const aOptions: TSimOptions; aLimit: Double;
+  Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<Double>;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR, I: SizeInt;
+  pL, pR: PUcs4Char;
+
+  StopChars: TUcs4CharSet;
+  Pattern, Value: string;
+  c: Ucs4Char;
+  p: TUcs4CharSet.PEntry;
+  r: array of Double;
+begin
+  if System.Length(aValues) < 1 then exit(nil);
+
+  if soIgnoreCase in aOptions then
+    Pattern := Utf8ToLower(aPattern)
+  else
+    Pattern := aPattern;
+
+  for I := 0 to System.High(aStopChars) do
+    if IsSingleCodePointUtf8(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
+      p^.Key := c;
+
+  if System.Length(Pattern) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf8ToUcs4SeqImpl(Pattern, pL, LenL);
+    end
+  else
+    begin
+      LBuf := Utf8ToUcs4SeqImpl(Pattern);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+
+  System.SetLength(r, System.Length(aValues));
+
+  for I := 0 to System.High(aValues) do begin
+    if soIgnoreCase in aOptions then
+      Value := Utf8ToLower(aValues[I])
+    else
+      Value := aValues[I];
+
+    if System.Length(Value) <= MAX_STATIC then
+      begin
+        pR := @RBufSt[0];
+        Utf8ToUcs4SeqImpl(Value, pR, LenR);
+      end
+    else
+      begin
+        RBuf := Utf8ToUcs4SeqImpl(Value);
+        LenR := System.Length(RBuf);
+        pR := Pointer(RBuf);
+      end;
+    r[I] := SimRatioGeneric(
+      pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLimit, Algo, aLess);
+  end;
+
+  Result := r;
+end;
+
+function SelectSimilarUtf8(const aPattern: string; const aValues: array of string;
+  const aStopChars: array of string; aLimit: Double; aMode: TSimMode; const aOptions: TSimOptions;
+  Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<TStringRatio>;
+  function Less(const L, R: TStringRatio): Boolean;
+  begin
+    Result := R.Ratio < L.Ratio;
+  end;
+var
+  ratios: array of Double;
+  r: array of TStringRatio;
+  I, J: SizeInt;
+begin
+  ratios := SimRatioListUtf8(aPattern, aValues, aStopChars, aMode, aOptions, aLimit, Algo, aLess);
+  System.SetLength(r, System.Length(ratios));
+  J := 0;
+  for I := 0 to System.High(ratios) do
+    if ratios[I] > Double(0.0) then begin
+      with r[J] do begin
+        Value := aValues[I];
+        Ratio := ratios[I];
+      end;
+      Inc(J);
+    end;
+  System.SetLength(r, J);
+  specialize TGNestedArrayHelper<TStringRatio>.Sort(r, @Less);
+  Result := r;
 end;
 
 { TFuzzySearchEdp.TEnumerator }
