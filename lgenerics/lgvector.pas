@@ -473,7 +473,7 @@ type
   public
   type
     TEqualityCompare = THelper.TEqualCompare;
-    TVector          = class(specialize TGVector<T>);
+    TVector          = specialize TGVector<T>;
     TLiteVector      = specialize TGLiteVector<T>;
     class procedure SwapItems(v: TVector; L, R: SizeInt); static;
     class procedure SwapItems(var v: TLiteVector; L, R: SizeInt); static; inline;
@@ -495,7 +495,7 @@ type
     THelper = specialize TGBaseArrayHelper<T, TCmpRel>;
   public
   type
-    TVector     = class(specialize TGVector<T>);
+    TVector     = specialize TGVector<T>;
     TLiteVector = specialize TGLiteVector<T>;
     TOptional   = specialize TGOptional<T>;
   { returns position of aValue in vector V, -1 if not found }
