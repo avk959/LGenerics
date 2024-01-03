@@ -1107,7 +1107,7 @@ asm
   add   [edi+12], eax //1
 /////////////////////////////////  mul by b[3]
   mov   eax, [esi]
-  mul   [ecx+12]
+  mul   dword ptr[ecx+12]
   add   [edi+12], eax
 
   xor  eax, eax
@@ -1670,7 +1670,7 @@ asm
   cmp  edx, [esp+36]
   jae  @DTooLarge
   mov  eax, [ebx+edi*4-4]        // eax <= R[I + dCount - 1]
-  div  [esp+36]
+  div  dword ptr[esp+36]
   mov  esi, eax                  // esi <= QHat
   mov  [esp+56], edx             // [esp+56] <= RHat
   jmp  @RefineEstimation
@@ -1679,9 +1679,9 @@ asm
   mov  esi, MAX_LIMB
   mov  eax, edx
   xor  edx, edx
-  div  [esp+36]
+  div  dword ptr[esp+36]
   mov  eax, [ebx+edi*4]
-  div  [esp+36]
+  div  dword ptr[esp+36]
   mov  eax, edx
   add  eax, [esp+36]
   jc   @MultAndSub
@@ -1731,7 +1731,7 @@ asm
   jnc  @RightQhat
 
   //compensating addition
-  dec  [esp+52]                 // todo: more tests needed !!!
+  dec  dword ptr[esp+52]           // todo: more tests needed !!!
   mov  eax, [esp+20]
   xor  esi, esi
   xor  ebp, ebp
