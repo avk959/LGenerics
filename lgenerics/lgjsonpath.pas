@@ -304,33 +304,37 @@ type
   ['{3D2794A4-F950-40DA-A611-51F7B37A6C11}']
     procedure SetParam(const aName: string; const aValue: TJpValue);
     function  GetParam(const aName: string): TJpValue;
-  { returns NodeList that matches its internal, previously parsed JSONPath query }
+  { returns NodeList that matches its internal, previously parsed JSONPath query;
+    the freeing of the obtained values is the responsibility of aRoot }
     function  Match(aRoot: TJsonNode): TJpNodeList;
   { returns True and NodeList in aNodeList if aRoot is valid JSON, False otherwise }
     function  Match(const aRoot: string; out aNodeList: TJpNodeList): Boolean;
   { returns True and NodeList as JSON in aNodeList if aRoot is valid JSON, False otherwise }
     function  Match(const aRoot: string; out aNodeList: string): Boolean;
-  { returns an array of TJsonNode that matches its internal, previously parsed JSONPath query }
+  { returns an array of TJsonNode that matches its internal, previously parsed JSONPath query;
+    the freeing of the obtained values is the responsibility of aRoot }
     function  MatchValues(aRoot: TJsonNode): TJpValueList;
   { returns True and an array of JSON values in aNodeArray if aRoot is valid JSON, False otherwise }
     function  MatchValues(const aRoot: string; out aNodeArray: TJpValueList): Boolean;
   { returns True and an array of JSON values as JSON in aNodeArray if aRoot is valid JSON, False otherwise }
     function  MatchValues(const aRoot: string; out aNodeArray: string): Boolean;
   { returns the first element along with its location that matches its internal,
-    previously parsed JSONPath query, if any, otherwise returns ('', NIL) }
+    previously parsed JSONPath query, if any, otherwise returns ('', NIL);
+    the freeing of the obtained value is the responsibility of aRoot }
     function  MatchFirst(aRoot: TJsonNode): TJpNode;
   { returns True and the first matching element along with its location
-    in aNode(('', NIL) if no matches) if aRoot is valid JSON, False otherwise. }
+    in aNode(('', NIL) if no matches) if aRoot is valid JSON, False otherwise }
     function  MatchFirst(const aRoot: string; out aNode: TJpNode): Boolean;
   { returns True and the first matching element along with its location
-    (empty object if no matches) as JSON if aRoot is valid JSON, False otherwise. }
+    (empty object if there is no matches) as JSON if aRoot is valid JSON, False otherwise }
     function  MatchFirst(const aRoot: string; out aNode: string): Boolean;
-  { returns the first matching element if any, otherwise returns NIL }
+  { returns the first matching element if any, otherwise returns NIL;
+    the freeing of the obtained value is the responsibility of aRoot }
     function  MatchFirstValue(aRoot: TJsonNode): TJsonNode;
-  { returns True and first matching element (NIL if no matches) in aValue
+  { returns True and first matching element (NIL if there is no matches) in aValue
     if aRoot is valid JSON, False otherwise }
     function  MatchFirstValue(const aRoot: string; out aValue: TJsonNode): Boolean;
-  { returns True and first matching element as JSON (an empty string if no matches)
+  { returns True and first matching element as JSON (an empty string if there is no matches)
     if aRoot is valid JSON, False otherwise }
     function  MatchFirstValue(const aRoot: string; out aValue: string): Boolean;
   { allows to define parameters and set their values }
@@ -349,9 +353,10 @@ type
   function JpParseQuery(const aQuery: string; out aPath: IJsonPath; out aMsg: string): Boolean;
 
 { tries to apply aQuery to JSON value aRoot; returns False if aQuery is invalid, in which case
-  the aMsg parameter contains an error message, otherwise returns the NodeList in the aList parameter }
+  the aMsg parameter contains an error message, otherwise returns the NodeList in the aList parameter;
+  the freeing of the obtained values is the responsibility of aRoot }
   function JpMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpNodeList; out aMsg: string): Boolean;
-{ same as above, but for the case where the content of the error message is of no interest }
+{ same as above, but for the case where the content of the error message is of no interest}
   function JpMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpNodeList): Boolean;
 { tries to apply aQuery to JSON value aRoot; returns False if aRoot is invalid JSON
   or aQuery is invalid, in which case the aMsg parameter contains an error message,
@@ -361,8 +366,9 @@ type
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatch(const aQuery, aRoot: string; out aList: string): Boolean;
   function JpMatch(const aQuery, aRoot: string; out aList: TJpNodeList): Boolean;
-{ tries to apply aQuery to the JSON value aRoot; returns False if aQuery is invalid, in which case,
-  the aMsg parameter contains an error message }
+{ tries to apply aQuery to the JSON value aRoot; returns False if aQuery is invalid,
+  in which case, the aMsg parameter contains an error message;
+  the freeing of the obtained values is the responsibility of aRoot }
   function JpMatchValues(const aQuery: string; aRoot: TJsonNode; out aList: TJpValueList; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatchValues(const aQuery: string; aRoot: TJsonNode; out aList: TJpValueList): Boolean;
@@ -374,22 +380,27 @@ type
   function JpMatchValues(const aQuery, aRoot: string; out aList: string): Boolean;
   function JpMatchValues(const aQuery, aRoot: string; out aList: TJpValueList): Boolean;
 { tries to apply aQuery to the JSON value aRoot and returns only the first match;
-  returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
+  returns False if aQuery is invalid, in which case the aMsg parameter contains an error message;
+  the freeing of the obtained value is the responsibility of aRoot }
   function JpMatchFirst(const aQuery: string; aRoot: TJsonNode; out aNode: TJpNode; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatchFirst(const aQuery: string; aRoot: TJsonNode; out aNode: TJpNode): Boolean;
 { tries to apply aQuery to the JSON value aRoot and returns only the first match; returns False if aRoot
   is invalid JSON or aQuery is invalid, in which case the aMsg parameter contains an error message }
   function JpMatchFirst(const aQuery, aRoot: string; out aNode, aMsg: string): Boolean;
+  function JpMatchFirst(const aQuery, aRoot: string; out aNode: TJpNode; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatchFirst(const aQuery, aRoot: string; out aNode: string): Boolean;
+  function JpMatchFirst(const aQuery, aRoot: string; out aNode: TJpNode): Boolean;
 { tries to apply aQuery to the JSON value aRoot and returns only the first match;
-  returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
+  returns False if aQuery is invalid, in which case the aMsg parameter contains an error message;
+  the freeing of the obtained value is the responsibility of aRoot }
   function JpMatchFirstValue(const aQuery: string; aRoot: TJsonNode; out aNode: TJsonNode; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatchFirstValue(const aQuery: string; aRoot: TJsonNode; out aNode: TJsonNode): Boolean;
-{ tries to apply aQuery to the JSON value aRoot and returns only the first match; returns False if aRoot
-  is invalid JSON or aQuery is invalid, in which case the aMsg parameter contains an error message }
+{ tries to apply aQuery to the JSON value aRoot and returns only the first match;
+  returns False if aRoot is invalid JSON or aQuery is invalid, in which case
+  the aMsg parameter contains an error message }
   function JpMatchFirstValue(const aQuery, aRoot: string; out aNode, aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatchFirstValue(const aQuery, aRoot: string; out aNode: string): Boolean;
@@ -5359,7 +5370,31 @@ begin
     aMsg := Matcher.Instance.Message;
 end;
 
+function JpMatchFirst(const aQuery, aRoot: string; out aNode: TJpNode; out aMsg: string): Boolean;
+var
+  Matcher: specialize TGAutoRef<TJpMatcher>;
+begin
+  aMsg := '';
+  aNode := TJpNode.Make('', nil);
+  Result := Matcher.Instance.TryParseQuery(aQuery);
+  if Result then
+    begin
+      Result := Matcher.Instance.MatchFirst(aRoot, aNode);
+      if not Result then
+        aMsg := SEInvalidJsonInst;
+    end
+  else
+    aMsg := Matcher.Instance.Message;
+end;
+
 function JpMatchFirst(const aQuery, aRoot: string; out aNode: string): Boolean;
+var
+  Dummy: string;
+begin
+  Result := JpMatchFirst(aQuery, aRoot, aNode, Dummy);
+end;
+
+function JpMatchFirst(const aQuery, aRoot: string; out aNode: TJpNode): Boolean;
 var
   Dummy: string;
 begin
