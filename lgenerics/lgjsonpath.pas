@@ -3845,17 +3845,13 @@ end;
 function TJpMatcher.Match(const aRoot: string; out aNodeList: TJpNodeList): Boolean;
 var
   Root: specialize TGAutoRef<TJsonNode>;
-  List: TJpNodeList;
   I: SizeInt;
 begin
   aNodeList := nil;
   if not Root.Instance.Parse(aRoot) then exit(False);
-  List := FPath.ApplyWithPath(Root.Instance);
-  System.SetLength(aNodeList, System.Length(List));
-  for I := 0 to System.High(List) do begin
-    aNodeList[I].Path := List[I].Path;
-    aNodeList[I].Value := List[I].Value.Clone;
-  end;
+  aNodeList := FPath.ApplyWithPath(Root.Instance);
+  for I := 0 to System.High(aNodeList) do
+    aNodeList[I].Value := aNodeList[I].Value.Clone;
   Result := True;
 end;
 
@@ -3877,15 +3873,13 @@ end;
 function TJpMatcher.MatchValues(const aRoot: string; out aNodeArray: TJpValueList): Boolean;
 var
   Root: specialize TGAutoRef<TJsonNode>;
-  a: TJpValueList;
   I: SizeInt;
 begin
   aNodeArray := nil;
   if not Root.Instance.Parse(aRoot) then exit(False);
-  a := FPath.Apply(Root.Instance);
-  System.SetLength(aNodeArray, System.Length(a));
-  for I := 0 to System.High(a) do
-    aNodeArray[I] := a[I].Clone;
+  aNodeArray := FPath.Apply(Root.Instance);
+  for I := 0 to System.High(aNodeArray) do
+    aNodeArray[I] := aNodeArray[I].Clone;
   Result := True;
 end;
 
