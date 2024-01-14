@@ -306,20 +306,30 @@ type
     function  GetParam(const aName: string): TJpValue;
   { returns NodeList that matches its internal, previously parsed JSONPath query }
     function  Match(aRoot: TJsonNode): TJpNodeList;
-  { returns True and NodeList as JSON if aRoot is valid JSON, False otherwise }
+  { returns True and NodeList in aNodeList if aRoot is valid JSON, False otherwise }
+    function  Match(const aRoot: string; out aNodeList: TJpNodeList): Boolean;
+  { returns True and NodeList as JSON in aNodeList if aRoot is valid JSON, False otherwise }
     function  Match(const aRoot: string; out aNodeList: string): Boolean;
   { returns an array of TJsonNode that matches its internal, previously parsed JSONPath query }
     function  MatchValues(aRoot: TJsonNode): TJpValueList;
-  { returns True and an array of JSON values if aRoot is valid JSON, False otherwise }
+  { returns True and an array of JSON values in aNodeArray if aRoot is valid JSON, False otherwise }
+    function  MatchValues(const aRoot: string; out aNodeArray: TJpValueList): Boolean;
+  { returns True and an array of JSON values as JSON in aNodeArray if aRoot is valid JSON, False otherwise }
     function  MatchValues(const aRoot: string; out aNodeArray: string): Boolean;
   { returns the first element along with its location that matches its internal,
-    previously parsed JSONPath query, if any, otherwise returns ('', nil) }
+    previously parsed JSONPath query, if any, otherwise returns ('', NIL) }
     function  MatchFirst(aRoot: TJsonNode): TJpNode;
+  { returns True and the first matching element along with its location
+    in aNode(('', NIL) if no matches) if aRoot is valid JSON, False otherwise. }
+    function  MatchFirst(const aRoot: string; out aNode: TJpNode): Boolean;
   { returns True and the first matching element along with its location
     (empty object if no matches) as JSON if aRoot is valid JSON, False otherwise. }
     function  MatchFirst(const aRoot: string; out aNode: string): Boolean;
   { returns the first matching element if any, otherwise returns NIL }
     function  MatchFirstValue(aRoot: TJsonNode): TJsonNode;
+  { returns True and first matching element (NIL if no matches) in aValue
+    if aRoot is valid JSON, False otherwise }
+    function  MatchFirstValue(const aRoot: string; out aValue: TJsonNode): Boolean;
   { returns True and first matching element as JSON (an empty string if no matches)
     if aRoot is valid JSON, False otherwise }
     function  MatchFirstValue(const aRoot: string; out aValue: string): Boolean;
@@ -347,8 +357,10 @@ type
   or aQuery is invalid, in which case the aMsg parameter contains an error message,
   otherwise returns the NodeList as JSON in the aList parameter }
   function JpMatch(const aQuery, aRoot: string; out aList, aMsg: string): Boolean;
+  function JpMatch(const aQuery, aRoot: string; out aList: TJpNodeList; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatch(const aQuery, aRoot: string; out aList: string): Boolean;
+  function JpMatch(const aQuery, aRoot: string; out aList: TJpNodeList): Boolean;
 { tries to apply aQuery to the JSON value aRoot; returns False if aQuery is invalid, in which case,
   the aMsg parameter contains an error message }
   function JpMatchValues(const aQuery: string; aRoot: TJsonNode; out aList: TJpValueList; out aMsg: string): Boolean;
@@ -357,8 +369,10 @@ type
 { tries to apply aQuery to the JSON value aRoot; returns False if aRoot is invalid JSON or
   aQuery is invalid, in which case, the aMsg parameter contains an error message }
   function JpMatchValues(const aQuery, aRoot: string; out aList, aMsg: string): Boolean;
+  function JpMatchValues(const aQuery, aRoot: string; out aList: TJpValueList; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest }
   function JpMatchValues(const aQuery, aRoot: string; out aList: string): Boolean;
+  function JpMatchValues(const aQuery, aRoot: string; out aList: TJpValueList): Boolean;
 { tries to apply aQuery to the JSON value aRoot and returns only the first match;
   returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
   function JpMatchFirst(const aQuery: string; aRoot: TJsonNode; out aNode: TJpNode; out aMsg: string): Boolean;
@@ -1420,12 +1434,16 @@ type
     function  TryGetParam(const aName: string; out aValue: TJpValue): Boolean;
     function  TryParseQuery(const aQuery: string): Boolean;
     function  Match(aRoot: TJsonNode): TJpNodeList;
+    function  Match(const aRoot: string; out aNodeList: TJpNodeList): Boolean;
     function  Match(const aRoot: string; out aNodeList: string): boolean;
     function  MatchValues(aRoot: TJsonNode): TJpValueList;
+    function  MatchValues(const aRoot: string; out aNodeArray: TJpValueList): Boolean;
     function  MatchValues(const aRoot: string; out aNodeArray: string): Boolean;
     function  MatchFirst(aRoot: TJsonNode): TJpNode;
+    function  MatchFirst(const aRoot: string; out aNode: TJpNode): Boolean;
     function  MatchFirst(const aRoot: string; out aNode: string): Boolean;
     function  MatchFirstValue(aRoot: TJsonNode): TJsonNode;
+    function  MatchFirstValue(const aRoot: string; out aValue: TJsonNode): Boolean;
     function  MatchFirstValue(const aRoot: string; out aValue: string): Boolean;
     property  Message: string read FMessage;
   end;
@@ -3824,6 +3842,23 @@ begin
   Result := FPath.ApplyWithPath(aRoot);
 end;
 
+function TJpMatcher.Match(const aRoot: string; out aNodeList: TJpNodeList): Boolean;
+var
+  Root: specialize TGAutoRef<TJsonNode>;
+  List: TJpNodeList;
+  I: SizeInt;
+begin
+  aNodeList := nil;
+  if not Root.Instance.Parse(aRoot) then exit(False);
+  List := FPath.ApplyWithPath(Root.Instance);
+  System.SetLength(aNodeList, System.Length(List));
+  for I := 0 to System.High(List) do begin
+    aNodeList[I].Path := List[I].Path;
+    aNodeList[I].Value := List[I].Value.Clone;
+  end;
+  Result := True;
+end;
+
 function TJpMatcher.Match(const aRoot: string; out aNodeList: string): boolean;
 var
   Root: specialize TGAutoRef<TJsonNode>;
@@ -3837,6 +3872,21 @@ end;
 function TJpMatcher.MatchValues(aRoot: TJsonNode): TJpValueList;
 begin
   Result := FPath.Apply(aRoot);
+end;
+
+function TJpMatcher.MatchValues(const aRoot: string; out aNodeArray: TJpValueList): Boolean;
+var
+  Root: specialize TGAutoRef<TJsonNode>;
+  a: TJpValueList;
+  I: SizeInt;
+begin
+  aNodeArray := nil;
+  if not Root.Instance.Parse(aRoot) then exit(False);
+  a := FPath.Apply(Root.Instance);
+  System.SetLength(aNodeArray, System.Length(a));
+  for I := 0 to System.High(a) do
+    aNodeArray[I] := a[I].Clone;
+  Result := True;
 end;
 
 function TJpMatcher.MatchValues(const aRoot: string; out aNodeArray: string): Boolean;
@@ -3854,6 +3904,22 @@ begin
   Result := FPath.GetFirstWithPath(aRoot);
 end;
 
+function TJpMatcher.MatchFirst(const aRoot: string; out aNode: TJpNode): Boolean;
+var
+  Root: specialize TGAutoRef<TJsonNode>;
+begin
+  if not Root.Instance.Parse(aRoot) then
+    begin
+      aNode.Path := '';
+      aNode.Value := nil;
+      exit(False);
+    end;
+  aNode := FPath.GetFirstWithPath(Root.Instance);
+  if aNode.Value <> nil then
+    aNode.Value := aNode.Value.Clone;
+  Result := True;
+end;
+
 function TJpMatcher.MatchFirst(const aRoot: string; out aNode: string): Boolean;
 var
   Root: specialize TGAutoRef<TJsonNode>;
@@ -3867,6 +3933,19 @@ end;
 function TJpMatcher.MatchFirstValue(aRoot: TJsonNode): TJsonNode;
 begin
   Result := FPath.GetFirst(aRoot);
+end;
+
+function TJpMatcher.MatchFirstValue(const aRoot: string; out aValue: TJsonNode): Boolean;
+var
+  Root: specialize TGAutoRef<TJsonNode>;
+  Node: TJsonNode;
+begin
+  aValue := nil;
+  if not Root.Instance.Parse(aRoot) then exit(False);
+  Node := FPath.GetFirst(Root.Instance);
+  if Node <> nil then
+    aValue := Node.Clone;
+  Result := True;
 end;
 
 function TJpMatcher.MatchFirstValue(const aRoot: string; out aValue: string): Boolean;
@@ -5149,7 +5228,31 @@ begin
     aMsg := Matcher.Instance.Message;
 end;
 
+function JpMatch(const aQuery, aRoot: string; out aList: TJpNodeList; out aMsg: string): Boolean;
+var
+  Matcher: specialize TGAutoRef<TJpMatcher>;
+begin
+  aMsg := '';
+  aList := nil;
+  Result := Matcher.Instance.TryParseQuery(aQuery);
+  if Result then
+    begin
+      Result := Matcher.Instance.Match(aRoot, aList);
+      if not Result then
+        aMsg := SEInvalidJsonInst;
+    end
+  else
+    aMsg := Matcher.Instance.Message;
+end;
+
 function JpMatch(const aQuery, aRoot: string; out aList: string): Boolean;
+var
+  Dummy: string;
+begin
+  Result := JpMatch(aQuery, aRoot, aList, Dummy);
+end;
+
+function JpMatch(const aQuery, aRoot: string; out aList: TJpNodeList): Boolean;
 var
   Dummy: string;
 begin
@@ -5194,7 +5297,31 @@ begin
     aMsg := Matcher.Instance.Message;
 end;
 
+function JpMatchValues(const aQuery, aRoot: string; out aList: TJpValueList; out aMsg: string): Boolean;
+var
+  Matcher: specialize TGAutoRef<TJpMatcher>;
+begin
+  aMsg := '';
+  aList := nil;
+  Result := Matcher.Instance.TryParseQuery(aQuery);
+  if Result then
+    begin
+      Result := Matcher.Instance.MatchValues(aRoot, aList);
+      if not Result then
+        aMsg := SEInvalidJsonInst;
+    end
+  else
+    aMsg := Matcher.Instance.Message;
+end;
+
 function JpMatchValues(const aQuery, aRoot: string; out aList: string): Boolean;
+var
+  Dummy: string;
+begin
+  Result := JpMatchValues(aQuery, aRoot, aList, Dummy);
+end;
+
+function JpMatchValues(const aQuery, aRoot: string; out aList: TJpValueList): Boolean;
 var
   Dummy: string;
 begin
