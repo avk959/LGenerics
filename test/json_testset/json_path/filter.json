@@ -770,6 +770,22 @@
       "result": [
         {"a": 0.011, "d": "e"}
       ]
+    },
+    {
+      "name": "equals, special nothing",
+      "selector" : "$.values[?length(@.a) == value($..c)]",
+      "document" : {
+        "c": "cd",
+        "values": [
+          {"a": "ab"},
+          {"c": "d"},
+          {"a": null}
+        ]
+      },
+      "result": [
+        {"c": "d"},
+        {"a": null}
+      ]
     }
   ]
 }
