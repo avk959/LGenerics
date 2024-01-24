@@ -1501,6 +1501,7 @@ begin
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
+      FVisited.UncBits[Curr] := True;
       if FWhites.UncBits[Curr] then
         begin
           for p in FGraph.AdjLists[Curr]^ do
@@ -1508,14 +1509,11 @@ begin
               Next := p^.Destination;
               if (FMates[Curr] = Next) or FVisited.UncBits[Next] then
                 continue;
+              FParents[Next] := Curr;
               if FMates[Next] = NULL_INDEX then
-                begin
-                  FParents[Next] := Curr;
-                  exit(Next);
-                end
+                exit(Next)
               else
                 begin
-                  FParents[Next] := Curr;
                   FQueue[qTail] := Next;
                   Inc(qTail);
                 end;
@@ -1524,11 +1522,14 @@ begin
       else
         begin
           Next := FMates[Curr];
+          if (Next = NULL_INDEX) or FVisited.UncBits[Next] then
+            continue;
           FParents[Next] := Curr;
           FQueue[qTail] := Next;
           Inc(qTail);
         end;
     end;
+
   Result := NULL_INDEX;
 end;
 
