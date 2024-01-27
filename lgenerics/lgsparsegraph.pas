@@ -102,7 +102,7 @@ type
 const
   GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';  //'LGraph'
   GRAPH_HEADER_VERSION     = 2;
-  GRAPH_ADJLIST_GROW       = 8;
+  GRAPH_ADJLIST_GROW       = 16;
   DENSE_CUTOFF             = 0.7;  //???
   JOHNSON_CUTOFF           = 0.2;  //???
 
@@ -835,7 +835,10 @@ end;
 
 procedure TGAdjList.Expand;
 begin
-  System.SetLength(FItems, Capacity + GRAPH_ADJLIST_GROW);
+  if Capacity < GRAPH_ADJLIST_GROW * 4 then
+    System.SetLength(FItems, Capacity + GRAPH_ADJLIST_GROW)
+  else
+    System.SetLength(FItems, Capacity + Capacity div 3);
 end;
 
 function TGAdjList.DoFind(aValue: SizeInt): SizeInt;
