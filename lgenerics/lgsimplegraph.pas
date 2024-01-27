@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic simple undirected graphs implementation.                        *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -256,6 +256,7 @@ type
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; override;
+    procedure DoForceAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData); override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
@@ -427,11 +428,10 @@ type
     function FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
     function GetMaxBipMatchHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
-  { returns False if graph is not bipartite or disconnected, otherwise in aMatch returns
+  { returns False if graph is not bipartite, otherwise in aMatch returns
     the matching of the maximum cardinality }
     function FindMaxBipMatchBfs(out aMatch: TIntEdgeArray): Boolean;
-  { returns the matching of the maximum cardinality in a bipartite graph if is connected,
-    otherwise returns an empty array }
+  { returns the matching of the maximum cardinality in a bipartite graph without any checks }
     function GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function GreedyMaxMatch: TIntEdgeArray;
@@ -3137,6 +3137,18 @@ begin
     end;
 end;
 
+procedure TGSimpleGraph.DoForceAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData);
+begin
+  FNodeList[aSrc].AdjList.Append(TAdjItem.Create(aDst, aData));
+  FNodeList[aDst].AdjList.Append(TAdjItem.Create(aSrc, aData));
+  Inc(FEdgeCount);
+  if ConnectedValid and SeparateJoin(aSrc, aDst) then
+    begin
+      Dec(FCompCount);
+      FConnected := FCompCount = 1;
+    end;
+end;
+
 function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FNodeList[aSrc].AdjList.Remove(aDst);
@@ -4243,7 +4255,7 @@ var
   Helper: TBfsMatch;
   w, g: TIntArray;
 begin
-  if not(Connected and IsBipartite(w, g)) then
+  if not IsBipartite(w, g) then
     exit(False);
   aMatch := Helper.MaxMatching(Self, w, g);
   Result := True;
@@ -4253,7 +4265,6 @@ function TGSimpleGraph.GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TInt
 var
   Helper: TBfsMatch;
 begin
-  if not Connected then exit(nil);
   Result := Helper.MaxMatching(Self, aWhites, aGrays);
 end;
 
@@ -5144,6 +5155,7 @@ procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
 var
   Ref: specialize TGAutoRef<TTextFileReader>;
   Reader: TTextFileReader;
+  s: TIntPairSet;
   Line, ParseLine: string;
   Src, Dst: SizeInt;
   Symb: AnsiChar;
@@ -5166,7 +5178,8 @@ begin
           'e':
             begin
               ReadStr(ParseLine, Symb, Src, Dst);
-              AddEdge(Src, Dst);
+              if s.Add(Src, Dst) then
+                ForceAddEdge(Src, Dst);
             end;
       end;
     end;
