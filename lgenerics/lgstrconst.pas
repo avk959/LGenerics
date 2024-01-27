@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Common string resources.                                                *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -53,6 +53,7 @@ resourcestring
   SEResultUnknownFatal     = 'Result is unknown due to fatal exception';
   SEResultUnknownCancel    = 'Result is unknown due to task cancelled';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
+  SESimpGraphLoopsNotAllow = 'Simple graph must not contain any loops';
   SEEdgeNotFoundFmt        = 'Edge (%d, %d) not found';
   SECallbackMissed         = 'Callback missed';
   SEStreamWriteVertMissed  = 'OnWriteVertex callback missed';
