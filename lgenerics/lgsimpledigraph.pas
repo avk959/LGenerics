@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic simple directed graph implementation.                           *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -125,6 +125,7 @@ type
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; override;
+    procedure DoForceAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData); override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
@@ -2038,6 +2039,14 @@ begin
       Inc(FEdgeCount);
       FReachabilityMatrix.Clear;
     end;
+end;
+
+procedure TGSimpleDigraph.DoForceAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData);
+begin
+  FNodeList[aSrc].AdjList.Append(TAdjItem.Create(aDst, aData));
+  Inc(FNodeList[aDst].Tag);
+  Inc(FEdgeCount);
+  FReachabilityMatrix.Clear;
 end;
 
 function TGSimpleDigraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
