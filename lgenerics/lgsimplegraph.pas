@@ -284,7 +284,7 @@ type
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TGSimpleGraph;
   { }
     function  CreatePermutation(const aMap: TIntArray): TGSimpleGraph;
-  { returns line graph constucted from self }
+  { returns line graph constucted from an instance }
     function  CreateLineGraph: TLineGraph;
   { symmetric difference }
     procedure SetSymmDifferenceOf(aGraph: TGSimpleGraph);
@@ -427,10 +427,11 @@ type
     function FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
     function GetMaxBipMatchHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality }
+  { returns False if graph is not bipartite or disconnected, otherwise in aMatch returns
+    the matching of the maximum cardinality }
     function FindMaxBipMatchBfs(out aMatch: TIntEdgeArray): Boolean;
-  { returns the matching of the maximum cardinality in a bipartite graph without any checks }
+  { returns the matching of the maximum cardinality in a bipartite graph if is connected,
+    otherwise returns an empty array }
     function GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function GreedyMaxMatch: TIntEdgeArray;
@@ -4242,7 +4243,7 @@ var
   Helper: TBfsMatch;
   w, g: TIntArray;
 begin
-  if not IsBipartite(w, g) then
+  if not(Connected and IsBipartite(w, g)) then
     exit(False);
   aMatch := Helper.MaxMatching(Self, w, g);
   Result := True;
@@ -4252,6 +4253,7 @@ function TGSimpleGraph.GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TInt
 var
   Helper: TBfsMatch;
 begin
+  if not Connected then exit(nil);
   Result := Helper.MaxMatching(Self, aWhites, aGrays);
 end;
 

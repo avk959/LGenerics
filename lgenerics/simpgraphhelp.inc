@@ -1522,7 +1522,7 @@ begin
       else
         begin
           Next := FMates[Curr];
-          if (Next = NULL_INDEX) or FVisited.UncBits[Next] then
+          if FVisited.UncBits[Next] then
             continue;
           FParents[Next] := Curr;
           FQueue[qTail] := Next;
