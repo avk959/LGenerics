@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Most common graph types and utils.                                      *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -287,6 +287,7 @@ type
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; virtual; abstract;
+    procedure DoForceAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData); virtual; abstract;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
@@ -404,19 +405,29 @@ type
     function  AddVertex(const aVertex: TVertex): Boolean;
   { returns count of added vertices }
     function  AddVertices(const aVertices: TVertexArray): SizeInt;
-  { removes vertex aVertex from graph, slow; raises EGraphError if not contains aVertex }
+  { removes a vertex aVertex from the graph, slow; raises EGraphError if not contains aVertex }
     procedure RemoveVertex(const aVertex: TVertex); inline;
+  { removes a vertex with index aIndex from the graph, slow; raises EGraphError if not contains aVertex }
     procedure RemoveVertexI(aIndex: SizeInt);
     function  ContainsVertex(const aVertex: TVertex): Boolean; inline;
-  { if does not contain aSrc or aDst vertices, they will be added;
+  { if the instance does not contain aSrc or aDst vertices, they will be added;
     returns True if the edge is added, False, if such an edge already exists }
-    function  AddEdge(const aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
+    function  AddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData): Boolean;
+  { if the instance does not contain aSrc or aDst vertices, they will be added;
+    does not check if the same edge exists; responsibility for ensuring the uniqueness
+    of the added edge lies with the user; raises EGraphError if aSrc = aDst }
+    procedure ForceAddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData);
   { adds edge with default data }
     function  AddEdge(const aSrc, aDst: TVertex): Boolean; inline;
+    procedure ForceAddEdge(const aSrc, aDst: TVertex);
   { returns True if the edge is added, False, if such an edge already exists;
     raises EGraphError if aSrc or aDst out of range }
     function  AddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+  { does not check if the same edge exists; responsibility for ensuring the uniqueness of the
+    added edge lies with the user; raises EGraphError if aSrc or aDst out of range or aSrc = aDst }
+    procedure ForceAddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData);
+    procedure ForceAddEdgeI(aSrc, aDst: SizeInt);
   { if contains an edge (aSrc, aDst) then removes it and returns True,
     otherwise returns False }
     function  RemoveEdge(const aSrc, aDst: TVertex): Boolean; inline;
@@ -1962,7 +1973,7 @@ begin
   Result := IndexOf(aVertex) >= 0;
 end;
 
-function TGSparseGraph.AddEdge(const aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
+function TGSparseGraph.AddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -1971,9 +1982,23 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
+procedure TGSparseGraph.ForceAddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData);
+var
+  SrcIdx, DstIdx: SizeInt;
+begin
+  AddVertex(aSrc, SrcIdx);
+  AddVertex(aDst, DstIdx);
+  DoForceAddEdge(SrcIdx, DstIdx, aData);
+end;
+
 function TGSparseGraph.AddEdge(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := AddEdge(aSrc, aDst, Default(TEdgeData));
+end;
+
+procedure TGSparseGraph.ForceAddEdge(const aSrc, aDst: TVertex);
+begin
+  ForceAddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
@@ -1986,6 +2011,20 @@ end;
 function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
+end;
+
+procedure TGSparseGraph.ForceAddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData);
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    raise EGraphError.Create(SESimpGraphLoopsNotAllow);
+  DoForceAddEdge(aSrc, aDst, aData);
+end;
+
+procedure TGSparseGraph.ForceAddEdgeI(aSrc, aDst: SizeInt);
+begin
+  ForceAddEdgeI(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSparseGraph.RemoveEdge(const aSrc, aDst: TVertex): Boolean;
