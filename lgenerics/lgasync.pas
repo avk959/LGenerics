@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some asynchronous primitives.                                           *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -2100,14 +2100,14 @@ end;
 
 function TGListenThread.GetThreadID: TThreadID;
 begin
-  Result := 0;
+  Result := TThreadID(0);
   if FWorker <> nil then
     Result := FWorker.ThreadID;
 end;
 
 function TGListenThread.GetHandle: TThreadID;
 begin
-  Result := 0;
+  Result := TThreadID(0);
   if FWorker <> nil then
     Result := FWorker.Handle;
 end;
