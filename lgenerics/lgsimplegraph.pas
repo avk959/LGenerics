@@ -1817,21 +1817,21 @@ function TGSimpleGraph.GreedyMatching: TIntEdgeArray;
 var
   Nodes: TIntArray;
   Matched: TBoolVector;
-  CurrPos, Size, Curr, Next: SizeInt;
+  I, Size, Curr, Next: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortNodesByDegree(soAsc);
   Matched.Capacity := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  CurrPos := 0;
+  I := 0;
   Size := 0;
-  while CurrPos < VertexCount do
+  while I < VertexCount do
     begin
-      if not Matched.UncBits[Nodes[CurrPos]] then
+      if not Matched.UncBits[Nodes[I]] then
         begin
-          Curr := Nodes[CurrPos];
+          Curr := Nodes[I];
           Next := NULL_INDEX;
-          for p in AdjLists[Curr]^ do // find adjacent non matched node
+          for p in AdjLists[Curr]^ do // find any non-matched neighbor
             if not Matched.UncBits[p^.Destination] then
               begin
                 Next := p^.Destination;
@@ -1842,12 +1842,12 @@ begin
               Matched.UncBits[Curr] := True;
               Matched.UncBits[Next] := True;
               if System.Length(Result) = Size then
-                System.SetLength(Result, Size shl 1);
+                System.SetLength(Result, Size * 2);
               Result[Size] := TIntEdge.Create(Curr, Next);
               Inc(Size);
             end;
         end;
-      Inc(CurrPos);
+      Inc(I);
     end;
   System.SetLength(Result, Size);
 end;
