@@ -3445,7 +3445,7 @@ var
   a: TIntArray;
 begin
   a := THelper.CreateRange(0, -1);
-  AssertTrue(a = nil);
+  AssertTrue(System.Length(a) = 2);
   a := THelper.CreateRange(0, 0);
   AssertTrue(System.Length(a) = 1);
   J := -10;
