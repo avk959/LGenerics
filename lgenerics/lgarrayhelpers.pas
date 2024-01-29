@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic helper utils for arrays.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -70,6 +70,7 @@ type
     MEDIAN_OF9_CUTOFF           = 511;
     DPQ_INSERTION_SORT_CUTOFF   = 47;
     INTROSORT_LOG_FACTOR        = 2;
+    DPQSORT_LOG_FACTOR          = 2;
     TRY_INSERT_SORT_LIMIT       = 64;
   type
     //to supress unnecessary refcounting
@@ -313,7 +314,7 @@ type
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
+    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
@@ -389,7 +390,7 @@ type
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
@@ -525,7 +526,7 @@ type
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
+    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
@@ -601,7 +602,7 @@ type
     class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
@@ -675,7 +676,7 @@ type
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
+    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TLess): T; static;
   public
@@ -752,7 +753,7 @@ type
     class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
     class procedure DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
@@ -826,7 +827,7 @@ type
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
+    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T; static;
   public
@@ -902,7 +903,7 @@ type
     class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
     class procedure DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
@@ -980,7 +981,7 @@ type
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
+    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T; static;
   public
@@ -1057,7 +1058,7 @@ type
     class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
+  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
     class procedure DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
@@ -1109,7 +1110,7 @@ type
     class function  QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(var A: array of T; L, R, Ttl: SizeInt); static;
     class function  DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(var A: array of T; L, R: SizeInt); static;
+    class procedure DoDPQSort(var A: array of T; L, R, Ttl: SizeInt); static;
     class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
     class procedure DoReverse(var A: array of T; L, R: SizeInt); static;
   { QuickSelect with random pivot selection, does not checks indices }
@@ -3551,9 +3552,8 @@ var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
 begin
-  pL := Succ(Random(Pred(R shr 1)));
-  //pR := Pred(R - Random(Pred(R shr 1)));
-  pR := pL + R shr 1;
+  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1]) - A;
+  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1]) - A;
 
   if not TCmpRel.Less(A[pR], A[pL]) then
     begin
@@ -3612,16 +3612,19 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGBaseArrayHelper.DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
+class procedure TGBaseArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
 begin
   if R > DPQ_INSERTION_SORT_CUTOFF then
-    with DPQSplit(A, R) do
-      begin
-        DoDPQSort(A, Left - 1, aLeftmost);
-        DoDPQSort(@A[Right + 1], R - Right - 1, False);
-        if TCmpRel.Less(A[Left], A[Right]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, False);
-      end
+    if Ttl > 0 then
+      with DPQSplit(A, R) do
+        begin
+          DoDPQSort(A, Left - 1, Ttl - 1, aLeftmost);
+          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, False);
+          if TCmpRel.Less(A[Left], A[Right]) then
+            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, False);
+        end
+    else
+      DoHeapSort(A, R)
   else
     if R > 0 then
       if aLeftmost then
@@ -4159,7 +4162,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
-      DoDPQSort(@A[0], R, True);
+      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -6177,9 +6180,8 @@ var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
 begin
-  pL := Succ(Random(Pred(R shr 1)));
-  //pR := Pred(R - Random(Pred(R shr 1)));
-  pR := pL + R shr 1;
+  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1]) - A;
+  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1]) - A;
 
   if A[pR] < A[pL] then
     begin
@@ -6237,16 +6239,19 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGComparableArrayHelper.DoDPQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
+class procedure TGComparableArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
 begin
   if R > DPQ_INSERTION_SORT_CUTOFF then
-    with DPQSplit(A, R) do
-      begin
-        DoDPQSort(A, Left - 1, aLeftmost);
-        DoDPQSort(@A[Right + 1], R - Right - 1, False);
-        if A[Left] < A[Right] then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, False);
-      end
+    if Ttl > 0 then
+      with DPQSplit(A, R) do
+        begin
+          DoDPQSort(A, Left - 1, Ttl - 1, aLeftmost);
+          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, False);
+          if A[Left] < A[Right] then
+            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, False);
+        end
+    else
+      DoHeapSort(A, R)
   else
     if R > 0 then
       if aLeftmost then
@@ -6782,7 +6787,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
-      DoDPQSort(@A[0], R, True);
+      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -8132,9 +8137,8 @@ var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
 begin
-  pL := Succ(Random(Pred(R shr 1)));
-  //pR := Pred(R - Random(Pred(R shr 1)));
-  pR := pL + R shr 1;
+  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1], c) - A;
+  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1], c) - A;
 
   if not c(A[pR], A[pL]) then
     begin
@@ -8192,16 +8196,19 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean);
+class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean);
 begin
   if R > DPQ_INSERTION_SORT_CUTOFF then
-    with DPQSplit(A, R, c) do
-      begin
-        DoDPQSort(A, Left - 1, c, aLeftmost);
-        DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
-        if c(A[Left], A[Right]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
-      end
+    if Ttl > 0 then
+      with DPQSplit(A, R, c) do
+        begin
+          DoDPQSort(A, Left - 1, Ttl - 1, c, aLeftmost);
+          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, c, False);
+          if c(A[Left], A[Right]) then
+            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, c, False);
+        end
+    else
+      DoHeapSort(A, R, c)
   else
     if R > 0 then
       if aLeftmost then
@@ -8744,7 +8751,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      DoDPQSort(@A[0], R, c, True);
+      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, c, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -10096,9 +10103,8 @@ var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
 begin
-  pL := Succ(Random(Pred(R shr 1)));
-  //pR := Pred(R - Random(Pred(R shr 1)));
-  pR := pL + R shr 1;
+  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1], c) - A;
+  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1], c) - A;
 
   if not c(A[pR], A[pL]) then
     begin
@@ -10156,16 +10162,19 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean);
+class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean);
 begin
   if R > DPQ_INSERTION_SORT_CUTOFF then
-    with DPQSplit(A, R, c) do
-      begin
-        DoDPQSort(A, Left - 1, c, aLeftmost);
-        DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
-        if c(A[Left], A[Right]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
-      end
+    if Ttl > 0 then
+      with DPQSplit(A, R, c) do
+        begin
+          DoDPQSort(A, Left - 1, Ttl - 1, c, aLeftmost);
+          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, c, False);
+          if c(A[Left], A[Right]) then
+            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, c, False);
+        end
+    else
+      DoHeapSort(A, R, c)
   else
     if R > 0 then
       if aLeftmost then
@@ -10709,7 +10718,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      DoDPQSort(@A[0], R, c, True);
+      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, c, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -12061,9 +12070,8 @@ var
   v, Pivot1, Pivot2: TFake;
   pL, pR, I: SizeInt;
 begin
-  pL := Succ(Random(Pred(R shr 1)));
-  //pR := Pred(R - Random(Pred(R shr 1)));
-  pR := pL + R shr 1;
+  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1], c) - A;
+  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1], c) - A;
 
   if not c(A[pR], A[pL]) then
     begin
@@ -12121,16 +12129,19 @@ begin
   Result.Right := pR + 1;
 end;
 
-class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean);
+class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean);
 begin
   if R > DPQ_INSERTION_SORT_CUTOFF then
-    with DPQSplit(A, R, c) do
-      begin
-        DoDPQSort(A, Left - 1, c, aLeftmost);
-        DoDPQSort(@A[Right + 1], R - Right - 1, c, False);
-        if c(A[Left], A[Right]) then
-          DoDPQSort(@A[Left + 1], Right - Left - 2, c, False);
-      end
+    if Ttl > 0 then
+      with DPQSplit(A, R, c) do
+        begin
+          DoDPQSort(A, Left - 1, Ttl - 1, c, aLeftmost);
+          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, c, False);
+          if c(A[Left], A[Right]) then
+            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, c, False);
+        end
+    else
+      DoHeapSort(A, R, c)
   else
     if R > 0 then
       if aLeftmost then
@@ -12674,7 +12685,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
-      DoDPQSort(@A[0], R, c, True);
+      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, c, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -13576,9 +13587,8 @@ var
 label
   EndLoop;
 begin
-  pL := Succ(L + Random(Pred((R - L) shr 1)));
-  //pR := Pred(R - Random(Pred((R - L) shr 1)));
-  pR := pL + (R - L) shr 1;
+  pL := MedianOf3(@A[L+1], @A[L+(R-L)shr 2], @A[L+(R-L)shr 1]) - PItem(@A[0]);
+  pR := MedianOf3(@A[L+(R-L)shr 1+1], @A[L+(R-L)shr 1+(R-L)shr 2+1], @A[R-1]) - PItem(@A[0]);
 
   if A[pL] <= A[pR] then
     begin
@@ -13641,16 +13651,19 @@ EndLoop:
   Result.Right := pR + 1;
 end;
 
-class procedure TGSimpleArrayHelper.DoDPQSort(var A: array of T; L, R: SizeInt);
+class procedure TGSimpleArrayHelper.DoDPQSort(var A: array of T; L, R, Ttl: SizeInt);
 begin
   if R - L > DPQ_INSERTION_SORT_CUTOFF then
-    with DPQSplit(A, L, R) do
-      begin
-        DoDPQSort(A, L, Left - 1);
-        DoDPQSort(A, Right + 1, R);
-        if A[Left] < A[Right] then
-          DoDPQSort(A, Left + 1, Right - 1);
-      end
+    if Ttl > 0 then
+      with DPQSplit(A, L, R) do
+        begin
+          DoDPQSort(A, L, Left - 1, Ttl - 1);
+          DoDPQSort(A, Right + 1, R, Ttl - 1);
+          if A[Left] < A[Right] then
+            DoDPQSort(A, Left + 1, Right - 1, Ttl - 1);
+        end
+    else
+      DoHeapSort(@A[L], R - L)
   else
     if R - L > 0 then
       if L <> 0 then
@@ -14279,7 +14292,7 @@ begin
   R := System.High(A);
   if (R > 0) and (CountRun(A, 0, R, o) < R) then
     begin
-      DoDPQSort(A, 0, R);
+      DoDPQSort(A, 0, R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR);
       if o = soDesc then
         DoReverse(A, 0, R);
     end;
