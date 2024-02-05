@@ -318,8 +318,8 @@ type
     function  MatchValues(const aRoot: string; out aNodeArray: TJpValueList): Boolean;
   { returns True and an array of JSON values as JSON in aNodeArray if aRoot is valid JSON, False otherwise }
     function  MatchValues(const aRoot: string; out aNodeArray: string): Boolean;
-  { returns the first element along with its location that matches its internal,
-    previously parsed JSONPath query, if any, otherwise returns ('', NIL);
+  { returns the first element along with its location(Node) that matches its internal,
+    previously parsed JSONPath query, if any, otherwise returns just ('', NIL);
     the freeing of the obtained value is the responsibility of aRoot }
     function  MatchFirst(aRoot: TJsonNode): TJpNode;
   { returns True and the first matching element along with its location
@@ -346,15 +346,17 @@ type
   with the root identifier, leading and trailing spaces are not allowed;
   returns nil if aQuery is invalid, in which case the aMsg parameter contains an error message }
   function JpParseQuery(const aQuery: string; out aMsg: string): IJsonPath;
+{ same as above, but for the case where the content of the error message is of no interest }
+  function JpParseQuery(const aQuery: string): IJsonPath;
 { returns True and IJsonPath in aPath if aQuery was successfully parsed, otherwise returns False }
   function JpParseQuery(const aQuery: string; out aPath: IJsonPath): Boolean;
 { returns True and IJsonPath in aPath if aQuery was successfully parsed,
   otherwise returns False and aMsg parameter contains an error message }
   function JpParseQuery(const aQuery: string; out aPath: IJsonPath; out aMsg: string): Boolean;
 
-{ tries to apply aQuery to JSON value aRoot; returns False if aQuery is invalid, in which case
-  the aMsg parameter contains an error message, otherwise returns the NodeList in the aList parameter;
-  the freeing of the obtained values is the responsibility of aRoot }
+{ tries to apply JSONPath query aQuery to JSON value aRoot; returns False if aQuery is invalid,
+  in which case the aMsg parameter contains an error message, otherwise returns the NodeList
+  in the aList parameter; the freeing of the obtained values is the responsibility of aRoot }
   function JpMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpNodeList; out aMsg: string): Boolean;
 { same as above, but for the case where the content of the error message is of no interest}
   function JpMatch(const aQuery: string; aRoot: TJsonNode; out aList: TJpNodeList): Boolean;
@@ -407,6 +409,40 @@ type
 
 
 type
+  { TJsonPathNodeHelper }
+  TJsonPathNodeHelper = class helper for TJsonNode
+  { returns NodeList that matches previously parsed JSONPath query aPath }
+    function Match(aPath: IJsonPath): TJpNodeList;
+  { tries to apply JSONPath query aQuery to the instance;
+    returns False if aQuery is invalid, in which case the aMsg parameter contains
+    an error message, otherwise returns the NodeList in the aList parameter }
+    function TryMatch(const aJpQuery: string; out aList: TJpNodeList; out aMsg: string): Boolean;
+  { same as above, but for the case where the content of the error message is of no interest}
+    function TryMatch(const aJpQuery: string; out aList: TJpNodeList): Boolean;
+  { returns an array of TJsonNode that matches previously parsed JSONPath query aPath }
+    function MatchValues(aPath: IJsonPath): TJpValueList;
+  { tries to apply JSONPath query aQuery to the instance;
+    returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
+    function TryMatchValues(const aJpQuery: string; out aList: TJpValueList; out aMsg: string): Boolean;
+  { same as above, but for the case where the content of the error message is of no interest }
+    function TryMatchValues(const aJpQuery: string; out aList: TJpValueList): Boolean;
+  { returns the first element along with its location that matches previously parsed
+    JSONPath query aPath, if any, otherwise returns ('', NIL) }
+    function MatchFirst(aPath: IJsonPath): TJpNode;
+  { tries to apply JSONPath query aQuery to the instance and returns only the first match in aNode;
+    returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
+    function TryMatchFirst(const aJpQuery: string; out aNode: TJpNode; out aMsg: string): Boolean;
+  { same as above, but for the case where the content of the error message is of no interest }
+    function TryMatchFirst(const aJpQuery: string; out aNode: TJpNode): Boolean;
+  { returns the first matching element if any, otherwise returns NIL }
+    function MatchFirstValue(aPath: IJsonPath): TJsonNode;
+  { tries to apply JSONPath query aQuery to the instance and returns only the first match;
+    returns False if aQuery is invalid, in which case the aMsg parameter contains an error message }
+    function TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode; out aMsg: string): Boolean;
+  { same as above, but for the case where the content of the error message is of no interest }
+    function TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode): Boolean;
+  end;
+
   TJpInstanceType = (jitLogical, jitValue, jitNodeList);
 
   { TJpInstance }
@@ -848,6 +884,72 @@ end;
 class operator TJpValue.>=(const L, R: TJpValue): Boolean;
 begin
   Result := (R < L) or (R = L);
+end;
+
+{ TJsonPathNodeHelper }
+
+function TJsonPathNodeHelper.Match(aPath: IJsonPath): TJpNodeList;
+begin
+  Result := aPath.Match(Self);
+end;
+
+function TJsonPathNodeHelper.TryMatch(const aJpQuery: string; out aList: TJpNodeList;
+  out aMsg: string): Boolean;
+begin
+  Result := JpMatch(aJpQuery, Self, aList, aMsg);
+end;
+
+function TJsonPathNodeHelper.TryMatch(const aJpQuery: string; out aList: TJpNodeList): Boolean;
+begin
+  Result := JpMatch(aJpQuery, Self, aList);
+end;
+
+function TJsonPathNodeHelper.MatchValues(aPath: IJsonPath): TJpValueList;
+begin
+  Result := aPath.MatchValues(Self);
+end;
+
+function TJsonPathNodeHelper.TryMatchValues(const aJpQuery: string; out aList: TJpValueList;
+  out aMsg: string): Boolean;
+begin
+  Result := JpMatchValues(aJpQuery, Self, aList, aMsg);
+end;
+
+function TJsonPathNodeHelper.TryMatchValues(const aJpQuery: string; out aList: TJpValueList): Boolean;
+begin
+  Result := JpMatchValues(aJpQuery, Self, aList);
+end;
+
+function TJsonPathNodeHelper.MatchFirst(aPath: IJsonPath): TJpNode;
+begin
+  Result := aPath.MatchFirst(Self);
+end;
+
+function TJsonPathNodeHelper.TryMatchFirst(const aJpQuery: string; out aNode: TJpNode;
+  out aMsg: string): Boolean;
+begin
+  Result := JpMatchFirst(aJpQuery, Self, aNode, aMsg);
+end;
+
+function TJsonPathNodeHelper.TryMatchFirst(const aJpQuery: string; out aNode: TJpNode): Boolean;
+begin
+  Result := JpMatchFirst(aJpQuery, Self, aNode);
+end;
+
+function TJsonPathNodeHelper.MatchFirstValue(aPath: IJsonPath): TJsonNode;
+begin
+  Result := aPath.MatchFirstValue(Self);
+end;
+
+function TJsonPathNodeHelper.TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode;
+  out aMsg: string): Boolean;
+begin
+  Result := JpMatchFirstValue(aJpQuery, Self, aNode, aMsg);
+end;
+
+function TJsonPathNodeHelper.TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode): Boolean;
+begin
+  Result := JpMatchFirstValue(aJpQuery, Self, aNode);
 end;
 
 { TJpInstance }
@@ -5180,6 +5282,13 @@ begin
       Result := nil;
       Matcher.Free;
     end;
+end;
+
+function JpParseQuery(const aQuery: string): IJsonPath;
+var
+  Dummy: string;
+begin
+  Result := JpParseQuery(aQuery, Dummy);
 end;
 
 function JpParseQuery(const aQuery: string; out aPath: IJsonPath): Boolean;
