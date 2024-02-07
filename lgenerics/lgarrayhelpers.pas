@@ -1259,6 +1259,7 @@ type
     CFSigned: Boolean;
   public
     class function  CreateRange(aFirst, aLast: T): TArray; static;
+    class function  CreateRandomInRange(aSize: SizeInt; aFirst, aLast: T): TArray; static;
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
   { LSD radix sorting, requires O(N) auxiliary memory }
     class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
@@ -15130,6 +15131,22 @@ begin
       Result[J] := I;
       Inc(J);
     end;
+end;
+
+class function TGOrdinalArrayHelper.CreateRandomInRange(aSize: SizeInt; aFirst, aLast: T): TArray;
+var
+  vLo, vHi, I: SizeInt;
+  r: TArray = nil;
+begin
+  if aSize > 0 then begin
+    if aLast < aFirst then Swap(aLast, aFirst);
+    vLo := SizeInt(aFirst);
+    vHi := SizeInt(aLast);
+    System.SetLength(r, aSize);
+    for I := 0 to High(r) do
+      r[I] := T(Random(Succ(vHi - vLo)) + vLo);
+  end;
+  Result := r;
 end;
 
 class function TGOrdinalArrayHelper.CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray;
