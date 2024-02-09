@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some algorithms on generic sequences.                                   *
 *                                                                           *
-*   Copyright(c) 2022-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -35,6 +35,7 @@ uses
   lgArrayHelpers,
   lgVector,
   lgHashTable,
+  lgHashMap,
   lgHash,
   lgHashMultiSet;
 
@@ -360,7 +361,7 @@ type
   ): specialize TGArray<TStringRatio>;
 
 type
-  { TFuzzySearchEdp: approximate string matching with k differences;
+  { TFuzzySearchEdp: approximate string matching with K differences;
     expects UTF-8 encoded strings as parameters;
     uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN) time complexity }
   TFuzzySearchEdp = record
@@ -398,6 +399,82 @@ type
     there is an index I such that LevenshteinDistance(aPattern, aText[I..Current]) <= K;
     K MUST be less then |aPattern| }
     function Matches(const aText: string; K: SizeInt): TMatches;
+  end;
+
+  { TFuzzySearchBitap: approximate string matching with K mismatches;
+    expects UTF-8 encoded strings as parameters;
+    the pattern must contain no more than MAX_PATTERN_CP code points;
+    uses Bitap algorithm with O(KN) time complexity }
+  TFuzzySearchBitap = record
+  public
+  type
+    TIntArray = array of SizeInt;
+  const
+    MAX_PATTERN_CP = BitSizeOf(QWord); // maximum number of code points code in the pattern
+  private
+  type
+    TMapType     = specialize TGLiteEquatableHashMap<Ucs4Char, QWord, TUcs4Hasher>;
+    TCharMap     = TMapType.TMap;
+    THelper      = specialize TGArrayHelpUtil<QWord>;
+    PSearchBitap = ^TFuzzySearchBitap;
+
+    TEnumerator = record
+    private
+      FText: string;
+      FTable: array of QWord;
+      FSearch: PSearchBitap;
+      FTextIndex,
+      FMatchIndex: SizeInt;
+      function  GetCurrent: SizeInt; inline;
+      procedure Init(pSearch: PSearchBitap; const aText: string; aOfs: SizeInt; aK: Integer);
+    public
+      function  MoveNext: Boolean;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+  public
+  type
+    TMatches = record
+    private
+      FSearch: PSearchBitap;
+      FText: string;
+      FOfs: SizeInt;
+      FK: Integer;
+    public
+      function GetEnumerator: TEnumerator;
+    end;
+
+  private
+  var
+    FCharMap: TCharMap;
+    FRawPattern: string;
+    FPattern: TUcs4Seq;
+    function  GetInitialized: Boolean; inline;
+    function  GetPattern: string; inline;
+    function  GetPatternLen: SizeInt; inline;
+    function  GetPatternUtf8Len: SizeInt; inline;
+    procedure InitState(const aPattern: string);
+  public
+  { aPattern must be a valid non-empty UTF-8 string containing no more than MAX_PATTERN_CP code points }
+    constructor Create(const aPattern: string);
+  { returns the index of the next approximate occurrence of the pattern in the string aText
+    that has a Hamming distance of at most K, starting from the index aOffset;
+    K value exceeding MAX_PATTERN_CP will be truncated to MAX_PATTERN_CP;
+    returns 0 if no occurrence is found or the instance is not initialized }
+    function NextMatch(const aText: string; K: Integer; aOffset: SizeInt = 1): SizeInt;
+  { returns an array of indices of all approximate occurrences of the pattern in the string aText
+    that have a Hamming distance of at most K, starting from the index aOffset;
+    K value exceeding MAX_PATTERN_CP will be truncated to MAX_PATTERN_CP;
+    returns an empty array if no occurrence is found or the instance is not initialized }
+    function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1): TIntArray;
+  { enumerates the indices of all approximate occurrences of the pattern in the string aText
+    that have a Hamming distance of at most K, starting from the index aOffset;
+    K value exceeding MAX_PATTERN_CP will be truncated to MAX_PATTERN_CP }
+    function Matches(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatches;
+    property Pattern: string read GetPattern;
+    property PatternLength: SizeInt read GetPatternLen;
+    property PatternLengthUtf8: SizeInt read GetPatternUtf8Len;
+    property Initialized: Boolean read GetInitialized;
   end;
 
 implementation
@@ -3737,5 +3814,205 @@ begin
   Result.FK := K;
   Result.FSearch := @Self;
 end;
+
+{ TFuzzySearchBitap.TMatches }
+
+function TFuzzySearchBitap.TMatches.GetEnumerator: TEnumerator;
+begin
+  Result.Init(FSearch, FText, FOfs, FK);
+end;
+
+{ TFuzzySearchBitap }
+
+function TFuzzySearchBitap.GetPattern: string;
+begin
+  Result := System.Copy(FRawPattern, 1, System.Length(FRawPattern));
+end;
+
+function TFuzzySearchBitap.GetInitialized: Boolean;
+begin
+  Result := FPattern <> nil;
+end;
+
+function TFuzzySearchBitap.GetPatternLen: SizeInt;
+begin
+  Result := System.Length(FRawPattern);
+end;
+
+function TFuzzySearchBitap.GetPatternUtf8Len: SizeInt;
+begin
+  if FPattern <> nil then
+    Result := System.Length(FPattern)
+  else
+    Result := Utf8Len(FRawPattern);
+end;
+
+procedure TFuzzySearchBitap.InitState(const aPattern: string);
+var
+  I: Integer;
+  p: PQWord;
+  q: QWord;
+begin
+  FRawPattern := aPattern;
+  UniqueString(FRawPattern);
+  if not Utf8Validate(aPattern) then exit;
+  if Utf8Len(FRawPattern) > MAX_PATTERN_CP then exit;
+  FPattern := Utf8ToUcs4Seq(FRawPattern);
+  for I := 0 to High(FPattern) do begin
+    p := FCharMap.GetMutValueDef(FPattern[I], System.High(QWord));
+    p^ := p^ and not(QWord(1) shl I);
+  end;
+end;
+
+{ TFuzzySearchBitap.TEnumerator }
+
+function TFuzzySearchBitap.TEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FMatchIndex;
+end;
+
+procedure TFuzzySearchBitap.TEnumerator.Init(pSearch: PSearchBitap; const aText: string; aOfs: SizeInt;
+  aK: Integer);
+begin
+  FText := '';
+  FTable := nil;
+  FSearch := nil;
+  FMatchIndex := 0;
+  if (pSearch = nil ) or not pSearch^.Initialized or (aText = '') then exit;
+  if (aOfs < 1) or (aOfs >= System.Length(aText) - pSearch^.PatternLength) then exit;
+  FTextIndex := aOfs;
+  FText := aText;
+  FSearch := pSearch;
+  aK := Math.Min(Math.Max(aK, 0), System.Length(pSearch^.FPattern));
+  FTable := THelper.CreateAndFill(not QWord(1), aK + 1);
+end;
+
+function TFuzzySearchBitap.TEnumerator.MoveNext: Boolean;
+var
+  cLen, TextLen: SizeInt;
+  vOld, vTemp, CharMask: QWord;
+  PtrnLen, I, K: Integer;
+  c: Ucs4Char;
+begin
+  if FSearch = nil then exit(False);
+  TextLen := System.Length(FText);
+  PtrnLen := FSearch^.PatternLengthUtf8;
+  K := System.High(FTable);
+  while FTextIndex <= TextLen do begin
+    c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), cLen);
+    FTextIndex += cLen;
+    CharMask := FSearch^.FCharMap.GetMutValueDef(c, System.High(QWord))^;
+    vOld := FTable[0];
+    FTable[0] := (FTable[0] or CharMask) shl 1;
+    for I := 1 to K do begin
+      vTemp := FTable[I];
+      FTable[I] := (vOld and (FTable[I] or CharMask)) shl 1;
+      vOld := vTemp;
+    end;
+    if FTable[K] and (QWord(1) shl PtrnLen) = 0 then begin
+      FMatchIndex := FTextIndex - FSearch^.PatternLength;
+      exit(True);
+    end;
+  end;
+  Result := False;
+end;
+
+constructor TFuzzySearchBitap.Create(const aPattern: string);
+begin
+  FCharMap := Default(TCharMap);
+  FPattern := nil;
+  FRawPattern := '';
+  if aPattern <> '' then InitState(aPattern);
+end;
+
+{$PUSH}{$WARN 5057 OFF}
+function TFuzzySearchBitap.NextMatch(const aText: string; K: Integer; aOffset: SizeInt): SizeInt;
+var
+  Table: array[0..MAX_PATTERN_CP] of QWord;
+  TextIdx, cLen, TextLen: SizeInt;
+  vOld, vTemp, CharMask: QWord;
+  PtrnLen, I: Integer;
+  c: Ucs4Char;
+begin
+  if not Initialized or (aText = '') or (aOffset < 1) then exit(0);
+  TextLen := System.Length(aText);
+  if TextLen - aOffset < Pred(PatternLength) then exit(0);
+  K := Math.Min(Math.Max(K, 0), System.Length(FPattern));
+  System.FillQWord(Table[0], K + 1, not QWord(1));
+  TextIdx := aOffset;
+  PtrnLen := PatternLengthUtf8;
+  while TextIdx <= TextLen do begin
+    c := CodePointToUcs4Char(@aText[TextIdx], Succ(TextLen - TextIdx), cLen);
+    TextIdx += cLen;
+    CharMask := FCharMap.GetMutValueDef(c, System.High(QWord))^;
+    vOld := Table[0];
+    Table[0] := (Table[0] or CharMask) shl 1;
+    for I := 1 to K do begin
+      vTemp := Table[I];
+      Table[I] := (vOld and (Table[I] or CharMask)) shl 1;
+      vOld := vTemp;
+    end;
+    if Table[K] and (QWord(1) shl PtrnLen) = 0 then
+      exit(TextIdx - PatternLength);
+  end;
+  Result := 0;
+end;
+
+function TFuzzySearchBitap.FindMatches(const aText: string; K: Integer; aOffset: SizeInt): TIntArray;
+var
+  Table: array[0..MAX_PATTERN_CP] of QWord;
+  r: TIntArray = nil;
+  TextIdx, cLen, TextLen, rLen: SizeInt;
+  vOld, vTemp, CharMask: QWord;
+  PtrnLen, I: Integer;
+  c: Ucs4Char;
+begin
+  if not Initialized or (aText = '') or (aOffset < 1) then exit(nil);
+  TextLen := System.Length(aText);
+  if TextLen - aOffset < Pred(PatternLength) then exit(nil);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  rLen := 0;
+  K := Math.Min(Math.Max(K, 0), System.Length(FPattern));
+  System.FillQWord(Table[0], K + 1, not QWord(1));
+  TextIdx := aOffset;
+  PtrnLen := PatternLengthUtf8;
+  while TextIdx <= TextLen do begin
+    c := CodePointToUcs4Char(@aText[TextIdx], Succ(TextLen - TextIdx), cLen);
+    TextIdx += cLen;
+    CharMask := FCharMap.GetMutValueDef(c, System.High(QWord))^;
+    vOld := Table[0];
+    Table[0] := (Table[0] or CharMask) shl 1;
+    for I := 1 to K do begin
+      vTemp := Table[I];
+      Table[I] := (vOld and (Table[I] or CharMask)) shl 1;
+      vOld := vTemp;
+    end;
+    if Table[K] and (QWord(1) shl PtrnLen) = 0 then begin
+      if System.Length(r) = rLen then
+        System.SetLength(r, rLen * 2);
+      r[rLen] := TextIdx - PatternLength;
+      Inc(rLen);
+    end;
+  end;
+  System.SetLength(r, rLen);
+  Result := r;
+end;
+
+function TFuzzySearchBitap.Matches(const aText: string; K: Integer; aOffset: SizeInt): TMatches;
+begin
+  if Initialized then begin
+    Result.FSearch := @Self;
+    Result.FText := aText;
+    Result.FOfs := aOffset;
+    Result.FK := K;
+  end else begin
+    Result.FSearch := nil;
+    Result.FText := '';
+    Result.FOfs := 0;
+    Result.FK := 0;
+  end;
+end;
+
+{$POP}
 
 end.
