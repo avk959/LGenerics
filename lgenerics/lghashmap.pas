@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hashmap implementations.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -444,7 +444,7 @@ type
     function  TryGetMutValue(const aKey: TKey; out aValue: PValue): Boolean;
   { returns value mapped to aKey or aDefault }
     function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue; inline;
-    function  GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
+    function  GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue; inline;
   { returns True if contains aKey, otherwise adds aKey and returns False }
     function  FindOrAddMutValue(const aKey: TKey; out p: PValue): Boolean;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
