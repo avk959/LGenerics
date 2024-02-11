@@ -415,7 +415,7 @@ type
   TFuzzySearchBitap = record
   public
   const
-    MAX_PATTERN_CP = BitSizeOf(QWord); // maximum number of code points code in the pattern
+    MAX_PATTERN_CP = Pred(BitSizeOf(QWord)); // maximum number of code points in the pattern
   private
   type
     TMapType     = specialize TGLiteEquatableHashMap<Ucs4Char, QWord, TUcs4Hasher>;
@@ -3887,8 +3887,8 @@ begin
       Table[I] := (vOld and (Table[I] or cMask)) shl 1;
       vOld := vTemp;
     end;
-    if (Table[K] and (QWord(1) shl PatLen) = 0) and
-      not aFound(TSeqMatch.Make(Queue[qHead], TextPos - Queue[qHead])) then exit;
+    if (Table[K] and (QWord(1) shl PatLen) = 0) and not
+      aFound(TSeqMatch.Make(Queue[qHead], TextPos - Queue[qHead])) then exit;
   end;
 end;
 {$POP}
