@@ -4069,7 +4069,7 @@ begin
   System.SetLength(s, aStream.Size - aStream.Position);
 {$POP}
   aStream.ReadBuffer(Pointer(s)^, System.Length(s));
-  Result := TryParse(aStream, aRoot, aSkipBom, aDepth);
+  Result := TryParse(s, aRoot, aSkipBom, aDepth);
 end;
 
 class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
