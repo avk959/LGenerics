@@ -317,7 +317,7 @@ procedure TTestJVariant.TestEqual;
 var
   v1, v2: TJVariant;
 begin
-  AssertFalse(v1 = v2);
+  AssertTrue(v1 = v2);
   v1 := True;
   AssertFalse(v1 = v2);
   v2 := False;
@@ -335,7 +335,7 @@ begin
   v1.SetNull;
   AssertFalse(v1 = v2);
   v2.SetNull;
-  AssertFalse(v1 = v2);
+  AssertTrue(v1 = v2);
 end;
 
 { TTestDouble2Str }
