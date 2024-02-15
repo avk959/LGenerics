@@ -1348,7 +1348,7 @@ begin
     while Diagonal > 0 do
       begin
         CurrRight :=
-          FindRow( DMain + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
+          FindRow(DMain + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
         CurrR[Diagonal] := CurrRight;
         Dec(Diagonal);
       end;
@@ -2966,7 +2966,7 @@ begin
   Result := Utf8CodePointLen(PByte(p), aByteCount);
 end;
 
-function CodePointToUcs4Char(p: PByte; aStrLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; //inline;
+function CodePointToUcs4Char(p: PByte; out aPtSize: SizeInt): Ucs4Char; //inline;
 begin
   case p^ of
     0..$7f:
@@ -2975,39 +2975,39 @@ begin
         exit(p^);
       end;
     $c2..$df:
-      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
+      if p[1] in [$80..$bf] then begin
         aPtSize := 2;
         exit(Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f)));
       end;
     $e0:
-      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+      if (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
         aPtSize := 3;
         exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2] and $3f)));
       end;
     $e1..$ec, $ee..$ef:
-      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+      if (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
         aPtSize := 3;
         exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
       end;
     $ed:
-      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+      if (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
         aPtSize := 3;
         exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
       end;
     $f0:
-      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+      if (p[1] in [$90..$bf]) and (p[2] in [$80..$bf]) and (p[3] in [$80..$bf]) then begin
         aPtSize := 4;
         exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
              Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
       end;
     $f1..$f3:
-      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+      if (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) and (p[3] in [$80..$bf]) then begin
         aPtSize := 4;
         exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
              Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
       end;
     $f4:
-      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+      if (p[1] in [$80..$8f]) and (p[2] in [$80..$bf]) and (p[3] in [$80..$bf]) then begin
         aPtSize := 4;
         exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
              Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
@@ -3045,7 +3045,7 @@ begin
   J := 0;
   while I < StrLen do
     begin
-      r[J] := CodePointToUcs4Char(@p[I], StrLen - I, PtSize);
+      r[J] := CodePointToUcs4Char(@p[I], PtSize);
       Inc(J);
       I += PtSize;
     end;
@@ -3063,7 +3063,7 @@ begin
   aLen := 0;
   while I < StrLen do
     begin
-      aPtr[aLen] := CodePointToUcs4Char(@p[I], StrLen - I, PtSize);
+      aPtr[aLen] := CodePointToUcs4Char(@p[I], PtSize);
       Inc(aLen);
       I += PtSize;
     end;
@@ -3237,7 +3237,7 @@ begin
   PtSize := 0;
   while pv < pEnd do
     begin
-      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, pEnd - pv, PtSize))^.SimpleLowerCase;
+      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, PtSize))^.SimpleLowerCase;
       if LoC = 0 then
         begin
           case PtSize of
@@ -3272,7 +3272,7 @@ begin
   PtSize := 0;
   while pv < pEnd do
     begin
-      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, pEnd - pv, PtSize))^.SimpleUpperCase;
+      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, PtSize))^.SimpleUpperCase;
       if LoC = 0 then
         begin
           case PtSize of
@@ -3304,14 +3304,14 @@ begin
   LenSub := System.Length(aSub);
   I := 0;
   J := 0;
-  cSub := CodePointToUcs4Char(pSub, LenSub, PtSizeSub);
+  cSub := CodePointToUcs4Char(pSub, PtSizeSub);
   while (I < LenStr) and (J < LenSub) do
     begin
-      cStr := CodePointToUcs4Char(@pStr[I], LenStr - I, PtSizeStr);
+      cStr := CodePointToUcs4Char(@pStr[I], PtSizeStr);
       if cStr = cSub then
         begin
           Inc(J, PtSizeSub);
-          cSub := CodePointToUcs4Char(@pSub[J], LenSub - J, PtSizeSub);
+          cSub := CodePointToUcs4Char(@pSub[J], PtSizeSub);
         end;
       Inc(I, PtSizeStr);
     end;
@@ -3585,11 +3585,11 @@ end;
 
 function IsSingleCodePointUtf8(const s: rawbytestring; out aPt: Ucs4Char): Boolean;
 var
-  PtLen, sLen: SizeInt;
+  PtLen: SizeInt;
 begin
-  sLen := System.Length(s);
-  aPt := CodePointToUcs4Char(Pointer(s), sLen, PtLen);
-  Result := sLen = PtLen;
+  if s = '' then exit(False);
+  aPt := CodePointToUcs4Char(Pointer(s), PtLen);
+  Result := PtLen = System.Length(s);
 end;
 
 function SimRatioExUtf8(const L, R: string; const aStopChars: array of string; aMode: TSimMode;
@@ -3766,7 +3766,7 @@ begin
   TextLen := System.Length(FText);
   while FTextIndex <= TextLen do
     begin
-      c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), I);
+      c := CodePointToUcs4Char(@FText[FTextIndex], I);
       FTextIndex += I;
       Inc(FPointIndex);
       Cost := 0;
@@ -3877,7 +3877,7 @@ begin
     Inc(qHead);
     if qHead = PatLen then
       qHead := 0;
-    c := CodePointToUcs4Char(@aText[TextPos], Succ(TextLen - TextPos), cLen);
+    c := CodePointToUcs4Char(@aText[TextPos], cLen);
     TextPos += cLen;
     cMask := FCharMap.GetValueDef(c, System.High(QWord));
     vOld := Table[0];
@@ -3935,7 +3935,7 @@ begin
     Inc(FqHead);
     if FqHead = PatLen then
       FqHead := 0;
-    c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), cLen);
+    c := CodePointToUcs4Char(@FText[FTextIndex], cLen);
     FTextIndex += cLen;
     cMask := FSearch^.FCharMap.GetValueDef(c, System.High(QWord));
     vOld := FTable[0];
@@ -3974,7 +3974,7 @@ begin
   CharIdx := 0;
   PatLen := System.Length(aPattern);
   while I <= PatLen do begin
-    c := CodePointToUcs4Char(@aPattern[I], Succ(PatLen - I), CharLen);
+    c := CodePointToUcs4Char(@aPattern[I], CharLen);
     I += CharLen;
     p := FCharMap.GetMutValueDef(c, System.High(QWord));
     p^ := p^ and not(QWord(1) shl CharIdx);
