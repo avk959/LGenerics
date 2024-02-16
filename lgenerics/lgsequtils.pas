@@ -177,10 +177,13 @@ type
     class function  SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
+    class function  IsTrivialDist(const L, R: array of T; aLimit: SizeInt; out aDist: SizeInt): Boolean; static; //inline;
     class function  LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsKRImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LevDistMbrDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
@@ -193,6 +196,7 @@ type
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
   public
   { returns True if L and R are identical sequence of elements }
     class function Same(const L, R: array of T): Boolean; static;
@@ -219,7 +223,7 @@ type
     class function LevDistanceMBR(const L, R: array of T): SizeInt; static;
   { the same as above; the aLimit parameter indicates the maximum expected distance,
     if this value is exceeded when calculating the distance, then the function exits
-    immediately and returns -1 }
+    immediately and returns -1; if aLimit < 0 it will be computed dynamically }
     class function LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
     with O(dn/w) time complexity, where n is Max(Length(L), Length(R)),
@@ -235,7 +239,7 @@ type
     class function LcsDistanceMyers(const L, R: array of T): SizeInt; static;
   { the same as above; the aLimit parameter indicates the maximum expected distance,
     if this value is exceeded when calculating the distance, then the function exits
-    immediately and returns -1 }
+    immediately and returns -1; if aLimit < 0 it will be computed dynamically }
     class function LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
     with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
@@ -785,6 +789,36 @@ begin
     end;
 end;
 
+class function TGSeqUtil.IsTrivialDist(const L, R: array of T; aLimit: SizeInt; out aDist: SizeInt): Boolean;
+begin
+  if aLimit = 0 then
+    if Same(L, R) then
+      begin
+        aDist := 0;
+        exit(True);
+      end
+    else
+      exit(False);
+  if System.Length(L) = 0 then
+    begin
+      if SizeUInt(System.Length(R)) <= SizeUInt(aLimit) then
+        aDist := System.Length(R)
+      else
+        aDist := NULL_INDEX;
+      exit(True);
+    end
+  else
+    if System.Length(R) = 0 then
+      begin
+        if SizeUInt(System.Length(L)) <= SizeUInt(aLimit) then
+          aDist := System.Length(L)
+        else
+          aDist := NULL_INDEX;
+        exit(True);
+      end;
+  Result := False;
+end;
+
 class function TGSeqUtil.LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray;
 var
   MatchList: TMap;
@@ -1265,8 +1299,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
-
+class function TGSeqUtil.GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
   function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;
   var
     I, MaxRow: SizeInt;
@@ -1278,7 +1311,6 @@ class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: Siz
       Inc(I);
     FindRow := I;
   end;
-
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
@@ -1289,21 +1321,6 @@ var
   Even: Boolean = True;
 begin
   //here aLenL <= aLenR
-
-  if aLenR - aLenL > aLimit then
-    exit(NULL_INDEX);
-
-  if pL = pR then
-    exit(aLenR - aLenL);
-
-  SkipSuffix(pL, pR, aLenL, aLenR);
-  SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    exit(aLenR);
-
-  if aLimit = 0 then  //////////
-    exit(NULL_INDEX); //////////
 
   if aLimit > aLenR then
     aLimit := aLenR;
@@ -1400,6 +1417,54 @@ begin
   Result := Dist;
 end;
 
+class function TGSeqUtil.LevDistMbrDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+var
+  K: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  K := 0;
+  repeat
+    if K <> 0 then
+      K := K * 2
+    else
+      K := Math.Max(aLenR - aLenL, 2); // 2 ???
+    Result := GetLevDistMbr(pL, pR, aLenL, aLenR, K);
+  until (Result <> NULL_INDEX) or (K >= aLenR);
+end;
+
+class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLimit < 0 then
+    exit(LevDistMbrDyn(pL, pR, aLenL, aLenR));
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  if aLimit = 0 then  //////////
+    exit(NULL_INDEX); //////////
+
+  Result := GetLevDistMbr(pL, pR, aLenL, aLenR, aLimit);
+end;
+
 class function TGSeqUtil.LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
 var
   Map: TQMap;
@@ -1415,7 +1480,6 @@ begin
         p^.Key := pL[I];
       p^.Value := p^.Value or (QWord(1) shl I);
     end;
-
 
   Result := aLenL;
   Vn := 0;
@@ -1914,6 +1978,20 @@ begin
   Result := NULL_INDEX;
 end;
 
+class function TGSeqUtil.LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+var
+  K: SizeInt;
+begin
+  K := 0;
+  repeat
+    if K <> 0 then
+      K := K * 2
+    else
+      K := Math.Max(aLenR - aLenL, 2); // 2 ???
+    Result := LcsDistMyersImpl(pL, pR, aLenL, aLenR, K);
+  until (Result <> NULL_INDEX) or (K >= aLenL + aLenR);
+end;
+
 class function TGSeqUtil.Same(const L, R: array of T): Boolean;
 var
   I: SizeInt;
@@ -2039,19 +2117,7 @@ end;
 
 class function TGSeqUtil.LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then
-    aLimit := 0;
-  if System.Length(L) = 0 then
-    if System.Length(R) <= aLimit then
-      exit(System.Length(R))
-    else
-      exit(NULL_INDEX)
-  else
-    if System.Length(R) = 0 then
-      if System.Length(L) <= aLimit then
-        exit(System.Length(L))
-      else
-        exit(NULL_INDEX);
+  if IsTrivialDist(L, R, aLimit, Result) then exit;
   if System.Length(L) <= System.Length(R) then
     Result := LevDistMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
@@ -2073,17 +2139,7 @@ end;
 
 class function TGSeqUtil.LevDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
-  if System.Length(L) = 0 then
-    if System.Length(R) <= aLimit then
-      exit(System.Length(R))
-    else
-      exit(NULL_INDEX)
-  else
-    if System.Length(R) = 0 then
-      if System.Length(L) <= aLimit then
-        exit(System.Length(L))
-      else
-        exit(NULL_INDEX);
+  if IsTrivialDist(L, R, aLimit, Result) then exit;
   if System.Length(L) <= System.Length(R) then
     Result := GetLevDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
@@ -2103,20 +2159,11 @@ end;
 
 class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
+  if IsTrivialDist(L, R, aLimit, Result) then exit;
   if aLimit < 0 then
-    aLimit := 0;
-  if System.Length(L) = 0 then
-    if System.Length(R) <= aLimit then
-      exit(System.Length(R))
-    else
-      exit(NULL_INDEX)
+    Result := LcsDistMyersDyn(@L[0], @R[0], System.Length(L), System.Length(R))
   else
-    if System.Length(R) = 0 then
-      if System.Length(L) <= aLimit then
-        exit(System.Length(L))
-      else
-        exit(NULL_INDEX);
-  Result := LcsDistMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit);
+    Result := LcsDistMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit);
 end;
 
 class function TGSeqUtil.LcsGus(const L, R: array of T): TArray;
