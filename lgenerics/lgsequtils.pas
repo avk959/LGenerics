@@ -1436,11 +1436,11 @@ begin
   K := 0;
   repeat
     if K <> 0 then
-      K := K * 2
+      K := Math.Min(K * 2, aLenR)
     else
       K := Math.Max(aLenR - aLenL, 2); // 2 ???
     Result := LevDistMbrImpl(pL, pR, aLenL, aLenR, K);
-  until (Result <> NULL_INDEX) or (K >= aLenR);
+  until Result <> NULL_INDEX;
 end;
 
 class function TGSeqUtil.GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
@@ -1984,6 +1984,7 @@ class function TGSeqUtil.LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): 
 var
   K: SizeInt;
 begin
+  //here aLenL <= aLenR
   if pL = pR then
     exit(aLenR - aLenL);
 
@@ -2000,7 +2001,7 @@ begin
     else
       K := Math.Max(aLenR - aLenL, 2); // 2 ???
     Result := LcsDistMyersImpl(pL, pR, aLenL, aLenR, K);
-  until (Result <> NULL_INDEX) or (K >= aLenL + aLenR);
+  until Result <> NULL_INDEX;
 end;
 
 class function TGSeqUtil.GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
