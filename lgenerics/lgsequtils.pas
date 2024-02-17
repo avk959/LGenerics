@@ -169,7 +169,7 @@ type
     TMultiSet     = TMultiSetType.TMultiSet;
 
   const
-    MAX_STATIC = 1024;
+    MAX_STATIC = 512;
     BLOCK_SIZE = BitSizeOf(QWord);
     BSIZE_MASK = Pred(BLOCK_SIZE);
     BSIZE_LOG  = 6;
@@ -182,9 +182,9 @@ type
     class function  LcsKRImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
-    class function  GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function  LevDistMbrDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LevDistMbrDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LevDistMyersDQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
@@ -197,6 +197,7 @@ type
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
   public
   { returns True if L and R are identical sequence of elements }
     class function Same(const L, R: array of T): Boolean; static;
@@ -256,8 +257,9 @@ type
     for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
     class function LcsMyers(const L, R: array of T): TArray; static;
   { returns similarity ratio using specified distance algorithm;
-    aLimit specifies the lower bound of the required similarity(0<=aLimit<=1.0),
-    if the obtained value is less than the specified value, zero will be returned }
+    aLimit specifies the lower bound of the required similarity(0<aLimit<=1.0),
+    if the obtained value is less than the specified value, zero will be returned;
+    aLimit <= 0 does not impose any restrictions on the obtained values }
     class function SimRatio(const L, R: array of T; aLimit: Double = Double(0);
                             Algo: TSeqDistanceAlgo = sdaDefault): Double; static;
   type
@@ -1299,7 +1301,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-class function TGSeqUtil.GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
   function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;
   var
     I, MaxRow: SizeInt;
@@ -1437,11 +1439,11 @@ begin
       K := K * 2
     else
       K := Math.Max(aLenR - aLenL, 2); // 2 ???
-    Result := GetLevDistMbr(pL, pR, aLenL, aLenR, K);
+    Result := LevDistMbrImpl(pL, pR, aLenL, aLenR, K);
   until (Result <> NULL_INDEX) or (K >= aLenR);
 end;
 
-class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 begin
   //here aLenL <= aLenR
   if aLimit < 0 then
@@ -1462,7 +1464,7 @@ begin
   if aLimit = 0 then  //////////
     exit(NULL_INDEX); //////////
 
-  Result := GetLevDistMbr(pL, pR, aLenL, aLenR, aLimit);
+  Result := LevDistMbrImpl(pL, pR, aLenL, aLenR, aLimit);
 end;
 
 class function TGSeqUtil.LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
@@ -1982,6 +1984,15 @@ class function TGSeqUtil.LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): 
 var
   K: SizeInt;
 begin
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
   K := 0;
   repeat
     if K <> 0 then
@@ -1990,6 +2001,33 @@ begin
       K := Math.Max(aLenR - aLenL, 2); // 2 ???
     Result := LcsDistMyersImpl(pL, pR, aLenL, aLenR, K);
   until (Result <> NULL_INDEX) or (K >= aLenL + aLenR);
+end;
+
+class function TGSeqUtil.GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLimit < 0 then
+    exit(LcsDistMyersDyn(pL, pR, aLenL, aLenR));
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  if aLimit = 0 then
+    exit(NULL_INDEX);
+
+  if aLimit > aLenL + aLenR then
+    aLimit := aLenL + aLenR;
+
+  Result := LcsDistMyersImpl(pL, pR, aLenL, aLenR, aLimit);
 end;
 
 class function TGSeqUtil.Same(const L, R: array of T): Boolean;
@@ -2110,18 +2148,18 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+    Result := GetLevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := LevDistMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+    Result := GetLevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
 class function TGSeqUtil.LevDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
   if IsTrivialDist(L, R, aLimit, Result) then exit;
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := GetLevDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := LevDistMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := GetLevDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 class function TGSeqUtil.LevDistanceMyers(const L, R: array of T): SizeInt;
@@ -2153,17 +2191,19 @@ begin
   else
     if System.Length(R) = 0 then
       exit(System.Length(L));
-  Result := LcsDistMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R),
-    System.Length(L) + System.Length(R));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(L) + System.Length(R))
+  else
+    Result := GetLcsDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L) + System.Length(R));
 end;
 
 class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
   if IsTrivialDist(L, R, aLimit, Result) then exit;
-  if aLimit < 0 then
-    Result := LcsDistMyersDyn(@L[0], @R[0], System.Length(L), System.Length(R))
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := LcsDistMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit);
+    Result := GetLcsDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 class function TGSeqUtil.LcsGus(const L, R: array of T): TArray;
@@ -2201,7 +2241,6 @@ var
   Len, Limit, Dist: SizeInt;
 begin
   if (System.Length(L) = 0) and (System.Length(R) = 0) then exit(Double(1.0));
-  if aLimit < 0 then aLimit := Double(0);
   if aLimit > 1 then aLimit := Double(1);
   if Algo = sdaLcsMyers then
     Len := System.Length(L) + System.Length(R)
@@ -2216,10 +2255,13 @@ begin
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
-  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  if Limit > 0 then
+    Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len)
+  else
+    Limit := -1;
   case Algo of
     sdaDefault:
-      if aLimit > Double(0.90) then
+      if aLimit > Double(0.90) then  // ???
         Dist := LevDistanceMbr(L, R, Limit)
       else
         Dist := LevDistanceMyers(L, R, Limit);
