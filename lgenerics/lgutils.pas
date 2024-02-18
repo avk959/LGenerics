@@ -1173,7 +1173,13 @@ type
 
   TSimOptions = set of TSimOption;
 
-  TSeqDistanceAlgo = (sdaDefault, sdaLevMBR, sdaLevMyers, sdaLcsMyers);
+  TSeqDistanceAlgo = (
+    sdaDefault,    //implementation-dependent
+    sdaLevMBR,     //Levenshtein distance using modified Berghel-Roach algorithm
+    sdaLevMyers,   //Levenshtein distance using Myers bit-vector algorithm
+    sdaLcsMyers,   //LCS distance using Myers O(ND) algorithm
+    sdaDumMBR      //Damerau-Levenshtein distance(restricted) using Berghel-Roach algorithm
+    );
 
 
   TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
