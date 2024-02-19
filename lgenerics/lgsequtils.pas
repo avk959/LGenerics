@@ -196,7 +196,6 @@ type
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function  LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  DumDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  DumDistMbrDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
@@ -243,7 +242,7 @@ type
     class function LcsDistanceMyers(const L, R: array of T): SizeInt; static;
   { the same as above; the aLimit parameter indicates the maximum expected distance,
     if this value is exceeded when calculating the distance, then the function exits
-    immediately and returns -1; if aLimit < 0 it will be computed dynamically }
+    immediately and returns -1; aLimit < 0 means it is unknown }
     class function LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the Damerau-Levenshtein distance(restricted) between L and R using
     modified Berghel-Roach algorithm }
@@ -285,13 +284,18 @@ type
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
   function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
   function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
+{ returns the Levenshtein distance using simple DP algorithm }
   function LevDistanceUtf16(const L, R: unicodestring): SizeInt; inline;
+{ returns the Levenshtein distance using Berghel-Roach algorithm }
   function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+{ returns the Levenshtein distance using Myers bit-vector algorithm }
   function LevDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+{ returns the LCS distance using Myers O(ND) algorithm }
   function LcsDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
   function LcsDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+{ returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
   function DumDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
   function DumDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
   function LcsGusUtf16(const L, R: unicodestring): unicodestring; inline;
@@ -325,13 +329,18 @@ type
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
+{ returns the Levenshtein distance using simple DP algorithm }
   function LevDistanceUtf8(const L, R: string): SizeInt; inline;
+{ returns the Levenshtein distance using Berghel-Roach algorithm }
   function LevDistanceMbrUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+{ returns the Levenshtein distance using Myers bit-vector algorithm }
   function LevDistanceMyersUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+{ returns the LCS distance using Myers O(ND) algorithm }
   function LcsDistanceMyersUtf8(const L, R: string): SizeInt; inline;
   function LcsDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+{ returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
   function DumDistanceMbrUtf8(const L, R: string): SizeInt; inline;
   function DumDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
   function LcsGusUtf8(const L, R: string): string; inline;
@@ -1994,35 +2003,11 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGSeqUtil.LcsDistMyersDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
-var
-  K: SizeInt;
-begin
-  //here aLenL <= aLenR
-  if pL = pR then
-    exit(aLenR - aLenL);
-
-  SkipSuffix(pL, pR, aLenL, aLenR);
-  SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    exit(aLenR);
-
-  K := 0;
-  repeat
-    if K <> 0 then
-      K := K * 2
-    else
-      K := Math.Max(aLenR - aLenL, 2); // 2 ???
-    Result := LcsDistMyersImpl(pL, pR, aLenL, aLenR, K);
-  until Result <> NULL_INDEX;
-end;
-
 class function TGSeqUtil.GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 begin
   //here aLenL <= aLenR
   if aLimit < 0 then
-    exit(LcsDistMyersDyn(pL, pR, aLenL, aLenR));
+    aLimit := aLenL + aLenR;
 
   if aLenR - aLenL > aLimit then
     exit(NULL_INDEX);
