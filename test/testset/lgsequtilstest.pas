@@ -1,6 +1,6 @@
 unit lgSeqUtilsTest;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}{$H+}{$warn 6058 off}
 
 interface
 
@@ -26,14 +26,20 @@ type
     procedure LevenshteinDistUtf8;
     procedure LevenshteinDistMbrUtf8;
     procedure LevenshteinDistMbrBoundedUtf8;
+    procedure LevenshteinDistMbrDynUtf8;
     procedure LevenshteinDistMyersUtf8;
     procedure LevenshteinDistMyersDQUtf8;
     procedure LevenshteinDistMyersLongUtf8;
     procedure LevenshteinDistMyersBoundedUtf8;
     procedure LevenshteinDistMyersDQBoundedUtf8;
     procedure LevenshteinDistMyersLongBoundedUtf8;
+    procedure LevenshteinDistMyersLongDynUtf8;
     procedure LcsDistMyersUtf8;
     procedure LcsDistMyersBoundedUtf8;
+    procedure LcsDistMyersDynUtf8;
+    procedure DumDistMbrUtf8;
+    procedure DumDistMbrBoundedUtf8;
+    procedure DumDistMbrDynUtf8;
     procedure LcsGusUtf8Test;
     procedure LcsKRUtf8Test;
     procedure LcsMyersUtf8Test;
@@ -46,14 +52,20 @@ type
     procedure LevenshteinDistUtf16;
     procedure LevenshteinDistMbrUtf16;
     procedure LevenshteinDistMbrBoundedUtf16;
+    procedure LevenshteinDistMbrDynUtf16;
     procedure LevenshteinDistMyersUtf16;
     procedure LevenshteinDistMyersDQUtf16;
     procedure LevenshteinDistMyersLongUtf16;
     procedure LevenshteinDistMyersBoundedUtf16;
     procedure LevenshteinDistMyersDQBoundedUtf16;
     procedure LevenshteinDistMyersLongBoundedUtf16;
+    procedure LevenshteinDistMyersLongDynUtf16;
     procedure LcsDistMyersUtf16;
     procedure LcsDistMyersBoundedUtf16;
+    procedure LcsDistMyersDynUtf16;
+    procedure DumDistMbrUtf16;
+    procedure DumDistMbrBoundedUtf16;
+    procedure DumDistMbrDynUtf16;
     procedure LcsGusUtf16Test;
     procedure LcsKRUtf16Test;
     procedure LcsMyersUtf16Test;
@@ -76,6 +88,13 @@ type
     procedure TestDiff;
     procedure SameTest;
     procedure IsPermutationTest;
+  end;
+
+  { TTestFuzzySearchBitap }
+
+  TTestFuzzySearchBitap = class(TTestCase)
+  published
+    procedure TestCreate;
   end;
 
 implementation
@@ -495,6 +514,97 @@ begin
   AssertTrue(LevDistanceMbrUtf8(s2, s1, 1) = -1);
 end;
 
+procedure TTestUnicodeUtils.LevenshteinDistMbrDynUtf8;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LevDistanceMbrUtf8(s1, s1, -1) = 0);
+  AssertTrue(LevDistanceMbrUtf8(s2, s2, -1) = 0);
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 6);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 4);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 5);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 8);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 2);
+end;
+
 procedure TTestUnicodeUtils.LevenshteinDistMyersUtf8;
 var
   s1, s2: string;
@@ -775,6 +885,32 @@ begin
   AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
 end;
 
+procedure TTestUnicodeUtils.LevenshteinDistMyersLongDynUtf8;
+const
+  s1:  string = 'Этого не обещаю. Вы знаете, как осаждают Кутузова с тех пор, как он назначен главнокомандующим. Он мне сам говорил, что все московские барыни сговорились отдать ему всех своих детей в адъютанты';
+  s2:  string = 'Нет, обещайте, обещайте, Basile, – сказала вслед ему Анна Михайловна, с улыбкой молодой кокетки, которая когда-то, должно быть, была ей свойственна, а теперь так не шла к ее истощенному лицу.';
+  s3:  string = 'Les souverains? Je ne parle pas de la Russie, – сказал виконт учтиво и безнадежно. – Les souverains, madame? Qu’ont ils fait pour Louis XVI, pour la reine, pour madame Elisabeth? Rien, – продолжал он, одушевляясь.';
+  s4:  string = 'И он, презрительно вздохнув, опять переменил положение. Князь Ипполит, долго смотревший в лорнет на виконта, вдруг при этих словах повернулся всем телом к маленькой княгине и, попросив у нее иголку, стал показывать ей, рисуя иголкой на столе, герб Конде.';
+  s5:  string = 'Ежели еще год Бонапарте останется на престоле Франции, – продолжал виконт начатый разговор, с видом человека, не слушающего других, но в деле, лучше всех ему известном, следящего только за ходом своих мыслей, – то дела пойдут слишком далеко.';
+  s6:  string = 'Не успели еще Анна Павловна и другие улыбкой оценить этих слов виконта, как Пьер опять ворвался в разговор, и Анна Павловна, хотя и предчувствовавшая, что он скажет что-нибудь неприличное, уже не могла остановить его.';
+  s7:  string = '– Свобода и равенство, – презрительно сказал виконт, как будто решившийся, наконец, серьезно доказать этому юноше всю глупость его речей, – всё громкие слова, которые уже давно компрометировались.';
+  s8:  string = '– Mais, mon cher monsieur Pierre, – сказала Анна Павловна, – как же вы объясняете великого человека, который мог казнить герцога, наконец просто человека, без суда и без вины?';
+  s9:  string = '– Как вы хотите, чтоб он всем отвечал вдруг? – сказал князь Андрей. – Притом надо в поступках государственного человека различать поступки частного лица, полководца или императора.';
+  s10: string = 'Тут князь Ипполит фыркнул и захохотал гораздо прежде своих слушателей, что произвело невыгодное для рассказчика впечатление. Однако многие, и в том числе пожилая дама и Анна Павловна, улыбнулись.';
+  s11: string = 'Пьер был неуклюж. Толстый, выше обыкновенного роста, широкий, с огромными красными руками, он, как говорится, не умел войти в салон и еще менее умел из него выйти, то есть перед выходом сказать что-нибудь особенно приятное.';
+  s12: string = 'Два лакея, один княгинин, другой его, дожидаясь, когда они кончат говорить, стояли с шалью и рединготом и слушали их, непонятный им, французский говор с такими лицами, как будто они понимали, что говорится, но не хотели показывать этого.';
+  s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
+  s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
+begin
+  AssertTrue(LevDistanceMyersUtf8(s1, s2, -1) = LevDistanceUtf8(s1, s2));
+  AssertTrue(LevDistanceMyersUtf8(s3, s4, -1) = LevDistanceUtf8(s3, s4));
+  AssertTrue(LevDistanceMyersUtf8(s5, s6, -1) = LevDistanceUtf8(s5, s6));
+  AssertTrue(LevDistanceMyersUtf8(s7, s8, -1) = LevDistanceUtf8(s7, s8));
+  AssertTrue(LevDistanceMyersUtf8(s9, s10, -1) = LevDistanceUtf8(s9, s10));
+  AssertTrue(LevDistanceMyersUtf8(s11, s12, -1) = LevDistanceUtf8(s11, s12));
+  AssertTrue(LevDistanceMyersUtf8(s13, s14, -1) = LevDistanceUtf8(s13, s14));
+end;
+
 procedure TTestUnicodeUtils.LcsDistMyersUtf8;
 var
   s1, s2: string;
@@ -949,6 +1085,366 @@ begin
   s2 := '一，在寒冷的冬天，我从森林里走来。';
   AssertTrue(LcsDistanceMyersUtf8(s1, s2) = 2);
   AssertTrue(LcsDistanceMyersUtf8(s2, s1, 1) = -1);
+end;
+
+procedure TTestUnicodeUtils.LcsDistMyersDynUtf8;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s1, -1) = 0);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s2, -1) = 0);
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 6);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 3);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 4);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 4);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 4);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 4);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 1);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 5);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 5);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 8);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 8);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 8);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 8);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 15);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 15);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LcsDistanceMyersUtf8(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf8(s2, s1, -1) = 2);
+end;
+
+procedure TTestUnicodeUtils.DumDistMbrUtf8;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(DumDistanceMbrUtf8(s1, s1) = 0);
+  AssertTrue(DumDistanceMbrUtf8(s2, s2) = 0);
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 6);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := 'аc';
+  s2 := 'cba';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'елил';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'мостки';
+  s2 := 'костик';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'шапито';
+  s2 := 'ашипот';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2) = 4);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 5);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 8);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := 'tests';
+  s2 := 'tset';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+end;
+
+procedure TTestUnicodeUtils.DumDistMbrBoundedUtf8;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(DumDistanceMbrUtf8(s1, s1, 1) = 0);
+  AssertTrue(DumDistanceMbrUtf8(s2, s2, 1) = 0);
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 5) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 5) = -1);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 0) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 0) = -1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 0) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 0) = -1);
+
+  s1 := 'аc';
+  s2 := 'cba';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 0) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 0) = -1);
+
+  s1 := 'нелли';
+  s2 := 'елил';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+
+  s1 := 'мостки';
+  s2 := 'костик';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+
+  s1 := 'шапито';
+  s2 := 'ашипот';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, 3) = -1);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, 3) = -1);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 4) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 4) = -1);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 7) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 7) = -1);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+
+  s1 := 'tests';
+  s2 := 'tset';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+end;
+
+procedure TTestUnicodeUtils.DumDistMbrDynUtf8;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(DumDistanceMbrUtf8(s1, s1, -1) = 0);
+  AssertTrue(DumDistanceMbrUtf8(s2, s2, -1) = 0);
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 6);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := 'аc';
+  s2 := 'cba';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'елил';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'мостки';
+  s2 := 'костик';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'шапито';
+  s2 := 'ашипот';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf8(s1, s2, -1) = 4);
+  AssertTrue(LevDistanceMbrUtf8(s2, s1, -1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 5);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 8);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := 'tests';
+  s2 := 'tset';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
 end;
 
 procedure TTestUnicodeUtils.LcsGusUtf8Test;
@@ -1458,6 +1954,97 @@ begin
   AssertTrue(LevDistanceMbrUtf16(s2, s1, 1) = -1);
 end;
 
+procedure TTestUnicodeUtils.LevenshteinDistMbrDynUtf16;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LevDistanceMbrUtf16(s1, s1, -1) = 0);
+  AssertTrue(LevDistanceMbrUtf16(s2, s2, -1) = 0);
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 6);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 4);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 5);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 8);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LevDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(LevDistanceMbrUtf16(s2, s1, -1) = 2);
+end;
+
 procedure TTestUnicodeUtils.LevenshteinDistMyersUtf16;
 var
   s1, s2: string;
@@ -1729,13 +2316,39 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf16(s1, s2, Pred(LevDistanceUtf8(s1, s2))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s3, s4, Pred(LevDistanceUtf8(s3, s4))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s5, s6, Pred(LevDistanceUtf8(s5, s6))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s7, s8, Pred(LevDistanceUtf8(s7, s8))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s9, s10, Pred(LevDistanceUtf8(s9, s10))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s11, s12, Pred(LevDistanceUtf8(s11, s12))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s1, s2, Pred(LevDistanceUtf16(s1, s2))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s3, s4, Pred(LevDistanceUtf16(s3, s4))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s5, s6, Pred(LevDistanceUtf16(s5, s6))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s7, s8, Pred(LevDistanceUtf16(s7, s8))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s9, s10, Pred(LevDistanceUtf16(s9, s10))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s11, s12, Pred(LevDistanceUtf16(s11, s12))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(LevDistanceUtf16(s13, s14))) = -1);
+end;
+
+procedure TTestUnicodeUtils.LevenshteinDistMyersLongDynUtf16;
+const
+  s1:  string = 'Этого не обещаю. Вы знаете, как осаждают Кутузова с тех пор, как он назначен главнокомандующим. Он мне сам говорил, что все московские барыни сговорились отдать ему всех своих детей в адъютанты';
+  s2:  string = 'Нет, обещайте, обещайте, Basile, – сказала вслед ему Анна Михайловна, с улыбкой молодой кокетки, которая когда-то, должно быть, была ей свойственна, а теперь так не шла к ее истощенному лицу.';
+  s3:  string = 'Les souverains? Je ne parle pas de la Russie, – сказал виконт учтиво и безнадежно. – Les souverains, madame? Qu’ont ils fait pour Louis XVI, pour la reine, pour madame Elisabeth? Rien, – продолжал он, одушевляясь.';
+  s4:  string = 'И он, презрительно вздохнув, опять переменил положение. Князь Ипполит, долго смотревший в лорнет на виконта, вдруг при этих словах повернулся всем телом к маленькой княгине и, попросив у нее иголку, стал показывать ей, рисуя иголкой на столе, герб Конде.';
+  s5:  string = 'Ежели еще год Бонапарте останется на престоле Франции, – продолжал виконт начатый разговор, с видом человека, не слушающего других, но в деле, лучше всех ему известном, следящего только за ходом своих мыслей, – то дела пойдут слишком далеко.';
+  s6:  string = 'Не успели еще Анна Павловна и другие улыбкой оценить этих слов виконта, как Пьер опять ворвался в разговор, и Анна Павловна, хотя и предчувствовавшая, что он скажет что-нибудь неприличное, уже не могла остановить его.';
+  s7:  string = '– Свобода и равенство, – презрительно сказал виконт, как будто решившийся, наконец, серьезно доказать этому юноше всю глупость его речей, – всё громкие слова, которые уже давно компрометировались.';
+  s8:  string = '– Mais, mon cher monsieur Pierre, – сказала Анна Павловна, – как же вы объясняете великого человека, который мог казнить герцога, наконец просто человека, без суда и без вины?';
+  s9:  string = '– Как вы хотите, чтоб он всем отвечал вдруг? – сказал князь Андрей. – Притом надо в поступках государственного человека различать поступки частного лица, полководца или императора.';
+  s10: string = 'Тут князь Ипполит фыркнул и захохотал гораздо прежде своих слушателей, что произвело невыгодное для рассказчика впечатление. Однако многие, и в том числе пожилая дама и Анна Павловна, улыбнулись.';
+  s11: string = 'Пьер был неуклюж. Толстый, выше обыкновенного роста, широкий, с огромными красными руками, он, как говорится, не умел войти в салон и еще менее умел из него выйти, то есть перед выходом сказать что-нибудь особенно приятное.';
+  s12: string = 'Два лакея, один княгинин, другой его, дожидаясь, когда они кончат говорить, стояли с шалью и рединготом и слушали их, непонятный им, французский говор с такими лицами, как будто они понимали, что говорится, но не хотели показывать этого.';
+  s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
+  s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
+begin
+  AssertTrue(LevDistanceMyersUtf16(s1, s2, -1) = LevDistanceUtf16(s1, s2));
+  AssertTrue(LevDistanceMyersUtf16(s3, s4, -1) = LevDistanceUtf16(s3, s4));
+  AssertTrue(LevDistanceMyersUtf16(s5, s6, -1) = LevDistanceUtf16(s5, s6));
+  AssertTrue(LevDistanceMyersUtf16(s7, s8, -1) = LevDistanceUtf16(s7, s8));
+  AssertTrue(LevDistanceMyersUtf16(s9, s10, -1) = LevDistanceUtf16(s9, s10));
+  AssertTrue(LevDistanceMyersUtf16(s11, s12, -1) = LevDistanceUtf16(s11, s12));
+  AssertTrue(LevDistanceMyersUtf16(s13, s14, -1) = LevDistanceUtf16(s13, s14));
 end;
 
 procedure TTestUnicodeUtils.LcsDistMyersUtf16;
@@ -1912,6 +2525,366 @@ begin
   s2 := '一，在寒冷的冬天，我从森林里走来。';
   AssertTrue(LcsDistanceMyersUtf16(s1, s2) = 2);
   AssertTrue(LcsDistanceMyersUtf16(s2, s1, 1) = -1);
+end;
+
+procedure TTestUnicodeUtils.LcsDistMyersDynUtf16;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s1, -1) = 0);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s2, -1) = 0);
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 6);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+
+  s1 := 'аб';
+  s2 := 'ааа';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 3);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 4);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 4);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 4);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 4);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 1);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'еллия';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костик';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+
+  s1 := 'мостик';
+  s2 := 'костяка';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 5);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 5);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 8);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 8);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 8);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 8);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 15);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 15);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+
+  s1 := 'а';
+  s2 := 'б';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(LcsDistanceMyersUtf16(s1, s2, -1) = 2);
+  AssertTrue(LcsDistanceMyersUtf16(s2, s1, -1) = 2);
+end;
+
+procedure TTestUnicodeUtils.DumDistMbrUtf16;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(DumDistanceMbrUtf16(s1, s1) = 0);
+  AssertTrue(DumDistanceMbrUtf16(s2, s2) = 0);
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 6);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 1);
+
+  s1 := 'аc';
+  s2 := 'cba';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'елил';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+
+  s1 := 'мостки';
+  s2 := 'костик';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+
+  s1 := 'шапито';
+  s2 := 'ашипот';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 4);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 5);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 8);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+
+  s1 := 'tests';
+  s2 := 'tset';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+end;
+
+procedure TTestUnicodeUtils.DumDistMbrBoundedUtf16;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(DumDistanceMbrUtf16(s1, s1, 1) = 0);
+  AssertTrue(DumDistanceMbrUtf16(s2, s2, 1) = 0);
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 5) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 5) = -1);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 0) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 0) = -1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 0) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 0) = -1);
+
+  s1 := 'аc';
+  s2 := 'cba';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 0) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 0) = -1);
+
+  s1 := 'нелли';
+  s2 := 'елил';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+
+  s1 := 'мостки';
+  s2 := 'костик';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+
+  s1 := 'шапито';
+  s2 := 'ашипот';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 3) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 3) = -1);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 4) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 4) = -1);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 7) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 7) = -1);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+
+  s1 := 'tests';
+  s2 := 'tset';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+end;
+
+procedure TTestUnicodeUtils.DumDistMbrDynUtf16;
+var
+  s1, s2: string;
+begin
+  s1 := '';
+  s2 := 'привет';
+  AssertTrue(DumDistanceMbrUtf16(s1, s1, -1) = 0);
+  AssertTrue(DumDistanceMbrUtf16(s2, s2, -1) = 0);
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 6);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 6);
+
+  s1 := 'аб';
+  s2 := 'аа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := 'аб';
+  s2 := 'ба';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := 'аc';
+  s2 := 'cba';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'а';
+  s2 := 'ббб';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'аабабаб';
+  s2 := 'аббаа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'нелли';
+  s2 := 'елли';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 1);
+
+  s1 := 'нелли';
+  s2 := 'елил';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'мостки';
+  s2 := 'костик';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'шапито';
+  s2 := 'ашипот';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+
+  s1 := 'дистанция';
+  s2 := 'дисперсия';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 4);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 4);
+
+  s1 := 'левенштейн';
+  s2 := 'франкенштейн';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 5);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 5);
+
+  s1 := 'ааааааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 0);
+
+  s1 := 'ааааааа';
+  s2 := 'бббббббб';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 8);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 8);
+
+  s1 := 'аааббаааа';
+  s2 := 'ааааааа';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := 'tests';
+  s2 := 'tset';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+
+  s1 := '一天，在寒冷的冬天，我从森林里走出来。';
+  s2 := '一，在寒冷的冬天，我从森林里走来。';
+  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
 end;
 
 procedure TTestUnicodeUtils.LcsGusUtf16Test;
@@ -2246,12 +3219,24 @@ begin
   AssertTrue(TIntSeqUtil.IsPermutation(a, b));
 end;
 
+{ TTestFuzzySearchBitap }
+
+procedure TTestFuzzySearchBitap.TestCreate;
+var
+  fsb: TFuzzySearchBitap;
+begin
+  fsb.Init('');
+  AssertFalse(fsb.Initialized);
+  fsb := TFuzzySearchBitap.Create('');
+  AssertFalse(fsb.Initialized);
+end;
 
 
 initialization
 
   RegisterTest(TTestUnicodeUtils);
   RegisterTest(TTestSeqUtils);
+  RegisterTest(TTestFuzzySearchBitap);
 
 end.
 
