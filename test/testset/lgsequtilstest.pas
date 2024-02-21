@@ -5,7 +5,7 @@ unit lgSeqUtilsTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, lgUtils, lgSeqUtils, Math, LazUtf8;
+  LazUtf8, Classes, SysUtils, fpcunit, testregistry, lgUtils, lgSeqUtils, Math;
 
 type
 
@@ -95,6 +95,12 @@ type
   TTestFuzzySearchBitap = class(TTestCase)
   published
     procedure TestCreate;
+    procedure TestNextMatch;
+    procedure TestNextMatchCI;
+    procedure TestFindMatches;
+    procedure TestFindMatchesCI;
+    procedure TestEnumerator;
+    procedure TestEnumeratorCI;
   end;
 
 implementation
@@ -3227,8 +3233,305 @@ var
 begin
   fsb.Init('');
   AssertFalse(fsb.Initialized);
+  AssertTrue(fsb.Length = 0);
+  AssertFalse(fsb.CaseInsensitive);
+
   fsb := TFuzzySearchBitap.Create('');
   AssertFalse(fsb.Initialized);
+  AssertTrue(fsb.Length = 0);
+  AssertFalse(fsb.CaseInsensitive);
+
+  fsb.Init('a');
+  AssertTrue(fsb.Initialized);
+  AssertTrue(fsb.Length = 1);
+  AssertFalse(fsb.CaseInsensitive);
+
+  fsb := TFuzzySearchBitap.Create('a');
+  AssertTrue(fsb.Initialized);
+  AssertTrue(fsb.Length = 1);
+  AssertFalse(fsb.CaseInsensitive);
+
+  fsb.Init('a', True);
+  AssertTrue(fsb.Initialized);
+  AssertTrue(fsb.Length = 1);
+  AssertTrue(fsb.CaseInsensitive);
+
+  fsb := TFuzzySearchBitap.Create('a', True);
+  AssertTrue(fsb.Initialized);
+  AssertTrue(fsb.Length = 1);
+  AssertTrue(fsb.CaseInsensitive);
+
+  fsb.Init(Utf8StringOfChar('ц', fsb.MAX_PATTERN_CP));
+  AssertTrue(fsb.Initialized);
+  AssertTrue(fsb.Length = fsb.MAX_PATTERN_CP);
+  AssertFalse(fsb.CaseInsensitive);
+
+  fsb := TFuzzySearchBitap.Create(Utf8StringOfChar('ц', fsb.MAX_PATTERN_CP));
+  AssertTrue(fsb.Initialized);
+  AssertTrue(fsb.Length = fsb.MAX_PATTERN_CP);
+  AssertFalse(fsb.CaseInsensitive);
+
+  fsb.Init(Utf8StringOfChar('ц', fsb.MAX_PATTERN_CP + 1));
+  AssertFalse(fsb.Initialized);
+  AssertTrue(fsb.Length = 0);
+  AssertFalse(fsb.CaseInsensitive);
+
+  fsb := TFuzzySearchBitap.Create(Utf8StringOfChar('ц', fsb.MAX_PATTERN_CP + 1));
+  AssertFalse(fsb.Initialized);
+  AssertTrue(fsb.Length = 0);
+  AssertFalse(fsb.CaseInsensitive);
+end;
+
+procedure TTestFuzzySearchBitap.TestNextMatch;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  sm: TSeqMatch;
+begin
+  Pattern := 'a';
+  fsb.Init(Pattern);
+
+  Text := '';
+  sm := fsb.NextMatch(Text, 1);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  Text := 'b';
+  sm := fsb.NextMatch(Text, 1, 0);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  sm := fsb.NextMatch(Text, 1, 2);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  sm := fsb.NextMatch(Text, fsb.MAX_PATTERN_CP + 1, 1);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  Pattern := 'abc';
+  fsb.Init(Pattern);
+
+  Text := 'aaac';
+  sm := fsb.NextMatch(Text, 1);
+  AssertTrue((sm.Start = 2) and (sm.Len = 3));
+
+  Pattern := 'различно';
+  fsb.Init(Pattern);
+  Text := 'very, очень различна, type, тип различен, mesure, мера различия, has, имеет различие, entirely, совсем безлично';
+
+  sm := fsb.NextMatch(Text, 0);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  sm := fsb.NextMatch(Text, 1);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различна');
+
+  sm := fsb.NextMatch(Text, 1, sm.Start + sm.Len);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  sm := fsb.NextMatch(Text, 2);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различна');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различен');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различия');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различие');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'безлично');
+end;
+
+procedure TTestFuzzySearchBitap.TestNextMatchCI;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  sm: TSeqMatch;
+begin
+  Pattern := 'различно';
+  fsb.Init(Pattern, True);
+  Text := 'very, очень различНа, type, тип рАзЛичен, mesure, мера РаЗличия, has, имеет разлиЧие, entirely, совсем безличНО';
+
+  sm := fsb.NextMatch(Text, 0);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  sm := fsb.NextMatch(Text, 1);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различНа');
+
+  sm := fsb.NextMatch(Text, 1, sm.Start + sm.Len);
+  AssertTrue((sm.Start = 0) and (sm.Len = 0));
+
+  sm := fsb.NextMatch(Text, 2);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'различНа');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'рАзЛичен');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'РаЗличия');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'разлиЧие');
+
+  sm := fsb.NextMatch(Text, 2, sm.Start + sm.Len);
+  AssertTrue((sm.Start <> 0) and (sm.Len <> 0));
+  AssertTrue(Copy(Text, sm.Start, sm.Len) = 'безличНО');
+end;
+
+procedure TTestFuzzySearchBitap.TestFindMatches;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  sma: array of TSeqMatch;
+begin
+  Pattern := 'различно';
+  fsb.Init(Pattern);
+  Text := 'very, очень различна, type, тип различен, mesure, мера различия, has, имеет различие, entirely, совсем безлично';
+
+  sma := fsb.FindMatches(Text, 0);
+  AssertTrue(sma = nil);
+
+  sma := fsb.FindMatches(Text, 1);
+  AssertTrue(Length(sma) = 1);
+  AssertTrue(Copy(Text, sma[0].Start, sma[0].Len) = 'различна');
+
+  sma := fsb.FindMatches(Text, 2);
+  AssertTrue(Length(sma) = 5);
+  AssertTrue(Copy(Text, sma[0].Start, sma[0].Len) = 'различна');
+  AssertTrue(Copy(Text, sma[1].Start, sma[1].Len) = 'различен');
+  AssertTrue(Copy(Text, sma[2].Start, sma[2].Len) = 'различия');
+  AssertTrue(Copy(Text, sma[3].Start, sma[3].Len) = 'различие');
+  AssertTrue(Copy(Text, sma[4].Start, sma[4].Len) = 'безлично');
+
+  sma := fsb.FindMatches(Text, 2, sma[1].Start + sma[1].Len, 1);
+  AssertTrue(Length(sma) = 1);
+  AssertTrue(Copy(Text, sma[0].Start, sma[0].Len) = 'различия');
+end;
+
+procedure TTestFuzzySearchBitap.TestFindMatchesCI;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  sma: array of TSeqMatch;
+begin
+  Pattern := 'различно';
+  fsb.Init(Pattern, True);
+  Text := 'very, очень различНа, type, тип рАзЛичен, mesure, мера РаЗличия, has, имеет разлиЧие, entirely, совсем безличНО';
+
+  sma := fsb.FindMatches(Text, 0);
+  AssertTrue(sma = nil);
+
+  sma := fsb.FindMatches(Text, 1);
+  AssertTrue(Length(sma) = 1);
+  AssertTrue(Copy(Text, sma[0].Start, sma[0].Len) = 'различНа');
+
+  sma := fsb.FindMatches(Text, 2);
+  AssertTrue(Length(sma) = 5);
+  AssertTrue(Copy(Text, sma[0].Start, sma[0].Len) = 'различНа');
+  AssertTrue(Copy(Text, sma[1].Start, sma[1].Len) = 'рАзЛичен');
+  AssertTrue(Copy(Text, sma[2].Start, sma[2].Len) = 'РаЗличия');
+  AssertTrue(Copy(Text, sma[3].Start, sma[3].Len) = 'разлиЧие');
+  AssertTrue(Copy(Text, sma[4].Start, sma[4].Len) = 'безличНО');
+
+  sma := fsb.FindMatches(Text, 2, sma[1].Start + sma[1].Len, 1);
+  AssertTrue(Length(sma) = 1);
+  AssertTrue(Copy(Text, sma[0].Start, sma[0].Len) = 'РаЗличия');
+end;
+
+procedure TTestFuzzySearchBitap.TestEnumerator;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  sm: TSeqMatch;
+  ans: TStringArray;
+  I, TestPos: Integer;
+begin
+  Pattern := 'различно';
+  fsb.Init(Pattern);
+  Text := 'very, очень различна, type, тип различен, mesure, мера различия, has, имеет различие, entirely, совсем безлично';
+
+  I := 0;
+  for sm in fsb.Matches(Text, 0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  ans := ['различна', 'различен', 'различия', 'различие', 'безлично'];
+
+  for sm in fsb.Matches(Text, 1) do begin
+    AssertTrue(Copy(Text, sm.Start, sm.Len) = ans[I]);
+    Inc(I);
+  end;
+  AssertTrue(I = 1);
+
+  I := 0;
+  TestPos := 1;
+  for sm in fsb.Matches(Text, 2) do begin
+    AssertTrue(Copy(Text, sm.Start, sm.Len) = ans[I]);
+    if I = 2 then
+      TestPos := sm.Start + sm.Len;
+    Inc(I);
+  end;
+  AssertTrue(I = 5);
+
+  I := 3;
+  for sm in fsb.Matches(Text, 2, TestPos) do begin
+    AssertTrue(Copy(Text, sm.Start, sm.Len) = ans[I]);
+    Inc(I);
+  end;
+  AssertTrue(I = 5);
+end;
+
+procedure TTestFuzzySearchBitap.TestEnumeratorCI;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  sm: TSeqMatch;
+  ans: TStringArray;
+  I, TestPos: Integer;
+begin
+  Pattern := 'различно';
+  fsb.Init(Pattern, True);
+  Text := 'very, очень различНа, type, тип рАзЛичен, mesure, мера РаЗличия, has, имеет разлиЧие, entirely, совсем безличНО';
+
+  I := 0;
+  for sm in fsb.Matches(Text, 0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  ans := ['различНа', 'рАзЛичен', 'РаЗличия', 'разлиЧие', 'безличНО'];
+
+  for sm in fsb.Matches(Text, 1) do begin
+    AssertTrue(Copy(Text, sm.Start, sm.Len) = ans[I]);
+    Inc(I);
+  end;
+  AssertTrue(I = 1);
+
+  I := 0;
+  TestPos := 1;
+  for sm in fsb.Matches(Text, 2) do begin
+    AssertTrue(Copy(Text, sm.Start, sm.Len) = ans[I]);
+    if I = 2 then
+      TestPos := sm.Start + sm.Len;
+    Inc(I);
+  end;
+  AssertTrue(I = 5);
+
+  I := 3;
+  for sm in fsb.Matches(Text, 2, TestPos) do begin
+    AssertTrue(Copy(Text, sm.Start, sm.Len) = ans[I]);
+    Inc(I);
+  end;
+  AssertTrue(I = 5);
 end;
 
 
