@@ -60,6 +60,7 @@ type
    procedure LevenshteinDistMbr;
    procedure LevenshteinDistMbr2;
    procedure LevenshteinDistMbrBounded;
+   procedure LevenshteinDistMbrDyn;
    procedure LevenshteinDistMyersD;
    procedure LevenshteinDistMyersD2;
    procedure LevenshteinDistMyersQ;
@@ -82,6 +83,10 @@ type
    procedure LcsDistMyers;
    procedure LcsDistMyers2;
    procedure LcsDistMyersBounded;
+   procedure LcsDistMyersDyn;
+   procedure DamerauDistMbr;
+   procedure DamerauDistMbrBounded;
+   procedure DamerauDistMbrDyn;
  end;
 
 implementation
@@ -1316,6 +1321,21 @@ begin
   AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', 7) = -1);
 end;
 
+procedure TFunTest.LevenshteinDistMbrDyn;
+begin
+  AssertTrue(LevDistanceMbr('', 'hello', -1) = 5);
+  AssertTrue(LevDistanceMbr('ab', 'ba', -1) = 2);
+  AssertTrue(LevDistanceMbr('ab', 'aaa', -1) = 2);
+  AssertTrue(LevDistanceMbr('a', 'bbb', -1) = 3);
+  AssertTrue(LevDistanceMbr('aababab','abbaa', -1) = 3);
+  AssertTrue(LevDistanceMbr('helli', 'ellia', -1) = 2);
+  AssertTrue(LevDistanceMbr('kitten', 'sitting', -1) = 3);
+  AssertTrue(LevDistanceMbr('distance', 'difference', -1) = 5);
+  AssertTrue(LevDistanceMbr('levenshtein', 'frankenstein', -1) = 6);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'aaaaaaa', -1) = 0);
+  AssertTrue(LevDistanceMbr('aaaaaaa', 'bbbbbbbb', -1) = 8);
+end;
+
 procedure TFunTest.LevenshteinDistMyersD;
 begin
   AssertTrue(LevDistanceMyers('', 'hello') = 5);
@@ -1887,6 +1907,149 @@ begin
   AssertTrue(LcsDistanceMyers('aaaaaaa', 'aaaaaaa', 1) = 0);
   AssertTrue(LcsDistanceMyers('aaaaaaa', 'bbbbbbbb', 15) = 15);
   AssertTrue(LcsDistanceMyers('aaaaaaa', 'bbbbbbbb', 14) = -1);
+end;
+
+procedure TFunTest.LcsDistMyersDyn;
+begin
+  AssertTrue(LcsDistanceMyers('', 'hello', -1) = 5);
+  AssertTrue(LcsDistanceMyers('hello', '', -1) = 5);
+
+  AssertTrue(LcsDistanceMyers('hello', 'hello', -1) = 0);
+
+  AssertTrue(LcsDistanceMyers('ab', 'aa', -1) = 2);
+  AssertTrue(LcsDistanceMyers('aa', 'ab', -1) = 2);
+
+  AssertTrue(LcsDistanceMyers('ab', 'ba', -1) = 2);
+  AssertTrue(LcsDistanceMyers('ba', 'ab', -1) = 2);
+
+  AssertTrue(LcsDistanceMyers('ab', 'aaa', -1) = 3);
+  AssertTrue(LcsDistanceMyers('aaa', 'ab', -1) = 3);
+
+  AssertTrue(LcsDistanceMyers('a', 'bbb', -1) = 4);
+  AssertTrue(LcsDistanceMyers('bbb', 'a', -1) = 4);
+
+  AssertTrue(LcsDistanceMyers('aababab','abbaa', -1) = 4);
+  AssertTrue(LcsDistanceMyers('abbaa', 'aababab', -1) = 4);
+
+  AssertTrue(LcsDistanceMyers('helli', 'elli', -1) = 1);
+  AssertTrue(LcsDistanceMyers('elli', 'helli', -1) = 1);
+
+  AssertTrue(LcsDistanceMyers('ellia', 'helli', -1) = 2);
+  AssertTrue(LcsDistanceMyers('helli', 'ellia', -1) = 2);
+
+  AssertTrue(LcsDistanceMyers('kitten', 'sitten', -1) = 2);
+  AssertTrue(LcsDistanceMyers('sitten', 'kitten', -1) = 2);
+
+  AssertTrue(LcsDistanceMyers('kitten', 'sitting', -1) = 5);
+  AssertTrue(LcsDistanceMyers('sitting', 'kitten', -1) = 5);
+
+  AssertTrue(LcsDistanceMyers('distance', 'difference', -1) = 8);
+  AssertTrue(LcsDistanceMyers('difference', 'distance', -1) = 8);
+
+  AssertTrue(LcsDistanceMyers('levenshtein', 'frankenstein', -1) = 9);
+  AssertTrue(LcsDistanceMyers('frankenstein', 'levenshtein', -1) = 9);
+
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'bbbbbbbb', -1) = 15);
+  AssertTrue(LcsDistanceMyers('bbbbbbbb', 'aaaaaaa', -1) = 15);
+
+  AssertTrue(LcsDistanceMyers('aaabbaaaa', 'aaaaaaa', -1) = 2);
+  AssertTrue(LcsDistanceMyers('aaaaaaa', 'aaabbaaaa', -1) = 2);
+
+  AssertTrue(LcsDistanceMyers('b', 'a', -1) = 2);
+  AssertTrue(LcsDistanceMyers('a', 'b', -1) = 2);
+end;
+
+procedure TFunTest.DamerauDistMbr;
+begin
+  AssertTrue(DumDistanceMbr('', 'hello') = 5);
+  AssertTrue(DumDistanceMbr('hello', '') = 5);
+  AssertTrue(DumDistanceMbr('hello', 'hello') = 0);
+  AssertTrue(DumDistanceMbr('ab', 'aa') = 1);
+  AssertTrue(DumDistanceMbr('aa', 'ab') = 1);
+  AssertTrue(DumDistanceMbr('ab', 'ba') = 1);
+  AssertTrue(DumDistanceMbr('ba', 'ab') = 1);
+  AssertTrue(DumDistanceMbr('ab', 'aaa') = 2);
+  AssertTrue(DumDistanceMbr('a', 'bbb') = 3);
+  AssertTrue(DumDistanceMbr('ac', 'cba') = 3);
+  AssertTrue(DumDistanceMbr('cba', 'ac') = 3);
+  AssertTrue(DumDistanceMbr('aababab','abbaa') = 3);
+  AssertTrue(DumDistanceMbr('helli', 'elli') = 1);
+  AssertTrue(DumDistanceMbr('ehlli', 'helli') = 1);
+  AssertTrue(DumDistanceMbr('helli', 'ehlli') = 1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitten') = 1);
+  AssertTrue(DumDistanceMbr('sitten', 'kitten') = 1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitting') = 3);
+  AssertTrue(DumDistanceMbr('kitten', 'ktitne') = 2);
+  AssertTrue(DumDistanceMbr('ktitne', 'kitten') = 2);
+  AssertTrue(DumDistanceMbr('distance', 'difference') = 5);
+  AssertTrue(DumDistanceMbr('levenshtein', 'frankenstein') = 6);
+  AssertTrue(DumDistanceMbr('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(DumDistanceMbr('aaaaaaa', 'bbbbbbbb') = 8);
+  AssertTrue(DumDistanceMbr('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(DumDistanceMbr('a', 'a') = 0);
+  AssertTrue(DumDistanceMbr('a', 'b') = 1);
+end;
+
+procedure TFunTest.DamerauDistMbrBounded;
+begin
+  AssertTrue(DumDistanceMbr('', 'hello', 5) = 5);
+  AssertTrue(DumDistanceMbr('', 'hello', 4) = -1);
+  AssertTrue(DumDistanceMbr('hello', 'hello', 1) = 0);
+  AssertTrue(DumDistanceMbr('ab', 'aa', 1) = 1);
+  AssertTrue(DumDistanceMbr('ab', 'ba', 1) = 1);
+  AssertTrue(DumDistanceMbr('ab', 'ba', 0) = -1);
+  AssertTrue(DumDistanceMbr('ab', 'aaa', 2) = 2);
+  AssertTrue(DumDistanceMbr('ab', 'aaa', 1) = -1);
+  AssertTrue(DumDistanceMbr('a', 'bbb', 2) = -1);
+  AssertTrue(DumDistanceMbr('ac', 'cba', 3) = 3);
+  AssertTrue(DumDistanceMbr('ac', 'cba', 2) = -1);
+  AssertTrue(DumDistanceMbr('aababab','abbaa', 3) = 3);
+  AssertTrue(DumDistanceMbr('aababab','abbaa', 2) = -1);
+  AssertTrue(DumDistanceMbr('helli', 'elli', 1) = 1);
+  AssertTrue(DumDistanceMbr('helli', 'elli', 0) = -1);
+  AssertTrue(DumDistanceMbr('ehlli', 'helli', 1) = 1);
+  AssertTrue(DumDistanceMbr('ehlli', 'helli', 0) = -1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitten', 1) = 1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitten', 0) = -1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitting', 3) = 3);
+  AssertTrue(DumDistanceMbr('kitten', 'sitting', 2) = -1);
+  AssertTrue(DumDistanceMbr('kitten', 'ktitne', 2) = 2);
+  AssertTrue(DumDistanceMbr('kitten', 'ktitne', 1) = -1);
+  AssertTrue(DumDistanceMbr('distance', 'difference', 5) = 5);
+  AssertTrue(DumDistanceMbr('distance', 'difference', 4) = -1);
+  AssertTrue(DumDistanceMbr('levenshtein', 'frankenstein', 6) = 6);
+  AssertTrue(DumDistanceMbr('levenshtein', 'frankenstein', 5) = -1);
+end;
+
+procedure TFunTest.DamerauDistMbrDyn;
+begin
+  AssertTrue(DumDistanceMbr('', 'hello', -1) = 5);
+  AssertTrue(DumDistanceMbr('hello', '', -1) = 5);
+  AssertTrue(DumDistanceMbr('hello', 'hello', -1) = 0);
+  AssertTrue(DumDistanceMbr('ab', 'aa', -1) = 1);
+  AssertTrue(DumDistanceMbr('aa', 'ab', -1) = 1);
+  AssertTrue(DumDistanceMbr('ab', 'ba', -1) = 1);
+  AssertTrue(DumDistanceMbr('ba', 'ab', -1) = 1);
+  AssertTrue(DumDistanceMbr('ab', 'aaa', -1) = 2);
+  AssertTrue(DumDistanceMbr('a', 'bbb', -1) = 3);
+  AssertTrue(DumDistanceMbr('ac', 'cba', -1) = 3);
+  AssertTrue(DumDistanceMbr('cba', 'ac', -1) = 3);
+  AssertTrue(DumDistanceMbr('aababab','abbaa', -1) = 3);
+  AssertTrue(DumDistanceMbr('helli', 'elli', -1) = 1);
+  AssertTrue(DumDistanceMbr('ehlli', 'helli', -1) = 1);
+  AssertTrue(DumDistanceMbr('helli', 'ehlli', -1) = 1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitten', -1) = 1);
+  AssertTrue(DumDistanceMbr('sitten', 'kitten', -1) = 1);
+  AssertTrue(DumDistanceMbr('kitten', 'sitting', -1) = 3);
+  AssertTrue(DumDistanceMbr('kitten', 'ktitne', -1) = 2);
+  AssertTrue(DumDistanceMbr('ktitne', 'kitten', -1) = 2);
+  AssertTrue(DumDistanceMbr('distance', 'difference', -1) = 5);
+  AssertTrue(DumDistanceMbr('levenshtein', 'frankenstein', -1) = 6);
+  AssertTrue(DumDistanceMbr('aaaaaaa', 'aaaaaaa', -1) = 0);
+  AssertTrue(DumDistanceMbr('aaaaaaa', 'bbbbbbbb', -1) = 8);
+  AssertTrue(DumDistanceMbr('aaabbaaaa', 'aaaaaaa', -1) = 2);
+  AssertTrue(DumDistanceMbr('a', 'a', -1) = 0);
+  AssertTrue(DumDistanceMbr('a', 'b', -1) = 1);
 end;
 
 initialization
