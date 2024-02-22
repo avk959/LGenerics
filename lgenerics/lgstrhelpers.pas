@@ -428,7 +428,7 @@ type
   function LevDistanceMbr(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
-  immediately and returns -1 }
+  immediately and returns -1; if aLimit < 0 it will be computed dynamically }
   function LevDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Levenshtein distance between L and R; uses the Myers bit-vector algorithm
@@ -448,12 +448,21 @@ type
   function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
-  immediately and returns -1 }
+  immediately and returns -1; aLimit < 0 means it is unknown }
   function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+{ returns the Damerau-Levenshtein distance(restricted) between L and R using modified Berghel-Roach algorithm }
+  function DumDistanceMbr(const L, R: rawbytestring): SizeInt;
+  function DumDistanceMbr(const L, R: array of Byte): SizeInt;
+{ the same as above; the aLimit parameter indicates the maximum expected distance,
+  if this value is exceeded when calculating the distance, then the function exits
+  immediately and returns -1; if aLimit < 0 it will be computed dynamically }
+  function DumDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+  function DumDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns similarity ratio using specified distance algorithm;
-  aLimit specifies the lower bound of the required similarity(0.0 <= aLimit <= 1.0),
-  if the obtained value is less than the specified one, zero will be returned }
+  aLimit specifies the lower bound of the required similarity(0.0 < aLimit <= 1.0),
+  if the obtained value is less than the specified one, zero will be returned;
+  aLimit <= 0 does not impose any restrictions on the obtained values }
   function SimRatio(const L, R: rawbytestring; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
   function SimRatio(const L, R: array of Byte; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
 
@@ -1152,7 +1161,7 @@ end;
 
 function LevDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 
-  function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt;
+  function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt; inline;
   var
     I, MaxRow: SizeInt;
   begin
@@ -1176,18 +1185,6 @@ var
   Even: Boolean = True;
 begin
   //here aLenL <= aLenR
-  if aLenR - aLenL > aLimit then
-    exit(NULL_INDEX);
-
-  if pL = pR then
-    exit(aLenR - aLenL);
-
-  SkipSuffix(pL, pR, aLenL, aLenR);
-  SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    exit(aLenR);
-
   if aLimit > aLenR then
     aLimit := aLenR;
 
@@ -1283,6 +1280,54 @@ begin
   Result := Dist;
 end;
 
+function LevDistanceMbrDyn(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  K: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  K := 0;
+  repeat
+    if K <> 0 then
+      K := Math.Min(K * 2, aLenR)
+    else
+      K := Math.Max(aLenR - aLenL, 2); // 2 ???
+    Result := LevDistanceMbrImpl(pL, pR, aLenL, aLenR, K);
+  until Result <> NULL_INDEX;
+end;
+
+function GetLevDistanceMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLimit < 0 then
+    exit(LevDistanceMbrDyn(pL, pR, aLenL, aLenR));
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  if aLimit = 0 then  //////////
+    exit(NULL_INDEX); //////////
+
+  Result := LevDistanceMbrImpl(pL, pR, aLenL, aLenR, aLimit);
+end;
+
 function LevDistanceMbr(const L, R: rawbytestring): SizeInt;
 begin
   if L = '' then
@@ -1291,9 +1336,9 @@ begin
     if R = '' then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistanceMbrImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
+    Result := GetLevDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := LevDistanceMbrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
+    Result := GetLevDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
 end;
 
 function LevDistanceMbr(const L, R: array of Byte): SizeInt;
@@ -1304,51 +1349,47 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistanceMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+    Result := GetLevDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+    Result := GetLevDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
 function LevDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then
-    aLimit := 0;
   if L = '' then
-    if System.Length(R) <= aLimit then
+    if SizeUInt(System.Length(R)) <= SizeUInt(aLimit) then
       exit(System.Length(R))
     else
       exit(NULL_INDEX)
   else
     if R = '' then
-      if System.Length(L) <= aLimit then
+      if SizeUInt(System.Length(L)) <= SizeUInt(aLimit) then
         exit(System.Length(L))
       else
         exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistanceMbrImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
+    Result := GetLevDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
   else
-    Result := LevDistanceMbrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
+    Result := GetLevDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
 end;
 
 function LevDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then
-    aLimit := 0;
   if System.Length(L) = 0 then
-    if System.Length(R) <= aLimit then
+    if SizeUInt(System.Length(R)) <= SizeUInt(aLimit) then
       exit(System.Length(R))
     else
       exit(NULL_INDEX)
   else
     if System.Length(R) = 0 then
-      if System.Length(L) <= aLimit then
+      if SizeUInt(System.Length(L)) <= SizeUInt(aLimit) then
         exit(System.Length(L))
       else
         exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistanceMbrImpl(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := GetLevDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := LevDistanceMbrImpl(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := GetLevDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 {$PUSH}{$WARN 5057 OFF}{$WARN 5036 OFF}{$Q-}{$R-}
@@ -2078,12 +2119,14 @@ var
   pR: PByte absolute R;
   M, N: SizeInt;
 begin
-  if aLimit < 0 then aLimit := 0;
-  if aLimit = 0 then
-    begin
-      if L = R then exit(0);
-      exit(NULL_INDEX);
-    end;
+  if aLimit < 0 then
+    aLimit := System.Length(L) + System.Length(R)
+  else
+    if aLimit = 0 then
+      begin
+        if L = R then exit(0);
+        exit(NULL_INDEX);
+      end;
   M := System.Length(L);
   N := System.Length(R);
   if M = 0 then
@@ -2104,7 +2147,7 @@ function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 var
   M, N: SizeInt;
 begin
-  if aLimit < 0 then aLimit := 0;
+  if aLimit < 0 then aLimit := System.Length(L) + System.Length(R);
   M := System.Length(L);  N := System.Length(R);
   if (aLimit = 0) and (M <> N) then exit(NULL_INDEX);
   if M = 0 then
@@ -2119,6 +2162,239 @@ begin
       else
         exit(M);
   Result := LcsDistMyersImplLim(@L[0], @R[0], M, N, aLimit);
+end;
+
+function DumDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+
+  function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt; inline;
+  var
+    I, MaxRow: SizeInt;
+  begin
+    if aDist = 0 then
+      I := 0
+    else
+      I := MaxOf3(aLeft,aAbove+Ord((pR[aAbove+1]=pL[aAbove+k])and(pR[aAbove]=pL[aAbove+k+1]))+1,aRight+1);
+    MaxRow := Min(aLenL - k, aLenR);
+    while (I < MaxRow) and (pR[I] = pL[I + k]) do
+      Inc(I);
+    FindRow := I;
+  end;
+
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: array of SizeInt = nil;
+
+  CurrL, CurrR, LastL, LastR, PrevL, PrevR: PSizeInt;
+  I, DMain, Dist, Diagonal, CurrRight, CurrLeft, Row: SizeInt;
+  tmp: Pointer;
+  Even: Boolean = True;
+begin
+  //here aLenL <= aLenR
+  if aLimit > aLenR then
+    aLimit := aLenR;
+
+  DMain := aLenL - aLenR;
+  Dist := -DMain;
+
+  if aLimit < MAX_STATIC div 6 then
+    begin
+      CurrL := @StBuf[0];
+      LastL := @StBuf[Succ(aLimit)];
+      PrevL := @StBuf[Succ(aLimit)*2];
+      CurrR := @StBuf[Succ(aLimit)*3];
+      LastR := @StBuf[Succ(aLimit)*4];
+      PrevR := @StBuf[Succ(aLimit)*5];
+    end
+  else
+    begin
+      System.SetLength(Buf, Succ(aLimit)*6);
+      CurrL := Pointer(Buf);
+      LastL := @Buf[Succ(aLimit)];
+      PrevL := @Buf[Succ(aLimit)*2];
+      CurrR := @Buf[Succ(aLimit)*3];
+      LastR := @Buf[Succ(aLimit)*4];
+      PrevR := @Buf[Succ(aLimit)*5];
+    end;
+
+  for I := 0 to Dist do
+    begin
+      LastR[I] := Dist - I - 1;
+      PrevR[I] := NULL_INDEX;
+    end;
+
+  repeat
+
+    Diagonal := (Dist - DMain) div 2;
+    if Even then
+      LastR[Diagonal] := NULL_INDEX;
+
+    CurrRight := NULL_INDEX;
+
+    while Diagonal > 0 do
+      begin
+        CurrRight :=
+          FindRow( DMain + Diagonal, Dist - Diagonal, PrevR[Diagonal - 1], LastR[Diagonal], CurrRight);
+        CurrR[Diagonal] := CurrRight;
+        Dec(Diagonal);
+      end;
+
+    Diagonal := (Dist + DMain) div 2;
+
+    if Even then
+      begin
+        LastL[Diagonal] := Pred((Dist - DMain) div 2);
+        CurrLeft := NULL_INDEX;
+      end
+    else
+      CurrLeft := (Dist - DMain) div 2;
+
+    while Diagonal > 0 do
+      begin
+        CurrLeft :=
+          FindRow(DMain - Diagonal, Dist - Diagonal, CurrLeft, LastL[Diagonal], PrevL[Diagonal - 1]);
+        CurrL[Diagonal] := CurrLeft;
+        Dec(Diagonal);
+      end;
+
+    Row := FindRow(DMain, Dist, CurrLeft, LastL[0], CurrRight);
+
+    if Row = aLenR then
+      break;
+
+    Inc(Dist);
+    if Dist > aLimit then
+      exit(NULL_INDEX);
+
+    CurrR[0] := Row;
+    CurrL[0] := Row;
+
+    tmp := PrevL;
+    PrevL := LastL;
+    LastL := CurrL;
+    CurrL := tmp;
+
+    tmp := PrevR;
+    PrevR := LastR;
+    LastR := CurrR;
+    CurrR := tmp;
+
+    Even := not Even;
+
+  until False;
+
+  Result := Dist;
+end;
+
+function DumDistanceMbrDyn(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+var
+  K: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  K := 0;
+  repeat
+    if K <> 0 then
+      K := Math.Min(K * 2, aLenR)
+    else
+      K := Math.Max(aLenR - aLenL, 2); // 2 ???
+    Result := DumDistanceMbrImpl(pL, pR, aLenL, aLenR, K);
+  until Result <> NULL_INDEX;
+end;
+
+function GetDumDistanceMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLimit < 0 then
+    exit(DumDistanceMbrDyn(pL, pR, aLenL, aLenR));
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  if aLimit = 0 then  //////////
+    exit(NULL_INDEX); //////////
+
+  Result := DumDistanceMbrImpl(pL, pR, aLenL, aLenR, aLimit);
+end;
+
+function DumDistanceMbr(const L, R: rawbytestring): SizeInt;
+begin
+  if L = '' then
+    exit(System.Length(R))
+  else
+    if R = '' then
+      exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetDumDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
+  else
+    Result := GetDumDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
+end;
+
+function DumDistanceMbr(const L, R: array of Byte): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetDumDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+  else
+    Result := GetDumDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+end;
+
+function DumDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+begin
+  if L = '' then
+    if SizeUInt(System.Length(R)) <= SizeUInt(aLimit) then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if R = '' then
+      if SizeUInt(System.Length(L)) <= SizeUInt(aLimit) then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  if System.Length(L) <= System.Length(R) then
+    Result := GetDumDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetDumDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
+end;
+
+function DumDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    if SizeUInt(System.Length(R)) <= SizeUInt(aLimit) then
+      exit(System.Length(R))
+    else
+      exit(NULL_INDEX)
+  else
+    if System.Length(R) = 0 then
+      if SizeUInt(System.Length(L)) <= SizeUInt(aLimit) then
+        exit(System.Length(L))
+      else
+        exit(NULL_INDEX);
+  if System.Length(L) <= System.Length(R) then
+    Result := GetDumDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetDumDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 function SimRatio(const L, R: rawbytestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
@@ -2138,10 +2414,14 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+      sdaDumMBR:   Dist := DumDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
-  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  if aLimit > 0 then
+    Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len)
+  else
+    Limit := -1;
   case Algo of
     sdaDefault:
       if aLimit > Double(0.90) then  //todo: more precise ???
@@ -2151,6 +2431,7 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+    sdaDumMBR:   Dist := DumDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
@@ -2175,10 +2456,14 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+      sdaDumMBR:   Dist := DumDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
-  Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len);
+  if aLimit > 0 then
+    Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len)
+  else
+    Limit := -1;
   case Algo of
     sdaDefault:
       if aLimit > Double(0.90) then //todo: more precise ???
@@ -2188,6 +2473,7 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+    sdaDumMBR:   Dist := DumDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
