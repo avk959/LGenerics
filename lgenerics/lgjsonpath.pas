@@ -255,6 +255,8 @@ type
     function AsJson: string;
   { splits Path into segments; returns an empty array if Path is not a valid normalized path }
     function PathToSegments: TStringArray;
+  { tries to split the normalized path aPath into segments; returns False if aPath is not a valid normalized path }
+    class function TrySplitNormalPath(const aPath: string; out aSegments: TStringArray): Boolean; static;
   end;
 
   {TJpNodeList represent a JSONPath Nodelist }
@@ -441,6 +443,8 @@ type
     function TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode; out aMsg: string): Boolean;
   { same as above, but for the case where the content of the error message is of no interest }
     function TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode): Boolean;
+  { tries to find an element using a path specified as a normalized path }
+    function FindNormalPath(const aNormalPath: string; out aNode: TJsonNode): Boolean;
   end;
 
   TJpInstanceType = (jitLogical, jitValue, jitNodeList);
@@ -567,8 +571,14 @@ begin
     Result := Format(Fmt, [NODE_PATH, Path, NODE_VALUE, Value.AsJson]);
 end;
 
-{$PUSH}{$WARN 5089 OFF}{$WARN 5094 OFF}{$WARN 5036 OFF}
+
 function TJpNode.PathToSegments: TStringArray;
+begin
+  TrySplitNormalPath(Path, Result);
+end;
+
+{$PUSH}{$WARN 5089 OFF}{$WARN 5094 OFF}{$WARN 5036 OFF}
+class function TJpNode.TrySplitNormalPath(const aPath: string; out aSegments: TStringArray): Boolean;
   function Hex2Byte(c: AnsiChar): Byte; inline;
   begin
     case c of
@@ -586,15 +596,14 @@ var
 const
   HexChars = ['0'..'9','A'..'F','a'..'f'];
 begin
-  if System.Length(Path) < 1 then exit(nil);
-  if (Path[1] <> '$') or (System.Length(Path) = 1) then exit(nil);
-  p := Pointer(Path);
-  pEnd := p + System.Length(Path);
+  aSegments := nil;
+  if (System.Length(aPath) < 1) or (aPath[1] <> '$') then exit(False);
+  p := Pointer(aPath);
+  pEnd := p + System.Length(aPath);
   Inc(p);
-  if p >= pEnd then exit(nil);
   sb.Create(64);
-  repeat
-    if p^ <> '[' then exit(nil);
+  while p < pEnd do begin
+    if p^ <> '[' then exit(False);
     Inc(p);
     case p^ of
       '0'..'9': begin
@@ -602,16 +611,16 @@ begin
             sb.Append(p^);
             Inc(p);
           until not(p^ in ['0'..'9']);
-          if p^ <> ']' then exit(nil);
+          if p^ <> ']' then exit(False);
           List.Add(sb.ToString);
           Inc(p);
         end;
       '''': begin
          Inc(p);
-         if p >= pEnd then exit(nil);
+         if p >= pEnd then exit(False);
          while p^ <> '''' do begin
            if p^ = '\' then begin
-             if p > pEnd - 2 then exit(nil);
+             if p > pEnd - 2 then exit(False);
              Inc(p);
              case p^ of
                'b': begin sb.Append(#8); Inc(p); end;
@@ -621,7 +630,7 @@ begin
                't': begin sb.Append(#9); Inc(p); end;
                'u': begin
                  if (p > pEnd - 5) or (p[1] <> '0') or (p[2] <> '0') or
-                     not ((p[3] in HexChars) and (p[3] in HexChars)) then exit(nil);
+                     not ((p[3] in HexChars) and (p[3] in HexChars)) then exit(False);
                  sb.Append(AnsiChar(Hex2Byte(p[3]) shl 4 or Hex2Byte(p[4])));
                  p += 5;
                end
@@ -633,23 +642,24 @@ begin
              sb.Append(p^);
              Inc(p);
            end;
-           if p >= pEnd then exit(nil);
+           if p >= pEnd then exit(False);
          end;
          Inc(p);
-         if p^ <> ']' then exit(nil);
+         if p^ <> ']' then exit(False);
          Inc(p);
          List.Add(sb.ToString);
        end;
     else
-      exit(nil);
+      exit(False);
     end;
-  until p >= pEnd;
-  Result := List.ToArray;
+  end;
+  aSegments := List.ToArray;
+  Result := True;
 end;
 {$POP}
 
 { TJpNodeListHelper }
-{$PUSH}{$WARN 6058 OFF}
+{$PUSH}{$WARN 6058 OFF}{$WARN 5093 OFF}
 function TJpNodeListHelper.AsJson: string;
 var
   sb: TStrBuilder;
@@ -950,6 +960,15 @@ end;
 function TJsonPathNodeHelper.TryMatchFirstValue(const aJpQuery: string; out aNode: TJsonNode): Boolean;
 begin
   Result := JpMatchFirstValue(aJpQuery, Self, aNode);
+end;
+
+function TJsonPathNodeHelper.FindNormalPath(const aNormalPath: string; out aNode: TJsonNode): Boolean;
+var
+  Segments: TStringArray;
+begin
+  aNode := nil;
+  if not TJpNode.TrySplitNormalPath(aNormalPath, Segments) then exit(False);
+  Result := FindPath(Segments, aNode);
 end;
 
 { TJpInstance }
