@@ -109,14 +109,18 @@
     + reducing the LCS problem to LIS
     + Kumar-Rangan algorithm for LCS
     + Myers algorithm for LCS
-  - the Levenshtein distance:
+  - Levenshtein distance:
     + simple DP algorithm
     + modified Berghel-Roach algorithm
     + Myers bit-vector algorithm with cut-off heuristic
   - LCS distance:
     + Myers algorithm for LCS distance
-  - fuzzy string matching(k differences)
+  - restricted Damerau-Levenshtein distance
+    + modified Berghel-Roach algorithm
+  - fuzzy string matching with k differences
     + Ukkonen EDP algorithm
+  - fuzzy string matching with k mismatches
+    + using bitap algorithm
   - fuzzy string matching with preprocessing(something similar to fuzzywuzzy)
 #### Other:
   - non-cryptogarphic hashes(unit lgHash):
