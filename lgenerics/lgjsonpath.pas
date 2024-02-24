@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   JSONPath implementation: query expressions for JSON.                    *
+*   JSONPath(RFC 9535) implementation: query expressions for JSON.          *
 *                                                                           *
 *   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
@@ -29,7 +29,7 @@ uses
   SysUtils, lgUtils, lgJson;
 
 {
-  https://datatracker.ietf.org/doc/draft-ietf-jsonpath-base
+  https://www.rfc-editor.org/rfc/rfc9535
   ---------------------------------------------------------------------------------------
 
       Basic elements:
