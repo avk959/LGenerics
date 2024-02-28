@@ -398,7 +398,8 @@ type
 
   { TFuzzySearchEdp: approximate string matching with K differences;
     expects UTF-8 encoded strings as parameters;
-    uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN) time complexity }
+    uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN)
+    expected time complexity }
   TFuzzySearchEdp = record
   private
   type
