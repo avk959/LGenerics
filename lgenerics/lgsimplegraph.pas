@@ -463,7 +463,8 @@ type
   { returns indices of the vertices of the some found minimum dominating vertex set;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
-    recent solution will be returned, and aExact will be set to False }
+    recent solution will be returned, and aExact will be set to False;
+    todo: seems buggy, do not use! }
     function  FindMDS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
   { returns True if aTestMds contains indices of the some minimal dominating vertex set, False otherwise }
