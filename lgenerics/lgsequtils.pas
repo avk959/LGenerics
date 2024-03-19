@@ -390,12 +390,6 @@ type
   ): specialize TGArray<TStringRatio>;
 
 type
-  TSeqMatch = record
-    Start,
-    Len: SizeInt;
-    constructor Make(aStart, aLen: SizeInt);
-  end;
-
   { TFuzzySearchEdp: approximate string matching with K differences;
     expects UTF-8 encoded strings as parameters;
     uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN)
@@ -447,6 +441,12 @@ type
     uses Bitap algorithm with O(KN) time complexity }
   TFuzzySearchBitap = record
   public
+  type
+    TMatch = record
+      Offset,         // byte index(1-based) of a match
+      Length: SizeInt;// match length in bytes
+      constructor Make(aOfs, aLen: SizeInt);
+    end;
   const
     MAX_PATTERN_CP = Pred(BitSizeOf(QWord)); // maximum number of code points in the pattern
 
@@ -465,12 +465,12 @@ type
       FSearch: PSearchBitap;
       FTextIndex: SizeInt;
       FqHead: Integer;
-      FMatch: TSeqMatch;
-      function  GetCurrent: TSeqMatch; inline;
+      FMatch: TMatch;
+      function  GetCurrent: TMatch; inline;
       procedure Init(pSearch: PSearchBitap; const aText: string; aOfs: SizeInt; aK: Integer);
     public
       function  MoveNext: Boolean;
-      property  Current: TSeqMatch read GetCurrent;
+      property  Current: TMatch read GetCurrent;
     end;
 
   public
@@ -487,7 +487,7 @@ type
 
   private
   type
-    TNestFound = function(const m: TSeqMatch): Boolean is nested;
+    TNestFound = function(const m: TMatch): Boolean is nested;
   var
     FCharMap: TCharMap;
     FLength: Integer;
@@ -504,14 +504,14 @@ type
     in the string aText that has a Hamming distance of at most K, starting from the index aOffset;
     returns TSeqMatch(0,0) if instance is not initialized or no occurrence is found
     or 0 > K >= MAX_PATTERN_CP or aOffset < 1 }
-    function NextMatch(const aText: string; K: Integer; aOffset: SizeInt = 1): TSeqMatch;
+    function NextMatch(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatch;
   { returns an array of of approximate occurrences of the pattern in the string aText
     that have a Hamming distance of at most K, starting from the index aOffset;
     if aLimit is greater than zero, it returns no more than aLimit occurrences,
     otherwise it returns all found occurrences;
     returns an empty array if no occurrence is found or the instance is not initialized
     or 0 > K >= MAX_PATTERN_CP or aOffset < 1 }
-    function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1; aLimit: SizeInt = 0): specialize TGArray<TSeqMatch>;
+    function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1; aLimit: SizeInt = 0): specialize TGArray<TMatch>;
   { enumerates the approximate occurrences of the pattern in the string aText that have
     a Hamming distance of at most K, starting from the index aOffset }
     function Matches(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatches;
@@ -4055,14 +4055,6 @@ begin
   Result := r;
 end;
 
-{ TSeqMatch }
-
-constructor TSeqMatch.Make(aStart, aLen: SizeInt);
-begin
-  Start := aStart;
-  Len := aLen
-end;
-
 { TFuzzySearchEdp.TEnumerator }
 
 function TFuzzySearchEdp.TEnumerator.GetCurrent: SizeInt;
@@ -4155,6 +4147,14 @@ begin
   Result.FSearch := @Self;
 end;
 
+{ TSeqMatch }
+
+constructor TFuzzySearchBitap.TMatch.Make(aOfs, aLen: SizeInt);
+begin
+  Offset := aOfs;
+  Length := aLen;
+end;
+
 { TFuzzySearchBitap.TMatches }
 
 function TFuzzySearchBitap.TMatches.GetEnumerator: TEnumerator;
@@ -4195,8 +4195,9 @@ var
   I, qHead, PatLen: Integer;
   c: Ucs4Char;
 begin
-  if not Initialized or (DWord(K) >= DWord(MAX_PATTERN_CP)) or (aText = '') or (aOffset < 1) then
+  if not Initialized or (DWord(K) >= DWord(MAX_PATTERN_CP)) or (aText = '') then
     exit;
+  if aOffset < 1 then aOffset := 1;
   TextLen := System.Length(aText);
   if aOffset > TextLen then
     exit;
@@ -4222,14 +4223,14 @@ begin
       vOld := vTemp;
     end;
     if (Table[K] and TestBit = 0) and not
-      aFound(TSeqMatch.Make(Queue[qHead], TextPos - Queue[qHead])) then exit;
+      aFound(TMatch.Make(Queue[qHead], TextPos - Queue[qHead])) then exit;
   end;
 end;
 {$POP}
 
 { TFuzzySearchBitap.TEnumerator }
 
-function TFuzzySearchBitap.TEnumerator.GetCurrent: TSeqMatch;
+function TFuzzySearchBitap.TEnumerator.GetCurrent: TMatch;
 begin
   Result := FMatch;
 end;
@@ -4242,9 +4243,10 @@ begin
   FQueue := nil;
   FSearch := nil;
   FqHead := 0;
-  FMatch := TSeqMatch.Make(0, 0);
+  FMatch := TMatch.Make(0, 0);
   if (pSearch = nil ) or not pSearch^.Initialized or (aText = '') then exit;
-  if (aOfs < 1) or (aOfs > System.Length(aText)) then exit;
+  if aOfs < 1 then aOfs := 1;
+  if aOfs > System.Length(aText) then exit;
   if DWord(aK) >= DWord(MAX_PATTERN_CP) then exit;
   aK := Math.Min(aK, pSearch^.Length);
   FTextIndex := aOfs;
@@ -4282,7 +4284,7 @@ begin
       vOld := vTemp;
     end;
     if FTable[K] and TestBit = 0 then begin
-      FMatch := TSeqMatch.Make(FQueue[FqHead], FTextIndex - FQueue[FqHead]);
+      FMatch := TMatch.Make(FQueue[FqHead], FTextIndex - FQueue[FqHead]);
       exit(True);
     end;
   end;
@@ -4334,26 +4336,26 @@ begin
   end;
 end;
 
-function TFuzzySearchBitap.NextMatch(const aText: string; K: Integer; aOffset: SizeInt): TSeqMatch;
+function TFuzzySearchBitap.NextMatch(const aText: string; K: Integer; aOffset: SizeInt): TMatch;
 var
-  m: TSeqMatch;
-  function Found(const aMatch: TSeqMatch): Boolean;
+  m: TMatch;
+  function Found(const aMatch: TMatch): Boolean;
   begin
     m := aMatch;
     Found := False;
   end;
 begin
-  m := TSeqMatch.Make(0, 0);
+  m := TMatch.Make(0, 0);
   DoSearch(aText, K, aOffset, @Found);
   Result := m;
 end;
 
 function TFuzzySearchBitap.FindMatches(const aText: string; K: Integer; aOffset: SizeInt;
-  aLimit: SizeInt): specialize TGArray<TSeqMatch>;
+  aLimit: SizeInt): specialize TGArray<TMatch>;
 var
-  r: array of TSeqMatch = nil;
+  r: array of TMatch = nil;
   rLen: SizeInt = 0;
-  function AddMatch(const aMatch: TSeqMatch): Boolean;
+  function AddMatch(const aMatch: TMatch): Boolean;
   begin
     if System.Length(r) = rLen then
       System.SetLength(r, rLen * 2);
