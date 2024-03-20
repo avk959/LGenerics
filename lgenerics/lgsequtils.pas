@@ -436,17 +436,13 @@ type
     property Length: SizeInt read GetLength;
   end;
 
+  TMatch = LgUtils.TSeqMatch;
+
   { TFuzzySearchBitap: approximate string matching with K mismatches;
     expects UTF-8 encoded strings as parameters;
     uses Bitap algorithm with O(KN) time complexity }
   TFuzzySearchBitap = record
   public
-  type
-    TMatch = record
-      Offset,         // byte index(1-based) of a match
-      Length: SizeInt;// match length in bytes
-      constructor Make(aOfs, aLen: SizeInt);
-    end;
   const
     MAX_PATTERN_CP = Pred(BitSizeOf(QWord)); // maximum number of code points in the pattern
 
@@ -500,17 +496,16 @@ type
   { aPattern must be a valid non-empty UTF-8 string containing no more than MAX_PATTERN_CP code points }
     constructor Create(const aPattern: string; aIgnoreCase: Boolean = False);
     procedure Init(const aPattern: string; aIgnoreCase: Boolean = False);
-  { returns the start position and length of the next approximate occurrence of the pattern
-    in the string aText that has a Hamming distance of at most K, starting from the index aOffset;
-    returns TSeqMatch(0,0) if instance is not initialized or no occurrence is found
-    or 0 > K >= MAX_PATTERN_CP or aOffset < 1 }
+  { returns the start position(1-based) and length(in bytes) of the next approximate
+    occurrence of the pattern in the string aText that has a Hamming distance of at most K,
+    starting from the index aOffset; returns TMatch(0,0) if instance is not initialized or
+    no occurrence is found or 0 > K >= MAX_PATTERN_CP }
     function NextMatch(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatch;
-  { returns an array of of approximate occurrences of the pattern in the string aText
+  { returns an array of all approximate occurrences of the pattern in the string aText
     that have a Hamming distance of at most K, starting from the index aOffset;
     if aLimit is greater than zero, it returns no more than aLimit occurrences,
-    otherwise it returns all found occurrences;
-    returns an empty array if no occurrence is found or the instance is not initialized
-    or 0 > K >= MAX_PATTERN_CP or aOffset < 1 }
+    otherwise it returns all found occurrences; returns an empty array if no occurrence
+    is found or the instance is not initialized or 0 > K >= MAX_PATTERN_CP }
     function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1; aLimit: SizeInt = 0): specialize TGArray<TMatch>;
   { enumerates the approximate occurrences of the pattern in the string aText that have
     a Hamming distance of at most K, starting from the index aOffset }
@@ -4145,14 +4140,6 @@ begin
   Result.FText := aText;
   Result.FK := K;
   Result.FSearch := @Self;
-end;
-
-{ TSeqMatch }
-
-constructor TFuzzySearchBitap.TMatch.Make(aOfs, aLen: SizeInt);
-begin
-  Offset := aOfs;
-  Length := aLen;
 end;
 
 { TFuzzySearchBitap.TMatches }

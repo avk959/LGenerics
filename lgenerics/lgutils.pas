@@ -1181,7 +1181,11 @@ type
     sdaDumMBR      //Damerau-Levenshtein distance(restricted) using Berghel-Roach algorithm
     );
 
-
+  TSeqMatch = record
+    Offset,
+    Length: SizeInt;
+    constructor Make(aOfs, aLen: SizeInt);
+  end;
   TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
 
 const
@@ -3717,6 +3721,14 @@ begin
     Result := b;
   if Result < c then
     Result := c;
+end;
+
+{ TSeqMatch }
+
+constructor TSeqMatch.Make(aOfs, aLen: SizeInt);
+begin
+  Offset := aOfs;
+  Length := aLen;
 end;
 
 end.
