@@ -3286,7 +3286,7 @@ procedure TTestFuzzySearchBitap.TestNextMatch;
 var
   fsb: TFuzzySearchBitap;
   Text, Pattern: string;
-  m: TFuzzySearchBitap.TMatch;
+  m: TMatch;
 begin
   Pattern := 'a';
   fsb.Init(Pattern);
@@ -3351,7 +3351,7 @@ procedure TTestFuzzySearchBitap.TestNextMatchCI;
 var
   fsb: TFuzzySearchBitap;
   Text, Pattern: string;
-  m: TFuzzySearchBitap.TMatch;
+  m: TMatch;
 begin
   Pattern := 'различно';
   fsb.Init(Pattern, True);
@@ -3392,7 +3392,7 @@ procedure TTestFuzzySearchBitap.TestFindMatches;
 var
   fsb: TFuzzySearchBitap;
   Text, Pattern: string;
-  ma: array of TFuzzySearchBitap.TMatch;
+  ma: array of TMatch;
 begin
   Pattern := 'различно';
   fsb.Init(Pattern);
@@ -3422,7 +3422,7 @@ procedure TTestFuzzySearchBitap.TestFindMatchesCI;
 var
   fsb: TFuzzySearchBitap;
   Text, Pattern: string;
-  ma: array of TFuzzySearchBitap.TMatch;
+  ma: array of TMatch;
 begin
   Pattern := 'различно';
   fsb.Init(Pattern, True);
@@ -3452,7 +3452,7 @@ procedure TTestFuzzySearchBitap.TestEnumerator;
 var
   fsb: TFuzzySearchBitap;
   Text, Pattern: string;
-  m: TFuzzySearchBitap.TMatch;
+  m: TMatch;
   ans: TStringArray;
   I, TestPos: Integer;
 begin
@@ -3495,7 +3495,7 @@ procedure TTestFuzzySearchBitap.TestEnumeratorCI;
 var
   fsb: TFuzzySearchBitap;
   Text, Pattern: string;
-  m: TFuzzySearchBitap.TMatch;
+  m: TMatch;
   ans: TStringArray;
   I, TestPos: Integer;
 begin
