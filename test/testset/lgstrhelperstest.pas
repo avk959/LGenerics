@@ -1,6 +1,6 @@
 unit LGStrHelpersTest;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}{$H+}{$modeswitch advancedrecords}{$modeswitch nestedprocvars}
 
 interface
 
@@ -8,6 +8,8 @@ uses
   Classes, SysUtils, fpcunit, testregistry, Math,
   lgUtils,
   lgArrayHelpers,
+  lgHash,
+  lgHashSet,
   lgStrHelpers;
 
 type
@@ -17,7 +19,6 @@ type
   { TBmSearchTest }
 
   TBmSearchTest = class(TTestCase)
-  private
   published
     procedure FindMatches;
     procedure FindMatchesBytes;
@@ -30,7 +31,6 @@ type
   { TBmhrSearchTest }
 
   TBmhrSearchTest = class(TTestCase)
-  private
   published
     procedure FindMatches;
     procedure FindMatchesBytes;
@@ -42,7 +42,6 @@ type
 
   { TBmSearchCITest }
   TBmSearchCITest = class(TTestCase)
-  private
   published
     procedure FindMatches;
     procedure FindMatches1251;
@@ -53,7 +52,6 @@ type
  { TFunTest }
 
  TFunTest = class(TTestCase)
- private
  published
    procedure LevenshteinDist;
    procedure LevenshteinDist2;
@@ -87,6 +85,32 @@ type
    procedure DamerauDistMbr;
    procedure DamerauDistMbrBounded;
    procedure DamerauDistMbrDyn;
+ end;
+
+ { TACSearchFsmTest }
+
+ TACSearchFsmTest = class(TTestCase)
+ private
+ type
+   TACSearch = specialize TGUniqRef<TACSearchFsm>;
+
+   { TRbsHasher }
+
+   TRbsHasher = record
+     class function Equal(const L, R: rawbytestring): Boolean; static;
+     class function HashCode(const s: rawbytestring): SizeInt; static;
+   end;
+
+   TStrSetType = specialize TGLiteChainHashSet<rawbytestring, TRbsHasher>;
+   TStrSet     = TStrSetType.TSet;
+ var
+   FMatchCount: Integer;
+   function OnMatch(const m: TMatch): Boolean;
+   function OnMatchFirst(const m: TMatch): Boolean;
+ published
+   procedure TestCreate;
+   procedure TestSearchDelegated;
+   procedure TestSearchNested;
  end;
 
 implementation
@@ -2052,12 +2076,115 @@ begin
   AssertTrue(DumDistanceMbr('a', 'b', -1) = 1);
 end;
 
+{ TACSearchFsmTest.TRbsHasher }
+
+class function TACSearchFsmTest.TRbsHasher.Equal(const L, R: rawbytestring): Boolean;
+begin
+  Result := L = R;
+end;
+
+class function TACSearchFsmTest.TRbsHasher.HashCode(const s: rawbytestring): SizeInt;
+begin
+  Result := TxxHash32LE.HashStr(s);
+end;
+
+{ TACSearchFsmTest }
+
+function TACSearchFsmTest.OnMatch(const m: TMatch): Boolean;
+begin
+  Inc(FMatchCount);
+  Result := True;
+end;
+
+function TACSearchFsmTest.OnMatchFirst(const m: TMatch): Boolean;
+begin
+  Inc(FMatchCount);
+  Result := False;
+end;
+
+procedure TACSearchFsmTest.TestCreate;
+var
+  ac: TACSearch;
+begin
+  {%H-}ac.Instance := TACSearchFsm.Create([]);
+  AssertTrue(ac.Instance.AlphabetSize = 0);
+  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.PatternCount = 0);
+  AssertFalse(ac.Instance.ContainsPattern('a'));
+  ac.Instance := TACSearchFsm.Create(['a','b']);
+  AssertTrue(ac.Instance.AlphabetSize <> 0);
+  AssertTrue(ac.Instance.NodeCount > 1);
+  AssertTrue(ac.Instance.PatternCount = 2);
+  AssertTrue(ac.Instance.ContainsPattern('a'));
+  AssertTrue(ac.Instance.ContainsPattern('b'));
+end;
+
+procedure TACSearchFsmTest.TestSearchDelegated;
+var
+  ac: TACSearch;
+  s: rawbytestring;
+  a: TStringArray;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  {%H-}ac.Instance := TACSearchFsm.Create(a);
+  s := 'hishero';
+  FMatchCount := 0;
+  ac.Instance.Search(s, @OnMatch);
+  AssertTrue(FMatchCount = Length(a));
+
+  FMatchCount := 0;
+  ac.Instance.Search(s, @OnMatchFirst);
+  AssertTrue(FMatchCount = 1);
+end;
+
+procedure TACSearchFsmTest.TestSearchNested;
+var
+  MatchCount: Integer = 0;
+  function NestMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := True;
+  end;
+  function FirstMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := False;
+  end;
+var
+  s: rawbytestring;
+  ss: TStrSet;
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    ss.Remove(Copy(s, m.Offset, m.Length));
+    Result := True;
+  end;
+var
+  ac: TACSearch;
+  a: TStringArray;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  {%H-}ac.Instance := TACSearchFsm.Create(a);
+  s := 'hishero';
+  ac.Instance.Search(s, @NestMatch);
+  AssertTrue(MatchCount = Length(a));
+
+  MatchCount := 0;
+  ac.Instance.Search(s, @FirstMatch);
+  AssertTrue(MatchCount = 1);
+
+  ss.AddAll(a);
+  AssertTrue(ss.Count = Length(a));
+  ac.Instance.Search(s, @TestMatch);
+  AssertTrue(ss.IsEmpty);
+end;
+
 initialization
 
   RegisterTest(TBmSearchTest);
   RegisterTest(TBmhrSearchTest);
   RegisterTest(TBmSearchCITest);
   RegisterTest(TFunTest);
+  RegisterTest(TACSearchFsmTest);
 
 end.
 
