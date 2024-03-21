@@ -35,6 +35,7 @@ uses
   lgArrayHelpers,
   lgAbstractContainer,
   lgVector,
+  lgQueue,
   lgMiscUtils,
   lgStrConst;
 
@@ -392,6 +393,50 @@ type
     function NextMatch(const s: rawbytestring; aOffset: SizeInt = 1): SizeInt;
   { returns in an array the indices(1-based) of all occurrences of the pattern in s }
     function FindMatches(const s: rawbytestring): TIntArray;
+  end;
+
+  TMatch = LgUtils.TSeqMatch;
+
+  { TACSearchFsm: Aho-Corasick automation(DFA) for the exact set matching problem }
+  TACSearchFsm = class
+  type
+    TOnMatch   = specialize TGOnTest<TMatch>;
+    TNestMatch = specialize TGNestTest<TMatch>;
+  private
+  type
+    TNode = record
+      NextMove: array of SizeInt;// transition table
+      Failure,                   // failure link
+      Output,                    // output link
+      Length: SizeInt;           // length > 0 indicates a terminal node
+    end;
+  private
+    FTrie: array of TNode;
+    FCodeTable: array[Byte] of SmallInt;
+    FNodeCount,
+    FWordCount: SizeInt;
+    FAlphabetSize: Integer;
+    function  NewNode: SizeInt;
+    procedure BuildCodeTable(const aList: array of rawbytestring);
+    procedure AddPattern(const aValue: rawbytestring); virtual;
+    procedure BuildLinks;
+  public
+    constructor Create(const aPatternList: array of rawbytestring);
+    function  ContainsPattern(const aValue: rawbytestring): Boolean;
+  { returns an array of all matches found in the string aText, starting at position aOffset
+    within aCount bytes; any value of aCount < 1 implies a search to the end of the text }
+    function  FindMatches(const aText: rawbytestring; aOffset: SizeInt = 1; aCount: SizeInt = 0): specialize TGArray<TMatch>;
+  { searches in the string aText starting at position aOffset within aCount bytes, passing
+    the found matches to the callback aOnMatch(); immediately exits the procedure if aOnMatch()
+    returns False; any value of aCount < 1 implies a search to the end of the text }
+    procedure Search(const aText: rawbytestring; aOnMatch: TOnMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
+    procedure Search(const aText: rawbytestring; aOnMatch: TNestMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
+  { returns True if at least one match is found in the string aText, starting at position aOffset
+    within aCount bytes; any value of aCount < 1 implies a search to the end of the text }
+    function  ContainsMatch(const aText: rawbytestring; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
+    property  NodeCount: SizeInt read FNodeCount;
+    property  PatternCount: SizeInt read FWordCount;
+    property  AlphabetSize: Integer read FAlphabetSize;
   end;
 
 { the following functions are only suitable for single-byte encodings }
@@ -4432,6 +4477,237 @@ begin
       end;
   until I = NULL_INDEX;
   System.SetLength(Result, J);
+end;
+
+{ TACSearchFsm }
+
+function TACSearchFsm.NewNode: SizeInt;
+begin
+  if FNodeCount = System.Length(FTrie) then
+    System.SetLength(FTrie, FNodeCount * 2);
+  System.SetLength(FTrie[FNodeCount].NextMove, FAlphabetSize);
+  Result := FNodeCount;
+  Inc(FNodeCount);
+end;
+
+procedure TACSearchFsm.BuildCodeTable(const aList: array of rawbytestring);
+var
+  I: SizeInt;
+  p, pEnd: PByte;
+begin
+  FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
+  for I := 0 to System.High(aList) do
+    begin
+      p := Pointer(aList[I]);
+      pEnd := p + System.Length(aList[I]);
+      while p < pEnd do
+        begin
+          if FCodeTable[p^] = -1 then
+            begin
+              FCodeTable[p^] := FAlphabetSize;
+              Inc(FAlphabetSize);
+            end;
+          Inc(p);
+        end;
+    end;
+end;
+
+procedure TACSearchFsm.AddPattern(const aValue: rawbytestring);
+var
+  Curr, Next, I: SizeInt;
+  c: Integer;
+begin
+  Curr := 0;
+  for I := 1 to System.Length(aValue) do
+    begin
+      c := FCodeTable[Byte(aValue[I])];
+      Next := FTrie[Curr].NextMove[c];
+      // if no transition is found for current character, just add a new one
+      if Next = 0 then
+        begin
+          Next := NewNode;
+          FTrie[Curr].NextMove[c] := Next;
+        end
+      else;
+      Curr := Next;
+    end;
+  FWordCount += Ord(FTrie[Curr].Length = 0);
+  FTrie[Curr].Length := System.Length(aValue);
+end;
+
+procedure TACSearchFsm.BuildLinks;
+var
+  Queue: specialize TGLiteQueue<SizeInt>;
+  Curr, Next, Fail, Link: SizeInt;
+  c: Integer;
+begin // simple BFS
+  for Curr in FTrie[0].NextMove do
+    if Curr <> 0 then
+      Queue.Enqueue(Curr);
+  while Queue.TryDequeue(Curr) do
+    for c := 0 to Pred(FAlphabetSize) do
+      if FTrie[Curr].NextMove[c] <> 0 then
+        begin
+          Next := FTrie[Curr].NextMove[c];
+          Queue.Enqueue(Next);
+          Fail := FTrie[Curr].Failure;
+          repeat
+            Link := FTrie[Fail].NextMove[c];
+            if Link <> 0 then
+              begin
+                FTrie[Next].Failure := Link;
+                if FTrie[Link].Length <> 0 then
+                  FTrie[Next].Output := Link
+                else
+                  FTrie[Next].Output := FTrie[Link].Output;
+                break;
+              end;
+            if Fail = 0 then break;
+            Fail := FTrie[Fail].Failure;
+          until False;
+        end
+      else
+        FTrie[Curr].NextMove[c] := FTrie[FTrie[Curr].Failure].NextMove[c];
+end;
+
+constructor TACSearchFsm.Create(const aPatternList: array of rawbytestring);
+var
+  s: rawbytestring;
+begin
+  BuildCodeTable(aPatternList);
+  System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
+  NewNode;
+  for s in aPatternList do
+    AddPattern(s);
+  System.SetLength(FTrie, FNodeCount);
+  BuildLinks;
+end;
+
+function TACSearchFsm.ContainsPattern(const aValue: rawbytestring): Boolean;
+var
+  Curr, Next, I: SizeInt;
+  c: Integer;
+begin
+  Curr := 0;
+  for I := 1 to System.Length(aValue) do
+    begin
+      c := FCodeTable[Byte(aValue[I])];
+      if c = -1 then exit(False);
+      Next := FTrie[Curr].NextMove[c];
+      if Next = 0 then exit(False);
+      Curr := Next;
+    end;
+  Result := FTrie[Curr].Length <> 0;
+end;
+
+function TACSearchFsm.FindMatches(const aText: rawbytestring; aOffset, aCount: SizeInt): specialize TGArray<TMatch>;
+var
+  Matches: array of TMatch = nil;
+  mCount: SizeInt = 0;
+  function Collect(const m: TMatch): Boolean;
+  begin
+    if mCount = System.Length(Matches) then
+      System.SetLength(Matches, mCount * 2);
+    Matches[mCount] := m;
+    Inc(mCount);
+    Result := True;
+  end;
+begin
+  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
+  Search(aText, @Collect, aOffset, aCount);
+  System.SetLength(Matches, mCount);
+  Result := Matches;
+end;
+
+procedure TACSearchFsm.Search(const aText: rawbytestring; aOnMatch: TOnMatch; aOffset, aCount: SizeInt);
+var
+  State, Tmp, I: SizeInt;
+  c: Integer;
+begin
+  if aOffset < 1 then aOffset := 1;
+  if aCount < 1 then
+    aCount := System.Length(aText)
+  else
+    aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
+  State := 0;
+  for I := aOffset to aCount do
+    begin
+      c := FCodeTable[Byte(aText[I])];
+      if c = -1 then
+        begin
+          State := 0;
+          continue;
+        end;
+      State := FTrie[State].NextMove[c];
+      if State = 0 then continue;
+      if FTrie[State].Length <> 0 then
+        if not aOnMatch(TMatch.Make(Succ(I - FTrie[State].Length), FTrie[State].Length)) then exit;
+      Tmp := State;
+      while FTrie[Tmp].Output <> 0 do
+        begin
+          Tmp := FTrie[Tmp].Output;
+          if not aOnMatch(TMatch.Make(Succ(I - FTrie[Tmp].Length), FTrie[Tmp].Length)) then exit;
+        end;
+    end;
+end;
+
+procedure TACSearchFsm.Search(const aText: rawbytestring; aOnMatch: TNestMatch; aOffset, aCount: SizeInt);
+var
+  State, Tmp, I: SizeInt;
+  c: Integer;
+begin
+  if aOffset < 1 then aOffset := 1;
+  if aCount < 1 then
+    aCount := System.Length(aText)
+  else
+    aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
+  State := 0;
+  for I := aOffset to aCount do
+    begin
+      c := FCodeTable[Byte(aText[I])];
+      if c = -1 then
+        begin
+          State := 0;
+          continue;
+        end;
+      State := FTrie[State].NextMove[c];
+      if State = 0 then continue;
+      if FTrie[State].Length <> 0 then
+        if not aOnMatch(TMatch.Make(Succ(I - FTrie[State].Length), FTrie[State].Length)) then exit;
+      Tmp := State;
+      while FTrie[Tmp].Output <> 0 do
+        begin
+          Tmp := FTrie[Tmp].Output;
+          if not aOnMatch(TMatch.Make(Succ(I - FTrie[Tmp].Length), FTrie[Tmp].Length)) then exit;
+        end;
+    end;
+end;
+
+function TACSearchFsm.ContainsMatch(const aText: rawbytestring; aOffset, aCount: SizeInt): Boolean;
+var
+  State, I: SizeInt;
+  c: Integer;
+begin
+  if aOffset < 1 then aOffset := 1;
+  if aCount < 1 then
+    aCount := System.Length(aText)
+  else
+    aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
+  State := 0;
+  for I := aOffset to aCount do
+    begin
+      c := FCodeTable[Byte(aText[I])];
+      if c = -1 then
+        begin
+          State := 0;
+          continue;
+        end;
+      State := FTrie[State].NextMove[c];
+      if State = 0 then continue;
+      if FTrie[State].Length <> 0 then exit(True);
+      if FTrie[State].Output <> 0 then exit(True);
+    end;
+  Result := False;
 end;
 
 end.
