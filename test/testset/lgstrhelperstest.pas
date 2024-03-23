@@ -94,8 +94,6 @@ type
  type
    TACSearch = specialize TGUniqRef<TACSearchFsm>;
 
-   { TRbsHasher }
-
    TRbsHasher = record
      class function Equal(const L, R: rawbytestring): Boolean; static;
      class function HashCode(const s: rawbytestring): SizeInt; static;
@@ -111,6 +109,7 @@ type
    procedure TestCreate;
    procedure TestSearchDelegated;
    procedure TestSearchNested;
+   procedure TestContainsMatch;
  end;
 
 implementation
@@ -2176,6 +2175,17 @@ begin
   AssertTrue(ss.Count = Length(a));
   ac.Instance.Search(s, @TestMatch);
   AssertTrue(ss.IsEmpty);
+end;
+
+procedure TACSearchFsmTest.TestContainsMatch;
+var
+  ac: TACSearch;
+begin
+  {%H-}ac.Instance := TACSearchFsm.Create(['aa','bb']);
+  AssertFalse(ac.Instance.ContainsMatch('abcde'));
+  AssertFalse(ac.Instance.ContainsMatch('ababcde'));
+  AssertTrue(ac.Instance.ContainsMatch('aabcde'));
+  AssertTrue(ac.Instance.ContainsMatch('abbcde'));
 end;
 
 initialization
