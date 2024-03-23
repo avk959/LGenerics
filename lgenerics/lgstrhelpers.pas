@@ -4495,7 +4495,7 @@ var
   I: SizeInt;
   p, pEnd: PByte;
 begin
-  FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
+  System.FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
   for I := 0 to System.High(aList) do
     begin
       p := Pointer(aList[I]);
