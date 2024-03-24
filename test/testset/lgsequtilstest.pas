@@ -1,11 +1,14 @@
 unit lgSeqUtilsTest;
 
-{$mode objfpc}{$H+}{$warn 6058 off}
+{$mode objfpc}{$H+}{$warn 6058 off}{$modeswitch nestedprocvars}
 
 interface
 
 uses
-  LazUtf8, Classes, SysUtils, fpcunit, testregistry, lgUtils, lgSeqUtils, Math;
+  LazUtf8, Classes, SysUtils, Math, fpcunit, testregistry,
+  lgUtils,
+  lgHashSet,
+  lgSeqUtils;
 
 type
 
@@ -101,6 +104,33 @@ type
     procedure TestFindMatchesCI;
     procedure TestEnumerator;
     procedure TestEnumeratorCI;
+  end;
+
+  { TACSearchFsmTest }
+
+  TACSearchFsmTest = class(TTestCase)
+  private
+  type
+    TStrSetType = specialize TGLiteChainHashSet<string, string>;
+    TStrSet     = TStrSetType.TSet;
+  var
+    FMatchCount: Integer;
+    function OnMatch(const m: TMatch): Boolean;
+    function OnMatchFirst(const m: TMatch): Boolean;
+  published
+    procedure TestCreate;
+    procedure TestSearchDelegatedDfa;
+    procedure TestSearchDelegatedNfa;
+    procedure TestSearchDelegatedDfaCI;
+    procedure TestSearchDelegatedNfaCI;
+    procedure TestSearchNestedDfa;
+    procedure TestSearchNestedNfa;
+    procedure TestSearchNestedDfaCI;
+    procedure TestSearchNestedNfaCI;
+    procedure TestContainsMatchDfa;
+    procedure TestContainsMatchNfa;
+    procedure TestContainsMatchDfaCI;
+    procedure TestContainsMatchNfaCI;
   end;
 
 implementation
@@ -3534,12 +3564,348 @@ begin
   AssertTrue(I = 5);
 end;
 
+{ TACSearchFsmTest }
+
+function TACSearchFsmTest.OnMatch(const m: TMatch): Boolean;
+begin
+  Inc(FMatchCount);
+  Result := True;
+end;
+
+function TACSearchFsmTest.OnMatchFirst(const m: TMatch): Boolean;
+begin
+  Inc(FMatchCount);
+  Result := False;
+end;
+
+procedure TACSearchFsmTest.TestCreate;
+var
+  ac: IACSearchUtf8;
+begin
+  ac := CreateACSearchFsm([]);
+  AssertTrue(ac.PatternCount = 0);
+  AssertFalse(ac.ContainsPattern('a'));
+
+  ac := CreateACSearchFsm(['a','b']);
+  AssertFalse(ac.CaseInsensitive);
+  AssertTrue(ac.PatternCount = 2);
+  AssertTrue(ac.ContainsPattern('a'));
+  AssertTrue(ac.ContainsPattern('b'));
+
+  ac := CreateACSearchFsm(['a','b'], True);
+  AssertTrue(ac.CaseInsensitive);
+  AssertTrue(ac.PatternCount = 2);
+  AssertTrue(ac.ContainsPattern('A'));
+  AssertTrue(ac.ContainsPattern('B'));
+
+  ac := CreateACSearchFsm(['a','b'], False, True);
+  AssertFalse(ac.CaseInsensitive);
+  AssertTrue(ac.PatternCount = 2);
+  AssertTrue(ac.ContainsPattern('a'));
+  AssertTrue(ac.ContainsPattern('b'));
+
+  ac := CreateACSearchFsm(['a','b'], True, True);
+  AssertTrue(ac.CaseInsensitive);
+  AssertTrue(ac.PatternCount = 2);
+  AssertTrue(ac.ContainsPattern('A'));
+  AssertTrue(ac.ContainsPattern('B'));
+end;
+
+procedure TACSearchFsmTest.TestSearchDelegatedDfa;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+  s: string;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  ac := CreateACSearchFsm(a);
+  s := 'hishero';
+  FMatchCount := 0;
+  ac.Search(s, @OnMatch);
+  AssertTrue(FMatchCount = Length(a));
+
+  FMatchCount := 0;
+  ac.Search(s, @OnMatchFirst);
+  AssertTrue(FMatchCount = 1);
+end;
+
+procedure TACSearchFsmTest.TestSearchDelegatedNfa;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+  s: string;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  ac := CreateACSearchFsm(a, False, True);
+  s := 'hishero';
+  FMatchCount := 0;
+  ac.Search(s, @OnMatch);
+  AssertTrue(FMatchCount = Length(a));
+
+  FMatchCount := 0;
+  ac.Search(s, @OnMatchFirst);
+  AssertTrue(FMatchCount = 1);
+end;
+
+procedure TACSearchFsmTest.TestSearchDelegatedDfaCI;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+  s: string;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  ac := CreateACSearchFsm(a, True);
+  s := 'HISHERO';
+  FMatchCount := 0;
+  ac.Search(s, @OnMatch);
+  AssertTrue(FMatchCount = Length(a));
+
+  FMatchCount := 0;
+  ac.Search(s, @OnMatchFirst);
+  AssertTrue(FMatchCount = 1);
+end;
+
+procedure TACSearchFsmTest.TestSearchDelegatedNfaCI;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+  s: string;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  ac := CreateACSearchFsm(a, True, True);
+  s := 'HISHERO';
+  FMatchCount := 0;
+  ac.Search(s, @OnMatch);
+  AssertTrue(FMatchCount = Length(a));
+
+  FMatchCount := 0;
+  ac.Search(s, @OnMatchFirst);
+  AssertTrue(FMatchCount = 1);
+end;
+
+procedure TACSearchFsmTest.TestSearchNestedDfa;
+var
+  MatchCount: Integer = 0;
+  function NestMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := True;
+  end;
+  function FirstMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := False;
+  end;
+var
+  s: string;
+  ss: TStrSet;
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    ss.Remove(Copy(s, m.Offset, m.Length));
+    Result := True;
+  end;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  ac := CreateACSearchFsm(a);
+  s := 'hishero';
+
+  ac.Search(s, @NestMatch);
+  AssertTrue(MatchCount = Length(a));
+
+  MatchCount := 0;
+  ac.Search(s, @FirstMatch);
+  AssertTrue(MatchCount = 1);
+
+  ss.AddAll(a);
+  AssertTrue(ss.Count = Length(a));
+  ac.Search(s, @TestMatch);
+  AssertTrue(ss.IsEmpty);
+end;
+
+procedure TACSearchFsmTest.TestSearchNestedNfa;
+var
+  MatchCount: Integer = 0;
+  function NestMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := True;
+  end;
+  function FirstMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := False;
+  end;
+var
+  s: string;
+  ss: TStrSet;
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    ss.Remove(Copy(s, m.Offset, m.Length));
+    Result := True;
+  end;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  ac := CreateACSearchFsm(a, False, True);
+  s := 'hishero';
+
+  ac.Search(s, @NestMatch);
+  AssertTrue(MatchCount = Length(a));
+
+  MatchCount := 0;
+  ac.Search(s, @FirstMatch);
+  AssertTrue(MatchCount = 1);
+
+  ss.AddAll(a);
+  AssertTrue(ss.Count = Length(a));
+  ac.Search(s, @TestMatch);
+  AssertTrue(ss.IsEmpty);
+end;
+
+procedure TACSearchFsmTest.TestSearchNestedDfaCI;
+var
+  MatchCount: Integer = 0;
+  function NestMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := True;
+  end;
+  function FirstMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := False;
+  end;
+var
+  s: string;
+  ss: TStrSet;
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    ss.Remove(Copy(s, m.Offset, m.Length));
+    Result := True;
+  end;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+  I: Integer;
+begin
+  a := ['HER', 'İS', 'HİS', 'SHE', 'Hİ', 'HE', 'İ', 'HERO'];
+  ac := CreateACSearchFsm(a, True);
+  s := 'hishero';
+
+  ac.Search(s, @NestMatch);
+  AssertTrue(MatchCount = Length(a));
+
+  MatchCount := 0;
+  ac.Search(s, @FirstMatch);
+  AssertTrue(MatchCount = 1);
+
+  for I := 0 to High(a) do
+    ss.Add(Utf8ToLower(a[I]));
+  AssertTrue(ss.Count = Length(a));
+  ac.Search(s, @TestMatch);
+  AssertTrue(ss.IsEmpty);
+end;
+
+procedure TACSearchFsmTest.TestSearchNestedNfaCI;
+var
+  MatchCount: Integer = 0;
+  function NestMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := True;
+  end;
+  function FirstMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := False;
+  end;
+var
+  s: string;
+  ss: TStrSet;
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    ss.Remove(Copy(s, m.Offset, m.Length));
+    Result := True;
+  end;
+var
+  ac: IACSearchUtf8;
+  a: TStringArray;
+  I: Integer;
+begin
+  a := ['HER', 'İS', 'HİS', 'SHE', 'Hİ', 'HE', 'İ', 'HERO'];
+  ac := CreateACSearchFsm(a, True, True);
+  s := 'hishero';
+
+  ac.Search(s, @NestMatch);
+  AssertTrue(MatchCount = Length(a));
+
+  MatchCount := 0;
+  ac.Search(s, @FirstMatch);
+  AssertTrue(MatchCount = 1);
+
+  for I := 0 to High(a) do
+    ss.Add(Utf8ToLower(a[I]));
+  AssertTrue(ss.Count = Length(a));
+  ac.Search(s, @TestMatch);
+  AssertTrue(ss.IsEmpty);
+end;
+
+procedure TACSearchFsmTest.TestContainsMatchDfa;
+var
+  ac: IACSearchUtf8;
+begin
+  ac := CreateACSearchFsm(['aa','bb']);
+  AssertFalse(ac.ContainsMatch('abcde'));
+  AssertFalse(ac.ContainsMatch('ababcde'));
+  AssertTrue(ac.ContainsMatch('bcdaae'));
+  AssertTrue(ac.ContainsMatch('acdbbe'));
+end;
+
+procedure TACSearchFsmTest.TestContainsMatchNfa;
+var
+  ac: IACSearchUtf8;
+begin
+  ac := CreateACSearchFsm(['aa','bb'], False, True);
+  AssertFalse(ac.ContainsMatch('abcde'));
+  AssertFalse(ac.ContainsMatch('ababcde'));
+  AssertTrue(ac.ContainsMatch('bcdaae'));
+  AssertTrue(ac.ContainsMatch('acdbbe'));
+end;
+
+procedure TACSearchFsmTest.TestContainsMatchDfaCI;
+var
+  ac: IACSearchUtf8;
+begin
+  ac := CreateACSearchFsm(['aA','Bb'], True);
+  AssertFalse(ac.ContainsMatch('abcde'));
+  AssertFalse(ac.ContainsMatch('ababcde'));
+  AssertTrue(ac.ContainsMatch('bcdaae'));
+  AssertTrue(ac.ContainsMatch('acdbbe'));
+end;
+
+procedure TACSearchFsmTest.TestContainsMatchNfaCI;
+var
+  ac: IACSearchUtf8;
+begin
+  ac := CreateACSearchFsm(['aA','Bb'], True, True);
+  AssertFalse(ac.ContainsMatch('abcde'));
+  AssertFalse(ac.ContainsMatch('ababcde'));
+  AssertTrue(ac.ContainsMatch('bcdaae'));
+  AssertTrue(ac.ContainsMatch('acdbbe'));
+end;
+
 
 initialization
 
   RegisterTest(TTestUnicodeUtils);
   RegisterTest(TTestSeqUtils);
   RegisterTest(TTestFuzzySearchBitap);
+  RegisterTest(TACSearchFsmTest);
 
 end.
 
