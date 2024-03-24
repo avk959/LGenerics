@@ -2110,6 +2110,10 @@ begin
   AssertTrue(ac.Instance.NodeCount = 1);
   AssertTrue(ac.Instance.PatternCount = 0);
   AssertFalse(ac.Instance.ContainsPattern('a'));
+
+  ac.Instance := TACSearchFsm.Create(['', '']);
+  AssertTrue(ac.Instance.PatternCount = 0);
+
   ac.Instance := TACSearchFsm.Create(['a','b']);
   AssertTrue(ac.Instance.AlphabetSize <> 0);
   AssertTrue(ac.Instance.NodeCount > 1);

@@ -4514,6 +4514,7 @@ var
   c, Loc: Ucs4Char;
   Code: Integer;
 begin
+  if aValue = '' then exit;
   Curr := 0;
   p := Pointer(aValue);
   pEnd := p + System.Length(aValue);
@@ -4895,6 +4896,7 @@ var
   p, pEnd: PByte;
   c, Loc: Ucs4Char;
 begin
+  if aValue = '' then exit;
   Curr := 0;
   LenUtf8 := 0;
   p := Pointer(aValue);

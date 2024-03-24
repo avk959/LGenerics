@@ -418,7 +418,7 @@ type
     FAlphabetSize: Integer;
     function  NewNode: SizeInt;
     procedure BuildCodeTable(const aList: array of rawbytestring);
-    procedure AddPattern(const aValue: rawbytestring); virtual;
+    procedure AddPattern(const aValue: rawbytestring);
     procedure BuildLinks;
   public
     constructor Create(const aPatternList: array of rawbytestring);
@@ -4517,6 +4517,7 @@ var
   Curr, Next, I: SizeInt;
   c: Integer;
 begin
+  if aValue = '' then exit;
   Curr := 0;
   for I := 1 to System.Length(aValue) do
     begin

@@ -3586,6 +3586,12 @@ begin
   AssertTrue(ac.PatternCount = 0);
   AssertFalse(ac.ContainsPattern('a'));
 
+  ac := CreateACSearchFsm(['', '']);
+  AssertTrue(ac.PatternCount = 0);
+
+  ac := CreateACSearchFsm(['', ''], False, True);
+  AssertTrue(ac.PatternCount = 0);
+
   ac := CreateACSearchFsm(['a','b']);
   AssertFalse(ac.CaseInsensitive);
   AssertTrue(ac.PatternCount = 2);
