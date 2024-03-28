@@ -3562,7 +3562,7 @@ end;
 function Utf8ToLower(const s: string): string;
 var
   pv, pr, pEnd: PByte;
-  LoC: DWord;
+  c, LoC: DWord;
   PtSize: SizeInt;
   r : string;
 begin
@@ -3574,7 +3574,14 @@ begin
   PtSize := 0;
   while pv < pEnd do
     begin
-      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, PtSize))^.SimpleLowerCase;
+      c := CodePointToUcs4Char(pv, PtSize);
+      if c < $80 then
+        if c in [$41..$5a] then // A..Z
+          LoC := c + 32
+        else
+          LoC := 0
+      else
+        LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
       if LoC = 0 then
         begin
           case PtSize of
@@ -3597,7 +3604,7 @@ end;
 function Utf8ToUpper(const s: string): string;
 var
   pv, pr, pEnd: PByte;
-  LoC: DWord;
+  c, UpC: DWord;
   PtSize: SizeInt;
   r : string;
 begin
@@ -3609,8 +3616,15 @@ begin
   PtSize := 0;
   while pv < pEnd do
     begin
-      LoC := UnicodeData.GetProps(CodePointToUcs4Char(pv, PtSize))^.SimpleUpperCase;
-      if LoC = 0 then
+      c := CodePointToUcs4Char(pv, PtSize);
+      if c < $80 then
+        if c in [$61..$7a] then // a..z
+          UpC := c - 32
+        else
+          UpC := 0
+      else
+        UpC := UnicodeData.GetProps(c)^.SimpleUpperCase;
+      if UpC = 0 then
         begin
           case PtSize of
             1: pr^ := pv^;
@@ -3622,7 +3636,7 @@ begin
           pr += PtSize;
         end
       else
-        Ucs4Char2Utf8Buffer(pr, LoC);
+        Ucs4Char2Utf8Buffer(pr, UpC);
       pv += PtSize;
     end;
   System.SetLength(r, pr - PByte(r));
@@ -4840,8 +4854,7 @@ begin
     DoSearch(aText, aOnMatch, aOffset, aCount);
 end;
 
-function TACSearchUtf8Dfa.ContainsMatch(const aText: string; aOffset: SizeInt;
-  aCount: SizeInt): Boolean;
+function TACSearchUtf8Dfa.ContainsMatch(const aText: string; aOffset, aCount: SizeInt): Boolean;
 var
   State, cLen: SizeInt;
   p, pEnd: PByte;
@@ -4960,7 +4973,6 @@ var
   State, NextState, cLen: SizeInt;
   p, pEnd, pText: PByte;
   c: Ucs4Char;
-  Code: Integer;
 begin
 {$DEFINE DoSearchMacro :=
   if aOffset < 1 then aOffset := 1;
@@ -4998,7 +5010,6 @@ var
   State, NextState, cLen: SizeInt;
   p, pEnd, pText: PByte;
   c: Ucs4Char;
-  Code: Integer;
 begin
   DoSearchMacro;
 end;
@@ -5010,7 +5021,6 @@ var
   pQueue: PSizeInt;
   p, pEnd, pText: PByte;
   c, Loc: Ucs4Char;
-  Code: Integer;
 begin
 {$DEFINE DoSearchCIMacro :=
   if aOffset < 1 then aOffset := 1;
@@ -5062,7 +5072,6 @@ var
   pQueue: PSizeInt;
   p, pEnd, pText: PByte;
   c, Loc: Ucs4Char;
-  Code: Integer;
 begin
   DoSearchCIMacro;
 end;
