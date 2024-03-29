@@ -1186,6 +1186,14 @@ type
     Length: SizeInt;
     constructor Make(aOfs, aLen: SizeInt);
   end;
+
+  TIndexMatch = record
+    Offset,
+    Length,
+    Index: SizeInt;
+    constructor Make(aOfs, aLen, aIdx: SizeInt);
+  end;
+
   TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
 
 const
@@ -3729,6 +3737,15 @@ constructor TSeqMatch.Make(aOfs, aLen: SizeInt);
 begin
   Offset := aOfs;
   Length := aLen;
+end;
+
+{ TIndexMatch }
+
+constructor TIndexMatch.Make(aOfs, aLen, aIdx: SizeInt);
+begin
+  Offset := aOfs;
+  Length := aLen;
+  Index := aIdx;
 end;
 
 end.
