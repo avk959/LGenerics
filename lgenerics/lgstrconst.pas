@@ -34,6 +34,7 @@ resourcestring
   SECantAccessEmpty        = 'Can not access element of empty container';
   SEClassCapacityExceedFmt = '%s maximum capacity exceeded(%d)';
   SECapacityExceedFmt      = 'Maximum capacity exceeded(%d)';
+  SEMaxNodeCountExceedFmt  = 'Maximum number of nodes exceeded(%d)';
   SECantUpdDuringIterFmt   = 'Can not update %s during enumeration';
   SEArrIndexOutOfBoundsFmt = 'Array index out of bounds(%d)';
   SEClassIdxOutOfBoundsFmt = '%s index out of bounds(%d)';
