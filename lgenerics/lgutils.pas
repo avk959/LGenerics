@@ -1194,6 +1194,17 @@ type
     constructor Make(aOfs, aLen, aIdx: SizeInt);
   end;
 
+  TSetMatchMode = (
+    smmDefault,         { all matches including overlapping ones, in the order provided by the algorithm }
+    smmLeftmostFirst,   { in case of overlapping matches, the leftmost one is selected;
+                          in case of ambiguity, the one closest to the beginning of the list of patterns
+                          is selected }
+    smmLeftmostLongest, { in case of overlapping matches, the leftmost one is selected;
+                          in case of ambiguity, the longest one is selected }
+    smmLeftmostShortest { in case of overlapping matches, the leftmost one is selected;
+                          in case of ambiguity, the shortest one is selected }
+    );
+
   TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
 
 const
