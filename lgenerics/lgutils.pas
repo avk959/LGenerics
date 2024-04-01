@@ -65,6 +65,7 @@ type
   TGSortProc<T>         = procedure(var A: array of T; o: TSortOrder = soAsc);
 
   ELGCapacityExceed     = class(Exception);
+  ELGMaxItemsExceed     = class(Exception);
   ELGAccessEmpty        = class(Exception);
   ELGOptional           = class(Exception);
   ELGFuture             = class(Exception);
