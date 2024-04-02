@@ -93,6 +93,7 @@ type
  private
  type
    TACSearch = specialize TGUniqRef<TACSearchFsm>;
+   TMatch    = TACSearchFsm.TMatch;
 
    TRbsHasher = record
      class function Equal(const L, R: rawbytestring): Boolean; static;
@@ -101,6 +102,7 @@ type
 
    TStrSetType = specialize TGLiteChainHashSet<rawbytestring, TRbsHasher>;
    TStrSet     = TStrSetType.TSet;
+   TRbsHelper  = specialize TGComparableArrayHelper<rawbytestring>;
  var
    FMatchCount: Integer;
    function OnMatch(const m: TMatch): Boolean;
@@ -110,6 +112,9 @@ type
    procedure TestSearchDelegated;
    procedure TestSearchNested;
    procedure TestContainsMatch;
+   procedure TestIndexOfPattern;
+   procedure TestFirstMatch;
+   procedure TestFindMatches;
  end;
 
 implementation
@@ -2112,11 +2117,12 @@ begin
   AssertFalse(ac.Instance.ContainsPattern('a'));
 
   ac.Instance := TACSearchFsm.Create(['', '']);
+  AssertTrue(ac.Instance.NodeCount = 1);
   AssertTrue(ac.Instance.PatternCount = 0);
 
-  ac.Instance := TACSearchFsm.Create(['a','b']);
+  ac.Instance := TACSearchFsm.Create(['a','b', 'a', 'b']);
   AssertTrue(ac.Instance.AlphabetSize <> 0);
-  AssertTrue(ac.Instance.NodeCount > 1);
+  AssertTrue(ac.Instance.NodeCount = 3);
   AssertTrue(ac.Instance.PatternCount = 2);
   AssertTrue(ac.Instance.ContainsPattern('a'));
   AssertTrue(ac.Instance.ContainsPattern('b'));
@@ -2190,6 +2196,76 @@ begin
   AssertFalse(ac.Instance.ContainsMatch('ababcde'));
   AssertTrue(ac.Instance.ContainsMatch('aabcde'));
   AssertTrue(ac.Instance.ContainsMatch('abbcde'));
+end;
+
+procedure TACSearchFsmTest.TestIndexOfPattern;
+var
+  ac: TACSearch;
+begin
+  {%H-}ac.Instance := TACSearchFsm.Create([]);
+  AssertTrue(ac.Instance.IndexOfPattern('a') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('b') = -1);
+  ac.Instance := TACSearchFsm.Create(['aa','ab','ac']);
+  AssertTrue(ac.Instance.IndexOfPattern('a') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('aa') = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('ab') = 1);
+  AssertTrue(ac.Instance.IndexOfPattern('ac') = 2);
+end;
+
+procedure TACSearchFsmTest.TestFirstMatch;
+var
+  ac: TACSearch;
+  s: string;
+  m: TMatch;
+begin
+  s := '012abcdefgh';
+  {%H-}ac.Instance := TACSearchFsm.Create(['0124','234','12345', '1234567','1234','23','890123']);
+  m := ac.Instance.FirstMatch(s);
+  AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
+  s := '01234567890123456789';
+  m := ac.Instance.FirstMatch(s);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = '23'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = '12345'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = '1234567'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = '1234'));
+end;
+
+procedure TACSearchFsmTest.TestFindMatches;
+var
+  ac: TACSearch;
+  s: string;
+  a: TStringArray;
+  m: array of TMatch;
+  I: Integer;
+begin
+  s := '012abcdefgh';
+  a := ['0124','234','12345', '1234567','1234','23','890123','6789012', '5678901'];
+  {%H-}ac.Instance := TACSearchFsm.Create(a);
+  m := ac.Instance.FindMatches(s);
+  AssertTrue(m = nil);
+
+  s := '01234567890123456789';
+  m := ac.Instance.FindMatches(s);
+  AssertTrue(Length(m) = 13);
+
+  m := ac.Instance.FindMatches(s, smmLeftmostFirst);
+  AssertTrue(Length(m) = 2);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '12345');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '6789012');
+
+  m := ac.Instance.FindMatches(s, smmLeftmostLongest);
+  AssertTrue(Length(m) = 2);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '1234567');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '890123');
+
+  m := ac.Instance.FindMatches(s, smmLeftmostShortest);
+  AssertTrue(Length(m) = 3);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '1234');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '5678901');
+  AssertTrue(Copy(s, m[2].Offset, m[2].Length) = '23');
 end;
 
 initialization
