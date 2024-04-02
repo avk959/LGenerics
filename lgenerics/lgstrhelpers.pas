@@ -437,7 +437,7 @@ type
     function  DoFindFirst(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     function  DoFindAll(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     procedure DoSearch(const s: rawbytestring; aOffset, aCount: SizeInt);
-    procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode);
+    class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
   public
     constructor Create(const aPatternList: array of rawbytestring);
     constructor Create(aPatternEnum: IStrEnumerable);
@@ -4789,7 +4789,7 @@ begin
   Result := L.Offset < R.Offset;
 end;
 
-procedure TACSearchFsm.DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode);
+class procedure TACSearchFsm.DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode);
 var
   Count, I, Len, Ofs: SizeInt;
 begin
