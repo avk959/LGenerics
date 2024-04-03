@@ -2114,7 +2114,7 @@ begin
   AssertTrue(ac.Instance.AlphabetSize = 0);
   AssertTrue(ac.Instance.NodeCount = 1);
   AssertTrue(ac.Instance.PatternCount = 0);
-  AssertFalse(ac.Instance.ContainsPattern('a'));
+  AssertFalse(ac.Instance.IsMatch('a'));
 
   ac.Instance := TACSearchFsm.Create(['', '']);
   AssertTrue(ac.Instance.NodeCount = 1);
@@ -2124,8 +2124,8 @@ begin
   AssertTrue(ac.Instance.AlphabetSize <> 0);
   AssertTrue(ac.Instance.NodeCount = 3);
   AssertTrue(ac.Instance.PatternCount = 2);
-  AssertTrue(ac.Instance.ContainsPattern('a'));
-  AssertTrue(ac.Instance.ContainsPattern('b'));
+  AssertTrue(ac.Instance.IsMatch('a'));
+  AssertTrue(ac.Instance.IsMatch('b'));
 end;
 
 procedure TACSearchFsmTest.TestSearchDelegated;

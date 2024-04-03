@@ -397,8 +397,6 @@ type
 
   { TACSearchFsm: Aho-Corasick automation(DFA) for the exact set matching problem }
   TACSearchFsm = class
-  const
-    DEF_BUF_SIZE   = $10000;
   type
     TMatch         = LgUtils.TIndexMatch;
     TOnMatch       = specialize TGOnTest<TMatch>;
@@ -445,7 +443,7 @@ type
     otherwise returns -1 }
     function  IndexOfPattern(const aValue: rawbytestring): SizeInt;
   { returns True if the instance contains such a pattern, False otherwise }
-    function  ContainsPattern(const aValue: rawbytestring): Boolean;
+    function  IsMatch(const aValue: rawbytestring): Boolean;
   { returns the first(according to the specified mode) match, if any, otherwise returns stub(0,0,-1) }
     function  FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode = smmDefault;
                          aOffset: SizeInt = 1; aCount: SizeInt = 0): TMatch;
@@ -4867,7 +4865,7 @@ begin
       Result := Index;
 end;
 
-function TACSearchFsm.ContainsPattern(const aValue: rawbytestring): Boolean;
+function TACSearchFsm.IsMatch(const aValue: rawbytestring): Boolean;
 begin
   Result := IndexOfPattern(aValue) <> NULL_INDEX;
 end;
