@@ -1196,7 +1196,8 @@ type
   end;
 
   TSetMatchMode = (
-    smmDefault,         { all matches including overlapping ones, in the order provided by the algorithm }
+    smmDefault,         { all matches are accepted, including overlapping ones, in the order provided
+                          by the algorithm }
     smmLeftmostFirst,   { in case of overlapping matches, the leftmost one is selected;
                           in case of ambiguity, the one closest to the beginning of the list of patterns
                           is selected }
