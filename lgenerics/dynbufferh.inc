@@ -303,7 +303,7 @@
 
   var
     FItems: TArray;
-  private
+  //private
     FCount,
     FHead: SizeInt;
     function  GetCapacity: SizeInt; inline;
