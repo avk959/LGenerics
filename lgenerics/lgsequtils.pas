@@ -533,14 +533,14 @@ type
     function  GetNodeCount: SizeInt;
     function  GetPatternCount: SizeInt;
     function  GetAlphabetSize: SizeInt;
-    function  IndexOfPattern(const a: array of AnsiChar): SizeInt;
-    function  IndexOfPattern(const s: string): SizeInt;
+  { if the string s, starting at index aOffset and within aCount bytes, matches one of the patterns,
+    returns the index of that pattern, otherwise returns -1 }
+    function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt;
   { returns True if the string s starting at index aOffset and within aCount bytes,
-    matches one of the specified patterns, returning the index of that pattern in aIndex,
-    otherwise returns False; any value of aCount < 1 implies a search to the end of the string }
-    function  IsMatch(const s: string; out aIndex: SizeInt; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
-  { same as above for the case where the pattern index is not of interest }
+    matches one of the specified patterns, otherwise returns False;
+    any value of aCount < 1 implies a search to the end of the string }
     function  IsMatch(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
+  { returns the very first match, if any, otherwise returns stub (0,0,-1)}
     function  FirstMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): TAcMatch;
   { returns an array of all matches found in string s according to the specified matching mode
     aMode, starting at position aOffset within aCount bytes; any value of aCount < 1 implies
@@ -4564,9 +4564,7 @@ type
     function  TryBuildFsm(const aPatternList: array of string): Boolean; virtual; abstract;
     function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean; virtual; abstract;
     function  Clone: IACSearchFsmUtf8; virtual; abstract;
-    function  IndexOfPattern(const a: array of AnsiChar): SizeInt; virtual; abstract;
-    function  IndexOfPattern(const s: string): SizeInt;
-    function  IsMatch(const s: string; out aIndex: SizeInt; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
+    function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; virtual; abstract;
     function  IsMatch(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
     function  FirstMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): TMatch;
     function  FindMatches(const aText: string; aMode: TSetMatchMode = smmDefault; aOffset: SizeInt = 1;
@@ -4617,7 +4615,7 @@ type
     function  TryBuildFsm(const aPatternList: array of string): Boolean; override;
     function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean; override;
     function  Clone: IACSearchFsmUtf8; override;
-    function  IndexOfPattern(const a: array of AnsiChar): SizeInt; override;
+    function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; override;
     property  AlphabetSize: Int32 read FAlphabetSize;
   end;
 
@@ -4698,7 +4696,7 @@ type
     function  TryBuildFsm(const aPatternList: array of string): Boolean; override;
     function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean; override;
     function  Clone: IACSearchFsmUtf8; override;
-    function  IndexOfPattern(const a: array of AnsiChar): SizeInt; override;
+    function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; override;
   end;
 
   { TACNfaCIUtf8 }
@@ -5030,31 +5028,9 @@ begin
   inherited;
 end;
 
-function TACFsmUtf8.IndexOfPattern(const s: string): SizeInt;
+function TACFsmUtf8.IsMatch(const s: string; aOffset, aCount: SizeInt): Boolean;
 begin
-  if s = '' then exit(NULL_INDEX);
-  Result := IndexOfPattern(s[1..System.Length(s)]);
-end;
-
-function TACFsmUtf8.IsMatch(const s: string; out aIndex: SizeInt; aOffset, aCount: SizeInt): Boolean;
-begin
-  aIndex := NULL_INDEX;
-  if s = '' then exit(False);
-  if aOffset < 1 then aOffset := 1;
-  if aOffset > System.Length(s) then exit(False);
-  if aCount < 1 then
-    aCount := System.Length(s)
-  else
-    aCount := Math.Min(Pred(aOffset + aCount), System.Length(s));
-  aIndex := IndexOfPattern(s[aOffset..aCount]);
-  Result := aIndex <> NULL_INDEX;
-end;
-
-function TACFsmUtf8.IsMatch(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := IsMatch(s, Dummy, aOffset, aCount);
+  Result := IndexOfPattern(s, aOffset, aCount) <> NULL_INDEX;
 end;
 
 function TACFsmUtf8.FirstMatch(const aText: string; aOffset, aCount: SizeInt): TMatch;
@@ -5432,16 +5408,14 @@ begin
   Result := Inst;
 end;
 
-function TACDfaUtf8.IndexOfPattern(const a: array of AnsiChar): SizeInt;
+function TACDfaUtf8.IndexOfPattern(const s: string; aOffset, aCount: SizeInt): SizeInt;
 var
   p, pEnd: PByte;
   Curr, Next, Code: Int32;
 begin
   Result := NULL_INDEX;
-  if System.Length(a) = 0 then exit;
+  if not DoProlog(s, aOffset, aCount, p, pEnd) then exit;
   Curr := 0;
-  p := PByte(@a[0]);
-  pEnd := p + System.Length(a);
   while p < pEnd do
     begin
       if CaseInsensitive then
@@ -5962,16 +5936,14 @@ begin
   Result := Inst;
 end;
 
-function TACNfaUtf8.IndexOfPattern(const a: array of AnsiChar): SizeInt;
+function TACNfaUtf8.IndexOfPattern(const s: string; aOffset, aCount: SizeInt): SizeInt;
 var
   p, pEnd: PByte;
   Curr, Next: Int32;
   c: Ucs4Char;
 begin
   Result := NULL_INDEX;
-  if System.Length(a) = 0 then exit;
-  p := PByte(@a[0]);
-  pEnd := p + System.Length(a);
+  if not DoProlog(s, aOffset, aCount, p, pEnd) then exit;
   Curr := 0;
   while p < pEnd do
     begin
