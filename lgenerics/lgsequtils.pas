@@ -3422,6 +3422,58 @@ begin
   Result := UNICODE_BAD_CHAR;
 end;
 
+function CodePointToUcs4Char(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char;
+begin
+  case p^ of
+    0..$7f:
+      begin
+        aPtSize := 1;
+        exit(p^);
+      end;
+    $c2..$df:
+      if (aLen > 1) and (p[1] in [$80..$bf]) then begin
+        aPtSize := 2;
+        exit(Ucs4Char(Ucs4Char(p[0] and $1f) shl 6 or Ucs4Char(p[1] and $3f)));
+      end;
+    $e0:
+      if (aLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2] and $3f)));
+      end;
+    $e1..$ec, $ee..$ef:
+      if (aLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+      end;
+    $ed:
+      if (aLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+        aPtSize := 3;
+        exit(Ucs4Char(Ucs4Char(p[0]and $f)shl 12 or Ucs4Char(p[1]and $3f)shl 6 or Ucs4Char(p[2]and $3f)));
+      end;
+    $f0:
+      if (aLen > 3) and (p[1] in [$90..$bf]) and (p[2] in [$80..$bf]) and (p[3] in [$80..$bf]) then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
+    $f1..$f3:
+      if (aLen > 3) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) and (p[3] in [$80..$bf]) then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
+    $f4:
+      if (aLen > 3) and (p[1] in [$80..$8f]) and (p[2] in [$80..$bf]) and (p[3] in [$80..$bf]) then begin
+        aPtSize := 4;
+        exit(Ucs4Char(Ucs4Char(p[0] and $7) shl 18 or Ucs4Char(p[1] and $3f) shl 12 or
+             Ucs4Char(p[2] and $3f) shl 6 or Ucs4Char(p[3] and $3f)));
+      end;
+  else
+  end;
+  aPtSize := 1;
+  Result := UNICODE_BAD_CHAR;
+end;
+
 function Utf8Len(const s: rawbytestring): SizeInt;
 var
   I, StrLen: SizeInt;
@@ -4513,9 +4565,12 @@ type
     TIntQueue   = specialize TGLiteQueue<Int32>;
     TSortHelper = specialize TGRegularArrayHelper<TMatch>;
   const
-    LETTER_CATEGORIES = [TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
-      TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucModifierLetter, TUnicodeCategory.ucOtherLetter];
-    LETTER_OR_DIGIT_CATEGORIES = LETTER_CATEGORIES + [TUnicodeCategory.ucDecimalNumber,TUnicodeCategory.ucLetterNumber];
+    LETTER_OR_DIGIT_CATEGORIES = [
+       TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
+       TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucModifierLetter,
+       TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucDecimalNumber,
+       TUnicodeCategory.ucLetterNumber, TUnicodeCategory.ucOtherNumber,
+       TUnicodeCategory.ucConnectPunctuation];
   var
     FQueue: array of TOfsEntry;
     FOnMatchHandler: TOnMatch;
@@ -4541,9 +4596,9 @@ type
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
     class function IsAlphaNum(c: Ucs4Char): Boolean; static; inline;
-    class function CpToUcs4(var p: PByte): Ucs4Char; static; inline;
-    class function CpToUcs4Lower(var p: PByte): Ucs4Char; static; inline;
-    class function CpToUcs4Lower(p: PByte; out aLen: SizeInt): Ucs4Char; static; inline;
+    class function CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
+    class function CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
+    class function CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; static; inline;
     class function DoProlog(const s: string; aOfs, aCount: SizeInt; out pText, pStart, pEnd: PByte): Boolean; static; inline;
     class function DoProlog(const s: string; aOfs, aCount: SizeInt; out pStart, pEnd: PByte): Boolean; static; inline;
     function  PushOffset(aQueueTop, aOffs: SizeInt): SizeInt; inline;
@@ -4772,19 +4827,19 @@ begin
   Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
 end;
 
-class function TACFsmUtf8.CpToUcs4(var p: PByte): Ucs4Char;
+class function TACFsmUtf8.CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char;
 var
-  Len: SizeInt;
+  PtSize: SizeInt;
 begin
-  Result := CodePointToUcs4Char(p, Len);
-  p += Len;
+  Result := CodePointToUcs4Char(p, aLen, PtSize);
+  p += PtSize;
 end;
 
-class function TACFsmUtf8.CpToUcs4Lower(var p: PByte): Ucs4Char;
+class function TACFsmUtf8.CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char;
 var
   c: Ucs4Char;
 begin
-  Result := CpToUcs4(p);
+  Result := CpToUcs4(p, aLen);
   if Result < $80 then
     if Result in [$41..$5a] then //A..Z
       Result += 32 else
@@ -4796,11 +4851,11 @@ begin
     end;
 end;
 
-class function TACFsmUtf8.CpToUcs4Lower(p: PByte; out aLen: SizeInt): Ucs4Char;
+class function TACFsmUtf8.CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char;
 var
   c: Ucs4Char;
 begin
-  Result := CodePointToUcs4Char(p, aLen);
+  Result := CodePointToUcs4Char(p, aLen, aPtSize);
   if Result < $80 then { duplicated because FPC 3.2.2 can't inline a common function }
     if Result in [$41..$5a] then //A..Z
       Result += 32 else
@@ -4868,7 +4923,7 @@ end;
 
 function TACFsmUtf8.OnWordBounds(pCurr, pEnd: PByte; aQueueTop, aWordLen: SizeInt): Boolean;
 begin
-  if (pCurr < pEnd) and IsAlphaNum(CpToUcs4(pCurr)) then exit(False);
+  if (pCurr < pEnd) and IsAlphaNum(CpToUcs4(pCurr, pEnd - pCurr)) then exit(False);
   aQueueTop := Pred(aQueueTop - aWordLen);
   if aQueueTop < 0 then aQueueTop += FQueueSize;
   Result := not IsAlphaNum(FQueue[aQueueTop].vChar);
@@ -5117,9 +5172,9 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        c := CpToUcs4Lower(p)
+        c := CpToUcs4Lower(p, pEnd - p)
       else
-        c := CpToUcs4(p);
+        c := CpToUcs4(p, pEnd - p);
       if c > BMP_MAX then exit(False);
       if FCodeTable[c] = -1 then
         begin
@@ -5185,9 +5240,9 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        Code := GetCharCode(CpToUcs4Lower(p))
+        Code := GetCharCode(CpToUcs4Lower(p, pEnd - p))
       else
-        Code := GetCharCode(CpToUcs4(p));
+        Code := GetCharCode(CpToUcs4(p, pEnd - p));
       Inc(LenUtf8);
       Next := FTrie[Curr].NextMove[Code];
       if Next = 0 then
@@ -5261,7 +5316,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4(p));
+      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -5286,7 +5341,7 @@ begin
   qTop := PushFirstOffset(s, Succ(p - pText));
   State := 0;
   while p < pEnd do begin
-    c := CpToUcs4(p);
+    c := CpToUcs4(p, pEnd - p);
     qTop := PushChar(qTop, c);
     State := GetNextMove(State, c);
     if State = 0 then continue;
@@ -5313,7 +5368,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4(p));
+      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
       if FTrie[State].Length <> 0 then exit(True);
       if FTrie[State].Output <> 0 then exit(True);
@@ -5333,7 +5388,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4(p);
+      c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
       State := GetNextMove(State, c);
       if State = 0 then continue;
@@ -5419,9 +5474,9 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        Code := GetCharCode(CpToUcs4Lower(p))
+        Code := GetCharCode(CpToUcs4Lower(p, pEnd - p))
       else
-        Code := GetCharCode(CpToUcs4(p));
+        Code := GetCharCode(CpToUcs4(p, pEnd - p));
       if Code = -1 then exit;
       Next := FTrie[Curr].NextMove[Code];
       if Next = 0 then exit;
@@ -5445,7 +5500,7 @@ begin
   State := 0;
   while p < pEnd do begin
     qTop := PushOffset(qTop, Succ(p - pText));
-    State := GetNextMove(State, CpToUcs4Lower(p));
+    State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
     if State = 0 then continue;
     with FTrie[State] do
       if Utf8Len <> 0 then
@@ -5477,7 +5532,7 @@ begin
   qTop := PushFirstOffset(s, Succ(p - pText));
   State := 0;
   while p < pEnd do begin
-    c := CpToUcs4Lower(p, Ofs);
+    c := CpToUcs4Lower(p, pEnd - p, Ofs);
     qTop := PushOffset(qTop, Succ(p - pText), c);
     p += Ofs;
     State := GetNextMove(State, c);
@@ -5512,7 +5567,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4Lower(p));
+      State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
       if State = 0 then continue;
       if FTrie[State].Length <> 0 then exit(True);
       if FTrie[State].Output <> 0 then exit(True);
@@ -5532,7 +5587,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4Lower(p);
+      c := CpToUcs4Lower(p, pEnd - p);
       qTop := PushChar(qTop, c);
       State := GetNextMove(State, c);
       if State = 0 then continue;
@@ -5721,9 +5776,9 @@ begin
   pEnd := p + System.Length(aValue);
   while p < pEnd do begin
     if CaseInsensitive then
-      c := CpToUcs4Lower(p)
+      c := CpToUcs4Lower(p, pEnd - p)
     else
-      c := CpToUcs4(p);
+      c := CpToUcs4(p, pEnd - p);
     Inc(LenUtf8);
     pNext := FTrie[Curr].NextMove.GetMutValueDef(c, -1);
     if pNext^ = -1 then
@@ -5781,7 +5836,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4(p);
+      c := CpToUcs4(p, pEnd - p);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
         State := FTrie[State].Failure;
@@ -5810,7 +5865,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4(p);
+      c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
@@ -5840,7 +5895,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4(p);
+      c := CpToUcs4(p, pEnd - p);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
         State := FTrie[State].Failure;
@@ -5863,7 +5918,7 @@ begin
   qTop := PushFirstOffset(s, Succ(p - pText));
   while p < pEnd do
     begin
-      c := CpToUcs4(p);
+      c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
@@ -5948,9 +6003,9 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        c := CpToUcs4Lower(p)
+        c := CpToUcs4Lower(p, pEnd - p)
       else
-        c := CpToUcs4(p);
+        c := CpToUcs4(p, pEnd - p);
       if not FTrie[Curr].NextMove.TryGetValue(c, Next) then exit;
       Curr := Next;
     end;
@@ -5974,7 +6029,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      c := CpToUcs4Lower(p);
+      c := CpToUcs4Lower(p, pEnd - p);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
         State := FTrie[State].Failure;
@@ -6010,7 +6065,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4Lower(p, Ofs);
+      c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
       NextState := 0;
@@ -6047,7 +6102,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4Lower(p);
+      c := CpToUcs4Lower(p, pEnd - p);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
         State := FTrie[State].Failure;
@@ -6070,7 +6125,7 @@ begin
   qTop := PushFirstOffset(s, Succ(p - pText));
   while p < pEnd do
     begin
-      c := CpToUcs4Lower(p);
+      c := CpToUcs4Lower(p, pEnd - p);
       qTop := PushChar(qTop, c);
       NextState := 0;
       while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
