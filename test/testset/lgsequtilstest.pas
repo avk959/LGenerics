@@ -77,6 +77,7 @@ type
 
     procedure ACStrReplaceTest;
     procedure ACStrReplaceCITest;
+    procedure ACStrReplaceListTest;
   end;
 
   { TTestSeqUtils }
@@ -3138,6 +3139,36 @@ begin
   AssertTrue(Res = 'İ ый нительный ок  по себе не , но ');
 end;
 
+procedure TTestUnicodeUtils.ACStrReplaceListTest;
+var
+  Src, Res, Keys, Subs: TStringArray;
+  RepCount: SizeInt;
+begin
+  Src := nil;
+  Keys := ['ascot','entru','remonstrative'];
+  Subs := [];
+  Res := ACStrReplaceList(Src, Keys, Subs, RepCount);
+  AssertTrue(RepCount = 0);
+  AssertTrue(Res = nil);
+  Src := [
+    'momenta noncontrastable ascots nonsubstantive jumbly epicoelian',
+    'knobstick unfathomed entrust equivale beautifiers',
+    'incommunicado incautelous menticide remonstratively pullen'];
+  Res := ACStrReplaceList(Src, Keys, Subs, RepCount);
+  AssertTrue(RepCount = 3);
+  AssertTrue(Length(Res) = 3);
+  AssertTrue(Res[0] = 'momenta noncontrastable s nonsubstantive jumbly epicoelian');
+  AssertTrue(Res[1] = 'knobstick unfathomed st equivale beautifiers');
+  AssertTrue(Res[2] = 'incommunicado incautelous menticide ly pullen');
+
+  Res := ACStrReplaceList(Src, Keys, Subs, RepCount, [sroOnlyWholeWords]);
+  AssertTrue(RepCount = 0);
+  AssertTrue(Length(Res) = 3);
+  AssertTrue(Res[0] = Src[0]);
+  AssertTrue(Res[1] = Src[1]);
+  AssertTrue(Res[2] = Src[2]);
+end;
+
 { TTestSeqUtils }
 
 procedure TTestSeqUtils.IsPrefixTest;
@@ -3963,7 +3994,10 @@ begin
     AssertTrue(ac.IndexOfPattern(a[I]) = I);
   s := 'неодинаковый';
   for I := 0 to High(a) do
-    AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])) = I);
+    begin
+      AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])) = I);
+      AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])-1) = -1);
+    end;
 end;
 
 procedure TACSearchFsmTest.TestIndexOfPatternNfa;
@@ -3983,7 +4017,10 @@ begin
     AssertTrue(ac.IndexOfPattern(a[I]) = I);
   s := 'неодинаковый';
   for I := 0 to High(a) do
-    AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])) = I);
+    begin
+      AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])) = I);
+      AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])-1) = -1);
+    end;
 end;
 
 procedure TACSearchFsmTest.TestIndexOfPatternDfaCI;
@@ -4004,7 +4041,10 @@ begin
     AssertTrue(ac.IndexOfPattern(b[I]) = I);
   s := 'НЕОДИНАКОВЫЙ';
   for I := 0 to High(b) do
-    AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])) = I);
+    begin
+      AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])) = I);
+      AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])-1) = -1);
+    end;
 end;
 
 procedure TACSearchFsmTest.TestIndexOfPatternNfaCI;
@@ -4025,7 +4065,10 @@ begin
     AssertTrue(ac.IndexOfPattern(b[I]) = I);
   s := 'НЕОДИНАКОВЫЙ';
   for I := 0 to High(b) do
-    AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])) = I);
+    begin
+      AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])) = I);
+      AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])-1) = -1);
+    end;
 end;
 
 procedure TACSearchFsmTest.TestFirstMatch;
