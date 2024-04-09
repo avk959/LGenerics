@@ -4595,7 +4595,7 @@ type
     procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); virtual; abstract;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
-    class function IsAlphaNum(c: Ucs4Char): Boolean; static; inline;
+    class function IsWordChar(c: Ucs4Char): Boolean; static; inline;
     class function CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
     class function CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
     class function CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; static; inline;
@@ -4706,13 +4706,13 @@ type
     FItems: array of TEntry;
     FCount: Int32;
     function  GetCapacity: Int32; inline;
-    function  DoFind(const aKey: Ucs4Char): PEntry;
-    function  FindInsertPos(const aKey: Ucs4Char): Int32;
-    function  DoAdd(const aKey: Ucs4Char): PEntry;
+    function  DoFind(aKey: Ucs4Char): PEntry;
+    function  DoFind(aKey: Ucs4Char; out aIndex: Int32): PEntry;
+    function  DoAdd(aKey: Ucs4Char; aIndex: Int32): PEntry;
   public
     function  GetEnumerator: TEnumerator;
-    function  GetMutValueDef(const aKey: Ucs4Char; const aDefault: Int32): PInt32; inline;
-    function  TryGetValue(const aKey: Ucs4Char; out aValue: Int32): Boolean;
+    function  GetMutValueDef(aKey: Ucs4Char; aDefault: Int32): PInt32; inline;
+    function  TryGetValue(aKey: Ucs4Char; out aValue: Int32): Boolean; inline;
     procedure TrimToFit;
     property  Count: Int32 read FCount;
     property  Capacity: Int32 read GetCapacity;
@@ -4820,7 +4820,7 @@ begin
   FWholeWordsOnly := aValue;
 end;
 
-class function TACFsmUtf8.IsAlphaNum(c: Ucs4Char): Boolean;
+class function TACFsmUtf8.IsWordChar(c: Ucs4Char): Boolean;
 begin
   if c < $80 then
     exit(AnsiChar(c) in ['A'..'Z','a'..'z','0'..'9', '_']);
@@ -4923,10 +4923,10 @@ end;
 
 function TACFsmUtf8.OnWordBounds(pCurr, pEnd: PByte; aQueueTop, aWordLen: SizeInt): Boolean;
 begin
-  if (pCurr < pEnd) and IsAlphaNum(CpToUcs4(pCurr, pEnd - pCurr)) then exit(False);
+  if (pCurr < pEnd) and IsWordChar(CpToUcs4(pCurr, pEnd - pCurr)) then exit(False);
   aQueueTop := Pred(aQueueTop - aWordLen);
   if aQueueTop < 0 then aQueueTop += FQueueSize;
-  Result := not IsAlphaNum(FQueue[aQueueTop].vChar);
+  Result := not IsWordChar(FQueue[aQueueTop].vChar);
 end;
 
 function TACFsmUtf8.PopOffset(aQueueTop, aWordLen: SizeInt): SizeInt;
@@ -4942,17 +4942,17 @@ begin
   Result := aOffset-1;
   if Byte(s[aOffset-1]) > $7f then
     begin
-      if aOffset < 3 then exit;
+      if (Byte(s[aOffset-1]) and $c0 <> $80) or (aOffset < 3) then exit;
       if Byte(s[aOffset-2]) and $c0 = $c0 then
         Result := aOffset-2
       else
         begin
-          if aOffset < 4 then exit;
+          if (Byte(s[aOffset-2]) and $c0 <> $80) or (aOffset < 4) then exit;
           if Byte(s[aOffset-3]) and $c0 = $c0 then
             Result := aOffset-3
           else
             begin
-              if aOffset < 5 then  exit;
+              if (Byte(s[aOffset-3]) and $c0 <> $80) or (aOffset < 5) then exit;
               if Byte(s[aOffset-4]) and $c0 = $c0 then
                 Result := aOffset-4;
             end;
@@ -5639,14 +5639,23 @@ begin
   Result := System.Length(FItems);
 end;
 
-function TUcs4ToIntMap.DoFind(const aKey: Ucs4Char): PEntry;
+function TUcs4ToIntMap.DoFind(aKey: Ucs4Char): PEntry;
 var
   L, R, M: Int32;
 begin
-  if (Count = 0) or (aKey < FItems[0].Key) or (aKey > FItems[Pred(FCount)].Key) then
-    exit(nil);
+  case Count of
+    0: exit(nil);
+    1:
+      if aKey = FItems[0].Key then
+        exit(PEntry(FItems))
+      else
+        exit(nil);
+  else
+    if (aKey < FItems[0].Key) or (aKey > FItems[Pred(Count)].Key) then
+      exit(nil);
+  end;
   L := 0;
-  R := Pred(FCount);
+  R := Pred(Count);
   while L < R do begin
     M := (L + R) shr 1;
     if FItems[M].Key < aKey then
@@ -5660,42 +5669,54 @@ begin
     Result := nil;
 end;
 
-function TUcs4ToIntMap.FindInsertPos(const aKey: Ucs4Char): Int32;
+function TUcs4ToIntMap.DoFind(aKey: Ucs4Char; out aIndex: Int32): PEntry;
 var
-  L, M, R: Int32;
+  L, R, M: Int32;
 begin
-  if Count = 0 then exit(0);
+  if Count = 0 then
+    begin
+      aIndex := 0;
+      exit(nil);
+    end;
   L := 0;
   R := Pred(Count);
   if aKey < FItems[L].Key then
-    exit(0)
+    begin
+      aIndex := 0;
+      exit(nil);
+    end
   else
     if aKey > FItems[R].Key then
-      exit(Count);
-  while L < R do
+      begin
+        aIndex := Count;
+        exit(nil);
+      end;
+  while L < R do begin
+    M := (L + R) shr 1;
+    if FItems[M].Key < aKey then
+      L := Succ(M)
+    else
+      R := M;
+  end;
+  if FItems[R].Key = aKey then
+    Result := @FItems[R]
+  else
     begin
-      M := (L + R) shr 1;
-      if FItems[M].Key < aKey then
-        L := Succ(M)
-      else
-        R := M;
+      aIndex := R;
+      Result := nil;
     end;
-  Result := R;
 end;
 
-function TUcs4ToIntMap.DoAdd(const aKey: Ucs4Char): PEntry;
-var
-  I: Int32;
+function TUcs4ToIntMap.DoAdd(aKey: Ucs4Char; aIndex: Int32): PEntry;
 begin
   if FItems <> nil then begin
     if Count = Capacity then
       System.SetLength(FItems, Count * 2);
-    I := FindInsertPos(aKey);
-    if I <> Count then
-      System.Move(FItems[I], FItems[I+1], (Count - I) * SizeOf(TEntry));
+    if aIndex <> Count then
+      System.Move(FItems[aIndex], FItems[aIndex+1], (Count - aIndex) * SizeOf(TEntry));
     Inc(FCount);
-    FItems[I].Key := aKey;
-    Result := @FItems[I];
+    FItems[aIndex].Key := aKey;
+    Result := @FItems[aIndex];
   end else begin
     System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY);
     FItems[0].Key := aKey;
@@ -5718,28 +5739,28 @@ begin
     end;
 end;
 
-function TUcs4ToIntMap.GetMutValueDef(const aKey: Ucs4Char; const aDefault: Int32): PInt32;
+function TUcs4ToIntMap.GetMutValueDef(aKey: Ucs4Char; aDefault: Int32): PInt32;
 var
   p: PEntry;
+  I: Int32;
 begin
-  p := DoFind(aKey);
-  if p = nil then begin
-    p := DoAdd(aKey);
-    p^.Value := aDefault;
-  end;
+  p := DoFind(aKey, I);
+  if p = nil then
+    begin
+      p := DoAdd(aKey, I);
+      p^.Value := aDefault;
+    end;
   Result := @p^.Value;
 end;
 
-function TUcs4ToIntMap.TryGetValue(const aKey: Ucs4Char; out aValue: Int32): Boolean;
+function TUcs4ToIntMap.TryGetValue(aKey: Ucs4Char; out aValue: Int32): Boolean;
 var
   p: PEntry;
 begin
   p := DoFind(aKey);
-  if p <> nil then begin
+  Result := p <> nil;
+  if Result then
     aValue := p^.Value;
-    exit(True);
-  end;
-  Result := False;
 end;
 
 procedure TUcs4ToIntMap.TrimToFit;
