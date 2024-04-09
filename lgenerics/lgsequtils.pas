@@ -570,7 +570,8 @@ type
 {$POP}
 
 { creates an instance of the Aho-Corasick automaton;
-  aPatterns(or aPatterEnum) specifies a set of search patterns;
+  aPatterns(or aPatterEnum) specifies a set of search patterns, in case of duplicate patterns,
+  only the first one will be taken into account;
   aIgnoreCase set to True specifies a case-insensitive search;
   by default the function tries to build a DFA first(DFA has noticeably better performance),
   which may not be possible if the patterns contain characters outside the BMP or the patterns
