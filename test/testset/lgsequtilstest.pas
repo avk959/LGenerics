@@ -4139,21 +4139,55 @@ end;
 procedure TACSearchFsmTest.TestFindMatchesOww;
 var
   ac: IACSearchFsmUtf8;
-  s: string;
+  s, s2: string;
   a: TStringArray;
   m: array of TMatch;
   I: Integer;
 begin
   a := ['самый','сомнительный','поход','сам','сом','ход'];
   s := 'самый сомнительный поход';
+
   ac := CreateACSearchFsm(a);
+
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 6);
   ac.OnlyWholeWords := True;
+
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 3);
   for I := 0 to High(m) do
     AssertTrue(m[I].Index = I);
+
+  m := ac.FindMatches(s, smmDefault, 11);
+  AssertTrue(Length(m) = 2);
+  for I := 0 to High(m) do
+    AssertTrue(m[I].Index = I+1);
+
+  s2 := StringReplace(s, ' ', 'о', []);
+  m := ac.FindMatches(s2, smmDefault, 13);
+  AssertTrue(Length(m) = 1);
+  AssertTrue(m[0].Index = 2);
+
+  ac := CreateACSearchFsm(a, False, True);
+
+  m := ac.FindMatches(s);
+  AssertTrue(Length(m) = 6);
+  ac.OnlyWholeWords := True;
+
+  m := ac.FindMatches(s);
+  AssertTrue(Length(m) = 3);
+  for I := 0 to High(m) do
+    AssertTrue(m[I].Index = I);
+
+  m := ac.FindMatches(s, smmDefault, 11);
+  AssertTrue(Length(m) = 2);
+  for I := 0 to High(m) do
+    AssertTrue(m[I].Index = I+1);
+
+  s2 := StringReplace(s, ' ', 'о', []);
+  m := ac.FindMatches(s2, smmDefault, 13);
+  AssertTrue(Length(m) = 1);
+  AssertTrue(m[0].Index = 2);
 end;
 
 procedure TACSearchFsmTest.TestContainsMatchDfa;
