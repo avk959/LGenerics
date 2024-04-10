@@ -786,6 +786,45 @@
         {"c": "d"},
         {"a": null}
       ]
+    },
+    {
+      "name": "non-singular existence, wildcard",
+      "selector" : "$[?@.*]",
+      "document" : [1, [], [2], {}, {"a": 3}],
+      "result": [
+        [2],
+        {"a": 3}
+      ]
+    },
+    {
+      "name": "non-singular existence, multiple",
+      "selector" : "$[?@[0, 0, 'a']]",
+      "document" : [1, [], [2], [2, 3], {"a": 3}, {"b": 4}, {"a": 3, "b": 4}],
+      "result": [
+        [2],
+        [2, 3],
+        {"a": 3},
+        {"a": 3, "b": 4}
+      ]
+    },
+    {
+      "name": "non-singular existence, slice",
+      "selector" : "$[?@[0:2]]",
+      "document" : [1, [], [2], [2, 3, 4], {}, {"a": 3}],
+      "result": [
+        [2],
+        [2, 3, 4]
+      ]
+    },
+    {
+      "name": "non-singular existence, negated",
+      "selector" : "$[?!@.*]",
+      "document" : [1, [], [2], {}, {"a": 3}],
+      "result": [
+        1,
+        [],
+        {}
+      ]
     }
   ]
 }

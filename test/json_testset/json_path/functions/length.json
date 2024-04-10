@@ -66,6 +66,34 @@
       "name": "too many params",
       "selector" : "$[?length(@.a,@.b)==1]",
       "invalid_selector": true
+    },
+    {
+      "name": "non-singular query arg",
+      "selector": "$[?length(@.*)<3]",
+      "invalid_selector": true
+    },
+    {
+      "name": "arg is a function expression",
+      "selector" : "$.values[?length(@.a)==length(value($..c))]",
+      "document" : {
+        "c": "cd",
+        "values": [{"a": "ab"}, {"a": "d"}]
+      },
+      "result": [
+        {"a": "ab"}
+      ]
+    },
+    {
+      "name": "arg is special nothing",
+      "selector" : "$[?length(value(@.a))>0]",
+      "document" : [
+          {"a": "ab"},
+          {"c": "d"},
+          {"a": null}
+      ],
+      "result": [
+        {"a": "ab"}
+      ]
     }
   ]
 }

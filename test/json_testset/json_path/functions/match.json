@@ -85,6 +85,26 @@
       "name": "too many params",
       "selector" : "$[?match(@.a,@.b,@.c)==1]",
       "invalid_selector": true
+    },
+    {
+      "name": "arg is a function expression",
+      "selector": "$.values[?match(@.a, value($..['regex']))]",
+      "document": {
+        "regex": "a.*",
+        "values": [
+          {
+            "a": "ab"
+          },
+          {
+            "a": "ba"
+          }
+        ]
+      },
+      "result": [
+        {
+          "a": "ab"
+        }
+      ]
     }
   ]
 }
