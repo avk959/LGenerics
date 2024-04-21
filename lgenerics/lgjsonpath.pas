@@ -111,6 +111,7 @@ uses
     key()
       result type is a ValueType;
         returns Index(number) or Name(string) of the current node;
+        parentheses are required;
 
     param(Arg) -- useful for repeated use of a query without reparsing, see IJsonPath.Params[]
       Arg type must be a ValueType;
