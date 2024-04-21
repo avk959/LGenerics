@@ -429,10 +429,14 @@ type
     function  All: Boolean;
   { returns the lowest index of the set bit, -1, if no bit is set }
     function  Bsf: SizeInt;
+  { returns the index of the next set bit after aFromIdx, if any, otherwise returns -1 }
+    function  NextSetBit(aFromIdx: SizeInt): SizeInt;
   { returns the highest index of the set bit, -1, if no bit is set }
     function  Bsr: SizeInt;
   { returns the lowest index of the open bit, -1, if all bits are set }
     function  Lob: SizeInt;
+  { returns the index of the next open bit after aFromIdx, if any, otherwise returns -1 }
+    function  NextOpenBit(aFromIdx: SizeInt): SizeInt;
   { changes the bit[aIndex] value to True if it was False and to False if it was True;
     returns old value; checks aIndex range }
     function  ToggleBit(aIndex: SizeInt): Boolean;
@@ -2501,13 +2505,39 @@ begin
   for I := 0 to System.High(FBits) do
     if FBits[I] <> 0 then
       exit(
-        {$IF DEFINED(CPU64)}
-          I shl INT_SIZE_LOG + ShortInt(BsfQWord(FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}
-          I shl INT_SIZE_LOG + ShortInt(BsfDWord(FBits[I]))
-        {$ELSE}
-          I shl INT_SIZE_LOG + ShortInt(BsfWord(FBits[I]))
-        {$ENDIF});
+        I shl INT_SIZE_LOG +
+        {$IF DEFINED(CPU64)}ShortInt(BsfQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(FBits[I]))
+        {$ELSE}ShortInt(BsfWord(FBits[I])){$ENDIF}
+      );
+  Result := NULL_INDEX;
+end;
+
+function TBoolVector.NextSetBit(aFromIdx: SizeInt): SizeInt;
+var
+  LimbIdx, BitIdx, I: SizeInt;
+  Limb: SizeUInt;
+begin
+  if SizeUInt(aFromIdx) >= SizeUInt(Capacity) then exit(NULL_INDEX);
+  LimbIdx := aFromIdx shr INT_SIZE_LOG;
+  BitIdx := aFromIdx and INT_SIZE_MASK;
+  Limb := FBits[LimbIdx] and not(High(SizeUInt) shr (BitSizeOf(SizeUInt) - Succ(BitIdx)));
+  if Limb <> 0 then
+    exit(
+      LimbIdx shl INT_SIZE_LOG +
+      {$IF DEFINED(CPU64)}ShortInt(BsfQWord(Limb))
+      {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(Limb))
+      {$ELSE}ShortInt(BsfWord(Limb)){$ENDIF}
+    )
+  else
+    for I := LimbIdx + 1 to System.High(FBits) do
+      if FBits[I] <> High(SizeUInt) then
+        exit(
+          I shl INT_SIZE_LOG +
+          {$IF DEFINED(CPU64)}ShortInt(BsfQWord(FBits[I]))
+          {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(FBits[I]))
+          {$ELSE}ShortInt(BsfWord(FBits[I])){$ENDIF}
+        );
   Result := NULL_INDEX;
 end;
 
@@ -2518,13 +2548,11 @@ begin
   for I := System.High(FBits) downto 0 do
     if FBits[I] <> 0 then
       exit(
-        {$IF DEFINED(CPU64)}
-          I shl INT_SIZE_LOG + ShortInt(BsrQWord(FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}
-          I shl INT_SIZE_LOG + ShortInt(BsrDWord(FBits[I]))
-        {$ELSE}
-          I shl INT_SIZE_LOG + ShortInt(BsrWord(FBits[I]))
-        {$ENDIF});
+        I shl INT_SIZE_LOG +
+        {$IF DEFINED(CPU64)}ShortInt(BsrQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}ShortInt(BsrDWord(FBits[I]))
+        {$ELSE}ShortInt(BsrWord(FBits[I])){$ENDIF}
+      );
   Result := NULL_INDEX;
 end;
 
@@ -2535,13 +2563,39 @@ begin
   for I := 0 to System.High(FBits) do
     if FBits[I] <> High(SizeUInt) then
       exit(
-        {$IF DEFINED(CPU64)}
-          I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}
-          I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
-        {$ELSE}
-          I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
-        {$ENDIF});
+        I shl INT_SIZE_LOG +
+        {$IF DEFINED(CPU64)}ShortInt(BsfQWord(not FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(not FBits[I]))
+        {$ELSE}ShortInt(BsfWord(not FBits[I])){$ENDIF}
+      );
+  Result := NULL_INDEX;
+end;
+
+function TBoolVector.NextOpenBit(aFromIdx: SizeInt): SizeInt;
+var
+  LimbIdx, BitIdx, I: SizeInt;
+  Limb: SizeUInt;
+begin
+  if SizeUInt(aFromIdx) >= SizeUInt(Capacity) then exit(NULL_INDEX);
+  LimbIdx := aFromIdx shr INT_SIZE_LOG;
+  BitIdx := aFromIdx and INT_SIZE_MASK;
+  Limb := not(FBits[LimbIdx] or High(SizeUInt) shr (BitSizeOf(SizeUInt) - Succ(BitIdx)));
+  if Limb <> 0 then
+    exit(
+      LimbIdx shl INT_SIZE_LOG +
+      {$IF DEFINED(CPU64)}ShortInt(BsfQWord(Limb))
+      {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(Limb))
+      {$ELSE}ShortInt(BsfWord(Limb)){$ENDIF}
+    )
+  else
+    for I := LimbIdx + 1 to System.High(FBits) do
+      if FBits[I] <> High(SizeUInt) then
+        exit(
+          I shl INT_SIZE_LOG +
+          {$IF DEFINED(CPU64)}ShortInt(BsfQWord(not FBits[I]))
+          {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(not FBits[I]))
+          {$ELSE}ShortInt(BsfWord(not FBits[I])){$ENDIF}
+        );
   Result := NULL_INDEX;
 end;
 
