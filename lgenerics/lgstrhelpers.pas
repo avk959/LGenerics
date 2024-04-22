@@ -433,6 +433,7 @@ type
     procedure AddPattern(const aValue: rawbytestring; aIndex: SizeInt);
     procedure BuildFsm;
     function  DoFindFirst(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
+    function  DoFindNoOverlaps(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     function  DoFindAll(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     procedure DoSearch(const s: rawbytestring; aOffset, aCount: SizeInt);
     class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
@@ -4686,6 +4687,57 @@ begin
   Result := Matches;
 end;
 
+function TACSearchFsm.DoFindNoOverlaps(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
+var
+  Matches: array of TMatch = nil;
+  Count: SizeInt = 0;
+  procedure AddMatch(const m: TMatch); inline;
+  begin
+    if Count = System.Length(Matches) then
+      System.SetLength(Matches, Count * 2);
+    Matches[Count] := m;
+    Inc(Count);
+  end;
+var
+  I: SizeInt;
+  State, Tmp, Code: Int32;
+begin
+  if (s = '') or (PatternCount = 0) then exit(nil);
+  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
+  if aOffset < 1 then aOffset := 1;
+  if aCount < 1 then
+    aCount := System.Length(s)
+  else
+    aCount := Math.Min(Pred(aOffset + aCount), System.Length(s));
+  State := 0;
+  for I := aOffset to aCount do
+    begin
+      Code := FCodeTable[Byte(s[I])];
+      if Code = -1 then
+        begin
+          State := 0;
+          continue;
+        end;
+      State := FTrie[State].NextMove[Code];
+      if State = 0 then continue;
+      with FTrie[State] do
+        if Length <> 0 then
+          begin
+            AddMatch(TMatch.Make(Succ(I - Length), Length, Index));
+            State := 0;
+            continue;
+          end;
+      if FTrie[State].Output <> 0 then
+        with FTrie[FTrie[State].Output] do
+          begin
+            AddMatch(TMatch.Make(Succ(I - Length), Length, Index));
+            State := 0;
+          end;
+    end;
+  System.SetLength(Matches, Count);
+  Result := Matches;
+end;
+
 function TACSearchFsm.DoFindAll(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
 var
   Matches: array of TMatch = nil;
@@ -4793,7 +4845,8 @@ var
 begin
   if aMatches = nil then exit;
   case aMode of
-    smmDefault:          exit;
+    smmDefault, smmNonOverlapping:
+      exit;
     smmLeftmostFirst:    TSortHelper.Sort(aMatches, @MatchLessLF);
     smmLeftmostLongest:  TSortHelper.Sort(aMatches, @MatchLessLL);
     smmLeftmostShortest: TSortHelper.Sort(aMatches, @MatchLessLS);
@@ -4870,8 +4923,8 @@ begin
   Result := IndexOfPattern(aValue) <> NULL_INDEX;
 end;
 
-function TACSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode; aOffset,
-  aCount: SizeInt): TMatch;
+function TACSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode;
+  aOffset, aCount: SizeInt): TMatch;
 var
   Matches: array of TMatch;
 begin
@@ -4886,10 +4939,13 @@ begin
   Result := Matches[0];
 end;
 
-function TACSearchFsm.FindMatches(const aText: rawbytestring; aMode: TSetMatchMode; aOffset,
-  aCount: SizeInt): TMatchArray;
+function TACSearchFsm.FindMatches(const aText: rawbytestring; aMode: TSetMatchMode;
+  aOffset, aCount: SizeInt): TMatchArray;
 begin
-  Result := DoFindAll(aText, aOffset, aCount);
+  if aMode = smmNonOverlapping then
+    Result := DoFindNoOverlaps(aText, aOffset, aCount)
+  else
+    Result := DoFindAll(aText, aOffset, aCount);
   DoFilterMatches(Result, aMode);
 end;
 
