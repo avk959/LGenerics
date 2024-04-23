@@ -2239,7 +2239,6 @@ var
   s: string;
   a: TStringArray;
   m: array of TMatch;
-  I: Integer;
 begin
   s := '012abcdefgh';
   a := ['0124','234','12345', '1234567','1234','23','890123','6789012', '5678901'];
@@ -2250,6 +2249,12 @@ begin
   s := '01234567890123456789';
   m := ac.Instance.FindMatches(s);
   AssertTrue(Length(m) = 13);
+
+  m := ac.Instance.FindMatches(s, smmNonOverlapping);
+  AssertTrue(Length(m) = 3);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '23');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '5678901');
+  AssertTrue(Copy(s, m[0].Offset, m[2].Length) = '23');
 
   m := ac.Instance.FindMatches(s, smmLeftmostFirst);
   AssertTrue(Length(m) = 2);
