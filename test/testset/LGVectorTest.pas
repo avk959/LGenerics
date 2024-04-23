@@ -312,6 +312,7 @@ type
     procedure Intersect1;
     procedure DisjunctJoin;
     procedure TestEquals;
+    procedure TestNextBits;
   end;
 
 implementation
@@ -3120,6 +3121,38 @@ begin
   AssertFalse(v1.Equals(v2));
   v2[100] := True;
   AssertTrue(v1.Equals(v2));
+end;
+
+procedure TBoolVectorTest.TestNextBits;
+var
+  v1, v2: TBoolVector;
+  I, I1, J, J1: Integer;
+const
+  TestSize = 256;
+  Step = 7;
+begin
+  {%H-}v1.EnsureCapacity(TestSize);
+  {%H-}v2.InitRange(TestSize);
+  I := 0;
+  while I < TestSize do
+    begin
+      v1[I] := True;
+      v2[I] := False;
+      Inc(I, Step);
+    end;
+  I := v1.Bsf;
+  J := v2.Lob;
+  AssertTrue((I = 0) and (J = 0));
+  while I <> -1 do
+    begin
+      I1 := v1.NextSetBit(I);
+      J1 := v2.NextOpenBit(J);
+      AssertTrue(I1 = J1);
+      if I1 <> -1 then
+        AssertTrue(I1 mod Step = 0);
+      I := I1;
+      J := J1;
+    end;
 end;
 
 initialization
