@@ -407,16 +407,15 @@ type
   type
     TNode = record
       NextMove: array of Int32;// transition table
-      Failure,                 // failure link
       Output,                  // output link
       Index,                   // index in the input list(if node is teminal)
       Length: Int32;           // length in bytes(Length > 0 indicates a terminal node)
     end;
-    TSortHelper = specialize TGRegularArrayHelper<TMatch>;
-    TCharBuffer = specialize TGDynArray<AnsiChar>;
+    TSortHelper = specialize TGRegularTimSort<TMatch>;
+    TQueue      = specialize TGLiteQueue<Int32>;
   private
     FTrie: array of TNode;
-    FCodeTable: array[Byte] of SmallInt;
+    FCharMap: array[Byte] of SmallInt;
     FOnMatchHandler: TOnMatch;
     FNestMatchHandler: TNestMatch;
     FOnMatch: TOnMatch;
@@ -428,12 +427,11 @@ type
     procedure RegisterMatchHandler(h: TOnMatch);
     procedure RegisterMatchHandler(h: TNestMatch);
     function  NewNode: SizeInt;
-    procedure BuildCodeTable(const aList: array of rawbytestring);
-    procedure BuildCodeTable(e: IStrEnumerable);
+    procedure BuildCharMap(const aList: array of rawbytestring);
     procedure AddPattern(const aValue: rawbytestring; aIndex: SizeInt);
     procedure BuildFsm;
     function  DoFindFirst(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
-    function  DoFindNoOverlaps(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
+    function  DoFindNoOverlap(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     function  DoFindAll(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     procedure DoSearch(const s: rawbytestring; aOffset, aCount: SizeInt);
     class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
@@ -458,7 +456,7 @@ type
     returns False; any value of aCount < 1 implies a search to the end of the text }
     procedure Search(const aText: rawbytestring; aOnMatch: TOnMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
     procedure Search(const aText: rawbytestring; aOnMatch: TNestMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
-    function  FilterMatches(const aSource: TMatchArray; aMode: TSetMatchMode): TMatchArray;
+    function  FilterMatches(const aSource: array of TMatch; aMode: TSetMatchMode): TMatchArray;
   { returns True if at least one match is found in the string aText, starting at position aOffset
     within aCount bytes; any value of aCount < 1 implies a search to the end of the text }
     function  ContainsMatch(const aText: rawbytestring; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
@@ -2487,7 +2485,8 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
-      sdaDumMBR:   Dist := DumDistanceMbr(L, R);
+    else // sdaDumMBR
+      Dist := DumDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -2504,7 +2503,8 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
-    sdaDumMBR:   Dist := DumDistanceMbr(L, R, Limit);
+  else // sdaDumMBR
+    Dist := DumDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
@@ -2529,7 +2529,8 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
-      sdaDumMBR:   Dist := DumDistanceMbr(L, R);
+    else // sdaDumMBR
+      Dist := DumDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -2546,7 +2547,8 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
-    sdaDumMBR:   Dist := DumDistanceMbr(L, R, Limit);
+  else // sdaDumMBR
+    Dist := DumDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
@@ -4544,32 +4546,17 @@ begin
   System.SetLength(FTrie[Result].NextMove, AlphabetSize);
 end;
 
-procedure TACSearchFsm.BuildCodeTable(const aList: array of rawbytestring);
+procedure TACSearchFsm.BuildCharMap(const aList: array of rawbytestring);
 var
   I: SizeInt;
   s: string;
 begin
-  System.FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
+  System.FillChar(FCharMap, SizeOf(FCharMap), $ff);
   for s in aList do
     for I := 1 to System.Length(s) do
-      if FCodeTable[Byte(s[I])] = -1 then
+      if FCharMap[Byte(s[I])] = -1 then
         begin
-          FCodeTable[Byte(s[I])] := AlphabetSize;
-          Inc(FAlphabetSize);
-        end;
-end;
-
-procedure TACSearchFsm.BuildCodeTable(e: IStrEnumerable);
-var
-  I: SizeInt;
-  s: string;
-begin
-  System.FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
-  for s in e do
-    for I := 1 to System.Length(s) do
-      if FCodeTable[Byte(s[I])] = -1 then
-        begin
-          FCodeTable[Byte(s[I])] := AlphabetSize;
+          FCharMap[Byte(s[I])] := AlphabetSize;
           Inc(FAlphabetSize);
         end;
 end;
@@ -4583,7 +4570,7 @@ begin
   Curr := 0;
   for I := 1 to System.Length(aValue) do
     begin
-      Code := FCodeTable[Byte(aValue[I])];
+      Code := FCharMap[Byte(aValue[I])];
       Next := FTrie[Curr].NextMove[Code];
       // if no transition is found for current character, just add a new one
       if Next = 0 then
@@ -4605,36 +4592,37 @@ end;
 
 procedure TACSearchFsm.BuildFsm;
 var
-  Queue: specialize TGLiteQueue<Int32>;
+  Queue: TQueue;
+  Failure: array of Int32;
   Curr, Next, Fail, Link, Code: Int32;
 begin // simple BFS
+  System.SetLength(Failure, NodeCount);
   for Curr in FTrie[0].NextMove do
     if Curr <> 0 then
       Queue.Enqueue(Curr);
   while Queue.TryDequeue(Curr) do
-    for Code := 0 to Pred(FAlphabetSize) do
+    for Code := 0 to Pred(AlphabetSize) do
       if FTrie[Curr].NextMove[Code] <> 0 then
         begin
           Next := FTrie[Curr].NextMove[Code];
           Queue.Enqueue(Next);
-          Fail := FTrie[Curr].Failure;
+          Fail := Curr;
           repeat
+            Fail := Failure[Fail];
             Link := FTrie[Fail].NextMove[Code];
             if Link <> 0 then
               begin
-                FTrie[Next].Failure := Link;
+                Failure[Next] := Link;
                 if FTrie[Link].Length <> 0 then
                   FTrie[Next].Output := Link
                 else
                   FTrie[Next].Output := FTrie[Link].Output;
                 break;
               end;
-            if Fail = 0 then break;
-            Fail := FTrie[Fail].Failure;
-          until False;
+          until Fail = 0;
         end
       else
-        FTrie[Curr].NextMove[Code] := FTrie[FTrie[Curr].Failure].NextMove[Code];
+        FTrie[Curr].NextMove[Code] := FTrie[Failure[Curr]].NextMove[Code];
 end;
 
 function TACSearchFsm.DoFindFirst(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
@@ -4662,7 +4650,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      Code := FCodeTable[Byte(s[I])];
+      Code := FCharMap[Byte(s[I])];
       if Code = -1 then
         NextState := 0
       else
@@ -4687,7 +4675,7 @@ begin
   Result := Matches;
 end;
 
-function TACSearchFsm.DoFindNoOverlaps(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
+function TACSearchFsm.DoFindNoOverlap(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
 var
   Matches: array of TMatch = nil;
   Count: SizeInt = 0;
@@ -4700,7 +4688,7 @@ var
   end;
 var
   I: SizeInt;
-  State, Tmp, Code: Int32;
+  State, Code: Int32;
 begin
   if (s = '') or (PatternCount = 0) then exit(nil);
   System.SetLength(Matches, ARRAY_INITIAL_SIZE);
@@ -4712,7 +4700,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      Code := FCodeTable[Byte(s[I])];
+      Code := FCharMap[Byte(s[I])];
       if Code = -1 then
         begin
           State := 0;
@@ -4763,7 +4751,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      Code := FCodeTable[Byte(s[I])];
+      Code := FCharMap[Byte(s[I])];
       if Code = -1 then
         begin
           State := 0;
@@ -4800,7 +4788,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      Code := FCodeTable[Byte(s[I])];
+      Code := FCharMap[Byte(s[I])];
       if Code = -1 then
         begin
           State := 0;
@@ -4821,22 +4809,28 @@ begin
     end;
 end;
 
-function MatchLessLF(const L, R: TACSearchFsm.TMatch): Boolean;
+function MatchCompareLF(const L, R: TIndexMatch): Boolean;
 begin
-  if L.Offset = R.Offset then exit(L.Index < R.Index);
-  Result := L.Offset < R.Offset;
+  if L.Offset = R.Offset then
+    Result := L.Index < R.Index
+  else
+    Result := L.Offset < R.Offset;
 end;
 
-function MatchLessLL(const L, R: TACSearchFsm.TMatch): Boolean;
+function MatchCompareLL(const L, R: TIndexMatch): Boolean;
 begin
-  if L.Offset = R.Offset then exit(L.Length > R.Length);
-  Result := L.Offset < R.Offset;
+  if L.Offset = R.Offset then
+    Result := L.Length > R.Length
+  else
+    Result := L.Offset < R.Offset;
 end;
 
-function MatchLessLS(const L, R: TACSearchFsm.TMatch): Boolean;
+function MatchCompareLS(const L, R: TIndexMatch): Boolean;
 begin
-  if L.Offset = R.Offset then exit(L.Length < R.Length);
-  Result := L.Offset < R.Offset;
+  if L.Offset = R.Offset then
+    Result := L.Length < R.Length
+  else
+    Result := L.Offset < R.Offset;
 end;
 
 class procedure TACSearchFsm.DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode);
@@ -4845,11 +4839,10 @@ var
 begin
   if aMatches = nil then exit;
   case aMode of
-    smmDefault, smmNonOverlapping:
-      exit;
-    smmLeftmostFirst:    TSortHelper.Sort(aMatches, @MatchLessLF);
-    smmLeftmostLongest:  TSortHelper.Sort(aMatches, @MatchLessLL);
-    smmLeftmostShortest: TSortHelper.Sort(aMatches, @MatchLessLS);
+    smmDefault, smmNonOverlapping: exit;
+    smmLeftmostFirst:    TSortHelper.Sort(aMatches, @MatchCompareLF);
+    smmLeftmostLongest:  TSortHelper.Sort(aMatches, @MatchCompareLL);
+    smmLeftmostShortest: TSortHelper.Sort(aMatches, @MatchCompareLS);
   end;
   Count := 0;
   I := 0;
@@ -4871,7 +4864,7 @@ var
   I: SizeInt;
 begin
   //todo: any failure conditions depending on the size of the input?
-  BuildCodeTable(aPatternList);
+  BuildCharMap(aPatternList);
   System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
   NewNode;
   for I := 0 to System.High(aPatternList) do
@@ -4881,21 +4874,8 @@ begin
 end;
 
 constructor TACSearchFsm.Create(aPatternEnum: IStrEnumerable);
-var
-  I: SizeInt;
-  s: rawbytestring;
 begin
-  BuildCodeTable(aPatternEnum);
-  System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
-  NewNode;
-  I := 0;
-  for s in aPatternEnum do
-    begin
-      AddPattern(s, I);
-      Inc(I);
-    end;
-  System.SetLength(FTrie, FNodeCount);
-  BuildFsm;
+  Create(aPatternEnum.ToArray);
 end;
 
 function TACSearchFsm.IndexOfPattern(const aValue: rawbytestring): SizeInt;
@@ -4907,7 +4887,7 @@ begin
   Curr := 0;
   for I := 1 to System.Length(aValue) do
     begin
-      Code := FCodeTable[Byte(aValue[I])];
+      Code := FCharMap[Byte(aValue[I])];
       if Code = -1 then exit;
       Next := FTrie[Curr].NextMove[Code];
       if Next = 0 then exit;
@@ -4923,17 +4903,16 @@ begin
   Result := IndexOfPattern(aValue) <> NULL_INDEX;
 end;
 
-function TACSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode;
-  aOffset, aCount: SizeInt): TMatch;
+function TACSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch;
 var
   Matches: array of TMatch;
 begin
   Matches := DoFindFirst(aText, aOffset, aCount);
   if Matches = nil then exit(TMatch.Make(0, 0, NULL_INDEX));
   case aMode of
-    smmLeftmostFirst:    TSortHelper.Sort(Matches, @MatchLessLF);
-    smmLeftmostLongest:  TSortHelper.Sort(Matches, @MatchLessLL);
-    smmLeftmostShortest: TSortHelper.Sort(Matches, @MatchLessLS);
+    smmLeftmostFirst:    TSortHelper.Sort(Matches, @MatchCompareLF);
+    smmLeftmostLongest:  TSortHelper.Sort(Matches, @MatchCompareLL);
+    smmLeftmostShortest: TSortHelper.Sort(Matches, @MatchCompareLS);
   else
   end;
   Result := Matches[0];
@@ -4943,7 +4922,7 @@ function TACSearchFsm.FindMatches(const aText: rawbytestring; aMode: TSetMatchMo
   aOffset, aCount: SizeInt): TMatchArray;
 begin
   if aMode = smmNonOverlapping then
-    Result := DoFindNoOverlaps(aText, aOffset, aCount)
+    Result := DoFindNoOverlap(aText, aOffset, aCount)
   else
     Result := DoFindAll(aText, aOffset, aCount);
   DoFilterMatches(Result, aMode);
@@ -4961,9 +4940,9 @@ begin
   DoSearch(aText, aOffset, aCount);
 end;
 
-function TACSearchFsm.FilterMatches(const aSource: TMatchArray; aMode: TSetMatchMode): TMatchArray;
+function TACSearchFsm.FilterMatches(const aSource: array of TMatch; aMode: TSetMatchMode): TMatchArray;
 begin
-  Result := System.Copy(aSource);
+  Result := specialize TGArrayHelpUtil<TMatch>.CreateCopy(aSource);
   DoFilterMatches(Result, aMode);
 end;
 
@@ -4972,7 +4951,7 @@ var
   I: SizeInt;
   State, Code: Int32;
 begin
-  if (aText = '') or (PatternCount = 0) then exit;
+  if (aText = '') or (PatternCount = 0) then exit(False);
   if aOffset < 1 then aOffset := 1;
   if aCount < 1 then
     aCount := System.Length(aText)
@@ -4981,7 +4960,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      Code := FCodeTable[Byte(aText[I])];
+      Code := FCharMap[Byte(aText[I])];
       if Code = -1 then
         begin
           State := 0;
