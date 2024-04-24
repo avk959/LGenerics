@@ -1,6 +1,14 @@
 {
   "tests": [
     {
+      "name": "existence, without segments",
+      "selector": "$[?@]",
+      "document": {"a": 1, "b": null},
+      "result": [
+        1, null
+      ]
+    },
+    {
       "name": "existence",
       "selector" : "$[?@.a]",
       "document" : [{"a": "b", "d": "e"}, {"b":"c", "d": "f"}],
@@ -85,6 +93,18 @@
       "document" : [{"a": false, "d": "e"}, {"a":"c", "d": "f"}],
       "result": [
         {"a": false, "d": "e"}
+      ]
+    },
+    {
+      "name": "equals self",
+      "selector" : "$[?@==@]",
+      "document" : [1, null, true, {"a": "b"}, [false]],
+      "result": [
+        1,
+        null,
+        true,
+        {"a": "b"},
+        [false]
       ]
     },
     {
@@ -408,6 +428,23 @@
       ]
     },
     {
+      "name": "exists and exists, data false",
+      "selector" : "$[?@.a&&@.b]",
+      "document" : [{"a": false, "b": false}, {"b": false}, {"c": false}],
+      "result": [
+        {"a": false, "b": false}
+      ]
+    },
+    {
+      "name": "exists or exists, data false",
+      "selector" : "$[?@.a||@.b]",
+      "document" : [{"a": false, "b": false}, {"b": false}, {"c": false}],
+      "result": [
+        {"a": false, "b": false},
+        {"b": false}
+      ]
+    },
+    {
       "name": "and",
       "selector" : "$[?@.a>0&&@.a<10]",
       "document" : [{"a": -10, "d": "e"}, {"a":5, "d": "f"}, {"a":20, "d": "f"}],
@@ -450,6 +487,45 @@
       ]
     },
     {
+      "name": "non-singular existence, wildcard",
+      "selector" : "$[?@.*]",
+      "document" : [1, [], [2], {}, {"a": 3}],
+      "result": [
+        [2],
+        {"a": 3}
+      ]
+    },
+    {
+      "name": "non-singular existence, multiple",
+      "selector" : "$[?@[0, 0, 'a']]",
+      "document" : [1, [], [2], [2, 3], {"a": 3}, {"b": 4}, {"a": 3, "b": 4}],
+      "result": [
+        [2],
+        [2, 3],
+        {"a": 3},
+        {"a": 3, "b": 4}
+      ]
+    },
+    {
+      "name": "non-singular existence, slice",
+      "selector" : "$[?@[0:2]]",
+      "document" : [1, [], [2], [2, 3, 4], {}, {"a": 3}],
+      "result": [
+        [2],
+        [2, 3, 4]
+      ]
+    },
+    {
+      "name": "non-singular existence, negated",
+      "selector" : "$[?!@.*]",
+      "document" : [1, [], [2], {}, {"a": 3}],
+      "result": [
+        1,
+        [],
+        {}
+      ]
+    },
+    {
       "name": "non-singular query in comparison, slice",
       "selector" : "$[?@[0:0]==0]",
       "invalid_selector": true
@@ -477,6 +553,24 @@
         [0, 1, 2],
         [42]
       ]
+    },
+    {
+      "name": "name segment on primitive, selects nothing",
+      "selector": "$[?@.a == 1]",
+      "document": {"a": 1},
+      "result": []
+    },
+    {
+      "name": "name segment on array, selects nothing",
+      "selector": "$[?@['0'] == 5]",
+      "document": [[5, 6]],
+      "result": []
+    },
+    {
+      "name": "index segment on object, selects nothing",
+      "selector": "$[?@[0] == 5]",
+      "document": [{"0": 5}],
+      "result": []
     },
     {
       "name": "relative non-singular query, index, equal",
@@ -788,43 +882,54 @@
       ]
     },
     {
-      "name": "non-singular existence, wildcard",
-      "selector" : "$[?@.*]",
-      "document" : [1, [], [2], {}, {"a": 3}],
+      "name": "object data",
+      "selector" : "$[?@<3]",
+      "document" : {
+        "a": 1,
+        "b": 2,
+        "c": 3
+      },
       "result": [
-        [2],
-        {"a": 3}
+        1, 2
       ]
     },
     {
-      "name": "non-singular existence, multiple",
-      "selector" : "$[?@[0, 0, 'a']]",
-      "document" : [1, [], [2], [2, 3], {"a": 3}, {"b": 4}, {"a": 3, "b": 4}],
+      "name": "and binds more tightly than or",
+      "selector" : "$[?@.a || @.b && @.b]",
+      "document" : [{"a": 1}],
       "result": [
-        [2],
-        [2, 3],
-        {"a": 3},
-        {"a": 3, "b": 4}
+        {"a": 1}
       ]
     },
     {
-      "name": "non-singular existence, slice",
-      "selector" : "$[?@[0:2]]",
-      "document" : [1, [], [2], [2, 3, 4], {}, {"a": 3}],
+      "name": "left to right evaluation",
+      "selector" : "$[?@.b && @.b || @.a]",
+      "document" : [{"a": 1}],
       "result": [
-        [2],
-        [2, 3, 4]
+        {"a": 1}
       ]
     },
     {
-      "name": "non-singular existence, negated",
-      "selector" : "$[?!@.*]",
-      "document" : [1, [], [2], {}, {"a": 3}],
+      "name": "group terms, left",
+      "selector" : "$[?(@.a || @.b) && @.a]",
+      "document" : [{"a": 1}],
       "result": [
-        1,
-        [],
-        {}
+        {"a": 1}
       ]
+    },
+    {
+      "name": "group terms, right",
+      "selector" : "$[?@.a && (@.b || @.a)]",
+      "document" : [{"a": 1}],
+      "result": [
+        {"a": 1}
+      ]
+    },
+    {
+      "name": "group terms, or before and",
+      "selector" : "$[?(@.a || @.b) && @.b]",
+      "document" : [{"a": 1}],
+      "result": []
     }
   ]
 }
