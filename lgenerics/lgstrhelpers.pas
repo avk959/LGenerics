@@ -4627,26 +4627,28 @@ end;
 
 function TACSearchFsm.DoFindFirst(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
 var
-  Matches: array of TMatch = nil;
-  Count: SizeInt = 0;
-  procedure AddMatch(const m: TMatch); inline;
+  Matches: array of TMatch;
+  MatchCount: SizeInt;
+  procedure AddMatch(const m: TMatch);
   begin
-    if Count = System.Length(Matches) then
-      System.SetLength(Matches, Count * 2);
-    Matches[Count] := m;
-    Inc(Count);
+    if MatchCount = System.Length(Matches) then
+      System.SetLength(Matches, MatchCount * 2);
+    Matches[MatchCount] := m;
+    Inc(MatchCount);
   end;
 var
   I: SizeInt;
   State, NextState, Code: Int32;
 begin
   if (s = '') or (PatternCount = 0) then exit(nil);
-  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
   if aOffset < 1 then aOffset := 1;
   if aCount < 1 then
     aCount := Succ(System.Length(s))
   else
     aCount := Succ(Math.Min(Pred(aOffset + aCount), System.Length(s)));
+  if aOffset > aCount then exit(nil);
+  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
+  MatchCount := 0;
   State := 0;
   for I := aOffset to aCount do
     begin
@@ -4671,32 +4673,34 @@ begin
       else
         if State <> 0 then break;
     end;
-  System.SetLength(Matches, Count);
+  System.SetLength(Matches, MatchCount);
   Result := Matches;
 end;
 
 function TACSearchFsm.DoFindNoOverlap(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
 var
-  Matches: array of TMatch = nil;
-  Count: SizeInt = 0;
-  procedure AddMatch(const m: TMatch); inline;
+  Matches: array of TMatch;
+  MatchCount: SizeInt;
+  procedure AddMatch(const m: TMatch);
   begin
-    if Count = System.Length(Matches) then
-      System.SetLength(Matches, Count * 2);
-    Matches[Count] := m;
-    Inc(Count);
+    if MatchCount = System.Length(Matches) then
+      System.SetLength(Matches, MatchCount * 2);
+    Matches[MatchCount] := m;
+    Inc(MatchCount);
   end;
 var
   I: SizeInt;
   State, Code: Int32;
 begin
   if (s = '') or (PatternCount = 0) then exit(nil);
-  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
   if aOffset < 1 then aOffset := 1;
   if aCount < 1 then
     aCount := System.Length(s)
   else
     aCount := Math.Min(Pred(aOffset + aCount), System.Length(s));
+  if aOffset > aCount then exit(nil);
+  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
+  MatchCount := 0;
   State := 0;
   for I := aOffset to aCount do
     begin
@@ -4722,32 +4726,34 @@ begin
             State := 0;
           end;
     end;
-  System.SetLength(Matches, Count);
+  System.SetLength(Matches, MatchCount);
   Result := Matches;
 end;
 
 function TACSearchFsm.DoFindAll(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
 var
-  Matches: array of TMatch = nil;
-  Count: SizeInt = 0;
-  procedure AddMatch(const m: TMatch); inline;
+  Matches: array of TMatch;
+  MatchCount: SizeInt;
+  procedure AddMatch(const m: TMatch);
   begin
-    if Count = System.Length(Matches) then
-      System.SetLength(Matches, Count * 2);
-    Matches[Count] := m;
-    Inc(Count);
+    if MatchCount = System.Length(Matches) then
+      System.SetLength(Matches, MatchCount * 2);
+    Matches[MatchCount] := m;
+    Inc(MatchCount);
   end;
 var
   I: SizeInt;
   State, Tmp, Code: Int32;
 begin
   if (s = '') or (PatternCount = 0) then exit(nil);
-  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
   if aOffset < 1 then aOffset := 1;
   if aCount < 1 then
     aCount := System.Length(s)
   else
     aCount := Math.Min(Pred(aOffset + aCount), System.Length(s));
+  if aOffset > aCount then exit(nil);
+  System.SetLength(Matches, ARRAY_INITIAL_SIZE);
+  MatchCount := 0;
   State := 0;
   for I := aOffset to aCount do
     begin
@@ -4770,7 +4776,7 @@ begin
             AddMatch(TMatch.Make(Succ(I - Length), Length, Index));
         end;
     end;
-  System.SetLength(Matches, Count);
+  System.SetLength(Matches, MatchCount);
   Result := Matches;
 end;
 
@@ -4863,7 +4869,7 @@ constructor TACSearchFsm.Create(const aPatternList: array of rawbytestring);
 var
   I: SizeInt;
 begin
-  //todo: any failure conditions depending on the size of the input?
+  //todo: any failure conditions depending on the size or (???) of the input?
   BuildCharMap(aPatternList);
   System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
   NewNode;
