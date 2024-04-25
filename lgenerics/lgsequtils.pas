@@ -524,13 +524,15 @@ type
 
 {$PUSH}{$INTERFACES COM}
   { IACSearchFsmUtf8: Aho-Corasick automation for exact set matching problem;
-    expects UTF-8 encoded strings as parameters }
+    current implementation does not store dictionary elements explicitly,
+    instead storing their indices; expects UTF-8 encoded strings as parameters }
   IACSearchFsmUtf8 = interface
   ['{AA85E5D4-5FBA-4D3C-BD16-858FC26B619C}']
     function  GetCaseInsensitive: Boolean;
     function  GetOnlyWholeWords: Boolean;
     procedure SetOnlyWholeWords(aValue: Boolean);
     function  GetNodeCount: SizeInt;
+    function  GetEmptyCount: SizeInt;
     function  GetPatternCount: SizeInt;
     function  GetAlphabetSize: SizeInt;
   { if the string s, starting at index aOffset and within aCount bytes, matches one of the patterns,
@@ -564,8 +566,9 @@ type
     property  OnlyWholeWords: Boolean read GetOnlyWholeWords write SetOnlyWholeWords;
   { some statistics }
     property  NodeCount: SizeInt read GetNodeCount;
+    property  EmptyNodeCount: SizeInt read GetEmptyCount;
     property  PatternCount: SizeInt read GetPatternCount;
-    property  AlphabetSize: SizeInt read GetAlphabetSize;//DFA only; NFA will always return -1;
+    property  AlphabetSize: SizeInt read GetAlphabetSize;
   end;
 {$POP}
 
@@ -573,17 +576,14 @@ type
   aPatterns(or aPatterEnum) specifies a set of search patterns, in case of duplicate patterns,
   only the first one will be taken into account;
   aIgnoreCase set to True specifies a case-insensitive search;
-  by default the function tries to build a DFA first(DFA has noticeably better performance),
-  which may not be possible if the patterns contain characters outside the BMP or the patterns
-  alphabet is too large; if aForceNFA is set to True the function will immediately build NFA }
+  by default the function tries to build a DFA first, which may not be possible if the patterns
+  contain characters outside the BMP or the patterns alphabet is too large; DFA usually takes
+  more memory and in addition, NFA can be faster on reasonably large sets of strings;
+  if aForceNFA is set to True the function will immediately build NFA }
   function CreateACSearchFsm(const aPatterns: array of string; aIgnoreCase: Boolean = False;
                              aForceNFA: Boolean = False): IACSearchFsmUtf8;
   function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean = False;
                              aForceNFA: Boolean = False): IACSearchFsmUtf8;
-{ if uncomment, NFA will use a hashmap for the transition table;
-  the default is sorted map, which seems to be somewhat faster and more memory efficient }
-  {.$DEFINE AC_USE_HASHMAP_NFA}
-
 
 type
   TStrReplaceOption   = (sroOnlyWholeWords, sroIgnoreCase);
@@ -610,22 +610,37 @@ type
                         const aOptions: TStrReplaceOptions = [];
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
-{ performs replacement for each element of the aSource array }
+{ performs replacements for each element of the aSource array }
   function ACStrReplaceList(const aSource, aSamples, aSubs: array of string;
                             out aReplaceCount: SizeInt;
                             const aOptions: TStrReplaceOptions = [];
                             aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                             const aDefaultSub: string = ''): TStringArray;
-{ }
+{ the same as above for the case where the number of replacements is not of interest }
   function ACStrReplaceList(const aSource, aSamples, aSubs: array of string;
                             const aOptions: TStrReplaceOptions = [];
                             aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                             const aDefaultSub: string = ''): TStringArray;
+{ uses a previously created automaton for replacements }
+  function ACStrReplace(aSearchFsm: IACSearchFsmUtf8;
+                        const aSource: string;
+                        const aSubs: array of string;
+                        out aReplaceCount: SizeInt;
+                        aOnlyWholeWords: Boolean = False;
+                        aMode: TOverlapsHandleMode = ohmLeftmostFirst;
+                        const aDefaultSub: string = ''): string;
+{ the same as above for the case where the number of replacements is not of interest }
+  function ACStrReplace(aSearchFsm: IACSearchFsmUtf8;
+                        const aSource: string;
+                        const aSubs: array of string;
+                        aOnlyWholeWords: Boolean = False;
+                        aMode: TOverlapsHandleMode = ohmLeftmostFirst;
+                        const aDefaultSub: string = ''): string;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Character, UnicodeData;
+  Character, UnicodeData, lgMiscUtils;
 
 { TGBmSearch.TEnumerator }
 
@@ -4563,8 +4578,7 @@ type
       Offset: SizeInt;
       vChar: Ucs4Char;
     end;
-    TIntQueue   = specialize TGLiteQueue<Int32>;
-    TSortHelper = specialize TGRegularArrayHelper<TMatch>;
+    TSortHelper = specialize TGRegularTimSort<TMatch>;
   const
     LETTER_OR_DIGIT_CATEGORIES = [
        TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
@@ -4582,26 +4596,35 @@ type
     FWordCount: SizeInt;
     FIgnoreCase,
     FWholeWordsOnly: Boolean;
+    class function  IsWordChar(c: Ucs4Char): Boolean; static; inline;
+    class function  CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
+    class function  CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
+    class function  CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; static; inline;
+    class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
+    class function  GetFsmClass: TACFsmUtf8Class; virtual; abstract;
+    class function  GetDfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class; inline;
+    class function  GetNfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class; inline;
     function  TestOnMatch(const m: TMatch): Boolean;
     function  TestNestMatch(const m: TMatch): Boolean;
     procedure RegisterMatchHandler(h: TOnMatch);
     procedure RegisterMatchHandler(h: TNestMatch);
     function  GetAlphabetSize: SizeInt; virtual;
     function  GetNodeCount: SizeInt;
+    function  GetEmptyCount: SizeInt; virtual;
     function  GetPatternCount: SizeInt;
     function  GetCaseInsensitive: Boolean;
     function  GetOnlyWholeWords: Boolean;
     procedure SetOnlyWholeWords(aValue: Boolean);
+    function  DoProlog(const s: string; aOfs, aCount: SizeInt; out pText, pStart, pEnd: PByte): Boolean; inline;
+    function  DoProlog(const s: string; aOfs, aCount: SizeInt; out pStart, pEnd: PByte): Boolean; inline;
+    function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; virtual; abstract;
+    function  DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch; virtual; abstract;
+    procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aHandler: TNestMatch); virtual; abstract;
+    procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aHandler: TNestMatch); virtual; abstract;
     procedure DoSearch(const s: string; aOffset, aCount: SizeInt); virtual; abstract;
     procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); virtual; abstract;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
-    class function IsWordChar(c: Ucs4Char): Boolean; static; inline;
-    class function CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
-    class function CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
-    class function CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; static; inline;
-    class function DoProlog(const s: string; aOfs, aCount: SizeInt; out pText, pStart, pEnd: PByte): Boolean; static; inline;
-    class function DoProlog(const s: string; aOfs, aCount: SizeInt; out pStart, pEnd: PByte): Boolean; static; inline;
     function  PushOffset(aQueueTop, aOffs: SizeInt): SizeInt; inline;
     function  PushOffset(aQueueTop, aOffs: SizeInt; aChar: Ucs4Char): SizeInt; inline;
     function  PushChar(aQueueTop: SizeInt; aChar: Ucs4Char): SizeInt; inline;
@@ -4609,16 +4632,12 @@ type
     function  PopOffset(aQueueTop, aWordLen: SizeInt): SizeInt; inline;
     function  PrevCpOffset(const s: string; aOffset: SizeInt): SizeInt; inline;
     function  PushFirstOffset(const s: string; aOffset: SizeInt): SizeInt;
-    class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
-    class function GetFsmClass: TACFsmUtf8Class; virtual; abstract;
-    class function GetDfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class; inline;
-    class function GetNfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class; inline;
   public
     class function CreateInstance(const aPatternList: array of string; aIgnoreCase, aForceNFA: Boolean): TACFsmUtf8;
     class function CreateInstance(e: IStrEnumerable; aIgnoreCase, aForceNFA: Boolean): TACFsmUtf8;
     constructor Create; virtual;
     function  TryBuildFsm(const aPatternList: array of string): Boolean; virtual; abstract;
-    function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean; virtual; abstract;
+    function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean;
     function  Clone: IACSearchFsmUtf8; virtual; abstract;
     function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; virtual; abstract;
     function  IsMatch(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
@@ -4628,8 +4647,9 @@ type
     procedure Search(const aText: string; aOnMatch: TOnMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
     procedure Search(const aText: string; aOnMatch: TNestMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
     function  ContainsMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
-    function  FilterMatches(const aSource: array of TAcMatch; aMode: TSetMatchMode): TMatchArray;
+    function  FilterMatches(const aSource: array of TMatch; aMode: TSetMatchMode): TMatchArray;
     property  NodeCount: SizeInt read FNodeCount;
+    property  PatternCount: SizeInt read FWordCount;
     property  OnlyWholeWords: Boolean read FWholeWordsOnly write FWholeWordsOnly;
     property  CaseInsensitive: Boolean read FIgnoreCase;
   end;
@@ -4643,25 +4663,27 @@ type
   type
     TNode = record
       NextMove: array of Int32;// transition table
-      Failure,                 // failure link
-      Output,                  // output link
-      Index,                   // index in the input list(if node is teminal)
-      Length,                  // length in bytes(Length > 0 indicates a terminal node)
+      Output,                  // output link(singly linked list)
+      Index,                   // index in the input list if node is teminal
+      Length,                  // length in bytes, Length > 0 indicates a terminal node
       Utf8Len: Int32;          // length in code points
     end;
+    TIntQueue = specialize TGLiteQueue<Int32>;
   protected
     FTrie: array of TNode;
-    FCodeTable: array[0..BMP_MAX] of ShortInt;
+    FCharMap: array[0..BMP_MAX] of ShortInt;
     FAlphabetSize: Int32;
     function  GetAlphabetSize: SizeInt; override;
-    function  AddToCodeTable(const s: string): Boolean;
-    function  BuildCodeTable(const aList: array of string): Boolean;
-    function  BuildCodeTable(e: IStrEnumerable): Boolean;
+    function  BuildCharMap(const aList: array of string): Boolean;
     function  NewNode: SizeInt; inline;
     function  GetCharCode(c: Ucs4Char): Int32; inline;
     procedure AddPattern(const aValue: string; aIndex: SizeInt);
     function  GetNextMove(aState: Int32; c: Ucs4Char): Int32; inline;
     procedure BuildFsm;
+    function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    function  DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
     procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
@@ -4669,7 +4691,6 @@ type
     class function GetFsmClass: TACFsmUtf8Class; override;
   public
     function  TryBuildFsm(const aPatternList: array of string): Boolean; override;
-    function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean; override;
     function  Clone: IACSearchFsmUtf8; override;
     function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; override;
     property  AlphabetSize: Int32 read FAlphabetSize;
@@ -4678,6 +4699,10 @@ type
   { TACDfaCIUtf8 }
   TACDfaCIUtf8 = class(TACDfaUtf8)
   protected
+    function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    function  DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
     procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
@@ -4687,12 +4712,10 @@ type
     constructor Create; override;
   end;
 
-{$IFNDEF AC_USE_HASHMAP_NFA}
-  { TUcs4ToIntMap: for internal use only }
-  TUcs4ToIntMap = record
-  private
+  { TCode2StateMap: for internal use only }
+  TCode2StateMap = record
   type
-    TEntry = specialize TGMapEntry<Ucs4Char, Int32>;
+    TEntry = specialize TGMapEntry<Int32, Int32>;
     PEntry = ^TEntry;
     TEnumerator = record
     private
@@ -4703,61 +4726,95 @@ type
       function MoveNext: Boolean; inline;
       property Current: TEntry read GetCurrent;
     end;
+  strict private
+  const
+    INITIAL_SIZE = 4;
   var
     FItems: array of TEntry;
     FCount: Int32;
-    function  GetCapacity: Int32; inline;
-    function  DoFind(aKey: Ucs4Char): PEntry;
-    function  DoFind(aKey: Ucs4Char; out aIndex: Int32): PEntry;
-    function  DoAdd(aKey: Ucs4Char; aIndex: Int32): PEntry;
+    function DoFind(aKey: Int32; out aIndex: Int32): PEntry;
+    function DoAdd(aKey, aIndex: Int32): PEntry; inline;
+    function GetKey(aIndex: Int32): Int32; inline;
+    function GetValue(aIndex: Int32): Int32; inline;
   public
-    function  GetEnumerator: TEnumerator;
-    function  GetMutValueDef(aKey: Ucs4Char; aDefault: Int32): PInt32; inline;
-    function  TryGetValue(aKey: Ucs4Char; out aValue: Int32): Boolean; inline;
-    procedure TrimToFit;
-    property  Count: Int32 read FCount;
-    property  Capacity: Int32 read GetCapacity;
+    function GetEnumerator: TEnumerator; inline;
+    function GetMutValueDef(aKey, aDefault: Int32): PInt32; inline;
+    property Count: Int32 read FCount;
+    property Keys[aIndex: Int32]: Int32 read GetKey;
+    property Values[aIndex: Int32]: Int32 read GetValue;
   end;
-{$ENDIF AC_USE_HASHMAP_NFA}
 
-  { TACNfaUtf8 }
+  { TACNfaUtf8: based on double array trie approach }
   TACNfaUtf8 = class(TACFsmUtf8)
   protected
   type
-  {$IFDEF AC_USE_HASHMAP_NFA}
-    TCharMapType = specialize TGLiteChainHashMap<Ucs4Char, Int32, TUcs4Hasher>;
-    TNextMove    = TCharMapType.TMap;
-  {$ELSE AC_USE_HASHMAP_NFA}
-    TNextMove = TUcs4ToIntMap;
-  {$ENDIF AC_USE_HASHMAP_NFA}
-    TNode = record
-      NextMove: TNextMove;// transition table
-      Failure,            // failure link
-      Output,             // output link
-      Index,              // index in pattern list
-      Length,             // length(in bytes) > 0 indicates a terminal node
-      Utf8Len: Int32;     // length in code points
+    TOutput = record
+      Index,        // index in the input list
+      Len,          // length in bytes
+      CpLen: Int32; // length in code points
     end;
+    TNode = record
+      AdjList: TCode2StateMap;
+      Output: Int32;
+    end;
+    TDaNode = record
+      Base,
+      Check,
+      Failure,        // failure link: singly linked list
+      Output,         // output link: index in FOutput array
+      NextOut: Int32; // next output link: singly linked list
+    end;
+    TPair = record
+      Node,
+      DaNode: Int32;
+      constructor Make(aNode, aDaNode: Int32);
+    end;
+    TPairQueue = specialize TGLiteQueue<TPair>;
+  const
+    NULL_NODE = Low(Int32);
+    LEAF_NODE = Int32(0);
   protected
+    FCharMap: array of Int32;
+    FDaTrie: array of TDaNode;
+    FOutput: array of TOutput;
     FTrie: array of TNode;
+    FOutCount,
+    FAlphabetSize: Int32;
     function  NewNode: SizeInt; inline;
+    function  NewOutput(aIndex, aLen, aCpLen: Int32): Int32; inline;
+    procedure BuildCharMap(const aPatternList: array of string);
     procedure AddPattern(const aValue: string; aIndex: SizeInt);
+    function  NextMove(aState, aCode: Int32): Int32; inline;
+    function  NextState(aState, aCode: Int32): Int32; inline;
+  { uses a slightly modified LINK method to create a double array-like structure }
     procedure BuildFsm;
+    function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    function  DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
     procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; override;
+    function  GetEmptyCount: SizeInt; override;
+    function  GetAlphabetSize: SizeInt; override;
     class function GetFsmClass: TACFsmUtf8Class; override;
+    property  OutCount: Int32 read FOutCount;
   public
+    constructor Create; override;
     function  TryBuildFsm(const aPatternList: array of string): Boolean; override;
-    function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean; override;
     function  Clone: IACSearchFsmUtf8; override;
     function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; override;
+    property  AlphabetSize: Int32 read FAlphabetSize;
   end;
 
   { TACNfaCIUtf8 }
   TACNfaCIUtf8 = class(TACNfaUtf8)
   protected
+    function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    function  DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch; override;
+    procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
     procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
@@ -4768,58 +4825,6 @@ type
   end;
 
 { TACFsmUtf8 }
-
-function TACFsmUtf8.TestOnMatch(const m: TMatch): Boolean;
-begin
-  Result := FOnMatchHandler(m);
-end;
-
-function TACFsmUtf8.TestNestMatch(const m: TMatch): Boolean;
-begin
-  Result := FNestMatchHandler(m);
-end;
-
-procedure TACFsmUtf8.RegisterMatchHandler(h: TOnMatch);
-begin
-  FOnMatchHandler := h;
-  FOnMatch := @TestOnMatch;
-end;
-
-procedure TACFsmUtf8.RegisterMatchHandler(h: TNestMatch);
-begin
-  FNestMatchHandler := h;
-  FOnMatch := @TestNestMatch;
-end;
-
-function TACFsmUtf8.GetAlphabetSize: SizeInt;
-begin
-  Result := -1;
-end;
-
-function TACFsmUtf8.GetNodeCount: SizeInt;
-begin
-  Result := FNodeCount;
-end;
-
-function TACFsmUtf8.GetPatternCount: SizeInt;
-begin
-  Result := FWordCount;
-end;
-
-function TACFsmUtf8.GetCaseInsensitive: Boolean;
-begin
-  Result := FIgnoreCase;
-end;
-
-function TACFsmUtf8.GetOnlyWholeWords: Boolean;
-begin
-  Result := FWholeWordsOnly;
-end;
-
-procedure TACFsmUtf8.SetOnlyWholeWords(aValue: Boolean);
-begin
-  FWholeWordsOnly := aValue;
-end;
 
 class function TACFsmUtf8.IsWordChar(c: Ucs4Char): Boolean;
 begin
@@ -4868,30 +4873,157 @@ begin
     end;
 end;
 
-class function TACFsmUtf8.DoProlog(const s: string; aOfs, aCount: SizeInt; out pText, pStart, pEnd: PByte): Boolean;
+function MatchCompareLF(const L, R: TAcMatch): Boolean;
 begin
-  if s = '' then exit(False);
-  if aOfs < 1 then aOfs := 1;
-  if aOfs > System.Length(s) then exit(False);
+  if L.Offset = R.Offset then
+    Result := L.Index < R.Index
+  else
+    Result := L.Offset < R.Offset;
+end;
+
+function MatchCompareLL(const L, R: TAcMatch): Boolean;
+begin
+  if L.Offset = R.Offset then
+    Result := L.Length > R.Length
+  else
+    Result := L.Offset < R.Offset;
+end;
+
+function MatchCompareLS(const L, R: TAcMatch): Boolean;
+begin
+  if L.Offset = R.Offset then
+    Result := L.Length < R.Length
+  else
+    Result := L.Offset < R.Offset;
+end;
+
+class procedure TACFsmUtf8.DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode);
+var
+  Count, I, Len, Ofs: SizeInt;
+begin
+  if aMatches = nil then exit;
+  case aMode of
+    smmDefault, smmNonOverlapping: exit;
+    smmLeftmostFirst:    TSortHelper.Sort(aMatches, @MatchCompareLF);
+    smmLeftmostLongest:  TSortHelper.Sort(aMatches, @MatchCompareLL);
+    smmLeftmostShortest: TSortHelper.Sort(aMatches, @MatchCompareLS);
+  end;
+  Count := 0;
+  I := 0;
+  Len := System.Length(aMatches);
+  repeat
+    Ofs := aMatches[Count].Offset + aMatches[Count].Length;
+    Inc(Count);
+    Inc(I);
+    while (I < Len) and (aMatches[I].Offset < Ofs) do Inc(I);
+    if I >= Len then break;
+    if I <> Count then
+      aMatches[Count] := aMatches[I];
+  until False;
+  System.SetLength(aMatches, Count);
+end;
+
+class function TACFsmUtf8.GetDfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class;
+begin
+  if aIgnoreCase then
+    Result := TACDfaCIUtf8
+  else
+    Result := TACDfaUtf8;
+end;
+
+class function TACFsmUtf8.GetNfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class;
+begin
+  if aIgnoreCase then
+    Result := TACNfaCIUtf8
+  else
+    Result := TACNfaUtf8;
+end;
+
+function TACFsmUtf8.TestOnMatch(const m: TMatch): Boolean;
+begin
+  Result := FOnMatchHandler(m);
+end;
+
+function TACFsmUtf8.TestNestMatch(const m: TMatch): Boolean;
+begin
+  Result := FNestMatchHandler(m);
+end;
+
+procedure TACFsmUtf8.RegisterMatchHandler(h: TOnMatch);
+begin
+  FOnMatchHandler := h;
+  FOnMatch := @TestOnMatch;
+end;
+
+procedure TACFsmUtf8.RegisterMatchHandler(h: TNestMatch);
+begin
+  FNestMatchHandler := h;
+  FOnMatch := @TestNestMatch;
+end;
+
+function TACFsmUtf8.GetAlphabetSize: SizeInt;
+begin
+  Result := -1;
+end;
+
+function TACFsmUtf8.GetNodeCount: SizeInt;
+begin
+  Result := FNodeCount;
+end;
+
+function TACFsmUtf8.GetEmptyCount: SizeInt;
+begin
+  Result := 0;
+end;
+
+function TACFsmUtf8.GetPatternCount: SizeInt;
+begin
+  Result := FWordCount;
+end;
+
+function TACFsmUtf8.GetCaseInsensitive: Boolean;
+begin
+  Result := FIgnoreCase;
+end;
+
+function TACFsmUtf8.GetOnlyWholeWords: Boolean;
+begin
+  Result := FWholeWordsOnly;
+end;
+
+procedure TACFsmUtf8.SetOnlyWholeWords(aValue: Boolean);
+begin
+  FWholeWordsOnly := aValue;
+end;
+
+function TACFsmUtf8.DoProlog(const s: string; aOfs, aCount: SizeInt; out pText, pStart, pEnd: PByte): Boolean;
+begin
+  if (s = '') or (PatternCount = 0) then
+    exit(False);
+  if aOfs < 1 then
+    aOfs := 1;
   if aCount < 1 then
     aCount := System.Length(s)
   else
     aCount := Math.Min(Pred(aOfs + aCount), System.Length(s));
+  if aOfs > aCount then exit(False);
   pText := Pointer(s);
   pStart := pText + Pred(aOfs);
   pEnd := pText + aCount;
   Result := True;
 end;
 
-class function TACFsmUtf8.DoProlog(const s: string; aOfs, aCount: SizeInt; out pStart, pEnd: PByte): Boolean;
+function TACFsmUtf8.DoProlog(const s: string; aOfs, aCount: SizeInt; out pStart, pEnd: PByte): Boolean;
 begin
-  if s = '' then exit(False);
-  if aOfs < 1 then aOfs := 1;
-  if aOfs > System.Length(s) then exit(False);
+  if (s = '') or (PatternCount = 0) then
+    exit(False);
+  if aOfs < 1 then
+    aOfs := 1;
   if aCount < 1 then
     aCount := System.Length(s)
   else
     aCount := Math.Min(Pred(aOfs + aCount), System.Length(s));
+  if aOfs > aCount then exit(False);
   pStart := PByte(s) + Pred(aOfs);
   pEnd := PByte(s) + aCount;
   Result := True;
@@ -4980,66 +5112,6 @@ begin
   Result := 1;
 end;
 
-function MatchLessLF(const L, R: TACFsmUtf8.TMatch): Boolean;
-begin
-  if L.Offset = R.Offset then exit(L.Index < R.Index);
-  Result := L.Offset < R.Offset;
-end;
-
-function MatchLessLL(const L, R: TACFsmUtf8.TMatch): Boolean;
-begin
-  if L.Offset = R.Offset then exit(L.Length > R.Length);
-  Result := L.Offset < R.Offset;
-end;
-
-function MatchLessLS(const L, R: TACFsmUtf8.TMatch): Boolean;
-begin
-  if L.Offset = R.Offset then exit(L.Length < R.Length);
-  Result := L.Offset < R.Offset;
-end;
-
-class procedure TACFsmUtf8.DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode);
-var
-  Count, I, Len, Ofs: SizeInt;
-begin
-  if aMatches = nil then exit;
-  case aMode of
-    smmDefault:          exit;
-    smmLeftmostFirst:    TSortHelper.Sort(aMatches, @MatchLessLF);
-    smmLeftmostLongest:  TSortHelper.Sort(aMatches, @MatchLessLL);
-    smmLeftmostShortest: TSortHelper.Sort(aMatches, @MatchLessLS);
-  end;
-  Count := 0;
-  I := 0;
-  Len := System.Length(aMatches);
-  repeat
-    Ofs := aMatches[Count].Offset + aMatches[Count].Length;
-    Inc(Count);
-    Inc(I);
-    while (I < Len) and (aMatches[I].Offset < Ofs) do Inc(I);
-    if I >= Len then break;
-    if I <> Count then
-      aMatches[Count] := aMatches[I];
-  until False;
-  System.SetLength(aMatches, Count);
-end;
-
-class function TACFsmUtf8.GetDfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class;
-begin
-  if aIgnoreCase then
-    Result := TACDfaCIUtf8
-  else
-    Result := TACDfaUtf8;
-end;
-
-class function TACFsmUtf8.GetNfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class;
-begin
-  if aIgnoreCase then
-    Result := TACNfaCIUtf8
-  else
-    Result := TACNfaUtf8;
-end;
-
 class function TACFsmUtf8.CreateInstance(const aPatternList: array of string; aIgnoreCase,
   aForceNFA: Boolean): TACFsmUtf8;
 begin
@@ -5084,42 +5156,52 @@ begin
   inherited;
 end;
 
+function TACFsmUtf8.TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean;
+begin
+  Result := TryBuildFsm(aPatternEnum.ToArray);
+end;
+
 function TACFsmUtf8.IsMatch(const s: string; aOffset, aCount: SizeInt): Boolean;
 begin
   Result := IndexOfPattern(s, aOffset, aCount) <> NULL_INDEX;
 end;
 
 function TACFsmUtf8.FirstMatch(const aText: string; aOffset, aCount: SizeInt): TMatch;
-var
-  Match: TMatch;
-  function GetFirst(const m: TMatch): Boolean;
-  begin
-    Match := m;
-    Result := False;
-  end;
 begin
-  Match := TMatch.Make(0, 0, NULL_INDEX);
-  Search(aText, @GetFirst, aOffset, aCount);
-  Result := Match;
+  if OnlyWholeWords then
+    Result := DoFindFirstOww(aText, aOffset, aCount)
+  else
+    Result := DoFindFirst(aText, aOffset, aCount);
 end;
 
 function TACFsmUtf8.FindMatches(const aText: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatchArray;
 var
-  Matches: TMatchArray = nil;
-  Count: SizeInt = 0;
+  Matches: TMatchArray;
+  MatchCount: SizeInt;
   function AddMatch(const m: TMatch): Boolean;
   begin
-    if Count = System.Length(Matches) then
-      System.SetLength(Matches, Count * 2);
-    Matches[Count] := m;
-    Inc(Count);
+    if MatchCount = System.Length(Matches) then
+      System.SetLength(Matches, MatchCount * 2);
+    Matches[MatchCount] := m;
+    Inc(MatchCount);
     Result := True;
   end;
 begin
   System.SetLength(Matches, ARRAY_INITIAL_SIZE);
+  MatchCount := 0;
+  if aMode = smmNonOverlapping then
+    begin
+      if OnlyWholeWords then
+        DoSearchNoOverlapOww(aText, aOffset, aCount, @AddMatch)
+      else
+        DoSearchNoOverlap(aText, aOffset, aCount, @AddMatch);
+      System.SetLength(Matches, MatchCount);
+      exit(Matches);
+    end;
   Search(aText, @AddMatch, aOffset, aCount);
-  System.SetLength(Matches, Count);
-  DoFilterMatches(Matches, aMode);
+  System.SetLength(Matches, MatchCount);
+  if aMode <> smmDefault then
+    DoFilterMatches(Matches, aMode);
   Result := Matches;
 end;
 
@@ -5149,9 +5231,9 @@ begin
     Result := GetHasMatch(aText, aOffset, aCount);
 end;
 
-function TACFsmUtf8.FilterMatches(const aSource: array of TAcMatch; aMode: TSetMatchMode): specialize TGArray<TAcMatch>;
+function TACFsmUtf8.FilterMatches(const aSource: array of TMatch; aMode: TSetMatchMode): TMatchArray;
 begin
-  Result := specialize TGArrayHelpUtil<TAcMatch>.CreateCopy(aSource);
+  Result := specialize TGArrayHelpUtil<TMatch>.CreateCopy(aSource);
   DoFilterMatches(Result, aMode);
 end;
 
@@ -5162,50 +5244,33 @@ begin
   Result := FAlphabetSize;
 end;
 
-function TACDfaUtf8.AddToCodeTable(const s: string): Boolean;
+function TACDfaUtf8.BuildCharMap(const aList: array of string): Boolean;
 var
   p, pEnd: PByte;
+  I: SizeInt;
   c: Ucs4Char;
 begin
-  if s = '' then exit(True);
-  p := Pointer(s);
-  pEnd := p + System.Length(s);
-  while p < pEnd do
+  System.FillChar(FCharMap, SizeOf(FCharMap), $ff);
+  for I := 0 to System.High(aList) do
     begin
-      if CaseInsensitive then
-        c := CpToUcs4Lower(p, pEnd - p)
-      else
-        c := CpToUcs4(p, pEnd - p);
-      if c > BMP_MAX then exit(False);
-      if FCodeTable[c] = -1 then
+      if aList[I] = '' then continue;
+      p := Pointer(aList[I]);
+      pEnd := p + System.Length(aList[I]);
+      while p < pEnd do
         begin
-          if AlphabetSize = MAX_CODE then exit(False);
-          FCodeTable[c] := AlphabetSize;
-          Inc(FAlphabetSize);
+          if CaseInsensitive then
+            c := CpToUcs4Lower(p, pEnd - p)
+          else
+            c := CpToUcs4(p, pEnd - p);
+          if c > BMP_MAX then exit(False);
+          if FCharMap[c] = -1 then
+            begin
+              if AlphabetSize = MAX_CODE then exit(False);
+              FCharMap[c] := AlphabetSize;
+              Inc(FAlphabetSize);
+            end;
         end;
     end;
-  Result := True;
-end;
-
-function TACDfaUtf8.BuildCodeTable(const aList: array of string): Boolean;
-var
-  I: SizeInt;
-begin
-  System.FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
-  for I := 0 to System.High(aList) do
-    if not AddToCodeTable(aList[I]) then
-      exit(False);
-  Result := True;
-end;
-
-function TACDfaUtf8.BuildCodeTable(e: IStrEnumerable): Boolean;
-var
-  s: string;
-begin
-  System.FillChar(FCodeTable, SizeOf(FCodeTable), $ff);
-  for s in e do
-    if not AddToCodeTable(s) then
-      exit(False);
   Result := True;
 end;
 
@@ -5225,7 +5290,7 @@ end;
 function TACDfaUtf8.GetCharCode(c: Ucs4Char): Int32;
 begin
   if c > BMP_MAX then exit(-1);
-  Result := FCodeTable[c];
+  Result := FCharMap[c];
 end;
 
 procedure TACDfaUtf8.AddPattern(const aValue: string; aIndex: SizeInt);
@@ -5269,7 +5334,7 @@ end;
 function TACDfaUtf8.GetNextMove(aState: Int32; c: Ucs4Char): Int32;
 begin
   if c > BMP_MAX then exit(0);
-  Result := FCodeTable[c];
+  Result := FCharMap[c];
   if Result = -1 then exit(0);
   Result := FTrie[aState].NextMove[Result];
 end;
@@ -5277,35 +5342,153 @@ end;
 procedure TACDfaUtf8.BuildFsm;
 var
   Queue: specialize TGLiteQueue<Int32>;
+  Failure: array of Int32;
   Curr, Next, Fail, Link, c: Int32;
 begin
+  System.SetLength(Failure, NodeCount);
   for Curr in FTrie[0].NextMove do
     if Curr <> 0 then
       Queue.Enqueue(Curr);
   while Queue.TryDequeue(Curr) do
-    for c := 0 to Pred(FAlphabetSize) do
+    for c := 0 to Pred(AlphabetSize) do
       if FTrie[Curr].NextMove[c] <> 0 then
         begin
           Next := FTrie[Curr].NextMove[c];
           Queue.Enqueue(Next);
-          Fail := FTrie[Curr].Failure;
+          Fail := Curr;
           repeat
+            Fail := Failure[Fail];
             Link := FTrie[Fail].NextMove[c];
             if Link <> 0 then
               begin
-                FTrie[Next].Failure := Link;
+                Failure[Next] := Link;
                 if FTrie[Link].Length <> 0 then
                   FTrie[Next].Output := Link
                 else
                   FTrie[Next].Output := FTrie[Link].Output;
                 break;
               end;
-            if Fail = 0 then break;
-            Fail := FTrie[Fail].Failure;
-          until False;
+          until Fail = 0;
         end
       else
-        FTrie[Curr].NextMove[c] := FTrie[FTrie[Curr].Failure].NextMove[c];
+        FTrie[Curr].NextMove[c] := FTrie[Failure[Curr]].NextMove[c];
+end;
+
+function TACDfaUtf8.DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch;
+var
+  p, pText, pEnd: PByte;
+  State: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  State := 0;
+  while p < pEnd do
+    begin
+      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
+      if State = 0 then continue;
+      with FTrie[State] do
+        if Length <> 0 then
+          exit(TMatch.Make(Succ(p - pText - Length), Length, Index));
+      if FTrie[State].Output <> 0 then
+        with FTrie[FTrie[State].Output] do
+          exit(TMatch.Make(Succ(p - pText - Length), Length, Index));
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+function TACDfaUtf8.DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch;
+var
+  p, pText, pEnd: PByte;
+  State, Tmp, qTop: Int32;
+  c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  State := 0;
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do
+    begin
+      c := CpToUcs4(p, pEnd - p);
+      qTop := PushChar(qTop, c);
+      State := GetNextMove(State, c);
+      if State = 0 then continue;
+      with FTrie[State] do
+        if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
+          exit(TMatch.Make(Succ(p - pText - Length), Length, Index));
+      Tmp := State;
+      while FTrie[Tmp].Output <> 0 do
+        begin
+          Tmp := FTrie[Tmp].Output;
+          with FTrie[Tmp] do
+            if OnWordBounds(p, pEnd, qTop, Utf8Len) then
+              exit(TMatch.Make(Succ(p - pText - Length), Length, Index));
+        end;
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+procedure TACDfaUtf8.DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
+var
+  p, pEnd, pText: PByte;
+  State: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  State := 0;
+  while p < pEnd do
+    begin
+      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
+      if State = 0 then continue;
+      with FTrie[State] do
+        if Length <> 0 then
+          begin
+            aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index));
+            State := 0;
+            continue;
+          end;
+      if FTrie[State].Output <> 0 then
+        with FTrie[FTrie[State].Output] do
+          begin
+            aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index));
+            State := 0;
+          end;
+    end;
+end;
+
+procedure TACDfaUtf8.DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
+var
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
+  c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do begin
+    c := CpToUcs4(p, pEnd - p);
+    qTop := PushChar(qTop, c);
+    State := GetNextMove(State, c);
+    if State = 0 then continue;
+    with FTrie[State] do
+      if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
+        begin
+          aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index));
+          State := 0;
+          continue;
+        end;
+    Tmp := State;
+    while FTrie[Tmp].Output <> 0 do
+      begin
+        Tmp := FTrie[Tmp].Output;
+        with FTrie[Tmp] do
+          if OnWordBounds(p, pEnd, qTop, Utf8Len) then
+            begin
+              aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index));
+              State := 0;
+              break;
+            end;
+      end;
+  end;
 end;
 
 procedure TACDfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
@@ -5371,8 +5554,8 @@ begin
     begin
       State := GetNextMove(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
-      if FTrie[State].Length <> 0 then exit(True);
-      if FTrie[State].Output <> 0 then exit(True);
+      if (FTrie[State].Length <> 0) or (FTrie[State].Output <> 0) then
+        exit(True);
     end;
   Result := False;
 end;
@@ -5414,32 +5597,11 @@ function TACDfaUtf8.TryBuildFsm(const aPatternList: array of string): Boolean;
 var
   I: SizeInt;
 begin
-  if not BuildCodeTable(aPatternList) then exit(False);
+  if not BuildCharMap(aPatternList) then exit(False);
   System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
   NewNode;
   for I := 0 to System.High(aPatternList) do
     AddPattern(aPatternList[I], I);
-  System.SetLength(FTrie, FNodeCount);
-  Inc(FQueueSize, 2);
-  System.SetLength(FQueue, FQueueSize);
-  BuildFsm;
-  Result := True;
-end;
-
-function TACDfaUtf8.TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean;
-var
-  I: SizeInt;
-  s: string;
-begin
-  if not BuildCodeTable(aPatternEnum) then exit(False);
-  System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
-  NewNode;
-  I := 0;
-  for s in aPatternEnum do
-    begin
-      AddPattern(s, I);
-      Inc(I);
-    end;
   System.SetLength(FTrie, FNodeCount);
   Inc(FQueueSize, 2);
   System.SetLength(FQueue, FQueueSize);
@@ -5453,7 +5615,7 @@ var
 begin
   Inst := TACDfaUtf8(GetFsmClass.Create);
   Inst.FTrie := FTrie;
-  Inst.FCodeTable := FCodeTable;
+  Inst.FCharMap := FCharMap;
   Inst.FQueue := System.Copy(FQueue);
   Inst.FAlphabetSize := FAlphabetSize;
   Inst.FQueueSize := FQueueSize;
@@ -5464,7 +5626,7 @@ begin
   Result := Inst;
 end;
 
-function TACDfaUtf8.IndexOfPattern(const s: string; aOffset, aCount: SizeInt): SizeInt;
+function TACDfaUtf8.IndexOfPattern(const s: string; aOffset: SizeInt; aCount: SizeInt): SizeInt;
 var
   p, pEnd: PByte;
   Curr, Next, Code: Int32;
@@ -5489,6 +5651,147 @@ begin
 end;
 
 { TACDfaCIUtf8 }
+
+function TACDfaCIUtf8.DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch;
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, qTop: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  qTop := 0;
+  State := 0;
+  while p < pEnd do
+    begin
+      qTop := PushOffset(qTop, Succ(p - pText));
+      State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
+      if State = 0 then continue;
+      with FTrie[State] do
+        if Utf8Len <> 0 then
+          begin
+            Ofs := PopOffset(qTop, Utf8Len);
+            exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          end;
+      if FTrie[State].Output <> 0 then
+        with FTrie[FTrie[State].Output] do
+          begin
+            Ofs := PopOffset(qTop, Utf8Len);
+            exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          end;
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+function TACDfaCIUtf8.DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch;
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
+  c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do
+    begin
+      c := CpToUcs4Lower(p, pEnd - p, Ofs);
+      qTop := PushOffset(qTop, Succ(p - pText), c);
+      p += Ofs;
+      State := GetNextMove(State, c);
+      if State = 0 then continue;
+      with FTrie[State] do
+        if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
+          begin
+            Ofs := PopOffset(qTop, Utf8Len);
+            exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          end;
+      Tmp := State;
+      while FTrie[Tmp].Output <> 0 do
+        begin
+          Tmp := FTrie[Tmp].Output;
+          with FTrie[Tmp] do
+            if OnWordBounds(p, pEnd, qTop, Utf8Len) then
+              begin
+                Ofs := PopOffset(qTop, Utf8Len);
+                exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+              end;
+        end;
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+procedure TACDfaCIUtf8.DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, qTop: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  qTop := 0;
+  State := 0;
+  while p < pEnd do begin
+    qTop := PushOffset(qTop, Succ(p - pText));
+    State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
+    if State = 0 then continue;
+    with FTrie[State] do
+      if Utf8Len <> 0 then
+        begin
+          Ofs := PopOffset(qTop, Utf8Len);
+          aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          State := 0;
+          continue;
+        end;
+    if FTrie[State].Output <> 0 then
+      with FTrie[FTrie[State].Output] do
+        begin
+          Ofs := PopOffset(qTop, Utf8Len);
+          aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          State := 0;
+        end;
+  end;
+end;
+
+procedure TACDfaCIUtf8.DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
+  c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do begin
+    c := CpToUcs4Lower(p, pEnd - p, Ofs);
+    qTop := PushOffset(qTop, Succ(p - pText), c);
+    p += Ofs;
+    State := GetNextMove(State, c);
+    if State = 0 then continue;
+    with FTrie[State] do
+      if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
+        begin
+          Ofs := PopOffset(qTop, Utf8Len);
+          aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          State := 0;
+          continue;
+        end;
+    Tmp := State;
+    while FTrie[Tmp].Output <> 0 do
+      begin
+        Tmp := FTrie[Tmp].Output;
+        with FTrie[Tmp] do
+          if OnWordBounds(p, pEnd, qTop, Utf8Len) then
+            begin
+              Ofs := PopOffset(qTop, Utf8Len);
+              aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+              State := 0;
+              break;
+            end;
+      end;
+  end;
+end;
 
 procedure TACDfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
 var
@@ -5570,8 +5873,8 @@ begin
     begin
       State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
       if State = 0 then continue;
-      if FTrie[State].Length <> 0 then exit(True);
-      if FTrie[State].Output <> 0 then exit(True);
+      if (FTrie[State].Length <> 0) or (FTrie[State].Output <> 0) then
+        exit(True);
     end;
   Result := False;
 end;
@@ -5615,50 +5918,41 @@ begin
   FIgnoreCase := True;
 end;
 
-{$IFNDEF AC_USE_HASHMAP_NFA}
-{ TUcs4ToIntMap.TEnumerator }
+{ TCode2StateMap.TEnumerator }
 
-function TUcs4ToIntMap.TEnumerator.GetCurrent: TEntry;
+function TCode2StateMap.TEnumerator.GetCurrent: TEntry;
 begin
   Result := FCurrent^;
 end;
 
-function TUcs4ToIntMap.TEnumerator.MoveNext: Boolean;
+function TCode2StateMap.TEnumerator.MoveNext: Boolean;
 begin
-  if FCurrent < FLast then
-    begin
-      Inc(FCurrent);
-      exit(True);
-    end;
-  Result := False;
+  Result := FCurrent < FLast;
+  FCurrent += Ord(Result);
 end;
 
-{ TUcs4ToIntMap }
+{ TCode2StateMap }
 
-function TUcs4ToIntMap.GetCapacity: Int32;
-begin
-  Result := System.Length(FItems);
-end;
-
-function TUcs4ToIntMap.DoFind(aKey: Ucs4Char): PEntry;
+function TCode2StateMap.DoFind(aKey: Int32; out aIndex: Int32): PEntry;
 var
   L, R, M: Int32;
 begin
-  case Count of
-    0: exit(nil);
-    1:
-      if aKey = FItems[0].Key then
-        exit(PEntry(FItems))
-      else
-        exit(nil);
-  else
-    if (aKey < FItems[0].Key) or (aKey > FItems[Pred(Count)].Key) then
-      exit(nil);
+  if Count = 0 then begin
+    aIndex := 0;
+    exit(nil);
   end;
   L := 0;
   R := Pred(Count);
+  if aKey < FItems[L].Key then begin
+    aIndex := 0;
+    exit(nil);
+  end else
+    if aKey > FItems[R].Key then begin
+      aIndex := Count;
+      exit(nil);
+    end;
   while L < R do begin
-    M := (L + R) shr 1;
+    M := {$PUSH}{$Q-}{$R-}(L + R) shr 1;{$POP}
     if FItems[M].Key < aKey then
       L := Succ(M)
     else
@@ -5666,52 +5960,16 @@ begin
   end;
   if FItems[R].Key = aKey then
     Result := @FItems[R]
-  else
+  else begin
+    aIndex := R;
     Result := nil;
-end;
-
-function TUcs4ToIntMap.DoFind(aKey: Ucs4Char; out aIndex: Int32): PEntry;
-var
-  L, R, M: Int32;
-begin
-  if Count = 0 then
-    begin
-      aIndex := 0;
-      exit(nil);
-    end;
-  L := 0;
-  R := Pred(Count);
-  if aKey < FItems[L].Key then
-    begin
-      aIndex := 0;
-      exit(nil);
-    end
-  else
-    if aKey > FItems[R].Key then
-      begin
-        aIndex := Count;
-        exit(nil);
-      end;
-  while L < R do begin
-    M := (L + R) shr 1;
-    if FItems[M].Key < aKey then
-      L := Succ(M)
-    else
-      R := M;
   end;
-  if FItems[R].Key = aKey then
-    Result := @FItems[R]
-  else
-    begin
-      aIndex := R;
-      Result := nil;
-    end;
 end;
 
-function TUcs4ToIntMap.DoAdd(aKey: Ucs4Char; aIndex: Int32): PEntry;
+function TCode2StateMap.DoAdd(aKey, aIndex: Int32): PEntry;
 begin
   if FItems <> nil then begin
-    if Count = Capacity then
+    if Count = System.Length(FItems) then
       System.SetLength(FItems, Count * 2);
     if aIndex <> Count then
       System.Move(FItems[aIndex], FItems[aIndex+1], (Count - aIndex) * SizeOf(TEntry));
@@ -5719,14 +5977,24 @@ begin
     FItems[aIndex].Key := aKey;
     Result := @FItems[aIndex];
   end else begin
-    System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY);
+    System.SetLength(FItems, INITIAL_SIZE);
     FItems[0].Key := aKey;
     FCount := 1;
     Result := @FItems[0];
   end;
 end;
 
-function TUcs4ToIntMap.GetEnumerator: TEnumerator;
+function TCode2StateMap.GetKey(aIndex: Int32): Int32;
+begin
+  Result := FItems[aIndex].Key;
+end;
+
+function TCode2StateMap.GetValue(aIndex: Int32): Int32;
+begin
+  Result := FItems[aIndex].Value;
+end;
+
+function TCode2StateMap.GetEnumerator: TEnumerator;
 begin
   if Count = 0 then
     begin
@@ -5740,7 +6008,7 @@ begin
     end;
 end;
 
-function TUcs4ToIntMap.GetMutValueDef(aKey: Ucs4Char; aDefault: Int32): PInt32;
+function TCode2StateMap.GetMutValueDef(aKey, aDefault: Int32): PInt32;
 var
   p: PEntry;
   I: Int32;
@@ -5754,21 +6022,13 @@ begin
   Result := @p^.Value;
 end;
 
-function TUcs4ToIntMap.TryGetValue(aKey: Ucs4Char; out aValue: Int32): Boolean;
-var
-  p: PEntry;
-begin
-  p := DoFind(aKey);
-  Result := p <> nil;
-  if Result then
-    aValue := p^.Value;
-end;
+{ TACNfaUtf8.TPair }
 
-procedure TUcs4ToIntMap.TrimToFit;
+constructor TACNfaUtf8.TPair.Make(aNode, aDaNode: Int32);
 begin
-  System.SetLength(FItems, Count);
+  Node := aNode;
+  DaNode := aDaNode;
 end;
-{$ENDIF AC_USE_HASHMAP_NFA}
 
 { TACNfaUtf8 }
 
@@ -5784,102 +6044,359 @@ begin
   Inc(FNodeCount);
 end;
 
+function TACNfaUtf8.NewOutput(aIndex, aLen, aCpLen: Int32): Int32;
+begin
+{$IFDEF CPU64}
+  if OutCount = MaxInt then
+    raise ELGMaxItemsExceed.CreateFmt(SEMaxNodeCountExceedFmt, [MaxInt]);
+{$ENDIF CPU64}
+  if OutCount = System.Length(FOutput) then
+    System.SetLength(FOutput, OutCount * 2);
+  with FOutput[OutCount] do
+    begin
+      Index := aIndex;
+      Len := aLen;
+      CpLen := aCpLen;
+    end;
+  Result := OutCount;
+  Inc(FOutCount);
+end;
+
+procedure TACNfaUtf8.BuildCharMap(const aPatternList: array of string);
+type
+  TMapType = specialize TGLiteChainHashMap<Ucs4Char, Int32, TUcs4Hasher>;
+  TMap     = TMapType.TMap;
+  TEntry   = TMap.TEntry;
+  function EntryCmp(const L, R: TEntry): Boolean;
+  begin
+    Result := L.Value > R.Value;
+  end;
+var
+  Map: TMap;
+  a: array of TEntry;
+  p, pEnd: PByte;
+  I: Int32;
+begin
+  for I := 0 to System.High(aPatternList) do
+    begin
+      if aPatternList[I] = '' then continue;
+      p := Pointer(aPatternList[I]);
+      pEnd := p + System.Length(aPatternList[I]);
+      while p < pEnd do
+        if CaseInsensitive then
+          Inc(Map.GetMutValueDef(CpToUcs4Lower(p, pEnd - p), 0)^)
+        else
+          Inc(Map.GetMutValueDef(CpToUcs4(p, pEnd - p), 0)^);
+    end;
+  a := Map.ToArray;
+  specialize TGNestedArrayHelper<TEntry>.MergeSort(a, @EntryCmp);
+  for I := 0 to System.High(a) do
+    FCharMap[a[I].Key] := Succ(I);
+  FAlphabetSize := Succ(System.Length(a));
+end;
+
 procedure TACNfaUtf8.AddPattern(const aValue: string; aIndex: SizeInt);
 var
   pNext: PInt32;
   p, pEnd: PByte;
-  Curr, LenUtf8: Int32;
-  c: Ucs4Char;
+  Curr, LenCp, Code: Int32;
 begin
   if aValue = '' then exit;
-  Curr := 0;
-  LenUtf8 := 0;
+  Curr := 0; // root node has index 0
   p := Pointer(aValue);
   pEnd := p + System.Length(aValue);
-  while p < pEnd do begin
-    if CaseInsensitive then
-      c := CpToUcs4Lower(p, pEnd - p)
-    else
-      c := CpToUcs4(p, pEnd - p);
-    Inc(LenUtf8);
-    pNext := FTrie[Curr].NextMove.GetMutValueDef(c, -1);
-    if pNext^ = -1 then
-      pNext^ := NewNode;
-    Curr := pNext^;
-  end;
-  if FTrie[Curr].Length = 0 then begin
-    Inc(FWordCount);
-    if LenUtf8 > FQueueSize then
-      FQueueSize := LenUtf8;
-    with FTrie[Curr] do begin
-      Index := aIndex;
-      Length := System.Length(aValue);
-      Utf8Len := LenUtf8;
+  LenCp := 0;
+  while p < pEnd do
+    begin
+      if CaseInsensitive then
+        Code := FCharMap[CpToUcs4Lower(p, pEnd - p)]
+      else
+        Code := FCharMap[CpToUcs4(p, pEnd - p)];
+      Inc(LenCp);
+      pNext := FTrie[Curr].AdjList.GetMutValueDef(Code, 0);
+      if pNext^ = 0 then
+        pNext^ := NewNode;
+      Curr := pNext^;
     end;
-  end;
+  if FTrie[Curr].Output = 0 then
+    begin
+      Inc(FWordCount);
+      if LenCp > FQueueSize then FQueueSize := LenCp;
+      FTrie[Curr].Output := NewOutput(aIndex, System.Length(aValue), LenCp);
+    end;
+end;
+
+function TACNfaUtf8.NextMove(aState, aCode: Int32): Int32;
+begin
+  Result := FDaTrie[aState].Base + aCode;
+  if (UInt32(Result) > UInt32(System.Length(FDaTrie))) or (FDaTrie[Result].Check <> aState) then
+    Result := 0;
+end;
+
+function TACNfaUtf8.NextState(aState, aCode: Int32): Int32;
+begin
+  if aCode = 0 then exit(0);
+  Result := FDaTrie[aState].Base + aCode;
+  if (UInt32(Result) > UInt32(System.Length(FDaTrie))) or (FDaTrie[Result].Check <> aState) then
+    repeat
+      aState := FDaTrie[aState].Failure;
+      Result := NextMove(aState, aCode);
+    until (Result <> 0) or (aState = 0);
 end;
 
 procedure TACNfaUtf8.BuildFsm;
 var
-  Queue: TIntQueue;
-  Curr, Fail, Link: Int32;
-  e: specialize TGMapEntry<Ucs4Char, Int32>;
-begin
-  for e in FTrie[0].NextMove do
-    Queue.Enqueue(e.Value);
-  while Queue.TryDequeue(Curr) do
-    for e in FTrie[Curr].NextMove do
+  VListHead, VListTail, AllVacantBound: Int32;
+  procedure VacantListRemove(aNode: Int32); inline;
+  var
+    Prev, Next: Int32;
+  begin
+    if aNode >= AllVacantBound then
+      AllVacantBound := Succ(aNode);
+    Next := FDaTrie[aNode].Base;
+    Prev := FDaTrie[aNode].Check;
+    if Prev <> NULL_NODE then
+      FDaTrie[-Prev].Base := Next;
+    if Next <> NULL_NODE then
+      FDaTrie[-Next].Check := Prev;
+    if aNode = VListHead then
+      VListHead := -Next;
+    if aNode = VListTail then
+      VListTail := -Prev;
+  end;
+  procedure Expand(aNewSize: SizeInt);
+  var
+    OldSize, I: Int32;
+  begin
+    if aNewSize <= System.Length(FDaTrie) then exit;
+    OldSize := System.Length(FDaTrie);
+  {$IFDEF CPU64}
+    if OldSize = MaxInt then
+      raise ELGMaxItemsExceed.CreateFmt(SEMaxNodeCountExceedFmt, [MaxInt]);
+    System.SetLength(FDaTrie, Math.Min(aNewSize, MaxInt));
+  {$ELSE CPU64}
+    System.SetLength(FDaTrie, aNewSize);
+  {$ENDIF CPU64}
+    for I := OldSize to System.High(FDaTrie) do
       begin
-        Queue.Enqueue(e.Value);
-        Fail := FTrie[Curr].Failure;
-        repeat
-          if FTrie[Fail].NextMove.TryGetValue(e.Key, Link) then
-            begin
-              FTrie[e.Value].Failure := Link;
-              if FTrie[Link].Length <> 0 then
-                FTrie[e.Value].Output := Link
-              else
-                FTrie[e.Value].Output := FTrie[Link].Output;
-              break;
-            end;
-          if Fail = 0 then break;
-          Fail := FTrie[Fail].Failure;
-        until False;
+        FDaTrie[I].Base := -Succ(I);
+        FDaTrie[I].Check := -Pred(I);
       end;
+    FDaTrie[System.High(FDaTrie)].Base := NULL_NODE;
+    if VListHead = NULL_NODE then ////////////////
+      VListHead := OldSize;
+    if VListTail <> NULL_NODE then
+      FDaTrie[VListTail].Base := -OldSize;
+    FDaTrie[OldSize].Check := -VListTail;
+    VListTail := System.High(FDaTrie);
+  end;
+  function NextVacantValue(aTrieNode: Int32): Int32;
+  var
+    Next, Dist, Dist2, Dist3: Int32;
+  begin
+    with FTrie[aTrieNode].AdjList do
+      case Count of
+        1:
+          begin
+            if VListHead = NULL_NODE then
+              Expand(System.Length(FDaTrie) * 2);
+            Result := VListHead - Keys[0];
+          end;
+        2:
+          begin
+            Dist := Keys[1] - Keys[0];
+            Next := VListHead;
+            Result := NULL_NODE;
+            repeat
+              if (Next = NULL_NODE) or (Next + Dist > System.High(FDaTrie)) then
+                Expand(System.Length(FDaTrie) * 2);
+              if FDaTrie[Next + Dist].Check < 0 then
+                exit(Next - Keys[0]);
+              Next := -FDaTrie[Next].Base;
+            until False;
+          end;
+        3:
+          begin
+            Dist := Keys[1] - Keys[0];
+            Dist2 := Keys[2] - Keys[0];
+            Next := VListHead;
+            Result := NULL_NODE;
+            repeat
+              if (Next = NULL_NODE) or (Next + Dist2 > System.High(FDaTrie)) then
+                Expand(System.Length(FDaTrie) * 2);
+              if (FDaTrie[Next + Dist].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) then
+                exit(Next - Keys[0]);
+              Next := -FDaTrie[Next].Base;
+            until False;
+          end;
+        4:
+          begin
+            Dist := Keys[1] - Keys[0];
+            Dist2 := Keys[2] - Keys[0];
+            Dist3 := Keys[3] - Keys[0];
+            Next := VListHead;
+            Result := NULL_NODE;
+            repeat
+              if (Next = NULL_NODE) or (Next + Dist3 > System.High(FDaTrie)) then
+                Expand(System.Length(FDaTrie) * 2);
+              if(FDaTrie[Next + Dist].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) and
+                (FDaTrie[Next + Dist3].Check < 0) then
+                exit(Next - Keys[0]);
+              Next := -FDaTrie[Next].Base;
+            until False;
+          end;
+      else
+        if AllVacantBound + Keys[Count - 1] - Keys[0] > System.High(FDaTrie) then
+          Expand(System.Length(FDaTrie) * 2);
+        Result := AllVacantBound - Keys[0];
+      end;
+  end;
+var
+  Queue: TPairQueue;
+  CurrPair: TPair;
+  Next, Fail, Link: Int32;
+  e: TCode2StateMap.TEntry;
+begin
+  System.SetLength(FDaTrie, LgUtils.RoundUpTwoPower(NodeCount + AlphabetSize));
+  for Next := 2 to System.High(FDaTrie) do
+    with FDaTrie[Next] do begin
+      Base := -Succ(Next);
+      Check := -Pred(Next);
+    end;
+  AllVacantBound := 0;
+  VListHead := 1;
+  FDaTrie[1].Base := -2;
+  FDaTrie[1].Check := NULL_NODE;
+  FDaTrie[System.High(FDaTrie)].Base := NULL_NODE;
+  VListTail := System.High(FDaTrie);
+
+  // root node has index 0 both in FTrie and FDaTrie
+  for e in FTrie[0].AdjList do begin
+    VacantListRemove(e.Key);
+    with FDaTrie[e.Key] do begin
+      Base := LEAF_NODE;
+      Check := 0;
+      Output := FTrie[e.Value].Output;
+    end;
+    Queue.Enqueue(TPair.Make(e.Value, e.Key));
+  end;
+
+  while Queue.TryDequeue(CurrPair) do
+    if FTrie[CurrPair.Node].AdjList.Count <> 0 then begin
+      FDaTrie[CurrPair.DaNode].Base := NextVacantValue(CurrPair.Node);
+      for e in FTrie[CurrPair.Node].AdjList do begin
+        Next := FDaTrie[CurrPair.DaNode].Base + e.Key;
+        VacantListRemove(Next);
+        with FDaTrie[Next] do begin
+          Base := LEAF_NODE;
+          Check := CurrPair.DaNode;
+          Output := FTrie[e.Value].Output;
+        end;
+        Queue.Enqueue(TPair.Make(e.Value, Next));
+        Fail := CurrPair.DaNode;
+        repeat
+          Fail := FDaTrie[Fail].Failure;
+          Link := NextMove(Fail, e.Key);
+          if Link <> 0 then begin
+            FDaTrie[Next].Failure := Link;
+            if FDaTrie[Link].Output <> 0 then
+              FDaTrie[Next].NextOut := Link
+            else
+              FDaTrie[Next].NextOut := FDaTrie[Link].NextOut;
+            break;
+          end;
+        until Fail = 0;
+      end;
+    end;
+  if System.Length(FDaTrie) > AllVacantBound then
+    System.SetLength(FDaTrie, AllVacantBound);
 end;
 
-procedure TACNfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+function TACNfaUtf8.DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch;
 var
   p, pEnd, pText: PByte;
-  State, NextState: Int32;
+  State: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  State := 0;
+  while p < pEnd do
+    begin
+      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          exit(TMatch.Make(Succ(p - pText - Len), Len, Index));
+      if FDaTrie[State].NextOut <> 0 then
+        with FOutput[FDaTrie[FDaTrie[State].NextOut].Output] do
+          exit(TMatch.Make(Succ(p - pText - Len), Len, Index));
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+function TACNfaUtf8.DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch;
+var
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
   c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do
+    begin
+      c := CpToUcs4(p, pEnd - p);
+      qTop := PushChar(qTop, c);
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            exit(TMatch.Make(Succ(p - pText - Len), Len, Index));
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
+        begin
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
+              exit(TMatch.Make(Succ(p - pText - Len), Len, Index));
+        end;
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+procedure TACNfaUtf8.DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
+var
+  p, pEnd, pText: PByte;
+  State: Int32;
 begin
   if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4(p, pEnd - p);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      with FTrie[NextState] do
-        if Length <> 0 then
-          if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
-      while FTrie[NextState].Output <> 0 do
-        begin
-          NextState := FTrie[NextState].Output;
-          with FTrie[NextState] do
-            if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
-        end;
+      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          begin
+            aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index));
+            State := 0;
+            continue;
+          end;
+      if FDaTrie[State].NextOut <> 0 then
+        with FOutput[FDaTrie[FDaTrie[State].NextOut].Output] do
+          begin
+            aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index));
+            State := 0;
+          end;
     end;
 end;
 
-procedure TACNfaUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+procedure TACNfaUtf8.DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   p, pEnd, pText: PByte;
-  State, NextState, qTop: Int32;
+  State, Tmp, qTop: Int32;
   c: Ucs4Char;
 begin
   if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
@@ -5889,20 +6406,81 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      with FTrie[NextState] do
-        if (Length <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
-          if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
-      while FTrie[NextState].Output <> 0 do
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            begin
+              aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index));
+              State := 0;
+              continue;
+            end;
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
         begin
-          NextState := FTrie[NextState].Output;
-          with FTrie[NextState] do
-            if OnWordBounds(p, pEnd, qTop, Utf8Len) then
-              if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
+              begin
+                aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index));
+                State := 0;
+                break;
+              end;
+        end;
+    end;
+end;
+
+procedure TACNfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+var
+  p, pEnd, pText: PByte;
+  State, Tmp: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  State := 0;
+  while p < pEnd do
+    begin
+      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
+        begin
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+        end;
+    end;
+end;
+
+procedure TACNfaUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+var
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
+  c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do
+    begin
+      c := CpToUcs4(p, pEnd - p);
+      qTop := PushChar(qTop, c);
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
+        begin
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
+              if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
         end;
     end;
 end;
@@ -5910,21 +6488,16 @@ end;
 function TACNfaUtf8.GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean;
 var
   p, pEnd: PByte;
-  State, NextState: Int32;
-  c: Ucs4Char;
+  State: Int32;
 begin
   if not DoProlog(s, aOffset, aCount, p, pEnd) then exit(False);
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4(p, pEnd - p);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      if (FTrie[NextState].Length <> 0) then exit(True);
-      if (FTrie[NextState].Output <> 0) then exit(True);
+      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      if State = 0 then continue;
+      if (FDaTrie[State].Output <> 0) or (FDaTrie[State].NextOut <> 0) then
+        exit(True);
     end;
   Result := False;
 end;
@@ -5932,7 +6505,7 @@ end;
 function TACNfaUtf8.GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean;
 var
   p, pEnd, pText: PByte;
-  State, NextState, qTop: Int32;
+  State, Tmp, qTop: Int32;
   c: Ucs4Char;
 begin
   if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit(False);
@@ -5942,20 +6515,30 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      with FTrie[NextState] do
-        if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then exit(True);
-      while FTrie[NextState].Output <> 0 do
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then exit(True);
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
         begin
-          NextState := FTrie[NextState].Output;
-          if OnWordBounds(p, pEnd, qTop, FTrie[NextState].Utf8Len) then exit(True);
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then exit(True);
         end;
     end;
   Result := False;
+end;
+
+function TACNfaUtf8.GetEmptyCount: SizeInt;
+begin
+  Result := System.Length(FDaTrie) - NodeCount;
+end;
+
+function TACNfaUtf8.GetAlphabetSize: SizeInt;
+begin
+  Result := FAlphabetSize;
 end;
 
 class function TACNfaUtf8.GetFsmClass: TACFsmUtf8Class;
@@ -5963,38 +6546,29 @@ begin
   Result := TACNfaUtf8;
 end;
 
+constructor TACNfaUtf8.Create;
+begin
+  inherited;
+  System.SetLength(FCharMap, Succ(High(Ucs4Char)));
+  System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
+  System.SetLength(FOutput, ARRAY_INITIAL_SIZE);
+  FNodeCount := 1;
+  FOutCount := 1;
+  FAlphabetSize := 1;
+end;
+
 function TACNfaUtf8.TryBuildFsm(const aPatternList: array of string): Boolean;
 var
   I: SizeInt;
 begin
-  System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
-  NewNode;
+  BuildCharMap(aPatternList);
   for I := 0 to System.High(aPatternList) do
     AddPattern(aPatternList[I], I);
-  System.SetLength(FTrie, FNodeCount);
   Inc(FQueueSize, 2);
+  System.SetLength(FOutput, OutCount);
   System.SetLength(FQueue, FQueueSize);
   BuildFsm;
-  Result := True;
-end;
-
-function TACNfaUtf8.TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean;
-var
-  I: SizeInt;
-  s: string;
-begin
-  System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
-  NewNode;
-  I := 0;
-  for s in aPatternEnum do
-    begin
-      AddPattern(s, I);
-      Inc(I);
-    end;
-  System.SetLength(FTrie, FNodeCount);
-  Inc(FQueueSize, 2);
-  System.SetLength(FQueue, FQueueSize);
-  BuildFsm;
+  FTrie := nil;
   Result := True;
 end;
 
@@ -6003,21 +6577,24 @@ var
   Inst: TACNfaUtf8;
 begin
   Inst := TACNfaUtf8(GetFsmClass.Create);
-  Inst.FTrie := FTrie;
+  Inst.FCharMap := FCharMap;
+  Inst.FDaTrie := FDaTrie;
+  Inst.FOutput := FOutput;
   Inst.FQueue := System.Copy(FQueue);
   Inst.FQueueSize := FQueueSize;
   Inst.FNodeCount := FNodeCount;
   Inst.FWordCount := FWordCount;
+  Inst.FOutCount := FOutCount;
+  Inst.FAlphabetSize := FAlphabetSize;
   Inst.FIgnoreCase := FIgnoreCase;
   Inst.FWholeWordsOnly := FWholeWordsOnly;
   Result := Inst;
 end;
 
-function TACNfaUtf8.IndexOfPattern(const s: string; aOffset, aCount: SizeInt): SizeInt;
+function TACNfaUtf8.IndexOfPattern(const s: string; aOffset: SizeInt; aCount: SizeInt): SizeInt;
 var
   p, pEnd: PByte;
-  Curr, Next: Int32;
-  c: Ucs4Char;
+  Curr, Next, c: Int32;
 begin
   Result := NULL_INDEX;
   if not DoProlog(s, aOffset, aCount, p, pEnd) then exit;
@@ -6025,25 +6602,97 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        c := CpToUcs4Lower(p, pEnd - p)
+        c := FCharMap[CpToUcs4Lower(p, pEnd - p)]
       else
-        c := CpToUcs4(p, pEnd - p);
-      if not FTrie[Curr].NextMove.TryGetValue(c, Next) then exit;
+        c := FCharMap[CpToUcs4(p, pEnd - p)];
+      if c = 0 then exit;
+      Next := NextMove(Curr, c);
+      if Next = 0 then exit;
       Curr := Next;
     end;
-  with FTrie[Curr] do
-    if Length <> 0 then
-      Result := Index;
+  with FDaTrie[Curr] do
+    if Output <> 0 then
+      Result := FOutput[Output].Index;
 end;
 
 { TACNfaCIUtf8 }
 
-procedure TACNfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+function TACNfaCIUtf8.DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch;
 var
   Ofs: SizeInt;
   p, pEnd, pText: PByte;
-  State, NextState, qTop: Int32;
+  State, qTop: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  qTop := 0;
+  State := 0;
+  while p < pEnd do
+    begin
+      qTop := PushOffset(qTop, Succ(p - pText));
+      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          begin
+            Ofs := PopOffset(qTop, CpLen);
+            exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          end;
+      if FDaTrie[State].NextOut <> 0 then
+        with FOutput[FDaTrie[FDaTrie[State].NextOut].Output] do
+          begin
+            Ofs := PopOffset(qTop, CpLen);
+            exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+          end;
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+function TACNfaCIUtf8.DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch;
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
   c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then
+    exit(TMatch.Make(0, 0, NULL_INDEX));
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do
+    begin
+      c := CpToUcs4Lower(p, pEnd - p, Ofs);
+      qTop := PushOffset(qTop, Succ(p - pText), c);
+      p += Ofs;
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            begin
+              Ofs := PopOffset(qTop, CpLen);
+              exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+            end;
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
+        begin
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
+              begin
+                Ofs := PopOffset(qTop, CpLen);
+                exit(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+              end;
+        end;
+    end;
+  Result := TMatch.Make(0, 0, NULL_INDEX);
+end;
+
+procedure TACNfaCIUtf8.DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, qTop: Int32;
 begin
   if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
   qTop := 0;
@@ -6051,35 +6700,31 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      c := CpToUcs4Lower(p, pEnd - p);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      with FTrie[NextState] do
-        if Utf8Len <> 0 then
+      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
           begin
-            Ofs := PopOffset(qTop, Utf8Len);
-            if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+            Ofs := PopOffset(qTop, CpLen);
+            aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+            State := 0;
+            continue;
           end;
-      while FTrie[NextState].Output <> 0 do
-        begin
-          NextState := FTrie[NextState].Output;
-          with FTrie[NextState] do
-            begin
-              Ofs := PopOffset(qTop, Utf8Len);
-              if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
-            end;
-        end;
+      if FDaTrie[State].NextOut <> 0 then
+        with FOutput[FTrie[FDaTrie[State].NextOut].Output] do
+          begin
+            Ofs := PopOffset(qTop, CpLen);
+            aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+            State := 0;
+          end;
     end;
 end;
 
-procedure TACNfaCIUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+procedure TACNfaCIUtf8.DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   Ofs: SizeInt;
   p, pEnd, pText: PByte;
-  State, NextState, qTop: Int32;
+  State, Tmp, qTop: Int32;
   c: Ucs4Char;
 begin
   if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
@@ -6090,24 +6735,98 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      with FTrie[NextState] do
-        if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            begin
+              Ofs := PopOffset(qTop, CpLen);
+              aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+              State := 0;
+              continue;
+            end;
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
+        begin
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
+              begin
+                Ofs := PopOffset(qTop, CpLen);
+                aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index));
+                State := 0;
+                break;
+              end;
+        end;
+    end;
+end;
+
+procedure TACNfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  qTop := 0;
+  State := 0;
+  while p < pEnd do
+    begin
+      qTop := PushOffset(qTop, Succ(p - pText));
+      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
           begin
-            Ofs := PopOffset(qTop, Utf8Len);
+            Ofs := PopOffset(qTop, CpLen);
             if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
           end;
-      while FTrie[NextState].Output <> 0 do
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
         begin
-          NextState := FTrie[NextState].Output;
-          with FTrie[NextState] do
-            if OnWordBounds(p, pEnd, qTop, Utf8Len) then
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            begin
+              Ofs := PopOffset(qTop, CpLen);
+              if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+            end;
+        end;
+    end;
+end;
+
+procedure TACNfaCIUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+var
+  Ofs: SizeInt;
+  p, pEnd, pText: PByte;
+  State, Tmp, qTop: Int32;
+  c: Ucs4Char;
+begin
+  if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit;
+  qTop := PushFirstOffset(s, Succ(p - pText));
+  State := 0;
+  while p < pEnd do
+    begin
+      c := CpToUcs4Lower(p, pEnd - p, Ofs);
+      qTop := PushOffset(qTop, Succ(p - pText), c);
+      p += Ofs;
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            begin
+              Ofs := PopOffset(qTop, CpLen);
+              if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+            end;
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
+        begin
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
               begin
-                Ofs := PopOffset(qTop, Utf8Len);
+                Ofs := PopOffset(qTop, CpLen);
                 if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
               end;
         end;
@@ -6117,21 +6836,16 @@ end;
 function TACNfaCIUtf8.GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean;
 var
   p, pEnd: PByte;
-  State, NextState: Int32;
-  c: Ucs4Char;
+  State: Int32;
 begin
   if not DoProlog(s, aOffset, aCount, p, pEnd) then exit(False);
   State := 0;
   while p < pEnd do
     begin
-      c := CpToUcs4Lower(p, pEnd - p);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      if (FTrie[NextState].Length <> 0) then exit(True);
-      if (FTrie[NextState].Output <> 0) then exit(True);
+      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      if State = 0 then continue;
+      if (FDaTrie[State].Output <> 0) or (FDaTrie[State].NextOut <> 0) then
+        exit(True);
     end;
   Result := False;
 end;
@@ -6139,7 +6853,7 @@ end;
 function TACNfaCIUtf8.GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean;
 var
   p, pEnd, pText: PByte;
-  State, NextState, qTop: Int32;
+  State, Tmp, qTop: Int32;
   c: Ucs4Char;
 begin
   if not DoProlog(s, aOffset, aCount, pText, p, pEnd) then exit(False);
@@ -6149,18 +6863,19 @@ begin
     begin
       c := CpToUcs4Lower(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      NextState := 0;
-      while not FTrie[State].NextMove.TryGetValue(c, NextState) and (State <> 0) do
-        State := FTrie[State].Failure;
-      if NextState = 0 then continue;
-      State := NextState;
-      with FTrie[NextState] do
-        if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then exit(True);
-      NextState := State;
-      while FTrie[NextState].Output <> 0 do
+      State := NextState(State, FCharMap[c]);
+      if State = 0 then continue;
+      if FDaTrie[State].Output <> 0 then
+        with FOutput[FDaTrie[State].Output] do
+          if OnWordBounds(p, pEnd, qTop, CpLen) then
+            exit(True);
+      Tmp := State;
+      while FDaTrie[Tmp].NextOut <> 0 do
         begin
-          NextState := FTrie[NextState].Output;
-          if OnWordBounds(p, pEnd, qTop, FTrie[NextState].Utf8Len) then exit(True);
+          Tmp := FDaTrie[Tmp].NextOut;
+          with FOutput[FDaTrie[Tmp].Output] do
+            if OnWordBounds(p, pEnd, qTop, CpLen) then
+              exit(True);
         end;
     end;
   Result := False;
@@ -6255,6 +6970,7 @@ begin
   FCount := 0;
 end;
 
+{$PUSH}{$WARN 5091 OFF}
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
   const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
 type
@@ -6273,7 +6989,8 @@ begin
   case aMode of
     ohmLeftmostFirst:    MatchMode := smmLeftmostFirst;
     ohmLeftmostLongest:  MatchMode := smmLeftmostLongest;
-    ohmLeftmostShortest: MatchMode := smmLeftmostShortest;
+  else//ohmLeftmostShortest
+    MatchMode := smmLeftmostShortest;
   end;
   with TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False) do
     try
@@ -6302,6 +7019,7 @@ begin
     Buf.Append(p, pEnd - p);
   Result := Buf.ToString;
 end;
+{$POP}
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string;
   const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
@@ -6334,7 +7052,7 @@ begin
   case aMode of
     ohmLeftmostFirst:    MatchMode := smmLeftmostFirst;
     ohmLeftmostLongest:  MatchMode := smmLeftmostLongest;
-  else
+  else //ohmLeftmostShortest
     MatchMode := smmLeftmostShortest;
   end;
   TAcRef.Instance := TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False);
@@ -6379,6 +7097,65 @@ var
   Dummy: SizeInt;
 begin
   Result := ACStrReplaceList(aSource, aSamples, aSubs, Dummy, aOptions, aMode, aDefaultSub);
+end;
+
+{$PUSH}{$WARN 5091 OFF}
+function ACStrReplace(aSearchFsm: IACSearchFsmUtf8; const aSource: string; const aSubs: array of string;
+  out aReplaceCount: SizeInt; aOnlyWholeWords: Boolean; aMode: TOverlapsHandleMode;
+  const aDefaultSub: string): string;
+type
+  TMatch = lgUtils.TIndexMatch;
+var
+  Matches: array of TMatch;
+  Buf: TStrBuffer;
+  pSrc, p, pEnd: PAnsiChar;
+  MatchMode: TSetMatchMode;
+  m: TMatch;
+  CopyCount: SizeInt;
+  Oww: Boolean;
+begin
+  aReplaceCount := 0;
+  if aSource = '' then exit('');
+  case aMode of
+    ohmLeftmostFirst:    MatchMode := smmLeftmostFirst;
+    ohmLeftmostLongest:  MatchMode := smmLeftmostLongest;
+  else // ohmLeftmostShortest
+    MatchMode := smmLeftmostShortest;
+  end;
+
+  Oww := aSearchFsm.OnlyWholeWords;
+  aSearchFsm.OnlyWholeWords := aOnlyWholeWords;
+  Matches := aSearchFsm.FindMatches(aSource, MatchMode);
+  aSearchFsm.OnlyWholeWords := Oww;
+
+  if Matches = nil then exit(aSource);
+  aReplaceCount := System.Length(Matches);
+  pSrc := Pointer(aSource);
+  p := pSrc;
+  pEnd := pSrc + System.Length(aSource);
+  Buf.Init(System.Length(aSource));
+  for m in Matches do
+    begin
+      CopyCount := m.Offset - Succ(p - pSrc);
+      Buf.Append(p, CopyCount);
+      Inc(p, CopyCount + m.Length);
+      if m.Index < System.Length(aSubs) then
+        Buf.Append(aSubs[m.Index])
+      else
+        Buf.Append(aDefaultSub);
+    end;
+  if p < pEnd then
+    Buf.Append(p, pEnd - p);
+  Result := Buf.ToString;
+end;
+{$POP}
+
+function ACStrReplace(aSearchFsm: IACSearchFsmUtf8; const aSource: string; const aSubs: array of string;
+  aOnlyWholeWords: Boolean; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+var
+  Dummy: SizeInt;
+begin
+  Result := ACStrReplace(aSearchFsm, aSource, aSubs, Dummy, aOnlyWholeWords, aMode, aDefaultSub);
 end;
 
 end.
