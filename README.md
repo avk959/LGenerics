@@ -103,8 +103,9 @@
   - longest increasing subsequence
   - ...
 #### Algorithms on strings and sequences(units lgStrHelpers, lgSeqUtils)
-  - Boyer-Moore string matching algorithm(in Fast Search variant), case sensitive and case insensitive
+  - Boyer-Moore string matching algorithm(in Fast Search variant)
   - Boyer-Moore-Horspool-Raita algorithm
+  - Aho-Corasick automation for multiple string matching
   - longest common subsequence of two sequences:
     + reducing the LCS problem to LIS
     + Kumar-Rangan algorithm for LCS
