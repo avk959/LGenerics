@@ -4119,6 +4119,12 @@ begin
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 13);
 
+  m := ac.FindMatches(s, smmNonOverlapping);
+  AssertTrue(Length(m) = 3);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '23');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '5678901');
+  AssertTrue(Copy(s, m[0].Offset, m[2].Length) = '23');
+
   m := ac.FindMatches(s, smmLeftmostFirst);
   AssertTrue(Length(m) = 2);
   AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '12345');
