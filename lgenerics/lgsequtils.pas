@@ -4634,10 +4634,8 @@ type
     function  PushFirstOffset(const s: string; aOffset: SizeInt): SizeInt;
   public
     class function CreateInstance(const aPatternList: array of string; aIgnoreCase, aForceNFA: Boolean): TACFsmUtf8;
-    class function CreateInstance(e: IStrEnumerable; aIgnoreCase, aForceNFA: Boolean): TACFsmUtf8;
     constructor Create; virtual;
     function  TryBuildFsm(const aPatternList: array of string): Boolean; virtual; abstract;
-    function  TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean;
     function  Clone: IACSearchFsmUtf8; virtual; abstract;
     function  IndexOfPattern(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt; virtual; abstract;
     function  IsMatch(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
@@ -5132,33 +5130,9 @@ begin
     end;
 end;
 
-class function TACFsmUtf8.CreateInstance(e: IStrEnumerable; aIgnoreCase, aForceNFA: Boolean): TACFsmUtf8;
-begin
-  if aForceNFA then
-    begin
-      Result := GetNfaClass(aIgnoreCase).Create;
-      Result.TryBuildFsm(e);
-    end
-  else
-    begin
-      Result := GetDfaClass(aIgnoreCase).Create;
-      if not Result.TryBuildFsm(e) then
-        begin
-          Result.Free;
-          Result := GetNfaClass(aIgnoreCase).Create;
-          Result.TryBuildFsm(e);
-        end;
-    end;
-end;
-
 constructor TACFsmUtf8.Create;
 begin
   inherited;
-end;
-
-function TACFsmUtf8.TryBuildFsm(aPatternEnum: IStrEnumerable): Boolean;
-begin
-  Result := TryBuildFsm(aPatternEnum.ToArray);
 end;
 
 function TACFsmUtf8.IsMatch(const s: string; aOffset, aCount: SizeInt): Boolean;
@@ -6900,7 +6874,7 @@ end;
 function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean;
   aForceNFA: Boolean): IACSearchFsmUtf8;
 begin
-  Result := TACFsmUtf8.CreateInstance(aPatterEnum, aIgnoreCase, aForceNFA);
+  Result := CreateACSearchFsm(aPatterEnum.ToArray, aIgnoreCase, aForceNFA);
 end;
 
 type
