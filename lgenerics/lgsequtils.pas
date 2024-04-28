@@ -551,7 +551,8 @@ type
                           aCount: SizeInt = 0): specialize TGArray<TAcMatch>;
   { searches in the string s starting at position aOffset within aCount bytes, passing
     the found matches(1-based, in bytes) to the callback aOnMatch(); immediately exits the procedure
-    if aOnMatch() returns False; any value of aCount < 1 implies a search to the end of the string }
+    if aOnMatch() returns False; any value of aCount < 1 implies a search to the end of the string;
+    if aOnMatch = nil then just exits the procedure }
     procedure Search(const s: string; aOnMatch: specialize TGOnTest<TAcMatch>;
                      aOffset: SizeInt = 1; aCount: SizeInt = 0);
     procedure Search(const s: string; aOnMatch: specialize TGNestTest<TAcMatch>;
@@ -586,8 +587,8 @@ type
                              aForceNFA: Boolean = False): IACSearchFsmUtf8;
 
 type
-  TStrReplaceOption   = (sroOnlyWholeWords, sroIgnoreCase);
-  TStrReplaceOptions  = set of TStrReplaceOption;
+  TStrReplaceOption  = (sroOnlyWholeWords, sroIgnoreCase);
+  TStrReplaceOptions = set of TStrReplaceOption;
 { a mode of selecting a single match when there are several overlapping matches,
   defines behavior corresponding to TSetMatchMode modes }
   TOverlapsHandleMode = (ohmLeftmostFirst, ohmLeftmostLongest, ohmLeftmostShortest);
@@ -4656,7 +4657,7 @@ type
   TACDfaUtf8 = class(TACFsmUtf8)
   protected
   const
-    BMP_MAX  = $ffff;
+    BMP_MAX  = Int32($ffff);
     MAX_CODE = High(ShortInt);
   type
     TNode = record
@@ -4669,7 +4670,7 @@ type
     TIntQueue = specialize TGLiteQueue<Int32>;
   protected
     FTrie: array of TNode;
-    FCharMap: array[0..BMP_MAX] of ShortInt;
+    FCharMap: array of Int32;
     FAlphabetSize: Int32;
     function  GetAlphabetSize: SizeInt; override;
     function  BuildCharMap(const aList: array of string): Boolean;
@@ -4747,9 +4748,9 @@ type
   protected
   type
     TOutput = record
-      Index,        // index in the input list
       Len,          // length in bytes
-      CpLen: Int32; // length in code points
+      CpLen,        // length in code points
+      Index: Int32; // index in the input list
     end;
     TNode = record
       AdjList: TCode2StateMap;
@@ -5181,6 +5182,7 @@ end;
 
 procedure TACFsmUtf8.Search(const aText: string; aOnMatch: TOnMatch; aOffset, aCount: SizeInt);
 begin
+  if aOnMatch = nil then exit;
   RegisterMatchHandler(aOnMatch);
   if OnlyWholeWords then
     DoSearchOww(aText, aOffset, aCount)
@@ -5190,6 +5192,7 @@ end;
 
 procedure TACFsmUtf8.Search(const aText: string; aOnMatch: TNestMatch; aOffset, aCount: SizeInt);
 begin
+  if aOnMatch = nil then exit;
   RegisterMatchHandler(aOnMatch);
   if OnlyWholeWords then
     DoSearchOww(aText, aOffset, aCount)
@@ -5224,7 +5227,8 @@ var
   I: SizeInt;
   c: Ucs4Char;
 begin
-  System.FillChar(FCharMap, SizeOf(FCharMap), $ff);
+  System.SetLength(FCharMap, BMP_MAX + 1);
+  System.FillChar(Pointer(FCharMap)^, System.Length(FCharMap)*SizeOf(Int32), $ff);
   for I := 0 to System.High(aList) do
     begin
       if aList[I] = '' then continue;
@@ -5280,9 +5284,9 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        Code := GetCharCode(CpToUcs4Lower(p, pEnd - p))
+        Code := FCharMap[CpToUcs4Lower(p, pEnd - p)]
       else
-        Code := GetCharCode(CpToUcs4(p, pEnd - p));
+        Code := FCharMap[CpToUcs4(p, pEnd - p)];
       Inc(LenUtf8);
       Next := FTrie[Curr].NextMove[Code];
       if Next = 0 then
@@ -5590,7 +5594,7 @@ begin
   Inst := TACDfaUtf8(GetFsmClass.Create);
   Inst.FTrie := FTrie;
   Inst.FCharMap := FCharMap;
-  Inst.FQueue := System.Copy(FQueue);
+  System.SetLength(Inst.FQueue, FQueueSize);
   Inst.FAlphabetSize := FAlphabetSize;
   Inst.FQueueSize := FQueueSize;
   Inst.FNodeCount := FNodeCount;
@@ -6227,11 +6231,12 @@ var
   end;
 var
   Queue: TPairQueue;
-  CurrPair: TPair;
+  ParentPair: TPair;
   Next, Fail, Link: Int32;
   e: TCode2StateMap.TEntry;
 begin
   System.SetLength(FDaTrie, LgUtils.RoundUpTwoPower(NodeCount + AlphabetSize));
+  //build a doubly linked list of vacant nodes in FDaTrie
   for Next := 2 to System.High(FDaTrie) do
     with FDaTrie[Next] do begin
       Base := -Succ(Next);
@@ -6255,19 +6260,19 @@ begin
     Queue.Enqueue(TPair.Make(e.Value, e.Key));
   end;
 
-  while Queue.TryDequeue(CurrPair) do
-    if FTrie[CurrPair.Node].AdjList.Count <> 0 then begin
-      FDaTrie[CurrPair.DaNode].Base := NextVacantValue(CurrPair.Node);
-      for e in FTrie[CurrPair.Node].AdjList do begin
-        Next := FDaTrie[CurrPair.DaNode].Base + e.Key;
+  while Queue.TryDequeue(ParentPair) do
+    if FTrie[ParentPair.Node].AdjList.Count <> 0 then begin
+      FDaTrie[ParentPair.DaNode].Base := NextVacantValue(ParentPair.Node);
+      for e in FTrie[ParentPair.Node].AdjList do begin
+        Next := FDaTrie[ParentPair.DaNode].Base + e.Key;
         VacantListRemove(Next);
         with FDaTrie[Next] do begin
           Base := LEAF_NODE;
-          Check := CurrPair.DaNode;
+          Check := ParentPair.DaNode;
           Output := FTrie[e.Value].Output;
         end;
         Queue.Enqueue(TPair.Make(e.Value, Next));
-        Fail := CurrPair.DaNode;
+        Fail := ParentPair.DaNode;
         repeat
           Fail := FDaTrie[Fail].Failure;
           Link := NextMove(Fail, e.Key);
@@ -6554,7 +6559,7 @@ begin
   Inst.FCharMap := FCharMap;
   Inst.FDaTrie := FDaTrie;
   Inst.FOutput := FOutput;
-  Inst.FQueue := System.Copy(FQueue);
+  System.SetLength(Inst.FQueue, FQueueSize);
   Inst.FQueueSize := FQueueSize;
   Inst.FNodeCount := FNodeCount;
   Inst.FWordCount := FWordCount;
