@@ -6186,8 +6186,11 @@ var
             Next := VListHead;
             Result := NULL_NODE;
             repeat
-              if (Next = NULL_NODE) or (Next + Dist > System.High(FDaTrie)) then
+              if (Next = NULL_NODE) or (Next + Dist > System.High(FDaTrie)) then begin
                 Expand(System.Length(FDaTrie) * 2);
+                if Next = NULL_NODE then
+                  Next := VListHead;
+              end;
               if FDaTrie[Next + Dist].Check < 0 then
                 exit(Next - Keys[0]);
               Next := -FDaTrie[Next].Base;
@@ -6200,8 +6203,11 @@ var
             Next := VListHead;
             Result := NULL_NODE;
             repeat
-              if (Next = NULL_NODE) or (Next + Dist2 > System.High(FDaTrie)) then
+              if (Next = NULL_NODE) or (Next + Dist2 > System.High(FDaTrie)) then begin
                 Expand(System.Length(FDaTrie) * 2);
+                if Next = NULL_NODE then
+                  Next := VListHead;
+              end;
               if (FDaTrie[Next + Dist].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) then
                 exit(Next - Keys[0]);
               Next := -FDaTrie[Next].Base;
@@ -6215,8 +6221,11 @@ var
             Next := VListHead;
             Result := NULL_NODE;
             repeat
-              if (Next = NULL_NODE) or (Next + Dist3 > System.High(FDaTrie)) then
+              if (Next = NULL_NODE) or (Next + Dist3 > System.High(FDaTrie)) then begin
                 Expand(System.Length(FDaTrie) * 2);
+                if Next = NULL_NODE then
+                  Next := VListHead;
+              end;
               if(FDaTrie[Next + Dist].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) and
                 (FDaTrie[Next + Dist3].Check < 0) then
                 exit(Next - Keys[0]);
@@ -6224,7 +6233,7 @@ var
             until False;
           end;
       else
-        if AllVacantBound + Keys[Count - 1] - Keys[0] > System.High(FDaTrie) then
+        if AllVacantBound + Keys[Pred(Count)] - Keys[0] > System.High(FDaTrie) then
           Expand(System.Length(FDaTrie) * 2);
         Result := AllVacantBound - Keys[0];
       end;
