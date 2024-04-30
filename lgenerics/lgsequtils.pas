@@ -579,12 +579,20 @@ type
   aIgnoreCase set to True specifies a case-insensitive search;
   by default the function tries to build a DFA first, which may not be possible if the patterns
   contain characters outside the BMP or the patterns alphabet is too large; DFA usually takes
-  more memory and in addition, NFA can be faster on reasonably large sets of strings;
+  more memory and in addition, NFA can be faster on reasonably large dictionaries;
   if aForceNFA is set to True the function will immediately build NFA }
   function CreateACSearchFsm(const aPatterns: array of string; aIgnoreCase: Boolean = False;
                              aForceNFA: Boolean = False): IACSearchFsmUtf8;
   function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean = False;
                              aForceNFA: Boolean = False): IACSearchFsmUtf8;
+
+{ Aho-Corasick NFA is based on Double Array Trie(DAT) and uses the simplest construction
+  algorithm, which nevertheless provides acceptable construction time. But if the dictionary
+  alphabet is sufficiently large, the load factor of the resulting DAT may be rather low.
+  If this flag is set to True, it can improve the load factor, but on the other hand it can
+  drastically increase the the time it takes to create large dictionaries }
+var
+  DatPreferMaxLoad: Boolean = False;
 
 type
   TStrReplaceOption  = (sroOnlyWholeWords, sroIgnoreCase);
@@ -4770,8 +4778,9 @@ type
     end;
     TPairQueue = specialize TGLiteQueue<TPair>;
   const
-    NULL_NODE = Low(Int32);
-    LEAF_NODE = Int32(0);
+    NULL_NODE         = Low(Int32);
+    LEAF_NODE         = Int32(0);
+    BIG_ALPHABET_SIZE = 1024; //todo: need some tweaking?
   protected
     FCharMap: array of Int32;
     FDaTrie: array of TDaNode;
@@ -6168,6 +6177,8 @@ var
     FDaTrie[OldSize].Check := -VListTail;
     VListTail := System.High(FDaTrie);
   end;
+var
+  TryMaxLoad: Boolean;
   function NextVacantValue(aTrieNode: Int32): Int32;
   var
     Next, Dist, Dist2, Dist3: Int32;
@@ -6233,9 +6244,29 @@ var
             until False;
           end;
       else
-        if AllVacantBound + Keys[Pred(Count)] - Keys[0] > System.High(FDaTrie) then
-          Expand(System.Length(FDaTrie) * 2);
-        Result := AllVacantBound - Keys[0];
+        if TryMaxLoad and (AlphabetSize >= BIG_ALPHABET_SIZE) then begin
+          Next := VListHead;
+          Dist := Keys[0];
+          repeat
+            if (Next = NULL_NODE) or (Next + Keys[Pred(Count)] - Dist > System.High(FDaTrie)) then begin
+              Expand(System.Length(FDaTrie) * 2);
+              if Next = NULL_NODE then
+                Next := VListHead;
+            end;
+            Result := Next - Dist;
+            for Dist2 := 1 to Pred(Count) do
+              if FDaTrie[Result + Keys[Dist2]].Check >= 0 then begin
+                Result := NULL_NODE;
+                break;
+              end;
+            if Result <> NULL_NODE then exit;
+            Next := -FDaTrie[Next].Base;
+          until False;
+        end else begin
+          if AllVacantBound + Keys[Pred(Count)] - Keys[0] > System.High(FDaTrie) then
+            Expand(System.Length(FDaTrie) * 2);
+          Result := AllVacantBound - Keys[0];
+        end;
       end;
   end;
 var
@@ -6244,6 +6275,7 @@ var
   Next, Fail, Link: Int32;
   e: TCode2StateMap.TEntry;
 begin
+  TryMaxLoad := DatPreferMaxLoad;
   System.SetLength(FDaTrie, LgUtils.RoundUpTwoPower(NodeCount + AlphabetSize));
   //build a doubly linked list of vacant nodes in FDaTrie
   for Next := 2 to System.High(FDaTrie) do
@@ -6880,12 +6912,12 @@ begin
   FIgnoreCase := True;
 end;
 
-function CreateACSearchFsm(const aPatterns: array of string; aIgnoreCase: Boolean; aForceNFA: Boolean): IACSearchFsmUtf8;
+function CreateACSearchFsm(const aPatterns: array of string; aIgnoreCase, aForceNFA: Boolean): IACSearchFsmUtf8;
 begin
   Result := TACFsmUtf8.CreateInstance(aPatterns, aIgnoreCase, aForceNFA);
 end;
 
-function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean;
+function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase,
   aForceNFA: Boolean): IACSearchFsmUtf8;
 begin
   Result := CreateACSearchFsm(aPatterEnum.ToArray, aIgnoreCase, aForceNFA);
