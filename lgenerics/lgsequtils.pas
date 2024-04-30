@@ -567,7 +567,7 @@ type
     property  OnlyWholeWords: Boolean read GetOnlyWholeWords write SetOnlyWholeWords;
   { some statistics }
     property  NodeCount: SizeInt read GetNodeCount;
-    property  EmptyNodeCount: SizeInt read GetEmptyCount;
+    property  EmptyCellCount: SizeInt read GetEmptyCount;
     property  PatternCount: SizeInt read GetPatternCount;
     property  AlphabetSize: SizeInt read GetAlphabetSize;
   end;
