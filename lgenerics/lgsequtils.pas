@@ -6177,11 +6177,35 @@ var
     FDaTrie[OldSize].Check := -VListTail;
     VListTail := System.High(FDaTrie);
   end;
-var
-  TryMaxLoad: Boolean;
+  function NextVacantValueMaxLoad(aTrieNode: Int32): Int32;
+  var
+    Next, LowKey, HiIdx, Dist, I: Int32;
+  begin
+    Next := VListHead;
+    with FTrie[aTrieNode].AdjList do begin
+      LowKey := Keys[0];
+      HiIdx := Pred(Count);
+      Dist := Keys[HiIdx] - LowKey;
+      repeat
+        if (Next = NULL_NODE) or (Next + Dist > System.High(FDaTrie)) then begin
+          Expand(System.Length(FDaTrie) * 2);
+          if Next = NULL_NODE then
+            Next := VListHead;
+        end;
+        Result := Next - LowKey;
+        for I := 1 to HiIdx do
+          if FDaTrie[Result + Keys[I]].Check >= 0 then begin
+            Result := NULL_NODE;
+            break;
+          end;
+        if Result <> NULL_NODE then exit;
+        Next := -FDaTrie[Next].Base;
+      until False;
+    end;
+  end;
   function NextVacantValue(aTrieNode: Int32): Int32;
   var
-    Next, Dist, Dist2, Dist3: Int32;
+    Next, Dist1, Dist2, Dist3: Int32;
   begin
     with FTrie[aTrieNode].AdjList do
       case Count of
@@ -6193,23 +6217,23 @@ var
           end;
         2:
           begin
-            Dist := Keys[1] - Keys[0];
+            Dist1 := Keys[1] - Keys[0];
             Next := VListHead;
             Result := NULL_NODE;
             repeat
-              if (Next = NULL_NODE) or (Next + Dist > System.High(FDaTrie)) then begin
+              if (Next = NULL_NODE) or (Next + Dist1 > System.High(FDaTrie)) then begin
                 Expand(System.Length(FDaTrie) * 2);
                 if Next = NULL_NODE then
                   Next := VListHead;
               end;
-              if FDaTrie[Next + Dist].Check < 0 then
+              if FDaTrie[Next + Dist1].Check < 0 then
                 exit(Next - Keys[0]);
               Next := -FDaTrie[Next].Base;
             until False;
           end;
         3:
           begin
-            Dist := Keys[1] - Keys[0];
+            Dist1 := Keys[1] - Keys[0];
             Dist2 := Keys[2] - Keys[0];
             Next := VListHead;
             Result := NULL_NODE;
@@ -6219,14 +6243,14 @@ var
                 if Next = NULL_NODE then
                   Next := VListHead;
               end;
-              if (FDaTrie[Next + Dist].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) then
+              if (FDaTrie[Next + Dist1].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) then
                 exit(Next - Keys[0]);
               Next := -FDaTrie[Next].Base;
             until False;
           end;
         4:
           begin
-            Dist := Keys[1] - Keys[0];
+            Dist1 := Keys[1] - Keys[0];
             Dist2 := Keys[2] - Keys[0];
             Dist3 := Keys[3] - Keys[0];
             Next := VListHead;
@@ -6237,45 +6261,27 @@ var
                 if Next = NULL_NODE then
                   Next := VListHead;
               end;
-              if(FDaTrie[Next + Dist].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) and
+              if(FDaTrie[Next + Dist1].Check < 0) and (FDaTrie[Next + Dist2].Check < 0) and
                 (FDaTrie[Next + Dist3].Check < 0) then
                 exit(Next - Keys[0]);
               Next := -FDaTrie[Next].Base;
             until False;
           end;
       else
-        if TryMaxLoad and (AlphabetSize >= BIG_ALPHABET_SIZE) then begin
-          Next := VListHead;
-          Dist := Keys[0];
-          repeat
-            if (Next = NULL_NODE) or (Next + Keys[Pred(Count)] - Dist > System.High(FDaTrie)) then begin
-              Expand(System.Length(FDaTrie) * 2);
-              if Next = NULL_NODE then
-                Next := VListHead;
-            end;
-            Result := Next - Dist;
-            for Dist2 := 1 to Pred(Count) do
-              if FDaTrie[Result + Keys[Dist2]].Check >= 0 then begin
-                Result := NULL_NODE;
-                break;
-              end;
-            if Result <> NULL_NODE then exit;
-            Next := -FDaTrie[Next].Base;
-          until False;
-        end else begin
-          if AllVacantBound + Keys[Pred(Count)] - Keys[0] > System.High(FDaTrie) then
-            Expand(System.Length(FDaTrie) * 2);
-          Result := AllVacantBound - Keys[0];
-        end;
+        if AllVacantBound + Keys[Pred(Count)] - Keys[0] > System.High(FDaTrie) then
+          Expand(System.Length(FDaTrie) * 2);
+        Result := AllVacantBound - Keys[0];
       end;
   end;
+
 var
   Queue: TPairQueue;
   ParentPair: TPair;
   Next, Fail, Link: Int32;
   e: TCode2StateMap.TEntry;
+  TryMaxLoad: Boolean;
 begin
-  TryMaxLoad := DatPreferMaxLoad;
+  TryMaxLoad := DatPreferMaxLoad and (AlphabetSize >= BIG_ALPHABET_SIZE);
   System.SetLength(FDaTrie, LgUtils.RoundUpTwoPower(NodeCount + AlphabetSize));
   //build a doubly linked list of vacant nodes in FDaTrie
   for Next := 2 to System.High(FDaTrie) do
@@ -6303,7 +6309,10 @@ begin
 
   while Queue.TryDequeue(ParentPair) do
     if FTrie[ParentPair.Node].AdjList.Count <> 0 then begin
-      FDaTrie[ParentPair.DaNode].Base := NextVacantValue(ParentPair.Node);
+      if TryMaxLoad then
+        FDaTrie[ParentPair.DaNode].Base := NextVacantValueMaxLoad(ParentPair.Node)
+      else
+        FDaTrie[ParentPair.DaNode].Base := NextVacantValue(ParentPair.Node);
       for e in FTrie[ParentPair.Node].AdjList do begin
         Next := FDaTrie[ParentPair.DaNode].Base + e.Key;
         VacantListRemove(Next);
