@@ -5616,23 +5616,20 @@ end;
 function TACDfaUtf8.IndexOfPattern(const s: string; aOffset: SizeInt; aCount: SizeInt): SizeInt;
 var
   p, pEnd: PByte;
-  Curr, Next, Code: Int32;
+  State: Int32;
 begin
   Result := NULL_INDEX;
   if not DoProlog(s, aOffset, aCount, p, pEnd) then exit;
-  Curr := 0;
+  State := 0;
   while p < pEnd do
     begin
       if CaseInsensitive then
-        Code := GetCharCode(CpToUcs4Lower(p, pEnd - p))
+        State := NextFsmState(State, CpToUcs4Lower(p, pEnd - p))
       else
-        Code := GetCharCode(CpToUcs4(p, pEnd - p));
-      if Code = -1 then exit;
-      Next := FTrie[Curr].NextMove[Code];
-      if Next = 0 then exit;
-      Curr := Next;
+        State := NextFsmState(State, CpToUcs4(p, pEnd - p));
+      if State = 0 then exit;
     end;
-  with FTrie[Curr] do
+  with FTrie[State] do
     if Length <> 0 then
       Result := Index;
 end;
@@ -6623,23 +6620,20 @@ end;
 function TACNfaUtf8.IndexOfPattern(const s: string; aOffset: SizeInt; aCount: SizeInt): SizeInt;
 var
   p, pEnd: PByte;
-  Curr, Next, c: Int32;
+  State: Int32;
 begin
   Result := NULL_INDEX;
   if not DoProlog(s, aOffset, aCount, p, pEnd) then exit;
-  Curr := 0;
+  State := 0;
   while p < pEnd do
     begin
       if CaseInsensitive then
-        c := FCharMap[CpToUcs4Lower(p, pEnd - p)]
+        State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)])
       else
-        c := FCharMap[CpToUcs4(p, pEnd - p)];
-      if c = 0 then exit;
-      Next := NextMove(Curr, c);
-      if Next = 0 then exit;
-      Curr := Next;
+        State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      if State = 0 then exit;
     end;
-  with FDaTrie[Curr] do
+  with FDaTrie[State] do
     if Output <> 0 then
       Result := FOutput[Output].Index;
 end;
