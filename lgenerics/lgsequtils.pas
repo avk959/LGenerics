@@ -4685,7 +4685,7 @@ type
     function  NewNode: SizeInt; inline;
     function  GetCharCode(c: Ucs4Char): Int32; inline;
     procedure AddPattern(const aValue: string; aIndex: SizeInt);
-    function  GetNextMove(aState: Int32; c: Ucs4Char): Int32; inline;
+    function  NextFsmState(aState: Int32; c: Ucs4Char): Int32; inline;
     procedure BuildFsm;
     function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; override;
     function  DoFindFirstOww(const s: string; aOffset, aCount: SizeInt): TMatch; override;
@@ -4793,7 +4793,7 @@ type
     procedure BuildCharMap(const aPatternList: array of string);
     procedure AddPattern(const aValue: string; aIndex: SizeInt);
     function  NextMove(aState, aCode: Int32): Int32; inline;
-    function  NextState(aState, aCode: Int32): Int32; inline;
+    function  NextFsmState(aState, aCode: Int32): Int32; inline;
   { uses a slightly modified LINK method to create a double array-like structure }
     procedure BuildFsm;
     function  DoFindFirst(const s: string; aOffset, aCount: SizeInt): TMatch; override;
@@ -5318,7 +5318,7 @@ begin
     end;
 end;
 
-function TACDfaUtf8.GetNextMove(aState: Int32; c: Ucs4Char): Int32;
+function TACDfaUtf8.NextFsmState(aState: Int32; c: Ucs4Char): Int32;
 begin
   if c > BMP_MAX then exit(0);
   Result := FCharMap[c];
@@ -5371,7 +5371,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
+      State := NextFsmState(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -5398,7 +5398,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := GetNextMove(State, c);
+      State := NextFsmState(State, c);
       if State = 0 then continue;
       with FTrie[State] do
         if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
@@ -5424,7 +5424,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
+      State := NextFsmState(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -5454,7 +5454,7 @@ begin
   while p < pEnd do begin
     c := CpToUcs4(p, pEnd - p);
     qTop := PushChar(qTop, c);
-    State := GetNextMove(State, c);
+    State := NextFsmState(State, c);
     if State = 0 then continue;
     with FTrie[State] do
       if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
@@ -5487,7 +5487,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
+      State := NextFsmState(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -5514,7 +5514,7 @@ begin
   while p < pEnd do begin
     c := CpToUcs4(p, pEnd - p);
     qTop := PushChar(qTop, c);
-    State := GetNextMove(State, c);
+    State := NextFsmState(State, c);
     if State = 0 then continue;
     with FTrie[State] do
       if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
@@ -5539,7 +5539,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4(p, pEnd - p));
+      State := NextFsmState(State, CpToUcs4(p, pEnd - p));
       if State = 0 then continue;
       if (FTrie[State].Length <> 0) or (FTrie[State].Output <> 0) then
         exit(True);
@@ -5561,7 +5561,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := GetNextMove(State, c);
+      State := NextFsmState(State, c);
       if State = 0 then continue;
       with FTrie[State] do
         if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then exit(True);
@@ -5652,7 +5652,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
+      State := NextFsmState(State, CpToUcs4Lower(p, pEnd - p));
       if State = 0 then continue;
       with FTrie[State] do
         if Utf8Len <> 0 then
@@ -5686,7 +5686,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := GetNextMove(State, c);
+      State := NextFsmState(State, c);
       if State = 0 then continue;
       with FTrie[State] do
         if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
@@ -5720,7 +5720,7 @@ begin
   State := 0;
   while p < pEnd do begin
     qTop := PushOffset(qTop, Succ(p - pText));
-    State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
+    State := NextFsmState(State, CpToUcs4Lower(p, pEnd - p));
     if State = 0 then continue;
     with FTrie[State] do
       if Utf8Len <> 0 then
@@ -5754,7 +5754,7 @@ begin
     c := CpToUcs4Lower(p, pEnd - p, Ofs);
     qTop := PushOffset(qTop, Succ(p - pText), c);
     p += Ofs;
-    State := GetNextMove(State, c);
+    State := NextFsmState(State, c);
     if State = 0 then continue;
     with FTrie[State] do
       if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
@@ -5791,7 +5791,7 @@ begin
   State := 0;
   while p < pEnd do begin
     qTop := PushOffset(qTop, Succ(p - pText));
-    State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
+    State := NextFsmState(State, CpToUcs4Lower(p, pEnd - p));
     if State = 0 then continue;
     with FTrie[State] do
       if Utf8Len <> 0 then
@@ -5826,7 +5826,7 @@ begin
     c := CpToUcs4Lower(p, pEnd - p, Ofs);
     qTop := PushOffset(qTop, Succ(p - pText), c);
     p += Ofs;
-    State := GetNextMove(State, c);
+    State := NextFsmState(State, c);
     if State = 0 then continue;
     with FTrie[State] do
       if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
@@ -5858,7 +5858,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := GetNextMove(State, CpToUcs4Lower(p, pEnd - p));
+      State := NextFsmState(State, CpToUcs4Lower(p, pEnd - p));
       if State = 0 then continue;
       if (FTrie[State].Length <> 0) or (FTrie[State].Output <> 0) then
         exit(True);
@@ -5880,7 +5880,7 @@ begin
     begin
       c := CpToUcs4Lower(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := GetNextMove(State, c);
+      State := NextFsmState(State, c);
       if State = 0 then continue;
       with FTrie[State] do
         if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then exit(True);
@@ -6120,7 +6120,7 @@ begin
     Result := 0;
 end;
 
-function TACNfaUtf8.NextState(aState, aCode: Int32): Int32;
+function TACNfaUtf8.NextFsmState(aState, aCode: Int32): Int32;
 begin
   if aCode = 0 then exit(0);
   Result := FDaTrie[aState].Base + aCode;
@@ -6289,7 +6289,7 @@ begin
       Base := -Succ(Next);
       Check := -Pred(Next);
     end;
-  AllVacantBound := 0;
+  AllVacantBound := 1;
   VListHead := 1;
   FDaTrie[1].Base := -2;
   FDaTrie[1].Check := NULL_NODE;
@@ -6351,7 +6351,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6377,7 +6377,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6404,7 +6404,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6435,7 +6435,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6469,7 +6469,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6497,7 +6497,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6523,7 +6523,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
       if State = 0 then continue;
       if (FDaTrie[State].Output <> 0) or (FDaTrie[State].NextOut <> 0) then
         exit(True);
@@ -6544,7 +6544,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6659,7 +6659,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6693,7 +6693,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6729,7 +6729,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6764,7 +6764,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6803,7 +6803,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6839,7 +6839,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6871,7 +6871,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
       if State = 0 then continue;
       if (FDaTrie[State].Output <> 0) or (FDaTrie[State].NextOut <> 0) then
         exit(True);
@@ -6892,7 +6892,7 @@ begin
     begin
       c := CpToUcs4Lower(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextState(State, FCharMap[c]);
+      State := NextFsmState(State, FCharMap[c]);
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
