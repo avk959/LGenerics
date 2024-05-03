@@ -49,73 +49,94 @@ type
     procedure NextMatch;
   end;
 
- { TFunTest }
+  { TFunTest }
 
- TFunTest = class(TTestCase)
- published
-   procedure LevenshteinDist;
-   procedure LevenshteinDist2;
-   procedure LevenshteinDistMbr;
-   procedure LevenshteinDistMbr2;
-   procedure LevenshteinDistMbrBounded;
-   procedure LevenshteinDistMbrDyn;
-   procedure LevenshteinDistMyersD;
-   procedure LevenshteinDistMyersD2;
-   procedure LevenshteinDistMyersQ;
-   procedure LevenshteinDistMyersDQ;
-   procedure LevenshteinDistMyersLong;
-   procedure LevenshteinDistMyersDBounded;
-   procedure LevenshteinDistMyersQBounded;
-   procedure LevenshteinDistMyersDQBounded;
-   procedure LevenshteinDistMyersLongBounded;
-   procedure LevenshteinDistMyersDBounded2;
-   procedure LevenshteinDistMyersQBounded2;
-   procedure LevenshteinDistMyersDQBounded2;
-   procedure LevenshteinDistMyersLongBounded2;
-   procedure LcsGusTest;
-   procedure LcsKRTest;
-   procedure LcsMyersTest;
-   procedure SimRatioTest;
-   procedure SimRatioLevExTest;
-   procedure SimRatioLevExTest1251;
-   procedure LcsDistMyers;
-   procedure LcsDistMyers2;
-   procedure LcsDistMyersBounded;
-   procedure LcsDistMyersDyn;
-   procedure DamerauDistMbr;
-   procedure DamerauDistMbrBounded;
-   procedure DamerauDistMbrDyn;
- end;
+  TFunTest = class(TTestCase)
+  published
+    procedure LevenshteinDist;
+    procedure LevenshteinDist2;
+    procedure LevenshteinDistMbr;
+    procedure LevenshteinDistMbr2;
+    procedure LevenshteinDistMbrBounded;
+    procedure LevenshteinDistMbrDyn;
+    procedure LevenshteinDistMyersD;
+    procedure LevenshteinDistMyersD2;
+    procedure LevenshteinDistMyersQ;
+    procedure LevenshteinDistMyersDQ;
+    procedure LevenshteinDistMyersLong;
+    procedure LevenshteinDistMyersDBounded;
+    procedure LevenshteinDistMyersQBounded;
+    procedure LevenshteinDistMyersDQBounded;
+    procedure LevenshteinDistMyersLongBounded;
+    procedure LevenshteinDistMyersDBounded2;
+    procedure LevenshteinDistMyersQBounded2;
+    procedure LevenshteinDistMyersDQBounded2;
+    procedure LevenshteinDistMyersLongBounded2;
+    procedure LcsGusTest;
+    procedure LcsKRTest;
+    procedure LcsMyersTest;
+    procedure SimRatioTest;
+    procedure SimRatioLevExTest;
+    procedure SimRatioLevExTest1251;
+    procedure LcsDistMyers;
+    procedure LcsDistMyers2;
+    procedure LcsDistMyersBounded;
+    procedure LcsDistMyersDyn;
+    procedure DamerauDistMbr;
+    procedure DamerauDistMbrBounded;
+    procedure DamerauDistMbrDyn;
+  end;
 
- { TACSearchFsmTest }
+  TRbsHasher = record
+    class function Equal(const L, R: rawbytestring): Boolean; static;
+    class function HashCode(const s: rawbytestring): SizeInt; static;
+  end;
 
- TACSearchFsmTest = class(TTestCase)
- private
- type
-   TACSearch = specialize TGUniqRef<TACSearchFsm>;
-   TMatch    = TACSearchFsm.TMatch;
+  TStrSetType = specialize TGLiteChainHashSet<rawbytestring, TRbsHasher>;
+  TStrSet     = TStrSetType.TSet;
+  TRbsHelper  = specialize TGComparableArrayHelper<rawbytestring>;
 
-   TRbsHasher = record
-     class function Equal(const L, R: rawbytestring): Boolean; static;
-     class function HashCode(const s: rawbytestring): SizeInt; static;
-   end;
+  { TACSearchFsmTest }
 
-   TStrSetType = specialize TGLiteChainHashSet<rawbytestring, TRbsHasher>;
-   TStrSet     = TStrSetType.TSet;
-   TRbsHelper  = specialize TGComparableArrayHelper<rawbytestring>;
- var
-   FMatchCount: Integer;
-   function OnMatch(const m: TMatch): Boolean;
-   function OnMatchFirst(const m: TMatch): Boolean;
- published
-   procedure TestCreate;
-   procedure TestSearchDelegated;
-   procedure TestSearchNested;
-   procedure TestContainsMatch;
-   procedure TestIndexOfPattern;
-   procedure TestFirstMatch;
-   procedure TestFindMatches;
- end;
+  TACSearchFsmTest = class(TTestCase)
+  private
+  type
+    TACSearch = specialize TGUniqRef<TACSearchFsm>;
+    TMatch    = TACSearchFsm.TMatch;
+  var
+    FMatchCount: Integer;
+    function OnMatch(const m: TMatch): Boolean;
+    function OnMatchFirst(const m: TMatch): Boolean;
+  published
+    procedure TestCreate;
+    procedure TestSearchDelegated;
+    procedure TestSearchNested;
+    procedure TestContainsMatch;
+    procedure TestIndexOfPattern;
+    procedure TestFirstMatch;
+    procedure TestFindMatches;
+  end;
+
+  { TDaacSearchFsmTest }
+
+  TDaacSearchFsmTest = class(TTestCase)
+  private
+  type
+    TACSearch = specialize TGUniqRef<TDaacSearchFsm>;
+    TMatch    = TDaacSearchFsm.TMatch;
+  var
+    FMatchCount: Integer;
+    function OnMatch(const m: TMatch): Boolean;
+    function OnMatchFirst(const m: TMatch): Boolean;
+  published
+    procedure TestCreate;
+    procedure TestSearchDelegated;
+    procedure TestSearchNested;
+    procedure TestContainsMatch;
+    procedure TestIndexOfPattern;
+    procedure TestFirstMatch;
+    procedure TestFindMatches;
+  end;
 
 implementation
 
@@ -2080,14 +2101,14 @@ begin
   AssertTrue(DumDistanceMbr('a', 'b', -1) = 1);
 end;
 
-{ TACSearchFsmTest.TRbsHasher }
+{ TRbsHasher }
 
-class function TACSearchFsmTest.TRbsHasher.Equal(const L, R: rawbytestring): Boolean;
+class function TRbsHasher.Equal(const L, R: rawbytestring): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TACSearchFsmTest.TRbsHasher.HashCode(const s: rawbytestring): SizeInt;
+class function TRbsHasher.HashCode(const s: rawbytestring): SizeInt;
 begin
   Result := TxxHash32LE.HashStr(s);
 end;
@@ -2206,10 +2227,16 @@ begin
   AssertTrue(ac.Instance.IndexOfPattern('a') = -1);
   AssertTrue(ac.Instance.IndexOfPattern('b') = -1);
   ac.Instance := TACSearchFsm.Create(['aa','ab','ac']);
+  AssertTrue(ac.Instance.IndexOfPattern('') = -1);
   AssertTrue(ac.Instance.IndexOfPattern('a') = -1);
   AssertTrue(ac.Instance.IndexOfPattern('aa') = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('bbaa', 3) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('bbaa', 3, 6) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('bbaa', 4) = -1);
   AssertTrue(ac.Instance.IndexOfPattern('ab') = 1);
+  AssertTrue(ac.Instance.IndexOfPattern('cab', 2) = 1);
   AssertTrue(ac.Instance.IndexOfPattern('ac') = 2);
+  AssertTrue(ac.Instance.IndexOfPattern('adac', 3) = 2);
 end;
 
 procedure TACSearchFsmTest.TestFirstMatch;
@@ -2219,18 +2246,30 @@ var
   m: TMatch;
 begin
   s := '012abcdefgh';
-  {%H-}ac.Instance := TACSearchFsm.Create(['0124','234','12345', '1234567','1234','23','890123']);
+  {%H-}ac.Instance := TACSearchFsm.Create(
+    ['0124','234','12345', '1234567','1234','23','890123','5678','6789']);
   m := ac.Instance.FirstMatch(s);
   AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
   s := '01234567890123456789';
   m := ac.Instance.FirstMatch(s);
   AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = '23'));
+  m := ac.Instance.FirstMatch(s, smmNonOverlapping, m.Offset + m.Length);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = '5678'));
+
   m := ac.Instance.FirstMatch(s, smmLeftmostFirst);
   AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = '12345'));
+   m := ac.Instance.FirstMatch(s, smmLeftmostFirst, m.Offset + m.Length);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = '6789'));
+
   m := ac.Instance.FirstMatch(s, smmLeftmostLongest);
   AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = '1234567'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostLongest, m.Offset + m.Length);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = '890123'));
+
   m := ac.Instance.FirstMatch(s, smmLeftmostShortest);
   AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = '1234'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostShortest, m.Offset + m.Length);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = '5678'));
 end;
 
 procedure TACSearchFsmTest.TestFindMatches;
@@ -2273,6 +2312,208 @@ begin
   AssertTrue(Copy(s, m[2].Offset, m[2].Length) = '23');
 end;
 
+{ TDaacSearchFsmTest }
+
+function TDaacSearchFsmTest.OnMatch(const m: TMatch): Boolean;
+begin
+  Inc(FMatchCount);
+  Result := True;
+end;
+
+function TDaacSearchFsmTest.OnMatchFirst(const m: TMatch): Boolean;
+begin
+  Inc(FMatchCount);
+  Result := False;
+end;
+
+procedure TDaacSearchFsmTest.TestCreate;
+var
+  ac: TACSearch;
+begin
+  {%H-}ac.Instance := TDaacSearchFsm.Create([]);
+  AssertTrue(ac.Instance.AlphabetSize = 1);
+  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.EmptyCellCount = 0);
+  AssertTrue(ac.Instance.PatternCount = 0);
+  AssertFalse(ac.Instance.IsMatch('a'));
+
+  ac.Instance := TDaacSearchFsm.Create(['', '']);
+  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.EmptyCellCount = 0);
+  AssertTrue(ac.Instance.PatternCount = 0);
+
+  ac.Instance := TDaacSearchFsm.Create(['a','b', 'a', 'b']);
+  AssertTrue(ac.Instance.AlphabetSize = 3);
+  AssertTrue(ac.Instance.NodeCount = 3);
+  AssertTrue(ac.Instance.EmptyCellCount = 0);
+  AssertTrue(ac.Instance.PatternCount = 2);
+  AssertTrue(ac.Instance.IsMatch('a'));
+  AssertTrue(ac.Instance.IsMatch('b'));
+end;
+
+procedure TDaacSearchFsmTest.TestSearchDelegated;
+var
+  ac: TACSearch;
+  s: rawbytestring;
+  a: TStringArray;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  {%H-}ac.Instance := TDaacSearchFsm.Create(a);
+  s := 'hishero';
+  FMatchCount := 0;
+  ac.Instance.Search(s, @OnMatch);
+  AssertTrue(FMatchCount = Length(a));
+
+  FMatchCount := 0;
+  ac.Instance.Search(s, @OnMatchFirst);
+  AssertTrue(FMatchCount = 1);
+end;
+
+procedure TDaacSearchFsmTest.TestSearchNested;
+var
+  MatchCount: Integer = 0;
+  function NestMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := True;
+  end;
+  function FirstMatch(const m: TMatch): Boolean;
+  begin
+    Inc(MatchCount);
+    Result := False;
+  end;
+var
+  s: rawbytestring;
+  ss: TStrSet;
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    ss.Remove(Copy(s, m.Offset, m.Length));
+    Result := True;
+  end;
+var
+  ac: TACSearch;
+  a: TStringArray;
+begin
+  a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
+  {%H-}ac.Instance := TDaacSearchFsm.Create(a);
+  s := 'hishero';
+  ac.Instance.Search(s, @NestMatch);
+  AssertTrue(MatchCount = Length(a));
+
+  MatchCount := 0;
+  ac.Instance.Search(s, @FirstMatch);
+  AssertTrue(MatchCount = 1);
+
+  ss.AddAll(a);
+  AssertTrue(ss.Count = Length(a));
+  ac.Instance.Search(s, @TestMatch);
+  AssertTrue(ss.IsEmpty);
+end;
+
+procedure TDaacSearchFsmTest.TestContainsMatch;
+var
+  ac: TACSearch;
+begin
+  {%H-}ac.Instance := TDaacSearchFsm.Create(['aa','bb']);
+  AssertFalse(ac.Instance.ContainsMatch('abcde'));
+  AssertFalse(ac.Instance.ContainsMatch('ababcde'));
+  AssertTrue(ac.Instance.ContainsMatch('aabcde'));
+  AssertTrue(ac.Instance.ContainsMatch('abbcde'));
+end;
+
+procedure TDaacSearchFsmTest.TestIndexOfPattern;
+var
+  ac: TACSearch;
+begin
+  {%H-}ac.Instance := TDaacSearchFsm.Create([]);
+  AssertTrue(ac.Instance.IndexOfPattern('a') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('b') = -1);
+  ac.Instance := TDaacSearchFsm.Create(['aa','ab','ac']);
+  AssertTrue(ac.Instance.IndexOfPattern('') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('a') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('aa') = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('bbaa', 3) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('bbaa', 3, 6) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('bbaa', 4) = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('ab') = 1);
+  AssertTrue(ac.Instance.IndexOfPattern('cab', 2) = 1);
+  AssertTrue(ac.Instance.IndexOfPattern('ac') = 2);
+  AssertTrue(ac.Instance.IndexOfPattern('adac', 3) = 2);
+end;
+
+procedure TDaacSearchFsmTest.TestFirstMatch;
+var
+  ac: TACSearch;
+  s: string;
+  m: TMatch;
+begin
+  s := '012abcdefgh';
+  {%H-}ac.Instance := TDaacSearchFsm.Create(
+    ['0124','234','12345', '1234567','1234','23','890123','5678','6789']);
+  m := ac.Instance.FirstMatch(s);
+  AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
+  s := '01234567890123456789';
+  m := ac.Instance.FirstMatch(s);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = '23'));
+  m := ac.Instance.FirstMatch(s, smmNonOverlapping, m.Offset + m.Length);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = '5678'));
+
+  m := ac.Instance.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = '12345'));
+   m := ac.Instance.FirstMatch(s, smmLeftmostFirst, m.Offset + m.Length);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = '6789'));
+
+  m := ac.Instance.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = '1234567'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostLongest, m.Offset + m.Length);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = '890123'));
+
+  m := ac.Instance.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = '1234'));
+  m := ac.Instance.FirstMatch(s, smmLeftmostShortest, m.Offset + m.Length);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = '5678'));
+end;
+
+procedure TDaacSearchFsmTest.TestFindMatches;
+var
+  ac: TACSearch;
+  s: string;
+  a: TStringArray;
+  m: array of TMatch;
+begin
+  s := '012abcdefgh';
+  a := ['0124','234','12345', '1234567','1234','23','890123','6789012', '5678901'];
+  {%H-}ac.Instance := TDaacSearchFsm.Create(a);
+  m := ac.Instance.FindMatches(s);
+  AssertTrue(m = nil);
+
+  s := '01234567890123456789';
+  m := ac.Instance.FindMatches(s);
+  AssertTrue(Length(m) = 13);
+
+  m := ac.Instance.FindMatches(s, smmNonOverlapping);
+  AssertTrue(Length(m) = 3);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '23');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '5678901');
+  AssertTrue(Copy(s, m[0].Offset, m[2].Length) = '23');
+
+  m := ac.Instance.FindMatches(s, smmLeftmostFirst);
+  AssertTrue(Length(m) = 2);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '12345');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '6789012');
+
+  m := ac.Instance.FindMatches(s, smmLeftmostLongest);
+  AssertTrue(Length(m) = 2);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '1234567');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '890123');
+
+  m := ac.Instance.FindMatches(s, smmLeftmostShortest);
+  AssertTrue(Length(m) = 3);
+  AssertTrue(Copy(s, m[0].Offset, m[0].Length) = '1234');
+  AssertTrue(Copy(s, m[1].Offset, m[1].Length) = '5678901');
+  AssertTrue(Copy(s, m[2].Offset, m[2].Length) = '23');
+end;
+
 initialization
 
   RegisterTest(TBmSearchTest);
@@ -2280,6 +2521,7 @@ initialization
   RegisterTest(TBmSearchCITest);
   RegisterTest(TFunTest);
   RegisterTest(TACSearchFsmTest);
+  RegisterTest(TDaacSearchFsmTest);
 
 end.
 
