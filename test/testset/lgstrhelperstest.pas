@@ -2237,6 +2237,13 @@ begin
   AssertTrue(ac.Instance.IndexOfPattern('cab', 2) = 1);
   AssertTrue(ac.Instance.IndexOfPattern('ac') = 2);
   AssertTrue(ac.Instance.IndexOfPattern('adac', 3) = 2);
+
+  ac.Instance := TACSearchFsm.Create(['aa','baa','bcaa']);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa', 1, 3) = 1);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa', 2, 2) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa', 3, 2) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('ebcaad', 2, 4) = 2);
 end;
 
 procedure TACSearchFsmTest.TestFirstMatch;
@@ -2439,6 +2446,13 @@ begin
   AssertTrue(ac.Instance.IndexOfPattern('cab', 2) = 1);
   AssertTrue(ac.Instance.IndexOfPattern('ac') = 2);
   AssertTrue(ac.Instance.IndexOfPattern('adac', 3) = 2);
+
+  ac.Instance := TDaacSearchFsm.Create(['aa','baa','bcaa']);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa') = -1);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa', 1, 3) = 1);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa', 2, 2) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('baaa', 3, 2) = 0);
+  AssertTrue(ac.Instance.IndexOfPattern('ebcaad', 2, 4) = 2);
 end;
 
 procedure TDaacSearchFsmTest.TestFirstMatch;
