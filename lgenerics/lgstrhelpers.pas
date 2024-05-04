@@ -416,7 +416,7 @@ type
     TSortHelper = specialize TGRegularTimSort<TMatch>;
   private
     FTrie: array of TNode;
-    FCharMap: array[Byte] of SmallInt;
+    FCharMap: array[Byte] of Int32;
     FOnMatchHandler: TOnMatch;
     FNestMatchHandler: TNestMatch;
     FOnMatch: TOnMatch;
@@ -432,7 +432,7 @@ type
     procedure AddPattern(const aValue: rawbytestring; aIndex: SizeInt);
     procedure BuildFsm;
     function  TestInput(const s: rawbytestring; var aOffset, aCount: SizeInt): Boolean; inline;
-    function  NextFsmState(aState: Int32; c: AnsiChar): Int32; inline;
+    function  NextFsmState(aState, aCode: Int32): Int32; inline;
     function  DoFindNoOverlap(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     function  DoFindAll(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
     procedure DoSearch(const s: rawbytestring; aOffset, aCount: SizeInt);
@@ -4759,11 +4759,10 @@ begin
   Result := aOffset <= aCount;
 end;
 
-function TACSearchFsm.NextFsmState(aState: Int32; c: AnsiChar): Int32;
+function TACSearchFsm.NextFsmState(aState, aCode: Int32): Int32;
 begin
-  Result := FCharMap[Ord(c)];
-  if Result = -1 then exit(0);
-  Result := FTrie[aState].NextMove[Result];
+  if aCode = -1 then exit(0);
+  Result := FTrie[aState].NextMove[aCode];
 end;
 
 function TACSearchFsm.DoFindNoOverlap(const s: rawbytestring; aOffset, aCount: SizeInt): TMatchArray;
@@ -4787,7 +4786,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      State := NextFsmState(State, s[I]);
+      State := NextFsmState(State, FCharMap[Ord(s[I])]);
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -4828,7 +4827,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      State := NextFsmState(State, s[I]);
+      State := NextFsmState(State, FCharMap[Ord(s[I])]);
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -4854,7 +4853,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      State := NextFsmState(State, s[I]);
+      State := NextFsmState(State, FCharMap[Ord(s[I])]);
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -4867,6 +4866,11 @@ begin
             if not FOnMatch(TMatch.Make(Succ(I - Length), Length, Index)) then exit;
         end;
     end;
+end;
+
+function MatchCompareNO(const L, R: TIndexMatch): Boolean;
+begin
+  Result := L.Offset < R.Offset;
 end;
 
 function MatchCompareLF(const L, R: TIndexMatch): Boolean;
@@ -4899,7 +4903,8 @@ var
 begin
   if aMatches = nil then exit;
   case aMode of
-    smmDefault, smmNonOverlapping: exit;
+    smmDefault: exit;
+    smmNonOverlapping:   TSortHelper.Sort(aMatches, @MatchCompareNO);
     smmLeftmostFirst:    TSortHelper.Sort(aMatches, @MatchCompareLF);
     smmLeftmostLongest:  TSortHelper.Sort(aMatches, @MatchCompareLL);
     smmLeftmostShortest: TSortHelper.Sort(aMatches, @MatchCompareLS);
@@ -4962,7 +4967,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      State := NextFsmState(State, aText[I]);
+      State := NextFsmState(State, FCharMap[Ord(aText[I])]);
       if State = 0 then exit;
     end;
   with FTrie[State] do
@@ -4975,6 +4980,7 @@ begin
   Result := IndexOfPattern(aText, aOffset, aCount) <> NULL_INDEX;
 end;
 
+{$PUSH}{$WARN 5089 OFF}
 function TACSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode; aOffset,
   aCount: SizeInt): TMatch;
 type
@@ -4989,7 +4995,7 @@ begin
   State := 0;
   if aMode < smmLeftmostFirst then begin
     for I := aOffset to aCount do begin
-      State := NextFsmState(State, aText[I]);
+      State := NextFsmState(State, FCharMap[Ord(aText[I])]);
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
@@ -5001,7 +5007,7 @@ begin
     exit;
   end;
   for I := aOffset to aCount do begin
-    NextState := NextFsmState(State, aText[I]);
+    NextState := NextFsmState(State, FCharMap[Ord(aText[I])]);
     if NextState = 0 then
       if State = 0 then
         continue
@@ -5026,6 +5032,7 @@ begin
     THelper.FindMin(Matches, Result, @MatchCompareLS);
   end;
 end;
+{$POP}
 
 function TACSearchFsm.FindMatches(const aText: rawbytestring; aMode: TSetMatchMode;
   aOffset, aCount: SizeInt): TMatchArray;
@@ -5060,7 +5067,7 @@ begin
   State := 0;
   for I := aOffset to aCount do
     begin
-      State := NextFsmState(State, aText[I]);
+      State := NextFsmState(State, FCharMap[Ord(aText[I])]);
       if State = 0 then continue;
       if FTrie[State].Length <> 0 then exit(True);
       if FTrie[State].Output <> 0 then exit(True);
@@ -5619,6 +5626,7 @@ begin
   Result := IndexOfPattern(aText, aOffset, aCount) <> NULL_INDEX;
 end;
 
+{$PUSH}{$WARN 5089 OFF}
 function TDaacSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode; aOffset,
   aCount: SizeInt): TMatch;
 type
@@ -5671,6 +5679,7 @@ begin
     THelper.FindMin(Matches, Result, @MatchCompareLS);
   end;
 end;
+{$POP}
 
 function TDaacSearchFsm.FindMatches(const aText: rawbytestring; aMode: TSetMatchMode;
   aOffset, aCount: SizeInt): TMatchArray;
