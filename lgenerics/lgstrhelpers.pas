@@ -4971,7 +4971,7 @@ begin
       if State = 0 then exit;
     end;
   with FTrie[State] do
-    if Length <> 0 then
+    if Length = Succ(aCount - aOffset) then
       Result := Index;
 end;
 
@@ -5606,14 +5606,16 @@ end;
 
 function TDaacSearchFsm.IndexOfPattern(const aText: rawbytestring; aOffset, aCount: SizeInt): SizeInt;
 var
-  I, State: Int32;
+  I, State, c: Int32;
 begin
   Result := NULL_INDEX;
   if not TestInput(aText, aOffset, aCount) then exit;
   State := 0;
   for I := aOffset to aCount do
     begin
-      State := NextMove(State, FCharMap[Ord(aText[I])]);
+      c := FCharMap[Ord(aText[I])];
+      if c = 0 then exit;
+      State := NextMove(State, c);
       if State = 0 then exit;
     end;
   with FDaTrie[State] do
