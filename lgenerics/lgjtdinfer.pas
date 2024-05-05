@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generating JTD schemas from JSON examples.                              *
 *                                                                           *
-*   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2024 A.Koverdyaev(avk)                                     *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -59,7 +59,7 @@ type
       Kind: THintKind;
       NumberType: TNumberType;
       EnumList,
-      Path: TStringArray;
+      Path: TStringArray; // todo: what about JSONpath?
       constructor Make(aDefNumType: TNumberType);
       constructor Make(const aPath: TStringArray; aDefNumType: TNumberType);
       constructor Enum(const aEnumList, aPath: TStringArray);
