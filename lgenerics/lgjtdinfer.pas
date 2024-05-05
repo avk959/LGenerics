@@ -30,7 +30,8 @@ type
   { TJtdInferrer: tries to generate a JSON Typedef schema from the example data; if the result
     can be improved with an Enum, Values, or Discriminator schema, just give it appropriate hints;
     there is currently no any analogue for the wildcard when specifying a path, so it is important that
-    the path in the hint points to the very first occurrence of the interesting object }
+    the path in the hint points to the very first occurrence of the interesting object;
+    note that the hint with the modifying path just will be ignored }
   TJtdInferrer = class
   public
   type
@@ -731,6 +732,8 @@ begin
   for I := 0 to System.High(aHints) do
     if aHints[I].Kind <> hkUnknown then
       begin
+        with aHints[I] do
+          if (Path <> nil) and (Path[System.High(Path)] = '-') then continue;
         h := aHints[I];
         case h.Kind of
           hkDefNumberType:
