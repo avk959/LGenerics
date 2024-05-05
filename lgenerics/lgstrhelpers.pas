@@ -4980,18 +4980,23 @@ begin
   Result := IndexOfPattern(aText, aOffset, aCount) <> NULL_INDEX;
 end;
 
-{$PUSH}{$WARN 5089 OFF}
+{$PUSH}{$WARN 5036 OFF}
 function TACSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode; aOffset,
   aCount: SizeInt): TMatch;
-type
-  THelper = specialize TGRegularVectorHelper<TMatch>;
 var
-  Matches: specialize TGLiteVector<TMatch>;
+  Match: TMatch;
+  MatchLess: specialize TGLessCompare<TMatch>;
+  procedure TestMatch(const m: TMatch); inline;
+  begin
+    if (Match.Offset = 0) or MatchLess(m, Match) then
+      Match := m;
+  end;
+var
   I: SizeInt;
   State, NextState: Int32;
 begin
-  Result := TMatch.Make(0, 0, NULL_INDEX);
-  if not TestInput(aText, aOffset, aCount) then exit;
+  Match := TMatch.Make(0, 0, NULL_INDEX);
+  if not TestInput(aText, aOffset, aCount) then exit(Match);
   State := 0;
   if aMode < smmLeftmostFirst then begin
     for I := aOffset to aCount do begin
@@ -5004,7 +5009,13 @@ begin
         with FTrie[FTrie[State].Output] do
           exit(TMatch.Make(Succ(I - Length), Length, Index));
     end;
-    exit;
+    exit(Match);
+  end;
+  case aMode of
+    smmLeftmostFirst:    MatchLess := @MatchCompareLF;
+    smmLeftmostLongest:  MatchLess := @MatchCompareLL;
+  else // smmLeftmostShortest
+    MatchLess := @MatchCompareLS;
   end;
   for I := aOffset to aCount do begin
     NextState := NextFsmState(State, FCharMap[Ord(aText[I])]);
@@ -5012,25 +5023,18 @@ begin
       if State = 0 then
         continue
       else
-        if Matches.NonEmpty then
-          break;
+        if Match.Offset <> 0 then break;
     State := NextState;
     with FTrie[NextState] do
       if Length <> 0 then
-        Matches.Add(TMatch.Make(Succ(I - Length), Length, Index));
+        TestMatch(TMatch.Make(Succ(I - Length), Length, Index));
     while FTrie[NextState].Output <> 0 do begin
       NextState := FTrie[NextState].Output;
       with FTrie[NextState] do
-        Matches.Add(TMatch.Make(Succ(I - Length), Length, Index));
+        TestMatch(TMatch.Make(Succ(I - Length), Length, Index));
     end;
   end;
-  if Matches.IsEmpty then exit;
-  case aMode of
-    smmLeftmostFirst:    THelper.FindMin(Matches, Result, @MatchCompareLF);
-    smmLeftmostLongest:  THelper.FindMin(Matches, Result, @MatchCompareLL);
-  else // smmLeftmostShortest
-    THelper.FindMin(Matches, Result, @MatchCompareLS);
-  end;
+  Result := Match;
 end;
 {$POP}
 
@@ -5628,18 +5632,23 @@ begin
   Result := IndexOfPattern(aText, aOffset, aCount) <> NULL_INDEX;
 end;
 
-{$PUSH}{$WARN 5089 OFF}
+{$PUSH}{$WARN 5036 OFF}
 function TDaacSearchFsm.FirstMatch(const aText: rawbytestring; aMode: TSetMatchMode; aOffset,
   aCount: SizeInt): TMatch;
-type
-  THelper = specialize TGRegularVectorHelper<TMatch>;
 var
-  Matches: specialize TGLiteVector<TMatch>;
+  Match: TMatch;
+  MatchLess: specialize TGLessCompare<TMatch>;
+  procedure TestMatch(const m: TMatch); inline;
+  begin
+    if (Match.Offset = 0) or MatchLess(m, Match) then
+      Match := m;
+  end;
+var
   I: SizeInt;
   State, NextState: Int32;
 begin
-  Result := TMatch.Make(0, 0, NULL_INDEX);
-  if not TestInput(aText, aOffset, aCount) then exit;
+  Match := TMatch.Make(0, 0, NULL_INDEX);
+  if not TestInput(aText, aOffset, aCount) then exit(Match);
   State := 0;
   if aMode < smmLeftmostFirst then begin
     for I := aOffset to aCount do begin
@@ -5652,7 +5661,13 @@ begin
         with FOutput[FDaTrie[FDaTrie[State].NextOut].Output] do
           exit(TMatch.Make(Succ(I - Length), Length, Index));
     end;
-    exit;
+    exit(Match);
+  end;
+  case aMode of
+    smmLeftmostFirst:    MatchLess := @MatchCompareLF;
+    smmLeftmostLongest:  MatchLess := @MatchCompareLL;
+  else // smmLeftmostShortest
+    MatchLess := @MatchCompareLS;
   end;
   for I := aOffset to aCount do begin
     NextState := NextFsmState(State, FCharMap[Ord(aText[I])]);
@@ -5660,26 +5675,19 @@ begin
       if State = 0 then
         continue
       else
-        if Matches.NonEmpty then
-          break;
+        if Match.Offset <> 0 then break;
     State := NextState;
     if FDaTrie[NextState].Output <> 0 then
       with FOutput[FDaTrie[NextState].Output] do
-        Matches.Add(TMatch.Make(Succ(I - Length), Length, Index));
+        TestMatch(TMatch.Make(Succ(I - Length), Length, Index));
     while FDaTrie[NextState].NextOut <> 0 do
       begin
         NextState := FDaTrie[NextState].NextOut;
         with FOutput[FDaTrie[NextState].Output] do
-          Matches.Add(TMatch.Make(Succ(I - Length), Length, Index));
+          TestMatch(TMatch.Make(Succ(I - Length), Length, Index));
       end;
   end;
-  if Matches.IsEmpty then exit;
-  case aMode of
-    smmLeftmostFirst:    THelper.FindMin(Matches, Result, @MatchCompareLF);
-    smmLeftmostLongest:  THelper.FindMin(Matches, Result, @MatchCompareLL);
-  else // smmLeftmostShortest
-    THelper.FindMin(Matches, Result, @MatchCompareLS);
-  end;
+  Result := Match;
 end;
 {$POP}
 
