@@ -6275,6 +6275,7 @@ begin
     until (Result <> 0) or (aState = 0);
 end;
 
+{$PUSH}{$WARN 5036 OFF}
 procedure TACNfaUtf8.BuildFsm;
 var
   VListHead, VListTail, AllVacantBound: Int32;
@@ -6485,7 +6486,6 @@ begin
     System.SetLength(FDaTrie, AllVacantBound);
 end;
 
-{$PUSH}{$WARN 5036 OFF}
 function TACNfaUtf8.DoFindFirst(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch;
 var
   Match: TMatch;

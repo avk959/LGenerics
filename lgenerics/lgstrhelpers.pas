@@ -5310,6 +5310,7 @@ begin
     until (Result <> 0) or (aState = 0);
 end;
 
+{$PUSH}{$WARN 5036 OFF}
 procedure TDaacSearchFsm.BuildFsm;
 var
   VListHead, VListTail, AllVacantBound: Int32;
@@ -5485,6 +5486,7 @@ begin
   if System.Length(FDaTrie) > AllVacantBound then
     System.SetLength(FDaTrie, AllVacantBound);
 end;
+{$POP}
 
 function TDaacSearchFsm.TestInput(const s: rawbytestring; var aOffset, aCount: SizeInt): Boolean;
 begin
