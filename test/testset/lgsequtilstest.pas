@@ -136,8 +136,14 @@ type
     procedure TestIndexOfPatternNfa;
     procedure TestIndexOfPatternDfaCI;
     procedure TestIndexOfPatternNfaCI;
-    procedure TestFirstMatch;
-    procedure TestFirstMatchCI;
+    procedure TestFirstMatchDfa;
+    procedure TestFirstMatchDfaOww;
+    procedure TestFirstMatchDfaCI;
+    procedure TestFirstMatchDfaCIOww;
+    procedure TestFirstMatchNfa;
+    procedure TestFirstMatchNfaOww;
+    procedure TestFirstMatchNfaCI;
+    procedure TestFirstMatchNfaCIOww;
     procedure TestFindMatches;
     procedure TestFindMatchesOww;
     procedure TestContainsMatchDfa;
@@ -3998,6 +4004,10 @@ begin
       AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])) = I);
       AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])-1) = -1);
     end;
+
+  a := ['aa','baa','bcaa'];
+  ac := CreateACSearchFsm(a);
+  AssertTrue(ac.IndexOfPattern('baaa') = -1);
 end;
 
 procedure TACSearchFsmTest.TestIndexOfPatternNfa;
@@ -4021,6 +4031,10 @@ begin
       AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])) = I);
       AssertTrue(ac.IndexOfPattern(s, Pos(a[I], s), Length(a[I])-1) = -1);
     end;
+
+  a := ['aa','baa','bcaa'];
+  ac := CreateACSearchFsm(a, False, True);
+  AssertTrue(ac.IndexOfPattern('baaa') = -1);
 end;
 
 procedure TACSearchFsmTest.TestIndexOfPatternDfaCI;
@@ -4045,6 +4059,9 @@ begin
       AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])) = I);
       AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])-1) = -1);
     end;
+  a := ['aa','baa','bcaa'];
+  ac := CreateACSearchFsm(a);
+  AssertTrue(ac.IndexOfPattern('BAAA') = -1);
 end;
 
 procedure TACSearchFsmTest.TestIndexOfPatternNfaCI;
@@ -4069,37 +4086,563 @@ begin
       AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])) = I);
       AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])-1) = -1);
     end;
+  a := ['aa','baa','bcaa'];
+  ac := CreateACSearchFsm(a);
+  AssertTrue(ac.IndexOfPattern('BAAA') = -1);
 end;
 
-procedure TACSearchFsmTest.TestFirstMatch;
+procedure TACSearchFsmTest.TestFirstMatchDfa;
 var
   ac: IACSearchFsmUtf8;
   a: TStringArray;
   s: string;
   m: TMatch;
+  Ofs: SizeInt;
 begin
-  a := ['один','оди','дина','на'];
+  a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
   ac := CreateACSearchFsm(a);
   s := 'НЕОДИНАКОВЫЙ';
   m := ac.FirstMatch(s);
   AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
   s := 'неодинаковый';
   m := ac.FirstMatch(s);
-  AssertTrue((m.Index = 1) and (AnsiLowerCase(Copy(s, m.Offset, m.Length)) = a[1]));
+  AssertTrue((m.Index = 1) and (Copy(s, m.Offset, m.Length) = a[1]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 1) and (Copy(s, m.Offset, m.Length) = a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 0) and (Copy(s, m.Offset, m.Length) = a[0]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and (Copy(s, m.Offset, m.Length) = a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 11) and (Copy(s, m.Offset, m.Length) = a[11]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 1) and (Copy(s, m.Offset, m.Length) = a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
 end;
 
-procedure TACSearchFsmTest.TestFirstMatchCI;
+procedure TACSearchFsmTest.TestFirstMatchDfaOww;
 var
   ac: IACSearchFsmUtf8;
   a: TStringArray;
   s: string;
   m: TMatch;
+  Ofs: SizeInt;
 begin
-  a := ['один','оди','дина','на'];
-  ac := CreateACSearchFsm(a, True);
-  s := 'неОдИнАковый';
+  a := [
+    'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
+    'раз не считается','не считается', 'не'
+  ];
+  ac := CreateACSearchFsm(a);
+  ac.OnlyWholeWords := True;
+  s := 'первый раз не считается';
+
   m := ac.FirstMatch(s);
-  AssertTrue((m.Index = 1) and (AnsiLowerCase(Copy(s, m.Offset, m.Length)) = a[1]));
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and (Copy(s, m.Offset, m.Length) = a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 9) and (Copy(s, m.Offset, m.Length) = a[9]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+end;
+
+procedure TACSearchFsmTest.TestFirstMatchDfaCI;
+var
+  ac: IACSearchFsmUtf8;
+  a: TStringArray;
+  s: string;
+  m: TMatch;
+  Ofs: SizeInt;
+begin
+  a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
+  ac := CreateACSearchFsm(a, True);
+  s := 'НЕОДИНАКОВЫЙ';
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 0) and AnsiSameText(Copy(s, m.Offset, m.Length), a[0]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and AnsiSameText(Copy(s, m.Offset, m.Length), a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 11) and AnsiSameText(Copy(s, m.Offset, m.Length), a[11]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 2) and AnsiSameText(Copy(s, m.Offset, m.Length), a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and AnsiSameText(Copy(s, m.Offset, m.Length), a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+end;
+
+procedure TACSearchFsmTest.TestFirstMatchDfaCIOww;
+var
+  ac: IACSearchFsmUtf8;
+  a: TStringArray;
+  s: string;
+  m: TMatch;
+  Ofs: SizeInt;
+begin
+  a := [
+    'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
+    'раз не считается','не считается', 'не'
+  ];
+  ac := CreateACSearchFsm(a, True);
+  ac.OnlyWholeWords := True;
+  s := 'ПЕРВЫЙ РАЗ НЕ СЧИТАЕТСЯ';
+
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and AnsiSameText(Copy(s, m.Offset, m.Length), a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 2) and AnsiSameText(Copy(s, m.Offset, m.Length), a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and AnsiSameText(Copy(s, m.Offset, m.Length), a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 9) and AnsiSameText(Copy(s, m.Offset, m.Length), a[9]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and AnsiSameText(Copy(s, m.Offset, m.Length), a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+end;
+
+procedure TACSearchFsmTest.TestFirstMatchNfa;
+var
+  ac: IACSearchFsmUtf8;
+  a: TStringArray;
+  s: string;
+  m: TMatch;
+  Ofs: SizeInt;
+begin
+  a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
+  ac := CreateACSearchFsm(a, False, True);
+  s := 'НЕОДИНАКОВЫЙ';
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
+  s := 'неодинаковый';
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Index = 1) and (Copy(s, m.Offset, m.Length) = a[1]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 1) and (Copy(s, m.Offset, m.Length) = a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 0) and (Copy(s, m.Offset, m.Length) = a[0]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and (Copy(s, m.Offset, m.Length) = a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 11) and (Copy(s, m.Offset, m.Length) = a[11]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 1) and (Copy(s, m.Offset, m.Length) = a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+end;
+
+procedure TACSearchFsmTest.TestFirstMatchNfaOww;
+var
+  ac: IACSearchFsmUtf8;
+  a: TStringArray;
+  s: string;
+  m: TMatch;
+  Ofs: SizeInt;
+begin
+  a := [
+    'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
+    'раз не считается','не считается', 'не'
+  ];
+  ac := CreateACSearchFsm(a, False, True);
+  ac.OnlyWholeWords := True;
+  s := 'первый раз не считается';
+
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 2) and (Copy(s, m.Offset, m.Length) = a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and (Copy(s, m.Offset, m.Length) = a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 9) and (Copy(s, m.Offset, m.Length) = a[9]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and (Copy(s, m.Offset, m.Length) = a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 4) and (Copy(s, m.Offset, m.Length) = a[4]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and (Copy(s, m.Offset, m.Length) = a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 3) and (Copy(s, m.Offset, m.Length) = a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and (Copy(s, m.Offset, m.Length) = a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and (Copy(s, m.Offset, m.Length) = a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and (Copy(s, m.Offset, m.Length) = a[6]));
+end;
+
+procedure TACSearchFsmTest.TestFirstMatchNfaCI;
+var
+  ac: IACSearchFsmUtf8;
+  a: TStringArray;
+  s: string;
+  m: TMatch;
+  Ofs: SizeInt;
+begin
+  a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
+  ac := CreateACSearchFsm(a, True, True);
+  s := 'НЕОДИНАКОВЫЙ';
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 0) and AnsiSameText(Copy(s, m.Offset, m.Length), a[0]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and AnsiSameText(Copy(s, m.Offset, m.Length), a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 11) and AnsiSameText(Copy(s, m.Offset, m.Length), a[11]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 2) and AnsiSameText(Copy(s, m.Offset, m.Length), a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and AnsiSameText(Copy(s, m.Offset, m.Length), a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+end;
+
+procedure TACSearchFsmTest.TestFirstMatchNfaCIOww;
+var
+  ac: IACSearchFsmUtf8;
+  a: TStringArray;
+  s: string;
+  m: TMatch;
+  Ofs: SizeInt;
+begin
+  a := [
+    'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
+    'раз не считается','не считается', 'не'
+  ];
+  ac := CreateACSearchFsm(a, True, True);
+  ac.OnlyWholeWords := True;
+  s := 'ПЕРВЫЙ РАЗ НЕ СЧИТАЕТСЯ';
+
+  m := ac.FirstMatch(s);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmDefault, m.Offset + m.Length);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+
+  m := ac.FirstMatch(s, smmNonOverlapping);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and AnsiSameText(Copy(s, m.Offset, m.Length), a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+
+  m := ac.FirstMatch(s, smmLeftmostFirst);
+  AssertTrue((m.Index = 2) and AnsiSameText(Copy(s, m.Offset, m.Length), a[2]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 9) and AnsiSameText(Copy(s, m.Offset, m.Length), a[9]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 9) and AnsiSameText(Copy(s, m.Offset, m.Length), a[9]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 10) and AnsiSameText(Copy(s, m.Offset, m.Length), a[10]));
+
+  m := ac.FirstMatch(s, smmLeftmostLongest);
+  AssertTrue((m.Index = 4) and AnsiSameText(Copy(s, m.Offset, m.Length), a[4]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 7) and AnsiSameText(Copy(s, m.Offset, m.Length), a[7]));
+
+  m := ac.FirstMatch(s, smmLeftmostShortest);
+  AssertTrue((m.Index = 3) and AnsiSameText(Copy(s, m.Offset, m.Length), a[3]));
+  Ofs := m.Offset + m.Length;
+  m := ac.FirstMatch(s, smmNonOverlapping, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
+  m := ac.FirstMatch(s, smmLeftmostFirst, Ofs);
+  AssertTrue((m.Index = 5) and AnsiSameText(Copy(s, m.Offset, m.Length), a[5]));
+  m := ac.FirstMatch(s, smmLeftmostLongest, Ofs);
+  AssertTrue((m.Index = 8) and AnsiSameText(Copy(s, m.Offset, m.Length), a[8]));
+  m := ac.FirstMatch(s, smmLeftmostShortest, Ofs);
+  AssertTrue((m.Index = 6) and AnsiSameText(Copy(s, m.Offset, m.Length), a[6]));
 end;
 
 procedure TACSearchFsmTest.TestFindMatches;
@@ -4178,8 +4721,8 @@ begin
 
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 6);
-  ac.OnlyWholeWords := True;
 
+  ac.OnlyWholeWords := True;
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 3);
   for I := 0 to High(m) do
