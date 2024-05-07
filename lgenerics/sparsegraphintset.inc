@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -410,6 +410,13 @@ constructor TGSparseGraph.TSkeleton.Create(aVertCount: SizeInt; aDirected: Boole
 begin
   System.SetLength(FAdjLists, aVertCount);
   FEdgeCount := 0;
+  FDirected := aDirected;
+end;
+
+constructor TGSparseGraph.TSkeleton.Create(aVertCount, aEdgeCount: SizeInt; aDirected: Boolean);
+begin
+  System.SetLength(FAdjLists, aVertCount);
+  FEdgeCount := aEdgeCount;
   FDirected := aDirected;
 end;
 

@@ -385,7 +385,7 @@ type
 ***********************************************************************************************************}
 
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aSource;
-    if aCount <= 0, then all cycles are returned; if aCount > 0, then
+    if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
     at the end of the timeout False will be returned }
     function  FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
@@ -1299,8 +1299,7 @@ function TGSimpleDigraph.CreateSkeleton: TSkeleton;
 var
   I: SizeInt;
 begin
-  Result := TSkeleton.Create(VertexCount, True);
-  Result.FEdgeCount := EdgeCount;
+  Result := TSkeleton.Create(VertexCount, EdgeCount, True);
   for I := 0 to Pred(VertexCount) do
     Result[I]^.AssignList(AdjLists[I]);
 end;

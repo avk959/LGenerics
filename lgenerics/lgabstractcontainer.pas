@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Common abstact container classes.                                       *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -667,16 +667,14 @@ type
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    TValueArray      = specialize TGArray<TKey>;
+    TValueArray      = specialize TGArray<TValue>;
 
   protected
   type
     TSpecValueEnumerator = specialize TGEnumerator<TValue>;
 
     TAbstractValueSet = class abstract
-    protected
       function GetCount: SizeInt; virtual; abstract;
-    public
       function GetEnumerator: TSpecValueEnumerator; virtual; abstract;
       function ToArray: TValueArray;
       function Contains(const aValue: TValue): Boolean; virtual; abstract;
@@ -843,9 +841,8 @@ type
   protected
   type
     TCustomRowMap = class(IRowMap)
-    protected
-      function  GetCount: SizeInt; virtual; abstract;
     public
+      function  GetCount: SizeInt; virtual; abstract;
       function  GetEnumerator: TRowDataEnumerator; virtual; abstract;
       function  IsEmpty: Boolean;
       procedure TrimToFit; virtual; abstract;

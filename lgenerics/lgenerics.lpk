@@ -31,199 +31,198 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="7"/>
-    <Files Count="46">
-      <Item1>
-        <Filename Value="lgabstractcontainer.pas"/>
-        <UnitName Value="lgAbstractContainer"/>
-      </Item1>
-      <Item2>
-        <Filename Value="lgarrayhelpers.pas"/>
-        <UnitName Value="lgArrayHelpers"/>
-      </Item2>
-      <Item3>
-        <Filename Value="lgasync.pas"/>
-        <UnitName Value="lgAsync"/>
-      </Item3>
-      <Item4>
-        <Filename Value="lgavltree.pas"/>
-        <UnitName Value="lgAvlTree"/>
-      </Item4>
-      <Item5>
-        <Filename Value="lgbimap.pas"/>
-        <UnitName Value="lgBiMap"/>
-      </Item5>
-      <Item6>
-        <Filename Value="lgdeque.pas"/>
-        <UnitName Value="lgDeque"/>
-      </Item6>
-      <Item7>
-        <Filename Value="lgfunction.pas"/>
-        <UnitName Value="lgFunction"/>
-      </Item7>
-      <Item8>
-        <Filename Value="lghash.pas"/>
-        <UnitName Value="lgHash"/>
-      </Item8>
-      <Item9>
-        <Filename Value="lghashmap.pas"/>
-        <UnitName Value="lgHashMap"/>
-      </Item9>
-      <Item10>
-        <Filename Value="lghashmultiset.pas"/>
-        <UnitName Value="lgHashMultiSet"/>
-      </Item10>
-      <Item11>
-        <Filename Value="lghashset.pas"/>
-        <UnitName Value="lgHashSet"/>
-      </Item11>
-      <Item12>
-        <Filename Value="lghashtable.pas"/>
-        <UnitName Value="lgHashTable"/>
-      </Item12>
-      <Item13>
-        <Filename Value="lghelpers.pas"/>
-        <UnitName Value="lgHelpers"/>
-      </Item13>
-      <Item14>
-        <Filename Value="lglist.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGList"/>
-      </Item14>
-      <Item15>
-        <Filename Value="lgmiscutils.pas"/>
-        <UnitName Value="lgMiscUtils"/>
-      </Item15>
-      <Item16>
-        <Filename Value="lgmultimap.pas"/>
-        <UnitName Value="lgMultiMap"/>
-      </Item16>
-      <Item17>
-        <Filename Value="lgpriorityqueue.pas"/>
-        <UnitName Value="lgPriorityQueue"/>
-      </Item17>
-      <Item18>
-        <Filename Value="lgqueue.pas"/>
-        <UnitName Value="lgQueue"/>
-      </Item18>
-      <Item19>
-        <Filename Value="lgsimpledigraph.pas"/>
-        <UnitName Value="lgSimpleDigraph"/>
-      </Item19>
-      <Item20>
-        <Filename Value="lgsimplegraph.pas"/>
-        <UnitName Value="lgSimpleGraph"/>
-      </Item20>
-      <Item21>
-        <Filename Value="lgsparsegraph.pas"/>
-        <UnitName Value="lgSparseGraph"/>
-      </Item21>
-      <Item22>
-        <Filename Value="lgstack.pas"/>
-        <UnitName Value="lgStack"/>
-      </Item22>
-      <Item23>
-        <Filename Value="lgstrconst.pas"/>
-        <UnitName Value="lgStrConst"/>
-      </Item23>
-      <Item24>
-        <Filename Value="lgstrhelpers.pas"/>
-        <UnitName Value="lgStrHelpers"/>
-      </Item24>
-      <Item25>
-        <Filename Value="lgtable2d.pas"/>
-        <UnitName Value="lgTable2D"/>
-      </Item25>
-      <Item26>
-        <Filename Value="lgtreemap.pas"/>
-        <UnitName Value="lgTreeMap"/>
-      </Item26>
-      <Item27>
-        <Filename Value="lgtreemultiset.pas"/>
-        <UnitName Value="lgTreeMultiSet"/>
-      </Item27>
-      <Item28>
-        <Filename Value="lgtreeset.pas"/>
-        <UnitName Value="lgTreeSet"/>
-      </Item28>
-      <Item29>
+    <Files>
+      <Item>
         <Filename Value="lgutils.pas"/>
         <UnitName Value="lgUtils"/>
-      </Item29>
-      <Item30>
+      </Item>
+      <Item>
+        <Filename Value="lgstrconst.pas"/>
+        <UnitName Value="lgStrConst"/>
+      </Item>
+      <Item>
+        <Filename Value="lghelpers.pas"/>
+        <UnitName Value="lgHelpers"/>
+      </Item>
+      <Item>
+        <Filename Value="lghash.pas"/>
+        <UnitName Value="lgHash"/>
+      </Item>
+      <Item>
+        <Filename Value="lgarrayhelpers.pas"/>
+        <UnitName Value="lgArrayHelpers"/>
+      </Item>
+      <Item>
+        <Filename Value="lgabstractcontainer.pas"/>
+        <UnitName Value="lgAbstractContainer"/>
+      </Item>
+      <Item>
         <Filename Value="lgvector.pas"/>
         <UnitName Value="lgVector"/>
-      </Item30>
-      <Item31>
-        <Filename Value="lgroottree.pas"/>
-        <UnitName Value="lgRootTree"/>
-      </Item31>
-      <Item32>
-        <Filename Value="lgint128.pas"/>
-        <UnitName Value="lgInt128"/>
-      </Item32>
-      <Item33>
-        <Filename Value="lgtreap.pas"/>
-        <UnitName Value="lgTreap"/>
-      </Item33>
-      <Item34>
+      </Item>
+      <Item>
+        <Filename Value="lgavltree.pas"/>
+        <UnitName Value="lgAvlTree"/>
+      </Item>
+      <Item>
         <Filename Value="lgbstutils.pas"/>
         <UnitName Value="lgBstUtils"/>
-      </Item34>
-      <Item35>
+      </Item>
+      <Item>
+        <Filename Value="lgtreap.pas"/>
+        <UnitName Value="lgTreap"/>
+      </Item>
+      <Item>
+        <Filename Value="lghashtable.pas"/>
+        <UnitName Value="lgHashTable"/>
+      </Item>
+      <Item>
+        <Filename Value="lghashmap.pas"/>
+        <UnitName Value="lgHashMap"/>
+      </Item>
+      <Item>
+        <Filename Value="lghashset.pas"/>
+        <UnitName Value="lgHashSet"/>
+      </Item>
+      <Item>
+        <Filename Value="lghashmultiset.pas"/>
+        <UnitName Value="lgHashMultiSet"/>
+      </Item>
+      <Item>
+        <Filename Value="lgmultimap.pas"/>
+        <UnitName Value="lgMultiMap"/>
+      </Item>
+      <Item>
+        <Filename Value="lgtreemap.pas"/>
+        <UnitName Value="lgTreeMap"/>
+      </Item>
+      <Item>
+        <Filename Value="lgtreemultiset.pas"/>
+        <UnitName Value="lgTreeMultiSet"/>
+      </Item>
+      <Item>
+        <Filename Value="lgtreeset.pas"/>
+        <UnitName Value="lgTreeSet"/>
+      </Item>
+      <Item>
+        <Filename Value="lglist.pas"/>
+        <UnitName Value="lgList"/>
+      </Item>
+      <Item>
+        <Filename Value="lgstack.pas"/>
+        <UnitName Value="lgStack"/>
+      </Item>
+      <Item>
+        <Filename Value="lgqueue.pas"/>
+        <UnitName Value="lgQueue"/>
+      </Item>
+      <Item>
+        <Filename Value="lgdeque.pas"/>
+        <UnitName Value="lgDeque"/>
+      </Item>
+      <Item>
+        <Filename Value="lgbimap.pas"/>
+        <UnitName Value="lgBiMap"/>
+      </Item>
+      <Item>
+        <Filename Value="lgfunction.pas"/>
+        <UnitName Value="lgFunction"/>
+      </Item>
+      <Item>
+        <Filename Value="lgtable2d.pas"/>
+        <UnitName Value="lgTable2D"/>
+      </Item>
+      <Item>
+        <Filename Value="lgasync.pas"/>
+        <UnitName Value="lgAsync"/>
+      </Item>
+      <Item>
+        <Filename Value="lgpriorityqueue.pas"/>
+        <UnitName Value="lgPriorityQueue"/>
+      </Item>
+      <Item>
         <Filename Value="lgrbtree.pas"/>
         <UnitName Value="lgRbTree"/>
-      </Item35>
-      <Item36>
-        <Filename Value="lgjson.pas"/>
-        <UnitName Value="lgJson"/>
-      </Item36>
-      <Item37>
-        <Filename Value="lgsequtils.pas"/>
-        <UnitName Value="lgSeqUtils"/>
-      </Item37>
-      <Item38>
-        <Filename Value="lgjsoncfg.pas"/>
-        <UnitName Value="lgJsonCfg"/>
-      </Item38>
-      <Item39>
+      </Item>
+      <Item>
+        <Filename Value="lgroottree.pas"/>
+        <UnitName Value="lgRootTree"/>
+      </Item>
+      <Item>
         <Filename Value="lgcsvutils.pas"/>
         <UnitName Value="lgCsvUtils"/>
-      </Item39>
-      <Item40>
-        <Filename Value="lgpdo.pas"/>
-        <UnitName Value="lgPdo"/>
-      </Item40>
-      <Item41>
-        <Filename Value="lgjsontypedef.pas"/>
-        <UnitName Value="lgJsonTypeDef"/>
-      </Item41>
-      <Item42>
-        <Filename Value="lgjtdcodegen.pas"/>
-        <UnitName Value="lgJtdCodegen"/>
-      </Item42>
-      <Item43>
-        <Filename Value="lgjtdtypes.pas"/>
-        <UnitName Value="lgJtdTypes"/>
-      </Item43>
-      <Item44>
-        <Filename Value="lgjtdinfer.pas"/>
-        <UnitName Value="lgJtdInfer"/>
-      </Item44>
-      <Item45>
+      </Item>
+      <Item>
+        <Filename Value="lgint128.pas"/>
+        <UnitName Value="lgInt128"/>
+      </Item>
+      <Item>
+        <Filename Value="lgmiscutils.pas"/>
+        <UnitName Value="lgMiscUtils"/>
+      </Item>
+      <Item>
+        <Filename Value="lgjson.pas"/>
+        <UnitName Value="lgJson"/>
+      </Item>
+      <Item>
+        <Filename Value="lgsequtils.pas"/>
+        <UnitName Value="lgSeqUtils"/>
+      </Item>
+      <Item>
+        <Filename Value="lgstrhelpers.pas"/>
+        <UnitName Value="lgStrHelpers"/>
+      </Item>
+      <Item>
+        <Filename Value="lgjsoncfg.pas"/>
+        <UnitName Value="lgJsonCfg"/>
+      </Item>
+      <Item>
         <Filename Value="lgjsonpath.pas"/>
         <UnitName Value="lgJsonPath"/>
-      </Item45>
-      <Item46>
+      </Item>
+      <Item>
+        <Filename Value="lgpdo.pas"/>
+        <UnitName Value="lgPdo"/>
+      </Item>
+      <Item>
+        <Filename Value="lgjsontypedef.pas"/>
+        <UnitName Value="lgJsonTypeDef"/>
+      </Item>
+      <Item>
+        <Filename Value="lgjtdcodegen.pas"/>
+        <UnitName Value="lgJtdCodegen"/>
+      </Item>
+      <Item>
+        <Filename Value="lgjtdinfer.pas"/>
+        <UnitName Value="lgJtdInfer"/>
+      </Item>
+      <Item>
+        <Filename Value="lgjtdtypes.pas"/>
+        <UnitName Value="lgJtdTypes"/>
+      </Item>
+      <Item>
+        <Filename Value="lgsparsegraph.pas"/>
+        <UnitName Value="lgSparseGraph"/>
+      </Item>
+      <Item>
+        <Filename Value="lgsimplegraph.pas"/>
+        <UnitName Value="lgSimpleGraph"/>
+      </Item>
+      <Item>
+        <Filename Value="lgsimpledigraph.pas"/>
+        <UnitName Value="lgSimpleDigraph"/>
+      </Item>
+      <Item>
         <Filename Value="lgjsonutils.pas"/>
-        <UnitName Value="lgjsonutils"/>
-      </Item46>
+        <UnitName Value="lgJsonUtils"/>
+      </Item>
     </Files>
-    <CompatibilityMode Value="True"/>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
     </UsageOptions>
     <PublishOptions>
       <Version Value="2"/>
+      <UseFileFilters Value="True"/>
     </PublishOptions>
   </Package>
 </CONFIG>

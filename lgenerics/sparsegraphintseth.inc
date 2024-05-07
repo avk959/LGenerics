@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -94,6 +94,7 @@ type
     function  GetVertexCount: SizeInt; inline;
   public
     constructor Create(aVertCount: SizeInt; aDirected: Boolean = False);
+    constructor Create(aVertCount, aEdgeCount: SizeInt; aDirected: Boolean = False);
     constructor Create(constref s: TSkeleton);
     function ContainsEdge(aSrc, aDst: SizeInt): Boolean; inline;
     function AddEdge(aSrc, aDst: SizeInt): Boolean;

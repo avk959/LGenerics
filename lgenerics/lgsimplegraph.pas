@@ -151,8 +151,13 @@ type
 
     TDistinctEdgeEnumerator = record
     private
-      FList: PNode;
-      FEnum: TAdjList.TEnumerator;
+    //type
+    //  PNode = TGSimpleGraph.PNode;
+    //  TAdjList = TGSimpleGraph.TAdjList;
+    //  TEnum = TGSimpleGraph.TAdjList.TEnumerator;
+    //var
+      FList: TGSimpleGraph.PNode;
+      FEnum: TGSimpleGraph.TAdjList.TEnumerator;
       FCurrIndex,
       FLastIndex: SizeInt;
       FEnumDone: Boolean;
@@ -514,7 +519,7 @@ type
   { returns True if aTestColors is complete and proper coloring of the vertices, False otherwise }
     function  IsProperVertexColoring(const aTestColors: TIntArray): Boolean;
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aSource;
-    if aCount <= 0, then all cycles are returned; if aCount > 0, then
+    if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
     at the end of the timeout False will be returned }
     function  FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
@@ -1406,8 +1411,7 @@ function TGSimpleGraph.CreateSkeleton: TSkeleton;
 var
   I: SizeInt;
 begin
-  Result := TSkeleton.Create(VertexCount);
-  Result.FEdgeCount := EdgeCount;
+  Result := TSkeleton.Create(VertexCount, EdgeCount);
   for I := 0 to Pred(VertexCount) do
     Result[I]^.AssignList(AdjLists[I]);
 end;

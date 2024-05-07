@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic multimap implementations.                                       *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -43,7 +43,7 @@ type
     specialize TGAbstractMultiMap<TKey, TValue>)
   protected
   type
-    THashTable    = class(specialize TGHashTableLP<TKey, TMMEntry, TKeyEqRel>);
+    THashTable = specialize TGHashTableLP<TKey, TMMEntry, TKeyEqRel>;
 
     TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
@@ -154,10 +154,10 @@ type
 
     var
       FTable: TTable;
-      function GetCount: SizeInt; override;
     public
       constructor Create;
       destructor Destroy; override;
+      function  GetCount: SizeInt; override;
       function  GetEnumerator: TSpecValueEnumerator; override;
       function  Contains(const aValue: TValue): Boolean; override;
       function  Add(const aValue: TValue): Boolean; override;
@@ -215,10 +215,10 @@ type
 
     var
       FTree: TTree;
-      function GetCount: SizeInt; override;
     public
       constructor Create(aNodeManager: TNodeManager);
       destructor Destroy; override;
+      function  GetCount: SizeInt; override;
       function  GetEnumerator: TSpecValueEnumerator; override;
       function  Contains(const aValue: TValue): Boolean; override;
       function  Add(const aValue: TValue): Boolean; override;
@@ -282,10 +282,10 @@ type
       INITIAL_CAPACITY = 8;
     var
       FList: TValList;
-      function GetCount: SizeInt; override;
     public
       constructor Create;
       destructor Destroy; override;
+      function  GetCount: SizeInt; override;
       function  GetEnumerator: TSpecValueEnumerator; override;
       procedure TrimToFit;
       function  Contains(const aValue: TValue): Boolean; override;
@@ -771,11 +771,6 @@ end;
 
 { TGHashMultiMap.TValueSet }
 
-function TGHashMultiMap.TValueSet.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
 constructor TGHashMultiMap.TValueSet.Create;
 begin
   FTable := TTable.Create(START_CAPACITY, LOAD_FACTOR);
@@ -785,6 +780,11 @@ destructor TGHashMultiMap.TValueSet.Destroy;
 begin
   FTable.Free;
   inherited;
+end;
+
+function TGHashMultiMap.TValueSet.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
 end;
 
 function TGHashMultiMap.TValueSet.GetEnumerator: TSpecValueEnumerator;
@@ -859,11 +859,6 @@ end;
 
 { TGTreeMultiMap.TValueSet }
 
-function TGTreeMultiMap.TValueSet.GetCount: SizeInt;
-begin
-  Result := FTree.Count;
-end;
-
 constructor TGTreeMultiMap.TValueSet.Create(aNodeManager: TNodeManager);
 begin
   FTree := TTree.Create(aNodeManager);
@@ -873,6 +868,11 @@ destructor TGTreeMultiMap.TValueSet.Destroy;
 begin
   FTree.Free;
   inherited;
+end;
+
+function TGTreeMultiMap.TValueSet.GetCount: SizeInt;
+begin
+  Result := FTree.Count;
 end;
 
 function TGTreeMultiMap.TValueSet.GetEnumerator: TSpecValueEnumerator;
@@ -996,11 +996,6 @@ end;
 
 { TGListMultiMap.TValueSet }
 
-function TGListMultiMap.TValueSet.GetCount: SizeInt;
-begin
-  Result := FList.Count;
-end;
-
 constructor TGListMultiMap.TValueSet.Create;
 begin
   FList := TValList.Create(INITIAL_CAPACITY, True);
@@ -1010,6 +1005,11 @@ destructor TGListMultiMap.TValueSet.Destroy;
 begin
   FList.Free;
   inherited;
+end;
+
+function TGListMultiMap.TValueSet.GetCount: SizeInt;
+begin
+  Result := FList.Count;
 end;
 
 function TGListMultiMap.TValueSet.GetEnumerator: TSpecValueEnumerator;

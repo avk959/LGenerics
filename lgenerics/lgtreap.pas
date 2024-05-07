@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some generic treap variants.                                            *
 *                                                                           *
-*   Copyright(c) 2019-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -38,11 +38,9 @@ type
       functor TCmpRel (comparison relation) must provide:
         class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteTreap<TKey, TValue, TCmpRel> = record
-  public
   type
     PNode = ^TNode;
     TNode = record
-    private
       FLeft,
       FRight: PNode;
       FKey: TKey;
@@ -101,7 +99,6 @@ type
         functor TCmpRel (comparison relation) must provide:
           class function Less([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteIdxTreap<TKey, TValue, TCmpRel> = record
-  public
   type
     PNode = ^TNode;
     TNode = record
@@ -173,7 +170,6 @@ type
         class field/property/function Identity: TValue; - neutral element of the monoid;
         associative dyadic function BinOp([const[ref]] L, R: TValue): TValue; }
   generic TGLiteSegmentTreap<TKey, TValue, TCmpRel, TValMonoid> = record
-  public
   type
     TEntry      = specialize TGMapEntry<TKey, TValue>;
     TEntryArray = array of TEntry;
@@ -268,7 +264,6 @@ type
     an array with most operations in O(LogN); on assignment and when passed by value,
     the whole treap is copied; }
   generic TGLiteImplicitTreap<T> = record
-  public
   type
     TArray = array of T;
 
@@ -276,7 +271,6 @@ type
   type
     PNode = ^TNode;
     TNode = record
-    private
       Left,
       Right: PNode;
       Prio: SizeUInt;
@@ -337,7 +331,6 @@ type
         associative dyadic function BinOp([const[ref]] L, R: TResult): TResult;
     on assignment and when passed by value, the whole treap is copied; }
   generic TGLiteImplSegmentTreap<T, TResult, TMonoid> = record
-  public
   type
     TArray = array of T;
 
@@ -345,7 +338,6 @@ type
   type
     PNode = ^TNode;
     TNode = record
-    private
       Left,
       Right: PNode;
       Prio: SizeUInt;

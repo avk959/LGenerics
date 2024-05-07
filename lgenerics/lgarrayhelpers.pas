@@ -138,10 +138,10 @@ type
       property Current: T read GetCurrent;
     end;
 
-    class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
   public
+    class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure Swap(var L, R: T); static; inline;
   { swaps the elements of A with the indices L and R;
     raises EArgumentException if L or R is out of bounds }
@@ -1465,6 +1465,31 @@ end;
 
 { TGArrayHelpUtil }
 
+class procedure TGArrayHelpUtil.DoReverse(p: PItem; R: SizeInt);
+var
+  pR: PItem;
+  v: TFake;
+begin
+  pR := @p[R];
+  while p < pR do
+    begin
+      v := TFake(p^);
+      TFake(p^) := TFake(pR^);
+      TFake(pR^) := v;
+      Inc(p);
+      Dec(pR);
+    end;
+end;
+
+class procedure TGArrayHelpUtil.PtrSwap(var L, R: Pointer);
+var
+  tmp: Pointer;
+begin
+  tmp := L;
+  L := R;
+  R := tmp;
+end;
+
 class procedure TGArrayHelpUtil.CopyItems(aSrc, aDst: PItem; aCount: SizeInt);
 begin
   if (aDst <> aSrc) and (aCount > 0) then  //else nothing to do
@@ -1531,31 +1556,6 @@ begin
       else
         System.Move(aSrc^, aDst^, aCount * SizeOf(T));
     end;
-end;
-
-class procedure TGArrayHelpUtil.DoReverse(p: PItem; R: SizeInt);
-var
-  pR: PItem;
-  v: TFake;
-begin
-  pR := @p[R];
-  while p < pR do
-    begin
-      v := TFake(p^);
-      TFake(p^) := TFake(pR^);
-      TFake(pR^) := v;
-      Inc(p);
-      Dec(pR);
-    end;
-end;
-
-class procedure TGArrayHelpUtil.PtrSwap(var L, R: Pointer);
-var
-  tmp: Pointer;
-begin
-  tmp := L;
-  L := R;
-  R := tmp;
 end;
 
 class procedure TGArrayHelpUtil.Swap(var L, R: T);

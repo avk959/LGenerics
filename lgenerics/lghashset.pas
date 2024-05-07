@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hashset implementations.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -971,7 +971,7 @@ end;
 
 function TGBaseOrderedHashSet.TReverseEnumerable.GetCurrent: T;
 begin
-  Result := FEnum.GetCurrent^.Key;
+  Result := FEnum.Current^.Key;
 end;
 
 constructor TGBaseOrderedHashSet.TReverseEnumerable.Create(aSet: TGBaseOrderedHashSet);

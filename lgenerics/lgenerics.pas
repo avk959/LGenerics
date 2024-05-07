@@ -8,12 +8,11 @@ unit LGenerics;
 interface
 
 uses
-  lgAbstractContainer, lgArrayHelpers, lgAsync, lgAvlTree, lgBiMap, lgDeque, lgFunction, lgHash, lgHashMap, 
-  lgHashMultiSet, lgHashSet, lgHashTable, lgHelpers, lgMiscUtils, lgMultiMap, lgPriorityQueue, lgQueue, 
-  lgSimpleDigraph, lgSimpleGraph, lgSparseGraph, lgStack, lgStrConst, lgStrHelpers, lgTable2D, lgTreeMap, 
-  lgTreeMultiSet, lgTreeSet, lgUtils, lgVector, lgRootTree, lgInt128, lgTreap, lgBstUtils, lgRbTree, lgJson, 
-  lgSeqUtils, lgJsonCfg, lgCsvUtils, lgPdo, lgJsonTypeDef, lgJtdCodegen, lgJtdTypes, lgJtdInfer, lgJsonPath, 
-  lgJsonUtils;
+  lgUtils, lgStrConst, lgHelpers, lgHash, lgArrayHelpers, lgAbstractContainer, lgVector, lgAvlTree, lgBstUtils, 
+  lgTreap, lgHashTable, lgHashMap, lgHashSet, lgHashMultiSet, lgMultiMap, lgTreeMap, lgTreeMultiSet, lgTreeSet, 
+  lgList, lgStack, lgQueue, lgDeque, lgBiMap, lgFunction, lgTable2D, lgAsync, lgPriorityQueue, lgRbTree, lgRootTree, 
+  lgCsvUtils, lgInt128, lgMiscUtils, lgJson, lgSeqUtils, lgStrHelpers, lgJsonCfg, lgJsonPath, lgPdo, lgJsonTypeDef, 
+  lgJtdCodegen, lgJtdInfer, lgJtdTypes, lgSparseGraph, lgSimpleGraph, lgSimpleDigraph, lgJsonUtils;
 
 implementation
 

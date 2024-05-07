@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some generic AVL tree implementations.                                  *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -72,11 +72,11 @@ type
     Balance: SizeInt;
     procedure SwapBalance(aNode: PNode); inline;
   {$ENDIF !CPU16}
-    property {%H-}NextLink: PNode read Left write Left; //for node manager
   public
     Data: T;
     function Successor: PNode;
     function Predecessor: PNode;
+    property {%H-}NextLink: PNode read Left write Left; //for node manager
   end;
 
   { TGCustomAvlTree }
@@ -386,8 +386,10 @@ type
     procedure Expand(aValue: SizeInt);
     function  NewNode: SizeInt;
     procedure FreeNode(aNode: SizeInt);
+  public
     function  Successor(aNode: SizeInt): SizeInt;
     function  Predecessor(aNode: SizeInt): SizeInt;
+  private
     procedure SwapBalance(L, R: SizeInt); inline;
     function  GetHighest: SizeInt;
     function  GetLowest: SizeInt;
@@ -2476,16 +2478,13 @@ var
 begin
   Result := FRoot;
   while Result <> nil do
-    begin
-      c := TKeyCmpRel.Compare(aKey, Result^.Data.Key);
-      if c < 0 then
-        Result := Result^.Left
+    if TKeyCmpRel.Less(aKey, Result^.Data.Key) then
+      Result := Result^.Left
+    else
+      if TKeyCmpRel.Less(Result^.Data.Key, aKey) then
+        Result := Result^.Right
       else
-        if c > 0 then
-          Result := Result^.Right
-        else
-          break;
-    end;
+        break;
 end;
 
 function TGAvlTree2.Remove(const aKey: TKey): Boolean;

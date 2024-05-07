@@ -166,8 +166,8 @@ type
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGSparseGraph<TVertex, TEdgeData, TEqRel> = class abstract
-  protected
-    {$I SparseGraphBitHelpH.inc}
+  public
+  {$I SparseGraphBitHelpH.inc}
   public
   type
     TSpecEdgeData  = TEdgeData;
@@ -192,8 +192,6 @@ type
       property Adjacent[aSrc, aDst: SizeInt]: Boolean read GetAdjacent; default;
     end;
 
-  protected
-  type
     PEdgeData          = ^TEdgeData;
     TAdjList           = specialize TGAdjList<TEdgeData>;
     PAdjList           = ^TAdjList;
@@ -202,6 +200,8 @@ type
 
     {$I SparseGraphIntSetH.inc}
 
+  protected
+  type
     TNode = record
       Vertex: TVertex;
       AdjList: TAdjList;
@@ -228,7 +228,7 @@ type
       //edges: src index, dst index as little endian LongInt, data
     end;
 
-  private
+  var
     FNodeList: TNodeList;
     FChainList: TChainList;
     FCount,

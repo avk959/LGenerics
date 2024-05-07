@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sorted list implementation.                                     *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -338,7 +338,7 @@ type
   private
   type
     TBuffer         = specialize TGLiteDynBuffer<T>;
-    THelper         = specialize TGBaseArrayHelper<T, TCmpRel>;
+    THelper         = class(specialize TGBaseArrayHelper<T, TCmpRel>);
     PLiteSortedList = ^TGLiteSortedList;
 
   public
@@ -477,7 +477,7 @@ type
   private
   type
     TBuffer     = specialize TGLiteDynBuffer<T>;
-    THelper     = specialize TGComparableArrayHelper<T>;
+    THelper     = class(specialize TGComparableArrayHelper<T>);
     TSortedList = TGLiteComparableSortedList;
     PSortedList = ^TSortedList;
 

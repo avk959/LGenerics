@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   The generic implementation of the conventional red-black tree.          *
 *                                                                           *
-*   Copyright(c) 2019-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -86,7 +86,7 @@ type
   { TGLiteRbTree implements the conventional red-black tree;
       functor TCmpRel (comparison relation) must provide:
         class function Less([const[ref]] L, R: TKey): Boolean;
-    on assignment and when passed by value, the whole treap is copied }
+    on assignment and when passed by value, the whole tree is copied }
   generic TGLiteRbTree<TKey, TValue, TCmpRel> = record
   public
   type
@@ -161,7 +161,7 @@ type
 
   { TGLiteComparableRbTree implements the conventional red-black tree;
     it assumes TKey has defined comparison operator <;
-    on assignment and when passed by value, the whole treap is copied }
+    on assignment and when passed by value, the whole tree is copied }
   generic TGLiteComparableRbTree<TKey, TValue> = record
   public
   type

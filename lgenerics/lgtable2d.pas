@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sparse table implementations.                                   *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -40,6 +40,7 @@ type
     specialize TGAbstractTable2D<TRow, TCol, TValue>)
   protected
   type
+    THackTable = class(TSpecTable2D);
     TRowHashTable = specialize TGHashTableLP<TRow, TRowEntry, TRowEqRel>;
 
     TColEnumerable = class(TAutoColDataEnumerable)
@@ -133,7 +134,6 @@ type
     specialize TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel>)
   protected
   type
-
     TRowMap = class(TCustomRowMap)
     private
     type
@@ -162,11 +162,10 @@ type
     var
       FTable: TSpecTable2D;
       FMap: TRowMapTable;
-    protected
-      function  GetCount: SizeInt; override;
     public
       constructor Create(aTable: TSpecTable2D);
       destructor Destroy; override;
+      function  GetCount: SizeInt; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
       function  Contains(const aCol: TCol): Boolean; override;
@@ -235,11 +234,10 @@ type
     var
       FTable: TSpecTable2D;
       FMap: TRowMapTable;
-    protected
-      function  GetCount: SizeInt; override;
     public
       constructor Create(aTable: TGTreeTable2D);
       destructor Destroy; override;
+      function  GetCount: SizeInt; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
       function  Contains(const aCol: TCol): Boolean; override;
@@ -315,11 +313,10 @@ type
     var
       FTable: TSpecTable2D;
       FMap: TRowMapTable;
-    protected
-      function  GetCount: SizeInt; override;
     public
       constructor Create(aTable: TSpecTable2D);
       destructor Destroy; override;
+      function  GetCount: SizeInt; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
       function  Contains(const aCol: TCol): Boolean; override;
@@ -639,11 +636,6 @@ end;
 
 { TGHashTable2D.TRowMap }
 
-function TGHashTable2D.TRowMap.GetCount: SizeInt;
-begin
-  Result := FMap.Count;
-end;
-
 constructor TGHashTable2D.TRowMap.Create(aTable: TSpecTable2D);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY, LOAD_FACTOR);
@@ -652,9 +644,14 @@ end;
 
 destructor TGHashTable2D.TRowMap.Destroy;
 begin
-  FTable.FCellCount -= FMap.Count;
+  THackTable(FTable).FCellCount -= FMap.Count;
   FMap.Free;
   inherited;
+end;
+
+function TGHashTable2D.TRowMap.GetCount: SizeInt;
+begin
+  Result := FMap.Count;
 end;
 
 function TGHashTable2D.TRowMap.GetEnumerator: TRowDataEnumerator;
@@ -695,7 +692,7 @@ begin
     begin
       p^.Key := aCol;
       p^.Value := aValue;
-      Inc(FTable.FCellCount);
+      Inc(THackTable(FTable).FCellCount);
     end;
 end;
 
@@ -710,14 +707,14 @@ begin
     begin
       p^.Key := aCol;
       p^.Value := aValue;
-      Inc(FTable.FCellCount);
+      Inc(THackTable(FTable).FCellCount);
     end;
 end;
 
 function TGHashTable2D.TRowMap.Remove(const aCol: TCol): Boolean;
 begin
   Result := FMap.Remove(aCol);
-  FTable.FCellCount -= Ord(Result);
+  THackTable(FTable).FCellCount -= Ord(Result);
 end;
 
 { TGHashTable2D }
@@ -758,11 +755,6 @@ end;
 
 { TGTreeTable2D.TRowMap }
 
-function TGTreeTable2D.TRowMap.GetCount: SizeInt;
-begin
-  Result := FMap.Count;
-end;
-
 constructor TGTreeTable2D.TRowMap.Create(aTable: TGTreeTable2D);
 begin
   FMap := TRowMapTable.Create(aTable.FNodeManager);
@@ -771,9 +763,14 @@ end;
 
 destructor TGTreeTable2D.TRowMap.Destroy;
 begin
-  FTable.FCellCount -= FMap.Count;
+  THackTable(FTable).FCellCount -= FMap.Count;
   FMap.Free;
   inherited;
+end;
+
+function TGTreeTable2D.TRowMap.GetCount: SizeInt;
+begin
+  Result := FMap.Count;
 end;
 
 function TGTreeTable2D.TRowMap.GetEnumerator: TRowDataEnumerator;
@@ -809,7 +806,7 @@ begin
   if Result then
     begin
       p^.Data.Value := aValue;
-      Inc(FTable.FCellCount);
+      Inc(THackTable(FTable).FCellCount);
     end;
 end;
 
@@ -818,14 +815,14 @@ var
   p: PNode;
 begin
   if not FMap.FindOrAdd(aCol, p) then
-    Inc(FTable.FCellCount);
+    Inc(THackTable(FTable).FCellCount);
   p^.Data.Value := aValue;
 end;
 
 function TGTreeTable2D.TRowMap.Remove(const aCol: TCol): Boolean;
 begin
   Result := FMap.Remove(aCol);
-  FTable.FCellCount -= Ord(Result);
+  THackTable(FTable).FCellCount -= Ord(Result);
 end;
 
 { TGTreeTable2D }
@@ -904,11 +901,6 @@ end;
 
 { TGListTable2D.TRowMap }
 
-function TGListTable2D.TRowMap.GetCount: SizeInt;
-begin
-  Result := FMap.Count;
-end;
-
 constructor TGListTable2D.TRowMap.Create(aTable: TSpecTable2D);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY);
@@ -917,9 +909,14 @@ end;
 
 destructor TGListTable2D.TRowMap.Destroy;
 begin
-  FTable.FCellCount -= FMap.Count;
+  THackTable(FTable).FCellCount -= FMap.Count;
   FMap.Free;
   inherited;
+end;
+
+function TGListTable2D.TRowMap.GetCount: SizeInt;
+begin
+  Result := FMap.Count;
 end;
 
 function TGListTable2D.TRowMap.GetEnumerator: TRowDataEnumerator;
@@ -959,7 +956,7 @@ begin
   if Result then
     begin
       p^.Value := aValue;
-      Inc(FTable.FCellCount);
+      Inc(THackTable(FTable).FCellCount);
     end;
 end;
 
@@ -969,14 +966,14 @@ var
   p: PEntry;
 begin
   if not FMap.FindOrAdd(aCol, p, I) then
-    Inc(FTable.FCellCount);
+    Inc(THackTable(FTable).FCellCount);
   p^.Value := aValue;
 end;
 
 function TGListTable2D.TRowMap.Remove(const aCol: TCol): Boolean;
 begin
   Result := FMap.Remove(aCol);
-  FTable.FCellCount -= Ord(Result);
+  THackTable(FTable).FCellCount -= Ord(Result);
 end;
 
 { TGListTable2D }

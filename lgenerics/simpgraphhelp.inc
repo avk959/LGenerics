@@ -2093,7 +2093,7 @@ end;
 
 procedure TGSimpleGraph.TPlanarHelper.CreateDigraphR;
 var
-  Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
+  Arcs: array of TArcPassRec;
   NodeArcs: TIntArray = nil;
   Visited: TBoolVector;
 
@@ -2181,8 +2181,8 @@ end;
 
 procedure TGSimpleGraph.TPlanarHelper.CreateDigraph;
 var
-  Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
-  NodeArcs: array of record FirstArc, CurrArc: SizeInt end;
+  Arcs: array of TArcPassRec;
+  NodeArcs: array of TNodeArc;
   Visited: TBoolVector;
 
   procedure Dfs(aRootIdx: SizeInt);

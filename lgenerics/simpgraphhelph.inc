@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -413,6 +413,13 @@ type
 
     TPairStack  = specialize TGLiteStack<TConflictPair>;
     TSortHelper = specialize TGBaseArrayHelper<PArc, TArcCmp>;
+    TArcPassRec = record
+      Target, Reverse: SizeInt;
+      Passed, Used: Boolean;
+    end;
+    TNodeArc = record
+      FirstArc, CurrArc: SizeInt;
+    end;
   var
     FNodes: array of TNode;
     FArcs: array of TArc;
