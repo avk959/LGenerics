@@ -2473,8 +2473,6 @@ begin
 end;
 
 function TGAvlTree2.Find(const aKey: TKey): PNode;
-var
-  c: SizeInt;
 begin
   Result := FRoot;
   while Result <> nil do
