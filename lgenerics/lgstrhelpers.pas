@@ -29,7 +29,7 @@ interface
 
 uses
 
-  Classes, SysUtils, Math, uRegExpr,
+  Classes, SysUtils, Math,
   lgUtils,
   lgHelpers,
   lgArrayHelpers,
@@ -132,41 +132,6 @@ type
     function Words(const aStopChars: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
     function WordSlices(const aStopChars: TSysCharSet = AsciiDelimiters): ISliceEnumerable; inline;
     function WordSliceEnum(const aStopChars: TSysCharSet = AsciiDelimiters): TWordSliceEnum; inline;
-  end;
-
-  TRegexMatch = class
-  protected
-  type
-    TStrEnumerable = class(specialize TGAutoEnumerable<string>)
-    private
-      FRegex: TRegExpr;
-      FInputString: string;
-      FInCycle: Boolean;
-    protected
-      function  GetCurrent: string; override;
-    public
-      constructor Create(aRegex: TRegExpr; const s: string);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-  var
-    FRegex: TRegExpr;
-    function  GetExpression: string;
-    function  GetModifierStr: string;
-    procedure SetExpression(const aValue: string);
-    procedure SetModifierStr(const aValue: string);
-  public
-  type
-    IStrEnumerable = specialize IGEnumerable<string>;
-
-    constructor Create;
-    constructor Create(const aRegExpression: string);
-    constructor Create(const aRegExpression, aModifierStr: string);
-    destructor Destroy; override;
-    function Matches(const aValue: string): IStrEnumerable; inline;
-    property Expression: string read GetExpression write SetExpression;
-    property ModifierStr: string read GetModifierStr write SetModifierStr;
   end;
 
   TStringListHelper = class helper for TStringList
@@ -3859,85 +3824,6 @@ begin
   Result.Init(Self, aStopChars);
 end;
 {$POP}
-
-{ TRegexMatch.TStrEnumerable }
-
-function TRegexMatch.TStrEnumerable.GetCurrent: string;
-begin
-  Result := string(FRegex.Match[0]);
-end;
-
-constructor TRegexMatch.TStrEnumerable.Create(aRegex: TRegExpr; const s: string);
-begin
-  inherited Create;
-  FRegex := aRegex;
-  FInputString := s;
-end;
-
-function TRegexMatch.TStrEnumerable.MoveNext: Boolean;
-begin
-  if FInCycle then
-    Result := FRegex.ExecNext
-  else
-    begin
-      FInCycle := True;
-      Result := FRegex.Exec(uRegExpr.RegExprString(FInputString));
-    end;
-end;
-
-procedure TRegexMatch.TStrEnumerable.Reset;
-begin
-  FInCycle := False;
-end;
-
-{ TRegexMatch }
-
-function TRegexMatch.GetExpression: string;
-begin
-  Result := string(FRegex.Expression);
-end;
-
-function TRegexMatch.GetModifierStr: string;
-begin
-  Result := string(FRegex.ModifierStr);
-end;
-
-procedure TRegexMatch.SetExpression(const aValue: string);
-begin
-  FRegex.Expression := uRegExpr.RegExprString(aValue);
-end;
-
-procedure TRegexMatch.SetModifierStr(const aValue: string);
-begin
-  FRegex.ModifierStr := uRegExpr.RegExprString(aValue);
-end;
-
-constructor TRegexMatch.Create;
-begin
-  FRegex := TRegExpr.Create;
-end;
-
-constructor TRegexMatch.Create(const aRegExpression: string);
-begin
-  FRegex := TRegExpr.Create(uRegExpr.RegExprString(aRegExpression));
-end;
-
-constructor TRegexMatch.Create(const aRegExpression, aModifierStr: string);
-begin
-  FRegex := TRegExpr.Create(uRegExpr.RegExprString(aRegExpression));
-  FRegex.ModifierStr := uRegExpr.RegExprString(aModifierStr);
-end;
-
-destructor TRegexMatch.Destroy;
-begin
-  FRegex.Free;
-  inherited;
-end;
-
-function TRegexMatch.Matches(const aValue: string): IStrEnumerable;
-begin
-  Result := TStrEnumerable.Create(FRegex, aValue);
-end;
 
 { TSringListHelper }
 
