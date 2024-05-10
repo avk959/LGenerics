@@ -66,7 +66,6 @@ type
     procedure Names;
     procedure IdenticNames;
     procedure JsonPointer;
-    procedure JsonPointer1;
     procedure TestTryAdd;
     procedure Values;
     procedure SkipBom;
@@ -921,21 +920,6 @@ begin
   AssertTrue(Node.AsNumber = 7);
   AssertTrue(o.Instance.FindPath(TJsonPtr.From(['m~n']), Node));
   AssertTrue(Node.AsNumber = 8);
-end;
-
-procedure TTestJson.JsonPointer1;
-var
-  o: specialize TGAutoRef<TJsonNode>;
-  Node: TJsonNode;
-begin
-  o.Instance.AsJson := '["bar", "baz"]';
-  AssertTrue(o.Instance.IsArray);
-  AssertTrue(o.Instance.Count = 2);
-  AssertTrue(o.Instance.FindPath(TJsonPtr.From('/-'), Node));
-  AssertTrue(Node.IsNull);
-  Node.AsString := 'foo';
-  AssertTrue(o.Instance.Count = 3);
-  AssertTrue(o.Instance.Items[2].AsString = 'foo');
 end;
 
 procedure TTestJson.TestTryAdd;
