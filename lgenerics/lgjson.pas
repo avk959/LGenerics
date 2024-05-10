@@ -644,16 +644,12 @@ type
     function  RemoveAll(const aName: string): SizeInt;
   { tries to find an element using a path specified as an array of path segments;
     if non-unique keys are encountered in the search path, the search terminates
-    immediately and returns False; the "-" element has a special sense only if it is
-    the last segment of the path, otherwise it is treated as a string;
-    each node considered self as a root }
+    immediately and returns False; the "-" element is treated just as a string }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPath: array of string): TJsonNode;
   { tries to find an element using a path specified as a JSON Pointer wrapper;
     if non-unique keys are encountered in the search path, the search terminates
-    immediately and returns False; the "-" element has a special sense only if it is
-    the last segment of the path, otherwise it is treated as a string;
-    each node considered self as a root; }
+    immediately and returns False; the "-" element is treated just as a string }
     function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPtr: TJsonPtr): TJsonNode; inline;
   { tries to find the element using the path given by the JSON pointer as a Pascal string }
@@ -5372,16 +5368,8 @@ begin
   for I := 0 to System.High(aPath) do
     if Node.IsArray then
       begin
-        if aPath[I] = '-' then
-          begin
-            if I <> System.High(aPath) then
-              exit(False);
-            aNode := Node.AddNode(jvkNull);
-            exit(True);
-          end
-        else
-          if not IsNonNegativeInt(aPath[I], Idx) then
-            exit(False);
+        if not IsNonNegativeInt(aPath[I], Idx) then
+          exit(False);
         if not Node.Find(Idx, Node) then
           exit(False);
       end
