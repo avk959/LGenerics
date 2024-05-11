@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generating JTD schemas from JSON examples.                              *
 *                                                                           *
-*   Copyright(c) 2024 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -24,14 +24,18 @@ unit lgJtdInfer;
 interface
 
 uses
-  SysUtils, Math, lgVector, lgMultiMap, lgJson, lgJsonTypeDef;
+  SysUtils, Math,
+  lgArrayHelpers,
+  lgVector,
+  lgMultiMap,
+  lgJson,
+  lgJsonTypeDef;
 
 type
-  { TJtdInferrer: tries to generate a JSON Typedef schema from the example data; if the result
-    can be improved with an Enum, Values, or Discriminator schema, just give it appropriate hints;
-    there is currently no any analogue for the wildcard when specifying a path, so it is important that
-    the path in the hint points to the very first occurrence of the interesting object;
-    note that the hint with the modifying path just will be ignored }
+  { TJtdInferrer: tries to generate a JSON Typedef schema from the example data;
+    by default TJtdInferrer will never generate Enum, Values, or Discriminator
+    schemas, if the result can be improved with an Enum, Values, or Discriminator schema,
+    just give it appropriate hints }
   TJtdInferrer = class
   public
   type
@@ -46,7 +50,7 @@ type
                           by default TJtdInferrer will guess the narrowest number type }
       hkUseEnum,        { hints that the string value pointed to by THint.Path is an element of an enumeration;
                           the complete list of elements may be specified in the THint.EnumList field }
-      hkUseMap,         { suggests treating the JSON object pointed to by the THint.Path as a Dictionary;
+      hkUseMap,         { suggests treating the JSON object pointed to by the THint.Path as a Dictionary(Values form);
                           by default TJtdInferrer will treat the JSON object as a Record(Properties form) }
       hkUseVariant,     { suggests treating the JSON object whose element is pointed to by THint.Path as
                           a Tagged Union(or Variant, if you prefer) for which this element is a discriminator;
@@ -59,15 +63,23 @@ type
       Kind: THintKind;
       NumberType: TNumberType;
       EnumList,
-      Path: TStringArray; // todo: what about JSONpath?
+      Path: TStringArray;
+      JsonPath: string; //if the JsonPath string is not empty, it has a higher priority than Path
       constructor Make(aDefNumType: TNumberType);
       constructor Make(const aPath: TStringArray; aDefNumType: TNumberType);
-      constructor Enum(const aEnumList, aPath: TStringArray);
       constructor Enum(const aPath: TStringArray);
+      constructor Enum(const aEnumList, aPath: TStringArray);
       constructor Map(const aPath: TStringArray);
       constructor Variant(const aPath: TStringArray);
       constructor AddProps(const aPath: TStringArray);
       constructor Nullable(const aPath: TStringArray);
+    { in all constructors declared below, aPath must be a valid JSONPath expression }
+      constructor JpMake(const aPath: string; aDefNumType: TNumberType);
+      constructor JpEnum(const aPath: string);
+      constructor JpEnum(const aEnumList: TStringArray; const aPath: string);
+      constructor JpMap(const aPath: string);
+      constructor JpAddProps(const aPath: string);
+      constructor JpNullable(const aPath: string);
     end;
 
   const
@@ -80,6 +92,7 @@ type
     PHint     = ^THint;
     THintMap  = specialize TGLiteHashMultiMap<TJsonNode, PHint, TObject>;
     THintList = specialize TGLiteVector<THint>;
+    TNodeList = specialize TGLiteVector<TJsonNode>;
     TStrType  = (stNone, stString, stTimeStamp);
 
     TNumType = record
@@ -120,11 +133,10 @@ type
     );
   {$POP}
   var
-    FHintMap: THintMap;
-    FSchema: TJsonNode;
-    FHintList: THintList;
     FSampleList: TStringArray;
-    FNodeList: array of TJsonNode;
+    FNodeList: TNodeList;
+    FHintList: THintList;
+    FHintMap: THintMap;
     FDefNumType: TNumberType;
     FMaxDepth: Integer;
     FBom: Boolean;
@@ -153,17 +165,25 @@ type
     procedure DoInitProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
     procedure DoInferProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
     procedure DoInfer(aSchema, aSample: TJsonNode);
+    procedure CollectHints(const aHints: array of THint);
     property  DefaultNumType: TNumberType read FDefNumType;
   public
   { aSamples specifies a set of examples as JSON values(i.e. as strings);
     returns the resulting schema as a DOM structure }
     class function Infer(const aSamples: array of string; const aHints: array of THint;
                          aSkipBom: Boolean = False; aMaxDepth: Integer = DEF_DEPTH): TJsonNode;
+  { aSamples specifies a set of examples as DOM structures;
+    returns the resulting schema as a DOM structure }
+    class function Infer(const aSamples: array of TJsonNode; const aHints: array of THint): TJsonNode;
   { aSamples specifies a set of examples as JSON values(i.e. as strings);
     returns the resulting schema as a JSON value(i.e. as text) }
     class function InferJson(const aSamples: array of string; const aHints: array of THint;
                              aSkipBom: Boolean = False; aMaxDepth: Integer = DEF_DEPTH): string;
+  { aSamples specifies a set of examples as DOM structures;
+    returns the resulting schema as a JSON value(i.e. as text) }
+    class function InferJson(const aSamples: array of TJsonNode; const aHints: array of THint): string;
     constructor Create(const aSamples: array of string; const aHints: array of THint);
+    constructor Create(const aSamples: array of TJsonNode; const aHints: array of THint);
     destructor Destroy; override;
     function Execute: TJsonNode;
     property MaxDepth: Integer read FMaxDepth write FMaxDepth;
@@ -174,7 +194,7 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  lgStrConst;
+  lgJsonPath, lgStrConst;
 
 { TJtdInferrer.THint }
 
@@ -184,6 +204,7 @@ begin
   NumberType := aDefNumType;
   EnumList := nil;
   Path := nil;
+  JsonPath := '';
 end;
 
 constructor TJtdInferrer.THint.Make(const aPath: TStringArray; aDefNumType: TNumberType);
@@ -192,14 +213,7 @@ begin
   NumberType := aDefNumType;
   EnumList := nil;
   Path := aPath;
-end;
-
-constructor TJtdInferrer.THint.Enum(const aEnumList, aPath: TStringArray);
-begin
-  Kind := hkUseEnum;
-  NumberType := ntNone;
-  EnumList := aEnumList;
-  Path := aPath;
+  JsonPath := '';
 end;
 
 constructor TJtdInferrer.THint.Enum(const aPath: TStringArray);
@@ -208,6 +222,16 @@ begin
   NumberType := ntNone;
   EnumList := nil;
   Path := aPath;
+  JsonPath := '';
+end;
+
+constructor TJtdInferrer.THint.Enum(const aEnumList, aPath: TStringArray);
+begin
+  Kind := hkUseEnum;
+  NumberType := ntNone;
+  EnumList := aEnumList;
+  Path := aPath;
+  JsonPath := '';
 end;
 
 constructor TJtdInferrer.THint.Map(const aPath: TStringArray);
@@ -216,6 +240,7 @@ begin
   NumberType := ntNone;
   EnumList := nil;
   Path := aPath;
+  JsonPath := '';
 end;
 
 constructor TJtdInferrer.THint.Variant(const aPath: TStringArray);
@@ -224,6 +249,7 @@ begin
   NumberType := ntNone;
   EnumList := nil;
   Path := aPath;
+  JsonPath := '';
 end;
 
 constructor TJtdInferrer.THint.AddProps(const aPath: TStringArray);
@@ -232,6 +258,7 @@ begin
   NumberType := ntNone;
   EnumList := nil;
   Path := aPath;
+  JsonPath := '';
 end;
 
 constructor TJtdInferrer.THint.Nullable(const aPath: TStringArray);
@@ -240,6 +267,61 @@ begin
   NumberType := ntNone;
   EnumList := nil;
   Path := aPath;
+  JsonPath := '';
+end;
+
+constructor TJtdInferrer.THint.JpMake(const aPath: string; aDefNumType: TNumberType);
+begin
+  Kind := hkDefNumberType;
+  NumberType := aDefNumType;
+  EnumList := nil;
+  Path := nil;
+  JsonPath := aPath;
+end;
+
+constructor TJtdInferrer.THint.JpEnum(const aPath: string);
+begin
+  Kind := hkUseEnum;
+  NumberType := ntNone;
+  EnumList := nil;
+  Path := nil;
+  JsonPath := aPath;
+end;
+
+constructor TJtdInferrer.THint.JpEnum(const aEnumList: TStringArray; const aPath: string);
+begin
+  Kind := hkUseEnum;
+  NumberType := ntNone;
+  EnumList := aEnumList;
+  Path := nil;
+  JsonPath := aPath;
+end;
+
+constructor TJtdInferrer.THint.JpMap(const aPath: string);
+begin
+  Kind := hkUseMap;
+  NumberType := ntNone;
+  EnumList := nil;
+  Path := nil;
+  JsonPath := aPath;
+end;
+
+constructor TJtdInferrer.THint.JpAddProps(const aPath: string);
+begin
+  Kind := hkAdditionalProps;
+  NumberType := ntNone;
+  EnumList := nil;
+  Path := nil;
+  JsonPath := aPath;
+end;
+
+constructor TJtdInferrer.THint.JpNullable(const aPath: string);
+begin
+  Kind := hkNullable;
+  NumberType := ntNone;
+  EnumList := nil;
+  Path := nil;
+  JsonPath := aPath;
 end;
 
 { TJtdInferrer }
@@ -346,11 +428,11 @@ begin
       else
         Result := stString;
     stString: Result := stString;
-    stTimeStamp:
-      if IsRfc8927TimeStamp(aValue) then
-        Result := stTimeStamp
-      else
-        Result := stString;
+  else // stTimeStamp
+    if IsRfc8927TimeStamp(aValue) then
+      Result := stTimeStamp
+    else
+      Result := stString;
   end;
 end;
 
@@ -441,7 +523,7 @@ begin
   for Hint in FHintMap[aSample] do
     case Hint^.Kind of
       hkDefNumberType:
-        if (NumType = DefaultNumType) and (Hint^.NumberType <> ntNone) then
+        if Hint^.NumberType > NumType then
           NumType := Hint^.NumberType;
       hkNullable:
         aSchema[NULLBL_KEY].AsBoolean := True;
@@ -692,13 +774,56 @@ begin
   end;
 end;
 
+procedure TJtdInferrer.CollectHints(const aHints: array of THint);
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(aHints) do
+    begin
+      case aHints[I].Kind of
+        hkUnknown: continue;
+        hkDefNumberType:
+          if (aHints[I].JsonPath = '') and (aHints[I].Path = nil) and
+             (aHints[I].NumberType > FDefNumType) then
+            begin
+              FDefNumType := aHints[I].NumberType;
+              continue;
+            end;
+        hkUseVariant: // here JsonPath just ignored
+          begin
+            if aHints[I].Path = nil then continue;
+            with FHintList.UncMutable[FHintList.Add(aHints[I])]^ do
+              begin
+                EnumList := [Path[System.High(Path)]];
+                System.SetLength(Path, System.High(Path));
+              end;
+            continue;
+          end
+      else
+      end;
+      FHintList.Add(aHints[I]);
+    end;
+end;
+
 class function TJtdInferrer.Infer(const aSamples: array of string; const aHints: array of THint;
   aSkipBom: Boolean; aMaxDepth: Integer): TJsonNode;
 begin
+  Result := nil;
   with TJtdInferrer.Create(aSamples, aHints) do
     try
       SkipBom := aSkipBom;
       MaxDepth := aMaxDepth;
+      Result := Execute;
+    finally
+      Free;
+    end;
+end;
+
+class function TJtdInferrer.Infer(const aSamples: array of TJsonNode; const aHints: array of THint): TJsonNode;
+begin
+  Result := nil;
+  with TJtdInferrer.Create(aSamples, aHints) do
+    try
       Result := Execute;
     finally
       Free;
@@ -711,6 +836,7 @@ var
   Schema: TJsonNode;
 begin
   Result := '';
+  Schema := nil;
   try
     Schema := Infer(aSamples, aHints, aSkipBom, aMaxDepth);
     Result := Schema.AsJson;
@@ -719,39 +845,37 @@ begin
   end;
 end;
 
-constructor TJtdInferrer.Create(const aSamples: array of string; const aHints: array of THint);
+class function TJtdInferrer.InferJson(const aSamples: array of TJsonNode; const aHints: array of THint): string;
 var
-  I: SizeInt;
-  h: THint;
+  Schema: TJsonNode;
+begin
+  Result := '';
+  Schema := nil;
+  try
+    Schema := Infer(aSamples, aHints);
+    Result := Schema.AsJson;
+  finally
+    Schema.Free;
+  end;
+end;
+
+constructor TJtdInferrer.Create(const aSamples: array of string; const aHints: array of THint);
 begin
   FDefNumType := DEFAULT_NUM_TYPE;
   FMaxDepth := DEF_DEPTH;
-  System.SetLength(FSampleList, System.Length(aSamples));
-  for I := 0 to System.High(aSamples) do
-    FSampleList[I] := aSamples[I];
-  for I := 0 to System.High(aHints) do
-    if aHints[I].Kind <> hkUnknown then
-      begin
-        with aHints[I] do
-          if (Path <> nil) and (Path[System.High(Path)] = '-') then continue;
-        h := aHints[I];
-        case h.Kind of
-          hkDefNumberType:
-            if h.Path = nil then
-              if (FDefNumType = DEFAULT_NUM_TYPE) and (h.NumberType > DEFAULT_NUM_TYPE) then
-                FDefNumType := h.NumberType;
-          hkUseVariant:
-            if System.Length(h.Path) <> 0 then
-              begin
-                h.EnumList := [h.Path[System.High(h.Path)]];
-                System.SetLength(h.Path, System.Length(h.Path) - 1);
-              end
-            else
-              h.EnumList := nil;
-        else
-        end;
-        FHintList.Add(h);
-      end;
+  FSampleList := specialize TGArrayHelpUtil<string>.CreateCopy(aSamples);
+  CollectHints(aHints);
+end;
+
+constructor TJtdInferrer.Create(const aSamples: array of TJsonNode; const aHints: array of THint);
+var
+  Node: TJsonNode;
+begin
+  FDefNumType := DEFAULT_NUM_TYPE;
+  FMaxDepth := DEF_DEPTH;
+  for Node in aSamples do
+    FNodeList.Add(Node.Clone);
+  CollectHints(aHints);
 end;
 
 destructor TJtdInferrer.Destroy;
@@ -765,31 +889,44 @@ end;
 
 function TJtdInferrer.Execute: TJsonNode;
 var
+  JpValueList: TJpValueList;
   Node, Pointed: TJsonNode;
-  I, J: SizeInt;
+  Sample: string;
+  pH: PHint;
 begin
-  System.SetLength(FNodeList, System.Length(FSampleList));
-  J := 0;
-  for I := 0 to System.High(FSampleList) do
-    if TJsonNode.TryParse(FSampleList[I], Node, SkipBom, MaxDepth) then
-      begin
-        FNodeList[J] := Node;
-        Inc(J);
-      end;
-  System.SetLength(FNodeList, J);
-  FSchema := TJsonNode.NewNode(jvkObject);
+  if FNodeList.IsEmpty then
+    for Sample in FSampleList do
+      if TJsonNode.TryParse(Sample, Node, SkipBom, MaxDepth) then
+        if TJsonNode.DuplicateFree(Node) then
+          FNodeList.Add(Node)
+        else
+          Node.Free;
   for Node in FNodeList do
-    begin
-      if not TJsonNode.DuplicateFree(Node) then  /////
-        exit(FSchema);
-      for I := 0 to Pred(FHintList.Count) do
-        if Node.FindPath(FHintList.UncMutable[I]^.Path, Pointed) then
-          FHintMap.Add(Pointed, FHintList.UncMutable[I]);
+    for pH in FHintList.Mutables do
+      if pH^.Kind <> hkUseVariant then
+        begin
+          if pH^.JsonPath <> '' then // JsonPath priority
+            begin
+              if Node.TryMatchValues(pH^.JsonPath, JpValueList) then
+                for Pointed in JpValueList do
+                  FHintMap.Add(Pointed, pH);
+            end
+          else
+            if Node.FindPath(pH^.Path, Pointed) then
+              FHintMap.Add(Pointed, pH);
+        end
+      else // JsonPath ignored
+        if Node.FindPath(pH^.Path, Pointed) then
+          FHintMap.Add(Pointed, pH);
+  Result := TJsonNode.NewNode(jvkObject);
+  for Node in FNodeList do
+    try
+      DoInfer(Result, Node);
+    except
+      Result.Clear;
+      Result.AsObject;
     end;
-  for Node in FNodeList do
-    DoInfer(FSchema, Node);
-  ClearAssistInfo(FSchema);
-  Result := FSchema;
+  ClearAssistInfo(Result);
 end;
 
 end.
