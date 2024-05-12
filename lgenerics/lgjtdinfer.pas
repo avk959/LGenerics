@@ -45,18 +45,20 @@ type
     THintKind = (
       hkUnknown,
       hkDefNumberType,  { suggests the default numeric type in the THint.NumberType field;
-                          if no THint.Path is specified, the hint refers to the whole sample,
+                          if no THint.Path/JsonPath is specified, the hint refers to the whole sample,
                           otherwise, only to the specified element;
                           by default TJtdInferrer will guess the narrowest number type }
-      hkUseEnum,        { hints that the string value pointed to by THint.Path is an element of an enumeration;
-                          the complete list of elements may be specified in the THint.EnumList field }
-      hkUseMap,         { suggests treating the JSON object pointed to by the THint.Path as a Dictionary(Values form);
-                          by default TJtdInferrer will treat the JSON object as a Record(Properties form) }
+      hkUseEnum,        { hints that the string value pointed to by THint.Path/JsonPath is an element
+                          of an enumeration; the complete list of elements may be specified
+                          in the THint.EnumList field }
+      hkUseMap,         { suggests treating the JSON object pointed to by the THint.Path/JsonPath
+                          as a Dictionary(Values form); by default TJtdInferrer will treat the JSON object
+                          as a Record(Properties form) }
       hkUseVariant,     { suggests treating the JSON object whose element is pointed to by THint.Path as
                           a Tagged Union(or Variant, if you prefer) for which this element is a discriminator;
                           specified element must be of type String }
-      hkAdditionalProps,{ hints that the JSON object pointed to by THint.Path can have additional properties }
-      hkNullable        { hints that the element pointed to by THint.Path is nullable }
+      hkAdditionalProps,{ hints that the JSON object pointed to by THint.Path/JsonPath can have additional properties }
+      hkNullable        { hints that the element pointed to by THint.Path/JsonPath is nullable }
     );
 
     THint = record
@@ -770,7 +772,6 @@ begin
       DoInferArray(aSchema, aSample);
     jvkObject:
       DoInferObject(aSchema, aSample);
-  else
   end;
 end;
 
