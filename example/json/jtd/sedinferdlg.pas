@@ -264,6 +264,7 @@ begin
       1: HintText := 'Select default number type';
       2: HintText := 'List of enum elements separated by semicolon';
       3: HintText := 'Path to element';
+      4: HintText := 'JSONPath expression';
     else
       HintText := '';
     end;
@@ -353,6 +354,7 @@ begin
         h.NumberType := ntNone;
       h.EnumList := sgHints.Cells[2, I].Split([';'], TStringSplitOptions.ExcludeLastEmpty);
       h.Path := TJsonPtr.ToSegments(sgHints.Cells[3, I]);
+      h.JsonPath := sgHints.Cells[4, I];
       List.Add(h)
     end;
   Result := List.ToArray;

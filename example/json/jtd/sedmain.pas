@@ -1728,6 +1728,7 @@ procedure TfrmMain.LoadInstanceTreeView(const aRootName: string);
             end;
         end;
         TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
+        FInstance2TreeMap.Add(aNode, TreeNode);
       end
     else
       case k of
@@ -1736,7 +1737,11 @@ procedure TfrmMain.LoadInstanceTreeView(const aRootName: string);
             aParent.ImageIndex := 5;
             aParent.SelectedIndex := aParent.ImageIndex + 10;
             for I := 0 to Pred(aNode.Count) do
-              VisitNode(tvInstanceTree.Items.AddChild(aParent, I.ToString), aNode.Items[I]);
+              begin
+                TreeNode := tvInstanceTree.Items.AddChild(aParent, I.ToString);
+                FInstance2TreeMap.Add(aNode.Items[I], TreeNode);
+                VisitNode(TreeNode, aNode.Items[I]);
+              end;
           end;
         jvkObject:
           begin
@@ -1747,6 +1752,7 @@ procedure TfrmMain.LoadInstanceTreeView(const aRootName: string);
                 TreeNode := tvInstanceTree.Items.AddChild(aParent, p.Key);
                 TreeNode.ImageIndex := 9;
                 TreeNode.SelectedIndex := TreeNode.ImageIndex + 10;
+                FInstance2TreeMap.Add(p.Value, TreeNode);
                 VisitNode(TreeNode, p.Value);
               end;
           end;
