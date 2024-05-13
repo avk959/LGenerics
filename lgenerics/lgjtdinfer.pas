@@ -95,6 +95,7 @@ type
     THintMap  = specialize TGLiteHashMultiMap<TJsonNode, PHint, TObject>;
     THintList = specialize TGLiteVector<THint>;
     TNodeList = specialize TGLiteVector<TJsonNode>;
+    TStrList  = specialize TGLiteVector<string>;
     TStrType  = (stNone, stString, stTimeStamp);
 
     TNumType = record
@@ -741,19 +742,23 @@ end;
 
 procedure TJtdInferrer.DoInferProps(aSchema, aSample: TJsonNode; AddProps: Boolean);
 var
+  PropsNode, Node: TJsonNode;
+  OptPropKeys: TStrList;
+  Key: string;
   p: TJsonNode.TPair;
-  s, n: TJsonNode;
 begin
   if AddProps then
     aSchema[ADD_PROPS_KEY].AsBoolean := True;
-  for p in aSchema[PROPS_KEY].Entries do
-    if aSample.Find(p.Key, n) then
-      DoInfer(p.Value, n)
+  PropsNode := aSchema[PROPS_KEY];
+  for p in PropsNode.Entries do
+    if aSample.Find(p.Key, Node) then
+      DoInfer(p.Value, Node)
     else
-      MovePropToOptional(aSchema, p.Key);
-  s := aSchema[PROPS_KEY];
+      OptPropKeys.Add(p.Key);
+  for Key in OptPropKeys do
+    MovePropToOptional(aSchema, Key);
   for p in aSample.Entries do
-    if not s.Find(p.Key, n) then
+    if not PropsNode.Find(p.Key, Node) then
       DoInfer(aSchema[OPT_PROPS_KEY][p.Key].AsObject, p.Value);
 end;
 
