@@ -4447,8 +4447,8 @@ function TJsonNode.TEntryEnumerator.MoveNext: Boolean;
 begin
   if FNode.Kind <> jvkObject then
     exit(False);
-  Inc(FCurrIndex);
-  Result := FCurrIndex < FNode.Count;
+  Result := FCurrIndex < Pred(FNode.Count);
+  Inc(FCurrIndex, Ord(Result));
 end;
 
 { TJsonNode.TEntries }
