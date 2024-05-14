@@ -68,7 +68,6 @@ type
     HEAP_INSERTION_SORT_CUTOFF  = 63;
     QUICK_INSERTION_SORT_CUTOFF = 47;
     MEDIAN_OF9_CUTOFF           = 511;
-    DPQ_INSERTION_SORT_CUTOFF   = 47;
     INTROSORT_LOG_FACTOR        = 2;
     DPQSORT_LOG_FACTOR          = 2;
     TRY_INSERT_SORT_LIMIT       = 64;
@@ -90,7 +89,7 @@ type
       MIN_MERGE_LEN     = SizeInt(1) shl MIN_MERGE_POW;
 
     type
-      TRun      = record
+      TRun = record
         Base, Count: SizeInt;
       end;
       PRun      = ^TRun;
@@ -263,7 +262,6 @@ type
   generic TGBaseArrayHelper<T, TCmpRel> = class(specialize TGArrayHelpUtil<T>)
   protected
   type
-
     TMergeSort = object(TMergeSortBase)
     private
       procedure CollapseA;
@@ -309,12 +307,8 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
-    class function  QSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
-    class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
@@ -386,12 +380,8 @@ type
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
-    class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
-    class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
@@ -521,12 +511,8 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
-    class function  QSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
-    class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
@@ -598,12 +584,8 @@ type
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
-    class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
-    class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
@@ -671,12 +653,8 @@ type
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TLess); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TLess): PItem; static; inline;
-    class function  QSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
-    class function  DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TLess): T; static;
   public
@@ -749,12 +727,8 @@ type
     class function  Lis(const A: array of T; c: TLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TLess): Boolean; static;
-  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
-    class procedure QuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
-    class procedure DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
@@ -822,12 +796,8 @@ type
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnLess); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TOnLess): PItem; static; inline;
-    class function  QSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
-    class function  DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnLess): T; static;
   public
@@ -899,12 +869,8 @@ type
     class function  Lis(const A: array of T; c: TOnLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TOnLess): Boolean; static;
-  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
-    class procedure QuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
-    class procedure DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TOnLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
@@ -976,12 +942,8 @@ type
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestLess); static;
     class function  MedianOf3(p1, p2, p3: PItem; c: TNestLess): PItem; static; inline;
-    class function  QSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
-    class function  DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit; static;
-    class procedure DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestLess): T; static;
   public
@@ -1054,12 +1016,8 @@ type
     class function  Lis(const A: array of T; c: TNestLess): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T; c: TNestLess): Boolean; static;
-  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
-    class procedure QuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort }
-    class procedure DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; c: TNestLess; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort, requires O(N) auxiliary memory }
@@ -1104,13 +1062,9 @@ type
     class function  DoBinSearchPos(A: PItem; R: SizeInt; const aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
-    class function  QSplit(var A: array of T; L, R: SizeInt): TSortSplit; static;
-    class procedure DoQSort(var A: array of T; L, R: SizeInt); static;
     class function  GetMo9Pivot(const A: array of T; L, R: SizeInt): T; static;
     class function  QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(var A: array of T; L, R, Ttl: SizeInt); static;
-    class function  DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit; static;
-    class procedure DoDPQSort(var A: array of T; L, R, Ttl: SizeInt); static;
     class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
     class procedure DoReverse(var A: array of T; L, R: SizeInt); static;
   { QuickSelect with random pivot selection, does not checks indices }
@@ -1192,12 +1146,8 @@ type
     class function  Lis(const A: array of T): TArray; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(const A, B: array of T): Boolean; static;
-  { hybrid in-place sorting based on quicksort with median-of-3 pivot selection }
-    class procedure QuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { hybrid in-place sorting based on introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
-  { hybrid in-place sorting based on V.Yaroslavskiy' dual pivot quicksort with random pivot selection }
-    class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
   { Pascal translation of Orson Peters' PDQSort algorithm, in-place }
     class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sorting, currently PDQSort }
@@ -3456,50 +3406,6 @@ begin
     end;
 end;
 
-class function TGBaseArrayHelper.QSplit(A: PItem; R: SizeInt): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1])^;
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not TCmpRel.Less(A[pL], Pivot);
-    repeat Dec(pR) until not TCmpRel.Less(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGBaseArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplit(A, R) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R)
-    else
-      UnguardInsertionSort(A, R);
-end;
-
 class function TGBaseArrayHelper.QSplitMo9(A: PItem; R: SizeInt): TSortSplit;
 var
   Pivot: T;
@@ -3537,92 +3443,6 @@ begin
             DoIntroSort(A, Left, Pred(Ttl), aLeftmost);
           if Right < R then
             DoIntroSort(@A[Right], R - Right, Pred(Ttl), False);
-        end
-    else
-      DoHeapSort(A, R)
-  else
-    if R > 0 then
-      if aLeftmost then
-        InsertionSort(A, R)
-      else
-        UnguardInsertionSort(A, R);
-end;
-
-class function TGBaseArrayHelper.DPQSplit(A: PItem; R: SizeInt): TSortSplit;
-var
-  v, Pivot1, Pivot2: TFake;
-  pL, pR, I: SizeInt;
-begin
-  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1]) - A;
-  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1]) - A;
-
-  if not TCmpRel.Less(A[pR], A[pL]) then
-    begin
-      Pivot1 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[0]);
-      Pivot2 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[R]);
-    end
-  else
-    begin
-      Pivot2 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[R]);
-      Pivot1 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[0]);
-    end;
-
-  pL := 1;
-  I  := 1;
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := TFake(A[I]);
-      if TCmpRel.Less(T(v), T(Pivot1)) then
-        begin
-          TFake(A[I]) := TFake(A[pL]);
-          TFake(A[pL]) := v;
-          Inc(pL);
-        end
-      else
-        if TCmpRel.Less(T(Pivot2), T(v)) then
-          begin
-            while (pR >= I) and TCmpRel.Less(T(Pivot2), A[pR]) do
-              Dec(pR);
-            if pR < I then
-              break;
-            if TCmpRel.Less(A[pR], T(Pivot1)) then
-              begin
-                TFake(A[I]) := TFake(A[pL]);
-                TFake(A[pL]) := TFake(A[pR]);
-                Inc(pL);
-              end
-            else
-              TFake(A[I]) := TFake(A[pR]);
-            TFake(A[pR]) := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-
-  TFake(A[0]) := TFake(A[pL - 1]);
-  TFake(A[pL - 1]) := Pivot1;
-  TFake(A[R]) := TFake(A[pR + 1]);
-  TFake(A[pR + 1]) := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGBaseArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
-begin
-  if R > DPQ_INSERTION_SORT_CUTOFF then
-    if Ttl > 0 then
-      with DPQSplit(A, R) do
-        begin
-          DoDPQSort(A, Left - 1, Ttl - 1, aLeftmost);
-          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, False);
-          if TCmpRel.Less(A[Left], A[Right]) then
-            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, False);
         end
     else
       DoHeapSort(A, R)
@@ -4130,19 +3950,6 @@ begin
   Result := True;
 end;
 
-class procedure TGBaseArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, o) < R) then
-    begin
-      DoQSort(@A[0], R, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
 class procedure TGBaseArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
 var
   R: SizeInt;
@@ -4151,19 +3958,6 @@ begin
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
       DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
-class procedure TGBaseArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, o) < R) then
-    begin
-      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -6084,50 +5878,6 @@ begin
     end;
 end;
 
-class function TGComparableArrayHelper.QSplit(A: PItem; R: SizeInt): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1])^;
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not(A[pL] < Pivot);
-    repeat Dec(pR) until not(Pivot < A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGComparableArrayHelper.DoQSort(A: PItem; R: SizeInt; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplit(A, R) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R)
-    else
-      UnguardInsertionSort(A, R);
-end;
-
 class function TGComparableArrayHelper.QSplitMo9(A: PItem; R: SizeInt): TSortSplit;
 var
   Pivot: T;
@@ -6165,91 +5915,6 @@ begin
             DoIntroSort(A, Left, Pred(Ttl), aLeftmost);
           if Right < R then
             DoIntroSort(@A[Right], R - Right, Pred(Ttl), False);
-        end
-    else
-      DoHeapSort(A, R)
-  else
-    if R > 0 then
-      if aLeftmost then
-        InsertionSort(A, R)
-      else
-        UnguardInsertionSort(A, R);
-end;
-
-class function TGComparableArrayHelper.DPQSplit(A: PItem; R: SizeInt): TSortSplit;
-var
-  v, Pivot1, Pivot2: TFake;
-  pL, pR, I: SizeInt;
-begin
-  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1]) - A;
-  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1]) - A;
-
-  if A[pR] < A[pL] then
-    begin
-      Pivot2 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[R]);
-      Pivot1 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[0]);
-    end
-  else
-    begin
-      Pivot1 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[0]);
-      Pivot2 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[R]);
-    end;
-  pL := 1;
-  I  := 1;
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := TFake(A[I]);
-      if T(v) < T(Pivot1) then
-        begin
-          TFake(A[I]) := TFake(A[pL]);
-          TFake(A[pL]) := v;
-          Inc(pL);
-        end
-      else
-        if T(Pivot2) < T(v) then
-          begin
-            while (pR >= I) and (T(Pivot2) < A[pR]) do
-              Dec(pR);
-            if pR < I then
-              break;
-            if A[pR] < T(Pivot1) then
-              begin
-                TFake(A[I]) := TFake(A[pL]);
-                TFake(A[pL]) := TFake(A[pR]);
-                Inc(pL);
-              end
-            else
-              TFake(A[I]) := TFake(A[pR]);
-            TFake(A[pR]) := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-
-  TFake(A[0]) := TFake(A[pL - 1]);
-  TFake(A[pL - 1]) := Pivot1;
-  TFake(A[R]) := TFake(A[pR + 1]);
-  TFake(A[pR + 1]) := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGComparableArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; aLeftmost: Boolean);
-begin
-  if R > DPQ_INSERTION_SORT_CUTOFF then
-    if Ttl > 0 then
-      with DPQSplit(A, R) do
-        begin
-          DoDPQSort(A, Left - 1, Ttl - 1, aLeftmost);
-          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, False);
-          if A[Left] < A[Right] then
-            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, False);
         end
     else
       DoHeapSort(A, R)
@@ -6755,19 +6420,6 @@ begin
   Result := True;
 end;
 
-class procedure TGComparableArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, o) < R) then
-    begin
-      DoQSort(@A[0], R, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
 class procedure TGComparableArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
 var
   R: SizeInt;
@@ -6776,19 +6428,6 @@ begin
   if (R > 0) and (CountRun(@A[0], R, o) < R) then
     begin
       DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
-class procedure TGComparableArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, o) < R) then
-    begin
-      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -8041,50 +7680,6 @@ begin
     end;
 end;
 
-class function TGRegularArrayHelper.QSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1], c)^;
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not c(A[pL], Pivot);
-    repeat Dec(pR) until not c(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGRegularArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TLess; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplit(A, R, c) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, c, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, c, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
-end;
-
 class function TGRegularArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TLess): TSortSplit;
 var
   Pivot: T;
@@ -8122,91 +7717,6 @@ begin
             DoIntroSort(A, Left, Pred(Ttl), c, aLeftmost);
           if Right < R then
             DoIntroSort(@A[Right], R - Right, Pred(Ttl), c, False);
-        end
-    else
-      DoHeapSort(A, R, c)
-  else
-    if R > 0 then
-      if aLeftmost then
-        InsertionSort(A, R, c)
-      else
-        UnguardInsertionSort(A, R, c);
-end;
-
-class function TGRegularArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TLess): TSortSplit;
-var
-  v, Pivot1, Pivot2: TFake;
-  pL, pR, I: SizeInt;
-begin
-  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1], c) - A;
-  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1], c) - A;
-
-  if not c(A[pR], A[pL]) then
-    begin
-      Pivot1 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[0]);
-      Pivot2 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[R]);
-    end
-  else
-    begin
-      Pivot2 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[R]);
-      Pivot1 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[0]);
-    end;
-
-  pL := 1;
-  I  := 1;
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := TFake(A[I]);
-      if c(T(v), T(Pivot1)) then
-        begin
-          TFake(A[I]) := TFake(A[pL]);
-          TFake(A[pL]) := v;
-          Inc(pL);
-        end
-      else
-        if c(T(Pivot2), T(v)) then
-          begin
-            while (pR >= I) and c(T(Pivot2), A[pR]) do
-              Dec(pR);
-            if pR < I then
-              break;
-            if c(A[pR], T(Pivot1)) then
-              begin
-                TFake(A[I]) := TFake(A[pL]);
-                TFake(A[pL]) := TFake(A[pR]);
-                Inc(pL);
-              end
-            else
-              TFake(A[I]) := TFake(A[pR]);
-            TFake(A[pR]) := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-  TFake(A[0]) := TFake(A[pL - 1]);
-  TFake(A[pL - 1]) := Pivot1;
-  TFake(A[R]) := TFake(A[pR + 1]);
-  TFake(A[pR + 1]) := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGRegularArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TLess; aLeftmost: Boolean);
-begin
-  if R > DPQ_INSERTION_SORT_CUTOFF then
-    if Ttl > 0 then
-      with DPQSplit(A, R, c) do
-        begin
-          DoDPQSort(A, Left - 1, Ttl - 1, c, aLeftmost);
-          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, c, False);
-          if c(A[Left], A[Right]) then
-            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, c, False);
         end
     else
       DoHeapSort(A, R, c)
@@ -8719,19 +8229,6 @@ begin
   Result := True;
 end;
 
-class procedure TGRegularArrayHelper.QuickSort(var A: array of T; c: TLess; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
-    begin
-      DoQSort(@A[0], R, c, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
 class procedure TGRegularArrayHelper.IntroSort(var A: array of T; c: TLess; o: TSortOrder);
 var
   R: SizeInt;
@@ -8740,19 +8237,6 @@ begin
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
       DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, c, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
-class procedure TGRegularArrayHelper.DualPivotQuickSort(var A: array of T; c: TLess; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
-    begin
-      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, c, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -10006,50 +9490,6 @@ begin
     end;
 end;
 
-class function TGDelegatedArrayHelper.QSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1], c)^;
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not c(A[pL], Pivot);
-    repeat Dec(pR) until not c(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGDelegatedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TOnLess; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplit(A, R, c) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, c, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, c, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
-end;
-
 class function TGDelegatedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
 var
   Pivot: T;
@@ -10088,91 +9528,6 @@ begin
             DoIntroSort(A, Left, Pred(Ttl), c, aLeftmost);
           if Right < R then
             DoIntroSort(@A[Right], R - Right, Pred(Ttl), c, False);
-        end
-    else
-      DoHeapSort(A, R, c)
-  else
-    if R > 0 then
-      if aLeftmost then
-        InsertionSort(A, R, c)
-      else
-        UnguardInsertionSort(A, R, c);
-end;
-
-class function TGDelegatedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TOnLess): TSortSplit;
-var
-  v, Pivot1, Pivot2: TFake;
-  pL, pR, I: SizeInt;
-begin
-  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1], c) - A;
-  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1], c) - A;
-
-  if not c(A[pR], A[pL]) then
-    begin
-      Pivot1 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[0]);
-      Pivot2 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[R]);
-    end
-  else
-    begin
-      Pivot2 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[R]);
-      Pivot1 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[0]);
-    end;
-
-  pL := 1;
-  I  := 1;
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := TFake(A[I]);
-      if c(T(v), T(Pivot1)) then
-        begin
-          TFake(A[I]) := TFake(A[pL]);
-          TFake(A[pL]) := v;
-          Inc(pL);
-        end
-      else
-        if c(T(Pivot2), T(v)) then
-          begin
-            while (pR >= I) and c(T(Pivot2), A[pR]) do
-              Dec(pR);
-            if pR < I then
-              break;
-            if c(A[pR], T(Pivot1)) then
-              begin
-                TFake(A[I]) := TFake(A[pL]);
-                TFake(A[pL]) := TFake(A[pR]);
-                Inc(pL);
-              end
-            else
-              TFake(A[I]) := TFake(A[pR]);
-            TFake(A[pR]) := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-  TFake(A[0]) := TFake(A[pL - 1]);
-  TFake(A[pL - 1]) := Pivot1;
-  TFake(A[R]) := TFake(A[pR + 1]);
-  TFake(A[pR + 1]) := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGDelegatedArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TOnLess; aLeftmost: Boolean);
-begin
-  if R > DPQ_INSERTION_SORT_CUTOFF then
-    if Ttl > 0 then
-      with DPQSplit(A, R, c) do
-        begin
-          DoDPQSort(A, Left - 1, Ttl - 1, c, aLeftmost);
-          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, c, False);
-          if c(A[Left], A[Right]) then
-            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, c, False);
         end
     else
       DoHeapSort(A, R, c)
@@ -10686,19 +10041,6 @@ begin
   Result := True;
 end;
 
-class procedure TGDelegatedArrayHelper.QuickSort(var A: array of T; c: TOnLess; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
-    begin
-      DoQSort(@A[0], R, c, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
 class procedure TGDelegatedArrayHelper.IntroSort(var A: array of T; c: TOnLess; o: TSortOrder);
 var
   R: SizeInt;
@@ -10707,19 +10049,6 @@ begin
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
       DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, c, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
-class procedure TGDelegatedArrayHelper.DualPivotQuickSort(var A: array of T; c: TOnLess; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
-    begin
-      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, c, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -11973,50 +11302,6 @@ begin
     end;
 end;
 
-class function TGNestedArrayHelper.QSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
-var
-  Pivot: T;
-  v: TFake;
-  pL, pR: SizeInt;
-begin
-  Pivot := MedianOf3(@A[1], @A[R shr 1], @A[R-1], c)^;
-  pL := -1;
-  pR := Succ(R);
-  repeat
-    repeat Inc(pL) until not c(A[pL], Pivot);
-    repeat Dec(pR) until not c(Pivot, A[pR]);
-    if pL > pR then break;
-    v := TFake(A[pL]);
-    TFake(A[pL]) := TFake(A[pR]);
-    TFake(A[pR]) := v;
-  until False;
-  Result.Left := pR;
-  Result.Right := pL;
-end;
-
-class procedure TGNestedArrayHelper.DoQSort(A: PItem; R: SizeInt; c: TNestLess; aLeftmost: Boolean);
-begin
-  while R > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplit(A, R, c) do
-      if Left <= R - Right then
-        begin
-          DoQSort(A, Left, c, aLeftmost);
-          A := @A[Right];
-          R -= Right;
-          aLeftmost := False;
-        end
-      else
-        begin
-          DoQSort(@A[Right], R - Right, c, False);
-          R := Left;
-        end;
-  if R > 0 then
-    if aLeftmost then
-      InsertionSort(A, R, c)
-    else
-      UnguardInsertionSort(A, R, c);
-end;
-
 class function TGNestedArrayHelper.QSplitMo9(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
 var
   Pivot: T;
@@ -12055,91 +11340,6 @@ begin
             DoIntroSort(A, Left, Pred(Ttl), c, aLeftmost);
           if Right < R then
             DoIntroSort(@A[Right], R - Right, Pred(Ttl), c, False);
-        end
-    else
-      DoHeapSort(A, R, c)
-  else
-    if R > 0 then
-      if aLeftmost then
-        InsertionSort(A, R, c)
-      else
-        UnguardInsertionSort(A, R, c);
-end;
-
-class function TGNestedArrayHelper.DPQSplit(A: PItem; R: SizeInt; c: TNestLess): TSortSplit;
-var
-  v, Pivot1, Pivot2: TFake;
-  pL, pR, I: SizeInt;
-begin
-  pL := MedianOf3(@A[1], @A[R shr 2], @A[R shr 1], c) - A;
-  pR := MedianOf3(@A[R shr 1 + 1], @A[R shr 1 + R shr 2 + 1], @A[R - 1], c) - A;
-
-  if not c(A[pR], A[pL]) then
-    begin
-      Pivot1 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[0]);
-      Pivot2 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[R]);
-    end
-  else
-    begin
-      Pivot2 := TFake(A[pL]);
-      TFake(A[pL]) := TFake(A[R]);
-      Pivot1 := TFake(A[pR]);
-      TFake(A[pR]) := TFake(A[0]);
-    end;
-
-  pL := 1;
-  I  := 1;
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := TFake(A[I]);
-      if c(T(v), T(Pivot1)) then
-        begin
-          TFake(A[I]) := TFake(A[pL]);
-          TFake(A[pL]) := v;
-          Inc(pL);
-        end
-      else
-        if c(T(Pivot2), T(v)) then
-          begin
-            while (pR >= I) and c(T(Pivot2), A[pR]) do
-              Dec(pR);
-            if pR < I then
-              break;
-            if c(A[pR], T(Pivot1)) then
-              begin
-                TFake(A[I]) := TFake(A[pL]);
-                TFake(A[pL]) := TFake(A[pR]);
-                Inc(pL);
-              end
-            else
-              TFake(A[I]) := TFake(A[pR]);
-            TFake(A[pR]) := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-  TFake(A[0]) := TFake(A[pL - 1]);
-  TFake(A[pL - 1]) := Pivot1;
-  TFake(A[R]) := TFake(A[pR + 1]);
-  TFake(A[pR + 1]) := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGNestedArrayHelper.DoDPQSort(A: PItem; R, Ttl: SizeInt; c: TNestLess; aLeftmost: Boolean);
-begin
-  if R > DPQ_INSERTION_SORT_CUTOFF then
-    if Ttl > 0 then
-      with DPQSplit(A, R, c) do
-        begin
-          DoDPQSort(A, Left - 1, Ttl - 1, c, aLeftmost);
-          DoDPQSort(@A[Right + 1], R - Right - 1, Ttl - 1, c, False);
-          if c(A[Left], A[Right]) then
-            DoDPQSort(@A[Left + 1], Right - Left - 2, Ttl - 1, c, False);
         end
     else
       DoHeapSort(A, R, c)
@@ -12653,19 +11853,6 @@ begin
   Result := True;
 end;
 
-class procedure TGNestedArrayHelper.QuickSort(var A: array of T; c: TNestLess; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
-    begin
-      DoQSort(@A[0], R, c, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
 class procedure TGNestedArrayHelper.IntroSort(var A: array of T; c: TNestLess; o: TSortOrder);
 var
   R: SizeInt;
@@ -12674,19 +11861,6 @@ begin
   if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
     begin
       DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR, c, True);
-      if o = soDesc then
-        Reverse(A);
-    end;
-end;
-
-class procedure TGNestedArrayHelper.DualPivotQuickSort(var A: array of T; c: TNestLess; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(@A[0], R, c, o) < R) then
-    begin
-      DoDPQSort(@A[0], R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR, c, True);
       if o = soDesc then
         Reverse(A);
     end;
@@ -13483,47 +12657,6 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.QSplit(var A: array of T; L, R: SizeInt): TSortSplit;
-var
-  v, Pivot: T;
-begin
-  Pivot := MedianOf3(@A[L+1], @A[L+(R-L)shr 1], @A[R-1])^;
-  Dec(L);
-  Inc(R);
-  repeat
-    repeat Inc(L); until A[L] >= Pivot;
-    repeat Dec(R); until A[R] <= Pivot;
-    if L > R then
-      break;
-    v := A[L];
-    A[L] := A[R];
-    A[R] := v;
-  until False;
-  Result.Left := R;
-  Result.Right := L;
-end;
-
-class procedure TGSimpleArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
-begin
-  while R - L > QUICK_INSERTION_SORT_CUTOFF do
-    with QSplit(A, L, R) do
-      if Left - L <= R - Right then
-        begin
-          DoQSort(A, L, Left);
-          L := Right;
-        end
-      else
-        begin
-          DoQSort(A, Right, R);
-          R := Left;
-        end;
-  if R - L > 0 then
-    if L = 0 then
-      InsertionSort(A, L, R)
-    else
-      UnguardInsertionSort(A, L, R);
-end;
-
 class function TGSimpleArrayHelper.GetMo9Pivot(const A: array of T; L, R: SizeInt): T;
 begin
   if R - L > MEDIAN_OF9_CUTOFF then
@@ -13579,98 +12712,6 @@ begin
         InsertionSort(A, L, R)
       else
         UnguardInsertionSort(A, L, R);
-end;
-
-class function TGSimpleArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
-var
-  v, Pivot1, Pivot2: T;
-  pL, pR, I: SizeInt;
-label
-  EndLoop;
-begin
-  pL := MedianOf3(@A[L+1], @A[L+(R-L)shr 2], @A[L+(R-L)shr 1]) - PItem(@A[0]);
-  pR := MedianOf3(@A[L+(R-L)shr 1+1], @A[L+(R-L)shr 1+(R-L)shr 2+1], @A[R-1]) - PItem(@A[0]);
-
-  if A[pL] <= A[pR] then
-    begin
-      Pivot1 := A[pL];
-      A[pL] := A[L];
-      Pivot2 := A[pR];
-      A[pR] := A[R];
-    end
-  else
-    begin
-      Pivot2 := A[pL];
-      A[pL] := A[R];
-      Pivot1 := A[pR];
-      A[pR] := A[L];
-    end;
-
-  pL := Succ(L);
-  I  := Succ(L);
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := A[I];
-      if v < Pivot1 then
-        begin
-          A[I] := A[pL];
-          A[pL] := v;
-          Inc(pL);
-        end
-      else
-        if v > Pivot2 then
-          begin
-            while A[pR] > Pivot2 do
-              begin
-                Dec(pR);
-                if pR < I then
-                  goto EndLoop;
-              end;
-            if A[pR] < Pivot1 then
-              begin
-                A[I] := A[pL];
-                A[pL] := A[pR];
-                Inc(pL);
-              end
-            else
-              A[I] := A[pR];
-            A[pR] := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-
-EndLoop:
-
-  A[L] := A[pL - 1];
-  A[pL - 1] := Pivot1;
-  A[R] := A[pR + 1];
-  A[pR + 1] := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGSimpleArrayHelper.DoDPQSort(var A: array of T; L, R, Ttl: SizeInt);
-begin
-  if R - L > DPQ_INSERTION_SORT_CUTOFF then
-    if Ttl > 0 then
-      with DPQSplit(A, L, R) do
-        begin
-          DoDPQSort(A, L, Left - 1, Ttl - 1);
-          DoDPQSort(A, Right + 1, R, Ttl - 1);
-          if A[Left] < A[Right] then
-            DoDPQSort(A, Left + 1, Right - 1, Ttl - 1);
-        end
-    else
-      DoHeapSort(@A[L], R - L)
-  else
-    if R - L > 0 then
-      if L <> 0 then
-        UnguardInsertionSort(A, L, R)
-      else
-        InsertionSort(A, L, R);
 end;
 
 class procedure TGSimpleArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
@@ -14260,19 +13301,6 @@ begin
   Result := True;
 end;
 
-class procedure TGSimpleArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(A, 0, R, o) < R) then
-    begin
-      DoQSort(A, 0, R);
-      if o = soDesc then
-        DoReverse(A, 0, R);
-    end;
-end;
-
 class procedure TGSimpleArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
 var
   R: SizeInt;
@@ -14281,19 +13309,6 @@ begin
   if (R > 0) and (CountRun(A, 0, R, o) < R) then
     begin
       DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
-      if o = soDesc then
-        DoReverse(A, 0, R);
-    end;
-end;
-
-class procedure TGSimpleArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if (R > 0) and (CountRun(A, 0, R, o) < R) then
-    begin
-      DoDPQSort(A, 0, R, LGUtils.NSB(R + 1) * DPQSORT_LOG_FACTOR);
       if o = soDesc then
         DoReverse(A, 0, R);
     end;
