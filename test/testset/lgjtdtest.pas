@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, fpcunit, testregistry, FileUtil,
-  lgUtils, lgJson, lgJsonTypeDef;
+  lgUtils, lgJson, lgJsonTypeDef, lgJtdInfer;
 
 type
 
@@ -50,6 +50,24 @@ type
     procedure TestMaxDepth;
     procedure TestMaxErrors;
     procedure TestValidation;
+  end;
+
+  { TJtdInferTest }
+
+  TJtdInferTest = class(TTestCase)
+  private
+  type
+    TInfer  = specialize TGUniqRef<TJtdInferrer>;
+    TSchema = specialize TGAutoRef<TJsonNode>;
+    THint  = TJtdInferrer.THint;
+  published
+    procedure TestCreate;
+    procedure TestScalar;
+    procedure TestEnum;
+    procedure TestProperties;
+    procedure TestElements;
+    procedure TestValues;
+    procedure TestDiscriminator;
   end;
 
 implementation
@@ -441,9 +459,282 @@ begin
     end;
 end;
 
+{ TJtdInferTest }
+
+procedure TJtdInferTest.TestCreate;
+var
+  Infer: TInfer;
+  StrSamples: TStringArray;
+  Samples: array of TJsonNode;
+  Schema: TSchema;
+begin
+  StrSamples := nil;
+  Infer.Instance := TJtdInferrer.Create(StrSamples, []);
+  AssertTrue(Infer.Instance.MaxDepth = TJtdInferrer.DEF_DEPTH);
+  AssertFalse(Infer.Instance.SkipBom);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+
+  Samples := nil;
+  Infer.Instance := TJtdInferrer.Create(Samples,[]);
+  AssertTrue(Infer.Instance.MaxDepth = TJtdInferrer.DEF_DEPTH);
+  AssertFalse(Infer.Instance.SkipBom);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+
+  StrSamples := ['','a'];
+  Infer.Instance := TJtdInferrer.Create(StrSamples,[]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+end;
+
+procedure TJtdInferTest.TestScalar;
+var
+  Infer: TInfer;
+  Schema: TSchema;
+begin
+  Infer.Instance := TJtdInferrer.Create(['42'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"int8"}');
+
+  Infer.Instance := TJtdInferrer.Create(['42'], [THint.Make(ntFloat64)]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"float64"}');
+
+  Infer.Instance := TJtdInferrer.Create(['42','null'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"int8","nullable":true}');
+
+  Infer.Instance := TJtdInferrer.Create(['42','"123"'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+
+  Infer.Instance := TJtdInferrer.Create(['false'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"boolean"}');
+
+  Infer.Instance := TJtdInferrer.Create(['false','true','null'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"boolean","nullable":true}');
+
+  Infer.Instance := TJtdInferrer.Create(['""'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"string"}');
+
+  Infer.Instance := TJtdInferrer.Create(['"a"','null'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"string","nullable":true}');
+
+  Infer.Instance := TJtdInferrer.Create(['"2015-10-12T23:59:15Z"'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"timestamp"}');
+
+  Infer.Instance := TJtdInferrer.Create(['"2015-10-12T23:59:15Z"','null'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"timestamp","nullable":true}');
+
+  Infer.Instance := TJtdInferrer.Create(['"2015-10-12T23:59:15Z"','""'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"string"}');
+end;
+
+procedure TJtdInferTest.TestEnum;
+var
+  Infer: TInfer;
+  Schema: TSchema;
+begin
+  Infer.Instance := TJtdInferrer.Create(['"aa"','"bb"','"cc"'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"type":"string"}');
+
+  Infer.Instance := TJtdInferrer.Create(['"aa"','"bb"','"cc"'], [THint.Enum([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"enum":["aa","bb","cc"]}');
+
+  Infer.Instance := TJtdInferrer.Create(['"aa"'], [THint.Enum(['aa','bb','cc'],[])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"enum":["aa","bb","cc"]}');
+
+  Infer.Instance := TJtdInferrer.Create(['"aa"','null'], [THint.Enum(['aa','bb','cc'],[])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"enum":["aa","bb","cc"],"nullable":true}');
+
+  Infer.Instance := TJtdInferrer.Create(['"aa"','42'], [THint.Enum(['aa','bb','cc'],[])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+end;
+
+procedure TJtdInferTest.TestProperties;
+var
+  Infer: TInfer;
+  Schema, Expect: TSchema;
+const
+  j1   = '{"a":42,"b":1001}';
+  j2   = '{"a":42,"b":1001,"c":"d"}';
+  j3   = '{"a":42,"b":1001,"c":3.14}';
+  exp1 = '{"properties":{"a":{"type":"int8"},"b":{"type":"int16"}}}';
+  exp2 = '{"properties":{"a":{"type":"int8"},"b":{"type":"int16"}},"optionalProperties":{"c":{"type":"string"}}}';
+  exp3 = '{"properties":{"a":{"type":"int8"},"b":{"type":"int16"}},"optionalProperties":{"c":{}}}';
+  exp4 = '{"properties":{"a":{"type":"int8"},"b":{"type":"int16"}},' +
+         '"optionalProperties":{"c":{"type":"string"}},' +
+         '"additionalProperties":true}';
+  exp5 = '{"properties":{"a":{"type":"int8"},"b":{"type":"int16"}},' +
+         '"optionalProperties":{"c":{"type":"string"}},' +
+         '"additionalProperties":true,"nullable":true}';
+  exp6 = '{"properties":{"a":{"type":"int8","nullable":true},' +
+         ' "b":{"type":"int16","nullable":true}},' +
+         '"optionalProperties":{"c":{"type":"string","nullable":true}},' +
+         '"additionalProperties":true}';
+begin
+  Infer.Instance := TJtdInferrer.Create([j1], []);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp1;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], []);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp2;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2, j3], []);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp3;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], [THint.AddProps([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp4;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], [THint.AddProps([]),THint.Nullable([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp5;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], [THint.AddProps([]),THint.JpNullable('$.*')]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp6;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+end;
+
+procedure TJtdInferTest.TestElements;
+var
+  Infer: TInfer;
+  Schema: TSchema;
+begin
+  Infer.Instance := TJtdInferrer.Create(['[3,42,1001]'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"elements":{"type":"int16"}}');
+
+  Infer.Instance := TJtdInferrer.Create(['[3,42,1001]','[3.14]'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"elements":{"type":"float64"}}');
+
+  Infer.Instance := TJtdInferrer.Create(['[3,42,1001]','[3.14,null]'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"elements":{"type":"float64","nullable":true}}');
+
+  Infer.Instance := TJtdInferrer.Create(['[3,42,1001]','[3.14,"a"]'], []);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"elements":{}}');
+
+  Infer.Instance := TJtdInferrer.Create(['[42,3.14,1001]'], [THint.Nullable([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"nullable":true,"elements":{"type":"float64"}}');
+
+  Infer.Instance := TJtdInferrer.Create(['[42,3.14,1001]'], [THint.Nullable(['0'])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{"elements":{"nullable":true,"type":"float64"}}');
+end;
+
+procedure TJtdInferTest.TestValues;
+var
+  Infer: TInfer;
+  Schema, Expect: TSchema;
+const
+  j1   = '{"a":42,"b":1001}';
+  j2   = '{"c":333,"d":777}';
+  j3   = '{"c":333,"d":""}';
+  exp1 = '{"optionalProperties":{"a":{"type":"int8"},"b":{"type":"int16"},"c":{"type":"int16"},"d":{"type":"int16"}}}';
+  exp2 = '{"values":{"type":"int16"}}';
+  exp3 = '{"values":{"type":"int16","nullable":true}}';
+  exp4 = '{"values":{"type":"int16"},"nullable":true}';
+  exp5 = '{"values":{}}';
+begin
+  Infer.Instance := TJtdInferrer.Create([j1, j2], []);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp1;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], [THint.Map([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp2;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], [THint.Map([]),THint.Nullable(['a'])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp3;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2], [THint.Map([]),THint.Nullable([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp4;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j3], [THint.Map([])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp5;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+end;
+
+procedure TJtdInferTest.TestDiscriminator;
+var
+  Infer: TInfer;
+  Schema, Expect: TSchema;
+const
+  j1   = '{"tag":"a","d":1001}';
+  j2   = '{"tag":"b","d":777,"e":"s"}';
+  j3   = '{"tag":"c","f":"g","h":false}';
+  j4   = '{"tag":"b","d":2048,"e":null}';
+  j5   = '{"tog":"u","s":false}';
+  j6   = '{"tag":true,"s":false}';
+  exp1 = '{"properties":{"tag":{"type":"string"}},"optionalProperties":{"e":{"type":"string"},' +
+         ' "d":{"type":"int16"},"f":{"type":"string"},"h":{"type":"boolean"}}}';
+  exp2 = '{"discriminator":"tag","mapping":{"a":{"properties":{"d":{"type":"int16"}}},' +
+         ' "b":{"properties":{"d":{"type":"int16"},"e":{"type":"string"}}},' +
+         ' "c":{"properties":{"f":{"type":"string"},"h":{"type":"boolean"}}}}}';
+  exp3 = '{"discriminator":"tag","mapping":{"a":{"properties":{"d":{"type":"int16"}}},' +
+         ' "b":{"properties":{"d":{"type":"int16"},"e":{"type":"string","nullable":true}}},' +
+         ' "c":{"properties":{"f":{"type":"string"},"h":{"type":"boolean"}}}}}';
+begin
+  Infer.Instance := TJtdInferrer.Create([j1, j2, j3], []);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp1;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2, j3], [THint.Variant(['tag'])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp2;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2, j3, j4], [THint.Variant(['tag'])]);
+  Schema.Instance := Infer.Instance.Execute;
+  Expect.Instance.AsJson := exp3;
+  AssertTrue(Schema.Instance.EqualTo(Expect.Instance));
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2, j3, j5], [THint.Variant(['tag'])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+
+  Infer.Instance := TJtdInferrer.Create([j1, j2, j3, j6], [THint.Variant(['tag'])]);
+  Schema.Instance := Infer.Instance.Execute;
+  AssertTrue(Schema.Instance.AsJson = '{}');
+end;
+
 initialization
   Randomize;
   RegisterTest(TJtdUtilsTest);
   RegisterTest(TJtdTest);
+  RegisterTest(TJtdInferTest);
 end.
 
