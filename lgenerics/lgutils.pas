@@ -19,8 +19,7 @@
 *****************************************************************************}
 unit lgUtils;
 
-{$MODE DELPHI}
-{$INLINE ON}
+{$MODE DELPHI}{$P-}
 {$MODESWITCH NESTEDPROCVARS}
 
 interface
