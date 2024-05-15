@@ -1065,7 +1065,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -1079,7 +1079,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -1097,7 +1097,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -1966,7 +1966,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -1980,7 +1980,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -1998,7 +1998,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -2804,7 +2804,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -2818,7 +2818,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -2836,7 +2836,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -3618,7 +3618,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -3632,7 +3632,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -3650,7 +3650,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -4434,7 +4434,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
   AssertTrue(s.Instance.AddAll(e) = 10);
   s.Instance.Clear;
@@ -4458,7 +4458,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 
@@ -4476,7 +4476,7 @@ begin
   AssertTrue(s.Instance.Count = 11);
   AssertTrue(s.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 10);
-  TIntHelper.QuickSort(e);
+  TIntHelper.IntroSort(e);
   AssertTrue(TIntHelper.Same(IntArray10, e));
 end;
 

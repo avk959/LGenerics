@@ -13,7 +13,7 @@ uses
 
 type
 
-  TSortAlgo    = (saQuickSort, saIntroSort, saDualPivotQuickSort, saPDQSort, saMergeSort, saTimSort,
+  TSortAlgo    = (saIntroSort, saPDQSort, saMergeSort, saTimSort,
                   saFclSort,{ fcl-stl TOrderingArrayUtils.Sort }
                   saGCSort, { Generics.Collections TArrayHelper.Sort }
                   saPasPDQSort { Akira1364's Pascal translation of PDQSort from
@@ -407,9 +407,7 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
     saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
@@ -436,9 +434,7 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
     saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
@@ -465,9 +461,7 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
     saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
@@ -494,9 +488,7 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
     saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
@@ -534,9 +526,7 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
     saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
@@ -584,9 +574,7 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
     saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);

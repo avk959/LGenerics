@@ -561,9 +561,6 @@ type
   { returns True if both A and B are identical sequence of elements }
     class function  Same(A, B: TVector): Boolean; static;
     class function  Same(constref A, B: TLiteVector): Boolean; static;
-  { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
@@ -657,9 +654,6 @@ type
   { returns True if both A and B are identical sequence of elements }
     class function  Same(A, B: TVector): Boolean; static;
     class function  Same(constref A, B: TLiteVector): Boolean; static;
-  { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
@@ -746,9 +740,6 @@ type
   { returns True if both A and B are identical sequence of elements }
     class function  Same(A, B: TVector; c: TLess): Boolean; static;
     class function  Same(constref A, B: TLiteVector; c: TLess): Boolean; static;
-  { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
@@ -839,9 +830,6 @@ type
   { returns True if both A and B are identical sequence of elements }
     class function  Same(A, B: TVector; c: TOnLess): Boolean; static;
     class function  Same(constref A, B: TLiteVector; c: TOnLess): Boolean; static;
-  { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; c: TOnLess; o: TSortOrder = soAsc); static; inline;
@@ -932,9 +920,6 @@ type
   { returns True if both A and B are identical sequence of elements }
     class function  Same(A, B: TVector; c: TLess): Boolean; static;
     class function  Same(constref A, B: TLiteVector; c: TLess): Boolean; static;
-  { slightly optimized quicksort with random pivot selection }
-    class procedure QuickSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
-    class procedure QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; c: TLess; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; c: TLess; o: TSortOrder = soAsc); static; inline;
@@ -3262,19 +3247,6 @@ begin
     Result := False;
 end;
 
-class procedure TGBaseVectorHelper.QuickSort(v: TVector; o: TSortOrder);
-begin
-  v.CheckInIteration;
-  if v.ElemCount > 1 then
-    THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], o);
-end;
-
-class procedure TGBaseVectorHelper.QuickSort(var v: TLiteVector; o: TSortOrder);
-begin
-  if v.Count > 1 then
-    THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
-end;
-
 class procedure TGBaseVectorHelper.IntroSort(v: TVector; o: TSortOrder);
 begin
   v.CheckInIteration;
@@ -3656,19 +3628,6 @@ begin
     Result := False;
 end;
 
-class procedure TGComparableVectorHelper.QuickSort(v: TVector; o: TSortOrder);
-begin
-  v.CheckInIteration;
-  if v.ElemCount > 1 then
-    THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], o);
-end;
-
-class procedure TGComparableVectorHelper.QuickSort(var v: TLiteVector; o: TSortOrder);
-begin
-  if v.Count > 1 then
-    THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
-end;
-
 class procedure TGComparableVectorHelper.IntroSort(v: TVector; o: TSortOrder);
 begin
   v.CheckInIteration;
@@ -4005,19 +3964,6 @@ begin
     Result := THelper.Same(A.FBuffer.FItems[0..Pred(cnt)], B.FBuffer.FItems[0..Pred(cnt)], c)
   else
     Result := False;
-end;
-
-class procedure TGRegularVectorHelper.QuickSort(v: TVector; c: TLess; o: TSortOrder);
-begin
-  v.CheckInIteration;
-  if v.ElemCount > 1 then
-    THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], c, o);
-end;
-
-class procedure TGRegularVectorHelper.QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder);
-begin
-  if v.Count > 1 then
-    THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
 class procedure TGRegularVectorHelper.IntroSort(v: TVector; c: TLess; o: TSortOrder);
@@ -4380,19 +4326,6 @@ begin
     Result := False;
 end;
 
-class procedure TGDelegatedVectorHelper.QuickSort(v: TVector; c: TOnLess; o: TSortOrder);
-begin
-  v.CheckInIteration;
-  if v.ElemCount > 1 then
-    THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], c, o);
-end;
-
-class procedure TGDelegatedVectorHelper.QuickSort(var v: TLiteVector; c: TOnLess; o: TSortOrder);
-begin
-  if v.Count > 1 then
-    THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
-end;
-
 class procedure TGDelegatedVectorHelper.IntroSort(v: TVector; c: TOnLess; o: TSortOrder);
 begin
   v.CheckInIteration;
@@ -4749,19 +4682,6 @@ begin
     Result := THelper.Same(A.FBuffer.FItems[0..Pred(cnt)], B.FBuffer.FItems[0..Pred(cnt)], c)
   else
     Result := False;
-end;
-
-class procedure TGNestedVectorHelper.QuickSort(v: TVector; c: TLess; o: TSortOrder);
-begin
-  v.CheckInIteration;
-  if v.ElemCount > 1 then
-    THelper.QuickSort(v.FItems[0..Pred(v.ElemCount)], c, o);
-end;
-
-class procedure TGNestedVectorHelper.QuickSort(var v: TLiteVector; c: TLess; o: TSortOrder);
-begin
-  if v.Count > 1 then
-    THelper.QuickSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
 class procedure TGNestedVectorHelper.IntroSort(v: TVector; c: TLess; o: TSortOrder);

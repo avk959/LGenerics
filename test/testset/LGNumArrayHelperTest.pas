@@ -294,28 +294,6 @@ type
     procedure SameOfDyn21Success;
     procedure SameOfDyn21Unsuccess;
 
-    procedure QuickSortOfEmpty;
-    procedure QuickSortAscOfStatic3Asc;
-    procedure QuickSortAscOfStatic3Desc;
-    procedure QuickSortDescOfStatic3Desc;
-    procedure QuickSortDescOfStatic3Asc;
-    procedure QuickSortAscOfStatic377;
-    procedure QuickSortDescOfStatic377;
-    procedure QuickSortAscOfStatic377Random;
-    procedure QuickSortAscOfStatic377RandomZeroes;
-    procedure QuickSortDescOfStatic377Random;
-    procedure QuickSortDescOfStatic377RandomZeroes;
-    procedure QuickSortAscOfDyn3Asc;
-    procedure QuickSortAscOfDyn3Desc;
-    procedure QuickSortDescOfDyn3Desc;
-    procedure QuickSortDescOfDyn3Asc;
-    procedure QuickSortAscOfDyn377;
-    procedure QuickSortDescOfDyn377;
-    procedure QuickSortAscOfDyn377Random;
-    procedure QuickSortAscOfDyn377RandomZeroes;
-    procedure QuickSortDescOfDyn377Random;
-    procedure QuickSortDescOfDyn377RandomZeroes;
-
     procedure HeapSortOfStatic277;
     procedure HeapSortOfStatic277Random;
     procedure HeapSortOfStatic277RandomZeroes;
@@ -344,28 +322,6 @@ type
     procedure IntroSortAscOfDyn577RandomZeroes;
     procedure IntroSortDescOfDyn577Random;
     procedure IntroSortDescOfDyn577RandomZeroes;
-
-    procedure DualPivotQuickSortOfEmpty;
-    procedure DualPivotQuickSortAscOfStatic3Asc;
-    procedure DualPivotQuickSortAscOfStatic3Desc;
-    procedure DualPivotQuickSortDescOfStatic3Desc;
-    procedure DualPivotQuickSortDescOfStatic3Asc;
-    procedure DualPivotQuickSortAscOfStatic577;
-    procedure DualPivotQuickSortDescOfStatic577;
-    procedure DualPivotQuickSortAscOfStatic577Random;
-    procedure DualPivotQuickSortAscOfStatic577RandomZeroes;
-    procedure DualPivotQuickSortDescOfStatic577Random;
-    procedure DualPivotQuickSortDescOfStatic577RandomZeroes;
-    procedure DualPivotQuickSortAscOfDyn3Asc;
-    procedure DualPivotQuickSortAscOfDyn3Desc;
-    procedure DualPivotQuickSortDescOfDyn3Desc;
-    procedure DualPivotQuickSortDescOfDyn3Asc;
-    procedure DualPivotQuickSortAscOfDyn577;
-    procedure DualPivotQuickSortDescOfDyn577;
-    procedure DualPivotQuickSortAscOfDyn577Random;
-    procedure DualPivotQuickSortAscOfDyn577RandomZeroes;
-    procedure DualPivotQuickSortDescOfDyn577Random;
-    procedure DualPivotQuickSortDescOfDyn577RandomZeroes;
 
     procedure PDQSortTest;
     procedure SelectDistinctTest;
@@ -2503,243 +2459,6 @@ begin
   AssertFalse(TIntHelper.Same(a, b));
 end;
 
-procedure TSimpArrayHelperTest.QuickSortOfEmpty;
-var
-  a: TIntArray;
-begin
-  //should not crash
-  TIntHelper.QuickSort(a{%H-});
-  AssertTrue(a = nil);
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfStatic3Asc;
-const
-  c: array[1..3] of Integer = (9, 13, 13);
-var
-  a: array[0..2] of Integer = (9, 13, 13);
-begin
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfStatic3Desc;
-const
-  c: array[1..3] of Integer = (9, 13, 13);
-var
-  a: array[0..2] of Integer = (13, 13, 9);
-begin
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfStatic3Desc;
-const
-  c: array[1..3] of Integer = (27, 11, 5);
-var
-  a: array[0..2] of Integer = (27, 11, 5);
-begin
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfStatic3Asc;
-const
-  c: array[1..3] of Integer = (27, 11, 5);
-var
-  a: array[0..2] of Integer = (11, 5, 27);
-begin
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfStatic377;
-var
-  I: Integer;
-  a, b: array[1..377] of Integer;
-begin
-  for I := 1 to 377 do
-    b[I] := I;
-  a := b;
-  TIntHelper.RandomShuffle(a);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfStatic377;
-var
-  I: Integer;
-  a, b: array[1..377] of Integer;
-begin
-  for I := 1 to 377 do
-    b[I] := 378 - I;
-  a := b;
-  TIntHelper.RandomShuffle(a);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfStatic377Random;
-var
-  I: Integer;
-  a: array[1..377] of Integer;
-begin
-  for I := 1 to 377 do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfStatic377RandomZeroes;
-var
-  I: Integer;
-  a: array[1..377] of Integer;
-begin
-  for I := 1 to 377 do
-    a[I] := Random(2);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfStatic377Random;
-var
-  I: Integer;
-  a: array[1..377] of Integer;
-begin
-  for I := 1 to 377 do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfStatic377RandomZeroes;
-var
-  I: Integer;
-  a: array[1..377] of Integer;
-begin
-  for I := 1 to 377 do
-    a[I] := Random(2);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfDyn3Asc;
-const
-  c: array[1..3] of Integer = (11, 19, 22);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(11, 19, 22);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfDyn3Desc;
-const
-  c: array[1..3] of Integer = (11, 19, 22);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(22, 11, 19);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfDyn3Desc;
-const
-  c: array[1..3] of Integer = (31, 14, 3);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(31, 14, 3);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfDyn3Asc;
-const
-  c: array[1..3] of Integer = (31, 14, 3);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(14, 3, 31);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfDyn377;
-var
-  I: Integer;
-  b: array[1..377] of Integer;
-  a: TIntArray;
-begin
-  for I := 1 to 377 do
-    b[I] := I;
-  a := TIntHelper.CreateRandomShuffle(b);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfDyn377;
-var
-  I: Integer;
-  b: array[1..377] of Integer;
-  a: TIntArray;
-begin
-  for I := 1 to 377 do
-    b[I] := 378 - I;
-  a := TIntHelper.CreateRandomShuffle(b);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfDyn377Random;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 377);
-  for I := 0 to System.High(a) do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortAscOfDyn377RandomZeroes;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 377);
-  for I := 0 to System.High(a) do
-    a[I] := Random(2);
-  TIntHelper.QuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfDyn377Random;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 377);
-  for I := 0 to System.High(a) do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TSimpArrayHelperTest.QuickSortDescOfDyn377RandomZeroes;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 377);
-  for I := 0 to System.High(a) do
-    a[I] := Random(2);
-  TIntHelper.QuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
 procedure TSimpArrayHelperTest.HeapSortOfStatic277;
 var
   I: Integer;
@@ -3049,243 +2768,6 @@ begin
   AssertTrue(TIntHelper.IsNonAscending(a));
 end;
 
-procedure TSimpArrayHelperTest.DualPivotQuickSortOfEmpty;
-var
-  a: TIntArray;
-begin
-  //should not crash
-  TIntHelper.DualPivotQuickSort(a{%H-});
-  AssertTrue(a = nil);
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfStatic3Asc;
-const
-  c: array[1..3] of Integer = (9, 13, 13);
-var
-  a: array[0..2] of Integer = (9, 13, 13);
-begin
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfStatic3Desc;
-const
-  c: array[1..3] of Integer = (9, 13, 13);
-var
-  a: array[0..2] of Integer = (13, 13, 9);
-begin
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfStatic3Desc;
-const
-  c: array[1..3] of Integer = (27, 11, 5);
-var
-  a: array[0..2] of Integer = (27, 11, 5);
-begin
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfStatic3Asc;
-const
-  c: array[1..3] of Integer = (27, 11, 5);
-var
-  a: array[0..2] of Integer = (11, 5, 27);
-begin
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfStatic577;
-var
-  I: Integer;
-  a, b: array[1..577] of Integer;
-begin
-  for I := 1 to 577 do
-    b[I] := I;
-  a := b;
-  TIntHelper.RandomShuffle(a);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfStatic577;
-var
-  I: Integer;
-  a, b: array[1..577] of Integer;
-begin
-  for I := 1 to 577 do
-    b[I] := 578 - I;
-  a := b;
-  TIntHelper.RandomShuffle(a);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfStatic577Random;
-var
-  I: Integer;
-  a: array[1..577] of Integer;
-begin
-  for I := 1 to 577 do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfStatic577RandomZeroes;
-var
-  I: Integer;
-  a: array[1..577] of Integer;
-begin
-  for I := 1 to 577 do
-    a[I] := Random(2);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfStatic577Random;
-var
-  I: Integer;
-  a: array[1..577] of Integer;
-begin
-  for I := 1 to 577 do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfStatic577RandomZeroes;
-var
-  I: Integer;
-  a: array[1..577] of Integer;
-begin
-  for I := 1 to 577 do
-    a[I] := Random(2);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfDyn3Asc;
-const
-  c: array[1..3] of Integer = (11, 19, 22);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(11, 19, 22);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfDyn3Desc;
-const
-  c: array[1..3] of Integer = (11, 19, 22);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(22, 11, 19);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfDyn3Desc;
-const
-  c: array[1..3] of Integer = (31, 14, 3);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(31, 14, 3);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfDyn3Asc;
-const
-  c: array[1..3] of Integer = (31, 14, 3);
-var
-  a: TIntArray;
-begin
-  a := TIntArray.Create(14, 3, 31);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, c));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfDyn577;
-var
-  I: Integer;
-  b: array[1..577] of Integer;
-  a: TIntArray;
-begin
-  for I := 1 to 577 do
-    b[I] := I;
-  a := TIntHelper.CreateRandomShuffle(b);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfDyn577;
-var
-  I: Integer;
-  b: array[1..577] of Integer;
-  a: TIntArray;
-begin
-  for I := 1 to 577 do
-    b[I] := 578 - I;
-  a := TIntHelper.CreateRandomShuffle(b);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.Same(a, b));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfDyn577Random;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 577);
-  for I := 0 to System.High(a) do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortAscOfDyn577RandomZeroes;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 577);
-  for I := 0 to System.High(a) do
-    a[I] := Random(2);
-  TIntHelper.DualPivotQuickSort(a);
-  AssertTrue(TIntHelper.IsNonDescending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfDyn577Random;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 577);
-  for I := 0 to System.High(a) do
-    a[I] := Random(Integer.MaxValue);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
-procedure TSimpArrayHelperTest.DualPivotQuickSortDescOfDyn577RandomZeroes;
-var
-  I: Integer;
-  a: TIntArray;
-begin
-  System.SetLength(a, 577);
-  for I := 0 to System.High(a) do
-    a[I] := Random(2);
-  TIntHelper.DualPivotQuickSort(a, soDesc);
-  AssertTrue(TIntHelper.IsNonAscending(a));
-end;
-
 procedure TSimpArrayHelperTest.PDQSortTest;
 var
   a, b: TIntArray;
@@ -3584,14 +3066,14 @@ begin
   for I := 0 to System.High(a) do
     a[I] := High(Int64) - Random(10000);
   a1 := Copy(a);
-  TInt64Helper.QuickSort(a1);
+  TInt64Helper.IntroSort(a1);
   b := TInt64Helper.Sorted(a);
   AssertFalse(TInt64Helper.Same(a, b));
   AssertTrue(TInt64Helper.Same(a1, b));
   a[0] := High(Int64);
   a[999] := Low(Int64);
   a1 := Copy(a);
-  TInt64Helper.QuickSort(a1);
+  TInt64Helper.IntroSort(a1);
   b := TInt64Helper.Sorted(a);
   AssertFalse(TInt64Helper.Same(a, b));
   AssertTrue(TInt64Helper.Same(a1, b));
@@ -3608,14 +3090,14 @@ begin
   for I := 0 to System.High(a) do
     a[I] := High(Int64) - Random(10000);
   a1 := Copy(a);
-  TInt64Helper.QuickSort(a1, soDesc);
+  TInt64Helper.IntroSort(a1, soDesc);
   b := TInt64Helper.Sorted(a, soDesc);
   AssertFalse(TInt64Helper.Same(a, b));
   AssertTrue(TInt64Helper.Same(a1, b));
   a[0] := High(Int64);
   a[999] := Low(Int64);
   a1 := Copy(a);
-  TInt64Helper.QuickSort(a1, soDesc);
+  TInt64Helper.IntroSort(a1, soDesc);
   b := TInt64Helper.Sorted(a, soDesc);
   AssertFalse(TInt64Helper.Same(a, b));
   AssertTrue(TInt64Helper.Same(a1, b));
@@ -3632,7 +3114,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := Random(10000000000) - 5000000000;
   b := Copy(a);
-  TInt64Helper.QuickSort(b);
+  TInt64Helper.IntroSort(b);
   AssertTrue(TInt64Helper.IsNonDescending(b));
   TInt64Helper.RadixSort(a);
   AssertTrue(TInt64Helper.Same(a, b));
@@ -3641,7 +3123,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := Random(10000000000) - 5000000000;
   b := Copy(a);
-  TInt64Helper.QuickSort(b);
+  TInt64Helper.IntroSort(b);
   AssertTrue(TInt64Helper.IsNonDescending(b));
   TInt64Helper.RadixSort(a);
   AssertTrue(TInt64Helper.Same(a, b));
@@ -3658,7 +3140,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := Random(10000000000) - 5000000000;
   b := Copy(a);
-  TInt64Helper.QuickSort(b, soDesc);
+  TInt64Helper.IntroSort(b, soDesc);
   AssertTrue(TInt64Helper.IsNonAscending(b));
   TInt64Helper.RadixSort(a, soDesc);
   AssertTrue(TInt64Helper.Same(a, b));
@@ -3667,7 +3149,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := Random(10000000000) - 5000000000;
   b := Copy(a);
-  TInt64Helper.QuickSort(b, soDesc);
+  TInt64Helper.IntroSort(b, soDesc);
   AssertTrue(TInt64Helper.IsNonAscending(b));
   TInt64Helper.RadixSort(a, soDesc);
   AssertTrue(TInt64Helper.Same(a, b));
