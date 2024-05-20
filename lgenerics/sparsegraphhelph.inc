@@ -178,6 +178,13 @@ type
     constructor Create(aIndex, aData: SizeInt);
   end;
 
+  TIntNodeMax = record
+    Index,
+    Data: SizeInt;
+    class operator < (const L, R: TIntNodeMax): Boolean; inline;
+    constructor Create(aIndex, aData: SizeInt);
+  end;
+
   { TGJoinableHashList: for internal use only; TEntry must provide
       property Key: SizeInt and numeric field Weight }
   generic TGJoinableHashList<TEntry> = record
@@ -434,6 +441,7 @@ type
     function  PeekPtr: PItem; inline;
     procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
     procedure Update(aHandle: SizeInt; const aNewValue: T); inline;
+    procedure Remove(aHandle: SizeInt);
     function  GetItem(aHandle: SizeInt): T; inline;
     function  GetItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
@@ -480,6 +488,7 @@ type
     function  Peek: T; inline;
     function  PeekPtr: PItem; inline;
     procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
+  { note: it does not handle key increase }
     procedure Update(aHandle: SizeInt; const aNewValue: T);
     procedure Remove(aHandle: SizeInt); inline;
     function  GetItem(aHandle: SizeInt): T; inline;
@@ -527,6 +536,7 @@ type
     function  Peek: T; inline;
     function  PeekPtr: PItem; inline;
     procedure Enqueue(aHandle: SizeInt; const aValue: T); inline;
+  { note: it does not handle key decrease }
     procedure Update(aHandle: SizeInt; const aNewValue: T);
     function  GetItem(aHandle: SizeInt): T; inline;
     function  GetItemPtr(aHandle: SizeInt): PItem; inline;

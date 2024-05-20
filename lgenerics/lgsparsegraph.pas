@@ -4270,6 +4270,20 @@ begin
   Data := aData;
 end;
 
+{ TIntNodeMax }
+
+class operator TIntNodeMax.<(const L, R: TIntNodeMax): Boolean;
+begin
+  if L.Data = R.Data then exit(L.Index < R.Index);
+  Result := R.Data < L.Data;
+end;
+
+constructor TIntNodeMax.Create(aIndex, aData: SizeInt);
+begin
+  Index := aIndex;
+  Data := aData;
+end;
+
 { TGJoinableHashList }
 
 function TGJoinableHashList.GetCount: SizeInt;
@@ -5947,6 +5961,22 @@ begin
         FHeap[I] := aNewValue;
         SiftDown(I);
       end;
+end;
+
+procedure TGBinHeapMin.Remove(aHandle: SizeInt);
+var
+  I: SizeInt;
+begin
+  I := FHandle2Index[aHandle];
+  Dec(FCount);
+  if I <> Count then
+    begin
+      FHeap[I] := FHeap[Count];
+      FHandle2Index[FIndex2Handle[Count]] := I;
+      FIndex2Handle[I] := FIndex2Handle[Count];
+      SiftDown(I);
+    end;
+  FHeap[Count] := Default(T);
 end;
 
 function TGBinHeapMin.GetItem(aHandle: SizeInt): T;
