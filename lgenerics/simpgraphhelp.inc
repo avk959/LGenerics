@@ -19,6 +19,14 @@
 
 { TGSimpleGraph.TNodeSearch }
 
+procedure TGSimpleGraph.TNodeSearch.SetTimeout(aValue: Integer);
+begin
+  if aValue = WAIT_INFINITE then
+    FTimeout := System.High(Integer)
+  else
+    FTimeout := Math.Max(aValue, 0);
+end;
+
 function TGSimpleGraph.TNodeSearch.TimeOut: Boolean;
 begin
   if not FCancelled then
@@ -164,9 +172,9 @@ function TGSimpleGraph.TBPCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph; aTimeO
 var
   Cand: TBoolVector;
 begin
-  FStartTime := Now;
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
+  FStartTime := Now;
   SortMatrixByWidth(aGraph, False);
   //SortMatrixByDegree(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
@@ -183,7 +191,7 @@ function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph; aTimeOut: 
 var
   Cand: TBoolVector;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, True);
@@ -360,7 +368,7 @@ function TGSimpleGraph.TBPCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph; aTi
 var
   Cand: TBits256;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, False);
@@ -378,8 +386,8 @@ function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph; aTimeOu
 var
   Cand: TBits256;
 begin
+  SetTimeout(aTimeOut);
   FStartTime := Now;
-  FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
@@ -524,7 +532,7 @@ function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: 
 var
   Cand: TIntSet;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
   FStartTime := Now;
   FNodes := aGraph.SortNodesByWidth(soDesc);
@@ -646,7 +654,7 @@ function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut
 var
   Cand, Tested: TBoolVector;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
   FStartTime := Now;
   FillMatrix(aGraph, Cand);
@@ -755,7 +763,7 @@ function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTime
 var
   Cand, Tested: TBits256;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
   FStartTime := Now;
   FillMatrix(aGraph, Cand);
@@ -817,7 +825,7 @@ function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: 
 var
   Cand: TIntSet;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FCancelled := False;
   FStartTime := Now;
   FRecentBest := aGraph.GreedyMDS;
@@ -989,7 +997,7 @@ end;
 function TGSimpleGraph.TExactColor.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
   out aExact: Boolean): SizeInt;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FCancelled := False;
@@ -1008,7 +1016,7 @@ function TGSimpleGraph.TExactColor.IsColorable(aGraph: TGSimpleGraph; aK: SizeIn
 var
   Lb: SizeInt;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FLowBound := aK;
@@ -1033,7 +1041,7 @@ end;
 function TGSimpleGraph.TExactColor.Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer;
   var aColors: TIntArray): TTriLean;
 begin
-  FTimeOut := aTimeOut and System.High(Integer);
+  SetTimeout(aTimeOut);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FLowBound := aK;
@@ -1142,7 +1150,10 @@ begin
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   FMatrix := aGraph.CreateBoolMatrix;
   FVacant.InitRange(FNodeCount);
-  FTimeOut := aTimeOut and System.High(Integer);
+  if aTimeOut = WAIT_INFINITE then
+    FTimeout := System.High(Integer)
+  else
+    FTimeout := Math.Max(aTimeOut, 0);
   FFound := 0;
   FDone := False;
   FCancelled := False;

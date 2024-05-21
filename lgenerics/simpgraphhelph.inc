@@ -24,7 +24,8 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancelled: Boolean;
-    function TimeOut: Boolean; inline;
+    procedure SetTimeout(aValue: Integer);
+    function  TimeOut: Boolean; inline;
   end;
 
   TBPCliqueIsHelper = object(TNodeSearch) // BP -> bit-parallel
@@ -460,4 +461,6 @@ type
     constructor Create(aIndex, aWDegree, aDegree: SizeInt);
   end;
 
+  TIntNodeBinHeap    = specialize TGBinHeapMin<TIntNode>;
+  TIntNodeBinHeapMax = specialize TGBinHeapMin<TIntNodeMax>;
 

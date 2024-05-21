@@ -28,7 +28,7 @@ unit lgSimpleGraph;
 interface
 
 uses
-  Classes, SysUtils, DateUtils,
+  Classes, SysUtils, DateUtils, Math,
   lgUtils,
   {%H-}lgHelpers,
   lgArrayHelpers,
@@ -151,11 +151,6 @@ type
 
     TDistinctEdgeEnumerator = record
     private
-    //type
-    //  PNode = TGSimpleGraph.PNode;
-    //  TAdjList = TGSimpleGraph.TAdjList;
-    //  TEnum = TGSimpleGraph.TAdjList.TEnumerator;
-    //var
       FList: TGSimpleGraph.PNode;
       FEnum: TGSimpleGraph.TAdjList.TEnumerator;
       FCurrIndex,
@@ -224,9 +219,7 @@ type
     procedure ListIsBP(aOnFind: TOnSetFound);
     procedure ListIsBP256(aOnFind: TOnSetFound);
     function  GetGreedyMis: TIntArray;
-    function  GetGreedyMisBP: TIntArray;
     function  GetGreedyMinIs: TIntArray;
-    function  GetGreedyMinIsBP: TIntArray;
     procedure DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -350,7 +343,7 @@ type
     the degeneracy of a graph G is the least k, such that every induced subgraph of G contains
     a vertex with degree d <= k }
     function  Degeneracy: SizeInt;
-  { same as above and in array aCores returns the degrees of the corresponding vertices,
+  { same as above and in array aDegs returns the degrees of the corresponding vertices,
     such that if aDegs[I] = k, then vertex I belongs to the k-core and not to the (k+1)-core }
     function  Degeneracy(out aDegs: TIntArray): SizeInt;
   { returns array of indices of the k-core(k-cores if graph is not connected) }
@@ -2123,112 +2116,82 @@ end;
 
 function TGSimpleGraph.GetGreedyMis: TIntArray;
 var
-  Cand, Stack: TIntSet;
-  I, J, CurrPop, MinPop: SizeInt;
+  Mis, Stack: TIntSet;
+  Queue: TIntNodeBinHeap;
+  InQueue: TBoolVector;
+  Node, Tmp: TIntNode;
+  I: SizeInt;
+  p: PAdjItem;
 begin
-  Cand.InitRange(VertexCount);
-  while Cand.NonEmpty do
+  Queue := TIntNodeBinHeap.Create(VertexCount);
+  InQueue.InitRange(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
+  Mis := Default(TIntSet);
+  Stack := Default(TIntSet);
+  Node := Default(TIntNode);
+  while Queue.TryDequeue(Node) do
     begin
-      J := NULL_INDEX;
-      MinPop := Succ(VertexCount);
-      for I in Cand do
-        begin
-          CurrPop := Succ(Cand.IntersectionCount(AdjLists[I]));
-          if CurrPop < MinPop then
+      InQueue.UncBits[Node.Index] := False;
+      Mis.Push(Node.Index);
+      for p in AdjLists[Node.Index]^ do
+        if InQueue.UncBits[p^.Key] then
+          begin
+            Queue.Remove(p^.Key);
+            InQueue.UncBits[p^.Key] := False;
+            Stack.Push(p^.Key);
+          end;
+      for I in Stack do
+        for p in AdjLists[I]^ do
+          if InQueue.UncBits[p^.Key] then
             begin
-              MinPop := CurrPop;
-              J := I;
+              Tmp := Queue.GetItem(p^.Key);
+              Dec(Tmp.Data);
+              Queue.Update(p^.Key, Tmp);
             end;
-        end;
-      Cand.Subtract(AdjLists[J]);
-      Cand.Delete(J);
-      {%H-}Stack.Push(J);
+      Stack.MakeEmpty;
     end;
-  Result := Stack.ToArray;
-end;
-
-function TGSimpleGraph.GetGreedyMisBP: TIntArray;
-var
-  Matrix: TBoolMatrix;
-  Cand: TBoolVector;
-  Stack: TIntSet;
-  I, J, CurrPop, MinPop: SizeInt;
-begin
-  Matrix := CreateBoolMatrix;
-  Cand.InitRange(VertexCount);
-  while Cand.NonEmpty do
-    begin
-      J := NULL_INDEX;
-      MinPop := Succ(VertexCount);
-      for I in Cand do
-        begin
-          CurrPop := Succ(Cand.IntersectionPop(Matrix[I]));
-          if CurrPop < MinPop then
-            begin
-              MinPop := CurrPop;
-              J := I;
-            end;
-        end;
-      Cand.UncBits[J] := False;
-      Cand.Subtract(Matrix[J]);
-      {%H-}Stack.Push(J);
-    end;
-  Result := Stack.ToArray;
+  Result := Mis.ToArray;
 end;
 
 function TGSimpleGraph.GetGreedyMinIs: TIntArray;
 var
-  Cand, Stack: TIntSet;
-  I, J, CurrPop, MaxPop: SizeInt;
+  MinIS, Stack: TIntSet;
+  Queue: TIntNodeBinHeapMax;
+  InQueue: TBoolVector;
+  Node, Tmp: TIntNodeMax;
+  I: SizeInt;
+  p: PAdjItem;
 begin
-  Cand.InitRange(VertexCount);
-  while Cand.NonEmpty do
+  Queue := TIntNodeBinHeapMax.Create(VertexCount);
+  InQueue.InitRange(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Queue.Enqueue(I, TIntNodeMax.Create(I, AdjLists[I]^.Count));
+  MinIS := Default(TIntSet);
+  Stack := Default(TIntSet);
+  Node := Default(TIntNodeMax);
+  while Queue.TryDequeue(Node) do
     begin
-      J := NULL_INDEX;
-      MaxPop := 0;
-      for I in Cand do
-        begin
-          CurrPop := Succ(Cand.IntersectionCount(AdjLists[I]));
-          if CurrPop > MaxPop then
+      InQueue.UncBits[Node.Index] := False;
+      MinIS.Push(Node.Index);
+      for p in AdjLists[Node.Index]^ do
+        if InQueue.UncBits[p^.Key] then
+          begin
+            Queue.Remove(p^.Key);
+            InQueue.UncBits[p^.Key] := False;
+            Stack.Push(p^.Key);
+          end;
+      for I in Stack do
+        for p in AdjLists[I]^ do
+          if InQueue.UncBits[p^.Key] then
             begin
-              MaxPop := CurrPop;
-              J := I;
+              Tmp := Queue.GetItem(p^.Key);
+              Dec(Tmp.Data);
+              Queue.Update(p^.Key, Tmp);
             end;
-        end;
-      Cand.Subtract(AdjLists[J]);
-      Cand.Delete(J);
-      {%H-}Stack.Push(J);
+      Stack.MakeEmpty;
     end;
-  Result := Stack.ToArray;
-end;
-
-function TGSimpleGraph.GetGreedyMinIsBP: TIntArray;
-var
-  Matrix: TBoolMatrix;
-  Cand: TBoolVector;
-  Stack: TIntSet;
-  I, J, CurrPop, MaxPop: SizeInt;
-begin
-  Matrix := CreateBoolMatrix;
-  Cand.InitRange(VertexCount);
-  while Cand.NonEmpty do
-    begin
-      J := NULL_INDEX;
-      MaxPop := 0;
-      for I in Cand do
-        begin
-          CurrPop := Succ(Cand.IntersectionPop(Matrix[I]));
-          if CurrPop > MaxPop then
-            begin
-              MaxPop := CurrPop;
-              J := I;
-            end;
-        end;
-      Cand.Subtract(Matrix[J]);
-      Cand.UncBits[J] := False;
-      {%H-}Stack.Push(J);
-    end;
-  Result := Stack.ToArray;
+  Result := MinIS.ToArray;
 end;
 
 procedure TGSimpleGraph.DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
@@ -4328,11 +4291,14 @@ begin
   if IsEmpty then
     exit(nil);
   if VertexCount = 1 then
-    exit([0]);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetGreedyMis
+    exit([0])
   else
-    Result := GetGreedyMisBP;
+    if VertexCount = 2 then
+      if Connected then
+        exit([0])
+      else
+        exit([0, 1]);
+  Result := GetGreedyMis;
 end;
 
 function TGSimpleGraph.IsMIS(const aTestMis: TIntArray): Boolean;
@@ -4422,10 +4388,7 @@ begin
         exit([0])
       else
         exit([0, 1]);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetGreedyMinIs
-  else
-    Result := GetGreedyMinIsBP;
+  Result := GetGreedyMinIs;
 end;
 
 function TGSimpleGraph.IsMDS(const aTestMds: TIntArray): Boolean;
@@ -5183,7 +5146,7 @@ begin
           'e':
             begin
               ReadStr(ParseLine, Symb, Src, Dst);
-              if s.Add(Src, Dst) then
+              if (Src <> Dst) and s.Add(Src, Dst) then //else ???
                 ForceAddEdge(Src, Dst);
             end;
       end;
