@@ -367,7 +367,7 @@ type
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
-    class function NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+    class function  NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   { inplace Bellman-Ford-Moore algorithm }
     class function  BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
