@@ -283,6 +283,7 @@ type
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; virtual; abstract;
   public
     destructor Destroy; override;
+    function GetInstanceClass: TJtdEntityClass;
     property Tag: string read FTag;
     //
   end;
@@ -1000,16 +1001,23 @@ end;
 
 procedure TJtdVariant.DoReadJson(aReader: TJsonReader);
 var
-  s: string;
-  n: TJsonNode;
+  s, TagName: string;
+  Node, TagNode: TJsonNode;
 begin
   if aReader.TokenKind <> tkObjectBegin then ReadError;
   if not aReader.CopyStruct(s) then ReadError;
-  if not TJsonNode.TryParse(s, n) then ReadError;
+  if not TJsonNode.TryParse(s, Node) then ReadError;
   try
-    DoReadJson(n);
+    TagName := GetTagJsonName;
+    if not Node.Find(TagName, TagNode) then ReadError;
+    if not TagNode.IsString then ReadError;
+    if not ValidTagValue(TagNode.AsString) then ReadError;
+    FTag := TagNode.AsString;
+    if not Node.Remove(TagName) then Error(SEInternJtdVariantError);
+    FreeAndNil(FInstance);
+    FInstance := GetInstanceClass(Tag).ReadJson(Node);
   finally
-    n.Free;
+    Node.Free;
   end;
 end;
 
@@ -1031,6 +1039,11 @@ destructor TJtdVariant.Destroy;
 begin
   FInstance.Free;
   inherited;
+end;
+
+function TJtdVariant.GetInstanceClass: TJtdEntityClass;
+begin
+  Result := GetInstanceClass(Tag);
 end;
 
 end.
