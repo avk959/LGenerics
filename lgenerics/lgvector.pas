@@ -2433,10 +2433,10 @@ end;
 
 function TBoolVector.IsEmpty: Boolean;
 var
-  I: SizeUInt;
+  I: SizeInt;
 begin
-  for I in FBits do
-    if I <> 0 then
+  for I := 0 to System.High(FBits) do
+    if FBits[I] <> 0 then
       exit(False);
   Result := True;
 end;
