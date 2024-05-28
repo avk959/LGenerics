@@ -29,9 +29,9 @@ end;
 
 function TGSimpleGraph.TNodeSearch.TimeOut: Boolean;
 begin
-  if not FCancelled then
-    FCancelled := SecondsBetween(Now, FStartTime) >= FTimeOut;
-  Result := FCancelled;
+  if not FCanceled then
+    FCanceled := SecondsBetween(Now, FStartTime) >= FTimeOut;
+  Result := FCanceled;
 end;
 
 { TGSimpleGraph.TBPCliqueIsHelper }
@@ -87,7 +87,7 @@ begin
           NewCand := aCand.Intersection(FMatrix[J]);
           Inc(FCurrCount);
           Extend(NewCand);
-          if FCancelled then
+          if FCanceled then
             break;
           FCurrSet.UncBits[FNodes[J]] := False;
           Dec(FCurrCount);
@@ -113,13 +113,13 @@ begin
             NewSub := aSub.Intersection(FMatrix[I]);
             FCurrSet.UncBits[FNodes[I]] := True;
             Extend(NewSub, NewCand);
-            if FCancelled then
+            if FCanceled then
               break;
             FCurrSet.UncBits[FNodes[I]] := False;
           end;
     end
   else
-    FOnFind(FCurrSet.ToArray, FCancelled);
+    FOnFind(FCurrSet.ToArray, FCanceled);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -173,7 +173,7 @@ var
   Cand: TBoolVector;
 begin
   SetTimeout(aTimeOut);
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, False);
   //SortMatrixByDegree(aGraph, False);
@@ -183,7 +183,7 @@ begin
   FCurrCount := 0;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCancelled;
+  aExact := not FCanceled;
 end;
 
 function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -192,7 +192,7 @@ var
   Cand: TBoolVector;
 begin
   SetTimeout(aTimeOut);
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
@@ -201,7 +201,7 @@ begin
   FCurrCount := 0;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCancelled;
+  aExact := not FCanceled;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
@@ -213,7 +213,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Capacity := aGraph.VertexCount;
   FOnFind := aOnFind;
-  FCancelled := False;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -226,7 +226,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Capacity := aGraph.VertexCount;
   FOnFind := aOnFind;
-  FCancelled := False;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -283,7 +283,7 @@ begin
           NewCand := aCand.Intersection(FMatrix[J]);
           Inc(FCurrCount);
           Extend(NewCand);
-          if FCancelled then
+          if FCanceled then
             break;
           FCurrSet[FNodes[J]] := False;
           Dec(FCurrCount);
@@ -309,13 +309,13 @@ begin
             NewSub := aSub.Intersection(FMatrix[I]);
             FCurrSet[FNodes[I]] := True;
             Extend(NewSub, NewCand);
-            if FCancelled then
+            if FCanceled then
               break;
             FCurrSet[FNodes[I]] := False;
           end;
     end
   else
-    FOnFind(FCurrSet.ToArray, FCancelled);
+    FOnFind(FCurrSet.ToArray, FCanceled);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -369,7 +369,7 @@ var
   Cand: TBits256;
 begin
   SetTimeout(aTimeOut);
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
@@ -378,7 +378,7 @@ begin
   FCurrCount := 0;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCancelled;
+  aExact := not FCanceled;
 end;
 
 function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -388,7 +388,7 @@ var
 begin
   SetTimeout(aTimeOut);
   FStartTime := Now;
-  FCancelled := False;
+  FCanceled := False;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
@@ -396,7 +396,7 @@ begin
   FCurrCount := 0;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCancelled;
+  aExact := not FCanceled;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
@@ -408,7 +408,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   FOnFind := aOnFind;
-  FCancelled := False;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -421,7 +421,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   FOnFind := aOnFind;
-  FCancelled := False;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -493,7 +493,7 @@ begin
           FCurrSet.Push(FNodes[J]);
           NewCand := aCand.Intersection(FMatrix[J]^);
           Extend(NewCand);
-          if FCancelled then
+          if FCanceled then
             break;
           FCurrSet.Pop;
         end;
@@ -518,13 +518,13 @@ begin
             NewSub := aSub.Intersection(FMatrix[I]^);
             FCurrSet.Push(FNodes[I]);
             Extend(NewSub, NewCand);
-            if FCancelled then
+            if FCanceled then
               break;
             FCurrSet.Pop;
           end;
     end
   else
-    FOnFind(FCurrSet.ToArray, FCancelled);
+    FOnFind(FCurrSet.ToArray, FCanceled);
 end;
 
 function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -533,7 +533,7 @@ var
   Cand: TIntSet;
 begin
   SetTimeout(aTimeOut);
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   FNodes := aGraph.SortNodesByWidth(soDesc);
   FMatrix := aGraph.CreateSkeleton;
@@ -541,7 +541,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCancelled;
+  aExact := not FCanceled;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
@@ -553,289 +553,249 @@ begin
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
   FOnFind := aOnFind;
-  FCancelled := False;
+  FCanceled := False;
   Extend(Sub, Cand);
-end;
-
-{ TGSimpleGraph.TBPDomSetHelper }
-
-procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
-var
-  Idx2Ord: TIntArray = nil;
-  I, Degree: SizeInt;
-  p: PAdjItem;
-begin
-  FNodes := aGraph.SortNodesByDegree(soDesc);
-  Idx2Ord.Length := FNodes.Length;
-  for I := 0 to System.High(FNodes) do
-    Idx2Ord[FNodes[I]] := I;
-  System.SetLength(FMatrix, System.Length(FNodes));
-  aCand.InitRange(FNodes.Length);
-  FCurrSet.Capacity := FNodes.Length;
-  for I := 0 to System.High(FNodes) do
-    begin
-      FMatrix[I].Capacity := FNodes.Length;
-      Degree := 0;
-      for p in aGraph.AdjLists[FNodes[I]]^ do
-        begin
-          FMatrix[I].UncBits[Idx2Ord[p^.Key]] := True;
-          Inc(Degree);
-        end;
-      if Degree = 0 then
-        begin
-          FCurrSet.UncBits[FNodes[I]] := True;
-          aCand.UncBits[I] := False;
-        end;
-    end;
-end;
-
-procedure TGSimpleGraph.TBPDomSetHelper.Extend(const aCand, aTested: TBoolVector);
-var
-  NewCand, NewTested: TBoolVector;
-  I, J: SizeInt;
-begin
-  if aCand.NonEmpty then
-    begin
-      if FCurrCount >= FRecentBest.Length - 1 then
-        exit;
-      if TimeOut then
-        exit;
-      I := NULL_INDEX;
-      for J in aCand do
-        if not aTested.UncBits[J] then
-          begin
-            I := J;
-            break;
-          end;
-      if I = NULL_INDEX then
-        exit;
-      NewTested := aTested;
-      NewTested.UncBits[I] := True;
-      NewCand := aCand.Difference(FMatrix[I]);
-      NewCand.UncBits[I] := False;
-      FCurrSet.UncBits[FNodes[I]] := True;
-      Inc(FCurrCount);
-      Extend(NewCand, NewTested);
-      FCurrSet.UncBits[FNodes[I]] := False;
-      Dec(FCurrCount);
-      if (FCurrCount < Pred(FRecentBest.Length)) and not FCancelled then
-        for J in aCand.Intersection(FMatrix[I]) do
-          begin
-            if NewTested.UncBits[J] then
-              continue;
-            NewTested.UncBits[J] := True;
-            NewCand := aCand.Difference(FMatrix[J]);
-            NewCand.UncBits[J] := False;
-            FCurrSet.UncBits[FNodes[J]] := True;
-            Inc(FCurrCount);
-            Extend(NewCand, NewTested);
-            if (FCurrCount < Pred(FRecentBest.Length)) and not FCancelled then
-              begin
-                NewCand.Subtract(FMatrix[I]);
-                FCurrSet.UncBits[FNodes[I]] := True;
-                Inc(FCurrCount);
-                Extend(NewCand, NewTested);
-                FCurrSet.UncBits[FNodes[I]] := False;
-                Dec(FCurrCount);
-              end;
-            if (FCurrCount >= FRecentBest.Length) or FCancelled then
-              break;
-            FCurrSet.UncBits[FNodes[J]] := False;
-            Dec(FCurrCount);
-          end;
-    end
-  else
-    if FCurrSet.PopCount < FRecentBest.Length then
-      FRecentBest := FCurrSet.ToArray;
-end;
-
-function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
-  out aExact: Boolean): TIntArray;
-var
-  Cand, Tested: TBoolVector;
-begin
-  SetTimeout(aTimeOut);
-  FCancelled := False;
-  FStartTime := Now;
-  FillMatrix(aGraph, Cand);
-  FRecentBest := aGraph.GreedyMDS;
-  Tested.Capacity := aGraph.VertexCount;
-  FCurrCount := 0;
-  Extend(Cand, Tested);
-  aExact := not FCancelled;
-  Result := FRecentBest;
-end;
-
-{ TGSimpleGraph.TBPDomSetHelper256 }
-
-procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
-var
-  Idx2Ord: TIntArray = nil;
-  I, Degree: SizeInt;
-  p: PAdjItem;
-begin
-  FNodes := aGraph.SortNodesByDegree(soDesc);
-  Idx2Ord.Length := FNodes.Length;
-  for I := 0 to System.High(FNodes) do
-    Idx2Ord[FNodes[I]] := I;
-  System.SetLength(FMatrix, System.Length(FNodes));
-  aCand.InitRange(FNodes.Length);
-  FCurrSet.InitZero;
-  for I := 0 to System.High(FNodes) do
-    begin
-      FMatrix[I].InitZero;
-      Degree := 0;
-      for p in aGraph.AdjLists[FNodes[I]]^ do
-        begin
-          FMatrix[I][Idx2Ord[p^.Key]] := True;
-          Inc(Degree);
-        end;
-      if Degree = 0 then
-        begin
-          FCurrSet[FNodes[I]] := True;
-          aCand[I] := False;
-        end;
-    end;
-end;
-
-procedure TGSimpleGraph.TBPDomSetHelper256.Extend(const aCand, aTested: TBits256);
-var
-  NewCand, NewTested: TBits256;
-  I, J: SizeInt;
-begin
-  if aCand.NonEmpty then
-    begin
-      if FCurrCount >= FRecentBest.Length - 1 then
-        exit;
-      if TimeOut then
-        exit;
-      I := NULL_INDEX;
-      for J in aCand do
-        if not aTested[J] then
-          begin
-            I := J;
-            break;
-          end;
-      if I = NULL_INDEX then
-        exit;
-      NewTested := aTested;
-      NewTested[I] := True;
-      NewCand := aCand.Difference(FMatrix[I]);
-      NewCand[I] := False;
-      FCurrSet[FNodes[I]] := True;
-      Inc(FCurrCount);
-      Extend(NewCand, NewTested);
-      FCurrSet[FNodes[I]] := False;
-      Dec(FCurrCount);
-      if (FCurrCount < Pred(FRecentBest.Length)) and not FCancelled then
-        for J in aCand.Intersection(FMatrix[I]) do
-          begin
-            if NewTested[J] then
-              continue;
-            NewTested[J] := True;
-            NewCand := aCand.Difference(FMatrix[J]);
-            NewCand[J] := False;
-            FCurrSet[FNodes[J]] := True;
-            Inc(FCurrCount);
-            Extend(NewCand, NewTested);
-            if (FCurrCount < Pred(FRecentBest.Length)) and not FCancelled then
-              begin
-                NewCand.Subtract(FMatrix[I]);
-                FCurrSet[FNodes[I]] := True;
-                Inc(FCurrCount);
-                Extend(NewCand, NewTested);
-                FCurrSet[FNodes[I]] := False;
-                Dec(FCurrCount);
-              end;
-            if (FCurrCount >= FRecentBest.Length) or FCancelled then
-              break;
-            FCurrSet[FNodes[J]] := False;
-            Dec(FCurrCount);
-          end;
-    end
-  else
-    if FCurrSet.PopCount < FRecentBest.Length then
-      FRecentBest := FCurrSet.ToArray;
-end;
-
-function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
-  out aExact: Boolean): TIntArray;
-var
-  Cand, Tested: TBits256;
-begin
-  SetTimeout(aTimeOut);
-  FCancelled := False;
-  FStartTime := Now;
-  FillMatrix(aGraph, Cand);
-  FRecentBest := aGraph.GreedyMDS;
-  {%H-}Tested.InitZero;
-  FCurrCount := 0;
-  Extend(Cand, Tested);
-  aExact := not FCancelled;
-  Result := FRecentBest;
 end;
 
 { TGSimpleGraph.TDomSetHelper }
 
-procedure TGSimpleGraph.TDomSetHelper.Extend(const aCand: TIntSet);
+procedure TGSimpleGraph.TDomSetHelper.FindBounds;
 var
-  NewCand: TIntSet;
-  I, J: SizeInt;
+  I, J, r, d, Delta: SizeInt;
 begin
-  if aCand.NonEmpty then
+  if FGraph.VertexCount < FGraph.COMMON_BP_CUTOFF then
     begin
-      if FCurrSet.Count >= FRecentBest.Length - 1 then
-        exit;
-      if TimeOut then
-        exit;
-      I := aCand[0];
-      NewCand.Assign(aCand);
-      FCurrSet.Push(I);
-      NewCand := aCand.Difference(FMatrix[I]^);
-      NewCand.Delete(I);
-      Extend(NewCand);
-      FCurrSet.Pop;
-      if (FCurrSet.Count >= FRecentBest.Length - 1) or FCancelled then
-        exit;
-      for J in aCand.Intersection(FMatrix[I]^) do
-        begin
-          FCurrSet.Push(J);
-          NewCand := aCand.Difference(FMatrix[J]^);
-          NewCand.Delete(J);
-          Extend(NewCand);
-          if (FCurrSet.Count < FRecentBest.Length - 1) and not FCancelled then
-            begin
-              FCurrSet.Push(I);
-              NewCand.Subtract(FMatrix[I]^);
-              Extend(NewCand);
-              FCurrSet.Pop;
-            end;
-          if (FCurrSet.Count >= FRecentBest.Length) or FCancelled then
-            exit;
-          FCurrSet.Pop;
-        end;
+      FGraphMx := FGraph.CreateBoolMatrix;
+      for I := 0 to Pred(FGraph.VertexCount) do
+        FGraphMx[I][I] := True;
     end
   else
-    if aCand.Count < FRecentBest.Length then
-      FRecentBest := FCurrSet.ToArray;
+    System.SetLength(FTempBool, FGraph.VertexCount);
+  FRecentBest := FGraph.GreedyMDS;
+  FLeafSet.Capacity := FGraph.VertexCount;
+  FSuppSet.Capacity := FGraph.VertexCount;
+  Delta := 1;
+  J := NULL_INDEX;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    with FGraph.AdjLists[I]^ do
+      if Count = 1 then
+        begin
+          FLeafSet[I] := True;
+          FindFirst(J);
+          FSuppSet[J] := True;
+          FSuppList.Add(J);
+        end
+     else
+       if Count > Delta then
+         Delta := Count;
+  FGraph.FindMetrics(r, d);
+  FLoBound := Math.Max(FSuppList.Count, FGraph.VertexCount div Succ(Delta));
+  FLoBound := Math.Max(FLoBound, Math.Max(r * 2 div 3, Succ(d) div 3));
+end;
+
+procedure TGSimpleGraph.TDomSetHelper.NewPrioList;
+var
+  D, S, InQueue: TBoolVector;
+  Queue: TIntNodeBinHeapMax;
+  Node, Tmp: TIntNodeMax;
+  I, Deg: SizeInt;
+  p: PAdjItem;
+begin
+  FPrioList.MakeEmpty;
+  Queue := TIntNodeBinHeapMax.Create(FGraph.VertexCount);
+  InQueue.Capacity := FGraph.VertexCount;
+  for I in FRecentBest do
+    if not(FSuppSet.UncBits[I] or FLeafSet.UncBits[I]) then
+      begin
+        Deg := FGraph.AdjLists[I]^.Count;
+        for p in FGraph.AdjLists[I]^ do
+          if FSuppSet[p^.Key] then
+            Dec(Deg);
+        Queue.Enqueue(I, TIntNodeMax.Create(I, Deg));
+        InQueue.UncBits[I] := True;
+      end;
+  Node := Default(TIntNodeMax);
+  S.Capacity := FGraph.VertexCount;
+  while Queue.TryDequeue(Node) do
+    begin
+      I := Node.Index;
+      InQueue.UncBits[I] := False;
+      FPrioList.Add(I);
+      S.UncBits[I] := True;
+      for p in FGraph.AdjLists[I]^ do
+        if S.UncBits[p^.Key] and InQueue.UncBits[p^.Key] then
+          begin
+            Tmp := Queue.GetItem(p^.Key);
+            Dec(Tmp.Data);
+            Queue.Update(p^.Key, Tmp);
+          end;
+    end;
+  D.InitRange(FGraph.VertexCount);
+  if FSuppList.NonEmpty then
+    D.Subtract(FLeafSet);
+  D.Subtract(S);
+  for I in D do
+    Queue.Enqueue(I, TIntNodeMax.Create(I, FGraph.AdjLists[I]^.Count));
+  while Queue.TryDequeue(Node) do
+    FPrioList.Add(Node.Index);
+end;
+
+function TGSimpleGraph.TDomSetHelper.IsFeasible(const aCand: TIntVector): Boolean;
+var
+  I, Rest: SizeInt;
+  p: PAdjItem;
+begin
+  System.FillChar(Pointer(FTempBool)^, System.Length(FTempBool), $01);
+  Rest := FGraph.VertexCount;
+  for I in aCand do
+    begin
+      if FTempBool[I] then
+        begin
+          FTempBool[I] := False;
+          Dec(Rest);
+        end;
+      if Rest <> 0 then
+        for p in FGraph.AdjLists[I]^ do
+          if FTempBool[p^.Key] then
+            begin
+              FTempBool[p^.Key] := False;
+              Dec(Rest);
+              if Rest = 0 then break;
+            end;
+      if Rest = 0 then break;
+    end;
+  Result := Rest = 0;
+end;
+
+function TGSimpleGraph.TDomSetHelper.IsFeasibleBp(const aCand: TIntVector): Boolean;
+var
+  I: SizeInt;
+begin
+  FTempSet.InitRange(FGraph.VertexCount);
+  for I := 0 to Pred(aCand.Count) do
+    FTempSet.Subtract(FGraphMx[aCand.UncMutable[I]^]);
+  Result := FTempSet.IsEmpty;
+end;
+
+function TGSimpleGraph.TDomSetHelper.FindNext(var aSolCand: TIntVector; aLevel, aListIdx: SizeInt): Boolean;
+var
+  I: SizeInt;
+begin
+  if aLevel = 0 then
+    begin
+      if IsFeasible(aSolCand) then
+        begin
+          FCurrMds.MakeEmpty;
+          FCurrMds.AddAll(aSolCand);
+          exit(True);
+        end;
+      exit(False);
+    end;
+  for I := aListIdx to Pred(FPrioList.Count) do
+    begin
+      if TimeOut then exit(False);
+      aSolCand.Add(FPrioList.UncMutable[I]^);
+      if FindNext(aSolCand, aLevel-1, aListIdx+1) then exit(True);
+      aSolCand.DeleteLast;
+    end;
+  Result := False;
+end;
+
+function TGSimpleGraph.TDomSetHelper.FindNextBp(var aSolCand: TIntVector; aLevel, aListIdx: SizeInt): Boolean;
+var
+  I: SizeInt;
+begin
+  if aLevel = 0 then
+    begin
+      if IsFeasibleBp(aSolCand) then
+        begin
+          FCurrMds.MakeEmpty;
+          FCurrMds.AddAll(aSolCand);
+          exit(True);
+        end;
+      exit(False);
+    end;
+  for I := aListIdx to Pred(FPrioList.Count) do
+    begin
+      if TimeOut then exit(False);
+      aSolCand.Add(FPrioList.UncMutable[I]^);
+      if FindNextBp(aSolCand, aLevel-1, aListIdx+1) then exit(True);
+      aSolCand.DeleteLast;
+    end;
+  Result := False;
+end;
+
+function TGSimpleGraph.TDomSetHelper.GetNext(aLoBound: SizeInt): TIntArray;
+var
+  Cand: TIntVector;
+  I: SizeInt;
+begin
+  Cand := Default(TIntVector);
+  for I in FSuppList do
+    Cand.Add(I);
+  if FindNext(Cand, aLoBound - FSuppList.Count, 0) then
+    Result := FCurrMds.ToArray
+  else
+    Result := nil;
+end;
+
+function TGSimpleGraph.TDomSetHelper.GetNextBp(aLoBound: SizeInt): TIntArray;
+var
+  Cand: TIntVector;
+  I: SizeInt;
+begin
+  Cand := Default(TIntVector);
+  for I in FSuppList do
+    Cand.Add(I);
+  if FindNextBp(Cand, aLoBound - FSuppList.Count, 0) then
+    Result := FCurrMds.ToArray
+  else
+    Result := nil;
+end;
+
+procedure TGSimpleGraph.TDomSetHelper.Execute;
+var
+  U, Bnd: SizeInt;
+  r: TIntArray;
+  UseBp: Boolean;
+begin
+  U := System.Length(FRecentBest);
+  Bnd := (FLoBound + U*3) div 4;
+  NewPrioList;
+  UseBp := FGraph.VertexCount < FGraph.COMMON_BP_CUTOFF;
+  while Succ(FLoBound) < U do
+    begin
+      if TimeOut then exit;
+      if UseBp then
+        r := GetNextBp(Bnd)
+      else
+        r := GetNext(Bnd);
+      if r = nil then
+        begin
+          FLoBound := Bnd;
+          Bnd := (FLoBound + U*3) div 4;
+        end
+      else
+        begin
+          FRecentBest := r;
+          U := Bnd;
+          Bnd := (FLoBound + U*3) div 4;
+          NewPrioList;
+        end;
+    end;
 end;
 
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
-var
-  Cand: TIntSet;
 begin
   SetTimeout(aTimeOut);
-  FCancelled := False;
   FStartTime := Now;
-  FRecentBest := aGraph.GreedyMDS;
-  FMatrix := aGraph.CreateSkeleton;
-  Cand.AssignArray(aGraph.SortNodesByDegree(soDesc));
-  while Cand.NonEmpty and FMatrix[Cand.Last]^.IsEmpty do
-    FCurrSet.Push(Cand.Pop);
-  Extend(Cand);
-  aExact := not FCancelled;
+  FGraph := aGraph;
+  FCanceled := False;
+  FindBounds;
+  Execute;
   Result := FRecentBest;
+  aExact := not FCanceled;
 end;
 
 { TGSimpleGraph.TExactColor.TNode }
@@ -893,8 +853,8 @@ var
 begin
   Clique := FGraph.FindMaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime));
   Result := Clique.Length;
-  FCancelled := not Exact;
-  if FCancelled or (Result >= FUpBound) then
+  FCanceled := not Exact;
+  if FCanceled or (Result >= FUpBound) then
     exit;
   CreateStaticGraph;
   FColorMap := FGraph.CreateIntArray(0);
@@ -1000,13 +960,13 @@ begin
   SetTimeout(aTimeOut);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   FUpBound := FGraph.GreedyColorRlf(FRecentBest);
   FLowBound := InitLowBound;
-  if not FCancelled and (FLowBound < FUpBound) then
+  if not FCanceled and (FLowBound < FUpBound) then
     DSatur(FLowBound);
-  aExact := not FCancelled;
+  aExact := not FCanceled;
   Result := FUpBound;
   aColors := FRecentBest;
 end;
@@ -1021,10 +981,10 @@ begin
   FGraph := aGraph;
   FLowBound := aK;
   FUpBound := Succ(aK);
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   Lb := InitLowBound;
-  if (Lb < FUpBound) and not FCancelled then
+  if (Lb < FUpBound) and not FCanceled then
     DSatur(Lb);
   if FLowBound >= FUpBound then
     begin
@@ -1032,7 +992,7 @@ begin
       Result := tlTrue;
     end
   else
-    if not FCancelled then
+    if not FCanceled then
       Result := tlFalse
     else
       Result := tlUnknown;
@@ -1046,7 +1006,7 @@ begin
   FGraph := aGraph;
   FLowBound := aK;
   FUpBound := Succ(aK);
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
   FColorMap := System.Copy(aColors);
   InitComplete;
@@ -1057,7 +1017,7 @@ begin
       Result := tlTrue;
     end
   else
-    if not FCancelled then
+    if not FCanceled then
       Result := tlFalse
     else
       Result := tlUnknown;
@@ -1156,14 +1116,14 @@ begin
     FTimeout := Math.Max(aTimeOut, 0);
   FFound := 0;
   FDone := False;
-  FCancelled := False;
+  FCanceled := False;
   FStartTime := Now;
 end;
 
 function TGSimpleGraph.THamiltonSearch.TimeToFinish: Boolean;
 begin
-  FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
-  Result := FCancelled or FDone;
+  FCanceled := FCanceled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
+  Result := FCanceled or FDone;
 end;
 
 function TGSimpleGraph.THamiltonSearch.SelectMin(const v: TBoolVector; out aValue: SizeInt): Boolean;
@@ -1288,7 +1248,7 @@ function TGSimpleGraph.THamiltonSearch.FindCycles(aGraph: TGSimpleGraph; aSrc, a
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
   ExecuteCycles;
-  Result := not FCancelled and pv^.NonEmpty;
+  Result := not FCanceled and pv^.NonEmpty;
 end;
 
 function TGSimpleGraph.THamiltonSearch.FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
@@ -1296,7 +1256,7 @@ function TGSimpleGraph.THamiltonSearch.FindPaths(aGraph: TGSimpleGraph; aSrc, aC
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
   ExecutePaths;
-  Result := not FCancelled and pv^.NonEmpty;
+  Result := not FCanceled and pv^.NonEmpty;
 end;
 
 { TGSimpleGraph.THKMatch }

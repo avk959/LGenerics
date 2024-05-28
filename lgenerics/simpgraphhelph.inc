@@ -23,7 +23,7 @@ type
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCancelled: Boolean;
+    FCanceled: Boolean;
     procedure SetTimeout(aValue: Integer);
     function  TimeOut: Boolean; inline;
   end;
@@ -102,36 +102,25 @@ type
     procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
   end;
 
-  TBPDomSetHelper = object(TNodeSearch) // BP -> bit-parallel
-  strict private
-    FMatrix: TBoolMatrix;
-    FCurrSet: TBoolVector;
-    FNodes: TIntArray;
-    FCurrCount: SizeInt;
-    procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
-    procedure Extend(const aCand, aTested: TBoolVector);
-  public
-    function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
-  end;
-
-  { TBPDomSetHelper256 }
-  TBPDomSetHelper256 = object(TNodeSearch) // BP -> bit-parallel
-  strict private
-    FMatrix: TBitMatrix256;
-    FCurrSet: TBits256;
-    FNodes: TIntArray;
-    FCurrCount: SizeInt;
-    procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
-    procedure Extend(const aCand, aTested: TBits256);
-  public
-    function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
-  end;
-
+  { TDomSetHelper: inspired by https://arxiv.org/abs/2211.07019,
+    Inza et al - "Exact and Heuristic Algorithms for the Domination Problem" }
   TDomSetHelper = object(TNodeSearch)
   strict private
-    FMatrix: TSkeleton;
-    FCurrSet: TIntSet;
-    procedure Extend(const aCand: TIntSet);
+    FGraph: TGSimpleGraph;
+    FGraphMx: TBoolMatrix;
+    FPrioList, FSuppList, FCurrMds: TIntVector;
+    FLeafSet, FSuppSet, FTempSet: TBoolVector;
+    FTempBool: array of Boolean;
+    FLoBound: SizeInt;
+    procedure FindBounds;
+    procedure NewPrioList;
+    function  IsFeasible(const aCand: TIntVector): Boolean;
+    function  IsFeasibleBp(const aCand: TIntVector): Boolean;
+    function  FindNext(var aSolCand: TIntVector; aLevel, aListIdx: SizeInt): Boolean;
+    function  FindNextBp(var aSolCand: TIntVector; aLevel, aListIdx: SizeInt): Boolean;
+    function  GetNext(aLoBound: SizeInt): TIntArray;
+    function  GetNextBp(aLoBound: SizeInt): TIntArray;
+    procedure Execute;
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
@@ -213,7 +202,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FDone,
-    FCancelled: Boolean;
+    FCanceled: Boolean;
     procedure Init(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
     function  TimeToFinish: Boolean; inline;
     function  SelectMin(const v: TBoolVector; out aValue: SizeInt): Boolean;

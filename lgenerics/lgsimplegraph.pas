@@ -221,9 +221,8 @@ type
     function  GetGreedyMis: TIntArray;
     function  GetGreedyMinIs: TIntArray;
     procedure DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
-    function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMdsConnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMdsDisconnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  ColorTrivial(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
     function  ColorConnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function  ColorDisconnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
@@ -461,8 +460,7 @@ type
   { returns indices of the vertices of the some found minimum dominating vertex set;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
-    recent solution will be returned, and aExact will be set to False;
-    todo: seems buggy, do not use! }
+    recent solution will be returned, and aExact will be set to False }
     function  FindMDS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
   { returns True if aTestMds contains indices of the some minimal dominating vertex set, False otherwise }
@@ -1779,7 +1777,10 @@ var
   Exact: Boolean;
 begin
   aExact := False;
-  TimeOut := aTimeOut and System.High(Integer);
+  if aTimeOut = WAIT_INFINITE then
+    Timeout := System.High(Integer)
+  else
+    Timeout := Math.Max(aTimeOut, 0);
   StartTime := Now;
   Result := GreedyMaxClique;
   if SecondsBetween(Now, StartTime) < TimeOut then
@@ -1791,6 +1792,7 @@ begin
             g := InducedSubgraph(Separates[I].ToArray);
             try
               CurrClique := g.FindMaxClique(Exact, TimeOut - SecondsBetween(Now, StartTime));
+              if not Exact then exit;
               if CurrClique.Length > Result.Length then
                 begin
                   Curr := 0;
@@ -1804,8 +1806,6 @@ begin
             finally
               g.Free;
             end;
-            if not Exact then
-              exit;
           end;
       aExact := True;
     end;
@@ -2272,25 +2272,61 @@ begin
   Extend(Cand, Tested);
 end;
 
-function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-var
-  Helper: TBPDomSetHelper;
-begin
-  Result := Helper.MinDomSet(Self, aTimeOut, aExact);
-end;
-
-function TGSimpleGraph.GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-var
-  Helper: TBPDomSetHelper256;
-begin
-  Result := Helper.MinDomSet(Self, aTimeOut, aExact);
-end;
-
-function TGSimpleGraph.GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+function TGSimpleGraph.GetMdsConnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TDomSetHelper;
+  I: SizeInt;
 begin
+  // here here assumes that the graph is connected and non-empty
+  aExact := True;
+  case VertexCount of
+    1, 2:
+      exit([0]);
+    3:
+      for I := 0 to 2 do
+        if DegreeI(I) = 2 then
+          exit([I]);
+  else
+  end;
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMdsDisconnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+var
+  Separates: TIntVectorArray;
+  g: TGSimpleGraph;
+  SepMds: TIntArray;
+  Mds: TIntVector;
+  I, J: SizeInt;
+  TimeOut: Integer;
+  StartTime: TDateTime;
+  Exact: Boolean;
+begin
+  aExact := False;
+  if aTimeOut = WAIT_INFINITE then
+    Timeout := System.High(Integer)
+  else
+    Timeout := Math.Max(aTimeOut, 0);
+  StartTime := Now;
+  Result := GreedyMds;
+  if SecondsBetween(Now, StartTime) < TimeOut then
+    begin
+      Separates := FindSeparates;
+      for I := 0 to System.High(Separates) do
+        begin
+          g := InducedSubgraph(Separates[I].ToArray);
+          try
+            SepMds := g.FindMds(Exact, TimeOut - SecondsBetween(Now, StartTime));
+            if not Exact then exit;
+            for J in SepMds do
+              Mds.Add(IndexOf(g[J]));
+          finally
+            g.Free;
+          end;
+        end;
+      Result := Mds.ToArray;
+      aExact := True;
+    end;
 end;
 
 function TGSimpleGraph.ColorTrivial(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
@@ -4356,24 +4392,15 @@ end;
 
 function TGSimpleGraph.FindMDS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 begin
-  aExact := True;
   if IsEmpty then
-    exit(nil);
-  if VertexCount = 1 then
-    exit([0])
+    begin
+      aExact := True;
+      exit(nil);
+    end;
+  if Connected then
+    Result := GetMdsConnected(aTimeOut, aExact)
   else
-    if VertexCount = 2 then
-      if Connected then
-        exit([0])
-      else
-        exit([0, 1]);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetMds(aTimeOut, aExact)
-  else
-    if VertexCount > TBits256.BITNESS then
-      Result := GetMdsBP(aTimeOut, aExact)
-    else
-      Result := GetMdsBP256(aTimeOut, aExact);
+    Result := GetMdsDisconnected(aTimeOut, aExact)
 end;
 
 function TGSimpleGraph.GreedyMDS: TIntArray;
