@@ -446,9 +446,9 @@ type
     setting aCancel to True in aOnFound will exit the method }
     procedure ListAllMIS(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found maximum independent set;
-    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout the best recent solution will be returned, and aExact
-    will be set to False }
+    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds,
+    any negative value implies an infinite timeout; at the end of the timeout the best recent solution
+    will be returned, and aExact will be set to False }
     function  FindMIS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMIS: TIntArray;
   { returns True if aTestMis contains indices of the some maximal independent vertex set, False otherwise }
@@ -458,9 +458,9 @@ type
     setting aCancel to True in aOnFound will exit the method }
     procedure ListDomSets(AtMostSize: SizeInt; aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found minimum dominating vertex set;
-    worst case time cost of exact solution O*(2^n);
-    aTimeOut specifies the timeout in seconds; at the end of the timeout the best
-    recent solution will be returned, and aExact will be set to False }
+    worst case time cost of exact solution O*(2^n); aTimeOut specifies the timeout in seconds,
+    any negative value implies an infinite timeout; at the end of the timeout the best recent solution
+    will be returned, and aExact will be set to False }
     function  FindMDS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
   { returns True if aTestMds contains indices of the some minimal dominating vertex set, False otherwise }
@@ -469,9 +469,9 @@ type
     setting aCancel to True in aOnFound will exit the method }
     procedure ListAllCliques(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found maximum clique;
-    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout the best recent solution will be returned, and aExact
-    will be set to False }
+    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds,
+    any negative value implies an infinite timeout; at the end of the timeout the best recent solution
+    will be returned, and aExact will be set to False }
     function  FindMaxClique(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMaxClique: TIntArray;
   { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
@@ -480,17 +480,17 @@ type
     setting aCancel to True in aOnFound will exit the method }
     procedure ListAllMVC(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found minimum vertex cover;
-    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout the best recent solution will be returned, and aExact
-    will be set to False }
+    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds,
+    any negative value implies an infinite timeout; at the end of the timeout the best recent solution
+    will be returned, and aExact will be set to False }
     function  FindMVC(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMVC: TIntArray;
   { returns True if aTestMvc contains indices of the some minimal vertex cover, False otherwise }
     function  IsMVC(const aTestMvc: TIntArray): Boolean;
   { returns count of used colors(chromatic number, if aExact); returns colors of the vertices
     in corresponding components of aColors; worst case time cost of exact solution O*(k^n);
-    aTimeOut specifies the timeout in seconds; at the end of the timeout,
-    the best recent solution will be returned, and aExact will be set to False }
+    aTimeOut specifies the timeout in seconds, any negative value implies an infinite timeout;
+    at the end of the timeout, the best recent solution will be returned, and aExact will be set to False }
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean;
               aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { returns tlTrue and colors of the vertices in corresponding components of aColors,
@@ -498,8 +498,8 @@ type
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
   { returns tlTrue if it is possible to complete the coloring using predefined colors specified
-    in aColors and at most aK of colors; aTimeOut specifies the timeout in seconds;
-    at the end of the timeout tlUnknown will be returned }
+    in aColors and at most aK of colors; aTimeOut specifies the timeout in seconds,
+    any negative value implies an infinite timeout; at the end of the timeout tlUnknown will be returned }
     function  IsKColorCompletable(aK: SizeInt; var aColors: TIntArray;
               aTimeOut: Integer = WAIT_INFINITE): TTriLean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
@@ -511,8 +511,8 @@ type
     function  IsProperVertexColoring(const aTestColors: TIntArray): Boolean;
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aSource;
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
-    Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
-    at the end of the timeout False will be returned }
+    Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds,
+    any negative value implies an infinite timeout; at the end of the timeout False will be returned }
     function  FindHamiltonCycles(const aSource: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
@@ -522,7 +522,8 @@ type
   { tries to return in aPaths the specified number of Hamiltonian paths, starting
     from the vertex aSrc; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
-    the timeout in seconds; at the end of the timeout False will be returned }
+    the timeout in seconds, any negative value implies an infinite timeout;
+    at the end of the timeout False will be returned }
     function  FindHamiltonPaths(const aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
@@ -1777,10 +1778,10 @@ var
   Exact: Boolean;
 begin
   aExact := False;
-  if aTimeOut = WAIT_INFINITE then
-    Timeout := System.High(Integer)
+  if aTimeOut < 0 then
+    TimeOut := System.High(Integer)
   else
-    Timeout := Math.Max(aTimeOut, 0);
+    TimeOut := aTimeOut;
   StartTime := Now;
   Result := GreedyMaxClique;
   if SecondsBetween(Now, StartTime) < TimeOut then
@@ -2069,7 +2070,10 @@ var
   Exact: Boolean;
 begin
   aExact := False;
-  TimeOut := aTimeOut and System.High(Integer);
+  if aTimeOut < 0 then
+    TimeOut := System.High(Integer)
+  else
+    TimeOut := aTimeOut;
   StartTime := Now;
   Result := GreedyMis;
   Mis := nil;
@@ -2303,10 +2307,10 @@ var
   Exact: Boolean;
 begin
   aExact := False;
-  if aTimeOut = WAIT_INFINITE then
-    Timeout := System.High(Integer)
+  if aTimeOut < 0 then
+    TimeOut := System.High(Integer)
   else
-    Timeout := Math.Max(aTimeOut, 0);
+    TimeOut := aTimeOut;
   StartTime := Now;
   Result := GreedyMds;
   if SecondsBetween(Now, StartTime) < TimeOut then
@@ -2394,7 +2398,10 @@ var
   Exact: Boolean;
 begin
   aExact := False;
-  TimeOut := aTimeOut and System.High(Integer);
+  if aTimeOut < 0 then
+    TimeOut := System.High(Integer)
+  else
+    TimeOut := aTimeOut;
   StartTime := Now;
   Result := GreedyColorRlf(aColors);
   if SecondsBetween(Now, StartTime) < TimeOut then
@@ -2438,7 +2445,10 @@ var
   TimeOut: Integer;
   StartTime: TDateTime;
 begin
-  TimeOut := aTimeOut and System.High(Integer);
+  if aTimeOut < 0 then
+    TimeOut := System.High(Integer)
+  else
+    TimeOut := aTimeOut;
   StartTime := Now;
   Separates := FindSeparates;
   aColors.Length := VertexCount;
