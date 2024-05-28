@@ -21,16 +21,16 @@
 
 procedure TGSimpleGraph.TNodeSearch.SetTimeout(aValue: Integer);
 begin
-  if aValue = WAIT_INFINITE then
-    FTimeout := System.High(Integer)
+  if aValue < 0 then
+    FTimeout := System.High(QWord)
   else
-    FTimeout := Math.Max(aValue, 0);
+    FTimeout := aValue * 1000;
 end;
 
 function TGSimpleGraph.TNodeSearch.TimeOut: Boolean;
 begin
   if not FCanceled then
-    FCanceled := SecondsBetween(Now, FStartTime) >= FTimeOut;
+    FCanceled := GetTickCount64 - FStartTime >= FTimeOut;
   Result := FCanceled;
 end;
 
@@ -174,7 +174,7 @@ var
 begin
   SetTimeout(aTimeOut);
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   SortMatrixByWidth(aGraph, False);
   //SortMatrixByDegree(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
@@ -193,7 +193,7 @@ var
 begin
   SetTimeout(aTimeOut);
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
@@ -370,7 +370,7 @@ var
 begin
   SetTimeout(aTimeOut);
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
@@ -387,7 +387,7 @@ var
   Cand: TBits256;
 begin
   SetTimeout(aTimeOut);
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   FCanceled := False;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
@@ -534,7 +534,7 @@ var
 begin
   SetTimeout(aTimeOut);
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   FNodes := aGraph.SortNodesByWidth(soDesc);
   FMatrix := aGraph.CreateSkeleton;
   FRecentBest := aGraph.GreedyMaxClique;
@@ -789,7 +789,7 @@ function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: 
   out aExact: Boolean): TIntArray;
 begin
   SetTimeout(aTimeOut);
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   FGraph := aGraph;
   FCanceled := False;
   FindBounds;
@@ -961,7 +961,7 @@ begin
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   FUpBound := FGraph.GreedyColorRlf(FRecentBest);
   FLowBound := InitLowBound;
   if not FCanceled and (FLowBound < FUpBound) then
@@ -982,7 +982,7 @@ begin
   FLowBound := aK;
   FUpBound := Succ(aK);
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   Lb := InitLowBound;
   if (Lb < FUpBound) and not FCanceled then
     DSatur(Lb);
@@ -1007,7 +1007,7 @@ begin
   FLowBound := aK;
   FUpBound := Succ(aK);
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
   FColorMap := System.Copy(aColors);
   InitComplete;
   DSatur(FLowBound);
@@ -1110,19 +1110,19 @@ begin
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   FMatrix := aGraph.CreateBoolMatrix;
   FVacant.InitRange(FNodeCount);
-  if aTimeOut = WAIT_INFINITE then
-    FTimeout := System.High(Integer)
+  if aTimeOut < 0 then
+    FTimeout := System.High(QWord)
   else
-    FTimeout := Math.Max(aTimeOut, 0);
+    FTimeout := aTimeOut * 1000;
   FFound := 0;
   FDone := False;
   FCanceled := False;
-  FStartTime := Now;
+  FStartTime := GetTickCount64;
 end;
 
 function TGSimpleGraph.THamiltonSearch.TimeToFinish: Boolean;
 begin
-  FCanceled := FCanceled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
+  FCanceled := FCanceled or (GetTickCount64 - FStartTime >= FTimeOut);
   Result := FCanceled or FDone;
 end;
 

@@ -21,8 +21,8 @@ type
   TNodeSearch = object
   protected
     FRecentBest: TIntArray;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
+    FStartTime,
+    FTimeOut: QWord;
     FCanceled: Boolean;
     procedure SetTimeout(aValue: Integer);
     function  TimeOut: Boolean; inline;
@@ -199,8 +199,8 @@ type
     FNodeCount,
     FRequired,
     FFound: SizeInt;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
+    FStartTime,
+    FTimeOut: QWord;
     FDone,
     FCanceled: Boolean;
     procedure Init(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
