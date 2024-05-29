@@ -621,12 +621,12 @@ type
       FBestTour: array of Integer;
       FRowMin,
       FColMin: TMinArray;
-      FMatrixSize,
-      FTimeOut: Integer;
+      FMatrixSize: Integer;
       FUpBound: T;
-      FStartTime: TDateTime;
+      FTimeOut,
+      FStartTime: QWord;
       FIsMetric,
-      FCancelled: Boolean;
+      FCanceled: Boolean;
       procedure Init(const m: TTspMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
@@ -722,15 +722,15 @@ type
     will raise EGraphError if m is not proper TSP matrix }
     class function FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
   { exact branch and bound algorithm for TSP;
-    aTimeOut specifies the timeout in seconds; at the end of the timeout,
-    will be returned False and the best recent solution;
+    aTimeOut specifies the timeout in seconds, any negative value implies an infinite timeout;
+    at the end of the timeout, will be returned False and the best recent solution;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
   { suboptimal branch and bound algorithm for TSP;
-    aTimeOut specifies the timeout in seconds; at the end of the timeout,
-    will be returned False and the best recent solution, otherwise
-    returns solution of a given guaranteed accuracy, specified with param Accuracy;
+    aTimeOut specifies the timeout in seconds, any negative value implies an infinite timeout;
+    at the end of the timeout will be returned False and the best recent solution,
+    otherwise returns solution of a given guaranteed accuracy, specified with param Accuracy;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out aCost: T;
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
@@ -2731,7 +2731,10 @@ begin
       FBestTour := nil;
       FUpBound := T.INF_VALUE;
     end;
-  FTimeOut := aTimeOut and System.High(Integer);
+  if aTimeOut < 0 then
+    FTimeOut := System.High(QWord)
+  else
+    FTimeOut := aTimeOut * 1000;
   System.SetLength(FForwardTour, FMatrixSize);
   System.FillChar(Pointer(FForwardTour)^, FMatrixSize * SizeOf(Integer), $ff);
   FBackTour := System.Copy(FForwardTour);
@@ -2740,14 +2743,15 @@ begin
   System.SetLength(FZeros, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
     FZeros[I].Capacity := FMatrixSize;
-  FStartTime := Now;
-  FCancelled := False;
+  FStartTime := GetTickCount64;
+  FCanceled := False;
 end;
 
 function TGTspHelper.TBbTsp.TimeOut: Boolean;
 begin
-  FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
-  Result := FCancelled;
+  if not FCanceled then
+   FCanceled := GetTickCount64 - FStartTime >= FTimeOut;
+  Result := FCanceled;
 end;
 
 function TGTspHelper.TBbTsp.Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
@@ -3099,7 +3103,7 @@ begin
   Cols := System.Copy(Rows);
   Search(FMatrixSize, 0, PInt(Rows), PInt(Cols));
   CopyBest(aTour, aCost);
-  Result := not FCancelled;
+  Result := not FCanceled;
 end;
 
 { TGTspHelper.TApproxBbTsp }
@@ -3375,7 +3379,7 @@ begin
   Cols := System.Copy(Rows);
   Search(FMatrixSize, 0, PInt(Rows), PInt(Cols));
   CopyBest(aTour, aCost);
-  Result := not FCancelled;
+  Result := not FCanceled;
 end;
 
 { TGTspHelper.TLs3Opt }
