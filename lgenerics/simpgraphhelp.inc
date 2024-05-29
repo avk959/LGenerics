@@ -623,7 +623,7 @@ begin
       FPrioList.Add(I);
       S.UncBits[I] := True;
       for p in FGraph.AdjLists[I]^ do
-        if S.UncBits[p^.Key] and InQueue.UncBits[p^.Key] then
+        if InQueue.UncBits[p^.Key] then
           begin
             Tmp := Queue.GetItem(p^.Key);
             Dec(Tmp.Data);
