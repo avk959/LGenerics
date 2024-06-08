@@ -91,9 +91,7 @@
   - N-th order statistics
   - inversion counting
   - distinct values selection
-  - quicksort
   - introsort
-  - dual pivot quicksort
   - mergesort
   - timsort(unit lgMiscUtils)
   - counting sort
