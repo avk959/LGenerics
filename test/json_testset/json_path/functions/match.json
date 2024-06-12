@@ -105,6 +105,36 @@
           "a": "ab"
         }
       ]
+    },
+    {
+      "name": "dot in character class",
+      "selector" : "$[?match(@, 'a[.b]c')]",
+      "document" : ["abc", "a.c", "axc"],
+      "result": ["abc", "a.c"]
+    },
+    {
+      "name": "escaped dot",
+      "selector" : "$[?match(@, 'a\\\\.c')]",
+      "document" : ["abc", "a.c", "axc"],
+      "result": ["a.c"]
+    },
+    {
+      "name": "escaped backslash before dot",
+      "selector" : "$[?match(@, 'a\\\\\\\\.c')]",
+      "document" : ["abc", "a.c", "axc", "a\\\u2028c"],
+      "result": ["a\\\u2028c"]
+    },
+    {
+      "name": "escaped left square bracket",
+      "selector" : "$[?match(@, 'a\\\\[.c')]",
+      "document" : ["abc", "a.c", "a[\u2028c"],
+      "result": ["a[\u2028c"]
+    },
+    {
+      "name": "escaped right square bracket",
+      "selector" : "$[?match(@, 'a[\\\\].]c')]",
+      "document" : ["abc", "a.c", "a\u2028c", "a]c"],
+      "result": ["a.c", "a]c"]
     }
   ]
 }

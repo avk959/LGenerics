@@ -119,6 +119,36 @@
         ]
       },
       "result": ["bab", "bba", "bbab"]
+    },
+    {
+      "name": "dot in character class",
+      "selector" : "$[?search(@, 'a[.b]c')]",
+      "document" : ["x abc y", "x a.c y", "x axc y"],
+      "result": ["x abc y", "x a.c y"]
+    },
+    {
+      "name": "escaped dot",
+      "selector" : "$[?search(@, 'a\\\\.c')]",
+      "document" : ["x abc y", "x a.c y", "x axc y"],
+      "result": ["x a.c y"]
+    },
+    {
+      "name": "escaped backslash before dot",
+      "selector" : "$[?search(@, 'a\\\\\\\\.c')]",
+      "document" : ["x abc y", "x a.c y", "x axc y", "x a\\\u2028c y"],
+      "result": ["x a\\\u2028c y"]
+    },
+    {
+      "name": "escaped left square bracket",
+      "selector" : "$[?search(@, 'a\\\\[.c')]",
+      "document" : ["x abc y", "x a.c y", "x a[\u2028c y"],
+      "result": ["x a[\u2028c y"]
+    },
+    {
+      "name": "escaped right square bracket",
+      "selector" : "$[?search(@, 'a[\\\\].]c')]",
+      "document" : ["x abc y", "x a.c y", "x a\u2028c y", "x a]c y"],
+      "result": ["x a.c y", "x a]c y"]
     }
   ]
 }

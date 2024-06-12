@@ -930,6 +930,90 @@
       "selector" : "$[?(@.a || @.b) && @.b]",
       "document" : [{"a": 1}],
       "result": []
+    },
+    {
+      "name": "string literal, single quote in double quotes",
+      "selector" : "$[?@ == \"quoted' literal\"]",
+      "document" : ["quoted' literal", "a", "quoted\\' literal"],
+      "result": ["quoted' literal"]
+    },
+    {
+      "name": "string literal, double quote in single quotes",
+      "selector" : "$[?@ == 'quoted\" literal']",
+      "document" : ["quoted\" literal", "a", "quoted\\\" literal", "'quoted\" literal'"],
+      "result": ["quoted\" literal"]
+    },
+    {
+      "name": "string literal, escaped single quote in single quotes",
+      "selector" : "$[?@ == 'quoted\\' literal']",
+      "document" : ["quoted' literal", "a", "quoted\\' literal", "'quoted\" literal'"],
+      "result": ["quoted' literal"]
+    },
+    {
+      "name": "string literal, escaped double quote in double quotes",
+      "selector" : "$[?@ == \"quoted\\\" literal\"]",
+      "document" : ["quoted\" literal", "a", "quoted\\\" literal", "'quoted\" literal'"],
+      "result": ["quoted\" literal"]
+    },
+    {
+      "name": "literal true must be compared",
+      "selector" : "$[?true]",
+      "invalid_selector": true
+    },
+    {
+      "name": "literal false must be compared",
+      "selector" : "$[?false]",
+      "invalid_selector": true
+    },
+    {
+      "name": "literal string must be compared",
+      "selector" : "$[?'abc']",
+      "invalid_selector": true
+    },
+    {
+      "name": "literal int must be compared",
+      "selector" : "$[?2]",
+      "invalid_selector": true
+    },
+    {
+      "name": "literal float must be compared",
+      "selector" : "$[?2.2]",
+      "invalid_selector": true
+    },
+    {
+      "name": "literal null must be compared",
+      "selector" : "$[?null]",
+      "invalid_selector": true
+    },
+    {
+      "name": "and, literals must be compared",
+      "selector" : "$[?true && false]",
+      "invalid_selector": true
+    },
+    {
+      "name": "or, literals must be compared",
+      "selector" : "$[?true || false]",
+      "invalid_selector": true
+    },
+    {
+      "name": "and, right hand literal must be compared",
+      "selector" : "$[?true == false && false]",
+      "invalid_selector": true
+    },
+    {
+      "name": "or, right hand literal must be compared",
+      "selector" : "$[?true == false || false]",
+      "invalid_selector": true
+    },
+    {
+      "name": "and, left hand literal must be compared",
+      "selector" : "$[?false && true == false]",
+      "invalid_selector": true
+    },
+    {
+      "name": "or, left hand literal must be compared",
+      "selector" : "$[?false || true == false]",
+      "invalid_selector": true
     }
   ]
 }
