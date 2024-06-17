@@ -305,10 +305,22 @@ type
     function  FindCenter: TIntArray;
   { returns array of indices of the peripheral vertices, if graph is strongly connected, nil otherwise }
     function  FindPeripheral: TIntArray;
+  { returns an array of degree centrality values for the nodes;
+    the degree centrality for some node is the fraction of nodes it is connected to,
+    normalized by dividing by the maximum possible degree in a simple graph }
+    function  DegreeCentrality: TDoubleArray;
+  { returns an array of in-degree centrality values for the nodes;
+    the in-degree centrality for some node is the fraction of nodes its incoming edges are connected to,
+    normalized by dividing by the maximum possible degree in a simple graph }
+    function  InDegreeCentrality: TDoubleArray;
+  { returns an array of out-degree centrality values for the nodes;
+    the out-degree centrality for some node is the fraction of nodes its outgoing edges are connected to,
+    normalized by dividing by the maximum possible degree in a simple graph }
+    function  OutDegreeCentrality: TDoubleArray;
   { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
     path, or an empty array if the path does not exists }
-    function ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
-    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+    function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 {**********************************************************************************************************
   flowgraph utilities
 ***********************************************************************************************************}
@@ -2510,6 +2522,43 @@ begin
         Inc(J);
       end;
   Result.Length := J;
+end;
+
+function TGSimpleDigraph.DegreeCentrality: TDoubleArray;
+var
+  I: SizeInt;
+  DMax: Double;
+begin
+  if IsEmpty then exit(nil);
+  System.SetLength(Result, VertexCount);
+  DMax := Pred(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    with FNodeList[I] do
+      Result[I] := (Double(Tag) + Double(AdjList.Count))/DMax;
+end;
+
+function TGSimpleDigraph.InDegreeCentrality: TDoubleArray;
+var
+  I: SizeInt;
+  DMax: Double;
+begin
+  if IsEmpty then exit(nil);
+  System.SetLength(Result, VertexCount);
+  DMax := Pred(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := Double(FNodeList[I].Tag)/DMax;
+end;
+
+function TGSimpleDigraph.OutDegreeCentrality: TDoubleArray;
+var
+  I: SizeInt;
+  DMax: Double;
+begin
+  if IsEmpty then exit(nil);
+  System.SetLength(Result, VertexCount);
+  DMax := Pred(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := Double(AdjLists[I]^.Count)/DMax;
 end;
 
 function TGSimpleDigraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;

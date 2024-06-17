@@ -328,13 +328,13 @@ type
   { returns True if graph is planar, an empty graph is considered planar;
     used FMR Left-Right planarity algorithm }
     function  IsPlanar: Boolean;
-  { same as above, recursive variant }
+  { same as above, recursive version }
     function  IsPlanarR: Boolean;
   { returns True and the planar embedding in aEmbedding, if graph is planar,
     otherwise returns False and nil; used FMR Left-Right planarity algorithm;
     todo: Kuratowski subdivision extraction? }
     function  IsPlanar(out aEmbedding: TPlanarEmbedding): Boolean;
-  { same as above, recursive variant }
+  { same as above, recursive version }
     function  IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
   { returns True if aEmbedding is proper planar embedding }
     function  IsEmbedding(const aEmbedding: TPlanarEmbedding): Boolean;
@@ -345,11 +345,13 @@ type
   { same as above and in array aDegs returns the degrees of the corresponding vertices,
     such that if aDegs[I] = k, then vertex I belongs to the k-core and not to the (k+1)-core }
     function  Degeneracy(out aDegs: TIntArray): SizeInt;
-  { returns array of indices of the k-core(k-cores if graph is not connected) }
+  { returns an array of indices of the k-core(k-cores if graph is not connected) }
     function  KCore(aK: SizeInt): TIntArray;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(const aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
+  { returns global clustering coefficient }
+    function  GlobalClustering: Double;
   { returns count of independent cycles }
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
@@ -396,14 +398,18 @@ type
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
-  { returns array of indices of the central vertices, if graph is connected, nil otherwise }
+  { returns an array of indices of the central vertices, if graph is connected, nil otherwise }
     function  FindCenter: TIntArray;
   { returns array of indices of the peripheral vertices, if graph is connected, nil otherwise }
     function  FindPeripheral: TIntArray;
+  { returns an array of degree centrality values for the nodes;
+    the degree centrality for some node is the fraction of nodes it is connected to,
+    normalized by dividing by the maximum possible degree in a simple graph }
+    function  DegreeCentrality: TDoubleArray;
   { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
     path, or an empty array if the path does not exists }
-    function ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
-    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+    function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
     type
       //vertex partition
       TCut = record
@@ -3818,22 +3824,51 @@ end;
 
 function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): Double;
 var
-  I, J, Counter, d: SizeInt;
+  Counter, d: SizeInt;
   pList: PAdjList;
+  p, p1: PAdjItem;
 begin
   CheckIndexRange(aIndex);
-  d := DegreeI(aIndex);
-  if d <= 1 then
-    exit(0.0);
+  d := AdjLists[aIndex]^.Count;
+  if d <= 1 then exit(Double(0));
   Counter := 0;
-  for I in AdjVerticesI(aIndex) do
+  for p in AdjLists[aIndex]^ do
+    begin
+      pList := AdjLists[p^.Key];
+      for p1 in AdjLists[aIndex]^ do
+        Inc(Counter, Ord((p^.Key > p1^.Key) and pList^.Contains(p1^.Key)));
+    end;
+  Result := Double(Counter)*2/(Double(d) * Double(Pred(d)));
+end;
+
+function TGSimpleGraph.GlobalClustering: Double;
+var
+  I: SizeInt;
+  TriangleCnt, TriadCnt, d: Int64;
+  pList, pList1: PAdjList;
+  p, p1: PAdjItem;
+begin
+  if IsEmpty then exit(Double(0));
+  TriangleCnt := 0;
+  TriadCnt := 0;
+  for I := 0 to Pred(VertexCount) do
     begin
       pList := AdjLists[I];
-      for J in AdjVerticesI(aIndex) do
-        if I <> J then
-          Counter += Ord(pList^.Contains(J));
+      d := pList^.Count;
+      if d > 1 then
+        begin
+          Inc(TriadCnt, d*(d-1) div 2);
+          for p in pList^ do
+            if p^.Key > I then
+              begin
+                pList1 := AdjLists[p^.Key];
+                for p1 in pList^ do
+                  Inc(TriangleCnt, Ord((p1^.Key > p^.Key) and pList1^.Contains(p1^.Key)));
+              end;
+        end;
     end;
-  Result := Double(Counter) / (Double(d) * Double(Pred(d)));
+  if TriadCnt = 0 then exit(Double(0));
+  Result := Double(TriangleCnt)*3/Double(TriadCnt);
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
@@ -4148,6 +4183,18 @@ begin
         Inc(J);
       end;
   Result.Length := J;
+end;
+
+function TGSimpleGraph.DegreeCentrality: TDoubleArray;
+var
+  I: SizeInt;
+  DMax: Double;
+begin
+  if IsEmpty then exit(nil);
+  System.SetLength(Result, VertexCount);
+  DMax := Pred(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := Double(AdjLists[I]^.Count)/DMax;
 end;
 
 function TGSimpleGraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;
