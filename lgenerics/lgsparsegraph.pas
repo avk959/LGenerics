@@ -47,6 +47,7 @@ type
   TIntArray        = array of SizeInt;
   TIntMatrix       = array of TIntArray;
   TShortArray      = array of ShortInt;
+  TDoubleArray     = array of Double;
   TIntHelper       = lgArrayHelpers.TSizeIntHelper;
   TIntVector       = specialize TGLiteVector<SizeInt>;
   PIntVector       = ^TIntVector;
