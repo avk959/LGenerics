@@ -3727,7 +3727,7 @@ begin
       if Odd(EdgeCnt) then
         exit(False);
       //check if FaceCnt satisfies Euler's formula
-      if not NodeCnt + FaceCnt - EdgeCnt div 2 = 2 then
+      if NodeCnt + FaceCnt - EdgeCnt div 2 <> 2 then
         exit(False);
     end;
 
@@ -3836,39 +3836,79 @@ begin
     begin
       pList := AdjLists[p^.Key];
       for p1 in AdjLists[aIndex]^ do
-        Inc(Counter, Ord((p^.Key > p1^.Key) and pList^.Contains(p1^.Key)));
+        if (p1^.Key > p^.Key) and pList^.Contains(p1^.Key) then
+          Inc(Counter);
     end;
   Result := Double(Counter)*2/(Double(d) * Double(Pred(d)));
 end;
 
 function TGSimpleGraph.GlobalClustering: Double;
-var
-  I: SizeInt;
-  TriangleCnt, TriadCnt, d: Int64;
-  pList, pList1: PAdjList;
-  p, p1: PAdjItem;
+  function GetClusteringBm: Double;
+  var
+    m: TBoolMatrix;
+    TriangleCnt, ForkCnt, d: Int64;
+    I, J, K: SizeInt;
+  begin
+    m := CreateBoolMatrix;
+    TriangleCnt := 0;
+    ForkCnt := 0;
+    for I := 0 to Pred(VertexCount) do
+      begin
+        d := AdjLists[I]^.Count;
+        if d > 1 then
+          begin
+            Inc(ForkCnt, d*(d-1) div 2);
+            J := I;
+            repeat
+              J := m[I].NextSetBit(J);
+              if J = NULL_INDEX then break;
+              K := J;
+              repeat
+                K := m[I].NextSetBit(K);
+                if K = NULL_INDEX then break;
+                if m[J].UncBits[K] then Inc(TriangleCnt);
+              until False;
+            until False;
+          end;
+      end;
+    if ForkCnt = 0 then exit(Double(0));
+    GetClusteringBm := Double(TriangleCnt)*3/Double(ForkCnt);
+  end;
+  function GetClustering: Double;
+  var
+    I: SizeInt;
+    TriangleCnt, ForkCnt, d: Int64;
+    pList, pList1: PAdjList;
+    p, p1: PAdjItem;
+  begin
+    TriangleCnt := 0;
+    ForkCnt := 0;
+    for I := 0 to Pred(VertexCount) do
+      begin
+        pList := AdjLists[I];
+        d := pList^.Count;
+        if d > 1 then
+          begin
+            Inc(ForkCnt, d*(d-1) div 2);
+            for p in pList^ do
+              if p^.Key > I then
+                begin
+                  pList1 := AdjLists[p^.Key];
+                  for p1 in pList^ do
+                    if (p1^.Key > p^.Key) and pList1^.Contains(p1^.Key) then
+                      Inc(TriangleCnt);
+                end;
+          end;
+      end;
+    if ForkCnt = 0 then exit(Double(0));
+    GetClustering := Double(TriangleCnt)*3/Double(ForkCnt);
+  end;
 begin
   if IsEmpty then exit(Double(0));
-  TriangleCnt := 0;
-  TriadCnt := 0;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      pList := AdjLists[I];
-      d := pList^.Count;
-      if d > 1 then
-        begin
-          Inc(TriadCnt, d*(d-1) div 2);
-          for p in pList^ do
-            if p^.Key > I then
-              begin
-                pList1 := AdjLists[p^.Key];
-                for p1 in pList^ do
-                  Inc(TriangleCnt, Ord((p1^.Key > p^.Key) and pList1^.Contains(p1^.Key)));
-              end;
-        end;
-    end;
-  if TriadCnt = 0 then exit(Double(0));
-  Result := Double(TriangleCnt)*3/Double(TriadCnt);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetClustering
+  else
+    Result := GetClusteringBm;
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
