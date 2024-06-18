@@ -2516,7 +2516,7 @@ begin
     )
   else
     for I := LimbIdx + 1 to System.High(FBits) do
-      if FBits[I] <> High(SizeUInt) then
+      if FBits[I] <> 0 then
         exit(
           I shl INT_SIZE_LOG +
           {$IF DEFINED(CPU64)}ShortInt(BsfQWord(FBits[I]))
