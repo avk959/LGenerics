@@ -2491,9 +2491,9 @@ begin
     if FBits[I] <> 0 then
       exit(
         I shl INT_SIZE_LOG +
-        {$IF DEFINED(CPU64)}ShortInt(BsfQWord(FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(FBits[I]))
-        {$ELSE}ShortInt(BsfWord(FBits[I])){$ENDIF}
+        {$IF DEFINED(CPU64)}SizeInt(BsfQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(FBits[I]))
+        {$ELSE}SizeInt(BsfWord(FBits[I])){$ENDIF}
       );
   Result := NULL_INDEX;
 end;
@@ -2510,18 +2510,18 @@ begin
   if Limb <> 0 then
     exit(
       LimbIdx shl INT_SIZE_LOG +
-      {$IF DEFINED(CPU64)}ShortInt(BsfQWord(Limb))
-      {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(Limb))
-      {$ELSE}ShortInt(BsfWord(Limb)){$ENDIF}
+      {$IF DEFINED(CPU64)}SizeInt(BsfQWord(Limb))
+      {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(Limb))
+      {$ELSE}SizeInt(BsfWord(Limb)){$ENDIF}
     )
   else
     for I := LimbIdx + 1 to System.High(FBits) do
       if FBits[I] <> 0 then
         exit(
           I shl INT_SIZE_LOG +
-          {$IF DEFINED(CPU64)}ShortInt(BsfQWord(FBits[I]))
-          {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(FBits[I]))
-          {$ELSE}ShortInt(BsfWord(FBits[I])){$ENDIF}
+          {$IF DEFINED(CPU64)}SizeInt(BsfQWord(FBits[I]))
+          {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(FBits[I]))
+          {$ELSE}SizeInt(BsfWord(FBits[I])){$ENDIF}
         );
   Result := NULL_INDEX;
 end;
@@ -2534,9 +2534,9 @@ begin
     if FBits[I] <> 0 then
       exit(
         I shl INT_SIZE_LOG +
-        {$IF DEFINED(CPU64)}ShortInt(BsrQWord(FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}ShortInt(BsrDWord(FBits[I]))
-        {$ELSE}ShortInt(BsrWord(FBits[I])){$ENDIF}
+        {$IF DEFINED(CPU64)}SizeInt(BsrQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}SizeInt(BsrDWord(FBits[I]))
+        {$ELSE}SizeInt(BsrWord(FBits[I])){$ENDIF}
       );
   Result := NULL_INDEX;
 end;
@@ -2549,9 +2549,9 @@ begin
     if FBits[I] <> High(SizeUInt) then
       exit(
         I shl INT_SIZE_LOG +
-        {$IF DEFINED(CPU64)}ShortInt(BsfQWord(not FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(not FBits[I]))
-        {$ELSE}ShortInt(BsfWord(not FBits[I])){$ENDIF}
+        {$IF DEFINED(CPU64)}SizeInt(BsfQWord(not FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(not FBits[I]))
+        {$ELSE}SizeInt(BsfWord(not FBits[I])){$ENDIF}
       );
   Result := NULL_INDEX;
 end;
@@ -2568,18 +2568,18 @@ begin
   if Limb <> 0 then
     exit(
       LimbIdx shl INT_SIZE_LOG +
-      {$IF DEFINED(CPU64)}ShortInt(BsfQWord(Limb))
-      {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(Limb))
-      {$ELSE}ShortInt(BsfWord(Limb)){$ENDIF}
+      {$IF DEFINED(CPU64)}SizeInt(BsfQWord(Limb))
+      {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(Limb))
+      {$ELSE}SizeInt(BsfWord(Limb)){$ENDIF}
     )
   else
     for I := LimbIdx + 1 to System.High(FBits) do
       if FBits[I] <> High(SizeUInt) then
         exit(
           I shl INT_SIZE_LOG +
-          {$IF DEFINED(CPU64)}ShortInt(BsfQWord(not FBits[I]))
-          {$ELSEIF DEFINED(CPU32)}ShortInt(BsfDWord(not FBits[I]))
-          {$ELSE}ShortInt(BsfWord(not FBits[I])){$ENDIF}
+          {$IF DEFINED(CPU64)}SizeInt(BsfQWord(not FBits[I]))
+          {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(not FBits[I]))
+          {$ELSE}SizeInt(BsfWord(not FBits[I])){$ENDIF}
         );
   Result := NULL_INDEX;
 end;
