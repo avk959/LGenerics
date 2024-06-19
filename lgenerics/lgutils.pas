@@ -25,13 +25,13 @@ unit lgUtils;
 interface
 
 uses
-
   SysUtils,
   Math,
   lgStrConst;
 
-type
+{$IF SizeOf(Char)<>1}{$FATAL UTF-16 Rtl is not supported}{$ENDIF}
 
+type
   TSortOrder            = (soAsc, soDesc);
   TRangeBound           = (rbLow, rbHigh);
   TTriLean              = (tlFalse, tlTrue, tlUnknown);
