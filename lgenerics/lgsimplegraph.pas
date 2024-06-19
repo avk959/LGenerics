@@ -348,8 +348,10 @@ type
   { returns an array of indices of the k-core(k-cores if graph is not connected) }
     function  KCore(aK: SizeInt): TIntArray;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
-    function  LocalClustering(const aVertex: TVertex): ValReal; inline;
+    function  LocalClustering(const aVertex: TVertex): Double; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
+  { returns an array of local clustering coefficients for the nodes }
+    function  LocalClustering: TDoubleArray;
   { returns global clustering coefficient }
     function  GlobalClustering: Double;
   { returns count of independent cycles }
@@ -3817,7 +3819,7 @@ begin
   Result := InQueue.ToArray;
 end;
 
-function TGSimpleGraph.LocalClustering(const aVertex: TVertex): ValReal;
+function TGSimpleGraph.LocalClustering(const aVertex: TVertex): Double;
 begin
   Result := LocalClusteringI(IndexOf(aVertex));
 end;
@@ -3840,6 +3842,70 @@ begin
           Inc(Counter);
     end;
   Result := Double(Counter)*2/(Double(d) * Double(Pred(d)));
+end;
+
+function TGSimpleGraph.LocalClustering: TDoubleArray;
+var
+  r: TDoubleArray;
+  procedure ClusteringBm;
+  var
+    m: TBoolMatrix;
+    Counter, d: SizeInt;
+    I, J, K: SizeInt;
+  begin
+    m := CreateBoolMatrix;
+    for I := 0 to Pred(VertexCount) do
+      begin
+        d := AdjLists[I]^.Count;
+        if d > 1 then
+          begin
+            Counter := 0;
+            for J in m[I] do
+              begin
+                K := J;
+                repeat
+                  K := m[I].NextSetBit(K);
+                  if K = NULL_INDEX then break;
+                  if m[J].UncBits[K] then Inc(Counter);
+                until False;
+              end;
+            r[I] := Double(Counter)*2/(Double(d) * Double(Pred(d)));
+          end;
+      end;
+  end;
+  procedure Clustering;
+  var
+    I: SizeInt;
+    Counter, d: SizeInt;
+    pList, pList1: PAdjList;
+    p, p1: PAdjItem;
+  begin
+    for I := 0 to Pred(VertexCount) do
+      begin
+        d := AdjLists[I]^.Count;
+        if d > 1 then
+          begin
+            pList := AdjLists[I];
+            Counter := 0;
+            for p in pList^ do
+              begin
+                pList1 := AdjLists[p^.Key];
+                for p1 in pList^ do
+                  if (p1^.Key > p^.Key) and pList1^.Contains(p1^.Key) then
+                    Inc(Counter);
+              end;
+            r[I] := Double(Counter)*2/(Double(d) * Double(d-1));
+          end;
+      end;
+  end;
+begin
+  if IsEmpty then exit(nil);
+  System.SetLength(r, VertexCount);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Clustering
+  else
+    ClusteringBm;
+  Result := r;
 end;
 
 function TGSimpleGraph.GlobalClustering: Double;
@@ -3877,19 +3943,19 @@ function TGSimpleGraph.GlobalClustering: Double;
   function GetClustering: Double;
   var
     I: SizeInt;
-    TriangleCnt, ForkCnt, d: Int64;
+    TriangleCnt, TriadCnt, d: Int64;
     pList, pList1: PAdjList;
     p, p1: PAdjItem;
   begin
     TriangleCnt := 0;
-    ForkCnt := 0;
+    TriadCnt := 0;
     for I := 0 to Pred(VertexCount) do
       begin
-        pList := AdjLists[I];
-        d := pList^.Count;
+        d := AdjLists[I]^.Count;
         if d > 1 then
           begin
-            Inc(ForkCnt, d*(d-1) div 2);
+            pList := AdjLists[I];
+            Inc(TriadCnt, d*(d-1) div 2);
             for p in pList^ do
               if p^.Key > I then
                 begin
@@ -3900,8 +3966,8 @@ function TGSimpleGraph.GlobalClustering: Double;
                 end;
           end;
       end;
-    if ForkCnt = 0 then exit(Double(0));
-    GetClustering := Double(TriangleCnt)*3/Double(ForkCnt);
+    if TriadCnt = 0 then exit(Double(0));
+    GetClustering := Double(TriangleCnt)*3/Double(TriadCnt);
   end;
 begin
   if IsEmpty then exit(Double(0));
