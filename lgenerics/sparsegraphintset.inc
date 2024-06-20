@@ -90,10 +90,11 @@ end;
 procedure TGSparseGraph.TIntSet.AssignList(aList: PAdjList);
 var
   p: PAdjItem;
-  I: SizeInt = 0;
+  I: SizeInt;
 begin
+  EnsureCapacity(aList^.Count);
   FCount := aList^.Count;
-  System.SetLength(FItems, Count);
+  I := 0;
   for p in aList^ do
     begin
       FItems[I] := p^.Destination;
