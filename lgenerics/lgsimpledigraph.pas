@@ -2465,8 +2465,7 @@ function TGSimpleDigraph.FindWeakComponents: TIntMatrix;
 var
   Visited: TBoolVector;
   Queue: TIntQueue;
-  EdgeSet: TIntPairSet;
-  g: array of TIntVector;
+  g: array of TIntSet;
   CompList: TIntVectorList;
   I, Curr, Next, CompIdx: SizeInt;
   p: PAdjItem;
@@ -2474,17 +2473,15 @@ begin
   if IsEmpty then exit(nil);
   if VertexCount = 1 then exit([[0]]);
   System.SetLength(g, VertexCount);
-  EdgeSet.EnsureCapacity(EdgeCount);
   for I := 0 to Pred(VertexCount) do
-    g[I].EnsureCapacity(FNodeList[I].AdjList.Count + FNodeList[I].Tag);
+    with FNodeList[I] do
+      begin
+        g[I].EnsureCapacity(AdjList.Count + Tag);
+        g[I].AssignList(@AdjList);
+      end;
   for I := 0 to Pred(VertexCount) do
     for p in AdjLists[I]^ do
-      if EdgeSet.Add(I, p^.Key) then
-        begin
-          g[I].Add(p^.Key);
-          g[p^.Key].Add(I);
-        end;
-  EdgeSet.Clear;
+      g[p^.Key].Add(I);
   Visited.Capacity := VertexCount;
   Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
