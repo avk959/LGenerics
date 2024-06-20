@@ -101,6 +101,8 @@ type
                 pv: PIntArrayVector): Boolean;
     end;
 
+    TIntVectorList = specialize TGLiteVector<TIntVector>;
+
   protected
     FReachabilityMatrix: TReachabilityMatrix;
     function  GetReachabilityValid: Boolean; inline;
@@ -291,14 +293,13 @@ type
   { returns count of the strong connected components; the corresponding element aCompIds
     will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
-  { returns array of indices of a strongly connected component that contains aVertex }
+  { returns an array of indices of a strongly connected component that contains aVertex }
     function  GetStrongComponent(const aVertex: TVertex): TIntArray; inline;
     function  GetStrongComponentI(aIndex: SizeInt): TIntArray;
   { creates internal reachability matrix }
     procedure BuildReachabilityMatrix;
-  { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
-    todo: doubtful method? }
-    function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
+  { returns an array of weakly connected components }
+    function  FindWeakComponents: TIntMatrix;
   { returns True, radius and diameter, if graph is strongly connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
@@ -2460,21 +2461,51 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(Ids, ScCount);
 end;
 
-function TGSimpleDigraph.TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
+function TGSimpleDigraph.FindWeakComponents: TIntMatrix;
 var
-  I: SizeInt;
+  Visited: TBoolVector;
+  Queue: TIntQueue;
+  EdgeSet: TIntPairSet;
+  g: array of TIntVector;
+  CompList: TIntVectorList;
+  I, Curr, Next, CompIdx: SizeInt;
+  p: PAdjItem;
 begin
-  if IsEmpty or ReachabilityValid then
-    exit(False);
-  if aScIds.Length <> VertexCount then
-    exit(False);
-  if SizeUInt(aScCount) >= SizeUInt(VertexCount) then
-    exit(False);
-  for I in aScIds do
-    if SizeUInt(I) >= SizeUInt(aScCount) then
-      exit(False);
-  Result := True;
-  FReachabilityMatrix := GetReachabilityMatrix(System.Copy(aScIds), aScCount);
+  if IsEmpty then exit(nil);
+  if VertexCount = 1 then exit([[0]]);
+  System.SetLength(g, VertexCount);
+  EdgeSet.EnsureCapacity(EdgeCount);
+  for I := 0 to Pred(VertexCount) do
+    g[I].EnsureCapacity(FNodeList[I].AdjList.Count + FNodeList[I].Tag);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if EdgeSet.Add(I, p^.Key) then
+        begin
+          g[I].Add(p^.Key);
+          g[p^.Key].Add(I);
+        end;
+  EdgeSet.Clear;
+  Visited.Capacity := VertexCount;
+  Curr := NULL_INDEX;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited.UncBits[I] then
+      begin
+        CompIdx := CompList.Add(Default(TIntVector));
+        CompList.UncMutable[CompIdx]^.Add(I);
+        Visited.UncBits[I] := True;
+        Queue.Enqueue(I);
+        while Queue.TryDequeue(Curr) do
+          for Next in g[Curr] do
+            if not Visited.UncBits[Next] then
+              begin
+                CompList.UncMutable[CompIdx]^.Add(Next);
+                Visited.UncBits[Next] := True;
+                Queue.Enqueue(Next);
+              end;
+      end;
+  System.SetLength(Result, CompList.Count);
+  for I := 0 to Pred(CompList.Count) do
+    Result[I] := CompList.UncMutable[I]^.ToArray;
 end;
 
 function TGSimpleDigraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
