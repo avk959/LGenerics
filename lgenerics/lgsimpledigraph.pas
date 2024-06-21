@@ -2489,7 +2489,7 @@ var
         Search(Next);
   end;
 var
-  ScIds, Members: TIntArray;
+  ScIds, ScMembers: TIntArray;
   Pairs, NewArcs: TIntEdgeVector;
   Sources, Sinks, Lones: TBoolVector;
   ScCount, I, J, Head, Tail: SizeInt;
@@ -2500,16 +2500,14 @@ begin
   if ReachabilityValid then
     if IsStrongConnected then
       exit(0)
-    else
-      begin
-        ScCount := FReachabilityMatrix.Size;
-        ScIds := FReachabilityMatrix.FIds;
-      end
-  else
-    begin
-      ScCount := SearchForStrongComponents(ScIds);
-      if ScCount = 1 then exit(0);
-    end;
+    else begin
+      ScCount := FReachabilityMatrix.Size;
+      ScIds := FReachabilityMatrix.FIds;
+    end
+  else begin
+    ScCount := SearchForStrongComponents(ScIds);
+    if ScCount = 1 then exit(0);
+  end;
   Scc := GetScCondensation(ScIds, ScCount);
 //////////////
   Sources.Capacity := ScCount;
@@ -2539,87 +2537,87 @@ begin
     Sinks.UncBits[e.Destination] := False;
   end;
 /////////////////////
-  Members := CreateIntArray(ScCount, NULL_INDEX);
+  ScMembers := CreateIntArray(ScCount, NULL_INDEX);
   for I := 0 to Pred(VertexCount) do begin
     J := ScIds[I];
-    if Members[J] = NULL_INDEX then
-      Members[J] := I;
+    if ScMembers[J] = NULL_INDEX then
+      ScMembers[J] := I;
   end;
 /////////////////
   Head := NULL_INDEX;
   Tail := NULL_INDEX;
   for e in Pairs do
     if Tail = NULL_INDEX then begin
-      Head := Members[e.Source];
-      Tail := Members[e.Destination];
+      Head := ScMembers[e.Source];
+      Tail := ScMembers[e.Destination];
     end else begin
-      NewArcs.Add(TIntEdge.Create(Tail, Members[e.Source]));
-      Tail := Members[e.Destination];
+      NewArcs.Add(TIntEdge.Create(Tail, ScMembers[e.Source]));
+      Tail := ScMembers[e.Destination];
     end;
   for I in Lones do
     if Tail = NULL_INDEX then begin
-      Head := Members[I];
-      Tail := Members[I];
+      Head := ScMembers[I];
+      Tail := ScMembers[I];
     end else begin
-      NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
-      Tail := Members[I];
+      NewArcs.Add(TIntEdge.Create(Tail, ScMembers[I]));
+      Tail := ScMembers[I];
     end;
   if Sources.PopCount >= Sinks.PopCount then begin
     for I in Sinks do begin
       J := Sources.Bsf;
       Sources.UncBits[J] := False;
       if Tail = NULL_INDEX then begin
-        Head := Members[I];
-        Tail := Members[J];
+        Head := ScMembers[I];
+        Tail := ScMembers[J];
         NewArcs.Add(TIntEdge.Create(Head, Tail));
       end else begin
-        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
-        Tail := Members[J];
-        NewArcs.Add(TIntEdge.Create(Members[I], Tail));
+        NewArcs.Add(TIntEdge.Create(Tail, ScMembers[I]));
+        Tail := ScMembers[J];
+        NewArcs.Add(TIntEdge.Create(ScMembers[I], Tail));
       end;
     end;
     for I in Sources do
       if Tail = NULL_INDEX then begin
-        Head := Members[I];
-        Tail := Members[I];
+        Head := ScMembers[I];
+        Tail := ScMembers[I];
       end else begin
-        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
-        Tail := Members[I];
+        NewArcs.Add(TIntEdge.Create(Tail, ScMembers[I]));
+        Tail := ScMembers[I];
       end;
   end else begin
     for I in Sources do begin
       J := Sinks.Bsf;
       Sinks.UncBits[J] := False;
       if Tail = NULL_INDEX then begin
-        Head := Members[J];
-        Tail := Members[I];
+        Head := ScMembers[J];
+        Tail := ScMembers[I];
         NewArcs.Add(TIntEdge.Create(Head, Tail));
       end else begin
-        NewArcs.Add(TIntEdge.Create(Tail, Members[J]));
-        Tail := Members[J];
-        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
+        NewArcs.Add(TIntEdge.Create(Tail, ScMembers[J]));
+        Tail := ScMembers[J];
+        NewArcs.Add(TIntEdge.Create(Tail, ScMembers[I]));
       end;
     end;
     for I in Sinks do
       if Tail = NULL_INDEX then begin
-        Head := Members[I];
-        Tail := Members[I];
+        Head := ScMembers[I];
+        Tail := ScMembers[I];
       end else begin
-        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
-        Tail := Members[I];
+        NewArcs.Add(TIntEdge.Create(Tail, ScMembers[I]));
+        Tail := ScMembers[I];
       end;
   end;
   NewArcs.Add(TIntEdge.Create(Tail, Head));
-  Result := NewArcs.Count;
+  Result := 0;
   if aOnAddEdge = nil then begin
     d := Default(TEdgeData);
     for e in NewArcs do
-      DoAddEdge(e.Source, e.Destination, d);
+      Inc(Result, Ord(DoAddEdge(e.Source, e.Destination, d)));
   end else
     for e in NewArcs do begin
       d := Default(TEdgeData);
       aOnAddEdge(Items[e.Source], Items[e.Destination], d);
-      DoAddEdge(e.Source, e.Destination, d);
+      Inc(Result, Ord(DoAddEdge(e.Source, e.Destination, d)));
     end;
 end;
 
