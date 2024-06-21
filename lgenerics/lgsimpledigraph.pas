@@ -102,6 +102,14 @@ type
     end;
 
     TIntVectorList = specialize TGLiteVector<TIntVector>;
+    TSccNode = record
+      AdjList: TIntSet;
+      InDegree: SizeInt;
+      function IsSource: Boolean; inline;
+      function IsSink: Boolean; inline;
+      function IsLone: Boolean; inline;
+    end;
+    TSccNodeList = array of TSccNode;
 
   protected
     FReachabilityMatrix: TReachabilityMatrix;
@@ -124,6 +132,7 @@ type
     function  GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
+    function  GetScCondensation(const aScIds: TIntArray; aScCount: SizeInt): TSccNodeList;
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; override;
@@ -290,9 +299,14 @@ type
     function  FindEulerianCycle: TIntArray;
   { checks whether the graph is stongly connected; an empty graph is considered disconnected }
     function  IsStrongConnected: Boolean;
+  { if the graph is not empty, makes the graph strongly connected by adding a minimum
+    of new arcs(if necessary); returns count of added arcs;
+    if aOnAddEdge = nil then new arcs will use default data value }
+    function  EnsureStrongConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { returns count of the strong connected components; the corresponding element aCompIds
     will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
+    function  StrongComponentCount: SizeInt;
   { returns an array of indices of a strongly connected component that contains aVertex }
     function  GetStrongComponent(const aVertex: TVertex): TIntArray; inline;
     function  GetStrongComponentI(aIndex: SizeInt): TIntArray;
@@ -1035,6 +1049,23 @@ begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
   ExecutePaths;
   Result := not FCancelled and pv^.NonEmpty;
+end;
+
+{ TGSimpleDigraph.TSccNode }
+
+function TGSimpleDigraph.TSccNode.IsSource: Boolean;
+begin
+  Result := (AdjList.Count <> 0) and (InDegree = 0);
+end;
+
+function TGSimpleDigraph.TSccNode.IsSink: Boolean;
+begin
+  Result := (AdjList.Count = 0) and (InDegree <> 0)
+end;
+
+function TGSimpleDigraph.TSccNode.IsLone: Boolean;
+begin
+  Result := (AdjList.Count = 0) and (InDegree = 0)
 end;
 
 { TGSimpleDigraph.TIncomingEnumerator }
@@ -1949,6 +1980,7 @@ begin
   IdVisited.Capacity := aScCount;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
+  Curr := NULL_INDEX;
   m := TSquareBitMatrix.Create(aScCount);
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
@@ -1962,8 +1994,8 @@ begin
           end;
         while Stack.TryPeek(Curr) do
           begin
-            CurrId := aScIds[{%H-}Curr];
-            if AdjEnums[{%H-}Curr].MoveNext then
+            CurrId := aScIds[Curr];
+            if AdjEnums[Curr].MoveNext then
               begin
                 Next := AdjEnums[Curr].Current;
                 NextId := aScIds[Next];
@@ -1994,7 +2026,7 @@ begin
                   begin
                     IdVisited.UncBits[Next] := True;
                     Curr := IdParents[Next];
-                    if Curr <> -1 then
+                    if Curr <> NULL_INDEX then
                       for J := 0 to Pred(aScCount) do
                         if m[Next, J] then
                           m[Curr, J] := True;
@@ -2003,6 +2035,49 @@ begin
           end;
       end;
   Result := TReachabilityMatrix.Create(m, aScIds);
+end;
+
+function TGSimpleDigraph.GetScCondensation(const aScIds: TIntArray; aScCount: SizeInt): TSccNodeList;
+var
+  List: TSccNodeList;
+  Queue: TIntArray;
+  ArcSet: TIntEdgeHashSet;
+  Visited: TBoolVector;
+  I, Curr, SrcId, DstId, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(List, aScCount);
+  if aScCount = 1 then exit(List);
+  System.SetLength(Queue, VertexCount);
+  Visited.Capacity := VertexCount;
+  System.SetLength(List, aScCount);
+  for I := 0 to Pred(VertexCount) do
+    if not Visited.UncBits[I] then
+      begin
+        Visited.UncBits[I] := True;
+        qHead := 0;
+        qTail := 1;
+        Queue[0] := I;
+        while qHead <> qTail do
+          begin
+            Curr := Queue[qHead];
+            Inc(qHead);
+            for p in AdjLists[Curr]^ do
+              begin
+                SrcId := aScIds[Curr];
+                DstId := aScIds[p^.Key];
+                if (SrcId <> DstId) and List[SrcId].AdjList.Add(DstId) then
+                  Inc(List[DstId].InDegree);
+                if not Visited.UncBits[p^.Key] then
+                  begin
+                    Visited.UncBits[p^.Key] := True;
+                    Queue[qTail] := p^.Key;
+                    Inc(qTail);
+                  end;
+              end;
+          end;
+      end;
+  Result := List;
 end;
 
 function TGSimpleDigraph.DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -2383,10 +2458,169 @@ begin
 end;
 
 function TGSimpleDigraph.IsStrongConnected: Boolean;
-var
-  Dummy: TIntArray;
 begin
-  Result := FindStrongComponents(Dummy) = 1;
+  Result := StrongComponentCount = 1;
+end;
+
+{
+  K. P. Eswaran and R. E. Tarjan, "Augmentation problems";
+  S. Raghavan, "A note on Eswaran and Tarjan's algorithm for the strong connectivity augmentation problem";
+}
+function TGSimpleDigraph.EnsureStrongConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+var
+  Scc: TSccNodeList;
+  Visited: TBoolVector;
+  CurrSink: SizeInt;
+  SinkFound: Boolean;
+  procedure Search(aNode: SizeInt);
+  var
+    Next: SizeInt;
+  begin
+    if Visited.UncBits[aNode] then exit;
+    Visited.UncBits[aNode] := True;
+    if Scc[aNode].IsSink then
+      begin
+        SinkFound := True;
+        CurrSink := aNode;
+        exit;
+      end;
+    for Next in Scc[aNode].AdjList do
+      if not SinkFound then
+        Search(Next);
+  end;
+var
+  ScIds, Members: TIntArray;
+  Pairs, NewArcs: TIntEdgeVector;
+  Sources, Sinks, Lones: TBoolVector;
+  ScCount, I, J, Head, Tail: SizeInt;
+  e: TIntEdge;
+  d: TEdgeData;
+begin
+  if IsEmpty or (VertexCount = 1) then exit(0);
+  if ReachabilityValid then
+    if IsStrongConnected then
+      exit(0)
+    else
+      begin
+        ScCount := FReachabilityMatrix.Size;
+        ScIds := FReachabilityMatrix.FIds;
+      end
+  else
+    begin
+      ScCount := SearchForStrongComponents(ScIds);
+      if ScCount = 1 then exit(0);
+    end;
+  Scc := GetScCondensation(ScIds, ScCount);
+//////////////
+  Sources.Capacity := ScCount;
+  Sinks.Capacity := ScCount;
+  Lones.Capacity := ScCount;
+  for I := 0 to Pred(ScCount) do
+    if Scc[I].IsSource then
+      Sources.UncBits[I] := True
+    else
+      if Scc[I].IsSink then
+        Sinks.UncBits[I] := True
+      else
+        if Scc[I].IsLone then
+          Lones.UncBits[I] := True;
+/////////////
+  Visited.Capacity := ScCount;
+  for I in Sources do begin
+    CurrSink := NULL_INDEX;
+    SinkFound := False;
+    Search(I);
+    if CurrSink <> NULL_INDEX then
+      Pairs.Add(TIntEdge.Create(I, CurrSink));
+  end; // p = Pairs.Count
+///////////
+  for e in Pairs do begin
+    Sources.UncBits[e.Source] := False;
+    Sinks.UncBits[e.Destination] := False;
+  end;
+/////////////////////
+  Members := CreateIntArray(ScCount, NULL_INDEX);
+  for I := 0 to Pred(VertexCount) do begin
+    J := ScIds[I];
+    if Members[J] = NULL_INDEX then
+      Members[J] := I;
+  end;
+/////////////////
+  Head := NULL_INDEX;
+  Tail := NULL_INDEX;
+  for e in Pairs do
+    if Tail = NULL_INDEX then begin
+      Head := Members[e.Source];
+      Tail := Members[e.Destination];
+    end else begin
+      NewArcs.Add(TIntEdge.Create(Tail, Members[e.Source]));
+      Tail := Members[e.Destination];
+    end;
+  for I in Lones do
+    if Tail = NULL_INDEX then begin
+      Head := Members[I];
+      Tail := Members[I];
+    end else begin
+      NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
+      Tail := Members[I];
+    end;
+  if Sources.PopCount >= Sinks.PopCount then begin
+    for I in Sinks do begin
+      J := Sources.Bsf;
+      Sources.UncBits[J] := False;
+      if Tail = NULL_INDEX then begin
+        Head := Members[I];
+        Tail := Members[J];
+        NewArcs.Add(TIntEdge.Create(Head, Tail));
+      end else begin
+        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
+        Tail := Members[J];
+        NewArcs.Add(TIntEdge.Create(Members[I], Tail));
+      end;
+    end;
+    for I in Sources do
+      if Tail = NULL_INDEX then begin
+        Head := Members[I];
+        Tail := Members[I];
+      end else begin
+        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
+        Tail := Members[I];
+      end;
+  end else begin
+    for I in Sources do begin
+      J := Sinks.Bsf;
+      Sinks.UncBits[J] := False;
+      if Tail = NULL_INDEX then begin
+        Head := Members[J];
+        Tail := Members[I];
+        NewArcs.Add(TIntEdge.Create(Head, Tail));
+      end else begin
+        NewArcs.Add(TIntEdge.Create(Tail, Members[J]));
+        Tail := Members[J];
+        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
+      end;
+    end;
+    for I in Sinks do
+      if Tail = NULL_INDEX then begin
+        Head := Members[I];
+        Tail := Members[I];
+      end else begin
+        NewArcs.Add(TIntEdge.Create(Tail, Members[I]));
+        Tail := Members[I];
+      end;
+  end;
+  NewArcs.Add(TIntEdge.Create(Tail, Head));
+  Result := NewArcs.Count;
+  if aOnAddEdge = nil then begin
+    d := Default(TEdgeData);
+    for e in NewArcs do
+      DoAddEdge(e.Source, e.Destination, d);
+  end else
+    for e in NewArcs do begin
+      d := Default(TEdgeData);
+      aOnAddEdge(Items[e.Source], Items[e.Destination], d);
+      DoAddEdge(e.Source, e.Destination, d);
+    end;
 end;
 
 function TGSimpleDigraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
@@ -2412,6 +2646,19 @@ begin
       m[0, 0] := True;
       FReachabilityMatrix := TReachabilityMatrix.Create(m, aCompIds);
     end;
+end;
+
+function TGSimpleDigraph.StrongComponentCount: SizeInt;
+var
+  Dummy: TIntArray;
+begin
+  if IsEmpty then
+    exit(0);
+  if VertexCount = 1 then
+    exit(1);
+  if ReachabilityValid then
+    exit(FReachabilityMatrix.Size);
+  Result := SearchForStrongComponents(Dummy);
 end;
 
 function TGSimpleDigraph.GetStrongComponent(const aVertex: TVertex): TIntArray;
