@@ -282,6 +282,12 @@ type
     function  IsSinkI(aIndex: SizeInt): Boolean;
     function  SourceCount: SizeInt;
     function  SinkCount: SizeInt;
+  { returs true if graph is complete; an empty graph is considered incomplete }
+    function  IsComplete: Boolean;
+  { returns an array of local clustering coefficients for the nodes }
+    function  LocalClustering: TDoubleArray;
+  { returns global clustering coefficient }
+    function  GlobalClustering: Double;
   { enumerates incoming arcs, slow }
     function  IncomingArcs(const aVertex: TVertex): TIncomingArcs;
     function  IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
@@ -2342,6 +2348,117 @@ begin
   for I := 0 to Pred(VertexCount) do
     if (FNodeList[I].AdjList.Count = 0) and (FNodeList[I].Tag <> 0) then
       Inc(Result);
+end;
+
+function TGSimpleDigraph.IsComplete: Boolean;
+begin
+  if IsEmpty then exit(False);
+  Result := EdgeCount div VertexCount = Pred(VertexCount);
+end;
+
+function TGSimpleDigraph.LocalClustering: TDoubleArray;
+var
+  g: array of TIntSet;
+  r: array of Double;
+  BiArcs: TIntArray;
+  I, J, K, L, M, d, Counter: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then exit(nil);
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    with FNodeList[I] do
+      begin
+        g[I].EnsureCapacity(Tag + AdjList.Count);
+        g[I].AssignList(@AdjList);
+      end;
+  System.SetLength(BiArcs, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if not g[p^.Key].Add(I) then
+        begin
+          Inc(BiArcs[p^.Key]);
+          g[p^.Key].Push(I);
+        end;
+  System.SetLength(r, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      d := g[I].Count;
+      if d > 1 then
+        begin
+          Counter := 0;
+          for J := 0 to d-2 do
+            begin
+              L := g[I][J];
+              for K := Succ(J) to Pred(d) do
+                begin
+                  M := g[I][K];
+                  if M <> L then
+                    begin
+                      if AdjLists[L]^.Contains(M) then
+                        Inc(Counter);
+                      if AdjLists[M]^.Contains(L) then
+                        Inc(Counter);
+                    end;
+                end;
+            end;
+          r[I] := Double(Counter)/(Double(d) * Double(d-1) - 2*BiArcs[I]);
+        end;
+    end;
+  Result := r;
+end;
+
+function TGSimpleDigraph.GlobalClustering: Double;
+var
+  g: array of TIntSet;
+  BiArcs: TIntArray;
+  I, J, K, L, M, d: SizeInt;
+  TriangleCnt, TriadCnt: Int64;
+  p: PAdjItem;
+begin
+  if IsEmpty then exit(Double(0));
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    with FNodeList[I] do
+      begin
+        g[I].EnsureCapacity(Tag + AdjList.Count);
+        g[I].AssignList(@AdjList);
+      end;
+  System.SetLength(BiArcs, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if not g[p^.Key].Add(I) then
+        begin
+          Inc(BiArcs[p^.Key]);
+          g[p^.Key].Push(I);
+        end;
+  TriangleCnt := 0;
+  TriadCnt := 0;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      d := g[I].Count;
+      if d > 1 then
+        begin
+          Inc(TriadCnt, Int64(d)*Pred(d)-2*BiArcs[I]);
+          for J := 0 to d-2 do
+            begin
+              L := g[I][J];
+              for K := Succ(J) to Pred(d) do
+                begin
+                  M := g[I][K];
+                  if L <> M then
+                    begin
+                      if AdjLists[L]^.Contains(M) then
+                        Inc(TriangleCnt);
+                      if AdjLists[M]^.Contains(L) then
+                        Inc(TriangleCnt);
+                    end;
+                end;
+            end;
+        end;
+    end;
+  if TriadCnt = 0 then exit(Double(0));
+  Result := Double(TriangleCnt)/Double(TriadCnt);
 end;
 
 function TGSimpleDigraph.IncomingArcs(const aVertex: TVertex): TIncomingArcs;
