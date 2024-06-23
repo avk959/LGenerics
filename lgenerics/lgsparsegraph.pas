@@ -101,7 +101,7 @@ type
   TGraphMagic           = string[8];
 
 const
-  GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';  //'LGraph'
+  GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
   GRAPH_HEADER_VERSION     = 2;
   GRAPH_ADJLIST_GROW       = 16;
   DENSE_CUTOFF             = 0.7;  //???
@@ -998,17 +998,13 @@ end;
 
 function TGAdjList.Add(const aItem: TAdjItem): Boolean;
 begin
-  if Count > 0 then
-    Result := DoFind(aItem.Destination) = NULL_INDEX
-  else
-    Result := True;
-  if Result then
-    begin
-      if Count >= Capacity then
-        Expand;
-      FItems[Count] := aItem;
-      Inc(FCount);
-    end;
+  if (Count <> 0) and (DoFind(aItem.Destination) <> NULL_INDEX) then
+    exit(False);
+  if Count = Capacity then
+    Expand;
+  FItems[Count] := aItem;
+  Inc(FCount);
+  Result := True;
 end;
 
 procedure TGAdjList.Append(const aItem: TAdjItem);
