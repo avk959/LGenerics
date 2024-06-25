@@ -145,8 +145,8 @@ type
     FLess,
     FGreater: SizeInt;
   public
-    class function HashCode(const aValue: TOrdIntPair): SizeInt; static;
-    class function Equal(const L, R: TOrdIntPair): Boolean; static;
+    class function HashCode(const aValue: TOrdIntPair): SizeInt; static; inline;
+    class function Equal(const L, R: TOrdIntPair): Boolean; static; inline;
     constructor Create(L, R: SizeInt);
     function Key: TOrdIntPair;
     property Left: SizeInt read FLess;
@@ -170,6 +170,12 @@ type
     function  Remove(L, R: SizeInt): Boolean; inline;
     property  Count: SizeInt read GetCount;
   end;
+
+  TIntPair2DoubleMapType = specialize TGLiteChainHashMap<TOrdIntPair, Double, TOrdIntPair>;
+  TIntPair2DoubleMap     = TIntPair2DoubleMapType.TMap;
+
+  TIntEdge2DoubleMapType = specialize TGLiteChainHashMap<TIntEdge, Double, TIntEdge>;
+  TIntEdge2DoubleMap     = TIntEdge2DoubleMapType.TMap;
 
   TIntNode = record
     Index,

@@ -33,9 +33,10 @@ uses
   lgStack,
   lgQueue,
   lgVector,
-  lgHashSet,
-  lgHashTable,
   lgHash,
+  lgHashTable,
+  lgHashSet,
+  lgHashMap,
   lgArrayHelpers,
   {%H-}lgHelpers,
   lgStrConst;
@@ -85,8 +86,8 @@ type
   TIntEdge = packed record
     Source,
     Destination: SizeInt;
-    class function HashCode(const aValue: TIntEdge): SizeInt; static;
-    class function Equal(const L, R: TIntEdge): Boolean; static;
+    class function HashCode(const aValue: TIntEdge): SizeInt; static; inline;
+    class function Equal(const L, R: TIntEdge): Boolean; static; inline;
     constructor Create(aSrc, aDst: SizeInt);
     function Key: TIntEdge; inline;
   end;
