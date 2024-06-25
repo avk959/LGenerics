@@ -392,6 +392,16 @@ type
       property  Current: TValue read GetCurrent;
     end;
 
+    TMutValueEnumerator = record
+    private
+      FEnum: TTblEnumerator;
+      function  GetCurrent: PValue; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: PValue read GetCurrent;
+    end;
+
     TEntryEnumerator = record
     private
       FEnum: TTblEnumerator;
@@ -414,6 +424,13 @@ type
       FMap: PHashMap;
     public
       function GetEnumerator: TValueEnumerator; inline;
+    end;
+
+    TMutValues = record
+    private
+      FMap: PHashMap;
+    public
+      function GetEnumerator: TMutValueEnumerator; inline;
     end;
 
   private
@@ -484,6 +501,7 @@ type
     procedure RetainAll(aCollection: IKeyCollection);
     function  Keys: TKeys;
     function  Values: TValues;
+    function  MutValues: TMutValues;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise ELGMapError if an aKey is not present in map }
@@ -1598,6 +1616,23 @@ begin
   FEnum.Reset;
 end;
 
+{ TGLiteHashMap.TMutValueEnumerator }
+
+function TGLiteHashMap.TMutValueEnumerator.GetCurrent: PValue;
+begin
+  Result := @FEnum.Current^.Value;
+end;
+
+function TGLiteHashMap.TMutValueEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGLiteHashMap.TMutValueEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
 { TGLiteHashMap.TEntryEnumerator }
 
 function TGLiteHashMap.TEntryEnumerator.GetCurrent: TEntry;
@@ -1625,6 +1660,13 @@ end;
 { TGLiteHashMap.TValues }
 
 function TGLiteHashMap.TValues.GetEnumerator: TValueEnumerator;
+begin
+  Result.FEnum := FMap^.FTable.GetEnumerator;
+end;
+
+{ TGLiteHashMap.TMutValues }
+
+function TGLiteHashMap.TMutValues.GetEnumerator: TMutValueEnumerator;
 begin
   Result.FEnum := FMap^.FTable.GetEnumerator;
 end;
@@ -2152,6 +2194,11 @@ begin
 end;
 
 function TGLiteHashMap.Values: TValues;
+begin
+  Result.FMap := @Self;
+end;
+
+function TGLiteHashMap.MutValues: TMutValues;
 begin
   Result.FMap := @Self;
 end;
