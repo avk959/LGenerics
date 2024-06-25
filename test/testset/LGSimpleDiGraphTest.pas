@@ -66,6 +66,7 @@ type
     procedure ContainsEulerianCycle1;
     procedure FindEulerianCycle;
     procedure IsStrongConnected;
+    procedure EnsureStrongConnected;
     procedure FindStrongComponents;
     procedure FindStrongComponents1;
     procedure FindStrongComponents2;
@@ -936,6 +937,33 @@ begin
   g := Ref;
   AssertFalse(g.IsStrongConnected);
   g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  AssertTrue(g.IsStrongConnected);
+end;
+
+procedure TSimpleDigraphTest.EnsureStrongConnected;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertTrue(g.EnsureStrongConnected = 0);
+
+  g.Clear;
+  AssertTrue(g.EnsureStrongConnected = 0);
+  g.AddVertex(0);
+  AssertTrue(g.EnsureStrongConnected = 0);
+  g.AddVertex(1);
+  g.AddVertex(2);
+  AssertFalse(g.IsStrongConnected);
+  AssertTrue(g.EnsureStrongConnected = 3);
+  AssertTrue(g.IsStrongConnected);
+
+  g.Clear;
+  g.AddEdges([0,1,0,2,1,3,2,3]);
+  AssertFalse(g.IsStrongConnected);
+  AssertTrue(g.StrongComponentCount = 4);
+  AssertTrue(g.EnsureStrongConnected = 1);
   AssertTrue(g.IsStrongConnected);
 end;
 
