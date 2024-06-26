@@ -405,14 +405,20 @@ type
     function  FindCenter: TIntArray;
   { returns array of indices of the peripheral vertices, if graph is connected, nil otherwise }
     function  FindPeripheral: TIntArray;
-  { returns an array of degree centrality values for the nodes }
+  { returns an array of degree centrality values for all vertices }
     function  DegreeCentrality: TDoubleArray;
-  { returns an array of closeness centrality values for nodes }
+  { returns closeness centrality value for the specified vertex }
+    function  ClosenessCentrality(const aVertex: TVertex): Double; inline;
+    function  ClosenessCentralityI(aIndex: SizeInt): Double;
+  { returns an array of closeness centrality values for all vertices }
     function  ClosenessCentrality: TDoubleArray;
-  { returns the shortest-path betweenness centrality values for nodes using Brandes' algorithm;
+  { returns the shortest-path betweenness centrality values for all vertices using Brandes' algorithm;
     if aNormalize is True then values will be normalized by 2/((N-1)(N-2));
     if aEndPoints is True then the endpoints will be included in the shortest path count }
     function  BetweenessCentrality(aNormalize: Boolean = True; aEndPoints: Boolean = False): TDoubleArray;
+  { returns betweenness centrality values for all edges in aBcMap using Brandes' algorithm;
+    if aNormalize is True then values will be normalized by 2/(N(N-1)) }
+    procedure EdgeBetweenessCentrality(out aBcMap: TIntPair2DoubleMap; aNormalize: Boolean = True);
   { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
     path, or an empty array if the path does not exists }
     function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
@@ -4306,6 +4312,47 @@ begin
     Result[I] := Double(AdjLists[I]^.Count)/DMax;
 end;
 
+function TGSimpleGraph.ClosenessCentrality(const aVertex: TVertex): Double;
+begin
+  Result := ClosenessCentralityI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.ClosenessCentralityI(aIndex: SizeInt): Double;
+var
+  Queue, Dist: TIntArray;
+  r: array of Double;
+  I, Curr, qHead, qTail, d, n: SizeInt;
+  CurrSum: Int64;
+  p: PAdjItem;
+begin
+  CheckIndexRange(aIndex);
+  if VertexCount = 1 then exit(Double(0));
+  System.SetLength(Queue, VertexCount);
+  System.SetLength(Dist, VertexCount);
+  System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
+  Dist[aIndex] := 0;
+  qHead := 0;
+  qTail := 1;
+  Queue[0] := aIndex;
+  n := 0;
+  CurrSum := 0;
+  while qHead <> qTail do begin
+    Curr := Queue[qHead];
+    Inc(qHead);
+    d := Succ(Dist[Curr]);
+    Inc(n);
+    for p in AdjLists[Curr]^ do
+      if Dist[p^.Key] = NULL_INDEX then begin
+        Dist[p^.Key] := d;
+        Queue[qTail] := p^.Key;
+        Inc(qTail);
+        CurrSum += d;
+      end;
+  end;
+  if CurrSum = 0 then exit(Double(0));
+  Result := (Double(Pred(n))*Double(Pred(n))/Double(Pred(VertexCount)))/Double(CurrSum);
+end;
+
 function TGSimpleGraph.ClosenessCentrality: TDoubleArray;
 var
   Queue, Dist: TIntArray;
@@ -4415,6 +4462,72 @@ begin
   for I := 0 to System.High(r) do
     r[I] *= Scale;
   Result := r;
+end;
+
+procedure TGSimpleGraph.EdgeBetweenessCentrality(out aBcMap: TIntPair2DoubleMap; aNormalize: Boolean);
+var
+  Stack: TSimpleStack;
+  Queue, Dist: TIntArray;
+  PredList: array of TIntVector;
+  Sigma: array of Int64;
+  Delta: array of Double;
+  I, Curr, Prev, qHead, qTail, d: SizeInt;
+  c, Scale: Double;
+  p: PAdjItem;
+  pBc: PDouble;
+begin
+  aBcMap.Clear;
+  if VertexCount < 2 then exit;
+  Stack := TSimpleStack.Create(VertexCount);
+  System.SetLength(PredList, VertexCount);
+  System.SetLength(Queue, VertexCount);
+  System.SetLength(Dist, VertexCount);
+  System.SetLength(Sigma, VertexCount);
+  System.SetLength(Delta, VertexCount);
+  aBcMap.EnsureCapacity(EdgeCount);
+  for I := 0 to Pred(VertexCount) do begin
+    System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
+    System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
+    Dist[I] := 0;
+    Sigma[I] := 1;
+    qHead := 0;
+    qTail := 1;
+    Queue[0] := I;
+    while qHead <> qTail do begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      Stack.Push(Curr);
+      d := Succ(Dist[Curr]);
+      for p in AdjLists[Curr]^ do begin
+        if Dist[p^.Key] = NULL_INDEX then begin
+          Dist[p^.Key] := d;
+          Queue[qTail] := p^.Key;
+          Inc(qTail);
+        end;
+        if Dist[p^.Key] = d then begin
+          Sigma[p^.Key] += Sigma[Curr];
+          PredList[p^.Key].Add(Curr);
+        end;
+      end;
+    end;
+    System.FillChar(Pointer(Delta)^, System.Length(Delta)*SizeOf(Double), 0);
+    while Stack.TryPop(Curr) do begin
+      Scale := (Delta[Curr] + 1)/Double(Sigma[Curr]);
+      for Prev in PredList[Curr] do
+        begin
+          c := Double(Sigma[Prev])*Scale;
+          aBcMap.GetMutValueDef(TOrdIntPair.Create(Prev, Curr), Double(0))^ += c;
+          Delta[Prev] += c;
+        end;
+      PredList[Curr].MakeEmpty;
+    end;
+  end;
+  if aNormalize then
+    Scale := Double(1)/(Double(VertexCount)*Double(VertexCount-1))
+  else
+    Scale := Double(0.5);
+  for pBc in aBcMap.MutValues do
+    pBc^ *= Scale;
 end;
 
 function TGSimpleGraph.ShortestPath(const aSrc, aDst: TVertex): TIntArray;
