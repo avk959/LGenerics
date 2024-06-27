@@ -244,180 +244,6 @@ type
     property Key: SizeInt read Index;
   end;
 
-  { TGWeightHelper }
-  generic TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel> = class sealed
-  public
-  type
-    TWeightArray  = array of TWeight;
-    PWeight       = ^TWeight;
-    TWArrayHelper = specialize TGArrayHelpUtil<TWeight>;
-
-  strict private
-    class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
-    class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
-    class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
-  public
-    class function  wMax(L, R: TWeight): TWeight; static; inline;
-    class function  wMin(L, R: TWeight): TWeight; static; inline;
-  type
-    TWeightEdge = record
-      Source,
-      Destination: SizeInt;
-      Weight:  TWeight;
-      class operator < (const L, R: TWeightEdge): Boolean; inline;
-      constructor Create(s, d: SizeInt; w: TWeight);
-      function Edge: TIntEdge; inline;
-    end;
-
-    TWeightItem = record
-      Index: SizeInt;
-      Weight: TWeight;
-      class operator < (const L, R: TWeightItem): Boolean; inline;
-      constructor Create(aIndex: SizeInt; w: TWeight);
-      property Key: SizeInt read Index;
-    end;
-
-    TRankItem = record
-      Index: SizeInt;
-      Rank,
-      Weight: TWeight;
-      class operator < (const L, R: TRankItem): Boolean; inline;
-      constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
-    end;
-
-    TApspCell = record
-      Weight: TWeight;
-      Predecessor: SizeInt;
-      constructor Create(aWeight: TWeight; aPred: SizeInt);
-    end;
-
-    TGraph        = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate     = function(const aSrc, aDst: TVertex): TWeight;
-    TEdgeArray    = array of TWeightEdge;
-    TWeightMatrix = array of array of TWeight;
-    TApspMatrix   = array of array of TApspCell;
-
-    { THungarian: hungarian weighted bipartite matching algorithm }
-    THungarian = record
-    strict private
-      FGraph: TGraph;
-      FBuffer: TIntArray;
-      FMates,
-      FParents,
-      FQueue: PSizeInt;
-      FPhi: TWeightArray;
-      FWhites,
-      FVisited: TBoolVector;
-      FMatchCount: SizeInt;
-      procedure Match(aNode, aMate: SizeInt); inline;
-      procedure Init(aGraph: TGraph; const w, g: TIntArray; AsMax: Boolean);
-      function  FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-      function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-      procedure AlternatePath(aRoot: SizeInt);
-      function  TryAugmentMin(var aDelta: TWeight): SizeInt;
-      function  TryAugmentMax(var aDelta: TWeight): SizeInt;
-      procedure ExecuteMin;
-      procedure ExecuteMax;
-      function  CreateEdges: TEdgeArray;
-    public
-      function  MinMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
-      function  MaxMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
-    end;
-
-    { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
-      copies graph into internal representation }
-    TBfmt = record
-    strict private
-    type
-      PNode  = ^TNode;
-      PArc   = ^TArc;
-
-      TArc = record
-        Target: PNode;       // pointer to target node
-        Weight: TWeight;
-        constructor Create(aTarget: PNode; aWeight: TWeight);
-      end;
-
-      TNode = record
-        FirstArc: PArc;      // pointer to first incident arc
-        Weight: TWeight;
-        TreePrev,
-        TreeNext,
-        Parent: PNode;
-        Level: SizeInt;
-      end;
-
-    public
-      Nodes: array of TNode;
-    strict private
-      FArcs: array of TArc;
-      FQueue: array of PNode;
-      FInQueue,
-      FActive: TBoolVector;
-      FGraph: TGraph;
-      FNodeCount: SizeInt;
-      procedure CopyGraph(aDirected: Boolean);
-      procedure SsspInit(aSrc: SizeInt);
-    public
-      constructor Create(aGraph: TGraph; aDirected: Boolean);
-      function  IndexOf(aNode: PNode): SizeInt; inline;
-      procedure Sssp(aSrc: SizeInt);
-    end;
-  { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
-    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
-  { Dijkstra's pathfinding algorithm }
-    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
-  { bidirectional Dijkstra's pathfinding algorithm }
-    class function  BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
-  { A* pathfinding algorithm }
-    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
-    class function  NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { inplace Bellman-Ford-Moore algorithm }
-    class function  BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
-  { inplace Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
-    faster negative cycle detection }
-    class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
-    class function  BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
-  { negative cycle detection }
-    class function  NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
-  { BFMT single-source shortest paths problem }
-    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
-    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-                    static;
-  { BFMT pathfinding }
-    class function  BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
-                    static;
-  { returns True if no negative cycle found, otherwise returns False and aPaths will contain
-    single element with the index of an element on negative cycle }
-    class function  FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
-    class function  JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
-    class function  BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean; static;
-  { creates array of length aLen and fills with InfWeight }
-    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static;
-  { creates array of length aLen and fills array with NegInfWeight }
-    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
-  { creates array of length aLen and fills array with ZeroWeight }
-    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static;
-  { resizes array to length aLen and fills array with aValue }
-    class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
-    class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
-  { creates square matrix, fills main diagonal with (I, ZeroWeight) and
-    fills other element with corresponding weights }
-    class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
-  { warning: does not checks input }
-    class function  ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray; static;
-  { returns bipartite matching of maximum cardinality and minimum weight;
-    warning: does not checks if aGraph is bipartite }
-    class function  MinBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
-  { returns bipartite matching of maximum cardinality and maximum weight;
-    warning: does not checks if aGraph is bipartite }
-    class function  MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
-  end;
-
   generic TGBinHeapMin<T> = record // for internal use only
   strict private
   type
@@ -548,6 +374,182 @@ type
     function  GetItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+  end;
+
+  { TGWeightHelper }
+  generic TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel> = class sealed
+  public
+  type
+    TWeightArray  = array of TWeight;
+    PWeight       = ^TWeight;
+    TWArrayHelper = specialize TGArrayHelpUtil<TWeight>;
+
+  strict private
+    class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
+    class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
+    class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
+  public
+    class function  wMax(L, R: TWeight): TWeight; static; inline;
+    class function  wMin(L, R: TWeight): TWeight; static; inline;
+  type
+    TWeightEdge = record
+      Source,
+      Destination: SizeInt;
+      Weight:  TWeight;
+      class operator < (const L, R: TWeightEdge): Boolean; inline;
+      constructor Create(s, d: SizeInt; w: TWeight);
+      function Edge: TIntEdge; inline;
+    end;
+
+    TWeightItem = record
+      Index: SizeInt;
+      Weight: TWeight;
+      class operator < (const L, R: TWeightItem): Boolean; inline;
+      constructor Create(aIndex: SizeInt; w: TWeight);
+      property Key: SizeInt read Index;
+    end;
+
+    TRankItem = record
+      Index: SizeInt;
+      Rank,
+      Weight: TWeight;
+      class operator < (const L, R: TRankItem): Boolean; inline;
+      constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
+    end;
+
+    TApspCell = record
+      Weight: TWeight;
+      Predecessor: SizeInt;
+      constructor Create(aWeight: TWeight; aPred: SizeInt);
+    end;
+
+    TGraph            = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate         = function(const aSrc, aDst: TVertex): TWeight;
+    TEdgeArray        = array of TWeightEdge;
+    TWeightMatrix     = array of array of TWeight;
+    TApspMatrix       = array of array of TApspCell;
+    TWItemBinHeapMin  = specialize TGBinHeapMin<TWeightItem>;
+    TWItemPairHeapMin = specialize TGPairHeapMin<TWeightItem>;
+
+    { THungarian: hungarian weighted bipartite matching algorithm }
+    THungarian = record
+    strict private
+      FGraph: TGraph;
+      FBuffer: TIntArray;
+      FMates,
+      FParents,
+      FQueue: PSizeInt;
+      FPhi: TWeightArray;
+      FWhites,
+      FVisited: TBoolVector;
+      FMatchCount: SizeInt;
+      procedure Match(aNode, aMate: SizeInt); inline;
+      procedure Init(aGraph: TGraph; const w, g: TIntArray; AsMax: Boolean);
+      function  FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+      function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+      procedure AlternatePath(aRoot: SizeInt);
+      function  TryAugmentMin(var aDelta: TWeight): SizeInt;
+      function  TryAugmentMax(var aDelta: TWeight): SizeInt;
+      procedure ExecuteMin;
+      procedure ExecuteMax;
+      function  CreateEdges: TEdgeArray;
+    public
+      function  MinMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+      function  MaxMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+    end;
+
+    { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
+      copies graph into internal representation }
+    TBfmt = record
+    strict private
+    type
+      PNode  = ^TNode;
+      PArc   = ^TArc;
+
+      TArc = record
+        Target: PNode;       // pointer to target node
+        Weight: TWeight;
+        constructor Create(aTarget: PNode; aWeight: TWeight);
+      end;
+
+      TNode = record
+        FirstArc: PArc;      // pointer to first incident arc
+        Weight: TWeight;
+        TreePrev,
+        TreeNext,
+        Parent: PNode;
+        Level: SizeInt;
+      end;
+
+    public
+      Nodes: array of TNode;
+    strict private
+      FArcs: array of TArc;
+      FQueue: array of PNode;
+      FInQueue,
+      FActive: TBoolVector;
+      FGraph: TGraph;
+      FNodeCount: SizeInt;
+      procedure CopyGraph(aDirected: Boolean);
+      procedure SsspInit(aSrc: SizeInt);
+    public
+      constructor Create(aGraph: TGraph; aDirected: Boolean);
+      function  IndexOf(aNode: PNode): SizeInt; inline;
+      procedure Sssp(aSrc: SizeInt);
+    end;
+  { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
+    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
+    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
+  { Dijkstra's pathfinding algorithm }
+    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+  { bidirectional Dijkstra's pathfinding algorithm }
+    class function  BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+  { A* pathfinding algorithm }
+    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+  {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
+    class function  NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+  { inplace Bellman-Ford-Moore algorithm }
+    class function  BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
+                    static;
+  { inplace Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
+    faster negative cycle detection }
+    class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
+                    static;
+    class function  BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
+  { negative cycle detection }
+    class function  NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
+  { BFMT single-source shortest paths problem }
+    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+                    static;
+  { BFMT pathfinding }
+    class function  BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+                    static;
+  { returns True if no negative cycle found, otherwise returns False and aPaths will contain
+    single element with the index of an element on negative cycle }
+    class function  FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function  JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function  BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean; static;
+  { creates array of length aLen and fills with InfWeight }
+    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static;
+  { creates array of length aLen and fills array with NegInfWeight }
+    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
+  { creates array of length aLen and fills array with ZeroWeight }
+    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static;
+  { resizes array to length aLen and fills array with aValue }
+    class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
+    class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
+  { creates square matrix, fills main diagonal with (I, ZeroWeight) and
+    fills other element with corresponding weights }
+    class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
+  { warning: does not checks input }
+    class function  ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray; static;
+  { returns bipartite matching of maximum cardinality and minimum weight;
+    warning: does not checks if aGraph is bipartite }
+    class function  MinBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
+  { returns bipartite matching of maximum cardinality and maximum weight;
+    warning: does not checks if aGraph is bipartite }
+    class function  MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   end;
 
   TINodePqMin = specialize TGPairHeapMin<TIntNode>;

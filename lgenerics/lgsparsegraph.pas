@@ -4945,13 +4945,13 @@ end;
 
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
-  Queue: specialize TGPairHeapMin<TWeightItem>;
+  Queue: TWItemPairHeapMin;
   Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
-  Queue := specialize TGPairHeapMin<TWeightItem>.Create(g.VertexCount);
+  Queue := TWItemPairHeapMin.Create(g.VertexCount);
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
   Item := TWeightItem.Create(aSrc, 0);
@@ -4973,13 +4973,13 @@ end;
 
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
-  Queue: specialize TGPairHeapMin<TWeightItem>;
+  Queue: TWItemPairHeapMin;
   Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
-  Queue := specialize TGPairHeapMin<TWeightItem>.Create(g.VertexCount);
+  Queue := TWItemPairHeapMin.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
@@ -5006,13 +5006,13 @@ end;
 
 class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
-  Queue: specialize TGBinHeapMin<TWeightItem>;
+  Queue: TWItemBinHeapMin;
   Parents: TIntArray;
   Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
-  Queue := specialize TGBinHeapMin<TWeightItem>.Create(g.VertexCount);
+  Queue := TWItemBinHeapMin.Create(g.VertexCount);
   Parents := g.CreateIntArray;
   Reached.Capacity := g.VertexCount;
   InQueue.Capacity := g.VertexCount;
@@ -5050,7 +5050,7 @@ const
   Bckwd = True;
 var
   Inst: array[Boolean] of TGraph;
-  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
+  Queue: array[Boolean] of TWItemBinHeapMin;
   Parents: array[Boolean] of TIntArray;
   InQueue: array[Boolean] of TBoolVector;
   Weights: array[Boolean] of TWeightArray;
@@ -5064,8 +5064,8 @@ begin
   Inst[Bckwd] := gRev;
   Weights[Forwd] := CreateWeightArray(g.VertexCount);
   Weights[Bckwd] := CreateWeightArray(gRev.VertexCount);
-  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(g.VertexCount);
-  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(gRev.VertexCount);
+  Queue[Forwd] := TWItemBinHeapMin.Create(g.VertexCount);
+  Queue[Bckwd] := TWItemBinHeapMin.Create(gRev.VertexCount);
   Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
   Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
   InQueue[Forwd].Capacity := g.VertexCount;
@@ -5179,7 +5179,7 @@ const
   Bckwd = True;
 var
   Inst: array[Boolean] of TGraph;
-  Queue: array[Boolean] of specialize TGBinHeapMin<TWeightItem>;
+  Queue: array[Boolean] of TWItemBinHeapMin;
   Parents: array[Boolean] of TIntArray;
   Weights: array[Boolean] of TWeightArray;
   InQueue: array[Boolean] of TBoolVector;
@@ -5198,8 +5198,8 @@ begin
   Parents[Bckwd] := gRev.CreateIntArray;
   Weights[Forwd] := CreateWeightArray(g.VertexCount);
   Weights[Bckwd] := CreateWeightArray(gRev.VertexCount);
-  Queue[Forwd] := specialize TGBinHeapMin<TWeightItem>.Create(g.VertexCount);
-  Queue[Bckwd] := specialize TGBinHeapMin<TWeightItem>.Create(gRev.VertexCount);
+  Queue[Forwd] := TWItemBinHeapMin.Create(g.VertexCount);
+  Queue[Bckwd] := TWItemBinHeapMin.Create(gRev.VertexCount);
   Reached.Capacity := g.VertexCount;
   InQueue[Forwd].Capacity := g.VertexCount;
   InQueue[Bckwd].Capacity := gRev.VertexCount;
@@ -5592,7 +5592,7 @@ end;
 
 class function TGWeightHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
 var
-  Queue: specialize TGPairHeapMin<TWeightItem>;
+  Queue: TWItemPairHeapMin;
   Parents: TIntArray;
   Phi, Weights: TWeightArray;
   Reached, InQueue: TBoolVector;
@@ -5610,7 +5610,7 @@ begin
   VertCount := aGraph.VertexCount;
   Parents.Length := VertCount;
   System.SetLength(Weights, VertCount);
-  Queue := specialize TGPairHeapMin<TWeightItem>.Create(VertCount);
+  Queue := TWItemPairHeapMin.Create(VertCount);
   Reached.Capacity := VertCount;
   InQueue.Capacity := VertCount;
   System.SetLength(aPaths, VertCount, VertCount);
