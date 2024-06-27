@@ -707,8 +707,11 @@ type
 
   protected
   type
-    TWeightItem  = TWeightHelper.TWeightItem;
-    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
+    TWeightItem       = TWeightHelper.TWeightItem;
+    TWItemBinHeapMin  = TWeightHelper.TWItemBinHeapMin;
+    TWItemPairHeapMin = TWeightHelper.TWItemPairHeapMin;
+    TEdgeHelper       = specialize TGComparableArrayHelper<TWeightEdge>;
+    TWArrayHelper     = TWeightHelper.TWArrayHelper;
 
     function CreateEdgeArray: TEdgeArray;
   public
@@ -809,6 +812,16 @@ type
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
+  { weighted versions of ClosenessCentrality() for non-negative weights only }
+    function FindClosenessCentrality(const aVertex: TVertex): Double; inline;
+    function FindClosenessCentralityI(aIndex: SizeInt): Double;
+    function FindClosenessCentrality: TDoubleArray;
+  { weighted versions of BetweenessCentrality() for non-negative weights only;
+    correct result is not guaranteed if TWeight is a floating-point type }
+    function FindBetweenessCentrality(aNormalize: Boolean = True; aEndPoints: Boolean = False): TDoubleArray;
+  { weighted versions of EdgeBetweenessCentrality() for non-negative weights only;
+    correct result is not guaranteed if TWeight is a floating-point type }
+    procedure FindEdgeBetweenessCentrality(out aBcMap: TIntPair2DoubleMap; aNormalize: Boolean = True);
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -4320,8 +4333,7 @@ end;
 function TGSimpleGraph.ClosenessCentralityI(aIndex: SizeInt): Double;
 var
   Queue, Dist: TIntArray;
-  r: array of Double;
-  I, Curr, qHead, qTail, d, n: SizeInt;
+  Curr, qHead, qTail, d, n: SizeInt;
   CurrSum: Int64;
   p: PAdjItem;
 begin
@@ -4475,6 +4487,7 @@ var
   c, Scale: Double;
   p: PAdjItem;
   pBc: PDouble;
+  e: TEdge;
 begin
   aBcMap.Clear;
   if VertexCount < 2 then exit;
@@ -4485,6 +4498,8 @@ begin
   System.SetLength(Sigma, VertexCount);
   System.SetLength(Delta, VertexCount);
   aBcMap.EnsureCapacity(EdgeCount);
+  for e in DistinctEdges do
+    aBcMap.Add(TOrdIntPair.Create(e.Source, e.Destination), 0);
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
@@ -6238,6 +6253,246 @@ begin
         Inc(J);
       end;
   aCenter.Length := J;
+end;
+
+function TGWeightedGraph.FindClosenessCentrality(const aVertex: TVertex): Double;
+begin
+  Result := FindClosenessCentralityI(IndexOf(aVertex));
+end;
+
+function TGWeightedGraph.FindClosenessCentralityI(aIndex: SizeInt): Double;
+var
+  Queue: TWItemPairHeapMin;
+  Reached, InQueue: TBoolVector;
+  n: SizeInt;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  CheckIndexRange(aIndex);
+  if VertexCount = 1 then exit(Double(0));
+  Queue := TWItemPairHeapMin.Create(VertexCount);
+  Reached.Capacity := VertexCount;
+  InQueue.Capacity := VertexCount;
+  n := 0;
+  Result := Double(0);
+  Item := TWeightItem.Create(aIndex, 0);
+  InQueue.UncBits[aIndex] := True;
+  repeat
+    Inc(n);
+    Result += Double(Item.Weight);
+    Reached.UncBits[Item.Index] := True;
+    for p in AdjLists[Item.Index]^ do
+      if not Reached.UncBits[p^.Key] then
+        if not InQueue.UncBits[p^.Key] then begin
+          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+          InQueue.UncBits[p^.Key] := True;
+        end else
+          if p^.Data.Weight + Item.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
+            Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+  until not Queue.TryDequeue(Item);
+  if Result = 0 then exit;
+  Result := (Double(Pred(n))*Double(Pred(n))/Double(Pred(VertexCount)))/Result;
+end;
+
+function TGWeightedGraph.FindClosenessCentrality: TDoubleArray;
+var
+  Queue: TWItemPairHeapMin;
+  Reached, InQueue: TBoolVector;
+  r: array of Double;
+  CurrSum: Double;
+  I, n: SizeInt;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  if IsEmpty then exit(nil);
+  if VertexCount = 1 then exit([Double(0)]);
+  System.SetLength(r, VertexCount);
+  Queue := TWItemPairHeapMin.Create(VertexCount);
+  Reached.Capacity := VertexCount;
+  InQueue.Capacity := VertexCount;
+  for I := 0 to Pred(VertexCount) do begin
+    Reached.ClearBits;
+    InQueue.ClearBits;
+    n := 0;
+    CurrSum := Double(0);
+    Item := TWeightItem.Create(I, 0);
+    InQueue.UncBits[I] := True;
+    repeat
+      Inc(n);
+      CurrSum += Double(Item.Weight);
+      Reached.UncBits[Item.Index] := True;
+      for p in AdjLists[Item.Index]^ do
+        if not Reached.UncBits[p^.Key] then
+          if not InQueue.UncBits[p^.Key] then begin
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+            InQueue.UncBits[p^.Key] := True;
+          end else
+            if p^.Data.Weight + Item.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+    until not Queue.TryDequeue(Item);
+    if CurrSum <> 0 then
+      r[I] := (Double(Pred(n))*Double(Pred(n))/Double(Pred(VertexCount)))/CurrSum;
+  end;
+  Result := r;
+end;
+
+function TGWeightedGraph.FindBetweenessCentrality(aNormalize: Boolean; aEndPoints: Boolean): TDoubleArray;
+var
+  Queue: TWItemPairHeapMin;
+  Stack: TSimpleStack;
+  PredList: array of TIntVector;
+  Reached: TBoolVector;
+  Dist: TWeightArray;
+  Parents: TIntArray;
+  Sigma: array of Int64;
+  Delta, r: array of Double;
+  w, nInf: TWeight;
+  Scale: Double;
+  I, Curr, Prev: SizeInt;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  if IsEmpty then exit(nil);
+  if VertexCount = 1 then exit([Double(0)]);
+  System.SetLength(PredList, VertexCount);
+  System.SetLength(Sigma, VertexCount);
+  System.SetLength(Delta, VertexCount);
+  System.SetLength(Dist, VertexCount);
+  System.SetLength(r, VertexCount);
+  Reached.Capacity := VertexCount;
+  Stack := TSimpleStack.Create(VertexCount);
+  Queue := TWItemPairHeapMin.Create(VertexCount);
+  nInf := NegInfWeight;
+  for I := 0 to Pred(VertexCount) do begin
+    System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
+    TWArrayHelper.Fill(Dist, nInf);
+    Reached.ClearBits;
+    Sigma[I] := 1;
+    Item := TWeightItem.Create(I, 0);
+    Dist[I] := 0;
+    repeat
+      Stack.Push(Item.Index);
+      Reached.UncBits[Item.Index] := True;
+      for p in AdjLists[Item.Index]^ do begin
+        w := Item.Weight + p^.Data.Weight;
+        if not Reached.UncBits[p^.Key] then
+          if (Dist[p^.Key] = nInf) or (w < Queue.GetItemPtr(p^.Key)^.Weight) then begin
+            if Dist[p^.Key] = nInf then
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, w))
+            else
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, w));
+            Dist[p^.Key] := w;
+            Sigma[p^.Key] := 0;
+            PredList[p^.Key].MakeEmpty;
+          end;
+        if w = Dist[p^.Key] then begin
+          Sigma[p^.Key] += Sigma[Item.Index];
+          PredList[p^.Key].Add(Item.Index);
+        end;
+      end;
+    until not Queue.TryDequeue(Item);
+    System.FillChar(Pointer(Delta)^, System.Length(Delta)*SizeOf(Double), 0);
+    if aEndPoints then
+      r[I] += Double(Pred(Stack.Count));
+    while Stack.TryPop(Curr) do begin
+      Scale := (Delta[Curr] + 1)/Double(Sigma[Curr]);
+      for Prev in PredList[Curr] do
+        Delta[Prev] += Double(Sigma[Prev])*Scale;
+      if Curr <> I then
+        r[Curr] += Delta[Curr] + Ord(aEndPoints);
+      PredList[I].MakeEmpty;
+    end;
+  end;
+  if aNormalize then begin
+    Scale := Double(1);
+    if aEndPoints then
+      Scale /= Double(VertexCount)*Double(VertexCount-1)
+    else
+      if VertexCount > 2 then
+        Scale /= Double(VertexCount-1)*Double(VertexCount-2);
+  end else
+    Scale := Double(0.5);
+  for I := 0 to System.High(r) do
+    r[I] *= Scale;
+  Result := r;
+end;
+
+procedure TGWeightedGraph.FindEdgeBetweenessCentrality(out aBcMap: TIntPair2DoubleMap; aNormalize: Boolean);
+var
+  Queue: TWItemPairHeapMin;
+  Stack: TSimpleStack;
+  PredList: array of TIntVector;
+  Reached: TBoolVector;
+  Dist: TWeightArray;
+  Sigma: array of Int64;
+  Delta: array of Double;
+  w, nInf: TWeight;
+  c, Scale: Double;
+  I, Curr, Prev: SizeInt;
+  Item: TWeightItem;
+  p: PAdjItem;
+  pBc: PDouble;
+  e: TEdge;
+begin
+  aBcMap.Clear;
+  if VertexCount < 2 then exit;
+  System.SetLength(PredList, VertexCount);
+  System.SetLength(Sigma, VertexCount);
+  System.SetLength(Delta, VertexCount);
+  System.SetLength(Dist, VertexCount);
+  Reached.Capacity := VertexCount;
+  Stack := TSimpleStack.Create(VertexCount);
+  Queue := TWItemPairHeapMin.Create(VertexCount);
+  aBcMap.EnsureCapacity(EdgeCount);
+  for e in DistinctEdges do
+    aBcMap.Add(TOrdIntPair.Create(e.Source, e.Destination), 0);
+  nInf := NegInfWeight;
+  for I := 0 to Pred(VertexCount) do begin
+    System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
+    TWArrayHelper.Fill(Dist, nInf);
+    Reached.ClearBits;
+    Sigma[I] := 1;
+    Item := TWeightItem.Create(I, 0);
+    Dist[I] := 0;
+    repeat
+      Stack.Push(Item.Index);
+      Reached.UncBits[Item.Index] := True;
+      for p in AdjLists[Item.Index]^ do begin
+        w := Item.Weight + p^.Data.Weight;
+        if not Reached.UncBits[p^.Key] then
+          if (Dist[p^.Key] = nInf) or (w < Queue.GetItemPtr(p^.Key)^.Weight) then begin
+            if Dist[p^.Key] = nInf then
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, w))
+            else
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, w));
+            Dist[p^.Key] := w;
+            Sigma[p^.Key] := 0;
+            PredList[p^.Key].MakeEmpty;
+          end;
+        if w = Dist[p^.Key] then begin
+          Sigma[p^.Key] += Sigma[Item.Index];
+          PredList[p^.Key].Add(Item.Index);
+        end;
+      end;
+    until not Queue.TryDequeue(Item);
+    System.FillChar(Pointer(Delta)^, System.Length(Delta)*SizeOf(Double), 0);
+    while Stack.TryPop(Curr) do begin
+      Scale := (Delta[Curr] + 1)/Double(Sigma[Curr]);
+      for Prev in PredList[Curr] do
+        begin
+          c := Double(Sigma[Prev])*Scale;
+          aBcMap.GetMutValueDef(TOrdIntPair.Create(Prev, Curr), Double(0))^ += c;
+          Delta[Prev] += c;
+        end;
+      PredList[Curr].MakeEmpty;
+    end;
+  end;
+  if aNormalize then
+    Scale := Double(1)/(Double(VertexCount)*Double(VertexCount-1))
+  else
+    Scale := Double(0.5);
+  for pBc in aBcMap.MutValues do
+    pBc^ *= Scale;
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntEdgeArray;
