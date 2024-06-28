@@ -406,7 +406,7 @@ type
     function  AddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(const aVertex: TVertex): Boolean;
   { returns count of added vertices }
-    function  AddVertices(const aVertices: TVertexArray): SizeInt;
+    function  AddVertices(const aVertices: array of TVertex): SizeInt;
   { removes a vertex aVertex from the graph, slow; raises EGraphError if not contains aVertex }
     procedure RemoveVertex(const aVertex: TVertex); inline;
   { removes a vertex with index aIndex from the graph, slow; raises EGraphError if not contains aVertex }
@@ -1945,13 +1945,13 @@ begin
   Result := AddVertex(aVertex, Dummy);
 end;
 
-function TGSparseGraph.AddVertices(const aVertices: TVertexArray): SizeInt;
+function TGSparseGraph.AddVertices(const aVertices: array of TVertex): SizeInt;
 var
-  v: TVertex;
+  I, Dummy: SizeInt;
 begin
   Result := VertexCount;
-  for v in aVertices do
-    AddVertex(v);
+  for I := 0 to System.High(aVertices) do
+    DoAddVertex(aVertices[I], Dummy);
   Result := VertexCount - Result;
 end;
 
