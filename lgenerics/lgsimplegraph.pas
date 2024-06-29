@@ -343,11 +343,12 @@ type
     the degeneracy of a graph G is the least k, such that every induced subgraph of G contains
     a vertex with degree d <= k }
     function  Degeneracy: SizeInt;
-  { same as above and in array aDegs returns the degrees of the corresponding vertices,
-    such that if aDegs[I] = k, then vertex I belongs to the k-core and not to the (k+1)-core }
-    function  Degeneracy(out aDegs: TIntArray): SizeInt;
-  { returns an array of indices of the k-core(k-cores if graph is not connected) }
-    function  KCore(aK: SizeInt): TIntArray;
+  { same as above and in array aCoreMap returns the core numbers of the corresponding vertices,
+    such that if aCoreMap[I] = k, then vertex I belongs to the k-core and not to the (k+1)-core }
+    function  Degeneracy(out aCoreMap: TIntArray): SizeInt;
+  { returns an array of indices of the k-core(k-cores if graph is not connected);
+    any aK < 0 implies the largest core number, if aCoreMap = nil, it will be computed }
+    function  KCore(aK: SizeInt = -1; const aCoreMap: TIntArray = nil): TIntArray;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(const aVertex: TVertex): Double; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
@@ -399,6 +400,9 @@ type
   { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { returns True if instance is k-connected; a k-connected(k >= 2) graph is a type of connected graph
+    where removing k-1 vertices from the graph does not disconnect it(nor make it trivial) }
+    function  IsKConnected(aK: SizeInt): Boolean;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns an array of indices of the central vertices, if graph is connected, nil otherwise }
@@ -423,14 +427,15 @@ type
     path, or an empty array if the path does not exists }
     function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-    type
-      //vertex partition
-      TCut = record
-        A,
-        B: TIntArray;
-      end;
 
-  { returns size of the some global minimum cut; used Nagamochi-Ibaraki algorithm }
+  type
+    //vertex partition
+    TCut = record
+      A,
+      B: TIntArray;
+    end;
+
+  { returns the size of some global minimum cut and thus the connectivity; used Nagamochi-Ibaraki algorithm }
     function  MinCut: SizeInt;
     function  MinCut(out aCut: TCut): SizeInt;
   { same as above and additionally in aCrossEdges returns array of the edges that cross the minimum cut }
@@ -3760,85 +3765,96 @@ end;
 
 function TGSimpleGraph.Degeneracy: SizeInt;
 var
-  Queue: TINodePqMin;
-  InQueue: TBoolVector;
-  Item: TIntNode = (Index: -1; Data: -1);
-  I: SizeInt;
-  p: PAdjItem;
+  Dummy: TIntArray;
 begin
-  if IsEmpty then
-    exit(NULL_INDEX);
-  Result := 0;
-  Queue := TINodePqMin.Create(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
-  InQueue.InitRange(VertexCount);
-  while Queue.TryDequeue(Item) do
-    begin
-      if Item.Data > Result then
-        Result := Item.Data;
-      InQueue.UncBits[Item.Index] := False;
-      for p in AdjLists[Item.Index]^ do
-        if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.GetItemPtr(p^.Key)^.Data)));
-    end;
+  Result := Degeneracy(Dummy);
 end;
 
-function TGSimpleGraph.Degeneracy(out aDegs: TIntArray): SizeInt;
+// Vladimir Batagelj and Matjaz Zaversnik: An O(m) Algorithm for Cores Decomposition of Networks
+function TGSimpleGraph.Degeneracy(out aCoreMap: TIntArray): SizeInt;
 var
-  Queue: TINodePqMin;
-  InQueue: TBoolVector;
-  Item: TIntNode = (Index: -1; Data: -1);
-  I: SizeInt;
+  Sorted, StartPos, Bins: TIntArray;
+  I, Deg, Tmp, NextDeg, NextPos, TmpPos: SizeInt;
   p: PAdjItem;
 begin
-  aDegs := nil;
-  if IsEmpty then
-    exit(NULL_INDEX);
-  Result := 0;
-  Queue := TINodePqMin.Create(VertexCount);
+  aCoreMap := nil;
+  if IsEmpty then exit(NULL_INDEX);
+  System.SetLength(aCoreMap, VertexCount);
+  Deg := 0;
+  for I := 0 to Pred(VertexCount) do begin
+    aCoreMap[I] := AdjLists[I]^.Count;
+    if aCoreMap[I] > Deg then
+      Deg := aCoreMap[I];
+  end;
+  System.SetLength(Bins, Succ(Deg));
   for I := 0 to Pred(VertexCount) do
-    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
-  InQueue.InitRange(VertexCount);
-  aDegs.Length := VertexCount;
-  while Queue.TryDequeue(Item) do
-    begin
-      if Item.Data > Result then
-        Result := Item.Data;
-      aDegs[Item.Index] := Result;
-      InQueue.UncBits[Item.Index] := False;
-      for p in AdjLists[Item.Index]^ do
-        if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.GetItemPtr(p^.Key)^.Data)));
+    Inc(Bins[aCoreMap[I]]);
+  Tmp := 0;
+  for I := 0 to System.High(Bins) do begin
+    Deg := Bins[I];
+    Bins[I] := Tmp;
+    Inc(Tmp, Deg);
+  end;
+  System.SetLength(StartPos, VertexCount);
+  System.SetLength(Sorted, VertexCount);
+  for I := 0 to Pred(VertexCount) do begin
+    StartPos[I] := Bins[aCoreMap[I]];
+    Sorted[StartPos[I]] := I;
+    Inc(Bins[aCoreMap[I]]);
+  end;
+  for I := System.High(Bins) downto 1 do
+    Bins[I] := Bins[Pred(I)];
+  Bins[0] := 0;
+  Result := 0;
+  for I := 0 to Pred(VertexCount) do begin
+    Deg := aCoreMap[Sorted[I]];
+    if Deg > Result then
+      Result := Deg;
+    for p in AdjLists[Sorted[I]]^ do begin
+      if aCoreMap[p^.Key] > Deg then begin
+        NextDeg := aCoreMap[p^.Key];
+        NextPos := StartPos[p^.Key];
+        TmpPos := Bins[NextDeg];
+        Tmp := Sorted[TmpPos];
+        if p^.Key <> Tmp then begin
+          StartPos[p^.Key] := TmpPos;
+          Sorted[NextPos] := Tmp;
+          StartPos[Tmp] := NextPos;
+          Sorted[TmpPos] := p^.Key;
+        end;
+        Inc(Bins[NextDeg]);
+        Dec(aCoreMap[p^.Key]);
+      end;
     end;
+  end;
 end;
 
-function TGSimpleGraph.KCore(aK: SizeInt): TIntArray;
+function TGSimpleGraph.KCore(aK: SizeInt; const aCoreMap: TIntArray): TIntArray;
 var
-  Queue: TINodePqMin;
-  InQueue: TBoolVector;
-  Item: TIntNode = (Index: -1; Data: -1);
-  I: SizeInt;
-  p: PAdjItem;
+  r, m: TIntArray;
+  I, Cnt, d: SizeInt;
 begin
-  if IsEmpty then
-    exit(nil);
-  if aK <= 0 then
-    exit(CreateIntArrayRange);
-  Queue := TINodePqMin.Create(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
-  InQueue.InitRange(VertexCount);
-  while Queue.TryDequeue(Item) do
+  if IsEmpty then exit(nil);
+  m := aCoreMap;
+  d := NULL_INDEX;
+  if System.Length(m) <> VertexCount then
+    d := Degeneracy(m);
+  if aK < 0 then
     begin
-      if Item.Data >= aK then
-        break;
-      InQueue.UncBits[Item.Index] := False;
-      for p in AdjLists[Item.Index]^ do
-        if InQueue.UncBits[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.GetItemPtr(p^.Key)^.Data)));
+      if d = NULL_INDEX then
+        TIntHelper.FindMax(m, d);
+      aK := d;
     end;
-  Result := InQueue.ToArray;
+  System.SetLength(r, VertexCount);
+  Cnt := 0;
+  for I := 0 to System.High(m) do
+    if m[I] >= aK then
+      begin
+        r[Cnt] := I;
+        Inc(Cnt);
+      end;
+  System.SetLength(r, Cnt);
+  Result := r;
 end;
 
 function TGSimpleGraph.LocalClustering(const aVertex: TVertex): Double;
@@ -4266,6 +4282,17 @@ begin
     end;
 end;
 
+function TGSimpleGraph.IsKConnected(aK: SizeInt): Boolean;
+begin
+  if (aK < 2) or (aK >= VertexCount) then exit(False);
+  if aK = 2 then
+    exit(IsBiconnected)
+  else
+    if aK = Pred(VertexCount) then
+      exit(IsComplete);
+  Result := MinCut >= aK;
+end;
+
 function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 begin
   Result := Connected;
@@ -4487,7 +4514,6 @@ var
   c, Scale: Double;
   p: PAdjItem;
   pBc: PDouble;
-  e: TEdge;
 begin
   aBcMap.Clear;
   if VertexCount < 2 then exit;
@@ -4498,8 +4524,10 @@ begin
   System.SetLength(Sigma, VertexCount);
   System.SetLength(Delta, VertexCount);
   aBcMap.EnsureCapacity(EdgeCount);
-  for e in DistinctEdges do
-    aBcMap.Add(TOrdIntPair.Create(e.Source, e.Destination), 0);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if p^.Key > I then
+        aBcMap.Add(TOrdIntPair.Create(I, p^.Key), 0);
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
@@ -6432,7 +6460,6 @@ var
   Item: TWeightItem;
   p: PAdjItem;
   pBc: PDouble;
-  e: TEdge;
 begin
   aBcMap.Clear;
   if VertexCount < 2 then exit;
@@ -6444,8 +6471,10 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   Queue := TWItemPairHeapMin.Create(VertexCount);
   aBcMap.EnsureCapacity(EdgeCount);
-  for e in DistinctEdges do
-    aBcMap.Add(TOrdIntPair.Create(e.Source, e.Destination), 0);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if p^.Key > I then
+        aBcMap.Add(TOrdIntPair.Create(I, p^.Key), 0);
   nInf := NegInfWeight;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
