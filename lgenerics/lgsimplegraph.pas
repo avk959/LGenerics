@@ -392,7 +392,7 @@ type
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
-    function  IsBiconnected: Boolean; inline;
+    function  IsBiconnected: Boolean;
   { returns a vector containing in the corresponding elements the edges
     of found bicomponents (in aVertex connected component) in aComps }
     procedure FindBicomponents(const aVertex: TVertex; out aComps: TEdgeArrayVector);
@@ -400,9 +400,6 @@ type
   { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
-  { returns True if instance is k-connected; a k-connected(k >= 2) graph is a type of connected graph
-    where removing k-1 vertices from the graph does not disconnect it(nor make it trivial) }
-    function  IsKConnected(aK: SizeInt): Boolean;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns an array of indices of the central vertices, if graph is connected, nil otherwise }
@@ -435,11 +432,14 @@ type
       B: TIntArray;
     end;
 
-  { returns the size of some global minimum cut and thus the connectivity; used Nagamochi-Ibaraki algorithm }
+  { returns the size of some global minimum cut and thus the edge connectivity;
+    used Nagamochi-Ibaraki algorithm }
     function  MinCut: SizeInt;
     function  MinCut(out aCut: TCut): SizeInt;
   { same as above and additionally in aCrossEdges returns array of the edges that cross the minimum cut }
     function  MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
+  {  }
+    function  IsPartition(const aCat: TCut): Boolean;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -3779,14 +3779,14 @@ var
 begin
   aCoreMap := nil;
   if IsEmpty then exit(NULL_INDEX);
-  System.SetLength(aCoreMap, VertexCount);
+  aCoreMap.Length := VertexCount;
   Deg := 0;
   for I := 0 to Pred(VertexCount) do begin
     aCoreMap[I] := AdjLists[I]^.Count;
     if aCoreMap[I] > Deg then
       Deg := aCoreMap[I];
   end;
-  System.SetLength(Bins, Succ(Deg));
+  Bins.Length := Succ(Deg);
   for I := 0 to Pred(VertexCount) do
     Inc(Bins[aCoreMap[I]]);
   Tmp := 0;
@@ -3795,9 +3795,9 @@ begin
     Bins[I] := Tmp;
     Inc(Tmp, Deg);
   end;
-  System.SetLength(StartPos, VertexCount);
-  System.SetLength(Sorted, VertexCount);
-  for I := 0 to Pred(VertexCount) do begin
+  StartPos.Length := VertexCount;
+  Sorted.Length := VertexCount;
+  for I := 0 to System.High(StartPos) do begin
     StartPos[I] := Bins[aCoreMap[I]];
     Sorted[StartPos[I]] := I;
     Inc(Bins[aCoreMap[I]]);
@@ -3806,7 +3806,7 @@ begin
     Bins[I] := Bins[Pred(I)];
   Bins[0] := 0;
   Result := 0;
-  for I := 0 to Pred(VertexCount) do begin
+  for I := 0 to System.High(aCoreMap) do begin
     Deg := aCoreMap[Sorted[I]];
     if Deg > Result then
       Result := Deg;
@@ -3837,7 +3837,7 @@ begin
   if IsEmpty then exit(nil);
   m := aCoreMap;
   d := NULL_INDEX;
-  if System.Length(m) <> VertexCount then
+  if m.Length <> VertexCount then
     d := Degeneracy(m);
   if aK < 0 then
     begin
@@ -3845,7 +3845,7 @@ begin
         TIntHelper.FindMax(m, d);
       aK := d;
     end;
-  System.SetLength(r, VertexCount);
+  r.Length := VertexCount;
   Cnt := 0;
   for I := 0 to System.High(m) do
     if m[I] >= aK then
@@ -3853,7 +3853,7 @@ begin
         r[Cnt] := I;
         Inc(Cnt);
       end;
-  System.SetLength(r, Cnt);
+  r.Length := Cnt;
   Result := r;
 end;
 
@@ -4282,17 +4282,6 @@ begin
     end;
 end;
 
-function TGSimpleGraph.IsKConnected(aK: SizeInt): Boolean;
-begin
-  if (aK < 2) or (aK >= VertexCount) then exit(False);
-  if aK = 2 then
-    exit(IsBiconnected)
-  else
-    if aK = Pred(VertexCount) then
-      exit(IsComplete);
-  Result := MinCut >= aK;
-end;
-
 function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 begin
   Result := Connected;
@@ -4595,7 +4584,7 @@ var
 begin
   if not Connected or (VertexCount < 2) then
     exit(0);
-  if VertexCount = 2 then
+  if BridgeExists then
     exit(1);
   Result := Helper.Execute(Self);
 end;
@@ -4667,6 +4656,32 @@ begin
             aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
           Inc(J);
         end;
+end;
+
+function TGSimpleGraph.IsPartition(const aCat: TCut): Boolean;
+var
+  vSet: TBoolVector;
+  I, Curr: SizeInt;
+  vMax: SizeUInt;
+begin
+  if VertexCount < 2 then exit(False);
+  if aCat.A.IsEmpty or aCat.B.IsEmpty then exit(False); // empty parts are not allowed
+  if aCat.A.Length + aCat.B.Length <> VertexCount then exit(False);// missing elements
+  vSet.InitRange(VertexCount);
+  vMax := SizeUInt(Pred(VertexCount));
+  for Curr in aCat.A do
+    begin
+      if SizeUInt(Curr) > vMax then exit(False); // out of range
+      if not vSet.UncBits[Curr] then exit(False);// duplicate value
+      vSet.UncBits[Curr] := False;
+    end;
+  for Curr in aCat.B do
+    begin
+      if SizeUInt(Curr) > vMax then exit(False);
+      if not vSet.UncBits[Curr] then exit(False);
+      vSet.UncBits[Curr] := False;
+    end;
+  Result := True;
 end;
 
 function TGSimpleGraph.FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
