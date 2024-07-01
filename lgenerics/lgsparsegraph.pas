@@ -4322,9 +4322,9 @@ begin
     Add(p^);
 end;
 
-procedure TGJoinableHashList.Remove(aValue: SizeInt);
+procedure TGJoinableHashList.Remove(aKey: SizeInt);
 begin
-  FTable.Remove(aValue);
+  FTable.Remove(aKey);
 end;
 
 { TSimpleStack }
