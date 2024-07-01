@@ -4661,7 +4661,7 @@ end;
 function TGSimpleGraph.IsPartition(const aCat: TCut): Boolean;
 var
   vSet: TBoolVector;
-  I, Curr: SizeInt;
+  Curr: SizeInt;
   vMax: SizeUInt;
 begin
   if VertexCount < 2 then exit(False);
@@ -6386,7 +6386,6 @@ var
   PredList: array of TIntVector;
   Reached: TBoolVector;
   Dist: TWeightArray;
-  Parents: TIntArray;
   Sigma: array of Int64;
   Delta, r: array of Double;
   w, nInf: TWeight;
