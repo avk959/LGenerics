@@ -2064,7 +2064,6 @@ function TGSimpleDigraph.GetScCondensation(const aScIds: TIntArray; aScCount: Si
 var
   List: TSccNodeList;
   Queue: TIntArray;
-  ArcSet: TIntEdgeHashSet;
   Visited: TBoolVector;
   I, Curr, SrcId, DstId, qHead, qTail: SizeInt;
   p: PAdjItem;
@@ -4546,7 +4545,6 @@ var
   PredList: array of TIntVector;
   Reached: TBoolVector;
   Dist: TWeightArray;
-  Parents: TIntArray;
   Sigma: array of Int64;
   Delta, r: array of Double;
   w, nInf: TWeight;
