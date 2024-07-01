@@ -210,7 +210,7 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure Add(const aValue: TEntry);
     procedure AddAll(const aList: TGJoinableHashList);
-    procedure Remove(aValue: SizeInt); inline;
+    procedure Remove(aKey: SizeInt); inline;
     property  Count: SizeInt read GetCount;
   end;
 
