@@ -49,8 +49,7 @@ type
     FBestSet: TIntSet;
     FBestCut: TWeight;
     procedure ClearMarks;
-    procedure Init(aGraph: TGInt64Net);
-    procedure Init2(aGraph: TGInt64Net);
+    procedure Init(aGraph: TGInt64Net; aCutsNeeded: Boolean);
     procedure ShrinkEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;

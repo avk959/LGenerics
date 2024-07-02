@@ -1848,20 +1848,22 @@ end;
 procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
 var
   I: SizeInt;
+  pAdj: PAdjList;
   p: PAdjItem;
 begin
   System.SetLength(FGraph, aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
     begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, 1));
+      pAdj := aGraph.AdjLists[I];
+      FGraph[I].EnsureCapacity(pAdj^.Count);
+      for p in pAdj^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Key, 1));
     end;
   if aCutsNeeded then
     begin
       System.SetLength(FCuts, aGraph.VertexCount);
       for I := 0 to Pred(aGraph.VertexCount) do
-        FCuts[I].Add(I);
+        FCuts[I].Push(I);
     end
   else
     FCuts := nil;
@@ -1888,13 +1890,13 @@ begin
       Edge.Target := aSource;
       FGraph[I].Add(Edge);
     end;
-  Finalize(FGraph[aTarget]);
+  FGraph[aTarget].Clear;
   FExistNodes.UncBits[aTarget] := False;
   if FCuts <> nil then
     begin
       while FCuts[aTarget].TryPop(I) do
         FCuts[aSource].Push(I);
-      Finalize(FCuts[aTarget]);
+      FCuts[aTarget].Clear;
     end;
 end;
 

@@ -339,7 +339,7 @@ type
     FInQueue: TBoolVector;
     FBestSet: TIntSet;
     FBestCut: SizeInt;
-    procedure ClearMarks; inline;
+    procedure ClearMarks;
     procedure Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
     procedure ShrinkEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
