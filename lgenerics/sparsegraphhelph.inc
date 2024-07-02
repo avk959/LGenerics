@@ -208,6 +208,7 @@ type
   public
     function  GetEnumerator: TEnumerator; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure Clear; inline;
     procedure Add(const aValue: TEntry);
     procedure AddAll(const aList: TGJoinableHashList);
     procedure Remove(aKey: SizeInt); inline;
