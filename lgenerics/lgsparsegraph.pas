@@ -70,6 +70,9 @@ type
   TNestNodeMapTest = function(aNode, aImage: SizeInt): Boolean is nested;
   TCost            = Int64;
   TVertexColor     = type Byte;
+  TGraphBisection  = record
+    A, B: TIntArray;
+  end;
 
 const
   MAX_COST = High(TCost);
@@ -386,6 +389,8 @@ type
     class function TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray; static;
     function  IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
     function  VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
+  {  }
+    function  IsBisection(const aBisect: TGraphBisection): Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -1755,6 +1760,32 @@ begin
   Result.Length := System.Length(aVertPath);
   for I := 0 to Pred(Result.Length) do
     Result[I] := IndexOf(aVertPath[I]);
+end;
+
+function TGSparseGraph.IsBisection(const aBisect: TGraphBisection): Boolean;
+var
+  vSet: TBoolVector;
+  Curr: SizeInt;
+  vMax: SizeUInt;
+begin
+  if VertexCount < 2 then exit(False);
+  if aBisect.A.IsEmpty or aBisect.B.IsEmpty then exit(False); // empty parts are not allowed
+  if aBisect.A.Length + aBisect.B.Length <> VertexCount then exit(False);// missing elements
+  vSet.InitRange(VertexCount);
+  vMax := SizeUInt(Pred(VertexCount));
+  for Curr in aBisect.A do
+    begin
+      if SizeUInt(Curr) > vMax then exit(False); // out of range
+      if not vSet.UncBits[Curr] then exit(False);// duplicate index
+      vSet.UncBits[Curr] := False;
+    end;
+  for Curr in aBisect.B do
+    begin
+      if SizeUInt(Curr) > vMax then exit(False);
+      if not vSet.UncBits[Curr] then exit(False);
+      vSet.UncBits[Curr] := False;
+    end;
+  Result := True;
 end;
 
 function TGSparseGraph.IsEmpty: Boolean;
@@ -4301,6 +4332,11 @@ end;
 procedure TGJoinableHashList.EnsureCapacity(aValue: SizeInt);
 begin
   FTable.EnsureCapacity(aValue);
+end;
+
+procedure TGJoinableHashList.Clear;
+begin
+  FTable.Clear;
 end;
 
 procedure TGJoinableHashList.Add(const aValue: TEntry);

@@ -426,11 +426,7 @@ type
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 
   type
-    //vertex partition
-    TCut = record
-      A,
-      B: TIntArray;
-    end;
+    TCut = TGraphBisection;
 
   { returns the size of some global minimum cut and thus the edge connectivity;
     used Nagamochi-Ibaraki algorithm }
@@ -438,8 +434,6 @@ type
     function  MinCut(out aCut: TCut): SizeInt;
   { same as above and additionally in aCrossEdges returns array of the edges that cross the minimum cut }
     function  MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
-  {  }
-    function  IsPartition(const aCat: TCut): Boolean;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -4596,6 +4590,7 @@ var
   B: TBoolVector;
   I: SizeInt;
 begin
+  aCut := Default(TCut);
   if not Connected or (VertexCount < 2) then
     exit(0);
   if VertexCount = 2 then
@@ -4618,70 +4613,44 @@ var
   I, J: SizeInt;
   p: PAdjItem;
 begin
+  aCrossEdges := nil;
   Result := MinCut(aCut);
-  if Result < 1 then
-    begin
-      aCrossEdges := nil;
-      exit;
-    end;
-  if aCut.A.Length <= aCut.B.Length then
-    begin
-      Left.Capacity := VertexCount;
-      Right.InitRange(VertexCount);
-      for I in aCut.A do
-        begin
-          Left.UncBits[I] := True;
-          Right.UncBits[I] := False;
-        end;
-    end
-  else
-    begin
-      Right.Capacity := VertexCount;
-      Left.InitRange(VertexCount);
-      for I in aCut.B do
-        begin
-          Right.UncBits[I] := True;
-          Left.UncBits[I] := False;
-        end;
-    end;
+  if Result < 1 then exit;
   J := 0;
   System.SetLength(aCrossEdges, Result);
-  for I in Left do
-    for p in AdjLists[I]^ do
-      if Right.UncBits[p^.Destination] then
-        begin
+  if aCut.A.Length <= aCut.B.Length then begin
+    Left.Capacity := VertexCount;
+    Right.InitRange(VertexCount);
+    for I in aCut.A do begin
+      Left.UncBits[I] := True;
+      Right.UncBits[I] := False;
+    end;
+    for I in Left do
+      for p in AdjLists[I]^ do
+        if Right.UncBits[p^.Destination] then begin
           if I < p^.Destination then
             aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
           else
             aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
           Inc(J);
         end;
-end;
-
-function TGSimpleGraph.IsPartition(const aCat: TCut): Boolean;
-var
-  vSet: TBoolVector;
-  Curr: SizeInt;
-  vMax: SizeUInt;
-begin
-  if VertexCount < 2 then exit(False);
-  if aCat.A.IsEmpty or aCat.B.IsEmpty then exit(False); // empty parts are not allowed
-  if aCat.A.Length + aCat.B.Length <> VertexCount then exit(False);// missing elements
-  vSet.InitRange(VertexCount);
-  vMax := SizeUInt(Pred(VertexCount));
-  for Curr in aCat.A do
-    begin
-      if SizeUInt(Curr) > vMax then exit(False); // out of range
-      if not vSet.UncBits[Curr] then exit(False);// duplicate value
-      vSet.UncBits[Curr] := False;
+  end else begin
+    Right.Capacity := VertexCount;
+    Left.InitRange(VertexCount);
+    for I in aCut.B do begin
+      Right.UncBits[I] := True;
+      Left.UncBits[I] := False;
     end;
-  for Curr in aCat.B do
-    begin
-      if SizeUInt(Curr) > vMax then exit(False);
-      if not vSet.UncBits[Curr] then exit(False);
-      vSet.UncBits[Curr] := False;
-    end;
-  Result := True;
+    for I in Right do
+      for p in AdjLists[I]^ do
+        if Left.UncBits[p^.Destination] then begin
+          if I < p^.Destination then
+            aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
+          else
+            aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
+          Inc(J);
+        end;
+  end;
 end;
 
 function TGSimpleGraph.FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
