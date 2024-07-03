@@ -391,7 +391,8 @@ type
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
-  { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
+  { checks whether an instance is biconnected, i.e. whether it contains more than two vertices
+    and whether it will remain connected after removing any single vertex }
     function  IsBiconnected: Boolean;
   { returns a vector containing in the corresponding elements the edges
     of found bicomponents (in aVertex connected component) in aComps }
@@ -4234,10 +4235,9 @@ end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
 begin
-  if Connected then
-    Result := not ContainsCutVertexI(0)
-  else
-    Result := False;
+  if VertexCount < 3 then
+    exit(False);
+  Result := Connected and not ContainsCutVertexI(0);
 end;
 
 procedure TGSimpleGraph.FindBicomponents(const aVertex: TVertex; out aComps: TEdgeArrayVector);
