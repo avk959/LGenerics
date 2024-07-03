@@ -1827,38 +1827,48 @@ end;
 
 { TGSimpleGraph.TNISimpMinCutHelper.TNiEdge }
 
-constructor TGSimpleGraph.TNISimpMinCutHelper.TNiEdge.Create(aTarget, aWeight: SizeInt);
+constructor TGSimpleGraph.TNISimpMinCutHelper.TNiEdge.Create(aTarget: SizeInt; aRev, aNext: PNiEdge);
 begin
   Target := aTarget;
-  Weight := aWeight;
+  Reverse := aRev;
+  Next := aNext;
 end;
 
 { TGSimpleGraph.TNISimpMinCutHelper }
 
-procedure TGSimpleGraph.TNISimpMinCutHelper.ClearMarks;
-var
-  I: SizeInt;
-  p: TNiAdjList.PEntry;
-begin
-  for I in FExistNodes do
-    for p in FGraph[I] do
-      p^.Scanned := False;
-end;
-
 procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
 var
-  I: SizeInt;
-  pAdj: PAdjList;
+  CurrEdge: TIntArray;
+  I, Tmp: SizeInt;
   p: PAdjItem;
 begin
-  System.SetLength(FGraph, aGraph.VertexCount);
+  CurrEdge.Length := aGraph.VertexCount;
+  System.SetLength(FNodes, aGraph.VertexCount);
+  System.SetLength(FEdges, aGraph.EdgeCount * 2);
+  Tmp := 0;
   for I := 0 to Pred(aGraph.VertexCount) do
     begin
-      pAdj := aGraph.AdjLists[I];
-      FGraph[I].EnsureCapacity(pAdj^.Count);
-      for p in pAdj^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Key, 1));
+      CurrEdge[I] := Tmp;
+      FNodes[I].AdjHead := @FEdges[Tmp];
+      Tmp += aGraph.AdjLists[I]^.Count;
     end;
+  for I := 0 to Pred(aGraph.VertexCount) do
+    for p in aGraph.AdjLists[I]^ do
+      if p^.Key > I then
+        begin
+          FEdges[CurrEdge[I]] :=
+            TNiEdge.Create(p^.Key, @FEdges[CurrEdge[p^.Key]], @FEdges[Succ(CurrEdge[I])]);
+          FEdges[CurrEdge[p^.Key]] :=
+            TNiEdge.Create(I, @FEdges[CurrEdge[I]], @FEdges[Succ(CurrEdge[p^.Key])]);
+          Inc(CurrEdge[I]);
+          Inc(CurrEdge[p^.Key])
+        end;
+  Tmp := 0;
+  for I := 0 to Pred(aGraph.VertexCount) do begin
+    Tmp += aGraph.AdjLists[I]^.Count;
+    FNodes[I].AdjTail := @FEdges[Pred(Tmp)];
+    FEdges[Pred(Tmp)].Next := nil;
+  end;
   if aCutsNeeded then
     begin
       System.SetLength(FCuts, aGraph.VertexCount);
@@ -1867,33 +1877,31 @@ begin
     end
   else
     FCuts := nil;
+  FScanned.Capacity := aGraph.EdgeCount * 2;
   FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := High(SizeInt);
 end;
 
-procedure TGSimpleGraph.TNISimpMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGSimpleGraph.TNISimpMinCutHelper.ContractEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
-  p: TNiAdjList.PEntry;
-  Edge: TNiEdge;
+  p: PNiEdge;
 begin
-  FGraph[aSource].Remove(aTarget);
-  FGraph[aTarget].Remove(aSource);
-  FGraph[aSource].AddAll(FGraph[aTarget]);
-  for p in FGraph[aTarget] do
+  p := FNodes[aTarget].AdjHead;
+  while p <> nil do
     begin
-      I := p^.Target;
-      Edge := p^;
-      FGraph[I].Remove(aTarget);
-      Edge.Target := aSource;
-      FGraph[I].Add(Edge);
+      p^.Reverse^.Target := aSource;
+      p := p^.Next;
     end;
-  FGraph[aTarget].Clear;
+  FNodes[aSource].AdjTail^.Next := FNodes[aTarget].AdjHead;
+  FNodes[aSource].AdjTail := FNodes[aTarget].AdjTail;
+  FNodes[aTarget].AdjHead := nil;
   FExistNodes.UncBits[aTarget] := False;
   if FCuts <> nil then
     begin
+      I := 0;
       while FCuts[aTarget].TryPop(I) do
         FCuts[aSource].Push(I);
       FCuts[aTarget].Clear;
@@ -1902,11 +1910,11 @@ end;
 
 procedure TGSimpleGraph.TNISimpMinCutHelper.ScanFirstSearch;
 var
-  I: SizeInt;
-  p: TNiAdjList.PEntry;
   Item: TIntNode;
+  I: SizeInt;
+  p: PNiEdge;
 begin
-  ClearMarks;
+  FScanned.ClearBits;
   FInQueue.Join(FExistNodes);
   for I in FExistNodes do
     FQueue.Enqueue(I, TIntNode.Create(I, 0));
@@ -1914,15 +1922,21 @@ begin
     begin
       I := FQueue.Dequeue.Index;
       FInQueue.UncBits[I] := False;
-      for p in FGraph[I] do
-        if FInQueue.UncBits[p^.Target] then
-          begin
-            Item := FQueue.GetItem(p^.Target);
-            Item.Data += p^.Weight;
-            FQueue.Update(p^.Target, Item);
-            p^.Scanned := True;
-            p^.ScanRank := Item.Data;
-          end;
+      p := FNodes[I].AdjHead;
+      while p <> nil do
+        begin
+          if not FScanned.UncBits[p - PNiEdge(FEdges)] and FInQueue.UncBits[p^.Target] then
+            begin
+              Item := FQueue.GetItem(p^.Target);
+              Inc(Item.Data);
+              FQueue.Update(p^.Target, Item);
+              FScanned.UncBits[p - PNiEdge(FEdges)] := True;
+              FScanned.UncBits[p^.Reverse - PNiEdge(FEdges)] := True;
+              p^.Rank := Item.Data;
+              p^.Reverse^.Rank := Item.Data;
+            end;
+          p := p^.Next;
+        end;
     end;
   Item := FQueue.Dequeue;
   FInQueue.UncBits[Item.Index] := False;
@@ -1937,17 +1951,26 @@ end;
 procedure TGSimpleGraph.TNISimpMinCutHelper.Shrink;
 var
   I: SizeInt;
-  p: TNiAdjList.PEntry;
-  Pair: TOrdIntPair;
+  p: PNiEdge;
+  Edge: TIntEdge;
 begin
   ScanFirstSearch;
   for I in FExistNodes do
-    for p in FGraph[I] do
-      if p^.Scanned and (p^.ScanRank >= FBestCut) then
-        FEdgeQueue.Enqueue(TOrdIntPair.Create(I, p^.Target));
-  while FEdgeQueue.TryDequeue(Pair) do
-    if FExistNodes.UncBits[Pair.Left] and FExistNodes.UncBits[Pair.Right] then
-      ShrinkEdge(Pair.Left, Pair.Right);
+    begin
+      p := FNodes[I].AdjHead;
+      while p <> nil do begin
+        if FScanned.UncBits[p - PNiEdge(FEdges)] and (p^.Rank >= FBestCut) then
+          begin
+            FEdgeQueue.Enqueue(TIntEdge.Create(I, p^.Target));
+            FScanned.UncBits[p^.Reverse - PNiEdge(FEdges)] := False;
+          end;
+        p := p^.Next;
+      end;
+    end;
+  Edge := Default(TIntEdge);
+  while FEdgeQueue.TryDequeue(Edge) do
+    if FExistNodes.UncBits[Edge.Source] and FExistNodes.UncBits[Edge.Destination] then
+      ContractEdge(Edge.Source, Edge.Destination);
 end;
 
 function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph): SizeInt;

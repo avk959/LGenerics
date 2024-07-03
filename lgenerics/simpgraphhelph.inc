@@ -316,37 +316,38 @@ type
   TNISimpMinCutHelper = record
   strict private
   type
+    PNiEdge = ^TNiEdge;
     TNiEdge = record
       Target,
-      Weight,
-      ScanRank: SizeInt;
-      Scanned: Boolean;
-      constructor Create(aTarget, aWeight: SizeInt);
-      property Key: SizeInt read Target;
+      Rank: SizeInt;
+      Reverse,
+      Next: PNiEdge;
+      constructor Create(aTarget: SizeInt; aRev, aNext: PNiEdge);
     end;
-
-    PNiEdge    = ^TNiEdge;
-    TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
+    TNiNode = record
+      AdjHead,
+      AdjTail: PNiEdge;
+    end;
     TQueue     = specialize TGPairHeapMax<TIntNode>;
-    TEdgeQueue = specialize TGLiteQueue<TOrdIntPair>;
-
+    TEdgeQueue = specialize TGLiteQueue<TIntEdge>;
   var
-    FGraph: array of TNiAdjList;
+    FEdges: array of TNiEdge;
+    FNodes: array of TNiNode;
     FCuts: array of TIntSet;
     FQueue: TQueue;
     FEdgeQueue: TEdgeQueue;
     FExistNodes,
+    FScanned,
     FInQueue: TBoolVector;
     FBestSet: TIntSet;
     FBestCut: SizeInt;
-    procedure ClearMarks;
     procedure Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
-    procedure ShrinkEdge(aSource, aTarget: SizeInt);
+    procedure ContractEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;
   public
-    function  Execute(aGraph: TGSimpleGraph): SizeInt;
-    function  Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+    function Execute(aGraph: TGSimpleGraph): SizeInt;
+    function Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
   end;
 
   { TPlanarHelper: planarity testing algorithm and planar embedding construction
