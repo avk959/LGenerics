@@ -2349,6 +2349,10 @@ var
 begin
   g := {%H-}Ref;
   AssertFalse(g.IsBiconnected);
+  Ref.Instance.AddVertices([0,1]);
+  AssertFalse(g.IsBiconnected);
+  Ref.Instance.AddEdges([0,1]);
+  AssertFalse(g.IsBiconnected);
   Ref.Instance := GenerateTestGr1;
   g := Ref;
   AssertFalse(g.IsBiconnected);
