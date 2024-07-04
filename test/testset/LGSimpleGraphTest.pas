@@ -5094,12 +5094,14 @@ var
   Ref: specialize TGAutoRef<TGraph64>;
   g: TGraph64;
   Cut: TGraph64.TCut;
+  w: Int64;
   a : TGraph64.TEdgeArray;
 begin
   {%H-}Ref.Instance := GenerateTestWGr3;
   g := Ref;
-  AssertTrue(g.MinWeightCutNI(Cut, a) = gnsOk);
+  AssertTrue(g.MinWeightCutNI(Cut, w, a) = gnsOk);
   AssertTrue(Length(a) = 2);
+  AssertTrue(w = 110);
   AssertTrue(g.TotalWeight(a) = 110);
   if (a[0].Source = 2) or (a[0].Source = 4) then
     begin
@@ -5130,13 +5132,15 @@ var
   Ref: specialize TGAutoRef<TGraph64>;
   g: TGraph64;
   Cut: TGraph64.TCut;
+  w: Int64;
   a : TGraph64.TEdgeArray;
 begin
   {%H-}Ref.Instance := GenerateTestWGr3;
   g := Ref;
   g.SetEdgeData(1, 3, TInt64Weight.Create(45));
-  AssertTrue(g.MinWeightCutNI(Cut, a) = gnsOk);
+  AssertTrue(g.MinWeightCutNI(Cut, w, a) = gnsOk);
   AssertTrue(Length(a) = 2);
+  AssertTrue(w = 105);
   AssertTrue(g.TotalWeight(a) = 105);
   if (a[0].Source = 0) or (a[0].Source = 2) then
     begin
