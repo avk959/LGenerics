@@ -878,7 +878,7 @@ type
     MIN_WEIGHT = Low(Int64);
 
     {$I GlobMinCutH.inc}
-
+  protected
     function GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
     function GetTrivialMinCut(out aCut: TWeight): Boolean;
     function StoerWagner(out aCut: TIntSet): TWeight;
@@ -923,7 +923,7 @@ type
   { the capacities of all edges must be nonnegative; returns state of network;
     if state is gnsOk then returns the global minimum cut in aCut and array of the edges
     that cross the minimum cut in aCrossEdges; used Nagamochi-Ibaraki algorithm }
-    function MinWeightCutNI(out aCut: TCut; out aCrossEdges: TEdgeArray): TGlobalNetState;
+    function MinWeightCutNI(out aCut: TCut; out aCutWeight: TWeight; out aCrossEdges: TEdgeArray): TGlobalNetState;
   end;
 
 implementation
@@ -4609,48 +4609,35 @@ end;
 
 function TGSimpleGraph.MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
 var
-  Left, Right: TBoolVector;
+  Left: TIntArray;
+  Right: TBoolVector;
   I, J: SizeInt;
   p: PAdjItem;
 begin
   aCrossEdges := nil;
   Result := MinCut(aCut);
   if Result < 1 then exit;
+  Right.InitRange(VertexCount);
+  if aCut.A.Length <= aCut.B.Length then begin
+    for I in aCut.A do
+      Right.UncBits[I] := False;
+    Left := aCut.A;
+  end else begin
+    for I in aCut.B do
+      Right.UncBits[I] := False;
+    Left := aCut.B;
+  end;
   J := 0;
   System.SetLength(aCrossEdges, Result);
-  if aCut.A.Length <= aCut.B.Length then begin
-    Left.Capacity := VertexCount;
-    Right.InitRange(VertexCount);
-    for I in aCut.A do begin
-      Left.UncBits[I] := True;
-      Right.UncBits[I] := False;
-    end;
-    for I in Left do
-      for p in AdjLists[I]^ do
-        if Right.UncBits[p^.Destination] then begin
-          if I < p^.Destination then
-            aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
-          else
-            aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
-          Inc(J);
-        end;
-  end else begin
-    Right.Capacity := VertexCount;
-    Left.InitRange(VertexCount);
-    for I in aCut.B do begin
-      Right.UncBits[I] := True;
-      Left.UncBits[I] := False;
-    end;
-    for I in Right do
-      for p in AdjLists[I]^ do
-        if Left.UncBits[p^.Destination] then begin
-          if I < p^.Destination then
-            aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
-          else
-            aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
-          Inc(J);
-        end;
-  end;
+  for I in Left do
+    for p in AdjLists[I]^ do
+      if Right.UncBits[p^.Destination] then begin
+        if I < p^.Destination then
+          aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
+        else
+          aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
+        Inc(J);
+      end;
 end;
 
 function TGSimpleGraph.FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
@@ -6941,6 +6928,7 @@ end;
 function TGInt64Net.MinWeightCutNI(out aCutWeight: TWeight): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
+  w: TWeight;
   e: TEdge;
 begin
   aCutWeight := 0;
@@ -6948,10 +6936,9 @@ begin
     exit(gnsTrivial);
   if not Connected then
     exit(gnsDisconnected);
-  for e in DistinctEdges do
-    if e.Data.Weight < 0 then
-      exit(gnsNegEdgeCapacity);
-  aCutWeight := Helper.GetMinCut(Self);
+  w := Helper.GetMinCut(Self);
+  if w = MIN_WEIGHT then exit(gnsNegEdgeCapacity);
+  aCutWeight := w;
   Result := gnsOk;
 end;
 
@@ -6960,6 +6947,7 @@ var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
   Total: TBoolVector;
+  w: TWeight;
   I: SizeInt;
   e: TEdge;
 begin
@@ -6970,10 +6958,9 @@ begin
     exit(gnsTrivial);
   if not Connected then
     exit(gnsDisconnected);
-  for e in DistinctEdges do
-    if e.Data.Weight < 0 then
-      exit(gnsNegEdgeCapacity);
-  aCutWeight := Helper.GetMinCut(Self, Cut);
+  w := Helper.GetMinCut(Self, Cut);
+  if w = MIN_WEIGHT then exit(gnsNegEdgeCapacity);
+  aCutWeight := w;
   Total.InitRange(VertexCount);
   for I in Cut do
     Total.UncBits[I] := False;
@@ -6982,65 +6969,39 @@ begin
   Result := gnsOk;
 end;
 
-function TGInt64Net.MinWeightCutNI(out aCut: TCut; out aCrossEdges: TEdgeArray): TGlobalNetState;
+function TGInt64Net.MinWeightCutNI(out aCut: TCut; out aCutWeight: TWeight;
+  out aCrossEdges: TEdgeArray): TGlobalNetState;
 var
-  Helper: TNIMinCutHelper;
-  Cut: TIntSet;
-  Left, Right: TBoolVector;
+  Left: TIntArray;
+  Right: TBoolVector;
   I, J: SizeInt;
-  e: TEdge;
   p: PAdjItem;
-  d: TEdgeData;
 begin
   aCrossEdges := nil;
-  aCut.A := nil;
-  aCut.B := nil;
-  if VertexCount < 2 then
-    exit(gnsTrivial);
-  if not Connected then
-    exit(gnsDisconnected);
-  for e in DistinctEdges do
-    if e.Data.Weight < 0 then
-      exit(gnsNegEdgeCapacity);
-  Helper.GetMinCut(Self, Cut);
-  if Cut.Count <= VertexCount shr 1 then
-    begin
-      Left.Capacity := VertexCount;
-      Right.InitRange(VertexCount);
-      for I in Cut do
-        begin
-          Left.UncBits[I] := True;
-          Right.UncBits[I] := False;
-        end;
-    end
-  else
-    begin
-      Right.Capacity := VertexCount;
-      Left.InitRange(VertexCount);
-      for I in Cut do
-        begin
-          Right.UncBits[I] := True;
-          Left.UncBits[I] := False;
-        end;
-    end;
-  aCut.A := Left.ToArray;
-  aCut.B := Right.ToArray;
-  System.SetLength(aCrossEdges, Left.PopCount);
+  Result := MinWeightCutNI(aCut, aCutWeight);
+  if Result <> gnsOk then exit;
+  Right.InitRange(VertexCount);
+  if aCut.A.Length <= aCut.B.Length then begin
+    for I in aCut.A do
+      Right.UncBits[I] := False;
+    Left := aCut.A;
+  end else begin
+    for I in aCut.B do
+      Right.UncBits[I] := False;
+    Left := aCut.B;
+  end;
+  System.SetLength(aCrossEdges, VertexCount);
   J := 0;
-  d := Default(TEdgeData);
   for I in Left do
     for p in AdjLists[I]^ do
-      if Right.UncBits[p^.Destination] then
-        begin
-          GetEdgeDataI(I, p^.Destination, d);
-          if I < p^.Destination then
-            aCrossEdges[J] := TWeightEdge.Create(I, p^.Destination, d.Weight)
-          else
-            aCrossEdges[J] := TWeightEdge.Create(p^.Destination, I, d.Weight);
-          Inc(J);
-        end;
+      if Right.UncBits[p^.Destination] then begin
+        if I < p^.Destination then
+          aCrossEdges[J] := TWeightEdge.Create(I, p^.Destination, p^.Data.Weight)
+        else
+          aCrossEdges[J] := TWeightEdge.Create(p^.Destination, I, p^.Data.Weight);
+        Inc(J);
+      end;
   System.SetLength(aCrossEdges, J);
-  Result := gnsOk;
 end;
 
 end.
