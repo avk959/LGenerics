@@ -4432,6 +4432,19 @@ begin
     aValue := Peek;
 end;
 
+{ TCostItem }
+
+class operator TCostItem.<(const L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost < R.Cost;
+end;
+
+constructor TCostItem.Create(aIndex: SizeInt; aCost: TCost);
+begin
+  Index := aIndex;
+  Cost := aCost;
+end;
+
 { TGWeightHelper.TWeightEdge }
 
 class operator TGWeightHelper.TWeightEdge.<(const L, R: TWeightEdge): Boolean;
@@ -4449,19 +4462,6 @@ end;
 function TGWeightHelper.TWeightEdge.Edge: TIntEdge;
 begin
   Result := TIntEdge.Create(Source, Destination);
-end;
-
-{ TCostItem }
-
-class operator TCostItem.<(const L, R: TCostItem): Boolean;
-begin
-  Result := L.Cost < R.Cost;
-end;
-
-constructor TCostItem.Create(aIndex: SizeInt; aCost: TCost);
-begin
-  Index := aIndex;
-  Cost := aCost;
 end;
 
 { TGWeightHelper.TWeightItem }
