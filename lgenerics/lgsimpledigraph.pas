@@ -561,7 +561,7 @@ type
     TWItemBinHeapMin  = TWeightHelper.TWItemBinHeapMin;
     TWItemPairHeapMin = TWeightHelper.TWItemPairHeapMin;
     TWeightItemList   = specialize TGLiteVector<TWeightItem>;
-  var
+  protected
     function  CreateEdgeArray: TEdgeArray;
     procedure GetDagMinPaths(aSrc: SizeInt; var aWeights: TWeightArray);
     procedure GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
