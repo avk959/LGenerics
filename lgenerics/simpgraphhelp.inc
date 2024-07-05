@@ -1836,50 +1836,101 @@ end;
 
 { TGSimpleGraph.TNISimpMinCutHelper }
 
-procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
+procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph; aCutNeeded: Boolean);
 var
-  CurrEdge: TIntArray;
+  EdgeIdx: TIntArray;
   I, Tmp: SizeInt;
   p: PAdjItem;
 begin
-  CurrEdge.Length := aGraph.VertexCount;
-  System.SetLength(FNodes, aGraph.VertexCount);
+  FNodeCount := aGraph.VertexCount;
+  EdgeIdx.Length := FNodeCount;
+  System.SetLength(FNodes, FNodeCount);
   System.SetLength(FEdges, aGraph.EdgeCount * 2);
   Tmp := 0;
-  for I := 0 to Pred(aGraph.VertexCount) do
+  for I := 0 to Pred(FNodeCount) do
     begin
-      CurrEdge[I] := Tmp;
+      EdgeIdx[I] := Tmp;
       FNodes[I].AdjHead := @FEdges[Tmp];
       Tmp += aGraph.AdjLists[I]^.Count;
+      FNodes[I].AdjTail := @FEdges[Pred(Tmp)];
     end;
-  for I := 0 to Pred(aGraph.VertexCount) do
+  for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       if p^.Key > I then
         begin
-          FEdges[CurrEdge[I]] :=
-            TNiEdge.Create(p^.Key, @FEdges[CurrEdge[p^.Key]], @FEdges[Succ(CurrEdge[I])]);
-          FEdges[CurrEdge[p^.Key]] :=
-            TNiEdge.Create(I, @FEdges[CurrEdge[I]], @FEdges[Succ(CurrEdge[p^.Key])]);
-          Inc(CurrEdge[I]);
-          Inc(CurrEdge[p^.Key])
+          FEdges[EdgeIdx[I]] :=
+            TNiEdge.Create(p^.Key, @FEdges[EdgeIdx[p^.Key]], @FEdges[Succ(EdgeIdx[I])]);
+          FEdges[EdgeIdx[p^.Key]] :=
+            TNiEdge.Create(I, @FEdges[EdgeIdx[I]], @FEdges[Succ(EdgeIdx[p^.Key])]);
+          Inc(EdgeIdx[I]);
+          Inc(EdgeIdx[p^.Key])
         end;
-  Tmp := 0;
-  for I := 0 to Pred(aGraph.VertexCount) do begin
-    Tmp += aGraph.AdjLists[I]^.Count;
-    FNodes[I].AdjTail := @FEdges[Pred(Tmp)];
-    FEdges[Pred(Tmp)].Next := nil;
-  end;
-  if aCutsNeeded then
+  for I := 0 to Pred(FNodeCount) do
+    FNodes[I].AdjTail^.Next := nil;
+  if aCutNeeded then
     begin
-      System.SetLength(FCuts, aGraph.VertexCount);
-      for I := 0 to Pred(aGraph.VertexCount) do
+      System.SetLength(FCuts, FNodeCount);
+      for I := 0 to Pred(FNodeCount) do
         FCuts[I].Push(I);
     end
   else
     FCuts := nil;
   FScanned.Capacity := aGraph.EdgeCount * 2;
+  FQueue := TQueue.Create(FNodeCount);
+  FExistNodes.InitRange(FNodeCount);
+  FInQueue.Capacity := FNodeCount;
+  FBestCut := High(SizeInt);
+end;
+
+procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph; const aUsed: TBoolVector);
+var
+  EdgeIdx: TIntArray;
+  I, Tmp, eCnt: SizeInt;
+  p: PAdjItem;
+begin
+  EdgeIdx.Length := aGraph.VertexCount;
+  Tmp := 0;
+  FNodeCount := 0;
+  for I := 0 to Pred(FNodeCount) do
+    if aUsed.UncBits[I] then
+      begin
+        Inc(FNodeCount);
+        EdgeIdx[I] := Tmp;
+        for p in AdjLists[I]^ do
+          if aUsed.UncBits[p^.Key] then
+            Inc(Tmp);
+      end;
+  eCnt := Tmp;
+  System.SetLength(FNodes, aGraph.VertexCount);
+  System.SetLength(FEdges, eCnt);
+  for I := 0 to Pred(FNodeCount) do
+    if aUsed.UncBits[I] then
+      FNodes[I].AdjHead := @FEdges[Tmp];
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aUsed.UncBits[I] then
+      for p in aGraph.AdjLists[I]^ do
+        if (p^.Key > I) and aUsed.UncBits[p^.Key] then
+          begin
+            FEdges[EdgeIdx[I]] :=
+              TNiEdge.Create(p^.Key, @FEdges[EdgeIdx[p^.Key]], @FEdges[Succ(EdgeIdx[I])]);
+            FEdges[EdgeIdx[p^.Key]] :=
+              TNiEdge.Create(I, @FEdges[EdgeIdx[I]], @FEdges[Succ(EdgeIdx[p^.Key])]);
+            Inc(EdgeIdx[I]);
+            Inc(EdgeIdx[p^.Key])
+          end;
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aUsed.UncBits[I] then
+      begin
+        Tmp := Pred(EdgeIdx[I]);
+        FNodes[I].AdjTail := @FEdges[Tmp];
+        FEdges[Tmp].Next := nil;
+      end;
+  System.SetLength(FCuts, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    FCuts[I].Push(I);
+  FScanned.Capacity := eCnt;
   FQueue := TQueue.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
+  FExistNodes := aUsed;
   FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := High(SizeInt);
 end;
@@ -1899,6 +1950,7 @@ begin
   FNodes[aSource].AdjTail := FNodes[aTarget].AdjTail;
   FNodes[aTarget].AdjHead := nil;
   FExistNodes.UncBits[aTarget] := False;
+  Dec(FNodeCount);
   if FCuts <> nil then
     begin
       I := 0;
@@ -1927,13 +1979,13 @@ begin
         begin
           if not FScanned.UncBits[p - PNiEdge(FEdges)] and FInQueue.UncBits[p^.Target] then
             begin
-              Item := FQueue.GetItem(p^.Target);
-              Inc(Item.Data);
-              FQueue.Update(p^.Target, Item);
               FScanned.UncBits[p - PNiEdge(FEdges)] := True;
               FScanned.UncBits[p^.Reverse - PNiEdge(FEdges)] := True;
+              Item := FQueue.GetItem(p^.Target);
+              Inc(Item.Data);
               p^.Rank := Item.Data;
               p^.Reverse^.Rank := Item.Data;
+              FQueue.Update(p^.Target, Item);
             end;
           p := p^.Next;
         end;
@@ -1976,7 +2028,7 @@ end;
 function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph): SizeInt;
 begin
   Init(aGraph, False);
-  while FExistNodes.PopCount >= 2 do
+  while FNodeCount >= 2 do
     Shrink;
   Result := FBestCut;
 end;
@@ -1984,7 +2036,20 @@ end;
 function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
 begin
   Init(aGraph, True);
-  while FExistNodes.PopCount >= 2 do
+  while FNodeCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+  aCut.Assign(FBestSet);
+end;
+
+function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph; const aNodeSet: TBoolVector;
+  out aCut: TIntSet): SizeInt;
+begin
+  if aNodeSet.Capacity < aGraph.VertexCount then
+    Init(aGraph, True)
+  else
+    Init(aGraph, aNodeSet);
+  while FNodeCount >= 2 do
     Shrink;
   Result := FBestCut;
   aCut.Assign(FBestSet);

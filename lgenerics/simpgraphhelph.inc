@@ -340,14 +340,17 @@ type
     FScanned,
     FInQueue: TBoolVector;
     FBestSet: TIntSet;
+    FNodeCount,
     FBestCut: SizeInt;
-    procedure Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
+    procedure Init(aGraph: TGSimpleGraph; aCutNeeded: Boolean);
+    procedure Init(aGraph: TGSimpleGraph; const aUsed: TBoolVector);
     procedure ContractEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;
   public
     function Execute(aGraph: TGSimpleGraph): SizeInt;
     function Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+    function Execute(aGraph: TGSimpleGraph; const aNodeSet: TBoolVector; out aCut: TIntSet): SizeInt;
   end;
 
   { TPlanarHelper: planarity testing algorithm and planar embedding construction
