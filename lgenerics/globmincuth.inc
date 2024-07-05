@@ -18,42 +18,45 @@
 *****************************************************************************}
 
 type
-  TSWAdjList = specialize TGJoinableHashList<TWeightItem>;
-
   { TNIMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm:
       H.Nagamochi and T.Ibaraki. "Computing Edge-Connectivity in Multigraphs and Capacitated Graphs" }
   TNIMinCutHelper = record
   private
   type
+    PNiEdge = ^TNiEdge;
     TNiEdge = record
       Target: SizeInt;
       Weight,
-      ScanRank: TWeight;
-      Scanned: Boolean;
-      constructor Create(aTarget: SizeInt; w: TWeight);
-      property Key: SizeInt read Target;
+      Rank: TWeight;
+      Reverse,
+      Next: PNiEdge;
+      constructor Create(aTarget: SizeInt; w: TWeight; aRev, aNext: PNiEdge);
     end;
-
-    PNiEdge    = ^TNiEdge;
-    TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
-    TEdgeQueue = specialize TGLiteQueue<TOrdIntPair>;
+    TNiNode = record
+      AdjHead,
+      AdjTail: PNiEdge;
+    end;
+    TEdgeQueue = specialize TGLiteQueue<TIntEdge>;
     TQueue     = specialize TGPairHeapMax<TWeightItem>;
-
   var
-    FGraph: array of TNiAdjList;
+    FEdges: array of TNiEdge;
+    FNodes: array of TNiNode;
     FCuts: array of TIntSet;
     FQueue: TQueue;
     FEdgeQueue: TEdgeQueue;
     FExistNodes,
+    FScanned,
     FInQueue: TBoolVector;
     FBestSet: TIntSet;
     FBestCut: TWeight;
-    procedure ClearMarks;
-    procedure Init(aGraph: TGInt64Net; aCutsNeeded: Boolean);
-    procedure ShrinkEdge(aSource, aTarget: SizeInt);
+    FNodeCount: SizeInt;
+    function  Init(aGraph: TGInt64Net; aCutNeeded: Boolean): Boolean;
+    procedure ContractEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;
   public
     function  GetMinCut(aGraph: TGInt64Net): TWeight;
     function  GetMinCut(aGraph: TGInt64Net; out aCut: TIntSet): TWeight;
   end;
+
+  TSWAdjList = specialize TGJoinableHashList<TWeightItem>;

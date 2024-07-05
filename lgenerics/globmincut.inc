@@ -19,73 +19,85 @@
 
 { TGInt64Net.TNIMinCutHelper.TNiEdge }
 
-constructor TGInt64Net.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
+constructor TGInt64Net.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight; aRev, aNext: PNiEdge);
 begin
   Target := aTarget;
   Weight := w;
+  Reverse := aRev;
+  Next := aNext;
 end;
 
 { TGInt64Net.TNIMinCutHelper }
 
-procedure TGInt64Net.TNIMinCutHelper.ClearMarks;
+function TGInt64Net.TNIMinCutHelper.Init(aGraph: TGInt64Net; aCutNeeded: Boolean): Boolean;
 var
-  I: SizeInt;
-  p: TNiAdjList.PEntry;
-begin
-  for I in FExistNodes do
-    for p in FGraph[I] do
-      p^.Scanned := False;
-end;
-
-procedure TGInt64Net.TNIMinCutHelper.Init(aGraph: TGInt64Net; aCutsNeeded: Boolean);
-var
-  I: SizeInt;
-  pAdj: PAdjList;
+  EdgeIdx: TIntArray;
+  I, Tmp: SizeInt;
+  w: TWeight;
   p: PAdjItem;
 begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
+  FNodeCount := aGraph.VertexCount;
+  EdgeIdx.Length := FNodeCount;
+  System.SetLength(FNodes, FNodeCount);
+  System.SetLength(FEdges, aGraph.EdgeCount * 2);
+  Tmp := 0;
+  for I := 0 to Pred(FNodeCount) do
     begin
-      pAdj := aGraph.AdjLists[I];
-      FGraph[I].EnsureCapacity(pAdj^.Count);
-      for p in pAdj^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+      EdgeIdx[I] := Tmp;
+      FNodes[I].AdjHead := @FEdges[Tmp];
+      Tmp += aGraph.AdjLists[I]^.Count;
+      FNodes[I].AdjTail := @FEdges[Pred(Tmp)];
     end;
-  if aCutsNeeded then
+  for I := 0 to Pred(FNodeCount) do
+    for p in aGraph.AdjLists[I]^ do
+      if p^.Key > I then
+        begin
+          w := p^.Data.Weight;
+          if w < 0 then exit(False);
+          FEdges[EdgeIdx[I]] :=
+            TNiEdge.Create(p^.Key, w, @FEdges[EdgeIdx[p^.Key]], @FEdges[Succ(EdgeIdx[I])]);
+          FEdges[EdgeIdx[p^.Key]] :=
+            TNiEdge.Create(I, w, @FEdges[EdgeIdx[I]], @FEdges[Succ(EdgeIdx[p^.Key])]);
+          Inc(EdgeIdx[I]);
+          Inc(EdgeIdx[p^.Key])
+        end;
+  for I := 0 to Pred(FNodeCount) do
+    FNodes[I].AdjTail^.Next := nil;
+  if aCutNeeded then
     begin
-      System.SetLength(FCuts, aGraph.VertexCount);
-      for I := 0 to Pred(aGraph.VertexCount) do
+      System.SetLength(FCuts, FNodeCount);
+      for I := 0 to Pred(FNodeCount) do
         FCuts[I].Push(I);
     end
   else
     FCuts := nil;
-  FQueue := TQueue.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Capacity := aGraph.VertexCount;
+  FScanned.Capacity := aGraph.EdgeCount * 2;
+  FQueue := TQueue.Create(FNodeCount);
+  FExistNodes.InitRange(FNodeCount);
+  FInQueue.Capacity := FNodeCount;
   FBestCut := MAX_WEIGHT;
+  Result := True;
 end;
 
-procedure TGInt64Net.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGInt64Net.TNIMinCutHelper.ContractEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: PNiEdge;
-  Edge: TNiEdge;
 begin
-  FGraph[aSource].Remove(aTarget);
-  FGraph[aTarget].Remove(aSource);
-  FGraph[aSource].AddAll(FGraph[aTarget]);
-  for p in FGraph[aTarget] do
+  p := FNodes[aTarget].AdjHead;
+  while p <> nil do
     begin
-      I := p^.Target;
-      Edge := p^;
-      FGraph[I].Remove(aTarget);
-      Edge.Target := aSource;
-      FGraph[I].Add(Edge);
+      p^.Reverse^.Target := aSource;
+      p := p^.Next;
     end;
-  FGraph[aTarget].Clear;
+  FNodes[aSource].AdjTail^.Next := FNodes[aTarget].AdjHead;
+  FNodes[aSource].AdjTail := FNodes[aTarget].AdjTail;
+  FNodes[aTarget].AdjHead := nil;
   FExistNodes.UncBits[aTarget] := False;
+  Dec(FNodeCount);
   if FCuts <> nil then
     begin
+      I := 0;
       while FCuts[aTarget].TryPop(I) do
         FCuts[aSource].Push(I);
       FCuts[aTarget].Clear;
@@ -94,11 +106,11 @@ end;
 
 procedure TGInt64Net.TNIMinCutHelper.ScanFirstSearch;
 var
+  Item: TWeightItem;
   I: SizeInt;
   p: PNiEdge;
-  Item: TWeightItem;
 begin
-  ClearMarks;
+  FScanned.ClearBits;
   FInQueue.Join(FExistNodes);
   for I in FExistNodes do
     FQueue.Enqueue(I, TWeightItem.Create(I, 0));
@@ -106,15 +118,21 @@ begin
     begin
       I := FQueue.Dequeue.Index;
       FInQueue.UncBits[I] := False;
-      for p in FGraph[I] do
-        if FInQueue.UncBits[p^.Target] then
-          begin
-            Item := FQueue.GetItem(p^.Target);
-            Item.Weight += p^.Weight;
-            FQueue.Update(p^.Target, Item);
-            p^.Scanned := True;
-            p^.ScanRank := Item.Weight;
-          end;
+      p := FNodes[I].AdjHead;
+      while p <> nil do
+        begin
+          if not FScanned.UncBits[p - PNiEdge(FEdges)] and FInQueue.UncBits[p^.Target] then
+            begin
+              FScanned.UncBits[p - PNiEdge(FEdges)] := True;
+              FScanned.UncBits[p^.Reverse - PNiEdge(FEdges)] := True;
+              Item := FQueue.GetItem(p^.Target);
+              Item.Weight += p^.Weight;
+              p^.Rank := Item.Weight;
+              p^.Reverse^.Rank := Item.Weight;
+              FQueue.Update(p^.Target, Item);
+            end;
+          p := p^.Next;
+        end;
     end;
   Item := FQueue.Dequeue;
   FInQueue.UncBits[Item.Index] := False;
@@ -130,30 +148,41 @@ procedure TGInt64Net.TNIMinCutHelper.Shrink;
 var
   I: SizeInt;
   p: PNiEdge;
-  Pair: TOrdIntPair;
+  Edge: TIntEdge;
 begin
   ScanFirstSearch;
   for I in FExistNodes do
-    for p in FGraph[I] do
-      if p^.Scanned and (p^.ScanRank >= FBestCut) then
-        FEdgeQueue.Enqueue(TOrdIntPair.Create(I, p^.Target));
-  while FEdgeQueue.TryDequeue(Pair) do
-    if FExistNodes.UncBits[Pair.Left] and FExistNodes.UncBits[Pair.Right] then
-      ShrinkEdge(Pair.Left, Pair.Right);
+    begin
+      p := FNodes[I].AdjHead;
+      while p <> nil do begin
+        if FScanned.UncBits[p - PNiEdge(FEdges)] and (p^.Rank >= FBestCut) then
+          begin
+            FEdgeQueue.Enqueue(TIntEdge.Create(I, p^.Target));
+            FScanned.UncBits[p^.Reverse - PNiEdge(FEdges)] := False;
+          end;
+        p := p^.Next;
+      end;
+    end;
+  Edge := Default(TIntEdge);
+  while FEdgeQueue.TryDequeue(Edge) do
+    if FExistNodes.UncBits[Edge.Source] and FExistNodes.UncBits[Edge.Destination] then
+      ContractEdge(Edge.Source, Edge.Destination);
 end;
 
 function TGInt64Net.TNIMinCutHelper.GetMinCut(aGraph: TGInt64Net): TWeight;
 begin
-  Init(aGraph, False);
-  while FExistNodes.PopCount >= 2 do
+  if not Init(aGraph, False) then
+    exit(MIN_WEIGHT);
+  while FNodeCount >= 2 do
     Shrink;
   Result := FBestCut;
 end;
 
 function TGInt64Net.TNIMinCutHelper.GetMinCut(aGraph: TGInt64Net; out aCut: TIntSet): TWeight;
 begin
-  Init(aGraph, True);
-  while FExistNodes.PopCount >= 2 do
+  if not Init(aGraph, True) then
+    exit(MIN_WEIGHT);
+  while FNodeCount >= 2 do
     Shrink;
   Result := FBestCut;
   aCut.Assign(FBestSet);
