@@ -242,7 +242,6 @@ type
     sorted in non-descending order}
     function  GetCycleBasisVector: TIntArray;
     function  CreateDegreeVector: TIntArray;
-  { may raise integer overflow }
     function  CreateNeighDegreeVector: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
@@ -704,6 +703,7 @@ type
     TWeightMatrix = TWeightHelper.TWeightMatrix;
     TApspCell     = TWeightHelper.TApspCell;
     TApspMatrix   = TWeightHelper.TApspMatrix;
+    TSpecWeight   = TWeight;
 
   protected
   type
@@ -870,12 +870,12 @@ type
   generic TGInt64Net<TVertex, TEdgeData, TEqRel>=class(specialize TGWeightedGraph<TVertex, Int64, TEdgeData, TEqRel>)
   public
   type
-    TWeight = Int64;
+    TWeight = TSpecWeight;
 
   protected
   const
-    MAX_WEIGHT = High(Int64);
-    MIN_WEIGHT = Low(Int64);
+    MAX_WEIGHT = High(TWeight);
+    MIN_WEIGHT = Low(TWeight);
 
     {$I GlobMinCutH.inc}
   protected
@@ -2921,13 +2921,13 @@ var
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
   EdgeSet: TIntPairSet;
-  I, Next: SizeInt;
-  Curr: SizeInt = -1;
+  I, Curr, Next: SizeInt;
 begin
   Visited.Capacity := VertexCount;
   Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
@@ -2990,9 +2990,7 @@ begin
     begin
       DegSum := 0;
       for p in AdjLists[I]^ do
-      {$PUSH}{$Q+}
         DegSum += AdjLists[p^.Key]^.Count;
-      {$POP}
       v[I] := DegSum;
     end;
   TIntHelper.Sort(v);
