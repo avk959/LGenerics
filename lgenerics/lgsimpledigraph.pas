@@ -554,6 +554,7 @@ type
     TWeightMatrix = TWeightHelper.TWeightMatrix;
     TApspCell     = TWeightHelper.TApspCell;
     TApspMatrix   = TWeightHelper.TApspMatrix;
+    TSpecWeight   = TWeight;
 
   protected
   type
@@ -707,12 +708,12 @@ type
      specialize TGWeightedDigraph<TVertex, Int64, TEdgeData, TEqRel>)
   public
   type
-    TWeight = Int64;
+    TWeight = TSpecWeight;
 
   protected
   const
-    MAX_WEIGHT = High(Int64);
-    MIN_WEIGHT = Low(Int64);
+    MAX_WEIGHT = High(TWeight);
+    MIN_WEIGHT = Low(TWeight);
 
     {$I MaxFlowH.inc}
   public
@@ -2861,7 +2862,7 @@ begin
       end;
   for I := 0 to Pred(VertexCount) do
     for p in AdjLists[I]^ do
-      g[p^.Key].Add(I);
+      g[p^.Key].Push(I);
   Visited.Capacity := VertexCount;
   Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
@@ -4204,8 +4205,6 @@ end;
 
 function TGWeightedDigraph.MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph;
   out aWeight: TWeight): TIntArray;
-var
-  d: TEdgeData;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
