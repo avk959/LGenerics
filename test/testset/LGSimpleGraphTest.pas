@@ -127,8 +127,6 @@ type
     procedure PlanarEmbedding1;
     procedure Degeneracy;
     procedure KCore;
-    procedure ContainsEulerianPath;
-    procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
     procedure FindEulerianCycle;
     procedure ContainsCutVertex;
@@ -2145,80 +2143,60 @@ begin
   AssertTrue(core = nil);
 end;
 
-procedure TSimpleGraphTest.ContainsEulerianPath;
-var
-  Ref: TRef;
-  g: TGraph;
-  vOdd: SizeInt;
-begin
-  g := {%H-}Ref;
-  AssertFalse(g.ContainsEulerianPath(vOdd));
-  Ref.Instance := GenerateTestGr1;
-  g := Ref;
-  AssertFalse(g.ContainsEulerianPath(vOdd));
-  Ref.Instance := GenerateTestGr3;
-  g := Ref;
-  AssertTrue(g.ContainsEulerianPath(vOdd));
-  AssertTrue(vOdd = 2);
-  Ref.Instance := GenerateCycle;
-  g := Ref;
-  AssertTrue(g.ContainsEulerianPath(vOdd));
-  AssertTrue(vOdd = -1);
-end;
-
-procedure TSimpleGraphTest.ContainsEulerianCycle;
-var
-  Ref: TRef;
-  g: TGraph;
-begin
-  g := {%H-}Ref;
-  AssertFalse(g.ContainsEulerianCycle);
-  Ref.Instance := GenerateTestGr1;
-  g := Ref;
-  AssertFalse(g.ContainsEulerianCycle);
-  Ref.Instance := GenerateCycle;
-  g := Ref;
-  AssertTrue(g.ContainsEulerianCycle);
-  Ref.Instance := GenerateTestGr3;
-  g := Ref;
-  AssertFalse(g.ContainsEulerianCycle);
-  g.RemoveEdge(3, 10);
-  AssertTrue(g.ContainsEulerianCycle);
-end;
-
 procedure TSimpleGraphTest.FindEulerianPath;
 var
   Ref: TRef;
   g: TGraph;
   Path: TIntArray;
 begin
-  {%H-}Ref.Instance := GenerateTestGr1;
-  g := Ref;
-  Path := g.FindEulerianPath;
+  g := {%H-}Ref;
+  AssertFalse(g.FindEulerianPath(Path));
   AssertTrue(Path.IsEmpty);
+
+  g.AddVertex(0);
+  AssertFalse(g.FindEulerianPath(Path));
+
+  g.AddVertex(1);
+  AssertFalse(g.FindEulerianPath(Path));
+
+  g.AddEdge(0, 1);
+  AssertTrue(g.FindEulerianPath(Path));
+  AssertTrue(Path.Length = 2);
+  AssertTrue(THelper.Same(Path, [1, 0]));
+
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.FindEulerianPath(Path));
+  AssertTrue(Path.IsEmpty);
+
   Ref.Instance := GenerateTestGr3;
   g := Ref;
-  Path := g.FindEulerianPath;
+  AssertTrue(g.FindEulerianPath(Path));
   AssertTrue(Path.Length = Succ(g.EdgeCount));
 end;
 
 procedure TSimpleGraphTest.FindEulerianCycle;
 var
-  Ref: TRef;
-  g: TGraph;
+  g: TRef;
   Cycle: TIntArray;
 begin
-  {%H-}Ref.Instance := GenerateCycle;
-  g := Ref;
-  Cycle := g.FindEulerianCycle;
-  AssertTrue(Cycle.Length = Succ(g.EdgeCount));
-  Ref.Instance := GenerateTestGr3;
-  g := Ref;
-  Cycle := g.FindEulerianCycle;
+  {%H-}g.Instance := GenerateTestGr1;
+  Cycle := [1,2,3];
+  AssertFalse(g.Instance.FindEulerianCycleI(Cycle));
   AssertTrue(Cycle.IsEmpty);
-  g.RemoveEdge(3, 10);
-  Cycle := g.FindEulerianCycle;
-  AssertTrue(Cycle.Length = Succ(g.EdgeCount));
+
+  g.Instance := GenerateCycle;
+  AssertTrue(g.Instance.FindEulerianCycleI(Cycle));
+  AssertTrue(Cycle.Length = Succ(g.Instance.EdgeCount));
+
+  g.Instance := GenerateTestGr3;
+  AssertFalse(g.Instance.FindEulerianCycleI(Cycle));
+  AssertTrue(Cycle.IsEmpty);
+  g.Instance.RemoveVertex(10);
+  AssertTrue(g.Instance.FindEulerianCycle(9, Cycle));
+  AssertTrue(Cycle.Length = Succ(g.Instance.EdgeCount));
+  AssertTrue(g.Instance[Cycle[0]] = 9);
+  AssertTrue(g.Instance[Cycle[High(Cycle)]] = 9);
 end;
 
 procedure TSimpleGraphTest.ContainsCutVertex;
