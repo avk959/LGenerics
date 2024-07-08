@@ -236,6 +236,10 @@ type
     procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
+  type
+    TNestCycleFound = procedure(const aParentTree: TIntArray; aJoin, aPred: SizeInt) is nested;
+  protected
+    procedure SearchForFundamentalCycles(aOnNextFound: TNestCycleFound);
     procedure SearchForCycleBasis(out aCycles: TIntArrayVector);
     procedure SearchForCycleBasisVector(out aVector: TIntVector);
   { finds some system of fundamental cycles and returns their length vector,
@@ -363,15 +367,15 @@ type
     function  ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
   { checks whether the graph is acyclic; an empty graph is considered acyclic }
     function  IsAcyclic: Boolean;
-  { checks whether exists Eulerian path; if exists only path, then
-    aFirstOdd will contains index of first vertex with odd degree, otherwise -1 }
-    function  ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
-  { checks whether exists Eulerian cycle }
-    function  ContainsEulerianCycle: Boolean;
-  { looking for some Eulerian cycle in the connected component }
-    function  FindEulerianCycle: TIntArray;
-  { looking for some Eulerian path in the connected component }
-    function  FindEulerianPath: TIntArray;
+  { returns True and an Eulerian cycle starting at the vertex aVertex in aCycle
+    if the instance is connected and has no odd vertex degrees, False otherwise }
+    function  FindEulerianCycle(const aVertex: TVertex; out aCycle: TIntArray): Boolean;
+  { returns True and an Eulerian cycle starting at the vertex with index aFromIndex in aCycle
+    if the instance is connected and has no odd vertex degrees, False otherwise }
+    function  FindEulerianCycleI(out aCycle: TIntArray; aFromIndex: SizeInt = 0): Boolean;
+  { returns True and some Eulerian path in aPath if the instance is connected and
+    has zero or exactly two vertices of odd vertex degree, False otherwise }
+    function  FindEulerianPath(out aPath: TIntArray): Boolean;
   { finds a certain system of fundamental cycles }
     function  FindFundamentalCycles: TIntArrayVector;
   { checks whether exists any articulation point that belong to the aVertex connected component }
@@ -2877,53 +2881,17 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.SearchForCycleBasis(out aCycles: TIntArrayVector);
+procedure TGSimpleGraph.SearchForFundamentalCycles(aOnNextFound: TNestCycleFound);
 var
   Stack: TSimpleStack;
-  Visited: TBoolVector;
+  Visited, InStack: TBoolVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  EdgeSet: TIntPairSet;
   I, Curr, Next: SizeInt;
 begin
+  if aOnNextFound = nil then exit;
   Visited.Capacity := VertexCount;
-  Stack := TSimpleStack.Create(VertexCount);
-  AdjEnums := CreateAdjEnumArray;
-  Parents := CreateIntArray;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited.UncBits[I] then
-      begin
-        Visited.UncBits[I] := True;
-        Stack.Push(I);
-        while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
-            begin
-              Next := AdjEnums[Curr].Current;
-              if not Visited.UncBits[Next] then
-                begin
-                  Visited.UncBits[Next] := True;
-                  Parents[Next] := Curr;
-                  Stack.Push(Next);
-                end
-              else
-                if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
-                  aCycles.Add(TreeExtractCycle(Parents, Next, Curr));
-            end
-          else
-            Stack.Pop;
-      end;
-end;
-
-procedure TGSimpleGraph.SearchForCycleBasisVector(out aVector: TIntVector);
-var
-  Stack: TSimpleStack;
-  Visited: TBoolVector;
-  AdjEnums: TAdjEnumArray;
-  Parents: TIntArray;
-  EdgeSet: TIntPairSet;
-  I, Curr, Next: SizeInt;
-begin
-  Visited.Capacity := VertexCount;
+  InStack.Capacity := VertexCount;
   Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
@@ -2932,24 +2900,44 @@ begin
     if not Visited.UncBits[I] then
       begin
         Visited.UncBits[I] := True;
+        InStack.UncBits[I] := True;
         Stack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[Curr].MoveNext then
+          if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited.UncBits[Next] then
                 begin
                   Visited.UncBits[Next] := True;
+                  InStack.UncBits[Next] := True;
                   Parents[Next] := Curr;
                   Stack.Push(Next);
                 end
               else
-                if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
-                  aVector.Add(TreeCycleLen(Parents, Next, Curr));
+                if InStack.UncBits[Next] and not((Parents[Curr] = NULL_INDEX) or (Parents[Curr] = Next)) then
+                  aOnNextFound(Parents, Next, Curr);
             end
           else
-            Stack.Pop;
+            InStack.UncBits[Stack.Pop] := False;
       end;
+end;
+
+procedure TGSimpleGraph.SearchForCycleBasis(out aCycles: TIntArrayVector);
+  procedure AddCycle(const aParents: TIntArray; aJoin, aPred: SizeInt);
+  begin
+    aCycles.Add(TreeExtractCycle(aParents, aJoin, aPred));
+  end;
+begin
+  SearchForFundamentalCycles(@AddCycle);
+end;
+
+procedure TGSimpleGraph.SearchForCycleBasisVector(out aVector: TIntVector);
+  procedure AddCycleLen(const aParents: TIntArray; aJoin, aPred: SizeInt);
+  begin
+    aVector.Add(TreeCycleLen(aParents, aJoin, aPred));
+  end;
+begin
+  SearchForFundamentalCycles(@AddCycleLen);
 end;
 
 function TGSimpleGraph.GetCycleBasisVector: TIntArray;
@@ -3157,7 +3145,7 @@ begin
           begin
             if CurrEdges[J].Destination > aIndex then
               Dec(CurrEdges[J].Destination);
-            FNodeList[I].AdjList.Add(CurrEdges[J]);
+            FNodeList[I].AdjList.Append(CurrEdges[J]);
           end;
     end;
 end;
@@ -4037,110 +4025,83 @@ begin
   Result := CheckAcyclic;
 end;
 
-function TGSimpleGraph.ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
-var
-  Comps: TIntVectorArray;
-  I, Cand, OddCount: SizeInt;
+function TGSimpleGraph.FindEulerianCycle(const aVertex: TVertex; out aCycle: TIntArray): Boolean;
 begin
-  aFirstOdd := NULL_INDEX;
-  if VertexCount < 2 then
-    exit(False);
-  Comps := FindSeparates;
-  Cand := NULL_INDEX;
-  for I := 0 to System.High(Comps) do
-    if Comps[I].Count > 1 then
-      if Cand = NULL_INDEX then
-        Cand := I
-      else
-        exit(False);
-  if Cand = NULL_INDEX then
-    exit(False);
-  OddCount := 0;
-  for I in Comps[Cand] do
-    if Odd(AdjLists[I]^.Count) then
-      begin
-        Inc(OddCount);
-        if OddCount > 2 then
-          begin
-            aFirstOdd := NULL_INDEX;
-            exit(False);
-          end;
-        if aFirstOdd = NULL_INDEX then
-          aFirstOdd := I;
-      end;
-  Result := True;
+  Result := FindEulerianCycleI(aCycle, IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.ContainsEulerianCycle: Boolean;
+function TGSimpleGraph.FindEulerianCycleI(out aCycle: TIntArray; aFromIndex: SizeInt): Boolean;
 var
-  Comps: TIntVectorArray;
-  I, Cand: SizeInt;
+  g: array of TIntSet;
+  Stack, Path: TIntStack;
+  I, s, d: SizeInt;
 begin
-  if VertexCount < 3 then
-    exit(False);
-  Comps := FindSeparates;
-  Cand := NULL_INDEX;
-  for I := 0 to System.High(Comps) do
-    if Comps[I].Count > 1 then
-      if Cand = NULL_INDEX then
-        Cand := I
-      else
-        exit(False);
-  if Cand = NULL_INDEX then
-    exit(False);
-  for I in Comps[Cand] do
+  aCycle := nil;
+  CheckIndexRange(aFromIndex);
+  if (VertexCount < 3) or not Connected then exit(False);
+  for I := 0 to Pred(VertexCount) do
     if Odd(AdjLists[I]^.Count) then
       exit(False);
-  Result := True;
-end;
-
-function TGSimpleGraph.FindEulerianCycle: TIntArray;
-var
-  g: TSkeleton;
-  Stack: TIntStack;
-  s, d: SizeInt;
-begin
-  if not ContainsEulerianCycle then
-    exit(nil);
-  g := CreateSkeleton;
-  s := 0;
-  while g.Degree[s] = 0 do
-    Inc(s);
-  {%H-}Stack.Push(s);
-  while g[s]^.FindFirst(d) do
-    begin
-      g.RemoveEdge(s, d);
-      Stack.Push(d);
-      s := d;
-    end;
-  Result := Stack.ToArray;
-end;
-
-function TGSimpleGraph.FindEulerianPath: TIntArray;
-var
-  g: TSkeleton;
-  Stack, Path: TIntStack;
-  s, d: SizeInt;
-begin
-  if not ContainsEulerianPath(s) then
-    exit(nil);
-  g := CreateSkeleton;
-  if s = NULL_INDEX then
-    begin
-      s := 0;
-      while g.Degree[s] = 0 do
-        Inc(s);
-    end;
-  {%H-}Stack.Push(s);
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    g[I].AssignList(AdjLists[I]);
+  Stack := Default(TIntStack);
+  Path := Default(TIntStack);
+  s := aFromIndex;
+  d := 0;
+  Stack.Push(s);
   while Stack.TryPeek(s) do
-    if g[s]^.FindFirst(d) then
+    if g[s].FindFirst(d) then
       begin
-        g.RemoveEdge(s, d);
+        g[s].Remove(d);
+        g[d].Remove(s);
         Stack.Push(d);
       end
     else
-      {%H-}Path.Push(Stack.Pop{%H-});
-  Result := Path.ToArray;
+      Path.Push(Stack.Pop);
+  aCycle := Path.ToArray;
+  Result := True;
+end;
+
+function TGSimpleGraph.FindEulerianPath(out aPath: TIntArray): Boolean;
+var
+  g: array of TIntSet;
+  Stack, Path: TIntStack;
+  I, OddCnt, s, d: SizeInt;
+begin
+  aPath := nil;
+  if (VertexCount < 2) or not Connected then exit(False);
+  OddCnt := 0;
+  s := NULL_INDEX;
+  for I := 0 to Pred(VertexCount) do
+    if Odd(AdjLists[I]^.Count) then
+      begin
+        if OddCnt = 2 then exit(False);
+        Inc(OddCnt);
+        if s = NULL_INDEX then
+          s := I;
+      end;
+  if OddCnt = 1 then exit(False);
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    g[I].AssignList(AdjLists[I]);
+  if s = NULL_INDEX then
+    s := 0;
+  d := 0;
+  Stack := Default(TIntStack);
+  Path := Default(TIntStack);
+  Stack.Push(s);
+  while Stack.TryPeek(s) do
+    if g[s].FindFirst(d) then
+      begin
+        g[s].Remove(d);
+        g[d].Remove(s);
+        Stack.Push(d);
+      end
+    else
+      Path.Push(Stack.Pop);
+  aPath := Path.ToArray;
+  Result := True;
 end;
 
 function TGSimpleGraph.FindFundamentalCycles: TIntArrayVector;
@@ -6772,17 +6733,17 @@ var
   Queue: specialize TGPairHeapMax<TWeightItem>;
   g: array of TSWAdjList;
   Cuts: array of TIntSet;
-  vRemains, vInQueue: TBoolVector;
+  Remains, InQueue: TBoolVector;
   Phase, Prev, Last, I: SizeInt;
   p: PAdjItem;
-  pItem: ^TWeightItem;
-  NextItem: TWeightItem;
+  pNeighb: ^TWeightItem;
+  Item: TWeightItem;
 begin
   //initialize
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      g[I].EnsureCapacity(DegreeI(I));
+      g[I].EnsureCapacity(AdjLists[I]^.Count);
       for p in AdjLists[I]^ do
         g[I].Add(TWeightItem.Create(p^.Destination, p^.Data.Weight));
     end;
@@ -6790,52 +6751,52 @@ begin
   for I := 0 to Pred(VertexCount) do
     Cuts[I].Add(I);
   Queue := specialize TGPairHeapMax<TWeightItem>.Create(VertexCount);
-  vRemains.InitRange(VertexCount);
-  vInQueue.Capacity := VertexCount;
+  Remains.InitRange(VertexCount);
+  InQueue.Capacity := VertexCount;
   Result := MAX_WEIGHT;
   //n-1 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
-      vInQueue.Join(vRemains);
-      for I in vRemains do
+      InQueue.Join(Remains);
+      for I in Remains do
         Queue.Enqueue(I, TWeightItem.Create(I, 0));
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;
-          vInQueue.UncBits[Prev] := False;
-          for pItem in g[Prev] do
-            if vInQueue.UncBits[pItem^.Index] then
+          InQueue.UncBits[Prev] := False;
+          for pNeighb in g[Prev] do
+            if InQueue.UncBits[pNeighb^.Index] then
               begin
-                NextItem := Queue.GetItem(pItem^.Index);
-                NextItem.Weight += pItem^.Weight;
-                Queue.Update(pItem^.Index, NextItem);
+                Item := Queue.GetItem(pNeighb^.Index);
+                Item.Weight += pNeighb^.Weight;
+                Queue.Update(pNeighb^.Index, Item);
               end;
         end;
-      NextItem := Queue.Dequeue;
-      Last := NextItem.Index;
-      vInQueue.UncBits[NextItem.Index] := False;
-      if Result > NextItem.Weight then
+      Item := Queue.Dequeue;
+      Last := Item.Index;
+      InQueue.UncBits[Last] := False;
+      if Result > Item.Weight then
         begin
-          Result := NextItem.Weight;
+          Result := Item.Weight;
           aCut.Assign(Cuts[Last]);
         end;
       while Cuts[Last].TryPop(I) do
         Cuts[Prev].Push(I);
-      Finalize(Cuts[Last]);
-      vRemains.UncBits[Last] := False;
+      Cuts[Last].Clear;
+      Remains.UncBits[Last] := False;
       //merge last two vertices, remain Prev
       g[Prev].Remove(Last);
       g[Last].Remove(Prev);
       g[Prev].AddAll(g[Last]);
-      for pItem in g[Last] do
+      for pNeighb in g[Last] do
         begin
-          I := pItem^.Index;
-          NextItem := pItem^;
+          Item := pNeighb^;
+          I := Item.Index;
           g[I].Remove(Last);
-          NextItem.Index := Prev;
-          g[I].Add(NextItem);
+          Item.Index := Prev;
+          g[I].Add(Item);
         end;
-      Finalize(g[Last]);
+      g[Last].Clear;
     end;
 end;
 
@@ -6927,7 +6888,6 @@ function TGInt64Net.MinWeightCutNI(out aCutWeight: TWeight): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
   w: TWeight;
-  e: TEdge;
 begin
   aCutWeight := 0;
   if VertexCount < 2 then
