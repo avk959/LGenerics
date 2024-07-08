@@ -367,12 +367,12 @@ type
     function  ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
   { checks whether the graph is acyclic; an empty graph is considered acyclic }
     function  IsAcyclic: Boolean;
-  { returns True and an Eulerian cycle starting at the vertex aVertex in aCycle
+  { returns True and an Eulerian cycle starting at the vertex aSource in aCycle
     if the instance is connected and has no odd vertex degrees, False otherwise }
-    function  FindEulerianCycle(const aVertex: TVertex; out aCycle: TIntArray): Boolean;
-  { returns True and an Eulerian cycle starting at the vertex with index aFromIndex in aCycle
+    function  FindEulerianCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean;
+  { returns True and an Eulerian cycle starting at the vertex with index aSrcIdx in aCycle
     if the instance is connected and has no odd vertex degrees, False otherwise }
-    function  FindEulerianCycleI(out aCycle: TIntArray; aFromIndex: SizeInt = 0): Boolean;
+    function  FindEulerianCycleI(out aCycle: TIntArray; aSrcIdx: SizeInt = 0): Boolean;
   { returns True and some Eulerian path in aPath if the instance is connected and
     has zero or exactly two vertices of odd vertex degree, False otherwise }
     function  FindEulerianPath(out aPath: TIntArray): Boolean;
@@ -4025,19 +4025,19 @@ begin
   Result := CheckAcyclic;
 end;
 
-function TGSimpleGraph.FindEulerianCycle(const aVertex: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleGraph.FindEulerianCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean;
 begin
-  Result := FindEulerianCycleI(aCycle, IndexOf(aVertex));
+  Result := FindEulerianCycleI(aCycle, IndexOf(aSource));
 end;
 
-function TGSimpleGraph.FindEulerianCycleI(out aCycle: TIntArray; aFromIndex: SizeInt): Boolean;
+function TGSimpleGraph.FindEulerianCycleI(out aCycle: TIntArray; aSrcIdx: SizeInt): Boolean;
 var
   g: array of TIntSet;
   Stack, Path: TIntStack;
   I, s, d: SizeInt;
 begin
   aCycle := nil;
-  CheckIndexRange(aFromIndex);
+  CheckIndexRange(aSrcIdx);
   if (VertexCount < 3) or not Connected then exit(False);
   for I := 0 to Pred(VertexCount) do
     if Odd(AdjLists[I]^.Count) then
@@ -4047,7 +4047,7 @@ begin
     g[I].AssignList(AdjLists[I]);
   Stack := Default(TIntStack);
   Path := Default(TIntStack);
-  s := aFromIndex;
+  s := aSrcIdx;
   d := 0;
   Stack.Push(s);
   while Stack.TryPeek(s) do
