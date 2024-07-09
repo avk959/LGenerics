@@ -301,8 +301,12 @@ type
     if True then aCycle will contain indices of the vertices of that cycle }
     function  ContainsCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aSrcIdx: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCycle: Boolean;
-    function  FindEulerianCycle: TIntArray;
+  {  }
+    function  FindEulerianCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean;
+  {  }
+    function  FindEulerianCycleI(out aCycle: TIntArray; aSrcIdx: SizeInt = 0): Boolean;
+  {  }
+    function  FindEulerianPath(out aPath: TIntArray): Boolean;
   { checks whether the graph is stongly connected; an empty graph is considered disconnected }
     function  IsStrongConnected: Boolean;
   { if the graph is not empty, makes the graph strongly connected by adding a minimum
@@ -2546,51 +2550,97 @@ begin
   Result := System.Length(aCycle) <> 0;
 end;
 
-function TGSimpleDigraph.ContainsEulerianCycle: Boolean;
-var
-  I, d: SizeInt;
+function TGSimpleDigraph.FindEulerianCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean;
 begin
-  if VertexCount < 2 then
-    exit(False);
-  d := 0;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      if InDegreeI(I) <> OutDegreeI(I) then
-        exit(False);
-      d += DegreeI(I);
-    end;
-  Result := d > 0;
+  Result := FindEulerianCycleI(aCycle, IndexOf(aSource));
 end;
 
-function TGSimpleDigraph.FindEulerianCycle: TIntArray;
+function TGSimpleDigraph.FindEulerianCycleI(out aCycle: TIntArray; aSrcIdx: SizeInt): Boolean;
 var
-  g: TSkeleton;
+  g: array of TIntSet;
   Stack, Path: TIntStack;
-  s, d: SizeInt;
+  I, s, d: SizeInt;
 begin
-  Result := nil;
-  if not ContainsEulerianCycle then
-    exit;
-  g := CreateSkeleton;
-  s := 0;
-  while g.Degree[s] = 0 do
-    Inc(s);
-  {%H-}Stack.Push(s);
+  aCycle := nil;
+  CheckIndexRange(aSrcIdx);
+  if VertexCount < 2 then
+    exit(False);
+  if System.Length(FindWeakComponents) <> 1 then
+    exit(False);
+  for I := 0 to Pred(VertexCount) do
+    with FNodeList[I] do
+      if AdjList.Count <> Tag then
+        exit(False);
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    g[I].AssignList(AdjLists[I]);
+  Stack := Default(TIntStack);
+  Path := Default(TIntStack);
+  s := aSrcIdx;
+  Stack.Push(s);
   while Stack.TryPeek(s) do
-    if g[s]^.FindFirst(d) then
+    if g[s].FindFirst(d) then
       begin
-        g.RemoveEdge(s, d);
+        g[s].Remove(d);
         Stack.Push(d);
       end
     else
-      {%H-}Path.Push(Stack.Pop{%H-});
-  System.SetLength(Result, Path.Count);
-  d := 0;
-  for s in Path.Reverse do
-    begin
-      Result[d] := s;
-      Inc(d);
-    end;
+      Path.Push(Stack.Pop);
+  aCycle := Path.ToArray;
+  TIntHelper.Reverse(aCycle);
+  Result := True;
+end;
+
+function TGSimpleDigraph.FindEulerianPath(out aPath: TIntArray): Boolean;
+var
+  g: array of TIntSet;
+  Stack, Path: TIntStack;
+  I, s, d, Start, Fin: SizeInt;
+begin
+  aPath := nil;
+  if VertexCount < 2 then
+    exit(False);
+  if System.Length(FindWeakComponents) <> 1 then
+    exit(False);
+  Start := NULL_INDEX;
+  Fin := NULL_INDEX;
+  for I := 0 to Pred(VertexCount) do
+    with FNodeList[I] do
+      begin
+        if AdjList.Count = Tag then continue;
+        if AdjList.Count - Tag = 1 then begin
+          if Start <> NULL_INDEX then exit(False);
+          Start := I;
+        end else
+          if AdjList.Count - Tag = NULL_INDEX then begin
+            if Fin <> NULL_INDEX then exit(False);
+            Fin := I;
+          end else
+            exit(False);
+      end;
+  if (Start <> NULL_INDEX) xor (Fin <> NULL_INDEX) then
+    exit(False);
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    g[I].AssignList(AdjLists[I]);
+  Stack := Default(TIntStack);
+  Path := Default(TIntStack);
+  if Start <> NULL_INDEX then
+    s := Start
+  else
+    s := 0;
+  Stack.Push(s);
+  while Stack.TryPeek(s) do
+    if g[s].FindFirst(d) then
+      begin
+        g[s].Remove(d);
+        Stack.Push(d);
+      end
+    else
+      Path.Push(Stack.Pop);
+  aPath := Path.ToArray;
+  TIntHelper.Reverse(aPath);
+  Result := True;
 end;
 
 function TGSimpleDigraph.IsStrongConnected: Boolean;
