@@ -301,11 +301,15 @@ type
     if True then aCycle will contain indices of the vertices of that cycle }
     function  ContainsCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aSrcIdx: SizeInt; out aCycle: TIntArray): Boolean;
-  {  }
+  { returns True and an Eulerian cycle starting at the vertex aSource in aCycle if the instance
+    is strongly connected and the in-degree of any vertex is equal to its out-degree, False otherwise }
     function  FindEulerianCycle(const aSource: TVertex; out aCycle: TIntArray): Boolean;
-  {  }
+  { returns True and an Eulerian cycle starting at the vertex with index aSrcIdx in aCycle if the instance
+    is strongly connected and the in-degree of any vertex is equal to its out-degree, False otherwise }
     function  FindEulerianCycleI(out aCycle: TIntArray; aSrcIdx: SizeInt = 0): Boolean;
-  {  }
+  { returns True and some Eulerian path in aPath if the instance is weakly connected and the in-degree
+    of any vertex is equal to its out-degree, except maybe exactly two vertices for which the difference
+    of the in-degree and out-degree is 1 and -1 respectively, otherwise returns False }
     function  FindEulerianPath(out aPath: TIntArray): Boolean;
   { checks whether the graph is stongly connected; an empty graph is considered disconnected }
     function  IsStrongConnected: Boolean;
@@ -2565,7 +2569,7 @@ begin
   CheckIndexRange(aSrcIdx);
   if VertexCount < 2 then
     exit(False);
-  if System.Length(FindWeakComponents) <> 1 then
+  if not IsStrongConnected then
     exit(False);
   for I := 0 to Pred(VertexCount) do
     with FNodeList[I] do
