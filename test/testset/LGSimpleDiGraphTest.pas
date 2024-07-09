@@ -62,9 +62,8 @@ type
     procedure ReachableFrom1;
     procedure ContainsCycle;
     procedure ContainsCycle1;
-    procedure ContainsEulerianCycle;
-    procedure ContainsEulerianCycle1;
     procedure FindEulerianCycle;
+    procedure FindEulerianPath;
     procedure IsStrongConnected;
     procedure EnsureStrongConnected;
     procedure FindStrongComponents;
@@ -877,31 +876,31 @@ begin
   AssertFalse(Cycle.IsEmpty);
 end;
 
-procedure TSimpleDigraphTest.ContainsEulerianCycle;
-var
-  Ref: TRef;
-  g: TGraph;
-begin
-  g := {%H-}Ref;
-  AssertFalse(g.ContainsEulerianCycle);
-  g.AddEdge(1, 2);
-  AssertFalse(g.ContainsEulerianCycle);
-  g.AddEdge(2, 1);
-  AssertTrue(g.ContainsEulerianCycle);
-  Ref.Instance := GenerateTestDigr1;
-  g := Ref;
-  AssertFalse(g.ContainsEulerianCycle);
-end;
-
-procedure TSimpleDigraphTest.ContainsEulerianCycle1;
-var
-  Ref: TRef;
-  g: TGraph;
-begin
-  {%H-}Ref.Instance := GenerateTestDigr2;
-  g := Ref;
-  AssertTrue(g.ContainsEulerianCycle);
-end;
+//procedure TSimpleDigraphTest.ContainsEulerianCycle;
+//var
+//  Ref: TRef;
+//  g: TGraph;
+//begin
+//  g := {%H-}Ref;
+//  AssertFalse(g.ContainsEulerianCycle);
+//  g.AddEdge(1, 2);
+//  AssertFalse(g.ContainsEulerianCycle);
+//  g.AddEdge(2, 1);
+//  AssertTrue(g.ContainsEulerianCycle);
+//  Ref.Instance := GenerateTestDigr1;
+//  g := Ref;
+//  AssertFalse(g.ContainsEulerianCycle);
+//end;
+//
+//procedure TSimpleDigraphTest.ContainsEulerianCycle1;
+//var
+//  Ref: TRef;
+//  g: TGraph;
+//begin
+//  {%H-}Ref.Instance := GenerateTestDigr2;
+//  g := Ref;
+//  AssertTrue(g.ContainsEulerianCycle);
+//end;
 
 procedure TSimpleDigraphTest.FindEulerianCycle;
 var
@@ -912,15 +911,54 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestDigr1;
   g := Ref;
-  Cycle := g.FindEulerianCycle;
+  Cycle := [0,1];
+  AssertFalse(g.FindEulerianCycleI(Cycle));
   AssertTrue(Cycle.IsEmpty);
+
   Ref.Instance := GenerateTestDigr2;
   g := Ref;
-  Cycle := g.FindEulerianCycle;
+  AssertTrue(g.FindEulerianCycleI(Cycle));
   AssertTrue(Cycle.Length = Succ(g.EdgeCount));
   AssertTrue(Cycle[0] = Cycle[Cycle.Length - 1]);
   for I := 0 to Cycle.Length - 2 do
     AssertTrue(g.ContainsEdgeI(Cycle[I], Cycle[Succ(I)]));
+
+  AssertTrue(g.FindEulerianCycle(5, Cycle));
+  AssertTrue(Cycle.Length = Succ(g.EdgeCount));
+  AssertTrue(g[Cycle[0]] = 5);
+  AssertTrue(g[Cycle[Cycle.Length - 1]] = 5);
+end;
+
+procedure TSimpleDigraphTest.FindEulerianPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  I: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Path := [0,1];
+  AssertFalse(g.FindEulerianPath(Path));
+  AssertTrue(Path.IsEmpty);
+
+  g.Clear;
+  g.AddEdges([1,2, 1,3, 2,4, 3,5, 4,6, 5,6, 6,1]);
+
+  AssertTrue(g.FindEulerianPath(Path));
+  AssertTrue(Path.Length = Succ(g.EdgeCount));
+  for I := 0 to Path.Length - 2 do
+    AssertTrue(g.ContainsEdgeI(Path[I], Path[Succ(I)]));
+  AssertTrue(g[Path[0]] = 1);
+  AssertTrue(g[Path[Path.Length - 1]] = 6);
+
+  Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertTrue(g.FindEulerianPath(Path));
+  AssertTrue(Path.Length = Succ(g.EdgeCount));
+  AssertTrue(Path[0] = Path[Path.Length - 1]);
+  AssertTrue(g[Path[0]] = 0);
+
 end;
 
 procedure TSimpleDigraphTest.IsStrongConnected;
