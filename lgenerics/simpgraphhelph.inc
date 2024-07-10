@@ -256,8 +256,8 @@ type
     FGraph: TGSimpleGraph;
     FMates,
     FParents,
+    FLabel,
     FQueue: TIntArray;
-    FVisited: TBoolVector;
     FWhites: TBoolVector;
     FMatchCount: SizeInt;
     procedure Match(aNode, aMate: SizeInt); inline;

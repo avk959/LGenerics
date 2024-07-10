@@ -1334,10 +1334,10 @@ end;
 
 function TGSimpleGraph.THKMatch.Bfs: Boolean;
 var
-  Curr, CurrArc, Matched, Dist: SizeInt;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
+  Curr, CurrArc, Matched, Dist, qHead, qTail: SizeInt;
 begin
+  qHead := 0;
+  qTail := 0;
   for Curr in FWhites do
     if FNodes[Curr].Mate = FDummy then
       begin
@@ -1354,7 +1354,7 @@ begin
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      if FNodes[{%H-}Curr].Distance < FNodes[FDummy].Distance then
+      if FNodes[Curr].Distance < FNodes[FDummy].Distance then
         begin
           CurrArc := FNodes[Curr].FirstArc;
           Dist := Succ(FNodes[Curr].Distance);
@@ -1440,7 +1440,6 @@ begin
   FMatchCount := 0;
   FGraph := aGraph;
   FWhites.Capacity := aGraph.VertexCount;
-  FVisited.Capacity := aGraph.VertexCount;
   if System.Length(w) <= System.Length(g) then
     for I in w do
       FWhites.UncBits[I] := True
@@ -1448,8 +1447,9 @@ begin
     for I in g do
       FWhites.UncBits[I] := True;
   FMates := aGraph.CreateIntArray;
-  FParents := aGraph.CreateIntArray;
-  FQueue := aGraph.CreateIntArray;
+  FLabel := aGraph.CreateIntArray;
+  System.SetLength(FParents, aGraph.VertexCount);
+  System.SetLength(FQueue, aGraph.VertexCount);
   for e in aGraph.GreedyMatching do
     begin
       Match(e.Source, e.Destination);
@@ -1460,47 +1460,46 @@ end;
 function TGSimpleGraph.TBfsMatch.FindAugmentPath(aRoot: SizeInt): SizeInt;
 var
   Curr, Next: SizeInt;
+  qHead, qTail: SizeInt;
   p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
-  FVisited.ClearBits;
   FParents[aRoot] := NULL_INDEX;
-  FQueue[qTail] := aRoot;
-  Inc(qTail);
+  FQueue[0] := aRoot;
+  FLabel[aRoot] := aRoot;
+  qHead := 0;
+  qTail := 1;
   while qHead < qTail do
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      FVisited.UncBits[Curr] := True;
       if FWhites.UncBits[Curr] then
-        begin
-          for p in FGraph.AdjLists[Curr]^ do
-            begin
-              Next := p^.Destination;
-              if (FMates[Curr] = Next) or FVisited.UncBits[Next] then
-                continue;
-              FParents[Next] := Curr;
-              if FMates[Next] = NULL_INDEX then
-                exit(Next)
-              else
-                begin
-                  FQueue[qTail] := Next;
-                  Inc(qTail);
-                end;
-            end;
-        end
+        for p in FGraph.AdjLists[Curr]^ do
+          begin
+            Next := p^.Key;
+            if (FMates[Curr] = Next) or (FLabel[Next] = aRoot) then
+              continue;
+            FParents[Next] := Curr;
+            if FMates[Next] = NULL_INDEX then
+              exit(Next)
+            else
+              begin
+                FLabel[Next] := aRoot;
+                FQueue[qTail] := Next;
+                Inc(qTail);
+              end;
+          end
       else
         begin
           Next := FMates[Curr];
-          if FVisited.UncBits[Next] then
-            continue;
-          FParents[Next] := Curr;
-          FQueue[qTail] := Next;
-          Inc(qTail);
+          if FLabel[Next] <> aRoot then
+            begin
+              FLabel[Next] := aRoot;
+              FParents[Next] := Curr;
+              FQueue[qTail] := Next;
+              Inc(qTail);
+            end;
         end;
     end;
-
   Result := NULL_INDEX;
 end;
 
