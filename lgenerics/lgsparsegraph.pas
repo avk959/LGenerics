@@ -4543,10 +4543,9 @@ begin
         FPhi[I] := ew;
       end;
 
-  FBuffer := TIntArray.Construct(aGraph.VertexCount * 3, NULL_INDEX);
-  FQueue := Pointer(FBuffer);
-  FMates := FQueue + aGraph.VertexCount;
-  FParents := FMates + aGraph.VertexCount;
+  System.SetLength(FQueue, aGraph.VertexCount);
+  System.SetLength(FParents, aGraph.VertexCount);
+  FMates := aGraph.CreateIntArray;
   FVisited.Capacity := aGraph.VertexCount;
 end;
 
@@ -4560,14 +4559,13 @@ end
 }
 function TGWeightHelper.THungarian.FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
-  Curr, Next: SizeInt;
+  Curr, Next, qHead, qTail: SizeInt;
   CurrPhi, Cost: TWeight;
   p: TGraph.PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
-  FQueue[qTail] := aRoot;
-  Inc(qTail);
+  qHead := 0;
+  qTail := 1;
+  FQueue[0] := aRoot;
   while qHead < qTail do
     begin
       Curr := FQueue[qHead];
@@ -4599,7 +4597,8 @@ begin
       else
         begin
           Next := FMates[Curr];
-          EnqueueNext;
+          if not FVisited.UncBits[Next] then
+            EnqueueNext;
         end;
     end;
   Result := NULL_INDEX;
@@ -4607,14 +4606,13 @@ end;
 
 function TGWeightHelper.THungarian.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
-  Curr, Next: SizeInt;
+  Curr, Next, qHead, qTail: SizeInt;
   CurrPhi, Cost: TWeight;
   p: TGraph.PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
-  FQueue[qTail] := aRoot;
-  Inc(qTail);
+  qHead := 0;
+  qTail := 1;
+  FQueue[0] := aRoot;
   while qHead < qTail do
     begin
       Curr := FQueue[qHead];
@@ -4646,7 +4644,8 @@ begin
       else
         begin
           Next := FMates[Curr];
-          EnqueueNext;
+          if not FVisited.UncBits[Next] then
+            EnqueueNext;
         end;
     end;
   Result := NULL_INDEX;
@@ -4670,7 +4669,7 @@ var
 begin
   aDelta := TWeight.INF_VALUE;
   Result := 0;
-  System.FillChar(FParents^, FGraph.VertexCount * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FParents)^, System.Length(FParents)*SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
@@ -4690,7 +4689,7 @@ var
 begin
   aDelta := TWeight.NEGINF_VALUE;
   Result := 0;
-  System.FillChar(FParents^, FGraph.VertexCount * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FParents)^, System.Length(FParents)*SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
