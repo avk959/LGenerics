@@ -1263,38 +1263,39 @@ end;
 
 procedure TGSimpleGraph.THKMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
 var
-  CurrArcIdx: TIntArray = nil;
-  Grays: TIntHashSet;
+  CurrArcIdx, Grays: TIntArray;
+  GraySet: TBoolVector;
   I, J: SizeInt;
   p: PAdjItem;
 begin
+  CurrArcIdx := nil;
   FNodeCount := Succ(aGraph.VertexCount);
   FDummy := Pred(FNodeCount);
   if System.Length(w) <= System.Length(g) then
     begin
       FWhites := w;
-      Grays.AddAll(g);
+      Grays := g;
     end
   else
     begin
       FWhites := g;
-      Grays.AddAll(w);
+      Grays := w;
     end;
+  GraySet.Capacity := aGraph.VertexCount;
+  for I in Grays do
+    GraySet.UncBits[I] := True;
 
   CurrArcIdx.Length := Succ(FNodeCount);
   J := 0;
   for I := 0 to FNodeCount - 2 do
     begin
       CurrArcIdx[I] := J;
-      if Grays.Contains(I) then
-        J += Succ(aGraph.DegreeI(I))
-      else
-        J += aGraph.DegreeI(I);
+      J += aGraph.AdjLists[I]^.Count + Ord(GraySet.UncBits[I]);
     end;
   CurrArcIdx[Pred(FNodeCount)] := J;
 
   System.SetLength(FNodes, Succ(FNodeCount));
-  System.SetLength(FArcs, Succ((aGraph.EdgeCount + Grays.Count) * 2));
+  System.SetLength(FArcs, Succ((aGraph.EdgeCount + Grays.Length) * 2));
 
   for I := 0 to Pred(FNodeCount) do
     begin
@@ -1329,7 +1330,7 @@ begin
   FNodes[FNodeCount].Distance := INF_DIST;
   FNodes[FNodeCount].Mate := FDummy;
 
-  FQueue := aGraph.CreateIntArray;
+  System.SetLength(FQueue, aGraph.VertexCount);
 end;
 
 function TGSimpleGraph.THKMatch.Bfs: Boolean;
