@@ -436,10 +436,9 @@ type
     THungarian = record
     strict private
       FGraph: TGraph;
-      FBuffer: TIntArray;
       FMates,
       FParents,
-      FQueue: PSizeInt;
+      FQueue: TIntArray;
       FPhi: TWeightArray;
       FWhites,
       FVisited: TBoolVector;
