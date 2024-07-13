@@ -882,6 +882,23 @@
       ]
     },
     {
+      "name": "equals, empty node list and empty node list",
+      "selector": "$[?@.a == @.b]",
+      "document": [{"a": 1}, {"b": 2}, {"c": 3}],
+      "result": [
+        {"c": 3}
+      ]
+    },
+    {
+      "name": "equals, empty node list and special nothing",
+      "selector": "$[?@.a == length(@.b)]",
+      "document": [{"a": 1}, {"b": 2}, {"c": 3}],
+      "result": [
+        {"b": 2},
+        {"c": 3}
+      ]
+    },
+    {
       "name": "object data",
       "selector" : "$[?@<3]",
       "document" : {
@@ -895,41 +912,45 @@
     },
     {
       "name": "and binds more tightly than or",
-      "selector" : "$[?@.a || @.b && @.b]",
-      "document" : [{"a": 1}],
+      "selector" : "$[?@.a || @.b && @.c]",
+      "document" : [{"a": 1}, {"b": 2, "c": 3}, {"c": 3}, {"b": 2}, {"a": 1, "b": 2, "c": 3}],
       "result": [
-        {"a": 1}
+        {"a": 1},
+        {"b": 2, "c": 3},
+        {"a": 1, "b": 2, "c": 3}
       ]
     },
     {
       "name": "left to right evaluation",
-      "selector" : "$[?@.b && @.b || @.a]",
-      "document" : [{"a": 1}],
+      "selector" : "$[?@.a && @.b || @.c]",
+      "document" : [{"a": 1}, {"b": 2}, {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"b": 1, "c": 3}, {"c": 3}, {"a": 1, "b": 2, "c": 3}],
       "result": [
-        {"a": 1}
+        {"a": 1, "b": 2},
+        {"a": 1, "c": 3},
+        {"b": 1, "c": 3},
+        {"c": 3},
+        {"a": 1, "b": 2, "c": 3}
       ]
     },
     {
       "name": "group terms, left",
-      "selector" : "$[?(@.a || @.b) && @.a]",
-      "document" : [{"a": 1}],
+      "selector" : "$[?(@.a || @.b) && @.c]",
+      "document" : [{"a": 1, "b": 2}, {"a": 1, "c": 3}, {"b": 2, "c": 3}, {"a": 1}, {"b": 2}, {"c": 3}, {"a": 1, "b": 2, "c": 3}],
       "result": [
-        {"a": 1}
+        {"a": 1, "c": 3},
+        {"b": 2, "c": 3},
+        {"a": 1, "b": 2, "c": 3}
       ]
     },
     {
       "name": "group terms, right",
-      "selector" : "$[?@.a && (@.b || @.a)]",
-      "document" : [{"a": 1}],
+      "selector" : "$[?@.a && (@.b || @.c)]",
+      "document" : [{"a": 1}, {"a": 1, "b": 2}, {"a": 1, "c": 2}, {"b": 2}, {"c": 2}, {"a": 1, "b": 2, "c": 3}],
       "result": [
-        {"a": 1}
+        {"a": 1, "b": 2},
+        {"a": 1, "c": 2},
+        {"a": 1, "b": 2, "c": 3}
       ]
-    },
-    {
-      "name": "group terms, or before and",
-      "selector" : "$[?(@.a || @.b) && @.b]",
-      "document" : [{"a": 1}],
-      "result": []
     },
     {
       "name": "string literal, single quote in double quotes",
