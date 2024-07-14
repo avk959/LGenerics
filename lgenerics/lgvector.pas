@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic vector implementations.                                         *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1107,6 +1107,7 @@ end;
 
 function TGVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
 begin
+  Result := nil;
   if aCount < 0 then
     aCount := 0;
   aCount := Math.Min(aCount, ElemCount - aIndex);
@@ -1554,6 +1555,7 @@ end;
 
 function TGLiteVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
 begin
+  Result := nil;
   if aCount < 0 then
     aCount := 0;
   aCount := Math.Min(aCount, Count - aIndex);
@@ -2384,6 +2386,7 @@ function TBoolVector.ToArray: TIntArray;
 var
   I, Pos: SizeInt;
 begin
+  Result := nil;
   System.SetLength(Result, PopCount);
   Pos := 0;
   for I in Self do

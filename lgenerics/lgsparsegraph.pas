@@ -4786,6 +4786,7 @@ var
   I, J: SizeInt;
   p: TGraph.PAdjItem;
 begin
+  CurrArcIdx := nil;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
   for I := 0 to System.High(CurrArcIdx) do

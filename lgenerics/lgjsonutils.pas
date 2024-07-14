@@ -21,6 +21,7 @@ function JsonNode2Data(aNode: TJsonNode): TJsonData;
   var
     I: SizeInt;
   begin
+    Result := nil;
     case aNode.Kind of
       jvkNull:    Result := CreateJson;
       jvkFalse:   Result := CreateJson(False);

@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Plain Data Objects marshalling.                                         *
 *                                                                           *
-*   Copyright(c) 2022-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -367,6 +367,7 @@ var
   var
     d: Double;
   begin
+    d := 0;
     case aTypData^.OrdType of
       otSByte:  d := PShortInt(aData)^;
       otUByte:  d := PByte(aData)^;
@@ -381,6 +382,7 @@ var
   end;
   function GetOrdValue(aTypData: PTypeData; aData: Pointer): Int64; inline;
   begin
+    Result := 0;
     case aTypData^.OrdType of
       otSByte:  Result := PShortInt(aData)^;
       otUByte:  Result := Int64(PByte(aData)^);
@@ -396,6 +398,7 @@ var
   var
     d: Double;
   begin
+    d := 0;
     case aTypData^.FloatType of
       ftSingle:   d := PSingle(aData)^;
       ftDouble:   d := PDouble(aData)^;
@@ -409,6 +412,7 @@ var
   var
     IsTrue: Boolean;
   begin
+    IsTrue := False;
     case aTypData^.OrdType of
       otSByte:  IsTrue := PShortInt(aData)^ > 0;
       otUByte:  IsTrue := PByte(aData)^ > 0;

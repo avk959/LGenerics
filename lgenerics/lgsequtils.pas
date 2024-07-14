@@ -1240,6 +1240,7 @@ begin
       LL2 := @Buf[Succ(aLenR)*4];
     end;
 
+  LocLcs := Default(TVector);
   LocLcs.EnsureCapacity(aLenL);
 
   Lcs(0, Pred(aLenL), 0, Pred(aLenR), GetLcsLen());
@@ -1280,6 +1281,7 @@ var
     ForV, RevV: PSizeInt;
     OddDelta: Boolean;
   begin
+    aSnake := Default(TSnake);
     LenL := Succ(LLast - LFirst);
     LenR := Succ(RLast - RFirst);
     Delta := LenL - LenR;
@@ -1397,6 +1399,7 @@ begin
       V1 := @Buf[(aLenL+aLenR+2)];
     end;
 
+  LocLcs := Default(TVector);
   LocLcs.EnsureCapacity(aLenL);
 
   Lcs(0, Pred(aLenL), 0, Pred(aLenR));
@@ -1868,6 +1871,7 @@ var
   Pad: QWord;
   p: ^TPQEntry;
 begin
+  aPeq := Default(TPeq);
   with aPeq.Map do
     begin
       EnsureCapacity(Math.Min(256, aSeqLen));
@@ -2572,6 +2576,7 @@ begin
     Len := System.Length(L) + System.Length(R)
   else
     Len := Math.Max(System.Length(L), System.Length(R));
+  Dist := 0;
   if aLimit = Double(0) then begin
     case Algo of
       sdaDefault,
@@ -2582,7 +2587,7 @@ begin
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
-  if Limit > 0 then
+  if aLimit > 0 then
     Limit := Len - {$IFDEF CPU64}Ceil64{$ELSE}Ceil{$ENDIF}(aLimit*Len)
   else
     Limit := -1;

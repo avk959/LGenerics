@@ -4,7 +4,7 @@
 *   Comma Separated Value (CSV) file format utilities,                      *
 *   which try to follow the format described in RFC 4180.                   *
 *                                                                           *
-*   Copyright(c) 2022 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2022-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1211,6 +1211,7 @@ begin
   Result := Self;
 end;
 
+{$PUSH}{$WARN 5063 OFF}
 function TCsvDoc.LoadFromStreamMT(aSource: TStream; const aMask: array of Boolean;
   aThreadLimit: Integer): TCsvDoc;
 var
@@ -1237,6 +1238,7 @@ begin
   end;
   Result := Self;
 end;
+{$POP}
 
 function TCsvDoc.LoadFromFile(const aFileName: string): TCsvDoc;
 begin
@@ -1251,6 +1253,7 @@ begin
   Result := Self;
 end;
 
+{$PUSH}{$WARN 5063 OFF}
 function TCsvDoc.LoadFromFileMT(const aFileName: string; aThreadLimit: Integer): TCsvDoc;
 var
   fs: TFileStream;
@@ -1277,6 +1280,7 @@ begin
     fs.Free;
   end;
 end;
+{$POP}
 
 function TCsvDoc.LoadBuffer(aSrcBuffer: PChar; aCount: SizeInt): TCsvDoc;
 begin
@@ -2590,14 +2594,14 @@ end;
 
 function TCsvWriter.AddEol: TCsvWriter;
 begin
-  DoWriteEol;
   Result := Self;
+  DoWriteEol;
 end;
 
 function TCsvWriter.AddRow(const aRow: TStringArray): TCsvWriter;
 begin
-  DoWriteRow(aRow);
   Result := Self;
+  DoWriteRow(aRow);
 end;
 
 end.

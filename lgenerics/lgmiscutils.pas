@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Miscellaneous classes and utils.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -743,6 +743,7 @@ const
   var
     b: Boolean;
   begin
+    b := False;
     case aTypData^.OrdType of
       otSByte:  b := PShortInt(aData)^ > 0;
       otUByte:  b := PByte(aData)^ > 0;
@@ -798,6 +799,7 @@ const
   end;
   function GetOrdValue(aTypData: PTypeData; aData: Pointer): Int64; inline;
   begin
+    Result := 0;
     case aTypData^.OrdType of
       otSByte:  Result := PShortInt(aData)^;
       otUByte:  Result := Int64(PByte(aData)^);

@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -665,8 +665,10 @@ end;
 procedure TGCostedInt64Net.TCsMcfHelper.Execute;
 var
   Node: PNode;
-  NeedUpdate: Boolean = True;
+  NeedUpdate: Boolean;
 begin
+  Node := nil;
+  NeedUpdate := True;
   repeat
     FEpsilon := CostMax(FEpsilon div ALPHA, 1);
     if NeedUpdate then
@@ -676,7 +678,7 @@ begin
     while FQueue.TryDequeue(Node) do
       begin
         FInQueue.UncBits[IndexOf(Node)] := False;
-        Discharge(Node{%H-});
+        Discharge(Node);
       end;
   until FEpsilon = 1;
 end;

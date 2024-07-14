@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSON parser and utilites that try to follow RFC 8259.                   *
 *                                                                           *
-*   Copyright(c) 2020-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2020-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1372,6 +1372,7 @@ end;
 
 class operator TJVariant.= (const L, R: TJVariant): Boolean;
 begin
+  Result := False;
   case L.Kind of
     vkNull:   Result := R.Kind = vkNull;
     vkBool:   Result := (R.Kind = vkBool) and not(L.FValue.Bool xor R.FValue.Bool);
@@ -1420,6 +1421,7 @@ end;
 
 function TJVariant.ToString: string;
 begin
+  Result := '';
   case Kind of
     vkNull:   Result := JS_NULL;
     vkBool:   Result := BoolToStr(FValue.Bool, JS_TRUE, JS_FALSE);
@@ -4609,23 +4611,23 @@ const
 var
   I: SizeInt;
 begin
-  if Self = nil then
-    exit(MAGIC);
+  Result := MAGIC;
+  if Self = nil then exit;
   case Kind of
-    jvkNull:    Result := MAGIC + 3;
-    jvkFalse:   Result := MAGIC + 7;
-    jvkTrue:    Result := MAGIC + 17;
+    jvkNull:    Result += 3;
+    jvkFalse:   Result += 7;
+    jvkTrue:    Result += 17;
     jvkNumber:  Result := Double.HashCode(FValue.Num);
     jvkString:  Result := string.HashCode(FString);
     jvkArray:
       begin
-        Result := MAGIC + 31;
+        Result += 31;
         for I := 0 to Pred(Count) do
           Result := RolSizeInt(Result + I, 13) xor FArray^.UncMutable[I]^.HashCode;
       end;
     jvkObject:
       begin
-        Result := RolSizeInt(MAGIC + 67, 11);
+        Result := RolSizeInt(Result + 67, 11);
         for I := 0 to Pred(Count) do
           with FObject^.Mutable[I]^ do
             Result := Result xor string.HashCode(Key) xor Value.HashCode;
@@ -5422,6 +5424,7 @@ begin
   FindPathPtr(aPtr, Result);
 end;
 
+{$PUSH}{$WARN 5059 OFF}
 function TJsonNode.TryGetPath(aNode: TJsonNode; out aPath: TStringArray): Boolean;
 var
   PathHolder: specialize TGLiteVector<string>;
@@ -5461,6 +5464,7 @@ begin
   Result := DoGetPath(Self);
   aPath := Path;
 end;
+{$POP}
 
 function TJsonNode.TryGetPtr(aNode: TJsonNode; out aPtr: string): Boolean;
 var
@@ -5766,6 +5770,7 @@ end;
 
 function TJsonNode.ToString: string;
 begin
+  Result := '';
   case Kind of
     jvkNull:    Result := JS_NULL;
     jvkFalse:   Result := JS_FALSE;
@@ -6146,7 +6151,7 @@ begin
   Result := True;
 end;
 
-{$PUSH}{$WARN 5089 OFF}{$WARN 5036 OFF}
+{$PUSH}{$WARN 5089 OFF}{$WARN 5036 OFF}{$WARN 5059 OFF}
 function TJsonPatch.ApplyValidated(aNode: TJsonNode): TPatchResult;
 var
   CopyNode, CurrNode, TmpNode: TJsonNode;
@@ -6214,7 +6219,6 @@ begin
   MoveNode(CopyNode, aNode);
   Result := prOk;
 end;
-{$POP}
 
 class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonNode;
   aOptions: TDiffOptions): TDiffResult;
@@ -6389,7 +6393,7 @@ var
       PushReplace(aSrc, aDst);
       exit(True);
     end;
-
+    Result := False;
     case aSrc.Kind of
       jvkNull, jvkFalse, jvkTrue: Result := True;
       jvkNumber: begin
@@ -6515,6 +6519,7 @@ begin //todo: how to improve processing of arrays of structures?
   else
     Result := drFail;
 end;
+{$POP}
 
 class function TJsonPatch.Diff(aSource, aTarget: TJsonNode; out aDiff: TJsonPatch;
   aOptions: TDiffOptions): TDiffResult;

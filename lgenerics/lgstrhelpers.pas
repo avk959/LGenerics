@@ -2567,6 +2567,7 @@ begin
     Len := System.Length(L) + System.Length(R)
   else
     Len := Math.Max(System.Length(L), System.Length(R));
+  Dist := 0;
   if aLimit = Double(0) then begin
     case Algo of
       sdaDefault,

@@ -1245,7 +1245,7 @@ type
   class var
     CFKeyKind: TKeyType;
     class constructor Init;
-    class procedure FillOffsets(const  A: array of TItem; out aOfs: TOffsets); static;
+    class procedure FillOffsets(const A: array of TItem; out aOfs: TOffsets); static;
     class procedure DoSortA(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoSortD(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoSort(var A: array of TItem; var aBuf: TArray; o: TSortOrder = soAsc); static;

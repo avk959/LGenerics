@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Pascal code generator from JSON TypeDef schemas.                        *                                            *
 *                                                                           *
-*   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -416,6 +416,7 @@ end;
 
 class function TJtdTypeTemplate.DefaultTypeName(aType: TJtdType): string;
 begin
+  Result := '';
   case aType of
     jtNone:      Result := '';
     jtBool:      Result := 'TJtdBool';
@@ -1021,6 +1022,7 @@ end;
 
 function TJtdTemplater.GetTypeAlias(aType: TJtdType): string;
 begin
+  Result := '';
   case aType of
     jtNone:      Result := '';
     jtBool:      Result := 'Bool';

@@ -796,6 +796,7 @@ begin
     Result.ValType := jvtNothing;
 end;
 
+{$PUSH}{$WARN 5059 OFF}
 class operator TJpValue.=(const L: TJpValue; R: TJsonNode): Boolean;
 begin
   if R = nil then exit(L.ValType = jvtNothing);
@@ -828,6 +829,7 @@ begin
       else
         Result := False;
 end;
+{$POP}
 
 class operator TJpValue.<(const L: TJpValue; R: TJsonNode): Boolean;
 begin
@@ -3724,6 +3726,7 @@ end;
 
 function TJpQueryParser.CheckFunParam(aType: TJpInstanceType; aExpr: TJpExpression): Boolean;
 begin
+  Result := False;
   case aType of
     jitLogical:
       if aExpr is TJpFunctionExpr then
@@ -4185,6 +4188,7 @@ begin
   FComplement := aComplement;
 end;
 
+{$PUSH}{$WARN 5059 OFF}
 function TIRegexp.TUCategory.Match(c: Ucs4Char): Boolean;
 begin
   case FKind of
@@ -4198,6 +4202,7 @@ begin
     uckOther:       Result := (TUnicodeCategory(GetProps(c)^.Category) in OTHER_CATEGORIES) xor FComplement;
   end;
 end;
+{$POP}
 
 { TIRegexp.TCceItem }
 
@@ -4220,6 +4225,7 @@ begin
   CHigh := aHi;
 end;
 
+{$PUSH}{$WARN 5059 OFF}
 function TIRegexp.TCceItem.Match(c: Ucs4Char): Boolean;
 begin
   case Kind of
@@ -4228,6 +4234,7 @@ begin
     cikCharRange: Result := (c >= CLow) and (c <= CHigh);
   end;
 end;
+{$POP}
 
 { TIRegexp.TCCStore }
 
@@ -4323,6 +4330,7 @@ begin
   VExpr := e;
 end;
 
+{$PUSH}{$WARN 5059 OFF}
 function TIRegexp.TCharClass.Match(c: Ucs4Char): Boolean;
 begin
   case Kind  of
@@ -4333,6 +4341,7 @@ begin
     cckClassExpr: Result := VExpr.Match(c);
   end;
 end;
+{$POP}
 
 { TIRegexp.TNfaNode }
 
@@ -5631,7 +5640,7 @@ begin
     end;
 end;
 
-{$PUSH}{$WARN 6060 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
+{$PUSH}{$WARN 6058 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
 function IsNumberInst(const aInst: TJpInstance; out n: Double): Boolean; inline;
 begin
   if aInst.InstType = jitValue then
