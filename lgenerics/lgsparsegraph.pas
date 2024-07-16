@@ -250,8 +250,7 @@ type
     procedure Expand;
     function  Add(const v: TVertex; aHash: SizeInt): SizeInt;
     procedure RemoveFromChain(aIndex: SizeInt);
-    procedure Delete(aIndex: SizeInt);
-    function  Remove(const v: TVertex): Boolean;
+    procedure DeleteNode(aIndex: SizeInt);
     function  Find(const v: TVertex): SizeInt;
     function  Find(const v: TVertex; aHash: SizeInt): SizeInt;
     function  FindOrAdd(const v: TVertex; out aIndex: SizeInt): Boolean;
@@ -420,19 +419,18 @@ type
   { if the instance does not contain aSrc or aDst vertices, they will be added;
     returns True if the edge is added, False, if such an edge already exists }
     function  AddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData): Boolean;
-  { if the instance does not contain aSrc or aDst vertices, they will be added;
-    does not check if the same edge exists; responsibility for ensuring the uniqueness
-    of the added edge lies with the user; raises EGraphError if aSrc = aDst }
-    procedure ForceAddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData);
   { adds edge with default data }
     function  AddEdge(const aSrc, aDst: TVertex): Boolean; inline;
-    procedure ForceAddEdge(const aSrc, aDst: TVertex);
   { returns True if the edge is added, False, if such an edge already exists;
     raises EGraphError if aSrc or aDst out of range }
     function  AddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-  { does not check if the same edge exists; responsibility for ensuring the uniqueness of the
-    added edge lies with the user; raises EGraphError if aSrc or aDst out of range or aSrc = aDst }
+  { if the instance does not contain aSrc or aDst vertices, they will be added;
+    does not check if the same edge exists; responsibility for ensuring the uniqueness of the
+    added edge lies with the user, use only if it is absolutely sure that such an edge does not
+    already exist; raises EGraphError if aSrc = aDst }
+    procedure ForceAddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData);
+    procedure ForceAddEdge(const aSrc, aDst: TVertex);
     procedure ForceAddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData);
     procedure ForceAddEdgeI(aSrc, aDst: SizeInt);
   { if contains an edge (aSrc, aDst) then removes it and returns True,
@@ -1337,7 +1335,7 @@ begin
     end;
 end;
 
-procedure TGSparseGraph.Delete(aIndex: SizeInt);
+procedure TGSparseGraph.DeleteNode(aIndex: SizeInt);
 begin
   Dec(FCount);
   if aIndex < VertexCount then
@@ -1352,22 +1350,6 @@ begin
       RemoveFromChain(aIndex);
       FNodeList[aIndex] := Default(TNode);
     end;
-end;
-
-function TGSparseGraph.Remove(const v: TVertex): Boolean;
-var
-  ToRemove: SizeInt;
-begin
-  if NonEmpty then
-    begin
-      ToRemove := Find(v);
-      if ToRemove >= 0 then
-        begin
-          Delete(ToRemove);
-          exit(True);
-        end;
-    end;
-  Result := False;
 end;
 
 function TGSparseGraph.Find(const v: TVertex): SizeInt;
@@ -2011,23 +1993,9 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
-procedure TGSparseGraph.ForceAddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData);
-var
-  SrcIdx, DstIdx: SizeInt;
-begin
-  AddVertex(aSrc, SrcIdx);
-  AddVertex(aDst, DstIdx);
-  DoForceAddEdge(SrcIdx, DstIdx, aData);
-end;
-
 function TGSparseGraph.AddEdge(const aSrc, aDst: TVertex): Boolean;
 begin
   Result := AddEdge(aSrc, aDst, Default(TEdgeData));
-end;
-
-procedure TGSparseGraph.ForceAddEdge(const aSrc, aDst: TVertex);
-begin
-  ForceAddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean;
@@ -2040,6 +2008,20 @@ end;
 function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
+end;
+
+procedure TGSparseGraph.ForceAddEdge(const aSrc, aDst: TVertex; const aData: TEdgeData);
+var
+  SrcIdx, DstIdx: SizeInt;
+begin
+  AddVertex(aSrc, SrcIdx);
+  AddVertex(aDst, DstIdx);
+  DoForceAddEdge(SrcIdx, DstIdx, aData);
+end;
+
+procedure TGSparseGraph.ForceAddEdge(const aSrc, aDst: TVertex);
+begin
+  ForceAddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
 procedure TGSparseGraph.ForceAddEdgeI(aSrc, aDst: SizeInt; const aData: TEdgeData);

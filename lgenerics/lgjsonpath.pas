@@ -5606,6 +5606,7 @@ begin
         aResult := 1;
 end;
 
+{$PUSH}{$IF FPC_FULLVERSION>30300}{$WARN 6060 OFF}{$ENDIF}
 procedure CallLengthFun(const aList: TJpParamList; out aResult: TJpInstance);
 begin
   aResult := TJpValue.Nothing;
@@ -5625,6 +5626,7 @@ begin
       else
       end;
 end;
+{$POP}
 
 procedure CallValueFun(const aList: TJpParamList; out aResult: TJpInstance);
 begin
@@ -5640,7 +5642,7 @@ begin
     end;
 end;
 
-{$PUSH}{$WARN 6058 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
+{$PUSH}{$IF FPC_FULLVERSION>30300}{$WARN 6060 OFF}{$ENDIF}{$WARN 6058 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
 function IsNumberInst(const aInst: TJpInstance; out n: Double): Boolean; inline;
 begin
   if aInst.InstType = jitValue then

@@ -1586,19 +1586,19 @@ end;
 function TGSimpleDigraph.GetDomTreeSnca(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray; out
   aOrd2Idx, aIdx2Ord: TIntArray): TIntArray;
 var
-  Parents: TIntArray;
-  Counter: SizeInt absolute aSize;
+  Parents: TIntArray = nil;
+  Counter: SizeInt = 0;
 
   procedure Dfs(From: SizeInt);
   var
-    Stack: TIntArray;
+    Stack: TIntArray = nil;
     AdjEnums: TAdjEnumArray;
     Next, sTop: SizeInt;
   begin
     AdjEnums := CreateAdjEnumArray;
     aIdx2Ord[From] := 0;
     Counter := 1;
-    {%H-}Stack.Length := VertexCount;
+    Stack.Length := VertexCount;
     sTop := 0;
     Stack[sTop] := From;
     while sTop >= 0 do
@@ -1683,6 +1683,7 @@ begin
       IDoms[I] := Dom;
       Parents[aOrd2Idx[I]] := aOrd2Idx[Dom];
     end;
+  aSize := Counter;
   Parents[aSrc] := aSrc;
   Result := Parents;
 end;
@@ -2130,7 +2131,7 @@ begin
   FEdgeCount -= FNodeList[aIndex].AdjList.Count;
   for p in FNodeList[aIndex].AdjList do
     Dec(FNodeList[p^.Destination].Tag);
-  Delete(aIndex);
+  DeleteNode(aIndex);
   for I := 0 to Pred(VertexCount) do
     begin
       CurrEdges := FNodeList[I].AdjList.ToArray;
@@ -3091,6 +3092,7 @@ begin
   System.SetLength(Sigma, VertexCount);
   System.SetLength(Delta, VertexCount);
   System.SetLength(r, VertexCount);
+  Curr := 0;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
@@ -3165,6 +3167,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     for p in AdjLists[I]^ do
       aBcMap.Add(TIntEdge.Create(I, p^.Key), 0);
+  Curr := 0;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
@@ -3877,7 +3880,7 @@ begin
     raise EGraphError.CreateFmt(SEStrLenExceedFmt, [Len]);
   sLen := Len;
   aStream.WriteBuffer(sLen, SizeOf(sLen));
-  aStream.WriteBuffer(Pointer(aValue)^, Len);
+  aStream.WriteBuffer(Pointer(aValue)^, sLen);
 end;
 
 procedure TStrFlowChart.ReadVertex(aStream: TStream; out aValue: string);

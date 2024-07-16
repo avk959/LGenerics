@@ -1062,6 +1062,7 @@ begin
   InQueue.Capacity := aGraph.VertexCount;
   Queue := TQueue.Create(aGraph.VertexCount);
   Result := 0;
+  CurrNode := Default(TNode);
   while Achromatic.NonEmpty do
     begin
       Inc(Result);

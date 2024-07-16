@@ -1596,6 +1596,7 @@ begin
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   Visited.Capacity := VertexCount;
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
@@ -1978,6 +1979,7 @@ var
   I, Curr, Next: SizeInt;
   CurrInLefts: Boolean;
 begin
+  Result := nil;
   Lefts.Capacity := VertexCount;
   LeftsVisit.Capacity := VertexCount;
   LeftsFree.Capacity := VertexCount;
@@ -2530,6 +2532,7 @@ begin
   aColors.Length := VertexCount;
   Achromatic.InitRange(VertexCount);
   Result := 0;
+  Node := Default(TIntNode);
   while Achromatic.NonEmpty do
     begin
       Inc(Result);
@@ -3134,7 +3137,7 @@ var
   I, J: SizeInt;
 begin
   FEdgeCount -= FNodeList[aIndex].AdjList.Count;
-  Delete(aIndex);
+  DeleteNode(aIndex);
   FConnectedValid := False;
   for I := 0 to Pred(VertexCount) do
     begin
@@ -4394,6 +4397,7 @@ begin
   System.SetLength(Sigma, VertexCount);
   System.SetLength(Delta, VertexCount);
   System.SetLength(r, VertexCount);
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
@@ -4470,6 +4474,7 @@ begin
     for p in AdjLists[I]^ do
       if p^.Key > I then
         aBcMap.Add(TOrdIntPair.Create(I, p^.Key), 0);
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Dist)^, System.Length(Dist)*SizeOf(SizeInt), $ff);
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
@@ -4821,6 +4826,7 @@ begin
   for I in aTestMds do
     begin
       Remain.UncBits[I] := True; //test aTestMds without I
+      AdjFound := False;
       for K in Remain do
         begin
           AdjList := AdjLists[K];
@@ -5670,7 +5676,7 @@ begin
   Len := System.Length(aValue);
   if Len > High(SmallInt) then
     raise EGraphError.CreateFmt(SEStrLenExceedFmt, [Len]);
-  sLen := Len;
+  sLen := NToLE(Len);
   aStream.WriteBuffer(sLen, SizeOf(sLen));
   aStream.WriteBuffer(Pointer(aValue)^, Len);
 end;
@@ -5679,7 +5685,9 @@ procedure TStrChart.ReadVertex(aStream: TStream; out aValue: string);
 var
   Len: SmallInt;
 begin
-  aStream.ReadBuffer(Len{%H-}, SizeOf(Len));
+  Len := 0;
+  aStream.ReadBuffer(Len, SizeOf(Len));
+  Len := LEToN(Len);
   System.SetLength(aValue, Len);
   aStream.ReadBuffer(Pointer(aValue)^, Len);
 end;
@@ -6320,6 +6328,7 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   Queue := TWItemPairHeapMin.Create(VertexCount);
   nInf := NegInfWeight;
+  Curr := 0;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
     TWArrayHelper.Fill(Dist, nInf);
@@ -6405,6 +6414,7 @@ begin
       if p^.Key > I then
         aBcMap.Add(TOrdIntPair.Create(I, p^.Key), 0);
   nInf := NegInfWeight;
+  Curr := 0;
   for I := 0 to Pred(VertexCount) do begin
     System.FillChar(Pointer(Sigma)^, System.Length(Sigma)*SizeOf(Int64), 0);
     TWArrayHelper.Fill(Dist, nInf);

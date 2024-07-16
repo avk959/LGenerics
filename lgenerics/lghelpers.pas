@@ -42,19 +42,19 @@ type
     class function Less(const L, R: TGUID): Boolean; static; inline;
   end;
 
-  TAStrHelper = type helper({$IF FPC_FULLVERSION>=30301}TAnsiStringHelper{$ELSE}TStringHelper{$ENDIF}) for ansistring
+  TAStrHelper = type helper(TStringHelper) for ansistring
     class function HashCode(const aValue: ansistring): SizeInt; static; inline;
     class function Equal(const L, R: ansistring): Boolean; static; inline;
     class function Less(const L, R: ansistring): Boolean; static;
   end;
 
-  TWStrHelper = type helper{$IF FPC_FULLVERSION>=30301}(TWideStringHelper){$ENDIF} for widestring
+  TWStrHelper = type helper{$IF FPC_FULLVERSION>30300}(TWideStringHelper){$ENDIF} for widestring
     class function HashCode(const aValue: widestring): SizeInt; static; inline;
     class function Equal(const L, R: widestring): Boolean; static; inline;
     class function Less(const L, R: widestring): Boolean; static;
   end;
 
-  TUStrHelper = type helper{$IF FPC_FULLVERSION>=30301}(TUnicodeStringHelper){$ENDIF} for unicodestring
+  TUStrHelper = type helper{$IF FPC_FULLVERSION>30300}(TUnicodeStringHelper){$ENDIF} for unicodestring
     class function HashCode(const aValue: unicodestring): SizeInt; static; inline;
     class function Equal(const L, R: unicodestring): Boolean; static; inline;
     class function Less(const L, R: unicodestring): Boolean; static;
