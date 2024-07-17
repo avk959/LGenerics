@@ -89,8 +89,8 @@ type
   TIntEdge = packed record
     Source,
     Destination: SizeInt;
-    class function HashCode(const aValue: TIntEdge): SizeInt; static; inline;
-    class function Equal(const L, R: TIntEdge): Boolean; static; inline;
+    class function HashCode(const aValue: TIntEdge): SizeInt; static; //inline;
+    class function Equal(const L, R: TIntEdge): Boolean; static; //inline;
     constructor Create(aSrc, aDst: SizeInt);
     function Key: TIntEdge; inline;
   end;
@@ -1523,7 +1523,7 @@ begin
   vSet.Capacity := aGraph.VertexCount;
   for I in aList do
     begin
-      {%H-}AddVertex(aGraph[I]);
+      AddVertex(aGraph[I]);
       vSet.UncBits[I] := True;
     end;
   for I in aList do
@@ -1539,7 +1539,7 @@ begin
   Clear;
   for I := 0 to Pred(System.Length(aTree)) do
     begin
-      {%H-}AddVertex(aGraph[I]);
+      AddVertex(aGraph[I]);
       Src := aTree[I];
       if Src <> -1 then
         AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
@@ -1584,10 +1584,12 @@ var
   p: PAdjItem;
 begin
   Result := nil;
+  Queue := nil;
+  Dist := nil;
   aRadius := VertexCount;
   aDiameter := 0;
-  {%H-}Queue.Length := VertexCount;
-  {%H-}Dist.Length := VertexCount;
+  Queue.Length := VertexCount;
+  Dist.Length := VertexCount;
   Result.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     begin

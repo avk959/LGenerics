@@ -3345,8 +3345,8 @@ var
 begin
   Result := TLineGraph.Create;
   Result.EnsureCapacity(EdgeCount);
-  for e in {%H-}DistinctEdges do
-    {%H-}Result.AddVertex(TOrdIntPair.Create(e.Source, e.Destination));
+  for e in DistinctEdges do
+    Result.AddVertex(TOrdIntPair.Create(e.Source, e.Destination));
   for I := 0 to Result.VertexCount - 2 do
     begin
       vI := Result[I];
@@ -6559,7 +6559,8 @@ procedure TPointsChart.ReadData(aStream: TStream; out aValue: TRealWeight);
 var
   Buf: Double;
 begin
-  aStream.ReadBuffer(Buf{%H-}, SizeOf(Buf));
+  Buf := 0;
+  aStream.ReadBuffer(Buf, SizeOf(Buf));
   aValue.Weight := Buf;
 end;
 

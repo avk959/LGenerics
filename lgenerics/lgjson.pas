@@ -6032,6 +6032,7 @@ begin
     end;
 end;
 
+{$IF FPC_FULLVERSION>30300}{$PUSH}{$WARN 6060 OFF}{$ENDIF}
 class function TJsonPatch.TryMove(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var
   Node: TJsonNode;
@@ -6077,6 +6078,7 @@ begin
     end;
   Result := True;
 end;
+{$IF FPC_FULLVERSION>30300}{$POP}{$ENDIF}
 
 class function TJsonPatch.TryReplace(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean;
 var

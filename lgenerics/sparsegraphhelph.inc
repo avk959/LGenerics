@@ -145,8 +145,8 @@ type
     FLess,
     FGreater: SizeInt;
   public
-    class function HashCode(const aValue: TOrdIntPair): SizeInt; static; inline;
-    class function Equal(const L, R: TOrdIntPair): Boolean; static; inline;
+    class function HashCode(const aValue: TOrdIntPair): SizeInt; static; //inline;
+    class function Equal(const L, R: TOrdIntPair): Boolean; static; //inline;
     constructor Create(L, R: SizeInt);
     function Key: TOrdIntPair;
     property Left: SizeInt read FLess;
@@ -405,7 +405,7 @@ type
     TWeightItem = record
       Index: SizeInt;
       Weight: TWeight;
-      class operator < (const L, R: TWeightItem): Boolean; inline;
+      class operator < (const L, R: TWeightItem): Boolean; //inline;
       constructor Create(aIndex: SizeInt; w: TWeight);
       property Key: SizeInt read Index;
     end;

@@ -112,8 +112,8 @@ type
 
   { TUcs4Hasher }
   TUcs4Hasher = record
-    class function HashCode(aValue: Ucs4Char): SizeInt; static; inline;
-    class function Equal(L, R: Ucs4Char): Boolean; static; inline;
+    class function HashCode(aValue: Ucs4Char): SizeInt; static; //inline;
+    class function Equal(L, R: Ucs4Char): Boolean; static; //inline;
   end;
 
   { TGSeqUtil provides several algorithms for arbitrary sequences
@@ -425,7 +425,7 @@ type
   var
     FPattern: TUcs4Seq;
     FD: array of SizeInt;
-    function GetInitialized: Boolean; inline;
+    function GetInitialized: Boolean;
     function GetLength: SizeInt;
   public
     constructor Create(const aPattern: string);
