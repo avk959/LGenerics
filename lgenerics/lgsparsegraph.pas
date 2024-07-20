@@ -397,6 +397,9 @@ type
     function  NonEmpty: Boolean;
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt);
+  {  }
+    procedure EnsureAdjCapacity(const aVertex: TVertex; aValue: SizeInt);
+    procedure EnsureAdjCapacityI(aIndex: SizeInt; aValue: SizeInt);
     procedure TrimToFit;
   { saves graph in its own binary format }
     procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex; aOnWriteData: TOnWriteData);
@@ -1295,9 +1298,9 @@ begin
       exit;
     end;
   if Capacity < MAX_POSITIVE_POW2 then
-    Resize(Capacity shl 1)
+    Resize(Capacity * 2)
   else
-    raise EGraphError.CreateFmt(SECapacityExceedFmt, [Capacity shl 1]);
+    raise EGraphError.CreateFmt(SECapacityExceedFmt, [Capacity * 2]);
 end;
 
 function TGSparseGraph.Add(const v: TVertex; aHash: SizeInt): SizeInt;
@@ -1801,19 +1804,28 @@ begin
       raise EGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
+procedure TGSparseGraph.EnsureAdjCapacity(const aVertex: TVertex; aValue: SizeInt);
+begin
+  EnsureAdjCapacityI(IndexOf(aVertex), aValue);
+end;
+
+procedure TGSparseGraph.EnsureAdjCapacityI(aIndex: SizeInt; aValue: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  AdjLists[aIndex]^.EnsureCapacity(aValue);
+end;
+
 procedure TGSparseGraph.TrimToFit;
 var
   I, NewCapacity: SizeInt;
 begin
   if VertexCount > 0 then
     begin
-      NewCapacity := LGUtils.RoundUpTwoPower(VertexCount shl 1);
+      NewCapacity := LGUtils.RoundUpTwoPower(VertexCount);
       if NewCapacity < Capacity then
-        begin
-          for I := 0 to Pred(VertexCount) do
-            FNodeList[I].AdjList.TrimToFit;
-          Resize(NewCapacity);
-        end;
+        Resize(NewCapacity);
+      for I := 0 to Pred(VertexCount) do
+        AdjLists[I]^.TrimToFit;
     end
   else
     Clear;
