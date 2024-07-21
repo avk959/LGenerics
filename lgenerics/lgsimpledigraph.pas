@@ -133,6 +133,7 @@ type
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
     function  GetScCondensation(const aScIds: TIntArray; aScCount: SizeInt): TSccNodeList;
+    function  GetUndirectedSchema: TIntSetArray;
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; const aData: TEdgeData): Boolean; override;
@@ -326,6 +327,8 @@ type
     function  GetStrongComponentI(aIndex: SizeInt): TIntArray;
   { creates internal reachability matrix }
     procedure BuildReachabilityMatrix;
+  { returns True if the instance is weakly connected, False otherwise }
+    function  IsWeakConnected: Boolean;
   { returns an array of weakly connected components }
     function  FindWeakComponents: TIntMatrix;
   { returns True, radius and diameter, if graph is strongly connected, False otherwise }
@@ -2112,6 +2115,25 @@ begin
   Result := List;
 end;
 
+function TGSimpleDigraph.GetUndirectedSchema: TIntSetArray;
+var
+  g: TIntSetArray;
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    with FNodeList[I] do
+      g[I].EnsureCapacity(AdjList.Count + Tag);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      begin
+        g[I].Push(p^.Key);
+        g[p^.Key].Push(I);
+      end;
+  Result := g;
+end;
+
 function TGSimpleDigraph.DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
@@ -2897,44 +2919,74 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(Ids, ScCount);
 end;
 
+function TGSimpleDigraph.IsWeakConnected: Boolean;
+var
+  g: TIntSetArray;
+  Queue: TIntArray;
+  Visited: TBoolVector;
+  Curr, Next, Counter, qHead, qTail: SizeInt;
+begin
+  if IsEmpty then exit(False);
+  if VertexCount = 1 then exit(True);
+  g := GetUndirectedSchema;
+  Visited.Capacity := VertexCount;
+  System.SetLength(Queue, VertexCount);
+  qHead := 0;
+  qTail := 1;
+  Queue[0] := 0;
+  Visited.UncBits[0] := True;
+  Counter := 1;
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for Next in g[Curr] do
+        if not Visited.UncBits[Next] then
+          begin
+            Visited.UncBits[Next] := True;
+            Inc(Counter);
+            Queue[qTail] := Next;
+            Inc(qTail);
+          end;
+    end;
+  Result := Counter = VertexCount;
+end;
+
 function TGSimpleDigraph.FindWeakComponents: TIntMatrix;
 var
-  Visited: TBoolVector;
-  Queue: TIntQueue;
-  g: array of TIntSet;
   CompList: TIntVectorList;
-  I, Curr, Next, CompIdx: SizeInt;
-  p: PAdjItem;
+  g: TIntSetArray;
+  Queue: TIntArray;
+  Visited: TBoolVector;
+  I, Curr, Next, CompIdx, qHead, qTail: SizeInt;
 begin
   if IsEmpty then exit(nil);
   if VertexCount = 1 then exit([[0]]);
-  System.SetLength(g, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    with FNodeList[I] do
-      begin
-        g[I].EnsureCapacity(AdjList.Count + Tag);
-        g[I].AssignList(@AdjList);
-      end;
-  for I := 0 to Pred(VertexCount) do
-    for p in AdjLists[I]^ do
-      g[p^.Key].Push(I);
+  g := GetUndirectedSchema;
   Visited.Capacity := VertexCount;
-  Curr := NULL_INDEX;
+  System.SetLength(Queue, VertexCount);
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
         CompIdx := CompList.Add(Default(TIntVector));
         CompList.UncMutable[CompIdx]^.Add(I);
         Visited.UncBits[I] := True;
-        Queue.Enqueue(I);
-        while Queue.TryDequeue(Curr) do
-          for Next in g[Curr] do
-            if not Visited.UncBits[Next] then
-              begin
-                CompList.UncMutable[CompIdx]^.Add(Next);
-                Visited.UncBits[Next] := True;
-                Queue.Enqueue(Next);
-              end;
+        qHead := 0;
+        qTail := 1;
+        Queue[0] := I;
+        while qHead < qTail do
+          begin
+            Curr := Queue[qHead];
+            Inc(qHead);
+            for Next in g[Curr] do
+              if not Visited.UncBits[Next] then
+                begin
+                  CompList.UncMutable[CompIdx]^.Add(Next);
+                  Visited.UncBits[Next] := True;
+                  Queue[qTail] := Next;
+                  Inc(qTail);
+                end;
+          end;
       end;
   System.SetLength(Result, CompList.Count);
   for I := 0 to Pred(CompList.Count) do
