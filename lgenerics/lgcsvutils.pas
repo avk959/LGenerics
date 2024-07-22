@@ -130,6 +130,9 @@ type
   public
   type
     TColCountPolicy = (ccpAccept, ccpIgnore, ccpError);
+    TRowCompare     = function(const L, R: TStringArray): Boolean;
+    TOnRowCompare   = function(const L, R: TStringArray): Boolean of object;
+    TNestRowCompare = function(const L, R: TStringArray): Boolean is nested;
 
   const
     MT_MIN_CHUNK_SIZE = SizeInt($400000); //todo: need some tweaking
@@ -262,6 +265,10 @@ type
     function  TrimTrailingBlanks(aRow: SizeInt): SizeInt;
   { removes blank cells at the end of rows in the entire document; returns the number of removed cells }
     function  TrimTrailingBlanks: SizeInt;
+  { sorts rows using specified comparator c }
+    procedure Sort(c: TRowCompare; aWithHeader: Boolean = False);
+    procedure Sort(c: TOnRowCompare; aWithHeader: Boolean = False);
+    procedure Sort(c: TNestRowCompare; aWithHeader: Boolean = False);
   { on document load defines behavior when rows are encountered whose number of columns
     does not match the number of header columns, ccpAccept by default.}
     property  ColCountPolicy: TColCountPolicy read FCcPolicy write FCcPolicy;
@@ -1467,6 +1474,30 @@ begin
   Result := 0;
   for I := 0 to Pred(FCells.Count) do
     Result += TrimTrailingBlanks(I);
+end;
+
+procedure TCsvDoc.Sort(c: TRowCompare; aWithHeader: Boolean);
+begin
+  if aWithHeader then
+    specialize TGRegularArrayHelper<TStringArray>.Sort(FCells.UncMutable[0][0..Pred(FCells.Count)], c)
+  else
+    specialize TGRegularArrayHelper<TStringArray>.Sort(FCells.UncMutable[0][1..Pred(FCells.Count)], c)
+end;
+
+procedure TCsvDoc.Sort(c: TOnRowCompare; aWithHeader: Boolean);
+begin
+  if aWithHeader then
+    specialize TGDelegatedArrayHelper<TStringArray>.Sort(FCells.UncMutable[0][0..Pred(FCells.Count)], c)
+  else
+    specialize TGDelegatedArrayHelper<TStringArray>.Sort(FCells.UncMutable[0][1..Pred(FCells.Count)], c)
+end;
+
+procedure TCsvDoc.Sort(c: TNestRowCompare; aWithHeader: Boolean);
+begin
+  if aWithHeader then
+    specialize TGNestedArrayHelper<TStringArray>.Sort(FCells.UncMutable[0][0..Pred(FCells.Count)], c)
+  else
+    specialize TGNestedArrayHelper<TStringArray>.Sort(FCells.UncMutable[0][1..Pred(FCells.Count)], c)
 end;
 
 { TCsvReader.TStrBuffer }
