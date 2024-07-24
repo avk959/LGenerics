@@ -244,20 +244,20 @@ type
     will raise exception if aRow or aCol is out of bounds(aCol = ColCount is allowed) }
     procedure InsertCell(aRow, aCol: SizeInt; const aValue: string);
   { adds the specified row to the end of the list of rows; returns the index of the added row }
-    function  AddRow(const aRow: TStringArray): SizeInt; inline;
+    function  AddRow(const aRow: array of string): SizeInt;
   { adds a row consisting of Max(aColCount, 0) empty cells to the end of the list of rows
     and returns a pointer to it }
-    function  AddRow(aColCount: SizeInt): PRow; inline;
+    function  AddRow(aColCount: SizeInt): PRow;
   { inserts the specified row at the position specified by the aIndex parameter;
     will raise exception if aIndex out of bounds(aIndex = RowCount is allowed) }
-    procedure InsertRow(aIndex: SizeInt; const aRow: TStringArray);
+    procedure InsertRow(aIndex: SizeInt; const aRow: array of string);
   { inserts a row consisting of Max(aColCount, 0) empty cells at the position specified
     by the aIndex parameter and returns a pointer to it; will raise exception if aIndex
     out of bounds(aIndex = RowCount is allowed) }
-    function  InsertRow(aIndex: SizeInt; aColCount: SizeInt): PRow; inline;
+    function  InsertRow(aIndex: SizeInt; aColCount: SizeInt): PRow;
   { removes the row specified in the aIndex parameter from the list and returns it as a result;
     will raise exception if aIndex out of bounds }
-    function  DeleteRow(aIndex: SizeInt): TStringArray; inline;
+    function  DeleteRow(aIndex: SizeInt): TStringArray;
   { returns false if Row[L] or Row[R] does not exist }
     function  SwapRow(L, R: SizeInt): Boolean;
   { removes blank cells at the end of row with index aRow, if it exists; returns the number of
@@ -1407,9 +1407,9 @@ begin
   Insert([aValue], p^, aCol);
 end;
 
-function TCsvDoc.AddRow(const aRow: TStringArray): SizeInt;
+function TCsvDoc.AddRow(const aRow: array of string): SizeInt;
 begin
-  Result := FCells.Add(aRow);
+  Result := FCells.Add(specialize TGArrayHelpUtil<string>.CreateCopy(aRow));
 end;
 
 function TCsvDoc.AddRow(aColCount: SizeInt): PRow;
@@ -1418,10 +1418,10 @@ begin
   System.SetLength(Result^, Math.Max(aColCount, 0));
 end;
 
-procedure TCsvDoc.InsertRow(aIndex: SizeInt; const aRow: TStringArray);
+procedure TCsvDoc.InsertRow(aIndex: SizeInt; const aRow: array of string);
 begin
   CheckRowInsertIndex(aIndex);
-  FCells.Insert(aIndex, aRow);
+  FCells.Insert(aIndex, specialize TGArrayHelpUtil<string>.CreateCopy(aRow));
 end;
 
 function TCsvDoc.InsertRow(aIndex: SizeInt; aColCount: SizeInt): PRow;
