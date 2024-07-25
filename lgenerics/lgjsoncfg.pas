@@ -4,7 +4,7 @@
 *   Storing configuration data in JSON files, replicates                    *
 *   the TJSONConfig interface.                                              *
 *                                                                           *
-*   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -80,7 +80,9 @@ type
     procedure CloseKey;
     procedure ResetKey;
     procedure EnumSubKeys(const aPath: string; aList: TStrings);
+    function  EnumSubKeys(const aPath: string): TStringArray;
     procedure EnumValues(const aPath: string; aList: TStrings);
+    function  EnumValues(const aPath: string): TStringArray;
 
     function  GetValue(const aPath: string; const aDefault: string): string;
     function  GetValue(const aPath: string; aDefault: Integer): Integer;
@@ -376,6 +378,28 @@ begin
         aList.Add(Node.Pairs[I].Key);
 end;
 
+function TJsonConf.EnumSubKeys(const aPath: string): TStringArray;
+var
+  r: TStringArray;
+  Node: TJsonNode;
+  I, Len: Integer;
+begin
+  Node := FindPath(aPath, False);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  Len := 0;
+  if Node <> nil then
+    for I := 0 to Pred(Node.Count) do
+      if Node.Items[I].IsObject then
+        begin
+          if System.Length(r) = Len then
+            System.SetLength(r, Len * 2);
+          r[Len] := Node.Pairs[I].Key;
+          Inc(Len);
+        end;
+  System.SetLength(r, Len);
+  Result := r;
+end;
+
 procedure TJsonConf.EnumValues(const aPath: string; aList: TStrings);
 var
   Node: TJsonNode;
@@ -386,6 +410,28 @@ begin
     for I := 0 to Pred(Node.Count) do
       if not Node.Items[I].IsObject then
         aList.Add(Node.Pairs[I].Key);
+end;
+
+function TJsonConf.EnumValues(const aPath: string): TStringArray;
+var
+  r: TStringArray;
+  Node: TJsonNode;
+  I, Len: Integer;
+begin
+  Node := FindPath(aPath, False);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  Len := 0;
+  if Node <> nil then
+    for I := 0 to Pred(Node.Count) do
+      if not Node.Items[I].IsObject then
+        begin
+          if System.Length(r) = Len then
+            System.SetLength(r, Len * 2);
+          r[Len] := Node.Pairs[I].Key;
+          Inc(Len);
+        end;
+  System.SetLength(r, Len);
+  Result := r;
 end;
 
 function TJsonConf.GetValue(const aPath: string; const aDefault: string): string;
