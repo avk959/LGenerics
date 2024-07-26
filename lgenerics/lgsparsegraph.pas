@@ -272,9 +272,9 @@ type
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     function  CreateBoolMatrix: TBoolMatrix;
-    function  CreateIntArray(aLength, aValue: SizeInt): TIntArray; inline;
-    function  CreateIntArray(aValue: SizeInt = -1): TIntArray; inline;
-    function  CreateIntArrayRange: TIntArray; inline;
+    function  CreateIntArray(aLength, aValue: SizeInt): TIntArray;
+    function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
+    function  CreateIntArrayRange: TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  CreateAdjItemEnumArray: TAdjItemEnumArray;
@@ -2366,7 +2366,7 @@ begin
   Inc(Result);
   Visited.Capacity := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  {%H-}Stack := CreateIntArray;
+  Stack := CreateIntArray;
   Visited.UncBits[aRoot] := True;
   Stack[sTop] := aRoot;
   while sTop >= 0 do
@@ -2450,13 +2450,13 @@ begin
       end;
 end;
 
-function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
 {$PUSH}{$MACRO ON}
-function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
   Queue: TIntArray;
