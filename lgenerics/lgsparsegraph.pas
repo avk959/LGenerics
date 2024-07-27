@@ -488,33 +488,41 @@ type
   traversal utilities
 ***********************************************************************************************************}
 
-  { returns count of visited vertices during the DFS traversal;
+  { returns count of visited vertices during the DFS traversal of the connected component
+    to which aRoot belongs;
     aOnWhite is called after next WHITE vertex found,
     aOnGray is called after visiting an already visited vertex,
     aOnDone is called after vertex done }
-    function DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
+    function  DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt; inline;
-    function DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
+    function  DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt;
-    function DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
+    function  DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt; inline;
-    function DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
+    function  DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt;
+  { same as above, but performs a whole graph traversal }
+    procedure DfsTraversal(aOnWhite, aOnGray: TOnNextNode; aOnDone: TOnNodeDone);
+    procedure DfsTraversal(aOnWhite, aOnGray: TNestNextNode; aOnDone: TNestNodeDone);
   { returns the DFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent in tree(or -1 if it is a root) }
-    function DfsTree: TIntArray;
-  { returns count of visited vertices during the BFS traversal;
+    function  DfsTree: TIntArray;
+  { returns count of visited vertices during the BFS traversal of the connected component
+    to which aRoot belongs;
     aOnWhite is called after next WHITE vertex found,
     aOnGray is called after visiting an already visited vertex,
     aOnDone is called after vertex done }
-    function BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
+    function  BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt; inline;
-    function BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
+    function  BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
                           aOnDone: TOnNodeDone = nil): SizeInt;
-    function BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
+    function  BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt; inline;
-    function BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
+    function  BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
                           aOnDone: TNestNodeDone): SizeInt;
+  { same as above, but performs a whole graph traversal }
+    procedure BfsTraversal(aOnWhite, aOnGray: TOnNextNode; aOnDone: TOnNodeDone);
+    procedure BfsTraversal(aOnWhite, aOnGray: TNestNextNode; aOnDone: TNestNodeDone);
   { returns the BFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent (or -1 if it is a root) }
     function BfsTree: TIntArray;
@@ -2343,59 +2351,46 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
-{$PUSH}{$MACRO ON}
-function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
+  AdjEnums: TAdjEnumArray;
   Stack: TIntArray;
   Visited: TBoolVector;
-  AdjEnums: TAdjEnumArray;
-  Next: SizeInt;
-  sTop: SizeInt = 0;
+  Next, sTop: SizeInt;
 begin
-{$DEFINE DfsWithVisitors :=
-  Result := 0;
   CheckIndexRange(aRoot);
-  if Assigned(aOnWhite) then
-    aOnWhite(aRoot, NULL_INDEX);
-  Inc(Result);
   Visited.Capacity := VertexCount;
-  AdjEnums := CreateAdjEnumArray;
-  Stack := CreateIntArray;
   Visited.UncBits[aRoot] := True;
-  Stack[sTop] := aRoot;
-  while sTop >= 0 do
-    begin
-      aRoot := Stack[sTop];
-      if AdjEnums[aRoot].MoveNext then
-        begin
-          Next := AdjEnums[aRoot].Current;
-          if not Visited.UncBits[Next] then
-            begin
-              Inc(Result);
-              if Assigned(aOnWhite) then
-                aOnWhite(Next, aRoot);
-              Visited.UncBits[Next] := True;
-              Inc(sTop);
-              Stack[sTop] := Next;
-            end
-          else
-            if Assigned(aOnGray) then
-              aOnGray(Next, aRoot);
-        end
-      else
-        begin
-          if Assigned(aOnDone) then
-            aOnDone(Stack[sTop]);
-          Dec(sTop);
-        end;
-    end }
-  DfsWithVisitors;
+  AdjEnums := CreateAdjEnumArray;
+  System.SetLength(Stack, VertexCount);
+  sTop := 0;
+  Stack[0] := aRoot;
+  Result := 1;
+  if aOnWhite <> nil then aOnWhite(aRoot, NULL_INDEX);
+  while sTop >= 0 do begin
+    aRoot := Stack[sTop];
+    if AdjEnums[aRoot].MoveNext then begin
+      Next := AdjEnums[aRoot].Current;
+      if not Visited.UncBits[Next] then begin
+        Visited.UncBits[Next] := True;
+        Inc(sTop);
+        Inc(Result);
+        Stack[sTop] := Next;
+        if aOnWhite <> nil then aOnWhite(Next, aRoot);
+      end else
+        if aOnGray <> nil then aOnGray(Next, aRoot);
+    end else begin
+      Dec(sTop);
+      if aOnDone <> nil then aOnDone(aRoot);
+    end;
+  end;
 end;
 
 function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
@@ -2407,15 +2402,113 @@ end;
 function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
   aOnDone: TNestNodeDone): SizeInt;
 var
+  AdjEnums: TAdjEnumArray;
   Stack: TIntArray;
   Visited: TBoolVector;
-  AdjEnums: TAdjEnumArray;
-  Next: SizeInt;
-  sTop: SizeInt = 0;
+  Next, sTop: SizeInt;
 begin
-  DfsWithVisitors;
+  CheckIndexRange(aRoot);
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aRoot] := True;
+  AdjEnums := CreateAdjEnumArray;
+  System.SetLength(Stack, VertexCount);
+  sTop := 0;
+  Stack[0] := aRoot;
+  Result := 1;
+  if aOnWhite <> nil then aOnWhite(aRoot, NULL_INDEX);
+  while sTop >= 0 do begin
+    aRoot := Stack[sTop];
+    if AdjEnums[aRoot].MoveNext then begin
+      Next := AdjEnums[aRoot].Current;
+      if not Visited.UncBits[Next] then begin
+        Visited.UncBits[Next] := True;
+        Inc(sTop);
+        Inc(Result);
+        Stack[sTop] := Next;
+        if aOnWhite <> nil then aOnWhite(Next, aRoot);
+      end else
+        if aOnGray <> nil then aOnGray(Next, aRoot);
+    end else begin
+      Dec(sTop);
+      if aOnDone <> nil then aOnDone(aRoot);
+    end;
+  end;
 end;
-{$UNDEF DfsWithVisitors}{$POP}
+
+procedure TGSparseGraph.DfsTraversal(aOnWhite, aOnGray: TOnNextNode; aOnDone: TOnNodeDone);
+var
+  AdjEnums: TAdjEnumArray;
+  Stack: TIntArray;
+  Visited: TBoolVector;
+  I, Curr, Next, sTop: SizeInt;
+begin
+  if IsEmpty then exit;
+  if (aOnWhite = nil) and (aOnGray = nil) and (aOnDone = nil) then exit;
+  AdjEnums := CreateAdjEnumArray;
+  System.SetLength(Stack, VertexCount);
+  Visited.Capacity := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited.UncBits[I] then begin
+      Visited.UncBits[I] := True;
+      sTop := 0;
+      Stack[0] := I;
+      if aOnWhite <> nil then aOnWhite(I, NULL_INDEX);
+      while sTop >= 0 do begin
+        Curr := Stack[sTop];
+        if AdjEnums[Curr].MoveNext then begin
+          Next := AdjEnums[Curr].Current;
+          if not Visited.UncBits[Next] then begin
+            Visited.UncBits[Next] := True;
+            Inc(sTop);
+            Stack[sTop] := Next;
+            if aOnWhite <> nil then aOnWhite(Next, Curr);
+          end else
+            if aOnGray <> nil then aOnGray(Next, Curr);
+        end else begin
+          Dec(sTop);
+          if aOnDone <> nil then aOnDone(Curr);
+        end;
+      end;
+    end;
+end;
+
+procedure TGSparseGraph.DfsTraversal(aOnWhite, aOnGray: TNestNextNode; aOnDone: TNestNodeDone);
+var
+  AdjEnums: TAdjEnumArray;
+  Stack: TIntArray;
+  Visited: TBoolVector;
+  I, Curr, Next, sTop: SizeInt;
+begin
+  if IsEmpty then exit;
+  if (aOnWhite = nil) and (aOnGray = nil) and (aOnDone = nil) then exit;
+  AdjEnums := CreateAdjEnumArray;
+  System.SetLength(Stack, VertexCount);
+  Visited.Capacity := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited.UncBits[I] then begin
+      Visited.UncBits[I] := True;
+      sTop := 0;
+      Stack[0] := I;
+      if aOnWhite <> nil then aOnWhite(I, NULL_INDEX);
+      while sTop >= 0 do begin
+        Curr := Stack[sTop];
+        if AdjEnums[Curr].MoveNext then begin
+          Next := AdjEnums[Curr].Current;
+          if not Visited.UncBits[Next] then begin
+            Visited.UncBits[Next] := True;
+            Inc(sTop);
+            Stack[sTop] := Next;
+            if aOnWhite <> nil then aOnWhite(Next, Curr);
+          end else
+            if aOnGray <> nil then aOnGray(Next, Curr);
+        end else begin
+          Dec(sTop);
+          if aOnDone <> nil then aOnDone(Curr);
+        end;
+      end;
+    end;
+end;
+
 function TGSparseGraph.DfsTree: TIntArray;
 var
   Stack: TSimpleStack;
@@ -2429,13 +2522,14 @@ begin
   Result := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
   Visited.Capacity := VertexCount;
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
         Stack.Push(I);
         Visited.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited.UncBits[Next] then
@@ -2455,48 +2549,38 @@ function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TOn
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
-{$PUSH}{$MACRO ON}
+
 function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
   Queue: TIntArray;
   Visited: TBoolVector;
+  qHead, qTail: SizeInt;
   p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
-{$DEFINE BfsWithVisitors :=
-  Result := 0;
   CheckIndexRange(aRoot);
-  Inc(Result);
-  if Assigned(aOnWhite) then
-    aOnWhite(aRoot, NULL_INDEX);
+  System.SetLength(Queue, VertexCount);
   Visited.Capacity := VertexCount;
-  Queue.Length := VertexCount;
+  Result := 1;
+  qHead := 0;
+  qTail := 1;
+  Queue[0] := aRoot;
   Visited.UncBits[aRoot] := True;
-  Queue[qTail] := aRoot;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      aRoot := Queue[qHead];
-      Inc(qHead);
-      for p in AdjLists[aRoot]^ do
-        if not Visited.UncBits[p^.Destination] then
-          begin
-            Inc(Result);
-            if Assigned(aOnWhite) then
-              aOnWhite(p^.Destination, aRoot);
-            Queue[qTail] := p^.Destination;
-            Inc(qTail);
-            Visited.UncBits[p^.Destination] := True;
-          end
-        else
-          if Assigned(aOnGray) then
-            aOnGray(p^.Destination, aRoot);
-      if Assigned(aOnDone) then
-        aOnDone(aRoot);
-    end }
-  BfsWithVisitors;
+  if aOnWhite <> nil then aOnWhite(aRoot, NULL_INDEX);
+  while qHead <> qTail do begin
+    aRoot := Queue[qHead];
+    Inc(qHead);
+    for p in AdjLists[aRoot]^ do
+      if not Visited.UncBits[p^.Destination] then begin
+        Visited.UncBits[p^.Destination] := True;
+        Queue[qTail] := p^.Destination;
+        Inc(qTail);
+        Inc(Result);
+        if aOnWhite <> nil then aOnWhite(p^.Destination, aRoot);
+      end else
+        if aOnGray <> nil then aOnGray(p^.Destination, aRoot);
+    if aOnDone <> nil then aOnDone(aRoot);
+  end;
 end;
 
 function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
@@ -2510,13 +2594,102 @@ function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNex
 var
   Queue: TIntArray;
   Visited: TBoolVector;
+  qHead, qTail: SizeInt;
   p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
-  BfsWithVisitors;
+  CheckIndexRange(aRoot);
+  System.SetLength(Queue, VertexCount);
+  Visited.Capacity := VertexCount;
+  Result := 1;
+  qHead := 0;
+  qTail := 1;
+  Queue[0] := aRoot;
+  Visited.UncBits[aRoot] := True;
+  if aOnWhite <> nil then aOnWhite(aRoot, NULL_INDEX);
+  while qHead <> qTail do begin
+    aRoot := Queue[qHead];
+    Inc(qHead);
+    for p in AdjLists[aRoot]^ do
+      if not Visited.UncBits[p^.Destination] then begin
+        Visited.UncBits[p^.Destination] := True;
+        Queue[qTail] := p^.Destination;
+        Inc(qTail);
+        Inc(Result);
+        if aOnWhite <> nil then aOnWhite(p^.Destination, aRoot);
+      end else
+        if aOnGray <> nil then aOnGray(p^.Destination, aRoot);
+    if aOnDone <> nil then aOnDone(aRoot);
+  end;
 end;
-{$UNDEF BfsWithVisitors}{$POP}
+
+procedure TGSparseGraph.BfsTraversal(aOnWhite, aOnGray: TOnNextNode; aOnDone: TOnNodeDone);
+var
+  Queue: TIntArray;
+  Visited: TBoolVector;
+  I, Curr, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then exit;
+  if (aOnWhite = nil) and (aOnGray = nil) and (aOnDone = nil) then exit;
+  System.SetLength(Queue, VertexCount);
+  Visited.Capacity := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited.UncBits[I] then begin
+      Visited.UncBits[I] := True;
+      qHead := 0;
+      qTail := 1;
+      Queue[0] := I;
+      if aOnWhite <> nil then aOnWhite(I, NULL_INDEX);
+      while qHead <> qTail do begin
+        Curr := Queue[qHead];
+        Inc(qHead);
+        for p in AdjLists[Curr]^ do
+          if not Visited.UncBits[p^.Destination] then begin
+            Visited.UncBits[p^.Destination] := True;
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            if aOnWhite <> nil then aOnWhite(p^.Destination, Curr);
+          end else
+            if aOnGray <> nil then aOnGray(p^.Destination, Curr);
+        if aOnDone <> nil then aOnDone(Curr);
+      end;
+    end;
+end;
+
+procedure TGSparseGraph.BfsTraversal(aOnWhite, aOnGray: TNestNextNode; aOnDone: TNestNodeDone);
+var
+  Queue: TIntArray;
+  Visited: TBoolVector;
+  I, Curr, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then exit;
+  if (aOnWhite = nil) and (aOnGray = nil) and (aOnDone = nil) then exit;
+  System.SetLength(Queue, VertexCount);
+  Visited.Capacity := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited.UncBits[I] then begin
+      Visited.UncBits[I] := True;
+      qHead := 0;
+      qTail := 1;
+      Queue[0] := I;
+      if aOnWhite <> nil then aOnWhite(I, NULL_INDEX);
+      while qHead <> qTail do begin
+        Curr := Queue[qHead];
+        Inc(qHead);
+        for p in AdjLists[Curr]^ do
+          if not Visited.UncBits[p^.Destination] then begin
+            Visited.UncBits[p^.Destination] := True;
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            if aOnWhite <> nil then aOnWhite(p^.Destination, Curr);
+          end else
+            if aOnGray <> nil then aOnGray(p^.Destination, Curr);
+        if aOnDone <> nil then aOnDone(Curr);
+      end;
+    end;
+end;
+
 function TGSparseGraph.BfsTree: TIntArray;
 var
   Queue: TIntArray;
@@ -2537,7 +2710,7 @@ begin
         Queue[qTail] := I;
         Inc(qTail);
         Visited.UncBits[I] := True;
-        while qHead < qTail do
+        while qHead <> qTail do
           begin
             Curr := Queue[qHead];
             Inc(qHead);
@@ -4363,67 +4536,67 @@ end;
 
 function TSimpleStack.GetCapacity: SizeInt;
 begin
-  Result := System.Length(Items);
+  Result := System.Length(FItems);
 end;
 
 function TSimpleStack.GetCount: SizeInt;
 begin
-  Result := Succ(Top);
+  Result := Succ(FTop);
 end;
 
 constructor TSimpleStack.Create(aSize: SizeInt);
 begin
-  System.SetLength(Items, aSize);
-  Top := NULL_INDEX;
+  System.SetLength(FItems, aSize);
+  FTop := NULL_INDEX;
 end;
 
 function TSimpleStack.ToArray: TIntArray;
 begin
-  Result := System.Copy(Items, 0, Count);;
+  Result := System.Copy(FItems, 0, Count);;
 end;
 
 function TSimpleStack.IsEmpty: Boolean;
 begin
-  Result := Top < 0;
+  Result := FTop < 0;
 end;
 
 function TSimpleStack.NonEmpty: Boolean;
 begin
-  Result := Top >= 0;
+  Result := FTop >= 0;
 end;
 
 procedure TSimpleStack.MakeEmpty;
 begin
-  Top := NULL_INDEX;
+  FTop := NULL_INDEX;
 end;
 
 procedure TSimpleStack.Push(aValue: SizeInt);
 begin
-  Inc(Top);
-  Items[Top] := aValue;
+  Inc(FTop);
+  FItems[FTop] := aValue;
 end;
 
 function TSimpleStack.Pop: SizeInt;
 begin
-  Result := Items[Top];
-  Dec(Top);
+  Result := FItems[FTop];
+  Dec(FTop);
 end;
 
 function TSimpleStack.TryPop(out aValue: SizeInt): Boolean;
 begin
-  Result := Top >= 0;
+  Result := FTop >= 0;
   if Result then
     aValue := Pop;
 end;
 
 function TSimpleStack.Peek: SizeInt;
 begin
-  Result := Items[Top];
+  Result := FItems[FTop];
 end;
 
 function TSimpleStack.TryPeek(out aValue: SizeInt): Boolean;
 begin
-  Result := Top >= 0;
+  Result := FTop >= 0;
   if Result then
     aValue := Peek;
 end;
