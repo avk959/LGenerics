@@ -217,8 +217,8 @@ type
 
   TSimpleStack = record
   strict private
-    Items: TIntArray;
-    Top: SizeInt;
+    FItems: TIntArray;
+    FTop: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
   public
