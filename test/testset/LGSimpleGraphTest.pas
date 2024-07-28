@@ -136,9 +136,10 @@ type
     procedure ContainsBridge;
     procedure FindBridges;
     procedure IsBiconnected;
-    procedure FindBicomponents;
-    procedure FindBicomponents2;
-    procedure FindBicomponents3;
+    procedure FindBlocks;
+    procedure FindBlocks2;
+    procedure FindBlocks3;
+    procedure FindBlocks4;
     procedure EnsureBiconnected;
     procedure FindMetrics;
     procedure FindCenter;
@@ -365,6 +366,7 @@ begin
   //from Lazarus forum member @upsidasi
   //see TestGr7.png
   Result := TGraph.Create;
+  Result.AddVertexRange(0, 17);
   Result.AddEdges([0, 1, 0, 10, 1, 2, 1, 11, 2, 3, 2, 4, 4, 5, 4, 10, 5, 6, 6, 7, 6, 8,
                    6, 9, 9, 10, 11, 12, 11, 17, 12, 13, 13, 14, 14, 15, 14, 16, 14, 17]);
 end;
@@ -2345,34 +2347,34 @@ begin
   AssertTrue(g.IsBiconnected);
 end;
 
-procedure TSimpleGraphTest.FindBicomponents;
+procedure TSimpleGraphTest.FindBlocks;
 var
   Ref: TRef;
   g: TGraph;
-  Comps: TEdgeArrayVector;
+  Blocks: TEdgeArrayVector;
 begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
-  g.FindBicomponentsI(1, Comps);
-  AssertTrue(Comps.Count = 1);
+  g.FindBlocksI(1, Blocks);
+  AssertTrue(Blocks.Count = 1);
   Ref.Instance := GenerateWheel;
   g := Ref;
-  g.FindBicomponentsI(1, Comps);
-  AssertTrue(Comps.Count = 1);
+  g.FindBlocksI(1, Blocks);
+  AssertTrue(Blocks.Count = 1);
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  g.FindBicomponentsI(1, Comps);
-  AssertTrue(Comps.Count = 6);
+  g.FindBlocksI(1, Blocks);
+  AssertTrue(Blocks.Count = 6);
   Ref.Instance := GenerateTestGr3;
   g := Ref;
-  g.FindBicomponentsI(1, Comps);
-  AssertTrue(Comps.Count = 3);
+  g.FindBlocksI(1, Blocks);
+  AssertTrue(Blocks.Count = 3);
 end;
 
-procedure TSimpleGraphTest.FindBicomponents2;
+procedure TSimpleGraphTest.FindBlocks2;
 var
   g, r3, r4, r5: TRef;
-  Comps: TEdgeArrayVector;
+  Blocks: TEdgeArrayVector;
   e: TIntEdge;
   I, J: SizeInt;
 begin
@@ -2382,13 +2384,13 @@ begin
   {%H-}g.Instance := GenerateTestGr6;
   for I := 0 to Pred(g.Instance.VertexCount) do
     begin
-      g.Instance.FindBicomponentsI(I, Comps);
-      AssertTrue(Comps.Count = 5);
-      for J := 0 to Pred(Comps.Count) do
-        case Length(Comps[J]) of
+      g.Instance.FindBlocksI(I, Blocks);
+      AssertTrue(Blocks.Count = 5);
+      for J := 0 to Pred(Blocks.Count) do
+        case Length(Blocks[J]) of
           1:
             begin
-              e := Comps[J][0];
+              e := Blocks[J][0];
               case g.Instance[e.Source] of
                 1: AssertTrue(g.Instance[e.Destination] = 2);
                 2: AssertTrue(g.Instance[e.Destination] = 1);
@@ -2399,24 +2401,24 @@ begin
               end;
             end;
           3:
-            for e in Comps[J] do
+            for e in Blocks[J] do
               AssertTrue(r3.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
           5:
-            for e in Comps[J] do
+            for e in Blocks[J] do
               AssertTrue(r4.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
           6:
-            for e in Comps[J] do
+            for e in Blocks[J] do
               AssertTrue(r5.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
         else
-          Fail(Format('Unexpected count of edges(%d)', [Length(Comps[J])]));
+          Fail(Format('Unexpected count of edges(%d)', [Length(Blocks[J])]));
         end;
     end;
 end;
 
-procedure TSimpleGraphTest.FindBicomponents3;
+procedure TSimpleGraphTest.FindBlocks3;
 var
   g, r5, r8: TRef;
-  Comps: TEdgeArrayVector;
+  Blocks: TEdgeArrayVector;
   e: TIntEdge;
   I, J: SizeInt;
 begin
@@ -2425,13 +2427,13 @@ begin
   {%H-}g.Instance := GenerateTestGr7;
   for I := 0 to Pred(g.Instance.VertexCount) do
     begin
-      g.Instance.FindBicomponentsI(I, Comps);
-      AssertTrue(Comps.Count = 8);
-      for J := 0 to Pred(Comps.Count) do
-        case Length(Comps[J]) of
+      g.Instance.FindBlocksI(I, Blocks);
+      AssertTrue(Blocks.Count = 8);
+      for J := 0 to Pred(Blocks.Count) do
+        case Length(Blocks[J]) of
           1:
             begin
-              e := Comps[J][0];
+              e := Blocks[J][0];
               case g.Instance[e.Source] of
                 1:  AssertTrue(g.Instance[e.Destination] = 11);
                 2:  AssertTrue(g.Instance[e.Destination] = 3);
@@ -2448,15 +2450,51 @@ begin
               end;
             end;
           5:
-            for e in Comps[J] do
+            for e in Blocks[J] do
               AssertTrue(r5.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
           9:
-            for e in Comps[J] do
+            for e in Blocks[J] do
               AssertTrue(r8.Instance.ContainsEdge(g.Instance[e.Source], g.Instance[e.Destination]));
         else
-          Fail(Format('Unexpected count of edges(%d)', [Length(Comps[J])]));
+          Fail(Format('Unexpected count of edges(%d)', [Length(Blocks[J])]));
         end;
     end;
+end;
+
+procedure TSimpleGraphTest.FindBlocks4;
+var
+  g: TRef;
+  Blocks: TIntArrayVector;
+  I: Integer;
+begin
+  {%H-}g.Instance.FindBlocks(Blocks);
+  AssertTrue(Blocks.IsEmpty);
+
+  g.Instance.AddVertex(42);
+  g.Instance.FindBlocks(Blocks);
+  AssertTrue(Blocks.Count = 1);
+  AssertTrue(Length(Blocks[0]) = 1);
+  AssertTrue(g.Instance[Blocks[0][0]] = 42);
+
+  g.Instance.AddVertex(1001);
+  g.Instance.FindBlocks(Blocks);
+  AssertTrue(Blocks.Count = 2);
+  AssertTrue(Length(Blocks[1]) = 1);
+  AssertTrue(g.Instance[Blocks[1][0]] = 1001);
+
+  g.Instance := GenerateTestGr7;
+  g.Instance.FindBlocks(Blocks);
+  AssertTrue(Blocks.Count = 8);
+  for I := 0 to Pred(Blocks.Count) do
+    TIntHelper.Sort(Blocks[I]);
+  AssertTrue(TIntHelper.Same(Blocks[0], [2, 3]));
+  AssertTrue(TIntHelper.Same(Blocks[1], [6, 7] ));
+  AssertTrue(TIntHelper.Same(Blocks[2], [6, 8]));
+  AssertTrue(TIntHelper.Same(Blocks[3], [14, 15]));
+  AssertTrue(TIntHelper.Same(Blocks[4], [14, 16]));
+  AssertTrue(TIntHelper.Same(Blocks[5], [11, 12, 13, 14, 17]));
+  AssertTrue(TIntHelper.Same(Blocks[6], [1, 11]));
+  AssertTrue(TIntHelper.Same(Blocks[7], [0, 1, 2, 4, 5, 6, 9, 10]));
 end;
 
 procedure TSimpleGraphTest.EnsureBiconnected;
@@ -2466,26 +2504,26 @@ var
 begin
   g := {%H-}Ref;
   FCallCount := 0;
-  g.EnsureBiconnected(@EdgeAdding);
+  g.MakeBiconnected(@EdgeAdding);
   AssertTrue(FCallCount = 0);
   AssertFalse(g.IsBiconnected);
   Ref.Instance := GenerateCycle;
   g := Ref;
-  g.EnsureBiconnected(@EdgeAdding);
+  g.MakeBiconnected(@EdgeAdding);
   AssertTrue(FCallCount = 0);
   Ref.Instance := GenerateWheel;
   g := Ref;
-  g.EnsureBiconnected(@EdgeAdding);
+  g.MakeBiconnected(@EdgeAdding);
   AssertTrue(FCallCount = 0);
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  g.EnsureBiconnected(@EdgeAdding);
+  g.MakeBiconnected(@EdgeAdding);
   AssertTrue(g.IsBiconnected);
   AssertTrue(FCallCount = 5);
   Ref.Instance := GenerateTestGr3;
   g := Ref;
   FCallCount := 0;
-  g.EnsureBiconnected(@EdgeAdding);
+  g.MakeBiconnected(@EdgeAdding);
   AssertTrue(g.IsBiconnected);
   AssertTrue(FCallCount = 2);
 end;
