@@ -233,7 +233,8 @@ type
     procedure SearchForCutVertices(aRoot: SizeInt; var aPoints: TIntHashSet);
     function  CutVertexExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
-    procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
+    procedure SearchForBlocks(aRoot: SizeInt; var aBlocks: TEdgeArrayVector);
+    procedure SearchForBlocks(var aBlocks: TIntArrayVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
   type
@@ -397,13 +398,15 @@ type
   { checks whether an instance is biconnected, i.e. whether it contains more than two vertices
     and whether it will remain connected after removing any single vertex }
     function  IsBiconnected: Boolean;
-  { returns a vector containing in the corresponding elements the edges
-    of found bicomponents (in aVertex connected component) in aComps }
-    procedure FindBicomponents(const aVertex: TVertex; out aComps: TEdgeArrayVector);
-    procedure FindBicomponentsI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
-  { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
-    returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
-    function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { returns the list of edges of each found block in the corresponding elements of the aBlocks }
+    procedure FindBlocks(const aVertex: TVertex; out aBlocks: TEdgeArrayVector);
+    procedure FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
+  { returns the list of vertex indices of each found block in the corresponding elements of the aBlocks }
+    procedure FindBlocks(out aBlocks: TIntArrayVector);
+  { if the number of vertices is not less than 3, make instance biconnected, adding,
+    if necessary, new edges; returns count of added edges;
+    if aOnAddEdge is nil then new edges will use default data value }
+    function  MakeBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns an array of indices of the central vertices, if graph is connected, nil otherwise }
@@ -2538,7 +2541,7 @@ begin
       Inc(Result);
       CurrIS := Achromatic;
       for I in Achromatic do
-        {%H-}Queue.Enqueue(I, Nodes[I]);
+        Queue.Enqueue(I, Nodes[I]);
       while Queue.TryDequeue(Node) do
         if CurrIS.UncBits[Node.Index] then
           begin
@@ -2557,52 +2560,39 @@ end;
 
 procedure TGSimpleGraph.SearchForCutVertices(aRoot: SizeInt; var aPoints: TIntHashSet);
 var
-  Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
-  Counter, Curr, Next, ChildCount: SizeInt;
+  Counter, ChildCount: SizeInt;
+  procedure FirstMet(aNode, aParent: SizeInt);
+  begin
+    LowPt[aNode] := Counter;
+    PreOrd[aNode] := Counter;
+    Parents[aNode] := aParent;
+    Inc(Counter);
+    ChildCount += Ord(aParent = aRoot);
+  end;
+  procedure BackEdge(aNode, aParent: SizeInt);
+  begin
+    if (aNode <> Parents[aParent]) and (LowPt[aParent] > PreOrd[aNode]) then
+      LowPt[aParent] := PreOrd[aNode];
+  end;
+  procedure NodeDone(aNode: SizeInt);
+  var
+    Prev: SizeInt;
+  begin
+    if aNode = aRoot then exit;
+    Prev := Parents[aNode];
+    if LowPt[Prev] > LowPt[aNode] then
+      LowPt[Prev] := LowPt[aNode];
+    if (LowPt[aNode] >= PreOrd[Prev]) and (Prev <> aRoot) then
+      aPoints.Add(Prev);
+  end;
 begin
-  AdjEnums := CreateAdjEnumArray;
-  Stack := TSimpleStack.Create(VertexCount);
-  LowPt := CreateIntArray;
-  PreOrd := CreateIntArray;
-  Parents := CreateIntArray;
-  PreOrd[aRoot] := 0;
-  LowPt[aRoot] := 0;
-  Stack.Push(aRoot);
-  Counter := 1;
+  System.SetLength(LowPt, VertexCount);
+  System.SetLength(PreOrd, VertexCount);
+  System.SetLength(Parents, VertexCount);
+  Counter := 0;
   ChildCount := 0;
-  while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
-      begin
-        Next := AdjEnums[Curr].Current;
-        if Next <> Parents[Curr] then
-          if PreOrd[Next] = NULL_INDEX then
-            begin
-              Parents[Next] := Curr;
-              PreOrd[Next] := Counter;
-              LowPt[Next] := Counter;
-              Inc(Counter);
-              ChildCount += Ord(Curr = aRoot);
-              Stack.Push(Next);
-            end
-          else
-            if LowPt[Curr] > PreOrd[Next] then
-              LowPt[Curr] := PreOrd[Next];
-      end
-    else
-      begin
-        Stack.Pop;
-        if Curr <> aRoot then
-          begin
-            Next := Curr;
-            Curr := Parents[Curr];
-            if LowPt[Curr] > LowPt[Next] then
-              LowPt[Curr] := LowPt[Next];
-            if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
-              aPoints.Add(Curr);
-          end;
-      end;
+  DfsTraversalI(aRoot, @FirstMet, @BackEdge, @NodeDone);
   if ChildCount > 1 then
     aPoints.Add(aRoot);
 end;
@@ -2612,7 +2602,7 @@ var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
-  Counter, Curr, Next, ChildCount: SizeInt;
+  Counter, Curr, Next, Prev, ChildCount: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
@@ -2623,158 +2613,178 @@ begin
   LowPt[aRoot] := 0;
   Stack.Push(aRoot);
   Counter := 1;
+  Curr := NULL_INDEX;
   ChildCount := 0;
   while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+    if AdjEnums[Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
-        if Next <> Parents[Curr] then
-          if PreOrd[Next] = NULL_INDEX then
-            begin
-              Parents[Next] := Curr;
-              PreOrd[Next] := Counter;
-              LowPt[Next] := Counter;
-              Inc(Counter);
-              Inc(ChildCount, Ord(Curr = aRoot));
-              Stack.Push(Next);
-            end
-          else
-            if LowPt[Curr] > PreOrd[Next] then
-              LowPt[Curr] := PreOrd[Next];
+        if PreOrd[Next] = NULL_INDEX then
+          begin
+            Parents[Next] := Curr;
+            PreOrd[Next] := Counter;
+            LowPt[Next] := Counter;
+            Inc(Counter);
+            Inc(ChildCount, Ord(Curr = aRoot));
+            Stack.Push(Next);
+          end
+        else
+          if (Next <> Parents[Curr]) and (LowPt[Curr] > PreOrd[Next]) then
+            LowPt[Curr] := PreOrd[Next];
       end
     else
       begin
         Stack.Pop;
-        if Curr <> aRoot then
-          begin
-            Next := Curr;
-            Curr := Parents[Curr];
-            if LowPt[Curr] > LowPt[Next] then
-              LowPt[Curr] := LowPt[Next];
-            if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
-              exit(True);
-          end;
+        if Curr = aRoot then continue;
+        Prev := Parents[Curr];
+        if LowPt[Prev] > LowPt[Curr] then
+          LowPt[Prev] := LowPt[Curr];
+        if (LowPt[Curr] >= PreOrd[Prev]) and (Prev <> aRoot) then
+          exit(True);
       end;
   Result := ChildCount > 1;
 end;
 
 procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
 var
-  Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents, Across: TIntArray;
-  Counter, Curr, Next: SizeInt;
+  Counter: SizeInt;
+  procedure FirstMet(aNode, aParent: SizeInt);
+  begin
+    LowPt[aNode] := Counter;
+    PreOrd[aNode] := Counter;
+    Parents[aNode] := aParent;
+    if Across[aParent] = NULL_INDEX then
+      Across[aParent] := aNode;
+    Inc(Counter);
+  end;
+  procedure BackEdge(aNode, aParent: SizeInt);
+  begin
+    if (aNode <> Parents[aParent]) and (LowPt[aParent] > PreOrd[aNode]) then
+      LowPt[aParent] := PreOrd[aNode];
+  end;
+  procedure NodeDone(aNode: SizeInt);
+  var
+    Prev: SizeInt;
+  begin
+    if aNode = aRoot then exit;
+    Prev := Parents[aNode];
+    if LowPt[Prev] > LowPt[aNode] then
+      LowPt[Prev] := LowPt[aNode];
+    if LowPt[aNode] >= PreOrd[Prev] then
+      if aNode = Across[Prev] then
+        if Prev <> aRoot then
+          aEdges.Add(TIntEdge.Create(Parents[Prev], aNode)) else
+      else
+        aEdges.Add(TIntEdge.Create(Across[Prev], aNode));
+  end;
 begin
-  AdjEnums := CreateAdjEnumArray;
-  Stack := TSimpleStack.Create(VertexCount);
-  LowPt := CreateIntArray;
-  PreOrd := CreateIntArray;
-  Parents := CreateIntArray;
+  System.SetLength(LowPt, VertexCount);
+  System.SetLength(PreOrd, VertexCount);
+  System.SetLength(Parents, VertexCount);
   Across := CreateIntArray;
-  PreOrd[aRoot] := 0;
-  LowPt[aRoot] := 0;
-  {%H-}Stack.Push(aRoot);
-  Counter := 1;
-  while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
-      begin
-        Next := AdjEnums[Curr].Current;
-        if Next <> Parents[Curr] then
-          if PreOrd[Next] = NULL_INDEX then
-            begin
-              if Across[Curr] = NULL_INDEX then
-                Across[Curr] := Next;
-              Parents[Next] := Curr;
-              PreOrd[Next] := Counter;
-              LowPt[Next] := Counter;
-              Inc(Counter);
-              Stack.Push(Next);
-            end
-          else
-            if LowPt[Curr] > PreOrd[Next] then
-              LowPt[Curr] := PreOrd[Next];
-      end
-    else
-      begin
-        Stack.Pop;
-        if Curr <> aRoot then
-          begin
-            Next := Curr;
-            Curr := Parents[Curr];
-            if LowPt[Curr] > LowPt[Next] then
-              LowPt[Curr] := LowPt[Next];
-            if LowPt[Next] >= PreOrd[Curr] then
-              begin
-                if Next = Across[Curr] then
-                  begin
-                    if Curr <> aRoot then
-                      aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
-                  end
-                else
-                  aEdges.Add(TIntEdge.Create(Across[Curr], Next));
-              end;
-          end;
-      end;
+  Counter := 0;
+  DfsTraversalI(aRoot, @FirstMet, @BackEdge, @NodeDone);
 end;
 
-procedure TGSimpleGraph.SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
+procedure TGSimpleGraph.SearchForBlocks(aRoot: SizeInt; var aBlocks: TEdgeArrayVector);
 var
-  Stack: TSimpleStack;
-  EdgeStack: TIntEdgeVector;
-  AdjEnums: TAdjEnumArray;
+  Stack: TIntEdgeVector;
   LowPt, PreOrd, Parents: TIntArray;
-  Counter, Curr, Next, I: SizeInt;
-begin
-  AdjEnums := CreateAdjEnumArray;
-  Stack := TSimpleStack.Create(VertexCount);
-  LowPt := CreateIntArray;
-  PreOrd := CreateIntArray;
-  Parents := CreateIntArray;
-  PreOrd[aRoot] := 0;
-  LowPt[aRoot] := 0;
-  {%H-}Stack.Push(aRoot);
-  Counter := 1;
-  while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+  Counter: SizeInt;
+  procedure FirstMet(aNode, aParent: SizeInt);
+  begin
+    LowPt[aNode] := Counter;
+    PreOrd[aNode] := Counter;
+    Parents[aNode] := aParent;
+    Stack.Add(TIntEdge.Create(aParent, aNode));
+    Inc(Counter);
+  end;
+  procedure BackEdge(aNode, aParent: SizeInt);
+  begin
+    if (aNode <> Parents[aParent]) and (PreOrd[aParent] > PreOrd[aNode]) then
       begin
-        Next := AdjEnums[Curr].Current;
-        if Next <> Parents[Curr] then
-          if PreOrd[Next] = NULL_INDEX then
-            begin
-              Parents[Next] := Curr;
-              PreOrd[Next] := Counter;
-              LowPt[Next] := Counter;
-              Inc(Counter);
-              Stack.Push(Next);
-              EdgeStack.Add(TIntEdge.Create(Curr, Next));
-            end
-          else
-            if PreOrd[Curr] > PreOrd[Next] then
-              begin
-                if LowPt[Curr] > PreOrd[Next] then
-                  LowPt[Curr] := PreOrd[Next];
-                EdgeStack.Add(TIntEdge.Create(Curr, Next));
-              end;
-      end
-    else
-      begin
-        Stack.Pop;
-        if Curr <> aRoot then
-          begin
-            Next := Curr;
-            Curr := Parents[Curr];
-            if LowPt[Curr] > LowPt[Next] then
-              LowPt[Curr] := LowPt[Next];
-            if LowPt[Next] >= PreOrd[Curr] then
-              begin
-                I := EdgeStack.Count;
-                with EdgeStack do
-                  repeat Dec(I);
-                  until (UncMutable[I]^.Source = Curr) and (UncMutable[I]^.Destination = Next);
-                aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count));
-              end;
-          end;
+        if LowPt[aParent] > PreOrd[aNode] then
+          LowPt[aParent] := PreOrd[aNode];
+        Stack.Add(TIntEdge.Create(aParent, aNode));
       end;
+  end;
+  procedure NodeDone(aNode: SizeInt);
+  var
+    Prev, I: SizeInt;
+  begin
+    if aNode = aRoot then exit;
+    Prev := Parents[aNode];
+    if LowPt[Prev] > LowPt[aNode] then
+      LowPt[Prev] := LowPt[aNode];
+    if LowPt[aNode] >= PreOrd[Prev] then
+      begin
+        I := Stack.Count;
+        with Stack do
+          repeat Dec(I);
+          until (UncMutable[I]^.Source = Prev) and (UncMutable[I]^.Destination = aNode);
+        aBlocks.Add(Stack.ExtractAll(I, Stack.Count));
+      end;
+  end;
+begin
+  System.SetLength(LowPt, VertexCount);
+  System.SetLength(PreOrd, VertexCount);
+  System.SetLength(Parents, VertexCount);
+  Counter := 0;
+  DfsTraversalI(aRoot, @FirstMet, @BackEdge, @NodeDone);
+end;
+
+procedure TGSimpleGraph.SearchForBlocks(var aBlocks: TIntArrayVector);
+var
+  Stack: TIntEdgeVector;
+  CompList: TIntVector;
+  LowPt, PreOrd, Parents: TIntArray;
+  Counter: SizeInt;
+  procedure FirstMet(aNode, aParent: SizeInt);
+  begin
+    LowPt[aNode] := Counter;
+    PreOrd[aNode] := Counter;
+    Parents[aNode] := aParent;
+    Stack.Add(TIntEdge.Create(aParent, aNode));
+    Inc(Counter);
+  end;
+  procedure BackEdge(aNode, aParent: SizeInt);
+  begin
+    if (aNode <> Parents[aParent]) and (LowPt[aParent] > PreOrd[aNode]) then
+      LowPt[aParent] := PreOrd[aNode];
+  end;
+  procedure NodeDone(aNode: SizeInt);
+  var
+    e: TIntEdge;
+    Prev: SizeInt;
+  begin
+    if Parents[aNode] = NULL_INDEX then
+      begin
+        if AdjLists[aNode]^.Count = 0 then
+          aBlocks.Add([aNode]);
+        exit;
+      end;
+    Prev := Parents[aNode];
+    if LowPt[Prev] > LowPt[aNode] then
+      LowPt[Prev] := LowPt[aNode];
+    if LowPt[aNode] >= PreOrd[Prev] then
+      begin
+        with Stack do
+          repeat
+            Stack.DeleteLast(e);
+            CompList.Add(e.Destination);
+          until (e.Source = Prev) and (e.Destination = aNode);
+        CompList.Add(Prev);
+        aBlocks.Add(CompList.ToArray);
+        CompList.MakeEmpty;
+      end;
+  end;
+begin
+  System.SetLength(LowPt, VertexCount);
+  System.SetLength(PreOrd, VertexCount);
+  System.SetLength(Parents, VertexCount);
+  Counter := 0;
+  DfsTraversal(@FirstMet, @BackEdge, @NodeDone);
 end;
 
 function TGSimpleGraph.BridgeExists: Boolean;
@@ -2782,50 +2792,47 @@ var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
-  Counter, Curr, Next, I: SizeInt;
+  Counter, Curr, Next, Prev, I: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
-  LowPt := CreateIntArray;
+  System.SetLength(LowPt, VertexCount);
+  System.SetLength(Parents, VertexCount);
   PreOrd := CreateIntArray;
-  Parents := CreateIntArray;
+  Curr := NULL_INDEX;
   Counter := 0;
   for I := 0 to Pred(VertexCount) do
-    if PreOrd[I] = -1 then
+    if PreOrd[I] = NULL_INDEX then
       begin
         PreOrd[I] := Counter;
         LowPt[I] := Counter;
         Inc(Counter);
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if Next <> Parents[Curr] then
-                if PreOrd[Next] = -1 then
-                  begin
-                    Parents[Next] := Curr;
-                    PreOrd[Next] := Counter;
-                    LowPt[Next] := Counter;
-                    Inc(Counter);
-                    Stack.Push(Next);
-                  end
-                else
-                  if LowPt[Curr] > PreOrd[Next] then
-                    LowPt[Curr] := PreOrd[Next];
+              if PreOrd[Next] = NULL_INDEX then
+                begin
+                  Parents[Next] := Curr;
+                  PreOrd[Next] := Counter;
+                  LowPt[Next] := Counter;
+                  Inc(Counter);
+                  Stack.Push(Next);
+                end
+              else
+                if (Next <> Parents[Curr]) and (LowPt[Curr] > PreOrd[Next]) then
+                  LowPt[Curr] := PreOrd[Next];
             end
           else
             begin
               Stack.Pop;
-              if Parents[Curr] <> NULL_INDEX then
-                begin
-                  Next := Curr;
-                  Curr := Parents[Curr];
-                  if LowPt[Curr] > LowPt[Next] then
-                    LowPt[Curr] := LowPt[Next];
-                  if LowPt[Next] > PreOrd[Curr] then
-                    exit(True);
-                end;
+              if Curr = I then continue;
+              Prev := Parents[Curr];
+              if LowPt[Prev] > LowPt[Curr] then
+                LowPt[Prev] := LowPt[Curr];
+              if LowPt[Curr] > PreOrd[Prev] then
+                exit(True);
             end;
       end;
   Result := False;
@@ -2833,96 +2840,60 @@ end;
 
 procedure TGSimpleGraph.SearchForBridges(var aBridges: TIntEdgeVector);
 var
-  Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
-  Counter, Curr, Next, I: SizeInt;
+  Counter: SizeInt;
+  procedure FirstMet(aNode, aParent: SizeInt);
+  begin
+    LowPt[aNode] := Counter;
+    PreOrd[aNode] := Counter;
+    Parents[aNode] := aParent;
+    Inc(Counter);
+  end;
+  procedure BackEdge(aNode, aParent: SizeInt);
+  begin
+    if (aNode <> Parents[aParent]) and (LowPt[aParent] > PreOrd[aNode]) then
+      LowPt[aParent] := PreOrd[aNode];
+  end;
+  procedure NodeDone(aNode: SizeInt);
+  var
+    Prev: SizeInt;
+  begin
+    if Parents[aNode] = NULL_INDEX then exit;
+    Prev := Parents[aNode];
+    if LowPt[Prev] > LowPt[aNode] then
+      LowPt[Prev] := LowPt[aNode];
+    if LowPt[aNode] > PreOrd[Prev] then
+      aBridges.Add(TIntEdge.Create(Prev, aNode));
+  end;
 begin
-  AdjEnums := CreateAdjEnumArray;
-  Stack := TSimpleStack.Create(VertexCount);
-  LowPt := CreateIntArray;
-  PreOrd := CreateIntArray;
-  Parents := CreateIntArray;
+  System.SetLength(LowPt, VertexCount);
+  System.SetLength(PreOrd, VertexCount);
+  System.SetLength(Parents, VertexCount);
   Counter := 0;
-  for I := 0 to Pred(VertexCount) do
-    if PreOrd[I] = -1 then
-      begin
-        PreOrd[I] := Counter;
-        LowPt[I] := Counter;
-        Inc(Counter);
-        {%H-}Stack.Push(I);
-        while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
-            begin
-              Next := AdjEnums[Curr].Current;
-              if Next <> Parents[Curr] then
-                if PreOrd[Next] = -1 then
-                  begin
-                    Parents[Next] := Curr;
-                    PreOrd[Next] := Counter;
-                    LowPt[Next] := Counter;
-                    Inc(Counter);
-                    Stack.Push(Next);
-                  end
-                else
-                  if LowPt[Curr] > PreOrd[Next] then
-                    LowPt[Curr] := PreOrd[Next];
-            end
-          else
-            begin
-              Stack.Pop;
-              if Parents[Curr] <> NULL_INDEX then
-                begin
-                  Next := Curr;
-                  Curr := Parents[Curr];
-                  if LowPt[Curr] > LowPt[Next] then
-                    LowPt[Curr] := LowPt[Next];
-                  if LowPt[Next] > PreOrd[Curr] then
-                    aBridges.Add(TIntEdge.Create(Curr, Next));
-                end;
-            end;
-      end;
+  DfsTraversal(@FirstMet, @BackEdge, @NodeDone);
 end;
 
 procedure TGSimpleGraph.SearchForFundamentalCycles(aOnNextFound: TNestCycleFound);
 var
-  Stack: TSimpleStack;
-  Visited, InStack: TBoolVector;
-  AdjEnums: TAdjEnumArray;
-  Parents: TIntArray;
-  I, Curr, Next: SizeInt;
+  Parents, PreOrd: TIntArray;
+  Counter: SizeInt;
+  procedure FirstMet(aNode, aParent: SizeInt);
+  begin
+    Parents[aNode] := aParent;
+    PreOrd[aNode] := Counter;
+    Inc(Counter);
+  end;
+  procedure BackEdge(aNode, aParent: SizeInt);
+  begin
+    if (PreOrd[aNode] < PreOrd[aParent]) and (Parents[aParent] <> aNode) then
+      aOnNextFound(Parents, aNode, aParent);
+  end;
 begin
   if aOnNextFound = nil then exit;
-  Visited.Capacity := VertexCount;
-  InStack.Capacity := VertexCount;
-  Stack := TSimpleStack.Create(VertexCount);
-  AdjEnums := CreateAdjEnumArray;
-  Parents := CreateIntArray;
-  Curr := NULL_INDEX;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited.UncBits[I] then
-      begin
-        Visited.UncBits[I] := True;
-        InStack.UncBits[I] := True;
-        Stack.Push(I);
-        while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
-            begin
-              Next := AdjEnums[Curr].Current;
-              if not Visited.UncBits[Next] then
-                begin
-                  Visited.UncBits[Next] := True;
-                  InStack.UncBits[Next] := True;
-                  Parents[Next] := Curr;
-                  Stack.Push(Next);
-                end
-              else
-                if InStack.UncBits[Next] and not((Parents[Curr] = NULL_INDEX) or (Parents[Curr] = Next)) then
-                  aOnNextFound(Parents, Next, Curr);
-            end
-          else
-            InStack.UncBits[Stack.Pop] := False;
-      end;
+  System.SetLength(Parents, VertexCount);
+  System.SetLength(PreOrd, VertexCount);
+  Counter := 0;
+  DfsTraversal(@FirstMet, @BackEdge, nil);
 end;
 
 procedure TGSimpleGraph.SearchForCycleBasis(out aCycles: TIntArrayVector);
@@ -4202,23 +4173,27 @@ begin
   Result := Connected and not ContainsCutVertexI(0);
 end;
 
-procedure TGSimpleGraph.FindBicomponents(const aVertex: TVertex; out aComps: TEdgeArrayVector);
+procedure TGSimpleGraph.FindBlocks(const aVertex: TVertex; out aBlocks: TEdgeArrayVector);
 begin
-  FindBicomponentsI(IndexOf(aVertex), aComps);
+  FindBlocksI(IndexOf(aVertex), aBlocks);
 end;
 
-procedure TGSimpleGraph.FindBicomponentsI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
+procedure TGSimpleGraph.FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
 begin
   aComps := Default(TEdgeArrayVector);
   CheckIndexRange(aIndex);
-  if VertexCount > 2 then
-    SearchForBicomponent(aIndex, aComps)
-  else
-    if (VertexCount = 2) and ContainsEdgeI(0, 1) then
-      aComps.Add([TIntEdge.Create(0, 1)]);
+  if AdjLists[aIndex]^.Count = 0 then exit;
+  SearchForBlocks(aIndex, aComps);
 end;
 
-function TGSimpleGraph.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+procedure TGSimpleGraph.FindBlocks(out aBlocks: TIntArrayVector);
+begin
+  aBlocks := Default(TIntArrayVector);
+  if IsEmpty then exit;
+  SearchForBlocks(aBlocks);
+end;
+
+function TGSimpleGraph.MakeBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
 var
   NewEdges: TIntEdgeVector;
   e: TIntEdge;
@@ -6606,9 +6581,9 @@ end;
 function TPointsChart.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   if aOnAddEdge <> nil then
-    Result := inherited EnsureBiconnected(aOnAddEdge)
+    Result := inherited MakeBiconnected(aOnAddEdge)
   else
-    Result := inherited EnsureBiconnected(@OnAddEdge);
+    Result := inherited MakeBiconnected(@OnAddEdge);
 end;
 
 function TPointsChart.SeparateGraph(aVertex: TPoint): TPointsChart;
