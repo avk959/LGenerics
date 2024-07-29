@@ -401,8 +401,8 @@ type
   { returns the list of edges of each found block in the corresponding elements of the aBlocks }
     procedure FindBlocks(const aVertex: TVertex; out aBlocks: TEdgeArrayVector);
     procedure FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
-  { returns the list of vertex indices of each found block in the corresponding elements of the aBlocks }
-    procedure FindBlocks(out aBlocks: TIntArrayVector);
+  { returns the vertex index sets of each block found }
+    function FindBlocks: TIntMatrix;
   { if the number of vertices is not less than 3, make instance biconnected, adding,
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
@@ -2769,6 +2769,7 @@ var
       LowPt[Prev] := LowPt[aNode];
     if LowPt[aNode] >= PreOrd[Prev] then
       begin
+        e := Default(TIntEdge);
         with Stack do
           repeat
             Stack.DeleteLast(e);
@@ -4186,11 +4187,14 @@ begin
   SearchForBlocks(aIndex, aComps);
 end;
 
-procedure TGSimpleGraph.FindBlocks(out aBlocks: TIntArrayVector);
+function TGSimpleGraph.FindBlocks: TIntMatrix;
+var
+  Blocks: TIntArrayVector;
 begin
-  aBlocks := Default(TIntArrayVector);
-  if IsEmpty then exit;
-  SearchForBlocks(aBlocks);
+  if IsEmpty then exit(nil);
+  Blocks := Default(TIntArrayVector);
+  SearchForBlocks(Blocks);
+  Result := Blocks.ToArray;
 end;
 
 function TGSimpleGraph.MakeBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
