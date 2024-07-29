@@ -2464,28 +2464,28 @@ end;
 procedure TSimpleGraphTest.FindBlocks4;
 var
   g: TRef;
-  Blocks: TIntArrayVector;
+  Blocks: TIntMatrix;
   I: Integer;
 begin
-  {%H-}g.Instance.FindBlocks(Blocks);
-  AssertTrue(Blocks.IsEmpty);
+  Blocks := {%H-}g.Instance.FindBlocks;
+  AssertTrue(Blocks = nil);
 
   g.Instance.AddVertex(42);
-  g.Instance.FindBlocks(Blocks);
-  AssertTrue(Blocks.Count = 1);
+  Blocks := g.Instance.FindBlocks;
+  AssertTrue(Length(Blocks) = 1);
   AssertTrue(Length(Blocks[0]) = 1);
   AssertTrue(g.Instance[Blocks[0][0]] = 42);
 
   g.Instance.AddVertex(1001);
-  g.Instance.FindBlocks(Blocks);
-  AssertTrue(Blocks.Count = 2);
+  Blocks := g.Instance.FindBlocks;
+  AssertTrue(Length(Blocks) = 2);
   AssertTrue(Length(Blocks[1]) = 1);
   AssertTrue(g.Instance[Blocks[1][0]] = 1001);
 
   g.Instance := GenerateTestGr7;
-  g.Instance.FindBlocks(Blocks);
-  AssertTrue(Blocks.Count = 8);
-  for I := 0 to Pred(Blocks.Count) do
+  Blocks := g.Instance.FindBlocks;
+  AssertTrue(Length(Blocks) = 8);
+  for I := 0 to High(Blocks) do
     TIntHelper.Sort(Blocks[I]);
   AssertTrue(TIntHelper.Same(Blocks[0], [2, 3]));
   AssertTrue(TIntHelper.Same(Blocks[1], [6, 7] ));
