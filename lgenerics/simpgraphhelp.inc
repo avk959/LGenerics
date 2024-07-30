@@ -1736,58 +1736,49 @@ end;
 
 procedure TGSimpleGraph.TPcMatchHelper.FindAugmentPath(aSource: SizeInt);
 var
-  Curr, Next, Mate, Tmp: SizeInt;
+  Curr, Next, Mate, Tmp, qHead, qTail: SizeInt;
   p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
   FInTree.ClearBits;
+  qHead := 0;
+  qTail := 1;
   FInTree.UncBits[aSource] := True;
-  FQueue[qTail] := aSource;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      Curr := FQueue[qHead];
-      Inc(qHead);
-      for p in FGraph.AdjLists[Curr]^ do
-        if not FInTree.UncBits[p^.Destination] then
-          begin
-            Next := p^.Destination;
-            Mate := FMates[Next];
-            if Mate = NULL_INDEX then
-              begin
-                FMates[Next] := Curr;
-                repeat
-                  Tmp := FMates[Curr];
-                  FMates[Curr] := Next;
-                  if Tmp <> NULL_INDEX then
-                    begin
-                      Curr := FGrannies[Curr];
-                      FMates[Tmp] := Curr;
-                      Next := Tmp;
-                    end;
-                until Tmp = NULL_INDEX;
-                Inc(FMatchCount);
-                exit;
-              end
-            else
-              if Mate <> Curr then
-                begin
-                  if Curr <> aSource then
-                    begin
-                      Tmp := Curr;
-                      repeat Tmp := FGrannies[Tmp];
-                      until (Tmp = aSource) or (Tmp = Next);
-                      if Tmp <> aSource then
-                        continue;
-                    end;
-                  FInTree.UncBits[Next] := True;
-                  FGrannies[Mate] := Curr;
-                  FQueue[qTail] := Mate;
-                  Inc(qTail);
-                end;
+  FQueue[0] := aSource;
+  while qHead <> qTail do begin
+    Curr := FQueue[qHead];
+    Inc(qHead);
+    for p in FGraph.AdjLists[Curr]^ do
+      if not FInTree.UncBits[p^.Destination] then begin
+        Next := p^.Destination;
+        Mate := FMates[Next];
+        if Mate = NULL_INDEX then begin
+          FMates[Next] := Curr;
+          repeat
+            Tmp := FMates[Curr];
+            FMates[Curr] := Next;
+            if Tmp <> NULL_INDEX then begin
+              Curr := FGrannies[Curr];
+              FMates[Tmp] := Curr;
+              Next := Tmp;
+            end;
+          until Tmp = NULL_INDEX;
+          Inc(FMatchCount);
+          exit;
+        end else
+          if Mate <> Curr then begin
+            if Curr <> aSource then begin
+              Tmp := Curr;
+              repeat Tmp := FGrannies[Tmp];
+              until (Tmp = aSource) or (Tmp = Next);
+              if Tmp <> aSource then continue;
+            end;
+            FInTree.UncBits[Next] := True;
+            FGrannies[Mate] := Curr;
+            FQueue[qTail] := Mate;
+            Inc(qTail);
           end;
-    end;
+      end;
+  end;
 end;
 
 procedure TGSimpleGraph.TPcMatchHelper.Init(aGraph: TGSimpleGraph);
@@ -1798,7 +1789,7 @@ begin
   FGraph := aGraph;
   FMates := aGraph.CreateIntArray;
   FGrannies := aGraph.CreateIntArray;
-  FQueue := aGraph.CreateIntArray;
+  System.SetLength(FQueue, aGraph.VertexCount);
   FInTree.Capacity := aGraph.VertexCount;
   for e in aGraph.GreedyMatching do
     begin
