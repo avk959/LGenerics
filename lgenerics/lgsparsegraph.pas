@@ -1636,19 +1636,17 @@ end;
 
 function TGSparseGraph.GetShortestPath(aSrc, aDst: SizeInt): TIntArray;
 var
-  Queue: TIntArray;
-  Parents: TIntArray;
-  Curr: SizeInt;
+  Queue, Parents: TIntArray;
+  Curr, qHead, qTail: SizeInt;
   p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
   System.SetLength(Queue, VertexCount);
   Parents := CreateIntArray;
-  Queue[qTail] := aSrc;
-  Inc(qTail);
+  Queue[0] := aSrc;
   Parents[aSrc] := aSrc;
-  while qHead < qTail do
+  qHead := 0;
+  qTail := 1;
+  while qHead <> qTail do
     begin
       Curr := Queue[qHead];
       Inc(qHead);
