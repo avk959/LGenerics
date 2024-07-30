@@ -402,7 +402,7 @@ type
     procedure FindBlocks(const aVertex: TVertex; out aBlocks: TEdgeArrayVector);
     procedure FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
   { returns the vertex index sets of each block found }
-    function FindBlocks: TIntMatrix;
+    function  FindBlocks: TIntMatrix;
   { if the number of vertices is not less than 3, make instance biconnected, adding,
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
@@ -2737,7 +2737,7 @@ end;
 procedure TGSimpleGraph.SearchForBlocks(var aBlocks: TIntArrayVector);
 var
   Stack: TIntEdgeVector;
-  CompList: TIntVector;
+  Block: TIntVector;
   LowPt, PreOrd, Parents: TIntArray;
   Counter: SizeInt;
   procedure FirstMet(aNode, aParent: SizeInt);
@@ -2773,11 +2773,11 @@ var
         with Stack do
           repeat
             Stack.DeleteLast(e);
-            CompList.Add(e.Destination);
+            Block.Add(e.Destination);
           until (e.Source = Prev) and (e.Destination = aNode);
-        CompList.Add(Prev);
-        aBlocks.Add(CompList.ToArray);
-        CompList.MakeEmpty;
+        Block.Add(Prev);
+        aBlocks.Add(Block.ToArray);
+        Block.MakeEmpty;
       end;
   end;
 begin
