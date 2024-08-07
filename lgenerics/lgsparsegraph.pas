@@ -494,13 +494,13 @@ type
     aOnGray is called after visiting an already visited vertex,
     aOnDone is called after vertex done }
     function  DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
-                          aOnDone: TOnNodeDone = nil): SizeInt; inline;
+                           aOnDone: TOnNodeDone = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
-                          aOnDone: TOnNodeDone = nil): SizeInt;
+                            aOnDone: TOnNodeDone = nil): SizeInt;
     function  DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
-                          aOnDone: TNestNodeDone): SizeInt; inline;
+                           aOnDone: TNestNodeDone): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
-                          aOnDone: TNestNodeDone): SizeInt;
+                            aOnDone: TNestNodeDone): SizeInt;
   { same as above, but performs a whole graph traversal }
     procedure DfsTraversal(aOnWhite, aOnGray: TOnNextNode; aOnDone: TOnNodeDone);
     procedure DfsTraversal(aOnWhite, aOnGray: TNestNextNode; aOnDone: TNestNodeDone);
@@ -513,13 +513,13 @@ type
     aOnGray is called after visiting an already visited vertex,
     aOnDone is called after vertex done }
     function  BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
-                          aOnDone: TOnNodeDone = nil): SizeInt; inline;
+                           aOnDone: TOnNodeDone = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode = nil; aOnGray: TOnNextNode = nil;
-                          aOnDone: TOnNodeDone = nil): SizeInt;
+                            aOnDone: TOnNodeDone = nil): SizeInt;
     function  BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TNestNextNode;
-                          aOnDone: TNestNodeDone): SizeInt; inline;
+                           aOnDone: TNestNodeDone): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNextNode;
-                          aOnDone: TNestNodeDone): SizeInt;
+                            aOnDone: TNestNodeDone): SizeInt;
   { same as above, but performs a whole graph traversal }
     procedure BfsTraversal(aOnWhite, aOnGray: TOnNextNode; aOnDone: TOnNodeDone);
     procedure BfsTraversal(aOnWhite, aOnGray: TNestNextNode; aOnDone: TNestNodeDone);
