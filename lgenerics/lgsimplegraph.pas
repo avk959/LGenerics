@@ -237,6 +237,7 @@ type
     procedure SearchForBlocks(var aBlocks: TIntArrayVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
+    procedure DoFindTreeMetrics(out aRadius, aDiameter, c1, c2: SizeInt);
   type
     TNestCycleFound = procedure(const aParentTree: TIntArray; aJoin, aPred: SizeInt) is nested;
   protected
@@ -2874,6 +2875,59 @@ begin
   DfsTraversal(@FirstMet, @BackEdge, @NodeDone);
 end;
 
+procedure TGSimpleGraph.DoFindTreeMetrics(out aRadius, aDiameter, c1, c2: SizeInt);
+var
+  Queue, Deg, Dist: TIntArray;
+  I, MaxDist, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  aRadius := 0;
+  aDiameter := 0;
+  c2 := NULL_INDEX;
+  if VertexCount = 1 then begin
+    c1 := 0; exit;
+  end;
+  SetLength(Queue, VertexCount);
+  SetLength(Deg, VertexCount);
+  SetLength(Dist, VertexCount);
+  qHead := 0;
+  qTail := 0;
+  for I := 0 to Pred(VertexCount) do begin
+    Deg[I] := AdjLists[I]^.Count;
+    if Deg[I] = 1 then begin
+      Queue[qTail] := I;
+      Inc(qTail);
+    end;
+  end;
+  MaxDist := 0;
+  c1 := NULL_INDEX;
+  while qHead <> qTail do begin
+    I := Queue[qHead];
+    Inc(qHead);
+    for p in AdjLists[I]^ do begin
+      Dec(Deg[p^.Key]);
+      if Deg[p^.Key] = 1 then begin
+        Queue[qTail] := p^.Key;
+        Inc(qTail);
+        Dist[p^.Key] := Succ(Dist[I]);
+        if Dist[p^.Key] > MaxDist then begin
+          MaxDist := Dist[p^.Key];
+          c1 := p^.Key;
+        end;
+      end;
+    end;
+  end;
+  aRadius := MaxDist;
+  aDiameter := MaxDist * 2;
+  for p in AdjLists[c1]^ do
+    if Dist[p^.Key] = MaxDist then begin
+      c2 := p^.Key;
+      Inc(aRadius);
+      Inc(aDiameter);
+      break;
+    end;
+end;
+
 procedure TGSimpleGraph.SearchForFundamentalCycles(aOnNextFound: TNestCycleFound);
 var
   Parents, PreOrd: TIntArray;
@@ -4218,10 +4272,15 @@ begin
 end;
 
 function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
+var
+  c1, c2: SizeInt;
 begin
   Result := Connected;
   if Result then
-    DoFindMetrics(aRadius, aDiameter);
+    if IsTree then
+      DoFindTreeMetrics(aRadius, aDiameter, c1, c2)
+    else
+      DoFindMetrics(aRadius, aDiameter);
 end;
 
 function TGSimpleGraph.FindCenter: TIntArray;
@@ -4232,8 +4291,16 @@ begin
   Result := nil;
   if not Connected then
     exit;
+  if IsTree then
+    begin
+      DoFindTreeMetrics(Radius, Diam, I, J);
+      if J <> NULL_INDEX then
+        exit([I, J])
+      else
+        exit([I]);
+    end;
   Eccs := DoFindMetrics(Radius, Diam);
-  Result{%H-}.Length := VertexCount;
+  Result.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Radius then
