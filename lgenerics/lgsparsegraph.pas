@@ -1608,22 +1608,21 @@ begin
       Dist[I] := 0;
       Ecc := 0;
       qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
+      qTail := 1;
+      Queue[0] := I;
+      while qHead <> qTail do
         begin
           J := Queue[qHead];
           Inc(qHead);
+          d := Succ(Dist[J]);
           for p in AdjLists[J]^ do
             if Dist[p^.Key] = NULL_INDEX then
               begin
                 Queue[qTail] := p^.Key;
                 Inc(qTail);
-                d := Succ(Dist[J]);
+                Dist[p^.Key] := d;
                 if Ecc < d then
                   Ecc := d;
-                Dist[p^.Key] := d;
               end;
         end;
       Result[I] := Ecc;
