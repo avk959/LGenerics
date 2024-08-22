@@ -140,7 +140,7 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
-  TOrdIntPair = packed record
+  TOrdIntPair = record
   strict private
     FLess,
     FGreater: SizeInt;

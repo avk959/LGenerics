@@ -86,7 +86,7 @@ const
 type
   TColorArray = array of TVertexColor;
 
-  TIntEdge = packed record
+  TIntEdge = record
     Source,
     Destination: SizeInt;
     class function HashCode(const aValue: TIntEdge): SizeInt; static; //inline;
@@ -804,17 +804,7 @@ end;
 
 class function TIntEdge.HashCode(const aValue: TIntEdge): SizeInt;
 begin
-{$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-  {$IF DEFINED (CPU64)}
-    Result := TxxHash32LE.HashGuid(TGuid(aValue));
-  {$ELSEIF DEFINED (CPU32)}
-    Result := TxxHash32LE.HashQWord(QWord(aValue));
-  {$ELSE }
-    Result := TxxHash32LE.HashDWord(DWord(aValue));
-  {$ENDIF }
-{$ElSE FPC_REQUIRES_PROPER_ALIGNMENT}
-    Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+  Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
 end;
 
 class function TIntEdge.Equal(const L, R: TIntEdge): Boolean;
@@ -4375,17 +4365,7 @@ end;
 
 class function TOrdIntPair.HashCode(const aValue: TOrdIntPair): SizeInt;
 begin
-{$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-  {$IF DEFINED (CPU64)}
-    Result := TxxHash32LE.HashGuid(TGuid(aValue));
-  {$ELSEIF DEFINED (CPU32)}
-    Result := TxxHash32LE.HashQWord(QWord(aValue));
-  {$ELSE }
-    Result := TxxHash32LE.HashDWord(DWord(aValue));
-  {$ENDIF }
-{$ElSE FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
 class function TOrdIntPair.Equal(const L, R: TOrdIntPair): Boolean;
