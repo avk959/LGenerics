@@ -2896,7 +2896,7 @@ begin
   Result := GenericDistanceUtf16(L, R, aLimit, dfisMbrDumBound);
 end;
 
-function LcsGenegicUtf16(const L, R: unicodestring; aSpec: TUcs4Util.TLcsAlgo): unicodestring;
+function LcsGenericUtf16(const L, R: unicodestring; aSpec: TUcs4Util.TLcsAlgo): unicodestring;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
@@ -2936,17 +2936,17 @@ end;
 
 function LcsGusUtf16(const L, R: unicodestring): unicodestring;
 begin
-  Result := LcsGenegicUtf16(L, R, laGus);
+  Result := LcsGenericUtf16(L, R, laGus);
 end;
 
 function LcsKRUtf16(const L, R: unicodestring): unicodestring;
 begin
-  Result := LcsGenegicUtf16(L, R, laKR);
+  Result := LcsGenericUtf16(L, R, laKR);
 end;
 
 function LcsMyersUtf16(const L, R: unicodestring): unicodestring;
 begin
-  Result := LcsGenegicUtf16(L, R, laMyers);
+  Result := LcsGenericUtf16(L, R, laMyers);
 end;
 
 {$PUSH}{$WARN 5089 OFF}
