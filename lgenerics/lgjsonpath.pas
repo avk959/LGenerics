@@ -1601,15 +1601,18 @@ type
     ESCAPABLE_CHARS = META_CHARS + ['-', '^', 'n', 'r', 't'];
     UCATEGORY_CHARS = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
     DIGITS          = ['0'..'9'];
+  {$PUSH}{$J-}
+    UC_BMP_CATEGORY: array[0..$ffff] of Byte = ({$I uc_bmp_gcategory.inc});
+  {$POP}
   type
     TUCategoryKind  = (
       uckCategory, uckLetter, uckMark, uckNumber, uckPunctuation, uckSeparator, uckSymbol, uckOther);
-
     TUCategory = record
     strict private
       FKind: TUCategoryKind;
       FCategory: TUnicodeCategory;
       FComplement: Boolean;
+      class function GetCategory(c: Ucs4Char): TUnicodeCategory; inline; static;
     public
       constructor Make(aKind: TUCategoryKind; aComplement: Boolean = False);
       constructor Make(c: TUnicodeCategory; aComplement: Boolean = False);
@@ -4175,6 +4178,14 @@ end;
 
 { TIRegexp.TUCategory }
 
+class function TIRegexp.TUCategory.GetCategory(c: Ucs4Char): TUnicodeCategory;
+begin
+  if c <= System.High(UC_BMP_CATEGORY) then
+    Result := TUnicodeCategory(UC_BMP_CATEGORY[c])
+  else
+    Result := TUnicodeCategory(UnicodeData.GetProps(c)^.Category);
+end;
+
 constructor TIRegexp.TUCategory.Make(aKind: TUCategoryKind; aComplement: Boolean);
 begin
   FKind := aKind;
@@ -4192,14 +4203,14 @@ end;
 function TIRegexp.TUCategory.Match(c: Ucs4Char): Boolean;
 begin
   case FKind of
-    uckCategory:    Result := (TUnicodeCategory(GetProps(c)^.Category) = FCategory) xor FComplement;
-    uckLetter:      Result := (TUnicodeCategory(GetProps(c)^.Category) in LETTER_CATEGORIES) xor FComplement;
-    uckMark:        Result := (TUnicodeCategory(GetProps(c)^.Category) in MARK_CATEGORIES) xor FComplement;
-    uckNumber:      Result := (TUnicodeCategory(GetProps(c)^.Category) in NUMBER_CATEGORIES) xor FComplement;
-    uckPunctuation: Result := (TUnicodeCategory(GetProps(c)^.Category) in PUNCTUATION_CATEGORIES) xor FComplement;
-    uckSeparator:   Result := (TUnicodeCategory(GetProps(c)^.Category) in SEPARATOR_CATEGORIES) xor FComplement;
-    uckSymbol:      Result := (TUnicodeCategory(GetProps(c)^.Category) in SYMBOL_CATEGORIES) xor FComplement;
-    uckOther:       Result := (TUnicodeCategory(GetProps(c)^.Category) in OTHER_CATEGORIES) xor FComplement;
+    uckCategory:    Result := (GetCategory(c) = FCategory) xor FComplement;
+    uckLetter:      Result := (GetCategory(c) in LETTER_CATEGORIES) xor FComplement;
+    uckMark:        Result := (GetCategory(c) in MARK_CATEGORIES) xor FComplement;
+    uckNumber:      Result := (GetCategory(c) in NUMBER_CATEGORIES) xor FComplement;
+    uckPunctuation: Result := (GetCategory(c) in PUNCTUATION_CATEGORIES) xor FComplement;
+    uckSeparator:   Result := (GetCategory(c) in SEPARATOR_CATEGORIES) xor FComplement;
+    uckSymbol:      Result := (GetCategory(c) in SYMBOL_CATEGORIES) xor FComplement;
+    uckOther:       Result := (GetCategory(c) in OTHER_CATEGORIES) xor FComplement;
   end;
 end;
 {$POP}
