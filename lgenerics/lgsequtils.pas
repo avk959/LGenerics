@@ -3674,7 +3674,7 @@ begin
   Result := Utf8Len(s);
 end;
 
-procedure Ucs4Char2Utf8Buffer(var aBuf: PByte; c: DWord);
+procedure Ucs4Char2Utf8Buffer(var aBuf: PByte; c: DWord); inline;
 begin
   case c of
     0..127:
@@ -3709,6 +3709,11 @@ begin
   end;
 end;
 
+{$PUSH}{$J-}
+const
+  UC_BMP_CASE_TBL: array[0..$ffff] of DWord = ({$I uc_bmp_case_map.inc});
+{$POP}
+
 function Utf8ToLower(const s: string): string;
 var
   pv, pr, pEnd: PByte;
@@ -3725,26 +3730,15 @@ begin
   while pv < pEnd do
     begin
       c := CodePointToUcs4Char(pv, PtSize);
-      if c < $80 then
-        if c in [$41..$5a] then // A..Z
-          LoC := c + 32
-        else
-          LoC := 0
+      if c <= System.High(UC_BMP_CASE_TBL) then
+        LoC := UC_BMP_CASE_TBL[c] and $ffff
       else
-        LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
-      if LoC = 0 then
         begin
-          case PtSize of
-            1: pr^ := pv^;
-            2: PByte2(pr)^ := PByte2(pv)^;
-            3: PByte3(pr)^ := PByte3(pv)^;
-            4: PByte4(pr)^ := PByte4(pv)^;
-          else
-          end;
-          pr += PtSize;
-        end
-      else
-        Ucs4Char2Utf8Buffer(pr, LoC);
+          LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
+          if LoC = 0 then
+            LoC := c;
+        end;
+      Ucs4Char2Utf8Buffer(pr, LoC);
       pv += PtSize;
     end;
   System.SetLength(r, pr - PByte(r));
@@ -3767,26 +3761,15 @@ begin
   while pv < pEnd do
     begin
       c := CodePointToUcs4Char(pv, PtSize);
-      if c < $80 then
-        if c in [$61..$7a] then // a..z
-          UpC := c - 32
-        else
-          UpC := 0
+      if c <= System.High(UC_BMP_CASE_TBL) then
+        UpC := UC_BMP_CASE_TBL[c] shr 16
       else
-        UpC := UnicodeData.GetProps(c)^.SimpleUpperCase;
-      if UpC = 0 then
         begin
-          case PtSize of
-            1: pr^ := pv^;
-            2: PByte2(pr)^ := PByte2(pv)^;
-            3: PByte3(pr)^ := PByte3(pv)^;
-            4: PByte4(pr)^ := PByte4(pv)^;
-          else
-          end;
-          pr += PtSize;
-        end
-      else
-        Ucs4Char2Utf8Buffer(pr, UpC);
+          UpC := UnicodeData.GetProps(c)^.SimpleUpperCase;
+          if UpC = 0 then
+            UpC := c;
+        end;
+      Ucs4Char2Utf8Buffer(pr, UpC);
       pv += PtSize;
     end;
   System.SetLength(r, pr - PByte(r));
@@ -4615,6 +4598,7 @@ type
     FWholeWordsOnly: Boolean;
     class function  IsWordChar(c: Ucs4Char): Boolean; static; inline;
     class function  CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
+    class function  RtlUcs4Lower(c: Ucs4Char): Ucs4Char; static; inline;
     class function  CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char; static; inline;
     class function  CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char; static; inline;
     class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
@@ -4859,20 +4843,20 @@ begin
   p += PtSize;
 end;
 
-class function TACFsmUtf8.CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char;
-var
-  c: Ucs4Char;
+class function TACFsmUtf8.RtlUcs4Lower(c: Ucs4Char): Ucs4Char;
 begin
-  Result := CpToUcs4(p, aLen);
-  if Result < $80 then
-    if Result in [$41..$5a] then //A..Z
-      Result += 32 else
+  Result := DWord(UnicodeData.GetProps(Result)^.SimpleLowerCase);
+  if Result = 0 then
+    Result := c;
+end;
+
+class function TACFsmUtf8.CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char;
+begin
+  Result:= CpToUcs4(p, aLen);
+  if Result <= System.High(UC_BMP_CASE_TBL) then
+    Result := UC_BMP_CASE_TBL[Result] and $ffff
   else
-    begin
-      c := DWord(UnicodeData.GetProps(Result)^.SimpleLowerCase);
-      if c <> 0 then
-        Result := c;
-    end;
+    Result := RtlUcs4Lower(Result);
 end;
 
 class function TACFsmUtf8.CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char;
@@ -4880,15 +4864,10 @@ var
   c: Ucs4Char;
 begin
   Result := CodePointToUcs4Char(p, aLen, aPtSize);
-  if Result < $80 then { duplicated because FPC 3.2.2 can't inline a common function }
-    if Result in [$41..$5a] then //A..Z
-      Result += 32 else
+  if Result <= System.High(UC_BMP_CASE_TBL) then
+    Result := UC_BMP_CASE_TBL[Result] and $ffff
   else
-    begin
-      c := DWord(UnicodeData.GetProps(Result)^.SimpleLowerCase);
-      if c <> 0 then
-        Result := c;
-    end;
+    Result := RtlUcs4Lower(Result);
 end;
 
 function MatchCompareNO(const L, R: TAcMatch): Boolean;
