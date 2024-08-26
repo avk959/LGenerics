@@ -4,7 +4,7 @@
 *   Implementation of JSON Type Definition(aka RFC 8927) specifications,    *
 *   a lightweight schema definition language for JSON documents.            *
 *                                                                           *
-*   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -31,8 +31,8 @@ uses
   Classes, SysUtils, lgHashSet, lgHashMap, lgJson;
 
 type
-  EJtdSchemaLoad     = class(Exception);
-  EJtdSchemaVerify   = class(Exception);
+  EJtdSchemaLoad   = class(Exception);
+  EJtdSchemaVerify = class(Exception);
 
 const
   DEF_DEPTH = TJsonNode.DEF_DEPTH;
@@ -117,6 +117,7 @@ type
     FType: TJtdType;
     FNullable,
     FAddProps: Boolean;
+    function  GetLoaded: Boolean; inline;
     function  GetDefinitions: TJtdSchemaMap; inline;
     function  GetDiscriminator: string; inline;
     function  GetElements: TJtdSchema; inline;
@@ -147,6 +148,7 @@ type
     procedure Load(const aJson: string; aMaxDepth: Integer = DEF_DEPTH);
     procedure LoadFromStream(aStream: TStream; aMaxDepth: Integer = DEF_DEPTH);
     procedure LoadFromFile(const aFileName: string; aMaxDepth: Integer = DEF_DEPTH);
+    property  Loaded: Boolean read GetLoaded;
     property  Kind: TFormKind read FKind;
     property  Ref: string read GetRef;
     property  ElType: TJtdType read FType;
@@ -210,6 +212,12 @@ type
   function Validate(aInstance: TJsonNode; aSchema: TJtdSchema; out aErrList: TJtdErrorList;
                     aMaxErrors: Integer = DEFAULT_ERRORS; aMaxDepth: Integer = DEFAULT_DEPTH): TJtdValidateResult;
 
+type
+
+  TJtdJsonNodeHelper = class helper for TJsonNode
+    function JtdValidate(aSchema: TJtdSchema): Boolean;
+    function JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError): Boolean;
+  end;
 {
   returns True if s is a valid Rfc8927-formatted timestamp, False otherwise;
   allows leading and trailing spaces;
@@ -316,6 +324,11 @@ begin
     CFKeywords.Add(JTD_PROPS[Prop], TKeyword.MakeProp(Prop));
   for Typ := jtBool to jtTimeStamp do
     CFKeywords.Add(JTD_TYPES[Typ], TKeyword.MakeType(Typ));
+end;
+
+function TJtdSchema.GetLoaded: Boolean;
+begin
+  Result := Kind <> fkNone;
 end;
 
 function TJtdSchema.GetDefinitions: TJtdSchemaMap;
@@ -772,7 +785,12 @@ procedure TJtdSchema.Load(aNode: TJsonNode);
 begin
   if not TJsonNode.DuplicateFree(aNode) then
     raise EJtdSchemaLoad.Create(SESchemaKeysNotUniq);
-  LoadNode(aNode);
+  try
+    LoadNode(aNode);
+  except
+    Clear;
+    raise;
+  end;
 end;
 
 procedure TJtdSchema.Load(const aJson: string; aMaxDepth: Integer);
@@ -863,7 +881,7 @@ end;
 
 type
   TStrList        = specialize TGLiteVector<string>;
-  TSchemaList     = specialize TGLiteVector<TStrList>;
+  TPathList       = specialize TGLiteVector<TStrList>;
   EMaxDepthExceed = class(Exception);
   EMaxErrorExceed = class(Exception);
 
@@ -871,7 +889,7 @@ function Validate(aInstance: TJsonNode; aSchema: TJtdSchema; out aErrList: TJtdE
   aMaxDepth: Integer): TJtdValidateResult;
 var
   InstancePath: TStrList;
-  SchemaPath: TSchemaList;
+  SchemaPath: TPathList;
   ErrorList: TJtdErrorList = nil;
   ErrListPos: SizeInt = 0;
   Root: TJtdSchema = nil;
@@ -1112,6 +1130,29 @@ begin
   aErrList := ErrorList;
   if (Result = jvrOk) and (aErrList <> nil) then
     Result := jvrErrors;
+end;
+
+{ TJtdJsonNodeHelper }
+
+function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema): Boolean;
+var
+  ErrList: TJtdErrorList;
+begin
+  Result := Validate(Self, aSchema, ErrList, 1) = jvrOk;
+end;
+
+function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError): Boolean;
+var
+  ErrList: TJtdErrorList;
+begin
+  Result := False;
+  ErrList := nil;
+  case Validate(Self, aSchema, ErrList, 1) of
+    jvrOk: Result := True;
+    jvrMaxErrorsExceed, jvrErrors:
+      aErr := ErrList[0];
+  else
+  end;
 end;
 
 function RealLeapSecond06(aYear: Word): Boolean; inline;
