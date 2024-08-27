@@ -5168,19 +5168,15 @@ end;
 
 procedure TIRegexp.PushEclose(aNode: Integer; aStack: PReStack);
 begin
-  with FTable[aNode]^ do
-    if Step <> FStep then begin
-      Step := FStep;
-      case Kind of
-        nkSplit: begin
-            PushEclose(Next1, aStack);
-            PushEclose(Next2, aStack);
-          end;
-        nkMatch, nkFinal:
-          aStack^.Push(aNode);
-      else
-      end;
-    end;
+  with FTable[aNode]^ do begin
+    if Step = FStep then exit;
+    Step := FStep;
+    if Kind = nkSplit then begin
+      PushEclose(Next1, aStack);
+      PushEclose(Next2, aStack);
+    end else
+      aStack^.Push(aNode);
+  end;
 end;
 
 {$PUSH}{$Q-}{$R-}
