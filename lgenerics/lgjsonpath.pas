@@ -307,6 +307,7 @@ type
   ['{3D2794A4-F950-40DA-A611-51F7B37A6C11}']
     procedure SetParam(const aName: string; const aValue: TJpValue);
     function  GetParam(const aName: string): TJpValue;
+    function  HasParam(const aName: string; out aParam: TJpValue): Boolean;
   { returns NodeList that matches its internal, previously parsed JSONPath query;
     the freeing of the obtained values is the responsibility of aRoot }
     function  Match(aRoot: TJsonNode): TJpNodeList;
@@ -1566,6 +1567,7 @@ type
     destructor Destroy; override;
     procedure SetParam(const aName: string; const aValue: TJpValue);
     function  GetParam(const aName: string): TJpValue;
+    function  HasParam(const aName: string; out aParam: TJpValue): Boolean;
     function  TryGetParam(const aName: string; out aValue: TJpValue): Boolean;
     function  TryParseQuery(const aQuery: string): Boolean;
     function  Match(aRoot: TJsonNode): TJpNodeList;
@@ -3946,6 +3948,13 @@ function TJpMatcher.GetParam(const aName: string): TJpValue;
 begin
   if not FParams.TryGetValue(aName, Result) then
     Result := TJpValue.Nothing;
+end;
+
+function TJpMatcher.HasParam(const aName: string; out aParam: TJpValue): Boolean;
+begin
+  Result := FParams.TryGetValue(aName, aParam);
+  if not Result then
+    aParam := TJpValue.Nothing;
 end;
 
 function TJpMatcher.TryGetParam(const aName: string; out aValue: TJpValue): Boolean;
