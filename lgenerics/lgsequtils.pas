@@ -647,7 +647,7 @@ type
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 const
-  UC_BMP_HIGH = $ffff;
+  UC_BMP_HIGH = $1fff;
 {$PUSH}{$J-}
   UC_BMP_CATEGORY: array[0..UC_BMP_HIGH] of Byte = ({$I uc_bmp_gcategory.inc});
 {$POP}
@@ -3716,7 +3716,7 @@ end;
 
 {$PUSH}{$J-}
 const
-  UC_BMP_CASE_TBL: array[0..$ffff] of DWord = ({$I uc_bmp_case_map.inc});
+  UC_BMP_CASE_TBL: array[0..UC_BMP_HIGH] of DWord = ({$I uc_bmp_case_map.inc});
 {$POP}
 
 function Utf8ToLower(const s: string): string;
@@ -4866,8 +4866,6 @@ begin
 end;
 
 class function TACFsmUtf8.CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char;
-var
-  c: Ucs4Char;
 begin
   Result := CodePointToUcs4Char(p, aLen, aPtSize);
   if Result <= UC_BMP_HIGH then
