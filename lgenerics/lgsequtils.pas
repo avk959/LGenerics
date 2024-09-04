@@ -646,6 +646,11 @@ type
                         aOnlyWholeWords: Boolean = False;
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
+const
+  UC_BMP_HIGH = $ffff;
+{$PUSH}{$J-}
+  UC_BMP_CATEGORY: array[0..UC_BMP_HIGH] of Byte = ({$I uc_bmp_gcategory.inc});
+{$POP}
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}

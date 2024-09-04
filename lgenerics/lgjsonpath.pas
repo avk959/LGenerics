@@ -1603,9 +1603,6 @@ type
     ESCAPABLE_CHARS = META_CHARS + ['-', '^', 'n', 'r', 't'];
     UCATEGORY_CHARS = ['C', 'L', 'M', 'N', 'P', 'S', 'Z'];
     DIGITS          = ['0'..'9'];
-  {$PUSH}{$J-}
-    UC_BMP_CATEGORY: array[0..$ffff] of Byte = ({$I uc_bmp_gcategory.inc});
-  {$POP}
   type
     TUCategoryKind  = (
       uckCategory, uckLetter, uckMark, uckNumber, uckPunctuation, uckSeparator, uckSymbol, uckOther);
@@ -4189,7 +4186,7 @@ end;
 
 class function TIRegexp.TUCategory.GetCategory(c: Ucs4Char): TUnicodeCategory;
 begin
-  if c <= System.High(UC_BMP_CATEGORY) then
+  if c <= UC_BMP_HIGH then
     Result := TUnicodeCategory(UC_BMP_CATEGORY[c])
   else
     Result := TUnicodeCategory(UnicodeData.GetProps(c)^.Category);
