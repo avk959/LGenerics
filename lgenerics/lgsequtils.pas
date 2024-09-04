@@ -3735,7 +3735,7 @@ begin
   while pv < pEnd do
     begin
       c := CodePointToUcs4Char(pv, PtSize);
-      if c <= System.High(UC_BMP_CASE_TBL) then
+      if c <= UC_BMP_HIGH then
         LoC := UC_BMP_CASE_TBL[c] and $ffff
       else
         begin
@@ -3766,7 +3766,7 @@ begin
   while pv < pEnd do
     begin
       c := CodePointToUcs4Char(pv, PtSize);
-      if c <= System.High(UC_BMP_CASE_TBL) then
+      if c <= UC_BMP_HIGH then
         UpC := UC_BMP_CASE_TBL[c] shr 16
       else
         begin
@@ -4835,9 +4835,10 @@ type
 
 class function TACFsmUtf8.IsWordChar(c: Ucs4Char): Boolean;
 begin
-  if c < $80 then
-    exit(AnsiChar(c) in ['A'..'Z','a'..'z','0'..'9', '_']);
-  Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
+  if c <= UC_BMP_HIGH then
+    Result := (TUnicodeCategory(UC_BMP_CATEGORY[c]) in LETTER_OR_DIGIT_CATEGORIES) or (c = Ord('_'))
+  else
+    Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
 end;
 
 class function TACFsmUtf8.CpToUcs4(var p: PByte; aLen: SizeInt): Ucs4Char;
@@ -4858,7 +4859,7 @@ end;
 class function TACFsmUtf8.CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char;
 begin
   Result:= CpToUcs4(p, aLen);
-  if Result <= System.High(UC_BMP_CASE_TBL) then
+  if Result <= UC_BMP_HIGH then
     Result := UC_BMP_CASE_TBL[Result] and $ffff
   else
     Result := RtlUcs4Lower(Result);
@@ -4869,7 +4870,7 @@ var
   c: Ucs4Char;
 begin
   Result := CodePointToUcs4Char(p, aLen, aPtSize);
-  if Result <= System.High(UC_BMP_CASE_TBL) then
+  if Result <= UC_BMP_HIGH then
     Result := UC_BMP_CASE_TBL[Result] and $ffff
   else
     Result := RtlUcs4Lower(Result);
