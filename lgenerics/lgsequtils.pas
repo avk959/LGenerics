@@ -647,9 +647,9 @@ type
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 const
-  UC_BMP_HIGH = $1fff;
+  UC_TBL_HIGH = $1fff;
 {$PUSH}{$J-}
-  UC_BMP_CATEGORY: array[0..UC_BMP_HIGH] of Byte = ({$I uc_bmp_gcategory.inc});
+  UC_CATEGORY_TBL: array[0..UC_TBL_HIGH] of Byte = ({$I uc_bmp_gcategory.inc});
 {$POP}
 
 implementation
@@ -3716,7 +3716,7 @@ end;
 
 {$PUSH}{$J-}
 const
-  UC_BMP_CASE_TBL: array[0..UC_BMP_HIGH] of DWord = ({$I uc_bmp_case_map.inc});
+  UC_CASE_TBL: array[0..UC_TBL_HIGH] of DWord = ({$I uc_bmp_case_map.inc});
 {$POP}
 
 function Utf8ToLower(const s: string): string;
@@ -3735,8 +3735,8 @@ begin
   while pv < pEnd do
     begin
       c := CodePointToUcs4Char(pv, PtSize);
-      if c <= UC_BMP_HIGH then
-        LoC := UC_BMP_CASE_TBL[c] and $ffff
+      if c <= UC_TBL_HIGH then
+        LoC := UC_CASE_TBL[c] and $ffff
       else
         begin
           LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
@@ -3766,8 +3766,8 @@ begin
   while pv < pEnd do
     begin
       c := CodePointToUcs4Char(pv, PtSize);
-      if c <= UC_BMP_HIGH then
-        UpC := UC_BMP_CASE_TBL[c] shr 16
+      if c <= UC_TBL_HIGH then
+        UpC := UC_CASE_TBL[c] shr 16
       else
         begin
           UpC := UnicodeData.GetProps(c)^.SimpleUpperCase;
@@ -4835,8 +4835,8 @@ type
 
 class function TACFsmUtf8.IsWordChar(c: Ucs4Char): Boolean;
 begin
-  if c <= UC_BMP_HIGH then
-    Result := (TUnicodeCategory(UC_BMP_CATEGORY[c]) in LETTER_OR_DIGIT_CATEGORIES) or (c = Ord('_'))
+  if c <= UC_TBL_HIGH then
+    Result := (TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES) or (c = Ord('_'))
   else
     Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
 end;
@@ -4858,9 +4858,9 @@ end;
 
 class function TACFsmUtf8.CpToUcs4Lower(var p: PByte; aLen: SizeInt): Ucs4Char;
 begin
-  Result:= CpToUcs4(p, aLen);
-  if Result <= UC_BMP_HIGH then
-    Result := UC_BMP_CASE_TBL[Result] and $ffff
+  Result := CpToUcs4(p, aLen);
+  if Result <= UC_TBL_HIGH then
+    Result := UC_CASE_TBL[Result] and $ffff
   else
     Result := RtlUcs4Lower(Result);
 end;
@@ -4868,8 +4868,8 @@ end;
 class function TACFsmUtf8.CpToUcs4Lower(p: PByte; aLen: SizeInt; out aPtSize: SizeInt): Ucs4Char;
 begin
   Result := CodePointToUcs4Char(p, aLen, aPtSize);
-  if Result <= UC_BMP_HIGH then
-    Result := UC_BMP_CASE_TBL[Result] and $ffff
+  if Result <= UC_TBL_HIGH then
+    Result := UC_CASE_TBL[Result] and $ffff
   else
     Result := RtlUcs4Lower(Result);
 end;

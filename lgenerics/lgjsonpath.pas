@@ -4186,8 +4186,8 @@ end;
 
 class function TIRegexp.TUCategory.GetCategory(c: Ucs4Char): TUnicodeCategory;
 begin
-  if c <= UC_BMP_HIGH then
-    Result := TUnicodeCategory(UC_BMP_CATEGORY[c])
+  if c <= UC_TBL_HIGH then
+    Result := TUnicodeCategory(UC_CATEGORY_TBL[c])
   else
     Result := TUnicodeCategory(UnicodeData.GetProps(c)^.Category);
 end;
