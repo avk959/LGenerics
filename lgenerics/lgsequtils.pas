@@ -4851,7 +4851,7 @@ end;
 
 class function TACFsmUtf8.RtlUcs4Lower(c: Ucs4Char): Ucs4Char;
 begin
-  Result := DWord(UnicodeData.GetProps(Result)^.SimpleLowerCase);
+  Result := DWord(UnicodeData.GetProps(c)^.SimpleLowerCase);
   if Result = 0 then
     Result := c;
 end;
