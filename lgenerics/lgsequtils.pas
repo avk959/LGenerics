@@ -636,14 +636,12 @@ type
                         const aSource: string;
                         const aSubs: array of string;
                         out aReplaceCount: SizeInt;
-                        aOnlyWholeWords: Boolean = False;
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 { the same as above for the case where the number of replacements is not of interest }
   function ACStrReplace(aSearchFsm: IACSearchFsmUtf8;
                         const aSource: string;
                         const aSubs: array of string;
-                        aOnlyWholeWords: Boolean = False;
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 const
@@ -4836,7 +4834,7 @@ type
 class function TACFsmUtf8.IsWordChar(c: Ucs4Char): Boolean;
 begin
   if c <= UC_TBL_HIGH then
-    Result := (TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES) or (c = Ord('_'))
+    Result := TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES
   else
     Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
 end;
@@ -7191,123 +7189,18 @@ begin
   Result := CreateACSearchFsm(aPatterEnum.ToArray, aIgnoreCase, aForceNFA);
 end;
 
-type
-  { TStrBuffer: for internal use only }
-  TStrBuffer = record
-  private
-    FBuffer: string;
-    FPtr: PAnsiChar;
-    FCount: SizeInt;
-  public
-    procedure Init(aCapacity: SizeInt); inline;
-    constructor Create(aCapacity: SizeInt);
-    procedure EnsureCapacity(aCapacity: SizeInt); inline;
-    procedure Append(p: PAnsiChar; aCount: SizeInt);
-    procedure Append(const s: string); inline;
-    function  ToString: string; inline;
-    property  Count: SizeInt read FCount;
-  end;
-
-{ TStrBuffer }
-
-procedure TStrBuffer.Init(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aCapacity))
-  else
-   System.SetLength(FBuffer, DEFAULT_CONTAINER_CAPACITY);
-  FPtr := Pointer(FBuffer);
-  FCount := 0;
-end;
-
-constructor TStrBuffer.Create(aCapacity: SizeInt);
-begin
-  Init(aCapacity);
-end;
-
-procedure TStrBuffer.EnsureCapacity(aCapacity: SizeInt);
-begin
-  if aCapacity > System.Length(FBuffer) then
-    begin
-      System.SetLength(FBuffer, lgUtils.RoundUpTwoPower(aCapacity));
-      FPtr := Pointer(FBuffer);
-    end;
-end;
-
-procedure TStrBuffer.Append(p: PAnsiChar; aCount: SizeInt);
-begin
-  if aCount < 1 then exit;
-  EnsureCapacity(Count + aCount);
-  System.Move(p^, FPtr[Count], aCount);
-  FCount += aCount;
-end;
-
-procedure TStrBuffer.Append(const s: string);
-begin
-  EnsureCapacity(Count + System.Length(s));
-  System.Move(Pointer(s)^, FPtr[Count], System.Length(s));
-  FCount += System.Length(s);
-end;
-
-function TStrBuffer.ToString: string;
-begin
-  System.SetLength(FBuffer, Count);
-  Result := FBuffer;
-  FBuffer := '';
-  FPtr := nil;
-  FCount := 0;
-end;
-
-{$PUSH}{$WARN 5091 OFF}
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
   const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
-type
-  TMatch = lgUtils.TIndexMatch;
 var
-  Matches: array of TMatch;
-  Buf: TStrBuffer;
-  pSrc, p, pEnd: PAnsiChar;
-  MatchMode: TSetMatchMode;
-  m: TMatch;
-  CopyCount: SizeInt;
+  IFsm: IACSearchFsmUtf8;
 begin
   aReplaceCount := 0;
   if aSource = '' then exit('');
   if System.Length(aSamples) = 0 then exit(aSource);
-  case aMode of
-    ohmLeftmostFirst:    MatchMode := smmLeftmostFirst;
-    ohmLeftmostLongest:  MatchMode := smmLeftmostLongest;
-  else//ohmLeftmostShortest
-    MatchMode := smmLeftmostShortest;
-  end;
-  with TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False) do
-    try
-      OnlyWholeWords := sroOnlyWholeWords in aOptions;
-      Matches := FindMatches(aSource, MatchMode);
-    finally
-      Free;
-    end;
-  if Matches = nil then exit(aSource);
-  aReplaceCount := System.Length(Matches);
-  pSrc := Pointer(aSource);
-  p := pSrc;
-  pEnd := pSrc + System.Length(aSource);
-  Buf.Init(System.Length(aSource));
-  for m in Matches do
-    begin
-      CopyCount := m.Offset - Succ(p - pSrc);
-      Buf.Append(p, CopyCount);
-      Inc(p, CopyCount + m.Length);
-      if m.Index < System.Length(aSubs) then
-        Buf.Append(aSubs[m.Index])
-      else
-        Buf.Append(aDefaultSub);
-    end;
-  if p < pEnd then
-    Buf.Append(p, pEnd - p);
-  Result := Buf.ToString;
+  IFsm := TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False);
+  IFsm.OnlyWholeWords := sroOnlyWholeWords in aOptions;
+  Result := ACStrReplace(IFsm, aSource, aSubs, aReplaceCount, aMode, aDefaultSub);
 end;
-{$POP}
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string;
   const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
@@ -7317,67 +7210,27 @@ begin
   Result := ACStrReplace(aSource, aSamples, aSubs, Dummy, aOptions, aMode, aDefaultSub);
 end;
 
-{$PUSH}{$WARN 5089 OFF}{$WARN 5091 OFF}
 function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
   const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
-type
-  TMatch = lgUtils.TIndexMatch;
 var
-  TAcRef: specialize TGUniqRef<TACFsmUtf8>;
-  Matches: array of TMatch;
+  IFsm: IACSearchFsmUtf8;
   r: TStringArray;
-  Buf: TStrBuffer;
-  s: string;
-  pSrc, p, pEnd: PAnsiChar;
-  MatchMode: TSetMatchMode;
-  m: TMatch;
-  I, CopyCount: SizeInt;
+  I, Count: SizeInt;
 begin
   aReplaceCount := 0;
   if System.Length(aSource) = 0 then exit(nil);
   if System.Length(aSamples) = 0 then
     exit(specialize TGArrayHelpUtil<string>.CreateCopy(aSource));
-  case aMode of
-    ohmLeftmostFirst:    MatchMode := smmLeftmostFirst;
-    ohmLeftmostLongest:  MatchMode := smmLeftmostLongest;
-  else //ohmLeftmostShortest
-    MatchMode := smmLeftmostShortest;
-  end;
-  TAcRef.Instance := TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False);
-  TAcRef.Instance.OnlyWholeWords := sroOnlyWholeWords in aOptions;
+  IFsm := TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False);
+  IFsm.OnlyWholeWords := sroOnlyWholeWords in aOptions;
   System.SetLength(r, System.Length(aSource));
-  Buf.Init(System.Length(aSource[0]));
   for I := 0 to System.High(aSource) do
     begin
-      s := aSource[I];
-      Matches := TAcRef.Instance.FindMatches(s, MatchMode);
-      if Matches = nil then
-        begin
-          r[I] := aSource[I];
-          continue;
-        end;
-      aReplaceCount += System.Length(Matches);
-      Buf.EnsureCapacity(System.Length(s));
-      pSrc := Pointer(s);
-      p := pSrc;
-      pEnd := pSrc + System.Length(s);
-      for m in Matches do
-        begin
-          CopyCount := m.Offset - Succ(p - pSrc);
-          Buf.Append(p, CopyCount);
-          Inc(p, CopyCount + m.Length);
-          if m.Index < System.Length(aSubs) then
-            Buf.Append(aSubs[m.Index])
-          else
-            Buf.Append(aDefaultSub);
-        end;
-      if p < pEnd then
-        Buf.Append(p, pEnd - p);
-      r[I] := Buf.ToString;
+      r[I] := ACStrReplace(IFsm, aSource[I], aSubs, Count, aMode, aDefaultSub);
+      aReplaceCount += Count;
     end;
   Result := r;
 end;
-{$POP}
 
 function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; const aOptions: TStrReplaceOptions;
   aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
@@ -7387,63 +7240,66 @@ begin
   Result := ACStrReplaceList(aSource, aSamples, aSubs, Dummy, aOptions, aMode, aDefaultSub);
 end;
 
-{$PUSH}{$WARN 5091 OFF}
-function ACStrReplace(aSearchFsm: IACSearchFsmUtf8; const aSource: string; const aSubs: array of string;
-  out aReplaceCount: SizeInt; aOnlyWholeWords: Boolean; aMode: TOverlapsHandleMode;
-  const aDefaultSub: string): string;
-type
-  TMatch = lgUtils.TIndexMatch;
-var
-  Matches: array of TMatch;
-  Buf: TStrBuffer;
-  pSrc, p, pEnd: PAnsiChar;
-  MatchMode: TSetMatchMode;
-  m: TMatch;
-  CopyCount: SizeInt;
-  Oww: Boolean;
-begin
-  aReplaceCount := 0;
-  if aSource = '' then exit('');
-  case aMode of
-    ohmLeftmostFirst:    MatchMode := smmLeftmostFirst;
-    ohmLeftmostLongest:  MatchMode := smmLeftmostLongest;
-  else // ohmLeftmostShortest
-    MatchMode := smmLeftmostShortest;
-  end;
-
-  Oww := aSearchFsm.OnlyWholeWords;
-  aSearchFsm.OnlyWholeWords := aOnlyWholeWords;
-  Matches := aSearchFsm.FindMatches(aSource, MatchMode);
-  aSearchFsm.OnlyWholeWords := Oww;
-
-  if Matches = nil then exit(aSource);
-  aReplaceCount := System.Length(Matches);
-  pSrc := Pointer(aSource);
-  p := pSrc;
-  pEnd := pSrc + System.Length(aSource);
-  Buf.Init(System.Length(aSource));
-  for m in Matches do
-    begin
-      CopyCount := m.Offset - Succ(p - pSrc);
-      Buf.Append(p, CopyCount);
-      Inc(p, CopyCount + m.Length);
-      if m.Index < System.Length(aSubs) then
-        Buf.Append(aSubs[m.Index])
-      else
-        Buf.Append(aDefaultSub);
-    end;
-  if p < pEnd then
-    Buf.Append(p, pEnd - p);
-  Result := Buf.ToString;
-end;
+{$PUSH}{$J-}
+const
+   OverlapMode2MatchMode: array[TOverlapsHandleMode] of TSetMatchMode = (
+     smmLeftmostFirst, smmLeftmostLongest, smmLeftmostShortest
+   );
 {$POP}
 
 function ACStrReplace(aSearchFsm: IACSearchFsmUtf8; const aSource: string; const aSubs: array of string;
-  aOnlyWholeWords: Boolean; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+  out aReplaceCount: SizeInt; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+var
+  Matches: array of lgUtils.TIndexMatch;
+  r: string;
+  pSrc, p, pEnd, pR: PAnsiChar;
+  I, RLen, CopyCount: SizeInt;
+begin
+  aReplaceCount := 0;
+  if aSource = '' then exit('');
+  Matches := aSearchFsm.FindMatches(aSource, OverlapMode2MatchMode[aMode]);
+  if Matches = nil then exit(aSource);
+  aReplaceCount := System.Length(Matches);
+  RLen := System.Length(aSource);
+  for I := 0 to System.High(Matches) do
+    with Matches[I] do begin
+      RLen -= Length;
+      if Index < System.Length(aSubs) then
+        RLen += System.Length(aSubs[Index])
+      else
+        RLen += System.Length(aDefaultSub);
+    end;
+  if RLen = 0 then exit('');
+  System.SetLength(r, RLen);
+  pR := Pointer(r);
+  pSrc := Pointer(aSource);
+  p := pSrc;
+  pEnd := pSrc + System.Length(aSource);
+  for I := 0 to System.High(Matches) do
+    with Matches[I] do begin
+      CopyCount := Offset - Succ(p - pSrc);
+      System.Move(p^, pR^, CopyCount);
+      pR += CopyCount;
+      p += CopyCount + Length;
+      if Index < System.Length(aSubs) then begin
+        System.Move(Pointer(aSubs[Index])^, pR^, System.Length(aSubs[Index]));
+        pR += System.Length(aSubs[Index]);
+      end else begin
+        System.Move(Pointer(aDefaultSub)^, pR^, System.Length(aDefaultSub));
+        pR += System.Length(aDefaultSub);
+      end;
+    end;
+  if p < pEnd then
+    System.Move(p^, pR^, pEnd - p);
+  Result := r;
+end;
+
+function ACStrReplace(aSearchFsm: IACSearchFsmUtf8; const aSource: string; const aSubs: array of string;
+  aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
 var
   Dummy: SizeInt;
 begin
-  Result := ACStrReplace(aSearchFsm, aSource, aSubs, Dummy, aOnlyWholeWords, aMode, aDefaultSub);
+  Result := ACStrReplace(aSearchFsm, aSource, aSubs, Dummy, aMode, aDefaultSub);
 end;
 
 end.
