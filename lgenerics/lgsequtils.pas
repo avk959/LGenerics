@@ -3691,7 +3691,7 @@ begin
         aBuf[1] := Byte(c and $3f or $80);
         aBuf += 2;
       end;
-    $800..$d7ff, $e000..$ffff:
+    $800..$d7ff, $e000..$fffc:
       begin
         aBuf[0] := Byte(c shr 12 or $e0);
         aBuf[1] := Byte(c shr 6) and $3f or $80;
