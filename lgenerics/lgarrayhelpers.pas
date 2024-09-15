@@ -14000,7 +14000,7 @@ var
   pA, pBuf: PItem;
 begin
   pA := @A[0];
-  pBuf := Pointer(aBuf);
+  pBuf := aBuf;
   for I := 0 to SizeOf(T) - 2 do
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
