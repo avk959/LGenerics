@@ -1177,7 +1177,7 @@ type
     class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
     class procedure RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
   { default sorting, currently RadixSort if length of A > RADIX_CUTOFF,
-    otherwise PDQSort }
+    otherwise IntroSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -1230,7 +1230,7 @@ type
   public
   type
     TArray = array of TItem;
-    PItem    = ^TItem;
+    PItem  = ^TItem;
 
   private
   type
@@ -13519,13 +13519,13 @@ begin
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
   case CFKeyKind of
-    ktUInt:
+    itUInt:
       if SimplePass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
-    ktSInt:
+    itSInt:
       if IntSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
-    ktFloat:
+    itFloat:
       if FloatSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
   end;
@@ -13660,13 +13660,13 @@ begin
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
   case CFKeyKind of
-    ktUInt:
+    itUInt:
       if SimplePass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
-    ktSInt:
+    itSInt:
       if IntSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
-    ktFloat:
+    itFloat:
       if FloatSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
   end;
@@ -14229,10 +14229,7 @@ begin
         if CountSortAllow(vMin, vMax, Succ(R)) then
           CountSort(A, vMin, vMax, o)
         else
-          begin
-            System.SetLength(Buf, System.Length(A));
-            DoRadixSort(A, Buf, o);
-          end;
+          DoRadixSort(A, Buf, o);
     end;
 end;
 
@@ -14419,17 +14416,17 @@ begin
 {$ELSE ENDIAN_LITTLE}
   for I := Pred(SizeOf(TKey)) downto 1 do
     if SimplePass(pA, pBuf, I) then
-      PtrSwap(pA, pBuf);
+      THelper.PtrSwap(pA, pBuf);
   case CFKeyKind of
     ktUInt:
       if SimplePass(pA, pBuf, 0) then
-        PtrSwap(pA, pBuf);
+        THelper.PtrSwap(pA, pBuf);
     ktSInt:
       if IntSignedPass(pA, pBuf, 0) then
-        PtrSwap(pA, pBuf);
+        THelper.PtrSwap(pA, pBuf);
     ktFloat:
       if FloatSignedPass(pA, pBuf, 0) then
-        PtrSwap(pA, pBuf);
+        THelper.PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
   if pBuf <> aBuf then
@@ -14560,17 +14557,17 @@ begin
 {$ELSE ENDIAN_LITTLE}
   for I := Pred(SizeOf(TKey)) downto 1 do
     if SimplePass(pA, pBuf, I) then
-      PtrSwap(pA, pBuf);
+      THelper.PtrSwap(pA, pBuf);
   case CFKeyKind of
     ktUInt:
       if SimplePass(pA, pBuf, 0) then
-        PtrSwap(pA, pBuf);
+        THelper.PtrSwap(pA, pBuf);
     ktSInt:
       if IntSignedPass(pA, pBuf, 0) then
-        PtrSwap(pA, pBuf);
+        THelper.PtrSwap(pA, pBuf);
     ktFloat:
       if FloatSignedPass(pA, pBuf, 0) then
-        PtrSwap(pA, pBuf);
+        THelper.PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
   if pBuf <> aBuf then
