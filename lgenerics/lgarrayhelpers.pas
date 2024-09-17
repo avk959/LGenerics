@@ -1166,7 +1166,7 @@ type
     TKeyBytes = array[0..Pred(SizeOf(T))] of Byte;
 
   class var
-    CFKeyKind: TItemType;
+    CFItemType: TItemType;
     class constructor Init;
     class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
     class procedure DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
@@ -1243,7 +1243,7 @@ type
     RADIX_CUTOFF   = 255;
     RADIX_BUF_SIZE = 1024;
   class var
-    CFKeyKind: TKeyType;
+    CFKeyType: TKeyType;
     class constructor Init;
     class procedure FillOffsets(const A: array of TItem; out aOfs: TOffsets); static;
     class procedure DoSortA(var A: array of TItem; aBuf: PItem; var aOfs: TOffsets); static;
@@ -13363,21 +13363,21 @@ begin
   case GetTypeKind(T) of
     tkInteger:
       if GetTypeData(TypeInfo(T))^.MinValue < 0 then
-        CFKeyKind := itSInt
+        CFItemType := itSInt
       else
-        CFKeyKind := itUInt;
+        CFItemType := itUInt;
     tkInt64:
       if GetTypeData(TypeInfo(T))^.MinInt64Value < 0 then
-        CFKeyKind := itSInt
+        CFItemType := itSInt
       else
-        CFKeyKind := itUInt;
+        CFItemType := itUInt;
     tkFloat:
       case GetTypeData(TypeInfo(T))^.FloatType of
-        ftSingle, ftDouble, ftExtended: CFKeyKind := itFloat;
-        ftCurr, ftComp: CFKeyKind := itSInt;
+        ftSingle, ftDouble, ftExtended: CFItemType := itFloat;
+        ftCurr, ftComp: CFItemType := itSInt;
       end
   else
-    CFKeyKind := itUInt;
+    CFItemType := itUInt;
   end;
 end;
 
@@ -13405,12 +13405,7 @@ class procedure TGNumArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var a
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 1 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     for I := System.High(A) downto 0 do
@@ -13431,12 +13426,7 @@ class procedure TGNumArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var a
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 129 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     Ofs[0] += Ofs[255];
@@ -13452,7 +13442,7 @@ class procedure TGNumArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var a
     Result := True;
   end;
 
-  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  function FloatLastPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: T;
     Ofs: PSizeInt;
@@ -13460,12 +13450,7 @@ class procedure TGNumArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var a
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 254 downto 128 do
       Ofs[I] += Ofs[Succ(I)];
     Sum := Ofs[128];
@@ -13503,7 +13488,7 @@ begin
   for I := 0 to SizeOf(T) - 2 do
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFItemType of
     itUInt:
       if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
@@ -13511,14 +13496,14 @@ begin
       if IntSignedPass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
     itFloat:
-      if FloatSignedPass(pA, pBuf, Pred(SizeOf(T))) then
+      if FloatLastPass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
   end;
 {$ELSE ENDIAN_LITTLE}
   for I := Pred(SizeOf(T)) downto 1 do
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFItemType of
     itUInt:
       if SimplePass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
@@ -13526,7 +13511,7 @@ begin
       if IntSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
     itFloat:
-      if FloatSignedPass(pA, pBuf, 0) then
+      if FloatLastPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
@@ -13545,12 +13530,7 @@ class procedure TGNumArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; var a
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 254 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     for I := System.High(A) downto 0 do
@@ -13571,12 +13551,7 @@ class procedure TGNumArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; var a
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 126 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     Ofs[255] += Ofs[0];
@@ -13592,7 +13567,7 @@ class procedure TGNumArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; var a
     Result := True;
   end;
 
-  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  function FloatLastPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: T;
     Ofs: PSizeInt;
@@ -13600,12 +13575,7 @@ class procedure TGNumArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; var a
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     Sum := 0;
     for I := 127 downto 0 do
       begin
@@ -13644,7 +13614,7 @@ begin
   for I := 0 to SizeOf(T) - 2 do
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFItemType of
     itUInt:
       if SimplePass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
@@ -13652,14 +13622,14 @@ begin
       if IntSignedPass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
     itFloat:
-      if FloatSignedPass(pA, pBuf, Pred(SizeOf(T))) then
+      if FloatLastPass(pA, pBuf, Pred(SizeOf(T))) then
         PtrSwap(pA, pBuf);
   end;
 {$ELSE ENDIAN_LITTLE}
   for I := Pred(SizeOf(T)) downto 1 do
     if SimplePass(pA, pBuf, I) then
       PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFItemType of
     itUInt:
       if SimplePass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
@@ -13667,7 +13637,7 @@ begin
       if IntSignedPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
     itFloat:
-      if FloatSignedPass(pA, pBuf, 0) then
+      if FloatLastPass(pA, pBuf, 0) then
         PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
@@ -13949,12 +13919,7 @@ class procedure TGOrdinalArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; v
     Ofs: PSizeInt;
   begin
     Ofs := @aOfs[aNum, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 1 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     aNum := aNum shl 3;
@@ -13974,12 +13939,7 @@ class procedure TGOrdinalArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; v
     Ofs: PSizeInt;
   begin
     Ofs := @aOfs[aNum, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 129 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     Ofs[0] += Ofs[255];
@@ -14026,12 +13986,7 @@ class procedure TGOrdinalArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; v
     Ofs: PSizeInt;
   begin
     Ofs := @aOfs[aNum, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 254 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     aNum := aNum shl 3;
@@ -14051,12 +14006,7 @@ class procedure TGOrdinalArrayHelper.DoRxSortD(var A: array of T; aBuf: PItem; v
     Ofs: PSizeInt;
   begin
     Ofs := @aOfs[aNum, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 126 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     Ofs[255] += Ofs[0];
@@ -14262,21 +14212,21 @@ begin
   case GetTypeKind(TKey) of
     tkInteger:
       if GetTypeData(TypeInfo(TKey))^.MinValue < 0 then
-        CFKeyKind := ktSInt
+        CFKeyType := ktSInt
       else
-        CFKeyKind := ktUInt;
+        CFKeyType := ktUInt;
     tkInt64:
       if GetTypeData(TypeInfo(TKey))^.MinInt64Value < 0 then
-        CFKeyKind := ktSInt
+        CFKeyType := ktSInt
       else
-        CFKeyKind := ktUInt;
+        CFKeyType := ktUInt;
     tkFloat:
       case GetTypeData(TypeInfo(TKey))^.FloatType of
-        ftSingle, ftDouble, ftExtended: CFKeyKind := ktFloat;
-        ftCurr, ftComp: CFKeyKind := ktSInt;
+        ftSingle, ftDouble, ftExtended: CFKeyType := ktFloat;
+        ftCurr, ftComp: CFKeyType := ktSInt;
       end
   else
-    CFKeyKind := ktUInt;
+    CFKeyType := ktUInt;
   end;
 end;
 
@@ -14304,12 +14254,7 @@ class procedure TGRadixSorter.DoSortA(var A: array of TItem; aBuf: PItem; var aO
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 1 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     for I := System.High(A) downto 0 do
@@ -14330,12 +14275,7 @@ class procedure TGRadixSorter.DoSortA(var A: array of TItem; aBuf: PItem; var aO
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 129 to 255 do
       Ofs[I] += Ofs[Pred(I)];
     Ofs[0] += Ofs[255];
@@ -14351,7 +14291,7 @@ class procedure TGRadixSorter.DoSortA(var A: array of TItem; aBuf: PItem; var aO
     Result := True;
   end;
 
-  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  function FloatLastPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: TItem;
     Ofs: PSizeInt;
@@ -14359,12 +14299,7 @@ class procedure TGRadixSorter.DoSortA(var A: array of TItem; aBuf: PItem; var aO
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 254 downto 128 do
       Ofs[I] += Ofs[Succ(I)];
     Sum := Ofs[128];
@@ -14402,7 +14337,7 @@ begin
   for I := 0 to SizeOf(TKey) - 2 do
     if SimplePass(pA, pBuf, I) then
       THelper.PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFKeyType of
     ktUInt:
       if SimplePass(pA, pBuf, Pred(SizeOf(TKey))) then
         THelper.PtrSwap(pA, pBuf);
@@ -14410,14 +14345,14 @@ begin
       if IntSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
         THelper.PtrSwap(pA, pBuf);
     ktFloat:
-      if FloatSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+      if FloatLastPass(pA, pBuf, Pred(SizeOf(TKey))) then
         THelper.PtrSwap(pA, pBuf);
   end;
 {$ELSE ENDIAN_LITTLE}
   for I := Pred(SizeOf(TKey)) downto 1 do
     if SimplePass(pA, pBuf, I) then
       THelper.PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFKeyType of
     ktUInt:
       if SimplePass(pA, pBuf, 0) then
         THelper.PtrSwap(pA, pBuf);
@@ -14425,7 +14360,7 @@ begin
       if IntSignedPass(pA, pBuf, 0) then
         THelper.PtrSwap(pA, pBuf);
     ktFloat:
-      if FloatSignedPass(pA, pBuf, 0) then
+      if FloatLastPass(pA, pBuf, 0) then
         THelper.PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
@@ -14444,12 +14379,7 @@ class procedure TGRadixSorter.DoSortD(var A: array of TItem; aBuf: PItem; var aO
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 254 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     for I := System.High(A) downto 0 do
@@ -14470,12 +14400,7 @@ class procedure TGRadixSorter.DoSortD(var A: array of TItem; aBuf: PItem; var aO
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     for I := 126 downto 0 do
       Ofs[I] += Ofs[Succ(I)];
     Ofs[255] += Ofs[0];
@@ -14491,7 +14416,7 @@ class procedure TGRadixSorter.DoSortD(var A: array of TItem; aBuf: PItem; var aO
     Result := True;
   end;
 
-  function FloatSignedPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
+  function FloatLastPass(aSrc, aDst: PItem; aIndex: SizeInt): Boolean;
   var
     Curr: TItem;
     Ofs: PSizeInt;
@@ -14499,12 +14424,7 @@ class procedure TGRadixSorter.DoSortD(var A: array of TItem; aBuf: PItem; var aO
     b: Byte;
   begin
     Ofs := @aOfs[aIndex, 0];
-    for I := 0 to 255 do
-      if Ofs[I] <> 0 then
-        if Ofs[I] = System.Length(A) then
-          exit(False)
-        else
-          break;
+    if Ofs^ = System.Length(A) then exit(False);
     Sum := 0;
     for I := 127 downto 0 do
       begin
@@ -14543,7 +14463,7 @@ begin
   for I := 0 to SizeOf(TKey) - 2 do
     if SimplePass(pA, pBuf, I) then
       THelper.PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFKeyType of
     ktUInt:
       if SimplePass(pA, pBuf, Pred(SizeOf(TKey))) then
         THelper.PtrSwap(pA, pBuf);
@@ -14551,14 +14471,14 @@ begin
       if IntSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
         THelper.PtrSwap(pA, pBuf);
     ktFloat:
-      if FloatSignedPass(pA, pBuf, Pred(SizeOf(TKey))) then
+      if FloatLastPass(pA, pBuf, Pred(SizeOf(TKey))) then
         THelper.PtrSwap(pA, pBuf);
   end;
 {$ELSE ENDIAN_LITTLE}
   for I := Pred(SizeOf(TKey)) downto 1 do
     if SimplePass(pA, pBuf, I) then
       THelper.PtrSwap(pA, pBuf);
-  case CFKeyKind of
+  case CFKeyType of
     ktUInt:
       if SimplePass(pA, pBuf, 0) then
         THelper.PtrSwap(pA, pBuf);
@@ -14566,7 +14486,7 @@ begin
       if IntSignedPass(pA, pBuf, 0) then
         THelper.PtrSwap(pA, pBuf);
     ktFloat:
-      if FloatSignedPass(pA, pBuf, 0) then
+      if FloatLastPass(pA, pBuf, 0) then
         THelper.PtrSwap(pA, pBuf);
   end;
 {$ENDIF ENDIAN_LITTLE}
