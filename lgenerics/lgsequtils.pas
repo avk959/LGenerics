@@ -607,7 +607,8 @@ type
   parameter aSamples specifies a set of search patterns;
   parameter aSubs specifies a set of substitutions, if the aSubs array has fewer elements
   than the aSamples array, aDefaultSub will be used as a replacement for the missing elements;
-  aReplaceCount parameter returns the number of replacements made }
+  aReplaceCount parameter returns the number of replacements made;
+  expects UTF-8 encoded strings as parameters }
   function ACStrReplace(const aSource: string;
                         const aSamples, aSubs: array of string;
                         out aReplaceCount: SizeInt;
@@ -3691,7 +3692,7 @@ begin
         aBuf[1] := Byte(c and $3f or $80);
         aBuf += 2;
       end;
-    $800..$d7ff, $e000..$fffc:
+    $800..$d7ff, $e000..$fffc, $fffe..$ffff:
       begin
         aBuf[0] := Byte(c shr 12 or $e0);
         aBuf[1] := Byte(c shr 6) and $3f or $80;
