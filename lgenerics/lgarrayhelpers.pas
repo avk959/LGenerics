@@ -1208,8 +1208,13 @@ type
     CFItemSize: Integer;
     CFSigned: Boolean;
   public
+  { creates an array filled with consecutive values from MIN(aFirst, aLast) to MAX(aFirst, aLast) inclusive }
     class function  CreateRange(aFirst, aLast: T): TArray; static;
+  { creates an array of size aSize of random elements in the range from MIN(aFirst, aLast)
+    to MAX(aFirst, aLast) inclusive; raises an exception if MAX(aFirst, aLast) - MIN(aFirst, aLast)
+    exceeds High(Int64)-1 due to the limitation of the built-in PRNG }
     class function  CreateRandomInRange(aSize: SizeInt; aFirst, aLast: T): TArray; static;
+  { creates a random permutation of the sequence from MIN(aFirst, aLast) to MAX(aFirst, aLast) inclusive }
     class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
   { LSD radix sorting, requires O(N) auxiliary memory }
     class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
