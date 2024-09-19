@@ -14087,10 +14087,11 @@ end;
 class function TGOrdinalArrayHelper.CreateRange(aFirst, aLast: T): TArray;
 var
   I: T;
-  J: SizeInt = 0;
+  J: SizeInt;
 begin
-  if aLast < aFirst then Swap(aLast, aFirst); ////
+  if aLast < aFirst then Swap(aLast, aFirst);
   System.SetLength(Result, Succ(aLast - aFirst));
+  J := 0;
   for I := aFirst to aLast do
     begin
       Result[J] := I;
@@ -14100,17 +14101,23 @@ end;
 
 class function TGOrdinalArrayHelper.CreateRandomInRange(aSize: SizeInt; aFirst, aLast: T): TArray;
 var
-  vLo, vHi, I: SizeInt;
-  r: TArray = nil;
+  vLo, Range: Int64;
+  I: SizeInt;
+  r: TArray;
 begin
-  if aSize > 0 then begin
-    if aLast < aFirst then Swap(aLast, aFirst);
-    vLo := SizeInt(aFirst);
-    vHi := SizeInt(aLast);
-    System.SetLength(r, aSize);
-    for I := 0 to High(r) do
-      r[I] := T(Random(Succ(vHi - vLo)) + vLo);
-  end;
+  if aSize < 1 then exit(nil);
+  if aLast < aFirst then Swap(aLast, aFirst);
+{$PUSH}{$Q+}{$R+}
+  vLo := aFirst;
+  Range := Succ(Int64(aLast) - vLo);
+{$POP}
+  System.SetLength(r, aSize);
+  if Range <= System.High(Integer) then
+    for I := 0 to System.High(r) do
+      r[I] := T(Random(Integer(Range)) + Integer(vLo))
+  else
+    for I := 0 to System.High(r) do
+      r[I] := T(Random(Range) + vLo);
   Result := r;
 end;
 
