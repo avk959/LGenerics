@@ -1187,25 +1187,26 @@ type
   { TGOrdinalArrayHelper: for ordinal numeric types only }
   generic TGOrdinalArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
   private
+  const
+    COUNT_BUF_SIZE = 512;
   type
-    TMonoKind = (mkAsc, mkDesc, mkConst, mkNone);
-    TGetAllow = function(aMin, aMax: T; aLen: SizeInt): Boolean;
-    TOffsets  = array[0..Pred(SizeOf(T)), Byte] of SizeInt;
+    TMonoKind      = (mkAsc, mkDesc, mkConst, mkNone);
+    TGetCountRange = function(aMin, aMax: T; aLen: SizeInt): SizeInt;
+    TOffsets       = array[0..Pred(SizeOf(T)), Byte] of SizeInt;
 
-    class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T; o:  TSortOrder); static;
+    class procedure CountSort(var A: array of T; aRange: SizeInt; aMinValue: T; o:  TSortOrder); static;
     class function  TryInsertSortA2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  TryInsertSortD2(var A: array of T; var aMin, aMax: T; L, R: SizeInt): SizeInt; static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonoKind; static;
-    class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
-    class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
+    class function  SignedCountRange(aMin, aMax: T; aLen: SizeInt): SizeInt; static;
+    class function  UnsignedCountRange(aMin, aMax: T; aLen: SizeInt): SizeInt; static;
     class procedure FillOffsets(const  A: array of T; out aOfs: TOffsets); static;
     class procedure DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoRxSortD(var A: array of T; aBuf: PItem; var aOfs: TOffsets); static;
     class procedure DoRadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder); static;
     class constructor Init;
   class var
-    CountSortAllow: TGetAllow;
-    CFItemSize: Integer;
+    GetCountRange: TGetCountRange;
     CFSigned: Boolean;
   public
   { creates an array filled with consecutive values from MIN(aFirst, aLast) to MAX(aFirst, aLast) inclusive }
@@ -1219,7 +1220,7 @@ type
   { LSD radix sorting, requires O(N) auxiliary memory }
     class procedure RadixSort(var A: array of T; o: TSortOrder = soAsc); static;
     class procedure RadixSort(var A: array of T; var aBuf: TArray; o: TSortOrder = soAsc); static;
-  { hybrid sorting, will use counting sort (if possible) or radix sort }
+  { hybrid sorting, will use counting sort  or radix sort if possible }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(const A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
@@ -13737,43 +13738,53 @@ end;
 
 { TGOrdinalArrayHelper }
 
-class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: T; o:  TSortOrder);
+class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aRange: SizeInt; aMinValue: T; o: TSortOrder);
 var
+  CountBuf: array[0..Pred(COUNT_BUF_SIZE)] of SizeInt;
+  Counts: array of SizeInt;
+  pCounts: PSizeInt;
   I, J: SizeInt;
   v: T;
-  Counts: array of SizeInt = nil;
 begin
-  System.SetLength(Counts, Succ(aMaxValue - aMinValue));
-  //System.FillChar(Counts[0], Succ(aMaxValue - aMinValue) * SizeOf(SizeInt), 0);
+  if aRange <= COUNT_BUF_SIZE then
+    begin
+      pCounts := @CountBuf[0];
+      System.FillChar(pCounts^, aRange*SizeOf(SizeInt), 0);
+    end
+  else
+    begin
+      System.SetLength(Counts, aRange);
+      pCounts := Pointer(Counts);
+    end;
 
   for J := 0 to System.High(A) do
-    Inc(Counts[A[J] - aMinValue]);
+    Inc(pCounts[A[J] - aMinValue]);
   if o = soAsc then
     begin
-      J := High(A);
-      for I := aMaxValue - aMinValue downto 0 do
-        if Counts[I] > 0 then
+      J := System.High(A);
+      for I := Pred(aRange) downto 0 do
+        if pCounts[I] <> 0 then
           begin
             v := T(I) + aMinValue;
             repeat
               A[J] := v;
-              Dec(Counts[I]);
+              Dec(pCounts[I]);
               Dec(J);
-            until Counts[I] = 0;
+            until pCounts[I] = 0;
           end;
     end
   else
     begin
       J := 0;
-      for I := aMaxValue - aMinValue downto 0 do
-        if Counts[I] > 0 then
+      for I := Pred(aRange) downto 0 do
+        if pCounts[I] <> 0 then
           begin
             v := T(I) + aMinValue;
             repeat
               A[J] := v;
-              Dec(Counts[I]);
+              Dec(pCounts[I]);
               Inc(J);
-            until Counts[I] = 0;
+            until pCounts[I] = 0;
           end;
     end;
 end;
@@ -13870,37 +13881,61 @@ begin
       until I > R;
     end;
 end;
-{$PUSH}{$Q-}{$R-}
-class function TGOrdinalArrayHelper.AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean;
+
+class function TGOrdinalArrayHelper.SignedCountRange(aMin, aMax: T; aLen: SizeInt): SizeInt;
 var
-  Sum: Int64;
+  Range: Int64;
 begin
-  if CFItemSize > 4 then
-    aLen := aLen div 3 //todo: more tests needed
+  Result := 0;
+{$PUSH}{$Q+}{$R+}
+  try
+    Range := Succ(Int64(aMax) - Int64(aMin));
+  except
+    exit;
+  end;
+{$POP}
+  if Range < COUNT_BUF_SIZE then //todo: tweaks needed?
+    begin
+      if Range < aLen div 2 then
+        Result := SizeInt(Range);
+    end
   else
-    aLen := aLen div 6;
-  Sum := Int64(aMin) + aLen;
-  if Sum < Int64(aMin) then
-    Result := (Int64(aMax) - Int64(aMin)) < aLen
-  else
-    Result := Int64(aMax) <= Sum;
+{$IF SizeOf(T) > 4}
+    if Range < aLen div 3 then
+      Result := SizeInt(Range);
+{$ELSE }
+    if Range < aLen div 6 then
+      Result := SizeInt(Range);
+{$ENDIF}
 end;
 
-class function TGOrdinalArrayHelper.AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean;
+class function TGOrdinalArrayHelper.UnsignedCountRange(aMin, aMax: T; aLen: SizeInt): SizeInt;
 var
-  Sum: QWord;
+  Range: QWord;
 begin
-  if CFItemSize > 4 then
-    aLen := aLen div 3 //todo: more tests needed
-  else
-    aLen := aLen div 6;
-  Sum := QWord(aMin) + QWord(aLen);
-  if Sum < QWord(aMin) then
-    Result := QWord(aMax) - QWord(aMin) < aLen
-  else
-    Result := QWord(aMax) <= Sum;
-end;
+  Result := 0;
+{$PUSH}{$Q+}{$R+}
+  try
+    Range := Succ(QWord(aMax) - QWord(aMin));
+  except
+    exit;
+  end;
 {$POP}
+  if Range < QWord(COUNT_BUF_SIZE) then //todo: tweaks needed?
+    begin
+      if Range < QWord(aLen div 2) then
+        Result := SizeInt(Range);
+    end
+  else
+{$IF SizeOf(T) > 4}
+    if Range < QWord(aLen div 3) then
+      Result := SizeInt(Range);
+{$ELSE }
+    if Range < QWord(aLen div 6) then
+      Result := SizeInt(Range);
+{$ENDIF}
+end;
+
 class procedure TGOrdinalArrayHelper.FillOffsets(const A: array of T; out aOfs: TOffsets);
 var
   Curr: T;
@@ -14083,10 +14118,9 @@ begin
     CFSigned := False;
   end;
   if CFSigned then
-    CountSortAllow := @AllowCsSigned
+    GetCountRange := @SignedCountRange
   else
-    CountSortAllow := @AllowCsUnsigned;
-  CFItemSize := SizeOf(T);
+    GetCountRange := @UnsignedCountRange;
 end;
 
 class function TGOrdinalArrayHelper.CreateRange(aFirst, aLast: T): TArray;
@@ -14163,36 +14197,36 @@ end;
 
 class procedure TGOrdinalArrayHelper.Sort(var A: array of T; o: TSortOrder);
 var
-  R: SizeInt;
+  R, CountRange: SizeInt;
   vMin, vMax: T;
   Mono: TMonoKind;
   Buf: TArray = nil;
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if R <= RADIX_CUTOFF then
+    if R <= RADIX_CUTOFF then
+      if CountRun(A, 0, R, o) < R then
         begin
-          if CountRun(A, 0, R, o) < R then
-            begin
-              DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
-              if o = soDesc then
-                DoReverse(A, 0, R);
-            end;
-          exit;
-        end;
-      Mono := Scan(A, vMin, vMax);
-      if Mono < mkNone then
-        begin
-          if (Mono <> mkConst) and (Ord(Mono) <> Ord(o)) then
-            Reverse(A);
+          DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTROSORT_LOG_FACTOR);
+          if o = soDesc then
+            DoReverse(A, 0, R);
         end
       else
-        if CountSortAllow(vMin, vMax, Succ(R)) then
-          CountSort(A, vMin, vMax, o)
+    else
+      begin
+        Mono := Scan(A, vMin, vMax);
+        if Mono = mkNone then
+          begin
+            CountRange := GetCountRange(vMin, vMax, Succ(R));
+            if CountRange <> 0 then
+              CountSort(A, CountRange, vMin, o)
+            else
+              DoRadixSort(A, Buf, o);
+          end
         else
-          DoRadixSort(A, Buf, o);
-    end;
+          if (Mono <> mkConst) and (Ord(Mono) <> Ord(o)) then
+            Reverse(A);
+      end;
 end;
 
 class function TGOrdinalArrayHelper.Sorted(const A: array of T; o: TSortOrder): TArray;
