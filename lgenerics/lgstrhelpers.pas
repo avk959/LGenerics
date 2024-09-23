@@ -113,7 +113,7 @@ type
     end;
 
   const
-    WhiteSpaces     = [#0..' '];
+    WhiteSpaces     = [#9, #10, #11, #12, #13, ' '];
     AsciiDelimiters = [#0..#255] - ['a'..'z', 'A'..'Z', '0'..'9', '_'];
   { Join2 is similar to Join() from SysUtils, but does not raise exceptions,
     returning an empty string in such cases }
