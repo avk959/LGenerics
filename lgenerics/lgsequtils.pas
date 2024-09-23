@@ -255,7 +255,7 @@ type
     class function DumDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
     with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
-    inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5; }
+    inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
     class function LcsGus(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
     uses Kumar-Rangan algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
@@ -277,7 +277,22 @@ type
     TLcsAlgo = (laGus, laKr, laMyers);
 
     class function Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
+
+  type
+    TLscEditOp = (leoDelete, leoInsert);
+    TLcsEdit = record
+      Value: T;
+      Index: SizeInt;
+      Operation: TLscEditOp;
+      constructor Del(aIndex: SizeInt; const aValue: T);
+      constructor Ins(aIndex: SizeInt; const aValue: T);
+    end;
+    TLcsEditScript = array of TLcsEdit;
+
+  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget }
+    class function EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditScript; static;
   end;
+
 
   TUcs4Seq  = array of Ucs4Char;
   TUcs4Less = function(const L, R: array of Ucs4Char): Boolean;
@@ -373,11 +388,13 @@ type
     Algo: TSeqDistanceAlgo = sdaDefault;
     aLess: TUcs4Less = nil
   ): specialize TGArray<Double>;
+
 type
   TStringRatio = record
     Value: string;
     Ratio: Double;
   end;
+
 { returns an array of pairs sorted by descending similarity ratio and containing only those
   strings whose similarity ratio is not less than the specified boundary aLimit }
   function SelectSimilarUtf8(
@@ -390,6 +407,19 @@ type
     Algo: TSeqDistanceAlgo = sdaDefault;
     aLess: TUcs4Less = nil
   ): specialize TGArray<TStringRatio>;
+
+type
+  TBufHash32      = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
+  TBufHash64      = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
+  TStrHashOption  = (shoSkipWS, shoIgnoreCase);
+  TStrHashOptions = set of TStrHashOption;
+
+{ returns a 32-bit hash(using aHash) of the string s, skipping whitespace and converting
+  it to lower case if the appropriate options are specified in aOpts }
+  function Utf8StringHash(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions = []; aSeed: DWord = 0): DWord;
+{ returns a 64-bit hash(using aHash) of the string s, skipping whitespace and converting
+  it to lower case if the appropriate options are specified in aOpts }
+  function Utf8StringHash64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions = []; aSeed: QWord = 0): QWord;
 
 type
   { TFuzzySearchEdp: approximate string matching with K differences;
@@ -2636,12 +2666,12 @@ begin
       while not TEqRel.Equal(v, aSource[SrcIdx]) do
         begin
           Del[SrcIdx] := True;
-          Inc(SrcIdx)
+          Inc(SrcIdx);
         end;
       while not TEqRel.Equal(v, aTarget[TrgIdx]) do
         begin
           Ins[TrgIdx] := True;
-          Inc(TrgIdx)
+          Inc(TrgIdx);
         end;
       Inc(SrcIdx);
       Inc(TrgIdx);
@@ -2652,6 +2682,76 @@ begin
     Ins[I] := True;
   Result.SourceChanges := Del;
   Result.TargetChanges := Ins;
+end;
+
+
+{ TGSeqUtil.TLcsEdit }
+
+constructor TGSeqUtil.TLcsEdit.Del(aIndex: SizeInt; const aValue: T);
+begin
+  Value := aValue;
+  Index := aIndex;
+  Operation := leoDelete;
+end;
+
+constructor TGSeqUtil.TLcsEdit.Ins(aIndex: SizeInt; const aValue: T);
+begin
+  Value := aValue;
+  Index := aIndex;
+  Operation := leoInsert;
+end;
+
+class function TGSeqUtil.EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditScript;
+var
+  LEds: TLcsEditScript = nil;
+  ScriptIdx: SizeInt = 0;
+  procedure Edit(const e: TLcsEdit); inline;
+  begin
+    if ScriptIdx = System.Length(LEds) then
+      System.SetLength(LEds, ScriptIdx*2);
+    LEds[ScriptIdx] := e;
+    Inc(ScriptIdx);
+  end;
+var
+  Lcs: TArray;
+  I, SrcIdx, TrgIdx: SizeInt;
+  v: T;
+begin
+  case aLcsAlgo of
+    laGus: Lcs := LcsGus(aSource, aTarget);
+    laKr:  Lcs := LcsKr(aSource, aTarget);
+  else// laMyers
+    Lcs := LcsMyers(aSource, aTarget);
+  end;
+
+  System.SetLength(LEds, ARRAY_INITIAL_SIZE);
+  SrcIdx := 0;
+  TrgIdx := 0;
+  for I := 0 to System.High(Lcs) do begin
+    v := Lcs[I];
+    while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
+      Edit(TLcsEdit.Del(SrcIdx, aSource[SrcIdx]));
+      Inc(SrcIdx);
+    end;
+    while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
+      Edit(TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]));
+      Inc(TrgIdx);
+    end;
+    Inc(SrcIdx);
+    Inc(TrgIdx);
+  end;
+
+  while SrcIdx < System.Length(aSource) do begin
+    Edit(TLcsEdit.Del(SrcIdx, aSource[SrcIdx]));
+    Inc(SrcIdx);
+  end;
+  while TrgIdx < System.Length(aTarget) do begin
+    Edit(TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]));
+    Inc(TrgIdx);
+  end;
+
+  System.SetLength(LEds, ScriptIdx);
+  Result := LEds;
 end;
 
 type
@@ -4237,6 +4337,105 @@ begin
   System.SetLength(r, J);
   specialize TGNestedArrayHelper<TStringRatio>.Sort(r, @Less);
   Result := r;
+end;
+
+function FilterStringUtf8(const s: string; pBuf: PByte; aSkipWS, aIgnoreCase: Boolean): SizeInt;
+var
+  pv, pBufStart, pEnd: PByte;
+  Prop: PUC_Prop;
+  c, LoC: DWord;
+  I, PtSize: SizeInt;
+const
+  WS = [9, 10, 11, 12, 13, 32, 133, 160];
+begin
+  // here is implied (aSkipWS or aIgnoreCase) is True
+  pBufStart := pBuf;
+  pv := PByte(s);
+  pEnd := pv + System.Length(s);
+  PtSize := 0;
+  if aSkipWS then
+    while pv < pEnd do begin
+      c := CodePointToUcs4Char(pv, PtSize);
+      pv += PtSize;
+      Prop := nil;
+      if c <= $a0 then begin
+        if c in WS then continue;
+      end else
+        if c > $167f then begin
+          Prop := UnicodeData.GetProps(c);
+          if Prop^.WhiteSpace then continue;
+        end;
+      if aIgnoreCase then begin
+        if c <= UC_TBL_HIGH then
+          LoC := UC_CASE_TBL[c] and $ffff
+        else begin
+          if Prop = nil then
+            LoC := UnicodeData.GetProps(c)^.SimpleLowerCase
+          else
+            LoC := Prop^.SimpleLowerCase;
+          if LoC = 0 then
+            LoC := c;
+        end;
+        Ucs4Char2Utf8Buffer(pBuf, LoC);
+      end else
+        Ucs4Char2Utf8Buffer(pBuf, c);
+    end
+  else // aIgnoreCase is True
+    while pv < pEnd do begin
+      c := CodePointToUcs4Char(pv, PtSize);
+      if c <= UC_TBL_HIGH then
+        LoC := UC_CASE_TBL[c] and $ffff
+      else begin
+        LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
+        if LoC = 0 then
+          LoC := c;
+      end;
+      Ucs4Char2Utf8Buffer(pBuf, LoC);
+      pv += PtSize;
+    end;
+  Result := pBuf - pBufStart;
+end;
+
+function Utf8StringHash(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions; aSeed: DWord): DWord;
+var
+  StBuf: array[0..Pred(MAX_STATIC div SizeOf(DWord))] of DWord;
+  Buf: specialize TGDynArray<DWord>;
+  Len: SizeInt;
+  pBuf: PByte;
+begin
+  if (s = '') or (aOpts = []) then exit(aHash(Pointer(s), System.Length(s), aSeed));
+  Len := System.Length(s);
+  if shoIgnoreCase in aOpts then Len += Len;
+  if Len <= SizeOf(StBuf) then
+    pBuf := @StBuf[0]
+  else
+    begin
+      Buf.Length := (Len + Pred(SizeOf(DWord))) div SizeOf(DWord);
+      pBuf := Pointer(Buf.Ptr);
+    end;
+  Len := FilterStringUtf8(s, pBuf, shoSkipWS in aOpts, shoIgnoreCase in aOpts);
+  Result := aHash(pBuf, Len, aSeed);
+end;
+
+function Utf8StringHash64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions; aSeed: QWord): QWord;
+var
+  StBuf: array[0..Pred(MAX_STATIC div SizeOf(QWord))] of QWord;
+  Buf: specialize TGDynArray<QWord>;
+  Len: SizeInt;
+  pBuf: PByte;
+begin
+  if (s = '') or (aOpts = []) then exit(aHash(Pointer(s), System.Length(s), aSeed));
+  Len := System.Length(s);
+  if shoIgnoreCase in aOpts then Len += Len;
+  if Len <= SizeOf(StBuf) then
+    pBuf := @StBuf[0]
+  else
+    begin
+      Buf.Length := (Len + Pred(SizeOf(QWord))) div SizeOf(QWord);
+      pBuf := Pointer(Buf.Ptr);
+    end;
+  Len := FilterStringUtf8(s, pBuf, shoSkipWS in aOpts, shoIgnoreCase in aOpts);
+  Result := aHash(pBuf, Len, aSeed);
 end;
 
 { TFuzzySearchEdp.TEnumerator }
