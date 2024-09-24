@@ -8,7 +8,8 @@ uses
   LazUtf8, Classes, SysUtils, Math, fpcunit, testregistry,
   lgUtils,
   lgHashSet,
-  lgSeqUtils;
+  lgSeqUtils,
+  lgHash;
 
 type
 
@@ -49,6 +50,8 @@ type
     procedure SimRatioUtf8Test;
     procedure SimRatioExUtf8Test;
     procedure FuzzySearchEdp;
+    procedure Utf8StringHashTest;
+    procedure Utf8StringHash64Test;
 
     procedure Utf16ToUcs4;
     procedure SubSequenceUtf8;
@@ -1693,6 +1696,46 @@ begin
       Inc(J);
     end;
   AssertTrue(J = 2);
+end;
+
+procedure TTestUnicodeUtils.Utf8StringHashTest;
+var
+  s1, s2, s3, s4: string;
+  h: TBufHash32;
+begin
+  s1 := 'Привет, мир!';
+  s2 := 'Привет, Мир!';
+  s3 := 'Привет,'#$e2#$80#$84'мир!';
+  s4 := 'Привет,'#$e2#$80#$84'Мир!';
+  h := @TxxHash32LE.HashBuf;
+
+  AssertFalse(Utf8StringHash(s1, h) = Utf8StringHash(s2, h));
+  AssertFalse(Utf8StringHash(s1, h) = Utf8StringHash(s3, h));
+  AssertFalse(Utf8StringHash(s1, h) = Utf8StringHash(s4, h));
+
+  AssertTrue(Utf8StringHash(s1, h, [shoIgnoreCase]) = Utf8StringHash(s2, h, [shoIgnoreCase]));
+  AssertTrue(Utf8StringHash(s1, h, [shoSkipWS]) = Utf8StringHash(s3, h, [shoSkipWS]));
+  AssertTrue(Utf8StringHash(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8StringHash(s4, h, [shoSkipWS, shoIgnoreCase]));
+end;
+
+procedure TTestUnicodeUtils.Utf8StringHash64Test;
+var
+  s1, s2, s3, s4: string;
+  h: TBufHash64;
+begin
+  s1 := 'Привет, мир!';
+  s2 := 'Привет, Мир!';
+  s3 := 'Привет,'#$e2#$80#$84'мир!';
+  s4 := 'Привет,'#$e2#$80#$84'Мир!';
+  h := @TxxHash64LE.HashBuf;
+
+  AssertFalse(Utf8StringHash64(s1, h) = Utf8StringHash64(s2, h));
+  AssertFalse(Utf8StringHash64(s1, h) = Utf8StringHash64(s3, h));
+  AssertFalse(Utf8StringHash64(s1, h) = Utf8StringHash64(s4, h));
+
+  AssertTrue(Utf8StringHash64(s1, h, [shoIgnoreCase]) = Utf8StringHash64(s2, h, [shoIgnoreCase]));
+  AssertTrue(Utf8StringHash64(s1, h, [shoSkipWS]) = Utf8StringHash64(s3, h, [shoSkipWS]));
+  AssertTrue(Utf8StringHash64(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8StringHash64(s4, h, [shoSkipWS, shoIgnoreCase]));
 end;
 
 {$WARN 4104 OFF}
