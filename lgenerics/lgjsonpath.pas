@@ -142,12 +142,17 @@ uses
     is_array(Arg)
       Arg type must be a ValueType;
       result type is a LogicalType;
-        returns boolean True if Arg is array;
+        returns boolean True if Arg is an array;
 
     is_object(Arg)
       Arg type must be ValueType;
       result type is a LogicalType;
-        returns boolean True if Arg is array;
+        returns boolean True if Arg is an object;
+
+    is_struct(Arg)
+      Arg type must be ValueType;
+      result type is a LogicalType;
+        returns boolean True if Arg is an array or object;
 
     contains(Input, Pattern)
       Input type must be a ValueType;
@@ -5725,6 +5730,12 @@ begin
   aResult := (System.Length(aList) = 1) and (aList[0].InstType = jitValue) and
              (aList[0].Value.ValType = jvtNode) and aList[0].Value.NodeValue.IsObject;
 end;
+{ is_struct() }
+procedure CallIsStruct(const aList: TJpParamList; out aResult: TJpInstance);
+begin
+  aResult := (System.Length(aList) = 1) and (aList[0].InstType = jitValue) and
+             (aList[0].Value.ValType = jvtNode) and aList[0].Value.NodeValue.IsStruct;
+end;
 { contains() -- case sensitive }
 procedure CallContains(const aList: TJpParamList; out aResult: TJpInstance);
 var
@@ -5737,7 +5748,7 @@ end;
 procedure CallContainsText(const aList: TJpParamList; out aResult: TJpInstance);
 var
   InText, Pattern: string;
-begin  // todo: Utf8ToLower(InText) ???
+begin
   aResult :=
     (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
     (System.Pos(LgSeqUtils.Utf8ToLower(Pattern), LgSeqUtils.Utf8ToLower(InText)) > 0)
@@ -5966,6 +5977,7 @@ begin
   FunCache.Add('is_string',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsString));
   FunCache.Add('is_array',     TJpFunctionDef.Make([jitValue], jitLogical, @CallIsArray));
   FunCache.Add('is_object',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsObject));
+  FunCache.Add('is_struct',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsStruct));
   FunCache.Add('contains',     TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallContains));
   FunCache.Add('contains_text',TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallContainsText));
   FunCache.Add('same_text',    TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallSameText));
