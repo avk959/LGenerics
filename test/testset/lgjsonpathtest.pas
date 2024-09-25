@@ -97,6 +97,7 @@ type
     procedure TestIsString;
     procedure TestIsArray;
     procedure TestIsObject;
+    procedure TestIsStruct;
     procedure TestContains;
     procedure TestContainsText;
     procedure TestSameText;
@@ -802,6 +803,24 @@ const
     (Value: '[{"a":"b"},{"a":{}}]';    Query: '$[?@[?is_object(@)]]'; Expected: '[{"a":{}}]'),
     (Value: '[{},[[],12],[0,null]]';   Query: '$[?@[?is_object(@)]]'; Expected: '[]'),
     (Value: '[{},[{},"a"],[12,null]]'; Query: '$[?@[?is_object(@)]]'; Expected: '[[{},"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsStruct;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (Value: '[42, false, []]';         Query: '$[?is_struct(@)]';     Expected: '[[]]'),
+    (Value: '[{},42,true,"a"]';        Query: '$[?is_struct(@)]';     Expected: '[{}]'),
+    (Value: '[null, [{}], {"a":0}]';   Query: '$[?is_struct(@)]';     Expected: '[[{}],{"a":0}]'),
+    (Value: '[{"a":null},{"a":42}]';   Query: '$[?@[?is_struct(@)]]'; Expected: '[]'),
+    (Value: '[{"a":"b"},{"a":{}}]';    Query: '$[?@[?is_struct(@)]]'; Expected: '[{"a":{}}]'),
+    (Value: '[{},[[],12],[0,null]]';   Query: '$[?@[?is_struct(@)]]'; Expected: '[[[],12]]'),
+    (Value: '[{},[{},"a"],[12,null]]'; Query: '$[?@[?is_struct(@)]]'; Expected: '[[{},"a"]]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
