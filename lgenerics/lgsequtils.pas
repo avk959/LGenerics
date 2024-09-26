@@ -416,10 +416,10 @@ type
 
 { returns a 32-bit hash(using aHash) of the string s, skipping whitespace and converting
   it to lower case if the appropriate options are specified in aOpts }
-  function Utf8StringHash(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions = []; aSeed: DWord = 0): DWord;
+  function Utf8HashText(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions = []; aSeed: DWord = 0): DWord;
 { returns a 64-bit hash(using aHash) of the string s, skipping whitespace and converting
   it to lower case if the appropriate options are specified in aOpts }
-  function Utf8StringHash64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions = []; aSeed: QWord = 0): QWord;
+  function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions = []; aSeed: QWord = 0): QWord;
 
 type
   { TFuzzySearchEdp: approximate string matching with K differences;
@@ -4396,7 +4396,7 @@ begin
   Result := pBuf - pBufStart;
 end;
 
-function Utf8StringHash(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions; aSeed: DWord): DWord;
+function Utf8HashText(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions; aSeed: DWord): DWord;
 var
   StBuf: array[0..Pred(MAX_STATIC div SizeOf(DWord))] of DWord;
   Buf: specialize TGDynArray<DWord>;
@@ -4417,7 +4417,7 @@ begin
   Result := aHash(pBuf, Len, aSeed);
 end;
 
-function Utf8StringHash64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions; aSeed: QWord): QWord;
+function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions; aSeed: QWord): QWord;
 var
   StBuf: array[0..Pred(MAX_STATIC div SizeOf(QWord))] of QWord;
   Buf: specialize TGDynArray<QWord>;
