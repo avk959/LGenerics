@@ -409,17 +409,17 @@ type
   ): specialize TGArray<TStringRatio>;
 
 type
-  TBufHash32      = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
-  TBufHash64      = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
-  TStrHashOption  = (shoSkipWS, shoIgnoreCase);
-  TStrHashOptions = set of TStrHashOption;
+  TBufHash32         = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
+  TBufHash64         = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
+  TStrCompareOption  = (scoIgnoreWS, scoIgnoreCase);
+  TStrCompareOptions = set of TStrCompareOption;
 
 { returns a 32-bit hash(using aHash) of the string s, skipping whitespace and converting
   it to lower case if the appropriate options are specified in aOpts }
-  function Utf8HashText(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions = []; aSeed: DWord = 0): DWord;
+  function Utf8HashText(const s: string; aHash: TBufHash32; const aOpts: TStrCompareOptions = []; aSeed: DWord = 0): DWord;
 { returns a 64-bit hash(using aHash) of the string s, skipping whitespace and converting
   it to lower case if the appropriate options are specified in aOpts }
-  function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions = []; aSeed: QWord = 0): QWord;
+  function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrCompareOptions = []; aSeed: QWord = 0): QWord;
 
 type
   { TFuzzySearchEdp: approximate string matching with K differences;
@@ -4396,7 +4396,7 @@ begin
   Result := pBuf - pBufStart;
 end;
 
-function Utf8HashText(const s: string; aHash: TBufHash32; const aOpts: TStrHashOptions; aSeed: DWord): DWord;
+function Utf8HashText(const s: string; aHash: TBufHash32; const aOpts: TStrCompareOptions; aSeed: DWord): DWord;
 var
   StBuf: array[0..Pred(MAX_STATIC div SizeOf(DWord))] of DWord;
   Buf: specialize TGDynArray<DWord>;
@@ -4405,7 +4405,7 @@ var
 begin
   if (s = '') or (aOpts = []) then exit(aHash(Pointer(s), System.Length(s), aSeed));
   Len := System.Length(s);
-  if shoIgnoreCase in aOpts then Len += Len;
+  if scoIgnoreCase in aOpts then Len += Len;
   if Len <= SizeOf(StBuf) then
     pBuf := @StBuf[0]
   else
@@ -4413,11 +4413,11 @@ begin
       Buf.Length := (Len + Pred(SizeOf(DWord))) div SizeOf(DWord);
       pBuf := Pointer(Buf.Ptr);
     end;
-  Len := FilterStringUtf8(s, pBuf, shoSkipWS in aOpts, shoIgnoreCase in aOpts);
+  Len := FilterStringUtf8(s, pBuf, scoIgnoreWS in aOpts, scoIgnoreCase in aOpts);
   Result := aHash(pBuf, Len, aSeed);
 end;
 
-function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrHashOptions; aSeed: QWord): QWord;
+function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrCompareOptions; aSeed: QWord): QWord;
 var
   StBuf: array[0..Pred(MAX_STATIC div SizeOf(QWord))] of QWord;
   Buf: specialize TGDynArray<QWord>;
@@ -4426,7 +4426,7 @@ var
 begin
   if (s = '') or (aOpts = []) then exit(aHash(Pointer(s), System.Length(s), aSeed));
   Len := System.Length(s);
-  if shoIgnoreCase in aOpts then Len += Len;
+  if scoIgnoreCase in aOpts then Len += Len;
   if Len <= SizeOf(StBuf) then
     pBuf := @StBuf[0]
   else
@@ -4434,7 +4434,7 @@ begin
       Buf.Length := (Len + Pred(SizeOf(QWord))) div SizeOf(QWord);
       pBuf := Pointer(Buf.Ptr);
     end;
-  Len := FilterStringUtf8(s, pBuf, shoSkipWS in aOpts, shoIgnoreCase in aOpts);
+  Len := FilterStringUtf8(s, pBuf, scoIgnoreWS in aOpts, scoIgnoreCase in aOpts);
   Result := aHash(pBuf, Len, aSeed);
 end;
 

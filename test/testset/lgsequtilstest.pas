@@ -1713,9 +1713,9 @@ begin
   AssertFalse(Utf8HashText(s1, h) = Utf8HashText(s3, h));
   AssertFalse(Utf8HashText(s1, h) = Utf8HashText(s4, h));
 
-  AssertTrue(Utf8HashText(s1, h, [shoIgnoreCase]) = Utf8HashText(s2, h, [shoIgnoreCase]));
-  AssertTrue(Utf8HashText(s1, h, [shoSkipWS]) = Utf8HashText(s3, h, [shoSkipWS]));
-  AssertTrue(Utf8HashText(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8HashText(s4, h, [shoSkipWS, shoIgnoreCase]));
+  AssertTrue(Utf8HashText(s1, h, [scoIgnoreCase]) = Utf8HashText(s2, h, [scoIgnoreCase]));
+  AssertTrue(Utf8HashText(s1, h, [scoIgnoreWS]) = Utf8HashText(s3, h, [scoIgnoreWS]));
+  AssertTrue(Utf8HashText(s1, h, [scoIgnoreWS, scoIgnoreCase]) = Utf8HashText(s4, h, [scoIgnoreWS, scoIgnoreCase]));
 end;
 
 procedure TTestUnicodeUtils.Utf8HashText64Test;
@@ -1733,9 +1733,9 @@ begin
   AssertFalse(Utf8HashText64(s1, h) = Utf8HashText64(s3, h));
   AssertFalse(Utf8HashText64(s1, h) = Utf8HashText64(s4, h));
 
-  AssertTrue(Utf8HashText64(s1, h, [shoIgnoreCase]) = Utf8HashText64(s2, h, [shoIgnoreCase]));
-  AssertTrue(Utf8HashText64(s1, h, [shoSkipWS]) = Utf8HashText64(s3, h, [shoSkipWS]));
-  AssertTrue(Utf8HashText64(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8HashText64(s4, h, [shoSkipWS, shoIgnoreCase]));
+  AssertTrue(Utf8HashText64(s1, h, [scoIgnoreCase]) = Utf8HashText64(s2, h, [scoIgnoreCase]));
+  AssertTrue(Utf8HashText64(s1, h, [scoIgnoreWS]) = Utf8HashText64(s3, h, [scoIgnoreWS]));
+  AssertTrue(Utf8HashText64(s1, h, [scoIgnoreWS, scoIgnoreCase]) = Utf8HashText64(s4, h, [scoIgnoreWS, scoIgnoreCase]));
 end;
 
 {$WARN 4104 OFF}
