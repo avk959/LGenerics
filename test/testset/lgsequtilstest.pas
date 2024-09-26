@@ -50,8 +50,8 @@ type
     procedure SimRatioUtf8Test;
     procedure SimRatioExUtf8Test;
     procedure FuzzySearchEdp;
-    procedure Utf8StringHashTest;
-    procedure Utf8StringHash64Test;
+    procedure Utf8HashTextTest;
+    procedure Utf8HashText64Test;
 
     procedure Utf16ToUcs4;
     procedure SubSequenceUtf8;
@@ -1698,7 +1698,7 @@ begin
   AssertTrue(J = 2);
 end;
 
-procedure TTestUnicodeUtils.Utf8StringHashTest;
+procedure TTestUnicodeUtils.Utf8HashTextTest;
 var
   s1, s2, s3, s4: string;
   h: TBufHash32;
@@ -1709,16 +1709,16 @@ begin
   s4 := 'Привет,'#$e2#$80#$84'Мир!';
   h := @TxxHash32LE.HashBuf;
 
-  AssertFalse(Utf8StringHash(s1, h) = Utf8StringHash(s2, h));
-  AssertFalse(Utf8StringHash(s1, h) = Utf8StringHash(s3, h));
-  AssertFalse(Utf8StringHash(s1, h) = Utf8StringHash(s4, h));
+  AssertFalse(Utf8HashText(s1, h) = Utf8HashText(s2, h));
+  AssertFalse(Utf8HashText(s1, h) = Utf8HashText(s3, h));
+  AssertFalse(Utf8HashText(s1, h) = Utf8HashText(s4, h));
 
-  AssertTrue(Utf8StringHash(s1, h, [shoIgnoreCase]) = Utf8StringHash(s2, h, [shoIgnoreCase]));
-  AssertTrue(Utf8StringHash(s1, h, [shoSkipWS]) = Utf8StringHash(s3, h, [shoSkipWS]));
-  AssertTrue(Utf8StringHash(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8StringHash(s4, h, [shoSkipWS, shoIgnoreCase]));
+  AssertTrue(Utf8HashText(s1, h, [shoIgnoreCase]) = Utf8HashText(s2, h, [shoIgnoreCase]));
+  AssertTrue(Utf8HashText(s1, h, [shoSkipWS]) = Utf8HashText(s3, h, [shoSkipWS]));
+  AssertTrue(Utf8HashText(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8HashText(s4, h, [shoSkipWS, shoIgnoreCase]));
 end;
 
-procedure TTestUnicodeUtils.Utf8StringHash64Test;
+procedure TTestUnicodeUtils.Utf8HashText64Test;
 var
   s1, s2, s3, s4: string;
   h: TBufHash64;
@@ -1729,13 +1729,13 @@ begin
   s4 := 'Привет,'#$e2#$80#$84'Мир!';
   h := @TxxHash64LE.HashBuf;
 
-  AssertFalse(Utf8StringHash64(s1, h) = Utf8StringHash64(s2, h));
-  AssertFalse(Utf8StringHash64(s1, h) = Utf8StringHash64(s3, h));
-  AssertFalse(Utf8StringHash64(s1, h) = Utf8StringHash64(s4, h));
+  AssertFalse(Utf8HashText64(s1, h) = Utf8HashText64(s2, h));
+  AssertFalse(Utf8HashText64(s1, h) = Utf8HashText64(s3, h));
+  AssertFalse(Utf8HashText64(s1, h) = Utf8HashText64(s4, h));
 
-  AssertTrue(Utf8StringHash64(s1, h, [shoIgnoreCase]) = Utf8StringHash64(s2, h, [shoIgnoreCase]));
-  AssertTrue(Utf8StringHash64(s1, h, [shoSkipWS]) = Utf8StringHash64(s3, h, [shoSkipWS]));
-  AssertTrue(Utf8StringHash64(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8StringHash64(s4, h, [shoSkipWS, shoIgnoreCase]));
+  AssertTrue(Utf8HashText64(s1, h, [shoIgnoreCase]) = Utf8HashText64(s2, h, [shoIgnoreCase]));
+  AssertTrue(Utf8HashText64(s1, h, [shoSkipWS]) = Utf8HashText64(s3, h, [shoSkipWS]));
+  AssertTrue(Utf8HashText64(s1, h, [shoSkipWS, shoIgnoreCase]) = Utf8HashText64(s4, h, [shoSkipWS, shoIgnoreCase]));
 end;
 
 {$WARN 4104 OFF}
