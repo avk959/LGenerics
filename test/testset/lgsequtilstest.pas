@@ -52,6 +52,7 @@ type
     procedure FuzzySearchEdp;
     procedure Utf8HashTextTest;
     procedure Utf8HashText64Test;
+    procedure Utf8SameTextTest;
 
     procedure Utf16ToUcs4;
     procedure SubSequenceUtf8;
@@ -1736,6 +1737,28 @@ begin
   AssertTrue(Utf8HashText64(s1, h, [scoIgnoreCase]) = Utf8HashText64(s2, h, [scoIgnoreCase]));
   AssertTrue(Utf8HashText64(s1, h, [scoIgnoreWS]) = Utf8HashText64(s3, h, [scoIgnoreWS]));
   AssertTrue(Utf8HashText64(s1, h, [scoIgnoreWS, scoIgnoreCase]) = Utf8HashText64(s4, h, [scoIgnoreWS, scoIgnoreCase]));
+end;
+
+procedure TTestUnicodeUtils.Utf8SameTextTest;
+var
+  s1, s2, s3, s4: string;
+begin
+  AssertTrue(Utf8SameText('', '', [scoIgnoreWS, scoIgnoreCase]));
+  AssertFalse(Utf8SameText('', ' '));
+  AssertTrue(Utf8SameText('', ' ', [scoIgnoreWS]));
+
+  s1 := 'Привет, мир!';
+  s2 := 'Привет, Мир!';
+  s3 := 'Привет,'#$e2#$80#$84'мир!';
+  s4 := 'Привет,'#$e2#$80#$84'Мир!';
+
+  AssertFalse(Utf8SameText(s1, s2));
+  AssertFalse(Utf8SameText(s1, s3));
+  AssertFalse(Utf8SameText(s1, s4));
+
+  AssertTrue(Utf8SameText(s1, s2, [scoIgnoreCase]));
+  AssertTrue(Utf8SameText(s1, s3, [scoIgnoreWS]));
+  AssertTrue(Utf8SameText(s1, s4, [scoIgnoreWS, scoIgnoreCase]));
 end;
 
 {$WARN 4104 OFF}
