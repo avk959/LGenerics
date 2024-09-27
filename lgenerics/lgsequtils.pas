@@ -420,6 +420,9 @@ type
 { returns a 64-bit hash(using aHash) of the string s, skipping whitespace and converting
   it to lower case if the appropriate options are specified in aOpts }
   function Utf8HashText64(const s: string; aHash: TBufHash64; const aOpts: TStrCompareOptions = []; aSeed: QWord = 0): QWord;
+{ checks for equality of the L and R strings, skipping whitespace characters and
+  converting the text to lower case if the appropriate flags are included in aOpts }
+  function Utf8SameText(const L, R: string; const aOpts: TStrCompareOptions = []): Boolean;
 
 type
   { TFuzzySearchEdp: approximate string matching with K differences;
@@ -4339,7 +4342,7 @@ begin
   Result := r;
 end;
 
-function FilterStringUtf8(const s: string; pBuf: PByte; aSkipWS, aIgnoreCase: Boolean): SizeInt;
+function FilterStringUtf8(const s: string; pBuf: PByte; aIgnoreWS, aIgnoreCase: Boolean): SizeInt;
 var
   pv, pBufStart, pEnd: PByte;
   Prop: PUC_Prop;
@@ -4348,12 +4351,12 @@ var
 const
   WS = [9, 10, 11, 12, 13, 32, 133, 160];
 begin
-  // here is implied (aSkipWS or aIgnoreCase) is True
+  // here is implied (aIgnoreWS or aIgnoreCase) is True
   pBufStart := pBuf;
   pv := PByte(s);
   pEnd := pv + System.Length(s);
   PtSize := 0;
-  if aSkipWS then
+  if aIgnoreWS then
     while pv < pEnd do begin
       c := CodePointToUcs4Char(pv, PtSize);
       pv += PtSize;
@@ -4436,6 +4439,37 @@ begin
     end;
   Len := FilterStringUtf8(s, pBuf, scoIgnoreWS in aOpts, scoIgnoreCase in aOpts);
   Result := aHash(pBuf, Len, aSeed);
+end;
+
+function Utf8SameText(const L, R: string; const aOpts: TStrCompareOptions): Boolean;
+var
+  LBuf, RBuf: specialize TGDynArray<Byte>;
+  LenL, LenR: SizeInt;
+  IgnoreWS, IgnoreCase: Boolean;
+begin
+  if aOpts = [] then exit(L = R);
+  IgnoreWS := scoIgnoreWS in aOpts;
+  IgnoreCase := scoIgnoreCase in aOpts;
+  if IgnoreCase then
+    begin
+      LenL := System.Length(L)*2;
+      LenR := System.Length(R)*2;
+    end
+  else
+    begin
+      LenL := System.Length(L);
+      LenR := System.Length(R);
+    end;
+  LBuf.Length := LenL;
+  RBuf.Length := LenR;
+  LenL := FilterStringUtf8(L, LBuf.Ptr, IgnoreWS, IgnoreCase);
+  LenR := FilterStringUtf8(R, RBuf.Ptr, IgnoreWS, IgnoreCase);
+  if LenL <> LenR then
+    exit(False)
+  else
+    if LenL = 0 then
+      exit(True);
+  Result := CompareByte(LBuf.Ptr^, RBuf.Ptr^, LenL) = 0;
 end;
 
 { TFuzzySearchEdp.TEnumerator }
