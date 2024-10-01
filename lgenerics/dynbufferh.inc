@@ -103,7 +103,6 @@
     private
       FCurrent,
       FLast: PItem;
-      FItems: TArray;
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
@@ -114,7 +113,6 @@
     private
       FCurrent,
       FLast: PItem;
-      FItems: TArray;
     public
       function  MoveNext: Boolean; inline;
       property  Current: PItem read FCurrent;
@@ -131,7 +129,6 @@
     private
       FCurrent,
       FFirst: PItem;
-      FItems: TArray;
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;

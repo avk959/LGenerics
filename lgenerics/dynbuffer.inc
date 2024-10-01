@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -465,41 +465,35 @@ end;
 
 function TGLiteDynBuffer.GetEnumerator: TEnumerator;
 begin
-  if FCount > 0 then
-    begin
-      Result.FCurrent := PItem(FItems) - 1;
-      Result.FLast := PItem(FItems) + Pred(FCount);
-      Result.FItems := FItems;
-      exit;
-    end;
-  Result.FCurrent := nil;
-  Result.FLast := nil;
+  if FCount > 0 then begin
+    Result.FCurrent := PItem(FItems) - 1;
+    Result.FLast := PItem(FItems) + Pred(FCount);
+  end else begin
+    Result.FCurrent := nil;
+    Result.FLast := nil;
+  end;
 end;
 
 function TGLiteDynBuffer.GetMutableEnumerator: TMutableEnumerator;
 begin
-  if FCount > 0 then
-    begin
-      Result.FCurrent := PItem(FItems) - 1;
-      Result.FLast := PItem(FItems) + Pred(FCount);
-      Result.FItems := FItems;
-      exit;
-    end;
-  Result.FCurrent := nil;
-  Result.FLast := nil;
+  if FCount > 0 then begin
+    Result.FCurrent := PItem(FItems) - 1;
+    Result.FLast := PItem(FItems) + Pred(FCount);
+  end else begin
+    Result.FCurrent := nil;
+    Result.FLast := nil;
+  end;
 end;
 
 function TGLiteDynBuffer.GetReverseEnumerator: TReverseEnumerator;
 begin
-  if FCount > 0 then
-    begin
-      Result.FCurrent := PItem(FItems) + FCount;
-      Result.FFirst := PItem(FItems);
-      Result.FItems := FItems;
-      exit;
-    end;
-  Result.FCurrent := nil;
-  Result.FFirst := nil;
+  if FCount > 0 then begin
+    Result.FCurrent := PItem(FItems) + FCount;
+    Result.FFirst := PItem(FItems);
+  end else begin
+    Result.FCurrent := nil;
+    Result.FFirst := nil;
+  end;
 end;
 
 function TGLiteDynBuffer.Mutables: TMutables;
