@@ -64,7 +64,7 @@ type
     function  AddAll(e: IEnumerable): SizeInt;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed);
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     procedure Insert(aIndex: SizeInt; const aValue: T);
   { will return False if aIndex out of bounds or instance in iteration }
     function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
@@ -74,21 +74,26 @@ type
     function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
   { inserts all elements of e into position aIndex and returns count of inserted elements;
     will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed);
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     function  InsertAll(aIndex: SizeInt; e: IEnumerable): SizeInt;
   { extracts value from position aIndex;
     will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     function  Extract(aIndex: SizeInt): T; inline;
   { will return False if aIndex out of bounds or instance in iteration }
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
   { extracts aCount elements(if possible) starting from aIndex;
     will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray;
+  { extracts all elements satisfying the aTest predicate into the result array;
+    will raise ELGUpdateLock if instance in iteration }
+    function  ExtractIf(aTest: TTest): TArray;
+    function  ExtractIf(aTest: TOnTest): TArray;
+    function  ExtractIf(aTest: TNestTest): TArray;
   { deletes value in position aIndex;
     will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     procedure Delete(aIndex: SizeInt);
   { will return False if aIndex out of bounds or instance in iteration }
     function  TryDelete(aIndex: SizeInt): Boolean;
@@ -96,10 +101,15 @@ type
     function  DeleteLast(out aValue: T): Boolean; inline;
   { deletes aCount elements(if possible) starting from aIndex and returns those count;
     will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
+  { removes all items not satisfying the aTest predicate; returns the number of items removed;
+    will raise ELGUpdateLock if instance in iteration }
+    function  Filter(aTest: TTest): SizeInt; virtual;
+    function  Filter(aTest: TOnTest): SizeInt; virtual;
+    function  Filter(aTest: TNestTest): SizeInt; virtual;
   { will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGUpdateLock if instance in iteration }
     function  Split(aIndex: SizeInt): TGVector;
   { will return False if aIndex out of bounds or instance in iteration }
     function  TrySplit(aIndex: SizeInt; out aValue: TGVector): Boolean;
@@ -128,6 +138,11 @@ type
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
     constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
+  { removes all items not satisfying the aTest predicate; returns the number of items removed;
+    will raise ELGUpdateLock if instance in iteration }
+    function  Filter(aTest: TTest): SizeInt; override;
+    function  Filter(aTest: TOnTest): SizeInt; override;
+    function  Filter(aTest: TNestTest): SizeInt; override;
   { will raise EArgumentOutOfRangeException if aIndex out of bounds }
     function  Split(aIndex: SizeInt): TGObjectVector;
   { will return False if aIndex out of bounds }
@@ -216,12 +231,20 @@ type
   { extracts aCount elements(if possible) starting from aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
+  { extracts all elements satisfying the aTest predicate into the result array }
+    function  ExtractIf(aTest: specialize TGTest<T>): TArray;
+    function  ExtractIf(aTest: specialize TGOnTest<T>): TArray;
+    function  ExtractIf(aTest: specialize TGNestTest<T>): TArray;
     function  DeleteLast: Boolean; inline;
     function  DeleteLast(out aValue: T): Boolean; inline;
   { deletes aCount elements(if possible) starting from aIndex;
     returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt; inline;
+  { removes all items not satisfying the aTest predicate; returns the number of items removed }
+    function  Filter(aTest: specialize TGTest<T>): SizeInt;
+    function  Filter(aTest: specialize TGOnTest<T>): SizeInt;
+    function  Filter(aTest: specialize TGNestTest<T>): SizeInt;
   { swaps items with indices aIdx1 and aIdx2; will raise ELGListError if any index out of bounds }
     procedure Swap(aIdx1, aIdx2: SizeInt);
   { does not checks range }
@@ -311,6 +334,10 @@ type
   { extracts aCount elements(if possible) starting from aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
+  { extracts all elements satisfying the aTest predicate into the result array }
+    function  ExtractIf(aTest: specialize TGTest<T>): TArray;
+    function  ExtractIf(aTest: specialize TGOnTest<T>): TArray;
+    function  ExtractIf(aTest: specialize TGNestTest<T>): TArray;
   { deletes value in position aIndex; will raise ELGListError if aIndex out of bounds}
     procedure Delete(aIndex: SizeInt); inline;
   { will return False if aIndex out of bounds }
@@ -321,6 +348,10 @@ type
     returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
+  { removes all items not satisfying the aTest predicate; returns the number of items removed }
+    function  Filter(aTest: specialize TGTest<T>): SizeInt;
+    function  Filter(aTest: specialize TGOnTest<T>): SizeInt;
+    function  Filter(aTest: specialize TGNestTest<T>): SizeInt;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -1234,6 +1265,96 @@ begin
   Result := ExtractRange(aIndex, aCount);
 end;
 
+function TGVector.ExtractIf(aTest: TTest): TArray;
+var
+  ToExtract: TArray;
+  I, J, Len: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(nil);
+  J := 0;
+  Len := 0;
+  System.SetLength(ToExtract, ElemCount);
+  for I := 0 to Pred(ElemCount) do begin
+    if aTest(FItems[I]) then begin
+      ToExtract[Len] := (FItems[I]);
+      Inc(Len);
+      continue;
+    end;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  if ElemCount - J <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(ElemCount) do
+        FItems[I] := Default(T);
+    FCount := J;
+  end;
+  System.SetLength(ToExtract, Len);
+  Result := ToExtract;
+end;
+
+function TGVector.ExtractIf(aTest: TOnTest): TArray;
+var
+  ToExtract: TArray;
+  I, J, Len: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(nil);
+  J := 0;
+  Len := 0;
+  System.SetLength(ToExtract, ElemCount);
+  for I := 0 to Pred(ElemCount) do begin
+    if aTest(FItems[I]) then begin
+      ToExtract[Len] := (FItems[I]);
+      Inc(Len);
+      continue;
+    end;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  if ElemCount - J <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(ElemCount) do
+        FItems[I] := Default(T);
+    FCount := J;
+  end;
+  System.SetLength(ToExtract, Len);
+  Result := ToExtract;
+end;
+
+function TGVector.ExtractIf(aTest: TNestTest): TArray;
+var
+  ToExtract: TArray;
+  I, J, Len: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(nil);
+  J := 0;
+  Len := 0;
+  System.SetLength(ToExtract, ElemCount);
+  for I := 0 to Pred(ElemCount) do begin
+    if aTest(FItems[I]) then begin
+      ToExtract[Len] := (FItems[I]);
+      Inc(Len);
+      continue;
+    end;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  if ElemCount - J <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(ElemCount) do
+        FItems[I] := Default(T);
+    FCount := J;
+  end;
+  System.SetLength(ToExtract, Len);
+  Result := ToExtract;
+end;
+
 procedure TGVector.Delete(aIndex: SizeInt);
 begin
   CheckInIteration;
@@ -1273,6 +1394,72 @@ begin
   CheckInIteration;
   CheckIndexRange(aIndex);
   Result := DeleteRange(aIndex, aCount);
+end;
+
+function TGVector.Filter(aTest: TTest): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(0);
+  J := 0;
+  for I := 0 to Pred(ElemCount) do begin
+    if not aTest(FItems[I]) then continue;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  Result := ElemCount - J;
+  if Result <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(ElemCount) do
+        FItems[I] := Default(T);
+    FCount := J;
+  end;
+end;
+
+function TGVector.Filter(aTest: TOnTest): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(0);
+  J := 0;
+  for I := 0 to Pred(ElemCount) do begin
+    if not aTest(FItems[I]) then continue;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  Result := ElemCount - J;
+  if Result <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(ElemCount) do
+        FItems[I] := Default(T);
+    FCount := J;
+  end;
+end;
+
+function TGVector.Filter(aTest: TNestTest): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(0);
+  J := 0;
+  for I := 0 to Pred(ElemCount) do begin
+    if not aTest(FItems[I]) then continue;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  Result := ElemCount - J;
+  if Result <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(ElemCount) do
+        FItems[I] := Default(T);
+    FCount := J;
+  end;
 end;
 
 function TGVector.Split(aIndex: SizeInt): TGVector;
@@ -1388,6 +1575,66 @@ constructor TGObjectVector.Create(e: IEnumerable; aOwnsObjects: Boolean);
 begin
   inherited Create(e);
   FOwnsObjects := aOwnsObjects;
+end;
+
+function TGObjectVector.Filter(aTest: TTest): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(0);
+  J := 0;
+  for I := 0 to Pred(ElemCount) do begin
+    if not aTest(FItems[I]) then begin
+      if OwnsObjects then FItems[I].Free;
+      continue;
+    end;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  Result := ElemCount - J;
+  FCount := J;
+end;
+
+function TGObjectVector.Filter(aTest: TOnTest): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(0);
+  J := 0;
+  for I := 0 to Pred(ElemCount) do begin
+    if not aTest(FItems[I]) then begin
+      if OwnsObjects then FItems[I].Free;
+      continue;
+    end;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  Result := ElemCount - J;
+  FCount := J;
+end;
+
+function TGObjectVector.Filter(aTest: TNestTest): SizeInt;
+var
+  I, J: SizeInt;
+begin
+  CheckInIteration;
+  if ElemCount = 0 then exit(0);
+  J := 0;
+  for I := 0 to Pred(ElemCount) do begin
+    if not aTest(FItems[I]) then begin
+      if OwnsObjects then FItems[I].Free;
+      continue;
+    end;
+    if I <> J then
+      FItems[J] := FItems[I];
+    Inc(J);
+  end;
+  Result := ElemCount - J;
+  FCount := J;
 end;
 
 function TGObjectVector.Split(aIndex: SizeInt): TGObjectVector;
@@ -1748,6 +1995,99 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
+function TGLiteVector.ExtractIf(aTest: specialize TGTest<T>): TArray;
+var
+  ToExtract: TArray;
+  I, J, Len: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(nil);
+  J := 0;
+  Len := 0;
+  p := Pointer(FBuffer.FItems);
+  System.SetLength(ToExtract, Count);
+  for I := 0 to Pred(Count) do begin
+    if aTest(p[I]) then begin
+      ToExtract[Len] := p[I];
+      Inc(Len);
+      continue;
+    end;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  if Count - J <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(Count) do
+        p[I] := Default(T);
+    FBuffer.FCount := J;
+  end;
+  System.SetLength(ToExtract, Len);
+  Result := ToExtract;
+end;
+
+function TGLiteVector.ExtractIf(aTest: specialize TGOnTest<T>): TArray;
+var
+  ToExtract: TArray;
+  I, J, Len: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(nil);
+  J := 0;
+  Len := 0;
+  p := Pointer(FBuffer.FItems);
+  System.SetLength(ToExtract, Count);
+  for I := 0 to Pred(Count) do begin
+    if aTest(p[I]) then begin
+      ToExtract[Len] := p[I];
+      Inc(Len);
+      continue;
+    end;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  if Count - J <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(Count) do
+        p[I] := Default(T);
+    FBuffer.FCount := J;
+  end;
+  System.SetLength(ToExtract, Len);
+  Result := ToExtract;
+end;
+
+function TGLiteVector.ExtractIf(aTest: specialize TGNestTest<T>): TArray;
+var
+  ToExtract: TArray;
+  I, J, Len: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(nil);
+  J := 0;
+  Len := 0;
+  p := Pointer(FBuffer.FItems);
+  System.SetLength(ToExtract, Count);
+  for I := 0 to Pred(Count) do begin
+    if aTest(p[I]) then begin
+      ToExtract[Len] := p[I];
+      Inc(Len);
+      continue;
+    end;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  if Count - J <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(Count) do
+        p[I] := Default(T);
+    FBuffer.FCount := J;
+  end;
+  System.SetLength(ToExtract, Len);
+  Result := ToExtract;
+end;
+
 function TGLiteVector.DeleteLast: Boolean;
 begin
   if NonEmpty then
@@ -1774,6 +2114,75 @@ begin
     Result := DeleteRange(aIndex, aCount)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGLiteVector.Filter(aTest: specialize TGTest<T>): SizeInt;
+var
+  I, J: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(0);
+  J := 0;
+  p := Pointer(FBuffer.FItems);
+  for I := 0 to Pred(Count) do begin
+    if not aTest(p[I]) then continue;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  Result := Count - J;
+  if Result <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(Count) do
+        p[I] := Default(T);
+    FBuffer.FCount := J;
+  end;
+end;
+
+function TGLiteVector.Filter(aTest: specialize TGOnTest<T>): SizeInt;
+var
+  I, J: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(0);
+  J := 0;
+  p := Pointer(FBuffer.FItems);
+  for I := 0 to Pred(Count) do begin
+    if not aTest(p[I]) then continue;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  Result := Count - J;
+  if Result <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(Count) do
+        p[I] := Default(T);
+    FBuffer.FCount := J;
+  end;
+end;
+
+function TGLiteVector.Filter(aTest: specialize TGNestTest<T>): SizeInt;
+var
+  I, J: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(0);
+  J := 0;
+  p := Pointer(FBuffer.FItems);
+  for I := 0 to Pred(Count) do begin
+    if not aTest(p[I]) then continue;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  Result := Count - J;
+  if Result <> 0 then begin
+    if IsManagedType(T) then
+      for I := J to Pred(Count) do
+        p[I] := Default(T);
+    FBuffer.FCount := J;
+  end;
 end;
 
 procedure TGLiteVector.Swap(aIdx1, aIdx2: SizeInt);
@@ -2030,6 +2439,21 @@ begin
   Result := FVector.ExtractAll(aIndex, aCount);
 end;
 
+function TGLiteObjectVector.ExtractIf(aTest: specialize TGTest<T>): TArray;
+begin
+  Result := FVector.ExtractIf(aTest);
+end;
+
+function TGLiteObjectVector.ExtractIf(aTest: specialize TGOnTest<T>): TArray;
+begin
+  Result := FVector.ExtractIf(aTest);
+end;
+
+function TGLiteObjectVector.ExtractIf(aTest: specialize TGNestTest<T>): TArray;
+begin
+  Result := FVector.ExtractIf(aTest);
+end;
+
 procedure TGLiteObjectVector.Delete(aIndex: SizeInt);
 var
   v: T;
@@ -2076,6 +2500,69 @@ begin
     end
   else
     Result := FVector.DeleteAll(aIndex, aCount);
+end;
+
+function TGLiteObjectVector.Filter(aTest: specialize TGTest<T>): SizeInt;
+var
+  I, J: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(0);
+  J := 0;
+  p := Pointer(FVector.FBuffer.FItems);
+  for I := 0 to Pred(Count) do begin
+    if not aTest(p[I]) then begin
+      if OwnsObjects then p[I].Free;
+      continue;
+    end;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  Result := Count - J;
+  FVector.FBuffer.FCount := J;
+end;
+
+function TGLiteObjectVector.Filter(aTest: specialize TGOnTest<T>): SizeInt;
+var
+  I, J: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(0);
+  J := 0;
+  p := Pointer(FVector.FBuffer.FItems);
+  for I := 0 to Pred(Count) do begin
+    if not aTest(p[I]) then begin
+      if OwnsObjects then p[I].Free;
+      continue;
+    end;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  Result := Count - J;
+  FVector.FBuffer.FCount := J;
+end;
+
+function TGLiteObjectVector.Filter(aTest: specialize TGNestTest<T>): SizeInt;
+var
+  I, J: SizeInt;
+  p: PItem;
+begin
+  if IsEmpty then exit(0);
+  J := 0;
+  p := Pointer(FVector.FBuffer.FItems);
+  for I := 0 to Pred(Count) do begin
+    if not aTest(p[I]) then begin
+      if OwnsObjects then p[I].Free;
+      continue;
+    end;
+    if I <> J then
+      p[J] := p[I];
+    Inc(J);
+  end;
+  Result := Count - J;
+  FVector.FBuffer.FCount := J;
 end;
 
 { TGLiteThreadObjectVector }
