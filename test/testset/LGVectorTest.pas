@@ -57,6 +57,11 @@ type
       destructor Destroy; override;
     end;
 
+    TKeyObj = class(TTestObj)
+      Key: string;
+      constructor Create(const aKey: string; aProc: TObjProc);
+    end;
+
     TCounter = object
     private
       FCount: Integer;
@@ -70,10 +75,14 @@ type
     TObjVector     = specialize TGObjectVector<TTestObj>;
     TAutoObjVector = specialize TGAutoRef<TObjVector>;
     TObjArray      = specialize TGArray<TTestObj>;
+    TKeyVector     = specialize TGObjectVector<TKeyObj>;
+    TAutoKeyVector = specialize TGAutoRef<TKeyVector>;
 
   const
     IntArray21: array[1..21] of Integer =
       (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
+    function IsNumberStr(const s: string): Boolean;
+    function HasNumberKeyObj(const o: TGVectorTest.TKeyObj): Boolean;
   published
     procedure IsEmpty;
     procedure NonEmpty;
@@ -136,6 +145,9 @@ type
     procedure ExtractAll_3;
     procedure ExtractAll_4;
     procedure ExtractAllStr;
+    procedure ExtractIfRegular;
+    procedure ExtractIfDelegated;
+    procedure ExtractIfNested;
 
     procedure TryDeleteFromEmpty;
     procedure TryDeleteFail;
@@ -148,6 +160,9 @@ type
     procedure DeleteAll_1;
     procedure DeleteAll_2;
     procedure DeleteAllStr;
+    procedure FilterRegular;
+    procedure FilterDelegated;
+    procedure FilterNested;
 
     procedure SplitEmpty;
     procedure SplitInt;
@@ -161,6 +176,9 @@ type
     procedure InIteration;
     procedure IterationDone;
     procedure ObjectVector;
+    procedure ObjectFilterRegular;
+    procedure ObjectFilterDelegated;
+    procedure ObjectFilterNested;
 
     procedure OrdHelper;
     procedure RadixHelper;
@@ -187,14 +205,22 @@ type
       destructor Destroy; override;
     end;
 
-    TObjVector     = specialize TGLiteObjectVector<TTestObj>;
+    TKeyObj = class(TTestObj)
+      Key: Integer;
+      constructor Create(aKey: Integer; aProc: TProc);
+    end;
+
+    TObjVector = specialize TGLiteObjectVector<TTestObj>;
+    TKeyVector = specialize TGLiteObjectVector<TKeyObj>;
 
   const
     IntArray21: array[1..21] of Integer =
       (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
 
-    function  GetEnum(aCount: Integer): IIntEnum;
-    function  GetReverseEnum(aCount: Integer): IIntEnum;
+    function GetEnum(aCount: Integer): IIntEnum;
+    function GetReverseEnum(aCount: Integer): IIntEnum;
+    function IsNumberStr(const s: string): Boolean;
+    function HasEvenKey(const o: TKeyObj): Boolean;
   published
     procedure IsEmpty;
     procedure NonEmpty;
@@ -241,6 +267,9 @@ type
     procedure ExtractAll_1;
     procedure ExtractAll_2;
     procedure ExtractAllStr;
+    procedure ExtractIfRegular;
+    procedure ExtractIfDelegated;
+    procedure ExtractIfNested;
 
     procedure DeleteAllFromEmpty;
     procedure DeleteAllOutOfBounds;
@@ -249,6 +278,9 @@ type
     procedure DeleteAll_1;
     procedure DeleteAll_2;
     procedure DeleteAllStr;
+    procedure FilterRegular;
+    procedure FilterDelegated;
+    procedure FilterNested;
     procedure Swap;
     procedure Swap1;
 
@@ -260,6 +292,9 @@ type
     procedure CallByValue;
 
     procedure ObjectVector;
+    procedure ObjectFilterRegular;
+    procedure ObjectFilterDelegated;
+    procedure ObjectFilterNested;
 
     procedure OrdHelper;
     procedure RadixHelper;
@@ -369,6 +404,14 @@ begin
   inherited;
 end;
 
+{ TGVectorTest.TKeyObj }
+
+constructor TGVectorTest.TKeyObj.Create(const aKey: string; aProc: TObjProc);
+begin
+  inherited Create(aProc);
+  Key := aKey;
+end;
+
 { TGVectorTest.TCounter }
 
 procedure TGVectorTest.TCounter.IncCount;
@@ -379,6 +422,20 @@ end;
 function TGVectorTest.TCounter.GetIncrement: TObjProc;
 begin
   Result := @IncCount;
+end;
+
+function TGVectorTest.IsNumberStr(const s: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := TryStrToInt(s, I);
+end;
+
+function TGVectorTest.HasNumberKeyObj(const o: TGVectorTest.TKeyObj): Boolean;
+var
+  I: Integer;
+begin
+  Result := TryStrToInt(o.Key, I);
 end;
 
 procedure TGVectorTest.IsEmpty;
@@ -1053,6 +1110,91 @@ begin
     AssertTrue(e[I] = 'string ' + I.ToString);
 end;
 
+function StrIsNumber(const s: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := TryStrToInt(s, I);
+end;
+
+procedure TGVectorTest.ExtractIfRegular;
+var
+  v: TAutoStrVector;
+  e: TStrArray;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Instance.ExtractIf(@StrIsNumber) = nil);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add('str' + I.ToString)
+    else
+      v.Instance.Add(I.ToString);
+  e := v.Instance.ExtractIf(@StrIsNumber);
+  AssertTrue(Length(e) = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for s in e do
+    AssertTrue(StrIsNumber(s));
+  for s in v.Instance do
+    AssertFalse(StrIsNumber(s));
+end;
+
+procedure TGVectorTest.ExtractIfDelegated;
+var
+  v: TAutoStrVector;
+  e: TStrArray;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Instance.ExtractIf(@IsNumberStr) = nil);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add('str' + I.ToString)
+    else
+      v.Instance.Add(I.ToString);
+  e := v.Instance.ExtractIf(@IsNumberStr);
+  AssertTrue(Length(e) = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for s in e do
+    AssertTrue(IsNumberStr(s));
+  for s in v.Instance do
+    AssertFalse(IsNumberStr(s));
+end;
+
+procedure TGVectorTest.ExtractIfNested;
+  function StrIsNumber(const s: string): Boolean;
+  var
+    I: Integer;
+  begin
+    Result := TryStrToInt(s, I);
+  end;
+var
+  v: TAutoStrVector;
+  e: TStrArray;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Instance.ExtractIf(@StrIsNumber) = nil);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add('str' + I.ToString)
+    else
+      v.Instance.Add(I.ToString);
+  e := v.Instance.ExtractIf(@StrIsNumber);
+  AssertTrue(Length(e) = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for s in e do
+    AssertTrue(StrIsNumber(s));
+  for s in v.Instance do
+    AssertFalse(StrIsNumber(s));
+end;
+
 procedure TGVectorTest.TryDeleteFromEmpty;
 var
   v: TAutoIntVector;
@@ -1185,6 +1327,75 @@ begin
   AssertTrue(v.Instance.Count = 2);
   AssertTrue(v{%H-}.Instance[0] = 'string 0');
   AssertTrue(v{%H-}.Instance[1] = 'string 15');
+end;
+
+procedure TGVectorTest.FilterRegular;
+var
+  v: TAutoStrVector;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Instance.Filter(@StrIsNumber) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add('str' + I.ToString)
+    else
+      v.Instance.Add(I.ToString);
+  I := v.Instance.Filter(@StrIsNumber);
+  AssertTrue(I = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for s in v.Instance do
+    AssertTrue(StrIsNumber(s));
+end;
+
+procedure TGVectorTest.FilterDelegated;
+var
+  v: TAutoStrVector;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Instance.Filter(@IsNumberStr) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add('str' + I.ToString)
+    else
+      v.Instance.Add(I.ToString);
+  I := v.Instance.Filter(@IsNumberStr);
+  AssertTrue(I = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for s in v.Instance do
+    AssertTrue(StrIsNumber(s));
+end;
+
+procedure TGVectorTest.FilterNested;
+  function StrIsNumber(const s: string): Boolean;
+  var
+    I: Integer;
+  begin
+    Result := TryStrToInt(s, I);
+  end;
+var
+  v: TAutoStrVector;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Instance.Filter(@StrIsNumber) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add('str' + I.ToString)
+    else
+      v.Instance.Add(I.ToString);
+  I := v.Instance.Filter(@StrIsNumber);
+  AssertTrue(I = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for s in v.Instance do
+    AssertTrue(StrIsNumber(s));
 end;
 
 procedure TGVectorTest.SplitEmpty;
@@ -1389,6 +1600,94 @@ begin
   AssertTrue(Counter.Count = 110);
 end;
 
+function ObjHasNumberKey(const o: TGVectorTest.TKeyObj): Boolean;
+var
+  I: Integer;
+begin
+  Result := TryStrToInt(o.Key, I);
+end;
+
+procedure TGVectorTest.ObjectFilterRegular;
+var
+  Counter: TCounter;
+  v: TAutoKeyVector;
+  I: Integer;
+  o: TKeyObj;
+const
+  TEST_SIZE = 16;
+begin
+  Counter := Default(TCounter);
+  AssertTrue(v.Instance.Filter(@ObjHasNumberKey) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add(TKeyObj.Create('str' + I.ToString, Counter.Increment))
+    else
+      v.Instance.Add(TKeyObj.Create(I.ToString, Counter.Increment));
+  AssertTrue(v.Instance.Filter(@ObjHasNumberKey) = TEST_SIZE div 2);
+  AssertTrue(Counter.Count = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for o in v.Instance do
+    AssertTrue(ObjHasNumberKey(o));
+  v.Instance := nil;
+  AssertTrue(Counter.Count = TEST_SIZE);
+end;
+
+procedure TGVectorTest.ObjectFilterDelegated;
+var
+  Counter: TCounter;
+  v: TAutoKeyVector;
+  I: Integer;
+  o: TKeyObj;
+const
+  TEST_SIZE = 16;
+begin
+  Counter := Default(TCounter);
+  AssertTrue(v.Instance.Filter(@HasNumberKeyObj) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add(TKeyObj.Create('str' + I.ToString, Counter.Increment))
+    else
+      v.Instance.Add(TKeyObj.Create(I.ToString, Counter.Increment));
+  AssertTrue(v.Instance.Filter(@HasNumberKeyObj) = TEST_SIZE div 2);
+  AssertTrue(Counter.Count = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for o in v.Instance do
+    AssertTrue(HasNumberKeyObj(o));
+  v.Instance := nil;
+  AssertTrue(Counter.Count = TEST_SIZE);
+end;
+
+procedure TGVectorTest.ObjectFilterNested;
+  function ObjHasNumberKey(const o: TKeyObj): Boolean;
+  var
+    I: Integer;
+  begin
+    Result := TryStrToInt(o.Key, I);
+  end;
+var
+  Counter: TCounter;
+  v: TAutoKeyVector;
+  I: Integer;
+  o: TKeyObj;
+const
+  TEST_SIZE = 16;
+begin
+  Counter := Default(TCounter);
+  AssertTrue(v.Instance.Filter(@ObjHasNumberKey) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Instance.Add(TKeyObj.Create('str' + I.ToString, Counter.Increment))
+    else
+      v.Instance.Add(TKeyObj.Create(I.ToString, Counter.Increment));
+  AssertTrue(v.Instance.Filter(@ObjHasNumberKey) = TEST_SIZE div 2);
+  AssertTrue(Counter.Count = TEST_SIZE div 2);
+  AssertTrue(v.Instance.Count = TEST_SIZE div 2);
+  for o in v.Instance do
+    AssertTrue(ObjHasNumberKey(o));
+  v.Instance := nil;
+  AssertTrue(Counter.Count = TEST_SIZE);
+end;
+
 procedure TGVectorTest.OrdHelper;
 type
   TOrdHelper = specialize TGOrdVectorHelper<Integer>;
@@ -1442,6 +1741,14 @@ begin
   inherited;
 end;
 
+{ TGLiteVectorTest.TKeyObj }
+
+constructor TGLiteVectorTest.TKeyObj.Create(aKey: Integer; aProc: TProc);
+begin
+  inherited Create(aProc);
+  Key := aKey;
+end;
+
 { TGLiteVectorTest }
 
 function TGLiteVectorTest.GetEnum(aCount: Integer): IIntEnum;
@@ -1463,6 +1770,18 @@ begin
     v.Add(I);
   Result :=
     specialize TGWrapEnumerable<Integer, TIntVector.TReverseEnumerator>.Construct(v.GetReverseEnumerator);
+end;
+
+function TGLiteVectorTest.IsNumberStr(const s: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := TryStrToInt(s, I);
+end;
+
+function TGLiteVectorTest.HasEvenKey(const o: TKeyObj): Boolean;
+begin
+  Result := not Odd(o.Key);
 end;
 
 procedure TGLiteVectorTest.IsEmpty;
@@ -1974,6 +2293,84 @@ begin
     AssertTrue(a[I] = 'string ' + I.ToString);
 end;
 
+procedure TGLiteVectorTest.ExtractIfRegular;
+var
+  v: TStrVector;
+  e: TStrArray;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.ExtractIf(@StrIsNumber) = nil);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Add('str' + I.ToString)
+    else
+      v.Add(I.ToString);
+  e := v.ExtractIf(@StrIsNumber);
+  AssertTrue(Length(e) = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for s in e do
+    AssertTrue(StrIsNumber(s));
+  for s in v do
+    AssertFalse(StrIsNumber(s));
+end;
+
+procedure TGLiteVectorTest.ExtractIfDelegated;
+var
+  v: TStrVector;
+  e: TStrArray;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.ExtractIf(@IsNumberStr) = nil);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Add('str' + I.ToString)
+    else
+      v.Add(I.ToString);
+  e := v.ExtractIf(@IsNumberStr);
+  AssertTrue(Length(e) = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for s in e do
+    AssertTrue(IsNumberStr(s));
+  for s in v do
+    AssertFalse(IsNumberStr(s));
+end;
+
+procedure TGLiteVectorTest.ExtractIfNested;
+  function StrIsNumber(const s: string): Boolean;
+  var
+    I: Integer;
+  begin
+    Result := TryStrToInt(s, I);
+  end;
+var
+  v: TStrVector;
+  e: TStrArray;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.ExtractIf(@StrIsNumber) = nil);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Add('str' + I.ToString)
+    else
+      v.Add(I.ToString);
+  e := v.ExtractIf(@StrIsNumber);
+  AssertTrue(Length(e) = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for s in e do
+    AssertTrue(StrIsNumber(s));
+  for s in v do
+    AssertFalse(StrIsNumber(s));
+end;
+
 procedure TGLiteVectorTest.DeleteAllFromEmpty;
 var
   v: TIntVector;
@@ -2067,6 +2464,75 @@ begin
   I := v.DeleteAll(2, 33);
   AssertTrue(v.Count = 2);
   AssertTrue(I = 30);
+end;
+
+procedure TGLiteVectorTest.FilterRegular;
+var
+  v: TStrVector;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Filter(@StrIsNumber) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Add('str' + I.ToString)
+    else
+      v.Add(I.ToString);
+  I := v.Filter(@StrIsNumber);
+  AssertTrue(I = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for s in v do
+    AssertTrue(StrIsNumber(s));
+end;
+
+procedure TGLiteVectorTest.FilterDelegated;
+var
+  v: TStrVector;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Filter(@IsNumberStr) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Add('str' + I.ToString)
+    else
+      v.Add(I.ToString);
+  I := v.Filter(@IsNumberStr);
+  AssertTrue(I = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for s in v do
+    AssertTrue(IsNumberStr(s));
+end;
+
+procedure TGLiteVectorTest.FilterNested;
+  function StrIsNumber(const s: string): Boolean;
+  var
+    I: Integer;
+  begin
+    Result := TryStrToInt(s, I);
+  end;
+var
+  v: TStrVector;
+  I: Integer;
+  s: string;
+const
+  TEST_SIZE = 16;
+begin
+  AssertTrue(v.Filter(@StrIsNumber) = 0);
+  for I := 1 to TEST_SIZE do
+    if Odd(I) then
+      v.Add('str' + I.ToString)
+    else
+      v.Add(I.ToString);
+  I := v.Filter(@StrIsNumber);
+  AssertTrue(I = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for s in v do
+    AssertTrue(StrIsNumber(s));
 end;
 
 procedure TGLiteVectorTest.Swap;
@@ -2253,6 +2719,99 @@ begin
   AssertTrue(Counter = 60);
   v := Default(TObjVector);
   AssertTrue(Counter = 100);
+end;
+
+function ObjHasEvenKey(const o: TGLiteVectorTest.TKeyObj): Boolean;
+begin
+  Result := not Odd(o.Key);
+end;
+
+procedure TGLiteVectorTest.ObjectFilterRegular;
+var
+  Counter: Integer;
+  procedure IncCount;
+  begin
+    Inc(Counter);
+  end;
+var
+  v: TKeyVector;
+  I: Integer;
+  o: TKeyObj;
+const
+  TEST_SIZE = 16;
+begin
+  Counter := 0;
+  AssertTrue(v.Filter(@ObjHasEvenKey) = 0);
+  AssertTrue(Counter = 0);
+  for I := 1 to TEST_SIZE do
+    v.Add(TKeyObj.Create(I, @IncCount));
+  AssertTrue(v.Filter(@ObjHasEvenKey) = TEST_SIZE div 2);
+  AssertTrue(Counter = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for o in v do
+    AssertTrue(ObjHasEvenKey(o));
+  v.Clear;
+  AssertTrue(Counter = TEST_SIZE);
+end;
+
+procedure TGLiteVectorTest.ObjectFilterDelegated;
+var
+  Counter: Integer;
+  procedure IncCount;
+  begin
+    Inc(Counter);
+  end;
+var
+  v: TKeyVector;
+  I: Integer;
+  o: TKeyObj;
+const
+  TEST_SIZE = 16;
+begin
+  Counter := 0;
+  AssertTrue(v.Filter(@HasEvenKey) = 0);
+  AssertTrue(Counter = 0);
+  for I := 1 to TEST_SIZE do
+    v.Add(TKeyObj.Create(I, @IncCount));
+  AssertTrue(v.Filter(@HasEvenKey) = TEST_SIZE div 2);
+  AssertTrue(Counter = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for o in v do
+    AssertTrue(HasEvenKey(o));
+  v.Clear;
+  AssertTrue(Counter = TEST_SIZE);
+end;
+
+procedure TGLiteVectorTest.ObjectFilterNested;
+var
+  Counter: Integer;
+  procedure IncCount;
+  begin
+    Inc(Counter);
+  end;
+  function ObjHasEvenKey(const o: TKeyObj): Boolean;
+  begin
+    Result := not Odd(o.Key);
+  end;
+var
+  v: TKeyVector;
+  I: Integer;
+  o: TKeyObj;
+const
+  TEST_SIZE = 16;
+begin
+  Counter := 0;
+  AssertTrue(v.Filter(@ObjHasEvenKey) = 0);
+  AssertTrue(Counter = 0);
+  for I := 1 to TEST_SIZE do
+    v.Add(TKeyObj.Create(I, @IncCount));
+  AssertTrue(v.Filter(@ObjHasEvenKey) = TEST_SIZE div 2);
+  AssertTrue(Counter = TEST_SIZE div 2);
+  AssertTrue(v.Count = TEST_SIZE div 2);
+  for o in v do
+    AssertTrue(ObjHasEvenKey(o));
+  v.Clear;
+  AssertTrue(Counter = TEST_SIZE);
 end;
 
 procedure TGLiteVectorTest.OrdHelper;
