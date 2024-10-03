@@ -4106,9 +4106,10 @@ begin
   Visited.Capacity := VertexCount;
   Visited.UncBits[aSrc] := True;
   Result[aSrc] := 0;
+  Curr := NULL_INDEX;
   Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+    if AdjEnums[Curr].MoveNext then
       begin
         p := AdjEnums[Curr].Current;
         Next := p^.Key;
@@ -4137,10 +4138,11 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   aTree := CreateIntArray;
+  Curr := NULL_INDEX;
   Result[aSrc] := 0;
-  {%H-}Stack.Push(aSrc);
+  Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+    if AdjEnums[Curr].MoveNext then
       begin
         p := AdjEnums[Curr].Current;
         Next := p^.Key;
