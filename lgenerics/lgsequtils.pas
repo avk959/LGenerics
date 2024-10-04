@@ -169,6 +169,7 @@ type
     end;
     TMultiSetType = specialize TGLiteChainHashMultiSet<T, TEqRel>;
     TMultiSet     = TMultiSetType.TMultiSet;
+    TDynIntArray = specialize TGDynArray<SizeInt>;
 
   const
     MAX_STATIC = 512;
@@ -197,8 +198,10 @@ type
     class function  LevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  GetLevDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function  LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function  GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  LcsDistWmImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  LcsDistWmLimImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  GetLcsDistWm(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  GetLcsDistWmLim(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  DumDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  DumDistMbrDyn(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  GetDumDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
@@ -238,14 +241,13 @@ type
     if this value is exceeded when calculating the distance, then the function exits
     immediately and returns -1; if aLimit < 0 it will be computed dynamically }
     class function LevDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
-  { the LCS edit distance allows only two operations: insertion and deletion; uses slightly
-    modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
-    from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
-    class function LcsDistanceMyers(const L, R: array of T): SizeInt; static;
+  { the LCS edit distance allows only insertions and deletions; based on
+    "An O(NP) Sequence Comparison Algorithm" by Sun Wu, Udi Manber, Gene Myers and Webb Miller }
+    class function LcsDistanceWM(const L, R: array of T): SizeInt; static;
   { the same as above; the aLimit parameter indicates the maximum expected distance,
     if this value is exceeded when calculating the distance, then the function exits
     immediately and returns -1; aLimit < 0 means it is unknown }
-    class function LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
+    class function LcsDistanceWM(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the Damerau-Levenshtein distance(restricted) between L and R using
     modified Berghel-Roach algorithm }
     class function DumDistanceMBR(const L, R: array of T): SizeInt; static;
@@ -258,14 +260,10 @@ type
     inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
     class function LcsGus(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-    uses Kumar-Rangan algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
-    m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed:
-    S. Kiran Kumar and C. Pandu Rangan(1987) "A Linear Space Algorithm for the LCS Problem" }
+    uses Kumar-Rangan algorithm for LCS with O(NP) time complexity and linear space complexity }
     class function LcsKR(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-    uses Myers algorithm for LCS with space complexity O(m+n) and time complexity O((m+n)*d), where
-    n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
-    for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
+    uses O(ND) algorithm from "An O(ND) Difference Algorithm and Its Variations" by Gene Myers }
     class function LcsMyers(const L, R: array of T): TArray; static;
   { returns similarity ratio using specified distance algorithm;
     aLimit specifies the lower bound of the required similarity(0<aLimit<=1.0),
@@ -309,9 +307,9 @@ type
 { returns the Levenshtein distance using Myers bit-vector algorithm }
   function LevDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
-{ returns the LCS distance using Myers O(ND) algorithm }
-  function LcsDistanceMyersUtf16(const L, R: unicodestring): SizeInt; inline;
-  function LcsDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+{ returns the LCS distance using Wu-Manber-Myers-Miller O(NP) algorithm }
+  function LcsDistanceWmUtf16(const L, R: unicodestring): SizeInt; inline;
+  function LcsDistanceWmUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
 { returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
   function DumDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
   function DumDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
@@ -354,9 +352,9 @@ type
 { returns the Levenshtein distance using Myers bit-vector algorithm }
   function LevDistanceMyersUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
-{ returns the LCS distance using Myers O(ND) algorithm }
-  function LcsDistanceMyersUtf8(const L, R: string): SizeInt; inline;
-  function LcsDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+{ returns the LCS distance using Wu-Manber-Myers-Miller O(NP) algorithm }
+  function LcsDistanceWmUtf8(const L, R: string): SizeInt; inline;
+  function LcsDistanceWmUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
 { returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
   function DumDistanceMbrUtf8(const L, R: string): SizeInt; inline;
   function DumDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
@@ -1318,7 +1316,6 @@ var
     ForV, RevV: PSizeInt;
     OddDelta: Boolean;
   begin
-    aSnake := Default(TSnake);
     LenL := Succ(LLast - LFirst);
     LenR := Succ(RLast - RFirst);
     Delta := LenL - LenR;
@@ -1339,18 +1336,14 @@ var
               Row := ForV[K - 1] + 1;
             Col := Row - K;
             aSnake.SetStartCell(LFirst + Row, RFirst + Col);
-            while (Row < LenL) and (Col < LenR) and TEqRel.Equal(pL[LFirst + Row], pR[RFirst + Col]) do
-              begin
-                Inc(Row);
-                Inc(Col);
-              end;
+            while (Row < LenL) and (Col < LenR) and TEqRel.Equal(pL[LFirst + Row], pR[RFirst + Col]) do begin
+              Inc(Row); Inc(Col);
+            end;
             ForV[K] := Row;
-            if OddDelta and (K >= Delta - D + 1) and (K <= Delta + D - 1) and
-               (Row + RevV[Delta - K] >= LenL) then
-              begin
-                aSnake.SetEndCell(LFirst + Row, RFirst + Col);
-                exit(Pred(D * 2));
-              end;
+            if OddDelta and (K >= Delta-D+1)and(K <= Delta+D-1)and(Row + RevV[Delta-K] >= LenL)then begin
+              aSnake.SetEndCell(LFirst + Row, RFirst + Col);
+              exit(Pred(D * 2));
+            end;
             K += 2;
           end;
 
@@ -1363,18 +1356,14 @@ var
               Row := RevV[K - 1] + 1;
             Col := Row - K;
             aSnake.SetEndCell(Succ(LLast - Row), Succ(RLast - Col));
-            while (Row < LenL) and (Col < LenR) and TEqRel.Equal(pL[LLast-Row], pR[RLast-Col]) do
-              begin
-                Inc(Row);
-                Inc(Col);
-              end;
+            while (Row < LenL) and (Col < LenR) and TEqRel.Equal(pL[LLast-Row], pR[RLast-Col]) do begin
+              Inc(Row); Inc(Col);
+            end;
             RevV[K] := Row;
-            if not OddDelta and (K <= D + Delta) and (K >= Delta - D) and
-              (Row + ForV[Delta - K] >= LenL) then
-              begin
-                aSnake.SetStartCell(Succ(LLast - Row), Succ(RLast - Col));
-                exit(D * 2);
-              end;
+            if not OddDelta and(K <= Delta+D)and(K >= Delta-D)and(Row + ForV[Delta-K] >= LenL) then begin
+              aSnake.SetStartCell(Succ(LLast - Row), Succ(RLast - Col));
+              exit(D * 2);
+            end;
             K += 2;
           end;
       end;
@@ -1420,7 +1409,7 @@ begin
     begin
       System.SetLength(Result, PrefixLen + SuffixLen);
       THelper.CopyItems(pL - PrefixLen, Pointer(Result), PrefixLen);
-      THelper.CopyItems(pL + aLenL, @Result[PrefixLen], SuffixLen);
+      THelper.CopyItems(pL, @Result[PrefixLen], SuffixLen);
       exit;
     end;
 
@@ -1505,7 +1494,7 @@ class function TGSeqUtil.LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: Siz
   begin
     if aDist = 0 then I := 0
     else I := MaxOf3(aLeft, aAbove + 1, aRight + 1);
-    MaxRow := Min(aLenL - k, aLenR);
+    MaxRow := Math.Min(aLenL - k, aLenR);
     while (I < MaxRow) and TEqRel.Equal(pR[I], pL[I + k]) do
       Inc(I);
     FindRow := I;
@@ -2134,51 +2123,98 @@ begin
   end;
 end;
 
-class function TGSeqUtil.LcsDistMyersImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.LcsDistWmImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
 var
-  I, J, D, K, HiK: SizeInt;
-  V: PSizeInt;
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
-  Buf: array of SizeInt = nil;
+  Buf: TDynIntArray;
+  P, K, X, Y, Delta: SizeInt;
+  Fp: PSizeInt;
 begin
-  if aLenL + aLenR < Pred(MAX_STATIC) then
-    begin
-      System.FillChar(StBuf, (aLenL + aLenR + 2) * SizeOf(SizeInt), 0);
-      V := @StBuf[Succ(aLenL)];
-    end
-  else
-    begin
-      System.SetLength(Buf, aLenL + aLenR + 2);
-      V := @Buf[Succ(aLenL)];
+  if aLenL + aLenR < MAX_STATIC - 2 then
+    Fp := @StBuf[0]
+  else begin
+    Buf.Length := aLenL + aLenR + 3;
+    Fp := Buf.Ptr;
+  end;
+  System.FillChar(Fp^, (aLenL + aLenR + 3) * SizeOf(SizeInt), $ff);
+  Fp += Succ(aLenL);
+  Delta := aLenR - aLenL;
+  for P := 0 to aLenL do begin
+    for K := -P to Delta - 1 do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and TEqRel.Equal(pL[X], pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
     end;
-
-  for D := 0 to aLenL + aLenR do
-    begin
-      K := -(D - 2 * Math.Max(0, D - aLenL));
-      HiK := D - 2 * Math.Max(0, D - aLenR);
-      while K <= HiK do
-        begin
-          if (K = -D) or ((K <> D) and (V[K - 1] < V[K + 1])) then
-            J := V[K + 1]
-          else
-            J := V[K - 1] + 1;
-          I := J - K;
-          while (J < aLenR) and (I < aLenL) and TEqRel.Equal(pL[I], pR[J]) do
-            begin
-              Inc(J);
-              Inc(I);
-            end;
-          if (I = aLenL) and (J = aLenR) then exit(D);
-          V[K] := J;
-          K += 2;
-        end;
-      if D = aLimit then break;
+    for K := P + Delta downto Delta do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and TEqRel.Equal(pL[X], pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
     end;
+    if Fp[Delta] = aLenR then exit(P + P + Delta);
+  end;
+  Result := aLenL + aLenR;
+end;
 
+class function TGSeqUtil.LcsDistWmLimImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+var
+  StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
+  Buf: TDynIntArray;
+  P, K, X, Y, Delta: SizeInt;
+  Fp: PSizeInt;
+begin
+  if aLimit < MAX_STATIC - 2 then
+    Fp := @StBuf[0]
+  else begin
+    Buf.Length := aLimit + 3;
+    Fp := Buf.Ptr;
+  end;
+  System.FillChar(Fp^, (aLimit + 3) * SizeOf(SizeInt), $ff);
+  Delta := aLenR - aLenL;
+  aLimit := (aLimit - Delta) div 2;
+  Fp += Succ(aLimit);
+  for P := 0 to aLimit do begin
+    for K := -P to Delta - 1 do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and TEqRel.Equal(pL[X], pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
+    end;
+    for K := P + Delta downto Delta do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and TEqRel.Equal(pL[X], pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
+    end;
+    if Fp[Delta] = aLenR then exit(P + P + Delta);
+  end;
   Result := NULL_INDEX;
 end;
 
-class function TGSeqUtil.GetLcsDistMyers(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.GetLcsDistWm(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+  Result := LcsDistWmImpl(pL, pR, aLenL, aLenR);
+end;
+
+class function TGSeqUtil.GetLcsDistWmLim(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 begin
   //here aLenL <= aLenR
   if aLimit < 0 then
@@ -2202,7 +2238,7 @@ begin
   if aLimit > aLenL + aLenR then
     aLimit := aLenL + aLenR;
 
-  Result := LcsDistMyersImpl(pL, pR, aLenL, aLenR, aLimit);
+  Result := LcsDistWmLimImpl(pL, pR, aLenL, aLenR, aLimit);
 end;
 
 class function TGSeqUtil.DumDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
@@ -2216,7 +2252,7 @@ class function TGSeqUtil.DumDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: Siz
         aLeft,
         aAbove+Ord(TEqRel.Equal(pR[aAbove+1],pL[aAbove+k])and TEqRel.Equal(pR[aAbove],pL[aAbove+k+1]))+1,
         aRight+1);
-    MaxRow := Min(aLenL - k, aLenR);
+    MaxRow := Math.Min(aLenL - k, aLenR);
     while (I < MaxRow) and TEqRel.Equal(pR[I], pL[I + k]) do
       Inc(I);
     FindRow := I;
@@ -2529,7 +2565,7 @@ begin
     Result := GetLevDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
-class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T): SizeInt;
+class function TGSeqUtil.LcsDistanceWM(const L, R: array of T): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -2537,18 +2573,18 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := GetLcsDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(L) + System.Length(R))
+    Result := GetLcsDistWm(@L[0], @R[0], System.Length(L), System.Length(R))
   else
-    Result := GetLcsDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L) + System.Length(R));
+    Result := GetLcsDistWm(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
-class function TGSeqUtil.LcsDistanceMyers(const L, R: array of T; aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.LcsDistanceWM(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
   if IsTrivialDist(L, R, aLimit, Result) then exit;
   if System.Length(L) <= System.Length(R) then
-    Result := GetLcsDistMyers(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := GetLcsDistWmLim(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := GetLcsDistMyers(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := GetLcsDistWmLim(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 class function TGSeqUtil.DumDistanceMBR(const L, R: array of T): SizeInt;
@@ -2609,7 +2645,7 @@ var
 begin
   if (System.Length(L) = 0) and (System.Length(R) = 0) then exit(Double(1.0));
   if aLimit > 1 then aLimit := Double(1);
-  if Algo = sdaLcsMyers then
+  if Algo = sdaLcsWM then
     Len := System.Length(L) + System.Length(R)
   else
     Len := Math.Max(System.Length(L), System.Length(R));
@@ -2619,7 +2655,7 @@ begin
       sdaDefault,
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+      sdaLcsWM:    Dist := LcsDistanceWM(L, R);
       sdaDumMBR:   Dist := DumDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
@@ -2636,7 +2672,7 @@ begin
         Dist := LevDistanceMyers(L, R, Limit);
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
-    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+    sdaLcsWM:    Dist := LcsDistanceWM(L, R, Limit);
     sdaDumMBR:   Dist := DumDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
@@ -2706,18 +2742,8 @@ end;
 
 class function TGSeqUtil.EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditScript;
 var
-  LEds: TLcsEditScript = nil;
-  ScriptIdx: SizeInt = 0;
-  procedure Edit(const e: TLcsEdit); inline;
-  begin
-    if ScriptIdx = System.Length(LEds) then
-      System.SetLength(LEds, ScriptIdx*2);
-    LEds[ScriptIdx] := e;
-    Inc(ScriptIdx);
-  end;
-var
   Lcs: TArray;
-  I, SrcIdx, TrgIdx: SizeInt;
+  I, SrcIdx, TrgIdx, ScriptIdx: SizeInt;
   v: T;
 begin
   case aLcsAlgo of
@@ -2727,17 +2753,20 @@ begin
     Lcs := LcsMyers(aSource, aTarget);
   end;
 
-  System.SetLength(LEds, ARRAY_INITIAL_SIZE);
+  System.SetLength(Result, System.Length(aSource) + System.Length(aTarget) - System.Length(Lcs)*2);
+  ScriptIdx := 0;
   SrcIdx := 0;
   TrgIdx := 0;
   for I := 0 to System.High(Lcs) do begin
     v := Lcs[I];
     while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
-      Edit(TLcsEdit.Del(SrcIdx, aSource[SrcIdx]));
+      Result[ScriptIdx] := TLcsEdit.Del(SrcIdx, aSource[SrcIdx]);
+      Inc(ScriptIdx);
       Inc(SrcIdx);
     end;
     while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
-      Edit(TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]));
+      Result[ScriptIdx] := TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]);
+      Inc(ScriptIdx);
       Inc(TrgIdx);
     end;
     Inc(SrcIdx);
@@ -2745,16 +2774,15 @@ begin
   end;
 
   while SrcIdx < System.Length(aSource) do begin
-    Edit(TLcsEdit.Del(SrcIdx, aSource[SrcIdx]));
+    Result[ScriptIdx] := TLcsEdit.Del(SrcIdx, aSource[SrcIdx]);
+    Inc(ScriptIdx);
     Inc(SrcIdx);
   end;
   while TrgIdx < System.Length(aTarget) do begin
-    Edit(TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]));
+    Result[ScriptIdx] := TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]);
+    Inc(ScriptIdx);
     Inc(TrgIdx);
   end;
-
-  System.SetLength(LEds, ScriptIdx);
-  Result := LEds;
 end;
 
 type
@@ -2910,8 +2938,8 @@ end;
 
 type
   TDistFunInternSpec = (
-    dfisDyn, dfisMbr, dfisMyers, dfisMyersLcs, dfisMbrDum, dfisMbrBound, dfisMyersBound,
-    dfisMyersLcsBound, dfisMbrDumBound);
+    dfisDyn, dfisMbr, dfisMyers, dfisWmLcs, dfisMbrDum, dfisMbrBound, dfisMyersBound,
+    dfisWmLcsBound, dfisMbrDumBound);
 
 function GenericDistanceUtf16(const L, R: unicodestring; aLimit: SizeInt; aSpec: TDistFunInternSpec): SizeInt;
 var
@@ -2944,14 +2972,14 @@ begin
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    dfisDyn:           Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMbr:           Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMyers:         Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMyersLcs:      Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMbrDum:        Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMbrBound:      Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
-    dfisMyersBound:    Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
-    dfisMyersLcsBound: Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfisDyn:        Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisMbr:        Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisMyers:      Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisWmLcs:      Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisMbrDum:     Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisMbrBound:   Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfisMyersBound: Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfisWmLcsBound: Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
     //dfisMbrDumBound
     Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
@@ -2983,14 +3011,14 @@ begin
   Result := GenericDistanceUtf16(L, R, aLimit, dfisMyersBound);
 end;
 
-function LcsDistanceMyersUtf16(const L, R: unicodestring): SizeInt;
+function LcsDistanceWmUtf16(const L, R: unicodestring): SizeInt;
 begin
-  Result := GenericDistanceUtf16(L, R, -1, dfisMyersLcs);
+  Result := GenericDistanceUtf16(L, R, -1, dfisWmLcs);
 end;
 
-function LcsDistanceMyersUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
+function LcsDistanceWmUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
 begin
-  Result := GenericDistanceUtf16(L, R, aLimit, dfisMyersLcsBound);
+  Result := GenericDistanceUtf16(L, R, aLimit, dfisWmLcsBound);
 end;
 
 function DumDistanceMbrUtf16(const L, R: unicodestring): SizeInt;
@@ -3948,11 +3976,11 @@ begin
     dfisDyn:           Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbr:           Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMyers:         Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMyersLcs:      Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisWmLcs:      Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbrDum:        Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbrBound:      Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfisMyersBound:    Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
-    dfisMyersLcsBound: Result := TUcs4Util.LcsDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfisWmLcsBound: Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
     //dfisMbrDumBound
     Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
@@ -3984,14 +4012,14 @@ begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfisMyersBound);
 end;
 
-function LcsDistanceMyersUtf8(const L, R: string): SizeInt;
+function LcsDistanceWmUtf8(const L, R: string): SizeInt;
 begin
-  Result := GenericDistanceUtf8(L, R, -1, dfisMyersLcs);
+  Result := GenericDistanceUtf8(L, R, -1, dfisWmLcs);
 end;
 
-function LcsDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
+function LcsDistanceWmUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
-  Result := GenericDistanceUtf8(L, R, aLimit, dfisMyersLcsBound);
+  Result := GenericDistanceUtf8(L, R, aLimit, dfisWmLcsBound);
 end;
 
 function DumDistanceMbrUtf8(const L, R: string): SizeInt;
@@ -4347,7 +4375,7 @@ var
   pv, pBufStart, pEnd: PByte;
   Prop: PUC_Prop;
   c, LoC: DWord;
-  I, PtSize: SizeInt;
+  PtSize: SizeInt;
 const
   WS = [9, 10, 11, 12, 13, 32, 133, 160];
 begin

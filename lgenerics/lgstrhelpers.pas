@@ -563,14 +563,11 @@ type
   function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Kumar-Rangan algorithm for LCS with space complexity O(n) and time complexity O(n(m-p)), where
-  m = Min(length(L), length(R)), n = Max(length(L), length(R)), and p is the length of the LCS computed }
+  uses Kumar-Rangan algorithm for LCS with O(NP) time complexity and linear space complexity }
   function LcsKR(const L, R: rawbytestring): rawbytestring;
   function LcsKR(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Myers algorithm for LCS with space complexity O(m+n) and time complexity O((m+n)*d), where
-  n and m are the lengths of L and R respectively, and d is the size of the minimum edit script
-  for L and R (d = m + n - 2*p, where p is the lenght of the LCS) }
+  uses O(ND) algorithm from "An O(ND) Difference Algorithm and Its Variations" by Gene Myers }
   function LcsMyers(const L, R: rawbytestring): rawbytestring;
   function LcsMyers(const L, R: array of Byte): TBytes;
 { returns the Levenshtein distance between L and R; used a simple dynamic programming
@@ -600,16 +597,15 @@ type
   immediately and returns -1; if aLimit < 0 it will be computed dynamically }
   function LevDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LevDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
-{ the LCS edit distance allows only two operations: insertion and deletion; uses slightly
-  modified Myers algorithm with O((|L|+|R|)D) time complexity and linear space complexity
-  from Eugene W. Myers(1986), "An O(ND) Difference Algorithm and Its Variations" }
-  function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
-  function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
+{ the LCS edit distance allows only insertions and deletions; based on
+  "An O(NP) Sequence Comparison Algorithm" by Sun Wu, Udi Manber, Gene Myers and Webb Miller }
+  function LcsDistanceWM(const L, R: rawbytestring): SizeInt;
+  function LcsDistanceWM(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1; aLimit < 0 means it is unknown }
-  function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
-  function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+  function LcsDistanceWM(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+  function LcsDistanceWM(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Damerau-Levenshtein distance(restricted) between L and R using modified Berghel-Roach algorithm }
   function DumDistanceMbr(const L, R: rawbytestring): SizeInt;
   function DumDistanceMbr(const L, R: array of Byte): SizeInt;
@@ -717,7 +713,7 @@ begin
 end;
 
 const
-  MAX_STATIC = 1024;
+  MAX_STATIC = 512;
 
 {$PUSH}{$WARN 5057 OFF}
 function LcsGusImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
@@ -1138,7 +1134,7 @@ var
                 Inc(Col);
               end;
             RevV[K] := Row;
-            if not OddDelta and (K <= D + Delta) and (K >= Delta - D) and
+            if not OddDelta and (K <= Delta + D) and (K >= Delta - D) and
               (Row + ForV[Delta - K] >= LenL) then
               begin
                 aSnake.SetStartCell(Succ(LLast - Row), Succ(RLast - Col));
@@ -1328,7 +1324,7 @@ function LevDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeI
       I := 0
     else
       I := MaxOf3(aLeft, aAbove + 1, aRight + 1);
-    MaxRow := Min(aLenL - k, aLenR);
+    MaxRow := Math.Min(aLenL - k, aLenR);
     while (I < MaxRow) and (pR[I] = pL[I + k]) do
       Inc(I);
     FindRow := I;
@@ -2150,177 +2146,208 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-function LcsDistMyersImpl(pL, pR: PByte; M{lenL}, N{lenR}: SizeInt): SizeInt;
+function LcsDistWmImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 var
-  I, J, D, K, HiK: SizeInt;
-  V: PSizeInt;
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
-  Buf: array of SizeInt = nil;
+  Buf: specialize TGDynArray<SizeInt>;
+  P, K, X, Y, Delta: SizeInt;
+  Fp: PSizeInt;
 begin
-
-  if M + N < Pred(MAX_STATIC) then
-    begin
-      System.FillChar(StBuf, (M + N + 2) * SizeOf(SizeInt), 0);
-      V := @StBuf[Succ(M)];
-    end
-  else
-    begin
-      System.SetLength(Buf, M + N + 2);
-      V := @Buf[Succ(M)];
+  if aLenL + aLenR < MAX_STATIC - 2 then
+    Fp := @StBuf[0]
+  else begin
+    Buf.Length := aLenL + aLenR + 3;
+    Fp := Buf.Ptr;
+  end;
+  System.FillChar(Fp^, (aLenL + aLenR + 3) * SizeOf(SizeInt), $ff);
+  Fp += Succ(aLenL);
+  Delta := aLenR - aLenL;
+  for P := 0 to aLenL do begin
+    for K := -P to Delta - 1 do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and (pL[X] = pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
     end;
-
-  for D := 0 to M + N do
-    begin
-      K := -(D - 2 * Math.Max(0, D - M));
-      HiK := D - 2 * Math.Max(0, D - N);
-      while K <= HiK do
-        begin
-          if (K = -D) or ((K <> D) and (V[K - 1] < V[K + 1])) then
-            J := V[K + 1]
-          else
-            J := V[K - 1] + 1;
-          I := J - K;
-          while (J < N) and (I < M) and (pL[I] = pR[J]) do
-            begin
-              Inc(J);
-              Inc(I);
-            end;
-          if (I = M) and (J = N) then exit(D);
-          V[K] := J;
-          K += 2;
-        end;
+    for K := P + Delta downto Delta do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and (pL[X] = pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
     end;
-
-  Result := NULL_INDEX; //we should never come here
+    if Fp[Delta] = aLenR then exit(P + P + Delta);
+  end;
+  Result := aLenL + aLenR;
 end;
 {$POP}
 
-function LcsDistanceMyers(const L, R: rawbytestring): SizeInt;
-var
-  pL: PByte absolute L;
-  pR: PByte absolute R;
-  M, N: SizeInt;
+function GetLcsDistWm(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
 begin
-  M := System.Length(L);
-  N := System.Length(R);
-  if M = 0 then
-    exit(N)
-  else
-    if N = 0 then
-      exit(M);
-  Result := LcsDistMyersImpl(pL, pR, M, N);
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+  Result := LcsDistWmImpl(pL, pR, aLenL, aLenR);
 end;
 
-function LcsDistanceMyers(const L, R: array of Byte): SizeInt;
-var
-  M, N: SizeInt;
+function LcsDistanceWM(const L, R: rawbytestring): SizeInt;
 begin
-  M := System.Length(L);
-  N := System.Length(R);
-  if M = 0 then
-    exit(N)
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
   else
-    if N = 0 then
-      exit(M);
-  Result := LcsDistMyersImpl(@L[0], @R[0], M, N);
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsDistWm(PByte(L), PByte(R), System.Length(L), System.Length(R))
+  else
+    Result := GetLcsDistWm(PByte(R), PByte(L), System.Length(R), System.Length(L));
+end;
+
+function LcsDistanceWM(const L, R: array of Byte): SizeInt;
+begin
+  if System.Length(L) = 0 then
+    exit(System.Length(R))
+  else
+    if System.Length(R) = 0 then
+      exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsDistWm(@L[0], @R[0], System.Length(L), System.Length(R))
+  else
+    Result := GetLcsDistWm(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-function LcsDistMyersImplLim(pL, pR: PByte; M{lenL}, N{lenR}, aLimit: SizeInt): SizeInt;
+function LcsDistWmLimImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 var
-  I, J, D, K, HiK: SizeInt;
-  V: PSizeInt;
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
-  Buf: array of SizeInt = nil;
+  Buf: specialize TGDynArray<SizeInt>;
+  P, K, X, Y, Delta: SizeInt;
+  Fp: PSizeInt;
 begin
-
-  if M + N < Pred(MAX_STATIC) then
-    begin
-      System.FillChar(StBuf, (M + N + 2) * SizeOf(SizeInt), 0);
-      V := @StBuf[Succ(M)];
-    end
-  else
-    begin
-      System.SetLength(Buf, M + N + 2);
-      V := @Buf[Succ(M)];
+  if aLimit < MAX_STATIC - 2 then
+    Fp := @StBuf[0]
+  else begin
+    Buf.Length := aLimit + 3;
+    Fp := Buf.Ptr;
+  end;
+  System.FillChar(Fp^, (aLimit + 3) * SizeOf(SizeInt), $ff);
+  Delta := aLenR - aLenL;
+  aLimit := (aLimit - Delta) div 2;
+  Fp += Succ(aLimit);
+  for P := 0 to aLimit do begin
+    for K := -P to Delta - 1 do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and (pL[X] = pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
     end;
-
-  for D := 0 to M + N do
-    begin
-      K := -(D - 2 * Math.Max(0, D - M));
-      HiK := D - 2 * Math.Max(0, D - N);
-      while K <= HiK do
-        begin
-          if (K = -D) or ((K <> D) and (V[K - 1] < V[K + 1])) then
-            J := V[K + 1]
-          else
-            J := V[K - 1] + 1;
-          I := J - K;
-          while (J < N) and (I < M) and (pL[I] = pR[J]) do
-            begin
-              Inc(J);
-              Inc(I);
-            end;
-          if (I = M) and (J = N) then exit(D);
-          V[K] := J;
-          K += 2;
-        end;
-      if D = aLimit then break;
+    for K := P + Delta downto Delta do begin
+      Y := Math.Max(Fp[K - 1] + 1, Fp[K + 1]);
+      X := Y - K;
+      while (X < aLenL) and (Y < aLenR) and (pL[X] = pR[Y]) do begin
+        Inc(X); Inc(Y);
+      end;
+      Fp[K] := Y;
     end;
-
+    if Fp[Delta] = aLenR then exit(P + P + Delta);
+  end;
   Result := NULL_INDEX;
 end;
 {$POP}
 
-function LcsDistanceMyers(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
-var
-  pL: PByte absolute L;
-  pR: PByte absolute R;
-  M, N: SizeInt;
+function GetLcsDistWmLim(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+begin
+  //here aLenL <= aLenR
+  if aLimit < 0 then
+    aLimit := aLenL + aLenR;
+
+  if aLenR - aLenL > aLimit then
+    exit(NULL_INDEX);
+
+  if pL = pR then
+    exit(aLenR - aLenL);
+
+  SkipSuffix(pL, pR, aLenL, aLenR);
+  SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then
+    exit(aLenR);
+
+  if aLimit = 0 then
+    exit(NULL_INDEX);
+
+  if aLimit > aLenL + aLenR then
+    aLimit := aLenL + aLenR;
+
+  Result := LcsDistWmLimImpl(pL, pR, aLenL, aLenR, aLimit);
+end;
+
+function LcsDistanceWM(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
 begin
   if aLimit < 0 then
     aLimit := System.Length(L) + System.Length(R)
   else
     if aLimit = 0 then
       begin
-        if L = R then exit(0);
+        if L = R then
+          exit(0);
         exit(NULL_INDEX);
       end;
-  M := System.Length(L);
-  N := System.Length(R);
-  if M = 0 then
-    if N > aLimit then
+  if System.Length(L) = 0 then
+    if System.Length(R) > aLimit then
       exit(NULL_INDEX)
     else
-      exit(N)
+      exit(System.Length(R))
   else
-    if N = 0 then
-      if M > aLimit then
+    if System.Length(R) = 0 then
+      if System.Length(L) > aLimit then
         exit(NULL_INDEX)
       else
-        exit(M);
-  Result := LcsDistMyersImplLim(pL, pR, M, N, aLimit);
+        exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsDistWmLim(PByte(L), PByte(R), System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetLcsDistWmLim(PByte(R), PByte(L), System.Length(R), System.Length(L), aLimit);
 end;
 
-function LcsDistanceMyers(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
-var
-  M, N: SizeInt;
+function LcsDistanceWM(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then aLimit := System.Length(L) + System.Length(R);
-  M := System.Length(L);  N := System.Length(R);
-  if (aLimit = 0) and (M <> N) then exit(NULL_INDEX);
-  if M = 0 then
-    if N > aLimit then
+  if aLimit < 0 then
+    aLimit := System.Length(L) + System.Length(R)
+  else
+    if aLimit = 0 then begin
+      if System.Length(L) <> System.Length(R) then
+        exit(NULL_INDEX);
+      if CompareByte(L[0], R[0], System.Length(L)) = 0 then
+        exit(0);
+      exit(NULL_INDEX);
+    end;
+  if System.Length(L) = 0 then
+    if System.Length(R) > aLimit then
       exit(NULL_INDEX)
     else
-      exit(N)
+      exit(System.Length(R))
   else
-    if N = 0 then
-      if M > aLimit then
+    if System.Length(R) = 0 then
+      if System.Length(L) > aLimit then
         exit(NULL_INDEX)
       else
-        exit(M);
-  Result := LcsDistMyersImplLim(@L[0], @R[0], M, N, aLimit);
+        exit(System.Length(L));
+  if System.Length(L) <= System.Length(R) then
+    Result := GetLcsDistWmLim(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+  else
+    Result := GetLcsDistWmLim(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 function DumDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
@@ -2333,7 +2360,7 @@ function DumDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeI
       I := 0
     else
       I := MaxOf3(aLeft,aAbove+Ord((pR[aAbove+1]=pL[aAbove+k])and(pR[aAbove]=pL[aAbove+k+1]))+1,aRight+1);
-    MaxRow := Min(aLenL - k, aLenR);
+    MaxRow := Math.Min(aLenL - k, aLenR);
     while (I < MaxRow) and (pR[I] = pL[I + k]) do
       Inc(I);
     FindRow := I;
@@ -2563,7 +2590,7 @@ begin
   if (L = '') and (R = '') then exit(Double(1.0));
   if aLimit < 0 then aLimit := Double(0);
   if aLimit > 1 then aLimit := Double(1);
-  if Algo = sdaLcsMyers then
+  if Algo = sdaLcsWM then
     Len := System.Length(L) + System.Length(R)
   else
     Len := Math.Max(System.Length(L), System.Length(R));
@@ -2573,7 +2600,7 @@ begin
       sdaDefault,
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+      sdaLcsWM:    Dist := LcsDistanceWM(L, R);
     else // sdaDumMBR
       Dist := DumDistanceMbr(L, R);
     end;
@@ -2591,7 +2618,7 @@ begin
         Dist := LevDistanceMyers(L, R, Limit);
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
-    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+    sdaLcsWM:    Dist := LcsDistanceWM(L, R, Limit);
   else // sdaDumMBR
     Dist := DumDistanceMbr(L, R, Limit);
   end;
@@ -2608,7 +2635,7 @@ begin
   if (System.Length(L) = 0) and (System.Length(R) = 0) then exit(Double(1.0));
   if aLimit < 0 then aLimit := Double(0);
   if aLimit > 1 then aLimit := Double(1);
-  if Algo = sdaLcsMyers then
+  if Algo = sdaLcsWM then
     Len := System.Length(L) + System.Length(R)
   else
     Len := Math.Max(System.Length(L), System.Length(R));
@@ -2617,7 +2644,7 @@ begin
       sdaDefault,
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
-      sdaLcsMyers: Dist := LcsDistanceMyers(L, R);
+      sdaLcsWM:    Dist := LcsDistanceWM(L, R);
     else // sdaDumMBR
       Dist := DumDistanceMbr(L, R);
     end;
@@ -2635,7 +2662,7 @@ begin
         Dist := LevDistanceMyers(L, R, Limit);
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
-    sdaLcsMyers: Dist := LcsDistanceMyers(L, R, Limit);
+    sdaLcsWM:    Dist := LcsDistanceWM(L, R, Limit);
   else // sdaDumMBR
     Dist := DumDistanceMbr(L, R, Limit);
   end;
