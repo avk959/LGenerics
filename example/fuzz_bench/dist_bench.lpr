@@ -99,14 +99,14 @@ const
     (Data: ({$I big_small.inc});   Name: 'Long/small_dist';   TotalLen: 81311; AvgLen: 813; AvgDist: 63));
 
   SbFuns: array of TSbTestFun = (
-    (Fun: @LcsDistanceMyers;    Name: 'LcsDistanceMyers'),
+    (Fun: @LcsDistanceWm;       Name: 'LcsDistanceWm'),
     (Fun: @DumDistanceMbr;      Name: 'DumDistanceMbr'),
     (Fun: @LevDistanceMbr;      Name: 'LevDistanceMbr'),
     (Fun: @LevDistanceMyers;    Name: 'LevDistanceMyers'),
     (Fun: @LevenshteinDistance; Name: 'Reference_DP'));
 
   UniFuns: array of TTestFun = (
-    (Fun: @LcsDistanceMyersUtf8; Name: 'LcsDistanceMyersUtf8'),
+    (Fun: @LcsDistanceWmUtf8;    Name: 'LcsDistanceWmUtf8'),
     (Fun: @DumDistanceMbrUtf8;   Name: 'DumDistanceMbrUtf8'),
     (Fun: @LevDistanceMbrUtf8;   Name: 'LevDistanceMbrUtf8'),
     (Fun: @LevDistanceMyersUtf8; Name: 'LevDistanceMyersUtf8'),
