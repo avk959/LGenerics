@@ -1,12 +1,13 @@
 ﻿## LGenerics
 
-  Collection of generic algorithms and data structures entirely written in/for FPC and Lazarus. 
-  Started as a self-education project, it now seems quite comfortable and fast.
-  In order to use it (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
-  
-  - open and compile package lgenerics/LGenerics.lpk.
-  
-  - add LGenerics package to project dependencies.
+  Collection of algorithms and data structures organized as a Lazarus package.
+  In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
+
+    - download the package sources.
+
+    - open the lgenerics/LGenerics.lpk package so Lazarus knows about it.
+
+    - add LGenerics package to your project dependencies.
 #### Implemented primitives:
   - stack(unit lgStack)
   - queue(unit lgQueue)
@@ -83,7 +84,7 @@
   - networks:
     + maximum flow: push/relabel, capacity scaling Dinitz
     + minimum-cost flow: Busacker-Gowen, cost scaling push/relabel algorithm
-    + global minimum cut: Stoer–Wagner, Nagamochi-Ibaraki    
+    + global minimum cut: Stoer–Wagner, Nagamochi-Ibaraki
 #### Algorithms on arrays and vectors(mostly unit lgArrayHelpers):
   - reverse, right/left cyclic shifts
   - permutations
@@ -107,13 +108,13 @@
   - longest common subsequence of two sequences:
     + reducing the LCS problem to LIS
     + Kumar-Rangan algorithm for LCS
-    + Myers algorithm for LCS
+    + Myers O(ND) algorithm for LCS
   - Levenshtein distance:
     + simple DP algorithm
     + modified Berghel-Roach algorithm
     + Myers bit-vector algorithm with cut-off heuristic
   - LCS distance:
-    + Myers algorithm for LCS distance
+    + O(NP) Wu-Manber-Myers-Miller LCS distance algorithm
   - restricted Damerau-Levenshtein distance
     + modified Berghel-Roach algorithm
   - fuzzy string matching with k differences
