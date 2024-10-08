@@ -239,29 +239,31 @@ begin
       exit(True);
     end;
   aData := nil;
-  if Count = 0 then
-    exit(False);
   d := Self;
   for I := 0 to System.High(aPath) do
-    if d.JsonType = jtArray then
-      begin
-        if not(IsNonNegativeInt(aPath[I], Idx) and (Idx < d.Count)) then
-          exit(False);
-        d := TJsonArray(d)[Idx];
-      end
-    else
-      begin
-        d := TJsonObject(d).Find(aPath[I]);
-        if d = nil then
-          exit(False);
-      end;
+    begin
+      if d.Count = 0 then
+        exit(False);
+      if d.JsonType = jtArray then
+        begin
+          if not(IsNonNegativeInt(aPath[I], Idx) and (Idx < d.Count)) then
+            exit(False);
+          d := TJsonArray(d)[Idx];
+        end
+      else
+        begin
+          d := TJsonObject(d).Find(aPath[I]);
+          if d = nil then
+            exit(False);
+        end;
+    end;
   aData := d;
   Result := d <> nil;
 end;
 
 function TJsonDataHelper.FindPathPtr(const aPtr: string; out aData: TJsonData): Boolean;
 var
-  Segments: TStringArray = nil;
+  Segments: TStringArray;
 begin
   if aPtr = '' then
     begin
