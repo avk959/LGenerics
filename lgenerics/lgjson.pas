@@ -1159,6 +1159,7 @@ type
   uses Ryū Double-to-String conversion algorithm }
   procedure Double2Str(aValue: Double; out s: shortstring; aDecimalSeparator: AnsiChar = '.');
   function  Double2Str(aValue: Double; aDecimalSeparator: AnsiChar = '.'): string;
+  function  Double2Str(aValue: Double; AlwaysShowFrac: Boolean; aDecimalSeparator: AnsiChar = '.'): string;
 { uses DefaultFormatSettins.DecimalSeparator as aDecimalSeparator }
   function  Double2StrDef(aValue: Double): string;
 { mostly RFC 8259 compliant: does not accept leading and trailing spaces, leading plus,
@@ -3656,6 +3657,28 @@ begin
   Double2Str(aValue, s, aDecimalSeparator);
   System.SetLength(Result, System.Length(s));
   System.Move(s[1], Pointer(Result)^, System.Length(s));
+end;
+
+function Double2Str(aValue: Double; AlwaysShowFrac: Boolean; aDecimalSeparator: AnsiChar): string;
+var
+  s: shortstring;
+  Len: Integer;
+begin
+  Result := '';
+  Double2Str(aValue, s, aDecimalSeparator);
+  if AlwaysShowFrac and IsExactInt(aValue) then
+    begin
+      Len := System.Length(s);
+      System.SetLength(Result, Len + 2);
+      System.Move(s[1], Pointer(Result)^, Len);
+      Result[Len + 1] := aDecimalSeparator;
+      Result[Len + 2] := '0';
+    end
+  else
+    begin
+      System.SetLength(Result, System.Length(s));
+      System.Move(s[1], Pointer(Result)^, System.Length(s));
+    end;
 end;
 
 function Double2StrDef(aValue: Double): string;
