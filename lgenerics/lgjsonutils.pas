@@ -284,7 +284,7 @@ type
 
 function TJsonFloatNum.GetAsString: TJSONStringType;
 begin
-  Result := Double2Str(AsFloat);
+  Result := Double2Str(AsFloat, True);
 end;
 
 initialization
