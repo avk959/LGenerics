@@ -276,5 +276,18 @@ begin
   Result := FindPath(Segments, aData);
 end;
 
+type
+  TJsonFloatNum = class(TJsonFloatNumber)
+  protected
+    function GetAsString: TJSONStringType; override;
+  end;
+
+function TJsonFloatNum.GetAsString: TJSONStringType;
+begin
+  Result := Double2Str(AsFloat);
+end;
+
+initialization
+  FpJson.SetJsonInstanceType(TJsonInstanceType.jitNumberFloat, TJsonFloatNum);
 end.
 
