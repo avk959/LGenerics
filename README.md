@@ -1,13 +1,9 @@
 ﻿## LGenerics
-
-  Collection of algorithms and data structures organized as a Lazarus package.
-  In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
-
-    - download the package sources.
-
-    - open the lgenerics/LGenerics.lpk package so Lazarus knows about it.
-
-    - add LGenerics package to your project dependencies.
+Collection of algorithms and data structures organized as a Lazarus package.
+In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
+  - download the package sources.
+  - open the lgenerics/LGenerics.lpk package so Lazarus knows about it.
+  - add LGenerics package to your project dependencies.
 #### Implemented primitives:
   - stack(unit lgStack)
   - queue(unit lgQueue)
