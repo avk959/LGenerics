@@ -570,11 +570,11 @@ type
   uses O(ND) algorithm from "An O(ND) Difference Algorithm and Its Variations" by Gene Myers }
   function LcsMyers(const L, R: rawbytestring): rawbytestring;
   function LcsMyers(const L, R: array of Byte): TBytes;
-{ returns the Levenshtein distance between L and R; used a simple dynamic programming
-  algorithm with O(mn) time complexity, where m and n are the lengths of L and R respectively,
+{ returns the edit distance between L and R; used a dynamic programming algorithm
+  with O(mn) time complexity, where m and n are the lengths of L and R respectively,
   and O(Max(m, n)) space complexity }
-  function LevDistance(const L, R: rawbytestring): SizeInt;
-  function LevDistance(const L, R: array of Byte): SizeInt;
+  function EditDistance(const L, R: rawbytestring; const aCost: TSeqEditCost): SizeInt;
+  function EditDistance(const L, R: array of Byte; const aCost: TSeqEditCost): SizeInt;
 { returns the Levenshtein distance between L and R; a Pascal translation(well, almost :))
   of github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
   a modified version of algorithm described by Berghel and Roach with O(min(n, m)*d)
@@ -1241,7 +1241,7 @@ begin
     Result := LcsMyersImpl(@R[0], @L[0], System.Length(R), System.Length(L));
 end;
 
-function LevDistanceDpImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
+function EditDistanceImpl(pL, pR: PByte; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
@@ -1259,27 +1259,41 @@ begin
   if aLenL = 0 then
     exit(aLenR);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    if pL^ = pR^ then
+      exit(0)
+    else
+      exit(SizeInt(aCost.Replacement));
+
 
   if aLenR < MAX_STATIC then
-    Dist := @StBuf[0]
+    begin
+      Dist := @StBuf[0];
+      Dist[0] := 0;
+    end
   else
     begin
       System.SetLength(Buf, Succ(aLenR));
       Dist := Pointer(Buf);
     end;
-  for I := 0 to aLenR do
-    Dist[I] := I;
+
+  for I := 1 to aLenR do
+    Dist[I] := Dist[I-1] + SizeInt(aCost.Insertion);
 
   for I := 1 to aLenL do
     begin
-      Prev := I;
+      Prev := Dist[0] + SizeInt(aCost.Deletion);
       b := pL[I-1];
       for J := 1 to aLenR do
         begin
           if pR[J-1] = b then
             Next := Dist[J-1]
           else
-            Next := Succ(MinOf3(Dist[J-1], Prev, Dist[J]));
+            Next := MinOf3(
+              Dist[J-1] + SizeInt(aCost.Replacement),
+              Dist[J] + SizeInt(aCost.Deletion),
+              Prev + SizeInt(aCost.Insertion)
+            );
           Dist[J-1] := Prev;
           Prev := Next;
         end;
@@ -1288,7 +1302,7 @@ begin
   Result := Dist[aLenR];
 end;
 
-function LevDistance(const L, R: rawbytestring): SizeInt;
+function EditDistance(const L, R: rawbytestring; const aCost: TSeqEditCost): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -1296,12 +1310,12 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistanceDpImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+    Result := EditDistanceImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aCost)
   else
-    Result := LevDistanceDpImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+    Result := EditDistanceImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aCost);
 end;
 
-function LevDistance(const L, R: array of Byte): SizeInt;
+function EditDistance(const L, R: array of Byte; const aCost: TSeqEditCost): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -1309,9 +1323,9 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistanceDpImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := EditDistanceImpl(@L[0], @R[0], System.Length(L), System.Length(R), aCost)
   else
-    Result := LevDistanceDpImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := EditDistanceImpl(@R[0], @L[0], System.Length(R), System.Length(L), aCost);
 end;
 
 function LevDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
@@ -1452,6 +1466,9 @@ begin
 
   if aLimit = 0 then
     exit(NULL_INDEX);
+
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(pL^ <> pR^));
 
   if aLimit > aLenR then
     aLimit := aLenR;
@@ -1972,22 +1989,6 @@ begin
 end;
 {$POP}
 
-function LevDistMyersDyn(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt;
-var
-  Peq: TPeq;
-  Buffer: TBytes;
-  AlphabetSize, Limit: SizeInt;
-begin
-  //here aLenL <= aLenR
-  AlphabetSize := RecodeSeq(pL, pR, aLenL, aLenR, Buffer);
-  CreatePeq(Pointer(Buffer), aLenL, AlphabetSize, Peq);
-  Limit := Math.Max(BLOCK_SIZE, aLenR - aLenL);
-  repeat
-    Result := LevDistMyersCutoff(Peq, @Buffer[aLenL], aLenL, aLenR, Limit);
-    Limit += Limit;
-  until Result <> NULL_INDEX;
-end;
-
 function LevDistMyers(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 var
   Peq: TPeq;
@@ -2011,6 +2012,9 @@ begin
   if aLenL = 0 then
     exit(aLenR);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(pL^ <> pR^));
+
   case aLenL of
     1..BitSizeOf(DWord):
       Result := LevDistMyersD(pL, pR, aLenL, aLenR);
@@ -2019,7 +2023,7 @@ begin
     BitSizeOf(QWord)+1..BitSizeOf(QWord)*2:
       Result := LevDistMyersDQ(pL, pR, aLenL, aLenR);
   else
-    Result := LevDistMyersDyn(pL, pR, aLenL, aLenR);
+    Result := LevDistMyers(pL, pR, aLenL, aLenR, aLenR);
   end;
 end;
 
@@ -2066,6 +2070,9 @@ begin
 
   if aLimit = 0 then  //////////
     exit(NULL_INDEX); //////////
+
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(pL^ <> pR^));
 
   if aLimit > aLenR then
     aLimit := aLenR;
@@ -2172,6 +2179,9 @@ begin
 
   if aLenL = 0 then exit(aLenR);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(pL^ <> pR^)*2);
+
   Result := LcsDistWmImpl(pL, pR, aLenL, aLenR);
 end;
 
@@ -2259,6 +2269,15 @@ begin
 
   if aLimit = 0 then
     exit(NULL_INDEX);
+
+  if (aLenL = 1) and (aLenR = 1) then
+    if pL^ = pR^ then
+      exit(0)
+    else
+      if aLimit > 1 then
+        exit(2)
+      else
+        exit(NULL_INDEX);
 
   if aLimit > aLenL + aLenR then
     aLimit := aLenL + aLenR;
@@ -2444,6 +2463,9 @@ begin
 
   if aLimit = 0 then  //////////
     exit(NULL_INDEX); //////////
+
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(pL^ <> pR^));
 
   if aLimit > aLenR then
     aLimit := aLenR;

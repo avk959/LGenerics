@@ -27,7 +27,7 @@ type
 
     procedure Utf8ToUcs4;
     procedure SubSequenceUtf16;
-    procedure LevenshteinDistUtf8;
+    procedure EditDistUtf8;
     procedure LevenshteinDistMbrUtf8;
     procedure LevenshteinDistMbrBoundedUtf8;
     procedure LevenshteinDistMbrDynUtf8;
@@ -56,7 +56,7 @@ type
 
     procedure Utf16ToUcs4;
     procedure SubSequenceUtf8;
-    procedure LevenshteinDistUtf16;
+    procedure EditDistUtf16;
     procedure LevenshteinDistMbrUtf16;
     procedure LevenshteinDistMbrBoundedUtf16;
     procedure LevenshteinDistMbrDynUtf16;
@@ -307,95 +307,97 @@ begin
   AssertFalse(IsSubSequenceUtf16(s, Copy(s, 6, Length(s))));
 end;
 
-procedure TTestUnicodeUtils.LevenshteinDistUtf8;
+procedure TTestUnicodeUtils.EditDistUtf8;
 var
   s1, s2: string;
+  sec: TSeqEditCost;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(LevDistanceUtf8(s1, s1) = 0);
-  AssertTrue(LevDistanceUtf8(s2, s2) = 0);
-  AssertTrue(LevDistanceUtf8(s1, s2) = 6);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 6);
+  sec := TSeqEditCost.Default;
+  AssertTrue(EditDistanceUtf8(s1, s1, sec) = 0);
+  AssertTrue(EditDistanceUtf8(s2, s2, sec) = 0);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 6);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 6);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 1);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 2);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 2);
 
   s1 := 'аб';
   s2 := 'ааа';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 2);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 2);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 3);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 3);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 3);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 3);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 3);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 3);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 3);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 3);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 1);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 1);
 
   s1 := 'нелли';
   s2 := 'еллия';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 2);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 2);
 
   s1 := 'мостик';
   s2 := 'костик';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 1);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 1);
 
   s1 := 'мостик';
   s2 := 'костяка';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 3);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 3);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 3);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 3);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 4);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 4);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 4);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 4);
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 5);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 5);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 5);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 5);
 
   s1 := 'ааааааа';
   s2 := 'ааааааа';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 0);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 0);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 8);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 8);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 8);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 8);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 2);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 2);
 
   s1 := 'а';
   s2 := 'б';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 1);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 1);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(LevDistanceUtf8(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf8(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf8(s1, s2, sec) = 2);
+  AssertTrue(EditDistanceUtf8(s2, s1, sec) = 2);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMbrUtf8;
@@ -773,13 +775,13 @@ const
   s13: string = 'Пожилая дама носила имя княгини Друбецкой, одной из лучших фамилий России, но она была бедна';
   s14: string = 'Но влияние в свете есть капитал, который надо беречь, чтоб он не исчез. Князь Василий знал это';
 begin
-  AssertTrue(LevDistanceMyersUtf8(s1, s2) = LevDistanceUtf8(s1, s2));
-  AssertTrue(LevDistanceMyersUtf8(s3, s4) = LevDistanceUtf8(s3, s4));
-  AssertTrue(LevDistanceMyersUtf8(s5, s6) = LevDistanceUtf8(s5, s6));
-  AssertTrue(LevDistanceMyersUtf8(s7, s8) = LevDistanceUtf8(s7, s8));
-  AssertTrue(LevDistanceMyersUtf8(s9, s10) = LevDistanceUtf8(s9, s10));
-  AssertTrue(LevDistanceMyersUtf8(s11, s12) = LevDistanceUtf8(s11, s12));
-  AssertTrue(LevDistanceMyersUtf8(s13, s14) = LevDistanceUtf8(s13, s14));
+  AssertTrue(LevDistanceMyersUtf8(s1, s2) = EditDistanceUtf8(s1, s2, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s3, s4) = EditDistanceUtf8(s3, s4, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s5, s6) = EditDistanceUtf8(s5, s6, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s7, s8) = EditDistanceUtf8(s7, s8, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s9, s10) = EditDistanceUtf8(s9, s10, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s11, s12) = EditDistanceUtf8(s11, s12, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s13, s14) = EditDistanceUtf8(s13, s14, TSeqEditCost.Default));
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersLongUtf8;
@@ -799,13 +801,13 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf8(s1, s2) = LevDistanceUtf8(s1, s2));
-  AssertTrue(LevDistanceMyersUtf8(s3, s4) = LevDistanceUtf8(s3, s4));
-  AssertTrue(LevDistanceMyersUtf8(s5, s6) = LevDistanceUtf8(s5, s6));
-  AssertTrue(LevDistanceMyersUtf8(s7, s8) = LevDistanceUtf8(s7, s8));
-  AssertTrue(LevDistanceMyersUtf8(s9, s10) = LevDistanceUtf8(s9, s10));
-  AssertTrue(LevDistanceMyersUtf8(s11, s12) = LevDistanceUtf8(s11, s12));
-  AssertTrue(LevDistanceMyersUtf8(s13, s14) = LevDistanceUtf8(s13, s14));
+  AssertTrue(LevDistanceMyersUtf8(s1, s2) = EditDistanceUtf8(s1, s2, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s3, s4) = EditDistanceUtf8(s3, s4, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s5, s6) = EditDistanceUtf8(s5, s6, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s7, s8) = EditDistanceUtf8(s7, s8, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s9, s10) = EditDistanceUtf8(s9, s10, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s11, s12) = EditDistanceUtf8(s11, s12, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s13, s14) = EditDistanceUtf8(s13, s14, TSeqEditCost.Default));
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersBoundedUtf8;
@@ -910,13 +912,13 @@ const
   s13: string = 'Пожилая дама носила имя княгини Друбецкой, одной из лучших фамилий России, но она была бедна';
   s14: string = 'Но влияние в свете есть капитал, который надо беречь, чтоб он не исчез. Князь Василий знал это';
 begin
-  AssertTrue(LevDistanceMyersUtf8(s1, s2, Pred(LevDistanceUtf8(s1, s2))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s3, s4, Pred(LevDistanceUtf8(s3, s4))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s5, s6, Pred(LevDistanceUtf8(s5, s6))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s7, s8, Pred(LevDistanceUtf8(s7, s8))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s9, s10, Pred(LevDistanceUtf8(s9, s10))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s11, s12, Pred(LevDistanceUtf8(s11, s12))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s1, s2, Pred(EditDistanceUtf8(s1, s2, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s3, s4, Pred(EditDistanceUtf8(s3, s4, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s5, s6, Pred(EditDistanceUtf8(s5, s6, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s7, s8, Pred(EditDistanceUtf8(s7, s8, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s9, s10, Pred(EditDistanceUtf8(s9, s10, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s11, s12, Pred(EditDistanceUtf8(s11, s12, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(EditDistanceUtf8(s13, s14, TSeqEditCost.Default))) = -1);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersLongBoundedUtf8;
@@ -936,13 +938,13 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf8(s1, s2, Pred(LevDistanceUtf8(s1, s2))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s3, s4, Pred(LevDistanceUtf8(s3, s4))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s5, s6, Pred(LevDistanceUtf8(s5, s6))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s7, s8, Pred(LevDistanceUtf8(s7, s8))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s9, s10, Pred(LevDistanceUtf8(s9, s10))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s11, s12, Pred(LevDistanceUtf8(s11, s12))) = -1);
-  AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s1, s2, Pred(EditDistanceUtf8(s1, s2, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s3, s4, Pred(EditDistanceUtf8(s3, s4, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s5, s6, Pred(EditDistanceUtf8(s5, s6, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s7, s8, Pred(EditDistanceUtf8(s7, s8, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s9, s10, Pred(EditDistanceUtf8(s9, s10, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s11, s12, Pred(EditDistanceUtf8(s11, s12, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf8(s13, s14, Pred(EditDistanceUtf8(s13, s14, TSeqEditCost.Default))) = -1);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersLongDynUtf8;
@@ -962,13 +964,13 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf8(s1, s2, -1) = LevDistanceUtf8(s1, s2));
-  AssertTrue(LevDistanceMyersUtf8(s3, s4, -1) = LevDistanceUtf8(s3, s4));
-  AssertTrue(LevDistanceMyersUtf8(s5, s6, -1) = LevDistanceUtf8(s5, s6));
-  AssertTrue(LevDistanceMyersUtf8(s7, s8, -1) = LevDistanceUtf8(s7, s8));
-  AssertTrue(LevDistanceMyersUtf8(s9, s10, -1) = LevDistanceUtf8(s9, s10));
-  AssertTrue(LevDistanceMyersUtf8(s11, s12, -1) = LevDistanceUtf8(s11, s12));
-  AssertTrue(LevDistanceMyersUtf8(s13, s14, -1) = LevDistanceUtf8(s13, s14));
+  AssertTrue(LevDistanceMyersUtf8(s1, s2, -1) = EditDistanceUtf8(s1, s2, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s3, s4, -1) = EditDistanceUtf8(s3, s4, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s5, s6, -1) = EditDistanceUtf8(s5, s6, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s7, s8, -1) = EditDistanceUtf8(s7, s8, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s9, s10, -1) = EditDistanceUtf8(s9, s10, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s11, s12, -1) = EditDistanceUtf8(s11, s12, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf8(s13, s14, -1) = EditDistanceUtf8(s13, s14, TSeqEditCost.Default));
 end;
 
 procedure TTestUnicodeUtils.LcsDistWmUtf8;
@@ -1827,95 +1829,95 @@ begin
   AssertFalse(IsSubSequenceUtf8(s, Copy(s, 8, Length(s))));
 end;
 
-procedure TTestUnicodeUtils.LevenshteinDistUtf16;
+procedure TTestUnicodeUtils.EditDistUtf16;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(LevDistanceUtf16(s1, s1) = 0);
-  AssertTrue(LevDistanceUtf16(s2, s2) = 0);
-  AssertTrue(LevDistanceUtf16(s1, s2) = 6);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 6);
+  AssertTrue(EditDistanceUtf16(s1, s1, TSeqEditCost.Default) = 0);
+  AssertTrue(EditDistanceUtf16(s2, s2, TSeqEditCost.Default) = 0);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 6);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 6);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 1);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 2);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 2);
 
   s1 := 'аб';
   s2 := 'ааа';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 2);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 2);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 3);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 3);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 3);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 3);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 3);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 3);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 3);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 3);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 1);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 1);
 
   s1 := 'нелли';
   s2 := 'еллия';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 2);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 2);
 
   s1 := 'мостик';
   s2 := 'костик';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 1);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 1);
 
   s1 := 'мостик';
   s2 := 'костяка';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 3);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 3);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 3);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 3);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 4);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 4);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 4);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 4);
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 5);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 5);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 5);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 5);
 
   s1 := 'ааааааа';
   s2 := 'ааааааа';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 0);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 0);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 8);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 8);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 8);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 8);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 2);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 2);
 
   s1 := 'а';
   s2 := 'б';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 1);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 1);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 1);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 1);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(LevDistanceUtf16(s1, s2) = 2);
-  AssertTrue(LevDistanceUtf16(s2, s1) = 2);
+  AssertTrue(EditDistanceUtf16(s1, s2, TSeqEditCost.Default) = 2);
+  AssertTrue(EditDistanceUtf16(s2, s1, TSeqEditCost.Default) = 2);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMbrUtf16;
@@ -2293,13 +2295,13 @@ const
   s13: string = 'Пожилая дама носила имя княгини Друбецкой, одной из лучших фамилий России, но она была бедна';
   s14: string = 'Но влияние в свете есть капитал, который надо беречь, чтоб он не исчез. Князь Василий знал это';
 begin
-  AssertTrue(LevDistanceMyersUtf16(s1, s2) = LevDistanceUtf8(s1, s2));
-  AssertTrue(LevDistanceMyersUtf16(s3, s4) = LevDistanceUtf8(s3, s4));
-  AssertTrue(LevDistanceMyersUtf16(s5, s6) = LevDistanceUtf8(s5, s6));
-  AssertTrue(LevDistanceMyersUtf16(s7, s8) = LevDistanceUtf8(s7, s8));
-  AssertTrue(LevDistanceMyersUtf16(s9, s10) = LevDistanceUtf8(s9, s10));
-  AssertTrue(LevDistanceMyersUtf16(s11, s12) = LevDistanceUtf8(s11, s12));
-  AssertTrue(LevDistanceMyersUtf16(s13, s14) = LevDistanceUtf8(s13, s14));
+  AssertTrue(LevDistanceMyersUtf16(s1, s2) = EditDistanceUtf8(s1, s2, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s3, s4) = EditDistanceUtf8(s3, s4, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s5, s6) = EditDistanceUtf8(s5, s6, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s7, s8) = EditDistanceUtf8(s7, s8, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s9, s10) = EditDistanceUtf8(s9, s10, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s11, s12) = EditDistanceUtf8(s11, s12, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s13, s14) = EditDistanceUtf8(s13, s14, TSeqEditCost.Default));
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersLongUtf16;
@@ -2319,13 +2321,13 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf16(s1, s2) = LevDistanceUtf8(s1, s2));
-  AssertTrue(LevDistanceMyersUtf16(s3, s4) = LevDistanceUtf8(s3, s4));
-  AssertTrue(LevDistanceMyersUtf16(s5, s6) = LevDistanceUtf8(s5, s6));
-  AssertTrue(LevDistanceMyersUtf16(s7, s8) = LevDistanceUtf8(s7, s8));
-  AssertTrue(LevDistanceMyersUtf16(s9, s10) = LevDistanceUtf8(s9, s10));
-  AssertTrue(LevDistanceMyersUtf16(s11, s12) = LevDistanceUtf8(s11, s12));
-  AssertTrue(LevDistanceMyersUtf16(s13, s14) = LevDistanceUtf8(s13, s14));
+  AssertTrue(LevDistanceMyersUtf16(s1, s2) = EditDistanceUtf8(s1, s2, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s3, s4) = EditDistanceUtf8(s3, s4, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s5, s6) = EditDistanceUtf8(s5, s6, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s7, s8) = EditDistanceUtf8(s7, s8, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s9, s10) = EditDistanceUtf8(s9, s10, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s11, s12) = EditDistanceUtf8(s11, s12, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s13, s14) = EditDistanceUtf8(s13, s14, TSeqEditCost.Default));
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersBoundedUtf16;
@@ -2430,13 +2432,13 @@ const
   s13: string = 'Пожилая дама носила имя княгини Друбецкой, одной из лучших фамилий России, но она была бедна';
   s14: string = 'Но влияние в свете есть капитал, который надо беречь, чтоб он не исчез. Князь Василий знал это';
 begin
-  AssertTrue(LevDistanceMyersUtf16(s1, s2, Pred(LevDistanceUtf8(s1, s2))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s3, s4, Pred(LevDistanceUtf8(s3, s4))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s5, s6, Pred(LevDistanceUtf8(s5, s6))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s7, s8, Pred(LevDistanceUtf8(s7, s8))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s9, s10, Pred(LevDistanceUtf8(s9, s10))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s11, s12, Pred(LevDistanceUtf8(s11, s12))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(LevDistanceUtf8(s13, s14))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s1, s2, Pred(EditDistanceUtf8(s1, s2, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s3, s4, Pred(EditDistanceUtf8(s3, s4, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s5, s6, Pred(EditDistanceUtf8(s5, s6, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s7, s8, Pred(EditDistanceUtf8(s7, s8, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s9, s10, Pred(EditDistanceUtf8(s9, s10, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s11, s12, Pred(EditDistanceUtf8(s11, s12, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(EditDistanceUtf8(s13, s14, TSeqEditCost.Default))) = -1);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersLongBoundedUtf16;
@@ -2456,13 +2458,13 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf16(s1, s2, Pred(LevDistanceUtf16(s1, s2))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s3, s4, Pred(LevDistanceUtf16(s3, s4))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s5, s6, Pred(LevDistanceUtf16(s5, s6))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s7, s8, Pred(LevDistanceUtf16(s7, s8))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s9, s10, Pred(LevDistanceUtf16(s9, s10))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s11, s12, Pred(LevDistanceUtf16(s11, s12))) = -1);
-  AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(LevDistanceUtf16(s13, s14))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s1, s2, Pred(EditDistanceUtf16(s1, s2, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s3, s4, Pred(EditDistanceUtf16(s3, s4, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s5, s6, Pred(EditDistanceUtf16(s5, s6, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s7, s8, Pred(EditDistanceUtf16(s7, s8, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s9, s10, Pred(EditDistanceUtf16(s9, s10, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s11, s12, Pred(EditDistanceUtf16(s11, s12, TSeqEditCost.Default))) = -1);
+  AssertTrue(LevDistanceMyersUtf16(s13, s14, Pred(EditDistanceUtf16(s13, s14, TSeqEditCost.Default))) = -1);
 end;
 
 procedure TTestUnicodeUtils.LevenshteinDistMyersLongDynUtf16;
@@ -2482,13 +2484,13 @@ const
   s13: string = 'Князь Ипполит торопливо надел свой редингот, который у него, по-новому, был длиннее пяток, и, путаясь в нем, побежал на крыльцо за княгиней, которую лакей подсаживал в карету.';
   s14: string = '– Ты не понимаешь, отчего я это говорю, – продолжал он. – Ведь это целая история жизни. Ты говоришь, Бонапарте и его карьера, – сказал он, хотя Пьер и не говорил про Бонапарте.';
 begin
-  AssertTrue(LevDistanceMyersUtf16(s1, s2, -1) = LevDistanceUtf16(s1, s2));
-  AssertTrue(LevDistanceMyersUtf16(s3, s4, -1) = LevDistanceUtf16(s3, s4));
-  AssertTrue(LevDistanceMyersUtf16(s5, s6, -1) = LevDistanceUtf16(s5, s6));
-  AssertTrue(LevDistanceMyersUtf16(s7, s8, -1) = LevDistanceUtf16(s7, s8));
-  AssertTrue(LevDistanceMyersUtf16(s9, s10, -1) = LevDistanceUtf16(s9, s10));
-  AssertTrue(LevDistanceMyersUtf16(s11, s12, -1) = LevDistanceUtf16(s11, s12));
-  AssertTrue(LevDistanceMyersUtf16(s13, s14, -1) = LevDistanceUtf16(s13, s14));
+  AssertTrue(LevDistanceMyersUtf16(s1, s2, -1) = EditDistanceUtf16(s1, s2, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s3, s4, -1) = EditDistanceUtf16(s3, s4, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s5, s6, -1) = EditDistanceUtf16(s5, s6, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s7, s8, -1) = EditDistanceUtf16(s7, s8, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s9, s10, -1) = EditDistanceUtf16(s9, s10, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s11, s12, -1) = EditDistanceUtf16(s11, s12, TSeqEditCost.Default));
+  AssertTrue(LevDistanceMyersUtf16(s13, s14, -1) = EditDistanceUtf16(s13, s14, TSeqEditCost.Default));
 end;
 
 procedure TTestUnicodeUtils.LcsDistWmUtf16;

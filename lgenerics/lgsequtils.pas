@@ -183,7 +183,7 @@ type
     class function  LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsKRImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
-    class function  LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
+    class function  EditDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt; static;
     class function  LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  LevDistMyersQ(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
@@ -216,10 +216,10 @@ type
     class function CommonPrefixLen(const L, R: array of T): SizeInt; static;
   { returns the length of the common suffix L and R }
     class function CommonSuffixLen(const L, R: array of T): SizeInt; static;
-  { returns Levenshtein distance between L and R; used a simple dynamic programming algorithm
+  { returns edit distance between L and R; used a dynamic programming algorithm
     with O(mn) time complexity, where n and m are the lengths of L and R respectively,
     and O(Max(m, n)) space complexity }
-    class function LevDistance(const L, R: array of T): SizeInt; static;
+    class function EditDistance(const L, R: array of T; const aCost: TSeqEditCost): SizeInt; static;
   { returns the Levenshtein distance between L and R; a Pascal translation of
     github.com/vaadin/gwt/dev/util/editdistance/ModifiedBerghelRoachEditDistance.java -
     a modified version of algorithm described by Berghel and Roach with O(min(|L|,|R|))*d)
@@ -295,8 +295,8 @@ type
   function IsSubSequenceUtf16(const aStr, aSub: unicodestring): Boolean;
   function Utf16ToUcs4Seq(const s: unicodestring): TUcs4Seq;
   function Ucs4SeqToUtf16(const s: TUcs4Seq): unicodestring;
-{ returns the Levenshtein distance using simple DP algorithm }
-  function LevDistanceUtf16(const L, R: unicodestring): SizeInt; inline;
+{ returns the edit distance using DP algorithm }
+  function EditDistanceUtf16(const L, R: unicodestring; const aCost: TSeqEditCost): SizeInt; inline;
 { returns the Levenshtein distance using Berghel-Roach algorithm }
   function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
   function LevDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
@@ -340,8 +340,8 @@ type
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
-{ returns the Levenshtein distance using simple DP algorithm }
-  function LevDistanceUtf8(const L, R: string): SizeInt; inline;
+{ returns the edit distance using DP algorithm }
+  function EditDistanceUtf8(const L, R: string; const aCost: TSeqEditCost): SizeInt; inline;
 { returns the Levenshtein distance using Berghel-Roach algorithm }
   function LevDistanceMbrUtf8(const L, R: string): SizeInt; inline;
   function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
@@ -1407,7 +1407,7 @@ begin
 end;
 {$POP}
 
-class function TGSeqUtil.LevDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt;
+class function TGSeqUtil.EditDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt = nil;
@@ -1425,26 +1425,40 @@ begin
   if aLenL = 0 then
     exit(aLenR);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    if TEqRel.Equal(pL^, pR^) then
+      exit(0)
+    else
+      exit(SizeInt(aCost.Replacement));
+
   if aLenR < MAX_STATIC then
-    Dist := @StBuf[0]
+    begin
+      Dist := @StBuf[0];
+      Dist[0] := 0;
+    end
   else
     begin
       System.SetLength(Buf, Succ(aLenR));
       Dist := Pointer(Buf);
     end;
-  for I := 0 to aLenR do
-    Dist[I] := I;
+
+  for I := 1 to aLenR do
+    Dist[I] := Dist[I-1] + SizeInt(aCost.Insertion);
 
   for I := 1 to aLenL do
     begin
-      Prev := I;
+      Prev := Dist[0] + SizeInt(aCost.Deletion);
       v := pL[I-1];
       for J := 1 to aLenR do
         begin
           if TEqRel.Equal(pR[J-1], v) then
             Next := Dist[J-1]
           else
-            Next := Succ(MinOf3(Dist[J-1], Prev, Dist[J]));
+            Next := MinOf3(
+              Dist[J-1] + SizeInt(aCost.Replacement),
+              Dist[J] + SizeInt(aCost.Deletion),
+              Prev + SizeInt(aCost.Insertion)
+            );
           Dist[J-1] := Prev;
           Prev := Next;
         end;
@@ -1588,6 +1602,9 @@ begin
 
   if aLimit = 0 then
     exit(NULL_INDEX);
+
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(not TEqRel.Equal(pL^, pR^)));
 
   if aLimit > aLenR then
     aLimit := aLenR;
@@ -2007,6 +2024,9 @@ begin
   if aLenL = 0 then
     exit(aLenR);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(not TEqRel.Equal(pL^, pR^)));
+
   case aLenL of
     1..BitSizeOf(QWord):
       Result := LevDistMyersQ(pL, pR, aLenL, aLenR);
@@ -2034,6 +2054,9 @@ begin
 
   if aLimit = 0 then
     exit(NULL_INDEX);
+
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(not TEqRel.Equal(pL^, pR^)));
 
   if aLimit > aLenR then
     aLimit := aLenR;
@@ -2137,6 +2160,9 @@ begin
   if aLenL = 0 then
     exit(aLenR);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(not TEqRel.Equal(pL^, pR^))*2);
+
   Result := LcsDistWmImpl(pL, pR, aLenL, aLenR);
 end;
 
@@ -2157,6 +2183,15 @@ begin
 
   if aLimit = 0 then
     exit(NULL_INDEX);
+
+  if (aLenL = 1) and (aLenR = 1) then
+    if TEqRel.Equal(pL^, pR^) then
+      exit(0)
+    else
+      if aLimit > 1 then
+        exit(2)
+      else
+        exit(NULL_INDEX);
 
   if aLimit > aLenL + aLenR then
     aLimit := aLenL + aLenR;
@@ -2304,6 +2339,9 @@ begin
   if aLimit = 0 then
     exit(NULL_INDEX);
 
+  if (aLenL = 1) and (aLenR = 1) then
+    exit(Ord(not TEqRel.Equal(pL^, pR^)));
+
   if aLimit > aLenR then
     aLimit := aLenR;
 
@@ -2407,7 +2445,7 @@ begin
   Result := Math.Min(System.Length(L), System.Length(R));
 end;
 
-class function TGSeqUtil.LevDistance(const L, R: array of T): SizeInt;
+class function TGSeqUtil.EditDistance(const L, R: array of T; const aCost: TSeqEditCost): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -2415,9 +2453,9 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := LevDistImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := EditDistImpl(@L[0], @R[0], System.Length(L), System.Length(R), aCost)
   else
-    Result := LevDistImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := EditDistImpl(@R[0], @L[0], System.Length(R), System.Length(L), aCost);
 end;
 
 class function TGSeqUtil.LevDistanceMBR(const L, R: array of T): SizeInt;
@@ -2881,7 +2919,7 @@ end;
 
 type
   TDistFunInternSpec = (
-    dfisDyn, dfisMbr, dfisMyers, dfisWmLcs, dfisMbrDum, dfisMbrBound, dfisMyersBound,
+    dfisMbr, dfisMyers, dfisWmLcs, dfisMbrDum, dfisMbrBound, dfisMyersBound,
     dfisWmLcsBound, dfisMbrDumBound);
 
 function GenericDistanceUtf16(const L, R: unicodestring; aLimit: SizeInt; aSpec: TDistFunInternSpec): SizeInt;
@@ -2915,7 +2953,6 @@ begin
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    dfisDyn:        Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbr:        Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMyers:      Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisWmLcs:      Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
@@ -2929,9 +2966,37 @@ begin
   end;
 end;
 
-function LevDistanceUtf16(const L, R: unicodestring): SizeInt;
+function EditDistanceUtf16(const L, R: unicodestring; const aCost: TSeqEditCost): SizeInt;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
 begin
-  Result := GenericDistanceUtf16(L, R, -1, dfisDyn);
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf16ToUcs4SeqImpl(L, pL, LenL);
+    end
+  else
+    begin
+      Utf16ToUcs4SeqImpl(L, LBuf);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf16ToUcs4SeqImpl(R, pR, LenR);
+    end
+  else
+    begin
+      Utf16ToUcs4SeqImpl(R, RBuf);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  Result := TUcs4Util.EditDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aCost);
 end;
 
 function LevDistanceMbrUtf16(const L, R: unicodestring): SizeInt;
@@ -3916,23 +3981,50 @@ begin
       pR := Pointer(RBuf);
     end;
   case aSpec of
-    dfisDyn:           Result := TUcs4Util.LevDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbr:           Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMyers:         Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisWmLcs:      Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisWmLcs:         Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbrDum:        Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbrBound:      Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfisMyersBound:    Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
-    dfisWmLcsBound: Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    dfisWmLcsBound:    Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
     //dfisMbrDumBound
     Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   end;
 end;
 
-function LevDistanceUtf8(const L, R: string): SizeInt;
+function EditDistanceUtf8(const L, R: string; const aCost: TSeqEditCost): SizeInt;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
 begin
-  Result := GenericDistanceUtf8(L, R, -1, dfisDyn);
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf8ToUcs4SeqImpl(L, pL, LenL);
+    end
+  else
+    begin
+      LBuf := Utf8ToUcs4SeqImpl(L);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf8ToUcs4SeqImpl(R, pR, LenR);
+    end
+  else
+    begin
+      RBuf := Utf8ToUcs4SeqImpl(R);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  Result := TUcs4Util.EditDistance(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aCost);
 end;
 
 function LevDistanceMbrUtf8(const L, R: string): SizeInt;

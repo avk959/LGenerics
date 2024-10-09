@@ -1207,6 +1207,14 @@ type
                           in case of ambiguity, the shortest one is selected }
     );
 
+  TSeqEditCost = record
+    Deletion,
+    Insertion,
+    Replacement: Byte;
+    constructor Make(aDel, aIns, aRep: Byte);
+    class function Default: TSeqEditCost; static; inline;
+  end;
+
   TBomKind = (bkNone, bkUtf8, bkUtf16LE, bkUtf16BE, bkUtf32LE, bkUtf32BE);
 
 const
@@ -3759,6 +3767,20 @@ begin
   Offset := aOfs;
   Length := aLen;
   Index := aIdx;
+end;
+
+{ TSeqEditCost }
+
+constructor TSeqEditCost.Make(aDel, aIns, aRep: Byte);
+begin
+  Deletion := aDel;
+  Insertion := aIns;
+  Replacement := aRep;
+end;
+
+class function TSeqEditCost.Default: TSeqEditCost;
+begin
+  Result := TSeqEditCost.Make(1, 1, 1);
 end;
 
 end.

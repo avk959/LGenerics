@@ -53,8 +53,8 @@ type
 
   TFunTest = class(TTestCase)
   published
-    procedure LevenshteinDist;
-    procedure LevenshteinDist2;
+    procedure EditDist;
+    procedure EditDist2;
     procedure LevenshteinDistMbr;
     procedure LevenshteinDistMbr2;
     procedure LevenshteinDistMbrBounded;
@@ -767,9 +767,28 @@ begin
   for J := 1 to Length(R) do
     for I := 1 to Length(L) do
       if L[I] = R[J] then
-        D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1])
+        D[I, J] := D[I-1, J-1]
       else
         D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1] + 1);
+  Result := D[Length(L), Length(R)];
+end;
+
+function LcsDistDp(const L, R: rawbytestring): SizeInt;
+var
+  D: array of array of SizeInt;
+  I, J: SizeInt;
+begin
+  SetLength(D, Succ(Length(L)), Succ(Length(R)));
+  for I := 1 to Length(L) do
+    D[I, 0] := I;
+  for I := 1 to Length(R) do
+    D[0, I] := I;
+  for J := 1 to Length(R) do
+    for I := 1 to Length(L) do
+      if L[I] = R[J] then
+        D[I, J] := D[I-1, J-1]
+      else
+        D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1] + 2);
   Result := D[Length(L), Length(R)];
 end;
 
@@ -1250,55 +1269,135 @@ const
 
 { TFunTest }
 
-procedure TFunTest.LevenshteinDist;
+procedure TFunTest.EditDist;
+var
+  sec: TSeqEditCost;
 begin
+  sec := TSeqEditCost.Default;
   AssertTrue(LevDistWF('', 'hello') = 5);
-  AssertTrue(LevDistance('', 'hello') = 5);
-  AssertTrue(LevDistance('hello', '') = 5);
-  AssertTrue(LevDistance('hello', 'hello') = 0);
+  AssertTrue(EditDistance('', 'hello', sec) = 5);
+  AssertTrue(EditDistance('hello', '', sec) = 5);
+  AssertTrue(EditDistance('hello', 'hello', sec) = 0);
   AssertTrue(LevDistWF('ab', 'aa') = 1);
-  AssertTrue(LevDistance('ab', 'aa') = 1);
-  AssertTrue(LevDistance('aa', 'ab') = 1);
-  AssertTrue(LevDistance('ab', 'ba') = 2);
-  AssertTrue(LevDistance('ba', 'ab') = 2);
+  AssertTrue(EditDistance('ab', 'aa', sec) = 1);
+  AssertTrue(EditDistance('aa', 'ab', sec) = 1);
+  AssertTrue(EditDistance('ab', 'ba', sec) = 2);
+  AssertTrue(EditDistance('ba', 'ab', sec) = 2);
   AssertTrue(LevDistWF('ab', 'aaa') = 2);
-  AssertTrue(LevDistance('ab', 'aaa') = 2);
-  AssertTrue(LevDistance('a', 'bbb') = 3);
+  AssertTrue(EditDistance('ab', 'aaa', sec) = 2);
+  AssertTrue(EditDistance('a', 'bbb', sec) = 3);
   AssertTrue(LevDistWF('aababab','abbaa') = 3);
-  AssertTrue(LevDistance('aababab','abbaa') = 3);
+  AssertTrue(EditDistance('aababab','abbaa', sec) = 3);
   AssertTrue(LevDistWF('helli', 'elli') = 1);
-  AssertTrue(LevDistance('helli', 'elli') = 1);
+  AssertTrue(EditDistance('helli', 'elli', sec) = 1);
   AssertTrue(LevDistWF('ellia', 'helli') = 2);
-  AssertTrue(LevDistance('ellia', 'helli') = 2);
-  AssertTrue(LevDistance('helli', 'ellia') = 2);
+  AssertTrue(EditDistance('ellia', 'helli', sec) = 2);
+  AssertTrue(EditDistance('helli', 'ellia', sec) = 2);
   AssertTrue(LevDistWF('kitten', 'sitten') = 1);
-  AssertTrue(LevDistance('kitten', 'sitten') = 1);
-  AssertTrue(LevDistance('sitten', 'kitten') = 1);
+  AssertTrue(EditDistance('kitten', 'sitten', sec) = 1);
+  AssertTrue(EditDistance('sitten', 'kitten', sec) = 1);
   AssertTrue(LevDistWF('kitten', 'sitting') = 3);
-  AssertTrue(LevDistance('kitten', 'sitting') = 3);
+  AssertTrue(EditDistance('kitten', 'sitting', sec) = 3);
   AssertTrue(LevDistWF('distance', 'difference') = 5);
-  AssertTrue(LevDistance('distance', 'difference') = 5);
+  AssertTrue(EditDistance('distance', 'difference', sec) = 5);
   AssertTrue(LevDistWF('levenshtein', 'frankenstein') = 6);
-  AssertTrue(LevDistance('levenshtein', 'frankenstein') = 6);
+  AssertTrue(EditDistance('levenshtein', 'frankenstein', sec) = 6);
   AssertTrue(LevDistWF('aaaaaaa', 'aaaaaaa') = 0);
-  AssertTrue(LevDistance('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(EditDistance('aaaaaaa', 'aaaaaaa', sec) = 0);
   AssertTrue(LevDistWF('aaaaaaa', 'bbbbbbbb') = 8);
-  AssertTrue(LevDistance('aaaaaaa', 'bbbbbbbb') = 8);
+  AssertTrue(EditDistance('aaaaaaa', 'bbbbbbbb', sec) = 8);
   AssertTrue(LevDistWF('aaabbaaaa', 'aaaaaaa') = 2);
-  AssertTrue(LevDistance('aaabbaaaa', 'aaaaaaa') = 2);
-  AssertTrue(LevDistance('a', 'a') = 0);
-  AssertTrue(LevDistance('a', 'b') = 1);
+  AssertTrue(EditDistance('aaabbaaaa', 'aaaaaaa', sec) = 2);
+  AssertTrue(EditDistance('a', 'a', sec) = 0);
+  AssertTrue(EditDistance('a', 'b', sec) = 1);
+
+  sec := TSeqEditCost.Make(1,1,2);
+
+  AssertTrue(LcsDistDp('', 'hello') = 5);
+  AssertTrue(EditDistance('', 'hello', sec) = 5);
+  AssertTrue(EditDistance('hello', '', sec) = 5);
+  AssertTrue(EditDistance('hello', 'hello', sec) = 0);
+
+  AssertTrue(LcsDistDp('ab', 'aa') = 2);
+  AssertTrue(EditDistance('ab', 'aa', sec) = 2);
+  AssertTrue(EditDistance('aa', 'ab', sec) = 2);
+
+  AssertTrue(LcsDistDp('ab', 'ba') = 2);
+  AssertTrue(EditDistance('ab', 'ba', sec) = 2);
+  AssertTrue(EditDistance('ba', 'ab', sec) = 2);
+
+  AssertTrue(LcsDistDp('ab', 'aaa') = 3);
+  AssertTrue(EditDistance('ab', 'aaa', sec) = 3);
+  AssertTrue(EditDistance('aaa', 'ab', sec) = 3);
+
+  AssertTrue(LcsDistDp('a', 'bbb') = 4);
+  AssertTrue(EditDistance('a', 'bbb', sec) = 4);
+  AssertTrue(EditDistance('bbb', 'a', sec) = 4);
+
+  AssertTrue(LcsDistDp('aababab','abbaa') = 4);
+  AssertTrue(EditDistance('aababab','abbaa', sec) = 4);
+  AssertTrue(EditDistance('abbaa', 'aababab', sec) = 4);
+
+  AssertTrue(LcsDistDp('helli', 'elli') = 1);
+  AssertTrue(EditDistance('helli', 'elli', sec) = 1);
+  AssertTrue(EditDistance('elli', 'helli', sec) = 1);
+
+  AssertTrue(LcsDistDp('ellia', 'helli') = 2);
+  AssertTrue(EditDistance('ellia', 'helli', sec) = 2);
+  AssertTrue(EditDistance('helli', 'ellia', sec) = 2);
+
+  AssertTrue(LcsDistDp('kitten', 'sitten') = 2);
+  AssertTrue(EditDistance('kitten', 'sitten', sec) = 2);
+  AssertTrue(EditDistance('sitten', 'kitten', sec) = 2);
+
+  AssertTrue(LcsDistDp('kitten', 'sitting') = 5);
+  AssertTrue(EditDistance('kitten', 'sitting', sec) = 5);
+  AssertTrue(EditDistance('sitting', 'kitten', sec) = 5);
+
+  AssertTrue(LcsDistDp('distance', 'difference') = 8);
+  AssertTrue(EditDistance('distance', 'difference', sec) = 8);
+  AssertTrue(EditDistance('difference', 'distance', sec) = 8);
+
+  AssertTrue(LcsDistDp('levenshtein', 'frankenstein') = 9);
+  AssertTrue(EditDistance('levenshtein', 'frankenstein', sec) = 9);
+  AssertTrue(EditDistance('frankenstein', 'levenshtein', sec) = 9);
+
+
+  AssertTrue(LcsDistDp('aaaaaaa', 'aaaaaaa') = 0);
+  AssertTrue(EditDistance('aaaaaaa', 'aaaaaaa', sec) = 0);
+
+  AssertTrue(LcsDistDp('aaaaaaa', 'bbbbbbbb') = 15);
+  AssertTrue(EditDistance('aaaaaaa', 'bbbbbbbb', sec) = 15);
+  AssertTrue(EditDistance('bbbbbbbb', 'aaaaaaa', sec) = 15);
+
+  AssertTrue(LcsDistDp('aaabbaaaa', 'aaaaaaa') = 2);
+  AssertTrue(EditDistance('aaabbaaaa', 'aaaaaaa', sec) = 2);
+  AssertTrue(EditDistance('aaaaaaa', 'aaabbaaaa', sec) = 2);
+
+  AssertTrue(EditDistance('b', 'a', sec) = 2);
+  AssertTrue(EditDistance('a', 'b', sec) = 2);
 end;
 
-procedure TFunTest.LevenshteinDist2;
+procedure TFunTest.EditDist2;
 var
   I: Integer = 0;
   d1, d2: Integer;
+  sec: TSeqEditCost;
 begin
+  sec := TSeqEditCost.Default;
   while I < High(TestWords) do
     begin
       d1 := LevDistWF(TestWords[I], TestWords[I+1]);
-      d2 := LevDistance(TestWords[I], TestWords[I+1]);
+      d2 := EditDistance(TestWords[I], TestWords[I+1], sec);
+      AssertTrue(d1 = d2);
+      I += 2;
+    end;
+  sec := TSeqEditCost.Make(1,1,2);
+  I := 0;
+  while I < High(TestWords) do
+    begin
+      d1 := LcsDistDp(TestWords[I], TestWords[I+1]);
+      d2 := EditDistance(TestWords[I], TestWords[I+1], sec);
       AssertTrue(d1 = d2);
       I += 2;
     end;
@@ -1828,25 +1927,6 @@ begin
   AssertTrue(R.ToString, R > 0.8);
   R := SimRatioEx(Pat1, Pat2, smTokenSort, [' '], [soIgnoreCase], 0, sdaDefault, @LoCase1251, @Less1251);
   AssertTrue(R.ToString, R > 0.98);
-end;
-
-function LcsDistDp(const L, R: rawbytestring): SizeInt;
-var
-  D: array of array of SizeInt;
-  I, J: SizeInt;
-begin
-  SetLength(D, Succ(Length(L)), Succ(Length(R)));
-  for I := 1 to Length(L) do
-    D[I, 0] := I;
-  for I := 1 to Length(R) do
-    D[0, I] := I;
-  for J := 1 to Length(R) do
-    for I := 1 to Length(L) do
-      if L[I] = R[J] then
-        D[I, J] := D[I-1, J-1]
-      else
-        D[I, J] := MinOf3(D[I-1, J] + 1, D[I, J-1] + 1, D[I-1, J-1] + 2);
-  Result := D[Length(L), Length(R)];
 end;
 
 procedure TFunTest.LcsDistWmTest;
