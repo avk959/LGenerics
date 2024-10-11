@@ -80,7 +80,7 @@ begin
   Start := Now;
   aDoc.LoadFromFileMT('MBTA_GTFS/stop_times.txt', StopTimeMask, Math.Min(TThread.ProcessorCount, 8)){%H-};
   //aDoc.LoadFromFile('MBTA_GTFS/stop_times.txt', StopTimeMask);
-  p := aDoc.Rows[0];
+  p := aDoc.MutRows[0];
   if(p^[Ord(stcTripId)] <> StopNames[stcTripId])or(p^[Ord(stcArrival)] <> StopNames[stcArrival])or
     (p^[Ord(stcDeparture)] <> StopNames[stcDeparture])or(p^[Ord(stcStopId)] <> StopNames[stcStopId]) then begin
     WriteLn('stop_times.txt not in expected format:');
@@ -89,7 +89,7 @@ begin
     Halt(1);
   end;
   for I := 1 to Pred(aDoc.RowCount) do begin
-    p := aDoc.Rows[I];
+    p := aDoc.MutRows[I];
     aStopTimeRowMap.FindOrAddMutValue(p^[Ord(stcTripId)], pStopList);
     pStopList^.Add(p);
   end;
@@ -106,7 +106,7 @@ var
 begin
   Start := Now;
   aDoc.LoadFromFile('MBTA_GTFS/trips.txt', TripMask);
-  p := aDoc.Rows[0];
+  p := aDoc.MutRows[0];
   if(p^[Ord(tcRouteId)]<>TripNames[tcRouteId])or(p^[Ord(tcService)]<>TripNames[tcService])or(p^[Ord(tcTripId)]<>TripNames[tcTripId])then begin
     WriteLn('trips.txt not in expected format:');
     for I := 0 to aDoc.ColCount[0] - 1 do
@@ -114,7 +114,7 @@ begin
     Halt(1);
   end;
   for I := 1 to Pred(aDoc.RowCount) do begin
-    p := aDoc.Rows[I];
+    p := aDoc.MutRows[I];
     aTripRowMap.FindOrAddMutValue(p^[Ord(tcRouteId)], pTripList);
     pTripList^.Add(p);
   end;

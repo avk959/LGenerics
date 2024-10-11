@@ -100,7 +100,7 @@ begin
   Doc := DocRef.Instance.LoadFromFileMT(
     'MBTA_GTFS/stop_times.txt', [true,true,true,true], Math.Min(TThread.ProcessorCount, 8)){%H-};
   //Doc := DocRef.Instance.LoadFromFile('MBTA_GTFS/stop_times.txt', [true,true,true,true]);
-  p := Doc.Rows[0];
+  p := Doc.MutRows[0];
   if(p^[0] <> 'trip_id')or(p^[1] <> 'arrival_time')or(p^[2] <> 'departure_time')or(p^[3] <> 'stop_id')then begin
     WriteLn('stop_times.txt not in expected format:');
     for I := 0 to Doc.ColCount[0] - 1 do
@@ -109,7 +109,7 @@ begin
   end;
   SetLength(aShedules, Pred(Doc.RowCount));
   for I := 1 to Pred(DocRef.Instance.RowCount) do begin
-    p := Doc.Rows[I];
+    p := Doc.MutRows[I];
     aStopTimeMap.FindOrAddMutValue(p^[0], pStopList);
     pStopList^.Add(Pred(I));
     aShedules[Pred(I)] := TScheduleItem.Make(p^[1], p^[2], p^[3]);
@@ -129,7 +129,7 @@ var
 begin
   Start := Now;
   Doc := DocRef.Instance.LoadFromFile('MBTA_GTFS/trips.txt', [true, true, true]);
-  p := Doc.Rows[0];
+  p := Doc.MutRows[0];
   if(p^[0] <> 'route_id') or (p^[1] <> 'service_id') or (p^[2] <> 'trip_id')then begin
     WriteLn('trips.txt not in expected format:');
     for I := 0 to Doc.ColCount[0] - 1 do
@@ -138,7 +138,7 @@ begin
   end;
   SetLength(aTrips, Pred(Doc.RowCount));
   for I := 1 to Pred(Doc.RowCount) do begin
-    p := Doc.Rows[I];
+    p := Doc.MutRows[I];
     aTripMap.FindOrAddMutValue(p^[0], pTripList);
     pTripList^.Add(Pred(I));
     aTrips[Pred(I)] := TTrip.Make(p^[0], p^[1], p^[2]);
