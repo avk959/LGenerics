@@ -152,7 +152,8 @@ type
     function  GetCell(aRow, aCol: SizeInt): string; inline;
     procedure SetCell(aRow, aCol: SizeInt; const aValue: string);
     function  GetColCount(aRow: SizeInt): SizeInt; inline;
-    function  GetRow(aIndex: SizeInt): PRow; inline;
+    function  GetMutRow(aIndex: SizeInt): PRow; inline;
+    function  GetRow(aIndex: SizeInt): TStringArray;
     function  GetRowCount: SizeInt; inline;
     function  GetHasIssues: Boolean; inline;
     function  GetIssueCount: SizeInt; inline;
@@ -272,7 +273,8 @@ type
   { on document load defines behavior when rows are encountered whose number of columns
     does not match the number of header columns, ccpAccept by default.}
     property  ColCountPolicy: TColCountPolicy read FCcPolicy write FCcPolicy;
-    property  Rows[aIndex: SizeInt]: PRow read GetRow;
+    property  MutRows[aIndex: SizeInt]: PRow read GetMutRow;
+    property  Rows[aIndex: SizeInt]: TStringArray read GetRow;
     property  Cells[aRow, aCol: SizeInt]: string read GetCell write SetCell; default;
     property  ColCount[aRow: SizeInt]: SizeInt read GetColCount;
     property  RowCount: SizeInt read GetRowCount;
@@ -685,10 +687,16 @@ begin
   Result := System.Length(FCells.UncMutable[aRow]^);
 end;
 
-function TCsvDoc.GetRow(aIndex: SizeInt): PRow;
+function TCsvDoc.GetMutRow(aIndex: SizeInt): PRow;
 begin
   CheckRowIndex(aIndex);
   Result := FCells.UncMutable[aIndex];
+end;
+
+function TCsvDoc.GetRow(aIndex: SizeInt): TStringArray;
+begin
+  CheckRowIndex(aIndex);
+  Result := System.Copy(FCells.UncMutable[aIndex]^);
 end;
 
 function TCsvDoc.GetRowCount: SizeInt;
