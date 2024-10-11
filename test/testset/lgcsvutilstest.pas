@@ -1387,9 +1387,9 @@ begin
   I1 := 0;
   I2 := 2;
   AssertTrue(Doc.Instance.SwapRow(I1, I2));
-  p := Doc.Instance.Rows[I1];
+  p := Doc.Instance.MutRows[I1];
   AssertTrue((p^[0] = 'x') and (p^[1] = 'y') and (p^[2] = 'z'));
-  p := Doc.Instance.Rows[I2];
+  p := Doc.Instance.MutRows[I2];
   AssertTrue((p^[0] = 'a') and (p^[1] = 'b') and (p^[2] = 'c'));
 end;
 
@@ -1520,7 +1520,7 @@ begin
   AssertTrue(Doc.Instance.TrimTrailingBlanks(2) = 4);
   AssertTrue(Doc.Instance.TrimTrailingBlanks = 16);
   for I := 0 to Doc.Instance.RowCount - 1 do
-    AssertTrue(Length(Doc.Instance.Rows[I]^) = 1);
+    AssertTrue(Length(Doc.Instance.MutRows[I]^) = 1);
 end;
 
 initialization
