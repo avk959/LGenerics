@@ -169,7 +169,8 @@ type
     end;
     TMultiSetType = specialize TGLiteChainHashMultiSet<T, TEqRel>;
     TMultiSet     = TMultiSetType.TMultiSet;
-    TDynIntArray = specialize TGDynArray<SizeInt>;
+    TDynIntArray  = specialize TGDynArray<SizeInt>;
+    TLcsImpl      = function(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray;
 
   const
     MAX_STATIC = 512;
@@ -180,9 +181,10 @@ type
     class function  SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
-    class function  LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray; static;
+    class function  LcsGusImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsKRImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
     class function  LcsMyersImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray; static;
+    class function  GetLcs(pL, pR: PItem; aLenL, aLenR: SizeInt; aImpl: TLcsImpl): TArray; static;
     class function  EditDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt; static;
     class function  LevDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  GetLevDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
@@ -256,7 +258,7 @@ type
     inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
     class function LcsGus(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-    uses Kumar-Rangan algorithm for LCS with O(NP) time complexity and linear space complexity }
+    uses Kumar-Rangan algorithm for LCS with O(N(M-|LCS|)) time complexity and linear space complexity }
     class function LcsKR(const L, R: array of T): TArray; static;
   { recursive, returns the longest common subsequence(LCS) of sequences L and R;
     uses O(ND) algorithm from "An O(ND) Difference Algorithm and Its Variations" by Gene Myers }
@@ -979,43 +981,28 @@ begin
     end;
 end;
 
-class function TGSeqUtil.LcsGusImpl(L, R: PItem; aLenL, aLenR: SizeInt): TArray;
+class function TGSeqUtil.LcsGusImpl(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray;
 var
   MatchList: TMap;
   NodeList: TNodeList;
   Tmp: TSizeIntArray;
   LocLis: TSizeIntArray;
-  I, J, PrefixLen, SuffixLen, NodeIdx: SizeInt;
+  I, J, NodeIdx: SizeInt;
   p: ^TEntry;
 const
   INIT_SIZE = 256;
 begin
-  //here aLenL <= aLenR
-  Result := nil;
-
-  if L = R then
-    exit(THelper.CreateCopy(L[0..Pred(aLenL)]));
-
-  SuffixLen := SkipSuffix(L, R, aLenL, aLenR);
-  PrefixLen := SkipPrefix(L, R, aLenL, aLenR);
-
-  if aLenL = 0 then
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      THelper.CopyItems(L - PrefixLen, Pointer(Result), PrefixLen);
-      THelper.CopyItems(L + aLenL, @Result[PrefixLen], SuffixLen);
-      exit;
-    end;
+  //here aLenL <= aLenR and aLenL <> 0
 
   for I := 0 to Pred(aLenL) do
-    if not MatchList.FindOrAdd(L[I], p) then
-      p^ := TEntry.Create(L[I], NULL_INDEX);
+    if not MatchList.FindOrAdd(pL[I], p) then
+      p^ := TEntry.Create(pL[I], NULL_INDEX);
 
   System.SetLength(NodeList, INIT_SIZE);
   J := 0;
   for I := 0 to Pred(aLenR) do
     begin
-      p := MatchList.Find(R[I]);
+      p := MatchList.Find(pR[I]);
       if p <> nil then
         begin
           if System.Length(NodeList) = J then
@@ -1031,7 +1018,7 @@ begin
   J := 0;
   for I := 0 to Pred(aLenL) do
     begin
-      NodeIdx := MatchList.Find(L[I])^.Value;
+      NodeIdx := MatchList.Find(pL[I])^.Value;
       while NodeIdx <> NULL_INDEX do
         with NodeList[NodeIdx] do
           begin
@@ -1044,29 +1031,14 @@ begin
     end;
   System.SetLength(Tmp, J);
 
-  if Tmp <> nil then
-    begin
-      NodeList := nil;
-      LocLis := GetLis(Tmp, aLenL);
-      Tmp := nil;
-      J := System.Length(Result);
-      System.SetLength(Result, J + System.Length(LocLis));
-      for I := 0 to System.High(LocLis) do
-        Result[I+J] := R[LocLis[I]];
+  if Tmp = nil then exit(nil);
 
-      System.SetLength(Result, PrefixLen + System.Length(LocLis) + SuffixLen);
-      for I := 0 to System.High(LocLis) do
-        Result[I+PrefixLen] := R[LocLis[I]];
-      THelper.CopyItems(L - PrefixLen, Pointer(Result), PrefixLen);
-      THelper.CopyItems(L + aLenL, @Result[PrefixLen+System.Length(LocLis)], SuffixLen);
-    end
-  else
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      if Result = nil then exit;
-      THelper.CopyItems(L - PrefixLen, Pointer(Result), PrefixLen);
-      THelper.CopyItems(L + aLenL, @Result[PrefixLen], SuffixLen);
-    end;
+  NodeList := nil;
+  LocLis := GetLis(Tmp, aLenL);
+  Tmp := nil;
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := pR[LocLis[I]];
 end;
 
 {$PUSH}{$WARN 5089 OFF}
@@ -1075,13 +1047,13 @@ var
   LocLcs: TVector;
   R1, R2, LL, LL1, LL2: PSizeInt;
   R, S: SizeInt;
-  procedure FillOne(LFirst, RFirst, RLast: SizeInt; DirectOrd: Boolean);
+  procedure FillOne(LFirst, RFirst, RLast: SizeInt; aForward: Boolean);
   var
     I, J, LoR, PosR, Tmp: SizeInt;
   begin
     J := 1;
     I := S;
-    if DirectOrd then begin
+    if aForward then begin
       R2[0] := RLast - RFirst + 2;
       while I > 0 do begin
         if J > R then
@@ -1116,26 +1088,26 @@ var
     end;
     R := Pred(J);
   end;
-  procedure Swap(var L, R: Pointer); inline;
+  procedure Swap(var pL, pR: Pointer); inline;
   var
     Tmp: Pointer;
   begin
-    Tmp := L;
-    L := R;
-    R := Tmp;
+    Tmp := pL;
+    pL := pR;
+    pR := Tmp;
   end;
-  procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; DirectOrd: Boolean);
+  procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; aForward: Boolean);
   var
     P: SizeInt;
   begin
-    if DirectOrd then
+    if aForward then
       S := Succ(LLast - LFirst)
     else
       S := Succ(LFirst - LLast);
     P := S - Waste;
     R := 0;
     while S >= P do begin
-      FillOne(LFirst, RFirst, RLast, DirectOrd);
+      FillOne(LFirst, RFirst, RLast, aForward);
       Swap(R2, R1);
       Dec(S);
     end;
@@ -1190,39 +1162,11 @@ var
       Lcs(LFirst + U, LLast, RFirst + V, RLast, LcsLen + W - U);
     end;
   end;
-  function GetLcsLen: SizeInt;
-  begin
-    R := 0;
-    S := Succ(aLenL);
-    while S > R do begin
-      Dec(S);
-      FillOne(0, 0, Pred(aLenR), True);
-      Swap(R2, R1);
-    end;
-    Result := S;
-  end;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt;
-  PrefixLen, SuffixLen: SizeInt;
 begin
-  //here aLenL <= aLenR
-  Result := nil;
-
-  if pL = pR then
-    exit(THelper.CreateCopy(pL[0..Pred(aLenL)]));
-
-  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
-  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      THelper.CopyItems(pL - PrefixLen, Pointer(Result), PrefixLen);
-      THelper.CopyItems(pL + aLenL, @Result[PrefixLen], SuffixLen);
-      exit;
-    end;
-
+  //here aLenL <= aLenR and aLenL <> 0
   if MAX_STATIC >= Succ(aLenR)*5 then
     begin
       R1 := @StBuf[0];
@@ -1244,16 +1188,9 @@ begin
   LocLcs := Default(TVector);
   LocLcs.EnsureCapacity(aLenL);
 
-  Lcs(0, Pred(aLenL), 0, Pred(aLenR), GetLcsLen());
-  Buf := nil;
+  Lcs(0, Pred(aLenL), 0, Pred(aLenR), (aLenL + aLenR - LcsDistWmImpl(pL, pR, aLenL, aLenR)) div 2);
 
-  System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
-  if Result = nil then exit;
-
-  if LocLcs.NonEmpty then
-    THelper.CopyItems(LocLcs.UncMutable[0], @Result[PrefixLen], LocLcs.Count);
-  THelper.CopyItems(pL - PrefixLen, Pointer(Result), PrefixLen);
-  THelper.CopyItems(pL + aLenL, @Result[PrefixLen + LocLcs.Count], SuffixLen);
+  Result := LocLcs.ToArray;
 end;
 {$POP}
 
@@ -1291,6 +1228,7 @@ var
     RevV := @V1[Succ(Mid)];
     ForV[1] := 0;
     RevV[1] := 0;
+    aSnake := Default(TSnake); // make compiler happy
     for D := 0 to Mid do
       begin
         K := -D;
@@ -1360,25 +1298,8 @@ var
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt;
-  PrefixLen, SuffixLen: SizeInt;
 begin
-  //here aLenL <= aLenR
-  Result := nil;
-
-  if pL = pR then
-    exit(THelper.CreateCopy(pL[0..Pred(aLenL)]));
-
-  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
-  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      THelper.CopyItems(pL - PrefixLen, Pointer(Result), PrefixLen);
-      THelper.CopyItems(pL, @Result[PrefixLen], SuffixLen);
-      exit;
-    end;
-
+  //here aLenL <= aLenR and aLenL <> 0
   if MAX_STATIC >= (aLenL+aLenR+2)*2 then
     begin
       V0 := @StBuf[0];
@@ -1395,16 +1316,44 @@ begin
   LocLcs.EnsureCapacity(aLenL);
 
   Lcs(0, Pred(aLenL), 0, Pred(aLenR));
-  Buf := nil;
 
-  System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
-  if Result = nil then exit;
-
-  if LocLcs.NonEmpty then
-    THelper.CopyItems(LocLcs.UncMutable[0], @Result[PrefixLen], LocLcs.Count);
-  THelper.CopyItems(pL - PrefixLen, Pointer(Result), PrefixLen);
-  THelper.CopyItems(pL + aLenL, @Result[PrefixLen + LocLcs.Count], SuffixLen);
+  Result := LocLcs.ToArray;
 end;
+
+class function TGSeqUtil.GetLcs(pL, pR: PItem; aLenL, aLenR: SizeInt; aImpl: TLcsImpl): TArray;
+var
+  LocLcs: TArray;
+  PrefixLen, SuffixLen: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(THelper.CreateCopy(pL[0..Pred(aLenL)]));
+
+  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
+  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then begin
+    System.SetLength(Result, PrefixLen + SuffixLen);
+    THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen);
+    THelper.CopyItems(pL, PItem(Result) + PrefixLen, SuffixLen);
+    exit;
+  end;
+
+  if (aLenL = 1) and (aLenR = 1) then begin
+    System.SetLength(Result, PrefixLen + SuffixLen);
+    THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen);
+    THelper.CopyItems(pL + 1, PItem(Result) + PrefixLen, SuffixLen);
+    exit;
+  end;
+
+  LocLcs := aImpl(pL, pR, aLenL, aLenR);
+
+  System.SetLength(Result, System.Length(LocLcs) + PrefixLen + SuffixLen);
+  THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen);
+  THelper.CopyItems(Pointer(LocLcs), PItem(Result) + PrefixLen, System.Length(LocLcs));
+  THelper.CopyItems(pL + aLenL, PItem(Result) + PrefixLen + System.Length(LocLcs), SuffixLen);
+end;
+
 {$POP}
 
 class function TGSeqUtil.EditDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt;
@@ -2595,9 +2544,9 @@ begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
   if System.Length(L) <= System.Length(R) then
-    Result := LcsGusImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := GetLcs(@L[0], @R[0], System.Length(L), System.Length(R), @LcsGusImpl)
   else
-    Result := LcsGusImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := GetLcs(@R[0], @L[0], System.Length(R), System.Length(L), @LcsGusImpl);
 end;
 
 class function TGSeqUtil.LcsKR(const L, R: array of T): TArray;
@@ -2605,9 +2554,9 @@ begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
   if System.Length(L) <= System.Length(R) then
-    Result := LcsKRImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := GetLcs(@L[0], @R[0], System.Length(L), System.Length(R), @LcsKRImpl)
   else
-    Result := LcsKRImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := GetLcs(@R[0], @L[0], System.Length(R), System.Length(L), @LcsKRImpl);
 end;
 
 class function TGSeqUtil.LcsMyers(const L, R: array of T): TArray;
@@ -2615,9 +2564,9 @@ begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
   if System.Length(L) <= System.Length(R) then
-    Result := LcsMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := GetLcs(@L[0], @R[0], System.Length(L), System.Length(R), @LcsMyersImpl)
   else
-    Result := LcsMyersImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := GetLcs(@R[0], @L[0], System.Length(R), System.Length(L), @LcsMyersImpl);
 end;
 
 class function TGSeqUtil.SimRatio(const L, R: array of T; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
