@@ -3899,7 +3899,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
@@ -3922,14 +3921,14 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := Pred(Len) downto 0 do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  Result := TailIdx;
 end;
 
 class function TGBaseArrayHelper.Lis(const A: array of T): TArray;
@@ -4622,7 +4621,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   TailIdx := TSizeIntHelper.CreateAndFill(0, aEntity.Count);
@@ -4645,15 +4643,15 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := 0 to Pred(Len) do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  TSizeIntHelper.Reverse(r);
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  TSizeIntHelper.Reverse(TailIdx);
+  Result := TailIdx;
 end;
 
 class function TGBaseIndexedHelper.Same(const e1, e2: TIndexed): Boolean;
@@ -6369,7 +6367,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
@@ -6392,14 +6389,14 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := Pred(Len) downto 0 do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  Result := TailIdx;
 end;
 
 class function TGComparableArrayHelper.Lis(const A: array of T): TArray;
@@ -8178,7 +8175,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
@@ -8201,14 +8197,14 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := Pred(Len) downto 0 do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  Result := TailIdx;
 end;
 
 class function TGRegularArrayHelper.Lis(const A: array of T; c: TLess): TArray;
@@ -9990,7 +9986,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
@@ -10013,14 +10008,14 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := Pred(Len) downto 0 do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  Result := TailIdx;
 end;
 
 class function TGDelegatedArrayHelper.Lis(const A: array of T; c: TOnLess): TArray;
@@ -11802,7 +11797,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
@@ -11825,14 +11819,14 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := Pred(Len) downto 0 do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  Result := TailIdx;
 end;
 
 class function TGNestedArrayHelper.Lis(const A: array of T; c: TNestLess): TArray;
@@ -13250,7 +13244,6 @@ var
     CeilIdx := R;
   end;
 var
-  r: array of SizeInt = nil;
   I, Idx, Len: SizeInt;
 begin
   System.SetLength(TailIdx, System.Length(A));
@@ -13273,14 +13266,14 @@ begin
           TailIdx[Idx] := I;
         end;
   if Len < 2 then exit(nil);
-  System.SetLength(r, Len);
   Idx := TailIdx[Pred(Len)];
   for I := Pred(Len) downto 0 do
     begin
-      r[I] := Idx;
+      TailIdx[I] := Idx;
       Idx := Parents[Idx];
     end;
-  Result := r;
+  System.SetLength(TailIdx, Len);
+  Result := TailIdx;
 end;
 
 class function TGSimpleArrayHelper.Lis(const A: array of T): TArray;
