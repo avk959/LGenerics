@@ -563,7 +563,7 @@ type
   function LcsGus(const L, R: rawbytestring): rawbytestring;
   function LcsGus(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-  uses Kumar-Rangan algorithm for LCS with O(NP) time complexity and linear space complexity }
+  uses Kumar-Rangan algorithm for LCS with O(N(M-|LCS|)) time complexity and linear space complexity }
   function LcsKR(const L, R: rawbytestring): rawbytestring;
   function LcsKR(const L, R: array of Byte): TBytes;
 { recursive, returns the longest common subsequence(LCS) of sequences L and R;
@@ -712,6 +712,9 @@ begin
     end;
 end;
 
+type
+  TLcsFunImpl = function(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
+
 const
   MAX_STATIC = 512;
 
@@ -728,27 +731,11 @@ var
   NodeList: TNodeList;
   Tmp: TSizeIntArray;
   LocLis: TSizeIntArray;
-  I, J, PrefixLen, SuffixLen, NodeIdx: SizeInt;
+  I, J, NodeIdx: SizeInt;
 const
   INIT_SIZE = 256; //???
 begin
-  //here aLenL <= aLenR
-  Result := nil;
-
-  if pL = pR then
-    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
-
-  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
-  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
-      exit;
-    end;
-
+  //here aLenL <= aLenR and aLenL <> 0
   TSizeIntHelper.Fill(MatchList, NULL_INDEX);
 
   System.SetLength(NodeList, INIT_SIZE);
@@ -779,38 +766,53 @@ begin
     end;
   System.SetLength(Tmp, J);
 
-  if Tmp <> nil then
-    begin
-      NodeList := nil;
+  if Tmp = nil then exit(nil);
 
-      LocLis := TSizeIntHelper.Lis(Tmp);
+  NodeList := nil;
 
-      if LocLis = nil then
-        begin
-          System.SetLength(Result, Succ(PrefixLen + SuffixLen));
-          Result[PrefixLen] := pR[Tmp[0]];
-          System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-          System.Move((pL + aLenL)^, Result[Succ(PrefixLen)], SuffixLen);
-        end
-      else
-        begin
-          Tmp := nil;
-          System.SetLength(Result, PrefixLen + System.Length(LocLis) + SuffixLen);
-          for I := 0 to System.High(LocLis) do
-            Result[I+PrefixLen] := pR[LocLis[I]];
-          System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-          System.Move((pL + aLenL)^, Result[PrefixLen + System.Length(LocLis)], SuffixLen);
-        end;
-    end
-  else
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      if Result = nil then exit;
-      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
-    end;
+  LocLis := TSizeIntHelper.Lis(Tmp);
+
+  if LocLis = nil then exit([pR[Tmp[0]]]);
+
+  System.SetLength(Result, System.Length(LocLis));
+  for I := 0 to System.High(LocLis) do
+    Result[I] := pR[LocLis[I]];
 end;
 {$POP}
+
+function GetLcs(pL, pR: PByte; aLenL, aLenR: SizeInt; aImpl: TLcsFunImpl): TBytes;
+var
+  LocLcs: TBytes;
+  PrefixLen, SuffixLen: SizeInt;
+begin
+  //here aLenL <= aLenR
+  if pL = pR then
+    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
+
+  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
+  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
+
+  if aLenL = 0 then begin
+    System.SetLength(Result, PrefixLen + SuffixLen);
+    System.Move((pL - PrefixLen)^, PByte(Result)^, PrefixLen);
+    System.Move(pL^, (PByte(Result) + PrefixLen)^, SuffixLen);
+    exit;
+  end;
+
+  if (aLenL = 1) and (aLenR = 1) then begin
+    System.SetLength(Result, PrefixLen + SuffixLen);
+    System.Move((pL - PrefixLen)^, PByte(Result)^, PrefixLen);
+    System.Move((pL + 1)^, (PByte(Result) + PrefixLen)^, SuffixLen);
+    exit;
+  end;
+
+  LocLcs := aImpl(pL, pR, aLenL, aLenR);
+
+  System.SetLength(Result, System.Length(LocLcs) + PrefixLen + SuffixLen);
+  System.Move((pL - PrefixLen)^, PByte(Result)^, PrefixLen);
+  System.Move(PByte(LocLcs)^, (PByte(Result) + PrefixLen)^, System.Length(LocLcs));
+  System.Move((pL + aLenL)^, (PByte(Result) + PrefixLen + System.Length(LocLcs))^, SuffixLen);
+end;
 
 function LcsGus(const L, R: rawbytestring): rawbytestring;
 var
@@ -820,9 +822,9 @@ begin
   if (L = '') or (R = '') then
     exit;
   if System.Length(L) <= System.Length(R) then
-    b := LcsGusImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+    b := GetLcs(Pointer(L), Pointer(R), System.Length(L), System.Length(R), @LcsGusImpl)
   else
-    b := LcsGusImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+    b := GetLcs(Pointer(R), Pointer(L), System.Length(R), System.Length(L), @LcsGusImpl);
   System.SetLength(Result, System.Length(b));
   System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
 end;
@@ -832,29 +834,28 @@ begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
   if System.Length(L) <= System.Length(R) then
-    Result := LcsGusImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := GetLcs(@L[0], @R[0], System.Length(L), System.Length(R), @LcsGusImpl)
   else
-    Result := LcsGusImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := GetLcs(@R[0], @L[0], System.Length(R), System.Length(L), @LcsGusImpl);
 end;
 
+function LcsDistWmImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): SizeInt; forward;
 {$PUSH}{$WARN 5089 OFF}
 {
  S. Kiran Kumar and C. Pandu Rangan(1987) "A Linear Space Algorithm for the LCS Problem"
 }
 function LcsKrImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
-type
-  TByteVector = specialize TGLiteVector<Byte>;
 var
-  LocLcs: TByteVector;
+  LocLcs: specialize TGLiteVector<Byte>;
   R1, R2, LL, LL1, LL2: PSizeInt;
   R, S: SizeInt;
-  procedure FillOne(LFirst, RFirst, RLast: SizeInt; DirectOrd: Boolean);
+  procedure FillOne(LFirst, RFirst, RLast: SizeInt; aForward: Boolean);
   var
     I, J, LoR, PosR, Tmp: SizeInt;
   begin
     J := 1;
     I := S;
-    if DirectOrd then begin
+    if aForward then begin
       R2[0] := RLast - RFirst + 2;
       while I > 0 do begin
         if J > R then LoR := 0 else LoR := R1[J];
@@ -883,26 +884,26 @@ var
     end;
     R := Pred(J);
   end;
-  procedure Swap(var L, R: Pointer); inline;
+  procedure Swap(var pL, pR: Pointer); inline;
   var
     Tmp: Pointer;
   begin
-    Tmp := L;
-    L := R;
-    R := Tmp;
+    Tmp := pL;
+    pL := pR;
+    pR := Tmp;
   end;
-  procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; DirectOrd: Boolean);
+  procedure CalMid(LFirst, LLast, RFirst, RLast, Waste: SizeInt; L: PSizeInt; aForward: Boolean);
   var
     P: SizeInt;
   begin
-    if DirectOrd then
+    if aForward then
       S := Succ(LLast - LFirst)
     else
       S := Succ(LFirst - LLast);
     P := S - Waste;
     R := 0;
     while S >= P do begin
-      FillOne(LFirst, RFirst, RLast, DirectOrd);
+      FillOne(LFirst, RFirst, RLast, aForward);
       Swap(R2, R1);
       Dec(S);
     end;
@@ -957,38 +958,13 @@ var
       Lcs(LFirst + U, LLast, RFirst + V, RLast, LcsLen + W - U);
     end;
   end;
-  function GetLcsLen: SizeInt;
-  begin
-    R := 0;
-    S := Succ(aLenL);
-    while S > R do begin
-      Dec(S);
-      FillOne(0, 0, Pred(aLenR), True);
-      Swap(R2, R1);
-    end;
-    Result := S;
-  end;
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt;
-  PrefixLen, SuffixLen: SizeInt;
 begin
   //here aLenL <= aLenR
-  Result := nil;
-
   if pL = pR then
     exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
-
-  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
-  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
-      exit;
-    end;
 
   if MAX_STATIC >= Succ(aLenR)*5 then
     begin
@@ -1010,16 +986,9 @@ begin
 
   LocLcs.EnsureCapacity(aLenL);
 
-  Lcs(0, Pred(aLenL), 0, Pred(aLenR), GetLcsLen());
-  Buf := nil;
+  Lcs(0, Pred(aLenL), 0, Pred(aLenR), (aLenL + aLenR - LcsDistWmImpl(pL, pR, aLenL, aLenR)) div 2);
 
-  System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
-  if Result = nil then exit;
-
-  if LocLcs.NonEmpty then
-    System.Move(LocLcs.UncMutable[0]^, Result[PrefixLen], LocLcs.Count);
-  System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-  System.Move((pL + aLenL)^, Result[PrefixLen + LocLcs.Count], SuffixLen);
+  Result := LocLcs.ToArray;
 end;
 {$POP}
 
@@ -1031,9 +1000,9 @@ begin
   if (L = '') or (R = '') then
     exit;
   if System.Length(L) <= System.Length(R) then
-    b := LcsKrImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+    b := GetLcs(Pointer(L), Pointer(R), System.Length(L), System.Length(R), @LcsKrImpl)
   else
-    b := LcsKrImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+    b := GetLcs(Pointer(R), Pointer(L), System.Length(R), System.Length(L), @LcsKrImpl);
   System.SetLength(Result, System.Length(b));
   System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
 end;
@@ -1043,9 +1012,9 @@ begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
   if System.Length(L) <= System.Length(R) then
-    Result := LcsKrImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := GetLcs(@L[0], @R[0], System.Length(L), System.Length(R), @LcsKrImpl)
   else
-    Result := LcsKrImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := GetLcs(@R[0], @L[0], System.Length(R), System.Length(L), @LcsKrImpl);
 end;
 
 type
@@ -1073,10 +1042,8 @@ end;
   Eugene W. Myers(1986) "An O(ND) Difference Algorithm and Its Variations"
 }
 function LcsMyersImpl(pL, pR: PByte; aLenL, aLenR: SizeInt): TBytes;
-type
-  TByteVector = specialize TGLiteVector<Byte>;
 var
-  LocLcs: TByteVector;
+  LocLcs: specialize TGLiteVector<Byte>;
   V0, V1: PSizeInt;
   function FindMiddleShake(LFirst, LLast, RFirst, RLast: SizeInt; out aSnake: TSnake): SizeInt;
   var
@@ -1170,25 +1137,8 @@ var
 var
   StBuf: array[0..Pred(MAX_STATIC)] of SizeInt;
   Buf: array of SizeInt;
-  PrefixLen, SuffixLen: SizeInt;
 begin
   //here aLenL <= aLenR
-  Result := nil;
-
-  if pL = pR then
-    exit(specialize TGArrayHelpUtil<Byte>.CreateCopy(pL[0..Pred(aLenL)]));
-
-  SuffixLen := SkipSuffix(pL, pR, aLenL, aLenR);
-  PrefixLen := SkipPrefix(pL, pR, aLenL, aLenR);
-
-  if aLenL = 0 then
-    begin
-      System.SetLength(Result, PrefixLen + SuffixLen);
-      System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-      System.Move((pL + aLenL)^, Result[PrefixLen], SuffixLen);
-      exit;
-    end;
-
   if MAX_STATIC >= (aLenL+aLenR+2)*2 then
     begin
       V0 := @StBuf[0];
@@ -1204,15 +1154,8 @@ begin
   LocLcs.EnsureCapacity(aLenL);
 
   Lcs(0, Pred(aLenL), 0, Pred(aLenR));
-  Buf := nil;
 
-  System.SetLength(Result, PrefixLen + LocLcs.Count + SuffixLen);
-  if Result = nil then exit;
-
-  if LocLcs.NonEmpty then
-    System.Move(LocLcs.UncMutable[0]^, Result[PrefixLen], LocLcs.Count);
-  System.Move((pL - PrefixLen)^, Pointer(Result)^, PrefixLen);
-  System.Move((pL + aLenL)^, Result[PrefixLen + LocLcs.Count], SuffixLen);
+  Result := LocLcs.ToArray;
 end;
 {$POP}
 
@@ -1224,9 +1167,9 @@ begin
   if (L = '') or (R = '') then
     exit;
   if System.Length(L) <= System.Length(R) then
-    b := LcsMyersImpl(Pointer(L), Pointer(R), System.Length(L), System.Length(R))
+    b := GetLcs(Pointer(L), Pointer(R), System.Length(L), System.Length(R), @LcsMyersImpl)
   else
-    b := LcsMyersImpl(Pointer(R), Pointer(L), System.Length(R), System.Length(L));
+    b := GetLcs(Pointer(R), Pointer(L), System.Length(R), System.Length(L), @LcsMyersImpl);
   System.SetLength(Result, System.Length(b));
   System.Move(Pointer(b)^, Pointer(Result)^, System.Length(b));
 end;
@@ -1236,9 +1179,9 @@ begin
   if (System.Length(L) = 0) or (System.Length(R) = 0) then
     exit(nil);
   if System.Length(L) <= System.Length(R) then
-    Result := LcsMyersImpl(@L[0], @R[0], System.Length(L), System.Length(R))
+    Result := GetLcs(@L[0], @R[0], System.Length(L), System.Length(R), @LcsMyersImpl)
   else
-    Result := LcsMyersImpl(@R[0], @L[0], System.Length(R), System.Length(L));
+    Result := GetLcs(@R[0], @L[0], System.Length(R), System.Length(L), @LcsMyersImpl);
 end;
 
 function EditDistanceImpl(pL, pR: PByte; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt;
@@ -2849,6 +2792,14 @@ var
   begin
     WordsL := SplitSortedSet(L, CountL, BufL, False);
     WordsR := SplitSortedSet(R, CountR, BufR, True);
+    if WordsL = nil then
+      if WordsR = nil then
+        exit(Double(1))
+      else
+        exit(Double(0))
+    else
+      if WordsR = nil then
+        exit(Double(0));
     IntersectIdx.EnsureCapacity(CountL);
     DiffIdxL.InitRange(CountL);
     DiffIdxR.InitRange(CountR);
@@ -3046,10 +2997,11 @@ var
     Buf: TWordArray = nil;
     I, J, Count, Len: SizeInt;
     pR: PChar;
+    r: rawbytestring;
   begin
     Words := aSplit(s, Count, Buf, False);
-    System.SetLength(Result, System.Length(s));
-    pR := Pointer(Result);
+    System.SetLength(r, System.Length(s));
+    pR := Pointer(r);
     Len := 0;
     for I := 0 to Pred(Count) do begin
       if I > 0 then begin
@@ -3059,11 +3011,11 @@ var
       end else
         Len += Words[I].Len;
       for J := 0 to Pred(Words[I].Len) do
-        with Words[I] do
-          pR[J] := Start[J];
+        pR[J] := Words[I].Start[J];
       pR += Words[I].Len;
     end;
-    System.SetLength(Result, Len);
+    System.SetLength(r, Len);
+    SplitMerge := r;
   end;
 
   function SplitMergeSorted(const s: rawbytestring): rawbytestring; inline;
@@ -3125,9 +3077,10 @@ var
     I, J, Len: SizeInt;
     pR: PChar;
     NotFirst: Boolean;
+    r: rawbytestring;
   begin
-    System.SetLength(Result, aSrcLen);
-    pR := Pointer(Result);
+    System.SetLength(r, aSrcLen);
+    pR := Pointer(r);
     NotFirst := False;
     Len := 0;
     for I in aIndices do begin
@@ -3140,11 +3093,11 @@ var
         NotFirst := True;
       end;
       for J := 0 to Pred(aWords[I].Len) do
-        with aWords[I] do
-          pR[J] := Start[J];
+        pR[J] := aWords[I].Start[J];
       pR += aWords[I].Len;
     end;
-    System.SetLength(Result, Len);
+    System.SetLength(r, Len);
+    Merge := r;
   end;
 
   function ToProperCase(const s: rawbytestring): rawbytestring;
@@ -3176,8 +3129,23 @@ var
     for K := 0 to System.High(aValues) do begin
       Value := ToProperCase(aValues[K]);
       WordsR := SplitSortedSet(Value, CountR, BufR, True);
+
+      if WordsL = nil then begin
+        if WordsR = nil then
+          r[K] := Double(1)
+        else
+          r[K] := Double(0);
+        continue;
+      end else
+        if WordsR = nil then begin
+          r[K] := Double(0);
+          continue;
+        end;
+
       IntersectIdx.ClearBits;
+      DiffIdxL.ClearBits;
       DiffIdxL.InitRange(CountL);
+      DiffIdxR.ClearBits;
       DiffIdxR.InitRange(CountR);
 
       if aLess <> nil then
@@ -3204,6 +3172,7 @@ var
         r[K] := Double(1.0);
         continue;
       end;
+
       SetL := Merge(System.Length(Pattern), WordsL, DiffIdxL);
       SetR := Merge(System.Length(Value), WordsR, DiffIdxR);
 
@@ -3273,7 +3242,6 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5036 OFF}
-
 function SelectSimilar(const aPattern: rawbytestring; const aValues: array of rawbytestring; aLimit: Double;
   aMode: TSimMode; const aStopChars: TSysCharSet; const aOptions: TSimOptions; Algo: TSeqDistanceAlgo;
   aCaseMap: TSimCaseMap; aLess: TSimLess): specialize TGArray<TRbStrRatio>;
@@ -3290,11 +3258,9 @@ begin
   System.SetLength(r, System.Length(ratios));
   J := 0;
   for I := 0 to System.High(ratios) do
-    if ratios[I] > Double(0) then begin
-      with r[J] do begin
-        Value := aValues[I];
-        Ratio := ratios[I];
-      end;
+    if ratios[I] >= aLimit then begin
+      r[J].Value := aValues[I];
+      r[J].Ratio := ratios[I];
       Inc(J);
     end;
   System.SetLength(r, J);
