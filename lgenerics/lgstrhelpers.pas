@@ -2792,13 +2792,13 @@ var
   begin
     WordsL := SplitSortedSet(L, CountL, BufL, False);
     WordsR := SplitSortedSet(R, CountR, BufR, True);
-    if WordsL = nil then
-      if WordsR = nil then
+    if CountL = 0 then
+      if CountR = 0 then
         exit(Double(1))
       else
         exit(Double(0))
     else
-      if WordsR = nil then
+      if CountR = 0 then
         exit(Double(0));
     IntersectIdx.EnsureCapacity(CountL);
     DiffIdxL.InitRange(CountL);
@@ -3130,14 +3130,14 @@ var
       Value := ToProperCase(aValues[K]);
       WordsR := SplitSortedSet(Value, CountR, BufR, True);
 
-      if WordsL = nil then begin
-        if WordsR = nil then
+      if CountL = 0 then begin
+        if CountR = 0 then
           r[K] := Double(1)
         else
           r[K] := Double(0);
         continue;
       end else
-        if WordsR = nil then begin
+        if CountR = 0 then begin
           r[K] := Double(0);
           continue;
         end;
