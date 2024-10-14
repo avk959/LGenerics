@@ -22,7 +22,6 @@ unit lgSeqUtils;
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
-{$MODESWITCH ARRAYOPERATORS}
 {$INLINE ON}
 
 interface
@@ -407,7 +406,7 @@ type
 type
   TBufHash32         = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
   TBufHash64         = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
-  TStrCompareOption  = (scoIgnoreWS, scoIgnoreCase);
+  TStrCompareOption  = (scoIgnoreWS, scoIgnoreWSChange, scoIgnoreCase);
   TStrCompareOptions = set of TStrCompareOption;
 
 { returns a 32-bit hash(using aHash) of the string s, skipping whitespace and converting
@@ -3162,10 +3161,11 @@ var
     Buf: TWordArray = nil;
     I, J, Count, Len: SizeInt;
     pR: PUcs4Char;
+    r: TUcs4Seq;
   begin
     Words := aSplit(s, Count, Buf, False);
-    System.SetLength(Result, System.Length(s));
-    pR := Pointer(Result);
+    System.SetLength(r, System.Length(s));
+    pR := Pointer(r);
     Len := 0;
     for I := 0 to Pred(Count) do begin
       if I > 0 then begin
@@ -3179,7 +3179,8 @@ var
           pR[J] := Start[J];
       pR += Words[I].Len;
     end;
-    System.SetLength(Result, Len);
+    System.SetLength(r, Len);
+    SplitMerge := r;
   end;
 
   function SplitMergeSorted(const s: array of Ucs4Char): TUcs4Seq;
@@ -3242,9 +3243,10 @@ var
     I, J, Len: SizeInt;
     pR: PUcs4Char;
     NotFirst: Boolean;
+    r: TUcs4Seq;
   begin
-    System.SetLength(Result, aSrcLen);
-    pR := Pointer(Result);
+    System.SetLength(r, aSrcLen);
+    pR := Pointer(r);
     NotFirst := False;
     Len := 0;
     for I in aIndices do begin
@@ -3261,7 +3263,8 @@ var
           pR[J] := Start[J];
       pR += aWords[I].Len;
     end;
-    System.SetLength(Result, Len);
+    System.SetLength(r, Len);
+    Merge := r;
   end;
 
   function WordSetPairwise(const L, R: array of Ucs4Char): Double;
@@ -3274,6 +3277,14 @@ var
   begin
     WordsL := SplitSortedSet(L, CountL, BufL, False);
     WordsR := SplitSortedSet(R, CountR, BufR, True);
+    if WordsL = nil then
+      if WordsR = nil then
+        exit(Double(1))
+      else
+        exit(Double(0))
+    else
+      if WordsR = nil then
+        exit(Double(0));
     IntersectIdx.EnsureCapacity(CountL);
     DiffIdxL.InitRange(CountL);
     DiffIdxR.InitRange(CountR);
@@ -3303,13 +3314,21 @@ var
     SetR := Merge(System.Length(R), WordsR, DiffIdxR);
 
     if Intersection <> nil then begin
-      if SetL <> nil then
-        SetL := Intersection + [UCS4_SPACE] + SetL
-      else
+      if SetL <> nil then begin
+        J := System.Length(SetL);
+        System.SetLength(SetL, Succ(System.Length(Intersection) + J));
+        System.Move(SetL[0], SetL[System.Length(SetL) - J], J*SizeOf(Ucs4Char));
+        System.Move(Intersection[0], SetL[0], System.Length(Intersection)*SizeOf(Ucs4Char));
+        SetL[System.Length(Intersection)] := UCS4_SPACE;
+      end else
         SetL := Intersection;
-      if SetR <> nil then
-        SetR := Intersection + [UCS4_SPACE] + SetR
-      else
+      if SetR <> nil then begin
+        J := System.Length(SetR);
+        System.SetLength(SetR, Succ(System.Length(Intersection) + J));
+        System.Move(SetR[0], SetR[System.Length(SetR) - J], J*SizeOf(Ucs4Char));
+        System.Move(Intersection[0], SetR[0], System.Length(Intersection)*SizeOf(Ucs4Char));
+        SetR[System.Length(Intersection)] := UCS4_SPACE;
+      end else
         SetR := Intersection;
     end;
 
@@ -4327,8 +4346,8 @@ begin
 end;
 
 function SelectSimilarUtf8(const aPattern: string; const aValues: array of string;
-  const aStopChars: array of string; aLimit: Double; aMode: TSimMode; const aOptions: TSimOptions;
-  Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<TStringRatio>;
+  const aStopChars: array of string; aLimit: Double; aMode: TSimMode;
+  const aOptions: TSimOptions; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<TStringRatio>;
   function Less(const L, R: TStringRatio): Boolean;
   begin
     Result := R.Ratio < L.Ratio;
@@ -4342,11 +4361,9 @@ begin
   System.SetLength(r, System.Length(ratios));
   J := 0;
   for I := 0 to System.High(ratios) do
-    if ratios[I] > Double(0.0) then begin
-      with r[J] do begin
-        Value := aValues[I];
-        Ratio := ratios[I];
-      end;
+    if ratios[I] >= aLimit then begin
+      r[J].Value := aValues[I];
+      r[J].Ratio := ratios[I];
       Inc(J);
     end;
   System.SetLength(r, J);
@@ -4354,60 +4371,91 @@ begin
   Result := r;
 end;
 
-function FilterStringUtf8(const s: string; pBuf: PByte; aIgnoreWS, aIgnoreCase: Boolean): SizeInt;
-var
-  pv, pBufStart, pEnd: PByte;
-  Prop: PUC_Prop;
-  c, LoC: DWord;
-  PtSize: SizeInt;
+function IsWhiteSpaceUcs4(aChar: DWord): Boolean; //inline;
 const
   WS = [9, 10, 11, 12, 13, 32, 133, 160];
 begin
-  // here is implied (aIgnoreWS or aIgnoreCase) is True
+  if aChar < $a1 then
+    exit(aChar in WS)
+  else
+    if aChar > $167f then
+      exit(UnicodeData.GetProps(aChar)^.WhiteSpace);
+  Result := False;
+end;
+
+function Ucs4CharToLower(aChar: DWord): DWord; inline;
+begin
+  if aChar <= UC_TBL_HIGH then
+    Result := UC_CASE_TBL[aChar] and $ffff
+  else begin
+    Result := UnicodeData.GetProps(aChar)^.SimpleLowerCase;
+    if Result = 0 then
+      Result := aChar;
+  end;
+end;
+
+function FilterStringUtf8(const s: string; pBuf: PByte; const aOpts: TStrCompareOptions): SizeInt;
+var
+  pSrc, pBufStart, pEnd: PByte;
+  c: DWord;
+  PtSize: SizeInt;
+  WsSkipping: Boolean;
+begin
+  // here is implied ((scoIgnoreWS or scoIgnoreWSChange) or scoIgnoreCase) is set
   pBufStart := pBuf;
-  pv := PByte(s);
-  pEnd := pv + System.Length(s);
+  pSrc := PByte(s);
+  pEnd := pSrc + System.Length(s);
   PtSize := 0;
-  if aIgnoreWS then
-    while pv < pEnd do begin
-      c := CodePointToUcs4Char(pv, PtSize);
-      pv += PtSize;
-      Prop := nil;
-      if c <= $a0 then begin
-        if c in WS then continue;
-      end else
-        if c > $167f then begin
-          Prop := UnicodeData.GetProps(c);
-          if Prop^.WhiteSpace then continue;
-        end;
-      if aIgnoreCase then begin
-        if c <= UC_TBL_HIGH then
-          LoC := UC_CASE_TBL[c] and $ffff
-        else begin
-          if Prop = nil then
-            LoC := UnicodeData.GetProps(c)^.SimpleLowerCase
-          else
-            LoC := Prop^.SimpleLowerCase;
-          if LoC = 0 then
-            LoC := c;
-        end;
-        Ucs4Char2Utf8Buffer(pBuf, LoC);
-      end else
+  if scoIgnoreWS in aOpts then begin
+    if scoIgnoreCase in aOpts then
+      while pSrc < pEnd do begin
+        c := CodePointToUcs4Char(pSrc, PtSize);
+        pSrc += PtSize;
+        if IsWhiteSpaceUcs4(c) then continue;
+        Ucs4Char2Utf8Buffer(pBuf, Ucs4CharToLower(c));
+      end
+    else
+      while pSrc < pEnd do begin
+        c := CodePointToUcs4Char(pSrc, PtSize);
+        pSrc += PtSize;
+        if IsWhiteSpaceUcs4(c) then continue;
         Ucs4Char2Utf8Buffer(pBuf, c);
-    end
-  else // aIgnoreCase is True
-    while pv < pEnd do begin
-      c := CodePointToUcs4Char(pv, PtSize);
-      if c <= UC_TBL_HIGH then
-        LoC := UC_CASE_TBL[c] and $ffff
-      else begin
-        LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
-        if LoC = 0 then
-          LoC := c;
+      end
+  end else
+    if scoIgnoreWSChange in aOpts then begin
+      WsSkipping := False;
+      if scoIgnoreCase in aOpts then
+        while pSrc < pEnd do begin
+          c := CodePointToUcs4Char(pSrc, PtSize);
+          pSrc += PtSize;
+          if IsWhiteSpaceUcs4(c) then begin
+            if WsSkipping then continue;
+            WsSkipping := True;
+            Ucs4Char2Utf8Buffer(pBuf, Ucs4CharToLower(c));
+          end else begin
+            WsSkipping := False;
+            Ucs4Char2Utf8Buffer(pBuf, Ucs4CharToLower(c));
+          end;
+        end
+      else
+        while pSrc < pEnd do begin
+          c := CodePointToUcs4Char(pSrc, PtSize);
+          pSrc += PtSize;
+          if IsWhiteSpaceUcs4(c) then begin
+          if WsSkipping then continue;
+            WsSkipping := True;
+            Ucs4Char2Utf8Buffer(pBuf, c);
+          end else begin
+            WsSkipping := False;
+            Ucs4Char2Utf8Buffer(pBuf, c);
+          end;
+        end
+    end else // aIgnoreCase
+      while pSrc < pEnd do begin
+        c := CodePointToUcs4Char(pSrc, PtSize);
+        Ucs4Char2Utf8Buffer(pBuf, Ucs4CharToLower(c));
+        pSrc += PtSize;
       end;
-      Ucs4Char2Utf8Buffer(pBuf, LoC);
-      pv += PtSize;
-    end;
   Result := pBuf - pBufStart;
 end;
 
@@ -4428,7 +4476,7 @@ begin
       Buf.Length := (Len + Pred(SizeOf(DWord))) div SizeOf(DWord);
       pBuf := Pointer(Buf.Ptr);
     end;
-  Len := FilterStringUtf8(s, pBuf, scoIgnoreWS in aOpts, scoIgnoreCase in aOpts);
+  Len := FilterStringUtf8(s, pBuf, aOpts);
   Result := aHash(pBuf, Len, aSeed);
 end;
 
@@ -4449,7 +4497,7 @@ begin
       Buf.Length := (Len + Pred(SizeOf(QWord))) div SizeOf(QWord);
       pBuf := Pointer(Buf.Ptr);
     end;
-  Len := FilterStringUtf8(s, pBuf, scoIgnoreWS in aOpts, scoIgnoreCase in aOpts);
+  Len := FilterStringUtf8(s, pBuf, aOpts);
   Result := aHash(pBuf, Len, aSeed);
 end;
 
@@ -4457,25 +4505,20 @@ function Utf8SameText(const L, R: string; const aOpts: TStrCompareOptions): Bool
 var
   LBuf, RBuf: specialize TGDynArray<Byte>;
   LenL, LenR: SizeInt;
-  IgnoreWS, IgnoreCase: Boolean;
 begin
   if aOpts = [] then exit(L = R);
-  IgnoreWS := scoIgnoreWS in aOpts;
-  IgnoreCase := scoIgnoreCase in aOpts;
-  if IgnoreCase then
+  if scoIgnoreCase in aOpts then
     begin
-      LenL := System.Length(L)*2;
-      LenR := System.Length(R)*2;
+      LBuf.Length := System.Length(L)*2;
+      RBuf.Length := System.Length(R)*2;
     end
   else
     begin
-      LenL := System.Length(L);
-      LenR := System.Length(R);
+      LBuf.Length := System.Length(L);
+      RBuf.Length := System.Length(R);
     end;
-  LBuf.Length := LenL;
-  RBuf.Length := LenR;
-  LenL := FilterStringUtf8(L, LBuf.Ptr, IgnoreWS, IgnoreCase);
-  LenR := FilterStringUtf8(R, RBuf.Ptr, IgnoreWS, IgnoreCase);
+  LenL := FilterStringUtf8(L, LBuf.Ptr, aOpts);
+  LenR := FilterStringUtf8(R, RBuf.Ptr, aOpts);
   if LenL <> LenR then
     exit(False)
   else
