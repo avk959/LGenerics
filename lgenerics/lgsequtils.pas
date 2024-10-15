@@ -317,11 +317,22 @@ type
   the lower bound of the required similarity(0<=aLimit<=1.0), if the obtained value
   is less than the specified value, zero will be returned }
   function SimRatioUtf16(const L, R: unicodestring; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
-{ similarity ratio using the Levenshtein distance with some preprocessing of the input text;
-  elements from aStopChars must be code points otherwise they will be ignored  }
+{ returns the similarity ratio using the specified distance algorithm after preprocessing
+  the input texts according to the aMode parameter; the elements in aStopChars must be single
+  code points, otherwise they will be ignored }
   function SimRatioExUtf16(
     const L, R: unicodestring;
     const aStopChars: array of unicodestring;
+    aMode: TSimMode = smSimple;
+    const aOptions: TSimOptions = [];
+    aLimit: Double = Double(0);
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aLess: TUcs4Less = nil
+  ): Double;
+{ returns the similarity ratio using the specified distance algorithm after preprocessing
+  the input texts according to the aMode parameter; all non-word chars are treated as stop chars }
+  function SimRatioExUtf16(
+    const L, R: unicodestring;
     aMode: TSimMode = smSimple;
     const aOptions: TSimOptions = [];
     aLimit: Double = Double(0);
@@ -362,6 +373,9 @@ type
   the lower bound of the required similarity(0<=aLimit<=1.0), if the obtained value
   is less than the specified value, zero will be returned }
   function SimRatioUtf8(const L, R: string; aLimit: Double = Double(0); Algo: TSeqDistanceAlgo = sdaDefault): Double;
+{ returns the similarity ratio using the specified distance algorithm after preprocessing
+  the input texts according to the aMode parameter; the elements in aStopChars must be single
+  code points, otherwise they will be ignored }
   function SimRatioExUtf8(
     const L, R: string;
     const aStopChars: array of string;
@@ -371,12 +385,35 @@ type
     Algo: TSeqDistanceAlgo = sdaDefault;
     aLess: TUcs4Less = nil
   ): Double;
+{ returns the similarity ratio using the specified distance algorithm after preprocessing
+  the input texts according to the aMode parameter; all non-word chars are treated as stop chars }
+  function SimRatioExUtf8(
+    const L, R: string;
+    aMode: TSimMode = smSimple;
+    const aOptions: TSimOptions = [];
+    aLimit: Double = Double(0);
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aLess: TUcs4Less = nil
+  ): Double;
 { returns an array, each element of which contains the similarity ratio between
-  aPattern and the corresponding element in the aValues array }
+  aPattern and the corresponding element in the aValues array; the elements in
+  aStopChars must be single code points, otherwise they will be ignored }
   function SimRatioListUtf8(
     const aPattern: string;
     const aValues: array of string;
     const aStopChars: array of string;
+    aMode: TSimMode = smSimple;
+    const aOptions: TSimOptions = [];
+    aLimit: Double = Double(0);
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aLess: TUcs4Less = nil
+  ): specialize TGArray<Double>;
+{ returns an array, each element of which contains the similarity ratio between
+  aPattern and the corresponding element in the aValues array; all non-word chars
+  are treated as stop chars }
+  function SimRatioListUtf8(
+    const aPattern: string;
+    const aValues: array of string;
     aMode: TSimMode = smSimple;
     const aOptions: TSimOptions = [];
     aLimit: Double = Double(0);
@@ -391,11 +428,24 @@ type
   end;
 
 { returns an array of pairs sorted by descending similarity ratio and containing only those
-  strings whose similarity ratio is not less than the specified boundary aLimit }
+  strings whose similarity ratio is not less than the specified aLimit; the elements in
+  aStopChars must be single code points, otherwise they will be ignored }
   function SelectSimilarUtf8(
     const aPattern: string;
     const aValues: array of string;
     const aStopChars: array of string;
+    aLimit: Double;
+    aMode: TSimMode = smSimple;
+    const aOptions: TSimOptions = [];
+    Algo: TSeqDistanceAlgo = sdaDefault;
+    aLess: TUcs4Less = nil
+  ): specialize TGArray<TStringRatio>;
+{ returns an array of pairs sorted by descending similarity ratio and containing only those
+  strings whose similarity ratio is not less than the specified aLimit; all non-word chars
+  are treated as stop chars }
+  function SelectSimilarUtf8(
+    const aPattern: string;
+    const aValues: array of string;
     aLimit: Double;
     aMode: TSimMode = smSimple;
     const aOptions: TSimOptions = [];
@@ -3040,8 +3090,44 @@ begin
   Result := LcsGenericUtf16(L, R, laMyers);
 end;
 
+function SimRatioUtf16(const L, R: unicodestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
+var
+  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
+  LBuf: TUcs4Seq = nil;
+  RBuf: TUcs4Seq = nil;
+  LenL, LenR: SizeInt;
+  pL, pR: PUcs4Char;
+begin
+  if System.Length(L) <= MAX_STATIC then
+    begin
+      pL := @LBufSt[0];
+      Utf16ToUcs4SeqImpl(L, pL, LenL);
+    end
+  else
+    begin
+      Utf16ToUcs4SeqImpl(L, LBuf);
+      LenL := System.Length(LBuf);
+      pL := Pointer(LBuf);
+    end;
+  if System.Length(R) <= MAX_STATIC then
+    begin
+      pR := @RBufSt[0];
+      Utf16ToUcs4SeqImpl(R, pR, LenR);
+    end
+  else
+    begin
+      Utf16ToUcs4SeqImpl(R, RBuf);
+      LenR := System.Length(RBuf);
+      pR := Pointer(RBuf);
+    end;
+  Result := TUcs4Util.SimRatio(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit, Algo);
+end;
+
+type
+  TUcs4CharTest = function(c: Ucs4Char): Boolean is nested;
+
 {$PUSH}{$WARN 5089 OFF}
-function SimRatioGeneric(const L, R: array of Ucs4Char; constref aStopChars: TUcs4CharSet;
+function SimRatioGeneric(const L, R: array of Ucs4Char; aIsStopChar: TUcs4CharTest;
   aMode: TSimMode; aPartial: Boolean; aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
 type
   TWord       = record Start: PUcs4Char; Len: SizeInt end;
@@ -3050,7 +3136,6 @@ type
   TSplitFun   = function(const s: array of Ucs4Char; out aCount: SizeInt; out aBuf: TWordArray;
                          aForceDyn: Boolean): PWord is nested;
   THelper     = specialize TGNestedArrayHelper<TWord>;
-  TUcs4Helper = specialize TGArrayHelpUtil<Ucs4Char>;
 const
   UCS4_SPACE: Ucs4Char = 32;
 var
@@ -3062,17 +3147,16 @@ var
     pS, pR: PUcs4Char;
     NewWord: Boolean;
   begin
-    if aStopChars.Count = 0 then exit(TUcs4Helper.CreateCopy(s));
     if System.Length(s) = 0 then exit(nil);
     System.SetLength(Result, System.Length(s));
     pS := @s[0];
     pR := Pointer(Result);
     I := 0;
-    while (I < System.Length(s)) and (aStopChars.Find(pS[I]) <> nil) do Inc(I);
+    while (I < System.Length(s)) and aIsStopChar(pS[I]) do Inc(I);
     J := 0;
     NewWord := False;
     for I := I to System.High(s) do
-      if aStopChars.Find(pS[I]) <> nil then
+      if aIsStopChar(pS[I]) then
         NewWord := True
       else begin
         if NewWord then begin
@@ -3131,7 +3215,7 @@ var
     CurrLen := 0;
     Count := 0;
     for I := 0 to System.High(s) do
-      if aStopChars.Find(p[I]) <> nil then begin
+      if aIsStopChar(p[I]) then begin
         if CurrLen = 0 then continue;
         Words[Count].Start := CurrStart;
         Words[Count].Len := CurrLen;
@@ -3391,7 +3475,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5036 OFF}
-function SimRatioExUtf16(const L, R: unicodestring; const aStopChars: array of unicodestring; aMode: TSimMode;
+function SimRatioExUtf16Impl(const L, R: unicodestring; aIsStopChar: TUcs4CharTest; aMode: TSimMode;
   const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
@@ -3399,12 +3483,7 @@ var
   RBuf: TUcs4Seq = nil;
   LenL, LenR: SizeInt;
   pL, pR: PUcs4Char;
-
-  StopChars: TUcs4CharSet;
   LocL, LocR: unicodestring;
-  I: SizeInt;
-  c: Ucs4Char;
-  p: TUcs4CharSet.PEntry;
 begin
 
   if soIgnoreCase in aOptions then
@@ -3417,10 +3496,6 @@ begin
       LocL := L;
       LocR := R;
     end;
-
-  for I := 0 to System.High(aStopChars) do
-    if IsSingleCodePointUtf16(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
-      p^.Key := c;
 
   if System.Length(LocL) <= MAX_STATIC then
     begin
@@ -3445,43 +3520,49 @@ begin
       pR := Pointer(RBuf);
     end;
 
-  Result :=
-    SimRatioGeneric(
-      pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLimit, Algo, aLess);
+  Result := SimRatioGeneric(
+    pL[0..Pred(LenL)], pR[0..Pred(LenR)], aIsStopChar, aMode, soPartial in aOptions, aLimit, Algo, aLess);
 end;
 {$POP}
 
-function SimRatioUtf16(const L, R: unicodestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
+function SimRatioExUtf16(const L, R: unicodestring; const aStopChars: array of unicodestring; aMode: TSimMode;
+  const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
 var
-  LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
-  LBuf: TUcs4Seq = nil;
-  RBuf: TUcs4Seq = nil;
-  LenL, LenR: SizeInt;
-  pL, pR: PUcs4Char;
+  StopChars: TUcs4CharSet;
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    Result := StopChars.Find(c) <> nil;
+  end;
+var
+  I: SizeInt;
+  c: Ucs4Char;
+  p: TUcs4CharSet.PEntry;
 begin
-  if System.Length(L) <= MAX_STATIC then
-    begin
-      pL := @LBufSt[0];
-      Utf16ToUcs4SeqImpl(L, pL, LenL);
-    end
-  else
-    begin
-      Utf16ToUcs4SeqImpl(L, LBuf);
-      LenL := System.Length(LBuf);
-      pL := Pointer(LBuf);
-    end;
-  if System.Length(R) <= MAX_STATIC then
-    begin
-      pR := @RBufSt[0];
-      Utf16ToUcs4SeqImpl(R, pR, LenR);
-    end
-  else
-    begin
-      Utf16ToUcs4SeqImpl(R, RBuf);
-      LenR := System.Length(RBuf);
-      pR := Pointer(RBuf);
-    end;
-  Result := TUcs4Util.SimRatio(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit, Algo);
+  for I := 0 to System.High(aStopChars) do
+    if IsSingleCodePointUtf16(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
+      p^.Key := c;
+  Result := SimRatioExUtf16Impl(L, R, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
+end;
+
+const
+  LETTER_OR_DIGIT_CATEGORIES = [
+     TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
+     TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucModifierLetter,
+     TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucDecimalNumber,
+     TUnicodeCategory.ucLetterNumber, TUnicodeCategory.ucOtherNumber,
+     TUnicodeCategory.ucConnectPunctuation];
+
+function SimRatioExUtf16(const L, R: unicodestring; aMode: TSimMode; const aOptions: TSimOptions;
+  aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    if c <= UC_TBL_HIGH then
+      Result := not(TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES)
+    else
+      Result := not(TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES);
+  end;
+begin
+  Result := SimRatioExUtf16Impl(L, R, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
 end;
 
 function Utf8CodePointLen(p: PByte; aStrLen: SizeInt): SizeInt; inline;
@@ -4222,19 +4303,17 @@ begin
   Result := PtLen = System.Length(s);
 end;
 
-function SimRatioExUtf8(const L, R: string; const aStopChars: array of string; aMode: TSimMode;
+function SimRatioExUtf8Impl(const L, R: string; aIsStopChar: TUcs4CharTest; aMode: TSimMode;
   const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
   LBuf: TUcs4Seq = nil;
   RBuf: TUcs4Seq = nil;
-  LenL, LenR, I: SizeInt;
+  LenL, LenR: SizeInt;
   pL, pR: PUcs4Char;
 
-  StopChars: TUcs4CharSet;
+var
   LocL, LocR: string;
-  c: Ucs4Char;
-  p: TUcs4CharSet.PEntry;
 begin
 
   if soIgnoreCase in aOptions then
@@ -4247,10 +4326,6 @@ begin
       LocL := L;
       LocR := R;
     end;
-
-  for I := 0 to System.High(aStopChars) do
-    if IsSingleCodePointUtf8(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
-      p^.Key := c;
 
   if System.Length(LocL) <= MAX_STATIC then
     begin
@@ -4275,13 +4350,46 @@ begin
       pR := Pointer(RBuf);
     end;
 
-  Result :=
-    SimRatioGeneric(
-      pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLimit, Algo, aLess);
+  Result := SimRatioGeneric(
+    pL[0..Pred(LenL)], pR[0..Pred(LenR)], aIsStopChar, aMode, soPartial in aOptions, aLimit, Algo, aLess);
 end;
 
-function SimRatioListUtf8(const aPattern: string; const aValues: array of string;
-  const aStopChars: array of string; aMode: TSimMode; const aOptions: TSimOptions; aLimit: Double;
+function SimRatioExUtf8(const L, R: string; const aStopChars: array of string; aMode: TSimMode;
+  const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
+var
+  StopChars: TUcs4CharSet;
+
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    Result := StopChars.Find(c) <> nil;
+  end;
+
+var
+  I: SizeInt;
+  c: Ucs4Char;
+  p: TUcs4CharSet.PEntry;
+begin
+  for I := 0 to System.High(aStopChars) do
+    if IsSingleCodePointUtf8(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
+      p^.Key := c;
+  Result := SimRatioExUtf8Impl(L, R, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
+end;
+
+function SimRatioExUtf8(const L, R: string; aMode: TSimMode; const aOptions: TSimOptions; aLimit: Double;
+  Algo: TSeqDistanceAlgo; aLess: TUcs4Less): Double;
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    if c <= UC_TBL_HIGH then
+      Result := not(TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES)
+    else
+      Result := not(TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES);
+  end;
+begin
+  Result := SimRatioExUtf8Impl(L, R, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
+end;
+
+function SimRatioListUtf8Impl(const aPattern: string; const aValues: array of string;
+  aIsStopChar: TUcs4CharTest; aMode: TSimMode; const aOptions: TSimOptions; aLimit: Double;
   Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<Double>;
 var
   LBufSt, RBufSt: array[0..Pred(MAX_STATIC)] of Ucs4Char;
@@ -4289,11 +4397,7 @@ var
   RBuf: TUcs4Seq = nil;
   LenL, LenR, I: SizeInt;
   pL, pR: PUcs4Char;
-
-  StopChars: TUcs4CharSet;
   Pattern, Value: string;
-  c: Ucs4Char;
-  p: TUcs4CharSet.PEntry;
   r: array of Double;
 begin
   if System.Length(aValues) < 1 then exit(nil);
@@ -4302,10 +4406,6 @@ begin
     Pattern := Utf8ToLower(aPattern)
   else
     Pattern := aPattern;
-
-  for I := 0 to System.High(aStopChars) do
-    if IsSingleCodePointUtf8(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
-      p^.Key := c;
 
   if System.Length(Pattern) <= MAX_STATIC then
     begin
@@ -4339,10 +4439,45 @@ begin
         pR := Pointer(RBuf);
       end;
     r[I] := SimRatioGeneric(
-      pL[0..Pred(LenL)], pR[0..Pred(LenR)], StopChars, aMode, soPartial in aOptions, aLimit, Algo, aLess);
+      pL[0..Pred(LenL)], pR[0..Pred(LenR)], aIsStopChar, aMode, soPartial in aOptions, aLimit, Algo, aLess);
   end;
 
   Result := r;
+end;
+
+function SimRatioListUtf8(const aPattern: string; const aValues: array of string;
+  const aStopChars: array of string; aMode: TSimMode; const aOptions: TSimOptions; aLimit: Double;
+  Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<Double>;
+var
+  StopChars: TUcs4CharSet;
+
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    Result := StopChars.Find(c) <> nil;
+  end;
+
+var
+  I: SizeInt;
+  c: Ucs4Char;
+  p: TUcs4CharSet.PEntry;
+begin
+  for I := 0 to System.High(aStopChars) do
+    if IsSingleCodePointUtf8(aStopChars[I], c) and not StopChars.FindOrAdd(c, p) then
+      p^.Key := c;
+  Result := SimRatioListUtf8Impl(aPattern, aValues, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
+end;
+
+function SimRatioListUtf8(const aPattern: string; const aValues: array of string; aMode: TSimMode;
+  const aOptions: TSimOptions; aLimit: Double; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<Double>;
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    if c <= UC_TBL_HIGH then
+      Result := not(TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES)
+    else
+      Result := not(TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES);
+  end;
+begin
+  Result := SimRatioListUtf8Impl(aPattern, aValues, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
 end;
 
 function SelectSimilarUtf8(const aPattern: string; const aValues: array of string;
@@ -4358,6 +4493,38 @@ var
   I, J: SizeInt;
 begin
   ratios := SimRatioListUtf8(aPattern, aValues, aStopChars, aMode, aOptions, aLimit, Algo, aLess);
+  System.SetLength(r, System.Length(ratios));
+  J := 0;
+  for I := 0 to System.High(ratios) do
+    if ratios[I] >= aLimit then begin
+      r[J].Value := aValues[I];
+      r[J].Ratio := ratios[I];
+      Inc(J);
+    end;
+  System.SetLength(r, J);
+  specialize TGNestedArrayHelper<TStringRatio>.Sort(r, @Less);
+  Result := r;
+end;
+
+function SelectSimilarUtf8(const aPattern: string; const aValues: array of string; aLimit: Double; aMode: TSimMode;
+  const aOptions: TSimOptions; Algo: TSeqDistanceAlgo; aLess: TUcs4Less): specialize TGArray<TStringRatio>;
+  function IsStopChar(c: Ucs4Char): Boolean;
+  begin
+    if c <= UC_TBL_HIGH then
+      Result := not(TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES)
+    else
+      Result := not(TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES);
+  end;
+  function Less(const L, R: TStringRatio): Boolean;
+  begin
+    Result := R.Ratio < L.Ratio;
+  end;
+var
+  ratios: array of Double;
+  r: array of TStringRatio;
+  I, J: SizeInt;
+begin
+  ratios := SimRatioListUtf8Impl(aPattern, aValues, @IsStopChar, aMode, aOptions, aLimit, Algo, aLess);
   System.SetLength(r, System.Length(ratios));
   J := 0;
   for I := 0 to System.High(ratios) do
@@ -4871,13 +5038,6 @@ type
     TSortHelper   = specialize TGRegularTimSort<TMatch>;
     TMatchLess    = specialize TGLessCompare<TMatch>;
     TLeftmostMode = smmLeftmostFirst..smmLeftmostShortest;
-  const
-    LETTER_OR_DIGIT_CATEGORIES = [
-       TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
-       TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucModifierLetter,
-       TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucDecimalNumber,
-       TUnicodeCategory.ucLetterNumber, TUnicodeCategory.ucOtherNumber,
-       TUnicodeCategory.ucConnectPunctuation];
   var
     FQueue: array of TOfsEntry;
     FOnMatchHandler: TOnMatch;
