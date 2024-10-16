@@ -4709,7 +4709,7 @@ begin
   TextLen := System.Length(FText);
   while FTextIndex <= TextLen do
     begin
-      c := CodePointToUcs4Char(@FText[FTextIndex], I);
+      c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), I);
       FTextIndex += I;
       Inc(FPointIndex);
       Cost := 0;
@@ -4843,7 +4843,7 @@ begin
     Inc(qHead);
     if qHead = PatLen then
       qHead := 0;
-    c := CodePointToUcs4Char(@aText[TextPos], cLen);
+    c := CodePointToUcs4Char(@aText[TextPos], Succ(TextLen - TextPos), cLen);
     TextPos += cLen;
     cMask := FCharMap.GetValueDef(c, System.High(QWord));
     vOld := Table[0];
@@ -4904,7 +4904,7 @@ begin
     Inc(FqHead);
     if FqHead = PatLen then
       FqHead := 0;
-    c := CodePointToUcs4Char(@FText[FTextIndex], cLen);
+    c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), cLen);
     FTextIndex += cLen;
     cMask := FSearch^.FCharMap.GetValueDef(c, System.High(QWord));
     vOld := FTable[0];
