@@ -274,20 +274,22 @@ type
     class function Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
 
   type
-    TLscEditOp = (leoDelete, leoInsert);
+    TLcsEditOp = (leoDelete, leoInsert);
     TLcsEdit = record
       Value: T;
-      Index: SizeInt;
-      Operation: TLscEditOp;
-      constructor Del(aIndex: SizeInt; const aValue: T);
-      constructor Ins(aIndex: SizeInt; const aValue: T);
+      SourceIndex,
+      TargetIndex: SizeInt;
+      Operation: TLcsEditOp;
+      constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
     end;
     TLcsEditScript = array of TLcsEdit;
 
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget }
-    class function EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditScript; static;
+    class function LcsEditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditScript; static;
   end;
 
+{*********************************************}
 
   TUcs4Seq  = array of Ucs4Char;
   TUcs4Less = function(const L, R: array of Ucs4Char): Boolean;
@@ -2705,23 +2707,26 @@ end;
 
 { TGSeqUtil.TLcsEdit }
 
-constructor TGSeqUtil.TLcsEdit.Del(aIndex: SizeInt; const aValue: T);
+constructor TGSeqUtil.TLcsEdit.Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
   Value := aValue;
-  Index := aIndex;
+  SourceIndex := aSrcIdx;
+  TargetIndex := aTrgIdx;
   Operation := leoDelete;
 end;
 
-constructor TGSeqUtil.TLcsEdit.Ins(aIndex: SizeInt; const aValue: T);
+constructor TGSeqUtil.TLcsEdit.Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
   Value := aValue;
-  Index := aIndex;
+  SourceIndex := aSrcIdx;
+  TargetIndex := aTrgIdx;
   Operation := leoInsert;
 end;
 
-class function TGSeqUtil.EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditScript;
+class function TGSeqUtil.LcsEditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditScript;
 var
   Lcs: TArray;
+  r: array of TLcsEdit;
   I, SrcIdx, TrgIdx, ScriptIdx: SizeInt;
   v: T;
 begin
@@ -2732,36 +2737,36 @@ begin
     Lcs := LcsMyers(aSource, aTarget);
   end;
 
-  System.SetLength(Result, System.Length(aSource) + System.Length(aTarget) - System.Length(Lcs)*2);
+  System.SetLength(r, System.Length(aSource) + System.Length(aTarget) - System.Length(Lcs)*2);
   ScriptIdx := 0;
   SrcIdx := 0;
   TrgIdx := 0;
   for I := 0 to System.High(Lcs) do begin
     v := Lcs[I];
     while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
-      Result[ScriptIdx] := TLcsEdit.Del(SrcIdx, aSource[SrcIdx]);
+      r[ScriptIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
       Inc(ScriptIdx);
       Inc(SrcIdx);
     end;
     while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
-      Result[ScriptIdx] := TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]);
+      r[ScriptIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
       Inc(ScriptIdx);
       Inc(TrgIdx);
     end;
     Inc(SrcIdx);
     Inc(TrgIdx);
   end;
-
   while SrcIdx < System.Length(aSource) do begin
-    Result[ScriptIdx] := TLcsEdit.Del(SrcIdx, aSource[SrcIdx]);
+    r[ScriptIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
     Inc(ScriptIdx);
     Inc(SrcIdx);
   end;
   while TrgIdx < System.Length(aTarget) do begin
-    Result[ScriptIdx] := TLcsEdit.Ins(SrcIdx, aTarget[TrgIdx]);
+    r[ScriptIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
     Inc(ScriptIdx);
     Inc(TrgIdx);
   end;
+  Result := r;
 end;
 
 type
