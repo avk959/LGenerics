@@ -1370,6 +1370,7 @@ begin
 
   Result := LocLcs.ToArray;
 end;
+{$POP}
 
 class function TGSeqUtil.GetLcs(pL, pR: PItem; aLenL, aLenR: SizeInt; aImpl: TLcsImpl): TArray;
 var
@@ -1404,8 +1405,6 @@ begin
   THelper.CopyItems(Pointer(LocLcs), PItem(Result) + PrefixLen, System.Length(LocLcs));
   THelper.CopyItems(pL + aLenL, PItem(Result) + PrefixLen + System.Length(LocLcs), SuffixLen);
 end;
-
-{$POP}
 
 class function TGSeqUtil.EditDistImpl(pL, pR: PItem; aLenL, aLenR: SizeInt; const aCost: TSeqEditCost): SizeInt;
 var
@@ -5237,11 +5236,13 @@ type
     FDaTrie: array of TDaNode;
     FOutput: array of TOutput;
     FTrie: array of TNode;
+    FMaxChar: Ucs4Char;
     FOutCount,
     FAlphabetSize: Int32;
     function  NewNode: SizeInt; inline;
     function  NewOutput(aIndex, aLen, aCpLen: Int32): Int32; inline;
     procedure BuildCharMap(const aPatternList: array of string);
+    function  EncodeChar(c: Ucs4Char): Int32; inline;
     procedure AddPattern(const aValue: string; aIndex: SizeInt);
     function  NextMove(aState, aCode: Int32): Int32; inline;
     function  NextFsmState(aState, aCode: Int32): Int32; inline;
@@ -6647,23 +6648,37 @@ var
   a: array of TEntry;
   p, pEnd: PByte;
   I: Int32;
+  c, MaxChar: Ucs4Char;
 begin
+  MaxChar := 0;
   for I := 0 to System.High(aPatternList) do
     begin
       if aPatternList[I] = '' then continue;
       p := Pointer(aPatternList[I]);
       pEnd := p + System.Length(aPatternList[I]);
-      while p < pEnd do
+      while p < pEnd do begin
         if CaseInsensitive then
-          Inc(Map.GetMutValueDef(CpToUcs4Lower(p, pEnd - p), 0)^)
+          c := CpToUcs4Lower(p, pEnd - p)
         else
-          Inc(Map.GetMutValueDef(CpToUcs4(p, pEnd - p), 0)^);
+          c := CpToUcs4(p, pEnd - p);
+        if c > MaxChar then
+          MaxChar := c;
+        Inc(Map.GetMutValueDef(c, 0)^);
+      end;
     end;
+  FMaxChar := MaxChar;
+  System.SetLength(FCharMap, Succ(MaxChar));
   a := Map.ToArray;
   specialize TGNestedArrayHelper<TEntry>.MergeSort(a, @EntryCmp);
   for I := 0 to System.High(a) do
     FCharMap[a[I].Key] := Succ(I);
   FAlphabetSize := Succ(System.Length(a));
+end;
+
+function TACNfaUtf8.EncodeChar(c: Ucs4Char): Int32;
+begin
+  if c > FMaxChar then exit(0);
+  Result := FCharMap[c];
 end;
 
 procedure TACNfaUtf8.AddPattern(const aValue: string; aIndex: SizeInt);
@@ -6944,7 +6959,7 @@ begin
   State := 0;
   if aMode < smmLeftmostFirst then begin
     while p < pEnd do begin
-      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4(p, pEnd - p)));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -6957,7 +6972,7 @@ begin
   end;
   MatchLess := SelectComparer(aMode);
   while p < pEnd do begin
-    NextState := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+    NextState := NextFsmState(State, EncodeChar(CpToUcs4(p, pEnd - p)));
     if NextState = 0 then
       if State = 0 then
         continue
@@ -6998,7 +7013,7 @@ begin
     while p < pEnd do begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7018,7 +7033,7 @@ begin
   while p < pEnd do begin
     c := CpToUcs4(p, pEnd - p);
     qTop := PushChar(qTop, c);
-    NextState := NextFsmState(State, FCharMap[c]);
+    NextState := NextFsmState(State, EncodeChar(c));
     if NextState = 0 then
       if State = 0 then
         continue
@@ -7049,7 +7064,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4(p, pEnd - p)));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7080,7 +7095,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7114,7 +7129,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4(p, pEnd - p)));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7142,7 +7157,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7168,7 +7183,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextFsmState(State, FCharMap[CpToUcs4(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4(p, pEnd - p)));
       if State = 0 then continue;
       if (FDaTrie[State].Output <> 0) or (FDaTrie[State].NextOut <> 0) then
         exit(True);
@@ -7189,7 +7204,7 @@ begin
     begin
       c := CpToUcs4(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7223,7 +7238,6 @@ end;
 constructor TACNfaUtf8.Create;
 begin
   inherited;
-  System.SetLength(FCharMap, Succ(High(Ucs4Char)));
   System.SetLength(FTrie, ARRAY_INITIAL_SIZE);
   System.SetLength(FOutput, ARRAY_INITIAL_SIZE);
   FNodeCount := 1;
@@ -7258,6 +7272,7 @@ begin
   Inst.FQueueSize := FQueueSize;
   Inst.FNodeCount := FNodeCount;
   Inst.FWordCount := FWordCount;
+  Inst.FMaxChar := FMaxChar;
   Inst.FOutCount := FOutCount;
   Inst.FAlphabetSize := FAlphabetSize;
   Inst.FIgnoreCase := FIgnoreCase;
@@ -7276,9 +7291,9 @@ begin
   while p < pEnd do
     begin
       if CaseInsensitive then
-        c := FCharMap[CpToUcs4Lower(p, pEnd - p)]
+        c := EncodeChar(CpToUcs4Lower(p, pEnd - p))
       else
-        c := FCharMap[CpToUcs4(p, pEnd - p)];
+        c := EncodeChar(CpToUcs4(p, pEnd - p));
       if c = 0 then exit;
       State := NextMove(State, c);
       if State = 0 then exit;
@@ -7312,7 +7327,7 @@ begin
   if aMode < smmLeftmostFirst then begin
     while p < pEnd do begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4Lower(p, pEnd - p)));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do begin
@@ -7330,7 +7345,7 @@ begin
   MatchLess := SelectComparer(aMode);
   while p < pEnd do begin
     qTop := PushOffset(qTop, Succ(p - pText));
-    NextState := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+    NextState := NextFsmState(State, EncodeChar(CpToUcs4Lower(p, pEnd - p)));
     if NextState = 0 then
       if State = 0 then
         continue
@@ -7377,7 +7392,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7402,7 +7417,7 @@ begin
     c := CpToUcs4Lower(p, pEnd - p, Ofs);
     qTop := PushOffset(qTop, Succ(p - pText), c);
     p += Ofs;
-    NextState := NextFsmState(State, FCharMap[c]);
+    NextState := NextFsmState(State, EncodeChar(c));
     if NextState = 0 then
       if State = 0 then
         continue
@@ -7440,7 +7455,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4Lower(p, pEnd - p)));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7475,7 +7490,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7514,7 +7529,7 @@ begin
   while p < pEnd do
     begin
       qTop := PushOffset(qTop, Succ(p - pText));
-      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4Lower(p, pEnd - p)));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7550,7 +7565,7 @@ begin
       c := CpToUcs4Lower(p, pEnd - p, Ofs);
       qTop := PushOffset(qTop, Succ(p - pText), c);
       p += Ofs;
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
@@ -7582,7 +7597,7 @@ begin
   State := 0;
   while p < pEnd do
     begin
-      State := NextFsmState(State, FCharMap[CpToUcs4Lower(p, pEnd - p)]);
+      State := NextFsmState(State, EncodeChar(CpToUcs4Lower(p, pEnd - p)));
       if State = 0 then continue;
       if (FDaTrie[State].Output <> 0) or (FDaTrie[State].NextOut <> 0) then
         exit(True);
@@ -7603,7 +7618,7 @@ begin
     begin
       c := CpToUcs4Lower(p, pEnd - p);
       qTop := PushChar(qTop, c);
-      State := NextFsmState(State, FCharMap[c]);
+      State := NextFsmState(State, EncodeChar(c));
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
