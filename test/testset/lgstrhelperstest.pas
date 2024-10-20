@@ -2429,7 +2429,7 @@ var
   ac: TACSearch;
 begin
   {%H-}ac.Instance := TDaacSearchFsm.Create([]);
-  AssertTrue(ac.Instance.AlphabetSize = 1);
+  AssertTrue(ac.Instance.AlphabetSize = 0);
   AssertTrue(ac.Instance.NodeCount = 1);
   AssertTrue(ac.Instance.EmptyCellCount = 0);
   AssertTrue(ac.Instance.PatternCount = 0);
@@ -2441,7 +2441,7 @@ begin
   AssertTrue(ac.Instance.PatternCount = 0);
 
   ac.Instance := TDaacSearchFsm.Create(['a','b', 'a', 'b']);
-  AssertTrue(ac.Instance.AlphabetSize = 3);
+  AssertTrue(ac.Instance.AlphabetSize = 2);
   AssertTrue(ac.Instance.NodeCount = 3);
   AssertTrue(ac.Instance.EmptyCellCount = 0);
   AssertTrue(ac.Instance.PatternCount = 2);
