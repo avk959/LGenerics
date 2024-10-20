@@ -5095,11 +5095,12 @@ begin
     for I := 1 to System.Length(s) do
       with Counter[Ord(s[I])] do
         begin
-          Inc(CodeCount, Ord(Count = 0));
+          if Count = 0 then
+            Inc(CodeCount);
           Inc(Count);
         end;
   specialize TGNestedArrayHelper<TCountRec>.MergeSort(Counter, @RecCmp);
-  FAlphabetSize := Succ(CodeCount);
+  FAlphabetSize := CodeCount;
   System.SetLength(FCharMap, Int32(High(Byte))+1);
   for I := 0 to Pred(CodeCount)  do
     with Counter[I] do
