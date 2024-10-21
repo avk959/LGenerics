@@ -369,7 +369,6 @@ type
     TOnMatch       = specialize TGOnTest<TMatch>;
     TNestMatch     = specialize TGNestTest<TMatch>;
     TMatchArray    = specialize TGArray<TMatch>;
-    IStrEnumerable = specialize IGEnumerable<rawbytestring>;
   private
   type
     TNode = record
@@ -405,7 +404,6 @@ type
   public
     class function FilterMatches(const aSource: array of TMatch; aMode: TSetMatchMode): TMatchArray; static;
     constructor Create(const aPatternList: array of rawbytestring);
-    constructor Create(aPatternEnum: IStrEnumerable);
     constructor Create(aFsm: TACSearchFsm);
   { returns the index of the pattern in the input list if the instance contains such a pattern,
     otherwise returns -1 }
@@ -443,7 +441,6 @@ type
     TMatchArray    = array of TMatch;
     TOnMatch       = specialize TGOnTest<TMatch>;
     TNestMatch     = specialize TGNestTest<TMatch>;
-    IStrEnumerable = specialize IGEnumerable<string>;
   protected
   type
     TCode2StateMap = record
@@ -523,7 +520,6 @@ type
     property  OutCount: Int32 read FOutCount;
   public
     constructor Create(const aPatternList: array of rawbytestring);
-    constructor Create(aPatternEnum: IStrEnumerable);
     constructor Create(aFsm: TDaacSearchFsm);
   { returns the index of the pattern in the input list if the instance contains such a pattern,
     otherwise returns -1 }
@@ -4780,11 +4776,6 @@ begin
   BuildFsm;
 end;
 
-constructor TACSearchFsm.Create(aPatternEnum: IStrEnumerable);
-begin
-  Create(aPatternEnum.ToArray);
-end;
-
 constructor TACSearchFsm.Create(aFsm: TACSearchFsm);
 begin
   FTrie := aFsm.FTrie;
@@ -5429,11 +5420,6 @@ begin
   System.SetLength(FOutput, OutCount);
   BuildFsm;
   FTrie := nil;
-end;
-
-constructor TDaacSearchFsm.Create(aPatternEnum: IStrEnumerable);
-begin
-  Create(aPatternEnum.ToArray)
 end;
 
 constructor TDaacSearchFsm.Create(aFsm: TDaacSearchFsm);
