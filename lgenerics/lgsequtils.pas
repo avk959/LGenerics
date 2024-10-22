@@ -601,25 +601,27 @@ type
   end;
 
   TAcMatch = LgUtils.TIndexMatch;
+  EAcFsmError = class(Exception);
 
 {$PUSH}{$INTERFACES COM}
   { IACSearchFsmUtf8: Aho-Corasick automation for exact set matching problem;
-    current implementation does not store dictionary elements explicitly,
-    instead storing their indices; expects UTF-8 encoded strings as parameters }
+    it does not store dictionary elements explicitly, instead storing their indices;
+    expects UTF-8 encoded strings as parameters }
   IACSearchFsmUtf8 = interface
   ['{AA85E5D4-5FBA-4D3C-BD16-858FC26B619C}']
     function  GetCaseInsensitive: Boolean;
     function  GetOnlyWholeWords: Boolean;
     procedure SetOnlyWholeWords(aValue: Boolean);
-    function  GetNodeCount: SizeInt;
+    function  GetStateCount: SizeInt;
     function  GetEmptyCount: SizeInt;
     function  GetPatternCount: SizeInt;
     function  GetAlphabetSize: SizeInt;
+    function  IsDfa: Boolean;
   { if the string aText, starting at index aOffset and within aCount bytes, matches
     one of the patterns, returns the index of that pattern, otherwise returns -1 }
     function  IndexOfPattern(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt;
   { returns True if the string aText starting at index aOffset and within aCount bytes,
-    matches one of the specified patterns, otherwise returns False;
+    matches one of the patterns, otherwise returns False;
     any value of aCount < 1 implies a search to the end of the string }
     function  IsMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
   { returns the very first match(according to the specified mode), if any, otherwise returns stub (0,0,-1)}
@@ -647,14 +649,37 @@ type
     by non-word characters or string boundaries }
     property  OnlyWholeWords: Boolean read GetOnlyWholeWords write SetOnlyWholeWords;
   { some statistics }
-    property  NodeCount: SizeInt read GetNodeCount;
+    property  StateCount: SizeInt read GetStateCount;
     property  EmptyCellCount: SizeInt read GetEmptyCount;
+  { number of accounted patterns }
     property  PatternCount: SizeInt read GetPatternCount;
     property  AlphabetSize: SizeInt read GetAlphabetSize;
   end;
+
+  { IACPersistFsmUtf8: serializable Aho-Corasick FSM(always NFA), stores the dictionary in its original form }
+  IACPersistFsmUtf8 = interface
+  ['{7601BEAB-9868-4D1A-9A71-B552538EFD2D}']
+    function  GetFsm: IACSearchFsmUtf8;
+    function  GetPatternListSize: Integer;
+    function  GetPattern(aIndex: Integer): string;
+  { returns a copy of the original pattern list }
+    function  GetPatternList: TStringArray;
+  { loads the FSM from a stream, may raise an exception }
+    procedure LoadFromStream(aStream: TStream);
+  { saves the FSM to a stream in its own binary format(currently quite primitive) }
+    procedure SaveToStream(aStream: TStream);
+  { loads the FSM from a file, may raise an exception }
+    procedure LoadFromFile(const aFileName: string);
+  { saves the FSM to a file, may raise an exception }
+    procedure SaveToFile(const aFileName: string);
+    property  Fsm: IACSearchFsmUtf8 read GetFsm;
+  { total number of patterns in the original pattern list }
+    property  PatternListSize: Integer read GetPatternListSize;
+    property  Patterns[aIndex: Integer]: string read GetPattern; default;
+  end;
 {$POP}
 
-{ creates an instance of the Aho-Corasick automaton;
+{ creates an instance of the Aho-Corasick FSM;
   aPatterns(or aPatterEnum) specifies a set of search patterns, in case of duplicate patterns,
   only the first one will be taken into account;
   aIgnoreCase set to True specifies a case-insensitive search;
@@ -662,16 +687,21 @@ type
   contain characters outside the BMP or the patterns alphabet is too large; DFA usually takes
   more memory and in addition, NFA can be faster on reasonably large dictionaries;
   if aForceNFA is set to True the function will immediately build NFA }
-  function CreateACSearchFsm(const aPatterns: array of string; aIgnoreCase: Boolean = False;
-                             aForceNFA: Boolean = False): IACSearchFsmUtf8;
-  function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean = False;
-                             aForceNFA: Boolean = False): IACSearchFsmUtf8;
+  function CreateAcFsmUtf8(const aPatterns: array of string; aIgnoreCase: Boolean = False;
+                           aForceNFA: Boolean = False): IACSearchFsmUtf8;
+{ creates an instance of a serializable Aho-Corasick FSM }
+  function NewAcFsmUtf8(const aPatterns: array of string; aIgnoreCase: Boolean = False): IACPersistFsmUtf8;
+  function NewAcFsmUtf8(aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean = False): IACPersistFsmUtf8;
+{ loads an instance of a serializable Aho-Corasick FSM from a stream }
+  function LoadAcFsmUtf8(aStream: TStream): IACPersistFsmUtf8;
+{ loads an instance of a serializable Aho-Corasick FSM from a file }
+  function LoadAcFsmUtf8(const aFileName: string): IACPersistFsmUtf8;
 
 { Aho-Corasick NFA is based on Double Array Trie(DAT) and uses the simplest construction
   algorithm, which nevertheless provides acceptable construction time. But if the dictionary
   alphabet is sufficiently large, the load factor of the resulting DAT may be rather low.
   If this flag is set to True, it can improve the load factor, but on the other hand it can
-  drastically increase the time it takes to create large dictionaries }
+  drastically increase the time taken to create NFA for large dictionaries. }
 var
   DatPreferMaxLoad: Boolean = False;
 
@@ -725,6 +755,7 @@ type
                         const aSubs: array of string;
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
+
 const
   UC_TBL_HIGH = $1fff;
 {$PUSH}{$J-}
@@ -733,8 +764,9 @@ const
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+{$WARN 6058 OFF : Call to subroutine "$1" marked as inline is not inlined }
 uses
-  Character, UnicodeData, lgMiscUtils;
+  BufStream, Character, UnicodeData, lgMiscUtils;
 
 { TGBmSearch.TEnumerator }
 
@@ -5049,7 +5081,8 @@ type
     FOnMatch: TOnMatch;
     FQueueSize,
     FNodeCount,
-    FWordCount: SizeInt;
+    FWordCount,
+    FAlphabetSize: Int32;
     FIgnoreCase,
     FWholeWordsOnly: Boolean;
     class function  IsWordChar(c: Ucs4Char): Boolean; static; inline;
@@ -5066,8 +5099,9 @@ type
     function  TestNestMatch(const m: TMatch): Boolean;
     procedure RegisterMatchHandler(h: TOnMatch);
     procedure RegisterMatchHandler(h: TNestMatch);
+    function  IsDfa: Boolean; virtual;
     function  GetAlphabetSize: SizeInt; virtual;
-    function  GetNodeCount: SizeInt;
+    function  GetStateCount: SizeInt;
     function  GetEmptyCount: SizeInt; virtual;
     function  GetPatternCount: SizeInt;
     function  GetCaseInsensitive: Boolean;
@@ -5105,8 +5139,8 @@ type
     procedure Search(const aText: string; aOnMatch: TNestMatch; aOffset: SizeInt = 1; aCount: SizeInt = 0);
     function  ContainsMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
     function  FilterMatches(const aSource: array of TMatch; aMode: TSetMatchMode): TMatchArray;
-    property  NodeCount: SizeInt read FNodeCount;
-    property  PatternCount: SizeInt read FWordCount;
+    property  NodeCount: Int32 read FNodeCount;
+    property  PatternCount: Int32 read FWordCount;
     property  OnlyWholeWords: Boolean read FWholeWordsOnly write FWholeWordsOnly;
     property  CaseInsensitive: Boolean read FIgnoreCase;
   end;
@@ -5129,11 +5163,9 @@ type
   protected
     FTrie: array of TNode;
     FCharMap: array of Int32;
-    FAlphabetSize: Int32;
     function  GetAlphabetSize: SizeInt; override;
     function  BuildCharMap(const aList: array of string): Boolean;
     function  NewNode: SizeInt; inline;
-    function  GetCharCode(c: Ucs4Char): Int32; inline;
     procedure AddPattern(const aValue: string; aIndex: SizeInt);
     function  NextFsmState(aState: Int32; c: Ucs4Char): Int32; inline;
     procedure BuildFsm;
@@ -5201,14 +5233,38 @@ type
     property Values[aIndex: Int32]: Int32 read GetValue;
   end;
 
+  TAcMagicSeq = array[0..6] of AnsiChar;
+  TAcStreamHeader = record
+    Magic: TAcMagicSeq;
+    Version,
+    PatternListSize,
+    RealPatternCount,
+    StateCount,
+    AlphabetSize,
+    QueueSize: Int32;
+    CaseInsensitive: Boolean;
+    procedure WriteStream(aStream: TStream);
+    procedure ReadStream(aStream: TStream);
+  end;
+
+{$PUSH}{$INTERFACES COM}
+   IAcFsmStreamWriter = interface
+   ['{9DC816DE-2DCD-43C3-86BC-497CC87B1FBC}']
+     function  GetQueueSize: Int32;
+     procedure FsmStreamWrite(aStream: TStream);
+   end;
+{$POP}
+
   { TACNfaUtf8: based on double array trie approach }
-  TACNfaUtf8 = class(TACFsmUtf8)
+  TACNfaUtf8 = class(TACFsmUtf8, IAcFsmStreamWriter)
   protected
   type
     TOutput = record
       Len,          // length in bytes
       CpLen,        // length in code points
       Index: Int32; // index in the input list
+      procedure ReadStream(aStream: TStream);
+      procedure WriteStream(aStream: TStream);
     end;
     TNode = record
       AdjList: TCode2StateMap;
@@ -5220,6 +5276,8 @@ type
       Failure,        // failure link: singly linked list
       Output,         // output link: index in FOutput array
       NextOut: Int32; // next output link: singly linked list
+      procedure ReadStream(aStream: TStream);
+      procedure WriteStream(aStream: TStream);
     end;
     TPair = record
       Node,
@@ -5232,13 +5290,12 @@ type
     LEAF_NODE         = Int32(0);
     BIG_ALPHABET_SIZE = 1024; //todo: need some tweaking?
   protected
-    FCharMap: array of Int32;
     FDaTrie: array of TDaNode;
     FOutput: array of TOutput;
+    FCharMap: array of Int32;
     FTrie: array of TNode;
     FMaxChar: Ucs4Char;
-    FOutCount,
-    FAlphabetSize: Int32;
+    FOutCount: Int32;
     function  NewNode: SizeInt; inline;
     function  NewOutput(aIndex, aLen, aCpLen: Int32): Int32; inline;
     procedure BuildCharMap(const aPatternList: array of string);
@@ -5248,6 +5305,7 @@ type
     function  NextFsmState(aState, aCode: Int32): Int32; inline;
   { uses a slightly modified LINK method to create a double array-like structure }
     procedure BuildFsm;
+    function  IsDfa: Boolean; override;
     function  DoFindFirst(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     function  DoFindFirstOww(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
@@ -5258,7 +5316,11 @@ type
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetEmptyCount: SizeInt; override;
     function  GetAlphabetSize: SizeInt; override;
+    function  GetQueueSize: Int32;
+    procedure FsmStreamWrite(aStream: TStream);
+    procedure FsmStreamRead(aStream: TStream; const aHeader: TAcStreamHeader);
     class function GetFsmClass: TACFsmUtf8Class; override;
+    class function CreateInstance(aCaseInsensitive: Boolean): TACNfaUtf8;
     property  OutCount: Int32 read FOutCount;
   public
     constructor Create; override;
@@ -5282,6 +5344,30 @@ type
     class function GetFsmClass: TACFsmUtf8Class; override;
   public
     constructor Create; override;
+  end;
+
+  { TACPersistFsmUtf8 }
+  TACPersistFsmUtf8 = class(TInterfacedObject, IACPersistFsmUtf8)
+  protected
+  const
+  {$PUSH}{$J-}
+    MAGIC_SEQ: TAcMagicSeq = 'IAcFsm8';
+  {$POP}
+    BUF_SIZE           = $10000;
+    STREAM_FMT_VERSION = 1;
+  protected
+    FInstance: IACSearchFsmUtf8;
+    FPatternList: TStringArray;
+  public
+    constructor Create(const aPatterns: array of string; aIgnoreCase: Boolean); overload;
+    function  GetFsm: IACSearchFsmUtf8;
+    function  GetPatternListSize: Integer;
+    function  GetPattern(aIndex: Integer): string;
+    function  GetPatternList: TStringArray;
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromFile(const aFileName: string);
+    procedure SaveToFile(const aFileName: string);
   end;
 
 { TACFsmUtf8 }
@@ -5431,12 +5517,17 @@ begin
   FOnMatch := @TestNestMatch;
 end;
 
+function TACFsmUtf8.IsDfa: Boolean;
+begin
+  Result := True;
+end;
+
 function TACFsmUtf8.GetAlphabetSize: SizeInt;
 begin
   Result := -1;
 end;
 
-function TACFsmUtf8.GetNodeCount: SizeInt;
+function TACFsmUtf8.GetStateCount: SizeInt;
 begin
   Result := FNodeCount;
 end;
@@ -5607,7 +5698,7 @@ begin
   inherited;
 end;
 
-function TACFsmUtf8.IsMatch(const s: string; aOffset, aCount: SizeInt): Boolean;
+function TACFsmUtf8.IsMatch(const s: string; aOffset: SizeInt; aCount: SizeInt): Boolean;
 begin
   Result := IndexOfPattern(s, aOffset, aCount) <> NULL_INDEX;
 end;
@@ -5736,12 +5827,6 @@ begin
   Inc(FNodeCount);
 end;
 
-function TACDfaUtf8.GetCharCode(c: Ucs4Char): Int32;
-begin
-  if c > BMP_MAX then exit(-1);
-  Result := FCharMap[c];
-end;
-
 procedure TACDfaUtf8.AddPattern(const aValue: string; aIndex: SizeInt);
 var
   p, pEnd: PByte;
@@ -5782,10 +5867,8 @@ end;
 
 function TACDfaUtf8.NextFsmState(aState: Int32; c: Ucs4Char): Int32;
 begin
-  if c > BMP_MAX then exit(0);
-  Result := FCharMap[c];
-  if Result = -1 then exit(0);
-  Result := FTrie[aState].NextMove[Result];
+  if (c > BMP_MAX) or (FCharMap[c] = -1) then exit(0);
+  Result := FTrie[aState].NextMove[FCharMap[c]];
 end;
 
 procedure TACDfaUtf8.BuildFsm;
@@ -6594,6 +6677,91 @@ begin
   Result := @p^.Value;
 end;
 
+{ TAcStreamHeader }
+
+procedure TAcStreamHeader.WriteStream(aStream: TStream);
+begin
+  aStream.WriteBuffer(Magic, SizeOf(Magic));
+  aStream.WriteBuffer(CaseInsensitive, SizeOf(CaseInsensitive));
+  aStream.WriteBuffer(NToLE(Version), SizeOf(Version));
+  aStream.WriteBuffer(NToLE(PatternListSize), SizeOf(PatternListSize));
+  aStream.WriteBuffer(NToLE(RealPatternCount), SizeOf(RealPatternCount));
+  aStream.WriteBuffer(NToLE(StateCount), SizeOf(StateCount));
+  aStream.WriteBuffer(NToLE(AlphabetSize), SizeOf(AlphabetSize));
+  aStream.WriteBuffer(NToLE(QueueSize), SizeOf(QueueSize));
+end;
+
+procedure TAcStreamHeader.ReadStream(aStream: TStream);
+var
+  I: Int32;
+begin
+  I := 0; // make comliler happy
+  aStream.ReadBuffer(Magic, SizeOf(Magic));
+  aStream.ReadBuffer(CaseInsensitive, SizeOf(CaseInsensitive));
+  aStream.ReadBuffer(I, SizeOf(I));
+  Version := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  PatternListSize := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  RealPatternCount := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  StateCount := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  AlphabetSize := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  QueueSize := LEToN(I);
+end;
+
+{ TACNfaUtf8.TOutput }
+
+procedure TACNfaUtf8.TOutput.ReadStream(aStream: TStream);
+var
+  I: Int32;
+begin
+  I := 0; //make compliler happy
+  aStream.ReadBuffer(I, SizeOf(I));
+  Len := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  CpLen := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  Index := LEToN(I);
+end;
+
+procedure TACNfaUtf8.TOutput.WriteStream(aStream: TStream);
+begin
+  aStream.WriteBuffer(NToLE(Len), SizeOf(Len));
+  aStream.WriteBuffer(NToLE(CpLen), SizeOf(CpLen));
+  aStream.WriteBuffer(NToLE(Index), SizeOf(Index));
+end;
+
+{ TACNfaUtf8.TDaNode }
+
+procedure TACNfaUtf8.TDaNode.ReadStream(aStream: TStream);
+var
+  I: Int32;
+begin
+  I := 0; //make compliler happy
+  aStream.ReadBuffer(I, SizeOf(I));
+  Base := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  Check := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  Failure := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  Output := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  NextOut := LEToN(I);
+end;
+
+procedure TACNfaUtf8.TDaNode.WriteStream(aStream: TStream);
+begin
+  aStream.WriteBuffer(NToLE(Base), SizeOf(Base));
+  aStream.WriteBuffer(NToLE(Check), SizeOf(Check));
+  aStream.WriteBuffer(NToLE(Failure), SizeOf(Failure));
+  aStream.WriteBuffer(NToLE(Output), SizeOf(Output));
+  aStream.WriteBuffer(NToLE(NextOut), SizeOf(NextOut));
+end;
+
 { TACNfaUtf8.TPair }
 
 constructor TACNfaUtf8.TPair.Make(aNode, aDaNode: Int32);
@@ -6672,7 +6840,7 @@ begin
   specialize TGNestedArrayHelper<TEntry>.MergeSort(a, @EntryCmp);
   for I := 0 to System.High(a) do
     FCharMap[a[I].Key] := Succ(I);
-  FAlphabetSize := Succ(System.Length(a));
+  FAlphabetSize := System.Length(a);
 end;
 
 function TACNfaUtf8.EncodeChar(c: Ucs4Char): Int32;
@@ -6939,6 +7107,11 @@ begin
     end;
   if System.Length(FDaTrie) > AllVacantBound then
     System.SetLength(FDaTrie, AllVacantBound);
+end;
+
+function TACNfaUtf8.IsDfa: Boolean;
+begin
+  Result := False;
 end;
 
 function TACNfaUtf8.DoFindFirst(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch;
@@ -7230,9 +7403,73 @@ begin
   Result := FAlphabetSize;
 end;
 
+function TACNfaUtf8.GetQueueSize: Int32;
+begin
+  Result := FQueueSize;
+end;
+
+procedure TACNfaUtf8.FsmStreamWrite(aStream: TStream);
+var
+  I, Len: Int32;
+begin
+  Len := System.Length(FDaTrie);
+  aStream.WriteBuffer(NToLE(Len), SizeOf(Len)); // FDaTrie size
+  for I := 0 to System.High(FDaTrie) do         // FDaTrie array
+    FDaTrie[I].WriteStream(aStream);
+  Len := System.Length(FOutput);
+  aStream.WriteBuffer(NToLE(Len), SizeOf(Len)); // FOutput size
+  for I := 0 to System.High(FOutput) do         // FOutput array
+    FOutput[I].WriteStream(aStream);
+  Len := System.Length(FCharMap);
+  aStream.WriteBuffer(NToLE(Len), SizeOf(Len)); // FCharMap size
+  for I := 0 to System.High(FCharMap) do
+    if FCharMap[I] <> 0 then begin              // only indices and values of non-zero codes
+      aStream.WriteBuffer(NToLE(I), SizeOf(I));
+      aStream.WriteBuffer(NToLE(FCharMap[I]), SizeOf(FCharMap[I]));
+    end;
+end;
+
+procedure TACNfaUtf8.FsmStreamRead(aStream: TStream; const aHeader: TAcStreamHeader);
+var
+  I, J, C: Int32;
+begin
+  FWordCount := aHeader.RealPatternCount;
+  FNodeCount := aHeader.StateCount;
+  FAlphabetSize := aHeader.AlphabetSize;
+  FQueueSize := aHeader.QueueSize;
+  System.SetLength(FQueue, FQueueSize);
+  J := 0; //make compliler happy
+  aStream.ReadBuffer(J, SizeOf(J));     // FDaTrie size
+  System.SetLength(FDaTrie, LEToN(J));
+  for I := 0 to System.High(FDaTrie) do // FDaTrie array
+    FDaTrie[I].ReadStream(aStream);
+  aStream.ReadBuffer(J, SizeOf(J));     // FOutput size
+  FOutCount := LEToN(J);
+  System.SetLength(FOutput, FOutCount);
+  for I := 0 to System.High(FOutput) do // FOutput array
+    FOutput[I].ReadStream(aStream);
+  aStream.ReadBuffer(J, SizeOf(J));     // FCharMap size
+  FMaxChar := Pred(LEToN(J));
+  System.SetLength(FCharMap, Succ(FMaxChar));
+  C := 0; //make compliler happy
+  for I := 1 to AlphabetSize do begin   // indices and values of non-zero codes
+    aStream.ReadBuffer(J, SizeOf(J));
+    aStream.ReadBuffer(C, SizeOf(C));
+    FCharMap[LEToN(J)] := LEToN(C);
+  end;
+end;
+
 class function TACNfaUtf8.GetFsmClass: TACFsmUtf8Class;
 begin
   Result := TACNfaUtf8;
+end;
+
+class function TACNfaUtf8.CreateInstance(aCaseInsensitive: Boolean): TACNfaUtf8;
+begin
+  if aCaseInsensitive then
+    Result := TACNfaCIUtf8.Create
+  else
+    Result := TACNfaUtf8.Create;
 end;
 
 constructor TACNfaUtf8.Create;
@@ -7242,7 +7479,6 @@ begin
   System.SetLength(FOutput, ARRAY_INITIAL_SIZE);
   FNodeCount := 1;
   FOutCount := 1;
-  FAlphabetSize := 1;
 end;
 
 function TACNfaUtf8.TryBuildFsm(const aPatternList: array of string): Boolean;
@@ -7647,15 +7883,181 @@ begin
   FIgnoreCase := True;
 end;
 
-function CreateACSearchFsm(const aPatterns: array of string; aIgnoreCase, aForceNFA: Boolean): IACSearchFsmUtf8;
+{ TACPersistFsmUtf8 }
+
+constructor TACPersistFsmUtf8.Create(const aPatterns: array of string; aIgnoreCase: Boolean);
+var
+  Inst: TACNfaUtf8;
+begin
+  FPatternList := specialize TGArrayHelpUtil<string>.CreateCopy(aPatterns);
+  Inst := TACNfaUtf8.CreateInstance(aIgnoreCase);
+  Inst.TryBuildFsm(FPatternList);
+  FInstance := Inst;
+end;
+
+function TACPersistFsmUtf8.GetFsm: IACSearchFsmUtf8;
+begin
+  Result := FInstance;
+end;
+
+function TACPersistFsmUtf8.GetPatternListSize: Integer;
+begin
+  Result := System.Length(FPatternList);
+end;
+
+function TACPersistFsmUtf8.GetPattern(aIndex: Integer): string;
+begin
+  if DWord(aIndex) >= DWord(System.Length(FPatternList)) then
+    raise EAcFsmError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FPatternList[aIndex];
+end;
+
+function TACPersistFsmUtf8.GetPatternList: TStringArray;
+begin
+  Result := System.Copy(FPatternList);
+end;
+
+procedure TACPersistFsmUtf8.LoadFromStream(aStream: TStream);
+var
+  Header: TAcStreamHeader;
+  rbs: TReadBufStream;
+  Inst: TACNfaUtf8;
+  List: TStringArray;
+  s: string;
+  I, Len: Int32;
+begin
+  Inst := nil;
+  try
+    rbs := TReadBufStream.Create(aStream, BUF_SIZE);
+    try
+      Header.ReadStream(rbs); // header
+      if Header.Magic <> MAGIC_SEQ then
+        raise EAcFsmError.Create(SEUnknownAcStreamFormat); //
+      if Header.Version <> STREAM_FMT_VERSION then
+        raise EAcFsmError.Create(SEUnsupportAcFmtVersion); //
+      System.SetLength(List, Header.PatternListSize);
+      for I := 0 to System.High(List) do begin // pattern list
+        rbs.ReadBuffer(Len, SizeOf(Len));
+        System.SetLength(s, LEToN(Len));
+        rbs.ReadBuffer(Pointer(s)^, System.Length(s));
+        List[I] := s;
+        s := '';
+      end;
+      Inst := TACNfaUtf8.CreateInstance(Header.CaseInsensitive);
+      Inst.FsmStreamRead(rbs, Header); // FSM
+      FInstance := Inst;
+      FPatternList := List;
+    finally
+      rbs.Free;
+    end;
+  except
+    Inst.Free;
+    raise;
+  end;
+end;
+
+procedure TACPersistFsmUtf8.SaveToStream(aStream: TStream);
+var
+  Header: TAcStreamHeader;
+  wbs: TWriteBufStream;
+  s: string;
+  I, Len: Int32;
+begin
+  if FInstance = nil then
+    raise EAcFsmError.Create(SEAcFsmNotAssigned);
+  Header.Magic := MAGIC_SEQ;
+  Header.Version := STREAM_FMT_VERSION;
+  Header.PatternListSize := System.Length(FPatternList);
+  Header.RealPatternCount := FInstance.PatternCount;
+  Header.StateCount := FInstance.StateCount;
+  Header.AlphabetSize := FInstance.AlphabetSize;
+  Header.QueueSize := (FInstance as IAcFsmStreamWriter).GetQueueSize;
+  Header.CaseInsensitive := FInstance.CaseInsensitive;
+  wbs := TWriteBufStream.Create(aStream, BUF_SIZE);
+  try
+    Header.WriteStream(wbs); // header
+    for I := 0 to System.High(FPatternList) do // pattern list
+      begin
+        s := FPatternList[I];
+        Len := System.Length(s);
+        wbs.WriteBuffer(NToLE(Len), SizeOf(Len));
+        wbs.WriteBuffer(Pointer(s)^, Len);
+      end;
+    (FInstance as IAcFsmStreamWriter).FsmStreamWrite(wbs); // FSM
+  finally
+    wbs.Free;
+  end;
+end;
+
+procedure TACPersistFsmUtf8.LoadFromFile(const aFileName: string);
+var
+  fs: TFileStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(fs);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TACPersistFsmUtf8.SaveToFile(const aFileName: string);
+var
+  fs: TFileStream;
+begin
+  fs := TFileStream.Create(aFileName, fmCreate);
+  try
+    SaveToStream(fs);
+  finally
+    fs.Free;
+  end;
+end;
+
+
+function CreateAcFsmUtf8(const aPatterns: array of string; aIgnoreCase: Boolean;
+  aForceNFA: Boolean): IACSearchFsmUtf8;
 begin
   Result := TACFsmUtf8.CreateInstance(aPatterns, aIgnoreCase, aForceNFA);
 end;
 
-function CreateACSearchFsm(const aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase,
-  aForceNFA: Boolean): IACSearchFsmUtf8;
+function NewAcFsmUtf8(const aPatterns: array of string; aIgnoreCase: Boolean): IACPersistFsmUtf8;
 begin
-  Result := CreateACSearchFsm(aPatterEnum.ToArray, aIgnoreCase, aForceNFA);
+  Result := TACPersistFsmUtf8.Create(aPatterns, aIgnoreCase);
+end;
+
+function NewAcFsmUtf8(aPatterEnum: specialize IGEnumerable<string>; aIgnoreCase: Boolean): IACPersistFsmUtf8;
+begin
+  Result := TACPersistFsmUtf8.Create(aPatterEnum.ToArray, aIgnoreCase);
+end;
+
+function LoadAcFsmUtf8(aStream: TStream): IACPersistFsmUtf8;
+var
+  r: TACPersistFsmUtf8;
+begin
+  Result := nil;
+  r := TACPersistFsmUtf8.Create;
+  try
+    r.LoadFromStream(aStream);
+    Result := r;
+  except
+    r.Free;
+    raise;
+  end;
+end;
+
+function LoadAcFsmUtf8(const aFileName: string): IACPersistFsmUtf8;
+var
+  r: TACPersistFsmUtf8;
+begin
+  Result := nil;
+  r := TACPersistFsmUtf8.Create;
+  try
+    r.LoadFromFile(aFileName);
+    Result := r;
+  except
+    r.Free;
+    raise;
+  end;
 end;
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
