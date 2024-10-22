@@ -230,6 +230,9 @@ resourcestring
   SEIreInvalidRangeQuant   = 'Invalid range quantifier';
   SEIreRangeQuantTooBig    = 'Range quantifier limit exceeded';
   SEIreRangeQuantMess      = 'Max is less than Min in range quantifier';
+  SEUnknownAcStreamFormat  = 'Unknown stream format';
+  SEUnsupportAcFmtVersion  = 'Unsupported stream format version';
+  SEAcFsmNotAssigned       = 'no FSM instance is assigned';
 
 implementation
 
