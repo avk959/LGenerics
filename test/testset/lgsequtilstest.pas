@@ -154,7 +154,13 @@ type
     procedure TestContainsMatchNfa;
     procedure TestContainsMatchDfaCI;
     procedure TestContainsMatchNfaCI;
+  end;
 
+  { TACPersistFsmTest }
+
+  TACPersistFsmTest = class(TTestCase)
+    procedure TestCreation;
+    procedure TestStreaming;
   end;
 
 implementation
@@ -3804,35 +3810,35 @@ procedure TACSearchFsmTest.TestCreate;
 var
   ac: IACSearchFsmUtf8;
 begin
-  ac := CreateACSearchFsm([]);
+  ac := CreateAcFsmUtf8([]);
   AssertTrue(ac.PatternCount = 0);
   AssertFalse(ac.IsMatch('a'));
 
-  ac := CreateACSearchFsm(['', '']);
+  ac := CreateAcFsmUtf8(['', '']);
   AssertTrue(ac.PatternCount = 0);
 
-  ac := CreateACSearchFsm(['', ''], False, True);
+  ac := CreateAcFsmUtf8(['', ''], False, True);
   AssertTrue(ac.PatternCount = 0);
 
-  ac := CreateACSearchFsm(['a','b']);
+  ac := CreateAcFsmUtf8(['a','b']);
   AssertFalse(ac.CaseInsensitive);
   AssertTrue(ac.PatternCount = 2);
   AssertTrue(ac.IsMatch('a'));
   AssertTrue(ac.IsMatch('b'));
 
-  ac := CreateACSearchFsm(['a','b'], True);
+  ac := CreateAcFsmUtf8(['a','b'], True);
   AssertTrue(ac.CaseInsensitive);
   AssertTrue(ac.PatternCount = 2);
   AssertTrue(ac.IsMatch('A'));
   AssertTrue(ac.IsMatch('B'));
 
-  ac := CreateACSearchFsm(['a','b'], False, True);
+  ac := CreateAcFsmUtf8(['a','b'], False, True);
   AssertFalse(ac.CaseInsensitive);
   AssertTrue(ac.PatternCount = 2);
   AssertTrue(ac.IsMatch('a'));
   AssertTrue(ac.IsMatch('b'));
 
-  ac := CreateACSearchFsm(['a','b'], True, True);
+  ac := CreateAcFsmUtf8(['a','b'], True, True);
   AssertTrue(ac.CaseInsensitive);
   AssertTrue(ac.PatternCount = 2);
   AssertTrue(ac.IsMatch('A'));
@@ -3846,7 +3852,7 @@ var
   s: string;
 begin
   a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   s := 'hishero';
   FMatchCount := 0;
   ac.Search(s, @OnMatch);
@@ -3864,7 +3870,7 @@ var
   s: string;
 begin
   a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
   s := 'hishero';
   FMatchCount := 0;
   ac.Search(s, @OnMatch);
@@ -3882,7 +3888,7 @@ var
   s: string;
 begin
   a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
-  ac := CreateACSearchFsm(a, True);
+  ac := CreateAcFsmUtf8(a, True);
   s := 'HISHERO';
   FMatchCount := 0;
   ac.Search(s, @OnMatch);
@@ -3900,7 +3906,7 @@ var
   s: string;
 begin
   a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
-  ac := CreateACSearchFsm(a, True, True);
+  ac := CreateAcFsmUtf8(a, True, True);
   s := 'HISHERO';
   FMatchCount := 0;
   ac.Search(s, @OnMatch);
@@ -3937,7 +3943,7 @@ var
   a: TStringArray;
 begin
   a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   s := 'hishero';
 
   ac.Search(s, @NestMatch);
@@ -3979,7 +3985,7 @@ var
   a: TStringArray;
 begin
   a := ['her', 'is', 'his', 'she', 'hi', 'he', 'i', 'hero'];
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
   s := 'hishero';
 
   ac.Search(s, @NestMatch);
@@ -4022,7 +4028,7 @@ var
   I: Integer;
 begin
   a := ['HER', 'İS', 'HİS', 'SHE', 'Hİ', 'HE', 'İ', 'HERO'];
-  ac := CreateACSearchFsm(a, True);
+  ac := CreateAcFsmUtf8(a, True);
   s := 'hishero';
 
   ac.Search(s, @NestMatch);
@@ -4066,7 +4072,7 @@ var
   I: Integer;
 begin
   a := ['HER', 'İS', 'HİS', 'SHE', 'Hİ', 'HE', 'İ', 'HERO'];
-  ac := CreateACSearchFsm(a, True, True);
+  ac := CreateAcFsmUtf8(a, True, True);
   s := 'hishero';
 
   ac.Search(s, @NestMatch);
@@ -4091,7 +4097,7 @@ var
   s: string;
 begin
   a := ['не','один','дина','вы','на'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   s := '';
   AssertTrue(ac.IndexOfPattern(s) = -1);
   s := 'оди';
@@ -4106,7 +4112,7 @@ begin
     end;
 
   a := ['aa','baa','bcaa'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   AssertTrue(ac.IndexOfPattern('baaa') = -1);
 end;
 
@@ -4118,7 +4124,7 @@ var
   s: string;
 begin
   a := ['не','один','дина','вы','на'];
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
   s := '';
   AssertTrue(ac.IndexOfPattern(s) = -1);
   s := 'оди';
@@ -4133,7 +4139,7 @@ begin
     end;
 
   a := ['aa','baa','bcaa'];
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
   AssertTrue(ac.IndexOfPattern('baaa') = -1);
 end;
 
@@ -4146,7 +4152,7 @@ var
 begin
   a := ['не','один','дина','вы','на'];
   b := ['НЕ','ОДИН','ДИНА','ВЫ','НА'];
-  ac := CreateACSearchFsm(a, True);
+  ac := CreateAcFsmUtf8(a, True);
   s := '';
   AssertTrue(ac.IndexOfPattern(s) = -1);
   s := 'оди';
@@ -4160,7 +4166,7 @@ begin
       AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])-1) = -1);
     end;
   a := ['aa','baa','bcaa'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   AssertTrue(ac.IndexOfPattern('BAAA') = -1);
 end;
 
@@ -4173,7 +4179,7 @@ var
 begin
   a := ['не','один','дина','вы','на'];
   b := ['НЕ','ОДИН','ДИНА','ВЫ','НА'];
-  ac := CreateACSearchFsm(a, True, True);
+  ac := CreateAcFsmUtf8(a, True, True);
   s := '';
   AssertTrue(ac.IndexOfPattern(s) = -1);
   s := 'оди';
@@ -4187,7 +4193,7 @@ begin
       AssertTrue(ac.IndexOfPattern(s, Pos(b[I], s), Length(b[I])-1) = -1);
     end;
   a := ['aa','baa','bcaa'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   AssertTrue(ac.IndexOfPattern('BAAA') = -1);
 end;
 
@@ -4200,7 +4206,7 @@ var
   Ofs: SizeInt;
 begin
   a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   s := 'НЕОДИНАКОВЫЙ';
   m := ac.FirstMatch(s);
   AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
@@ -4271,7 +4277,7 @@ begin
     'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
     'раз не считается','не считается', 'не'
   ];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   ac.OnlyWholeWords := True;
   s := 'первый раз не считается';
 
@@ -4340,7 +4346,7 @@ var
   Ofs: SizeInt;
 begin
   a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
-  ac := CreateACSearchFsm(a, True);
+  ac := CreateAcFsmUtf8(a, True);
   s := 'НЕОДИНАКОВЫЙ';
   m := ac.FirstMatch(s);
   AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
@@ -4408,7 +4414,7 @@ begin
     'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
     'раз не считается','не считается', 'не'
   ];
-  ac := CreateACSearchFsm(a, True);
+  ac := CreateAcFsmUtf8(a, True);
   ac.OnlyWholeWords := True;
   s := 'ПЕРВЫЙ РАЗ НЕ СЧИТАЕТСЯ';
 
@@ -4477,7 +4483,7 @@ var
   Ofs: SizeInt;
 begin
   a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
   s := 'НЕОДИНАКОВЫЙ';
   m := ac.FirstMatch(s);
   AssertTrue((m.Offset = 0) and (m.Length = 0) and (m.Index = -1));
@@ -4548,7 +4554,7 @@ begin
     'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
     'раз не считается','не считается', 'не'
   ];
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
   ac.OnlyWholeWords := True;
   s := 'первый раз не считается';
 
@@ -4617,7 +4623,7 @@ var
   Ofs: SizeInt;
 begin
   a := ['одина','один','одинак','ако','ак','аков','овы','ов','овый','ков','ко','ковый'];
-  ac := CreateACSearchFsm(a, True, True);
+  ac := CreateAcFsmUtf8(a, True, True);
   s := 'НЕОДИНАКОВЫЙ';
   m := ac.FirstMatch(s);
   AssertTrue((m.Index = 1) and AnsiSameText(Copy(s, m.Offset, m.Length), a[1]));
@@ -4685,7 +4691,7 @@ begin
     'считает','читается','первый раз','первый','первый раз не','раз не','раз','считается',
     'раз не считается','не считается', 'не'
   ];
-  ac := CreateACSearchFsm(a, True, True);
+  ac := CreateAcFsmUtf8(a, True, True);
   ac.OnlyWholeWords := True;
   s := 'ПЕРВЫЙ РАЗ НЕ СЧИТАЕТСЯ';
 
@@ -4754,7 +4760,7 @@ var
 begin
   s := '012abcdefgh';
   a := ['0124','234','12345', '1234567','1234','23','890123','6789012', '5678901'];
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
   m := ac.FindMatches(s);
   AssertTrue(m = nil);
 
@@ -4796,7 +4802,7 @@ begin
   a := ['самый','сомнительный','поход','сам','сом','ход'];
   s := 'самый сомнительный поход';
 
-  ac := CreateACSearchFsm(a);
+  ac := CreateAcFsmUtf8(a);
 
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 6);
@@ -4817,7 +4823,7 @@ begin
   AssertTrue(Length(m) = 1);
   AssertTrue(m[0].Index = 2);
 
-  ac := CreateACSearchFsm(a, False, True);
+  ac := CreateAcFsmUtf8(a, False, True);
 
   m := ac.FindMatches(s);
   AssertTrue(Length(m) = 6);
@@ -4843,7 +4849,7 @@ procedure TACSearchFsmTest.TestContainsMatchDfa;
 var
   ac: IACSearchFsmUtf8;
 begin
-  ac := CreateACSearchFsm(['aa','bb']);
+  ac := CreateAcFsmUtf8(['aa','bb']);
   AssertFalse(ac.ContainsMatch('abcde'));
   AssertFalse(ac.ContainsMatch('ababcde'));
   AssertTrue(ac.ContainsMatch('bcdaae'));
@@ -4854,7 +4860,7 @@ procedure TACSearchFsmTest.TestContainsMatchNfa;
 var
   ac: IACSearchFsmUtf8;
 begin
-  ac := CreateACSearchFsm(['aa','bb'], False, True);
+  ac := CreateAcFsmUtf8(['aa','bb'], False, True);
   AssertFalse(ac.ContainsMatch('abcde'));
   AssertFalse(ac.ContainsMatch('ababcde'));
   AssertTrue(ac.ContainsMatch('bcdaae'));
@@ -4865,7 +4871,7 @@ procedure TACSearchFsmTest.TestContainsMatchDfaCI;
 var
   ac: IACSearchFsmUtf8;
 begin
-  ac := CreateACSearchFsm(['aA','Bb'], True);
+  ac := CreateAcFsmUtf8(['aA','Bb'], True);
   AssertFalse(ac.ContainsMatch('abcde'));
   AssertFalse(ac.ContainsMatch('ababcde'));
   AssertTrue(ac.ContainsMatch('bcdaae'));
@@ -4876,11 +4882,77 @@ procedure TACSearchFsmTest.TestContainsMatchNfaCI;
 var
   ac: IACSearchFsmUtf8;
 begin
-  ac := CreateACSearchFsm(['aA','Bb'], True, True);
+  ac := CreateAcFsmUtf8(['aA','Bb'], True, True);
   AssertFalse(ac.ContainsMatch('abcde'));
   AssertFalse(ac.ContainsMatch('ababcde'));
   AssertTrue(ac.ContainsMatch('bcdaae'));
   AssertTrue(ac.ContainsMatch('acdbbe'));
+end;
+
+{ TACPersistFsmTest }
+
+procedure TACPersistFsmTest.TestCreation;
+var
+  a: IACPersistFsmUtf8;
+begin
+  a := NewAcFsmUtf8([]);
+  AssertTrue(a <> nil);
+  AssertTrue(a.PatternListSize = 0);
+  AssertTrue(a.GetPatternList = nil);
+  AssertFalse(a.Fsm.CaseInsensitive);
+  AssertTrue(a.Fsm.StateCount = 1);
+  AssertTrue(a.Fsm.PatternCount = 0);
+  AssertTrue(a.Fsm.AlphabetSize = 0);
+
+  a := NewAcFsmUtf8([], True);
+  AssertTrue(a.Fsm.CaseInsensitive);
+
+  a := NewAcFsmUtf8(['раз', 'раз', 'два', 'два', 'три', 'три']);
+  AssertTrue(a.PatternListSize = 6);
+  AssertTrue(Length(a.GetPatternList) = 6);
+  AssertFalse(a.Fsm.CaseInsensitive);
+  AssertTrue(a.Fsm.StateCount = 10);
+  AssertTrue(a.Fsm.PatternCount = 3);
+  AssertTrue(a.Fsm.AlphabetSize = 7);
+  AssertTrue(a.Fsm.IsMatch('раз'));
+  AssertTrue(a.Fsm.IsMatch('два'));
+  AssertTrue(a.Fsm.IsMatch('три'));
+end;
+
+procedure TACPersistFsmTest.TestStreaming;
+var
+  ms: specialize TGAutoRef<TMemoryStream>;
+  a: IACPersistFsmUtf8;
+begin
+  a := NewAcFsmUtf8([]);
+  a.SaveToStream(ms.Instance);
+  a := nil;
+  ms.Instance.Position := 0;
+
+  a := LoadAcFsmUtf8(ms.Instance);
+  AssertTrue(a.PatternListSize = 0);
+  AssertTrue(a.GetPatternList = nil);
+  AssertFalse(a.Fsm.CaseInsensitive);
+  AssertTrue(a.Fsm.StateCount = 1);
+  AssertTrue(a.Fsm.PatternCount = 0);
+  AssertTrue(a.Fsm.AlphabetSize = 0);
+
+  ms.Instance.Clear;
+  a := NewAcFsmUtf8(['раз', 'раз', 'два', 'два', 'три', 'три'], True);
+  a.SaveToStream(ms.Instance);
+  a := nil;
+  ms.Instance.Position := 0;
+
+  a := LoadAcFsmUtf8(ms.Instance);
+  AssertTrue(a.PatternListSize = 6);
+  AssertTrue(Length(a.GetPatternList) = 6);
+  AssertTrue(a.Fsm.CaseInsensitive);
+  AssertTrue(a.Fsm.StateCount = 10);
+  AssertTrue(a.Fsm.PatternCount = 3);
+  AssertTrue(a.Fsm.AlphabetSize = 7);
+  AssertTrue(a.Fsm.IsMatch('раз'));
+  AssertTrue(a.Fsm.IsMatch('два'));
+  AssertTrue(a.Fsm.IsMatch('три'));
 end;
 
 
@@ -4890,6 +4962,7 @@ initialization
   RegisterTest(TTestSeqUtils);
   RegisterTest(TTestFuzzySearchBitap);
   RegisterTest(TACSearchFsmTest);
+  RegisterTest(TACPersistFsmTest);
 
 end.
 
