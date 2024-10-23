@@ -2224,17 +2224,17 @@ var
 begin
   {%H-}ac.Instance := TACSearchFsm.Create([]);
   AssertTrue(ac.Instance.AlphabetSize = 0);
-  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.StateCount = 1);
   AssertTrue(ac.Instance.PatternCount = 0);
   AssertFalse(ac.Instance.IsMatch('a'));
 
   ac.Instance := TACSearchFsm.Create(['', '']);
-  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.StateCount = 1);
   AssertTrue(ac.Instance.PatternCount = 0);
 
   ac.Instance := TACSearchFsm.Create(['a','b', 'a', 'b']);
   AssertTrue(ac.Instance.AlphabetSize <> 0);
-  AssertTrue(ac.Instance.NodeCount = 3);
+  AssertTrue(ac.Instance.StateCount = 3);
   AssertTrue(ac.Instance.PatternCount = 2);
   AssertTrue(ac.Instance.IsMatch('a'));
   AssertTrue(ac.Instance.IsMatch('b'));
@@ -2430,19 +2430,19 @@ var
 begin
   {%H-}ac.Instance := TDaacSearchFsm.Create([]);
   AssertTrue(ac.Instance.AlphabetSize = 0);
-  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.StateCount = 1);
   AssertTrue(ac.Instance.EmptyCellCount = 0);
   AssertTrue(ac.Instance.PatternCount = 0);
   AssertFalse(ac.Instance.IsMatch('a'));
 
   ac.Instance := TDaacSearchFsm.Create(['', '']);
-  AssertTrue(ac.Instance.NodeCount = 1);
+  AssertTrue(ac.Instance.StateCount = 1);
   AssertTrue(ac.Instance.EmptyCellCount = 0);
   AssertTrue(ac.Instance.PatternCount = 0);
 
   ac.Instance := TDaacSearchFsm.Create(['a','b', 'a', 'b']);
   AssertTrue(ac.Instance.AlphabetSize = 2);
-  AssertTrue(ac.Instance.NodeCount = 3);
+  AssertTrue(ac.Instance.StateCount = 3);
   AssertTrue(ac.Instance.EmptyCellCount = 0);
   AssertTrue(ac.Instance.PatternCount = 2);
   AssertTrue(ac.Instance.IsMatch('a'));
