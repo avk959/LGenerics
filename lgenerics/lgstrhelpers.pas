@@ -427,7 +427,7 @@ type
   { returns True if at least one match is found in the string aText, starting at position aOffset
     within aCount bytes; any value of aCount < 1 implies a search to the end of the text }
     function ContainsMatch(const aText: rawbytestring; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
-    property NodeCount: SizeInt read FNodeCount;
+    property StateCount: SizeInt read FNodeCount;
     property PatternCount: SizeInt read FWordCount;
     property AlphabetSize: SizeInt read FAlphabetSize;
   end;
@@ -543,7 +543,7 @@ type
   { returns True if at least one match is found in the string aText, starting at position aOffset
     within aCount bytes; any value of aCount < 1 implies a search to the end of the text }
     function ContainsMatch(const aText: rawbytestring; aOffset: SizeInt = 1; aCount: SizeInt = 0): Boolean;
-    property NodeCount: Int32 read FNodeCount;
+    property StateCount: Int32 read FNodeCount;
     property EmptyCellCount: Int32 read GetEmptyCount;
     property PatternCount: Int32 read FWordCount;
     property AlphabetSize: Int32 read FAlphabetSize;
@@ -4491,12 +4491,12 @@ end;
 function TACSearchFsm.NewNode: SizeInt;
 begin
 {$IFDEF CPU64}
-  if NodeCount = MaxInt then
+  if StateCount = MaxInt then
     raise ELGMaxItemsExceed.CreateFmt(SEMaxNodeCountExceedFmt, [MaxInt]);
 {$ENDIF CPU64}
   if FNodeCount = System.Length(FTrie) then
-    System.SetLength(FTrie, NodeCount * 2);
-  Result := NodeCount;
+    System.SetLength(FTrie, StateCount * 2);
+  Result := StateCount;
   Inc(FNodeCount);
   System.SetLength(FTrie[Result].NextMove, AlphabetSize);
 end;
@@ -4551,7 +4551,7 @@ var
   Failure: array of Int32;
   Curr, Next, Fail, Link, Code: Int32;
 begin // simple BFS
-  System.SetLength(Failure, NodeCount);
+  System.SetLength(Failure, StateCount);
   for Curr in FTrie[0].NextMove do
     if Curr <> 0 then
       Queue.Enqueue(Curr);
@@ -5050,12 +5050,12 @@ end;
 function TDaacSearchFsm.NewNode: Int32;
 begin
 {$IFDEF CPU64}
-  if NodeCount = MaxInt then
+  if StateCount = MaxInt then
     raise ELGMaxItemsExceed.CreateFmt(SEMaxNodeCountExceedFmt, [MaxInt]);
 {$ENDIF CPU64}
-  if NodeCount = System.Length(FTrie) then
-    System.SetLength(FTrie, NodeCount * 2);
-  Result := NodeCount;
+  if StateCount = System.Length(FTrie) then
+    System.SetLength(FTrie, StateCount * 2);
+  Result := StateCount;
   Inc(FNodeCount);
 end;
 
@@ -5261,7 +5261,7 @@ var
   Next, Fail, Link: Int32;
   e: TCode2StateMap.TEntry;
 begin
-  System.SetLength(FDaTrie, LgUtils.RoundUpTwoPower(NodeCount + 256));
+  System.SetLength(FDaTrie, LgUtils.RoundUpTwoPower(StateCount + 256));
   for Next := 2 to System.High(FDaTrie) do
     with FDaTrie[Next] do begin
       Base := -Succ(Next);
