@@ -26,6 +26,7 @@ type
     procedure Validate;
 
     procedure Utf8ToUcs4;
+    procedure TestUtf8StrToCpSeq;
     procedure SubSequenceUtf16;
     procedure EditDistUtf8;
     procedure LevenshteinDistMbrUtf8;
@@ -292,6 +293,32 @@ begin
   AssertTrue('s8', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s8)) = s8);
   AssertTrue('s9', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s9)) = s9);
   AssertTrue('s10', Ucs4SeqToUtf8(Utf8ToUcs4Seq(s10)) = s10);
+end;
+
+procedure TTestUnicodeUtils.TestUtf8StrToCpSeq;
+const
+  s1:  string = 'Ну, здравствуйте, здравствуйте. Je vois que je vous fais peur, садитесь и рассказывайте';
+  s2:  string = 'Dieu, quelle virulente sortie![4] – отвечал, нисколько не смутясь такою встречей';
+  s3:  string = 'Вы не видали еще, – или: – вы не знакомы с ma tante? – говорила Анна Павловна';
+  s4:  string = 'Il va se faire tuer. Dites-moi, pourquoi cette vilaine guerre, – сказала она князю Василию';
+  s5:  string = 'Да, я слышал про его план вечного мира, и это очень интересно, но едва ли возможно…';
+  s6:  string = 'шепнула Анна Павловна одному. – Le vicomte est un parfait conteur, – проговорила она другому';
+  s7:  string = 'Княжна облокотила свою открытую полную руку на столик и не нашла нужным что-либо сказать';
+  s8:  string = 'Le charmant Hippolyte поражал своим необыкновенным сходством с сестрою-красавицею';
+  s9:  string = 'Ce n’est pas une histoire de revenants? – сказал он, усевшись подле княгини и торопливо пристроив к глазам свой лорнет';
+  s10: string = '悲しい時間！ おお魅力！';
+begin
+  AssertTrue('empty string', CpSeqToUtf8Str(Utf8StrToCpSeq('')) = '');
+  AssertTrue('s1', CpSeqToUtf8Str(Utf8StrToCpSeq(s1)) = s1);
+  AssertTrue('s2', CpSeqToUtf8Str(Utf8StrToCpSeq(s2)) = s2);
+  AssertTrue('s3', CpSeqToUtf8Str(Utf8StrToCpSeq(s3)) = s3);
+  AssertTrue('s4', CpSeqToUtf8Str(Utf8StrToCpSeq(s4)) = s4);
+  AssertTrue('s5', CpSeqToUtf8Str(Utf8StrToCpSeq(s5)) = s5);
+  AssertTrue('s6', CpSeqToUtf8Str(Utf8StrToCpSeq(s6)) = s6);
+  AssertTrue('s7', CpSeqToUtf8Str(Utf8StrToCpSeq(s7)) = s7);
+  AssertTrue('s8', CpSeqToUtf8Str(Utf8StrToCpSeq(s8)) = s8);
+  AssertTrue('s9', CpSeqToUtf8Str(Utf8StrToCpSeq(s9)) = s9);
+  AssertTrue('s10', CpSeqToUtf8Str(Utf8StrToCpSeq(s10)) = s10);
 end;
 
 procedure TTestUnicodeUtils.SubSequenceUtf16;
