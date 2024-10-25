@@ -22,6 +22,7 @@ unit lgSeqUtils;
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH TYPEHELPERS}
 {$INLINE ON}
 
 interface
@@ -345,7 +346,8 @@ type
   function Utf8ValidateDfa(const s: rawbytestring): Boolean;
 { branchy range validator based on Table 3-7 of Unicode Standard }
   function Utf8Validate(const s: rawbytestring): Boolean;
-{ these functions expect UTF-8 encoded strings as parameters;
+
+{ all these functions expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness and normalization of the strings lies with the user }
   function Utf8StrLen(const s: string): SizeInt; inline;
   function Utf8CodePointLength(p: PAnsiChar; aByteCount: SizeInt): SizeInt;
@@ -354,6 +356,40 @@ type
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
   function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
+
+type
+  { TUtf8Cp: describes a codepoint within some string }
+  TUtf8Cp = record
+  private
+    FOffset,
+    FCpOffset,
+    FSize: SizeInt;
+    FCode: Ucs4Char;
+    procedure Init(aOfs, aCpOfs, aSize: SizeInt; c: Ucs4Char); inline;
+  public
+    class function HashCode(const aCp: TUtf8Cp): SizeInt; static; inline;
+    class function Equal(const L, R: TUtf8Cp): Boolean; static; inline;
+    function ToString: string;
+    function Write(aBuffer: PAnsiChar): Integer;
+    property Offset: SizeInt read FOffset;
+    property CpOffset: SizeInt read FCpOffset;
+    property ByteSize: SizeInt read FSize;
+    property Code: Ucs4Char read FCode;
+  end;
+
+  TUtf8CpSeq = array of TUtf8Cp;
+
+  { TUtf8CpSeqHelper }
+  TUtf8CpSeqHelper = type helper for TUtf8CpSeq
+    class function Parse(const s: string): TUtf8CpSeq; static;
+    function ToString: string;
+  end;
+
+{ returns the sequence of TUtf8Cp of string s }
+  function Utf8StrToCpSeq(const s: string): TUtf8CpSeq;
+{ builds the string for the TUtf8Cp sequence s }
+  function CpSeqToUtf8Str(const s: array of TUtf8Cp): string;
+
 { returns the edit distance using DP algorithm }
   function EditDistanceUtf8(const L, R: string; const aCost: TSeqEditCost): SizeInt; inline;
 { returns the Levenshtein distance using Berghel-Roach algorithm }
@@ -4242,6 +4278,100 @@ begin
     end;
   System.SetLength(r, I);
   Result := r;
+end;
+
+{ TUtf8Cp }
+
+procedure TUtf8Cp.Init(aOfs, aCpOfs, aSize: SizeInt; c: Ucs4Char);
+begin
+  FOffset := aOfs;
+  FCpOffset := aCpOfs;
+  FSize := aSize;
+  FCode := c;
+end;
+
+class function TUtf8Cp.HashCode(const aCp: TUtf8Cp): SizeInt;
+begin
+  Result := JdkHash(DWord(aCp.Code));
+end;
+
+class function TUtf8Cp.Equal(const L, R: TUtf8Cp): Boolean;
+begin
+  Result := L.Code = R.Code;
+end;
+
+function TUtf8Cp.ToString: string;
+var
+  b: TByte4;
+  Len: Integer;
+begin
+  Len := Ucs4CharToUtf8Char(Code, b);
+  SetString(Result, PAnsiChar(@b), Len);
+end;
+
+function TUtf8Cp.Write(aBuffer: PAnsiChar): Integer;
+var
+  p: PByte;
+begin
+  p := Pointer(aBuffer);
+  Ucs4Char2Utf8Buffer(p, DWord(Code));
+  Result := ByteSize;
+end;
+
+{ TUtf8CpSeqHelper }
+
+class function TUtf8CpSeqHelper.Parse(const s: string): TUtf8CpSeq;
+begin
+  Result := Utf8StrToCpSeq(s);
+end;
+
+function TUtf8CpSeqHelper.ToString: string;
+begin
+  Result := CpSeqToUtf8Str(Self);
+end;
+
+function Utf8StrToCpSeq(const s: string): TUtf8CpSeq;
+var
+  r: TUtf8CpSeq;
+  I, Ofs, CpOfs, Len: SizeInt;
+  c: Ucs4Char;
+  p, pEnd: PByte;
+begin
+  if s = '' then exit(nil);
+  System.SetLength(r, System.Length(s));
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  Ofs := 1;
+  CpOfs := 1;
+  I := 0;
+  Len := 0;
+  while p < pEnd do
+    begin
+      c := CodePointToUcs4Char(p, Len);
+      r[I].Init(Ofs, CpOfs, Len, c);
+      Inc(I);
+      Inc(CpOfs);
+      p += Len;
+      Ofs += Len;
+    end;
+  System.SetLength(r, I);
+  Result := r;
+end;
+
+function CpSeqToUtf8Str(const s: array of TUtf8Cp): string;
+var
+  I, Len: SizeInt;
+  p: PByte;
+begin
+  Result := '';
+  if System.Length(s) = 0 then exit;
+  Len := 0;
+  for I := 0 to System.High(s) do
+    Len += s[I].ByteSize;
+  System.SetLength(Result, Len);
+  p := Pointer(Result);
+  for I := 0 to System.High(s) do
+    Ucs4Char2Utf8Buffer(p, DWord(s[I].Code));
 end;
 
 function LcsGenegicUtf8(const L, R: string; aSpec: TUcs4Util.TLcsAlgo): string;
