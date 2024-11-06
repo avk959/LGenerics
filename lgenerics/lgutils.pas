@@ -272,7 +272,7 @@ type
   var
     FInstance: PInstance;
     function  NewInstance: PInstance;
-    procedure ReleaseInstance;
+    procedure ReleaseInstance(var aInst: PInstance);
     function  GetAllocated: Boolean; inline;
     function  GetRefCount: Integer;
     function  GetPtr: PValue;
@@ -315,8 +315,8 @@ type
   var
     FInstance: PInstance;
     function  NewInstance: PInstance; inline;
+    procedure ReleaseInstance(var aInst: PInstance);
     procedure UniqInstance;
-    procedure ReallocUniq(aNewLen: SizeInt);
     procedure Realloc(aNewLen: SizeInt);
     procedure ReallocManaged(aNewLen: SizeInt);
     function  GetLength: SizeInt; inline;
@@ -2010,15 +2010,16 @@ begin
   Result := FInstance;
 end;
 
-procedure TGCowPtr<T>.ReleaseInstance;
+procedure TGCowPtr<T>.ReleaseInstance(var aInst: PInstance);
 begin
-  if InterlockedDecrement(FInstance^.RefCount) = 0 then
+  if aInst = nil then exit;
+  if InterlockedDecrement(aInst^.RefCount) = 0 then
     begin
       if IsManagedType(T) then
-        FInstance^.Value := Default(T);
-      System.Dispose(FInstance);
+        aInst^.Value := Default(T);
+      System.Dispose(aInst);
     end;
-  FInstance := nil;
+  aInst := nil;
 end;
 
 function TGCowPtr<T>.GetAllocated: Boolean;
@@ -2053,9 +2054,7 @@ end;
 
 procedure TGCowPtr<T>.SetValue(const aValue: T);
 begin
-  if (FInstance <> nil) and (FInstance^.RefCount > 1) then
-    ReleaseInstance;
-  GetPtr^ := aValue;
+  GetUniqPtr^ := aValue;
 end;
 
 class operator TGCowPtr<T>.Initialize(var cp: TGCowPtr<T>);
@@ -2075,8 +2074,8 @@ begin
       aDst.Release;
       if aSrc.FInstance <> nil then
         begin
-          aDst.FInstance := aSrc.FInstance;
           InterLockedIncrement(aSrc.FInstance^.RefCount);
+          aDst.FInstance := aSrc.FInstance;
         end;
     end;
 end;
@@ -2099,8 +2098,7 @@ end;
 
 procedure TGCowPtr<T>.Release;
 begin
-  if FInstance <> nil then
-    ReleaseInstance;
+  ReleaseInstance(FInstance);
 end;
 
 procedure TGCowPtr<T>.Unique;
@@ -2111,7 +2109,7 @@ begin
     begin
       Old := FInstance;
       NewInstance^.Value := Old^.Value;
-      InterlockedDecrement(Old^.RefCount);
+      ReleaseInstance(Old);
     end;
 end;
 
@@ -2166,6 +2164,22 @@ begin
   Result^.FRefCount := 1;
 end;
 
+procedure TGCowDynArray<T>.ReleaseInstance(var aInst: PInstance);
+begin
+  if aInst = nil then exit;
+  if InterlockedDecrement(aInst^.FRefCount) = 0 then
+    begin
+      if aInst^.FItems <> nil then
+        begin
+          if IsManagedType(T) then
+            FillItems(aInst^.FItems, aInst^.FLength, Default(T));
+          System.FreeMem(aInst^.FItems);
+        end;
+      System.Dispose(aInst);
+    end;
+  aInst := nil;
+end;
+
 procedure TGCowDynArray<T>.UniqInstance;
 var
   OldInstance: PInstance;
@@ -2184,24 +2198,7 @@ begin
       else
         System.Move(OldInstance^.FItems^, FInstance^.FItems^, FInstance^.FLength * SizeOf(T));
     end;
-  InterlockedDecrement(OldInstance^.FRefCount);
-end;
-
-procedure TGCowDynArray<T>.ReallocUniq(aNewLen: SizeInt);
-var
-  OldInstance: PInstance;
-begin
-  OldInstance := FInstance;
-  FInstance := NewInstance;
-  FInstance^.FLength := aNewLen;
-  if FInstance^.FLength > 0 then
-    begin
-      FInstance^.FItems := System.GetMem(FInstance^.FLength * SizeOf(T));
-      if IsManagedType(T) then
-        System.FillChar(FInstance^.FItems^, FInstance^.FLength * SizeOf(T), 0);
-      CopyItems(OldInstance^.FItems, FInstance^.FItems, Math.Min(FInstance^.FLength, OldInstance^.FLength));
-    end;
-  InterlockedDecrement(OldInstance^.FRefCount);
+  ReleaseInstance(OldInstance);
 end;
 
 procedure TGCowDynArray<T>.Realloc(aNewLen: SizeInt);
@@ -2285,25 +2282,19 @@ end;
 
 procedure TGCowDynArray<T>.SetLen(aValue: SizeInt);
 begin
-  if aValue <> Length then
+  if aValue < 0 then
+    raise EInvalidOpException.Create(SECantAcceptNegLen);
+  if aValue > 0 then
     begin
-      if aValue = 0 then
-        begin
-          Release;
-          exit;
-        end;
-      if aValue > 0 then
-        begin
-          if FInstance = nil then
-            FInstance := NewInstance;
-          if FInstance^.FRefCount > 1 then
-            ReallocUniq(aValue)
-          else
-            Realloc(aValue);
-        end
+      if FInstance = nil then
+        FInstance := NewInstance
       else
-        raise EInvalidOpException.Create(SECantAcceptNegLen);
-    end;
+        Unique;
+      if aValue <> Length then
+        Realloc(aValue);
+    end
+  else
+    Release;
 end;
 
 procedure TGCowDynArray<T>.SetItem(aIndex: SizeInt; const aValue: T);
@@ -2463,18 +2454,7 @@ end;
 
 procedure TGCowDynArray<T>.Release;
 begin
-  if FInstance = nil then exit;
-  if InterlockedDecrement(FInstance^.FRefCount) = 0 then
-    begin
-      if FInstance^.FItems <> nil then
-        begin
-          if IsManagedType(T) then
-            FillItems(FInstance^.FItems, FInstance^.FLength, Default(T));
-          System.FreeMem(FInstance^.FItems);
-        end;
-      System.Dispose(FInstance);
-    end;
-  FInstance := nil;
+  ReleaseInstance(FInstance);
 end;
 
 procedure TGCowDynArray<T>.Unique;
@@ -2485,9 +2465,6 @@ end;
 
 procedure TGCowDynArray<T>.Fill(aCount: SizeInt; const aValue: T);
 begin
-  Release;
-  if aCount < 1 then
-    exit;
   Length := aCount;
   FillItems(FInstance^.FItems, aCount, aValue);
 end;
@@ -2496,7 +2473,7 @@ function TGCowDynArray<T>.CreateCopy(aFromIndex, aCount: SizeInt): TGCowDynArray
 begin
   if aFromIndex < 0 then
     aFromIndex := 0;
-  Result{%H-}.Release;
+  Result.Release;
   if (aFromIndex >= Length) or (aCount < 1) then
     exit;
   aCount := Math.Min(aCount, Length - aFromIndex);
