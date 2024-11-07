@@ -38,7 +38,6 @@ uses
   lgHashTable,
   lgHashMap,
   lgHash,
-  lgHashMultiSet,
   lgStrConst;
 
 type
@@ -167,10 +166,10 @@ type
       M: QWord;
       Score: SizeInt;
     end;
-    TMultiSetType = specialize TGLiteChainHashMultiSet<T, TEqRel>;
-    TMultiSet     = TMultiSetType.TMultiSet;
-    TDynIntArray  = specialize TGDynArray<SizeInt>;
-    TLcsImpl      = function(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray;
+    TCounterType = specialize TGLiteChainHashMap<T, SizeInt, TEqRel>;
+    TCounter     = TCounterType.TMap;
+    TDynIntArray = specialize TGDynArray<SizeInt>;
+    TLcsImpl     = function(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray;
 
   const
     MAX_STATIC = 512;
@@ -637,7 +636,6 @@ type
   end;
 
   TAcMatch = LgUtils.TIndexMatch;
-  EAcFsmError = class(Exception);
 
 {$PUSH}{$INTERFACES COM}
   { IACSearchFsmUtf8: Aho-Corasick automation for exact set matching problem;
@@ -2430,17 +2428,20 @@ end;
 
 class function TGSeqUtil.IsPermutation(const L, R: array of T): Boolean;
 var
-  LCounter, RCounter: TMultiSet;
+  Counter: TCounter;
+  I: SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R) = 0);
   if System.Length(L) <> System.Length(R) then
     exit(False);
-  if Same(L, R) then
-    exit(True);
-  LCounter.AddAll(L);
-  RCounter.AddAll(R);
-  Result := LCounter.IsEqual(RCounter);
+  for I := 0 to System.High(L) do
+    Inc(Counter.GetMutValueDef(L[I], 0)^);
+  for I := 0 to System.High(R) do
+    Dec(Counter.GetMutValueDef(R[I], 0)^);
+  for I in Counter.Values do
+    if I <> 0 then exit(False);
+  Result := True;
 end;
 
 class function TGSeqUtil.IsSubSequence(const aSeq, aSub: array of T): Boolean;
@@ -6821,11 +6822,11 @@ begin
   aStream.WriteBuffer(NToLE(QueueSize), SizeOf(QueueSize));
 end;
 
+{$PUSH}{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized }
 procedure TAcStreamHeader.ReadStream(aStream: TStream);
 var
   I: Int32;
 begin
-  I := 0; // make comliler happy
   aStream.ReadBuffer(Magic, SizeOf(Magic));
   aStream.ReadBuffer(CaseInsensitive, SizeOf(CaseInsensitive));
   aStream.ReadBuffer(I, SizeOf(I));
@@ -6841,14 +6842,15 @@ begin
   aStream.ReadBuffer(I, SizeOf(I));
   QueueSize := LEToN(I);
 end;
+{$POP}
 
 { TACNfaUtf8.TOutput }
 
+{$PUSH}{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized }
 procedure TACNfaUtf8.TOutput.ReadStream(aStream: TStream);
 var
   I: Int32;
 begin
-  I := 0; //make compliler happy
   aStream.ReadBuffer(I, SizeOf(I));
   Len := LEToN(I);
   aStream.ReadBuffer(I, SizeOf(I));
@@ -6856,6 +6858,7 @@ begin
   aStream.ReadBuffer(I, SizeOf(I));
   Index := LEToN(I);
 end;
+{$POP}
 
 procedure TACNfaUtf8.TOutput.WriteStream(aStream: TStream);
 begin
@@ -6866,11 +6869,11 @@ end;
 
 { TACNfaUtf8.TDaNode }
 
+{$PUSH}{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized }
 procedure TACNfaUtf8.TDaNode.ReadStream(aStream: TStream);
 var
   I: Int32;
 begin
-  I := 0; //make compliler happy
   aStream.ReadBuffer(I, SizeOf(I));
   Base := LEToN(I);
   aStream.ReadBuffer(I, SizeOf(I));
@@ -6882,6 +6885,7 @@ begin
   aStream.ReadBuffer(I, SizeOf(I));
   NextOut := LEToN(I);
 end;
+{$POP}
 
 procedure TACNfaUtf8.TDaNode.WriteStream(aStream: TStream);
 begin

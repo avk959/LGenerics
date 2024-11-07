@@ -73,6 +73,7 @@ type
   ELGMapError           = class(Exception);
   ELGObjectMapError     = class(ELGMapError);
   ELGTableError         = class(Exception);
+  EAcFsmError           = class(Exception);
 
 const
   MAX_CONTAINER_SIZE         = Succ(High(SizeInt) shr 2);
