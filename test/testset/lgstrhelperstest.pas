@@ -148,6 +148,17 @@ type
     procedure TestFindMatchesBytes;
   end;
 
+  { TACSearchFsmTest }
+
+  TACSearchFsmTest = class(TTestCase)
+  private
+  type
+    TACSearch = specialize TGUniqRef<TACSearchFsm>;
+  published
+    procedure TestCreation;
+    procedure TestStreaming;
+  end;
+
 implementation
 
 procedure TBmSearchTest.FindMatches;
@@ -2801,6 +2812,109 @@ begin
   AssertTrue(THelper.Same(Copy(txt, m[2].Offset, m[2].Length), string('23').ToBytes));
 end;
 
+{ TACSearchFsmTest }
+
+procedure TACSearchFsmTest.TestCreation;
+var
+  fsm: TACSearch;
+begin
+  {%H-}fsm.Instance := TACSearchFsm.Create([]);
+  AssertTrue(fsm.Instance.PatternListSize = 0);
+  AssertFalse(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.StringPatterns = nil);
+  AssertTrue(fsm.Instance.StateCount = 1);
+  AssertTrue(fsm.Instance.PatternCount = 0);
+  AssertTrue(fsm.Instance.AlphabetSize = 0);
+  AssertTrue(fsm.Instance.PatternListSize = 0);
+
+  fsm.Instance := TACSearchFsm.CreateBytes([]);
+  AssertTrue(fsm.Instance.PatternListSize = 0);
+  AssertTrue(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.StringPatterns = nil);
+  AssertTrue(fsm.Instance.StateCount = 1);
+  AssertTrue(fsm.Instance.PatternCount = 0);
+  AssertTrue(fsm.Instance.AlphabetSize = 0);
+  AssertTrue(fsm.Instance.PatternListSize = 0);
+
+
+  fsm.Instance := TACSearchFsm.Create(['one', 'two', 'three', 'one', 'two', 'three']);
+  AssertFalse(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.PatternListSize = 6);
+  AssertTrue(Length(fsm.Instance.StringPatterns) = 6);
+  AssertTrue(fsm.Instance.StateCount = 11);
+  AssertTrue(fsm.Instance.PatternCount = 3);
+  AssertTrue(fsm.Instance.AlphabetSize = 7);
+  AssertTrue(fsm.Instance.IsMatch('one'));
+  AssertTrue(fsm.Instance.IsMatch('two'));
+  AssertTrue(fsm.Instance.IsMatch('three'));
+
+  fsm.Instance := TACSearchFsm.CreateBytes([[1,2,3], [4,5,6], [7,8,9], [1,2,3], [4,5,6], [7,8,9]]);
+  AssertTrue(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.PatternListSize = 6);
+  AssertTrue(Length(fsm.Instance.BytePatterns) = 6);
+  AssertTrue(fsm.Instance.StateCount.ToString, fsm.Instance.StateCount = 10);
+  AssertTrue(fsm.Instance.PatternCount = 3);
+  AssertTrue(fsm.Instance.AlphabetSize = 9);
+  AssertTrue(fsm.Instance.IsMatch([1,2,3]));
+  AssertTrue(fsm.Instance.IsMatch([4,5,6]));
+  AssertTrue(fsm.Instance.IsMatch([7,8,9]));
+end;
+
+procedure TACSearchFsmTest.TestStreaming;
+var
+  ms: specialize TGAutoRef<TMemoryStream>;
+  fsm: TACSearch;
+begin
+  {%H-}fsm.Instance := TACSearchFsm.Create([]);
+  fsm.Instance.SaveToStream(ms.Instance);
+  fsm.Clear;
+  ms.Instance.Position := 0;
+
+  fsm.Instance := TACSearchFsm.FromStream(ms.Instance);
+  AssertFalse(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.StringPatterns = nil);
+  AssertTrue(fsm.Instance.PatternListSize = 0);
+  AssertTrue(fsm.Instance.StateCount = 1);
+  AssertTrue(fsm.Instance.PatternCount = 0);
+  AssertTrue(fsm.Instance.AlphabetSize = 0);
+
+  ms.Instance.Clear;
+
+  fsm.Instance := TACSearchFsm.Create(['one', 'two', 'three', 'one', 'two', 'three']);
+  fsm.Instance.SaveToStream(ms.Instance);
+  fsm.Clear;
+  ms.Instance.Position := 0;
+
+  fsm.Instance := TACSearchFsm.FromStream(ms.Instance);
+  AssertFalse(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.PatternListSize = 6);
+  AssertTrue(Length(fsm.Instance.StringPatterns) = 6);
+  AssertTrue(fsm.Instance.StateCount = 11);
+  AssertTrue(fsm.Instance.PatternCount = 3);
+  AssertTrue(fsm.Instance.AlphabetSize = 7);
+  AssertTrue(fsm.Instance.IsMatch('one'));
+  AssertTrue(fsm.Instance.IsMatch('two'));
+  AssertTrue(fsm.Instance.IsMatch('three'));
+
+  ms.Instance.Clear;
+
+  fsm.Instance := TACSearchFsm.CreateBytes([[1,2,3], [4,5,6], [7,8,9], [1,2,3], [4,5,6], [7,8,9]]);
+  fsm.Instance.SaveToStream(ms.Instance);
+  fsm.Clear;
+  ms.Instance.Position := 0;
+
+  fsm.Instance := TACSearchFsm.FromStream(ms.Instance);
+  AssertTrue(fsm.Instance.UseBytePatterns);
+  AssertTrue(fsm.Instance.PatternListSize = 6);
+  AssertTrue(Length(fsm.Instance.BytePatterns) = 6);
+  AssertTrue(fsm.Instance.StateCount.ToString, fsm.Instance.StateCount = 10);
+  AssertTrue(fsm.Instance.PatternCount = 3);
+  AssertTrue(fsm.Instance.AlphabetSize = 9);
+  AssertTrue(fsm.Instance.IsMatch([1,2,3]));
+  AssertTrue(fsm.Instance.IsMatch([4,5,6]));
+  AssertTrue(fsm.Instance.IsMatch([7,8,9]));
+end;
+
 initialization
 
   RegisterTest(TBmSearchTest);
@@ -2809,6 +2923,7 @@ initialization
   RegisterTest(TFunTest);
   RegisterTest(TACSearchDfaTest);
   RegisterTest(TDaacSearchTest);
+  RegisterTest(TACSearchFsmTest);
 
 end.
 
