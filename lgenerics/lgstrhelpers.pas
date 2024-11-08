@@ -361,7 +361,7 @@ type
     function FindMatches(const s: rawbytestring): TIntArray;
   end;
 
-  { TACAbstractFsm }
+  { TACAbstractFsm: abstract ancestor class }
   TACAbstractFsm = class abstract
   type
     TMatch      = LgUtils.TIndexMatch;
@@ -560,6 +560,65 @@ type
     property EmptyCellCount: Int32 read GetEmptyCount;
   end;
 
+  { TACSearchFsm: serializable Aho-Corasick FSM, stores a list of patterns in its internal structure }
+  TACSearchFsm = class(TDaACSearch)
+  public
+  type
+    TRbStringArray = array of rawbytestring;
+    TBytesArray    = array of TBytes;
+  protected
+  type
+    TMagic = array[0..6] of AnsiChar;
+    TStreamHeader = record
+      Magic: TMagic;
+      Version,
+      PatternListSize,
+      RealPatternCount,
+      StateCount,
+      TrieSize,
+      OutputCount,
+      AlphabetSize: Int32;
+      UseBytes: Boolean;
+    end;
+  const
+  {$PUSH}{$J-}
+    MAGIC_SEQ: TMagic = 'TDACFsm';
+  {$POP}
+    STREAM_FMT_VERSION = 1;
+    STREAM_BUF_SIZE    = $10000;
+  protected
+    FStrPatterns: TRbStringArray;
+    FBytePatterns: array of TBytes;
+    FUseBytes: Boolean;
+    function  CopyBytes(const aBytes: array of TBytes): TBytesArray;
+    function  GetPatternListSize: Integer;
+    function  GetBytePatterns: TBytesArray;
+    function  GetStrPatterns: TRbStringArray;
+    procedure WriteHeader(aStream: TStream; const sh: TStreamHeader);
+    procedure ReadHeader(aStream: TStream; out sh: TStreamHeader);
+    procedure WriteBytes(aStream: TStream; const b: TBytes);
+    procedure ReadBytes(aStream: TStream; out b: TBytes);
+    procedure WriteStr(aStream: TStream; const s: rawbytestring);
+    procedure ReadStr(aStream: TStream; out s: rawbytestring);
+    procedure WriteOutput(aStream: TStream; const o: TOutput);
+    procedure ReadOutput(aStream: TStream; out o: TOutput);
+    procedure WriteNode(aStream: TStream; const n: TDaNode);
+    procedure ReadNode(aStream: TStream; out n: TDaNode);
+    procedure WriteStream(aStream: TStream);
+    procedure ReadStream(aStream: TStream);
+  public
+    constructor Create(const aPatternList: array of rawbytestring);
+    constructor CreateBytes(const aPatternList: array of TBytes);
+    constructor FromStream(aStream: TStream);
+    constructor FromFile(const aFileName: string);
+    procedure SaveToStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    property  StringPatterns: TRbStringArray read GetStrPatterns;
+    property  BytePatterns: TBytesArray read GetBytePatterns;
+    property  UseBytePatterns: Boolean read FUseBytes;
+    property  PatternListSize: Integer read GetPatternListSize;
+  end;
+
 { the following functions are only suitable for single-byte encodings }
 
 { returns True if aSub is a subsequence of aStr, False otherwise }
@@ -686,6 +745,8 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+uses
+  BufStream;
 
 function IsSubSequence(const aStr, aSub: rawbytestring): Boolean;
 begin
@@ -5727,6 +5788,283 @@ begin
   Result.FNodeCount := StateCount;
   Result.FWordCount := PatternCount;
   Result.FAlphabetSize := AlphabetSize;
+end;
+
+{ TACSearchFsm }
+
+function TACSearchFsm.CopyBytes(const aBytes: array of TBytes): TBytesArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, System.Length(aBytes));
+  for I := 0 to System.High(aBytes) do
+    Result[I] := System.Copy(aBytes[I]);
+end;
+
+function TACSearchFsm.GetPatternListSize: Integer;
+begin
+  if UseBytePatterns then
+    Result := System.Length(FBytePatterns)
+  else
+    Result := System.Length(FStrPatterns)
+end;
+
+function TACSearchFsm.GetBytePatterns: TBytesArray;
+begin
+  Result := CopyBytes(FBytePatterns);
+end;
+
+function TACSearchFsm.GetStrPatterns: TRbStringArray;
+begin
+  Result := System.Copy(FStrPatterns);
+end;
+
+procedure TACSearchFsm.WriteHeader(aStream: TStream; const sh: TStreamHeader);
+begin
+  aStream.WriteBuffer(sh.Magic, SizeOf(sh.Magic));
+  aStream.WriteBuffer(sh.UseBytes, SizeOf(sh.UseBytes));
+  aStream.WriteBuffer(NToLE(sh.Version), SizeOf(sh.Version));
+  aStream.WriteBuffer(NToLE(sh.PatternListSize), SizeOf(sh.PatternListSize));
+  aStream.WriteBuffer(NToLE(sh.RealPatternCount), SizeOf(sh.RealPatternCount));
+  aStream.WriteBuffer(NToLE(sh.StateCount), SizeOf(sh.StateCount));
+  aStream.WriteBuffer(NToLE(sh.TrieSize), SizeOf(sh.TrieSize));
+  aStream.WriteBuffer(NToLE(sh.OutputCount), SizeOf(sh.OutputCount));
+  aStream.WriteBuffer(NToLE(sh.AlphabetSize), SizeOf(sh.AlphabetSize));
+end;
+
+{$PUSH}
+{$WARN 5058 OFF : Variable "$1" does not seem to be initialized }
+{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized }
+procedure TACSearchFsm.ReadHeader(aStream: TStream; out sh: TStreamHeader);
+var
+  I: Int32;
+begin
+  I := 0;
+  aStream.ReadBuffer(sh.Magic, SizeOf(sh.Magic));
+  aStream.ReadBuffer(sh.UseBytes, SizeOf(sh.UseBytes));
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.Version := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.PatternListSize := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.RealPatternCount := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.StateCount := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.TrieSize := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.OutputCount := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  sh.AlphabetSize := LEToN(I);
+end;
+
+procedure TACSearchFsm.WriteBytes(aStream: TStream; const b: TBytes);
+var
+  Len: Int32;
+begin
+  Len := System.Length(b);
+  aStream.WriteBuffer(NToLE(Len), SizeOf(Len));
+  aStream.WriteBuffer(Pointer(b)^, Len);
+end;
+
+procedure TACSearchFsm.ReadBytes(aStream: TStream; out b: TBytes);
+var
+  Len: Int32;
+begin
+  aStream.ReadBuffer(Len, SizeOf(Len));
+  Len := LEToN(Len);
+  System.SetLength(b, Len);
+  aStream.ReadBuffer(Pointer(b)^, Len);
+end;
+
+procedure TACSearchFsm.WriteStr(aStream: TStream; const s: rawbytestring);
+var
+  Len: Int32;
+begin
+  Len := System.Length(s);
+  aStream.WriteBuffer(NToLE(Len), SizeOf(Len));
+  aStream.WriteBuffer(Pointer(s)^, Len);
+end;
+
+procedure TACSearchFsm.ReadStr(aStream: TStream; out s: rawbytestring);
+var
+  Len: Int32;
+begin
+  aStream.ReadBuffer(Len, SizeOf(Len));
+  Len := LEToN(Len);
+  System.SetLength(s, Len);
+  aStream.ReadBuffer(Pointer(s)^, Len);
+end;
+
+procedure TACSearchFsm.WriteOutput(aStream: TStream; const o: TOutput);
+begin
+  aStream.WriteBuffer(NToLE(o.Length), SizeOf(o.Length));
+  aStream.WriteBuffer(NToLE(o.Index), SizeOf(o.Index));
+end;
+
+procedure TACSearchFsm.ReadOutput(aStream: TStream; out o: TOutput);
+var
+  I: Int32;
+begin
+  aStream.ReadBuffer(I, SizeOf(I));
+  o.Length := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  o.Index := LEToN(I);
+end;
+
+procedure TACSearchFsm.WriteNode(aStream: TStream; const n: TDaNode);
+begin
+  aStream.WriteBuffer(NToLE(n.Base), SizeOf(n.Base));
+  aStream.WriteBuffer(NToLE(n.Check), SizeOf(n.Check));
+  aStream.WriteBuffer(NToLE(n.Failure), SizeOf(n.Failure));
+  aStream.WriteBuffer(NToLE(n.Output), SizeOf(n.Output));
+  aStream.WriteBuffer(NToLE(n.NextOut), SizeOf(n.NextOut));
+end;
+
+procedure TACSearchFsm.ReadNode(aStream: TStream; out n: TDaNode);
+var
+  I: Int32;
+begin
+  aStream.ReadBuffer(I, SizeOf(I));
+  n.Base := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  n.Check := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  n.Failure := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  n.Output := LEToN(I);
+  aStream.ReadBuffer(I, SizeOf(I));
+  n.NextOut := LEToN(I);
+end;
+
+procedure TACSearchFsm.WriteStream(aStream: TStream);
+var
+  wbs: TWriteBufStream;
+  Header: TStreamHeader;
+  I: Int32;
+begin
+  Header.Magic := MAGIC_SEQ;
+  Header.Version := STREAM_FMT_VERSION;
+  Header.UseBytes := UseBytePatterns;
+  if UseBytePatterns then
+    Header.PatternListSize := System.Length(FBytePatterns)
+  else
+    Header.PatternListSize := System.Length(FStrPatterns);
+  Header.RealPatternCount := PatternCount;
+  Header.StateCount := StateCount;
+  Header.TrieSize := System.Length(FDaTrie);
+  Header.OutputCount := OutCount;
+  Header.AlphabetSize := AlphabetSize;
+  wbs := TWriteBufStream.Create(aStream, STREAM_BUF_SIZE);
+  try
+    WriteHeader(wbs, Header);                     // header
+    if UseBytePatterns then                       // pattern list
+      for I := 0 to System.High(FBytePatterns) do
+        WriteBytes(wbs, FBytePatterns[I])
+    else
+      for I := 0 to System.High(FStrPatterns) do
+        WriteStr(wbs, FStrPatterns[I]);
+    for I := 0 to System.High(FDaTrie) do         // FDaTrie array
+      WriteNode(wbs, FDaTrie[I]);
+    for I := 0 to System.High(FOutput) do         // FOutput array
+      WriteOutput(wbs, FOutput[I]);
+    for I := 0 to System.High(FCodeMap) do        // FCodeMap
+      wbs.WriteBuffer(NToLE(FCodeMap[I]), SizeOf(FCodeMap[I]));
+  finally
+    wbs.Free;
+  end;
+end;
+
+procedure TACSearchFsm.ReadStream(aStream: TStream);
+var
+  rbs: TReadBufStream;
+  Header: TStreamHeader;
+  I, J: Int32;
+begin
+  rbs := TReadBufStream.Create(aStream, STREAM_BUF_SIZE);
+  try
+    ReadHeader(rbs, Header);              // header
+    if Header.Magic <> MAGIC_SEQ then
+      raise EAcFsmError.Create(SEUnknownAcStreamFormat);
+    if Header.Version <> STREAM_FMT_VERSION then
+      raise EAcFsmError.Create(SEUnsupportAcFmtVersion);
+    FWordCount := Header.RealPatternCount;
+    FNodeCount := Header.StateCount;
+    FOutCount := Header.OutputCount;
+    FAlphabetSize := Header.AlphabetSize;
+    FUseBytes := Header.UseBytes;
+    if UseBytePatterns then begin         // pattern list
+      System.SetLength(FBytePatterns, Header.PatternListSize);
+      for I := 0 to System.High(FBytePatterns) do
+        ReadBytes(rbs, FBytePatterns[I]);
+    end else begin
+      System.SetLength(FStrPatterns, Header.PatternListSize);
+      for I := 0 to System.High(FStrPatterns) do
+        ReadStr(rbs, FStrPatterns[I]);
+    end;
+    System.SetLength(FDaTrie, Header.TrieSize);
+    for I := 0 to System.High(FDaTrie) do // FDaTrie array
+      ReadNode(rbs, FDaTrie[I]);
+    System.SetLength(FOutput, FOutCount);
+    for I := 0 to System.High(FOutput) do // FOutput array
+      ReadOutput(rbs, FOutput[I]);
+    System.SetLength(FCodeMap, System.High(Byte) + 1);
+    for I := 0 to System.High(FCodeMap) do// FCodeMap
+      begin
+        rbs.ReadBuffer(J, SizeOf(J));
+        FCodeMap[I] := LEToN(J);
+      end;
+  finally
+    rbs.Free;
+  end;
+end;
+{$POP}
+
+constructor TACSearchFsm.Create(const aPatternList: array of rawbytestring);
+begin
+  FStrPatterns := specialize TGArrayHelpUtil<rawbytestring>.CreateCopy(aPatternList);
+  inherited Create(FStrPatterns);
+end;
+
+constructor TACSearchFsm.CreateBytes(const aPatternList: array of TBytes);
+begin
+  FUseBytes := True;
+  FBytePatterns := CopyBytes(aPatternList);
+  inherited CreateBytes(FBytePatterns);
+end;
+
+constructor TACSearchFsm.FromStream(aStream: TStream);
+begin
+  ReadStream(aStream);
+end;
+
+constructor TACSearchFsm.FromFile(const aFileName: string);
+var
+  fs: TFileStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    ReadStream(fs);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TACSearchFsm.SaveToStream(aStream: TStream);
+begin
+  WriteStream(aStream);
+end;
+
+procedure TACSearchFsm.SaveToFile(const aFileName: string);
+var
+  fs: TFileStream;
+begin
+  fs := TFileStream.Create(aFileName, fmCreate);
+  try
+    SaveToStream(fs);
+  finally
+    fs.Free;
+  end;
 end;
 
 end.
