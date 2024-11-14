@@ -92,10 +92,10 @@ const
 
 type
 
-  TJVarKind = (vkNull, vkBool, vkNumber, vkString);
+  TJVarKind = (vkNull, vkBool, vkNumber, vkString, vkArray, vkPairs);
 
   TJVariant = record
-  strict private
+  private
   type
     TValue = record
       case Integer of
@@ -104,53 +104,67 @@ type
         2: (Bool: Boolean);
         3: (Int: Int64);
     end;
-
-  var
+  const
+  {$PUSH}{$J-}
+    KIND_NAMES: array[TJVarKind] of string = ('Null','Boolean','Double','String','Array','Pairs');
+  {$POP}
+  private
     FValue: TValue;
     FKind: TJVarKind;
-    procedure DoClear; inline;
-    procedure ConvertError(const aSrc, aDst: string);
-  private
+    procedure ClearValue;
+    procedure ConvertError(aDestKind: TJVarKind);
     class operator Initialize(var v: TJVariant);
     class operator Finalize(var v: TJVariant);
-    class operator Copy(constref aSrc: TJVariant; var aDst: TJVariant); inline;
-    class operator AddRef(var v: TJVariant);
+    class operator Copy(constref aSrc: TJVariant; var aDst: TJVariant);
   public
-    class function Null: TJVariant; static; inline;
-    class operator := (aValue: Double): TJVariant; inline;
-    class operator := (aValue: Boolean): TJVariant; inline;
-    class operator := (const aValue: string): TJVariant; inline;
-    class operator := (const v: TJVariant): Double; inline;
-    class operator := (const v: TJVariant): Int64; inline;
-    class operator := (const v: TJVariant): Boolean; inline;
-    class operator := (const v: TJVariant): string; inline;
-    class operator = (const L, R: TJVariant): Boolean; inline;
+  type
+    TPair      = specialize TGMapEntry<string, TJVariant>;
+    TVarArray  = array of TJVariant;
+    TPairArray = array of TPair;
+  public
+    class function Null: TJVariant; static;
+    class operator := (aValue: Boolean): TJVariant;
+    class operator := (aValue: Double): TJVariant;
+    class operator := (const aValue: string): TJVariant;
+    class operator := (const aValue: TVarArray): TJVariant;
+    class operator := (const aValue: TPairArray): TJVariant;
+    class operator := (const v: TJVariant): Boolean;
+    class operator := (const v: TJVariant): Double;
+    class operator := (const v: TJVariant): string;
+    class operator := (const v: TJVariant): TVarArray;
+    class operator := (const v: TJVariant): TPairArray;
+    class operator = (const L, R: TJVariant): Boolean;
     procedure Clear;
-    procedure SetNull; inline;
-    function  IsInteger: Boolean; inline;
-  { returns a Boolean value of the instance; raises an exception if Kind <> vkBoolean }
-    function  AsBoolean: Boolean; inline;
+  { returns a Boolean value of the instance; raises an exception if Kind <> vkBool }
+    function  AsBoolean: Boolean;
   { returns a numeric value of the instance; raises an exception if Kind <> vkNumber }
-    function  AsNumber: Double; inline;
-  { returns a integer value of the instance; raises an exception if Kind <> vkNumber
-    or value is not exact integer }
-    function  AsInteger: Int64; inline;
+    function  AsNumber: Double;
   { returns a string value of the instance; raises an exception if Kind <> vkString }
-    function  AsString: string; inline;
+    function  AsString: string;
+  { returns an array value of the instance; raises an exception if Kind <> vkArray }
+    function  AsArray: TVarArray;
+  { returns a pair array value of the instance; raises an exception if Kind <> vkPairs }
+    function  AsPairs: TPairArray;
+  { returns a JSON representation of the instance }
+    function  AsJson: string;
   { returns a string representation of the instance }
-    function  ToString: string; inline;
+    function  ToString: string;
     property  Kind: TJVarKind read FKind;
   end;
 
-  TJVarPair   = specialize TGMapEntry<string, TJVariant>;
-  TJVarArray  = array of TJVariant;
-  TJPairArray = array of TJVarPair;
+  TJVarPair   = TJVariant.TPair;
+  TJVarArray  = TJVariant.TVarArray;
+  TJPairArray = TJVariant.TPairArray;
+
+const
+{$PUSH}{$J-}
+  EMPTY_PAIRS: TJPairArray = ();
+{$POP}
 
 function JNull: TJVariant; inline;
 function JPair(const aName: string; const aValue: TJVariant): TJVarPair; inline;
 
 type
-
   TJsonNode = class;
 
   { TJsonPtr: wrapper over JSON Pointer(RFC 6901) functionality }
@@ -235,9 +249,9 @@ type
       Index: SizeInt;
       Name: string;
       Parent: TJsonNode;
-      constructor Init(aLevel, aIndex: SizeInt; aParent: TJsonNode);
-      constructor Init(aLevel: SizeInt; const aName: string; aParent: TJsonNode);
-      constructor Init(aParent: TJsonNode);
+      constructor Make(aLevel, aIndex: SizeInt; aParent: TJsonNode);
+      constructor Make(aLevel: SizeInt; const aName: string; aParent: TJsonNode);
+      constructor Make(aParent: TJsonNode);
     end;
 
     TOnIterate   = function(const aContext: TIterContext; aNode: TJsonNode): Boolean of object;
@@ -249,9 +263,9 @@ type
       Name: string;
       Parent,
       Node: TJsonNode;
-      constructor Init(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
-      constructor Init(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
-      constructor Init(aNode: TJsonNode);
+      constructor Make(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
+      constructor Make(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
+      constructor Make(aNode: TJsonNode);
     end;
 
     INodeEnumerable = specialize IGEnumerable<TVisitNode>;
@@ -355,8 +369,6 @@ type
     function  GetNItem(const aName: string): TJsonNode;
     function  GetValue: TJVariant;
     procedure SetValue(const aValue: TJVariant);
-    procedure SetVarArray(const a: TJVarArray);
-    procedure SetPairArray(const a: TJPairArray);
     property  FString: string read GetFString write SetFString;
     property  FArray: PJsArray read GetFArray write SetFArray;
     property  FObject: PJsObject read GetFObject write SetFObject;
@@ -493,6 +505,7 @@ type
     class function NewNode(const aValue: string): TJsonNode; static; inline;
     class function NewNode(aKind: TJsValueKind = jvkNull): TJsonNode; static; inline;
     class function NewNode(aNode: TJsonNode): TJsonNode; static; inline;
+    class function NewNode(const aValue: TJVariant): TJsonNode; static; inline;
   { returns the document root node if parsing is successful, nil otherwise }
     class function NewJson(const s: string): TJsonNode; static; inline;
   { returns the maximum nesting depth of aNode, is recursive }
@@ -505,8 +518,7 @@ type
     constructor Create(aValue: Double); overload;
     constructor Create(const aValue: string); overload;
     constructor Create(aKind: TJsValueKind); overload;
-    constructor Create(const a: TJVarArray); overload;
-    constructor Create(const a: TJPairArray); overload;
+    constructor Create(const aValue: TJVariant); overload;
     constructor Create(aNode: TJsonNode); overload;
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
@@ -542,10 +554,10 @@ type
     exits immediately if aFunc returns False }
     procedure Iterate(aFunc: TOnIterate);
     procedure Iterate(aFunc: TNestIterate);
-  { adds null value to the instance as to an array; if the instance is not an array,
+  { adds null value to the instance as an array; if the instance is not an array,
     it is cleared and becomes an array; returns Self }
     function  AddNull: TJsonNode; inline;
-  { adds Boolean value to the instance as to an array; if the instance is not an array,
+  { adds Boolean value to the instance as an array; if the instance is not an array,
     it is cleared; returns Self }
     function  Add(aValue: Boolean): TJsonNode; inline;
   { adds a number value to the instance as to an array; if the instance is not an array,
@@ -554,42 +566,36 @@ type
   { adds string value to the instance as to an array; if the instance is not an array,
     it is cleared and becomes an array; returns Self }
     function  Add(const aValue: string): TJsonNode; inline;
-  { adds a new array from the elements of the array a to the instance as to an array;
+  { adds a new node from aValue to the instance as an array;
     if the instance is not an array, it is cleared; returns Self }
-    function  Add(const a: TJVarArray): TJsonNode;
-  { appends all items of array A to the instance as to an array, returns Self }
-    function  AddRange(const a: TJVarArray): TJsonNode;
-  { adds a new node from the elements of the array a to the instance as to an array;
-    if the instance is not an array, it is cleared; returns Self }
-    function  Add(const a: TJPairArray): TJsonNode;
-  { adds a new node of the specified type to the instance as to an array; if the instance
+    function  Add(const aValue: TJVariant): TJsonNode;
+  { adds a new node of the specified type to the instance as an array; if the instance
     is not an array, it is cleared; returns the new node }
     function  AddNode(aKind: TJsValueKind = jvkNull): TJsonNode; inline;
   { returns True and the created node in the aNode parameter, if the string aJson can be parsed;
-    the new object is added as to an array }
+    the new node is added as to an array }
     function  AddJson(const aJson: string; out aNode: TJsonNode): Boolean; inline;
-  { adds pair (aName, null) to the instance as to an object; if the instance is not an object,
+  { appends all elements of array a to the instance as an array;
+    if the instance is not an array, it is cleared; returns Self }
+    function  AddAll(const a: TJVarArray): TJsonNode;
+  { adds pair (aName, null) to the instance as an object; if the instance is not an object,
     it is cleared; returns Self }
     function  AddNull(const aName: string): TJsonNode; inline;
-  { adds pair (aName, aValue) to the instance as to an object; if the instance is not an object,
+  { adds pair (aName, aValue) to the instance as an object; if the instance is not an object,
     it is cleared; returns Self }
     function  Add(const aName: string; aValue: Boolean): TJsonNode; inline;
     function  Add(const aName: string; aValue: Double): TJsonNode; inline;
     function  Add(const aName, aValue: string): TJsonNode; inline;
-  { adds pair (aName, array from aValue elements) to the instance as to an object;
-    if the instance is not an object, it is cleared; returns Self }
-    function  Add(const aName: string; const aValue: TJVarArray): TJsonNode;
-  { adds pair (aName: object from aValue elements) to the instance as to an object;
-    if the instance is not an object, it is cleared; returns Self }
-    function  Add(const aName: string; const aValue: TJPairArray): TJsonNode;
-  { adds all items of array A to the instance as to an object, returns Self }
-    function  AddRange(const a: TJPairArray): TJsonNode;
-  { adds a new node of the specified kind associated with aName to the instance as to an object;
+    function  Add(const aName: string; const aValue: TJVariant): TJsonNode;
+  { adds a new node of the specified kind associated with aName to the instance as an object;
     if the instance is not an object, it is cleared; returns a new node }
     function  AddNode(const aName: string; aKind: TJsValueKind = jvkNull): TJsonNode; inline;
   { returns True and the created node associated with aName in the aNode parameter,
     if the string aJson can be parsed; the new node is added as to an object }
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean; inline;
+  { appends all pairs of array a to the instance as an object;
+    if the instance is not an object, it is cleared; returns Self }
+    function  AddAll(const a: TJPairArray): TJsonNode;
   { returns True and adds pair(aName, aValue) to the instance as to an object if the instance
     does not contain the aName key, otherwise just returns False }
     function  TryAddNull(const aName: string): Boolean;
@@ -599,8 +605,7 @@ type
     function  TryAdd(const aName: string; aValue: Boolean): Boolean;
     function  TryAdd(const aName: string; aValue: Double): Boolean;
     function  TryAdd(const aName, aValue: string): Boolean;
-    function  TryAdd(const aName: string; const aValue: TJVarArray): Boolean;
-    function  TryAdd(const aName: string; const aValue: TJPairArray): Boolean;
+    function  TryAdd(const aName: string; const aValue: TJVariant): Boolean;
   { returns True and adds a new node aNode of the specified type associated with aName
     to the instance as to an object only if aName is unique within an instance, otherwise
     just returns False; if an instance is not an object, it is cleared }
@@ -618,6 +623,7 @@ type
     function  Insert(aIndex: SizeInt; aValue: Boolean): Boolean;
     function  Insert(aIndex: SizeInt; aValue: Double): Boolean;
     function  Insert(aIndex: SizeInt; const aValue: string): Boolean;
+    function  Insert(aIndex: SizeInt; const aValue: TJVariant): Boolean;
   { if aIndex = 0 then acts like AddNode; returns True and inserts new node of the specified kind
     at position aIndex if aIndex is in the range [1..Count] and the instance is an array,
     otherwise just returns False }
@@ -701,11 +707,9 @@ type
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { acts as FindOrAdd }
     property  NItems[const aName: string]: TJsonNode read GetNItem; default;
-  { note: GetValue() will raise an exception if the instance is not a scalar }
     property  Value: TJVariant read GetValue write SetValue;
-    property  VArr: TJVarArray write SetVarArray;
-    property  PArr: TJPairArray write SetPairArray;
   end;
+
 
   TPatchResult = (prOk, prPatchMiss, prTargetMiss, prMalformPatch, prFail);
   TDiffResult  = (drOk, drSourceMiss, drTargetMiss, drFail);
@@ -717,7 +721,7 @@ type
     doEmitTestOnReplace,  { generate test operations that check that the target's values to be
                             replaced are exactly equal to the expected ones }
 
-    doDisableArrayReplace,//leave only deletions and insertions available in arrays
+    doDisableArrayReplace,{ leave only deletions and insertions available in arrays }
 
     doEnableMove          { replace successive ADD/REMOVE (or vice versa) operations applied
                             to the same value with a single MOVE operation }
@@ -1147,7 +1151,6 @@ type
     property  SkipBom: Boolean read FSkipBom;
   end;
 
-
   function  IsExactInt(aValue: Double): Boolean; inline;
   function  IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; inline;
   function  SameDouble(L, R: Double): Boolean; inline;
@@ -1176,6 +1179,7 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+{$WARN 6058 OFF : Call to subroutine "$1" marked as inline is not inlined }
 
 const
   MAX_EXACT_INT  = Double(9007199254740991); //2^53 - 1
@@ -1183,6 +1187,7 @@ const
   JS_NULL        = 'null';
   JS_FALSE       = 'false';
   JS_TRUE        = 'true';
+  JS_JPAIR       = 'JPair(';
 {$PUSH}{$J-}
   ssLineBreaks: array[TJsLineBreak] of string[2] = (#10, #13#10);
 {$POP}
@@ -1266,17 +1271,20 @@ end;
 
 { TJVariant }
 
-procedure TJVariant.DoClear;
+procedure TJVariant.ClearValue;
 begin
-  if Kind = vkString then
-    string(FValue.Ref) := ''
+  case Kind of
+    vkString: string(FValue.Ref) := '';
+    vkArray:  TVarArray(FValue.Ref) := nil;
+    vkPairs:  TPairArray(FValue.Ref) := nil;
   else
     FValue.Int := 0;
+  end;
 end;
 
-procedure TJVariant.ConvertError(const aSrc, aDst: string);
+procedure TJVariant.ConvertError(aDestKind: TJVarKind);
 begin
-  raise EInvalidCast.CreateFmt(SECantConvertFmt, [aSrc, aDst]);
+  raise EInvalidCast.CreateFmt(SECantConvertFmt, [KIND_NAMES[Kind], KIND_NAMES[aDestKind]]);
 end;
 
 class operator TJVariant.Initialize(var v: TJVariant);
@@ -1287,23 +1295,20 @@ end;
 
 class operator TJVariant.Finalize(var v: TJVariant);
 begin
-  v.DoClear;
+  v.Clear;
 end;
 
 class operator TJVariant.Copy(constref aSrc: TJVariant; var aDst: TJVariant);
 begin
-  aDst.DoClear;
-  if aSrc.Kind = vkString then
-    string(aDst.FValue.Ref) := string(aSrc.FValue.Ref)
+  aDst.ClearValue;
+  case aSrc.Kind of
+    vkString: string(aDst.FValue.Ref) := string(aSrc.FValue.Ref);
+    vkArray:  TVarArray(aDst.FValue.Ref) := TVarArray(aSrc.FValue.Ref);
+    vkPairs:  TPairArray(aDst.FValue.Ref) := TPairArray(aSrc.FValue.Ref);
   else
     aDst.FValue := aSrc.FValue;
+  end;
   aDst.FKind := aSrc.Kind;
-end;
-
-class operator TJVariant.AddRef(var v: TJVariant);
-begin
-  if v.Kind = vkString then
-    UniqueString(string(v.FValue.Ref));
 end;
 
 class function TJVariant.Null: TJVariant;
@@ -1311,93 +1316,124 @@ begin
   Result.Clear;
 end;
 
-class operator TJVariant.:=(aValue: Double): TJVariant;
+{$PUSH}{$WARN 5093 OFF : function result variable of a managed type does not seem to be initialized }
+class operator TJVariant.:= (aValue: Boolean): TJVariant;
 begin
-  Result{%H-}.DoClear;
-  Result.FValue.Num := aValue;
-  Result.FKind := vkNumber;
+  with Result do begin
+    ClearValue;
+    FValue.Bool := aValue;
+    FKind := vkBool;
+  end;
 end;
 
-class operator TJVariant.:=(aValue: Boolean): TJVariant;
+class operator TJVariant.:= (aValue: Double): TJVariant;
 begin
-  Result{%H-}.DoClear;
-  Result.FValue.Bool := aValue;
-  Result.FKind := vkBool;
+  with Result do begin
+    ClearValue;
+    FValue.Num := aValue;
+    FKind := vkNumber;
+  end;
 end;
 
-class operator TJVariant.:=(const aValue: string): TJVariant;
+class operator TJVariant.:= (const aValue: string): TJVariant;
 begin
-  Result{%H-}.DoClear;
-  string(Result.FValue.Ref) := aValue;
-  Result.FKind := vkString;
+  with Result do begin
+    ClearValue;
+    string(FValue.Ref) := aValue;
+    FKind := vkString;
+  end;
+end;
+
+class operator TJVariant.:= (const aValue: TVarArray): TJVariant; inline;
+begin
+  with Result do begin
+    ClearValue;
+    TVarArray(FValue.Ref) := aValue;
+    FKind := vkArray;
+  end;
+end;
+
+class operator TJVariant.:= (const aValue: TPairArray): TJVariant; inline;
+begin
+  with Result do begin
+    ClearValue;
+    TPairArray(FValue.Ref) := aValue;
+    FKind := vkPairs;
+  end;
+end;
+{$POP}
+
+class operator TJVariant.:=(const v: TJVariant): Boolean;
+begin
+  if v.Kind <> vkBool then v.ConvertError(vkBool);
+  Result := v.FValue.Bool;
 end;
 
 class operator TJVariant.:=(const v: TJVariant): Double;
 begin
-  case v.Kind of
-    vkNull:   v.ConvertError('null', 'Double');
-    vkBool:   v.ConvertError('Boolean', 'Double');
-    vkNumber: ;
-    vkString: v.ConvertError('string', 'Double');
-  end;
+  if v.Kind <> vkNumber then v.ConvertError(vkBool);
   Result := v.FValue.Num;
-end;
-
-class operator TJVariant.:=(const v: TJVariant): Int64;
-begin
-  if not IsExactInt(Double(v), Result) then
-    v.ConvertError('Double', 'Int64');
-end;
-
-class operator TJVariant.:=(const v: TJVariant): Boolean;
-begin
-  case v.Kind of
-    vkNull:   v.ConvertError('null', 'Boolean');
-    vkBool:   ;
-    vkNumber: v.ConvertError('Double', 'Boolean');
-    vkString: v.ConvertError('string', 'Boolean');
-  end;
-  Result := v.FValue.Bool;
 end;
 
 class operator TJVariant.:=(const v: TJVariant): string;
 begin
-  case v.Kind of
-    vkNull:   v.ConvertError('null', 'string');
-    vkBool:   v.ConvertError('Boolean', 'string');
-    vkNumber: v.ConvertError('Double', 'string');
-    vkString: ;
-  end;
+  if v.Kind <> vkString then v.ConvertError(vkString);
   Result := string(v.FValue.Ref);
 end;
 
-class operator TJVariant.= (const L, R: TJVariant): Boolean;
+class operator TJVariant.:= (const v: TJVariant): TVarArray;
 begin
-  Result := False;
-  case L.Kind of
-    vkNull:   Result := R.Kind = vkNull;
-    vkBool:   Result := (R.Kind = vkBool) and not(L.FValue.Bool xor R.FValue.Bool);
-    vkNumber: Result := (R.Kind = vkNumber) and SameValue(L.FValue.Num, R.FValue.Num);
-    vkString: Result := (R.Kind = vkString) and (string(L.FValue.Ref) = string(R.FValue.Ref));
+  if v.Kind <> vkArray then v.ConvertError(vkArray);
+  Result := TVarArray(v.FValue.Ref);
+end;
+
+class operator TJVariant.:= (const v: TJVariant): TPairArray;
+begin
+  if v.Kind <> vkPairs then v.ConvertError(vkPairs);
+  Result := TPairArray(v.FValue.Ref);
+end;
+
+class operator TJVariant.= (const L, R: TJVariant): Boolean;
+  function Eq(const L, R: TJVariant): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if L.Kind <> R.Kind then exit(False);
+    case L.Kind of
+      vkNull:   exit(True);
+      vkBool:   exit(not(L.FValue.Bool xor R.FValue.Bool));
+      vkNumber: exit(L.FValue.Num = R.FValue.Num);
+      vkString: exit(string(L.FValue.Ref) = string(R.FValue.Ref));
+      vkArray:
+        if L.FValue.Ref <> R.FValue.Ref then begin
+          if System.Length(TVarArray(L.FValue.Ref)) <> System.Length(TVarArray(R.FValue.Ref))then
+            exit(False);
+          for I := 0 to System.High(TVarArray(L.FValue.Ref)) do
+            if not Eq(TVarArray(L.FValue.Ref)[I], TVarArray(R.FValue.Ref)[I]) then exit(False);
+        end;
+      vkPairs:
+        if L.FValue.Ref <> R.FValue.Ref then begin
+          if System.Length(TPairArray(L.FValue.Ref)) <> System.Length(TPairArray(R.FValue.Ref))then
+            exit(False);
+          for I := 0 to System.High(TPairArray(L.FValue.Ref)) do
+            begin
+              if TPairArray(L.FValue.Ref)[I].Key <> TPairArray(R.FValue.Ref)[I].Key then
+                exit(False);
+              if not Eq(TPairArray(L.FValue.Ref)[I].Value, TPairArray(R.FValue.Ref)[I].Value) then
+                exit(False);
+            end;
+        end;
+    end;
+    Result := True;
   end;
+begin
+  Result := Eq(L, R);
 end;
 
 procedure TJVariant.Clear;
 begin
-  DoClear;
+  ClearValue;
   FKind := vkNull;
-end;
-
-procedure TJVariant.SetNull;
-begin
-  Clear;
-end;
-
-function  TJVariant.IsInteger: Boolean;
-begin
-  if Kind <> vkNumber then
-    exit(False);
-  Result := IsExactInt(FValue.Num);
 end;
 
 function TJVariant.AsBoolean: Boolean;
@@ -1410,25 +1446,149 @@ begin
   Result := Self;
 end;
 
-function TJVariant.AsInteger: Int64;
-begin
-  Result := Self;
-end;
-
 function TJVariant.AsString: string;
 begin
   Result := Self;
 end;
 
-function TJVariant.ToString: string;
+function TJVariant.AsArray: TVarArray;
 begin
-  Result := '';
-  case Kind of
-    vkNull:   Result := JS_NULL;
-    vkBool:   Result := BoolToStr(FValue.Bool, JS_TRUE, JS_FALSE);
-    vkNumber: Result := Double2StrDef(FValue.Num);
-    vkString: Result := string(FValue.Ref);
+  Result := Self;
+end;
+
+function TJVariant.AsPairs: TPairArray;
+begin
+  Result := Self;
+end;
+
+const
+{$PUSH}{$J-}
+  chOpenCurBr: AnsiChar  = '{';
+  chClosCurBr: AnsiChar  = '}';
+  chOpenSqrBr: AnsiChar  = '[';
+  chClosSqrBr: AnsiChar  = ']';
+  chClosParen: AnsiChar  = ')';
+  chColon: AnsiChar      = ':';
+  chComma: AnsiChar      = ',';
+  chSpace: AnsiChar      = ' ';
+  chEscapeSym: AnsiChar  = '\';
+  chBackSpSym: AnsiChar  = 'b';
+  chTabSym: AnsiChar     = 't';
+  chLineSym: AnsiChar    = 'n';
+  chFormSym: AnsiChar    = 'f';
+  chCarRetSym: AnsiChar  = 'r';
+  chUnicodeSym: AnsiChar = 'u';
+  chZero: AnsiChar       = '0';
+{$POP}
+
+function TJVariant.AsJson: string;
+var
+  sb: TJsonNode.TStrBuilder;
+  s: shortstring;
+  procedure BuildJson(const aValue: TJVariant);
+  var
+    I, Last: SizeInt;
+  begin
+    case aValue.Kind of
+      vkNull:   sb.Append(JS_NULL);
+      vkBool:
+        if aValue.FValue.Bool then
+          sb.Append(JS_TRUE)
+        else
+          sb.Append(JS_FALSE);
+      vkNumber:
+        begin
+          Double2Str(aValue.FValue.Num, s);
+          sb.Append(s);
+        end;
+      vkString: sb.AppendEncode(string(aValue.FValue.Ref));
+      vkArray:
+        begin
+          sb.Append(chOpenSqrBr);
+          Last := System.High(TVarArray(aValue.FValue.Ref));
+          for I := 0 to Last do
+            begin
+              BuildJson(TVarArray(aValue.FValue.Ref)[I]);
+              if I <> Last then sb.Append(chComma);
+            end;
+          sb.Append(chClosSqrBr);
+        end;
+      vkPairs:
+        begin
+          sb.Append(chOpenCurBr);
+          Last := System.High(TPairArray(aValue.FValue.Ref));
+          for I := 0 to Last do
+            begin
+              sb.AppendEncode(TPairArray(aValue.FValue.Ref)[I].Key);
+              sb.Append(chColon);
+              BuildJson(TPairArray(aValue.FValue.Ref)[I].Value);
+              if I <> Last then sb.Append(chComma);
+            end;
+          sb.Append(chClosCurBr);
+        end;
+    end;
   end;
+
+begin
+  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  BuildJson(Self);
+  Result := sb.ToString;
+end;
+
+function TJVariant.ToString: string;
+var
+  sb: TJsonNode.TStrBuilder;
+  s: shortstring;
+  procedure BuildJson(const aValue: TJVariant);
+  var
+    I, Last: SizeInt;
+  begin
+    case aValue.Kind of
+      vkNull:   sb.Append(JS_NULL);
+      vkBool:
+        if aValue.FValue.Bool then
+          sb.Append(JS_TRUE)
+        else
+          sb.Append(JS_FALSE);
+      vkNumber:
+        begin
+          Double2Str(aValue.FValue.Num, s);
+          sb.Append(s);
+        end;
+      vkString: sb.Append(string(aValue.FValue.Ref));
+      vkArray:
+        begin
+          sb.Append(chOpenSqrBr);
+          Last := System.High(TVarArray(aValue.FValue.Ref));
+          for I := 0 to Last do
+            begin
+              BuildJson(TVarArray(aValue.FValue.Ref)[I]);
+              if I <> Last then sb.Append(chComma);
+            end;
+          sb.Append(chClosSqrBr);
+        end;
+      vkPairs:
+        begin
+          sb.Append(chOpenSqrBr);
+          Last := System.High(TPairArray(aValue.FValue.Ref));
+          for I := 0 to Last do
+            begin
+              sb.Append(JS_JPAIR);
+              sb.Append(TPairArray(aValue.FValue.Ref)[I].Key);
+              sb.Append(chComma);
+              BuildJson(TPairArray(aValue.FValue.Ref)[I].Value);
+              sb.Append(chClosParen);
+              if I <> Last then sb.Append(chComma);
+            end;
+          sb.Append(chClosSqrBr);
+        end;
+    end;
+  end;
+
+begin
+  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  BuildJson(Self);
+  Result := sb.ToString;
 end;
 
 function JNull: TJVariant;
@@ -1443,22 +1603,6 @@ end;
 
 const
 {$PUSH}{$J-}{$WARN 2005 OFF}
-  chOpenCurBr: AnsiChar  = '{';
-  chClosCurBr: AnsiChar  = '}';
-  chOpenSqrBr: AnsiChar  = '[';
-  chClosSqrBr: AnsiChar  = ']';
-  chColon: AnsiChar      = ':';
-  chComma: AnsiChar      = ',';
-  chSpace: AnsiChar      = ' ';
-  chEscapeSym: AnsiChar  = '\';
-  chBackSpSym: AnsiChar  = 'b';
-  chTabSym: AnsiChar     = 't';
-  chLineSym: AnsiChar    = 'n';
-  chFormSym: AnsiChar    = 'f';
-  chCarRetSym: AnsiChar  = 'r';
-  chUnicodeSym: AnsiChar = 'u';
-  chZero: AnsiChar       = '0';
-
   Space  = Integer( 0); //  space
   White  = Integer( 1); //  other whitespace
   LCurBr = Integer( 2); //  {
@@ -1764,7 +1908,7 @@ end;
 
 { TJsonNode.TIterContext }
 
-constructor TJsonNode.TIterContext.Init(aLevel, aIndex: SizeInt; aParent: TJsonNode);
+constructor TJsonNode.TIterContext.Make(aLevel, aIndex: SizeInt; aParent: TJsonNode);
 begin
   Level := aLevel;
   Index := aIndex;
@@ -1772,7 +1916,7 @@ begin
   Parent := aParent;
 end;
 
-constructor TJsonNode.TIterContext.Init(aLevel: SizeInt; const aName: string; aParent: TJsonNode);
+constructor TJsonNode.TIterContext.Make(aLevel: SizeInt; const aName: string; aParent: TJsonNode);
 begin
   Level := aLevel;
   Index := NULL_INDEX;
@@ -1780,7 +1924,7 @@ begin
   Parent := aParent;
 end;
 
-constructor TJsonNode.TIterContext.Init(aParent: TJsonNode);
+constructor TJsonNode.TIterContext.Make(aParent: TJsonNode);
 begin
   Level := 0;
   Index := NULL_INDEX;
@@ -1790,7 +1934,7 @@ end;
 
 { TJsonNode.TVisitNode }
 
-constructor TJsonNode.TVisitNode.Init(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
+constructor TJsonNode.TVisitNode.Make(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
 begin
   Level := aLevel;
   Index := aIndex;
@@ -1799,7 +1943,7 @@ begin
   Node := aNode;
 end;
 
-constructor TJsonNode.TVisitNode.Init(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
+constructor TJsonNode.TVisitNode.Make(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
 begin
   Level := aLevel;
   Index := NULL_INDEX;
@@ -1808,7 +1952,7 @@ begin
   Node := aNode;
 end;
 
-constructor TJsonNode.TVisitNode.Init(aNode: TJsonNode);
+constructor TJsonNode.TVisitNode.Make(aNode: TJsonNode);
 begin
   Level := 0;
   Index := NULL_INDEX;
@@ -3818,59 +3962,69 @@ begin
 end;
 
 function TJsonNode.GetValue: TJVariant;
-begin
-   case Kind of
-    jvkNull:   exit(TJVariant.Null);
-    jvkFalse:  exit(False);
-    jvkTrue:   exit(True);
-    jvkNumber: exit(FValue.Num);
-    jvkString: exit(FString);
-    jvkArray:  raise EJsException.CreateFmt(SECantConvertFmt, ['Array', 'TJVariant']);
-    jvkObject: raise EJsException.CreateFmt(SECantConvertFmt, ['Object', 'TJVariant']);
+  procedure DoGet(aNode: TJsonNode; out v: TJVariant);
+  var
+    I: SizeInt;
+  begin
+    case aNode.Kind of
+     jvkNull:   v := TJVariant.Null;
+     jvkFalse:  v := False;
+     jvkTrue:   v := True;
+     jvkNumber: v := aNode.FValue.Num;
+     jvkString: v := aNode.FString;
+     jvkArray:
+       begin
+         v.ClearValue;
+         v.FKind := vkArray;
+         System.SetLength(TJVarArray(v.FValue.Ref), aNode.Count);
+         for I := 0 to Pred(aNode.Count) do
+           DoGet(aNode.Items[I], TJVarArray(v.FValue.Ref)[I]);
+       end;
+     jvkObject:
+       begin
+         v.ClearValue;
+         v.FKind := vkPairs;
+         System.SetLength(TJPairArray(v.FValue.Ref), aNode.Count);
+         for I := 0 to Pred(aNode.Count) do
+           with aNode.Pairs[I] do
+             begin
+               TJPairArray(v.FValue.Ref)[I].Key := Key;
+               DoGet(Value, TJPairArray(v.FValue.Ref)[I].Value);
+             end;
+       end;
+   end;
   end;
+begin
+  DoGet(Self, Result);
 end;
 
 procedure TJsonNode.SetValue(const aValue: TJVariant);
-begin
-  case aValue.Kind of
-    vkNull:   AsNull;
-    vkBool:   AsBoolean := Boolean(aValue);
-    vkNumber: AsNumber := Double(aValue);
-    vkString: AsString := string(aValue);
-  end;
-end;
-
-procedure TJsonNode.SetVarArray(const a: TJVarArray);
-var
-  I: SizeInt;
-begin
-  DoClear;
-  FValue.Ref := CreateJsArray;
-  FKind := jvkArray;
-  for I := 0 to System.High(a) do
-    case a[I].Kind of
-      vkNull:   FArray^.Add(TJsonNode.Create);
-      vkBool:   FArray^.Add(TJsonNode.Create(a[I].AsBoolean));
-      vkNumber: FArray^.Add(TJsonNode.Create(a[I].AsNumber));
-      vkString: FArray^.Add(TJsonNode.Create(a[I].AsString));
+  procedure DoSet(const v: TJVariant; aNode: TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    case v.Kind of
+      vkNull:   aNode.AsNull;
+      vkBool:   aNode.AsBoolean := Boolean(v);
+      vkNumber: aNode.AsNumber := Double(v);
+      vkString: aNode.AsString := string(v);
+      vkArray:
+        begin
+          aNode.AsArray;
+          for I := 0 to System.High(TJVarArray(v.FValue.Ref)) do
+            DoSet(TJVarArray(v.FValue.Ref)[I], aNode.AddNode);
+        end;
+      vkPairs:
+        begin
+          aNode.AsObject;
+          for I := 0 to System.High(TJPairArray(v.FValue.Ref)) do
+            with TJPairArray(v.FValue.Ref)[I] do
+              DoSet(Value, aNode.AddNode(Key));
+        end;
     end;
-end;
-
-procedure TJsonNode.SetPairArray(const a: TJPairArray);
-var
-  I: SizeInt;
+  end;
 begin
-  DoClear;
-  FValue.Ref := CreateJsObject;
-  FKind := jvkObject;
-  for I := 0 to System.High(a) do
-    with a[I] do
-      case Value.Kind of
-        vkNull:   FObject^.Add(TPair.Create(Key, TJsonNode.Create));
-        vkBool:   FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsBoolean)));
-        vkNumber: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsNumber)));
-        vkString: FObject^.Add(TPair.Create(Key, TJsonNode.Create(Value.AsString)));
-      end;
+  DoSet(aValue, Self);
 end;
 
 { TJsonNode.TNodeEnumerator }
@@ -3882,7 +4036,7 @@ end;
 
 constructor TJsonNode.TNodeEnumerator.Create(aNode: TJsonNode);
 begin
-  FStart := TVisitNode.Init(aNode);
+  FStart := TVisitNode.Make(aNode);
   FQueue.Enqueue(FStart);
 end;
 
@@ -3896,13 +4050,13 @@ begin
         jvkArray:
           if FCurrent.Node.FArray <> nil then
             for I := 0 to Pred(FCurrent.Node.FArray^.Count) do
-              FQueue.Enqueue(TVisitNode.Init(
+              FQueue.Enqueue(TVisitNode.Make(
                  Succ(FCurrent.Level), I, FCurrent.Node, FCurrent.Node.FArray^.UncMutable[I]^));
         jvkObject:
           if FCurrent.Node.FObject <> nil then
             for I := 0 to Pred(FCurrent.Node.FObject^.Count) do
               with FCurrent.Node.FObject^.Mutable[I]^ do
-                FQueue.Enqueue(TVisitNode.Init(Succ(FCurrent.Level), Key, FCurrent.Node, Value));
+                FQueue.Enqueue(TVisitNode.Make(Succ(FCurrent.Level), Key, FCurrent.Node, Value));
       else
       end;
       exit(True);
@@ -4198,6 +4352,11 @@ begin
   Result := aNode.Clone;
 end;
 
+class function TJsonNode.NewNode(const aValue: TJVariant): TJsonNode;
+begin
+  Result := TJsonNode.Create(aValue);
+end;
+
 class function TJsonNode.NewJson(const s: string): TJsonNode;
 begin
   TryParse(s, Result);
@@ -4291,19 +4450,13 @@ begin
   FKind := aKind;
 end;
 
-constructor TJsonNode.Create(const a: TJVarArray);
+constructor TJsonNode.Create(const aValue: TJVariant);
 begin
-  SetVarArray(a);
-end;
-
-constructor TJsonNode.Create(const a: TJPairArray);
-begin
-  SetPairArray(a);
+  SetValue(aValue);
 end;
 
 constructor TJsonNode.Create(aNode: TJsonNode);
 begin
-  Create;
   CopyFrom(aNode);
 end;
 
@@ -4390,17 +4543,17 @@ end;
 
 function TJsonNode.IsLiteral: Boolean;
 begin
-  Result := Kind in [jvkNull, jvkFalse, jvkTrue];
+  Result := Kind < jvkNumber;
 end;
 
 function TJsonNode.IsScalar: Boolean;
 begin
-  Result := Kind in [jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString];
+  Result := Kind < jvkArray;
 end;
 
 function TJsonNode.IsStruct: Boolean;
 begin
-  Result := Kind in [jvkArray, jvkObject];
+  Result := Kind > jvkString;
 end;
 
 { TJsonNode.TEnumerator }
@@ -4717,7 +4870,7 @@ var
         if aNode.FArray <> nil then
           for I := 0 to Pred(aNode.FArray^.Count) do
             begin
-              DoIterate(TIterContext.Init(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              DoIterate(TIterContext.Make(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
               if Done then exit;
             end;
       jvkObject:
@@ -4725,7 +4878,7 @@ var
           for I := 0 to Pred(aNode.FObject^.Count) do
             with aNode.FObject^.Mutable[I]^ do
               begin
-                DoIterate(TIterContext.Init(Succ(aCtx.Level), Key, aNode), Value);
+                DoIterate(TIterContext.Make(Succ(aCtx.Level), Key, aNode), Value);
                 if Done then exit;
               end;
     else
@@ -4733,7 +4886,7 @@ var
   end;
 begin
   if aFunc = nil then exit;
-  DoIterate(TIterContext.Init(nil), Self);
+  DoIterate(TIterContext.Make(nil), Self);
 end;
 
 procedure TJsonNode.Iterate(aFunc: TNestIterate);
@@ -4751,7 +4904,7 @@ var
         if aNode.FArray <> nil then
           for I := 0 to Pred(aNode.FArray^.Count) do
             begin
-              DoIterate(TIterContext.Init(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              DoIterate(TIterContext.Make(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
               if Done then exit;
             end;
       jvkObject:
@@ -4759,7 +4912,7 @@ var
           for I := 0 to Pred(aNode.FObject^.Count) do
             with aNode.FObject^.Mutable[I]^ do
               begin
-                DoIterate(TIterContext.Init(Succ(aCtx.Level), Key, aNode), Value);
+                DoIterate(TIterContext.Make(Succ(aCtx.Level), Key, aNode), Value);
                 if Done then exit;
               end;
     else
@@ -4767,244 +4920,179 @@ var
   end;
 begin
   if aFunc = nil then exit;
-  DoIterate(TIterContext.Init(nil), Self);
+  DoIterate(TIterContext.Make(nil), Self);
 end;
 
 function TJsonNode.AddNull: TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   FArray^.Add(TJsonNode.Create);
   Result := Self;
 end;
 
 function TJsonNode.Add(aValue: Boolean): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   FArray^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(aValue: Double): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   FArray^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aValue: string): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   FArray^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
-function TJsonNode.Add(const a: TJVarArray): TJsonNode;
+function TJsonNode.Add(const aValue: TJVariant): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create(a));
-  Result := Self;
-end;
-
-function TJsonNode.Add(const a: TJPairArray): TJsonNode;
-begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create(a));
-  Result := Self;
-end;
-
-function TJsonNode.AddRange(const a: TJVarArray): TJsonNode;
-var
-  I: SizeInt;
-begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
-  for I := 0 to System.High(a) do
-    case a[I].Kind of
-      vkNull:   AddNull;
-      vkBool:   Add(Boolean(a[I]));
-      vkNumber: Add(Double(a[I]));
-      vkString: Add(string(a[I]));
-    end;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
+  FArray^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.AddNode(aKind: TJsValueKind): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   Result := TJsonNode.Create(aKind);
   FArray^.Add(Result);
 end;
 
 function TJsonNode.AddJson(const aJson: string; out aNode: TJsonNode): Boolean;
 begin
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   Result := TryParse(aJson, aNode);
   if Result then
     FArray^.Add(aNode);
 end;
 
+function TJsonNode.AddAll(const a: TJVarArray): TJsonNode;
+var
+  I: SizeInt;
+begin
+  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
+  for I := 0 to System.High(a) do
+    FArray^.Add(TJsonNode.Create(a[I]));
+  Result := Self;
+end;
+
 function TJsonNode.AddNull(const aName: string): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   FObject^.Add(TPair.Create(aName, TJsonNode.Create));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName: string; aValue: Boolean): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName: string; aValue: Double): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName, aValue: string): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
   Result := Self;
 end;
 
-function TJsonNode.Add(const aName: string; const aValue: TJVarArray): TJsonNode;
+function TJsonNode.Add(const aName: string; const aValue: TJVariant): TJsonNode;
 begin
-   if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
-  Result := Self;
-end;
-
-function TJsonNode.Add(const aName: string; const aValue: TJPairArray): TJsonNode;
-begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
-  Result := Self;
-end;
-
-function TJsonNode.AddRange(const a: TJPairArray): TJsonNode;
-var
-  I: SizeInt;
-begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  for I := 0 to System.High(a) do
-    with a[I] do
-      case Value.Kind of
-        vkNull:   AddNull(Key);
-        vkBool:   Add(Key, Boolean(Value));
-        vkNumber: Add(Key, Double(Value));
-        vkString: Add(Key, string(Value));
-      end;
   Result := Self;
 end;
 
 function TJsonNode.AddNode(const aName: string; aKind: TJsValueKind): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := TJsonNode.Create(aKind);
   FObject^.Add(TPair.Create(aName, Result));
 end;
 
 function TJsonNode.AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := TryParse(aJson, aNode);
   if Result then
     FObject^.Add(TPair.Create(aName, aNode));
+end;
+
+function TJsonNode.AddAll(const a: TJPairArray): TJsonNode;
+var
+  I: SizeInt;
+begin
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
+  for I := 0 to System.High(a) do
+    FObject^.Add(TPair.Create(a[I].Key, TJsonNode.Create(a[I].Key)));
+  Result := Self;
 end;
 
 function TJsonNode.TryAddNull(const aName: string): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
-  if Result then
-    p^.Value := TJsonNode.Create;
+  if Result then p^.Value := TJsonNode.Create;
 end;
 
 function TJsonNode.TryAdd(const aName: string; aValue: Boolean): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
-  if Result then
-    p^.Value := TJsonNode.Create(aValue);
+  if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
 function TJsonNode.TryAdd(const aName: string; aValue: Double): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
-  if Result then
-    p^.Value := TJsonNode.Create(aValue);
+  if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
 function TJsonNode.TryAdd(const aName, aValue: string): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
-  if Result then
-    p^.Value := TJsonNode.Create(aValue);
+  if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
-function TJsonNode.TryAdd(const aName: string; const aValue: TJVarArray): Boolean;
+function TJsonNode.TryAdd(const aName: string; const aValue: TJVariant): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
-  if Result then
-    p^.Value := TJsonNode.Create(aValue);
-end;
-
-function TJsonNode.TryAdd(const aName: string; const aValue: TJPairArray): Boolean;
-var
-  p: ^TPair;
-begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
-  if Result then
-    p^.Value := TJsonNode.Create(aValue);
+  if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
 function TJsonNode.TryAddNode(const aName: string; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
+  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   aNode := nil;
   Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
   if Result then
@@ -5020,8 +5108,7 @@ var
 begin
   if TryParse(aJson, aNode) then
     begin
-      if AsObject.FValue.Ref = nil then
-        FValue.Ref := CreateJsObject;
+      if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
       if FObject^.AddUniq(TPair.Create(aName, nil), p) then
         begin
           p^.Value := aNode;
@@ -5073,6 +5160,16 @@ begin
   Result := False;
 end;
 
+function TJsonNode.Insert(aIndex: SizeInt; const aValue: TJVariant): Boolean;
+begin
+  if CanArrayInsert(aIndex) then
+    begin
+      FArray^.Insert(aIndex, TJsonNode.Create(aValue));
+      exit(True);
+    end;
+  Result := False;
+end;
+
 function TJsonNode.InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
 begin
   if CanArrayInsert(aIndex) then
@@ -5087,36 +5184,31 @@ end;
 
 function TJsonNode.Contains(const aName: string): Boolean;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(FObject^.Contains(aName));
+  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.Contains(aName));
   Result := False;
 end;
 
 function TJsonNode.ContainsUniq(const aName: string): Boolean;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(FObject^.ContainsUniq(aName));
+  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.ContainsUniq(aName));
   Result := False;
 end;
 
 function TJsonNode.IndexOfName(const aName: string): SizeInt;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(FObject^.IndexOf(aName));
+  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.IndexOf(aName));
   Result := NULL_INDEX;
 end;
 
 function TJsonNode.CountOfName(const aName: string): SizeInt;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(FObject^.CountOf(aName));
+  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.CountOf(aName));
   Result := 0;
 end;
 
 function TJsonNode.HasUniqName(aIndex: SizeInt): Boolean;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(FObject^.HasUniqKey(aIndex));
+  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.HasUniqKey(aIndex));
   Result := False;
 end;
 
@@ -5248,8 +5340,7 @@ begin
   aNode := nil;
   case Kind of
     jvkArray:
-      if FArray <> nil then
-        exit(FArray^.TryExtract(aIndex, aNode));
+      if FArray <> nil then exit(FArray^.TryExtract(aIndex, aNode));
     jvkObject:
       if (FObject <> nil) and FObject^.TryDelete(aIndex, p) then
         begin
@@ -5742,7 +5833,7 @@ function TJsonNode.GetValue(out aValue: TJVariant): Boolean;
 begin
   if not IsScalar then exit(False);
   case Kind of
-    jvkNull:   aValue.SetNull;
+    jvkNull:   aValue.Clear;
     jvkFalse:  aValue := False;
     jvkTrue:   aValue := True;
     jvkNumber: aValue := FValue.Num;
