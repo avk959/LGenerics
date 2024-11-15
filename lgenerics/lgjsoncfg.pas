@@ -530,7 +530,7 @@ begin
       for v in n do
         if v.Kind in VALUE_KINDS then
           begin
-            v.GetValue(Result[I]);
+            Result[I] := v.Value;
             Inc(I);
           end;
       System.SetLength(Result, I);
