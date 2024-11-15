@@ -575,6 +575,10 @@ type
   { returns True and the created node in the aNode parameter, if the string aJson can be parsed;
     the new node is added as to an array }
     function  AddJson(const aJson: string; out aNode: TJsonNode): Boolean; inline;
+  { if aNode is not an array, nothing is happening; if aCopy is True, adds copies
+    of all aNode elements to the instance as an array, otherwise moves all aNode elements
+    to the instance, and leaves aNode empty; returns Self }
+    function  AddAll(aNode: TJsonNode; aCopy: Boolean = True): TJsonNode;
   { appends all elements of array a to the instance as an array;
     if the instance is not an array, it is cleared; returns Self }
     function  AddAll(const a: TJVarArray): TJsonNode;
@@ -671,7 +675,6 @@ type
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndentSize: Integer = DEF_INDENT;
                          aOffset: Integer = 0): string;
     function  FormatJson(const aStyle: TJsonFormatStyle; aOffset: Integer = 0): string;
-    function  GetValue(out aValue: TJVariant): Boolean;
   { saves content to stream in compact form; returns the number of bytes written }
     function  SaveToStream(aStream: TStream): SizeInt; inline;
   { saves content to stream with formatting; returns the number of bytes written }
@@ -4024,6 +4027,7 @@ procedure TJsonNode.SetValue(const aValue: TJVariant);
     end;
   end;
 begin
+  Clear;
   DoSet(aValue, Self);
 end;
 
@@ -4973,6 +4977,30 @@ begin
     FArray^.Add(aNode);
 end;
 
+function TJsonNode.AddAll(aNode: TJsonNode; aCopy: Boolean): TJsonNode;
+var
+  I: SizeInt;
+begin
+  if aNode.IsArray then
+    begin
+      if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
+      if aCopy then
+        for I := 0 to Pred(aNode.Count) do
+          FArray^.Add(aNode.Items[I].Clone)
+      else
+        if aNode.FValue.Ref <> nil then
+          begin
+            for I := 0 to Pred(aNode.FArray^.Count) do
+              begin
+                FArray^.Add(aNode.FArray^.Mutable[I]^);
+                aNode.FArray^.Mutable[I]^ := nil;
+              end;
+            aNode.FArray^.MakeEmpty;
+          end;
+    end;
+  Result := Self;
+end;
+
 function TJsonNode.AddAll(const a: TJVarArray): TJsonNode;
 var
   I: SizeInt;
@@ -5827,20 +5855,6 @@ begin
     else
       DoFormat(Self, aOffset, False);
   Result := sb.ToString;
-end;
-
-function TJsonNode.GetValue(out aValue: TJVariant): Boolean;
-begin
-  if not IsScalar then exit(False);
-  case Kind of
-    jvkNull:   aValue.Clear;
-    jvkFalse:  aValue := False;
-    jvkTrue:   aValue := True;
-    jvkNumber: aValue := FValue.Num;
-    jvkString: aValue := string(FValue.Ref);
-  else
-  end;
-  Result := True;
 end;
 
 function TJsonNode.SaveToStream(aStream: TStream): SizeInt;
