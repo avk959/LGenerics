@@ -21,7 +21,9 @@ type
     procedure TestBool;
     procedure TestString;
     procedure TestNumber;
-    procedure TestInteger;
+    procedure TestArray;
+    procedure TestPairs;
+    procedure TestAsJson;
     procedure TestEqual;
   end;
 
@@ -54,8 +56,8 @@ type
 
   TTestJson = class(TTestCase)
   private
-    FNodeCount: Integer;
     function CreateArrayOfObj: TJsonNode;
+    function GetNodeCount(aNode: TJsonNode): SizeInt;
   published
     procedure Parser;
     procedure Validator;
@@ -67,6 +69,8 @@ type
     procedure IdenticNames;
     procedure JsonPointer;
     procedure TestTryAdd;
+    procedure TestAddAllVar;
+    procedure TestAddAll;
     procedure Values;
     procedure SkipBom;
     procedure Equal;
@@ -286,30 +290,92 @@ begin
   AssertTrue(Rased);
 end;
 
-procedure TTestJVariant.TestInteger;
+procedure TTestJVariant.TestArray;
 var
   v: TJVariant;
+  a: TJVarArray;
   Rased: Boolean = False;
 begin
-  v := 42;
-  AssertTrue(v.Kind = vkNumber);
-  AssertTrue(v.IsInteger);
-  AssertTrue(v.AsInteger = 42);
-  v := 42.42;
-  AssertFalse(v.IsInteger);
-  v := Double(10e17);
-  AssertFalse(v.IsInteger);
-  AssertTrue(v.AsNumber = Double(10e17));
-  v := -9007199254740991;
-  AssertTrue(v.IsInteger);
-  AssertTrue(v.AsInteger = -9007199254740991);
-  AssertTrue(v.ToString = '-9007199254740991');
+  v := [42, False];
+  AssertTrue(v.Kind = vkArray);
+  a := v;
+  AssertTrue(Length(a) = 2);
+  AssertTrue(a[0].Kind = vkNumber);
+  AssertTrue(a[0] = 42);
+  AssertTrue(a[1].Kind = vkBool);
+  AssertFalse(a[1].AsBoolean);
   try
-    v.AsBoolean;
+    v.AsPairs;
   except
     Rased := True;
   end;
   AssertTrue(Rased);
+
+  v.Clear;
+  v := [];
+  AssertTrue(v.Kind = vkArray);
+  AssertTrue(Length(v.AsArray) = 0);
+end;
+
+procedure TTestJVariant.TestPairs;
+var
+  v: TJVariant;
+  a: TJPairArray;
+  Rased: Boolean = False;
+begin
+  v := [JPair('a', JNull), JPair('b', 42), JPair('c', [False, 'bla'])];
+  AssertTrue(v.Kind = vkPairs);
+  a := v;
+  AssertTrue(Length(a) = 3);
+  AssertTrue(a[0].Key = 'a');
+  AssertTrue(a[0].Value.Kind = vkNull);
+  AssertTrue(a[1].Key = 'b');
+  AssertTrue(a[1].Value.Kind = vkNumber);
+  AssertTrue(a[1].Value.AsNumber = 42);
+  AssertTrue(a[2].Key = 'c');
+  AssertTrue(a[2].Value.Kind = vkArray);
+  AssertTrue(Length(a[2].Value.AsArray) = 2);
+  AssertFalse(a[2].Value.AsArray[0]);
+  AssertTrue(a[2].Value.AsArray[1] = 'bla');
+  try
+    v.AsArray;
+  except
+    Rased := True;
+  end;
+  AssertTrue(Rased);
+
+  v := EMPTY_PAIRS;
+  AssertTrue(v.Kind = vkPairs);
+  AssertTrue(Length(v.AsPairs) = 0);
+end;
+
+procedure TTestJVariant.TestAsJson;
+var
+  v: TJVariant;
+begin
+  v := JNull;
+  AssertTrue(v.AsJson = 'null');
+
+  v := False;
+  AssertTrue(v.AsJson = 'false');
+
+  v := True;
+  AssertTrue(v.AsJson = 'true');
+
+  v := 42;
+  AssertTrue(v.AsJson = '42');
+
+  v := 'bla';
+  AssertTrue(v.AsJson = '"bla"');
+
+  v := [];
+  AssertTrue(v.AsJson = '[]');
+
+  v := EMPTY_PAIRS;
+  AssertTrue(v.AsJson = '{}');
+
+  v := [JPair('a', JNull), JPair('b', 42), JPair('c', [False, 'bla'])];
+  AssertTrue(v.AsJson = '{"a":null,"b":42,"c":[false,"bla"]}');
 end;
 
 procedure TTestJVariant.TestEqual;
@@ -331,9 +397,12 @@ begin
   AssertFalse(v1 = v2);
   v2 := 42;
   AssertTrue(v1 = v2);
-  v1.SetNull;
+  v1.Clear;
   AssertFalse(v1 = v2);
-  v2.SetNull;
+  v2.Clear;
+  AssertTrue(v1 = v2);
+  v1 := [JPair('a', JNull), JPair('b', 42), JPair('c', [False, 'bla'])];
+  v2 := [JPair('a', JNull), JPair('b', 42), JPair('c', [False, 'bla'])];
   AssertTrue(v1 = v2);
 end;
 
@@ -662,51 +731,42 @@ var
   I, J, K: Integer;
   n: string;
 begin
-  FNodeCount := 1;
   Node := TJsonNode.Create;
   for I := 1 to 10 do
     begin
       o := Node.AddNode(jvkObject);
-      Inc(FNodeCount);
       for J := 1 to 50 do
         begin
           K := J mod 6;
           n := 'name ' + K.ToString;
           case K of
-           0:
-             begin
-               o.Add(n, J);
-               Inc(FNodeCount);
-             end;
-           1:
-             begin
-               o.Add(n, Odd(J));
-               Inc(FNodeCount);
-             end;
-           2:
-             begin
-               o.Add(n, J.ToString);
-               Inc(FNodeCount);
-             end;
-           3:
-             begin
-               o.AddNull(n);
-               Inc(FNodeCount);
-             end;
-           4:
-             begin
-               o.Add(n, [K, Odd(J), 'name', JNull]);
-               FNodeCount += 5;
-             end;
-           5:
-             begin
-               o.Add(n, [JPair('number', J), JPair('known', False), JPair('place', 'none')]);
-               FNodeCount += 4;
-             end;
+           0: o.Add(n, J);
+           1: o.Add(n, Odd(J));
+           2: o.Add(n, J.ToString);
+           3: o.AddNull(n);
+           4: o.Add(n, [K, Odd(J), 'name', JNull]);
+           5: o.Add(n, [JPair('number', J), JPair('known', False), JPair('place', 'none')]);
           end;
         end;
     end;
   Result := Node;
+end;
+
+function TTestJson.GetNodeCount(aNode: TJsonNode): SizeInt;
+var
+  Count: SizeInt = 0;
+  procedure DoCount(aNode: TJsonNode);
+  var
+    I: SizeInt;
+  begin
+    Inc(Count);
+    if aNode.IsStruct then
+      for I := 0 to Pred(aNode.Count) do
+        DoCount(aNode.Items[I]);
+  end;
+begin
+  DoCount(aNode);
+  Result := Count;
 end;
 
 procedure TTestJson.Parser;
@@ -818,7 +878,7 @@ begin
   I := 1;
   for Node in o.Instance.SubTree do
     Inc(I);
-  AssertTrue(I = FNodeCount);
+  AssertTrue(I = GetNodeCount(o.Instance));
 end;
 
 procedure TTestJson.Enrties;
@@ -937,10 +997,47 @@ begin
   AssertTrue(o.Instance.Find('new key', Node));
 end;
 
+procedure TTestJson.TestAddAllVar;
+var
+  o: specialize TGAutoRef<TJsonNode>;
+begin
+  TJsonNode(o).Add(1);
+  TJsonNode(o).Add(2);
+  TJsonNode(o).AddAll([3,4,5]);
+  AssertTrue(TJsonNode(o).IsArray);
+  AssertTrue(TJsonNode(o).Count = 5);
+  AssertTrue(TJsonNode(o).Items[0].Value = 1);
+  AssertTrue(TJsonNode(o).Items[1].Value = 2);
+  AssertTrue(TJsonNode(o).Items[2].Value = 3);
+  AssertTrue(TJsonNode(o).Items[3].Value = 4);
+  AssertTrue(TJsonNode(o).Items[4].Value = 5);
+end;
+
+procedure TTestJson.TestAddAll;
+var
+  o1, o2: specialize TGAutoRef<TJsonNode>;
+begin
+  TJsonNode(o1).AsBoolean := True;
+  TJsonNode(o1).AddAll(TJsonNode(o2));
+  AssertTrue(TJsonNode(o1).IsBoolean);
+
+  TJsonNode(o1).AddAll([1,2,3]);
+  TJsonNode(o2).AddAll([4,5,6]);
+  TJsonNode(o1).AddAll(o2.Instance);
+  AssertTrue(TJsonNode(o1).IsArray);
+  AssertTrue(TJsonNode(o1).Count = 6);
+  AssertTrue(TJsonNode(o2).Count = 3);
+
+  TJsonNode(o1).AddAll(o2.Instance, False);
+  AssertTrue(TJsonNode(o1).Count = 9);
+  AssertTrue(TJsonNode(o2).Count = 0);
+end;
+
 procedure TTestJson.Values;
 var
   o: specialize TGAutoRef<TJsonNode>;
   User: TJsonNode;
+  v: TJVariant;
 begin
   User := o.Instance.AddNode(jvkObject);
   User['firstName'].Value := 'John';
@@ -955,7 +1052,23 @@ begin
   AssertTrue(User['lastName'].Value = 'Smith');
   AssertTrue(User['age'].Value = 42);
   AssertFalse(User['married'].Value);
-  AssertTrue(User['spouse'].IsNull);
+  AssertTrue(User['spouse'].Value.Kind = vkNull);
+
+  TJsonNode(o).Value := [
+    42,
+    [
+      JPair('a',False)
+    ],
+    [
+      JPair('b',True),
+      JPair('c',JNull)
+    ],
+    'bla'
+  ];
+  AssertTrue(TJsonNode(o).IsArray);
+  v := [42,[JPair('a',False)],[JPair('b',True),JPair('c',JNull)],'bla'];
+  AssertTrue(TJsonNode(o).Value = v);
+  AssertTrue(TJsonNode(o).AsJson = '[42,{"a":false},{"b":true,"c":null},"bla"]');
 end;
 
 procedure TTestJson.SkipBom;
