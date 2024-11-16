@@ -279,12 +279,12 @@ begin
   try
     a := Conf.GetValue('/a', [1]);
     AssertEquals('GetValue, default length', 1, Length(a));
-    AssertEquals('GetValue, default value', 1, Int64(a[0]));
+    AssertEquals('GetValue, default value', 1, a[0].AsNumber);
     Conf.SetValue('/a', [42, False, 'item']);
     a := Conf.GetValue('/a', []);
     AssertEquals('GetValue, length', 3, Length(a));
     AssertEquals('GetValue, item[0], Kind', Integer(vkNumber), Integer(a[0].Kind));
-    AssertEquals('GetValue, item[0], Value', 42, Int64(a[0]));
+    AssertEquals('GetValue, item[0], Value', 42, a[0].AsNumber);
     AssertEquals('GetValue, item[1], Kind', Integer(vkBool), Integer(a[1].Kind));
     AssertEquals('GetValue, item[1], Value', False, Boolean(a[1]));
     AssertEquals('GetValue, item[2], Kind', Integer(vkString), Integer(a[2].Kind));
