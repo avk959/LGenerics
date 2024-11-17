@@ -905,23 +905,25 @@ begin
     for I := 0 to Pred(NeighbCount) do
       EdgeList[I]^.NeighbDropColor(aColor);
 end;
-
+{$PUSH}{$B+}
 function TGSimpleGraph.TExactColor.SelectNext(out aNode: SizeInt): Boolean;
 var
-  I, MaxSat: Integer;
+  I, MaxSat, MaxDeg: Integer;
 begin
-  MaxSat := NULL_INDEX;
   aNode := NULL_INDEX;
+  MaxSat := NULL_INDEX;
+  MaxDeg := System.Low(Integer);
   for I in FAchromatic do
     with FNodes[I] do
-      if (Saturation > MaxSat) or (Saturation = MaxSat) and (Degree > FNodes[aNode].Degree) then
+      if (Saturation > MaxSat) or ((Saturation = MaxSat) and (Degree > MaxDeg)) then
         begin
-          MaxSat := Saturation;
           aNode := I;
+          MaxSat := Saturation;
+          MaxDeg := Degree;
         end;
   Result := aNode >= 0;
 end;
-
+{$POP}
 procedure TGSimpleGraph.TExactColor.DSatur(aMaxColor: SizeInt);
 var
   CurrNode, Color: SizeInt;
