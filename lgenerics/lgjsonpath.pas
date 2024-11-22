@@ -270,6 +270,10 @@ type
 
   TJpNodeListHelper = type helper for TJpNodeList
     function AsJson: string;
+  { returns an array of normalized paths }
+    function ToPathList: TStringArray;
+  { returns an array of JSON Pointers }
+    function ToPointerList: TStringArray;
   end;
 
   TJpValueList = array of TJsonNode;
@@ -714,6 +718,28 @@ begin
   sb.Append('}');
   sb.Append(']');
   Result := sb.ToString;
+end;
+
+function TJpNodeListHelper.ToPathList: TStringArray;
+var
+  r: TStringArray;
+  I: SizeInt;
+begin
+  System.SetLength(r, System.Length(Self));
+  for I := 0 to System.High(Self) do
+    r[I] := Self[I].Path;
+  Result := r;
+end;
+
+function TJpNodeListHelper.ToPointerList: TStringArray;
+var
+  r: TStringArray;
+  I: SizeInt;
+begin
+  System.SetLength(r, System.Length(Self));
+  for I := 0 to System.High(Self) do
+    r[I] := TJsonPtr.ToPointer(Self[I].PathToSegments);
+  Result := r;
 end;
 
 { TJpValueListHelper }
