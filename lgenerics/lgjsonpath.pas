@@ -499,6 +499,9 @@ type
 
 { I-Regexp checker: just in case }
   function IRegexpCheck(const aRegex: string; out aMsg: string): Boolean;
+{  }
+  function IRegexpMatch(const aText, aRegex: string): Boolean;
+  function IRegexpSearch(const aText, aRegex: string): Boolean;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -5634,6 +5637,26 @@ begin
       Result := ParseOk;
       if not Result then
         aMsg := Message;
+    finally
+      Free;
+    end;
+end;
+
+function IRegexpMatch(const aText, aRegex: string): Boolean;
+begin
+  with TIRegexp.Create(aRegex, False) do
+    try
+      Result := Match(aText);
+    finally
+      Free;
+    end;
+end;
+
+function IRegexpSearch(const aText, aRegex: string): Boolean;
+begin
+  with TIRegexpSearch.Create(aRegex, False) do
+    try
+      Result := Match(aText);
     finally
       Free;
     end;
