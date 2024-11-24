@@ -8,6 +8,7 @@ uses
   SysUtils, fpcunit, testregistry,
   LGUtils,
   LGHelpers,
+  lgAbstractContainer,
   LGPriorityQueue,
   LGArrayHelpers;
 
@@ -43,8 +44,10 @@ type
     TLiteIntPairingHeap      = specialize TGLitePairingHeap<Integer, Integer>;
     TLiteIntPairHeapMin      = specialize TGLiteComparablePairHeapMin<Integer>;
 
-    TIntHelper               = specialize TGComparableArrayHelper<Integer>;
+    TIntHelper               = specialize TGOrdinalArrayHelper<Integer>;
     TIntArray                = TIntBaseBinHeap.TArray;
+    IIntEnumerable           = specialize IGEnumerable<Integer>;
+    IIntArrayCursor          = specialize TGArrayCursor<Integer>;
     THandleArray             = array of THandle;
     function LongIntCmp(const L, R: LongInt): Boolean;
   published
@@ -67,11 +70,13 @@ type
     procedure LiteBinHeapReverse;
     procedure LiteBinHeapAssign;
     procedure LiteBinHeapPassByValue;
+    procedure LiteBinHeapAddAll;
     procedure LiteComparableBinHeap;
     procedure LiteComparableBinHeap1;
     procedure LiteComparableBinHeapReverse;
     procedure LiteComparableBinHeapAssign;
     procedure LiteComparableBinHeapPassByValue;
+    procedure LiteComparableBinHeapAddAll;
 
     procedure BasePairHeapEnqueueAll;
     procedure BasePairHeapUpdate;
@@ -598,6 +603,41 @@ begin
   AssertTrue(h.IsEmpty);
 end;
 
+procedure TGPriorityQueueTest.LiteBinHeapAddAll;
+var
+  q: TLiteIntBinHeap;
+  I, J: Integer;
+  a: TIntArray;
+  e: IIntEnumerable;
+const
+  TestSize = 100;
+begin
+  a := TIntHelper.CreateRandomInRange(TestSize, -1000, 1000);
+  q.EnqueueAll(a);
+  AssertTrue(q.Count = TestSize);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(TIntHelper.IsNonAscending(a));
+
+  a := TIntHelper.CreateRandomInRange(TestSize, -2000, 2000);
+  e := IIntArrayCursor.Create(a);
+  q.EnqueueAll(e);
+  AssertTrue(q.Count = TestSize);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(TIntHelper.IsNonAscending(a));
+end;
+
 procedure TGPriorityQueueTest.LiteComparableBinHeap;
 var
   q: TLiteIntBinHeapMin;
@@ -710,6 +750,41 @@ begin
   AssertTrue(h.IsEmpty);
   Test(h);
   AssertTrue(h.IsEmpty);
+end;
+
+procedure TGPriorityQueueTest.LiteComparableBinHeapAddAll;
+var
+  q: TLiteIntBinHeapMin;
+  I, J: Integer;
+  a: TIntArray;
+  e: IIntEnumerable;
+const
+  TestSize = 100;
+begin
+  a := TIntHelper.CreateRandomInRange(TestSize, -1000, 1000);
+  q.EnqueueAll(a);
+  AssertTrue(q.Count = TestSize);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(TIntHelper.IsNonDescending(a));
+
+  a := TIntHelper.CreateRandomInRange(TestSize, -2000, 2000);
+  e := IIntArrayCursor.Create(a);
+  q.EnqueueAll(e);
+  AssertTrue(q.Count = TestSize);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(TIntHelper.IsNonDescending(a));
 end;
 
 procedure TGPriorityQueueTest.BasePairHeapEnqueueAll;
