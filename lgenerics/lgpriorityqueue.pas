@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic prority queue implementations.                                  *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -189,6 +189,8 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     procedure Enqueue(const aValue: T); inline;
+    procedure EnqueueAll(const a: array of T);
+    procedure EnqueueAll(e: specialize IGEnumerable<T>);
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -254,6 +256,8 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     procedure Enqueue(const aValue: T); inline;
+    procedure EnqueueAll(const a: array of T);
+    procedure EnqueueAll(e: specialize IGEnumerable<T>);
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -1463,6 +1467,38 @@ begin
   FloatUp(FBuffer.PushLast(aValue));
 end;
 
+procedure TGLiteBinHeap.EnqueueAll(const a: array of T);
+var
+  I, Cnt: SizeInt;
+begin
+  if System.Length(a) = 0 then exit;
+  Cnt := Count;
+  FBuffer.EnsureCapacity(Cnt + System.Length(a));
+  for I := 0 to System.High(a) do
+    FBuffer.PushLast(a[I]);
+  if Cnt = 0 then
+    BuildHeap
+  else
+    for I := Cnt to Pred(Count) do
+      FloatUp(I);
+end;
+
+procedure TGLiteBinHeap.EnqueueAll(e: specialize IGEnumerable<T>);
+var
+  I, Cnt: SizeInt;
+  v: T;
+begin
+  Cnt := Count;
+  for v in e do
+    FBuffer.PushLast(v);
+  if Cnt = Count then exit;
+  if Cnt = 0 then
+    BuildHeap
+  else
+    for I := Cnt to Pred(Count) do
+      FloatUp(I);
+end;
+
 function TGLiteBinHeap.Dequeue: T;
 begin
   FBuffer.CheckEmpty;
@@ -1720,6 +1756,38 @@ end;
 procedure TGLiteComparableBinHeapMin.Enqueue(const aValue: T);
 begin
   FloatUp(FBuffer.PushLast(aValue));
+end;
+
+procedure TGLiteComparableBinHeapMin.EnqueueAll(const a: array of T);
+var
+  I, Cnt: SizeInt;
+begin
+  if System.Length(a) = 0 then exit;
+  Cnt := Count;
+  FBuffer.EnsureCapacity(Cnt + System.Length(a));
+  for I := 0 to System.High(a) do
+    FBuffer.PushLast(a[I]);
+  if Cnt = 0 then
+    BuildHeap
+  else
+    for I := Cnt to Pred(Count) do
+      FloatUp(I);
+end;
+
+procedure TGLiteComparableBinHeapMin.EnqueueAll(e: specialize IGEnumerable<T>);
+var
+  I, Cnt: SizeInt;
+  v: T;
+begin
+  Cnt := Count;
+  for v in e do
+    FBuffer.PushLast(v);
+  if Cnt = Count then exit;
+  if Cnt = 0 then
+    BuildHeap
+  else
+    for I := Cnt to Pred(Count) do
+      FloatUp(I);
 end;
 
 function TGLiteComparableBinHeapMin.Dequeue: T;
