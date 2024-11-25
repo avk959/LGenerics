@@ -34,6 +34,9 @@ type
 
     TLiteIntBinHeap          = specialize TGLiteBinHeap<Integer, Integer>;
     TLiteIntBinHeapMin       = specialize TGLiteComparableBinHeapMin<Integer>;
+    TIntKSelect              = specialize TGKSelect<Integer, Integer>;
+    TIntCompKSelect          = specialize TGComparableKSelect<Integer>;
+    TIntRegKSelect           = specialize TGRegularKSelect<Integer>;
 
     TIntBasePairHeap         = specialize TGPairingHeap<Integer>;
     TIntComparblePairHeapMax = specialize TGComparablePairHeapMax<Integer>;
@@ -47,9 +50,10 @@ type
     TIntHelper               = specialize TGOrdinalArrayHelper<Integer>;
     TIntArray                = TIntBaseBinHeap.TArray;
     IIntEnumerable           = specialize IGEnumerable<Integer>;
-    IIntArrayCursor          = specialize TGArrayCursor<Integer>;
+    TIntArrayCursor          = specialize TGArrayCursor<Integer>;
     THandleArray             = array of THandle;
     function LongIntCmp(const L, R: LongInt): Boolean;
+    function EqualSets(const L, R: array of Integer): Boolean;
   published
     procedure BaseBinHeap;
     procedure BaseBinHeapReverse;
@@ -65,6 +69,8 @@ type
     procedure DelegatedBinHeap;
     procedure DefaultDelegatedBinHeap;
     procedure DelegatedBinHeapReverse;
+    procedure RegularKSelectArray;
+    procedure RegularKSelectEnum;
 
     procedure LiteBinHeap;
     procedure LiteBinHeapReverse;
@@ -77,6 +83,10 @@ type
     procedure LiteComparableBinHeapAssign;
     procedure LiteComparableBinHeapPassByValue;
     procedure LiteComparableBinHeapAddAll;
+    procedure KSelectArray;
+    procedure KSelectEnum;
+    procedure ComparableKSelectArray;
+    procedure ComparableKSelectEnum;
 
     procedure BasePairHeapEnqueueAll;
     procedure BasePairHeapUpdate;
@@ -145,6 +155,21 @@ end;
 function TGPriorityQueueTest.LongIntCmp(const L, R: LongInt): Boolean;
 begin
   Result := L < R;
+end;
+
+function TGPriorityQueueTest.EqualSets(const L, R: array of Integer): Boolean;
+var
+  LocR: TIntArray;
+  Item, I: Integer;
+begin
+  if Length(L) <> Length(R) then exit(False);
+  LocR := TIntHelper.CreateCopy(R);
+  for Item in L do begin
+    I := TIntHelper.SequentSearch(LocR, Item);
+    if I < 0 then exit(False);
+    Delete(LocR, I, 1);
+  end;
+  Result := LocR = nil;
 end;
 
 procedure TGPriorityQueueTest.BaseBinHeap;
@@ -513,6 +538,87 @@ begin
   end;
 end;
 
+procedure TGPriorityQueueTest.RegularKSelectArray;
+var
+  a, r: TIntArray;
+  c: specialize TGLessCompare<Integer>;
+begin
+  c := specialize TGDefaults<Integer>.Less;
+  a := [];
+  AssertTrue(TIntRegKSelect.GetKMax(a, 1, c) = nil);
+  AssertTrue(TIntRegKSelect.GetKMin(a, 1, c) = nil);
+
+  a := [1, 2];
+  AssertTrue(TIntRegKSelect.GetKMax(a, -1, c) = nil);
+  AssertTrue(TIntRegKSelect.GetKMin(a, -1, c) = nil);
+
+  r := TIntRegKSelect.GetKMin(a, 3, c);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  r := TIntRegKSelect.GetKMax(a, 3, c);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  r := TIntRegKSelect.GetKMax(a, 1, c);
+  AssertTrue(EqualSets(r, [2]));
+
+  r := TIntRegKSelect.GetKMin(a, 1, c);
+  AssertTrue(EqualSets(r, [1]));
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4];
+
+  r := TIntRegKSelect.GetKMax(a, 3, c);
+  AssertTrue(EqualSets(r, [3, 4, 4]));
+
+  r := TIntRegKSelect.GetKMin(a, 3, c);
+  AssertTrue(EqualSets(r, [1, 1, 2]));
+end;
+
+procedure TGPriorityQueueTest.RegularKSelectEnum;
+var
+  e: IIntEnumerable;
+  a, r: TIntArray;
+  c: specialize TGLessCompare<Integer>;
+begin
+  c := specialize TGDefaults<Integer>.Less;
+  a := [];
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntRegKSelect.GetKMax(e, 1, c) = nil);
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntRegKSelect.GetKMin(e, 1, c) = nil);
+
+  a := [1, 2];
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntRegKSelect.GetKMax(e, -1, c) = nil);
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntRegKSelect.GetKMin(e, -1, c) = nil);
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntRegKSelect.GetKMin(e, 3, c);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntRegKSelect.GetKMax(e, 3, c);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntRegKSelect.GetKMax(e, 1, c);
+  AssertTrue(EqualSets(r, [2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntRegKSelect.GetKMin(e, 1, c);
+  AssertTrue(EqualSets(r, [1]));
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4];
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntRegKSelect.GetKMax(e, 3, c);
+  AssertTrue(EqualSets(r, [3, 4, 4]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntRegKSelect.GetKMin(e, 3, c);
+  AssertTrue(EqualSets(r, [1, 1, 2]));
+end;
+
 procedure TGPriorityQueueTest.LiteBinHeap;
 var
   q: TLiteIntBinHeap;
@@ -625,7 +731,7 @@ begin
   AssertTrue(TIntHelper.IsNonAscending(a));
 
   a := TIntHelper.CreateRandomInRange(TestSize, -2000, 2000);
-  e := IIntArrayCursor.Create(a);
+  e := TIntArrayCursor.Create(a);
   q.EnqueueAll(e);
   AssertTrue(q.Count = TestSize);
   I := 0;
@@ -774,7 +880,7 @@ begin
   AssertTrue(TIntHelper.IsNonDescending(a));
 
   a := TIntHelper.CreateRandomInRange(TestSize, -2000, 2000);
-  e := IIntArrayCursor.Create(a);
+  e := TIntArrayCursor.Create(a);
   q.EnqueueAll(e);
   AssertTrue(q.Count = TestSize);
   I := 0;
@@ -785,6 +891,160 @@ begin
       Inc(I);
     end;
   AssertTrue(TIntHelper.IsNonDescending(a));
+end;
+
+procedure TGPriorityQueueTest.KSelectArray;
+var
+  a, r: TIntArray;
+begin
+  a := [];
+  AssertTrue(TIntKSelect.GetKMax(a, 1) = nil);
+  AssertTrue(TIntKSelect.GetKMin(a, 1) = nil);
+
+  a := [1, 2];
+  AssertTrue(TIntKSelect.GetKMax(a, -1) = nil);
+  AssertTrue(TIntKSelect.GetKMin(a, -1) = nil);
+
+  r := TIntKSelect.GetKMin(a, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  r := TIntKSelect.GetKMax(a, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  r := TIntKSelect.GetKMax(a, 1);
+  AssertTrue(EqualSets(r, [2]));
+
+  r := TIntKSelect.GetKMin(a, 1);
+  AssertTrue(EqualSets(r, [1]));
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4];
+
+  r := TIntKSelect.GetKMax(a, 3);
+  AssertTrue(EqualSets(r, [3, 4, 4]));
+
+  r := TIntKSelect.GetKMin(a, 3);
+  AssertTrue(EqualSets(r, [1, 1, 2]));
+end;
+
+procedure TGPriorityQueueTest.KSelectEnum;
+var
+  e: IIntEnumerable;
+  a, r: TIntArray;
+begin
+  a := [];
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntKSelect.GetKMax(e, 1) = nil);
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntKSelect.GetKMin(e, 1) = nil);
+
+  a := [1, 2];
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntKSelect.GetKMax(e, -1) = nil);
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntKSelect.GetKMin(e, -1) = nil);
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntKSelect.GetKMin(e, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntKSelect.GetKMax(e, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntKSelect.GetKMax(e, 1);
+  AssertTrue(EqualSets(r, [2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntKSelect.GetKMin(e, 1);
+  AssertTrue(EqualSets(r, [1]));
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4];
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntKSelect.GetKMax(e, 3);
+  AssertTrue(EqualSets(r, [3, 4, 4]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntKSelect.GetKMin(e, 3);
+  AssertTrue(EqualSets(r, [1, 1, 2]));
+end;
+
+procedure TGPriorityQueueTest.ComparableKSelectArray;
+var
+  a, r: TIntArray;
+begin
+  a := [];
+  AssertTrue(TIntCompKSelect.GetKMax(a, 1) = nil);
+  AssertTrue(TIntCompKSelect.GetKMin(a, 1) = nil);
+
+  a := [1, 2];
+  AssertTrue(TIntCompKSelect.GetKMax(a, -1) = nil);
+  AssertTrue(TIntCompKSelect.GetKMin(a, -1) = nil);
+
+  r := TIntCompKSelect.GetKMin(a, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  r := TIntCompKSelect.GetKMax(a, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  r := TIntCompKSelect.GetKMax(a, 1);
+  AssertTrue(EqualSets(r, [2]));
+
+  r := TIntCompKSelect.GetKMin(a, 1);
+  AssertTrue(EqualSets(r, [1]));
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4];
+
+  r := TIntCompKSelect.GetKMax(a, 3);
+  AssertTrue(EqualSets(r, [3, 4, 4]));
+
+  r := TIntCompKSelect.GetKMin(a, 3);
+  AssertTrue(EqualSets(r, [1, 1, 2]));
+end;
+
+procedure TGPriorityQueueTest.ComparableKSelectEnum;
+var
+  e: IIntEnumerable;
+  a, r: TIntArray;
+begin
+  a := [];
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntCompKSelect.GetKMax(e, 1) = nil);
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntCompKSelect.GetKMin(e, 1) = nil);
+
+  a := [1, 2];
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntCompKSelect.GetKMax(e, -1) = nil);
+  e := TIntArrayCursor.Create(a);
+  AssertTrue(TIntCompKSelect.GetKMin(e, -1) = nil);
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntCompKSelect.GetKMin(e, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntCompKSelect.GetKMax(e, 3);
+  AssertTrue(EqualSets(r, [1, 2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntCompKSelect.GetKMax(e, 1);
+  AssertTrue(EqualSets(r, [2]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntCompKSelect.GetKMin(e, 1);
+  AssertTrue(EqualSets(r, [1]));
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4];
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntCompKSelect.GetKMax(e, 3);
+  AssertTrue(EqualSets(r, [3, 4, 4]));
+
+  e := TIntArrayCursor.Create(a);
+  r := TIntCompKSelect.GetKMin(e, 3);
+  AssertTrue(EqualSets(r, [1, 1, 2]));
 end;
 
 procedure TGPriorityQueueTest.BasePairHeapEnqueueAll;
