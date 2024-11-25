@@ -26,10 +26,10 @@ unit lgPriorityQueue;
 interface
 
 uses
-
   SysUtils,
   lgUtils,
   lgHelpers,
+  lgArrayHelpers,
   lgAbstractContainer,
   lgStrConst;
 
@@ -155,12 +155,15 @@ type
       functor TCmpRel (comparision relation) must provide
         class function Less([const[ref]] L, R: T): Boolean; }
   generic TGLiteBinHeap<T, TCmpRel> = record
-  public
+  private
   type
     TBuffer     = specialize TGLiteDynBuffer<T>;
+  public
+  type
     TEnumerator = TBuffer.TEnumerator;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
+    TLess       = specialize TGLessCompare<T>;
 
   strict private
   type
@@ -176,14 +179,11 @@ type
     property  Items: TBuffer.TArray read FBuffer.FItems;
     class function DoCompare(const L, R: T): Boolean; static;
   public
-  type
-    TLess = specialize TGLessCompare<T>;
     function  Comparator: TLess; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
-    procedure Modified; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -224,12 +224,15 @@ type
   { TGLiteComparableBinHeapMin implements minimizing priority queue with queue interface;
     it assumes that type T has defined comparison operator < }
   generic TGLiteComparableBinHeapMin<T> = record
-  public
+  private
   type
     TBuffer     = specialize TGLiteDynBuffer<T>;
+  public
+  type
     TEnumerator = TBuffer.TEnumerator;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
+    TLess       = specialize TGLessCompare<T>;
   strict private
   type
     TFake = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
@@ -243,14 +246,11 @@ type
     function  DequeueItem: T;
     class function DoCompare(const L, R: T): Boolean; static;
   public
-  type
-    TLess = specialize TGLessCompare<T>;
     function  Comparator: TLess; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
-    procedure Modified; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -265,6 +265,86 @@ type
     function  TryPeek(out aValue: T): Boolean; inline;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
+  end;
+
+  { TGKSelect: functor TCmpRel must provide
+      class function Less([const[ref]] L, R: T): Boolean;
+    which returns True if L is less then R }
+  generic TGKSelect<T, TCmpRel> = record
+  private
+  type
+    THelper = specialize TGBaseArrayHelper<T, TCmpRel>;
+    TRevCmp = record
+      class function Less(const L, R: T): Boolean; inline; static;
+    end;
+    TQueue    = specialize TGLiteBinHeap<T, TCmpRel>;
+    TRevQueue = specialize TGLiteBinHeap<T, TRevCmp>;
+  public
+  type
+    TArray      = array of T;
+    IEnumerable = specialize IGEnumerable<T>;
+  { returns Min(Length(a), Max(0, aK)) of the maximal elements of array a }
+    class function GetKMax(const a: array of T; aK: Integer): TArray; static;
+  { returns Min(e.Total, Max(0, aK))  of the maximal elements of sequence e }
+    class function GetKMax(e: IEnumerable; aK: Integer): TArray; static;
+  { returns Min(Length(a), Max(0, aK)) of the minimal elements of array a }
+    class function GetKMin(const a: array of T; aK: Integer): TArray; static;
+  { returns Min(e.Total, Max(0, aK))  of the minimal elements of sequence e }
+    class function GetKMin(e: IEnumerable; aK: Integer): TArray; static;
+  end;
+
+  { TGComparableKSelect: it assumes that type T has defined comparison operator < }
+  generic TGComparableKSelect<T> = record
+  private
+  type
+    THelper = specialize TGComparableArrayHelper<T>;
+    TRevCmp = record
+      class function Less(const L, R: T): Boolean; inline; static;
+    end;
+    TQueue    = specialize TGLiteComparableBinHeapMin<T>;
+    TRevQueue = specialize TGLiteBinHeap<T, TRevCmp>;
+  public
+  type
+    TArray      = array of T;
+    IEnumerable = specialize IGEnumerable<T>;
+  { returns Min(Length(a), Max(0, aK)) of the maximal elements of array a }
+    class function GetKMax(const a: array of T; aK: Integer): TArray; static;
+  { returns Min(e.Total, Max(0, aK))  of the maximal elements of sequence e }
+    class function GetKMax(e: IEnumerable; aK: Integer): TArray; static;
+  { returns Min(Length(a), Max(0, aK)) of the minimal elements of array a }
+    class function GetKMin(const a: array of T; aK: Integer): TArray; static;
+  { returns Min(e.Total, Max(0, aK))  of the minimal elements of sequence e }
+    class function GetKMin(e: IEnumerable; aK: Integer): TArray; static;
+  end;
+
+  { TGRegularKSelect }
+  generic TGRegularKSelect<T> = record
+  public
+  type
+    TLess = specialize TGLessCompare<T>;
+  private
+  type
+    THelper = specialize TGRegularArrayHelper<T>;
+    TRevCmp = object
+      Cmp: TLess;
+      function Less(const L, R: T): Boolean;
+    end;
+    TQueue    = specialize TGRegularBinHeap<T>;
+    TRevQueue = specialize TGDelegatedBinHeap<T>;
+    TRef      = specialize TGUniqRef<TQueue>;
+    TRevRef   = specialize TGUniqRef<TRevQueue>;
+  public
+  type
+    TArray      = array of T;
+    IEnumerable = specialize IGEnumerable<T>;
+  { returns Min(Length(a), Max(0, aK)) of the maximal elements of array a }
+    class function GetKMax(const a: array of T; aK: Integer; c: TLess): TArray; static;
+  { returns Min(e.Total, Max(0, aK))  of the maximal elements of sequence e }
+    class function GetKMax(e: IEnumerable; aK: Integer; c: TLess): TArray; static;
+  { returns Min(Length(a), Max(0, aK)) of the minimal elements of array a }
+    class function GetKMin(const a: array of T; aK: Integer; c: TLess): TArray; static;
+  { returns Min(e.Total, Max(0, aK))  of the minimal elements of sequence e }
+    class function GetKMin(e: IEnumerable; aK: Integer; c: TLess): TArray; static;
   end;
 
   THandle = LGUtils.THandle;
@@ -1437,11 +1517,6 @@ begin
   FBuffer.Clear;
 end;
 
-procedure TGLiteBinHeap.Modified;
-begin
-  BuildHeap;
-end;
-
 function TGLiteBinHeap.IsEmpty: Boolean;
 begin
   Result := FBuffer.Count = 0;
@@ -1728,11 +1803,6 @@ begin
   FBuffer.Clear;
 end;
 
-procedure TGLiteComparableBinHeapMin.Modified;
-begin
-  BuildHeap;
-end;
-
 function TGLiteComparableBinHeapMin.IsEmpty: Boolean;
 begin
   Result := FBuffer.Count = 0;
@@ -1814,6 +1884,299 @@ begin
   Result := NonEmpty;
   if Result then
     aValue := FBuffer.FItems[0];
+end;
+
+{ TGKSelect.TRevCmp }
+
+class function TGKSelect.TRevCmp.Less(const L, R: T): Boolean;
+begin
+  Result := TCmpRel.Less(R, L);
+end;
+
+{ TGKSelect }
+
+class function TGKSelect.GetKMax(const a: array of T; aK: Integer): TArray;
+var
+  q: TRevQueue;
+  I: SizeInt;
+begin
+  if (System.Length(a) = 0) or (aK < 1) then exit(nil);
+  if aK >= System.Length(a) then exit(THelper.CreateCopy(a));
+  if aK = 1 then exit([a[THelper.IndexOfMax(a)]]);
+  q.EnqueueAll(a[0..Pred(aK)]);
+  for I := aK to System.High(a) do
+    if TCmpRel.Less(q.Peek, a[I]) then
+      begin
+        q.Dequeue;
+        q.Enqueue(a[I]);
+      end;
+  Result := q.ToArray;
+end;
+
+class function TGKSelect.GetKMax(e: IEnumerable; aK: Integer): TArray;
+var
+  q: TRevQueue;
+  v: T;
+begin
+  if aK < 1 then
+    begin
+      e.Discard;
+      exit(nil);
+    end;
+  for v in e do
+    if q.Count >= aK then
+      begin
+        if TCmpRel.Less(q.Peek, v) then
+          begin
+            q.Dequeue;
+            q.Enqueue(v);
+          end;
+      end
+    else
+      q.Enqueue(v);
+  Result := q.ToArray;
+end;
+
+class function TGKSelect.GetKMin(const a: array of T; aK: Integer): TArray;
+var
+  q: TQueue;
+  I: SizeInt;
+begin
+  if (System.Length(a) = 0) or (aK < 1) then exit(nil);
+  if aK >= System.Length(a) then exit(THelper.CreateCopy(a));
+  if aK = 1 then exit([a[THelper.IndexOfMin(a)]]);
+  q.EnqueueAll(a[0..Pred(aK)]);
+  for I := aK to System.High(a) do
+    if TCmpRel.Less(a[I], q.Peek) then
+      begin
+        q.Dequeue;
+        q.Enqueue(a[I]);
+      end;
+  Result := q.ToArray;
+end;
+
+class function TGKSelect.GetKMin(e: IEnumerable; aK: Integer): TArray;
+var
+  q: TQueue;
+  v: T;
+begin
+  if aK < 1 then
+    begin
+      e.Discard;
+      exit(nil);
+    end;
+  for v in e do
+    if q.Count >= aK then
+      begin
+        if TCmpRel.Less(v, q.Peek) then
+          begin
+            q.Dequeue;
+            q.Enqueue(v);
+          end;
+      end
+    else
+      q.Enqueue(v);
+  Result := q.ToArray;
+end;
+
+{ TGComparableKSelect.TRevCmp }
+
+class function TGComparableKSelect.TRevCmp.Less(const L, R: T): Boolean;
+begin
+  Result := R < L;
+end;
+
+{ TGComparableKSelect }
+
+class function TGComparableKSelect.GetKMax(const a: array of T; aK: Integer): TArray;
+var
+  q: TQueue;
+  I: SizeInt;
+begin
+  if (System.Length(a) = 0) or (aK < 1) then exit(nil);
+  if aK >= System.Length(a) then exit(THelper.CreateCopy(a));
+  if aK = 1 then exit([a[THelper.IndexOfMax(a)]]);
+  q.EnqueueAll(a[0..Pred(aK)]);
+  for I := aK to System.High(a) do
+    if q.Peek < a[I] then
+      begin
+        q.Dequeue;
+        q.Enqueue(a[I]);
+      end;
+  Result := q.ToArray;
+end;
+
+class function TGComparableKSelect.GetKMax(e: IEnumerable; aK: Integer): TArray;
+var
+  q: TQueue;
+  v: T;
+begin
+  if aK < 1 then
+    begin
+      e.Discard;
+      exit(nil);
+    end;
+  for v in e do
+    if q.Count >= aK then
+      begin
+        if q.Peek < v then
+          begin
+            q.Dequeue;
+            q.Enqueue(v);
+          end;
+      end
+    else
+      q.Enqueue(v);
+  Result := q.ToArray;
+end;
+
+class function TGComparableKSelect.GetKMin(const a: array of T; aK: Integer): TArray;
+var
+  q: TRevQueue;
+  I: SizeInt;
+begin
+  if (System.Length(a) = 0) or (aK < 1) then exit(nil);
+  if aK >= System.Length(a) then exit(THelper.CreateCopy(a));
+  if aK = 1 then exit([a[THelper.IndexOfMin(a)]]);
+  q.EnqueueAll(a[0..Pred(aK)]);
+  for I := aK to System.High(a) do
+    if a[I] < q.Peek then
+      begin
+        q.Dequeue;
+        q.Enqueue(a[I]);
+      end;
+  Result := q.ToArray;
+end;
+
+class function TGComparableKSelect.GetKMin(e: IEnumerable; aK: Integer): TArray;
+var
+  q: TRevQueue;
+  v: T;
+begin
+  if aK < 1 then
+    begin
+      e.Discard;
+      exit(nil);
+    end;
+  for v in e do
+    if q.Count >= aK then
+      begin
+        if v < q.Peek then
+          begin
+            q.Dequeue;
+            q.Enqueue(v);
+          end;
+      end
+    else
+      q.Enqueue(v);
+  Result := q.ToArray;
+end;
+
+{ TGRegularKSelect.TRevCmp }
+
+function TGRegularKSelect.TRevCmp.Less(const L, R: T): Boolean;
+begin
+  Result := Cmp(R, L);
+end;
+
+{ TGRegularKSelect }
+
+class function TGRegularKSelect.GetKMax(const a: array of T; aK: Integer; c: TLess): TArray;
+var
+  Ref: TRevRef;
+  Comp: TRevCmp;
+  q: TRevQueue;
+  I: SizeInt;
+begin
+  if (System.Length(a) = 0) or (aK < 1) then exit(nil);
+  if aK >= System.Length(a) then exit(THelper.CreateCopy(a));
+  if aK = 1 then exit([a[THelper.IndexOfMax(a, c)]]);
+  Comp.Cmp := c;
+  Ref.Instance := TRevQueue.Create(a[0..Pred(aK)], @Comp.Less);
+  q := Ref;
+  for I := aK to System.High(a) do
+    if c(q.Peek, a[I]) then
+      begin
+        q.Dequeue;
+        q.Enqueue(a[I]);
+      end;
+  Result := q.ToArray;
+end;
+
+class function TGRegularKSelect.GetKMax(e: IEnumerable; aK: Integer; c: TLess): TArray;
+var
+  Ref: TRevRef;
+  Comp: TRevCmp;
+  q: TRevQueue;
+  v: T;
+begin
+  if aK < 1 then
+    begin
+      e.Discard;
+      exit(nil);
+    end;
+  Comp.Cmp := c;
+  Ref.Instance := TRevQueue.Create(@Comp.Less);
+  q := Ref;
+  for v in e do
+    if q.Count >= aK then
+      begin
+        if c(q.Peek, v) then
+          begin
+            q.Dequeue;
+            q.Enqueue(v);
+          end;
+      end
+    else
+      q.Enqueue(v);
+  Result := q.ToArray;
+end;
+
+class function TGRegularKSelect.GetKMin(const a: array of T; aK: Integer; c: TLess): TArray;
+var
+  Ref: TRef;
+  q: TQueue;
+  I: SizeInt;
+begin
+  if (System.Length(a) = 0) or (aK < 1) then exit(nil);
+  if aK >= System.Length(a) then exit(THelper.CreateCopy(a));
+  if aK = 1 then exit([a[THelper.IndexOfMin(a, c)]]);
+  Ref.Instance := TQueue.Create(a[0..Pred(aK)], c);
+  q := Ref;
+  for I := aK to System.High(a) do
+    if c(a[I], q.Peek) then
+      begin
+        q.Dequeue;
+        q.Enqueue(a[I]);
+      end;
+  Result := q.ToArray;
+end;
+
+class function TGRegularKSelect.GetKMin(e: IEnumerable; aK: Integer; c: TLess): TArray;
+var
+  Ref: TRef;
+  q: TQueue;
+  v: T;
+begin
+  if aK < 1 then
+    begin
+      e.Discard;
+      exit(nil);
+    end;
+  Ref.Instance := TQueue.Create(c);
+  q := Ref;
+  for v in e do
+    if q.Count >= aK then
+      begin
+        if c(v, q.Peek) then
+          begin
+            q.Dequeue;
+            q.Enqueue(v);
+          end;
+      end
+    else
+      q.Enqueue(v);
+  Result := q.ToArray;
 end;
 
 { TGCustomPairingHeap.TNode }
