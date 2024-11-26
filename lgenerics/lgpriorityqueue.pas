@@ -321,7 +321,9 @@ type
   generic TGRegularKSelect<T> = record
   public
   type
-    TLess = specialize TGLessCompare<T>;
+    TArray      = array of T;
+    IEnumerable = specialize IGEnumerable<T>;
+    TLess       = specialize TGLessCompare<T>;
   private
   type
     THelper = specialize TGRegularArrayHelper<T>;
@@ -334,9 +336,6 @@ type
     TRef      = specialize TGUniqRef<TQueue>;
     TRevRef   = specialize TGUniqRef<TRevQueue>;
   public
-  type
-    TArray      = array of T;
-    IEnumerable = specialize IGEnumerable<T>;
   { returns Min(Length(a), Max(0, aK)) of the maximal elements of array a }
     class function GetKMax(const a: array of T; aK: Integer; c: TLess): TArray; static;
   { returns Min(e.Total, Max(0, aK))  of the maximal elements of sequence e }
