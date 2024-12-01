@@ -441,7 +441,7 @@ begin
     tkArrayBegin, tkObjectBegin:
       begin
         if not aReader.CopyStruct(s) then ReadError;
-        if Instance.Parse(s) then ReadError;
+        if not Instance.TryParse(s) then ReadError;
       end;
   else
     ReadError;
