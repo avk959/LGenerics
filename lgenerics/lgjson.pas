@@ -102,7 +102,7 @@ type
         0: (Num: Double);
         1: (Ref: Pointer);
         2: (Bool: Boolean);
-        3: (Int: Int64);
+        3: (Int: QWord);
     end;
   const
   {$PUSH}{$J-}
@@ -332,7 +332,7 @@ type
     case Integer of
       0: (Ref: Pointer);
       1: (Num: Double);
-      2: (Int: Int64);
+      2: (Int: QWord);
     end;
 
   var
@@ -342,6 +342,7 @@ type
     class procedure FreeJsArray(a: PJsArray); static;
     class function  CreateJsObject: PJsObject; static; inline;
     class procedure FreeJsObject(o: PJsObject); static;
+    class procedure MoveNode(aSrc, aDst: TJsonNode); static;
     function  GetFString: string; inline;
     function  GetFArray: PJsArray; inline;
     function  GetFObject: PJsObject; inline;
@@ -547,10 +548,13 @@ type
     returns false if any object contains a non-unique key }
     function  EqualTo(aNode: TJsonNode): Boolean;
     function  HashCode: SizeInt;
-  { tries to load JSON from a string, in case of failure it returns False,
-    in this case the content of the instance does not change }
-    function  Parse(const s: string): Boolean;
-  { Recursively traverses the document tree in a Preorder manner, calling aFunc on each node;
+  { tries to load JSON from a string, returns False if it fails, in which case
+    the content of the instance is not changed }
+    function  TryParse(const s: string): Boolean;
+  { tries to load JSON from a file, returns False if it fails, in which case
+    the content of the instance is not changed }
+    function  TryParseFile(const aFileName: string): Boolean;
+  { recursively traverses the document tree in a Preorder manner, calling aFunc on each node;
     exits immediately if aFunc returns False }
     procedure Iterate(aFunc: TOnIterate);
     procedure Iterate(aFunc: TNestIterate);
@@ -773,7 +777,6 @@ type
     class function  GetPath(aNode: TJsonNode; var aPathNode: TJsonNode; out aPath: TStringArray): Boolean; static;
     class function  FindExistStruct(aNode: TJsonNode; const aPath: TStringArray; out aStruct: TJsonNode;
                                     out aStructKey: string): Boolean; static; inline;
-    class procedure MoveNode(aSrc, aDst: TJsonNode); static; inline;
     class function  FindCopyValue(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean; static;
     class function  TryAdd(aNode, aValue: TJsonNode; const aPath: TStringArray): Boolean; static;
     class function  TryRemove(aNode: TJsonNode; const aPath: TStringArray): Boolean; static;
@@ -2666,6 +2669,15 @@ begin
     end;
 end;
 
+class procedure TJsonNode.MoveNode(aSrc, aDst: TJsonNode);
+begin
+  aDst.Clear;
+  aDst.FValue := aSrc.FValue;
+  aDst.FKind := aSrc.Kind;
+  aSrc.FKind := jvkNull;
+  aSrc.FValue.Int := 0;
+end;
+
 function TJsonNode.GetFString: string;
 begin
   Result := string(FValue.Ref);
@@ -3900,7 +3912,7 @@ end;
 
 procedure TJsonNode.SetAsJson(const aValue: string);
 begin
-  if not Parse(aValue) then
+  if not TryParse(aValue) then
     raise EJsException.Create(SECantParseJsStr);
 end;
 
@@ -4268,16 +4280,21 @@ class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonN
 var
   s: string = '';
 begin
-  with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
-    try
-    {$PUSH}{$Q+}{$R+}
-      System.SetLength(s, Size);
-    {$POP}
-      ReadBuffer(Pointer(s)^, System.Length(s));
-    finally
-      Free;
-    end;
-  Result := TryParse(s, aRoot, aSkipBom, aDepth);
+  Result := False;
+  aRoot := nil;
+  try
+    with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
+      try
+      {$PUSH}{$Q+}{$R+}
+        System.SetLength(s, Size);
+      {$POP}
+        ReadBuffer(Pointer(s)^, System.Length(s));
+      finally
+        Free;
+      end;
+    Result := TryParse(s, aRoot, aSkipBom, aDepth);
+  except
+  end;
 end;
 
 class function TJsonNode.Load(const s: string; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
@@ -4816,43 +4833,28 @@ begin
 end;
 {$POP}
 
-function TJsonNode.Parse(const s: string): Boolean;
+function TJsonNode.TryParse(const s: string): Boolean;
 var
   Node: TJsonNode;
 begin
-  if not TryParse(s, Node) then
-    exit(False);
+  Result := False;
+  if not TryParse(s, Node) then exit;
   try
-    Clear;
-    case Node.FKind of
-      jvkNumber:
-        begin
-          Self.FValue.Num := Node.FValue.Num;
-          Node.FValue.Int := 0;
-          FKind := jvkNumber;
-        end;
-      jvkString:
-        begin
-          FString := Node.FString;
-          Node.FString := '';
-          FKind := jvkString;
-        end;
-      jvkArray:
-        begin
-          FArray := Node.FArray;
-          Node.FArray := nil;
-          FKind := jvkArray;
-        end;
-      jvkObject:
-        begin
-          FObject := Node.FObject;
-          Node.FObject := nil;
-          FKind := jvkObject;
-        end;
-    else
-      FKind := Node.Kind;
-    end;
-    Node.FKind := jvkNull;
+    MoveNode(Node, Self);
+    Result := True;
+  finally
+    Node.Free;
+  end;
+end;
+
+function TJsonNode.TryParseFile(const aFileName: string): Boolean;
+var
+  Node: TJsonNode;
+begin
+  Result := False;
+  if not TryParseFile(aFileName, Node) then exit;
+  try
+    MoveNode(Node, Self);
     Result := True;
   finally
     Node.Free;
@@ -6043,15 +6045,6 @@ begin
   Result := True;
 end;
 
-class procedure TJsonPatch.MoveNode(aSrc, aDst: TJsonNode);
-begin
-  aDst.Clear;
-  aDst.FValue := aSrc.FValue;
-  aDst.FKind := aSrc.FKind;
-  aSrc.FKind := jvkNull;
-  aSrc.FValue.Int := 0;
-end;
-
 class function TJsonPatch.FindCopyValue(aNode: TJsonNode; const aPath: TStringArray; out aValue: TJsonNode): Boolean;
 var
   Node: TJsonNode;
@@ -6346,7 +6339,7 @@ begin
         exit(prMalformPatch);
       end;
     end;
-  MoveNode(CopyNode, aNode);
+  TJsonNode.MoveNode(CopyNode, aNode);
   Result := prOk;
 end;
 
@@ -6944,7 +6937,7 @@ begin
           exit(prMalformPatch);
         end;
       end;
-    MoveNode(CopyNode, aTarget);
+    TJsonNode.MoveNode(CopyNode, aTarget);
     Result := prOk;
   finally
     CopyNode.Free;
