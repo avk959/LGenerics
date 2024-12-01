@@ -4027,7 +4027,7 @@ var
   I: SizeInt;
 begin
   aNodeList := nil;
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   aNodeList := FPath.ApplyWithPath(Root.Instance);
   for I := 0 to System.High(aNodeList) do
     aNodeList[I].Value := aNodeList[I].Value.Clone;
@@ -4039,7 +4039,7 @@ var
   Root: specialize TGAutoRef<TJsonNode>;
 begin
   aNodeList := '';
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   aNodeList := FPath.ApplyWithPath(Root.Instance).AsJson;
   Result := True;
 end;
@@ -4055,7 +4055,7 @@ var
   I: SizeInt;
 begin
   aNodeArray := nil;
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   aNodeArray := FPath.Apply(Root.Instance);
   for I := 0 to System.High(aNodeArray) do
     aNodeArray[I] := aNodeArray[I].Clone;
@@ -4067,7 +4067,7 @@ var
   Root: specialize TGAutoRef<TJsonNode>;
 begin
   aNodeArray := '';
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   aNodeArray := FPath.Apply(Root.Instance).AsJson;
   Result := True;
 end;
@@ -4081,7 +4081,7 @@ function TJpMatcher.MatchFirst(const aRoot: string; out aNode: TJpNode): Boolean
 var
   Root: specialize TGAutoRef<TJsonNode>;
 begin
-  if not Root.Instance.Parse(aRoot) then
+  if not Root.Instance.TryParse(aRoot) then
     begin
       aNode.Path := '';
       aNode.Value := nil;
@@ -4098,7 +4098,7 @@ var
   Root: specialize TGAutoRef<TJsonNode>;
 begin
   aNode := '';
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   aNode := FPath.GetFirstWithPath(Root.Instance).AsJson;
   Result := True;
 end;
@@ -4114,7 +4114,7 @@ var
   Node: TJsonNode;
 begin
   aValue := nil;
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   Node := FPath.GetFirst(Root.Instance);
   if Node <> nil then
     aValue := Node.Clone;
@@ -4127,7 +4127,7 @@ var
   Node: TJsonNode;
 begin
   aValue := '';
-  if not Root.Instance.Parse(aRoot) then exit(False);
+  if not Root.Instance.TryParse(aRoot) then exit(False);
   Node := FPath.GetFirst(Root.Instance);
   if Node <> nil then
     aValue := Node.AsJson;
