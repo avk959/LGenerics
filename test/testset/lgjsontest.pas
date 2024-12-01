@@ -783,7 +783,7 @@ begin
     begin
       Stream.Instance.LoadFromFile(CurrFile);
       Stream.Instance.Position := 0;
-      Result := Node.Instance.Parse(Stream.Instance.DataString);
+      Result := Node.Instance.TryParse(Stream.Instance.DataString);
       fn := ExtractFileName(CurrFile);
       c := fn[1];
       Inc(Total);
@@ -826,7 +826,7 @@ procedure TTestJson.Parse;
 var
   o: specialize TGAutoRef<TJsonNode>;
 begin
-  AssertTrue(o.Instance.Parse(TestJson));
+  AssertTrue(o.Instance.TryParse(TestJson));
   AssertTrue(o.Instance.AsJson = TestJson);
   AssertTrue(o.Instance.IsArray);
   AssertTrue(o.Instance.Count = 2);
@@ -949,7 +949,7 @@ var
   o: specialize TGAutoRef<TJsonNode>;
   Node: TJsonNode;
 begin
-  AssertTrue(o.Instance.Parse(PathJson));
+  AssertTrue(o.Instance.TryParse(PathJson));
   AssertTrue(o.Instance.FindPath(TJsonPtr.From(''), Node));
   AssertTrue(Node = o.Instance);
   AssertTrue(o.Instance.FindPath(TJsonPtr.From('/foo'), Node));
@@ -1100,8 +1100,8 @@ begin
   AssertTrue(n2.EqualTo(n1));
   AssertTrue(o1.Instance.EqualTo(o1.Instance));
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
-  AssertTrue(o1.Instance.Parse(TestJson));
-  AssertTrue(o2.Instance.Parse(TestJson));
+  AssertTrue(o1.Instance.TryParse(TestJson));
+  AssertTrue(o2.Instance.TryParse(TestJson));
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
   User := o2.Instance.Items[1];
   User['spouse'].Value := 'Kate';
@@ -1114,7 +1114,7 @@ procedure TTestJson.Clone;
 var
   o1, o2: specialize TGAutoRef<TJsonNode>;
 begin
-  AssertTrue(o1.Instance.Parse(TestJson));
+  AssertTrue(o1.Instance.TryParse(TestJson));
   {%H-}o2.Instance := o1.Instance.Clone;
   AssertTrue(o1.Instance <> o2.Instance);
   AssertTrue(o1.Instance.EqualTo(o2.Instance));
@@ -1125,9 +1125,9 @@ var
   o1, o2: specialize TGAutoRef<TJsonNode>;
   Stream: specialize TGAutoRef<TStringStream>;
 begin
-  o1.Instance.Parse(TestJson);
+  o1.Instance.TryParse(TestJson);
   AssertTrue(o1.Instance.SaveToStream(Stream.Instance) = Length(TestJson));
-  AssertTrue(o2.Instance.Parse(Stream.Instance.DataString));
+  AssertTrue(o2.Instance.TryParse(Stream.Instance.DataString));
   AssertTrue(o2.Instance.EqualTo(o1.Instance));
 end;
 
