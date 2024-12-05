@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   128-bit integers implementation.                                        *
 *                                                                           *
-*   Copyright(c) 2019-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -25,7 +25,7 @@ unit lgInt128;
 
 interface
 uses
-  SysUtils, Math, SysConst, lgUtils;
+  SysUtils, Math, lgUtils;
 
 {$IFDEF ENDIAN_BIG}
   {$FATAL Big Endian is not supported }
@@ -38,43 +38,37 @@ uses
 {$ENDIF} {.$Q+}{.$R+}
 
 type
+  TValueSign = Math.TValueSign;
 
   { TUInt128 }
   TUInt128 = record
   private
+  type
+    TLimb = {$IFDEF USE_LIMB64}QWord{$ELSE}DWord{$ENDIF};
   const
   {$IFDEF USE_LIMB64}
-  type
-    TLimb                = QWord;
+    LIMB_SIZE_LOG      = 6;
+    STR_CONV_BASE      = TLimb(10000000000000000000);
+    STR_CONV_BASE_LOG  = 19;
   {$ELSE USE_LIMB64}
-  type
-    TLimb                = DWord;
+    LIMB_SIZE_LOG      = 5;
+    STR_CONV_BASE      = TLimb(1000000000);
+    STR_CONV_BASE_LOG  = 9;
   {$ENDIF USE_LIMB64}
-  const
-  {$IFDEF USE_LIMB64}
-    LIMB_SIZE_LOG        = 6;
-    STR_CONV_BASE: TLimb = TLimb(10000000000000000000);
-    STR_CONV_BASE_LOG    = 19;
-    LIMB_PER_VALUE       = 2;
-  {$ELSE USE_LIMB64}
-    LIMB_SIZE_LOG        = 5;
-    STR_CONV_BASE: TLimb = TLimb(1000000000);
-    STR_CONV_BASE_LOG    = 9;
-    LIMB_PER_VALUE       = 4;
-  {$ENDIF USE_LIMB64}
-    MAX_LIMB             = High(TLimb);
-    BIT_PER_LIMB         = BitSizeOf(TLimb);
-    LIMB_BITSIZE_MASK    = BIT_PER_LIMB - 1;
-    DWORD_PER_VALUE      = 4;
-    BYTE_PER_VALUE       = 16;
-    BIT_PER_VALUE        = 128;
-    VALUE_BITSIZE_MASK   = Pred(BIT_PER_VALUE);
+    BIT_PER_VALUE      = 128;
+    VALUE_BITSIZE_MASK = Pred(BIT_PER_VALUE);
+    BIT_PER_LIMB       = BitSizeOf(TLimb);
+    LIMB_BITSIZE_MASK  = BIT_PER_LIMB - 1;
+    LIMB_PER_VALUE     = BIT_PER_VALUE div BIT_PER_LIMB;
+    DWORD_PER_VALUE    = 4;
+    BYTE_PER_VALUE     = 16;
+    MAX_LIMB           = High(TLimb);
   type
-    PLimb                = ^TLimb;
-    TLimbs128            = array[0..Pred(LIMB_PER_VALUE)] of TLimb;
-    TLimbsEx             = array[0..LIMB_PER_VALUE] of TLimb;
-    TCompare             = type TValueSign;
-    TParseResult         = (prDec, prHex, prZero, prNan);
+    PLimb              = ^TLimb;
+    TLimbs128          = array[0..Pred(LIMB_PER_VALUE)] of TLimb;
+    TLimbsEx           = array[0..LIMB_PER_VALUE] of TLimb;
+    TCompare           = type TValueSign;
+    TParseResult       = (prDec, prHex, prZero, prNan);
   var
     FLimbs: TLimbs128;
     function  GetBit(aIndex: Integer): Boolean; inline;
@@ -161,7 +155,7 @@ type
     class operator  div(const aValue: TUInt128; aD: DWord): TUInt128; inline;
     class operator  mod(const aValue: TUInt128; aD: DWord): DWord; inline;
 
-    class function  MinValue: TUInt128; static;
+     class function  MinValue: TUInt128; static;
     class function  MaxValue: TUInt128; static;
     class procedure DivRem(const aValue, aD: TUInt128; out aQ, aR: TUInt128); static;
     class function  DivRem(const aValue: TUInt128; aD: DWord; out aQ: TUInt128): DWord; static; inline;
@@ -175,6 +169,7 @@ type
     class function  Compare(const L, R: TUInt128): SizeInt; static; inline;
     class function  Equal(const L, R: TUInt128): Boolean; static; inline;
     class function  HashCode(const aValue: TUInt128): SizeInt; static; inline;
+
     function  Lo: QWord; inline;
     function  Hi: QWord; inline;
     function  IsZero: Boolean;
@@ -205,9 +200,12 @@ type
     TLimbs128 = TUInt128.TLimbs128;
     PLimb     = TUInt128.PLimb;
     TCompare  = TUInt128.TCompare;
+
   const
-    SIGN_FLAG: TLimb = TLimb({$IFDEF USE_LIMB64}$8000000000000000{$ELSE}$80000000{$ENDIF});
-    SIGN_MASK: TLimb = TLimb({$IFDEF USE_LIMB64}$7fffffffffffffff{$ELSE}$7fffffff{$ENDIF});
+    LIMB_PER_VALUE = TUInt128.LIMB_PER_VALUE;
+    HIGH_LIMB      = Pred(LIMB_PER_VALUE);
+    SIGN_FLAG      = TLimb({$IFDEF USE_LIMB64}$8000000000000000{$ELSE}$80000000{$ENDIF});
+    SIGN_MASK      = TLimb({$IFDEF USE_LIMB64}$7fffffffffffffff{$ELSE}$7fffffff{$ENDIF});
   var
     FLimbs: TLimbs128;
     function  GetBit(aIndex: Integer): Boolean;
@@ -217,6 +215,8 @@ type
     function  GetDWord(aIndex: Integer): DWord;
     procedure SetDWord(aIndex: Integer; aValue: DWord);
     function  GetNormLimbs: TLimbs128; inline;
+    function  GetIsZero: Boolean; inline;
+    function  GetSign: TValueSign; inline;
     class function  Cmp(const L, R: TInt128): TCompare; static;
     class function  Cmp(const L: TInt128; R: Integer): TCompare; static;
     class procedure DoAdd(a, b, s: PLimb); static;
@@ -291,12 +291,12 @@ type
     class function  HashCode(const aValue: TInt128): SizeInt; static; inline;
     function  Lo: QWord;
     function  Hi: QWord;
-    function  IsZero: Boolean;
-    procedure SetZero;
+    function  IsZero: Boolean; inline;
+    procedure SetZero; inline;
     function  IsOdd: Boolean; inline;
+    function  Sign: TValueSign; inline;
     function  IsNegative: Boolean; inline;
     function  IsPositive: Boolean; inline;
-    function  Sign: TValueSign;
     procedure Negate; inline;
   { note: the BitLength of the negative value will always be 128 }
     function  BitLength: Integer; inline;
@@ -312,9 +312,9 @@ type
   end;
 
 implementation
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}{$MACRO ON}{$WARN 5023 OFF : Unit "$1" not used in $2}
 uses
-  LGHash;
-{$B-}{$COPERATORS ON}{$POINTERMATH ON}{$MACRO ON}
+  SysConst, LgHash, LgStrConst;
 {$IFDEF USE_LIMB64}
   {$DEFINE BsrLimb := BsrQWord}
   {$DEFINE BsfLimb := BsfQWord}
@@ -334,7 +334,7 @@ begin
   if SizeUInt(aIndex) < SizeUInt(BIT_PER_VALUE) then
     Result := FLimbs[aIndex shr LIMB_SIZE_LOG] and (TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK)) <> 0
   else
-    raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
+    raise ERangeError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['Bit', aIndex]);
 {$ELSE R+}
   Result := FLimbs[aIndex shr LIMB_SIZE_LOG] and (TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK)) <> 0;
 {$ENDIF R+}
@@ -351,7 +351,7 @@ begin
       FLimbs[aIndex shr LIMB_SIZE_LOG] := FLimbs[aIndex shr LIMB_SIZE_LOG] and
                                           not(TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK))
   else
-    raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
+    raise ERangeError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['Bit', aIndex]);
 {$ELSE R+}
   if aValue then
     FLimbs[aIndex shr LIMB_SIZE_LOG] := FLimbs[aIndex shr LIMB_SIZE_LOG] or
@@ -368,7 +368,7 @@ begin
   if SizeUInt(aIndex) < SizeUInt(BYTE_PER_VALUE) then
     Result := PByte(@FLimbs)[aIndex]
   else
-    raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
+    raise ERangeError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['Byte', aIndex]);
 {$ELSE R+}
   Result := PByte(@FLimbs)[aIndex];
 {$ENDIF R+}
@@ -380,7 +380,7 @@ begin
   if SizeUInt(aIndex) < SizeUInt(BYTE_PER_VALUE) then
     PByte(@FLimbs)[aIndex] := aValue
   else
-    raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
+    raise ERangeError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['Byte', aIndex]);
 {$ELSE R+}
   PByte(@FLimbs)[aIndex] := aValue;
 {$ENDIF R+}
@@ -392,7 +392,7 @@ begin
   if SizeUInt(aIndex) < SizeUInt(DWORD_PER_VALUE) then
     Result := PDWord(@FLimbs)[aIndex]
   else
-    raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
+    raise ERangeError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['DWord', aIndex]);
 {$ELSE R+}
   Result := PDWord(@FLimbs)[aIndex];
 {$ENDIF R+}
@@ -404,7 +404,7 @@ begin
   if SizeUInt(aIndex) < SizeUInt(DWORD_PER_VALUE) then
     PDWord(@FLimbs)[aIndex] := aValue
   else
-    raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
+    raise ERangeError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['DWord', aIndex]);
 {$ELSE R+}
   PDWord(@FLimbs)[aIndex] := aValue;
 {$ENDIF R+}
@@ -413,33 +413,20 @@ end;
 class function TUInt128.Cmp(const a, b: TLimbs128): TCompare;
 begin
 {$IFDEF USE_LIMB64}
-  if a[1] > b[1] then
-    exit(1);
-  if a[1] < b[1] then
-    exit(-1);
-  if a[0] > b[0] then
-    exit(1);
-  if a[0] < b[0] then
-    exit(-1);
+  Result := TCompare(a[1] > b[1]) - TCompare(a[1] < b[1]);
+  if Result = 0 then
+    Result := TCompare(a[0] > b[0]) - TCompare(a[0] < b[0]);
 {$ELSE USE_LIMB64}
-  if a[3] > b[3] then
-    exit(1);
-  if a[3] < b[3] then
-    exit(-1);
-  if a[2] > b[2] then
-    exit(1);
-  if a[2] < b[2] then
-    exit(-1);
-  if a[1] > b[1] then
-    exit(1);
-  if a[1] < b[1] then
-    exit(-1);
-  if a[0] > b[0] then
-    exit(1);
-  if a[0] < b[0] then
-    exit(-1);
+  Result := TCompare(a[3] > b[3]) - TCompare(a[3] < b[3]);
+  if Result = 0 then begin
+    Result := TCompare(a[2] > b[2]) - TCompare(a[2] < b[2]);
+    if Result = 0 then begin
+      Result := TCompare(a[1] > b[1]) - TCompare(a[1] < b[1]);
+      if Result = 0 then
+        Result := TCompare(a[0] > b[0]) - TCompare(a[0] < b[0]);
+    end;
+  end;
 {$ENDIF USE_LIMB64}
-  Result := 0;
 end;
 
 class function TUInt128.MsBitIndex(const aValue: TLimbs128): Integer;
@@ -551,6 +538,7 @@ end;
 var
   v, brw: TLimb;
 begin
+{$PUSH}{$Q-}{$R-}
   brw := TLimb(a[0] <> 0);
   n[0] := -a[0];
 
@@ -563,6 +551,7 @@ begin
   brw := TLimb(n[1] > v) or TLimb(v <> 0);
 
   n[3] := -a[3] - brw;
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -621,6 +610,7 @@ end;
 var
   v, c: TLimb;
 begin
+{$PUSH}{$Q-}{$R-}
   s[0] := a[0] + b[0];
   c := TLimb(s[0] < a[0]);
 
@@ -640,6 +630,7 @@ begin
   s[3] := v + b[3];
 
   Result := c + TLimb(s[3] < v);
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -688,6 +679,7 @@ end;
   {$ENDIF CPUX64}
 {$ELSE CPU_INTEL}
 begin
+{$PUSH}{$Q-}{$R-}
   s[0] := b + a[0];
   b := TLimb(s[0] < b);
 
@@ -699,6 +691,7 @@ begin
 
   s[3] := b + a[3];
   Result := TLimb(s[3] < b);
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -757,6 +750,7 @@ end;
 var
   v, brw: TLimb;
 begin
+{$PUSH}{$Q-}{$R-}
   v := a[0] - b[0];
   brw := TLimb(v > a[0]);
   d[0] := v;
@@ -775,6 +769,7 @@ begin
   brw := TLimb(v > a[3]);
   d[3] := v - b[3];
   Result := brw + TLimb(d[3] > v);
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -833,6 +828,7 @@ end;
 var
   brw: TLimb;
 begin
+{$PUSH}{$Q-}{$R-}
   brw := a[0];
   d[0] := brw - b;
   brw := TLimb(d[0] > brw);
@@ -848,6 +844,7 @@ begin
   b := a[3];
   d[3] := b - brw;
   Result := TLimb(d[3] > b);
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -1249,6 +1246,7 @@ var
   Prod: QWord;
   Digs: array[0..1] of TLimb absolute Prod;
 begin
+{$PUSH}{$Q-}{$R-}
   Prod := QWord(a[0]) * QWord(b);
   p[0] := Digs[0];
 
@@ -1261,6 +1259,7 @@ begin
   Prod := QWord(a[3]) * QWord(b) + QWord(Digs[1]);
   p[3] := Digs[0];
   Result := Digs[1];
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -1316,16 +1315,10 @@ begin
         r[1] := a[1] shl BitDist or a[0] shr (BIT_PER_LIMB - BitDist);
       end;
     1:
-      if BitDist <> 0 then
-        begin
-          r[0] := 0;
-          r[1] := a[0] shl BitDist;
-        end
-      else
-        begin
-          r[0] := 0;
-          r[1] := a[0];
-        end;
+      begin
+        r[0] := 0;
+        r[1] := a[0] shl BitDist;
+      end;
   end;
 {$ELSE USE_LIMB64}
   case aDist of
@@ -1367,20 +1360,12 @@ begin
           r[3] := a[1];
         end;
     3:
-      if BitDist <> 0 then
-        begin
-          r[0] := 0;
-          r[1] := 0;
-          r[2] := 0;
-          r[3] := a[0] shl BitDist;
-        end
-      else
-        begin
-          r[0] := 0;
-          r[1] := 0;
-          r[2] := 0;
-          r[3] := a[0];
-        end
+      begin
+        r[0] := 0;
+        r[1] := 0;
+        r[2] := 0;
+        r[3] := a[0] shl BitDist;
+      end;
   end;
 {$ENDIF USE_LIMB64}
 end;
@@ -1399,16 +1384,10 @@ begin
         r[0] := a[0] shr BitDist or a[1] shl (BIT_PER_LIMB - BitDist);
       end;
     1:
-      if BitDist <> 0 then
-        begin
-          r[1] := 0;
-          r[0] := a[1] shr BitDist;
-        end
-      else
-        begin
-          r[0] := a[1];
-          r[1] := 0;
-        end;
+      begin
+        r[1] := 0;
+        r[0] := a[1] shr BitDist;
+      end;
   end;
 {$ELSE USE_LIMB64}
   case aDist of
@@ -1450,20 +1429,12 @@ begin
           r[3] := 0;
         end;
     3:
-      if BitDist <> 0 then
-        begin
-          r[3] := 0;
-          r[2] := 0;
-          r[1] := 0;
-          r[0] := a[3] shr BitDist;
-        end
-      else
-        begin
-          r[0] := a[3];
-          r[1] := 0;
-          r[2] := 0;
-          r[3] := 0;
-        end;
+      begin
+        r[3] := 0;
+        r[2] := 0;
+        r[1] := 0;
+        r[0] := a[3] shr BitDist;
+      end;
   end;
 {$ENDIF USE_LIMB64}
 end;
@@ -1774,6 +1745,7 @@ var
   dMsLimb, Qhat: DWord;
   I, J, dCount: Integer;
 begin
+{$PUSH}{$Q-}{$R-}
   dCount := Integer(q[0]);
   J := LIMB_PER_VALUE;
   if r[J] = 0 then
@@ -1818,6 +1790,7 @@ begin
         end;
       q[I] := Qhat;
     end;
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -1940,6 +1913,7 @@ var
   vA, vQ: QWord;
   aDigs: array[0..1] of TLimb absolute vA;
 begin
+{$PUSH}{$Q-}{$R-}
   aDigs[0] := a[3];
   aDigs[1] := 0;
   vQ := vA div d;
@@ -1965,6 +1939,7 @@ begin
   vA -= vQ * QWord(d);
 
   Result := aDigs[0];
+{$POP}
 end;
 {$ENDIF CPU_INTEL}
 
@@ -1978,7 +1953,7 @@ begin
   while aValue <> 0 do
     begin
       q := aValue div 10;
-      aStr[Result] := Tbl10[aValue {%H-}- q*10];
+      aStr[Result] := Tbl10[aValue - q*10];
       aValue := q;
       Inc(Result);
     end;
@@ -1996,14 +1971,10 @@ var
 const
   Decimals: array['0'..'9'] of TLimb = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  if aCount > 0 then
-    begin
-      Result := Decimals[aValue[0]];
-      for I := 1 to aCount - 1 do
-        Result := Result * 10 + Decimals[aValue[I]];
-    end
-  else
-    Result := 0;
+  if aCount < 1 then exit(0);
+  Result := Decimals[aValue[0]];
+  for I := 1 to aCount - 1 do
+    Result := Result * 10 + Decimals[aValue[I]];
 end;
 
 class function TUInt128.ParseStr(const aValue: string; out aResult: shortstring): TParseResult;
@@ -2242,8 +2213,7 @@ begin
   if aShowRadix then
     Result[J] := '$';
 end;
-
-{$POP}{Q-, R-}
+{$POP}
 
 class operator TUInt128.=(const L, R: TUInt128): Boolean;
 begin
@@ -2761,7 +2731,7 @@ begin
   Mask := Pred(DWord(1) shl Succ(BsrDword(aRange.DWords[MsDWordIdx])));
   repeat
     Result.DWords[MsDWordIdx] := BJNextRandom and Mask;
-  until Result < aRange;
+  until Result < aRange; //cmp
 end;
 
 class function TUInt128.Parse(const s: string): TUInt128;
@@ -2848,12 +2818,10 @@ end;
 
 function TUInt128.PopCount: Integer;
 begin
-{$IFDEF USE_LIMB64}
-  Result := Integer(PopCnt(FLimbs[0])) + Integer(PopCnt(FLimbs[1]));
-{$ELSE USE_LIMB64}
-  Result := Integer(PopCnt(FLimbs[0])) + Integer(PopCnt(FLimbs[1])) +
-            Integer(PopCnt(FLimbs[2])) + Integer(PopCnt(FLimbs[3]));
-{$ENDIF USE_LIMB64}
+  Result := Integer(PopCnt(FLimbs[0])) + Integer(PopCnt(FLimbs[1]))
+{$IFNDEF USE_LIMB64}
+    + Integer(PopCnt(FLimbs[2])) + Integer(PopCnt(FLimbs[3]))
+{$ENDIF}
 end;
 
 function TUInt128.BitLength: Integer;
@@ -2898,12 +2866,6 @@ end;
 
 { TInt128 }
 
-{$IFDEF USE_LIMB64}
-  {$DEFINE HiLimbMacro := FLimbs[1]}
-{$ELSE USE_LIMB64}
-  {$DEFINE HiLimbMacro := FLimbs[3]}
-{$ENDIF USE_LIMB64}
-
 function TInt128.GetBit(aIndex: Integer): Boolean;
 begin
   Result := TUInt128(FLimbs).GetBit(aIndex);
@@ -2946,32 +2908,41 @@ begin
 {$ENDIF USE_LIMB64}
 end;
 
+function TInt128.GetIsZero: Boolean;
+begin
+{$IFDEF USE_LIMB64}
+  Result := FLimbs[0] or (FLimbs[1] and SIGN_MASK) = 0;
+{$ELSE USE_LIMB64}
+  Result := FLimbs[0] or FLimbs[1] or FLimbs[2] or (FLimbs[3] and SIGN_MASK) = 0;
+{$ENDIF USE_LIMB64}
+end;
+
+function TInt128.GetSign: TValueSign;
+begin
+  if GetIsZero then exit(0);
+  Result := Ord(FLimbs[HIGH_LIMB] and SIGN_FLAG = 0) - Ord(FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0);
+end;
+
 class function TInt128.Cmp(const L, R: TInt128): TCompare;
 var
   LSign, RSign: TValueSign;
 begin
-  LSign := L.Sign;
-  RSign := R.Sign;
-  if LSign <> RSign then
-    begin
-      if LSign > RSign then
-        exit(1);
-      exit(-1);
-    end;
-  if LSign > 0 then
-    exit(TUInt128.Cmp(L.FLimbs, R.FLimbs));
-  if LSign < 0 then
-    exit(TUInt128.Cmp(R.FLimbs, L.FLimbs));
+  LSign := L.GetSign;
+  RSign := R.GetSign;
+  if LSign <> RSign then exit(Ord(LSign > RSign) - Ord(LSign < RSign));
   Result := 0;
+  case LSign of
+    -1: Result := TUInt128.Cmp(R.FLimbs, L.FLimbs);
+     1: Result := TUInt128.Cmp(L.FLimbs, R.FLimbs);
+  end;
 end;
 
 class function TInt128.Cmp(const L: TInt128; R: Integer): TCompare;
 var
   LNeg, LIsSingleLimb: Boolean;
 begin
-  if R = 0 then
-    exit(L.Sign);
-  LNeg := L.HiLimbMacro and SIGN_FLAG <> 0;
+  if R = 0 then exit(L.GetSign);
+  LNeg := L.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
   if LNeg xor (R < 0) then
     begin
       if LNeg then
@@ -3418,33 +3389,33 @@ begin
   d[3] := -d[3] - b;
   Result := 1;
 end;
-{$ENDIF CPU_INTEL}{$POP}{Q-, R-}
+{$ENDIF CPU_INTEL}{$POP}
 
 class procedure TInt128.Add(const a, b: TInt128; out s: TInt128);
 var
   ANeg, BNeg: Boolean;
 begin
-  ANeg := a.HiLimbMacro and SIGN_FLAG <> 0;
-  BNeg := b.HiLimbMacro and SIGN_FLAG <> 0;
+  ANeg := a.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  BNeg := b.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
   if ANeg xor BNeg then
     begin
       if ANeg xor (DoSub(@a, @b, @s) <> 0) then
-        s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+        s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     end
   else
     begin
       DoAdd(@a, @b, @s);
 {$IFOPT Q+}
-      if s.HiLimbMacro and SIGN_FLAG = 0 then
+      if s.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0 then
         begin
           if ANeg then
-            s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+            s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
         raise EIntOverflow.Create(SIntOverflow);
 {$ELSE Q+}
       if ANeg then
-        s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+        s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 {$ENDIF Q+}
     end;
 end;
@@ -3458,18 +3429,18 @@ begin
       s := a;
       exit;
     end;
-  ANeg := a.HiLimbMacro and SIGN_FLAG <> 0;
+  ANeg := a.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
   if ANeg xor (b < 0) then
     begin
       if ANeg then
         begin
           if DoSubShort(@a, b, @s) = 0 then
-            s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+            s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
         begin
           if DoSubShort(@a, -TLimb(b), @s) <> 0 then
-            s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+            s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end;
     end
   else
@@ -3479,16 +3450,16 @@ begin
       else
         DoAddShort(@a, b, @s);
 {$IFOPT Q+}
-      if s.HiLimbMacro and SIGN_FLAG = 0 then
+      if s.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0 then
         begin
           if ANeg then
-            s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+            s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
         raise EIntOverflow.Create(SIntOverflow);
 {$ELSE Q+}
       if ANeg then
-        s.HiLimbMacro := s.HiLimbMacro or SIGN_FLAG;
+        s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 {$ENDIF Q+}
     end;
 end;
@@ -3497,27 +3468,27 @@ class procedure TInt128.Sub(const a, b: TInt128; out d: TInt128);
 var
   ANeg, BNeg: Boolean;
 begin
-  ANeg := a.HiLimbMacro and SIGN_FLAG <> 0;
-  BNeg := b.HiLimbMacro and SIGN_FLAG <> 0;
+  ANeg := a.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  BNeg := b.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
   if ANeg xor BNeg then
     begin
       DoAdd(@a, @b, @d);
 {$IFOPT Q+}
-      if d.HiLimbMacro and SIGN_FLAG = 0 then
+      if d.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0 then
         begin
           if ANeg then
-            d.HiLimbMacro := d.HiLimbMacro or SIGN_FLAG;
+            d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
         raise EIntOverflow.Create(SIntOverflow);
 {$ELSE Q+}
       if ANeg then
-        d.HiLimbMacro := d.HiLimbMacro or SIGN_FLAG;
+        d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 {$ENDIF Q+}
     end
   else
     if ANeg xor (DoSub(@a, @b, @d) <> 0) then
-      d.HiLimbMacro := d.HiLimbMacro or SIGN_FLAG;
+      d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 end;
 
 class procedure TInt128.SubShort(const a: TInt128; b: Integer; out d: TInt128);
@@ -3529,7 +3500,7 @@ begin
       d := a;
       exit;
     end;
-  ANeg := a.HiLimbMacro and SIGN_FLAG <> 0;
+  ANeg := a.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
   if ANeg xor (b < 0) then
     begin
       if ANeg then
@@ -3537,16 +3508,16 @@ begin
       else
         DoAddShort(@a, -TLimb(b), @d);
 {$IFOPT Q+}
-      if d.HiLimbMacro and SIGN_FLAG = 0 then
+      if d.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0 then
         begin
           if ANeg then
-            d.HiLimbMacro := d.HiLimbMacro or SIGN_FLAG;
+            d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
         raise EIntOverflow.Create(SIntOverflow);
 {$ELSE Q+}
       if ANeg then
-        d.HiLimbMacro := d.HiLimbMacro or SIGN_FLAG;
+        d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 {$ENDIF Q+}
     end
   else
@@ -3554,12 +3525,12 @@ begin
       if ANeg then
         begin
           if DoSubShort(@a, -TLimb(b), @d) = 0 then
-            d.HiLimbMacro := d.HiLimbMacro xor SIGN_FLAG;
+            d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] xor SIGN_FLAG;
         end
       else
         begin
           if DoSubShort(@a, b, @d) <> 0 then
-            d.HiLimbMacro := d.HiLimbMacro xor SIGN_FLAG;
+            d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] xor SIGN_FLAG;
         end;
     end;
 end;
@@ -3568,24 +3539,24 @@ class procedure TInt128.DoMul(a, b, p: PInt128);
 var
   ANeg, BNeg: Boolean;
 begin
-  ANeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
-  BNeg := b^.HiLimbMacro and SIGN_FLAG <> 0;
-  b^.HiLimbMacro := b^.HiLimbMacro and SIGN_MASK;
+  ANeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
+  BNeg := b^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  b^.FLimbs[HIGH_LIMB] := b^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   try
   {$IFOPT Q+}
-    if (TUInt128.DoMul(PLimb(a), PLimb(b), PLimb(p)) <> 0) or (p^.HiLimbMacro and SIGN_FLAG <> 0) then
+    if (TUInt128.DoMul(PLimb(a), PLimb(b), PLimb(p)) <> 0) or (p^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
       raise EIntOverflow.Create(SIntOverflow);
   {$ELSE Q+}
     TUInt128.DoMul(PLimb(a), PLimb(b), PLimb(p));
   {$ENDIF Q+}
     if ANeg xor BNeg then
-      p^.HiLimbMacro := p^.HiLimbMacro or SIGN_FLAG;
+      p^.FLimbs[HIGH_LIMB] := p^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   finally
     if ANeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     if BNeg then
-      b^.HiLimbMacro := b^.HiLimbMacro or SIGN_FLAG;
+      b^.FLimbs[HIGH_LIMB] := b^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3598,18 +3569,18 @@ begin
       p^ := Default(TInt128);
       exit;
     end;
-  ANeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
+  ANeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   try
   {$IFOPT Q+}
     if b > 0 then
       begin
-        if (TUInt128.DoMulShort(PLimb(a), TLimb(b), PLimb(p)) <> 0) or (p^.HiLimbMacro and SIGN_FLAG <> 0) then
-         raise EIntOverflow.Create(SIntOverflow);
+        if (TUInt128.DoMulShort(PLimb(a), TLimb(b), PLimb(p)) <> 0) or (p^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
+          raise EIntOverflow.Create(SIntOverflow);
       end
     else
-      if (TUInt128.DoMulShort(PLimb(a), -TLimb(b), PLimb(p)) <> 0) or (p^.HiLimbMacro and SIGN_FLAG <> 0) then
-       raise EIntOverflow.Create(SIntOverflow);
+      if (TUInt128.DoMulShort(PLimb(a), -TLimb(b), PLimb(p)) <> 0) or (p^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
+        raise EIntOverflow.Create(SIntOverflow);
   {$ELSE Q+}
     if b > 0 then
       TUInt128.DoMulShort(PLimb(a), TLimb(b), PLimb(p))
@@ -3617,10 +3588,10 @@ begin
       TUInt128.DoMulShort(PLimb(a), -TLimb(b), PLimb(p));
   {$ENDIF Q+}
     if ANeg xor (b < 0) then
-      p^.HiLimbMacro := p^.HiLimbMacro or SIGN_FLAG;
+      p^.FLimbs[HIGH_LIMB] := p^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   finally
     if ANeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3628,21 +3599,21 @@ class procedure TInt128.Divide(a, d, q, r: PInt128);
 var
   aNeg, dNeg: Boolean;
 begin
-  aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  dNeg := d^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
-  d^.HiLimbMacro := d^.HiLimbMacro and SIGN_MASK;
+  aNeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  dNeg := d^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
+  d^.FLimbs[HIGH_LIMB] := d^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   try
     TUInt128.DivRem(PUInt128(a)^, PUInt128(d)^, PUInt128(q)^, PUInt128(r)^);
     if aNeg xor dNeg then
-      q^.HiLimbMacro := q^.HiLimbMacro or SIGN_FLAG;
+      q^.FLimbs[HIGH_LIMB] := q^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     if aNeg then
-      r^.HiLimbMacro := r^.HiLimbMacro or SIGN_FLAG;
+      r^.FLimbs[HIGH_LIMB] := r^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   finally
     if aNeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     if dNeg then
-      d^.HiLimbMacro := d^.HiLimbMacro or SIGN_FLAG;
+      d^.FLimbs[HIGH_LIMB] := d^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3650,19 +3621,19 @@ class procedure TInt128.DivQ(a, d, q: PInt128);
 var
   aNeg, dNeg: Boolean;
 begin
-  aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  dNeg := d^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
-  d^.HiLimbMacro := d^.HiLimbMacro and SIGN_MASK;
+  aNeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  dNeg := d^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
+  d^.FLimbs[HIGH_LIMB] := d^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   try
     PUInt128(q)^ := PUInt128(a)^ div PUInt128(d)^;
     if aNeg xor dNeg then
-      q^.HiLimbMacro := q^.HiLimbMacro or SIGN_FLAG;
+      q^.FLimbs[HIGH_LIMB] := q^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   finally
     if aNeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     if dNeg then
-      d^.HiLimbMacro := d^.HiLimbMacro or SIGN_FLAG;
+      d^.FLimbs[HIGH_LIMB] := d^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3670,19 +3641,19 @@ class procedure TInt128.DivR(a, d, r: PInt128);
 var
   aNeg, dNeg: Boolean;
 begin
-  aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  dNeg := d^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
-  d^.HiLimbMacro := d^.HiLimbMacro and SIGN_MASK;
+  aNeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  dNeg := d^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
+  d^.FLimbs[HIGH_LIMB] := d^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   try
     PUInt128(r)^ := PUInt128(a)^ mod PUInt128(d)^;
     if aNeg then
-      r^.HiLimbMacro := r^.HiLimbMacro or SIGN_FLAG;
+      r^.FLimbs[HIGH_LIMB] := r^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   finally
     if aNeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     if dNeg then
-      d^.HiLimbMacro := d^.HiLimbMacro or SIGN_FLAG;
+      d^.FLimbs[HIGH_LIMB] := d^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3690,8 +3661,8 @@ class function TInt128.DivShort(a: PInt128; d: Integer; q: PInt128): Integer;
 var
   aNeg, dNeg: Boolean;
 begin
-  aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
+  aNeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   dNeg := d < 0;
   try
     if dNeg then
@@ -3699,12 +3670,12 @@ begin
     else
       Result := Integer(TUInt128.DivRem(PUInt128(a)^, DWord(d), PUInt128(q)^));
     if aNeg xor dNeg then
-      q^.HiLimbMacro := q^.HiLimbMacro or SIGN_FLAG;
+      q^.FLimbs[HIGH_LIMB] := q^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
     if aNeg then
       Result := -Result;
   finally
     if aNeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3712,8 +3683,8 @@ class procedure TInt128.DivShortQ(a: PInt128; d: Integer; q: PInt128);
 var
   aNeg, dNeg: Boolean;
 begin
-  aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
+  aNeg := a^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
+  a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] and SIGN_MASK;
   dNeg := d < 0;
   try
     if dNeg then
@@ -3721,10 +3692,10 @@ begin
     else
       PUInt128(q)^ := PUInt128(a)^ div DWord(d);
     if aNeg xor dNeg then
-      q^.HiLimbMacro := q^.HiLimbMacro or SIGN_FLAG;
+      q^.FLimbs[HIGH_LIMB] := q^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   finally
     if aNeg then
-      a^.HiLimbMacro := a^.HiLimbMacro or SIGN_FLAG;
+      a^.FLimbs[HIGH_LIMB] := a^.FLimbs[HIGH_LIMB] or SIGN_FLAG;
   end;
 end;
 
@@ -3734,9 +3705,9 @@ var
   aNeg: Boolean;
 begin
   tmp := TUInt128(a^);
-  aNeg := tmp.HiLimbMacro and SIGN_FLAG <> 0;
+  aNeg := tmp.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
   if aNeg then
-    tmp.HiLimbMacro := tmp.HiLimbMacro and SIGN_MASK;
+    tmp.FLimbs[HIGH_LIMB] := tmp.FLimbs[HIGH_LIMB] and SIGN_MASK;
   if d > 0 then
     Result := Integer(tmp mod DWord(d))
   else
@@ -3747,8 +3718,8 @@ end;
 
 class operator TInt128.=(const L, R: TInt128): Boolean;
 begin
-  if L.IsZero then
-    exit(R.IsZero);
+  if L.GetIsZero then
+    exit(R.GetIsZero);
 {$IFDEF USE_LIMB64}
   Result := (L.FLimbs[0] = R.FLimbs[0]) and (L.FLimbs[1] = R.FLimbs[1]);
 {$ELSE USE_LIMB64}
@@ -3759,8 +3730,8 @@ end;
 
 class operator TInt128.<>(const L, R: TInt128): Boolean;
 begin
-  if L.IsZero then
-    exit(not R.IsZero);
+  if L.GetIsZero then
+    exit(not R.GetIsZero);
 {$IFDEF USE_LIMB64}
   Result := (L.FLimbs[0] <> R.FLimbs[0]) or (L.FLimbs[1] <> R.FLimbs[1]);
 {$ELSE USE_LIMB64}
@@ -4078,14 +4049,14 @@ end;
 class function TInt128.Random: TInt128;
 begin
   Result := TInt128(TUInt128.Random);
-  Result.HiLimbMacro := Result.HiLimbMacro and SIGN_MASK;
+  Result.FLimbs[HIGH_LIMB] := Result.FLimbs[HIGH_LIMB] and SIGN_MASK;
 end;
 
 class function TInt128.RandomInRange(const aRange: TInt128): TInt128;
 begin
   Result := TInt128(TUInt128.RandomInRange(TUInt128(aRange.AbsValue)));
-  if aRange.HiLimbMacro and SIGN_FLAG <> 0 then
-    Result.HiLimbMacro := Result.HiLimbMacro or SIGN_FLAG;
+  if aRange.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
+    Result.FLimbs[HIGH_LIMB] := Result.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 end;
 
 class function TInt128.Parse(const s: string): TInt128;
@@ -4096,7 +4067,7 @@ end;
 
 procedure TInt128.Negate;
 begin
-  HiLimbMacro := HiLimbMacro xor SIGN_FLAG;
+  FLimbs[HIGH_LIMB] := FLimbs[HIGH_LIMB] xor SIGN_FLAG;
 end;
 
 class function TInt128.TryParse(const s: string; out aValue: TInt128): Boolean;
@@ -4110,7 +4081,7 @@ begin
     IsNeg := sCopy[1] = '-';
     if IsNeg then
       sCopy := System.Copy(sCopy, 2, System.Length(sCopy));
-    if TUInt128.TryParseStr(sCopy, aValue.FLimbs) and (aValue.HiLimbMacro and SIGN_FLAG = 0) then
+    if TUInt128.TryParseStr(sCopy, aValue.FLimbs) and (aValue.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0) then
       begin
         if IsNeg then
           aValue.Negate;
@@ -4147,11 +4118,7 @@ end;
 
 function TInt128.IsZero: Boolean;
 begin
-{$IFDEF USE_LIMB64}
-  Result := FLimbs[0] or (FLimbs[1] and SIGN_MASK) = 0;
-{$ELSE USE_LIMB64}
-  Result := FLimbs[0] or FLimbs[1] or FLimbs[2] or (FLimbs[3] and SIGN_MASK) = 0;
-{$ENDIF USE_LIMB64}
+  Result := GetIsZero;
 end;
 
 procedure TInt128.SetZero;
@@ -4164,40 +4131,19 @@ begin
   Result := Boolean(FLimbs[0] and 1);
 end;
 
+function TInt128.Sign: TValueSign;
+begin
+  Result := GetSign;
+end;
+
 function TInt128.IsNegative: Boolean;
 begin
-{$IFDEF USE_LIMB64}
-  Result := (FLimbs[0] or (FLimbs[1] and SIGN_MASK) <> 0) and (FLimbs[1] and SIGN_FLAG <> 0);
-{$ELSE USE_LIMB64}
-  Result := (FLimbs[0] or FLimbs[1] or FLimbs[2] or (FLimbs[3] and SIGN_MASK) <> 0) and
-            (FLimbs[3] and SIGN_FLAG <> 0);
-{$ENDIF USE_LIMB64}
+  Result := GetSign = -1;
 end;
 
 function TInt128.IsPositive: Boolean;
 begin
-{$IFDEF USE_LIMB64}
-  Result := (FLimbs[0] or (FLimbs[1] and SIGN_MASK) <> 0) and (FLimbs[1] and SIGN_FLAG = 0);
-{$ELSE USE_LIMB64}
-  Result := (FLimbs[0] or FLimbs[1] or FLimbs[2] or (FLimbs[3] and SIGN_MASK) <> 0) and
-            (FLimbs[3] and SIGN_FLAG = 0);
-{$ENDIF USE_LIMB64}
-end;
-
-function TInt128.Sign: TValueSign;
-begin
-{$IFDEF USE_LIMB64}
-  if FLimbs[0] or (FLimbs[1] and SIGN_MASK) = 0 then
-    exit(0);
-  if FLimbs[1] and SIGN_FLAG = 0 then
-    exit(1);
-{$ELSE USE_LIMB64}
-  if FLimbs[0] or FLimbs[1] or FLimbs[2] or (FLimbs[3] and SIGN_MASK) = 0 then
-    exit(0);
-  if FLimbs[3] and SIGN_FLAG = 0 then
-    exit(1);
-{$ENDIF USE_LIMB64}
-  Result := -1;
+  Result := GetSign = 1;
 end;
 
 function TInt128.BitLength: Integer;
@@ -4221,14 +4167,14 @@ end;
 function TInt128.ToDouble: Double;
 begin
   Result := TUInt128(AbsValue).ToDouble;
-  if HiLimbMacro and SIGN_FLAG <> 0 then
+  if FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
     Result := -Result;
 end;
 
 function TInt128.ToExtended: Extended;
 begin
   Result := TUInt128(AbsValue).ToExtended;
-  if HiLimbMacro and SIGN_FLAG <> 0 then
+  if FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
     Result := -Result;
 end;
 
@@ -4237,7 +4183,7 @@ begin
   if IsZero then
     exit('0');
   Result := TUInt128.Val2Str(AbsValue.FLimbs);
-  if Self.HiLimbMacro and SIGN_FLAG <> 0 then
+  if FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
     System.Insert('-', Result, 1);
 end;
 
