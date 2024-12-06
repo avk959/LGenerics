@@ -25,7 +25,7 @@ unit lgInt128;
 
 interface
 uses
-  SysUtils, Math, lgUtils;
+  SysUtils, Math;
 
 {$IFDEF ENDIAN_BIG}
   {$FATAL Big Endian is not supported }
@@ -61,14 +61,12 @@ type
     LIMB_BITSIZE_MASK  = BIT_PER_LIMB - 1;
     LIMB_PER_VALUE     = BIT_PER_VALUE div BIT_PER_LIMB;
     DWORD_PER_VALUE    = 4;
-    BYTE_PER_VALUE     = 16;
     MAX_LIMB           = High(TLimb);
   type
     PLimb              = ^TLimb;
     TLimbs128          = array[0..Pred(LIMB_PER_VALUE)] of TLimb;
     TLimbsEx           = array[0..LIMB_PER_VALUE] of TLimb;
     TCompare           = type TValueSign;
-    TParseResult       = (prDec, prHex, prZero, prNan);
   var
     FLimbs: TLimbs128;
     function  GetBit(aIndex: Integer): Boolean; inline;
@@ -106,10 +104,9 @@ type
     class function  DoDivShort(a: PLimb; d: TLimb; q: PLimb): TLimb; static;
     class function  Limb2Str(aValue: TLimb; aStr: PAnsiChar; aShowLz: Boolean = True): Integer; static;
     class function  Str2Limb(aValue: PAnsiChar; aCount: Integer): TLimb; static;
-    class function  ParseStr(const aValue: string; out aResult: shortstring): TParseResult; static;
-    class function  TryParseStr(const s: string; out aValue: TLimbs128): Boolean; static;
-    class function  TryDec2Val(const s: shortstring; out aValue: TLimbs128): Boolean; static;
-    class procedure Hex2Val(const s: shortstring; out aValue: TLimbs128); static;
+    class function  TryParseStr(p: PAnsiChar; aCount: SizeInt; out aValue: TLimbs128): Boolean; static;
+    class function  TryDec2Val(p: PAnsiChar; aCount: SizeInt; var aValue: TLimbs128): Boolean; static;
+    class function  TryHex2Val(p: PAnsiChar; aCount: SizeInt; var aValue: TLimbs128): Boolean; static;
     class function  Val2Str(const aValue: TLimbs128): string; static;
     class function  Val2Hex(const aValue: TLimbs128; aMinDigits: Integer; aShowRadix: Boolean): string; static;
   public
@@ -155,7 +152,7 @@ type
     class operator  div(const aValue: TUInt128; aD: DWord): TUInt128; inline;
     class operator  mod(const aValue: TUInt128; aD: DWord): DWord; inline;
 
-     class function  MinValue: TUInt128; static;
+    class function  MinValue: TUInt128; static;
     class function  MaxValue: TUInt128; static;
     class procedure DivRem(const aValue, aD: TUInt128; out aQ, aR: TUInt128); static;
     class function  DivRem(const aValue: TUInt128; aD: DWord; out aQ: TUInt128): DWord; static; inline;
@@ -164,7 +161,9 @@ type
     class function  Encode(v0, v1, v2, v3: DWord): TUInt128; static;
     class function  Random: TUInt128; static; inline;
     class function  RandomInRange(const aRange: TUInt128): TUInt128; static;
+  {  }
     class function  Parse(const s: string): TUInt128; static;
+  {  }
     class function  TryParse(const s: string; out aValue: TUInt128): Boolean; static;
     class function  Compare(const L, R: TUInt128): SizeInt; static; inline;
     class function  Equal(const L, R: TUInt128): Boolean; static; inline;
@@ -180,7 +179,6 @@ type
     function  PopCount: Integer;
     function  BitLength: Integer; inline;
     function  ToDouble: Double;
-    function  ToExtended: Extended;
     function  ToString: string; inline;
     function  ToHexString(aMinDigits: Integer; aShowRadix: Boolean = False): string; inline;
     function  ToHexString(aShowRadix: Boolean = False): string; inline;
@@ -214,10 +212,12 @@ type
     procedure SetByte(aIndex: Integer; aValue: Byte);
     function  GetDWord(aIndex: Integer): DWord;
     procedure SetDWord(aIndex: Integer; aValue: DWord);
-    function  GetNormLimbs: TLimbs128; inline;
     function  GetIsZero: Boolean; inline;
     function  GetSign: TValueSign; inline;
+    function  GetNormLimbs: TLimbs128; inline;
+    function  GetAbsLimbs: TLimbs128; inline;
     class function  Cmp(const L, R: TInt128): TCompare; static;
+    class function  GetSign(aValue: Integer; out aLimb: TLimb): TValueSign; static;
     class function  Cmp(const L: TInt128; R: Integer): TCompare; static;
     class procedure DoAdd(a, b, s: PLimb); static;
     class procedure DoAddShort(a: PLimb; b: TLimb; s: PLimb); static;
@@ -284,7 +284,9 @@ type
     class function  Encode(v0, v1, v2, v3: DWord): TInt128; static; inline;
     class function  Random: TInt128; static;
     class function  RandomInRange(const aRange: TInt128): TInt128; static;
+  {  }
     class function  Parse(const s: string): TInt128; static;
+  {  }
     class function  TryParse(const s: string; out aValue: TInt128): Boolean; static;
     class function  Compare(const L, R: TInt128): SizeInt; static; inline;
     class function  Equal(const L, R: TInt128): Boolean; static; inline;
@@ -300,9 +302,8 @@ type
     procedure Negate; inline;
   { note: the BitLength of the negative value will always be 128 }
     function  BitLength: Integer; inline;
-    function  AbsValue: TInt128;
+    function  AbsValue: TInt128; inline;
     function  ToDouble: Double;
-    function  ToExtended: Extended;
     function  ToString: string;
     function  ToHexString(aMinDigits: Integer; aShowRadix: Boolean = False): string; inline;
     function  ToHexString(aShowRadix: Boolean = False): string; inline;
@@ -311,10 +312,15 @@ type
     property  DWords[aIndex: Integer]: DWord read GetDWord write SetDWord;
   end;
 
+  resourcestring
+    SEInvalidUInt128 = '"%s" is an invalid TUInt128';
+    SEInvalidInt128  = '"%s" is an invalid TInt128';
+    SEDivByZero128   = 'Division by zero';
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}{$MACRO ON}{$WARN 5023 OFF : Unit "$1" not used in $2}
 uses
-  SysConst, LgHash, LgStrConst;
+  LgHash, LgStrConst;
 {$IFDEF USE_LIMB64}
   {$DEFINE BsrLimb := BsrQWord}
   {$DEFINE BsfLimb := BsfQWord}
@@ -1977,204 +1983,115 @@ begin
     Result := Result * 10 + Decimals[aValue[I]];
 end;
 
-class function TUInt128.ParseStr(const aValue: string; out aResult: shortstring): TParseResult;
-type
-  TParseState =
-    (psStart, psPlusFound, psSeemsHex, psFirstZeroFound, psDecLeadZeroFound,
-     psHexLeadZeroFound, psHexDetected, psDecDetected);
-var
-  I, rLen: Integer;
-  pR, pV: PAnsiChar;
-  CurrChar: AnsiChar;
-  State: TParseState;
-const
-  MaxLen = 39;    //39 - maximal TUInt128 decimal string length
-  MaxHexLen = 32; //32 - maximal TUInt128 hex string length
+class function TUInt128.TryParseStr(p: PAnsiChar; aCount: SizeInt; out aValue: TLimbs128): Boolean;
 begin
-  Result := prNan;
-  if aValue = '' then
-    exit;
-  pR := @aResult[1];
-  pV := PAnsiChar(aValue);
-  State := psStart;
-  rLen := 0;
-  for I := 0 to Pred(Length(aValue)) do
-    begin
-      CurrChar := pV[I];
-      if CurrChar = ' ' then
-        exit;
-      case State of
-        psStart:
-          case CurrChar of
-            '+':      State := psPlusFound;
-            '0':      State := psFirstZeroFound;
-            '$',
-            'X','x':  State := psSeemsHex;
-            '1'..'9': begin State := psDecDetected; pR[rLen] := CurrChar; Inc(rLen) end;
-          else
-            exit;
-          end;
-        psPlusFound:
-          case CurrChar of
-            '0':      State := psFirstZeroFound;
-            '$',
-            'X','x':  State := psSeemsHex;
-            '1'..'9': begin State := psDecDetected; pR[rLen] := CurrChar; Inc(rLen) end;
-          else
-            exit;
-          end;
-        psSeemsHex:
-          case CurrChar of
-            '0':      State := psHexLeadZeroFound;
-            '1'..'9',
-            'A'..'F',
-            'a'..'f': begin State := psHexDetected; pR[rLen] := CurrChar; Inc(rLen) end;
-          else
-            exit;
-          end;
-        psFirstZeroFound:
-          case CurrChar of
-            '0':      continue;
-            'X', 'x': State := psSeemsHex;
-            '1'..'9': begin State := psDecDetected; pR[rLen] := CurrChar; Inc(rLen) end;
-          else
-            exit;
-          end;
-        psDecLeadZeroFound:
-          case CurrChar of
-            '0':      continue;
-            '1'..'9': begin State := psDecDetected; pR[rLen] := CurrChar; Inc(rLen) end;
-          else
-            exit;
-          end;
-        psHexLeadZeroFound:
-          case CurrChar of
-            '0':      continue;
-            '1'..'9',
-            'A'..'F',
-            'a'..'f': begin State := psHexDetected; pR[rLen] := CurrChar; Inc(rLen) end;
-          else
-            exit;
-          end;
-        psHexDetected:
-          if (CurrChar in ['0'..'9', 'A'..'F', 'a'..'f']) and (rLen < MaxHexLen) then
-            begin
-              pR[rLen] := CurrChar;
-              Inc(rLen)
-            end
-          else
-            exit;
-        psDecDetected:
-          if (CurrChar in ['0'..'9']) and (rLen < MaxLen) then
-            begin
-              pR[rLen] := CurrChar;
-              Inc(rLen)
-            end
-          else
-            exit;
+  while (aCount > 0) and (p^ in [#9, #32]) do begin
+    Inc(p);
+    Dec(aCount);
+  end;
+  if aCount < 1 then exit(False);
+  aValue := Default(TLimbs128);
+  case p^ of
+    '0':
+      begin
+        if aCount = 1 then exit(True);
+        Inc(p);
+        Dec(aCount);
+        if p^ in ['X', 'x'] then begin
+          Inc(p);
+          Dec(aCount);
+          Result := TryHex2Val(p, aCount, aValue);
+        end else
+          Result := TryDec2Val(p, aCount, aValue);
       end;
-    end;
-  if State < psFirstZeroFound then
-    exit;
-  if State < psHexDetected then
-    exit(prZero);
-  SetLength(aResult, rLen);
-  if State = psDecDetected then
-    Result := prDec
+    '1'..'9': Result := TryDec2Val(p, aCount, aValue);
+    '$', 'X', 'x':
+      begin
+        Inc(p);
+        Dec(aCount);
+        Result := TryHex2Val(p, aCount, aValue);
+      end
   else
-    Result := prHex;
+    Result := False;
+  end;
 end;
 
-class function TUInt128.TryParseStr(const s: string; out aValue: TLimbs128): Boolean;
+class function TUInt128.TryDec2Val(p: PAnsiChar; aCount: SizeInt; var aValue: TLimbs128): Boolean;
 var
-  prs: shortstring;
+  I, MulCount: SizeInt;
+const
+  MaxLen = 39;
 begin
-  case ParseStr(s, prs) of
-    prDec:  exit(TryDec2Val(prs, aValue));
-    prHex:  Hex2Val(prs, aValue);
-    prZero: TUInt128(aValue) := Default(TUInt128);
-  else //prNan
-    exit(False);
+  while (aCount > 0) and (p^ = '0') do begin
+    Inc(p);
+    Dec(aCount);
+  end;
+  if aCount < 1 then exit(True);
+  if aCount > MaxLen then exit(False);
+  for I := 0 to Pred(aCount) do
+    if not(p[I] in ['0'..'9']) then exit(False);
+  MulCount := aCount div STR_CONV_BASE_LOG;
+  aCount -= MulCount * STR_CONV_BASE_LOG;
+  SetSingleLimb(Str2Limb(p, aCount), aValue);
+  p += aCount;
+  for I := 1 to MulCount do begin
+    if DoMulShort(@aValue, STR_CONV_BASE, @aValue) <> 0 then exit(False);
+    if DoAddShort(@aValue, Str2Limb(p, STR_CONV_BASE_LOG), @aValue) <> 0 then exit(False);
+    p += STR_CONV_BASE_LOG;
   end;
   Result := True;
 end;
 
-class function TUInt128.TryDec2Val(const s: shortstring; out aValue: TLimbs128): Boolean;
+class function TUInt128.TryHex2Val(p: PAnsiChar; aCount: SizeInt; var aValue: TLimbs128): Boolean;
 var
-  Len, MulCount, StartPos, I: Integer;
-begin
-  Len := System.Length(s);
-  StartPos := 1;
-  MulCount := Len div STR_CONV_BASE_LOG;
-  Len -= MulCount * STR_CONV_BASE_LOG;
-  SetSingleLimb(Str2Limb(@s[StartPos], Len), aValue);
-  Inc(StartPos, Len);
-  for I := 1 to MulCount do
-    begin
-      if DoMulShort(@aValue, STR_CONV_BASE, @aValue) <> 0 then
-        exit(False);
-      if DoAddShort(@aValue, Str2Limb(@s[StartPos], STR_CONV_BASE_LOG), @aValue) <> 0 then
-        exit(False);
-      StartPos += STR_CONV_BASE_LOG;
-    end;
-  Result := True;
-end;
-
-class procedure TUInt128.Hex2Val(const s: shortstring; out aValue: TLimbs128);
-var
-  I, J, ByteCnt: Integer;
+  I, J, ByteCnt: SizeInt;
 const
   Table: array['0'..'f'] of Byte = (
      0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,10,11,12,13,14,15,0,0,0,0,0,0,0,0,0,
      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,11,12,13,14,15);
+  MaxLen = SizeOf(TLimbs128) * 2;
 begin
-  ByteCnt := Length(s) shr 1;
-  J := Length(s);
-  for I := 0 to Pred(ByteCnt) do
-    begin
-      TUInt128({%H-}aValue).Bytes[I] := Table[s[J]] or (Table[s[J-1]] shl 4);
-      J -= 2;
-    end;
-  if Odd(Length(s)) then
-    begin
-      TUInt128(aValue).Bytes[ByteCnt] := Table[s[J]];
-      Inc(ByteCnt);
-    end;
-  for I := ByteCnt to Pred(BYTE_PER_VALUE) do
-    TUInt128(aValue).Bytes[I] := 0;
+  if (aCount < 1) or (aCount > MaxLen) then exit(False);
+  for I := 0 to Pred(aCount) do
+    if not(p[I] in ['0'..'9','A'..'F','a'..'f']) then exit(False);
+  ByteCnt := aCount div 2;
+  J := aCount-1;
+  for I := 0 to Pred(ByteCnt) do begin
+    TUInt128(aValue).Bytes[I] := Table[p[J]] or (Table[p[J-1]] shl 4);
+    J -= 2;
+  end;
+  if Odd(aCount) then
+    TUInt128(aValue).Bytes[ByteCnt] := Table[p[J]];
+  Result := True;
 end;
 
 class function TUInt128.Val2Str(const aValue: TLimbs128): string;
 var
   q: TLimbs128;
   r: TLimb;
+  p: PAnsiChar;
   rLen, I: Integer;
   c: AnsiChar;
+  Done: Boolean;
 begin
-  if TUInt128(aValue).IsZero then
-    exit('0');
+  if TUInt128(aValue).IsZero then exit('0');
   q := aValue;
-  rLen := 0;
   SetLength(Result, 39);
+  p := Pointer(Result);
+  rLen := 0;
   repeat
     r := DoDivShort(@q, STR_CONV_BASE, @q);
-    if not TUInt128(q).IsZero then
-      rLen += Limb2Str(r, @Result[Succ(rLen)])
-    else
-      begin
-        rLen += Limb2Str(r, @Result[Succ(rLen)], False);
-        break;
-      end;
-  until False;
+    Done := TUInt128(q).IsZero;
+    rLen += Limb2Str(r, @p[rLen], not Done);
+  until Done;
   SetLength(Result, rLen);
-  I := 1;
+  p := Pointer(Result);
+  Dec(rLen);
+  I := 0;
   while I < rLen do  //reverse Result
     begin
-      c := Result[I];
-      Result[I] := Result[rLen];
-      Result[rLen] := c;
-      Inc(I);
-      Dec(rLen);
+      c := p[I]; p[I] := p[rLen]; p[rLen] := c;
+      Inc(I); Dec(rLen);
     end;
 end;
 
@@ -2561,7 +2478,7 @@ begin
         end;
     end
   else
-    raise EDivByZero.Create(SDivByZero);
+    raise EDivByZero.Create(SEDivByZero128);
 end;
 
 class operator TUInt128.mod(const aValue, aD: TUInt128): TUInt128;
@@ -2588,7 +2505,7 @@ begin
         end;
     end
   else
-    raise EDivByZero.Create(SDivByZero);
+    raise EDivByZero.Create(SEDivByZero128);
 end;
 
 class operator TUInt128.div(const aValue: TUInt128; aD: DWord): TUInt128;
@@ -2596,7 +2513,7 @@ begin
   if aD <> 0 then
     DoDivShort(@aValue, aD, @Result)
   else
-    raise EDivByZero.Create(SDivByZero);
+    raise EDivByZero.Create(SEDivByZero128);
 end;
 
 class operator TUInt128.mod(const aValue: TUInt128; aD: DWord): DWord;
@@ -2606,7 +2523,7 @@ begin
   if aD <> 0 then
     Result := DoDivShort(@aValue, aD, @tmp)
   else
-    raise EDivByZero.Create(SDivByZero);
+    raise EDivByZero.Create(SEDivByZero128);
 end;
 
 class function TUInt128.MinValue: TUInt128;
@@ -2660,7 +2577,7 @@ begin
         end
     end
   else
-    raise EDivByZero.Create(SDivByZero);
+    raise EDivByZero.Create(SEDivByZero128);
 end;
 
 class function TUInt128.DivRem(const aValue: TUInt128; aD: DWord; out aQ: TUInt128): DWord;
@@ -2668,7 +2585,7 @@ begin
   if aD <> 0 then
     Result := DoDivShort(@aValue, aD, @aQ)
   else
-    raise EDivByZero.Create(SDivByZero);
+    raise EDivByZero.Create(SEDivByZero128);
 end;
 
 class function TUInt128.Encode(aLo: QWord): TUInt128;
@@ -2712,37 +2629,37 @@ end;
 
 class function TUInt128.Random: TUInt128;
 begin
-  Result := Encode(BJNextRandom, BJNextRandom, BJNextRandom, BJNextRandom);
+  Result := Encode(
+    System.Random(Int64(High(DWord))+1), System.Random(Int64(High(DWord))+1),
+    System.Random(Int64(High(DWord))+1), System.Random(Int64(High(DWord))+1)
+  );
 end;
 
 class function TUInt128.RandomInRange(const aRange: TUInt128): TUInt128;
 var
   MsDWordIdx, I: Integer;
-  Mask: DWord;
 begin
-  if aRange < 2 then
-    exit(0);
+  if aRange < 2 then exit(0);
   MsDWordIdx := Pred(DWORD_PER_VALUE);
-  while aRange.DWords[MsDWordIdx] = 0 do
-    Dec(MsDWordIdx);
+  while aRange.DWords[MsDWordIdx] = 0 do Dec(MsDWordIdx);
   Result := Default(TUInt128);
-  for I := 0 to Pred(MsDWordIdx) do
-    Result.DWords[I] := BJNextRandom;
-  Mask := Pred(DWord(1) shl Succ(BsrDword(aRange.DWords[MsDWordIdx])));
-  repeat
-    Result.DWords[MsDWordIdx] := BJNextRandom and Mask;
-  until Result < aRange; //cmp
+  I := 0;
+  while I < MsDWordIdx do begin
+    Result.DWords[I] := System.Random(Int64(High(DWord))+1);
+    Inc(I);
+  end;
+  Result.DWords[I] := System.Random(Int64(aRange.DWords[I]));
 end;
 
 class function TUInt128.Parse(const s: string): TUInt128;
 begin
   if not TryParse(s, Result) then
-    raise EConvertError.CreateFmt(SInvalidInteger, [s]);
+    raise EConvertError.CreateFmt(SEInvalidUInt128, [s]);
 end;
 
 class function TUInt128.TryParse(const s: string; out aValue: TUInt128): Boolean;
 begin
-  Result := TryParseStr(s, aValue.FLimbs);
+  Result := TryParseStr(Pointer(s), System.Length(s), aValue.FLimbs);
 end;
 
 class function TUInt128.Compare(const L, R: TUInt128): SizeInt;
@@ -2831,22 +2748,12 @@ end;
 
 function TUInt128.ToDouble: Double;
 const
-  Basis: Double = Double($100000000);
+  Base: Double = Double($100000000);
 var
   p: PDWord;
 begin
   p := PDWord(@FLimbs);
-  Result := ((Double(p[3]) * Basis + Double(p[2])) * Basis + Double(p[1])) * Basis + Double(p[0]);
-end;
-
-function TUInt128.ToExtended: Extended;
-const
-  Basis: Double = Extended($100000000);
-var
-  p: PDWord;
-begin
-  p := PDWord(@FLimbs);
-  Result := ((Extended(p[3]) * Basis + Extended(p[2])) * Basis + Extended(p[1])) * Basis + Extended(p[0]);
+  Result := ((Double(p[3]) * Base + Double(p[2])) * Base + Double(p[1])) * Base + Double(p[0]);
 end;
 
 function TUInt128.ToString: string;
@@ -2896,18 +2803,6 @@ begin
   TUInt128(FLimbs).SetDWord(aIndex, aValue);
 end;
 
-function TInt128.GetNormLimbs: TLimbs128;
-begin
-  Result := FLimbs;
-{$IFDEF USE_LIMB64}
-  if Result[0] or (Result[1] and SIGN_MASK) = 0 then
-    Result[1] := 0;
-{$ELSE USE_LIMB64}
-  if Result[0] or Result[1] or Result[2] or (Result[3] and SIGN_MASK) = 0 then
-    Result[3] := 0;
-{$ENDIF USE_LIMB64}
-end;
-
 function TInt128.GetIsZero: Boolean;
 begin
 {$IFDEF USE_LIMB64}
@@ -2921,6 +2816,19 @@ function TInt128.GetSign: TValueSign;
 begin
   if GetIsZero then exit(0);
   Result := Ord(FLimbs[HIGH_LIMB] and SIGN_FLAG = 0) - Ord(FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0);
+end;
+
+function TInt128.GetNormLimbs: TLimbs128;
+begin
+  Result := FLimbs;
+  if GetIsZero then
+    Result[HIGH_LIMB] := 0;
+end;
+
+function TInt128.GetAbsLimbs: TLimbs128;
+begin
+  Result := FLimbs;
+  Result[HIGH_LIMB] := Result[HIGH_LIMB] and SIGN_MASK;
 end;
 
 class function TInt128.Cmp(const L, R: TInt128): TCompare;
@@ -2937,45 +2845,48 @@ begin
   end;
 end;
 
+class function TInt128.GetSign(aValue: Integer; out aLimb: TLimb): TValueSign;
+begin
+  if aValue > 0 then begin
+    aLimb := TLimb(aValue);
+    Result := 1;
+  end else
+    if aValue < 0 then begin
+      aLimb := TLimb(-Int64(aValue));
+      Result := -1;
+    end else begin
+      aLimb := 0;
+      Result := 0;
+    end;
+end;
+
 class function TInt128.Cmp(const L: TInt128; R: Integer): TCompare;
 var
-  LNeg, LIsSingleLimb: Boolean;
+  RLimb: TLimb;
+  LSign, RSign: TValueSign;
+  LSingleLimb: Boolean;
 begin
-  if R = 0 then exit(L.GetSign);
-  LNeg := L.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0;
-  if LNeg xor (R < 0) then
-    begin
-      if LNeg then
-       exit(-1);
-      Result := 1;
-    end
-  else
-    begin
+  LSign := L.GetSign;
+  RSign := GetSign(R, RLimb);
+  if LSign <> RSign then exit(Ord(LSign > RSign) - Ord(LSign < RSign));
 {$IFDEF USE_LIMB64}
-      LIsSingleLimb := L.FLimbs[1] and SIGN_MASK = 0;
+  LSingleLimb := L.FLimbs[1] and SIGN_MASK = 0;
 {$ELSE USE_LIMB64}
-      LIsSingleLimb := L.FLimbs[1] or L.FLimbs[2] or (L.FLimbs[3] and SIGN_MASK) = 0;
+  LSingleLimb := L.FLimbs[1] or L.FLimbs[2] or (L.FLimbs[3] and SIGN_MASK) = 0;
 {$ENDIF USE_LIMB64}
-      if LIsSingleLimb then
-        begin
-          if LNeg then
-            begin
-              if L.FLimbs[0] > TLimb(-TLimb(R)) then
-                exit(-1);
-              if L.FLimbs[0] < TLimb(-TLimb(R)) then
-                exit(1);
-              exit(0);
-            end;
-          if L.FLimbs[0] > TLimb(R) then
-            exit(1);
-          if L.FLimbs[0] < TLimb(R) then
-            exit(-1);
-          exit(0);
-        end;
-      if LNeg then
-        exit(-1);
-      Result := 1;
-    end;
+  Result := 0;
+  case LSign of
+    -1:
+      if LSingleLimb then
+        Result := Ord(L.FLimbs[0] < RLimb) - Ord(L.FLimbs[0] > RLimb)
+      else
+        Result := -1;
+     1:
+       if LSingleLimb then
+         Result := Ord(L.FLimbs[0] > RLimb) - Ord(L.FLimbs[0] < RLimb)
+       else
+         Result := 1;
+  end;
 end;
 
 {$PUSH}{$Q-}{$R-}
@@ -4054,7 +3965,7 @@ end;
 
 class function TInt128.RandomInRange(const aRange: TInt128): TInt128;
 begin
-  Result := TInt128(TUInt128.RandomInRange(TUInt128(aRange.AbsValue)));
+  Result := TInt128(TUInt128.RandomInRange(TUInt128(aRange.GetAbsLimbs)));
   if aRange.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
     Result.FLimbs[HIGH_LIMB] := Result.FLimbs[HIGH_LIMB] or SIGN_FLAG;
 end;
@@ -4062,33 +3973,35 @@ end;
 class function TInt128.Parse(const s: string): TInt128;
 begin
   if not TryParse(s, Result) then
-    raise EConvertError.CreateFmt(SInvalidInteger, [s]);
-end;
-
-procedure TInt128.Negate;
-begin
-  FLimbs[HIGH_LIMB] := FLimbs[HIGH_LIMB] xor SIGN_FLAG;
+    raise EConvertError.CreateFmt(SEInvalidInt128, [s]);
 end;
 
 class function TInt128.TryParse(const s: string; out aValue: TInt128): Boolean;
 var
-  IsNeg: Boolean = False;
-  sCopy: string;
+  p: PAnsiChar;
+  Len: SizeInt;
+  IsNeg: Boolean;
 begin
-  if s <> '' then
-    begin
-    sCopy := s;
-    IsNeg := sCopy[1] = '-';
-    if IsNeg then
-      sCopy := System.Copy(sCopy, 2, System.Length(sCopy));
-    if TUInt128.TryParseStr(sCopy, aValue.FLimbs) and (aValue.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0) then
-      begin
-        if IsNeg then
-          aValue.Negate;
-        exit(True);
-      end;
-    end;
   Result := False;
+  p := Pointer(s);
+  Len := System.Length(s);
+  while (Len > 0) and (p^ in [#9, #31]) do begin
+    Inc(p);
+    Dec(Len);
+  end;
+  if Len < 1 then exit;
+  IsNeg := False;
+  if p^ = '-' then begin
+    IsNeg := True;
+    Inc(p);
+    Dec(Len);
+  end;
+  if TUInt128.TryParseStr(p, Len, aValue.FLimbs) and (aValue.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0) then
+    begin
+      if IsNeg then
+        aValue.FLimbs[HIGH_LIMB] := aValue.FLimbs[HIGH_LIMB] or SIGN_FLAG;
+      Result := True;
+    end;
 end;
 
 class function TInt128.Compare(const L, R: TInt128): SizeInt;
@@ -4146,6 +4059,11 @@ begin
   Result := GetSign = 1;
 end;
 
+procedure TInt128.Negate;
+begin
+  FLimbs[HIGH_LIMB] := FLimbs[HIGH_LIMB] xor SIGN_FLAG;
+end;
+
 function TInt128.BitLength: Integer;
 begin
   Result := Succ(TUInt128.MsBitIndex(FLimbs));
@@ -4153,27 +4071,12 @@ end;
 
 function TInt128.AbsValue: TInt128;
 begin
-{$IFDEF USE_LIMB64}
-  Result.FLimbs[0] := FLimbs[0];
-  Result.FLimbs[1] := FLimbs[1] and SIGN_MASK;
-{$ELSE USE_LIMB64}
-  Result.FLimbs[0] := FLimbs[0];
-  Result.FLimbs[1] := FLimbs[1];
-  Result.FLimbs[2] := FLimbs[2];
-  Result.FLimbs[3] := FLimbs[3] and SIGN_MASK;
-{$ENDIF USE_LIMB64}
+  Result.FLimbs := GetAbsLimbs;
 end;
 
 function TInt128.ToDouble: Double;
 begin
-  Result := TUInt128(AbsValue).ToDouble;
-  if FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
-    Result := -Result;
-end;
-
-function TInt128.ToExtended: Extended;
-begin
-  Result := TUInt128(AbsValue).ToExtended;
+  Result := TUInt128(GetAbsLimbs).ToDouble;
   if FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
     Result := -Result;
 end;
@@ -4182,9 +4085,9 @@ function TInt128.ToString: string;
 begin
   if IsZero then
     exit('0');
-  Result := TUInt128.Val2Str(AbsValue.FLimbs);
+  Result := TUInt128.Val2Str(GetAbsLimbs);
   if FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0 then
-    System.Insert('-', Result, 1);
+    Result := '-' + Result;
 end;
 
 function TInt128.ToHexString(aMinDigits: Integer; aShowRadix: Boolean): string;
@@ -4194,7 +4097,7 @@ end;
 
 function TInt128.ToHexString(aShowRadix: Boolean): string;
 begin
-  Result := TUInt128.Val2Hex(GetNormLimbs, SizeOf(TInt128) * 2, aShowRadix);
+  Result := TUInt128.Val2Hex(GetNormLimbs, SizeOf(TLimbs128) * 2, aShowRadix);
 end;
 
 end.
