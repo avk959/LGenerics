@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Non-cryptographic hash functions for hash table lookup.                 *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -439,7 +439,7 @@ begin
   Result := (Result xor Result shr 13) * c3;
   Result :=  Result xor Result shr 16;
 end;
-{$UNDEF c1}{$UNDEF c2}{$UNDEF c3}{$UNDEF}{$UNDEF c5}
+{$UNDEF c1}{$UNDEF c2}{$UNDEF c3}{$UNDEF c4}{$UNDEF c5}
 
 
 {$DEFINE c1 := QWord($9e3779b185ebca87)}{$DEFINE c2 := QWord($c2b2ae3d27d4eb4f)}
@@ -662,7 +662,7 @@ begin
   Result :=  Result xor Result shr 32;
 end;
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
-{$UNDEF c1}{$UNDEF c2}{$UNDEF c3}{$UNDEF}{$UNDEF c5}
+{$UNDEF c1}{$UNDEF c2}{$UNDEF c3}{$UNDEF c4}{$UNDEF c5}{$UNDEF c6}
 
 { TMurmur2LE }
 
