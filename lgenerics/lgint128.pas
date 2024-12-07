@@ -67,6 +67,7 @@ type
     TLimbs128          = array[0..Pred(LIMB_PER_VALUE)] of TLimb;
     TLimbsEx           = array[0..LIMB_PER_VALUE] of TLimb;
     TCompare           = type TValueSign;
+    TParseInfo         = (piHex, piDec, piNan);
   var
     FLimbs: TLimbs128;
     function  GetBit(aIndex: Integer): Boolean; inline;
@@ -104,7 +105,7 @@ type
     class function  DoDivShort(a: PLimb; d: TLimb; q: PLimb): TLimb; static;
     class function  Limb2Str(aValue: TLimb; aStr: PAnsiChar; aShowLz: Boolean = True): Integer; static;
     class function  Str2Limb(aValue: PAnsiChar; aCount: Integer): TLimb; static;
-    class function  TryParseStr(p: PAnsiChar; aCount: SizeInt; out aValue: TLimbs128): Boolean; static;
+    class function  TryParseStr(p: PAnsiChar; aCount: SizeInt; out aValue: TLimbs128): TParseInfo; static;
     class function  TryDec2Val(p: PAnsiChar; aCount: SizeInt; var aValue: TLimbs128): Boolean; static;
     class function  TryHex2Val(p: PAnsiChar; aCount: SizeInt; var aValue: TLimbs128): Boolean; static;
     class function  Val2Str(const aValue: TLimbs128): string; static;
@@ -125,6 +126,7 @@ type
     class operator  <=(const L: TUInt128; R: DWord): Boolean;
 
     class operator  :=(const aValue: DWord): TUInt128;
+  { may raise an exception if it cannot parse the input string }
     class operator  :=(const aValue: string): TUInt128; inline;
     class operator  :=(const aValue: TUInt128): Double; inline;
     class operator  :=(const aValue: TUInt128): string; inline;
@@ -161,9 +163,19 @@ type
     class function  Encode(v0, v1, v2, v3: DWord): TUInt128; static;
     class function  Random: TUInt128; static; inline;
     class function  RandomInRange(const aRange: TUInt128): TUInt128; static;
-  {  }
+  { returns the value obtained by parsing the input string s, see below for the rules;
+    raises an exception if it cannot parse the input string }
     class function  Parse(const s: string): TUInt128; static;
-  {  }
+  { returns True and the resulting value in the aValue parameter in case of successful
+    parsing of the input string s, otherwise returns False;
+    the input string s must be a representation of an integer in decimal or hexadecimal notation:
+      leading spaces and tabs are allowed;
+      leading zeroes are allowed;
+      a plus sign is allowed;
+      a minus sign is not allowed;
+      hexadecimal values MUST be prefixed with '$', '0X', '0x', 'X' or 'x';
+      numerical value MUST fit into the range of TUInt128;
+    if the function returned False, then aValue is undefined }
     class function  TryParse(const s: string; out aValue: TUInt128): Boolean; static;
     class function  Compare(const L, R: TUInt128): SizeInt; static; inline;
     class function  Equal(const L, R: TUInt128): Boolean; static; inline;
@@ -194,11 +206,11 @@ type
   TInt128 = record
   private
   type
-    TLimb     = TUInt128.TLimb;
-    TLimbs128 = TUInt128.TLimbs128;
-    PLimb     = TUInt128.PLimb;
-    TCompare  = TUInt128.TCompare;
-
+    TLimb      = TUInt128.TLimb;
+    TLimbs128  = TUInt128.TLimbs128;
+    PLimb      = TUInt128.PLimb;
+    TCompare   = TUInt128.TCompare;
+    TParseInfo = TUInt128.TParseInfo;
   const
     LIMB_PER_VALUE = TUInt128.LIMB_PER_VALUE;
     HIGH_LIMB      = Pred(LIMB_PER_VALUE);
@@ -253,6 +265,7 @@ type
     class operator  :=(const aValue: Integer): TInt128;
     class operator  :=(const aValue: TInt128): Double; inline;
     class operator  :=(const aValue: TInt128): string; inline;
+  { may raise an exception if it cannot parse the input string }
     class operator  :=(const aValue: string): TInt128; inline;
 
     class operator  Inc(const aValue: TInt128): TInt128; inline;
@@ -284,9 +297,18 @@ type
     class function  Encode(v0, v1, v2, v3: DWord): TInt128; static; inline;
     class function  Random: TInt128; static;
     class function  RandomInRange(const aRange: TInt128): TInt128; static;
-  {  }
+  { returns the value obtained by parsing the input string s, see below for the rules;
+    raises an exception if it cannot parse the input string }
     class function  Parse(const s: string): TInt128; static;
-  {  }
+  { returns True and the resulting value in the aValue parameter in case of successful
+    parsing of the input string s, otherwise returns False;
+    the input string s must be a representation of an integer in decimal or hexadecimal notation:
+      leading spaces and tabs are allowed;
+      leading zeroes are allowed;
+      a plus sign and a minus sign are allowed;
+      hexadecimal values MUST be prefixed with '$', '0X', '0x', 'X' or 'x';
+      numerical value MUST fit into the range of TInt128;
+    if the function returned False, then aValue is undefined }
     class function  TryParse(const s: string; out aValue: TInt128): Boolean; static;
     class function  Compare(const L, R: TInt128): SizeInt; static; inline;
     class function  Equal(const L, R: TInt128): Boolean; static; inline;
@@ -316,6 +338,7 @@ type
     SEInvalidUInt128 = '"%s" is an invalid TUInt128';
     SEInvalidInt128  = '"%s" is an invalid TInt128';
     SEDivByZero128   = 'Division by zero';
+    SEInt128Overflow = 'Arithmetic overflow';
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}{$MACRO ON}{$WARN 5023 OFF : Unit "$1" not used in $2}
@@ -493,7 +516,6 @@ begin
 {$ENDIF USE_LIMB64}
 end;
 
-{$PUSH}{$Q-}{$R-}
 class procedure TUInt128.DoNeg(a: PLimb; n: PLimb);
 {$IFDEF CPU_INTEL}register; assembler; nostackframe;
   {$IFDEF CPUX64}
@@ -1983,36 +2005,31 @@ begin
     Result := Result * 10 + Decimals[aValue[I]];
 end;
 
-class function TUInt128.TryParseStr(p: PAnsiChar; aCount: SizeInt; out aValue: TLimbs128): Boolean;
+class function TUInt128.TryParseStr(p: PAnsiChar; aCount: SizeInt; out aValue: TLimbs128): TParseInfo;
 begin
-  while (aCount > 0) and (p^ in [#9, #32]) do begin
-    Inc(p);
-    Dec(aCount);
-  end;
-  if aCount < 1 then exit(False);
+  Result := piNan;
+  if aCount < 1 then exit;
   aValue := Default(TLimbs128);
   case p^ of
     '0':
       begin
-        if aCount = 1 then exit(True);
+        if aCount = 1 then exit(piDec);
         Inc(p);
         Dec(aCount);
         if p^ in ['X', 'x'] then begin
           Inc(p);
           Dec(aCount);
-          Result := TryHex2Val(p, aCount, aValue);
+          if TryHex2Val(p, aCount, aValue) then Result := piHex;
         end else
-          Result := TryDec2Val(p, aCount, aValue);
+          if TryDec2Val(p, aCount, aValue) then Result := piDec;
       end;
-    '1'..'9': Result := TryDec2Val(p, aCount, aValue);
+    '1'..'9': if TryDec2Val(p, aCount, aValue) then Result := piDec;
     '$', 'X', 'x':
       begin
         Inc(p);
         Dec(aCount);
-        Result := TryHex2Val(p, aCount, aValue);
+        if TryHex2Val(p, aCount, aValue) then Result := piHex;
       end
-  else
-    Result := False;
   end;
 end;
 
@@ -2051,7 +2068,13 @@ const
      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,11,12,13,14,15);
   MaxLen = SizeOf(TLimbs128) * 2;
 begin
-  if (aCount < 1) or (aCount > MaxLen) then exit(False);
+  if aCount < 1 then exit(False);
+  while (aCount > 0) and (p^ = '0') do begin
+    Inc(p);
+    Dec(aCount);
+  end;
+  if aCount < 1 then exit(True);
+  if aCount > MaxLen then exit(False);
   for I := 0 to Pred(aCount) do
     if not(p[I] in ['0'..'9','A'..'F','a'..'f']) then exit(False);
   ByteCnt := aCount div 2;
@@ -2130,7 +2153,6 @@ begin
   if aShowRadix then
     Result[J] := '$';
 end;
-{$POP}
 
 class operator TUInt128.=(const L, R: TUInt128): Boolean;
 begin
@@ -2258,7 +2280,7 @@ class operator TUInt128.Inc(const aValue: TUInt128): TUInt128;
 begin
 {$IFOPT Q+}
   if DoAddShort(@aValue, 1, @Result) <> 0 then
-    raise EIntOverflow.Create(SIntOverflow);
+    raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   DoAddShort(@aValue, 1, @Result);
 {$ENDIF Q+}
@@ -2268,7 +2290,7 @@ class operator TUInt128.Dec(const aValue: TUInt128): TUInt128;
 begin
 {$IFOPT Q+}
   if DoSubShort(@aValue, 1, @Result) <> 0 then
-    raise EIntOverflow.Create(SIntOverflow);
+    raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   DoSubShort(@aValue, 1, @Result);
 {$ENDIF Q+}
@@ -2387,7 +2409,7 @@ class operator TUInt128.+(const L, R: TUInt128): TUInt128;
 begin
 {$IFOPT Q+}
   if DoAdd(@L, @R, @Result) <> 0 then
-    raise EIntOverflow.Create(SIntOverflow);
+    raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   DoAdd(@L, @R, @Result);
 {$ENDIF Q+}
@@ -2400,7 +2422,7 @@ begin
 {$IFOPT Q+}
   else
     if DoAddShort(@L, R, @Result) <> 0 then
-      raise EIntOverflow.Create(SIntOverflow);
+      raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   else
     DoAddShort(@L, R, @Result);
@@ -2411,7 +2433,7 @@ class operator TUInt128.-(const L, R: TUInt128): TUInt128;
 begin
 {$IFOPT Q+}
   if DoSub(@L, @R, @Result) <> 0 then
-    raise EIntOverflow.Create(SIntOverflow);
+    raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   DoSub(@L, @R, @Result);
 {$ENDIF Q+}
@@ -2424,7 +2446,7 @@ begin
 {$IFOPT Q+}
   else
     if DoSubShort(@L, R, @Result) <> 0 then
-      raise EIntOverflow.Create(SIntOverflow);
+      raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   else
     DoSubShort(@L, R, @Result);
@@ -2440,7 +2462,7 @@ class operator TUInt128.*(const L, R: TUInt128): TUInt128;
 begin
 {$IFOPT Q+}
   if DoMul(@L, @R, @Result) <> 0 then
-    raise EIntOverflow.Create(SIntOverflow);
+    raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   DoMul(@L, @R, @Result);
 {$ENDIF Q+}
@@ -2452,7 +2474,7 @@ begin
     exit(Default(TUInt128));
 {$IFOPT Q+}
   if DoMulShort(@L, R, @Result) <> 0 then
-    raise EIntOverflow.Create(SIntOverflow);
+    raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
   DoMulShort(@L, R, @Result);
 {$ENDIF Q+}
@@ -2658,8 +2680,23 @@ begin
 end;
 
 class function TUInt128.TryParse(const s: string; out aValue: TUInt128): Boolean;
+var
+  p: PAnsiChar;
+  Len: SizeInt;
 begin
-  Result := TryParseStr(Pointer(s), System.Length(s), aValue.FLimbs);
+  Result := False;
+  p := Pointer(s);
+  Len := System.Length(s);
+  while (Len > 0) and (p^ in [#9, #31]) do begin
+    Inc(p);
+    Dec(Len);
+  end;
+  if Len < 1 then exit(False);
+  if p^ = '+' then begin
+    Inc(p);
+    Dec(Len);
+  end;
+  Result := TryParseStr(p, Len, aValue.FLimbs) <> piNan;
 end;
 
 class function TUInt128.Compare(const L, R: TUInt128): SizeInt;
@@ -2679,11 +2716,7 @@ end;
 
 class function TUInt128.HashCode(const aValue: TUInt128): SizeInt;
 begin
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
-  Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := TxxHash32LE.HashGuid(TGuid(aValue));
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
 function TUInt128.Lo: QWord;
@@ -3323,7 +3356,7 @@ begin
             s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
-        raise EIntOverflow.Create(SIntOverflow);
+        raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
       if ANeg then
         s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
@@ -3367,7 +3400,7 @@ begin
             s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
-        raise EIntOverflow.Create(SIntOverflow);
+        raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
       if ANeg then
         s.FLimbs[HIGH_LIMB] := s.FLimbs[HIGH_LIMB] or SIGN_FLAG;
@@ -3391,7 +3424,7 @@ begin
             d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
-        raise EIntOverflow.Create(SIntOverflow);
+        raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
       if ANeg then
         d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
@@ -3425,7 +3458,7 @@ begin
             d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
         end
       else
-        raise EIntOverflow.Create(SIntOverflow);
+        raise EIntOverflow.Create(SEInt128Overflow);
 {$ELSE Q+}
       if ANeg then
         d.FLimbs[HIGH_LIMB] := d.FLimbs[HIGH_LIMB] or SIGN_FLAG;
@@ -3457,7 +3490,7 @@ begin
   try
   {$IFOPT Q+}
     if (TUInt128.DoMul(PLimb(a), PLimb(b), PLimb(p)) <> 0) or (p^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
-      raise EIntOverflow.Create(SIntOverflow);
+      raise EIntOverflow.Create(SEInt128Overflow);
   {$ELSE Q+}
     TUInt128.DoMul(PLimb(a), PLimb(b), PLimb(p));
   {$ENDIF Q+}
@@ -3487,11 +3520,11 @@ begin
     if b > 0 then
       begin
         if (TUInt128.DoMulShort(PLimb(a), TLimb(b), PLimb(p)) <> 0) or (p^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
-          raise EIntOverflow.Create(SIntOverflow);
+          raise EIntOverflow.Create(SEInt128Overflow);
       end
     else
       if (TUInt128.DoMulShort(PLimb(a), -TLimb(b), PLimb(p)) <> 0) or (p^.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
-        raise EIntOverflow.Create(SIntOverflow);
+        raise EIntOverflow.Create(SEInt128Overflow);
   {$ELSE Q+}
     if b > 0 then
       TUInt128.DoMulShort(PLimb(a), TLimb(b), PLimb(p))
@@ -3981,27 +4014,32 @@ var
   p: PAnsiChar;
   Len: SizeInt;
   IsNeg: Boolean;
+  Info: TParseInfo;
 begin
-  Result := False;
   p := Pointer(s);
   Len := System.Length(s);
   while (Len > 0) and (p^ in [#9, #31]) do begin
     Inc(p);
     Dec(Len);
   end;
-  if Len < 1 then exit;
+  if Len < 1 then exit(False);
   IsNeg := False;
   if p^ = '-' then begin
     IsNeg := True;
     Inc(p);
     Dec(Len);
-  end;
-  if TUInt128.TryParseStr(p, Len, aValue.FLimbs) and (aValue.FLimbs[HIGH_LIMB] and SIGN_FLAG = 0) then
-    begin
-      if IsNeg then
-        aValue.FLimbs[HIGH_LIMB] := aValue.FLimbs[HIGH_LIMB] or SIGN_FLAG;
-      Result := True;
+  end else
+    if p^ = '+' then begin
+      Inc(p);
+      Dec(Len);
     end;
+  Info := TUInt128.TryParseStr(p, Len, aValue.FLimbs);
+  if Info = piNan then exit(False);
+  if (IsNeg or (Info = piDec)) and (aValue.FLimbs[HIGH_LIMB] and SIGN_FLAG <> 0) then
+    exit(False);
+  if IsNeg then
+    aValue.FLimbs[HIGH_LIMB] := aValue.FLimbs[HIGH_LIMB] or SIGN_FLAG;
+  Result := True;
 end;
 
 class function TInt128.Compare(const L, R: TInt128): SizeInt;
