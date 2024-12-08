@@ -1111,9 +1111,9 @@ type
     skWildcard, // wildcard selector - ( * )
     skSlice,    // slice selector    - Python like slice ([start : end : step])
     skFilter    // filter selector   - ([?()])
-    );
+  );
 
-  TOptionalInt = specialize TGOptional<SizeInt>;
+  TOptionalInt = specialize TGOptional<Int64>;
 
   TSlice = record
     Start,
@@ -1130,14 +1130,14 @@ type
   TSelector = class
   strict protected
     FKind: TSelectorKind;
-    function GetIndex: SizeInt; virtual;
+    function GetIndex: Int64; virtual;
     function GetName: string; virtual;
     function GetSlice: PSlice; virtual;
     function GetFilter: TJpFilter; virtual;
   public
     NextSegment: TSegment;
     property Kind: TSelectorKind read FKind;
-    property Index: SizeInt read GetIndex;
+    property Index: Int64 read GetIndex;
     property Name: string read GetName;
     property Slice: PSlice read GetSlice;
     property Filter: TJpFilter read GetFilter;
@@ -1151,11 +1151,11 @@ type
   { TIndexSelector }
   TIndexSelector = class(TSelector)
   strict private
-    FIndex: SizeInt;
+    FIndex: Int64;
   strict protected
-    function GetIndex: SizeInt; override;
+    function GetIndex: Int64; override;
   public
-    constructor Create(aIndex: SizeInt);
+    constructor Create(aIndex: Int64);
   end;
 
   { TNameSelector }
@@ -1206,7 +1206,7 @@ type
     destructor Destroy; override;
     function  GetEnumerator: TSelectorEnum; inline;
     function  GetFirstSelector: TSelector; inline;
-    procedure AddSelector(aIndex: SizeInt); virtual;
+    procedure AddSelector(aIndex: Int64); virtual;
     procedure AddSelector(const aName: string); virtual;
     procedure AddWildcard; virtual;
     procedure AddSelector(const s: TSlice); virtual;
@@ -1226,7 +1226,7 @@ type
   strict protected
   public
     constructor Create;
-    procedure AddSelector(aIndex: SizeInt); override;
+    procedure AddSelector(aIndex: Int64); override;
     procedure AddSelector(const aName: string); override;
     procedure AddWildcard; override;
     procedure AddSelector(const aSlice: TSlice); override;
@@ -1541,7 +1541,7 @@ type
     FNumValue: Double;
     FFunDef: TJpFunctionDef;
     FToken: TJpTokenKind;
-    class function ParseIntValue(p: PAnsiChar; aCount: SizeInt; out aValue: SizeInt): TIntParseResult; static;
+    class function ParseIntValue(p: PAnsiChar; aCount: SizeInt; out aValue: Int64): TIntParseResult; static;
     class function MakeString(p: PAnsiChar; aCount: SizeInt): string; static; inline;
     class function StrDecode(p: PAnsiChar; aCount: SizeInt): string; static;
     function  GetPos: SizeInt; inline;
@@ -1564,7 +1564,7 @@ type
     function  GetQuoteName: string;
     procedure DblQuoteNameEscape; inline;
     function  GetDblQuoteName: string;
-    procedure ParseInt(out aValue: SizeInt);
+    procedure ParseInt(out aValue: Int64);
     procedure IndexOrSlice(aSegment: TSegment); inline;
     procedure Slice(aSegment: TSegment; const aStart: TOptionalInt);
     procedure CheckBoolOperand(aExpr: TJpExpression); inline;
@@ -1842,7 +1842,7 @@ end;
 
 { TSelector }
 
-function TSelector.GetIndex: SizeInt;
+function TSelector.GetIndex: Int64;
 begin
   Result := -1;
 end;
@@ -1871,12 +1871,12 @@ end;
 
 { TIndexSelector }
 
-function TIndexSelector.GetIndex: SizeInt;
+function TIndexSelector.GetIndex: Int64;
 begin
   Result := FIndex;
 end;
 
-constructor TIndexSelector.Create(aIndex: SizeInt);
+constructor TIndexSelector.Create(aIndex: Int64);
 begin
   FKind := skIndex;
   FIndex := aIndex;
@@ -1965,7 +1965,7 @@ begin
     Result := FSelectors[0];
 end;
 
-procedure TSegment.AddSelector(aIndex: SizeInt);
+procedure TSegment.AddSelector(aIndex: Int64);
 begin
   Assert(aIndex = aIndex); // make compiler happy
 end;
@@ -2003,7 +2003,7 @@ begin
   FKind := sgkChild;
 end;
 
-procedure TChildSegment.AddSelector(aIndex: SizeInt);
+procedure TChildSegment.AddSelector(aIndex: Int64);
 begin
   FSelectors.Add(TIndexSelector.Create(aIndex));
 end;
@@ -2045,7 +2045,8 @@ end;
 
 procedure TJsonPathQuery.ApplySlice(aSel: TSelector; aNode: TJsonNode);
 var
-  I, Len, Start, Stop, Step: SizeInt;
+  Start, Stop, Step: Int64;
+  I, Len: SizeInt;
 begin
   Step := aSel.Slice^.Step.OrElse(1);
   if (aNode.Count = 0) or (Step = 0) then exit;
@@ -2059,8 +2060,8 @@ begin
     Stop := aSel.Slice^.Stop.OrElse(Pred(-Len));
     if Stop < 0 then Stop += Len;   // normalize
 
-    Start := Math.Min(Math.Max(Start, -1), Pred(Len));
-    Stop := Math.Min(Math.Max(Stop, -1), Pred(Len));
+    Start := Math.Min(Math.Max(Start, -1), Pred(Int64(Len)));
+    Stop := Math.Min(Math.Max(Stop, -1), Pred(Int64(Len)));
     I := Start;
     while I > Stop do begin
       if aSel.NextSegment = nil then
@@ -2077,8 +2078,8 @@ begin
     Stop := aSel.Slice^.Stop.OrElse(Len);
     if Stop < 0 then Stop += Len;   // normalize
 
-    Start := Math.Min(Math.Max(Start, 0), Len);
-    Stop := Math.Min(Math.Max(Stop, 0), Len);
+    Start := Math.Min(Math.Max(Start, 0), Int64(Len));
+    Stop := Math.Min(Math.Max(Stop, 0), Int64(Len));
     I := Start;
     while I < Stop do begin
       if aSel.NextSegment = nil then
@@ -2101,6 +2102,9 @@ begin
     skIndex:
       if aRoot.Kind = jvkArray then begin
         I := aSel.Index;
+      {$IFNDEF CPU64}
+        if aSel.Index <> Int64(I) then exit;
+      {$ENDIF}
         if I < 0 then
           I += aRoot.Count;
         if aRoot.Find(I, LNode) then
@@ -2339,7 +2343,8 @@ end;
 
 procedure TJsonSpecPathQuery.ApplySliceWithPath(aSel: TSelector; aNode: TJsonNode);
 var
-  I, Len, Start, Stop, Step: SizeInt;
+  Start, Stop, Step: Int64;
+  I, Len: SizeInt;
 begin
   Step := aSel.Slice^.Step.OrElse(1);
   if (aNode.Count = 0) or (Step = 0) then exit;
@@ -2353,8 +2358,8 @@ begin
     Stop := aSel.Slice^.Stop.OrElse(Pred(-Len));
     if Stop < 0 then Stop += Len;
 
-    Start := Math.Min(Math.Max(Start, -1), Pred(Len));
-    Stop := Math.Min(Math.Max(Stop, -1), Pred(Len));
+    Start := Math.Min(Math.Max(Start, -1), Pred(Int64(Len)));
+    Stop := Math.Min(Math.Max(Stop, -1), Pred(Int64(Len)));
     I := Start;
     while I > Stop do begin
       PathPush(I);
@@ -2373,8 +2378,8 @@ begin
     Stop := aSel.Slice^.Stop.OrElse(Len);
     if Stop < 0 then Stop += Len;
 
-    Start := Math.Min(Math.Max(Start, 0), Len);
-    Stop := Math.Min(Math.Max(Stop, 0), Len);
+    Start := Math.Min(Math.Max(Start, 0), Int64(Len));
+    Stop := Math.Min(Math.Max(Stop, 0), Int64(Len));
     I := Start;
     while I < Stop do begin
       PathPush(I);
@@ -2399,10 +2404,13 @@ begin
     skIndex:
       if aRoot.Kind = jvkArray then begin
         I := aSel.Index;
+      {$IFNDEF CPU64}
+        if aSel.Index <> Int64(I) then exit;
+      {$ENDIF}
         if I < 0 then
           I += aRoot.Count;
         if aRoot.Find(I, LNode) then begin
-          PathPush(I);
+          PathPush(SizeInt(I));
           if aSel.NextSegment = nil then
             AddMatchWithPath(LNode)
           else
@@ -2956,21 +2964,14 @@ end;
 { TJpParser }
 
 {$PUSH}{$Q-}{$R-}{$J-}
-class function TJpQueryParser.ParseIntValue(p: PAnsiChar; aCount: SizeInt; out aValue: SizeInt): TIntParseResult;
+class function TJpQueryParser.ParseIntValue(p: PAnsiChar; aCount: SizeInt; out aValue: Int64): TIntParseResult;
 var
-  v: SizeUInt;
+  v: UInt64;
   I, Len: SizeInt;
   IsNeg: Boolean = False;
 const
   DECIMAL_DIGS: array['0'..'9'] of Byte = (0,1,2,3,4,5,6,7,8,9);
-{$IF DEFINED(CPU32)}
-  MAX_DIGITS = 10;
-  TEST_BOUND = LongInt(1000000000);
-{$ELSEIF DEFINED(CPU64)}
   MAX_DIGITS = 16;
-{$ELSE }
-  {$FATAL 8/16-bit Cpu's not supported}
-{$ENDIF}
 begin
   if aCount < 1 then exit(iprInvalid);
   I := 0;
@@ -2999,18 +3000,12 @@ begin
     Inc(Len);
     if Len > MAX_DIGITS then exit(iprRange);
   end;
-{$IF DEFINED(CPU32)}
-  if (Len = MAX_DIGITS) and (v < TEST_BOUND) then exit(iprRange);
-  if (IsNeg and (v > SizeUInt(System.High(SizeInt))+1)) or (v > System.High(SizeInt)) then
-    exit(iprRange);
-{$ELSEIF DEFINED(CPU64)}
   if v > 9007199254740991 then
     exit(iprRange); //integer value MUST be within the range of exact values
-{$ENDIF }
   if IsNeg then
-    aValue := -SizeInt(v)
+    aValue := -Int64(v)
   else
-    aValue := SizeInt(v);
+    aValue := Int64(v);
   Result := iprOk;
 end;
 
@@ -3502,7 +3497,7 @@ begin
   SkipCharThenWS;
 end;
 
-procedure TJpQueryParser.ParseInt(out aValue: SizeInt);
+procedure TJpQueryParser.ParseInt(out aValue: Int64);
 var
   Start: PAnsiChar;
 begin
@@ -3524,7 +3519,7 @@ end;
 procedure TJpQueryParser.IndexOrSlice(aSegment: TSegment);
 var
   oi: TOptionalInt;
-  Idx: SizeInt;
+  Idx: Int64;
 begin
   Assert(CurrChar in MINUS_OR_DIGIT);
   ParseInt(Idx);
@@ -3545,7 +3540,7 @@ end;
 procedure TJpQueryParser.Slice(aSegment: TSegment; const aStart: TOptionalInt);
 var
   s: TSlice;
-  Value: SizeInt;
+  Value: Int64;
   procedure ParseStep; inline;
   begin
     SkipCharThenWS;
