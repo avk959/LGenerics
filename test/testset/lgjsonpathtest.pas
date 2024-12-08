@@ -609,7 +609,7 @@ var
   I: Integer;
 begin
   for I := 0 to High(aTestSet) do begin
-    if not Root.Instance.Parse(aTestSet[I].Value) then
+    if not Root.Instance.TryParse(aTestSet[I].Value) then
       begin
         aErrList.Add(Format(JsonFmt, [I]));
         continue;
@@ -652,7 +652,7 @@ var
 const
   Json = '[null,42,true,"key"]';
 begin
-  if Root.Instance.Parse(Json) then begin
+  if Root.Instance.TryParse(Json) then begin
     Query := '$[?@==param("parValue")]';
     if JpParseQuery(Query, Path) then begin
       Expect := '[]';
