@@ -233,6 +233,11 @@ resourcestring
   SEUnknownAcStreamFormat  = 'Unknown stream format';
   SEUnsupportAcFmtVersion  = 'Unsupported stream format version';
   SEAcFsmNotAssigned       = 'no FSM instance is assigned';
+//Int128
+  SEInvalidUInt128         = '"%s" is an invalid UInt128';
+  SEInvalidInt128          = '"%s" is an invalid Int128';
+  SEDivByZero128           = 'Division by zero(128)';
+  SEInt128Overflow         = 'Arithmetic overflow(128)';
 
 implementation
 
