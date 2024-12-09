@@ -99,6 +99,7 @@ type
     procedure ModInt;
     procedure DivRemValue;
     procedure DivRemInt;
+    procedure Encode;
   end;
 
 implementation
@@ -296,13 +297,22 @@ begin
   AssertFalse(TUInt128.TryParse('', I));
   AssertFalse(TUInt128.TryParse('0x', I));
   AssertFalse(TUInt128.TryParse('x', I));
+  AssertFalse(TUInt128.TryParse('$', I));
   AssertFalse(TUInt128.TryParse('-', I));
+  AssertFalse(TUInt128.TryParse('+', I));
   AssertFalse(TUInt128.TryParse('0-', I));
+  AssertFalse(TUInt128.TryParse('++0x0', I));
 
   AssertTrue(TUInt128.TryParse('0', I));
   AssertTrue(I.IsZero);
 
+  AssertTrue(TUInt128.TryParse('+0', I));
+  AssertTrue(I.IsZero);
+
   AssertTrue(TUInt128.TryParse('110', I));
+  AssertTrue(I.ToString = '110');
+
+  AssertTrue(TUInt128.TryParse('+110', I));
   AssertTrue(I.ToString = '110');
 
   AssertTrue(TUInt128.TryParse('x11f', I));
@@ -310,6 +320,9 @@ begin
   AssertTrue(TUInt128.TryParse('0x11f', I));
   AssertTrue(I.ToHexString(1) = '11F');
   AssertTrue(TUInt128.TryParse('0X11f', I));
+  AssertTrue(I.ToHexString(1) = '11F');
+
+  AssertTrue(TUInt128.TryParse('+x0000000000000000000000000000000000011f', I));
   AssertTrue(I.ToHexString(1) = '11F');
 
 
@@ -320,6 +333,9 @@ begin
   AssertTrue(I.ToHexString(1) = 'FFFFFFFFFFFFFFFF');
 
   AssertTrue(TUInt128.TryParse('340282366920938463463374607431768211455', I));
+  AssertTrue(I.ToString = '340282366920938463463374607431768211455');
+
+  AssertTrue(TUInt128.TryParse('+00000000000340282366920938463463374607431768211455', I));
   AssertTrue(I.ToString = '340282366920938463463374607431768211455');
 end;
 
@@ -1084,8 +1100,12 @@ begin
   AssertFalse(TInt128.TryParse('0x', I));
   AssertFalse(TInt128.TryParse('x', I));
   AssertFalse(TInt128.TryParse('-x', I));
+  AssertFalse(TInt128.TryParse('+x', I));
   AssertFalse(TInt128.TryParse('-', I));
+  AssertFalse(TInt128.TryParse('+-', I));
   AssertFalse(TInt128.TryParse('0-', I));
+  AssertFalse(TInt128.TryParse('+-0', I));
+  AssertFalse(TInt128.TryParse('-+10', I));
 
   AssertTrue(TInt128.TryParse('0', I));
   AssertTrue(I.IsZero);
@@ -1093,7 +1113,13 @@ begin
   AssertTrue(TInt128.TryParse('-0', I));
   AssertTrue(I.IsZero);
 
+  AssertTrue(TInt128.TryParse('+0', I));
+  AssertTrue(I.IsZero);
+
   AssertTrue(TInt128.TryParse('110', I));
+  AssertTrue(I.ToString = '110');
+
+  AssertTrue(TInt128.TryParse('+110', I));
   AssertTrue(I.ToString = '110');
 
   AssertTrue(TInt128.TryParse('x11f', I));
@@ -1103,11 +1129,17 @@ begin
   AssertTrue(TInt128.TryParse('0X11f', I));
   AssertTrue(I.ToHexString(1) = '11F');
 
+  AssertTrue(TInt128.TryParse('+0X11f', I));
+  AssertTrue(I.ToHexString(1) = '11F');
+
 
   AssertTrue(TInt128.TryParse('18446744073709551615', I));
   AssertTrue(I.ToString = '18446744073709551615');
 
   AssertTrue(TInt128.TryParse('$ffffffffffffffff', I));
+  AssertTrue(I.ToHexString(1) = 'FFFFFFFFFFFFFFFF');
+
+  AssertTrue(TInt128.TryParse('+$000000000000000000000000000000ffffffffffffffff', I));
   AssertTrue(I.ToHexString(1) = 'FFFFFFFFFFFFFFFF');
 
   AssertTrue(TInt128.TryParse('-$ffffffffffffffff', I));
@@ -1117,8 +1149,15 @@ begin
   AssertTrue(I = I.MaxValue);
   AssertTrue(TInt128.TryParse('-170141183460469231731687303715884105727', I));
   AssertTrue(I = I.MinValue);
+
   AssertFalse(TInt128.TryParse('170141183460469231731687303715884105728', I));
   AssertFalse(TInt128.TryParse('-170141183460469231731687303715884105728', I));
+
+  AssertTrue(TInt128.TryParse('$ffffffffffffffffffffffffffffffff', I));
+  AssertTrue(I = I.MinValue);
+
+  AssertTrue(TInt128.TryParse('-$7fffffffffffffffffffffffffffffff', I));
+  AssertTrue(I = I.MinValue);
 end;
 
 procedure TInt128Test.CompareValue;
@@ -1915,6 +1954,24 @@ begin
   AssertTrue(q = TInt128('42792641331514984116831468502'));
   AssertTrue(r = -743560293);
   AssertTrue(q * d + r = a);
+end;
+
+procedure TInt128Test.Encode;
+var
+  a: TInt128;
+begin
+  a := TInt128.Encode(0,0,0,0);
+  AssertTrue(a = 0);
+
+  a := TInt128.Encode(1,0,0,$80000000);
+  AssertTrue(a = -1);
+
+  a := TInt128.Encode(-42);
+  AssertTrue(a = -42);
+
+  a := TInt128.Encode(Low(Int64));
+  AssertTrue(a.Lo = QWord($8000000000000000));
+  AssertTrue(a.Hi = QWord($8000000000000000));
 end;
 
 initialization
