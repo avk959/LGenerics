@@ -242,6 +242,8 @@ type
     procedure AddAllStaticArray21;
     procedure AddAllDynArray21;
     procedure AddAllSelf;
+    procedure FillInt;
+    procedure FillStr;
 
     procedure Clear;
     procedure MakeEmpty;
@@ -1980,6 +1982,44 @@ begin
     AssertTrue(v{%H-}[I] = IntArray21[I + 1]);
   for I := 0 to 20 do
     AssertTrue(v{%H-}[I+21] = IntArray21[I + 1]);
+end;
+
+procedure TGLiteVectorTest.FillInt;
+var
+  v: TIntVector;
+  I: Integer;
+begin
+  {%H-}v.Add(42);
+  AssertTrue(v.NonEmpty);
+
+  I := v.Fill(7, -2);
+  AssertTrue(I = 0);
+  AssertTrue(v.IsEmpty);
+
+  I := v.Fill(7, 12);
+  AssertTrue(I = 12);
+  AssertTrue(v.Count = 12);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = 7);
+end;
+
+procedure TGLiteVectorTest.FillStr;
+var
+  v: TStrVector;
+  I: Integer;
+begin
+  {%H-}v.Add('one');
+  AssertTrue(v.NonEmpty);
+
+  I := v.Fill('two', -2);
+  AssertTrue(I = 0);
+  AssertTrue(v.IsEmpty);
+
+  I := v.Fill('three', 12);
+  AssertTrue(I = 12);
+  AssertTrue(v.Count = 12);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = 'three');
 end;
 
 procedure TGLiteVectorTest.Clear;
