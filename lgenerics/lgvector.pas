@@ -178,6 +178,7 @@ type
   type
     TBuffer = specialize TGLiteDynBuffer<T>;
     TFake   = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
+    THelper = specialize TGArrayHelpUtil<T>;
 
   public
   type
@@ -218,6 +219,7 @@ type
     function  AddAll(const a: array of T): SizeInt;
     function  AddAll(e: specialize IGEnumerable<T>): SizeInt;
     function  AddAll(constref aVector: TGLiteVector): SizeInt;
+    function  Fill(const aValue: T; aCount: SizeInt): SizeInt;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
     procedure Insert(aIndex: SizeInt; const aValue: T); inline;
@@ -1955,6 +1957,18 @@ begin
         System.Move(Pointer(aVector.FBuffer.FItems)^, FItems[I], Result * SizeOf(T));
       FCount += Result;
     end;
+end;
+
+function TGLiteVector.Fill(const aValue: T; aCount: SizeInt): SizeInt;
+begin
+  FBuffer.MakeEmpty;
+  if aCount > 0 then
+    begin
+      FBuffer.EnsureCapacity(aCount);
+      THelper.Fill(FBuffer.FItems[0..Pred(aCount)], aValue);
+      FBuffer.FCount := aCount;
+    end;
+  Result := Count;
 end;
 
 procedure TGLiteVector.Insert(aIndex: SizeInt; const aValue: T);
