@@ -2870,7 +2870,7 @@ begin
       else
         if (c <= $dbff) and (I < Len-1) and (p[I+1] >= #$dc00)and(p[I+1] <= #$dfff) then
           begin
-            pSeq[aSeqLen] := (c - $d7c0) shl 10 + (Ucs4Char(p[I+1]) xor $dc00);
+            pSeq[aSeqLen] := Ucs4Char((c - $d7c0) shl 10) + (Ucs4Char(p[I+1]) xor $dc00);
             Inc(I);
           end
         else { invalid surrogate pair }
@@ -2899,7 +2899,7 @@ begin
       else
         if (c <= $dbff) and (I < Len-1) and (p[I+1] >= #$dc00)and(p[I+1] <= #$dfff) then
           begin
-            aSeq[Count] := (c - $d7c0) shl 10 + (Ucs4Char(p[I+1]) xor $dc00);
+            aSeq[Count] := Ucs4Char((c - $d7c0) shl 10) + (Ucs4Char(p[I+1]) xor $dc00);
             Inc(I);
           end
         else { invalid surrogate pair }
@@ -2921,7 +2921,7 @@ begin
   else
     if (c <= $dbff) and (aStrLen > 1) and (p[1] >= #$dc00)and(p[1] <= #$dfff) then
       begin
-        Result := (c - $d7c0) shl 10 + (Ucs4Char(p[1]) xor $dc00);
+        Result := Ucs4Char((c - $d7c0) shl 10) + (Ucs4Char(p[1]) xor $dc00);
         Inc(aLen);
       end
     else
@@ -3538,7 +3538,7 @@ begin
   else
     if (c <= $dbff) and (Len > 1) and (p[1] >= #$dc00)and(p[1] <= #$dfff) then
       begin
-        aPt := (c - $d7c0) shl 10 + (Ucs4Char(p[1]) xor $dc00);
+        aPt := Ucs4Char((c - $d7c0) shl 10) + (Ucs4Char(p[1]) xor $dc00);
         Dec(Len);
       end
     else
