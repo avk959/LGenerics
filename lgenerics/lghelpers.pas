@@ -209,6 +209,7 @@ type
     class function HashCode(aValue: TObject): SizeInt; static; inline;
     class function Equal(L, R: TObject): Boolean; static; inline;
     class function Less(L, R: TObject): Boolean; static; inline;
+    function GetSelfRef: TObject;
   end;
 
   TVariantHelper = type helper for Variant
@@ -841,6 +842,11 @@ end;
 class function TGObjectHelper.Less(L, R: TObject): Boolean;
 begin
   Result := Pointer(L) < Pointer(R);
+end;
+
+function TGObjectHelper.GetSelfRef: TObject;
+begin
+  Result := Self;
 end;
 
 class function TVariantHelper.HashCode(const aValue: Variant): SizeInt;
