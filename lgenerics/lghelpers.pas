@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Helpers for some basic types.                                           *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -856,7 +856,7 @@ end;
 
 class function TVariantHelper.Equal(const L, R: Variant): Boolean;
 begin
-  Result := VarCompareValue(L, R) = vrEqual;
+  Result := CompareByte(L, R, SizeOf(Variant)) = 0;
 end;
 
 class function TVariantHelper.Less(const L, R: Variant): Boolean;
