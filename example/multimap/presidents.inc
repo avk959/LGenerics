@@ -44,4 +44,5 @@
 (FirstName:'George';     LastName:'Bush'),
 (FirstName:'Barack';     LastName:'Obama'),
 (FirstName:'Donald';     LastName:'Trump'),
-(FirstName:'Joseph';     LastName:'Biden'))
+(FirstName:'Joseph';     LastName:'Biden'),
+(FirstName:'Donald';     LastName:'Trump'))
