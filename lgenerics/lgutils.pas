@@ -2822,7 +2822,7 @@ begin
     aFromIndex := 0;
   if (aFromIndex >= Length) or (aCount < 1) then
     begin
-      Result.Clear;
+      Result.DoClear;
       exit;
     end;
   aCount := Math.Min(aCount, Length - aFromIndex);
