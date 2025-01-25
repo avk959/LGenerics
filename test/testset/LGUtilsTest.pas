@@ -44,6 +44,8 @@ type
     procedure TurnSetElem;
   end;
 
+  { TGOptionalTest }
+
   TGOptionalTest = class(TTestCase)
   private
   type
@@ -67,6 +69,10 @@ type
     procedure AssignNilInterfaceRaw;
     procedure AssignArray;
     procedure AssignNilArray;
+    procedure UnwrapInt;
+    procedure UnwrapStr;
+    procedure UnwrapArray;
+    procedure UnwrapInterface;
     procedure OrElseInt;
     procedure OrElseStr;
     procedure OrElseRaiseInt;
@@ -728,6 +734,63 @@ var
 begin
   o := nil;
   AssertTrue(o.Assigned);
+end;
+
+procedure TGOptionalTest.UnwrapInt;
+var
+  o: TOptional;
+  I: Integer;
+begin
+  AssertFalse({%H-}o.Unwrap(I));
+  o := 42;
+  AssertTrue(o.Unwrap(I));
+  AssertTrue(I = 42);
+end;
+
+procedure TGOptionalTest.UnwrapStr;
+var
+  o: TStrOptional;
+  s: string;
+begin
+  AssertFalse({%H-}o.Unwrap(s));
+  o := '';
+  AssertTrue(o.Unwrap(s));
+  AssertTrue(s = '');
+  o.Clear;
+  AssertFalse(o.Unwrap(s));
+  o := 'blah';
+  AssertTrue(o.Unwrap(s));
+  AssertTrue(s = 'blah');
+end;
+
+procedure TGOptionalTest.UnwrapArray;
+var
+  o: TArrayOptional;
+  a: array of Integer;
+begin
+  AssertFalse({%H-}o.Unwrap(a));
+  o := nil;
+  AssertTrue(o.Unwrap(a));
+  AssertTrue(a = nil);
+  o.Clear;
+  AssertFalse(o.Unwrap(a));
+  o := [42];
+  AssertTrue(o.Unwrap(a));
+  AssertTrue(Length(a) = 1);
+  AssertTrue(a[0] = 42);
+end;
+
+procedure TGOptionalTest.UnwrapInterface;
+var
+  o: TIntfOptional;
+  Intf: IInterface;
+begin
+  AssertFalse({%H-}o.Unwrap(Intf));
+  o := IInterface(nil);
+  AssertFalse(o.Unwrap(Intf));
+  o := TInterfacedObject.Create;
+  AssertTrue(o.Unwrap(Intf));
+  AssertTrue(Intf <> nil);
 end;
 
 procedure TGOptionalTest.OrElseInt;
