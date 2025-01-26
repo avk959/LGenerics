@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *   Some common BST utilities.                                              *
-*   Copyright(c) 2019-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -32,8 +32,8 @@ uses
 
 type
 
-  { TGBaseBstUtil - binary search tree utility, it assumes TNode is a record type and
-    it allocates memory with System.GetMem;
+  { TGBaseBstUtil - binary search tree utility, it assumes TNode is a record type;
+    it allocates memory with System.New();
       TNode must provide:
         field/property/function Key: TKey;
         field/property/function Left: ^TNode;
@@ -45,12 +45,13 @@ type
     TOnVisit   = procedure(aNode: PNode; var aGoOn: Boolean) of object;
     TNestVisit = procedure(aNode: PNode; var aGoOn: Boolean) is nested;
 
+    class function  CreateNode: PNode; inline; static;
     class function  GetTreeSize(aNode: PNode): SizeInt; static;
     class function  GetHeight(aNode: PNode): SizeInt; static;
     class function  GetLowest(aRoot: PNode): PNode; static;
     class function  GetHighest(aRoot: PNode): PNode; static;
-    class procedure ClearTree(aNode: PNode); static;
     class procedure FreeNode(aNode: PNode); static; inline;
+    class procedure ClearTree(aNode: PNode); static;
     class function  PreOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt; static;
     class function  PreOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt; static;
     class function  InOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt; static;
@@ -103,6 +104,11 @@ implementation
 
 { TGBaseBstUtil }
 
+class function TGBaseBstUtil.CreateNode: PNode;
+begin
+  System.New(Result);
+end;
+
 class function TGBaseBstUtil.GetTreeSize(aNode: PNode): SizeInt;
 var
   Size: SizeInt = 0;
@@ -150,23 +156,21 @@ begin
       Result := Result^.Right;
 end;
 
+class procedure TGBaseBstUtil.FreeNode(aNode: PNode);
+begin
+  //if IsManagedType(TNode) then
+    aNode^ := Default(TNode);
+  System.Dispose(aNode);
+end;
+
 class procedure TGBaseBstUtil.ClearTree(aNode: PNode);
 begin
   if aNode <> nil then
     begin
       ClearTree(aNode^.Left);
       ClearTree(aNode^.Right);
-      //if IsManagedType(TNode) then
-        aNode^ := Default(TNode);
-      System.FreeMem(aNode);
+      FreeNode(aNode);
     end;
-end;
-
-class procedure TGBaseBstUtil.FreeNode(aNode: PNode);
-begin
-  //if IsManagedType(TNode) then
-    aNode^ := Default(TNode);
-  System.FreeMem(aNode);
 end;
 
 class function TGBaseBstUtil.PreOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
