@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some generic treap variants.                                            *
 *                                                                           *
-*   Copyright(c) 2019-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -445,6 +445,7 @@ type
       property Reversed: Boolean read GetReversed write SetReversed;
       property Key: SizeInt read GetSize;
     end;
+    TUtil = specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>;
 
   var
     FRoot: PNode;
@@ -523,7 +524,7 @@ end;
 
 class function TGLiteTreap.NewNode(const aKey: TKey): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FKey := aKey;
   Result^.FPrio := SizeUInt(NextRandomQWord);
@@ -810,7 +811,7 @@ end;
 
 class function TGLiteIdxTreap.NewNode(const aKey: TKey): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FKey := aKey;
   Result^.FPrio := SizeUInt(NextRandomQWord);
@@ -1139,7 +1140,7 @@ end;
 
 class function TGLiteSegmentTreap.NewNode(const aKey: TKey; const aValue: TValue): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.Key := aKey;
   Result^.Prio := SizeUInt(NextRandomQWord);
@@ -1726,7 +1727,7 @@ end;
 
 class function TGLiteImplicitTreap.NewNode(const aValue: T): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.Prio := SizeUInt(NextRandomQWord);
   Result^.Size := 1;
@@ -2061,7 +2062,7 @@ end;
 
 class function TGLiteImplSegmentTreap.NewNode(const aValue: T): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.Prio := SizeUInt(NextRandomQWord);
   Result^.Size := 1;
@@ -2494,25 +2495,23 @@ end;
 
 function TGLiteImplicitSegTreap.GetCount: SizeInt;
 begin
-  Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot);
+  Result := TUtil.GetNodeSize(FRoot);
 end;
 
 function TGLiteImplicitSegTreap.GetHeight: SizeInt;
 begin
-  Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetHeight(FRoot);
+  Result := TUtil.GetHeight(FRoot);
 end;
 
 procedure TGLiteImplicitSegTreap.CheckIndexRange(aIndex: SizeInt);
 begin
-  if SizeUInt(aIndex) >=
-     SizeUInt(specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot)) then
+  if SizeUInt(aIndex) >= SizeUInt(TUtil.GetNodeSize(FRoot)) then
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteImplicitSegTreap.CheckInsertRange(aIndex: SizeInt);
 begin
-  if SizeUInt(aIndex) >
-     SizeUInt(specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot)) then
+  if SizeUInt(aIndex) > SizeUInt(TUtil.GetNodeSize(FRoot)) then
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
@@ -2540,7 +2539,7 @@ end;
 
 class function TGLiteImplicitSegTreap.NewNode(const aValue: T): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FSize := 1;
   Result^.Prio := SizeUInt(NextRandomQWord);
@@ -2637,7 +2636,7 @@ begin
   if aRoot <> nil then
     begin
       Push(aRoot);
-      CurrIdx := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(aRoot^.Left);
+      CurrIdx := TUtil.GetNodeSize(aRoot^.Left);
       if CurrIdx < aIdx then
         begin
           L := aRoot;
@@ -2723,7 +2722,7 @@ end;
 procedure TGLiteImplicitSegTreap.Clear;
 begin
   if FRoot <> nil then
-    specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.ClearTree(FRoot);
+    TUtil.ClearTree(FRoot);
   FRoot := nil;
 end;
 
@@ -2752,7 +2751,7 @@ end;
 
 function TGLiteImplicitSegTreap.Add(const aValue: T): SizeInt;
 begin
-  Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot);
+  Result := TUtil.GetNodeSize(FRoot);
   if FRoot <> nil then
     FRoot := MergeNode(FRoot, NewNode(aValue))
   else
@@ -2798,7 +2797,7 @@ begin
   SplitNode(aIndex, FRoot, L, R);
   SplitNode(1, R, M, R);
   Result := M^.Value;
-  specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.FreeNode(M);
+  TUtil.FreeNode(M);
   FRoot := MergeNode(L, R);
 end;
 
@@ -2813,7 +2812,7 @@ begin
   SplitNode(aIndex, FRoot, L, R);
   SplitNode(aCount, R, M, R);
   Result := M^.Size;
-  specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.ClearTree(M);
+  TUtil.ClearTree(M);
   FRoot := MergeNode(L, R);
 end;
 
