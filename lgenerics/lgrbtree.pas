@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   The generic implementation of the conventional red-black tree.          *
 *                                                                           *
-*   Copyright(c) 2019-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -720,7 +720,7 @@ end;
 
 class function TGLiteRbTree.NewNode(const aKey: TKey): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FKey := aKey;
   Result^.FParent := RED;
@@ -1332,7 +1332,7 @@ end;
 
 class function TGLiteComparableRbTree.NewNode(const aKey: TKey): PNode;
 begin
-  Result := System.GetMem(SizeOf(TNode));
+  Result := TUtil.CreateNode;
   System.FillChar(Result^, SizeOf(TNode), 0);
   Result^.FKey := aKey;
   Result^.FParent := RED;
