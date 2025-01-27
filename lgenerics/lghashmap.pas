@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hashmap implementations.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -92,12 +92,12 @@ type
     //return True if aKey found, otherwise insert (garbage) pair and return False;
     function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; override;
     function  DoExtract(const aKey: TKey; out v: TValue): Boolean; override;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
-    function  DoExtractIf(aTest: TKeyTest): TEntryArray; override;
-    function  DoExtractIf(aTest: TOnKeyTest): TEntryArray; override;
-    function  DoExtractIf(aTest: TNestKeyTest): TEntryArray; override;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; override;
+    function  DoExtractIf(aTest: TEntryTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TOnEntryTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TNestEntryTest): TEntryArray; override;
     procedure DoClear; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure DoTrimToFit; override;
@@ -245,9 +245,9 @@ type
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership); inline;
     function  DoRemove(const aKey: TKey): Boolean; override;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; override;
     procedure DoClear; override;
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
@@ -357,9 +357,9 @@ type
   type
     TEntryArray      = specialize TGArray<TEntry>;
     TKeyArray        = specialize TGArray<TKey>;
-    TKeyTest         = specialize TGTest<TKey>;
-    TOnKeyTest       = specialize TGOnTest<TKey>;
-    TNestKeyTest     = specialize TGNestTest<TKey>;
+    TEntryTest       = specialize TGTest<TEntry>;
+    TOnEntryTest     = specialize TGOnTest<TEntry>;
+    TNestEntryTest   = specialize TGNestTest<TEntry>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     IKeyCollection   = specialize IGCollection<TKey>;
@@ -491,13 +491,13 @@ type
     function  RemoveAll(const a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
     function  RemoveAll(constref aMap: TGLiteHashMap): SizeInt;
-    function  RemoveIf(aTest: TKeyTest): SizeInt;
-    function  RemoveIf(aTest: TOnKeyTest): SizeInt;
-    function  RemoveIf(aTest: TNestKeyTest): SizeInt;
+    function  RemoveIf(aTest: TEntryTest): SizeInt;
+    function  RemoveIf(aTest: TOnEntryTest): SizeInt;
+    function  RemoveIf(aTest: TNestEntryTest): SizeInt;
     function  Extract(const aKey: TKey; out v: TValue): Boolean;
-    function  ExtractIf(aTest: TKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
+    function  ExtractIf(aTest: TEntryTest): TEntryArray;
+    function  ExtractIf(aTest: TOnEntryTest): TEntryArray;
+    function  ExtractIf(aTest: TNestEntryTest): TEntryArray;
     procedure RetainAll(aCollection: IKeyCollection);
     function  Keys: TKeys;
     function  Values: TValues;
@@ -790,45 +790,45 @@ begin
     end;
 end;
 
-function TGAbstractHashMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGAbstractHashMap.DoRemoveIf(aTest: TEntryTest): SizeInt;
 begin
-  Result := FTable.RemoveIf(aTest);
+  Result := FTable.RemoveIfe(aTest);
 end;
 
-function TGAbstractHashMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGAbstractHashMap.DoRemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
-  Result := FTable.RemoveIf(aTest);
+  Result := FTable.RemoveIfe(aTest);
 end;
 
-function TGAbstractHashMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGAbstractHashMap.DoRemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
-  Result := FTable.RemoveIf(aTest);
+  Result := FTable.RemoveIfe(aTest);
 end;
 
-function TGAbstractHashMap.DoExtractIf(aTest: TKeyTest): TEntryArray;
+function TGAbstractHashMap.DoExtractIf(aTest: TEntryTest): TEntryArray;
 var
   eh: TExtractHelper;
 begin
   eh.Init;
-  FTable.RemoveIf(aTest, @eh.OnExtract);
+  FTable.RemoveIfe(aTest, @eh.OnExtract);
   Result := eh.Final;
 end;
 
-function TGAbstractHashMap.DoExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGAbstractHashMap.DoExtractIf(aTest: TOnEntryTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
   e.Init;
-  FTable.RemoveIf(aTest, @e.OnExtract);
+  FTable.RemoveIfe(aTest, @e.OnExtract);
   Result := e.Final;
 end;
 
-function TGAbstractHashMap.DoExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGAbstractHashMap.DoExtractIf(aTest: TNestEntryTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
   e.Init;
-  FTable.RemoveIf(aTest, @e.OnExtract);
+  FTable.RemoveIfe(aTest, @e.OnExtract);
   Result := e.Final;
 end;
 
@@ -1223,19 +1223,19 @@ begin
     end;
 end;
 
-function TGCustomObjectHashMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGCustomObjectHashMap.DoRemoveIf(aTest: TEntryTest): SizeInt;
 begin
-  Result := FTable.RemoveIf(aTest, @EntryRemoving);
+  Result := FTable.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGCustomObjectHashMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGCustomObjectHashMap.DoRemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
-  Result := FTable.RemoveIf(aTest, @EntryRemoving);
+  Result := FTable.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGCustomObjectHashMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGCustomObjectHashMap.DoRemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
-  Result := FTable.RemoveIf(aTest, @EntryRemoving);
+  Result := FTable.RemoveIfe(aTest, @EntryRemoving);
 end;
 
 procedure TGCustomObjectHashMap.DoClear;
@@ -2059,38 +2059,38 @@ begin
     end;
 end;
 
-function TGLiteHashMap.RemoveIf(aTest: TKeyTest): SizeInt;
+function TGLiteHashMap.RemoveIf(aTest: TEntryTest): SizeInt;
 var
   re: TTblRemovableEnumerator;
 begin
   Result := Count;
   re := FTable.GetRemovableEnumerator;
   while re.MoveNext do
-    if aTest(re.Current^.Key) then
+    if aTest(re.Current^) then
       re.RemoveCurrent;
   Result -= Count;
 end;
 
-function TGLiteHashMap.RemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGLiteHashMap.RemoveIf(aTest: TOnEntryTest): SizeInt;
 var
   re: TTblRemovableEnumerator;
 begin
   Result := Count;
   re := FTable.GetRemovableEnumerator;
   while re.MoveNext do
-    if aTest(re.Current^.Key) then
+    if aTest(re.Current^) then
       re.RemoveCurrent;
   Result -= Count;
 end;
 
-function TGLiteHashMap.RemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGLiteHashMap.RemoveIf(aTest: TNestEntryTest): SizeInt;
 var
   re: TTblRemovableEnumerator;
 begin
   Result := Count;
   re := FTable.GetRemovableEnumerator;
   while re.MoveNext do
-    if aTest(re.Current^.Key) then
+    if aTest(re.Current^) then
       re.RemoveCurrent;
   Result -= Count;
 end;
@@ -2109,7 +2109,7 @@ begin
     end;
 end;
 
-function TGLiteHashMap.ExtractIf(aTest: TKeyTest): TEntryArray;
+function TGLiteHashMap.ExtractIf(aTest: TEntryTest): TEntryArray;
 var
   re: TTblRemovableEnumerator;
   I: SizeInt = 0;
@@ -2120,11 +2120,11 @@ begin
   while re.MoveNext do
     begin
       e := re.Current^;
-      if aTest(e.Key) then
+      if aTest(e) then
         begin
           re.RemoveCurrent;
           if I = System.Length(Result) then
-            System.SetLength(Result, I shl 1);
+            System.SetLength(Result, I * 2);
           Result[I] := e;
           Inc(I);
         end;
@@ -2132,7 +2132,7 @@ begin
   System.SetLength(Result, I);
 end;
 
-function TGLiteHashMap.ExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGLiteHashMap.ExtractIf(aTest: TOnEntryTest): TEntryArray;
 var
   re: TTblRemovableEnumerator;
   I: SizeInt = 0;
@@ -2143,11 +2143,11 @@ begin
   while re.MoveNext do
     begin
       e := re.Current^;
-      if aTest(e.Key) then
+      if aTest(e) then
         begin
           re.RemoveCurrent;
           if I = System.Length(Result) then
-            System.SetLength(Result, I shl 1);
+            System.SetLength(Result, I * 2);
           Result[I] := e;
           Inc(I);
         end;
@@ -2155,7 +2155,7 @@ begin
   System.SetLength(Result, I);
 end;
 
-function TGLiteHashMap.ExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGLiteHashMap.ExtractIf(aTest: TNestEntryTest): TEntryArray;
 var
   re: TTblRemovableEnumerator;
   I: SizeInt = 0;
@@ -2166,11 +2166,11 @@ begin
   while re.MoveNext do
     begin
       e := re.Current^;
-      if aTest(e.Key) then
+      if aTest(e) then
         begin
           re.RemoveCurrent;
           if I = System.Length(Result) then
-            System.SetLength(Result, I shl 1);
+            System.SetLength(Result, I * 2);
           Result[I] := e;
           Inc(I);
         end;
