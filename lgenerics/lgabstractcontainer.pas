@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Common abstact container classes.                                       *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -468,7 +468,7 @@ type
   { TGAbstractMap: map abstract ancestor class  }
   generic TGAbstractMap<TKey, TValue> = class abstract(TSimpleIterable, specialize IGMap<TKey, TValue>,
     specialize IGReadOnlyMap<TKey, TValue>)
-  {must be
+  {should be
     generic TGAbstractMap<TKey, TValue> = class abstract(
       specialize TGAbstractContainer<specialize TGMapEntry<TKey, TValue>>), but in 3.2.0 it doesn't compile}
   public
@@ -481,9 +481,9 @@ type
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     TEntryArray      = specialize TGArray<TEntry>;
     TKeyArray        = specialize TGArray<TKey>;
-    TKeyTest         = specialize TGTest<TKey>; ///////
-    TOnKeyTest       = specialize TGOnTest<TKey>;
-    TNestKeyTest     = specialize TGNestTest<TKey>;
+    TEntryTest       = specialize TGTest<TEntry>; ///////
+    TOnEntryTest     = specialize TGOnTest<TEntry>;
+    TNestEntryTest   = specialize TGNestTest<TEntry>;
     TKeyOptional     = specialize TGOptional<TKey>;
     TValueOptional   = specialize TGOptional<TValue>;
     TKeyCollection   = specialize TGAbstractCollection<TKey>;
@@ -534,12 +534,12 @@ type
     //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
     function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; virtual; abstract;
     function  DoExtract(const aKey: TKey; out v: TValue): Boolean; virtual; abstract;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; virtual; abstract;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; virtual; abstract;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; virtual; abstract;
-    function  DoExtractIf(aTest: TKeyTest): TEntryArray; virtual; abstract;
-    function  DoExtractIf(aTest: TOnKeyTest): TEntryArray; virtual; abstract;
-    function  DoExtractIf(aTest: TNestKeyTest): TEntryArray; virtual; abstract;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; virtual; abstract;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; virtual; abstract;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; virtual; abstract;
+    function  DoExtractIf(aTest: TEntryTest): TEntryArray; virtual; abstract;
+    function  DoExtractIf(aTest: TOnEntryTest): TEntryArray; virtual; abstract;
+    function  DoExtractIf(aTest: TNestEntryTest): TEntryArray; virtual; abstract;
 
     function  DoRemove(const aKey: TKey): Boolean; virtual;
     procedure DoClear; virtual; abstract;
@@ -594,14 +594,14 @@ type
     function  Remove(const aKey: TKey): Boolean;
     function  RemoveAll(const a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
-    function  RemoveIf(aTest: TKeyTest): SizeInt;
-    function  RemoveIf(aTest: TOnKeyTest): SizeInt;
-    function  RemoveIf(aTest: TNestKeyTest): SizeInt;
+    function  RemoveIf(aTest: TEntryTest): SizeInt;
+    function  RemoveIf(aTest: TOnEntryTest): SizeInt;
+    function  RemoveIf(aTest: TNestEntryTest): SizeInt;
     function  Extract(const aKey: TKey; out v: TValue): Boolean;
-    function  ExtractIf(aTest: TKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
-    procedure RetainAll({%H-}aCollection: IKeyCollection);
+    function  ExtractIf(aTest: TEntryTest): TEntryArray;
+    function  ExtractIf(aTest: TOnEntryTest): TEntryArray;
+    function  ExtractIf(aTest: TNestEntryTest): TEntryArray;
+    procedure RetainAll(aCollection: IKeyCollection);
     function  Clone: TSpecMap; virtual; abstract;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
@@ -3027,19 +3027,19 @@ begin
     end;
 end;
 
-function TGAbstractMap.RemoveIf(aTest: TKeyTest): SizeInt;
+function TGAbstractMap.RemoveIf(aTest: TEntryTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGAbstractMap.RemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGAbstractMap.RemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGAbstractMap.RemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGAbstractMap.RemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
@@ -3051,29 +3051,33 @@ begin
   Result := DoExtract(aKey, v);
 end;
 
-function TGAbstractMap.ExtractIf(aTest: TKeyTest): TEntryArray;
+function TGAbstractMap.ExtractIf(aTest: TEntryTest): TEntryArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-function TGAbstractMap.ExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGAbstractMap.ExtractIf(aTest: TOnEntryTest): TEntryArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-function TGAbstractMap.ExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGAbstractMap.ExtractIf(aTest: TNestEntryTest): TEntryArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
 procedure TGAbstractMap.RetainAll(aCollection: IKeyCollection);
+  function ToRemove(const e: TEntry): Boolean;
+  begin
+    Result := aCollection.NonContains(e.Key);
+  end;
 begin
   Assert(aCollection = aCollection); //to supress hints
   CheckInIteration;
-  DoRemoveIf(@aCollection.NonContains);
+  DoRemoveIf(@ToRemove);
 end;
 
 
