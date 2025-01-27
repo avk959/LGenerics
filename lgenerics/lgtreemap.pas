@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sorted map implementations on top of AVL tree.                  *
 *                                                                           *
-*   Copyright(c) 2018-2023 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -99,12 +99,12 @@ type
     //return True if aKey found, otherwise insert (garbage) pair and return False;
     function  FindOrAdd(const aKey: TKey; out p: PEntry): Boolean; override;
     function  DoExtract(const aKey: TKey; out v: TValue): Boolean; override;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
-    function  DoExtractIf(aTest: TKeyTest): TEntryArray; override;
-    function  DoExtractIf(aTest: TOnKeyTest): TEntryArray; override;
-    function  DoExtractIf(aTest: TNestKeyTest): TEntryArray; override;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; override;
+    function  DoExtractIf(aTest: TEntryTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TOnEntryTest): TEntryArray; override;
+    function  DoExtractIf(aTest: TNestEntryTest): TEntryArray; override;
     procedure DoClear; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure DoTrimToFit; override;
@@ -215,9 +215,9 @@ type
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
     function  DoRemove(const aKey: TKey): Boolean; override;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; override;
     procedure DoClear; override;
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
@@ -332,9 +332,9 @@ type
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
     function  DoRemove(const aKey: TKey): Boolean; override;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; override;
     procedure DoClear; override;
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
@@ -409,9 +409,9 @@ type
     procedure EntryRemoving(p: PEntry);
     procedure SetOwnership(aOwns: TMapObjOwnership);
     function  DoRemove(const aKey: TKey): Boolean; override;
-    function  DoRemoveIf(aTest: TKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnKeyTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestKeyTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TOnEntryTest): SizeInt; override;
+    function  DoRemoveIf(aTest: TNestEntryTest): SizeInt; override;
     procedure DoClear; override;
     function  DoSetValue(const aKey: TKey; const aNewValue: TValue): Boolean; override;
     function  DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean; override;
@@ -600,45 +600,45 @@ begin
     end;
 end;
 
-function TGAbstractTreeMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGAbstractTreeMap.DoRemoveIf(aTest: TEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest);
+  Result := FTree.RemoveIfe(aTest);
 end;
 
-function TGAbstractTreeMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGAbstractTreeMap.DoRemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest);
+  Result := FTree.RemoveIfe(aTest);
 end;
 
-function TGAbstractTreeMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGAbstractTreeMap.DoRemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest);
+  Result := FTree.RemoveIfe(aTest);
 end;
 
-function TGAbstractTreeMap.DoExtractIf(aTest: TKeyTest): TEntryArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TEntryTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
   e.Init;
-  FTree.RemoveIf(aTest, @e.OnExtract);
+  FTree.RemoveIfe(aTest, @e.OnExtract);
   Result := e.Final;
 end;
 
-function TGAbstractTreeMap.DoExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TOnEntryTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
   e.Init;
-  FTree.RemoveIf(aTest, @e.OnExtract);
+  FTree.RemoveIfe(aTest, @e.OnExtract);
   Result := e.Final;
 end;
 
-function TGAbstractTreeMap.DoExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TNestEntryTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
   e.Init;
-  FTree.RemoveIf(aTest, @e.OnExtract);
+  FTree.RemoveIfe(aTest, @e.OnExtract);
   Result := e.Final;
 end;
 
@@ -1040,19 +1040,19 @@ begin
     end;
 end;
 
-function TGObjectTreeMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGObjectTreeMap.DoRemoveIf(aTest: TEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGObjectTreeMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGObjectTreeMap.DoRemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGObjectTreeMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGObjectTreeMap.DoRemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
 procedure TGObjectTreeMap.DoClear;
@@ -1471,19 +1471,19 @@ begin
     end;
 end;
 
-function TGObjectRegularTreeMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGObjectRegularTreeMap.DoRemoveIf(aTest: TEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGObjectRegularTreeMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGObjectRegularTreeMap.DoRemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGObjectRegularTreeMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGObjectRegularTreeMap.DoRemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
 procedure TGObjectRegularTreeMap.DoClear;
@@ -1762,19 +1762,19 @@ begin
     end;
 end;
 
-function TGObjectDelegatedTreeMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGObjectDelegatedTreeMap.DoRemoveIf(aTest: TEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGObjectDelegatedTreeMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGObjectDelegatedTreeMap.DoRemoveIf(aTest: TOnEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
-function TGObjectDelegatedTreeMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGObjectDelegatedTreeMap.DoRemoveIf(aTest: TNestEntryTest): SizeInt;
 begin
-  Result := FTree.RemoveIf(aTest, @EntryRemoving);
+  Result := FTree.RemoveIfe(aTest, @EntryRemoving);
 end;
 
 procedure TGObjectDelegatedTreeMap.DoClear;
