@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic hash table implementations for internal use.                    *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -59,10 +59,13 @@ type
   type
     PEntry           = ^TEntry;
     TEntryEvent      = procedure(p: PEntry) of object;
-    TTest            = specialize TGTest<TKey>;
-    TOnTest          = specialize TGOnTest<TKey>;
-    TNestTest        = specialize TGNestTest<TKey>;
-    TEntryTest       = function(p: PEntry): Boolean of object;
+    TKeyTest         = specialize TGTest<TKey>;
+    TOnKeyTest       = specialize TGOnTest<TKey>;
+    TNestKeyTest     = specialize TGNestTest<TKey>;
+    TEntryTest       = specialize TGTest<TEntry>;
+    TOnEntryTest     = specialize TGOnTest<TEntry>;
+    TNestEntryTest   = specialize TGNestTest<TEntry>;
+    TOnPEntryTest    = function(p: PEntry): Boolean of object;
     TEntryEnumerator = specialize TGEnumerator<PEntry>;
 
     TSearchResult = record
@@ -90,10 +93,13 @@ type
     function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; virtual; abstract;
     function  Remove(const aKey: TKey): Boolean; virtual; abstract;
     procedure RemoveAt(const aPos: TSearchResult); virtual; abstract;
-    function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
-    function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
-    function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
-    function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
+    function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     property  Count: SizeInt read FCount;
   { The number of elements that can be written without rehashing }
     property  ExpandTreshold: SizeInt read FExpandTreshold;
@@ -180,10 +186,13 @@ type
     procedure DoRemove(aIndex: SizeInt); override;
   public
     function  Clone: TAbstractHashTable; override;
-    function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
   end;
 
   { TGOpenAddrTombstones }
@@ -204,10 +213,13 @@ type
     procedure Clear; override;
     procedure ClearTombstones; inline;
     function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
-    function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     property  TombstonesCount: SizeInt read FTombstonesCount;
   end;
 
@@ -337,10 +349,13 @@ type
     function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; override;
     function  Remove(const aKey: TKey): Boolean; override;
     procedure RemoveAt(const aPos: TSearchResult); override;
-    function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  GetFirst: PEntry;
     function  GetLast: PEntry;
     property  Head: PNode read FHead;
@@ -427,10 +442,13 @@ type
     function  Add(const aKey: TKey): PNode; inline;
     function  Remove(const aKey: TKey): Boolean; override;
     procedure RemoveAt(const aPos: TSearchResult); override;
-    function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
-    function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
+    function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
   end;
 
   { TGHashTableLP: simplified version TGOpenAddrLP }
@@ -1256,7 +1274,7 @@ begin
   Result := c;
 end;
 
-function TGOpenAddrLP.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrLP.RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1277,7 +1295,7 @@ begin
     end;
 end;
 
-function TGOpenAddrLP.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrLP.RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1298,7 +1316,7 @@ begin
     end;
 end;
 
-function TGOpenAddrLP.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrLP.RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1319,7 +1337,70 @@ begin
     end;
 end;
 
-function TGOpenAddrLP.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrLP.RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(System.Length(FList)) do
+        if (FList[I].Hash <> 0) and aTest(FList[I].Data) then
+          begin
+            if aOnRemove <> nil then
+              aOnRemove(@FList[I].Data);
+            DoRemove(I);
+            Inc(Result);
+          end
+        else
+          Inc(I);
+    end;
+end;
+
+function TGOpenAddrLP.RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(System.Length(FList)) do
+        if (FList[I].Hash <> 0) and aTest(FList[I].Data) then
+          begin
+            if aOnRemove <> nil then
+              aOnRemove(@FList[I].Data);
+            DoRemove(I);
+            Inc(Result);
+          end
+        else
+          Inc(I);
+    end;
+end;
+
+function TGOpenAddrLP.RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(System.Length(FList)) do
+        if (FList[I].Hash <> 0) and aTest(FList[I].Data) then
+          begin
+            if aOnRemove <> nil then
+              aOnRemove(@FList[I].Data);
+            DoRemove(I);
+            Inc(Result);
+          end
+        else
+          Inc(I);
+    end;
+end;
+
+function TGOpenAddrLP.RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1406,7 +1487,7 @@ begin
   e := @FList[aRes.FoundIndex].Data;
 end;
 
-function TGOpenAddrTombstones.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrTombstones.RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1428,7 +1509,7 @@ begin
     end;
 end;
 
-function TGOpenAddrTombstones.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrTombstones.RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1450,7 +1531,7 @@ begin
     end;
 end;
 
-function TGOpenAddrTombstones.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrTombstones.RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1472,7 +1553,73 @@ begin
     end;
 end;
 
-function TGOpenAddrTombstones.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOpenAddrTombstones.RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(System.Length(FList)) do
+        begin
+          if (FList[I].Hash and USED_FLAG <> 0) and aTest(FList[I].Data) then
+            begin
+              if aOnRemove <> nil then
+                aOnRemove(@FList[I].Data);
+              DoRemove(I);
+              Inc(Result);
+            end;
+          Inc(I);
+        end;
+    end;
+end;
+
+function TGOpenAddrTombstones.RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(System.Length(FList)) do
+        begin
+          if (FList[I].Hash and USED_FLAG <> 0) and aTest(FList[I].Data) then
+            begin
+              if aOnRemove <> nil then
+                aOnRemove(@FList[I].Data);
+              DoRemove(I);
+              Inc(Result);
+            end;
+          Inc(I);
+        end;
+    end;
+end;
+
+function TGOpenAddrTombstones.RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(System.Length(FList)) do
+        begin
+          if (FList[I].Hash and USED_FLAG <> 0) and aTest(FList[I].Data) then
+            begin
+              if aOnRemove <> nil then
+                aOnRemove(@FList[I].Data);
+              DoRemove(I);
+              Inc(Result);
+            end;
+          Inc(I);
+        end;
+    end;
+end;
+
+function TGOpenAddrTombstones.RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2011,7 +2158,7 @@ begin
     end;
 end;
 
-function TGOrderedHashTable.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOrderedHashTable.RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -2031,7 +2178,7 @@ begin
     end;
 end;
 
-function TGOrderedHashTable.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOrderedHashTable.RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -2051,7 +2198,7 @@ begin
     end;
 end;
 
-function TGOrderedHashTable.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOrderedHashTable.RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -2071,7 +2218,67 @@ begin
     end;
 end;
 
-function TGOrderedHashTable.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+function TGOrderedHashTable.RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := 0;
+  CurrNode := FHead;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Next;
+      if aTest(CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          RemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
+end;
+
+function TGOrderedHashTable.RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := 0;
+  CurrNode := FHead;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Next;
+      if aTest(CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          RemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
+end;
+
+function TGOrderedHashTable.RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := 0;
+  CurrNode := FHead;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Next;
+      if aTest(CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          RemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
+end;
+
+function TGOrderedHashTable.RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -2490,7 +2697,7 @@ begin
   DoRemove(aPos);
 end;
 
-function TGChainHashTable.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
+function TGChainHashTable.RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
@@ -2522,7 +2729,7 @@ begin
       end;
 end;
 
-function TGChainHashTable.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
+function TGChainHashTable.RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
@@ -2554,7 +2761,7 @@ begin
       end;
 end;
 
-function TGChainHashTable.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
+function TGChainHashTable.RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
@@ -2586,7 +2793,103 @@ begin
       end;
 end;
 
-function TGChainHashTable.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+function TGChainHashTable.RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  PrevNode, CurrNode, NextNode: PNode;
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    for I := 0 to Pred(System.Length(FList)) do
+      begin
+        CurrNode := FList[I];
+        PrevNode := nil;
+        while CurrNode <> nil do
+          begin
+            NextNode := CurrNode^.Next;
+            if aTest(CurrNode^.Data) then
+              begin
+                if PrevNode <> nil then
+                  PrevNode^.Next := NextNode
+                else
+                  FList[I] := NextNode;
+                if aOnRemove <> nil then
+                  aOnRemove(@CurrNode^.Data);
+                DisposeNode(CurrNode);
+                Inc(Result);
+              end
+            else
+              PrevNode := CurrNode;
+            CurrNode := NextNode;
+          end;
+      end;
+end;
+
+function TGChainHashTable.RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  PrevNode, CurrNode, NextNode: PNode;
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    for I := 0 to Pred(System.Length(FList)) do
+      begin
+        CurrNode := FList[I];
+        PrevNode := nil;
+        while CurrNode <> nil do
+          begin
+            NextNode := CurrNode^.Next;
+            if aTest(CurrNode^.Data) then
+              begin
+                if PrevNode <> nil then
+                  PrevNode^.Next := NextNode
+                else
+                  FList[I] := NextNode;
+                if aOnRemove <> nil then
+                  aOnRemove(@CurrNode^.Data);
+                DisposeNode(CurrNode);
+                Inc(Result);
+              end
+            else
+              PrevNode := CurrNode;
+            CurrNode := NextNode;
+          end;
+      end;
+end;
+
+function TGChainHashTable.RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  PrevNode, CurrNode, NextNode: PNode;
+  I: SizeInt;
+begin
+  Result := 0;
+  if Count > 0 then
+    for I := 0 to Pred(System.Length(FList)) do
+      begin
+        CurrNode := FList[I];
+        PrevNode := nil;
+        while CurrNode <> nil do
+          begin
+            NextNode := CurrNode^.Next;
+            if aTest(CurrNode^.Data) then
+              begin
+                if PrevNode <> nil then
+                  PrevNode^.Next := NextNode
+                else
+                  FList[I] := NextNode;
+                if aOnRemove <> nil then
+                  aOnRemove(@CurrNode^.Data);
+                DisposeNode(CurrNode);
+                Inc(Result);
+              end
+            else
+              PrevNode := CurrNode;
+            CurrNode := NextNode;
+          end;
+      end;
+end;
+
+function TGChainHashTable.RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;

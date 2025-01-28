@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some generic AVL tree implementations.                                  *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -84,14 +84,17 @@ type
   generic TGCustomAvlTree<TKey, TEntry> = class abstract
   public
   type
-    TNode       = specialize TGAvlTreeNode<TEntry>;
-    PNode       = ^TNode;
-    PEntry      = ^TEntry;
-    TTest       = specialize TGTest<TKey>;
-    TOnTest     = specialize TGOnTest<TKey>;
-    TNestTest   = specialize TGNestTest<TKey>;
-    TEntryTest  = function(p: PEntry): Boolean of object;
-    TEntryEvent = procedure(p: PEntry) of object;
+    TNode          = specialize TGAvlTreeNode<TEntry>;
+    PNode          = ^TNode;
+    PEntry         = ^TEntry;
+    TKeyTest       = specialize TGTest<TKey>;
+    TOnKeyTest     = specialize TGOnTest<TKey>;
+    TNestKeyTest   = specialize TGNestTest<TKey>;
+    TEntryTest     = specialize TGTest<TEntry>;
+    TOnEntryTest   = specialize TGOnTest<TEntry>;
+    TNestEntryTest = specialize TGNestTest<TEntry>;
+    TOnPEntryTest  = function(p: PEntry): Boolean of object;
+    TEntryEvent    = procedure(p: PEntry) of object;
 
     TEnumerator = class
     protected
@@ -152,10 +155,13 @@ type
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TEnumerator; inline;
     function  GetEnumeratorAt(const aKey: TKey; aInclusive: Boolean): TEnumerator; inline;
-    function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt;
-    function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt;
-    function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt;
-    function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent = nil): SizeInt;
+    function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt;
     function  Find(const aKey: TKey): PNode; virtual; abstract;
     function  FindLess(const aKey: TKey): PNode; virtual; abstract;
     function  FindLessOrEqual(const aKey: TKey): PNode; virtual; abstract;
@@ -1174,7 +1180,7 @@ begin
     Result := TEnumerator.Create(FindGreater(aKey))
 end;
 
-function TGCustomAvlTree.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
+function TGCustomAvlTree.RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -1194,7 +1200,7 @@ begin
     end;
 end;
 
-function TGCustomAvlTree.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
+function TGCustomAvlTree.RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -1214,7 +1220,7 @@ begin
     end;
 end;
 
-function TGCustomAvlTree.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
+function TGCustomAvlTree.RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
@@ -1234,7 +1240,67 @@ begin
     end;
 end;
 
-function TGCustomAvlTree.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+function TGCustomAvlTree.RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  CurrNode, NextNode: PNode;
+begin
+  CurrNode := Lowest;
+  Result := 0;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Successor;
+      if aTest(CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          DoRemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
+end;
+
+function TGCustomAvlTree.RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  CurrNode, NextNode: PNode;
+begin
+  CurrNode := Lowest;
+  Result := 0;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Successor;
+      if aTest(CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          DoRemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
+end;
+
+function TGCustomAvlTree.RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent): SizeInt;
+var
+  CurrNode, NextNode: PNode;
+begin
+  CurrNode := Lowest;
+  Result := 0;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Successor;
+      if aTest(CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          DoRemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
+end;
+
+function TGCustomAvlTree.RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
