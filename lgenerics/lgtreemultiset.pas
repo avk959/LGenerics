@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sorted multiset implementations on top of AVL tree.             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -708,7 +708,7 @@ var
 begin
   I.FSet := Self;
   I.FOtherSet := aSet;
-  FTree.RemoveIf(@I.OnIntersect, @EntryRemoved);
+  FTree.RemoveIfp(@I.OnIntersect, @EntryRemoved);
   Assert(@I = @I);//to supress hints
 end;
 
@@ -1274,7 +1274,7 @@ var
 begin
   I.FSet := Self;
   I.FOtherSet := aSet;
-  FTree.RemoveIf(@I.OnIntersect, @EntryRemoved);
+  FTree.RemoveIfp(@I.OnIntersect, @EntryRemoved);
   Assert(@I = @I);//to supress hints
 end;
 
