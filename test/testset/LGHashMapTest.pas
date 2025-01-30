@@ -281,9 +281,27 @@ begin
   Result := Odd(aValue);
 end;
 
-function StrOdd(const aValue: string): Boolean;
+function IntOddValue(const e: TIntEntry): Boolean;
 begin
-  Result := Odd(StrToInt(System.Copy(aValue, System.Length(aValue), 1)));
+  Result := Odd(e.Value);
+end;
+
+function StrOdd(const aValue: string): Boolean;
+var
+  I: Integer;
+begin
+  if TryStrToInt(Copy(aValue, 5, Length(aValue)), I) then
+    exit(Odd(I));
+  Result := False;
+end;
+
+function StrOddKey(const e: TStrEntry): Boolean;
+var
+  I: Integer;
+begin
+  if TryStrToInt(Copy(e.Key, 5, Length(e.Key)), I) then
+    exit(Odd(I));
+  Result := False;
 end;
 
 { TTestObj }
@@ -411,15 +429,16 @@ procedure THashMapLPTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -427,15 +446,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure THashMapLPTest.IntRetain;
@@ -518,16 +538,16 @@ procedure THashMapLPTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -535,15 +555,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure THashMapLPTest.StrRetain;
@@ -709,15 +730,16 @@ procedure THashMapLPTTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -725,15 +747,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure THashMapLPTTest.IntRetain;
@@ -816,16 +839,16 @@ procedure THashMapLPTTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -833,15 +856,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure THashMapLPTTest.StrRetain;
@@ -958,15 +982,16 @@ procedure THashMapQPTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -974,15 +999,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure THashMapQPTest.IntRetain;
@@ -1065,16 +1091,16 @@ procedure THashMapQPTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1082,15 +1108,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure THashMapQPTest.StrRetain;
@@ -1207,15 +1234,16 @@ procedure TChainHashMapTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1223,15 +1251,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TChainHashMapTest.IntRetain;
@@ -1314,16 +1343,16 @@ procedure TChainHashMapTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1331,15 +1360,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TChainHashMapTest.StrRetain;
@@ -1456,15 +1486,16 @@ procedure TOrderHashMapTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1472,15 +1503,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TOrderHashMapTest.IntRetain;
@@ -1563,16 +1595,16 @@ procedure TOrderHashMapTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1580,15 +1612,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TOrderHashMapTest.StrRetain;
@@ -1939,15 +1972,16 @@ procedure TLiteHashMapLPTest.Int_2;
 var
   m: TIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
   AssertTrue(m.Count = TestSize);
   AssertTrue(m.ContainsAll(k));
   AssertTrue(m.RemoveAll(k[0..49]) = 50);
@@ -1955,15 +1989,16 @@ begin
   AssertTrue(m.ContainsAll(k[50..99]));
   AssertTrue(m.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Count = 0);
-  m.AddAll(e);
-  AssertTrue(m.RemoveIf(@IntOdd) = 50);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Count = 50);
-  for {%H-}I in m.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.AddAll(e) = 50);
-  e := m.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TLiteHashMapLPTest.IntRetain;
@@ -2046,16 +2081,16 @@ procedure TLiteHashMapLPTest.Str_2;
 var
   m: TStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
   AssertTrue(m.Count = TestSize);
   AssertTrue(m.ContainsAll(k));
   AssertTrue(m.RemoveAll(k[0..49]) = 50);
@@ -2063,15 +2098,16 @@ begin
   AssertTrue(m.ContainsAll(k[50..99]));
   AssertTrue(m.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Count = 0);
-  m.AddAll(e);
-  AssertTrue(m.RemoveIf(@StrOdd) = 50);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Count = 50);
-  for {%H-}s in m.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.AddAll(e) = 50);
-  e := m.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TLiteHashMapLPTest.StrRetain;
@@ -2226,15 +2262,16 @@ procedure TLiteChainHashMapTest.Int_2;
 var
   m: TIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
   AssertTrue(m.Count = TestSize);
   AssertTrue(m.ContainsAll(k));
   AssertTrue(m.RemoveAll(k[0..49]) = 50);
@@ -2242,15 +2279,16 @@ begin
   AssertTrue(m.ContainsAll(k[50..99]));
   AssertTrue(m.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Count = 0);
-  m.AddAll(e);
-  AssertTrue(m.RemoveIf(@IntOdd) = 50);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Count = 50);
-  for {%H-}I in m.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.AddAll(e) = 50);
-  e := m.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TLiteChainHashMapTest.IntRetain;
@@ -2333,16 +2371,16 @@ procedure TLiteChainHashMapTest.Str_2;
 var
   m: TStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
   AssertTrue(m.Count = TestSize);
   AssertTrue(m.ContainsAll(k));
   AssertTrue(m.RemoveAll(k[0..49]) = 50);
@@ -2350,15 +2388,16 @@ begin
   AssertTrue(m.ContainsAll(k[50..99]));
   AssertTrue(m.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Count = 0);
-  m.AddAll(e);
-  AssertTrue(m.RemoveIf(@StrOdd) = 50);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Count = 50);
-  for {%H-}s in m.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.AddAll(e) = 50);
-  e := m.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TLiteChainHashMapTest.StrRetain;
@@ -2463,15 +2502,16 @@ procedure TLiteEquatableHashMapTest.Int_2;
 var
   m: TIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
   AssertTrue(m.Count = TestSize);
   AssertTrue(m.ContainsAll(k));
   AssertTrue(m.RemoveAll(k[0..49]) = 50);
@@ -2479,15 +2519,16 @@ begin
   AssertTrue(m.ContainsAll(k[50..99]));
   AssertTrue(m.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Count = 0);
-  m.AddAll(e);
-  AssertTrue(m.RemoveIf(@IntOdd) = 50);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Count = 50);
-  for {%H-}I in m.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.AddAll(e) = 50);
-  e := m.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TLiteEquatableHashMapTest.IntRetain;
@@ -2570,16 +2611,16 @@ procedure TLiteEquatableHashMapTest.Str_2;
 var
   m: TStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
   AssertTrue(m.Count = TestSize);
   AssertTrue(m.ContainsAll(k));
   AssertTrue(m.RemoveAll(k[0..49]) = 50);
@@ -2587,15 +2628,16 @@ begin
   AssertTrue(m.ContainsAll(k[50..99]));
   AssertTrue(m.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Count = 0);
-  m.AddAll(e);
-  AssertTrue(m.RemoveIf(@StrOdd) = 50);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Count = 50);
-  for {%H-}s in m.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.AddAll(e) = 50);
-  e := m.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TLiteEquatableHashMapTest.StrRetain;
