@@ -175,9 +175,27 @@ begin
   Result := Odd(aValue);
 end;
 
-function StrOdd(const aValue: string): Boolean;
+function IntOddValue(const e: TIntEntry): Boolean;
 begin
-  Result := Odd(StrToInt(System.Copy(aValue, System.Length(aValue), 1)));
+  Result := Odd(e.Value);
+end;
+
+function StrOdd(const aValue: string): Boolean;
+var
+  I: Integer;
+begin
+  if TryStrToInt(Copy(aValue, 5, Length(aValue)), I) then
+    exit(Odd(I));
+  Result := False;
+end;
+
+function StrOddKey(const e: TStrEntry): Boolean;
+var
+  I: Integer;
+begin
+  if TryStrToInt(Copy(e.Key, 5, Length(e.Key)), I) then
+    exit(Odd(I));
+  Result := False;
 end;
 
 { TTestObj }
@@ -303,15 +321,16 @@ procedure TBaseTreeMapTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -319,15 +338,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TBaseTreeMapTest.IntRetain;
@@ -410,16 +430,16 @@ procedure TBaseTreeMapTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -427,15 +447,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TBaseTreeMapTest.StrRetain;
@@ -680,15 +701,16 @@ procedure TComparableTreeMapTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -696,15 +718,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TComparableTreeMapTest.Rec_1;
@@ -805,16 +828,16 @@ procedure TComparableTreeMapTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -822,15 +845,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TComparableTreeMapTest.StrRetain;
@@ -1031,15 +1055,16 @@ procedure TRegularTreeMapTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1047,15 +1072,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TRegularTreeMapTest.IntRetain;
@@ -1138,16 +1164,16 @@ procedure TRegularTreeMapTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1155,15 +1181,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TRegularTreeMapTest.StrRetain;
@@ -1395,15 +1422,16 @@ procedure TDelegatedTreeMapTest.Int_2;
 var
   m: TAutoIntMap;
   I, TestSize: Integer;
-  e: TIntEntryArray;
+  ea: TIntEntryArray;
   k: TIntKeyArray;
+  e: TIntEntry;
 begin
   TestSize := 100;
-  e := CreateIntArray(TestSize);
+  ea := CreateIntArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1411,15 +1439,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@IntOddValue) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for I in m.Instance.Keys do
-    AssertFalse(IntOdd(I));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@IntOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(IntOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
 end;
 
 procedure TDelegatedTreeMapTest.IntRetain;
@@ -1502,16 +1531,16 @@ procedure TDelegatedTreeMapTest.Str_2;
 var
   m: TAutoStrMap;
   I, TestSize: Integer;
-  e: TStrEntryArray;
+  ea: TStrEntryArray;
   k: TStrKeyArray;
-  s: string;
+  e: TStrEntry;
 begin
   TestSize := 100;
-  e := CreateStrArray(TestSize);
+  ea := CreateStrArray(TestSize);
   System.SetLength(k, TestSize);
-  for I := 0 to System.High(e) do
-    k[I] := e[I].Key;
-  m.Instance.AddAll(e);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.Instance.AddAll(ea);
   AssertTrue(m.Instance.Count = TestSize);
   AssertTrue(m.Instance.ContainsAll(k));
   AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
@@ -1519,15 +1548,16 @@ begin
   AssertTrue(m.Instance.ContainsAll(k[50..99]));
   AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
   AssertTrue(m.Instance.Count = 0);
-  m.Instance.AddAll(e);
-  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  m.Instance.AddAll(ea);
+  AssertTrue(m.Instance.RemoveIf(@StrOddKey) = 50);
   AssertTrue(m.Instance.Count = 50);
-  for s in m.Instance.Keys do
-    AssertFalse(StrOdd(s));
-  AssertTrue(m.Instance.AddAll(e) = 50);
-  e := m.Instance.ExtractIf(@StrOdd);
-  for I := 0 to System.High(e) do
-    AssertTrue(StrOdd(e[I].Key));
+  for e in m.Instance.Entries do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.Instance.AddAll(ea) = 50);
+  ea := m.Instance.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
 end;
 
 procedure TDelegatedTreeMapTest.StrRetain;
