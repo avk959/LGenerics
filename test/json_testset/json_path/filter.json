@@ -25,6 +25,21 @@
       ]
     },
     {
+      "name": "absolute existence, without segments",
+      "selector": "$[?$]",
+      "document": {"a": 1, "b": null},
+      "result": [1, null]
+    },
+    {
+      "name": "absolute existence, with segments",
+      "selector": "$[?$.*.a]",
+      "document": [{"a": "b", "d": "e"}, {"b":"c", "d": "f"}],
+      "result": [
+        {"a": "b", "d": "e"},
+        {"b":"c", "d": "f"}
+      ]
+    },
+    {
       "name": "equals string, single quotes",
       "selector" : "$[?@.a=='b']",
       "document" : [{"a": "b", "d": "e"}, {"a":"c", "d": "f"}],
@@ -99,6 +114,18 @@
       "name": "equals self",
       "selector" : "$[?@==@]",
       "document" : [1, null, true, {"a": "b"}, [false]],
+      "result": [
+        1,
+        null,
+        true,
+        {"a": "b"},
+        [false]
+      ]
+    },
+    {
+      "name": "absolute, equals self",
+      "selector": "$[?$==$]",
+      "document": [1, null, true, {"a": "b"}, [false]],
       "result": [
         1,
         null,
