@@ -643,20 +643,22 @@ type
   end;
 
   { TGraphDotWriter }
-
   generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
     specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
   type
     TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings) override;
+    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   public
     constructor Create;
   end;
 
+  { TIntChartDotWriter }
   TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TDummy, Integer>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; override;
+    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   end;
 
   { TStrChart
@@ -682,9 +684,11 @@ type
     function AddEdges(const aVertexList: array of string): Integer;
   end;
 
+  { TStrChartDotWriter }
   TStrChartDotWriter = class(specialize TGraphDotWriter<string, TDummy, string>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; override;
+    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
@@ -838,6 +842,13 @@ type
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntEdgeArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight; Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+  end;
+
+  { TWeightedGraphDotWriter }
+  generic TWeightedGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
+    specialize TGraphDotWriter<TVertex, TEdgeData, TEqRel>)
+  protected
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   end;
 
   TRealWeight = specialize TGSimpleWeight<ValReal>;
@@ -5684,19 +5695,23 @@ end;
 
 { TGraphDotWriter }
 
+procedure TGraphDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if TSimpleGraph(aGraph).IsolatedI(I) then
+      aList.Add(I.ToString);
+end;
+
 procedure TGraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
 var
   e: TGraph.TEdge;
-  s: string;
+  Fmt: string;
 begin
+  Fmt := '%d ' + FEdgeMark + ' %d';
   for e in TSimpleGraph(aGraph).DistinctEdges do
-    begin
-      if Assigned(OnWriteEdge) then
-        s := OnWriteEdge(aGraph, e)
-      else
-        s := DefaultWriteEdge(aGraph, e);
-      aList.Add(s);
-    end;
+    aList.Add(Format(Fmt, [e.Source, e.Destination]));
 end;
 
 constructor TGraphDotWriter.Create;
@@ -5707,9 +5722,23 @@ end;
 
 { TIntChartDotWriter }
 
-function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
+procedure TIntChartDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
+var
+  I: SizeInt;
 begin
-  Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]) + ';';
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if TSimpleGraph(aGraph).IsolatedI(I) then
+      aList.Add(aGraph[I].ToString);
+end;
+
+procedure TIntChartDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
+var
+  e: TGraph.TEdge;
+  Fmt: string;
+begin
+  Fmt := '%d ' + FEdgeMark + ' %d';
+  for e in TSimpleGraph(aGraph).DistinctEdges do
+    aList.Add(Format(Fmt, [aGraph[e.Source], aGraph[e.Destination]]));
 end;
 
 { TStrChart }
@@ -5817,9 +5846,23 @@ end;
 
 { TStrChartDotWriter }
 
-function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
+procedure TStrChartDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
+var
+  I: SizeInt;
 begin
-  Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if TSimpleGraph(aGraph).IsolatedI(I) then
+      aList.Add('"' + aGraph[I] + '"');
+end;
+
+procedure TStrChartDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
+var
+  e: TGraph.TEdge;
+  Fmt: string;
+begin
+  Fmt := '"%s" ' + FEdgeMark + ' "%s"';
+  for e in TSimpleGraph(aGraph).DistinctEdges do
+    aList.Add(Format(Fmt, [aGraph[e.Source], aGraph[e.Destination]]));
 end;
 
 { TGWeightedGraph }
@@ -6568,6 +6611,18 @@ begin
                   end;
         until not Queue.TryDequeue(Item);
       end;
+end;
+
+{ TWeightedGraphDotWriter }
+
+procedure TWeightedGraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
+var
+  e: TGraph.TEdge;
+  Fmt: string;
+begin
+  Fmt := '%d ' + FEdgeMark + ' %d [label="%s"];';
+  for e in TSimpleGraph(aGraph).DistinctEdges do
+    aList.Add(Format(Fmt, [e.Source, e.Destination, e.Data.Weight.ToString]));
 end;
 
 { TPointsChart }
