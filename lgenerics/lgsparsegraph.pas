@@ -559,26 +559,21 @@ type
   type
     TWriteDirection = (wdTopToBottom, wdLeftToWrite);
     TGraph          = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
-    TOnStartWrite   = function(aGraph: TGraph): string of object;
-    TOnWriteVertex  = function(aGraph: TGraph; aIndex: SizeInt): string of object;
-    TOnWriteEdge    = function(aGraph: TGraph; const aEdge: TGraph.TEdge): string of object;
-
+    TOnGraphWrite   = procedure(aGraph: TGraph; aList: TStrings) of object;
   protected
   const
     DIRECTS: array[TWriteDirection] of string = ('rankdir=TB;', 'rankdir=LR;');
   var
     FGraphMark,
     FEdgeMark: string;
-    FDirection: TWriteDirection;
-    FOnStartWrite: TOnStartWrite;
-    FOnWriteVertex: TOnWriteVertex;
-    FOnWriteEdge: TOnWriteEdge;
+    FOnStartWrite: TOnGraphWrite;
     FSizeX,
     FSizeY: Single;
+    FDirection: TWriteDirection;
     FShowTitle: Boolean;
-    function  Graph2Dot(aGraph: TGraph): string; virtual;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings) virtual; abstract;
-    function  DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string; virtual;
+    function  Graph2Dot(aGraph: TGraph): TStringList; virtual;
+    procedure WriteVertices(aGraph: TGraph; aList: TStrings); virtual; abstract;
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings); virtual; abstract;
     function  SizeDefined: Boolean;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
@@ -587,9 +582,8 @@ type
     property  SizeX: Single read FSizeX write FSizeX; //image width in inches, default 0.0
     property  SizeY: Single read FSizeY write FSizeY; //image height in inches, default 0.0
     property  ShowTitle: Boolean read FShowTitle write FShowTitle;
-    property  OnStartWrite: TOnStartWrite read FOnStartWrite write FOnStartWrite;
-    property  OnWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
-    property  OnWriteEdge: TOnWriteEdge read FOnWriteEdge write FOnWriteEdge;
+  { called immediately after the header is written, if assigned }
+    property  OnStartWrite: TOnGraphWrite read FOnStartWrite write FOnStartWrite;
   end;
 
   TTspMatrixState = (tmsProper, tmsTrivial, tmsNonSquare, tmsNegElement);
@@ -2808,51 +2802,30 @@ end;
 
 { TGAbstractDotWriter }
 
-function TGAbstractDotWriter.Graph2Dot(aGraph: TGraph): string;
+function TGAbstractDotWriter.Graph2Dot(aGraph: TGraph): TStringList;
 var
-  List: TStringList;
   s: string;
   I: SizeInt;
 begin
-  Result := '';
   if aGraph.Title <> '' then
     s := '"' + aGraph.Title + '"'
   else
     s := 'Untitled';
-  List := TStringList.Create;
-  try
-    List.SkipLastLineBreak := True;
-    List.WriteBOM := False;
-    List.DefaultEncoding := TEncoding.UTF8;
-    List.Add(FGraphMark + s + ' {');
-    if ShowTitle then
-      List.Add('label=' + s + ';');
-    if SizeDefined then
-      List.Add('size="' + SizeX.ToString + ',' + SizeY.ToString + '";');
-    List.Add(DIRECTS[Direction]);
-    if Assigned(OnStartWrite) then
-      begin
-        s := OnStartWrite(aGraph);
-        List.Add(s);
-      end;
-    if Assigned(OnWriteVertex) then
-      for I := 0 to Pred(aGraph.VertexCount) do
-        begin
-          s := OnWriteVertex(aGraph, I);
-          List.Add(s);
-        end;
-    WriteEdges(aGraph, List);
-    List.Add('}');
-    Result := List.Text;
-  finally
-    List.Free;
-  end;
-end;
-
-function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; const aEdge: TGraph.TEdge): string;
-begin
-  Assert(aGraph = aGraph);
-  Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
+  Result := TStringList.Create;
+  Result.SkipLastLineBreak := True;
+  Result.WriteBOM := False;
+  Result.DefaultEncoding := TEncoding.UTF8;
+  Result.Add(FGraphMark + s + ' {');
+  if ShowTitle then
+    Result.Add('label=' + s + ';');
+  if SizeDefined then
+    Result.Add('size="' + SizeX.ToString + ',' + SizeY.ToString + '";');
+  Result.Add(DIRECTS[Direction]);
+  if Assigned(OnStartWrite) then
+    OnStartWrite(aGraph, Result);
+  WriteVertices(aGraph, Result);
+  WriteEdges(aGraph, Result);
+  Result.Add('}');
 end;
 
 function TGAbstractDotWriter.SizeDefined: Boolean;
@@ -2861,11 +2834,13 @@ begin
 end;
 
 procedure TGAbstractDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
-var
-  Dot: utf8string;
 begin
-  Dot := Graph2Dot(aGraph);
-  aStream.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
+  with Graph2Dot(aGraph) do
+    try
+      SaveToStream(aStream);
+    finally
+      Free;
+    end;
 end;
 
 procedure TGAbstractDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
