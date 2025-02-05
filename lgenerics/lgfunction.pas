@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -43,6 +43,7 @@ type
     TOnMap       = specialize TGOnMap<X, Y>;
     TNestMap     = specialize TGNestMap<X, Y>;
     TArrayX      = specialize TGArray<X>;
+    TArrayY      = specialize TGArray<Y>;
     IEnumerableX = specialize IGEnumerable<X>;
     IEnumerableY = specialize IGEnumerable<Y>;
 
@@ -125,6 +126,9 @@ type
     class function Apply(e: IEnumerableX; f: TMapFunc): IEnumerableY; static; inline;
     class function Apply(e: IEnumerableX; f: TOnMap): IEnumerableY; static; inline;
     class function Apply(e: IEnumerableX; f: TNestMap): IEnumerableY; static; inline;
+    class function Map(const a: array of X; f: TMapFunc): TArrayY; static;
+    class function Map(const a: array of X; f: TOnMap): TArrayY; static;
+    class function Map(const a: array of X; f: TNestMap): TArrayY; static;
   end;
 
   generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGMapFunc<X, Y>): specialize IGEnumerable<Y>; inline;
@@ -552,6 +556,39 @@ end;
 class function TGMapping.Apply(e: IEnumerableX; f: TNestMap): IEnumerableY;
 begin
   Result := TEnumNestedMap.Create(e, f);
+end;
+
+class function TGMapping.Map(const a: array of X; f: TMapFunc): TArrayY;
+var
+  I: SizeInt;
+  r: TArrayY;
+begin
+  System.SetLength(r, System.Length(a));
+  for I := 0 to System.High(a) do
+    r[I] := f(a[I]);
+  Result := r;
+end;
+
+class function TGMapping.Map(const a: array of X; f: TOnMap): TArrayY;
+var
+  I: SizeInt;
+  r: TArrayY;
+begin
+  System.SetLength(r, System.Length(a));
+  for I := 0 to System.High(a) do
+    r[I] := f(a[I]);
+  Result := r;
+end;
+
+class function TGMapping.Map(const a: array of X; f: TNestMap): TArrayY;
+var
+  I: SizeInt;
+  r: TArrayY;
+begin
+  System.SetLength(r, System.Length(a));
+  for I := 0 to System.High(a) do
+    r[I] := f(a[I]);
+  Result := r;
 end;
 
 generic function GMap<X, Y>(const a: specialize TGArray<X>; f: specialize TGMapFunc<X, Y>): specialize IGEnumerable<Y>;
