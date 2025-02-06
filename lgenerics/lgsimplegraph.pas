@@ -135,6 +135,7 @@ type
       function NextFaceEdge(constref aEdge: TIntEdge): TIntEdge;
       function TraverseFace(constref aEdge: TIntEdge; aOnPassEdge: TOnPassEdge = nil): TIntArray;
       function TraverseFace(constref aEdge: TIntEdge; aOnPassEdge: TNestPassEdge): TIntArray;
+      function FaceTraverseList(aCompIndex: SizeInt): TIntMatrix;
       property NodeCount: SizeInt read GetNodeCount;
       property EdgeCount: SizeInt read GetEdgeCount;
       property ComponentCount: SizeInt read GetCompCount;
@@ -1245,37 +1246,26 @@ function TGSimpleGraph.TPlanarEmbedding.TraverseFace(constref aEdge: TIntEdge;
   aOnPassEdge: TOnPassEdge): TIntArray;
 var
   Path: TIntVector;
-  FirstArc, EnterArc, CurrArc, PrevArc: SizeInt;
+  EnterArc, CurrArc: SizeInt;
 begin
   Result := nil;
-  FirstArc := FindEdge(aEdge.Source, aEdge.Destination);
-  if FirstArc = NULL_INDEX then
+  CurrArc := FindEdge(aEdge.Source, aEdge.Destination);
+  if CurrArc = NULL_INDEX then
     raise EGraphError.CreateFmt(SENoSuchEdgeFmt, [aEdge.Source, aEdge.Destination]);
   if aOnPassEdge <> nil then
     aOnPassEdge(aEdge.Source, aEdge.Destination);
   Path.Add(aEdge.Source);
   Path.Add(aEdge.Destination);
-  EnterArc := GetReverse(FEdgeList[FirstArc].Next);
-  PrevArc := FirstArc;
-  CurrArc := NextFaceEdge(PrevArc);
-  with FEdgeList[CurrArc] do
-    begin
-      if aOnPassEdge <> nil then
-        aOnPassEdge(Source, Target);
-      Path.Add(Target);
-    end;
-  while CurrArc <> EnterArc do
-    begin
-      PrevArc := CurrArc;
-      CurrArc := NextFaceEdge(PrevArc);
-      with FEdgeList[CurrArc] do
-        begin
-          if aOnPassEdge <> nil then
-            aOnPassEdge(Source, Target);
-          Path.Add(Target);
-        end;
-    end;
-  Path.Add(aEdge.Source);
+  EnterArc := GetReverse(FEdgeList[CurrArc].Next);
+  repeat
+    CurrArc := NextFaceEdge(CurrArc);
+    with FEdgeList[CurrArc] do
+      begin
+        if aOnPassEdge <> nil then
+          aOnPassEdge(Source, Target);
+        Path.Add(Target);
+      end;
+  until CurrArc = EnterArc;
   Result := Path.ToArray;
 end;
 
@@ -1283,38 +1273,50 @@ function TGSimpleGraph.TPlanarEmbedding.TraverseFace(constref aEdge: TIntEdge;
   aOnPassEdge: TNestPassEdge): TIntArray;
 var
   Path: TIntVector;
-  FirstArc, EnterArc, CurrArc, PrevArc: SizeInt;
+  EnterArc, CurrArc: SizeInt;
 begin
   Result := nil;
-  FirstArc := FindEdge(aEdge.Source, aEdge.Destination);
-  if FirstArc = NULL_INDEX then
+  CurrArc := FindEdge(aEdge.Source, aEdge.Destination);
+  if CurrArc = NULL_INDEX then
     raise EGraphError.CreateFmt(SENoSuchEdgeFmt, [aEdge.Source, aEdge.Destination]);
   if aOnPassEdge <> nil then
     aOnPassEdge(aEdge.Source, aEdge.Destination);
   Path.Add(aEdge.Source);
   Path.Add(aEdge.Destination);
-  EnterArc := GetReverse(FEdgeList[FirstArc].Next);
-  PrevArc := FirstArc;
-  CurrArc := NextFaceEdge(PrevArc);
-  with FEdgeList[CurrArc] do
-    begin
-      if aOnPassEdge <> nil then
-        aOnPassEdge(Source, Target);
-      Path.Add(Target);
-    end;
-  while CurrArc <> EnterArc do
-    begin
-      PrevArc := CurrArc;
-      CurrArc := NextFaceEdge(PrevArc);
-      with FEdgeList[CurrArc] do
-        begin
-          if aOnPassEdge <> nil then
-            aOnPassEdge(Source, Target);
-          Path.Add(Target);
-        end;
-    end;
-  Path.Add(aEdge.Source);
+  EnterArc := GetReverse(FEdgeList[CurrArc].Next);
+  repeat
+    CurrArc := NextFaceEdge(CurrArc);
+    with FEdgeList[CurrArc] do
+      begin
+        if aOnPassEdge <> nil then
+          aOnPassEdge(Source, Target);
+        Path.Add(Target);
+      end;
+  until CurrArc = EnterArc;
   Result := Path.ToArray;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.FaceTraverseList(aCompIndex: SizeInt): TIntMatrix;
+var
+  hs: TIntEdgeHashSet;
+  procedure PassEdge(aSrc, aDst: SizeInt);
+  begin
+    hs.Add(TIntEdge.Create(aSrc, aDst));
+  end;
+var
+  v: TIntArrayVector;
+  s, d: SizeInt;
+  e: TIntEdge;
+begin
+  v := Default(TIntArrayVector);
+  for s in Components[aCompIndex] do
+    for d in AdjListCw(s) do
+      begin
+        e := TIntEdge.Create(s, d);
+        if hs.NonContains(e) then
+          v.Add(TraverseFace(e, @PassEdge));
+      end;
+  Result := v.ToArray;
 end;
 
 {$I SimpGraphHelp.inc}
