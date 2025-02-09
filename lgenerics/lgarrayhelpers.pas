@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic helper utils for arrays.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -14124,9 +14124,11 @@ begin
   if aLast < aFirst then Swap(aLast, aFirst);
   System.SetLength(Result, Succ(aLast - aFirst));
   J := 0;
-  for I := aFirst to aLast do
+  I := aFirst;
+  while I <= aLast do
     begin
       Result[J] := I;
+      Inc(I);
       Inc(J);
     end;
 end;
