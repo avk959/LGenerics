@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some algorithms on generic sequences.                                   *
 *                                                                           *
-*   Copyright(c) 2022-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -341,12 +341,14 @@ type
     Algo: TSeqDistanceAlgo = sdaDefault;
     aLess: TUcs4Less = nil
   ): Double;
+
+
 { Pascal translation of https://github.com/cyb70289/utf8/blob/master/lookup.c }
   function Utf8ValidateDfa(const s: rawbytestring): Boolean;
 { branchy range validator based on Table 3-7 of Unicode Standard }
   function Utf8Validate(const s: rawbytestring): Boolean;
 
-{ all these functions expect UTF-8 encoded strings as parameters;
+{ all functions below expect UTF-8 encoded strings as parameters;
   the responsibility for the correctness and normalization of the strings lies with the user }
   function Utf8StrLen(const s: string): SizeInt; inline;
   function Utf8CodePointLength(p: PAnsiChar; aByteCount: SizeInt): SizeInt;
@@ -507,6 +509,45 @@ type
   function Utf8SameText(const L, R: string; const aOpts: TStrCompareOptions = []): Boolean;
 
 type
+  TMatch = LgUtils.TSeqMatch;
+
+  { TKmpSearchCI: simple case-insensitive search in UTF-8 text(KMP based, quite slow) }
+  TKmpSearchCI = record
+  private
+  type
+    TUcs4Cp = record
+      Offset: SizeInt;
+      Code: Ucs4Char;
+      constructor Make(aOfs: SizeInt; aCode: Ucs4Char);
+    end;
+  var
+    FPattern: TUcs4Seq;
+    FPrefix: array of SizeInt;
+    FQueue: array of TUcs4Cp;
+    FQTop: SizeInt;
+    FWholeWords: Boolean;
+    class function IsWordChar(c: Ucs4Char): Boolean; inline; static;
+    class function Ucs4Lower(c: Ucs4Char): Ucs4Char; inline; static;
+    class function PrevCpOffset(const s: string; aOfs: SizeInt): SizeInt; static;
+    function  GetInitialized: Boolean; inline;
+    procedure QueuePush(o: SizeInt; c: Ucs4Char); inline;
+    function  GetStartOffset: SizeInt; inline;
+    procedure PushFirstOffset(const s: string; aOfs: SizeInt);
+    function  OnWordBounds(p, pEnd: PByte): Boolean; inline;
+    function  NextMatchOww(const aText: string; aOfs, aLen: SizeInt): TMatch;
+    property  QueueTop: SizeInt read FQTop;
+  public
+  { aPattern must be a valid non-empty UTF-8 string }
+    constructor Create(const aPattern: string);
+    procedure Init(const aPattern: string);
+  { returns the first match found in the string aText, starting at position aOffset
+    within aCount bytes; if no match is found returns stub (0,0);
+    any value of aCount < 1 implies searching to the end of the string }
+    function  NextMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): TMatch;
+    property  OnlyWholeWords: Boolean read FWholeWords write FWholeWords;
+    property  Initialized: Boolean read GetInitialized;
+  end;
+
   { TFuzzySearchEdp: approximate string matching with K differences;
     expects UTF-8 encoded strings as parameters;
     uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN)
@@ -553,7 +594,6 @@ type
     property Length: SizeInt read GetLength;
   end;
 
-  TMatch     = LgUtils.TSeqMatch;
   TOnMatch   = specialize TGOnTest<TMatch>;
   TNestMatch = specialize TGNestTest<TMatch>;
 
@@ -4859,6 +4899,201 @@ begin
     if LenL = 0 then
       exit(True);
   Result := CompareByte(LBuf.Ptr^, RBuf.Ptr^, LenL) = 0;
+end;
+
+{ TKmpSearchCI.TUcs4Cp }
+
+constructor TKmpSearchCI.TUcs4Cp.Make(aOfs: SizeInt; aCode: Ucs4Char);
+begin
+  Offset := aOfs;
+  Code := aCode;
+end;
+
+{ TKmpSearchCI }
+
+class function TKmpSearchCI.IsWordChar(c: Ucs4Char): Boolean;
+begin
+  if c <= UC_TBL_HIGH then
+    Result := TUnicodeCategory(UC_CATEGORY_TBL[c]) in LETTER_OR_DIGIT_CATEGORIES
+  else
+    Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
+end;
+
+class function TKmpSearchCI.Ucs4Lower(c: Ucs4Char): Ucs4Char;
+begin
+  if c <= UC_TBL_HIGH then
+    Result := UC_CASE_TBL[c] and $ffff
+  else
+    begin
+      Result := DWord(UnicodeData.GetProps(c)^.SimpleLowerCase);
+      if Result = 0 then Result := c;
+    end;
+end;
+
+class function TKmpSearchCI.PrevCpOffset(const s: string; aOfs: SizeInt): SizeInt;
+begin
+  if aOfs <= 1 then exit(0);
+  Result := aOfs-1;
+  if Byte(s[aOfs-1]) > $7f then
+    begin
+      if (Byte(s[aOfs-1]) and $c0 <> $80) or (aOfs < 3) then exit;
+      if Byte(s[aOfs-2]) and $c0 = $c0 then
+        Result := aOfs-2
+      else
+        begin
+          if (Byte(s[aOfs-2]) and $c0 <> $80) or (aOfs < 4) then exit;
+          if Byte(s[aOfs-3]) and $c0 = $c0 then
+            Result := aOfs-3
+          else
+            begin
+              if (Byte(s[aOfs-3]) and $c0 <> $80) or (aOfs < 5) then exit;
+              if Byte(s[aOfs-4]) and $c0 = $c0 then
+                Result := aOfs-4;
+            end;
+        end;
+    end;
+end;
+
+function TKmpSearchCI.GetInitialized: Boolean;
+begin
+  Result := FPattern <> nil;
+end;
+
+procedure TKmpSearchCI.QueuePush(o: SizeInt; c: Ucs4Char);
+begin
+  FQueue[QueueTop] := TUcs4Cp.Make(o, c);
+  Inc(FQTop);
+  if QueueTop = System.Length(FQueue) then FQTop := 0;
+end;
+
+function TKmpSearchCI.GetStartOffset: SizeInt;
+begin
+  Result := QueueTop + 1;
+  if Result = System.Length(FQueue) then Result := 0;
+  Result := FQueue[Result].Offset;
+end;
+
+procedure TKmpSearchCI.PushFirstOffset(const s: string; aOfs: SizeInt);
+var
+  Dummy: SizeInt;
+begin
+  aOfs := PrevCpOffset(s, aOfs);
+  if aOfs = 0 then
+    QueuePush(0, 0)
+  else
+    QueuePush(aOfs, CodePointToUcs4Char(@s[aOfs], Dummy));
+end;
+
+function TKmpSearchCI.OnWordBounds(p, pEnd: PByte): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  if (FQueue[QueueTop].Offset <> 0) and IsWordChar(FQueue[QueueTop].Code) then exit(False);
+  if (p < pEnd) and IsWordChar(CodePointToUcs4Char(p, pEnd - p, Dummy)) then exit(False);
+  Result := True;
+end;
+
+function TKmpSearchCI.NextMatchOww(const aText: string; aOfs, aLen: SizeInt): TMatch;
+var
+  cLen, J, PatLen: SizeInt;
+  p, pEnd, pAbsEnd: PByte;
+  c: Ucs4Char;
+begin
+  FQTop := 0;
+  PushFirstOffset(aText, aOfs);
+  p := @aText[aOfs];
+  pEnd := PByte(aText) + aLen;
+  pAbsEnd := PByte(aText) + System.Length(aText);
+  PatLen := System.Length(FPattern);
+  J := 0;
+  while p < pEnd do
+    begin
+      c := Ucs4Lower(CodePointToUcs4Char(p, pEnd - p, cLen));
+      QueuePush(aOfs, c);
+      p += cLen;
+      aOfs += cLen;
+      while (J > 0) and (FPattern[J] <> c) do
+        J := FPrefix[Pred(J)];
+      Inc(J, Ord(FPattern[J] = c));
+      if J = PatLen then
+        if OnWordBounds(p, pAbsEnd) then
+          begin
+            J := GetStartOffset;
+            exit(TMatch.Make(J, aOfs - J));
+          end
+        else
+          Dec(J);
+    end;
+  Result := TMatch.Make(0, 0);
+end;
+
+constructor TKmpSearchCI.Create(const aPattern: string);
+begin
+  Init(aPattern);
+end;
+
+procedure TKmpSearchCI.Init(const aPattern: string);
+var
+  I, J, PatLen, cLen: SizeInt;
+begin
+  FPattern := nil;
+  FPrefix := nil;
+  FQueue := nil;
+  FWholeWords := False;
+  if (aPattern = '') or not Utf8Validate(aPattern) then exit;
+  System.SetLength(FPattern, Utf8Len(aPattern));
+  System.SetLength(FPrefix, System.Length(FPattern));
+  System.SetLength(FQueue, System.Length(FPattern)+1);
+  J := 0;
+  I := 1;
+  PatLen := System.Length(aPattern);
+  while I <= PatLen do begin
+    FPattern[J] := Ucs4Lower(CodePointToUcs4Char(@aPattern[I], cLen));
+    I += cLen;
+    Inc(J);
+  end;
+  J := 0;
+  for I := 1 to System.High(FPattern) do
+    begin
+      while (J > 0) and (FPattern[J] <> FPattern[I]) do
+        J := FPrefix[Pred(J)];
+      Inc(J, Ord(FPattern[J] = FPattern[I]));
+      FPrefix[I] := J;
+    end;
+end;
+
+function TKmpSearchCI.NextMatch(const aText: string; aOffset: SizeInt; aCount: SizeInt): TMatch;
+var
+  cLen, J, PatLen: SizeInt;
+  c: Ucs4Char;
+begin
+  if not Initialized or (aOffset > System.Length(aText)) then exit(TMatch.Make(0, 0));
+  if aOffset < 1 then
+    aOffset := 1;
+  if aCount < 1 then
+    aCount := System.Length(aText)
+  else
+    aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
+  if aOffset > aCount then exit(TMatch.Make(0, 0));
+  if OnlyWholeWords then exit(NextMatchOww(aText, aOffset, aCount));
+  FQTop := 0;
+  PatLen := System.Length(FPattern);
+  J := 0;
+  while aOffset <= aCount do
+    begin
+      c := Ucs4Lower(CodePointToUcs4Char(@aText[aOffset], Succ(aCount-aOffset), cLen));
+      QueuePush(aOffset, c);
+      aOffset += cLen;
+      while (J > 0) and (FPattern[J] <> c) do
+        J := FPrefix[Pred(J)];
+      Inc(J, Ord(FPattern[J] = c));
+      if J = PatLen then
+        begin
+          J := GetStartOffset;
+          exit(TMatch.Make(J, aOffset - J));
+        end;
+    end;
+  Result := TMatch.Make(0, 0);
 end;
 
 { TFuzzySearchEdp.TEnumerator }
