@@ -780,8 +780,8 @@ var
   DatPreferMaxLoad: Boolean = False;
 
 type
-  TStrReplaceOption  = (sroOnlyWholeWords, sroIgnoreCase);
-  TStrReplaceOptions = set of TStrReplaceOption;
+  TStrReplaceFlag  = (srfOnlyWholeWords, srfIgnoreCase);
+  TStrReplaceFlags = set of TStrReplaceFlag;
 { a mode of selecting a single match when there are several overlapping matches,
   defines behavior corresponding to TSetMatchMode modes }
   TOverlapsHandleMode = (ohmLeftmostFirst, ohmLeftmostLongest, ohmLeftmostShortest);
@@ -796,24 +796,24 @@ type
   function ACStrReplace(const aSource: string;
                         const aSamples, aSubs: array of string;
                         out aReplaceCount: SizeInt;
-                        const aOptions: TStrReplaceOptions = [];
+                        const aOptions: TStrReplaceFlags = [];
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 { the same as above for the case where the number of replacements is not of interest }
   function ACStrReplace(const aSource: string;
                         const aSamples, aSubs: array of string;
-                        const aOptions: TStrReplaceOptions = [];
+                        const aOptions: TStrReplaceFlags = [];
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 { performs replacements for each element of the aSource array }
   function ACStrReplaceList(const aSource, aSamples, aSubs: array of string;
                             out aReplaceCount: SizeInt;
-                            const aOptions: TStrReplaceOptions = [];
+                            const aOptions: TStrReplaceFlags = [];
                             aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                             const aDefaultSub: string = ''): TStringArray;
 { the same as above for the case where the number of replacements is not of interest }
   function ACStrReplaceList(const aSource, aSamples, aSubs: array of string;
-                            const aOptions: TStrReplaceOptions = [];
+                            const aOptions: TStrReplaceFlags = [];
                             aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                             const aDefaultSub: string = ''): TStringArray;
 { uses a previously created automaton for replacements }
@@ -8430,20 +8430,20 @@ begin
 end;
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
-  const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+  const aOptions: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
 var
   IFsm: IACSearchFsmUtf8;
 begin
   aReplaceCount := 0;
   if aSource = '' then exit('');
   if System.Length(aSamples) = 0 then exit(aSource);
-  IFsm := TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False);
-  IFsm.OnlyWholeWords := sroOnlyWholeWords in aOptions;
+  IFsm := TACFsmUtf8.CreateInstance(aSamples, srfIgnoreCase in aOptions, False);
+  IFsm.OnlyWholeWords := srfOnlyWholeWords in aOptions;
   Result := ACStrReplace(IFsm, aSource, aSubs, aReplaceCount, aMode, aDefaultSub);
 end;
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string;
-  const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+  const aOptions: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
 var
   Dummy: SizeInt;
 begin
@@ -8451,7 +8451,7 @@ begin
 end;
 
 function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
-  const aOptions: TStrReplaceOptions; aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
+  const aOptions: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
 var
   IFsm: IACSearchFsmUtf8;
   r: TStringArray;
@@ -8461,8 +8461,8 @@ begin
   if System.Length(aSource) = 0 then exit(nil);
   if System.Length(aSamples) = 0 then
     exit(specialize TGArrayHelpUtil<string>.CreateCopy(aSource));
-  IFsm := TACFsmUtf8.CreateInstance(aSamples, sroIgnoreCase in aOptions, False);
-  IFsm.OnlyWholeWords := sroOnlyWholeWords in aOptions;
+  IFsm := TACFsmUtf8.CreateInstance(aSamples, srfIgnoreCase in aOptions, False);
+  IFsm.OnlyWholeWords := srfOnlyWholeWords in aOptions;
   System.SetLength(r, System.Length(aSource));
   for I := 0 to System.High(aSource) do
     begin
@@ -8472,7 +8472,7 @@ begin
   Result := r;
 end;
 
-function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; const aOptions: TStrReplaceOptions;
+function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; const aOptions: TStrReplaceFlags;
   aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
 var
   Dummy: SizeInt;
