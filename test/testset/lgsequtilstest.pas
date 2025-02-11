@@ -164,6 +164,16 @@ type
     procedure TestStreaming;
   end;
 
+  { TKmpSearchCITest }
+
+  TKmpSearchCITest = class(TTestCase)
+    procedure TestCreation;
+    procedure TestFirstMatch;
+    procedure TestFirstMatchOww;
+    procedure TestFindMatches;
+    procedure TestFindMatchesOww;
+  end;
+
 implementation
 
 const
@@ -3234,7 +3244,7 @@ begin
   Res := ACStrReplace(Src, Keys, Subs, [], ohmLeftmostShortest);
   AssertTrue(Res = '66мый 77мнительный 88док 66м по себе не 77м, но 88д');
 
-  Res := ACStrReplace(Src, Keys, Subs, [sroOnlyWholeWords]);
+  Res := ACStrReplace(Src, Keys, Subs, [srfOnlyWholeWords]);
   AssertTrue(Res = '33 44 55 00 по себе не 11, но 22');
 
   Res := ACStrReplace(Src, Keys, [], RepCount);
@@ -3260,20 +3270,20 @@ begin
   AssertTrue(Res = Src);
 
   Src := 'İ самый сомнительный ходок сам по себе не сом, но ход';
-  Res := ACStrReplace(Src, Keys, Subs, RepCount, [sroIgnoreCase]);
+  Res := ACStrReplace(Src, Keys, Subs, RepCount, [srfIgnoreCase]);
   AssertTrue(RepCount = 6);
   AssertTrue(Res = 'İ 00ый 11нительный 22ок 00 по себе не 11, но 22');
 
-  Res := ACStrReplace(Src, Keys, Subs, [sroIgnoreCase], ohmLeftmostLongest);
+  Res := ACStrReplace(Src, Keys, Subs, [srfIgnoreCase], ohmLeftmostLongest);
   AssertTrue(Res = 'İ 33 44 55 00 по себе не 11, но 22');
 
-  Res := ACStrReplace(Src, Keys, Subs, [sroIgnoreCase], ohmLeftmostShortest);
+  Res := ACStrReplace(Src, Keys, Subs, [srfIgnoreCase], ohmLeftmostShortest);
   AssertTrue(Res = 'İ 66мый 77мнительный 88док 66м по себе не 77м, но 88д');
 
-  Res := ACStrReplace(Src, Keys, Subs, [sroOnlyWholeWords, sroIgnoreCase]);
+  Res := ACStrReplace(Src, Keys, Subs, [srfOnlyWholeWords, srfIgnoreCase]);
   AssertTrue(Res = 'İ 33 44 55 00 по себе не 11, но 22');
 
-  Res := ACStrReplace(Src, Keys, [], RepCount, [sroIgnoreCase]);
+  Res := ACStrReplace(Src, Keys, [], RepCount, [srfIgnoreCase]);
   AssertTrue(RepCount = 6);
   AssertTrue(Res = 'İ ый нительный ок  по себе не , но ');
 end;
@@ -3300,7 +3310,7 @@ begin
   AssertTrue(Res[1] = 'knobstick unfathomed st equivale beautifiers');
   AssertTrue(Res[2] = 'incommunicado incautelous menticide ly pullen');
 
-  Res := ACStrReplaceList(Src, Keys, Subs, RepCount, [sroOnlyWholeWords]);
+  Res := ACStrReplaceList(Src, Keys, Subs, RepCount, [srfOnlyWholeWords]);
   AssertTrue(RepCount = 0);
   AssertTrue(Length(Res) = 3);
   AssertTrue(Res[0] = Src[0]);
@@ -4982,6 +4992,172 @@ begin
   AssertTrue(a.Fsm.IsMatch('три'));
 end;
 
+{ TKmpSearchCITest }
+
+procedure TKmpSearchCITest.TestCreation;
+var
+  Kmp: TKmpSearchCI;
+begin
+  AssertFalse({%H-}Kmp.Initialized);
+  Kmp.Init('');
+  AssertFalse(Kmp.Initialized);
+  Kmp.Init(NotAscii);
+  AssertFalse(Kmp.Initialized);
+  Kmp.Init(Ascii);
+  AssertTrue(Kmp.Initialized);
+
+  Kmp := TKmpSearchCI.Create('');
+  AssertFalse(Kmp.Initialized);
+  Kmp := TKmpSearchCI.Create(NotAscii);
+  AssertFalse(Kmp.Initialized);
+  Kmp := TKmpSearchCI.Create(Ascii);
+  AssertTrue(Kmp.Initialized);
+end;
+
+procedure TKmpSearchCITest.TestFirstMatch;
+var
+  Kmp: TKmpSearchCI;
+  Txt, Key: string;
+  m: TMatch;
+begin
+  Key := '2025';
+  Kmp.Init(Key);
+  Txt := '1234567890123456789';
+  AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
+
+  Txt := '1234567890123420256789';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Copy(Txt, m.Offset, m.Length) = Key);
+
+  m := Kmp.NextMatch(Txt, 15, 4);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Copy(Txt, m.Offset, m.Length) = Key);
+
+  m := Kmp.NextMatch(Txt, 16, 4);
+  AssertTrue(m.Offset = 0);
+
+  Key := '2025ГоД';
+  Kmp.Init(Key);
+  AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
+
+  Txt := 'просто строка 22020220252025г2025го2025гОд6789';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Key := 'Г';
+  Kmp.Init(Key);
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+end;
+
+procedure TKmpSearchCITest.TestFirstMatchOww;
+var
+  Kmp: TKmpSearchCI;
+  Txt, Key: string;
+  m: TMatch;
+begin
+  Key := '2025Г';
+  Kmp.Init(Key);
+  Kmp.OnlyWholeWords := True;
+  Txt := '123456789012342025г6789';
+  AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
+
+  Txt := '2025г_12345678901234-2025г_6789_2025г';
+  AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
+
+  Txt := '12345678901234-2025г-6789';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Txt := '2025г 1234567890123456789';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Txt := '1234567890123456789-2025г';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Txt := '12345678901234-2025г-6789';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Key := 'Г';
+  Kmp.Init(Key);
+  Kmp.OnlyWholeWords := True;
+  AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
+
+  Txt := '12345678901234-2025.г-6789';
+  m := Kmp.NextMatch(Txt);
+  AssertTrue(m.Offset <> 0);
+  AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+end;
+
+procedure TKmpSearchCITest.TestFindMatches;
+var
+  Kmp: TKmpSearchCI;
+  Txt, Key: string;
+  ma: array of TMatch;
+  m: TMatch;
+begin
+  Key := 'аБеГд';
+  Txt := 'абВГДАбвгДАБВгдабВГДабвгд';
+  Kmp.Init(Key);
+  ma := Kmp.FindMatches(Txt);
+  AssertTrue(ma = nil);
+
+  Key := 'аБвГд';
+  Kmp.Init(Key);
+  ma := Kmp.FindMatches(Txt);
+  AssertTrue(Length(ma) = 5);
+  for m in ma do
+    AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Key := 'абвгАБВГ';
+  Txt := 'абВГАбвгАБВгабВГабВгабВГ';
+  Kmp.Init(Key);
+  ma := Kmp.FindMatches(Txt);
+  AssertTrue(Length(ma) = 5);
+  for m in ma do
+    AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+end;
+
+procedure TKmpSearchCITest.TestFindMatchesOww;
+var
+  Kmp: TKmpSearchCI;
+  Txt, Key: string;
+  ma: array of TMatch;
+  m: TMatch;
+begin
+  Txt := 'абВГДАбвгДАБВгдабВГДабвгд';
+  Key := 'аБвГд';
+  Kmp.Init(Key);
+  Kmp.OnlyWholeWords := True;
+  ma := Kmp.FindMatches(Txt);
+  AssertTrue(ma = nil);
+
+  Txt := 'абВГД.АбвгД,АБВгд абВГД*абвгд';
+  ma := Kmp.FindMatches(Txt);
+  AssertTrue(Length(ma) = 5);
+  for m in ma do
+    AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  Txt := 'абВГД.АбвгД.АБВгд.абВГД.абвгд';
+  Key := 'аБвГд.АбВгД';
+  Kmp.Init(Key);
+  Kmp.OnlyWholeWords := True;
+  ma := Kmp.FindMatches(Txt);
+  AssertTrue(Length(ma) = 4);
+  for m in ma do
+    AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+end;
+
 
 initialization
 
@@ -4990,6 +5166,7 @@ initialization
   RegisterTest(TTestFuzzySearchBitap);
   RegisterTest(TACSearchFsmTest);
   RegisterTest(TACPersistFsmTest);
+  RegisterTest(TKmpSearchCITest);
 
 end.
 
