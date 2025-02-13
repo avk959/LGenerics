@@ -516,20 +516,22 @@ type
     FPrefix: array of SizeInt;
     FWholeWords: Boolean;
     function GetInitialized: Boolean; inline;
-    function OnWordBounds(const s: string; aOfs: SizeInt): Boolean; inline;
+    function OnWordBounds(const s: string; aTail: SizeInt): Boolean; inline;
     function NextMatchOww(const aText: string; aOfs, aLen: SizeInt): SizeInt;
-    function FindMatchesOww(const aText: string; aOfs, aLen: SizeInt): specialize TGArray<SizeInt>;
+    function FindMatchesOww(const aText: string; aOverlaps: Boolean; aOfs, aLen: SizeInt): specialize TGArray<SizeInt>;
   public
   { aPattern must be non-empty string }
-    constructor Create(const aPattern: string);
-    procedure Init(const aPattern: string);
+    constructor Create(const aPattern: string; aWholeWords: Boolean = False);
+    procedure Init(const aPattern: string; aWholeWords: Boolean = False);
   { returns the first occurrence found in the string aText, starting at position
     aOffset within aCount bytes; returns 0 if no occurrence is found;
     any value of aCount < 1 implies searching to the end of the string }
     function  NextMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): SizeInt;
-  { returns an array of all occurrences found in string aText, starting at position aOffset
-    within aCount bytes; any value of aCount < 1 implies searching to the end of the string }
-    function  FindMatches(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): specialize TGArray<SizeInt>;
+  { returns an array of occurrences(all if aOverlaps is True, otherwise only non-overlapping ones)
+    found in string aText, starting at position aOffset within aCount bytes;
+    any value of aCount < 1 implies searching to the end of the string }
+    function  FindMatches(const aText: string; aOverlaps: Boolean = False; aOffset: SizeInt = 1;
+                          aCount: SizeInt = 0): specialize TGArray<SizeInt>;
   { if set to True, the word boundary will be examined for each occurrence,
     i.e. if it is surrounded by non-word characters or string boundaries }
     property  OnlyWholeWords: Boolean read FWholeWords write FWholeWords;
@@ -560,25 +562,41 @@ type
     procedure PushFirstOffset(const s: string; aOfs: SizeInt);
     function  OnWordBounds(p, pEnd: PByte): Boolean; inline;
     function  NextMatchOww(const aText: string; aOfs, aLen: SizeInt): TMatch;
-    function  FindMatchesOww(const aText: string; aOfs, aLen: SizeInt): specialize TGArray<TMatch>;
+    function  FindMatchesOww(const aText: string; aOverlaps: Boolean; aOfs, aLen: SizeInt): specialize TGArray<TMatch>;
     property  QueueTop: SizeInt read FQTop;
   public
   { aPattern must be a valid non-empty UTF-8 string }
-    constructor Create(const aPattern: string);
-    procedure Init(const aPattern: string);
+    constructor Create(const aPattern: string; aWholeWords: Boolean = False);
+    procedure Init(const aPattern: string; aWholeWords: Boolean = False);
   { returns the first match found in the string aText, starting at position aOffset
     within aCount bytes; if no match is found returns stub (0,0);
     any value of aCount < 1 implies searching to the end of the string }
     function  NextMatch(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): TMatch;
-  { returns an array of all matches found in string aText, starting at position aOffset
-    within aCount bytes; any value of aCount < 1 implies searching to the end of the string }
-    function  FindMatches(const aText: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): specialize TGArray<TMatch>;
+  { returns an array of occurrences(all if aOverlaps is True, otherwise only non-overlapping ones)
+    found in string aText, starting at position aOffset within aCount bytes;
+    any value of aCount < 1 implies searching to the end of the string }
+    function  FindMatches(const aText: string; aOverlaps: Boolean = False; aOffset: SizeInt = 1;
+                          aCount: SizeInt = 0): specialize TGArray<TMatch>;
   { if set to True, the word boundary will be examined for each match,
     i.e. if it is surrounded by non-word characters or string boundaries }
     property  OnlyWholeWords: Boolean read FWholeWords write FWholeWords;
     property  Initialized: Boolean read GetInitialized;
   end;
 
+  TStrReplaceOption  = (sroReplaceAll, sroIgnoreCase, sroOnlyWholeWords);
+  TStrReplaceOptions = set of TStrReplaceOption;
+{ replaces occurrences of aPattern in the aSource string (only the first one found or all
+  if the sroReplaceAll option is included in aOptions) with the substitution value aSubst;
+  If sroIgnoreCase is enabled in aOptions, aPattern MUST be a valid UTF-8 string
+  so that a case-insensitive search can be done;
+  if the sroOnlyWholeWords option is included in aOptions, the word boundary will be examined
+  for each match, i.e. if it is surrounded by non-word characters or string boundaries }
+  function StrReplaceUtf8(const aSource, aPattern, aSubst: string; out aCount: SizeInt;
+                          aOptions: TStrReplaceOptions = []): string;
+{ same as above, in case the number of replacements performed is not of interest }
+  function StrReplaceUtf8(const aSource, aPattern, aSubst: string; aOptions: TStrReplaceOptions = []): string;
+
+type
   { TFuzzySearchEdp: approximate string matching with K differences;
     expects UTF-8 encoded strings as parameters;
     uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN)
@@ -4968,15 +4986,15 @@ begin
   Result := FPattern <> '';
 end;
 
-function TKmpSearch.OnWordBounds(const s: string; aOfs: SizeInt): Boolean;
+function TKmpSearch.OnWordBounds(const s: string; aTail: SizeInt): Boolean;
 var
-  Ofs, Dummy: SizeInt;
+  o, d: SizeInt;
 begin
-  Ofs := PrevCpOffset(s, aOfs-System.Length(FPattern)+1);
-  if (Ofs > 0) and IsWordChar(CodePointToUcs4Char(@s[Ofs], System.Length(s)-Ofs+1, Dummy)) then
+  o := PrevCpOffset(s, Succ(aTail-System.Length(FPattern)));
+  if (o > 0) and IsWordChar(CodePointToUcs4Char(@s[o], Succ(aTail-System.Length(FPattern))-o, d)) then
     exit(False);
-  if (aOfs < System.Length(s)) and
-      IsWordChar(CodePointToUcs4Char(@s[Ofs+1], System.Length(s)-Ofs, Dummy)) then
+  if (aTail < System.Length(s)) and
+      IsWordChar(CodePointToUcs4Char(@s[aTail + 1], System.Length(s) - aTail, d)) then
     exit(False);
   Result := True;
 end;
@@ -4999,14 +5017,15 @@ begin
       if J = PatLen then
         begin
           if OnWordBounds(aText, aOfs) then
-            exit(aOfs-PatLen+1);
+            exit(aOfs - PatLen + 1);
           J := FPrefix[Pred(J)];
         end;
     end;
   Result := 0;
 end;
 
-function TKmpSearch.FindMatchesOww(const aText: string; aOfs, aLen: SizeInt): specialize TGArray<SizeInt>;
+function TKmpSearch.FindMatchesOww(const aText: string; aOverlaps: Boolean; aOfs, aLen: SizeInt): specialize TGArray<
+  SizeInt>;
 var
   r: array of SizeInt = nil;
   mCount: SizeInt = 0;
@@ -5032,22 +5051,27 @@ begin
         J := FPrefix[Pred(J)];
       Inc(J, Ord(p[J] = c));
       if J = PatLen then
-        begin
-          if OnWordBounds(aText, aOfs-PatLen+1) then
-            AddMatch(aOfs-PatLen+1);
+        if OnWordBounds(aText, aOfs) then
+          begin
+            AddMatch(aOfs - PatLen + 1);
+            if aOverlaps then
+              J := FPrefix[Pred(J)]
+            else
+              J := 0;
+          end
+        else
           J := FPrefix[Pred(J)];
-        end;
     end;
   System.SetLength(r, mCount);
   Result := r;
 end;
 
-constructor TKmpSearch.Create(const aPattern: string);
+constructor TKmpSearch.Create(const aPattern: string; aWholeWords: Boolean);
 begin
-  Init(aPattern);
+  Init(aPattern, aWholeWords);
 end;
 
-procedure TKmpSearch.Init(const aPattern: string);
+procedure TKmpSearch.Init(const aPattern: string; aWholeWords: Boolean);
 var
   I, J: SizeInt;
   p: PAnsiChar;
@@ -5068,6 +5092,7 @@ begin
       Inc(J, Ord(p[J] = p[I]));
       FPrefix[I] := J;
     end;
+  FWholeWords := aWholeWords;
 end;
 
 function TKmpSearch.NextMatch(const aText: string; aOffset: SizeInt; aCount: SizeInt): SizeInt;
@@ -5082,9 +5107,9 @@ begin
     aCount := System.Length(aText)
   else
     aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
-  if aOffset > aCount then exit(0);
-  if OnlyWholeWords then exit(NextMatchOww(aText, aOffset, aCount));
   PatLen := System.Length(FPattern);
+  if aOffset > Succ(aCount - PatLen) then exit(0);
+  if OnlyWholeWords then exit(NextMatchOww(aText, aOffset, aCount));
   p := Pointer(FPattern);
   J := 0;
   for aOffset := aOffset to aCount do
@@ -5098,7 +5123,8 @@ begin
   Result := 0;
 end;
 
-function TKmpSearch.FindMatches(const aText: string; aOffset: SizeInt; aCount: SizeInt): specialize TGArray<SizeInt>;
+function TKmpSearch.FindMatches(const aText: string; aOverlaps: Boolean; aOffset: SizeInt; aCount: SizeInt): specialize
+  TGArray<SizeInt>;
 var
   r: array of SizeInt = nil;
   mCount: SizeInt = 0;
@@ -5119,10 +5145,10 @@ begin
     aCount := System.Length(aText)
   else
     aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
-  if aOffset > aCount then exit(nil);
-  if OnlyWholeWords then exit(FindMatchesOww(aText, aOffset, aCount));
-  System.SetLength(r, ARRAY_INITIAL_SIZE);
   PatLen := System.Length(FPattern);
+  if aOffset > Succ(aCount - PatLen) then exit(nil);
+  if OnlyWholeWords then exit(FindMatchesOww(aText, aOverlaps, aOffset, aCount));
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
   p := Pointer(FPattern);
   J := 0;
   for aOffset := aOffset to aCount do
@@ -5134,7 +5160,10 @@ begin
       if J = PatLen then
         begin
           AddMatch(Succ(aOffset - PatLen));
-          J := FPrefix[Pred(J)];
+          if aOverlaps then
+            J := FPrefix[Pred(J)]
+          else
+            J := 0;
         end;
     end;
   System.SetLength(r, mCount);
@@ -5235,7 +5264,8 @@ begin
   Result := TMatch.Make(0, 0);
 end;
 
-function TKmpSearchCI.FindMatchesOww(const aText: string; aOfs, aLen: SizeInt): specialize TGArray<TMatch>;
+function TKmpSearchCI.FindMatchesOww(const aText: string; aOverlaps: Boolean; aOfs, aLen: SizeInt): specialize TGArray<
+  TMatch>;
 var
   r: array of TMatch = nil;
   mCount: SizeInt = 0;
@@ -5268,28 +5298,33 @@ begin
         J := FPrefix[Pred(J)];
       Inc(J, Ord(FPattern[J] = c));
       if J = PatLen then
-        begin
-          if OnWordBounds(p, pAbsEnd) then AddMatch(GetStartOffset);
+        if OnWordBounds(p, pAbsEnd) then
+          begin
+            AddMatch(GetStartOffset);
+            if aOverlaps then
+              J := FPrefix[Pred(J)]
+            else
+              J := 0;
+          end
+        else
           J := FPrefix[Pred(J)];
-        end;
     end;
   System.SetLength(r, mCount);
   Result := r;
 end;
 
-constructor TKmpSearchCI.Create(const aPattern: string);
+constructor TKmpSearchCI.Create(const aPattern: string; aWholeWords: Boolean);
 begin
-  Init(aPattern);
+  Init(aPattern, aWholeWords);
 end;
 
-procedure TKmpSearchCI.Init(const aPattern: string);
+procedure TKmpSearchCI.Init(const aPattern: string; aWholeWords: Boolean);
 var
   I, J, PatLen, cLen: SizeInt;
 begin
   FPattern := nil;
   FPrefix := nil;
   FQueue := nil;
-  FWholeWords := False;
   if (aPattern = '') or not Utf8Validate(aPattern) then exit;
   System.SetLength(FPattern, Utf8Len(aPattern));
   System.SetLength(FPrefix, System.Length(FPattern));
@@ -5310,6 +5345,7 @@ begin
       Inc(J, Ord(FPattern[J] = FPattern[I]));
       FPrefix[I] := J;
     end;
+  FWholeWords := aWholeWords;
 end;
 
 function TKmpSearchCI.NextMatch(const aText: string; aOffset: SizeInt; aCount: SizeInt): TMatch;
@@ -5345,7 +5381,8 @@ begin
   Result := TMatch.Make(0, 0);
 end;
 
-function TKmpSearchCI.FindMatches(const aText: string; aOffset: SizeInt; aCount: SizeInt): specialize TGArray<TMatch>;
+function TKmpSearchCI.FindMatches(const aText: string; aOverlaps: Boolean; aOffset: SizeInt; aCount: SizeInt
+  ): specialize TGArray<TMatch>;
 var
   r: array of TMatch = nil;
   mCount: SizeInt = 0;
@@ -5366,7 +5403,7 @@ begin
   else
     aCount := Math.Min(Pred(aOffset + aCount), System.Length(aText));
   if aOffset > aCount then exit(nil);
-  if OnlyWholeWords then exit(FindMatchesOww(aText, aOffset, aCount));
+  if OnlyWholeWords then exit(FindMatchesOww(aText, aOverlaps, aOffset, aCount));
   System.SetLength(r, ARRAY_INITIAL_SIZE);
   FQTop := 0;
   PatLen := System.Length(FPattern);
@@ -5382,11 +5419,130 @@ begin
       if J = PatLen then
         begin
           AddMatch(GetStartOffset);
-          J := FPrefix[Pred(J)];
+          if aOverlaps then
+            J := FPrefix[Pred(J)]
+          else
+            J := 0;
         end;
     end;
   System.SetLength(r, mCount);
   Result := r;
+end;
+
+function StrReplaceUtf8(const aSource, aPattern, aSubst: string; out aCount: SizeInt;
+  aOptions: TStrReplaceOptions): string;
+  function ReplaceMatches(const ma: array of TMatch): string;
+  var
+    r: string;
+    pSrc, p, pEnd, pR: PAnsiChar;
+    SubsLen, Cnt: SizeInt;
+    m: TMatch;
+  begin
+    if System.Length(ma) = 0 then exit(aSource);
+    aCount := System.Length(ma);
+    SubsLen := System.Length(aSubst);
+    Cnt := 0;
+    for m in ma do Cnt += SubsLen - m.Length;
+    System.SetLength(r, System.Length(aSource) + Cnt);
+    pR := Pointer(r);
+    pSrc := Pointer(aSource);
+    p := pSrc;
+    pEnd := pSrc + System.Length(aSource);
+    for m in ma do begin
+      Cnt := m.Offset - Succ(p - pSrc);
+      System.Move(p^, pR^, Cnt);
+      pR += Cnt;
+      p += Cnt + m.Length;
+      System.Move(Pointer(aSubst)^, pR^, SubsLen);
+      pR += SubsLen;
+    end;
+    if p < pEnd then System.Move(p^, pR^, pEnd - p);
+    ReplaceMatches := r;
+  end;
+
+  function ReplaceOffsets(const a: array of SizeInt): string;
+  var
+    r: string;
+    pSrc, p, pEnd, pR: PAnsiChar;
+    ToCopy, PatLen, SubsLen, Ofs: SizeInt;
+  begin
+    if System.Length(a) = 0 then exit(aSource);
+    aCount :=  System.Length(a);
+    PatLen := System.Length(aPattern);
+    SubsLen := System.Length(aSubst);
+    System.SetLength(r, System.Length(aSource) + aCount * (SubsLen - PatLen));
+    pR := Pointer(r);
+    pSrc := Pointer(aSource);
+    p := pSrc;
+    pEnd := pSrc + System.Length(aSource);
+    for Ofs in a do begin
+      ToCopy := Ofs - Succ(p - pSrc);
+      System.Move(p^, pR^, ToCopy);
+      pR += ToCopy;
+      p += ToCopy + PatLen;
+      System.Move(Pointer(aSubst)^, pR^, SubsLen);
+      pR += SubsLen;
+    end;
+    if p < pEnd then System.Move(p^, pR^, pEnd - p);
+    ReplaceOffsets := r;
+  end;
+
+  function DoReplaceCI: string;
+  var
+    m: TMatch;
+  begin
+    if sroReplaceAll in aOptions then
+      DoReplaceCI :=
+        ReplaceMatches(TKmpSearchCi.Create(aPattern, sroOnlyWholeWords in aOptions).FindMatches(aSource))
+    else begin
+      m := TKmpSearchCi.Create(aPattern, sroOnlyWholeWords in aOptions).NextMatch(aSource);
+      if m.Offset = 0 then exit(aSource);
+      DoReplaceCI := ReplaceMatches(m);
+    end;
+  end;
+
+  function DoReplaceOww: string;
+  var
+    Ofs: SizeInt;
+  begin
+    if sroReplaceAll in aOptions then
+      DoReplaceOww := ReplaceOffsets(TKmpSearch.Create(aPattern, True).FindMatches(aSource))
+    else begin
+      Ofs := TKmpSearch.Create(aPattern, True).NextMatch(aSource);
+      if Ofs = 0 then exit(aSource);
+      DoReplaceOww := ReplaceOffsets(Ofs);
+    end;
+  end;
+
+  function DoReplace: string;
+  var
+    I: Integer;
+  begin
+    if sroOnlyWholeWords in aOptions then
+      DoReplace := DoReplaceOww
+    else begin
+      if sroReplaceAll in aOptions then
+        DoReplace := SysUtils.StringReplace(aSource, aPattern, aSubst, [rfReplaceAll], I)
+      else
+        DoReplace := SysUtils.StringReplace(aSource, aPattern, aSubst, [], I);
+      aCount := I;
+    end;
+  end;
+
+begin
+  aCount := 0;
+  if (aSource = '') or (aPattern = '') then exit(aSource);
+  if sroIgnoreCase in aOptions then
+    Result := DoReplaceCI
+  else
+    Result := DoReplace;
+end;
+
+function StrReplaceUtf8(const aSource, aPattern, aSubst: string; aOptions: TStrReplaceOptions): string;
+var
+  Dummy: SizeInt;
+begin
+  Result := StrReplaceUtf8(aSource, aPattern, aSubst, Dummy, aOptions);
 end;
 
 { TFuzzySearchEdp.TEnumerator }
