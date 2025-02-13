@@ -4180,7 +4180,7 @@ end;
 
 function TBmhrSearch.Find(aHeap: PByte; const aHeapLen: SizeInt; I: SizeInt): SizeInt;
 var
-  NeedLast, J: Integer;
+  NeedLast, NeedHalf, J: Integer;
   p: PByte absolute FNeedle;
 begin
   case System.Length(FNeedle) of
@@ -4191,32 +4191,36 @@ begin
         exit(I + J);
       end;
     2:
-      while I <= aHeapLen - 2 do
+      while I < aHeapLen - 1 do
         begin
-          if(aHeap[I + 1] = p[1]) and (aHeap[I] = p^) then
+          if (aHeap[I] = p^) and (aHeap[I + 1] = p[1]) then
             exit(I);
           I += FBcShift[aHeap[I + 1]];
         end;
     3:
-      while I <= aHeapLen - 3 do
+      while I < aHeapLen - 2 do
         begin
-          if(aHeap[I + 2] = p[2]) and (aHeap[I] = p^) and
-            (aHeap[I + 1] = p[1]) then
+          if (aHeap[I] = p^) and (aHeap[I + 1] = p[1]) and (aHeap[I + 2] = p[2]) then
             exit(I);
           I += FBcShift[aHeap[I + 2]];
         end;
-  else
-    begin
-      NeedLast := Pred(System.Length(FNeedle));
-      while I <= aHeapLen - Succ(NeedLast) do
+    4:
+      while I < aHeapLen - 3 do
         begin
-          if(aHeap[I + NeedLast] = p[NeedLast]) and (aHeap[I] = p^) and
-            (aHeap[I + NeedLast shr 1] = p[NeedLast shr 1]) and
-            (CompareByte(aHeap[Succ(I)], p[1], Pred(NeedLast)) = 0) then
+          if(aHeap[I]=p^)and(aHeap[I+1]=p[1])and(aHeap[I+2]=p[2])and(aHeap[I+3]=p[3]) then
             exit(I);
-          I += FBcShift[aHeap[I + NeedLast]];
+          I += FBcShift[aHeap[I + 3]];
         end;
-    end;
+  else
+    NeedLast := Pred(System.Length(FNeedle));
+    NeedHalf := NeedLast div 2;
+    while I < aHeapLen - NeedLast do
+      begin
+        if(aHeap[I + NeedLast] = p[NeedLast]) and (aHeap[I] = p^) and
+          (aHeap[I + NeedHalf] = p[NeedHalf]) and
+          (CompareByte(aHeap[Succ(I)], p[1], Pred(NeedLast)) = 0) then exit(I);
+        I += FBcShift[aHeap[I + NeedLast]];
+      end;
   end;
   Result := NULL_INDEX;
 end;
