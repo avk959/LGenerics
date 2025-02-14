@@ -5437,7 +5437,7 @@ var
   pPat, pTxt: PByte;
 begin
   if (aText = '') or (aPattern = '') then exit(0);
-  specialize TGArrayHelpUtil<Integer>.Fill(Shifts, System.Length(aPattern));
+  System.FillDWord(Shifts, System.Length(Shifts), DWord(System.Length(aPattern)));
   PatLast := System.Length(aPattern)-1;
   pPat := Pointer(aPattern);
   for I := 0 to PatLast - 1 do Shifts[pPat[I]] := PatLast - I;
@@ -5495,7 +5495,7 @@ var
   pPat, pTxt: PByte;
 begin
   if (aText = '') or (aPattern = '') then exit(nil);
-  specialize TGArrayHelpUtil<Integer>.Fill(Shifts, System.Length(aPattern));
+  System.FillDWord(Shifts, System.Length(Shifts), DWord(System.Length(aPattern)));
   PatLast := System.Length(aPattern)-1;
   pPat := Pointer(aPattern);
   for I := 0 to PatLast - 1 do Shifts[pPat[I]] := PatLast - I;
