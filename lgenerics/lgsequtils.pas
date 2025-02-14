@@ -531,7 +531,7 @@ type
     found in string aText, starting at position aOffset within aCount bytes;
     any value of aCount < 1 implies searching to the end of the string }
     function  FindMatches(const aText: string; aOverlaps: Boolean = False; aOffset: SizeInt = 1;
-                          aCount: SizeInt = 0): specialize TGArray<SizeInt>;
+                          aCount: SizeInt = 0): TSizeIntArray;
   { if set to True, the word boundary will be examined for each occurrence,
     i.e. if it is surrounded by non-word characters or string boundaries }
     property  OnlyWholeWords: Boolean read FWholeWords write FWholeWords;
@@ -5123,8 +5123,8 @@ begin
   Result := 0;
 end;
 
-function TKmpSearch.FindMatches(const aText: string; aOverlaps: Boolean; aOffset: SizeInt; aCount: SizeInt): specialize
-  TGArray<SizeInt>;
+function TKmpSearch.FindMatches(const aText: string; aOverlaps: Boolean; aOffset: SizeInt;
+  aCount: SizeInt): TSizeIntArray;
 var
   r: array of SizeInt = nil;
   mCount: SizeInt = 0;
@@ -5381,8 +5381,8 @@ begin
   Result := TMatch.Make(0, 0);
 end;
 
-function TKmpSearchCI.FindMatches(const aText: string; aOverlaps: Boolean; aOffset: SizeInt; aCount: SizeInt
-  ): specialize TGArray<TMatch>;
+function TKmpSearchCI.FindMatches(const aText: string; aOverlaps: Boolean; aOffset: SizeInt;
+  aCount: SizeInt): specialize TGArray<TMatch>;
 var
   r: array of TMatch = nil;
   mCount: SizeInt = 0;
@@ -5429,8 +5429,157 @@ begin
   Result := r;
 end;
 
+{$PUSH}{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized}
+function BmhrPos(const aText, aPattern: string): SizeInt;
+var
+  Shifts: array[Byte] of Integer;
+  PatLast, PatHalf, TxtLen, I, J: SizeInt;
+  pPat, pTxt: PByte;
+begin
+  if (aText = '') or (aPattern = '') then exit(0);
+  specialize TGArrayHelpUtil<Integer>.Fill(Shifts, System.Length(aPattern));
+  PatLast := System.Length(aPattern)-1;
+  pPat := Pointer(aPattern);
+  for I := 0 to PatLast - 1 do Shifts[pPat[I]] := PatLast - I;
+  TxtLen := System.Length(aText);
+  pTxt := Pointer(aText);
+  I := 0;
+  case PatLast of
+    0:
+      begin
+        J := IndexByte(pTxt[I], TxtLen, pPat^);
+        if J < 0 then exit(0);
+        exit(Succ(I + J));
+      end;
+    1:
+      while I < TxtLen - 1 do begin
+        if (pTxt[I] = pPat^) and (pTxt[I + 1] = pPat[1]) then exit(Succ(I));
+        I += Shifts[pTxt[I + 1]];
+      end;
+    2:
+      while I < TxtLen - 2 do begin
+        if(pTxt[I] = pPat^)and(pTxt[I+1] = pPat[1])and(pTxt[I+2] = pPat[2])then exit(Succ(I));
+        I += Shifts[pTxt[I + 2]];
+      end;
+    3:
+      while I < TxtLen - 3 do begin
+        if (pTxt[I] = pPat^) and (pTxt[I+1] = pPat[1]) and
+           (pTxt[I+2] = pPat[2]) and (pTxt[I+3] = pPat[3]) then exit(Succ(I));
+        I += Shifts[pTxt[I + 3]];
+      end;
+  else
+    PatHalf := PatLast div 2;
+    while I < TxtLen - PatLast do begin
+      if(pTxt[I + PatLast] = pPat[PatLast]) and (pTxt[I] = pPat^) and
+        (pTxt[I + PatHalf] = pPat[PatHalf]) and
+        (CompareByte(pTxt[Succ(I)], pPat[1], Pred(PatLast)) = 0) then exit(Succ(I));
+      I += Shifts[pTxt[I + PatLast]];
+    end;
+  end;
+  Result := 0;
+end;
+
+function BmhrAll(const aText, aPattern: string): TSizeIntArray;
+var
+  r: TSizeIntArray = nil;
+  mCount: SizeInt = 0;
+  procedure AddMatch(m: SizeInt); inline;
+  begin
+    if mCount = System.Length(r) then System.SetLength(r, mCount * 2);
+    r[mCount] := m;
+    Inc(mCount);
+  end;
+var
+  Shifts: array[Byte] of Integer;
+  PatLast, PatHalf, TxtLen, I, J: SizeInt;
+  pPat, pTxt: PByte;
+begin
+  if (aText = '') or (aPattern = '') then exit(nil);
+  specialize TGArrayHelpUtil<Integer>.Fill(Shifts, System.Length(aPattern));
+  PatLast := System.Length(aPattern)-1;
+  pPat := Pointer(aPattern);
+  for I := 0 to PatLast - 1 do Shifts[pPat[I]] := PatLast - I;
+  TxtLen := System.Length(aText);
+  pTxt := Pointer(aText);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  I := 0;
+  case PatLast of
+    0:
+      while I < TxtLen do begin
+        J := IndexByte(pTxt[I], TxtLen - I, pPat^);
+        if J < 0 then break;
+        I += J + 1;
+        AddMatch(I);
+      end;
+    1:
+      while I < TxtLen - 1 do
+        if (pTxt[I] = pPat^) and (pTxt[I + 1] = pPat[1]) then begin
+          AddMatch(Succ(I));
+          I += 2;
+        end else
+          I += Shifts[pTxt[I + 1]];
+    2:
+      while I < TxtLen - 2 do
+        if(pTxt[I] = pPat^)and(pTxt[I+1] = pPat[1])and(pTxt[I+2] = pPat[2])then begin
+          AddMatch(Succ(I));
+          I += 3;
+        end else
+          I += Shifts[pTxt[I + 2]];
+    3:
+      while I < TxtLen - 3 do
+        if(pTxt[I] = pPat^) and (pTxt[I+1] = pPat[1]) and
+          (pTxt[I+2] = pPat[2]) and (pTxt[I+3] = pPat[3]) then begin
+          AddMatch(Succ(I));
+          I += 4;
+        end else
+          I += Shifts[pTxt[I + 3]];
+  else
+    PatHalf := PatLast div 2;
+    while I < TxtLen - PatLast do
+      if(pTxt[I + PatLast] = pPat[PatLast]) and (pTxt[I] = pPat^) and
+        (pTxt[I + PatHalf] = pPat[PatHalf]) and
+        (CompareByte(pTxt[Succ(I)], pPat[1], Pred(PatLast)) = 0) then begin
+          AddMatch(Succ(I));
+          I += Succ(PatLast);
+      end else
+        I += Shifts[pTxt[I + PatLast]];
+  end;
+  System.SetLength(r, mCount);
+  Result := r;
+end;
+{$POP}
+
+function SysPosFindAll(const aText, aPattern: string): TSizeIntArray;
+var
+  r: TSizeIntArray = nil;
+  mCount: SizeInt = 0;
+  procedure AddMatch(m: SizeInt);
+  begin
+    if mCount = System.Length(r) then System.SetLength(r, mCount * 2);
+    r[mCount] := m;
+    Inc(mCount);
+  end;
+var
+  Ofs, PatLen, TxtBound: SizeInt;
+begin
+   if (aText = '') or (aPattern = '') then exit(nil);
+   PatLen := System.Length(aPattern);
+   TxtBound := System.Length(aText) - PatLen + 2;
+   System.SetLength(r, ARRAY_INITIAL_SIZE);
+   Ofs := 1;
+   while Ofs < TxtBound do begin
+     Ofs := System.Pos(aPattern, aText, Ofs);
+     if Ofs = 0 then break;
+     AddMatch(Ofs);
+     Ofs += PatLen;
+   end;
+   System.SetLength(r, mCount);
+   Result := r;
+end;
+
 function StrReplaceUtf8(const aSource, aPattern, aSubst: string; out aCount: SizeInt;
   aOptions: TStrReplaceOptions): string;
+
   function ReplaceMatches(const ma: array of TMatch): string;
   var
     r: string;
@@ -5516,17 +5665,29 @@ function StrReplaceUtf8(const aSource, aPattern, aSubst: string; out aCount: Siz
 
   function DoReplace: string;
   var
-    I: Integer;
+    Ofs: SizeInt;
+  const
+    BMHR_CUTOFF = 512; //TODO: BMHR_CUTOFF ???
   begin
     if sroOnlyWholeWords in aOptions then
       DoReplace := DoReplaceOww
-    else begin
-      if sroReplaceAll in aOptions then
-        DoReplace := SysUtils.StringReplace(aSource, aPattern, aSubst, [rfReplaceAll], I)
-      else
-        DoReplace := SysUtils.StringReplace(aSource, aPattern, aSubst, [], I);
-      aCount := I;
-    end;
+    else
+      if System.Length(aSource) >= BMHR_CUTOFF then begin
+        if sroReplaceAll in aOptions then
+          DoReplace := ReplaceOffsets(BmhrAll(aSource, aPattern))
+        else begin
+          Ofs := BmhrPos(aSource, aPattern);
+          if Ofs = 0 then exit(aSource);
+          DoReplace := ReplaceOffsets(Ofs);
+        end;
+      end else
+        if sroReplaceAll in aOptions then
+          DoReplace := ReplaceOffsets(SysPosFindAll(aSource, aPattern))
+        else begin
+          Ofs := System.Pos(aPattern, aSource);
+          if Ofs = 0 then exit(aSource);
+          DoReplace := ReplaceOffsets(Ofs);
+        end;
   end;
 
 begin
