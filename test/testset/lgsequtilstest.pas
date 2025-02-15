@@ -80,6 +80,11 @@ type
     procedure SimRatioUtf16Test;
     procedure SimRatioExUtf16Test;
 
+    procedure StrReplaceUtf8Test;
+    procedure StrReplaceUtf8OwwTest;
+    procedure StrReplaceUtf8CITest;
+    procedure StrReplaceUtf8CiOwwTest;
+
     procedure ACStrReplaceTest;
     procedure ACStrReplaceCITest;
     procedure ACStrReplaceListTest;
@@ -168,8 +173,17 @@ type
 
   TKmpSearchCITest = class(TTestCase)
     procedure TestCreation;
-    procedure TestFirstMatch;
-    procedure TestFirstMatchOww;
+    procedure TestNextMatch;
+    procedure TestNextMatchOww;
+    procedure TestFindMatches;
+    procedure TestFindMatchesOww;
+  end;
+
+  { TKmpSearchTest }
+
+  TKmpSearchTest = class(TTestCase)
+    procedure TestNextMatch;
+    procedure TestNextMatchOww;
     procedure TestFindMatches;
     procedure TestFindMatchesOww;
   end;
@@ -3216,6 +3230,256 @@ begin
   AssertTrue(SimRatioExUtf16('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx) = DblOne);
 end;
 
+procedure TTestUnicodeUtils.StrReplaceUtf8Test;
+var
+  Txt, Key, Subst, s: string;
+  Cnt: SizeInt;
+const
+  Key1   = '2335';
+  Key2   = '2345';
+  Key3   = 'ABCD42';
+  Key4   = 'ABCDEF';
+  Key5   = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA';
+  Subst1 = 'FEDCBA42';
+
+  Txt1 = '12345678901234567890';
+  Txt2 =
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA';
+
+  Ans4 =
+    '1234567890FEDCBA42GHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA';
+  Ans4a =
+    '1234567890FEDCBA42GHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890FEDCBA42GHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890FEDCBA42GHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890FEDCBA42GHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA'+
+    '1234567890FEDCBA42GHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_!@#$%^&*()-=+|\/":;<>?987654321LKJIHGFEDCBA';
+begin
+  Key := '';
+  Txt := '';
+  Subst := '';
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt) = '');
+  AssertTrue(Cnt = 0);
+
+  Cnt := 42;
+  Txt := Txt1;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Cnt := 42;
+  Key := Key1;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Key := Key2;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt) = '1678901234567890');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, [sroReplaceAll]) = '167890167890');
+  AssertTrue(Cnt = 2);
+
+  Subst := 'abcde';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt) = '1abcde678901234567890');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, [sroReplaceAll]) = '1abcde678901abcde67890');
+  AssertTrue(Cnt = 2);
+
+  Txt := Txt2;
+  Key := Key3;
+  Subst := Subst1;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, [sroReplaceAll]) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Key := Key4;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt) = Ans4);
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, [sroReplaceAll]) = Ans4a);
+  AssertTrue(Cnt = 5);
+
+  Key := Key5;
+  Subst := '';
+  Cnt := 0;
+  s := StrReplaceUtf8(Txt, Key, Subst, Cnt, [sroReplaceAll]);
+  AssertTrue(s, s = '');
+  AssertTrue(Cnt.ToString, Cnt = 5);
+end;
+
+procedure TTestUnicodeUtils.StrReplaceUtf8OwwTest;
+var
+  Txt, Key, Subst: string;
+  Cnt: SizeInt;
+const
+  OptsOww    = [sroOnlyWholeWords];
+  OptsOwwAll = [sroReplaceAll, sroOnlyWholeWords];
+begin
+  Cnt := 42;
+  Key := '';
+  Txt := '';
+  Subst := '';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = '');
+  AssertTrue(Cnt = 0);
+
+  Txt := '123123123123123123123';
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Key := '123';
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Txt := '123123-123-123123-123-123123';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = '123123--123123-123-123123');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOwwAll) = '123123--123123--123123');
+  AssertTrue(Cnt = 2);
+
+  Txt := '123-123123123-123';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = '-123123123-123');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOwwAll) = '-123123123-');
+  AssertTrue(Cnt = 2);
+
+  Key := '123-123123123-123';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = '');
+  AssertTrue(Cnt = 1);
+
+  Subst := 'abcd';
+  Cnt := 0;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOww) = 'abcd');
+  AssertTrue(Cnt = 1);
+
+  Key := '123';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsOwwAll) = 'abcd-123123123-abcd');
+  AssertTrue(Cnt = 2);
+end;
+
+procedure TTestUnicodeUtils.StrReplaceUtf8CITest;
+var
+  Txt, Key, Subst: string;
+  Cnt: SizeInt;
+const
+  OptsCI    = [sroIgnoreCase];
+  OptsCiAll = [sroReplaceAll, sroIgnoreCase];
+begin
+  Cnt := 42;
+  Key := '';
+  Txt := '';
+  Subst := '';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCI) = '');
+  AssertTrue(Cnt = 0);
+
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiAll) = '');
+  AssertTrue(Cnt = 0);
+
+  Txt := 'нечто что что-то чтобы почтой';
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCI) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Key := 'ЧТО';
+  Subst := '?';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCI) = 'не? что что-то чтобы почтой');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiAll) = 'не? ? ?-то ?бы по?й');
+  AssertTrue(Cnt = 5);
+
+  Txt := 'Ɽнечто Ɫчто Ɽчто-то Ɑчтобы Ɫпочтой';
+  Subst := 'What';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCI) = 'ⱤнеWhat Ɫчто Ɽчто-то Ɑчтобы Ɫпочтой');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiAll) = 'ⱤнеWhat ⱢWhat ⱤWhat-то ⱭWhatбы ⱢпоWhatй');
+  AssertTrue(Cnt = 5);
+
+ Txt :=  'ＬＡＺＡＲＵＳ это среда быстрой разработки приложений';
+ Key := 'ＬａｚａｒｕＳ';
+ Subst := 'Лазарь';
+
+ AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCI) = 'Лазарь это среда быстрой разработки приложений');
+ AssertTrue(Cnt = 1);
+
+ Cnt := 0;
+ AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiAll) = 'Лазарь это среда быстрой разработки приложений');
+ AssertTrue(Cnt = 1);
+end;
+
+procedure TTestUnicodeUtils.StrReplaceUtf8CiOwwTest;
+var
+  Txt, Key, Subst: string;
+  Cnt: SizeInt;
+const
+  OptsCiOww    = [sroIgnoreCase, sroOnlyWholeWords];
+  OptsCiOwwAll = [sroReplaceAll, sroIgnoreCase, sroOnlyWholeWords];
+begin
+  Cnt := 42;
+  Key := '';
+  Txt := '';
+  Subst := '';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOww) = '');
+  AssertTrue(Cnt = 0);
+
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOwwAll) = '');
+  AssertTrue(Cnt = 0);
+
+  Txt := 'нечто что что-то чтобы почтой';
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOww) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Key := 'ЧТО';
+  Subst := '?';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOww) = 'нечто ? что-то чтобы почтой');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOwwAll) = 'нечто ? ?-то чтобы почтой');
+  AssertTrue(Cnt = 2);
+
+  Txt := 'Ɽнечто Ɑчтобы Ɫпочтой Ɫ что Ɽ что-то';
+  Subst := 'What';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOww) = 'Ɽнечто Ɑчтобы Ɫпочтой Ɫ What Ɽ что-то');
+  AssertTrue(Cnt = 1);
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOwwAll) = 'Ɽнечто Ɑчтобы Ɫпочтой Ɫ What Ɽ What-то');
+  AssertTrue(Cnt = 2);
+
+  Txt :=  'ＬＡＺＡＲＵＳэто среда быстрой разработки приложений';
+  Key := 'ＬａｚａｒｕＳ';
+  Subst := 'Лазарь';
+
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOww) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Cnt := 42;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOwwAll) = Txt);
+  AssertTrue(Cnt = 0);
+
+  Txt :=  'ＬＡＺＡＲＵＳ это среда быстрой разработки приложений';
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOww) = 'Лазарь это среда быстрой разработки приложений');
+  AssertTrue(Cnt = 1);
+
+  Cnt := 0;
+  AssertTrue(StrReplaceUtf8(Txt, Key, Subst, Cnt, OptsCiOwwAll) = 'Лазарь это среда быстрой разработки приложений');
+  AssertTrue(Cnt = 1);
+end;
+
 procedure TTestUnicodeUtils.ACStrReplaceTest;
 var
   Src, Res: string;
@@ -5005,6 +5269,8 @@ begin
   AssertFalse(Kmp.Initialized);
   Kmp.Init(Ascii);
   AssertTrue(Kmp.Initialized);
+  Kmp.Init(Ascii, True);
+  AssertTrue(Kmp.OnlyWholeWords);
 
   Kmp := TKmpSearchCI.Create('');
   AssertFalse(Kmp.Initialized);
@@ -5012,9 +5278,11 @@ begin
   AssertFalse(Kmp.Initialized);
   Kmp := TKmpSearchCI.Create(Ascii);
   AssertTrue(Kmp.Initialized);
+  Kmp := TKmpSearchCI.Create(Ascii, True);
+  AssertTrue(Kmp.OnlyWholeWords);
 end;
 
-procedure TKmpSearchCITest.TestFirstMatch;
+procedure TKmpSearchCITest.TestNextMatch;
 var
   Kmp: TKmpSearchCI;
   Txt, Key: string;
@@ -5053,15 +5321,14 @@ begin
   AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
 end;
 
-procedure TKmpSearchCITest.TestFirstMatchOww;
+procedure TKmpSearchCITest.TestNextMatchOww;
 var
   Kmp: TKmpSearchCI;
   Txt, Key: string;
   m: TMatch;
 begin
   Key := '2025Г';
-  Kmp.Init(Key);
-  Kmp.OnlyWholeWords := True;
+  Kmp.Init(Key, True);
   Txt := '123456789012342025г6789';
   AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
 
@@ -5089,8 +5356,7 @@ begin
   AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
 
   Key := 'Г';
-  Kmp.Init(Key);
-  Kmp.OnlyWholeWords := True;
+  Kmp.Init(Key, True);
   AssertTrue(Kmp.NextMatch(Txt).Offset = 0);
 
   Txt := '12345678901234-2025.г-6789';
@@ -5123,6 +5389,11 @@ begin
   Txt := 'абВГАбвгАБВгабВГабВгабВГ';
   Kmp.Init(Key);
   ma := Kmp.FindMatches(Txt);
+  AssertTrue(Length(ma) = 3);
+  for m in ma do
+    AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  ma := Kmp.FindMatches(Txt, True);
   AssertTrue(Length(ma) = 5);
   for m in ma do
     AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
@@ -5137,8 +5408,7 @@ var
 begin
   Txt := 'абВГДАбвгДАБВгдабВГДабвгд';
   Key := 'аБвГд';
-  Kmp.Init(Key);
-  Kmp.OnlyWholeWords := True;
+  Kmp.Init(Key, True);
   ma := Kmp.FindMatches(Txt);
   AssertTrue(ma = nil);
 
@@ -5150,12 +5420,150 @@ begin
 
   Txt := 'абВГД.АбвгД.АБВгд.абВГД.абвгд';
   Key := 'аБвГд.АбВгД';
-  Kmp.Init(Key);
-  Kmp.OnlyWholeWords := True;
+  Kmp.Init(Key, True);
   ma := Kmp.FindMatches(Txt);
+  AssertTrue(Length(ma) = 2);
+  for m in ma do
+    AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+
+  ma := Kmp.FindMatches(Txt, True);
   AssertTrue(Length(ma) = 4);
   for m in ma do
     AssertTrue(Utf8ToLower(Copy(Txt, m.Offset, m.Length)) = Utf8ToLower(Key));
+end;
+
+{ TKmpSearchTest }
+
+procedure TKmpSearchTest.TestNextMatch;
+var
+  Kmp: TKmpSearch;
+  Txt, Key: string;
+  Ofs: Integer;
+begin
+  Key := '';
+  Txt := '';
+  Kmp.Init(Key);
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Txt := '1234567890123420256789';
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Key := '2025';
+  Kmp.Init(Key);
+  Ofs := Kmp.NextMatch(Txt);
+  AssertTrue(Ofs <> 0);
+  AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  AssertTrue(Kmp.NextMatch(Txt, 1, 17) = 0);
+end;
+
+procedure TKmpSearchTest.TestNextMatchOww;
+var
+  Kmp: TKmpSearch;
+  Txt, Key: string;
+  Ofs: Integer;
+begin
+  Key := '';
+  Txt := '';
+  Kmp.Init(Key, True);
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Txt := '1234567890123420256789';
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Key := '2025';
+  Kmp.Init(Key, True);
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Txt := '12345678901234 20256789';
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Txt := '123456789012342025 6789';
+  AssertTrue(Kmp.NextMatch(Txt) = 0);
+
+  Txt := '2025-234567890123456789';
+  Ofs := Kmp.NextMatch(Txt);
+  AssertTrue(Ofs <> 0);
+  AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  Txt := '1234567890123456789.2025';
+  Ofs := Kmp.NextMatch(Txt);
+  AssertTrue(Ofs <> 0);
+  AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  Txt := '12345678901234!2025?6789';
+  Ofs := Kmp.NextMatch(Txt);
+  AssertTrue(Ofs <> 0);
+  AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  AssertTrue(Kmp.NextMatch(Txt, 1, 18) = 0);
+end;
+
+procedure TKmpSearchTest.TestFindMatches;
+var
+  Kmp: TKmpSearch;
+  Txt, Key: string;
+  a: array of SizeInt;
+  Ofs: SizeInt;
+begin
+  Key := '12335';
+  Txt := '1234512345123451234512345';
+  Kmp.Init(Key);
+  a := Kmp.FindMatches(Txt);
+  AssertTrue(a = nil);
+
+  Key := '12345';
+  Kmp.Init(Key);
+  a := Kmp.FindMatches(Txt);
+  AssertTrue(Length(a) = 5);
+  for Ofs in a do
+    AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  Key := '123123';
+  Txt := '123123123123123123';
+  Kmp.Init(Key);
+  a := Kmp.FindMatches(Txt);
+  AssertTrue(Length(a) = 3);
+  for Ofs in a do
+    AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  a := Kmp.FindMatches(Txt, True);
+  AssertTrue(Length(a) = 5);
+  for Ofs in a do
+    AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+end;
+
+procedure TKmpSearchTest.TestFindMatchesOww;
+var
+  Kmp: TKmpSearch;
+  Txt, Key: string;
+  a: array of SizeInt;
+  Ofs: SizeInt;
+begin
+  Key := '12345';
+  Txt := '1234512345123451234512345';
+  Kmp.Init(Key, True);
+  a := Kmp.FindMatches(Txt);
+  AssertTrue(a = nil);
+
+  Txt := '12345.12345.12345.12345.12345';
+  a := Kmp.FindMatches(Txt);
+  AssertTrue(Length(a) = 5);
+  for Ofs in a do
+    AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  Key := '123.123';
+  Txt := '123.123.123.123.123.123';
+  Kmp.Init(Key, True);
+  a := Kmp.FindMatches(Txt);
+  AssertTrue(Length(a) = 3);
+  for Ofs in a do
+    AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
+
+  a := Kmp.FindMatches(Txt, True);
+  AssertTrue(Length(a) = 5);
+  for Ofs in a do
+    AssertTrue(Copy(Txt, Ofs, Length(Key)) = Key);
 end;
 
 
@@ -5167,6 +5575,7 @@ initialization
   RegisterTest(TACSearchFsmTest);
   RegisterTest(TACPersistFsmTest);
   RegisterTest(TKmpSearchCITest);
+  RegisterTest(TKmpSearchTest);
 
 end.
 
