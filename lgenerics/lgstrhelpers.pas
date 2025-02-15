@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some useful string routines.                                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -3928,7 +3928,7 @@ procedure FillBcTable(pNeedle: PByte; aLen: Integer; var aTable: TBcTableType);
 var
   I: Integer;
 begin
-  specialize TGArrayHelpUtil<Integer>.Fill(aTable, aLen);
+  System.FillDWord(aTable, System.Length(aTable), DWord(aLen));
   for I := 0 to aLen - 2 do
     aTable[pNeedle[I]] := Pred(aLen - I);
 end;
