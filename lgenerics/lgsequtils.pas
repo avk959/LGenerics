@@ -4958,7 +4958,7 @@ begin
     Result := TUnicodeCategory(GetProps(c)^.Category) in LETTER_OR_DIGIT_CATEGORIES;
 end;
 
-function PrevCpOffset(const s: string; aOfs: SizeInt): SizeInt; inline;
+function PrevCpOffsetUtf8(const s: string; aOfs: SizeInt): SizeInt; inline;
 begin
   if aOfs <= 1 then exit(0);
   Result := aOfs-1;
@@ -4990,7 +4990,7 @@ function TKmpSearch.OnWordBounds(const s: string; aTail: SizeInt): Boolean;
 var
   o, d: SizeInt;
 begin
-  o := PrevCpOffset(s, Succ(aTail-System.Length(FPattern)));
+  o := PrevCpOffsetUtf8(s, Succ(aTail-System.Length(FPattern)));
   if (o > 0) and IsWordChar(CodePointToUcs4Char(@s[o], Succ(aTail-System.Length(FPattern))-o, d)) then
     exit(False);
   if (aTail < System.Length(s)) and
@@ -5214,7 +5214,7 @@ procedure TKmpSearchCI.PushFirstOffset(const s: string; aOfs: SizeInt);
 var
   Dummy: SizeInt;
 begin
-  aOfs := PrevCpOffset(s, aOfs);
+  aOfs := PrevCpOffsetUtf8(s, aOfs);
   if aOfs = 0 then
     QueuePush(0, 0)
   else
@@ -6600,7 +6600,7 @@ function TACFsmUtf8.PushFirstOffset(const s: string; aOffset: SizeInt): SizeInt;
 var
   Len: SizeInt;
 begin
-  aOffset := PrevCpOffset(s, aOffset);
+  aOffset := PrevCpOffsetUtf8(s, aOffset);
   with FQueue[0] do
     if aOffset = 0 then
       begin
