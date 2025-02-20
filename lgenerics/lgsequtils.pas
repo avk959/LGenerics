@@ -5429,57 +5429,107 @@ begin
   Result := r;
 end;
 
+function OnWordBoundsUtf8(const s: string; aOfs, aLen: SizeInt): Boolean;
+var
+  o, d: SizeInt;
+begin
+  o := PrevCpOffsetUtf8(s, aOfs);
+  if (o > 0) and IsWordChar(CodePointToUcs4Char(@s[o], aOfs - o, d)) then exit(False);
+  o := Pred(aOfs + aLen);
+  if(o < System.Length(s))and IsWordChar(CodePointToUcs4Char(@s[o+1],System.Length(s)-o,d))then exit(False);
+  Result := True;
+end;
+
+function GetSysPos(const aText, aPattern: string; aWholeWord: Boolean): SizeInt;
+var
+  Ofs, OfsBound: SizeInt;
+begin
+  if aWholeWord then begin
+    OfsBound := System.Length(aText) - System.Length(aPattern) + 2;
+    Result := 0;
+    Ofs := 1;
+    while Ofs < OfsBound do begin
+      Ofs := System.Pos(aPattern, aText, Ofs);
+      if Ofs = 0 then exit;
+      if OnWordBoundsUtf8(aText, Ofs,  System.Length(aPattern)) then exit(Ofs);
+      Inc(Ofs);
+    end;
+  end else
+    Result := System.Pos(aPattern, aText);
+end;
+
+function GetSysPosAll(const aText, aPattern: string; aWholeWords: Boolean): TSizeIntArray;
+var
+  r: TSizeIntArray = nil;
+  mCount: SizeInt = 0;
+  procedure AddMatch(m: SizeInt);
+  begin
+    if mCount = System.Length(r) then System.SetLength(r, mCount * 2);
+    r[mCount] := m;
+    Inc(mCount);
+  end;
+var
+  Ofs, PatLen, OfsBound: SizeInt;
+begin
+  if (aText = '') or (aPattern = '') then exit(nil);
+  PatLen := System.Length(aPattern);
+  OfsBound := System.Length(aText) - PatLen + 2;
+  if OfsBound < 2 then exit(nil);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  Ofs := 1;
+  while Ofs < OfsBound do begin
+    Ofs := System.Pos(aPattern, aText, Ofs);
+    if Ofs = 0 then break;
+    if aWholeWords then begin
+      if OnWordBoundsUtf8(aText, Ofs, PatLen) then begin
+        AddMatch(Ofs);
+        Ofs += PatLen;
+      end else
+        Inc(Ofs);
+    end else begin
+      AddMatch(Ofs);
+      Ofs += PatLen;
+    end;
+  end;
+  System.SetLength(r, mCount);
+  Result := r;
+end;
+
 {$PUSH}{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized}
-function BmhrPos(const aText, aPattern: string): SizeInt;
+function GetBmhPos(const aText, aPattern: string; aWholeWord: Boolean): SizeInt;
 var
   Shifts: array[Byte] of Integer;
-  PatLast, PatHalf, TxtLen, I, J: SizeInt;
+  PatLast, OfsBound, I: SizeInt;
   pPat, pTxt: PByte;
+const
+  BMH_CUTOFF = 4; // must be > 2
 begin
-  if (aText = '') or (aPattern = '') then exit(0);
+  if System.Length(aPattern) < BMH_CUTOFF then exit(GetSysPos(aText, aPattern, aWholeWord));
+  if System.Length(aPattern) > System.Length(aText) then exit(0);
   System.FillDWord(Shifts, System.Length(Shifts), DWord(System.Length(aPattern)));
   PatLast := System.Length(aPattern)-1;
   pPat := Pointer(aPattern);
   for I := 0 to PatLast - 1 do Shifts[pPat[I]] := PatLast - I;
-  TxtLen := System.Length(aText);
+  OfsBound := System.Length(aText) - PatLast;
   pTxt := Pointer(aText);
   I := 0;
-  case PatLast of
-    0:
-      begin
-        J := IndexByte(pTxt[I], TxtLen, pPat^);
-        if J < 0 then exit(0);
-        exit(Succ(I + J));
-      end;
-    1:
-      while I < TxtLen - 1 do begin
-        if (pTxt[I] = pPat^) and (pTxt[I + 1] = pPat[1]) then exit(Succ(I));
-        I += Shifts[pTxt[I + 1]];
-      end;
-    2:
-      while I < TxtLen - 2 do begin
-        if(pTxt[I] = pPat^)and(pTxt[I+1] = pPat[1])and(pTxt[I+2] = pPat[2])then exit(Succ(I));
-        I += Shifts[pTxt[I + 2]];
-      end;
-    3:
-      while I < TxtLen - 3 do begin
-        if (pTxt[I] = pPat^) and (pTxt[I+1] = pPat[1]) and
-           (pTxt[I+2] = pPat[2]) and (pTxt[I+3] = pPat[3]) then exit(Succ(I));
-        I += Shifts[pTxt[I + 3]];
-      end;
-  else
-    PatHalf := PatLast div 2;
-    while I < TxtLen - PatLast do begin
+  if aWholeWord then
+    while I < OfsBound do begin
       if(pTxt[I + PatLast] = pPat[PatLast]) and (pTxt[I] = pPat^) and
-        (pTxt[I + PatHalf] = pPat[PatHalf]) and
+        (CompareByte(pTxt[Succ(I)], pPat[1], Pred(PatLast)) = 0) and
+        OnWordBoundsUtf8(aText, Succ(I), Succ(PatLast)) then exit(Succ(I));
+      I += Shifts[pTxt[I + PatLast]];
+    end
+  else
+    while I < OfsBound do begin
+      if(pTxt[I + PatLast] = pPat[PatLast]) and (pTxt[I] = pPat^) and
         (CompareByte(pTxt[Succ(I)], pPat[1], Pred(PatLast)) = 0) then exit(Succ(I));
       I += Shifts[pTxt[I + PatLast]];
     end;
-  end;
   Result := 0;
 end;
 
-function BmhrAll(const aText, aPattern: string): TSizeIntArray;
+function GetBmhAll(const aText, aPattern: string; aWholeWords: Boolean): TSizeIntArray;
 var
   r: TSizeIntArray = nil;
   mCount: SizeInt = 0;
@@ -5491,91 +5541,44 @@ var
   end;
 var
   Shifts: array[Byte] of Integer;
-  PatLast, PatHalf, TxtLen, I, J: SizeInt;
+  PatLast, OfsBound, I: SizeInt;
   pPat, pTxt: PByte;
+const
+  BMH_CUTOFF = 3; // must be > 2
 begin
-  if (aText = '') or (aPattern = '') then exit(nil);
+  if System.Length(aPattern) < BMH_CUTOFF then exit(GetSysPosAll(aText, aPattern, aWholeWords));
+  if System.Length(aPattern) > System.Length(aText) then exit(nil);
   System.FillDWord(Shifts, System.Length(Shifts), DWord(System.Length(aPattern)));
   PatLast := System.Length(aPattern)-1;
   pPat := Pointer(aPattern);
   for I := 0 to PatLast - 1 do Shifts[pPat[I]] := PatLast - I;
-  TxtLen := System.Length(aText);
+  OfsBound := System.Length(aText) - PatLast;
   pTxt := Pointer(aText);
   System.SetLength(r, ARRAY_INITIAL_SIZE);
   I := 0;
-  case PatLast of
-    0:
-      while I < TxtLen do begin
-        J := IndexByte(pTxt[I], TxtLen - I, pPat^);
-        if J < 0 then break;
-        I += J + 1;
-        AddMatch(I);
-      end;
-    1:
-      while I < TxtLen - 1 do
-        if (pTxt[I] = pPat^) and (pTxt[I + 1] = pPat[1]) then begin
-          AddMatch(Succ(I));
-          I += 2;
-        end else
-          I += Shifts[pTxt[I + 1]];
-    2:
-      while I < TxtLen - 2 do
-        if(pTxt[I] = pPat^)and(pTxt[I+1] = pPat[1])and(pTxt[I+2] = pPat[2])then begin
-          AddMatch(Succ(I));
-          I += 3;
-        end else
-          I += Shifts[pTxt[I + 2]];
-    3:
-      while I < TxtLen - 3 do
-        if(pTxt[I] = pPat^) and (pTxt[I+1] = pPat[1]) and
-          (pTxt[I+2] = pPat[2]) and (pTxt[I+3] = pPat[3]) then begin
-          AddMatch(Succ(I));
-          I += 4;
-        end else
-          I += Shifts[pTxt[I + 3]];
-  else
-    PatHalf := PatLast div 2;
-    while I < TxtLen - PatLast do
+  if aWholeWords then
+    while I < OfsBound do
       if(pTxt[I + PatLast] = pPat[PatLast]) and (pTxt[I] = pPat^) and
-        (pTxt[I + PatHalf] = pPat[PatHalf]) and
+        (CompareByte(pTxt[Succ(I)], pPat[1], Pred(PatLast)) = 0) then begin
+        if OnWordBoundsUtf8(aText, Succ(I), Succ(PatLast)) then begin
+          AddMatch(Succ(I));
+          I += Succ(PatLast);
+        end else
+          I += Shifts[pTxt[I + PatLast]];
+      end else
+        I += Shifts[pTxt[I + PatLast]]
+  else
+    while I < OfsBound do
+      if(pTxt[I + PatLast] = pPat[PatLast]) and (pTxt[I] = pPat^) and
         (CompareByte(pTxt[Succ(I)], pPat[1], Pred(PatLast)) = 0) then begin
           AddMatch(Succ(I));
           I += Succ(PatLast);
       end else
         I += Shifts[pTxt[I + PatLast]];
-  end;
   System.SetLength(r, mCount);
   Result := r;
 end;
 {$POP}
-
-function SysPosFindAll(const aText, aPattern: string): TSizeIntArray;
-var
-  r: TSizeIntArray = nil;
-  mCount: SizeInt = 0;
-  procedure AddMatch(m: SizeInt);
-  begin
-    if mCount = System.Length(r) then System.SetLength(r, mCount * 2);
-    r[mCount] := m;
-    Inc(mCount);
-  end;
-var
-  Ofs, PatLen, TxtBound: SizeInt;
-begin
-   if (aText = '') or (aPattern = '') then exit(nil);
-   PatLen := System.Length(aPattern);
-   TxtBound := System.Length(aText) - PatLen + 2;
-   System.SetLength(r, ARRAY_INITIAL_SIZE);
-   Ofs := 1;
-   while Ofs < TxtBound do begin
-     Ofs := System.Pos(aPattern, aText, Ofs);
-     if Ofs = 0 then break;
-     AddMatch(Ofs);
-     Ofs += PatLen;
-   end;
-   System.SetLength(r, mCount);
-   Result := r;
-end;
 
 function StrReplaceUtf8(const aSource, aPattern, aSubst: string; out aCount: SizeInt;
   aOptions: TStrReplaceOptions): string;
@@ -5650,44 +5653,28 @@ function StrReplaceUtf8(const aSource, aPattern, aSubst: string; out aCount: Siz
     end;
   end;
 
-  function DoReplaceOww: string;
-  var
-    Ofs: SizeInt;
-  begin
-    if sroReplaceAll in aOptions then
-      DoReplaceOww := ReplaceOffsets(TKmpSearch.Create(aPattern, True).FindMatches(aSource))
-    else begin
-      Ofs := TKmpSearch.Create(aPattern, True).NextMatch(aSource);
-      if Ofs = 0 then exit(aSource);
-      DoReplaceOww := ReplaceOffsets(Ofs);
-    end;
-  end;
-
   function DoReplace: string;
   var
     Ofs: SizeInt;
   const
-    BMHR_CUTOFF = 512; //TODO: BMHR_CUTOFF ???
+    BMH_CUTOFF = 512; //TODO: BMH_CUTOFF ???
   begin
-    if sroOnlyWholeWords in aOptions then
-      DoReplace := DoReplaceOww
-    else
-      if System.Length(aSource) >= BMHR_CUTOFF then begin
-        if sroReplaceAll in aOptions then
-          DoReplace := ReplaceOffsets(BmhrAll(aSource, aPattern))
-        else begin
-          Ofs := BmhrPos(aSource, aPattern);
-          if Ofs = 0 then exit(aSource);
-          DoReplace := ReplaceOffsets(Ofs);
-        end;
-      end else
-        if sroReplaceAll in aOptions then
-          DoReplace := ReplaceOffsets(SysPosFindAll(aSource, aPattern))
-        else begin
-          Ofs := System.Pos(aPattern, aSource);
-          if Ofs = 0 then exit(aSource);
-          DoReplace := ReplaceOffsets(Ofs);
-        end;
+    if System.Length(aSource) >= BMH_CUTOFF then begin
+      if sroReplaceAll in aOptions then
+        DoReplace := ReplaceOffsets(GetBmhAll(aSource, aPattern, sroOnlyWholeWords in aOptions))
+      else begin
+        Ofs := GetBmhPos(aSource, aPattern, sroOnlyWholeWords in aOptions);
+        if Ofs = 0 then exit(aSource);
+        DoReplace := ReplaceOffsets(Ofs);
+      end;
+    end else
+      if sroReplaceAll in aOptions then
+        DoReplace := ReplaceOffsets(GetSysPosAll(aSource, aPattern, sroOnlyWholeWords in aOptions))
+      else begin
+        Ofs := GetSysPos(aSource, aPattern, sroOnlyWholeWords in aOptions);
+        if Ofs = 0 then exit(aSource);
+        DoReplace := ReplaceOffsets(Ofs);
+      end;
   end;
 
 begin
