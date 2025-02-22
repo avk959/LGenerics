@@ -124,11 +124,6 @@ type
   type
     TArray = array of T;
     PItem = ^T;
-    TDiff = record
-      SourceChanges,                   //here True indicates deletion
-      TargetChanges: array of Boolean; //here True indicates insertion
-    end;
-
   private
   type
     TNode = record
@@ -269,9 +264,18 @@ type
     class function SimRatio(const L, R: array of T; aLimit: Double = Double(0);
                             Algo: TSeqDistanceAlgo = sdaDefault): Double; static;
   type
+    TDiff = record
+      SourceChanges,                   //here True indicates deletion
+      TargetChanges: array of Boolean; //here True indicates insertion
+    end;
+    TDiffV = record
+      SourceChanges,              //here True indicates deletion
+      TargetChanges: TBoolVector; //here True indicates insertion
+    end;
     TLcsAlgo = (laGus, laKr, laMyers);
 
-    class function Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
+    class function  Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
+    class procedure Diff(const aSource, aTarget: array of T; out aDiff: TDiffV; aAlgo: TLcsAlgo = laMyers); static;
 
   type
     TLcsEditOp = (leoDelete, leoInsert);
@@ -2859,6 +2863,44 @@ begin
     Ins[I] := True;
   Result.SourceChanges := Del;
   Result.TargetChanges := Ins;
+end;
+
+class procedure TGSeqUtil.Diff(const aSource, aTarget: array of T; out aDiff: TDiffV; aAlgo: TLcsAlgo);
+var
+  Lcs: TArray;
+  I, SrcIdx, TrgIdx: SizeInt;
+  v: T;
+begin
+  case aAlgo of
+    laGus: Lcs := LcsGus(aSource, aTarget);
+    laKr:  Lcs := LcsKr(aSource, aTarget);
+  else// laMyers
+    Lcs := LcsMyers(aSource, aTarget);
+  end;
+  aDiff := Default(TDiffV);
+  SrcIdx := 0;
+  TrgIdx := 0;
+  with aDiff do begin
+    SourceChanges.EnsureCapacity(System.Length(aSource));
+    TargetChanges.EnsureCapacity(System.Length(aTarget));
+    for I := 0 to System.High(Lcs) do begin
+      v := Lcs[I];
+      while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
+        SourceChanges.UncBits[SrcIdx] := True;
+        Inc(SrcIdx);
+      end;
+      while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
+        TargetChanges.UncBits[TrgIdx] := True;
+        Inc(TrgIdx);
+      end;
+      Inc(SrcIdx);
+      Inc(TrgIdx);
+    end;
+    for I := SrcIdx to System.High(aSource) do
+      SourceChanges.UncBits[I] := True;
+    for I := TrgIdx to System.High(aTarget) do
+      TargetChanges.UncBits[I] := True;
+  end;
 end;
 
 
