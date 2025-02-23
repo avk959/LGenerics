@@ -671,7 +671,7 @@ type
       FTable: array of QWord;
       FQueue: array of SizeInt;
       FSearch: PSearchBitap;
-      FTextIndex: SizeInt;
+      FTxtOfs: SizeInt;
       FqHead: Integer;
       FMatch: TMatch;
       function  GetCurrent: TMatch; inline;
@@ -1554,6 +1554,14 @@ begin
     System.SetLength(Result, PrefixLen + SuffixLen);
     THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen);
     THelper.CopyItems(pL + 1, PItem(Result) + PrefixLen, SuffixLen);
+    exit;
+  end;
+
+  if IsSubSequence(pR[0..aLenR-1], pL[0..aLenL-1]) then begin
+    System.SetLength(Result, PrefixLen + SuffixLen + aLenL);
+    THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen);
+    THelper.CopyItems(pL, PItem(Result) + PrefixLen, aLenL);
+    THelper.CopyItems(pL + aLenL, PItem(Result) + PrefixLen + aLenL, SuffixLen);
     exit;
   end;
 
@@ -2539,17 +2547,19 @@ end;
 
 class function TGSeqUtil.IsSubSequence(const aSeq, aSub: array of T): Boolean;
 var
-  I, J: SizeInt;
+  I, J, SeqLen, SubLen: SizeInt;
 begin
+  if System.Length(aSub) > System.Length(aSeq) then exit(False);
+  SeqLen := System.Length(aSeq);
+  SubLen := System.Length(aSub);
   I := 0;
   J := 0;
-  while (I < System.Length(aSeq)) and (J < System.Length(aSub)) do
+  while (I < SeqLen) and (J < SubLen) do
     begin
-      if TEqRel.Equal(aSeq[I], aSub[J]) then
-        Inc(J);
+      Inc(J, Ord(TEqRel.Equal(aSeq[I], aSub[J])));
       Inc(I);
     end;
-  Result := J = System.Length(aSub);
+  Result := J = SubLen;
 end;
 
 class function TGSeqUtil.IsPrefix(const L, R: array of T): Boolean;
@@ -4836,7 +4846,7 @@ begin
   Result := r;
 end;
 
-function IsWhiteSpaceUcs4(aChar: DWord): Boolean; //inline;
+function IsWhiteSpaceUcs4(aChar: DWord): Boolean;
 const
   WS = [9, 10, 11, 12, 13, 32, 133, 160];
 begin
@@ -5862,30 +5872,35 @@ procedure TFuzzySearchBitap.DoSearch(const aText: string; K: Integer; aOffset: S
 var
   Table: array[0..MAX_PATTERN_CP] of QWord;
   Queue: array[0..Pred(MAX_PATTERN_CP)] of SizeInt;
-  TextPos, TextLen, cLen: SizeInt;
+  Ofs, TxtLen, cLen: SizeInt;
   vOld, vTemp, cMask, TestBit: QWord;
   I, qHead, PatLen: Integer;
   c: Ucs4Char;
+  NoCase: Boolean;
 begin
   if not Initialized or (DWord(K) >= DWord(MAX_PATTERN_CP)) or (aText = '') then
     exit;
   if aOffset < 1 then aOffset := 1;
-  TextLen := System.Length(aText);
-  if aOffset > TextLen then
+  TxtLen := System.Length(aText);
+  if aOffset > TxtLen then
     exit;
   PatLen := Length;
   K := Math.Min(K, PatLen);
   System.FillQWord(Table[0], K + 1, not QWord(1));
   qHead := 0;
-  TextPos := aOffset;
+  Ofs := aOffset;
   TestBit := QWord(1) shl PatLen;
-  while TextPos <= TextLen do begin
-    Queue[qHead] := TextPos;
+  NoCase := FIgnoreCase;
+  while Ofs <= TxtLen do begin
+    Queue[qHead] := Ofs;
     Inc(qHead);
     if qHead = PatLen then
       qHead := 0;
-    c := CodePointToUcs4Char(@aText[TextPos], Succ(TextLen - TextPos), cLen);
-    TextPos += cLen;
+    if NoCase then
+      c := Ucs4Char(Ucs4CharToLower(DWord(CodePointToUcs4Char(@aText[Ofs], Succ(TxtLen - Ofs), cLen))))
+    else
+      c := CodePointToUcs4Char(@aText[Ofs], Succ(TxtLen - Ofs), cLen);
+    Ofs += cLen;
     cMask := FCharMap.GetValueDef(c, System.High(QWord));
     vOld := Table[0];
     Table[0] := (Table[0] or cMask) shl 1;
@@ -5894,8 +5909,8 @@ begin
       Table[I] := (vOld and (Table[I] or cMask)) shl 1;
       vOld := vTemp;
     end;
-    if (Table[K] and TestBit = 0) and not
-      aFound(TMatch.Make(Queue[qHead], TextPos - Queue[qHead])) then exit;
+    if(Table[K] and TestBit = 0) and not aFound(TMatch.Make(Queue[qHead], Ofs-Queue[qHead]))then
+      exit;
   end;
 end;
 {$POP}
@@ -5921,7 +5936,7 @@ begin
   if aOfs > System.Length(aText) then exit;
   if DWord(aK) >= DWord(MAX_PATTERN_CP) then exit;
   aK := Math.Min(aK, pSearch^.Length);
-  FTextIndex := aOfs;
+  FTxtOfs := aOfs;
   FText := aText;
   FSearch := pSearch;
   FTable := THelper.CreateAndFill(not QWord(1), aK + 1);
@@ -5934,19 +5949,24 @@ var
   vOld, vTemp, cMask, TestBit: QWord;
   PatLen, I, K: Integer;
   c: Ucs4Char;
+  NoCase: Boolean;
 begin
   if FSearch = nil then exit(False);
   TextLen := System.Length(FText);
   PatLen := System.Length(FQueue);
   K := System.High(FTable);
   TestBit := QWord(1) shl PatLen;
-  while FTextIndex <= TextLen do begin
-    FQueue[FqHead] := FTextIndex;
+  NoCase := FSearch^.FIgnoreCase;
+  while FTxtOfs <= TextLen do begin
+    FQueue[FqHead] := FTxtOfs;
     Inc(FqHead);
     if FqHead = PatLen then
       FqHead := 0;
-    c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), cLen);
-    FTextIndex += cLen;
+    if NoCase then
+      c := Ucs4Char(Ucs4CharToLower(DWord(CodePointToUcs4Char(@FText[FTxtOfs], Succ(TextLen - FTxtOfs), cLen))))
+    else
+      c := CodePointToUcs4Char(@FText[FTxtOfs], Succ(TextLen - FTxtOfs), cLen);
+    FTxtOfs += cLen;
     cMask := FSearch^.FCharMap.GetValueDef(c, System.High(QWord));
     vOld := FTable[0];
     FTable[0] := (FTable[0] or cMask) shl 1;
@@ -5956,7 +5976,7 @@ begin
       vOld := vTemp;
     end;
     if FTable[K] and TestBit = 0 then begin
-      FMatch := TMatch.Make(FQueue[FqHead], FTextIndex - FQueue[FqHead]);
+      FMatch := TMatch.Make(FQueue[FqHead], FTxtOfs - FQueue[FqHead]);
       exit(True);
     end;
   end;
@@ -5972,8 +5992,7 @@ procedure TFuzzySearchBitap.Init(const aPattern: string; aIgnoreCase: Boolean);
 var
   I, CharIdx, PatLen, CharLen: SizeInt;
   p: PQWord;
-  pProp: PUC_Prop;
-  c, c2: Ucs4Char;
+  c: Ucs4Char;
 begin
   FCharMap := Default(TCharMap);
   FLength := 0;
@@ -5986,24 +6005,13 @@ begin
   CharIdx := 0;
   PatLen := System.Length(aPattern);
   while I <= PatLen do begin
-    c := CodePointToUcs4Char(@aPattern[I], CharLen);
+    if aIgnoreCase then
+      c := Ucs4Char(Ucs4CharToLower(DWord(CodePointToUcs4Char(@aPattern[I], CharLen))))
+    else
+      c := CodePointToUcs4Char(@aPattern[I], CharLen);
     I += CharLen;
     p := FCharMap.GetMutValueDef(c, System.High(QWord));
     p^ := p^ and not(QWord(1) shl CharIdx);
-    if aIgnoreCase then begin
-      pProp := UnicodeData.GetProps(c);
-      c2 := DWord(pProp^.SimpleLowerCase);
-      if c2 <> 0 then begin
-        p := FCharMap.GetMutValueDef(c2, System.High(QWord));
-        p^ := p^ and not(QWord(1) shl CharIdx);
-      end else begin
-        c2 := DWord(pProp^.SimpleUpperCase);
-        if c2 <> 0 then begin
-          p := FCharMap.GetMutValueDef(c2, System.High(QWord));
-          p^ := p^ and not(QWord(1) shl CharIdx);
-        end;
-      end;
-    end;
     Inc(CharIdx);
   end;
 end;
