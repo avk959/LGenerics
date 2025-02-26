@@ -251,11 +251,11 @@ type
     with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
     inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
     class function LcsGus(const L, R: array of T): TArray; static;
-  { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-    uses Kumar-Rangan algorithm for LCS with O(N(M-|LCS|)) time complexity and linear space complexity }
+  { returns the longest common subsequence(LCS) of sequences L and R; uses Kumar-Rangan algorithm
+    for LCS with O(N(M-|LCS|)) time complexity and linear space complexity, recursive }
     class function LcsKR(const L, R: array of T): TArray; static;
-  { recursive, returns the longest common subsequence(LCS) of sequences L and R;
-    uses O(ND) algorithm from "An O(ND) Difference Algorithm and Its Variations" by Gene Myers }
+  { returns the longest common subsequence(LCS) of sequences L and R; uses O(ND) algorithm
+    from "An O(ND) Difference Algorithm and Its Variations" by Gene Myers, recursive }
     class function LcsMyers(const L, R: array of T): TArray; static;
   { returns similarity ratio using specified distance algorithm;
     aLimit specifies the lower bound of the required similarity(0<aLimit<=1.0),
@@ -275,6 +275,7 @@ type
     TLcsAlgo = (laGus, laKr, laMyers);
 
     class function  Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
+  { a noticeably less memory-consuming version }
     class procedure Diff(const aSource, aTarget: array of T; out aDiff: TDiffV; aAlgo: TLcsAlgo = laMyers); static;
 
   type
@@ -291,10 +292,30 @@ type
     end;
     TLcsEditSeq = array of TLcsEdit;
 
-  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget }
+    TSeqEdit = record
+      SourceValue,
+      TargetValue: T;
+      SourceIndex,
+      TargetIndex: SizeInt;
+      Operation: TSeqEditOp;
+      constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Rep(const aSrcValue, aTrgValue: T; aSrcIdx, aTrgIdx: SizeInt);
+    end;
+    TSeqEditSeq = array of TSeqEdit;
+
+  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
+    only operations of deletion and insertion are available }
     class function LcsEditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditSeq; static;
+    class function ApplyLcsScript(const aSrc: array of T; const aScript: TLcsEditSeq; out aTrg: TArray): Boolean; static;
   { returns the global alignment of the sequences aSource and aTarget }
     class function LcsAlignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditSeq; static;
+  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
+    since the function under the hood uses LCS, the resulting script may be suboptimal }
+    class function EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqEditSeq; static;
+    class function ApplyScript(const aSrc: array of T; const aScript: TSeqEditSeq; out aTrg: TArray): Boolean; static;
+    class function Alignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqEditSeq; static;
   end;
 
 {*********************************************}
@@ -368,6 +389,10 @@ type
   function Ucs4CharToUtf8(c: Ucs4Char): string;
 
 type
+  TUcs4CharHelper = type helper for Ucs4Char
+    function ToUtf8: string; inline;
+  end;
+
   { TUtf8Cp: describes a codepoint within some string }
   TUtf8Cp = record
   private
@@ -502,9 +527,13 @@ type
   ): specialize TGArray<TStringRatio>;
 
 type
-  TBufHash32         = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
-  TBufHash64         = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
-  TStrCompareOption  = (scoIgnoreWS, scoIgnoreWSChange, scoIgnoreCase);
+  TBufHash32 = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
+  TBufHash64 = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
+  TStrCompareOption = (
+    scoIgnoreCase,
+    scoIgnoreWS,
+    scoIgnoreWSChange 
+  );
   TStrCompareOptions = set of TStrCompareOption;
 
 { returns a 32-bit hash(using aHash) of the string s, skipping whitespace and converting
@@ -859,24 +888,24 @@ type
   function ACStrReplace(const aSource: string;
                         const aSamples, aSubs: array of string;
                         out aReplaceCount: SizeInt;
-                        const aOptions: TStrReplaceFlags = [];
+                        const aFlags: TStrReplaceFlags = [];
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 { the same as above for the case where the number of replacements is not of interest }
   function ACStrReplace(const aSource: string;
                         const aSamples, aSubs: array of string;
-                        const aOptions: TStrReplaceFlags = [];
+                        const aFlags: TStrReplaceFlags = [];
                         aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                         const aDefaultSub: string = ''): string;
 { performs replacements for each element of the aSource array }
   function ACStrReplaceList(const aSource, aSamples, aSubs: array of string;
                             out aReplaceCount: SizeInt;
-                            const aOptions: TStrReplaceFlags = [];
+                            const aFlags: TStrReplaceFlags = [];
                             aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                             const aDefaultSub: string = ''): TStringArray;
 { the same as above for the case where the number of replacements is not of interest }
   function ACStrReplaceList(const aSource, aSamples, aSubs: array of string;
-                            const aOptions: TStrReplaceFlags = [];
+                            const aFlags: TStrReplaceFlags = [];
                             aMode: TOverlapsHandleMode = ohmLeftmostFirst;
                             const aDefaultSub: string = ''): TStringArray;
 { uses a previously created automaton for replacements }
@@ -2861,26 +2890,21 @@ begin
   System.SetLength(Ins, System.Length(aTarget));
   SrcIdx := 0;
   TrgIdx := 0;
-  for I := 0 to System.High(Lcs) do
-    begin
-      v := Lcs[I];
-      while not TEqRel.Equal(v, aSource[SrcIdx]) do
-        begin
-          Del[SrcIdx] := True;
-          Inc(SrcIdx);
-        end;
-      while not TEqRel.Equal(v, aTarget[TrgIdx]) do
-        begin
-          Ins[TrgIdx] := True;
-          Inc(TrgIdx);
-        end;
+  for I := 0 to System.High(Lcs) do begin
+    v := Lcs[I];
+    while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
+      Del[SrcIdx] := True;
       Inc(SrcIdx);
+    end;
+    while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
+      Ins[TrgIdx] := True;
       Inc(TrgIdx);
     end;
-  for I := SrcIdx to System.High(Del) do
-    Del[I] := True;
-  for I := TrgIdx to System.High(Ins) do
-    Ins[I] := True;
+    Inc(SrcIdx);
+    Inc(TrgIdx);
+  end;
+  for I := SrcIdx to System.High(Del) do Del[I] := True;
+  for I := TrgIdx to System.High(Ins) do Ins[I] := True;
   Result.SourceChanges := Del;
   Result.TargetChanges := Ins;
 end;
@@ -2950,6 +2974,45 @@ begin
   Operation := seoInsert;
 end;
 
+{ TGSeqUtil.TSeqEdit }
+
+constructor TGSeqUtil.TSeqEdit.Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+begin
+  SourceValue := aValue;
+  TargetValue := aValue;
+  SourceIndex := aSrcIdx;
+  TargetIndex := aTrgIdx;
+  Operation := seoMatch;
+end;
+
+constructor TGSeqUtil.TSeqEdit.Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+begin
+  SourceValue := aValue;
+  TargetValue := Default(T);
+  SourceIndex := aSrcIdx;
+  TargetIndex := aTrgIdx;
+  Operation := seoDelete;
+end;
+
+constructor TGSeqUtil.TSeqEdit.Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+begin
+  SourceValue := Default(T);
+  TargetValue := aValue;
+  SourceIndex := aSrcIdx;
+  TargetIndex := aTrgIdx;
+  Operation := seoInsert;
+end;
+
+constructor TGSeqUtil.TSeqEdit.Rep(const aSrcValue, aTrgValue: T; aSrcIdx, aTrgIdx: SizeInt);
+begin
+  SourceValue := aSrcValue;
+  TargetValue := aTrgValue;
+  SourceIndex := aSrcIdx;
+  TargetIndex := aTrgIdx;
+  Operation := seoReplace;
+end;
+
+
 class function TGSeqUtil.LcsEditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditSeq;
 var
   Lcs: TArray;
@@ -2964,35 +3027,63 @@ begin
     Lcs := LcsMyers(aSource, aTarget);
   end;
   System.SetLength(r, System.Length(aSource) + System.Length(aTarget) - System.Length(Lcs)*2);
-  ResIdx := 0;
-  SrcIdx := 0;
-  TrgIdx := 0;
+  ResIdx := 0; SrcIdx := 0; TrgIdx := 0;
   for I := 0 to System.High(Lcs) do begin
     v := Lcs[I];
     while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
       r[ResIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
-      Inc(ResIdx);
-      Inc(SrcIdx);
+      Inc(ResIdx); Inc(SrcIdx);
     end;
     while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
       r[ResIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
-      Inc(ResIdx);
-      Inc(TrgIdx);
+      Inc(ResIdx); Inc(TrgIdx);
     end;
-    Inc(SrcIdx);
-    Inc(TrgIdx);
+    Inc(SrcIdx); Inc(TrgIdx);
   end;
   while SrcIdx < System.Length(aSource) do begin
     r[ResIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
-    Inc(ResIdx);
-    Inc(SrcIdx);
+    Inc(ResIdx); Inc(SrcIdx);
   end;
   while TrgIdx < System.Length(aTarget) do begin
     r[ResIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
-    Inc(ResIdx);
-    Inc(TrgIdx);
+    Inc(ResIdx); Inc(TrgIdx);
   end;
   Result := r;
+end;
+
+class function TGSeqUtil.ApplyLcsScript(const aSrc: array of T; const aScript: TLcsEditSeq; out aTrg: TArray): Boolean;
+var
+  r: TArray = nil;
+  OpCounts: array[seoDelete..seoInsert] of SizeInt = (0,0);
+  I, SrcIdx, TrgIdx: SizeInt;
+begin
+  aTrg := nil;
+  for I := 0 to System.High(aScript) do
+    if aScript[I].Operation in [seoDelete, seoInsert] then
+      Inc(OpCounts[aScript[I].Operation])
+    else exit(False);
+  System.SetLength(r, System.Length(aSrc) + OpCounts[seoInsert] - OpCounts[seoDelete]);
+  SrcIdx := 0; TrgIdx := 0;
+  for I := 0 to System.High(aScript) do begin
+    while SrcIdx < aScript[I].SourceIndex do begin
+      r[TrgIdx] := aSrc[SrcIdx];
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+    if aScript[I].TargetIndex <> TrgIdx then exit(False);
+    if aScript[I].Operation = seoDelete then begin
+      if not TEqRel.Equal(aSrc[SrcIdx], aScript[I].Value) then exit(False);
+      Inc(SrcIdx);
+    end else begin
+      r[TrgIdx] := aScript[I].Value;
+      Inc(TrgIdx);
+    end;
+  end;
+  for I := SrcIdx to System.High(aSrc) do begin
+    r[TrgIdx] := aSrc[I];
+    Inc(TrgIdx);
+  end;
+  aTrg := r;
+  Result := True;
 end;
 
 class function TGSeqUtil.LcsAlignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditSeq;
@@ -3009,36 +3100,183 @@ begin
     Lcs := LcsMyers(aSource, aTarget);
   end;
   System.SetLength(r, System.Length(aSource) + System.Length(aTarget) - System.Length(Lcs));
-  ResIdx := 0;
-  SrcIdx := 0;
-  TrgIdx := 0;
+  ResIdx := 0; SrcIdx := 0; TrgIdx := 0;
   for I := 0 to System.High(Lcs) do begin
     v := Lcs[I];
     while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
       r[ResIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
-      Inc(ResIdx);
-      Inc(SrcIdx);
+      Inc(ResIdx); Inc(SrcIdx);
     end;
     while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
       r[ResIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
-      Inc(ResIdx);
-      Inc(TrgIdx);
+      Inc(ResIdx); Inc(TrgIdx);
     end;
     r[ResIdx] := TLcsEdit.Make(v, SrcIdx, TrgIdx);
-    Inc(ResIdx);
-    Inc(SrcIdx);
-    Inc(TrgIdx);
+    Inc(ResIdx); Inc(SrcIdx); Inc(TrgIdx);
   end;
   while SrcIdx < System.Length(aSource) do begin
     r[ResIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
-    Inc(ResIdx);
-    Inc(SrcIdx);
+    Inc(ResIdx); Inc(SrcIdx);
   end;
   while TrgIdx < System.Length(aTarget) do begin
     r[ResIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
-    Inc(ResIdx);
+    Inc(ResIdx); Inc(TrgIdx);
+  end;
+  Result := r;
+end;
+
+class function TGSeqUtil.EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqEditSeq;
+var
+  r: array of TSeqEdit = nil;
+  rCount: SizeInt = 0;
+  procedure AddEdit(const e: TSeqEdit);
+  begin
+    if rCount = System.Length(r) then System.SetLength(r, rCount*2);
+    r[rCount] := e;
+    Inc(rCount);
+  end;
+var
+  Lcs: TArray;
+  I, SrcIdx, TrgIdx: SizeInt;
+  v: T;
+begin
+  case aLcsAlgo of
+    laGus: Lcs := LcsGus(aSource, aTarget);
+    laKr:  Lcs := LcsKr(aSource, aTarget);
+  else// laMyers
+    Lcs := LcsMyers(aSource, aTarget);
+  end;
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  SrcIdx := 0; TrgIdx := 0;
+  for I := 0 to System.High(Lcs) do begin
+    v := Lcs[I];
+    while not(TEqRel.Equal(v, aSource[SrcIdx]) or TEqRel.Equal(v, aTarget[TrgIdx]))do begin
+      AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+    while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
+      AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
+      Inc(SrcIdx);
+    end;
+    while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
+      AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
+      Inc(TrgIdx);
+    end;
+    Inc(SrcIdx); Inc(TrgIdx);
+  end;
+  while(SrcIdx < System.Length(aSource))and(TrgIdx < System.Length(aTarget))do begin
+    AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
+    Inc(SrcIdx); Inc(TrgIdx);
+  end;
+  while SrcIdx < System.Length(aSource) do begin
+    AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
+    Inc(SrcIdx);
+  end;
+  while TrgIdx < System.Length(aTarget) do begin
+    AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
     Inc(TrgIdx);
   end;
+  System.SetLength(r, rCount);
+  Result := r;
+end;
+
+class function TGSeqUtil.ApplyScript(const aSrc: array of T; const aScript: TSeqEditSeq; out aTrg: TArray): Boolean;
+var
+  r: TArray = nil;
+  OpCounts: array[seoDelete..seoReplace] of SizeInt = (0,0,0);
+  I, SrcIdx, TrgIdx: SizeInt;
+begin
+  aTrg := nil;
+  for I := 0 to System.High(aScript) do
+    if aScript[I].Operation in [seoDelete..seoReplace] then
+      Inc(OpCounts[aScript[I].Operation])
+    else exit(False);
+  System.SetLength(r, System.Length(aSrc) + OpCounts[seoInsert] - OpCounts[seoDelete]);
+  SrcIdx := 0; TrgIdx := 0;
+  for I := 0 to System.High(aScript) do begin
+    while SrcIdx < aScript[I].SourceIndex do begin
+      r[TrgIdx] := aSrc[SrcIdx];
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+    if aScript[I].TargetIndex <> TrgIdx then exit(False);
+    case aScript[I].Operation of
+      seoDelete:
+        begin
+          if not TEqRel.Equal(aSrc[SrcIdx], aScript[I].SourceValue) then exit(False);
+          Inc(SrcIdx);
+        end;
+      seoInsert:
+        begin
+          r[TrgIdx] := aScript[I].TargetValue;
+          Inc(TrgIdx);
+        end;
+    else //seoReplace
+      if not TEqRel.Equal(aSrc[SrcIdx], aScript[I].SourceValue) then exit(False);
+      r[TrgIdx] := aScript[I].TargetValue;
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+  end;
+  for I := SrcIdx to System.High(aSrc) do begin
+    r[TrgIdx] := aSrc[I];
+    Inc(TrgIdx);
+  end;
+  aTrg := r;
+  Result := True;
+end;
+
+class function TGSeqUtil.Alignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqEditSeq;
+var
+  r: array of TSeqEdit = nil;
+  rCount: SizeInt = 0;
+  procedure AddEdit(const e: TSeqEdit);
+  begin
+    if rCount = System.Length(r) then System.SetLength(r, rCount*2);
+    r[rCount] := e;
+    Inc(rCount);
+  end;
+var
+  Lcs: TArray;
+  I, SrcIdx, TrgIdx: SizeInt;
+  v: T;
+begin
+  case aLcsAlgo of
+    laGus: Lcs := LcsGus(aSource, aTarget);
+    laKr:  Lcs := LcsKr(aSource, aTarget);
+  else// laMyers
+    Lcs := LcsMyers(aSource, aTarget);
+  end;
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  SrcIdx := 0; TrgIdx := 0;
+  for I := 0 to System.High(Lcs) do begin
+    v := Lcs[I];
+    while not(TEqRel.Equal(v, aSource[SrcIdx]) or TEqRel.Equal(v, aTarget[TrgIdx]))do begin
+      AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+    while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
+      AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
+      Inc(SrcIdx);
+    end;
+    while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
+      AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
+      Inc(TrgIdx);
+    end;
+    AddEdit(TSeqEdit.Make(v, SrcIdx, TrgIdx));
+    Inc(SrcIdx); Inc(TrgIdx);
+  end;
+  while(SrcIdx < System.Length(aSource))and(TrgIdx < System.Length(aTarget))do begin
+    AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
+    Inc(SrcIdx); Inc(TrgIdx);
+  end;
+  while SrcIdx < System.Length(aSource) do begin
+    AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
+    Inc(SrcIdx);
+  end;
+  while TrgIdx < System.Length(aTarget) do begin
+    AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
+    Inc(TrgIdx);
+  end;
+  System.SetLength(r, rCount);
   Result := r;
 end;
 
@@ -4495,6 +4733,13 @@ begin
   SetString(Result, PAnsiChar(@b4), Len);
 end;
 
+{ TUcs4CharHelper }
+
+function TUcs4CharHelper.ToUtf8: string;
+begin
+  Result := Ucs4CharToUtf8(Self);
+end;
+
 { TUtf8Cp }
 
 procedure TUtf8Cp.Init(aOfs, aCpOfs, aSize: SizeInt; c: Ucs4Char);
@@ -4917,7 +5162,7 @@ end;
 
 function IsWhiteSpaceUcs4(aChar: DWord): Boolean;
 const
-  WS = [9, 10, 11, 12, 13, 32, 133, 160];
+  WS = [9, 32, 160];
 begin
   if aChar < $a1 then
     exit(aChar in WS)
@@ -9128,28 +9373,28 @@ begin
 end;
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
-  const aOptions: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+  const aFlags: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
 var
   IFsm: IACSearchFsmUtf8;
 begin
   aReplaceCount := 0;
   if aSource = '' then exit('');
   if System.Length(aSamples) = 0 then exit(aSource);
-  IFsm := TACFsmUtf8.CreateInstance(aSamples, srfIgnoreCase in aOptions, False);
-  IFsm.OnlyWholeWords := srfOnlyWholeWords in aOptions;
+  IFsm := TACFsmUtf8.CreateInstance(aSamples, srfIgnoreCase in aFlags, False);
+  IFsm.OnlyWholeWords := srfOnlyWholeWords in aFlags;
   Result := ACStrReplace(IFsm, aSource, aSubs, aReplaceCount, aMode, aDefaultSub);
 end;
 
 function ACStrReplace(const aSource: string; const aSamples, aSubs: array of string;
-  const aOptions: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
+  const aFlags: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): string;
 var
   Dummy: SizeInt;
 begin
-  Result := ACStrReplace(aSource, aSamples, aSubs, Dummy, aOptions, aMode, aDefaultSub);
+  Result := ACStrReplace(aSource, aSamples, aSubs, Dummy, aFlags, aMode, aDefaultSub);
 end;
 
 function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; out aReplaceCount: SizeInt;
-  const aOptions: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
+  const aFlags: TStrReplaceFlags; aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
 var
   IFsm: IACSearchFsmUtf8;
   r: TStringArray;
@@ -9159,8 +9404,8 @@ begin
   if System.Length(aSource) = 0 then exit(nil);
   if System.Length(aSamples) = 0 then
     exit(specialize TGArrayHelpUtil<string>.CreateCopy(aSource));
-  IFsm := TACFsmUtf8.CreateInstance(aSamples, srfIgnoreCase in aOptions, False);
-  IFsm.OnlyWholeWords := srfOnlyWholeWords in aOptions;
+  IFsm := TACFsmUtf8.CreateInstance(aSamples, srfIgnoreCase in aFlags, False);
+  IFsm.OnlyWholeWords := srfOnlyWholeWords in aFlags;
   System.SetLength(r, System.Length(aSource));
   for I := 0 to System.High(aSource) do
     begin
@@ -9170,12 +9415,12 @@ begin
   Result := r;
 end;
 
-function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; const aOptions: TStrReplaceFlags;
+function ACStrReplaceList(const aSource, aSamples, aSubs: array of string; const aFlags: TStrReplaceFlags;
   aMode: TOverlapsHandleMode; const aDefaultSub: string): TStringArray;
 var
   Dummy: SizeInt;
 begin
-  Result := ACStrReplaceList(aSource, aSamples, aSubs, Dummy, aOptions, aMode, aDefaultSub);
+  Result := ACStrReplaceList(aSource, aSamples, aSubs, Dummy, aFlags, aMode, aDefaultSub);
 end;
 
 {$PUSH}{$J-}
