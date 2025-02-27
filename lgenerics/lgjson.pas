@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSON parser and utilites that try to follow RFC 8259.                   *
 *                                                                           *
-*   Copyright(c) 2020-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2020-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -6416,11 +6416,38 @@ var
 
   function DoDiff(aSrc, aDst: TJsonNode): Boolean; forward;
 
+  function DoArrayDiffWithRep(aSrc, aDst: TJsonNode): Boolean;
+  var
+    p: TDiffUtil.TSeqPatch;
+    I: SizeInt;
+  begin
+    p := TDiffUtil.MakePatch(
+      aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
+
+    for I := 0 to System.High(p) do
+      if p[I].Operation = seoReplace then begin
+        Path.Add(SizeUInt2Str(p[I].SourceIndex));
+        /////////////
+        if not DoDiff(p[I].SourceValue, p[I].TargetValue) then exit(False);
+        /////////////
+        Path.DeleteLast;
+      end;
+
+    for I := System.High(p) downto 0 do
+      if p[I].Operation = seoDelete then
+        PushRemove(SizeUInt2Str(p[I].SourceIndex), p[I].SourceValue);
+
+    for I := 0 to System.High(p) do
+      if p[I].Operation = seoInsert then
+        PushAdd(SizeUInt2Str(p[I].TargetIndex), p[I].TargetValue);
+
+    Result := True;
+  end;
+
   function DoArrayDiff(aSrc, aDst: TJsonNode): Boolean;
   var
-    LocDiff: TDiffUtil.TDiff;
-    I, DelIdx, InsIdx, DelLen, InsLen: SizeInt;
-    Del, Ins: array of Boolean;
+    p: TDiffUtil.TSeqLcsPatch;
+    I: SizeInt;
   begin
     if aSrc.Count = 0 then begin
       for I := 0 to Pred(aDst.Count) do
@@ -6428,50 +6455,23 @@ var
       exit(True);
     end else
       if aDst.Count = 0 then begin
-        for I := 0 to Pred(aSrc.Count) do
+        for I := Pred(aSrc.Count) downto 0 do
           PushRemove(SizeUInt2Str(I), aSrc.Items[I]);
         exit(True);
       end;
 
-    LocDiff := TDiffUtil.Diff(aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],
-                              aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
-    Del := LocDiff.SourceChanges;
-    Ins := LocDiff.TargetChanges;
-    DelLen := System.Length(Del);
-    InsLen := System.Length(Ins);
-    if UseArrayReplace then
-      begin
-        DelIdx := 0;
-        InsIdx := 0;
-        repeat
-          while(DelIdx < DelLen)and Del[DelIdx]and(InsIdx < InsLen)and Ins[InsIdx]do begin
-            Path.Add(SizeUInt2Str(DelIdx)); //replacements
-            /////////////
-            if not DoDiff(aSrc.Items[DelIdx], aDst.Items[InsIdx]) then
-              exit(False);
-            /////////////
-            Path.DeleteLast;
-            Del[DelIdx] := False;
-            Inc(DelIdx);
-            Ins[InsIdx] := False;
-            Inc(InsIdx);
-          end;
-          while (DelIdx < DelLen) and Del[DelIdx] do
-            Inc(DelIdx);
-          while (InsIdx < InsLen) and Ins[InsIdx] do
-            Inc(InsIdx);
-          Inc(DelIdx);
-          Inc(InsIdx);
-        until (DelIdx >= DelLen) and (InsIdx >= InsLen);
-      end;
+    if UseArrayReplace then exit(DoArrayDiffWithRep(aSrc, aDst));
 
-    for DelIdx := Pred(DelLen) downto 0 do
-      if Del[DelIdx] then
-        PushRemove(SizeUInt2Str(DelIdx), aSrc.Items[DelIdx]);
+    p := TDiffUtil.MakeLcsPatch(
+      aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
 
-    for InsIdx := 0 to Pred(InsLen) do
-      if Ins[InsIdx] then
-        PushAdd(SizeUInt2Str(InsIdx), aDst.Items[InsIdx]);
+    for I := System.High(p) downto 0 do
+      if p[I].Operation = seoDelete then
+        PushRemove(SizeUInt2Str(p[I].SourceIndex), p[I].Value);
+
+    for I := 0 to System.High(p) do
+      if p[I].Operation = seoInsert then
+        PushAdd(SizeUInt2Str(p[I].TargetIndex), p[I].Value);
 
     Result := True;
   end;
