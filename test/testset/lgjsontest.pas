@@ -154,6 +154,8 @@ type
     sTarget1 = '"baz"';
     sSource2 = '{"foo": [1, 3, [2, "wat"]], "boo": ["bar", "baz"]}';
     sTarget2 = '{"foo": [1, 2, 3, [2, 3, "wat"], 9], "boo": ["bar", "ozz", "baz"], "zoo": "boom"}';
+    sSource3 = '{"boo": ["bar", "baz", null]}';
+    sTarget3 = '{"boo": []}';
     sPatch1  = '[{"op": "replace", "path": "", "value": "baz"}]';
     sPatch2  =
                '[{"op": "add", "path": "/foo/2/1", "value": 3,"fizz": 42}, ' +
@@ -2282,6 +2284,13 @@ begin
 
   Source.Instance := TJsonNode.NewJson(sSource2);
   Target.Instance := TJsonNode.NewJson(sTarget2);
+  AssertTrue(TJsonPatch.Diff(Source.Instance, Target.Instance, Node) = drOk);
+  Diff.Instance := Node;
+  AssertTrue(TJsonPatch.Patch(Diff.Instance.AsJson, Source.Instance) = prOk);
+  AssertTrue(Source.Instance.EqualTo(Target.Instance));
+
+  Source.Instance.AsJson := sSource3;
+  Target.Instance.AsJson := sTarget3;
   AssertTrue(TJsonPatch.Diff(Source.Instance, Target.Instance, Node) = drOk);
   Diff.Instance := Node;
   AssertTrue(TJsonPatch.Patch(Diff.Instance.AsJson, Source.Instance) = prOk);
