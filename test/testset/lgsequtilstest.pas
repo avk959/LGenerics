@@ -95,16 +95,25 @@ type
   TTestSeqUtils = class(TTestCase)
   private
   type
-    TIntSeqUtil = specialize TGSeqUtil<Integer, Integer>;
-    TIntArray   = array of Integer;
+    TIntSeqUtil  = specialize TGSeqUtil<Integer, Integer>;
+    TLcsEdit     = TIntSeqUtil.TLcsEdit;
+    TSeqEdit     = TIntSeqUtil.TSeqEdit;
+    TSeqLcsPatch = TIntSeqUtil.TSeqLcsPatch;
+    TSeqPatch    = TIntSeqUtil.TSeqPatch;
+    TPatchStat   = TIntSeqUtil.TSeqPatchStat;
+    TIntArray    = array of Integer;
+    function ApplyLcsPatch(const aSrc: array of Integer; const aPatch: TSeqLcsPatch): TIntArray;
+    function ApplyPatch(const aSrc: array of Integer; const aPatch: TSeqPatch): TIntArray;
   published
     procedure IsPrefixTest;
     procedure IsSuffixTest;
     procedure PrefixLenTest;
     procedure SuffixLenTest;
-    procedure TestDiff;
     procedure SameTest;
     procedure IsPermutationTest;
+    procedure TestDiff;
+    procedure TestLcsPatch;
+    procedure TestPatch;
   end;
 
   { TTestFuzzySearchBitap }
@@ -113,11 +122,17 @@ type
   published
     procedure TestCreate;
     procedure TestNextMatch;
+    procedure TestNextMatchOww;
     procedure TestNextMatchCI;
+    procedure TestNextMatchCIOww;
     procedure TestFindMatches;
+    procedure TestFindMatchesOww;
     procedure TestFindMatchesCI;
+    procedure TestFindMatchesCIOww;
     procedure TestEnumerator;
+    procedure TestEnumeratorOww;
     procedure TestEnumeratorCI;
+    procedure TestEnumeratorCIOww;
   end;
 
   { TACSearchFsmTest }
@@ -3584,6 +3599,18 @@ end;
 
 { TTestSeqUtils }
 
+function TTestSeqUtils.ApplyLcsPatch(const aSrc: array of Integer; const aPatch: TSeqLcsPatch): TIntArray;
+begin
+  if not TIntSeqUtil.ApplyLcsPatch(aSrc, aPatch, Result) then
+    raise Exception.Create('Failed apply LcsPatch');
+end;
+
+function TTestSeqUtils.ApplyPatch(const aSrc: array of Integer; const aPatch: TSeqPatch): TIntArray;
+begin
+  if not TIntSeqUtil.ApplyPatch(aSrc, aPatch, Result) then
+    raise Exception.Create('Failed apply patch');
+end;
+
 procedure TTestSeqUtils.IsPrefixTest;
 var
   a: TIntArray = nil;
@@ -3680,6 +3707,57 @@ begin
   AssertTrue(TIntSeqUtil.CommonSuffixLen(a[1..3], a) = 3);
 end;
 
+procedure TTestSeqUtils.SameTest;
+var
+  a, b: TIntArray;
+begin
+  a := nil;
+  b := nil;
+  AssertTrue(TIntSeqUtil.Same(a, b));
+
+  a := [42];
+  AssertFalse(TIntSeqUtil.Same(a, b));
+
+  b := [42];
+  AssertTrue(TIntSeqUtil.Same(a, b));
+
+  a := [42, 1001];
+  b := [42, 1001, 42];
+  AssertFalse(TIntSeqUtil.Same(a, b));
+
+  a := [42, 1001, 42];
+  AssertTrue(TIntSeqUtil.Same(a, b));
+end;
+
+procedure TTestSeqUtils.IsPermutationTest;
+var
+  a, b: TIntArray;
+begin
+  a := nil;
+  b := nil;
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [42];
+  AssertFalse(TIntSeqUtil.IsPermutation(a, b));
+
+  b := [42];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [42, 1001];
+  b := [7, 1001, 42];
+  AssertFalse(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [1001, 42, 7];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  b := [1001, 7, 42];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+
+  a := [1001, 42, 7, 7];
+  b := [7, 1001, 7, 42];
+  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+end;
+
 procedure TTestSeqUtils.TestDiff;
 var
   a: TIntArray = nil;
@@ -3733,55 +3811,128 @@ begin
       AssertFalse(d.TargetChanges[I]);
 end;
 
-procedure TTestSeqUtils.SameTest;
+procedure TTestSeqUtils.TestLcsPatch;
 var
-  a, b: TIntArray;
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+  p: TSeqLcsPatch;
+  e: TLcsEdit;
 begin
-  a := nil;
+  p := TIntSeqUtil.MakeLcsPatch(a, b);
+  AssertTrue(p = nil);
+
+  b := [1,2,3,4,5];
+  p := TIntSeqUtil.MakeLcsPatch(a, b);
+  AssertTrue(Length(p) = Length(b));
+  for e in p do begin
+    AssertTrue(e.Operation = seoInsert);
+    AssertTrue(e.Value = b[e.TargetIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+
+  a := [1,2,3,4,5];
+  p := TIntSeqUtil.MakeLcsPatch(a, b);
+  AssertTrue(p = nil);
+
+  b := [0,1,2,42,3,4,5,6,7];
+  p := TIntSeqUtil.MakeLcsPatch(a, b);
+  AssertTrue(Length(p) = TIntSeqUtil.LcsDistanceWM(a, b));
+  for e in p do
+    if e.Operation = seoDelete then
+      AssertTrue(e.Value = a[e.SourceIndex])
+    else
+      AssertTrue(e.Value = b[e.TargetIndex]);
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+
   b := nil;
-  AssertTrue(TIntSeqUtil.Same(a, b));
-
-  a := [42];
-  AssertFalse(TIntSeqUtil.Same(a, b));
-
-  b := [42];
-  AssertTrue(TIntSeqUtil.Same(a, b));
-
-  a := [42, 1001];
-  b := [42, 1001, 42];
-  AssertFalse(TIntSeqUtil.Same(a, b));
-
-  a := [42, 1001, 42];
-  AssertTrue(TIntSeqUtil.Same(a, b));
+  p := TIntSeqUtil.MakeLcsPatch(a, b);
+  AssertTrue(Length(p) = Length(a));
+  for e in p do begin
+    AssertTrue(e.Operation = seoDelete);
+    AssertTrue(e.Value = a[e.SourceIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
 end;
 
-procedure TTestSeqUtils.IsPermutationTest;
+procedure TTestSeqUtils.TestPatch;
+  procedure FillStat(var s: TPatchStat; aValue: SizeInt);
+  begin
+    s[seoMatch] := aValue;
+    s[seoDelete] := aValue;
+    s[seoInsert] := aValue;
+    s[seoReplace] := aValue;
+  end;
 var
-  a, b: TIntArray;
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+  p: TSeqPatch;
+  Stat: TPatchStat;
+  e: TSeqEdit;
+  o: TIntSeqUtil.TSeqEditOp;
 begin
-  a := nil;
+  FillStat(Stat, 42);
+  p := TIntSeqUtil.MakePatch(a, b, Stat);
+  AssertTrue(p = nil);
+  for o in TIntSeqUtil.TSeqEditOp do
+    AssertTrue(Stat[o] = 0);
+
+  b := [1,2,3,4,5];
+  FillStat(Stat, 42);
+  p := TIntSeqUtil.MakePatch(a, b, Stat);
+  AssertTrue(Length(p) = Length(b));
+  for o in TIntSeqUtil.TSeqEditOp do
+    if o = seoInsert then
+      AssertTrue(Stat[o] = Length(b))
+    else
+      AssertTrue(Stat[o] = 0);
+  for e in p do begin
+    AssertTrue(e.Operation = seoInsert);
+    AssertTrue(e.TargetValue = b[e.TargetIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyPatch(a, p), b));
+
+  a := [1,2,3,4,5];
+  FillStat(Stat, 42);
+  p := TIntSeqUtil.MakePatch(a, b, Stat);
+  AssertTrue(p = nil);
+  for o in TIntSeqUtil.TSeqEditOp do
+    if o = seoMatch then
+      AssertTrue(Stat[o] = Length(b))
+    else
+      AssertTrue(Stat[o] = 0);
+
+  b := [7,8,9,4,5,6,7];
+  FillStat(Stat, 42);
+  p := TIntSeqUtil.MakePatch(a, b, Stat);
+  AssertTrue(Length(p) = TIntSeqUtil.LevDistanceMBR(a, b));
+  for e in p do begin
+    Dec(Stat[e.Operation]);
+    case e.Operation of
+      seoDelete:  AssertTrue(e.SourceValue = a[e.SourceIndex]);
+      seoInsert:  AssertTrue(e.TargetValue = b[e.TargetIndex]);
+      seoReplace: AssertTrue((e.SourceValue = a[e.SourceIndex]) and (e.TargetValue = b[e.TargetIndex]));
+    else
+    end;
+  end;
+  for o in TIntSeqUtil.TSeqEditOp do
+    if o <> seoMatch then
+      AssertTrue(Stat[o] = 0);
+  AssertTrue(TIntSeqUtil.Same(ApplyPatch(a, p), b));
+
   b := nil;
-  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
-
-  a := [42];
-  AssertFalse(TIntSeqUtil.IsPermutation(a, b));
-
-  b := [42];
-  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
-
-  a := [42, 1001];
-  b := [7, 1001, 42];
-  AssertFalse(TIntSeqUtil.IsPermutation(a, b));
-
-  a := [1001, 42, 7];
-  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
-
-  b := [1001, 7, 42];
-  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
-
-  a := [1001, 42, 7, 7];
-  b := [7, 1001, 7, 42];
-  AssertTrue(TIntSeqUtil.IsPermutation(a, b));
+  FillStat(Stat, 42);
+  p := TIntSeqUtil.MakePatch(a, b, Stat);
+  AssertTrue(Length(p) = Length(a));
+  for o in TIntSeqUtil.TSeqEditOp do
+    if o = seoDelete then
+      AssertTrue(Stat[o] = Length(a))
+    else
+      AssertTrue(Stat[o] = 0);
+  for e in p do begin
+    AssertTrue(e.Operation = seoDelete);
+    AssertTrue(e.SourceValue = a[e.SourceIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyPatch(a, p), b));
 end;
 
 { TTestFuzzySearchBitap }
@@ -3906,6 +4057,32 @@ begin
   AssertTrue(Copy(Text, m.Offset, m.Length) = 'безлично');
 end;
 
+procedure TTestFuzzySearchBitap.TestNextMatchOww;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  m: TMatch;
+begin
+  Text := '113!12345.322.1223.133+223-323';
+  Pattern := '123';
+  fsb.Init(Pattern, False, True);
+
+  m := fsb.NextMatch(Text, 0);
+  AssertTrue((m.Offset = 0) and (m.Length = 0));
+
+  m := fsb.NextMatch(Text, 1);
+  AssertTrue((m.Offset = 1) and (m.Length = 3));
+
+  m := fsb.NextMatch(Text, 1, m.Offset + m.Length);
+  AssertTrue((m.Offset = 20) and (m.Length = 3));
+
+  m := fsb.NextMatch(Text, 1, m.Offset + m.Length);
+  AssertTrue((m.Offset = 24) and (m.Length = 3));
+
+  m := fsb.NextMatch(Text, 1, m.Offset + m.Length);
+  AssertTrue((m.Offset = 28) and (m.Length = 3));
+end;
+
 procedure TTestFuzzySearchBitap.TestNextMatchCI;
 var
   fsb: TFuzzySearchBitap;
@@ -3945,6 +4122,46 @@ begin
   m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
   AssertTrue((m.Offset <> 0) and (m.Length <> 0));
   AssertTrue(Copy(Text, m.Offset, m.Length) = 'безличНО');
+
+  m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
+  AssertTrue((m.Offset = 0) and (m.Length = 0));
+end;
+
+procedure TTestFuzzySearchBitap.TestNextMatchCIOww;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  m: TMatch;
+begin
+  Text := 'чисто перечислять вычислять веслом весло маслом масло числом числа несло';
+  Pattern := 'ЧИСЛО';
+  fsb.Init(Pattern, True, True);
+
+  m := fsb.NextMatch(Text, 0);
+  AssertTrue((m.Offset = 0) and (m.Length = 0));
+
+  m := fsb.NextMatch(Text, 1);
+  AssertTrue(m.Offset = 1);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = 'чисто');
+
+  m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
+  AssertTrue((m.Offset <> 0) and (m.Length <> 0));
+  AssertTrue(Copy(Text, m.Offset, m.Length) = 'весло');
+
+  m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
+  AssertTrue((m.Offset <> 0) and (m.Length <> 0));
+  AssertTrue(Copy(Text, m.Offset, m.Length) = 'масло');
+
+  m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
+  AssertTrue((m.Offset <> 0) and (m.Length <> 0));
+  AssertTrue(Copy(Text, m.Offset, m.Length) = 'числа');
+
+  m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
+  AssertTrue((m.Offset <> 0) and (m.Length <> 0));
+  AssertTrue(Copy(Text, m.Offset, m.Length) = 'несло');
+
+  m := fsb.NextMatch(Text, 2, m.Offset + m.Length);
+  AssertTrue((m.Offset = 0) and (m.Length = 0));
 end;
 
 procedure TTestFuzzySearchBitap.TestFindMatches;
@@ -3977,6 +4194,33 @@ begin
   AssertTrue(Copy(Text, ma[0].Offset, ma[0].Length) = 'различия');
 end;
 
+procedure TTestFuzzySearchBitap.TestFindMatchesOww;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  ma: array of TMatch;
+begin
+  Text := 'чисто перечислять вычислять веслом весло маслом масло числом числа несло';
+  Pattern := 'число';
+  fsb.Init(Pattern, False, True);
+
+  ma := fsb.FindMatches(Text, 0);
+  AssertTrue(ma = nil);
+
+  ma := fsb.FindMatches(Text, 1);
+  AssertTrue(Length(ma) = 2);
+  AssertTrue(Copy(Text, ma[0].Offset, ma[0].Length) = 'чисто');
+  AssertTrue(Copy(Text, ma[1].Offset, ma[1].Length) = 'числа');
+
+  ma := fsb.FindMatches(Text, 2);
+  AssertTrue(Length(ma) = 5);
+  AssertTrue(Copy(Text, ma[0].Offset, ma[0].Length) = 'чисто');
+  AssertTrue(Copy(Text, ma[1].Offset, ma[1].Length) = 'весло');
+  AssertTrue(Copy(Text, ma[2].Offset, ma[2].Length) = 'масло');
+  AssertTrue(Copy(Text, ma[3].Offset, ma[3].Length) = 'числа');
+  AssertTrue(Copy(Text, ma[4].Offset, ma[4].Length) = 'несло');
+end;
+
 procedure TTestFuzzySearchBitap.TestFindMatchesCI;
 var
   fsb: TFuzzySearchBitap;
@@ -4005,6 +4249,33 @@ begin
   ma := fsb.FindMatches(Text, 2, ma[1].Offset + ma[1].Length, 1);
   AssertTrue(Length(ma) = 1);
   AssertTrue(Copy(Text, ma[0].Offset, ma[0].Length) = 'РаЗличия');
+end;
+
+procedure TTestFuzzySearchBitap.TestFindMatchesCIOww;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  ma: array of TMatch;
+begin
+  Text := 'чисто перечислять вычислять веслом весло маслом масло числом числа несло';
+  Pattern := 'ЧИСЛО';
+  fsb.Init(Pattern, True, True);
+
+  ma := fsb.FindMatches(Text, 0);
+  AssertTrue(ma = nil);
+
+  ma := fsb.FindMatches(Text, 1);
+  AssertTrue(Length(ma) = 2);
+  AssertTrue(Copy(Text, ma[0].Offset, ma[0].Length) = 'чисто');
+  AssertTrue(Copy(Text, ma[1].Offset, ma[1].Length) = 'числа');
+
+  ma := fsb.FindMatches(Text, 2);
+  AssertTrue(Length(ma) = 5);
+  AssertTrue(Copy(Text, ma[0].Offset, ma[0].Length) = 'чисто');
+  AssertTrue(Copy(Text, ma[1].Offset, ma[1].Length) = 'весло');
+  AssertTrue(Copy(Text, ma[2].Offset, ma[2].Length) = 'масло');
+  AssertTrue(Copy(Text, ma[3].Offset, ma[3].Length) = 'числа');
+  AssertTrue(Copy(Text, ma[4].Offset, ma[4].Length) = 'несло');
 end;
 
 procedure TTestFuzzySearchBitap.TestEnumerator;
@@ -4050,6 +4321,38 @@ begin
   AssertTrue(I = 5);
 end;
 
+procedure TTestFuzzySearchBitap.TestEnumeratorOww;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  m: TMatch;
+  ans: TStringArray;
+  I: Integer;
+begin
+  Text := 'чисто перечислять вычислять веслом весло маслом масло числом числа несло';
+  Pattern := 'число';
+  fsb.Init(Pattern, False, True);
+
+  I := 0;
+  for m in fsb.Matches(Text, 0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  ans := ['чисто', 'числа'];
+  I := 0;
+  for m in fsb.Matches(Text, 1) do begin
+    AssertTrue(Copy(Text, m.Offset, m.Length) = ans[I]);
+    Inc(I);
+  end;
+
+  ans := ['чисто', 'весло', 'масло', 'числа', 'несло'];
+  I := 0;
+  for m in fsb.Matches(Text, 2) do begin
+    AssertTrue(Copy(Text, m.Offset, m.Length) = ans[I]);
+    Inc(I);
+  end;
+end;
+
 procedure TTestFuzzySearchBitap.TestEnumeratorCI;
 var
   fsb: TFuzzySearchBitap;
@@ -4091,6 +4394,38 @@ begin
     Inc(I);
   end;
   AssertTrue(I = 5);
+end;
+
+procedure TTestFuzzySearchBitap.TestEnumeratorCIOww;
+var
+  fsb: TFuzzySearchBitap;
+  Text, Pattern: string;
+  m: TMatch;
+  ans: TStringArray;
+  I: Integer;
+begin
+  Text := 'чисто перечислять вычислять веслом весло маслом масло числом числа несло';
+  Pattern := 'ЧИСЛО';
+  fsb.Init(Pattern, True, True);
+
+  I := 0;
+  for m in fsb.Matches(Text, 0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  ans := ['чисто', 'числа'];
+  I := 0;
+  for m in fsb.Matches(Text, 1) do begin
+    AssertTrue(Copy(Text, m.Offset, m.Length) = ans[I]);
+    Inc(I);
+  end;
+
+  ans := ['чисто', 'весло', 'масло', 'числа', 'несло'];
+  I := 0;
+  for m in fsb.Matches(Text, 2) do begin
+    AssertTrue(Copy(Text, m.Offset, m.Length) = ans[I]);
+    Inc(I);
+  end;
 end;
 
 { TACSearchFsmTest }
