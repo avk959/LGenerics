@@ -282,40 +282,44 @@ type
     TSeqEditOp = (seoMatch, seoDelete, seoInsert, seoReplace);
     TLcsEditOp = seoMatch..seoInsert;
     TLcsEdit = record
+      Operation: TLcsEditOp;
       Value: T;
       SourceIndex,
       TargetIndex: SizeInt;
-      Operation: TLcsEditOp;
       constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
       constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
       constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
     end;
-    TLcsEditSeq = array of TLcsEdit;
+    TSeqLcsPatch = array of TLcsEdit;
 
     TSeqEdit = record
+      Operation: TSeqEditOp;
       SourceValue,
       TargetValue: T;
       SourceIndex,
       TargetIndex: SizeInt;
-      Operation: TSeqEditOp;
       constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
       constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
       constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
       constructor Rep(const aSrcValue, aTrgValue: T; aSrcIdx, aTrgIdx: SizeInt);
     end;
-    TSeqEditSeq = array of TSeqEdit;
+    TSeqPatch = array of TSeqEdit;
 
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
     only operations of deletion and insertion are available }
-    class function LcsEditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditSeq; static;
-    class function ApplyLcsScript(const aSrc: array of T; const aScript: TLcsEditSeq; out aTrg: TArray): Boolean; static;
-  { returns the global alignment of the sequences aSource and aTarget }
-    class function LcsAlignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TLcsEditSeq; static;
+    class function MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqLcsPatch; static;
+    class function ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch; out aTrg: TArray): Boolean; static;
+
+  type
+     TSeqPatchStat = array[TSeqEditOp] of SizeInt;
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
-    since the function under the hood uses LCS, the resulting script may be suboptimal }
-    class function EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqEditSeq; static;
-    class function ApplyScript(const aSrc: array of T; const aScript: TSeqEditSeq; out aTrg: TArray): Boolean; static;
-    class function Alignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqEditSeq; static;
+    returns script statictics in aStat; since the function under the hood uses LCS,
+    the resulting script may be suboptimal }
+    class function MakePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
+                             aLcsAlgo: TLcsAlgo = laMyers): TSeqPatch; static;
+  { same as above, if the statistics are not of interest }
+    class function MakePatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqPatch; static;
+    class function ApplyPatch(const aSrc: array of T; const aPatch: TSeqPatch; out aTrg: TArray): Boolean; static;
   end;
 
 {*********************************************}
@@ -2593,7 +2597,7 @@ begin
   SubLen := System.Length(aSub);
   I := 0;
   J := 0;
-  while (I < SeqLen) and (J < SubLen) do
+  while (I < SeqLen) and (J < SubLen) and (SeqLen-I >= SubLen-J) do
     begin
       Inc(J, Ord(TEqRel.Equal(aSeq[I], aSub[J])));
       Inc(I);
@@ -2952,68 +2956,68 @@ end;
 
 constructor TGSeqUtil.TLcsEdit.Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoMatch;
   Value := aValue;
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoMatch;
 end;
 
 constructor TGSeqUtil.TLcsEdit.Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoDelete;
   Value := aValue;
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoDelete;
 end;
 
 constructor TGSeqUtil.TLcsEdit.Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoInsert;
   Value := aValue;
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoInsert;
 end;
 
 { TGSeqUtil.TSeqEdit }
 
 constructor TGSeqUtil.TSeqEdit.Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoMatch;
   SourceValue := aValue;
   TargetValue := aValue;
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoMatch;
 end;
 
 constructor TGSeqUtil.TSeqEdit.Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoDelete;
   SourceValue := aValue;
   TargetValue := Default(T);
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoDelete;
 end;
 
 constructor TGSeqUtil.TSeqEdit.Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoInsert;
   SourceValue := Default(T);
   TargetValue := aValue;
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoInsert;
 end;
 
 constructor TGSeqUtil.TSeqEdit.Rep(const aSrcValue, aTrgValue: T; aSrcIdx, aTrgIdx: SizeInt);
 begin
+  Operation := seoReplace;
   SourceValue := aSrcValue;
   TargetValue := aTrgValue;
   SourceIndex := aSrcIdx;
   TargetIndex := aTrgIdx;
-  Operation := seoReplace;
 end;
 
 
-class function TGSeqUtil.LcsEditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditSeq;
+class function TGSeqUtil.MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqLcsPatch;
 var
   Lcs: TArray;
   r: array of TLcsEdit;
@@ -3051,30 +3055,31 @@ begin
   Result := r;
 end;
 
-class function TGSeqUtil.ApplyLcsScript(const aSrc: array of T; const aScript: TLcsEditSeq; out aTrg: TArray): Boolean;
+class function TGSeqUtil.ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch;
+  out aTrg: TArray): Boolean;
 var
   r: TArray = nil;
   OpCounts: array[seoDelete..seoInsert] of SizeInt = (0,0);
   I, SrcIdx, TrgIdx: SizeInt;
 begin
   aTrg := nil;
-  for I := 0 to System.High(aScript) do
-    if aScript[I].Operation in [seoDelete, seoInsert] then
-      Inc(OpCounts[aScript[I].Operation])
+  for I := 0 to System.High(aPatch) do
+    if aPatch[I].Operation in [seoDelete, seoInsert] then
+      Inc(OpCounts[aPatch[I].Operation])
     else exit(False);
   System.SetLength(r, System.Length(aSrc) + OpCounts[seoInsert] - OpCounts[seoDelete]);
   SrcIdx := 0; TrgIdx := 0;
-  for I := 0 to System.High(aScript) do begin
-    while SrcIdx < aScript[I].SourceIndex do begin
+  for I := 0 to System.High(aPatch) do begin
+    while SrcIdx < aPatch[I].SourceIndex do begin
       r[TrgIdx] := aSrc[SrcIdx];
       Inc(SrcIdx); Inc(TrgIdx);
     end;
-    if aScript[I].TargetIndex <> TrgIdx then exit(False);
-    if aScript[I].Operation = seoDelete then begin
-      if not TEqRel.Equal(aSrc[SrcIdx], aScript[I].Value) then exit(False);
+    if aPatch[I].TargetIndex <> TrgIdx then exit(False);
+    if aPatch[I].Operation = seoDelete then begin
+      if not TEqRel.Equal(aSrc[SrcIdx], aPatch[I].Value) then exit(False);
       Inc(SrcIdx);
     end else begin
-      r[TrgIdx] := aScript[I].Value;
+      r[TrgIdx] := aPatch[I].Value;
       Inc(TrgIdx);
     end;
   end;
@@ -3086,46 +3091,8 @@ begin
   Result := True;
 end;
 
-class function TGSeqUtil.LcsAlignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TLcsEditSeq;
-var
-  Lcs: TArray;
-  r: array of TLcsEdit;
-  I, SrcIdx, TrgIdx, ResIdx: SizeInt;
-  v: T;
-begin
-  case aLcsAlgo of
-    laGus: Lcs := LcsGus(aSource, aTarget);
-    laKr:  Lcs := LcsKr(aSource, aTarget);
-  else// laMyers
-    Lcs := LcsMyers(aSource, aTarget);
-  end;
-  System.SetLength(r, System.Length(aSource) + System.Length(aTarget) - System.Length(Lcs));
-  ResIdx := 0; SrcIdx := 0; TrgIdx := 0;
-  for I := 0 to System.High(Lcs) do begin
-    v := Lcs[I];
-    while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
-      r[ResIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
-      Inc(ResIdx); Inc(SrcIdx);
-    end;
-    while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
-      r[ResIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
-      Inc(ResIdx); Inc(TrgIdx);
-    end;
-    r[ResIdx] := TLcsEdit.Make(v, SrcIdx, TrgIdx);
-    Inc(ResIdx); Inc(SrcIdx); Inc(TrgIdx);
-  end;
-  while SrcIdx < System.Length(aSource) do begin
-    r[ResIdx] := TLcsEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx);
-    Inc(ResIdx); Inc(SrcIdx);
-  end;
-  while TrgIdx < System.Length(aTarget) do begin
-    r[ResIdx] := TLcsEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx);
-    Inc(ResIdx); Inc(TrgIdx);
-  end;
-  Result := r;
-end;
-
-class function TGSeqUtil.EditScript(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqEditSeq;
+class function TGSeqUtil.MakePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
+  aLcsAlgo: TLcsAlgo): TSeqPatch;
 var
   r: array of TSeqEdit = nil;
   rCount: SizeInt = 0;
@@ -3146,73 +3113,82 @@ begin
   else// laMyers
     Lcs := LcsMyers(aSource, aTarget);
   end;
+  aStat := Default(TSeqPatchStat);
+  aStat[seoMatch] := System.Length(Lcs);
   System.SetLength(r, ARRAY_INITIAL_SIZE);
   SrcIdx := 0; TrgIdx := 0;
   for I := 0 to System.High(Lcs) do begin
     v := Lcs[I];
     while not(TEqRel.Equal(v, aSource[SrcIdx]) or TEqRel.Equal(v, aTarget[TrgIdx]))do begin
       AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
-      Inc(SrcIdx); Inc(TrgIdx);
+      Inc(SrcIdx); Inc(TrgIdx); Inc(aStat[seoReplace]);
     end;
     while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
       AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
-      Inc(SrcIdx);
+      Inc(SrcIdx); Inc(aStat[seoDelete]);
     end;
     while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
       AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
-      Inc(TrgIdx);
+      Inc(TrgIdx); Inc(aStat[seoInsert]);
     end;
     Inc(SrcIdx); Inc(TrgIdx);
   end;
   while(SrcIdx < System.Length(aSource))and(TrgIdx < System.Length(aTarget))do begin
     AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
-    Inc(SrcIdx); Inc(TrgIdx);
+    Inc(SrcIdx); Inc(TrgIdx); Inc(aStat[seoReplace]);
   end;
   while SrcIdx < System.Length(aSource) do begin
     AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
-    Inc(SrcIdx);
+    Inc(SrcIdx); Inc(aStat[seoDelete]);
   end;
   while TrgIdx < System.Length(aTarget) do begin
     AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
-    Inc(TrgIdx);
+    Inc(TrgIdx); Inc(aStat[seoInsert]);
   end;
   System.SetLength(r, rCount);
   Result := r;
 end;
 
-class function TGSeqUtil.ApplyScript(const aSrc: array of T; const aScript: TSeqEditSeq; out aTrg: TArray): Boolean;
+class function TGSeqUtil.MakePatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqPatch;
+var
+  Dummy: TSeqPatchStat;
+begin
+  Result := MakePatch(aSource, aTarget, Dummy, aLcsAlgo);
+end;
+
+class function TGSeqUtil.ApplyPatch(const aSrc: array of T; const aPatch: TSeqPatch; out aTrg: TArray): Boolean;
 var
   r: TArray = nil;
   OpCounts: array[seoDelete..seoReplace] of SizeInt = (0,0,0);
   I, SrcIdx, TrgIdx: SizeInt;
 begin
   aTrg := nil;
-  for I := 0 to System.High(aScript) do
-    if aScript[I].Operation in [seoDelete..seoReplace] then
-      Inc(OpCounts[aScript[I].Operation])
+  for I := 0 to System.High(aPatch) do
+    if aPatch[I].Operation in [seoDelete..seoReplace] then
+      Inc(OpCounts[aPatch[I].Operation])
     else exit(False);
   System.SetLength(r, System.Length(aSrc) + OpCounts[seoInsert] - OpCounts[seoDelete]);
   SrcIdx := 0; TrgIdx := 0;
-  for I := 0 to System.High(aScript) do begin
-    while SrcIdx < aScript[I].SourceIndex do begin
+  for I := 0 to System.High(aPatch) do begin
+    while SrcIdx < aPatch[I].SourceIndex do begin
       r[TrgIdx] := aSrc[SrcIdx];
       Inc(SrcIdx); Inc(TrgIdx);
     end;
-    if aScript[I].TargetIndex <> TrgIdx then exit(False);
-    case aScript[I].Operation of
+    if aPatch[I].TargetIndex <> TrgIdx then exit(False);
+    case aPatch[I].Operation of
       seoDelete:
         begin
-          if not TEqRel.Equal(aSrc[SrcIdx], aScript[I].SourceValue) then exit(False);
+          if not TEqRel.Equal(aSrc[SrcIdx], aPatch[I].SourceValue) then exit(False);
           Inc(SrcIdx);
         end;
       seoInsert:
         begin
-          r[TrgIdx] := aScript[I].TargetValue;
+          r[TrgIdx] := aPatch[I].TargetValue;
           Inc(TrgIdx);
         end;
     else //seoReplace
-      if not TEqRel.Equal(aSrc[SrcIdx], aScript[I].SourceValue) then exit(False);
-      r[TrgIdx] := aScript[I].TargetValue;
+      if not TEqRel.Equal(aSrc[SrcIdx], aPatch[I].SourceValue) then exit(False);
+      r[TrgIdx] := aPatch[I].TargetValue;
       Inc(SrcIdx); Inc(TrgIdx);
     end;
   end;
@@ -3222,62 +3198,6 @@ begin
   end;
   aTrg := r;
   Result := True;
-end;
-
-class function TGSeqUtil.Alignment(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqEditSeq;
-var
-  r: array of TSeqEdit = nil;
-  rCount: SizeInt = 0;
-  procedure AddEdit(const e: TSeqEdit);
-  begin
-    if rCount = System.Length(r) then System.SetLength(r, rCount*2);
-    r[rCount] := e;
-    Inc(rCount);
-  end;
-var
-  Lcs: TArray;
-  I, SrcIdx, TrgIdx: SizeInt;
-  v: T;
-begin
-  case aLcsAlgo of
-    laGus: Lcs := LcsGus(aSource, aTarget);
-    laKr:  Lcs := LcsKr(aSource, aTarget);
-  else// laMyers
-    Lcs := LcsMyers(aSource, aTarget);
-  end;
-  System.SetLength(r, ARRAY_INITIAL_SIZE);
-  SrcIdx := 0; TrgIdx := 0;
-  for I := 0 to System.High(Lcs) do begin
-    v := Lcs[I];
-    while not(TEqRel.Equal(v, aSource[SrcIdx]) or TEqRel.Equal(v, aTarget[TrgIdx]))do begin
-      AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
-      Inc(SrcIdx); Inc(TrgIdx);
-    end;
-    while not TEqRel.Equal(v, aSource[SrcIdx]) do begin
-      AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
-      Inc(SrcIdx);
-    end;
-    while not TEqRel.Equal(v, aTarget[TrgIdx]) do begin
-      AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
-      Inc(TrgIdx);
-    end;
-    AddEdit(TSeqEdit.Make(v, SrcIdx, TrgIdx));
-    Inc(SrcIdx); Inc(TrgIdx);
-  end;
-  while(SrcIdx < System.Length(aSource))and(TrgIdx < System.Length(aTarget))do begin
-    AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
-    Inc(SrcIdx); Inc(TrgIdx);
-  end;
-  while SrcIdx < System.Length(aSource) do begin
-    AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
-    Inc(SrcIdx);
-  end;
-  while TrgIdx < System.Length(aTarget) do begin
-    AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
-    Inc(TrgIdx);
-  end;
-  System.SetLength(r, rCount);
-  Result := r;
 end;
 
 type
