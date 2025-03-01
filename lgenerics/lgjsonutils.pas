@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some useful JSON utilites.                                              *
 *                                                                           *
-*   Copyright(c) 2024 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2025 A.Koverdyaev(avk)                                     *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -99,7 +99,7 @@ type
     constructor Create(aPatchNode: TJsonNode);
     destructor Destroy; override;
   { tries to apply the internal patch to aTarget; returns False if no
-    patch was loaded otherwise applies patch to aTarget and returns True }
+    patch was loaded, otherwise applies patch to aTarget and returns True }
     function Apply(aTarget: TJsonNode): Boolean;
     function Apply(var aTarget: string): Boolean;
     property Loaded: Boolean read GetLoaded;
