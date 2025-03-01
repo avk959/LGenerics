@@ -534,9 +534,9 @@ type
   TBufHash32 = function(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord): DWord;
   TBufHash64 = function(aBuffer: Pointer; aCount: SizeInt; aSeed: QWord): QWord;
   TStrCompareOption = (
-    scoIgnoreCase,
-    scoIgnoreWS,
-    scoIgnoreWSChange 
+    scoIgnoreCase,    // ignore character case
+    scoIgnoreWS,      // ignore whitespace characters
+    scoIgnoreWSChange // ignore changes in the number of whitespace characters
   );
   TStrCompareOptions = set of TStrCompareOption;
 
@@ -2861,7 +2861,7 @@ begin
     Limit := -1;
   case Algo of
     sdaDefault:
-      if aLimit > Double(0.90) then  // ???
+      if aLimit >= Double(0.90) then  // ???
         Dist := LevDistanceMbr(L, R, Limit)
       else
         Dist := LevDistanceMyers(L, R, Limit);
