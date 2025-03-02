@@ -46,7 +46,8 @@ uses
   lgCsvUtilsTest,
   lgPdoTest,
   lgJtdTest,
-  LgJsonPathTest;
+  LgJsonPathTest,
+  LgJsonUtilsTest;
 
 type
 

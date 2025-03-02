@@ -1,0 +1,242 @@
+{
+  "Patch_Tests": [
+    {
+      "name": "rfc Appedix_A #1",
+      "document": {"a":"b"},
+      "patch": {"a":"c"},
+      "expected": {"a":"c"}
+    },
+    {
+      "name": "rfc Appedix_A #2",
+      "document": {"a":"b"},
+      "patch": {"b":"c"},
+      "expected": {"a":"b","b":"c"}
+    },
+    {
+      "name": "rfc Appedix_A #3",
+      "document": {"a":"b"},
+      "patch": {"a":null},
+      "expected": {}
+    },
+    {
+      "name": "rfc Appedix_A #4",
+      "document": {"a":"b","b":"c"},
+      "patch": {"a":null},
+      "expected": {"b":"c"}
+    },
+    {
+      "name": "rfc Appedix_A #5",
+      "document": {"a":["b"]},
+      "patch": {"a":"c"},
+      "expected": {"a":"c"}
+    },
+    {
+      "name": "rfc Appedix_A #6",
+      "document": {"a":"c"},
+      "patch": {"a":["b"]},
+      "expected": {"a":["b"]}
+    },
+    {
+      "name": "rfc Appedix_A #7",
+      "document": {"a":{"b":"c"}},
+      "patch": {"a":{"b":"d","c": null}},
+      "expected": {"a":{"b":"d"}}
+    },
+    {
+      "name": "rfc Appedix_A #8",
+      "document": {"a":[{"b":"c"}]},
+      "patch": {"a":[1]},
+      "expected": {"a":[1]}
+    },
+    {
+      "name": "rfc Appedix_A #9",
+      "document": ["a","b"],
+      "patch": ["c","d"],
+      "expected": ["c","d"]
+    },
+    {
+      "name": "rfc Appedix_A #10",
+      "document": {"a":"b"},
+      "patch": ["c"],
+      "expected": ["c"]
+    },
+    {
+      "name": "rfc Appedix_A #11",
+      "document": {"a":"foo"},
+      "patch": null,
+      "expected": null
+    },
+    {
+      "name": "rfc Appedix_A #12",
+      "document": {"a":"foo"},
+      "patch": "bar",
+      "expected": "bar"
+    },
+    {
+      "name": "rfc Appedix_A #13",
+      "document": {"e":null},
+      "patch": {"a":1},
+      "expected": {"e":null,"a":1}
+    },
+    {
+      "name": "rfc Appedix_A #14",
+      "document": [1,2],
+      "patch": {"a":"b","c":null},
+      "expected": {"a":"b"}
+    },
+    {
+      "name": "rfc Appedix_A #15",
+      "document": {},
+      "patch": {"a":{"bb":{"ccc":null}}},
+      "expected": {"a":{"bb":{}}}
+    },
+    {
+      "name": "rfc simple example",
+      "document": {"a":"b","c":{"d":"e","f":"g"}},
+      "patch": {"a":"z","c":{"f":null}},
+      "expected": {"a":"z","c":{"d":"e"}}
+    },
+    {
+      "name": "rfc example",
+      "document": {
+          "title":"Goodbye!",
+          "author":{"givenName":"John","familyName":"Doe"},
+          "tags":["example","sample"],
+          "content":"This will be unchanged"
+      },
+      "patch": {
+          "title":"Hello!",
+          "phoneNumber":"+01-123-456-7890",
+          "author":{"familyName":null},
+          "tags":["example"]
+      },
+      "expected": {
+          "title":"Hello!",
+          "author":{"givenName":"John"},
+          "tags":["example"],
+          "content":"This will be unchanged",
+          "phoneNumber":"+01-123-456-7890"
+      }
+    }
+  ],
+  "Diff_Tests": [
+    {
+      "name": "non-object source, string",
+      "source": "bar",
+      "target": {"a":"b"},
+      "expected": {"a":"b"}
+    },
+    {
+      "name": "non-object source, number",
+      "source": 42,
+      "target": {"a":"b"},
+      "expected": {"a":"b"}
+    },
+    {
+      "name": "non-object source, boolean",
+      "source": false,
+      "target": {"a":"b"},
+      "expected": {"a":"b"}
+    },
+    {
+      "name": "non-object source, null",
+      "source": null,
+      "target": {"a":"b"},
+      "expected": {"a":"b"}
+    },
+    {
+      "name": "non-object source, array",
+      "source": ["bar","baz"],
+      "target": {"a":"b"},
+      "expected": {"a":"b"}
+    },
+    {
+      "name": "non-object target, string",
+      "source": {"a":"b"},
+      "target": "foo",
+      "expected": "foo"
+    },
+    {
+      "name": "non-object target, number",
+      "source": {"a":"b"},
+      "target": 42,
+      "expected": 42
+    },
+    {
+      "name": "non-object target, boolean",
+      "source": {"a":"b"},
+      "target": false,
+      "expected": false
+    },
+    {
+      "name": "non-object target, null",
+      "source": {"a":"b"},
+      "target": null,
+      "expected": null
+    },
+    {
+      "name": "non-object target, array",
+      "source": {"a":"b"},
+      "target": ["bar","baz"],
+      "expected": ["bar","baz"]
+    },
+    {
+      "name": "rfc example",
+      "source": {
+          "title":"Goodbye!",
+          "author":{"givenName":"John","familyName":"Doe"},
+          "tags":["example","sample"],
+          "content":"This will be unchanged"
+      },
+      "target": {
+          "title":"Hello!",
+          "author":{"givenName":"John"},
+          "tags":["example"],
+          "content":"This will be unchanged",
+          "phoneNumber":"+01-123-456-7890"
+      },
+      "expected": {
+          "title":"Hello!",
+          "phoneNumber":"+01-123-456-7890",
+          "author":{"familyName":null},
+          "tags":["example"]
+      }
+    },
+    {
+      "name": "rfc simple example",
+      "source": {"a":"b","c":{"d":"e","f":"g"}},
+      "target": {"a":"z","c":{"d":"e"}},
+      "expected": {"a":"z","c":{"f":null}}
+    },
+    {
+      "name": "rfc Appedix_A #2",
+      "source": {"a":"b"},
+      "target": {"a":"b","b":"c"},
+      "expected": {"b":"c"}
+    },
+    {
+      "name": "rfc Appedix_A #3",
+      "source": {"a":"b"},
+      "target": {},
+      "expected": {"a":null}
+    },
+    {
+      "name": "rfc Appedix_A #4",
+      "source": {"a":"b","b":"c"},
+      "target": {"b":"c"},
+      "expected": {"a":null}
+    },
+    {
+      "name": "rfc Appedix_A #13",
+      "source": {"e":null},
+      "target": {"e":null,"a":1},
+      "expected": {"a":1}
+    },
+    {
+      "name": "rfc Appedix_A #15",
+      "source": {},
+      "target": {"a":{"bb":{}}},
+      "expected": {"a":{"bb":{}}}
+    }
+  ]
+}
