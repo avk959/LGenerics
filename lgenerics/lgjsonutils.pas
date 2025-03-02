@@ -385,7 +385,7 @@ var
   Src, Trg: specialize TGAutoRef<TJsonNode>;
 begin
   aPatch := nil;
-  if not Src.Instance.TryParse(aSource) and Trg.Instance.TryParse(aTarget) then exit(False);
+  if not(Src.Instance.TryParse(aSource) and Trg.Instance.TryParse(aTarget)) then exit(False);
   aPatch := DiffNode(Src.Instance, Trg.Instance);
   Result := True;
 end;
@@ -395,7 +395,7 @@ var
   Src, Trg: specialize TGAutoRef<TJsonNode>;
 begin
   aPatch := nil;
-  if not Src.Instance.TryParse(aSource) and Trg.Instance.TryParse(aTarget) then exit(False);
+  if not(Src.Instance.TryParse(aSource) and Trg.Instance.TryParse(aTarget)) then exit(False);
   aPatch := Diff(Src.Instance, Trg.Instance);
   Result := True;
 end;
@@ -413,18 +413,16 @@ end;
 
 class function TJsonMergePatch.DiffJson(const aSource, aTarget: string; out aPatch: string): Boolean;
 var
-  Src, Trg: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
 begin
   aPatch := '';
-  Result := False;
-  if not Src.Instance.TryParse(aSource) and Trg.Instance.TryParse(aTarget) then exit;
-  with DiffNode(Src.Instance, Trg.Instance) do
+  Result := Diff(aSource, aTarget, n);
+  if Result then
     try
-      aPatch := AsJson;
+      aPatch := n.AsJson;
     finally
-      Free;
+      n.Free;
     end;
-  Result := True;
 end;
 
 class procedure TJsonMergePatch.ApplyPatch(aPatch, aTarget: TJsonNode);
