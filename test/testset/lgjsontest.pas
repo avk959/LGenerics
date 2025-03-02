@@ -213,10 +213,10 @@ begin
   if Dir = '' then exit;
   TestDir := Dir + DirectorySeparator + 'json_testset' + DirectorySeparator;
   Dir := TestDir + ParseDir + DirectorySeparator;
-  if DirectoryExists(Dir) then;
+  if DirectoryExists(Dir) then
     TestFileList := FindAllFiles(Dir);
   Dir := TestDir + PatchDir + DirectorySeparator;
-  if DirectoryExists(Dir) then;
+  if DirectoryExists(Dir) then
     TestPatchList := FindAllFiles(Dir);
 end;
 
