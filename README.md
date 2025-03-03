@@ -128,6 +128,7 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   - 128-bit integers(unit lgInt128)
   - JSON validator/parser/generator(unit lgJson)
   - JSON Patch/Diff(unit lgJson)
+  - JSON Merge Patch/Diff(unit lgJsonUtils)
   - JSON serialization/deserialization of native Pascal data structures using RTTI(unit lgPdo)
   - JSON Type Definition schemas(unit lgJsonTypeDef)
     + validating a JSON document against a JTD schema(unit lgJsonTypeDef)
