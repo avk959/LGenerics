@@ -76,6 +76,8 @@ type
     procedure Equal;
     procedure Clone;
     procedure TestSave2Stream;
+    procedure ForcePathTest;
+    procedure ForcePathTest1;
   end;
 
   { TTestJsonWriter }
@@ -1131,6 +1133,62 @@ begin
   AssertTrue(o1.Instance.SaveToStream(Stream.Instance) = Length(TestJson));
   AssertTrue(o2.Instance.TryParse(Stream.Instance.DataString));
   AssertTrue(o2.Instance.EqualTo(o1.Instance));
+end;
+
+procedure TTestJson.ForcePathTest;
+var
+  Ref, Tst: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+begin
+  Ref.Instance.Value := 42;
+  AssertFalse(Ref.Instance.ForcePath(['a'], n));
+  AssertTrue(Ref.Instance.ForcePath(['a'], n, True));
+  AssertTrue(n.IsNull);
+  n.Value := 42;
+
+  AssertTrue('3', Ref.Instance.ForcePath(['b'], n));
+  AssertTrue('4', n.IsNull);
+  n.Value := 1001;
+
+  AssertFalse('5', Ref.Instance.ForcePath(['b', 'c'], n));
+
+  AssertFalse(Ref.Instance.ForcePath(['c', 'd'], n));
+  AssertTrue(Ref.Instance.ForcePath(['c', 'd'], n, True));
+  AssertTrue(n.IsNull);
+
+  Tst.Instance.Value := [
+    JPair('a', 42),
+    JPair('b', 1001),
+    JPair('c', [JPair('d',JNull)])
+  ];
+  AssertTrue(Ref.Instance.EqualTo(Tst.Instance));
+
+  Ref.Instance.Find('c', n);
+  n.Add('d', 0);
+  AssertFalse(Ref.Instance.ForcePath(['c', 'd', 'e'], n, True));
+end;
+
+procedure TTestJson.ForcePathTest1;
+var
+  Ref: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+begin
+  n := Ref.Instance.ForcePath(['a']);
+  n.Value := 42;
+  AssertTrue(n.AsNumber = 42);
+
+  n := Ref.Instance.ForcePath(['a','b']);
+  n.Value := 1001;
+  Ref.Instance.ForcePath(['a']).Add('b', False);
+
+  n := Ref.Instance.ForcePath(['a']);
+  AssertTrue(n.Count = 2);
+  AssertTrue(n.CountOfName('b') = 2);
+
+  n := Ref.Instance.ForcePath(['a','b','c']);
+  AssertTrue(n.IsNull);
+  n := Ref.Instance.ForcePath(['a']);
+  AssertTrue(n.Count = 1);
 end;
 
 { TTestJsonWriter }
