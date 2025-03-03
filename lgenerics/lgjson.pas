@@ -661,6 +661,16 @@ type
     immediately and returns False; the "-" element is treated just as a string }
     function  FindPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
     function  FindPath(const aPath: array of string): TJsonNode;
+  { treats all path segments as property names; if non-unique names are encountered
+    in the search path, the search terminates immediately and returns False;
+    if such properties are missing, they will be added; if the next node encountered
+    is not an object, the behavior is determined by the aOverwriteExisting parameter;
+    if succeeds, the last node on the specified path is returned in the aNode parameter }
+    function  ForcePath(const aPath: array of string; out aNode: TJsonNode;
+                        aOverwriteExisting: Boolean = False): Boolean;
+  { treats all path segments as property names; ensures unique names and overwrites
+    existing nodes; returns the last node on the specified path }
+    function  ForcePath(const aPath: array of string): TJsonNode;
   { tries to find an element using a path specified as a JSON Pointer wrapper;
     if non-unique keys are encountered in the search path, the search terminates
     immediately and returns False; the "-" element is treated just as a string }
@@ -5529,6 +5539,52 @@ end;
 function TJsonNode.FindPath(const aPath: array of string): TJsonNode;
 begin
   FindPath(aPath, Result);
+end;
+
+function TJsonNode.ForcePath(const aPath: array of string; out aNode: TJsonNode;
+  aOverwriteExisting: Boolean): Boolean;
+var
+  Node, Next: TJsonNode;
+  I: SizeInt;
+begin
+  if System.Length(aPath) = 0 then
+    begin
+      aNode := Self;
+      exit(True);
+    end;
+  aNode := nil;
+  Node := Self;
+  for I := 0 to System.High(aPath) do
+    begin
+      if not Node.IsObject then
+        if aOverwriteExisting then
+          Node.AsObject
+        else
+          exit(False);
+      if Node.Find(aPath[I], Next) then
+        if not Node.ContainsUniq(aPath[I]) then
+          exit(False)
+        else
+      else
+        Next := Node.AddNode(aPath[I]);
+      Node := Next;
+    end;
+  aNode := Node;
+  Result := True;
+end;
+
+function TJsonNode.ForcePath(const aPath: array of string): TJsonNode;
+var
+
+  I: SizeInt;
+begin
+  Result := Self;
+  for I := 0 to System.High(aPath) do
+    begin
+      while Result.CountOfName(aPath[I]) > 1 do
+        Result.Remove(aPath[I]);
+      Result.FindOrAdd(aPath[I], Result);
+    end;
 end;
 
 function TJsonNode.FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
