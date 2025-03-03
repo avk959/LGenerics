@@ -4,7 +4,7 @@
 *   Implementation of JSON Type Definition(aka RFC 8927) specifications,    *
 *   a lightweight schema definition language for JSON documents.            *
 *                                                                           *
-*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -28,7 +28,7 @@ unit lgJsonTypeDef;
 interface
 
 uses
-  Classes, SysUtils, lgHashSet, lgHashMap, lgJson;
+  Classes, SysUtils, lgHashSet, lgHashMap, lgJson, lgJsonPath;
 
 type
   EJtdSchemaLoad   = class(Exception);
@@ -214,7 +214,7 @@ type
 
 type
 
-  TJtdJsonNodeHelper = class helper for TJsonNode
+  TJtdJsonNodeHelper = class helper(TJsonPathNodeHelper) for TJsonNode
     function JtdValidate(aSchema: TJtdSchema): Boolean;
     function JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError): Boolean;
   end;
