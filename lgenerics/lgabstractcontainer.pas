@@ -565,25 +565,32 @@ type
     procedure EnsureCapacity(aValue: SizeInt);
   { free unused memory if possible }
     procedure TrimToFit;
-  { returns True and aValue mapped to aKey if contains aKey, False otherwise }
+  { returns True and the value mapped to aKey in the aValue parameter if instance
+    contains aKey, False otherwise }
     function  TryGetValue(const aKey: TKey; out aValue: TValue): Boolean;
+  { returns True and a pointer to the value mapped to aKey in the aValue parameter
+    if instance contains aKey, False otherwise }
     function  TryGetMutValue(const aKey: TKey; out aValue: PValue): Boolean;
-  { returns value mapped to aKey or aDefault }
+  { returns value mapped to aKey if instance contains aKey, otherwise returns aDefault }
     function  GetValueDef(const aKey: TKey; const aDefault: TValue): TValue; inline;
+  { returns a pointer to the value mapped to aKey; if instance does not contain such a key,
+    it will be added with the value aDefault }
     function  GetMutValueDef(const aKey: TKey; const aDefault: TValue): PValue;
-  { returns True if contains aKey, otherwise adds aKey and returns False }
+  { returns True if instance contains aKey, otherwise adds aKey and returns False;
+    returns a pointer to value in the p parameter }
     function  FindOrAddMutValue(const aKey: TKey; out p: PValue): Boolean;
-  { returns True and add TEntry(aKey, aValue) only if not contains aKey }
+  { returns True and adds TEntry(aKey, aValue) only if instance does not contain aKey }
     function  Add(const aKey: TKey; const aValue: TValue): Boolean;
-  { returns True and add e only if not contains e.Key }
+  { returns True and adds e only if instance does not contain e.Key }
     function  Add(const e: TEntry): Boolean; inline;
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
   { returns True if e.Key added, False otherwise }
     function  AddOrSetValue(const e: TEntry): Boolean;
-  { will add only entries which keys are absent in map }
+  { adds only those entries whose keys are not present in the instance }
     function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
-  { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
+  { returns True and maps aNewValue to aKey only if instance contains aKey,
+    otherwise returns False }
     function  Replace(const aKey: TKey; const aNewValue: TValue): Boolean;
     function  Contains(const aKey: TKey): Boolean; inline;
     function  NonContains(const aKey: TKey): Boolean;
@@ -608,7 +615,7 @@ type
     function  Entries: IEntryEnumerable;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
-  { reading will raise ELGMapError if an aKey is not present in map }
+  { GetValue will raise ELGMapError if aKey is not present in the instance }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
