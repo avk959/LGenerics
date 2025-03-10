@@ -586,7 +586,8 @@ type
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
   { returns True if e.Key added, False otherwise }
     function  AddOrSetValue(const e: TEntry): Boolean;
-  { adds only those entries whose keys are not present in the instance }
+  { adds only those entries whose keys are not present in the instance;
+    returns the number of entries added }
     function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
   { returns True and maps aNewValue to aKey only if instance contains aKey,
