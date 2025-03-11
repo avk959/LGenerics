@@ -2063,7 +2063,7 @@ begin
   else
     begin
       Result := Count;
-      Clear;
+      MakeEmpty;
     end;
 end;
 
