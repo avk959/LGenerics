@@ -355,12 +355,10 @@ type
   generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
   public
   type
-    PEntry = ^TEntry;
-    TNode  = specialize TTGAvlNode2<TEntry>;
-    PNode  = ^TNode;
-
+    PEntry    = ^TEntry;
+    TNode     = specialize TTGAvlNode2<TEntry>;
+    PNode     = ^TNode;
     TNodeList = array of TNode;
-
 
   private
   type
@@ -383,6 +381,18 @@ type
       property  Current: PEntry read GetCurrent;
     end;
 
+    TUnordEnumerator = record
+    private
+      FCurrNode,
+      FFLastNode: PNode;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTree: PAvlTree);
+    public
+      function  GetEnumerator: TUnordEnumerator; inline;
+      function  MoveNext: Boolean; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
   private
     FNodes: TNodeList;
     function  GetCapacity: SizeInt; inline;
@@ -403,6 +413,7 @@ type
     function  GetHeight: SizeInt;
     function  FindInsertPos(const aKey: TKey): SizeInt;
     function  FindNode(const aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    function  FindNode(const aKey: TKey): SizeInt;
     procedure ReplaceWithSuccessor(aNode: SizeInt);
     procedure RotateLeft(aNode: SizeInt);
     procedure RotateRight(aNode: SizeInt);
@@ -417,13 +428,16 @@ type
     class operator AddRef(var aTree: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
+    function  UnOrdered: TUnordEnumerator; inline;
     procedure Clear; inline;
+    procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { returns nil if aKey already exists }
     function  Add(const aKey: TKey): PEntry;
     function  FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
     function  Find(const aKey: TKey): PEntry;
+    function  Find(const aKey: TKey; out aIndex: SizeInt): PEntry;
     function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aIndex: SizeInt); inline;
     function  FindLess(const aKey: TKey): SizeInt;
@@ -443,12 +457,10 @@ type
   generic TGLiteComparableAvlTree<TKey, TEntry> = record
   public
   type
-    PEntry = ^TEntry;
-    TNode  = specialize TTGAvlNode2<TEntry>;
-    PNode  = ^TNode;
-
+    PEntry    = ^TEntry;
+    TNode     = specialize TTGAvlNode2<TEntry>;
+    PNode     = ^TNode;
     TNodeList = array of TNode;
-
 
   private
   type
@@ -471,6 +483,18 @@ type
       property  Current: PEntry read GetCurrent;
     end;
 
+    TUnordEnumerator = record
+    private
+      FCurrNode,
+      FFLastNode: PNode;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTree: PAvlTree);
+    public
+      function  GetEnumerator: TUnordEnumerator; inline;
+      function  MoveNext: Boolean; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
   private
     FNodes: TNodeList;
     function  GetCapacity: SizeInt; inline;
@@ -489,6 +513,7 @@ type
     function  GetHeight: SizeInt;
     function  FindInsertPos(const aKey: TKey): SizeInt;
     function  FindNode(const aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    function  FindNode(const aKey: TKey): SizeInt;
     procedure ReplaceWithSuccessor(aNode: SizeInt);
     procedure RotateLeft(aNode: SizeInt);
     procedure RotateRight(aNode: SizeInt);
@@ -503,13 +528,16 @@ type
     class operator AddRef(var aTree: TGLiteComparableAvlTree);
   public
     function  GetEnumerator: TEnumerator;
+    function  UnOrdered: TUnordEnumerator; inline;
     procedure Clear; inline;
+    procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { returns nil if aKey already exists }
     function  Add(const aKey: TKey): PEntry;
     function  FindOrAdd(const aKey: TKey; out e: PEntry): Boolean;
     function  Find(const aKey: TKey): PEntry;
+    function  Find(const aKey: TKey; out aIndex: SizeInt): PEntry;
     function  Remove(const aKey: TKey): Boolean;
     procedure RemoveAt(aIndex: SizeInt); inline;
     function  FindLess(const aKey: TKey): SizeInt;
@@ -2613,8 +2641,9 @@ end;
 
 function TGLiteAvlTree.TEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = 0;
+  NextNode: SizeInt;
 begin
+  NextNode := 0;
   if FCurrNode <> 0 then
     NextNode := FTree^.Successor(FCurrNode)
   else
@@ -2632,6 +2661,38 @@ procedure TGLiteAvlTree.TEnumerator.Reset;
 begin
   FCurrNode := 0;
   FInCycle := False;
+end;
+
+{ TGLiteAvlTree.TUnordEnumerator }
+
+function TGLiteAvlTree.TUnordEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FCurrNode^.Data;
+end;
+
+procedure TGLiteAvlTree.TUnordEnumerator.Init(aTree: PAvlTree);
+begin
+  if aTree^.Count > 0 then
+    begin
+      FCurrNode := Pointer(aTree^.FNodes);
+      FFLastNode := FCurrNode + aTree^.Count;
+    end
+  else
+    begin
+      FCurrNode := nil;
+      FFLastNode := nil;
+    end;
+end;
+
+function TGLiteAvlTree.TUnordEnumerator.GetEnumerator: TUnordEnumerator;
+begin
+  Result := Self;
+end;
+
+function TGLiteAvlTree.TUnordEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrNode < FFLastNode;
+  Inc(FCurrNode, Ord(Result));
 end;
 
 { TGLiteAvlTree }
@@ -2864,6 +2925,19 @@ begin
         else
           break;
     end;
+end;
+
+function TGLiteAvlTree.FindNode(const aKey: TKey): SizeInt;
+begin
+  Result := Root;
+  while Result <> 0 do
+    if TKeyCmpRel.Less(aKey, FNodes[Result].Data.Key) then
+      Result := FNodes[Result].Left
+    else
+      if TKeyCmpRel.Less(FNodes[Result].Data.Key, aKey) then
+        Result := FNodes[Result].Right
+      else
+        break;
 end;
 
 procedure TGLiteAvlTree.ReplaceWithSuccessor(aNode: SizeInt);
@@ -3301,9 +3375,28 @@ begin
   Result.Init(@Self);
 end;
 
+function TGLiteAvlTree.UnOrdered: TUnordEnumerator;
+begin
+  Result.init(@Self);
+end;
+
 procedure TGLiteAvlTree.Clear;
 begin
   FNodes := nil;
+end;
+
+procedure TGLiteAvlTree.MakeEmpty;
+var
+  I: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      if IsManagedType(TEntry) then
+        for I := 1 to Count do
+          FNodes[I].Data := Default(TEntry);
+      FNodes[0].Right := 0; //root
+      FNodes[0].Left := 0;  //count
+    end;
 end;
 
 procedure TGLiteAvlTree.EnsureCapacity(aValue: SizeInt);
@@ -3351,20 +3444,29 @@ end;
 
 function TGLiteAvlTree.Find(const aKey: TKey): PEntry;
 var
-  Node, ParentNode: SizeInt;
+  Node: SizeInt;
 begin
-  Node := FindNode(aKey, ParentNode);
+  Node := FindNode(aKey);
   if Node <> 0 then
     Result :=  @FNodes[Node].Data
   else
     Result := nil;
 end;
 
+function TGLiteAvlTree.Find(const aKey: TKey; out aIndex: SizeInt): PEntry;
+begin
+  aIndex := FindNode(aKey);
+  if aIndex <> 0 then
+    Result :=  @FNodes[aIndex].Data
+  else
+    Result := nil;
+end;
+
 function TGLiteAvlTree.Remove(const aKey: TKey): Boolean;
 var
-  Node, ParentNode: SizeInt;
+  Node: SizeInt;
 begin
-  Node := FindNode(aKey, ParentNode);
+  Node := FindNode(aKey);
   Result := Node <> 0;
   if Result then
     RemoveNode(Node);
@@ -3468,8 +3570,9 @@ end;
 
 function TGLiteComparableAvlTree.TEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = 0;
+  NextNode: SizeInt;
 begin
+  NextNode := 0;
   if FCurrNode <> 0 then
     NextNode := FTree^.Successor(FCurrNode)
   else
@@ -3487,6 +3590,38 @@ procedure TGLiteComparableAvlTree.TEnumerator.Reset;
 begin
   FCurrNode := 0;
   FInCycle := False;
+end;
+
+{ TGLiteComparableAvlTree.TUnordEnumerator }
+
+function TGLiteComparableAvlTree.TUnordEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FCurrNode^.Data;
+end;
+
+procedure TGLiteComparableAvlTree.TUnordEnumerator.Init(aTree: PAvlTree);
+begin
+  if aTree^.Count > 0 then
+    begin
+      FCurrNode := Pointer(aTree^.FNodes);
+      FFLastNode := FCurrNode + aTree^.Count;
+    end
+  else
+    begin
+      FCurrNode := nil;
+      FFLastNode := nil;
+    end;
+end;
+
+function TGLiteComparableAvlTree.TUnordEnumerator.GetEnumerator: TUnordEnumerator;
+begin
+  Result := Self;
+end;
+
+function TGLiteComparableAvlTree.TUnordEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrNode < FFLastNode;
+  Inc(FCurrNode, Ord(Result));
 end;
 
 { TGLiteComparableAvlTree }
@@ -3719,6 +3854,19 @@ begin
         else
           break;
     end;
+end;
+
+function TGLiteComparableAvlTree.FindNode(const aKey: TKey): SizeInt;
+begin
+  Result := Root;
+  while Result <> 0 do
+    if aKey < FNodes[Result].Data.Key then
+      Result := FNodes[Result].Left
+    else
+      if FNodes[Result].Data.Key < aKey then
+        Result := FNodes[Result].Right
+      else
+        break;
 end;
 
 procedure TGLiteComparableAvlTree.ReplaceWithSuccessor(aNode: SizeInt);
@@ -4157,9 +4305,28 @@ begin
   Result.Init(@Self);
 end;
 
+function TGLiteComparableAvlTree.UnOrdered: TUnordEnumerator;
+begin
+  Result.Init(@Self);
+end;
+
 procedure TGLiteComparableAvlTree.Clear;
 begin
   FNodes := nil;
+end;
+
+procedure TGLiteComparableAvlTree.MakeEmpty;
+var
+  I: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      if IsManagedType(TEntry) then
+        for I := 1 to Count do
+          FNodes[I].Data := Default(TEntry);
+      FNodes[0].Right := 0; //root
+      FNodes[0].Left := 0;  //count
+    end;
 end;
 
 procedure TGLiteComparableAvlTree.EnsureCapacity(aValue: SizeInt);
@@ -4207,20 +4374,29 @@ end;
 
 function TGLiteComparableAvlTree.Find(const aKey: TKey): PEntry;
 var
-  Node, ParentNode: SizeInt;
+  Node: SizeInt;
 begin
-  Node := FindNode(aKey, ParentNode);
+  Node := FindNode(aKey);
   if Node <> 0 then
     Result :=  @FNodes[Node].Data
   else
     Result := nil;
 end;
 
+function TGLiteComparableAvlTree.Find(const aKey: TKey; out aIndex: SizeInt): PEntry;
+begin
+  aIndex := FindNode(aKey);
+  if aIndex <> 0 then
+    Result :=  @FNodes[aIndex].Data
+  else
+    Result := nil;
+end;
+
 function TGLiteComparableAvlTree.Remove(const aKey: TKey): Boolean;
 var
-  Node, ParentNode: SizeInt;
+  Node: SizeInt;
 begin
-  Node := FindNode(aKey, ParentNode);
+  Node := FindNode(aKey);
   Result := Node <> 0;
   if Result then
     RemoveNode(Node);
