@@ -163,6 +163,30 @@ type
     procedure FindCeil;
   end;
 
+  { TLiteTreeMapTest }
+
+  TLiteTreeMapTest = class(TTestCase)
+  private
+  type
+    TIntMap = specialize TGLiteTreeMap<Integer, Integer, Integer>;
+    TStrMap = specialize TGLiteTreeMap<string, Integer, string>;
+
+  published
+    procedure Int_1;
+    procedure Int_2;
+    procedure IntRetain;
+    procedure Str_1;
+    procedure Str_2;
+    procedure StrRetain;
+    procedure Head;
+    procedure Tail;
+    procedure Range;
+    procedure FindFloor;
+    procedure FindCeil;
+    procedure MakeEmptyTest;
+    procedure PassByValue;
+  end;
+
   function CreateIntArray(aSize: Integer): TIntEntryArray;
   function CreateStrArray(aSize: Integer): TStrEntryArray;
   function CreateObjArray(var aCounter: TCounter; aSize: Integer): TObjEntryArray;
@@ -1734,10 +1758,445 @@ begin
   AssertTrue(I = 30);
 end;
 
+{ TLiteTreeMapTest }
+
+procedure TLiteTreeMapTest.Int_1;
+var
+  m: TIntMap;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(m.IsEmpty);
+  m.Add(1,11);
+  AssertTrue(m.Count = 1);
+  AssertTrue(m.Contains(1));
+  AssertTrue(m[1] = 11);
+  AssertFalse(m.Contains(2));
+  m[2] := 22;
+  AssertTrue(m.Contains(2));
+  AssertTrue(m[2] = 22);
+  AssertTrue(m.Count = 2);
+  m.Clear;
+  AssertTrue(m.Count = 0);
+  for I := 1 to 100 do
+    m[I * 23] := I * 47;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[I * 23] = I * 47);
+  for I := 1 to 100 do
+    m[I * 23] := I * 53;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[I * 23] = I * 53);
+  for I := 1 to 100 do
+    AssertTrue(m[I * 23] = I * 53);
+  try
+    I := m[22];
+  except
+    on e: ELGMapError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertTrue(m.Remove(23));
+  AssertFalse(m.Contains(23));
+  AssertFalse(m.TryGetValue(12, I));
+  AssertTrue(m.TryGetValue(46, I));
+  AssertTrue(I = 106);
+  AssertTrue(m.GetValueDef(17, 0) = 0);
+  AssertTrue(m.GetValueDef(17, 27) = 27);
+  for I := 1 to 100 do
+    m.Remove(I * 23);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteTreeMapTest.Int_2;
+var
+  m: TIntMap;
+  I, TestSize: Integer;
+  ea: TIntEntryArray;
+  k: TIntKeyArray;
+  e: TIntEntry;
+begin
+  TestSize := 100;
+  ea := CreateIntArray(TestSize);
+  System.SetLength(k, TestSize);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
+  AssertTrue(m.Count = TestSize);
+  AssertTrue(m.ContainsAll(k));
+  AssertTrue(m.RemoveAll(k[0..49]) = 50);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(k[50..99]));
+  AssertTrue(m.RemoveAll(k[50..99]) = 50);
+  AssertTrue(m.Count = 0);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@IntOddValue) = 50);
+  AssertTrue(m.Count = 50);
+  for e in m do
+    AssertFalse(IntOddValue(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@IntOddValue);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(IntOddValue(e));
+end;
+
+procedure TLiteTreeMapTest.IntRetain;
+var
+  m: TIntMap;
+  s: TAutoIntSet;
+  I, TestSize: Integer;
+  e: TIntEntryArray;
+begin
+  TestSize := 100;
+  e := CreateIntArray(TestSize);
+  I := 1;
+  while I <= System.High(e) do
+    begin
+      s.Instance.Add(e[I].Key);
+      I += 2;
+    end;
+  AssertTrue(s.Instance.Count = 50);
+  m.AddAll(e);
+  AssertTrue(m.Count = TestSize);
+  m.RetainAll(s.Instance);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(s.Instance));
+  for I in m.Keys do
+    AssertTrue(IntOdd(I));
+  AssertTrue(m.RemoveAll(s.Instance) = 50);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteTreeMapTest.Str_1;
+var
+  m: TStrMap;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(m.IsEmpty);
+  m.Add('1',11);
+  AssertTrue(m.Count = 1);
+  AssertTrue(m.Contains('1'));
+  AssertTrue(m['1'] = 11);
+  AssertFalse(m.Contains('2'));
+  m['2'] := 22;
+  AssertTrue(m.Contains('2'));
+  AssertTrue(m['2'] = 22);
+  AssertTrue(m.Count = 2);
+  m.Clear;
+  AssertTrue(m.Count = 0);
+  for I := 1 to 100 do
+    m[IntToStr(I * 23)] := I * 47;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[IntToStr(I * 23)] = I * 47);
+  for I := 1 to 100 do
+    m[IntToStr(I * 23)] := I * 53;
+  AssertTrue(m.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m[IntToStr(I * 23)] = I * 53);
+  for I := 1 to 100 do
+    AssertTrue(m[IntToStr(I * 23)] = I * 53);
+  try
+    I := m['22'];
+  except
+    on e: ELGMapError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertTrue(m.Remove('23'));
+  AssertFalse(m.Contains('23'));
+  AssertFalse(m.TryGetValue('12', I));
+  AssertTrue(m.TryGetValue('46', I));
+  AssertTrue(I = 106);
+  AssertTrue(m.GetValueDef('17', 0) = 0);
+  AssertTrue(m.GetValueDef('17', 27) = 27);
+  for I := 1 to 100 do
+    m.Remove(IntToStr(I * 23));
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteTreeMapTest.Str_2;
+var
+  m: TStrMap;
+  I, TestSize: Integer;
+  ea: TStrEntryArray;
+  k: TStrKeyArray;
+  e: TStrEntry;
+begin
+  TestSize := 100;
+  ea := CreateStrArray(TestSize);
+  System.SetLength(k, TestSize);
+  for I := 0 to System.High(ea) do
+    k[I] := ea[I].Key;
+  m.AddAll(ea);
+  AssertTrue(m.Count = TestSize);
+  AssertTrue(m.ContainsAll(k));
+  AssertTrue(m.RemoveAll(k[0..49]) = 50);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(k[50..99]));
+  AssertTrue(m.RemoveAll(k[50..99]) = 50);
+  AssertTrue(m.Count = 0);
+  m.AddAll(ea);
+  AssertTrue(m.RemoveIf(@StrOddKey) = 50);
+  AssertTrue(m.Count = 50);
+  for e in m do
+    AssertFalse(StrOddKey(e));
+  AssertTrue(m.AddAll(ea) = 50);
+  ea := m.ExtractIf(@StrOddKey);
+  AssertTrue(Length(ea) = 50);
+  for e in ea do
+    AssertTrue(StrOddKey(e));
+end;
+
+procedure TLiteTreeMapTest.StrRetain;
+var
+  m: TStrMap;
+  s: TAutoStrSet;
+  I, TestSize: Integer;
+  e: TStrEntryArray;
+  v: string;
+begin
+  TestSize := 100;
+  e := CreateStrArray(TestSize);
+  I := 1;
+  while I <= System.High(e) do
+    begin
+      s.Instance.Add(e[I].Key);
+      I += 2;
+    end;
+  AssertTrue(s.Instance.Count = 50);
+  m.AddAll(e);
+  AssertTrue(m.Count = TestSize);
+  m.RetainAll(s.Instance);
+  AssertTrue(m.Count = 50);
+  AssertTrue(m.ContainsAll(s.Instance));
+  for v in m.Keys do
+    AssertTrue(StrOdd(v));
+  AssertTrue(m.RemoveAll(s.Instance) = 50);
+  AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteTreeMapTest.Head;
+var
+  m: TIntMap;
+  ea: TIntEntryArray;
+  e: TIntEntry;
+  I, TestSize: Integer;
+begin
+  TestSize := 100;
+  ea := CreateIntArray(TestSize);
+  TIntHelper.RandomShuffle(ea);
+
+  I := 0;
+  for e in m.Head(TestSize) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  m.AddAll(ea);
+  for e in m.Head(0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  for e in m.Head(0, True) do
+    Inc(I);
+  AssertTrue(I = 1);
+
+  I := 0;
+  for e in m.Head(80) do
+    begin
+      AssertTrue(I = e.Key);
+      Inc(I);
+    end;
+  AssertTrue(I = 80);
+
+  I := 0;
+  for e in m.Head(80, True) do
+    begin
+      AssertTrue(I = e.Key);
+      Inc(I);
+    end;
+  AssertTrue(I = 81);
+end;
+
+procedure TLiteTreeMapTest.Tail;
+var
+  m: TIntMap;
+  ea: TIntEntryArray;
+  e: TIntEntry;
+  I, TestSize: Integer;
+begin
+  TestSize := 100;
+  ea := CreateIntArray(TestSize);
+  TIntHelper.RandomShuffle(ea);
+
+  I := 0;
+  for e in m.Tail(0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  m.AddAll(ea);
+  for e in m.Tail(99) do
+    Inc(I);
+  AssertTrue(I = 1);
+
+  I := 0;
+  for e in m.Tail(99, False) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  I := 30;
+  for e in m.Tail(I) do
+    begin
+      AssertTrue(I = e.Key);
+      Inc(I);
+    end;
+  AssertTrue(I = 100);
+end;
+
+procedure TLiteTreeMapTest.Range;
+var
+  m: TIntMap;
+  ea: TIntEntryArray;
+  e: TIntEntry;
+  I, TestSize: Integer;
+begin
+  TestSize := 100;
+  ea := CreateIntArray(TestSize);
+  TIntHelper.RandomShuffle(ea);
+
+  I := 0;
+  for e in m.Range(0, 100) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  m.AddAll(ea);
+
+  for e in m.Range(10, 10) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  for e in m.Range(0, 0) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  for e in m.Range(0, 0, BOUNDS_BOTH) do
+    Inc(I);
+  AssertTrue(I = 1);
+
+
+  I := 10;
+  for e in m.Range(I, 90) do
+    begin
+      AssertTrue(I = e.Key);
+      Inc(I);
+    end;
+  AssertTrue(I = 90);
+
+  I := 10;
+  for e in m.Range(I, 90, BOUNDS_BOTH) do
+    begin
+      AssertTrue(I = e.Key);
+      Inc(I);
+    end;
+  AssertTrue(I = 91);
+end;
+
+procedure TLiteTreeMapTest.FindFloor;
+var
+  m: TIntMap;
+  I: Integer;
+begin
+  for I := 1 to 16 do
+    m[I * 3] := I;
+  AssertFalse(m.FindFloorKey(2, I));
+  AssertFalse(m.FindFloorKey(3, I));
+  AssertTrue(m.FindFloorKey(3, I, True));
+  AssertTrue(I = 3);
+  AssertTrue(m.FindFloorKey(9, I));
+  AssertTrue(I = 6);
+  AssertTrue(m.FindFloorKey(9, I, True));
+  AssertTrue(I = 9);
+  AssertTrue(m.FindFloorKey(13, I));
+  AssertTrue(I = 12);
+  AssertTrue(m.FindFloorKey(22, I));
+  AssertTrue(I = 21);
+  AssertTrue(m.FindFloorKey(27, I));
+  AssertTrue(I = 24);
+  AssertTrue(m.FindFloorKey(27, I, True));
+  AssertTrue(I = 27);
+end;
+
+procedure TLiteTreeMapTest.FindCeil;
+var
+  m: TIntMap;
+  I: Integer;
+begin
+  for I := 1 to 16 do
+    m[I * 3] := I;
+  AssertTrue(m.FindCeilKey(48, I));
+  AssertTrue(I = 48);
+  AssertFalse(m.FindCeilKey(48, I, False));
+  AssertTrue(m.FindCeilKey(9, I));
+  AssertTrue(I = 9);
+  AssertTrue(m.FindCeilKey(9, I, False));
+  AssertTrue(I = 12);
+  AssertTrue(m.FindCeilKey(13, I));
+  AssertTrue(I = 15);
+  AssertTrue(m.FindCeilKey(22, I));
+  AssertTrue(I = 24);
+  AssertTrue(m.FindCeilKey(27, I));
+  AssertTrue(I = 27);
+  AssertTrue(m.FindCeilKey(27, I, False));
+  AssertTrue(I = 30);
+end;
+
+procedure TLiteTreeMapTest.MakeEmptyTest;
+var
+  m: TIntMap;
+begin
+  m.AddAll([TIntEntry.Create(15,15), TIntEntry.Create(5,5), TIntEntry.Create(3,3)]);
+  AssertTrue(m.Count = 3);
+
+  m.MakeEmpty;
+  AssertTrue(m.Count = 0);
+  AssertTrue(m.Consistent);
+
+  m.AddAll([TIntEntry.Create(215,15), TIntEntry.Create(125,5), TIntEntry.Create(103,3)]);
+  AssertTrue(m.Count = 3);
+  AssertTrue(m.Consistent);
+end;
+
+procedure TLiteTreeMapTest.PassByValue;
+  procedure Test(aMap: TStrMap);
+  begin
+    aMap.Add('key0', 0);
+    aMap.Add('key1', 1);
+    aMap.Add('key2', 2);
+    AssertTrue(aMap.NonEmpty);
+    AssertTrue(aMap.Contains('key0'));
+    AssertTrue(aMap.Contains('key1'));
+    AssertTrue(aMap.Contains('key2'));
+  end;
+var
+  m: TStrMap;
+begin
+  m.EnsureCapacity(8);
+  AssertTrue(m.IsEmpty);
+  Test(m);
+  AssertTrue(m.IsEmpty);
+  AssertTrue(m.NonContains('key0'));
+  AssertTrue(m.NonContains('key1'));
+  AssertTrue(m.NonContains('key2'));
+end;
+
 initialization
   RegisterTest(TBaseTreeMapTest);
   RegisterTest(TComparableTreeMapTest);
   RegisterTest(TRegularTreeMapTest);
   RegisterTest(TDelegatedTreeMapTest);
+  RegisterTest(TLiteTreeMapTest);
 end.
 
