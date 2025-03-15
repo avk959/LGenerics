@@ -359,6 +359,8 @@ type
     TNode     = specialize TTGAvlNode2<TEntry>;
     PNode     = ^TNode;
     TNodeList = array of TNode;
+    TOnData   = procedure(const e: TEntry) of object;
+    TNestData = procedure(const e: TEntry) is nested;
 
   private
   type
@@ -429,6 +431,9 @@ type
   public
     function  GetEnumerator: TEnumerator;
     function  UnOrdered: TUnordEnumerator; inline;
+  { in-order traversal }
+    procedure Traverse(aOnData: TOnData);
+    procedure Traverse(aOnData: TNestData);
     procedure Clear; inline;
     procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -461,6 +466,8 @@ type
     TNode     = specialize TTGAvlNode2<TEntry>;
     PNode     = ^TNode;
     TNodeList = array of TNode;
+    TOnData   = procedure(const e: TEntry) of object;
+    TNestData = procedure(const e: TEntry) is nested;
 
   private
   type
@@ -529,6 +536,9 @@ type
   public
     function  GetEnumerator: TEnumerator;
     function  UnOrdered: TUnordEnumerator; inline;
+  { in-order traversal }
+    procedure Traverse(aOnData: TOnData);
+    procedure Traverse(aOnData: TNestData);
     procedure Clear; inline;
     procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
@@ -3380,6 +3390,32 @@ begin
   Result.init(@Self);
 end;
 
+procedure TGLiteAvlTree.Traverse(aOnData: TOnData);
+  procedure Visit(aNode: SizeInt);
+  begin
+    if aNode = 0 then exit;
+    Visit(FNodes[aNode].Left);
+    aOnData(FNodes[aNode].Data);
+    Visit(FNodes[aNode].Right);
+  end;
+begin
+  if (Count = 0) or (aOnData = nil) then exit;
+  Visit(Root);
+end;
+
+procedure TGLiteAvlTree.Traverse(aOnData: TNestData);
+  procedure Visit(aNode: SizeInt);
+  begin
+    if aNode = 0 then exit;
+    Visit(FNodes[aNode].Left);
+    aOnData(FNodes[aNode].Data);
+    Visit(FNodes[aNode].Right);
+  end;
+begin
+  if (Count = 0) or (aOnData = nil) then exit;
+  Visit(Root);
+end;
+
 procedure TGLiteAvlTree.Clear;
 begin
   FNodes := nil;
@@ -4308,6 +4344,32 @@ end;
 function TGLiteComparableAvlTree.UnOrdered: TUnordEnumerator;
 begin
   Result.Init(@Self);
+end;
+
+procedure TGLiteComparableAvlTree.Traverse(aOnData: TOnData);
+  procedure Visit(aNode: SizeInt);
+  begin
+    if aNode = 0 then exit;
+    Visit(FNodes[aNode].Left);
+    aOnData(FNodes[aNode].Data);
+    Visit(FNodes[aNode].Right);
+  end;
+begin
+  if (Count = 0) or (aOnData = nil) then exit;
+  Visit(Root);
+end;
+
+procedure TGLiteComparableAvlTree.Traverse(aOnData: TNestData);
+  procedure Visit(aNode: SizeInt);
+  begin
+    if aNode = 0 then exit;
+    Visit(FNodes[aNode].Left);
+    aOnData(FNodes[aNode].Data);
+    Visit(FNodes[aNode].Right);
+  end;
+begin
+  if (Count = 0) or (aOnData = nil) then exit;
+  Visit(Root);
 end;
 
 procedure TGLiteComparableAvlTree.Clear;
