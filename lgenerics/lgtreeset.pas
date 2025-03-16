@@ -2004,15 +2004,18 @@ end;
 
 function TGLiteTreeSet.ToArray: TArray;
 var
-  I: SizeInt = 0;
-  p: PEntry;
+  r: TArray;
+  rCnt: SizeInt = 0;
+  procedure Visit(const e: TEntry);
+  begin
+    r[rCnt] := e.Key;
+    Inc(rCnt);
+  end;
 begin
-  System.SetLength(Result, Count);
-  for p in FTree do
-    begin
-      Result[I] := p^.Key;
-      Inc(I);
-    end;
+  if FTree.Count = 0 then exit(nil);
+  System.SetLength(r, Count);
+  FTree.Traverse(@Visit);
+  Result := r;
 end;
 
 function TGLiteTreeSet.IsEmpty: Boolean;
