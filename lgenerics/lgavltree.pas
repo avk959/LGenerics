@@ -3399,7 +3399,7 @@ procedure TGLiteAvlTree.Traverse(aOnData: TOnData);
     Visit(FNodes[aNode].Right);
   end;
 begin
-  if (Count = 0) or (aOnData = nil) then exit;
+  if Count = 0 then exit;
   Visit(Root);
 end;
 
@@ -3412,7 +3412,7 @@ procedure TGLiteAvlTree.Traverse(aOnData: TNestData);
     Visit(FNodes[aNode].Right);
   end;
 begin
-  if (Count = 0) or (aOnData = nil) then exit;
+  if Count = 0 then exit;
   Visit(Root);
 end;
 
@@ -4355,7 +4355,7 @@ procedure TGLiteComparableAvlTree.Traverse(aOnData: TOnData);
     Visit(FNodes[aNode].Right);
   end;
 begin
-  if (Count = 0) or (aOnData = nil) then exit;
+  if Count = 0 then exit;
   Visit(Root);
 end;
 
@@ -4368,7 +4368,7 @@ procedure TGLiteComparableAvlTree.Traverse(aOnData: TNestData);
     Visit(FNodes[aNode].Right);
   end;
 begin
-  if (Count = 0) or (aOnData = nil) then exit;
+  if Count = 0 then exit;
   Visit(Root);
 end;
 
