@@ -2514,16 +2514,18 @@ end;
 
 function TGLiteTreeMap.ToArray: TEntryArray;
 var
-  I: SizeInt;
-  p: PEntry;
+  r: TEntryArray = nil;
+  rCnt: SizeInt = 0;
+  procedure Visit(const e: TEntry);
+  begin
+    r[rCnt] := e;
+    Inc(rCnt);
+  end;
 begin
-  System.SetLength(Result, Count);
-  I := 0;
-  for p in FTree do
-    begin
-      Result[I] := p^;
-      Inc(I);
-    end;
+  if FTree.Count = 0 then exit(nil);
+  System.SetLength(r, Count);
+  FTree.Traverse(@Visit);
+  Result := r;
 end;
 
 function TGLiteTreeMap.IsEmpty: Boolean;
