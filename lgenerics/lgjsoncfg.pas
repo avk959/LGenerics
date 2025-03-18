@@ -4,7 +4,7 @@
 *   Storing configuration data in JSON files, replicates                    *
 *   the TJSONConfig interface.                                              *
 *                                                                           *
-*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -75,6 +75,7 @@ type
     procedure Reload;
     procedure Clear;
     procedure Flush;
+    procedure Changed;
     procedure OpenKey(const aPath: string; aForceKey: Boolean);
     function  TryOpenKey(const aPath: string; aForceKey: Boolean): Boolean;
     procedure CloseKey;
@@ -109,6 +110,11 @@ type
 
     procedure DeletePath(const aPath: string);
     procedure DeleteValue(const aPath: string);
+  { returns False if instance does not contain the key specified in aOldPath or already contains
+    the key specified in aNewPath, otherwise renames the key and returns True }
+    function  RenameKey(const aOldPath, aNewPath: string): Boolean;
+  { closes the current key if it was opened before and removes all keys containing empty objects }
+    procedure Cleanup;
     property  Modified: Boolean read FModified;
     property  FormatStyle: TJsonFormatStyle read FFormatStyle write FFormatStyle;
   published
@@ -327,6 +333,11 @@ begin
     end;
 end;
 
+procedure TJsonConf.Changed;
+begin
+  FModified := True;
+end;
+
 procedure TJsonConf.OpenKey(const aPath: string; aForceKey: Boolean);
 begin
   if aPath = '' then
@@ -385,17 +396,15 @@ var
   I, Len: Integer;
 begin
   Node := FindPath(aPath, False);
-  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  if Node = nil then exit(nil);
+  System.SetLength(r, Node.Count);
   Len := 0;
-  if Node <> nil then
-    for I := 0 to Pred(Node.Count) do
-      if Node.Items[I].IsObject then
-        begin
-          if System.Length(r) = Len then
-            System.SetLength(r, Len * 2);
-          r[Len] := Node.Pairs[I].Key;
-          Inc(Len);
-        end;
+  for I := 0 to Pred(Node.Count) do
+    if Node.Items[I].IsObject then
+      begin
+        r[Len] := Node.Pairs[I].Key;
+        Inc(Len);
+      end;
   System.SetLength(r, Len);
   Result := r;
 end;
@@ -744,12 +753,56 @@ var
 begin
   if (aPath = '') or (aPath = '/') then exit;
   Node := FindObj(StripSlash(aPath), False, Key);
-  FModified := FModified or (Node <> nil) and Node.Remove(Key);
+  if (Node <> nil) and Node.Remove(Key) then
+    FModified := True;
 end;
 
 procedure TJsonConf.DeleteValue(const aPath: string);
 begin
   DeletePath(aPath);
+end;
+
+function TJsonConf.RenameKey(const aOldPath, aNewPath: string): Boolean;
+var
+  OldNode, NewNode, OldValue: TJsonNode;
+  OldKey, NewKey: string;
+begin
+  if (aOldPath = '') or (aOldPath = '/') or (aNewPath = '') or (aNewPath = '/') then
+    exit(False);
+  OldNode := FindObj(StripSlash(aOldPath), False, OldKey);
+  if (OldNode = nil) or not OldNode.Find(OldKey, OldValue) then exit(False);
+  if FindElem(StripSlash(aNewPath), False, True) <> nil then exit(False);
+  NewNode := FindObj(StripSlash(aNewPath), True, NewKey);
+  NewNode.AddNode(NewKey).CopyFrom(OldValue);
+  OldNode.Remove(OldKey);
+  FModified := True;
+  Result := True;
+end;
+
+procedure TJsonConf.Cleanup;
+  procedure DoClean(aNode: TJsonNode);
+  var
+    I: SizeInt;
+    Value: TJsonNode;
+  begin
+    if aNode.IsObject then
+      for I := Pred(aNode.Count) downto 0 do
+        begin
+          Value := aNode.Items[I];
+          if Value.IsObject then
+            begin
+              DoClean(Value);
+              if Value.Count = 0 then
+                begin
+                  aNode.Delete(I);
+                  FModified := True;
+                end;
+            end;
+        end;
+  end;
+begin
+  FCurrNode := FRoot;
+  DoClean(FRoot);
 end;
 
 end.
