@@ -110,10 +110,11 @@ type
 
     procedure DeletePath(const aPath: string);
     procedure DeleteValue(const aPath: string);
-  { returns False if instance does not contain the key specified in aOldPath or already contains
-    the key specified in aNewPath, otherwise renames the key and returns True }
+  { returns False if instance does not contain the key specified in aOldPath or already
+    contains the key specified in aNewPath, otherwise renames the key and returns True }
     function  RenameKey(const aOldPath, aNewPath: string): Boolean;
-  { closes the current key if it was opened before and removes all keys containing empty objects }
+  { closes the current key if it was opened before and recursively removes
+    all keys containing empty objects }
     procedure Cleanup;
     property  Modified: Boolean read FModified;
     property  FormatStyle: TJsonFormatStyle read FFormatStyle write FFormatStyle;
@@ -766,6 +767,8 @@ function TJsonConf.RenameKey(const aOldPath, aNewPath: string): Boolean;
 var
   OldNode, NewNode, OldValue: TJsonNode;
   OldKey, NewKey: string;
+  Path: TStringArray;
+  I: SizeInt;
 begin
   if (aOldPath = '') or (aOldPath = '/') or (aNewPath = '') or (aNewPath = '/') then
     exit(False);
@@ -774,6 +777,17 @@ begin
   if FindElem(StripSlash(aNewPath), False, True) <> nil then exit(False);
   NewNode := FindObj(StripSlash(aNewPath), True, NewKey);
   NewNode.AddNode(NewKey).CopyFrom(OldValue);
+  if OldValue.IsObject and (FCurrNode <> FRoot) then // check that OldValue does not belong
+    begin                                            // to the path of the current key
+      Path := nil;
+      if FRoot.TryGetPath(FCurrNode, Path) then
+        for I := System.High(Path) downto 0 do
+          if FRoot.FindPath(Path[0..I]) = OldValue then
+            begin
+              FCurrNode := FRoot;
+              break;
+            end;
+    end;
   OldNode.Remove(OldKey);
   FModified := True;
   Result := True;
