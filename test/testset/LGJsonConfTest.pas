@@ -12,7 +12,7 @@ uses
 
 type
 
-  { TTestJsonConf  just repeats tests for TJSONConfig}
+  { TTestJsonConf  mostly repeats tests for TJSONConfig}
   TTestJsonConf = class(TTestCase)
   private
     function  CreateConf(const aFileName: string): TJsonConf;
@@ -29,6 +29,8 @@ type
     procedure TestVarArray;
     procedure TestPairArray;
     procedure TestDuplicates;
+    procedure TestRename;
+    procedure TestCleanup;
   end;
 
 implementation
@@ -83,7 +85,7 @@ begin
     AssertEquals('Boolean Read/Write', d, Conf.GetValue('d', False));
     AssertEquals('Int64 Read/Write', e, Conf.GetValue('e', Int64(0)));
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -100,7 +102,7 @@ begin
     AssertEquals('Read at root', 2, Conf.GetValue('b/a', 2));
     AssertEquals('Read at root', 3, Conf.GetValue('b/c/a', 3));
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -123,7 +125,7 @@ begin
     AssertEquals('EnumSubkeys first element', List.Instance[0], 'b');
     AssertEquals('EnumSubkeys second element', List.Instance[1], 'c');
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -150,7 +152,7 @@ begin
     AssertEquals('EnumValues subkey first element', 'a', List.Instance[0]);
     AssertEquals('EnumValues subkey second element', 'b', List.Instance[1]);
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -179,7 +181,7 @@ begin
     Conf.Clear;
     AssertEquals('Clear', 0, Conf.GetValue('/a', 0));
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -226,7 +228,7 @@ begin
     AssertEquals('OpenKey with aForceKey, level 3', 1, List.Instance.Count);
     AssertEquals('OpenKey with aForceKey, level 3', 'd', List.Instance[0]);
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -266,7 +268,7 @@ begin
     Conf.GetValue('a', List.Instance, '');
     AssertStrings('Int64', List.Instance, ['1']);
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -293,7 +295,7 @@ begin
     a := Conf.GetValue('/a', [1]);
     AssertEquals('GetValue after set empty, length', 0, Length(a));
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -316,7 +318,7 @@ begin
     I64 := Conf.GetValue('/b/d', Int64(0));
     AssertEquals('GetValue b/c', -9007199254740991, I64);
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
   end;
 end;
 
@@ -387,7 +389,71 @@ begin
     I := Conf.GetValue('a/c', Integer(0));
     AssertEquals('GetValue a/b after overrite', 1001, I);
   finally
-    ClearConf(Conf, True);
+    ClearConf(Conf);
+  end;
+end;
+
+procedure TTestJsonConf.TestRename;
+var
+  Conf: TJsonConf;
+begin
+  Conf := CreateConf('test.json');
+  try
+    Conf.SetValue('/a/b/c', Integer(42));
+    AssertTrue(Conf.GetValue('/a/b/c', Integer(0)) = 42);
+    Conf.SetValue('/a/b/d', Integer(1001));
+    AssertTrue(Conf.GetValue('/a/b/d', Integer(0)) = 1001);
+    AssertTrue(Conf.RenameKey('/a/b/c', '/a/b/e/f'));
+    AssertTrue(Conf.RenameKey('/a/b/d', '/a/b/g/h'));
+    AssertTrue(Conf.GetValue('/a/b/c', Integer(0)) = 0);
+    AssertTrue(Conf.GetValue('/a/b/e/f', Integer(0)) = 42);
+    AssertTrue(Conf.GetValue('/a/b/d', Integer(0)) = 0);
+    AssertTrue(Conf.GetValue('/a/b/g/h', Integer(0)) = 1001);
+
+    Conf.Clear;
+
+    Conf.SetValue('/a/b/c', Integer(42));
+    Conf.SetValue('/a/b/d', Integer(1001));
+    Conf.OpenKey('/a/b', False);
+    AssertTrue(Conf.GetValue('c', Integer(0)) = 42);
+    AssertTrue(Conf.GetValue('d', Integer(0)) = 1001);
+    AssertTrue(Conf.RenameKey('c', 'e/f'));
+    AssertTrue(Conf.RenameKey('d', 'g/h'));
+    AssertTrue(Conf.GetValue('c', Integer(0)) = 0);
+    AssertTrue(Conf.GetValue('e/f', Integer(0)) = 42);
+    AssertTrue(Conf.GetValue('/a/b/e/f', Integer(0)) = 42);
+    AssertTrue(Conf.GetValue('d', Integer(0)) = 0);
+    AssertTrue(Conf.GetValue('g/h', Integer(0)) = 1001);
+    AssertTrue(Conf.GetValue('/a/b/g/h', Integer(0)) = 1001);
+  finally
+    ClearConf(Conf);
+  end;
+end;
+
+procedure TTestJsonConf.TestCleanup;
+var
+  Conf: TJsonConf;
+  sk: TStringArray;
+begin
+  Conf := CreateConf('test.json');
+  try
+    Conf.SetValue('/a/b/c/a', Integer(42));
+    Conf.SetValue('/d/e/f/a', Integer(1001));
+    Conf.SetValue('/g/h/i/a', Integer(777));
+    sk := Conf.EnumSubKeys('');
+    AssertTrue(Length(sk) = 3);
+
+    Conf.DeleteValue('/a/b/c/a');
+    Conf.DeleteValue('/d/e/f/a');
+    Conf.DeleteValue('/g/h/i/a');
+    sk := Conf.EnumSubKeys('');
+    AssertTrue(Length(sk) = 3);
+
+    Conf.Cleanup;
+    sk := Conf.EnumSubKeys('');
+    AssertTrue(Length(sk) = 0);
+  finally
+    ClearConf(Conf);
   end;
 end;
 
