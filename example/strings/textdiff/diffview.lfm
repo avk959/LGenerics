@@ -1,0 +1,249 @@
+object frmDiffView: TfrmDiffView
+  Left = 352
+  Height = 875
+  Top = 250
+  Width = 1332
+  BorderIcons = [biSystemMenu, biMaximize]
+  Caption = 'frmDiffView'
+  ClientHeight = 875
+  ClientWidth = 1332
+  DesignTimePPI = 115
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  Position = poScreenCenter
+  ShowHint = True
+  LCLVersion = '3.0.0.2'
+  object pnView: TPanel
+    Left = 0
+    Height = 816
+    Top = 31
+    Width = 1332
+    Align = alClient
+    BevelOuter = bvNone
+    Caption = 'pnView'
+    ClientHeight = 816
+    ClientWidth = 1332
+    ParentBackground = False
+    TabOrder = 0
+    object sgSource: TStringGrid
+      Left = 0
+      Height = 816
+      Top = 0
+      Width = 668
+      Align = alLeft
+      AutoAdvance = aaNone
+      AutoEdit = False
+      ColCount = 3
+      ExtendedSelect = False
+      FixedCols = 0
+      FixedRows = 0
+      Flat = True
+      Options = [goHorzLine, goRowSelect, goSmoothScroll, goRowHighlight]
+      ParentFont = False
+      ScrollBars = ssVertical
+      TabOrder = 0
+      OnPrepareCanvas = sgSourcePrepareCanvas
+      OnResize = sgSourceResize
+      OnSelection = sgSourceSelection
+      OnTopLeftChanged = sgSourceTopLeftChanged
+    end
+    object Splitter1: TSplitter
+      Left = 668
+      Height = 816
+      Top = 0
+      Width = 6
+      ResizeStyle = rsPattern
+    end
+    object sgTarget: TStringGrid
+      Left = 674
+      Height = 816
+      Top = 0
+      Width = 658
+      Align = alClient
+      AutoAdvance = aaNone
+      AutoEdit = False
+      ColCount = 3
+      ExtendedSelect = False
+      FixedCols = 0
+      FixedRows = 0
+      Flat = True
+      Options = [goHorzLine, goRowSelect, goSmoothScroll, goRowHighlight]
+      ParentFont = False
+      ScrollBars = ssVertical
+      TabOrder = 2
+      OnPrepareCanvas = sgTargetPrepareCanvas
+      OnResize = sgTargetResize
+      OnSelection = sgTargetSelection
+      OnTopLeftChanged = sgTargetTopLeftChanged
+    end
+  end
+  object ToolBar1: TToolBar
+    Left = 0
+    Height = 31
+    Top = 0
+    Width = 1332
+    Caption = 'ToolBar1'
+    EdgeBorders = [ebTop, ebBottom]
+    Images = frmMain.imlMain
+    List = True
+    ShowCaptions = True
+    TabOrder = 1
+    object ToolButton1: TToolButton
+      Left = 1
+      Height = 8
+      Top = 2
+      Caption = 'ToolButton1'
+      Style = tbsSeparator
+    end
+    object ToolButton2: TToolButton
+      Left = 9
+      Top = 2
+      Action = acShowLineDiffs
+      AutoSize = True
+    end
+    object ToolButton3: TToolButton
+      Left = 167
+      Height = 8
+      Top = 2
+      Caption = 'ToolButton3'
+      Style = tbsSeparator
+    end
+    object ToolButton4: TToolButton
+      Left = 175
+      Top = 2
+      Action = acFirstBlock
+      AutoSize = True
+    end
+    object ToolButton5: TToolButton
+      Left = 232
+      Top = 2
+      Action = acPrevBlock
+      AutoSize = True
+    end
+    object ToolButton6: TToolButton
+      Left = 315
+      Top = 2
+      Action = acNextBlock
+      AutoSize = True
+    end
+    object ToolButton7: TToolButton
+      Left = 374
+      Top = 2
+      Action = acLastBlock
+      AutoSize = True
+    end
+    object ToolButton8: TToolButton
+      Left = 430
+      Height = 8
+      Top = 2
+      Caption = 'ToolButton8'
+      Style = tbsSeparator
+    end
+    object ToolButton9: TToolButton
+      Left = 438
+      Top = 2
+      Action = acClose
+      AutoSize = True
+    end
+    object ToolButton10: TToolButton
+      Left = 502
+      Height = 8
+      Top = 2
+      Caption = 'ToolButton10'
+      Style = tbsSeparator
+    end
+  end
+  object stbStatus: TStatusBar
+    Left = 0
+    Height = 28
+    Top = 847
+    Width = 1332
+    Panels = <    
+      item
+        Width = 300
+      end    
+      item
+        Width = 300
+      end    
+      item
+        Style = psOwnerDraw
+        Width = 150
+      end    
+      item
+        Style = psOwnerDraw
+        Width = 150
+      end    
+      item
+        Style = psOwnerDraw
+        Width = 150
+      end    
+      item
+        Style = psOwnerDraw
+        Width = 200
+      end    
+      item
+        Width = 1
+      end>
+    SimplePanel = False
+    OnDrawPanel = stbStatusDrawPanel
+  end
+  object aclstDiffView: TActionList
+    Images = frmMain.imlMain
+    Left = 276
+    Top = 173
+    object acFirstBlock: TAction
+      Category = 'Navigate'
+      Caption = 'First'
+      Hint = 'To first change|Go to the first change block'
+      ImageIndex = 10
+      OnExecute = acFirstBlockExecute
+      OnUpdate = acFirstBlockUpdate
+      ShortCut = 16454
+    end
+    object acPrevBlock: TAction
+      Category = 'Navigate'
+      Caption = 'Previous'
+      Hint = 'To previous change|Go to the previous change block'
+      ImageIndex = 11
+      OnExecute = acPrevBlockExecute
+      OnUpdate = acPrevBlockUpdate
+      ShortCut = 16464
+    end
+    object acNextBlock: TAction
+      Category = 'Navigate'
+      Caption = 'Next'
+      Hint = 'To next change|Go to the next change block'
+      ImageIndex = 12
+      OnExecute = acNextBlockExecute
+      OnUpdate = acNextBlockUpdate
+      ShortCut = 16462
+    end
+    object acLastBlock: TAction
+      Category = 'Navigate'
+      Caption = 'Last'
+      Hint = 'To last change|Go to the last change block'
+      ImageIndex = 13
+      OnExecute = acLastBlockExecute
+      OnUpdate = acLastBlockUpdate
+      ShortCut = 16460
+    end
+    object acShowLineDiffs: TAction
+      Category = 'View'
+      AutoCheck = True
+      Caption = 'Show line differences'
+      Hint = 'Show line difference in substitutions'
+      ImageIndex = 14
+      OnExecute = acShowLineDiffsExecute
+      ShortCut = 24652
+    end
+    object acClose: TAction
+      Category = 'File'
+      Caption = 'Close'
+      Hint = 'Close window'
+      ImageIndex = 15
+      OnExecute = acCloseExecute
+      ShortCut = 27
+    end
+  end
+end

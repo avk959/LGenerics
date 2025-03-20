@@ -403,7 +403,7 @@ type
   { returns the list of edges of each found block in the corresponding elements of the aBlocks }
     procedure FindBlocks(const aVertex: TVertex; out aBlocks: TEdgeArrayVector);
     procedure FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
-  { returns the vertex index sets of each block found }
+  { returns sets of vertex indices for each block found }
     function  FindBlocks: TIntMatrix;
   { if the number of vertices is not less than 3, make instance biconnected, adding,
     if necessary, new edges; returns count of added edges;
@@ -1038,7 +1038,7 @@ end;
 procedure TGSimpleGraph.TPlanarEmbedding.Init(aNodeCount, aEdgeCount, aCompCount: SizeInt);
 begin
   FNodeList := TIntArray.Construct(aNodeCount, NULL_INDEX);
-  System.SetLength(FEdgeList, aEdgeCount shl 1);
+  System.SetLength(FEdgeList, aEdgeCount * 2);
   System.SetLength(FComponents, aCompCount);
   FCounter := 0;
 end;
