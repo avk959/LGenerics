@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSONPath(RFC 9535) implementation: query expressions for JSON.          *
 *                                                                           *
-*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1286,10 +1286,10 @@ type
     FPathHolder: specialize TGLiteVector<string>;
     FMatchPathCollector: specialize TGLiteVector<TJpNode>;
     function  EncodeSegment(const s: string): string;
-    procedure PathPush(const aSegment: string); inline;
-    procedure PathPush(aSegment: SizeInt); inline;
+    procedure PathPush(const aSegment: string);
+    procedure PathPush(aSegment: SizeInt);
     procedure PathPop; inline;
-    procedure AddMatchWithPath(aNode: TJsonNode); inline;
+    procedure AddMatchWithPath(aNode: TJsonNode);
     procedure ApplySliceWithPath(aSel: TSelector; aNode: TJsonNode);
     procedure ApplySelectorWithPath(aSel: TSelector; aRoot: TJsonNode; aDesc: Boolean = False);
     procedure ApplySegmentWithPath(aSegment: TSegment; aRoot: TJsonNode);
@@ -1565,7 +1565,7 @@ type
     procedure DblQuoteNameEscape; inline;
     function  GetDblQuoteName: string;
     procedure ParseInt(out aValue: Int64);
-    procedure IndexOrSlice(aSegment: TSegment); inline;
+    procedure IndexOrSlice(aSegment: TSegment);
     procedure Slice(aSegment: TSegment; const aStart: TOptionalInt);
     procedure CheckBoolOperand(aExpr: TJpExpression); inline;
     function  ExprLevel0(aSkip: Boolean): TJpExpression;
