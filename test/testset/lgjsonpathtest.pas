@@ -7,35 +7,18 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry, FileUtil,
   LgUtils,
+  LgVector,
   LgJson,
   LgJsonPath;
 
 const
-  TEST_DIR       = 'json_testset';
-  SPEC_DIR       = 'json_path';
-  FUNC_DIR       = 'functions';
-  WS_DIR         = 'whitespace';
-  BASIC_TEST     = 'basic.json';
-  FILTER_TEST    = 'filter.json';
-  INDEX_TEST     = 'index_selector.json';
-  NAME_TEST      = 'name_selector.json';
-  SLICE_TEST     = 'slice_selector.json';
-  COUNT_TEST     = 'count.json';
-  LENGTH_TEST    = 'length.json';
-  MATCH_TEST     = 'match.json';
-  SEARCH_TEST    = 'search.json';
-  VALUE_TEST     = 'value.json';
-  REGRESS_TEST   = 'regress.json';
-  WS_FILTER_TEST = 'filter.json';
-  WS_FUNC_TEST   = 'functions.json';
-  WS_OPER_TEST   = 'operators.json';
-  WS_SELECT_TEST = 'selectors.json';
-  WS_SLICE_TEST  = 'slice.json';
+  TEST_DIR     = 'json_testset';
+  SPEC_DIR     = 'json_path';
+  CTS_JSON     = 'cts.json';
+  REGRESS_JSON = 'regress.json';
 
 var
   TestDir: string = '';
-  FunTestDir: string = '';
-  WsTestDir: string = '';
 
 type
 
@@ -43,28 +26,17 @@ type
 
   TTestJsonPath = class(TTestCase)
   private
+  type
+    TJsonVect = specialize TGLiteVector<TJsonNode>;
+    TStrVect  = specialize TGLiteVector<string>;
     function  FalseReject(const aName, aQuery: string): string;
     function  FalseAccept(const aName, aQuery: string): string;
     function  Expected(const aName: string; aExpect: TJsonNode; aGot: TJpValueList): string;
-    function  TestEqual(aLeft: TJpValueList; aRight: TJsonNode): Boolean;
-    procedure RunTestSet(aTestSet: TJsonNode);
+    function  ExpectedValues(aLeft: TJpValueList; aRight: TJsonNode): Boolean;
+    function  ExpectedList(const aList: TJpNodeList; aValues, aPaths: TJsonNode): Boolean;
   published
-    procedure TestBasic;
-    procedure TestFilter;
     procedure TestFilterGarbage;
-    procedure TestIndex;
-    procedure TestName;
-    procedure TestSlice;
-    procedure TestCountFun;
-    procedure TestLengthFun;
-    procedure TestMatchFun;
-    procedure TestSearchFun;
-    procedure TestValueFun;
-    procedure TestFilterWs;
-    procedure TestFunctionWs;
-    procedure TestOperatorWs;
-    procedure TestSelectorWs;
-    procedure TestSliceWs;
+    procedure CtsTest;
     procedure TestMore;
     procedure IRegexpPass;
     procedure IRegexpFail;
@@ -115,6 +87,7 @@ type
   end;
 
 implementation
+{$B-}
 
 function TTestJsonPath.FalseReject(const aName, aQuery: string): string;
 const
@@ -137,78 +110,46 @@ begin
   Result := Format(Fmt, [aName, aExpect.AsJson, aGot.AsJson]);
 end;
 
-function TTestJsonPath.TestEqual(aLeft: TJpValueList; aRight: TJsonNode): Boolean;
+function TTestJsonPath.ExpectedValues(aLeft: TJpValueList; aRight: TJsonNode): Boolean;
 var
+  ValList: TJsonVect;
   I: SizeInt;
   Node: TJsonNode;
-  Found: Boolean;
 begin
   if not aRight.IsArray then exit(False);
   if Length(aLeft) <> aRight.Count then exit(False);
+  for Node in aRight do
+    ValList.Add(Node);
   for Node in aLeft do
-    begin
-      Found := False;
-      for I := 0 to Pred(aRight.Count) do
-        if Node.EqualTo(aRight.Items[I]) then
-          begin
-            Found := True;
-            break;
-          end;
-      if not Found then exit(False);
-    end;
-  Result := True;
-end;
-
-procedure TTestJsonPath.RunTestSet(aTestSet: TJsonNode);
-var
-  CurrTest, Doc, Expect, Invalid: TJsonNode;
-  GotOut: TJpValueList;
-  TstName, Query: string;
-  Path: IJsonPath;
-begin
-  for CurrTest in aTestSet do
-    begin
-      AssertTrue(CurrTest.IsObject);
-      AssertTrue(CurrTest.Find('selector', Doc));
-      Query := Doc.AsString;
-      AssertTrue(CurrTest.Find('name', Doc));
-      TstName := Doc.AsString;
-      if CurrTest.Find('invalid_selector', Invalid) then
-        AssertFalse(FalseAccept(TstName, Query), JpParseQuery(Query, Path))
-      else
+    for I := 0 to Pred(ValList.Count) do
+      if Node.EqualTo(ValList[I]) then
         begin
-          AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
-          AssertTrue(CurrTest.Find('document', Doc));
-          AssertTrue(CurrTest.Find('result', Expect));
-          GotOut := Path.MatchValues(Doc);
-          AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
+          ValList.Extract(I);
+          break;
         end;
-    end;
+  Result := ValList.IsEmpty;
 end;
 
-procedure TTestJsonPath.TestBasic;
+function TTestJsonPath.ExpectedList(const aList: TJpNodeList; aValues, aPaths: TJsonNode): Boolean;
 var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
+  VList: TJsonVect;
+  PList: TStrVect;
+  Node: TJsonNode;
+  I, J: SizeInt;
 begin
-  AssertTrue(DirectoryExists(TestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + BASIC_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestFilter;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + FILTER_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
+  for Node in aValues.Items[0] do
+    VList.Add(Node);
+  for Node in aPaths.Items[0] do
+    PList.Add(Node.AsString);
+  for I := 0 to High(aList) do
+    for J := 0 to Pred(VList.Count) do
+      if aList[I].Value.EqualTo(VList[J]) then begin
+        if aList[I].Path <> PList[J] then exit(False);
+        VList.Extract(J);
+        PList.Extract(J);
+        break;
+      end;
+  Result := VList.IsEmpty;
 end;
 
 procedure TTestJsonPath.TestFilterGarbage;
@@ -226,160 +167,117 @@ begin
   AssertFalse(JpParseQuery('$.list[?@.name == "value" null]', I));
 end;
 
-procedure TTestJsonPath.TestIndex;
+procedure TTestJsonPath.CtsTest;
 var
+  TestLog: specialize TGAutoRef<TStringList>;
   TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
+  Tests, CurrTest, Sel, Doc, Res, ResPaths, Node: TJsonNode;
+  Matcher: IJsonPath;
+  GotList: TJpNodeList;
+  TestFile, TstName: string;
+  Log: TStringList;
+  I, J: Integer;
+const
+  Fmt = 'Test #%d("%s"): %s';
 begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + INDEX_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestName;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + NAME_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestSlice;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + SLICE_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestCountFun;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(FunTestDir + COUNT_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestLengthFun;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(FunTestDir + LENGTH_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestMatchFun;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(FunTestDir + MATCH_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestSearchFun;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(FunTestDir + SEARCH_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestValueFun;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(FunTestDir + VALUE_TEST);
-  AssertTrue(TestSet.Instance <> nil);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestFilterWs;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  AssertTrue(DirectoryExists(WsTestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_FILTER_TEST);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestFunctionWs;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  AssertTrue(DirectoryExists(WsTestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_FUNC_TEST);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestOperatorWs;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  AssertTrue(DirectoryExists(WsTestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_OPER_TEST);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestSelectorWs;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  AssertTrue(DirectoryExists(WsTestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_SELECT_TEST);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
-end;
-
-procedure TTestJsonPath.TestSliceWs;
-var
-  TestSet: specialize TGAutoRef<TJsonNode>;
-  Tests: TJsonNode;
-begin
-  AssertTrue(DirectoryExists(WsTestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(WsTestDir + WS_SLICE_TEST);
-  AssertTrue(TestSet.Instance.Find('tests', Tests));
-  AssertTrue(Tests.IsArray);
-  RunTestSet(Tests);
+  Log := TestLog;
+  I := -1;
+  if not DirectoryExists(TestDir) then
+    Log.Add('TestDir not found')
+  else begin
+    TestFile := TestDir + 'cts.json';
+    if not FileExists(TestFile) then
+      Log.Add('cts.json not found')
+    else begin
+      {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestFile);
+      if not TestSet.Instance.Find('tests', Tests) then
+        Log.Add('tests entry in cts.json not found')
+      else
+        if not Tests.IsArray then
+          Log.Add('tests entry in cts.json is not array')
+        else
+          if Tests.Count = 0 then
+            Log.Add('tests entry in cts.json is empty')
+          else
+            for CurrTest in Tests do begin
+              Inc(I);
+              if not(CurrTest.Find('name', Node) and Node.IsString) then begin
+                Log.Add(Format('Test #%d does not have a name, ignored', [I]));
+                continue;
+              end;
+              TstName := Node.AsString;
+              if not(CurrTest.Find('selector', Sel) and Sel.IsString)then begin
+                Log.Add(Format(Fmt, [I, TstName, 'selector not found, ignored']));
+                continue;
+              end;
+              if CurrTest.Find('invalid_selector', Node) and Node.IsTrue then begin
+                if JpParseQuery(Sel.AsString, Matcher) then
+                  Log.Add(Format(Fmt, [I, TstName, 'false query accept']));
+                continue;
+              end else
+                if not JpParseQuery(Sel.AsString, Matcher) then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'false query reject']));
+                  continue;
+                end;
+              if not CurrTest.Find('document', Doc) then begin
+                Log.Add(Format(Fmt, [I, TstName, 'document not found, ignored']));
+                continue;
+              end;
+              GotList := Matcher.Match(Doc);
+              if CurrTest.Find('results', Res) then begin
+                if not Res.IsArray then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'non-array results, ignored']));
+                  continue;
+                end;
+                if Res.Count < 2 then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'results too small, ignored']));
+                  continue;
+                end;
+                if not(CurrTest.Find('results_paths', ResPaths) and ResPaths.IsArray) then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'results_paths not found, ignored']));
+                  continue;
+                end;
+                if (Res.Count <> ResPaths.Count) or (Res.Items[0].Count <> ResPaths.Items[0].Count) then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'results size does not match paths size, ignored']));
+                  continue;
+                end;
+                if not ExpectedList(GotList, Res, ResPaths) then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'unexpected result']));
+                end;
+              end else begin
+                if not(CurrTest.Find('result', Res) and Res.IsArray) then
+                  begin
+                    Log.Add(Format(Fmt, [I, TstName, 'result array not found, ignored']));
+                    continue;
+                  end;
+                if not(CurrTest.Find('result_paths', ResPaths) and ResPaths.IsArray) then
+                  begin
+                    Log.Add(Format(Fmt, [I, TstName, 'path array not found, ignored']));
+                    continue;
+                  end;
+                if Res.Count <> ResPaths.Count then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'result size does not match path size, ignored']));
+                  continue;
+                end;
+                if Length(GotList) <> Res.Count then begin
+                  Log.Add(Format(Fmt, [I, TstName, 'unexpected result size']));
+                  continue;
+                end;
+                for J := 0 to High(GotList) do begin
+                  if not GotList[J].Value.EqualTo(Res.Items[J]) then begin
+                    Log.Add(Format(Fmt, [I, TstName, 'result value mismatch']));
+                    break;
+                  end;
+                  if GotList[J].Path <> ResPaths.Items[J].AsString then begin
+                    Log.Add(Format(Fmt, [I, TstName, 'result path mismatch']));
+                    break;
+                  end;
+                end;
+              end;
+            end;
+    end;
+  end;
+  AssertTrue(Log.Text, Log.Count = 0);
 end;
 
 procedure TTestJsonPath.TestMore;
@@ -391,7 +289,7 @@ var
   Path: IJsonPath;
 begin
   AssertTrue(DirectoryExists(TestDir));
-  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + REGRESS_TEST);
+  {%H-}TestSet.Instance := TJsonNode.LoadFromFile(TestDir + REGRESS_JSON);
   AssertTrue(TestSet.Instance <> nil);
   AssertTrue(TestSet.Instance.Find('queries', Tests));
   AssertTrue(Tests.IsArray);
@@ -412,7 +310,7 @@ begin
               AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
               AssertTrue(CurrTest.Find('document', Doc));
               GotOut := Path.MatchValues(Doc);
-              AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
+              AssertTrue(Expected(TstName, Expect, GotOut), ExpectedValues(GotOut, Expect));
             end;
         end
       else
@@ -425,7 +323,7 @@ begin
                 AssertTrue(FalseReject(TstName, Query), JpParseQuery(Query, Path));
                 AssertTrue(CurrTest.Find('document', Doc));
                 GotOut := Path.MatchValues(Doc);
-                AssertTrue(Expected(TstName, Expect, GotOut), TestEqual(GotOut, Expect));
+                AssertTrue(Expected(TstName, Expect, GotOut), ExpectedValues(GotOut, Expect));
               end;
           end
         else
@@ -1123,15 +1021,7 @@ begin
   Dir := Dir + DirectorySeparator + TEST_DIR + DirectorySeparator;
   Dir := Dir + SPEC_DIR + DirectorySeparator;
   if DirectoryExists(Dir) then
-    begin
-      TestDir := Dir;
-      Dir := Dir + FUNC_DIR + DirectorySeparator;
-      if DirectoryExists(Dir) then
-        FunTestDir := Dir;
-      Dir := TestDir + WS_DIR + DirectorySeparator;
-      if DirectoryExists(Dir) then
-        WsTestDir := Dir;
-    end;
+    TestDir := Dir;
 end;
 
 initialization
