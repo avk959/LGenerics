@@ -72,6 +72,8 @@ type
     procedure TestIsStruct;
     procedure TestContains;
     procedure TestContainsText;
+    procedure TestHasWord;
+    procedure TestHasWordCi;
     procedure TestSameText;
     procedure TestStartsWith;
     procedure TestEndsWith;
@@ -749,6 +751,38 @@ const
     (Value: '["in", "one", "nand"]';         Query: '$[?contains_text(@, "An")]';         Expected: '["nand"]'),
     (Value: '{"один":[42],"два":[0]}';       Query: '$..[?contains_text(key(),"ДИ")]';    Expected: '[[42]]'),
     (Value: '[{"код":"000"},{"код":"010"}]'; Query: '$[?@[?contains_text(@, "10")]].код'; Expected: '["010"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestHasWord;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (Value: '[42, "sfoo", "fooz"]';       Query: '$[?has_word(@, "foo")]';     Expected: '[]'),
+    (Value: '["barbar", "i bar", "bar"]'; Query: '$[?has_word(@, "bar")]';     Expected: '["i bar","bar"]'),
+    (Value: '["in", "fin", "ino"]';       Query: '$[?has_word(@, "in")]';      Expected: '["in"]'),
+    (Value: '{"из-под":[42],"низ":[0]}';  Query: '$..[?has_word(key(),"из")]'; Expected: '[[42]]'),
+    (Value: '["кода","шкод","1-код-2"]';  Query: '$[?has_word(@, "код")]';     Expected: '["1-код-2"]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestHasWordCi;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (Value: '[42, "sfoo", "fooz"]';       Query: '$[?has_word_ci(@, "FOO")]';     Expected: '[]'),
+    (Value: '["barbar", "i bar", "bar"]'; Query: '$[?has_word_ci(@, "BAR")]';     Expected: '["i bar","bar"]'),
+    (Value: '["in", "fin", "ino"]';       Query: '$[?has_word_ci(@, "IN")]';      Expected: '["in"]'),
+    (Value: '{"из-под":[42],"низ":[0]}';  Query: '$..[?has_word_ci(key(),"ИЗ")]'; Expected: '[[42]]'),
+    (Value: '["кода","шкод","1-код-2"]';  Query: '$[?has_word_ci(@, "КОД")]';     Expected: '["1-код-2"]')
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
