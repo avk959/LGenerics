@@ -164,6 +164,16 @@ uses
     contains_text(Input, Pattern)
       case insensitive version of contains()
 
+    has_word(Input, Pattern)
+      Input type must be a ValueType;
+      Pattern type must be a ValueType;
+      result type is a LogicalType;
+        returns boolean True if Input is a string and Pattern is a string
+        and Pattern is a substring of Input located on the word boundaries;
+
+    has_word_ci(Input, Pattern)
+      case insensitive version of has_word()
+
     same_text(Arg1, Arg2)
       Arg1 type must be a ValueType;
       Arg2 type must be a ValueType;
@@ -5793,10 +5803,32 @@ procedure CallContainsText(const aList: TJpParamList; out aResult: TJpInstance);
 var
   InText, Pattern: string;
 begin
-  aResult :=
-    (System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern) and
-    (System.Pos(LgSeqUtils.Utf8ToLower(Pattern), LgSeqUtils.Utf8ToLower(InText)) > 0)
+  if(System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern)then
+    aResult := TKmpSearchCI.Create(Pattern).NextMatch(InText).Offset > 0
+  else
+    aResult := False;
 end;
+{ has_word() -- case sensitive }
+procedure CallHasWord(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  if(System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern)then
+    aResult := TKmpSearch.Create(Pattern, True).NextMatch(InText) > 0
+  else
+    aResult := False;
+end;
+{ has_word_ci() -- case insensitive }
+procedure CallHasWordCI(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  InText, Pattern: string;
+begin
+  if(System.Length(aList) = 2) and IsStringInst(aList[0], InText) and IsStringInst(aList[1], Pattern)then
+    aResult := TKmpSearchCI.Create(Pattern, True).NextMatch(InText).Offset > 0
+  else
+    aResult := False;
+end;
+
 { same_text() -- case insensitive }
 procedure CallSameText(const aList: TJpParamList; out aResult: TJpInstance);
 var
@@ -6006,7 +6038,10 @@ begin
 end;
 
 procedure RegisterBuiltIns;
+const
+  DEF_CAP = 64;
 begin
+  FunCache.EnsureCapacity(DEF_CAP);
   FunCache.Add('count',        TJpFunctionDef.Make([jitNodeList], jitValue, @CallCountFun));
   FunCache.Add('length',       TJpFunctionDef.Make([jitValue], jitValue, @CallLengthFun));
   FunCache.Add('value',        TJpFunctionDef.Make([jitNodeList], jitValue, @CallValueFun));
@@ -6024,6 +6059,8 @@ begin
   FunCache.Add('is_struct',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsStruct));
   FunCache.Add('contains',     TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallContains));
   FunCache.Add('contains_text',TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallContainsText));
+  FunCache.Add('has_word',     TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallHasWord));
+  FunCache.Add('has_word_ci',  TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallHasWordCI));
   FunCache.Add('same_text',    TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallSameText));
   FunCache.Add('starts_with',  TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallStartsWith));
   FunCache.Add('ends_with',    TJpFunctionDef.Make([jitValue, jitValue], jitLogical, @CallEndsWith));
