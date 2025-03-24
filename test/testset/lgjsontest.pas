@@ -78,6 +78,7 @@ type
     procedure TestSave2Stream;
     procedure ForcePathTest;
     procedure ForcePathTest1;
+    procedure DumpJsonTest;
   end;
 
   { TTestJsonWriter }
@@ -1189,6 +1190,50 @@ begin
   AssertTrue(n.IsNull);
   n := Ref.Instance.ForcePath(['a']);
   AssertTrue(n.Count = 1);
+end;
+
+procedure TTestJson.DumpJsonTest;
+var
+  n1, n2: specialize TGAutoRef<TJsonNode>;
+  s: string;
+const
+  Json1 = '{"аб":"вг","де":"𐌰𐌱","cd":"<&>"}';
+  Ans1  = '{"\u0430\u0431":"\u0432\u0433","\u0434\u0435":"\uD800\uDF30\uD800\uDF31","cd":"<&>"}';
+  Ans2  = '{"\u0430\u0431":"\u0432\u0433","\u0434\u0435":"\uD800\uDF30\uD800\uDF31","cd":"\u003C\u0026\u003E"}';
+  Ans3  = '{"аб":"вг","де":"\uD800\uDF30\uD800\uDF31","cd":"<&>"}';
+  Ans4  = '{"аб":"вг","де":"\uD800\uDF30\uD800\uDF31","cd":"\u003C\u0026\u003E"}';
+  Ans5  = '{"аб":"вг","де":"𐌰𐌱","cd":"\u003C\u0026\u003E"}';
+begin
+  n1.Instance.AsJson := Json1;
+  s := n1.Instance.DumpJson;
+  AssertTrue('1: ' + s, s = Ans1);
+  n2.Instance.AsJson := s;
+  AssertTrue('1', n1.Instance.EqualTo(n2.Instance));
+
+  s := n1.Instance.DumpJson(ueoEnsureASCII, True);
+  AssertTrue('2: ' + s, s = Ans2);
+  n2.Instance.AsJson := s;
+  AssertTrue('2', n1.Instance.EqualTo(n2.Instance));
+
+  s := n1.Instance.DumpJson(ueoEnsureBMP);
+  AssertTrue('3: ' + s, s = Ans3);
+  n2.Instance.AsJson := s;
+  AssertTrue('3', n1.Instance.EqualTo(n2.Instance));
+
+  s := n1.Instance.DumpJson(ueoEnsureBMP, True);
+  AssertTrue('4: ' + s, s = Ans4);
+  n2.Instance.AsJson := s;
+  AssertTrue('4', n1.Instance.EqualTo(n2.Instance));
+
+  s := n1.Instance.DumpJson(ueoNone);
+  AssertTrue('5: ' + s, s = Json1);
+  n2.Instance.AsJson := s;
+  AssertTrue('5', n1.Instance.EqualTo(n2.Instance));
+
+  s := n1.Instance.DumpJson(ueoNone, True);
+  AssertTrue('6: ' + s, s = Ans5);
+  n2.Instance.AsJson := s;
+  AssertTrue('6', n1.Instance.EqualTo(n2.Instance));
 end;
 
 { TTestJsonWriter }
