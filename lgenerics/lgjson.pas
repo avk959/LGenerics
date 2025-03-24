@@ -269,6 +269,7 @@ type
     end;
 
     INodeEnumerable = specialize IGEnumerable<TVisitNode>;
+    TUEscapeOption  = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
 
   private
   const
@@ -292,7 +293,7 @@ type
       procedure Append(p: PAnsiChar; aCount: SizeInt);
       procedure Append(const s: string); inline;
       procedure AppendEncode(const s: string);
-      procedure AppendEncodeAscii(const s: string);
+      procedure AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
       procedure Append(const s: shortstring); inline;
       function  SaveToStream(aStream: TStream): SizeInt; inline;
       function  WriteToStream(aStream: TStream): SizeInt; inline;
@@ -685,6 +686,10 @@ type
   { returns True and JSON Pointer to aNode in the instance subtree if instance subtree
     contains aNode, othewise returns False; }
     function  TryGetPtr(aNode: TJsonNode; out aPtr: string): Boolean;
+  { returns a compact JSON representation of the instance, aUEscOpt indicates which Unicode
+    characters should be escaped in JSON strings, aHtmlEsc indicates whether problematic
+    HTML characters should be escaped in JSON strings }
+    function  DumpJson(aUEscOpt: TUEscapeOption = ueoEnsureASCII; aHtmlEsc: Boolean = False): string;
   { returns a formatted JSON representation of an instance, is recursive }
     function  FormatJson(aOptions: TJsFormatOptions = []; aIndentSize: Integer = DEF_INDENT;
                          aOffset: Integer = 0): string;
@@ -2060,20 +2065,17 @@ begin
     case c of
       #0..#7, #11, #14..#31:
         begin
-           Append(chEscapeSym);
-           Append(chUnicodeSym);
-           Append(chZero);
-           Append(chZero);
+           Append('\u00');
            Append(HEX_CHARS_TBL[Ord(c) shr  4]);
            Append(HEX_CHARS_TBL[Ord(c) and 15]);
         end;
-      #8 : begin Append(chEscapeSym); Append(chBackSpSym) end; //backspace
-      #9 : begin Append(chEscapeSym); Append(chTabSym) end;    //tab
-      #10: begin Append(chEscapeSym); Append(chLineSym) end;   //line feed
-      #12: begin Append(chEscapeSym); Append(chFormSym) end;   //form feed
-      #13: begin Append(chEscapeSym); Append(chCarRetSym) end; //carriage return
-      '"': begin Append(chEscapeSym); Append('"') end;         //quote
-      '\': begin Append(chEscapeSym); Append('\') end;         //backslash
+      #8 : Append('\'#8);  //backspace
+      #9 : Append('\'#9);  //tab
+      #10: Append('\'#10); //line feed
+      #12: Append('\'#12); //form feed
+      #13: Append('\'#13); //carriage return
+      '"': Append('\"');   //quote
+      '\': Append('\\');   //backslash
     else
       Append(c);
     end;
@@ -2135,24 +2137,22 @@ begin
   end;
 end;
 
-function Utf8ToUnicodeHex(var pUtf8Char: PAnsiChar; aLen: Integer; pBuffer: PAnsiChar): Integer;
+function Ucs4ToUEsc(c: DWord; pBuffer: PAnsiChar): Integer;
 var
-  ul, uh: DWord;
+  ul: DWord;
 begin
-  Inc(pUtf8Char, Utf8Char2Ucs4(PByte(pUtf8Char), aLen, uh));
   ul := 0;
-  if uh > $ffff then
-    if uh <= $10ffff then begin
-      ul := uh and $3ff + $dc00;
-      uh := uh shr 10 + $d7c0;
-    end else uh := $fffd; //unicode replacement character
+  if c > $ffff then begin
+    ul := c and $3ff + $dc00;
+    c := c shr 10 + $d7c0;
+  end;
   Result := 6;
   pBuffer[0] := chEscapeSym;
   pBuffer[1] := chUnicodeSym;
-  pBuffer[2] := HEX_CHARS_TBL[uh shr 12];
-  pBuffer[3] := HEX_CHARS_TBL[(uh shr  8) and $f];
-  pBuffer[4] := HEX_CHARS_TBL[(uh shr  4) and $f];
-  pBuffer[5] := HEX_CHARS_TBL[uh and $f];
+  pBuffer[2] := HEX_CHARS_TBL[c shr 12];
+  pBuffer[3] := HEX_CHARS_TBL[(c shr  8) and $f];
+  pBuffer[4] := HEX_CHARS_TBL[(c shr  4) and $f];
+  pBuffer[5] := HEX_CHARS_TBL[c and $f];
   if ul <> 0 then begin
     Result += 6;
     pBuffer[ 6] := chEscapeSym;
@@ -2164,42 +2164,61 @@ begin
   end;
 end;
 
-procedure TJsonNode.TStrBuilder.AppendEncodeAscii(const s: string);
+procedure TJsonNode.TStrBuilder.AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
 var
-  c: AnsiChar;
+  c: DWord;
   p, pEnd: PAnsiChar;
-  Len: Integer;
+  Len, BufLen: Integer;
   Buffer: array[0..15] of AnsiChar;
 begin
   Append('"');
   p := Pointer(s);
   pEnd := p + System.Length(s);
   while p < pEnd do begin
-    c := p^;
-    if c < #128 then begin
+    Len := Utf8Char2Ucs4(PByte(p), pEnd - p, c);
+    if c < $80 then
       case c of
-        #0..#7, #11, #14..#31:
+        0..7, 11, 14..31:
           begin
-             Append(chEscapeSym); Append(chUnicodeSym);
-             Append(chZero); Append(chZero);
-             Append(HEX_CHARS_TBL[Ord(c) shr  4]);
-             Append(HEX_CHARS_TBL[Ord(c) and 15]);
+             Append('\u00');
+             Append(HEX_CHARS_TBL[c shr  4]);
+             Append(HEX_CHARS_TBL[c and 15]);
           end;
-        #8 : begin Append(chEscapeSym); Append(chBackSpSym) end; //backspace
-        #9 : begin Append(chEscapeSym); Append(chTabSym) end;    //tab
-        #10: begin Append(chEscapeSym); Append(chLineSym) end;   //line feed
-        #12: begin Append(chEscapeSym); Append(chFormSym) end;   //form feed
-        #13: begin Append(chEscapeSym); Append(chCarRetSym) end; //carriage return
-        '"': begin Append(chEscapeSym); Append('"') end;         //quote - 34
-        '\': begin Append(chEscapeSym); Append('\') end;         //backslash - 92
-        #32..#33, #35..#91, #93..#127: Append(c);
+        8 : Append('\'#8);  //backspace
+        9 : Append('\'#9);  //tab
+        10: Append('\'#10); //line feed
+        12: Append('\'#12); //form feed
+        13: Append('\'#13); //carriage return
+        34: Append('\"');   //quote
+        92: Append('\\');   //backslash
       else
+        if aHtmlEsc then
+          case c of
+            38: Append('\u0026'); // &
+            60: Append('\u003C'); // <
+            62: Append('\u003E'); // >
+          else
+            Append(AnsiChar(c));
+          end
+        else
+          Append(AnsiChar(c));
+      end
+    else
+      case aUEscOpt of
+        ueoEnsureASCII: begin
+            BufLen := Ucs4ToUEsc(c, @Buffer);
+            Append(@Buffer, BufLen);
+          end;
+        ueoEnsureBMP:
+          if c > $ffff then begin
+            BufLen := Ucs4ToUEsc(c, @Buffer);
+            Append(@Buffer, BufLen);
+          end else
+            Append(p, Len);
+      else // ueoNone
+        Append(p, Len);
       end;
-      Inc(p);
-    end else begin
-      Len := Utf8ToUnicodeHex(p, pEnd - p, @Buffer);
-      Append(@Buffer, Len);
-    end;
+    p += Len;
   end;
   Append('"');
 end;
@@ -4341,7 +4360,7 @@ var
   sb: TStrBuilder;
 begin
   sb := TStrBuilder.Create(System.Length(s)*2);
-  sb.AppendEncodeAscii(s);
+  sb.AppendEncodeOpt(s, ueoEnsureASCII, False);
   Result := sb.ToString;
 end;
 
@@ -5674,6 +5693,67 @@ begin
   Result := TryGetPath(aNode, Path);
   if Result then
     aPtr := TJsonPtr.ToPointer(Path);
+end;
+
+function TJsonNode.DumpJson(aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean): string;
+var
+  sb: TStrBuilder;
+  e: TPair;
+  s: shortstring;
+  procedure BuildJson(aInst: TJsonNode);
+  var
+    I, Last: SizeInt;
+  begin
+    case aInst.Kind of
+      jvkNull:   sb.Append(JS_NULL);
+      jvkFalse:  sb.Append(JS_FALSE);
+      jvkTrue:   sb.Append(JS_TRUE);
+      jvkNumber:
+        begin
+          Double2Str(aInst.FValue.Num, s);
+          sb.Append(s);
+        end;
+      jvkString: sb.AppendEncodeOpt(aInst.FString, aUEscOpt, aHtmlEsc);
+      jvkArray:
+        begin
+          sb.Append(chOpenSqrBr);
+          if aInst.FArray <> nil then
+            begin
+              Last := Pred(aInst.FArray^.Count);
+              for I := 0 to Last do
+                begin
+                  BuildJson(aInst.FArray^.UncMutable[I]^);
+                  if I <> Last then
+                    sb.Append(chComma);
+                end;
+            end;
+          sb.Append(chClosSqrBr);
+        end;
+      jvkObject:
+        begin
+          sb.Append(chOpenCurBr);
+          if aInst.FObject <> nil then
+            begin
+              Last := Pred(aInst.FObject^.Count);
+              for I := 0 to Last do
+                begin
+                  e := aInst.FObject^.Mutable[I]^;
+                  sb.AppendEncodeOpt(e.Key, aUEscOpt, aHtmlEsc);
+                  sb.Append(chColon);
+                  BuildJson(e.Value);
+                  if I <> Last then
+                    sb.Append(chComma);
+                end;
+            end;
+          sb.Append(chClosCurBr);
+        end;
+    end;
+  end;
+begin
+  if (aUEscOpt = ueoNone) and not aHtmlEsc then exit(GetAsJson);
+  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
+  BuildJson(Self);
+  Result := sb.ToString;
 end;
 
 function TJsonNode.FormatJson(aOptions: TJsFormatOptions; aIndentSize: Integer; aOffset: Integer): string;
