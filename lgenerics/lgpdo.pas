@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Plain Data Objects marshalling.                                         *
 *                                                                           *
-*   Copyright(c) 2022-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -52,9 +52,7 @@ const
                                 aStrict: Boolean = False): string;
   { the type being registered must be a record; associates the field names aFieldNames with
     the record fields by their indexes; to exclude a field from serialization, it is sufficient
-    to specify its name as an empty string; to avoid name mapping errors, it makes sense to use
-    the $OPTIMIZATION NOORDERFIELDS directive in the record declaration; returns True on
-    successful registration }
+    to specify its name as an empty string; returns True on successful registration }
   function RegisterRecordFields(aTypeInfo: PTypeInfo; const aFieldNames: TStringArray): Boolean;
   function RegisteredRecordFields(aTypeInfo: PTypeInfo; out aFieldNames: TStringArray): Boolean;
   function UnRegisterPdo(aTypeInfo: PTypeInfo): Boolean;
