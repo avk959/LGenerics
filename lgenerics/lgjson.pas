@@ -2069,13 +2069,13 @@ begin
            Append(HEX_CHARS_TBL[Ord(c) shr  4]);
            Append(HEX_CHARS_TBL[Ord(c) and 15]);
         end;
-      #8 : Append('\'#8);  //backspace
-      #9 : Append('\'#9);  //tab
-      #10: Append('\'#10); //line feed
-      #12: Append('\'#12); //form feed
-      #13: Append('\'#13); //carriage return
-      '"': Append('\"');   //quote
-      '\': Append('\\');   //backslash
+      #8 : Append('\b'); //backspace
+      #9 : Append('\t'); //tab
+      #10: Append('\n'); //line feed
+      #12: Append('\f'); //form feed
+      #13: Append('\r'); //carriage return
+      '"': Append('\"'); //quote
+      '\': Append('\\'); //backslash
     else
       Append(c);
     end;
@@ -2184,13 +2184,13 @@ begin
              Append(HEX_CHARS_TBL[c shr  4]);
              Append(HEX_CHARS_TBL[c and 15]);
           end;
-        8 : Append('\'#8);  //backspace
-        9 : Append('\'#9);  //tab
-        10: Append('\'#10); //line feed
-        12: Append('\'#12); //form feed
-        13: Append('\'#13); //carriage return
-        34: Append('\"');   //quote
-        92: Append('\\');   //backslash
+        8 : Append('\b'); //backspace
+        9 : Append('\t'); //tab
+        10: Append('\n'); //line feed
+        12: Append('\f'); //form feed
+        13: Append('\r'); //carriage return
+        34: Append('\"'); //quote
+        92: Append('\\'); //backslash
       else
         if aHtmlEsc then
           case c of
@@ -2207,12 +2207,12 @@ begin
       case aUEscOpt of
         ueoEnsureASCII: begin
             BufLen := Ucs4ToUEsc(c, @Buffer);
-            Append(@Buffer, BufLen);
+            Append(PAnsiChar(@Buffer), BufLen);
           end;
         ueoEnsureBMP:
           if c > $ffff then begin
             BufLen := Ucs4ToUEsc(c, @Buffer);
-            Append(@Buffer, BufLen);
+            Append(PAnsiChar(@Buffer), BufLen);
           end else
             Append(p, Len);
       else // ueoNone
