@@ -2267,12 +2267,19 @@ begin
   Result := x[aSeq[0]] shl 12 or x[aSeq[1]] shl 8 or x[aSeq[2]] shl 4 or x[aSeq[3]];
 end;
 
+{$PUSH}{$MACRO ON}
 function TJsonNode.TStrBuilder.ToDecodeString: string;
 var
   r: string;
   I, J, Last: SizeInt;
   pR, pBuf: PAnsiChar;
   uh, ul: DWord;
+{$DEFINE PushRelaceCharMacro :=
+  pR[ J ] := #$ef;
+  pR[J+1] := #$bf;
+  pR[J+2] := #$bd;
+  J += 3
+}
 begin
   System.SetLength(r, Count);
   Last := Pred(Count);
@@ -2321,16 +2328,13 @@ begin
                     pR[J+3] := Char(ul and $3f or $80);
                     J += 4;
                   end else begin
-                    pR[J] := '?';
-                    Inc(J);
+                    PushRelaceCharMacro;
                   end;
                 end else begin
-                  pR[J] := '?';
-                  Inc(J);
+                  PushRelaceCharMacro;
                 end;
               $dc00..$dfff: begin // low surrogate
-                  pR[J] := '?';
-                  Inc(J);
+                  PushRelaceCharMacro;
                 end;
             else
             end;
@@ -2338,12 +2342,13 @@ begin
       else
         pR[J] := pBuf[Succ(I)];
         I += 2;
-        Inc(J)
+        Inc(J);
       end;
   System.SetLength(r, J);
   Result := r;
   FCount := 0;
 end;
+{$UNDEF PushRelaceCharMacro}{$POP}
 
 function TJsonNode.TStrBuilder.ToPChar: PAnsiChar;
 begin
