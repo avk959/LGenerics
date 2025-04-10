@@ -5250,15 +5250,15 @@ begin
   Result := aOfs-1;
   if Byte(s[aOfs-1]) > $7f then begin
     if (Byte(s[aOfs-1]) and $c0 <> $80) or (aOfs < 3) then exit;
-    if Byte(s[aOfs-2]) and $c0 = $c0 then
+    if Byte(s[aOfs-2]) and $e0 = $c0 then
       Result := aOfs-2
     else begin
       if (Byte(s[aOfs-2]) and $c0 <> $80) or (aOfs < 4) then exit;
-      if Byte(s[aOfs-3]) and $c0 = $c0 then
+      if Byte(s[aOfs-3]) and $f0 = $e0 then
         Result := aOfs-3
       else begin
         if (Byte(s[aOfs-3]) and $c0 <> $80) or (aOfs < 5) then exit;
-        if Byte(s[aOfs-4]) and $c0 = $c0 then
+        if Byte(s[aOfs-4]) and $f8 = $f0 then
           Result := aOfs-4;
       end;
     end;
