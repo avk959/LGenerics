@@ -25,7 +25,7 @@ unit lgJsonCfg;
 interface
 
 uses
-  Classes, SysUtils, lgUtils, lgJson;
+  Classes, SysUtils, lgUtils, lgHelpers, lgJson;
 
 const
   DEF_FORMAT = [jfoSingleLineArray, jfoSingleLineObject, jfoEgyptBrace];
@@ -459,7 +459,7 @@ var
   I: Int64 = 0;
 begin
   n := FindElem(StripSlash(aPath), False);
-  if (n <> nil) and n.IsNumber and IsExactInt(n.AsNumber, I) and
+  if (n <> nil) and n.IsNumber and Double.IsExactInt(n.AsNumber, I) and
      (I <= High(Integer)) and (I >= Low(Integer)) then exit(Integer(I));
   Result := aDefault;
 end;
@@ -470,7 +470,7 @@ var
   I: Int64 = 0;
 begin
   n := FindElem(StripSlash(aPath), False);
-  if (n <> nil) and n.IsNumber and IsExactInt(n.AsNumber, I) then exit(I);
+  if (n <> nil) and n.IsNumber and Double.IsExactInt(n.AsNumber, I) then exit(I);
   Result := aDefault;
 end;
 

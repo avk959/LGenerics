@@ -28,7 +28,7 @@ unit lgJsonTypeDef;
 interface
 
 uses
-  Classes, SysUtils, lgHashSet, lgHashMap, lgJson, lgJsonPath;
+  Classes, SysUtils, lgHelpers, lgHashSet, lgHashMap, lgJson, lgJsonPath;
 
 type
   EJtdSchemaLoad   = class(Exception);
@@ -944,7 +944,7 @@ var
           end;
       jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32:
         if not aInst.IsNumber then PushError else
-          if not lgJson.IsExactInt(aInst.AsNumber, I) then PushError else
+          if not Double.IsExactInt(aInst.AsNumber, I) then PushError else
             case Typ of
               jtInt8:   if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then PushError;
               jtUInt8:  if (I < 0) or (I > System.High(Byte)) then PushError;

@@ -26,6 +26,7 @@ interface
 uses
   Classes, SysUtils, JsonScanner, JsonParser, FpJson,
   lgUtils,
+  lgHelpers,
   lgJson,
   lgStrConst;
 
@@ -127,7 +128,7 @@ function JsonNode2Data(aNode: TJsonNode): TJsonData;
       jvkNumber:
         begin
           d := aNode.AsNumber;
-          if IsExactInt(d, I64) then
+          if Double.IsExactInt(d, I64) then
             if (I64 < System.Low(Integer)) or (I64 > System.High(Integer)) then
               Result := CreateJson(I64)
             else

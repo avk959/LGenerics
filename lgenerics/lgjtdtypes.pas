@@ -25,7 +25,7 @@ unit lgJtdTypes;
 interface
 
 uses
-  Classes, SysUtils, lgUtils, lgVector, lgHashMap, lgJson;
+  Classes, SysUtils, lgUtils, lgHelpers, lgVector, lgHashMap, lgJson;
 
 type
 
@@ -596,7 +596,7 @@ var
   I: Int64;
 begin
   aValue := 0;
-  if not IsExactInt(d, I) then exit(False);
+  if not Double.IsExactInt(d, I) then exit(False);
   if (I < System.Low(T)) or (I > System.High(T)) then exit(False);
   aValue := T(I);
   Result := True;

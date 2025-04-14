@@ -6,7 +6,8 @@ unit lgPdoTest;
 interface
 
 uses
-  Classes, SysUtils, Variants, fpcunit, testregistry, lgPdo, lgArrayHelpers, lgJson;
+  Classes, SysUtils, Variants, fpcunit, testregistry,
+  lgHelpers, lgPdo, lgArrayHelpers, lgJson;
 
 type
   { TTestPdoRegister }
@@ -987,7 +988,7 @@ begin
       end;
   until False;
   if not(KeyFound and ValueFound) then exit(False);
-  if not IsExactInt(d, I) then exit(False);
+  if not Double.IsExactInt(d, I) then exit(False);
   if (jroRangeOverflowCheck in aOptions) and ((I < Low(Integer)) or (I > High(Integer))) then
     exit(False);
   pRec^.Value := I;

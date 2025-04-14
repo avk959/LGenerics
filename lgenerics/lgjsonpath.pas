@@ -26,7 +26,7 @@ unit lgJsonPath;
 interface
 
 uses
-  SysUtils, lgUtils, lgJson;
+  SysUtils, lgUtils, lgHelpers, lgJson;
 
 {
   https://www.rfc-editor.org/rfc/rfc9535
@@ -5763,7 +5763,7 @@ procedure CallIsInteger(const aList: TJpParamList; out aResult: TJpInstance);
 var
   d: Double;
 begin
-  aResult := (System.Length(aList) = 1) and IsNumberInst(aList[0], d) and LgJson.IsExactInt(d);
+  aResult := (System.Length(aList) = 1) and IsNumberInst(aList[0], d) and Double.IsExactInt(d);
 end;
 { is_string() }
 procedure CallIsString(const aList: TJpParamList; out aResult: TJpInstance);

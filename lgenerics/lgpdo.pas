@@ -24,7 +24,7 @@ unit lgPdo;
 interface
 
 uses
-  Classes, SysUtils, TypInfo, lgJson;
+  Classes, SysUtils, TypInfo, lgHelpers, lgJson;
 
 { PDO - Plain Data Objects is a conventional collective name for Pascal data structures
   that can be user-transparently(well, almost) stored/loaded to/from another format(currently only JSON):
@@ -922,7 +922,7 @@ var
   begin
     if Reader.TokenKind <> tkNumber then
       Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkNumber), TokenKindName(Reader.TokenKind)]));
-    if not IsExactInt(Reader.AsNumber, I) then
+    if not Double.IsExactInt(Reader.AsNumber, I) then
       Error(Format(SECantAssignJsonNumFmt, [TypeKindName(aTypeInfo^.Kind)]));
     case GetTypeData(aTypeInfo)^.OrdType of
       otSByte:
@@ -989,7 +989,7 @@ var
       ftExtended: PExtended(aData)^ := d;
       ftComp:
         begin
-          if not IsExactInt(Reader.AsNumber, I) then
+          if not Double.IsExactInt(Reader.AsNumber, I) then
             Error(Format(SECantAssignJsonNumFmt, ['ftComp']));
           PComp(aData)^ := I;
         end;
@@ -1141,7 +1141,7 @@ var
       tkNumber:
         begin
           d := Reader.AsNumber;
-          if IsExactInt(d, I) then
+          if Double.IsExactInt(d, I) then
             Variant(aData^) := I
           else
             Variant(aData^) := d;
