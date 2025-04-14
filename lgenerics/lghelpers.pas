@@ -147,17 +147,26 @@ type
  // currently special float types (nan, infinity) are ignored
 
   TGSingleHelper = type helper(TSingleHelper) for Single
-    function IsZero: Boolean; inline;
     class function HashCode(aValue: Single): SizeInt; static; inline;
     class function Equal(L, R: Single): Boolean; static; inline;
     class function Less(L, R: Single): Boolean; static; inline;
+    function IsZero: Boolean; inline;
   end;
 
   TGDoubleHelper = type helper(TDoubleHelper) for Double
+  private
+  const
+    MAX_EXACT_INT  = Double(9007199254740991); //2^53 - 1
+  public
+    class function IsZero(aValue: Double): Boolean; inline; static;
+    class function HashCode(aValue: Double): SizeInt; inline; static;
+    class function Equal(L, R: Double): Boolean; inline; static;
+    class function Less(L, R: Double): Boolean; inline; static;
+    class function IsExactInt(aValue: Double): Boolean; inline; static;
+    class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; inline; static;
     function IsZero: Boolean; inline;
-    class function HashCode(aValue: Double): SizeInt; static; inline;
-    class function Equal(L, R: Double): Boolean; static; inline;
-    class function Less(L, R: Double): Boolean; static; inline;
+    function IsExactInt: Boolean; inline;
+    function IsExactInt(out aValue: Int64): Boolean; inline;
   end;
 
 {$ifdef FPC_HAS_TYPE_EXTENDED}
@@ -658,11 +667,6 @@ begin
   Result := L < R;
 end;
 
-function TGSingleHelper.IsZero: Boolean;
-begin
-  Result:= (DWord(Self) and $7fffffff) = 0;
-end;
-
 class function TGSingleHelper.HashCode(aValue: Single): SizeInt;
 begin
   if aValue.IsZero then
@@ -681,14 +685,19 @@ begin
   Result := L < R;
 end;
 
-function TGDoubleHelper.IsZero: Boolean;
+function TGSingleHelper.IsZero: Boolean;
 begin
-  Result := (QWord(Self) and $7fffffffffffffff) = 0;
+  Result:= (DWord(Self) and $7fffffff) = 0;
+end;
+
+class function TGDoubleHelper.IsZero(aValue: Double): Boolean;
+begin
+  Result := QWord(aValue) and QWord($7fffffffffffffff) = 0;
 end;
 
 class function TGDoubleHelper.HashCode(aValue: Double): SizeInt;
 begin
-  if aValue.IsZero then
+  if IsZero(aValue) then
     Result := HashFunc.HashQWord(QWord(Double(0.0)))
   else
     Result := HashFunc.HashQWord(QWord(aValue));
@@ -703,6 +712,33 @@ class function TGDoubleHelper.Less(L, R: Double): Boolean;
 begin
   Result := L < R;
 end;
+
+class function TGDoubleHelper.IsExactInt(aValue: Double): Boolean;
+begin
+  Result := (System.Frac(aValue) = 0) and (System.Abs(aValue) <= MAX_EXACT_INT);
+end;
+
+class function TGDoubleHelper.IsExactInt(aValue: Double; out aIntValue: Int64): Boolean;
+begin
+  Result := IsExactInt(aValue);
+  if Result then aIntValue := System.Trunc(aValue);
+end;
+
+function TGDoubleHelper.IsZero: Boolean;
+begin
+  Result := IsZero(Self);
+end;
+
+function TGDoubleHelper.IsExactInt: Boolean;
+begin
+  Result := IsExactInt(Self);
+end;
+
+function TGDoubleHelper.IsExactInt(out aValue: Int64): Boolean;
+begin
+  Result := IsExactInt(Self, aValue);
+end;
+
 {$ifdef FPC_HAS_TYPE_EXTENDED}
 function TGExtendedHelper.IsZero: Boolean;
 begin

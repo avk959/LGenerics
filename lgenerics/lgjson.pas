@@ -1172,9 +1172,6 @@ type
     property  SkipBom: Boolean read FSkipBom;
   end;
 
-  function  IsExactInt(aValue: Double): Boolean; inline;
-  function  IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; inline;
-  function  SameDouble(L, R: Double): Boolean; inline;
 { returns the shortest decimal representation of aValue formatted according
   to the following rules:
    as an integer value if aValue is an exact integer;
@@ -1203,8 +1200,6 @@ implementation
 {$WARN 6058 OFF : Call to subroutine "$1" marked as inline is not inlined }
 
 const
-  MAX_EXACT_INT  = Double(9007199254740991); //2^53 - 1
-  DBL_CMP_FACTOR = Double(1E12);
   JS_NULL        = 'null';
   JS_FALSE       = 'false';
   JS_TRUE        = 'true';
@@ -1212,26 +1207,6 @@ const
 {$PUSH}{$J-}
   ssLineBreaks: array[TJsLineBreak] of string[2] = (#10, #13#10);
 {$POP}
-
-function IsExactInt(aValue: Double): Boolean;
-begin
-  Result := (Frac(aValue) = 0) and (Abs(aValue) <= MAX_EXACT_INT);
-end;
-
-function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean;
-begin
-  if IsExactInt(aValue) then
-    begin
-      aIntValue := Trunc(aValue);
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function SameDouble(L, R: Double): Boolean;
-begin
-  Result := Abs(L - R) * DBL_CMP_FACTOR <= Min(Abs(L), Abs(R));
-end;
 
 { TJsonFormatStyle }
 
@@ -3727,7 +3702,7 @@ begin
       exit;
     end;
 
-  if IsExactInt(aValue, I64) then
+  if Double.IsExactInt(aValue, I64) then
     begin
       Int64_ToStr(I64, s);
       exit;
@@ -3859,7 +3834,7 @@ var
 begin
   Result := '';
   Double2Str(aValue, s, aDecimalSeparator);
-  if AlwaysShowFrac and IsExactInt(aValue) then
+  if AlwaysShowFrac and Double.IsExactInt(aValue) then
     begin
       Len := System.Length(s);
       System.SetLength(Result, Len + 2);
@@ -4573,7 +4548,7 @@ function TJsonNode.IsInteger: Boolean;
 begin
   if Kind <> jvkNumber then
     exit(False);
-  Result := IsExactInt(FValue.Num);
+  Result := Double.IsExactInt(FValue.Num);
 end;
 
 function TJsonNode.IsString: Boolean;
