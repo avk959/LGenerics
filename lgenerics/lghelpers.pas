@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Helpers for some basic types.                                           *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -147,23 +147,32 @@ type
  // currently special float types (nan, infinity) are ignored
 
   TGSingleHelper = type helper(TSingleHelper) for Single
-    class function HashCode(aValue: Single): SizeInt; static; inline;
-    class function Equal(L, R: Single): Boolean; static; inline;
-    class function Less(L, R: Single): Boolean; static; inline;
+  private
+  const
+    MAX_EXACT_INT = Single($ffffff); //2^24 - 1
+  public
+    class function IsZero(const aValue: Single): Boolean; inline; static;
+    class function HashCode(const aValue: Single): SizeInt; inline; static;
+    class function Equal(const L, R: Single): Boolean; inline; static;
+    class function Less(const L, R: Single): Boolean; inline; static;
+    class function IsExactInt(const aValue: Single): Boolean; inline; static;
+    class function IsExactInt(const aValue: Single; out aIntValue: Int32): Boolean; inline; static;
     function IsZero: Boolean; inline;
+    function IsExactInt: Boolean; inline;
+    function IsExactInt(out aValue: Int32): Boolean; inline;
   end;
 
   TGDoubleHelper = type helper(TDoubleHelper) for Double
   private
   const
-    MAX_EXACT_INT  = Double(9007199254740991); //2^53 - 1
+    MAX_EXACT_INT  = Double($1fffffffffffff); //2^53 - 1
   public
-    class function IsZero(aValue: Double): Boolean; inline; static;
-    class function HashCode(aValue: Double): SizeInt; inline; static;
-    class function Equal(L, R: Double): Boolean; inline; static;
-    class function Less(L, R: Double): Boolean; inline; static;
-    class function IsExactInt(aValue: Double): Boolean; inline; static;
-    class function IsExactInt(aValue: Double; out aIntValue: Int64): Boolean; inline; static;
+    class function IsZero(const aValue: Double): Boolean; inline; static;
+    class function HashCode(const aValue: Double): SizeInt; inline; static;
+    class function Equal(const L, R: Double): Boolean; inline; static;
+    class function Less(const L, R: Double): Boolean; inline; static;
+    class function IsExactInt(const aValue: Double): Boolean; inline; static;
+    class function IsExactInt(const aValue: Double; out aIntValue: Int64): Boolean; inline; static;
     function IsZero: Boolean; inline;
     function IsExactInt: Boolean; inline;
     function IsExactInt(out aValue: Int64): Boolean; inline;
@@ -171,10 +180,32 @@ type
 
 {$ifdef FPC_HAS_TYPE_EXTENDED}
   TGExtendedHelper = type helper(TExtendedHelper) for Extended
+  private
+  type
+    TRec80 = packed record
+    {$ifdef ENDIAN_LITTLE}
+      Mantis: QWord;
+      PExp: Word;
+    {$else ENDIAN_LITTLE}
+      PExp: Word;
+      Mantis: QWord;
+    {$endif ENDIAN_LITTLE}
+    end;
+  const
+    MIN_EXACT_INT = Extended(Low(Int64));
+    MAX_EXACT_INT = Extended(High(Int64));
+    EXP_MASK      = Word($7fff);
+    SIGN_FLAG     = Word($8000);
+  public
+    class function IsZero(const aValue: Extended): Boolean; inline; static;
+    class function HashCode(const aValue: Extended): SizeInt; inline; static;
+    class function Equal(const L, R: Extended): Boolean; inline; static;
+    class function Less(const L, R: Extended): Boolean; inline; static;
+    class function IsExactInt(const aValue: Extended): Boolean; inline; static;
+    class function IsExactInt(const aValue: Extended; out aIntValue: Int64): Boolean; inline; static;
     function IsZero: Boolean; inline;
-    class function HashCode(aValue: Extended): SizeInt; static; inline;
-    class function Equal(L, R: Extended): Boolean; static; inline;
-    class function Less(L, R: Extended): Boolean; static; inline;
+    function IsExactInt: Boolean; inline;
+    function IsExactInt(out aValue: Int64): Boolean; inline;
   end;
 {$ENDIF}
 
@@ -667,35 +698,61 @@ begin
   Result := L < R;
 end;
 
-class function TGSingleHelper.HashCode(aValue: Single): SizeInt;
+class function TGSingleHelper.IsZero(const aValue: Single): Boolean;
 begin
-  if aValue.IsZero then
+  Result:= DWord(aValue) and DWord($7fffffff) = 0;
+end;
+
+class function TGSingleHelper.HashCode(const aValue: Single): SizeInt;
+begin
+  if IsZero(aValue) then
     Result := HashFunc.HashDWord(DWord(Single(0.0)))
   else
     Result := HashFunc.HashDWord(DWord(aValue));
 end;
 
-class function TGSingleHelper.Equal(L, R: Single): Boolean;
+class function TGSingleHelper.Equal(const L, R: Single): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TGSingleHelper.Less(L, R: Single): Boolean;
+class function TGSingleHelper.Less(const L, R: Single): Boolean;
 begin
   Result := L < R;
 end;
 
-function TGSingleHelper.IsZero: Boolean;
+class function TGSingleHelper.IsExactInt(const aValue: Single): Boolean;
 begin
-  Result:= (DWord(Self) and $7fffffff) = 0;
+  Result := (System.Frac(aValue) = 0) and (System.Abs(aValue) <= MAX_EXACT_INT);
 end;
 
-class function TGDoubleHelper.IsZero(aValue: Double): Boolean;
+class function TGSingleHelper.IsExactInt(const aValue: Single; out aIntValue: Int32): Boolean;
+begin
+  Result := IsExactInt(aValue);
+  if Result then aIntValue := System.Trunc(aValue);
+end;
+
+function TGSingleHelper.IsZero: Boolean;
+begin
+  Result:= IsZero(Self);
+end;
+
+function TGSingleHelper.IsExactInt: Boolean;
+begin
+  Result := IsExactInt(Self);
+end;
+
+function TGSingleHelper.IsExactInt(out aValue: Int32): Boolean;
+begin
+  Result := IsExactInt(Self, aValue);
+end;
+
+class function TGDoubleHelper.IsZero(const aValue: Double): Boolean;
 begin
   Result := QWord(aValue) and QWord($7fffffffffffffff) = 0;
 end;
 
-class function TGDoubleHelper.HashCode(aValue: Double): SizeInt;
+class function TGDoubleHelper.HashCode(const aValue: Double): SizeInt;
 begin
   if IsZero(aValue) then
     Result := HashFunc.HashQWord(QWord(Double(0.0)))
@@ -703,22 +760,22 @@ begin
     Result := HashFunc.HashQWord(QWord(aValue));
 end;
 
-class function TGDoubleHelper.Equal(L, R: Double): Boolean;
+class function TGDoubleHelper.Equal(const L, R: Double): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TGDoubleHelper.Less(L, R: Double): Boolean;
+class function TGDoubleHelper.Less(const L, R: Double): Boolean;
 begin
   Result := L < R;
 end;
 
-class function TGDoubleHelper.IsExactInt(aValue: Double): Boolean;
+class function TGDoubleHelper.IsExactInt(const aValue: Double): Boolean;
 begin
   Result := (System.Frac(aValue) = 0) and (System.Abs(aValue) <= MAX_EXACT_INT);
 end;
 
-class function TGDoubleHelper.IsExactInt(aValue: Double; out aIntValue: Int64): Boolean;
+class function TGDoubleHelper.IsExactInt(const aValue: Double; out aIntValue: Int64): Boolean;
 begin
   Result := IsExactInt(aValue);
   if Result then aIntValue := System.Trunc(aValue);
@@ -740,12 +797,14 @@ begin
 end;
 
 {$ifdef FPC_HAS_TYPE_EXTENDED}
-function TGExtendedHelper.IsZero: Boolean;
+class function TGExtendedHelper.IsZero(const aValue: Extended): Boolean;
+var
+  r: TRec80 absolute aValue;
 begin
-  Result := SpecialType < fsDenormal;
+  Result := (r.PExp and EXP_MASK = 0) and (r.Mantis = 0);
 end;
 
-class function TGExtendedHelper.HashCode(aValue: Extended): SizeInt;
+class function TGExtendedHelper.HashCode(const aValue: Extended): SizeInt;
 const
   Zero: Extended = 0.0;
 begin
@@ -755,15 +814,42 @@ begin
     Result := HashFunc.HashBuf(@aValue, SizeOf(aValue));
 end;
 
-class function TGExtendedHelper.Equal(L, R: Extended): Boolean;
+class function TGExtendedHelper.Equal(const L, R: Extended): Boolean;
 begin
   Result := L = R;
 end;
 
-class function TGExtendedHelper.Less(L, R: Extended): Boolean;
+class function TGExtendedHelper.Less(const L, R: Extended): Boolean;
 begin
   Result := L < R;
 end;
+
+class function TGExtendedHelper.IsExactInt(const aValue: Extended): Boolean;
+begin
+  Result := (System.Frac(aValue) = 0) and (aValue >= MIN_EXACT_INT) and (aValue <= MAX_EXACT_INT);
+end;
+
+class function TGExtendedHelper.IsExactInt(const aValue: Extended; out aIntValue: Int64): Boolean;
+begin
+  Result := IsExactInt(aValue);
+  if Result then aIntValue := System.Trunc(aValue);
+end;
+
+function TGExtendedHelper.IsZero: Boolean;
+begin
+  Result := IsZero(Self);
+end;
+
+function TGExtendedHelper.IsExactInt: Boolean;
+begin
+  Result := IsExactInt(Self);
+end;
+
+function TGExtendedHelper.IsExactInt(out aValue: Int64): Boolean;
+begin
+  Result := IsExactInt(Self, aValue);
+end;
+
 {$ENDIF}
 
 {$IF DECLARED(Comp)}
