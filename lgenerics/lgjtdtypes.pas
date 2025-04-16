@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   A set of classes handy when generating code from JTD schemas.           *                                            *
 *                                                                           *
-*   Copyright(c) 2023 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
