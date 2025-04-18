@@ -388,7 +388,7 @@ type
     property  BufIndex: SizeInt read FBufIndex;
   public
     class function New(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean): TCsvReader; static;
-    class function New(aSource: TStream): TCsvReader; static;
+    class function New(aSource: TStream; aOwnsStream: Boolean = False): TCsvReader; static;
     class function New(aSrcBuffer: PChar; aCount: SizeInt): TCsvReader; static;
   { attempts to read a single row from the buffer using the CSV properties of aMaster
     if aMaster is not nil; returns the number of bytes read, -1 if the buffer cannot be read }
@@ -398,7 +398,7 @@ type
     is set equal to the stream size; if aOwnsStream is set to True, the reader
     is responsible for destroying source stream }
     constructor Create(aSource: TStream; aBufSize: Sizeint; aOwnsStream: Boolean); virtual;
-    constructor Create(aSource: TStream);  virtual;
+    constructor Create(aSource: TStream; aOwnsStream: Boolean = False);  virtual;
     constructor Create(aSrcBuffer: PChar; aCount: SizeInt); virtual;
     destructor Destroy; override;
     procedure AssignCsvProps(aSource: TCsvEntity); override;
@@ -462,6 +462,7 @@ type
   TCsvWriter = class(TCsvEntity)
   private
   var
+    FOwnStream,
     FStream: TStream;
     FCellBuf: TCsvReader.TStrBuffer;
     FRowIndex,
@@ -472,16 +473,17 @@ type
     procedure DoWriteEol;
     procedure DoWriteCell(const s: string);
     procedure DoWriteRow(const r: TStringArray);
+    function  GetOwnsStream: Boolean; inline;
     function  WriteDoc(aDoc: TCsvDoc): SizeInt;
   protected
     procedure SetDelimiterChar(d: Char); override;
     procedure SetQuoteChar(qc: Char); override;
     procedure SetLEStyle(les: TLineEndStyle); override;
   public
-    class function New(aStream: TStream; aBufSize: SizeInt): TCsvWriter; static;
-    class function New(aStream: TStream): TCsvWriter; static;
-    constructor Create(aStream: TStream; aBufSize: SizeInt);
-    constructor Create(aStream: TStream);
+    class function New(aStream: TStream; aBufSize: SizeInt; aOwnsStream: Boolean = False): TCsvWriter; static;
+    class function New(aStream: TStream; aOwnsStream: Boolean = False): TCsvWriter; static;
+    constructor Create(aStream: TStream; aBufSize: SizeInt; aOwnsStream: Boolean = False);
+    constructor Create(aStream: TStream; aOwnsStream: Boolean = False);
     destructor Destroy; override;
     procedure AssignCsvProps(aSource: TCsvEntity); override;
     function SetDelimiter(d: Char): TCsvWriter; inline;
@@ -497,6 +499,7 @@ type
     property ColIndex: SizeInt read FColIndex;
   { the index of the current row, immediately incremented by 1 after writing the end of the line }
     property RowIndex: SizeInt read FRowIndex;
+    property OwnsStream: Boolean read GetOwnsStream;
   end;
 
 implementation
@@ -1947,9 +1950,9 @@ begin
   Result := TCsvReader.Create(aSource, aBufSize, aOwnsStream);
 end;
 
-class function TCsvReader.New(aSource: TStream): TCsvReader;
+class function TCsvReader.New(aSource: TStream; aOwnsStream: Boolean): TCsvReader;
 begin
-  Result := TCsvReader.Create(aSource);
+  Result := TCsvReader.Create(aSource, aOwnsStream);
 end;
 
 class function TCsvReader.New(aSrcBuffer: PChar; aCount: SizeInt): TCsvReader;
@@ -1995,9 +1998,9 @@ begin
   FillTokenTable;
 end;
 
-constructor TCsvReader.Create(aSource: TStream);
+constructor TCsvReader.Create(aSource: TStream; aOwnsStream: Boolean);
 begin
-  Create(aSource, DEF_BUF_SIZE, False);
+  Create(aSource, DEF_BUF_SIZE, aOwnsStream);
 end;
 
 constructor TCsvReader.Create(aSrcBuffer: PChar; aCount: SizeInt);
@@ -2520,6 +2523,11 @@ begin
   DoWriteEol;
 end;
 
+function TCsvWriter.GetOwnsStream: Boolean;
+begin
+  Result := FOwnStream <> nil;
+end;
+
 function TCsvWriter.WriteDoc(aDoc: TCsvDoc): SizeInt;
 var
   I: SizeInt;
@@ -2556,19 +2564,21 @@ begin
   FLineBreak := GetLineBreak(LineEndStyle);
 end;
 
-class function TCsvWriter.New(aStream: TStream; aBufSize: SizeInt): TCsvWriter;
+class function TCsvWriter.New(aStream: TStream; aBufSize: SizeInt; aOwnsStream: Boolean): TCsvWriter;
 begin
-  Result := TCsvWriter.Create(aStream, aBufSize);
+  Result := TCsvWriter.Create(aStream, aBufSize, aOwnsStream);
 end;
 
-class function TCsvWriter.New(aStream: TStream): TCsvWriter;
+class function TCsvWriter.New(aStream: TStream; aOwnsStream: Boolean): TCsvWriter;
 begin
-  Result := TCsvWriter.Create(aStream);
+  Result := TCsvWriter.Create(aStream, aOwnsStream);
 end;
 
-constructor TCsvWriter.Create(aStream: TStream; aBufSize: SizeInt);
+constructor TCsvWriter.Create(aStream: TStream; aBufSize: SizeInt; aOwnsStream: Boolean);
 begin
   inherited Create;
+  if aOwnsStream then
+    FOwnStream := aStream;
   if aBufSize > 0 then
     FStream := TWriteBufStream.Create(aStream, aBufSize)
   else
@@ -2579,15 +2589,16 @@ begin
   FCellBuf.Reset(TCsvReader.DEFAULT_CAP);
 end;
 
-constructor TCsvWriter.Create(aStream: TStream);
+constructor TCsvWriter.Create(aStream: TStream; aOwnsStream: Boolean);
 begin
-  Create(aStream, NULL_INDEX);
+  Create(aStream, NULL_INDEX, aOwnsStream);
 end;
 
 destructor TCsvWriter.Destroy;
 begin
   FCellBuf.Write2Stream(FStream);
   FStream.Free;
+  FOwnStream.Free;
   inherited;
 end;
 
