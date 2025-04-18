@@ -4,7 +4,7 @@
 *   Comma Separated Value (CSV) file format utilities,                      *
 *   which try to follow the format described in RFC 4180.                   *
 *                                                                           *
-*   Copyright(c) 2022-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -469,9 +469,9 @@ type
     FLineBreak: string;
     FSpecChars: TSysCharset;
     function  GetLineBreak(les: TLineEndStyle): string; inline;
-    procedure DoWriteEol; inline;
+    procedure DoWriteEol;
     procedure DoWriteCell(const s: string);
-    procedure DoWriteRow(const r: TStringArray); inline;
+    procedure DoWriteRow(const r: TStringArray);
     function  WriteDoc(aDoc: TCsvDoc): SizeInt;
   protected
     procedure SetDelimiterChar(d: Char); override;
@@ -2119,14 +2119,22 @@ begin
 end;
 
 function TCsvReader.ReadRow(const aMask: array of Boolean): SizeInt;
+var
+  I: SizeInt;
 begin
   Result := 0;
+  if ReadState > rsRead then exit;
+  if State = psBeginRow then
+    I := 0
+  else
+    I := Succ(ColIndex);
   repeat
-    if (Succ(ColIndex) <= System.High(aMask)) and aMask[Succ(ColIndex)] then begin
+    if (I < System.Length(aMask)) and aMask[I] then begin
       if not Read then break;
       Inc(Result);
     end else
       if not Skip then break;
+    I := Succ(ColIndex);
   until State = psBeginRow;
 end;
 
@@ -2633,14 +2641,14 @@ end;
 
 function TCsvWriter.AddEol: TCsvWriter;
 begin
-  Result := Self;
   DoWriteEol;
+  Result := Self;
 end;
 
 function TCsvWriter.AddRow(const aRow: TStringArray): TCsvWriter;
 begin
-  Result := Self;
   DoWriteRow(aRow);
+  Result := Self;
 end;
 
 end.
