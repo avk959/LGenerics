@@ -472,6 +472,7 @@ type
     function  GetLineBreak(les: TLineEndStyle): string; inline;
     procedure DoWriteEol;
     procedure DoWriteCell(const s: string);
+    procedure DoWriteCell(const aBuffer; aCount: SizeInt);
     procedure DoWriteRow(const r: TStringArray);
     function  GetOwnsStream: Boolean; inline;
     function  WriteDoc(aDoc: TCsvDoc): SizeInt;
@@ -492,6 +493,7 @@ type
     function SetQuotePolicy(qp: TQuotePolicy): TCsvWriter; inline;
 
     function AddCell(const aValue: string): TCsvWriter; inline;
+    function AddCell(const aBuffer; aCount: SizeInt): TCsvWriter; inline;
     function AddEol: TCsvWriter; inline;
     function AddRow(const aRow: TStringArray): TCsvWriter; inline;
   { the column index of the currently written cell, -1 if no cells have been written
@@ -2512,6 +2514,32 @@ begin
   Inc(FColIndex);
 end;
 
+procedure TCsvWriter.DoWriteCell(const aBuffer; aCount: SizeInt);
+var
+  I: SizeInt;
+  NeedQuotes: Boolean;
+  p: PAnsiChar;
+begin
+  if ColIndex >= 0 then
+    FCellBuf.Append(Delimiter);
+  NeedQuotes := QuotePolicy = qpForce;
+  p := @aBuffer;
+  if not NeedQuotes then
+    for I := 0 to Pred(aCount) do
+      if p[I] in FSpecChars then begin
+        NeedQuotes := True;
+        break;
+      end;
+  if NeedQuotes then FCellBuf.Append(QuoteMark);
+  for I := 0 to Pred(aCount) do begin
+    if p[I] = QuoteMark then
+      FCellBuf.Append(QuoteMark);
+    FCellBuf.Append(p[I]);
+  end;
+  if NeedQuotes then FCellBuf.Append(QuoteMark);
+  Inc(FColIndex);
+end;
+
 procedure TCsvWriter.DoWriteRow(const r: TStringArray);
 var
   I: SizeInt;
@@ -2647,6 +2675,12 @@ end;
 function TCsvWriter.AddCell(const aValue: string): TCsvWriter;
 begin
   DoWriteCell(aValue);
+  Result := Self;
+end;
+
+function TCsvWriter.AddCell(const aBuffer; aCount: SizeInt): TCsvWriter;
+begin
+  DoWriteCell(aBuffer, aCount);
   Result := Self;
 end;
 
