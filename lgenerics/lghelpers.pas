@@ -159,49 +159,53 @@ type
     class function  HashCode(const aValue: Single): SizeInt; inline; static;
     class function  Equal(const L, R: Single): Boolean; inline; static;
     class function  Less(const L, R: Single): Boolean; inline; static;
+    class function  IsFinite(const aValue: Single): Boolean; inline; static;
     class function  IsExactInt(const aValue: Single): Boolean; inline; static;
     class function  IsExactInt(const aValue: Single; out aIntValue: Int32): Boolean; inline; static;
     class procedure Negate(var aValue: Single); inline; static;
   { returns value with the magnitude of aMagn and the sign of aSgn }
-    class function  CopySign(const aMagn, aSgn: Single): Single; inline; static;
+    class function CopySign(const aMagn, aSgn: Single): Single; inline; static;
   { returns True and in the aQuiet parameter whether it is quiet if aValue is NaN,
     otherwise returns False }
-    class function  IsNan(const aValue: Single; out aQuiet: Boolean): Boolean; overload; inline; static;
+    class function IsNan(const aValue: Single; out aQuiet: Boolean): Boolean; overload; inline; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a quiet NaN
     with that payload; otherwize returns 0.0 }
-    class function  SetPayload(const aValue: Single): Single; static;
+    class function SetPayload(const aValue: Single): Single; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
     with that payload; otherwize returns 0.0 }
     class function  SetSignalPayload(const aValue: Single): Single; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
-    class function  GetPayload(const aValue: Single): Single; inline; static;
+    class function GetPayload(const aValue: Single): Single; inline; static;
   { returns True if L and R are unordered, that is, at least one of them is NaN }
-    class function  Unordered(const L, R: Single): Boolean; inline; static;
+    class function Unordered(const L, R: Single): Boolean; inline; static;
   { returns True if L > R; returns False if L <= R or unordered }
-    class function  IsGreater(const L, R: Single): Boolean; inline; static;
+    class function IsGreater(const L, R: Single): Boolean; inline; static;
   { returns True if L >= R; returns False if L < R or unordered }
-    class function  IsGreaterEqual(const L, R: Single): Boolean; inline; static;
+    class function IsGreaterEqual(const L, R: Single): Boolean; inline; static;
   { returns True if L < R; returns False if L >= R or unordered }
-    class function  IsLess(const L, R: Single): Boolean; inline; static;
+    class function IsLess(const L, R: Single): Boolean; inline; static;
   { returns True if L <= R; returns False if L > R or unordered }
-    class function  IsLessEqual(const L, R: Single): Boolean; inline; static;
+    class function IsLessEqual(const L, R: Single): Boolean; inline; static;
   { returns True if L = R; returns False if L <> R or unordered }
-    class function  IsEqual(const L, R: Single): Boolean; inline; static;
+    class function IsEqual(const L, R: Single): Boolean; inline; static;
   { returns True if L <> R; returns False if L = R or unordered }
-    class function  IsNotEqual(const L, R: Single): Boolean; inline; static;
+    class function IsNotEqual(const L, R: Single): Boolean; inline; static;
   { TotalOrder predicate }
-    class function  TotalOrder(const L, R: Single): Boolean; static;
-  { returns quiet NaN if L and R unordered, otherwise
+    class function TotalOrder(const L, R: Single): Boolean; static;
+  { returns quiet NaN if L and R are unordered, otherwise
     returns L if L <= R or R if R < L (-0 < +0) }
-    class function  Minimum(const L, R: Single): Single; static;
-  { returns quiet NaN if L and R unordered, otherwise
+    class function Minimum(const L, R: Single): Single; static;
+  { returns quiet NaN if L and R are unordered, otherwise
     returns L if L >= R or R if R > L (+0 > -0) }
-    class function  Maximum(const L, R: Single): Single; static;
+    class function Maximum(const L, R: Single): Single; static;
   { returns the next representable value after aNum in the direction of aTo }
-    class function  NextAfter(const aNum, aTo: Single): Single; static;
-  { returns the value of a unit in the last position of aNum if aNum is finite number,
-    otherwise returns quiet NaN }
-    class function  Quantum(const aNum: Single): Single; static;
+    class function NextAfter(const aNum, aTo: Single): Single; static;
+  { returns the Quantum(IEEE 754) value of aNum if aNum is a finite number,
+    otherwise returns aNum itself }
+    class function Quantum(const aNum: Single): Single; static;
+  { returns the value of a unit in the last place(JH version) if aNum is a finite number,
+    otherwise returns aNum itself }
+    class function Ulp(const aNum: Single): Single; static;
     function  IsZero: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int32): Boolean; inline;
@@ -209,6 +213,7 @@ type
     function  CopySign(const aSgn: Single): Single; inline;
     function  IsNan(out aQuit: Boolean): Boolean; overload; inline;
     function  NextToward(const aValue: Single): Single; inline;
+    function  Quantum: Single; inline;
     function  Ulp: Single; inline;
   end;
 
@@ -227,49 +232,53 @@ type
     class function  HashCode(const aValue: Double): SizeInt; inline; static;
     class function  Equal(const L, R: Double): Boolean; inline; static;
     class function  Less(const L, R: Double): Boolean; inline; static;
+    class function  IsFinite(const aValue: Double): Boolean; inline; static;
     class function  IsExactInt(const aValue: Double): Boolean; inline; static;
     class function  IsExactInt(const aValue: Double; out aIntValue: Int64): Boolean; inline; static;
     class procedure Negate(var aValue: Double); inline; static;
   { returns value with the magnitude of aMagn and the sign of aSgn }
-    class function  CopySign(const aMagn, aSgn: Double): Double; inline; static;
+    class function CopySign(const aMagn, aSgn: Double): Double; inline; static;
   { returns True and in the aQuiet parameter whether it is quiet if aValue is NaN,
     otherwise returns False }
-    class function  IsNan(const aValue: Double; out aQuiet: Boolean): Boolean; overload; inline; static;
+    class function IsNan(const aValue: Double; out aQuiet: Boolean): Boolean; overload; inline; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a quiet NaN
     with that payload; otherwize returns 0.0 }
-    class function  SetPayload(const aValue: Double): Double; static;
+    class function SetPayload(const aValue: Double): Double; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
     with that payload; otherwize returns 0.0 }
-    class function  SetSignalPayload(const aValue: Double): Double; static;
+    class function SetSignalPayload(const aValue: Double): Double; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
-    class function  GetPayload(const aValue: Double): Double; inline; static;
+    class function GetPayload(const aValue: Double): Double; inline; static;
   { returns True if L and R are unordered, that is, at least one of them is NaN }
-    class function  Unordered(const L, R: Double): Boolean; inline; static;
+    class function Unordered(const L, R: Double): Boolean; inline; static;
   { returns True if L > R; returns False if L <= R or unordered }
-    class function  IsGreater(const L, R: Double): Boolean; inline; static;
+    class function IsGreater(const L, R: Double): Boolean; inline; static;
   { returns True if L >= R; returns False if L < R or unordered }
-    class function  IsGreaterEqual(const L, R: Double): Boolean; inline; static;
+    class function IsGreaterEqual(const L, R: Double): Boolean; inline; static;
   { returns True if L < R; returns False if L >= R or unordered }
-    class function  IsLess(const L, R: Double): Boolean; inline; static;
+    class function IsLess(const L, R: Double): Boolean; inline; static;
   { returns True if L <= R; returns False if L > R or unordered }
-    class function  IsLessEqual(const L, R: Double): Boolean; inline; static;
+    class function IsLessEqual(const L, R: Double): Boolean; inline; static;
   { returns True if L = R; returns False if L <> R or unordered }
-    class function  IsEqual(const L, R: Double): Boolean; inline; static;
+    class function IsEqual(const L, R: Double): Boolean; inline; static;
   { returns True if L <> R; returns False if L = R or unordered }
-    class function  IsNotEqual(const L, R: Double): Boolean; inline; static;
+    class function IsNotEqual(const L, R: Double): Boolean; inline; static;
   { TotalOrder predicate }
-    class function  TotalOrder(const L, R: Double): Boolean; static;
-  { returns quiet NaN if L and R unordered, otherwise
+    class function TotalOrder(const L, R: Double): Boolean; static;
+  { returns quiet NaN if L and R are unordered, otherwise
     returns L if L <= R or R if R < L (-0 < +0) }
-    class function  Minimum(const L, R: Double): Double; static;
-  { returns quiet NaN if L and R unordered, otherwise
+    class function Minimum(const L, R: Double): Double; static;
+  { returns quiet NaN if L and R are unordered, otherwise
     returns L if L >= R or R if R > L (+0 > -0) }
-    class function  Maximum(const L, R: Double): Double; static;
+    class function Maximum(const L, R: Double): Double; static;
   { returns the next representable value after aNum in the direction of aTo }
-    class function  NextAfter(const aNum, aTo: Double): Double; static;
-  { returns the value of a unit in the last position of aNum if aNum is finite number,
-    otherwise returns quiet NaN }
-    class function  Quantum(const aNum: Double): Double; static;
+    class function NextAfter(const aNum, aTo: Double): Double; static;
+  { returns the Quantum(IEEE 754) value of aNum if aNum is a finite number,
+    otherwise returns aNum itself }
+    class function Quantum(const aNum: Double): Double; static;
+  { returns the value of a unit in the last place(JH version) if aNum is a finite number,
+    otherwise returns aNum itself }
+    class function Ulp(const aNum: Double): Double; static;
     function  IsZero: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int64): Boolean; inline;
@@ -277,6 +286,7 @@ type
     function  CopySign(const aSgn: Double): Double; inline;
     function  IsNan(out aQuit: Boolean): Boolean; overload; inline;
     function  NextToward(const aValue: Double): Double; inline;
+    function  Quantum: Double; inline;
     function  Ulp: Double; inline;
   end;
 
@@ -284,26 +294,79 @@ type
   TGExtendedHelper = type helper(TExtendedHelper) for Extended
   private
   type
-    TRec80 = packed record
+    TPWord = packed record
       Mantis: QWord;
       PExp: Word;
     end;
   const
-    SIGN_FLAG = Word($8000);
+    SIGN_FLAG  = Word($8000);
+    EXP_MASK   = Word($7fff);
+    INT_FLAG   = QWord($8000000000000000);
+    QUIET_MASK = QWord($c000000000000000);
   public
   const
-    MIN_EXACT_INT = Extended(Low(Int64));
-    MAX_EXACT_INT = Extended(High(Int64));
+    MAX_PAYLOAD = QWord($3fffffffffffffff);
   public
-    class function IsZero(const aValue: Extended): Boolean; inline; static;
-    class function HashCode(const aValue: Extended): SizeInt; inline; static;
-    class function Equal(const L, R: Extended): Boolean; inline; static;
-    class function Less(const L, R: Extended): Boolean; inline; static;
-    class function IsExactInt(const aValue: Extended): Boolean; inline; static;
-    class function IsExactInt(const aValue: Extended; out aIntValue: Int64): Boolean; inline; static;
-    function IsZero: Boolean; inline;
-    function IsExactInt: Boolean; inline;
-    function IsExactInt(out aValue: Int64): Boolean; inline;
+    class function  IsZero(const aValue: Extended): Boolean; inline; static;
+    class function  HashCode(const aValue: Extended): SizeInt; inline; static;
+    class function  Equal(const L, R: Extended): Boolean; inline; static;
+    class function  Less(const L, R: Extended): Boolean; inline; static;
+    class function  IsFinite(const aValue: Extended): Boolean; inline; static;
+    class function  IsExactInt(const aValue: Extended): Boolean; inline; static;
+    class function  IsExactInt(const aValue: Extended; out aIntValue: Int64): Boolean; static;
+    class procedure Negate(var aValue: Extended); inline; static;
+  { returns value with the magnitude of aMagn and the sign of aSgn }
+    class function CopySign(const aMagn, aSgn: Extended): Extended; inline; static;
+  { returns True and in the aQuiet parameter whether it is quiet if aValue is NaN,
+    otherwise returns False }
+    class function IsNan(const aValue: Extended; out aQuiet: Boolean): Boolean; overload; inline; static;
+  { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a quiet NaN
+    with that payload; otherwize returns 0.0 }
+    class function SetPayload(const aValue: Extended): Extended; static;
+  { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
+    with that payload; otherwize returns 0.0 }
+    class function SetSignalPayload(const aValue: Extended): Extended; static;
+  { if aValue is NaN then returns its payload, otherwise returns -1 }
+    class function GetPayload(const aValue: Extended): Extended; inline; static;
+  { returns True if L and R are unordered, that is, at least one of them is NaN }
+    class function Unordered(const L, R: Extended): Boolean; inline; static;
+  { returns True if L > R; returns False if L <= R or unordered }
+    class function IsGreater(const L, R: Extended): Boolean; inline; static;
+  { returns True if L >= R; returns False if L < R or unordered }
+    class function IsGreaterEqual(const L, R: Extended): Boolean; inline; static;
+  { returns True if L < R; returns False if L >= R or unordered }
+    class function IsLess(const L, R: Extended): Boolean; inline; static;
+  { returns True if L <= R; returns False if L > R or unordered }
+    class function IsLessEqual(const L, R: Extended): Boolean; inline; static;
+  { returns True if L = R; returns False if L <> R or unordered }
+    class function IsEqual(const L, R: Extended): Boolean; inline; static;
+  { returns True if L <> R; returns False if L = R or unordered }
+    class function IsNotEqual(const L, R: Extended): Boolean; inline; static;
+  { TotalOrder predicate }
+    class function TotalOrder(const L, R: Extended): Boolean; static;
+  { returns quiet NaN if L and R are unordered, otherwise
+    returns L if L <= R or R if R < L (-0 < +0) }
+    class function Minimum(const L, R: Extended): Extended; static;
+  { returns quiet NaN if L and R are unordered, otherwise
+    returns L if L >= R or R if R > L (+0 > -0) }
+    class function Maximum(const L, R: Extended): Extended; static;
+  { returns the next representable value after aNum in the direction of aTo }
+    class function NextAfter(const aNum, aTo: Extended): Extended; static;
+  { returns the Quantum(IEEE 754) value of aNum if aNum is a finite number,
+    otherwise returns aNum itself }
+    class function Quantum(const aNum: Extended): Extended; static;
+  { returns the value of a unit in the last place(JH version) if aNum is a finite number,
+    otherwise returns aNum itself }
+    class function Ulp(const aNum: Extended): Extended; static;
+    function  IsZero: Boolean; inline;
+    function  IsExactInt: Boolean; inline;
+    function  IsExactInt(out aValue: Int64): Boolean; inline;
+    procedure Negate; inline;
+    function  CopySign(const aSgn: Extended): Extended; inline;
+    function  IsNan(out aQuit: Boolean): Boolean; overload; inline;
+    function  NextToward(const aValue: Extended): Extended; inline;
+    function  Quantum: Extended; inline;
+    function  Ulp: Extended; inline;
   end;
 {$ENDIF}
 
@@ -500,6 +563,7 @@ type
   function HashPointer(const aValue: Pointer): SizeInt;
 
 implementation
+{$WARN 4110 OFF : Range check error while evaluating constants ($1 must be between $2 and $3)}
 {$Q-}{$R-}{$B-}{$COPERATORS ON}{$MACRO ON}
 {$DEFINE HashFunc := TxxHash32LE}
 
@@ -781,10 +845,12 @@ begin
   Result := L < R;
 end;
 
+{$PUSH}{$WARN 4055 OFF : Conversion between ordinals and pointers is not portable}
 class function TGPointerHelper.HashCode(aValue: Pointer): SizeInt;
 begin
-  Result := SizeUInt.HashCode({%H-}SizeUInt(aValue));
+  Result := SizeUInt.HashCode(SizeUInt(aValue));
 end;
+{$POP}
 
 class function TGPointerHelper.Equal(L, R: Pointer): Boolean;
 begin
@@ -819,8 +885,14 @@ begin
   Result := L < R;
 end;
 
+class function TGSingleHelper.IsFinite(const aValue: Single): Boolean;
+begin
+  Result := (DWord(aValue) and not SIGN_FLAG) < EXP_MASK;
+end;
+
 class function TGSingleHelper.IsExactInt(const aValue: Single): Boolean;
 begin
+  if not IsFinite(aValue) then exit(False);
   Result := (System.Frac(aValue) = 0) and (System.Abs(aValue) <= MAX_EXACT_INT);
 end;
 
@@ -991,27 +1063,21 @@ begin
 end;
 
 class function TGSingleHelper.NextAfter(const aNum, aTo: Single): Single;
-var
-  n, nSign: DWord;
 begin
-  n := DWord(aNum) and not SIGN_FLAG;
-  if n > EXP_MASK then
-    exit(NaN)
+  if DWord(aNum) and not SIGN_FLAG > EXP_MASK then
+    exit(aNum)
   else
-    if aTo.IsNan then
-      exit(NaN);
+    if (DWord(aTo) and not SIGN_FLAG) > EXP_MASK then
+      exit(aTo);
   if aNum = aTo then exit(aNum);
-  if n = 0 then
+  if aNum = 0 then
     DWord(Result) := DWord(1) or DWord(aTo) and SIGN_FLAG
   else
-    begin
-      nSign := DWord(aNum) and SIGN_FLAG;
-      if(Boolean(nSign shr 31) xor aTo.Sign)or((DWord(aTo) and not SIGN_FLAG) < n)then
-        //to zero
-        DWord(Result) := Pred(n) and not SIGN_FLAG or nSign
-      else
-        DWord(Result) := Succ(n) and not SIGN_FLAG or nSign;
-    end;
+    if(aNum.Sign xor aTo.Sign) or (System.Abs(aNum) > System.Abs(aTo))then
+      //to zero
+      DWord(Result) := Pred(DWord(aNum))
+    else
+      DWord(Result) := Succ(DWord(aNum));
 end;
 
 class function TGSingleHelper.Quantum(const aNum: Single): Single;
@@ -1020,10 +1086,24 @@ var
   nExp: Int32;
 begin
   n := DWord(aNum) and not SIGN_FLAG;
-  if n >= EXP_MASK then exit(NaN);
+  if n >= EXP_MASK then exit(aNum);
   nExp := Int32((DWord(aNum) shr 23) and $ff) - 23;
   if nExp <= 0 then
-    DWord(Result) := 1
+    DWord(Result) := DWord(1)
+  else
+    DWord(Result) := DWord(nExp) shl 23;
+end;
+
+class function TGSingleHelper.Ulp(const aNum: Single): Single;
+var
+  n: DWord;
+  nExp: Int32;
+begin
+  n := DWord(aNum) and not SIGN_FLAG;
+  if n >= EXP_MASK then exit(aNum);
+  nExp := Int32((DWord(aNum) shr 23) and $ff) - 24;
+  if nExp <= 0 then
+    DWord(Result) := DWord(1)
   else
     DWord(Result) := DWord(nExp) shl 23;
 end;
@@ -1063,9 +1143,14 @@ begin
   Result := NextAfter(Self, aValue);
 end;
 
-function TGSingleHelper.Ulp: Single;
+function TGSingleHelper.Quantum: Single;
 begin
   Result := Quantum(Self);
+end;
+
+function TGSingleHelper.Ulp: Single;
+begin
+  Result := Ulp(Self);
 end;
 
 class function TGDoubleHelper.IsZero(const aValue: Double): Boolean;
@@ -1091,8 +1176,14 @@ begin
   Result := L < R;
 end;
 
+class function TGDoubleHelper.IsFinite(const aValue: Double): Boolean;
+begin
+  Result := (QWord(aValue) and not SIGN_FLAG) < EXP_MASK;
+end;
+
 class function TGDoubleHelper.IsExactInt(const aValue: Double): Boolean;
 begin
+  if not IsFinite(aValue) then exit(False);
   Result := (System.Frac(aValue) = 0) and (System.Abs(aValue) <= MAX_EXACT_INT);
 end;
 
@@ -1263,41 +1354,49 @@ begin
 end;
 
 class function TGDoubleHelper.NextAfter(const aNum, aTo: Double): Double;
-var
-  n, nSign: QWord;
 begin
-  n := QWord(aNum) and not SIGN_FLAG;
-  if n > EXP_MASK then
-    exit(NaN)
+  if (QWord(aNum) and not SIGN_FLAG) > EXP_MASK then
+    exit(aNum)
   else
-    if aTo.IsNan then
-      exit(NaN);
+    if (QWord(aTo) and not SIGN_FLAG) > EXP_MASK then
+      exit(aTo);
   if aNum = aTo then exit(aNum);
-  if n = 0 then
+  if aNum = 0 then
     QWord(Result) := QWord(1) or QWord(aTo) and SIGN_FLAG
   else
-    begin
-      nSign := QWord(aNum) and SIGN_FLAG;
-      if(Boolean(nSign shr 63) xor aTo.Sign)or((QWord(aTo) and not SIGN_FLAG) < n)then
-        //to zero
-        QWord(Result) := Pred(n) and not SIGN_FLAG or nSign
-      else
-        QWord(Result) := Succ(n) and not SIGN_FLAG or nSign;
-    end;
+    if(aNum.Sign xor aTo.Sign)or(System.Abs(aNum) > System.Abs(aTo))then
+      //to zero
+      QWord(Result) := Pred(QWord(aNum))
+    else
+      QWord(Result) := Succ(QWord(aNum));
 end;
 
 class function TGDoubleHelper.Quantum(const aNum: Double): Double;
 var
-  v: QWord;
-  vExp: Int32;
+  n: QWord;
+  nExp: Int32;
 begin
-  v := QWord(aNum) and not SIGN_FLAG;
-  if v >= EXP_MASK then exit(NaN);
-  vExp := Int32((QWord(aNum) shr 52) and $7ff) - 52;
-  if vExp <= 0 then
-    QWord(Result) := 1
+  n := QWord(aNum) and not SIGN_FLAG;
+  if n >= EXP_MASK then exit(aNum);
+  nExp := Int32((QWord(aNum) shr 52) and $7ff) - 52;
+  if nExp <= 0 then
+    QWord(Result) := QWord(1)
   else
-    QWord(Result) := QWord(vExp) shl 52;
+    QWord(Result) := QWord(nExp) shl 52;
+end;
+
+class function TGDoubleHelper.Ulp(const aNum: Double): Double;
+var
+  n: QWord;
+  nExp: Int32;
+begin
+  n := QWord(aNum) and not SIGN_FLAG;
+  if n >= EXP_MASK then exit(aNum);
+  nExp := Int32((QWord(aNum) shr 52) and $7ff) - 53;
+  if nExp <= 0 then
+    QWord(Result) := QWord(1)
+  else
+    QWord(Result) := QWord(nExp) shl 52;
 end;
 
 function TGDoubleHelper.IsZero: Boolean;
@@ -1335,22 +1434,27 @@ begin
   Result := NextAfter(Self, aValue);
 end;
 
-function TGDoubleHelper.Ulp: Double;
+function TGDoubleHelper.Quantum: Double;
 begin
   Result := Quantum(Self);
+end;
+
+function TGDoubleHelper.Ulp: Double;
+begin
+  Result := Ulp(Self);
 end;
 
 {$ifdef FPC_HAS_TYPE_EXTENDED}
 class function TGExtendedHelper.IsZero(const aValue: Extended): Boolean;
 begin
-  Result := (TRec80(aValue).PExp and not SIGN_FLAG = 0)and(TRec80(aValue).Mantis = 0);
+  Result := (TPWord(aValue).PExp and not SIGN_FLAG = 0)and(TPWord(aValue).Mantis = 0);
 end;
 
 class function TGExtendedHelper.HashCode(const aValue: Extended): SizeInt;
 const
   Zero: Extended = 0.0;
 begin
-  if aValue.IsZero then
+  if IsZero(aValue) then
     Result := HashFunc.HashBuf(@Zero, SizeOf(Zero))
   else
     Result := HashFunc.HashBuf(@aValue, SizeOf(aValue));
@@ -1366,15 +1470,273 @@ begin
   Result := L < R;
 end;
 
+class function TGExtendedHelper.IsFinite(const aValue: Extended): Boolean;
+begin
+  case TPWord(aValue).PExp and EXP_MASK of
+    0:        Result := TPWord(aValue).Mantis and INT_FLAG = 0;
+    EXP_MASK: Result := False;
+  else
+    Result := TPWord(aValue).Mantis and INT_FLAG <> 0;
+  end;
+end;
+
 class function TGExtendedHelper.IsExactInt(const aValue: Extended): Boolean;
 begin
-  Result := (System.Frac(aValue) = 0) and (aValue >= MIN_EXACT_INT) and (aValue <= MAX_EXACT_INT);
+  if not IsFinite(aValue) then exit(False);
+  Result := (System.Frac(aValue) = 0) and (aValue >= Low(Int64)) and (aValue <= High(Int64));
 end;
 
 class function TGExtendedHelper.IsExactInt(const aValue: Extended; out aIntValue: Int64): Boolean;
 begin
   Result := IsExactInt(aValue);
   if Result then aIntValue := System.Trunc(aValue);
+end;
+
+class procedure TGExtendedHelper.Negate(var aValue: Extended);
+begin
+  TPWord(aValue).PExp := TPWord(aValue).PExp xor SIGN_FLAG;
+end;
+
+class function TGExtendedHelper.CopySign(const aMagn, aSgn: Extended): Extended;
+begin
+  Result := aMagn;
+  TPWord(Result).PExp := TPWord(Result).PExp and EXP_MASK or TPWord(aSgn).PExp and SIGN_FLAG;
+end;
+
+class function TGExtendedHelper.IsNan(const aValue: Extended; out aQuiet: Boolean): Boolean;
+begin
+  Result := False;
+  if TPWord(aValue).PExp and EXP_MASK <> EXP_MASK then exit;
+  case Byte(TPWord(aValue).PExp shr 62) of
+    2:  begin Result := True; aQuiet := False end;
+    3:  begin Result := True; aQuiet := True end;
+  end;
+end;
+
+{$PUSH}{$WARN 5036 OFF : Local variable "$1" does not seem to be initialized}
+class function TGExtendedHelper.SetPayload(const aValue: Extended): Extended;
+var
+  I: Int64;
+begin
+  if IsExactInt(aValue, I) and (QWord(I) <= MAX_PAYLOAD) then
+    with TPWord(Result) do
+      begin
+        Mantis := QWord(I) or QUIET_MASK;
+        PExp := EXP_MASK;
+      end
+  else
+    Result := 0;
+end;
+
+class function TGExtendedHelper.SetSignalPayload(const aValue: Extended): Extended;
+var
+  I: Int64;
+begin
+  if IsExactInt(aValue, I) and (QWord(I) <= MAX_PAYLOAD) then
+    with TPWord(Result) do
+      begin
+        Mantis := QWord(I) or INT_FLAG;
+        PExp := EXP_MASK;
+      end
+  else
+    Result := 0;
+end;
+{$POP}
+
+class function TGExtendedHelper.GetPayload(const aValue: Extended): Extended;
+var
+  Dummy: Boolean;
+begin
+  if IsNan(aValue, Dummy) then
+    Result := Int64(TPWord(aValue).Mantis and MAX_PAYLOAD)
+  else
+    Result := -1;
+end;
+
+class function TGExtendedHelper.Unordered(const L, R: Extended): Boolean;
+var
+  Dummy: Boolean;
+begin
+  Result := IsNan(L, Dummy) or IsNan(R, Dummy);
+end;
+
+class function TGExtendedHelper.IsGreater(const L, R: Extended): Boolean;
+begin
+  if Unordered(L, R) then exit(False);
+  Result := L > R;
+end;
+
+class function TGExtendedHelper.IsGreaterEqual(const L, R: Extended): Boolean;
+begin
+  if Unordered(L, R) then exit(False);
+  Result := L >= R;
+end;
+
+class function TGExtendedHelper.IsLess(const L, R: Extended): Boolean;
+begin
+  if Unordered(L, R) then exit(False);
+  Result := L < R;
+end;
+
+class function TGExtendedHelper.IsLessEqual(const L, R: Extended): Boolean;
+begin
+  if Unordered(L, R) then exit(False);
+  Result := L <= R;
+end;
+
+class function TGExtendedHelper.IsEqual(const L, R: Extended): Boolean;
+begin
+  if Unordered(L, R) then exit(False);
+  Result := L = R;
+end;
+
+class function TGExtendedHelper.IsNotEqual(const L, R: Extended): Boolean;
+begin
+  if Unordered(L, R) then exit(False);
+  Result := L <> R;
+end;
+
+class function TGExtendedHelper.TotalOrder(const L, R: Extended): Boolean;
+var
+  LNeg, RNeg: Boolean;
+begin
+  LNeg := Boolean(TPWord(L).PExp shr 15);
+  RNeg := Boolean(TPWord(R).PExp shr 15);
+  if LNeg xor RNeg then exit(LNeg);
+  if LNeg then
+    if TPWord(L).PExp and EXP_MASK = TPWord(R).PExp and EXP_MASK then
+      Result := TPWord(L).Mantis > TPWord(R).Mantis
+    else
+      Result := TPWord(L).PExp and EXP_MASK > TPWord(R).PExp and EXP_MASK
+  else
+    if TPWord(L).PExp and EXP_MASK = TPWord(R).PExp and EXP_MASK then
+      Result := TPWord(L).Mantis < TPWord(R).Mantis
+    else
+      Result := TPWord(L).PExp and EXP_MASK < TPWord(R).PExp and EXP_MASK;
+end;
+
+class function TGExtendedHelper.Minimum(const L, R: Extended): Extended;
+var
+  Quiet: Boolean;
+begin
+  if IsNan(L, Quiet) then
+    if Quiet then
+      exit(L)
+    else
+      exit(NaN)
+  else
+    if IsNan(R, Quiet) then
+      if Quiet then
+        exit(R)
+      else
+        exit(NaN);
+  if L < R then
+    Result := L
+  else
+    if R < L then
+      Result := R
+    else
+      if IsZero(L) and (L.Sign xor R.Sign) then
+        if L.Sign then
+          Result := L
+        else
+          Result := R
+      else
+        Result := L;
+end;
+
+class function TGExtendedHelper.Maximum(const L, R: Extended): Extended;
+var
+  Quiet: Boolean;
+begin
+  if IsNan(L, Quiet) then
+    if Quiet then
+      exit(L)
+    else
+      exit(NaN)
+  else
+    if IsNan(R, Quiet) then
+      if Quiet then
+        exit(R)
+      else
+        exit(NaN);
+  if L > R then
+    Result := L
+  else
+    if R > L then
+      Result := R
+    else
+      if IsZero(L) and (L.Sign xor R.Sign) then
+        if R.Sign then
+          Result := L
+        else
+          Result := R
+      else
+        Result := L;
+end;
+
+class function TGExtendedHelper.NextAfter(const aNum, aTo: Extended): Extended;
+var
+  Dummy: Boolean;
+begin
+  if IsNan(aNum, Dummy) then
+    exit(aNum)
+  else
+    if IsNan(aTo, Dummy) then
+      exit(aTo);
+  if aNum = aTo then exit(aNum);
+  if aNum = 0 then begin
+    TPWord(Result).Mantis := QWord(1);
+    TPWord(Result).PExp :=  TPWord(aTo).PExp and SIGN_FLAG;
+  end else
+    if(aNum.Sign xor aTo.Sign)or(System.Abs(aNum) > System.Abs(aTo))then begin
+      //to zero
+      TPWord(Result).PExp := TPWord(aNum).PExp;
+      TPWord(Result).Mantis := Pred(TPWord(aNum).Mantis);
+      if TPWord(Result).Mantis and INT_FLAG = 0 then
+        if TPWord(Result).PExp and EXP_MASK <> 0 then begin
+          Dec(TPWord(Result).PExp);
+          if TPWord(Result).PExp and EXP_MASK <> 0 then
+            TPWord(Result).Mantis := TPWord(Result).Mantis or INT_FLAG;
+        end;
+    end else begin
+      TPWord(Result).PExp := TPWord(aNum).PExp;
+      TPWord(Result).Mantis := Succ(TPWord(aNum).Mantis);
+      if TPWord(Result).Mantis = 0 then begin
+        Inc(TPWord(Result).PExp);
+        TPWord(Result).Mantis := INT_FLAG;
+      end;
+    end;
+end;
+
+class function TGExtendedHelper.Quantum(const aNum: Extended): Extended;
+var
+  nExp: Int32;
+begin
+  if not IsFinite(aNum) then exit(aNum);
+  nExp := Int32(TPWord(aNum).PExp and EXP_MASK) - 63;
+  if nExp <= 0 then begin
+    TPWord(Result).PExp := 0;
+    TPWord(Result).Mantis := 1;
+  end else begin
+    TPWord(Result).PExp := Word(nExp);
+    TPWord(Result).Mantis := INT_FLAG;
+  end;
+end;
+
+class function TGExtendedHelper.Ulp(const aNum: Extended): Extended;
+var
+  nExp: Int32;
+begin
+  if not IsFinite(aNum) then exit(aNum);
+  nExp := Int32(TPWord(aNum).PExp and EXP_MASK) - 64;
+  if nExp <= 0 then begin
+    TPWord(Result).PExp := 0;
+    TPWord(Result).Mantis := 1;
+  end else begin
+    TPWord(Result).PExp := Word(nExp);
+    TPWord(Result).Mantis := INT_FLAG;
+  end;
 end;
 
 function TGExtendedHelper.IsZero: Boolean;
@@ -1392,6 +1754,35 @@ begin
   Result := IsExactInt(Self, aValue);
 end;
 
+procedure TGExtendedHelper.Negate;
+begin
+  Negate(Self);
+end;
+
+function TGExtendedHelper.CopySign(const aSgn: Extended): Extended;
+begin
+  Result := CopySign(Self, aSgn);
+end;
+
+function TGExtendedHelper.IsNan(out aQuit: Boolean): Boolean;
+begin
+  Result := IsNan(Self, aQuit);
+end;
+
+function TGExtendedHelper.NextToward(const aValue: Extended): Extended;
+begin
+  Result := NextAfter(Self, aValue);
+end;
+
+function TGExtendedHelper.Quantum: Extended;
+begin
+  Result := Quantum(Self);
+end;
+
+function TGExtendedHelper.Ulp: Extended;
+begin
+  Result := Ulp(Self);
+end;
 {$ENDIF}
 
 {$IF DECLARED(Comp)}
