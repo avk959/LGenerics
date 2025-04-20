@@ -1069,7 +1069,7 @@ begin
   else
     if (DWord(aTo) and not SIGN_FLAG) > EXP_MASK then
       exit(aTo);
-  if aNum = aTo then exit(aNum);
+  if aNum = aTo then exit(aTo);
   if aNum = 0 then
     DWord(Result) := DWord(1) or DWord(aTo) and SIGN_FLAG
   else
@@ -1082,30 +1082,23 @@ end;
 
 class function TGSingleHelper.Quantum(const aNum: Single): Single;
 var
-  n: DWord;
-  nExp: Int32;
+  n: Single;
 begin
-  n := DWord(aNum) and not SIGN_FLAG;
-  if n >= EXP_MASK then exit(aNum);
-  nExp := Int32((DWord(aNum) shr 23) and $ff) - 23;
-  if nExp <= 0 then
-    DWord(Result) := DWord(1)
+  if not IsFinite(aNum) then exit(aNum);
+  n := System.Abs(aNum);
+  if n < MaxValue then
+    Result := NextAfter(n, PositiveInfinity) - n
   else
-    DWord(Result) := DWord(nExp) shl 23;
+    Result := n - NextAfter(n, 0);
 end;
 
 class function TGSingleHelper.Ulp(const aNum: Single): Single;
 var
-  n: DWord;
-  nExp: Int32;
+  n: Single;
 begin
-  n := DWord(aNum) and not SIGN_FLAG;
-  if n >= EXP_MASK then exit(aNum);
-  nExp := Int32((DWord(aNum) shr 23) and $ff) - 24;
-  if nExp <= 0 then
-    DWord(Result) := DWord(1)
-  else
-    DWord(Result) := DWord(nExp) shl 23;
+  if not IsFinite(aNum) then exit(aNum);
+  n := System.Abs(aNum);
+  Result := n - NextAfter(n, -1);
 end;
 
 function TGSingleHelper.IsZero: Boolean;
@@ -1360,7 +1353,7 @@ begin
   else
     if (QWord(aTo) and not SIGN_FLAG) > EXP_MASK then
       exit(aTo);
-  if aNum = aTo then exit(aNum);
+  if aNum = aTo then exit(aTo);
   if aNum = 0 then
     QWord(Result) := QWord(1) or QWord(aTo) and SIGN_FLAG
   else
@@ -1373,30 +1366,23 @@ end;
 
 class function TGDoubleHelper.Quantum(const aNum: Double): Double;
 var
-  n: QWord;
-  nExp: Int32;
+  n: Double;
 begin
-  n := QWord(aNum) and not SIGN_FLAG;
-  if n >= EXP_MASK then exit(aNum);
-  nExp := Int32((QWord(aNum) shr 52) and $7ff) - 52;
-  if nExp <= 0 then
-    QWord(Result) := QWord(1)
+  if not IsFinite(aNum) then exit(aNum);
+  n := System.Abs(aNum);
+  if n < MaxValue then
+    Result := NextAfter(n, PositiveInfinity) - n
   else
-    QWord(Result) := QWord(nExp) shl 52;
+    Result := n - NextAfter(n, 0);
 end;
 
 class function TGDoubleHelper.Ulp(const aNum: Double): Double;
 var
-  n: QWord;
-  nExp: Int32;
+  n: Double;
 begin
-  n := QWord(aNum) and not SIGN_FLAG;
-  if n >= EXP_MASK then exit(aNum);
-  nExp := Int32((QWord(aNum) shr 52) and $7ff) - 53;
-  if nExp <= 0 then
-    QWord(Result) := QWord(1)
-  else
-    QWord(Result) := QWord(nExp) shl 52;
+  if not IsFinite(aNum) then exit(aNum);
+  n := System.Abs(aNum);
+  Result := n - NextAfter(n, -1);
 end;
 
 function TGDoubleHelper.IsZero: Boolean;
@@ -1684,7 +1670,7 @@ begin
   else
     if IsNan(aTo, Dummy) then
       exit(aTo);
-  if aNum = aTo then exit(aNum);
+  if aNum = aTo then exit(aTo);
   if aNum = 0 then begin
     TPWord(Result).Mantis := QWord(1);
     TPWord(Result).PExp :=  TPWord(aTo).PExp and SIGN_FLAG;
@@ -1711,32 +1697,23 @@ end;
 
 class function TGExtendedHelper.Quantum(const aNum: Extended): Extended;
 var
-  nExp: Int32;
+  n: Extended;
 begin
   if not IsFinite(aNum) then exit(aNum);
-  nExp := Int32(TPWord(aNum).PExp and EXP_MASK) - 63;
-  if nExp <= 0 then begin
-    TPWord(Result).PExp := 0;
-    TPWord(Result).Mantis := 1;
-  end else begin
-    TPWord(Result).PExp := Word(nExp);
-    TPWord(Result).Mantis := INT_FLAG;
-  end;
+  n := System.Abs(aNum);
+  if n < MaxValue then
+    Result := NextAfter(n, PositiveInfinity) - n
+  else
+    Result := n - NextAfter(n, 0);
 end;
 
 class function TGExtendedHelper.Ulp(const aNum: Extended): Extended;
 var
-  nExp: Int32;
+  n: Single;
 begin
   if not IsFinite(aNum) then exit(aNum);
-  nExp := Int32(TPWord(aNum).PExp and EXP_MASK) - 64;
-  if nExp <= 0 then begin
-    TPWord(Result).PExp := 0;
-    TPWord(Result).Mantis := 1;
-  end else begin
-    TPWord(Result).PExp := Word(nExp);
-    TPWord(Result).Mantis := INT_FLAG;
-  end;
+  n := System.Abs(aNum);
+  Result := n - NextAfter(n, -1);
 end;
 
 function TGExtendedHelper.IsZero: Boolean;
