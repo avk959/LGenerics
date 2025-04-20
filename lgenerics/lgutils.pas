@@ -2743,7 +2743,7 @@ class operator TGDynArray<T>.Copy(constref aSrc: TGDynArray<T>; var aDst: TGDynA
 begin
   if @aSrc <> @aDst then
     begin
-      aDst.Clear;
+      aDst.DoClear;
       if aSrc.Length <> 0 then
         begin
           aDst.Length := aSrc.Length;
@@ -2809,7 +2809,7 @@ end;
 
 procedure TGDynArray<T>.Fill(aCount: SizeInt; const aValue: T);
 begin
-  Clear;
+  DoClear;
   if aCount < 1 then
     exit;
   Length := aCount;
