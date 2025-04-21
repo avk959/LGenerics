@@ -201,12 +201,13 @@ type
   { returns the next representable value after aNum in the direction of aTo }
     class function NextAfter(const aNum, aTo: Single): Single; static;
   { returns the Quantum(IEEE 754) value of aNum if aNum is a finite number,
-    otherwise returns aNum itself }
+    otherwise returns Abs(aNum) }
     class function Quantum(const aNum: Single): Single; static;
   { returns the value of a unit in the last place(JH version) if aNum is a finite number,
-    otherwise returns aNum itself }
+    otherwise returns Abs(aNum) }
     class function Ulp(const aNum: Single): Single; static;
     function  IsZero: Boolean; inline;
+    function  IsFinite: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int32): Boolean; inline;
     procedure Negate; inline;
@@ -274,12 +275,13 @@ type
   { returns the next representable value after aNum in the direction of aTo }
     class function NextAfter(const aNum, aTo: Double): Double; static;
   { returns the Quantum(IEEE 754) value of aNum if aNum is a finite number,
-    otherwise returns aNum itself }
+    otherwise returns Abs(aNum) }
     class function Quantum(const aNum: Double): Double; static;
   { returns the value of a unit in the last place(JH version) if aNum is a finite number,
-    otherwise returns aNum itself }
+    otherwise returns Abs(aNum) }
     class function Ulp(const aNum: Double): Double; static;
     function  IsZero: Boolean; inline;
+    function  IsFinite: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int64): Boolean; inline;
     procedure Negate; inline;
@@ -353,12 +355,13 @@ type
   { returns the next representable value after aNum in the direction of aTo }
     class function NextAfter(const aNum, aTo: Extended): Extended; static;
   { returns the Quantum(IEEE 754) value of aNum if aNum is a finite number,
-    otherwise returns aNum itself }
+    otherwise returns Abs(aNum) }
     class function Quantum(const aNum: Extended): Extended; static;
   { returns the value of a unit in the last place(JH version) if aNum is a finite number,
-    otherwise returns aNum itself }
+    otherwise returns Abs(aNum) }
     class function Ulp(const aNum: Extended): Extended; static;
     function  IsZero: Boolean; inline;
+    function  IsFinite: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int64): Boolean; inline;
     procedure Negate; inline;
@@ -1063,47 +1066,60 @@ begin
 end;
 
 class function TGSingleHelper.NextAfter(const aNum, aTo: Single): Single;
+var
+  n, t: DWord;
 begin
-  if DWord(aNum) and not SIGN_FLAG > EXP_MASK then
-    exit(aNum)
-  else
-    if (DWord(aTo) and not SIGN_FLAG) > EXP_MASK then
-      exit(aTo);
-  if aNum = aTo then exit(aTo);
-  if aNum = 0 then
-    DWord(Result) := DWord(1) or DWord(aTo) and SIGN_FLAG
-  else
-    if(aNum.Sign xor aTo.Sign) or (System.Abs(aNum) > System.Abs(aTo))then
+  n := DWord(aNum) and not SIGN_FLAG;
+  if n > EXP_MASK then exit(aNum);
+  t := DWord(aTo) and not SIGN_FLAG;
+  if (t > EXP_MASK) or (aNum = aTo) then exit(aTo);
+  if n <> 0 then
+    if(Boolean(DWord(aNum) shr 31) xor Boolean(DWord(aTo) shr 31)) or (n > t)then
       //to zero
-      DWord(Result) := Pred(DWord(aNum))
+      DWord(Result) := DWord(aNum) - 1
     else
-      DWord(Result) := Succ(DWord(aNum));
+      DWord(Result) := DWord(aNum) + 1
+  else
+    DWord(Result) := DWord(1) or DWord(aTo) and SIGN_FLAG;
 end;
 
 class function TGSingleHelper.Quantum(const aNum: Single): Single;
 var
-  n: Single;
+  n: DWord;
+  nExp: Int32;
 begin
-  if not IsFinite(aNum) then exit(aNum);
-  n := System.Abs(aNum);
-  if n < MaxValue then
-    Result := NextAfter(n, PositiveInfinity) - n
+  n := DWord(aNum) and not SIGN_FLAG;
+  if n < EXP_MASK then
+    begin
+      nExp := Int32(n shr 23);
+      case nExp of
+        0, 1:  DWord(Result) := DWord(1);
+        2..23: DWord(Result) := DWord(1) shl (nExp - 1);
+      else
+        DWord(Result) := DWord(nExp - 23) shl 23;
+      end;
+    end
   else
-    Result := n - NextAfter(n, 0);
+    DWord(Result) := n;
 end;
 
 class function TGSingleHelper.Ulp(const aNum: Single): Single;
 var
-  n: Single;
+  n: DWord absolute Result;
 begin
-  if not IsFinite(aNum) then exit(aNum);
-  n := System.Abs(aNum);
-  Result := n - NextAfter(n, -1);
+  n := DWord(aNum) and not SIGN_FLAG;
+  if n < EXP_MASK then
+    Result -= NextAfter(Result, -1);
 end;
 
 function TGSingleHelper.IsZero: Boolean;
 begin
   Result:= IsZero(Self);
+end;
+
+function TGSingleHelper.IsFinite: Boolean;
+begin
+  Result := IsFinite(Self);
 end;
 
 function TGSingleHelper.IsExactInt: Boolean;
@@ -1347,47 +1363,63 @@ begin
 end;
 
 class function TGDoubleHelper.NextAfter(const aNum, aTo: Double): Double;
+var
+  n, t: QWord;
 begin
-  if (QWord(aNum) and not SIGN_FLAG) > EXP_MASK then
-    exit(aNum)
+  n := QWord(aNum) and not SIGN_FLAG;
+  if n > EXP_MASK then exit(aNum);
+  t := QWord(aTo) and not SIGN_FLAG;
+  if (t > EXP_MASK) or (aNum = aTo) then exit(aTo);
+  if n <> 0 then
+    if(Boolean(QWord(aNum) shr 63) xor Boolean(QWord(aTo) shr 63)) or (n > t)then
+       //to zero
+       QWord(Result) := QWord(aNum) - 1
+     else
+       QWord(Result) := QWord(aNum) + 1
   else
-    if (QWord(aTo) and not SIGN_FLAG) > EXP_MASK then
-      exit(aTo);
-  if aNum = aTo then exit(aTo);
-  if aNum = 0 then
-    QWord(Result) := QWord(1) or QWord(aTo) and SIGN_FLAG
-  else
-    if(aNum.Sign xor aTo.Sign)or(System.Abs(aNum) > System.Abs(aTo))then
-      //to zero
-      QWord(Result) := Pred(QWord(aNum))
-    else
-      QWord(Result) := Succ(QWord(aNum));
+    QWord(Result) := QWord(1) or QWord(aTo) and SIGN_FLAG;
 end;
 
 class function TGDoubleHelper.Quantum(const aNum: Double): Double;
 var
-  n: Double;
+  nExp: Int32;
 begin
-  if not IsFinite(aNum) then exit(aNum);
-  n := System.Abs(aNum);
-  if n < MaxValue then
-    Result := NextAfter(n, PositiveInfinity) - n
-  else
-    Result := n - NextAfter(n, 0);
+  QWord(Result) := QWord(aNum) and not SIGN_FLAG;
+  if QWord(Result) < EXP_MASK then
+    begin
+      nExp := Int32(QWord(Result) shr 52);
+      case nExp of
+        0, 1:  QWord(Result) := QWord(1);
+        2..52: QWord(Result) := QWord(1) shl (nExp - 1);
+      else
+        QWord(Result) := QWord(nExp - 52) shl 52;
+      end;
+    end;
 end;
 
 class function TGDoubleHelper.Ulp(const aNum: Double): Double;
 var
-  n: Double;
+  next: Double;
 begin
-  if not IsFinite(aNum) then exit(aNum);
-  n := System.Abs(aNum);
-  Result := n - NextAfter(n, -1);
+  QWord(Result) := QWord(aNum) and not SIGN_FLAG;
+  if QWord(Result) < EXP_MASK then
+    if QWord(Result) <> 0 then
+      begin
+        QWord(next) := QWord(Result) - 1;
+        Result -= next;
+      end
+    else
+      QWord(Result) := QWord(1);
 end;
 
 function TGDoubleHelper.IsZero: Boolean;
 begin
   Result := IsZero(Self);
+end;
+
+function TGDoubleHelper.IsFinite: Boolean;
+begin
+  Result := IsFinite(Self);
 end;
 
 function TGDoubleHelper.IsExactInt: Boolean;
@@ -1696,29 +1728,30 @@ begin
 end;
 
 class function TGExtendedHelper.Quantum(const aNum: Extended): Extended;
-var
-  n: Extended;
 begin
-  if not IsFinite(aNum) then exit(aNum);
-  n := System.Abs(aNum);
-  if n < MaxValue then
-    Result := NextAfter(n, PositiveInfinity) - n
-  else
-    Result := n - NextAfter(n, 0);
+  Result := System.Abs(aNum);
+  if IsFinite(Result) then
+    if Result < MaxValue then
+      Result := NextAfter(Result, MaxValue) - Result
+    else
+      Result -= NextAfter(Result, 0);
 end;
 
 class function TGExtendedHelper.Ulp(const aNum: Extended): Extended;
-var
-  n: Single;
 begin
-  if not IsFinite(aNum) then exit(aNum);
-  n := System.Abs(aNum);
-  Result := n - NextAfter(n, -1);
+  Result := System.Abs(aNum);
+  if IsFinite(Result) then
+    Result -= NextAfter(Result, -1);
 end;
 
 function TGExtendedHelper.IsZero: Boolean;
 begin
   Result := IsZero(Self);
+end;
+
+function TGExtendedHelper.IsFinite: Boolean;
+begin
+  Result := IsFinite(Self);
 end;
 
 function TGExtendedHelper.IsExactInt: Boolean;
