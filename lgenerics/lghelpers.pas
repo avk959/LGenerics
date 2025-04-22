@@ -171,11 +171,14 @@ type
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a quiet NaN
     with that payload; otherwize returns 0.0 }
     class function SetPayload(const aValue: Single): Single; static;
+    class function SetPayload(const aValue: Int32): Single; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
     with that payload; otherwize returns 0.0 }
     class function  SetSignalPayload(const aValue: Single): Single; static;
+    class function  SetSignalPayload(const aValue: Int32): Single; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
     class function GetPayload(const aValue: Single): Single; inline; static;
+    class function GetPayloadI(const aValue: Single): Int32; inline; static;
   { returns True if L and R are unordered, that is, at least one of them is NaN }
     class function Unordered(const L, R: Single): Boolean; inline; static;
   { returns True if L > R; returns False if L <= R or unordered }
@@ -213,6 +216,10 @@ type
     procedure Negate; inline;
     function  CopySign(const aSgn: Single): Single; inline;
     function  IsNan(out aQuit: Boolean): Boolean; overload; inline;
+    function  SetPayload: Single; inline;
+    function  SetSignalPayload: Single; inline;
+    function  GetPayload: Single; inline;
+    function  GetPayloadI: Int32; inline;
     function  NextToward(const aValue: Single): Single; inline;
     function  Quantum: Single; inline;
     function  Ulp: Single; inline;
@@ -245,11 +252,14 @@ type
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a quiet NaN
     with that payload; otherwize returns 0.0 }
     class function SetPayload(const aValue: Double): Double; static;
+    class function SetPayload(const aValue: Int64): Double; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
     with that payload; otherwize returns 0.0 }
     class function SetSignalPayload(const aValue: Double): Double; static;
+    class function SetSignalPayload(const aValue: Int64): Double; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
     class function GetPayload(const aValue: Double): Double; inline; static;
+    class function GetPayloadI(const aValue: Double): Int64; inline; static;
   { returns True if L and R are unordered, that is, at least one of them is NaN }
     class function Unordered(const L, R: Double): Boolean; inline; static;
   { returns True if L > R; returns False if L <= R or unordered }
@@ -287,6 +297,10 @@ type
     procedure Negate; inline;
     function  CopySign(const aSgn: Double): Double; inline;
     function  IsNan(out aQuit: Boolean): Boolean; overload; inline;
+    function  SetPayload: Double; inline;
+    function  SetSignalPayload: Double; inline;
+    function  GetPayload: Double; inline;
+    function  GetPayloadI: Int64; inline;
     function  NextToward(const aValue: Double): Double; inline;
     function  Quantum: Double; inline;
     function  Ulp: Double; inline;
@@ -321,15 +335,18 @@ type
     class function CopySign(const aMagn, aSgn: Extended): Extended; inline; static;
   { returns True and in the aQuiet parameter whether it is quiet if aValue is NaN,
     otherwise returns False }
-    class function IsNan(const aValue: Extended; out aQuiet: Boolean): Boolean; overload; inline; static;
+    class function IsNan(const aValue: Extended; out aQuiet: Boolean): Boolean; overload; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a quiet NaN
     with that payload; otherwize returns 0.0 }
     class function SetPayload(const aValue: Extended): Extended; static;
+    class function SetPayload(const aValue: Int64): Extended; static;
   { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
     with that payload; otherwize returns 0.0 }
     class function SetSignalPayload(const aValue: Extended): Extended; static;
+    class function SetSignalPayload(const aValue: Int64): Extended; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
-    class function GetPayload(const aValue: Extended): Extended; inline; static;
+    class function GetPayload(const aValue: Extended): Extended; static;
+    class function GetPayloadI(const aValue: Extended): Int64; static;
   { returns True if L and R are unordered, that is, at least one of them is NaN }
     class function Unordered(const L, R: Extended): Boolean; inline; static;
   { returns True if L > R; returns False if L <= R or unordered }
@@ -367,6 +384,10 @@ type
     procedure Negate; inline;
     function  CopySign(const aSgn: Extended): Extended; inline;
     function  IsNan(out aQuit: Boolean): Boolean; overload; inline;
+    function  SetPayload: Extended; inline;
+    function  SetSignalPayload: Extended; inline;
+    function  GetPayload: Extended; inline;
+    function  GetPayloadI: Int64; inline;
     function  NextToward(const aValue: Extended): Extended; inline;
     function  Quantum: Extended; inline;
     function  Ulp: Extended; inline;
@@ -932,6 +953,14 @@ begin
     Result := 0;
 end;
 
+class function TGSingleHelper.SetPayload(const aValue: Int32): Single;
+begin
+  if DWord(aValue) <= MAX_PAYLOAD then
+    DWord(Result) := EXP_MASK or QUIET_FLAG or DWord(aValue)
+  else
+    Result := 0;
+end;
+
 class function TGSingleHelper.SetSignalPayload(const aValue: Single): Single;
 var
   I: Int32;
@@ -943,7 +972,23 @@ begin
 end;
 {$POP}
 
+class function TGSingleHelper.SetSignalPayload(const aValue: Int32): Single;
+begin
+  if DWord(aValue) <= MAX_PAYLOAD then
+    DWord(Result) := EXP_MASK or DWord(aValue)
+  else
+    Result := 0;
+end;
+
 class function TGSingleHelper.GetPayload(const aValue: Single): Single;
+begin
+  if (DWord(aValue) and not SIGN_FLAG) > EXP_MASK then
+    Result := Int32(DWord(aValue) and MAX_PAYLOAD)
+  else
+    Result := -1;
+end;
+
+class function TGSingleHelper.GetPayloadI(const aValue: Single): Int32;
 begin
   if (DWord(aValue) and not SIGN_FLAG) > EXP_MASK then
     Result := Int32(DWord(aValue) and MAX_PAYLOAD)
@@ -1147,6 +1192,26 @@ begin
   Result := IsNan(Self, aQuit);
 end;
 
+function TGSingleHelper.SetPayload: Single;
+begin
+  Result := SetPayload(Self);
+end;
+
+function TGSingleHelper.SetSignalPayload: Single;
+begin
+  Result := SetSignalPayload(Self);
+end;
+
+function TGSingleHelper.GetPayload: Single;
+begin
+  Result := GetPayload(Self);
+end;
+
+function TGSingleHelper.GetPayloadI: Int32;
+begin
+  Result := GetPayloadI(Self);
+end;
+
 function TGSingleHelper.NextToward(const aValue: Single): Single;
 begin
   Result := NextAfter(Self, aValue);
@@ -1229,6 +1294,14 @@ begin
     Result := 0;
 end;
 
+class function TGDoubleHelper.SetPayload(const aValue: Int64): Double;
+begin
+  if QWord(aValue) <= MAX_PAYLOAD then
+    QWord(Result) := EXP_MASK or QUIET_FLAG or QWord(aValue)
+  else
+    Result := 0;
+end;
+
 class function TGDoubleHelper.SetSignalPayload(const aValue: Double): Double;
 var
   I: Int64;
@@ -1240,7 +1313,24 @@ begin
 end;
 {$POP}
 
+class function TGDoubleHelper.SetSignalPayload(const aValue: Int64): Double;
+begin
+  if QWord(aValue) <= MAX_PAYLOAD then
+    QWord(Result) := EXP_MASK or QWord(aValue)
+  else
+    Result := 0;
+end;
+
+
 class function TGDoubleHelper.GetPayload(const aValue: Double): Double;
+begin
+  if (QWord(aValue) and not SIGN_FLAG) > EXP_MASK then
+    Result := Int64(QWord(aValue) and MAX_PAYLOAD)
+  else
+    Result := -1;
+end;
+
+class function TGDoubleHelper.GetPayloadI(const aValue: Double): Int64;
 begin
   if (QWord(aValue) and not SIGN_FLAG) > EXP_MASK then
     Result := Int64(QWord(aValue) and MAX_PAYLOAD)
@@ -1447,6 +1537,26 @@ begin
   Result := IsNan(Self, aQuit);
 end;
 
+function TGDoubleHelper.SetPayload: Double;
+begin
+  Result := SetPayload(Self);
+end;
+
+function TGDoubleHelper.SetSignalPayload: Double;
+begin
+  Result := SetSignalPayload(Self);
+end;
+
+function TGDoubleHelper.GetPayload: Double;
+begin
+  Result := GetPayload(Self);
+end;
+
+function TGDoubleHelper.GetPayloadI: Int64;
+begin
+  Result := GetPayloadI(Self);
+end;
+
 function TGDoubleHelper.NextToward(const aValue: Double): Double;
 begin
   Result := NextAfter(Self, aValue);
@@ -1525,7 +1635,7 @@ class function TGExtendedHelper.IsNan(const aValue: Extended; out aQuiet: Boolea
 begin
   Result := False;
   if TPWord(aValue).PExp and EXP_MASK <> EXP_MASK then exit;
-  case Byte(TPWord(aValue).PExp shr 62) of
+  case Byte(TPWord(aValue).Mantis shr 62) of
     2:  begin Result := True; aQuiet := False end;
     3:  begin Result := True; aQuiet := True end;
   end;
@@ -1540,6 +1650,18 @@ begin
     with TPWord(Result) do
       begin
         Mantis := QWord(I) or QUIET_MASK;
+        PExp := EXP_MASK;
+      end
+  else
+    Result := 0;
+end;
+
+class function TGExtendedHelper.SetPayload(const aValue: Int64): Extended;
+begin
+  if QWord(aValue) <= MAX_PAYLOAD then
+    with TPWord(Result) do
+      begin
+        Mantis := QWord(aValue) or QUIET_MASK;
         PExp := EXP_MASK;
       end
   else
@@ -1561,7 +1683,29 @@ begin
 end;
 {$POP}
 
+class function TGExtendedHelper.SetSignalPayload(const aValue: Int64): Extended;
+begin
+  if QWord(aValue) <= MAX_PAYLOAD then
+    with TPWord(Result) do
+      begin
+        Mantis := QWord(aValue) or INT_FLAG;
+        PExp := EXP_MASK;
+      end
+  else
+    Result := 0;
+end;
+
 class function TGExtendedHelper.GetPayload(const aValue: Extended): Extended;
+var
+  Dummy: Boolean;
+begin
+  if IsNan(aValue, Dummy) then
+    Result := Int64(TPWord(aValue).Mantis and MAX_PAYLOAD)
+  else
+    Result := -1;
+end;
+
+class function TGExtendedHelper.GetPayloadI(const aValue: Extended): Int64;
 var
   Dummy: Boolean;
 begin
@@ -1777,6 +1921,26 @@ end;
 function TGExtendedHelper.IsNan(out aQuit: Boolean): Boolean;
 begin
   Result := IsNan(Self, aQuit);
+end;
+
+function TGExtendedHelper.SetPayload: Extended;
+begin
+  Result := SetPayload(Self);
+end;
+
+function TGExtendedHelper.SetSignalPayload: Extended;
+begin
+  Result := SetSignalPayload(Self);
+end;
+
+function TGExtendedHelper.GetPayload: Extended;
+begin
+  Result := GetPayload(Self);
+end;
+
+function TGExtendedHelper.GetPayloadI: Int64;
+begin
+  Result := GetPayloadI(Self);
 end;
 
 function TGExtendedHelper.NextToward(const aValue: Extended): Extended;
