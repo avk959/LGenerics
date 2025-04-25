@@ -3981,8 +3981,13 @@ begin
 end;
 
 function TJsonNode.GetNItem(const aName: string): TJsonNode;
-begin
-  FindOrAdd(aName, Result);
+var
+  n: TJsonNode;
+begin // workaround for optimizer bug (attempt)
+  if FindOrAdd(aName, n) then
+    Result := n
+  else
+    Result := n;
 end;
 
 function TJsonNode.GetValue: TJVariant;
