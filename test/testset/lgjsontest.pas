@@ -79,6 +79,8 @@ type
     procedure ForcePathTest;
     procedure ForcePathTest1;
     procedure DumpJsonTest;
+    procedure TestDuplicates;
+    procedure TestDuplicates2;
   end;
 
   { TTestJsonWriter }
@@ -1234,6 +1236,90 @@ begin
   AssertTrue('6: ' + s, s = Ans5);
   n2.Instance.AsJson := s;
   AssertTrue('6', n1.Instance.EqualTo(n2.Instance));
+end;
+
+procedure TTestJson.TestDuplicates;
+var
+  n, ans: specialize TGAutoRef<TJsonNode>;
+const
+  JSON0  = '.23';
+  JSON1  = '0.23';
+  JSON2  = #13#10'421001'#13#10#13#10;
+  JSON3  = '{"a":1,"b":2,"a":3}';
+  JSON3I = '{"a":1,"b":2}';
+  JSON3R = '{"b":2,"a":3}';
+  JSON4  = '{"a":[42],"b":2,"a":{"c":1001}}';
+  JSON4I = '{"a":[42],"b":2}';
+  JSON4R = '{"b":2,"a":{"c":1001}}';
+begin
+  AssertFalse(n.Instance.TryParse(JSON0, ndupIgnore));
+  AssertFalse(n.Instance.TryParse(JSON0, ndupRewrite));
+
+  AssertTrue(n.Instance.TryParse(JSON1, ndupIgnore));
+  AssertTrue(n.Instance.TryParse(JSON1, ndupRewrite));
+
+  AssertTrue(n.Instance.TryParse(JSON2, ndupIgnore));
+  AssertTrue(n.Instance.AsNumber = 421001);
+  AssertTrue(n.Instance.TryParse(JSON2, ndupRewrite));
+  AssertTrue(n.Instance.AsNumber = 421001);
+
+  AssertTrue(n.Instance.TryParse(JSON3, ndupIgnore));
+  ans.Instance.AsJson := JSON3I;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON3, ndupRewrite));
+  ans.Instance.AsJson := JSON3R;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON4, ndupIgnore));
+  ans.Instance.AsJson := JSON4I;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON4, ndupRewrite));
+  ans.Instance.AsJson := JSON4R;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+end;
+
+procedure TTestJson.TestDuplicates2;
+var
+  Node: specialize TGAutoRef<TJsonNode>;
+  Stream: specialize TGAutoRef<TStringStream>;
+  CurrFile, fn, s: string;
+  Ans: Boolean;
+  c: AnsiChar;
+  Total: Integer;
+begin
+  AssertTrue('File list not loaded', Assigned(TestFileList));
+  Total := 0;
+  for CurrFile in TestFileList do
+    begin
+      Stream.Instance.LoadFromFile(CurrFile);
+      s := Stream.Instance.DataString;
+      fn := ExtractFileName(CurrFile);
+      c := fn[1];
+      Inc(Total);
+      Ans := Node.Instance.TryParse(s, ndupIgnore);
+      if c = 'y' then
+        AssertTrue(fn + ': expected True, but got False(jdupIgnore)' + s, Ans)
+      else
+        if c = 'n' then
+          AssertFalse(fn + ': expected False, but got True(jdupIgnore)', Ans);
+    end;
+  AssertTrue(Total = 295);
+
+  for CurrFile in TestFileList do
+    begin
+      Stream.Instance.LoadFromFile(CurrFile);
+      s := Stream.Instance.DataString;
+      fn := ExtractFileName(CurrFile);
+      c := fn[1];
+      Ans := Node.Instance.TryParse(s, ndupRewrite);
+      if c = 'y' then
+        AssertTrue(fn + ': expected True, but got False(jdupRewrite)' + s, Ans)
+      else
+        if c = 'n' then
+          AssertFalse(fn + ': expected False, but got True(jdupRewrite)', Ans);
+    end;
 end;
 
 { TTestJsonWriter }
