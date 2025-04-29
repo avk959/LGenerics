@@ -937,21 +937,20 @@ var
       jtBool: if not aInst.IsBoolean then PushError;
       jtFloat32, jtFloat64:
         if not aInst.IsNumber then PushError else
-          if(Typ = jtFloat32)and(System.Abs(aInst.AsNumber) > Math.MaxSingle)then
-            PushError;
+          if(Typ = jtFloat32)and(System.Abs(aInst.AsNumber) > Math.MaxSingle)then PushError;
       jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32:
-        if not aInst.IsNumber then PushError else
-          if not Double.IsExactInt(aInst.AsNumber, I) then PushError else
-            case Typ of
-              jtInt8:   if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then PushError;
-              jtUInt8:  if (I < 0) or (I > System.High(Byte)) then PushError;
-              jtInt16:  if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then PushError;
-              jtUInt16: if (I < 0) or (I > System.High(Word)) then PushError;
-              jtInt32:  if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then PushError;
-              jtUInt32: if (I < 0) or (I > System.High(DWord)) then PushError;
-            else
-              raise Exception.Create('');
-            end;
+        if not(aInst.IsNumber and Double.IsExactInt(aInst.AsNumber, I))then PushError
+        else
+          case Typ of
+            jtInt8:   if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then PushError;
+            jtUInt8:  if (I < 0) or (I > System.High(Byte)) then PushError;
+            jtInt16:  if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then PushError;
+            jtUInt16: if (I < 0) or (I > System.High(Word)) then PushError;
+            jtInt32:  if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then PushError;
+            jtUInt32: if (I < 0) or (I > System.High(DWord)) then PushError;
+          else
+            raise Exception.Create('');
+          end;
       jtString: if not aInst.IsString then PushError;
       jtTimeStamp:
         if not aInst.IsString then PushError
