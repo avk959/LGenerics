@@ -928,7 +928,6 @@ var
   end;
   procedure DoType(aInst: TJsonNode; aSchema: TJtdSchema);
   var
-    d: Double;
     I: Int64;
     Typ: TJtdSchema.TJtdType;
   begin
@@ -938,10 +937,8 @@ var
       jtBool: if not aInst.IsBoolean then PushError;
       jtFloat32, jtFloat64:
         if not aInst.IsNumber then PushError else
-          if Typ = jtFloat32 then begin
-            d := aInst.AsNumber;
-            if (d < Math.MinSingle) or (d > Math.MaxSingle) then PushError;
-          end;
+          if(Typ = jtFloat32)and(System.Abs(aInst.AsNumber) > Math.MaxSingle)then
+            PushError;
       jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32:
         if not aInst.IsNumber then PushError else
           if not Double.IsExactInt(aInst.AsNumber, I) then PushError else
