@@ -953,9 +953,7 @@ var
           end;
       jtString: if not aInst.IsString then PushError;
       jtTimeStamp:
-        if not aInst.IsString then PushError
-        else
-          if not IsRfc8927TimeStamp(aInst.AsString) then PushError;
+        if not(aInst.IsString and IsRfc8927TimeStamp(aInst.AsString)) then PushError;
     else
       raise Exception.Create('');
     end;
@@ -964,11 +962,8 @@ var
   procedure DoEnum(aInst: TJsonNode; aSchema: TJtdSchema);
   begin
     SchemaPathPush(aSchema.JTD_PROPS[spEnum]);
-    if not aInst.IsString or (aSchema.Enum = nil) then
-      PushError
-    else
-      if not aSchema.Enum.Contains(aInst.AsString) then
-        PushError;
+    if not(aInst.IsString and (aSchema.Enum <> nil) and aSchema.Enum.Contains(aInst.AsString))then
+      PushError;
     SchemaPathPop;
   end;
   procedure DoElements(aInst: TJsonNode; aSchema: TJtdSchema);
