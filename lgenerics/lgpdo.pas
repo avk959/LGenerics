@@ -1046,7 +1046,7 @@ var
     case GetTypeData(aTypeInfo)^.FloatType of
       ftSingle:
         begin
-          if RangeOfloCheck and ((d < Math.MinSingle) or (d > Math.MaxSingle)) then
+          if RangeOfloCheck and (System.Abs(d) > Math.MaxSingle) then
             Error(Format(SEPdoOverflowErrorFmt, ['Single', d]));
           PSingle(aData)^ := d;
         end;
@@ -1059,14 +1059,11 @@ var
           PComp(aData)^ := I;
         end;
       ftCurr:
-        if RangeOfloCheck then
-          try
-            PCurrency(aData)^ := d;
-          except
-            Error(Format(SEPdoOverflowErrorFmt, ['Currency', d]))
-          end
-        else
+        begin
+          if RangeOfloCheck and ((d < Currency.MinValue) or (d > Currency.MaxValue))then
+            Error(Format(SEPdoOverflowErrorFmt, ['Currency', d]));
           PCurrency(aData)^ := d;
+        end;
     end;
   end;
   procedure ReadChar(aTypeInfo: PTypeInfo; aData: Pointer);
