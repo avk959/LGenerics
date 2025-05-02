@@ -3794,6 +3794,10 @@ var
   c2: TChar2;
   Tmp: array[0..21] of AnsiChar;
   IsNeg: Boolean;
+const
+  NAN_NAMES:  array[Boolean] of array[Boolean] of string[7] = (('sNaN', '-sNaN'), ('qNaN', '-qNaN'));
+  INF_NAMES:  array[Boolean] of string[11] = ('Infinity', '-Infinity');
+  ZERO_NAMES: array[Boolean] of string[3] = ('0', '-0');
 begin
   IsNeg := Boolean(Bits shr (DBL_MANTISSA_BITS + DBL_EXPONENT_BITS));
   IeeeMantissa := Bits and DBL_MANTISSA_MASK;
@@ -3802,21 +3806,15 @@ begin
     begin
       if IeeeMantissa <> 0 then
         begin
-          s := 'NaN';
+          s := NAN_NAMES[Boolean(IeeeMantissa shr Pred(DBL_MANTISSA_BITS)), IsNeg];
           exit;
         end;
       if IeeeExp <> 0 then
         begin
-          if IsNeg then
-            s := '-Infinity'
-          else
-            s := 'Infinity';
+          s := INF_NAMES[IsNeg];
           exit;
         end;
-      if IsNeg then
-        s := '-0'
-      else
-        s := '0';
+      s := ZERO_NAMES[IsNeg];
       exit;
     end;
 
