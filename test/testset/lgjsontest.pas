@@ -420,11 +420,13 @@ var
   d: Double;
 begin
   AssertTrue(Double2Str(0.0) = '0');
-  PQWord(@d)^ := QWord($8000000000000000);
+  QWord(d) := QWord($8000000000000000);
   AssertTrue(Double2Str(d) = '-0');
   AssertTrue(Double2Str(Double.PositiveInfinity) = 'Infinity');
   AssertTrue(Double2Str(Double.NegativeInfinity) = '-Infinity');
-  AssertTrue(Double2Str(Double.NaN) = 'NaN');
+  AssertTrue(Double2Str(Double.NaN) = '-qNaN');
+  QWord(d) := Succ(QWord($7ff) shl 52);
+  AssertTrue(Double2Str(d) = 'sNaN');
 end;
 
 procedure TTestDouble2Str.Bounds;
