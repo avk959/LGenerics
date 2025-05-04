@@ -1189,11 +1189,11 @@ type
 { uses DefaultFormatSettins.DecimalSeparator as aDecimalSeparator }
   function  Double2StrDef(aValue: Double): string;
 { mostly RFC 8259 compliant: does not accept leading and trailing spaces, leading plus,
-  thousand separators, leading zeros, and special values(i.e. NaN, Inf, etc) and
-  expects a period as a decimal separator;
-  if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
-  function  TryStr2Double(const s: string; out aValue: Double): Boolean; inline;
-  function  TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean; inline;
+  thousand separators, leading zeros, and special values(i.e. NaN, Inf, etc) and expects
+  a period as a decimal separator; if the result is False then aValue is undefined;
+  uses Eisel-Lemire algorithm }
+  function  TryStr2Double(const s: string; out aValue: Double): Boolean;
+  function  TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean;
 { returns True and the value of the number in aInt if the string s is a non-negative integer
   in decimal notation, otherwise returns False;
   leading and trailing spaces and leading zeros are not allowed }
@@ -7557,10 +7557,19 @@ var
   LzCount: Integer;
   Prod: TOWord;
 begin
-{$IFDEF CPU64}
-  if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= 9007199254740991) then
+  if aMantissa = 0 then
     begin
-      aValue := Double(aMantissa);
+      if aNeg then
+        PQWord(@aValue)^ := QWord(1) shl 63
+      else
+        aValue := Double(0.0);
+      exit(True);
+    end;
+{$IFDEF CPU64}
+  if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= 9007199254740991) and
+     (Math.GetRoundMode = rmNearest) and (Math.GetPrecisionMode in [pmDouble, pmExtended]) then
+    begin
+      aValue := aMantissa;
       if aPow10 < 0 then
         aValue /= TEN_POWER[-aPow10]
       else
@@ -7570,14 +7579,6 @@ begin
       exit(True);
     end;
 {$ENDIF CPU64}
-  if aMantissa = 0 then
-    begin
-      if aNeg then
-        PQWord(@aValue)^ := QWord(1) shl 63
-      else
-        aValue := Double(0.0);
-      exit(True);
-    end;
 
   Exponent := SarInt64((152170 + 65536) * aPow10, 16) + 1024 + 63;
   LzCount := Pred(BitSizeOf(QWord)) - BsrQWord(aMantissa);
@@ -7735,11 +7736,6 @@ begin
     Val(p, aValue, Code);
     Result := Code = 0;
   except
-    on e: EOverflow do  //todo: ???
-      begin
-        PQWord(@aValue)^ := INF_EXP;
-        Result := True;
-      end;
     on e: Exception do
       Result := False;
   end;
@@ -7756,8 +7752,6 @@ var
 const
   Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  if p^ = #0 then
-    exit(False);
   pOld := p;
   IsNeg := False;
   if p^ = '-' then
@@ -7849,11 +7843,13 @@ end;
 
 function TryStr2Double(const s: string; out aValue: Double): Boolean;
 begin
+  if s = '' then exit(False);
   Result := TryPChar2Double(PAnsiChar(s), aValue);
 end;
 
 function TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean;
 begin
+  if p = nil then exit(False);
   Result := TryPChar2Double(p, aValue);
 end;
 
