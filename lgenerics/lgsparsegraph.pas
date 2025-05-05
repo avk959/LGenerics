@@ -2805,7 +2805,6 @@ end;
 function TGAbstractDotWriter.Graph2Dot(aGraph: TGraph): TStringList;
 var
   s: string;
-  I: SizeInt;
 begin
   if aGraph.Title <> '' then
     s := '"' + aGraph.Title + '"'
