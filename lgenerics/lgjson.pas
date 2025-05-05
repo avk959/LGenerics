@@ -536,6 +536,7 @@ type
     function  IsTrue: Boolean; inline;
     function  IsNumber: Boolean; inline;
     function  IsInteger: Boolean; inline;
+    function  IsInteger(out aValue: Int64): Boolean; inline;
     function  IsString: Boolean; inline;
     function  IsArray: Boolean; inline;
     function  IsObject: Boolean; inline;
@@ -4670,6 +4671,13 @@ begin
   if Kind <> jvkNumber then
     exit(False);
   Result := Double.IsExactInt(FValue.Num);
+end;
+
+function TJsonNode.IsInteger(out aValue: Int64): Boolean;
+begin
+  if Kind <> jvkNumber then
+    exit(False);
+  Result := Double.IsExactInt(FValue.Num, aValue);
 end;
 
 function TJsonNode.IsString: Boolean;
