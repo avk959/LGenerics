@@ -123,6 +123,7 @@ resourcestring
   SEJsonArraySizeNotFitFmt = 'JSON array size does not match the size of static PDO array(%d)';
   SEUnassignClassInstFmt   = 'Unassigned class instance(%s)';
   SECallbackFalseRetFmt    = 'Custom callback returned False when reading %s';
+  SEExceptWhileJsonLoadFmt = 'Exception %s with message "%s" when loading JSON';
 //JTD
   SECantLoadJsStream         = 'Cannot load JSON stream';
   SECantLoadJsFile           = 'Cannot load JSON file';
