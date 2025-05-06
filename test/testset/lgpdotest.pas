@@ -989,7 +989,7 @@ begin
   until False;
   if not(KeyFound and ValueFound) then exit(False);
   if not Double.IsExactInt(d, I) then exit(False);
-  if (jroRangeOverflowCheck in aOptions) and ((I < Low(Integer)) or (I > High(Integer))) then
+  if (I < Low(Integer)) or (I > High(Integer)) then
     exit(False);
   pRec^.Value := I;
   Result := True;
@@ -1880,7 +1880,7 @@ begin
   r := Default(TTestRec);
   AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
   try
-    PdoLoadJson(TypeInfo(r), r, Json, [jroRangeOverflowCheck]);
+    PdoLoadJson(TypeInfo(r), r, Json);
   except
     on e: EPdoLoadJson do
       Raised := True;
