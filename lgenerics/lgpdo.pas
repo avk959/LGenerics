@@ -85,15 +85,19 @@ const
   DEFAULT_DEPTH = TJsonReader.DEF_DEPTH;
 
 type
-  EPdoLoadJson = class(Exception);
+  EPdoLoadJson = class(Exception)
+  private
+    FPath: string;
+  public
+    constructor Create(const aMessage, aPath: string);
+    property JsonPath: string read FPath;
+  end;
 
   TJsonReadOption  = (
     jroSkipUnknownProps,   { properties not found will be silently ignored; by default an exception will be raised }
     jroIgnoreNameCase,     { property names will be treated as case insensitive; case sensitive by default }
     jroRejectNulls,        { an exception will be raised in case of JSON.null value; by default null values
                              are accepted for sets, classes, strings, dynamic arrays, and Variants }
-    jroRangeOverflowCheck, { will check if received JSON numeric values lead to out of range or overflow;
-                             by default relies on compiler options }
     jroTryCreateClassInst);{ will try to call a constructor for an unassigned class instance;
                              raises an exception by default }
   TJsonReadOptions = set of TJsonReadOption;
@@ -889,6 +893,13 @@ begin
 end;
 {$POP}
 
+{ EPdoLoadJson }
+constructor EPdoLoadJson.Create(const aMessage, aPath: string);
+begin
+  inherited Create(aMessage);
+  FPath := aPath;
+end;
+
 function RegisterClassLoadProc(aTypeInfo: PTypeInfo; aProc: TJson2ClassProc): Boolean;
 begin
   if aTypeInfo = nil then exit(False);
@@ -954,10 +965,10 @@ type
   TTokenKind = TJsonReader.TTokenKind;
 var
   Reader: TJsonReader = nil;
-  SkipUnknownProps, IgnoreNameCase, RejectNulls, RangeOfloCheck: Boolean;
+  SkipUnknownProps, IgnoreNameCase, RejectNulls: Boolean;
   procedure Error(const aMessage: string);
   begin
-    raise EPdoLoadJson.Create(aMessage);
+    raise EPdoLoadJson.Create(aMessage, Reader.Path);
   end;
   procedure ReadNext; inline;
   begin
@@ -992,44 +1003,44 @@ var
     case GetTypeData(aTypeInfo)^.OrdType of
       otSByte:
         begin
-          if RangeOfloCheck and ((I < System.Low(ShortInt)) or (I > System.High(ShortInt))) then
+          if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then
             Error(Format(SEPdoRangeErrorFmt, ['ShortInt', I]));
           PShortInt(aData)^ := I;
         end;
       otUByte:
         begin
-          if RangeOfloCheck and ((I < 0) or (I > System.High(Byte))) then
+          if (I < 0) or (I > System.High(Byte)) then
             Error(Format(SEPdoRangeErrorFmt, ['Byte', I]));
           PByte(aData)^ := I;
         end;
       otSWord:
         begin
-          if RangeOfloCheck and ((I < System.Low(SmallInt)) or (I > System.High(SmallInt))) then
+          if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then
             Error(Format(SEPdoRangeErrorFmt, ['SmallInt', I]));
           PSmallInt(aData)^ := I;
         end;
       otUWord:
         begin
-          if RangeOfloCheck and ((I < 0) or (I > System.High(Word))) then
+          if (I < 0) or (I > System.High(Word)) then
             Error(Format(SEPdoRangeErrorFmt, ['Word', I]));
           PWord(aData)^ := I;
         end;
       otSLong:
         begin
-          if RangeOfloCheck and ((I < System.Low(LongInt)) or (I > System.High(LongInt))) then
+          if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then
             Error(Format(SEPdoRangeErrorFmt, ['LongInt', I]));
           PLongInt(aData)^ := I;
         end;
       otULong:
         begin
-          if RangeOfloCheck and ((I < 0) or (I > System.High(Dword))) then
+          if (I < 0) or (I > System.High(Dword)) then
             Error(Format(SEPdoRangeErrorFmt, ['Dword', I]));
           PDword(aData)^ := I;
         end;
       otSQWord: PInt64(aData)^ := I;
       otUQWord:
         begin
-          if RangeOfloCheck and (I < 0) then
+          if I < 0 then
             Error(Format(SEPdoRangeErrorFmt, ['QWord', I]));
           PQWord(aData)^ := I;
         end;
@@ -1046,7 +1057,7 @@ var
     case GetTypeData(aTypeInfo)^.FloatType of
       ftSingle:
         begin
-          if RangeOfloCheck and (System.Abs(d) > Math.MaxSingle) then
+          if System.Abs(d) > Math.MaxSingle then
             Error(Format(SEPdoOverflowErrorFmt, ['Single', d]));
           PSingle(aData)^ := d;
         end;
@@ -1060,7 +1071,7 @@ var
         end;
       ftCurr:
         begin
-          if RangeOfloCheck and ((d < Currency.MinValue) or (d > Currency.MaxValue))then
+          if (d < Currency.MinValue) or (d > Currency.MaxValue) then
             Error(Format(SEPdoOverflowErrorFmt, ['Currency', d]));
           PCurrency(aData)^ := d;
         end;
@@ -1744,8 +1755,13 @@ begin
   SkipUnknownProps := jroSkipUnknownProps in aOptions;
   IgnoreNameCase := jroIgnoreNameCase in aOptions;
   RejectNulls := jroRejectNulls in aOptions;
-  RangeOfloCheck := jroRangeOverflowCheck in aOptions;
-  ReadValue(aTypeInfo, @aValue);
+  try
+    ReadValue(aTypeInfo, @aValue);
+  except
+    on e: EPdoLoadJson do raise;
+    on e: Exception do
+      raise EPdoLoadJson.Create(Format(SEExceptWhileJsonLoadFmt, [e.ClassName, e.Message]), Reader.Path);
+  end;
 end;
 {$POP}
 
@@ -1814,7 +1830,7 @@ begin
   if aReader.TokenKind = tkNull then exit(not(jroRejectNulls in aOpts));
   if aReader.TokenKind <> tkNumber then exit(False);
   if not aReader.AsNumber.IsExactInt(I) then exit(False);
-  if(jroRangeOverflowCheck in aOpts)and((I < Low(ShortInt))or(I > High(ShortInt)))then exit(False);
+  if (I < Low(ShortInt)) or (I > High(ShortInt)) then exit(False);
   pI^ := ShortInt(I);
   Result := True;
 end;
@@ -1839,7 +1855,7 @@ begin
   if aReader.TokenKind = tkNull then exit(not(jroRejectNulls in aOpts));
   if aReader.TokenKind <> tkNumber then exit(False);
   if not aReader.AsNumber.IsExactInt(I) then exit(False);
-  if(jroRangeOverflowCheck in aOpts)and((I < 0)or(I > High(Byte)))then exit(False);
+  if (I < 0) or (I > High(Byte)) then exit(False);
   pB^ := Byte(I);
   Result := True;
 end;
@@ -1864,7 +1880,7 @@ begin
   if aReader.TokenKind = tkNull then exit(not(jroRejectNulls in aOpts));
   if aReader.TokenKind <> tkNumber then exit(False);
   if not aReader.AsNumber.IsExactInt(I) then exit(False);
-  if(jroRangeOverflowCheck in aOpts)and((I < Low(SmallInt))or(I > High(SmallInt)))then exit(False);
+  if (I < Low(SmallInt)) or (I > High(SmallInt)) then exit(False);
   pI^ := SmallInt(I);
   Result := True;
 end;
@@ -1889,7 +1905,7 @@ begin
   if aReader.TokenKind = tkNull then exit(not(jroRejectNulls in aOpts));
   if aReader.TokenKind <> tkNumber then exit(False);
   if not aReader.AsNumber.IsExactInt(I) then exit(False);
-  if(jroRangeOverflowCheck in aOpts)and((I < 0)or(I > High(Word)))then exit(False);
+  if (I < 0) or (I > High(Word)) then exit(False);
   pW^ := Word(I);
   Result := True;
 end;
@@ -1914,7 +1930,7 @@ begin
   if aReader.TokenKind = tkNull then exit(not(jroRejectNulls in aOpts));
   if aReader.TokenKind <> tkNumber then exit(False);
   if not aReader.AsNumber.IsExactInt(I) then exit(False);
-  if(jroRangeOverflowCheck in aOpts)and((I < Low(Integer))or(I > High(Integer)))then exit(False);
+  if (I < Low(Integer)) or (I > High(Integer)) then exit(False);
   pI^ := Integer(I);
   Result := True;
 end;
@@ -1939,7 +1955,7 @@ begin
   if aReader.TokenKind = tkNull then exit(not(jroRejectNulls in aOpts));
   if aReader.TokenKind <> tkNumber then exit(False);
   if not aReader.AsNumber.IsExactInt(I) then exit(False);
-  if(jroRangeOverflowCheck in aOpts)and((I < 0)or(I > High(Cardinal)))then exit(False);
+  if (I < 0) or (I > High(Cardinal)) then exit(False);
   pC^ := Cardinal(I);
   Result := True;
 end;
