@@ -970,7 +970,7 @@ type
     function Add(aValue: Double): TJsonStrWriter;
     function Add(const s: string): TJsonStrWriter;
     function Add(const s: shortstring): TJsonStrWriter;
-    function Add(aValue: TJsonNode): TJsonStrWriter; inline;
+    function Add(aValue: TJsonNode): TJsonStrWriter;
     function AddJson(const aJson: string): TJsonStrWriter;
     function AddName(const aName: string): TJsonStrWriter;
     function AddName(const aName: shortstring): TJsonStrWriter;
@@ -2430,12 +2430,12 @@ begin
   if (s = '') then
     exit;
   if s[1] <> '/' then
-    raise EJsException.Create(SEInvalidJsPtr);
+    raise EJsException.Create(SEInvalidJsonPtr);
   if s = '/' then
     exit(['']);
   Len := System.Length(s);
   if s[Len] = '~' then
-    raise EJsException.Create(SEInvalidJsPtr);
+    raise EJsException.Create(SEInvalidJsonPtr);
 
   System.SetLength(Segs, ARRAY_INITIAL_SIZE);
   System.SetLength(CurrSeg, Len - 1);
@@ -2459,7 +2459,7 @@ begin
               '0': AppendChar('~');
               '1': AppendChar('/');
             else
-              raise EJsException.Create(SEInvalidJsPtr);
+              raise EJsException.Create(SEInvalidJsonPtr);
             end;
             Inc(I);
           end
