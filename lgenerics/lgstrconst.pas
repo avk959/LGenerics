@@ -24,7 +24,7 @@ unit lgStrConst;
 interface
 
 resourcestring
-
+//
   SEOptionalValueEmpty     = 'No value assigned';
   SECopyInadmissible       = 'Copying inadmissible';
   SEOwnRequired            = 'Ownership required';
@@ -79,10 +79,10 @@ resourcestring
   SENoSuchEdgeFmt          = 'No such edge (%d, %d)';
   SEInputIsNotProperPermut = 'Input array is not proper permutation';
   SEVertexNonUnique        = 'Vertex label is not unique';
+//Json
   SECantConvertFmt         = 'Cannot convert %s to %s';
-  SEInvalidJsPtr           = 'Invalid JSON Pointer instance';
+  SEInvalidJsonPtr         = 'Invalid JSON Pointer instance';
   SECantParseJsStr         = 'Cannot parse JSON string';
-  SEUnknownJsNodeKind      = 'Unknown JsonNode kind';
   SEUnknownJsDataType      = 'Unknown JsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
