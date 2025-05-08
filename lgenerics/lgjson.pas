@@ -229,6 +229,7 @@ const
   DEF_INDENT = 4;
 
 type
+  TJsonReader = class;
   { TJsonNode is the entity used to validate, parse, generate, and navigate a json document;
     the lifetime of all nested elements is determined by the document root node;
     it is this (and only this) node that requires explicit free;
@@ -346,7 +347,10 @@ type
     class function  CreateJsObject: PJsObject; static; inline;
     class procedure FreeJsObject(o: PJsObject); static;
     class procedure MoveNode(aSrc, aDst: TJsonNode); static;
-    class function  DoParseJson(const s: string; aDups: TNameDuplicates; aSkipBom: Boolean; aMaxDepth: Integer): TJsonNode;
+    class function  DoParseJson(aReader: TJsonReader; aDups: TNameDuplicates): TJsonNode;
+    class function  DoParseJson(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
+                                aMaxDepth: Integer): TJsonNode;
+    class function  DoParseJson(aStream: TStream; aDups: TNameDuplicates; aSkipBom: Boolean; aMaxDepth: Integer): TJsonNode;
     function  GetFString: string; inline;
     function  GetFArray: PJsArray; inline;
     function  GetFObject: PJsObject; inline;
@@ -556,11 +560,17 @@ type
   { tries to load JSON from a string, returns False if it fails, in which case
     the content of the instance is not changed }
     function  TryParse(const s: string): Boolean;
+    function  TryParse(aBuffer: PAnsiChar; aCount: SizeInt; aDuplicates: TNameDuplicates;
+                       aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean;
+    function  TryParse(aStream: TStream; aDuplicates: TNameDuplicates; aSkipBom: Boolean = False;
+                       aDepth: Integer = DEF_DEPTH): Boolean;
     function  TryParse(const s: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean = False;
                        aDepth: Integer = DEF_DEPTH): Boolean;
   { tries to load JSON from a file, returns False if it fails, in which case
     the content of the instance is not changed }
     function  TryParseFile(const aFileName: string): Boolean;
+    function  TryParseFile(const aFileName: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean = False;
+                           aDepth: Integer = DEF_DEPTH): Boolean;
   { recursively traverses the document tree in a Preorder manner, calling aFunc on each node;
     exits immediately if aFunc returns False }
     procedure Iterate(aFunc: TOnIterate);
@@ -1062,6 +1072,7 @@ type
     FSkipBom,
     FBufferSource: Boolean;
     function  GetIndex: SizeInt; inline;
+    function  GetMaxDepth: SizeInt; inline;
     function  GetStructKind: TStructKind; inline;
     function  GetParentKind: TStructKind; inline;
     procedure UpdateArray; inline;
@@ -1174,6 +1185,7 @@ type
     property  ParentKind: TStructKind read GetParentKind;
   { indicates the nesting depth of the current structure, zero based }
     property  Depth: SizeInt read FStackTop;
+    property  MaxDepth: SizeInt read GetMaxDepth;
     property  ReadState: TReadState read FReadState;
     property  SkipBom: Boolean read FSkipBom;
   end;
@@ -2693,40 +2705,32 @@ begin
   aSrc.FValue.Int := 0;
 end;
 
-{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
-class function TJsonNode.DoParseJson(const s: string; aDups: TNameDuplicates; aSkipBom: Boolean;
-  aMaxDepth: Integer): TJsonNode;
+class function TJsonNode.DoParseJson(aReader: TJsonReader; aDups: TNameDuplicates): TJsonNode;
 var
-  Ref: specialize TGUniqRef<TJsonReader>;
   Stack: array of TJsonNode;
-  Reader: TJsonReader;
   TopNode, Node: TJsonNode;
   sTop: Integer;
   k: TJsonReader.TTokenKind;
 begin
-  if aMaxDepth < 32 then aMaxDepth := TJsonNode.DEF_DEPTH;
-  Ref.Instance := TJsonReader.Create(Pointer(s), System.Length(s), aMaxDepth, aSkipBom);
-  Reader := Ref;
-
-  if not Reader.Read then exit(nil);
-  if TJsonReader.IsStartToken(Reader.TokenKind) then begin
-    k := Reader.TokenKind;
-    if not Reader.Read then exit(nil);
-    System.SetLength(Stack, aMaxDepth + 1);
+  if not aReader.Read then exit(nil);
+  if TJsonReader.IsStartToken(aReader.TokenKind) then begin
+    k := aReader.TokenKind;
+    if not aReader.Read then exit(nil);
+    System.SetLength(Stack, aReader.MaxDepth + 1);
     case k of
       tkArrayBegin:  Stack[0] := TJsonNode.Create(jvkArray);
       tkObjectBegin: Stack[0] := TJsonNode.Create(jvkObject);
     end;
   end else begin
-    if Reader.ReadState = rsError then exit(nil);
-    Reader.Read;
-    if Reader.ReadState <> rsEof then exit(nil);
-    case Reader.TokenKind of
+    if aReader.ReadState = rsError then exit(nil);
+    aReader.Read;
+    if aReader.ReadState <> rsEof then exit(nil);
+    case aReader.TokenKind of
       tkNull:   exit(TJsonNode.Create);
       tkFalse:  exit(TJsonNode.Create(False));
       tkTrue:   exit(TJsonNode.Create(True));
-      tkNumber: exit(TJsonNode.Create(Reader.AsNumber));
-      tkString: exit(TJsonNode.Create(Reader.AsString));
+      tkNumber: exit(TJsonNode.Create(aReader.AsNumber));
+      tkString: exit(TJsonNode.Create(aReader.AsString));
     end;
   end;
 
@@ -2734,51 +2738,51 @@ begin
   sTop := 0;
   repeat
     TopNode := Stack[sTop];
-    case Reader.TokenKind of
+    case aReader.TokenKind of
       tkNull:
         case TopNode.Kind of
           jvkArray:  TopNode.AddNull;
           jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAddNull(Reader.Name)
-            else TopNode[Reader.Name].AsNull;
+            if aDups = ndupIgnore then TopNode.TryAddNull(aReader.Name)
+            else TopNode[aReader.Name].AsNull;
         end;
       tkFalse:
         case TopNode.Kind of
           jvkArray:  TopNode.Add(False);
           jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(Reader.Name, False)
-            else TopNode[Reader.Name].AsBoolean := False;
+            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, False)
+            else TopNode[aReader.Name].AsBoolean := False;
         end;
       tkTrue:
         case TopNode.Kind of
           jvkArray:  TopNode.Add(True);
           jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(Reader.Name, True)
-            else TopNode[Reader.Name].AsBoolean := True;
+            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, True)
+            else TopNode[aReader.Name].AsBoolean := True;
         end;
       tkNumber:
         case TopNode.Kind of
-          jvkArray:  TopNode.Add(Reader.AsNumber);
+          jvkArray:  TopNode.Add(aReader.AsNumber);
           jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(Reader.Name, Reader.AsNumber)
-            else TopNode[Reader.Name].AsNumber := Reader.AsNumber;
+            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, aReader.AsNumber)
+            else TopNode[aReader.Name].AsNumber := aReader.AsNumber;
         end;
       tkString:
         case TopNode.Kind of
-          jvkArray:  TopNode.Add(Reader.AsString);
+          jvkArray:  TopNode.Add(aReader.AsString);
           jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(Reader.Name, Reader.AsString)
-            else TopNode[Reader.Name].AsString := Reader.AsString;
+            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, aReader.AsString)
+            else TopNode[aReader.Name].AsString := aReader.AsString;
         end;
       tkArrayBegin: begin
           case TopNode.Kind of
             jvkArray:  Node := TopNode.AddNode(jvkArray);
             jvkObject:
               if aDups = ndupIgnore then
-                if not TopNode.TryAddNode(Reader.Name, Node, jvkArray) then begin
-                  Reader.Skip; continue;
+                if not TopNode.TryAddNode(aReader.Name, Node, jvkArray) then begin
+                  aReader.Skip; continue;
                 end else
-              else Node := TopNode[Reader.Name].AsArray;
+              else Node := TopNode[aReader.Name].AsArray;
           end;
           Inc(sTop); Stack[sTop] := Node;
         end;
@@ -2787,24 +2791,49 @@ begin
             jvkArray:  Node := TopNode.AddNode(jvkObject);
             jvkObject:
               if aDups = ndupIgnore then
-                if not TopNode.TryAddNode(Reader.Name, Node, jvkObject) then begin
-                  Reader.Skip; continue;
+                if not TopNode.TryAddNode(aReader.Name, Node, jvkObject) then begin
+                  aReader.Skip; continue;
                 end else
-              else Node := TopNode[Reader.Name].AsObject;
+              else Node := TopNode[aReader.Name].AsObject;
           end;
           Inc(sTop); Stack[sTop] := Node;
         end;
       tkArrayEnd, tkObjectEnd: Dec(sTop);
     end;
-  until not Reader.Read;
+  until not aReader.Read;
 
-  if (Reader.ReadState <> rsEOF) or (sTop <> -1) then begin
+  if (aReader.ReadState <> rsEOF) or (sTop <> -1) then begin
     Stack[0].Free;
     exit(nil);
   end;
   Result := Stack[0];
 end;
-{$POP}
+
+class function TJsonNode.DoParseJson(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
+  aMaxDepth: Integer): TJsonNode;
+var
+  Reader: TJsonReader;
+begin
+  Reader := TJsonReader.Create(aBuf, aCount, aMaxDepth, aSkipBom);
+  try
+    Result := DoParseJson(Reader, aDups);
+  finally
+    Reader.Free;
+  end;
+end;
+
+class function TJsonNode.DoParseJson(aStream: TStream; aDups: TNameDuplicates; aSkipBom: Boolean;
+  aMaxDepth: Integer): TJsonNode;
+var
+  Reader: TJsonReader;
+begin
+  Reader := TJsonReader.Create(aStream, Reader.DEF_BUF_SIZE, aMaxDepth, aSkipBom);
+  try
+    Result := DoParseJson(Reader, aDups);
+  finally
+    Reader.Free;
+  end;
+end;
 
 function TJsonNode.GetFString: string;
 begin
@@ -4985,18 +5014,38 @@ begin
   end;
 end;
 
-function TJsonNode.TryParse(const s: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean; aDepth: Integer): Boolean;
+function TJsonNode.TryParse(aBuffer: PAnsiChar; aCount: SizeInt; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
 var
   Node: TJsonNode;
 begin
-  Node := DoParseJson(s, aDuplicates, aSkipBom, aDepth);
+  Node := DoParseJson(aBuffer, aCount, aDuplicates, aSkipBom, aDepth);
   try
     Result := Node <> nil;
-    if Result then
-      MoveNode(Node, Self);
+    if Result then MoveNode(Node, Self);
   finally
     Node.Free;
   end;
+end;
+
+function TJsonNode.TryParse(aStream: TStream; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
+var
+  Node: TJsonNode;
+begin
+  Node := DoParseJson(aStream, aDuplicates, aSkipBom, aDepth);
+  try
+    Result := Node <> nil;
+    if Result then MoveNode(Node, Self);
+  finally
+    Node.Free;
+  end;
+end;
+
+function TJsonNode.TryParse(const s: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
+begin
+  Result := TryParse(Pointer(s), System.Length(s), aDuplicates, aSkipBom, aDepth);
 end;
 
 function TJsonNode.TryParseFile(const aFileName: string): Boolean;
@@ -5010,6 +5059,21 @@ begin
     Result := True;
   finally
     Node.Free;
+  end;
+end;
+
+function TJsonNode.TryParseFile(const aFileName: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
+begin
+  try
+    with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
+      try
+        Result := TryParse(TStream(GetSelfRef), aDuplicates, aSkipBom, aDepth);
+      finally
+        Free;
+      end;
+  except
+    Result := False;
   end;
 end;
 
@@ -8950,6 +9014,11 @@ end;
 function TJsonReader.GetIndex: SizeInt;
 begin
   Result := FStack[Depth].CurrIndex;
+end;
+
+function TJsonReader.GetMaxDepth: SizeInt;
+begin
+  Result := System.Length(FStack);
 end;
 
 function TJsonReader.GetStructKind: TStructKind;
