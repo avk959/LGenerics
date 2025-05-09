@@ -129,11 +129,8 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
-
-resourcestring
-  SlgEInvalidJsonFileFmt = '"%s" is not a valid JSON configuration file';
-  SlgECouldNotOpenKeyFmt = 'Could not open key "%s"';
-  SlgDuplicateNameFmt    = 'Duplicate object member: "%s"';
+uses
+  LgStrConst;
 
 { TJsonConf }
 
@@ -143,10 +140,10 @@ begin
   FFileName := aFileName;
   if csLoading in ComponentState then exit;
   Flush;
-  if not FileExists(aFileName) then
-    Clear
+  if FileExists(aFileName) then
+    LoadFromFile(aFileName)
   else
-    LoadFromFile(aFileName);
+    Clear;
 end;
 
 function TJsonConf.GetFormatIndentSize: Integer;
@@ -194,18 +191,23 @@ end;
 
 procedure TJsonConf.LoadFromFile(const aFileName: string);
 var
-  Node: TJsonNode = nil;
+  Ok: Boolean = False;
 begin
-  if TJsonNode.TryParseFile(aFileName, Node) and (Node.IsObject) then
-    begin
-      FRoot.Free;
-      FRoot := Node;
-      FCurrNode := Node;
-      exit;
-    end
+  try
+    with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
+      try
+        Ok := FRoot.TryParse(TStream(GetSelfRef), ndupIgnore);
+      finally
+        Free;
+      end;
+  except
+    on e: Exception do
+      raise EJsonConfError.CreateFmt(LgSEFailOpenCfgFileFmt, [aFileName, e.Message]);
+  end;
+  if Ok then
+    FCurrNode := FRoot
   else
-    Node.Free;
-  raise EJsonConfError.CreateFmt(SlgEInvalidJsonFileFmt,[aFileName]);
+    raise EJsonConfError.CreateFmt(LgSEInvalidJsonFileFmt, [aFileName]);
 end;
 
 procedure TJsonConf.Loaded;
@@ -349,7 +351,7 @@ begin
     else
       FCurrNode := FindObj(aPath, aForceKey);
   if FCurrNode = nil then
-    raise EJsonConfError.CreateFmt(SlgECouldNotOpenKeyFmt, [aPath]);
+    raise EJsonConfError.CreateFmt(LgSECouldNotOpenKeyFmt, [aPath]);
 end;
 
 function TJsonConf.TryOpenKey(const aPath: string; aForceKey: Boolean): Boolean;
@@ -650,7 +652,7 @@ begin
         begin
           aValue.GetNameValue(I, Key, Value);
           if not n.TryAdd(Key, Value) then
-            raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
+            raise EJsonConfError.CreateFmt(LgSEDuplicateNameFmt, [Key]);
         end
   else
     for Value in aValue do
@@ -710,7 +712,7 @@ begin
             Ok := n.TryAdd(Key, string(Value));
           end;
           if not Ok then
-            raise EJsonConfError.CreateFmt(SlgDuplicateNameFmt, [Key]);
+            raise EJsonConfError.CreateFmt(LgSEDuplicateNameFmt, [Key]);
         end;
   FModified := True;
 end;
