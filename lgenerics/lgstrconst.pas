@@ -86,6 +86,11 @@ resourcestring
   SEUnknownJsDataType      = 'Unknown JsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
+//JsonCfg
+  LgSEFailOpenCfgFileFmt   = 'Failed to open configuration file "%s"; %s';
+  LgSEInvalidJsonFileFmt   = '"%s" is not a valid JSON configuration file';
+  LgSECouldNotOpenKeyFmt   = 'Could not open key "%s"';
+  LgSEDuplicateNameFmt     = 'Duplicate object member: "%s"';
 //CSV
   SERowIndexOutOfBoundsFmt = 'Row index out of bounds(%d)';
   SEColIndexOutOfBoundsFmt = 'Column index out of bounds(%d)';
@@ -175,7 +180,7 @@ resourcestring
   SEJPathIntRangeFmt       = 'integer value out of range(%s)';
   SEJPathUnknownSymFmt     = 'unrecognized symbol "%s"';
   SEJPathInternalParseFmt  = 'Internal parser error: "%s"';
-  SEJPathMalformQuery      = 'Malformed query string';
+  SEJPathMalformQuery      = 'Ill-formed query string';
   SEJPathCloseBracketMiss  = 'missing closing bracket';
   SEJPathCloseParenMiss    = 'missing closing parenthesis';
   SEJPathOperandMiss       = 'missing operand';
