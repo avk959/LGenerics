@@ -1001,8 +1001,8 @@ type
     function AddJson(const aName: shortstring; aJson: string): TJsonStrWriter;
     function BeginArray: TJsonStrWriter;
     function BeginObject: TJsonStrWriter;
-    function EndArray: TJsonStrWriter; inline;
-    function EndObject: TJsonStrWriter; inline;
+    function EndArray: TJsonStrWriter;
+    function EndObject: TJsonStrWriter;
   { one-time function }
     property JsonString: string read GetJson;
     class function WriteJson(aNode: TJsonNode; aInitLen: SizeInt = DEFAULT_LEN): string; static;
