@@ -115,8 +115,10 @@ type
     FStrValue: string;
     FKind: TFormKind;
     FType: TJtdType;
-    FNullable,
     FAddProps: Boolean;
+  protected
+    FNullable: Boolean;
+  private
     function  GetLoaded: Boolean; inline;
     function  GetDefinitions: TJtdSchemaMap; inline;
     function  GetDiscriminator: string; inline;
