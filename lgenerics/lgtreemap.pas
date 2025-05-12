@@ -459,7 +459,7 @@ type
       FCurrNode: SizeInt;
       FInCycle: Boolean;
       function  GetCurrent: TEntry; inline;
-      procedure Init(const aMap: TGLiteTreeMap; aNode: SizeInt); inline;
+      procedure Init(constref aMap: TGLiteTreeMap; aNode: SizeInt); inline;
     public
       function  MoveNext: Boolean; inline;
       property  Current: TEntry read GetCurrent;
@@ -471,7 +471,7 @@ type
       FCurrNode: SizeInt;
       FInCycle: Boolean;
       function  GetCurrent: TEntry; inline;
-      procedure Init(const aMap: TGLiteTreeMap); inline;
+      procedure Init(constref aMap: TGLiteTreeMap); inline;
     public
       function  GetEnumerator: TReverseEntries; inline;
       function  MoveNext: Boolean; inline;
@@ -482,7 +482,7 @@ type
     private
       FEnum: TTree.TUnordEnumerator;
       function  GetCurrent: TEntry; inline;
-      procedure Init(const aMap: TGLiteTreeMap); inline;
+      procedure Init(constref aMap: TGLiteTreeMap); inline;
     public
       function  GetEnumerator: TUnordEntries; inline;
       function  MoveNext: Boolean; inline;
@@ -493,7 +493,7 @@ type
     private
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TKey; inline;
-      procedure Init(const aMap: TGLiteTreeMap); inline;
+      procedure Init(constref aMap: TGLiteTreeMap); inline;
     public
       function  GetEnumerator: TKeys; inline;
       function  MoveNext: Boolean; inline;
@@ -504,7 +504,7 @@ type
     private
       FEnum: TTree.TUnordEnumerator;
       function  GetCurrent: TKey; inline;
-      procedure Init(const aMap: TGLiteTreeMap); inline;
+      procedure Init(constref aMap: TGLiteTreeMap); inline;
     public
       function  GetEnumerator: TUnordKeys; inline;
       function  MoveNext: Boolean; inline;
@@ -515,7 +515,7 @@ type
     private
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TValue; inline;
-      procedure Init(const aMap: TGLiteTreeMap); inline;
+      procedure Init(constref aMap: TGLiteTreeMap); inline;
     public
       function  GetEnumerator: TValues; inline;
       function  MoveNext: Boolean; inline;
@@ -526,7 +526,7 @@ type
     private
       FEnum: TTree.TUnordEnumerator;
       function  GetCurrent: TValue; inline;
-      procedure Init(const aMap: TGLiteTreeMap); inline;
+      procedure Init(constref aMap: TGLiteTreeMap); inline;
     public
       function  GetEnumerator: TUnordValues; inline;
       function  MoveNext: Boolean; inline;
@@ -541,7 +541,7 @@ type
       FInclusive,
       FDone: Boolean;
       function  GetCurrent: TEntry; inline;
-      procedure Init(const aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
+      procedure Init(constref aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
     public
       function  GetEnumerator: THead; inline;
       function  MoveNext: Boolean;
@@ -555,7 +555,7 @@ type
       FFirstNode: SizeInt;
       FInCycle: Boolean;
       function  GetCurrent: TEntry; inline;
-      procedure Init(const aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
+      procedure Init(constref aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
     public
       function  GetEnumerator: TTail; inline;
       function  MoveNext: Boolean;
@@ -571,7 +571,7 @@ type
       FInclusive,
       FDone: Boolean;
       function  GetCurrent: TEntry; inline;
-      procedure Init(const aMap: TGLiteTreeMap; const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds);
+      procedure Init(constref aMap: TGLiteTreeMap; const aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds);
     public
       function  GetEnumerator: TRange; inline;
       function  MoveNext: Boolean;
@@ -2120,7 +2120,7 @@ begin
   Result := FTree^.NodeList[FCurrNode].Data;
 end;
 
-procedure TGLiteTreeMap.TEntryEnumerator.Init(const aMap: TGLiteTreeMap; aNode: SizeInt);
+procedure TGLiteTreeMap.TEntryEnumerator.Init(constref aMap: TGLiteTreeMap; aNode: SizeInt);
 begin
   FTree := @aMap.FTree;
   FCurrNode := aNode;
@@ -2143,7 +2143,7 @@ begin
   Result := FTree^.NodeList[FCurrNode].Data;
 end;
 
-procedure TGLiteTreeMap.TReverseEntries.Init(const aMap: TGLiteTreeMap);
+procedure TGLiteTreeMap.TReverseEntries.Init(constref aMap: TGLiteTreeMap);
 begin
   FTree := @aMap.FTree;
   FCurrNode := FTree^.Highest;
@@ -2171,7 +2171,7 @@ begin
   Result := FEnum.Current^;
 end;
 
-procedure TGLiteTreeMap.TUnordEntries.Init(const aMap: TGLiteTreeMap);
+procedure TGLiteTreeMap.TUnordEntries.Init(constref aMap: TGLiteTreeMap);
 begin
   FEnum := aMap.FTree.UnOrdered;
 end;
@@ -2193,7 +2193,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-procedure TGLiteTreeMap.TKeys.Init(const aMap: TGLiteTreeMap);
+procedure TGLiteTreeMap.TKeys.Init(constref aMap: TGLiteTreeMap);
 begin
   FEnum := aMap.FTree.GetEnumerator;
 end;
@@ -2215,7 +2215,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-procedure TGLiteTreeMap.TUnordKeys.Init(const aMap: TGLiteTreeMap);
+procedure TGLiteTreeMap.TUnordKeys.Init(constref aMap: TGLiteTreeMap);
 begin
   FEnum := aMap.FTree.UnOrdered;
 end;
@@ -2237,7 +2237,7 @@ begin
   Result := FEnum.Current^.Value;
 end;
 
-procedure TGLiteTreeMap.TValues.Init(const aMap: TGLiteTreeMap);
+procedure TGLiteTreeMap.TValues.Init(constref aMap: TGLiteTreeMap);
 begin
   FEnum := aMap.FTree.GetEnumerator;
 end;
@@ -2259,7 +2259,7 @@ begin
   Result := FEnum.Current^.Value;
 end;
 
-procedure TGLiteTreeMap.TUnordValues.Init(const aMap: TGLiteTreeMap);
+procedure TGLiteTreeMap.TUnordValues.Init(constref aMap: TGLiteTreeMap);
 begin
   FEnum := aMap.FTree.UnOrdered;
 end;
@@ -2281,7 +2281,7 @@ begin
   Result := FTree^.NodeList[FCurrNode].Data;
 end;
 
-procedure TGLiteTreeMap.THead.Init(const aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
+procedure TGLiteTreeMap.THead.Init(constref aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
 begin
   FTree := @aMap.FTree;
   FCurrNode := 0;
@@ -2326,7 +2326,7 @@ begin
   Result := FTree^.NodeList[FCurrNode].Data;
 end;
 
-procedure TGLiteTreeMap.TTail.Init(const aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
+procedure TGLiteTreeMap.TTail.Init(constref aMap: TGLiteTreeMap; const aBound: TKey; aInclusive: Boolean);
 begin
   FTree := @aMap.FTree;
   FCurrNode := 0;
@@ -2367,7 +2367,7 @@ begin
   Result := FTree^.NodeList[FCurrNode].Data;
 end;
 
-procedure TGLiteTreeMap.TRange.Init(const aMap: TGLiteTreeMap; const aLowBound, aHighBound: TKey;
+procedure TGLiteTreeMap.TRange.Init(constref aMap: TGLiteTreeMap; const aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds);
 begin
   FTree := @aMap.FTree;
