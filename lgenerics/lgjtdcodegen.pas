@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Pascal code generator from JSON TypeDef schemas.                        *                                            *
 *                                                                           *
-*   Copyright(c) 2023-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -41,42 +41,55 @@ uses
     however, all of these keywords are not portable.
 }
 type
+  ECodegen  = class(Exception);
+
   TFormKind = TJtdSchema.TFormKind;
   TJtdType  = TJtdSchema.TJtdType;
 
+  { TJtdTemplate }
+
   TJtdTemplate = class abstract
+  strict private
+    FNullable: Boolean;
   private
     FDescription,
     FTypeName: string;
-    FAsciiNames,
-    FNullable: Boolean;
+    FAsciiNames: Boolean;
     function  GetDescription: string;
   public
+    constructor Create(aNullable: Boolean);
     procedure WriteDescription(aText: TStrings; aComment: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); virtual; abstract;
-    procedure WriteImplementation(aText: TStrings) virtual;
+    procedure WriteImplementation(aText: TStrings); virtual;
     property  Description: string read FDescription write FDescription;
     property  TypeName: string read FTypeName;
     property  HasAsciiNames: Boolean read FAsciiNames write FAsciiNames;
-    property  Nullable: Boolean read FNullable write FNullable;
+    property  Nullable: Boolean read FNullable;
   end;
 
   { TJtdTemplater }
   TJtdTemplater = class
+  public
+  const
+    MAX_REF_DEPTH = 512;
   strict private
   type
+    TRefEntry = record
+      TypeNames: array[Boolean] of string;
+    end;
+    PRefEntry     = ^TRefEntry;
     TTemplateList = specialize TGObjectVector<TJtdTemplate>;
     TStrSetType   = specialize TGLiteChainHashSet<string, string>;
     TStrSet       = TStrSetType.TSet;
-    TTypeMapType  = specialize TGLiteChainHashMap<string, string, string>;
-    TTypeMap      = TTypeMapType.TMap;
+    TRefMapType   = specialize TGLiteChainHashMap<string, TRefEntry, string>;
+    TRefMap       = TRefMapType.TMap;
+    TJtdHack      = class(TJtdSchema);
   var
     FRootSchema: TJtdSchema;
     EnumElemSet,
     FPasKeywords,
     FGlobNameTable: TStrSet;
-    FTypeMap,
-    FDefsMap: TTypeMap;
+    FRefMap: TRefMap;
     FTemplateList: TTemplateList;
     FDeclarationList,
     FImplementationList: TStringList;
@@ -185,7 +198,7 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  TypInfo, Math, lgStrConst;
+  TypInfo, Math, LgJtdTypes, lgStrConst;
 
 const
   DESCRIPTION_TAG      = 'description';
@@ -208,11 +221,11 @@ const
   ALPHANUM_CHARS       = ALPHA_CHARS + ['0'..'9'];
 
 type
-  TJtdEnumAlias = class(TJtdTemplate)
+  TJtdTypeAlias = class(TJtdTemplate)
   private
     FOldTypeName: string;
   public
-    constructor Create(const aTypeName, aOldTypeName: string);
+    constructor Create(const aTypeName, aOldTypeName: string; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
   end;
 
@@ -228,9 +241,9 @@ type
   private
     FType: TJtdType;
   public
-    class function DefaultTypeName(aType: TJtdType): string; static;
-    constructor Create(aType: TJtdType);
-    constructor Create(aType: TJtdType; const aTypeName: string);
+    class function DefaultTypeName(aType: TJtdType; aNullable: Boolean): string; static;
+    constructor Create(aType: TJtdType; aNullable: Boolean);
+    constructor Create(aType: TJtdType; const aTypeName: string; aNullable: Boolean);
     function  GetType: TJtdType;
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
   end;
@@ -246,44 +259,39 @@ type
     property  EnumDescription: TJsonNode read FEnumDescription write FEnumDescription;
   end;
 
-  TJtdImplemented = class abstract(TJtdTemplate)
-  public
-    procedure WriteImplementation(aText: TStrings); override;
-  end;
-
-  TJtdEnumElem = class(TJtdImplemented)
+  TJtdEnumElem = class(TJtdTemplate)
   private
     FEnumType: TJtdEnumType;
   public
-    constructor Create(const aTypeName: string; aEnumType: TJtdEnumType);
+    constructor Create(const aTypeName: string; aEnumType: TJtdEnumType; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
   end;
 
-  TJtdStrEnumElem = class(TJtdImplemented)
+  TJtdStrEnumElem = class(TJtdTemplate)
   private
     FElemList: TStringArray;
     FEnumDescription: TJsonNode;
   public
-    constructor Create(const aTypeName: string; const aElemList: TStringArray);
+    constructor Create(const aTypeName: string; const aElemList: TStringArray; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
     procedure WriteImplementation(aText: TStrings); override;
     property  ElemList: TStringArray read FElemList;
     property  EnumDescription: TJsonNode read FEnumDescription write FEnumDescription;
   end;
 
-  TJtdElements = class(TJtdImplemented)
+  TJtdElements = class(TJtdTemplate)
   private
     FSpecType: string;
   public
-    constructor Create(const aTypeName, aSpecType: string);
+    constructor Create(const aTypeName, aSpecType: string; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
   end;
 
-  TJtdValues = class(TJtdImplemented)
+  TJtdValues = class(TJtdTemplate)
   private
     FSpecType: string;
   public
-    constructor Create(const aTypeName, aSpecType: string);
+    constructor Create(const aTypeName, aSpecType: string; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
   end;
 
@@ -297,20 +305,22 @@ type
   end;
   TJtdPropList = array of TJtdPropInfo;
 
-  TJtdProps = class(TJtdImplemented)
+  TJtdProps = class(TJtdTemplate)
   private
     FProps,
     FOptProps: TJtdPropList;
     FAdditionalProps: Boolean;
-    procedure WriteClearProc(aText: TStrings);
+    procedure WriteDoClearProc(aText: TStrings);
+    procedure WriteClearFieldsProc(aText: TStrings);
+    procedure WriteCreateProc(aText: TStrings);
+    procedure WriteGetters(aText: TStrings);
     procedure WriteSetters(aText: TStrings);
-    procedure WriteReadPropsFromNode(aText: TStrings);
     procedure WriteReadPropsReader(aText: TStrings);
     procedure WritePropsWriteJson(aText: TStrings);
     procedure WritePropDescription(const aProp: TJtdPropInfo; aText: TStrings; aComment: Boolean);
     procedure WriteOptPropsWarning(aText: TStrings; aComment: Boolean);
   public
-    constructor Create(const aTypeName: string; const aProps, aOptProps: TJtdPropList);
+    constructor Create(const aTypeName: string; const aProps, aOptProps: TJtdPropList; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
     procedure WriteImplementation(aText: TStrings); override;
     property  Props: TJtdPropList read FProps;
@@ -327,18 +337,17 @@ type
   end;
   TTagMapping = array of TTagMap;
 
-  TJtdVarTemplate = class(TJtdImplemented)
+  TJtdUnionTemplate = class(TJtdTemplate)
   private
     FTagJsonName: string;
     FMapping: TTagMapping;
     procedure WritePropDescription(const aDescr, aTagValue: string; aText: TStrings; aComment: Boolean);
     procedure WriteGetTagJsonName(aText: TStrings);
-    procedure WriteValidTagValue(aText: TStrings);
     procedure WriteGetInstanceClass(aText: TStrings);
     procedure WriteGetters(aText: TStrings);
     procedure WriteSetters(aText: TStrings);
   public
-    constructor Create(const aTagName, aTypeName: string; const aMapping: TTagMapping);
+    constructor Create(const aTagName, aTypeName: string; const aMapping: TTagMapping; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
     procedure WriteImplementation(aText: TStrings); override;
     property  TagJsonName: string read FTagJsonName;
@@ -363,6 +372,11 @@ begin
   Result := '{ ' + SysUtils.WrapText(s, LineEnding + '  ', [' ', '-', #9], 72) + ' }';
 end;
 
+constructor TJtdTemplate.Create(aNullable: Boolean);
+begin
+  FNullable := aNullable;
+end;
+
 procedure TJtdTemplate.WriteDescription(aText: TStrings; aComment: Boolean);
 var
   s: string;
@@ -378,32 +392,34 @@ begin
   Assert(aText = aText);
 end;
 
-constructor TJtdEnumAlias.Create(const aTypeName, aOldTypeName: string);
+constructor TJtdTypeAlias.Create(const aTypeName, aOldTypeName: string; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FTypeName := aTypeName;
   FOldTypeName := aOldTypeName;
 end;
 
-procedure TJtdEnumAlias.WriteDeclaration(aText: TStrings; aComment: Boolean);
+procedure TJtdTypeAlias.WriteDeclaration(aText: TStrings; aComment: Boolean);
 begin
   WriteDescription(aText, aComment);
   aText.Add(Format('  %s = %s;', [TypeName, FOldTypeName]));
   aText.Add('');
-  Assert(aComment = aComment);
 end;
 
 class function TJtdGenAny.DefaultTypeName: string;
 begin
-  Result := 'TJtdAny';
+  Result := JTD_FORM_ANCESTORS[TFormKind.fkEmpty][True];
 end;
 
 constructor TJtdGenAny.Create;
 begin
+  inherited Create(True);
   FTypeName := DefaultTypeName;
 end;
 
 constructor TJtdGenAny.Create(const aTypeName: string);
 begin
+  inherited Create(True);
   FTypeName := aTypeName;
 end;
 
@@ -414,33 +430,22 @@ begin
   aText.Add('');
 end;
 
-class function TJtdTypeTemplate.DefaultTypeName(aType: TJtdType): string;
+class function TJtdTypeTemplate.DefaultTypeName(aType: TJtdType; aNullable: Boolean): string;
 begin
-  Result := '';
-  case aType of
-    jtNone:      Result := '';
-    jtBool:      Result := 'TJtdBool';
-    jtFloat32:   Result := 'TJtdFloat32';
-    jtFloat64:   Result := 'TJtdFloat64';
-    jtInt8:      Result := 'TJtdInt8';
-    jtUInt8:     Result := 'TJtdUInt8';
-    jtInt16:     Result := 'TJtdInt16';
-    jtUInt16:    Result := 'TJtdUInt16';
-    jtInt32:     Result := 'TJtdInt32';
-    jtUInt32:    Result := 'TJtdUInt32';
-    jtString:    Result := 'TJtdString';
-    jtTimeStamp: Result := 'TJtdDateTimeUTC';
-  end;
+  if aType = jtNone then exit('');
+  Result := JTD_TYPE_IMPL[aType][aNullable].ClassName;
 end;
 
-constructor TJtdTypeTemplate.Create(aType: TJtdType);
+constructor TJtdTypeTemplate.Create(aType: TJtdType; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FType := aType;
-  FTypeName := DefaultTypeName(FType);
+  FTypeName := DefaultTypeName(FType, aNullable);
 end;
 
-constructor TJtdTypeTemplate.Create(aType: TJtdType; const aTypeName: string);
+constructor TJtdTypeTemplate.Create(aType: TJtdType; const aTypeName: string; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FType := aType;
   FTypeName := aTypeName;
 end;
@@ -453,7 +458,7 @@ end;
 procedure TJtdTypeTemplate.WriteDeclaration(aText: TStrings; aComment: Boolean);
 begin
   WriteDescription(aText, aComment);
-  aText.Add(Format('  %s = %s;', [TypeName, DefaultTypeName(FType)]));
+  aText.Add(Format('  %s = %s;', [TypeName, DefaultTypeName(FType, Nullable)]));
   aText.Add('');
 end;
 
@@ -493,34 +498,25 @@ begin
   aText.Add('');
 end;
 
-procedure TJtdImplemented.WriteImplementation(aText: TStrings);
+constructor TJtdEnumElem.Create(const aTypeName: string; aEnumType: TJtdEnumType; aNullable: Boolean);
 begin
-  aText.Add(Format('{ %s }', [TypeName]));
-  aText.Add('');
-  aText.Add(Format('class function %s.GetJtdClass: TJtdEntityClass;', [TypeName]));
-  aText.Add('begin');
-  aText.Add(Format('  Result := %s;', [TypeName]));
-  aText.Add('end;');
-  aText.Add('');
-end;
-
-constructor TJtdEnumElem.Create(const aTypeName: string; aEnumType: TJtdEnumType);
-begin
+  inherited Create(aNullable);
   FTypeName := aTypeName;
   FEnumType := aEnumType;
 end;
 
 procedure TJtdEnumElem.WriteDeclaration(aText: TStrings; aComment: Boolean);
+const
+  Fmt = '  %s = class sealed(specialize %s<%s>);';
 begin
   WriteDescription(aText, aComment);
-  aText.Add(Format('  %s = class sealed(specialize TJtdEnum<%s>)', [TypeName, FEnumType.TypeName]));
-  aText.Add('    class function GetJtdClass: TJtdEntityClass; override;');
-  aText.Add('  end;');
+  aText.Add(Format(Fmt, [TypeName, JTD_FORM_ANCESTORS[TFormKind.fkEnum][Nullable], FEnumType.TypeName]));
   aText.Add('');
 end;
 
-constructor TJtdStrEnumElem.Create(const aTypeName: string; const aElemList: TStringArray);
+constructor TJtdStrEnumElem.Create(const aTypeName: string; const aElemList: TStringArray; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FTypeName := aTypeName;
   FElemList := aElemList;
   FAsciiNames := True;
@@ -552,11 +548,9 @@ begin
       end;
     end;
   end;
-  aText.Add(Format('  %s = class sealed(TJtdStrEnum)', [TypeName]));
-  aText.Add('  protected');
+  aText.Add(Format('  %s = class sealed(%s)', [TypeName, JTD_STR_ENUM[Nullable].ClassName]));
   aText.Add('  public');
-  aText.Add('    class function GetJtdClass: TJtdEntityClass; override;');
-  aText.Add('    class function IsEnumElement(const aValue: string): Boolean; override;');
+  aText.Add('    class function IsElement(const aValue: string): Boolean; override;');
   aText.Add('  end;');
   aText.Add('');
 end;
@@ -566,7 +560,7 @@ var
   I: Integer;
 begin
   inherited WriteImplementation(aText);
-  aText.Add(Format('class function %s.IsEnumElement(const aValue: string): Boolean;', [TypeName]));
+  aText.Add(Format('class function %s.IsElement(const aValue: string): Boolean;', [TypeName]));
   aText.Add('begin');
   if HasAsciiNames then
     aText.Add('  case aValue of')
@@ -582,48 +576,96 @@ begin
   aText.Add('');
 end;
 
-constructor TJtdElements.Create(const aTypeName, aSpecType: string);
+constructor TJtdElements.Create(const aTypeName, aSpecType: string; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FTypeName := aTypeName;
   FSpecType := aSpecType;
 end;
 
 procedure TJtdElements.WriteDeclaration(aText: TStrings; aComment: Boolean);
+const
+  Fmt = '  %s = class sealed(specialize %s<%s>);';
 begin
   WriteDescription(aText, aComment);
-  aText.Add(Format('  %s = class sealed(specialize TJtdList<%s>)', [TypeName, FSpecType]));
-  aText.Add('    class function GetJtdClass: TJtdEntityClass; override;');
-  aText.Add('  end;');
+  aText.Add(Format(Fmt, [TypeName, JTD_FORM_ANCESTORS[TFormKind.fkElements][Nullable], FSpecType]));
   aText.Add('');
 end;
 
-constructor TJtdValues.Create(const aTypeName, aSpecType: string);
+constructor TJtdValues.Create(const aTypeName, aSpecType: string; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FTypeName := aTypeName;
   FSpecType := aSpecType;
 end;
 
 procedure TJtdValues.WriteDeclaration(aText: TStrings; aComment: Boolean);
+const
+  Fmt = '  %s = class sealed(specialize %s<%s>);';
 begin
   WriteDescription(aText, aComment);
-  aText.Add(Format('  %s = class sealed(specialize TJtdMap<%s>)', [TypeName, FSpecType]));
-  aText.Add('    class function GetJtdClass: TJtdEntityClass; override;');
-  aText.Add('  end;');
+  aText.Add(Format(Fmt, [TypeName, JTD_FORM_ANCESTORS[TFormKind.fkValues][Nullable], FSpecType]));
   aText.Add('');
 end;
 
-procedure TJtdProps.WriteClearProc(aText: TStrings);
+procedure TJtdProps.WriteDoClearProc(aText: TStrings);
 var
   I: Integer;
 begin
-  aText.Add(Format('procedure %s.Clear;', [TypeName]));
+  aText.Add(Format('procedure %s.DoClear;', [TypeName]));
   aText.Add('begin');
-  for I := 0 to System.High(Props) do
-    aText.Add(Format('  FreeAndNil(%s);', [Props[I].PropFieldName]));
+  if Nullable then
+    for I := 0 to System.High(Props) do
+      aText.Add(Format('  FreeAndNil(%s);', [Props[I].PropFieldName]));
   for I := 0 to System.High(OptionalProps) do
     aText.Add(Format('  FreeAndNil(%s);', [OptionalProps[I].PropFieldName]));
   aText.Add('end;');
   aText.Add('');
+end;
+
+procedure TJtdProps.WriteClearFieldsProc(aText: TStrings);
+var
+  I: Integer;
+begin
+  if Nullable then exit;
+  aText.Add(Format('procedure %s.ClearFields;', [TypeName]));
+  aText.Add('begin');
+  for I := 0 to System.High(Props) do
+    aText.Add(Format('  %s.Free;', [Props[I].PropFieldName]));
+  aText.Add('end;');
+  aText.Add('');
+end;
+
+procedure TJtdProps.WriteCreateProc(aText: TStrings);
+var
+  I: Integer;
+begin
+  aText.Add(Format('procedure %s.CreateFields;', [TypeName]));
+  aText.Add('begin');
+  for I := 0 to System.High(Props) do
+    aText.Add(Format('  %s := %s.Create;', [Props[I].PropFieldName, Props[I].PropType]));
+  aText.Add('end;');
+  aText.Add('');
+end;
+
+procedure TJtdProps.WriteGetters(aText: TStrings);
+  procedure DoWrite(const Info: TJtdPropInfo; aText: TStrings);
+  begin
+    aText.Add(Format('function %s.Get%s: %s;', [TypeName, Info.PropName, Info.PropType]));
+    aText.Add('begin');
+    aText.Add('  CheckNull;');
+    aText.Add(Format('  Result := %s;', [Info.PropFieldName]));
+    aText.Add('end;');
+    aText.Add('');
+  end;
+var
+  I: Integer;
+begin
+  if not Nullable then exit;
+  for I := 0 to System.High(Props) do
+    DoWrite(Props[I], aText);
+  for I := 0 to System.High(OptionalProps) do
+    DoWrite(OptionalProps[I], aText);
 end;
 
 procedure TJtdProps.WriteSetters(aText: TStrings);
@@ -631,6 +673,8 @@ procedure TJtdProps.WriteSetters(aText: TStrings);
   begin
     aText.Add(Format('procedure %s.Set%s(aValue: %s);', [TypeName, Info.PropName, Info.PropType]));
     aText.Add('begin');
+    if Nullable then
+      aText.Add('  CheckFields;');
     aText.Add(Format('  if aValue = %s then exit;', [Info.PropFieldName]));
     aText.Add(Format('  %s.Free;', [Info.PropFieldName]));
     aText.Add(Format('  %s := aValue;', [Info.PropFieldName]));
@@ -646,64 +690,6 @@ begin
     DoWrite(OptionalProps[I], aText);
 end;
 
-procedure TJtdProps.WriteReadPropsFromNode(aText: TStrings);
-var
-  I: Integer;
-begin
-  aText.Add('{$PUSH}{$WARN 5057 OFF}');
-  aText.Add(Format('procedure %s.DoReadJson(aNode: TJsonNode);', [TypeName]));
-  if (Props <> nil) or (OptionalProps <> nil) then begin
-    aText.Add('var');
-    aText.Add('  p: TJsonNode.TPair;');
-    if Props <> nil then begin
-      aText.Add(Format('  Flags: array[0..%d] of Boolean;', [System.High(Props)]));
-      aText.Add('  I: Integer;');
-    end;
-    aText.Add('begin');
-    aText.Add('  if not aNode.IsObject then ReadError;');
-    aText.Add('  Clear;');
-    if Props <> nil then
-      aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
-    aText.Add('  for p in aNode.Entries do');
-    if HasAsciiNames then
-      aText.Add('    case p.Key of')
-    else
-      aText.Add('    case TJsonNode.PasStrToAsciiJson(p.Key) of');
-    for I := 0 to System.High(Props) do
-      begin
-        aText.Add(Format('      ''%s'':', [Props[I].JsonPropName]));
-        aText.Add('        begin');
-        aText.Add(Format('          %s := %s(%s.ReadJson(p.Value));',
-          [Props[I].PropFieldName, Props[I].PropType, Props[I].PropType]));
-        aText.Add(Format('          Flags[%d] := True;', [I]));
-        aText.Add('        end;');
-      end;
-    for I := 0 to System.High(OptionalProps) do
-      begin
-        aText.Add(Format('      ''%s'':', [OptionalProps[I].JsonPropName]));
-        aText.Add(Format('         %s := %s(%s.ReadJson(p.Value));',
-          [OptionalProps[I].PropFieldName, OptionalProps[I].PropType, OptionalProps[I].PropType]));
-      end;
-    aText.Add('    else');
-    if not AdditionalProps then
-      aText.Add('      UnknownProp(p.Key);');
-    aText.Add('    end;');
-    if FProps <> nil then begin
-      aText.Add('  for I := 0 to System.High(Flags) do');
-      aText.Add('    if not Flags[I] then');
-      aText.Add('      case I of');
-      for I := 0 to System.High(Props) do
-        aText.Add(Format('        %d: PropNotFound(''%s'');', [I, Props[I].JsonPropName]));
-      aText.Add('      else');
-      aText.Add('      end;');
-    end;
-  end else
-    aText.Add('begin');
-  aText.Add('end;');
-  aText.Add('{$POP}');
-  aText.Add('');
-end;
-
 procedure TJtdProps.WriteReadPropsReader(aText: TStrings);
 var
   I: Integer;
@@ -716,12 +702,11 @@ begin
     aText.Add('  I: Integer;');
   end;
   aText.Add('begin');
-  aText.Add('  if aReader.TokenKind <> tkObjectBegin then ReadError;');
-  aText.Add('  Clear;');
+  aText.Add('  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);');
   if Props <> nil then
     aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
   aText.Add('  repeat');
-  aText.Add('    if not aReader.Read then ReadError;');
+  aText.Add('    if not aReader.Read then ReaderFail(aReader);');
   aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
   if (Props <> nil) or (OptionalProps <> nil) then begin
     if HasAsciiNames then
@@ -731,21 +716,24 @@ begin
     for I := 0 to System.High(Props) do
       begin
         aText.Add(Format('      ''%s'':', [Props[I].JsonPropName]));
-        aText.Add('        begin');
-        aText.Add(Format('          %s := %s(%s.ReadJson(aReader));',
-          [Props[I].PropFieldName, Props[I].PropType, Props[I].PropType]));
+        aText.Add(Format('        if not Flags[%d] then begin', [I]));
+        aText.Add(Format('          %s.ReadJson(aReader);', [Props[I].PropFieldName]));
         aText.Add(Format('          Flags[%d] := True;', [I]));
-        aText.Add('        end;');
+        aText.Add('        end else DuplicateProp(aReader);');
       end;
     for I := 0 to System.High(OptionalProps) do
       begin
         aText.Add(Format('      ''%s'':', [OptionalProps[I].JsonPropName]));
-        aText.Add(Format('         %s := %s(%s.ReadJson(aReader));',
+        aText.Add(Format('         if %s = nil then', [OptionalProps[I].PropFieldName]));
+        aText.Add(Format('           %s := %s(%s.LoadInstance(aReader))',
           [OptionalProps[I].PropFieldName, OptionalProps[I].PropType, OptionalProps[I].PropType]));
+        aText.Add('         else DuplicateProp(aReader);');
       end;
     aText.Add('    else');
-    if not AdditionalProps then
-      aText.Add('      UnknownProp(aReader.Name);');
+    if AdditionalProps then begin
+      aText.Add('      if aReader.IsStartToken(aReader.TokenKind) then aReader.Skip;');
+    end else
+      aText.Add('      UnknownProp(aReader.Name, aReader);');
     aText.Add('    end;');
   end;
   aText.Add('  until False;');
@@ -754,8 +742,7 @@ begin
     aText.Add('    if not Flags[I] then');
     aText.Add('      case I of');
     for I := 0 to System.High(Props) do
-      aText.Add(Format('        %d: PropNotFound(''%s'');', [I, Props[I].JsonPropName]));
-    aText.Add('      else');
+      aText.Add(Format('        %d: PropNotFound(''%s'', aReader);', [I, Props[I].JsonPropName]));
     aText.Add('      end;');
   end;
   aText.Add('end;');
@@ -767,9 +754,8 @@ procedure TJtdProps.WritePropsWriteJson(aText: TStrings);
 var
   I: Integer;
 begin
-  aText.Add(Format('procedure %s.DoWriteJson(aWriter: TJsonStrWriter);', [TypeName]));
+  aText.Add(Format('procedure %s.WriteFields(aWriter: TJsonStrWriter);', [TypeName]));
   aText.Add('begin');
-  aText.Add('  aWriter.BeginObject;');
   for I := 0 to System.High(Props) do begin
     if HasAsciiNames then
       aText.Add(Format('  aWriter.AddName(''%s'');', [Props[I].JsonPropName]))
@@ -786,7 +772,6 @@ begin
     aText.Add(Format('    %s.WriteJson(aWriter);', [OptionalProps[I].PropName]));
     aText.Add('  end;');
   end;
-  aText.Add('  aWriter.EndObject;');
   aText.Add('end;');
   aText.Add('');
 end;
@@ -814,13 +799,14 @@ procedure TJtdProps.WriteOptPropsWarning(aText: TStrings; aComment: Boolean);
 begin
   if aComment and (FOptProps <> nil) then begin
     aText.Add('');
-    aText.Add('  { All of the following properties are optional }');
+    aText.Add('  { All of the following properties are optional, so may contain NILs }');
     aText.Add('');
   end;
 end;
 
-constructor TJtdProps.Create(const aTypeName: string; const aProps, aOptProps: TJtdPropList);
+constructor TJtdProps.Create(const aTypeName: string; const aProps, aOptProps: TJtdPropList; aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FTypeName := aTypeName;
   FProps := aProps;
   FOptProps := aOptProps;
@@ -832,12 +818,20 @@ var
   I: Integer;
 begin
   WriteDescription(aText, aComment);
-  aText.Add(Format('  %s = class sealed(TJtdObject)', [TypeName]));
+  aText.Add(
+    Format('  %s = class sealed(%s)', [TypeName,  JTD_FORM_ANCESTORS[TFormKind.fkProperties][Nullable]]));
   aText.Add('  private');
   for I := 0 to System.High(Props) do
     aText.Add(Format('    %s: %s;', [Props[I].PropFieldName, Props[I].PropType]));
   for I := 0 to System.High(OptionalProps) do
     aText.Add(Format('    %s: %s;', [OptionalProps[I].PropFieldName, OptionalProps[I].PropType]));
+
+  if Nullable then begin
+    for I := 0 to System.High(Props) do
+      aText.Add(Format('    function  Get%s: %s;', [Props[I].PropName, Props[I].PropType]));
+    for I := 0 to System.High(OptionalProps) do
+      aText.Add(Format('    function  Get%s: %s;', [OptionalProps[I].PropName, OptionalProps[I].PropType]));
+  end;
 
   for I := 0 to System.High(Props) do
     aText.Add(Format('    procedure Set%s(aValue: %s);', [Props[I].PropName, Props[I].PropType]));
@@ -845,23 +839,33 @@ begin
     aText.Add(Format('    procedure Set%s(aValue: %s);', [OptionalProps[I].PropName, OptionalProps[I].PropType]));
 
   aText.Add('  protected');
-  aText.Add('    procedure DoReadJson(aNode: TJsonNode); override;');
   aText.Add('    procedure DoReadJson(aReader: TJsonReader); override;');
-  aText.Add('    procedure DoWriteJson(aWriter: TJsonStrWriter); override;');
+  aText.Add('    procedure WriteFields(aWriter: TJsonStrWriter); override;');
+  aText.Add('    procedure DoClear; override;');
+  aText.Add('    procedure CreateFields; override;');
+  if not Nullable then
+    aText.Add('    procedure ClearFields; override;');
   aText.Add('  public');
-  aText.Add('    class function GetJtdClass: TJtdEntityClass; override;');
-  aText.Add('    procedure Clear; override;');
   for I := 0 to System.High(Props) do begin
     WritePropDescription(Props[I], aText, aComment);
-    aText.Add(Format('    property %s: %s read %s write Set%s;',
-      [Props[I].PropName, Props[I].PropType, Props[I].PropFieldName, Props[I].PropName]));
+    if Nullable then
+      aText.Add(Format('    property %s: %s read Get%s write Set%s;',
+        [Props[I].PropName, Props[I].PropType, Props[I].PropName, Props[I].PropName]))
+    else
+      aText.Add(Format('    property %s: %s read %s write Set%s;',
+        [Props[I].PropName, Props[I].PropType, Props[I].PropFieldName, Props[I].PropName]));
   end;
   WriteOptPropsWarning(aText, aComment);
   for I := 0 to System.High(OptionalProps) do begin
     WritePropDescription(OptionalProps[I], aText, aComment);
-    aText.Add(Format('    property %s: %s read %s write Set%s;',
-      [OptionalProps[I].PropName, OptionalProps[I].PropType, OptionalProps[I].PropFieldName,
-       OptionalProps[I].PropName]));
+    if Nullable then
+      aText.Add(Format('    property %s: %s read Get%s write Set%s;',
+        [OptionalProps[I].PropName, OptionalProps[I].PropType, OptionalProps[I].PropName,
+         OptionalProps[I].PropName]))
+    else
+      aText.Add(Format('    property %s: %s read %s write Set%s;',
+        [OptionalProps[I].PropName, OptionalProps[I].PropType, OptionalProps[I].PropFieldName,
+         OptionalProps[I].PropName]));
   end;
   aText.Add('  end;');
   aText.Add('');
@@ -869,15 +873,18 @@ end;
 
 procedure TJtdProps.WriteImplementation(aText: TStrings);
 begin
-  inherited WriteImplementation(aText);
-  WriteClearProc(aText);
+  aText.Add(Format('{ %s }', [TypeName]));
+  aText.Add('');
+  WriteGetters(aText);
   WriteSetters(aText);
-  WriteReadPropsFromNode(aText);
   WriteReadPropsReader(aText);
   WritePropsWriteJson(aText);
+  WriteDoClearProc(aText);
+  WriteClearFieldsProc(aText);
+  WriteCreateProc(aText);
 end;
 
-procedure TJtdVarTemplate.WritePropDescription(const aDescr, aTagValue: string; aText: TStrings;
+procedure TJtdUnionTemplate.WritePropDescription(const aDescr, aTagValue: string; aText: TStrings;
   aComment: Boolean);
 var
   s: string;
@@ -892,7 +899,7 @@ begin
   end;
 end;
 
-procedure TJtdVarTemplate.WriteGetTagJsonName(aText: TStrings);
+procedure TJtdUnionTemplate.WriteGetTagJsonName(aText: TStrings);
 begin
   aText.Add(Format('class function %s.GetTagJsonName: string;', [TypeName]));
   aText.Add('begin');
@@ -904,27 +911,7 @@ begin
   aText.Add('');
 end;
 
-procedure TJtdVarTemplate.WriteValidTagValue(aText: TStrings);
-var
-  I: Integer;
-begin
-  aText.Add(Format('class function %s.ValidTagValue(const aValue: string): Boolean;', [TypeName]));
-  aText.Add('begin');
-  if HasAsciiNames then
-    aText.Add('  case aValue of')
-  else
-    aText.Add('  case TJsonNode.PasStrToAsciiJson(aValue) of');
-  for I := 0 to System.High(FMapping) - 1 do
-    aText.Add(Format('    ''%s'',', [FMapping[I].TagValue]));
-  aText.Add(Format('    ''%s'': Result := True;', [FMapping[System.High(FMapping)].TagValue]));
-  aText.Add('  else');
-  aText.Add('    Result := False;');
-  aText.Add('  end;');
-  aText.Add('end;');
-  aText.Add('');
-end;
-
-procedure TJtdVarTemplate.WriteGetInstanceClass(aText: TStrings);
+procedure TJtdUnionTemplate.WriteGetInstanceClass(aText: TStrings);
 var
   I: Integer;
 begin
@@ -943,20 +930,22 @@ begin
   aText.Add('');
 end;
 
-procedure TJtdVarTemplate.WriteGetters(aText: TStrings);
+procedure TJtdUnionTemplate.WriteGetters(aText: TStrings);
 var
   I: Integer;
 begin
   for I := 0 to System.High(Mapping) do begin
     aText.Add(Format('function %s.Get%s: %s;', [TypeName, Mapping[I].PropName, Mapping[I].PropType]));
     aText.Add('begin');
+    if Nullable then
+      aText.Add('  CheckNull;');
     aText.Add(Format('  Result := FInstance as %s;', [Mapping[I].PropType]));
     aText.Add('end;');
     aText.Add('');
   end;
 end;
 
-procedure TJtdVarTemplate.WriteSetters(aText: TStrings);
+procedure TJtdUnionTemplate.WriteSetters(aText: TStrings);
 var
   I: Integer;
 begin
@@ -970,35 +959,37 @@ begin
       aText.Add(Format('  FTag := ''%s'';', [Mapping[I].TagValue]))
     else
       aText.Add(Format('  FTag := TJsonNode.JsonStrToPas(''%s'');', [Mapping[I].TagValue]));
+    if Nullable then
+      aText.Add('  DoAssign;');
     aText.Add('end;');
     aText.Add('');
   end;
 end;
 
-constructor TJtdVarTemplate.Create(const aTagName, aTypeName: string; const aMapping: TTagMapping);
+constructor TJtdUnionTemplate.Create(const aTagName, aTypeName: string; const aMapping: TTagMapping;
+  aNullable: Boolean);
 begin
+  inherited Create(aNullable);
   FTagJsonName := aTagName;
   FTypeName := aTypeName;
   FMapping := aMapping;
   FAsciiNames := True;
 end;
 
-procedure TJtdVarTemplate.WriteDeclaration(aText: TStrings; aComment: Boolean);
+procedure TJtdUnionTemplate.WriteDeclaration(aText: TStrings; aComment: Boolean);
 var
   I: Integer;
 begin
   WriteDescription(aText, aComment);
-  aText.Add(Format('  %s = class sealed(TJtdVariant)', [TypeName]));
+  aText.Add(Format('  %s = class sealed(%s)', [TypeName, JTD_FORM_ANCESTORS[fkDiscriminator][Nullable]]));
   aText.Add('  protected');
   for I := 0 to System.High(Mapping) do
     aText.Add(Format('    function Get%s: %s;', [Mapping[I].PropName, Mapping[I].PropType]));
   for I := 0 to System.High(Mapping) do
     aText.Add(Format('    procedure Set%s(aValue: %s);', [Mapping[I].PropName, Mapping[I].PropType]));
   aText.Add('    class function GetTagJsonName: string; override;');
-  aText.Add('    class function ValidTagValue(const aValue: string): Boolean; override;');
   aText.Add('    class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;');
   aText.Add('  public');
-  aText.Add('    class function GetJtdClass: TJtdEntityClass; override;');
   for I := 0 to System.High(Mapping) do begin
     WritePropDescription(Mapping[I].Description, Mapping[I].TagValue, aText, aComment);
     aText.Add(Format('    property %s: %s read Get%s write Set%s;',
@@ -1008,11 +999,9 @@ begin
   aText.Add('');
 end;
 
-procedure TJtdVarTemplate.WriteImplementation(aText: TStrings);
+procedure TJtdUnionTemplate.WriteImplementation(aText: TStrings);
 begin
-  inherited WriteImplementation(aText);
   WriteGetTagJsonName(aText);
-  WriteValidTagValue(aText);
   WriteGetInstanceClass(aText);
   WriteGetters(aText);
   WriteSetters(aText);
@@ -1281,7 +1270,6 @@ begin
   Template := TJtdGenAny.Create(TypName);
   if HasDescription(aSchema, s) then
     Template.Description := s;
-  Template.Nullable := aSchema.Nullable;
   FTemplateList.Add(Template);
   Result := Template.TypeName;
 end;
@@ -1289,11 +1277,49 @@ end;
 function TJtdTemplater.HandleRef(aSchema: TJtdSchema): string;
 var
   Schema: TJtdSchema;
+  Ref, TypName, PrefName, s: string;
+  p: PRefEntry;
+  Template: TJtdTypeAlias;
+  LNullable: Boolean;
+  I: SizeInt;
 begin
-  if FDefsMap.TryGetValue(aSchema.Ref, Result) then exit;
-  Schema := FRootSchema.Definitions[aSchema.Ref];
-  Result := HandleSchema(Schema, aSchema.Ref);
-  FDefsMap.Add(aSchema.Ref, Result);
+  LNullable := aSchema.Nullable;
+  Schema := aSchema;
+  I := 0;
+  repeat
+    Ref := Schema.Ref;
+    Schema := FRootSchema.Definitions[Ref];
+    LNullable := LNullable or Schema.Nullable;
+    if I = MAX_REF_DEPTH then
+      raise ECodegen.CreateFmt(SEJtdMaxRefDepthExceedFmt,[I]);
+    Inc(I);
+  until Schema.Kind <> fkRef;
+  p := FRefMap.GetMutValueDef(Ref, Default(TRefEntry));
+  if p^.TypeNames[LNullable] = '' then begin
+    if LNullable and not Schema.Nullable then
+      begin
+        TJtdHack(Schema).FNullable := True;
+        try
+          TypName := HandleSchema(Schema, Ref);
+        finally
+          TJtdHack(Schema).FNullable := False;
+        end;
+      end
+    else
+      TypName := HandleSchema(Schema, Ref);
+    p^.TypeNames[LNullable] := TypName;
+  end else
+    TypName := p^.TypeNames[LNullable];
+
+  PrefName := AsPasUniqTypeName(GetPreferNameDef(aSchema, ''));
+  if PrefName <> '' then begin
+    Template := TJtdTypeAlias.Create(PrefName, TypName, aSchema.Nullable);
+    if HasDescription(aSchema, s) then // ???
+      Template.Description := s;
+    FTemplateList.Add(Template);
+    TypName := PrefName;
+  end;
+  Result := TypName;
 end;
 
 function TJtdTemplater.HandleType(aSchema: TJtdSchema; const aTypeName: string): string;
@@ -1302,10 +1328,9 @@ var
   s, TypName: string;
 begin
   TypName := AsUniqTypeName(AsPasIdentifier(GetPreferNameDef(aSchema, aTypeName)) + GetTypeAlias(aSchema.ElType));
-  Template := TJtdTypeTemplate.Create(aSchema.ElType, TypName);
+  Template := TJtdTypeTemplate.Create(aSchema.ElType, TypName, aSchema.Nullable);
   if HasDescription(aSchema, s) then
     Template.Description := s;
-  Template.Nullable := aSchema.Nullable;
   FTemplateList.Add(Template);
   Result := Template.TypeName;
 end;
@@ -1323,23 +1348,12 @@ begin
   ElemList := aSchema.Enum.ToArray;
   PrefName := AsPasUniqTypeName(GetPreferNameDef(aSchema, aTypeName));
 
-  s := string.Join('_', ElemList);
-  if FTypeMap.TryGetValue(s, TypName) then begin
-    if PrefName <> '' then begin
-      FTemplateList.Add(TJtdEnumAlias.Create(PrefName, TypName));
-      if HasDescription(aSchema, s) then
-        FTemplateList[FTemplateList.Count-1].Description := s;
-      TypName := PrefName;
-    end;
-    exit(TypName);
-  end;
-
   if PrefName <> '' then
     TypName := PrefName
   else
     TypName := AsUniqTypeName(ENUM_TAG);
 
-  if IsUniqIdentifierList(ElemList) then begin
+  if IsUniqIdentifierList(ElemList) and (System.Length(ElemList) <= 256) then begin
     EnumTemplate := TJtdEnumType.Create(TypName, ElemList);
     CheckUniqEnumElements(ElemList);
     FGlobNameTable.Add(EnumTemplate.TypeName);
@@ -1349,14 +1363,13 @@ begin
     if HasEnumDescription(aSchema, n) then
       EnumTemplate.EnumDescription := n;
     ElemTemplate := TJtdEnumElem.Create(
-      AsUniqTypeName(System.Copy(TypName, 2, System.Length(TypName)) + ELEM_TAG), EnumTemplate);
+      AsUniqTypeName(System.Copy(TypName, 2, System.Length(TypName)) + ELEM_TAG), EnumTemplate, aSchema.Nullable);
     ElemTemplate.Description := Format(
       'Container for some %s enumeration element', [EnumTemplate.TypeName]);
-    ElemTemplate.Nullable := aSchema.Nullable;
     FTemplateList.Add(ElemTemplate);
     Result := ElemTemplate.TypeName;
   end else begin
-    StrEnum := TJtdStrEnumElem.Create(TypName, ElemList);
+    StrEnum := TJtdStrEnumElem.Create(TypName, ElemList, aSchema.Nullable);
     if not IsAsciiWordList(ElemList) then begin
       for I := 0 to System.High(ElemList) do
         ElemList[I] := TJsonNode.PasStrToAsciiJson(ElemList[I]);
@@ -1367,10 +1380,8 @@ begin
       StrEnum.Description := s;
     if HasEnumDescription(aSchema, n) then
       StrEnum.EnumDescription := n;
-    StrEnum.Nullable := aSchema.Nullable;
     Result := StrEnum.TypeName;
   end;
-  FTypeMap.Add(string.Join('_', ElemList), Result);
 end;
 
 function TJtdTemplater.HandleElements(aSchema: TJtdSchema; const aTypeName: string): string;
@@ -1387,7 +1398,7 @@ begin
       end;
     fkType:
       begin
-        ElemName := TJtdTypeTemplate.DefaultTypeName(aSchema.Elements.ElType);
+        ElemName := TJtdTypeTemplate.DefaultTypeName(aSchema.Elements.ElType, aSchema.Elements.Nullable);
         ElemAlias := GetTypeAlias(aSchema.ElType);
       end;
   else
@@ -1396,10 +1407,9 @@ begin
   end;
   if TypName = '' then
     TypName := AsUniqTypeName(ElemAlias + ELEMENTS_TAG);
-  Template := TJtdElements.Create(TypName, ElemName);
+  Template := TJtdElements.Create(TypName, ElemName, aSchema.Nullable);
   if HasDescription(aSchema, s) then
     Template.Description := s;
-  Template.Nullable := aSchema.Nullable;
   FTemplateList.Add(Template);
   Result := Template.TypeName;
 end;
@@ -1418,7 +1428,7 @@ begin
       end;
     fkType:
       begin
-        ElemName := TJtdTypeTemplate.DefaultTypeName(aSchema.Values.ElType);
+        ElemName := TJtdTypeTemplate.DefaultTypeName(aSchema.Values.ElType, aSchema.Values.Nullable);
         ElemAlias := GetTypeAlias(aSchema.ElType);
       end;
   else
@@ -1427,10 +1437,9 @@ begin
   end;
   if TypName = '' then
     TypName := AsUniqTypeName(ElemAlias + VALUES_TAG);
-  Template := TJtdValues.Create(TypName, ElemName);
+  Template := TJtdValues.Create(TypName, ElemName, aSchema.Nullable);
   if HasDescription(aSchema, s) then
     Template.Description := s;
-  Template.Nullable := aSchema.Nullable;
   FTemplateList.Add(Template);
   Result := Template.TypeName;
 end;
@@ -1463,7 +1472,7 @@ var
       PropInfo.PropFieldName := AsFieldName(PropInfo.PropName);
       case e.Value.Kind of
         fkEmpty: PropInfo.PropType := TJtdGenAny.DefaultTypeName;
-        fkType:  PropInfo.PropType := TJtdTypeTemplate.DefaultTypeName(e.Value.ElType);
+        fkType:  PropInfo.PropType := TJtdTypeTemplate.DefaultTypeName(e.Value.ElType, e.Value.Nullable);
       else
         PropInfo.PropType := HandleSchema(e.Value, PropInfo.PropName);
       end;
@@ -1506,12 +1515,12 @@ begin
     OptPropList := FindPropInfo(aSchema.OptionalProperties);
   if TypName = '' then
     TypName := AsUniqTypeName(OBJECT_TAG);
-  Template := TJtdProps.Create(TypName, PropList, OptPropList);
+  Template := TJtdProps.Create(TypName, PropList, OptPropList, aSchema.Nullable);
   Template.HasAsciiNames := PureAsciiNames;
-  Template.Nullable := aSchema.Nullable;
   FTemplateList.Add(Template);
   if HasDescription(aSchema, s) then
     Template.Description := s;
+  Template.AdditionalProps := aSchema.AdditionalProperties;
   Result := Template.TypeName;
 end;
 
@@ -1521,7 +1530,7 @@ var
   PropNameSet: TStrSet;
   Mapping: TTagMapping;
   s, TypName: string;
-  Template: TJtdVarTemplate;
+  Template: TJtdUnionTemplate;
   I: Integer;
   e: TJtdSchemaMap.TEntry;
   AsciiNames: Boolean = True;
@@ -1559,11 +1568,10 @@ begin
     s := aSchema.Discriminator
   else
     s := TJsonNode.PasStrToAsciiJson(aSchema.Discriminator);
-  Template := TJtdVarTemplate.Create(s, TypName, Mapping);
+  Template := TJtdUnionTemplate.Create(s, TypName, Mapping, aSchema.Nullable);
   if HasDescription(aSchema, s) then
     Template.Description := s;
   Template.HasAsciiNames := AsciiNames;
-  Template.Nullable := aSchema.Nullable;
   FTemplateList.Add(Template);
   Result := Template.TypeName;
 end;
@@ -1589,8 +1597,7 @@ function TJtdTemplater.ProcessSchema: string;
 begin
   EnumElemSet.Clear;
   FGlobNameTable.Clear;
-  FTypeMap.Clear;
-  FDefsMap.Clear;
+  FRefMap.Clear;
   FTemplateList.Clear;
   Result := HandleSchema(FRootSchema, RootClassName);
 end;
@@ -1637,7 +1644,7 @@ begin
     aText.Add('  ' + SysUtils.WrapText(CustomHeader, LineEnding + '  ', [' ', '-', #9], 78));
     aText.Add('');
   end;
-  aText.Add(Format('  This unit was automatically created by %s, do not edit.', [DISPLAY_NAME]));
+  aText.Add(Format('  This unit was automatically created by %s.', [DISPLAY_NAME]));
   aText.Add('}');
 end;
 
