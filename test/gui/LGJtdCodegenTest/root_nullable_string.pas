@@ -1,7 +1,7 @@
 {
   Source schema: root_nullable_string.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit root_nullable_string;
 
@@ -15,7 +15,7 @@ uses
 type
 
 { TRootNullableStringString is nullable }
-  TRootNullableStringString = TJtdString;
+  TRootNullableStringString = TJtdNullableString;
 
 implementation
 

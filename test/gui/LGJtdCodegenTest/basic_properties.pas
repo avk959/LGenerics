@@ -1,7 +1,7 @@
 {
   Source schema: basic_properties.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit basic_properties;
 
@@ -14,13 +14,9 @@ uses
 
 type
 
-  TBaz = class sealed(specialize TJtdList<TJtdBool>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TBaz = class sealed(specialize TJtdList<TJtdBool>);
 
-  TQuux = class sealed(specialize TJtdList<TJtdBool>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TQuux = class sealed(specialize TJtdList<TJtdBool>);
 
   TBasicProperties = class sealed(TJtdObject)
   private
@@ -33,12 +29,12 @@ type
     procedure SetBaz(aValue: TBaz);
     procedure SetQuux(aValue: TQuux);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "foo" JSON property }
     property Foo: TJtdBool read FFoo write SetFoo;
   { refers to "bar" JSON property }
@@ -51,34 +47,7 @@ type
 
 implementation
 
-{ TBaz }
-
-class function TBaz.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBaz;
-end;
-
-{ TQuux }
-
-class function TQuux.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TQuux;
-end;
-
 { TBasicProperties }
-
-class function TBasicProperties.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBasicProperties;
-end;
-
-procedure TBasicProperties.Clear;
-begin
-  FreeAndNil(FFoo);
-  FreeAndNil(FBar);
-  FreeAndNil(FBaz);
-  FreeAndNil(FQuux);
-end;
 
 procedure TBasicProperties.SetFoo(aValue: TJtdBool);
 begin
@@ -109,104 +78,54 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBasicProperties.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..3] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'foo':
-        begin
-          FFoo := TJtdBool(TJtdBool.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-      'bar':
-        begin
-          FBar := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[1] := True;
-        end;
-      'baz':
-        begin
-          FBaz := TBaz(TBaz.ReadJson(p.Value));
-          Flags[2] := True;
-        end;
-      'quux':
-        begin
-          FQuux := TQuux(TQuux.ReadJson(p.Value));
-          Flags[3] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('foo');
-        1: PropNotFound('bar');
-        2: PropNotFound('baz');
-        3: PropNotFound('quux');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TBasicProperties.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..3] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'foo':
-        begin
-          FFoo := TJtdBool(TJtdBool.ReadJson(aReader));
+        if not Flags[0] then begin
+          FFoo.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
       'bar':
-        begin
-          FBar := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[1] then begin
+          FBar.ReadJson(aReader);
           Flags[1] := True;
-        end;
+        end else DuplicateProp(aReader);
       'baz':
-        begin
-          FBaz := TBaz(TBaz.ReadJson(aReader));
+        if not Flags[2] then begin
+          FBaz.ReadJson(aReader);
           Flags[2] := True;
-        end;
+        end else DuplicateProp(aReader);
       'quux':
-        begin
-          FQuux := TQuux(TQuux.ReadJson(aReader));
+        if not Flags[3] then begin
+          FQuux.ReadJson(aReader);
           Flags[3] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('foo');
-        1: PropNotFound('bar');
-        2: PropNotFound('baz');
-        3: PropNotFound('quux');
-      else
+        0: PropNotFound('foo', aReader);
+        1: PropNotFound('bar', aReader);
+        2: PropNotFound('baz', aReader);
+        3: PropNotFound('quux', aReader);
       end;
 end;
 {$POP}
 
-procedure TBasicProperties.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBasicProperties.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('foo');
   Foo.WriteJson(aWriter);
   aWriter.AddName('bar');
@@ -215,7 +134,26 @@ begin
   Baz.WriteJson(aWriter);
   aWriter.AddName('quux');
   Quux.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TBasicProperties.DoClear;
+begin
+end;
+
+procedure TBasicProperties.ClearFields;
+begin
+  FFoo.Free;
+  FBar.Free;
+  FBaz.Free;
+  FQuux.Free;
+end;
+
+procedure TBasicProperties.CreateFields;
+begin
+  FFoo := TJtdBool.Create;
+  FBar := TJtdString.Create;
+  FBaz := TBaz.Create;
+  FQuux := TQuux.Create;
 end;
 
 end.

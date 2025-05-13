@@ -1,7 +1,7 @@
 {
   Source schema: nullable_discriminator.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit nullable_discriminator;
 
@@ -19,12 +19,12 @@ type
     FBaz: TJtdString;
     procedure SetBaz(aValue: TJtdString);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "baz" JSON property }
     property Baz: TJtdString read FBaz write SetBaz;
   end;
@@ -34,28 +34,26 @@ type
     FQuuz: TJtdString;
     procedure SetQuuz(aValue: TJtdString);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "quuz" JSON property }
     property Quuz: TJtdString read FQuuz write SetQuuz;
   end;
 
 { TNullableDiscriminator is nullable }
-  TNullableDiscriminator = class sealed(TJtdVariant)
+  TNullableDiscriminator = class sealed(TJtdNullableUnion)
   protected
     function GetBar: TBar;
     function GetQuux: TQuux;
     procedure SetBar(aValue: TBar);
     procedure SetQuux(aValue: TQuux);
     class function GetTagJsonName: string; override;
-    class function ValidTagValue(const aValue: string): Boolean; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
   { matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
   { matches the "quux" tag }
@@ -66,16 +64,6 @@ implementation
 
 { TBar }
 
-class function TBar.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBar;
-end;
-
-procedure TBar.Clear;
-begin
-  FreeAndNil(FBaz);
-end;
-
 procedure TBar.SetBaz(aValue: TJtdString);
 begin
   if aValue = FBaz then exit;
@@ -84,84 +72,55 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBar.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..0] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'baz':
-        begin
-          FBaz := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('baz');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TBar.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'baz':
-        begin
-          FBaz := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[0] then begin
+          FBaz.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('baz');
-      else
+        0: PropNotFound('baz', aReader);
       end;
 end;
 {$POP}
 
-procedure TBar.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBar.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('baz');
   Baz.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TBar.DoClear;
+begin
+end;
+
+procedure TBar.ClearFields;
+begin
+  FBaz.Free;
+end;
+
+procedure TBar.CreateFields;
+begin
+  FBaz := TJtdString.Create;
 end;
 
 { TQuux }
-
-class function TQuux.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TQuux;
-end;
-
-procedure TQuux.Clear;
-begin
-  FreeAndNil(FQuuz);
-end;
 
 procedure TQuux.SetQuuz(aValue: TJtdString);
 begin
@@ -171,93 +130,57 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TQuux.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..0] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'quuz':
-        begin
-          FQuuz := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('quuz');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TQuux.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'quuz':
-        begin
-          FQuuz := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[0] then begin
+          FQuuz.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('quuz');
-      else
+        0: PropNotFound('quuz', aReader);
       end;
 end;
 {$POP}
 
-procedure TQuux.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TQuux.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('quuz');
   Quuz.WriteJson(aWriter);
-  aWriter.EndObject;
 end;
 
-{ TNullableDiscriminator }
-
-class function TNullableDiscriminator.GetJtdClass: TJtdEntityClass;
+procedure TQuux.DoClear;
 begin
-  Result := TNullableDiscriminator;
+end;
+
+procedure TQuux.ClearFields;
+begin
+  FQuuz.Free;
+end;
+
+procedure TQuux.CreateFields;
+begin
+  FQuuz := TJtdString.Create;
 end;
 
 class function TNullableDiscriminator.GetTagJsonName: string;
 begin
   Result := 'foo';
-end;
-
-class function TNullableDiscriminator.ValidTagValue(const aValue: string): Boolean;
-begin
-  case aValue of
-    'bar',
-    'quux': Result := True;
-  else
-    Result := False;
-  end;
 end;
 
 class function TNullableDiscriminator.GetInstanceClass(const aTag: string): TJtdEntityClass;
@@ -272,11 +195,13 @@ end;
 
 function TNullableDiscriminator.GetBar: TBar;
 begin
+  CheckNull;
   Result := FInstance as TBar;
 end;
 
 function TNullableDiscriminator.GetQuux: TQuux;
 begin
+  CheckNull;
   Result := FInstance as TQuux;
 end;
 
@@ -286,6 +211,7 @@ begin
   FInstance.Free;
   FInstance := aValue;
   FTag := 'bar';
+  DoAssign;
 end;
 
 procedure TNullableDiscriminator.SetQuux(aValue: TQuux);
@@ -294,6 +220,7 @@ begin
   FInstance.Free;
   FInstance := aValue;
   FTag := 'quux';
+  DoAssign;
 end;
 
 end.

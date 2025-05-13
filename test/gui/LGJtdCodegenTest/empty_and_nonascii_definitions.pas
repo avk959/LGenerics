@@ -1,7 +1,7 @@
 {
   Source schema: empty_and_nonascii_definitions.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit empty_and_nonascii_definitions;
 

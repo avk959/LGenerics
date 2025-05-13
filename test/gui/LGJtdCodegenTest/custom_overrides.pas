@@ -1,7 +1,7 @@
 {
   Source schema: custom_overrides.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit custom_overrides;
 
@@ -14,65 +14,57 @@ uses
 
 type
 
-  TOverrideElementsContainer = class sealed(specialize TJtdList<TJtdString>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TOverrideElementsContainer = class sealed(specialize TJtdList<TJtdString>);
 
-  TOverrideValuesContainer = class sealed(specialize TJtdMap<TJtdString>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TOverrideValuesContainer = class sealed(specialize TJtdMap<TJtdString>);
 
   TOverrideTypeEnum = (FOO, BAR);
 
 { Container for some TOverrideTypeEnum enumeration element }
-  TOverrideTypeEnumElem = class sealed(specialize TJtdEnum<TOverrideTypeEnum>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TOverrideTypeEnumElem = class sealed(specialize TJtdEnum<TOverrideTypeEnum>);
 
   TOverrideTypeProperties = class sealed(TJtdObject)
   private
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   end;
 
   TBar = class sealed(TJtdObject)
   private
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   end;
 
   TBaz = class sealed(TJtdObject)
   private
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   end;
 
-  TOverrideTypeDiscriminator = class sealed(TJtdVariant)
+  TOverrideTypeDiscriminator = class sealed(TJtdUnion)
   protected
     function GetBar: TBar;
     function GetBaz: TBaz;
     procedure SetBar(aValue: TBar);
     procedure SetBaz(aValue: TBaz);
     class function GetTagJsonName: string; override;
-    class function ValidTagValue(const aValue: string): Boolean; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
   { matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
   { matches the "baz" tag }
@@ -94,12 +86,12 @@ type
     procedure SetOverrideTypeProperties(aValue: TOverrideTypeProperties);
     procedure SetOverrideTypeDiscriminator(aValue: TOverrideTypeDiscriminator);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "override_type_expr" JSON property }
     property OverrideTypeExpr: TJtdString read FOverrideTypeExpr write SetOverrideTypeExpr;
   { refers to "override_elements_container" JSON property }
@@ -116,152 +108,96 @@ type
 
 implementation
 
-{ TOverrideElementsContainer }
-
-class function TOverrideElementsContainer.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TOverrideElementsContainer;
-end;
-
-{ TOverrideValuesContainer }
-
-class function TOverrideValuesContainer.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TOverrideValuesContainer;
-end;
-
-{ TOverrideTypeEnumElem }
-
-class function TOverrideTypeEnumElem.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TOverrideTypeEnumElem;
-end;
-
 { TOverrideTypeProperties }
-
-class function TOverrideTypeProperties.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TOverrideTypeProperties;
-end;
-
-procedure TOverrideTypeProperties.Clear;
-begin
-end;
-
-{$PUSH}{$WARN 5057 OFF}
-procedure TOverrideTypeProperties.DoReadJson(aNode: TJsonNode);
-begin
-end;
-{$POP}
 
 {$PUSH}{$WARN 5057 OFF}
 procedure TOverrideTypeProperties.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
   until False;
 end;
 {$POP}
 
-procedure TOverrideTypeProperties.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TOverrideTypeProperties.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
-  aWriter.EndObject;
+end;
+
+procedure TOverrideTypeProperties.DoClear;
+begin
+end;
+
+procedure TOverrideTypeProperties.ClearFields;
+begin
+end;
+
+procedure TOverrideTypeProperties.CreateFields;
+begin
 end;
 
 { TBar }
 
-class function TBar.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBar;
-end;
-
-procedure TBar.Clear;
-begin
-end;
-
-{$PUSH}{$WARN 5057 OFF}
-procedure TBar.DoReadJson(aNode: TJsonNode);
-begin
-end;
-{$POP}
-
 {$PUSH}{$WARN 5057 OFF}
 procedure TBar.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
   until False;
 end;
 {$POP}
 
-procedure TBar.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBar.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
-  aWriter.EndObject;
+end;
+
+procedure TBar.DoClear;
+begin
+end;
+
+procedure TBar.ClearFields;
+begin
+end;
+
+procedure TBar.CreateFields;
+begin
 end;
 
 { TBaz }
 
-class function TBaz.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBaz;
-end;
-
-procedure TBaz.Clear;
-begin
-end;
-
-{$PUSH}{$WARN 5057 OFF}
-procedure TBaz.DoReadJson(aNode: TJsonNode);
-begin
-end;
-{$POP}
-
 {$PUSH}{$WARN 5057 OFF}
 procedure TBaz.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
   until False;
 end;
 {$POP}
 
-procedure TBaz.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBaz.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
-  aWriter.EndObject;
 end;
 
-{ TOverrideTypeDiscriminator }
-
-class function TOverrideTypeDiscriminator.GetJtdClass: TJtdEntityClass;
+procedure TBaz.DoClear;
 begin
-  Result := TOverrideTypeDiscriminator;
+end;
+
+procedure TBaz.ClearFields;
+begin
+end;
+
+procedure TBaz.CreateFields;
+begin
 end;
 
 class function TOverrideTypeDiscriminator.GetTagJsonName: string;
 begin
   Result := 'foo';
-end;
-
-class function TOverrideTypeDiscriminator.ValidTagValue(const aValue: string): Boolean;
-begin
-  case aValue of
-    'bar',
-    'baz': Result := True;
-  else
-    Result := False;
-  end;
 end;
 
 class function TOverrideTypeDiscriminator.GetInstanceClass(const aTag: string): TJtdEntityClass;
@@ -301,21 +237,6 @@ begin
 end;
 
 { TCustomOverrides }
-
-class function TCustomOverrides.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TCustomOverrides;
-end;
-
-procedure TCustomOverrides.Clear;
-begin
-  FreeAndNil(FOverrideTypeExpr);
-  FreeAndNil(FOverrideElementsContainer);
-  FreeAndNil(FOverrideValuesContainer);
-  FreeAndNil(FOverrideTypeEnum);
-  FreeAndNil(FOverrideTypeProperties);
-  FreeAndNil(FOverrideTypeDiscriminator);
-end;
 
 procedure TCustomOverrides.SetOverrideTypeExpr(aValue: TJtdString);
 begin
@@ -360,128 +281,66 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TCustomOverrides.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..5] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'override_type_expr':
-        begin
-          FOverrideTypeExpr := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-      'override_elements_container':
-        begin
-          FOverrideElementsContainer := TOverrideElementsContainer(TOverrideElementsContainer.ReadJson(p.Value));
-          Flags[1] := True;
-        end;
-      'override_values_container':
-        begin
-          FOverrideValuesContainer := TOverrideValuesContainer(TOverrideValuesContainer.ReadJson(p.Value));
-          Flags[2] := True;
-        end;
-      'override_type_enum':
-        begin
-          FOverrideTypeEnum := TOverrideTypeEnumElem(TOverrideTypeEnumElem.ReadJson(p.Value));
-          Flags[3] := True;
-        end;
-      'override_type_properties':
-        begin
-          FOverrideTypeProperties := TOverrideTypeProperties(TOverrideTypeProperties.ReadJson(p.Value));
-          Flags[4] := True;
-        end;
-      'override_type_discriminator':
-        begin
-          FOverrideTypeDiscriminator := TOverrideTypeDiscriminator(TOverrideTypeDiscriminator.ReadJson(p.Value));
-          Flags[5] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('override_type_expr');
-        1: PropNotFound('override_elements_container');
-        2: PropNotFound('override_values_container');
-        3: PropNotFound('override_type_enum');
-        4: PropNotFound('override_type_properties');
-        5: PropNotFound('override_type_discriminator');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TCustomOverrides.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..5] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'override_type_expr':
-        begin
-          FOverrideTypeExpr := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[0] then begin
+          FOverrideTypeExpr.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
       'override_elements_container':
-        begin
-          FOverrideElementsContainer := TOverrideElementsContainer(TOverrideElementsContainer.ReadJson(aReader));
+        if not Flags[1] then begin
+          FOverrideElementsContainer.ReadJson(aReader);
           Flags[1] := True;
-        end;
+        end else DuplicateProp(aReader);
       'override_values_container':
-        begin
-          FOverrideValuesContainer := TOverrideValuesContainer(TOverrideValuesContainer.ReadJson(aReader));
+        if not Flags[2] then begin
+          FOverrideValuesContainer.ReadJson(aReader);
           Flags[2] := True;
-        end;
+        end else DuplicateProp(aReader);
       'override_type_enum':
-        begin
-          FOverrideTypeEnum := TOverrideTypeEnumElem(TOverrideTypeEnumElem.ReadJson(aReader));
+        if not Flags[3] then begin
+          FOverrideTypeEnum.ReadJson(aReader);
           Flags[3] := True;
-        end;
+        end else DuplicateProp(aReader);
       'override_type_properties':
-        begin
-          FOverrideTypeProperties := TOverrideTypeProperties(TOverrideTypeProperties.ReadJson(aReader));
+        if not Flags[4] then begin
+          FOverrideTypeProperties.ReadJson(aReader);
           Flags[4] := True;
-        end;
+        end else DuplicateProp(aReader);
       'override_type_discriminator':
-        begin
-          FOverrideTypeDiscriminator := TOverrideTypeDiscriminator(TOverrideTypeDiscriminator.ReadJson(aReader));
+        if not Flags[5] then begin
+          FOverrideTypeDiscriminator.ReadJson(aReader);
           Flags[5] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('override_type_expr');
-        1: PropNotFound('override_elements_container');
-        2: PropNotFound('override_values_container');
-        3: PropNotFound('override_type_enum');
-        4: PropNotFound('override_type_properties');
-        5: PropNotFound('override_type_discriminator');
-      else
+        0: PropNotFound('override_type_expr', aReader);
+        1: PropNotFound('override_elements_container', aReader);
+        2: PropNotFound('override_values_container', aReader);
+        3: PropNotFound('override_type_enum', aReader);
+        4: PropNotFound('override_type_properties', aReader);
+        5: PropNotFound('override_type_discriminator', aReader);
       end;
 end;
 {$POP}
 
-procedure TCustomOverrides.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TCustomOverrides.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('override_type_expr');
   OverrideTypeExpr.WriteJson(aWriter);
   aWriter.AddName('override_elements_container');
@@ -494,7 +353,30 @@ begin
   OverrideTypeProperties.WriteJson(aWriter);
   aWriter.AddName('override_type_discriminator');
   OverrideTypeDiscriminator.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TCustomOverrides.DoClear;
+begin
+end;
+
+procedure TCustomOverrides.ClearFields;
+begin
+  FOverrideTypeExpr.Free;
+  FOverrideElementsContainer.Free;
+  FOverrideValuesContainer.Free;
+  FOverrideTypeEnum.Free;
+  FOverrideTypeProperties.Free;
+  FOverrideTypeDiscriminator.Free;
+end;
+
+procedure TCustomOverrides.CreateFields;
+begin
+  FOverrideTypeExpr := TJtdString.Create;
+  FOverrideElementsContainer := TOverrideElementsContainer.Create;
+  FOverrideValuesContainer := TOverrideValuesContainer.Create;
+  FOverrideTypeEnum := TOverrideTypeEnumElem.Create;
+  FOverrideTypeProperties := TOverrideTypeProperties.Create;
+  FOverrideTypeDiscriminator := TOverrideTypeDiscriminator.Create;
 end;
 
 end.

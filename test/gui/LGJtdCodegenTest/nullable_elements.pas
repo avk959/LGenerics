@@ -1,7 +1,7 @@
 {
   Source schema: nullable_elements.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit nullable_elements;
 
@@ -15,17 +15,8 @@ uses
 type
 
 { TNullableElements is nullable }
-  TNullableElements = class sealed(specialize TJtdList<TJtdString>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TNullableElements = class sealed(specialize TJtdNullableList<TJtdString>);
 
 implementation
-
-{ TNullableElements }
-
-class function TNullableElements.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TNullableElements;
-end;
 
 end.

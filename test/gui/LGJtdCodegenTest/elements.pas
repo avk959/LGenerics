@@ -1,7 +1,7 @@
 {
   Source schema: elements.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit elements;
 
@@ -14,17 +14,8 @@ uses
 
 type
 
-  TElements = class sealed(specialize TJtdList<TJtdString>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TElements = class sealed(specialize TJtdList<TJtdString>);
 
 implementation
-
-{ TElements }
-
-class function TElements.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TElements;
-end;
 
 end.

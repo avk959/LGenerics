@@ -1,7 +1,7 @@
 {
   Source schema: keywords.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit keywords;
 
@@ -25,12 +25,12 @@ type
     procedure SetFor_(aValue: TFor_String);
     procedure SetObject_(aValue: TObject_String);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "for" JSON property }
     property For_: TFor_String read FFor_ write SetFor_;
   { refers to "object" JSON property }
@@ -40,17 +40,6 @@ type
 implementation
 
 { TKeywords }
-
-class function TKeywords.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TKeywords;
-end;
-
-procedure TKeywords.Clear;
-begin
-  FreeAndNil(FFor_);
-  FreeAndNil(FObject_);
-end;
 
 procedure TKeywords.SetFor_(aValue: TFor_String);
 begin
@@ -67,85 +56,62 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TKeywords.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..1] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'for':
-        begin
-          FFor_ := TFor_String(TFor_String.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-      'object':
-        begin
-          FObject_ := TObject_String(TObject_String.ReadJson(p.Value));
-          Flags[1] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('for');
-        1: PropNotFound('object');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TKeywords.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'for':
-        begin
-          FFor_ := TFor_String(TFor_String.ReadJson(aReader));
+        if not Flags[0] then begin
+          FFor_.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
       'object':
-        begin
-          FObject_ := TObject_String(TObject_String.ReadJson(aReader));
+        if not Flags[1] then begin
+          FObject_.ReadJson(aReader);
           Flags[1] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('for');
-        1: PropNotFound('object');
-      else
+        0: PropNotFound('for', aReader);
+        1: PropNotFound('object', aReader);
       end;
 end;
 {$POP}
 
-procedure TKeywords.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TKeywords.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('for');
   For_.WriteJson(aWriter);
   aWriter.AddName('object');
   Object_.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TKeywords.DoClear;
+begin
+end;
+
+procedure TKeywords.ClearFields;
+begin
+  FFor_.Free;
+  FObject_.Free;
+end;
+
+procedure TKeywords.CreateFields;
+begin
+  FFor_ := TFor_String.Create;
+  FObject_ := TObject_String.Create;
 end;
 
 end.

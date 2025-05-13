@@ -1,7 +1,7 @@
 {
   Source schema: enum_variant_collisions.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit enum_variant_collisions;
 
@@ -15,22 +15,13 @@ uses
 type
 
   TEnumVariantCollisions = class sealed(TJtdStrEnum)
-  protected
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    class function IsEnumElement(const aValue: string): Boolean; override;
+    class function IsElement(const aValue: string): Boolean; override;
   end;
 
 implementation
 
-{ TEnumVariantCollisions }
-
-class function TEnumVariantCollisions.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TEnumVariantCollisions;
-end;
-
-class function TEnumVariantCollisions.IsEnumElement(const aValue: string): Boolean;
+class function TEnumVariantCollisions.IsElement(const aValue: string): Boolean;
 begin
   case aValue of
     'foo',

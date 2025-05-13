@@ -1,7 +1,7 @@
 {
   Source schema: values.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit values;
 
@@ -14,17 +14,8 @@ uses
 
 type
 
-  TValues = class sealed(specialize TJtdMap<TJtdString>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TValues = class sealed(specialize TJtdMap<TJtdString>);
 
 implementation
-
-{ TValues }
-
-class function TValues.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TValues;
-end;
 
 end.

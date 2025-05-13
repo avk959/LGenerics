@@ -1,7 +1,7 @@
 {
   Source schema: definition_name_collisions.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit definition_name_collisions;
 

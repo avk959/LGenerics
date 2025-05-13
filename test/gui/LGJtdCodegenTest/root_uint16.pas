@@ -1,7 +1,7 @@
 {
   Source schema: root_uint16.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit root_uint16;
 

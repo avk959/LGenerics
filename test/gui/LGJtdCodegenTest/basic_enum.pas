@@ -1,7 +1,7 @@
 {
   Source schema: basic_enum.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit basic_enum;
 
@@ -14,20 +14,11 @@ uses
 
 type
 
-  TBasicEnum = (Foo, Bar, Baz);
+  TEnum = (Foo, Bar, Baz);
 
-{ Container for some TBasicEnum enumeration element }
-  TBasicEnumElem = class sealed(specialize TJtdEnum<TBasicEnum>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+{ Container for some TEnum enumeration element }
+  TEnumElem = class sealed(specialize TJtdEnum<TEnum>);
 
 implementation
-
-{ TBasicEnumElem }
-
-class function TBasicEnumElem.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBasicEnumElem;
-end;
 
 end.

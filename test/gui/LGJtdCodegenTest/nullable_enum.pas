@@ -1,7 +1,7 @@
 {
   Source schema: nullable_enum.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit nullable_enum;
 
@@ -14,20 +14,11 @@ uses
 
 type
 
-  TNullableEnum = (Foo, Bar, Baz);
+  TEnum = (Foo, Bar, Baz);
 
-{ Container for some TNullableEnum enumeration element; is nullable }
-  TNullableEnumElem = class sealed(specialize TJtdEnum<TNullableEnum>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+{ Container for some TEnum enumeration element; is nullable }
+  TNullableEnumElem = class sealed(specialize TJtdNullableEnum<TEnum>);
 
 implementation
-
-{ TNullableEnumElem }
-
-class function TNullableEnumElem.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TNullableEnumElem;
-end;
 
 end.

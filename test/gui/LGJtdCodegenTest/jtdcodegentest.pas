@@ -66,7 +66,7 @@ implementation
 procedure TTestRoundTreap.TestBasicDiscriminator;
 var
   Src, Dst: specialize TGAutoRef<TJsonNode>;
-  bd: specialize TGAutoRef<TBasicDiscriminator>;
+  bd: specialize TGAutoRef<TFooUnion>;
   s, r: string;
 const
   TestValues: TStringArray = (
@@ -84,15 +84,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}bd.Instance := TBasicDiscriminator.ReadJson(Src.Instance) as TBasicDiscriminator;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}bd.Instance := TFooUnion.LoadInstance(s) as TFooUnion;
       r := bd.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      bd.Instance := TBasicDiscriminator.ReadJson(s) as TBasicDiscriminator;
-      r := bd.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -100,7 +95,7 @@ end;
 procedure TTestRoundTreap.TestBasicEnum;
 var
   Src, Dst: specialize TGAutoRef<TJsonNode>;
-  be: specialize TGAutoRef<TBasicEnumElem>;
+  be: specialize TGAutoRef<TEnumElem>;
   s, r: string;
 const
   TestValues: TStringArray = (
@@ -118,15 +113,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}be.Instance := TBasicEnumElem.ReadJson(Src.Instance) as TBasicEnumElem;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}be.Instance := TEnumElem.LoadInstance(s) as TEnumElem;
       r := be.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      be.Instance := TBasicEnumElem.ReadJson(s) as TBasicEnumElem;
-      r := be.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -152,15 +142,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}bp.Instance := TBasicProperties.ReadJson(Src.Instance) as TBasicProperties;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}bp.Instance := TBasicProperties.LoadInstance(s) as TBasicProperties;
       r := bp.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      bp.Instance := TBasicProperties.ReadJson(s) as TBasicProperties;
-      r := bp.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -186,15 +171,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}co.Instance := TCustomOverrides.ReadJson(Src.Instance) as TCustomOverrides;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}co.Instance := TCustomOverrides.LoadInstance(s) as TCustomOverrides;
       r := co.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      co.Instance := TCustomOverrides.ReadJson(s) as TCustomOverrides;
-      r := co.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -220,15 +200,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}bs.Instance := TBarString.ReadJson(Src.Instance) as TBarString;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}bs.Instance := TBarString.LoadInstance(s) as TBarString;
       r := bs.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      bs.Instance := TBarString.ReadJson(s) as TBarString;
-      r := bs.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -254,15 +229,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}ds.Instance := TDescription.ReadJson(Src.Instance) as TDescription;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}ds.Instance := TDescription.LoadInstance(s) as TDescription;
       r := ds.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ds.Instance := TDescription.ReadJson(s) as TDescription;
-      r := ds.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -288,15 +258,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}el.Instance := TElements.ReadJson(Src.Instance) as TElements;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}el.Instance := TElements.LoadInstance(s) as TElements;
       r := el.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      el.Instance := TElements.ReadJson(s) as TElements;
-      r := el.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -322,15 +287,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}enad.Instance := TEmptyAndNonasciiDefinitionsString.ReadJson(Src.Instance) as TEmptyAndNonasciiDefinitionsString;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}enad.Instance := TEmptyAndNonasciiDefinitionsString.LoadInstance(s) as TEmptyAndNonasciiDefinitionsString;
       r := enad.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      enad.Instance := TEmptyAndNonasciiDefinitionsString.ReadJson(s) as TEmptyAndNonasciiDefinitionsString;
-      r := enad.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -356,15 +316,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}enev.Instance := TEmptyAndNonasciiEnumValues.ReadJson(Src.Instance) as TEmptyAndNonasciiEnumValues;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}enev.Instance := TEmptyAndNonasciiEnumValues.LoadInstance(s) as TEmptyAndNonasciiEnumValues;
       r := enev.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      enev.Instance := TEmptyAndNonasciiEnumValues.ReadJson(s) as TEmptyAndNonasciiEnumValues;
-      r := enev.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -390,15 +345,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}enp.Instance := TEmptyAndNonasciiProperties.ReadJson(Src.Instance) as TEmptyAndNonasciiProperties;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}enp.Instance := TEmptyAndNonasciiProperties.LoadInstance(s) as TEmptyAndNonasciiProperties;
       r := enp.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      enp.Instance := TEmptyAndNonasciiProperties.ReadJson(s) as TEmptyAndNonasciiProperties;
-      r := enp.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -424,15 +374,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}ec.Instance := TEnumCollisions.ReadJson(Src.Instance) as TEnumCollisions;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}ec.Instance := TEnumCollisions.LoadInstance(s) as TEnumCollisions;
       r := ec.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ec.Instance := TEnumCollisions.ReadJson(s) as TEnumCollisions;
-      r := ec.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -458,15 +403,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}evc.Instance := TEnumVariantCollisions.ReadJson(Src.Instance) as TEnumVariantCollisions;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}evc.Instance := TEnumVariantCollisions.LoadInstance(s) as TEnumVariantCollisions;
       r := evc.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      evc.Instance := TEnumVariantCollisions.ReadJson(s) as TEnumVariantCollisions;
-      r := evc.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -492,15 +432,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}ini.Instance := TInitialisms.ReadJson(Src.Instance) as TInitialisms;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}ini.Instance := TInitialisms.LoadInstance(s) as TInitialisms;
       r := ini.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ini.Instance := TInitialisms.ReadJson(s) as TInitialisms;
-      r := ini.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -526,15 +461,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}kw.Instance := TKeywords.ReadJson(Src.Instance) as TKeywords;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}kw.Instance := TKeywords.LoadInstance(s) as TKeywords;
       r := kw.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      kw.Instance := TKeywords.ReadJson(s) as TKeywords;
-      r := kw.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -561,17 +491,11 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      nd := TNullableDiscriminator.ReadJson(Src.Instance) as TNullableDiscriminator;
+      AssertTrue(Src.Instance.TryParse(s));
+      nd := TNullableDiscriminator.LoadInstance(s) as TNullableDiscriminator;
       {%H-}ndRef.Instance := nd;
       r := nd.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      nd := TNullableDiscriminator.ReadJson(s) as TNullableDiscriminator;
-      ndRef.Instance := nd;
-      r := nd.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -598,17 +522,11 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      ne := TNullableElements.ReadJson(Src.Instance) as TNullableElements;
+      AssertTrue(Src.Instance.TryParse(s));
+      ne := TNullableElements.LoadInstance(s) as TNullableElements;
       {%H-}neRef.Instance := ne;
       r := ne.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ne := TNullableElements.ReadJson(s) as TNullableElements;
-      neRef.Instance := ne;
-      r := ne.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -635,17 +553,11 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      nee := TNullableEnumElem.ReadJson(Src.Instance) as TNullableEnumElem;
+      AssertTrue(Src.Instance.TryParse(s));
+      nee := TNullableEnumElem.LoadInstance(s) as TNullableEnumElem;
       {%H-}neeRef.Instance := nee;
       r := nee.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      nee := TNullableEnumElem.ReadJson(s) as TNullableEnumElem;
-      neeRef.Instance := nee;
-      r := nee.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -672,17 +584,11 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      np := TNullableProperties.ReadJson(Src.Instance) as TNullableProperties;
+      AssertTrue(Src.Instance.TryParse(s));
+      np := TNullableProperties.LoadInstance(s) as TNullableProperties;
       {%H-}npRef.Instance := np;
       r := np.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      np := TNullableProperties.ReadJson(s) as TNullableProperties;
-      npRef.Instance := np;
-      r := np.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -708,15 +614,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}nr.Instance := TNullableReferences.ReadJson(Src.Instance) as TNullableReferences;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}nr.Instance := TNullableReferences.LoadInstance(s) as TNullableReferences;
       r := nr.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      nr.Instance := TNullableReferences.ReadJson(s) as TNullableReferences;
-      r := nr.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -742,15 +643,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}pnc.Instance := TPropertyNameCollisions.ReadJson(Src.Instance) as TPropertyNameCollisions;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}pnc.Instance := TPropertyNameCollisions.LoadInstance(s) as TPropertyNameCollisions;
       r := pnc.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      pnc.Instance := TPropertyNameCollisions.ReadJson(s) as TPropertyNameCollisions;
-      r := pnc.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -776,15 +672,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}bs.Instance := TBazString.ReadJson(Src.Instance) as TBazString;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}bs.Instance := TBazString.LoadInstance(s) as TBazString;
       r := bs.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      bs.Instance := TBazString.ReadJson(s) as TBazString;
-      r := bs.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -804,15 +695,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}rb.Instance := TRootBooleanBool.ReadJson(Src.Instance) as TRootBooleanBool;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}rb.Instance := TRootBooleanBool.LoadInstance(s) as TRootBooleanBool;
       r := rb.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      rb.Instance := TRootBooleanBool.ReadJson(s) as TRootBooleanBool;
-      r := rb.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -838,15 +724,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}ri16.Instance := TRootInt16Int16.ReadJson(Src.Instance) as TRootInt16Int16;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}ri16.Instance := TRootInt16Int16.LoadInstance(s) as TRootInt16Int16;
       r := ri16.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ri16.Instance := TRootInt16Int16.ReadJson(s) as TRootInt16Int16;
-      r := ri16.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -872,15 +753,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}ri32.Instance := TRootInt32Int32.ReadJson(Src.Instance) as TRootInt32Int32;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}ri32.Instance := TRootInt32Int32.LoadInstance(s) as TRootInt32Int32;
       r := ri32.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ri32.Instance := TRootInt32Int32.ReadJson(s) as TRootInt32Int32;
-      r := ri32.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -906,15 +782,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}ri8.Instance := TRootInt8Int8.ReadJson(Src.Instance) as TRootInt8Int8;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}ri8.Instance := TRootInt8Int8.LoadInstance(s) as TRootInt8Int8;
       r := ri8.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ri8.Instance := TRootInt8Int8.ReadJson(s) as TRootInt8Int8;
-      r := ri8.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -941,17 +812,11 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      ns := TRootNullableStringString.ReadJson(Src.Instance) as TRootNullableStringString;
+      AssertTrue(Src.Instance.TryParse(s));
+      ns := TRootNullableStringString.LoadInstance(s) as TRootNullableStringString;
       {%H-}nsRef.Instance := ns;
       r := ns.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      ns := TRootNullableStringString.ReadJson(s) as TRootNullableStringString;
-      nsRef.Instance := ns;
-      r := ns.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -977,15 +842,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}rs.Instance := TRootStringString.ReadJson(Src.Instance) as TRootStringString;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}rs.Instance := TRootStringString.LoadInstance(s) as TRootStringString;
       r := rs.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      rs.Instance := TRootStringString.ReadJson(s) as TRootStringString;
-      r := rs.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -1011,15 +871,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}rui16.Instance := TRootUint16UInt16.ReadJson(Src.Instance) as TRootUint16UInt16;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}rui16.Instance := TRootUint16UInt16.LoadInstance(s) as TRootUint16UInt16;
       r := rui16.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      rui16.Instance := TRootUint16UInt16.ReadJson(s) as TRootUint16UInt16;
-      r := rui16.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -1045,15 +900,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}rui32.Instance := TRootUint32UInt32.ReadJson(Src.Instance) as TRootUint32UInt32;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}rui32.Instance := TRootUint32UInt32.LoadInstance(s) as TRootUint32UInt32;
       r := rui32.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      rui32.Instance := TRootUint32UInt32.ReadJson(s) as TRootUint32UInt32;
-      r := rui32.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -1079,15 +929,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}rui8.Instance := TRootUint8UInt8.ReadJson(Src.Instance) as TRootUint8UInt8;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}rui8.Instance := TRootUint8UInt8.LoadInstance(s) as TRootUint8UInt8;
       r := rui8.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      rui8.Instance := TRootUint8UInt8.ReadJson(s) as TRootUint8UInt8;
-      r := rui8.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -1113,15 +958,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}tc.Instance := TTypeCollisions.ReadJson(Src.Instance) as TTypeCollisions;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}tc.Instance := TTypeCollisions.LoadInstance(s) as TTypeCollisions;
       r := tc.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      tc.Instance := TTypeCollisions.ReadJson(s) as TTypeCollisions;
-      r := tc.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;
@@ -1147,15 +987,10 @@ const
 begin
   for s in  TestValues do
     begin
-      AssertTrue(Src.Instance.Parse(s));
-      {%H-}v.Instance := TValues.ReadJson(Src.Instance) as TValues;
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}v.Instance := TValues.LoadInstance(s) as TValues;
       r := v.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-
-      v.Instance := TValues.ReadJson(s) as TValues;
-      r := v.Instance.AsJson;
-      AssertTrue(Dst.Instance.Parse(r));
+      AssertTrue(Dst.Instance.TryParse(r));
       AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
     end;
 end;

@@ -1,7 +1,7 @@
 {
   Source schema: enum_collisions.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit enum_collisions;
 
@@ -17,21 +17,19 @@ type
   TBar = (x, y);
 
 { Container for some TBar enumeration element }
-  TBarElem = class sealed(specialize TJtdEnum<TBar>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TBarElem = class sealed(specialize TJtdEnum<TBar>);
 
   TFoo = class sealed(TJtdObject)
   private
     FBar: TBarElem;
     procedure SetBar(aValue: TBarElem);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "bar" JSON property }
     property Bar: TBarElem read FBar write SetBar;
   end;
@@ -45,12 +43,12 @@ type
     procedure SetFoo(aValue: TFoo);
     procedure SetFooBar(aValue: TFooBar);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "foo" JSON property }
     property Foo: TFoo read FFoo write SetFoo;
   { refers to "foo_bar" JSON property }
@@ -59,24 +57,7 @@ type
 
 implementation
 
-{ TBarElem }
-
-class function TBarElem.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBarElem;
-end;
-
 { TFoo }
-
-class function TFoo.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TFoo;
-end;
-
-procedure TFoo.Clear;
-begin
-  FreeAndNil(FBar);
-end;
 
 procedure TFoo.SetBar(aValue: TBarElem);
 begin
@@ -86,85 +67,55 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TFoo.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..0] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'bar':
-        begin
-          FBar := TBarElem(TBarElem.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('bar');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TFoo.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'bar':
-        begin
-          FBar := TBarElem(TBarElem.ReadJson(aReader));
+        if not Flags[0] then begin
+          FBar.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('bar');
-      else
+        0: PropNotFound('bar', aReader);
       end;
 end;
 {$POP}
 
-procedure TFoo.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TFoo.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('bar');
   Bar.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TFoo.DoClear;
+begin
+end;
+
+procedure TFoo.ClearFields;
+begin
+  FBar.Free;
+end;
+
+procedure TFoo.CreateFields;
+begin
+  FBar := TBarElem.Create;
 end;
 
 { TEnumCollisions }
-
-class function TEnumCollisions.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TEnumCollisions;
-end;
-
-procedure TEnumCollisions.Clear;
-begin
-  FreeAndNil(FFoo);
-  FreeAndNil(FFooBar);
-end;
 
 procedure TEnumCollisions.SetFoo(aValue: TFoo);
 begin
@@ -181,85 +132,62 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TEnumCollisions.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..1] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'foo':
-        begin
-          FFoo := TFoo(TFoo.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-      'foo_bar':
-        begin
-          FFooBar := TFooBar(TFooBar.ReadJson(p.Value));
-          Flags[1] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('foo');
-        1: PropNotFound('foo_bar');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TEnumCollisions.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'foo':
-        begin
-          FFoo := TFoo(TFoo.ReadJson(aReader));
+        if not Flags[0] then begin
+          FFoo.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
       'foo_bar':
-        begin
-          FFooBar := TFooBar(TFooBar.ReadJson(aReader));
+        if not Flags[1] then begin
+          FFooBar.ReadJson(aReader);
           Flags[1] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('foo');
-        1: PropNotFound('foo_bar');
-      else
+        0: PropNotFound('foo', aReader);
+        1: PropNotFound('foo_bar', aReader);
       end;
 end;
 {$POP}
 
-procedure TEnumCollisions.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TEnumCollisions.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('foo');
   Foo.WriteJson(aWriter);
   aWriter.AddName('foo_bar');
   FooBar.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TEnumCollisions.DoClear;
+begin
+end;
+
+procedure TEnumCollisions.ClearFields;
+begin
+  FFoo.Free;
+  FFooBar.Free;
+end;
+
+procedure TEnumCollisions.CreateFields;
+begin
+  FFoo := TFoo.Create;
+  FFooBar := TFooBar.Create;
 end;
 
 end.

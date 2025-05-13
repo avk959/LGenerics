@@ -1,7 +1,7 @@
 {
   Source schema: empty_and_nonascii_enum_values.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit empty_and_nonascii_enum_values;
 
@@ -15,22 +15,13 @@ uses
 type
 
   TEmptyAndNonasciiEnumValues = class sealed(TJtdStrEnum)
-  protected
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    class function IsEnumElement(const aValue: string): Boolean; override;
+    class function IsElement(const aValue: string): Boolean; override;
   end;
 
 implementation
 
-{ TEmptyAndNonasciiEnumValues }
-
-class function TEmptyAndNonasciiEnumValues.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TEmptyAndNonasciiEnumValues;
-end;
-
-class function TEmptyAndNonasciiEnumValues.IsEnumElement(const aValue: string): Boolean;
+class function TEmptyAndNonasciiEnumValues.IsElement(const aValue: string): Boolean;
 begin
   case TJsonNode.PasStrToAsciiJson(aValue) of
     '""',

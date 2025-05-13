@@ -1,7 +1,7 @@
 {
   Source schema: reference.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit reference;
 

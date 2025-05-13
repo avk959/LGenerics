@@ -1,7 +1,7 @@
 {
   Source schema: description.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit description;
 
@@ -25,44 +25,40 @@ type
   );
 
 { Container for some TEnumWithDescription enumeration element }
-  TEnumWithDescriptionElem = class sealed(specialize TJtdEnum<TEnumWithDescription>)
-    class function GetJtdClass: TJtdEntityClass; override;
-  end;
+  TEnumWithDescriptionElem = class sealed(specialize TJtdEnum<TEnumWithDescription>);
 
 { A description for properties }
   TPropertiesWithDescription = class sealed(TJtdObject)
   private
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   end;
 
 { A description for discriminator variant }
   TBar = class sealed(TJtdObject)
   private
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   end;
 
 { A description for discriminator }
-  TDiscriminatorWithDescription = class sealed(TJtdVariant)
+  TDiscriminatorWithDescription = class sealed(TJtdUnion)
   protected
     function GetBar: TBar;
     procedure SetBar(aValue: TBar);
     class function GetTagJsonName: string; override;
-    class function ValidTagValue(const aValue: string): Boolean; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
   { A description for discriminator variant
     matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
@@ -83,12 +79,12 @@ type
     procedure SetPropertiesWithDescription(aValue: TPropertiesWithDescription);
     procedure SetDiscriminatorWithDescription(aValue: TDiscriminatorWithDescription);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { Whereas disregard and contempt for human rights have resulted in barbarous 
     acts which have outraged the conscience of mankind, and the advent of 
     a world in which human beings shall enjoy freedom of speech and belief 
@@ -111,102 +107,67 @@ type
 
 implementation
 
-{ TEnumWithDescriptionElem }
-
-class function TEnumWithDescriptionElem.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TEnumWithDescriptionElem;
-end;
-
 { TPropertiesWithDescription }
-
-class function TPropertiesWithDescription.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TPropertiesWithDescription;
-end;
-
-procedure TPropertiesWithDescription.Clear;
-begin
-end;
-
-{$PUSH}{$WARN 5057 OFF}
-procedure TPropertiesWithDescription.DoReadJson(aNode: TJsonNode);
-begin
-end;
-{$POP}
 
 {$PUSH}{$WARN 5057 OFF}
 procedure TPropertiesWithDescription.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
   until False;
 end;
 {$POP}
 
-procedure TPropertiesWithDescription.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TPropertiesWithDescription.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
-  aWriter.EndObject;
+end;
+
+procedure TPropertiesWithDescription.DoClear;
+begin
+end;
+
+procedure TPropertiesWithDescription.ClearFields;
+begin
+end;
+
+procedure TPropertiesWithDescription.CreateFields;
+begin
 end;
 
 { TBar }
 
-class function TBar.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TBar;
-end;
-
-procedure TBar.Clear;
-begin
-end;
-
-{$PUSH}{$WARN 5057 OFF}
-procedure TBar.DoReadJson(aNode: TJsonNode);
-begin
-end;
-{$POP}
-
 {$PUSH}{$WARN 5057 OFF}
 procedure TBar.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
   until False;
 end;
 {$POP}
 
-procedure TBar.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBar.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
-  aWriter.EndObject;
 end;
 
-{ TDiscriminatorWithDescription }
-
-class function TDiscriminatorWithDescription.GetJtdClass: TJtdEntityClass;
+procedure TBar.DoClear;
 begin
-  Result := TDiscriminatorWithDescription;
+end;
+
+procedure TBar.ClearFields;
+begin
+end;
+
+procedure TBar.CreateFields;
+begin
 end;
 
 class function TDiscriminatorWithDescription.GetTagJsonName: string;
 begin
   Result := 'foo';
-end;
-
-class function TDiscriminatorWithDescription.ValidTagValue(const aValue: string): Boolean;
-begin
-  case aValue of
-    'bar': Result := True;
-  else
-    Result := False;
-  end;
 end;
 
 class function TDiscriminatorWithDescription.GetInstanceClass(const aTag: string): TJtdEntityClass;
@@ -232,21 +193,6 @@ begin
 end;
 
 { TDescription }
-
-class function TDescription.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TDescription;
-end;
-
-procedure TDescription.Clear;
-begin
-  FreeAndNil(FLongDescription);
-  FreeAndNil(FRefWithDescription);
-  FreeAndNil(FStringWithDescription);
-  FreeAndNil(FEnumWithDescription);
-  FreeAndNil(FPropertiesWithDescription);
-  FreeAndNil(FDiscriminatorWithDescription);
-end;
 
 procedure TDescription.SetLongDescription(aValue: TJtdString);
 begin
@@ -291,128 +237,66 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TDescription.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..5] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case p.Key of
-      'long_description':
-        begin
-          FLongDescription := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-      'ref_with_description':
-        begin
-          FRefWithDescription := TBazString(TBazString.ReadJson(p.Value));
-          Flags[1] := True;
-        end;
-      'string_with_description':
-        begin
-          FStringWithDescription := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[2] := True;
-        end;
-      'enum_with_description':
-        begin
-          FEnumWithDescription := TEnumWithDescriptionElem(TEnumWithDescriptionElem.ReadJson(p.Value));
-          Flags[3] := True;
-        end;
-      'properties_with_description':
-        begin
-          FPropertiesWithDescription := TPropertiesWithDescription(TPropertiesWithDescription.ReadJson(p.Value));
-          Flags[4] := True;
-        end;
-      'discriminator_with_description':
-        begin
-          FDiscriminatorWithDescription := TDiscriminatorWithDescription(TDiscriminatorWithDescription.ReadJson(p.Value));
-          Flags[5] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('long_description');
-        1: PropNotFound('ref_with_description');
-        2: PropNotFound('string_with_description');
-        3: PropNotFound('enum_with_description');
-        4: PropNotFound('properties_with_description');
-        5: PropNotFound('discriminator_with_description');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TDescription.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..5] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case aReader.Name of
       'long_description':
-        begin
-          FLongDescription := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[0] then begin
+          FLongDescription.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
       'ref_with_description':
-        begin
-          FRefWithDescription := TBazString(TBazString.ReadJson(aReader));
+        if not Flags[1] then begin
+          FRefWithDescription.ReadJson(aReader);
           Flags[1] := True;
-        end;
+        end else DuplicateProp(aReader);
       'string_with_description':
-        begin
-          FStringWithDescription := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[2] then begin
+          FStringWithDescription.ReadJson(aReader);
           Flags[2] := True;
-        end;
+        end else DuplicateProp(aReader);
       'enum_with_description':
-        begin
-          FEnumWithDescription := TEnumWithDescriptionElem(TEnumWithDescriptionElem.ReadJson(aReader));
+        if not Flags[3] then begin
+          FEnumWithDescription.ReadJson(aReader);
           Flags[3] := True;
-        end;
+        end else DuplicateProp(aReader);
       'properties_with_description':
-        begin
-          FPropertiesWithDescription := TPropertiesWithDescription(TPropertiesWithDescription.ReadJson(aReader));
+        if not Flags[4] then begin
+          FPropertiesWithDescription.ReadJson(aReader);
           Flags[4] := True;
-        end;
+        end else DuplicateProp(aReader);
       'discriminator_with_description':
-        begin
-          FDiscriminatorWithDescription := TDiscriminatorWithDescription(TDiscriminatorWithDescription.ReadJson(aReader));
+        if not Flags[5] then begin
+          FDiscriminatorWithDescription.ReadJson(aReader);
           Flags[5] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('long_description');
-        1: PropNotFound('ref_with_description');
-        2: PropNotFound('string_with_description');
-        3: PropNotFound('enum_with_description');
-        4: PropNotFound('properties_with_description');
-        5: PropNotFound('discriminator_with_description');
-      else
+        0: PropNotFound('long_description', aReader);
+        1: PropNotFound('ref_with_description', aReader);
+        2: PropNotFound('string_with_description', aReader);
+        3: PropNotFound('enum_with_description', aReader);
+        4: PropNotFound('properties_with_description', aReader);
+        5: PropNotFound('discriminator_with_description', aReader);
       end;
 end;
 {$POP}
 
-procedure TDescription.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TDescription.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('long_description');
   LongDescription.WriteJson(aWriter);
   aWriter.AddName('ref_with_description');
@@ -425,7 +309,30 @@ begin
   PropertiesWithDescription.WriteJson(aWriter);
   aWriter.AddName('discriminator_with_description');
   DiscriminatorWithDescription.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TDescription.DoClear;
+begin
+end;
+
+procedure TDescription.ClearFields;
+begin
+  FLongDescription.Free;
+  FRefWithDescription.Free;
+  FStringWithDescription.Free;
+  FEnumWithDescription.Free;
+  FPropertiesWithDescription.Free;
+  FDiscriminatorWithDescription.Free;
+end;
+
+procedure TDescription.CreateFields;
+begin
+  FLongDescription := TJtdString.Create;
+  FRefWithDescription := TBazString.Create;
+  FStringWithDescription := TJtdString.Create;
+  FEnumWithDescription := TEnumWithDescriptionElem.Create;
+  FPropertiesWithDescription := TPropertiesWithDescription.Create;
+  FDiscriminatorWithDescription := TDiscriminatorWithDescription.Create;
 end;
 
 end.

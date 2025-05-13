@@ -1,7 +1,7 @@
 {
   Source schema: empty_and_nonascii_properties.jtd.json
 
-  This unit was automatically created by JtdPasCodegen, do not edit.
+  This unit was automatically created by JtdPasCodegen.
 }
 unit empty_and_nonascii_properties;
 
@@ -33,12 +33,12 @@ type
     procedure SetFoo_bar1(aValue: TJtdString);
     procedure SetFoo___bar(aValue: TJtdString);
   protected
-    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure WriteFields(aWriter: TJsonStrWriter); override;
+    procedure DoClear; override;
+    procedure CreateFields; override;
+    procedure ClearFields; override;
   public
-    class function GetJtdClass: TJtdEntityClass; override;
-    procedure Clear; override;
   { refers to "" JSON property }
     property EmptyName: TJtdString read FEmptyName write SetEmptyName;
   { refers to "$foo" JSON property }
@@ -60,23 +60,6 @@ type
 implementation
 
 { TEmptyAndNonasciiProperties }
-
-class function TEmptyAndNonasciiProperties.GetJtdClass: TJtdEntityClass;
-begin
-  Result := TEmptyAndNonasciiProperties;
-end;
-
-procedure TEmptyAndNonasciiProperties.Clear;
-begin
-  FreeAndNil(FEmptyName);
-  FreeAndNil(FP_foo);
-  FreeAndNil(F_foo);
-  FreeAndNil(FP0foo);
-  FreeAndNil(FFoo0bar);
-  FreeAndNil(FFoo_bar);
-  FreeAndNil(FFoo_bar1);
-  FreeAndNil(FFoo___bar);
-end;
 
 procedure TEmptyAndNonasciiProperties.SetEmptyName(aValue: TJtdString);
 begin
@@ -135,152 +118,78 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TEmptyAndNonasciiProperties.DoReadJson(aNode: TJsonNode);
-var
-  p: TJsonNode.TPair;
-  Flags: array[0..7] of Boolean;
-  I: Integer;
-begin
-  if not aNode.IsObject then ReadError;
-  Clear;
-  System.FillChar(Flags, SizeOf(Flags), 0);
-  for p in aNode.Entries do
-    case TJsonNode.PasStrToAsciiJson(p.Key) of
-      '""':
-        begin
-          FEmptyName := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[0] := True;
-        end;
-      '"$foo"':
-        begin
-          FP_foo := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[1] := True;
-        end;
-      '"_foo"':
-        begin
-          F_foo := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[2] := True;
-        end;
-      '"0foo"':
-        begin
-          FP0foo := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[3] := True;
-        end;
-      '"foo0bar"':
-        begin
-          FFoo0bar := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[4] := True;
-        end;
-      '"foo bar"':
-        begin
-          FFoo_bar := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[5] := True;
-        end;
-      '"foo\nbar"':
-        begin
-          FFoo_bar1 := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[6] := True;
-        end;
-      '"foo\uFDFDbar"':
-        begin
-          FFoo___bar := TJtdString(TJtdString.ReadJson(p.Value));
-          Flags[7] := True;
-        end;
-    else
-      UnknownProp(p.Key);
-    end;
-  for I := 0 to System.High(Flags) do
-    if not Flags[I] then
-      case I of
-        0: PropNotFound('""');
-        1: PropNotFound('"$foo"');
-        2: PropNotFound('"_foo"');
-        3: PropNotFound('"0foo"');
-        4: PropNotFound('"foo0bar"');
-        5: PropNotFound('"foo bar"');
-        6: PropNotFound('"foo\nbar"');
-        7: PropNotFound('"foo\uFDFDbar"');
-      else
-      end;
-end;
-{$POP}
-
-{$PUSH}{$WARN 5057 OFF}
 procedure TEmptyAndNonasciiProperties.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..7] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ReadError;
-  Clear;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
-    if not aReader.Read then ReadError;
+    if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
     case TJsonNode.PasStrToAsciiJson(aReader.Name) of
       '""':
-        begin
-          FEmptyName := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[0] then begin
+          FEmptyName.ReadJson(aReader);
           Flags[0] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"$foo"':
-        begin
-          FP_foo := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[1] then begin
+          FP_foo.ReadJson(aReader);
           Flags[1] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"_foo"':
-        begin
-          F_foo := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[2] then begin
+          F_foo.ReadJson(aReader);
           Flags[2] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"0foo"':
-        begin
-          FP0foo := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[3] then begin
+          FP0foo.ReadJson(aReader);
           Flags[3] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"foo0bar"':
-        begin
-          FFoo0bar := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[4] then begin
+          FFoo0bar.ReadJson(aReader);
           Flags[4] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"foo bar"':
-        begin
-          FFoo_bar := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[5] then begin
+          FFoo_bar.ReadJson(aReader);
           Flags[5] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"foo\nbar"':
-        begin
-          FFoo_bar1 := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[6] then begin
+          FFoo_bar1.ReadJson(aReader);
           Flags[6] := True;
-        end;
+        end else DuplicateProp(aReader);
       '"foo\uFDFDbar"':
-        begin
-          FFoo___bar := TJtdString(TJtdString.ReadJson(aReader));
+        if not Flags[7] then begin
+          FFoo___bar.ReadJson(aReader);
           Flags[7] := True;
-        end;
+        end else DuplicateProp(aReader);
     else
-      UnknownProp(aReader.Name);
+      UnknownProp(aReader.Name, aReader);
     end;
   until False;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
-        0: PropNotFound('""');
-        1: PropNotFound('"$foo"');
-        2: PropNotFound('"_foo"');
-        3: PropNotFound('"0foo"');
-        4: PropNotFound('"foo0bar"');
-        5: PropNotFound('"foo bar"');
-        6: PropNotFound('"foo\nbar"');
-        7: PropNotFound('"foo\uFDFDbar"');
-      else
+        0: PropNotFound('""', aReader);
+        1: PropNotFound('"$foo"', aReader);
+        2: PropNotFound('"_foo"', aReader);
+        3: PropNotFound('"0foo"', aReader);
+        4: PropNotFound('"foo0bar"', aReader);
+        5: PropNotFound('"foo bar"', aReader);
+        6: PropNotFound('"foo\nbar"', aReader);
+        7: PropNotFound('"foo\uFDFDbar"', aReader);
       end;
 end;
 {$POP}
 
-procedure TEmptyAndNonasciiProperties.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TEmptyAndNonasciiProperties.WriteFields(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName(TJsonNode.JsonStrToPas('""'));
   EmptyName.WriteJson(aWriter);
   aWriter.AddName(TJsonNode.JsonStrToPas('"$foo"'));
@@ -297,7 +206,34 @@ begin
   Foo_bar1.WriteJson(aWriter);
   aWriter.AddName(TJsonNode.JsonStrToPas('"foo\uFDFDbar"'));
   Foo___bar.WriteJson(aWriter);
-  aWriter.EndObject;
+end;
+
+procedure TEmptyAndNonasciiProperties.DoClear;
+begin
+end;
+
+procedure TEmptyAndNonasciiProperties.ClearFields;
+begin
+  FEmptyName.Free;
+  FP_foo.Free;
+  F_foo.Free;
+  FP0foo.Free;
+  FFoo0bar.Free;
+  FFoo_bar.Free;
+  FFoo_bar1.Free;
+  FFoo___bar.Free;
+end;
+
+procedure TEmptyAndNonasciiProperties.CreateFields;
+begin
+  FEmptyName := TJtdString.Create;
+  FP_foo := TJtdString.Create;
+  F_foo := TJtdString.Create;
+  FP0foo := TJtdString.Create;
+  FFoo0bar := TJtdString.Create;
+  FFoo_bar := TJtdString.Create;
+  FFoo_bar1 := TJtdString.Create;
+  FFoo___bar := TJtdString.Create;
 end;
 
 end.
