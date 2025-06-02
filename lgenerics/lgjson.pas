@@ -492,7 +492,7 @@ type
                             aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
   { note: the responsibility for the existence of the file lies with the user }
     class function TryParseFile(const aFileName: string; out aRoot: TJsonNode;
-                            aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
+                                aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
   { returns the document root node if parsing is successful, nil otherwise }
     class function Load(const s: string; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
     class function Load(aStream: TStream; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
@@ -506,8 +506,8 @@ type
   { converts a pascal string to a JSON string, all code points except [#32...#127]
     are replaced by their uXXXX codes }
     class function PasStrToAsciiJson(const s: string): string; static;
-  { converts a JSON string to a pascal string }
-    class function JsonStrToPas(const s: string): string; static;
+  { tries to convert a JSON string aJsonStr to a pascal string aPasStr }
+    class function TryJsonStrToPas(const aJsonStr: string; out aPasStr: string): Boolean; static;
     class function NewNull: TJsonNode; static; inline;
     class function NewNode(aValue: Boolean): TJsonNode; static; inline;
     class function NewNode(aValue: Double): TJsonNode; static; inline;
@@ -2504,12 +2504,10 @@ end;
 
 class function TJsonPtr.ValidAlien(const s: string): Boolean;
 var
-  sb: TJsonNode.TStrBuilder;
+  ps: string;
 begin
-  if not TJsonNode.JsonStringValid(s) then
-    exit(False);
-  sb := TJsonNode.TStrBuilder.Create(s);
-  Result := ValidPtr(sb.ToDecodeString);
+  if not TJsonNode.TryJsonStrToPas(s, ps) then exit(False);
+  Result := ValidPtr(ps);
 end;
 
 class function TJsonPtr.ToSegments(const aPtr: string): TStringArray;
@@ -2556,10 +2554,11 @@ end;
 
 constructor TJsonPtr.FromAlien(const s: string);
 var
-  sb: TJsonNode.TStrBuilder;
+  ps: string;
 begin
-  sb := TJsonNode.TStrBuilder.Create(s);
-  FSegments := Decode(sb.ToDecodeString);
+  if not TJsonNode.TryJsonStrToPas(s, ps) then
+    raise EJsException.Create(SEInvalidJsonPtr);
+  FSegments := Decode(ps);
 end;
 
 function TJsonPtr.GetEnumerator: TEnumerator;
@@ -2713,6 +2712,7 @@ var
   k: TJsonReader.TTokenKind;
 begin
   if not aReader.Read then exit(nil);
+  Stack := nil;
   if TJsonReader.IsStartToken(aReader.TokenKind) then begin
     k := aReader.TokenKind;
     if not aReader.Read then exit(nil);
@@ -4495,12 +4495,17 @@ begin
   Result := sb.ToString;
 end;
 
-class function TJsonNode.JsonStrToPas(const s: string): string;
+class function TJsonNode.TryJsonStrToPas(const aJsonStr: string; out aPasStr: string): Boolean;
 var
-  sb: TStrBuilder;
+  n: TJsonNode;
 begin
-  sb := TStrBuilder.Create(s);
-  Result := sb.ToDecodeString;
+  Result := False;
+  if not TryParse(aJsonStr, n) then exit;
+  if n.IsString then begin
+    aPasStr := n.AsString;
+    Result := True;
+  end;
+  n.Free;
 end;
 
 class function TJsonNode.NewNull: TJsonNode;
