@@ -627,7 +627,6 @@ end;
 
 class function TAStrHelper.Less(const L, R: ansistring): Boolean;
 begin
-  //Result := StrComp(PAnsiChar(L), PAnsiChar(R));
   Result := AnsiCompareStr(L, R) < 0;
 end;
 
@@ -643,7 +642,6 @@ end;
 
 class function TWStrHelper.Less(const L, R: widestring): Boolean;
 begin
-  //Result := StrComp(PWideChar(L), PWideChar(R));
   Result := WideCompareStr(L, R) < 0;
 end;
 
