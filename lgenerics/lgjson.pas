@@ -508,6 +508,9 @@ type
     class function PasStrToAsciiJson(const s: string): string; static;
   { tries to convert a JSON string aJsonStr to a pascal string aPasStr }
     class function TryJsonStrToPas(const aJsonStr: string; out aPasStr: string): Boolean; static;
+  { converts a JSON string aJsonStr to a pascal string;
+    will raise exception if aJsonStr is not well-formed JSON string }
+    class function JsonStrToPas(const aJsonStr: string): string; static;
     class function NewNull: TJsonNode; static; inline;
     class function NewNode(aValue: Boolean): TJsonNode; static; inline;
     class function NewNode(aValue: Double): TJsonNode; static; inline;
@@ -4497,15 +4500,21 @@ end;
 
 class function TJsonNode.TryJsonStrToPas(const aJsonStr: string; out aPasStr: string): Boolean;
 var
-  n: TJsonNode;
+  sb: TStrBuilder;
 begin
-  Result := False;
-  if not TryParse(aJsonStr, n) then exit;
-  if n.IsString then begin
-    aPasStr := n.AsString;
-    Result := True;
-  end;
-  n.Free;
+  if not JsonStringValid(aJsonStr) then exit(False);
+  sb := TStrBuilder.Create(aJsonStr);
+  aPasStr := sb.ToDecodeString;
+  Result := True;
+end;
+
+class function TJsonNode.JsonStrToPas(const aJsonStr: string): string;
+var
+  s: string;
+begin
+  if not TryJsonStrToPas(aJsonStr, s) then
+    raise EJsException.Create(SECantParseJsStr);
+  Result := s;
 end;
 
 class function TJsonNode.NewNull: TJsonNode;
