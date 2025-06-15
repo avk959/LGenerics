@@ -82,6 +82,7 @@ resourcestring
 //Json
   SECantConvertFmt         = 'Cannot convert %s to %s';
   SEInvalidJsonPtr         = 'Invalid JSON Pointer instance';
+  SEInvalidJsonStrInst     = 'Invalid JSON string instance';
   SECantParseJsStr         = 'Cannot parse JSON string';
   SEUnknownJsDataType      = 'Unknown JsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
@@ -165,13 +166,13 @@ resourcestring
   SEStrNotEnumElemFmt        = '"%s" is not an element of the %s enumeration';
   SEUnknownPropFoundFmt      = '%s: found unknown property "%s"';
   SEJtdCantReadNullValue     = 'Cannot access Null value';
-  SEJtdNullNotAcceptFmt      = 'Null value does not acceptable for %s';
   SEJtdExpectGotFmt          = 'Expected %s, but got %s';
   SEJtdNumRangeFmt           = 'Numeric value out of %s range';
   SEJtdIllform8927TSFmt      = 'Ill-formed RFC 8927 timestamp(%s)';
   SEJtdIllegalEnumFmt        = 'Illegal Enum value(%s)';
   SEJtdDupValuesKeyFmt       = 'Duplicate Values key "%s")';
   SEJtdDupPropNameFmt        = 'Duplicate property name "%s")';
+  SEJtdInputKeysNotUniq      = 'Input JSON contains non-unique keys';
   SEJtdTagNotFoundFmt        = 'Discriminator tag "%s" not found';
   SEJtdDiscriTagNotStr       = 'Discriminator tag is not string';
   SEJtdIllegalTagValueFmt    = 'Illegal Discriminator tag value "%s"';
