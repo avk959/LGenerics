@@ -285,6 +285,7 @@ type
       FBuffer: specialize TGDynArray<AnsiChar>;
       FCount: SizeInt;
     public
+      class function DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string; static;
       constructor Create(aCapacity: SizeInt);
       constructor Create(const s: string);
       function  IsEmpty: Boolean; inline;
@@ -1978,7 +1979,105 @@ begin
   Node := aNode;
 end;
 
+type
+  TChar2 = array[0..1] of AnsiChar;
+  TChar4 = array[0..3] of AnsiChar;
+  PChar2 = ^TChar2;
+  PChar4 = ^TChar4;
+
+function HexCh4ToDWord(const aSeq: TChar4): DWord; inline;
+const
+  x: array['0'..'f'] of DWord = (
+   0, 1, 2, 3, 4, 5, 6, 7, 8, 9,15,15,15,15,15,15,
+  15,10,11,12,13,14,15,15,15,15,15,15,15,15,15,15,
+  15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
+  15,10,11,12,13,14,15);
+begin
+  Result := x[aSeq[0]] shl 12 or x[aSeq[1]] shl 8 or x[aSeq[2]] shl 4 or x[aSeq[3]];
+end;
+
 { TJsonNode.TStrBuilder }
+
+{$PUSH}{$MACRO ON}
+class function TJsonNode.TStrBuilder.DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string;
+var
+  r: string;
+  I, J, Last: SizeInt;
+  pR: PAnsiChar;
+  uh, ul: DWord;
+{$DEFINE PushReplaceCharMacro :=
+  pR[ J ] := #$ef;
+  pR[J+1] := #$bf;
+  pR[J+2] := #$bd;
+  J += 3
+}
+begin
+  System.SetLength(r, aCount);
+  Last := Pred(aCount);
+  I := 1;
+  J := 0;
+  pR := PAnsiChar(r);
+  while I < Last do
+    if p[I] <> '\' then begin
+      pR[J] := p[I];
+      Inc(I);
+      Inc(J);
+    end else
+      case p[Succ(I)] of
+        'b': begin pR[J] := #8;  I += 2; Inc(J); end;
+        'f': begin pR[J] := #12; I += 2; Inc(J); end;
+        'n': begin pR[J] := #10; I += 2; Inc(J); end;
+        'r': begin pR[J] := #13; I += 2; Inc(J); end;
+        't': begin pR[J] := #9;  I += 2; Inc(J); end;
+        'u':
+          begin
+            uh := HexCh4ToDWord(PChar4(@p[I+2])^);
+            I += 6;
+            case uh of
+              0..$7f: begin pR[J] := Char(uh); Inc(J); end;
+              $80..$7ff: begin
+                  pR[ J ] := Char((uh shr 6) or $c0);
+                  pR[J+1] := Char((uh and $3f) or $80);
+                  J += 2;
+                end;
+              $800..$d7ff,$e000..$ffff: begin
+                  pR[ J ] := Char((uh shr 12) or $e0);
+                  pR[J+1] := Char((uh shr 6) and $3f or $80);
+                  pR[J+2] := Char((uh and $3f) or $80);
+                  J += 3;
+                end;
+              $d800..$dbff: // high surrogate
+                if (Last - I >= 5) and (p[I] = '\') and (p[I+1] = 'u') then begin
+                  ul := HexCh4ToDWord(PChar4(@p[I+2])^);
+                  if (ul >= $dc00) and (ul <= $dfff) then begin
+                    I += 6;
+                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
+                    pR[ J ] := Char(ul shr 18 or $f0);
+                    pR[J+1] := Char((ul shr 12) and $3f or $80);
+                    pR[J+2] := Char((ul shr 6) and $3f or $80);
+                    pR[J+3] := Char(ul and $3f or $80);
+                    J += 4;
+                  end else begin
+                    PushReplaceCharMacro;
+                  end;
+                end else begin
+                  PushReplaceCharMacro;
+                end;
+              $dc00..$dfff: begin // low surrogate
+                  PushReplaceCharMacro;
+                end;
+            else
+            end;
+          end;
+      else
+        pR[J] := p[Succ(I)];
+        I += 2;
+        Inc(J);
+      end;
+  System.SetLength(r, J);
+  Result := r;
+end;
+{$UNDEF PushReplaceCharMacro}{$POP}
 
 constructor TJsonNode.TStrBuilder.Create(aCapacity: SizeInt);
 begin
@@ -2246,105 +2345,12 @@ begin
   FCount := 0;
 end;
 
-type
-  TChar2 = array[0..1] of AnsiChar;
-  TChar4 = array[0..3] of AnsiChar;
-  PChar2 = ^TChar2;
-  PChar4 = ^TChar4;
-
-function HexCh4ToDWord(const aSeq: TChar4): DWord; inline;
-const
-  x: array['0'..'f'] of DWord = (
-   0, 1, 2, 3, 4, 5, 6, 7, 8, 9,15,15,15,15,15,15,
-  15,10,11,12,13,14,15,15,15,15,15,15,15,15,15,15,
-  15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
-  15,10,11,12,13,14,15);
-begin
-  Result := x[aSeq[0]] shl 12 or x[aSeq[1]] shl 8 or x[aSeq[2]] shl 4 or x[aSeq[3]];
-end;
-
-{$PUSH}{$MACRO ON}
 function TJsonNode.TStrBuilder.ToDecodeString: string;
-var
-  r: string;
-  I, J, Last: SizeInt;
-  pR, pBuf: PAnsiChar;
-  uh, ul: DWord;
-{$DEFINE PushRelaceCharMacro :=
-  pR[ J ] := #$ef;
-  pR[J+1] := #$bf;
-  pR[J+2] := #$bd;
-  J += 3
-}
 begin
-  System.SetLength(r, Count);
-  Last := Pred(Count);
-  I := 1;
-  J := 0;
-  pR := PAnsiChar(r);
-  pBuf := FBuffer.Ptr;
-  while I < Last do
-    if pBuf[I] <> '\' then begin
-      pR[J] := pBuf[I];
-      Inc(I);
-      Inc(J);
-    end else
-      case pBuf[Succ(I)] of
-        'b': begin pR[J] := #8;  I += 2; Inc(J); end;
-        'f': begin pR[J] := #12; I += 2; Inc(J); end;
-        'n': begin pR[J] := #10; I += 2; Inc(J); end;
-        'r': begin pR[J] := #13; I += 2; Inc(J); end;
-        't': begin pR[J] := #9;  I += 2; Inc(J); end;
-        'u':
-          begin
-            uh := HexCh4ToDWord(PChar4(@pBuf[I+2])^);
-            I += 6;
-            case uh of
-              0..$7f: begin pR[J] := Char(uh); Inc(J); end;
-              $80..$7ff: begin
-                  pR[ J ] := Char((uh shr 6) or $c0);
-                  pR[J+1] := Char((uh and $3f) or $80);
-                  J += 2;
-                end;
-              $800..$d7ff,$e000..$ffff: begin
-                  pR[ J ] := Char((uh shr 12) or $e0);
-                  pR[J+1] := Char((uh shr 6) and $3f or $80);
-                  pR[J+2] := Char((uh and $3f) or $80);
-                  J += 3;
-                end;
-              $d800..$dbff: // high surrogate
-                if (Last - I >= 5) and (pBuf[I] = '\') and (pBuf[I+1] = 'u') then begin
-                  ul := HexCh4ToDWord(PChar4(@pBuf[I+2])^);
-                  if (ul >= $dc00) and (ul <= $dfff) then begin
-                    I += 6;
-                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
-                    pR[ J ] := Char(ul shr 18 or $f0);
-                    pR[J+1] := Char((ul shr 12) and $3f or $80);
-                    pR[J+2] := Char((ul shr 6) and $3f or $80);
-                    pR[J+3] := Char(ul and $3f or $80);
-                    J += 4;
-                  end else begin
-                    PushRelaceCharMacro;
-                  end;
-                end else begin
-                  PushRelaceCharMacro;
-                end;
-              $dc00..$dfff: begin // low surrogate
-                  PushRelaceCharMacro;
-                end;
-            else
-            end;
-          end;
-      else
-        pR[J] := pBuf[Succ(I)];
-        I += 2;
-        Inc(J);
-      end;
-  System.SetLength(r, J);
-  Result := r;
+  if IsEmpty then exit('');
+  Result := DecodeJsonStr(FBuffer.Ptr, Count);
   FCount := 0;
 end;
-{$UNDEF PushRelaceCharMacro}{$POP}
 
 function TJsonNode.TStrBuilder.ToPChar: PAnsiChar;
 begin
@@ -4324,7 +4330,7 @@ class function TJsonNode.JsonStringValid(const s: string): Boolean;
 var
   Stack: array[0..3] of TParseMode;
 begin
-  if System.Length(s) < 2 then
+  if (System.Length(s) < 2) or (s[1] <> '"') or (s[System.Length(s)] <> '"') then
     exit(False);
   Result := ValidateStrBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
 end;
@@ -4499,13 +4505,10 @@ begin
 end;
 
 class function TJsonNode.TryJsonStrToPas(const aJsonStr: string; out aPasStr: string): Boolean;
-var
-  sb: TStrBuilder;
 begin
-  if not JsonStringValid(aJsonStr) then exit(False);
-  sb := TStrBuilder.Create(aJsonStr);
-  aPasStr := sb.ToDecodeString;
-  Result := True;
+  Result := JsonStringValid(aJsonStr);
+  if Result then
+    aPasStr := TStrBuilder.DecodeJsonStr(Pointer(aJsonStr), System.Length(aJsonStr));
 end;
 
 class function TJsonNode.JsonStrToPas(const aJsonStr: string): string;
@@ -4513,7 +4516,7 @@ var
   s: string;
 begin
   if not TryJsonStrToPas(aJsonStr, s) then
-    raise EJsException.Create(SECantParseJsStr);
+    raise EJsException.Create(SEInvalidJsonStrInst);
   Result := s;
 end;
 
