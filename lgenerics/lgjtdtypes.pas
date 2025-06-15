@@ -20,7 +20,6 @@
 unit lgJtdTypes;
 
 {$MODE OBJFPC}{$H+}
-{$MODESWITCH TYPEHELPERS}
 
 interface
 
@@ -34,7 +33,7 @@ type
   private
     FPath: string;
   public
-    constructor Create(const aMessage, aPath: string);
+    constructor Create(const aMessage, aPath: string); overload;
     property JsonPath: string read FPath;
   end;
 
@@ -47,22 +46,36 @@ type
   const
     DEF_DEPTH    = TJsonReader.DEF_DEPTH;
     DEF_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
+  private
+    FAssigned: Boolean;
   protected
-    procedure DoReadJson(aReader: TJsonReader); virtual; abstract;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); virtual; abstract;
-    class function  IsNullable: Boolean; virtual;
+    procedure DoAssign; virtual;
+    procedure DoReadJson(aNode: TJsonNode); virtual;
+    procedure DoReadJson(aReader: TJsonReader); virtual;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); virtual;
+    procedure CheckNull;
     class function  GetJtdClass: TJtdEntityClass; virtual;
     class procedure Error(const aMessage: string); static;
+    class procedure NotImplemented(const aMethod: string); static;
     class procedure ReadError(const aMessage: string; aReader: TJsonReader); static;
-    class procedure ReadError(const aMessage, aPath: string); static;
+    class procedure ReadError(const aFmt: string; const Args: array of const; aReader: TJsonReader); static;
+    class procedure ReadError(const aMessage: string); static;
+    class procedure ReadError(const aFmt: string; const Args: array of const); static;
     class procedure ReaderFail(aReader: TJsonReader); static;
+    class function  ReadInt(aReader: TJsonReader): Int64; static;
+    class function  ReadInt(aNode: TJsonNode): Int64; static;
     class procedure ExpectObject(aReader: TJsonReader); static;
+    class procedure ExpectObject(aNode: TJsonNode); static;
     class procedure PropNotFound(const aJsonPropName: string; aReader: TJsonReader); static;
+    class procedure PropNotFound(const aJsonPropName: string); static;
     class procedure UnknownProp(const aJsonPropName: string; aReader: TJsonReader); static;
+    class procedure UnknownProp(const aJsonPropName: string); static;
     class procedure DuplicateProp(aReader: TJsonReader); static;
+    class procedure DuplicateProp(const aProp: string); static;
     class procedure InternalError(aNumber: Byte); static;
   public
   { if the loading fails, an exception will be raised }
+    class function LoadInstance(aNode: TJsonNode): TJtdEntity;
     class function LoadInstance(aReader: TJsonReader): TJtdEntity;
     class function LoadInstance(aBuffer: PAnsiChar; aCount: SizeInt): TJtdEntity;
     class function LoadInstance(const aJson: string): TJtdEntity;
@@ -70,187 +83,157 @@ type
                                 aMaxDepth: SizeInt = DEF_DEPTH): TJtdEntity;
   { returns NIL in case of failed loading }
     class function TryLoad(aBuffer: PAnsiChar; aCount: SizeInt): TJtdEntity;
+    class function TryLoad(aNode: TJsonNode): TJtdEntity;
     class function TryLoad(const aJson: string): TJtdEntity;
     class function TryLoad(aStream: TStream; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                           aMaxDepth: SizeInt = DEF_DEPTH): TJtdEntity;
     class function TryLoadFile(const aFileName: string; aSkipBom: Boolean = False;
                                aBufSize: SizeInt = DEF_BUF_SIZE; aMaxDepth: SizeInt = DEF_DEPTH): TJtdEntity;
-
     constructor Create; virtual;
-  { if the loading fails, an exception will be raised }
+    procedure ReadJson(aNode: TJsonNode); virtual;
     procedure ReadJson(aReader: TJsonReader); virtual;
+  { if the loading fails, an exception will be raised }
     procedure Load(aBuffer: PAnsiChar; aCount: SizeInt);
     procedure Load(const aJson: string);
     procedure Load(aStream: TStream; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                    aMaxDepth: SizeInt = DEF_DEPTH);
     procedure LoadFile(const aFileName: string; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                        aMaxDepth: SizeInt = DEF_DEPTH);
-
+    procedure SetNull; virtual;
+    function  IsNull: Boolean; virtual;
     procedure WriteJson(aWriter: TJsonStrWriter); virtual;
     function  AsJson: string;
-    property  Nullable: Boolean read IsNullable;
   end;
 
-  { TJtdNullableEntity: abstract ancestor class }
-  TJtdNullableEntity = class abstract(TJtdEntity)
-  protected
-    function  GetIsNull: Boolean; virtual; abstract;
-    procedure DoSetNull; virtual; abstract;
-    class function IsNullable: Boolean; override;
-  public
-    procedure SetNull; virtual;
-    procedure WriteJson(aWriter: TJsonStrWriter); override;
-    property  IsNull: Boolean read GetIsNull;
-  end;
-
-  { TJtdNullable: abstract ancestor class }
-  TJtdNullable = class abstract(TJtdNullableEntity)
-  strict private
-    FAssigned: Boolean;
-  protected
-    function  GetIsNull: Boolean; override;
-    procedure DoSetNull; override;
-    procedure CheckNull; inline;
-    procedure DoAssign; inline;
-  public
-    procedure ReadJson(aReader: TJsonReader); override;
-  end;
-
-  { TJtdAny: container for JTD "empty" form, can contain arbitrary data }
-  TJtdAny = class sealed(TJtdNullableEntity)
-  private
-    FInstance: TJsonNode;
-  protected
-    procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    function  GetIsNull: Boolean; override;
-    procedure DoSetNull; override;
-  public
-    constructor Create; override;
-    destructor Destroy; override;
-    property Instance: TJsonNode read FInstance;
-  end;
-
-  { TJtdGenValue: abstract ancestor class }
-  generic TJtdGenValue<T> = class abstract(TJtdEntity)
+  { TJtdValue }
+  generic TJtdValue<T> = class abstract(TJtdEntity)
   protected
     FValue: T;
-  public
-    constructor Create(const aValue: T); virtual; overload;
-    property Value: T read FValue write FValue;
-  end;
-
-  { TJtdGenNullableValue: abstract ancestor class }
-  generic TJtdGenNullableValue<T> = class abstract(TJtdNullable)
-  protected
-    FValue: T;
-    function  GetValue: T; inline;
+    function  GetValue: T;
     procedure SetValue(const aValue: T); virtual;
   public
     constructor Create(const aValue: T); virtual; overload;
-    function OrElse(const aDefault: T): T; inline;
+    function OrElse(const aDefault: T): T;
     property Value: T read GetValue write SetValue;
   end;
 
-  { TJtdValue: abstract ancestor class }
-  generic TJtdValue<T> = class abstract(specialize TJtdGenValue<T>)
+  { TJtdAny: container for JTD "empty" form }
+  TJtdAny = class sealed(TJtdEntity)
+  private
+    FInstance: TJsonNode;
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-  end;
-
-  { TJtdNullableValue: abstract ancestor class }
-  generic TJtdNullableValue<T> = class abstract(specialize TJtdGenNullableValue<T>)
-  protected
-    procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+    procedure SetNull; override;
+    function  IsNull: Boolean; override;
+    property Instance: TJsonNode read FInstance;
   end;
 
   { TJtdBool: container for JTD "boolean" type }
-  TJtdBool = class sealed(specialize TJtdValue<Boolean>);
-
-  { TJtdNullableBool: container for nullable JTD "boolean" type }
-  TJtdNullableBool = class sealed(specialize TJtdNullableValue<Boolean>);
-
-  { TJtdFloat32: container for JTD "float32" type }
-  TJtdFloat32 = class sealed(specialize TJtdValue<Single>);
-
-  { TJtdNullableFloat32: container for nullable JTD "float32" type }
-  TJtdNullableFloat32 = class sealed(specialize TJtdNullableValue<Single>);
-
-  { TJtdFloat64: container for JTD "float64" type }
-  TJtdFloat64 = class sealed(specialize TJtdValue<Double>);
-
-  { TJtdNullableFloat64: container for JTD nullable "float64" type }
-  TJtdNullableFloat64 = class sealed(specialize TJtdNullableValue<Double>);
-
-  { TJtdInt8: container for JTD "int8" type }
-  TJtdInt8 = class sealed(specialize TJtdValue<Int8>);
-
-  { TJtdNullableInt8: container for JTD nullable "int8" type }
-  TJtdNullableInt8 = class sealed(specialize TJtdNullableValue<Int8>);
-
-  { TJtdUInt8: container for JTD "uint8" type }
-  TJtdUInt8 = class sealed(specialize TJtdValue<UInt8>);
-
-  { TJtdNullableUInt8: container for JTD nullable "uint8" type }
-  TJtdNullableUInt8 = class sealed(specialize TJtdNullableValue<UInt8>);
-
-  { TJtdInt16: container for JTD "int16" type }
-  TJtdInt16 = class sealed(specialize TJtdValue<Int16>);
-
-  { TJtdNullableInt16: container for JTD nullable "int16" type }
-  TJtdNullableInt16 = class sealed(specialize TJtdNullableValue<Int16>);
-
-  { TJtdUInt16: container for JTD "uint16" type }
-  TJtdUInt16 = class sealed(specialize TJtdValue<UInt16>);
-
-  { TJtdNullableUInt16: container for JTD nullable "uint16" type }
-  TJtdNullableUInt16 = class sealed(specialize TJtdNullableValue<UInt16>);
-
-  { TJtdInt32: container for JTD "int32" type }
-  TJtdInt32 = class sealed(specialize TJtdValue<Int32>);
-
-  { TJtdNullableInt32: container for JTD nullable "int32" type }
-  TJtdNullableInt32 = class sealed(specialize TJtdNullableValue<Int32>);
-
-  { TJtdUInt32: container for JTD "uint32" type }
-  TJtdUInt32 = class sealed(specialize TJtdValue<UInt32>);
-
-  { TJtdNullableUInt32: container for JTD nullable "uint32" type }
-  TJtdNullableUInt32 = class sealed(specialize TJtdNullableValue<UInt32>);
-
-  { TJtdString: container for JTD "string" type }
-  TJtdString = class sealed(specialize TJtdValue<string>);
-
-  { TJtdNullableString: container for JTD nullable "string" type }
-  TJtdNullableString = class sealed(specialize TJtdNullableValue<string>);
-
-  { TJtdDateTimeUTC: container for JTD "timestamp" type }
-  TJtdDateTimeUTC = class sealed(specialize TJtdValue<TDateTime>);
-
-  { TJtdNullableDateTimeUTC: container for JTD nullable "timestamp" type }
-  TJtdNullableDateTimeUTC = class sealed(specialize TJtdNullableValue<TDateTime>);
-
-  { TJtdEnum: generic container for JDT "enum" form when the enum elements are valid Pascal identifiers }
-  generic TJtdEnum<TEnum> = class(specialize TJtdGenValue<TEnum>)
+  TJtdBool = class sealed(specialize TJtdValue<Boolean>)
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
-  { TJtdNullableEnum: generic container for JDT nullable "enum" form when the enum elements
-    are valid Pascal identifiers }
-  generic TJtdNullableEnum<T> = class abstract(specialize TJtdGenNullableValue<T>)
+  { TJtdFloat32: container for JTD "float32" type }
+  TJtdFloat32 = class sealed(specialize TJtdValue<Single>)
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdFloat64: container for JTD "float64" type }
+  TJtdFloat64 = class sealed(specialize TJtdValue<Double>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdInt8: container for JTD "int8" type }
+  TJtdInt8 = class sealed(specialize TJtdValue<Int8>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdUInt8: container for JTD "uint8" type }
+  TJtdUInt8 = class sealed(specialize TJtdValue<UInt8>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdInt16: container for JTD "int16" type }
+  TJtdInt16 = class sealed(specialize TJtdValue<Int16>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdUInt16: container for JTD "uint16" type }
+  TJtdUInt16 = class sealed(specialize TJtdValue<UInt16>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdInt32: container for JTD "int32" type }
+  TJtdInt32 = class sealed(specialize TJtdValue<Int32>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdUInt32: container for JTD "uint32" type }
+  TJtdUInt32 = class sealed(specialize TJtdValue<UInt32>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdString: container for JTD "string" type }
+  TJtdString = class sealed(specialize TJtdValue<string>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdDateTimeUTC: container for JTD "timestamp" type }
+  TJtdDateTimeUTC = class sealed(specialize TJtdValue<TDateTime>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  end;
+
+  { TJtdEnum: generic container for JDT "enum" form when the enum elements are valid Pascal identifiers }
+  generic TJtdEnum<TEnum> = class(specialize TJtdValue<TEnum>)
+  protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
   { TJtdStrEnum: container for JDT "enum" form when the enum elements are not valid Pascal identifiers }
-  TJtdStrEnum = class abstract(specialize TJtdGenValue<string>)
+  TJtdStrEnum = class abstract(specialize TJtdValue<string>)
   protected
-    procedure SetValue(const aValue: string);
+    procedure SetValue(const aValue: string); override;
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
@@ -259,48 +242,17 @@ type
     property Value: string read FValue write SetValue;
   end;
 
-  { TJtdNullableStrEnum: container for JDT nullable "enum" form when the enum elements
-    are not valid Pascal identifiers }
-  TJtdNullableStrEnum = class abstract(specialize TJtdGenNullableValue<string>)
-  protected
-    procedure SetValue(const aValue: string); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-  public
-    class function IsElement(const aValue: string): Boolean; virtual; abstract;
-    constructor Create(const aValue: string); override;
-  end;
-
   { TJtdGenContainer: abstract ancestor class }
   TJtdGenContainer = class abstract(TJtdEntity)
   protected
     procedure DoClear; virtual; abstract;
   public
     destructor Destroy; override;
-    procedure ReadJson(aReader: TJsonReader); override;
-  end;
-
-  { TJtdGenNullableContainer: abstract ancestor class }
-  TJtdGenNullableContainer = class abstract(TJtdNullable)
-  protected
-    procedure DoClear; virtual; abstract;
-    procedure DoSetNull; override;
-  public
-    destructor Destroy; override;
-  end;
-
-  { TJtdContainer: abstract ancestor class }
-  TJtdContainer = class abstract(TJtdGenContainer)
-    procedure Clear; virtual;
-  end;
-
-  { TJtdNullableContainer: abstract ancestor class }
-  TJtdNullableContainer = class abstract(TJtdGenNullableContainer)
-    procedure Clear; virtual;
+    procedure SetNull; override;
   end;
 
   { TJtdList: generic container for JTD "elements" form }
-  generic TJtdList<T: TJtdEntity> = class(TJtdContainer)
+  generic TJtdList<T: TJtdEntity> = class(TJtdGenContainer)
   protected
   type
     TList = specialize TGLiteVector<T>;
@@ -313,37 +265,13 @@ type
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; aValue: T);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
     procedure DoClear; override;
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Add(aValue: T): SizeInt;
-    procedure Insert(aIndex: SizeInt; aValue: T);
-    procedure Delete(aIndex: SizeInt); inline;
-    property  Count: SizeInt read GetCount;
-    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
-  end;
-
-  { TJtdNullableList: generic container for JTD nullable "elements" form }
-  generic TJtdNullableList<T: TJtdEntity> = class(TJtdNullableContainer)
-  protected
-  type
-    TList = specialize TGLiteVector<T>;
-  public
-  type
-    TEnumerator = TList.TEnumerator;
-  private
-    FList: TList;
-    function  GetCount: SizeInt; inline;
-    function  GetItem(aIndex: SizeInt): T; inline;
-    procedure SetItem(aIndex: SizeInt; aValue: T);
-  protected
-    procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-  public
-    function  GetEnumerator: TEnumerator; inline;
+    procedure Clear;
     function  Add(aValue: T): SizeInt;
     procedure Insert(aIndex: SizeInt; aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
@@ -352,7 +280,7 @@ type
   end;
 
   { TJtdMap: generic container for JTD "values" form }
-  generic TJtdMap<T: TJtdEntity> = class(TJtdContainer)
+  generic TJtdMap<T: TJtdEntity> = class(TJtdGenContainer)
   protected
   type
     TMapType = specialize TGLiteChainHashMap<string, T, string>;
@@ -368,6 +296,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetItem(const aKey: string): T; inline;
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
     procedure DoClear; override;
@@ -378,45 +307,7 @@ type
     function  Keys: TJtdMapKeys; inline;
   { enumerates all values }
     function  Values: TJtdMapValues; inline;
-    function  Contains(const aKey: string): Boolean; inline;
-  { returns True and adds the (aKey, aValue) pair only if the instance does not contain aKey }
-    function  Add(const aKey: string; aValue: T): Boolean; inline;
-    procedure AddOrSetValue(const aKey: string; aValue: T);
-  { returns True and aValue mapped to aKey if contains aKey,
-    False otherwise, in this case aValue is undefined }
-    function  TryGetValue(const aKey: string; out aValue: T): Boolean; inline;
-    function  Remove(const aKey: string): Boolean;
-  { GetItem getter returns nil if aKey is not present in the instance }
-    property  Items[const aKey: string]: T read GetItem write AddOrSetValue; default;
-  end;
-
-  { TJtdNullableMap: generic container for JTD nullable "values" form }
-  generic TJtdNullableMap<T: TJtdEntity> = class(TJtdNullableContainer)
-  protected
-  type
-    TMapType = specialize TGLiteChainHashMap<string, T, string>;
-    TMap     = TMapType.TMap;
-  public
-  type
-    TJtdMapEntry      = TMap.TEntry;
-    TJtdMapEnumerator = TMap.TEntryEnumerator;
-    TJtdMapKeys       = TMap.TKeys;
-    TJtdMapValues     = TMap.TValues;
-  private
-    FMap: TMap;
-    function  GetCount: SizeInt; inline;
-    function  GetItem(const aKey: string): T; inline;
-  protected
-    procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-  public
-  { enumerates all pairs (aKey, aValue) }
-    function  GetEnumerator: TJtdMapEnumerator; inline;
-  { enumerates all keys }
-    function  Keys: TJtdMapKeys; inline;
-  { enumerates all values }
-    function  Values: TJtdMapValues; inline;
+    procedure Clear;
     function  Contains(const aKey: string): Boolean; inline;
   { returns True and adds the (aKey, aValue) pair only if the instance does not contain aKey }
     function  Add(const aKey: string; aValue: T): Boolean; inline;
@@ -432,24 +323,14 @@ type
   { TJtdObject: abstract ancestor class for JTD "properties" form }
   TJtdObject = class abstract(TJtdGenContainer)
   protected
-    procedure CreateFields; virtual; abstract;
-    procedure ClearFields; virtual; abstract;
-    procedure WriteFields(aWriter: TJsonStrWriter); virtual; abstract;
+    procedure DoClear; override;
+    procedure CreateProps; virtual;
+    procedure ClearProps; virtual;
+    procedure WriteProps(aWriter: TJsonStrWriter); virtual;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     constructor Create; override;
     destructor Destroy; override;
-  end;
-
-  { TJtdNullableObject: abstract ancestor class for JTD nullable "properties" form }
-  TJtdNullableObject = class abstract(TJtdGenNullableContainer)
-  protected
-    procedure CreateFields; virtual; abstract;
-    procedure WriteFields(aWriter: TJsonStrWriter); virtual; abstract;
-    procedure CheckFields;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-  public
-    procedure ReadJson(aReader: TJsonReader); override;
   end;
 
   { TJtdUnion: abstract ancestor class for JTD "discriminator" form }
@@ -457,6 +338,7 @@ type
   protected
     FTag: string;
     FInstance: TJtdEntity;
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
     procedure DoClear; override;
@@ -466,61 +348,26 @@ type
     function GetInstanceClass: TJtdEntityClass;
     property Tag: string read FTag;
   end;
-
-  { TJtdNullableUnion: abstract ancestor class for nullable JTD "discriminator" form }
-  TJtdNullableUnion = class abstract(TJtdGenNullableContainer)
-  protected
-    FTag: string;
-    FInstance: TJtdEntity;
-    procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    class function GetTagJsonName: string; virtual; abstract;
-    class function GetInstanceClass(const aTag: string): TJtdEntityClass; virtual; abstract;
-  public
-    function GetInstanceClass: TJtdEntityClass;
-    property Tag: string read FTag;
-  end;
-
-resourcestring
-  SEJtdInternalFmt = 'JTD types internal error #%u';
 
 type
   TTokenKind   = TJsonReader.TTokenKind;
   TJtdFormKind = TJtdSchema.TFormKind;
   TJtdType     = TJtdSchema.TJtdType;
+  TJsValueKind = LgJson.TJsValueKind;
 
 const
 {$PUSH}{$J-}
-  JTD_TYPE_IMPL: array[TJtdType] of array[Boolean] of TJtdEntityClass = (
-    (nil, nil),
-    (TJtdBool, TJtdNullableBool),
-    (TJtdFloat32, TJtdNullableFloat32),
-    (TJtdFloat64, TJtdNullableFloat64),
-    (TJtdInt8, TJtdNullableInt8),
-    (TJtdUInt8, TJtdNullableUInt8),
-    (TJtdInt16, TJtdNullableInt16),
-    (TJtdUInt16, TJtdNullableUInt16),
-    (TJtdInt32, TJtdNullableInt32),
-    (TJtdUInt32, TJtdNullableUInt32),
-    (TJtdString, TJtdNullableString),
-    (TJtdDateTimeUTC, TJtdNullableDateTimeUTC)
+  JTD_TYPE_IMPL: array[TJtdType] of TJtdEntityClass = (
+    nil, TJtdBool, TJtdFloat32, TJtdFloat64, TJtdInt8, TJtdUInt8, TJtdInt16,
+    TJtdUInt16, TJtdInt32, TJtdUInt32, TJtdString, TJtdDateTimeUTC
   );
-  JTD_FORM_ANCESTORS: array[TJtdFormKind] of array[Boolean] of string = (
-    ('', ''),
-    ('TJtdAny', 'TJtdAny'),
-    ('', ''),
-    ('', ''),
-    ('TJtdEnum', 'TJtdNullableEnum'),
-    ('TJtdList', 'TJtdNullableList'),
-    ('TJtdObject', 'TJtdNullableObject'),
-    ('TJtdMap', 'TJtdNullableMap'),
-    ('TJtdUnion', 'TJtdNullableUnion')
+  JTD_FORM_ANCESTORS: array[TJtdFormKind] of string = (
+    '', 'TJtdAny', '', '', 'TJtdEnum', 'TJtdList', 'TJtdObject', 'TJtdMap', 'TJtdUnion'
   );
-  JTD_STR_ENUM: array[Boolean] of TJtdEntityClass = (TJtdStrEnum, TJtdNullableStrEnum);
 {$POP}
 
 const
+  CSJtdNull       = 'Null';
   CSJtdBool       = 'Boolean';
   CSJtdNumber     = 'Number';
   CSJtdString     = 'String';
@@ -530,7 +377,12 @@ const
   CSJtdObject     = 'Object';
 {$PUSH}{$J-}
   TOKEN_NAMES: array[TTokenKind] of string = (
-    'trash', 'Null', 'Boolean', 'Boolean', 'Number', 'String', 'Array', 'Object', 'trash', 'trash'
+    'trash', CSJtdNull, CSJtdBool, CSJtdBool, CSJtdNumber, CSJtdString,
+    CSJtdArray, CSJtdObject, 'trash', 'trash'
+  );
+  //(jvkNull, jvkFalse, jvkTrue, jvkNumber, jvkString, jvkArray, jvkObject);
+  JKIND_NAMES: array[TJsValueKind] of string = (
+    CSJtdNull, CSJtdBool, CSJtdBool, CSJtdNumber, CSJtdString, CSJtdArray, CSJtdObject
   );
 {$POP}
 
@@ -539,24 +391,46 @@ implementation
 uses
   TypInfo, Math, lgStrConst;
 
+const
+  SEJtdInternalFmt = 'JTD internal error #%u';
+  SEJtdNotImplFmt  = 'Method %s.%s not implemented';
+
 { EJtdReadJson }
 
 constructor EJtdReadJson.Create(const aMessage, aPath: string);
 begin
-  inherited Create(aMessage);
+  Create(aMessage);
   FPath := aPath;
-end;
-
-procedure JtdReadError(const aMessage: string; aReader: TJsonReader);
-begin
-  TJtdEntity.ReadError(aMessage, aReader);
 end;
 
 { TJtdEntity }
 
-class function TJtdEntity.IsNullable: Boolean;
+procedure TJtdEntity.DoAssign;
 begin
-  Result := False;
+  FAssigned := True;
+end;
+
+procedure TJtdEntity.DoReadJson(aNode: TJsonNode);
+begin
+  Assert(aNode = aNode); // make compiler happy
+  NotImplemented({$I %currentRoutine%});
+end;
+
+procedure TJtdEntity.DoReadJson(aReader: TJsonReader);
+begin
+  Assert(aReader = aReader); // make compiler happy
+  NotImplemented({$I %currentRoutine%});
+end;
+
+procedure TJtdEntity.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  Assert(aWriter = aWriter); // make compiler happy
+  NotImplemented({$I %currentRoutine%});
+end;
+
+procedure TJtdEntity.CheckNull;
+begin
+  if IsNull then Error(SEJtdCantReadNullValue);
 end;
 
 class function TJtdEntity.GetJtdClass: TJtdEntityClass;
@@ -569,47 +443,109 @@ begin
   raise EJtdException.Create(aMessage);
 end;
 
+class procedure TJtdEntity.NotImplemented(const aMethod: string);
+begin
+  Error(Format(SEJtdNotImplFmt, [ClassName, aMethod]));
+end;
+
 class procedure TJtdEntity.ReadError(const aMessage: string; aReader: TJsonReader);
 begin
   raise EJtdReadJson.Create(aMessage, aReader.Path);
 end;
 
-class procedure TJtdEntity.ReadError(const aMessage, aPath: string);
+class procedure TJtdEntity.ReadError(const aFmt: string; const Args: array of const; aReader: TJsonReader);
 begin
-  raise EJtdReadJson.Create(aMessage, aPath);
+  raise EJtdReadJson.Create(Format(aFmt, Args), aReader.Path);
+end;
+
+class procedure TJtdEntity.ReadError(const aMessage: string);
+begin
+  raise EJtdReadJson.Create(aMessage);
+end;
+
+class procedure TJtdEntity.ReadError(const aFmt: string; const Args: array of const);
+begin
+  raise EJtdReadJson.Create(Format(aFmt, Args));
 end;
 
 class procedure TJtdEntity.ReaderFail(aReader: TJsonReader);
 begin
   if aReader.ReadState = rsEof then
-    raise EJtdReadJson.Create(SEUnexpectJsonEnd, '')
+    raise EJtdReadJson.Create(SEUnexpectJsonEnd)
   else
     raise EJtdReadJson.Create(SEInvalidJsonInst, aReader.Path);
 end;
 
+class function TJtdEntity.ReadInt(aReader: TJsonReader): Int64;
+begin
+  if aReader.TokenKind <> tkNumber then
+    ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
+  if not Double.IsExactInt(aReader.AsNumber, Result) then
+    ReadError(SEJtdExpectGotFmt, [CSJtdInteger, TOKEN_NAMES[aReader.TokenKind]], aReader);
+end;
+
+class function TJtdEntity.ReadInt(aNode: TJsonNode): Int64;
+begin
+  if not aNode.IsNumber then
+    ReadError(SEJtdExpectGotFmt, [CSJtdNumber, JKIND_NAMES[aNode.Kind]]);
+  if not Double.IsExactInt(aNode.AsNumber, Result) then
+    ReadError(SEJtdExpectGotFmt, [CSJtdInteger, JKIND_NAMES[aNode.Kind]]);
+end;
+
 class procedure TJtdEntity.ExpectObject(aReader: TJsonReader);
 begin
-  ReadError(Format(SEJtdExpectGotFmt, [CSJtdObject, TOKEN_NAMES[aReader.TokenKind]]), aReader);
+  ReadError(SEJtdExpectGotFmt, [CSJtdObject, TOKEN_NAMES[aReader.TokenKind]], aReader);
+end;
+
+class procedure TJtdEntity.ExpectObject(aNode: TJsonNode);
+begin
+  ReadError(SEJtdExpectGotFmt, [CSJtdObject, JKIND_NAMES[aNode.Kind]]);
 end;
 
 class procedure TJtdEntity.PropNotFound(const aJsonPropName: string; aReader: TJsonReader);
 begin
-  ReadError(Format(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName]), aReader);
+  ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName], aReader);
+end;
+
+class procedure TJtdEntity.PropNotFound(const aJsonPropName: string);
+begin
+  ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName]);
 end;
 
 class procedure TJtdEntity.UnknownProp(const aJsonPropName: string; aReader: TJsonReader);
 begin
-  ReadError(Format(SEUnknownPropFoundFmt, [ClassName, aJsonPropName]), aReader);
+  ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName], aReader);
+end;
+
+class procedure TJtdEntity.UnknownProp(const aJsonPropName: string);
+begin
+  ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName]);
 end;
 
 class procedure TJtdEntity.DuplicateProp(aReader: TJsonReader);
 begin
-  ReadError(Format(SEJtdDupPropNameFmt, [aReader.Name]), aReader);
+  ReadError(SEJtdDupPropNameFmt, [aReader.Name], aReader);
+end;
+
+class procedure TJtdEntity.DuplicateProp(const aProp: string);
+begin
+  ReadError(SEJtdDupPropNameFmt, [aProp]);
 end;
 
 class procedure TJtdEntity.InternalError(aNumber: Byte);
 begin
   Error(Format(SEJtdInternalFmt, [aNumber]));
+end;
+
+class function TJtdEntity.LoadInstance(aNode: TJsonNode): TJtdEntity;
+begin
+  Result := GetJtdClass.Create;
+  try
+    Result.ReadJson(aNode);
+  except
+    FreeAndNil(Result);
+    raise;
+  end;
 end;
 
 class function TJtdEntity.LoadInstance(aReader: TJsonReader): TJtdEntity;
@@ -661,6 +597,14 @@ begin
   end;
 end;
 
+class function TJtdEntity.TryLoad(aNode: TJsonNode): TJtdEntity;
+begin
+  try
+    Result := LoadInstance(aNode);
+  except
+  end;
+end;
+
 class function TJtdEntity.TryLoad(const aJson: string): TJtdEntity;
 begin
   try
@@ -698,12 +642,21 @@ begin
   inherited Create;
 end;
 
+procedure TJtdEntity.ReadJson(aNode: TJsonNode);
+begin
+  SetNull;
+  if aNode.IsNull then exit;
+  DoReadJson(aNode);
+  DoAssign;
+end;
+
 procedure TJtdEntity.ReadJson(aReader: TJsonReader);
 begin
   if (aReader.ReadState = rsStart) and not aReader.Read then ReaderFail(aReader);
-  if aReader.TokenKind = tkNull then
-    ReadError(Format(SEJtdNullNotAcceptFmt, [ClassName]), aReader);
+  SetNull;
+  if aReader.TokenKind = tkNull then exit;
   DoReadJson(aReader);
+  DoAssign;
 end;
 
 procedure TJtdEntity.Load(aBuffer: PAnsiChar; aCount: SizeInt);
@@ -747,9 +700,22 @@ begin
   end;
 end;
 
+procedure TJtdEntity.SetNull;
+begin
+  FAssigned := False;
+end;
+
+function TJtdEntity.IsNull: Boolean;
+begin
+  Result := not FAssigned;
+end;
+
 procedure TJtdEntity.WriteJson(aWriter: TJsonStrWriter);
 begin
-  DoWriteJson(aWriter);
+  if IsNull then
+    aWriter.AddNull
+  else
+    DoWriteJson(aWriter);
 end;
 
 function TJtdEntity.AsJson: string;
@@ -765,58 +731,42 @@ begin
   end;
 end;
 
-{ TJtdNullableEntity }
+{ TJtdValue }
 
-class function TJtdNullableEntity.IsNullable: Boolean;
+function TJtdValue.GetValue: T;
 begin
-  Result := True;
+  CheckNull;
+  Result := FValue;
 end;
 
-procedure TJtdNullableEntity.SetNull;
+procedure TJtdValue.SetValue(const aValue: T);
 begin
-  if not IsNull then DoSetNull;
-end;
-
-procedure TJtdNullableEntity.WriteJson(aWriter: TJsonStrWriter);
-begin
-  if IsNull then
-    aWriter.AddNull
-  else
-    DoWriteJson(aWriter);
-end;
-
-{ TJtdNullable }
-
-function TJtdNullable.GetIsNull: Boolean;
-begin
-  Result := not FAssigned;
-end;
-
-procedure TJtdNullable.DoSetNull;
-begin
-  FAssigned := False;
-end;
-
-procedure TJtdNullable.CheckNull;
-begin
-  if not FAssigned then Error(SEJtdCantReadNullValue);
-end;
-
-procedure TJtdNullable.DoAssign;
-begin
-  FAssigned := True;
-end;
-
-procedure TJtdNullable.ReadJson(aReader: TJsonReader);
-begin
-  if (aReader.ReadState = rsStart) and not aReader.Read then ReaderFail(aReader);
-  SetNull;
-  if aReader.TokenKind = tkNull then exit;
-  DoReadJson(aReader);
+  FValue := aValue;
   DoAssign;
 end;
 
+constructor TJtdValue.Create(const aValue: T);
+begin
+  inherited Create;
+  Value := aValue;
+end;
+
+function TJtdValue.OrElse(const aDefault: T): T;
+begin
+  if IsNull then
+    Result := aDefault
+  else
+    Result := FValue;
+end;
+
 { TJtdAny }
+
+procedure TJtdAny.DoReadJson(aNode: TJsonNode);
+begin
+  if not TJsonNode.DuplicateFree(aNode) then
+    ReadError(SEJtdInputKeysNotUniq);
+  FInstance.CopyFrom(aNode);
+end;
 
 procedure TJtdAny.DoReadJson(aReader: TJsonReader);
 var
@@ -832,6 +782,7 @@ begin
       begin
         if not aReader.CopyStruct(s) then ReaderFail(aReader);
         if not Instance.TryParse(s) then ReadError(SEInvalidJsonInst, aReader);
+        if not TJsonNode.DuplicateFree(Instance) then ReadError(SEJtdInputKeysNotUniq);
       end;
   else
     InternalError(1);
@@ -843,16 +794,6 @@ begin
   aWriter.Add(Instance);
 end;
 
-function TJtdAny.GetIsNull: Boolean;
-begin
-  Result := FInstance.IsNull;
-end;
-
-procedure TJtdAny.DoSetNull;
-begin
-  FInstance.Clear;
-end;
-
 constructor TJtdAny.Create;
 begin
   inherited Create;
@@ -862,379 +803,363 @@ end;
 destructor TJtdAny.Destroy;
 begin
   FInstance.Free;
+  inherited Destroy;
+end;
+
+procedure TJtdAny.SetNull;
+begin
+  FInstance.Clear;
   inherited;
 end;
 
-type
-  { TJtdBoolHelper }
-  TJtdBoolHelper = type helper(TBooleanHelper) for Boolean
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdSingleHelper }
-  TJtdSingleHelper = type helper(TGSingleHelper) for Single
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdDoubleHelper }
-  TJtdDoubleHelper = type helper(TGDoubleHelper) for Double
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdShortIntHelper }
-  TJtdShortIntHelper = type helper(TGShortIntHelper) for ShortInt
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdByteHelper }
-  TJtdByteHelper = type helper(TGByteHelper) for Byte
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdSmallIntHelper }
-  TJtdSmallIntHelper = type helper(TGSmallIntHelper) for SmallInt
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdWordHelper }
-  TJtdWordHelper = type helper(TGWordHelper) for Word
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdLongIntHelper }
-  TJtdLongIntHelper = type helper(TGLongIntHelper) for LongInt
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdDWordHelper }
-  TJtdDWordHelper = type helper(TGDWordHelper) for DWord
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdStrHelper }
-  TJtdStrHelper = type helper(TAStrHelper) for ansistring
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-  { TJtdDateTimeHelper }
-  TJtdDateTimeHelper = type helper(TGDateTimeHelper) for TDateTime
-    procedure ReadJson(aReader: TJsonReader);
-    procedure WriteJson(aWriter: TJsonStrWriter);
-  end;
-
-{ TJtdBoolHelper }
-procedure TJtdBoolHelper.ReadJson(aReader: TJsonReader);
+function TJtdAny.IsNull: Boolean;
 begin
-  if not(aReader.TokenKind in [tkFalse, tkTrue]) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdBool, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  Self := aReader.TokenKind = tkTrue;
+  Result := inherited;
+  if not Result then
+    Result := FInstance.IsNull;
 end;
 
-procedure TJtdBoolHelper.WriteJson(aWriter: TJsonStrWriter);
+{ TJtdBool }
+
+procedure TJtdBool.DoReadJson(aNode: TJsonNode);
 begin
-  if Self then
+  if not aNode.IsBoolean then
+    ReadError(SEJtdExpectGotFmt, [CSJtdBool, JKIND_NAMES[aNode.Kind]]);
+  FValue := aNode.IsTrue;
+end;
+
+procedure TJtdBool.DoReadJson(aReader: TJsonReader);
+begin
+  if not(aReader.TokenKind in [tkFalse, tkTrue]) then
+    ReadError(SEJtdExpectGotFmt, [CSJtdBool, TOKEN_NAMES[aReader.TokenKind]], aReader);
+  FValue := aReader.TokenKind = tkTrue;
+end;
+
+procedure TJtdBool.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  if FValue then
     aWriter.AddTrue
   else
     aWriter.AddFalse;
 end;
 
-{ TJtdSingleHelper }
-procedure TJtdSingleHelper.ReadJson(aReader: TJsonReader);
+{ TJtdFloat32 }
+
+procedure TJtdFloat32.DoReadJson(aNode: TJsonNode);
+var
+  d: Double;
+begin
+  if not aNode.IsNumber then
+    ReadError(SEJtdExpectGotFmt, [CSJtdNumber, JKIND_NAMES[aNode.Kind]]);
+  d := aNode.AsNumber;
+  if System.Abs(d) > Math.MaxSingle then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := d;
+end;
+
+procedure TJtdFloat32.DoReadJson(aReader: TJsonReader);
 var
   d: Double;
 begin
   if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
+    ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
   d := aReader.AsNumber;
   if System.Abs(d) > Math.MaxSingle then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['Float32']), aReader);
-  Self := d;
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := d;
 end;
 
-procedure TJtdSingleHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdFloat32.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Self);
+  aWriter.Add(FValue);
 end;
 
-{ TJtdDoubleHelper }
-procedure TJtdDoubleHelper.ReadJson(aReader: TJsonReader);
+{ TJtdFloat64 }
+
+procedure TJtdFloat64.DoReadJson(aNode: TJsonNode);
+begin
+  if not aNode.IsNumber then
+    ReadError(SEJtdExpectGotFmt, [CSJtdNumber, JKIND_NAMES[aNode.Kind]]);
+  FValue := aNode.AsNumber;
+end;
+
+procedure TJtdFloat64.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  Self := aReader.AsNumber;
+    ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
+  FValue := aReader.AsNumber;
 end;
 
-procedure TJtdDoubleHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdFloat64.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Self);
+  aWriter.Add(FValue);
 end;
 
-{ TJtdShortIntHelper }
-procedure TJtdShortIntHelper.ReadJson(aReader: TJsonReader);
+{ TJtdInt8 }
+
+procedure TJtdInt8.DoReadJson(aNode: TJsonNode);
 var
   I: Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not Double.IsExactInt(aReader.AsNumber, I) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdInteger, CSJtdFractional]), aReader);
-  if (I < System.Low(Self)) or (I > System.High(Self)) then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['Int8']), aReader);
-  Self := I;
+  I := ReadInt(aNode);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := I;
 end;
 
-procedure TJtdShortIntHelper.WriteJson(aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(Self);
-end;
-
-{ TJtdByteHelper }
-procedure TJtdByteHelper.ReadJson(aReader: TJsonReader);
+procedure TJtdInt8.DoReadJson(aReader: TJsonReader);
 var
   I: Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not Double.IsExactInt(aReader.AsNumber, I) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdInteger, CSJtdFractional]), aReader);
-  if (I < System.Low(Self)) or (I > System.High(Self)) then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['UInt8']), aReader);
-  Self := I;
+  I := ReadInt(aReader);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := I;
 end;
 
-procedure TJtdByteHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdInt8.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Self);
+  aWriter.Add(FValue);
 end;
 
-{ TJtdSmallIntHelper }
-procedure TJtdSmallIntHelper.ReadJson(aReader: TJsonReader);
+{ TJtdUInt8 }
+
+procedure TJtdUInt8.DoReadJson(aNode: TJsonNode);
 var
   I: Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not Double.IsExactInt(aReader.AsNumber, I) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdInteger, CSJtdFractional]), aReader);
-  if (I < System.Low(Self)) or (I > System.High(Self)) then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['Int16']), aReader);
-  Self := I;
+  I := ReadInt(aNode);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := I;
 end;
 
-procedure TJtdSmallIntHelper.WriteJson(aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(Self);
-end;
-
-{ TJtdWordHelper }
-procedure TJtdWordHelper.ReadJson(aReader: TJsonReader);
+procedure TJtdUInt8.DoReadJson(aReader: TJsonReader);
 var
   I: Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not Double.IsExactInt(aReader.AsNumber, I) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdInteger, CSJtdFractional]), aReader);
-  if (I < System.Low(Self)) or (I > System.High(Self)) then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['UInt16']), aReader);
-  Self := I;
+  I := ReadInt(aReader);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := I;
 end;
 
-procedure TJtdWordHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdUInt8.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Self);
+  aWriter.Add(FValue);
 end;
 
-{ TJtdLongIntHelper }
-procedure TJtdLongIntHelper.ReadJson(aReader: TJsonReader);
+{ TJtdInt16 }
+
+procedure TJtdInt16.DoReadJson(aNode: TJsonNode);
 var
   I: Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not Double.IsExactInt(aReader.AsNumber, I) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdInteger, CSJtdFractional]), aReader);
-  if (I < System.Low(Self)) or (I > System.High(Self)) then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['Int32']), aReader);
-  Self := I;
+  I := ReadInt(aNode);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := I;
 end;
 
-procedure TJtdLongIntHelper.WriteJson(aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(Self);
-end;
-
-{ TJtdDWordHelper }
-procedure TJtdDWordHelper.ReadJson(aReader: TJsonReader);
+procedure TJtdInt16.DoReadJson(aReader: TJsonReader);
 var
   I: Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not Double.IsExactInt(aReader.AsNumber, I) then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdInteger, CSJtdFractional]), aReader);
-  if (I < System.Low(Self)) or (I > System.High(Self)) then
-    JtdReadError(Format(SEJtdNumRangeFmt, ['UInt32']), aReader);
-  Self := I;
+  I := ReadInt(aReader);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := I;
 end;
 
-procedure TJtdDWordHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdInt16.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Self);
+  aWriter.Add(FValue);
 end;
 
-{ TJtdStrHelper }
-procedure TJtdStrHelper.ReadJson(aReader: TJsonReader);
+{ TJtdUInt16 }
+
+procedure TJtdUInt16.DoReadJson(aNode: TJsonNode);
+var
+  I: Int64;
+begin
+  I := ReadInt(aNode);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := I;
+end;
+
+procedure TJtdUInt16.DoReadJson(aReader: TJsonReader);
+var
+  I: Int64;
+begin
+  I := ReadInt(aReader);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := I;
+end;
+
+procedure TJtdUInt16.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(FValue);
+end;
+
+{ TJtdInt32 }
+
+procedure TJtdInt32.DoReadJson(aNode: TJsonNode);
+var
+  I: Int64;
+begin
+  I := ReadInt(aNode);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := I;
+end;
+
+procedure TJtdInt32.DoReadJson(aReader: TJsonReader);
+var
+  I: Int64;
+begin
+  I := ReadInt(aReader);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := I;
+end;
+
+procedure TJtdInt32.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(FValue);
+end;
+
+{ TJtdUInt32 }
+
+procedure TJtdUInt32.DoReadJson(aNode: TJsonNode);
+var
+  I: Int64;
+begin
+  I := ReadInt(aNode);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName]);
+  FValue := I;
+end;
+
+procedure TJtdUInt32.DoReadJson(aReader: TJsonReader);
+var
+  I: Int64;
+begin
+  I := ReadInt(aReader);
+  if (I < System.Low(Value)) or (I > System.High(Value)) then
+    ReadError(SEJtdNumRangeFmt, [ClassName], aReader);
+  FValue := I;
+end;
+
+procedure TJtdUInt32.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(FValue);
+end;
+
+{ TJtdString }
+
+procedure TJtdString.DoReadJson(aNode: TJsonNode);
+begin
+  if not aNode.IsString then
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, JKIND_NAMES[aNode.Kind]]);
+  FValue := aNode.AsString;
+end;
+
+procedure TJtdString.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> TTokenKind.tkString then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  Self := aReader.AsString;
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
+  FValue := aReader.AsString;
 end;
 
-procedure TJtdStrHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdString.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Self);
+  aWriter.Add(FValue);
 end;
 
-{ TJtdDateTimeHelper }
-procedure TJtdDateTimeHelper.ReadJson(aReader: TJsonReader);
+{ TJtdDateTimeUTC }
+
+procedure TJtdDateTimeUTC.DoReadJson(aNode: TJsonNode);
+var
+  d: TDateTime;
+begin
+  if not aNode.IsString then
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, JKIND_NAMES[aNode.Kind]]);
+  if not TryRfc8927TimeStampToUTC(aNode.AsString, d) then
+    ReadError(Format(SEJtdIllform8927TSFmt, [aNode.AsString]));
+  FValue := d;
+end;
+
+procedure TJtdDateTimeUTC.DoReadJson(aReader: TJsonReader);
 var
   d: TDateTime;
 begin
   if aReader.TokenKind <> TTokenKind.tkString then
-    JtdReadError(Format(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]]), aReader);
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   if not TryRfc8927TimeStampToUTC(aReader.AsString, d) then
-    JtdReadError(Format(SEJtdIllform8927TSFmt, [aReader.AsString]), aReader);
-  Self := d;
+    ReadError(Format(SEJtdIllform8927TSFmt, [aReader.AsString]), aReader);
+  FValue := d;
 end;
 
-procedure TJtdDateTimeHelper.WriteJson(aWriter: TJsonStrWriter);
+procedure TJtdDateTimeUTC.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(UTCToRfc8927TimeStamp(Self));
-end;
-
-{ TJtdGenValue }
-
-constructor TJtdGenValue.Create(const aValue: T);
-begin
-  inherited Create;
-  Value := aValue;
-end;
-
-{ TJtdGenNullableValue }
-
-function TJtdGenNullableValue.GetValue: T;
-begin
-  CheckNull;
-  Result := FValue;
-end;
-
-procedure TJtdGenNullableValue.SetValue(const aValue: T);
-begin
-  if IsNull then DoAssign;
-  FValue := aValue;
-end;
-
-constructor TJtdGenNullableValue.Create(const aValue: T);
-begin
-  inherited Create;
-  Value := aValue;
-end;
-
-function TJtdGenNullableValue.OrElse(const aDefault: T): T;
-begin
-  if IsNull then
-    Result := aDefault
-  else
-    Result := FValue;
-end;
-
-{ TJtdValue }
-
-procedure TJtdValue.DoReadJson(aReader: TJsonReader);
-begin
-  FValue.ReadJson(aReader);
-end;
-
-procedure TJtdValue.DoWriteJson(aWriter: TJsonStrWriter);
-begin
-  FValue.WriteJson(aWriter);
-end;
-
-{ TJtdNullableValue }
-
-procedure TJtdNullableValue.DoReadJson(aReader: TJsonReader);
-begin
-  FValue.ReadJson(aReader);
-end;
-
-procedure TJtdNullableValue.DoWriteJson(aWriter: TJsonStrWriter);
-begin
-  FValue.WriteJson(aWriter);
+  aWriter.Add(UTCToRfc8927TimeStamp(FValue));
 end;
 
 { TJtdEnum }
+
+procedure TJtdEnum.DoReadJson(aNode: TJsonNode);
+var
+  v: Integer;
+begin
+  if not aNode.IsString then
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, JKIND_NAMES[aNode.Kind]]);
+  v := GetEnumValue(TypeInfo(TEnum), aNode.AsString);
+  if v < 0 then
+    ReadError(Format(SEJtdIllegalEnumFmt, [aNode.AsString]));
+  FValue := TEnum(v);
+end;
 
 procedure TJtdEnum.DoReadJson(aReader: TJsonReader);
 var
   v: Integer;
 begin
   if aReader.TokenKind <> TTokenKind.tkString then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]]), aReader);
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   v := GetEnumValue(TypeInfo(TEnum), aReader.AsString);
   if v < 0 then
     ReadError(Format(SEJtdIllegalEnumFmt, [aReader.AsString]), aReader);
-  Value := TEnum(v);
+  FValue := TEnum(v);
 end;
 
 procedure TJtdEnum.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(GetEnumName(TypeInfo(TEnum), Integer(Value)));
-end;
-
-{ TJtdNullableEnum }
-
-procedure TJtdNullableEnum.DoReadJson(aReader: TJsonReader);
-var
-  v: Integer;
-begin
-  if aReader.TokenKind <> TTokenKind.tkString then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  v := GetEnumValue(TypeInfo(T), aReader.AsString);
-  if v < 0 then
-    ReadError(Format(SEJtdIllegalEnumFmt, [aReader.AsString]), aReader);
-  Value := T(v);
-end;
-
-procedure TJtdNullableEnum.DoWriteJson(aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(GetEnumName(TypeInfo(T), Integer(FValue)));
+  aWriter.Add(GetEnumName(TypeInfo(TEnum), Integer(FValue)));
 end;
 
 { TJtdStrEnum }
 
 procedure TJtdStrEnum.SetValue(const aValue: string);
 begin
-  if Value = aValue then exit;
   if not IsElement(aValue) then
     Error(Format(SEStrNotEnumElemFmt, [aValue, ClassName]));
-  Value := aValue;
+  inherited SetValue(aValue);
+end;
+
+procedure TJtdStrEnum.DoReadJson(aNode: TJsonNode);
+begin
+  if not aNode.IsString then
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, JKIND_NAMES[aNode.Kind]]);
+  if not IsElement(aNode.AsString) then
+    ReadError(Format(SEStrNotEnumElemFmt, [aNode.AsString, ClassName]));
+  FValue := aNode.AsString;
 end;
 
 procedure TJtdStrEnum.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> TTokenKind.tkString then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]]), aReader);
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   if not IsElement(aReader.AsString) then
     ReadError(Format(SEStrNotEnumElemFmt, [aReader.AsString, ClassName]), aReader);
   FValue := aReader.AsString;
@@ -1242,38 +1167,10 @@ end;
 
 procedure TJtdStrEnum.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(Value);
-end;
-
-constructor TJtdStrEnum.Create(const aValue: string);
-begin
-  if not IsElement(aValue) then Error(Format(SEStrNotEnumElemFmt, [aValue, ClassName]));
-  inherited Create(aValue);
-end;
-
-{ TJtdNullableStrEnum }
-
-procedure TJtdNullableStrEnum.SetValue(const aValue: string);
-begin
-  if not IsElement(aValue) then Error(Format(SEStrNotEnumElemFmt, [aValue, ClassName]));
-  inherited SetValue(aValue);
-end;
-
-procedure TJtdNullableStrEnum.DoReadJson(aReader: TJsonReader);
-begin
-  if aReader.TokenKind <> TTokenKind.tkString then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  if not IsElement(aReader.AsString) then
-    ReadError(Format(SEStrNotEnumElemFmt, [aReader.AsString, ClassName]), aReader);
-  Value := aReader.AsString;
-end;
-
-procedure TJtdNullableStrEnum.DoWriteJson(aWriter: TJsonStrWriter);
-begin
   aWriter.Add(FValue);
 end;
 
-constructor TJtdNullableStrEnum.Create(const aValue: string);
+constructor TJtdStrEnum.Create(const aValue: string);
 begin
   if not IsElement(aValue) then Error(Format(SEStrNotEnumElemFmt, [aValue, ClassName]));
   inherited Create(aValue);
@@ -1287,49 +1184,24 @@ begin
   inherited Destroy;
 end;
 
-procedure TJtdGenContainer.ReadJson(aReader: TJsonReader);
+procedure TJtdGenContainer.SetNull;
 begin
+  if IsNull then exit;
   DoClear;
-  inherited ReadJson(aReader);
-end;
-
-{ TJtdGenNullableContainer }
-
-destructor TJtdGenNullableContainer.Destroy;
-begin
-  DoClear;
-  inherited Destroy;
-end;
-
-procedure TJtdGenNullableContainer.DoSetNull;
-begin
-  DoClear;
-  inherited DoSetNull;
-end;
-
-{ TJtdContainer }
-
-procedure TJtdContainer.Clear;
-begin
-  DoClear;
-end;
-
-{ TJtdNullableContainer }
-
-procedure TJtdNullableContainer.Clear;
-begin
-  DoClear;
+  inherited;
 end;
 
 { TJtdList }
 
 function TJtdList.GetCount: SizeInt;
 begin
+  CheckNull;
   Result := FList.Count;
 end;
 
 function TJtdList.GetItem(aIndex: SizeInt): T;
 begin
+  CheckNull;
   Result := FList[aIndex];
 end;
 
@@ -1343,12 +1215,23 @@ begin
       v.Free;
       FList[aIndex] := aValue;
     end;
+  DoAssign;
+end;
+
+procedure TJtdList.DoReadJson(aNode: TJsonNode);
+var
+  n: TJsonNode;
+begin
+  if not aNode.IsArray then
+    ReadError(SEJtdExpectGotFmt, [CSJtdArray, JKIND_NAMES[aNode.Kind]]);
+  for n in aNode do
+    FList.Add(T(T.LoadInstance(n)));
 end;
 
 procedure TJtdList.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkArrayBegin then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdArray, TOKEN_NAMES[aReader.TokenKind]]), aReader);
+    ReadError(SEJtdExpectGotFmt, [CSJtdArray, TOKEN_NAMES[aReader.TokenKind]], aReader);
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkArrayEnd then break;
@@ -1380,6 +1263,11 @@ begin
   Result := FList.GetEnumerator;
 end;
 
+procedure TJtdList.Clear;
+begin
+  DoClear;
+end;
+
 function TJtdList.Add(aValue: T): SizeInt;
 begin
   Result := FList.Add(aValue);
@@ -1398,100 +1286,32 @@ begin
   v.Free;
 end;
 
-{ TJtdNullableList }
-
-function TJtdNullableList.GetCount: SizeInt;
-begin
-  CheckNull;
-  Result := FList.Count;
-end;
-
-function TJtdNullableList.GetItem(aIndex: SizeInt): T;
-begin
-  CheckNull;
-  Result := FList[aIndex];
-end;
-
-procedure TJtdNullableList.SetItem(aIndex: SizeInt; aValue: T);
-var
-  v: T;
-begin
-  CheckNull;
-  v := FList[aIndex];
-  if v <> aValue then
-    begin
-      v.Free;
-      FList[aIndex] := aValue;
-    end;
-end;
-
-procedure TJtdNullableList.DoReadJson(aReader: TJsonReader);
-begin
-  if aReader.TokenKind <> tkArrayBegin then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdArray, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  repeat
-    if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkArrayEnd then break;
-    FList.Add(T(T.LoadInstance(aReader)));
-  until False;
-end;
-
-procedure TJtdNullableList.DoWriteJson(aWriter: TJsonStrWriter);
-var
-  I: SizeInt;
-begin
-  aWriter.BeginArray;
-  for I := 0 to Pred(Count) do
-    FList.UncMutable[I]^.WriteJson(aWriter);
-  aWriter.EndArray;
-end;
-
-procedure TJtdNullableList.DoClear;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(FList.Count) do
-    FList.UncMutable[I]^.Free;
-  FList.MakeEmpty;
-end;
-
-function TJtdNullableList.GetEnumerator: TEnumerator;
-begin
-  CheckNull;
-  Result := FList.GetEnumerator;
-end;
-
-function TJtdNullableList.Add(aValue: T): SizeInt;
-begin
-  Result := FList.Add(aValue);
-  DoAssign;
-end;
-
-procedure TJtdNullableList.Insert(aIndex: SizeInt; aValue: T);
-begin
-  FList.Insert(aIndex, aValue);
-  DoAssign;
-end;
-
-procedure TJtdNullableList.Delete(aIndex: SizeInt);
-var
-  v: T;
-begin
-  CheckNull;
-  v := FList.Extract(aIndex);
-  v.Free;
-end;
-
 { TJtdMap }
 
 function TJtdMap.GetCount: SizeInt;
 begin
+  CheckNull;
   Result := FMap.Count;
 end;
 
 function TJtdMap.GetItem(const aKey: string): T;
 begin
+  CheckNull;
   if not FMap.TryGetValue(aKey, Result) then Result := nil;
+end;
+
+procedure TJtdMap.DoReadJson(aNode: TJsonNode);
+var
+  e: TJsonNode.TPair;
+  p: TMap.PValue;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  for e in aNode.Entries do begin
+    p := FMap.GetMutValueDef(e.Key, nil);
+    if p^ <> nil then
+      ReadError(Format(SEJtdDupValuesKeyFmt, [e.Key]));
+    p^ := T(T.LoadInstance(e.Value));
+  end;
 end;
 
 procedure TJtdMap.DoReadJson(aReader: TJsonReader);
@@ -1546,14 +1366,21 @@ begin
   Result := FMap.Values;
 end;
 
+procedure TJtdMap.Clear;
+begin
+  DoClear;
+end;
+
 function TJtdMap.Contains(const aKey: string): Boolean;
 begin
+  CheckNull;
   Result := FMap.Contains(aKey);
 end;
 
 function TJtdMap.Add(const aKey: string; aValue: T): Boolean;
 begin
   Result := FMap.Add(aKey, aValue);
+  DoAssign;
 end;
 
 procedure TJtdMap.AddOrSetValue(const aKey: string; aValue: T);
@@ -1563,120 +1390,16 @@ begin
   if FMap.FindOrAddMutValue(aKey, p) and (p^ <> aValue) then
     p^.Free;
   p^ := aValue;
+  DoAssign;
 end;
 
 function TJtdMap.TryGetValue(const aKey: string; out aValue: T): Boolean;
 begin
+  CheckNull;
   Result := FMap.TryGetValue(aKey, aValue);
 end;
 
 function TJtdMap.Remove(const aKey: string): Boolean;
-var
-  v: T = nil;
-begin
-  Result := FMap.Extract(aKey, v);
-  if Result then
-    v.Free;
-end;
-
-{ TJtdNullableMap }
-
-function TJtdNullableMap.GetCount: SizeInt;
-begin
-  CheckNull;
-  Result := FMap.Count;
-end;
-
-function TJtdNullableMap.GetItem(const aKey: string): T;
-begin
-  CheckNull;
-  if not FMap.TryGetValue(aKey, Result) then Result := nil;
-end;
-
-procedure TJtdNullableMap.DoReadJson(aReader: TJsonReader);
-var
-  p: TMap.PValue;
-begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
-  repeat
-    if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
-    p := FMap.GetMutValueDef(aReader.Name, nil);
-    if p^ <> nil then
-      ReadError(Format(SEJtdDupValuesKeyFmt, [aReader.Name]), aReader);
-    p^ := T(T.LoadInstance(aReader));
-  until False;
-end;
-
-procedure TJtdNullableMap.DoWriteJson(aWriter: TJsonStrWriter);
-var
-  e: TJtdMapEntry;
-begin
-  aWriter.BeginObject;
-  for e in FMap do
-    begin
-      aWriter.AddName(e.Key);
-      e.Value.WriteJson(aWriter);
-    end;
-  aWriter.EndObject;
-end;
-
-procedure TJtdNullableMap.DoClear;
-var
-  v: T;
-begin
-  for v in FMap.Values do
-    v.Free;
-  FMap.MakeEmpty;
-end;
-
-function TJtdNullableMap.GetEnumerator: TJtdMapEnumerator;
-begin
-  CheckNull;
-  Result := FMap.GetEnumerator;
-end;
-
-function TJtdNullableMap.Keys: TJtdMapKeys;
-begin
-  CheckNull;
-  Result := FMap.Keys;
-end;
-
-function TJtdNullableMap.Values: TJtdMapValues;
-begin
-  CheckNull;
-  Result := FMap.Values;
-end;
-
-function TJtdNullableMap.Contains(const aKey: string): Boolean;
-begin
-  CheckNull;
-  Result := FMap.Contains(aKey);
-end;
-
-function TJtdNullableMap.Add(const aKey: string; aValue: T): Boolean;
-begin
-  Result := FMap.Add(aKey, aValue);
-  DoAssign;
-end;
-
-procedure TJtdNullableMap.AddOrSetValue(const aKey: string; aValue: T);
-var
-  p: TMap.PValue;
-begin
-  if FMap.FindOrAddMutValue(aKey, p) and (p^ <> aValue) then
-    p^.Free;
-  p^ := aValue;
-  DoAssign;
-end;
-
-function TJtdNullableMap.TryGetValue(const aKey: string; out aValue: T): Boolean;
-begin
-  CheckNull;
-  Result := FMap.TryGetValue(aKey, aValue);
-end;
-
-function TJtdNullableMap.Remove(const aKey: string): Boolean;
 var
   v: T = nil;
 begin
@@ -1688,82 +1411,92 @@ end;
 
 { TJtdObject }
 
+procedure TJtdObject.DoClear;
+begin
+end;
+
+procedure TJtdObject.CreateProps;
+begin
+end;
+
+procedure TJtdObject.ClearProps;
+begin
+end;
+
+procedure TJtdObject.WriteProps(aWriter: TJsonStrWriter);
+begin
+  Assert(aWriter = aWriter);
+end;
+
 procedure TJtdObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
   aWriter.BeginObject;
-  WriteFields(aWriter);
+  WriteProps(aWriter);
   aWriter.EndObject;
 end;
 
 constructor TJtdObject.Create;
 begin
-  inherited Create;
-  CreateFields;
+  inherited;
+  CreateProps;
 end;
 
 destructor TJtdObject.Destroy;
 begin
-  ClearFields;
-  inherited Destroy;
-end;
-
-{ TJtdNullableObject }
-
-procedure TJtdNullableObject.CheckFields;
-begin
-  if IsNull then
-    begin
-      CreateFields;
-      DoAssign;
-    end;
-end;
-
-procedure TJtdNullableObject.DoWriteJson(aWriter: TJsonStrWriter);
-begin
-  aWriter.BeginObject;
-  WriteFields(aWriter);
-  aWriter.EndObject;
-end;
-
-procedure TJtdNullableObject.ReadJson(aReader: TJsonReader);
-begin
-  if (aReader.ReadState = rsStart) and not aReader.Read then ReaderFail(aReader);
-  SetNull;
-  if aReader.TokenKind = tkNull then exit;
-  CreateFields;
-  DoReadJson(aReader);
-  DoAssign;
+  ClearProps;
+  inherited;
 end;
 
 { TJtdUnion }
 
+procedure TJtdUnion.DoReadJson(aNode: TJsonNode);
+var
+  Node, TagNode: TJsonNode;
+  TagName: string;
+  InstClass: TJtdEntityClass;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  TagName := GetTagJsonName;
+  if not aNode.Contains(TagName) then
+    ReadError(Format(SEJtdTagNotFoundFmt, [TagName]));
+  Node := aNode.Clone;
+  try
+    Node.Find(TagName, TagNode);
+    if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr);
+    InstClass := GetInstanceClass(TagNode.AsString);
+    if InstClass = nil then
+      ReadError(Format(SEJtdIllegalTagValueFmt, [TagNode.AsString]));
+    FTag := TagNode.AsString;
+    if not Node.Remove(TagName) then InternalError(2);
+    FInstance := InstClass.LoadInstance(Node);
+  finally
+    Node.Free;
+  end;
+end;
+
 procedure TJtdUnion.DoReadJson(aReader: TJsonReader);
 var
-  s, TagName, TagValue, LPath: string;
+  s, TagName, TagValue: string;
   Node, TagNode: TJsonNode;
   InstClass: TJtdEntityClass;
 begin
-  if aReader.TokenKind <> tkObjectBegin then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdObject, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  LPath := aReader.Path;
+  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   if not aReader.CopyStruct(s) then ReaderFail(aReader);
-  if not TJsonNode.TryParse(s, Node) then InternalError(2);
+  if not TJsonNode.TryParse(s, Node) then InternalError(3);
   try
     TagName := GetTagJsonName;
     if not Node.Find(TagName, TagNode) then
-      ReadError(Format(SEJtdTagNotFoundFmt, [TagName]), LPath);
-    if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr, LPath);
+      ReadError(Format(SEJtdTagNotFoundFmt, [TagName]));
+    if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr);
     TagValue := TagNode.AsString;
     InstClass := GetInstanceClass(TagValue);
     if InstClass = nil then
-      ReadError(Format(SEJtdIllegalTagValueFmt, [TagValue]), LPath);
-    if not Node.Remove(TagName) then InternalError(3);
-    FTag := '';
-    FreeAndNil(FInstance);
+      ReadError(Format(SEJtdIllegalTagValueFmt, [TagValue]));
+    if not Node.Remove(TagName) then InternalError(4);
     try
-      FInstance := InstClass.LoadInstance(Node.AsJson);
+      FInstance := InstClass.LoadInstance(Node);
     except
-      ReadError(SEJtdInvalidDiscriInst, LPath);
+      ReadError(SEJtdInvalidDiscriInst);
     end;
     FTag := TagValue;
   finally
@@ -1775,70 +1508,17 @@ procedure TJtdUnion.DoWriteJson(aWriter: TJsonStrWriter);
 begin
   aWriter.BeginObject;
   aWriter.Add(GetTagJsonName, Tag);
-  TJtdObject(FInstance).WriteFields(aWriter);
+  TJtdObject(FInstance).WriteProps(aWriter);
   aWriter.EndObject;
 end;
 
 procedure TJtdUnion.DoClear;
 begin
   FTag := '';
-  FInstance.Free;
-end;
-
-function TJtdUnion.GetInstanceClass: TJtdEntityClass;
-begin
-  Result := GetInstanceClass(Tag);
-end;
-
-{ TJtdNullableUnion }
-
-procedure TJtdNullableUnion.DoReadJson(aReader: TJsonReader);
-var
-  s, TagName, TagValue, LPath: string;
-  Node, TagNode: TJsonNode;
-  InstClass: TJtdEntityClass;
-begin
-  if aReader.TokenKind <> tkObjectBegin then
-    ReadError(Format(SEJtdExpectGotFmt, [CSJtdObject, TOKEN_NAMES[aReader.TokenKind]]), aReader);
-  LPath := aReader.Path;
-  if not aReader.CopyStruct(s) then ReaderFail(aReader);
-  if not TJsonNode.TryParse(s, Node) then InternalError(4);
-  try
-    TagName := GetTagJsonName;
-    if not Node.Find(TagName, TagNode) then
-      ReadError(Format(SEJtdTagNotFoundFmt, [TagName]), LPath);
-    if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr, LPath);
-    TagValue := TagNode.AsString;
-    InstClass := GetInstanceClass(TagValue);
-    if InstClass = nil then
-      ReadError(Format(SEJtdIllegalTagValueFmt, [TagValue]), LPath);
-    if not Node.Remove(TagName) then InternalError(5);
-    try
-      FInstance := InstClass.LoadInstance(Node.AsJson);
-    except
-      ReadError(SEJtdInvalidDiscriInst, LPath);
-    end;
-    FTag := TagValue;
-  finally
-    Node.Free;
-  end;
-end;
-
-procedure TJtdNullableUnion.DoWriteJson(aWriter: TJsonStrWriter);
-begin
-  aWriter.BeginObject;
-  aWriter.Add(GetTagJsonName, Tag);
-  TJtdObject(FInstance).WriteFields(aWriter);
-  aWriter.EndObject;
-end;
-
-procedure TJtdNullableUnion.DoClear;
-begin
-  FTag := '';
   FreeAndNil(FInstance);
 end;
 
-function TJtdNullableUnion.GetInstanceClass: TJtdEntityClass;
+function TJtdUnion.GetInstanceClass: TJtdEntityClass;
 begin
   Result := GetInstanceClass(Tag);
 end;
