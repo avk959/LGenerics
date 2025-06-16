@@ -37,7 +37,7 @@ uses
 
 type
 
-  { TGCustomHashMultiSet: common hash multiset abstract ancestor class }
+  { TGAbstractHashMultiSet: common hash multiset abstract ancestor class }
   generic TGAbstractHashMultiSet<T> = class abstract(specialize TGAbstractMultiSet<T>)
   public
   type
@@ -120,16 +120,16 @@ type
     class function MaxLoadFactor: Single; inline;
     class function MinLoadFactor: Single; inline;
     constructor Create;
-    constructor Create(constref a: array of T);
+    constructor Create(const a: array of T);
     constructor Create(e: IEnumerable);
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; constref a: array of T);
+    constructor Create(aCapacity: SizeInt; const a: array of T);
     constructor Create(aCapacity: SizeInt; e: IEnumerable);
     constructor Create(aLoadFactor: Single);
-    constructor Create(aLoadFactor: Single; constref a: array of T);
+    constructor Create(aLoadFactor: Single; const a: array of T);
     constructor Create(aLoadFactor: Single; e: IEnumerable);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
     constructor CreateCopy(aMultiSet: TAbstractHashMultiSet);
     destructor Destroy; override;
@@ -930,7 +930,7 @@ begin
   FTable := GetTableClass.Create;
 end;
 
-constructor TGAbstractHashMultiSet.Create(constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(const a: array of T);
 begin
   FTable := GetTableClass.Create;
   DoAddAll(a);
@@ -958,7 +958,7 @@ begin
   FTable := GetTableClass.Create(aCapacity);
 end;
 
-constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; const a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(a);
@@ -975,7 +975,7 @@ begin
   FTable := GetTableClass.Create(aLoadFactor);
 end;
 
-constructor TGAbstractHashMultiSet.Create(aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(aLoadFactor: Single; const a: array of T);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
   DoAddAll(a);
@@ -998,7 +998,7 @@ begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
 end;
 
-constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(a);
