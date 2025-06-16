@@ -14,7 +14,7 @@ uses
 
 type
 
-  TElements = class sealed(specialize TJtdList<TJtdString>);
+  TRootObject = class sealed(specialize TJtdList<TJtdString>);
 
 implementation
 

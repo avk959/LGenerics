@@ -14,8 +14,8 @@ uses
 
 type
 
-{ TNullableElements is nullable }
-  TNullableElements = class sealed(specialize TJtdNullableList<TJtdString>);
+{ TRootObject is nullable; }
+  TRootObject = class sealed(specialize TJtdList<TJtdString>);
 
 implementation
 

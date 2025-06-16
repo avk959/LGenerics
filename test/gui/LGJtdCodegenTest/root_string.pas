@@ -14,7 +14,7 @@ uses
 
 type
 
-  TRootStringString = TJtdString;
+  TRootObject = TJtdString;
 
 implementation
 

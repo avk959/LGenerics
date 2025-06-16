@@ -14,14 +14,14 @@ uses
 
 type
 
-  TEmptyAndNonasciiEnumValues = class sealed(TJtdStrEnum)
+  TRootObject = class sealed(TJtdStrEnum)
   public
     class function IsElement(const aValue: string): Boolean; override;
   end;
 
 implementation
 
-class function TEmptyAndNonasciiEnumValues.IsElement(const aValue: string): Boolean;
+class function TRootObject.IsElement(const aValue: string): Boolean;
 begin
   case TJsonNode.PasStrToAsciiJson(aValue) of
     '""',

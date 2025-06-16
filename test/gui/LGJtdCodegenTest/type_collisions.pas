@@ -17,77 +17,116 @@ type
   TBar = class sealed(TJtdObject)
   private
     FX: TJtdBool;
+    function  GetX: TJtdBool;
     procedure SetX(aValue: TJtdBool);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "x" JSON property }
-    property X: TJtdBool read FX write SetX;
+    property X: TJtdBool read GetX write SetX;
   end;
 
   TFoo = class sealed(TJtdObject)
   private
     FBar: TBar;
+    function  GetBar: TBar;
     procedure SetBar(aValue: TBar);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "bar" JSON property }
-    property Bar: TBar read FBar write SetBar;
+    property Bar: TBar read GetBar write SetBar;
   end;
 
   TFooBar = class sealed(TJtdObject)
   private
     FX: TJtdString;
+    function  GetX: TJtdString;
     procedure SetX(aValue: TJtdString);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "x" JSON property }
-    property X: TJtdString read FX write SetX;
+    property X: TJtdString read GetX write SetX;
   end;
 
-  TTypeCollisions = class sealed(TJtdObject)
+  TRootObject = class sealed(TJtdObject)
   private
     FFoo: TFoo;
     FFooBar: TFooBar;
+    function  GetFoo: TFoo;
+    function  GetFooBar: TFooBar;
     procedure SetFoo(aValue: TFoo);
     procedure SetFooBar(aValue: TFooBar);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "foo" JSON property }
-    property Foo: TFoo read FFoo write SetFoo;
+    property Foo: TFoo read GetFoo write SetFoo;
   { refers to "foo_bar" JSON property }
-    property FooBar: TFooBar read FFooBar write SetFooBar;
+    property FooBar: TFooBar read GetFooBar write SetFooBar;
   end;
 
 implementation
 
 { TBar }
 
+function TBar.GetX: TJtdBool;
+begin
+  CheckNull;
+  Result := FX;
+end;
+
 procedure TBar.SetX(aValue: TJtdBool);
 begin
+  DoAssign;
   if aValue = FX then exit;
   FX.Free;
   FX := aValue;
 end;
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TBar.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..0] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'x':
+        if not Flags[0] then begin
+          FX.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('x');
+      end;
+end;
+{$POP}
 
 {$PUSH}{$WARN 5057 OFF}
 procedure TBar.DoReadJson(aReader: TJsonReader);
@@ -118,34 +157,64 @@ begin
 end;
 {$POP}
 
-procedure TBar.WriteFields(aWriter: TJsonStrWriter);
-begin
-  aWriter.AddName('x');
-  X.WriteJson(aWriter);
-end;
-
-procedure TBar.DoClear;
-begin
-end;
-
-procedure TBar.ClearFields;
-begin
-  FX.Free;
-end;
-
-procedure TBar.CreateFields;
+procedure TBar.CreateProps;
 begin
   FX := TJtdBool.Create;
 end;
 
+procedure TBar.ClearProps;
+begin
+  FX.Free;
+end;
+
+procedure TBar.WriteProps(aWriter: TJsonStrWriter);
+begin
+  aWriter.AddName('x');
+  FX.WriteJson(aWriter);
+end;
+
 { TFoo }
+
+function TFoo.GetBar: TBar;
+begin
+  CheckNull;
+  Result := FBar;
+end;
 
 procedure TFoo.SetBar(aValue: TBar);
 begin
+  DoAssign;
   if aValue = FBar then exit;
   FBar.Free;
   FBar := aValue;
 end;
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TFoo.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..0] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'bar':
+        if not Flags[0] then begin
+          FBar.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('bar');
+      end;
+end;
+{$POP}
 
 {$PUSH}{$WARN 5057 OFF}
 procedure TFoo.DoReadJson(aReader: TJsonReader);
@@ -176,34 +245,64 @@ begin
 end;
 {$POP}
 
-procedure TFoo.WriteFields(aWriter: TJsonStrWriter);
-begin
-  aWriter.AddName('bar');
-  Bar.WriteJson(aWriter);
-end;
-
-procedure TFoo.DoClear;
-begin
-end;
-
-procedure TFoo.ClearFields;
-begin
-  FBar.Free;
-end;
-
-procedure TFoo.CreateFields;
+procedure TFoo.CreateProps;
 begin
   FBar := TBar.Create;
 end;
 
+procedure TFoo.ClearProps;
+begin
+  FBar.Free;
+end;
+
+procedure TFoo.WriteProps(aWriter: TJsonStrWriter);
+begin
+  aWriter.AddName('bar');
+  FBar.WriteJson(aWriter);
+end;
+
 { TFooBar }
+
+function TFooBar.GetX: TJtdString;
+begin
+  CheckNull;
+  Result := FX;
+end;
 
 procedure TFooBar.SetX(aValue: TJtdString);
 begin
+  DoAssign;
   if aValue = FX then exit;
   FX.Free;
   FX := aValue;
 end;
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TFooBar.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..0] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'x':
+        if not Flags[0] then begin
+          FX.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('x');
+      end;
+end;
+{$POP}
 
 {$PUSH}{$WARN 5057 OFF}
 procedure TFooBar.DoReadJson(aReader: TJsonReader);
@@ -234,44 +333,87 @@ begin
 end;
 {$POP}
 
-procedure TFooBar.WriteFields(aWriter: TJsonStrWriter);
-begin
-  aWriter.AddName('x');
-  X.WriteJson(aWriter);
-end;
-
-procedure TFooBar.DoClear;
-begin
-end;
-
-procedure TFooBar.ClearFields;
-begin
-  FX.Free;
-end;
-
-procedure TFooBar.CreateFields;
+procedure TFooBar.CreateProps;
 begin
   FX := TJtdString.Create;
 end;
 
-{ TTypeCollisions }
-
-procedure TTypeCollisions.SetFoo(aValue: TFoo);
+procedure TFooBar.ClearProps;
 begin
+  FX.Free;
+end;
+
+procedure TFooBar.WriteProps(aWriter: TJsonStrWriter);
+begin
+  aWriter.AddName('x');
+  FX.WriteJson(aWriter);
+end;
+
+{ TRootObject }
+
+function TRootObject.GetFoo: TFoo;
+begin
+  CheckNull;
+  Result := FFoo;
+end;
+
+function TRootObject.GetFooBar: TFooBar;
+begin
+  CheckNull;
+  Result := FFooBar;
+end;
+
+procedure TRootObject.SetFoo(aValue: TFoo);
+begin
+  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
 end;
 
-procedure TTypeCollisions.SetFooBar(aValue: TFooBar);
+procedure TRootObject.SetFooBar(aValue: TFooBar);
 begin
+  DoAssign;
   if aValue = FFooBar then exit;
   FFooBar.Free;
   FFooBar := aValue;
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TTypeCollisions.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..1] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'foo':
+        if not Flags[0] then begin
+          FFoo.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+      'foo_bar':
+        if not Flags[1] then begin
+          FFooBar.ReadJson(e.Value);
+          Flags[1] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('foo');
+        1: PropNotFound('foo_bar');
+      end;
+end;
+{$POP}
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TRootObject.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;
@@ -305,28 +447,24 @@ begin
 end;
 {$POP}
 
-procedure TTypeCollisions.WriteFields(aWriter: TJsonStrWriter);
+procedure TRootObject.CreateProps;
 begin
-  aWriter.AddName('foo');
-  Foo.WriteJson(aWriter);
-  aWriter.AddName('foo_bar');
-  FooBar.WriteJson(aWriter);
+  FFoo := TFoo.Create;
+  FFooBar := TFooBar.Create;
 end;
 
-procedure TTypeCollisions.DoClear;
-begin
-end;
-
-procedure TTypeCollisions.ClearFields;
+procedure TRootObject.ClearProps;
 begin
   FFoo.Free;
   FFooBar.Free;
 end;
 
-procedure TTypeCollisions.CreateFields;
+procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
 begin
-  FFoo := TFoo.Create;
-  FFooBar := TFooBar.Create;
+  aWriter.AddName('foo');
+  FFoo.WriteJson(aWriter);
+  aWriter.AddName('foo_bar');
+  FFooBar.WriteJson(aWriter);
 end;
 
 end.

@@ -14,7 +14,13 @@ uses
 
 type
 
-  TBazString = TJtdString;
+  TBaz = TJtdString;
+
+  TBar = TBaz;
+
+  TFoo = TBar;
+
+  TRootObject = TFoo;
 
 implementation
 

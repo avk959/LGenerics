@@ -14,103 +14,145 @@ uses
 
 type
 
-  TBaz = class sealed(specialize TJtdList<TJtdBool>);
-
-  TQuux = class sealed(specialize TJtdList<TJtdBool>);
-
-{ TNullableProperties is nullable }
-  TNullableProperties = class sealed(TJtdNullableObject)
+{ TRootObject is nullable; }
+  TRootObject = class sealed(TJtdObject)
   private
     FFoo: TJtdBool;
     FBar: TJtdString;
-    FBaz: TBaz;
-    FQuux: TQuux;
+    FBaz: specialize TJtdList<TJtdBool>;
+    FQuux: specialize TJtdList<TJtdBool>;
     function  GetFoo: TJtdBool;
     function  GetBar: TJtdString;
-    function  GetBaz: TBaz;
-    function  GetQuux: TQuux;
+    function  GetBaz: specialize TJtdList<TJtdBool>;
+    function  GetQuux: specialize TJtdList<TJtdBool>;
     procedure SetFoo(aValue: TJtdBool);
     procedure SetBar(aValue: TJtdString);
-    procedure SetBaz(aValue: TBaz);
-    procedure SetQuux(aValue: TQuux);
+    procedure SetBaz(aValue: specialize TJtdList<TJtdBool>);
+    procedure SetQuux(aValue: specialize TJtdList<TJtdBool>);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "foo" JSON property }
     property Foo: TJtdBool read GetFoo write SetFoo;
   { refers to "bar" JSON property }
     property Bar: TJtdString read GetBar write SetBar;
   { refers to "baz" JSON property }
-    property Baz: TBaz read GetBaz write SetBaz;
+    property Baz: specialize TJtdList<TJtdBool> read GetBaz write SetBaz;
   { refers to "quux" JSON property }
-    property Quux: TQuux read GetQuux write SetQuux;
+    property Quux: specialize TJtdList<TJtdBool> read GetQuux write SetQuux;
   end;
 
 implementation
 
-{ TNullableProperties }
+{ TRootObject }
 
-function TNullableProperties.GetFoo: TJtdBool;
+function TRootObject.GetFoo: TJtdBool;
 begin
   CheckNull;
   Result := FFoo;
 end;
 
-function TNullableProperties.GetBar: TJtdString;
+function TRootObject.GetBar: TJtdString;
 begin
   CheckNull;
   Result := FBar;
 end;
 
-function TNullableProperties.GetBaz: TBaz;
+function TRootObject.GetBaz: specialize TJtdList<TJtdBool>;
 begin
   CheckNull;
   Result := FBaz;
 end;
 
-function TNullableProperties.GetQuux: TQuux;
+function TRootObject.GetQuux: specialize TJtdList<TJtdBool>;
 begin
   CheckNull;
   Result := FQuux;
 end;
 
-procedure TNullableProperties.SetFoo(aValue: TJtdBool);
+procedure TRootObject.SetFoo(aValue: TJtdBool);
 begin
-  CheckFields;
+  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
 end;
 
-procedure TNullableProperties.SetBar(aValue: TJtdString);
+procedure TRootObject.SetBar(aValue: TJtdString);
 begin
-  CheckFields;
+  DoAssign;
   if aValue = FBar then exit;
   FBar.Free;
   FBar := aValue;
 end;
 
-procedure TNullableProperties.SetBaz(aValue: TBaz);
+procedure TRootObject.SetBaz(aValue: specialize TJtdList<TJtdBool>);
 begin
-  CheckFields;
+  DoAssign;
   if aValue = FBaz then exit;
   FBaz.Free;
   FBaz := aValue;
 end;
 
-procedure TNullableProperties.SetQuux(aValue: TQuux);
+procedure TRootObject.SetQuux(aValue: specialize TJtdList<TJtdBool>);
 begin
-  CheckFields;
+  DoAssign;
   if aValue = FQuux then exit;
   FQuux.Free;
   FQuux := aValue;
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TNullableProperties.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..3] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'foo':
+        if not Flags[0] then begin
+          FFoo.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+      'bar':
+        if not Flags[1] then begin
+          FBar.ReadJson(e.Value);
+          Flags[1] := True;
+        end else DuplicateProp(e.Key);
+      'baz':
+        if not Flags[2] then begin
+          FBaz.ReadJson(e.Value);
+          Flags[2] := True;
+        end else DuplicateProp(e.Key);
+      'quux':
+        if not Flags[3] then begin
+          FQuux.ReadJson(e.Value);
+          Flags[3] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('foo');
+        1: PropNotFound('bar');
+        2: PropNotFound('baz');
+        3: PropNotFound('quux');
+      end;
+end;
+{$POP}
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TRootObject.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..3] of Boolean;
   I: Integer;
@@ -156,32 +198,32 @@ begin
 end;
 {$POP}
 
-procedure TNullableProperties.WriteFields(aWriter: TJsonStrWriter);
-begin
-  aWriter.AddName('foo');
-  Foo.WriteJson(aWriter);
-  aWriter.AddName('bar');
-  Bar.WriteJson(aWriter);
-  aWriter.AddName('baz');
-  Baz.WriteJson(aWriter);
-  aWriter.AddName('quux');
-  Quux.WriteJson(aWriter);
-end;
-
-procedure TNullableProperties.DoClear;
-begin
-  FreeAndNil(FFoo);
-  FreeAndNil(FBar);
-  FreeAndNil(FBaz);
-  FreeAndNil(FQuux);
-end;
-
-procedure TNullableProperties.CreateFields;
+procedure TRootObject.CreateProps;
 begin
   FFoo := TJtdBool.Create;
   FBar := TJtdString.Create;
-  FBaz := TBaz.Create;
-  FQuux := TQuux.Create;
+  FBaz := specialize TJtdList<TJtdBool>.Create;
+  FQuux := specialize TJtdList<TJtdBool>.Create;
+end;
+
+procedure TRootObject.ClearProps;
+begin
+  FFoo.Free;
+  FBar.Free;
+  FBaz.Free;
+  FQuux.Free;
+end;
+
+procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
+begin
+  aWriter.AddName('foo');
+  FFoo.WriteJson(aWriter);
+  aWriter.AddName('bar');
+  FBar.WriteJson(aWriter);
+  aWriter.AddName('baz');
+  FBaz.WriteJson(aWriter);
+  aWriter.AddName('quux');
+  FQuux.WriteJson(aWriter);
 end;
 
 end.

@@ -14,7 +14,7 @@ uses
 
 type
 
-  TRootBooleanBool = TJtdBool;
+  TRootObject = TJtdBool;
 
 implementation
 

@@ -19,13 +19,15 @@ All of the following units are automatically generated from test schemas obtaine
   keywords, nullable_discriminator, nullable_elements, nullable_enum, nullable_properties,
   nullable_references, property_name_collisions, reference, root_boolean, root_int16, root_int32,
   root_int8, root_nullable_string, root_string, root_uint16, root_uint32, root_uint8, type_collisions,
-  values;
+  values, optional_properties, nullable_optional_properties;
 
 type
 
   { TTestRoundTreap }
 
   TTestRoundTreap = class(TTestCase)
+  private
+    procedure RunTestSet(const aValues: array of string; aTestClass: TJtdEntityClass);
   published
     procedure TestBasicDiscriminator;
     procedure TestBasicEnum;
@@ -44,8 +46,10 @@ type
     procedure TestNullableDiscriminator;
     procedure TestNullableElements;
     procedure TestNullableEnum;
+    procedure TestNullableOptionalProperties;
     procedure TestNullableProperties;
     procedure TestNullableReferences;
+    procedure TestOptionalProperties;
     procedure TestPropertyNameCollisions;
     procedure TestReference;
     procedure TestRootBoolean;
@@ -58,16 +62,34 @@ type
     procedure TestRootUint32;
     procedure TestRootUint8;
     procedure TestTypeCollisions;
-    procedure TestTValues;
+    procedure TestValuesUnit;
   end;
 
 implementation
 
-procedure TTestRoundTreap.TestBasicDiscriminator;
+procedure TTestRoundTreap.RunTestSet(const aValues: array of string; aTestClass: TJtdEntityClass);
 var
   Src, Dst: specialize TGAutoRef<TJsonNode>;
-  bd: specialize TGAutoRef<TFooUnion>;
-  s, r: string;
+  Ref: specialize TGAutoRef<TJtdEntity>;
+  s, d: string;
+begin
+  for s in  aValues do
+    begin
+      AssertTrue(Src.Instance.TryParse(s));
+      {%H-}Ref.Instance := aTestClass.TryLoad(Src.Instance) as aTestClass;
+      AssertTrue(Ref.Instance <> nil);
+      d := Ref.Instance.AsJson;
+      AssertTrue(Dst.Instance.TryParse(d));
+      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
+
+      Ref.Instance.Load(s);
+      d := Ref.Instance.AsJson;
+      AssertTrue(Dst.Instance.TryParse(d));
+      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
+    end;
+end;
+
+procedure TTestRoundTreap.TestBasicDiscriminator;
 const
   TestValues: TStringArray = (
     '{"foo":"QUUX","quuz":"B"}',
@@ -82,21 +104,10 @@ const
     '{"baz":"%g","foo":"BAR_BAZ"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}bd.Instance := TFooUnion.LoadInstance(s) as TFooUnion;
-      r := bd.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, basic_discriminator.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestBasicEnum;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  be: specialize TGAutoRef<TEnumElem>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"Baz"',
@@ -111,21 +122,10 @@ const
     '"Bar"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}be.Instance := TEnumElem.LoadInstance(s) as TEnumElem;
-      r := be.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, basic_enum.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestBasicProperties;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  bp: specialize TGAutoRef<TBasicProperties>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"bar":"b/kul","baz":[false],"foo":true,"quux":[true,true,true,true,true,true,true]}',
@@ -140,21 +140,10 @@ const
     '{"bar":"\\;lzJ8","baz":[true],"foo":false,"quux":[false,false,true,false,false,true,true]}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}bp.Instance := TBasicProperties.LoadInstance(s) as TBasicProperties;
-      r := bp.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, basic_properties.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestCustomOverrides;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  co: specialize TGAutoRef<TCustomOverrides>;
-  s, r: string;
 const
   TestValues: TStringArray = (
   '{"override_elements_container":["syA%","kp@/KW]","C''=(","@`SW","qc|HM~~","","%c5"],"override_type_discriminator":{"foo":"baz"},"override_type_enum":"BAR","override_type_expr":"H!","override_type_properties":{},"override_values_container":{}}',
@@ -169,21 +158,10 @@ const
   '{"override_elements_container":["_m","f5&"],"override_type_discriminator":{"foo":"bar"},"override_type_enum":"FOO","override_type_expr":"","override_type_properties":{},"override_values_container":{"6X){":"<u7D0","8":"P.6+O","TDS>*":"(V","[":"2''zM","v\"":"xw"}}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}co.Instance := TCustomOverrides.LoadInstance(s) as TCustomOverrides;
-      r := co.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, custom_overrides.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestDefinitionNameCollisions;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  bs: specialize TGAutoRef<TBarString>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"@"',
@@ -198,21 +176,10 @@ const
     '"H"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}bs.Instance := TBarString.LoadInstance(s) as TBarString;
-      r := bs.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, definition_name_collisions.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestDescription;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ds: specialize TGAutoRef<TDescription>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"discriminator_with_description":{"foo":"bar"},"enum_with_description":"Z","long_description":"c=,qh","properties_with_description":{},"ref_with_description":"|","string_with_description":"~zF2Q"}',
@@ -227,21 +194,10 @@ const
     '{"discriminator_with_description":{"foo":"bar"},"enum_with_description":"X","long_description":"r2wPS","properties_with_description":{},"ref_with_description":"GI#[i","string_with_description":"53407 "}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}ds.Instance := TDescription.LoadInstance(s) as TDescription;
-      r := ds.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, description.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestElements;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  el: specialize TGAutoRef<TElements>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '["qTNh"]',
@@ -256,21 +212,10 @@ const
     '["r"]'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}el.Instance := TElements.LoadInstance(s) as TElements;
-      r := el.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, elements.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestEmptyAndNonasciiDefinitions;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  enad: specialize TGAutoRef<TEmptyAndNonasciiDefinitionsString>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"r:93"',
@@ -285,21 +230,10 @@ const
     '"k9S`!&"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}enad.Instance := TEmptyAndNonasciiDefinitionsString.LoadInstance(s) as TEmptyAndNonasciiDefinitionsString;
-      r := enad.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, empty_and_nonascii_definitions.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestEmptyAndNonasciiEnumValues;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  enev: specialize TGAutoRef<TEmptyAndNonasciiEnumValues>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"foo bar"',
@@ -314,21 +248,10 @@ const
     '"0foo"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}enev.Instance := TEmptyAndNonasciiEnumValues.LoadInstance(s) as TEmptyAndNonasciiEnumValues;
-      r := enev.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, empty_and_nonascii_enum_values.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestEmptyAndNonasciiProperties;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  enp: specialize TGAutoRef<TEmptyAndNonasciiProperties>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"":">*2Vz]y","$foo":"!C8)","0foo":"_6","_foo":"m>o{X.:","foo\nbar":"+","foo bar":"##<c","foo0bar":"uO`","foo﷽bar":"1r9<i$b"}',
@@ -343,21 +266,10 @@ const
     '{"":"","$foo":"a","0foo":"V","_foo":"ZH7","foo\nbar":"","foo bar":"","foo0bar":"R","foo﷽bar":"/ml\\om["}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}enp.Instance := TEmptyAndNonasciiProperties.LoadInstance(s) as TEmptyAndNonasciiProperties;
-      r := enp.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, empty_and_nonascii_properties.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestEnumCollisions;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ec: specialize TGAutoRef<TEnumCollisions>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"foo":{"bar":"y"},"foo_bar":"x"}',
@@ -372,21 +284,10 @@ const
     '{"foo":{"bar":"y"},"foo_bar":"y"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}ec.Instance := TEnumCollisions.LoadInstance(s) as TEnumCollisions;
-      r := ec.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, enum_collisions.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestEnumVariantCollisions;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  evc: specialize TGAutoRef<TEnumVariantCollisions>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"foo"',
@@ -401,21 +302,10 @@ const
     '"foo"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}evc.Instance := TEnumVariantCollisions.LoadInstance(s) as TEnumVariantCollisions;
-      r := evc.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, enum_variant_collisions.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestInitialisms;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ini: specialize TGAutoRef<TInitialisms>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"http":"","id":">$ldB","nested_id_initialism":{"json":"K -\\7y","normalword":"?["},"utf8":"+rn_C","word_with_embedded_id_initialism":"\\:3$/E","word_with_trailing_initialism_id":"W,."}',
@@ -430,21 +320,10 @@ const
     '{"http":"xw","id":"&T5","nested_id_initialism":{"json":"7zIT%","normalword":"vA"},"utf8":"sx","word_with_embedded_id_initialism":"d","word_with_trailing_initialism_id":"P64"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}ini.Instance := TInitialisms.LoadInstance(s) as TInitialisms;
-      r := ini.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, initialisms.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestKeywords;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  kw: specialize TGAutoRef<TKeywords>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"for":";''(","object":"D"}',
@@ -459,22 +338,10 @@ const
     '{"for":"2","object":"ZhDx"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}kw.Instance := TKeywords.LoadInstance(s) as TKeywords;
-      r := kw.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, keywords.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestNullableDiscriminator;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ndRef: specialize TGAutoRef<TNullableDiscriminator>;
-  nd: TNullableDiscriminator;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"foo":"quux","quuz":"."}',
@@ -489,30 +356,17 @@ const
     '{"baz":"`\\U","foo":"bar"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      nd := TNullableDiscriminator.LoadInstance(s) as TNullableDiscriminator;
-      {%H-}ndRef.Instance := nd;
-      r := nd.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, nullable_discriminator.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestNullableElements;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  neRef: specialize TGAutoRef<TNullableElements>;
-  ne: TNullableElements;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '["-MRk","-","H\\","Z"]',
     '["","N"]',
     'null',
-    'null',
-    'null',
+    '["a","b","c"]',
+    '["","","",""]',
     'null',
     'null',
     '["x"]',
@@ -520,27 +374,14 @@ const
     '["HU","ym4","Pi7Y",""]'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      ne := TNullableElements.LoadInstance(s) as TNullableElements;
-      {%H-}neRef.Instance := ne;
-      r := ne.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, nullable_elements.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestNullableEnum;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  neeRef: specialize TGAutoRef<TNullableEnumElem>;
-  nee: TNullableEnumElem;
-  s, r: string;
 const
   TestValues: TStringArray = (
-    'null',
-    'null',
+    '"Foo"',
+    '"Baz"',
     'null',
     'null',
     '"Bar"',
@@ -551,53 +392,46 @@ const
     'null'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      nee := TNullableEnumElem.LoadInstance(s) as TNullableEnumElem;
-      {%H-}neeRef.Instance := nee;
-      r := nee.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, nullable_enum.TRootObject);
+end;
+
+procedure TTestRoundTreap.TestNullableOptionalProperties;
+const
+  TestValues: TStringArray = (
+    '{"baz":null}',
+    '{"baz":null,"foo":null}',
+    '{"baz":null,"foo":")L2"}',
+    '{}',
+    '{"foo":null}',
+    '{"bar":["<u.>",null,"}"],"foo":"O"}',
+    '{"bar":[null,null,"g&[w",null,"6p2L",null,"m6"],"foo":null}',
+    '{"bar":["","# p0",null,"{<j"],"baz":false}',
+    '{"bar":null}',
+    '{"foo":null,"bar":null}'
+  );
+begin
+  RunTestSet(TestValues, nullable_optional_properties.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestNullableProperties;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  npRef: specialize TGAutoRef<TNullableProperties>;
-  np: TNullableProperties;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"bar":"6","baz":[true,true,false,false,false],"foo":true,"quux":[true,true,true,true,false,false]}',
     'null',
     '{"bar":"@zqldz","baz":[false,false],"foo":true,"quux":[true,true,true,true,false,false,true]}',
     'null',
+    '{"bar":"-","baz":[],"foo":true,"quux":[]}',
     'null',
-    'null',
-    'null',
+    '{"bar":"?","baz":[true],"foo":true,"quux":[false]}',
     'null',
     '{"bar":"@Hxz=","baz":[true,true,false,false,false],"foo":false,"quux":[true,false,false,false,false,false,true]}',
     'null'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      np := TNullableProperties.LoadInstance(s) as TNullableProperties;
-      {%H-}npRef.Instance := np;
-      r := np.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, nullable_properties.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestNullableReferences;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  nr: specialize TGAutoRef<TNullableReferences>;
-  s, r: string;
 const
   TestValues: TStringArray = (
   '{"notnull_ref_notnull_string":"z(q","notnull_ref_null_string":"Z^qLU","notnull_string":"MqRm)_","null_ref_notnull_string":"APQ,","null_ref_null_string":null,"null_string":null}',
@@ -612,21 +446,28 @@ const
   '{"notnull_ref_notnull_string":"u","notnull_ref_null_string":"","notnull_string":"O","null_ref_notnull_string":null,"null_ref_null_string":null,"null_string":"9"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}nr.Instance := TNullableReferences.LoadInstance(s) as TNullableReferences;
-      r := nr.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, nullable_references.TRootObject);
+end;
+
+procedure TTestRoundTreap.TestOptionalProperties;
+const
+  TestValues: TStringArray = (
+    '{}',
+    '{"bar":["}c","*[b","\\.","","","C=YSG2Q","_.?"],"baz":false}',
+    '{"bar":["L9/","VE#Yy@"],"baz":false,"foo":"m"}',
+    '{"bar":[],"foo":"1gzvX"}',
+    '{"bar":["T~9<#","5i +","kII$Z","c;cQ{>"],"foo":";;l#y["}',
+    '{"baz":true}',
+    '{"bar":["D","Tt%","","_6\\","{NnV+."],"foo":""}',
+    '{"bar":["j9#","","Qqd~jJ","","p,Aa.","y",",S"],"foo":"ug\"Pf"}',
+    '{}',
+    '{"foo":"kkX"}'
+  );
+begin
+  RunTestSet(TestValues, optional_properties.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestPropertyNameCollisions;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  pnc: specialize TGAutoRef<TPropertyNameCollisions>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"Foo":"''F1^v","foo":"g0PhuAK"}',
@@ -641,21 +482,10 @@ const
     '{"Foo":";p9Zt","foo":"-9BoQdj"}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}pnc.Instance := TPropertyNameCollisions.LoadInstance(s) as TPropertyNameCollisions;
-      r := pnc.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, property_name_collisions.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestReference;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  bs: specialize TGAutoRef<TBazString>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"A7+C"',
@@ -670,21 +500,10 @@ const
     '"dj[iu"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}bs.Instance := TBazString.LoadInstance(s) as TBazString;
-      r := bs.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, reference.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootBoolean;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  rb: specialize TGAutoRef<TRootBooleanBool>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     'false',
@@ -693,21 +512,10 @@ const
     'false'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}rb.Instance := TRootBooleanBool.LoadInstance(s) as TRootBooleanBool;
-      r := rb.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_boolean.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootInt16;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ri16: specialize TGAutoRef<TRootInt16Int16>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '-21708',
@@ -722,21 +530,10 @@ const
     '19773'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}ri16.Instance := TRootInt16Int16.LoadInstance(s) as TRootInt16Int16;
-      r := ri16.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_int16.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootInt32;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ri32: specialize TGAutoRef<TRootInt32Int32>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '-1793378960',
@@ -751,21 +548,10 @@ const
     '-2132175479'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}ri32.Instance := TRootInt32Int32.LoadInstance(s) as TRootInt32Int32;
-      r := ri32.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_int32.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootInt8;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  ri8: specialize TGAutoRef<TRootInt8Int8>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '33',
@@ -780,22 +566,10 @@ const
     '-105'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}ri8.Instance := TRootInt8Int8.LoadInstance(s) as TRootInt8Int8;
-      r := ri8.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_int8.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootNullableString;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  nsRef: specialize TGAutoRef<TRootNullableStringString>;
-  ns: TRootNullableStringString;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '"+"',
@@ -810,22 +584,10 @@ const
     '"@Ob5."'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      ns := TRootNullableStringString.LoadInstance(s) as TRootNullableStringString;
-      {%H-}nsRef.Instance := ns;
-      r := ns.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_nullable_string.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootString;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  rs: specialize TGAutoRef<TRootStringString>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '""',
@@ -840,21 +602,10 @@ const
     '"0i)b}in"'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}rs.Instance := TRootStringString.LoadInstance(s) as TRootStringString;
-      r := rs.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_string.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootUint16;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  rui16: specialize TGAutoRef<TRootUint16UInt16>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '18333',
@@ -869,21 +620,10 @@ const
     '65535'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}rui16.Instance := TRootUint16UInt16.LoadInstance(s) as TRootUint16UInt16;
-      r := rui16.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_uint16.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootUint32;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  rui32: specialize TGAutoRef<TRootUint32UInt32>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '939257830',
@@ -898,21 +638,10 @@ const
     '2561377967'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}rui32.Instance := TRootUint32UInt32.LoadInstance(s) as TRootUint32UInt32;
-      r := rui32.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_uint32.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestRootUint8;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  rui8: specialize TGAutoRef<TRootUint8UInt8>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '230',
@@ -927,21 +656,10 @@ const
     '225'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}rui8.Instance := TRootUint8UInt8.LoadInstance(s) as TRootUint8UInt8;
-      r := rui8.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, root_uint8.TRootObject);
 end;
 
 procedure TTestRoundTreap.TestTypeCollisions;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  tc: specialize TGAutoRef<TTypeCollisions>;
-  s, r: string;
 const
   TestValues: TStringArray = (
     '{"foo":{"bar":{"x":true}},"foo_bar":{"x":"a$.T"}}',
@@ -956,21 +674,10 @@ const
     '{"foo":{"bar":{"x":false}},"foo_bar":{"x":"+b~k?Y"}}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}tc.Instance := TTypeCollisions.LoadInstance(s) as TTypeCollisions;
-      r := tc.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, type_collisions.TRootObject);
 end;
 
-procedure TTestRoundTreap.TestTValues;
-var
-  Src, Dst: specialize TGAutoRef<TJsonNode>;
-  v: specialize TGAutoRef<TValues>;
-  s, r: string;
+procedure TTestRoundTreap.TestValuesUnit;
 const
   TestValues: TStringArray = (
     '{"J|N":"B*","q%PVN+M":"KeY|)ki"}',
@@ -985,14 +692,7 @@ const
     '{}'
   );
 begin
-  for s in  TestValues do
-    begin
-      AssertTrue(Src.Instance.TryParse(s));
-      {%H-}v.Instance := TValues.LoadInstance(s) as TValues;
-      r := v.Instance.AsJson;
-      AssertTrue(Dst.Instance.TryParse(r));
-      AssertTrue(TJsonNode.Equal(Dst.Instance, Src.Instance));
-    end;
+  RunTestSet(TestValues, values.TRootObject);
 end;
 
 

@@ -14,7 +14,7 @@ uses
 
 type
 
-  TEmptyAndNonasciiDefinitionsString = TJtdString;
+  TRootObject = TJtdString;
 
 implementation
 

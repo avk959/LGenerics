@@ -14,10 +14,10 @@ uses
 
 type
 
-  TEnum = (Foo, Bar, Baz);
+  TRootObjectEnum = (Foo, Bar, Baz);
 
-{ Container for some TEnum enumeration element }
-  TEnumElem = class sealed(specialize TJtdEnum<TEnum>);
+{ Container for some TRootObjectEnum enumeration element }
+  TRootObject = class sealed(specialize TJtdEnum<TRootObjectEnum>);
 
 implementation
 

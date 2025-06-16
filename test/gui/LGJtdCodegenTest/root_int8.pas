@@ -14,7 +14,7 @@ uses
 
 type
 
-  TRootInt8Int8 = TJtdInt8;
+  TRootObject = TJtdInt8;
 
 implementation
 

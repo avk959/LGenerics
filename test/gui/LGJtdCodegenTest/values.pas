@@ -14,7 +14,7 @@ uses
 
 type
 
-  TValues = class sealed(specialize TJtdMap<TJtdString>);
+  TRootObject = class sealed(specialize TJtdMap<TJtdString>);
 
 implementation
 

@@ -14,8 +14,8 @@ uses
 
 type
 
-{ TRootNullableStringString is nullable }
-  TRootNullableStringString = TJtdNullableString;
+{ TRootObject is nullable; }
+  TRootObject = TJtdString;
 
 implementation
 

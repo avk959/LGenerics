@@ -14,45 +14,94 @@ uses
 
 type
 
-  TPropertyNameCollisions = class sealed(TJtdObject)
+  TRootObject = class sealed(TJtdObject)
   private
     FFoo: TJtdString;
     FFoo1: TJtdString;
+    function  GetFoo: TJtdString;
+    function  GetFoo1: TJtdString;
     procedure SetFoo(aValue: TJtdString);
     procedure SetFoo1(aValue: TJtdString);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "foo" JSON property }
-    property Foo: TJtdString read FFoo write SetFoo;
+    property Foo: TJtdString read GetFoo write SetFoo;
   { refers to "Foo" JSON property }
-    property Foo1: TJtdString read FFoo1 write SetFoo1;
+    property Foo1: TJtdString read GetFoo1 write SetFoo1;
   end;
 
 implementation
 
-{ TPropertyNameCollisions }
+{ TRootObject }
 
-procedure TPropertyNameCollisions.SetFoo(aValue: TJtdString);
+function TRootObject.GetFoo: TJtdString;
 begin
+  CheckNull;
+  Result := FFoo;
+end;
+
+function TRootObject.GetFoo1: TJtdString;
+begin
+  CheckNull;
+  Result := FFoo1;
+end;
+
+procedure TRootObject.SetFoo(aValue: TJtdString);
+begin
+  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
 end;
 
-procedure TPropertyNameCollisions.SetFoo1(aValue: TJtdString);
+procedure TRootObject.SetFoo1(aValue: TJtdString);
 begin
+  DoAssign;
   if aValue = FFoo1 then exit;
   FFoo1.Free;
   FFoo1 := aValue;
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TPropertyNameCollisions.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..1] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'foo':
+        if not Flags[0] then begin
+          FFoo.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+      'Foo':
+        if not Flags[1] then begin
+          FFoo1.ReadJson(e.Value);
+          Flags[1] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('foo');
+        1: PropNotFound('Foo');
+      end;
+end;
+{$POP}
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TRootObject.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;
@@ -86,28 +135,24 @@ begin
 end;
 {$POP}
 
-procedure TPropertyNameCollisions.WriteFields(aWriter: TJsonStrWriter);
+procedure TRootObject.CreateProps;
 begin
-  aWriter.AddName('foo');
-  Foo.WriteJson(aWriter);
-  aWriter.AddName('Foo');
-  Foo1.WriteJson(aWriter);
+  FFoo := TJtdString.Create;
+  FFoo1 := TJtdString.Create;
 end;
 
-procedure TPropertyNameCollisions.DoClear;
-begin
-end;
-
-procedure TPropertyNameCollisions.ClearFields;
+procedure TRootObject.ClearProps;
 begin
   FFoo.Free;
   FFoo1.Free;
 end;
 
-procedure TPropertyNameCollisions.CreateFields;
+procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
 begin
-  FFoo := TJtdString.Create;
-  FFoo1 := TJtdString.Create;
+  aWriter.AddName('foo');
+  FFoo.WriteJson(aWriter);
+  aWriter.AddName('Foo');
+  FFoo1.WriteJson(aWriter);
 end;
 
 end.

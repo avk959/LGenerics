@@ -5,7 +5,7 @@
 }
 unit enum_collisions;
 
-{$MODE OBJFPC}{$H+}{$B-}
+{$MODE OBJFPC}{$H+}{$B-}{$SCOPEDENUMS ON}
 
 interface
 
@@ -14,57 +14,97 @@ uses
 
 type
 
-  TBar = (x, y);
+  TBarEnum = (x, y);
 
-{ Container for some TBar enumeration element }
-  TBarElem = class sealed(specialize TJtdEnum<TBar>);
+{ Container for some TBarEnum enumeration element }
+  TBar = class sealed(specialize TJtdEnum<TBarEnum>);
 
   TFoo = class sealed(TJtdObject)
   private
-    FBar: TBarElem;
-    procedure SetBar(aValue: TBarElem);
+    FBar: TBar;
+    function  GetBar: TBar;
+    procedure SetBar(aValue: TBar);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "bar" JSON property }
-    property Bar: TBarElem read FBar write SetBar;
+    property Bar: TBar read GetBar write SetBar;
   end;
 
-  TFooBar = TBarElem;
+  TFooBarEnum = (x, y);
 
-  TEnumCollisions = class sealed(TJtdObject)
+{ Container for some TFooBarEnum enumeration element }
+  TFooBar = class sealed(specialize TJtdEnum<TFooBarEnum>);
+
+  TRootObject = class sealed(TJtdObject)
   private
     FFoo: TFoo;
     FFooBar: TFooBar;
+    function  GetFoo: TFoo;
+    function  GetFooBar: TFooBar;
     procedure SetFoo(aValue: TFoo);
     procedure SetFooBar(aValue: TFooBar);
   protected
+    procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure WriteFields(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
-    procedure CreateFields; override;
-    procedure ClearFields; override;
+    procedure CreateProps; override;
+    procedure ClearProps; override;
+    procedure WriteProps(aWriter: TJsonStrWriter); override;
   public
   { refers to "foo" JSON property }
-    property Foo: TFoo read FFoo write SetFoo;
+    property Foo: TFoo read GetFoo write SetFoo;
   { refers to "foo_bar" JSON property }
-    property FooBar: TFooBar read FFooBar write SetFooBar;
+    property FooBar: TFooBar read GetFooBar write SetFooBar;
   end;
 
 implementation
 
 { TFoo }
 
-procedure TFoo.SetBar(aValue: TBarElem);
+function TFoo.GetBar: TBar;
 begin
+  CheckNull;
+  Result := FBar;
+end;
+
+procedure TFoo.SetBar(aValue: TBar);
+begin
+  DoAssign;
   if aValue = FBar then exit;
   FBar.Free;
   FBar := aValue;
 end;
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TFoo.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..0] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'bar':
+        if not Flags[0] then begin
+          FBar.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('bar');
+      end;
+end;
+{$POP}
 
 {$PUSH}{$WARN 5057 OFF}
 procedure TFoo.DoReadJson(aReader: TJsonReader);
@@ -95,44 +135,87 @@ begin
 end;
 {$POP}
 
-procedure TFoo.WriteFields(aWriter: TJsonStrWriter);
+procedure TFoo.CreateProps;
 begin
-  aWriter.AddName('bar');
-  Bar.WriteJson(aWriter);
+  FBar := TBar.Create;
 end;
 
-procedure TFoo.DoClear;
-begin
-end;
-
-procedure TFoo.ClearFields;
+procedure TFoo.ClearProps;
 begin
   FBar.Free;
 end;
 
-procedure TFoo.CreateFields;
+procedure TFoo.WriteProps(aWriter: TJsonStrWriter);
 begin
-  FBar := TBarElem.Create;
+  aWriter.AddName('bar');
+  FBar.WriteJson(aWriter);
 end;
 
-{ TEnumCollisions }
+{ TRootObject }
 
-procedure TEnumCollisions.SetFoo(aValue: TFoo);
+function TRootObject.GetFoo: TFoo;
 begin
+  CheckNull;
+  Result := FFoo;
+end;
+
+function TRootObject.GetFooBar: TFooBar;
+begin
+  CheckNull;
+  Result := FFooBar;
+end;
+
+procedure TRootObject.SetFoo(aValue: TFoo);
+begin
+  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
 end;
 
-procedure TEnumCollisions.SetFooBar(aValue: TFooBar);
+procedure TRootObject.SetFooBar(aValue: TFooBar);
 begin
+  DoAssign;
   if aValue = FFooBar then exit;
   FFooBar.Free;
   FFooBar := aValue;
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TEnumCollisions.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aNode: TJsonNode);
+var
+  Flags: array[0..1] of Boolean;
+  e: TJsonNode.TPair;
+  I: Integer;
+begin
+  if not aNode.IsObject then ExpectObject(aNode);
+  System.FillChar(Flags, SizeOf(Flags), 0);
+  for e in aNode.Entries do
+    case e.Key of
+      'foo':
+        if not Flags[0] then begin
+          FFoo.ReadJson(e.Value);
+          Flags[0] := True;
+        end else DuplicateProp(e.Key);
+      'foo_bar':
+        if not Flags[1] then begin
+          FFooBar.ReadJson(e.Value);
+          Flags[1] := True;
+        end else DuplicateProp(e.Key);
+    else
+      UnknownProp(e.Key);
+    end;
+  for I := 0 to System.High(Flags) do
+    if not Flags[I] then
+      case I of
+        0: PropNotFound('foo');
+        1: PropNotFound('foo_bar');
+      end;
+end;
+{$POP}
+
+{$PUSH}{$WARN 5057 OFF}
+procedure TRootObject.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;
@@ -166,28 +249,24 @@ begin
 end;
 {$POP}
 
-procedure TEnumCollisions.WriteFields(aWriter: TJsonStrWriter);
+procedure TRootObject.CreateProps;
 begin
-  aWriter.AddName('foo');
-  Foo.WriteJson(aWriter);
-  aWriter.AddName('foo_bar');
-  FooBar.WriteJson(aWriter);
+  FFoo := TFoo.Create;
+  FFooBar := TFooBar.Create;
 end;
 
-procedure TEnumCollisions.DoClear;
-begin
-end;
-
-procedure TEnumCollisions.ClearFields;
+procedure TRootObject.ClearProps;
 begin
   FFoo.Free;
   FFooBar.Free;
 end;
 
-procedure TEnumCollisions.CreateFields;
+procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
 begin
-  FFoo := TFoo.Create;
-  FFooBar := TFooBar.Create;
+  aWriter.AddName('foo');
+  FFoo.WriteJson(aWriter);
+  aWriter.AddName('foo_bar');
+  FFooBar.WriteJson(aWriter);
 end;
 
 end.

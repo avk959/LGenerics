@@ -14,7 +14,15 @@ uses
 
 type
 
-  TBarString = TJtdString;
+  TBar1 = TJtdString;
+
+  TBar = TBar1;
+
+  TFoo1 = TBar;
+
+  TFoo = TFoo1;
+
+  TRootObject = TFoo;
 
 implementation
 
