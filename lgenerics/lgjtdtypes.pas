@@ -19,7 +19,7 @@
 *****************************************************************************}
 unit lgJtdTypes;
 
-{$MODE OBJFPC}{$H+}
+{$MODE OBJFPC}{$H+}{$OBJECTCHECKS OFF}
 
 interface
 
@@ -47,13 +47,11 @@ type
     DEF_DEPTH    = TJsonReader.DEF_DEPTH;
     DEF_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
   private
-    FAssigned: Boolean;
+    FIsNull: Boolean;
   protected
-    procedure DoAssign; virtual;
     procedure DoReadJson(aNode: TJsonNode); virtual;
     procedure DoReadJson(aReader: TJsonReader); virtual;
     procedure DoWriteJson(aWriter: TJsonStrWriter); virtual;
-    procedure CheckNull;
     class function  GetJtdClass: TJtdEntityClass; virtual;
     class procedure Error(const aMessage: string); static;
     class procedure NotImplemented(const aMethod: string); static;
@@ -66,12 +64,6 @@ type
     class function  ReadInt(aNode: TJsonNode): Int64; static;
     class procedure ExpectObject(aReader: TJsonReader); static;
     class procedure ExpectObject(aNode: TJsonNode); static;
-    class procedure PropNotFound(const aJsonPropName: string; aReader: TJsonReader); static;
-    class procedure PropNotFound(const aJsonPropName: string); static;
-    class procedure UnknownProp(const aJsonPropName: string; aReader: TJsonReader); static;
-    class procedure UnknownProp(const aJsonPropName: string); static;
-    class procedure DuplicateProp(aReader: TJsonReader); static;
-    class procedure DuplicateProp(const aProp: string); static;
     class procedure InternalError(aNumber: Byte); static;
   public
   { if the loading fails, an exception will be raised }
@@ -90,6 +82,7 @@ type
     class function TryLoadFile(const aFileName: string; aSkipBom: Boolean = False;
                                aBufSize: SizeInt = DEF_BUF_SIZE; aMaxDepth: SizeInt = DEF_DEPTH): TJtdEntity;
     constructor Create; virtual;
+    constructor CreateNull; virtual;
     procedure ReadJson(aNode: TJsonNode); virtual;
     procedure ReadJson(aReader: TJsonReader); virtual;
   { if the loading fails, an exception will be raised }
@@ -99,8 +92,8 @@ type
                    aMaxDepth: SizeInt = DEF_DEPTH);
     procedure LoadFile(const aFileName: string; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                        aMaxDepth: SizeInt = DEF_DEPTH);
-    procedure SetNull; virtual;
     function  IsNull: Boolean; virtual;
+    procedure SetNull;
     procedure WriteJson(aWriter: TJsonStrWriter); virtual;
     function  AsJson: string;
   end;
@@ -109,12 +102,10 @@ type
   generic TJtdValue<T> = class abstract(TJtdEntity)
   protected
     FValue: T;
-    function  GetValue: T;
-    procedure SetValue(const aValue: T); virtual;
   public
     constructor Create(const aValue: T); virtual; overload;
     function OrElse(const aDefault: T): T;
-    property Value: T read GetValue write SetValue;
+    property Value: T read FValue write FValue;
   end;
 
   { TJtdAny: container for JTD "empty" form }
@@ -128,7 +119,6 @@ type
   public
     constructor Create; override;
     destructor Destroy; override;
-    procedure SetNull; override;
     function  IsNull: Boolean; override;
     property Instance: TJsonNode read FInstance;
   end;
@@ -232,7 +222,7 @@ type
   { TJtdStrEnum: container for JDT "enum" form when the enum elements are not valid Pascal identifiers }
   TJtdStrEnum = class abstract(specialize TJtdValue<string>)
   protected
-    procedure SetValue(const aValue: string); override;
+    procedure SetValue(const aValue: string);
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
@@ -244,11 +234,8 @@ type
 
   { TJtdGenContainer: abstract ancestor class }
   TJtdGenContainer = class abstract(TJtdEntity)
-  protected
-    procedure DoClear; virtual; abstract;
-  public
     destructor Destroy; override;
-    procedure SetNull; override;
+    procedure Clear; virtual; abstract;
   end;
 
   { TJtdList: generic container for JTD "elements" form }
@@ -268,10 +255,9 @@ type
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
   public
     function  GetEnumerator: TEnumerator; inline;
-    procedure Clear;
+    procedure Clear; override;
     function  Add(aValue: T): SizeInt;
     procedure Insert(aIndex: SizeInt; aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
@@ -299,7 +285,6 @@ type
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
   public
   { enumerates all pairs (aKey, aValue) }
     function  GetEnumerator: TJtdMapEnumerator; inline;
@@ -307,7 +292,7 @@ type
     function  Keys: TJtdMapKeys; inline;
   { enumerates all values }
     function  Values: TJtdMapValues; inline;
-    procedure Clear;
+    procedure Clear; override;
     function  Contains(const aKey: string): Boolean; inline;
   { returns True and adds the (aKey, aValue) pair only if the instance does not contain aKey }
     function  Add(const aKey: string; aValue: T): Boolean; inline;
@@ -323,28 +308,26 @@ type
   { TJtdObject: abstract ancestor class for JTD "properties" form }
   TJtdObject = class abstract(TJtdGenContainer)
   protected
-    procedure DoClear; override;
-    procedure CreateProps; virtual;
-    procedure ClearProps; virtual;
-    procedure WriteProps(aWriter: TJsonStrWriter); virtual;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-  public
-    constructor Create; override;
-    destructor Destroy; override;
+    class procedure PropNotFound(const aJsonPropName: string; aReader: TJsonReader); static;
+    class procedure PropNotFound(const aJsonPropName: string); static;
+    class procedure UnknownProp(const aJsonPropName: string; aReader: TJsonReader); static;
+    class procedure UnknownProp(const aJsonPropName: string); static;
+    class procedure DuplicateProp(aReader: TJsonReader); static;
+    class procedure DuplicateProp(const aProp: string); static;
   end;
 
   { TJtdUnion: abstract ancestor class for JTD "discriminator" form }
-  TJtdUnion = class abstract(TJtdGenContainer)
+  TJtdUnion = class abstract(TJtdEntity)
   protected
     FTag: string;
     FInstance: TJtdEntity;
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
-    procedure DoClear; override;
     class function GetTagJsonName: string; virtual; abstract;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; virtual; abstract;
   public
+    destructor Destroy; override;
     function GetInstanceClass: TJtdEntityClass;
     property Tag: string read FTag;
   end;
@@ -405,11 +388,6 @@ end;
 
 { TJtdEntity }
 
-procedure TJtdEntity.DoAssign;
-begin
-  FAssigned := True;
-end;
-
 procedure TJtdEntity.DoReadJson(aNode: TJsonNode);
 begin
   Assert(aNode = aNode); // make compiler happy
@@ -426,11 +404,6 @@ procedure TJtdEntity.DoWriteJson(aWriter: TJsonStrWriter);
 begin
   Assert(aWriter = aWriter); // make compiler happy
   NotImplemented({$I %currentRoutine%});
-end;
-
-procedure TJtdEntity.CheckNull;
-begin
-  if IsNull then Error(SEJtdCantReadNullValue);
 end;
 
 class function TJtdEntity.GetJtdClass: TJtdEntityClass;
@@ -502,36 +475,6 @@ begin
   ReadError(SEJtdExpectGotFmt, [CSJtdObject, JKIND_NAMES[aNode.Kind]]);
 end;
 
-class procedure TJtdEntity.PropNotFound(const aJsonPropName: string; aReader: TJsonReader);
-begin
-  ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName], aReader);
-end;
-
-class procedure TJtdEntity.PropNotFound(const aJsonPropName: string);
-begin
-  ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName]);
-end;
-
-class procedure TJtdEntity.UnknownProp(const aJsonPropName: string; aReader: TJsonReader);
-begin
-  ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName], aReader);
-end;
-
-class procedure TJtdEntity.UnknownProp(const aJsonPropName: string);
-begin
-  ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName]);
-end;
-
-class procedure TJtdEntity.DuplicateProp(aReader: TJsonReader);
-begin
-  ReadError(SEJtdDupPropNameFmt, [aReader.Name], aReader);
-end;
-
-class procedure TJtdEntity.DuplicateProp(const aProp: string);
-begin
-  ReadError(SEJtdDupPropNameFmt, [aProp]);
-end;
-
 class procedure TJtdEntity.InternalError(aNumber: Byte);
 begin
   Error(Format(SEJtdInternalFmt, [aNumber]));
@@ -540,23 +483,13 @@ end;
 class function TJtdEntity.LoadInstance(aNode: TJsonNode): TJtdEntity;
 begin
   Result := GetJtdClass.Create;
-  try
-    Result.ReadJson(aNode);
-  except
-    FreeAndNil(Result);
-    raise;
-  end;
+  Result.ReadJson(aNode);
 end;
 
 class function TJtdEntity.LoadInstance(aReader: TJsonReader): TJtdEntity;
 begin
   Result := GetJtdClass.Create;
-  try
-    Result.ReadJson(aReader);
-  except
-    FreeAndNil(Result);
-    raise;
-  end;
+  Result.ReadJson(aReader);
 end;
 
 class function TJtdEntity.LoadInstance(aBuffer: PAnsiChar; aCount: SizeInt): TJtdEntity;
@@ -594,6 +527,7 @@ begin
   try
     Result := LoadInstance(aBuffer, aCount);
   except
+    FreeAndNil(Result);
   end;
 end;
 
@@ -602,6 +536,7 @@ begin
   try
     Result := LoadInstance(aNode);
   except
+    FreeAndNil(Result);
   end;
 end;
 
@@ -610,6 +545,7 @@ begin
   try
     Result := LoadInstance(aJson);
   except
+    FreeAndNil(Result);
   end;
 end;
 
@@ -619,6 +555,7 @@ begin
   try
     Result := LoadInstance(aStream, aSkipBom, aBufSize, aMaxDepth);
   except
+    FreeAndNil(Result);
   end;
 end;
 
@@ -629,7 +566,7 @@ begin
   try
     with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
       try
-        Result := LoadInstance(TStream(GetSelfRef), aSkipBom, aBufSize, aMaxDepth);
+        Result := TryLoad(TStream(GetSelfRef), aSkipBom, aBufSize, aMaxDepth);
       finally
         Free;
       end;
@@ -642,21 +579,33 @@ begin
   inherited Create;
 end;
 
+constructor TJtdEntity.CreateNull;
+begin
+  inherited Create;
+  FIsNull := True;
+end;
+
 procedure TJtdEntity.ReadJson(aNode: TJsonNode);
 begin
-  SetNull;
-  if aNode.IsNull then exit;
+  FIsNull := False;
+  if aNode.IsNull then
+    begin
+      SetNull;
+      exit;
+    end;
   DoReadJson(aNode);
-  DoAssign;
 end;
 
 procedure TJtdEntity.ReadJson(aReader: TJsonReader);
 begin
   if (aReader.ReadState = rsStart) and not aReader.Read then ReaderFail(aReader);
-  SetNull;
-  if aReader.TokenKind = tkNull then exit;
+  FIsNull := False;
+  if aReader.TokenKind = tkNull then
+    begin
+      SetNull;
+      exit;
+    end;
   DoReadJson(aReader);
-  DoAssign;
 end;
 
 procedure TJtdEntity.Load(aBuffer: PAnsiChar; aCount: SizeInt);
@@ -700,14 +649,14 @@ begin
   end;
 end;
 
-procedure TJtdEntity.SetNull;
-begin
-  FAssigned := False;
-end;
-
 function TJtdEntity.IsNull: Boolean;
 begin
-  Result := not FAssigned;
+  Result := (Self = nil) or FIsNull;
+end;
+
+procedure TJtdEntity.SetNull;
+begin
+  FIsNull := True;
 end;
 
 procedure TJtdEntity.WriteJson(aWriter: TJsonStrWriter);
@@ -732,18 +681,6 @@ begin
 end;
 
 { TJtdValue }
-
-function TJtdValue.GetValue: T;
-begin
-  CheckNull;
-  Result := FValue;
-end;
-
-procedure TJtdValue.SetValue(const aValue: T);
-begin
-  FValue := aValue;
-  DoAssign;
-end;
 
 constructor TJtdValue.Create(const aValue: T);
 begin
@@ -804,12 +741,6 @@ destructor TJtdAny.Destroy;
 begin
   FInstance.Free;
   inherited Destroy;
-end;
-
-procedure TJtdAny.SetNull;
-begin
-  FInstance.Clear;
-  inherited;
 end;
 
 function TJtdAny.IsNull: Boolean;
@@ -1144,7 +1075,7 @@ procedure TJtdStrEnum.SetValue(const aValue: string);
 begin
   if not IsElement(aValue) then
     Error(Format(SEStrNotEnumElemFmt, [aValue, ClassName]));
-  inherited SetValue(aValue);
+  FValue := aValue;
 end;
 
 procedure TJtdStrEnum.DoReadJson(aNode: TJsonNode);
@@ -1180,28 +1111,19 @@ end;
 
 destructor TJtdGenContainer.Destroy;
 begin
-  DoClear;
+  Clear;
   inherited Destroy;
-end;
-
-procedure TJtdGenContainer.SetNull;
-begin
-  if IsNull then exit;
-  DoClear;
-  inherited;
 end;
 
 { TJtdList }
 
 function TJtdList.GetCount: SizeInt;
 begin
-  CheckNull;
   Result := FList.Count;
 end;
 
 function TJtdList.GetItem(aIndex: SizeInt): T;
 begin
-  CheckNull;
   Result := FList[aIndex];
 end;
 
@@ -1215,7 +1137,6 @@ begin
       v.Free;
       FList[aIndex] := aValue;
     end;
-  DoAssign;
 end;
 
 procedure TJtdList.DoReadJson(aNode: TJsonNode);
@@ -1224,6 +1145,7 @@ var
 begin
   if not aNode.IsArray then
     ReadError(SEJtdExpectGotFmt, [CSJtdArray, JKIND_NAMES[aNode.Kind]]);
+  Clear;
   for n in aNode do
     FList.Add(T(T.LoadInstance(n)));
 end;
@@ -1232,6 +1154,7 @@ procedure TJtdList.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkArrayBegin then
     ReadError(SEJtdExpectGotFmt, [CSJtdArray, TOKEN_NAMES[aReader.TokenKind]], aReader);
+  Clear;
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkArrayEnd then break;
@@ -1249,23 +1172,19 @@ begin
   aWriter.EndArray;
 end;
 
-procedure TJtdList.DoClear;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(FList.Count) do
-    FList.UncMutable[I]^.Free;
-  FList.MakeEmpty;
-end;
-
 function TJtdList.GetEnumerator: TEnumerator;
 begin
   Result := FList.GetEnumerator;
 end;
 
 procedure TJtdList.Clear;
+var
+  I: SizeInt;
 begin
-  DoClear;
+  if FList.IsEmpty then exit;
+  for I := 0 to Pred(FList.Count) do
+    FList.UncMutable[I]^.Free;
+  FList.MakeEmpty;
 end;
 
 function TJtdList.Add(aValue: T): SizeInt;
@@ -1290,13 +1209,11 @@ end;
 
 function TJtdMap.GetCount: SizeInt;
 begin
-  CheckNull;
   Result := FMap.Count;
 end;
 
 function TJtdMap.GetItem(const aKey: string): T;
 begin
-  CheckNull;
   if not FMap.TryGetValue(aKey, Result) then Result := nil;
 end;
 
@@ -1306,6 +1223,7 @@ var
   p: TMap.PValue;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   for e in aNode.Entries do begin
     p := FMap.GetMutValueDef(e.Key, nil);
     if p^ <> nil then
@@ -1319,6 +1237,7 @@ var
   p: TMap.PValue;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
@@ -1342,15 +1261,6 @@ begin
   aWriter.EndObject;
 end;
 
-procedure TJtdMap.DoClear;
-var
-  v: T;
-begin
-  for v in FMap.Values do
-    v.Free;
-  FMap.MakeEmpty;
-end;
-
 function TJtdMap.GetEnumerator: TJtdMapEnumerator;
 begin
   Result := FMap.GetEnumerator;
@@ -1367,20 +1277,23 @@ begin
 end;
 
 procedure TJtdMap.Clear;
+var
+  v: T;
 begin
-  DoClear;
+  if FMap.IsEmpty then exit;
+  for v in FMap.Values do
+    v.Free;
+  FMap.MakeEmpty;
 end;
 
 function TJtdMap.Contains(const aKey: string): Boolean;
 begin
-  CheckNull;
   Result := FMap.Contains(aKey);
 end;
 
 function TJtdMap.Add(const aKey: string; aValue: T): Boolean;
 begin
   Result := FMap.Add(aKey, aValue);
-  DoAssign;
 end;
 
 procedure TJtdMap.AddOrSetValue(const aKey: string; aValue: T);
@@ -1390,12 +1303,10 @@ begin
   if FMap.FindOrAddMutValue(aKey, p) and (p^ <> aValue) then
     p^.Free;
   p^ := aValue;
-  DoAssign;
 end;
 
 function TJtdMap.TryGetValue(const aKey: string; out aValue: T): Boolean;
 begin
-  CheckNull;
   Result := FMap.TryGetValue(aKey, aValue);
 end;
 
@@ -1403,7 +1314,6 @@ function TJtdMap.Remove(const aKey: string): Boolean;
 var
   v: T = nil;
 begin
-  CheckNull;
   Result := FMap.Extract(aKey, v);
   if Result then
     v.Free;
@@ -1411,40 +1321,34 @@ end;
 
 { TJtdObject }
 
-procedure TJtdObject.DoClear;
+class procedure TJtdObject.PropNotFound(const aJsonPropName: string; aReader: TJsonReader);
 begin
+  ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName], aReader);
 end;
 
-procedure TJtdObject.CreateProps;
+class procedure TJtdObject.PropNotFound(const aJsonPropName: string);
 begin
+  ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName]);
 end;
 
-procedure TJtdObject.ClearProps;
+class procedure TJtdObject.UnknownProp(const aJsonPropName: string; aReader: TJsonReader);
 begin
+  ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName], aReader);
 end;
 
-procedure TJtdObject.WriteProps(aWriter: TJsonStrWriter);
+class procedure TJtdObject.UnknownProp(const aJsonPropName: string);
 begin
-  Assert(aWriter = aWriter);
+  ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName]);
 end;
 
-procedure TJtdObject.DoWriteJson(aWriter: TJsonStrWriter);
+class procedure TJtdObject.DuplicateProp(aReader: TJsonReader);
 begin
-  aWriter.BeginObject;
-  WriteProps(aWriter);
-  aWriter.EndObject;
+  ReadError(SEJtdDupPropNameFmt, [aReader.Name], aReader);
 end;
 
-constructor TJtdObject.Create;
+class procedure TJtdObject.DuplicateProp(const aProp: string);
 begin
-  inherited;
-  CreateProps;
-end;
-
-destructor TJtdObject.Destroy;
-begin
-  ClearProps;
-  inherited;
+  ReadError(SEJtdDupPropNameFmt, [aProp]);
 end;
 
 { TJtdUnion }
@@ -1468,6 +1372,7 @@ begin
       ReadError(Format(SEJtdIllegalTagValueFmt, [TagNode.AsString]));
     FTag := TagNode.AsString;
     if not Node.Remove(TagName) then InternalError(2);
+    FreeAndNil(FInstance);
     FInstance := InstClass.LoadInstance(Node);
   finally
     Node.Free;
@@ -1493,6 +1398,7 @@ begin
     if InstClass = nil then
       ReadError(Format(SEJtdIllegalTagValueFmt, [TagValue]));
     if not Node.Remove(TagName) then InternalError(4);
+    FreeAndNil(FInstance);
     try
       FInstance := InstClass.LoadInstance(Node);
     except
@@ -1505,17 +1411,23 @@ begin
 end;
 
 procedure TJtdUnion.DoWriteJson(aWriter: TJsonStrWriter);
+var
+  n: TJsonNode;
 begin
-  aWriter.BeginObject;
-  aWriter.Add(GetTagJsonName, Tag);
-  TJtdObject(FInstance).WriteProps(aWriter);
-  aWriter.EndObject;
+  if not TJsonNode.TryParse(FInstance.AsJson, n) then InternalError(5);
+  try
+    if not n.IsObject then InternalError(6);
+    n.Add(GetTagJsonName, Tag);
+    aWriter.Add(n);
+  finally
+    n.Free;
+  end;
 end;
 
-procedure TJtdUnion.DoClear;
+destructor TJtdUnion.Destroy;
 begin
-  FTag := '';
-  FreeAndNil(FInstance);
+  FInstance.Free;
+  inherited Destroy;
 end;
 
 function TJtdUnion.GetInstanceClass: TJtdEntityClass;
