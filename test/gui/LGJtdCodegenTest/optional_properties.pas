@@ -19,54 +19,32 @@ type
     FFoo: TJtdString;
     FBar: specialize TJtdList<TJtdString>;
     FBaz: TJtdBool;
-    function  GetFoo: TJtdString;
-    function  GetBar: specialize TJtdList<TJtdString>;
-    function  GetBaz: TJtdBool;
     procedure SetFoo(aValue: TJtdString);
     procedure SetBar(aValue: specialize TJtdList<TJtdString>);
     procedure SetBaz(aValue: TJtdBool);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoClear; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
 
   { All of the following properties are optional, so may contain NILs }
 
   { refers to "foo" JSON property }
-    property Foo: TJtdString read GetFoo write SetFoo;
+    property Foo: TJtdString read FFoo write SetFoo;
   { refers to "bar" JSON property }
-    property Bar: specialize TJtdList<TJtdString> read GetBar write SetBar;
+    property Bar: specialize TJtdList<TJtdString> read FBar write SetBar;
   { refers to "baz" JSON property }
-    property Baz: TJtdBool read GetBaz write SetBaz;
+    property Baz: TJtdBool read FBaz write SetBaz;
   end;
 
 implementation
 
 { TRootObject }
 
-function TRootObject.GetFoo: TJtdString;
-begin
-  CheckNull;
-  Result := FFoo;
-end;
-
-function TRootObject.GetBar: specialize TJtdList<TJtdString>;
-begin
-  CheckNull;
-  Result := FBar;
-end;
-
-function TRootObject.GetBaz: TJtdBool;
-begin
-  CheckNull;
-  Result := FBaz;
-end;
-
 procedure TRootObject.SetFoo(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
@@ -74,7 +52,6 @@ end;
 
 procedure TRootObject.SetBar(aValue: specialize TJtdList<TJtdString>);
 begin
-  DoAssign;
   if aValue = FBar then exit;
   FBar.Free;
   FBar := aValue;
@@ -82,7 +59,6 @@ end;
 
 procedure TRootObject.SetBaz(aValue: TJtdBool);
 begin
-  DoAssign;
   if aValue = FBaz then exit;
   FBaz.Free;
   FBaz := aValue;
@@ -94,6 +70,7 @@ var
   e: TJsonNode.TPair;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   for e in aNode.Entries do
     case e.Key of
       'foo':
@@ -118,6 +95,7 @@ end;
 procedure TRootObject.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
@@ -141,27 +119,29 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.DoClear;
+procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.BeginObject;
+  if Foo <> nil then begin
+    aWriter.AddName('foo');
+    Foo.WriteJson(aWriter);
+  end;
+  if Bar <> nil then begin
+    aWriter.AddName('bar');
+    Bar.WriteJson(aWriter);
+  end;
+  if Baz <> nil then begin
+    aWriter.AddName('baz');
+    Baz.WriteJson(aWriter);
+  end;
+  aWriter.EndObject;
+end;
+
+procedure TRootObject.Clear;
 begin
   FreeAndNil(FFoo);
   FreeAndNil(FBar);
   FreeAndNil(FBaz);
-end;
-
-procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
-begin
-  if FFoo <> nil then begin
-    aWriter.AddName('foo');
-    FFoo.WriteJson(aWriter);
-  end;
-  if FBar <> nil then begin
-    aWriter.AddName('bar');
-    FBar.WriteJson(aWriter);
-  end;
-  if FBaz <> nil then begin
-    aWriter.AddName('baz');
-    FBaz.WriteJson(aWriter);
-  end;
 end;
 
 end.

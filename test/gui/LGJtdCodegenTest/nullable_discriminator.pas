@@ -17,40 +17,36 @@ type
   TBar = class sealed(TJtdObject)
   private
     FBaz: TJtdString;
-    function  GetBaz: TJtdString;
     procedure SetBaz(aValue: TJtdString);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "baz" JSON property }
-    property Baz: TJtdString read GetBaz write SetBaz;
+    property Baz: TJtdString read FBaz write SetBaz;
   end;
 
   TQuux = class sealed(TJtdObject)
   private
     FQuuz: TJtdString;
-    function  GetQuuz: TJtdString;
     procedure SetQuuz(aValue: TJtdString);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "quuz" JSON property }
-    property Quuz: TJtdString read GetQuuz write SetQuuz;
+    property Quuz: TJtdString read FQuuz write SetQuuz;
   end;
 
 { TRootObject is nullable; }
   TRootObject = class sealed(TJtdUnion)
   protected
-    function GetBar: TBar;
-    function GetQuux: TQuux;
+    function  GetBar: TBar;
+    function  GetQuux: TQuux;
     procedure SetBar(aValue: TBar);
     procedure SetQuux(aValue: TQuux);
     class function GetTagJsonName: string; override;
@@ -66,15 +62,8 @@ implementation
 
 { TBar }
 
-function TBar.GetBaz: TJtdString;
-begin
-  CheckNull;
-  Result := FBaz;
-end;
-
 procedure TBar.SetBaz(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FBaz then exit;
   FBaz.Free;
   FBaz := aValue;
@@ -88,12 +77,13 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'baz':
         if not Flags[0] then begin
-          FBaz.ReadJson(e.Value);
+          FBaz := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
     else
@@ -114,6 +104,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -121,7 +112,7 @@ begin
     case aReader.Name of
       'baz':
         if not Flags[0] then begin
-          FBaz.ReadJson(aReader);
+          FBaz := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
     else
@@ -136,33 +127,23 @@ begin
 end;
 {$POP}
 
-procedure TBar.CreateProps;
+procedure TBar.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FBaz := TJtdString.Create;
-end;
-
-procedure TBar.ClearProps;
-begin
-  FBaz.Free;
-end;
-
-procedure TBar.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('baz');
-  FBaz.WriteJson(aWriter);
+  Baz.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TBar.Clear;
+begin
+  FreeAndNil(FBaz);
 end;
 
 { TQuux }
 
-function TQuux.GetQuuz: TJtdString;
-begin
-  CheckNull;
-  Result := FQuuz;
-end;
-
 procedure TQuux.SetQuuz(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FQuuz then exit;
   FQuuz.Free;
   FQuuz := aValue;
@@ -176,12 +157,13 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'quuz':
         if not Flags[0] then begin
-          FQuuz.ReadJson(e.Value);
+          FQuuz := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
     else
@@ -202,6 +184,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -209,7 +192,7 @@ begin
     case aReader.Name of
       'quuz':
         if not Flags[0] then begin
-          FQuuz.ReadJson(aReader);
+          FQuuz := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
     else
@@ -224,20 +207,17 @@ begin
 end;
 {$POP}
 
-procedure TQuux.CreateProps;
+procedure TQuux.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FQuuz := TJtdString.Create;
-end;
-
-procedure TQuux.ClearProps;
-begin
-  FQuuz.Free;
-end;
-
-procedure TQuux.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('quuz');
-  FQuuz.WriteJson(aWriter);
+  Quuz.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TQuux.Clear;
+begin
+  FreeAndNil(FQuuz);
 end;
 
 class function TRootObject.GetTagJsonName: string;
@@ -257,19 +237,16 @@ end;
 
 function TRootObject.GetBar: TBar;
 begin
-  CheckNull;
   Result := FInstance as TBar;
 end;
 
 function TRootObject.GetQuux: TQuux;
 begin
-  CheckNull;
   Result := FInstance as TQuux;
 end;
 
 procedure TRootObject.SetBar(aValue: TBar);
 begin
-  DoAssign;
   if aValue = FInstance then exit;
   FInstance.Free;
   FInstance := aValue;
@@ -278,7 +255,6 @@ end;
 
 procedure TRootObject.SetQuux(aValue: TQuux);
 begin
-  DoAssign;
   if aValue = FInstance then exit;
   FInstance.Free;
   FInstance := aValue;

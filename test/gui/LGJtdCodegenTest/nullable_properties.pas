@@ -21,10 +21,6 @@ type
     FBar: TJtdString;
     FBaz: specialize TJtdList<TJtdBool>;
     FQuux: specialize TJtdList<TJtdBool>;
-    function  GetFoo: TJtdBool;
-    function  GetBar: TJtdString;
-    function  GetBaz: specialize TJtdList<TJtdBool>;
-    function  GetQuux: specialize TJtdList<TJtdBool>;
     procedure SetFoo(aValue: TJtdBool);
     procedure SetBar(aValue: TJtdString);
     procedure SetBaz(aValue: specialize TJtdList<TJtdBool>);
@@ -32,51 +28,25 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "foo" JSON property }
-    property Foo: TJtdBool read GetFoo write SetFoo;
+    property Foo: TJtdBool read FFoo write SetFoo;
   { refers to "bar" JSON property }
-    property Bar: TJtdString read GetBar write SetBar;
+    property Bar: TJtdString read FBar write SetBar;
   { refers to "baz" JSON property }
-    property Baz: specialize TJtdList<TJtdBool> read GetBaz write SetBaz;
+    property Baz: specialize TJtdList<TJtdBool> read FBaz write SetBaz;
   { refers to "quux" JSON property }
-    property Quux: specialize TJtdList<TJtdBool> read GetQuux write SetQuux;
+    property Quux: specialize TJtdList<TJtdBool> read FQuux write SetQuux;
   end;
 
 implementation
 
 { TRootObject }
 
-function TRootObject.GetFoo: TJtdBool;
-begin
-  CheckNull;
-  Result := FFoo;
-end;
-
-function TRootObject.GetBar: TJtdString;
-begin
-  CheckNull;
-  Result := FBar;
-end;
-
-function TRootObject.GetBaz: specialize TJtdList<TJtdBool>;
-begin
-  CheckNull;
-  Result := FBaz;
-end;
-
-function TRootObject.GetQuux: specialize TJtdList<TJtdBool>;
-begin
-  CheckNull;
-  Result := FQuux;
-end;
-
 procedure TRootObject.SetFoo(aValue: TJtdBool);
 begin
-  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
@@ -84,7 +54,6 @@ end;
 
 procedure TRootObject.SetBar(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FBar then exit;
   FBar.Free;
   FBar := aValue;
@@ -92,7 +61,6 @@ end;
 
 procedure TRootObject.SetBaz(aValue: specialize TJtdList<TJtdBool>);
 begin
-  DoAssign;
   if aValue = FBaz then exit;
   FBaz.Free;
   FBaz := aValue;
@@ -100,7 +68,6 @@ end;
 
 procedure TRootObject.SetQuux(aValue: specialize TJtdList<TJtdBool>);
 begin
-  DoAssign;
   if aValue = FQuux then exit;
   FQuux.Free;
   FQuux := aValue;
@@ -114,27 +81,28 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'foo':
         if not Flags[0] then begin
-          FFoo.ReadJson(e.Value);
+          FFoo := TJtdBool(TJtdBool.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       'bar':
         if not Flags[1] then begin
-          FBar.ReadJson(e.Value);
+          FBar := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[1] := True;
         end else DuplicateProp(e.Key);
       'baz':
         if not Flags[2] then begin
-          FBaz.ReadJson(e.Value);
+          FBaz := specialize TJtdList<TJtdBool>(specialize TJtdList<TJtdBool>.LoadInstance(e.Value));
           Flags[2] := True;
         end else DuplicateProp(e.Key);
       'quux':
         if not Flags[3] then begin
-          FQuux.ReadJson(e.Value);
+          FQuux := specialize TJtdList<TJtdBool>(specialize TJtdList<TJtdBool>.LoadInstance(e.Value));
           Flags[3] := True;
         end else DuplicateProp(e.Key);
     else
@@ -158,6 +126,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -165,22 +134,22 @@ begin
     case aReader.Name of
       'foo':
         if not Flags[0] then begin
-          FFoo.ReadJson(aReader);
+          FFoo := TJtdBool(TJtdBool.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       'bar':
         if not Flags[1] then begin
-          FBar.ReadJson(aReader);
+          FBar := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[1] := True;
         end else DuplicateProp(aReader);
       'baz':
         if not Flags[2] then begin
-          FBaz.ReadJson(aReader);
+          FBaz := specialize TJtdList<TJtdBool>(specialize TJtdList<TJtdBool>.LoadInstance(aReader));
           Flags[2] := True;
         end else DuplicateProp(aReader);
       'quux':
         if not Flags[3] then begin
-          FQuux.ReadJson(aReader);
+          FQuux := specialize TJtdList<TJtdBool>(specialize TJtdList<TJtdBool>.LoadInstance(aReader));
           Flags[3] := True;
         end else DuplicateProp(aReader);
     else
@@ -198,32 +167,26 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.CreateProps;
+procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FFoo := TJtdBool.Create;
-  FBar := TJtdString.Create;
-  FBaz := specialize TJtdList<TJtdBool>.Create;
-  FQuux := specialize TJtdList<TJtdBool>.Create;
-end;
-
-procedure TRootObject.ClearProps;
-begin
-  FFoo.Free;
-  FBar.Free;
-  FBaz.Free;
-  FQuux.Free;
-end;
-
-procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('foo');
-  FFoo.WriteJson(aWriter);
+  Foo.WriteJson(aWriter);
   aWriter.AddName('bar');
-  FBar.WriteJson(aWriter);
+  Bar.WriteJson(aWriter);
   aWriter.AddName('baz');
-  FBaz.WriteJson(aWriter);
+  Baz.WriteJson(aWriter);
   aWriter.AddName('quux');
-  FQuux.WriteJson(aWriter);
+  Quux.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TRootObject.Clear;
+begin
+  FreeAndNil(FFoo);
+  FreeAndNil(FBar);
+  FreeAndNil(FBaz);
+  FreeAndNil(FQuux);
 end;
 
 end.

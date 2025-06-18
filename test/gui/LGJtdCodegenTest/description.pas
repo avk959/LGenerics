@@ -33,7 +33,9 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   end;
 
 { A description for discriminator variant }
@@ -42,13 +44,15 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   end;
 
 { A description for discriminator }
   TDiscriminatorWithDescription = class sealed(TJtdUnion)
   protected
-    function GetBar: TBar;
+    function  GetBar: TBar;
     procedure SetBar(aValue: TBar);
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
@@ -65,12 +69,6 @@ type
     FEnumWithDescription: TEnumWithDescription;
     FPropertiesWithDescription: TPropertiesWithDescription;
     FDiscriminatorWithDescription: TDiscriminatorWithDescription;
-    function  GetLongDescription: TJtdString;
-    function  GetRefWithDescription: TBaz;
-    function  GetStringWithDescription: TJtdString;
-    function  GetEnumWithDescription: TEnumWithDescription;
-    function  GetPropertiesWithDescription: TPropertiesWithDescription;
-    function  GetDiscriminatorWithDescription: TDiscriminatorWithDescription;
     procedure SetLongDescription(aValue: TJtdString);
     procedure SetRefWithDescription(aValue: TBaz);
     procedure SetStringWithDescription(aValue: TJtdString);
@@ -80,27 +78,26 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { Whereas disregard and contempt for human rights have resulted in barbarous acts 
     which have outraged the conscience of mankind, and the advent of a world in 
     which human beings shall enjoy freedom of speech and belief and freedom from 
     fear and want has been proclaimed as the highest aspiration of the common people,
      refers to "long_description" JSON property }
-    property LongDescription: TJtdString read GetLongDescription write SetLongDescription;
+    property LongDescription: TJtdString read FLongDescription write SetLongDescription;
   { A description for ref; refers to "ref_with_description" JSON property }
-    property RefWithDescription: TBaz read GetRefWithDescription write SetRefWithDescription;
+    property RefWithDescription: TBaz read FRefWithDescription write SetRefWithDescription;
   { A description for string; refers to "string_with_description" JSON property }
-    property StringWithDescription: TJtdString read GetStringWithDescription write SetStringWithDescription;
+    property StringWithDescription: TJtdString read FStringWithDescription write SetStringWithDescription;
   { A description for enum; refers to "enum_with_description" JSON property }
-    property EnumWithDescription: TEnumWithDescription read GetEnumWithDescription write SetEnumWithDescription;
+    property EnumWithDescription: TEnumWithDescription read FEnumWithDescription write SetEnumWithDescription;
   { A description for properties; refers to "properties_with_description" JSON property }
-    property PropertiesWithDescription: TPropertiesWithDescription read GetPropertiesWithDescription write SetPropertiesWithDescription;
+    property PropertiesWithDescription: TPropertiesWithDescription read FPropertiesWithDescription write SetPropertiesWithDescription;
   { A description for discriminator; refers to "discriminator_with_description" 
     JSON property }
-    property DiscriminatorWithDescription: TDiscriminatorWithDescription read GetDiscriminatorWithDescription write SetDiscriminatorWithDescription;
+    property DiscriminatorWithDescription: TDiscriminatorWithDescription read FDiscriminatorWithDescription write SetDiscriminatorWithDescription;
   end;
 
 implementation
@@ -125,6 +122,16 @@ begin
 end;
 {$POP}
 
+procedure TPropertiesWithDescription.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.BeginObject;
+  aWriter.EndObject;
+end;
+
+procedure TPropertiesWithDescription.Clear;
+begin
+end;
+
 { TBar }
 
 {$PUSH}{$WARN 5057 OFF}
@@ -145,6 +152,16 @@ begin
 end;
 {$POP}
 
+procedure TBar.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.BeginObject;
+  aWriter.EndObject;
+end;
+
+procedure TBar.Clear;
+begin
+end;
+
 class function TDiscriminatorWithDescription.GetTagJsonName: string;
 begin
   Result := 'foo';
@@ -161,13 +178,11 @@ end;
 
 function TDiscriminatorWithDescription.GetBar: TBar;
 begin
-  CheckNull;
   Result := FInstance as TBar;
 end;
 
 procedure TDiscriminatorWithDescription.SetBar(aValue: TBar);
 begin
-  DoAssign;
   if aValue = FInstance then exit;
   FInstance.Free;
   FInstance := aValue;
@@ -176,45 +191,8 @@ end;
 
 { TRootObject }
 
-function TRootObject.GetLongDescription: TJtdString;
-begin
-  CheckNull;
-  Result := FLongDescription;
-end;
-
-function TRootObject.GetRefWithDescription: TBaz;
-begin
-  CheckNull;
-  Result := FRefWithDescription;
-end;
-
-function TRootObject.GetStringWithDescription: TJtdString;
-begin
-  CheckNull;
-  Result := FStringWithDescription;
-end;
-
-function TRootObject.GetEnumWithDescription: TEnumWithDescription;
-begin
-  CheckNull;
-  Result := FEnumWithDescription;
-end;
-
-function TRootObject.GetPropertiesWithDescription: TPropertiesWithDescription;
-begin
-  CheckNull;
-  Result := FPropertiesWithDescription;
-end;
-
-function TRootObject.GetDiscriminatorWithDescription: TDiscriminatorWithDescription;
-begin
-  CheckNull;
-  Result := FDiscriminatorWithDescription;
-end;
-
 procedure TRootObject.SetLongDescription(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FLongDescription then exit;
   FLongDescription.Free;
   FLongDescription := aValue;
@@ -222,7 +200,6 @@ end;
 
 procedure TRootObject.SetRefWithDescription(aValue: TBaz);
 begin
-  DoAssign;
   if aValue = FRefWithDescription then exit;
   FRefWithDescription.Free;
   FRefWithDescription := aValue;
@@ -230,7 +207,6 @@ end;
 
 procedure TRootObject.SetStringWithDescription(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FStringWithDescription then exit;
   FStringWithDescription.Free;
   FStringWithDescription := aValue;
@@ -238,7 +214,6 @@ end;
 
 procedure TRootObject.SetEnumWithDescription(aValue: TEnumWithDescription);
 begin
-  DoAssign;
   if aValue = FEnumWithDescription then exit;
   FEnumWithDescription.Free;
   FEnumWithDescription := aValue;
@@ -246,7 +221,6 @@ end;
 
 procedure TRootObject.SetPropertiesWithDescription(aValue: TPropertiesWithDescription);
 begin
-  DoAssign;
   if aValue = FPropertiesWithDescription then exit;
   FPropertiesWithDescription.Free;
   FPropertiesWithDescription := aValue;
@@ -254,7 +228,6 @@ end;
 
 procedure TRootObject.SetDiscriminatorWithDescription(aValue: TDiscriminatorWithDescription);
 begin
-  DoAssign;
   if aValue = FDiscriminatorWithDescription then exit;
   FDiscriminatorWithDescription.Free;
   FDiscriminatorWithDescription := aValue;
@@ -268,37 +241,38 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'long_description':
         if not Flags[0] then begin
-          FLongDescription.ReadJson(e.Value);
+          FLongDescription := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       'ref_with_description':
         if not Flags[1] then begin
-          FRefWithDescription.ReadJson(e.Value);
+          FRefWithDescription := TBaz(TBaz.LoadInstance(e.Value));
           Flags[1] := True;
         end else DuplicateProp(e.Key);
       'string_with_description':
         if not Flags[2] then begin
-          FStringWithDescription.ReadJson(e.Value);
+          FStringWithDescription := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[2] := True;
         end else DuplicateProp(e.Key);
       'enum_with_description':
         if not Flags[3] then begin
-          FEnumWithDescription.ReadJson(e.Value);
+          FEnumWithDescription := TEnumWithDescription(TEnumWithDescription.LoadInstance(e.Value));
           Flags[3] := True;
         end else DuplicateProp(e.Key);
       'properties_with_description':
         if not Flags[4] then begin
-          FPropertiesWithDescription.ReadJson(e.Value);
+          FPropertiesWithDescription := TPropertiesWithDescription(TPropertiesWithDescription.LoadInstance(e.Value));
           Flags[4] := True;
         end else DuplicateProp(e.Key);
       'discriminator_with_description':
         if not Flags[5] then begin
-          FDiscriminatorWithDescription.ReadJson(e.Value);
+          FDiscriminatorWithDescription := TDiscriminatorWithDescription(TDiscriminatorWithDescription.LoadInstance(e.Value));
           Flags[5] := True;
         end else DuplicateProp(e.Key);
     else
@@ -324,6 +298,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -331,32 +306,32 @@ begin
     case aReader.Name of
       'long_description':
         if not Flags[0] then begin
-          FLongDescription.ReadJson(aReader);
+          FLongDescription := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       'ref_with_description':
         if not Flags[1] then begin
-          FRefWithDescription.ReadJson(aReader);
+          FRefWithDescription := TBaz(TBaz.LoadInstance(aReader));
           Flags[1] := True;
         end else DuplicateProp(aReader);
       'string_with_description':
         if not Flags[2] then begin
-          FStringWithDescription.ReadJson(aReader);
+          FStringWithDescription := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[2] := True;
         end else DuplicateProp(aReader);
       'enum_with_description':
         if not Flags[3] then begin
-          FEnumWithDescription.ReadJson(aReader);
+          FEnumWithDescription := TEnumWithDescription(TEnumWithDescription.LoadInstance(aReader));
           Flags[3] := True;
         end else DuplicateProp(aReader);
       'properties_with_description':
         if not Flags[4] then begin
-          FPropertiesWithDescription.ReadJson(aReader);
+          FPropertiesWithDescription := TPropertiesWithDescription(TPropertiesWithDescription.LoadInstance(aReader));
           Flags[4] := True;
         end else DuplicateProp(aReader);
       'discriminator_with_description':
         if not Flags[5] then begin
-          FDiscriminatorWithDescription.ReadJson(aReader);
+          FDiscriminatorWithDescription := TDiscriminatorWithDescription(TDiscriminatorWithDescription.LoadInstance(aReader));
           Flags[5] := True;
         end else DuplicateProp(aReader);
     else
@@ -376,40 +351,32 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.CreateProps;
+procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FLongDescription := TJtdString.Create;
-  FRefWithDescription := TBaz.Create;
-  FStringWithDescription := TJtdString.Create;
-  FEnumWithDescription := TEnumWithDescription.Create;
-  FPropertiesWithDescription := TPropertiesWithDescription.Create;
-  FDiscriminatorWithDescription := TDiscriminatorWithDescription.Create;
-end;
-
-procedure TRootObject.ClearProps;
-begin
-  FLongDescription.Free;
-  FRefWithDescription.Free;
-  FStringWithDescription.Free;
-  FEnumWithDescription.Free;
-  FPropertiesWithDescription.Free;
-  FDiscriminatorWithDescription.Free;
-end;
-
-procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('long_description');
-  FLongDescription.WriteJson(aWriter);
+  LongDescription.WriteJson(aWriter);
   aWriter.AddName('ref_with_description');
-  FRefWithDescription.WriteJson(aWriter);
+  RefWithDescription.WriteJson(aWriter);
   aWriter.AddName('string_with_description');
-  FStringWithDescription.WriteJson(aWriter);
+  StringWithDescription.WriteJson(aWriter);
   aWriter.AddName('enum_with_description');
-  FEnumWithDescription.WriteJson(aWriter);
+  EnumWithDescription.WriteJson(aWriter);
   aWriter.AddName('properties_with_description');
-  FPropertiesWithDescription.WriteJson(aWriter);
+  PropertiesWithDescription.WriteJson(aWriter);
   aWriter.AddName('discriminator_with_description');
-  FDiscriminatorWithDescription.WriteJson(aWriter);
+  DiscriminatorWithDescription.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TRootObject.Clear;
+begin
+  FreeAndNil(FLongDescription);
+  FreeAndNil(FRefWithDescription);
+  FreeAndNil(FStringWithDescription);
+  FreeAndNil(FEnumWithDescription);
+  FreeAndNil(FPropertiesWithDescription);
+  FreeAndNil(FDiscriminatorWithDescription);
 end;
 
 end.

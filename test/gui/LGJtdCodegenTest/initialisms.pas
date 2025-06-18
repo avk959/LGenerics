@@ -18,21 +18,18 @@ type
   private
     FNormalword: TJtdString;
     FJson: TJtdString;
-    function  GetNormalword: TJtdString;
-    function  GetJson: TJtdString;
     procedure SetNormalword(aValue: TJtdString);
     procedure SetJson(aValue: TJtdString);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "normalword" JSON property }
-    property Normalword: TJtdString read GetNormalword write SetNormalword;
+    property Normalword: TJtdString read FNormalword write SetNormalword;
   { refers to "json" JSON property }
-    property Json: TJtdString read GetJson write SetJson;
+    property Json: TJtdString read FJson write SetJson;
   end;
 
   TRootObject = class sealed(TJtdObject)
@@ -43,12 +40,6 @@ type
     FWordWithTrailingInitialismId: TJtdString;
     FWordWithEmbeddedIdInitialism: TJtdString;
     FNestedIdInitialism: TNestedIdInitialism;
-    function  GetId: TJtdString;
-    function  GetHttp: TJtdString;
-    function  GetUtf8: TJtdString;
-    function  GetWordWithTrailingInitialismId: TJtdString;
-    function  GetWordWithEmbeddedIdInitialism: TJtdString;
-    function  GetNestedIdInitialism: TNestedIdInitialism;
     procedure SetId(aValue: TJtdString);
     procedure SetHttp(aValue: TJtdString);
     procedure SetUtf8(aValue: TJtdString);
@@ -58,43 +49,29 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "id" JSON property }
-    property Id: TJtdString read GetId write SetId;
+    property Id: TJtdString read FId write SetId;
   { refers to "http" JSON property }
-    property Http: TJtdString read GetHttp write SetHttp;
+    property Http: TJtdString read FHttp write SetHttp;
   { refers to "utf8" JSON property }
-    property Utf8: TJtdString read GetUtf8 write SetUtf8;
+    property Utf8: TJtdString read FUtf8 write SetUtf8;
   { refers to "word_with_trailing_initialism_id" JSON property }
-    property WordWithTrailingInitialismId: TJtdString read GetWordWithTrailingInitialismId write SetWordWithTrailingInitialismId;
+    property WordWithTrailingInitialismId: TJtdString read FWordWithTrailingInitialismId write SetWordWithTrailingInitialismId;
   { refers to "word_with_embedded_id_initialism" JSON property }
-    property WordWithEmbeddedIdInitialism: TJtdString read GetWordWithEmbeddedIdInitialism write SetWordWithEmbeddedIdInitialism;
+    property WordWithEmbeddedIdInitialism: TJtdString read FWordWithEmbeddedIdInitialism write SetWordWithEmbeddedIdInitialism;
   { refers to "nested_id_initialism" JSON property }
-    property NestedIdInitialism: TNestedIdInitialism read GetNestedIdInitialism write SetNestedIdInitialism;
+    property NestedIdInitialism: TNestedIdInitialism read FNestedIdInitialism write SetNestedIdInitialism;
   end;
 
 implementation
 
 { TNestedIdInitialism }
 
-function TNestedIdInitialism.GetNormalword: TJtdString;
-begin
-  CheckNull;
-  Result := FNormalword;
-end;
-
-function TNestedIdInitialism.GetJson: TJtdString;
-begin
-  CheckNull;
-  Result := FJson;
-end;
-
 procedure TNestedIdInitialism.SetNormalword(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FNormalword then exit;
   FNormalword.Free;
   FNormalword := aValue;
@@ -102,7 +79,6 @@ end;
 
 procedure TNestedIdInitialism.SetJson(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FJson then exit;
   FJson.Free;
   FJson := aValue;
@@ -116,17 +92,18 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'normalword':
         if not Flags[0] then begin
-          FNormalword.ReadJson(e.Value);
+          FNormalword := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       'json':
         if not Flags[1] then begin
-          FJson.ReadJson(e.Value);
+          FJson := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[1] := True;
         end else DuplicateProp(e.Key);
     else
@@ -148,6 +125,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -155,12 +133,12 @@ begin
     case aReader.Name of
       'normalword':
         if not Flags[0] then begin
-          FNormalword.ReadJson(aReader);
+          FNormalword := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       'json':
         if not Flags[1] then begin
-          FJson.ReadJson(aReader);
+          FJson := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[1] := True;
         end else DuplicateProp(aReader);
     else
@@ -176,67 +154,26 @@ begin
 end;
 {$POP}
 
-procedure TNestedIdInitialism.CreateProps;
+procedure TNestedIdInitialism.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FNormalword := TJtdString.Create;
-  FJson := TJtdString.Create;
-end;
-
-procedure TNestedIdInitialism.ClearProps;
-begin
-  FNormalword.Free;
-  FJson.Free;
-end;
-
-procedure TNestedIdInitialism.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('normalword');
-  FNormalword.WriteJson(aWriter);
+  Normalword.WriteJson(aWriter);
   aWriter.AddName('json');
-  FJson.WriteJson(aWriter);
+  Json.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TNestedIdInitialism.Clear;
+begin
+  FreeAndNil(FNormalword);
+  FreeAndNil(FJson);
 end;
 
 { TRootObject }
 
-function TRootObject.GetId: TJtdString;
-begin
-  CheckNull;
-  Result := FId;
-end;
-
-function TRootObject.GetHttp: TJtdString;
-begin
-  CheckNull;
-  Result := FHttp;
-end;
-
-function TRootObject.GetUtf8: TJtdString;
-begin
-  CheckNull;
-  Result := FUtf8;
-end;
-
-function TRootObject.GetWordWithTrailingInitialismId: TJtdString;
-begin
-  CheckNull;
-  Result := FWordWithTrailingInitialismId;
-end;
-
-function TRootObject.GetWordWithEmbeddedIdInitialism: TJtdString;
-begin
-  CheckNull;
-  Result := FWordWithEmbeddedIdInitialism;
-end;
-
-function TRootObject.GetNestedIdInitialism: TNestedIdInitialism;
-begin
-  CheckNull;
-  Result := FNestedIdInitialism;
-end;
-
 procedure TRootObject.SetId(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FId then exit;
   FId.Free;
   FId := aValue;
@@ -244,7 +181,6 @@ end;
 
 procedure TRootObject.SetHttp(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FHttp then exit;
   FHttp.Free;
   FHttp := aValue;
@@ -252,7 +188,6 @@ end;
 
 procedure TRootObject.SetUtf8(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FUtf8 then exit;
   FUtf8.Free;
   FUtf8 := aValue;
@@ -260,7 +195,6 @@ end;
 
 procedure TRootObject.SetWordWithTrailingInitialismId(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FWordWithTrailingInitialismId then exit;
   FWordWithTrailingInitialismId.Free;
   FWordWithTrailingInitialismId := aValue;
@@ -268,7 +202,6 @@ end;
 
 procedure TRootObject.SetWordWithEmbeddedIdInitialism(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FWordWithEmbeddedIdInitialism then exit;
   FWordWithEmbeddedIdInitialism.Free;
   FWordWithEmbeddedIdInitialism := aValue;
@@ -276,7 +209,6 @@ end;
 
 procedure TRootObject.SetNestedIdInitialism(aValue: TNestedIdInitialism);
 begin
-  DoAssign;
   if aValue = FNestedIdInitialism then exit;
   FNestedIdInitialism.Free;
   FNestedIdInitialism := aValue;
@@ -290,37 +222,38 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'id':
         if not Flags[0] then begin
-          FId.ReadJson(e.Value);
+          FId := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       'http':
         if not Flags[1] then begin
-          FHttp.ReadJson(e.Value);
+          FHttp := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[1] := True;
         end else DuplicateProp(e.Key);
       'utf8':
         if not Flags[2] then begin
-          FUtf8.ReadJson(e.Value);
+          FUtf8 := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[2] := True;
         end else DuplicateProp(e.Key);
       'word_with_trailing_initialism_id':
         if not Flags[3] then begin
-          FWordWithTrailingInitialismId.ReadJson(e.Value);
+          FWordWithTrailingInitialismId := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[3] := True;
         end else DuplicateProp(e.Key);
       'word_with_embedded_id_initialism':
         if not Flags[4] then begin
-          FWordWithEmbeddedIdInitialism.ReadJson(e.Value);
+          FWordWithEmbeddedIdInitialism := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[4] := True;
         end else DuplicateProp(e.Key);
       'nested_id_initialism':
         if not Flags[5] then begin
-          FNestedIdInitialism.ReadJson(e.Value);
+          FNestedIdInitialism := TNestedIdInitialism(TNestedIdInitialism.LoadInstance(e.Value));
           Flags[5] := True;
         end else DuplicateProp(e.Key);
     else
@@ -346,6 +279,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -353,32 +287,32 @@ begin
     case aReader.Name of
       'id':
         if not Flags[0] then begin
-          FId.ReadJson(aReader);
+          FId := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       'http':
         if not Flags[1] then begin
-          FHttp.ReadJson(aReader);
+          FHttp := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[1] := True;
         end else DuplicateProp(aReader);
       'utf8':
         if not Flags[2] then begin
-          FUtf8.ReadJson(aReader);
+          FUtf8 := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[2] := True;
         end else DuplicateProp(aReader);
       'word_with_trailing_initialism_id':
         if not Flags[3] then begin
-          FWordWithTrailingInitialismId.ReadJson(aReader);
+          FWordWithTrailingInitialismId := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[3] := True;
         end else DuplicateProp(aReader);
       'word_with_embedded_id_initialism':
         if not Flags[4] then begin
-          FWordWithEmbeddedIdInitialism.ReadJson(aReader);
+          FWordWithEmbeddedIdInitialism := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[4] := True;
         end else DuplicateProp(aReader);
       'nested_id_initialism':
         if not Flags[5] then begin
-          FNestedIdInitialism.ReadJson(aReader);
+          FNestedIdInitialism := TNestedIdInitialism(TNestedIdInitialism.LoadInstance(aReader));
           Flags[5] := True;
         end else DuplicateProp(aReader);
     else
@@ -398,40 +332,32 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.CreateProps;
+procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FId := TJtdString.Create;
-  FHttp := TJtdString.Create;
-  FUtf8 := TJtdString.Create;
-  FWordWithTrailingInitialismId := TJtdString.Create;
-  FWordWithEmbeddedIdInitialism := TJtdString.Create;
-  FNestedIdInitialism := TNestedIdInitialism.Create;
-end;
-
-procedure TRootObject.ClearProps;
-begin
-  FId.Free;
-  FHttp.Free;
-  FUtf8.Free;
-  FWordWithTrailingInitialismId.Free;
-  FWordWithEmbeddedIdInitialism.Free;
-  FNestedIdInitialism.Free;
-end;
-
-procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('id');
-  FId.WriteJson(aWriter);
+  Id.WriteJson(aWriter);
   aWriter.AddName('http');
-  FHttp.WriteJson(aWriter);
+  Http.WriteJson(aWriter);
   aWriter.AddName('utf8');
-  FUtf8.WriteJson(aWriter);
+  Utf8.WriteJson(aWriter);
   aWriter.AddName('word_with_trailing_initialism_id');
-  FWordWithTrailingInitialismId.WriteJson(aWriter);
+  WordWithTrailingInitialismId.WriteJson(aWriter);
   aWriter.AddName('word_with_embedded_id_initialism');
-  FWordWithEmbeddedIdInitialism.WriteJson(aWriter);
+  WordWithEmbeddedIdInitialism.WriteJson(aWriter);
   aWriter.AddName('nested_id_initialism');
-  FNestedIdInitialism.WriteJson(aWriter);
+  NestedIdInitialism.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TRootObject.Clear;
+begin
+  FreeAndNil(FId);
+  FreeAndNil(FHttp);
+  FreeAndNil(FUtf8);
+  FreeAndNil(FWordWithTrailingInitialismId);
+  FreeAndNil(FWordWithEmbeddedIdInitialism);
+  FreeAndNil(FNestedIdInitialism);
 end;
 
 end.

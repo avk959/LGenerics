@@ -37,12 +37,6 @@ type
     FNullRefNotnullString: TNullRefNotnullString;
     FNotnullRefNullString: TNotnullRefNullString;
     FNullRefNullString: TNullRefNullString;
-    function  GetNotnullString: TNotnullString;
-    function  GetNullString: TNullString;
-    function  GetNotnullRefNotnullString: TNotnullRefNotnullString;
-    function  GetNullRefNotnullString: TNullRefNotnullString;
-    function  GetNotnullRefNullString: TNotnullRefNullString;
-    function  GetNullRefNullString: TNullRefNullString;
     procedure SetNotnullString(aValue: TNotnullString);
     procedure SetNullString(aValue: TNullString);
     procedure SetNotnullRefNotnullString(aValue: TNotnullRefNotnullString);
@@ -52,67 +46,29 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "notnull_string" JSON property }
-    property NotnullString: TNotnullString read GetNotnullString write SetNotnullString;
+    property NotnullString: TNotnullString read FNotnullString write SetNotnullString;
   { refers to "null_string" JSON property }
-    property NullString: TNullString read GetNullString write SetNullString;
+    property NullString: TNullString read FNullString write SetNullString;
   { refers to "notnull_ref_notnull_string" JSON property }
-    property NotnullRefNotnullString: TNotnullRefNotnullString read GetNotnullRefNotnullString write SetNotnullRefNotnullString;
+    property NotnullRefNotnullString: TNotnullRefNotnullString read FNotnullRefNotnullString write SetNotnullRefNotnullString;
   { refers to "null_ref_notnull_string" JSON property }
-    property NullRefNotnullString: TNullRefNotnullString read GetNullRefNotnullString write SetNullRefNotnullString;
+    property NullRefNotnullString: TNullRefNotnullString read FNullRefNotnullString write SetNullRefNotnullString;
   { refers to "notnull_ref_null_string" JSON property }
-    property NotnullRefNullString: TNotnullRefNullString read GetNotnullRefNullString write SetNotnullRefNullString;
+    property NotnullRefNullString: TNotnullRefNullString read FNotnullRefNullString write SetNotnullRefNullString;
   { refers to "null_ref_null_string" JSON property }
-    property NullRefNullString: TNullRefNullString read GetNullRefNullString write SetNullRefNullString;
+    property NullRefNullString: TNullRefNullString read FNullRefNullString write SetNullRefNullString;
   end;
 
 implementation
 
 { TRootObject }
 
-function TRootObject.GetNotnullString: TNotnullString;
-begin
-  CheckNull;
-  Result := FNotnullString;
-end;
-
-function TRootObject.GetNullString: TNullString;
-begin
-  CheckNull;
-  Result := FNullString;
-end;
-
-function TRootObject.GetNotnullRefNotnullString: TNotnullRefNotnullString;
-begin
-  CheckNull;
-  Result := FNotnullRefNotnullString;
-end;
-
-function TRootObject.GetNullRefNotnullString: TNullRefNotnullString;
-begin
-  CheckNull;
-  Result := FNullRefNotnullString;
-end;
-
-function TRootObject.GetNotnullRefNullString: TNotnullRefNullString;
-begin
-  CheckNull;
-  Result := FNotnullRefNullString;
-end;
-
-function TRootObject.GetNullRefNullString: TNullRefNullString;
-begin
-  CheckNull;
-  Result := FNullRefNullString;
-end;
-
 procedure TRootObject.SetNotnullString(aValue: TNotnullString);
 begin
-  DoAssign;
   if aValue = FNotnullString then exit;
   FNotnullString.Free;
   FNotnullString := aValue;
@@ -120,7 +76,6 @@ end;
 
 procedure TRootObject.SetNullString(aValue: TNullString);
 begin
-  DoAssign;
   if aValue = FNullString then exit;
   FNullString.Free;
   FNullString := aValue;
@@ -128,7 +83,6 @@ end;
 
 procedure TRootObject.SetNotnullRefNotnullString(aValue: TNotnullRefNotnullString);
 begin
-  DoAssign;
   if aValue = FNotnullRefNotnullString then exit;
   FNotnullRefNotnullString.Free;
   FNotnullRefNotnullString := aValue;
@@ -136,7 +90,6 @@ end;
 
 procedure TRootObject.SetNullRefNotnullString(aValue: TNullRefNotnullString);
 begin
-  DoAssign;
   if aValue = FNullRefNotnullString then exit;
   FNullRefNotnullString.Free;
   FNullRefNotnullString := aValue;
@@ -144,7 +97,6 @@ end;
 
 procedure TRootObject.SetNotnullRefNullString(aValue: TNotnullRefNullString);
 begin
-  DoAssign;
   if aValue = FNotnullRefNullString then exit;
   FNotnullRefNullString.Free;
   FNotnullRefNullString := aValue;
@@ -152,7 +104,6 @@ end;
 
 procedure TRootObject.SetNullRefNullString(aValue: TNullRefNullString);
 begin
-  DoAssign;
   if aValue = FNullRefNullString then exit;
   FNullRefNullString.Free;
   FNullRefNullString := aValue;
@@ -166,37 +117,38 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'notnull_string':
         if not Flags[0] then begin
-          FNotnullString.ReadJson(e.Value);
+          FNotnullString := TNotnullString(TNotnullString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       'null_string':
         if not Flags[1] then begin
-          FNullString.ReadJson(e.Value);
+          FNullString := TNullString(TNullString.LoadInstance(e.Value));
           Flags[1] := True;
         end else DuplicateProp(e.Key);
       'notnull_ref_notnull_string':
         if not Flags[2] then begin
-          FNotnullRefNotnullString.ReadJson(e.Value);
+          FNotnullRefNotnullString := TNotnullRefNotnullString(TNotnullRefNotnullString.LoadInstance(e.Value));
           Flags[2] := True;
         end else DuplicateProp(e.Key);
       'null_ref_notnull_string':
         if not Flags[3] then begin
-          FNullRefNotnullString.ReadJson(e.Value);
+          FNullRefNotnullString := TNullRefNotnullString(TNullRefNotnullString.LoadInstance(e.Value));
           Flags[3] := True;
         end else DuplicateProp(e.Key);
       'notnull_ref_null_string':
         if not Flags[4] then begin
-          FNotnullRefNullString.ReadJson(e.Value);
+          FNotnullRefNullString := TNotnullRefNullString(TNotnullRefNullString.LoadInstance(e.Value));
           Flags[4] := True;
         end else DuplicateProp(e.Key);
       'null_ref_null_string':
         if not Flags[5] then begin
-          FNullRefNullString.ReadJson(e.Value);
+          FNullRefNullString := TNullRefNullString(TNullRefNullString.LoadInstance(e.Value));
           Flags[5] := True;
         end else DuplicateProp(e.Key);
     else
@@ -222,6 +174,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -229,32 +182,32 @@ begin
     case aReader.Name of
       'notnull_string':
         if not Flags[0] then begin
-          FNotnullString.ReadJson(aReader);
+          FNotnullString := TNotnullString(TNotnullString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       'null_string':
         if not Flags[1] then begin
-          FNullString.ReadJson(aReader);
+          FNullString := TNullString(TNullString.LoadInstance(aReader));
           Flags[1] := True;
         end else DuplicateProp(aReader);
       'notnull_ref_notnull_string':
         if not Flags[2] then begin
-          FNotnullRefNotnullString.ReadJson(aReader);
+          FNotnullRefNotnullString := TNotnullRefNotnullString(TNotnullRefNotnullString.LoadInstance(aReader));
           Flags[2] := True;
         end else DuplicateProp(aReader);
       'null_ref_notnull_string':
         if not Flags[3] then begin
-          FNullRefNotnullString.ReadJson(aReader);
+          FNullRefNotnullString := TNullRefNotnullString(TNullRefNotnullString.LoadInstance(aReader));
           Flags[3] := True;
         end else DuplicateProp(aReader);
       'notnull_ref_null_string':
         if not Flags[4] then begin
-          FNotnullRefNullString.ReadJson(aReader);
+          FNotnullRefNullString := TNotnullRefNullString(TNotnullRefNullString.LoadInstance(aReader));
           Flags[4] := True;
         end else DuplicateProp(aReader);
       'null_ref_null_string':
         if not Flags[5] then begin
-          FNullRefNullString.ReadJson(aReader);
+          FNullRefNullString := TNullRefNullString(TNullRefNullString.LoadInstance(aReader));
           Flags[5] := True;
         end else DuplicateProp(aReader);
     else
@@ -274,40 +227,32 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.CreateProps;
+procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FNotnullString := TNotnullString.Create;
-  FNullString := TNullString.Create;
-  FNotnullRefNotnullString := TNotnullRefNotnullString.Create;
-  FNullRefNotnullString := TNullRefNotnullString.Create;
-  FNotnullRefNullString := TNotnullRefNullString.Create;
-  FNullRefNullString := TNullRefNullString.Create;
-end;
-
-procedure TRootObject.ClearProps;
-begin
-  FNotnullString.Free;
-  FNullString.Free;
-  FNotnullRefNotnullString.Free;
-  FNullRefNotnullString.Free;
-  FNotnullRefNullString.Free;
-  FNullRefNullString.Free;
-end;
-
-procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('notnull_string');
-  FNotnullString.WriteJson(aWriter);
+  NotnullString.WriteJson(aWriter);
   aWriter.AddName('null_string');
-  FNullString.WriteJson(aWriter);
+  NullString.WriteJson(aWriter);
   aWriter.AddName('notnull_ref_notnull_string');
-  FNotnullRefNotnullString.WriteJson(aWriter);
+  NotnullRefNotnullString.WriteJson(aWriter);
   aWriter.AddName('null_ref_notnull_string');
-  FNullRefNotnullString.WriteJson(aWriter);
+  NullRefNotnullString.WriteJson(aWriter);
   aWriter.AddName('notnull_ref_null_string');
-  FNotnullRefNullString.WriteJson(aWriter);
+  NotnullRefNullString.WriteJson(aWriter);
   aWriter.AddName('null_ref_null_string');
-  FNullRefNullString.WriteJson(aWriter);
+  NullRefNullString.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TRootObject.Clear;
+begin
+  FreeAndNil(FNotnullString);
+  FreeAndNil(FNullString);
+  FreeAndNil(FNotnullRefNotnullString);
+  FreeAndNil(FNullRefNotnullString);
+  FreeAndNil(FNotnullRefNullString);
+  FreeAndNil(FNullRefNullString);
 end;
 
 end.

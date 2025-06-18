@@ -18,42 +18,26 @@ type
   private
     FFoo: TJtdString;
     FFoo1: TJtdString;
-    function  GetFoo: TJtdString;
-    function  GetFoo1: TJtdString;
     procedure SetFoo(aValue: TJtdString);
     procedure SetFoo1(aValue: TJtdString);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure CreateProps; override;
-    procedure ClearProps; override;
-    procedure WriteProps(aWriter: TJsonStrWriter); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
+    procedure Clear; override;
   { refers to "foo" JSON property }
-    property Foo: TJtdString read GetFoo write SetFoo;
+    property Foo: TJtdString read FFoo write SetFoo;
   { refers to "Foo" JSON property }
-    property Foo1: TJtdString read GetFoo1 write SetFoo1;
+    property Foo1: TJtdString read FFoo1 write SetFoo1;
   end;
 
 implementation
 
 { TRootObject }
 
-function TRootObject.GetFoo: TJtdString;
-begin
-  CheckNull;
-  Result := FFoo;
-end;
-
-function TRootObject.GetFoo1: TJtdString;
-begin
-  CheckNull;
-  Result := FFoo1;
-end;
-
 procedure TRootObject.SetFoo(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FFoo then exit;
   FFoo.Free;
   FFoo := aValue;
@@ -61,7 +45,6 @@ end;
 
 procedure TRootObject.SetFoo1(aValue: TJtdString);
 begin
-  DoAssign;
   if aValue = FFoo1 then exit;
   FFoo1.Free;
   FFoo1 := aValue;
@@ -75,17 +58,18 @@ var
   I: Integer;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   for e in aNode.Entries do
     case e.Key of
       'foo':
         if not Flags[0] then begin
-          FFoo.ReadJson(e.Value);
+          FFoo := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       'Foo':
         if not Flags[1] then begin
-          FFoo1.ReadJson(e.Value);
+          FFoo1 := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[1] := True;
         end else DuplicateProp(e.Key);
     else
@@ -107,6 +91,7 @@ var
   I: Integer;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
@@ -114,12 +99,12 @@ begin
     case aReader.Name of
       'foo':
         if not Flags[0] then begin
-          FFoo.ReadJson(aReader);
+          FFoo := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       'Foo':
         if not Flags[1] then begin
-          FFoo1.ReadJson(aReader);
+          FFoo1 := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[1] := True;
         end else DuplicateProp(aReader);
     else
@@ -135,24 +120,20 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.CreateProps;
+procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  FFoo := TJtdString.Create;
-  FFoo1 := TJtdString.Create;
-end;
-
-procedure TRootObject.ClearProps;
-begin
-  FFoo.Free;
-  FFoo1.Free;
-end;
-
-procedure TRootObject.WriteProps(aWriter: TJsonStrWriter);
-begin
+  aWriter.BeginObject;
   aWriter.AddName('foo');
-  FFoo.WriteJson(aWriter);
+  Foo.WriteJson(aWriter);
   aWriter.AddName('Foo');
-  FFoo1.WriteJson(aWriter);
+  Foo1.WriteJson(aWriter);
+  aWriter.EndObject;
+end;
+
+procedure TRootObject.Clear;
+begin
+  FreeAndNil(FFoo);
+  FreeAndNil(FFoo1);
 end;
 
 end.
