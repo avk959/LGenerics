@@ -313,10 +313,7 @@ type
     FProps,
     FOptProps: TJtdPropList;
     FAdditionalProps: Boolean;
-    procedure WriteDoClearProc(aText: TStrings);
-    procedure WriteClearPropsProc(aText: TStrings);
-    procedure WriteCreatePropsProc(aText: TStrings);
-    procedure WriteGetters(aText: TStrings);
+    procedure WriteClearProc(aText: TStrings);
     procedure WriteSetters(aText: TStrings);
     procedure WriteReadPropsNodeReader(aText: TStrings);
     procedure WriteReadPropsReader(aText: TStrings);
@@ -663,62 +660,18 @@ begin
   aText.Add('');
 end;
 
-procedure TJtdProps.WriteDoClearProc(aText: TStrings);
+procedure TJtdProps.WriteClearProc(aText: TStrings);
 var
   I: Integer;
 begin
-  if OptionalProps = nil then exit;
-  aText.Add(Format('procedure %s.DoClear;', [TypeName]));
+  aText.Add(Format('procedure %s.Clear;', [TypeName]));
   aText.Add('begin');
+  for I := 0 to System.High(Props) do
+    aText.Add(Format('  FreeAndNil(%s);', [Props[I].PropFieldName]));
   for I := 0 to System.High(OptionalProps) do
     aText.Add(Format('  FreeAndNil(%s);', [OptionalProps[I].PropFieldName]));
   aText.Add('end;');
   aText.Add('');
-end;
-
-procedure TJtdProps.WriteClearPropsProc(aText: TStrings);
-var
-  I: Integer;
-begin
-  if Props = nil then exit;
-  aText.Add(Format('procedure %s.ClearProps;', [TypeName]));
-  aText.Add('begin');
-  for I := 0 to System.High(Props) do
-    aText.Add(Format('  %s.Free;', [Props[I].PropFieldName]));
-  aText.Add('end;');
-  aText.Add('');
-end;
-
-procedure TJtdProps.WriteCreatePropsProc(aText: TStrings);
-var
-  I: Integer;
-begin
-  if Props = nil then exit;
-  aText.Add(Format('procedure %s.CreateProps;', [TypeName]));
-  aText.Add('begin');
-  for I := 0 to System.High(Props) do
-    aText.Add(Format('  %s := %s.Create;', [Props[I].PropFieldName, Props[I].PropType]));
-  aText.Add('end;');
-  aText.Add('');
-end;
-
-procedure TJtdProps.WriteGetters(aText: TStrings);
-  procedure DoWrite(const Info: TJtdPropInfo; aText: TStrings);
-  begin
-    aText.Add(Format('function %s.Get%s: %s;', [TypeName, Info.PropName, Info.PropType]));
-    aText.Add('begin');
-    aText.Add('  CheckNull;');
-    aText.Add(Format('  Result := %s;', [Info.PropFieldName]));
-    aText.Add('end;');
-    aText.Add('');
-  end;
-var
-  I: Integer;
-begin
-  for I := 0 to System.High(Props) do
-    DoWrite(Props[I], aText);
-  for I := 0 to System.High(OptionalProps) do
-    DoWrite(OptionalProps[I], aText);
 end;
 
 procedure TJtdProps.WriteSetters(aText: TStrings);
@@ -726,7 +679,6 @@ procedure TJtdProps.WriteSetters(aText: TStrings);
   begin
     aText.Add(Format('procedure %s.Set%s(aValue: %s);', [TypeName, Info.PropName, Info.PropType]));
     aText.Add('begin');
-    aText.Add('  DoAssign;');
     aText.Add(Format('  if aValue = %s then exit;', [Info.PropFieldName]));
     aText.Add(Format('  %s.Free;', [Info.PropFieldName]));
     aText.Add(Format('  %s := aValue;', [Info.PropFieldName]));
@@ -760,6 +712,8 @@ begin
     end;
   aText.Add('begin');
   aText.Add('  if not aNode.IsObject then ExpectObject(aNode);');
+  if (Props <> nil) or (OptionalProps <> nil) then
+    aText.Add('  Clear;');
   if Props <> nil then
     aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
   if (Props <> nil) or (OptionalProps <> nil) then begin
@@ -772,7 +726,8 @@ begin
       begin
         aText.Add(Format('      ''%s'':', [Props[I].JsonPropName]));
         aText.Add(Format('        if not Flags[%d] then begin', [I]));
-        aText.Add(Format('          %s.ReadJson(e.Value);', [Props[I].PropFieldName]));
+        aText.Add(Format('          %s := %s(%s.LoadInstance(e.Value));',
+          [Props[I].PropFieldName, Props[I].PropType, Props[I].PropType]));
         aText.Add(Format('          Flags[%d] := True;', [I]));
         aText.Add('        end else DuplicateProp(e.Key);');
       end;
@@ -815,6 +770,8 @@ begin
   end;
   aText.Add('begin');
   aText.Add('  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);');
+  if (Props <> nil) or (OptionalProps <> nil) then
+    aText.Add('  Clear;');
   if Props <> nil then
     aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
   aText.Add('  repeat');
@@ -829,7 +786,8 @@ begin
       begin
         aText.Add(Format('      ''%s'':', [Props[I].JsonPropName]));
         aText.Add(Format('        if not Flags[%d] then begin', [I]));
-        aText.Add(Format('          %s.ReadJson(aReader);', [Props[I].PropFieldName]));
+        aText.Add(Format('          %s := %s(%s.LoadInstance(aReader));',
+          [Props[I].PropFieldName, Props[I].PropType, Props[I].PropType]));
         aText.Add(Format('          Flags[%d] := True;', [I]));
         aText.Add('        end else DuplicateProp(aReader);');
       end;
@@ -866,25 +824,26 @@ procedure TJtdProps.WritePropsWriteJson(aText: TStrings);
 var
   I: Integer;
 begin
-  if (Props = nil) and (OptionalProps = nil) then exit;
-  aText.Add(Format('procedure %s.WriteProps(aWriter: TJsonStrWriter);', [TypeName]));
+  aText.Add(Format('procedure %s.DoWriteJson(aWriter: TJsonStrWriter);', [TypeName]));
   aText.Add('begin');
+  aText.Add('  aWriter.BeginObject;');
   for I := 0 to System.High(Props) do begin
     if HasAsciiNames then
       aText.Add(Format('  aWriter.AddName(''%s'');', [Props[I].JsonPropName]))
     else
       aText.Add(Format('  aWriter.AddName(TJsonNode.JsonStrToPas(''%s''));', [Props[I].JsonPropName]));
-    aText.Add(Format('  %s.WriteJson(aWriter);', [Props[I].PropFieldName]));
+    aText.Add(Format('  %s.WriteJson(aWriter);', [Props[I].PropName]));
   end;
   for I := 0 to System.High(OptionalProps) do begin
-    aText.Add(Format('  if %s <> nil then begin', [OptionalProps[I].PropFieldName]));
+    aText.Add(Format('  if %s <> nil then begin', [OptionalProps[I].PropName]));
     if HasAsciiNames then
       aText.Add(Format('    aWriter.AddName(''%s'');', [OptionalProps[I].JsonPropName]))
     else
       aText.Add(Format('    aWriter.AddName(TJsonNode.JsonStrToPas(''%s''));', [OptionalProps[I].JsonPropName]));
-    aText.Add(Format('    %s.WriteJson(aWriter);', [OptionalProps[I].PropFieldName]));
+    aText.Add(Format('    %s.WriteJson(aWriter);', [OptionalProps[I].PropName]));
     aText.Add('  end;');
   end;
+  aText.Add('  aWriter.EndObject;');
   aText.Add('end;');
   aText.Add('');
 end;
@@ -949,15 +908,11 @@ begin
   aText.Add(
     Format('  %s = class sealed(%s)', [TypeName, JTD_FORM_ANCESTORS[fkProperties]]));
   aText.Add('  private');
+
   for I := 0 to System.High(Props) do
     aText.Add(Format('    %s: %s;', [Props[I].PropFieldName, Props[I].PropType]));
   for I := 0 to System.High(OptionalProps) do
     aText.Add(Format('    %s: %s;', [OptionalProps[I].PropFieldName, OptionalProps[I].PropType]));
-
-  for I := 0 to System.High(Props) do
-    aText.Add(Format('    function  Get%s: %s;', [Props[I].PropName, Props[I].PropType]));
-  for I := 0 to System.High(OptionalProps) do
-    aText.Add(Format('    function  Get%s: %s;', [OptionalProps[I].PropName, OptionalProps[I].PropType]));
 
   for I := 0 to System.High(Props) do
     aText.Add(Format('    procedure Set%s(aValue: %s);', [Props[I].PropName, Props[I].PropType]));
@@ -967,25 +922,19 @@ begin
   aText.Add('  protected');
   aText.Add('    procedure DoReadJson(aNode: TJsonNode); override;');
   aText.Add('    procedure DoReadJson(aReader: TJsonReader); override;');
-  if OptionalProps <> nil then
-    aText.Add('    procedure DoClear; override;');
-  if Props <> nil then begin
-    aText.Add('    procedure CreateProps; override;');
-    aText.Add('    procedure ClearProps; override;');
-  end;
-  if (Props <> nil) or (OptionalProps <> nil) then
-    aText.Add('    procedure WriteProps(aWriter: TJsonStrWriter); override;');
+  aText.Add('    procedure DoWriteJson(aWriter: TJsonStrWriter); override;');
   aText.Add('  public');
+  aText.Add('    procedure Clear; override;');
   for I := 0 to System.High(Props) do begin
     WritePropDescription(Props[I], aText, aComment);
-    aText.Add(Format('    property %s: %s read Get%s write Set%s;',
-      [Props[I].PropName, Props[I].PropType, Props[I].PropName, Props[I].PropName]));
+    aText.Add(Format('    property %s: %s read %s write Set%s;',
+      [Props[I].PropName, Props[I].PropType, Props[I].PropFieldName, Props[I].PropName]));
   end;
   WriteOptPropsWarning(aText, aComment);
   for I := 0 to System.High(OptionalProps) do begin
     WritePropDescription(OptionalProps[I], aText, aComment);
-    aText.Add(Format('    property %s: %s read Get%s write Set%s;',
-      [OptionalProps[I].PropName, OptionalProps[I].PropType, OptionalProps[I].PropName,
+    aText.Add(Format('    property %s: %s read %s write Set%s;',
+      [OptionalProps[I].PropName, OptionalProps[I].PropType, OptionalProps[I].PropFieldName,
        OptionalProps[I].PropName]));
   end;
   aText.Add('  end;');
@@ -996,14 +945,11 @@ procedure TJtdProps.WriteImplementation(aText: TStrings);
 begin
   aText.Add(Format('{ %s }', [TypeName]));
   aText.Add('');
-  WriteGetters(aText);
   WriteSetters(aText);
   WriteReadPropsNodeReader(aText);
   WriteReadPropsReader(aText);
-  WriteDoClearProc(aText);
-  WriteCreatePropsProc(aText);
-  WriteClearPropsProc(aText);
   WritePropsWriteJson(aText);
+  WriteClearProc(aText);
 end;
 
 procedure TJtdUnionTemplate.WritePropDescription(const aDescr, aTagValue: string; aText: TStrings;
@@ -1069,7 +1015,6 @@ begin
   for I := 0 to System.High(Mapping) do begin
     aText.Add(Format('function %s.Get%s: %s;', [TypeName, Mapping[I].PropName, Mapping[I].PropType]));
     aText.Add('begin');
-    aText.Add('  CheckNull;');
     aText.Add(Format('  Result := FInstance as %s;', [Mapping[I].PropType]));
     aText.Add('end;');
     aText.Add('');
@@ -1083,7 +1028,6 @@ begin
   for I := 0 to System.High(Mapping) do begin
     aText.Add(Format('procedure %s.Set%s(aValue: %s);', [TypeName, Mapping[I].PropName, Mapping[I].PropType]));
     aText.Add('begin');
-    aText.Add('  DoAssign;');
     aText.Add('  if aValue = FInstance then exit;');
     aText.Add('  FInstance.Free;');
     aText.Add('  FInstance := aValue;');
@@ -1114,7 +1058,7 @@ begin
   aText.Add(Format('  %s = class sealed(%s)', [TypeName, JTD_FORM_ANCESTORS[fkDiscriminator]]));
   aText.Add('  protected');
   for I := 0 to System.High(Mapping) do
-    aText.Add(Format('    function Get%s: %s;', [Mapping[I].PropName, Mapping[I].PropType]));
+    aText.Add(Format('    function  Get%s: %s;', [Mapping[I].PropName, Mapping[I].PropType]));
   for I := 0 to System.High(Mapping) do
     aText.Add(Format('    procedure Set%s(aValue: %s);', [Mapping[I].PropName, Mapping[I].PropType]));
   aText.Add('    class function GetTagJsonName: string; override;');
@@ -1560,13 +1504,10 @@ var
         d := e.Key;
       PropInfo.PropName := AsPasUniqIdentifier(d, PropNameSet);
       PropInfo.PropFieldName := AsFieldName(PropInfo.PropName);
-      if HasPreferName(e.Value, d) or not PureAsciiNames then
+      if HasPreferName(e.Value, d) or not(PureAsciiNames and(e.Value.Kind in[fkEnum,fkProperties,fkDiscriminator]))then
         PropInfo.PropType := HandleSchema(e.Value)
       else
-        if e.Value.Kind in [fkEnum, fkProperties, fkDiscriminator] then
-          PropInfo.PropType := HandleSchema(e.Value, AsUniqTypeName(PropInfo.PropName))
-        else
-          PropInfo.PropType := HandleSchema(e.Value);
+        PropInfo.PropType := HandleSchema(e.Value, AsUniqTypeName(PropInfo.PropName));
       d := '';
       if (PropsDescr <> nil) and PropsDescr.Find(e.Key, Node) and Node.IsString then
         d := Node.AsString
