@@ -170,6 +170,12 @@ type
     property  UseUnits: TStringArray read FUseUnits;
     property  Switches: string read FSwitches;
   public
+    class function  CreateUnit(aSchema: TJtdSchema; const aUnitName: string = '';
+                               const aRootClassName: string = ''; const aCustomHeader: string = '';
+                               AllowComments: Boolean = True): string; static;
+    class procedure CreateUnitFile(const aFileName: string; aSchema: TJtdSchema;
+                                   const aUnitName: string = ''; const aRootClassName: string = '';
+                                   const aCustomHeader: string = '';  AllowComments: Boolean = True); static;
     constructor Create(aSchema: TJtdSchema);
     destructor Destroy; override;
   { after the execution of the RunTemplater proc, the FinalRootClassName
@@ -1737,6 +1743,39 @@ begin
   if aText[Pred(aText.Count)] <> '' then
     aText.Add('');
   aText.Add('end.');
+end;
+
+class function TJtdPasCodegen.CreateUnit(aSchema: TJtdSchema; const aUnitName: string; const aRootClassName: string;
+  const aCustomHeader: string; AllowComments: Boolean): string;
+begin
+  Result := '';
+  with TJtdPasCodegen.Create(aSchema) do
+    try
+      UnitName := aUnitName;
+      PreferRootClassName := aRootClassName;
+      CustomHeader := aCustomHeader;
+      ShowComments := AllowComments;
+      Execute;
+      Result := Source.Text;
+    finally
+      Free;
+    end;
+end;
+
+class procedure TJtdPasCodegen.CreateUnitFile(const aFileName: string; aSchema: TJtdSchema;
+  const aUnitName: string; const aRootClassName: string; const aCustomHeader: string; AllowComments: Boolean);
+begin
+  with TJtdPasCodegen.Create(aSchema) do
+    try
+      UnitName := aUnitName;
+      PreferRootClassName := aRootClassName;
+      CustomHeader := aCustomHeader;
+      ShowComments := AllowComments;
+      Execute;
+      Source.SaveToFile(aFileName);
+    finally
+      Free;
+    end;
 end;
 
 constructor TJtdPasCodegen.Create(aSchema: TJtdSchema);
