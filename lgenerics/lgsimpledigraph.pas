@@ -371,15 +371,15 @@ type
     function  IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
     raises an exception if it does not contain the vertex aSource;
-    each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
+    each element aTree[J] is immediate dominator of J'th vertex or -1 if J'th vertex is root
     or is unreachable from aSource; used amazingly simple iterative algorithm from
     Cooper, Harvey and Kennedy "A Simple, Fast Dominance Algorithm" }
     function  FindDomTree(const aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
     raises an exception if it does not contain the vertex aSource;
-    each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
-    or is unreachable from aSource; used Georgiadis's Semi-NCA algorithm }
+    each element aTree[J] is an immediate dominator of vertex J, or -1 if vertex J is the root
+    or is not reachable from aSource; used Georgiadis's Semi-NCA algorithm }
     function  FindDomTreeSnca(const aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { returns True if aTree is dominator tree rooted by aSource;
