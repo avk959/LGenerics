@@ -100,6 +100,7 @@ type
     function  IsPasKeyword(const s: string): Boolean;
     function  IsIdentifier(const s: string): Boolean;
     function  IsAsciiEncoded(const s: string): Boolean;
+    function  InUpperCase(const s: string): Boolean;
     function  IsUniqIdentifierList(const a: array of string): Boolean;
     procedure CheckUniqEnumElements(const aElems: TStringArray);
     function  IsAsciiWordList(const a: array of string): Boolean;
@@ -216,10 +217,11 @@ const
   OBJECT_TAG           = 'JObject';
   VARIANT_TAG          = '_Union';
   EMPTY_NAME           = 'EmptyName';
-  NULLABLE_COMMENT     = ' is nullable;';
+  NULLABLE_COMMENT     = ' is nullable';
   KEYWORD_SUFFIX       = '_';
   ASCII_PREFIX         = 'P';
-  ASCII_LETTERS        = ['a'..'z', 'A'..'Z'];
+  ASCII_LOW_CASE       = ['a'..'z'];
+  ASCII_LETTERS        = ASCII_LOW_CASE + ['A'..'Z'];
   ALPHA_CHARS          = ASCII_LETTERS + ['_'];
   ALPHANUM_CHARS       = ALPHA_CHARS + ['0'..'9'];
 
@@ -873,17 +875,13 @@ begin
     exit;
   end;
   if IsMultiline(d, a) then begin
-    Insert([c], a, System.Length(a));
-    a[0] := '  { ' + a[0];
+    Insert(['  { ' + c + ';'], a, 0);
     a[System.High(a)] := a[System.High(a)] + ' }';
     for I := 1 to System.High(a) do
       a[I] := '    ' + a[I];
     aText.Add(string.Join(LineEnding, a));
   end else begin
-    if d[System.Length(d)] in [',', '.', ';', '?', '!'] then
-      c := d + ' ' + c
-    else
-      c := d + '; ' + c;
+    c := c + '; ' + d;
     aText.Add('  { ' + SysUtils.WrapText(c, LineEnding + '    ', STOP_CHARS, 76) + ' }');
   end;
 end;
@@ -966,19 +964,19 @@ var
   I: SizeInt;
 begin
   if not aComment then exit;
-  c := Format('matches the "%s" tag; ', [aTagValue]);
+  c := Format('matches the "%s" tag', [aTagValue]);
   if aDescr = '' then begin
-    aText.Add('  { ' + c + '}');
+    aText.Add('  { ' + c + ' }');
     exit;
   end;
   if IsMultiline(aDescr, a) then begin
-    Insert(['  { ' + c], a, 0);
+    Insert(['  { ' + c + ';'], a, 0);
     a[System.High(a)] := a[System.High(a)] + ' }';
     for I := 1 to System.High(a) do
       a[I] := '    ' + a[I];
     aText.Add(string.Join(LineEnding, a));
   end else begin
-    d := c + aDescr;
+    d := c + '; ' + aDescr;
     aText.Add('  { ' + SysUtils.WrapText(d, LineEnding + '    ', STOP_CHARS, 76) + ' }');
   end;
 end;
@@ -1128,6 +1126,16 @@ begin
   Result := True;
 end;
 
+function TJtdTemplater.InUpperCase(const s: string): Boolean;
+var
+  I: Integer;
+begin
+  for I := 1 to System.Length(s) do
+    if not(s[I] in ALPHANUM_CHARS) or (s[I] in ASCII_LOW_CASE) then
+      exit(False);
+  Result := True;
+end;
+
 function TJtdTemplater.IsUniqIdentifierList(const a: array of string): Boolean;
 var
   ss: TStrSet;
@@ -1206,7 +1214,10 @@ begin
       a[I] := ProperCase(a[I]);
     Result := string.Join('', a);
   end else
-    Result := ProperCase(s);
+    if InUpperCase(s) then
+      Result := ProperCase(s)
+    else
+      Result := CapitalizeFirst(s);
 end;
 
 function TJtdTemplater.AsUniqIdentifier(const s: string): string;
