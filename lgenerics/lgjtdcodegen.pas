@@ -19,7 +19,7 @@
 *****************************************************************************}
 unit lgJtdCodegen;
 
-{$MODE OBJFPC}{$H+}
+{$MODE OBJFPC}{$H+}{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
@@ -53,17 +53,28 @@ type
   private
   const
     STOP_CHARS: TSysCharSet = [#9, ' ', '-', ',', '.', ';', '?', '!'];
+    SPEC_TAG: string = 'specialize';
+  type
+    TDependence = record
+      DepName: string;
+      IsSpecDecl: Boolean;
+      constructor Make(const aName: string; aSpec: Boolean = False);
+    end;
+    TDependList = array of TDependence;
   var
     FDescription,
     FTypeName: string;
     FAsciiNames: Boolean;
     function MakeDescription: string;
     class function IsMultiline(const s: string; out aLines: TStringArray): Boolean; static;
+    class function IsSpecDecl(const s: string; out aSpecName: string): Boolean; static;
+    class function IsSpecDecl(const s: string; out aGenType, aSpecType: string): Boolean; static;
   public
     constructor Create(aNullable: Boolean);
     procedure WriteDescription(aText: TStrings; aComment: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); virtual; abstract;
     procedure WriteImplementation(aText: TStrings); virtual;
+    function  Dependencies: TDependList; virtual;
     property  Description: string read FDescription write FDescription;
     property  TypeName: string read FTypeName;
     property  HasAsciiNames: Boolean read FAsciiNames write FAsciiNames;
@@ -119,18 +130,19 @@ type
     function  HasDescription(aSchema: TJtdSchema; out aDescr: string): Boolean;
     function  HasEnumDescription(aSchema: TJtdSchema; out aDescr: TJsonNode): Boolean;
     function  HasPreferName(aSchema: TJtdSchema; out aName: string): Boolean;
-    function  GetPreferName(aSchema: TJtdSchema; const aPredefName: string; aTop: Boolean): string;
+    function  GetPreferName(aSchema: TJtdSchema; const aPredefName: string; aRoot: Boolean): string;
     ////////////////////////////
-    function  HandleEmpty(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleRef(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleType(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleEnum(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleElements(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleValues(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleProperties(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleDiscriminator(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
-    function  HandleSchema(aSchema: TJtdSchema; const aTypeName: string = ''; aTop: Boolean = False): string;
+    function  HandleEmpty(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleRef(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleType(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleEnum(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleElements(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleValues(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleProperties(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleDiscriminator(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
+    function  HandleSchema(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
     procedure InitGlobNameTable;
+    procedure CheckCyclicDeps;
     function  ProcessSchema: string;
   public
     constructor Create(aSchema: TJtdSchema);
@@ -204,7 +216,7 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  TypInfo, Math, lgJtdTypes, lgStrConst;
+  Math, lgJtdTypes, lgStrConst;
 
 const
   DESCRIPTION_TAG      = 'description';
@@ -214,6 +226,11 @@ const
   DEF_ROOT_NAME        = 'RootObject';
   TYPE_TAG             = 'Type';
   ENUM_TAG             = 'Enum';
+  ELEM_TAG             = 'Elem';
+  LIST_TAG             = 'List';
+  MAP_TAG              = 'Map';
+  LIST_ELEM_TAG        = LIST_TAG + ELEM_TAG;
+  MAP_ELEM_TAG         = MAP_TAG + ELEM_TAG;
   OBJECT_TAG           = 'JObject';
   VARIANT_TAG          = '_Union';
   EMPTY_NAME           = 'EmptyName';
@@ -232,6 +249,7 @@ type
   public
     constructor Create(const aTypeName, aOldTypeName: string; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
+    function  Dependencies: TDependList; override;
   end;
 
   TJtdForwardDecl = class(TJtdTemplate)
@@ -244,6 +262,7 @@ type
     class function DefaultTypeName: string; static;
     constructor Create(const aTypeName: string);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
+    function  Dependencies: TDependList; override;
   end;
 
   TJtdTypeTemplate = class(TJtdTemplate)
@@ -274,6 +293,7 @@ type
     class function GetSpecDecl(const aSpecType: string): string; static;
     constructor Create(const aTypeName: string; aEnumType: TJtdEnumType; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
+    function  Dependencies: TDependList; override;
   end;
 
   TJtdStrEnumElem = class(TJtdTemplate)
@@ -295,6 +315,8 @@ type
     class function GetSpecDecl(const aSpecType: string): string; static;
     constructor Create(const aTypeName, aSpecType: string; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
+    function  Dependencies: TDependList; override;
+    property  SpecType: string read FSpecType;
   end;
 
   TJtdValues = class(TJtdTemplate)
@@ -304,6 +326,8 @@ type
     class function GetSpecDecl(const aSpecType: string): string; static;
     constructor Create(const aTypeName, aSpecType: string; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
+    function  Dependencies: TDependList; override;
+    property  SpecType: string read FSpecType;
   end;
 
   TJtdPropInfo = record
@@ -332,6 +356,7 @@ type
     constructor Create(const aTypeName: string; const aProps, aOptProps: TJtdPropList; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
     procedure WriteImplementation(aText: TStrings); override;
+    function  Dependencies: TDependList; override;
     property  Props: TJtdPropList read FProps;
     property  OptionalProps: TJtdPropList read FOptProps;
     property  AdditionalProps: Boolean read FAdditionalProps write FAdditionalProps;
@@ -359,9 +384,17 @@ type
     constructor Create(const aTagName, aTypeName: string; const aMapping: TTagMapping; aNullable: Boolean);
     procedure WriteDeclaration(aText: TStrings; aComment: Boolean); override;
     procedure WriteImplementation(aText: TStrings); override;
+    function  Dependencies: TDependList; override;
     property  TagJsonName: string read FTagJsonName;
     property  Mapping: TTagMapping read FMapping;
   end;
+
+
+constructor TJtdTemplate.TDependence.Make(const aName: string; aSpec: Boolean);
+begin
+  DepName := aName;
+  IsSpecDecl := aSpec;
+end;
 
 function TJtdTemplate.MakeDescription: string;
 var
@@ -408,6 +441,40 @@ begin
     end;
 end;
 
+class function TJtdTemplate.IsSpecDecl(const s: string; out aSpecName: string): Boolean;
+var
+  KeyPos, OpenPos, ClosePos: SizeInt;
+begin
+  KeyPos := System.Pos(SPEC_TAG, s);
+  Result := KeyPos > 0;
+  if Result then
+    begin
+      OpenPos := System.Pos('<', s, KeyPos + System.Length(SPEC_TAG));
+      if OpenPos = 0 then exit(False);
+      ClosePos := System.Pos('>', s, OpenPos + 1);
+      if ClosePos = 0 then exit(False);
+      aSpecName := System.Copy(s, OpenPos + 1, ClosePos - OpenPos - 1).Trim;
+    end;
+end;
+
+class function TJtdTemplate.IsSpecDecl(const s: string; out aGenType, aSpecType: string): Boolean;
+var
+  KeyPos, OpenPos, ClosePos: SizeInt;
+begin
+  KeyPos := System.Pos(SPEC_TAG, s);
+  Result := KeyPos > 0;
+  if Result then
+    begin
+      KeyPos += System.Length(SPEC_TAG);
+      OpenPos := System.Pos('<', s, KeyPos);
+      if OpenPos = 0 then exit(False);
+      ClosePos := System.Pos('>', s, OpenPos + 1);
+      if ClosePos = 0 then exit(False);
+      aGenType := System.Copy(s, KeyPos + 1, OpenPos - KeyPos).Trim;
+      aSpecType := System.Copy(s, OpenPos + 1, ClosePos - OpenPos - 1).Trim;
+    end;
+end;
+
 constructor TJtdTemplate.Create(aNullable: Boolean);
 begin
   FNullable := aNullable;
@@ -428,6 +495,11 @@ begin
   Assert(aText = aText);
 end;
 
+function TJtdTemplate.Dependencies: TDependList;
+begin
+  Result := nil;
+end;
+
 constructor TJtdTypeAlias.Create(const aTypeName, aOldTypeName: string; aNullable: Boolean);
 begin
   inherited Create(aNullable);
@@ -440,6 +512,11 @@ begin
   WriteDescription(aText, aComment);
   aText.Add(Format('  %s = %s;', [TypeName, FOldTypeName]));
   aText.Add('');
+end;
+
+function TJtdTypeAlias.Dependencies: TDependList;
+begin
+  Result := [TDependence.Make(FOldTypeName)];
 end;
 
 constructor TJtdForwardDecl.Create(const aTypeName: string);
@@ -471,6 +548,11 @@ begin
   WriteDescription(aText, aComment);
   aText.Add(Format('  %s = %s;', [TypeName, DefaultTypeName]));
   aText.Add('');
+end;
+
+function TJtdGenAny.Dependencies: TDependList;
+begin
+  Result := [TDependence.Make(DefaultTypeName)];
 end;
 
 class function TJtdTypeTemplate.DefaultTypeName(aType: TJtdType): string;
@@ -555,6 +637,11 @@ begin
   WriteDescription(aText, aComment);
   aText.Add(Format(Fmt, [TypeName, JTD_FORM_ANCESTORS[fkEnum], FEnumType.TypeName]));
   aText.Add('');
+end;
+
+function TJtdEnumElem.Dependencies: TDependList;
+begin
+  Result := [TDependence.Make(FEnumType.TypeName)];
 end;
 
 constructor TJtdStrEnumElem.Create(const aTypeName: string; const aElemList: TStringArray; aNullable: Boolean);
@@ -645,6 +732,11 @@ begin
   aText.Add('');
 end;
 
+function TJtdElements.Dependencies: TDependList;
+begin
+  Result := [TDependence.Make(FSpecType)];
+end;
+
 class function TJtdValues.GetSpecDecl(const aSpecType: string): string;
 const
   Fmt = 'specialize %s<%s>';
@@ -666,6 +758,11 @@ begin
   WriteDescription(aText, aComment);
   aText.Add(Format(Fmt, [TypeName, JTD_FORM_ANCESTORS[fkValues], FSpecType]));
   aText.Add('');
+end;
+
+function TJtdValues.Dependencies: TDependList;
+begin
+  Result := [TDependence.Make(FSpecType)];
 end;
 
 procedure TJtdProps.WriteClearProc(aText: TStrings);
@@ -956,6 +1053,33 @@ begin
   WriteClearProc(aText);
 end;
 
+function TJtdProps.Dependencies: TDependList;
+var
+  I: SizeInt;
+  s, tn: string;
+  Deps: specialize TGLiteVector<TDependence>;
+begin
+  for I := 0 to System.High(Props) do begin
+    s := Props[I].PropType;
+    if s = TypeName then continue;
+    if IsSpecDecl(s, tn) then begin
+      if tn <> TypeName then
+        Deps.Add(TDependence.Make(tn, True));
+    end else
+      Deps.Add(TDependence.Make(s));
+  end;
+  for I := 0 to System.High(OptionalProps) do begin
+    s := OptionalProps[I].PropType;
+    if s = TypeName then continue;
+    if IsSpecDecl(s, tn) then begin
+      if tn <> TypeName then
+        Deps.Add(TDependence.Make(tn, True));
+    end else
+      Deps.Add(TDependence.Make(s));
+  end;
+  Result := Deps.ToArray;
+end;
+
 procedure TJtdUnionTemplate.WritePropDescription(const aDescr, aTagValue: string; aText: TStrings;
   aComment: Boolean);
 var
@@ -1083,6 +1207,23 @@ begin
   WriteGetInstanceClass(aText);
   WriteGetters(aText);
   WriteSetters(aText);
+end;
+
+function TJtdUnionTemplate.Dependencies: TDependList;
+var
+  I: SizeInt;
+  s, tn: string;
+  sa: TDependList;
+begin
+  SetLength(sa, System.Length(Mapping));
+  for I := 0 to System.High(Mapping) do begin
+    s := Mapping[I].PropType;
+    if IsSpecDecl(s, tn) then
+      sa[I] := TDependence.Make(tn, True)
+    else
+      sa[I] := TDependence.Make(s);
+  end;
+  Result := sa;
 end;
 
 { TJtdTemplater }
@@ -1324,24 +1465,24 @@ begin
   if Result then aName := n.AsString;
 end;
 
-function TJtdTemplater.GetPreferName(aSchema: TJtdSchema; const aPredefName: string; aTop: Boolean): string;
+function TJtdTemplater.GetPreferName(aSchema: TJtdSchema; const aPredefName: string; aRoot: Boolean): string;
 var
   s: string;
 begin
   if aPredefName <> '' then exit(aPredefName);
   if HasPreferName(aSchema, s) then exit(AsUniqTypeName(s));
-  if aTop then
+  if aRoot then
     Result := AsUniqTypeName(DEF_ROOT_NAME)
   else
     Result := '';
 end;
 
-function TJtdTemplater.HandleEmpty(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleEmpty(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   Template: TJtdGenAny;
   d, TypName: string;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   if TypName = '' then exit(TJtdGenAny.DefaultTypeName);
 
@@ -1352,7 +1493,7 @@ begin
   Result := Template.TypeName;
 end;
 
-function TJtdTemplater.HandleRef(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleRef(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   Schema: TJtdSchema;
   TypName, Alias, r, d: string;
@@ -1361,10 +1502,10 @@ begin
   if FRefMap.TryGetValue(aSchema.Ref, TypName) then exit(TypName);
   Alias := '';
   TypName := '';
-  if aTop then
-    Alias := GetPreferName(aSchema, aTypeName, aTop)
+  if aRoot then
+    Alias := GetPreferName(aSchema, aTypeName, aRoot)
   else
-    TypName := GetPreferName(aSchema, '', aTop);
+    TypName := GetPreferName(aSchema, '', aRoot);
   if TypName = '' then
     TypName := AsPasUniqTypeName(aSchema.Ref);
 
@@ -1377,7 +1518,7 @@ begin
       Template.Description := d;
     FTemplateList.Add(Template);
   end;
-  if aTop then begin
+  if aRoot then begin
     Template := TJtdTypeAlias.Create(Alias, TypName, aSchema.Nullable);
     if HasDescription(aSchema, d) then
       Template.Description := d;
@@ -1387,12 +1528,12 @@ begin
     Result := TypName;
 end;
 
-function TJtdTemplater.HandleType(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleType(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   Template: TJtdTypeTemplate;
   d, TypName: string;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   if TypName = '' then
     exit(TJtdTypeTemplate.DefaultTypeName(aSchema.ElType));
@@ -1404,7 +1545,7 @@ begin
   Result := Template.TypeName;
 end;
 
-function TJtdTemplater.HandleEnum(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleEnum(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   EnumTemplate: TJtdEnumType;
   ElemTemplate: TJtdEnumElem;
@@ -1414,7 +1555,7 @@ var
   n: TJsonNode;
   I: Integer;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   ElemList := aSchema.Enum.ToArray;
 
@@ -1460,16 +1601,32 @@ begin
   end;
 end;
 
-function TJtdTemplater.HandleElements(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleElements(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   Template: TJtdElements;
-  d, ElemName, TypName: string;
+  s, d, ElemName, TypName: string;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   ElemName := HandleSchema(aSchema.Elements);
 
-  if TypName = '' then exit(TJtdElements.GetSpecDecl(ElemName));
+  if TypName = '' then begin
+    if TJtdTemplate.IsSpecDecl(ElemName, s, d) then begin
+      if s = JTD_FORM_ANCESTORS[fkElements] then
+        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + LIST_TAG + LIST_ELEM_TAG)
+      else
+        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + MAP_TAG + LIST_ELEM_TAG);
+      FTemplateList.Add(TJtdTypeAlias.Create(d, ElemName, aSchema.Elements.Nullable));
+      ElemName := d;
+    end;
+    exit(TJtdElements.GetSpecDecl(ElemName));
+  end;
+
+  if TJtdTemplate.IsSpecDecl(ElemName, d) then begin
+    d := AsUniqTypeName(System.Copy(TypName, 2, System.Length(TypName)) + ELEM_TAG);
+    FTemplateList.Add(TJtdTypeAlias.Create(d, ElemName, aSchema.Elements.Nullable));
+    ElemName := d;
+  end;
 
   Template := TJtdElements.Create(TypName, ElemName, aSchema.Nullable);
   if HasDescription(aSchema, d) then
@@ -1478,16 +1635,33 @@ begin
   Result := Template.TypeName;
 end;
 
-function TJtdTemplater.HandleValues(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleValues(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   Template: TJtdValues;
-  d, ElemName, TypName: string;
+  s, d, ElemName, TypName: string;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   ElemName := HandleSchema(aSchema.Values);
 
-  if TypName = '' then exit(TJtdValues.GetSpecDecl(ElemName));
+  if TypName = '' then begin
+    if TJtdTemplate.IsSpecDecl(ElemName, s, d) then begin
+      if s = JTD_FORM_ANCESTORS[fkElements] then
+        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + LIST_TAG + MAP_ELEM_TAG)
+      else
+        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + MAP_TAG + MAP_ELEM_TAG);
+      FTemplateList.Add(TJtdTypeAlias.Create(d, ElemName, aSchema.Values.Nullable));
+      ElemName := d;
+    end;
+    exit(TJtdValues.GetSpecDecl(ElemName));
+  end;
+
+  if TJtdTemplate.IsSpecDecl(ElemName, d) then begin
+    d := AsUniqTypeName(System.Copy(TypName, 2, System.Length(TypName)) + ELEM_TAG);
+    FTemplateList.Add(TJtdTypeAlias.Create(d, ElemName, aSchema.Values.Nullable));
+    ElemName := d;
+  end;
+
   Template := TJtdValues.Create(TypName, ElemName, aSchema.Nullable);
   if HasDescription(aSchema, d) then
     Template.Description := d;
@@ -1495,7 +1669,7 @@ begin
   Result := Template.TypeName;
 end;
 
-function TJtdTemplater.HandleProperties(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleProperties(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   PropNameSet: TStrSet;
   PropsDescr: TJsonNode = nil;
@@ -1542,7 +1716,7 @@ var
   Template: TJtdProps;
   d, TypName: string;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   if TypName = '' then
     TypName := AsUniqTypeName(OBJECT_TAG);
@@ -1576,7 +1750,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5091 OFF}
-function TJtdTemplater.HandleDiscriminator(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleDiscriminator(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   PropNameSet: TStrSet;
   Mapping: TTagMapping;
@@ -1586,7 +1760,7 @@ var
   e: TJtdSchemaMap.TEntry;
   AsciiNames: Boolean = True;
 begin
-  TypName := GetPreferName(aSchema, aTypeName, aTop);
+  TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   if TypName = '' then
     TypName := AsPasUniqTypeName(aSchema.Discriminator + VARIANT_TAG);
@@ -1630,20 +1804,20 @@ begin
 end;
 {$POP}
 
-function TJtdTemplater.HandleSchema(aSchema: TJtdSchema; const aTypeName: string; aTop: Boolean): string;
+function TJtdTemplater.HandleSchema(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 begin
   if FDepth = MAX_DEPTH then
     raise ECodegen.Create(SEJPathMaxDepthExceed);
   Inc(FDepth);
   case aSchema.Kind of
-    fkEmpty:         Result := HandleEmpty(aSchema, aTypeName, aTop);
-    fkRef:           Result := HandleRef(aSchema, aTypeName, aTop);
-    fkType:          Result := HandleType(aSchema, aTypeName, aTop);
-    fkEnum:          Result := HandleEnum(aSchema, aTypeName, aTop);
-    fkElements:      Result := HandleElements(aSchema, aTypeName, aTop);
-    fkValues:        Result := HandleValues(aSchema, aTypeName, aTop);
-    fkProperties:    Result := HandleProperties(aSchema, aTypeName, aTop);
-    fkDiscriminator: Result := HandleDiscriminator(aSchema, aTypeName, aTop);
+    fkEmpty:         Result := HandleEmpty(aSchema, aTypeName, aRoot);
+    fkRef:           Result := HandleRef(aSchema, aTypeName, aRoot);
+    fkType:          Result := HandleType(aSchema, aTypeName, aRoot);
+    fkEnum:          Result := HandleEnum(aSchema, aTypeName, aRoot);
+    fkElements:      Result := HandleElements(aSchema, aTypeName, aRoot);
+    fkValues:        Result := HandleValues(aSchema, aTypeName, aRoot);
+    fkProperties:    Result := HandleProperties(aSchema, aTypeName, aRoot);
+    fkDiscriminator: Result := HandleDiscriminator(aSchema, aTypeName, aRoot);
   else
     Result := '';
   end;
@@ -1660,6 +1834,102 @@ begin
     FGlobNameTable.Add(UpCase(TJtdTypeTemplate.DefaultTypeName(I)));
 end;
 
+type
+  TTempVec = specialize TGLiteVector<TJtdTemplate>;
+  TDeferData = record
+    Index: SizeInt;
+    Defers: TTempVec;
+    constructor Make(aIndex: SizeInt);
+  end;
+
+  TDeferMapType = specialize TGLiteChainHashMap<string, TDeferData, string>;
+  TDeferMap     = TDeferMapType.TMap;
+
+constructor TDeferData.Make(aIndex: SizeInt);
+begin
+  Index := aIndex;
+end;
+
+procedure TJtdTemplater.CheckCyclicDeps;
+var
+  Declared: TStrSet;
+  DeferMap: TDeferMap;
+  procedure AddTemplate(aTemplate: TJtdTemplate);
+  var
+    Template: TJtdTemplate;
+    p: TDeferMap.PValue;
+  begin
+    Declared.Add(aTemplate.TypeName);
+    FTemplateList.Add(aTemplate);
+    p := DeferMap.GetMutValueDef(aTemplate.TypeName, Default(TDeferData));
+    for Template in p^.Defers do
+      AddTemplate(Template);
+    p^.Defers.MakeEmpty;
+  end;
+var
+  Temp: TTempVec;
+  Deps: specialize TGLiteVector<string>;
+  Template: TJtdTemplate;
+  I, J, Idx: SizeInt;
+  tn, dn: string;
+  CurrDep: TJtdTemplate.TDependence;
+  jt: TJtdType;
+  Deferred: Boolean;
+begin
+  Temp.AddAll(FTemplateList);
+  FTemplateList.OwnsObjects := False;
+  FTemplateList.Clear;
+  FTemplateList.OwnsObjects := True;
+  for I := 0 to Pred(Temp.Count) do
+    DeferMap.Add(Temp[I].TypeName, TDeferData.Make(I));
+  Declared.Add(TJtdGenAny.DefaultTypeName);
+  for jt := jtBool to jtTimeStamp do
+    Declared.Add(TJtdTypeTemplate.DefaultTypeName(jt));
+  I := 0;
+  for Template in Temp do begin
+    if Template is TJtdElements then begin
+      tn := TJtdElements(Template).SpecType;
+      if Declared.NonContains(tn) then begin
+        DeferMap.GetMutValueDef(tn, Default(TDeferData))^.Defers.Add(Template);
+        continue;
+      end;
+    end else
+      if Template is TJtdValues then begin
+        tn := TJtdValues(Template).SpecType;
+        if Declared.NonContains(tn) then begin
+          DeferMap.GetMutValueDef(tn, Default(TDeferData))^.Defers.Add(Template);
+          continue;
+        end;
+      end else begin
+        Deferred := False;
+        dn := '';
+        J := NULL_INDEX;
+        Deps.MakeEmpty;
+        for CurrDep in Template.Dependencies do begin
+          tn := CurrDep.DepName;
+          if Declared.NonContains(tn) then begin
+            Deps.Add(tn);
+            if CurrDep.IsSpecDecl then begin
+              Deferred := True;
+              Idx := DeferMap.GetMutValueDef(tn, Default(TDeferData))^.Index;
+              if Idx > J then begin
+                J := Idx;
+                dn := tn;
+              end;
+            end;
+          end;
+        end;
+        if Deferred then begin
+          DeferMap.GetMutValueDef(dn, Default(TDeferData))^.Defers.Add(Template);
+          continue;
+        end else
+          for tn in Deps do
+            FTemplateList.Add(TJtdForwardDecl.Create(tn));
+      end;
+    AddTemplate(Template);
+  end;
+end;
+
 function TJtdTemplater.ProcessSchema: string;
 begin
   EnumElemSet.Clear;
@@ -1668,6 +1938,7 @@ begin
   InitGlobNameTable;
   FDepth := 0;
   Result := HandleSchema(FRootSchema, AsUniqTypeName(RootClassName), True);
+  if FRootSchema.Definitions <> nil then CheckCyclicDeps;
 end;
 
 constructor TJtdTemplater.Create(aSchema: TJtdSchema);
