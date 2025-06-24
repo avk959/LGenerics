@@ -102,10 +102,11 @@ type
     FTemplateList: TTemplateList;
     FDeclarationList,
     FImplementationList: TStringList;
-    FUniqEnumElems,
-    FComments: Boolean;
     FRootClassName: string;
     FDepth: Integer;
+    EUsePasEnums,
+    FUniqEnumElems,
+    FComments: Boolean;
   private
     procedure FillPasKeywords;
     function  IsPasKeyword(const s: string): Boolean;
@@ -149,13 +150,20 @@ type
     destructor Destroy; override;
   { returns the type name of the root class }
     function  Execute: string;
-    property  HasUniqEnumElements: Boolean read FUniqEnumElems;
-    property  ShowComments: Boolean read FComments write FComments;
   { preferred root class type name(without T), optional }
     property  RootClassName: string read FRootClassName write FRootClassName;
     property  DeclarationList: TStringList read FDeclarationList;
     property  ImplementationList: TStringList read FImplementationList;
+    property  HasUniqEnumElements: Boolean read FUniqEnumElems;
+    property  ShowComments: Boolean read FComments write FComments;
+    property  UsePasEnums: Boolean read EUsePasEnums write EUsePasEnums;
   end;
+
+  TCodegenOption = (
+    cgoDisablePasEnums, // disable using Pascal's enumerations
+    cgoDisableComments  // disable code comments
+  );
+  TCodegenOptions = set of TCodegenOption;
 
   { TJtdPasCodegen }
   TJtdPasCodegen = class
@@ -173,6 +181,7 @@ type
     FSwitches,
     FCustomHeader: string;
     FUseUnits: TStringArray;
+    FUsePasEnums,
     FComments: Boolean;
     procedure WriteHeader(aText: TStrings);
     procedure WriteUnitClause(aText: TStrings);
@@ -185,11 +194,11 @@ type
   public
     class function  CreateUnit(aSchema: TJtdSchema; const aUnitName: string = '';
                                const aRootClassName: string = ''; const aCustomHeader: string = '';
-                               AllowComments: Boolean = True): string; static;
+                               aOptions: TCodegenOptions = []): string; static;
     class procedure CreateUnitFile(const aFileName: string; aSchema: TJtdSchema;
                                    const aUnitName: string = ''; const aRootClassName: string = '';
-                                   const aCustomHeader: string = '';  AllowComments: Boolean = True); static;
-    constructor Create(aSchema: TJtdSchema);
+                                   const aCustomHeader: string = ''; aOptions: TCodegenOptions = []); static;
+    constructor Create(aSchema: TJtdSchema; aOptions: TCodegenOptions = []);
     destructor Destroy; override;
   { after the execution of the RunTemplater proc, the FinalRootClassName
     contains the type name of the root class }
@@ -208,8 +217,10 @@ type
     property  UnitName: string read FUnitName write FUnitName;
   { some additional text that will be placed in the unit header }
     property  CustomHeader: string read FCustomHeader write FCustomHeader;
-  { whether to display comments, the default is True }
-    property  ShowComments: Boolean read FComments write FComments;
+  { True if code comments are enabled }
+    property  ShowComments: Boolean read FComments;
+  { True if the use of Pascal enumerations is enabled }
+    property  UsePasEnums: Boolean read FUsePasEnums;
   end;
 
 implementation
@@ -1559,7 +1570,7 @@ begin
 
   ElemList := aSchema.Enum.ToArray;
 
-  if IsUniqIdentifierList(ElemList) and (System.Length(ElemList) <= 256) then begin
+  if UsePasEnums and IsUniqIdentifierList(ElemList) and (System.Length(ElemList) <= 256) then begin
     CheckUniqEnumElements(ElemList);
     if TypName = '' then
       EnumName := AsUniqTypeName(ENUM_TAG)
@@ -2028,15 +2039,14 @@ begin
 end;
 
 class function TJtdPasCodegen.CreateUnit(aSchema: TJtdSchema; const aUnitName: string; const aRootClassName: string;
-  const aCustomHeader: string; AllowComments: Boolean): string;
+  const aCustomHeader: string; aOptions: TCodegenOptions): string;
 begin
   Result := '';
-  with TJtdPasCodegen.Create(aSchema) do
+  with TJtdPasCodegen.Create(aSchema, aOptions) do
     try
       UnitName := aUnitName;
       PreferRootClassName := aRootClassName;
       CustomHeader := aCustomHeader;
-      ShowComments := AllowComments;
       Execute;
       Result := Source.Text;
     finally
@@ -2044,15 +2054,14 @@ begin
     end;
 end;
 
-class procedure TJtdPasCodegen.CreateUnitFile(const aFileName: string; aSchema: TJtdSchema;
-  const aUnitName: string; const aRootClassName: string; const aCustomHeader: string; AllowComments: Boolean);
+class procedure TJtdPasCodegen.CreateUnitFile(const aFileName: string; aSchema: TJtdSchema; const aUnitName: string;
+  const aRootClassName: string; const aCustomHeader: string; aOptions: TCodegenOptions);
 begin
-  with TJtdPasCodegen.Create(aSchema) do
+  with TJtdPasCodegen.Create(aSchema, aOptions) do
     try
       UnitName := aUnitName;
       PreferRootClassName := aRootClassName;
       CustomHeader := aCustomHeader;
-      ShowComments := AllowComments;
       Execute;
       Source.SaveToFile(aFileName);
     finally
@@ -2060,12 +2069,14 @@ begin
     end;
 end;
 
-constructor TJtdPasCodegen.Create(aSchema: TJtdSchema);
+constructor TJtdPasCodegen.Create(aSchema: TJtdSchema; aOptions: TCodegenOptions);
 begin
   FUseUnits := ['SysUtils', 'lgJson', 'lgJtdTypes'];
   FUnitName := DEFAULT_UNIT_NAME;
-  FComments := True;
+  FUsePasEnums := not (cgoDisablePasEnums in aOptions);
+  FComments := not (cgoDisableComments in aOptions);
   FEngine := TJtdTemplater.Create(aSchema);
+  FEngine.UsePasEnums := UsePasEnums;
   FSource := TStringList.Create;
 end;
 
