@@ -1,12 +1,12 @@
 object frmCodegenDlg: TfrmCodegenDlg
   Left = 367
-  Height = 310
+  Height = 350
   Top = 250
-  Width = 399
+  Width = 411
   BorderIcons = [biSystemMenu]
   Caption = 'frmCodegenDlg'
-  ClientHeight = 310
-  ClientWidth = 399
+  ClientHeight = 350
+  ClientWidth = 411
   DesignTimePPI = 115
   Font.Height = -14
   OnCloseQuery = FormCloseQuery
@@ -25,15 +25,15 @@ object frmCodegenDlg: TfrmCodegenDlg
     Left = 160
     Height = 19
     Top = 8
-    Width = 229
+    Width = 241
     Anchors = [akTop, akLeft, akRight]
     AutoSize = False
     Caption = 'lbCurrSchemaName'
   end
   object btOk: TButton
-    Left = 198
+    Left = 210
     Height = 30
-    Top = 270
+    Top = 310
     Width = 90
     Anchors = [akRight, akBottom]
     Caption = 'Ok'
@@ -52,7 +52,7 @@ object frmCodegenDlg: TfrmCodegenDlg
     Left = 160
     Height = 27
     Top = 44
-    Width = 229
+    Width = 241
     Anchors = [akTop, akLeft, akRight]
     TabOrder = 1
   end
@@ -60,7 +60,7 @@ object frmCodegenDlg: TfrmCodegenDlg
     Left = 160
     Height = 27
     Top = 88
-    Width = 229
+    Width = 241
     Anchors = [akTop, akLeft, akRight]
     TabOrder = 2
   end
@@ -74,8 +74,8 @@ object frmCodegenDlg: TfrmCodegenDlg
   object fneDestFile: TFileNameEdit
     Left = 160
     Height = 27
-    Top = 216
-    Width = 229
+    Top = 254
+    Width = 241
     DialogKind = dkSave
     DialogTitle = 'Save unit as'
     DialogOptions = [ofOverwritePrompt, ofNoNetworkButton, ofEnableSizing, ofViewDetail]
@@ -94,12 +94,12 @@ object frmCodegenDlg: TfrmCodegenDlg
   object Label4: TLabel
     Left = 16
     Height = 19
-    Top = 220
+    Top = 258
     Width = 88
     Caption = 'Unit file name:'
   end
   object sbtPreview: TSpeedButton
-    Left = 361
+    Left = 373
     Height = 28
     Hint = 'Preview...'
     Top = 172
@@ -113,7 +113,7 @@ object frmCodegenDlg: TfrmCodegenDlg
     Left = 161
     Height = 27
     Top = 132
-    Width = 228
+    Width = 240
     Anchors = [akTop, akLeft, akRight]
     TabOrder = 4
   end
@@ -128,7 +128,7 @@ object frmCodegenDlg: TfrmCodegenDlg
     Left = 160
     Height = 23
     Top = 176
-    Width = 194
+    Width = 206
     Anchors = [akTop, akLeft, akRight]
     AutoSize = False
     Caption = 'Enable comments in code'
@@ -137,13 +137,25 @@ object frmCodegenDlg: TfrmCodegenDlg
     TabOrder = 5
   end
   object ntCancel: TButton
-    Left = 298
+    Left = 310
     Height = 30
-    Top = 270
+    Top = 310
     Width = 90
     Anchors = [akRight, akBottom]
     Caption = 'Cancel'
     ModalResult = 2
     TabOrder = 6
+  end
+  object chbPasEnums: TCheckBox
+    Left = 160
+    Height = 23
+    Top = 212
+    Width = 206
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = False
+    Caption = 'Enable Pascal enumerations'
+    Checked = True
+    State = cbChecked
+    TabOrder = 7
   end
 end

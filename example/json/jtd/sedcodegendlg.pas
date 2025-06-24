@@ -13,6 +13,7 @@ type
 
   TfrmCodegenDlg = class(TForm)
     btOk: TButton;
+    chbPasEnums: TCheckBox;
     ntCancel: TButton;
     chbComments: TCheckBox;
     edClassName: TEdit;
@@ -169,6 +170,7 @@ end;
 function TfrmCodegenDlg.GenCode: string;
 var
   Schema: TJtdSchema;
+  Opts: TCodegenOptions;
 begin
   Result := '';
   Screen.BeginWaitCursor;
@@ -176,12 +178,16 @@ begin
     Schema := TJtdSchema.Create;
     try
       Schema.Load(FSchema);
-      with TJtdPasCodegen.Create(Schema) do
+      Opts := [];
+      if not chbComments.Checked then
+        Include(Opts, cgoDisableComments);
+      if not chbPasEnums.Checked then
+        Include(Opts, cgoDisablePasEnums);
+      with TJtdPasCodegen.Create(Schema, Opts) do
         try
           PreferRootClassName := edClassName.Text;
           UnitName := edUnitName.Text;
           CustomHeader := edCustomHeader.Text;
-          ShowComments := chbComments.Checked;
           Execute;
           Result := Source.Text;
         finally
