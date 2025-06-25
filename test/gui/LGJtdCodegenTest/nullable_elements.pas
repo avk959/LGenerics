@@ -14,7 +14,7 @@ uses
 
 type
 
-{ TRootObject is nullable; }
+{ TRootObject is nullable }
   TRootObject = class sealed(specialize TJtdList<TJtdString>);
 
 implementation

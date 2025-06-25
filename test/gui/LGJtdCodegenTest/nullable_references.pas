@@ -16,17 +16,17 @@ type
 
   TNotnullString = TJtdString;
 
-{ TNullString is nullable; }
+{ TNullString is nullable }
   TNullString = TJtdString;
 
   TNotnullRefNotnullString = TNotnullString;
 
-{ TNullRefNotnullString is nullable; }
+{ TNullRefNotnullString is nullable }
   TNullRefNotnullString = TNotnullString;
 
   TNotnullRefNullString = TNullString;
 
-{ TNullRefNullString is nullable; }
+{ TNullRefNullString is nullable }
   TNullRefNullString = TNullString;
 
   TRootObject = class sealed(TJtdObject)

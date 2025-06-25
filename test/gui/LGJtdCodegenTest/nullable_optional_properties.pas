@@ -31,11 +31,11 @@ type
 
   { All of the following properties are optional, so may contain NILs }
 
-  { refers to "foo" JSON property; is nullable; }
+  { refers to "foo" JSON property; is nullable }
     property Foo: TJtdString read FFoo write SetFoo;
   { refers to "bar" JSON property }
     property Bar: specialize TJtdList<TJtdString> read FBar write SetBar;
-  { refers to "baz" JSON property; is nullable; }
+  { refers to "baz" JSON property; is nullable }
     property Baz: TJtdBool read FBaz write SetBaz;
   end;
 

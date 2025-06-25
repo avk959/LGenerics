@@ -58,9 +58,9 @@ type
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-  { matches the "bar" tag; }
+  { matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
-  { matches the "baz" tag; }
+  { matches the "baz" tag }
     property Baz: TBaz read GetBaz write SetBaz;
   end;
 

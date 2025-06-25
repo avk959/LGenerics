@@ -14,7 +14,7 @@ uses
 
 type
 
-  TBarbaz = class sealed(TJtdObject)
+  TBarBaz = class sealed(TJtdObject)
   private
     FBaz: TJtdString;
     procedure SetBaz(aValue: TJtdString);
@@ -44,24 +44,24 @@ type
 
   TRootObject = class sealed(TJtdUnion)
   protected
-    function  GetBarBaz: TBarbaz;
+    function  GetBarBaz: TBarBaz;
     function  GetQuux: TQuux;
-    procedure SetBarBaz(aValue: TBarbaz);
+    procedure SetBarBaz(aValue: TBarBaz);
     procedure SetQuux(aValue: TQuux);
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-  { matches the "BAR_BAZ" tag; }
-    property BarBaz: TBarbaz read GetBarBaz write SetBarBaz;
-  { matches the "QUUX" tag; }
+  { matches the "BAR_BAZ" tag }
+    property BarBaz: TBarBaz read GetBarBaz write SetBarBaz;
+  { matches the "QUUX" tag }
     property Quux: TQuux read GetQuux write SetQuux;
   end;
 
 implementation
 
-{ TBarbaz }
+{ TBarBaz }
 
-procedure TBarbaz.SetBaz(aValue: TJtdString);
+procedure TBarBaz.SetBaz(aValue: TJtdString);
 begin
   if aValue = FBaz then exit;
   FBaz.Free;
@@ -69,7 +69,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBarbaz.DoReadJson(aNode: TJsonNode);
+procedure TBarBaz.DoReadJson(aNode: TJsonNode);
 var
   Flags: array[0..0] of Boolean;
   e: TJsonNode.TPair;
@@ -97,7 +97,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBarbaz.DoReadJson(aReader: TJsonReader);
+procedure TBarBaz.DoReadJson(aReader: TJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
@@ -126,7 +126,7 @@ begin
 end;
 {$POP}
 
-procedure TBarbaz.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBarBaz.DoWriteJson(aWriter: TJsonStrWriter);
 begin
   aWriter.BeginObject;
   aWriter.AddName('baz');
@@ -134,7 +134,7 @@ begin
   aWriter.EndObject;
 end;
 
-procedure TBarbaz.Clear;
+procedure TBarBaz.Clear;
 begin
   FreeAndNil(FBaz);
 end;
@@ -227,16 +227,16 @@ end;
 class function TRootObject.GetInstanceClass(const aTag: string): TJtdEntityClass;
 begin
   case aTag of
-    'BAR_BAZ': Result := TBarbaz;
+    'BAR_BAZ': Result := TBarBaz;
     'QUUX': Result := TQuux;
   else
     Result := nil;
   end;
 end;
 
-function TRootObject.GetBarBaz: TBarbaz;
+function TRootObject.GetBarBaz: TBarBaz;
 begin
-  Result := FInstance as TBarbaz;
+  Result := FInstance as TBarBaz;
 end;
 
 function TRootObject.GetQuux: TQuux;
@@ -244,7 +244,7 @@ begin
   Result := FInstance as TQuux;
 end;
 
-procedure TRootObject.SetBarBaz(aValue: TBarbaz);
+procedure TRootObject.SetBarBaz(aValue: TBarBaz);
 begin
   if aValue = FInstance then exit;
   FInstance.Free;

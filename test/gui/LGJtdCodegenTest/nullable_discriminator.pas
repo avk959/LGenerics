@@ -42,7 +42,7 @@ type
     property Quuz: TJtdString read FQuuz write SetQuuz;
   end;
 
-{ TRootObject is nullable; }
+{ TRootObject is nullable }
   TRootObject = class sealed(TJtdUnion)
   protected
     function  GetBar: TBar;
@@ -52,9 +52,9 @@ type
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-  { matches the "bar" tag; }
+  { matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
-  { matches the "quux" tag; }
+  { matches the "quux" tag }
     property Quux: TQuux read GetQuux write SetQuux;
   end;
 

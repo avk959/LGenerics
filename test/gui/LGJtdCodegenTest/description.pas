@@ -81,22 +81,22 @@ type
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
-  { Whereas disregard and contempt for human rights have resulted in barbarous acts 
-    which have outraged the conscience of mankind, and the advent of a world in 
-    which human beings shall enjoy freedom of speech and belief and freedom from 
-    fear and want has been proclaimed as the highest aspiration of the common people,
-     refers to "long_description" JSON property }
+  { refers to "long_description" JSON property; Whereas disregard and contempt for 
+    human rights have resulted in barbarous acts which have outraged the conscience 
+    of mankind, and the advent of a world in which human beings shall enjoy freedom 
+    of speech and belief and freedom from fear and want has been proclaimed as the 
+    highest aspiration of the common people, }
     property LongDescription: TJtdString read FLongDescription write SetLongDescription;
-  { A description for ref; refers to "ref_with_description" JSON property }
+  { refers to "ref_with_description" JSON property; A description for ref }
     property RefWithDescription: TBaz read FRefWithDescription write SetRefWithDescription;
-  { A description for string; refers to "string_with_description" JSON property }
+  { refers to "string_with_description" JSON property; A description for string }
     property StringWithDescription: TJtdString read FStringWithDescription write SetStringWithDescription;
-  { A description for enum; refers to "enum_with_description" JSON property }
+  { refers to "enum_with_description" JSON property; A description for enum }
     property EnumWithDescription: TEnumWithDescription read FEnumWithDescription write SetEnumWithDescription;
-  { A description for properties; refers to "properties_with_description" JSON property }
+  { refers to "properties_with_description" JSON property; A description for properties }
     property PropertiesWithDescription: TPropertiesWithDescription read FPropertiesWithDescription write SetPropertiesWithDescription;
-  { A description for discriminator; refers to "discriminator_with_description" 
-    JSON property }
+  { refers to "discriminator_with_description" JSON property; A description for 
+    discriminator }
     property DiscriminatorWithDescription: TDiscriminatorWithDescription read FDiscriminatorWithDescription write SetDiscriminatorWithDescription;
   end;
 

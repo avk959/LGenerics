@@ -16,7 +16,7 @@ type
 
   TRootObject = class sealed(TJtdObject)
   private
-    FEmptyname: TJtdString;
+    FEmptyName: TJtdString;
     FP_foo: TJtdString;
     F_foo: TJtdString;
     FP0foo: TJtdString;
@@ -24,7 +24,7 @@ type
     FFoo_bar: TJtdString;
     FFoo_bar1: TJtdString;
     FFoo___bar: TJtdString;
-    procedure SetEmptyname(aValue: TJtdString);
+    procedure SetEmptyName(aValue: TJtdString);
     procedure SetP_foo(aValue: TJtdString);
     procedure Set_foo(aValue: TJtdString);
     procedure SetP0foo(aValue: TJtdString);
@@ -39,7 +39,7 @@ type
   public
     procedure Clear; override;
   { refers to "" JSON property }
-    property Emptyname: TJtdString read FEmptyname write SetEmptyname;
+    property EmptyName: TJtdString read FEmptyName write SetEmptyName;
   { refers to "$foo" JSON property }
     property P_foo: TJtdString read FP_foo write SetP_foo;
   { refers to "_foo" JSON property }
@@ -60,11 +60,11 @@ implementation
 
 { TRootObject }
 
-procedure TRootObject.SetEmptyname(aValue: TJtdString);
+procedure TRootObject.SetEmptyName(aValue: TJtdString);
 begin
-  if aValue = FEmptyname then exit;
-  FEmptyname.Free;
-  FEmptyname := aValue;
+  if aValue = FEmptyName then exit;
+  FEmptyName.Free;
+  FEmptyName := aValue;
 end;
 
 procedure TRootObject.SetP_foo(aValue: TJtdString);
@@ -130,7 +130,7 @@ begin
     case TJsonNode.PasStrToAsciiJson(e.Key) of
       '""':
         if not Flags[0] then begin
-          FEmptyname := TJtdString(TJtdString.LoadInstance(e.Value));
+          FEmptyName := TJtdString(TJtdString.LoadInstance(e.Value));
           Flags[0] := True;
         end else DuplicateProp(e.Key);
       '"$foo"':
@@ -201,7 +201,7 @@ begin
     case TJsonNode.PasStrToAsciiJson(aReader.Name) of
       '""':
         if not Flags[0] then begin
-          FEmptyname := TJtdString(TJtdString.LoadInstance(aReader));
+          FEmptyName := TJtdString(TJtdString.LoadInstance(aReader));
           Flags[0] := True;
         end else DuplicateProp(aReader);
       '"$foo"':
@@ -262,7 +262,7 @@ procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
 begin
   aWriter.BeginObject;
   aWriter.AddName(TJsonNode.JsonStrToPas('""'));
-  Emptyname.WriteJson(aWriter);
+  EmptyName.WriteJson(aWriter);
   aWriter.AddName(TJsonNode.JsonStrToPas('"$foo"'));
   P_foo.WriteJson(aWriter);
   aWriter.AddName(TJsonNode.JsonStrToPas('"_foo"'));
@@ -282,7 +282,7 @@ end;
 
 procedure TRootObject.Clear;
 begin
-  FreeAndNil(FEmptyname);
+  FreeAndNil(FEmptyName);
   FreeAndNil(FP_foo);
   FreeAndNil(F_foo);
   FreeAndNil(FP0foo);
