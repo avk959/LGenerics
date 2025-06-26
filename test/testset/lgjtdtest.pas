@@ -29,6 +29,7 @@ type
     procedure Rfc8927TimeStamp_LS;
     procedure RoundTrip_TDateTime;
     procedure RoundTrip_TTimeStamp;
+    procedure RoundTrip_TDateTimeTzOfs;
   end;
 
   { TJtdTest }
@@ -254,6 +255,25 @@ begin
       s := UTCToRfc8927TimeStamp(ts);
       AssertTrue(TryRfc8927TimeStampToUTC(s, ts2));
       AssertTrue(EqualTs(ts2, ts));
+    end;
+end;
+
+procedure TJtdUtilsTest.RoundTrip_TDateTimeTzOfs;
+var
+  d1, d2: TDateTime;
+  s: string;
+  I, Ofs1, Ofs2: Integer;
+const
+  TestSize = 1000;
+begin
+  for I := 1 to TestSize do
+    begin
+      d1 := RandomDateTime;
+      Ofs1 := Random(MinsPerDay*2-1)-(MinsPerDay-1);
+      s := DateTimeToRfc8927Ts(d1, Ofs1);
+      AssertTrue(TryRfc8927TsToDateTime(s, d2, Ofs2));
+      AssertTrue(Ofs1 = Ofs2);
+      AssertTrue(d1 = d2);
     end;
 end;
 
