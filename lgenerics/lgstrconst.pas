@@ -178,6 +178,7 @@ resourcestring
   SEJtdIllegalTagValueFmt    = 'Illegal Discriminator tag value "%s"';
   SEJtdInvalidDiscriInst     = 'Invalid Discriminator instance';
   SEJtdMaxRefDepthExceedFmt  = 'Maximum "ref" depth exceeded(%u)';
+  SEJtdTzOffsOutOfRangeFmt   = 'Timezone offset out of range(%d)';
 //JSONPath
   SEJLeadWSNotAllow        = 'Leading spaces are not allowed';
   SEJTrailWSNotAllow       = 'Trailing spaces are not allowed';
