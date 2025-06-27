@@ -635,10 +635,13 @@ begin
 end;
 
 constructor TJtdEnumElem.Create(const aTypeName: string; aEnumType: TJtdEnumType; aNullable: Boolean);
+const
+  Fmt = '%s: container for some %s enumeration element';
 begin
   inherited Create(aNullable);
   FTypeName := aTypeName;
   FEnumType := aEnumType;
+  Description := Format(Fmt, [aTypeName, aEnumType.TypeName]);
 end;
 
 procedure TJtdEnumElem.WriteDeclaration(aText: TStrings; aComment: Boolean);
@@ -1590,8 +1593,6 @@ begin
       EnumTemplate.EnumDescription := n;
     if TypName = '' then exit(TJtdEnumElem.GetSpecDecl(EnumName));
     ElemTemplate := TJtdEnumElem.Create(TypName, EnumTemplate, aSchema.Nullable);
-    ElemTemplate.Description := Format(
-      'Container for some %s enumeration element', [EnumTemplate.TypeName]);
     FTemplateList.Add(ElemTemplate);
     Result := ElemTemplate.TypeName;
   end else begin
