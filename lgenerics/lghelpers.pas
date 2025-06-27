@@ -29,8 +29,8 @@ interface
 uses
   Classes,
   SysUtils,
-  typinfo,
-  variants,
+  TypInfo,
+  Variants,
   lgUtils,
   lgHash;
 
@@ -422,8 +422,10 @@ type
 
   TGCurrencyHelper = type helper for Currency
   const
+  {$PUSH}{$J-}
     MinValue: Currency = -922337203685477.5808;
     MaxValue: Currency = 922337203685477.5807;
+  {$POP}
     class function HashCode(const aValue: Currency): SizeInt; static; inline;
     class function Equal(const L, R: Currency): Boolean; static; inline;
     class function Less(const L, R: Currency): Boolean; static; inline;
