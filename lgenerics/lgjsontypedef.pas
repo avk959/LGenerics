@@ -1189,6 +1189,8 @@ type
 
 const
   MAX_SFRAC_DIGITS = 4;
+  MSecPerHour      = SecsPerHour*MSecsPerSec;
+  MSecsPerMin      = SecsPerMin*MSecsPerSec;
 
 {$J-}
 function ValidTimeStamp(p: PChar; aCount: SizeInt; out aFrags: TDtFragments): Boolean;
@@ -1291,7 +1293,8 @@ begin
   end;
 
   if MaybeLeapSec and (aFrags.TZOffset = 0) then begin
-    if (aFrags.Year > 2016) or (aFrags.Hour <> 23) or (aFrags.Minute <> 59) then exit(False);
+    if(aFrags.Year < 1972)or(aFrags.Year > 2016)or(aFrags.Hour <> 23)or(aFrags.Minute <> 59)then
+      exit(False);
     if aFrags.Month = 6 then begin
       if aFrags.MDay <> 30 then exit(False);
       if not RealLeapSecond06(aFrags.Year) then exit(False);
@@ -1344,12 +1347,12 @@ begin
   else
     I := System.Trunc(System.Abs(aTime * MSecsPerDay + 0.5));
   LTime := DWord(I - (I div MSecsPerDay) * MSecsPerDay);
-  Hour := LTime div 3600000;
-  LTime -= Hour * 3600000;
-  Minute := LTime div 60000;
-  LTime -= Minute * 60000;
-  Second := LTime div 1000;
-  MilliSecond := LTime - Second * 1000;
+  Hour := LTime div MSecPerHour;
+  LTime -= Hour * MSecPerHour;
+  Minute := LTime div MSecsPerMin;
+  LTime -= Minute * MSecsPerMin;
+  Second := LTime div MSecsPerSec;
+  MilliSecond := LTime - Second * MSecsPerSec;
 end;
 
 function IsRealLeapSecond(aDate: TDateTime): Boolean;
@@ -1358,7 +1361,7 @@ var
   Year, Month, MDay: Word;
 begin
   SysUtils.DecodeDate(aDate, Year, Month, MDay);
-  if (Year > 2016) or not(((Month = 6) and (MDay = 30)) or ((Month = 12) and (MDay = 31))) then
+  if(Year < 1972)or(Year > 2016)or not(((Month = 6)and(MDay = 30))or((Month = 12)and(MDay = 31)))then
     exit(False);
   DoDecodeTime(aDate, Hour, Minute, Second, MilliSecond);
   if (Hour <> 23) or (Minute <> 59) then
@@ -1396,8 +1399,8 @@ begin
     MAX_SFRAC_DIGITS:   c := DWord(System.Trunc(aFrag.SecFraction * ValReal(1e-1) + 0.5));
   end;
 
-  LTime := TDateTime(aFrag.Hour*(SecsPerHour*MSecsPerSec) + aFrag.Minute*(SecsPerMin*MSecsPerSec) +
-                     aFrag.Second * MSecsPerSec + c)/MSecsPerDay;
+  LTime :=
+    TDateTime(aFrag.Hour*MSecPerHour + aFrag.Minute*MSecsPerMin + aFrag.Second * MSecsPerSec + c)/MSecsPerDay;
 
   if aDate < 0 then
     aDate := aDate - LTime
@@ -1406,7 +1409,7 @@ begin
 
   if aFrag.TZOffset <> 0 then
     begin
-      aDate := IncMinute(aDate, aFrag.TZOffset);
+      aDate := DateUtils.IncMinute(aDate, aFrag.TZOffset);
       if MaybeLeapSec and not IsRealLeapSecond(aDate) then
         exit(False);
     end;
@@ -1525,8 +1528,10 @@ begin
   SkipSpaces(p, aCount);
   if ValidTimeStamp(p, aCount, Frag) then begin
     aTzOfs := -Frag.TZOffset;
-    Frag.TZOffset := 0;
-    if TryDTFragmentsToUtc(Frag, aDate) then exit(True);
+    if TryDTFragmentsToUtc(Frag, aDate) then begin
+      aDate := DateUtils.IncMinute(aDate, aTzOfs);
+      exit(True);
+    end;
   end;
   aTzOfs := 0;
   aDate := 0;
