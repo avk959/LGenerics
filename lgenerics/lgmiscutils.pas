@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Miscellaneous classes and utils.                                        *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -29,11 +29,13 @@ interface
 
 uses
 
-  Classes, SysUtils, math,
+  Classes, SysUtils, Math,
   lgUtils,
   {%H-}lgHelpers,
   lgArrayHelpers,
   lgAbstractContainer,
+  lgVector,
+  lgHash,
   lgHashMap,
   lgStrConst;
 
@@ -416,6 +418,39 @@ type
     property  SizeLimit: SizeInt read FSizeLimit write SetSizeLimit;
     property  OnGetValue: TOnGetValue read FGetValue;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
+  end;
+
+  { TGBloomFilter: a conventional Bloom filter;
+      THashProv must provide:
+        class function Hash1([const] v: T; Seed: DWord): SizeInt;
+        class function Hash2([const] v: T; Seed: DWord): SizeInt; }
+  generic TGBloomFilter<T, THashProv> = class
+  private
+  const
+    DBL_LN2 = Double(0.693147180559945309);
+    MIN_FPP = Double(0.1);
+    GOLD_R  = SizeInt($9E3779B9);
+  var
+    FBits: TBoolVector;
+    FNumBits,
+    FHashCount,
+    FMaxCount,
+    FCount,
+    FMask: SizeInt;
+    FSeed1,
+    FSeed2: DWord;
+    function  GetBitIndex(h1, h2, aIdx: SizeInt): SizeInt; inline;
+    function  AddValue(const aValue: T): Boolean;
+    function  TestValue(const aValue: T): Boolean;
+  public
+    constructor Create(aMaxExpectCount: SizeInt; aMaxExpectFpp: Double = Double(0.01));
+    function Add(const aValue: T): Boolean;
+    function MayContain(const aValue: T): Boolean;
+    function FalsePositiveProbability: Double;
+    property Count: SizeInt read FCount;
+    property BitSize: SizeInt read FNumBits;
+    property HashCount: SizeInt read FHashCount;
+    property MaxExpectCount: SizeInt read FMaxCount;
   end;
 
   TParamKind = (pkOption, pkLongOption, pkArgument);
@@ -5871,6 +5906,83 @@ begin
       if FMap.Count > FSizeLimit then
         FMap.RemoveFirst;
     end;
+end;
+
+{ TGBloomFilter }
+
+{$PUSH}{$Q-}{$R-}
+function TGBloomFilter.GetBitIndex(h1, h2, aIdx: SizeInt): SizeInt;
+begin
+  Result := (
+    LgUtils.RolSizeInt(h1, aIdx) + Succ(aIdx*2)*GOLD_R*LgUtils.RorSizeInt(h2, aIdx)) and FMask;
+end;
+
+function TGBloomFilter.AddValue(const aValue: T): Boolean;
+var
+  I, BitIdx, h1, h2: SizeInt;
+begin
+  Result := False;
+  h1 := THashProv.Hash1(aValue, FSeed1);
+  h2 := THashProv.Hash2(aValue, FSeed2);
+  for I := 0 to Pred(FHashCount) do begin
+    BitIdx := GetBitIndex(h1, h2, I);
+    if not FBits.UncBits[BitIdx] then begin
+      FBits.UncBits[BitIdx] := True;
+      Result := True;
+    end;
+  end;
+end;
+
+function TGBloomFilter.TestValue(const aValue: T): Boolean;
+var
+  I, h1, h2: SizeInt;
+begin
+  h1 := THashProv.Hash1(aValue, FSeed1);
+  h2 := THashProv.Hash2(aValue, FSeed2);
+  for I := 0 to Pred(FHashCount) do
+    if not FBits.UncBits[GetBitIndex(h1, h2, I)] then exit(False);
+  Result := True;
+end;
+{$POP}
+
+
+{$PUSH}{$Q+}{$R+}
+constructor TGBloomFilter.Create(aMaxExpectCount: SizeInt; aMaxExpectFpp: Double);
+var
+  Cnt: Int64;
+begin
+  LgUtils.BJRandomize;
+  FSeed1 := LgUtils.BJNextRandom;
+  FSeed2 := LgUtils.BJNextRandom;
+  if aMaxExpectCount < 64 then
+    aMaxExpectCount := 64;
+  FMaxCount := aMaxExpectCount;
+  aMaxExpectFpp := Math.Min(System.Abs(aMaxExpectFpp), MIN_FPP);
+  Cnt := -Math.Ceil64(aMaxExpectCount*System.Ln(aMaxExpectFpp)/(DBL_LN2*DBL_LN2));
+  if Cnt > MAX_POSITIVE_POW2 then
+    raise Exception.Create('TBloomFilter bit size too large');
+  FNumBits := LgUtils.RoundUpTwoPower(SizeInt(Cnt));
+  FBits.Capacity := FNumBits;
+  FMask := Pred(FNumBits);
+  FHashCount := Math.Min(-Math.Ceil(System.Ln(aMaxExpectFpp)/DBL_LN2), INT_SIZE_MASK);
+end;
+{$POP}
+
+function TGBloomFilter.Add(const aValue: T): Boolean;
+begin
+  Result := AddValue(aValue);
+  Inc(FCount, Ord(Result));
+end;
+
+function TGBloomFilter.MayContain(const aValue: T): Boolean;
+begin
+  if Count = 0 then exit(False);
+  Result := TestValue(aValue);
+end;
+
+function TGBloomFilter.FalsePositiveProbability: Double;
+begin
+  Result := Math.Power(Double(1) - System.Exp(-Double(FHashCount)*Count/BitSize), FHashCount);
 end;
 
 end.
