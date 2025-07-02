@@ -182,6 +182,7 @@ type
     FCustomHeader: string;
     FUseUnits: TStringArray;
     FUsePasEnums,
+    FWriteTS,
     FComments: Boolean;
     procedure WriteHeader(aText: TStrings);
     procedure WriteUnitClause(aText: TStrings);
@@ -213,21 +214,23 @@ type
     property  PreferRootClassName: string read FPreferRootName write FPreferRootName;
   { final root class type name }
     property  FinalRootClassName: string read FFinalRootName;
-  { unit name, optional, by default is "Unit1" }
+  { unit name, optional, default is "Unit1" }
     property  UnitName: string read FUnitName write FUnitName;
-  { some additional text that will be placed in the unit header }
+  { some additional text that will be placed in the unit header, optional }
     property  CustomHeader: string read FCustomHeader write FCustomHeader;
   { True if code comments are enabled }
     property  ShowComments: Boolean read FComments;
   { True if the use of Pascal enumerations is enabled }
     property  UsePasEnums: Boolean read FUsePasEnums;
+  { if True, the header will contain the unit creation timestamp, default is False }
+    property  WriteTimeStamp: Boolean read FWriteTS write FWriteTS;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  Math, lgJtdTypes, lgStrConst;
+  Math, DateUtils, lgJtdTypes, lgStrConst;
 
 const
   DESCRIPTION_TAG      = 'description';
@@ -1989,13 +1992,22 @@ end;
 { TJtdPasCodegen }
 
 procedure TJtdPasCodegen.WriteHeader(aText: TStrings);
+const
+  HEAD_FMT = '  This unit was automatically created by %s%s.';
+  DATE_FMT = '" on "yyyy-mm-dd hh:mm:ss';
+var
+  d: TDateTime;
 begin
   aText.Add('{');
   if CustomHeader <> '' then begin
     aText.Add('  ' + SysUtils.WrapText(CustomHeader, LineEnding + '  ', [' ', '-', #9], 78));
     aText.Add('');
   end;
-  aText.Add(Format('  This unit was automatically created by %s.', [DISPLAY_NAME]));
+  if WriteTimeStamp then begin
+    d := DateUtils.LocalTimeToUniversal(SysUtils.Now);
+    aText.Add(Format(HEAD_FMT,[DISPLAY_NAME, SysUtils.FormatDateTime(DATE_FMT, d)]))
+  end else
+    aText.Add(Format(HEAD_FMT, [DISPLAY_NAME, '']));
   aText.Add('}');
 end;
 
