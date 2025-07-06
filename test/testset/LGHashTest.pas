@@ -66,6 +66,8 @@ type
     procedure HashGuidSeed0;
     procedure HashGuid0Seed1000001;
     procedure HashGuidSeed1000001;
+
+    procedure Incremental;
   end;
 
   TxxHash64Test = class(TTestCase)
@@ -135,6 +137,8 @@ type
     procedure HashGuidSeed0;
     procedure HashGuid0Seed1000001;
     procedure HashGuidSeed1000001;
+
+    procedure Incremental;
   end;
 
   TMurmur2Test = class(TTestCase)
@@ -306,6 +310,8 @@ type
     procedure HashGuidSeed0;
     procedure HashGuid0Seed1000001;
     procedure HashGuidSeed1000001;
+
+    procedure Incremental;
   end;
 
 
@@ -381,6 +387,23 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+
+function RandomString(aLen: Integer): string;
+const
+  CsSize = 64;
+  CharSet: array[0..CsSize-1] of AnsiChar = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$';
+var
+  p: PAnsiChar;
+begin
+  SetLength(Result, aLen);
+  p := Pointer(Result);
+  while aLen > 0 do
+    begin
+      p^ := CharSet[Random(CsSize)];
+      Inc(p);
+      Dec(aLen);
+    end;
+end;
 
 procedure TxxHash32Test.HashBuf0Seed0;
 var
@@ -956,6 +979,33 @@ begin
   AssertTrue(Format(UnexpFmt, [h]), h = hash);
 end;
 
+procedure TxxHash32Test.Incremental;
+const
+  MIN_LEN     = 2;
+  LEN_RANGE   = 13;
+  MIN_COUNT   = 2;
+  COUNT_RANGE = 10;
+  TEST_SIZE   = 1000;
+var
+  h: TIncXxHash32LE;
+  a: TStringArray;
+  s: string;
+  I, J: Integer;
+  Seed: DWord;
+begin
+  for I := 1 to TEST_SIZE do
+    begin
+      Seed := DWord(Random(MaxInt));
+      SetLength(a, Random(COUNT_RANGE) + MIN_COUNT);
+      for J := 0 to High(a) do
+        a[J] := RandomString(Random(LEN_RANGE) + MIN_LEN);
+      h.Reset(Seed);
+      for s in a do
+        h.Add(Pointer(s)^, Length(s));
+      AssertTrue(h.Hash = TxxHash32LE.HashStr(string.Join('', a), Seed));
+    end;
+end;
+
 procedure TxxHash64Test.HashBuf0Seed0;
 var
   h: QWord;
@@ -1014,7 +1064,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($F557498CAD8E9DC6);
+  hash: QWord = QWord($DE0327B0D25D92CC);
 begin
   s := 'abcd';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1027,7 +1077,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($76B4AD32CF534088);
+  hash: QWord = QWord($6278A44A4B70C190);
 begin
   s := 'abcdb';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1053,7 +1103,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($35706107E390BCA1);
+  hash: QWord = QWord($CAE0FD1AC1C1489D);
 begin
   s := 'abcdbcdecdef';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1066,7 +1116,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($39DCCFB45D7E3B0C);
+  hash: QWord = QWord($F8C9A4D9F0CB7C16);
 begin
   s := 'abcdbcdecdefdef';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1105,7 +1155,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($50FFB1D3CD371F97);
+  hash: QWord = QWord($FFCA110AD4DCCD3C);
 begin
   s := 'abcdbcdecdefdefgefghf';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1131,7 +1181,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($92E9D12E0FC36470);
+  hash: QWord = QWord($941DA75B496F8208);
 begin
   s := 'abcdbcdecdefdefgefghfghighijhij';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1170,7 +1220,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($C9C3D7A94E7EF9B0);
+  hash: QWord = QWord($B53CCF42376AD771);
 begin
   s := 'abcdbcdecdefdefgefghfghighijhijkijkl';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1183,7 +1233,7 @@ var
   s: ansistring;
 const
   seed = 0;
-  hash: QWord = QWord($A37CE97F2BC82755);
+  hash: QWord = QWord($134EDF29A5DD429D);
 begin
   s := 'abcdbcdecdefdefgefghfghighijhijkijkljkl';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1274,7 +1324,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($F78949A1A24BC2C8);
+  hash: QWord = QWord($53B79852583B2E2E);
 begin
   s := 'abcd';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1287,7 +1337,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($586348E8799BCB3D);
+  hash: QWord = QWord($E861DC2F28ED8B38);
 begin
   s := 'abcdb';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1313,7 +1363,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($F0D6AB152B39CBA3);
+  hash: QWord = QWord($239934F6F17E2708);
 begin
   s := 'abcdbcdecdef';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1326,7 +1376,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($CA4DB88C4E68341E);
+  hash: QWord = QWord($8F49C92E50384201);
 begin
   s := 'abcdbcdecdefdef';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1365,7 +1415,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($3C7B029C8A38E59C);
+  hash: QWord = QWord($1F29C995222FDC9A);
 begin
   s := 'abcdbcdecdefdefgefghf';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1391,7 +1441,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($9A753CAAC723DEF4);
+  hash: QWord = QWord($97E0035EDC062184);
 begin
   s := 'abcdbcdecdefdefgefghfghighijhij';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1430,7 +1480,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($63663EAFED054C40);
+  hash: QWord = QWord($54CF3B8E0F2DD963);
 begin
   s := 'abcdbcdecdefdefgefghfghighijhijkijkl';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1443,7 +1493,7 @@ var
   s: ansistring;
 const
   seed = 1000001;
-  hash: QWord = QWord($A0F18688CC6C395E);
+  hash: QWord = QWord($64D416C21BD81D4F);
 begin
   s := 'abcdbcdecdefdefgefghfghighijhijkijkljkl';
   h := TxxHash64LE.HashBuf(PAnsiChar(s), System.Length(s), seed);
@@ -1534,7 +1584,7 @@ var
   d: DWord;
 const
   seed = 0;
-  hash: QWord = QWord($246B7026727250F1);
+  hash: QWord = QWord($3AEFA6FD5CF2DEB4);
 begin
   d := 0;
   h := TxxHash64LE.HashDWord(d, seed);
@@ -1547,7 +1597,7 @@ var
   d: DWord;
 const
   seed = 0;
-  hash: QWord = QWord($5655F487CCD9FE24);
+  hash: QWord = QWord($64D1CDBBCF0CF2F3);
 begin
   d := $484F120C;
   h := TxxHash64LE.HashDWord(d, seed);
@@ -1560,7 +1610,7 @@ var
   d: DWord;
 const
   seed = 1000001;
-  hash: QWord = QWord($78FB3A8A06DE848A);
+  hash: QWord = QWord($AA2E7654CC6D3EA5);
 begin
   d := 0;
   h := TxxHash64LE.HashDWord(d, seed);
@@ -1573,7 +1623,7 @@ var
   d: DWord;
 const
   seed = 1000001;
-  hash: QWord = QWord($E09A77DE732E90AA);
+  hash: QWord = QWord($56F737125701A42D);
 begin
   d := $484F120C;
   h := TxxHash64LE.HashDWord(d, seed);
@@ -1682,6 +1732,33 @@ begin
   g := StringToGuid('{8D60E51C-0FEA-4D45-9644-4C4AFC4FC22F}');
   h := TxxHash64LE.HashGuid(g, seed);
   AssertTrue(Format(UnexpFmt, [h]), h = hash);
+end;
+
+procedure TxxHash64Test.Incremental;
+const
+  MIN_LEN     = 2;
+  LEN_RANGE   = 13;
+  MIN_COUNT   = 2;
+  COUNT_RANGE = 10;
+  TEST_SIZE   = 1000;
+var
+  h: TIncXxHash64LE;
+  a: TStringArray;
+  s: string;
+  I, J: Integer;
+  Seed: QWord;
+begin
+  for I := 1 to TEST_SIZE do
+    begin
+      Seed := QWord(Random(MaxInt));
+      SetLength(a, Random(COUNT_RANGE) + MIN_COUNT);
+      for J := 0 to High(a) do
+        a[J] := RandomString(Random(LEN_RANGE) + MIN_LEN);
+      h.Reset(Seed);
+      for s in a do
+        h.Add(Pointer(s)^, Length(s));
+      AssertTrue(h.Hash = TxxHash64LE.HashStr(string.Join('', a), Seed));
+    end;
 end;
 
 { TMurmur2Test }
@@ -3412,6 +3489,33 @@ begin
   AssertTrue(Format(UnexpFmt, [h]), h = hash);
 end;
 
+procedure TMurmur3Test.Incremental;
+const
+  MIN_LEN     = 2;
+  LEN_RANGE   = 13;
+  MIN_COUNT   = 2;
+  COUNT_RANGE = 10;
+  TEST_SIZE   = 1000;
+var
+  h: TIncMurmur3LE;
+  a: TStringArray;
+  s: string;
+  I, J: Integer;
+  Seed: DWord;
+begin
+  for I := 1 to TEST_SIZE do
+    begin
+      Seed := DWord(Random(MaxInt));
+      SetLength(a, Random(COUNT_RANGE) + MIN_COUNT);
+      for J := 0 to High(a) do
+        a[J] := RandomString(Random(LEN_RANGE) + MIN_LEN);
+      h.Reset(Seed);
+      for s in a do
+        h.Add(Pointer(s)^, Length(s));
+      AssertTrue(h.Hash = TMurmur3LE.HashStr(string.Join('', a), Seed));
+    end;
+end;
+
 { TMurmur64aTest }
 
 procedure TMurmur64aTest.HashBuf0Seed0;
@@ -4144,7 +4248,7 @@ end;
 
 
 initialization
-
+  Randomize;
   RegisterTest(TxxHash32Test);
   RegisterTest(TxxHash64Test);
   RegisterTest(TMurmur2Test);
