@@ -377,6 +377,10 @@ type
   { sets length to aCount and fills array by aCount values aValue }
     procedure Fill(aCount: SizeInt; const aValue: T);
     function  CreateCopy(aFromIndex, aCount: SizeInt): TGCowDynArray<T>;
+  { returns the number of elements inserted }
+    function  Insert(const aSource: array of T; aIndex: SizeInt): SizeInt;
+  { returns the number of elements deleted }
+    function  Delete(aFromIndex, aCount: SizeInt): SizeInt;
     property  RefCount: Integer read GetRefCount;
     property  Length: SizeInt read GetLength write SetLen;
     property  High: SizeInt read GetHigh;
@@ -459,6 +463,10 @@ type
   { sets length to aCount and fills array by aCount values aValue }
     procedure Fill(aCount: SizeInt; const aValue: T);
     function  CreateCopy(aFromIndex, aCount: SizeInt): TGDynArray<T>;
+  { returns the number of elements inserted }
+    function  Insert(const aSource: array of T; aIndex: SizeInt): SizeInt;
+  { returns the number of elements deleted }
+    function  Delete(aFromIndex, aCount: SizeInt): SizeInt;
     procedure Clear; inline;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
     property  Length: SizeInt read FLength write SetLen;
@@ -2499,6 +2507,95 @@ begin
     System.Move((FInstance^.FItems + aFromIndex)^, Result.FInstance^.FItems^, aCount * SizeOf(T));
 end;
 
+function TGCowDynArray<T>.Insert(const aSource: array of T; aIndex: SizeInt): SizeInt;
+var
+  OldItems: PItem;
+  OldLen: SizeInt;
+  NewInst: PInstance;
+begin
+  Result := System.Length(aSource);
+  if Result = 0 then exit;
+  if FInstance = nil then
+    begin
+      Realloc(Result);
+      if IsManagedType(T) then
+        CopyItems(@aSource[0], FInstance^.FItems, Result)
+      else
+        System.Move(aSource[0], FInstance^.FItems^, Result*SizeOf(T));
+      exit;
+    end;
+  OldLen := Length;
+  aIndex := Math.Min(OldLen, Math.Max(aIndex, 0));
+  OldItems := FInstance^.FItems;
+  NewInst := NewInstance;
+  with NewInst^ do
+    begin
+      FLength := OldLen + Result;
+      FItems := System.GetMem(FLength*SizeOf(T));
+      if IsManagedType(T) then
+        begin
+          System.FillChar(FItems^, FLength * SizeOf(T), 0);
+          if aIndex > 0 then
+            CopyItems(OldItems, FItems, aIndex);
+          CopyItems(@aSource[0], FItems+aIndex, Result);
+          if aIndex < OldLen then
+            CopyItems(OldItems+aIndex, FItems+aIndex+Result, OldLen-aIndex);
+        end
+      else
+        begin
+          if aIndex > 0 then
+            System.Move(OldItems^, FItems^, aIndex*SizeOf(T));
+          System.Move(aSource[0], FItems[aIndex], Result*SizeOf(T));
+          if aIndex < OldLen then
+            System.Move(OldItems[aIndex], FItems[aIndex+Result], (OldLen-aIndex)*SizeOf(T));
+        end;
+    end;
+  Release;
+  FInstance := NewInst;
+end;
+
+function TGCowDynArray<T>.Delete(aFromIndex, aCount: SizeInt): SizeInt;
+var
+  NewInst: PInstance;
+  OldItems: PItem;
+  OldLen, TailLen: SizeInt;
+begin
+  OldLen := Length;
+  if (SizeUInt(aFromIndex) >= SizeUInt(OldLen)) or (aCount < 1) then exit(0);
+  aCount := Math.Min(aCount, OldLen - aFromIndex);
+  if aCount = OldLen then
+    begin
+      Release;
+      exit(aCount);
+    end;
+  TailLen := OldLen - aCount - aFromIndex;
+  OldItems := FInstance^.FItems;
+  NewInst := NewInstance;
+  with NewInst^ do
+    begin
+      FLength := OldLen - aCount;
+      FItems := System.GetMem(FLength*SizeOf(T));
+      if IsManagedType(T) then
+        begin
+          System.FillChar(FItems^, FLength * SizeOf(T), 0);
+          if aFromIndex > 0 then
+            CopyItems(OldItems, FItems, aFromIndex);
+          if TailLen > 0 then
+            CopyItems(OldItems+aFromIndex+aCount, FItems+aFromIndex, TailLen);
+        end
+      else
+        begin
+          if aFromIndex > 0 then
+            System.Move(OldItems^, FItems^, aFromIndex*SizeOf(T));
+          if TailLen > 0 then
+            System.Move(OldItems[aFromIndex+aCount], FItems[aFromIndex], TailLen*SizeOf(T));
+        end;
+    end;
+  Release;
+  FInstance := NewInst;
+  Result := aCount;
+end;
+
 { TGDynArray<T>.TEnumerator }
 
 function TGDynArray<T>.TEnumerator.GetCurrent: T;
@@ -2809,9 +2906,11 @@ end;
 
 procedure TGDynArray<T>.Fill(aCount: SizeInt; const aValue: T);
 begin
-  DoClear;
   if aCount < 1 then
-    exit;
+    begin
+      DoClear;
+      exit;
+    end;
   Length := aCount;
   FillItems(FItems, Length, aValue);
 end;
@@ -2831,6 +2930,91 @@ begin
     CopyItems(FItems + aFromIndex, Result.FItems, aCount)
   else
     System.Move((FItems + aFromIndex)^, Result.FItems^, aCount * SizeOf(T));
+end;
+
+function TGDynArray<T>.Insert(const aSource: array of T; aIndex: SizeInt): SizeInt;
+var
+  OldItems: PItem;
+  OldLen: SizeInt;
+begin
+  Result := System.Length(aSource);
+  if Result = 0 then exit;
+  OldLen := Length;
+  aIndex := Math.Min(OldLen, Math.Max(aIndex, 0));
+  if OldLen = 0 then
+    begin
+      Realloc(Result);
+      if IsManagedType(T) then
+        CopyItems(@aSource[0], FItems, Result)
+      else
+        System.Move(aSource[0], FItems^, Result*SizeOf(T));
+      exit;
+    end;
+  OldItems := FItems;
+  FLength := OldLen + Result;
+  FItems := System.GetMem(FLength*SizeOf(T));
+  if IsManagedType(T) then
+    begin
+      System.FillChar(FItems^, FLength * SizeOf(T), 0);
+      if aIndex > 0 then
+        System.Move(OldItems^, FItems^, aIndex*SizeOf(T));
+      CopyItems(@aSource[0], FItems+aIndex, Result);
+      if aIndex < OldLen then
+        System.Move(OldItems[aIndex], FItems[aIndex+Result], (OldLen-aIndex)*SizeOf(T));
+      System.FillChar(OldItems^, OldLen * SizeOf(T), 0);
+    end
+  else
+    begin
+      if aIndex > 0 then
+        System.Move(OldItems^, FItems^, aIndex*SizeOf(T));
+      System.Move(aSource[0], FItems[aIndex], Result*SizeOf(T));
+      if aIndex < OldLen then
+        System.Move(OldItems[aIndex], FItems[aIndex+Result], (OldLen-aIndex)*SizeOf(T));
+    end;
+  System.FreeMem(OldItems);
+end;
+
+function TGDynArray<T>.Delete(aFromIndex, aCount: SizeInt): SizeInt;
+var
+  OldItems: PItem;
+  OldLen, TailLen: SizeInt;
+begin
+  OldLen := Length;
+  if (SizeUInt(aFromIndex) >= SizeUInt(OldLen)) or (aCount < 1) then exit(0);
+  aCount := Math.Min(aCount, OldLen - aFromIndex);
+  if aCount = OldLen then
+    begin
+      DoClear;
+      exit(aCount);
+    end;
+  OldItems := FItems;
+  FLength := OldLen - aCount;
+  TailLen := OldLen - aCount - aFromIndex;
+  FItems := System.GetMem(FLength*SizeOf(T));
+  if IsManagedType(T) then
+    begin
+      System.FillChar(FItems^, FLength * SizeOf(T), 0);
+      if aFromIndex > 0 then
+        begin
+          System.Move(OldItems^, FItems^, aFromIndex*SizeOf(T));
+          System.FillChar(OldItems^, aFromIndex*SizeOf(T), 0);
+        end;
+      if TailLen > 0 then
+        begin
+          System.Move(OldItems[aFromIndex+aCount], FItems[aFromIndex], TailLen*SizeOf(T));
+          System.FillChar(OldItems[aFromIndex+aCount], TailLen*SizeOf(T), 0);
+        end;
+      FillItems(OldItems+aFromIndex, aCount, Default(T));
+    end
+  else
+    begin
+      if aFromIndex > 0 then
+        System.Move(OldItems^, FItems^, aFromIndex*SizeOf(T));
+      if TailLen > 0 then
+        System.Move(OldItems[aFromIndex+aCount], FItems[aFromIndex], TailLen*SizeOf(T));
+    end;
+  System.FreeMem(OldItems);
+  Result := aCount;
 end;
 
 procedure TGDynArray<T>.Clear;
