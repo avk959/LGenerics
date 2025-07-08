@@ -347,6 +347,10 @@ type
     procedure CopyInt2DynArray;
     procedure SortInt;
     procedure PassByValue;
+    procedure InsertInt;
+    procedure InsertStr;
+    procedure DeleteInt;
+    procedure DeleteStr;
   end;
 
   { TDynArrayTest }
@@ -376,6 +380,10 @@ type
     procedure CopyInt2DynArray;
     procedure SortInt;
     procedure PassByValue;
+    procedure InsertInt;
+    procedure InsertStr;
+    procedure DeleteInt;
+    procedure DeleteStr;
   end;
 
   { TGSetTest }
@@ -2734,6 +2742,167 @@ begin
   AssertTrue(a.Length = 50);
 end;
 
+procedure TCowDynArrayTest.InsertInt;
+var
+  a1, a2: TIntArray;
+  ia: array of Integer;
+  I: Integer;
+begin
+  a1.Length := 5;
+  for I := 0 to a1.High do
+    a1[I] := I+1;
+  a2 := a1;
+  I := 42;
+  AssertTrue(a1.Insert(I, 10) = 1);
+  AssertTrue(a1.Length = 6);
+  for I := 0 to a1.High-1 do
+    AssertTrue(a1[I] = I+1);
+  AssertTrue(a1[a1.High] = 42);
+  AssertTrue(a2.Length = 5);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = I+1);
+
+  a2 := a1;
+  AssertTrue(a2.Length = 6);
+  AssertTrue(a2[a2.High] = 42);
+
+  ia := nil;
+  AssertTrue(a2.Insert(ia, 10) = 0);
+  AssertTrue(a2.Length = 6);
+
+  ia := [1001,1002,1003];
+  AssertTrue(a2.Insert(ia, -2) = 3);
+  AssertTrue(a2.Length = 9);
+  AssertTrue(a1.Length = 6);
+  for I := 0 to High(ia) do
+    AssertTrue(a2[I] = ia[I]);
+  for I := Length(ia) to a2.High-1 do
+    AssertTrue(a2[I] = I-High(ia));
+  AssertTrue(a2[a2.High] = 42);
+end;
+
+procedure TCowDynArrayTest.InsertStr;
+var
+  a1, a2: TStrArray;
+  sa: array of string;
+  s: string;
+  I: Integer;
+begin
+  a1.Length := 5;
+  for I := 0 to a1.High do
+    a1[I] := (I+1).ToString;
+  a2 := a1;
+  s := '42';
+  AssertTrue(a1.Insert(s, 10) = 1);
+  AssertTrue(a1.Length = 6);
+  for I := 0 to a1.High-1 do
+    AssertTrue(a1[I] = (I+1).ToString);
+  AssertTrue(a1[a1.High] = '42');
+  AssertTrue(a2.Length = 5);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = (I+1).ToString);
+
+  a2 := a1;
+  AssertTrue(a2.Length = 6);
+  AssertTrue(a2[a2.High] = '42');
+
+  sa := nil;
+  AssertTrue(a2.Insert(sa, 10) = 0);
+  AssertTrue(a2.Length = 6);
+
+  sa := ['1001','1002','1003'];
+  AssertTrue(a2.Insert(sa, -2) = 3);
+  AssertTrue(a2.Length = 9);
+  AssertTrue(a1.Length = 6);
+  for I := 0 to High(sa) do
+    AssertTrue(a2[I] = sa[I]);
+  for I := Length(sa) to a2.High-1 do
+    AssertTrue(a2[I] = (I-High(sa)).ToString);
+  AssertTrue(a2[a2.High] = '42');
+end;
+
+procedure TCowDynArrayTest.DeleteInt;
+var
+  a1, a2: TIntArray;
+  I, Len, Idx, Count: Integer;
+begin
+  AssertTrue(a1.Delete(0, 1) = 0);
+
+  a1.Fill(5, 42);
+  AssertTrue(a1.Length = 5);
+  a2 := a1;
+  AssertTrue(a1.Delete(-1, 2) = 0);
+  AssertTrue(a1.Delete(5, 2) = 0);
+  AssertTrue(a1.Delete(1, -1) = 0);
+  AssertTrue(a1.Delete(1, 0) = 0);
+
+  AssertTrue(a1.Delete(0, 7) = 5);
+  AssertTrue(a1.Length = 0);
+  AssertTrue(a2.Length = 5);
+
+  a2.Fill(10, 42);
+  a1 := a2;
+  AssertTrue(a2.Delete(2, 10) = 8);
+  AssertTrue(a2.Length = 2);
+  AssertTrue(a1.Length = 10);
+
+  a2 := a1;
+  Len := 16;
+  a1.Length := Len;
+  for I := 0 to a1.High do
+    a1[I] := I;
+  Idx := 5;
+  Count := 7;
+  a1.Delete(Idx, Count);
+  AssertTrue(a1.Length = Len-Count);
+  for I := 0 to Idx-1 do
+    AssertTrue(a1[I] = I);
+  for I := Idx to a1.High do
+    AssertTrue(a1[I] = I+Count);
+  AssertTrue(a2.Length = 10);
+end;
+
+procedure TCowDynArrayTest.DeleteStr;
+var
+  a1, a2: TStrArray;
+  I, Len, Idx, Count: Integer;
+begin
+  AssertTrue(a1.Delete(0, 1) = 0);
+
+  a1.Fill(5, '42');
+  AssertTrue(a1.Length = 5);
+  a2 := a1;
+  AssertTrue(a1.Delete(-1, 2) = 0);
+  AssertTrue(a1.Delete(5, 2) = 0);
+  AssertTrue(a1.Delete(1, -1) = 0);
+  AssertTrue(a1.Delete(1, 0) = 0);
+
+  AssertTrue(a1.Delete(0, 7) = 5);
+  AssertTrue(a1.Length = 0);
+  AssertTrue(a2.Length = 5);
+
+  a2.Fill(10, '42');
+  a1 := a2;
+  AssertTrue(a2.Delete(2, 10) = 8);
+  AssertTrue(a2.Length = 2);
+  AssertTrue(a1.Length = 10);
+
+  a2 := a1;
+  Len := 16;
+  a1.Length := Len;
+  for I := 0 to a1.High do
+    a1[I] := I.ToString;
+  Idx := 5;
+  Count := 7;
+  a1.Delete(Idx, Count);
+  AssertTrue(a1.Length = Len-Count);
+  for I := 0 to Idx-1 do
+    AssertTrue(a1[I] = I.ToString);
+  for I := Idx to a1.High do
+    AssertTrue(a1[I] = (I+Count).ToString);
+  AssertTrue(a2.Length = 10);
+end;
+
 { TDynArrayTest }
 
 procedure TDynArrayTest.LengthInt;
@@ -3071,6 +3240,185 @@ begin
   AssertTrue(a.Length = 50);
   for I := 0 to a.High do
     AssertTrue(a[I] = 50 - I);
+end;
+
+procedure TDynArrayTest.InsertInt;
+var
+  a: TIntArray;
+  ia: array of Integer;
+  I, Idx: Integer;
+begin
+  I := 42;
+  AssertTrue(a.Insert(I, -1) = 1);
+  AssertTrue(a.Length = 1);
+  AssertTrue(a[0] = 42);
+
+  a.Clear;
+  AssertTrue(a.Insert(I, 10) = 1);
+  AssertTrue(a.Length = 1);
+  AssertTrue(a[0] = 42);
+
+  ia := nil;
+  a.Clear;
+  AssertTrue(a.Insert(ia, 10) = 0);
+
+  a.Fill(10, 1001);
+  ia := [42, 42, 42];
+  Idx := 0;
+  AssertTrue(a.Insert(ia, Idx) = Length(ia));
+  AssertTrue(a.Length = 13);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = 1001);
+  for I := Idx to Idx + High(ia) do
+    AssertTrue(a[I] = 42);
+  for I := Idx + Length(ia) to a.High do
+    AssertTrue(a[I] = 1001);
+
+  a.Fill(10, 1001);
+  Idx := 4;
+  AssertTrue(a.Insert(ia, Idx) = Length(ia));
+  AssertTrue(a.Length = 13);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = 1001);
+  for I := Idx to Idx + High(ia) do
+    AssertTrue(a[I] = 42);
+  for I := Idx + Length(ia) to a.High do
+    AssertTrue(a[I] = 1001);
+
+  a.Fill(10, 1001);
+  idx := a.Length;
+  AssertTrue(a.Insert(ia, Idx) = Length(ia));
+  AssertTrue(a.Length = 13);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = 1001);
+  for I := Idx to Idx + High(ia) do
+    AssertTrue(a[I] = 42);
+  for I := Idx + Length(ia) to a.High do
+    AssertTrue(a[I] = 1001);
+end;
+
+procedure TDynArrayTest.InsertStr;
+var
+  a: TStrArray;
+  sa: array of string;
+  s: string;
+  I, Idx: Integer;
+begin
+  s := '42';
+  AssertTrue(a.Insert(s, -1) = 1);
+  AssertTrue(a.Length = 1);
+  AssertTrue(a[0] = '42');
+
+  a.Clear;
+  AssertTrue(a.Insert(s, 10) = 1);
+  AssertTrue(a.Length = 1);
+  AssertTrue(a[0] = '42');
+
+  sa := nil;
+  a.Clear;
+  AssertTrue(a.Insert(sa, 10) = 0);
+
+  a.Fill(10, '1001');
+  sa := ['42', '42', '42'];
+  Idx := 0;
+  AssertTrue(a.Insert(sa, Idx) = Length(sa));
+  AssertTrue(a.Length = 13);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = '1001');
+  for I := Idx to Idx + High(sa) do
+    AssertTrue(a[I] = '42');
+  for I := Idx + Length(sa) to a.High do
+    AssertTrue(a[I] = '1001');
+
+  a.Fill(10, '1001');
+  Idx := 4;
+  AssertTrue(a.Insert(sa, Idx) = Length(sa));
+  AssertTrue(a.Length = 13);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = '1001');
+  for I := Idx to Idx + High(sa) do
+    AssertTrue(a[I] = '42');
+  for I := Idx + Length(sa) to a.High do
+    AssertTrue(a[I] = '1001');
+
+  a.Fill(10, '1001');
+  idx := a.Length;
+  AssertTrue(a.Insert(sa, Idx) = Length(sa));
+  AssertTrue(a.Length = 13);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = '1001');
+  for I := Idx to Idx + High(sa) do
+    AssertTrue(a[I] = '42');
+  for I := Idx + Length(sa) to a.High do
+    AssertTrue(a[I] = '1001');
+end;
+
+procedure TDynArrayTest.DeleteInt;
+var
+  a: TIntArray;
+  I, Len, Idx, Count: Integer;
+begin
+  AssertTrue(a.Delete(0, 1) = 0);
+
+  a.Fill(5, 42);
+  AssertTrue(a.Delete(-1, 2) = 0);
+  AssertTrue(a.Delete(5, 2) = 0);
+  AssertTrue(a.Delete(1, -1) = 0);
+  AssertTrue(a.Delete(1, 0) = 0);
+
+  AssertTrue(a.Delete(0, 7) = 5);
+  AssertTrue(a.Length = 0);
+
+  a.Fill(10, 42);
+  AssertTrue(a.Delete(2, 10) = 8);
+  AssertTrue(a.Length = 2);
+
+  Len := 16;
+  a.Length := Len;
+  for I := 0 to a.High do
+    a[I] := I;
+  Idx := 5;
+  Count := 7;
+  a.Delete(Idx, Count);
+  AssertTrue(a.Length = Len-Count);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = I);
+  for I := Idx to a.High do
+    AssertTrue(a[I] = I+Count);
+end;
+
+procedure TDynArrayTest.DeleteStr;
+var
+  a: TStrArray;
+  I, Len, Idx, Count: Integer;
+begin
+  AssertTrue(a.Delete(0, 1) = 0);
+
+  a.Fill(5, '42');
+  AssertTrue(a.Delete(-1, 2) = 0);
+  AssertTrue(a.Delete(5, 2) = 0);
+  AssertTrue(a.Delete(1, -1) = 0);
+  AssertTrue(a.Delete(1, 0) = 0);
+
+  AssertTrue(a.Delete(0, 7) = 5);
+  AssertTrue(a.Length = 0);
+
+  a.Fill(10, '42');
+  AssertTrue(a.Delete(2, 10) = 8);
+  AssertTrue(a.Length = 2);
+
+  Len := 16;
+  a.Length := Len;
+  for I := 0 to a.High do
+    a[I] := I.ToString;
+  Idx := 5;
+  Count := 7;
+  a.Delete(Idx, Count);
+  AssertTrue(a.Length = Len-Count);
+  for I := 0 to Idx-1 do
+    AssertTrue(a[I] = I.ToString);
+  for I := Idx to a.High do
+    AssertTrue(a[I] = (I+Count).ToString);
 end;
 
 { TGSetTest }
