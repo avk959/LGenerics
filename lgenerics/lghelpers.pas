@@ -172,10 +172,10 @@ type
     with that payload; otherwize returns 0.0 }
     class function SetPayload(const aValue: Single): Single; static;
     class function SetPayload(const aValue: Int32): Single; static;
-  { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
-    with that payload; otherwize returns 0.0 }
-    class function  SetSignalPayload(const aValue: Single): Single; static;
-    class function  SetSignalPayload(const aValue: Int32): Single; static;
+  { if aValue is a non-negative integer greater than zero and not exceeding MAX_PAYLOAD,
+    returns a signaling NaN with that payload; otherwize returns 0.0 }
+    class function SetSignalPayload(const aValue: Single): Single; static;
+    class function SetSignalPayload(const aValue: Int32): Single; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
     class function GetPayload(const aValue: Single): Single; inline; static;
     class function GetPayloadI(const aValue: Single): Int32; inline; static;
@@ -253,8 +253,8 @@ type
     with that payload; otherwize returns 0.0 }
     class function SetPayload(const aValue: Double): Double; static;
     class function SetPayload(const aValue: Int64): Double; static;
-  { if aValue is a non-negative integer not exceeding MAX_PAYLOAD, returns a signaling NaN
-    with that payload; otherwize returns 0.0 }
+  { if aValue is a non-negative integer greater than zero and not exceeding MAX_PAYLOAD,
+    returns a signaling NaN with that payload; otherwize returns 0.0 }
     class function SetSignalPayload(const aValue: Double): Double; static;
     class function SetSignalPayload(const aValue: Int64): Double; static;
   { if aValue is NaN then returns its payload, otherwise returns -1 }
@@ -965,7 +965,7 @@ class function TGSingleHelper.SetSignalPayload(const aValue: Single): Single;
 var
   I: Int32;
 begin
-  if IsExactInt(aValue, I) and(DWord(I) <= MAX_PAYLOAD) then
+  if IsExactInt(aValue, I) and (I <> 0) and (DWord(I) <= MAX_PAYLOAD) then
     DWord(Result) := EXP_MASK or DWord(I)
   else
     Result := 0;
@@ -974,7 +974,7 @@ end;
 
 class function TGSingleHelper.SetSignalPayload(const aValue: Int32): Single;
 begin
-  if DWord(aValue) <= MAX_PAYLOAD then
+  if (aValue <> 0) and (DWord(aValue) <= MAX_PAYLOAD) then
     DWord(Result) := EXP_MASK or DWord(aValue)
   else
     Result := 0;
@@ -1306,7 +1306,7 @@ class function TGDoubleHelper.SetSignalPayload(const aValue: Double): Double;
 var
   I: Int64;
 begin
-  if IsExactInt(aValue, I) and(QWord(I) <= MAX_PAYLOAD) then
+  if IsExactInt(aValue, I) and (I <> 0) and (QWord(I) <= MAX_PAYLOAD) then
     QWord(Result) := EXP_MASK or QWord(I)
   else
     Result := 0;
@@ -1315,7 +1315,7 @@ end;
 
 class function TGDoubleHelper.SetSignalPayload(const aValue: Int64): Double;
 begin
-  if QWord(aValue) <= MAX_PAYLOAD then
+  if (aValue <> 0) and (QWord(aValue) <= MAX_PAYLOAD) then
     QWord(Result) := EXP_MASK or QWord(aValue)
   else
     Result := 0;
