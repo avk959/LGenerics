@@ -1196,21 +1196,29 @@ type
 
 { returns the shortest decimal representation of aValue formatted according
   to the following rules:
-   as an integer value if aValue is an exact integer;
-   in fixed point notation if -3 >= Exponent(aValue) <= 15;
-   in scientific notation otherwise;
+    as an integer value if aValue is an exact integer;
+    in fixed point notation if -3 >= Exponent(aValue) <= 15;
+    in scientific notation otherwise;
   uses Ryū Double-to-String conversion algorithm }
   procedure Double2Str(aValue: Double; out s: shortstring; aDecimalSeparator: AnsiChar = '.');
   function  Double2Str(aValue: Double; aDecimalSeparator: AnsiChar = '.'): string;
   function  Double2Str(aValue: Double; AlwaysShowFrac: Boolean; aDecimalSeparator: AnsiChar = '.'): string;
 { uses DefaultFormatSettins.DecimalSeparator as aDecimalSeparator }
   function  Double2StrDef(aValue: Double): string;
-{ mostly RFC 8259 compliant: does not accept leading and trailing spaces, leading plus,
+{ tries to convert a string in decimal or scientific notation to a Double value aValue;
+  mostly RFC 8259 compliant: does not accept leading and trailing spaces, leading plus,
   thousand separators, leading zeros, and special values(i.e. NaN, Inf, etc) and expects
   a period as a decimal separator; if the result is False then aValue is undefined;
   uses Eisel-Lemire algorithm }
   function  TryStr2Double(const s: string; out aValue: Double): Boolean;
   function  TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean;
+{ tries to convert a string in decimal or scientific notation to a Double value aValue;
+  does not accept thousand separators; allows some special values(Inf, Infinity, NaN, qNaN, sNaN),
+  leading and trailing spaces, leading zeros, leading plus, missing integer or fractional part or
+  exponent value; if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
+  function  TryStrToDouble(const s: string; out aValue: Double; aDecSeparator: AnsiChar = '.'): Boolean;
+  function  TryStrToDouble(const a: array of AnsiChar; out aValue: Double; aDecSeparator: AnsiChar = '.'): Boolean;
+  function  TryStrToDouble(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aDecSeparator: AnsiChar = '.'): Boolean;
 { returns True and the value of the number in aInt if the string s is a non-negative integer
   in decimal notation, otherwise returns False;
   leading and trailing spaces and leading zeros are not allowed }
@@ -3834,9 +3842,9 @@ var
   Tmp: array[0..21] of AnsiChar;
   IsNeg: Boolean;
 const
-  NAN_NAMES:  array[Boolean] of array[Boolean] of string[7] = (('sNaN', '-sNaN'), ('qNaN', '-qNaN'));
-  INF_NAMES:  array[Boolean] of string[11] = ('Infinity', '-Infinity');
-  ZERO_NAMES: array[Boolean] of string[3] = ('0', '-0');
+  NAN_NAMES:  array[Boolean] of array[Boolean] of string = (('sNaN', '-sNaN'), ('qNaN', '-qNaN'));
+  INF_NAMES:  array[Boolean] of string = ('Infinity', '-Infinity');
+  ZERO_NAMES: array[Boolean] of string = ('0', '-0');
 begin
   IsNeg := Boolean(Bits shr (DBL_MANTISSA_BITS + DBL_EXPONENT_BITS));
   IeeeMantissa := Bits and DBL_MANTISSA_MASK;
@@ -7928,6 +7936,181 @@ begin
     exit(True);
   Result := TryPChar2DblFallBack(pOld, aValue);
 end;
+
+{ TryPChar2Double2 }
+function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSeparator: AnsiChar): Boolean;
+
+  function SameSpec(p: PAnsiChar; aCount: SizeInt; const s: string): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if System.Length(s) <> aCount then exit(False);
+    for I := 1 to Pred(aCount) do
+      if AnsiChar(Ord(p[I]) or $20) <> s[Succ(I)] then exit(False);
+    Result := True;
+  end;
+
+  function IsSpecValue(p: PAnsiChar; aCount: SizeInt; aIsNeg: Boolean; out aValue: Double): Boolean;
+  begin
+    case AnsiChar(Ord(p^) or $20) of
+      'i':
+        if SameSpec(p, aCount, 'inf') or SameSpec(p, aCount, 'infinity') then begin
+          if aIsNeg then
+            aValue := Double.NegativeInfinity
+          else
+            aValue := Double.PositiveInfinity;
+          exit(True);
+        end;
+      'n':
+        if SameSpec(p, aCount, 'nan') then begin
+          aValue := Double.SetPayload(Int64(0));
+          if aIsNeg then aValue.Negate;
+          exit(True);
+        end;
+      'q':
+        if SameSpec(p, aCount, 'qnan') then begin
+          aValue := Double.SetPayload(Int64(0));
+          if aIsNeg then aValue.Negate;
+          exit(True);
+        end;
+      's':
+        if SameSpec(p, aCount, 'snan') then begin
+          aValue := Double.SetSignalPayload(Int64(1));
+          if aIsNeg then aValue.Negate;
+          exit(True);
+        end;
+    end;
+    Result := False;
+  end;
+
+  function FallBack(p: PAnsiChar; aCount: SizeInt; out aValue: Double): Boolean;
+  var
+    s: shortstring;
+    I, Code: Integer;
+  begin
+    if aCount > SizeOf(s)-1 then exit(False);
+    System.SetLength(s, aCount);
+    System.Move(p^, s[1], aCount);
+    if aSeparator <> '.' then
+      for I := 1 to aCount do
+        if s[I] = aSeparator then begin
+          s[I] := '.';
+          break;
+        end;
+    Val(s, aValue, Code);
+    Result := Code = 0;
+  end;
+
+var
+  Mantis: QWord;
+  Pow10, PowVal: Int64;
+  DigCount: Integer;
+  pOld, pDigStart, pTemp, pEnd: PAnsiChar;
+  IsNeg, PowIsNeg: Boolean;
+const
+  Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+begin
+  //aCount <> 0 and no whitespace characters are assumed
+  pEnd := p + aCount;
+  pOld := p;
+
+  IsNeg := False;
+  if p^ = '-' then begin
+    IsNeg := True;
+    Inc(p);
+    if p = pEnd then exit(False);
+  end else
+    if p^ = '+' then begin
+      Inc(p);
+      if p = pEnd then exit(False);
+    end;
+
+  if not((p^ in ['0'..'9', 'E', 'e']) or (p^ = aSeparator)) then
+    exit(IsSpecValue(p, pEnd - p, IsNeg, aValue));
+
+  while (p < pEnd) and (p^ = '0') do Inc(p); // leading zeros
+
+  if p = pEnd then begin
+    if IsNeg then
+      aValue := Double.CopySign(0, -1)
+    else
+      aValue := 0;
+    exit(True);
+  end;
+
+  Mantis := 0;
+  pDigStart := nil;
+  DigCount := 0;
+  if p^ in ['0'..'9'] then begin
+    pDigStart := p;
+    repeat
+      Mantis := Mantis * 10 + Digits[p^];
+      Inc(p);
+    until (p = pEnd) or not(p^ in ['0'..'9']);
+    DigCount := p - pDigStart;
+  end;
+
+  Pow10 := 0;
+  if (p < pEnd) and (p^ = aSeparator) then begin
+    Inc(p);
+    if (p < pEnd) and (p^ in ['0'..'9']) then begin
+      if pDigStart = nil then
+        pDigStart := p - 1;
+      pTemp := p;
+      repeat
+        Mantis := Mantis * 10 + Digits[p^];
+        Inc(p);
+      until (p = pEnd) or not(p^ in ['0'..'9']);
+      Pow10 := -Int64(p - pTemp);
+      DigCount := p - pDigStart - 1;
+    end;
+  end;
+
+  if (p < pEnd) and (p^ in ['e', 'E']) then begin
+    Inc(p);
+    if p < pEnd then begin
+      PowIsNeg := False;
+      PowVal := 0;
+      if p^ = '-' then begin
+        PowIsNeg := True;
+        Inc(p);
+      end else
+        if p^ = '+' then Inc(p);
+      while (p < pEnd) and (p^ in ['0'..'9']) do begin
+        if PowVal < $100000000 then
+          PowVal := PowVal * 10 + Integer(Digits[p^]);
+        Inc(p);
+      end;
+      if PowIsNeg then
+        Pow10 -= PowVal
+      else
+        Pow10 += PowVal;
+    end;
+  end;
+  ////////////////////////////
+  if p <> pEnd then exit(False);
+  ////////////////////////////
+
+  if DigCount = 0 then begin
+    if IsNeg then
+      aValue := Double.CopySign(0, -1)
+    else
+      aValue := 0;
+    exit(True);
+  end;
+
+  if DigCount >= 19 then begin
+    pTemp := pDigStart;
+    while pTemp^ in ['0', aSeparator] do Inc(pTemp);
+    DigCount -= pTemp - pDigStart;
+    if DigCount >= 19 then exit(FallBack(pOld, p - pOld, aValue)); ////
+  end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    exit(FallBack(pOld, p - pOld, aValue)); ////
+  if TryBuildDoubleEiselLemire(Mantis, Pow10, IsNeg, aValue) then
+    exit(True);
+  Result := FallBack(pOld, p - pOld, aValue); ////
+end;
 {$POP}
 
 function TryStr2Double(const s: string; out aValue: Double): Boolean;
@@ -7940,6 +8123,32 @@ function TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean;
 begin
   if p = nil then exit(False);
   Result := TryPChar2Double(p, aValue);
+end;
+
+function TryStrToDouble(const s: string; out aValue: Double; aDecSeparator: AnsiChar): Boolean;
+begin
+  Result := TryStrToDouble(PAnsiChar(s), System.Length(s), aValue, aDecSeparator);
+end;
+
+function TryStrToDouble(const a: array of AnsiChar; out aValue: Double; aDecSeparator: AnsiChar): Boolean;
+begin
+  if System.Length(a) = 0 then exit(False);
+  Result := TryStrToDouble(@a[0], System.Length(a), aValue, aDecSeparator);
+end;
+
+function TryStrToDouble(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aDecSeparator: AnsiChar): Boolean;
+begin
+  if (p = nil) or (aCount < 1) then exit(False);
+  while (aCount <> 0) and (p^ in [#9,' ']) do // skip whitespace characters
+    begin
+      Inc(p);
+      Dec(aCount);
+    end;
+  while (aCount <> 0) and (p[Pred(aCount)] in [#9,' ']) do
+    Dec(aCount);
+  if aCount = 0 then
+    exit(False);
+  Result := TryPChar2Double2(p, aCount, aValue, aDecSeparator);
 end;
 
 {$PUSH}{$J-}{$WARN 2005 OFF}
