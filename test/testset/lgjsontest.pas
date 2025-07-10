@@ -6,8 +6,9 @@ unit LGJsonTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, FileUtil,
+  Classes, SysUtils, StrUtils, fpcunit, testregistry, FileUtil,
   lgUtils,
+  lgHelpers,
   lgJson,
   lgList;
 
@@ -49,6 +50,16 @@ type
     procedure IbmFpgen;
     procedure IbmFpgen2;
     procedure Roundtrip;
+  end;
+
+  { TTestTryStrToDouble }
+
+  TTestTryStrToDouble = class(TTestCase)
+    procedure SpacesLeadZeros;
+    procedure MissingParts;
+    procedure SpecValues;
+    procedure Basic;
+    procedure DecSeparator;
   end;
 
 
@@ -729,6 +740,314 @@ begin
       s := Double2Str(d);
       AssertTrue(TryStr2Double(s, d1));
       AssertTrue(d = d1);
+    end;
+end;
+
+{ TTestTryStrToDouble }
+
+procedure TTestTryStrToDouble.SpacesLeadZeros;
+var
+  d: Double;
+begin
+  AssertFalse(TryStrToDouble('', d));
+  AssertFalse(TryStrToDouble('  '#9#9, d));
+  AssertFalse(TryStrToDouble('+', d));
+  AssertFalse(TryStrToDouble('-', d));
+  AssertFalse(TryStrToDouble('0-', d));
+  AssertFalse(TryStrToDouble('0+', d));
+  AssertFalse(TryStrToDouble('a', d));
+  AssertFalse(TryStrToDouble('-000Inf', d));
+  AssertFalse(TryStrToDouble('-00NaN', d));
+  AssertFalse(TryStrToDouble('.NaN', d));
+  AssertFalse(TryStrToDouble('.0NaN', d));
+  AssertFalse(TryStrToDouble('eNaN', d));
+
+  AssertTrue(TryStrToDouble(#9'  1  '#9, d));
+  AssertTrue(d = 1);
+
+  AssertTrue(TryStrToDouble(#9'  000000001  ', d));
+  AssertTrue(d = 1);
+
+  AssertTrue(TryStrToDouble('  000000000  ', d));
+  AssertTrue(d = 0);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('  +000000000  ', d));
+  AssertTrue(d = 0);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('  -000000000  ', d));
+  AssertTrue(d = 0);
+  AssertTrue(d.Sign);
+end;
+
+procedure TTestTryStrToDouble.MissingParts;
+var
+  d: Double;
+begin
+  AssertTrue(TryStrToDouble('0', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('+0', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-0', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('.', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('+.', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-.', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('e', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+
+  AssertTrue(TryStrToDouble('+e', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-e', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('e123456789123456789123456789', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-e-123456789123456789123456789', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('.e', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+
+  AssertTrue(TryStrToDouble('+.e', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-.e', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('.e123456789123456789123456789', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-.e-123456789123456789123456789', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('0.e', d));
+  AssertTrue(d.IsZero);
+
+  AssertTrue(TryStrToDouble('+0.e', d));
+  AssertTrue(d.IsZero);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-0.e', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('0.e-', d));
+  AssertTrue(d.IsZero);
+
+  AssertTrue(TryStrToDouble('-0.e-', d));
+  AssertTrue(d.IsZero);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('1.e', d));
+  AssertTrue(d = 1);
+
+  AssertTrue(TryStrToDouble('+1.e', d));
+  AssertTrue(d = 1);
+
+  AssertTrue(TryStrToDouble('-1.e', d));
+  AssertTrue(d = -1);
+
+  AssertTrue(TryStrToDouble('.5', d));
+  AssertTrue(d = 0.5);
+
+  AssertTrue(TryStrToDouble('-.5', d));
+  AssertTrue(d = -0.5);
+
+  AssertTrue(TryStrToDouble('.5e', d));
+  AssertTrue(d = 0.5);
+
+  AssertTrue(TryStrToDouble('-.5e-', d));
+  AssertTrue(d = -0.5);
+end;
+
+procedure TTestTryStrToDouble.SpecValues;
+var
+  d: Double;
+  quiet: Boolean;
+begin
+  AssertFalse(TryStrToDouble('ins', d));
+  AssertFalse(TryStrToDouble('iof', d));
+  AssertFalse(TryStrToDouble('infiniti', d));
+  AssertFalse(TryStrToDouble('nun', d));
+  AssertFalse(TryStrToDouble('nat', d));
+  AssertFalse(TryStrToDouble('inan', d));
+
+  AssertTrue(TryStrToDouble('inf', d));
+  AssertTrue(d.IsPositiveInfinity);
+  AssertTrue(TryStrToDouble('INF', d));
+  AssertTrue(d.IsPositiveInfinity);
+
+  AssertTrue(TryStrToDouble('-inf', d));
+  AssertTrue(d.IsNegativeInfinity);
+  AssertTrue(TryStrToDouble('-INF', d));
+  AssertTrue(d.IsNegativeInfinity);
+
+  AssertTrue(TryStrToDouble('infinity', d));
+  AssertTrue(d.IsPositiveInfinity);
+  AssertTrue(TryStrToDouble('INFINITY', d));
+  AssertTrue(d.IsPositiveInfinity);
+
+  AssertTrue(TryStrToDouble('-infinity', d));
+  AssertTrue(d.IsNegativeInfinity);
+  AssertTrue(TryStrToDouble('-INFINITY', d));
+  AssertTrue(d.IsNegativeInfinity);
+
+  AssertTrue(TryStrToDouble('nan', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertFalse(d.Sign);
+  AssertTrue(TryStrToDouble('NAN', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-nan', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertTrue(d.Sign);
+  AssertTrue(TryStrToDouble('-NAN', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('qnan', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertFalse(d.Sign);
+  AssertTrue(TryStrToDouble('QNAN', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-qnan', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertTrue(d.Sign);
+  AssertTrue(TryStrToDouble('-QNAN', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertTrue(quiet);
+  AssertTrue(d.Sign);
+
+  AssertTrue(TryStrToDouble('snan', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertFalse(quiet);
+  AssertFalse(d.Sign);
+  AssertTrue(TryStrToDouble('SNAN', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertFalse(quiet);
+  AssertFalse(d.Sign);
+
+  AssertTrue(TryStrToDouble('-snan', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertFalse(quiet);
+  AssertTrue(d.Sign);
+  AssertTrue(TryStrToDouble('-SNAN', d));
+  AssertTrue(d.IsNan(quiet));
+  AssertFalse(quiet);
+  AssertTrue(d.Sign);
+end;
+
+procedure TTestTryStrToDouble.Basic;
+var
+  s: string;
+  q: QWord;
+  d1, d2: Double;
+  I: Integer;
+const
+  MASK     = QWord($7ff0000000000000);
+  TestSize = 10000;
+begin
+  s := '12345678901234567.8901234567890';
+  Val(s, d1, I);
+  AssertTrue(I = 0);
+  AssertTrue(TryStrToDouble(s, d2));
+  AssertTrue(d1 = d2);
+
+  s := DupeString('1234567890', 25);
+  Insert('.', s, Length(s) - 10);
+  Val(s, d1, I);
+  AssertTrue(I = 0);
+  AssertTrue(TryStrToDouble(s, d2));
+  AssertTrue(d1 = d2);
+
+  SmRandomize;
+  for I := 1 to TestSize do
+    begin
+      repeat
+        q := SmNextRandom;
+      until (q and MASK <> 0) and (q and MASK <> MASK);
+      QWord(d1) := q;
+      s := Double2Str(d1);
+      AssertTrue(TryStrToDouble(s, d2));
+      AssertTrue(d2 = d1);
+    end;
+end;
+
+procedure TTestTryStrToDouble.DecSeparator;
+var
+  s: string;
+  q: QWord;
+  d1, d2: Double;
+  I: Integer;
+const
+  MASK     = QWord($7ff0000000000000);
+  TestSize = 10000;
+  ds = ',';
+begin
+  s := '12345678901234567,8901234567890';
+  Val(StringReplace(s, ds, '.', []), d1, I);
+  AssertTrue(I = 0);
+  AssertTrue(TryStrToDouble(s, d2, ds));
+  AssertTrue(d1 = d2);
+
+  s := DupeString('1234567890', 25);
+  Insert(ds, s, Length(s) - 10);
+  Val(StringReplace(s, ds, '.', []), d1, I);
+  AssertTrue(I = 0);
+  AssertTrue(TryStrToDouble(s, d2, ds));
+  AssertTrue(d1 = d2);
+
+  SmRandomize;
+  for I := 1 to TestSize do
+    begin
+      repeat
+        q := SmNextRandom;
+      until (q and MASK <> 0) and (q and MASK <> MASK);
+      QWord(d1) := q;
+      s := Double2Str(d1, ds);
+      AssertTrue(TryStrToDouble(s, d2, ds));
+      AssertTrue(d2 = d1);
     end;
 end;
 
@@ -2636,6 +2955,7 @@ initialization
   RegisterTest(TTestJVariant);
   RegisterTest(TTestDouble2Str);
   RegisterTest(TTestTryStr2Double);
+  RegisterTest(TTestTryStrToDouble);
   RegisterTest(TTestJson);
   RegisterTest(TTestJsonWriter);
   RegisterTest(TTestJsonReader);
