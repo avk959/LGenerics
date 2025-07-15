@@ -92,11 +92,15 @@ type
   TMurmur = class
   protected
   type
+    TByte2 = array[0..1] of Byte;
     TByte3 = array[0..2] of Byte;
+    TByte4 = array[0..3] of Byte;
     TByte5 = array[0..4] of Byte;
     TByte6 = array[0..5] of Byte;
     TByte7 = array[0..6] of Byte;
+    PByte2 = ^TByte2;
     PByte3 = ^TByte3;
+    PByte4 = ^TByte4;
     PByte5 = ^TByte5;
     PByte6 = ^TByte6;
     PByte7 = ^TByte7;
@@ -179,6 +183,7 @@ type
   function JdkHashW(aValue: Word): Word; inline;
   function JdkHash(aValue: DWord): DWord; inline;
   function JdkHashQ(aValue: QWord): DWord; inline;
+
   { FNV1A_JesteressM: slightly modified FNV1A_Hash_Jesteress from http://www.sanmayce.com/Fastest_Hash}
   function FNV1A_JesteressM(aBuffer: Pointer; aCount: SizeInt; aSeed: DWord = 0): DWord;
 
@@ -241,7 +246,8 @@ begin
         end;
       if aCount and 2 <> 0 then
         begin
-          Result := (Result xor PWord(p)^) * DWord(709607);
+          Result := (Result xor p^) * DWord(709607);
+          Result := (Result xor p[1]) * DWord(709607);
           p += 2;
         end;
       if aCount and 1 <> 0 then
@@ -273,7 +279,8 @@ begin
     end;
   if aCount and 2 <> 0 then
     begin
-      Result := (Result xor PWord(p)^) * DWord(709607);
+      Result := (Result xor p^) * DWord(709607);
+      Result := (Result xor p[1]) * DWord(709607);
       p += 2;
     end;
   if aCount and 1 <> 0 then
@@ -1036,7 +1043,7 @@ begin
       k4 := 0;
       case aCount of
         1: PByte(@k4)^  := PByte(p)^;
-        2: PWord(@k4)^  := PWord(p)^;
+        2: PByte2(@k4)^ := PByte2(p)^;
         3: PByte3(@k4)^ := PByte3(p)^;
       end;
       Result := (Result xor k4) * m32;
@@ -1213,7 +1220,7 @@ begin
       k4 := 0;
       case aCount of
         1: PByte(@k4)^  := PByte(p)^;
-        2: PWord(@k4)^  := PWord(p)^;
+        2: PByte2(@k4)^ := PByte2(p)^;
         3: PByte3(@k4)^ := PByte3(p)^;
       end;
       k4 := k4 * m32;
@@ -1402,7 +1409,7 @@ begin
       k4 := 0;
       case aCount of
         1: PByte(@k4)^  := PByte(p)^;
-        2: PWord(@k4)^  := PWord(p)^;
+        2: PByte2(@k4)^ := PByte2(p)^;
         3: PByte3(@k4)^ := PByte3(p)^;
       end;
       Result := Result xor (RolDWord(k4 * c1, 15) * c2);
@@ -1663,9 +1670,9 @@ begin
       k4 := 0;
       case aCount of
         1: PByte( @k4)^ := PByte( p)^;
-        2: PWord( @k4)^ := PWord( p)^;
+        2: PByte2(@k4)^ := PByte2( p)^;
         3: PByte3(@k4)^ := PByte3(p)^;
-        4: PDWord(@k4)^ := PDWord(p)^;
+        4: PByte4(@k4)^ := PByte4(p)^;
         5: PByte5(@k4)^ := PByte5(p)^;
         6: PByte6(@k4)^ := PByte6(p)^;
         7: PByte7(@k4)^ := PByte7(p)^;
