@@ -1593,7 +1593,18 @@ begin
     exit;
   end;
 
-  if (aLenL = 1) and (aLenR = 1) then begin
+  if aLenL = 1 then begin
+    if aLenR > 2 then begin
+      repeat
+        Inc(pR);
+        Dec(aLenR);
+        if TEqRel.Equal(pL^, pR^) then begin
+          System.SetLength(Result, PrefixLen + SuffixLen + 1);
+          THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen + SuffixLen + 1);
+          exit;
+        end;
+      until aLenR = 1;
+    end;
     System.SetLength(Result, PrefixLen + SuffixLen);
     THelper.CopyItems(pL - PrefixLen, PItem(Result), PrefixLen);
     THelper.CopyItems(pL + 1, PItem(Result) + PrefixLen, SuffixLen);
