@@ -1628,6 +1628,16 @@ begin
   s2 := '01234445556789';
   s := '01236789';
   AssertTrue(LcsGusUtf8(s1, s2) = s);
+
+  s1 := '012396789';
+  s2 := '012344495556789';
+  s := '012396789';
+  AssertTrue(LcsGusUtf8(s1, s2) = s);
+
+  s1 := '?this_is_a_test!';
+  s2 := 'testing123testing';
+  s := 'tsitest';
+  AssertTrue(LcsGusUtf8(s1, s2) = s);
 end;
 
 procedure TTestUnicodeUtils.LcsKRUtf8Test;
@@ -1659,6 +1669,16 @@ begin
   s2 := '01234445556789';
   s := '01236789';
   AssertTrue(LcsKRUtf8(s1, s2) = s);
+
+  s1 := '012396789';
+  s2 := '012344495556789';
+  s := '012396789';
+  AssertTrue(LcsKRUtf8(s1, s2) = s);
+
+  s1 := '?this_is_a_test!';
+  s2 := 'testing123testing';
+  s := 'tsitest';
+  AssertTrue(LcsKRUtf8(s1, s2) = s);
 end;
 
 procedure TTestUnicodeUtils.LcsMyersUtf8Test;
@@ -1689,6 +1709,16 @@ begin
   s1 := '01236789';
   s2 := '01234445556789';
   s := '01236789';
+  AssertTrue(LcsMyersUtf8(s1, s2) = s);
+
+  s1 := '012396789';
+  s2 := '012344495556789';
+  s := '012396789';
+  AssertTrue(LcsMyersUtf8(s1, s2) = s);
+
+  s1 := '?this_is_a_test!';
+  s2 := 'testing123testing';
+  s := 'tsitest';
   AssertTrue(LcsMyersUtf8(s1, s2) = s);
 end;
 
@@ -3144,6 +3174,16 @@ begin
   s2 := '01234445556789';
   s := '01236789';
   AssertTrue(LcsGusUtf16(s1, s2) = s);
+
+  s1 := '012396789';
+  s2 := '012344495556789';
+  s := '012396789';
+  AssertTrue(LcsGusUtf16(s1, s2) = s);
+
+  s1 := '?this_is_a_test!';
+  s2 := 'testing123testing';
+  s := 'tsitest';
+  AssertTrue(LcsGusUtf16(s1, s2) = s);
 end;
 
 procedure TTestUnicodeUtils.LcsKRUtf16Test;
@@ -3175,6 +3215,16 @@ begin
   s2 := '01234445556789';
   s := '01236789';
   AssertTrue(LcsKRUtf16(s1, s2) = s);
+
+  s1 := '012396789';
+  s2 := '012344495556789';
+  s := '012396789';
+  AssertTrue(LcsKRUtf16(s1, s2) = s);
+
+  s1 := '?this_is_a_test!';
+  s2 := 'testing123testing';
+  s := 'tsitest';
+  AssertTrue(LcsKRUtf16(s1, s2) = s);
 end;
 
 procedure TTestUnicodeUtils.LcsMyersUtf16Test;
@@ -3205,6 +3255,16 @@ begin
   s1 := '01236789';
   s2 := '01234445556789';
   s := '01236789';
+  AssertTrue(LcsMyersUtf16(s1, s2) = s);
+
+  s1 := '012396789';
+  s2 := '012344495556789';
+  s := '012396789';
+  AssertTrue(LcsMyersUtf16(s1, s2) = s);
+
+  s1 := '?this_is_a_test!';
+  s2 := 'testing123testing';
+  s := 'tsitest';
   AssertTrue(LcsMyersUtf16(s1, s2) = s);
 end;
 
