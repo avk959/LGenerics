@@ -124,6 +124,31 @@ type
   type
     TArray = array of T;
     PItem = ^T;
+
+    TSeqEditOp = (seoMatch, seoDelete, seoInsert, seoReplace);
+    TLcsEditOp = seoMatch..seoInsert;
+
+    TLcsEdit = record
+      Operation: TLcsEditOp;
+      Value: T;
+      SourceIndex,
+      TargetIndex: SizeInt;
+      constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+    end;
+
+    TSeqEdit = record
+      Operation: TSeqEditOp;
+      SourceValue,
+      TargetValue: T;
+      SourceIndex,
+      TargetIndex: SizeInt;
+      constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
+      constructor Rep(const aSrcValue, aTrgValue: T; aSrcIdx, aTrgIdx: SizeInt);
+    end;
   private
   type
     TNode = record
@@ -166,12 +191,29 @@ type
     TDynIntArray = specialize TGDynArray<SizeInt>;
     TLcsImpl     = function(pL, pR: PItem; aLenL, aLenR: SizeInt): TArray;
 
+    TItemInfo = record
+      SourceCount,
+      TargetCount,
+      SourceLine,
+      TargetLine: SizeInt;
+      class function Less(const L, R: TItemInfo): Boolean; inline; static;
+    end;
+
+    PItemInfo    = ^TItemInfo;
+    TInfoMapType = specialize TGLiteChainHashMap<T, TItemInfo, TEqRel>;
+    TInfoMap     = TInfoMapType.TMap;
+    TEditList    = specialize TGLiteVector<TLcsEdit>;
+    TInfoList    = specialize TGLiteVector<TItemInfo>;
+    TInfoHelper  = specialize TGBaseArrayHelper<TItemInfo, TItemInfo>;
+
   const
     MAX_STATIC = 512;
     BLOCK_SIZE = BitSizeOf(QWord);
     BSIZE_MASK = Pred(BLOCK_SIZE);
     BSIZE_LOG  = 6;
-
+  {$PUSH}{$J-}
+    DEFAULT_INFO: TItemInfo = (SourceCount: 0; TargetCount: 0; SourceLine: -1; TargetLine: -1);
+  {$POP}
     class function  SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  GetLis(const a: array of SizeInt; aMaxLen: SizeInt): TSizeIntArray; static;
@@ -279,37 +321,16 @@ type
     class procedure Diff(const aSource, aTarget: array of T; out aDiff: TDiffV; aAlgo: TLcsAlgo = laMyers); static;
 
   type
-    TSeqEditOp = (seoMatch, seoDelete, seoInsert, seoReplace);
-    TLcsEditOp = seoMatch..seoInsert;
-    TLcsEdit = record
-      Operation: TLcsEditOp;
-      Value: T;
-      SourceIndex,
-      TargetIndex: SizeInt;
-      constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
-      constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
-      constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
-    end;
     TSeqLcsPatch = array of TLcsEdit;
-
-    TSeqEdit = record
-      Operation: TSeqEditOp;
-      SourceValue,
-      TargetValue: T;
-      SourceIndex,
-      TargetIndex: SizeInt;
-      constructor Make(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
-      constructor Del(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
-      constructor Ins(const aValue: T; aSrcIdx, aTrgIdx: SizeInt);
-      constructor Rep(const aSrcValue, aTrgValue: T; aSrcIdx, aTrgIdx: SizeInt);
-    end;
     TSeqPatch = array of TSeqEdit;
 
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
     only operations of deletion and insertion are available }
     class function MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqLcsPatch; static;
     class function ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch; out aTrg: TArray): Boolean; static;
-
+  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
+    only operations of deletion and insertion are available; uses some version of the Patience Diff algorithm }
+    class function MakePatiencePatch(const aSource, aTarget: array of T): TSeqLcsPatch; static;
   type
      TSeqPatchStat = array[TSeqEditOp] of SizeInt;
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
@@ -1153,6 +1174,13 @@ constructor TGSeqUtil.TNode.Create(aIndex, aNext: SizeInt);
 begin
   Index := aIndex;
   Next := aNext;
+end;
+
+{ TGSeqUtil.TItemInfo }
+
+class function TGSeqUtil.TItemInfo.Less(const L, R: TItemInfo): Boolean;
+begin
+  Result := L.TargetLine < R.TargetLine;
 end;
 
 { TGSeqUtil }
@@ -3027,7 +3055,6 @@ begin
   TargetIndex := aTrgIdx;
 end;
 
-
 class function TGSeqUtil.MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqLcsPatch;
 var
   Lcs: TArray;
@@ -3100,6 +3127,217 @@ begin
   end;
   aTrg := r;
   Result := True;
+end;
+
+class function TGSeqUtil.MakePatiencePatch(const aSource, aTarget: array of T): TSeqLcsPatch;
+var
+  EditList: TEditList;
+
+  function TrivialCase(pSrc, pTrg: PItem; aSrcLen, aTrgLen: SizeInt): Boolean;
+  var
+    SrcOfs, TrgOfs, I, J: SizeInt;
+  begin
+    Result := (aSrcLen = 0) or (aSrcLen = 1) or (aTrgLen = 0) or (aTrgLen = 1);
+    if not Result then exit;
+    SrcOfs := pSrc - PItem(@aSource[0]);
+    TrgOfs := pTrg - PItem(@aTarget[0]);
+    case aSrcLen of
+      0:
+        for I := 0 to Pred(aTrgLen) do
+          EditList.Add(TLcsEdit.Ins(pTrg[I], SrcOfs, TrgOfs + I));
+      1:
+        begin
+          J := NULL_INDEX;
+          for I := 0 to Pred(aTrgLen) do
+            if TEqRel.Equal(pSrc^, pTrg[I]) then begin
+              J := I; break;
+            end;
+          if J = NULL_INDEX then begin
+            EditList.Add(TLcsEdit.Del(pSrc^, SrcOfs, TrgOfs));
+            for I := 0 to Pred(aTrgLen) do
+              EditList.Add(TLcsEdit.Ins(pTrg[I], SrcOfs + 1, TrgOfs + I));
+          end else begin
+            for I := 0 to Pred(J) do
+              EditList.Add(TLcsEdit.Ins(pTrg[I], SrcOfs, TrgOfs + I));
+            for I := Succ(J) to Pred(aTrgLen) do
+              EditList.Add(TLcsEdit.Ins(pTrg[I], SrcOfs + 1, TrgOfs + I));
+          end;
+        end;
+    else
+      case aTrgLen of
+        0:
+          for I := 0 to Pred(aSrcLen) do
+            EditList.Add(TLcsEdit.Del(pSrc[I], SrcOfs + I, TrgOfs));
+        1:
+          begin
+            J := NULL_INDEX;
+            for I := 0 to Pred(aSrcLen) do
+              if TEqRel.Equal(pTrg^, pSrc[I]) then begin
+                J := I; break;
+              end;
+            if J = NULL_INDEX then begin
+              for I := 0 to Pred(aSrcLen) do
+                EditList.Add(TLcsEdit.Del(pSrc[I], SrcOfs + I, TrgOfs));
+              EditList.Add(TLcsEdit.Ins(pTrg^, SrcOfs + aSrcLen, TrgOfs));
+            end else begin
+              for I := 0 to Pred(J) do
+                EditList.Add(TLcsEdit.Del(pSrc[I], SrcOfs + I, TrgOfs));
+              for I := Succ(J) to Pred(aSrcLen) do
+                EditList.Add(TLcsEdit.Del(pSrc[I], SrcOfs + I, TrgOfs + 1));
+            end;
+          end;
+      end;
+    end;
+  end;
+
+  procedure Fallback(pSrc, pTrg: PItem; aSrcLen, aTrgLen: SizeInt);
+  var
+    Lcs: array of T;
+    SrcOfs, TrgOfs, I, SrcIdx, TrgIdx: SizeInt;
+    v: T;
+  begin
+    Lcs := GetLcs(pSrc, pTrg, aSrcLen, aTrgLen,@LcsMyersImpl);
+    SrcOfs := pSrc - PItem(@aSource[0]);
+    TrgOfs := pTrg - PItem(@aTarget[0]);
+    SrcIdx := 0; TrgIdx := 0;
+    for I := 0 to System.High(Lcs) do begin
+      v := Lcs[I];
+      while not TEqRel.Equal(v, pSrc[SrcIdx]) do begin
+        EditList.Add(TLcsEdit.Del(pSrc[SrcIdx], SrcIdx + SrcOfs, TrgIdx + TrgOfs));
+        Inc(SrcIdx);
+      end;
+      while not TEqRel.Equal(v, pTrg[TrgIdx]) do begin
+        EditList.Add(TLcsEdit.Ins(pTrg[TrgIdx], SrcIdx + SrcOfs, TrgIdx + TrgOfs));
+        Inc(TrgIdx);
+      end;
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+    while SrcIdx < aSrcLen do begin
+      EditList.Add(TLcsEdit.Del(pSrc[SrcIdx], SrcIdx + SrcOfs, TrgIdx + TrgOfs));
+      Inc(SrcIdx);
+    end;
+    while TrgIdx < aTrgLen do begin
+      EditList.Add(TLcsEdit.Ins(pTrg[TrgIdx], SrcIdx + SrcOfs, TrgIdx + TrgOfs));
+      Inc(TrgIdx);
+    end;
+  end;
+
+  procedure SimpleDiff(pSrc, pTrg: PItem; aSrcLen, aTrgLen: SizeInt);
+  var
+    SrcOfs, TrgOfs, I: SizeInt;
+  begin
+    SrcOfs := pSrc - PItem(@aSource[0]);
+    TrgOfs := pTrg - PItem(@aTarget[0]);
+    for I := 0 to Pred(aSrcLen) do
+      EditList.Add(TLcsEdit.Del(pSrc[I], SrcOfs + I, TrgOfs));
+    SrcOfs += aSrcLen;
+    for I := 0 to Pred(aTrgLen) do
+      EditList.Add(TLcsEdit.Ins(pTrg[I], SrcOfs, TrgOfs + I));
+  end;
+
+  procedure DoDiff(pSrc, pTrg: PItem; aSrcLen, aTrgLen: SizeInt);
+  var
+    InfoMap: TInfoMap;
+    UniqList: TInfoList;
+    IndexMap: TSizeIntArray = nil;
+    p: PItemInfo;
+    I, SrcPos, TrgPos: SizeInt;
+    HaveCommon: Boolean;
+  begin
+    I := 0;
+    if aSrcLen < aTrgLen then
+      while (I < aSrcLen) and TEqRel.Equal(pSrc[I], pTrg[I]) do Inc(I)
+    else
+      while (I < aTrgLen) and TEqRel.Equal(pSrc[I], pTrg[I]) do Inc(I);
+    pSrc += I; pTrg += I; aSrcLen -= I; aTrgLen -= I;
+
+    if aSrcLen < aTrgLen then
+      while (aSrcLen > 0) and TEqRel.Equal(pSrc[Pred(aSrcLen)], pTrg[Pred(aTrgLen)]) do begin
+        Dec(aSrcLen); Dec(aTrgLen);
+      end
+    else
+      while (aTrgLen > 0) and TEqRel.Equal(pSrc[Pred(aSrcLen)], pTrg[Pred(aTrgLen)]) do begin
+        Dec(aSrcLen); Dec(aTrgLen);
+      end;
+
+    if TrivialCase(pSrc, pTrg, aSrcLen, aTrgLen) then exit;
+
+    Initialize(InfoMap);
+
+    for I := 0 to Pred(aSrcLen) do begin
+      p := InfoMap.GetMutValueDef(pSrc[I], DEFAULT_INFO);
+      Inc(p^.SourceCount);
+      if p^.SourceLine = NULL_INDEX then
+        p^.SourceLine := I;
+    end;
+
+    HaveCommon := False;
+    for I := 0 to Pred(aTrgLen) do
+      if InfoMap.TryGetMutValue(pTrg[I], p) then begin
+        Inc(p^.TargetCount);
+        if p^.TargetLine = NULL_INDEX then
+          p^.TargetLine := I;
+        HaveCommon := True;
+      end;
+
+    Initialize(UniqList); // due to 3.2.2 bug
+
+    for p in InfoMap.MutValues do
+      if (p^.SourceCount = 1) and (p^.TargetCount = 1) then
+        UniqList.Add(p^);
+
+    InfoMap.Clear; //
+
+    if UniqList.IsEmpty then begin
+      if HaveCommon then
+        Fallback(pSrc, pTrg, aSrcLen, aTrgLen)
+      else
+        SimpleDiff(pSrc, pTrg, aSrcLen, aTrgLen);
+      exit;
+    end;
+
+    if UniqList.Count > 1 then
+      IndexMap := TInfoHelper.LisI(UniqList.UncMutable[0][0..Pred(UniqList.Count)]);
+
+    if IndexMap = nil then IndexMap := [0];
+
+    SrcPos := 0;
+    TrgPos := 0;
+    for I in IndexMap do begin
+      p := UniqList.UncMutable[I];
+      if (p^.SourceLine <> SrcPos) or (p^.TargetLine <> TrgPos) then
+        DoDiff(pSrc + SrcPos, pTrg + TrgPos, p^.SourceLine - SrcPos, p^.TargetLine - TrgPos);
+      SrcPos := Succ(p^.SourceLine);
+      TrgPos := Succ(p^.TargetLine);
+    end;
+
+    if (aSrcLen <> SrcPos) or (aTrgLen <> TrgPos) then
+      DoDiff(pSrc + SrcPos, pTrg + TrgPos, aSrcLen - SrcPos, aTrgLen - TrgPos);
+  end;
+
+var
+  I: SizeInt;
+begin
+  Result := nil;
+
+  if System.Length(aSource) = 0 then begin
+    System.SetLength(Result, System.Length(aTarget));
+    for I := 0 to System.High(Result) do
+      Result[I] := TLcsEdit.Ins(aTarget[I], 0, I);
+    exit;
+  end else
+    if System.Length(aTarget) = 0 then begin
+      System.SetLength(Result, System.Length(aSource));
+      for I := 0 to System.High(Result) do
+        Result[I] := TLcsEdit.Del(aSource[I], I, 0);
+      exit;
+    end;
+
+  Initialize(EditList); //
+
+  DoDiff(@aSource[0], @aTarget[0], System.Length(aSource), System.Length(aTarget));
+
+  Result := EditList.ToArray;
 end;
 
 class function TGSeqUtil.MakePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
@@ -3210,6 +3448,8 @@ begin
   aTrg := r;
   Result := True;
 end;
+
+
 
 type
   TUcs4Util    = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
