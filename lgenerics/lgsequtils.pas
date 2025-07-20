@@ -3194,7 +3194,10 @@ var
     SrcOfs, TrgOfs, I, SrcIdx, TrgIdx: SizeInt;
     v: T;
   begin
-    Lcs := GetLcs(pSrc, pTrg, aSrcLen, aTrgLen,@LcsMyersImpl);
+    if aSrcLen <= aTrgLen then
+      Lcs := LcsMyersImpl(pSrc, pTrg, aSrcLen, aTrgLen)
+    else
+      Lcs := LcsMyersImpl(pTrg, pSrc, aTrgLen, aSrcLen);
     SrcOfs := pSrc - PItem(@aSource[0]);
     TrgOfs := pTrg - PItem(@aTarget[0]);
     SrcIdx := 0; TrgIdx := 0;
