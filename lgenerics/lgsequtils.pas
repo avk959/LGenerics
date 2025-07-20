@@ -328,8 +328,8 @@ type
     only operations of deletion and insertion are available }
     class function MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqLcsPatch; static;
     class function ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch; out aTrg: TArray): Boolean; static;
-  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
-    only operations of deletion and insertion are available; uses some version of the Patience Diff algorithm }
+  { returns an edit script, a sequence of primitive operations that convert aSource to aTarget; only
+    operations of deletion and insertion are available; uses some variant of the Patience Diff strategy }
     class function MakePatiencePatch(const aSource, aTarget: array of T): TSeqLcsPatch; static;
   type
      TSeqPatchStat = array[TSeqEditOp] of SizeInt;
@@ -3280,6 +3280,11 @@ var
         HaveCommon := True;
       end;
 
+    if not HaveCommon then begin
+      SimpleDiff(pSrc, pTrg, aSrcLen, aTrgLen);
+      exit;
+    end;
+
     Initialize(UniqList); // due to 3.2.2 bug
 
     for p in InfoMap.MutValues do
@@ -3289,10 +3294,7 @@ var
     InfoMap.Clear; //
 
     if UniqList.IsEmpty then begin
-      if HaveCommon then
-        Fallback(pSrc, pTrg, aSrcLen, aTrgLen)
-      else
-        SimpleDiff(pSrc, pTrg, aSrcLen, aTrgLen);
+      Fallback(pSrc, pTrg, aSrcLen, aTrgLen);
       exit;
     end;
 
