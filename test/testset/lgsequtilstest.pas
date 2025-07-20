@@ -113,6 +113,7 @@ type
     procedure IsPermutationTest;
     procedure TestDiff;
     procedure TestLcsPatch;
+    procedure TestPatiencePatch;
     procedure TestPatch;
   end;
 
@@ -3906,6 +3907,49 @@ begin
 
   b := nil;
   p := TIntSeqUtil.MakeLcsPatch(a, b);
+  AssertTrue(Length(p) = Length(a));
+  for e in p do begin
+    AssertTrue(e.Operation = seoDelete);
+    AssertTrue(e.Value = a[e.SourceIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+end;
+
+procedure TTestSeqUtils.TestPatiencePatch;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+  p: TSeqLcsPatch;
+  e: TLcsEdit;
+begin
+  p := TIntSeqUtil.MakePatiencePatch(a, b);
+  AssertTrue(p = nil);
+
+  b := [1,2,3,4,5];
+  p := TIntSeqUtil.MakePatiencePatch(a, b);
+  AssertTrue(Length(p) = Length(b));
+  for e in p do begin
+    AssertTrue(e.Operation = seoInsert);
+    AssertTrue(e.Value = b[e.TargetIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+
+  a := [1,2,3,4,5];
+  p := TIntSeqUtil.MakePatiencePatch(a, b);
+  AssertTrue(p = nil);
+
+  b := [0,1,2,42,3,4,5,6,7];
+  p := TIntSeqUtil.MakePatiencePatch(a, b);
+  AssertTrue(Length(p) = TIntSeqUtil.LcsDistanceWM(a, b));
+  for e in p do
+    if e.Operation = seoDelete then
+      AssertTrue(e.Value = a[e.SourceIndex])
+    else
+      AssertTrue(e.Value = b[e.TargetIndex]);
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+
+  b := nil;
+  p := TIntSeqUtil.MakePatiencePatch(a, b);
   AssertTrue(Length(p) = Length(a));
   for e in p do begin
     AssertTrue(e.Operation = seoDelete);
