@@ -3133,12 +3133,10 @@ class function TGSeqUtil.MakePatiencePatch(const aSource, aTarget: array of T): 
 var
   EditList: TEditList;
 
-  function TrivialCase(pSrc, pTrg: PItem; aSrcLen, aTrgLen: SizeInt): Boolean;
+  procedure TrivialCase(pSrc, pTrg: PItem; aSrcLen, aTrgLen: SizeInt);
   var
     SrcOfs, TrgOfs, I, J: SizeInt;
   begin
-    Result := (aSrcLen = 0) or (aSrcLen = 1) or (aTrgLen = 0) or (aTrgLen = 1);
-    if not Result then exit;
     SrcOfs := pSrc - PItem(@aSource[0]);
     TrgOfs := pTrg - PItem(@aTarget[0]);
     case aSrcLen of
@@ -3239,7 +3237,7 @@ var
   var
     InfoMap: TInfoMap;
     UniqList: TInfoList;
-    IndexMap: TSizeIntArray = nil;
+    AscOrderMap: TSizeIntArray = nil;
     p: PItemInfo;
     I, SrcPos, TrgPos: SizeInt;
     HaveCommon: Boolean;
@@ -3260,7 +3258,12 @@ var
         Dec(aSrcLen); Dec(aTrgLen);
       end;
 
-    if TrivialCase(pSrc, pTrg, aSrcLen, aTrgLen) then exit;
+    if (aSrcLen = 0) and (aTrgLen = 0) then exit;
+
+    if (aSrcLen < 2) or (aTrgLen < 2) then begin
+      TrivialCase(pSrc, pTrg, aSrcLen, aTrgLen);
+      exit;
+    end;
 
     Initialize(InfoMap);
 
@@ -3299,13 +3302,13 @@ var
     end;
 
     if UniqList.Count > 1 then
-      IndexMap := TInfoHelper.LisI(UniqList.UncMutable[0][0..Pred(UniqList.Count)]);
+      AscOrderMap := TInfoHelper.LisI(UniqList.UncMutable[0][0..Pred(UniqList.Count)]);
 
-    if IndexMap = nil then IndexMap := [0];
+    if AscOrderMap = nil then AscOrderMap := [0];
 
     SrcPos := 0;
     TrgPos := 0;
-    for I in IndexMap do begin
+    for I in AscOrderMap do begin
       p := UniqList.UncMutable[I];
       if (p^.SourceLine <> SrcPos) or (p^.TargetLine <> TrgPos) then
         DoDiff(pSrc + SrcPos, pTrg + TrgPos, p^.SourceLine - SrcPos, p^.TargetLine - TrgPos);
