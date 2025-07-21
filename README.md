@@ -105,6 +105,9 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
     + reducing the LCS problem to LIS
     + Kumar-Rangan algorithm for LCS
     + Myers O(ND) algorithm for LCS
+  - difference between two sequences
+    + LCS based
+    + Patience Diff
   - Levenshtein distance:
     + simple DP algorithm
     + modified Berghel-Roach algorithm
