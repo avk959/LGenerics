@@ -3313,13 +3313,13 @@ var
     TrgPos := 0;
     for I in AscOrderMap do begin
       p := UniqList.UncMutable[I];
-      if (p^.SourceLine <> SrcPos) or (p^.TargetLine <> TrgPos) then
+      if (SrcPos < p^.SourceLine) or (TrgPos < p^.TargetLine) then
         DoDiff(pSrc + SrcPos, pTrg + TrgPos, p^.SourceLine - SrcPos, p^.TargetLine - TrgPos);
       SrcPos := Succ(p^.SourceLine);
       TrgPos := Succ(p^.TargetLine);
     end;
 
-    if (aSrcLen <> SrcPos) or (aTrgLen <> TrgPos) then
+    if (SrcPos < aSrcLen) or (TrgPos < aTrgLen) then
       DoDiff(pSrc + SrcPos, pTrg + TrgPos, aSrcLen - SrcPos, aTrgLen - TrgPos);
   end;
 
