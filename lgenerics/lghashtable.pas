@@ -39,7 +39,7 @@ type
   generic TGAbstractHashTable<TKey, TEntry> = class abstract
   strict protected
   const
-    MIN_LOAD_FACTOR  = 0.25;
+    MIN_LOAD_FACTOR = 0.25;
 
   type
     TAbstractHashTable = specialize TGAbstractHashTable<TKey, TEntry>;
@@ -114,7 +114,7 @@ type
     specialize TGAbstractHashTable<TKey, TEntry>)
   strict protected
   const
-    USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
+    USED_FLAG: SizeInt = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
 
   type
     TNode = record
