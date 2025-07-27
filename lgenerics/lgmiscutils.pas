@@ -52,7 +52,7 @@ type
   protected
   type
     //to supress unnecessary refcounting
-    TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
+    TFake      = array[0..Pred(SizeOf(T))] of Byte;
     TFakeArray = array of TFake;
 
     TTimSortBase = object
