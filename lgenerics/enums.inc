@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -87,6 +87,17 @@ begin
   FTest := aTest;
 end;
 
+{ TGEnumRegularNotFilter }
+
+function TGEnumRegularNotFilter.MoveNext: Boolean;
+begin
+  repeat
+    if not FEnum.MoveNext then
+      exit(False);
+    Result := not FTest(FEnum.GetCurrent);
+  until Result;
+end;
+
 { TGEnumDelegatedFilter }
 
 constructor TGEnumDelegatedFilter.Create(e: TSpecEnumerator; aTest: TOnTest);
@@ -104,6 +115,17 @@ begin
   until Result;
 end;
 
+{ TGEnumDelegatedNotFilter }
+
+function TGEnumDelegatedNotFilter.MoveNext: Boolean;
+begin
+  repeat
+    if not FEnum.MoveNext then
+      exit(False);
+    Result := not FTest(FEnum.GetCurrent);
+  until Result;
+end;
+
 { TGEnumNestedFilter }
 
 constructor TGEnumNestedFilter.Create(e: TSpecEnumerator; aTest: TNestTest);
@@ -118,6 +140,17 @@ begin
     if not FEnum.MoveNext then
       exit(False);
     Result := FTest(FEnum.GetCurrent);
+  until Result;
+end;
+
+{ TGEnumNestedNotFilter }
+
+function TGEnumNestedNotFilter.MoveNext: Boolean;
+begin
+  repeat
+    if not FEnum.MoveNext then
+      exit(False);
+    Result := not FTest(FEnum.GetCurrent);
   until Result;
 end;
 

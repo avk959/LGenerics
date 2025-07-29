@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -67,6 +67,10 @@
     function MoveNext: Boolean; override;
   end;
 
+  generic TGEnumRegularNotFilter<T> = class(specialize TGEnumRegularFilter<T>)
+    function MoveNext: Boolean; override;
+  end;
+
   generic TGEnumDelegatedFilter<T> = class(specialize TGEnumCursor<T>)
   public
   type
@@ -79,6 +83,10 @@
     function MoveNext: Boolean; override;
   end;
 
+  generic TGEnumDelegatedNotFilter<T> = class(specialize TGEnumDelegatedFilter<T>)
+    function MoveNext: Boolean; override;
+  end;
+
   generic TGEnumNestedFilter<T> = class(specialize TGEnumCursor<T>)
   public
   type
@@ -88,6 +96,10 @@
     FTest: TNestTest;
   public
     constructor Create(e: TSpecEnumerator; aTest: TNestTest);
+    function MoveNext: Boolean; override;
+  end;
+
+  generic TGEnumNestedNotFilter<T> = class(specialize TGEnumNestedFilter<T>)
     function MoveNext: Boolean; override;
   end;
 

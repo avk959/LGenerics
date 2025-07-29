@@ -106,6 +106,9 @@ type
     function  Select(aTest: TTest): IEnumerable; inline;
     function  Select(aTest: TOnTest): IEnumerable; inline;
     function  Select(aTest: TNestTest): IEnumerable; inline;
+    function  Skip(aTest: TTest): IEnumerable; inline;
+    function  Skip(aTest: TOnTest): IEnumerable; inline;
+    function  Skip(aTest: TNestTest): IEnumerable; inline;
     function  Any(aTest: TTest): Boolean;
     function  Any(aTest: TOnTest): Boolean;
     function  Any(aTest: TNestTest): Boolean;
@@ -1321,6 +1324,21 @@ end;
 function TGEnumerable.Select(aTest: TNestTest): IEnumerable;
 begin
   Result := specialize TGEnumNestedFilter<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.Skip(aTest: TTest): IEnumerable;
+begin
+  Result := specialize TGEnumRegularNotFilter<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.Skip(aTest: TOnTest): IEnumerable;
+begin
+  Result := specialize TGEnumDelegatedNotFilter<T>.Create(GetEnumerator, aTest);
+end;
+
+function TGEnumerable.Skip(aTest: TNestTest): IEnumerable;
+begin
+  Result := specialize TGEnumNestedNotFilter<T>.Create(GetEnumerator, aTest);
 end;
 
 function TGEnumerable.Any(aTest: TTest): Boolean;
