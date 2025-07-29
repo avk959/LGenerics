@@ -140,6 +140,18 @@ type
     procedure Enum21_SortedNested;
     procedure Enum21_SortedNestedDesc;
 
+    procedure EmptyEnum_SkipRegular;
+    procedure Enum21_SkipRegular;
+    procedure Enum11_SkipRegular;
+
+    procedure EmptyEnum_SkipDelegated;
+    procedure Enum21_SkipDelegated;
+    procedure Enum11_SkipDelegated;
+
+    procedure EmptyEnum_SkipNested;
+    procedure Enum21_SkipNested;
+    procedure Enum11_SkipNested;
+
     procedure EmptyEnum_SelectRegular;
     procedure Enum21_SelectRegular;
     procedure Enum11_SelectRegular;
@@ -944,6 +956,96 @@ var
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateRandomShuffle(IntStrictInc21));
   AssertTrue(TIntHelper.Same(e.Sorted(@IntComp).Reverse.ToArray, IntStrictDec21));
+end;
+
+procedure TEnumerableTest.EmptyEnum_SkipRegular;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(nil);
+  AssertTrue(e.Skip(@IsEven).None);
+end;
+
+procedure TEnumerableTest.Enum21_SkipRegular;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  AssertTrue(e.Skip(@IsEven).Total = 11);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  AssertTrue(TIntHelper.Same(e.Skip(@IsEven).ToArray, IntOddInc11));
+end;
+
+procedure TEnumerableTest.Enum11_SkipRegular;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntOddInc11));
+  AssertTrue(e.Skip(@IsEven).Total = Length(IntOddInc11));
+end;
+
+procedure TEnumerableTest.EmptyEnum_SkipDelegated;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(nil);
+  AssertTrue(e.Skip(@GetIsEven).None);
+end;
+
+procedure TEnumerableTest.Enum21_SkipDelegated;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  AssertTrue(e.Skip(@GetIsEven).Total = 11);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  AssertTrue(TIntHelper.Same(e.Skip(@GetIsEven).ToArray, IntOddInc11));
+end;
+
+procedure TEnumerableTest.Enum11_SkipDelegated;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntOddInc11));
+  AssertTrue(e.Skip(@GetIsEven).Total = Length(IntOddInc11));
+end;
+
+procedure TEnumerableTest.EmptyEnum_SkipNested;
+  function IsEven(const aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(nil);
+  AssertTrue(e.Skip(@IsEven).None);
+end;
+
+procedure TEnumerableTest.Enum21_SkipNested;
+  function IsEven(const aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  AssertTrue(e.Skip(@IsEven).Total = 11);
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntStrictInc21));
+  AssertTrue(TIntHelper.Same(e.Skip(@IsEven).ToArray, IntOddInc11));
+end;
+
+procedure TEnumerableTest.Enum11_SkipNested;
+  function IsEven(const aValue: Integer): Boolean;
+  begin
+    Result := not Odd(aValue);
+  end;
+var
+  e: IIntEnumerable;
+begin
+  e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntOddInc11));
+  AssertTrue(e.Skip(@IsEven).Total = Length(IntOddInc11));
 end;
 
 procedure TEnumerableTest.EmptyEnum_SelectRegular;
