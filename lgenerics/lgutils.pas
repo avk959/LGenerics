@@ -531,7 +531,7 @@ type
     function  Max(c: TGLessCompare<T>): TGOptional<T>; overload;
     function  Max(c: TGOnLessCompare<T>): TGOptional<T>; overload;
     function  Max(c: TGNestLessCompare<T>): TGOptional<T>; overload;
-    function  Skip(aCount: SizeInt): IGEnumerable<T>;
+    function  Skip(aCount: SizeInt): IGEnumerable<T>; overload;
     function  SkipWhile(p: TGTest<T>): IGEnumerable<T>; overload;
     function  SkipWhile(p: TGOnTest<T>): IGEnumerable<T>; overload;
     function  SkipWhile(p: TGNestTest<T>): IGEnumerable<T>; overload;
@@ -543,6 +543,9 @@ type
     function  Sorted(c: TGOnLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Sorted(c: TGNestLessCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Sorted(aProc: TGSortProc<T>; o: TSortOrder = soAsc): IGEnumerable<T>; overload;
+    function  Skip(p: TGTest<T>): IGEnumerable<T>; overload;
+    function  Skip(p: TGOnTest<T>): IGEnumerable<T>; overload;
+    function  Skip(p: TGNestTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGOnTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGNestTest<T>): IGEnumerable<T>; overload;
