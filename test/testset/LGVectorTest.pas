@@ -333,6 +333,7 @@ type
     procedure Bsf;
     procedure Bsr;
     procedure Lob;
+    procedure Hob;
     procedure ToggleBit;
     procedure CallByValue;
     procedure Intersecting;
@@ -350,6 +351,7 @@ type
     procedure DisjunctJoin;
     procedure TestEquals;
     procedure TestNextBits;
+    procedure TestPrevBits;
   end;
 
 implementation
@@ -3279,7 +3281,6 @@ begin
     begin
       v[I] := True;
       AssertTrue(v.Bsr = I);
-      v[I] := False;
     end;
 end;
 
@@ -3301,6 +3302,25 @@ begin
     end;
   v[120] := False;
   AssertTrue(v.Lob = 120);
+end;
+
+procedure TBoolVectorTest.Hob;
+var
+  v: TBoolVector;
+  I: Integer;
+begin
+  AssertTrue(v.Hob = -1);
+  v.InitRange(128);
+  AssertTrue(v.Hob = -1);
+  v[25] := False;
+  v[75] := False;
+  AssertTrue(v.Hob = 75);
+  v.SetBits;
+  for I := 0 to Pred(v.Capacity) do
+    begin
+      v[I] := False;
+      AssertTrue(v.Hob = I);
+    end;
 end;
 
 procedure TBoolVectorTest.ToggleBit;
@@ -3749,6 +3769,38 @@ begin
       AssertTrue(I1 = J1);
       if I1 <> -1 then
         AssertTrue(I1 mod Step = 0);
+      I := I1;
+      J := J1;
+    end;
+end;
+
+procedure TBoolVectorTest.TestPrevBits;
+var
+  v1, v2: TBoolVector;
+  I, I1, J, J1: Integer;
+const
+  TestSize = 256;
+  Step = 7;
+begin
+  {%H-}v1.EnsureCapacity(TestSize);
+  {%H-}v2.InitRange(TestSize);
+  I := TestSize - 1;
+  while I >= 0 do
+    begin
+      v1[I] := True;
+      v2[I] := False;
+      Dec(I, Step);
+    end;
+  I := v1.Bsr;
+  J := v2.Hob;
+  AssertTrue((I = TestSize - 1) and (J = TestSize - 1));
+  while I <> -1 do
+    begin
+      I1 := v1.PrevSetBit(I);
+      J1 := v2.PrevOpenBit(J);
+      AssertTrue(I1 = J1);
+      if I1 <> -1 then
+        AssertTrue(I - I1 = Step);
       I := I1;
       J := J1;
     end;
