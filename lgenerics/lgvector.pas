@@ -464,12 +464,18 @@ type
     function  Bsf: SizeInt;
   { returns the index of the next set bit after aFromIdx, if any, otherwise returns -1 }
     function  NextSetBit(aFromIdx: SizeInt): SizeInt;
+  { returns the index of the previous set bit before aFromIdx, if any, otherwise returns -1 }
+    function  PrevSetBit(aFromIdx: SizeInt): SizeInt;
   { returns the highest index of the set bit, -1, if no bit is set }
     function  Bsr: SizeInt;
   { returns the lowest index of the open bit, -1, if all bits are set }
     function  Lob: SizeInt;
+  { returns the highest index of the open bit, -1, if all bits are set }
+    function  Hob: SizeInt;
   { returns the index of the next open bit after aFromIdx, if any, otherwise returns -1 }
     function  NextOpenBit(aFromIdx: SizeInt): SizeInt;
+  { returns the index of the previous open bit before aFromIdx, if any, otherwise returns -1 }
+    function  PrevOpenBit(aFromIdx: SizeInt): SizeInt;
   { changes the bit[aIndex] value to True if it was False and to False if it was True;
     returns old value; checks aIndex range }
     function  ToggleBit(aIndex: SizeInt): Boolean;
@@ -2993,12 +2999,7 @@ var
 begin
   for I := 0 to System.High(FBits) do
     if FBits[I] <> 0 then
-      exit(
-        I shl INT_SIZE_LOG +
-        {$IF DEFINED(CPU64)}SizeInt(BsfQWord(FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(FBits[I]))
-        {$ELSE}SizeInt(BsfWord(FBits[I])){$ENDIF}
-      );
+      exit(I shl INT_SIZE_LOG + BsfSizeUInt(FBits[I]));
   Result := NULL_INDEX;
 end;
 
@@ -3012,21 +3013,29 @@ begin
   BitIdx := aFromIdx and INT_SIZE_MASK;
   Limb := FBits[LimbIdx] and not(High(SizeUInt) shr (BitSizeOf(SizeUInt) - Succ(BitIdx)));
   if Limb <> 0 then
-    exit(
-      LimbIdx shl INT_SIZE_LOG +
-      {$IF DEFINED(CPU64)}SizeInt(BsfQWord(Limb))
-      {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(Limb))
-      {$ELSE}SizeInt(BsfWord(Limb)){$ENDIF}
-    )
+    exit(LimbIdx shl INT_SIZE_LOG + BsfSizeUInt(Limb))
   else
     for I := LimbIdx + 1 to System.High(FBits) do
       if FBits[I] <> 0 then
-        exit(
-          I shl INT_SIZE_LOG +
-          {$IF DEFINED(CPU64)}SizeInt(BsfQWord(FBits[I]))
-          {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(FBits[I]))
-          {$ELSE}SizeInt(BsfWord(FBits[I])){$ENDIF}
-        );
+        exit(I shl INT_SIZE_LOG + BsfSizeUInt(FBits[I]));
+  Result := NULL_INDEX;
+end;
+
+function TBoolVector.PrevSetBit(aFromIdx: SizeInt): SizeInt;
+var
+  LimbIdx, BitIdx, I: SizeInt;
+  Limb: SizeUInt;
+begin
+  if SizeUInt(aFromIdx) >= SizeUInt(Capacity) then exit(NULL_INDEX);
+  LimbIdx := aFromIdx shr INT_SIZE_LOG;
+  BitIdx := aFromIdx and INT_SIZE_MASK;
+  Limb := FBits[LimbIdx] and not(High(SizeUInt) shl BitIdx);
+  if Limb <> 0 then
+    exit(LimbIdx shl INT_SIZE_LOG + BsrSizeUInt(Limb))
+  else
+    for I := LimbIdx - 1 downto 0 do
+      if FBits[I] <> 0 then
+        exit(I shl INT_SIZE_LOG + BsrSizeUInt(FBits[I]));
   Result := NULL_INDEX;
 end;
 
@@ -3036,12 +3045,7 @@ var
 begin
   for I := System.High(FBits) downto 0 do
     if FBits[I] <> 0 then
-      exit(
-        I shl INT_SIZE_LOG +
-        {$IF DEFINED(CPU64)}SizeInt(BsrQWord(FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}SizeInt(BsrDWord(FBits[I]))
-        {$ELSE}SizeInt(BsrWord(FBits[I])){$ENDIF}
-      );
+      exit(I shl INT_SIZE_LOG + BsrSizeUInt(FBits[I]));
   Result := NULL_INDEX;
 end;
 
@@ -3051,12 +3055,17 @@ var
 begin
   for I := 0 to System.High(FBits) do
     if FBits[I] <> High(SizeUInt) then
-      exit(
-        I shl INT_SIZE_LOG +
-        {$IF DEFINED(CPU64)}SizeInt(BsfQWord(not FBits[I]))
-        {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(not FBits[I]))
-        {$ELSE}SizeInt(BsfWord(not FBits[I])){$ENDIF}
-      );
+      exit(I shl INT_SIZE_LOG + BsfSizeUInt(not FBits[I]));
+  Result := NULL_INDEX;
+end;
+
+function TBoolVector.Hob: SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := System.High(FBits) downto 0 do
+    if FBits[I] <> High(SizeUInt) then
+      exit(I shl INT_SIZE_LOG + BsrSizeUInt(not FBits[I]));
   Result := NULL_INDEX;
 end;
 
@@ -3070,21 +3079,29 @@ begin
   BitIdx := aFromIdx and INT_SIZE_MASK;
   Limb := not(FBits[LimbIdx] or High(SizeUInt) shr (BitSizeOf(SizeUInt) - Succ(BitIdx)));
   if Limb <> 0 then
-    exit(
-      LimbIdx shl INT_SIZE_LOG +
-      {$IF DEFINED(CPU64)}SizeInt(BsfQWord(Limb))
-      {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(Limb))
-      {$ELSE}SizeInt(BsfWord(Limb)){$ENDIF}
-    )
+    exit(LimbIdx shl INT_SIZE_LOG + BsfSizeUInt(Limb))
   else
     for I := LimbIdx + 1 to System.High(FBits) do
       if FBits[I] <> High(SizeUInt) then
-        exit(
-          I shl INT_SIZE_LOG +
-          {$IF DEFINED(CPU64)}SizeInt(BsfQWord(not FBits[I]))
-          {$ELSEIF DEFINED(CPU32)}SizeInt(BsfDWord(not FBits[I]))
-          {$ELSE}SizeInt(BsfWord(not FBits[I])){$ENDIF}
-        );
+        exit(I shl INT_SIZE_LOG + BsfSizeUInt(not FBits[I]));
+  Result := NULL_INDEX;
+end;
+
+function TBoolVector.PrevOpenBit(aFromIdx: SizeInt): SizeInt;
+var
+  LimbIdx, BitIdx, I: SizeInt;
+  Limb: SizeUInt;
+begin
+  if SizeUInt(aFromIdx) >= SizeUInt(Capacity) then exit(NULL_INDEX);
+  LimbIdx := aFromIdx shr INT_SIZE_LOG;
+  BitIdx := aFromIdx and INT_SIZE_MASK;
+  Limb := not(FBits[LimbIdx] or High(SizeUInt) shl BitIdx);
+  if Limb <> 0 then
+    exit(LimbIdx shl INT_SIZE_LOG + BsrSizeUInt(Limb))
+  else
+    for I := LimbIdx - 1 downto 0 do
+      if FBits[I] <> High(SizeUInt) then
+        exit(I shl INT_SIZE_LOG + BsrSizeUInt(not FBits[I]));
   Result := NULL_INDEX;
 end;
 
@@ -3101,14 +3118,10 @@ begin
 end;
 
 function TBoolVector.UncToggleBit(aIndex: SizeInt): Boolean;
-var
-  LimbIdx: SizeInt;
-  Mask: SizeUInt;
 begin
-  LimbIdx := aIndex shr INT_SIZE_LOG;
-  Mask := SizeUInt(1) shl (aIndex and INT_SIZE_MASK);
-  Result := FBits[LimbIdx] and Mask <> 0;
-  FBits[LimbIdx] := FBits[LimbIdx] xor Mask;
+  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+  FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] xor (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
 function TBoolVector.Intersecting(constref aValue: TBoolVector): Boolean;
