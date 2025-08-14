@@ -3917,9 +3917,21 @@ begin
 {$ENDIF}
 end;
 
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+function GCard<TSet>(const s: TSet): Integer;
+var
+  I: Integer;
+  p: PByte;
+begin
+  if System.GetTypeKind(s) <> System.tkSet then exit(-1);
+  p := @s;
+  Result := 0;
+  for I := 0 to Pred(SizeOf(s)) do
+    Inc(Result, PopCnt(p[I]));
+end;
+{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
 {$PUSH}{$MACRO ON}
-{$IF FPC_FULLVERSION>30300}{$WARN 6060 OFF : Case statement does not handle all possible cases}{$ENDIF}
-function GCard<TSet>(const s: TSet): Integer; inline;
+function GCard<TSet>(const s: TSet): Integer;
 {$DEFINE CardCaseMacro :=
   case SizeOf(s) of
     OfsMacro+1: Inc(Result, PopCnt(p[OfsMacro]));
@@ -3978,10 +3990,12 @@ begin
         {$DEFINE OfsMacro := 24}
         CardCaseMacro;
       end;
-    4: Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^) + PopCnt(PQWord(p+16)^) + PopCnt(PQWord(p+24)^);
+  else // 4
+    Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^) + PopCnt(PQWord(p+16)^) + PopCnt(PQWord(p+24)^);
   end;
 end;
 {$UNDEF CardCaseMacro}{$UNDEF OfsMacro}{$POP}
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 function MinOf3(a, b, c: SizeInt): SizeInt;
 begin
