@@ -3930,71 +3930,51 @@ begin
     Inc(Result, PopCnt(p[I]));
 end;
 {$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-{$PUSH}{$MACRO ON}
 function GCard<TSet>(const s: TSet): Integer;
-{$DEFINE CardCaseMacro :=
-  case SizeOf(s) of
-    OfsMacro+1: Inc(Result, PopCnt(p[OfsMacro]));
-    OfsMacro+2: Inc(Result, PopCnt(PWord(p+OfsMacro)^));
-    OfsMacro+3:
-      begin
-        Inc(Result, PopCnt(PWord(p+OfsMacro)^));
-        Inc(Result, PopCnt(p[OfsMacro+2]));
-      end;
-    OfsMacro+4: Inc(Result, PopCnt(PDWord(p+OfsMacro)^));
-    OfsMacro+5:
-      begin
-        Inc(Result, PopCnt(PDWord(p+OfsMacro)^));
-        Inc(Result, PopCnt(p[OfsMacro+4]));
-      end;
-    OfsMacro+6:
-      begin
-        Inc(Result, PopCnt(PDWord(p+OfsMacro)^));
-        Inc(Result, PopCnt(PWord(p+OfsMacro+4)^));
-      end;
-    OfsMacro+7:
-      begin
-        Inc(Result, PopCnt(PDWord(p+OfsMacro)^));
-        Inc(Result, PopCnt(PWord(p+OfsMacro+4)^));
-        Inc(Result, PopCnt(p[OfsMacro+6]));
-      end;
-  end
-}
+const
+  SIZE   = SizeOf(TSet);
+  OFFSET = (SIZE div 8)*8;
 var
   p: PByte;
 begin
-  if System.GetTypeKind(s) <> System.tkSet then exit(-1);
+  if System.GetTypeKind(TSet) <> System.tkSet then exit(-1);
   p := @s;
-  case SizeOf(s) div 8 of
-    0:
-      begin
-        Result := 0;
-        {$DEFINE OfsMacro := 0}
-        CardCaseMacro;
-      end;
-    1:
-      begin
-        Result := PopCnt(PQWord(p)^);
-        {$DEFINE OfsMacro := 8}
-        CardCaseMacro;
-      end;
-    2:
-      begin
-        Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^);
-        {$DEFINE OfsMacro := 16}
-        CardCaseMacro;
-      end;
-    3:
-      begin
-        Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^) + PopCnt(PQWord(p+16)^);
-        {$DEFINE OfsMacro := 24}
-        CardCaseMacro;
-      end;
+  case SIZE div 8 of
+    0: Result := 0;
+    1: Result := PopCnt(PQWord(p)^);
+    2: Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^);
+    3: Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^) + PopCnt(PQWord(p+16)^);
   else // 4
     Result := PopCnt(PQWord(p)^) + PopCnt(PQWord(p+8)^) + PopCnt(PQWord(p+16)^) + PopCnt(PQWord(p+24)^);
   end;
+  case SIZE mod 8 of
+    0: ;
+    1: Inc(Result, PopCnt(p[OFFSET]));
+    2: Inc(Result, PopCnt(PWord(p+OFFSET)^));
+    3:
+      begin
+        Inc(Result, PopCnt(PWord(p+OFFSET)^));
+        Inc(Result, PopCnt(p[OFFSET+2]));
+      end;
+    4: Inc(Result, PopCnt(PDWord(p+OFFSET)^));
+    5:
+      begin
+        Inc(Result, PopCnt(PDWord(p+OFFSET)^));
+        Inc(Result, PopCnt(p[OFFSET+4]));
+      end;
+    6:
+      begin
+        Inc(Result, PopCnt(PDWord(p+OFFSET)^));
+        Inc(Result, PopCnt(PWord(p+OFFSET+4)^));
+      end;
+    7:
+      begin
+        Inc(Result, PopCnt(PDWord(p+OFFSET)^));
+        Inc(Result, PopCnt(PWord(p+OFFSET+4)^));
+        Inc(Result, PopCnt(p[OFFSET+6]));
+      end;
+  end;
 end;
-{$UNDEF CardCaseMacro}{$UNDEF OfsMacro}{$POP}
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 
 function MinOf3(a, b, c: SizeInt): SizeInt;
