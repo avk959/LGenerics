@@ -1168,6 +1168,11 @@ type
 
   procedure TurnSetElem<TSet, TElem>(var aSet: TSet; aElem: TElem; aOn: Boolean);{$IF FPC_FULLVERSION>=30202}inline;{$ENDIF}
 
+  function PopCntQ(q: QWord): Integer; inline;
+  function PopCntD(d: DWord): Integer; inline;
+  function PopCntW(w: Word): Integer; inline;
+  function PopCntB(b: Byte): Integer; inline;
+
 { if TSet is a set type, returns the cardinality of set s, otherwise returns -1 }
   function GCard<TSet>(const s: TSet): Integer; inline;
 
@@ -1242,6 +1247,17 @@ const
 {$PUSH}{$J-}
   ENCODING_NAMES: array[TBomKind] of string = (
     '','UTF-8', 'UTF-16LE', 'UTF-16BE', 'UTF-32LE', 'UTF-32BE');
+
+  BYTE_POP_CNTS: array[Byte] of ShortInt = (
+    0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
+    1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+    1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+    2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+    1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+    2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+    2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+    3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8
+  );
 {$POP}
 
   function DetectBom(aBuffer: PByte; aBufSize: SizeInt): TBomKind;
@@ -3917,20 +3933,54 @@ begin
 {$ENDIF}
 end;
 
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+function PopCntQ(q: QWord): Integer;
+const
+  c1 = QWord($5555555555555555);
+  c2 = QWord($3333333333333333);
+  c3 = QWord($0f0f0f0f0f0f0f0f);
+  c4 = QWord($0101010101010101);
+begin
+  q := q - (q shr 1) and c1;
+  q := q and c2 + (q shr 2) and c2;
+  Result := (((q + q shr 4) and c3)*c4) shr 56;
+end;
+
+function PopCntD(d: DWord): Integer;
+const
+  c1 = DWord($55555555);
+  c2 = DWord($33333333);
+  c3 = DWord($0f0f0f0f);
+  c4 = DWord($01010101);
+begin
+  d := d - (d shr 1) and c1;
+  d := d and c2 + (d shr 2) and c2;
+  Result := ((((d + d shr 4) and c3)*c4) shr 24) and $3f;
+end;
+
+function PopCntW(w: Word): Integer;
+begin
+  Result := BYTE_POP_CNTS[Byte(w)] + BYTE_POP_CNTS[Byte(w shr 8)];
+end;
+
+function PopCntB(b: Byte): Integer; inline;
+begin
+  Result := BYTE_POP_CNTS[b];
+end;
+
 function GCard<TSet>(const s: TSet): Integer;
+{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
 var
-  I: Integer;
   p: PByte;
+  I: Integer;
 begin
   if System.GetTypeKind(s) <> System.tkSet then exit(-1);
   p := @s;
   Result := 0;
-  for I := 0 to Pred(SizeOf(s)) do
-    Inc(Result, PopCnt(p[I]));
-end;
+  for I := 0 to Pred(SizeOf(TSet)) do
+    Inc(Result, BYTE_POP_CNTS[p[I]]);
 {$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-function GCard<TSet>(const s: TSet): Integer;
+{$IFDEF CPU64}
+{$IF DEFINED(CPUx86_64) AND DEFINED(CPUX86_HAS_POPCNT)}
 const
   SIZE   = SizeOf(TSet);
   OFFSET = (SIZE div 8)*8;
@@ -3949,33 +3999,64 @@ begin
   end;
   case SIZE mod 8 of
     0: ;
-    1: Inc(Result, PopCnt(p[OFFSET]));
-    2: Inc(Result, PopCnt(PWord(p+OFFSET)^));
-    3:
-      begin
-        Inc(Result, PopCnt(PWord(p+OFFSET)^));
-        Inc(Result, PopCnt(p[OFFSET+2]));
-      end;
+    1: Inc(Result, PopCntB(p[OFFSET]));
+    2: Inc(Result, PopCntW(PWord(p+OFFSET)^));
+    3: Inc(Result, PopCnt(DWord(PWord(p+OFFSET)^) shl 8 or p[OFFSET+2]));
     4: Inc(Result, PopCnt(PDWord(p+OFFSET)^));
-    5:
-      begin
-        Inc(Result, PopCnt(PDWord(p+OFFSET)^));
-        Inc(Result, PopCnt(p[OFFSET+4]));
-      end;
-    6:
-      begin
-        Inc(Result, PopCnt(PDWord(p+OFFSET)^));
-        Inc(Result, PopCnt(PWord(p+OFFSET+4)^));
-      end;
-    7:
-      begin
-        Inc(Result, PopCnt(PDWord(p+OFFSET)^));
-        Inc(Result, PopCnt(PWord(p+OFFSET+4)^));
-        Inc(Result, PopCnt(p[OFFSET+6]));
-      end;
+    5: Inc(Result, PopCnt(QWord(PDWord(p+OFFSET)^) shl 8 or p[OFFSET+4]));
+    6: Inc(Result, PopCnt(QWord(PDWord(p+OFFSET)^) shl 16 or PWord(p+OFFSET+4)^));
+    7: Inc(Result, PopCnt(QWord(PDWord(p+OFFSET)^) shl 24 or PWord(p+OFFSET+4)^ shl 8 or p[OFFSET+6]));
   end;
-end;
+{$ELSE  DEFINED(CPUx86_64) AND DEFINED(CPUX86_HAS_POPCNT)}
+const
+  SIZE   = SizeOf(TSet);
+  OFFSET = (SIZE div 8)*8;
+var
+  p: PByte;
+begin
+  if System.GetTypeKind(TSet) <> System.tkSet then exit(-1);
+  p := @s;
+  case SIZE div 8 of
+    0: Result := 0;
+    1: Result := PopCntQ(PQWord(p)^);
+    2: Result := PopCntQ(PQWord(p)^) + PopCntQ(PQWord(p+8)^);
+    3: Result := PopCntQ(PQWord(p)^) + PopCntQ(PQWord(p+8)^) + PopCntQ(PQWord(p+16)^);
+  else // 4
+    Result := PopCntQ(PQWord(p)^) + PopCntQ(PQWord(p+8)^) + PopCntQ(PQWord(p+16)^) + PopCntQ(PQWord(p+24)^);
+  end;
+  case SIZE mod 8 of
+    0: ;
+    1: Inc(Result, PopCntB(p[OFFSET]));
+    2: Inc(Result, PopCntW(PWord(p+OFFSET)^));
+    3: Inc(Result, PopCntD(DWord(PWord(p+OFFSET)^) shl 8 or p[OFFSET+2]));
+    4: Inc(Result, PopCntD(PDWord(p+OFFSET)^));
+    5: Inc(Result, PopCntQ(QWord(PDWord(p+OFFSET)^) shl 8 or p[OFFSET+4]));
+    6: Inc(Result, PopCntQ(QWord(PDWord(p+OFFSET)^) shl 16 or PWord(p+OFFSET+4)^));
+    7: Inc(Result, PopCntQ(QWord(PDWord(p+OFFSET)^) shl 24 or PWord(p+OFFSET+4)^ shl 8 or p[OFFSET+6]));
+  end;
+{$ENDIF  DEFINED(CPUx86_64) AND DEFINED(CPUX86_HAS_POPCNT)}
+{$ELSE CPU64}
+const
+  SIZE   = SizeOf(TSet);
+  OFFSET = (SIZE div 4)*4;
+var
+  p: PByte;
+  I: Integer;
+begin
+  if System.GetTypeKind(TSet) <> System.tkSet then exit(-1);
+  p := @s;
+  Result := 0;
+  for I := 0 to Pred(SIZE div 4) do
+    Inc(Result, PopCntD(PDWord(p+I*4)^));
+  case SIZE mod 4 of
+    0: ;
+    1: Inc(Result, PopCntB(p[OFFSET]));
+    2: Inc(Result, PopCntW(PWord(p+OFFSET)^));
+    3: Inc(Result, PopCntD(DWord(PWord(p+OFFSET)^) shl 8 or p[OFFSET+2]));
+  end;
+{$ENDIF CPU64}
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+end;
 
 function MinOf3(a, b, c: SizeInt): SizeInt;
 begin
