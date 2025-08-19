@@ -3933,6 +3933,7 @@ begin
 {$ENDIF}
 end;
 
+{$PUSH}{$Q-}{$R-}
 function PopCntQ(q: QWord): Integer;
 const
   c1 = QWord($5555555555555555);
@@ -4057,6 +4058,7 @@ begin
 {$ENDIF CPU64}
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
+{$POP}
 
 function MinOf3(a, b, c: SizeInt): SizeInt;
 begin
