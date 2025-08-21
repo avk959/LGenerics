@@ -3147,22 +3147,22 @@ begin
   Result := 0;
   while I <= Len - 4 do
     begin
-      Result += SizeInt(PopCnt(FBits[I  ] and aValue.FBits[I  ])) +
-                SizeInt(PopCnt(FBits[I+1] and aValue.FBits[I+1])) +
-                SizeInt(PopCnt(FBits[I+2] and aValue.FBits[I+2])) +
-                SizeInt(PopCnt(FBits[I+3] and aValue.FBits[I+3]));
+      Result += LgUtils.PopCntSui(FBits[I  ] and aValue.FBits[I  ]) +
+                LgUtils.PopCntSui(FBits[I+1] and aValue.FBits[I+1]) +
+                LgUtils.PopCntSui(FBits[I+2] and aValue.FBits[I+2]) +
+                LgUtils.PopCntSui(FBits[I+3] and aValue.FBits[I+3]);
       Inc(I, 4);
     end;
   case Len - I of
     1:
-      Result += SizeInt(PopCnt(FBits[I] and aValue.FBits[I]));
+      Result += LgUtils.PopCntSui(FBits[I] and aValue.FBits[I]);
     2:
-      Result += SizeInt(PopCnt(FBits[I  ] and aValue.FBits[I  ])) +
-                SizeInt(PopCnt(FBits[I+1] and aValue.FBits[I+1]));
+      Result += LgUtils.PopCntSui(FBits[I  ] and aValue.FBits[I  ]) +
+                LgUtils.PopCntSui(FBits[I+1] and aValue.FBits[I+1]);
     3:
-      Result += SizeInt(PopCnt(FBits[I  ] and aValue.FBits[I  ])) +
-                SizeInt(PopCnt(FBits[I+1] and aValue.FBits[I+1])) +
-                SizeInt(PopCnt(FBits[I+2] and aValue.FBits[I+2]));
+      Result += LgUtils.PopCntSui(FBits[I  ] and aValue.FBits[I  ]) +
+                LgUtils.PopCntSui(FBits[I+1] and aValue.FBits[I+1]) +
+                LgUtils.PopCntSui(FBits[I+2] and aValue.FBits[I+2]);
   else
   end;
 end;
@@ -3193,35 +3193,35 @@ begin
   Result := 0;
   while I <= Len - 4 do
     begin
-      Result += SizeInt(PopCnt(not FBits[I  ] and aValue.FBits[I  ])) +
-                SizeInt(PopCnt(not FBits[I+1] and aValue.FBits[I+1])) +
-                SizeInt(PopCnt(not FBits[I+2] and aValue.FBits[I+2])) +
-                SizeInt(PopCnt(not FBits[I+3] and aValue.FBits[I+3]));
+      Result += LgUtils.PopCntSui(not FBits[I  ] and aValue.FBits[I  ]) +
+                LgUtils.PopCntSui(not FBits[I+1] and aValue.FBits[I+1]) +
+                LgUtils.PopCntSui(not FBits[I+2] and aValue.FBits[I+2]) +
+                LgUtils.PopCntSui(not FBits[I+3] and aValue.FBits[I+3]);
       Inc(I, 4);
     end;
   case Len - I of
     1:
       begin
-        Result += SizeInt(PopCnt(not FBits[I] and aValue.FBits[I]));
+        Result += LgUtils.PopCntSui(not FBits[I] and aValue.FBits[I]);
         I += 1;
       end;
     2:
       begin
-        Result += SizeInt(PopCnt(not FBits[I  ] and aValue.FBits[I  ])) +
-                  SizeInt(PopCnt(not FBits[I+1] and aValue.FBits[I+1]));
+        Result += LgUtils.PopCntSui(not FBits[I  ] and aValue.FBits[I  ]) +
+                  LgUtils.PopCntSui(not FBits[I+1] and aValue.FBits[I+1]);
         I += 2;
       end;
     3:
       begin
-        Result += SizeInt(PopCnt(not FBits[I  ] and aValue.FBits[I  ])) +
-                  SizeInt(PopCnt(not FBits[I+1] and aValue.FBits[I+1])) +
-                  SizeInt(PopCnt(not FBits[I+2] and aValue.FBits[I+2]));
+        Result += LgUtils.PopCntSui(not FBits[I  ] and aValue.FBits[I  ]) +
+                  LgUtils.PopCntSui(not FBits[I+1] and aValue.FBits[I+1]) +
+                  LgUtils.PopCntSui(not FBits[I+2] and aValue.FBits[I+2]);
         I += 3;
       end;
   else
   end;
   for I := I to System.High(aValue.FBits) do
-    Result += SizeInt(PopCnt(aValue.FBits[I]));
+    Result += LgUtils.PopCntSui(aValue.FBits[I]);
 end;
 
 procedure TBoolVector.Join(constref aValue: TBoolVector);
@@ -3405,18 +3405,18 @@ begin
   Result := 0;
   while I <= System.Length(FBits) - 4 do
     begin
-      Result += SizeInt(PopCnt(FBits[I  ])) + SizeInt(PopCnt(FBits[I+1])) +
-                SizeInt(PopCnt(FBits[I+2])) + SizeInt(PopCnt(FBits[I+3]));
+      Result += LgUtils.PopCntSui(FBits[I  ]) + LgUtils.PopCntSui(FBits[I+1]) +
+                LgUtils.PopCntSui(FBits[I+2]) + LgUtils.PopCntSui(FBits[I+3]);
       Inc(I, 4);
     end;
   case System.Length(FBits) - I of
     1:
-      Result += SizeInt(PopCnt(FBits[I]));
+      Result += LgUtils.PopCntSui(FBits[I]);
     2:
-      Result += SizeInt(PopCnt(FBits[I])) + SizeInt(PopCnt(FBits[I+1]));
+      Result += LgUtils.PopCntSui(FBits[I]) + LgUtils.PopCntSui(FBits[I+1]);
     3:
-      Result += SizeInt(PopCnt(FBits[I])) + SizeInt(PopCnt(FBits[I+1])) +
-                SizeInt(PopCnt(FBits[I+2]));
+      Result += LgUtils.PopCntSui(FBits[I]) + LgUtils.PopCntSui(FBits[I+1]) +
+                LgUtils.PopCntSui(FBits[I+2]);
   else
   end;
 end;
