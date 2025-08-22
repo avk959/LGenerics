@@ -1174,7 +1174,7 @@ type
   function PopCntD(d: DWord): Integer; inline;
 
 { if TSet is a set type, returns the cardinality of set s, otherwise returns -1 }
-  function GCard<TSet>(const s: TSet): Integer;{$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}inline;{$ENDIF}
+  function GCard<TSet>(const s: TSet): Integer;{$IF SizeOF(SizeUInt)>2}inline;{$ENDIF}
 
   function MinOf3(a, b, c: SizeInt): SizeInt; inline;
   function MaxOf3(a, b, c: SizeInt): SizeInt; inline;
@@ -1486,7 +1486,7 @@ begin
 end;
 
 function PopCntSui(sui: SizeUInt): SizeInt;
-{$IF DEFINED(CPUX64)}
+{$IF DEFINED(CPU64)}
 {$IFDEF CPUX86_HAS_POPCNT}
 begin
   Result := SizeInt(PopCnt(sui));
@@ -1501,7 +1501,7 @@ begin
   sui := sui and c2 + (sui shr 2) and c2;
   Result := SizeInt((((sui + sui shr 4) and c3)*c4) shr 56);
 {$ENDIF CPUX86_HAS_POPCNT}
-{$ELSEIF DEFINED(CPU386)}
+{$ELSEIF DEFINED(CPU32)}
 {$IFDEF CPUX86_HAS_POPCNT}
 begin
   Result := SizeInt(PopCnt(sui));
@@ -1519,7 +1519,7 @@ begin
 {$ELSE}
 begin
   Result := SizeInt(PopCnt(sui));
-{$IFEND  DEFINED(CPU386)}
+{$IFEND  DEFINED(CPU32)}
 end;
 
 {$POP}
@@ -3985,7 +3985,7 @@ begin
 end;
 
 function GCard<TSet>(const s: TSet): Integer;
-{$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+{$IF SizeOf(SizeUInt)<=2}
 var
   p: PByte;
   I: Integer;
@@ -3995,8 +3995,8 @@ begin
   Result := 0;
   for I := 0 to Pred(SizeOf(TSet)) do
     Inc(Result, PopCnt(p[I]));
-{$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
-{$IF DEFINED(CPU64)}
+{$ELSE SizeOf(SizeUInt)<=2}
+{$IFDEF CPU64}
 {$IFDEF CPUX86_HAS_POPCNT}
 const
   SIZE   = SizeOf(TSet);
@@ -4052,7 +4052,7 @@ begin
     7: Inc(Result, PopCntQ(QWord(PDWord(p+OFFSET)^) shl 24 or PWord(p+OFFSET+4)^ shl 8 or p[OFFSET+6]));
   end;
 {$ENDIF  CPUX86_HAS_POPCNT}
-{$ELSEIF DEFINED(CPU32)}
+{$ELSE  CPU64}
 {$IFDEF CPUX86_HAS_POPCNT}
 const
   SIZE   = SizeOf(TSet);
@@ -4092,18 +4092,8 @@ begin
     3: Inc(Result, PopCntD(DWord(PWord(p+OFFSET)^) shl 8 or p[OFFSET+2]));
   end;
 {$ENDIF  CPUX86_HAS_POPCNT}
-{$ELSE  DEFINED(CPU32)}
-var
-  p: PByte;
-  I: Integer;
-begin
-  if System.GetTypeKind(s) <> System.tkSet then exit(-1);
-  p := @s;
-  Result := 0;
-  for I := 0 to Pred(SizeOf(TSet)) do
-    Inc(Result, PopCnt(p[I]));
-{$ENDIF  DEFINED(CPU32)}
-{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+{$ENDIF  CPU64}
+{$IFEND SizeOf(SizeUInt)<=2}
 end;
 {$POP}
 
