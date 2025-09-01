@@ -189,7 +189,7 @@ begin
 
   s := specialize PdoToJson<TCommunityList>(ComList);
 
-  if not n.Instance.Parse(s) then
+  if not n.Instance.TryParse(s) then
     WriteLn('Oops, something went wrong :(')
   else
     WriteLn(n.Instance.FormatJson([jfoEgyptBrace]));
