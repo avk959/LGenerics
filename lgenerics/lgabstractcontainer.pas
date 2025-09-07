@@ -2874,12 +2874,9 @@ var
   p: PEntry;
 begin
   p := Find(aKey);
-  if p <> nil then
-    begin
-      aValue := p^.Value;
-      exit(True);
-    end;
-  Result := False;
+  Result := p <> nil;
+  if Result then
+    aValue := p^.Value;
 end;
 
 function TGAbstractMap.TryGetMutValue(const aKey: TKey; out aValue: PValue): Boolean;
@@ -2887,12 +2884,9 @@ var
   p: PEntry;
 begin
   p := Find(aKey);
-  if p <> nil then
-    begin
-      aValue := @p^.Value;
-      exit(True);
-    end;
-  Result := False;
+  Result := p <> nil;
+  if Result then
+    aValue := @p^.Value;
 end;
 
 function TGAbstractMap.GetValueDef(const aKey: TKey; const aDefault: TValue): TValue;
