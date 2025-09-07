@@ -155,7 +155,7 @@ type
     procedure Rehash(var aTarget: TNodeList); virtual;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult; virtual;
+    procedure DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult); virtual;
     procedure DoRemove(aIndex: SizeInt); virtual; abstract;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
     class constructor Init;
@@ -207,7 +207,7 @@ type
     FTombstonesCount: SizeInt;
     function  BusyCount: SizeInt; inline;
     procedure Rehash(var aTarget: TNodeList); override;
-    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult; override;
+    procedure DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult); override;
     procedure DoRemove(aIndex: SizeInt); override;
   public
     procedure Clear; override;
@@ -323,7 +323,7 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoAdd(aKeyHash: SizeInt): PNode;
-    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+    procedure DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
     procedure Add2Tail(aNode: PNode);
     procedure RemoveFromList(aNode: PNode);
     procedure RemoveNode(aNode: PNode);
@@ -418,7 +418,7 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoAdd(aKeyHash: SizeInt): PNode;
-    function  DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+    procedure DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
     procedure DoRemove(const aPos: TSearchResult);
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
   public
@@ -1064,27 +1064,29 @@ begin
     AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-function TGOpenAddressing.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+procedure TGOpenAddressing.DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
 var
   I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
-  Result.FoundIndex := NULL_INDEX;
-  Result.InsertIndex := NULL_INDEX;
+  aRes.FoundIndex := NULL_INDEX;
+  aRes.InsertIndex := NULL_INDEX;
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      if FList[Pos].Hash = 0 then                 // node empty => key not found
-        begin
-          Result.InsertIndex := Pos;
-          exit;
-        end;
-      if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-        begin
-          Result.FoundIndex := Pos;               // key found
-          exit;
-        end;
+      with FList[Pos] do begin
+        if Hash = 0 then                          // node empty => key not found
+          begin
+            aRes.InsertIndex := Pos;
+            exit;
+          end;
+        if (Hash = aKeyHash) and TEqRel.Equal(Data.Key, aKey) then
+          begin
+            aRes.FoundIndex := Pos;               // key found
+            exit;
+          end;
+      end;
       Pos := TProbeSeq.NextProbe(Pos, I) and Mask;// probe sequence
     end;
 end;
@@ -1161,14 +1163,14 @@ begin
   if FList = nil then
     AllocList(DEFAULT_CONTAINER_CAPACITY);
   h := TEqRel.HashCode(aKey);
-  aRes := DoFind(aKey, h);
+  DoFind(aKey, h, aRes);
   Result := aRes.FoundIndex >= 0; // key found?
   if not Result then              // key not found
     begin
       if Count >= ExpandTreshold then
         begin
           Expand;
-          aRes := DoFind(aKey, h);
+          DoFind(aKey, h, aRes);
         end;
       if aRes.InsertIndex > NULL_INDEX then
         begin
@@ -1187,7 +1189,7 @@ begin
   Result := nil;
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, TEqRel.HashCode(aKey));
+      DoFind(aKey, TEqRel.HashCode(aKey), aPos);
       if aPos.FoundIndex >= 0 then
         Result := @FList[aPos.FoundIndex].Data;
     end;
@@ -1199,7 +1201,7 @@ var
 begin
   if Count > 0 then
     begin
-      p := DoFind(aKey, TEqRel.HashCode(aKey));
+      DoFind(aKey, TEqRel.HashCode(aKey), p);
       if p.FoundIndex >= 0 then
         begin
           DoRemove(p.FoundIndex);
@@ -1461,7 +1463,7 @@ begin
   if FList = nil then
     AllocList(DEFAULT_CONTAINER_CAPACITY);
   h := TEqRel.HashCode(aKey);
-  aRes := DoFind(aKey, h);
+  DoFind(aKey, h, aRes);
   Result := aRes.FoundIndex >= 0; // key found?
   if not Result then              // key not found
     begin
@@ -1471,7 +1473,7 @@ begin
             ClearTombstones
           else
             Expand;
-          aRes := DoFind(aKey, h);
+          DoFind(aKey, h, aRes);
         end;
       if aRes.InsertIndex >= 0 then
         begin
@@ -1641,34 +1643,36 @@ begin
     end;
 end;
 
-function TGOpenAddrTombstones.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+procedure TGOpenAddrTombstones.DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
 var
   I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
-  Result.FoundIndex := NULL_INDEX;
-  Result.InsertIndex := NULL_INDEX;
+  aRes.FoundIndex := NULL_INDEX;
+  aRes.InsertIndex := NULL_INDEX;
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      if FList[Pos].Hash = 0 then                 // node empty => key not found
-        begin
-          if Result.InsertIndex = NULL_INDEX then // if none tombstone found, remember first empty
-            Result.InsertIndex := Pos;
-          exit;
-        end;
-      if FList[Pos].Hash = TOMBSTONE then
-        begin
-          if Result.InsertIndex = NULL_INDEX then // remember first tombstone position
-            Result.InsertIndex := Pos;
-        end
-      else
-        if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
+      with FList[Pos] do begin
+        if Hash = 0 then                          // node empty => key not found
           begin
-            Result.FoundIndex := Pos;             // key found
+            if aRes.InsertIndex = NULL_INDEX then // if none tombstone found, remember first empty
+              aRes.InsertIndex := Pos;
             exit;
           end;
+        if Hash = TOMBSTONE then
+          begin
+            if aRes.InsertIndex = NULL_INDEX then // remember first tombstone position
+              aRes.InsertIndex := Pos;
+          end
+        else
+          if (Hash = aKeyHash) and TEqRel.Equal(Data.Key, aKey) then
+            begin
+              aRes.FoundIndex := Pos;             // key found
+              exit;
+            end;
+      end;
       Pos := TProbeSeq.NextProbe(Pos, I) and Mask;// probe sequence
     end;
 end;
@@ -1908,7 +1912,7 @@ begin
   Add2Tail(Result);
 end;
 
-function TGOrderedHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+procedure TGOrderedHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
 var
   CurrNode, PrevNode: PNode;
 begin
@@ -1921,8 +1925,8 @@ begin
       PrevNode := CurrNode;
       CurrNode := CurrNode^.ChainNext;
     end;
-  Result.Node := CurrNode;
-  Result.PrevNode := PrevNode;
+  aRes.Node := CurrNode;
+  aRes.PrevNode := PrevNode;
   if UpdateOnHit and (CurrNode <> nil) and (Count > 1) then
     begin
       RemoveFromList(CurrNode);
@@ -2106,7 +2110,7 @@ begin
   if FList = nil then
     AllocList(DEFAULT_CONTAINER_CAPACITY);
   h := TEqRel.HashCode(aKey);
-  aRes := DoFind(aKey, h);
+  DoFind(aKey, h, aRes);
   Result := aRes.Node <> nil; // key found?
   if not Result then          // key not found
     begin
@@ -2122,7 +2126,7 @@ begin
   Result := nil;
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, TEqRel.HashCode(aKey));
+      DoFind(aKey, TEqRel.HashCode(aKey), aPos);
       if aPos.Node <> nil then
         Result := @PNode(aPos.Node)^.Data;
     end;
@@ -2132,7 +2136,7 @@ function TGOrderedHashTable.Remove(const aKey: TKey): Boolean;
 var
   sr: TSearchResult;
 begin
-  sr := DoFind(aKey, TEqRel.HashCode(aKey));
+  DoFind(aKey, TEqRel.HashCode(aKey), sr);
   if sr.Node <> nil then
     begin
       RemoveAt(sr);
@@ -2486,7 +2490,7 @@ begin
   FList[I] := Result;
 end;
 
-function TGChainHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+procedure TGChainHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
 var
   CurrNode, PrevNode: PNode;
 begin
@@ -2501,8 +2505,8 @@ begin
       CurrNode := CurrNode^.Next;
     end;
 
-  Result.Node := CurrNode;
-  Result.PrevNode := PrevNode;
+  aRes.Node := CurrNode;
+  aRes.PrevNode := PrevNode;
 end;
 
 procedure TGChainHashTable.DoRemove(const aPos: TSearchResult);
@@ -2648,7 +2652,7 @@ begin
   if FList = nil then
     AllocList(DEFAULT_CONTAINER_CAPACITY);
   h := TEqRel.HashCode(aKey);
-  aRes := DoFind(aKey, h);
+  DoFind(aKey, h, aRes);
   Result := aRes.Node <> nil; // key found ?
   if not Result then          // key not found
     begin
@@ -2663,7 +2667,7 @@ function TGChainHashTable.Find(const aKey: TKey; out aPos: TSearchResult): PEntr
 begin
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, TEqRel.HashCode(aKey));
+      DoFind(aKey, TEqRel.HashCode(aKey), aPos);
       if aPos.Node <> nil then
         Result := @PNode(aPos.Node)^.Data
       else
@@ -2686,7 +2690,7 @@ function TGChainHashTable.Remove(const aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin
-  p := DoFind(aKey, TEqRel.HashCode(aKey));
+  DoFind(aKey, TEqRel.HashCode(aKey), p);
   Result := p.Node <> nil;
   if Result then
     DoRemove(p);
@@ -3510,16 +3514,18 @@ var
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
-  Result := SLOT_NOT_FOUND;
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      if FList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos);
-      if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-        exit(Pos);                // key found
-      Pos := Succ(Pos) and Mask;  // probe sequence
+      with FList[Pos] do begin
+        if Hash = 0 then        // node empty => key not found
+          exit(not Pos);
+        if (Hash = aKeyHash) and TEqRel.Equal(Data.Key, aKey) then
+          exit(Pos);            // key found
+      end;
+      Pos := Succ(Pos) and Mask;// probe sequence
     end;
+  Result := SLOT_NOT_FOUND;
 end;
 
 procedure TGLiteHashTableLP.DoRemove(aIndex: SizeInt);
@@ -4360,11 +4366,13 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      if FList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos);
-      if FList[Pos].Data.Key = aKey then
-        exit(Pos);                // key found
-      Pos := Succ(Pos) and Mask;  // probe sequence
+      with FList[Pos] do begin
+        if Hash = 0 then        // node empty => key not found
+          exit(not Pos);
+        if Data.Key = aKey then
+          exit(Pos);            // key found
+      end;
+      Pos := Succ(Pos) and Mask;// probe sequence
     end;
 end;
 
