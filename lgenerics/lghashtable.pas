@@ -4362,7 +4362,6 @@ var
   I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
-  Result := SLOT_NOT_FOUND;
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
@@ -4374,6 +4373,7 @@ begin
       end;
       Pos := Succ(Pos) and Mask;// probe sequence
     end;
+  Result := SLOT_NOT_FOUND;
 end;
 
 procedure TGLiteEquatableHashTable.DoRemove(aIndex: SizeInt);
