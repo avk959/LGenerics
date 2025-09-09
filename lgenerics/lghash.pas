@@ -305,16 +305,15 @@ begin
       v2 := aSeed + c2;
       v3 := aSeed;
       v4 := aSeed - c1;
-      while aCount >= 16 do
-        begin
-          System.Move(p^, buf, 16);
-          v1 := RolDWord(v1 + buf[0] * c2, 13) * c1;
-          v2 := RolDWord(v2 + buf[1] * c2, 13) * c1;
-          v3 := RolDWord(v3 + buf[2] * c2, 13) * c1;
-          v4 := RolDWord(v4 + buf[3] * c2, 13) * c1;
-          p += 16;
-          aCount -= 16;
-        end;
+      repeat
+        System.Move(p^, buf, 16);
+        v1 := RolDWord(v1 + buf[0] * c2, 13) * c1;
+        v2 := RolDWord(v2 + buf[1] * c2, 13) * c1;
+        v3 := RolDWord(v3 + buf[2] * c2, 13) * c1;
+        v4 := RolDWord(v4 + buf[3] * c2, 13) * c1;
+        p += 16;
+        aCount -= 16;
+      until aCount < 16;
       Result += RolDWord(v1, 1) + RolDWord(v2, 7) + RolDWord(v3, 12) + RolDWord(v4, 18);
     end
   else
@@ -386,15 +385,14 @@ begin
       v2 := aSeed + c2;
       v3 := aSeed;
       v4 := aSeed - c1;
-      while aCount >= 16 do
-        begin
-          v1 := RolDWord(v1 + p[0] * c2, 13) * c1;
-          v2 := RolDWord(v2 + p[1] * c2, 13) * c1;
-          v3 := RolDWord(v3 + p[2] * c2, 13) * c1;
-          v4 := RolDWord(v4 + p[3] * c2, 13) * c1;
-          p += 4;
-          aCount -= 16;
-        end;
+      repeat
+        v1 := RolDWord(v1 + p[0] * c2, 13) * c1;
+        v2 := RolDWord(v2 + p[1] * c2, 13) * c1;
+        v3 := RolDWord(v3 + p[2] * c2, 13) * c1;
+        v4 := RolDWord(v4 + p[3] * c2, 13) * c1;
+        p += 4;
+        aCount -= 16;
+      until aCount < 16;
       Result += RolDWord(v1, 1) + RolDWord(v2, 7) + RolDWord(v3, 12) + RolDWord(v4, 18);
     end
   else
