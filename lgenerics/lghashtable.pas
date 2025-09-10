@@ -46,12 +46,12 @@ type
     THashTableClass  = class of TAbstractHashTable;
 
   var
-    FCount,
-    FExpandTreshold: SizeInt;
+    FCount: SizeInt;
     FLoadFactor: Single;
     procedure AllocList(aCapacity: SizeInt); virtual; abstract;
     function  GetCapacity: SizeInt; virtual; abstract;
     procedure SetLoadFactor(aValue: Single); virtual; abstract;
+    function  GetExpandTreshold: SizeInt; virtual; abstract;
     function  GetFillRatio: Single;
     function  RestrictLoadFactor(aValue: Single): Single;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; virtual; abstract;
@@ -102,7 +102,7 @@ type
     function  RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     property  Count: SizeInt read FCount;
   { The number of elements that can be written without rehashing }
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
@@ -148,9 +148,11 @@ type
 
   var
     FList: TNodeList;
+    FExpandTreshold: SizeInt;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
     procedure SetLoadFactor(aValue: Single); override;
+    function  GetExpandTreshold: SizeInt; override;
     procedure UpdateExpandTreshold;
     procedure Rehash(var aTarget: TNodeList); virtual;
     procedure Resize(aNewCapacity: SizeInt);
@@ -174,9 +176,10 @@ type
 
   TLPSeq = class
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 0.55;
     MAX_LOAD_FACTOR: Single     = 0.90;
-
+  {$POP}
     class function NextProbe(aPrevPos, aIndex: SizeInt): SizeInt; static; inline;
   end;
 
@@ -231,8 +234,10 @@ type
 
   TQP12Seq = class
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 0.50;
     MAX_LOAD_FACTOR: Single     = 0.75;
+  {$POP}
     class function NextProbe(aPrevPos, aIndex: SizeInt): SizeInt; static; inline;
   end;
 
@@ -302,19 +307,22 @@ type
 {$ENDIF ORDEREDHASHTABLE_ENABLE_PAGEDNODEMANAGER}
 
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 1.0;
     MAX_LOAD_FACTOR: Single     = 4.0;
     MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 2) div SizeOf(Pointer);
-
+  {$POP}
   var
     FList: TChainList;
     FHead,
     FTail: PNode;
     FNodeManager: TNodeManager;
+    FExpandTreshold: SizeInt;
     FUpdateOnHit: Boolean;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
     procedure SetLoadFactor(aValue: Single); override;
+    function  GetExpandTreshold: SizeInt; override;
     function  NewNode: PNode; inline;
     procedure DisposeNode(aNode: PNode); inline;
     procedure ClearChainList;
@@ -363,74 +371,55 @@ type
     property  UpdateOnHit: Boolean read FUpdateOnHit write FUpdateOnHit;
   end;
 
-{.$DEFINE CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}{ if uncomment define, TGChainHashTable
-                                                   will use TGPageNodeManager }
   { TGChainHashTable }
   generic TGChainHashTable<TKey, TEntry, TEqRel> = class(specialize TGAbstractHashTable<TKey, TEntry>)
   public
   type
-    PNode = ^TNode;
     TNode = record
-      Next: PNode;
-      Hash: SizeInt;
+      Hash,
+      Next: SizeInt;
       Data: TEntry;
-      property  NextLink: PNode read Next write Next; //for node manager
     end;
+    PNode = ^TNode;
 
   protected
   type
-    TChainList = array of PNode;
-
     TEnumerator = class(TEntryEnumerator)
     private
-      FList: TChainList;
-      FCurrNode: PNode;
-      FLastIndex,
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FFirstNode,
+      FLastNode: PNode;
     protected
       function  GetCurrent: PEntry; override;
     public
-      constructor Create(constref aList: TChainList);
+      constructor Create(aTable: TGChainHashTable);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
-{$IFDEF CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}
-    TNodeManager = specialize TGPageNodeManager<TNode>;
-{$ELSE CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}
-    TNodeManager = specialize TGNodeManager<TNode>;
-{$ENDIF CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}
+
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 1.0;
     MAX_LOAD_FACTOR: Single     = 4.0;
-    MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 2) div SizeOf(Pointer);
-
+  {$POP}
   var
-    FList: TChainList;
-    FNodeManager: TNodeManager;
+    FNodeList: array of TNode;
+    FChainList: array of SizeInt;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
+    function  GetExpandTreshold: SizeInt; override;
     procedure SetLoadFactor(aValue: Single); override;
-    function  NewNode: PNode; inline;
-    procedure DisposeNode(aNode: PNode);
-    procedure ClearList;
-    procedure UpdateExpandTreshold;
-    procedure Rehash(var aTarget: TChainList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoAdd(aKeyHash: SizeInt): PNode;
+    procedure DoAdd(aKeyHash: SizeInt);
     procedure DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
+    procedure FixChain(aOldIndex, aNewIndex: SizeInt);
     procedure DoRemove(const aPos: TSearchResult);
+    function  DoFindChainPrev(aNode: SizeInt): SizeInt;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
   public
     class function DefaultLoadFactor: Single; override;
     class function MaxLoadFactor: Single; override;
-    constructor CreateEmpty; override;
-    constructor CreateEmpty(aLoadFactor: Single); override;
-    constructor Create; override;
-    constructor Create(aCapacity: SizeInt); override;
-    constructor Create(aLoadFactor: Single); override;
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single); override;
-    destructor Destroy; override;
     procedure Clear; override;
     function  Clone: TAbstractHashTable; override;
     procedure EnsureCapacity(aValue: SizeInt); override;
@@ -439,7 +428,6 @@ type
   { returns True if aKey found, otherwise insert empty Entry and return False }
     function  FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
     function  Find(const aKey: TKey; out aPos: TSearchResult): PEntry; override;
-    function  Add(const aKey: TKey): PNode; inline;
     function  Remove(const aKey: TKey): Boolean; override;
     procedure RemoveAt(const aPos: TSearchResult); override;
     function  RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
@@ -465,8 +453,9 @@ type
 
   const
     NODE_SIZE             = SizeOf(TNode);
+    {$PUSH}{$J-}
     USED_FLAG: SizeInt    = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
-    {$PUSH}{$J+}
+    {$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
     {$POP}
   type
@@ -523,9 +512,11 @@ type
     class constructor Init;
   public
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 0.55;
     MAX_LOAD_FACTOR: Single     = 0.90;
     MIN_LOAD_FACTOR: Single     = 0.25;
+  {$POP}
     class function DefaultLoadFactor: Single; static; inline;
     class function MaxLoadFactor: Single; static; inline;
     class function MinLoadFactor: Single; static; inline;
@@ -566,8 +557,9 @@ type
 
   const
     NODE_SIZE             = SizeOf(TNode);
+    {$PUSH}{$J-}
     USED_FLAG: SizeInt    = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
-    {$PUSH}{$J+}
+    {$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
     {$POP}
   type
@@ -626,10 +618,11 @@ type
     class operator AddRef(var ht: TGLiteHashTableLP);
   public
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 0.55;
     MAX_LOAD_FACTOR: Single     = 0.90;
     MIN_LOAD_FACTOR: Single     = 0.25;
-
+  {$POP}
     function  GetEnumerator: TEnumerator;
     function  GetRemovableEnumerator: TRemovableEnumerator;
     procedure Clear;
@@ -736,10 +729,11 @@ type
     class operator AddRef(var ht: TGLiteChainHashTable);
   public
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 1.0;
     MAX_LOAD_FACTOR: Single     = 1.0;
     MIN_LOAD_FACTOR: Single     = 1.0;
-
+  {$POP}
     function  GetEnumerator: TEnumerator; inline;
     function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
@@ -778,8 +772,9 @@ type
 
   const
     NODE_SIZE             = SizeOf(TNode);
+    {$PUSH}{$J-}
     USED_FLAG: SizeInt    = Low(SizeInt);
-    {$PUSH}{$J+}
+    {$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
     {$POP}
   type
@@ -834,10 +829,11 @@ type
     class operator AddRef(var ht: TGLiteEquatableHashTable); inline;
   public
   const
+  {$PUSH}{$J-}
     DEFAULT_LOAD_FACTOR: Single = 0.5;
     MAX_LOAD_FACTOR: Single     = 0.5;
     MIN_LOAD_FACTOR: Single     = 0.5;
-
+  {$POP}
     function  GetEnumerator: TEnumerator;
     function  GetRemovableEnumerator: TRemovableEnumerator;
     procedure Clear;
@@ -984,6 +980,11 @@ begin
       if Count >= ExpandTreshold then
         Expand;
     end;
+end;
+
+function TGOpenAddressing.GetExpandTreshold: SizeInt;
+begin
+  Result := FExpandTreshold;
 end;
 
 procedure TGOpenAddressing.UpdateExpandTreshold;
@@ -1810,6 +1811,11 @@ begin
     end;
 end;
 
+function TGOrderedHashTable.GetExpandTreshold: SizeInt;
+begin
+  Result := FExpandTreshold;
+end;
+
 function TGOrderedHashTable.NewNode: PNode;
 begin
   Result := FNodeManager.NewNode;
@@ -2325,34 +2331,31 @@ begin
   Result := @FCurrNode^.Data;
 end;
 
-constructor TGChainHashTable.TEnumerator.Create(constref aList: TChainList);
+constructor TGChainHashTable.TEnumerator.Create(aTable: TGChainHashTable);
 begin
-  FList := aList;
-  FLastIndex := High(aList);
-  FCurrIndex := NULL_INDEX;
+  if aTable.Count > 0 then
+    begin
+      FCurrNode := Pointer(aTable.FNodeList);
+      FFirstNode := Pointer(aTable.FNodeList);
+      FLastNode := FFirstNode + aTable.Count;
+    end
+  else
+    begin
+      FCurrNode := nil;
+      FFirstNode := nil;
+      FLastNode := nil;
+    end;
 end;
 
 function TGChainHashTable.TEnumerator.MoveNext: Boolean;
-var
-  NextNode: PNode = nil;
 begin
-  if FCurrNode <> nil then
-    NextNode := FCurrNode^.Next;
-  while NextNode = nil do
-    begin
-      if FCurrIndex >= FLastIndex then
-        exit(False);
-      Inc(FCurrIndex);
-      NextNode := FList[FCurrIndex];
-    end;
-  FCurrNode := NextNode;
-  Result := True;
+  Result := FCurrNode < FLastNode;
+  if Result then Inc(FCurrNode);
 end;
 
 procedure TGChainHashTable.TEnumerator.Reset;
 begin
-  FCurrNode := nil;
-  FCurrIndex := NULL_INDEX;
+  FCurrNode := FFirstNode;
 end;
 
 { TGChainHashTable }
@@ -2361,171 +2364,165 @@ procedure TGChainHashTable.AllocList(aCapacity: SizeInt);
 begin
   if aCapacity > 0 then
     begin
-      aCapacity := Math.Min(aCapacity, MAX_CAPACITY);
       if not IsTwoPower(aCapacity) then
         aCapacity := LGUtils.RoundUpTwoPower(aCapacity);
     end
   else
     aCapacity := DEFAULT_CONTAINER_CAPACITY;
-  System.SetLength(FList, aCapacity);
-  UpdateExpandTreshold;
+  System.SetLength(FChainList, aCapacity);
+  System.SetLength(FNodeList, Trunc(Double(aCapacity) * LoadFactor) + 1);
 end;
 
 function TGChainHashTable.GetCapacity: SizeInt;
 begin
-  Result := System.Length(FList);
+  Result := System.Length(FChainList);
+end;
+
+function TGChainHashTable.GetExpandTreshold: SizeInt;
+begin
+  Result := System.High(FNodeList);
 end;
 
 procedure TGChainHashTable.SetLoadFactor(aValue: Single);
+var
+  NewSize: SizeInt;
+  OldFactor: Single;
 begin
   aValue := RestrictLoadFactor(aValue);
-  if aValue <> LoadFactor then
+  if aValue = LoadFactor then exit;
+  if FChainList = nil then
     begin
       FLoadFactor := aValue;
-      UpdateExpandTreshold;
-      if Count >= ExpandTreshold then
-        Expand;
+      exit;
     end;
-end;
-
-function TGChainHashTable.NewNode: PNode;
-begin
-  Result := FNodeManager.NewNode;
-  Inc(FCount);
-end;
-
-procedure TGChainHashTable.DisposeNode(aNode: PNode);
-begin
-  if aNode <> nil then
+  OldFactor := LoadFactor;
+  FLoadFactor := aValue;
+  NewSize := Trunc(Double(System.Length(FChainList)) * LoadFactor) + 1;
+  if LoadFactor < OldFactor then
     begin
-      aNode^ := Default(TNode);
-      FNodeManager.FreeNode(aNode);
-      Dec(FCount);
-    end;
-end;
-
-procedure TGChainHashTable.ClearList;
-var
-  Node, CurrNode, NextNode: PNode;
-begin
-  for Node in FList do
-    begin
-      CurrNode := Node;
-      while CurrNode <> nil do
-        begin
-          NextNode := CurrNode^.Next;
-          CurrNode^.Data := Default(TEntry);
-          FNodeManager.DisposeNode(CurrNode);
-          CurrNode := NextNode;
-        end;
-    end;
-  FList := nil;
-  FCount := 0;
-end;
-
-procedure TGChainHashTable.UpdateExpandTreshold;
-begin
-  if System.Length(FList) < MAX_CAPACITY then
-    FExpandTreshold := Trunc(System.Length(FList) * LoadFactor)
-  else
-    FExpandTreshold := High(SizeInt);
-end;
-
-procedure TGChainHashTable.Rehash(var aTarget: TChainList);
-var
-  Curr, Next: PNode;
-  I, Mask: SizeInt;
-begin
-  if Count > 0 then
-    begin
-      Mask := System.High(aTarget);
-      for I := 0 to System.High(FList) do
-        if FList[I] <> nil then
-          begin
-            Curr := FList[I];
-            repeat
-              Next := Curr^.Next;
-              Curr^.Next := aTarget[Curr^.Hash and Mask];
-              aTarget[Curr^.Hash and Mask] := Curr;
-              Curr := Next;
-            until Next = nil;
-          end;
-    end;
+      if Count >= NewSize then
+        Resize(EstimateCapacity(Count, LoadFactor))
+      else
+        System.SetLength(FNodeList, NewSize);
+    end
+  else // LoadFactor > OldFactor
+    System.SetLength(FNodeList, NewSize);
 end;
 
 procedure TGChainHashTable.Resize(aNewCapacity: SizeInt);
 var
-  NewList: TChainList;
+  NewList: array of SizeInt;
+  I, J, Mask: SizeInt;
 begin
+  Assert(LgUtils.IsTwoPower(aNewCapacity), 'New size is not power of 2');
   System.SetLength(NewList, aNewCapacity);
-  Rehash(NewList);
-  FList := NewList;
-  UpdateExpandTreshold;
+  System.SetLength(FNodeList, Trunc(Double(aNewCapacity) * LoadFactor) + 1);
+  Mask := Pred(aNewCapacity);
+  for I := 1 to Count do
+    begin
+      J := FNodeList[I].Hash and Mask;
+      FNodeList[I].Next := NewList[J];
+      NewList[J] := I;
+    end;
+  FChainList := NewList;
 end;
 
 procedure TGChainHashTable.Expand;
-var
-  NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := System.Length(FList);
-  if OldCapacity > 0 then
-    begin
-      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
-      if NewCapacity > OldCapacity then
-        Resize(NewCapacity);
-    end
+  if FChainList <> nil then
+    Resize(System.Length(FChainList)*2)
   else
     AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-function TGChainHashTable.DoAdd(aKeyHash: SizeInt): PNode;
+procedure TGChainHashTable.DoAdd(aKeyHash: SizeInt);
 var
-  I: SizeInt;
+  I, Node: SizeInt;
 begin
   //add node to chain
-  I := aKeyHash and System.High(FList);
-  Result := NewNode;
-  Result^.Hash := aKeyHash;
-  Result^.Next := FList[I];
-  FList[I] := Result;
+  Inc(FCount);
+  I := aKeyHash and System.High(FChainList);
+  FNodeList[Count].Hash := aKeyHash;
+  FNodeList[Count].Next := FChainList[I];
+  FChainList[I] := Count;
 end;
 
 procedure TGChainHashTable.DoFind(const aKey: TKey; aKeyHash: SizeInt; out aRes: TSearchResult);
 var
-  CurrNode, PrevNode: PNode;
+  I: Sizeint;
 begin
-  CurrNode := FList[aKeyHash and System.High(FList)];
-  PrevNode := nil;
+  I := FChainList[aKeyHash and System.High(FChainList)];
+  aRes.InsertIndex := 0;
 
-  while CurrNode <> nil do
+  while I <> 0 do
     begin
-      if (CurrNode^.Hash = aKeyHash) and TEqRel.Equal(CurrNode^.Data.Key, aKey) then
-        break;
-      PrevNode := CurrNode;
-      CurrNode := CurrNode^.Next;
+      if (FNodeList[I].Hash = aKeyHash) and TEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        begin
+          aRes.FoundIndex := I;
+          exit;
+        end;
+      aRes.InsertIndex := I;
+      I := FNodeList[I].Next;
     end;
 
-  aRes.Node := CurrNode;
-  aRes.PrevNode := PrevNode;
+  aRes.FoundIndex := 0;
+end;
+
+procedure TGChainHashTable.FixChain(aOldIndex, aNewIndex: SizeInt);
+var
+  I: SizeInt;
+begin
+  I := FNodeList[aNewIndex].Hash and System.High(FChainList);
+  if FChainList[I] <> aOldIndex then
+    begin
+      I := FChainList[I];
+      repeat
+        if FNodeList[I].Next = aOldIndex then
+          begin
+            FNodeList[I].Next := aNewIndex;
+            exit;
+          end;
+        I := FNodeList[I].Next;
+      until I = 0;
+    end
+  else
+    FChainList[I] := aNewIndex;
 end;
 
 procedure TGChainHashTable.DoRemove(const aPos: TSearchResult);
 begin
-  if aPos.Node <> nil then
+  if aPos.InsertIndex <> 0 then  //is not head of chain
+    FNodeList[aPos.InsertIndex].Next := FNodeList[aPos.FoundIndex].Next
+  else
+    FChainList[FNodeList[aPos.FoundIndex].Hash and System.High(FChainList)] := FNodeList[aPos.FoundIndex].Next;
+  if aPos.FoundIndex < Count then
     begin
-      if aPos.PrevNode <> nil then  //is not head of chain
-        PNode(aPos.PrevNode)^.Next := PNode(aPos.Node)^.Next
-      else
-        FList[PNode(aPos.Node)^.Hash and System.High(FList)] := PNode(aPos.Node)^.Next;
-      DisposeNode(aPos.Node);
+      FNodeList[aPos.FoundIndex] := FNodeList[Count];
+      FixChain(Count, aPos.FoundIndex);
     end;
+  if IsManagedType(TEntry) then
+    FNodeList[Count].Data := Default(TEntry);
+  Dec(FCount);
+end;
+
+function TGChainHashTable.DoFindChainPrev(aNode: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  I := FChainList[FNodeList[aNode].Hash and System.High(FChainList)];
+  if I = aNode then exit(0);
+  while I <> 0 do
+    begin
+      if FNodeList[I].Next = aNode then exit(I);
+      I := FNodeList[I].Next;
+    end;
+  raise Exception.Create('Internal error'); /////////
 end;
 
 class function TGChainHashTable.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
-  //aCount := Math.Min(Math.Max(aCount, 0), MAX_CAPACITY);
   if aCount > 0 then
-    Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
+    Result := LGUtils.RoundUpTwoPower(Ceil64(Double(aCount) / aLoadFactor))
   else
     Result := DEFAULT_CONTAINER_CAPACITY;
 end;
@@ -2540,89 +2537,31 @@ begin
   Result := MAX_LOAD_FACTOR;
 end;
 
-constructor TGChainHashTable.CreateEmpty;
-begin
-  inherited;
-  FNodeManager := TNodeManager.Create;
-end;
-
-constructor TGChainHashTable.CreateEmpty(aLoadFactor: Single);
-begin
-  inherited CreateEmpty(aLoadFactor);
-  FNodeManager := TNodeManager.Create;
-end;
-
-constructor TGChainHashTable.Create;
-begin
-  inherited Create;
-  FNodeManager := TNodeManager.Create;
-  FNodeManager.EnsureFreeCount(Capacity);
-end;
-
-constructor TGChainHashTable.Create(aCapacity: SizeInt);
-begin
-  inherited Create(aCapacity);
-  FNodeManager := TNodeManager.Create;
-  FNodeManager.EnsureFreeCount(Capacity);
-end;
-
-constructor TGChainHashTable.Create(aLoadFactor: Single);
-begin
-  inherited Create(aLoadFactor);
-  FNodeManager := TNodeManager.Create;
-  FNodeManager.EnsureFreeCount(Capacity);
-end;
-
-constructor TGChainHashTable.Create(aCapacity: SizeInt; aLoadFactor: Single);
-begin
-  inherited Create(aCapacity, aLoadFactor);
-  FNodeManager := TNodeManager.Create;
-  FNodeManager.EnsureFreeCount(Capacity);
-end;
-
-destructor TGChainHashTable.Destroy;
-begin
-  ClearList;
-  FNodeManager.Free;
-  inherited;
-end;
-
 procedure TGChainHashTable.Clear;
 begin
-  ClearList;
-  FNodeManager.Clear;
-  FExpandTreshold := 0;
+  FNodeList := nil;
+  FChainList := nil;
+  FCount := 0;
 end;
 
 function TGChainHashTable.Clone: TAbstractHashTable;
 var
-  AddedNode, CurrNode: PNode;
-  I: SizeInt;
+  Table: TGChainHashTable;
 begin
-  Result := TGChainHashTable.Create(System.Length(FList), LoadFactor);
-  for I := 0 to System.High(FList) do
-    begin
-      CurrNode := FList[I];
-      while CurrNode <> nil do
-        begin
-          AddedNode := TGChainHashTable(Result).DoAdd(CurrNode^.Hash);
-          AddedNode^.Data := CurrNode^.Data;
-          CurrNode := CurrNode^.Next;
-        end;
-    end;
+  Table := TGChainHashTable.CreateEmpty;
+  Table.FNodeList := System.Copy(FNodeList);
+  Table.FChainList := System.Copy(FChainList);
+  Table.FCount := Count;
+  Table.FLoadFactor := LoadFactor;
+  Result := Table;
 end;
 
 procedure TGChainHashTable.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
-    begin
-      FNodeManager.EnsureFreeCount(aValue - Count);
-      NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> System.Length(FList) then
-        Resize(NewCapacity);
-    end;
+  if aValue <= ExpandTreshold then exit;
+  Resize(EstimateCapacity(aValue, LoadFactor));
 end;
 
 procedure TGChainHashTable.TrimToFit;
@@ -2632,9 +2571,8 @@ begin
   if Count > 0 then
     begin
       NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < System.Length(FList) then
+      if NewCapacity < System.Length(FChainList) then
         Resize(NewCapacity);
-      FNodeManager.ClearFreeList;
     end
   else
     Clear;
@@ -2642,56 +2580,44 @@ end;
 
 function TGChainHashTable.GetEnumerator: TEntryEnumerator;
 begin
-  Result := TEnumerator.Create(FList);
+  Result := TEnumerator.Create(Self);
 end;
 
 function TGChainHashTable.FindOrAdd(const aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
 var
   h: SizeInt;
 begin
-  if FList = nil then
+  if FChainList = nil then
     AllocList(DEFAULT_CONTAINER_CAPACITY);
   h := TEqRel.HashCode(aKey);
   DoFind(aKey, h, aRes);
-  Result := aRes.Node <> nil; // key found ?
-  if not Result then          // key not found
+  Result := aRes.FoundIndex <> 0;
+  if not Result then
     begin
-      if Count >= ExpandTreshold then
-        Expand;
-      aRes.Node := DoAdd(h);
+      if Count = System.High(FNodeList) then Expand;
+      DoAdd(h);
+      aRes.FoundIndex := Count;
     end;
-  e := @PNode(aRes.Node)^.Data;
+  e := @FNodeList[aRes.FoundIndex].Data;
 end;
 
 function TGChainHashTable.Find(const aKey: TKey; out aPos: TSearchResult): PEntry;
 begin
-  if Count > 0 then
-    begin
-      DoFind(aKey, TEqRel.HashCode(aKey), aPos);
-      if aPos.Node <> nil then
-        Result := @PNode(aPos.Node)^.Data
-      else
-        Result := nil;
-    end
+  if Count = 0 then exit(nil);
+  DoFind(aKey, TEqRel.HashCode(aKey), aPos);
+  if aPos.FoundIndex <> 0 then
+    Result := @FNodeList[aPos.FoundIndex].Data
   else
     Result := nil;
-end;
-
-function TGChainHashTable.Add(const aKey: TKey): PNode;
-begin
-  if FList = nil then
-    AllocList(DEFAULT_CONTAINER_CAPACITY);
-  if Count >= ExpandTreshold then
-    Expand;
-  Result := DoAdd(TEqRel.HashCode(aKey));
 end;
 
 function TGChainHashTable.Remove(const aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin
+  if Count = 0 then exit(False);
   DoFind(aKey, TEqRel.HashCode(aKey), p);
-  Result := p.Node <> nil;
+  Result := p.FoundIndex <> 0;
   if Result then
     DoRemove(p);
 end;
@@ -2703,226 +2629,156 @@ end;
 
 function TGChainHashTable.RemoveIf(aTest: TKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(FNodeList[I].Data.Key) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data.Key) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TOnKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(FNodeList[I].Data.Key) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data.Key) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TNestKeyTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(FNodeList[I].Data.Key) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data.Key) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 function TGChainHashTable.RemoveIfe(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(FNodeList[I].Data) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 function TGChainHashTable.RemoveIfe(aTest: TOnEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(FNodeList[I].Data) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 function TGChainHashTable.RemoveIfe(aTest: TNestEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(FNodeList[I].Data) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 function TGChainHashTable.RemoveIfp(aTest: TOnPEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
-  PrevNode, CurrNode, NextNode: PNode;
+  sr: TSearchResult;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(System.Length(FList)) do
+  Result := Count;
+  if Result = 0 then exit;
+  I := 1;
+  while I <= Count do
+    if aTest(@FNodeList[I].Data) then
       begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(@CurrNode^.Data) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+        sr.FoundIndex := I;
+        sr.InsertIndex := DoFindChainPrev(I);
+        if aOnRemove <> nil then
+          aOnRemove(@FNodeList[I].Data);
+        DoRemove(sr);
+      end
+    else
+      Inc(I);
+  Result -= Count;
 end;
 
 { TGHashTableLP.TEnumerator }
@@ -3123,11 +2979,13 @@ begin
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
-      if FList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos);
-      if (FList[Pos].Hash = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
-        exit(Pos);                // key found
-      Pos := Succ(Pos) and Mask;  // probe sequence
+      with FList[Pos] do begin
+        if Hash = 0 then        // node empty => key not found
+          exit(not Pos);
+        if (Hash = aKeyHash) and TEqRel.Equal(Data.Key, aKey) then
+          exit(Pos);            // key found
+      end;
+      Pos := Succ(Pos) and Mask;// probe sequence
     end;
 end;
 
