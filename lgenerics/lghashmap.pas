@@ -1075,107 +1075,83 @@ begin
 end;
 
 function TGBaseOrderedHashMap.FindFirst(out aEntry: TEntry): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aEntry := TOrdTable(FTable).Head^.Data;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetFirst;
+  Result := p <> nil;
+  if Result then aEntry := p^;
 end;
 
 function TGBaseOrderedHashMap.FindLast(out aEntry: TEntry): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aEntry := TOrdTable(FTable).Tail^.Data;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetLast;
+  Result := p <> nil;
+  if Result then aEntry := p^;
 end;
 
 function TGBaseOrderedHashMap.FindFirstKey(out aKey: TKey): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aKey := TOrdTable(FTable).Head^.Data.Key;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetFirst;
+  Result := p <> nil;
+  if Result then aKey := p^.Key;
 end;
 
 function TGBaseOrderedHashMap.FindLastKey(out aKey: TKey): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aKey := TOrdTable(FTable).Tail^.Data.Key;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetLast;
+  Result := p <> nil;
+  if Result then aKey := p^.Key;
 end;
 
 function TGBaseOrderedHashMap.FindFirstValue(out aValue: TValue): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aValue := TOrdTable(FTable).Head^.Data.Value;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetFirst;
+  Result := p <> nil;
+  if Result then aValue := p^.Value;
 end;
 
 function TGBaseOrderedHashMap.FindLastValue(out aValue: TValue): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aValue := TOrdTable(FTable).Tail^.Data.Value;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetLast;
+  Result := p <> nil;
+  if Result then aValue := p^.Value;
 end;
 
 function TGBaseOrderedHashMap.ExtractFirst(out aEntry: TEntry): Boolean;
-var
-  v: TValue;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  aEntry := TOrdTable(FTable).Head^.Data;
-  Result := DoExtract(aEntry.Key, v);
+  Result := FindFirst(aEntry);
+  if Result then TOrdTable(FTable).RemoveFirst;
 end;
 
 function TGBaseOrderedHashMap.ExtractLast(out aEntry: TEntry): Boolean;
-var
-  v: TValue;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  aEntry := TOrdTable(FTable).Tail^.Data;
-  Result := DoExtract(aEntry.Key, v);
+  Result := FindLast(aEntry);
+  if Result then TOrdTable(FTable).RemoveLast;
 end;
 
 function TGBaseOrderedHashMap.RemoveFirst: Boolean;
-var
-  k: TKey;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  k := TOrdTable(FTable).Head^.Data.Key;
-  Result := DoRemove(k);
+  Result := TOrdTable(FTable).RemoveFirst;
 end;
 
 function TGBaseOrderedHashMap.RemoveLast: Boolean;
-var
-  k: TKey;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  k := TOrdTable(FTable).Tail^.Data.Key;
-  Result := DoRemove(k);
+  Result := TOrdTable(FTable).RemoveLast;
 end;
 
 { TGOrderedHashMap }
@@ -1487,85 +1463,71 @@ begin
 end;
 
 function TGObjectOrdHashMap.FindFirst(out aEntry: TEntry): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aEntry := TOrdTable(FTable).Head^.Data;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetFirst;
+  Result := p <> nil;
+  if Result then aEntry := p^;
 end;
 
 function TGObjectOrdHashMap.FindLast(out aEntry: TEntry): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aEntry := TOrdTable(FTable).Tail^.Data;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetLast;
+  Result := p <> nil;
+  if Result then aEntry := p^;
 end;
 
 function TGObjectOrdHashMap.FindFirstKey(out aKey: TKey): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aKey := TOrdTable(FTable).Head^.Data.Key;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetFirst;
+  Result := p <> nil;
+  if Result then aKey := p^.Key;
 end;
 
 function TGObjectOrdHashMap.FindLastKey(out aKey: TKey): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aKey := TOrdTable(FTable).Tail^.Data.Key;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetLast;
+  Result := p <> nil;
+  if Result then aKey := p^.Key;
 end;
 
 function TGObjectOrdHashMap.FindFirstValue(out aValue: TValue): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aValue := TOrdTable(FTable).Head^.Data.Value;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetFirst;
+  Result := p <> nil;
+  if Result then aValue := p^.Value;
 end;
 
 function TGObjectOrdHashMap.FindLastValue(out aValue: TValue): Boolean;
+var
+  p: PEntry;
 begin
-  if FTable.Count > 0 then
-    begin
-      aValue := TOrdTable(FTable).Tail^.Data.Value;
-      exit(True);
-    end;
-  Result := False;
+  p := TOrdTable(FTable).GetLast;
+  Result := p <> nil;
+  if Result then aValue := p^.Value;
 end;
 
 function TGObjectOrdHashMap.ExtractFirst(out aEntry: TEntry): Boolean;
-var
-  v: TValue;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  aEntry := TOrdTable(FTable).Head^.Data;
-  Result := DoExtract(aEntry.Key, v);
+  Result := FindFirst(aEntry);
+  if Result then TOrdTable(FTable).RemoveFirst;
 end;
 
 function TGObjectOrdHashMap.ExtractLast(out aEntry: TEntry): Boolean;
-var
-  v: TValue;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  aEntry := TOrdTable(FTable).Tail^.Data;
-  Result := DoExtract(aEntry.Key, v);
+  Result := FindLast(aEntry);
+  if Result then TOrdTable(FTable).RemoveLast;
 end;
 
 function TGObjectOrdHashMap.RemoveFirst: Boolean;
@@ -1573,10 +1535,8 @@ var
   k: TKey;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  k := TOrdTable(FTable).Head^.Data.Key;
-  Result := DoRemove(k);
+  Result := FindFirstKey(k);
+  if Result then DoRemove(k);
 end;
 
 function TGObjectOrdHashMap.RemoveLast: Boolean;
@@ -1584,10 +1544,8 @@ var
   k: TKey;
 begin
   CheckInIteration;
-  if FTable.Count < 1 then
-    exit(False);
-  k := TOrdTable(FTable).Tail^.Data.Key;
-  Result := DoRemove(k);
+  Result := FindLastKey(k);
+  if Result then DoRemove(k);
 end;
 
 { TGLiteHashMap.TKeyEnumerator }
