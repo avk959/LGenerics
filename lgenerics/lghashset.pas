@@ -180,7 +180,6 @@ type
   protected
   type
     TOrderedHashTable = specialize TGOrderedHashTable<T, TEntry, TEqRel>;
-    PNode             = TOrderedHashTable.PNode;
 
     TReverseEnumerable = class(TContainerEnumerable)
     protected
