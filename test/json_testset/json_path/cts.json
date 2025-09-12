@@ -566,6 +566,57 @@
       ]
     },
     {
+      "name": "basic, name shorthand, true",
+      "selector": "$.true",
+      "document": {
+        "true": "A",
+        "_foo": "B"
+      },
+      "result": [
+        "A"
+      ],
+      "result_paths": [
+        "$['true']"
+      ],
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "name": "basic, name shorthand, false",
+      "selector": "$.false",
+      "document": {
+        "false": "A",
+        "_foo": "B"
+      },
+      "result": [
+        "A"
+      ],
+      "result_paths": [
+        "$['false']"
+      ],
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "name": "basic, name shorthand, null",
+      "selector": "$.null",
+      "document": {
+        "null": "A",
+        "_foo": "B"
+      },
+      "result": [
+        "A"
+      ],
+      "result_paths": [
+        "$['null']"
+      ],
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
       "name": "basic, descendant segment, wildcard shorthand, array data",
       "selector": "$..*",
       "document": [
@@ -7572,6 +7623,24 @@
       "result_paths": [
         "$[0]"
       ],
+      "tags": [
+        "function",
+        "length"
+      ]
+    },
+    {
+      "name": "functions, length, non-singular query arg, multiple index selectors",
+      "selector": "$[?length(@[1, 2])<3]",
+      "invalid_selector": true,
+      "tags": [
+        "function",
+        "length"
+      ]
+    },
+    {
+      "name": "functions, length, non-singular query arg, multiple name selectors",
+      "selector": "$[?length(@['a', 'b'])<3]",
+      "invalid_selector": true,
       "tags": [
         "function",
         "length"
