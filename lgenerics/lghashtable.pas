@@ -345,8 +345,6 @@ type
     function  GetLast: PEntry;
     function  RemoveFirst: Boolean;
     function  RemoveLast: Boolean;
-    //property  Head: PNode read GetHead;
-    //property  Tail: PNode read GetTail;
     property  UpdateOnHit: Boolean read FUpdateOnHit write FUpdateOnHit;
   end;
 
@@ -1816,8 +1814,8 @@ end;
 
 procedure TGOrderedHashTable.SetHeadIdx(aValue: SizeInt);
 begin
-  if FNodeList = nil then exit;
-  FNodeList[0].Prior := aValue;
+  if FNodeList <> nil then
+    FNodeList[0].Prior := aValue;
 end;
 
 function TGOrderedHashTable.GetTailIdx: SizeInt;
@@ -1828,8 +1826,8 @@ end;
 
 procedure TGOrderedHashTable.SetTailIdx(aValue: SizeInt);
 begin
-  if FNodeList = nil then exit;
-  FNodeList[0].Next := aValue;
+  if FNodeList <> nil then
+    FNodeList[0].Next := aValue;
 end;
 
 function TGOrderedHashTable.GetHead: PNode;
@@ -2252,31 +2250,43 @@ begin
 end;
 
 function TGOrderedHashTable.GetFirst: PEntry;
+var
+  I: SizeInt;
 begin
-  if HeadIdx <> 0 then
-    Result := @FNodeList[HeadIdx].Data
+  I := HeadIdx;
+  if I <> 0 then
+    Result := @FNodeList[I].Data
   else
     Result := nil;
 end;
 
 function TGOrderedHashTable.GetLast: PEntry;
+var
+  I: SizeInt;
 begin
-  if TailIdx <> 0 then
-    Result := @FNodeList[TailIdx].Data
+  I := TailIdx;
+  if I <> 0 then
+    Result := @FNodeList[I].Data
   else
     Result := nil;
 end;
 
 function TGOrderedHashTable.RemoveFirst: Boolean;
+var
+  I: SizeInt;
 begin
-  Result := HeadIdx <> 0;
-  if Result then RemoveNode(HeadIdx);
+  I := HeadIdx;
+  Result := I <> 0;
+  if Result then RemoveNode(I);
 end;
 
 function TGOrderedHashTable.RemoveLast: Boolean;
+var
+  I: SizeInt;
 begin
-  Result := TailIdx <> 0;
-  if Result then RemoveNode(TailIdx);
+  I := TailIdx;
+  Result := I <> 0;
+  if Result then RemoveNode(I);
 end;
 
 { TGChainHashTable.TEnumerator }
