@@ -253,6 +253,8 @@ type
     procedure Insert;
     procedure InsertOutOfBounds;
     procedure Insert1;
+    procedure InsertAllInt;
+    procedure InsertAllStr;
 
     procedure ExtractFromEmpty;
     procedure ExtractFail;
@@ -2146,6 +2148,95 @@ begin
   AssertTrue(v.Count = 8);
   for I := 0 to 7 do
     AssertTrue(v{%H-}[I] = I);
+end;
+
+procedure TGLiteVectorTest.InsertAllInt;
+var
+  v, r: TIntVector;
+  a: array of Integer;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(v.Count = 0);
+  try
+    v.InsertAll(1, a);
+  except
+    on e: ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  AssertTrue(v.InsertAll(0, [6,7,8]) = 3);
+  AssertTrue(v.Count = 3);
+  r.AddAll([6,7,8]);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+
+  v.MakeEmpty;
+  r.MakeEmpty;
+  v.AddAll([1,2,3,4,5]);
+  AssertTrue(v.InsertAll(0, [6,7,8]) = 3);
+  AssertTrue(v.Count = 8);
+  r.AddAll([6,7,8,1,2,3,4,5]);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+
+  v.MakeEmpty;
+  r.MakeEmpty;
+  v.AddAll([1,2,3,4,5]);
+  AssertTrue(v.InsertAll(3, [6,7,8]) = 3);
+  AssertTrue(v.Count = 8);
+  r.AddAll([1,2,3,6,7,8,4,5]);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+
+  v.MakeEmpty;
+  r.MakeEmpty;
+  v.AddAll([1,2,3,4,5]);
+  AssertTrue(v.InsertAll(5, [6,7,8]) = 3);
+  AssertTrue(v.Count = 8);
+  r.AddAll([1,2,3,4,5,6,7,8]);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+end;
+
+procedure TGLiteVectorTest.InsertAllStr;
+var
+  v, r: TStrVector;
+  I: Integer;
+begin
+  AssertTrue(v.InsertAll(0, ['a','b','c']) = 3);
+  AssertTrue(v.Count = 3);
+  r.AddAll(['a','b','c']);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+
+  v.MakeEmpty;
+  r.MakeEmpty;
+  v.AddAll(['a','b','c','d','e']);
+  AssertTrue(v.InsertAll(0, ['f','g','h']) = 3);
+  AssertTrue(v.Count = 8);
+  r.AddAll(['f','g','h','a','b','c','d','e']);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+
+  v.MakeEmpty;
+  r.MakeEmpty;
+  v.AddAll(['a','b','c','d','e']);
+  AssertTrue(v.InsertAll(3, ['f','g','h']) = 3);
+  AssertTrue(v.Count = 8);
+  r.AddAll(['a','b','c','f','g','h','d','e']);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
+
+  v.MakeEmpty;
+  r.MakeEmpty;
+  v.AddAll(['a','b','c','d','e']);
+  AssertTrue(v.InsertAll(5, ['f','g','h']) = 3);
+  AssertTrue(v.Count = 8);
+  r.AddAll(['a','b','c','d','e','f','g','h']);
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = r[I]);
 end;
 
 procedure TGLiteVectorTest.ExtractFromEmpty;
