@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic vector implementations.                                         *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -225,6 +225,12 @@ type
     procedure Insert(aIndex: SizeInt; const aValue: T); inline;
   { will return False if aIndex out of bounds }
     function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean; inline;
+  { inserts all elements of array a into position aIndex and returns count of inserted elements;
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed) }
+    function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
+  { inserts all elements of e into position aIndex and returns count of inserted elements;
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed) }
+    function  InsertAll(aIndex: SizeInt; e: specialize IGEnumerable<T>): SizeInt;
   { deletes and returns value from position aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  Extract(aIndex: SizeInt): T; inline;
@@ -328,6 +334,12 @@ type
     procedure Insert(aIndex: SizeInt; const aValue: T); inline;
   { will return False if aIndex out of bounds }
     function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean; inline;
+  { inserts all elements of array a into position aIndex and returns count of inserted elements;
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed) }
+    function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt; inline;
+  { inserts all elements of e into position aIndex and returns count of inserted elements;
+    will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed) }
+    function  InsertAll(aIndex: SizeInt; e: specialize IGEnumerable<T>): SizeInt; inline;
   { extracts value from position aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  Extract(aIndex: SizeInt): T; inline;
@@ -1979,10 +1991,9 @@ end;
 
 procedure TGLiteVector.Insert(aIndex: SizeInt; const aValue: T);
 begin
-  if SizeUInt(aIndex) <= SizeUInt(Count) then
-    InsertItem(aIndex, aValue)
-  else
+  if SizeUInt(aIndex) > SizeUInt(Count) then
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  InsertItem(aIndex, aValue)
 end;
 
 function TGLiteVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
@@ -1990,6 +2001,41 @@ begin
   Result := SizeUInt(aIndex) <= SizeUInt(Count);
   if Result then
     InsertItem(aIndex, aValue);
+end;
+
+function TGLiteVector.InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
+var
+  I: SizeInt;
+begin
+  if SizeUInt(aIndex) > SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+
+  Result := System.Length(a);
+
+  if Result = 0 then exit;
+
+  FBuffer.EnsureCapacity(Count + Result);
+  if aIndex < Count then
+    begin
+      System.Move(FBuffer.FItems[aIndex], FBuffer.FItems[aIndex + Result], SizeOf(T)*(Count - aIndex));
+      if IsManagedType(T) then
+        System.FillChar(FBuffer.FItems[aIndex], SizeOf(T)*Result, 0);
+    end;
+  if IsManagedType(T) then
+    for I := 0 to Pred(Result) do
+      begin
+        FBuffer.FItems[aIndex] := a[I];
+        Inc(aIndex);
+      end
+  else
+    System.Move(a[0], FBuffer.FItems[aIndex], SizeOf(T)*Result);
+
+  Inc(FBuffer.FCount, Result);
+end;
+
+function TGLiteVector.InsertAll(aIndex: SizeInt; e: specialize IGEnumerable<T>): SizeInt;
+begin
+  Result := InsertAll(aIndex, e.ToArray);
 end;
 
 function TGLiteVector.Extract(aIndex: SizeInt): T;
@@ -2442,6 +2488,16 @@ end;
 function TGLiteObjectVector.TryInsert(aIndex: SizeInt; const aValue: T): Boolean;
 begin
   Result := FVector.TryInsert(aIndex, aValue);
+end;
+
+function TGLiteObjectVector.InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
+begin
+  Result := FVector.InsertAll(aIndex, a);
+end;
+
+function TGLiteObjectVector.InsertAll(aIndex: SizeInt; e: specialize IGEnumerable<T>): SizeInt;
+begin
+  Result := FVector.InsertAll(aIndex, e);
 end;
 
 function TGLiteObjectVector.Extract(aIndex: SizeInt): T;
