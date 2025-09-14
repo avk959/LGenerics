@@ -643,19 +643,20 @@ type
     only if aName is unique within an instance and the string aJson can be parsed;
     the new node is added as to an object }
     function  TryAddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
-  { if aIndex = 0 then acts like AddNull;
+  { if the instance is not an array and aIndex = 0, then it acts like AddNull;
     returns True and inserts null at position aIndex if aIndex is in the range [1..Count]
     and the instance is an array, otherwise just returns False }
     function  InsertNull(aIndex: SizeInt): Boolean;
-  { if aIndex = 0 then acts like Add(aValue); returns True and inserts aValue at position aIndex
-    if aIndex is in the range [1..Count] and the instance is an array, otherwise just returns False }
+  { if the instance is not an array and aIndex = 0, then it acts like;
+    returns True and inserts aValue at position aIndex if aIndex is in the range [1..Count]
+    and the instance is an array, otherwise just returns False }
     function  Insert(aIndex: SizeInt; aValue: Boolean): Boolean;
     function  Insert(aIndex: SizeInt; aValue: Double): Boolean;
     function  Insert(aIndex: SizeInt; const aValue: string): Boolean;
     function  Insert(aIndex: SizeInt; const aValue: TJVariant): Boolean;
-  { if aIndex = 0 then acts like AddNode; returns True and inserts new node of the specified kind
-    at position aIndex if aIndex is in the range [1..Count] and the instance is an array,
-    otherwise just returns False }
+  { if the instance is not an array and aIndex = 0, then it acts like AddNode;
+    returns True and inserts new node of the specified kind at position aIndex if aIndex
+    is in the range [1..Count] and the instance is an array, otherwise just returns False }
     function  InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
     function  Contains(const aName: string): Boolean; inline;
     function  ContainsUniq(const aName: string): Boolean; inline;
@@ -4445,9 +4446,7 @@ class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: 
 var
   s: string = '';
 begin
-{$PUSH}{$Q+}{$R+}
   System.SetLength(s, aCount);
-{$POP}
   aStream.ReadBuffer(Pointer(s)^, aCount);
   Result := TryParse(s, aRoot, aSkipBom, aDepth);
 end;
@@ -5393,64 +5392,48 @@ end;
 
 function TJsonNode.InsertNull(aIndex: SizeInt): Boolean;
 begin
-  if CanArrayInsert(aIndex) then
-    begin
-      FArray^.Insert(aIndex, TJsonNode.Create);
-      exit(True);
-    end;
-  Result := False;
+  Result := CanArrayInsert(aIndex);
+  if Result then
+    FArray^.Insert(aIndex, TJsonNode.Create);
 end;
 
 function TJsonNode.Insert(aIndex: SizeInt; aValue: Boolean): Boolean;
 begin
-  if CanArrayInsert(aIndex) then
-    begin
-      FArray^.Insert(aIndex, TJsonNode.Create(aValue));
-      exit(True);
-    end;
-  Result := False;
+  Result := CanArrayInsert(aIndex);
+  if Result then
+    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
 function TJsonNode.Insert(aIndex: SizeInt; aValue: Double): Boolean;
 begin
-  if CanArrayInsert(aIndex) then
-    begin
-      FArray^.Insert(aIndex, TJsonNode.Create(aValue));
-      exit(True);
-    end;
-  Result := False;
+  Result := CanArrayInsert(aIndex);
+  if Result then
+    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
 function TJsonNode.Insert(aIndex: SizeInt; const aValue: string): Boolean;
 begin
-  if CanArrayInsert(aIndex) then
-    begin
-      FArray^.Insert(aIndex, TJsonNode.Create(aValue));
-      exit(True);
-    end;
-  Result := False;
+  Result := CanArrayInsert(aIndex);
+  if Result then
+    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
 function TJsonNode.Insert(aIndex: SizeInt; const aValue: TJVariant): Boolean;
 begin
-  if CanArrayInsert(aIndex) then
-    begin
-      FArray^.Insert(aIndex, TJsonNode.Create(aValue));
-      exit(True);
-    end;
-  Result := False;
+  Result := CanArrayInsert(aIndex);
+  if Result then
+    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
 function TJsonNode.InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
 begin
-  if CanArrayInsert(aIndex) then
+  aNode := nil;
+  Result := CanArrayInsert(aIndex);
+  if Result then
     begin
       aNode := TJsonNode.Create(aKind);
       FArray^.Insert(aIndex, aNode);
-      exit(True);
     end;
-  aNode := nil;
-  Result := False;
 end;
 
 function TJsonNode.Contains(const aName: string): Boolean;
