@@ -368,7 +368,7 @@ type
     procedure SetAsNumber(aValue: Double);
     function  GetAsString: string; inline;
     procedure SetAsString(const aValue: string); inline;
-    function  DoBuildJson: TStrBuilder;
+    procedure DoBuildJson(out sb: TStrBuilder);
     function  GetAsJson: string; inline;
     procedure SetAsJson(const aValue: string);
     function  GetCount: SizeInt; inline;
@@ -4018,10 +4018,9 @@ begin
   Result := Double2Str(aValue, DefaultFormatSettings.DecimalSeparator);
 end;
 
-function TJsonNode.DoBuildJson: TStrBuilder;
+procedure TJsonNode.DoBuildJson(out sb: TStrBuilder);
 var
-  sb: TStrBuilder;
-  e: TPair;
+  p: TPair;
   s: shortstring;
   procedure BuildJson(aInst: TJsonNode);
   var
@@ -4060,10 +4059,10 @@ var
               Last := Pred(aInst.FObject^.Count);
               for I := 0 to Last do
                 begin
-                  e := aInst.FObject^.Mutable[I]^;
-                  sb.AppendEncode(e.Key);
+                  p := aInst.FObject^.Mutable[I]^;
+                  sb.AppendEncode(p.Key);
                   sb.Append(chColon);
-                  BuildJson(e.Value);
+                  BuildJson(p.Value);
                   if I <> Last then
                     sb.Append(chComma);
                 end;
@@ -4075,12 +4074,14 @@ var
 begin
   sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   BuildJson(Self);
-  Result := sb;
 end;
 
 function TJsonNode.GetAsJson: string;
+var
+  sb: TStrBuilder;
 begin
-  Result := DoBuildJson.ToString;
+  DoBuildJson(sb);
+  Result := sb.ToString;
 end;
 
 procedure TJsonNode.SetAsJson(const aValue: string);
@@ -6191,8 +6192,11 @@ begin
 end;
 
 function TJsonNode.SaveToStream(aStream: TStream): SizeInt;
+var
+  sb: TStrBuilder;
 begin
-  Result := DoBuildJson.SaveToStream(aStream);
+  DoBuildJson(sb);
+  Result := sb.SaveToStream(aStream);
 end;
 
 function TJsonNode.SaveToStream(aStream: TStream; const aStyle: TJsonFormatStyle): SizeInt;
