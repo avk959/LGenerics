@@ -368,7 +368,7 @@ type
     procedure SetAsNumber(aValue: Double);
     function  GetAsString: string; inline;
     procedure SetAsString(const aValue: string); inline;
-    procedure DoBuildJson(out sb: TStrBuilder);
+    procedure DoBuildJson(var sb: TStrBuilder);
     function  GetAsJson: string; inline;
     procedure SetAsJson(const aValue: string);
     function  GetCount: SizeInt; inline;
@@ -421,10 +421,9 @@ type
     var
       FQueue: TQueue;
       FCurrent: TJsonNode;
-      function GetCurrent: TJsonNode; inline;
     public
       function MoveNext: Boolean;
-      property Current: TJsonNode read GetCurrent;
+      property Current: TJsonNode read FCurrent;
     end;
 
     TSubTree = record
@@ -1557,7 +1556,7 @@ var
   end;
 
 begin
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   BuildJson(Self);
   Result := sb.ToString;
 end;
@@ -1613,7 +1612,7 @@ var
   end;
 
 begin
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   BuildJson(Self);
   Result := sb.ToString;
 end;
@@ -2614,7 +2613,7 @@ function TJsonPtr.ToAlien: string;
 var
   sb: TJsonNode.TStrBuilder;
 begin
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   sb.AppendEncode(Encode(FSegments));
   Result := sb.ToString;
 end;
@@ -4018,7 +4017,7 @@ begin
   Result := Double2Str(aValue, DefaultFormatSettings.DecimalSeparator);
 end;
 
-procedure TJsonNode.DoBuildJson(out sb: TStrBuilder);
+procedure TJsonNode.DoBuildJson(var sb: TStrBuilder);
 var
   p: TPair;
   s: shortstring;
@@ -4072,7 +4071,6 @@ var
     end;
   end;
 begin
-  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
   BuildJson(Self);
 end;
 
@@ -4080,6 +4078,7 @@ function TJsonNode.GetAsJson: string;
 var
   sb: TStrBuilder;
 begin
+  sb.Create(S_BUILD_INIT_SIZE);
   DoBuildJson(sb);
   Result := sb.ToString;
 end;
@@ -4498,7 +4497,7 @@ class function TJsonNode.PasStrToJson(const s: string): string;
 var
   sb: TStrBuilder;
 begin
-  sb := TStrBuilder.Create(System.Length(s)*2);
+  sb.Create(System.Length(s)*2);
   sb.AppendEncode(s);
   Result := sb.ToString;
 end;
@@ -4507,7 +4506,7 @@ class function TJsonNode.PasStrToAsciiJson(const s: string): string;
 var
   sb: TStrBuilder;
 begin
-  sb := TStrBuilder.Create(System.Length(s)*2);
+  sb.Create(System.Length(s)*2);
   sb.AppendEncodeOpt(s, ueoEnsureASCII, False);
   Result := sb.ToString;
 end;
@@ -4789,11 +4788,6 @@ end;
 
 { TJsonNode.TTreeEnumerator }
 
-function TJsonNode.TTreeEnumerator.GetCurrent: TJsonNode;
-begin
-  Result := FCurrent;
-end;
-
 function TJsonNode.TTreeEnumerator.MoveNext: Boolean;
 var
   I: SizeInt;
@@ -4950,8 +4944,7 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
   end;
 
 begin
-  if aNode = Self then
-    exit;
+  if aNode = Self then exit;
   Clear;
   DoCopy(aNode, Self);
 end;
@@ -5947,7 +5940,7 @@ var
   end;
 begin
   if (aUEscOpt = ueoNone) and not aHtmlEsc then exit(GetAsJson);
-  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
+  sb.Create(S_BUILD_INIT_SIZE);
   BuildJson(Self);
   Result := sb.ToString;
 end;
@@ -6169,7 +6162,7 @@ var
       end;
   end;
 begin
-  sb := TStrBuilder.Create(S_BUILD_INIT_SIZE);
+  sb.Create(S_BUILD_INIT_SIZE);
   LineBreak := ssLineBreaks[aStyle.LineBreak];
   OneLineArray := jfoSingleLineArray in aStyle.Options;
   OneLineObject := jfoSingleLineObject in aStyle.Options;
@@ -6195,6 +6188,7 @@ function TJsonNode.SaveToStream(aStream: TStream): SizeInt;
 var
   sb: TStrBuilder;
 begin
+  sb.Create(S_BUILD_INIT_SIZE);
   DoBuildJson(sb);
   Result := sb.SaveToStream(aStream);
 end;
@@ -8202,7 +8196,7 @@ begin
   StackHigh := Pred(aStack.Size);
   Stack[0].Create(nil, pmNone);
   Stack[1].Create(aNode, pmNone);
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   for I := 0 to Pred(Size) do begin
     if Buf[I] < #128 then begin
       NextClass := SymClassTable[Ord(Buf[I])];
@@ -9655,8 +9649,8 @@ begin
   FStackHigh := aMaxDepth;
   FSkipBom := aSkipBom;
   FReadMode := True;
-  FsBuilder := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  FsbHelp := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  FsBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  FsbHelp.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FStack[0] := TLevel.Create(pmNone);
 end;
 
