@@ -31,7 +31,6 @@ uses
   lgHelpers,
   lgAbstractContainer,
   lgArrayHelpers,
-  lgQueue,
   lgVector,
   lgList,
   lgSeqUtils,
@@ -91,6 +90,35 @@ const
 {$POP}
 
 type
+  TUEscapeOption = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
+
+  { TStrBuilder: helper entity for internal use }
+  TStrBuilder = record
+  private
+    FBuffer: specialize TGDynArray<AnsiChar>;
+    FCount: SizeInt;
+  public
+    class function DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string; static;
+    constructor Create(aCapacity: SizeInt);
+    constructor Create(const s: string);
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure MakeEmpty; inline;
+    procedure EnsureCapacity(aCapacity: SizeInt); inline;
+    procedure Append(c: AnsiChar); inline;
+    procedure Append(c: AnsiChar; aCount: SizeInt);
+    procedure Append(p: PAnsiChar; aCount: SizeInt);
+    procedure Append(const s: string); inline;
+    procedure AppendEncode(const s: string);
+    procedure AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
+    procedure Append(const s: shortstring); inline;
+    function  SaveToStream(aStream: TStream): SizeInt; inline;
+    function  WriteToStream(aStream: TStream): SizeInt; inline;
+    function  ToString: string; inline;
+    function  ToDecodeString: string;
+    function  ToPChar: PAnsiChar; inline;
+    property  Count: SizeInt read FCount;
+  end;
 
   TJVarKind = (vkNull, vkBool, vkNumber, vkString, vkArray, vkPairs);
 
@@ -189,7 +217,7 @@ type
   { checks if a Pascal string s is a well-formed JSON Pointer }
     class function ValidPtr(const s: string): Boolean; static;
   { checks if a JSON string s is a well-formed JSON Pointer }
-    class function ValidAlien(const s: string): Boolean; static;
+    class function ValidJsonPtr(const s: string): Boolean; static;
   { converts a JSON pointer instance aPtr into a sequence of segments;
     raises an EJsException if aPtr is not a well-formed JSON Pointer }
     class function ToSegments(const aPtr: string): TStringArray; static;
@@ -209,7 +237,7 @@ type
   { constructs a pointer from JSON string, treats slash("/")
     as a path delimiter and "~" as a special character;
     raises an exception if s is not a well-formed JSON Pointer }
-    constructor FromAlien(const s: string);
+    constructor FromJson(const s: string);
     function  GetEnumerator: TEnumerator; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -218,11 +246,131 @@ type
   { returns a pointer as a Pascal string }
     function  ToString: string; inline;
   { returns a pointer as a JSON string }
-    function  ToAlien: string;
+    function  ToJson: string;
     function  ToSegments: TStringArray; inline;
     function  Match(aRoot: TJsonNode; out aNode: TJsonNode): Boolean; inline;
     property  Count: SizeInt read GetCount;
     property  Segments[aIndex: SizeInt]: string read GetSegment; default;
+  end;
+
+  { TJsArray: a helper entity, it owns the nodes it contains }
+  TJsArray = record
+  type
+    PJsonNode = ^TJsonNode;
+  strict private
+    FItems: array of TJsonNode;
+    function  GetCount: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
+    function  GetItem(aIndex: SizeInt): TJsonNode; inline;
+    function  GetUncItem(aIndex: SizeInt): TJsonNode; inline;
+    function  GetUncMutItem(aIndex: SizeInt): PJsonNode; inline;
+    function  GetList: PJsonNode; inline;
+    procedure SetCount(aValue: SizeInt); inline;
+    class operator Finalize(var a: TJsArray); inline;
+  public
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure Clear;
+    procedure MakeEmpty; inline;
+    procedure Add(aNode: TJsonNode);
+    function  Insert(aIndex: SizeInt; aNode: TJsonNode): SizeInt;
+    function  Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Items[aIndex: SizeInt]: TJsonNode read GetItem; default;
+    property  UncItems[aIndex: SizeInt]: TJsonNode read GetUncItem;
+    property  UncMutItems[aIndex: SizeInt]: PJsonNode read GetUncMutItem;
+    property  List: PJsonNode read GetList;
+  end;
+  PJsArray = ^TJsArray;
+
+  PJsObject = ^TJsObject;
+
+  { TJsObject: a helper entity, it owns the nodes it contains }
+  TJsObject = record
+  private
+    class function GetHash(const aKey: string): SizeInt; static; inline;
+  public
+  type
+    TPair = specialize TGMapEntry<string, TJsonNode>;
+    PPair = ^TPair;
+
+    TNode = record
+    private
+      Chain,
+      Hash,
+      Next: SizeInt;
+    public
+      Data: TPair;
+    end;
+    PNode = ^TNode;
+
+  strict private
+    FNodes: array of TNode;
+    function  GetCount: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
+    procedure SetCount(aValue: SizeInt); inline;
+    function  GetPair(aIndex: SizeInt): TPair; inline;
+    function  GetUncPair(aIndex: SizeInt): TPair; inline;
+    function  GetUncMutPair(aIndex: SizeInt): PPair; inline;
+    function  GetItem(aIndex: SizeInt): TJsonNode; inline;
+    function  GetUncItem(aIndex: SizeInt): TJsonNode; inline;
+    procedure Rehash(aOldSize: SizeInt);
+    procedure DoAdd(const aKey: string; aNode: TJsonNode; aHash: SizeInt); inline;
+    function  DoFind(const aKey: string; aHash: SizeInt): SizeInt;
+    function  GetCountOf(const aKey: string): SizeInt;
+    function  DoFindUniq(const aKey: string): SizeInt; //0 -> not found; -1 -> found non-unique
+    procedure RemoveFromChain(aIndex: SizeInt);
+    procedure DoExtract(aIndex: SizeInt; out p: TPair);
+    function  TestHasUniq(aIndex: SizeInt): Boolean;
+    function  GetList: PNode; inline;
+    class operator Finalize(var o: TJsObject); inline;
+  public
+  type
+    TEqualEnumerator = record
+    private
+      FObj: PJsObject;
+      FKey: string;
+      FCurrIndex,
+      FHash: SizeInt;
+      FInLoop: Boolean;
+      function  GetCurrent: TPair; inline;
+      procedure Init(const aKey: string; aObj: PJsObject);
+      procedure InitEmpty;
+    public
+      function  MoveNext: Boolean;
+      property  Current: TPair read GetCurrent;
+    end;
+
+    class function GetEmptyEqualKeys: TEqualEnumerator; static; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    function  GetEqualKeys(const aKey: string): TEqualEnumerator; inline;
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt);
+    function  Contains(const aKey: string): Boolean; inline;
+    function  ContainsUniq(const aKey: string): Boolean; inline;
+    function  IndexOf(const aKey: string): SizeInt; inline;
+    function  CountOf(const aKey: string): SizeInt; inline;
+    procedure Add(const aKey: string; aNode: TJsonNode); inline;
+    function  AddUniq(const aKey: string; out p: PPair): Boolean; inline;
+    function  Find(const aKey: string): PPair;
+    function  Find(const aKey: string; aHash: SizeInt): SizeInt;
+    function  FindOrAdd(const aKey: string; out p: PPair): Boolean;
+    function  FindUniq(const aKey: string): PPair;
+    function  HasUniqKey(aIndex: SizeInt): Boolean;
+    function  Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
+    function  ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
+    function  Extract(const aKey: string; out aNode: TJsonNode): Boolean;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Pairs[aIndex: SizeInt]: TPair read GetPair; default;
+    property  UncPairs[aIndex: SizeInt]: TPair read GetUncPair;
+    property  UncMutPairs[aIndex: SizeInt]: PPair read GetUncMutPair;
+    property  Items[aIndex: SizeInt]: TJsonNode read GetItem;
+    property  UncItems[aIndex: SizeInt]: TJsonNode read GetUncItem;
+    property  List: PNode read GetList;
   end;
 
 const
@@ -241,9 +389,8 @@ type
     DEF_DEPTH = 511;
 
   type
-    TPair           = specialize TGMapEntry<string, TJsonNode>;
-    TNodeArray      = array of TJsonNode;
-    IPairEnumerable = specialize IGEnumerable<TPair>;
+    TPair      = specialize TGMapEntry<string, TJsonNode>;
+    TNodeArray = array of TJsonNode;
 
     TIterContext = record
       Level,
@@ -269,9 +416,6 @@ type
       constructor Make(aNode: TJsonNode);
     end;
 
-    INodeEnumerable = specialize IGEnumerable<TVisitNode>;
-    TUEscapeOption  = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
-
     TNameDuplicates = (ndupIgnore, ndupRewrite);
 
   private
@@ -280,62 +424,11 @@ type
     RW_BUF_SIZE       = 32768;
 
   type
-    TStrBuilder = record
-    private
-      FBuffer: specialize TGDynArray<AnsiChar>;
-      FCount: SizeInt;
-    public
-      class function DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string; static;
-      constructor Create(aCapacity: SizeInt);
-      constructor Create(const s: string);
-      function  IsEmpty: Boolean; inline;
-      function  NonEmpty: Boolean; inline;
-      procedure MakeEmpty; inline;
-      procedure EnsureCapacity(aCapacity: SizeInt); inline;
-      procedure Append(c: AnsiChar); inline;
-      procedure Append(c: AnsiChar; aCount: SizeInt);
-      procedure Append(p: PAnsiChar; aCount: SizeInt);
-      procedure Append(const s: string); inline;
-      procedure AppendEncode(const s: string);
-      procedure AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
-      procedure Append(const s: shortstring); inline;
-      function  SaveToStream(aStream: TStream): SizeInt; inline;
-      function  WriteToStream(aStream: TStream): SizeInt; inline;
-      function  ToString: string; inline;
-      function  ToDecodeString: string;
-      function  ToPChar: PAnsiChar; inline;
-      property  Count: SizeInt read FCount;
-    end;
-
-    TJsArray        = specialize TGLiteVector<TJsonNode>;
-    TJsObject       = specialize TGLiteHashList2<string, TPair, string>;
-    PJsArray        = ^TJsArray;
-    PJsObject       = ^TJsObject;
-    TPairEnumerator = specialize TGEnumerator<TPair>;
-    TPairs          = specialize TGEnumCursor<TPair>;
-    TRwBuffer       = array[0..Pred(RW_BUF_SIZE div SizeOf(SizeUInt))] of SizeUInt;
-
-    TEmptyPairEnumerator = class(TPairEnumerator)
-    protected
-      function  GetCurrent: TPair; override;
-    public
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-    TEqualEnumerator = class(TPairEnumerator)
-    protected
-      FEnum: TJsObject.TEqualEnumerator;
-      function  GetCurrent: TPair; override;
-    public
-      constructor Create(const aEnum: TJsObject.TEqualEnumerator);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
+    TRwBuffer = array[0..Pred(RW_BUF_SIZE div SizeOf(SizeUInt))] of SizeUInt;
 
     TValue = record
     case Integer of
-      0: (Ref: Pointer);
+      0: (Ptr: Pointer);
       1: (Num: Double);
       2: (Int: QWord);
     end;
@@ -343,22 +436,16 @@ type
   var
     FValue: TValue;
     FKind: TJsValueKind;
-    class function  CreateJsArray: PJsArray; static; inline;
-    class procedure FreeJsArray(a: PJsArray); static;
-    class function  CreateJsObject: PJsObject; static; inline;
-    class procedure FreeJsObject(o: PJsObject); static;
     class procedure MoveNode(aSrc, aDst: TJsonNode); static;
     class function  DoParseJson(aReader: TJsonReader; aDups: TNameDuplicates): TJsonNode;
     class function  DoParseJson(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
                                 aMaxDepth: Integer): TJsonNode;
     class function  DoParseJson(aStream: TStream; aDups: TNameDuplicates; aSkipBom: Boolean; aMaxDepth: Integer): TJsonNode;
-    function  GetFString: string; inline;
-    function  GetFArray: PJsArray; inline;
-    function  GetFObject: PJsObject; inline;
-    procedure SetFString(const aValue: string); inline;
-    procedure SetFArray(aValue: PJsArray); inline;
-    procedure SetFObject(aValue: PJsObject); inline;
-    procedure DoClear;
+    function  GetStrVal: string; inline;
+    function  GetArrayPtr: PJsArray; inline;
+    function  GetObjPtr: PJsObject; inline;
+    procedure SetStrVal(const aValue: string); inline;
+    procedure DoClear; //inline;
     function  GetAsArray: TJsonNode; inline;
     function  GetAsObject: TJsonNode; inline;
     function  GetAsNull: TJsonNode; inline;
@@ -368,75 +455,34 @@ type
     procedure SetAsNumber(aValue: Double);
     function  GetAsString: string; inline;
     procedure SetAsString(const aValue: string); inline;
-    procedure DoBuildJson(var sb: TStrBuilder);
-    function  GetAsJson: string; inline;
+    function  GetAsJson: string;
     procedure SetAsJson(const aValue: string);
     function  GetCount: SizeInt; inline;
-    function  CanArrayInsert(aIndex: SizeInt): Boolean; inline;
-    function  CanObjectInsert(aIndex: SizeInt): Boolean; inline;
     function  GetItem(aIndex: SizeInt): TJsonNode;
     function  GetPair(aIndex: SizeInt): TPair;
     function  GetNItem(const aName: string): TJsonNode;
     function  GetValue: TJVariant;
     procedure SetValue(const aValue: TJVariant);
-    property  FString: string read GetFString write SetFString;
-    property  FArray: PJsArray read GetFArray write SetFArray;
-    property  FObject: PJsObject read GetFObject write SetFObject;
-
-  type
-    TNodeEnumerator = class(specialize TGEnumerator<TVisitNode>)
-    private
-    type
-      TQueue = specialize TGLiteQueue<TVisitNode>;
-    var
-      FQueue: TQueue;
-      FStart,
-      FCurrent: TVisitNode;
-    protected
-      function  GetCurrent: TVisitNode; override;
-    public
-      constructor Create(aNode: TJsonNode);
-      function  MoveNext: Boolean; override;
-      procedure Reset; override;
-    end;
-
-  private
-    function GetNodeEnumerable: INodeEnumerable;
+    property  StrVal: string read GetStrVal write SetStrVal;
+    property  ArrayPtr: PJsArray read GetArrayPtr;
+    property  ObjectPtr: PJsObject read GetObjPtr;
   public
   type
     TEnumerator = record
     private
-      FNode: TJsonNode;
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FLastNode: Pointer;
+      FKind: TJsValueKind;
       function GetCurrent: TJsonNode; inline;
     public
       function MoveNext: Boolean; inline;
       property Current: TJsonNode read GetCurrent;
     end;
 
-    TTreeEnumerator = record
-    private
-    type
-      TQueue = specialize TGLiteQueue<TJsonNode>;
-    var
-      FQueue: TQueue;
-      FCurrent: TJsonNode;
-    public
-      function MoveNext: Boolean;
-      property Current: TJsonNode read FCurrent;
-    end;
-
-    TSubTree = record
-    private
-      FNode: TJsonNode;
-    public
-      function GetEnumerator: TTreeEnumerator;
-    end;
-
     TEntryEnumerator = record
     private
-      FNode: TJsonNode;
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FLastNode: TJsObject.PNode;
       function GetCurrent: TPair; inline;
     public
       function MoveNext: Boolean; inline;
@@ -452,8 +498,8 @@ type
 
     TNameEnumerator = record
     private
-      FNode: TJsonNode;
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FLastNode: TJsObject.PNode;
       function GetCurrent: string; inline;
     public
       function MoveNext: Boolean; inline;
@@ -466,6 +512,17 @@ type
     public
       function GetEnumerator: TNameEnumerator;
       function ToArray: TStringArray;
+    end;
+
+    TEqualEnumerator = record
+    private
+      FEnum: TJsObject.TEqualEnumerator;
+      function  GetCurrent: TPair; inline;
+      procedure Init(const aEnum: TJsObject.TEqualEnumerator);
+    public
+      function  GetEnumerator: TEqualEnumerator; inline;
+      function  MoveNext: Boolean; inline;
+      property  Current: TPair read GetCurrent;
     end;
 
   { checks if the content is well-formed JSON; aDepth indicates the maximum allowable
@@ -481,7 +538,6 @@ type
     class function JsonStringValid(const s: string): Boolean; static;
   { checks if s represents a valid JSON number }
     class function JsonNumberValid(const s: string): Boolean; static;
-    class function LikelyKind(aBuf: PAnsiChar; aSize: SizeInt): TJsValueKind; static;
   { returns the parsing result; if the result is True, then the created
     object is returned in the aRoot parameter, otherwise nil is returned }
     class function TryParse(const s: string; out aRoot: TJsonNode;
@@ -534,10 +590,9 @@ type
     constructor Create(aNode: TJsonNode); overload;
     destructor Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
-    function  SubTree: TSubTree; inline;
     function  Entries: TEntries; inline;
     function  Names: TNames; inline;
-    function  EqualNames(const aName: string): IPairEnumerable; inline;
+    function  EqualNames(const aName: string): TEqualEnumerator; inline;
     function  IsNull: Boolean; inline;
     function  IsFalse: Boolean; inline;
     function  IsTrue: Boolean; inline;
@@ -551,7 +606,7 @@ type
     function  IsLiteral: Boolean; inline;
     function  IsScalar: Boolean; inline;
     function  IsStruct: Boolean; inline;
-    procedure Clear; inline;
+    procedure Clear;
   { duplicates an instance, is recursive }
     function  Clone: TJsonNode;
   { makes a deep copy of the aNode, does not check if aNode is assigned, is recursive }
@@ -642,21 +697,18 @@ type
     only if aName is unique within an instance and the string aJson can be parsed;
     the new node is added as to an object }
     function  TryAddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
-  { if the instance is not an array and aIndex = 0, then it acts like AddNull;
-    returns True and inserts null at position aIndex if aIndex is in the range [1..Count]
-    and the instance is an array, otherwise just returns False }
-    function  InsertNull(aIndex: SizeInt): Boolean;
-  { if the instance is not an array and aIndex = 0, then it acts like;
-    returns True and inserts aValue at position aIndex if aIndex is in the range [1..Count]
-    and the instance is an array, otherwise just returns False }
-    function  Insert(aIndex: SizeInt; aValue: Boolean): Boolean;
-    function  Insert(aIndex: SizeInt; aValue: Double): Boolean;
-    function  Insert(aIndex: SizeInt; const aValue: string): Boolean;
-    function  Insert(aIndex: SizeInt; const aValue: TJVariant): Boolean;
-  { if the instance is not an array and aIndex = 0, then it acts like AddNode;
-    returns True and inserts new node of the specified kind at position aIndex if aIndex
-    is in the range [1..Count] and the instance is an array, otherwise just returns False }
-    function  InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
+  { tries to insert a null value at the specified position aIndex of the instance as an array;
+    returns the index of the inserted element }
+    function  InsertNull(aIndex: SizeInt): SizeInt; inline;
+  { tries to insert a specified value at the specified position aIndex of the instance as an array;
+    returns the index of the inserted element }
+    function  Insert(aIndex: SizeInt; aValue: Boolean): SizeInt; inline;
+    function  Insert(aIndex: SizeInt; aValue: Double): SizeInt; inline;
+    function  Insert(aIndex: SizeInt; const aValue: string): SizeInt; inline;
+    function  Insert(aIndex: SizeInt; const aValue: TJVariant): SizeInt; inline;
+  { tries to insert a node at the specified position aIndex of the instance as an array;
+    returns the index of the inserted element }
+    function  InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): SizeInt; inline;
     function  Contains(const aName: string): Boolean; inline;
     function  ContainsUniq(const aName: string): Boolean; inline;
     function  IndexOfName(const aName: string): SizeInt; inline;
@@ -739,8 +791,6 @@ type
     property  AsArray: TJsonNode read GetAsArray;
   { converts an instance to an object }
     property  AsObject: TJsonNode read GetAsObject;
-  { traverses the document tree in BFS manner, level by level }
-    property  AsEnumerable: INodeEnumerable read GetNodeEnumerable;
     property  Kind: TJsValueKind read FKind;
     property  Count: SizeInt read GetCount;
   { will raise exception if aIndex out of bounds }
@@ -1056,7 +1106,7 @@ type
     FBuffer: PAnsiChar;
     FStack: array of TLevel;
     FsBuilder,
-    FsbHelp: TJsonNode.TStrBuilder;
+    FsbHelp: TStrBuilder;
     FSrcStream: TStream;
     FBufSize,
     FByteCount,
@@ -1295,6 +1345,407 @@ begin
   LineBreak := aLineBreak;
 end;
 
+const
+{$PUSH}{$J-}
+  chOpenCurBr: AnsiChar  = '{';
+  chClosCurBr: AnsiChar  = '}';
+  chOpenSqrBr: AnsiChar  = '[';
+  chClosSqrBr: AnsiChar  = ']';
+  chClosParen: AnsiChar  = ')';
+  chColon: AnsiChar      = ':';
+  chComma: AnsiChar      = ',';
+  chSpace: AnsiChar      = ' ';
+  chEscapeSym: AnsiChar  = '\';
+  chBackSpSym: AnsiChar  = 'b';
+  chTabSym: AnsiChar     = 't';
+  chLineSym: AnsiChar    = 'n';
+  chFormSym: AnsiChar    = 'f';
+  chCarRetSym: AnsiChar  = 'r';
+  chUnicodeSym: AnsiChar = 'u';
+  chZero: AnsiChar       = '0';
+{$POP}
+
+type
+  TChar2 = array[0..1] of AnsiChar;
+  TChar4 = array[0..3] of AnsiChar;
+  PChar2 = ^TChar2;
+  PChar4 = ^TChar4;
+
+function HexCh4ToDWord(const aSeq: TChar4): DWord; inline;
+const
+  x: array['0'..'f'] of DWord = (
+   0, 1, 2, 3, 4, 5, 6, 7, 8, 9,15,15,15,15,15,15,
+  15,10,11,12,13,14,15,15,15,15,15,15,15,15,15,15,
+  15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
+  15,10,11,12,13,14,15);
+begin
+  Result := x[aSeq[0]] shl 12 or x[aSeq[1]] shl 8 or x[aSeq[2]] shl 4 or x[aSeq[3]];
+end;
+
+{ TStrBuilder }
+
+{$PUSH}{$MACRO ON}
+class function TStrBuilder.DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string;
+var
+  r: string;
+  I, J, Last: SizeInt;
+  pR: PAnsiChar;
+  uh, ul: DWord;
+{$DEFINE PushReplaceCharMacro :=
+  pR[ J ] := #$ef;
+  pR[J+1] := #$bf;
+  pR[J+2] := #$bd;
+  J += 3
+}
+begin
+  System.SetLength(r, aCount);
+  Last := Pred(aCount);
+  I := 1;
+  J := 0;
+  pR := PAnsiChar(r);
+  while I < Last do
+    if p[I] <> '\' then begin
+      pR[J] := p[I];
+      Inc(I);
+      Inc(J);
+    end else
+      case p[Succ(I)] of
+        'b': begin pR[J] := #8;  I += 2; Inc(J); end;
+        'f': begin pR[J] := #12; I += 2; Inc(J); end;
+        'n': begin pR[J] := #10; I += 2; Inc(J); end;
+        'r': begin pR[J] := #13; I += 2; Inc(J); end;
+        't': begin pR[J] := #9;  I += 2; Inc(J); end;
+        'u':
+          begin
+            uh := HexCh4ToDWord(PChar4(@p[I+2])^);
+            I += 6;
+            case uh of
+              0..$7f: begin pR[J] := Char(uh); Inc(J); end;
+              $80..$7ff: begin
+                  pR[ J ] := Char((uh shr 6) or $c0);
+                  pR[J+1] := Char((uh and $3f) or $80);
+                  J += 2;
+                end;
+              $800..$d7ff,$e000..$ffff: begin
+                  pR[ J ] := Char((uh shr 12) or $e0);
+                  pR[J+1] := Char((uh shr 6) and $3f or $80);
+                  pR[J+2] := Char((uh and $3f) or $80);
+                  J += 3;
+                end;
+              $d800..$dbff: // high surrogate
+                if (Last - I >= 5) and (p[I] = '\') and (p[I+1] = 'u') then begin
+                  ul := HexCh4ToDWord(PChar4(@p[I+2])^);
+                  if (ul >= $dc00) and (ul <= $dfff) then begin
+                    I += 6;
+                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
+                    pR[ J ] := Char(ul shr 18 or $f0);
+                    pR[J+1] := Char((ul shr 12) and $3f or $80);
+                    pR[J+2] := Char((ul shr 6) and $3f or $80);
+                    pR[J+3] := Char(ul and $3f or $80);
+                    J += 4;
+                  end else begin
+                    PushReplaceCharMacro;
+                  end;
+                end else begin
+                  PushReplaceCharMacro;
+                end;
+              $dc00..$dfff: begin // low surrogate
+                  PushReplaceCharMacro;
+                end;
+            else
+            end;
+          end;
+      else
+        pR[J] := p[Succ(I)];
+        I += 2;
+        Inc(J);
+      end;
+  System.SetLength(r, J);
+  Result := r;
+end;
+{$UNDEF PushReplaceCharMacro}{$POP}
+
+constructor TStrBuilder.Create(aCapacity: SizeInt);
+begin
+  if aCapacity > 0 then
+    FBuffer.Length := lgUtils.RoundUpTwoPower(aCapacity)
+  else
+    FBuffer.Length := DEFAULT_CONTAINER_CAPACITY;
+  FCount := 0;
+end;
+
+constructor TStrBuilder.Create(const s: string);
+begin
+  FBuffer.Length := System.Length(s);
+  FCount := System.Length(s);
+  System.Move(Pointer(s)^, FBuffer.Ptr^, System.Length(s));
+end;
+
+function TStrBuilder.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TStrBuilder.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TStrBuilder.MakeEmpty;
+begin
+  FCount := 0;
+end;
+
+procedure TStrBuilder.EnsureCapacity(aCapacity: SizeInt);
+begin
+  if aCapacity > FBuffer.Length then
+    FBuffer.Length := lgUtils.RoundUpTwoPower(aCapacity);
+end;
+
+procedure TStrBuilder.Append(c: AnsiChar);
+begin
+  EnsureCapacity(Count + 1);
+  FBuffer[Count] := c;
+  Inc(FCount);
+end;
+
+procedure TStrBuilder.Append(c: AnsiChar; aCount: SizeInt);
+begin
+  if aCount < 1 then exit;
+  EnsureCapacity(Count + aCount);
+  FillChar(FBuffer.Ptr[Count], aCount, c);
+  FCount += aCount;
+end;
+
+procedure TStrBuilder.Append(p: PAnsiChar; aCount: SizeInt);
+begin
+  if aCount < 1 then exit;
+  EnsureCapacity(Count + aCount);
+  System.Move(p^, FBuffer.Ptr[Count], aCount);
+  FCount += aCount;
+end;
+
+procedure TStrBuilder.Append(const s: string);
+begin
+  EnsureCapacity(Count + System.Length(s));
+  System.Move(Pointer(s)^, FBuffer.Ptr[Count], System.Length(s));
+  FCount += System.Length(s);
+end;
+
+const
+  HEX_CHARS_TBL: PAnsiChar = '0123456789ABCDEF';
+
+procedure TStrBuilder.AppendEncode(const s: string);
+var
+  I: SizeInt;
+  c: AnsiChar;
+begin
+  Append('"');
+  for I := 1 to System.Length(s) do begin
+    c := s[I];
+    case c of
+      #0..#7, #11, #14..#31:
+        begin
+           Append('\u00');
+           Append(HEX_CHARS_TBL[Ord(c) shr  4]);
+           Append(HEX_CHARS_TBL[Ord(c) and 15]);
+        end;
+      #8 : Append('\b'); //backspace
+      #9 : Append('\t'); //tab
+      #10: Append('\n'); //line feed
+      #12: Append('\f'); //form feed
+      #13: Append('\r'); //carriage return
+      '"': Append('\"'); //quote
+      '\': Append('\\'); //backslash
+    else
+      Append(c);
+    end;
+  end;
+  Append('"');
+end;
+
+function Utf8Char2Ucs4(p: PByte; aStrLen: Integer; out aUcs4: DWord): Integer;
+const
+  REPLACE_CHAR = $fffd;
+  procedure ExitBadChar; inline;
+  begin
+    aUcs4 := REPLACE_CHAR; Result := 1
+  end;
+begin
+  case p^ of
+    0..$7f:
+      begin aUcs4 := p^; Result := 1; end;
+    $c2..$df:
+      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
+        aUcs4 := DWord(DWord(p[0] and $1f) shl 6 or DWord(p[1] and $3f));
+        Result := 2;
+      end else ExitBadChar;
+    $e0:
+      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
+        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        Result := 3;
+      end else ExitBadChar;
+    $e1..$ec, $ee..$ef:
+      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
+        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        Result := 3;
+      end else ExitBadChar;
+    $ed:
+      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
+        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
+        Result := 3;
+      end else ExitBadChar;
+    $f0:
+      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
+        Result := 4;
+      end else ExitBadChar;
+    $f1..$f3:
+      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
+        Result := 4
+      end else ExitBadChar;
+    $f4:
+      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
+        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
+                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
+        Result := 4;
+      end else ExitBadChar;
+  else
+    ExitBadChar;
+  end;
+end;
+
+function Ucs4ToUEsc(c: DWord; pBuffer: PAnsiChar): Integer;
+var
+  ul: DWord;
+begin
+  ul := 0;
+  if c > $ffff then begin
+    ul := c and $3ff + $dc00;
+    c := c shr 10 + $d7c0;
+  end;
+  Result := 6;
+  pBuffer[0] := chEscapeSym;
+  pBuffer[1] := chUnicodeSym;
+  pBuffer[2] := HEX_CHARS_TBL[c shr 12];
+  pBuffer[3] := HEX_CHARS_TBL[(c shr  8) and $f];
+  pBuffer[4] := HEX_CHARS_TBL[(c shr  4) and $f];
+  pBuffer[5] := HEX_CHARS_TBL[c and $f];
+  if ul <> 0 then begin
+    Result += 6;
+    pBuffer[ 6] := chEscapeSym;
+    pBuffer[ 7] := chUnicodeSym;
+    pBuffer[ 8] := HEX_CHARS_TBL[ul shr 12];
+    pBuffer[ 9] := HEX_CHARS_TBL[(ul shr  8) and $f];
+    pBuffer[10] := HEX_CHARS_TBL[(ul shr  4) and $f];
+    pBuffer[11] := HEX_CHARS_TBL[ul and $f];
+  end;
+end;
+
+procedure TStrBuilder.AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
+var
+  c: DWord;
+  p, pEnd: PAnsiChar;
+  Len, BufLen: Integer;
+  Buffer: array[0..15] of AnsiChar;
+begin
+  Append('"');
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  while p < pEnd do begin
+    Len := Utf8Char2Ucs4(PByte(p), pEnd - p, c);
+    if c < $80 then
+      case c of
+        0..7, 11, 14..31:
+          begin
+             Append('\u00');
+             Append(HEX_CHARS_TBL[c shr  4]);
+             Append(HEX_CHARS_TBL[c and 15]);
+          end;
+        8 : Append('\b'); //backspace
+        9 : Append('\t'); //tab
+        10: Append('\n'); //line feed
+        12: Append('\f'); //form feed
+        13: Append('\r'); //carriage return
+        34: Append('\"'); //quote
+        92: Append('\\'); //backslash
+      else
+        if aHtmlEsc then
+          case c of
+            38: Append('\u0026'); // &
+            60: Append('\u003C'); // <
+            62: Append('\u003E'); // >
+          else
+            Append(AnsiChar(c));
+          end
+        else
+          Append(AnsiChar(c));
+      end
+    else
+      case aUEscOpt of
+        ueoEnsureASCII: begin
+            BufLen := Ucs4ToUEsc(c, @Buffer);
+            Append(PAnsiChar(@Buffer), BufLen);
+          end;
+        ueoEnsureBMP:
+          if c > $ffff then begin
+            BufLen := Ucs4ToUEsc(c, @Buffer);
+            Append(PAnsiChar(@Buffer), BufLen);
+          end else
+            Append(p, Len);
+      else // ueoNone
+        Append(p, Len);
+      end;
+    p += Len;
+  end;
+  Append('"');
+end;
+
+procedure TStrBuilder.Append(const s: shortstring);
+begin
+  EnsureCapacity(Count + System.Length(s));
+  System.Move(s[1], FBuffer.Ptr[Count], System.Length(s));
+  FCount += System.Length(s);
+end;
+
+function TStrBuilder.SaveToStream(aStream: TStream): SizeInt;
+begin
+  aStream.WriteBuffer(FBuffer.Ptr^, Count);
+  Result := Count;
+  FCount := 0;
+end;
+
+function TStrBuilder.WriteToStream(aStream: TStream): SizeInt;
+begin
+  Result := aStream.Write(FBuffer.Ptr^, Count);
+  FCount := 0;
+end;
+
+function TStrBuilder.ToString: string;
+begin
+  System.SetLength(Result, Count);
+  System.Move(FBuffer.Ptr^, Pointer(Result)^, Count);
+  FCount := 0;
+end;
+
+function TStrBuilder.ToDecodeString: string;
+begin
+  if IsEmpty then exit('');
+  Result := DecodeJsonStr(FBuffer.Ptr, Count);
+  FCount := 0;
+end;
+
+function TStrBuilder.ToPChar: PAnsiChar;
+begin
+  EnsureCapacity(Succ(Count));
+  FBuffer[Count] := #0;
+  FCount := 0;
+  Result := FBuffer.Ptr;
+end;
+
 { TJVariant }
 
 procedure TJVariant.ClearValue;
@@ -1487,36 +1938,16 @@ begin
   Result := Self;
 end;
 
-const
-{$PUSH}{$J-}
-  chOpenCurBr: AnsiChar  = '{';
-  chClosCurBr: AnsiChar  = '}';
-  chOpenSqrBr: AnsiChar  = '[';
-  chClosSqrBr: AnsiChar  = ']';
-  chClosParen: AnsiChar  = ')';
-  chColon: AnsiChar      = ':';
-  chComma: AnsiChar      = ',';
-  chSpace: AnsiChar      = ' ';
-  chEscapeSym: AnsiChar  = '\';
-  chBackSpSym: AnsiChar  = 'b';
-  chTabSym: AnsiChar     = 't';
-  chLineSym: AnsiChar    = 'n';
-  chFormSym: AnsiChar    = 'f';
-  chCarRetSym: AnsiChar  = 'r';
-  chUnicodeSym: AnsiChar = 'u';
-  chZero: AnsiChar       = '0';
-{$POP}
-
 function TJVariant.AsJson: string;
 var
-  sb: TJsonNode.TStrBuilder;
+  sb: TStrBuilder;
   s: shortstring;
   procedure BuildJson(const aValue: TJVariant);
   var
     I, Last: SizeInt;
   begin
     case aValue.Kind of
-      vkNull:   sb.Append(JS_NULL);
+      vkNull: sb.Append(JS_NULL);
       vkBool:
         if aValue.FValue.Bool then
           sb.Append(JS_TRUE)
@@ -1563,14 +1994,14 @@ end;
 
 function TJVariant.ToString: string;
 var
-  sb: TJsonNode.TStrBuilder;
+  sb: TStrBuilder;
   s: shortstring;
   procedure BuildJson(const aValue: TJVariant);
   var
     I, Last: SizeInt;
   begin
     case aValue.Kind of
-      vkNull:   sb.Append(JS_NULL);
+      vkNull: sb.Append(JS_NULL);
       vkBool:
         if aValue.FValue.Bool then
           sb.Append(JS_TRUE)
@@ -1987,387 +2418,6 @@ begin
   Node := aNode;
 end;
 
-type
-  TChar2 = array[0..1] of AnsiChar;
-  TChar4 = array[0..3] of AnsiChar;
-  PChar2 = ^TChar2;
-  PChar4 = ^TChar4;
-
-function HexCh4ToDWord(const aSeq: TChar4): DWord; inline;
-const
-  x: array['0'..'f'] of DWord = (
-   0, 1, 2, 3, 4, 5, 6, 7, 8, 9,15,15,15,15,15,15,
-  15,10,11,12,13,14,15,15,15,15,15,15,15,15,15,15,
-  15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
-  15,10,11,12,13,14,15);
-begin
-  Result := x[aSeq[0]] shl 12 or x[aSeq[1]] shl 8 or x[aSeq[2]] shl 4 or x[aSeq[3]];
-end;
-
-{ TJsonNode.TStrBuilder }
-
-{$PUSH}{$MACRO ON}
-class function TJsonNode.TStrBuilder.DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string;
-var
-  r: string;
-  I, J, Last: SizeInt;
-  pR: PAnsiChar;
-  uh, ul: DWord;
-{$DEFINE PushReplaceCharMacro :=
-  pR[ J ] := #$ef;
-  pR[J+1] := #$bf;
-  pR[J+2] := #$bd;
-  J += 3
-}
-begin
-  System.SetLength(r, aCount);
-  Last := Pred(aCount);
-  I := 1;
-  J := 0;
-  pR := PAnsiChar(r);
-  while I < Last do
-    if p[I] <> '\' then begin
-      pR[J] := p[I];
-      Inc(I);
-      Inc(J);
-    end else
-      case p[Succ(I)] of
-        'b': begin pR[J] := #8;  I += 2; Inc(J); end;
-        'f': begin pR[J] := #12; I += 2; Inc(J); end;
-        'n': begin pR[J] := #10; I += 2; Inc(J); end;
-        'r': begin pR[J] := #13; I += 2; Inc(J); end;
-        't': begin pR[J] := #9;  I += 2; Inc(J); end;
-        'u':
-          begin
-            uh := HexCh4ToDWord(PChar4(@p[I+2])^);
-            I += 6;
-            case uh of
-              0..$7f: begin pR[J] := Char(uh); Inc(J); end;
-              $80..$7ff: begin
-                  pR[ J ] := Char((uh shr 6) or $c0);
-                  pR[J+1] := Char((uh and $3f) or $80);
-                  J += 2;
-                end;
-              $800..$d7ff,$e000..$ffff: begin
-                  pR[ J ] := Char((uh shr 12) or $e0);
-                  pR[J+1] := Char((uh shr 6) and $3f or $80);
-                  pR[J+2] := Char((uh and $3f) or $80);
-                  J += 3;
-                end;
-              $d800..$dbff: // high surrogate
-                if (Last - I >= 5) and (p[I] = '\') and (p[I+1] = 'u') then begin
-                  ul := HexCh4ToDWord(PChar4(@p[I+2])^);
-                  if (ul >= $dc00) and (ul <= $dfff) then begin
-                    I += 6;
-                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
-                    pR[ J ] := Char(ul shr 18 or $f0);
-                    pR[J+1] := Char((ul shr 12) and $3f or $80);
-                    pR[J+2] := Char((ul shr 6) and $3f or $80);
-                    pR[J+3] := Char(ul and $3f or $80);
-                    J += 4;
-                  end else begin
-                    PushReplaceCharMacro;
-                  end;
-                end else begin
-                  PushReplaceCharMacro;
-                end;
-              $dc00..$dfff: begin // low surrogate
-                  PushReplaceCharMacro;
-                end;
-            else
-            end;
-          end;
-      else
-        pR[J] := p[Succ(I)];
-        I += 2;
-        Inc(J);
-      end;
-  System.SetLength(r, J);
-  Result := r;
-end;
-{$UNDEF PushReplaceCharMacro}{$POP}
-
-constructor TJsonNode.TStrBuilder.Create(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    FBuffer.Length := lgUtils.RoundUpTwoPower(aCapacity)
-  else
-    FBuffer.Length := DEFAULT_CONTAINER_CAPACITY;
-  FCount := 0;
-end;
-
-constructor TJsonNode.TStrBuilder.Create(const s: string);
-begin
-  FBuffer.Length := System.Length(s);
-  FCount := System.Length(s);
-  System.Move(Pointer(s)^, FBuffer.Ptr^, System.Length(s));
-end;
-
-function TJsonNode.TStrBuilder.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TJsonNode.TStrBuilder.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TJsonNode.TStrBuilder.MakeEmpty;
-begin
-  FCount := 0;
-end;
-
-procedure TJsonNode.TStrBuilder.EnsureCapacity(aCapacity: SizeInt);
-begin
-  if aCapacity > FBuffer.Length then
-    FBuffer.Length := lgUtils.RoundUpTwoPower(aCapacity);
-end;
-
-procedure TJsonNode.TStrBuilder.Append(c: AnsiChar);
-begin
-  EnsureCapacity(Count + 1);
-  FBuffer[Count] := c;
-  Inc(FCount);
-end;
-
-procedure TJsonNode.TStrBuilder.Append(c: AnsiChar; aCount: SizeInt);
-begin
-  if aCount < 1 then exit;
-  EnsureCapacity(Count + aCount);
-  FillChar(FBuffer.Ptr[Count], aCount, c);
-  FCount += aCount;
-end;
-
-procedure TJsonNode.TStrBuilder.Append(p: PAnsiChar; aCount: SizeInt);
-begin
-  if aCount < 1 then exit;
-  EnsureCapacity(Count + aCount);
-  System.Move(p^, FBuffer.Ptr[Count], aCount);
-  FCount += aCount;
-end;
-
-procedure TJsonNode.TStrBuilder.Append(const s: string);
-begin
-  EnsureCapacity(Count + System.Length(s));
-  System.Move(Pointer(s)^, FBuffer.Ptr[Count], System.Length(s));
-  FCount += System.Length(s);
-end;
-
-const
-  HEX_CHARS_TBL: PAnsiChar = '0123456789ABCDEF';
-
-procedure TJsonNode.TStrBuilder.AppendEncode(const s: string);
-var
-  I: SizeInt;
-  c: AnsiChar;
-begin
-  Append('"');
-  for I := 1 to System.Length(s) do begin
-    c := s[I];
-    case c of
-      #0..#7, #11, #14..#31:
-        begin
-           Append('\u00');
-           Append(HEX_CHARS_TBL[Ord(c) shr  4]);
-           Append(HEX_CHARS_TBL[Ord(c) and 15]);
-        end;
-      #8 : Append('\b'); //backspace
-      #9 : Append('\t'); //tab
-      #10: Append('\n'); //line feed
-      #12: Append('\f'); //form feed
-      #13: Append('\r'); //carriage return
-      '"': Append('\"'); //quote
-      '\': Append('\\'); //backslash
-    else
-      Append(c);
-    end;
-  end;
-  Append('"');
-end;
-
-function Utf8Char2Ucs4(p: PByte; aStrLen: Integer; out aUcs4: DWord): Integer;
-const
-  REPLACE_CHAR = $fffd;
-  procedure ExitBadChar; inline;
-  begin
-    aUcs4 := REPLACE_CHAR; Result := 1
-  end;
-begin
-  case p^ of
-    0..$7f:
-      begin aUcs4 := p^; Result := 1; end;
-    $c2..$df:
-      if (aStrLen > 1) and (p[1] in [$80..$bf]) then begin
-        aUcs4 := DWord(DWord(p[0] and $1f) shl 6 or DWord(p[1] and $3f));
-        Result := 2;
-      end else ExitBadChar;
-    $e0:
-      if (aStrLen > 2) and (p[1] in [$a0..$bf]) and (p[2] in [$80..$bf]) then begin
-        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
-        Result := 3;
-      end else ExitBadChar;
-    $e1..$ec, $ee..$ef:
-      if (aStrLen > 2) and (p[1] in [$80..$bf]) and (p[2] in [$80..$bf]) then begin
-        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
-        Result := 3;
-      end else ExitBadChar;
-    $ed:
-      if (aStrLen > 2) and (p[1] in [$80..$9f]) and (p[2] in [$80..$bf]) then begin
-        aUcs4 := DWord(DWord(p[0] and $f) shl 12 or DWord(p[1] and $3f) shl 6 or DWord(p[2] and $3f));
-        Result := 3;
-      end else ExitBadChar;
-    $f0:
-      if(aStrLen > 3)and(p[1]in[$90..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
-                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
-        Result := 4;
-      end else ExitBadChar;
-    $f1..$f3:
-      if(aStrLen > 3)and(p[1]in[$80..$bf])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
-                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
-        Result := 4
-      end else ExitBadChar;
-    $f4:
-      if(aStrLen > 3)and(p[1]in[$80..$8f])and(p[2]in[$80..$bf])and(p[3]in[$80..$bf])then begin
-        aUcs4 := DWord(DWord(p[0] and $7) shl 18 or DWord(p[1] and $3f) shl 12 or
-                           DWord(p[2] and $3f) shl 6 or DWord(p[3] and $3f));
-        Result := 4;
-      end else ExitBadChar;
-  else
-    ExitBadChar;
-  end;
-end;
-
-function Ucs4ToUEsc(c: DWord; pBuffer: PAnsiChar): Integer;
-var
-  ul: DWord;
-begin
-  ul := 0;
-  if c > $ffff then begin
-    ul := c and $3ff + $dc00;
-    c := c shr 10 + $d7c0;
-  end;
-  Result := 6;
-  pBuffer[0] := chEscapeSym;
-  pBuffer[1] := chUnicodeSym;
-  pBuffer[2] := HEX_CHARS_TBL[c shr 12];
-  pBuffer[3] := HEX_CHARS_TBL[(c shr  8) and $f];
-  pBuffer[4] := HEX_CHARS_TBL[(c shr  4) and $f];
-  pBuffer[5] := HEX_CHARS_TBL[c and $f];
-  if ul <> 0 then begin
-    Result += 6;
-    pBuffer[ 6] := chEscapeSym;
-    pBuffer[ 7] := chUnicodeSym;
-    pBuffer[ 8] := HEX_CHARS_TBL[ul shr 12];
-    pBuffer[ 9] := HEX_CHARS_TBL[(ul shr  8) and $f];
-    pBuffer[10] := HEX_CHARS_TBL[(ul shr  4) and $f];
-    pBuffer[11] := HEX_CHARS_TBL[ul and $f];
-  end;
-end;
-
-procedure TJsonNode.TStrBuilder.AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
-var
-  c: DWord;
-  p, pEnd: PAnsiChar;
-  Len, BufLen: Integer;
-  Buffer: array[0..15] of AnsiChar;
-begin
-  Append('"');
-  p := Pointer(s);
-  pEnd := p + System.Length(s);
-  while p < pEnd do begin
-    Len := Utf8Char2Ucs4(PByte(p), pEnd - p, c);
-    if c < $80 then
-      case c of
-        0..7, 11, 14..31:
-          begin
-             Append('\u00');
-             Append(HEX_CHARS_TBL[c shr  4]);
-             Append(HEX_CHARS_TBL[c and 15]);
-          end;
-        8 : Append('\b'); //backspace
-        9 : Append('\t'); //tab
-        10: Append('\n'); //line feed
-        12: Append('\f'); //form feed
-        13: Append('\r'); //carriage return
-        34: Append('\"'); //quote
-        92: Append('\\'); //backslash
-      else
-        if aHtmlEsc then
-          case c of
-            38: Append('\u0026'); // &
-            60: Append('\u003C'); // <
-            62: Append('\u003E'); // >
-          else
-            Append(AnsiChar(c));
-          end
-        else
-          Append(AnsiChar(c));
-      end
-    else
-      case aUEscOpt of
-        ueoEnsureASCII: begin
-            BufLen := Ucs4ToUEsc(c, @Buffer);
-            Append(PAnsiChar(@Buffer), BufLen);
-          end;
-        ueoEnsureBMP:
-          if c > $ffff then begin
-            BufLen := Ucs4ToUEsc(c, @Buffer);
-            Append(PAnsiChar(@Buffer), BufLen);
-          end else
-            Append(p, Len);
-      else // ueoNone
-        Append(p, Len);
-      end;
-    p += Len;
-  end;
-  Append('"');
-end;
-
-procedure TJsonNode.TStrBuilder.Append(const s: shortstring);
-begin
-  EnsureCapacity(Count + System.Length(s));
-  System.Move(s[1], FBuffer.Ptr[Count], System.Length(s));
-  FCount += System.Length(s);
-end;
-
-function TJsonNode.TStrBuilder.SaveToStream(aStream: TStream): SizeInt;
-begin
-  aStream.WriteBuffer(FBuffer.Ptr^, Count);
-  Result := Count;
-  FCount := 0;
-end;
-
-function TJsonNode.TStrBuilder.WriteToStream(aStream: TStream): SizeInt;
-begin
-  Result := aStream.Write(FBuffer.Ptr^, Count);
-  FCount := 0;
-end;
-
-function TJsonNode.TStrBuilder.ToString: string;
-begin
-  System.SetLength(Result, Count);
-  System.Move(FBuffer.Ptr^, Pointer(Result)^, Count);
-  FCount := 0;
-end;
-
-function TJsonNode.TStrBuilder.ToDecodeString: string;
-begin
-  if IsEmpty then exit('');
-  Result := DecodeJsonStr(FBuffer.Ptr, Count);
-  FCount := 0;
-end;
-
-function TJsonNode.TStrBuilder.ToPChar: PAnsiChar;
-begin
-  EnsureCapacity(Succ(Count));
-  FBuffer[Count] := #0;
-  FCount := 0;
-  Result := FBuffer.Ptr;
-end;
-
 { TJsonPtr.TEnumerator }
 
 function TJsonPtr.TEnumerator.GetCurrent: string;
@@ -2401,11 +2451,11 @@ end;
 
 class function TJsonPtr.Encode(const aSegs: array of string): string;
 var
-  sb: TJsonNode.TStrBuilder;
+  sb: TStrBuilder;
   I, J: SizeInt;
 begin
   Result := '';
-  sb := TJsonNode.TStrBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   for I := 0 to System.High(aSegs) do
     begin
       sb.Append('/');
@@ -2519,7 +2569,7 @@ begin
   Result := True;
 end;
 
-class function TJsonPtr.ValidAlien(const s: string): Boolean;
+class function TJsonPtr.ValidJsonPtr(const s: string): Boolean;
 var
   ps: string;
 begin
@@ -2569,7 +2619,7 @@ begin
   FSegments := specialize TGArrayHelpUtil<string>.CreateCopy(aPath);
 end;
 
-constructor TJsonPtr.FromAlien(const s: string);
+constructor TJsonPtr.FromJson(const s: string);
 var
   ps: string;
 begin
@@ -2609,9 +2659,9 @@ begin
   Result := Encode(FSegments);
 end;
 
-function TJsonPtr.ToAlien: string;
+function TJsonPtr.ToJson: string;
 var
-  sb: TJsonNode.TStrBuilder;
+  sb: TStrBuilder;
 begin
   sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   sb.AppendEncode(Encode(FSegments));
@@ -2628,89 +2678,581 @@ begin
   Result := aRoot.FindPath(FSegments, aNode);
 end;
 
-{ TJsonNode.TEmptyPairEnumerator }
+{ TJsArray }
 
-function TJsonNode.TEmptyPairEnumerator.GetCurrent: TPair;
+function TJsArray.GetCount: SizeInt;
 begin
-  Result := Default(TPair);
+  if FItems = nil then exit(0);
+  Result := SizeInt(FItems[0]);
 end;
 
-function TJsonNode.TEmptyPairEnumerator.MoveNext: Boolean;
+function TJsArray.GetCapacity: SizeInt;
 begin
+  if FItems = nil then exit(0);
+  Result := System.High(FItems);
+end;
+
+function TJsArray.GetItem(aIndex: SizeInt): TJsonNode;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FItems[Succ(aIndex)];
+end;
+
+function TJsArray.GetUncItem(aIndex: SizeInt): TJsonNode;
+begin
+  Result := FItems[Succ(aIndex)];
+end;
+
+function TJsArray.GetUncMutItem(aIndex: SizeInt): PJsonNode;
+begin
+  Result := @FItems[Succ(aIndex)];
+end;
+
+function TJsArray.GetList: PJsonNode;
+begin
+  if FItems = nil then exit(nil);
+  Result := @FItems[1];
+end;
+
+procedure TJsArray.SetCount(aValue: SizeInt);
+begin
+  if FItems <> nil then
+    SizeInt(FItems[0]) := aValue;
+end;
+
+class operator TJsArray.Finalize(var a: TJsArray);
+begin
+  a.Clear;
+end;
+
+function TJsArray.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TJsArray.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TJsArray.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > Capacity then
+    if aValue < DEFAULT_CONTAINER_CAPACITY then
+      System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
+    else
+      System.SetLength(FItems, LgUtils.RoundUpTwoPower(Succ(aValue)));
+end;
+
+procedure TJsArray.Clear;
+var
+  I: SizeInt;
+begin
+  for I := 1 to Count do FItems[I].Free;
+  FItems := nil;
+end;
+
+procedure TJsArray.MakeEmpty;
+begin
+  SetCount(0);
+end;
+
+procedure TJsArray.Add(aNode: TJsonNode);
+var
+  Cnt: SizeInt;
+begin
+  Cnt := Succ(Count);
+  EnsureCapacity(Cnt);
+  FItems[Cnt] := aNode;
+  SetCount(Cnt);
+end;
+
+function TJsArray.Insert(aIndex: SizeInt; aNode: TJsonNode): SizeInt;
+var
+  Cnt: SizeInt;
+begin
+  Cnt := Count;
+  Result := Math.Min(Math.Max(aIndex, 0), Cnt);
+  aIndex := Succ(Result);
+  Inc(Cnt);
+  EnsureCapacity(Cnt);
+  if aIndex < Cnt then
+    System.Move(FItems[aIndex], FItems[Succ(aIndex)], (Cnt - aIndex)*SizeOf(TJsonNode));
+  FItems[aIndex] := aNode;
+  SetCount(Cnt);
+end;
+
+function TJsArray.Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
+var
+  Cnt: SizeInt;
+begin
+  aNode := nil;
+  Cnt := Count;
+  Result := SizeUInt(aIndex) < SizeUInt(Cnt);
+  if Result then
+    begin
+      Inc(aIndex);
+      aNode := FItems[aIndex];
+      if aIndex < Cnt then
+        System.Move(FItems[Succ(aIndex)], FItems[aIndex], (Cnt - aIndex)*SizeOf(TJsonNode));
+      SetCount(Pred(Cnt));
+    end;
+end;
+
+{ TJsObject }
+
+class function TJsObject.GetHash(const aKey: string): SizeInt;
+begin
+  Result := string.HashCode(aKey);
+end;
+
+{ TJsObject }
+
+function TJsObject.GetCount: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Hash;
+end;
+
+function TJsObject.GetCapacity: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := System.High(FNodes);
+end;
+
+procedure TJsObject.SetCount(aValue: SizeInt);
+begin
+  if FNodes <> nil then
+    FNodes[0].Hash := aValue;
+end;
+
+function TJsObject.GetPair(aIndex: SizeInt): TPair;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FNodes[Succ(aIndex)].Data;
+end;
+
+function TJsObject.GetUncPair(aIndex: SizeInt): TPair;
+begin
+  Result := FNodes[Succ(aIndex)].Data;
+end;
+
+function TJsObject.GetUncMutPair(aIndex: SizeInt): PPair;
+begin
+  Result := @FNodes[Succ(aIndex)].Data;
+end;
+
+function TJsObject.GetItem(aIndex: SizeInt): TJsonNode;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FNodes[Succ(aIndex)].Data.Value;
+end;
+
+function TJsObject.GetUncItem(aIndex: SizeInt): TJsonNode;
+begin
+  Result := FNodes[Succ(aIndex)].Data.Value;
+end;
+
+procedure TJsObject.Rehash(aOldSize: SizeInt);
+var
+  I, J, Mask: SizeInt;
+begin
+  if aOldSize <> 0 then
+    begin
+      I := 0;
+      while I < aOldSize - 3 do
+        begin
+          FNodes[I  ].Chain := 0;
+          FNodes[I+1].Chain := 0;
+          FNodes[I+2].Chain := 0;
+          FNodes[I+3].Chain := 0;
+          I += 4;
+        end;
+    end;
+  Mask := System.High(FNodes);
+  for I := 1 to Count do
+    begin
+      J := FNodes[I].Hash and Mask;
+      FNodes[I].Next := FNodes[J].Chain;
+      FNodes[J].Chain := I;
+    end;
+end;
+
+procedure TJsObject.DoAdd(const aKey: string; aNode: TJsonNode; aHash: SizeInt);
+var
+  NodeIdx, ChainIdx: SizeInt;
+begin
+  ChainIdx := aHash and (System.High(FNodes));
+  NodeIdx := Succ(Count);
+  with FNodes[NodeIdx] do
+    begin
+      Hash := aHash;
+      Next := FNodes[ChainIdx].Chain;
+      Data.Key := aKey;
+      Data.Value := aNode;
+    end;
+  FNodes[ChainIdx].Chain := NodeIdx;
+  SetCount(NodeIdx);
+end;
+
+function TJsObject.DoFind(const aKey: string; aHash: SizeInt): SizeInt;
+begin
+  Result := FNodes[aHash and System.High(FNodes)].Chain;
+  while Result <> 0 do
+    begin
+      if (FNodes[Result].Hash = aHash) and (FNodes[Result].Data.Key = aKey) then
+        exit;
+      Result := FNodes[Result].Next;
+    end;
+end;
+
+function TJsObject.GetCountOf(const aKey: string): SizeInt;
+var
+  I, h: SizeInt;
+begin
+  h := GetHash(aKey);
+  I := FNodes[h and System.High(FNodes)].Chain;
+  Result := 0;
+  while I <> 0 do
+    begin
+      if (FNodes[I].Hash = h) and (FNodes[I].Data.Key = aKey) then
+        Inc(Result);
+      I := FNodes[I].Next;
+    end;
+end;
+
+function TJsObject.DoFindUniq(const aKey: string): SizeInt;
+var
+  I, h: SizeInt;
+begin
+  h := GetHash(aKey);
+  I := FNodes[h and System.High(FNodes)].Chain;
+  Result := 0;
+  while I <> 0 do
+    begin
+      if (FNodes[I].Hash = h) and (FNodes[I].Data.Key = aKey) then
+        begin
+          if Result <> 0 then exit(NULL_INDEX);
+          Result := I;
+        end;
+      I := FNodes[I].Next;
+    end;
+end;
+
+procedure TJsObject.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodes[aIndex].Hash and System.High(FNodes);
+  Curr := FNodes[I].Chain;
+  Prev := 0;
+  while Curr <> 0 do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev = 0 then
+            FNodes[I].Chain := FNodes[Curr].Next
+          else
+            FNodes[Prev].Next := FNodes[Curr].Next;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodes[Curr].Next;
+    end;
+end;
+
+procedure TJsObject.DoExtract(aIndex: SizeInt; out p: TPair);
+var
+  Cnt: SizeInt;
+begin
+  p := FNodes[aIndex].Data;
+  with FNodes[aIndex].Data do
+    begin
+      Key := '';
+      Value := nil;
+    end;
+  Cnt := Count;
+  SetCount(Pred(Cnt));
+  if aIndex < Cnt then
+    begin
+      System.Move(FNodes[Succ(aIndex)], FNodes[aIndex], (Cnt - aIndex)*SizeOf(TNode));
+      with FNodes[Cnt] do
+        begin
+          Next := 0;
+          Pointer(Data.Key) := nil;
+          Data.Value := nil;
+        end;
+      Rehash(System.Length(FNodes));
+    end
+  else
+    RemoveFromChain(aIndex);
+end;
+
+function TJsObject.TestHasUniq(aIndex: SizeInt): Boolean;
+var
+  I, h, cnt: SizeInt;
+  k: string;
+begin
+  h := FNodes[aIndex].Hash;
+  k := FNodes[aIndex].Data.Key;
+  I := FNodes[h and System.High(FNodes)].Chain;
+  cnt := 0;
+  while I <> 0 do
+    begin
+      if (I = aIndex) or ((FNodes[I].Hash = h) and (FNodes[I].Data.Key = k)) then
+        begin
+          if cnt = 1 then exit(False);
+          Inc(cnt);
+        end;
+      I := FNodes[I].Next;
+    end;
+  Result := True;
+end;
+
+function TJsObject.GetList: PNode;
+begin
+  if FNodes = nil then exit(nil);
+  Result := @FNodes[1];
+end;
+
+class operator TJsObject.Finalize(var o: TJsObject);
+begin
+  o.Clear;
+end;
+
+{ TJsObject.TEqualEnumerator }
+
+function TJsObject.TEqualEnumerator.GetCurrent: TPair;
+begin
+  Result := FObj^.FNodes[FCurrIndex].Data;
+end;
+
+procedure TJsObject.TEqualEnumerator.Init(const aKey: string; aObj: PJsObject);
+begin
+  FKey := aKey;
+  FObj := aObj;
+  FCurrIndex := 0;
+  FHash := TJsObject.GetHash(aKey);
+  FInLoop := False;
+end;
+
+procedure TJsObject.TEqualEnumerator.InitEmpty;
+begin
+  FKey := '';
+  FObj := nil;
+  FCurrIndex := 0;
+  FHash := 0;
+  FInLoop := True;
+end;
+
+function TJsObject.TEqualEnumerator.MoveNext: Boolean;
+var
+  I: SizeInt;
+begin
+  if FInLoop then
+    begin
+      if FCurrIndex = 0 then exit(False);
+      with FObj^ do
+        begin
+          I := FNodes[FCurrIndex].Next;
+          while I <> 0 do
+            begin
+              if(FNodes[I].Hash = FHash) and (FNodes[I].Data.Key = FKey) then break;
+              I := FNodes[I].Next;
+            end;
+        end;
+      FCurrIndex := I;
+    end
+  else
+    begin
+      if (FObj = nil) or (FObj^.GetCount = 0) then exit(False);
+      FCurrIndex := FObj^.Find(FKey, FHash)+1;
+      FInLoop := True;
+    end;
+  Result := FCurrIndex <> 0;
+end;
+
+class function TJsObject.GetEmptyEqualKeys: TEqualEnumerator;
+begin
+  Result.InitEmpty;
+end;
+
+function TJsObject.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TJsObject.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+function TJsObject.GetEqualKeys(const aKey: string): TEqualEnumerator;
+begin
+  Result.Init(aKey, @Self);
+end;
+
+procedure TJsObject.Clear;
+var
+  I: SizeInt;
+begin
+  for I := 1 to Count do FNodes[I].Data.Value.Free;
+  FNodes := nil;
+end;
+
+procedure TJsObject.EnsureCapacity(aValue: SizeInt);
+var
+  OldSize: SizeInt;
+begin
+  if aValue > Capacity then
+    begin
+      OldSize := System.Length(FNodes);
+      if aValue < DEFAULT_CONTAINER_CAPACITY then
+        System.SetLength(FNodes, DEFAULT_CONTAINER_CAPACITY)
+      else
+        System.SetLength(FNodes, LgUtils.RoundUpTwoPower(Succ(aValue)));
+      Rehash(OldSize);
+    end;
+end;
+
+function TJsObject.Contains(const aKey: string): Boolean;
+begin
+  if IsEmpty then exit(False);
+  Result := DoFind(aKey, GetHash(aKey)) <> 0;
+end;
+
+function TJsObject.ContainsUniq(const aKey: string): Boolean;
+begin
+  if IsEmpty then exit(False);
+  Result := DoFindUniq(aKey) > 0;
+end;
+
+function TJsObject.IndexOf(const aKey: string): SizeInt;
+begin
+  if IsEmpty then exit(NULL_INDEX);
+  Result := Pred(DoFind(aKey, GetHash(aKey)));
+end;
+
+function TJsObject.CountOf(const aKey: string): SizeInt;
+begin
+  if IsEmpty then exit(0);
+  Result := GetCountOf(aKey);
+end;
+
+procedure TJsObject.Add(const aKey: string; aNode: TJsonNode);
+begin
+  EnsureCapacity(Succ(Count));
+  DoAdd(aKey, aNode, GetHash(aKey));
+end;
+
+function TJsObject.AddUniq(const aKey: string; out p: PPair): Boolean;
+var
+  h: SizeInt;
+begin
+  h := GetHash(aKey);
+  p := nil;
+  if NonEmpty and (DoFind(aKey, h) <> 0) then exit(False);
+  EnsureCapacity(Succ(Count));
+  DoAdd(aKey, nil, h);
+  p := @FNodes[Count].Data;
+  Result := True;
+end;
+
+function TJsObject.Find(const aKey: string): PPair;
+var
+  I: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      I := DoFind(aKey, GetHash(aKey));
+      if I <> 0 then exit(@FNodes[I].Data);
+    end;
+  Result := nil;
+end;
+
+function TJsObject.Find(const aKey: string; aHash: SizeInt): SizeInt;
+begin
+  if IsEmpty then exit(NULL_INDEX);
+  Result := Pred(DoFind(aKey, aHash));
+end;
+
+function TJsObject.FindOrAdd(const aKey: string; out p: PPair): Boolean;
+var
+  h, I: SizeInt;
+begin
+  h := GetHash(aKey);
+  if NonEmpty then
+    begin
+      I := DoFind(aKey, h);
+      if I <> 0 then
+        begin
+          p := @FNodes[I].Data;
+          exit(True);
+        end;
+    end;
+  EnsureCapacity(Succ(Count));
+  DoAdd(aKey, nil, h);
+  p := @FNodes[Count].Data;
   Result := False;
 end;
 
-procedure TJsonNode.TEmptyPairEnumerator.Reset;
+function TJsObject.FindUniq(const aKey: string): PPair;
+var
+  I: SizeInt;
 begin
+  if NonEmpty then
+    begin
+      I := DoFindUniq(aKey);
+      if I > 0 then exit(@FNodes[I].Data);
+    end;
+  Result := nil;
 end;
 
-{ TJsonNode.TEqualEnumerator }
-
-function TJsonNode.TEqualEnumerator.GetCurrent: TPair;
+function TJsObject.HasUniqKey(aIndex: SizeInt): Boolean;
 begin
-  Result := FEnum.Current;
+  if SizeUInt(aIndex) < SizeUInt(Count) then exit(TestHasUniq(Succ(aIndex)));
+  Result := False;
 end;
 
-constructor TJsonNode.TEqualEnumerator.Create(const aEnum: TJsObject.TEqualEnumerator);
+function TJsObject.Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
+var
+  p: TPair;
 begin
-  FEnum := aEnum;
+  aNode := nil;
+  Result := SizeUInt(aIndex) < SizeUInt(Count);
+  if Result then
+    begin
+      DoExtract(Succ(aIndex), p);
+      aNode := p.Value;
+    end;
 end;
 
-function TJsonNode.TEqualEnumerator.MoveNext: Boolean;
+function TJsObject.ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
 begin
-  Result := FEnum.MoveNext;
+  Result := SizeUInt(aIndex) < SizeUInt(Count);
+  if Result then DoExtract(Succ(aIndex), p);
 end;
 
-procedure TJsonNode.TEqualEnumerator.Reset;
+function TJsObject.Extract(const aKey: string; out aNode: TJsonNode): Boolean;
+var
+  I: SizeInt;
+  p: TPair;
 begin
-  FEnum.Reset;
-end;
-
-procedure TJsonNode.TNodeEnumerator.Reset;
-begin
-  FQueue.Clear;
-  FQueue.Enqueue(FStart);
+  aNode := nil;
+  if IsEmpty then exit(False);
+  I := DoFind(aKey, GetHash(aKey));
+  Result := I <> 0;
+  if Result then
+    begin
+      DoExtract(I, p);
+      aNode := p.Value;
+    end;
 end;
 
 { TJsonNode }
-
-class function TJsonNode.CreateJsArray: PJsArray;
-begin
-  Result := System.GetMem(SizeOf(TJsArray));
-  FillChar(Result^, SizeOf(TJsArray), 0);
-end;
-
-class procedure TJsonNode.FreeJsArray(a: PJsArray);
-var
-  I: SizeInt;
-begin
-  if a <> nil then
-    begin
-      for I := 0 to Pred(a^.Count) do
-        a^.UncMutable[I]^.Free;
-      System.Finalize(a^);
-      FreeMem(a);
-    end;
-end;
-
-class function TJsonNode.CreateJsObject: PJsObject;
-begin
-  Result := GetMem(SizeOf(TJsObject));
-  FillChar(Result^, SizeOf(TJsObject), 0);
-end;
-
-class procedure TJsonNode.FreeJsObject(o: PJsObject);
-var
-  I: SizeInt;
-begin
-  if o <> nil then
-    begin
-      for I := 0 to Pred(o^.Count) do
-        o^.Mutable[I]^.Value.Free;
-      System.Finalize(o^);
-      FreeMem(o);
-    end;
-end;
 
 class procedure TJsonNode.MoveNode(aSrc, aDst: TJsonNode);
 begin
@@ -2737,6 +3279,7 @@ begin
     case k of
       tkArrayBegin:  Stack[0] := TJsonNode.Create(jvkArray);
       tkObjectBegin: Stack[0] := TJsonNode.Create(jvkObject);
+    else
     end;
   end else begin
     if aReader.ReadState = rsError then exit(nil);
@@ -2748,6 +3291,7 @@ begin
       tkTrue:   exit(TJsonNode.Create(True));
       tkNumber: exit(TJsonNode.Create(aReader.AsNumber));
       tkString: exit(TJsonNode.Create(aReader.AsString));
+    else
     end;
   end;
 
@@ -2762,35 +3306,35 @@ begin
           jvkObject:
             if aDups = ndupIgnore then TopNode.TryAddNull(aReader.Name)
             else TopNode[aReader.Name].AsNull;
-        end;
+        else end;
       tkFalse:
         case TopNode.Kind of
           jvkArray:  TopNode.Add(False);
           jvkObject:
             if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, False)
             else TopNode[aReader.Name].AsBoolean := False;
-        end;
+        else end;
       tkTrue:
         case TopNode.Kind of
           jvkArray:  TopNode.Add(True);
           jvkObject:
             if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, True)
             else TopNode[aReader.Name].AsBoolean := True;
-        end;
+        else end;
       tkNumber:
         case TopNode.Kind of
           jvkArray:  TopNode.Add(aReader.AsNumber);
           jvkObject:
             if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, aReader.AsNumber)
             else TopNode[aReader.Name].AsNumber := aReader.AsNumber;
-        end;
+        else end;
       tkString:
         case TopNode.Kind of
           jvkArray:  TopNode.Add(aReader.AsString);
           jvkObject:
             if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, aReader.AsString)
             else TopNode[aReader.Name].AsString := aReader.AsString;
-        end;
+        else end;
       tkArrayBegin: begin
           case TopNode.Kind of
             jvkArray:  Node := TopNode.AddNode(jvkArray);
@@ -2800,7 +3344,7 @@ begin
                   aReader.Skip; continue;
                 end else
               else Node := TopNode[aReader.Name].AsArray;
-          end;
+          else end;
           Inc(sTop); Stack[sTop] := Node;
         end;
       tkObjectBegin: begin
@@ -2812,7 +3356,7 @@ begin
                   aReader.Skip; continue;
                 end else
               else Node := TopNode[aReader.Name].AsObject;
-          end;
+          else end;
           Inc(sTop); Stack[sTop] := Node;
         end;
       tkArrayEnd, tkObjectEnd: Dec(sTop);
@@ -2852,51 +3396,33 @@ begin
   end;
 end;
 
-function TJsonNode.GetFString: string;
+function TJsonNode.GetStrVal: string;
 begin
-  Result := string(FValue.Ref);
+  Result := string(FValue.Ptr);
 end;
 
-function TJsonNode.GetFArray: PJsArray;
+function TJsonNode.GetArrayPtr: PJsArray;
 begin
-  Result := FValue.Ref;
+  Result := @FValue.Ptr;
 end;
 
-function TJsonNode.GetFObject: PJsObject;
+function TJsonNode.GetObjPtr: PJsObject;
 begin
-  Result := FValue.Ref;
+  Result := @FValue.Ptr;
 end;
 
-procedure TJsonNode.SetFString(const aValue: string);
+procedure TJsonNode.SetStrVal(const aValue: string);
 begin
-  string(FValue.Ref) := aValue;
-end;
-
-procedure TJsonNode.SetFArray(aValue: PJsArray);
-begin
-  FValue.Ref := aValue;
-end;
-
-procedure TJsonNode.SetFObject(aValue: PJsObject);
-begin
-  FValue.Ref := aValue;
+  string(FValue.Ptr) := aValue;
 end;
 
 procedure TJsonNode.DoClear;
 begin
-  case FKind of
+  case Kind of
     jvkNumber: FValue.Int := 0;
-    jvkString: FString := '';
-    jvkArray:
-      begin
-        FreeJsArray(FValue.Ref);
-        FValue.Ref := nil;
-      end;
-    jvkObject:
-      begin
-        FreeJsObject(FValue.Ref);
-        FValue.Ref := nil;
-      end;
+    jvkString: Finalize(string(FValue.Ptr));
+    jvkArray:  Finalize(TJsArray(FValue.Ptr));
+    jvkObject: Finalize(TJsObject(FValue.Ptr));
   else
   end;
 end;
@@ -2986,7 +3512,7 @@ begin
       DoClear;
       FKind := jvkString;
     end;
-  Result := FString;
+  Result := StrVal;
 end;
 
 procedure TJsonNode.SetAsString(const aValue: string);
@@ -2996,7 +3522,7 @@ begin
       DoClear;
       FKind := jvkString;
     end;
-  FString := aValue;
+  StrVal := aValue;
 end;
 
 type
@@ -4017,10 +4543,11 @@ begin
   Result := Double2Str(aValue, DefaultFormatSettings.DecimalSeparator);
 end;
 
-procedure TJsonNode.DoBuildJson(var sb: TStrBuilder);
+function TJsonNode.GetAsJson: string;
 var
-  p: TPair;
+  sb: TStrBuilder;
   s: shortstring;
+  p: ^TPair;
   procedure BuildJson(aInst: TJsonNode);
   var
     I, Last: SizeInt;
@@ -4034,16 +4561,16 @@ var
           Double2Str(aInst.FValue.Num, s);
           sb.Append(s);
         end;
-      jvkString: sb.AppendEncode(aInst.FString);
+      jvkString: sb.AppendEncode(aInst.StrVal);
       jvkArray:
         begin
           sb.Append(chOpenSqrBr);
-          if aInst.FArray <> nil then
+          if aInst.ArrayPtr^.NonEmpty then
             begin
-              Last := Pred(aInst.FArray^.Count);
+              Last := Pred(aInst.ArrayPtr^.Count);
               for I := 0 to Last do
                 begin
-                  BuildJson(aInst.FArray^.UncMutable[I]^);
+                  BuildJson(aInst.ArrayPtr^.UncItems[I]);
                   if I <> Last then
                     sb.Append(chComma);
                 end;
@@ -4053,15 +4580,15 @@ var
       jvkObject:
         begin
           sb.Append(chOpenCurBr);
-          if aInst.FObject <> nil then
+          if aInst.ObjectPtr^.NonEmpty then
             begin
-              Last := Pred(aInst.FObject^.Count);
+              Last := Pred(aInst.ObjectPtr^.Count);
               for I := 0 to Last do
                 begin
-                  p := aInst.FObject^.Mutable[I]^;
-                  sb.AppendEncode(p.Key);
+                  p := aInst.ObjectPtr^.UncMutPairs[I];
+                  sb.AppendEncode(p^.Key);
                   sb.Append(chColon);
-                  BuildJson(p.Value);
+                  BuildJson(p^.Value);
                   if I <> Last then
                     sb.Append(chComma);
                 end;
@@ -4071,15 +4598,8 @@ var
     end;
   end;
 begin
-  BuildJson(Self);
-end;
-
-function TJsonNode.GetAsJson: string;
-var
-  sb: TStrBuilder;
-begin
   sb.Create(S_BUILD_INIT_SIZE);
-  DoBuildJson(sb);
+  BuildJson(Self);
   Result := sb.ToString;
 end;
 
@@ -4091,57 +4611,33 @@ end;
 
 function TJsonNode.GetCount: SizeInt;
 begin
-  Result := 0;
   case Kind of
-    jvkArray:
-      if FArray <> nil then Result := FArray^.Count;
-    jvkObject:
-      if FObject <> nil then Result := FObject^.Count;
+    jvkArray:  Result := ArrayPtr^.Count;
+    jvkObject: Result := ObjectPtr^.Count;
   else
+    Result := 0;
   end;
-end;
-
-function TJsonNode.CanArrayInsert(aIndex: SizeInt): Boolean;
-begin
-  if aIndex <> 0 then
-    exit((Kind = jvkArray)and(FValue.Ref <> nil)and(SizeUInt(aIndex) <= SizeUInt(FArray^.Count)));
-  if AsArray.FValue.Ref = nil then
-    FValue.Ref := CreateJsArray;
-  Result := True;
-end;
-
-function TJsonNode.CanObjectInsert(aIndex: SizeInt): Boolean;
-begin
-  if aIndex <> 0 then
-    exit((Kind = jvkObject)and(FValue.Ref <> nil)and(SizeUInt(aIndex) <= SizeUInt(FObject^.Count)));
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  Result := True;
 end;
 
 function TJsonNode.GetItem(aIndex: SizeInt): TJsonNode;
 begin
-  if SizeUInt(aIndex) < SizeUInt(Count) then
-    case Kind of
-      jvkArray:  exit(FArray^.UncMutable[aIndex]^);
-      jvkObject: exit(FObject^.Mutable[aIndex]^.Value);
-    else
-    end
-  else
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
     raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-  Result := nil;
+  case Kind of
+    jvkArray:  exit(ArrayPtr^.UncItems[aIndex]);
+    jvkObject: exit(ObjectPtr^.UncItems[aIndex]);
+  else
+    Result := nil;
+  end;
 end;
 
 function TJsonNode.GetPair(aIndex: SizeInt): TPair;
 begin
-  if SizeUInt(aIndex) < SizeUInt(Count) then
-    if Kind = jvkObject then
-      exit(FObject^.Mutable[aIndex]^)
-    else
-      raise EJsException.Create(SEJsonInstNotObj)
-  else
+  if Kind <> jvkObject then
+    raise EJsException.Create(SEJsonInstNotObj);
+  if SizeUInt(aIndex) >= SizeUInt(ObjectPtr^.Count) then
     raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-  Result := Default(TPair);
+  Result := ObjectPtr^.UncPairs[aIndex];
 end;
 
 function TJsonNode.GetNItem(const aName: string): TJsonNode;
@@ -4164,7 +4660,7 @@ function TJsonNode.GetValue: TJVariant;
      jvkFalse:  v := False;
      jvkTrue:   v := True;
      jvkNumber: v := aNode.FValue.Num;
-     jvkString: v := aNode.FString;
+     jvkString: v := aNode.StrVal;
      jvkArray:
        begin
          v.ClearValue;
@@ -4219,48 +4715,6 @@ procedure TJsonNode.SetValue(const aValue: TJVariant);
 begin
   Clear;
   DoSet(aValue, Self);
-end;
-
-{ TJsonNode.TNodeEnumerator }
-
-function TJsonNode.TNodeEnumerator.GetCurrent: TVisitNode;
-begin
-  Result := FCurrent;
-end;
-
-constructor TJsonNode.TNodeEnumerator.Create(aNode: TJsonNode);
-begin
-  FStart := TVisitNode.Make(aNode);
-  FQueue.Enqueue(FStart);
-end;
-
-function TJsonNode.TNodeEnumerator.MoveNext: Boolean;
-var
-  I: SizeInt;
-begin
-  if FQueue.TryDequeue(FCurrent) then
-    begin
-      case FCurrent.Node.Kind of
-        jvkArray:
-          if FCurrent.Node.FArray <> nil then
-            for I := 0 to Pred(FCurrent.Node.FArray^.Count) do
-              FQueue.Enqueue(TVisitNode.Make(
-                 Succ(FCurrent.Level), I, FCurrent.Node, FCurrent.Node.FArray^.UncMutable[I]^));
-        jvkObject:
-          if FCurrent.Node.FObject <> nil then
-            for I := 0 to Pred(FCurrent.Node.FObject^.Count) do
-              with FCurrent.Node.FObject^.Mutable[I]^ do
-                FQueue.Enqueue(TVisitNode.Make(Succ(FCurrent.Level), Key, FCurrent.Node, Value));
-      else
-      end;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TJsonNode.GetNodeEnumerable: INodeEnumerable;
-begin
-  Result := specialize TGEnumCursor<TVisitNode>.Create(TNodeEnumerator.Create(Self));
 end;
 
 class function TJsonNode.ValidJson(const s: string; aSkipBom: Boolean; aDepth: Integer): Boolean;
@@ -4351,24 +4805,6 @@ begin
   if System.Length(s) < 1 then
     exit(False);
   Result := ValidateNumBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
-end;
-
-class function TJsonNode.LikelyKind(aBuf: PAnsiChar; aSize: SizeInt): TJsValueKind;
-var
-  I: SizeInt;
-begin
-  Result := jvkNull;
-  for I := 0 to Pred(aSize) do
-    case aBuf[I] of
-      #9, #10, #13, ' ': ;
-      '"':               exit(jvkString);
-      '-', '0'..'9':     exit(jvkNumber);
-      '[':               exit(jvkArray);
-      '{':               exit(jvkObject);
-      'f':               exit(jvkFalse);
-      'n':               exit(jvkNull);
-      't':               exit(jvkTrue);
-    end;
 end;
 
 function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; forward;
@@ -4576,16 +5012,15 @@ var
   begin
     if aLevel > MaxDep then
       MaxDep := aLevel;
-    if aNode.Count > 0 then
-      case aNode.Kind of
-        jvkArray:
-          for I := 0 to Pred(aNode.FArray^.Count) do
-            Traverse(aNode.FArray^.UncMutable[I]^, Succ(aLevel));
-        jvkObject:
-          for I := 0 to Pred(aNode.FObject^.Count) do
-            Traverse(aNode.FObject^.Mutable[I]^.Value, Succ(aLevel));
-      else
-      end;
+    case aNode.Kind of
+      jvkArray:
+        for I := 0 to Pred(aNode.ArrayPtr^.Count) do
+          Traverse(aNode.ArrayPtr^.UncItems[I], Succ(aLevel));
+      jvkObject:
+        for I := 0 to Pred(aNode.ObjectPtr^.Count) do
+          Traverse(aNode.ObjectPtr^.UncItems[I], Succ(aLevel));
+    else
+    end;
   end;
 begin
   Traverse(aNode, 0);
@@ -4597,23 +5032,19 @@ class function TJsonNode.DuplicateFree(aNode: TJsonNode): Boolean;
   var
     I: SizeInt;
   begin
-    if aNode.Count > 0 then
-      case aNode.Kind of
-        jvkArray:
-          for I := 0 to Pred(aNode.Count) do
-            if not NamesUnique(aNode.FArray^.UncMutable[I]^) then
-              exit(False);
-        jvkObject:
-          for I := 0 to Pred(aNode.Count) do
-            with aNode.FObject^.Mutable[I]^ do
-              begin
-                if not aNode.FObject^.HasUniqKey(I) then
-                  exit(False);
-                if not NamesUnique(Value) then
-                  exit(False);
-              end;
-      else
-      end;
+    case aNode.Kind of
+      jvkArray:
+        for I := 0 to Pred(aNode.Count) do
+          if not NamesUnique(aNode.ArrayPtr^.UncItems[I]) then
+            exit(False);
+      jvkObject:
+        for I := 0 to Pred(aNode.Count) do
+          begin
+            if not aNode.ObjectPtr^.HasUniqKey(I) then exit(False);
+            if not NamesUnique(aNode.ObjectPtr^.UncItems[I]) then exit(False);
+          end;
+    else
+    end;
     Result := True;
   end;
 begin
@@ -4646,7 +5077,7 @@ end;
 
 constructor TJsonNode.Create(const aValue: string);
 begin
-  FString := aValue;
+  StrVal := aValue;
   FKind := jvkString;
 end;
 
@@ -4673,13 +5104,22 @@ end;
 
 function TJsonNode.GetEnumerator: TEnumerator;
 begin
-  Result.FNode := Self;
-  Result.FCurrIndex := NULL_INDEX;
-end;
-
-function TJsonNode.SubTree: TSubTree;
-begin
-  Result.FNode := Self;
+  Result.FKind := Kind;
+  case Kind of
+    jvkArray:
+      begin
+        Result.FCurrNode := TJsArray.PJsonNode(ArrayPtr^.List) - 1;
+        Result.FLastNode := TJsArray.PJsonNode(Result.FCurrNode) + ArrayPtr^.Count;
+      end;
+    jvkObject:
+      begin
+        Result.FCurrNode := TJsObject.PNode(ObjectPtr^.List) - 1;
+        Result.FLastNode := TJsObject.PNode(Result.FCurrNode) + ObjectPtr^.Count;
+      end
+  else
+    Result.FCurrNode := nil;
+    Result.FLastNode := nil;
+  end;
 end;
 
 function TJsonNode.Entries: TEntries;
@@ -4692,11 +5132,12 @@ begin
   Result.FNode := Self;
 end;
 
-function TJsonNode.EqualNames(const aName: string): IPairEnumerable;
+function TJsonNode.EqualNames(const aName: string): TEqualEnumerator;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    exit(TPairs.Create(TEqualEnumerator.Create(FObject^.GetEqualEnumerator(aName))));
-  Result := TPairs.Create(TEmptyPairEnumerator.Create);
+  if Kind = jvkObject then
+    Result.Init(ObjectPtr^.GetEqualKeys(aName))
+  else
+    Result.Init(TJsObject.GetEmptyEqualKeys);
 end;
 
 function TJsonNode.IsNull: Boolean;
@@ -4772,9 +5213,9 @@ end;
 
 function TJsonNode.TEnumerator.GetCurrent: TJsonNode;
 begin
-  case FNode.Kind of
-    jvkArray:  Result := FNode.FArray^.UncMutable[FCurrIndex]^;
-    jvkObject: Result := FNode.FObject^.Mutable[FCurrIndex]^.Value;
+  case FKind of
+    jvkArray:  Result := TJsArray.PJsonNode(FCurrNode)^;
+    jvkObject: Result := TJsObject.PNode(FCurrNode)^.Data.Value;
   else
     Result := nil;
   end;
@@ -4782,89 +5223,87 @@ end;
 
 function TJsonNode.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < Pred(FNode.Count);
-  Inc(FCurrIndex, Ord(Result));
-end;
-
-{ TJsonNode.TTreeEnumerator }
-
-function TJsonNode.TTreeEnumerator.MoveNext: Boolean;
-var
-  I: SizeInt;
-begin
-  if FQueue.TryDequeue(FCurrent) then
-    begin
-      if FCurrent.Count <> 0 then
-        case FCurrent.Kind of
-          jvkArray:
-            for I := 0 to Pred(FCurrent.FArray^.Count) do
-              FQueue.Enqueue(FCurrent.FArray^.UncMutable[I]^);
-          jvkObject:
-            for I := 0 to Pred(FCurrent.FObject^.Count) do
-              FQueue.Enqueue(FCurrent.FObject^.Mutable[I]^.Value);
-        else
+  if FCurrNode < FLastNode then
+    case FKind of
+      jvkArray:
+        begin
+          Inc(TJsArray.PJsonNode(FCurrNode));
+          exit(True);
         end;
-      exit(True);
+      jvkObject:
+        begin
+          Inc(TJsObject.PNode(FCurrNode));
+          exit(True);
+        end;
+    else
     end;
   Result := False;
-end;
-
-{ TJsonNode.TSubTree }
-
-function TJsonNode.TSubTree.GetEnumerator: TTreeEnumerator;
-var
-  Node: TJsonNode;
-begin
-  Result.FQueue := Default(TTreeEnumerator.TQueue);
-  for Node in FNode do
-    Result.FQueue.Enqueue(Node);
-  Result.FCurrent := nil;
 end;
 
 { TJsonNode.TEntryEnumerator }
 
 function TJsonNode.TEntryEnumerator.GetCurrent: TPair;
 begin
-  Result := FNode.FObject^.Mutable[FCurrIndex]^
+  Result := FCurrNode^.Data;
 end;
 
 function TJsonNode.TEntryEnumerator.MoveNext: Boolean;
 begin
-  if FNode.Kind <> jvkObject then
-    exit(False);
-  Result := FCurrIndex < Pred(FNode.Count);
-  Inc(FCurrIndex, Ord(Result));
+  if FCurrNode < FLastNode then
+    begin
+      Inc(FCurrNode);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TJsonNode.TEntries }
 
 function TJsonNode.TEntries.GetEnumerator: TEntryEnumerator;
 begin
-  Result.FNode := FNode;
-  Result.FCurrIndex := NULL_INDEX;
+  if FNode.Kind = jvkObject then
+    begin
+      Result.FCurrNode := FNode.ObjectPtr^.List - 1;
+      Result.FLastNode := Result.FCurrNode + FNode.ObjectPtr^.Count;
+    end
+  else
+    begin
+      Result.FCurrNode := nil;
+      Result.FLastNode := nil;
+    end;
 end;
 
 { TJsonNode.TNameEnumerator }
 
 function TJsonNode.TNameEnumerator.GetCurrent: string;
 begin
-  Result := FNode.FObject^.Mutable[FCurrIndex]^.Key;
+  Result := FCurrNode^.Data.Key;
 end;
 
 function TJsonNode.TNameEnumerator.MoveNext: Boolean;
 begin
-  if FNode.Kind <> jvkObject then
-    exit(False);
-  Inc(FCurrIndex);
-  Result := FCurrIndex < FNode.Count;
+  if FCurrNode < FLastNode then
+    begin
+      Inc(FCurrNode);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TJsonNode.TNames }
 
 function TJsonNode.TNames.GetEnumerator: TNameEnumerator;
 begin
-  Result.FNode := FNode;
-  Result.FCurrIndex := NULL_INDEX;
+  if FNode.Kind = jvkObject then
+    begin
+      Result.FCurrNode := FNode.ObjectPtr^.List - 1;
+      Result.FLastNode := Result.FCurrNode + FNode.ObjectPtr^.Count;
+    end
+  else
+    begin
+      Result.FCurrNode := nil;
+      Result.FLastNode := nil;
+    end;
 end;
 
 function TJsonNode.TNames.ToArray: TStringArray;
@@ -4881,6 +5320,28 @@ begin
         Inc(I);
       end;
   System.SetLength(Result, I);
+end;
+
+{ TJsonNode.TEqualEnumerator }
+
+function TJsonNode.TEqualEnumerator.GetCurrent: TPair;
+begin
+  Result := FEnum.Current;
+end;
+
+procedure TJsonNode.TEqualEnumerator.Init(const aEnum: TJsObject.TEqualEnumerator);
+begin
+  FEnum := aEnum;
+end;
+
+function TJsonNode.TEqualEnumerator.GetEnumerator: TEqualEnumerator;
+begin
+  Result := Self;
+end;
+
+function TJsonNode.TEqualEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
 end;
 
 procedure TJsonNode.Clear;
@@ -4906,37 +5367,27 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
       jvkFalse:   aDst.AsBoolean := False;
       jvkTrue:    aDst.AsBoolean := True;
       jvkNumber:  aDst.AsNumber := aSrc.FValue.Num;
-      jvkString:  aDst.AsString := aSrc.FString;
+      jvkString:  aDst.AsString := aSrc.StrVal;
       jvkArray:
         begin
-          aDst.AsArray;
-          if aSrc.Count > 0 then
+          aDst.AsArray.ArrayPtr^.EnsureCapacity(aSrc.ArrayPtr^.Count);
+          for I := 0 to Pred(aSrc.ArrayPtr^.Count) do
             begin
-              aDst.FArray := CreateJsArray;
-              aDst.FArray^.EnsureCapacity(aSrc.FArray^.Count);
-              for I := 0 to Pred(aSrc.FArray^.Count) do
-                begin
-                  Node := TJsonNode.Create;
-                  DoCopy(aSrc.FArray^.UncMutable[I]^, Node);
-                  aDst.FArray^.Add(Node);
-                end;
+              Node := TJsonNode.Create;
+              DoCopy(aSrc.ArrayPtr^.UncItems[I], Node);
+              aDst.ArrayPtr^.Add(Node);
             end;
         end;
       jvkObject:
         begin
-          aDst.AsObject;
-          if aSrc.Count > 0 then
+          aDst.AsObject.AsObject.ObjectPtr^.EnsureCapacity(aSrc.ObjectPtr^.Count);
+          for I := 0 to Pred(aSrc.ObjectPtr^.Count) do
             begin
-              aDst.FObject := CreateJsObject;
-              aDst.FObject^.EnsureCapacity(aSrc.FObject^.Count);
-              for I := 0 to Pred(aSrc.FObject^.Count) do
+              Node := TJsonNode.Create;
+              with aSrc.ObjectPtr^.UncMutPairs[I]^ do
                 begin
-                  Node := TJsonNode.Create;
-                  with aSrc.FObject^.Mutable[I]^ do
-                    begin
-                      DoCopy(Value, Node);
-                      aDst.FObject^.Add(TPair.Create(Key, Node));
-                    end;
+                  DoCopy(Value, Node);
+                  aDst.ObjectPtr^.Add(Key, Node);
                 end;
             end;
         end;
@@ -4944,7 +5395,8 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
   end;
 
 begin
-  if aNode = Self then exit;
+  if aNode = Self then
+    exit;
   Clear;
   DoCopy(aNode, Self);
 end;
@@ -4965,19 +5417,18 @@ begin
     exit(False);
   case aNode.Kind of
     jvkNumber: exit(FValue.Num = aNode.FValue.Num);
-    jvkString: exit(FString = aNode.FString);
+    jvkString: exit(StrVal = aNode.StrVal);
     jvkArray:
       for I := 0 to Pred(Count) do
-        if not FArray^.UncMutable[I]^.EqualTo(aNode.FArray^.UncMutable[I]^) then
+        if not ArrayPtr^.UncItems[I].EqualTo(aNode.ArrayPtr^.UncItems[I]) then
           exit(False);
     jvkObject:
       begin
         for I := 0 to Pred(Count) do
           begin
-            p := aNode.FObject^.FindUniq(FObject^.Mutable[I]^.Key);
-            if p = nil then
-              exit(False);
-            if not FObject^.Mutable[I]^.Value.EqualTo(p^.Value) then
+            p := aNode.ObjectPtr^.FindUniq(ObjectPtr^.UncMutPairs[I]^.Key);
+            if p = nil then exit(False);
+            if not ObjectPtr^.UncItems[I].EqualTo(p^.Value) then
               exit(False);
           end;
       end;
@@ -5000,18 +5451,18 @@ begin
     jvkFalse:   Result += 7;
     jvkTrue:    Result += 17;
     jvkNumber:  Result := Double.HashCode(FValue.Num);
-    jvkString:  Result := string.HashCode(FString);
+    jvkString:  Result := string.HashCode(StrVal);
     jvkArray:
       begin
         Result += 31;
         for I := 0 to Pred(Count) do
-          Result := RolSizeInt(Result + I, 13) xor FArray^.UncMutable[I]^.HashCode;
+          Result := RolSizeInt(Result + I, 13) xor ArrayPtr^.UncItems[I].HashCode;
       end;
     jvkObject:
       begin
         Result := RolSizeInt(Result + 67, 11);
         for I := 0 to Pred(Count) do
-          with FObject^.Mutable[I]^ do
+          with ObjectPtr^.UncMutPairs[I]^ do
             Result := Result xor string.HashCode(Key) xor Value.HashCode;
       end;
   end;
@@ -5107,20 +5558,18 @@ var
     if Done then exit;
     case aNode.Kind of
       jvkArray:
-        if aNode.FArray <> nil then
-          for I := 0 to Pred(aNode.FArray^.Count) do
+        for I := 0 to Pred(aNode.ArrayPtr^.Count) do
+          begin
+            DoIterate(TIterContext.Make(Succ(aCtx.Level), I, aNode), aNode.ArrayPtr^.UncItems[I]);
+            if Done then exit;
+          end;
+      jvkObject:
+        for I := 0 to Pred(aNode.ObjectPtr^.Count) do
+          with aNode.ObjectPtr^.UncMutPairs[I]^ do
             begin
-              DoIterate(TIterContext.Make(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              DoIterate(TIterContext.Make(Succ(aCtx.Level), Key, aNode), Value);
               if Done then exit;
             end;
-      jvkObject:
-        if aNode.FObject <> nil then
-          for I := 0 to Pred(aNode.FObject^.Count) do
-            with aNode.FObject^.Mutable[I]^ do
-              begin
-                DoIterate(TIterContext.Make(Succ(aCtx.Level), Key, aNode), Value);
-                if Done then exit;
-              end;
     else
     end;
   end;
@@ -5141,20 +5590,18 @@ var
     if Done then exit;
     case aNode.Kind of
       jvkArray:
-        if aNode.FArray <> nil then
-          for I := 0 to Pred(aNode.FArray^.Count) do
+        for I := 0 to Pred(aNode.ArrayPtr^.Count) do
+          begin
+            DoIterate(TIterContext.Make(Succ(aCtx.Level), I, aNode), aNode.ArrayPtr^.UncItems[I]);
+            if Done then exit;
+          end;
+      jvkObject:
+        for I := 0 to Pred(aNode.ObjectPtr^.Count) do
+          with aNode.ObjectPtr^.UncMutPairs[I]^ do
             begin
-              DoIterate(TIterContext.Make(Succ(aCtx.Level), I, aNode), aNode.FArray^.UncMutable[I]^);
+              DoIterate(TIterContext.Make(Succ(aCtx.Level), Key, aNode), Value);
               if Done then exit;
             end;
-      jvkObject:
-        if aNode.FObject <> nil then
-          for I := 0 to Pred(aNode.FObject^.Count) do
-            with aNode.FObject^.Mutable[I]^ do
-              begin
-                DoIterate(TIterContext.Make(Succ(aCtx.Level), Key, aNode), Value);
-                if Done then exit;
-              end;
     else
     end;
   end;
@@ -5165,52 +5612,45 @@ end;
 
 function TJsonNode.AddNull: TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create);
+  AsArray.ArrayPtr^.Add(TJsonNode.Create);
   Result := Self;
 end;
 
 function TJsonNode.Add(aValue: Boolean): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create(aValue));
+  AsArray.ArrayPtr^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(aValue: Double): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create(aValue));
+  AsArray.ArrayPtr^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aValue: string): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create(aValue));
+  AsArray.ArrayPtr^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aValue: TJVariant): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
-  FArray^.Add(TJsonNode.Create(aValue));
+  AsArray.ArrayPtr^.Add(TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.AddNode(aKind: TJsValueKind): TJsonNode;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   Result := TJsonNode.Create(aKind);
-  FArray^.Add(Result);
+  AsArray.ArrayPtr^.Add(Result);
 end;
 
 function TJsonNode.AddJson(const aJson: string; out aNode: TJsonNode): Boolean;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
   Result := TryParse(aJson, aNode);
   if Result then
-    FArray^.Add(aNode);
+    AsArray.ArrayPtr^.Add(aNode);
 end;
 
 function TJsonNode.AddAll(aNode: TJsonNode; aCopy: Boolean): TJsonNode;
@@ -5219,19 +5659,19 @@ var
 begin
   if aNode.IsArray then
     begin
-      if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
+      AsArray;
       if aCopy then
         for I := 0 to Pred(aNode.Count) do
-          FArray^.Add(aNode.Items[I].Clone)
+          ArrayPtr^.Add(aNode.Items[I].Clone)
       else
-        if aNode.FValue.Ref <> nil then
+        if aNode.ArrayPtr^.NonEmpty then
           begin
-            for I := 0 to Pred(aNode.FArray^.Count) do
+            for I := 0 to Pred(aNode.ArrayPtr^.Count) do
               begin
-                FArray^.Add(aNode.FArray^.Mutable[I]^);
-                aNode.FArray^.Mutable[I]^ := nil;
+                ArrayPtr^.Add(aNode.ArrayPtr^.UncItems[I]);
+                aNode.ArrayPtr^.UncMutItems[I]^ := nil;
               end;
-            aNode.FArray^.MakeEmpty;
+            aNode.ArrayPtr^.MakeEmpty;
           end;
     end;
   Result := Self;
@@ -5241,69 +5681,62 @@ function TJsonNode.AddAll(const a: TJVarArray): TJsonNode;
 var
   I: SizeInt;
 begin
-  if AsArray.FValue.Ref = nil then FValue.Ref := CreateJsArray;
+  AsArray;
   for I := 0 to System.High(a) do
-    FArray^.Add(TJsonNode.Create(a[I]));
+    ArrayPtr^.Add(TJsonNode.Create(a[I]));
   Result := Self;
 end;
 
 function TJsonNode.AddNull(const aName: string): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.Create));
+  AsObject.ObjectPtr^.Add(aName, TJsonNode.Create);
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName: string; aValue: Boolean): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
+  AsObject.ObjectPtr^.Add(aName, TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName: string; aValue: Double): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
+  AsObject.ObjectPtr^.Add(aName, TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName, aValue: string): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
+  AsObject.ObjectPtr^.Add(aName, TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.Add(const aName: string; const aValue: TJVariant): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  FObject^.Add(TPair.Create(aName, TJsonNode.Create(aValue)));
+  AsObject.ObjectPtr^.Add(aName, TJsonNode.Create(aValue));
   Result := Self;
 end;
 
 function TJsonNode.AddNode(const aName: string; aKind: TJsValueKind): TJsonNode;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := TJsonNode.Create(aKind);
-  FObject^.Add(TPair.Create(aName, Result));
+  AsObject.ObjectPtr^.Add(aName, Result);
 end;
 
 function TJsonNode.AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   Result := TryParse(aJson, aNode);
   if Result then
-    FObject^.Add(TPair.Create(aName, aNode));
+    AsObject.ObjectPtr^.Add(aName, aNode);
 end;
 
 function TJsonNode.AddAll(const a: TJPairArray): TJsonNode;
 var
   I: SizeInt;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
+  AsObject;
   for I := 0 to System.High(a) do
-    FObject^.Add(TPair.Create(a[I].Key, TJsonNode.Create(a[I].Key)));
+    ObjectPtr^.Add(a[I].Key, TJsonNode.Create(a[I].Key));
   Result := Self;
 end;
 
@@ -5311,8 +5744,7 @@ function TJsonNode.TryAddNull(const aName: string): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
+  Result := AsObject.ObjectPtr^.AddUniq(aName, p);
   if Result then p^.Value := TJsonNode.Create;
 end;
 
@@ -5320,8 +5752,7 @@ function TJsonNode.TryAdd(const aName: string; aValue: Boolean): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
+  Result := AsObject.ObjectPtr^.AddUniq(aName, p);
   if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
@@ -5329,8 +5760,7 @@ function TJsonNode.TryAdd(const aName: string; aValue: Double): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
+  Result := AsObject.ObjectPtr^.AddUniq(aName, p);
   if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
@@ -5338,8 +5768,7 @@ function TJsonNode.TryAdd(const aName, aValue: string): Boolean;
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
+  Result := AsObject.ObjectPtr^.AddUniq(aName, p);
   if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
@@ -5347,8 +5776,7 @@ function TJsonNode.TryAdd(const aName: string; const aValue: TJVariant): Boolean
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
+  Result := AsObject.ObjectPtr^.AddUniq(aName, p);
   if Result then p^.Value := TJsonNode.Create(aValue);
 end;
 
@@ -5356,9 +5784,8 @@ function TJsonNode.TryAddNode(const aName: string; out aNode: TJsonNode; aKind: 
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
   aNode := nil;
-  Result := FObject^.AddUniq(TPair.Create(aName, nil), p);
+  Result := AsObject.ObjectPtr^.AddUniq(aName, p);
   if Result then
     begin
       aNode := TJsonNode.Create(aKind);
@@ -5372,8 +5799,7 @@ var
 begin
   if TryParse(aJson, aNode) then
     begin
-      if AsObject.FValue.Ref = nil then FValue.Ref := CreateJsObject;
-      if FObject^.AddUniq(TPair.Create(aName, nil), p) then
+      if AsObject.ObjectPtr^.AddUniq(aName, p) then
         begin
           p^.Value := aNode;
           exit(True);
@@ -5384,89 +5810,74 @@ begin
   Result := False;
 end;
 
-function TJsonNode.InsertNull(aIndex: SizeInt): Boolean;
+function TJsonNode.InsertNull(aIndex: SizeInt): SizeInt;
 begin
-  Result := CanArrayInsert(aIndex);
-  if Result then
-    FArray^.Insert(aIndex, TJsonNode.Create);
+  Result := AsArray.ArrayPtr^.Insert(aIndex, TJsonNode.Create);
 end;
 
-function TJsonNode.Insert(aIndex: SizeInt; aValue: Boolean): Boolean;
+function TJsonNode.Insert(aIndex: SizeInt; aValue: Boolean): SizeInt;
 begin
-  Result := CanArrayInsert(aIndex);
-  if Result then
-    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
+  Result := AsArray.ArrayPtr^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
-function TJsonNode.Insert(aIndex: SizeInt; aValue: Double): Boolean;
+function TJsonNode.Insert(aIndex: SizeInt; aValue: Double): SizeInt;
 begin
-  Result := CanArrayInsert(aIndex);
-  if Result then
-    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
+  Result := AsArray.ArrayPtr^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
-function TJsonNode.Insert(aIndex: SizeInt; const aValue: string): Boolean;
+function TJsonNode.Insert(aIndex: SizeInt; const aValue: string): SizeInt;
 begin
-  Result := CanArrayInsert(aIndex);
-  if Result then
-    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
+  Result := AsArray.ArrayPtr^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
-function TJsonNode.Insert(aIndex: SizeInt; const aValue: TJVariant): Boolean;
+function TJsonNode.Insert(aIndex: SizeInt; const aValue: TJVariant): SizeInt;
 begin
-  Result := CanArrayInsert(aIndex);
-  if Result then
-    FArray^.Insert(aIndex, TJsonNode.Create(aValue));
+  Result := AsArray.ArrayPtr^.Insert(aIndex, TJsonNode.Create(aValue));
 end;
 
-function TJsonNode.InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): Boolean;
+function TJsonNode.InsertNode(aIndex: SizeInt; out aNode: TJsonNode; aKind: TJsValueKind): SizeInt;
 begin
-  aNode := nil;
-  Result := CanArrayInsert(aIndex);
-  if Result then
-    begin
-      aNode := TJsonNode.Create(aKind);
-      FArray^.Insert(aIndex, aNode);
-    end;
+  aNode := TJsonNode.Create(aKind);
+  Result := AsArray.ArrayPtr^.Insert(aIndex, aNode);
 end;
 
 function TJsonNode.Contains(const aName: string): Boolean;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.Contains(aName));
-  Result := False;
+  if Kind <> jvkObject then exit(False);
+  Result := ObjectPtr^.Contains(aName);
 end;
 
 function TJsonNode.ContainsUniq(const aName: string): Boolean;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.ContainsUniq(aName));
-  Result := False;
+  if Kind <> jvkObject then exit(False);
+  Result := ObjectPtr^.ContainsUniq(aName);
 end;
 
 function TJsonNode.IndexOfName(const aName: string): SizeInt;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.IndexOf(aName));
-  Result := NULL_INDEX;
+  if Kind <> jvkObject then exit(NULL_INDEX);
+  Result := ObjectPtr^.IndexOf(aName);
 end;
 
 function TJsonNode.CountOfName(const aName: string): SizeInt;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.CountOf(aName));
-  Result := 0;
+  if Kind <> jvkObject then exit(0);
+  Result := ObjectPtr^.CountOf(aName);
 end;
 
 function TJsonNode.HasUniqName(aIndex: SizeInt): Boolean;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then exit(FObject^.HasUniqKey(aIndex));
-  Result := False;
+  if Kind <> jvkObject then exit(False);
+  Result := ObjectPtr^.HasUniqKey(aIndex);
 end;
 
 function TJsonNode.Find(const aKey: string; out aValue: TJsonNode): Boolean;
 var
   p: ^TPair;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
+  if Kind = jvkObject then
     begin
-      p := FObject^.Find(aKey);
+      p := ObjectPtr^.Find(aKey);
       if p <> nil then
         begin
           aValue := p^.Value;
@@ -5481,14 +5892,9 @@ function TJsonNode.FindOrAdd(const aName: string; out aValue: TJsonNode): Boolea
 var
   p: ^TPair;
 begin
-  if AsObject.FValue.Ref = nil then
-    FValue.Ref := CreateJsObject;
-  Result := FObject^.FindOrAdd(aName, p);
+  Result := AsObject.ObjectPtr^.FindOrAdd(aName, p);
   if not Result then
-    begin
-      p^.Key := aName;
-      p^.Value := TJsonNode.Create;
-    end;
+    p^.Value := TJsonNode.Create;
   aValue := p^.Value;
 end;
 
@@ -5496,40 +5902,31 @@ function TJsonNode.FindUniq(const aName: string; out aValue: TJsonNode): Boolean
 var
   p: ^TPair;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
-    begin
-      p := FObject^.FindUniq(aName);
-      if p <> nil then
-        begin
-          aValue := p^.Value;
-          exit(True);
-        end;
-    end;
   aValue := nil;
-  Result := False;
+  if Kind <> jvkObject then exit(False);
+  p := ObjectPtr^.FindUniq(aName);
+  Result := p <> nil;
+  if Result then
+    aValue := p^.Value;
 end;
 
 function TJsonNode.FindAll(const aName: string): TNodeArray;
 var
   r: TNodeArray = nil;
   I: SizeInt;
-  e: TPair;
+  p: TPair;
 begin
-  if (Kind = jvkObject) and (FValue.Ref <> nil) then
+  if Kind <> jvkObject then exit(nil);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  I := 0;
+  for p in EqualNames(aName) do
     begin
-      System.SetLength(r, ARRAY_INITIAL_SIZE);
-      I := 0;
-      for e in FObject^.EqualKeys(aName) do
-        begin
-          if I = System.Length(r) then
-            System.SetLength(r, I * 2);
-          r[I] := e.Value;
-          Inc(I);
-        end;
-      System.SetLength(r, I);
-      exit(r);
+      if I = System.Length(r) then System.SetLength(r, I * 2);
+      r[I] := p.Value;
+      Inc(I);
     end;
-  Result := nil;
+  System.SetLength(r, I);
+  Result := r;
 end;
 
 function TJsonNode.Find(aIndex: SizeInt; out aValue: TJsonNode): Boolean;
@@ -5537,8 +5934,8 @@ begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
     begin
       case Kind of
-        jvkArray:  aValue := FArray^.UncMutable[aIndex]^;
-        jvkObject: aValue := FObject^.Mutable[aIndex]^.Value;
+        jvkArray:  aValue := ArrayPtr^.UncItems[aIndex];
+        jvkObject: aValue := ObjectPtr^.UncMutPairs[aIndex]^.Value;
       else
       end;
       exit(True);
@@ -5549,9 +5946,9 @@ end;
 
 function TJsonNode.FindPair(aIndex: SizeInt; out aValue: TPair): Boolean;
 begin
-  if (Kind=jvkObject)and(FObject<>nil)and(SizeUInt(aIndex)<SizeUInt(FObject^.Count))then
+  if (Kind = jvkObject) and (SizeUInt(aIndex) < SizeUInt(ObjectPtr^.Count)) then
      begin
-       aValue := FObject^.Mutable[aIndex]^;
+       aValue := ObjectPtr^.UncPairs[aIndex];
        exit(True);
      end;
   aValue := Default(TPair);
@@ -5560,9 +5957,9 @@ end;
 
 function TJsonNode.FindName(aIndex: SizeInt; out aName: string): Boolean;
 begin
-  if (Kind=jvkObject)and(FObject<>nil)and(SizeUInt(aIndex)<SizeUInt(FObject^.Count))then
+  if (Kind = jvkObject) and (SizeUInt(aIndex) < SizeUInt(ObjectPtr^.Count)) then
      begin
-       aName := FObject^.Mutable[aIndex]^.Key;
+       aName := ObjectPtr^.UncMutPairs[aIndex]^.Key;
        exit(True);
      end;
   aName := '';
@@ -5573,79 +5970,68 @@ function TJsonNode.Delete(aIndex: SizeInt): Boolean;
 var
   Node: TJsonNode;
 begin
-  if Extract(aIndex, Node) then
-    begin
-      Node.Free;
-      exit(True);
-    end;
-  Result := False;
+  case Kind of
+    jvkArray:
+      begin
+        Result := ArrayPtr^.Extract(aIndex, Node);
+        if Result then Node.Free;
+      end;
+    jvkObject:
+      begin
+        Result := ObjectPtr^.Extract(aIndex, Node);
+        if Result then Node.Free;
+      end;
+  else
+    Result := False;
+  end;
 end;
 
 function TJsonNode.Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
 var
   p: TPair;
 begin
-  aNode := nil;
   case Kind of
-    jvkArray:
-      if FArray <> nil then exit(FArray^.TryExtract(aIndex, aNode));
-    jvkObject:
-      if (FObject <> nil) and FObject^.TryDelete(aIndex, p) then
-        begin
-          aNode := p.Value;
-          exit(True);
-        end;
+    jvkArray:  Result := ArrayPtr^.Extract(aIndex, aNode);
+    jvkObject: Result := ObjectPtr^.Extract(aIndex, aNode);
   else
+    aNode := nil;
+    Result := False;
   end;
-  Result := False;
 end;
 
 function TJsonNode.Extract(aIndex: SizeInt; out aPair: TPair): Boolean;
 begin
-  if (Kind = jvkObject) and (FObject <> nil) and FObject^.TryDelete(aIndex, aPair) then
-    exit(True);
-  aPair := Default(TPair);
-  Result := False;
+  aPair.Value := nil;
+  if Kind <> jvkObject then exit(False);
+  Result := ObjectPtr^.ExtractPair(aIndex, aPair);
 end;
 
 function TJsonNode.Extract(const aName: string; out aNode: TJsonNode): Boolean;
 var
   p: TPair;
 begin
-  if (Kind = jvkObject) and (FObject <> nil) and FObject^.Remove(aName, p) then
+  if Kind <> jvkObject then
     begin
-      aNode := p.Value;
-      exit(True);
+      aNode := nil;
+      exit(False);
     end;
-  aNode := nil;
-  Result := False;
+  Result := ObjectPtr^.Extract(aName, aNode);
 end;
 
 function TJsonNode.Remove(const aName: string): Boolean;
 var
   Node: TJsonNode;
 begin
-  if Extract(aName, Node) then
-    begin
-      Node.Free;
-      exit(True);
-    end;
-  Result := False;
+  Result := Extract(aName, Node);
+  if Result then
+    Node.Free;
 end;
 
 function TJsonNode.RemoveAll(const aName: string): SizeInt;
-var
-  p: TPair;
 begin
-  p := Default(TPair);
-  if (Kind = jvkObject) and (FObject <> nil) then
-    begin
-      Result := FObject^.Count;
-      while FObject^.Remove(aName, p) do
-        p.Value.Free;
-      Result := Result - FObject^.Count;
-    end;
-  Result := 0;
+  Result := Count;
+  while Remove(aName) do;
+  Result -= Count;
 end;
 
 {$PUSH}{$Q-}{$R-}
@@ -5849,16 +6235,16 @@ var
       end;
     case CurrNode.Kind of
       jvkArray:
-        for I := 0 to Pred(CurrNode.Count) do
+        for I := 0 to Pred(CurrNode.ArrayPtr^.Count) do
           begin
             PathHolder.Add(SizeUInt2Str(I));
-            if DoGetPath(CurrNode.FArray^.UncMutable[I]^) then exit(True);
+            if DoGetPath(CurrNode.ArrayPtr^.UncItems[I]) then exit(True);
             PathHolder.DeleteLast;
           end;
       jvkObject:
-        for I := 0 to Pred(CurrNode.Count) do
+        for I := 0 to Pred(CurrNode.ObjectPtr^.Count) do
           begin
-            p := CurrNode.FObject^.Mutable[I];
+            p := CurrNode.ObjectPtr^.UncMutPairs[I];
             PathHolder.Add(p^.Key);
             if DoGetPath(p^.Value) then exit(True);
             PathHolder.DeleteLast;
@@ -5887,7 +6273,7 @@ end;
 function TJsonNode.DumpJson(aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean): string;
 var
   sb: TStrBuilder;
-  e: TPair;
+  p: ^TPair;
   s: shortstring;
   procedure BuildJson(aInst: TJsonNode);
   var
@@ -5902,16 +6288,16 @@ var
           Double2Str(aInst.FValue.Num, s);
           sb.Append(s);
         end;
-      jvkString: sb.AppendEncodeOpt(aInst.FString, aUEscOpt, aHtmlEsc);
+      jvkString: sb.AppendEncodeOpt(aInst.StrVal, aUEscOpt, aHtmlEsc);
       jvkArray:
         begin
           sb.Append(chOpenSqrBr);
-          if aInst.FArray <> nil then
+          if aInst.ArrayPtr^.NonEmpty then
             begin
-              Last := Pred(aInst.FArray^.Count);
+              Last := Pred(aInst.ArrayPtr^.Count);
               for I := 0 to Last do
                 begin
-                  BuildJson(aInst.FArray^.UncMutable[I]^);
+                  BuildJson(aInst.ArrayPtr^.UncItems[I]);
                   if I <> Last then
                     sb.Append(chComma);
                 end;
@@ -5921,15 +6307,15 @@ var
       jvkObject:
         begin
           sb.Append(chOpenCurBr);
-          if aInst.FObject <> nil then
+          if aInst.ObjectPtr^.NonEmpty then
             begin
-              Last := Pred(aInst.FObject^.Count);
+              Last := Pred(aInst.ObjectPtr^.Count);
               for I := 0 to Last do
                 begin
-                  e := aInst.FObject^.Mutable[I]^;
-                  sb.AppendEncodeOpt(e.Key, aUEscOpt, aHtmlEsc);
+                  p := aInst.ObjectPtr^.UncMutPairs[I];
+                  sb.AppendEncodeOpt(p^.Key, aUEscOpt, aHtmlEsc);
                   sb.Append(chColon);
-                  BuildJson(e.Value);
+                  BuildJson(p^.Value);
                   if I <> Last then
                     sb.Append(chComma);
                 end;
@@ -6040,7 +6426,8 @@ var
   procedure DoFormat(aNode: TJsonNode; aPos: Integer; IsRoot: Boolean = False);
   var
     I, Last: Integer;
-    p: TJsonNode.TPair;
+    n: TJsonNode;
+    p: ^TPair;
     MultiLine: Boolean;
   begin
     if aNode.Kind < jvkArray then
@@ -6054,10 +6441,11 @@ var
               NewLine(
                 aPos, not IsRoot and MultiLine and (sb.FBuffer[sb.FBuffer.High] in [chOpenSqrBr, chOpenCurBr]));
             sb.Append(chOpenSqrBr);
-            Last := Pred(aNode.Count);
+            Last := Pred(aNode.ArrayPtr^.Count);
             for I := 0 to Last do begin
-              NewLine(aPos + aStyle.IndentSize, MultiLine and CanOneLine(aNode.Items[I]));
-              DoFormat(aNode.Items[I], aPos + aStyle.IndentSize);
+              n := aNode.ArrayPtr^.UncItems[I];
+              NewLine(aPos + aStyle.IndentSize, MultiLine and CanOneLine(n));
+              DoFormat(n, aPos + aStyle.IndentSize);
               if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
@@ -6070,12 +6458,12 @@ var
               NewLine(
                 aPos, not IsRoot and MultiLine and (sb.FBuffer[sb.FBuffer.High] in [chOpenSqrBr, chOpenCurBr]));
             sb.Append(chOpenCurBr);
-            Last := Pred(aNode.Count);
+            Last := Pred(aNode.ObjectPtr^.Count);
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine);
-              p := aNode.Pairs[I];
-              AppendKey(p.Key);
-              DoFormat(p.Value, aPos + aStyle.IndentSize);
+              p := aNode.ObjectPtr^.UncMutPairs[I];
+              AppendKey(p^.Key);
+              DoFormat(p^.Value, aPos + aStyle.IndentSize);
               if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
@@ -6087,7 +6475,7 @@ var
   procedure FormatBsd(aNode: TJsonNode; aPos: Integer; aNewLine: Boolean; IsRoot: Boolean = False);
   var
     I, Last: Integer;
-    p: TJsonNode.TPair;
+    p: ^TPair;
     MultiLine: Boolean;
   begin
     if aNode.Kind < jvkArray then
@@ -6099,10 +6487,10 @@ var
             MultiLine := not CanOneLineArray(aNode);
             NewLine(aPos, not IsRoot and MultiLine and aNewLine);
             sb.Append(chOpenSqrBr);
-            Last := Pred(aNode.Count);
+            Last := Pred(aNode.ArrayPtr^.Count);
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine);
-              FormatBsd(aNode.Items[I], aPos + aStyle.IndentSize, False);
+              FormatBsd(aNode.ArrayPtr^.UncItems[I], aPos + aStyle.IndentSize, False);
               if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
@@ -6113,12 +6501,12 @@ var
             MultiLine := not CanOneLineObject(aNode);
             NewLine(aPos, not IsRoot and MultiLine and aNewLine);
             sb.Append(chOpenCurBr);
-            Last := Pred(aNode.Count);
+            Last := Pred(aNode.ObjectPtr^.Count);
             for I := 0 to Last do begin
               NewLine(aPos + aStyle.IndentSize, MultiLine);
-              p := aNode.Pairs[I];
-              AppendKey(p.Key, p.Value);
-              FormatBsd(p.Value, aPos + aStyle.IndentSize, True);
+              p := aNode.ObjectPtr^.UncMutPairs[I];
+              AppendKey(p^.Key, p^.Value);
+              FormatBsd(p^.Value, aPos + aStyle.IndentSize, True);
               if I < Last then AppendComma(MultiLine);
             end;
             NewLine(aPos, MultiLine);
@@ -6130,7 +6518,7 @@ var
   procedure FormatSingleLine(aNode: TJsonNode);
   var
     I, Last: Integer;
-    p: TJsonNode.TPair;
+    p: ^TPair;
   begin
     if aNode.Kind < jvkArray then
       AppendScalar(aNode)
@@ -6139,9 +6527,9 @@ var
         jvkArray:
           begin
             sb.Append(chOpenSqrBr);
-            Last := Pred(aNode.Count);
+            Last := Pred(aNode.ArrayPtr^.Count);
             for I := 0 to Last do begin
-              FormatSingleLine(aNode.Items[I]);
+              FormatSingleLine(aNode.ArrayPtr^.UncItems[I]);
               if I < Last then AppendComma;
             end;
             sb.Append(chClosSqrBr);
@@ -6149,11 +6537,11 @@ var
         jvkObject:
           begin
             sb.Append(chOpenCurBr);
-            Last := Pred(aNode.Count);
+            Last := Pred(aNode.ObjectPtr^.Count);
             for I := 0 to Last do begin
-              p := aNode.Pairs[I];
-              AppendKey(p.Key);
-              FormatSingleLine(p.Value);
+              p := aNode.ObjectPtr^.UncMutPairs[I];
+              AppendKey(p^.Key);
+              FormatSingleLine(p^.Value);
               if I < Last then AppendComma;
             end;
             sb.Append(chClosCurBr);
@@ -6185,12 +6573,8 @@ begin
 end;
 
 function TJsonNode.SaveToStream(aStream: TStream): SizeInt;
-var
-  sb: TStrBuilder;
 begin
-  sb.Create(S_BUILD_INIT_SIZE);
-  DoBuildJson(sb);
-  Result := sb.SaveToStream(aStream);
+  Result := TJsonWriter.WriteJson(aStream, Self);
 end;
 
 function TJsonNode.SaveToStream(aStream: TStream; const aStyle: TJsonFormatStyle): SizeInt;
@@ -6204,12 +6588,11 @@ end;
 
 procedure TJsonNode.SaveToFile(const aFileName: string);
 var
-  fs: TFileStream = nil;
+  fs: TFileStream;
 begin
   fs := TFileStream.Create(aFileName, fmOpenWrite or fmCreate);
   try
-    //SaveToStream(fs);
-    TJsonWriter.WriteJson(fs, Self);
+    SaveToStream(fs);
   finally
     fs.Free;
   end;
@@ -6217,7 +6600,7 @@ end;
 
 procedure TJsonNode.SaveToFile(const aFileName: string; const aStyle: TJsonFormatStyle);
 var
-  fs: TFileStream = nil;
+  fs: TFileStream;
 begin
   fs := TFileStream.Create(aFileName, fmOpenWrite or fmCreate);
   try
@@ -6235,7 +6618,7 @@ begin
     jvkFalse:   Result := JS_FALSE;
     jvkTrue:    Result := JS_TRUE;
     jvkNumber:  Result := Double2StrDef(FValue.Num);
-    jvkString:  Result := FString;
+    jvkString:  Result := StrVal;
     jvkArray,
     jvkObject:  Result := FormatJson([jfoSingleLine, jfoStrAsIs]);
   end;
@@ -6415,11 +6798,10 @@ begin
           Node.AddNode(aValue.Kind).CopyFrom(aValue);
           exit(True);
         end;
-      if not IsNonNegativeInt(Key, Idx) then
+      if not IsNonNegativeInt(Key, Idx) or (SizeUInt(Idx) > SizeUInt(Node.Count)) then
         exit(False);
-      Result := Node.InsertNode(Idx, Node, aValue.Kind);
-      if Result then
-        Node.CopyFrom(aValue);
+      Node.InsertNode(Idx, Node, aValue.Kind);
+      Node.CopyFrom(aValue);
     end
   else
     begin
@@ -6428,9 +6810,9 @@ begin
         Node.AddNode(Key).CopyFrom(aValue)
       else
         begin
-          if not Node.FObject^.HasUniqKey(Idx) then
+          if not Node.ObjectPtr^.HasUniqKey(Idx) then
             exit(False);
-          Node.FObject^.Mutable[Idx]^.Value.CopyFrom(aValue);
+          Node.ObjectPtr^.UncMutPairs[Idx]^.Value.CopyFrom(aValue);
         end;
       Result := True;
     end;
@@ -6495,31 +6877,25 @@ begin
     begin
       if Key = '-' then
         begin
-          if Node.FArray = nil then
-            Node.FArray := Node.CreateJsArray;
-          Node.FArray^.Insert(Node.Count, aValue);
+          Node.ArrayPtr^.Insert(Node.Count, aValue);
           exit(True);
         end;
       if not IsNonNegativeInt(Key, Idx) then
         exit(False);
-      if not Node.CanArrayInsert(Idx) then
+      if SizeUInt(Idx) > SizeUInt(Node.Count) then
         exit(False);
-      Node.FArray^.Insert(Idx, aValue);
+      Node.ArrayPtr^.Insert(Idx, aValue);
     end
   else
     begin
       Idx := Node.IndexOfName(Key);
       if Idx = NULL_INDEX then
-        begin
-          if Node.FObject = nil then
-            Node.FObject := Node.CreateJsObject;
-          Node.FObject^.Add(TJsonNode.TPair.Create(Key, aValue));
-        end
+        Node.ObjectPtr^.Add(Key, aValue)
       else
         begin
-          if not Node.FObject^.HasUniqKey(Idx) then
+          if not Node.ObjectPtr^.HasUniqKey(Idx) then
             exit(False);
-          with Node.FObject^.Mutable[Idx]^ do
+          with Node.ObjectPtr^.UncMutPairs[Idx]^ do
             begin
               Value.Free;
               Value := aValue;
@@ -6613,6 +6989,8 @@ var
 begin
   CopyRef.Instance := aNode.Clone;
   CopyNode := CopyRef;
+  TmpNode := nil;
+  PathFrom := nil;
   for I := 0 to Pred(FNode.Count) do
     begin
       CurrNode := FNode.Items[I];
@@ -6751,7 +7129,7 @@ var
     I: SizeInt;
   begin
     p := TDiffUtil.MakePatch(
-      aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
+      aSrc.ArrayPtr^.List[0..Pred(aSrc.Count)], aDst.ArrayPtr^.List[0..Pred(aDst.Count)]);
 
     for I := 0 to System.High(p) do
       if p[I].Operation = seoReplace then begin
@@ -6792,7 +7170,7 @@ var
     if UseArrayReplace then exit(DoArrayDiffWithRep(aSrc, aDst));
 
     p := TDiffUtil.MakeLcsPatch(
-      aSrc.FArray^.UncMutable[0][0..Pred(aSrc.Count)],aDst.FArray^.UncMutable[0][0..Pred(aDst.Count)]);
+      aSrc.ArrayPtr^.List[0..Pred(aSrc.Count)],aDst.ArrayPtr^.List[0..Pred(aDst.Count)]);
 
     for I := System.High(p) downto 0 do
       if p[I].Operation = seoDelete then
@@ -6812,9 +7190,9 @@ var
     I: SizeInt;
   begin
     for I := 0 to Pred(aSrc.Count) do begin
-      if not aSrc.FObject^.HasUniqKey(I) then
+      if not aSrc.ObjectPtr^.HasUniqKey(I) then
         exit(False);
-      p := aSrc.FObject^.Mutable[I]^;
+      p := aSrc.ObjectPtr^.UncPairs[I];
       if aDst.Find(p.Key, Node) then  //todo: IndexOfName() ???
         if aDst.ContainsUniq(p.Key) then begin
           Path.Add(p.Key);
@@ -6829,7 +7207,7 @@ var
         PushRemove(p.Key, p.Value);
     end;
     for I := 0 to Pred(aDst.Count) do begin
-      p := aDst.FObject^.Mutable[I]^;
+      p := aDst.ObjectPtr^.UncPairs[I];
       if not aSrc.Contains(p.Key) then begin
         if not aDst.HasUniqName(I) then
           exit(False);
@@ -7102,6 +7480,7 @@ begin
   Result := LocPatch.Instance.Apply(aTarget);
 end;
 
+{$PUSH}{$WARN 5089 OFF}
 class function TJsonPatch.PatchFile(p: TJsonPatch; const aTargetFileName: string): TPatchResult;
 var
   LocTarget: specialize TGUniqRef<TJsonNode>;
@@ -7113,6 +7492,7 @@ begin
   if Result = prOk then
     LocTarget.Instance.SaveToFile(aTargetFileName);
 end;
+{$POP}
 
 class function TJsonPatch.PatchFile(const aPatch: string; const aTargetFileName: string): TPatchResult;
 var
@@ -8184,7 +8564,7 @@ var
   NextState, NextClass, StackHigh: Integer;
   State: Integer = GO;
   sTop: Integer = 1;
-  sb: TJsonNode.TStrBuilder;
+  sb: TStrBuilder;
   KeyValue: string = '';
   function Number: Double; inline;
   begin
@@ -8719,25 +9099,23 @@ var
       jvkFalse:  Writer.AddFalse;
       jvkTrue:   Writer.AddTrue;
       jvkNumber: Writer.Add(aInst.FValue.Num);
-      jvkString: Writer.Add(aInst.FString);
+      jvkString: Writer.Add(aInst.StrVal);
       jvkArray:
         begin
           Writer.BeginArray;
-          if aInst.FArray <> nil then
-            for I := 0 to Pred(aInst.FArray^.Count) do
-              WriteNode(aInst.FArray^.UncMutable[I]^);
+          for I := 0 to Pred(aInst.ArrayPtr^.Count) do
+            WriteNode(aInst.ArrayPtr^.UncItems[I]);
           Writer.EndArray;
         end;
       jvkObject:
         begin
           Writer.BeginObject;
-          if aInst.FObject <> nil then
-            for I := 0 to Pred(aInst.FObject^.Count) do
-              begin
-                p := aInst.FObject^.Mutable[I]^;
-                Writer.AddName(p.Key);
-                WriteNode(p.Value);
-              end;
+          for I := 0 to Pred(aInst.ObjectPtr^.Count) do
+            begin
+              p := aInst.ObjectPtr^.UncPairs[I];
+              Writer.AddName(p.Key);
+              WriteNode(p.Value);
+            end;
           Writer.EndObject;
         end;
     end;
@@ -9149,7 +9527,7 @@ end;
 class function TJsonStrWriter.WriteJson(aNode: TJsonNode; aInitLen: SizeInt): string;
 var
   Writer: TJsonStrWriter = nil;
-  p: TJsonNode.TPair;
+  p: ^TJsonNode.TPair;
   procedure WriteNode(aInst: TJsonNode);
   var
     I: SizeInt;
@@ -9159,25 +9537,23 @@ var
       jvkFalse:  Writer.AddFalse;
       jvkTrue:   Writer.AddTrue;
       jvkNumber: Writer.Add(aInst.FValue.Num);
-      jvkString: Writer.Add(aInst.FString);
+      jvkString: Writer.Add(aInst.StrVal);
       jvkArray:
         begin
           Writer.BeginArray;
-          if aInst.FArray <> nil then
-            for I := 0 to Pred(aInst.FArray^.Count) do
-              WriteNode(aInst.FArray^.UncMutable[I]^);
+          for I := 0 to Pred(aInst.ArrayPtr^.Count) do
+            WriteNode(aInst.ArrayPtr^.UncItems[I]);
           Writer.EndArray;
         end;
       jvkObject:
         begin
           Writer.BeginObject;
-          if aInst.FObject <> nil then
-            for I := 0 to Pred(aInst.FObject^.Count) do
-              begin
-                p := aInst.FObject^.Mutable[I]^;
-                Writer.AddName(p.Key);
-                WriteNode(p.Value);
-              end;
+          for I := 0 to Pred(aInst.ObjectPtr^.Count) do
+            begin
+              p := aInst.ObjectPtr^.UncMutPairs[I];
+              Writer.AddName(p^.Key);
+              WriteNode(p^.Value);
+            end;
           Writer.EndObject;
         end;
     end;
