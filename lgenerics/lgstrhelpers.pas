@@ -44,7 +44,7 @@ type
   TStrSlice = record
     Ptr: PAnsiChar;
     Count: SizeInt;
-    constructor Init(p: PAnsiChar; aCount: SizeInt);
+    constructor Make(p: PAnsiChar; aCount: SizeInt);
     class operator := (const s: string): TStrSlice; inline;
     class operator := (const s: TStrSlice): string; inline;
     class operator = (const L, R: TStrSlice): Boolean; inline;
@@ -3462,7 +3462,7 @@ end;
 
 { TStrSlice }
 
-constructor TStrSlice.Init(p: PAnsiChar; aCount: SizeInt);
+constructor TStrSlice.Make(p: PAnsiChar; aCount: SizeInt);
 begin
   Ptr := p;
   Count := aCount;
@@ -3470,7 +3470,7 @@ end;
 
 class operator TStrSlice.:=(const s: string): TStrSlice;
 begin
-  Result := TStrSlice.Init(Pointer(s), System.length(s));
+  Result := TStrSlice.Make(Pointer(s), System.Length(s));
 end;
 
 class operator TStrSlice.:=(const s: TStrSlice): string;
@@ -3547,7 +3547,7 @@ end;
 
 function TAnsiStrHelper.TSliceEnumerable.GetCurrent: TStrSlice;
 begin
-  Result.Init(@FValue[FStartIndex], FLastIndex - FStartIndex);
+  Result.Make(@FValue[FStartIndex], FLastIndex - FStartIndex);
 end;
 
 constructor TAnsiStrHelper.TSliceEnumerable.Create(const aValue: string; const aStopChars: TSysCharSet);
@@ -3584,7 +3584,7 @@ end;
 
 function TAnsiStrHelper.TWordSliceEnumerator.GetCurrent: TStrSlice;
 begin
-  Result.Init(@FValue[FStartIndex], FLastIndex - FStartIndex);
+  Result.Make(@FValue[FStartIndex], FLastIndex - FStartIndex);
 end;
 
 function TAnsiStrHelper.TWordSliceEnumerator.MoveNext: Boolean;
