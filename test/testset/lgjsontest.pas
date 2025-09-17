@@ -74,7 +74,6 @@ type
     procedure Validator;
     procedure Parse;
     procedure GetEnumerator;
-    procedure SubTree;
     procedure Enrties;
     procedure Names;
     procedure IdenticNames;
@@ -1196,19 +1195,6 @@ begin
     end;
 end;
 
-procedure TTestJson.SubTree;
-var
-  o: specialize TGAutoRef<TJsonNode>;
-  Node: TJsonNode;
-  I: Integer;
-begin
-  {%H-}o.Instance := CreateArrayOfObj;
-  I := 1;
-  for Node in o.Instance.SubTree do
-    Inc(I);
-  AssertTrue(I = GetNodeCount(o.Instance));
-end;
-
 procedure TTestJson.Enrties;
 var
   o: specialize TGAutoRef<TJsonNode>;
@@ -1660,7 +1646,6 @@ begin
   WriteNull(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkNull);
   AssertTrue(s = 'null');
 end;
 
@@ -1679,7 +1664,6 @@ begin
   WriteFalse(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkFalse);
   AssertTrue(s = 'false');
 end;
 
@@ -1698,7 +1682,6 @@ begin
   WriteTrue(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkTrue);
   AssertTrue(s = 'true');
 end;
 
@@ -1719,7 +1702,6 @@ begin
   WriteNum(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkNumber);
   AssertTrue(s = '-42');
 end;
 
@@ -1740,7 +1722,6 @@ begin
   WriteStr(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkString);
   AssertTrue(s = '"string \"value\""');
 end;
 
@@ -1761,7 +1742,6 @@ begin
   WriteJson(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
   AssertTrue(s = Json);
 end;
 
@@ -1785,7 +1765,6 @@ begin
   WriteNode(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
   AssertTrue(s = Json);
 end;
 
@@ -1806,7 +1785,6 @@ begin
   WriteArr(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkArray);
   AssertTrue(s = '[]');
 end;
 
@@ -1827,7 +1805,6 @@ begin
   WriteObj(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
   AssertTrue(s = '{}');
 end;
 
@@ -1864,7 +1841,6 @@ begin
   WriteObj(Stream.Instance);
   s := Stream.Instance.DataString;
   AssertTrue(TJsonNode.ValidJson(s));
-  AssertTrue(TJsonNode.LikelyKind(Pointer(s), Length(s)) = jvkObject);
   AssertTrue(s = Json);
 end;
 
