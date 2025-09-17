@@ -90,36 +90,6 @@ const
 {$POP}
 
 type
-  TUEscapeOption = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
-
-  { TStrBuilder: helper entity for internal use }
-  TStrBuilder = record
-  private
-    FBuffer: specialize TGDynArray<AnsiChar>;
-    FCount: SizeInt;
-  public
-    class function DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string; static;
-    constructor Create(aCapacity: SizeInt);
-    constructor Create(const s: string);
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure MakeEmpty; inline;
-    procedure EnsureCapacity(aCapacity: SizeInt); inline;
-    procedure Append(c: AnsiChar); inline;
-    procedure Append(c: AnsiChar; aCount: SizeInt);
-    procedure Append(p: PAnsiChar; aCount: SizeInt);
-    procedure Append(const s: string); inline;
-    procedure AppendEncode(const s: string);
-    procedure AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
-    procedure Append(const s: shortstring); inline;
-    function  SaveToStream(aStream: TStream): SizeInt; inline;
-    function  WriteToStream(aStream: TStream): SizeInt; inline;
-    function  ToString: string; inline;
-    function  ToDecodeString: string;
-    function  ToPChar: PAnsiChar; inline;
-    property  Count: SizeInt read FCount;
-  end;
-
   TJVarKind = (vkNull, vkBool, vkNumber, vkString, vkArray, vkPairs);
 
   TJVariant = record
@@ -417,6 +387,7 @@ type
     end;
 
     TNameDuplicates = (ndupIgnore, ndupRewrite);
+    TUEscapeOption  = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
 
   private
   const
@@ -1062,6 +1033,35 @@ type
     class function WriteJson(aNode: TJsonNode; aInitLen: SizeInt = DEFAULT_LEN): string; static;
   end;
 
+  { TStrBuilder: helper entity for internal use }
+  TStrBuilder = record
+  private
+    FBuffer: specialize TGDynArray<AnsiChar>;
+    FCount: SizeInt;
+    class function DecodeJsonStr(p: PAnsiChar; aCount: SizeInt): string; static;
+  public
+    constructor Create(aCapacity: SizeInt);
+    constructor Create(const s: string);
+  private
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure MakeEmpty; inline;
+    procedure EnsureCapacity(aCapacity: SizeInt); inline;
+    procedure Append(c: AnsiChar); inline;
+    procedure Append(c: AnsiChar; aCount: SizeInt);
+    procedure Append(p: PAnsiChar; aCount: SizeInt);
+    procedure Append(const s: string); inline;
+    procedure AppendEncode(const s: string);
+    procedure AppendEncodeOpt(const s: string; aUEscOpt: TJsonNode.TUEscapeOption; aHtmlEsc: Boolean);
+    procedure Append(const s: shortstring); inline;
+    function  SaveToStream(aStream: TStream): SizeInt; inline;
+    function  WriteToStream(aStream: TStream): SizeInt; inline;
+    function  ToString: string; inline;
+    function  ToDecodeString: string;
+    function  ToPChar: PAnsiChar; inline;
+    property  Count: SizeInt read FCount;
+  end;
+
   TParseMode = (pmNone, pmKey, pmArray, pmObject);
   PParseMode = ^TParseMode;
 
@@ -1398,7 +1398,7 @@ var
   J += 3
 }
 begin
-  System.SetLength(r, aCount);
+  System.SetLength(r, aCount - 2);
   Last := Pred(aCount);
   I := 1;
   J := 0;
@@ -1645,7 +1645,7 @@ begin
   end;
 end;
 
-procedure TStrBuilder.AppendEncodeOpt(const s: string; aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean);
+procedure TStrBuilder.AppendEncodeOpt(const s: string; aUEscOpt: TJsonNode.TUEscapeOption; aHtmlEsc: Boolean);
 var
   c: DWord;
   p, pEnd: PAnsiChar;
@@ -1732,10 +1732,85 @@ begin
 end;
 
 function TStrBuilder.ToDecodeString: string;
+var
+  I, J, Last: SizeInt;
+  p, pR: PAnsiChar;
+  uh, ul: DWord;
 begin
   if IsEmpty then exit('');
-  Result := DecodeJsonStr(FBuffer.Ptr, Count);
-  FCount := 0;
+  Last := Pred(Count);
+  I := 1;
+  J := 0;
+  p := FBuffer.Ptr;
+  pR := FBuffer.Ptr;
+  while I < Last do
+    if p[I] <> '\' then begin
+      pR[J] := p[I];
+      Inc(I);
+      Inc(J);
+    end else
+      case p[Succ(I)] of
+        'b': begin pR[J] := #8;  I += 2; Inc(J); end;
+        'f': begin pR[J] := #12; I += 2; Inc(J); end;
+        'n': begin pR[J] := #10; I += 2; Inc(J); end;
+        'r': begin pR[J] := #13; I += 2; Inc(J); end;
+        't': begin pR[J] := #9;  I += 2; Inc(J); end;
+        'u':
+          begin
+            uh := HexCh4ToDWord(PChar4(@p[I+2])^);
+            I += 6;
+            case uh of
+              0..$7f: begin pR[J] := Char(uh); Inc(J); end;
+              $80..$7ff: begin
+                  pR[ J ] := Char((uh shr 6) or $c0);
+                  pR[J+1] := Char((uh and $3f) or $80);
+                  J += 2;
+                end;
+              $800..$d7ff,$e000..$ffff: begin
+                  pR[ J ] := Char((uh shr 12) or $e0);
+                  pR[J+1] := Char((uh shr 6) and $3f or $80);
+                  pR[J+2] := Char((uh and $3f) or $80);
+                  J += 3;
+                end;
+              $d800..$dbff: // high surrogate
+                if (Last - I >= 5) and (p[I] = '\') and (p[I+1] = 'u') then begin
+                  ul := HexCh4ToDWord(PChar4(@p[I+2])^);
+                  if (ul >= $dc00) and (ul <= $dfff) then begin
+                    I += 6;
+                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
+                    pR[ J ] := Char(ul shr 18 or $f0);
+                    pR[J+1] := Char((ul shr 12) and $3f or $80);
+                    pR[J+2] := Char((ul shr 6) and $3f or $80);
+                    pR[J+3] := Char(ul and $3f or $80);
+                    J += 4;
+                  end else begin
+                    pR[ J ] := #$ef;
+                    pR[J+1] := #$bf;
+                    pR[J+2] := #$bd;
+                    J += 3;
+                  end;
+                end else begin
+                  pR[ J ] := #$ef;
+                  pR[J+1] := #$bf;
+                  pR[J+2] := #$bd;
+                  J += 3;
+                end;
+              $dc00..$dfff: begin // low surrogate
+                  pR[ J ] := #$ef;
+                  pR[J+1] := #$bf;
+                  pR[J+2] := #$bd;
+                  J += 3;
+                end;
+            else
+            end;
+          end;
+      else
+        pR[J] := p[Succ(I)];
+        I += 2;
+        Inc(J);
+      end;
+  FCount := J;
+  Result := ToString;
 end;
 
 function TStrBuilder.ToPChar: PAnsiChar;
@@ -8652,7 +8727,7 @@ begin
           end else exit(False);
         36: //string value
           begin
-            sb.Append(Buf[I]);
+            sb.Append(Buf[I]); ////
             case Stack[sTop].Mode of
               pmKey: begin
                   KeyValue := sb.ToDecodeString;
