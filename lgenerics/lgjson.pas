@@ -4760,7 +4760,7 @@ begin
     raise EJsException.Create(SEJsonInstNotObj);
   if SizeUInt(aIndex) >= SizeUInt(ObjectPtr^.Count) then
     raise EJsException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-  Result := ObjectPtr^.UncPairs[aIndex];
+  Result := ObjectPtr^.UncMutPairs[aIndex]^;
 end;
 
 function TJsonNode.GetNItem(const aName: string): TJsonNode;
