@@ -228,14 +228,17 @@ type
   type
     PJsonNode = ^TJsonNode;
   strict private
-    FItems: array of TJsonNode;
+    FItems: PJsonNode;
+    function  GetLen: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TJsonNode; inline;
     function  GetUncItem(aIndex: SizeInt): TJsonNode; inline;
     function  GetUncMutItem(aIndex: SizeInt): PJsonNode; inline;
     function  GetList: PJsonNode; inline;
+    procedure SetLen(aValue: SizeInt); inline;
     procedure SetCount(aValue: SizeInt); inline;
+    class operator Initialize(var a: TJsArray); inline;
     class operator Finalize(var a: TJsArray); inline;
   public
     function  IsEmpty: Boolean; inline;
@@ -277,9 +280,11 @@ type
     PNode = ^TNode;
 
   strict private
-    FNodes: array of TNode;
+    FNodes: PNode;
+    function  GetLength: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
+    procedure SetLen(aValue: SizeInt); inline;
     procedure SetCount(aValue: SizeInt); inline;
     function  GetPair(aIndex: SizeInt): TPair; inline;
     function  GetUncPair(aIndex: SizeInt): TPair; inline;
@@ -287,7 +292,7 @@ type
     function  GetItem(aIndex: SizeInt): TJsonNode; inline;
     function  GetUncItem(aIndex: SizeInt): TJsonNode; inline;
     procedure Rehash(aOldSize: SizeInt);
-    procedure DoAdd(const aKey: string; aNode: TJsonNode; aHash: SizeInt); inline;
+    procedure DoAdd(const aKey: string; aNode: TJsonNode; aHash: SizeInt);
     function  DoFind(const aKey: string; aHash: SizeInt): SizeInt;
     function  GetCountOf(const aKey: string): SizeInt;
     function  DoFindUniq(const aKey: string): SizeInt; //0 -> not found; -1 -> found non-unique
@@ -295,6 +300,8 @@ type
     procedure DoExtract(aIndex: SizeInt; out p: TPair);
     function  TestHasUniq(aIndex: SizeInt): Boolean;
     function  GetList: PNode; inline;
+    property  Length: SizeInt read GetLength;
+    class operator Initialize(var o: TJsObject); inline;
     class operator Finalize(var o: TJsObject); inline;
   public
   type
@@ -324,15 +331,15 @@ type
     function  IndexOf(const aKey: string): SizeInt; inline;
     function  CountOf(const aKey: string): SizeInt; inline;
     procedure Add(const aKey: string; aNode: TJsonNode); inline;
-    function  AddUniq(const aKey: string; out p: PPair): Boolean; inline;
+    function  AddUniq(const aKey: string; out p: PPair): Boolean;
     function  Find(const aKey: string): PPair;
-    function  Find(const aKey: string; aHash: SizeInt): SizeInt;
+    function  Find(const aKey: string; aHash: SizeInt): SizeInt; inline;
     function  FindOrAdd(const aKey: string; out p: PPair): Boolean;
     function  FindUniq(const aKey: string): PPair;
-    function  HasUniqKey(aIndex: SizeInt): Boolean;
+    function  HasUniqKey(aIndex: SizeInt): Boolean; inline;
     function  Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
     function  ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
-    function  Extract(const aKey: string; out aNode: TJsonNode): Boolean;
+    function  Extract(const aKey: string; out aNode: TJsonNode): Boolean; inline;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Pairs[aIndex: SizeInt]: TPair read GetPair; default;
@@ -416,7 +423,7 @@ type
     function  GetArrayPtr: PJsArray; inline;
     function  GetObjPtr: PJsObject; inline;
     procedure SetStrVal(const aValue: string); inline;
-    procedure DoClear; //inline;
+    procedure DoClear;
     function  GetAsArray: TJsonNode; inline;
     function  GetAsObject: TJsonNode; inline;
     function  GetAsNull: TJsonNode; inline;
@@ -2755,45 +2762,62 @@ end;
 
 { TJsArray }
 
-function TJsArray.GetCount: SizeInt;
+function TJsArray.GetLen: SizeInt;
 begin
   if FItems = nil then exit(0);
   Result := SizeInt(FItems[0]);
 end;
 
+function TJsArray.GetCount: SizeInt;
+begin
+  if FItems = nil then exit(0);
+  Result := SizeInt(FItems[1]);
+end;
+
 function TJsArray.GetCapacity: SizeInt;
 begin
   if FItems = nil then exit(0);
-  Result := System.High(FItems);
+  Result := SizeInt(FItems[0]) - 2;
 end;
 
 function TJsArray.GetItem(aIndex: SizeInt): TJsonNode;
 begin
   if SizeUInt(aIndex) >= SizeUInt(Count) then
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-  Result := FItems[Succ(aIndex)];
+  Result := FItems[aIndex + 2];
 end;
 
 function TJsArray.GetUncItem(aIndex: SizeInt): TJsonNode;
 begin
-  Result := FItems[Succ(aIndex)];
+  Result := FItems[aIndex + 2];
 end;
 
 function TJsArray.GetUncMutItem(aIndex: SizeInt): PJsonNode;
 begin
-  Result := @FItems[Succ(aIndex)];
+  Result := @FItems[aIndex + 2];
 end;
 
 function TJsArray.GetList: PJsonNode;
 begin
   if FItems = nil then exit(nil);
-  Result := @FItems[1];
+  Result := @FItems[2];
+end;
+
+procedure TJsArray.SetLen(aValue: SizeInt);
+begin
+  if FItems <> nil then
+    SizeInt(FItems[0]) := aValue;
 end;
 
 procedure TJsArray.SetCount(aValue: SizeInt);
 begin
   if FItems <> nil then
-    SizeInt(FItems[0]) := aValue;
+    SizeInt(FItems[1]) := aValue;
+end;
+
+class operator TJsArray.Initialize(var a: TJsArray);
+begin
+  a.FItems := nil;
 end;
 
 class operator TJsArray.Finalize(var a: TJsArray);
@@ -2812,19 +2836,27 @@ begin
 end;
 
 procedure TJsArray.EnsureCapacity(aValue: SizeInt);
+var
+  Cnt, NewLen: SizeInt;
 begin
-  if aValue > Capacity then
-    if aValue < DEFAULT_CONTAINER_CAPACITY then
-      System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
-    else
-      System.SetLength(FItems, LgUtils.RoundUpTwoPower(Succ(aValue)));
+  if aValue <= Capacity then exit;
+  Cnt := Count;
+  if aValue < DEFAULT_CONTAINER_CAPACITY - 1 then
+    NewLen := DEFAULT_CONTAINER_CAPACITY
+  else
+    NewLen := LgUtils.RoundUpTwoPower(aValue + 2);
+  System.ReAllocMem(FItems, NewLen * SizeOf(TJsonNode));
+  SetLen(NewLen);
+  SetCount(Cnt);
 end;
 
 procedure TJsArray.Clear;
 var
   I: SizeInt;
 begin
-  for I := 1 to Count do FItems[I].Free;
+  if FItems = nil then exit;
+  for I := 2 to Succ(Count) do FItems[I].Free;
+  System.FreeMem(FItems);
   FItems := nil;
 end;
 
@@ -2839,7 +2871,7 @@ var
 begin
   Cnt := Succ(Count);
   EnsureCapacity(Cnt);
-  FItems[Cnt] := aNode;
+  FItems[Cnt + 1] := aNode;
   SetCount(Cnt);
 end;
 
@@ -2849,13 +2881,12 @@ var
 begin
   Cnt := Count;
   Result := Math.Min(Math.Max(aIndex, 0), Cnt);
-  aIndex := Succ(Result);
-  Inc(Cnt);
-  EnsureCapacity(Cnt);
-  if aIndex < Cnt then
-    System.Move(FItems[aIndex], FItems[Succ(aIndex)], (Cnt - aIndex)*SizeOf(TJsonNode));
+  aIndex := Result + 2;
+  EnsureCapacity(Cnt + 1);
+  SetCount(Cnt + 1);
+  if aIndex < Cnt + 2 then
+    System.Move(FItems[aIndex], FItems[Succ(aIndex)], (Cnt + 2 - aIndex)*SizeOf(TJsonNode));
   FItems[aIndex] := aNode;
-  SetCount(Cnt);
 end;
 
 function TJsArray.Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
@@ -2867,10 +2898,10 @@ begin
   Result := SizeUInt(aIndex) < SizeUInt(Cnt);
   if Result then
     begin
-      Inc(aIndex);
+      aIndex += 2;
       aNode := FItems[aIndex];
-      if aIndex < Cnt then
-        System.Move(FItems[Succ(aIndex)], FItems[aIndex], (Cnt - aIndex)*SizeOf(TJsonNode));
+      if aIndex < Succ(Cnt) then
+        System.Move(FItems[Succ(aIndex)], FItems[aIndex], (Succ(Cnt) - aIndex)*SizeOf(TJsonNode));
       SetCount(Pred(Cnt));
     end;
 end;
@@ -2882,7 +2913,11 @@ begin
   Result := string.HashCode(aKey);
 end;
 
-{ TJsObject }
+function TJsObject.GetLength: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Next;
+end;
 
 function TJsObject.GetCount: SizeInt;
 begin
@@ -2893,7 +2928,13 @@ end;
 function TJsObject.GetCapacity: SizeInt;
 begin
   if FNodes = nil then exit(0);
-  Result := System.High(FNodes);
+  Result := Pred(FNodes[0].Next);
+end;
+
+procedure TJsObject.SetLen(aValue: SizeInt);
+begin
+  if FNodes <> nil then
+    FNodes[0].Next := aValue;
 end;
 
 procedure TJsObject.SetCount(aValue: SizeInt);
@@ -2935,19 +2976,16 @@ procedure TJsObject.Rehash(aOldSize: SizeInt);
 var
   I, J, Mask: SizeInt;
 begin
-  if aOldSize <> 0 then
+  I := 0;
+  while I < aOldSize - 3 do
     begin
-      I := 0;
-      while I < aOldSize - 3 do
-        begin
-          FNodes[I  ].Chain := 0;
-          FNodes[I+1].Chain := 0;
-          FNodes[I+2].Chain := 0;
-          FNodes[I+3].Chain := 0;
-          I += 4;
-        end;
+      FNodes[I  ].Chain := 0;
+      FNodes[I+1].Chain := 0;
+      FNodes[I+2].Chain := 0;
+      FNodes[I+3].Chain := 0;
+      I += 4;
     end;
-  Mask := System.High(FNodes);
+  Mask := Pred(Length);
   for I := 1 to Count do
     begin
       J := FNodes[I].Hash and Mask;
@@ -2960,8 +2998,9 @@ procedure TJsObject.DoAdd(const aKey: string; aNode: TJsonNode; aHash: SizeInt);
 var
   NodeIdx, ChainIdx: SizeInt;
 begin
-  ChainIdx := aHash and (System.High(FNodes));
+  ChainIdx := aHash and Pred(Length);
   NodeIdx := Succ(Count);
+  SetCount(NodeIdx);
   with FNodes[NodeIdx] do
     begin
       Hash := aHash;
@@ -2970,12 +3009,11 @@ begin
       Data.Value := aNode;
     end;
   FNodes[ChainIdx].Chain := NodeIdx;
-  SetCount(NodeIdx);
 end;
 
 function TJsObject.DoFind(const aKey: string; aHash: SizeInt): SizeInt;
 begin
-  Result := FNodes[aHash and System.High(FNodes)].Chain;
+  Result := FNodes[aHash and Pred(Length)].Chain;
   while Result <> 0 do
     begin
       if (FNodes[Result].Hash = aHash) and (FNodes[Result].Data.Key = aKey) then
@@ -2989,7 +3027,7 @@ var
   I, h: SizeInt;
 begin
   h := GetHash(aKey);
-  I := FNodes[h and System.High(FNodes)].Chain;
+  I := FNodes[h and Pred(Length)].Chain;
   Result := 0;
   while I <> 0 do
     begin
@@ -3004,7 +3042,7 @@ var
   I, h: SizeInt;
 begin
   h := GetHash(aKey);
-  I := FNodes[h and System.High(FNodes)].Chain;
+  I := FNodes[h and Pred(Length)].Chain;
   Result := 0;
   while I <> 0 do
     begin
@@ -3021,7 +3059,7 @@ procedure TJsObject.RemoveFromChain(aIndex: SizeInt);
 var
   I, Curr, Prev: SizeInt;
 begin
-  I := FNodes[aIndex].Hash and System.High(FNodes);
+  I := FNodes[aIndex].Hash and Pred(Length);
   Curr := FNodes[I].Chain;
   Prev := 0;
   while Curr <> 0 do
@@ -3054,13 +3092,8 @@ begin
   if aIndex < Cnt then
     begin
       System.Move(FNodes[Succ(aIndex)], FNodes[aIndex], (Cnt - aIndex)*SizeOf(TNode));
-      with FNodes[Cnt] do
-        begin
-          Next := 0;
-          Pointer(Data.Key) := nil;
-          Data.Value := nil;
-        end;
-      Rehash(System.Length(FNodes));
+      System.FillChar(FNodes[Cnt], SizeOf(TNode), 0);
+      Rehash(Length);
     end
   else
     RemoveFromChain(aIndex);
@@ -3068,19 +3101,19 @@ end;
 
 function TJsObject.TestHasUniq(aIndex: SizeInt): Boolean;
 var
-  I, h, cnt: SizeInt;
+  I, h, Cnt: SizeInt;
   k: string;
 begin
   h := FNodes[aIndex].Hash;
   k := FNodes[aIndex].Data.Key;
-  I := FNodes[h and System.High(FNodes)].Chain;
-  cnt := 0;
+  I := FNodes[h and Pred(Length)].Chain;
+  Cnt := 0;
   while I <> 0 do
     begin
       if (I = aIndex) or ((FNodes[I].Hash = h) and (FNodes[I].Data.Key = k)) then
         begin
-          if cnt = 1 then exit(False);
-          Inc(cnt);
+          if Cnt = 1 then exit(False);
+          Inc(Cnt);
         end;
       I := FNodes[I].Next;
     end;
@@ -3091,6 +3124,11 @@ function TJsObject.GetList: PNode;
 begin
   if FNodes = nil then exit(nil);
   Result := @FNodes[1];
+end;
+
+class operator TJsObject.Initialize(var o: TJsObject);
+begin
+  o.FNodes := nil;
 end;
 
 class operator TJsObject.Finalize(var o: TJsObject);
@@ -3174,22 +3212,32 @@ procedure TJsObject.Clear;
 var
   I: SizeInt;
 begin
-  for I := 1 to Count do FNodes[I].Data.Value.Free;
+  if FNodes = nil then exit;
+  for I := 1 to Count do
+    with FNodes[I].Data do
+      begin
+        Key := '';
+        Value.Free;
+      end;
+  System.FreeMem(FNodes);
   FNodes := nil;
 end;
 
 procedure TJsObject.EnsureCapacity(aValue: SizeInt);
 var
-  OldSize: SizeInt;
+  OldSize, NewSize: SizeInt;
 begin
   if aValue > Capacity then
     begin
-      OldSize := System.Length(FNodes);
+      OldSize := Length;
       if aValue < DEFAULT_CONTAINER_CAPACITY then
-        System.SetLength(FNodes, DEFAULT_CONTAINER_CAPACITY)
+        NewSize := DEFAULT_CONTAINER_CAPACITY
       else
-        System.SetLength(FNodes, LgUtils.RoundUpTwoPower(Succ(aValue)));
-      Rehash(OldSize);
+        NewSize := LgUtils.RoundUpTwoPower(Succ(aValue));
+      System.ReAllocMem(FNodes, NewSize * SizeOf(TNode));
+      System.FillChar(FNodes[OldSize], (NewSize - OldSize) * SizeOf(TNode), 0);
+      SetLen(NewSize);
+      if OldSize <> 0 then Rehash(OldSize);
     end;
 end;
 
@@ -3495,7 +3543,7 @@ procedure TJsonNode.DoClear;
 begin
   case Kind of
     jvkNumber: FValue.Int := 0;
-    jvkString: Finalize(string(FValue.Ptr));
+    jvkString: string(FValue.Ptr) := '';
     jvkArray:  Finalize(TJsArray(FValue.Ptr));
     jvkObject: Finalize(TJsObject(FValue.Ptr));
   else
@@ -5446,6 +5494,7 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
       jvkArray:
         begin
           aDst.AsArray.ArrayPtr^.EnsureCapacity(aSrc.ArrayPtr^.Count);
+          aDst.AsArray;
           for I := 0 to Pred(aSrc.ArrayPtr^.Count) do
             begin
               Node := TJsonNode.Create;
@@ -5456,6 +5505,7 @@ procedure TJsonNode.CopyFrom(aNode: TJsonNode);
       jvkObject:
         begin
           aDst.AsObject.AsObject.ObjectPtr^.EnsureCapacity(aSrc.ObjectPtr^.Count);
+          aDst.AsObject;
           for I := 0 to Pred(aSrc.ObjectPtr^.Count) do
             begin
               Node := TJsonNode.Create;
@@ -5481,13 +5531,13 @@ var
   I: SizeInt;
   p: ^TPair;
 begin
+  if aNode = Self then
+    exit(True);
   if Self = nil then
     exit(aNode = nil)
   else
     if aNode = nil then
       exit(False);
-  if aNode = Self then
-    exit(True);
   if (Kind <> aNode.Kind) or (Count <> aNode.Count) then
     exit(False);
   case aNode.Kind of
