@@ -1415,8 +1415,8 @@ begin
       Len := Last - I;
       EscPos := System.IndexByte(p[I], Len, Byte('\'));
       if EscPos < 0 then begin
-        J += Len;
         System.Move(p[I], pR[J], Len);
+        J += Len;
         break;
       end;
       System.Move(p[I], pR[J], EscPos);
