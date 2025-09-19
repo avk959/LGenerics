@@ -1753,7 +1753,7 @@ var
 begin
   Bound := Pred(Count);
   FCount := 0;
-  if Bound = 2 then exit('');
+  if Bound = 1 then exit('');
   I := 1;
   J := 1;
   p := FBuffer.Ptr;
