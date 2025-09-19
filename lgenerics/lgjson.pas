@@ -1751,9 +1751,9 @@ var
   p, pR: PAnsiChar;
   uh, ul: DWord;
 begin
-  Bound := Count;
+  Bound := Pred(Count);
   FCount := 0;
-  if Bound = 1 then exit('');
+  if Bound = 2 then exit('');
   I := 1;
   J := 1;
   p := FBuffer.Ptr;
@@ -8792,23 +8792,26 @@ begin
             State := AR;
           end else exit(False);
         36: //string value
-          case Stack[sTop].Mode of
-            pmKey: begin
-                KeyValue := sb.ToDecodeString;
-                State := CO;
-              end;
-            pmArray: begin
-                Stack[sTop].Node.Add(sb.ToDecodeString);
-                State := OK;
-              end;
-            pmObject: begin
-                Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
-                State := OK;
-              end
-          else
-            Stack[sTop].Node.AsString := sb.ToDecodeString;
-            Dec(sTop);
-            State := OK;
+          begin
+            sb.Append(Buf[I]);
+            case Stack[sTop].Mode of
+              pmKey: begin
+                  KeyValue := sb.ToDecodeString;
+                  State := CO;
+                end;
+              pmArray: begin
+                  Stack[sTop].Node.Add(sb.ToDecodeString);
+                  State := OK;
+                end;
+              pmObject: begin
+                  Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
+                  State := OK;
+                end
+            else
+              Stack[sTop].Node.AsString := sb.ToDecodeString;
+              Dec(sTop);
+              State := OK;
+            end;
           end;
         37: //OK - comma
           case Stack[sTop].Mode of
