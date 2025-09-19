@@ -196,7 +196,7 @@ type
       TargetCount,
       SourceLine,
       TargetLine: SizeInt;
-      class function Less(const L, R: TItemInfo): Boolean; inline; static;
+      class function Less(const L, R: TItemInfo): Boolean; static;
     end;
 
     PItemInfo    = ^TItemInfo;
@@ -322,7 +322,7 @@ type
 
   type
     TSeqLcsPatch = array of TLcsEdit;
-    TSeqPatch = array of TSeqEdit;
+    TSeqPatch    = array of TSeqEdit;
 
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
     only operations of deletion and insertion are available }
@@ -696,6 +696,7 @@ type
     function GetInitialized: Boolean;
     function GetLength: SizeInt;
   public
+  { aPattern MUST be a non-empty, well-formed UTF-8 encoded string }
     constructor Create(const aPattern: string);
     procedure Init(const aPattern: string);
   { returns an enumerator of indexes of code points(1-based) in aText such that
@@ -760,8 +761,8 @@ type
     FLength: Integer;
     FIgnoreCase,
     FWholeWords: Boolean;
-    function  GetInitialized: Boolean; inline;
-    function  GetLength: Integer; inline;
+    function  GetInitialized: Boolean;
+    function  GetLength: Integer;
     function  GetCaseInsensitive: Boolean; inline;
     procedure DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestFound);
     class function OnWordBounds(const s: string; aOffset, aLen: SizeInt): Boolean; static;
@@ -6267,7 +6268,7 @@ begin
           FD[I] := Err;
         end;
       while FD[FTop] > FK do Dec(FTop);
-      if FTop = System.Length(FPattern) then
+      if FTop = System.High(FD) then
         exit(True)
       else
         Inc(FTop);
