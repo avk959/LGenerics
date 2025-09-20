@@ -32,7 +32,6 @@ uses
   lgAbstractContainer,
   lgArrayHelpers,
   lgVector,
-  lgList,
   lgSeqUtils,
   lgStrConst;
 
@@ -1284,7 +1283,6 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
-{$WARN 6058 OFF : Call to subroutine "$1" marked as inline is not inlined }
 
 const
   JS_NULL        = 'null';
@@ -2289,8 +2287,8 @@ const
 {$POP}
 
 const
-  INF_EXP      = QWord($7ff0000000000000);
-  NUM_STATES   = Integer(1 shl ZE or 1 shl IR or 1 shl FS or 1 shl E3);
+  INF_EXP    = QWord($7ff0000000000000);
+  NUM_STATES = Integer(1 shl ZE or 1 shl IR or 1 shl FS or 1 shl E3);
 
 {$PUSH}{$MACRO ON}
 {$DEFINE ValidateBufMacro :=
@@ -3499,6 +3497,7 @@ begin
           Inc(sTop); Stack[sTop] := Node;
         end;
       tkArrayEnd, tkObjectEnd: Dec(sTop);
+    else
     end;
   until not aReader.Read;
 
@@ -6128,8 +6127,6 @@ begin
 end;
 
 function TJsonNode.Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
-var
-  p: TPair;
 begin
   case Kind of
     jvkArray:  Result := ArrayPtr^.Extract(aIndex, aNode);
@@ -6148,8 +6145,6 @@ begin
 end;
 
 function TJsonNode.Extract(const aName: string; out aNode: TJsonNode): Boolean;
-var
-  p: TPair;
 begin
   if Kind <> jvkObject then
     begin
@@ -6955,8 +6950,8 @@ begin
             exit(False);
           Node.ObjectPtr^.UncMutPairs[Idx]^.Value.CopyFrom(aValue);
         end;
-      Result := True;
     end;
+  Result := True;
 end;
 {$POP}
 
