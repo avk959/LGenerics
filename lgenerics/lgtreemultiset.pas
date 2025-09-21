@@ -29,7 +29,7 @@ uses
 
   SysUtils,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgAbstractContainer,
   lgAvlTree;
 

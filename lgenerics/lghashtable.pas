@@ -31,7 +31,7 @@ uses
   SysUtils,
   math,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgStrConst;
 
 type

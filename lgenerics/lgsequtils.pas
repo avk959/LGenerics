@@ -31,7 +31,7 @@ uses
 
   Classes, SysUtils, Math,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgArrayHelpers,
   lgHash,
   lgVector,
@@ -956,7 +956,7 @@ const
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
-{$WARN 6058 OFF : Call to subroutine "$1" marked as inline is not inlined }
+
 uses
   BufStream, Character, UnicodeData, lgMiscUtils;
 

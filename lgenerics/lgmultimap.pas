@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic multimap implementations.                                       *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -29,7 +29,7 @@ uses
 
   SysUtils,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgAbstractContainer,
   lgHashTable,
   lgAvlTree,
@@ -410,7 +410,7 @@ type
     TKeys = record
     private
       FMap: PMultiMap;
-      procedure Init(aMap: PMultiMap); inline;
+      procedure Init(aMap: PMultiMap);
     public
       function GetEnumerator: TKeyEnumerator; inline;
     end;
@@ -418,7 +418,7 @@ type
     TValues = record
     private
       FMap: PMultiMap;
-      procedure Init(aMap: PMultiMap); inline;
+      procedure Init(aMap: PMultiMap);
     public
       function GetEnumerator: TValueEnumerator; inline;
     end;
@@ -427,7 +427,7 @@ type
     private
       FMap: PMultiMap;
       FKey: TKey;
-      procedure Init(aMap: PMultiMap; const aKey: TKey); inline;
+      procedure Init(aMap: PMultiMap; const aKey: TKey);
     public
       function GetEnumerator: TValueViewEnumerator; inline;
       function ToArray: TValueArray;

@@ -23,6 +23,7 @@ unit lgArrayHelpers;
 {$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
+{$WARN 5058 off : Variable "$1" does not seem to be initialized}
 
 interface
 
@@ -30,7 +31,7 @@ uses
 
   SysUtils, math, typinfo,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgStrConst;
 
 type
@@ -13929,6 +13930,7 @@ begin
 {$ENDIF}
 end;
 
+{$PUSH}{$WARN 5058 OFF : Variable "$1" does not seem to be initialized}
 class procedure TGOrdinalArrayHelper.FillOffsets(const A: array of T; out aOfs: TOffsets);
 var
   Curr: T;
@@ -13942,6 +13944,7 @@ begin
         Inc(aOfs[J, (Curr shr (J * 8)) and $ff]);
     end;
 end;
+{$POP}
 
 class procedure TGOrdinalArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets);
 

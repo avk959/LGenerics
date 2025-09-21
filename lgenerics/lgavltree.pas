@@ -31,7 +31,7 @@ uses
 
   SysUtils, Math,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgStrConst;
 
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager

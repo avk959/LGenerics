@@ -679,6 +679,7 @@ begin
           vkBool:   n.Add(Boolean(aValue[I]));
           vkNumber: n.Add(Double(aValue[I]));
           vkString: n.Add(string(aValue[I]));
+        else
         end;
     end;
   FModified := True;

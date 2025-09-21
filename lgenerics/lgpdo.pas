@@ -426,7 +426,7 @@ begin
   Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen, aStrict);
 end;
 
-{$PUSH}{$WARN 5089 OFF}
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer; aStrict: Boolean): string;
 var
   Writer: TJsonStrWriter;
@@ -958,7 +958,8 @@ begin
   PdoLoadJson(TypeInfo(T), aValue, aJson, aOptions, aMaxDepth, aSkipBom);
 end;
 
-{$PUSH}{$WARN 5024 OFF}{$WARN 5036 OFF}{$WARN 5089 OFF}
+{$PUSH}{$WARN 5024 OFF}{$WARN 5036 OFF}
+{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 procedure PdoLoadJson(aTypeInfo: PTypeInfo; var aValue; const aJson: string; const aOptions: TJsonReadOptions;
   aMaxDepth: Integer; aSkipBom: Boolean);
 type
@@ -1983,6 +1984,7 @@ begin
 end;
 
 initialization
+{$WARN 5058 OFF : Variable "$1" does not seem to be initialized}
   InitCriticalSection(GlobLock);
 finalization
   DoneCriticalSection(GlobLock);

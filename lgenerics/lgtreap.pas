@@ -29,7 +29,7 @@ uses
   SysUtils, Math,
   lgUtils,
   lgBstUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgStrConst;
 
 type

@@ -30,7 +30,7 @@ interface
 uses
   Classes, SysUtils, DateUtils, Math,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgArrayHelpers,
   lgStack,
   lgVector,
@@ -1651,6 +1651,8 @@ var
   p: PAdjItem;
 begin
   aPeoSeq := nil;
+  System.Initialize(Lefts);
+  Node := Default(TIntNode);
   //max cardinality search
   Queue := TINodePqMax.Create(VertexCount);
   InQueue.InitRange(VertexCount);
@@ -1661,7 +1663,7 @@ begin
   I := 0;
   while Queue.TryDequeue(Node) do
     begin
-      InQueue.UncBits[{%H-}Node.Index] := False;
+      InQueue.UncBits[Node.Index] := False;
       aPeoSeq[I] := Node.Index;
       Index2Ord[Node.Index] := I;
       Inc(I);
@@ -1915,12 +1917,13 @@ var
 begin
   Nodes := TINodePqMin.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    {%H-}Nodes.Enqueue(I, TIntNode.Create(I, DegreeI(I)));
+    Nodes.Enqueue(I, TIntNode.Create(I, DegreeI(I)));
   Matched.Capacity := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  Node := Default(TIntNode);
   Size := 0;
   while Nodes.TryDequeue(Node) do
-    if not Matched.UncBits[{%H-}Node.Index] then
+    if not Matched.UncBits[Node.Index] then
       begin
         s := Node.Index;
         d := NULL_INDEX;
@@ -2324,9 +2327,10 @@ var
   Cand, Tested: TBoolVector;
 begin
   Cancelled := False;
+  System.Initialize(CurrSet);
   InitMsc;
   Cand.InitRange(VertexCount);
-  Cand.Subtract(CurrSet{%H-});
+  Cand.Subtract(CurrSet);
   Tested.Capacity := VertexCount;
   Extend(Cand, Tested);
 end;
@@ -3031,7 +3035,8 @@ function TGSimpleGraph.CreateComplementDegreeArray: TIntArray;
 var
   I: SizeInt;
 begin
-  Result{%H-}.Length := VertexCount;
+  Result := nil;
+  Result.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     Result[I] := VertexCount - AdjLists[I]^.Count;
 end;
@@ -4996,6 +5001,7 @@ var
       end;
   end;
 begin
+  System.Initialize(Stack);
   Result := nil;
   if IsEmpty then
     exit;
@@ -5007,7 +5013,7 @@ begin
     CommGreedy
   else
     BpGreedy;
-  Result := {%H-}Stack.ToArray;
+  Result := Stack.ToArray;
 end;
 
 function TGSimpleGraph.IsMaxClique(const aTestClique: TIntArray): Boolean;
@@ -5452,7 +5458,8 @@ end;
 
 procedure TGChart.ReadData(aStream: TStream; out aValue: TDummy);
 begin
-  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aValue := Default(TDummy);
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
 end;
 
 procedure TGChart.WriteData(aStream: TStream; const aValue: TDummy);
@@ -5570,7 +5577,8 @@ end;
 
 procedure TIntChart.ReadVertex(aStream: TStream; out aValue: Integer);
 begin
-  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aValue := 0;
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
   aValue := LEtoN(aValue);
 end;
 
@@ -6634,6 +6642,7 @@ begin
   aData.Weight := aSrc.Distance(aDst);
 end;
 
+{$PUSH}{$WARN 5027 OFF : Local variable is assigned but never used }
 procedure TPointsChart.WritePoint(aStream: TStream; const aValue: TPoint);
 var
   p: TPoint;
@@ -6642,13 +6651,16 @@ begin
   p.Y := NtoLE(aValue.Y);
   aStream.WriteBuffer(p, SizeOf(p));
 end;
+{$POP}
 
+{$PUSH}{$WARN 5058 OFF : Variable "v" does not seem to be initialized}
 procedure TPointsChart.ReadPoint(aStream: TStream; out aValue: TPoint);
 begin
-  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
   aValue.X := LEtoN(aValue.X);
   aValue.Y := LEtoN(aValue.Y);
 end;
+{$POP}
 
 procedure TPointsChart.WriteData(aStream: TStream; const aValue: TRealWeight);
 var

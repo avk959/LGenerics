@@ -31,7 +31,7 @@ uses
   SysUtils,
   lgUtils,
   lgBstUtils,
-  {%H-}lgHelpers;
+  lgHelpers;
 
 type
   TNodeColor = 0..1;
@@ -71,10 +71,10 @@ type
     procedure MakeBlack; inline;
     function  IsRed: Boolean; inline;
     procedure MakeRed; inline;
-    property  {%H-}LeftPtr: PNode write SetLeft;
-    property  {%H-}RightPtr: PNode write SetRight;
-    property  {%H-}ParentPtr: PNode write SetParent;
-    property  {%H-}Color: TNodeColor read GetColor write SetColor;
+    property  LeftPtr: PNode write SetLeft;
+    property  RightPtr: PNode write SetRight;
+    property  ParentPtr: PNode write SetParent;
+    property  Color: TNodeColor read GetColor write SetColor;
   public
     Value: TValue;
     property  Left: PNode read GetLeft;

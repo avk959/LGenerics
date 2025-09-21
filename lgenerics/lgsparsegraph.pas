@@ -38,7 +38,7 @@ uses
   lgHashSet,
   lgHashMap,
   lgArrayHelpers,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgStrConst;
 
 type
@@ -5901,10 +5901,11 @@ class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix:
 var
   Stack: TIntStack;
 begin
+  System.Initialize(Stack);
   Result := nil;
   if aMatrix[aSrc, aDst].Weight < TWeight.INF_VALUE then
     repeat
-      {%H-}Stack.Push(aDst);
+      Stack.Push(aDst);
       aDst := aMatrix[aSrc, aDst].Predecessor;
     until aDst = aSrc;
   if Stack.NonEmpty then

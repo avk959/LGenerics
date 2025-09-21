@@ -31,7 +31,7 @@ uses
 
   Classes, SysUtils, Math,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgArrayHelpers,
   lgAbstractContainer,
   lgVector,

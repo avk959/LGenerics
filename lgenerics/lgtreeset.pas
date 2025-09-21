@@ -30,7 +30,7 @@ uses
 
   SysUtils,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgAbstractContainer,
   lgAvlTree;
 
@@ -2508,6 +2508,7 @@ class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
 var
   v: T;
 begin
+  System.Initialize(Result);
   for v in L do
     if R.NonContains(v) then
       Result.Add(v);

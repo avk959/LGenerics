@@ -30,7 +30,7 @@ uses
 
   SysUtils,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgAbstractContainer,
   lgHashTable,
   lgStrConst;

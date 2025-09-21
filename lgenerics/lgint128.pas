@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   128-bit integers implementation.                                        *
 *                                                                           *
-*   Copyright(c) 2019-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2019-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -2840,6 +2840,7 @@ begin
   case LSign of
     -1: Result := TUInt128.Cmp(R.FLimbs, L.FLimbs);
      1: Result := TUInt128.Cmp(L.FLimbs, R.FLimbs);
+  else
   end;
 end;
 
@@ -2884,6 +2885,7 @@ begin
          Result := Ord(L.FLimbs[0] > RLimb) - Ord(L.FLimbs[0] < RLimb)
        else
          Result := 1;
+  else
   end;
 end;
 

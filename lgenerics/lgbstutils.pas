@@ -28,7 +28,7 @@ interface
 uses
   SysUtils,
   lgUtils,
-  {%H-}lgHelpers;
+  lgHelpers;
 
 type
 

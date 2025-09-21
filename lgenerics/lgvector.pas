@@ -31,7 +31,7 @@ uses
   SysUtils,
   math,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgArrayHelpers,
   lgAbstractContainer,
   lgStrConst;
@@ -243,8 +243,8 @@ type
     function  ExtractIf(aTest: specialize TGTest<T>): TArray;
     function  ExtractIf(aTest: specialize TGOnTest<T>): TArray;
     function  ExtractIf(aTest: specialize TGNestTest<T>): TArray;
-    function  DeleteLast: Boolean; inline;
-    function  DeleteLast(out aValue: T): Boolean; inline;
+    function  DeleteLast: Boolean;
+    function  DeleteLast(out aValue: T): Boolean;
   { deletes aCount elements(if possible) starting from aIndex;
     returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
@@ -3981,25 +3981,29 @@ begin
 end;
 
 class function TGComparableVectorHelper.GetMin(v: TVector): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)]);
 end;
 
 class function TGComparableVectorHelper.GetMin(constref v: TLiteVector): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)]);
 end;
 
 class function TGComparableVectorHelper.GetMax(v: TVector): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)]);
 end;
 
 class function TGComparableVectorHelper.GetMax(constref v: TLiteVector): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)]);
 end;
@@ -4070,13 +4074,15 @@ begin
 end;
 
 class function TGComparableVectorHelper.NthSmallest(v: TVector; N: SizeInt): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N);
 end;
 
 class function TGComparableVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N);
 end;
@@ -4676,25 +4682,29 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.GetMin(v: TVector; c: TOnLess): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
 class function TGDelegatedVectorHelper.GetMin(constref v: TLiteVector; c: TOnLess): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
 class function TGDelegatedVectorHelper.GetMax(v: TVector; c: TOnLess): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
 class function TGDelegatedVectorHelper.GetMax(constref v: TLiteVector; c: TOnLess): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
@@ -4767,14 +4777,16 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TOnLess): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, c);
 end;
 
 class function TGDelegatedVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt;
   c: TOnLess): TOptional;
-{%H-}begin
+begin
+  System.Initialize(Result);
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, c);
 end;

@@ -619,13 +619,14 @@ var
   p, pEnd: PAnsiChar;
 const
   HexChars = ['0'..'9','A'..'F','a'..'f'];
+  INIT_CAP = 64;
 begin
   aSegments := nil;
   if (System.Length(aPath) < 1) or (aPath[1] <> '$') then exit(False);
   p := Pointer(aPath);
   pEnd := p + System.Length(aPath);
   Inc(p);
-  sb.Create(64);
+  sb.Create(INIT_CAP);
   while p < pEnd do begin
     if p^ <> '[' then exit(False);
     Inc(p);
@@ -683,7 +684,8 @@ end;
 {$POP}
 
 { TJpNodeListHelper }
-{$PUSH}{$WARN 6058 OFF}{$WARN 5093 OFF}
+
+{$PUSH}{$WARN 5093 OFF : function result variable of a managed type does not seem to be initialized}
 function TJpNodeListHelper.AsJson: string;
 var
   sb: TStrBuilder;
@@ -732,6 +734,7 @@ begin
   sb.Append(']');
   Result := sb.ToString;
 end;
+{$POP}
 
 function TJpNodeListHelper.ToPathList: TStringArray;
 var
@@ -757,6 +760,7 @@ end;
 
 { TJpValueListHelper }
 
+{$PUSH}{$WARN 5093 OFF : function result variable of a managed type does not seem to be initialized}
 function TJpValueListHelper.AsJson: string;
 var
   sb: TStrBuilder;
@@ -4960,6 +4964,7 @@ begin
 end;
 
 {$PUSH}{$MACRO ON}
+{$WARN 4080 OFF : Converting the operands to "$1" before doing the subtract could prevent overflow errors.}
 {$DEFINE AppendCopyFragMacro :=
   Fin := aFinal;
   CopyFragment(aStart, aFinal, aFragStart, Len);
@@ -5714,7 +5719,7 @@ begin
     end;
 end;
 
-{$PUSH}{$IF FPC_FULLVERSION>30300}{$WARN 6060 OFF}{$ENDIF}{$WARN 6058 OFF}{$WARN 5091 OFF}{$WARN 5036 OFF}
+{$PUSH}{$IF FPC_FULLVERSION>30300}{$WARN 6060 OFF}{$ENDIF}{$WARN 5091 OFF}{$WARN 5036 OFF}
 function IsNumberInst(const aInst: TJpInstance; out n: Double): Boolean; inline;
 begin
   if aInst.InstType = jitValue then
@@ -6077,6 +6082,7 @@ end;
 
 initialization
   RegisterBuiltIns;
+{$WARN 5058 OFF : Variable "$1" does not seem to be initialized}
   InitCriticalSection(GlobLock);
 finalization
   DoneCriticalSection(GlobLock);

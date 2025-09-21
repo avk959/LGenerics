@@ -26,7 +26,9 @@
         </Debugging>
       </Linking>
       <Other>
-        <CustomOptions Value="-dUseCThreads"/>
+        <CustomOptions Value="-dUseCThreads
+-vm6058
+-vm5023"/>
       </Other>
     </CompilerOptions>
     <Description Value="Generics algorithms and data structures"/>

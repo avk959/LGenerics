@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic simple directed graph implementation.                           *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -29,7 +29,7 @@ interface
 uses
   Classes, SysUtils, DateUtils,
   lgUtils,
-  {%H-}lgHelpers,
+  lgHelpers,
   lgQueue,
   lgVector,
   lgHashMap,
@@ -1489,6 +1489,7 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   InStack.Capacity := VertexCount;
   Visited.Capacity := VertexCount;
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
@@ -1496,7 +1497,7 @@ begin
         Visited.UncBits[I] := True;
         InStack.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited.UncBits[Next] then
@@ -1510,7 +1511,7 @@ begin
                   exit(True);
             end
           else
-            InStack.UncBits[Stack.Pop{%H-}] := False;
+            InStack.UncBits[Stack.Pop] := False;
       end;
   Result := False;
 end;
@@ -1811,13 +1812,14 @@ begin
   Result := CreateIntArray;
   Visited.Capacity := VertexCount;
   Counter := Pred(VertexCount);
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
         Visited.UncBits[I] := True;
         Stack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited.UncBits[Next] then
@@ -1849,6 +1851,7 @@ begin
   InStack.Capacity := VertexCount;
   Visited.Capacity := VertexCount;
   Counter := Pred(VertexCount);
+  Curr := NULL_INDEX;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
@@ -1856,7 +1859,7 @@ begin
         InStack.UncBits[I] := True;
         Visited.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited.UncBits[Next] then
@@ -1896,10 +1899,11 @@ begin
   Result := CreateIntArray;
   Visited.Capacity := VertexCount;
   Visited.UncBits[aSrc] := True;
+  Curr := NULL_INDEX;
   Result[aSrc] := 0;
   Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+    if AdjEnums[Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
         if not Visited.UncBits[Next] then
@@ -1928,10 +1932,11 @@ begin
   aTree := CreateIntArray;
   Visited.Capacity := VertexCount;
   Visited.UncBits[aSrc] := True;
+  Curr := NULL_INDEX;
   Result[aSrc] := 0;
-  {%H-}Stack.Push(aSrc);
+  Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+    if AdjEnums[Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
         if not Visited.UncBits[Next] then
@@ -1963,6 +1968,7 @@ begin
   PreOrd := CreateIntArray;
   aIds := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
+  Curr := NULL_INDEX;
   Counter := 0;
   Result := 0;
   for I := 0 to Pred(VertexCount) do
@@ -1974,7 +1980,7 @@ begin
         VtxStack.Push(I);
         PathStack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if PreOrd[Next] = NULL_INDEX then
@@ -3414,11 +3420,12 @@ var
 begin
   if aDomTree.Length <> VertexCount then
     raise EGraphError.Create(SEInvalidTreeInst);
+  System.Initialize(DomSet);
   Len := VertexCount;
   repeat
     if SizeUInt(aVertexIdx) >= SizeUInt(VertexCount) then
       raise EGraphError.Create(SEInvalidTreeInst);
-    {%H-}DomSet.Push(aVertexIdx);
+    DomSet.Push(aVertexIdx);
     Dec(Len);
     if Len < 0 then
       raise EGraphError.Create(SEInvalidTreeInst);
@@ -3747,7 +3754,8 @@ end;
 
 procedure TGFlowChart.ReadData(aStream: TStream; out aValue: TDummy);
 begin
-  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aValue := Default(TDummy);
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
 end;
 
 procedure TGFlowChart.WriteData(aStream: TStream; const aValue: TDummy);
@@ -3866,7 +3874,8 @@ end;
 
 procedure TIntFlowChart.ReadVertex(aStream: TStream; out aValue: Integer);
 begin
-  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aValue := 0;
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
   aValue := LEtoN(aValue);
 end;
 
@@ -3968,7 +3977,7 @@ end;
 
 procedure TStrFlowChart.ReadVertex(aStream: TStream; out aValue: string);
 var
-  Len: SmallInt;
+  Len: SmallInt = 0;
 begin
   aStream.ReadBuffer(Len{%H-}, SizeOf(Len));
   System.SetLength(aValue, Len);

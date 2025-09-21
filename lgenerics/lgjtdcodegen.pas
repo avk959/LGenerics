@@ -1865,6 +1865,7 @@ begin
   Index := aIndex;
 end;
 
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 procedure TJtdTemplater.CheckCyclicDeps;
 var
   Declared: TStrSet;
@@ -1944,6 +1945,7 @@ begin
     AddTemplate(Template);
   end;
 end;
+{$POP}
 
 function TJtdTemplater.ProcessSchema: string;
 begin

@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -730,7 +730,7 @@ var
   Cand: TIntVector;
   I: SizeInt;
 begin
-  Cand := Default(TIntVector);
+  System.Initialize(Cand);
   for I in FSuppList do
     Cand.Add(I);
   if FindNext(Cand, aLoBound - FSuppList.Count, 0) then
@@ -744,7 +744,7 @@ var
   Cand: TIntVector;
   I: SizeInt;
 begin
-  Cand := Default(TIntVector);
+  System.Initialize(Cand);
   for I in FSuppList do
     Cand.Add(I);
   if FindNextBp(Cand, aLoBound - FSuppList.Count, 0) then

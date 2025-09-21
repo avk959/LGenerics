@@ -1519,7 +1519,8 @@ end;
 
 function TGDoubleHelper.IsExactInt(out aValue: Int64): Boolean;
 begin
-  Result := IsExactInt(Self, aValue);
+  Result := IsExactInt(Self);
+  if Result then aValue := System.Trunc(Self);
 end;
 
 procedure TGDoubleHelper.Negate;
@@ -2083,10 +2084,12 @@ begin
   Result := HashFunc.HashBuf(@aValue, SizeOf(System.Variant), 0);
 end;
 
+{$PUSH}{$WARN 5026 OFF : Value parameter assignrd but never used }
 class function TVariantHelper.Equal(const L, R: Variant): Boolean;
 begin
   Result := CompareByte(L, R, SizeOf(Variant)) = 0;
 end;
+{$POP}
 
 class function TVariantHelper.Less(const L, R: Variant): Boolean;
 begin

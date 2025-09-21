@@ -2868,6 +2868,7 @@ var
     else
       if CountR = 0 then
         exit(Double(0));
+
     IntersectIdx.EnsureCapacity(CountL);
     DiffIdxL.InitRange(CountL);
     DiffIdxR.InitRange(CountR);
@@ -3192,6 +3193,7 @@ var
   begin
     Pattern := ToProperCase(aPattern);
     WordsL := SplitSortedSet(Pattern, CountL, BufL, False);
+
     IntersectIdx.EnsureCapacity(CountL);
 
     for K := 0 to System.High(aValues) do begin
@@ -3269,7 +3271,7 @@ var
   end;
 
 var
-  LPattern: rawbytestring;
+  LPattern: rawbytestring = '';
   I: SizeInt;
 begin
   if System.Length(aValues) = 0 then exit(nil);
@@ -3309,7 +3311,7 @@ begin
 end;
 {$POP}
 
-{$PUSH}{$WARN 5036 OFF}
+{$PUSH}{$WARN 5036 OFF : Local variable "$1" does not seem to be initialized}
 function SelectSimilar(const aPattern: rawbytestring; const aValues: array of rawbytestring; aLimit: Double;
   aMode: TSimMode; const aStopChars: TSysCharSet; const aOptions: TSimOptions; Algo: TSeqDistanceAlgo;
   aCaseMap: TSimCaseMap; aLess: TSimLess): specialize TGArray<TRbStrRatio>;
@@ -5269,11 +5271,10 @@ var
   s: string;
 begin
   for I := 0 to System.High(Counter) do
-    with Counter[I] do
-      begin
-        Count := 0;
-        Key := I;
-      end;
+    begin
+      Counter[I].Count := 0;
+      Counter[I].Key := I;
+    end;
   CodeCount := 0;
   for s in aList do
     for I := 1 to System.Length(s) do
