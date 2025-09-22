@@ -1270,8 +1270,8 @@ type
   function  TryStr2Double(p: PAnsiChar; out aValue: Double): Boolean;
 { tries to convert a string in decimal or scientific notation to a Double value aValue;
   does not accept thousand separators; allows some special values(Inf, Infinity, NaN, qNaN, sNaN),
-  leading and trailing spaces, leading zeros, leading plus, missing integer or fractional part or
-  exponent value; if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
+  leading and trailing spaces, leading zeros, leading plus, missing integer or fractional part;
+  if the result is False then aValue is undefined; uses Eisel-Lemire algorithm }
   function  TryStrToDouble(const s: string; out aValue: Double; aDecSeparator: AnsiChar = '.'): Boolean;
   function  TryStrToDouble(const a: array of AnsiChar; out aValue: Double; aDecSeparator: AnsiChar = '.'): Boolean;
   function  TryStrToDouble(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aDecSeparator: AnsiChar = '.'): Boolean;
@@ -2156,39 +2156,39 @@ end;
 
 const
 {$PUSH}{$J-}{$WARN 2005 OFF}
-  Space  = Integer( 0); //  space
-  White  = Integer( 1); //  other whitespace
-  LCurBr = Integer( 2); //  {
-  RCurBr = Integer( 3); //  }
-  LSqrBr = Integer( 4); //  [
-  RSqrBr = Integer( 5); //  ]
-  Colon  = Integer( 6); //  :
-  Comma  = Integer( 7); //  ,
-  Quote  = Integer( 8); //  "
-  BSlash = Integer( 9); //  \
-  Slash  = Integer(10); //  /
-  Plus   = Integer(11); //  +
-  Minus  = Integer(12); //  -
-  Point  = Integer(13); //  .
-  Zero   = Integer(14); //  0
-  Digit  = Integer(15); //  123456789
-  LowerA = Integer(16); //  a
-  LowerB = Integer(17); //  b
-  LowerC = Integer(18); //  c
-  LowerD = Integer(19); //  d
-  LowerE = Integer(20); //  e
-  LowerF = Integer(21); //  f
-  LowerL = Integer(22); //  l
-  LowerN = Integer(23); //  n
-  LowerR = Integer(24); //  r
-  LowerS = Integer(25); //  s
-  LowerT = Integer(26); //  t
-  LowerU = Integer(27); //  u
-  ABCDF  = Integer(28); //  ABCDF
-  UpperE = Integer(29); //  E
-  Etc    = Integer(30); //  everything else
+  Space  = ShortInt( 0); //  space
+  White  = ShortInt( 1); //  other whitespace
+  LCurBr = ShortInt( 2); //  {
+  RCurBr = ShortInt( 3); //  }
+  LSqrBr = ShortInt( 4); //  [
+  RSqrBr = ShortInt( 5); //  ]
+  Colon  = ShortInt( 6); //  :
+  Comma  = ShortInt( 7); //  ,
+  Quote  = ShortInt( 8); //  "
+  BSlash = ShortInt( 9); //  \
+  Slash  = ShortInt(10); //  /
+  Plus   = ShortInt(11); //  +
+  Minus  = ShortInt(12); //  -
+  Point  = ShortInt(13); //  .
+  Zero   = ShortInt(14); //  0
+  Digit  = ShortInt(15); //  123456789
+  LowerA = ShortInt(16); //  a
+  LowerB = ShortInt(17); //  b
+  LowerC = ShortInt(18); //  c
+  LowerD = ShortInt(19); //  d
+  LowerE = ShortInt(20); //  e
+  LowerF = ShortInt(21); //  f
+  LowerL = ShortInt(22); //  l
+  LowerN = ShortInt(23); //  n
+  LowerR = ShortInt(24); //  r
+  LowerS = ShortInt(25); //  s
+  LowerT = ShortInt(26); //  t
+  LowerU = ShortInt(27); //  u
+  ABCDF  = ShortInt(28); //  ABCDF
+  UpperE = ShortInt(29); //  E
+  Etc    = ShortInt(30); //  everything else
 
-  SymClassTable: array[0..255] of Integer = (
+  SymClassTable: array[Byte] of ShortInt = (
     -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
     -1,    White,  White,  -1,     -1,     White,  -1,     -1,
     -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
@@ -2227,40 +2227,40 @@ const
     Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc
   );
 
-  __ = Integer(-1);// error
-  GO = Integer( 0);// start
-  OK = Integer( 1);// ok
-  OB = Integer( 2);// object
-  KE = Integer( 3);// key
-  CO = Integer( 4);// colon
-  VA = Integer( 5);// value
-  AR = Integer( 6);// array
-  ST = Integer( 7);// string
-  ES = Integer( 8);// escape
-  U1 = Integer( 9);// u1
-  U2 = Integer(10);// u2
-  U3 = Integer(11);// u3
-  U4 = Integer(12);// u4
-  MI = Integer(13);// minus
-  ZE = Integer(14);// zero
-  IR = Integer(15);// integer
-  FR = Integer(16);// fraction
-  FS = Integer(17);// fraction
-  E1 = Integer(18);// e
-  E2 = Integer(19);// ex
-  E3 = Integer(20);// exp
-  T1 = Integer(21);// tr
-  T2 = Integer(22);// tru
-  T3 = Integer(23);// true
-  F1 = Integer(24);// fa
-  F2 = Integer(25);// fal
-  F3 = Integer(26);// fals
-  F4 = Integer(27);// false
-  N1 = Integer(28);// nu
-  N2 = Integer(29);// nul
-  N3 = Integer(30);// null
+  __ = ShortInt(-1);// error
+  GO = ShortInt( 0);// start
+  OK = ShortInt( 1);// ok
+  OB = ShortInt( 2);// object
+  KE = ShortInt( 3);// key
+  CO = ShortInt( 4);// colon
+  VA = ShortInt( 5);// value
+  AR = ShortInt( 6);// array
+  ST = ShortInt( 7);// string
+  ES = ShortInt( 8);// escape
+  U1 = ShortInt( 9);// u1
+  U2 = ShortInt(10);// u2
+  U3 = ShortInt(11);// u3
+  U4 = ShortInt(12);// u4
+  MI = ShortInt(13);// minus
+  ZE = ShortInt(14);// zero
+  IR = ShortInt(15);// integer
+  FR = ShortInt(16);// fraction
+  FS = ShortInt(17);// fraction
+  E1 = ShortInt(18);// e
+  E2 = ShortInt(19);// ex
+  E3 = ShortInt(20);// exp
+  T1 = ShortInt(21);// tr
+  T2 = ShortInt(22);// tru
+  T3 = ShortInt(23);// true
+  F1 = ShortInt(24);// fa
+  F2 = ShortInt(25);// fal
+  F3 = ShortInt(26);// fals
+  F4 = ShortInt(27);// false
+  N1 = ShortInt(28);// nu
+  N2 = ShortInt(29);// nul
+  N3 = ShortInt(30);// null
 
-  VldStateTransitions: array[GO..N3, __..Etc] of Integer = (
+  VldStateTransitions: array[GO..N3, __..Etc] of ShortInt = (
 {
   The state transition table takes the current state and the current symbol,
   and returns either a new state or an action. An action is represented as a
@@ -8583,8 +8583,12 @@ begin
       if p^ = '-' then begin
         PowIsNeg := True;
         Inc(p);
+        if p = pEnd then exit(False);
       end else
-        if p^ = '+' then Inc(p);
+        if p^ = '+' then begin
+          Inc(p);
+          if p = pEnd then exit(False);
+        end;
       while (p < pEnd) and (p^ in ['0'..'9']) do begin
         if PowVal < $100000000 then
           PowVal := PowVal * 10 + Integer(Digits[p^]);
@@ -8594,7 +8598,8 @@ begin
         Pow10 -= PowVal
       else
         Pow10 += PowVal;
-    end;
+    end else
+      exit(False);
   end;
   ////////////////////////////
   if p <> pEnd then exit(False);
@@ -8662,7 +8667,7 @@ end;
 
 {$PUSH}{$J-}{$WARN 2005 OFF}
 const
-  StateTransitions: array[GO..N3, __..Etc] of Integer = (
+  StateTransitions: array[GO..N3, __..Etc] of ShortInt = (
 {
   The state transition table takes the current state and the current symbol,
   and returns either a new state or an action. An action is represented as a
@@ -8727,8 +8732,8 @@ begin
   sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   for I := 0 to Pred(Size) do begin
     NextState := StateTransitions[State, SymClassTable[Ord(Buf[I])]];
-    if (NextState) < DWord(31) then begin
-      if DWord(NextState - ST) < DWord(14) then
+    if Byte(NextState) < Byte(31) then begin
+      if Byte(NextState - ST) < Byte(14) then
         sb.Append(Buf[I]); /////////////////////
       State := NextState;
     end else
@@ -10024,7 +10029,7 @@ begin
     if NextState = __ then exit(False);
     if CopyMode then FsbHelp.Append(c); //////////
     if NextState < 31 then begin
-      if (DWord(NextState - ST) < DWord(14)) and ReadMode then
+      if (Byte(NextState - ST) < Byte(14)) and ReadMode then
         FsBuilder.Append(c);
       FState := NextState;
     end else
