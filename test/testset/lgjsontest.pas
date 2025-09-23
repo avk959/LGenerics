@@ -80,7 +80,7 @@ type
     procedure JsonPointer;
     procedure TestTryAdd;
     procedure TestAddAllVar;
-    procedure TestAddAll;
+    procedure TestMerge;
     procedure Values;
     procedure SkipBom;
     procedure Equal;
@@ -808,16 +808,16 @@ begin
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
-  AssertTrue(TryStrToDouble('e', d));
+  AssertTrue(TryStrToDouble('e1', d));
   AssertTrue(d.IsZero);
   AssertFalse(d.Sign);
 
 
-  AssertTrue(TryStrToDouble('+e', d));
+  AssertTrue(TryStrToDouble('+e1', d));
   AssertTrue(d.IsZero);
   AssertFalse(d.Sign);
 
-  AssertTrue(TryStrToDouble('-e', d));
+  AssertTrue(TryStrToDouble('-e1', d));
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
@@ -829,16 +829,16 @@ begin
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
-  AssertTrue(TryStrToDouble('.e', d));
+  AssertTrue(TryStrToDouble('.e1', d));
   AssertTrue(d.IsZero);
   AssertFalse(d.Sign);
 
 
-  AssertTrue(TryStrToDouble('+.e', d));
+  AssertTrue(TryStrToDouble('+.e1', d));
   AssertTrue(d.IsZero);
   AssertFalse(d.Sign);
 
-  AssertTrue(TryStrToDouble('-.e', d));
+  AssertTrue(TryStrToDouble('-.e1', d));
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
@@ -850,31 +850,37 @@ begin
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
-  AssertTrue(TryStrToDouble('0.e', d));
+  AssertTrue(TryStrToDouble('0.e1', d));
   AssertTrue(d.IsZero);
 
-  AssertTrue(TryStrToDouble('+0.e', d));
+  AssertTrue(TryStrToDouble('+0.e1', d));
   AssertTrue(d.IsZero);
   AssertFalse(d.Sign);
 
-  AssertTrue(TryStrToDouble('-0.e', d));
+  AssertTrue(TryStrToDouble('-0.e2', d));
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
-  AssertTrue(TryStrToDouble('0.e-', d));
+  AssertTrue(TryStrToDouble('0.e-2', d));
   AssertTrue(d.IsZero);
 
-  AssertTrue(TryStrToDouble('-0.e-', d));
+  AssertTrue(TryStrToDouble('-0.e-3', d));
   AssertTrue(d.IsZero);
   AssertTrue(d.Sign);
 
-  AssertTrue(TryStrToDouble('1.e', d));
+  AssertTrue(TryStrToDouble('42.', d));
+  AssertTrue(d = 42);
+
+  AssertTrue(TryStrToDouble('-42.', d));
+  AssertTrue(d = -42);
+
+  AssertTrue(TryStrToDouble('1.e0', d));
   AssertTrue(d = 1);
 
-  AssertTrue(TryStrToDouble('+1.e', d));
+  AssertTrue(TryStrToDouble('+1.e0', d));
   AssertTrue(d = 1);
 
-  AssertTrue(TryStrToDouble('-1.e', d));
+  AssertTrue(TryStrToDouble('-1.e0', d));
   AssertTrue(d = -1);
 
   AssertTrue(TryStrToDouble('.5', d));
@@ -883,10 +889,10 @@ begin
   AssertTrue(TryStrToDouble('-.5', d));
   AssertTrue(d = -0.5);
 
-  AssertTrue(TryStrToDouble('.5e', d));
+  AssertTrue(TryStrToDouble('.5e0', d));
   AssertTrue(d = 0.5);
 
-  AssertTrue(TryStrToDouble('-.5e-', d));
+  AssertTrue(TryStrToDouble('-.5e-0', d));
   AssertTrue(d = -0.5);
 end;
 
@@ -958,6 +964,7 @@ begin
   AssertTrue(quiet);
   AssertTrue(d.Sign);
 
+{$IFNDEF CPUx86}
   AssertTrue(TryStrToDouble('snan', d));
   AssertTrue(d.IsNan(quiet));
   AssertFalse(quiet);
@@ -975,6 +982,7 @@ begin
   AssertTrue(d.IsNan(quiet));
   AssertFalse(quiet);
   AssertTrue(d.Sign);
+{$ENDIF }
 end;
 
 procedure TTestTryStrToDouble.Basic;
@@ -1327,22 +1335,22 @@ begin
   AssertTrue(TJsonNode(o).Items[4].Value = 5);
 end;
 
-procedure TTestJson.TestAddAll;
+procedure TTestJson.TestMerge;
 var
   o1, o2: specialize TGAutoRef<TJsonNode>;
 begin
   TJsonNode(o1).AsBoolean := True;
-  TJsonNode(o1).AddAll(TJsonNode(o2));
+  AssertTrue(TJsonNode(o1).MergeArray(TJsonNode(o2)) = 0);
   AssertTrue(TJsonNode(o1).IsBoolean);
 
   TJsonNode(o1).AddAll([1,2,3]);
   TJsonNode(o2).AddAll([4,5,6]);
-  TJsonNode(o1).AddAll(o2.Instance);
+  AssertTrue(TJsonNode(o1).MergeArray(o2.Instance) = 3);
   AssertTrue(TJsonNode(o1).IsArray);
   AssertTrue(TJsonNode(o1).Count = 6);
   AssertTrue(TJsonNode(o2).Count = 3);
 
-  TJsonNode(o1).AddAll(o2.Instance, False);
+  AssertTrue(TJsonNode(o1).MergeArray(o2.Instance, False) = 3);
   AssertTrue(TJsonNode(o1).Count = 9);
   AssertTrue(TJsonNode(o2).Count = 0);
 end;
