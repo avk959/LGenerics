@@ -437,7 +437,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TJsonNode;
     function  GetPair(aIndex: SizeInt): TPair;
-    function  GetNItem(const aName: string): TJsonNode;
+    function  GetObjProp(const aName: string): TJsonNode;
     function  GetValue: TJVariant;
     procedure SetValue(const aValue: TJVariant);
     property  StrVal: string read GetStrVal write SetStrVal;
@@ -633,8 +633,8 @@ type
     function  AddJson(const aJson: string; out aNode: TJsonNode): Boolean; inline;
   { if aNode is not an array, nothing is happening; if aCopy is True, adds copies
     of all aNode elements to the instance as an array, otherwise moves all aNode elements
-    to the instance, and leaves aNode empty; returns Self }
-    function  AddAll(aNode: TJsonNode; aCopy: Boolean = True): TJsonNode;
+    to the instance, and leaves aNode empty; returns number of merged nodes }
+    function  MergeArray(aNode: TJsonNode; aCopy: Boolean = True): SizeInt;
   { appends all elements of array a to the instance as an array;
     if the instance is not an array, it is cleared; returns Self }
     function  AddAll(const a: TJVarArray): TJsonNode;
@@ -775,7 +775,7 @@ type
   { will raise exception if aIndex out of bounds or an instance is not an object }
     property  Pairs[aIndex: SizeInt]: TPair read GetPair;
   { acts as FindOrAdd }
-    property  NItems[const aName: string]: TJsonNode read GetNItem; default;
+    property  Props[const aName: string]: TJsonNode read GetObjProp; default;
     property  Value: TJVariant read GetValue write SetValue;
   end;
 
@@ -4790,7 +4790,7 @@ begin
   Result := ObjectPtr^.UncMutPairs[aIndex]^;
 end;
 
-function TJsonNode.GetNItem(const aName: string): TJsonNode;
+function TJsonNode.GetObjProp(const aName: string): TJsonNode;
 var
   n: TJsonNode;
 begin // workaround for optimizer bug (attempt)
@@ -5805,28 +5805,27 @@ begin
     AsArray.ArrayPtr^.Add(aNode);
 end;
 
-function TJsonNode.AddAll(aNode: TJsonNode; aCopy: Boolean): TJsonNode;
+function TJsonNode.MergeArray(aNode: TJsonNode; aCopy: Boolean): SizeInt;
 var
   I: SizeInt;
 begin
-  if aNode.IsArray then
-    begin
-      AsArray;
-      if aCopy then
-        for I := 0 to Pred(aNode.Count) do
-          ArrayPtr^.Add(aNode.Items[I].Clone)
-      else
-        if aNode.ArrayPtr^.NonEmpty then
+  if not aNode.IsArray then exit(0);
+  AsArray;
+  Result := Count;
+  if aCopy then
+    for I := 0 to Pred(aNode.Count) do
+      ArrayPtr^.Add(aNode.Items[I].Clone)
+  else
+    if aNode.ArrayPtr^.NonEmpty then
+      begin
+        for I := 0 to Pred(aNode.ArrayPtr^.Count) do
           begin
-            for I := 0 to Pred(aNode.ArrayPtr^.Count) do
-              begin
-                ArrayPtr^.Add(aNode.ArrayPtr^.UncItems[I]);
-                aNode.ArrayPtr^.UncMutItems[I]^ := nil;
-              end;
-            aNode.ArrayPtr^.MakeEmpty;
+            ArrayPtr^.Add(aNode.ArrayPtr^.UncItems[I]);
+            aNode.ArrayPtr^.UncMutItems[I]^ := nil;
           end;
-    end;
-  Result := Self;
+        aNode.ArrayPtr^.MakeEmpty;
+      end;
+  Result := Count - Result;
 end;
 
 function TJsonNode.AddAll(const a: TJVarArray): TJsonNode;
