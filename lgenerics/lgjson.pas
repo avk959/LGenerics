@@ -8171,7 +8171,7 @@ begin
       exit(True);
     end;
 {$IFDEF CPU64}
-  if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= 9007199254740991) and
+  if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= QWord(9007199254740991)) and
      (Math.GetRoundMode = rmNearest) and (Math.GetPrecisionMode in [pmDouble, pmExtended]) then
     begin
       aValue := aMantissa;
@@ -8730,7 +8730,7 @@ begin
   Stack[1].Create(aNode, pmNone);
   sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   for I := 0 to Pred(Size) do begin
-    NextState := StateTransitions[State, SymClassTable[Ord(Buf[I])]];
+    NextState := StateTransitions[State, SymClassTable[Byte(Buf[I])]];
     if Byte(NextState) < Byte(31) then begin
       if Byte(NextState - ST) < Byte(14) then
         sb.Append(Buf[I]); /////////////////////
