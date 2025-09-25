@@ -4957,7 +4957,7 @@ begin
   Result := ValidateNumBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
 end;
 
-function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; forward;
+
 
 type
   TParseNode = record
@@ -4972,6 +4972,128 @@ begin
   Node := aNode;
   Mode := aMode;
 end;
+
+type
+  TJsonParser = class
+  strict protected
+  const
+  // symbol classes
+    Err    = ShortInt(-1);//  error
+    Space  = ShortInt( 0);//  space
+    White  = ShortInt( 1);//  other whitespace
+    LCurBr = ShortInt( 2);//  {
+    RCurBr = ShortInt( 3);//  }
+    LSqrBr = ShortInt( 4);//  [
+    RSqrBr = ShortInt( 5);//  ]
+    Colon  = ShortInt( 6);//  :
+    Comma  = ShortInt( 7);//  ,
+    Quote  = ShortInt( 8);//  "
+    Plus   = ShortInt( 9);//  +
+    Minus  = ShortInt(10);//  -
+    Point  = ShortInt(11);//  .
+    Zero   = ShortInt(12);//  0
+    Digit  = ShortInt(13);//  123456789
+    LowerA = ShortInt(14);//  a
+    LowerE = ShortInt(15);//  e
+    LowerF = ShortInt(16);//  f
+    LowerL = ShortInt(17);//  l
+    LowerN = ShortInt(18);//  n
+    LowerR = ShortInt(19);//  r
+    LowerS = ShortInt(20);//  s
+    LowerT = ShortInt(21);//  t
+    LowerU = ShortInt(22);//  u
+    UpperE = ShortInt(23);//  E
+
+    // parser states
+    __ = ShortInt(-1);// error
+    GO = ShortInt( 0);// start
+    OK = ShortInt( 1);// ok
+    OB = ShortInt( 2);// object
+    KE = ShortInt( 3);// key
+    CO = ShortInt( 4);// colon
+    VA = ShortInt( 5);// value
+    AR = ShortInt( 6);// array
+    MI = ShortInt( 7);// minus
+    ZE = ShortInt( 8);// zero
+    IR = ShortInt( 9);// integer
+    FR = ShortInt(10);// fraction
+    FS = ShortInt(11);// fraction
+    E1 = ShortInt(12);// e
+    E2 = ShortInt(13);// ex
+    E3 = ShortInt(14);// exp
+    T1 = ShortInt(15);// tr
+    T2 = ShortInt(16);// tru
+    T3 = ShortInt(17);// true
+    F1 = ShortInt(18);// fa
+    F2 = ShortInt(19);// fal
+    F3 = ShortInt(20);// fals
+    F4 = ShortInt(21);// false
+    N1 = ShortInt(22);// nu
+    N2 = ShortInt(23);// nul
+    N3 = ShortInt(24);// null
+{$PUSH}{$J-}{$WARN 2005 OFF}
+    SymClassTable: array[Byte] of ShortInt = (
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+      -1,    White,  White,  -1,     -1,     White,  -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+
+      Space, -1,     Quote,  -1,     -1,     -1,     -1,     -1,
+      -1,    -1,     -1,     Plus,   Comma,  Minus,  Point,  -1,
+      Zero,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,
+      Digit, Digit,  Colon,  -1,     -1,     -1,     -1,     -1,
+
+      -1,    -1,     -1,     -1,     -1,     UpperE, -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+      -1,    -1,     -1,     LSqrBr, -1,     RSqrBr, -1,     -1,
+
+      -1,    LowerA, -1,     -1,     -1,     LowerE, LowerF, -1,
+      -1,    -1,     -1,     -1,     LowerL, -1,     LowerN, -1,
+      -1,    -1,     LowerR, LowerS, LowerT, LowerU, -1,     -1,
+      -1,    -1,     -1,     LCurBr, -1,     RCurBr, -1,     -1,
+
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+    );
+
+    TransitionTable: array[GO..N3, __..UpperE] of ShortInt = (
+{
+                 white                               1-9
+             space |  {  }  [  ]  :  ,  " +  -  .  0  |  a  e  f  l  n  r  s  t  u  E  }
+{start  GO}(__,GO,GO,28,__,29,__,__,__,30,__,MI,__,ZE,IR,__,__,F1,__,N1,__,__,T1,__,__),
+{ok     OK}(__,OK,OK,__,26,__,27,__,31,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
+{object OB}(__,OB,OB,__,25,__,__,__,__,30,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
+{key    KE}(__,KE,KE,__,__,__,__,__,__,30,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
+{colon  CO}(__,CO,CO,__,__,__,__,32,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
+{value  VA}(__,VA,VA,28,__,29,__,__,__,30,__,MI,__,ZE,IR,__,__,F1,__,N1,__,__,T1,__,__),
+{array  AR}(__,AR,AR,28,__,29,27,__,__,30,__,MI,__,ZE,IR,__,__,F1,__,N1,__,__,T1,__,__),
+{minus  MI}(__,__,__,__,__,__,__,__,__,__,__,__,__,ZE,IR,__,__,__,__,__,__,__,__,__,__),
+{zero   ZE}(__,34,34,__,26,__,27,__,33,__,__,__,FR,__,__,__,E1,__,__,__,__,__,__,__,E1),
+{int    IR}(__,34,34,__,26,__,27,__,33,__,__,__,FR,IR,IR,__,E1,__,__,__,__,__,__,__,E1),
+{frac   FR}(__,__,__,__,__,__,__,__,__,__,__,__,__,FS,FS,__,__,__,__,__,__,__,__,__,__),
+{fracs  FS}(__,34,34,__,26,__,27,__,33,__,__,__,__,FS,FS,__,E1,__,__,__,__,__,__,__,E1),
+{e      E1}(__,__,__,__,__,__,__,__,__,__,E2,E2,__,E3,E3,__,__,__,__,__,__,__,__,__,__),
+{ex     E2}(__,__,__,__,__,__,__,__,__,__,__,__,__,E3,E3,__,__,__,__,__,__,__,__,__,__),
+{exp    E3}(__,34,34,__,26,__,27,__,33,__,__,__,__,E3,E3,__,__,__,__,__,__,__,__,__,__),
+{t      T1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T2,__,__,__,__),
+{tr     T2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T3,__),
+{tru    T3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,35,__,__,__,__,__,__,__,__),
+{f      F1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F2,__,__,__,__,__,__,__,__,__),
+{fa     F2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F3,__,__,__,__,__,__),
+{fal    F3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F4,__,__,__),
+{fals   F4}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,36,__,__,__,__,__,__,__,__),
+{n      N1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N2,__),
+{nu     N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__,__),
+{nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,37,__,__,__,__,__,__)
+    );
+{$POP}
+    class function ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt; static;
+  public
+    class function ParseStrBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
+  end;
 
 class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aSkipBom: Boolean;
   aDepth: Integer): Boolean;
@@ -5001,12 +5123,12 @@ begin
   try
     if aDepth <= DEF_DEPTH then
       Result :=
-        DoParseStr(Buf, Size, aRoot, TOpenArray.Create(@Stack[0], aDepth + 1))
+        TJsonParser.ParseStrBuf(Buf, Size, aRoot, TOpenArray.Create(@Stack[0], aDepth + 1))
     else
       begin
         System.SetLength(DynStack, aDepth + 1);
         Result :=
-          DoParseStr(Buf, Size, aRoot, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
+          TJsonParser.ParseStrBuf(Buf, Size, aRoot, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
       end;
   except
     Result := False;
@@ -8664,6 +8786,296 @@ begin
   Result := TryPChar2Double2(p, aCount, aValue, aDecSeparator);
 end;
 
+{ TJsonParser }
+
+{$PUSH}{$WARN 5089 OFF}
+
+class function TJsonParser.ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt;
+const
+  HEX_CHARS  = ['0'..'9','A'..'F','a'..'f'];
+var
+  I: SizeInt;
+  uh, ul: DWord;
+begin
+  Assert(p^ = '"');
+  if aCount < 2 then exit(0);
+  I := 1;
+  while I < aCount do begin
+    if p[I] in [#0 .. #31] then exit(0);
+    if p[I] = '"' then exit(I);
+    if p[I] <> '\' then begin
+      sb.Append(p[I]); Inc(I);
+    end else begin
+      if aCount - I < 3 then exit(0);
+      case p[Succ(I)] of
+        '"': begin sb.Append('"'); I += 2; end;
+        '/': begin sb.Append('/'); I += 2; end;
+        '\': begin sb.Append('\'); I += 2; end;
+        'b': begin sb.Append( #8); I += 2; end;
+        'f': begin sb.Append(#12); I += 2; end;
+        'n': begin sb.Append(#10); I += 2; end;
+        'r': begin sb.Append(#13); I += 2; end;
+        't': begin sb.Append( #9); I += 2; end;
+        'u': begin
+            if aCount - I < 8 then exit(0);
+            if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
+                   (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
+            uh := HexCh4ToDWord(PChar4(@p[I+2])^);
+            I += 6;
+            case uh of
+              0..$7f: sb.Append(Char(uh));
+              $80..$7ff: begin
+                  sb.Append(Char((uh shr 6) or $c0));
+                  sb.Append(Char((uh and $3f) or $80));
+                end;
+              $800..$d7ff,$e000..$ffff: begin
+                  sb.Append(Char((uh shr 12) or $e0));
+                  sb.Append(Char((uh shr 6) and $3f or $80));
+                  sb.Append(Char((uh and $3f) or $80));
+                end;
+              $d800..$dbff: // high surrogate
+                if (aCount - I > 7) and (p[I] = '\') and (p[I+1] = 'u') then begin
+                  if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
+                         (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
+                  ul := HexCh4ToDWord(PChar4(@p[I+2])^);
+                  if (ul >= $dc00) and (ul <= $dfff) then begin
+                    I += 6;
+                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
+                    sb.Append(Char(ul shr 18 or $f0));
+                    sb.Append(Char((ul shr 12) and $3f or $80));
+                    sb.Append(Char((ul shr 6) and $3f or $80));
+                    sb.Append(Char(ul and $3f or $80));
+                  end else begin
+                    sb.Append(#$ef);
+                    sb.Append(#$bf);
+                    sb.Append(#$bd);
+                  end;
+                end else begin
+                  sb.Append(#$ef);
+                  sb.Append(#$bf);
+                  sb.Append(#$bd);
+                end;
+              $dc00..$dfff: begin // low surrogate
+                  sb.Append(#$ef);
+                  sb.Append(#$bf);
+                  sb.Append(#$bd);
+                end;
+            else
+            end;
+          end;
+      else
+        exit(0);
+      end;
+    end;
+  end;
+  Result := 0;
+end;
+
+class function TJsonParser.ParseStrBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode;
+  const aStack: TOpenArray): Boolean;
+const
+  NUM_STATES = Integer(1 shl ZE or 1 shl IR or 1 shl FS or 1 shl E3);
+var
+  sb: TStrBuilder;
+
+  function Number: Double; inline;
+  begin
+    if not TryPChar2DoubleFast(sb.ToPChar, Result) then
+      Abort;
+  end;
+
+var
+  Stack: PParseNode;
+  I, Advance: SizeInt;
+  KeyValue: string = '';
+  NextState, StackHigh: Integer;
+  State: Integer = GO;
+  sTop: Integer = 1;
+begin
+  Stack := aStack.Data;
+  StackHigh := Pred(aStack.Size);
+  Stack[0].Create(nil, pmNone);
+  Stack[1].Create(aNode, pmNone);
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  I := 0;
+  while I < Size do begin
+    NextState := TransitionTable[State, SymClassTable[Byte(Buf[I])]];
+    if Byte(NextState) < Byte(25) then begin
+      if Byte(NextState - MI) < Byte(8) then sb.Append(Buf[I]);
+      State := NextState;
+    end else
+      case NextState of
+        25: //end object - state = object
+          if Stack[sTop].Mode = pmKey then begin
+            Dec(sTop);
+            State := OK;
+          end else exit(False);
+        26: //end object
+          if Stack[sTop].Mode = pmObject then begin
+            if Integer(1 shl State) and NUM_STATES <> 0 then
+              Stack[sTop].Node.Add(KeyValue, Number);
+            Dec(sTop);
+            State := OK;
+          end else exit(False);
+        27: //end array
+          if Stack[sTop].Mode = pmArray then begin
+            if Integer(1 shl State) and NUM_STATES <> 0 then
+              Stack[sTop].Node.Add(Number);
+            Dec(sTop);
+            State := OK;
+          end else exit(False);
+        28: //begin object
+          if sTop < StackHigh then begin
+            case Stack[sTop].Mode of
+              pmNone: begin
+                  Stack[sTop].Node.AsObject;
+                  Stack[sTop].Mode := pmKey;
+                end;
+              pmArray: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
+                  Inc(sTop);
+                end;
+              pmObject: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkObject), pmKey);
+                  Inc(sTop);
+                end;
+            else
+              exit(False);
+            end;
+            State := OB;
+          end else exit(False);
+        29: //begin array
+          if sTop < StackHigh then begin
+            case Stack[sTop].Mode of
+              pmNone: begin
+                  Stack[sTop].Node.AsArray;
+                  Stack[sTop].Mode := pmArray;
+                end;
+              pmArray: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
+                  Inc(sTop);
+                end;
+              pmObject: begin
+                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkArray), pmArray);
+                  Inc(sTop);
+                end;
+            else
+              exit(False);
+            end;
+            State := AR;
+          end else exit(False);
+        30: //begin string
+          begin
+            Advance := ParseString(@Buf[I], Size - I, sb);
+            if Advance = 0 then exit(False);
+            I += Advance;
+            case Stack[sTop].Mode of
+              pmKey: begin
+                  KeyValue := sb.ToString;
+                  State := CO;
+                end;
+              pmArray: begin
+                  Stack[sTop].Node.Add(sb.ToString);
+                  State := OK;
+                end;
+              pmObject: begin
+                  Stack[sTop].Node.Add(KeyValue, sb.ToString);
+                  State := OK;
+                end
+            else
+              Stack[sTop].Node.AsString := sb.ToString;
+              Dec(sTop);
+              State := OK;
+            end;
+          end;
+        31: //OK - comma
+          case Stack[sTop].Mode of
+            pmObject: begin
+                Stack[sTop].Mode := pmKey;
+                State := KE;
+              end;
+            pmArray: State := VA;
+          else
+            exit(False);
+          end;
+        32: //colon
+          if Stack[sTop].Mode = pmKey then begin
+            Stack[sTop].Mode := pmObject;
+            State := VA;
+          end else exit(False);
+        33: //end Number - comma
+          case Stack[sTop].Mode of
+            pmArray: begin
+                Stack[sTop].Node.Add(Number);
+                State := VA;
+              end;
+            pmObject: begin
+                Stack[sTop].Node.Add(KeyValue, Number);
+                Stack[sTop].Mode := pmKey;
+                State := KE;
+              end;
+          else
+            exit(False);
+          end;
+        34: //end Number - white space
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.Add(Number);
+              pmObject: Stack[sTop].Node.Add(KeyValue, Number);
+            else
+              Stack[sTop].Node.AsNumber := Number;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+        35: //true literal
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.Add(True);
+              pmObject: Stack[sTop].Node.Add(KeyValue, True);
+            else
+              Stack[sTop].Node.AsBoolean := True;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+        36: //false literal
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.Add(False);
+              pmObject: Stack[sTop].Node.Add(KeyValue, False);
+            else
+              Stack[sTop].Node.AsBoolean := False;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+        37: //null literal
+          begin
+            case Stack[sTop].Mode of
+              pmArray:  Stack[sTop].Node.AddNull;
+              pmObject: Stack[sTop].Node.AddNull(KeyValue);
+            else
+              Stack[sTop].Node.AsNull;
+              Dec(sTop);
+            end;
+            State := OK;
+          end;
+      else
+        exit(False);
+      end;
+    Inc(I);
+  end;
+  if Integer(1 shl State) and NUM_STATES <> 0 then begin
+    if Stack[sTop].Mode <> pmNone then exit(False);
+    Stack[sTop].Node.AsNumber := Number;
+    State := OK;
+    Dec(sTop);
+  end;
+  Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
+end;
+{$POP}
+
 {$PUSH}{$J-}{$WARN 2005 OFF}
 const
   StateTransitions: array[GO..N3, __..Etc] of ShortInt = (
@@ -8706,203 +9118,6 @@ const
 {nu     N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__,__,__,__),
 {nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,43,__,__,__,__,__,__,__,__)
   );
-{$POP}
-
-{$PUSH}{$WARN 5089 OFF}
-function DoParseStr(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean;
-var
-  Stack: PParseNode;
-  I: SizeInt;
-  NextState, StackHigh: Integer;
-  State: Integer = GO;
-  sTop: Integer = 1;
-  sb: TStrBuilder;
-  KeyValue: string = '';
-  function Number: Double; inline;
-  begin
-    if not TryPChar2DoubleFast(sb.ToPChar, Result) then
-      Abort;
-  end;
-begin
-  Stack := aStack.Data;
-  StackHigh := Pred(aStack.Size);
-  Stack[0].Create(nil, pmNone);
-  Stack[1].Create(aNode, pmNone);
-  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  for I := 0 to Pred(Size) do begin
-    NextState := StateTransitions[State, SymClassTable[Byte(Buf[I])]];
-    if Byte(NextState) < Byte(31) then begin
-      if Byte(NextState - ST) < Byte(14) then
-        sb.Append(Buf[I]); /////////////////////
-      State := NextState;
-    end else
-      case NextState of
-        31: //end object - state = object
-          if Stack[sTop].Mode = pmKey then begin
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        32: //end object
-          if Stack[sTop].Mode = pmObject then begin
-            if Integer(1 shl State) and NUM_STATES <> 0 then
-              Stack[sTop].Node.Add(KeyValue, Number);
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        33: //end array
-          if Stack[sTop].Mode = pmArray then begin
-            if Integer(1 shl State) and NUM_STATES <> 0 then
-              Stack[sTop].Node.Add(Number);
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        34: //begin object
-          if sTop < StackHigh then begin
-            case Stack[sTop].Mode of
-              pmNone: begin
-                  Stack[sTop].Node.AsObject;
-                  Stack[sTop].Mode := pmKey;
-                end;
-              pmArray: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
-                  Inc(sTop);
-                end;
-              pmObject: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkObject), pmKey);
-                  Inc(sTop);
-                end;
-            else
-              exit(False);
-            end;
-            State := OB;
-          end else exit(False);
-        35: //begin array
-          if sTop < StackHigh then begin
-            case Stack[sTop].Mode of
-              pmNone: begin
-                  Stack[sTop].Node.AsArray;
-                  Stack[sTop].Mode := pmArray;
-                end;
-              pmArray: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
-                  Inc(sTop);
-                end;
-              pmObject: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(KeyValue, jvkArray), pmArray);
-                  Inc(sTop);
-                end;
-            else
-              exit(False);
-            end;
-            State := AR;
-          end else exit(False);
-        36: //string value
-          begin
-            sb.Append(Buf[I]);
-            case Stack[sTop].Mode of
-              pmKey: begin
-                  KeyValue := sb.ToDecodeString;
-                  State := CO;
-                end;
-              pmArray: begin
-                  Stack[sTop].Node.Add(sb.ToDecodeString);
-                  State := OK;
-                end;
-              pmObject: begin
-                  Stack[sTop].Node.Add(KeyValue, sb.ToDecodeString);
-                  State := OK;
-                end
-            else
-              Stack[sTop].Node.AsString := sb.ToDecodeString;
-              Dec(sTop);
-              State := OK;
-            end;
-          end;
-        37: //OK - comma
-          case Stack[sTop].Mode of
-            pmObject: begin
-                Stack[sTop].Mode := pmKey;
-                State := KE;
-              end;
-            pmArray: State := VA;
-          else
-            exit(False);
-          end;
-        38: //colon
-          if Stack[sTop].Mode = pmKey then begin
-            Stack[sTop].Mode := pmObject;
-            State := VA;
-          end else exit(False);
-        39: //end Number - comma
-          case Stack[sTop].Mode of
-            pmArray: begin
-                Stack[sTop].Node.Add(Number);
-                State := VA;
-              end;
-            pmObject: begin
-                Stack[sTop].Node.Add(KeyValue, Number);
-                Stack[sTop].Mode := pmKey;
-                State := KE;
-              end;
-          else
-            exit(False);
-          end;
-        40: //end Number - white space
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(Number);
-              pmObject: Stack[sTop].Node.Add(KeyValue, Number);
-            else
-              Stack[sTop].Node.AsNumber := Number;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-        41: //true literal
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(True);
-              pmObject: Stack[sTop].Node.Add(KeyValue, True);
-            else
-              Stack[sTop].Node.AsBoolean := True;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-        42: //false literal
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(False);
-              pmObject: Stack[sTop].Node.Add(KeyValue, False);
-            else
-              Stack[sTop].Node.AsBoolean := False;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-        43: //null literal
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.AddNull;
-              pmObject: Stack[sTop].Node.AddNull(KeyValue);
-            else
-              Stack[sTop].Node.AsNull;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-      else
-        exit(False);
-      end;
-  end;
-  if Integer(1 shl State) and NUM_STATES <> 0 then begin
-    if Stack[sTop].Mode <> pmNone then exit(False);
-    Stack[sTop].Node.AsNumber := Number;
-    State := OK;
-    Dec(sTop);
-  end;
-  Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
-end;
 {$POP}
 
 const
