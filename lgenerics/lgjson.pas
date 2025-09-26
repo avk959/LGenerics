@@ -2154,113 +2154,137 @@ begin
   Result := TJVarPair.Create(aName, aValue);
 end;
 
-const
+type
+  TBaseParserEnv = class
+  const
+{$PUSH}{$J-}
+    Space  = ShortInt( 0); //  space
+    White  = ShortInt( 1); //  other whitespace
+    LCurBr = ShortInt( 2); //  {
+    RCurBr = ShortInt( 3); //  }
+    LSqrBr = ShortInt( 4); //  [
+    RSqrBr = ShortInt( 5); //  ]
+    Colon  = ShortInt( 6); //  :
+    Comma  = ShortInt( 7); //  ,
+    Quote  = ShortInt( 8); //  "
+    BSlash = ShortInt( 9); //  \
+    Slash  = ShortInt(10); //  /
+    Plus   = ShortInt(11); //  +
+    Minus  = ShortInt(12); //  -
+    Point  = ShortInt(13); //  .
+    Zero   = ShortInt(14); //  0
+    Digit  = ShortInt(15); //  123456789
+    LowerA = ShortInt(16); //  a
+    LowerB = ShortInt(17); //  b
+    LowerC = ShortInt(18); //  c
+    LowerD = ShortInt(19); //  d
+    LowerE = ShortInt(20); //  e
+    LowerF = ShortInt(21); //  f
+    LowerL = ShortInt(22); //  l
+    LowerN = ShortInt(23); //  n
+    LowerR = ShortInt(24); //  r
+    LowerS = ShortInt(25); //  s
+    LowerT = ShortInt(26); //  t
+    LowerU = ShortInt(27); //  u
+    ABCDF  = ShortInt(28); //  ABCDF
+    UpperE = ShortInt(29); //  E
+    Etc    = ShortInt(30); //  everything else
+
+    SymClassTable: array[Byte] of ShortInt = (
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+      -1,    White,  White,  -1,     -1,     White,  -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
+
+      Space, Etc,    Quote,  Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Plus,   Comma,  Minus,  Point,  Slash,
+      Zero,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,
+      Digit, Digit,  Colon,  Etc,    Etc,    Etc,    Etc,    Etc,
+
+      Etc,   ABCDF,  ABCDF,  ABCDF,  ABCDF,  UpperE, ABCDF,  Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    LSqrBr, BSlash, RSqrBr, Etc,    Etc,
+
+      Etc,   LowerA, LowerB, LowerC, LowerD, LowerE, LowerF, Etc,
+      Etc,   Etc,    Etc,    Etc,    LowerL, Etc,    LowerN, Etc,
+      Etc,   Etc,    LowerR, LowerS, LowerT, LowerU, Etc,    Etc,
+      Etc,   Etc,    Etc,    LCurBr, Etc,    RCurBr, Etc,    Etc,
+
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
+      Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc
+    );
+
+    __ = ShortInt(-1);// error
+    GO = ShortInt( 0);// start
+    OK = ShortInt( 1);// ok
+    OB = ShortInt( 2);// object
+    KE = ShortInt( 3);// key
+    CO = ShortInt( 4);// colon
+    VA = ShortInt( 5);// value
+    AR = ShortInt( 6);// array
+    ST = ShortInt( 7);// string
+    ES = ShortInt( 8);// escape
+    U1 = ShortInt( 9);// u1
+    U2 = ShortInt(10);// u2
+    U3 = ShortInt(11);// u3
+    U4 = ShortInt(12);// u4
+    MI = ShortInt(13);// minus
+    ZE = ShortInt(14);// zero
+    IR = ShortInt(15);// integer
+    FR = ShortInt(16);// fraction
+    FS = ShortInt(17);// fraction
+    E1 = ShortInt(18);// e
+    E2 = ShortInt(19);// ex
+    E3 = ShortInt(20);// exp
+    T1 = ShortInt(21);// tr
+    T2 = ShortInt(22);// tru
+    T3 = ShortInt(23);// true
+    F1 = ShortInt(24);// fa
+    F2 = ShortInt(25);// fal
+    F3 = ShortInt(26);// fals
+    F4 = ShortInt(27);// false
+    N1 = ShortInt(28);// nu
+    N2 = ShortInt(29);// nul
+    N3 = ShortInt(30);// null
+
+    NUM_STATES = [ZE, IR, FS, E3];
+  end;
+{$POP}
+
+type
+  TOpenArray = record
+    Data: Pointer;
+    Size: Integer;
+    constructor Create(aData: Pointer; aSize: Integer);
+  end;
+
+constructor TOpenArray.Create(aData: Pointer; aSize: Integer);
+begin
+  Data := aData;
+  Size := aSize;
+end;
+
+type
+  TBaseValidator = class(TBaseParserEnv)
+  strict protected
+  const
 {$PUSH}{$J-}{$WARN 2005 OFF}
-  Space  = ShortInt( 0); //  space
-  White  = ShortInt( 1); //  other whitespace
-  LCurBr = ShortInt( 2); //  {
-  RCurBr = ShortInt( 3); //  }
-  LSqrBr = ShortInt( 4); //  [
-  RSqrBr = ShortInt( 5); //  ]
-  Colon  = ShortInt( 6); //  :
-  Comma  = ShortInt( 7); //  ,
-  Quote  = ShortInt( 8); //  "
-  BSlash = ShortInt( 9); //  \
-  Slash  = ShortInt(10); //  /
-  Plus   = ShortInt(11); //  +
-  Minus  = ShortInt(12); //  -
-  Point  = ShortInt(13); //  .
-  Zero   = ShortInt(14); //  0
-  Digit  = ShortInt(15); //  123456789
-  LowerA = ShortInt(16); //  a
-  LowerB = ShortInt(17); //  b
-  LowerC = ShortInt(18); //  c
-  LowerD = ShortInt(19); //  d
-  LowerE = ShortInt(20); //  e
-  LowerF = ShortInt(21); //  f
-  LowerL = ShortInt(22); //  l
-  LowerN = ShortInt(23); //  n
-  LowerR = ShortInt(24); //  r
-  LowerS = ShortInt(25); //  s
-  LowerT = ShortInt(26); //  t
-  LowerU = ShortInt(27); //  u
-  ABCDF  = ShortInt(28); //  ABCDF
-  UpperE = ShortInt(29); //  E
-  Etc    = ShortInt(30); //  everything else
-
-  SymClassTable: array[Byte] of ShortInt = (
-    -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
-    -1,    White,  White,  -1,     -1,     White,  -1,     -1,
-    -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
-    -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
-
-    Space, Etc,    Quote,  Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Plus,   Comma,  Minus,  Point,  Slash,
-    Zero,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,
-    Digit, Digit,  Colon,  Etc,    Etc,    Etc,    Etc,    Etc,
-
-    Etc,   ABCDF,  ABCDF,  ABCDF,  ABCDF,  UpperE, ABCDF,  Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    LSqrBr, BSlash, RSqrBr, Etc,    Etc,
-
-    Etc,   LowerA, LowerB, LowerC, LowerD, LowerE, LowerF, Etc,
-    Etc,   Etc,    Etc,    Etc,    LowerL, Etc,    LowerN, Etc,
-    Etc,   Etc,    LowerR, LowerS, LowerT, LowerU, Etc,    Etc,
-    Etc,   Etc,    Etc,    LCurBr, Etc,    RCurBr, Etc,    Etc,
-
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc,
-    Etc,   Etc,    Etc,    Etc,    Etc,    Etc,    Etc,    Etc
-  );
-
-  __ = ShortInt(-1);// error
-  GO = ShortInt( 0);// start
-  OK = ShortInt( 1);// ok
-  OB = ShortInt( 2);// object
-  KE = ShortInt( 3);// key
-  CO = ShortInt( 4);// colon
-  VA = ShortInt( 5);// value
-  AR = ShortInt( 6);// array
-  ST = ShortInt( 7);// string
-  ES = ShortInt( 8);// escape
-  U1 = ShortInt( 9);// u1
-  U2 = ShortInt(10);// u2
-  U3 = ShortInt(11);// u3
-  U4 = ShortInt(12);// u4
-  MI = ShortInt(13);// minus
-  ZE = ShortInt(14);// zero
-  IR = ShortInt(15);// integer
-  FR = ShortInt(16);// fraction
-  FS = ShortInt(17);// fraction
-  E1 = ShortInt(18);// e
-  E2 = ShortInt(19);// ex
-  E3 = ShortInt(20);// exp
-  T1 = ShortInt(21);// tr
-  T2 = ShortInt(22);// tru
-  T3 = ShortInt(23);// true
-  F1 = ShortInt(24);// fa
-  F2 = ShortInt(25);// fal
-  F3 = ShortInt(26);// fals
-  F4 = ShortInt(27);// false
-  N1 = ShortInt(28);// nu
-  N2 = ShortInt(29);// nul
-  N3 = ShortInt(30);// null
-
-  VldStateTransitions: array[GO..N3, __..Etc] of ShortInt = (
+  TransitionTable: array[GO..N3, __..Etc] of ShortInt = (
 {
   The state transition table takes the current state and the current symbol,
   and returns either a new state or an action. An action is represented as a
@@ -2302,16 +2326,16 @@ const
 {nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,OK,__,__,__,__,__,__,__,__)
   );
 {$POP}
-
-const
-  INF_EXP    = QWord($7ff0000000000000);
-  NUM_STATES = Integer(1 shl ZE or 1 shl IR or 1 shl FS or 1 shl E3);
+  public
+    class function ValidateBuf(Buf: PByte; Size: SizeInt; const aStack: TOpenArray): Boolean; static;
+    class function ValidateStream(s: TStream; aSkipBom: Boolean; const aStack: TOpenArray): Boolean; static;
+  end;
 
 {$PUSH}{$MACRO ON}
 {$DEFINE ValidateBufMacro :=
 for I := 0 to Pred(Size) do
   begin
-    NextState := VldStateTransitions[State, SymClassTable[Buf[I]]];
+    NextState := TransitionTable[State, SymClassTable[Buf[I]]];
     if NextState > __ then
       State := NextState
     else
@@ -2376,20 +2400,7 @@ for I := 0 to Pred(Size) do
   end
 }
 
-type
-  TOpenArray = record
-    Data: Pointer;
-    Size: Integer;
-    constructor Create(aData: Pointer; aSize: Integer);
-  end;
-
-constructor TOpenArray.Create(aData: Pointer; aSize: Integer);
-begin
-  Data := aData;
-  Size := aSize;
-end;
-
-function ValidateBuf(Buf: PByte; Size: SizeInt; const aStack: TOpenArray): Boolean;
+class function TBaseValidator.ValidateBuf(Buf: PByte; Size: SizeInt; const aStack: TOpenArray): Boolean;
 var
   Stack: PParseMode;
   I: SizeInt;
@@ -2401,40 +2412,10 @@ begin
   StackHigh := Pred(aStack.Size);
   Stack[0] := pmNone;
   ValidateBufMacro;
-  Result := ((State = OK) or (State in [ZE, IR, FS, E3])) and (sTop = 0) and (Stack[0] = pmNone);
+  Result := ((State = OK) or (State in NUM_STATES)) and (sTop = 0) and (Stack[0] = pmNone);
 end;
 
-function ValidateStrBuf(Buf: PByte; Size: SizeInt; const aStack: TOpenArray): Boolean;
-var
-  Stack: PParseMode;
-  I: SizeInt;
-  NextState, StackHigh: Integer;
-  State: Integer = GO;
-  sTop: Integer = 0;
-begin
-  Stack := aStack.Data;
-  StackHigh := Pred(aStack.Size);
-  Stack[0] := pmNone;
-  ValidateBufMacro;
-  Result := (State = OK) and (sTop = 0) and (Stack[0] = pmNone);
-end;
-
-function ValidateNumBuf(Buf: PByte; Size: SizeInt; const aStack: TOpenArray): Boolean;
-var
-  Stack: PParseMode;
-  I: SizeInt;
-  NextState, StackHigh: Integer;
-  State: Integer = GO;
-  sTop: Integer = 0;
-begin
-  Stack := aStack.Data;
-  StackHigh := Pred(aStack.Size);
-  Stack[0] := pmNone;
-  ValidateBufMacro;
-  Result := (State in [Ze, IR, FS, E3]) and (sTop = 0) and (Stack[0] = pmNone);
-end;
-
-function ValidateStream(s: TStream; aSkipBom: Boolean; const aStack: TOpenArray): Boolean;
+class function TBaseValidator.ValidateStream(s: TStream; aSkipBom: Boolean; const aStack: TOpenArray): Boolean;
 var
   Stack: PParseMode;
   Buffer: TJsonNode.TRwBuffer;
@@ -2461,15 +2442,14 @@ begin
     else
       exit(False);
     end;
-  ValidateBufMacro;
-  Buf := @Buffer[0];
-  repeat
-    Size := s.Read(Buffer, SizeOf(Buffer));
+  while Size > 0 do begin
     ValidateBufMacro;
-  until Size < SizeOf(Buffer);
-  Result := ((State = OK) or (State in [ZE, IR, FS, E3])) and (sTop = 0) and (Stack[0] = pmNone);
+    Size := s.Read(Buffer, SizeOf(Buffer));
+    Buf := @Buffer[0];
+  end;
+  Result := ((State = OK) or (State in NUM_STATES)) and (sTop = 0) and (Stack[0] = pmNone);
 end;
-{$POP}
+{$UNDEF ValidateBufMacro}{$POP}
 
 { TJsonNode.TIterContext }
 
@@ -4890,11 +4870,11 @@ begin
       exit(False);
     end;
   if aDepth <= DEF_DEPTH then
-    Result := ValidateBuf(Buf, Size, TOpenArray.Create(@Stack[0], aDepth + 1))
+    Result := TBaseValidator.ValidateBuf(Buf, Size, TOpenArray.Create(@Stack[0], aDepth + 1))
   else
     begin
       System.SetLength(DynStack, aDepth + 1);
-      Result := ValidateBuf(Buf, Size, TOpenArray.Create(Pointer(DynStack), aDepth + 1))
+      Result := TBaseValidator.ValidateBuf(Buf, Size, TOpenArray.Create(Pointer(DynStack), aDepth + 1))
     end;
 end;
 
@@ -4905,11 +4885,11 @@ var
 begin
   if aDepth < 1 then exit(False);
   if aDepth <= DEF_DEPTH then
-    Result := ValidateStream(aStream, aSkipBom, TOpenArray.Create(@Stack[0], aDepth + 1))
+    Result := TBaseValidator.ValidateStream(aStream, aSkipBom, TOpenArray.Create(@Stack[0], aDepth + 1))
   else
     begin
       System.SetLength(DynStack, aDepth + 1);
-      Result := ValidateStream(aStream, aSkipBom, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
+      Result := TBaseValidator.ValidateStream(aStream, aSkipBom, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
     end;
 end;
 
@@ -4943,18 +4923,16 @@ class function TJsonNode.JsonStringValid(const s: string): Boolean;
 var
   Stack: array[0..3] of TParseMode;
 begin
-  if (System.Length(s) < 2) or (s[1] <> '"') or (s[System.Length(s)] <> '"') then
-    exit(False);
-  Result := ValidateStrBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
+  if System.Length(s) < 2 then exit(False);
+  Result := TBaseValidator.ValidateBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
 end;
 
 class function TJsonNode.JsonNumberValid(const s: string): Boolean;
 var
   Stack: array[0..3] of TParseMode;
 begin
-  if System.Length(s) < 1 then
-    exit(False);
-  Result := ValidateNumBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
+  if s = '' then exit(False);
+  Result := TBaseValidator.ValidateBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
 end;
 
 
@@ -5031,6 +5009,10 @@ type
     N1 = ShortInt(22);// nu
     N2 = ShortInt(23);// nul
     N3 = ShortInt(24);// null
+
+    FIRST_ACTION = ShortInt(25);
+    NUM_STATES = [ZE, IR, FS, E3];
+
 {$PUSH}{$J-}{$WARN 2005 OFF}
     SymClassTable: array[Byte] of ShortInt = (
       -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
@@ -5091,6 +5073,7 @@ type
     );
 {$POP}
     class function ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt; static;
+    class function ToDouble(p: PAnsiChar): Double; static;
   public
     class function ParseStrBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
   end;
@@ -8349,6 +8332,9 @@ begin
   Result := True;
 end;
 
+const
+  INF_EXP    = QWord($7ff0000000000000);
+
 function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
@@ -8788,8 +8774,6 @@ end;
 
 { TJsonParser }
 
-{$PUSH}{$WARN 5089 OFF}
-
 class function TJsonParser.ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt;
 const
   HEX_CHARS  = ['0'..'9','A'..'F','a'..'f'];
@@ -8801,7 +8785,7 @@ begin
   if aCount < 2 then exit(0);
   I := 1;
   while I < aCount do begin
-    if p[I] in [#0 .. #31] then exit(0);
+    if Ord(p[I]) < Ord(' ') then exit(0);
     if p[I] = '"' then exit(I);
     if p[I] <> '\' then begin
       sb.Append(p[I]); Inc(I);
@@ -8871,19 +8855,14 @@ begin
   Result := 0;
 end;
 
+class function TJsonParser.ToDouble(p: PAnsiChar): Double;
+begin
+  if not TryPChar2DoubleFast(p, Result) then Abort;
+end;
+
+{$PUSH}{$WARN 5089 OFF}
 class function TJsonParser.ParseStrBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode;
   const aStack: TOpenArray): Boolean;
-const
-  NUM_STATES = Integer(1 shl ZE or 1 shl IR or 1 shl FS or 1 shl E3);
-var
-  sb: TStrBuilder;
-
-  function Number: Double; inline;
-  begin
-    if not TryPChar2DoubleFast(sb.ToPChar, Result) then
-      Abort;
-  end;
-
 var
   Stack: PParseNode;
   I, Advance: SizeInt;
@@ -8891,6 +8870,7 @@ var
   NextState, StackHigh: Integer;
   State: Integer = GO;
   sTop: Integer = 1;
+  sb: TStrBuilder;
 begin
   Stack := aStack.Data;
   StackHigh := Pred(aStack.Size);
@@ -8900,9 +8880,9 @@ begin
   I := 0;
   while I < Size do begin
     NextState := TransitionTable[State, SymClassTable[Byte(Buf[I])]];
-    if Byte(NextState) < Byte(25) then begin
-      if Byte(NextState - MI) < Byte(8) then sb.Append(Buf[I]);
+    if Byte(NextState) < Byte(FIRST_ACTION) then begin
       State := NextState;
+      if NextState in [MI..E3] then sb.Append(Buf[I]);
     end else
       case NextState of
         25: //end object - state = object
@@ -8912,15 +8892,15 @@ begin
           end else exit(False);
         26: //end object
           if Stack[sTop].Mode = pmObject then begin
-            if Integer(1 shl State) and NUM_STATES <> 0 then
-              Stack[sTop].Node.Add(KeyValue, Number);
+            if State in NUM_STATES then
+              Stack[sTop].Node.Add(KeyValue, ToDouble(sb.ToPChar));
             Dec(sTop);
             State := OK;
           end else exit(False);
         27: //end array
           if Stack[sTop].Mode = pmArray then begin
-            if Integer(1 shl State) and NUM_STATES <> 0 then
-              Stack[sTop].Node.Add(Number);
+            if State in NUM_STATES then
+              Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
             Dec(sTop);
             State := OK;
           end else exit(False);
@@ -9003,27 +8983,27 @@ begin
             Stack[sTop].Mode := pmObject;
             State := VA;
           end else exit(False);
-        33: //end Number - comma
+        33: //end number - comma
           case Stack[sTop].Mode of
             pmArray: begin
-                Stack[sTop].Node.Add(Number);
+                Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
                 State := VA;
               end;
             pmObject: begin
-                Stack[sTop].Node.Add(KeyValue, Number);
+                Stack[sTop].Node.Add(KeyValue, ToDouble(sb.ToPChar));
                 Stack[sTop].Mode := pmKey;
                 State := KE;
               end;
           else
             exit(False);
           end;
-        34: //end Number - white space
+        34: //end number - white space
           begin
             case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(Number);
-              pmObject: Stack[sTop].Node.Add(KeyValue, Number);
+              pmArray:  Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
+              pmObject: Stack[sTop].Node.Add(KeyValue, ToDouble(sb.ToPChar));
             else
-              Stack[sTop].Node.AsNumber := Number;
+              Stack[sTop].Node.AsNumber := ToDouble(sb.ToPChar);
               Dec(sTop);
             end;
             State := OK;
@@ -9066,9 +9046,9 @@ begin
       end;
     Inc(I);
   end;
-  if Integer(1 shl State) and NUM_STATES <> 0 then begin
+  if State in NUM_STATES then begin
     if Stack[sTop].Mode <> pmNone then exit(False);
-    Stack[sTop].Node.AsNumber := Number;
+    Stack[sTop].Node.AsNumber := ToDouble(sb.ToPChar);
     State := OK;
     Dec(sTop);
   end;
@@ -9076,9 +9056,13 @@ begin
 end;
 {$POP}
 
+type
+  TReadEnv = class(TBaseParserEnv)
+  protected
 {$PUSH}{$J-}{$WARN 2005 OFF}
-const
-  StateTransitions: array[GO..N3, __..Etc] of ShortInt = (
+  const
+    FIRST_ACTION = ShortInt(31);
+    TransitionTable: array[GO..N3, __..Etc] of ShortInt = (
 {
   The state transition table takes the current state and the current symbol,
   and returns either a new state or an action. An action is represented as a
@@ -9119,6 +9103,7 @@ const
 {nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,43,__,__,__,__,__,__,__,__)
   );
 {$POP}
+  end;
 
 const
   AN = Integer(7); //Array Next
@@ -9230,8 +9215,8 @@ end;
 procedure TJsonWriter.ValueAdding;
 begin
   case StackTop of
-    VA: FStack[FStackTop] := OB;
-    AR: FStack[FStackTop] := AN;
+    TReadEnv.VA: FStack[FStackTop] := TReadEnv.OB;
+    TReadEnv.AR: FStack[FStackTop] := AN;
     AN: DoWriteChar(chComma);
   else
   end;
@@ -9240,8 +9225,8 @@ end;
 procedure TJsonWriter.PairAdding;
 begin
   case StackTop of
-    OB: DoWriteChar(chComma);
-    KE: FStack[FStackTop] := OB;
+    TReadEnv.OB: DoWriteChar(chComma);
+    TReadEnv.KE: FStack[FStackTop] := TReadEnv.OB;
   else
   end;
 end;
@@ -9263,7 +9248,7 @@ begin
   FStack.Length := STACK_INIT_SIZE;
   FBufPtr := FBuffer.Ptr;
   FStackTop := NULL_INDEX;
-  StackPush(OK);
+  StackPush(TReadEnv.OK);
 end;
 
 constructor TJsonWriter.Create(aStream: TStream);
@@ -9336,8 +9321,8 @@ end;
 function TJsonWriter.AddName(const aName: string): TJsonWriter;
 begin
   case StackTop of
-    OB: DoWriteChar(chComma);
-    KE: FStack[FStackTop] := VA;
+    TReadEnv.OB: DoWriteChar(chComma);
+    TReadEnv.KE: FStack[FStackTop] := TReadEnv.VA;
   else
   end;
   DoWriteStr(Pointer(aName), System.Length(aName));
@@ -9410,26 +9395,26 @@ end;
 function TJsonWriter.BeginArray: TJsonWriter;
 begin
   case StackTop of
-    VA: FStack[FStackTop] := OB;
-    AR: FStack[FStackTop] := AN;
+    TReadEnv.VA: FStack[FStackTop] := TReadEnv.OB;
+    TReadEnv.AR: FStack[FStackTop] := AN;
     AN: DoWriteChar(chComma);
   else
   end;
   DoWriteChar(chOpenSqrBr);
-  StackPush(AR);
+  StackPush(TReadEnv.AR);
   Result := Self;
 end;
 
 function TJsonWriter.BeginObject: TJsonWriter;
 begin
   case StackTop of
-    VA: FStack[FStackTop] := OB;
-    AR: FStack[FStackTop] := AN;
+    TReadEnv.VA: FStack[FStackTop] := TReadEnv.OB;
+    TReadEnv.AR: FStack[FStackTop] := AN;
     AN: DoWriteChar(chComma);
   else
   end;
   DoWriteChar(chOpenCurBr);
-  StackPush(KE);
+  StackPush(TReadEnv.KE);
   Result := Self;
 end;
 
@@ -9586,8 +9571,8 @@ end;
 procedure TJsonStrWriter.ValueAdding;
 begin
   case StackTop of
-    VA: FStack[FStackTop] := OB;
-    AR: FStack[FStackTop] := AN;
+    TReadEnv.VA: FStack[FStackTop] := TReadEnv.OB;
+    TReadEnv.AR: FStack[FStackTop] := AN;
     AN: DoWriteChar(chComma);
   else
   end;
@@ -9596,8 +9581,8 @@ end;
 procedure TJsonStrWriter.PairAdding;
 begin
   case StackTop of
-    OB: DoWriteChar(chComma);
-    KE: FStack[FStackTop] := OB;
+    TReadEnv.OB: DoWriteChar(chComma);
+    TReadEnv.KE: FStack[FStackTop] := TReadEnv.OB;
   else
   end;
 end;
@@ -9605,8 +9590,8 @@ end;
 procedure TJsonStrWriter.NameAdding;
 begin
   case StackTop of
-    OB: DoWriteChar(chComma);
-    KE: FStack[FStackTop] := VA;
+    TReadEnv.OB: DoWriteChar(chComma);
+    TReadEnv.KE: FStack[FStackTop] := TReadEnv.VA;
   else
   end;
 end;
@@ -9632,7 +9617,7 @@ begin
   if FStack.Length < STACK_INIT_SIZE then
     FStack.Length := STACK_INIT_SIZE;
   FStackTop := NULL_INDEX;
-  StackPush(OK);
+  StackPush(TReadEnv.OK);
 end;
 
 function TJsonStrWriter.AddNull: TJsonStrWriter;
@@ -9848,26 +9833,26 @@ end;
 function TJsonStrWriter.BeginArray: TJsonStrWriter;
 begin
   case StackTop of
-    VA: FStack[FStackTop] := OB;
-    AR: FStack[FStackTop] := AN;
+    TReadEnv.VA: FStack[FStackTop] := TReadEnv.OB;
+    TReadEnv.AR: FStack[FStackTop] := AN;
     AN: DoWriteChar(chComma);
   else
   end;
   DoWriteChar(chOpenSqrBr);
-  StackPush(AR);
+  StackPush(TReadEnv.AR);
   Result := Self;
 end;
 
 function TJsonStrWriter.BeginObject: TJsonStrWriter;
 begin
   case StackTop of
-    VA: FStack[FStackTop] := OB;
-    AR: FStack[FStackTop] := AN;
+    TReadEnv.VA: FStack[FStackTop] := TReadEnv.OB;
+    TReadEnv.AR: FStack[FStackTop] := AN;
     AN: DoWriteChar(chComma);
   else
   end;
   DoWriteChar(chOpenCurBr);
-  StackPush(KE);
+  StackPush(TReadEnv.KE);
   Result := Self;
 end;
 
@@ -10000,7 +9985,7 @@ end;
 function TJsonReader.NullValue: Boolean;
 begin
   UpdateArray;
-  FState := OK;
+  FState := TReadEnv.OK;
   FToken := tkNull;
   Result := True;
 end;
@@ -10010,7 +9995,7 @@ begin
   FBoolValue := False;
   UpdateArray;
   FToken := tkFalse;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10018,7 +10003,7 @@ function TJsonReader.TrueValue: Boolean;
 begin
   FBoolValue := True;
   UpdateArray;
-  FState := OK;
+  FState := TReadEnv.OK;
   FToken := tkTrue;
   Result := True;
 end;
@@ -10042,7 +10027,7 @@ procedure TJsonReader.NameValue;
 begin
   if ReadMode then
     FName := FsBuilder.ToDecodeString;
-  FState := CO;
+  FState := TReadEnv.CO;
 end;
 
 function TJsonReader.CommaAfterNum: Boolean;
@@ -10050,11 +10035,11 @@ begin
   if not NumValue then
     exit(False);
   case FStack[Depth].Mode of
-    pmArray: FState := VA;
+    pmArray: FState := TReadEnv.VA;
     pmObject:
       begin
         FStack[Depth].Mode := pmKey;
-        FState := KE;
+        FState := TReadEnv.KE;
       end;
   else
     exit(False);
@@ -10068,7 +10053,7 @@ begin
     FStrValue := FsBuilder.ToDecodeString;
   UpdateArray;
   FToken := tkString;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10092,7 +10077,7 @@ begin
   end;
   Inc(FStackTop);
   FToken := tkArrayBegin;
-  FState := AR;
+  FState := TReadEnv.AR;
   Result := True;
 end;
 
@@ -10116,7 +10101,7 @@ begin
   end;
   Inc(FStackTop);
   FToken := tkObjectBegin;
-  FState := OB;
+  FState := TReadEnv.OB;
   Result := True;
 end;
 
@@ -10127,7 +10112,7 @@ begin
   Dec(FStackTop);
   FToken := tkArrayEnd;
   UpdateArray;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10138,7 +10123,7 @@ begin
   if not NumValue then
     exit(False);
   FDeferToken := tkArrayEnd;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10149,7 +10134,7 @@ begin
   Dec(FStackTop);
   FToken := tkObjectEnd;
   UpdateArray;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10160,7 +10145,7 @@ begin
   if not NumValue then
     exit(False);
   FDeferToken := tkObjectEnd;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10171,7 +10156,7 @@ begin
   FToken := tkObjectEnd;
   Dec(FStackTop);
   UpdateArray;
-  FState := OK;
+  FState := TReadEnv.OK;
   Result := True;
 end;
 
@@ -10239,23 +10224,22 @@ begin
       exit(False);
     Inc(FPosition);
     c := FBuffer[FPosition];
-    NextState := StateTransitions[FState, SymClassTable[Ord(c)]];
-    if NextState = __ then exit(False);
+    NextState := TReadEnv.TransitionTable[FState, TReadEnv.SymClassTable[Byte(c)]];
+    if NextState = TReadEnv.__ then exit(False);
     if CopyMode then FsbHelp.Append(c); //////////
-    if NextState < 31 then begin
-      if (Byte(NextState - ST) < Byte(14)) and ReadMode then
-        FsBuilder.Append(c);
+    if NextState < TReadEnv.FIRST_ACTION then begin
       FState := NextState;
+      if (Byte(NextState - TReadEnv.ST) < Byte(14)) and ReadMode then
+        FsBuilder.Append(c);
     end else
     case NextState of
       31: exit(ObjectEndOb);  //end object when state = OB
       32:                     //end object when state = OK or in [ZE, IR, FS, E3]
-        if Integer(1 shl FState) and NUM_STATES = 0 then exit(ObjectEnd)
-        else exit(ObjectEndAfterNum);
-
+        if FState in TReadEnv.NUM_STATES then exit(ObjectEndAfterNum)
+        else exit(ObjectEnd);
       33:                     //end array when state = OK or in [ZE, IR, FS, E3]
-        if Integer(1 shl FState) and NUM_STATES = 0 then exit(ArrayEnd)
-        else exit(ArrayEndAfterNum);
+        if FState in TReadEnv.NUM_STATES then exit(ArrayEndAfterNum)
+        else exit(ArrayEnd);
       34: exit(ObjectBegin);  //begin object
       35: exit(ArrayBegin);   //begin array
       36:                     //string value
@@ -10269,19 +10253,19 @@ begin
         case FStack[Depth].Mode of
           pmObject: begin
               FStack[Depth].Mode := pmKey;
-              FState := KE;
+              FState := TReadEnv.KE;
             end;
-          pmArray: FState := VA;
+          pmArray: FState := TReadEnv.VA;
         else exit(False);
         end;
       38:                     //colon
         if FStack[Depth].Mode = pmKey then begin
           FStack[Depth].Mode := pmObject;
-          FState := VA;
+          FState := TReadEnv.VA;
         end else exit(False);
       39: exit(CommaAfterNum);//end number - comma
       40: begin               //end number - white space
-        FState := OK;
+        FState := TReadEnv.OK;
         exit(NumValue);
       end;
       41: exit(TrueValue);    //true literal
@@ -10441,15 +10425,15 @@ begin
             FReadState := rsError;
             exit;
           end;
-        if Integer(1 shl FState) and NUM_STATES <> 0 then
+        if FState in TReadEnv.NUM_STATES then
           begin
-            FState := OK;
+            FState := TReadEnv.OK;
             if NumValue then
               exit(True)
             else
               FReadState := rsError;
           end;
-        if FState <> OK then
+        if FState <> TReadEnv.OK then
           FReadState := rsError;
       end
     else
