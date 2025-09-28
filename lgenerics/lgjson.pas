@@ -381,17 +381,6 @@ type
     TOnIterate   = function(const aContext: TIterContext; aNode: TJsonNode): Boolean of object;
     TNestIterate = function(const aContext: TIterContext; aNode: TJsonNode): Boolean is nested;
 
-    TVisitNode = record
-      Level,
-      Index: SizeInt;
-      Name: string;
-      Parent,
-      Node: TJsonNode;
-      constructor Make(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
-      constructor Make(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
-      constructor Make(aNode: TJsonNode);
-    end;
-
     TNameDuplicates = (ndupRewrite, ndupIgnore);
     TUEscapeOption  = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
 
@@ -2477,35 +2466,6 @@ begin
   Index := NULL_INDEX;
   Name := '';
   Parent := aParent;
-end;
-
-{ TJsonNode.TVisitNode }
-
-constructor TJsonNode.TVisitNode.Make(aLevel, aIndex: SizeInt; aParent, aNode: TJsonNode);
-begin
-  Level := aLevel;
-  Index := aIndex;
-  Name := '';
-  Parent := aParent;
-  Node := aNode;
-end;
-
-constructor TJsonNode.TVisitNode.Make(aLevel: SizeInt; const aName: string; aParent, aNode: TJsonNode);
-begin
-  Level := aLevel;
-  Index := NULL_INDEX;
-  Name := aName;
-  Parent := aParent;
-  Node := aNode;
-end;
-
-constructor TJsonNode.TVisitNode.Make(aNode: TJsonNode);
-begin
-  Level := 0;
-  Index := NULL_INDEX;
-  Name := '';
-  Parent := nil;
-  Node := aNode;
 end;
 
 { TJsonPtr.TEnumerator }
@@ -7979,9 +7939,11 @@ const
 {$PUSH}{$Q-}{$R-}{$J-}{$WARN 4080 OFF}
 function TryBuildDoubleEiselLemire(aMantissa: QWord; const aPow10: Int64; aNeg: Boolean; out aValue: Double): Boolean; inline;
 const
+{$IF DEFINED(CPUX86_64) OR DEFINED(CPUAARCH64)}
   TEN_POWER: array[0..22] of Double = (
     1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
     1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22);
+{$ENDIF}
 
   EL_MANTIS_64: array[ELDBL_LOWEST_POWER..ELDBL_HIGHEST_POWER] of QWord = (
     QWord($a5ced43b7e3e9188), QWord($cf42894a5dce35ea), QWord($818995ce7aa0e1b2), QWord($a1ebfb4219491a1f),
@@ -8318,19 +8280,25 @@ begin
         aValue := Double(0.0);
       exit(True);
     end;
-{$IFDEF CPU64}
-  if (aPow10 >= -22) and (aPow10 <= 22) and (aMantissa <= QWord(9007199254740991)) and
-     (Math.GetRoundMode = rmNearest) and (Math.GetPrecisionMode in [pmDouble, pmExtended]) then
-    begin
-      aValue := aMantissa;
-      if aPow10 < 0 then
-        aValue /= TEN_POWER[-aPow10]
-      else
-        aValue *= TEN_POWER[aPow10];
-      if aNeg then aValue := -aValue;
-      exit(True);
-    end;
-{$ENDIF CPU64}
+{$IF DEFINED(CPUX86_64) OR DEFINED(CPUAARCH64)}
+  if ((aPow10 >= -22) and (aPow10 <= 22)) and (aMantissa <= QWord(9007199254740991)) and
+     (Math.GetRoundMode = rmNearest) and (Math.GetPrecisionMode in [pmDouble, pmExtended]) then begin
+    aValue := aMantissa;
+    if aPow10 < 0 then
+      aValue /= TEN_POWER[-aPow10]
+    else
+      aValue *= TEN_POWER[aPow10];
+    if aNeg then aValue := -aValue;
+    exit(True);
+  end;
+{$ELSE}
+  if (aMantissa <= QWord(9007199254740991)) and (aPow10 = 0) and
+     (Math.GetPrecisionMode in [pmDouble, pmExtended]) then begin
+    aValue := aMantissa;
+    if aNeg then aValue := -aValue;
+    exit(True);
+  end;
+{$ENDIF}
 
   Exponent := SarInt64((152170 + 65536) * aPow10, 16) + 1024 + 63;
   LzCount := Pred(BitSizeOf(QWord)) - BsrQWord(aMantissa);
