@@ -8794,74 +8794,76 @@ begin
   Assert(p^ = '"');
   if aCount < 2 then exit(0);
   I := 1;
-  while I < aCount do begin
-    if Ord(p[I]) < Ord(' ') then exit(0);
-    if p[I] = '"' then exit(I);
-    if p[I] <> '\' then begin
-      sb.Append(p[I]); Inc(I);
-    end else begin
-      if aCount - I < 3 then exit(0);
-      case p[Succ(I)] of
-        '"': begin sb.Append('"'); I += 2; end;
-        '/': begin sb.Append('/'); I += 2; end;
-        '\': begin sb.Append('\'); I += 2; end;
-        'b': begin sb.Append( #8); I += 2; end;
-        'f': begin sb.Append(#12); I += 2; end;
-        'n': begin sb.Append(#10); I += 2; end;
-        'r': begin sb.Append(#13); I += 2; end;
-        't': begin sb.Append( #9); I += 2; end;
-        'u': begin
-            if aCount - I < 8 then exit(0);
-            if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
-                   (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
-            uh := HexCh4ToDWord(PChar4(@p[I+2])^);
-            I += 6;
-            case uh of
-              0..$7f: sb.Append(Char(uh));
-              $80..$7ff: begin
-                  sb.Append(Char((uh shr 6) or $c0));
-                  sb.Append(Char((uh and $3f) or $80));
-                end;
-              $800..$d7ff,$e000..$ffff: begin
-                  sb.Append(Char((uh shr 12) or $e0));
-                  sb.Append(Char((uh shr 6) and $3f or $80));
-                  sb.Append(Char((uh and $3f) or $80));
-                end;
-              $d800..$dbff: // high surrogate
-                if (aCount - I > 7) and (p[I] = '\') and (p[I+1] = 'u') then begin
-                  if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
-                         (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
-                  ul := HexCh4ToDWord(PChar4(@p[I+2])^);
-                  if (ul >= $dc00) and (ul <= $dfff) then begin
-                    I += 6;
-                    ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
-                    sb.Append(Char(ul shr 18 or $f0));
-                    sb.Append(Char((ul shr 12) and $3f or $80));
-                    sb.Append(Char((ul shr 6) and $3f or $80));
-                    sb.Append(Char(ul and $3f or $80));
+  while I < aCount do
+    case p[I] of
+      #0..#31: exit(0);
+      '"':     exit(I);
+      '\': begin
+        if I > aCount - 3 then exit(0);
+        case p[Succ(I)] of
+          '"': begin sb.Append('"'); I += 2; end;
+          '/': begin sb.Append('/'); I += 2; end;
+          '\': begin sb.Append('\'); I += 2; end;
+          'b': begin sb.Append( #8); I += 2; end;
+          'f': begin sb.Append(#12); I += 2; end;
+          'n': begin sb.Append(#10); I += 2; end;
+          'r': begin sb.Append(#13); I += 2; end;
+          't': begin sb.Append( #9); I += 2; end;
+          'u': begin
+              if I > aCount - 8 then exit(0);
+              if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
+                     (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
+              uh := HexCh4ToDWord(PChar4(@p[I+2])^);
+              I += 6;
+              case uh of
+                0..$7f: sb.Append(Char(uh));
+                $80..$7ff: begin
+                    sb.Append(Char((uh shr 6) or $c0));
+                    sb.Append(Char((uh and $3f) or $80));
+                  end;
+                $800..$d7ff,$e000..$ffff: begin
+                    sb.Append(Char((uh shr 12) or $e0));
+                    sb.Append(Char((uh shr 6) and $3f or $80));
+                    sb.Append(Char((uh and $3f) or $80));
+                  end;
+                $d800..$dbff: // high surrogate
+                  if (I < aCount - 7) and (p[I] = '\') and (p[I+1] = 'u') then begin
+                    if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
+                           (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
+                    ul := HexCh4ToDWord(PChar4(@p[I+2])^);
+                    if (ul >= $dc00) and (ul <= $dfff) then begin
+                      I += 6;
+                      ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
+                      sb.Append(Char(ul shr 18 or $f0));
+                      sb.Append(Char((ul shr 12) and $3f or $80));
+                      sb.Append(Char((ul shr 6) and $3f or $80));
+                      sb.Append(Char(ul and $3f or $80));
+                    end else begin
+                      sb.Append(#$ef);
+                      sb.Append(#$bf);
+                      sb.Append(#$bd);
+                    end;
                   end else begin
                     sb.Append(#$ef);
                     sb.Append(#$bf);
                     sb.Append(#$bd);
                   end;
-                end else begin
-                  sb.Append(#$ef);
-                  sb.Append(#$bf);
-                  sb.Append(#$bd);
-                end;
-              $dc00..$dfff: begin // low surrogate
-                  sb.Append(#$ef);
-                  sb.Append(#$bf);
-                  sb.Append(#$bd);
-                end;
-            else
+                $dc00..$dfff: begin // low surrogate
+                    sb.Append(#$ef);
+                    sb.Append(#$bf);
+                    sb.Append(#$bd);
+                  end;
+              else
+              end;
             end;
-          end;
-      else
-        exit(0);
+        else
+          exit(0);
+        end;
       end;
+    else
+      sb.Append(p[I]);
+      Inc(I);
     end;
-  end;
   Result := 0;
 end;
 
