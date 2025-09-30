@@ -1045,6 +1045,9 @@ type
     procedure MakeEmpty; inline;
     procedure EnsureCapacity(aCapacity: SizeInt); inline;
     procedure Append(c: AnsiChar); inline;
+    procedure Append(c1, c2: AnsiChar); inline;
+    procedure Append(c1, c2, c3: AnsiChar); inline;
+    procedure Append(c1, c2, c3, c4: AnsiChar); inline;
     procedure Append(c: AnsiChar; aCount: SizeInt);
     procedure Append(p: PAnsiChar; aCount: SizeInt);
     procedure Append(const s: string); inline;
@@ -1512,6 +1515,33 @@ begin
   Inc(FCount);
 end;
 
+procedure TStrBuilder.Append(c1, c2: AnsiChar);
+begin
+  EnsureCapacity(Count + 2);
+  FBuffer[Count] := c1;
+  FBuffer[Count+1] := c2;
+  Inc(FCount, 2);
+end;
+
+procedure TStrBuilder.Append(c1, c2, c3: AnsiChar);
+begin
+  EnsureCapacity(Count + 3);
+  FBuffer[Count] := c1;
+  FBuffer[Count+1] := c2;
+  FBuffer[Count+2] := c3;
+  Inc(FCount, 3);
+end;
+
+procedure TStrBuilder.Append(c1, c2, c3, c4: AnsiChar);
+begin
+  EnsureCapacity(Count + 4);
+  FBuffer[Count] := c1;
+  FBuffer[Count+1] := c2;
+  FBuffer[Count+2] := c3;
+  FBuffer[Count+3] := c4;
+  Inc(FCount, 4);
+end;
+
 procedure TStrBuilder.Append(c: AnsiChar; aCount: SizeInt);
 begin
   if aCount < 1 then exit;
@@ -1549,17 +1579,16 @@ begin
     case c of
       #0..#7, #11, #14..#31:
         begin
-           Append('\u00');
-           Append(HEX_CHARS_TBL[Ord(c) shr  4]);
-           Append(HEX_CHARS_TBL[Ord(c) and 15]);
+           Append('\','u','0','0');
+           Append(HEX_CHARS_TBL[Ord(c) shr  4], HEX_CHARS_TBL[Ord(c) and 15]);
         end;
-      #8 : Append('\b'); //backspace
-      #9 : Append('\t'); //tab
-      #10: Append('\n'); //line feed
-      #12: Append('\f'); //form feed
-      #13: Append('\r'); //carriage return
-      '"': Append('\"'); //quote
-      '\': Append('\\'); //backslash
+      #8 : Append('\','b'); //backspace
+      #9 : Append('\','t'); //tab
+      #10: Append('\','n'); //line feed
+      #12: Append('\','f'); //form feed
+      #13: Append('\','r'); //carriage return
+      '"': Append('\','"'); //quote
+      '\': Append('\','\'); //backslash
     else
       Append(c);
     end;
@@ -1664,17 +1693,16 @@ begin
       case c of
         0..7, 11, 14..31:
           begin
-             Append('\u00');
-             Append(HEX_CHARS_TBL[c shr  4]);
-             Append(HEX_CHARS_TBL[c and 15]);
+             Append('\','u','0','0');
+             Append(HEX_CHARS_TBL[c shr  4], HEX_CHARS_TBL[c and 15]);
           end;
-        8 : Append('\b'); //backspace
-        9 : Append('\t'); //tab
-        10: Append('\n'); //line feed
-        12: Append('\f'); //form feed
-        13: Append('\r'); //carriage return
-        34: Append('\"'); //quote
-        92: Append('\\'); //backslash
+        8 : Append('\','b'); //backspace
+        9 : Append('\','t'); //tab
+        10: Append('\','n'); //line feed
+        12: Append('\','f'); //form feed
+        13: Append('\','r'); //carriage return
+        34: Append('\','"'); //quote
+        92: Append('\','\'); //backslash
       else
         if aHtmlEsc then
           case c of
@@ -1823,6 +1851,7 @@ begin
   end;
   System.SetLength(Result, Pred(J));
   System.Move((pR+1)^, Pointer(Result)^, Pred(J));
+  FCount := 0;
 end;
 
 function TStrBuilder.ToPChar: PAnsiChar;
@@ -4921,30 +4950,24 @@ type
   const
   // symbol classes
     Err    = ShortInt(-1);//  error
-    Space  = ShortInt( 0);//  space
-    White  = ShortInt( 1);//  other whitespace
-    LCurBr = ShortInt( 2);//  {
-    RCurBr = ShortInt( 3);//  }
-    LSqrBr = ShortInt( 4);//  [
-    RSqrBr = ShortInt( 5);//  ]
-    Colon  = ShortInt( 6);//  :
-    Comma  = ShortInt( 7);//  ,
-    Quote  = ShortInt( 8);//  "
-    Plus   = ShortInt( 9);//  +
-    Minus  = ShortInt(10);//  -
-    Point  = ShortInt(11);//  .
-    Zero   = ShortInt(12);//  0
-    Digit  = ShortInt(13);//  123456789
-    LowerA = ShortInt(14);//  a
-    LowerE = ShortInt(15);//  e
-    LowerF = ShortInt(16);//  f
-    LowerL = ShortInt(17);//  l
-    LowerN = ShortInt(18);//  n
-    LowerR = ShortInt(19);//  r
-    LowerS = ShortInt(20);//  s
-    LowerT = ShortInt(21);//  t
-    LowerU = ShortInt(22);//  u
-    UpperE = ShortInt(23);//  E
+    White  = ShortInt( 0);//  whitespace
+    LCurBr = ShortInt( 1);//  {
+    RCurBr = ShortInt( 2);//  }
+    LSqrBr = ShortInt( 3);//  [
+    RSqrBr = ShortInt( 4);//  ]
+    Colon  = ShortInt( 5);//  :
+    Comma  = ShortInt( 6);//  ,
+    Quote  = ShortInt( 7);//  "
+    MiOrD  = ShortInt( 8);//  -, 0123456789
+    LowerA = ShortInt( 9);//  a
+    LowerE = ShortInt(10);//  e
+    LowerF = ShortInt(11);//  f
+    LowerL = ShortInt(12);//  l
+    LowerN = ShortInt(13);//  n
+    LowerR = ShortInt(14);//  r
+    LowerS = ShortInt(15);//  s
+    LowerT = ShortInt(16);//  t
+    LowerU = ShortInt(17);//  u
 
     // parser states
     __ = ShortInt(-1);// error
@@ -4955,27 +4978,18 @@ type
     CO = ShortInt( 4);// colon
     VA = ShortInt( 5);// value
     AR = ShortInt( 6);// array
-    MI = ShortInt( 7);// minus
-    ZE = ShortInt( 8);// zero
-    IR = ShortInt( 9);// integer
-    FR = ShortInt(10);// fraction
-    FS = ShortInt(11);// fraction
-    E1 = ShortInt(12);// e
-    E2 = ShortInt(13);// ex
-    E3 = ShortInt(14);// exp
-    T1 = ShortInt(15);// tr
-    T2 = ShortInt(16);// tru
-    T3 = ShortInt(17);// true
-    F1 = ShortInt(18);// fa
-    F2 = ShortInt(19);// fal
-    F3 = ShortInt(20);// fals
-    F4 = ShortInt(21);// false
-    N1 = ShortInt(22);// nu
-    N2 = ShortInt(23);// nul
-    N3 = ShortInt(24);// null
+    T1 = ShortInt( 7);// tr
+    T2 = ShortInt( 8);// tru
+    T3 = ShortInt( 9);// true
+    F1 = ShortInt(10);// fa
+    F2 = ShortInt(11);// fal
+    F3 = ShortInt(12);// fals
+    F4 = ShortInt(13);// false
+    N1 = ShortInt(14);// nu
+    N2 = ShortInt(15);// nul
+    N3 = ShortInt(16);// null
 
-    FIRST_ACTION = ShortInt(25);
-    NUM_STATES = [ZE, IR, FS, E3];
+    FIRST_ACTION = ShortInt(17);
 
 {$PUSH}{$J-}{$WARN 2005 OFF}
     SymClassTable: array[Byte] of ShortInt = (
@@ -4984,12 +4998,12 @@ type
       -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
       -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
 
-      Space, -1,     Quote,  -1,     -1,     -1,     -1,     -1,
-      -1,    -1,     -1,     Plus,   Comma,  Minus,  Point,  -1,
-      Zero,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,
-      Digit, Digit,  Colon,  -1,     -1,     -1,     -1,     -1,
+      White, -1,     Quote,  -1,     -1,     -1,     -1,     -1,
+      -1,    -1,     -1,     -1,     Comma,  MiOrD,  -1,     -1,
+      MiOrD, MiOrD,  MiOrD,  MiOrD,  MiOrD,  MiOrD,  MiOrD,  MiOrD,
+      MiOrD, MiOrD,  Colon,  -1,     -1,     -1,     -1,     -1,
 
-      -1,    -1,     -1,     -1,     -1,     UpperE, -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
       -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
       -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
       -1,    -1,     -1,     LSqrBr, -1,     RSqrBr, -1,     -1,
@@ -5005,39 +5019,30 @@ type
       -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
     );
 
-    TransitionTable: array[GO..N3, __..UpperE] of ShortInt = (
+    TransitionTable: array[GO..N3, __..LowerU] of ShortInt = (
 {
-                 white                               1-9
-             space |  {  }  [  ]  :  ,  " +  -  .  0  |  a  e  f  l  n  r  s  t  u  E  }
-{start  GO}(__,GO,GO,28,__,29,__,__,__,30,__,MI,__,ZE,IR,__,__,F1,__,N1,__,__,T1,__,__),
-{ok     OK}(__,OK,OK,__,26,__,27,__,31,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
-{object OB}(__,OB,OB,__,25,__,__,__,__,30,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
-{key    KE}(__,KE,KE,__,__,__,__,__,__,30,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
-{colon  CO}(__,CO,CO,__,__,__,__,32,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__),
-{value  VA}(__,VA,VA,28,__,29,__,__,__,30,__,MI,__,ZE,IR,__,__,F1,__,N1,__,__,T1,__,__),
-{array  AR}(__,AR,AR,28,__,29,27,__,__,30,__,MI,__,ZE,IR,__,__,F1,__,N1,__,__,T1,__,__),
-{minus  MI}(__,__,__,__,__,__,__,__,__,__,__,__,__,ZE,IR,__,__,__,__,__,__,__,__,__,__),
-{zero   ZE}(__,34,34,__,26,__,27,__,33,__,__,__,FR,__,__,__,E1,__,__,__,__,__,__,__,E1),
-{int    IR}(__,34,34,__,26,__,27,__,33,__,__,__,FR,IR,IR,__,E1,__,__,__,__,__,__,__,E1),
-{frac   FR}(__,__,__,__,__,__,__,__,__,__,__,__,__,FS,FS,__,__,__,__,__,__,__,__,__,__),
-{fracs  FS}(__,34,34,__,26,__,27,__,33,__,__,__,__,FS,FS,__,E1,__,__,__,__,__,__,__,E1),
-{e      E1}(__,__,__,__,__,__,__,__,__,__,E2,E2,__,E3,E3,__,__,__,__,__,__,__,__,__,__),
-{ex     E2}(__,__,__,__,__,__,__,__,__,__,__,__,__,E3,E3,__,__,__,__,__,__,__,__,__,__),
-{exp    E3}(__,34,34,__,26,__,27,__,33,__,__,__,__,E3,E3,__,__,__,__,__,__,__,__,__,__),
-{t      T1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T2,__,__,__,__),
-{tr     T2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T3,__),
-{tru    T3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,35,__,__,__,__,__,__,__,__),
-{f      F1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F2,__,__,__,__,__,__,__,__,__),
-{fa     F2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F3,__,__,__,__,__,__),
-{fal    F3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F4,__,__,__),
-{fals   F4}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,36,__,__,__,__,__,__,__,__),
-{n      N1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N2,__),
-{nu     N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__,__),
-{nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,37,__,__,__,__,__,__)
+                                     -,0-9
+             white {  }  [  ]  :  ,  " |  a  e  f  l  n  r  s  t  u  }
+{start  GO}(__,GO,19,__,20,__,__,__,21,24,__,__,F1,__,N1,__,__,T1,__),
+{ok     OK}(__,OK,__,17,__,18,__,22,__,__,__,__,__,__,__,__,__,__,__),
+{object OB}(__,OB,__,17,__,__,__,__,21,__,__,__,__,__,__,__,__,__,__),
+{key    KE}(__,KE,__,__,__,__,__,__,21,__,__,__,__,__,__,__,__,__,__),
+{colon  CO}(__,CO,__,__,__,__,23,__,__,__,__,__,__,__,__,__,__,__,__),
+{value  VA}(__,VA,19,__,20,__,__,__,21,24,__,__,F1,__,N1,__,__,T1,__),
+{array  AR}(__,AR,19,__,20,18,__,__,21,24,__,__,F1,__,N1,__,__,T1,__),
+{t      T1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T2,__,__,__),
+{tr     T2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T3),
+{tru    T3}(__,__,__,__,__,__,__,__,__,__,__,25,__,__,__,__,__,__,__),
+{f      F1}(__,__,__,__,__,__,__,__,__,__,F2,__,__,__,__,__,__,__,__),
+{fa     F2}(__,__,__,__,__,__,__,__,__,__,__,__,__,F3,__,__,__,__,__),
+{fal    F3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F4,__,__),
+{fals   F4}(__,__,__,__,__,__,__,__,__,__,__,26,__,__,__,__,__,__,__),
+{n      N1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N2),
+{nu     N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__),
+{nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,27,__,__,__,__,__)
     );
 {$POP}
     class function ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt; static;
-    class function ToDouble(p: PAnsiChar): Double; static;
   public
     class function ParseBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
     class function ParseBufDupRewrite(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
@@ -5108,8 +5113,7 @@ begin
   aRoot := TJsonNode.Create;
   try
     if aDepth <= DEF_DEPTH then
-      Result :=
-        TJsonParser.ParseBuf(Buf, Size, aRoot, TOpenArray.Create(@Stack[0], aDepth + 1))
+      Result := TJsonParser.ParseBuf(Buf, Size, aRoot, TOpenArray.Create(@Stack[0], aDepth + 1))
     else
       begin
         System.SetLength(DynStack, aDepth + 1);
@@ -8349,12 +8353,8 @@ function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
 begin
-  try
-    Val(p, aValue, Code);
-    Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
-  except
-    Result := False;
-  end;
+  Val(p, aValue, Code);
+  Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
 end;
 
 { TryPChar2DoubleFast is a relaxed parser, it expects a valid null-terminated
@@ -8455,13 +8455,8 @@ function TryPChar2DblFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
 begin
-  try
-    Val(p, aValue, Code);
-    Result := Code = 0;
-  except
-    on e: Exception do
-      Result := False;
-  end;
+  Val(p, aValue, Code);
+  Result := Code = 0;
 end;
 
 { TryPChar2Double }
@@ -8756,6 +8751,109 @@ begin
   Result := TryPChar2Double(p, aValue);
 end;
 
+{ tries to convert a sequence of characters starting at the specified position and up to the
+  first non-numeric character to a Double value according to RFC 8259;
+  if successful, returns the length of this sequence; otherwise, returns zero }
+function PCharToDoubleLen(p: PAnsiChar; out aValue: Double): SizeInt;
+  function FallBack(p: PAnsiChar; Len: SizeInt; out aValue: Double): Boolean;
+  var
+    s: shortstring;
+    c: Integer;
+  begin
+    if (Len < 1) or (Len > 255) then exit(False);
+    System.SetLength(s, Len);
+    System.Move(p^, s[1], Len);
+    Val(s, aValue, c);
+    Result := (c = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
+  end;
+var
+  Man: QWord;
+  Pow10, PowVal: Int64;
+  DigCount: Integer;
+  pOld, pDigStart, pTemp: PAnsiChar;
+  IsNeg, PowIsNeg: Boolean;
+const
+  Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+begin
+  if (p = nil) or not(p^ in ['-','0'..'9']) then exit(0);
+  pOld := p;
+  IsNeg := False;
+  if p^ = '-' then begin
+    Inc(p);
+    IsNeg := True;
+  end;
+  if p^ = '0' then begin
+    Inc(p);
+    if p^ in ['0'..'9'] then exit(0);
+    Man := 0;
+    pDigStart := p;
+  end else begin
+    if not(p^ in ['1'..'9']) then exit(0);
+    pDigStart := p;
+    Man := Digits[p^];
+    Inc(p);
+    while p^ in ['0'..'9'] do begin
+      Man := Man * 10 + Digits[p^];
+      Inc(p);
+    end;
+  end;
+  Pow10 := 0;
+  if p^ = '.' then begin
+    Inc(p);
+    if not(p^ in ['0'..'9']) then exit(0);
+    pTemp := p;
+    while p^ in ['0'..'9'] do begin
+      Man := Man * 10 + Digits[p^];
+      Inc(p);
+    end;
+    Pow10 := -Int64(p - pTemp);
+    DigCount := p - pDigStart - 1;
+  end else
+    DigCount := p - pDigStart;
+  if p^ in ['e', 'E'] then begin
+    PowIsNeg := False;
+    Inc(p);
+    if p^ = '-' then begin
+      PowIsNeg := True;
+      Inc(p);
+    end else
+      if p^ = '+' then
+        Inc(p);
+    if not(p^ in ['0'..'9']) then exit(0);
+    PowVal := Integer(Digits[p^]);
+    Inc(p);
+    while p^ in ['0'..'9'] do begin
+      if PowVal < $100000000 then
+        PowVal := PowVal * 10 + Integer(Digits[p^]);
+      Inc(p);
+    end;
+    if PowIsNeg then
+      Pow10 -= PowVal
+    else
+      Pow10 += PowVal;
+  end;
+
+  if DigCount >= 19 then begin
+    pTemp := pDigStart;
+    while pTemp^ in ['0', '.'] do
+      Inc(pTemp);
+    DigCount -= pTemp - pDigStart;
+    if DigCount >= 19 then
+      if FallBack(pOld, p - pOld, aValue) then
+        exit(p - pOld)
+      else
+        exit(0);
+  end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    if FallBack(pOld, p - pOld, aValue) then
+      exit(p - pOld)
+    else
+      exit(0);
+  if not TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
+    if not FallBack(pOld, p - pOld, aValue) then exit(0);
+  Result := p - pOld;
+end;
+
 function TryStrToDouble(const s: string; out aValue: Double; aDecSeparator: AnsiChar): Boolean;
 begin
   Result := TryStrToDouble(PAnsiChar(s), System.Length(s), aValue, aDecSeparator);
@@ -8794,10 +8892,15 @@ begin
   Assert(p^ = '"');
   if aCount < 2 then exit(0);
   I := 1;
-  while I < aCount do
+  while I < aCount do begin
+    if not(p[I] in [#0..#31,'"','\']) then begin
+      sb.Append(p[I]);
+      Inc(I);
+      continue;
+    end;
     case p[I] of
       #0..#31: exit(0);
-      '"':     exit(I);
+      '"':     exit(I+1);
       '\': begin
         if I > aCount - 3 then exit(0);
         case p[Succ(I)] of
@@ -8816,16 +8919,11 @@ begin
               uh := HexCh4ToDWord(PChar4(@p[I+2])^);
               I += 6;
               case uh of
-                0..$7f: sb.Append(Char(uh));
-                $80..$7ff: begin
-                    sb.Append(Char((uh shr 6) or $c0));
-                    sb.Append(Char((uh and $3f) or $80));
-                  end;
-                $800..$d7ff,$e000..$ffff: begin
-                    sb.Append(Char((uh shr 12) or $e0));
-                    sb.Append(Char((uh shr 6) and $3f or $80));
-                    sb.Append(Char((uh and $3f) or $80));
-                  end;
+                0..$7f:    sb.Append(Char(uh));
+                $80..$7ff: sb.Append(Char((uh shr 6) or $c0), Char((uh and $3f) or $80));
+                $800..$d7ff,$e000..$ffff:
+                    sb.Append(Char((uh shr 12) or $e0), Char((uh shr 6) and $3f or $80),
+                              Char((uh and $3f) or $80));
                 $d800..$dbff: // high surrogate
                   if (I < aCount - 7) and (p[I] = '\') and (p[I+1] = 'u') then begin
                     if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
@@ -8834,25 +8932,14 @@ begin
                     if (ul >= $dc00) and (ul <= $dfff) then begin
                       I += 6;
                       ul := (uh - $d7c0) shl 10 + (ul xor $dc00);
-                      sb.Append(Char(ul shr 18 or $f0));
-                      sb.Append(Char((ul shr 12) and $3f or $80));
-                      sb.Append(Char((ul shr 6) and $3f or $80));
-                      sb.Append(Char(ul and $3f or $80));
-                    end else begin
-                      sb.Append(#$ef);
-                      sb.Append(#$bf);
-                      sb.Append(#$bd);
-                    end;
-                  end else begin
-                    sb.Append(#$ef);
-                    sb.Append(#$bf);
-                    sb.Append(#$bd);
-                  end;
-                $dc00..$dfff: begin // low surrogate
-                    sb.Append(#$ef);
-                    sb.Append(#$bf);
-                    sb.Append(#$bd);
-                  end;
+                      sb.Append(Char(ul shr 18 or $f0), Char((ul shr 12) and $3f or $80),
+                                Char((ul shr 6) and $3f or $80), Char(ul and $3f or $80));
+                    end else
+                      sb.Append(#$ef, #$bf, #$bd);
+                  end else
+                    sb.Append(#$ef, #$bf, #$bd);
+                $dc00..$dfff: // low surrogate
+                  sb.Append(#$ef, #$bf, #$bd);
               else
               end;
             end;
@@ -8861,15 +8948,9 @@ begin
         end;
       end;
     else
-      sb.Append(p[I]);
-      Inc(I);
     end;
+  end;
   Result := 0;
-end;
-
-class function TJsonParser.ToDouble(p: PAnsiChar): Double;
-begin
-  if not TryPChar2DoubleFast(p, Result) then Abort;
 end;
 
 class function TJsonParser.ParseBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode;
@@ -8878,6 +8959,7 @@ var
   Stack: PParseNode;
   I, Advance: SizeInt;
   KeyValue: string = '';
+  NumValue: Double;
   NextState, StackHigh: Integer;
   State: Integer = GO;
   sTop: Integer = 1;
@@ -8891,31 +8973,21 @@ begin
   I := 0;
   while I < Size do begin
     NextState := TransitionTable[State, SymClassTable[Byte(Buf[I])]];
-    if Byte(NextState) < Byte(FIRST_ACTION) then begin
-      State := NextState;
-      if NextState in [MI..E3] then sb.Append(Buf[I]);
-    end else
+    if Byte(NextState) < Byte(FIRST_ACTION) then
+      State := NextState
+    else
       case NextState of
-        25: //end object - state = object
-          if Stack[sTop].Mode = pmKey then begin
+        17: //end object - state = object
+          if Stack[sTop].Mode in [pmKey, pmObject] then begin
             Dec(sTop);
             State := OK;
           end else exit(False);
-        26: //end object
-          if Stack[sTop].Mode = pmObject then begin
-            if State in NUM_STATES then
-              Stack[sTop].Node.Add(KeyValue, ToDouble(sb.ToPChar));
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        27: //end array
+        18: //end array
           if Stack[sTop].Mode = pmArray then begin
-            if State in NUM_STATES then
-              Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
             Dec(sTop);
             State := OK;
           end else exit(False);
-        28: //begin object
+        19: //begin object
           if sTop < StackHigh then begin
             case Stack[sTop].Mode of
               pmNone: begin
@@ -8935,7 +9007,7 @@ begin
             end;
             State := OB;
           end else exit(False);
-        29: //begin array
+        20: //begin array
           if sTop < StackHigh then begin
             case Stack[sTop].Mode of
               pmNone: begin
@@ -8955,7 +9027,7 @@ begin
             end;
             State := AR;
           end else exit(False);
-        30: //begin string
+        21: //begin string
           begin
             Advance := ParseString(@Buf[I], Size - I, sb);
             if Advance = 0 then exit(False);
@@ -8978,8 +9050,9 @@ begin
               Dec(sTop);
               State := OK;
             end;
+            continue;
           end;
-        31: //OK - comma
+        22: //OK - comma
           case Stack[sTop].Mode of
             pmObject: begin
                 Stack[sTop].Mode := pmKey;
@@ -8989,37 +9062,26 @@ begin
           else
             exit(False);
           end;
-        32: //colon
+        23: //colon
           if Stack[sTop].Mode = pmKey then begin
             Stack[sTop].Mode := pmObject;
             State := VA;
           end else exit(False);
-        33: //end number - comma
-          case Stack[sTop].Mode of
-            pmArray: begin
-                Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
-                State := VA;
-              end;
-            pmObject: begin
-                Stack[sTop].Node.Add(KeyValue, ToDouble(sb.ToPChar));
-                Stack[sTop].Mode := pmKey;
-                State := KE;
-              end;
-          else
-            exit(False);
-          end;
-        34: //end number - white space
-          begin
+        24: begin //begin number
+            Advance := PCharToDoubleLen(@Buf[I], NumValue);
+            if Advance = 0 then exit(False);
+            I += Advance;
             case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
-              pmObject: Stack[sTop].Node.Add(KeyValue, ToDouble(sb.ToPChar));
+              pmArray:  Stack[sTop].Node.Add(NumValue);
+              pmObject: Stack[sTop].Node.Add(KeyValue, NumValue);
             else
-              Stack[sTop].Node.AsNumber := ToDouble(sb.ToPChar);
+              Stack[sTop].Node.AsNumber := NumValue;
               Dec(sTop);
             end;
             State := OK;
+            continue;
           end;
-        35: //true literal
+        25: //true literal
           begin
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(True);
@@ -9030,7 +9092,7 @@ begin
             end;
             State := OK;
           end;
-        36: //false literal
+        26: //false literal
           begin
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(False);
@@ -9041,7 +9103,7 @@ begin
             end;
             State := OK;
           end;
-        37: //null literal
+        27: //null literal
           begin
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.AddNull;
@@ -9057,12 +9119,6 @@ begin
       end;
     Inc(I);
   end;
-  if State in NUM_STATES then begin
-    if Stack[sTop].Mode <> pmNone then exit(False);
-    Stack[sTop].Node.AsNumber := ToDouble(sb.ToPChar);
-    State := OK;
-    Dec(sTop);
-  end;
   Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
 end;
 
@@ -9072,6 +9128,7 @@ var
   Stack: PParseNode;
   I, Advance: SizeInt;
   KeyValue: string = '';
+  NumValue: Double;
   NextState, StackHigh: Integer;
   State: Integer = GO;
   sTop: Integer = 1;
@@ -9085,31 +9142,21 @@ begin
   I := 0;
   while I < Size do begin
     NextState := TransitionTable[State, SymClassTable[Byte(Buf[I])]];
-    if Byte(NextState) < Byte(FIRST_ACTION) then begin
-      State := NextState;
-      if NextState in [MI..E3] then sb.Append(Buf[I]);
-    end else
+    if Byte(NextState) < Byte(FIRST_ACTION) then
+      State := NextState
+    else
       case NextState of
-        25: //end object - state = object
-          if Stack[sTop].Mode = pmKey then begin
+        17: //end object - state = object
+          if Stack[sTop].Mode in [pmKey, pmObject] then begin
             Dec(sTop);
             State := OK;
           end else exit(False);
-        26: //end object
-          if Stack[sTop].Mode = pmObject then begin
-            if State in NUM_STATES then
-              Stack[sTop].Node[KeyValue].AsNumber := ToDouble(sb.ToPChar);
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        27: //end array
+        18: //end array
           if Stack[sTop].Mode = pmArray then begin
-            if State in NUM_STATES then
-              Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
             Dec(sTop);
             State := OK;
           end else exit(False);
-        28: //begin object
+        19: //begin object
           if sTop < StackHigh then begin
             case Stack[sTop].Mode of
               pmNone: begin
@@ -9129,7 +9176,7 @@ begin
             end;
             State := OB;
           end else exit(False);
-        29: //begin array
+        20: //begin array
           if sTop < StackHigh then begin
             case Stack[sTop].Mode of
               pmNone: begin
@@ -9149,7 +9196,7 @@ begin
             end;
             State := AR;
           end else exit(False);
-        30: //begin string
+        21: //begin string
           begin
             Advance := ParseString(@Buf[I], Size - I, sb);
             if Advance = 0 then exit(False);
@@ -9172,8 +9219,9 @@ begin
               Dec(sTop);
               State := OK;
             end;
+            continue;
           end;
-        31: //OK - comma
+        22: //OK - comma
           case Stack[sTop].Mode of
             pmObject: begin
                 Stack[sTop].Mode := pmKey;
@@ -9183,37 +9231,26 @@ begin
           else
             exit(False);
           end;
-        32: //colon
+        23: //colon
           if Stack[sTop].Mode = pmKey then begin
             Stack[sTop].Mode := pmObject;
             State := VA;
           end else exit(False);
-        33: //end number - comma
-          case Stack[sTop].Mode of
-            pmArray: begin
-                Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
-                State := VA;
-              end;
-            pmObject: begin
-                Stack[sTop].Node[KeyValue].AsNumber := ToDouble(sb.ToPChar);
-                Stack[sTop].Mode := pmKey;
-                State := KE;
-              end;
-          else
-            exit(False);
-          end;
-        34: //end number - white space
-          begin
+        24: begin //begin number
+            Advance := PCharToDoubleLen(@Buf[I], NumValue);
+            if Advance = 0 then exit(False);
+            I += Advance;
             case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(ToDouble(sb.ToPChar));
-              pmObject: Stack[sTop].Node[KeyValue].AsNumber := ToDouble(sb.ToPChar);
+              pmArray:  Stack[sTop].Node.Add(NumValue);
+              pmObject: Stack[sTop].Node[KeyValue].AsNumber := NumValue;
             else
-              Stack[sTop].Node.AsNumber := ToDouble(sb.ToPChar);
+              Stack[sTop].Node.AsNumber := NumValue;
               Dec(sTop);
             end;
             State := OK;
+            continue;
           end;
-        35: //true literal
+        25: //true literal
           begin
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(True);
@@ -9224,7 +9261,7 @@ begin
             end;
             State := OK;
           end;
-        36: //false literal
+        26: //false literal
           begin
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(False);
@@ -9235,7 +9272,7 @@ begin
             end;
             State := OK;
           end;
-        37: //null literal
+        27: //null literal
           begin
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.AddNull;
@@ -9250,12 +9287,6 @@ begin
         exit(False);
       end;
     Inc(I);
-  end;
-  if State in NUM_STATES then begin
-    if Stack[sTop].Mode <> pmNone then exit(False);
-    Stack[sTop].Node.AsNumber := ToDouble(sb.ToPChar);
-    State := OK;
-    Dec(sTop);
   end;
   Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
 end;
