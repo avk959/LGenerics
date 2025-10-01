@@ -1851,7 +1851,6 @@ begin
   end;
   System.SetLength(Result, Pred(J));
   System.Move((pR+1)^, Pointer(Result)^, Pred(J));
-  FCount := 0;
 end;
 
 function TStrBuilder.ToPChar: PAnsiChar;
@@ -8886,21 +8885,21 @@ class function TJsonParser.ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TS
 const
   HEX_CHARS  = ['0'..'9','A'..'F','a'..'f'];
 var
-  I: SizeInt;
+  I, J: SizeInt;
   uh, ul: DWord;
 begin
   Assert(p^ = '"');
   if aCount < 2 then exit(0);
   I := 1;
   while I < aCount do begin
-    if not(p[I] in [#0..#31,'"','\']) then begin
-      sb.Append(p[I]);
-      Inc(I);
-      continue;
+    J := I;
+    while not(p[J] in [#0..#31,'"','\']) do Inc(J);
+    if J <> I then begin
+      sb.Append(PAnsiChar(@p[I]), J - I);
+      I := J;
     end;
     case p[I] of
-      #0..#31: exit(0);
-      '"':     exit(I+1);
+      '"': exit(I+1);
       '\': begin
         if I > aCount - 3 then exit(0);
         case p[Succ(I)] of
@@ -8947,7 +8946,8 @@ begin
           exit(0);
         end;
       end;
-    else
+    else //#0..#31
+      exit(0);
     end;
   end;
   Result := 0;
