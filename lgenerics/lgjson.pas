@@ -403,7 +403,6 @@ type
     FValue: TValue;
     FKind: TJsValueKind;
     class procedure MoveNode(aSrc, aDst: TJsonNode); static;
-    class function  DoParseBufDupRewrite(aBuf: PAnsiChar; aCount: SizeInt; aSkipBom: Boolean; aMaxDepth: Integer): TJsonNode;
     class function  DoParseJson(aReader: TJsonReader; aDups: TNameDuplicates): TJsonNode;
     class function  DoParseBuffer(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
                                   aMaxDepth: Integer): TJsonNode;
@@ -1560,6 +1559,7 @@ end;
 
 procedure TStrBuilder.Append(const s: string);
 begin
+  if s = '' then exit;
   EnsureCapacity(Count + System.Length(s));
   System.Move(Pointer(s)^, FBuffer.Ptr[Count], System.Length(s));
   FCount += System.Length(s);
@@ -3462,7 +3462,7 @@ begin
                 if not TopNode.TryAddNode(aReader.Name, Node, jvkArray) then begin
                   aReader.Skip; continue;
                 end else
-              else Node := TopNode[aReader.Name].AsArray;
+              else Node := TopNode[aReader.Name].AsNull.AsArray;
           else end;
           Inc(sTop); Stack[sTop] := Node;
         end;
@@ -3474,7 +3474,7 @@ begin
                 if not TopNode.TryAddNode(aReader.Name, Node, jvkObject) then begin
                   aReader.Skip; continue;
                 end else
-              else Node := TopNode[aReader.Name].AsObject;
+              else Node := TopNode[aReader.Name].AsNull.AsObject;
           else end;
           Inc(sTop); Stack[sTop] := Node;
         end;
@@ -3488,23 +3488,6 @@ begin
     exit(nil);
   end;
   Result := Stack[0];
-end;
-
-class function TJsonNode.DoParseBuffer(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
-  aMaxDepth: Integer): TJsonNode;
-var
-  Reader: TJsonReader;
-begin
-  if aDups = ndupRewrite then
-    Result := DoParseBufDupRewrite(aBuf, aCount, aSkipBom, aMaxDepth)
-  else begin
-    Reader := TJsonReader.Create(aBuf, aCount, aMaxDepth, aSkipBom);
-    try
-      Result := DoParseJson(Reader, aDups);
-    finally
-      Reader.Free;
-    end;
-  end;
 end;
 
 class function TJsonNode.DoParseStream(aStream: TStream; aDups: TNameDuplicates; aSkipBom: Boolean;
@@ -5044,14 +5027,12 @@ type
     class function ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt; static;
   public
     class function ParseBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
-    class function ParseBufDupRewrite(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
+    class function ParseBuf(aBuf: PAnsiChar; aCount, aMaxDepth: SizeInt; aNode: TJsonNode; aDupRewrite: Boolean): Boolean; static;
   end;
 
-class function TJsonNode.DoParseBufDupRewrite(aBuf: PAnsiChar; aCount: SizeInt; aSkipBom: Boolean;
+class function TJsonNode.DoParseBuffer(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
   aMaxDepth: Integer): TJsonNode;
 var
-  Stack: array[0..DEF_DEPTH] of TParseNode;
-  DynStack: array of TParseNode = nil;
   Success: Boolean;
 begin
   Result := nil;
@@ -5070,15 +5051,7 @@ begin
     end;
   Result := TJsonNode.Create;
   try
-    if aMaxDepth <= DEF_DEPTH then
-      Success :=
-        TJsonParser.ParseBufDupRewrite(aBuf, aCount, Result, TOpenArray.Create(@Stack[0], aMaxDepth + 1))
-    else
-      begin
-        System.SetLength(DynStack, aMaxDepth + 1);
-        Success :=
-          TJsonParser.ParseBufDupRewrite(aBuf, aCount, Result, TOpenArray.Create(Pointer(DynStack), aMaxDepth + 1));
-      end;
+    Success := TJsonParser.ParseBuf(aBuf, aCount, aMaxDepth, Result, aDups = ndupRewrite);
   except
     Success := False;
   end;
@@ -9122,174 +9095,185 @@ begin
   Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
 end;
 
-class function TJsonParser.ParseBufDupRewrite(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode;
-  const aStack: TOpenArray): Boolean;
+class function TJsonParser.ParseBuf(aBuf: PAnsiChar; aCount, aMaxDepth: SizeInt; aNode: TJsonNode;
+  aDupRewrite: Boolean): Boolean;
+const
+  WHITE_SPACE = [#9, #10, #13, ' '];
 var
-  Stack: PParseNode;
-  I, Advance: SizeInt;
-  KeyValue: string = '';
-  NumValue: Double;
-  NextState, StackHigh: Integer;
-  State: Integer = GO;
-  sTop: Integer = 1;
-  sb: TStrBuilder;
-begin
-  Stack := aStack.Data;
-  StackHigh := Pred(aStack.Size);
-  Stack[0].Create(nil, pmNone);
-  Stack[1].Create(aNode, pmNone);
-  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  I := 0;
-  while I < Size do begin
-    NextState := TransitionTable[State, SymClassTable[Byte(Buf[I])]];
-    if Byte(NextState) < Byte(FIRST_ACTION) then
-      State := NextState
-    else
-      case NextState of
-        17: //end object - state = object
-          if Stack[sTop].Mode in [pmKey, pmObject] then begin
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        18: //end array
-          if Stack[sTop].Mode = pmArray then begin
-            Dec(sTop);
-            State := OK;
-          end else exit(False);
-        19: //begin object
-          if sTop < StackHigh then begin
-            case Stack[sTop].Mode of
-              pmNone: begin
-                  Stack[sTop].Node.AsObject;
-                  Stack[sTop].Mode := pmKey;
-                end;
-              pmArray: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkObject), pmKey);
-                  Inc(sTop);
-                end;
-              pmObject: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node[KeyValue].AsObject, pmKey);
-                  Inc(sTop);
-                end;
-            else
-              exit(False);
-            end;
-            State := OB;
-          end else exit(False);
-        20: //begin array
-          if sTop < StackHigh then begin
-            case Stack[sTop].Mode of
-              pmNone: begin
-                  Stack[sTop].Node.AsArray;
-                  Stack[sTop].Mode := pmArray;
-                end;
-              pmArray: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node.AddNode(jvkArray), pmArray);
-                  Inc(sTop);
-                end;
-              pmObject: begin
-                  Stack[sTop+1].Create(Stack[sTop].Node[KeyValue].AsArray, pmArray);
-                  Inc(sTop);
-                end;
-            else
-              exit(False);
-            end;
-            State := AR;
-          end else exit(False);
-        21: //begin string
-          begin
-            Advance := ParseString(@Buf[I], Size - I, sb);
-            if Advance = 0 then exit(False);
-            I += Advance;
-            case Stack[sTop].Mode of
-              pmKey: begin
-                  KeyValue := sb.ToString;
-                  State := CO;
-                end;
-              pmArray: begin
-                  Stack[sTop].Node.Add(sb.ToString);
-                  State := OK;
-                end;
-              pmObject: begin
-                  Stack[sTop].Node[KeyValue].AsString := sb.ToString;
-                  State := OK;
-                end
-            else
-              Stack[sTop].Node.AsString := sb.ToString;
-              Dec(sTop);
-              State := OK;
-            end;
-            continue;
-          end;
-        22: //OK - comma
-          case Stack[sTop].Mode of
-            pmObject: begin
-                Stack[sTop].Mode := pmKey;
-                State := KE;
-              end;
-            pmArray: State := VA;
-          else
-            exit(False);
-          end;
-        23: //colon
-          if Stack[sTop].Mode = pmKey then begin
-            Stack[sTop].Mode := pmObject;
-            State := VA;
-          end else exit(False);
-        24: begin //begin number
-            Advance := PCharToDoubleLen(@Buf[I], NumValue);
-            if Advance = 0 then exit(False);
-            I += Advance;
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(NumValue);
-              pmObject: Stack[sTop].Node[KeyValue].AsNumber := NumValue;
-            else
-              Stack[sTop].Node.AsNumber := NumValue;
-              Dec(sTop);
-            end;
-            State := OK;
-            continue;
-          end;
-        25: //true literal
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(True);
-              pmObject: Stack[sTop].Node[KeyValue].AsBoolean := True;
-            else
-              Stack[sTop].Node.AsBoolean := True;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-        26: //false literal
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.Add(False);
-              pmObject: Stack[sTop].Node[KeyValue].AsBoolean := False;
-            else
-              Stack[sTop].Node.AsBoolean := False;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-        27: //null literal
-          begin
-            case Stack[sTop].Mode of
-              pmArray:  Stack[sTop].Node.AddNull;
-              pmObject: Stack[sTop].Node[KeyValue].AsNull;
-            else
-              Stack[sTop].Node.AsNull;
-              Dec(sTop);
-            end;
-            State := OK;
-          end;
-      else
-        exit(False);
-      end;
-    Inc(I);
+  pCurr, pEnd: PAnsiChar;
+
+  procedure SkipWS; inline;
+  begin
+    while (pCurr < pEnd) and (pCurr^ in WHITE_SPACE) do Inc(pCurr);
   end;
-  Result := (State = OK) and (sTop = 0) and (Stack[0].Node = nil) and (Stack[0].Mode = pmNone);
+
+  function ParseNumber(out aValue: Double): Boolean;
+  var
+    Len: SizeInt;
+  begin
+    Assert(pCurr^ in ['-','0'..'9']);
+    Len := PCharToDoubleLen(pCurr, aValue);
+    Result := Len <> 0;
+    if Result then pCurr += Len;
+  end;
+
+var
+  sb: TStrBuilder;
+
+  function TryParseString(out aValue: string): Boolean;
+  var
+    Len: SizeInt;
+  begin
+    Assert(pCurr^ = '"');
+    Len := ParseString(pCurr, pEnd - pCurr, sb);
+    Result := Len <> 0;
+    if Result then begin
+      aValue := sb.ToString;
+      pCurr += Len;
+    end;
+  end;
+
+var
+  Depth, MaxDepth: Integer;
+
+  function ParseValue(aNode: TJsonNode): Boolean; forward;
+
+  function ParseArray(aNode: TJsonNode): Boolean;
+  var
+    NextRequired: Boolean;
+  begin
+    Assert(pCurr^ = '[');
+    if Depth = MaxDepth then exit(False);
+    Inc(Depth);
+    Inc(pCurr);
+    NextRequired := False;
+    aNode.Clear;
+    while pCurr < pEnd do begin
+      SkipWS;
+      if pCurr^ = ']' then begin
+        if NextRequired then break;
+        Inc(pCurr);
+        Dec(Depth);
+        exit(True);
+      end;
+      if not ParseValue(aNode.AddNode) then break;
+      SkipWS;
+      NextRequired := pCurr^ = ',';
+      if NextRequired then
+        Inc(pCurr)
+      else
+        if pCurr^ <> ']' then break;
+    end;
+    Result := False;
+    Dec(Depth);
+  end;
+
+  function ParseObject(aNode: TJsonNode): Boolean;
+  var
+    KeyValue: string;
+    n: TJsonNode;
+    NextRequired, Success: Boolean;
+  begin
+    Assert(pCurr^ = '{');
+    if Depth = MaxDepth then exit(False);
+    Inc(Depth);
+    Inc(pCurr);
+    NextRequired := False;
+    aNode.Clear;
+    while pCurr < pEnd do begin
+      SkipWS;
+      if pCurr^ = '}' then begin
+        if NextRequired then break;
+        Inc(pCurr);
+        Dec(Depth);
+        exit(True);
+      end;
+      if pCurr^ <> '"' then break;
+      if not TryParseString(KeyValue) then break;
+      SkipWS;
+      if pCurr^ <> ':' then break;
+      Inc(pCurr);
+      if aDupRewrite then begin
+        if not ParseValue(aNode[KeyValue]) then break;
+      end else
+        if aNode.TryAddNode(KeyValue, n, jvkNull) then begin
+          if not ParseValue(n) then break;
+        end else begin
+          n := TJsonNode.Create;
+          Success := ParseValue(n);
+          n.Free;
+          if not Success then break;
+        end;
+      SkipWS;
+      NextRequired := pCurr^ = ',';
+      if NextRequired then
+        Inc(pCurr)
+      else
+        if pCurr^ <> '}' then break;
+    end;
+    Result := False;
+    Dec(Depth);
+  end;
+
+  function ParseValue(aNode: TJsonNode): Boolean;
+  var
+    s: string;
+    d: Double;
+  begin
+    SkipWS;
+    if pCurr >= pEnd then exit(False);
+    case pCurr^ of
+      '"': begin
+          Result := TryParseString(s);
+          if Result then aNode.AsString := s;
+        end;
+      '-','0'..'9': begin
+          Result := ParseNumber(d);
+          if Result then aNode.AsNumber := d;
+        end;
+      '[': Result := ParseArray(aNode);
+      'f': begin
+          Result := (pEnd - pCurr > 4) and (pCurr[1]='a') and (pCurr[2]='l') and
+                    (pCurr[3]='s') and (pCurr[4]='e');
+          if Result then begin
+            Inc(pCurr, 5);
+            aNode.AsBoolean := False;
+          end;
+        end;
+      'n': begin
+          Result := (pEnd - pCurr > 3) and (pCurr[1]='u') and (pCurr[2]='l') and (pCurr[3]='l');
+          if Result then begin
+            Inc(pCurr, 4);
+            aNode.AsNull;
+          end;
+        end;
+      't': begin
+          Result := (pEnd - pCurr > 3) and (pCurr[1]='r') and (pCurr[2]='u') and (pCurr[3]='e');
+          if Result then begin
+            Inc(pCurr, 4);
+            aNode.AsBoolean := True;
+          end;
+        end;
+      '{': Result := ParseObject(aNode);
+    else
+      Result := False;
+    end;
+  end;
+
+begin
+  if (aBuf = nil) or (aCount < 1) or (aMaxDepth < 1) then exit(False);
+  pCurr := aBuf;
+  pEnd := aBuf + aCount;
+  Depth := 0;
+  MaxDepth := aMaxDepth;
+  sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
+  Result := ParseValue(aNode);
+  if Result then begin
+    SkipWS;
+    Result := pCurr = pEnd;
+  end;
 end;
+
 
 type
   TReadEnv = class(TBaseParserEnv)
