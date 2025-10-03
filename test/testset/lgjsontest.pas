@@ -1566,6 +1566,12 @@ const
   JSON4  = '{"a":[42],"b":2,"a":{"c":1001}}';
   JSON4I = '{"a":[42],"b":2}';
   JSON4R = '{"b":2,"a":{"c":1001}}';
+  JSON5  = '{"a":[42],"b":2,"a":[1001]}';
+  JSON5I = '{"a":[42],"b":2}';
+  JSON5R = '{"b":2,"a":[1001]}';
+  JSON6  = '{"a":{"b":42},"b":2,"a":{"c":1001}}';
+  JSON6I = '{"a":{"b":42},"b":2}';
+  JSON6R = '{"b":2,"a":{"c":1001}}';
 begin
   AssertFalse(n.Instance.TryParse(JSON0, ndupIgnore));
   AssertFalse(n.Instance.TryParse(JSON0, ndupRewrite));
@@ -1592,6 +1598,22 @@ begin
 
   AssertTrue(n.Instance.TryParse(JSON4, ndupRewrite));
   ans.Instance.AsJson := JSON4R;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON5, ndupIgnore));
+  ans.Instance.AsJson := JSON5I;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON5, ndupRewrite));
+  ans.Instance.AsJson := JSON5R;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON6, ndupIgnore));
+  ans.Instance.AsJson := JSON6I;
+  AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
+
+  AssertTrue(n.Instance.TryParse(JSON6, ndupRewrite));
+  ans.Instance.AsJson := JSON6R;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 end;
 
