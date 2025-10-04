@@ -381,8 +381,8 @@ type
     TOnIterate   = function(const aContext: TIterContext; aNode: TJsonNode): Boolean of object;
     TNestIterate = function(const aContext: TIterContext; aNode: TJsonNode): Boolean is nested;
 
-    TNameDuplicates = (ndupRewrite, ndupIgnore);
-    TUEscapeOption  = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
+    TDuplicateMode = (dumAccept, dumRewrite, dumIgnore);
+    TUEscapeOption = (ueoEnsureASCII, ueoEnsureBMP, ueoNone);
 
   private
   const
@@ -403,11 +403,6 @@ type
     FValue: TValue;
     FKind: TJsValueKind;
     class procedure MoveNode(aSrc, aDst: TJsonNode); static;
-    class function  DoParseJson(aReader: TJsonReader; aDups: TNameDuplicates): TJsonNode;
-    class function  DoParseBuffer(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
-                                  aMaxDepth: Integer): TJsonNode;
-    class function  DoParseStream(aStream: TStream; aDups: TNameDuplicates; aSkipBom: Boolean;
-                                  aMaxDepth: Integer): TJsonNode;
     function  GetStrVal: string; inline;
     function  GetArrayPtr: PJsArray; inline;
     function  GetObjPtr: PJsObject; inline;
@@ -507,23 +502,29 @@ type
     class function JsonNumberValid(const s: string): Boolean; static;
   { returns the parsing result; if the result is True, then the created
     object is returned in the aRoot parameter, otherwise nil is returned }
-    class function TryParse(const s: string; out aRoot: TJsonNode;
+    class function TryParse(const s: string; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
                             aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
-    class function TryParse(aStream: TStream; out aRoot: TJsonNode;
+    class function TryParse(aBuffer: PAnsiChar; aCount: SizeInt; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
                             aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
-    class function TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
+    class function TryParse(aStream: TStream; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
+                            aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
+    class function TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
                             aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
   { note: the responsibility for the existence of the file lies with the user }
-    class function TryParseFile(const aFileName: string; out aRoot: TJsonNode;
+    class function TryParseFile(const aFileName: string; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
                                 aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
   { returns the document root node if parsing is successful, nil otherwise }
-    class function Load(const s: string; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
-    class function Load(aStream: TStream; aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
-    class function Load(aStream: TStream; aCount: SizeInt; aSkipBom: Boolean = False;
+    class function Load(const s: string; aMode: TDuplicateMode = dumAccept; aSkipBom: Boolean = False;
                         aDepth: Integer = DEF_DEPTH): TJsonNode; static;
+    class function Load(aBuffer: PAnsiChar; aCount: SizeInt; aSkipBom: Boolean = False; aMode: TDuplicateMode = dumAccept;
+                        aDepth: Integer = DEF_DEPTH): TJsonNode; static;
+    class function Load(aStream: TStream; aMode: TDuplicateMode = dumAccept; aSkipBom: Boolean = False;
+                        aDepth: Integer = DEF_DEPTH): TJsonNode; static;
+    class function Load(aStream: TStream; aCount: SizeInt; aMode: TDuplicateMode = dumAccept;
+                        aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
   { note: the responsibility for the existence of the file lies with the user }
-    class function LoadFromFile(const aFileName: string; aSkipBom: Boolean = False;
-                                aDepth: Integer = DEF_DEPTH): TJsonNode; static;
+    class function LoadFromFile(const aFileName: string; aMode: TDuplicateMode = dumAccept;
+                                aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): TJsonNode; static;
   { converts a pascal string to a JSON string }
     class function PasStrToJson(const s: string): string; static;
   { converts a pascal string to a JSON string, all code points except [#32...#127]
@@ -584,18 +585,16 @@ type
     function  HashCode: SizeInt;
   { tries to load JSON from a string, returns False if it fails, in which case
     the content of the instance is not changed }
-    function  TryParse(const s: string): Boolean;
-    function  TryParse(aBuffer: PAnsiChar; aCount: SizeInt; aDuplicates: TNameDuplicates;
-                       aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean;
-    function  TryParse(aStream: TStream; aDuplicates: TNameDuplicates; aSkipBom: Boolean = False;
+    function  TryParse(const s: string; aMode: TDuplicateMode = dumAccept; aSkipBom: Boolean = False;
                        aDepth: Integer = DEF_DEPTH): Boolean;
-    function  TryParse(const s: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean = False;
+    function  TryParse(aBuffer: PAnsiChar; aCount: SizeInt; aMode: TDuplicateMode = dumAccept;
+                       aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean;
+    function  TryParse(aStream: TStream; aMode: TDuplicateMode = dumAccept; aSkipBom: Boolean = False;
                        aDepth: Integer = DEF_DEPTH): Boolean;
   { tries to load JSON from a file, returns False if it fails, in which case
     the content of the instance is not changed }
-    function  TryParseFile(const aFileName: string): Boolean;
-    function  TryParseFile(const aFileName: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean = False;
-                           aDepth: Integer = DEF_DEPTH): Boolean;
+    function  TryParseFile(const aFileName: string; aMode: TDuplicateMode = dumAccept;
+                           aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean;
   { recursively traverses the document tree in a Preorder manner, calling aFunc on each node;
     exits immediately if aFunc returns False }
     procedure Iterate(aFunc: TOnIterate);
@@ -621,6 +620,14 @@ type
   { returns True and the created node in the aNode parameter, if the string aJson can be parsed;
     the new node is added as to an array }
     function  AddJson(const aJson: string; out aNode: TJsonNode): Boolean; inline;
+  { sorts the instance using the specified comparator and returns True
+    if the instance is an array, otherwise returns False }
+    function  ArraySort(aCmp: specialize TGLessCompare<TJsonNode>): Boolean;
+    function  ArraySort(aCmp: specialize TGOnLessCompare<TJsonNode>): Boolean;
+    function  ArraySort(aCmp: specialize TGNestLessCompare<TJsonNode>): Boolean;
+  { if the instance is an array and indices L and R are within the array's range,
+    then swaps the elements with indices L and R and returns True; otherwise, returns False }
+    function  ArraySwap(L, R: SizeInt): Boolean;
   { if aNode is not an array, nothing is happening; if aCopy is True, adds copies
     of all aNode elements to the instance as an array, otherwise moves all aNode elements
     to the instance, and leaves aNode empty; returns number of merged nodes }
@@ -645,7 +652,7 @@ type
     function  AddJson(const aName, aJson: string; out aNode: TJsonNode): Boolean; inline;
   { appends all pairs of array a to the instance as an object;
     if the instance is not an object, it is cleared; returns Self }
-    function  AddAll(const a: TJPairArray): TJsonNode;
+    function  AddAll(const a: TJPairArray; aMode: TDuplicateMode = dumIgnore): TJsonNode;
   { returns True and adds pair(aName, aValue) to the instance as to an object if the instance
     does not contain the aName key, otherwise just returns False }
     function  TryAddNull(const aName: string): Boolean;
@@ -725,6 +732,33 @@ type
   { returns True and JSON Pointer to aNode in the instance subtree if instance subtree
     contains aNode, othewise returns False; }
     function  TryGetPtr(aNode: TJsonNode; out aPtr: string): Boolean;
+  { the path is specified as an array of segments in aPath parameter; path must exist and be unique,
+    with the possible exception of the last segment; the last segment, which is an unsigned
+    decimal number, is treated as an array index or a string key depending on the parent type;
+    if the key being inserted into the object already exists, the behavior is determined
+    by the aMode parameter;
+    if successful, returns True and the inserted node in the aNode parameter }
+    function  InsertPath(const aPath: array of string; out aNode: TJsonNode; aMode: TDuplicateMode = dumIgnore): Boolean;
+  { same as above, the path is specified as a JSON Pointer instance  }
+    function  InsertPath(const aPtr: TJsonPtr; out aNode: TJsonNode; aMode: TDuplicateMode = dumIgnore): Boolean;
+  { same as above, the path is specified as a JSON Pointer in the form of a Pascal string }
+    function  InsertPathPtr(const aPtr: string; out aNode: TJsonNode; aMode: TDuplicateMode = dumIgnore): Boolean;
+  { the path is specified as an array of segments in aPath parameter;
+    returns True and extracts the corresponding node if the path exists and is unique,
+    otherwise returns False }
+    function  ExtractPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
+  { same as above, the path is specified as a JSON Pointer instance }
+    function  ExtractPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+  { same as above, the path is specified as a JSON Pointer in the form of a Pascal string }
+    function  ExtractPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean;
+  { the path is specified as an array of segments in aPath parameter;
+    returns True and removes the corresponding node if the path exists and is unique,
+    otherwise returns False }
+    function  RemovePath(const aPath: array of string): Boolean;
+  { same as above, the path is specified as a JSON Pointer instance }
+    function  RemovePath(const aPtr: TJsonPtr): Boolean;
+  { same as above, the path is specified as a JSON Pointer in the form of a Pascal string }
+    function  RemovePathPtr(const aPtr: string): Boolean;
   { returns a compact JSON representation of the instance, aUEscOpt indicates which Unicode
     characters should be escaped in JSON strings, aHtmlEsc indicates whether problematic
     HTML characters should be escaped in JSON strings }
@@ -3382,127 +3416,6 @@ begin
   aSrc.FValue.Int := 0;
 end;
 
-class function TJsonNode.DoParseJson(aReader: TJsonReader; aDups: TNameDuplicates): TJsonNode;
-var
-  Stack: array of TJsonNode;
-  TopNode, Node: TJsonNode;
-  sTop: Integer;
-  k: TJsonReader.TTokenKind;
-begin
-  if not aReader.Read then exit(nil);
-  Stack := nil;
-  if TJsonReader.IsStartToken(aReader.TokenKind) then begin
-    k := aReader.TokenKind;
-    if not aReader.Read then exit(nil);
-    System.SetLength(Stack, aReader.MaxDepth + 1);
-    case k of
-      tkArrayBegin:  Stack[0] := TJsonNode.Create(jvkArray);
-      tkObjectBegin: Stack[0] := TJsonNode.Create(jvkObject);
-    else
-    end;
-  end else begin
-    if aReader.ReadState = rsError then exit(nil);
-    aReader.Read;
-    if aReader.ReadState <> rsEof then exit(nil);
-    case aReader.TokenKind of
-      tkNull:   exit(TJsonNode.Create);
-      tkFalse:  exit(TJsonNode.Create(False));
-      tkTrue:   exit(TJsonNode.Create(True));
-      tkNumber: exit(TJsonNode.Create(aReader.AsNumber));
-      tkString: exit(TJsonNode.Create(aReader.AsString));
-    else
-    end;
-  end;
-
-  Node := nil;
-  sTop := 0;
-  repeat
-    TopNode := Stack[sTop];
-    case aReader.TokenKind of
-      tkNull:
-        case TopNode.Kind of
-          jvkArray:  TopNode.AddNull;
-          jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAddNull(aReader.Name)
-            else TopNode[aReader.Name].AsNull;
-        else end;
-      tkFalse:
-        case TopNode.Kind of
-          jvkArray:  TopNode.Add(False);
-          jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, False)
-            else TopNode[aReader.Name].AsBoolean := False;
-        else end;
-      tkTrue:
-        case TopNode.Kind of
-          jvkArray:  TopNode.Add(True);
-          jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, True)
-            else TopNode[aReader.Name].AsBoolean := True;
-        else end;
-      tkNumber:
-        case TopNode.Kind of
-          jvkArray:  TopNode.Add(aReader.AsNumber);
-          jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, aReader.AsNumber)
-            else TopNode[aReader.Name].AsNumber := aReader.AsNumber;
-        else end;
-      tkString:
-        case TopNode.Kind of
-          jvkArray:  TopNode.Add(aReader.AsString);
-          jvkObject:
-            if aDups = ndupIgnore then TopNode.TryAdd(aReader.Name, aReader.AsString)
-            else TopNode[aReader.Name].AsString := aReader.AsString;
-        else end;
-      tkArrayBegin: begin
-          case TopNode.Kind of
-            jvkArray:  Node := TopNode.AddNode(jvkArray);
-            jvkObject:
-              if aDups = ndupIgnore then
-                if not TopNode.TryAddNode(aReader.Name, Node, jvkArray) then begin
-                  aReader.Skip; continue;
-                end else
-              else Node := TopNode[aReader.Name].AsNull.AsArray;
-          else end;
-          Inc(sTop); Stack[sTop] := Node;
-        end;
-      tkObjectBegin: begin
-          case TopNode.Kind of
-            jvkArray:  Node := TopNode.AddNode(jvkObject);
-            jvkObject:
-              if aDups = ndupIgnore then
-                if not TopNode.TryAddNode(aReader.Name, Node, jvkObject) then begin
-                  aReader.Skip; continue;
-                end else
-              else Node := TopNode[aReader.Name].AsNull.AsObject;
-          else end;
-          Inc(sTop); Stack[sTop] := Node;
-        end;
-      tkArrayEnd, tkObjectEnd: Dec(sTop);
-    else
-    end;
-  until not aReader.Read;
-
-  if (aReader.ReadState <> rsEOF) or (sTop <> -1) then begin
-    Stack[0].Free;
-    exit(nil);
-  end;
-  Result := Stack[0];
-end;
-
-class function TJsonNode.DoParseStream(aStream: TStream; aDups: TNameDuplicates; aSkipBom: Boolean;
-  aMaxDepth: Integer): TJsonNode;
-var
-  Reader: TJsonReader;
-begin
-  Reader := TJsonReader.Create(aStream, Reader.DEF_BUF_SIZE, aMaxDepth, aSkipBom);
-  try
-    Result := DoParseJson(Reader, aDups);
-  finally
-    Reader.Free;
-  end;
-end;
-
 function TJsonNode.GetStrVal: string;
 begin
   Result := string(FValue.Ptr);
@@ -5030,77 +4943,55 @@ type
     class function ParseBuf(aBuf: PAnsiChar; aCount, aMaxDepth: SizeInt; aNode: TJsonNode; aDupRewrite: Boolean): Boolean; static;
   end;
 
-class function TJsonNode.DoParseBuffer(aBuf: PAnsiChar; aCount: SizeInt; aDups: TNameDuplicates; aSkipBom: Boolean;
-  aMaxDepth: Integer): TJsonNode;
-var
-  Success: Boolean;
+class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aMode: TDuplicateMode;
+  aSkipBom: Boolean; aDepth: Integer): Boolean;
 begin
-  Result := nil;
-  if aMaxDepth < 1 then exit;
-  if aCount < 1 then exit;
-  if aSkipBom then
-    case DetectBom(Pointer(aBuf), aCount) of
-      bkNone: ;
-      bkUtf8:
-        begin
-          aBuf += UTF8_BOM_LEN;
-          aCount -= UTF8_BOM_LEN;
-        end;
-    else
-      exit;
-    end;
-  Result := TJsonNode.Create;
-  try
-    Success := TJsonParser.ParseBuf(aBuf, aCount, aMaxDepth, Result, aDups = ndupRewrite);
-  except
-    Success := False;
-  end;
-  if not Success then FreeAndNil(Result);
+  aRoot := nil;
+  if s = '' then exit(False);
+  Result := TJsonNode.TryParse(Pointer(s), System.Length(s), aRoot, aMode, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.TryParse(const s: string; out aRoot: TJsonNode; aSkipBom: Boolean;
-  aDepth: Integer): Boolean;
+class function TJsonNode.TryParse(aBuffer: PAnsiChar; aCount: SizeInt; out aRoot: TJsonNode;
+  aMode: TDuplicateMode; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   Stack: array[0..DEF_DEPTH] of TParseNode;
   DynStack: array of TParseNode = nil;
-  Buf: PAnsiChar;
-  Size: SizeInt;
 begin
   aRoot := nil;
-  if aDepth < 1 then exit(False);
-  Buf := Pointer(s);
-  Size := System.Length(s);
-  if Size < 1 then exit(False);
+  if (aBuffer = nil) or (aCount < 1) or (aDepth < 1) then exit(False);
   if aSkipBom then
-    case DetectBom(Pointer(Buf), Size) of
+    case DetectBom(Pointer(aBuffer), aCount) of
       bkNone: ;
       bkUtf8:
         begin
-          Buf += UTF8_BOM_LEN;
-          Size -= UTF8_BOM_LEN;
+          aBuffer += UTF8_BOM_LEN;
+          aCount -= UTF8_BOM_LEN;
         end;
     else
       exit(False);
     end;
   aRoot := TJsonNode.Create;
-  try
-    if aDepth <= DEF_DEPTH then
-      Result := TJsonParser.ParseBuf(Buf, Size, aRoot, TOpenArray.Create(@Stack[0], aDepth + 1))
-    else
-      begin
-        System.SetLength(DynStack, aDepth + 1);
-        Result :=
-          TJsonParser.ParseBuf(Buf, Size, aRoot, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
-      end;
-  except
-    Result := False;
-  end;
+  if aMode = dumAccept then
+    try
+      if aDepth <= DEF_DEPTH then
+        Result := TJsonParser.ParseBuf(aBuffer, aCount, aRoot, TOpenArray.Create(@Stack[0], aDepth + 1))
+      else
+        begin
+          System.SetLength(DynStack, aDepth + 1);
+          Result :=
+            TJsonParser.ParseBuf(aBuffer, aCount, aRoot, TOpenArray.Create(Pointer(DynStack), aDepth + 1));
+        end;
+    except
+      Result := False;
+    end
+  else
+    Result := TJsonParser.ParseBuf(aBuffer, aCount, aDepth, aRoot, aMode = dumRewrite);
   if not Result then
     FreeAndNil(aRoot);
 end;
 
-class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aSkipBom: Boolean;
-  aDepth: Integer): Boolean;
+class function TJsonNode.TryParse(aStream: TStream; out aRoot: TJsonNode; aMode: TDuplicateMode;
+  aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
@@ -5108,21 +4999,21 @@ begin
   System.SetLength(s, aStream.Size - aStream.Position);
 {$POP}
   aStream.ReadBuffer(Pointer(s)^, System.Length(s));
-  Result := TryParse(s, aRoot, aSkipBom, aDepth);
+  Result := TryParse(s, aRoot, aMode, aSkipBom, aDepth);
 end;
 
 class function TJsonNode.TryParse(aStream: TStream; aCount: SizeInt; out aRoot: TJsonNode;
-  aSkipBom: Boolean; aDepth: Integer): Boolean;
+  aMode: TDuplicateMode; aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
   System.SetLength(s, aCount);
   aStream.ReadBuffer(Pointer(s)^, aCount);
-  Result := TryParse(s, aRoot, aSkipBom, aDepth);
+  Result := TryParse(s, aRoot, aMode, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode; aSkipBom: Boolean;
-  aDepth: Integer): Boolean;
+class function TJsonNode.TryParseFile(const aFileName: string; out aRoot: TJsonNode; aMode: TDuplicateMode;
+  aSkipBom: Boolean; aDepth: Integer): Boolean;
 var
   s: string = '';
 begin
@@ -5138,29 +5029,39 @@ begin
       finally
         Free;
       end;
-    Result := TryParse(s, aRoot, aSkipBom, aDepth);
+    Result := TryParse(s, aRoot, aMode, aSkipBom, aDepth);
   except
   end;
 end;
 
-class function TJsonNode.Load(const s: string; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
+class function TJsonNode.Load(const s: string; aMode: TDuplicateMode; aSkipBom: Boolean;
+  aDepth: Integer): TJsonNode;
 begin
-  TryParse(s, Result, aSkipBom, aDepth);
+  TryParse(s, Result, aMode, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.Load(aStream: TStream; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
+class function TJsonNode.Load(aBuffer: PAnsiChar; aCount: SizeInt; aSkipBom: Boolean; aMode: TDuplicateMode;
+  aDepth: Integer): TJsonNode;
 begin
-  TryParse(aStream, Result, aSkipBom, aDepth);
+  TryParse(aBuffer, aCount, Result, aMode, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.Load(aStream: TStream; aCount: SizeInt; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
+class function TJsonNode.Load(aStream: TStream; aMode: TDuplicateMode; aSkipBom: Boolean;
+  aDepth: Integer): TJsonNode;
 begin
-  TryParse(aStream, aCount, Result, aSkipBom, aDepth);
+  TryParse(aStream, Result, aMode, aSkipBom, aDepth);
 end;
 
-class function TJsonNode.LoadFromFile(const aFileName: string; aSkipBom: Boolean; aDepth: Integer): TJsonNode;
+class function TJsonNode.Load(aStream: TStream; aCount: SizeInt; aMode: TDuplicateMode; aSkipBom: Boolean;
+  aDepth: Integer): TJsonNode;
 begin
-  TryParseFile(aFileName, Result, aSkipBom, aDepth);
+  TryParse(aStream, aCount, Result, aMode, aSkipBom, aDepth);
+end;
+
+class function TJsonNode.LoadFromFile(const aFileName: string; aMode: TDuplicateMode; aSkipBom: Boolean;
+  aDepth: Integer): TJsonNode;
+begin
+  TryParseFile(aFileName, Result, aMode, aSkipBom, aDepth);
 end;
 
 class function TJsonNode.PasStrToJson(const s: string): string;
@@ -5705,81 +5606,49 @@ begin
 end;
 {$POP}
 
-function TJsonNode.TryParse(const s: string): Boolean;
-var
-  Node: TJsonNode;
+function TJsonNode.TryParse(const s: string; aMode: TDuplicateMode; aSkipBom: Boolean;
+  aDepth: Integer): Boolean;
 begin
-  Result := False;
-  if not TryParse(s, Node) then exit;
-  try
-    MoveNode(Node, Self);
-    Result := True;
-  finally
-    Node.Free;
-  end;
+  Result := TryParse(Pointer(s), System.Length(s), aMode, aSkipBom, aDepth);
 end;
 
-function TJsonNode.TryParse(aBuffer: PAnsiChar; aCount: SizeInt; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+function TJsonNode.TryParse(aBuffer: PAnsiChar; aCount: SizeInt; aMode: TDuplicateMode; aSkipBom: Boolean;
   aDepth: Integer): Boolean;
 var
   Node: TJsonNode;
 begin
-  Node := DoParseBuffer(aBuffer, aCount, aDuplicates, aSkipBom, aDepth);
-  try
-    Result := Node <> nil;
-    if Result then MoveNode(Node, Self);
-  finally
-    Node.Free;
-  end;
+  Result := TryParse(aBuffer, aCount, Node, aMode, aSkipBom, aDepth);
+  if Result then
+    begin
+      MoveNode(Node, Self);
+      Node.Free;
+    end;
 end;
 
-function TJsonNode.TryParse(aStream: TStream; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+function TJsonNode.TryParse(aStream: TStream; aMode: TDuplicateMode; aSkipBom: Boolean;
   aDepth: Integer): Boolean;
 var
   Node: TJsonNode;
 begin
-  Node := DoParseStream(aStream, aDuplicates, aSkipBom, aDepth);
-  try
-    Result := Node <> nil;
-    if Result then MoveNode(Node, Self);
-  finally
-    Node.Free;
-  end;
+  Result := TryParse(aStream, Node, aMode, aSkipBom, aDepth);
+  if Result then
+    begin
+      MoveNode(Node, Self);
+      Node.Free;
+    end;
 end;
 
-function TJsonNode.TryParse(const s: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
+function TJsonNode.TryParseFile(const aFileName: string; aMode: TDuplicateMode; aSkipBom: Boolean;
   aDepth: Integer): Boolean;
-begin
-  Result := TryParse(Pointer(s), System.Length(s), aDuplicates, aSkipBom, aDepth);
-end;
-
-function TJsonNode.TryParseFile(const aFileName: string): Boolean;
 var
   Node: TJsonNode;
 begin
-  Result := False;
-  if not TryParseFile(aFileName, Node) then exit;
-  try
-    MoveNode(Node, Self);
-    Result := True;
-  finally
-    Node.Free;
-  end;
-end;
-
-function TJsonNode.TryParseFile(const aFileName: string; aDuplicates: TNameDuplicates; aSkipBom: Boolean;
-  aDepth: Integer): Boolean;
-begin
-  try
-    with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
-      try
-        Result := TryParse(TStream(GetSelfRef), aDuplicates, aSkipBom, aDepth);
-      finally
-        Free;
-      end;
-  except
-    Result := False;
-  end;
+  Result := TryParseFile(aFileName, Node, aMode, aSkipBom, aDepth);
+  if Result then
+    begin
+      MoveNode(Node, Self);
+      Node.Free;
+    end;
 end;
 
 procedure TJsonNode.Iterate(aFunc: TOnIterate);
@@ -5889,9 +5758,48 @@ begin
     AsArray.ArrayPtr^.Add(aNode);
 end;
 
+function TJsonNode.ArraySort(aCmp: specialize TGLessCompare<TJsonNode>): Boolean;
+begin
+  Result := IsArray;
+  if Result and ArrayPtr^.NonEmpty then
+    specialize TGRegularArrayHelper<TJsonNode>.Sort(ArrayPtr^.List[0..Pred(ArrayPtr^.Count)], aCmp);
+end;
+
+function TJsonNode.ArraySort(aCmp: specialize TGOnLessCompare<TJsonNode>): Boolean;
+begin
+  Result := IsArray;
+  if Result and ArrayPtr^.NonEmpty then
+    specialize TGDelegatedArrayHelper<TJsonNode>.Sort(ArrayPtr^.List[0..Pred(ArrayPtr^.Count)], aCmp);
+end;
+
+function TJsonNode.ArraySort(aCmp: specialize TGNestLessCompare<TJsonNode>): Boolean;
+begin
+  Result := IsArray;
+  if Result and ArrayPtr^.NonEmpty  then
+    specialize TGNestedArrayHelper<TJsonNode>.Sort(ArrayPtr^.List[0..Pred(ArrayPtr^.Count)], aCmp);
+end;
+
+function TJsonNode.ArraySwap(L, R: SizeInt): Boolean;
+var
+  n: TJsonNode;
+  List: ^TJsonNode;
+  c: SizeUInt;
+begin
+  c := Count;
+  Result := IsArray and (SizeUInt(L) < SizeUInt(c)) and (SizeUInt(R) < SizeUInt(c));
+  if Result then
+    begin
+      List := ArrayPtr^.List;
+      n := List[L];
+      List[L] := List[R];
+      List[R] := n;
+    end;
+end;
+
 function TJsonNode.MergeArray(aNode: TJsonNode; aCopy: Boolean): SizeInt;
 var
   I: SizeInt;
+  List: ^TJsonNode;
 begin
   if not aNode.IsArray then exit(0);
   AsArray;
@@ -5902,10 +5810,11 @@ begin
   else
     if aNode.ArrayPtr^.NonEmpty then
       begin
+        List := aNode.ArrayPtr^.List;
         for I := 0 to Pred(aNode.ArrayPtr^.Count) do
           begin
-            ArrayPtr^.Add(aNode.ArrayPtr^.UncItems[I]);
-            aNode.ArrayPtr^.UncMutItems[I]^ := nil;
+            ArrayPtr^.Add(List[I]);
+            List[I] := nil;
           end;
         aNode.ArrayPtr^.MakeEmpty;
       end;
@@ -5965,13 +5874,25 @@ begin
     AsObject.ObjectPtr^.Add(aName, aNode);
 end;
 
-function TJsonNode.AddAll(const a: TJPairArray): TJsonNode;
+function TJsonNode.AddAll(const a: TJPairArray; aMode: TDuplicateMode): TJsonNode;
 var
   I: SizeInt;
+  p: ^TPair;
 begin
   AsObject;
   for I := 0 to System.High(a) do
-    ObjectPtr^.Add(a[I].Key, TJsonNode.Create(a[I].Key));
+    case aMode of
+      dumAccept:
+        ObjectPtr^.Add(a[I].Key, TJsonNode.Create(a[I].Value));
+      dumRewrite:
+        if ObjectPtr^.FindOrAdd(a[I].Key, p) then
+          p^.Value.Value := a[I].Value
+        else
+          p^.Value := TJsonNode.Create(a[I].Value);
+      dumIgnore:
+        if ObjectPtr^.AddUniq(a[I].Key, p) then
+          p^.Value := TJsonNode.Create(a[I].Value);
+    end;
   Result := Self;
 end;
 
@@ -6499,6 +6420,114 @@ begin
   Result := TryGetPath(aNode, Path);
   if Result then
     aPtr := TJsonPtr.ToPointer(Path);
+end;
+
+function TJsonNode.InsertPath(const aPath: array of string; out aNode: TJsonNode;
+  aMode: TDuplicateMode): Boolean;
+var
+  Parent: TJsonNode;
+  I: SizeInt;
+begin
+  aNode := nil;
+  if not IsStruct then exit(False);
+  if System.Length(aPath) = 0 then exit(False);
+  if not FindPath(aPath[0..Pred(System.High(aPath))], Parent) then
+    exit(False);
+  if Parent.IsArray then
+    begin
+      if not(IsNonNegativeInt(aPath[System.High(aPath)], I) and (I <= Parent.Count)) then
+        exit(False);
+      Result := Parent.InsertNode(I, aNode, jvkNull) = I;
+    end
+  else
+    if Parent.IsObject then
+      case aMode of
+        dumAccept: begin
+            aNode := Parent.AddNode(aPath[System.High(aPath)]);
+            Result := True;
+          end;
+        dumRewrite: begin
+            if Parent.CountOfName(aPath[System.High(aPath)]) > 1 then exit(False);
+            aNode := Parent[aPath[System.High(aPath)]].AsNull;
+            Result := True;
+          end;
+        dumIgnore: Result := Parent.TryAddNode(aPath[System.High(aPath)], aNode, jvkNull);
+      end
+    else
+      Result := False;
+end;
+
+function TJsonNode.InsertPath(const aPtr: TJsonPtr; out aNode: TJsonNode; aMode: TDuplicateMode): Boolean;
+begin
+  Result := InsertPath(aPtr.ToSegments, aNode, aMode);
+end;
+
+function TJsonNode.InsertPathPtr(const aPtr: string; out aNode: TJsonNode; aMode: TDuplicateMode): Boolean;
+var
+  Segments: TStringArray = nil;
+begin
+  if not TJsonPtr.TryGetSegments(aPtr, Segments) then
+    begin
+      aNode := nil;
+      exit(False);
+    end;
+  Result := InsertPath(Segments, aNode, aMode);
+end;
+
+function TJsonNode.ExtractPath(const aPath: array of string; out aNode: TJsonNode): Boolean;
+var
+  Parent: TJsonNode;
+  I: SizeInt;
+begin
+  aNode := nil;
+  if not IsStruct then exit(False);
+  if System.Length(aPath) = 0 then exit(False);
+  if not FindPath(aPath[0..Pred(System.High(aPath))], Parent) then exit(False);
+  if Parent.IsArray then
+    Result := IsNonNegativeInt(aPath[System.High(aPath)], I) and Parent.Extract(I, aNode)
+  else
+    Result := Parent.Extract(aPath[System.High(aPath)], aNode);
+end;
+
+function TJsonNode.ExtractPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+begin
+  Result := ExtractPath(aPtr.ToSegments, aNode);
+end;
+
+function TJsonNode.ExtractPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean;
+var
+  Segments: TStringArray = nil;
+begin
+  if not TJsonPtr.TryGetSegments(aPtr, Segments) then
+    begin
+      aNode := nil;
+      exit(False);
+    end;
+  Result := ExtractPath(Segments, aNode);
+end;
+
+function TJsonNode.RemovePath(const aPath: array of string): Boolean;
+var
+  Node: TJsonNode;
+begin
+  Result := ExtractPath(aPath, Node);
+  if Result then Node.Free;
+end;
+
+function TJsonNode.RemovePath(const aPtr: TJsonPtr): Boolean;
+var
+  Node: TJsonNode;
+begin
+  Result := ExtractPath(aPtr, Node);
+  if Result then Node.Free;
+end;
+
+function TJsonNode.RemovePathPtr(const aPtr: string): Boolean;
+var
+  Node: TJsonNode;
+begin
+  Result := ExtractPathPtr(aPtr, Node);
+  if Result then Node.Free;
 end;
 
 function TJsonNode.DumpJson(aUEscOpt: TUEscapeOption; aHtmlEsc: Boolean): string;
@@ -9147,7 +9176,6 @@ var
     Inc(Depth);
     Inc(pCurr);
     NextRequired := False;
-    aNode.Clear;
     while pCurr < pEnd do begin
       SkipWS;
       if pCurr^ = ']' then begin
@@ -9179,7 +9207,6 @@ var
     Inc(Depth);
     Inc(pCurr);
     NextRequired := False;
-    aNode.Clear;
     while pCurr < pEnd do begin
       SkipWS;
       if pCurr^ = '}' then begin
@@ -9194,7 +9221,7 @@ var
       if pCurr^ <> ':' then break;
       Inc(pCurr);
       if aDupRewrite then begin
-        if not ParseValue(aNode[KeyValue]) then break;
+        if not ParseValue(aNode[KeyValue].AsNull) then break;
       end else
         if aNode.TryAddNode(KeyValue, n, jvkNull) then begin
           if not ParseValue(n) then break;
