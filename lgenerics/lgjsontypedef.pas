@@ -804,7 +804,7 @@ procedure TJtdSchema.Load(const aJson: string; aMaxDepth: Integer);
 var
   Node: TJsonNode = nil;
 begin
-  if not TJsonNode.TryParse(aJson, Node, False, aMaxDepth) then
+  if not TJsonNode.TryParse(aJson, Node, dumAccept, False, aMaxDepth) then
     raise EJtdSchemaLoad.Create(SECantParseJsStr);
   try
     if not TJsonNode.DuplicateFree(Node) then
@@ -819,7 +819,7 @@ procedure TJtdSchema.LoadFromStream(aStream: TStream; aMaxDepth: Integer);
 var
   Node: TJsonNode = nil;
 begin
-  if not TJsonNode.TryParse(aStream, Node, False, aMaxDepth) then
+  if not TJsonNode.TryParse(aStream, Node, dumAccept, False, aMaxDepth) then
     raise EJtdSchemaLoad.Create(SECantLoadJsStream);
   try
     if not TJsonNode.DuplicateFree(Node) then
@@ -834,7 +834,7 @@ procedure TJtdSchema.LoadFromFile(const aFileName: string; aMaxDepth: Integer);
 var
   Node: TJsonNode = nil;
 begin
-  if not TJsonNode.TryParseFile(aFileName, Node, False, aMaxDepth) then
+  if not TJsonNode.TryParseFile(aFileName, Node, dumAccept, False, aMaxDepth) then
     raise EJtdSchemaLoad.Create(SECantLoadJsFile);
   try
     if not TJsonNode.DuplicateFree(Node) then

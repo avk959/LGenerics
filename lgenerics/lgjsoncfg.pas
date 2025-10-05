@@ -196,7 +196,7 @@ begin
   try
     with TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite) do
       try
-        Ok := FRoot.TryParse(TStream(GetSelfRef), ndupIgnore);
+        Ok := FRoot.TryParse(TStream(GetSelfRef), dumIgnore);
       finally
         Free;
       end;

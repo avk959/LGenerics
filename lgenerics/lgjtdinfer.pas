@@ -902,7 +902,7 @@ var
 begin
   if FNodeList.IsEmpty then
     for Sample in FSampleList do
-      if TJsonNode.TryParse(Sample, Node, SkipBom, MaxDepth) then
+      if TJsonNode.TryParse(Sample, Node, dumAccept, SkipBom, MaxDepth) then
         if TJsonNode.DuplicateFree(Node) then
           FNodeList.Add(Node)
         else
