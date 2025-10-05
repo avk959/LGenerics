@@ -6486,7 +6486,11 @@ begin
   if Parent.IsArray then
     Result := IsNonNegativeInt(aPath[System.High(aPath)], I) and Parent.Extract(I, aNode)
   else
-    Result := Parent.Extract(aPath[System.High(aPath)], aNode);
+    begin
+      Result := Parent.ContainsUniq(aPath[System.High(aPath)]);
+      if Result then
+        Result := Parent.Extract(aPath[System.High(aPath)], aNode);
+    end;
 end;
 
 function TJsonNode.ExtractPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
