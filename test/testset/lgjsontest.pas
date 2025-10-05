@@ -91,6 +91,13 @@ type
     procedure DumpJsonTest;
     procedure TestDuplicates;
     procedure TestDuplicates2;
+    procedure TestArraySwap;
+    procedure TestInsertPath;
+    procedure TestInsertPath2;
+    procedure TestInsertPathPtr;
+    procedure TestExpractPath;
+    procedure TestExpractPath2;
+    procedure TestExpractPathPtr;
   end;
 
   { TTestJsonWriter }
@@ -1404,10 +1411,10 @@ begin
   {%H-}Stream.Instance := TStringStream.Create(s);
   Stream.Instance.Position := 0;
   AssertTrue(TJsonNode.ValidJson(Stream.Instance, True));
-  AssertTrue(TJsonNode.TryParse(s, o, True));
+  AssertTrue(TJsonNode.TryParse(s, o, dumAccept, True));
   o.Free;
   Stream.Instance.Position := 0;
-  AssertTrue(TJsonNode.TryParse(Stream.Instance, o, True));
+  AssertTrue(TJsonNode.TryParse(Stream.Instance, o, dumAccept, True));
   o.Free;
 end;
 
@@ -1573,46 +1580,46 @@ const
   JSON6I = '{"a":{"b":42},"b":2}';
   JSON6R = '{"b":2,"a":{"c":1001}}';
 begin
-  AssertFalse(n.Instance.TryParse(JSON0, ndupIgnore));
-  AssertFalse(n.Instance.TryParse(JSON0, ndupRewrite));
+  AssertFalse(n.Instance.TryParse(JSON0, dumIgnore));
+  AssertFalse(n.Instance.TryParse(JSON0, dumRewrite));
 
-  AssertTrue(n.Instance.TryParse(JSON1, ndupIgnore));
-  AssertTrue(n.Instance.TryParse(JSON1, ndupRewrite));
+  AssertTrue(n.Instance.TryParse(JSON1, dumIgnore));
+  AssertTrue(n.Instance.TryParse(JSON1, dumRewrite));
 
-  AssertTrue(n.Instance.TryParse(JSON2, ndupIgnore));
+  AssertTrue(n.Instance.TryParse(JSON2, dumIgnore));
   AssertTrue(n.Instance.AsNumber = 421001);
-  AssertTrue(n.Instance.TryParse(JSON2, ndupRewrite));
+  AssertTrue(n.Instance.TryParse(JSON2, dumRewrite));
   AssertTrue(n.Instance.AsNumber = 421001);
 
-  AssertTrue(n.Instance.TryParse(JSON3, ndupIgnore));
+  AssertTrue(n.Instance.TryParse(JSON3, dumIgnore));
   ans.Instance.AsJson := JSON3I;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON3, ndupRewrite));
+  AssertTrue(n.Instance.TryParse(JSON3, dumRewrite));
   ans.Instance.AsJson := JSON3R;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON4, ndupIgnore));
+  AssertTrue(n.Instance.TryParse(JSON4, dumIgnore));
   ans.Instance.AsJson := JSON4I;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON4, ndupRewrite));
+  AssertTrue(n.Instance.TryParse(JSON4, dumRewrite));
   ans.Instance.AsJson := JSON4R;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON5, ndupIgnore));
+  AssertTrue(n.Instance.TryParse(JSON5, dumIgnore));
   ans.Instance.AsJson := JSON5I;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON5, ndupRewrite));
+  AssertTrue(n.Instance.TryParse(JSON5, dumRewrite));
   ans.Instance.AsJson := JSON5R;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON6, ndupIgnore));
+  AssertTrue(n.Instance.TryParse(JSON6, dumIgnore));
   ans.Instance.AsJson := JSON6I;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 
-  AssertTrue(n.Instance.TryParse(JSON6, ndupRewrite));
+  AssertTrue(n.Instance.TryParse(JSON6, dumRewrite));
   ans.Instance.AsJson := JSON6R;
   AssertTrue(TJsonNode.Equal(n.Instance, ans.Instance));
 end;
@@ -1635,7 +1642,7 @@ begin
       fn := ExtractFileName(CurrFile);
       c := fn[1];
       Inc(Total);
-      Ans := Node.Instance.TryParse(s, ndupIgnore);
+      Ans := Node.Instance.TryParse(s, dumIgnore);
       if c = 'y' then
         AssertTrue(fn + ': expected True, but got False(jdupIgnore)' + s, Ans)
       else
@@ -1650,13 +1657,230 @@ begin
       s := Stream.Instance.DataString;
       fn := ExtractFileName(CurrFile);
       c := fn[1];
-      Ans := Node.Instance.TryParse(s, ndupRewrite);
+      Ans := Node.Instance.TryParse(s, dumRewrite);
       if c = 'y' then
         AssertTrue(fn + ': expected True, but got False(jdupRewrite)' + s, Ans)
       else
         if c = 'n' then
           AssertFalse(fn + ': expected False, but got True(jdupRewrite)', Ans);
     end;
+end;
+
+procedure TTestJson.TestArraySwap;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+begin
+  Node.Instance.AsJson := 'null';
+  AssertFalse(Node.Instance.ArraySwap(0, 0));
+  Node.Instance.AsJson := '42';
+  AssertFalse(Node.Instance.ArraySwap(0, 0));
+  Node.Instance.AsJson := '"foo"';
+  AssertFalse(Node.Instance.ArraySwap(0, 0));
+  Node.Instance.AsJson := '{"a":"foo","b":42}';
+  AssertFalse(Node.Instance.ArraySwap(0, 0));
+
+  Node.Instance.AsJson := '[0]';
+  AssertFalse(Node.Instance.ArraySwap(0, 1));
+  AssertTrue(Node.Instance.ArraySwap(0, 0));
+
+  Node.Instance.AsJson := '[0,1,2,3,4,5]';
+  AssertTrue(Node.Instance.ArraySwap(0, 5));
+  Ans.Instance.AsJson := '[5,1,2,3,4,0]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+  AssertTrue(Node.Instance.ArraySwap(1, 4));
+  Ans.Instance.AsJson := '[5,4,2,3,1,0]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+end;
+
+procedure TTestJson.TestInsertPath;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+begin
+  Node.Instance.AsJson := 'null';
+  AssertFalse(Node.Instance.InsertPath(['a'], n));
+
+  Node.Instance.AsJson := '[1,2,3]';
+  AssertFalse(Node.Instance.InsertPath(['4'], n));
+  AssertTrue(Node.Instance.InsertPath(['0'], n));
+  AssertTrue(n.IsNull);
+  n.AsNumber := 0;
+  Ans.Instance.AsJson := '[0,1,2,3]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '[1,2,{"a":null,"b":42}]';
+  AssertFalse(Node.Instance.InsertPath(['2','b'], n));
+  AssertTrue(Node.Instance.InsertPath(['2','b'], n, dumRewrite));
+  n.AsString := 'foo';
+  Ans.Instance.AsJson := '[1,2,{"a":null,"b":"foo"}]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  AssertTrue(Node.Instance.InsertPath(['2','b'], n, dumAccept));
+  n.AsBoolean := False;
+  AssertTrue(Node.Instance.AsJson = '[1,2,{"a":null,"b":"foo","b":false}]');
+
+  AssertFalse(Node.Instance.InsertPath(['2','b'], n, dumRewrite));
+end;
+
+procedure TTestJson.TestInsertPath2;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+  p: TJsonPtr;
+begin
+  Node.Instance.AsJson := 'null';
+  p := TJsonPtr.From('/a');
+  AssertFalse(Node.Instance.InsertPath(p, n));
+
+  Node.Instance.AsJson := '[1,2,3]';
+  p := TJsonPtr.From('/4');
+  AssertFalse(Node.Instance.InsertPath(p, n));
+  p := TJsonPtr.From('/0');
+  AssertTrue(Node.Instance.InsertPath(p, n));
+  AssertTrue(n.IsNull);
+  n.AsNumber := 0;
+  Ans.Instance.AsJson := '[0,1,2,3]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '[1,2,{"a":null,"b":42}]';
+  p := TJsonPtr.From('/2/b');
+  AssertFalse(Node.Instance.InsertPath(p, n));
+  AssertTrue(Node.Instance.InsertPath(p, n, dumRewrite));
+  n.AsString := 'foo';
+  Ans.Instance.AsJson := '[1,2,{"a":null,"b":"foo"}]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  AssertTrue(Node.Instance.InsertPath(p, n, dumAccept));
+  n.AsBoolean := False;
+  AssertTrue(Node.Instance.AsJson = '[1,2,{"a":null,"b":"foo","b":false}]');
+
+  AssertFalse(Node.Instance.InsertPath(p, n, dumRewrite));
+end;
+
+procedure TTestJson.TestInsertPathPtr;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+begin
+  Node.Instance.AsJson := 'null';
+  AssertFalse(Node.Instance.InsertPathPtr('/a', n));
+
+  Node.Instance.AsJson := '[1,2,3]';
+  AssertFalse(Node.Instance.InsertPathPtr('/4', n));
+  AssertTrue(Node.Instance.InsertPathPtr('/0', n));
+  AssertTrue(n.IsNull);
+  n.AsNumber := 0;
+  Ans.Instance.AsJson := '[0,1,2,3]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '[1,2,{"a":null,"b":42}]';
+  AssertFalse(Node.Instance.InsertPathPtr('/2/b', n));
+  AssertTrue(Node.Instance.InsertPathPtr('/2/b', n, dumRewrite));
+  n.AsString := 'foo';
+  Ans.Instance.AsJson := '[1,2,{"a":null,"b":"foo"}]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  AssertTrue(Node.Instance.InsertPathPtr('/2/b', n, dumAccept));
+  n.AsBoolean := False;
+  AssertTrue(Node.Instance.AsJson = '[1,2,{"a":null,"b":"foo","b":false}]');
+
+  AssertFalse(Node.Instance.InsertPathPtr('/2/b', n, dumRewrite));
+end;
+
+procedure TTestJson.TestExpractPath;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+begin
+  Node.Instance.AsJson := 'null';
+  AssertFalse(Node.Instance.ExtractPath([''], n));
+  AssertTrue(n = nil);
+
+  Node.Instance.AsJson := '[0,1,2,3,4]';
+  AssertFalse(Node.Instance.ExtractPath(['5'], n));
+
+  AssertTrue(Node.Instance.ExtractPath(['3'], n));
+  AssertTrue(n.IsNumber and (n.AsNumber = 3));
+  n.Free;
+
+  Ans.Instance.AsJson := '[0,1,2,4]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '{"a":42,"b":[null,true,1001]}';
+  AssertTrue(Node.Instance.ExtractPath(['b','1'], n));
+  AssertTrue(n.IsTrue);
+  n.Free;
+  Ans.Instance.AsJson := '{"a":42,"b":[null,1001]}';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '{"a":42,"b":[null,true,1001],"a":null}';
+  AssertFalse(Node.Instance.ExtractPath(['a'], n));
+end;
+
+procedure TTestJson.TestExpractPath2;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+  p: TJsonPtr;
+begin
+  Node.Instance.AsJson := 'null';
+  p := TJsonPtr.From('');
+  AssertFalse(Node.Instance.ExtractPath(p, n));
+  AssertTrue(n = nil);
+
+  Node.Instance.AsJson := '[0,1,2,3,4]';
+  p := TJsonPtr.From('/5');
+  AssertFalse(Node.Instance.ExtractPath(p, n));
+
+  p := TJsonPtr.From('/3');
+  AssertTrue(Node.Instance.ExtractPath(p, n));
+  AssertTrue(n.IsNumber and (n.AsNumber = 3));
+  n.Free;
+
+  Ans.Instance.AsJson := '[0,1,2,4]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '{"a":42,"b":[null,true,1001]}';
+  p := TJsonPtr.From('/b/1');
+  AssertTrue(Node.Instance.ExtractPath(p, n));
+  AssertTrue(n.IsTrue);
+  n.Free;
+  Ans.Instance.AsJson := '{"a":42,"b":[null,1001]}';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '{"a":42,"b":[null,true,1001],"a":null}';
+  p := TJsonPtr.From('/a');
+  AssertFalse(Node.Instance.ExtractPath(p, n));
+end;
+
+procedure TTestJson.TestExpractPathPtr;
+var
+  Node, Ans: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+begin
+  Node.Instance.AsJson := 'null';
+  AssertFalse(Node.Instance.ExtractPathPtr('', n));
+  AssertTrue(n = nil);
+
+  Node.Instance.AsJson := '[0,1,2,3,4]';
+  AssertFalse(Node.Instance.ExtractPathPtr('/5', n));
+
+  AssertTrue(Node.Instance.ExtractPathPtr('/3', n));
+  AssertTrue(n.IsNumber and (n.AsNumber = 3));
+  n.Free;
+
+  Ans.Instance.AsJson := '[0,1,2,4]';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '{"a":42,"b":[null,true,1001]}';
+  AssertTrue(Node.Instance.ExtractPathPtr('/b/1', n));
+  AssertTrue(n.IsTrue);
+  n.Free;
+  Ans.Instance.AsJson := '{"a":42,"b":[null,1001]}';
+  AssertTrue(Node.Instance.EqualTo(Ans.Instance));
+
+  Node.Instance.AsJson := '{"a":42,"b":[null,true,1001],"a":null}';
+  AssertFalse(Node.Instance.ExtractPathPtr('/a', n));
 end;
 
 { TTestJsonWriter }
