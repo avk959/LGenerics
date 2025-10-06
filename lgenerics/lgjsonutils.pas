@@ -32,7 +32,7 @@ uses
 
 type
   { TJsonDataHelper }
-  TJsonDataHelper = class helper for TJsonData
+  TJsonDataHelper = class helper(TGObjectHelper) for TJsonData
   const
     DEF_PARSER_OPTS = [joUTF8, joStrict];
     class function TryParse(const s: TJSONStringType; out aData: TJsonData;
