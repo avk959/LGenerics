@@ -338,7 +338,8 @@ type
     function  HasUniqKey(aIndex: SizeInt): Boolean; inline;
     function  Extract(aIndex: SizeInt; out aNode: TJsonNode): Boolean;
     function  ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
-    function  Extract(const aKey: string; out aNode: TJsonNode): Boolean; inline;
+    function  Extract(const aKey: string; out aNode: TJsonNode): Boolean;
+    function  ExtractUniq(const aKey: string; out aNode: TJsonNode): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Pairs[aIndex: SizeInt]: TPair read GetPair; default;
@@ -3398,6 +3399,22 @@ begin
   if IsEmpty then exit(False);
   I := DoFind(aKey, GetHash(aKey));
   Result := I <> 0;
+  if Result then
+    begin
+      DoExtract(I, p);
+      aNode := p.Value;
+    end;
+end;
+
+function TJsObject.ExtractUniq(const aKey: string; out aNode: TJsonNode): Boolean;
+var
+  I: SizeInt;
+  p: TPair;
+begin
+  aNode := nil;
+  if IsEmpty then exit(False);
+  I := DoFindUniq(aKey);
+  Result := I > 0;
   if Result then
     begin
       DoExtract(I, p);
@@ -6484,13 +6501,9 @@ begin
   if System.Length(aPath) = 0 then exit(False);
   if not FindPath(aPath[0..Pred(System.High(aPath))], Parent) then exit(False);
   if Parent.IsArray then
-    Result := IsNonNegativeInt(aPath[System.High(aPath)], I) and Parent.Extract(I, aNode)
+    Result := IsNonNegativeInt(aPath[System.High(aPath)], I) and Parent.ArrayPtr^.Extract(I, aNode)
   else
-    begin
-      Result := Parent.ContainsUniq(aPath[System.High(aPath)]);
-      if Result then
-        Result := Parent.Extract(aPath[System.High(aPath)], aNode);
-    end;
+    Result := Parent.ObjectPtr^.ExtractUniq(aPath[System.High(aPath)], aNode);
 end;
 
 function TJsonNode.ExtractPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
