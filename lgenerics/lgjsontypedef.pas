@@ -941,12 +941,16 @@ var
     SchemaPathPush(aSchema.JTD_PROPS[spType]);
     Typ := aSchema.ElType;
     case Typ of
-      jtBool: if not aInst.IsBoolean then PushError;
+      jtBool:
+        if not aInst.IsBoolean then
+          PushError;
       jtFloat32, jtFloat64:
         if not aInst.IsNumber then PushError else
-          if(Typ = jtFloat32)and(System.Abs(aInst.AsNumber) > Math.MaxSingle)then PushError;
+          if(Typ = jtFloat32)and(System.Abs(aInst.AsNumber) > Math.MaxSingle) then
+            PushError;
       jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32:
-        if not(aInst.IsNumber and Double.IsExactInt(aInst.AsNumber, I))then PushError
+        if not(aInst.IsNumber and Double.IsExactInt(aInst.AsNumber, I)) then
+          PushError
         else
           case Typ of
             jtInt8:   if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then PushError;
@@ -958,9 +962,12 @@ var
           else
             raise Exception.Create('');
           end;
-      jtString: if not aInst.IsString then PushError;
+      jtString:
+        if not aInst.IsString then
+          PushError;
       jtTimeStamp:
-        if not(aInst.IsString and IsRfc8927TimeStamp(aInst.AsString)) then PushError;
+        if not(aInst.IsString and IsRfc8927TimeStamp(aInst.AsString)) then
+          PushError;
     else
       raise Exception.Create('');
     end;
@@ -978,12 +985,14 @@ var
     I: SizeInt;
   begin
     SchemaPathPush(aSchema.JTD_PROPS[spElements]);
-    if not aInst.IsArray then PushError else
+    if aInst.IsArray then
       for I := 0 to Pred(aInst.Count) do begin
         InstancePath.Add(IntToStr(I));
         DoValidate(aInst.Items[I], aSchema.Elements);
         InstancePath.DeleteLast;
-      end;
+      end
+    else
+      PushError;
     SchemaPathPop;
   end;
   procedure DoProps(aInst: TJsonNode; aSchema: TJtdSchema; const aParentTag: string = '');
@@ -1048,7 +1057,8 @@ var
         DoValidate(p.Value, aSchema.Values);
         InstancePath.DeleteLast;
       end
-    else PushError;
+    else
+      PushError;
     SchemaPathPop;
   end;
   procedure DoDiscr(aInst: TJsonNode; aSchema: TJtdSchema);
