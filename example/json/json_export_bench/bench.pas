@@ -129,7 +129,7 @@ end;
 
 procedure RegisterCallback;
 begin
-  RegisterRecordStoreProc(TypeInfo(TMyRec), @TMyRec.JsonWrite);
+  RegisterPdoToJsonProc(TypeInfo(TMyRec), @TMyRec.JsonWrite);
 end;
 
 procedure UnRegister;

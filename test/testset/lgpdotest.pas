@@ -320,16 +320,16 @@ const
   Expect: TStringArray = ('one', 'two', 'three');
 begin
   a := ['dummy'];
-  AssertFalse(RegisteredRecordFields(TypeInfo(r2), a));
+  AssertFalse(RecordFieldsRegistered(TypeInfo(r2), a));
   AssertTrue(a = nil);
   a := ['dummy'];
-  AssertFalse(RegisteredRecordFields(TypeInfo(r1), a));
+  AssertFalse(RecordFieldsRegistered(TypeInfo(r1), a));
   AssertTrue(a = nil);
   a := ['one', 'two', 'three','four'];
   AssertTrue(RegisterRecordFields(TypeInfo(r1), a));
-  AssertFalse(RegisteredRecordFields(TypeInfo(r2), a));
+  AssertFalse(RecordFieldsRegistered(TypeInfo(r2), a));
   AssertTrue(a = nil);
-  AssertTrue(RegisteredRecordFields(TypeInfo(r1), a));
+  AssertTrue(RecordFieldsRegistered(TypeInfo(r1), a));
   AssertTrue(specialize TGComparableArrayHelper<string>.Same(a, Expect));
 end;
 
@@ -856,7 +856,7 @@ var
 const
   Expect = '{"field a":42,"field b":"string value"}';
 begin
-  AssertTrue(RegisterRecordStoreProc(TypeInfo(r), @TSimple.WriteJson));
+  AssertTrue(RegisterPdoToJsonProc(TypeInfo(r), @TSimple.WriteJson));
   r.a := 42;
   r.b := 'string value';
   s := PdoToJson(TypeInfo(r), r);
@@ -871,7 +871,7 @@ var
 const
   Expect = '{"name":"just name","value":42,"flag":true}';
 begin
-  AssertTrue(RegisterObjectStoreProc(TypeInfo(o), @TMyObj.WriteJson));
+  AssertTrue(RegisterPdoToJsonProc(TypeInfo(o), @TMyObj.WriteJson));
   o.Name := 'just name';
   o.Value := 42;
   o.Flag := True;
@@ -1835,7 +1835,7 @@ const
   Json = '{"Key":"key1","Value":42}';
 begin
   r := Default(TTestRec);
-  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  AssertTrue(RegisterJsonToPdoProc(TypeInfo(r), @TTestRec.LoadJson));
   PdoLoadJson(TypeInfo(r), r, Json);
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
   AssertTrue(r.Key = 'key1');
@@ -1849,7 +1849,7 @@ const
   Json = '{"KEY":"key1","VALUE":42}';
 begin
   r := Default(TTestRec);
-  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  AssertTrue(RegisterJsonToPdoProc(TypeInfo(r), @TTestRec.LoadJson));
   PdoLoadJson(TypeInfo(r), r, Json, [jroIgnoreNameCase]);
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
   AssertTrue(r.Key = 'key1');
@@ -1863,7 +1863,7 @@ const
   Json = '{"Key":"key1","Blah":null,"Value":42}';
 begin
   r := Default(TTestRec);
-  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  AssertTrue(RegisterJsonToPdoProc(TypeInfo(r), @TTestRec.LoadJson));
   PdoLoadJson(TypeInfo(r), r, Json, [jroSkipUnknownProps]);
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
   AssertTrue(r.Key = 'key1');
@@ -1878,7 +1878,7 @@ const
   Json = '{"Key":"key1","Value":2147483648}';
 begin
   r := Default(TTestRec);
-  AssertTrue(RegisterRecordLoadProc(TypeInfo(r), @TTestRec.LoadJson));
+  AssertTrue(RegisterJsonToPdoProc(TypeInfo(r), @TTestRec.LoadJson));
   try
     PdoLoadJson(TypeInfo(r), r, Json);
   except

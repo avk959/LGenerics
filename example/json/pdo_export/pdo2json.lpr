@@ -181,7 +181,7 @@ var
   n: specialize TGAutoRef<TJsonNode>;
   s: string;
 begin
-  RegisterRecordStoreProc(TypeInfo(TPerson), @TPerson.WriteJson);
+  RegisterPdoToJsonProc(TypeInfo(TPerson), @TPerson.WriteJson);
   RegisterRecordFields(TypeInfo(TMember), ['memberId', 'meta', 'person', 'registerDate', 'friends', 'groups']);
   RegisterRecordFields(TypeInfo(TCommunity), ['name', 'slogan', 'groupList', 'memberList']);
 
