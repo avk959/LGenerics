@@ -1147,7 +1147,7 @@ type
     FPosition,
     FStackTop,
     FStackHigh: SizeInt;
-    FState: Integer;
+    FState: ShortInt;
     FReadState: TReadState;
     FToken,
     FDeferToken: TTokenKind;
@@ -4954,6 +4954,8 @@ type
 {nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,27,__,__,__,__,__)
     );
 {$POP}
+  WHITE_SPACE = [#9, #10, #13, ' '];
+
     class function ParseString(p: PAnsiChar; aCount: SizeInt; var sb: TStrBuilder): SizeInt; static;
   public
     class function ParseBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonNode; const aStack: TOpenArray): Boolean; static;
@@ -8977,6 +8979,12 @@ class function TJsonParser.ParseBuf(Buf: PAnsiChar; Size: SizeInt; aNode: TJsonN
 var
   Stack: PParseNode;
   I, Advance: SizeInt;
+  procedure SkipWS; inline;
+  begin
+    repeat Inc(I);
+    until (I >= Size) or not(Buf[I] in WHITE_SPACE);
+  end;
+var
   KeyValue: string = '';
   NumValue: Double;
   NextState, StackHigh: Integer;
@@ -8992,9 +9000,13 @@ begin
   I := 0;
   while I < Size do begin
     NextState := TransitionTable[State, SymClassTable[Byte(Buf[I])]];
-    if Byte(NextState) < Byte(FIRST_ACTION) then
-      State := NextState
-    else
+    if Byte(NextState) < Byte(FIRST_ACTION) then begin
+      if (State = NextState) and (Buf[I] in WHITE_SPACE) then begin
+        SkipWS;
+        continue;
+      end;
+      State := NextState;
+    end else
       case NextState of
         17: //end object - state = object
           if Stack[sTop].Mode in [pmKey, pmObject] then begin
@@ -9088,7 +9100,7 @@ begin
           end else exit(False);
         24: begin //begin number
             Advance := PCharToDoubleLen(@Buf[I], NumValue);
-            if Advance = 0 then exit(False);
+            if (Advance = 0) or (I + Advance > Size) then exit(False);
             I += Advance;
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(NumValue);
@@ -9143,8 +9155,6 @@ end;
 
 class function TJsonParser.ParseBuf(aBuf: PAnsiChar; aCount, aMaxDepth: SizeInt; aNode: TJsonNode;
   aDupRewrite: Boolean): Boolean;
-const
-  WHITE_SPACE = [#9, #10, #13, ' '];
 var
   pCurr, pEnd: PAnsiChar;
 
@@ -9159,7 +9169,7 @@ var
   begin
     Assert(pCurr^ in ['-','0'..'9']);
     Len := PCharToDoubleLen(pCurr, aValue);
-    Result := Len <> 0;
+    Result := (Len <> 0) and (pCurr + Len <= pEnd);
     if Result then pCurr += Len;
   end;
 
@@ -9217,7 +9227,7 @@ var
   var
     KeyValue: string;
     n: TJsonNode;
-    NextRequired, Success: Boolean;
+    NextRequired: Boolean;
   begin
     Assert(pCurr^ = '{');
     if Depth = MaxDepth then exit(False);
@@ -9242,12 +9252,13 @@ var
       end else
         if aNode.TryAddNode(KeyValue, n, jvkNull) then begin
           if not ParseValue(n) then break;
-        end else begin
-          n := TJsonNode.Create;
-          Success := ParseValue(n);
-          n.Free;
-          if not Success then break;
-        end;
+        end else
+          with TJsonNode.Create do
+            try
+              if not ParseValue(TJsonNode(GetSelfRef)) then break;
+            finally
+              Free;
+            end;
       SkipWS;
       NextRequired := pCurr^ = ',';
       if NextRequired then
