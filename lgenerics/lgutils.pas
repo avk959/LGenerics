@@ -87,6 +87,16 @@ const
   VOID: TDummy               = ();
 
 type
+  { TGLessFunctor assumes that the comparison operator < is defined for type TComparable }
+  TGLessFunctor<TComparable> = record
+    class function Less(const L, R: TComparable): Boolean; static; inline;
+  end;
+
+  { TGReverseLess assumes that the comparison operator < is defined for type TComparable }
+  TGReverseLess<TComparable> = record
+    class function Less(const L, R: TComparable): Boolean; static; inline;
+  end;
+
   TGOptional<T> = record
   private
   var
@@ -3506,6 +3516,20 @@ begin
     Result := R
   else
     Result := L;
+end;
+
+{ TGLessFunctor }
+
+class function TGLessFunctor<TComparable>.Less(const L, R: TComparable): Boolean;
+begin
+  Result := L < R;
+end;
+
+{ TGReverseLess }
+
+class function TGReverseLess<TComparable>.Less(const L, R: TComparable): Boolean;
+begin
+  Result := R < L;
 end;
 
 { TSpinLock }
