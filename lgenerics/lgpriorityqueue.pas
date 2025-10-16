@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic prority queue implementations.                                  *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -26,7 +26,7 @@ unit lgPriorityQueue;
 interface
 
 uses
-  SysUtils,
+  SysUtils, Math,
   lgUtils,
   lgHelpers,
   lgArrayHelpers,
@@ -35,7 +35,7 @@ uses
 
 type
 
-  { TGCustomBinHeap: abstract ancestor class of priority queue with queue interface on top of binary heap }
+  { TGCustomBinHeap: abstract ancestor class of priority queue with queue a interface }
   generic TGCustomBinHeap<T> = class abstract(specialize TGCustomArrayContainer<T>, specialize IGQueue<T>)
   protected
     procedure BuildHeap; virtual; abstract;
@@ -55,23 +55,72 @@ type
     function  TryPeek(out aValue: T): Boolean;
   end;
 
-  { TGBaseBinHeap implements maximizing priority queue with queue interface;
+  { TGBaseBinHeap implements maximizing priority queue with a queue interface;
       functor TCmpRel (comparision relation) must provide
         class function Less([const[ref]] L, R: T): Boolean; }
   generic TGBaseBinHeap<T, TCmpRel> = class(specialize TGCustomBinHeap<T>)
   protected
     procedure BuildHeap; override;
     procedure SiftDown; override;
-    procedure FloatUp(aIndex: SizeInt);  override;
+    procedure FloatUp(aIndex: SizeInt); override;
     class function DoCompare(const L, R: T): Boolean; static;
   public
     class function Comparator: TLess; static; inline;
   end;
 
-  { TGBinHeap assumes that type T implements TCmpRel}
+  { TGBinHeap assumes that type T implements TCmpRel }
   generic TGBinHeap<T> = class(specialize TGBaseBinHeap<T, T>);
 
-  { TGObjectBinHeap implements maximizing priority queue with queue interface;
+  { TGDaryHeap: d-ary heap based maximizing priority queue with a queue interface;
+      functor TCmpRel (comparision relation) must provide
+        class function Less([const[ref]] L, R: T): Boolean; }
+{$IF FPC_FULLVERSION > 30300}
+  generic TGBaseDaryHeap<T, TCmpRel, const Arity: ShortInt> = class(specialize TGBaseBinHeap<T, TCmpRel>)
+  const
+{$ELSE}
+  generic TGBaseDaryHeap<T, TCmpRel, TArity> = class(specialize TGBaseBinHeap<T, TCmpRel>)
+  private
+  const
+    Arity = SizeOf(TArity);
+  public
+  const
+{$ENDIF}
+    BRANCH_FACTOR = ShortInt(Ord((Arity>2)and(Arity<17))*Arity+Ord(Arity<3)*3+Ord(Arity>16)*16);
+  protected
+    procedure BuildHeap; override;
+    procedure SiftDown(aIndex: SizeInt);
+    procedure SiftDown; override;
+    procedure FloatUp(aIndex: SizeInt); override;
+  end;
+
+{$IF FPC_FULLVERSION > 30300}
+  generic TGDaryHeap<T, const Arity: ShortInt> = class(specialize TGBaseDaryHeap<T, T, Arity>);
+{$ELSE}
+  generic TGDaryHeap<T, TArity> = class(specialize TGBaseDaryHeap<T, T, TArity>);
+{$ENDIF}
+
+
+  { TGComparableDaryHeap: d-ary heap based maximizing priority queue with a queue interface,
+    it assumes that type T has defined comparison operator < }
+{$IF FPC_FULLVERSION > 30300}
+  generic TGComparableDaryHeapMax<T, const Arity: ShortInt> = class(
+    specialize TGBaseDaryHeap<T, specialize TGLessFunctor<T>, Arity>);
+{$ELSE}
+  generic TGComparableDaryHeapMax<T, TArity> = class(
+    specialize TGBaseDaryHeap<T, specialize TGLessFunctor<T>, TArity>);
+{$ENDIF}
+
+  { TGComparableDaryHeapMin: d-ary heap based minimizing priority queue with a queue interface,
+    it assumes that type T has defined comparison operator < }
+{$IF FPC_FULLVERSION > 30300}
+  generic TGComparableDaryHeapMin<T, const Arity: ShortInt> = class(
+    specialize TGBaseDaryHeap<T, specialize TGReverseLess<T>, Arity>);
+{$ELSE}
+  generic TGComparableDaryHeapMin<T, TArity> = class(
+    specialize TGBaseDaryHeap<T, specialize TGReverseLess<T>, TArity>);
+{$ENDIF}
+
+  { TGObjectBinHeap implements maximizing priority queue with a queue interface;
       TGObjectBinHeap.Dequeue(or TryDequeue) EXTRACTS object from queue,
       you need to free this object yourself }
   generic TGObjectBinHeap<T: class; TCmpRel> = class(specialize TGBaseBinHeap<T, TCmpRel>)
@@ -84,7 +133,7 @@ type
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
     constructor Create(const A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
-    property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
+    property OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
   { TGObjBinHeap assumes that class T implements TCmpRel}
@@ -97,7 +146,7 @@ type
     class function Comparator: TLess; static; inline;
   end;
 
-  { TGComparableBinHeapMax: maximizing priority queue with queue interface,
+  { TGComparableBinHeapMax: maximizing priority queue with a queue interface,
     it assumes that type T has defined comparison operator < }
   generic TGComparableBinHeapMax<T> = class(specialize TGComparableBinHeap<T>)
   protected
@@ -106,7 +155,7 @@ type
     procedure FloatUp(aIndex: SizeInt); override;
   end;
 
-  { TGComparableBinHeapMin: minimizing priority queue with queue interface,
+  { TGComparableBinHeapMin: minimizing priority queue with a queue interface,
     it assumes that type T has defined comparison operator < }
   generic TGComparableBinHeapMin<T> = class(specialize TGComparableBinHeap<T>)
   protected
@@ -115,11 +164,10 @@ type
     procedure FloatUp(aIndex: SizeInt); override;
   end;
 
-  { TGRegularBinHeap: maximizing priority queue with queue interface and regular comparator }
+  { TGRegularBinHeap: maximizing priority queue with a queue interface and regular comparator }
   generic TGRegularBinHeap<T> = class(specialize TGCustomBinHeap<T>)
-  private
-    FLess: TLess;
   protected
+    FLess: TLess;
     procedure BuildHeap; override;
     procedure SiftDown; override;
     procedure FloatUp(aIndex: SizeInt); override;
@@ -132,11 +180,31 @@ type
     function Comparator: TLess; inline;
   end;
 
-  { TGDelegatedBinHeap: maximizing priority queue with queue interface and delegated comparator }
-  generic TGDelegatedBinHeap<T> = class(specialize TGCustomBinHeap<T>)
+  { TGRegularDaryHeap: d-ary heap based maximizing priority queue with a queue interface
+    and regular comparator }
+{$IF FPC_FULLVERSION > 30300}
+  generic TGRegularDaryHeap<T, const Arity: ShortInt> = class(specialize TGRegularBinHeap<T>)
+  const
+{$ELSE}
+  generic TGRegularDaryHeap<T, TArity> = class(specialize TGRegularBinHeap<T>)
   private
-    FLess: TOnLess;
+  const
+    Arity = SizeOf(TArity);
+  public
+  const
+{$ENDIF}
+    BRANCH_FACTOR = ShortInt(Ord((Arity>2)and(Arity<17))*Arity+Ord(Arity<3)*3+Ord(Arity>16)*16);
   protected
+    procedure BuildHeap; override;
+    procedure SiftDown(aIndex: SizeInt);
+    procedure SiftDown; override;
+    procedure FloatUp(aIndex: SizeInt); override;
+  end;
+
+  { TGDelegatedBinHeap: maximizing priority queue with queue a interface and delegated comparator }
+  generic TGDelegatedBinHeap<T> = class(specialize TGCustomBinHeap<T>)
+  protected
+    FLess: TOnLess;
     procedure BuildHeap; override;
     procedure SiftDown; override;
     procedure FloatUp(aIndex: SizeInt); override;
@@ -151,7 +219,28 @@ type
     function Comparator: TOnLess; inline;
   end;
 
-  { TGLiteBinHeap implements maximizing priority queue with queue interface;
+  { TGDelegatedDaryHeap: d-ary heap based maximizing priority queue with a queue interface
+    and delegated comparator }
+{$IF FPC_FULLVERSION > 30300}
+  generic TGDelegatedDaryHeap<T, const Arity: ShortInt> = class(specialize TGDelegatedBinHeap<T>)
+  const
+{$ELSE}
+  generic TGDelegatedDaryHeap<T, TArity> = class(specialize TGDelegatedBinHeap<T>)
+  private
+  const
+    Arity = SizeOf(TArity);
+  public
+  const
+{$ENDIF}
+    BRANCH_FACTOR = ShortInt(Ord((Arity>2)and(Arity<17))*Arity+Ord(Arity<3)*3+Ord(Arity>16)*16);
+  protected
+    procedure BuildHeap; override;
+    procedure SiftDown(aIndex: SizeInt);
+    procedure SiftDown; override;
+    procedure FloatUp(aIndex: SizeInt); override;
+  end;
+
+  { TGLiteBinHeap implements maximizing priority queue with a queue interface;
       functor TCmpRel (comparision relation) must provide
         class function Less([const[ref]] L, R: T): Boolean; }
   generic TGLiteBinHeap<T, TCmpRel> = record
@@ -221,7 +310,7 @@ type
     procedure Unlock; inline;
   end;
 
-  { TGLiteComparableBinHeapMin implements minimizing priority queue with queue interface;
+  { TGLiteComparableBinHeapMin implements minimizing priority queue with a queue interface;
     it assumes that type T has defined comparison operator < }
   generic TGLiteComparableBinHeapMin<T> = record
   private
@@ -348,7 +437,7 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGCustomPairingHeap: abstract ancestor class to implement priority queue on top of pairing heap }
+  { TGCustomPairingHeap: abstract ancestor class to implement pairing heap based priority queue }
   generic TGCustomPairingHeap<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGQueue<T>,
     specialize IGPriorityQueue<T>)
   public
@@ -968,6 +1057,58 @@ begin
   Result := @DoCompare;
 end;
 
+{ TGBaseDaryHeap }
+
+procedure TGBaseDaryHeap.BuildHeap;
+var
+  I: SizeInt;
+begin
+  for I := Pred(ElemCount div BRANCH_FACTOR) downto 0 do
+    SiftDown(I);
+end;
+
+procedure TGBaseDaryHeap.SiftDown(aIndex: SizeInt);
+var
+  ChildIdx, Size, I: SizeInt;
+  v: TFake;
+begin
+  Size := ElemCount;
+  ChildIdx := Succ(aIndex * BRANCH_FACTOR);
+  v := TFake(FItems[aIndex]);
+  while ChildIdx < Size do
+    begin
+      for I := Succ(ChildIdx) to Math.Min(ChildIdx + Pred(BRANCH_FACTOR), Pred(Size)) do
+        if TCmpRel.Less(FItems[ChildIdx], FItems[I]) then
+          ChildIdx := I;
+      if not TCmpRel.Less(T(v), FItems[ChildIdx]) then break;
+      TFake(FItems[aIndex]) := TFake(FItems[ChildIdx]);
+      aIndex := ChildIdx;
+      ChildIdx := Succ(ChildIdx * BRANCH_FACTOR);
+    end;
+  TFake(FItems[aIndex]) := v;
+end;
+
+procedure TGBaseDaryHeap.SiftDown;
+begin
+  SiftDown(0);
+end;
+
+procedure TGBaseDaryHeap.FloatUp(aIndex: SizeInt);
+var
+  ParentIdx: SizeInt;
+  v: TFake;
+begin
+  ParentIdx := Pred(aIndex) div BRANCH_FACTOR;
+  v := TFake(FItems[aIndex]);
+  while (aIndex > 0) and TCmpRel.Less(FItems[ParentIdx], T(v)) do
+    begin
+      TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
+      aIndex := ParentIdx;
+      ParentIdx := Pred(ParentIdx) div BRANCH_FACTOR;
+    end;
+  TFake(FItems[aIndex]) := v;
+end;
+
 { TGObjectBinHeap }
 
 procedure TGObjectBinHeap.DoClear;
@@ -1278,6 +1419,58 @@ begin
   Result := FLess;
 end;
 
+{ TGRegularDaryHeap }
+
+procedure TGRegularDaryHeap.BuildHeap;
+var
+  I: SizeInt;
+begin
+  for I := Pred(ElemCount div BRANCH_FACTOR) downto 0 do
+    SiftDown(I);
+end;
+
+procedure TGRegularDaryHeap.SiftDown(aIndex: SizeInt);
+var
+  ChildIdx, Size, I: SizeInt;
+  v: TFake;
+begin
+  Size := ElemCount;
+  ChildIdx := Succ(aIndex * BRANCH_FACTOR);
+  v := TFake(FItems[aIndex]);
+  while ChildIdx < Size do
+    begin
+      for I := Succ(ChildIdx) to Math.Min(ChildIdx + Pred(BRANCH_FACTOR), Pred(Size)) do
+        if FLess(FItems[ChildIdx], FItems[I]) then
+          ChildIdx := I;
+      if not FLess(T(v), FItems[ChildIdx]) then break;
+      TFake(FItems[aIndex]) := TFake(FItems[ChildIdx]);
+      aIndex := ChildIdx;
+      ChildIdx := Succ(ChildIdx * BRANCH_FACTOR);
+    end;
+  TFake(FItems[aIndex]) := v;
+end;
+
+procedure TGRegularDaryHeap.SiftDown;
+begin
+  SiftDown(0);
+end;
+
+procedure TGRegularDaryHeap.FloatUp(aIndex: SizeInt);
+var
+  ParentIdx: SizeInt;
+  v: TFake;
+begin
+  ParentIdx := Pred(aIndex) div BRANCH_FACTOR;
+  v := TFake(FItems[aIndex]);
+  while (aIndex > 0) and FLess(FItems[ParentIdx], T(v)) do
+    begin
+      TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
+      aIndex := ParentIdx;
+      ParentIdx := Pred(ParentIdx) div BRANCH_FACTOR;
+    end;
+  TFake(FItems[aIndex]) := v;
+end;
+
 { TGDelegatedBinHeap }
 
 procedure TGDelegatedBinHeap.BuildHeap;
@@ -1386,6 +1579,58 @@ end;
 function TGDelegatedBinHeap.Comparator: TOnLess;
 begin
   Result := FLess;
+end;
+
+{ TGDelegatedDaryHeap }
+
+procedure TGDelegatedDaryHeap.BuildHeap;
+var
+  I: SizeInt;
+begin
+  for I := Pred(ElemCount div BRANCH_FACTOR) downto 0 do
+    SiftDown(I);
+end;
+
+procedure TGDelegatedDaryHeap.SiftDown(aIndex: SizeInt);
+var
+  ChildIdx, Size, I: SizeInt;
+  v: TFake;
+begin
+  Size := ElemCount;
+  ChildIdx := Succ(aIndex * BRANCH_FACTOR);
+  v := TFake(FItems[aIndex]);
+  while ChildIdx < Size do
+    begin
+      for I := Succ(ChildIdx) to Math.Min(ChildIdx + Pred(BRANCH_FACTOR), Pred(Size)) do
+        if FLess(FItems[ChildIdx], FItems[I]) then
+          ChildIdx := I;
+      if not FLess(T(v), FItems[ChildIdx]) then break;
+      TFake(FItems[aIndex]) := TFake(FItems[ChildIdx]);
+      aIndex := ChildIdx;
+      ChildIdx := Succ(ChildIdx * BRANCH_FACTOR);
+    end;
+  TFake(FItems[aIndex]) := v;
+end;
+
+procedure TGDelegatedDaryHeap.SiftDown;
+begin
+  SiftDown(0);
+end;
+
+procedure TGDelegatedDaryHeap.FloatUp(aIndex: SizeInt);
+var
+  ParentIdx: SizeInt;
+  v: TFake;
+begin
+  ParentIdx := Pred(aIndex) div BRANCH_FACTOR;
+  v := TFake(FItems[aIndex]);
+  while (aIndex > 0) and FLess(FItems[ParentIdx], T(v)) do
+    begin
+      TFake(FItems[aIndex]) := TFake(FItems[ParentIdx]);
+      aIndex := ParentIdx;
+      ParentIdx := Pred(ParentIdx) div BRANCH_FACTOR;
+    end;
+  TFake(FItems[aIndex]) := v;
 end;
 
 { TGLiteBinHeap }
