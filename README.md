@@ -10,7 +10,7 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   - deque(unit lgDeque)
   - vector(unit lgVector)
   - vector of bits(unit lgVector)
-  - priority queue based on binary heap(unit lgPriorityQueue)
+  - priority queue based on binary(d-ary) heap(unit lgPriorityQueue)
   - priority queue with key update and melding based on pairing heap(unit lgPriorityQueue)
   - sorted list(unit lgList)
   - hashed list - array based list with the ability to fast search by key(unit lgList)  
