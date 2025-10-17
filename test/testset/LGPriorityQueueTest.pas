@@ -1,7 +1,8 @@
 unit LGPriorityQueueTest;
 
-{$mode objfpc}{$H+}
-{$modeswitch advancedrecords}
+{$MODE OBJFPC}{$H+}
+{$MODESWITCH ADVANCEDRECORDS}
+{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 
 interface
 uses
@@ -27,10 +28,15 @@ type
     end;
 
     TIntBaseBinHeap          = specialize TGBinHeap<Integer>;
+    TIntDaryHeap             = specialize TGDaryHeap<Integer,{$IF FPC_FULLVERSION > 30300}4{$ELSE}DWord{$ENDIF}>;
     TIntComparbleBinHeapMax  = specialize TGComparableBinHeapMax<Integer>;
     TIntComparbleBinHeapMin  = specialize TGComparableBinHeapMin<Integer>;
+    TIntComparbleDaryHeapMax = specialize TGComparableDaryHeapMax<Integer,{$IF FPC_FULLVERSION > 30300}4{$ELSE}DWord{$ENDIF}>;
+    TIntComparbleDaryHeapMin = specialize TGComparableDaryHeapMin<Integer,{$IF FPC_FULLVERSION > 30300}4{$ELSE}DWord{$ENDIF}>;
     TIntRegularBinHeap       = specialize TGRegularBinHeap<Integer>;
+    TIntRegularDaryHeap      = specialize TGRegularDaryHeap<Integer,{$IF FPC_FULLVERSION > 30300}4{$ELSE}DWord{$ENDIF}>;
     TIntDelegatedBinHeap     = specialize TGDelegatedBinHeap<Integer>;
+    TIntDelegatedDaryHeap    = specialize TGDelegatedDaryHeap<Integer,{$IF FPC_FULLVERSION > 30300}4{$ELSE}DWord{$ENDIF}>;
 
     TLiteIntBinHeap          = specialize TGLiteBinHeap<Integer, Integer>;
     TLiteIntBinHeapMin       = specialize TGLiteComparableBinHeapMin<Integer>;
@@ -48,7 +54,7 @@ type
     TLiteIntPairHeapMin      = specialize TGLiteComparablePairHeapMin<Integer>;
 
     TIntHelper               = specialize TGOrdinalArrayHelper<Integer>;
-    TIntArray                = TIntBaseBinHeap.TArray;
+    TIntArray                = array of Integer;
     IIntEnumerable           = specialize IGEnumerable<Integer>;
     TIntArrayCursor          = specialize TGArrayCursor<Integer>;
     THandleArray             = array of THandle;
@@ -57,18 +63,23 @@ type
   published
     procedure BaseBinHeap;
     procedure BaseBinHeapReverse;
+    procedure DaryHeap;
     procedure ComparableBinHeapMax;
     procedure ComparableBinHeapMax1;
     procedure ComparableBinHeapMaxReverse;
     procedure ComparableBinHeapMin;
     procedure ComparableBinHeapMin1;
     procedure ComparableBinHeapMinReverse;
+    procedure ComparableDaryHeapMax;
+    procedure ComparableDaryHeapMin;
     procedure RegularBinHeap;
     procedure DefaultRegularBinHeap;
     procedure RegularBinHeapReverse;
+    procedure RegularDaryHeap;
     procedure DelegatedBinHeap;
     procedure DefaultDelegatedBinHeap;
     procedure DelegatedBinHeapReverse;
+    procedure DelegatedDaryHeap;
     procedure RegularKSelectArray;
     procedure RegularKSelectEnum;
 
@@ -219,6 +230,50 @@ begin
   finally
     q.Free;
   end;
+end;
+
+procedure TGPriorityQueueTest.DaryHeap;
+var
+  Ref: specialize TGUniqRef<TIntDaryHeap>;
+  q: TIntDaryHeap;
+  I, J: Integer;
+  a, b: TIntArray;
+begin
+  AssertTrue(q.BRANCH_FACTOR = 4);
+  SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := I * 1001;
+  TIntHelper.RandomShuffle(a);
+  {%H-}Ref.Instance := TIntDaryHeap.Create(a);
+  q := Ref;
+  AssertTrue(q.Count = Length(a));
+  SetLength(b, q.Count);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      b[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(b));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(b));
+  b := nil;
+
+  I := q.EnqueueAll(a);
+  AssertTrue(I = Length(a));
+  AssertTrue(I = q.Count);
+
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(a));
 end;
 
 procedure TGPriorityQueueTest.ComparableBinHeapMax;
@@ -377,6 +432,94 @@ begin
   end;
 end;
 
+procedure TGPriorityQueueTest.ComparableDaryHeapMax;
+var
+  Ref: specialize TGUniqRef<TIntComparbleDaryHeapMax>;
+  q: TIntComparbleDaryHeapMax;
+  I, J: Integer;
+  a, b: TIntArray;
+begin
+  AssertTrue(q.BRANCH_FACTOR = 4);
+  SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := I * 1001;
+  TIntHelper.RandomShuffle(a);
+  {%H-}Ref.Instance := TIntComparbleDaryHeapMax.Create(a);
+  q := Ref;
+  AssertTrue(q.Count = Length(a));
+  SetLength(b, q.Count);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      b[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(b));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(b));
+  b := nil;
+
+  I := q.EnqueueAll(a);
+  AssertTrue(I = Length(a));
+  AssertTrue(I = q.Count);
+
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(a));
+end;
+
+procedure TGPriorityQueueTest.ComparableDaryHeapMin;
+var
+  Ref: specialize TGUniqRef<TIntComparbleDaryHeapMin>;
+  q: TIntComparbleDaryHeapMin;
+  I, J: Integer;
+  a, b: TIntArray;
+begin
+  AssertTrue(q.BRANCH_FACTOR = 4);
+  SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := I * 1001;
+  TIntHelper.RandomShuffle(a);
+  {%H-}Ref.Instance := TIntComparbleDaryHeapMin.Create(a);
+  q := Ref;
+  AssertTrue(q.Count = Length(a));
+  SetLength(b, q.Count);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      b[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(b));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictAscending(b));
+  b := nil;
+
+  I := q.EnqueueAll(a);
+  AssertTrue(I = Length(a));
+  AssertTrue(I = q.Count);
+
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictAscending(a));
+end;
+
 function CmpLongInt(const L, R: LongInt): Boolean;
 begin
   Result := L < R;
@@ -460,6 +603,50 @@ begin
   end;
 end;
 
+procedure TGPriorityQueueTest.RegularDaryHeap;
+var
+  Ref: specialize TGUniqRef<TIntRegularDaryHeap>;
+  q: TIntRegularDaryHeap;
+  I, J: Integer;
+  a, b: TIntArray;
+begin
+  AssertTrue(q.BRANCH_FACTOR = 4);
+  SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := I * 1001;
+  TIntHelper.RandomShuffle(a);
+  {%H-}Ref.Instance := TIntRegularDaryHeap.Create(a, @CmpLongInt);
+  q := Ref;
+  AssertTrue(q.Count = Length(a));
+  SetLength(b, q.Count);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      b[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(b));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(b));
+  b := nil;
+
+  I := q.EnqueueAll(a);
+  AssertTrue(I = Length(a));
+  AssertTrue(I = q.Count);
+
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(a));
+end;
+
 procedure TGPriorityQueueTest.DelegatedBinHeap;
 var
   q: TIntDelegatedBinHeap;
@@ -536,6 +723,50 @@ begin
   finally
     q.Free;
   end;
+end;
+
+procedure TGPriorityQueueTest.DelegatedDaryHeap;
+var
+  Ref: specialize TGUniqRef<TIntDelegatedDaryHeap>;
+  q: TIntDelegatedDaryHeap;
+  I, J: Integer;
+  a, b: TIntArray;
+begin
+  AssertTrue(q.BRANCH_FACTOR = 4);
+  SetLength(a, 100);
+  for I := 1 to System.Length(a) do
+    a[I - 1] := I * 1001;
+  TIntHelper.RandomShuffle(a);
+  {%H-}Ref.Instance := TIntDelegatedDaryHeap.Create(a, @LongIntCmp);
+  q := Ref;
+  AssertTrue(q.Count = Length(a));
+  SetLength(b, q.Count);
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      b[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = System.Length(b));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(b));
+  b := nil;
+
+  I := q.EnqueueAll(a);
+  AssertTrue(I = Length(a));
+  AssertTrue(I = q.Count);
+
+  I := 0;
+  J := 0;
+  while q.TryDequeue(J) do
+    begin
+      a[I] := J;
+      Inc(I);
+    end;
+  AssertTrue(I = Length(a));
+  AssertTrue(q.IsEmpty);
+  AssertTrue(TIntHelper.IsStrictDescending(a));
 end;
 
 procedure TGPriorityQueueTest.RegularKSelectArray;
