@@ -3726,31 +3726,125 @@ begin
 end;
 
 { for internal use only }
-function GetDecimalLen(const aValue: QWord): Integer; inline;
+
+//function GetDecimalLenQ(const aValue: QWord): Integer; inline;
+//begin
+//  case aValue of
+//    0..9: Result := 1;
+//    10..99: Result := 2;
+//    100..999: Result := 3;
+//    1000..9999: Result := 4;
+//    10000..99999: Result := 5;
+//    100000..999999: Result := 6;
+//    1000000..9999999: Result := 7;
+//    10000000..99999999: Result := 8;
+//    100000000..999999999: Result := 9;
+//    1000000000..9999999999: Result := 10;
+//    10000000000..99999999999: Result := 11;
+//    100000000000..999999999999: Result := 12;
+//    1000000000000..9999999999999: Result := 13;
+//    10000000000000..99999999999999: Result := 14;
+//    100000000000000..999999999999999: Result := 15;
+//    1000000000000000..9999999999999999: Result := 16;
+//    10000000000000000..99999999999999999: Result := 17;
+//    100000000000000000..999999999999999999: Result := 18;
+//    1000000000000000000..9999999999999999999: Result := 19;
+//  else
+//    Result := 20;
+//  end;
+//end;
+
+//function GetDecimalLenQ(aValue: QWord): Integer; inline;
+//const
+//  Tbl: array[0..19] of QWord = (
+//                     0,               10,                100,                1000,
+//                 10000,           100000,            1000000,            10000000,
+//             100000000,       1000000000,        10000000000,        100000000000,
+//         1000000000000,   10000000000000,    100000000000000,    1000000000000000,
+//    10000000000000000,100000000000000000,1000000000000000000,10000000000000000000
+//  );
+//begin
+//  Result := (Succ(ShortInt(BsrQWord(aValue))) * Integer(1233)) shr 12;
+//  Inc(Result, Ord(aValue >= Tbl[Result]));
+//end;
+
+//function GetDecimalLenQ(const aValue: QWord): Integer; inline;
+//const
+//  Tbl_1: array [0..64] of ShortInt = (
+//      1,  1,  1,  1,  1,  2,  2,  2,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  6,  6,  6,  7,
+//      7,  7,  7,  8,  8,  8,  9,  9,  9, 10, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13,
+//     13, 14, 14, 14, 15, 15, 15, 16, 16, 16, 16, 17, 17, 17, 18, 18, 18, 19, 19, 19, 19
+//  );
+//  Tbl_2: array [0..64] of QWord = (
+//    QWord($FFFFFFFFFFFFFFFF), QWord($FFFFFFFFFFFFFFF6), QWord($FFFFFFFFFFFFFFF6), QWord($FFFFFFFFFFFFFFF6),
+//    QWord($FFFFFFFFFFFFFFF6), QWord($FFFFFFFFFFFFFF9C), QWord($FFFFFFFFFFFFFF9C), QWord($FFFFFFFFFFFFFF9C),
+//    QWord($FFFFFFFFFFFFFC18), QWord($FFFFFFFFFFFFFC18), QWord($FFFFFFFFFFFFFC18), QWord($FFFFFFFFFFFFD8F0),
+//    QWord($FFFFFFFFFFFFD8F0), QWord($FFFFFFFFFFFFD8F0), QWord($FFFFFFFFFFFFD8F0), QWord($FFFFFFFFFFFE7960),
+//    QWord($FFFFFFFFFFFE7960), QWord($FFFFFFFFFFFE7960), QWord($FFFFFFFFFFF0BDC0), QWord($FFFFFFFFFFF0BDC0),
+//    QWord($FFFFFFFFFFF0BDC0), QWord($FFFFFFFFFF676980), QWord($FFFFFFFFFF676980), QWord($FFFFFFFFFF676980),
+//    QWord($FFFFFFFFFF676980), QWord($FFFFFFFFFA0A1F00), QWord($FFFFFFFFFA0A1F00), QWord($FFFFFFFFFA0A1F00),
+//    QWord($FFFFFFFFC4653600), QWord($FFFFFFFFC4653600), QWord($FFFFFFFFC4653600), QWord($FFFFFFFDABF41C00),
+//    QWord($FFFFFFFDABF41C00), QWord($FFFFFFFDABF41C00), QWord($FFFFFFFDABF41C00), QWord($FFFFFFE8B7891800),
+//    QWord($FFFFFFE8B7891800), QWord($FFFFFFE8B7891800), QWord($FFFFFF172B5AF000), QWord($FFFFFF172B5AF000),
+//    QWord($FFFFFF172B5AF000), QWord($FFFFF6E7B18D6000), QWord($FFFFF6E7B18D6000), QWord($FFFFF6E7B18D6000),
+//    QWord($FFFFF6E7B18D6000), QWord($FFFFA50CEF85C000), QWord($FFFFA50CEF85C000), QWord($FFFFA50CEF85C000),
+//    QWord($FFFC72815B398000), QWord($FFFC72815B398000), QWord($FFFC72815B398000), QWord($FFDC790D903F0000),
+//    QWord($FFDC790D903F0000), QWord($FFDC790D903F0000), QWord($FFDC790D903F0000), QWord($FE9CBA87A2760000),
+//    QWord($FE9CBA87A2760000), QWord($FE9CBA87A2760000), QWord($F21F494C589C0000), QWord($F21F494C589C0000),
+//    QWord($F21F494C589C0000), QWord($7538DCFB76180000), QWord($7538DCFB76180000), QWord($7538DCFB76180000),
+//    QWord($7538DCFB76180000)
+//  );
+//var
+//  BitLen: ShortInt;
+//begin
+//  BitLen := Succ(ShortInt(BsrQWord(aValue)));
+//  Result := Tbl_1[BitLen] + SizeInt(Tbl_2[BitLen] + aValue < aValue);
+//end;
+
+//function GetDecimalLenD(aValue: DWord): Integer; inline;
+//const
+//  Tbl: array [0..32] of QWord = (
+//     4294967296,  4294967296,  8589934582,  8589934582,  8589934582, 12884901788,
+//    12884901788, 12884901788, 17179868184, 17179868184, 17179868184, 21474826480,
+//    21474826480, 21474826480, 21474826480, 25769703776, 25769703776, 25769703776,
+//    30063771072, 30063771072, 30063771072, 34349738368, 34349738368, 34349738368,
+//    34349738368, 38554705664, 38554705664, 38554705664, 41949672960, 41949672960,
+//    41949672960, 42949672960, 42949672960
+//  );
+//begin
+//  Result := (aValue + Tbl[Succ(ShortInt(BsrDWord(aValue)))]) shr 32;
+//end;
+
+function GetDecimalLen(aValue: QWord): Integer; inline;
 begin
-  case aValue of
-    0..9: Result := 1;
-    10..99: Result := 2;
-    100..999: Result := 3;
-    1000..9999: Result := 4;
-    10000..99999: Result := 5;
-    100000..999999: Result := 6;
-    1000000..9999999: Result := 7;
-    10000000..99999999: Result := 8;
-    100000000..999999999: Result := 9;
-    1000000000..9999999999: Result := 10;
-    10000000000..99999999999: Result := 11;
-    100000000000..999999999999: Result := 12;
-    1000000000000..9999999999999: Result := 13;
-    10000000000000..99999999999999: Result := 14;
-    100000000000000..999999999999999: Result := 15;
-    1000000000000000..9999999999999999: Result := 16;
-    10000000000000000..99999999999999999: Result := 17;
-    100000000000000000..999999999999999999: Result := 18;
-    1000000000000000000..9999999999999999999: Result := 19;
+  if aValue < 10000000000 then
+    if aValue < 10000 then
+      if aValue < 100 then
+        Result := 2 - Ord(aValue < 10)
+      else
+        Result := 4 - Ord(aValue < 1000)
+    else
+      if aValue < 100000000 then
+        if aValue < 1000000 then
+          Result := 6 - Ord(aValue < 100000)
+        else
+          Result := 8 - Ord(aValue < 10000000)
+      else
+        Result := 10 - Ord(aValue < 1000000000)
   else
-    Result := 20;
-  end;
+    if aValue < 100000000000000 then
+      if aValue < 1000000000000 then
+        Result := 12 - Ord(aValue < 100000000000)
+      else
+        Result := 14 - Ord(aValue < 10000000000000)
+    else
+      if aValue < 1000000000000000000 then
+        if aValue < 10000000000000000 then
+          Result := 16 - Ord(aValue < 1000000000000000)
+        else
+          Result := 18 - Ord(aValue < 100000000000000000)
+      else
+        Result := 20 - Ord(aValue < 10000000000000000000);
 end;
 
 function SizeUIntDecimalLen(const aValue: SizeUInt): Integer; inline;
@@ -3758,24 +3852,25 @@ begin
 {$IF DEFINED(CPU64)}
   Result := GetDecimalLen(aValue);
 {$ELSEIF DEFINED(CPU32)}
-  case aValue of
-    0..9: Result := 1;
-    10..99: Result := 2;
-    100..999: Result := 3;
-    1000..9999: Result := 4;
-    10000..99999: Result := 5;
-    100000..999999: Result := 6;
-    1000000..9999999: Result := 7;
-    10000000..99999999: Result := 8;
-    100000000..999999999: Result := 9;
+  if aValue < 10000 then
+    if aValue < 100 then
+      Result := 2 - Ord(aValue < 10)
+    else
+      Result := 4 - Ord(aValue < 1000)
   else
-    Result := 10;
-  end;
+    if aValue < 100000000 then
+      if aValue < 1000000 then
+        Result := 6 - Ord(aValue < 100000)
+      else
+        Result := 8 - Ord(aValue < 10000000)
+    else
+      Result := 10 - Ord(aValue < 1000000000);
 {$ELSEIF DEFINED(CPU16)}
+begin
   case aValue of
-    0..9: Result := 1;
-    10..99: Result := 2;
-    100..999: Result := 3;
+    0..9:       Result := 1;
+    10..99:     Result := 2;
+    100..999:   Result := 3;
     1000..9999: Result := 4;
   else
     Result := 5;
