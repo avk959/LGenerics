@@ -139,6 +139,11 @@ uses
       result type is a LogicalType;
         returns boolean True if Arg is string value;
 
+    is_std_date(Arg)
+    Arg type must be a ValueType;
+    result type is a LogicalType;
+      returns a boolean value of True if Arg is a string containing an RFC 4287 compliant date-time value;
+
     is_array(Arg)
       Arg type must be a ValueType;
       result type is a LogicalType;
@@ -517,7 +522,7 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  Math, lgVector, lgHashMap, lgSeqUtils, lgStrConst, Character, UnicodeData;
+  Math, lgVector, lgHashMap, lgSeqUtils, lgJsonTypeDef, lgStrConst, Character, UnicodeData;
 
 type
   { TStrBuilder }
@@ -5777,6 +5782,13 @@ var
 begin
   aResult := (System.Length(aList) = 1) and IsStringInst(aList[0], s);
 end;
+{ is_std_date() }
+procedure CallIsStdDate(const aList: TJpParamList; out aResult: TJpInstance);
+var
+  s: string;
+begin
+  aResult := (System.Length(aList) = 1) and IsStringInst(aList[0], s) and IsRfc8927TimeStamp(s);
+end;
 { is_array() }
 procedure CallIsArray(const aList: TJpParamList; out aResult: TJpInstance);
 begin
@@ -6059,6 +6071,7 @@ begin
   FunCache.Add('is_number',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsNumber));
   FunCache.Add('is_integer',   TJpFunctionDef.Make([jitValue], jitLogical, @CallIsInteger));
   FunCache.Add('is_string',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsString));
+  FunCache.Add('is_std_date',  TJpFunctionDef.Make([jitValue], jitLogical, @CallIsStdDate));
   FunCache.Add('is_array',     TJpFunctionDef.Make([jitValue], jitLogical, @CallIsArray));
   FunCache.Add('is_object',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsObject));
   FunCache.Add('is_struct',    TJpFunctionDef.Make([jitValue], jitLogical, @CallIsStruct));
