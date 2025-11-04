@@ -67,6 +67,7 @@ type
     procedure TestIsNumber;
     procedure TestIsInteger;
     procedure TestIsString;
+    procedure TestIsStdDate;
     procedure TestIsArray;
     procedure TestIsObject;
     procedure TestIsStruct;
@@ -503,9 +504,8 @@ end;
 
 procedure TTestAuxFun.RunTestSet(const aTestSet: TTestSet; aErrList: TStrings);
 var
-  Root: specialize TGAutoRef<TJsonNode>;
+  Root, OutList, Expected: specialize TGAutoRef<TJsonNode>;
   Path: IJsonPath;
-  vList: string;
   I: Integer;
 begin
   for I := 0 to High(aTestSet) do begin
@@ -519,9 +519,10 @@ begin
         aErrList.Add(Format(QueryFmt, [I]));
         continue;
       end;
-    vList := Path.MatchValues(Root.Instance).AsJson;
-    if vList <> aTestSet[I].Expected then
-      aErrList.Add(Format(ExpectFmt, [I, aTestSet[I].Expected, vList]));
+    Expected.Instance.AsJson := aTestSet[I].Expected;
+    OutList.Instance.AsJson := Path.MatchValues(Root.Instance).AsJson;
+    if not OutList.Instance.EqualTo(Expected.Instance) then
+      aErrList.Add(Format(ExpectFmt, [I, aTestSet[I].Expected, OutList.Instance.AsJson]));
   end;
 end;
 
@@ -667,6 +668,29 @@ const
     (Value: '[{"a":"b"},{"a":27.456}]'; Query: '$[?@[?is_string(@)]]'; Expected: '[{"a":"b"}]'),
     (Value: '[[],[[],12],[0,null]]';    Query: '$[?@[?is_string(@)]]'; Expected: '[]'),
     (Value: '[[],[[],"a"],[12,null]]';  Query: '$[?@[?is_string(@)]]'; Expected: '[[[],"a"]]')
+  );
+begin
+  RunTestSet(Tests, ErrList.Instance);
+  AssertTrue(ErrList.Instance.Text, ErrList.Instance.Count = 0);
+end;
+
+procedure TTestAuxFun.TestIsStdDate;
+var
+  ErrList: TAutoStrList;
+const
+  Tests: TTestSet = (
+    (Value: '[]';             Query: '$[?is_std_date(@)]'; Expected: '[]'),
+    (Value: '["a",false,42]'; Query: '$[?is_std_date(@)]'; Expected: '[]'),
+    (
+      Value:    '["2001-11-25 23:12:34Z","2007-14-11T21:11:11Z","2015-01-15T22:15:31Z"]';
+      Query:    '$[?is_std_date(@)]';
+      Expected: '["2015-01-15T22:15:31Z"]'
+    ),
+    (
+      Value:    '{"a":false,"b":null,"c":"blah","d":"2015-01-15T22:15:31Z"}';
+      Query:    '$[?is_std_date(@)]';
+      Expected: '["2015-01-15T22:15:31Z"]'
+    )
   );
 begin
   RunTestSet(Tests, ErrList.Instance);
