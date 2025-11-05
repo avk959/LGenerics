@@ -26,7 +26,7 @@ unit lgJsonPath;
 interface
 
 uses
-  SysUtils, lgUtils, lgHelpers, lgJson;
+  SysUtils, lgUtils, lgHelpers, lgJson, lgJsonTypeDef;
 
 {
   https://www.rfc-editor.org/rfc/rfc9535
@@ -438,7 +438,7 @@ type
 
 type
   { TJsonPathNodeHelper }
-  TJsonPathNodeHelper = class helper for TJsonNode
+  TJsonPathNodeHelper = class helper(TJtdJsonNodeHelper) for TJsonNode
   { returns NodeList that matches previously parsed JSONPath query aPath }
     function Match(aPath: IJsonPath): TJpNodeList;
   { tries to apply JSONPath query aQuery to the instance;
@@ -522,7 +522,7 @@ implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 uses
-  Math, lgVector, lgHashMap, lgSeqUtils, lgJsonTypeDef, lgStrConst, Character, UnicodeData;
+  Math, lgVector, lgHashMap, lgSeqUtils, lgStrConst, Character, UnicodeData;
 
 type
   { TStrBuilder }

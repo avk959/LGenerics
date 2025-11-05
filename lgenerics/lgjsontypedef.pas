@@ -28,7 +28,7 @@ unit lgJsonTypeDef;
 interface
 
 uses
-  Classes, SysUtils, lgHelpers, lgHashSet, lgHashMap, lgJson, lgJsonPath;
+  Classes, SysUtils, lgHelpers, lgHashSet, lgHashMap, lgJson;
 
 type
   EJtdSchemaLoad   = class(Exception);
@@ -214,7 +214,7 @@ type
 
 type
 
-  TJtdJsonNodeHelper = class helper(TJsonPathNodeHelper) for TJsonNode
+  TJtdJsonNodeHelper = class helper for TJsonNode
     function JtdValidate(aSchema: TJtdSchema): Boolean;
     function JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError): Boolean;
   end;
