@@ -125,6 +125,7 @@ type
                         aFrom, aCount: SizeInt): string; static; overload;
     class function Join(const aSeparator: string; aValues: IStrEnumerable): string; static; overload;
     class function Join(const aSeparator: string; aValues: ISliceEnumerable): string; static; overload;
+    class function SameChars(const L, R: array of AnsiChar): Boolean; static;
     function StripWhiteSpaces: string; inline;
     function StripChar(aChar: AnsiChar): string;
     function StripChars(const aChars: TSysCharSet): string;
@@ -3773,6 +3774,13 @@ begin
     end;
   System.SetLength(s, CharCount);
   Result := s;
+end;
+
+class function TAnsiStrHelper.SameChars(const L, R: array of AnsiChar): Boolean;
+begin
+  if System.Length(L) <> System.Length(R) then exit(False);
+  if System.Length(L) = 0 then exit(True);
+  Result := CompareByte(L[0], R[0], System.Length(L)) = 0;
 end;
 
 function TAnsiStrHelper.StripWhiteSpaces: string;
