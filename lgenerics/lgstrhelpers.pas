@@ -3780,7 +3780,7 @@ class function TAnsiStrHelper.SameChars(const L, R: array of AnsiChar): Boolean;
 begin
   if System.Length(L) <> System.Length(R) then exit(False);
   if System.Length(L) = 0 then exit(True);
-  Result := CompareByte(L[0], R[0], System.Length(L)) = 0;
+  Result := System.CompareByte(L[0], R[0], System.Length(L)) = 0;
 end;
 
 function TAnsiStrHelper.StripWhiteSpaces: string;
