@@ -406,7 +406,9 @@ type
   the responsibility for the correctness and normalization of the strings lies with the user }
   function Utf8StrLen(const s: string): SizeInt; inline;
   function Utf8CodePointLength(p: PAnsiChar; aByteCount: SizeInt): SizeInt;
+{ simple (single-char) lowercase mapping }
   function Utf8ToLower(const s: string): string;
+{ simple (single-char) uppercase mapping }
   function Utf8ToUpper(const s: string): string;
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
@@ -4393,19 +4395,22 @@ begin
   Result := UNICODE_BAD_CHAR;
 end;
 
-function Utf8Len(const s: rawbytestring): SizeInt;
+function Utf8Len(p: PByte; aCount: SizeInt): SizeInt;
 var
-  I, StrLen: SizeInt;
-  p: PByte absolute s;
+  pEnd: PByte;
 begin
-  StrLen := System.Length(s);
+  pEnd := p + aCount;
   Result := 0;
-  I := 0;
-  while I < StrLen do
+  while p < pEnd do
     begin
-      I += Utf8CodePointLen(@p[I], StrLen - I);
+      p += Utf8CodePointLen(p, pEnd - p);
       Inc(Result);
     end;
+end;
+
+function Utf8Len(const s: rawbytestring): SizeInt; inline;
+begin
+  Result := Utf8Len(Pointer(s), System.Length(s));
 end;
 
 function Utf8ToUcs4SeqImpl(const s: rawbytestring): TUcs4Seq;
@@ -4445,8 +4450,9 @@ begin
 end;
 
 { see http://bjoern.hoehrmann.de/utf-8/decoder/dfa; optimized version based on Rich Felker's variant }
-{$PUSH}{$J-}
+function Utf8ValidateDfa(const s: rawbytestring): Boolean;
 const
+{$PUSH}{$J-}
   UTF8_D: array[Byte] of Byte = (
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -4464,13 +4470,10 @@ const
      12,12,12,12,12,12,12,36,12,36,12,12, 12,36,12,12,12,12,12,36,12,36,12,12,
      12,36,12,12,12,12,12,12,12,12,12,12);
 {$POP}
-
-function Utf8ValidateDfa(const s: rawbytestring): Boolean;
+  UTF8_REJECT = 12;
 var
   I: SizeInt;
   State: Byte;
-const
-  UTF8_REJECT = 12;
 begin
   State := 0;
   for I := 1 to System.Length(s) do
