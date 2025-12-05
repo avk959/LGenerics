@@ -53,6 +53,7 @@ type
   type
     TReadOption    = (
       roSkipLeadSpaces,{ leading white spaces in cells will be skipped }
+      roSkipBom,       { UTF-8 BOM will be skipped }
       roComments,      { single-line comments starting with a comment sign with no leading
                          white spaces are allowed(will just be ignored) }
       roStrict         { ECsvRead will be raised when a problem with reading a CSV document happens;
@@ -1674,15 +1675,17 @@ begin
     FReadState := rsEof;
     exit(rsEof);
   end;
-  FBom := DetectBom(PByte(FBuffer), FBufCount);
-  case FBom of
-    bkNone: ;
-    bkUtf8: FBufIndex += UTF8_BOM_LEN;
-  else
-    FParseState := psEncoding;
-    HandleEvent(0, 0, FParseState);
-    FReadState := rsFatal;
-    exit(rsFatal);
+  if roSkipBom in Options then begin
+    FBom := DetectBom(PByte(FBuffer), FBufCount);
+    case FBom of
+      bkNone: ;
+      bkUtf8: FBufIndex += UTF8_BOM_LEN;
+    else
+      FParseState := psEncoding;
+      HandleEvent(0, 0, FParseState);
+      FReadState := rsFatal;
+      exit(rsFatal);
+    end;
   end;
   FReadState := rsRead;
   Result := rsRead;
