@@ -839,6 +839,7 @@ var
 begin
   s := #$ef#$bb#$bf'a,b,c';
   {%H-}Reader.Instance := TCsvReader.Create(TStrStream.Create(s), 0, True);
+  Reader.Instance.Options := [roSkipBom];
   AssertTrue('Can not read row starting with UTF-8 BOM', Reader.Instance.ReadRow);
   AssertTrue('Unexpected state after reading a row starting with UTF-8 BOM', Reader.Instance.ReadState = rsEof);
   row := Reader.Instance.CurrentRow;
@@ -848,6 +849,7 @@ begin
 
   s := #$ff#$fe'a,b,c';
   Reader.Instance := TCsvReader.Create(TStrStream.Create(s), 0, True);
+  Reader.Instance.Options := [roSkipBom];
   AssertFalse('Reads row starting with UTF-16 BOM', Reader.Instance.ReadRow);
   AssertTrue('Read state not set to fatal', Reader.Instance.ReadState = rsFatal);
   AssertTrue('Incorrectly recognized UTF-16LE BOM', Reader.Instance.BOM = bkUtf16LE);
@@ -859,7 +861,7 @@ begin
 
   Reader.Instance := TCsvReader
     .New(Pointer(s), Length(s))
-    .SetOptions([roStrict]);
+    .SetOptions([roStrict, roSkipBom]);
   try
     Reader.Instance.ReadRow;
   except
@@ -1007,19 +1009,14 @@ begin
   AssertTrue(Count = 12);
   AssertTrue(THelper.Same(row, ['a','b','c']));
 
-  s := #$ff#$fe + s;
-  Count := TCsvReader.TryReadRow(Pointer(s), Length(s), row);
-  AssertTrue(Count = -1);
-  AssertTrue(row = nil);
-
   {%H-}Reader.Instance := TCsvReader
     .New(nil, 0)
     .SetDelimiter(';')
     .SetQuoteMark('`')
     .SetCommentMark('%')
-    .SetOptions([roSkipLeadSpaces, roComments]);
+    .SetOptions([roSkipLeadSpaces, roSkipBom, roComments]);
 
-  s := #13#10#13#10'% this is comment'#10'   aa;    `b``b`;cc ';
+  s := #$ef#$bb#$bf#13#10#13#10'% this is comment'#10'   aa;    `b``b`;cc ';
   Count := TCsvReader.TryReadRow(Pointer(s), Length(s), row, Reader.Instance);
   AssertTrue(Count = Length(s));
   AssertTrue(THelper.Same(row, ['aa', 'b`b', 'cc ']));
