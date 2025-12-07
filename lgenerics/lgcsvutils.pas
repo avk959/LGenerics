@@ -166,10 +166,15 @@ type
     function  GetCsvText: string;
     procedure DoSetCsvText(const aValue: string);
     procedure LoadStream(s: TStream; aBufSize: SizeInt; aOwnsStream: Boolean);
+    procedure LoadStreamCp(s: TStream; aCodePage: Integer; aOwnsStream: Boolean);
     procedure LoadStream(s: TStream; aBufSize: SizeInt; aOwnsStream: Boolean;
                          const aMask: array of Boolean);
+    procedure LoadStreamCp(s: TStream; aCodePage: Integer; aOwnsStream: Boolean;
+                           const aMask: array of Boolean);
     procedure LoadFile(const aFileName: string);
+    procedure LoadFile(const aFileName: string; aCodePage: Integer);
     procedure LoadFile(const aFileName: string; const aMask: array of Boolean);
+    procedure LoadFile(const aFileName: string; const aMask: array of Boolean; aCodePage: Integer);
     procedure DoLoadBuffer(aBuffer: PChar; aCount: SizeInt);
     procedure DoLoadBuffer(aBuffer: PChar; aCount: SizeInt; const aMask: array of Boolean);
   protected
@@ -196,11 +201,14 @@ type
     is less than 1, the buffer size is set equal to the stream size; if aOwnsStream is set
     to True, the CsvDoc is responsible for destroying source stream; returns Self }
     function  LoadFromStream(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean): TCsvDoc;
+    function  LoadFromStream(aSource: TStream; aOwnsStream: Boolean; aCodePage: Integer): TCsvDoc;
   { loads only masked columns(i.e. aMask[Col]=True) from the stream, ignoring the ColCountPolicy
     property; issues, if any, are only logged for masked columns; if aMask is empty,
     all columns are loaded; returns Self }
     function  LoadFromStream(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean;
                              const aMask: array of Boolean): TCsvDoc;
+    function  LoadFromStream(aSource: TStream; aOwnsStream: Boolean; const aMask: array of Boolean;
+                             aCodePage: Integer): TCsvDoc;
     function  LoadFromStream(aSource: TStream): TCsvDoc;
   { the same as above using the field mask }
     function  LoadFromStream(aSource: TStream; const aMask: array of Boolean): TCsvDoc;
@@ -212,8 +220,11 @@ type
                                aThreadLimit: Integer = 0): TCsvDoc; experimental;
   { loads document from file; returns Self }
     function  LoadFromFile(const aFileName: string): TCsvDoc;
+    function  LoadFromFile(const aFileName: string; aCodePage: Integer): TCsvDoc;
   { the same as above using the field mask }
     function  LoadFromFile(const aFileName: string; const aMask: array of Boolean): TCsvDoc;
+    function  LoadFromFile(const aFileName: string; const aMask: array of Boolean;
+                           aCodePage: Integer): TCsvDoc;
   { will try to load document from file in multi-threaded mode; returns Self }
     function  LoadFromFileMT(const aFileName: string; aThreadLimit: Integer = 0): TCsvDoc; experimental;
   { the same as above using the field mask }
@@ -345,7 +356,8 @@ type
   var
     FSrcStream: TStream;
     FIssues: TIssueVector;
-    FBuffer: PChar;
+    FBuffer: PAnsiChar;
+    FData: string;
     FBufSize,
     FBufCount,
     FBufIndex,
@@ -390,6 +402,7 @@ type
   public
     class function New(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean): TCsvReader; static;
     class function New(aSource: TStream; aOwnsStream: Boolean = False): TCsvReader; static;
+    class function NewCp(aSource: TStream; aCodePage: Integer; aOwnsStream: Boolean = False): TCsvReader; static;
     class function New(aSrcBuffer: PChar; aCount: SizeInt): TCsvReader; static;
   { attempts to read a single row from the buffer using the CSV properties of aMaster
     if aMaster is not nil; returns the number of bytes read, -1 if the buffer cannot be read }
@@ -399,7 +412,8 @@ type
     is set equal to the stream size; if aOwnsStream is set to True, the reader
     is responsible for destroying source stream }
     constructor Create(aSource: TStream; aBufSize: Sizeint; aOwnsStream: Boolean); virtual;
-    constructor Create(aSource: TStream; aOwnsStream: Boolean = False);  virtual;
+    constructor Create(aSource: TStream; aOwnsStream: Boolean = False); virtual;
+    constructor CreateCp(aSource: TStream; aCodePage: Integer; aOwnsStream: Boolean = False); virtual;
     constructor Create(aSrcBuffer: PChar; aCount: SizeInt); virtual;
     destructor Destroy; override;
     procedure AssignCsvProps(aSource: TCsvEntity); override;
@@ -796,10 +810,32 @@ begin
     end;
 end;
 
+procedure TCsvDoc.LoadStreamCp(s: TStream; aCodePage: Integer; aOwnsStream: Boolean);
+begin
+  with GetReaderClass.CreateCp(s, aCodePage, aOwnsStream) do
+    try
+      Clear;
+      ReadDoc(Self);
+    finally
+      Free;
+    end;
+end;
+
 procedure TCsvDoc.LoadStream(s: TStream; aBufSize: SizeInt; aOwnsStream: Boolean;
   const aMask: array of Boolean);
 begin
   with TAcceptingDocReader.Create(s, aBufSize, aOwnsStream) do
+    try
+      Clear;
+      ReadDocMasked(Self, aMask);
+    finally
+      Free;
+    end;
+end;
+
+procedure TCsvDoc.LoadStreamCp(s: TStream; aCodePage: Integer; aOwnsStream: Boolean; const aMask: array of Boolean);
+begin
+  with GetReaderClass.CreateCp(s, aCodePage, aOwnsStream) do
     try
       Clear;
       ReadDocMasked(Self, aMask);
@@ -820,6 +856,18 @@ begin
   end;
 end;
 
+procedure TCsvDoc.LoadFile(const aFileName: string; aCodePage: Integer);
+var
+  fs: TFileStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadStreamCp(fs, aCodePage, False);
+  finally
+    fs.Free;
+  end;
+end;
+
 procedure TCsvDoc.LoadFile(const aFileName: string; const aMask: array of Boolean);
 var
   fs: TFileStream;
@@ -827,6 +875,18 @@ begin
   fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
   try
     LoadStream(fs, DEF_BUF_SIZE, False, aMask);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TCsvDoc.LoadFile(const aFileName: string; const aMask: array of Boolean; aCodePage: Integer);
+var
+  fs: TFileStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadStreamCp(fs, aCodePage, False, aMask);
   finally
     fs.Free;
   end;
@@ -966,11 +1026,25 @@ begin
   Result := Self;
 end;
 
+function TCsvDoc.LoadFromStream(aSource: TStream; aOwnsStream: Boolean; aCodePage: Integer): TCsvDoc;
+begin
+  LoadStreamCp(aSource, aCodePage, aOwnsStream);
+  Result := Self;
+end;
+
 function TCsvDoc.LoadFromStream(aSource: TStream; aBufSize: SizeInt; aOwnsStream: Boolean;
   const aMask: array of Boolean): TCsvDoc;
 begin
   if System.Length(aMask) = 0 then exit(LoadFromStream(aSource, aBufSize, aOwnsStream));
   LoadStream(aSource, aBufSize, aOwnsStream, aMask);
+  Result := Self;
+end;
+
+function TCsvDoc.LoadFromStream(aSource: TStream; aOwnsStream: Boolean; const aMask: array of Boolean;
+  aCodePage: Integer): TCsvDoc;
+begin
+  if System.Length(aMask) = 0 then exit(LoadFromStream(aSource, aOwnsStream, aCodePage));
+  LoadStreamCp(aSource, aCodePage, aOwnsStream, aMask);
   Result := Self;
 end;
 
@@ -1266,10 +1340,24 @@ begin
   Result := Self;
 end;
 
+function TCsvDoc.LoadFromFile(const aFileName: string; aCodePage: Integer): TCsvDoc;
+begin
+  LoadFile(aFileName, aCodePage);
+  Result := Self;
+end;
+
 function TCsvDoc.LoadFromFile(const aFileName: string; const aMask: array of Boolean): TCsvDoc;
 begin
   if System.Length(aMask) = 0 then exit(LoadFromFile(aFileName));
   LoadFile(aFileName, aMask);
+  Result := Self;
+end;
+
+function TCsvDoc.LoadFromFile(const aFileName: string; const aMask: array of Boolean;
+  aCodePage: Integer): TCsvDoc;
+begin
+  if System.Length(aMask) = 0 then exit(LoadFromFile(aFileName, aCodePage));
+  LoadFile(aFileName, aMask, aCodePage);
   Result := Self;
 end;
 
@@ -1560,19 +1648,17 @@ end;
 
 function TCsvReader.TStrBuffer.PieceUp2Char(c: Char): string;
 var
-  I, Pos: SizeInt;
+  I, Len: SizeInt;
 begin
-  if Count = 0 then exit('');
-  I := 0;
-  Pos := NULL_INDEX;
-  repeat
-    if FItems[I] = c then
-      Pos := I;
-    Inc(I);
-  until (I = Count) or (Pos >= 0);
-  if Pos < 0 then exit('');
-  System.SetLength(Result, Succ(Pos));
-  System.Move(FItems.Ptr^, Pointer(Result)^, Succ(Pos));
+  Len := 0;
+  for I := 0 to Pred(Count) do
+    if FItems[I] = c then begin
+      Len := Succ(I);
+      break;
+    end;
+  if Len = 0 then exit('');
+  System.SetLength(Result, Len);
+  System.Move(FItems.Ptr^, Pointer(Result)^, Len);
   FCount := 0;
 end;
 
@@ -1959,6 +2045,11 @@ begin
   Result := TCsvReader.Create(aSource, aOwnsStream);
 end;
 
+class function TCsvReader.NewCp(aSource: TStream; aCodePage: Integer; aOwnsStream: Boolean): TCsvReader;
+begin
+  Result := TCsvReader.CreateCp(aSource, aCodePage, aOwnsStream);
+end;
+
 class function TCsvReader.New(aSrcBuffer: PChar; aCount: SizeInt): TCsvReader;
 begin
   Result := TCsvReader.Create(aSrcBuffer, aCount);
@@ -2005,6 +2096,37 @@ end;
 constructor TCsvReader.Create(aSource: TStream; aOwnsStream: Boolean);
 begin
   Create(aSource, DEF_BUF_SIZE, aOwnsStream);
+end;
+
+constructor TCsvReader.CreateCp(aSource: TStream; aCodePage: Integer; aOwnsStream: Boolean);
+var
+  Encoding: TEncoding;
+  Bytes: TBytes;
+  ByteCount: SizeInt;
+  BomLen: Integer;
+begin
+  inherited Create;
+{$PUSH}{$Q+}{$R+}
+  ByteCount := aSource.Size - aSource.Position;
+{$POP}
+  System.SetLength(Bytes, ByteCount);
+  aSource.ReadBuffer(Pointer(Bytes)^, ByteCount);
+  if aOwnsStream then
+    aSource.Free;
+  Encoding := TEncoding.GetEncoding(aCodePage);
+  BomLen := TEncoding.GetBufferEncoding(Bytes, Encoding);
+  FData := Encoding.GetAnsiString(Bytes, BomLen, ByteCount - BomLen);
+  if not TEncoding.IsStandardEncoding(Encoding) then
+    Encoding.Free;
+  FBuffer := Pointer(FData);
+  FBufSize := System.Length(FData);
+  FBufCount := FBufSize;
+  FBufIndex := FBufCount;
+  FColIndex := NULL_INDEX;
+  FBufferSource := True;
+  if FBufSize > 0 then
+    System.SetLength(FCurrRow, DEFAULT_CONTAINER_CAPACITY);
+  FillTokenTable;
 end;
 
 constructor TCsvReader.Create(aSrcBuffer: PChar; aCount: SizeInt);
