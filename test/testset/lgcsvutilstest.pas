@@ -75,6 +75,7 @@ type
     procedure BareQuote;
     procedure UnclosedQuote;
     procedure TryReadRow;
+    procedure Encoding;
   end;
 
   { TTestCsvWriter }
@@ -1020,6 +1021,46 @@ begin
   Count := TCsvReader.TryReadRow(Pointer(s), Length(s), row, Reader.Instance);
   AssertTrue(Count = Length(s));
   AssertTrue(THelper.Same(row, ['aa', 'b`b', 'cc ']));
+end;
+
+procedure TTestCsvReader.Encoding;
+type
+  Str1251 = type string(1251);
+var
+  Reader: TReader;
+  ms: specialize TGAutoRef<TMemoryStream>;
+  a: TStringArray;
+  s1251: Str1251;
+  s: string;
+  us: unicodestring;
+  b: TBytes;
+  I: Integer;
+begin
+  a := ['а,б,в', 'г,д,е', 'ё,ж,з'];
+  s1251 := string.Join(string(#10), a);
+  ms.Instance.WriteBuffer(Pointer(s1251)^, Length(s1251));
+  ms.Instance.Position := 0;
+  {%H-}Reader.Instance := TCsvReader.CreateCp(ms.Instance, 1251);
+  I := 0;
+  while Reader.Instance.ReadRow do begin
+    s := string.Join(',', Reader.Instance.CurrentRow);
+    AssertTrue(s, s = a[I]);
+    Inc(I);
+  end;
+
+  us := unicodestring(string.Join(string(#10), a));
+  b := TEncoding.GetEncoding(StringCodePage(us)).GetPreamble;
+  ms.Instance.Clear;
+  ms.Instance.WriteBuffer(b[0], Length(b));
+  ms.Instance.WriteBuffer(us[1], Length(us)*StringElementSize(us));
+  ms.Instance.Position := 0;
+  Reader.Instance := TCsvReader.CreateCp(ms.Instance, StringCodePage(us));
+  I := 0;
+  while Reader.Instance.ReadRow do begin
+    s := string.Join(',', Reader.Instance.CurrentRow);
+    AssertTrue(s, s = a[I]);
+    Inc(I);
+  end;
 end;
 
 { TTestCsvWriter }
