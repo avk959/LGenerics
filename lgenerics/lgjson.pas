@@ -6543,14 +6543,12 @@ var
   I: SizeInt;
 begin
   aNode := nil;
-  if not IsStruct then exit(False);
-  if System.Length(aPath) = 0 then exit(False);
-  if not FindPath(aPath[0..Pred(System.High(aPath))], Parent) then
-    exit(False);
+  Result := False;
+  if not IsStruct or (System.Length(aPath) = 0) then exit;
+  if not FindPath(aPath[0..Pred(System.High(aPath))], Parent) then exit;
   if Parent.IsArray then
     begin
-      if not(IsNonNegativeInt(aPath[System.High(aPath)], I) and (I <= Parent.Count)) then
-        exit(False);
+      if not(IsNonNegativeInt(aPath[System.High(aPath)], I) and (I <= Parent.Count)) then exit;
       Result := Parent.InsertNode(I, aNode, jvkNull) = I;
     end
   else
@@ -6561,14 +6559,12 @@ begin
             Result := True;
           end;
         dumRewrite: begin
-            if Parent.CountOfName(aPath[System.High(aPath)]) > 1 then exit(False);
+            if Parent.CountOfName(aPath[System.High(aPath)]) > 1 then exit;
             aNode := Parent[aPath[System.High(aPath)]].AsNull;
             Result := True;
           end;
         dumIgnore: Result := Parent.TryAddNode(aPath[System.High(aPath)], aNode, jvkNull);
-      end
-    else
-      Result := False;
+      end;
 end;
 
 function TJsonNode.InsertPath(const aPtr: TJsonPtr; out aNode: TJsonNode; aMode: TDuplicateMode): Boolean;
