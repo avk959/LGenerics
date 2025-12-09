@@ -211,6 +211,18 @@ type
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
+  { TJtdDateTime: container for JTD "timestamp" type }
+  TJtdDateTime = class sealed(specialize TJtdValue<TDateTime>)
+  protected
+    FTzOffset: Integer;
+    procedure SetTzOffset(aValue: Integer);
+    procedure DoReadJson(aNode: TJsonNode); override;
+    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+  public
+    property TzOffset: Integer read FTzOffset write SetTzOffset;
+  end;
+
   { TJtdEnum: generic container for JDT "enum" form when the enum elements are valid Pascal identifiers }
   generic TJtdEnum<TEnum> = class(specialize TJtdValue<TEnum>)
   protected
@@ -802,7 +814,7 @@ end;
 
 procedure TJtdFloat32.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdFloat64 }
@@ -823,7 +835,7 @@ end;
 
 procedure TJtdFloat64.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdInt8 }
@@ -850,7 +862,7 @@ end;
 
 procedure TJtdInt8.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdUInt8 }
@@ -877,7 +889,7 @@ end;
 
 procedure TJtdUInt8.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdInt16 }
@@ -904,7 +916,7 @@ end;
 
 procedure TJtdInt16.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdUInt16 }
@@ -931,7 +943,7 @@ end;
 
 procedure TJtdUInt16.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdInt32 }
@@ -958,7 +970,7 @@ end;
 
 procedure TJtdInt32.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdUInt32 }
@@ -985,7 +997,7 @@ end;
 
 procedure TJtdUInt32.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdString }
@@ -1006,7 +1018,7 @@ end;
 
 procedure TJtdString.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(FValue);
+  aWriter.Add(Value);
 end;
 
 { TJtdDateTimeUTC }
@@ -1035,7 +1047,48 @@ end;
 
 procedure TJtdDateTimeUTC.DoWriteJson(aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(UTCToRfc8927TimeStamp(FValue));
+  aWriter.Add(UTCToRfc8927TimeStamp(Value));
+end;
+
+{ TJtdDateTime }
+
+procedure TJtdDateTime.SetTzOffset(aValue: Integer);
+begin
+  if FTzOffset = aValue then exit;
+  if (aValue <= -MinsPerDay) or (aValue >= MinsPerDay) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEJtdTzOffsOutOfRangeFmt, [aValue]);
+  FTzOffset := aValue;
+end;
+
+procedure TJtdDateTime.DoReadJson(aNode: TJsonNode);
+var
+  d: TDateTime;
+  tzo: Integer;
+begin
+  if not aNode.IsString then
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, JKIND_NAMES[aNode.Kind]]);
+  if not TryRfc8927TsToDateTime(aNode.AsString, d, tzo) then
+    ReadError(Format(SEJtdIllform8927TSFmt, [aNode.AsString]));
+  FValue := d;
+  FTzOffset := tzo;
+end;
+
+procedure TJtdDateTime.DoReadJson(aReader: TJsonReader);
+var
+  d: TDateTime;
+  tzo: Integer;
+begin
+  if aReader.TokenKind <> TTokenKind.tkString then
+    ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
+  if not TryRfc8927TsToDateTime(aReader.AsString, d, tzo) then
+    ReadError(Format(SEJtdIllform8927TSFmt, [aReader.AsString]), aReader);
+  FValue := d;
+  FTzOffset := tzo;
+end;
+
+procedure TJtdDateTime.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(DateTimeToRfc8927Ts(Value, TzOffset));
 end;
 
 { TJtdEnum }
