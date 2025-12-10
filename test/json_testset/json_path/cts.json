@@ -4672,6 +4672,58 @@
       ]
     },
     {
+      "name": "filter, quoted True, double quotes",
+      "selector": "$[?@.a==\"True\"]",
+      "document": [
+        {
+          "a": "True"
+        },
+        {
+          "a": true
+        },
+        {
+          "a": "SomethingElse"
+        }
+      ],
+      "result": [
+        {
+          "a": "True"
+        }
+      ],
+      "result_paths": [
+        "$[0]"
+      ],
+      "tags": [
+        "case"
+      ]
+    },
+    {
+      "name": "filter, quoted True, single quotes",
+      "selector": "$[?@.a=='True']",
+      "document": [
+        {
+          "a": "True"
+        },
+        {
+          "a": true
+        },
+        {
+          "a": "SomethingElse"
+        }
+      ],
+      "result": [
+        {
+          "a": "True"
+        }
+      ],
+      "result_paths": [
+        "$[0]"
+      ],
+      "tags": [
+        "case"
+      ]
+    },
+    {
       "name": "filter, false, incorrectly capitalized",
       "selector": "$[?@==False]",
       "invalid_selector": true,
@@ -4680,9 +4732,113 @@
       ]
     },
     {
+      "name": "filter, quoted False, double quotes",
+      "selector": "$[?@.a==\"False\"]",
+      "document": [
+        {
+          "a": "False"
+        },
+        {
+          "a": false
+        },
+        {
+          "a": "SomethingElse"
+        }
+      ],
+      "result": [
+        {
+          "a": "False"
+        }
+      ],
+      "result_paths": [
+        "$[0]"
+      ],
+      "tags": [
+        "case"
+      ]
+    },
+    {
+      "name": "filter, quoted False, single quotes",
+      "selector": "$[?@.a=='False']",
+      "document": [
+        {
+          "a": "False"
+        },
+        {
+          "a": false
+        },
+        {
+          "a": "SomethingElse"
+        }
+      ],
+      "result": [
+        {
+          "a": "False"
+        }
+      ],
+      "result_paths": [
+        "$[0]"
+      ],
+      "tags": [
+        "case"
+      ]
+    },
+    {
       "name": "filter, null, incorrectly capitalized",
       "selector": "$[?@==Null]",
       "invalid_selector": true,
+      "tags": [
+        "case"
+      ]
+    },
+    {
+      "name": "filter, quoted Null, double quotes",
+      "selector": "$[?@.a==\"Null\"]",
+      "document": [
+        {
+          "a": "Null"
+        },
+        {
+          "a": null
+        },
+        {
+          "a": "SomethingElse"
+        }
+      ],
+      "result": [
+        {
+          "a": "Null"
+        }
+      ],
+      "result_paths": [
+        "$[0]"
+      ],
+      "tags": [
+        "case"
+      ]
+    },
+    {
+      "name": "filter, quoted Null, single quotes",
+      "selector": "$[?@.a=='Null']",
+      "document": [
+        {
+          "a": "Null"
+        },
+        {
+          "a": null
+        },
+        {
+          "a": "SomethingElse"
+        }
+      ],
+      "result": [
+        {
+          "a": "Null"
+        }
+      ],
+      "result_paths": [
+        "$[0]"
+      ],
       "tags": [
         "case"
       ]
