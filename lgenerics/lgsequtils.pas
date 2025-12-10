@@ -417,6 +417,20 @@ type
 
 type
   TUcs4CharHelper = type helper for Ucs4Char
+  type
+    TCharEnum = record
+    private
+      FCurrent,
+      FBound: PByte;
+      FCurrentChar: Ucs4Char;
+      procedure Init(p: PByte; aCount: SizeInt);
+    public
+      function GetEnumerator: TCharEnum; inline;
+      function MoveNext: Boolean; inline;
+      property Current: Ucs4Char read FCurrentChar;
+    end;
+  public
+    class function Chars(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): TCharEnum; static;
     function ToUtf8: string; inline;
   end;
 
@@ -4916,7 +4930,50 @@ begin
   SetString(Result, PAnsiChar(@b4), Len);
 end;
 
+{ TUcs4CharHelper.TCharEnum }
+
+procedure TUcs4CharHelper.TCharEnum.Init(p: PByte; aCount: SizeInt);
+begin
+  FCurrent := p;
+  FBound := p + aCount;
+  FCurrentChar := 0;
+end;
+
+function TUcs4CharHelper.TCharEnum.GetEnumerator: TCharEnum;
+begin
+  Result := Self;
+end;
+
+function TUcs4CharHelper.TCharEnum.MoveNext: Boolean;
+var
+  Len: SizeInt;
+begin
+  if FCurrent < FBound then
+    begin
+      FCurrentChar := CodePointToUcs4Char(FCurrent, FBound - FCurrent, Len);
+      Inc(FCurrent, Len);
+      exit(True);
+    end;
+  Result := False;
+end;
+
 { TUcs4CharHelper }
+
+class function TUcs4CharHelper.Chars(const s: string; aOffset: SizeInt; aCount: SizeInt): TCharEnum;
+begin
+  if aOffset < 1 then
+    aOffset := 1;
+  if aOffset > System.Length(s) then
+    begin
+      Result.Init(nil, 0);
+      exit;
+    end;
+  if aCount < 1 then
+    aCount := Succ(System.Length(s) - aOffset)
+  else
+    aCount := Math.Min(aCount, Succ(System.Length(s) - aOffset));
+  Result.Init(@s[aOffset], aCount);
+end;
 
 function TUcs4CharHelper.ToUtf8: string;
 begin
