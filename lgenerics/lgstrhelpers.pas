@@ -373,23 +373,16 @@ type
   type
     TSortHelper = specialize TGRegularTimSort<TMatch>;
   protected
-    FOnMatchHandler: TOnMatch;
-    FNestMatchHandler: TNestMatch;
-    FOnMatch: TOnMatch;
     FNodeCount,
     FWordCount: SizeInt;
     FAlphabetSize: SizeInt;
-    function  TestOnMatch(const m: TMatch): Boolean;
-    function  TestNestMatch(const m: TMatch): Boolean;
-    procedure RegisterMatchHandler(h: TOnMatch);
-    procedure RegisterMatchHandler(h: TNestMatch);
     function  TestInput(const s: rawbytestring; var aOffset, aCount: SizeInt): Boolean; inline;
     function  TestInput(const a: array of Byte; var aOffset, aCount: SizeInt): Boolean;
     function  GetPatternIndex(p: PByte; aCount: SizeInt): SizeInt; virtual; abstract;
     function  GetFirstMatch(p: PByte; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; virtual; abstract;
     function  DoFindNoOverlap(p: PByte; aOffset, aCount: SizeInt): TMatchArray; virtual; abstract;
     function  DoFind(p: PByte; aOffset, aCount: SizeInt): TMatchArray; virtual; abstract;
-    procedure DoSearch(p: PByte; aOffset, aCount: SizeInt); virtual; abstract;
+    procedure DoSearch(p: PByte; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); virtual; abstract;
     function  HasMatch(p: PByte; aCount: SizeInt): Boolean; virtual; abstract;
     class procedure DoFilterMatches(var aMatches: TMatchArray; aMode: TSetMatchMode); static;
   public
@@ -456,12 +449,11 @@ type
     function  GetFirstMatch(p: PByte; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     function  DoFindNoOverlap(p: PByte; aOffset, aCount: SizeInt): TMatchArray; override;
     function  DoFind(p: PByte; aOffset, aCount: SizeInt): TMatchArray; override;
-    procedure DoSearch(p: PByte; aOffset, aCount: SizeInt); override;
+    procedure DoSearch(p: PByte; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     function  HasMatch(p: PByte; aCount: SizeInt): Boolean; override;
   public
-    constructor Create;
-    constructor Create(const aPatternList: array of rawbytestring);
-    constructor CreateBytes(const aPatternList: array of TBytes);
+    constructor Create(const aPatternList: array of rawbytestring); overload;
+    constructor CreateBytes(const aPatternList: array of TBytes); overload;
     function Clone: TACSearchDfa;
   end;
 
@@ -549,14 +541,13 @@ type
     function  GetFirstMatch(p: PByte; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     function  DoFindNoOverlap(p: PByte; aOffset, aCount: SizeInt): TMatchArray; override;
     function  DoFind(p: PByte; aOffset, aCount: SizeInt): TMatchArray; override;
-    procedure DoSearch(p: PByte; aOffset, aCount: SizeInt); override;
+    procedure DoSearch(p: PByte; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     function  HasMatch(p: PByte; aCount: SizeInt): Boolean; override;
     property  OutCount: Int32 read FOutCount;
     class function CountRecCmp(const L, R: TCountRec): Boolean; static;
   public
-    constructor Create;
-    constructor Create(const aPatternList: array of rawbytestring);
-    constructor CreateBytes(const aPatternList: array of TBytes);
+    constructor Create(const aPatternList: array of rawbytestring); overload;
+    constructor CreateBytes(const aPatternList: array of TBytes); overload;
     function Clone: TDaACSearch;
     property EmptyCellCount: Int32 read GetEmptyCount;
   end;
@@ -4558,28 +4549,6 @@ end;
 
 { TACAbstractFsm }
 
-function TACAbstractFsm.TestOnMatch(const m: TMatch): Boolean;
-begin
-  Result := FOnMatchHandler(m);
-end;
-
-function TACAbstractFsm.TestNestMatch(const m: TMatch): Boolean;
-begin
-  Result := FNestMatchHandler(m);
-end;
-
-procedure TACAbstractFsm.RegisterMatchHandler(h: TOnMatch);
-begin
-  FOnMatchHandler := h;
-  FOnMatch := @TestOnMatch;
-end;
-
-procedure TACAbstractFsm.RegisterMatchHandler(h: TNestMatch);
-begin
-  FNestMatchHandler := h;
-  FOnMatch := @TestNestMatch;
-end;
-
 function TACAbstractFsm.TestInput(const s: rawbytestring; var aOffset, aCount: SizeInt): Boolean;
 begin
   if (s = '') or (PatternCount = 0) or (aOffset > System.Length(s)) then exit(False);
@@ -4723,31 +4692,35 @@ begin
 end;
 
 procedure TACAbstractFsm.Search(const aText: rawbytestring; aOnMatch: TOnMatch; aOffset: SizeInt; aCount: SizeInt);
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    Result := aOnMatch(m);
+  end;
 begin
-  if not TestInput(aText, aOffset, aCount) then exit;
-  RegisterMatchHandler(aOnMatch);
-  DoSearch(@aText[aOffset], aOffset, aCount);
+  if not(Assigned(aOnMatch) and TestInput(aText, aOffset, aCount)) then exit;
+  DoSearch(@aText[aOffset], aOffset, aCount, @TestMatch);
 end;
 
 procedure TACAbstractFsm.Search(const aText: rawbytestring; aOnMatch: TNestMatch; aOffset: SizeInt; aCount: SizeInt);
 begin
-  if not TestInput(aText, aOffset, aCount) then exit;
-  RegisterMatchHandler(aOnMatch);
-  DoSearch(@aText[aOffset], aOffset, aCount);
+  if not(Assigned(aOnMatch) and TestInput(aText, aOffset, aCount)) then exit;
+  DoSearch(@aText[aOffset], aOffset, aCount, aOnMatch);
 end;
 
 procedure TACAbstractFsm.Search(const aText: array of Byte; aOnMatch: TOnMatch; aOffset: SizeInt; aCount: SizeInt);
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    Result := aOnMatch(m);
+  end;
 begin
-  if not TestInput(aText, aOffset, aCount) then exit;
-  RegisterMatchHandler(aOnMatch);
-  DoSearch(@aText[aOffset], aOffset, aCount);
+  if not(Assigned(aOnMatch) and TestInput(aText, aOffset, aCount)) then exit;
+  DoSearch(@aText[aOffset], aOffset, aCount, @TestMatch);
 end;
 
 procedure TACAbstractFsm.Search(const aText: array of Byte; aOnMatch: TNestMatch; aOffset: SizeInt; aCount: SizeInt);
 begin
-  if not TestInput(aText, aOffset, aCount) then exit;
-  RegisterMatchHandler(aOnMatch);
-  DoSearch(@aText[aOffset], aOffset, aCount);
+  if not(Assigned(aOnMatch) and TestInput(aText, aOffset, aCount)) then exit;
+  DoSearch(@aText[aOffset], aOffset, aCount, aOnMatch);
 end;
 
 function TACAbstractFsm.ContainsMatch(const aText: rawbytestring; aOffset: SizeInt; aCount: SizeInt): Boolean;
@@ -5037,7 +5010,7 @@ begin
   Result := Matches;
 end;
 
-procedure TACSearchDfa.DoSearch(p: PByte; aOffset, aCount: SizeInt);
+procedure TACSearchDfa.DoSearch(p: PByte; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   I: SizeInt;
   State, Tmp: Int32;
@@ -5049,13 +5022,13 @@ begin
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
-          if not FOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
+          if not aOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
       Tmp := State;
       while FTrie[Tmp].Output <> 0 do
         begin
           Tmp := FTrie[Tmp].Output;
           with FTrie[Tmp] do
-            if not FOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
         end;
     end;
 end;
@@ -5074,11 +5047,6 @@ begin
       if FTrie[State].Output <> 0 then exit(True);
     end;
   Result := False;
-end;
-
-constructor TACSearchDfa.Create;
-begin
-  inherited;
 end;
 
 constructor TACSearchDfa.Create(const aPatternList: array of rawbytestring);
@@ -5710,7 +5678,7 @@ begin
   Result := Matches;
 end;
 
-procedure TDaACSearch.DoSearch(p: PByte; aOffset, aCount: SizeInt);
+procedure TDaACSearch.DoSearch(p: PByte; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   I: SizeInt;
   State, Tmp: Int32;
@@ -5722,13 +5690,13 @@ begin
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
-          if not FOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
+          if not aOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
       Tmp := State;
       while FDaTrie[Tmp].NextOut <> 0 do
         begin
           Tmp := FDaTrie[Tmp].NextOut;
           with FOutput[FDaTrie[Tmp].Output] do
-            if not FOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Succ(aOffset + I - Length), Length, Index)) then exit;
         end;
     end;
 end;
@@ -5752,11 +5720,6 @@ end;
 class function TDaACSearch.CountRecCmp(const L, R: TCountRec): Boolean;
 begin
   Result := L.Count > R.Count;
-end;
-
-constructor TDaACSearch.Create;
-begin
-  inherited;
 end;
 
 constructor TDaACSearch.Create(const aPatternList: array of rawbytestring);
