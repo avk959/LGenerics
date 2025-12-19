@@ -770,9 +770,6 @@ type
     end;
 
   private
-  type
-    TNestFound = function(const m: TMatch): Boolean is nested;
-  var
     FCharMap: TCharMap;
     FLength: Integer;
     FIgnoreCase,
@@ -780,7 +777,7 @@ type
     function  GetInitialized: Boolean;
     function  GetLength: Integer;
     function  GetCaseInsensitive: Boolean; inline;
-    procedure DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestFound);
+    procedure DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestMatch);
     class function OnWordBounds(const s: string; aOffset, aLen: SizeInt): Boolean; static;
   public
   { aPattern must be a valid non-empty UTF-8 string containing no more than MAX_PATTERN_CP code points }
@@ -6493,7 +6490,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TFuzzySearchBitap.DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestFound);
+procedure TFuzzySearchBitap.DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestMatch);
 var
   Table: array[0..MAX_PATTERN_CP] of QWord;
   Queue: array[0..Pred(MAX_PATTERN_CP)] of SizeInt;
@@ -6659,9 +6656,6 @@ type
     TLeftmostMode = smmLeftmostFirst..smmLeftmostShortest;
   var
     FQueue: array of TOfsEntry;
-    FOnMatchHandler: TOnMatch;
-    FNestMatchHandler: TNestMatch;
-    FOnMatch: TOnMatch;
     FQueueSize,
     FNodeCount,
     FWordCount,
@@ -6677,10 +6671,6 @@ type
     class function  GetFsmClass: TACFsmUtf8Class; virtual; abstract;
     class function  GetDfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class; inline;
     class function  GetNfaClass(aIgnoreCase: Boolean): TACFsmUtf8Class; inline;
-    function  TestOnMatch(const m: TMatch): Boolean;
-    function  TestNestMatch(const m: TMatch): Boolean;
-    procedure RegisterMatchHandler(h: TOnMatch);
-    procedure RegisterMatchHandler(h: TNestMatch);
     function  IsDfa: Boolean; virtual;
     function  GetAlphabetSize: SizeInt; virtual;
     function  GetStateCount: SizeInt;
@@ -6695,8 +6685,8 @@ type
     function  DoFindFirstOww(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; virtual; abstract;
     procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aHandler: TNestMatch); virtual; abstract;
     procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aHandler: TNestMatch); virtual; abstract;
-    procedure DoSearch(const s: string; aOffset, aCount: SizeInt); virtual; abstract;
-    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); virtual; abstract;
+    procedure DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); virtual; abstract;
+    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); virtual; abstract;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; virtual; abstract;
     function  PushOffset(aQueueTop, aOffs: SizeInt): SizeInt; inline;
@@ -6754,8 +6744,8 @@ type
     function  DoFindFirstOww(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
-    procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
-    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
+    procedure DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     class function GetFsmClass: TACFsmUtf8Class; override;
@@ -6773,8 +6763,8 @@ type
     function  DoFindFirstOww(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
-    procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
-    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
+    procedure DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     class function GetFsmClass: TACFsmUtf8Class; override;
@@ -6891,8 +6881,8 @@ type
     function  DoFindFirstOww(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
-    procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
-    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
+    procedure DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetEmptyCount: SizeInt; override;
@@ -6918,8 +6908,8 @@ type
     function  DoFindFirstOww(const s: string; aMode: TSetMatchMode; aOffset, aCount: SizeInt): TMatch; override;
     procedure DoSearchNoOverlap(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     procedure DoSearchNoOverlapOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
-    procedure DoSearch(const s: string; aOffset, aCount: SizeInt); override;
-    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt); override;
+    procedure DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
+    procedure DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch); override;
     function  GetHasMatch(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     function  GetHasMatchOww(const s: string; aOffset, aCount: SizeInt): Boolean; override;
     class function GetFsmClass: TACFsmUtf8Class; override;
@@ -7066,28 +7056,6 @@ begin
     Result := TACNfaCIUtf8
   else
     Result := TACNfaUtf8;
-end;
-
-function TACFsmUtf8.TestOnMatch(const m: TMatch): Boolean;
-begin
-  Result := FOnMatchHandler(m);
-end;
-
-function TACFsmUtf8.TestNestMatch(const m: TMatch): Boolean;
-begin
-  Result := FNestMatchHandler(m);
-end;
-
-procedure TACFsmUtf8.RegisterMatchHandler(h: TOnMatch);
-begin
-  FOnMatchHandler := h;
-  FOnMatch := @TestOnMatch;
-end;
-
-procedure TACFsmUtf8.RegisterMatchHandler(h: TNestMatch);
-begin
-  FNestMatchHandler := h;
-  FOnMatch := @TestNestMatch;
 end;
 
 function TACFsmUtf8.IsDfa: Boolean;
@@ -7292,23 +7260,25 @@ begin
 end;
 
 procedure TACFsmUtf8.Search(const aText: string; aOnMatch: TOnMatch; aOffset, aCount: SizeInt);
+  function TestMatch(const m: TMatch): Boolean;
+  begin
+    Result := aOnMatch(m);
+  end;
 begin
   if aOnMatch = nil then exit;
-  RegisterMatchHandler(aOnMatch);
   if OnlyWholeWords then
-    DoSearchOww(aText, aOffset, aCount)
+    DoSearchOww(aText, aOffset, aCount, @TestMatch)
   else
-    DoSearch(aText, aOffset, aCount);
+    DoSearch(aText, aOffset, aCount, @TestMatch);
 end;
 
 procedure TACFsmUtf8.Search(const aText: string; aOnMatch: TNestMatch; aOffset, aCount: SizeInt);
 begin
   if aOnMatch = nil then exit;
-  RegisterMatchHandler(aOnMatch);
   if OnlyWholeWords then
-    DoSearchOww(aText, aOffset, aCount)
+    DoSearchOww(aText, aOffset, aCount, aOnMatch)
   else
-    DoSearch(aText, aOffset, aCount);
+    DoSearch(aText, aOffset, aCount, aOnMatch);
 end;
 
 function TACFsmUtf8.ContainsMatch(const aText: string; aOffset: SizeInt; aCount: SizeInt): Boolean;
@@ -7631,7 +7601,7 @@ begin
   end;
 end;
 
-procedure TACDfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+procedure TACDfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   p, pEnd, pText: PByte;
   State, Tmp: Int32;
@@ -7644,18 +7614,18 @@ begin
       if State = 0 then continue;
       with FTrie[State] do
         if Length <> 0 then
-          if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
+          if not aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
       Tmp := State;
       while FTrie[Tmp].Output <> 0 do
         begin
           Tmp := FTrie[Tmp].Output;
           with FTrie[Tmp] do
-            if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
         end;
     end;
 end;
 
-procedure TACDfaUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+procedure TACDfaUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   p, pEnd, pText: PByte;
   State, Tmp, qTop: Int32;
@@ -7671,14 +7641,14 @@ begin
     if State = 0 then continue;
     with FTrie[State] do
       if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
-        if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
+        if not aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
     Tmp := State;
     while FTrie[Tmp].Output <> 0 do
       begin
         Tmp := FTrie[Tmp].Output;
         with FTrie[Tmp] do
           if OnWordBounds(p, pEnd, qTop, Utf8Len) then
-            if not FOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Succ(p - pText - Length), Length, Index)) then exit;
       end;
   end;
 end;
@@ -7997,7 +7967,7 @@ begin
   end;
 end;
 
-procedure TACDfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+procedure TACDfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   Ofs: SizeInt;
   p, pEnd, pText: PByte;
@@ -8014,7 +7984,7 @@ begin
       if Utf8Len <> 0 then
         begin
           Ofs := PopOffset(qTop, Utf8Len);
-          if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+          if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
         end;
     Tmp := State;
     while FTrie[Tmp].Output <> 0 do
@@ -8023,13 +7993,13 @@ begin
         with FTrie[Tmp] do
           begin
             Ofs := PopOffset(qTop, Utf8Len);
-            if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
           end;
       end;
   end;
 end;
 
-procedure TACDfaCIUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+procedure TACDfaCIUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   Ofs: SizeInt;
   p, pEnd, pText: PByte;
@@ -8049,7 +8019,7 @@ begin
       if (Utf8Len <> 0) and OnWordBounds(p, pEnd, qTop, Utf8Len) then
         begin
           Ofs := PopOffset(qTop, Utf8Len);
-          if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+          if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
         end;
     Tmp := State;
     while FTrie[Tmp].Output <> 0 do
@@ -8059,7 +8029,7 @@ begin
           if OnWordBounds(p, pEnd, qTop, Utf8Len) then
             begin
               Ofs := PopOffset(qTop, Utf8Len);
-              if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then
+              if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then
                 exit;
             end;
       end;
@@ -8845,7 +8815,7 @@ begin
     end;
 end;
 
-procedure TACNfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+procedure TACNfaUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   p, pEnd, pText: PByte;
   State, Tmp: Int32;
@@ -8858,18 +8828,18 @@ begin
       if State = 0 then continue;
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
-          if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+          if not aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
       Tmp := State;
       while FDaTrie[Tmp].NextOut <> 0 do
         begin
           Tmp := FDaTrie[Tmp].NextOut;
           with FOutput[FDaTrie[Tmp].Output] do
-            if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
         end;
     end;
 end;
 
-procedure TACNfaUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+procedure TACNfaUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   p, pEnd, pText: PByte;
   State, Tmp, qTop: Int32;
@@ -8887,14 +8857,14 @@ begin
       if FDaTrie[State].Output <> 0 then
         with FOutput[FDaTrie[State].Output] do
           if OnWordBounds(p, pEnd, qTop, CpLen) then
-            if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
       Tmp := State;
       while FDaTrie[Tmp].NextOut <> 0 do
         begin
           Tmp := FDaTrie[Tmp].NextOut;
           with FOutput[FDaTrie[Tmp].Output] do
             if OnWordBounds(p, pEnd, qTop, CpLen) then
-              if not FOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
+              if not aOnMatch(TMatch.Make(Succ(p - pText - Len), Len, Index)) then exit;
         end;
     end;
 end;
@@ -9305,7 +9275,7 @@ begin
     end;
 end;
 
-procedure TACNfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt);
+procedure TACNfaCIUtf8.DoSearch(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   Ofs: SizeInt;
   p, pEnd, pText: PByte;
@@ -9323,7 +9293,7 @@ begin
         with FOutput[FDaTrie[State].Output] do
           begin
             Ofs := PopOffset(qTop, CpLen);
-            if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+            if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
           end;
       Tmp := State;
       while FDaTrie[Tmp].NextOut <> 0 do
@@ -9332,13 +9302,13 @@ begin
           with FOutput[FDaTrie[Tmp].Output] do
             begin
               Ofs := PopOffset(qTop, CpLen);
-              if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+              if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
             end;
         end;
     end;
 end;
 
-procedure TACNfaCIUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt);
+procedure TACNfaCIUtf8.DoSearchOww(const s: string; aOffset, aCount: SizeInt; aOnMatch: TNestMatch);
 var
   Ofs: SizeInt;
   p, pEnd, pText: PByte;
@@ -9360,7 +9330,7 @@ begin
           if OnWordBounds(p, pEnd, qTop, CpLen) then
             begin
               Ofs := PopOffset(qTop, CpLen);
-              if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+              if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
             end;
       Tmp := State;
       while FDaTrie[Tmp].NextOut <> 0 do
@@ -9370,7 +9340,7 @@ begin
             if OnWordBounds(p, pEnd, qTop, CpLen) then
               begin
                 Ofs := PopOffset(qTop, CpLen);
-                if not FOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
+                if not aOnMatch(TMatch.Make(Ofs, Succ(p - pText) - Ofs, Index)) then exit;
               end;
         end;
     end;
