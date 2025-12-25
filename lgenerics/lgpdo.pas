@@ -114,6 +114,9 @@ type
   function JsonToPdoProcRegistered(aTypeInfo: PTypeInfo): Boolean;
   function UnregisterJsonToPdoProc(aTypeInfo: PTypeInfo): Boolean;
 
+  function RegisterPdoJsonProcs(aTypeInfo: PTypeInfo; aWriteProc: TPdoToJsonProc;
+                                aReadProc: TJsonToPdoProc): Boolean;
+
 
 type
   TOptString = specialize TGOptional<string>;
@@ -929,6 +932,26 @@ begin
     if not(PdoCache.TryGetMutValue(aTypeInfo, pe) and (pe^.JsonToPdoProc <> nil)) then exit(False);
     pe^.JsonToPdoProc := nil;
     if (pe^.FieldMap = nil) and (pe^.PdoToJsonProc = nil) then PdoCache.Remove(aTypeInfo);
+  finally
+    GlobLock.EndWrite;
+  end;
+end;
+
+function RegisterPdoJsonProcs(aTypeInfo: PTypeInfo; aWriteProc: TPdoToJsonProc;
+  aReadProc: TJsonToPdoProc): Boolean;
+var
+  pe: PPdoCacheEntry;
+begin
+  Result := False;
+  if (aTypeInfo = nil) or not(aTypeInfo^.Kind in CUSTOM_KINDS) then exit;
+  if (aWriteProc = nil) or (aReadProc = nil) then exit;
+  GlobLock.BeginWrite;
+  try
+    pe := PdoCache.GetMutValueDef(aTypeInfo, DEF_CACHE_ENTRY);
+    if (pe^.PdoToJsonProc <> nil) or (pe^.JsonToPdoProc <> nil) then exit;
+    pe^.PdoToJsonProc := aWriteProc;
+    pe^.JsonToPdoProc := aReadProc;
+    Result := True;
   finally
     GlobLock.EndWrite;
   end;
