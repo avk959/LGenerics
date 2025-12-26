@@ -31,48 +31,57 @@ type
     property  Length: SizeInt read GetLenght write SetLength;
   end;
 
+{$PUSH}{$J-}
   TLGSmallIntHelper = type helper(TGSmallIntHelper) for SmallInt
-    const INF_VALUE: SmallInt    = 32767;
-    const NEGINF_VALUE: SmallInt = -32768;
+  const
+    INF_VALUE: SmallInt    = 32767;
+    NEGINF_VALUE: SmallInt = -32768;
   end;
 
   TLGLongIntHelper = type helper(TGLongIntHelper) for LongInt
-    const INF_VALUE: LongInt    = 2147483647;
-    const NEGINF_VALUE: LongInt = -2147483648;
+  const
+    INF_VALUE: LongInt    = 2147483647;
+    NEGINF_VALUE: LongInt = -2147483648;
   end;
 
   TLGInt64Helper = type helper(TGInt64Helper) for Int64
-    const INF_VALUE: Int64    = 9223372036854775807;
-    const NEGINF_VALUE: Int64 = -9223372036854775808;
+  const
+    INF_VALUE: Int64    = 9223372036854775807;
+    NEGINF_VALUE: Int64 = -9223372036854775808;
   end;
 
   TLGSingleHelper = type helper(TGSingleHelper) for Single
-    const INF_VALUE: Single    = 340282346638528859811704183484516925440.0;
-    const NEGINF_VALUE: Single = -340282346638528859811704183484516925440.0;
+  const
+    INF_VALUE: Single    = 340282346638528859811704183484516925440.0;
+    NEGINF_VALUE: Single = -340282346638528859811704183484516925440.0;
   end;
 
   TLGDoubleHelper = type helper(TGDoubleHelper) for Double
-    const INF_VALUE: Double    = 1.7976931348623157081e+308;
-    const NEGINF_VALUE: Double = -1.7976931348623157081e+308;
+  const
+    INF_VALUE: Double    = 1.7976931348623157081e+308;
+    NEGINF_VALUE: Double = -1.7976931348623157081e+308;
   end;
 
 {$ifdef FPC_HAS_TYPE_EXTENDED}
   TLGExtendedHelper = type helper(TGExtendedHelper) for Extended
-    const INF_VALUE: Extended    = 1.18973149535723176505e+4932;
-    const NEGINF_VALUE: Extended = -1.18973149535723176505e+4932;
+  const
+    INF_VALUE: Extended    = 1.18973149535723176505e+4932;
+    NEGINF_VALUE: Extended = -1.18973149535723176505e+4932;
   end;
 {$ENDIF}
 
 {$IF DECLARED(Comp)}
   TLGCompHelper = type helper(TCompHelper) for Comp
-    const INF_VALUE: Comp    = 9223372036854775807;
-    const NEGINF_VALUE: Comp = -9223372036854775808;
+  const
+    INF_VALUE: Comp    = 9223372036854775807;
+    NEGINF_VALUE: Comp = -9223372036854775808;
   end;
 {$ENDIF}
+{$POP}
 
   TLGCurrencyHelper = type helper(TGCurrencyHelper) for Currency
-    const INF_VALUE: Currency    = 922337203685477.5807;
-    const NEGINF_VALUE: Currency = -922337203685477.5808;
+    class function INF_VALUE: Currency; static; inline;
+    class function NEGINF_VALUE: Currency; static; inline;
   end;
 
   generic TGSimpleWeight<T> = record

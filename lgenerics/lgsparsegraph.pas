@@ -4152,6 +4152,18 @@ begin
 {$ENDIF}
 end;
 
+{ TLGCurrencyHelper }
+
+class function TLGCurrencyHelper.INF_VALUE: Currency;
+begin
+  Result := MaxValue;
+end;
+
+class function TLGCurrencyHelper.NEGINF_VALUE: Currency;
+begin
+  Result := MinValue;
+end;
+
 { TGSimpleWeight }
 
 constructor TGSimpleWeight.Create(aValue: T);
