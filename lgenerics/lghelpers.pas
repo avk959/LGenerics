@@ -60,7 +60,7 @@ type
     class function Less(const L, R: unicodestring): Boolean; static;
   end;
 
-  TShortStrHelper = type helper for shortstring
+  TShortStrHelper = type helper{$IF FPC_FULLVERSION>30300}(TShortStringHelper){$ENDIF} for shortstring
     class function HashCode(const aValue: shortstring): SizeInt; static; inline;
     class function Equal(const L, R: shortstring): Boolean; static; inline;
     class function Less(const L, R: shortstring): Boolean; static; inline;
@@ -420,16 +420,19 @@ type
     class function Less(L, R: TTime): Boolean; static; inline;
   end;
 
-  TGCurrencyHelper = type helper for Currency
-  const
-  {$PUSH}{$J-}
-    MinValue: Currency = -922337203685477.5808;
-    MaxValue: Currency = 922337203685477.5807;
-  {$POP}
+  TGCurrencyHelper = type helper{$IF FPC_FULLVERSION>30300}(TCurrencyHelper){$ENDIF} for Currency
+  private
+    class function GetMaxValue: Currency; static; inline;
+    class function GetMinValue: Currency; static; inline;
+  public
     class function HashCode(const aValue: Currency): SizeInt; static; inline;
     class function Equal(const L, R: Currency): Boolean; static; inline;
     class function Less(const L, R: Currency): Boolean; static; inline;
+{$IF FPC_FULLVERSION<=30300}
     function ToString: string; inline;
+{$ENDIF}
+    class property MaxValue: Currency read GetMaxValue;
+    class property MinValue: Currency read GetMinValue;
   end;
 
   TGObjectHelper = class helper for TObject
@@ -2024,6 +2027,16 @@ begin
   Result := L < R;
 end;
 
+class function TGCurrencyHelper.GetMaxValue: Currency;
+begin
+  Result := MaxCurrency;
+end;
+
+class function TGCurrencyHelper.GetMinValue: Currency;
+begin
+  Result := MinCurrency;
+end;
+
 class function TGCurrencyHelper.HashCode(const aValue: Currency): SizeInt;
 begin
   Result := HashFunc.HashQWord(QWord(aValue));
@@ -2039,10 +2052,12 @@ begin
   Result := L < R;
 end;
 
+{$IF FPC_FULLVERSION<=30300}
 function TGCurrencyHelper.ToString: string;
 begin
   Result := CurrToStr(Self);
 end;
+{$ENDIF}
 
 class function TGObjectHelper.HashCode(aValue: TObject): SizeInt;
 begin
