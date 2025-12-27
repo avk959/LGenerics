@@ -13384,7 +13384,7 @@ var
   Curr: T;
   I, J: SizeInt;
 begin
-  System.FillChar(aOfs, SizeOf(aOfs), 0);
+  System.FillChar(PByte(@aOfs[0, 0])^, SizeOf(aOfs), 0);
   for I := 0 to System.High(A) do
     begin
       Curr := A[I];
@@ -13928,13 +13928,12 @@ begin
 {$ENDIF}
 end;
 
-{$PUSH}{$WARN 5058 OFF : Variable "$1" does not seem to be initialized}
 class procedure TGOrdinalArrayHelper.FillOffsets(const A: array of T; out aOfs: TOffsets);
 var
   Curr: T;
   I, J: SizeInt;
 begin
-  System.FillChar(aOfs, SizeOf(aOfs), 0);
+  System.FillChar(PByte(@aOfs[0, 0])^, SizeOf(aOfs), 0);
   for I := 0 to System.High(A) do
     begin
       Curr := A[I];
@@ -13942,7 +13941,6 @@ begin
         Inc(aOfs[J, (Curr shr (J * 8)) and $ff]);
     end;
 end;
-{$POP}
 
 class procedure TGOrdinalArrayHelper.DoRxSortA(var A: array of T; aBuf: PItem; var aOfs: TOffsets);
 
@@ -14277,7 +14275,7 @@ var
   Key: TKey;
   I, J: SizeInt;
 begin
-  System.FillChar(aOfs, SizeOf(aOfs), 0);
+  System.FillChar(PByte(@aOfs[0, 0])^, SizeOf(aOfs), 0);
   for I := 0 to System.High(A) do
     begin
       Key := TMap.GetKey(A[I]);
