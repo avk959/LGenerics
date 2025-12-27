@@ -140,6 +140,7 @@ type
 
     class procedure DoReverse(p: PItem; R: SizeInt); static;
     class procedure PtrSwap(var L, R: Pointer); static; inline;
+    class procedure DoRotLeft(var A: array of T; aDist: SizeInt); static;
   public
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure Swap(var L, R: T); static; inline;
@@ -1070,6 +1071,7 @@ type
     class procedure DoReverse(var A: array of T; L, R: SizeInt); static;
   { QuickSelect with random pivot selection, does not checks indices }
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
+    class procedure DoRotLeft(var A: array of T; aDist: SizeInt); static;
   public
     class procedure Swap(var L, R: T); static; inline;
     class procedure Reverse(var A: array of T); static;
@@ -1447,6 +1449,14 @@ begin
   R := tmp;
 end;
 
+class procedure TGArrayHelpUtil.DoRotLeft(var A: array of T; aDist: SizeInt);
+begin
+  if aDist < 0 then aDist += System.Length(A);
+  DoReverse(@A[0], Pred(aDist));
+  DoReverse(@A[aDist], System.High(A) - aDist);
+  DoReverse(@A[0], System.High(A));
+end;
+
 class procedure TGArrayHelpUtil.CopyItems(aSrc, aDst: PItem; aCount: SizeInt);
 begin
   if (aDst <> aSrc) and (aCount > 0) then  //else nothing to do
@@ -1785,27 +1795,17 @@ begin
 end;
 
 class procedure TGArrayHelpUtil.RotateLeft(var A: array of T; aDist: SizeInt);
-var
-  Len: SizeInt;
 begin
-  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+  if (aDist = 0) or (aDist <= -System.Length(A)) or (aDist >= System.Length(A)) then
     exit;
-  Len := System.Length(A);
-  if aDist < 0 then
-    aDist += Len;
-  DoReverse(@A[0], Pred(aDist));
-  DoReverse(@A[aDist], Pred(Len - aDist));
-  DoReverse(@A[0], Pred(Len));
+  DoRotLeft(A, aDist);
 end;
 
 class procedure TGArrayHelpUtil.RotateRight(var A: array of T; aDist: SizeInt);
 begin
-  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+  if (aDist = 0) or (aDist <= -System.Length(A)) or (aDist >= System.Length(A)) then
     exit;
-  if aDist > 0 then
-    RotateLeft(A, System.Length(A) - aDist)
-  else
-    RotateLeft(A, -aDist);
+  DoRotLeft(A, -aDist);
 end;
 
 
@@ -12816,6 +12816,14 @@ begin
   Result := A[N];
 end;
 
+class procedure TGSimpleArrayHelper.DoRotLeft(var A: array of T; aDist: SizeInt);
+begin
+  if aDist < 0 then aDist += System.Length(A);
+  DoReverse(A, 0, Pred(aDist));
+  DoReverse(A, aDist, System.High(A));
+  DoReverse(A, 0, System.High(A));
+end;
+
 class procedure TGSimpleArrayHelper.Swap(var L, R: T);
 var
   v: T;
@@ -12832,27 +12840,17 @@ begin
 end;
 
 class procedure TGSimpleArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
-var
-  Len: SizeInt;
 begin
-  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+  if (aDist = 0) or (aDist <= -System.Length(A)) or (aDist >= System.Length(A)) then
     exit;
-  Len := System.Length(A);
-  if aDist < 0 then
-    aDist += Len;
-  DoReverse(A, 0, Pred(aDist));
-  DoReverse(A, aDist, Pred(Len));
-  DoReverse(A, 0, Pred(Len));
+  DoRotLeft(A, aDist);
 end;
 
 class procedure TGSimpleArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
 begin
-  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+  if (aDist = 0) or (aDist <= -System.Length(A)) or (aDist >= System.Length(A)) then
     exit;
-  if aDist > 0 then
-    RotateLeft(A, System.Length(A) - aDist)
-  else
-    RotateLeft(A, -aDist)
+  DoRotLeft(A, -aDist);
 end;
 
 class function TGSimpleArrayHelper.SequentSearch(const A: array of T; const aValue: T): SizeInt;
