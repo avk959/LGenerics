@@ -414,6 +414,8 @@ type
     procedure Union;
     procedure Difference;
     procedure SymmetricDifference;
+    procedure Assignment;
+    procedure CastTest;
   end;
 
 implementation
@@ -3771,6 +3773,43 @@ begin
       s2{%H-}.Include(I);
   s := s1 >< s2;
   AssertTrue(s.Count = 2048);
+end;
+
+procedure TGSetTest.Assignment;
+var
+  s: TMySet;
+  a: array of TMyRange;
+begin
+  s := 0;
+  AssertTrue(s.Count = 1);
+  AssertTrue(s.Contains(0));
+  s := 42;
+  AssertFalse(s.Contains(0));
+  AssertTrue(s.Contains(42));
+  AssertTrue(s.Count = 1);
+  a := [1,2,3];
+  s := a;
+  AssertTrue(s.Count = 3);
+  AssertTrue(specialize TGSimpleArrayHelper<TMyRange>.Same(s.ToArray, a));
+end;
+
+procedure TGSetTest.CastTest;
+var
+  r: TMyRange;
+  a: array of TMyRange;
+begin
+  r := 42;
+  with TMySet(r) do
+    begin
+      AssertTrue(Count = 1);
+      AssertTrue(Contains(42));
+    end;
+  a := [-1,0,1,2,3];
+  with TMySet(a) do
+    begin
+      AssertTrue(Count = Length(a));
+      AssertTrue(specialize TGSimpleArrayHelper<TMyRange>.Same(ToArray, a));
+    end;
 end;
 
 initialization
