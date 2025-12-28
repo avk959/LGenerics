@@ -1135,8 +1135,8 @@ type
     class operator  =(const L, R: TGSet<T>): Boolean;
     class operator <=(const L, R: TGSet<T>): Boolean;
     class operator in(aValue: T; const aSet: TGSet<T>): Boolean; inline;
-    class operator Implicit(aValue: T): TGSet<T>; inline; overload;
-    class operator Explicit(aValue: T): TGSet<T>; inline; overload;
+    class operator Implicit(aValue: T): TGSet<T>; overload;
+    class operator Explicit(aValue: T): TGSet<T>; overload;
     class operator Implicit(const a: array of T): TGSet<T>; overload;
     class operator Explicit(const a: array of T): TGSet<T>; overload;
   end;
@@ -3654,7 +3654,7 @@ end;
 {$IFDEF USE_TGSET_INITIALIZE}
 class operator TGSet<T>.Initialize(var s: TGSet<T>);
 begin
-  s.FBits := Default(TBits);
+  System.FillChar(PByte(@s.FBits)^, SizeOf(TBits), 0);
 end;
 {$ENDIF}
 
@@ -3854,40 +3854,32 @@ end;
 
 class operator TGSet<T>.Implicit(aValue: T): TGSet<T>;
 begin
-{$IFNDEF USE_TGSET_INITIALIZE}
-  System.FillChar(Result.FBits, SizeOf(TBits), 0);
-{$ENDIF}
-  Result{%H-}.Include(aValue);
+  System.FillChar(PByte(@Result.FBits)^, SizeOf(TBits), 0);
+  Result.Include(aValue);
 end;
 
 class operator TGSet<T>.Explicit(aValue: T): TGSet<T>;
 begin
-{$IFNDEF USE_TGSET_INITIALIZE}
-  System.FillChar(Result.FBits, SizeOf(TBits), 0);
-{$ENDIF}
-  Result{%H-}.Include(aValue);
+  System.FillChar(PByte(@Result.FBits)^, SizeOf(TBits), 0);
+  Result.Include(aValue);
 end;
 
 class operator TGSet<T>.Implicit(const a: array of T): TGSet<T>;
 var
   I: Integer;
 begin
-{$IFNDEF USE_TGSET_INITIALIZE}
-  System.FillChar(Result.FBits, SizeOf(TBits), 0);
-{$ENDIF}
+  System.FillChar(PByte(@Result.FBits)^, SizeOf(TBits), 0);
   for I := 0 to System.High(a) do
-    Result{%H-}.Include(a[I]);
+    Result.Include(a[I]);
 end;
 
 class operator TGSet<T>.Explicit(const a: array of T): TGSet<T>;
 var
   I: Integer;
 begin
-{$IFNDEF USE_TGSET_INITIALIZE}
-  System.FillChar(Result.FBits, SizeOf(TBits), 0);
-{$ENDIF}
+  System.FillChar(PByte(@Result.FBits)^, SizeOf(TBits), 0);
   for I := 0 to System.High(a) do
-    Result{%H-}.Include(a[I]);
+    Result.Include(a[I]);
 end;
 
 { TGRecRange }
