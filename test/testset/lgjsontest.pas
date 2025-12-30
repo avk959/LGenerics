@@ -971,7 +971,6 @@ begin
   AssertTrue(quiet);
   AssertTrue(d.Sign);
 
-{$IFNDEF CPUx86}
   AssertTrue(TryStrToDouble('snan', d));
   AssertTrue(d.IsNan(quiet));
   AssertFalse(quiet);
@@ -989,7 +988,6 @@ begin
   AssertTrue(d.IsNan(quiet));
   AssertFalse(quiet);
   AssertTrue(d.Sign);
-{$ENDIF }
 end;
 
 procedure TTestTryStrToDouble.Basic;
