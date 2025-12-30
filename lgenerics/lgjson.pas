@@ -8707,7 +8707,7 @@ function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSe
         end;
       's':
         if SameSpec(p, aCount, 'snan') then begin
-          aValue := Double.SetSignalPayload(Int64(1));
+          Double.SetSignalPayload(Int64(1), aValue);
           if aIsNeg then aValue.Negate;
           exit(True);
         end;
