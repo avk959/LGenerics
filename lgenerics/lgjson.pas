@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSON parser and utilites that try to follow RFC 8259.                   *
 *                                                                           *
-*   Copyright(c) 2020-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2020-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -222,7 +222,7 @@ type
     property  Segments[aIndex: SizeInt]: string read GetSegment; default;
   end;
 
-  { TJsArray: a helper entity, it owns the nodes it contains }
+  { TJsArray: a helper entity for internal use only }
   TJsArray = record
   type
     PJsonNode = ^TJsonNode;
@@ -237,8 +237,6 @@ type
     function  GetList: PJsonNode; inline;
     procedure SetLen(aValue: SizeInt); inline;
     procedure SetCount(aValue: SizeInt); inline;
-    class operator Initialize(var a: TJsArray); inline;
-    class operator Finalize(var a: TJsArray); inline;
   public
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -255,11 +253,11 @@ type
     property  UncMutItems[aIndex: SizeInt]: PJsonNode read GetUncMutItem;
     property  List: PJsonNode read GetList;
   end;
-  PJsArray = ^TJsArray;
 
+  PJsArray  = ^TJsArray;
   PJsObject = ^TJsObject;
 
-  { TJsObject: a helper entity, it owns the nodes it contains }
+  { TJsObject: a helper entity for internal use only }
   TJsObject = record
   private
     class function GetHash(const aKey: string): SizeInt; static; inline;
@@ -300,8 +298,6 @@ type
     function  TestHasUniq(aIndex: SizeInt): Boolean;
     function  GetList: PNode; inline;
     property  Length: SizeInt read GetLength;
-    class operator Initialize(var o: TJsObject); inline;
-    class operator Finalize(var o: TJsObject); inline;
   public
   type
     TEqualEnumerator = record
@@ -2846,16 +2842,6 @@ begin
     SizeInt(FItems[1]) := aValue;
 end;
 
-class operator TJsArray.Initialize(var a: TJsArray);
-begin
-  a.FItems := nil;
-end;
-
-class operator TJsArray.Finalize(var a: TJsArray);
-begin
-  a.Clear;
-end;
-
 function TJsArray.IsEmpty: Boolean;
 begin
   Result := Count = 0;
@@ -3157,16 +3143,6 @@ begin
   Result := @FNodes[1];
 end;
 
-class operator TJsObject.Initialize(var o: TJsObject);
-begin
-  o.FNodes := nil;
-end;
-
-class operator TJsObject.Finalize(var o: TJsObject);
-begin
-  o.Clear;
-end;
-
 { TJsObject.TEqualEnumerator }
 
 function TJsObject.TEqualEnumerator.GetCurrent: TPair;
@@ -3458,8 +3434,8 @@ begin
   case Kind of
     jvkNumber: FValue.Int := 0;
     jvkString: string(FValue.Ptr) := '';
-    jvkArray:  Finalize(TJsArray(FValue.Ptr));
-    jvkObject: Finalize(TJsObject(FValue.Ptr));
+    jvkArray:  TJsArray(FValue.Ptr).Clear;
+    jvkObject: TJsObject(FValue.Ptr).Clear;
   else
   end;
 end;
