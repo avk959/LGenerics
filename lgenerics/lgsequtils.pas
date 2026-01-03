@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some algorithms on generic sequences.                                   *
 *                                                                           *
-*   Copyright(c) 2022-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -310,7 +310,7 @@ type
       SourceChanges,                   //here True indicates deletion
       TargetChanges: array of Boolean; //here True indicates insertion
     end;
-    TDiffV = record
+    TVecDiff = record
       SourceChanges,              //here True indicates deletion
       TargetChanges: TBoolVector; //here True indicates insertion
     end;
@@ -318,28 +318,41 @@ type
 
     class function  Diff(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TDiff; static;
   { a noticeably less memory-consuming version }
-    class procedure Diff(const aSource, aTarget: array of T; out aDiff: TDiffV; aAlgo: TLcsAlgo = laMyers); static;
+    class procedure Diff(const aSource, aTarget: array of T; out aDiff: TVecDiff; aAlgo: TLcsAlgo = laMyers); static;
+  { some variant of the Patience Diff strategy }
+    class function  PatienceDiff(const aSource, aTarget: array of T; aFallback: TLcsAlgo = laMyers): TDiff; static;
+    class procedure PatienceDiff(const aSource, aTarget: array of T; out aDiff: TVecDiff; aFallback: TLcsAlgo = laMyers); static;
 
   type
-    TSeqLcsPatch = array of TLcsEdit;
-    TSeqPatch    = array of TSeqEdit;
+    TSeqLcsPatch  = array of TLcsEdit;
+    TSeqPatch     = array of TSeqEdit;
+    TLcsPatchStat = array[TLcsEditOp] of SizeInt;
 
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
-    only operations of deletion and insertion are available }
-    class function MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqLcsPatch; static;
-    class function ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch; out aTrg: TArray): Boolean; static;
+    only operations of deletion and insertion are available; returns script statictics in aStat }
+    class function MakeLcsPatch(const aSource, aTarget: array of T; out aStat: TLcsPatchStat;
+                                aLcsAlgo: TLcsAlgo = laMyers): TSeqLcsPatch; static;
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget; only
-    operations of deletion and insertion are available; uses some variant of the Patience Diff strategy }
-    class function MakePatiencePatch(const aSource, aTarget: array of T): TSeqLcsPatch; static;
+    operations of deletion and insertion are available; uses some variant of the Patience Diff strategy;
+    returns script statictics in aStat }
+    class function MakePatienceLcsPatch(const aSource, aTarget: array of T; out aStat: TLcsPatchStat;
+                                        aFallback: TLcsAlgo = laMyers): TSeqLcsPatch; static;
+  { same as above, if the statistics are not of interest }
+    class function MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqLcsPatch; static;
+    class function MakePatienceLcsPatch(const aSource, aTarget: array of T; aFallback: TLcsAlgo = laMyers): TSeqLcsPatch; static;
+    class function ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch; out aTrg: TArray): Boolean; static;
   type
      TSeqPatchStat = array[TSeqEditOp] of SizeInt;
   { returns an edit script, a sequence of primitive operations that convert aSource to aTarget;
-    returns script statictics in aStat; since the function under the hood uses LCS,
-    the resulting script may be suboptimal }
+    since the function under the hood uses LCS diff, the resulting script may be suboptimal;
+    returns script statictics in aStat }
     class function MakePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
                              aLcsAlgo: TLcsAlgo = laMyers): TSeqPatch; static;
+    class function MakePatiencePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
+                                     aFallback: TLcsAlgo = laMyers): TSeqPatch; static;
   { same as above, if the statistics are not of interest }
     class function MakePatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo = laMyers): TSeqPatch; static;
+    class function MakePatiencePatch(const aSource, aTarget: array of T; aFallback: TLcsAlgo = laMyers): TSeqPatch; static;
     class function ApplyPatch(const aSrc: array of T; const aPatch: TSeqPatch; out aTrg: TArray): Boolean; static;
   end;
 
@@ -2966,7 +2979,7 @@ begin
   Result.TargetChanges := Ins;
 end;
 
-class procedure TGSeqUtil.Diff(const aSource, aTarget: array of T; out aDiff: TDiffV; aAlgo: TLcsAlgo);
+class procedure TGSeqUtil.Diff(const aSource, aTarget: array of T; out aDiff: TVecDiff; aAlgo: TLcsAlgo);
 var
   Lcs: TArray;
   I, SrcIdx, TrgIdx: SizeInt;
@@ -2978,7 +2991,7 @@ begin
   else// laMyers
     Lcs := LcsMyers(aSource, aTarget);
   end;
-  aDiff := Default(TDiffV);
+  aDiff := Default(TVecDiff);
   SrcIdx := 0;
   TrgIdx := 0;
   with aDiff do begin
@@ -3004,6 +3017,39 @@ begin
   end;
 end;
 
+class function TGSeqUtil.PatienceDiff(const aSource, aTarget: array of T; aFallback: TLcsAlgo): TDiff;
+var
+  Patch: TSeqLcsPatch;
+  I: SizeInt;
+begin
+  Patch := MakePatienceLcsPatch(aSource, aTarget, aFallback);
+  System.SetLength(Result.SourceChanges, System.Length(aSource));
+  System.SetLength(Result.TargetChanges, System.Length(aTarget));
+  for I := 0 to System.High(Patch) do
+    case Patch[I].Operation of
+      seoMatch: ;
+      seoDelete: Result.SourceChanges[Patch[I].SourceIndex] := True;
+      seoInsert: Result.TargetChanges[Patch[I].TargetIndex] := True;
+    end;
+end;
+
+class procedure TGSeqUtil.PatienceDiff(const aSource, aTarget: array of T; out aDiff: TVecDiff;
+  aFallback: TLcsAlgo);
+var
+  Patch: TSeqLcsPatch;
+  I: SizeInt;
+begin
+  aDiff := Default(TVecDiff);
+  Patch := MakePatienceLcsPatch(aSource, aTarget, aFallback);
+  aDiff.SourceChanges.EnsureCapacity(System.Length(aSource));
+  aDiff.TargetChanges.EnsureCapacity(System.Length(aTarget));
+  for I := 0 to System.High(Patch) do
+    case Patch[I].Operation of
+      seoMatch: ;
+      seoDelete: aDiff.SourceChanges.UncBits[Patch[I].SourceIndex] := True;
+      seoInsert: aDiff.TargetChanges.UncBits[Patch[I].TargetIndex] := True;
+    end;
+end;
 
 { TGSeqUtil.TLcsEdit }
 
@@ -3069,6 +3115,20 @@ begin
   TargetIndex := aTrgIdx;
 end;
 
+class function TGSeqUtil.MakeLcsPatch(const aSource, aTarget: array of T; out aStat: TLcsPatchStat;
+  aLcsAlgo: TLcsAlgo): TSeqLcsPatch;
+var
+  I: SizeInt;
+  r: TSeqLcsPatch;
+begin
+  r := MakeLcsPatch(aSource, aTarget, aLcsAlgo);
+  aStat := Default(TLcsPatchStat);
+  for I := 0 to System.High(r) do
+    Inc(aStat[r[I].Operation]);
+  aStat[seoMatch] := System.Length(aSource) - aStat[seoDelete];
+  Result := r;
+end;
+
 class function TGSeqUtil.MakeLcsPatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqLcsPatch;
 var
   Lcs: TArray;
@@ -3107,43 +3167,21 @@ begin
   Result := r;
 end;
 
-class function TGSeqUtil.ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch;
-  out aTrg: TArray): Boolean;
+class function TGSeqUtil.MakePatienceLcsPatch(const aSource, aTarget: array of T; out aStat: TLcsPatchStat;
+  aFallback: TLcsAlgo): TSeqLcsPatch;
 var
-  r: TArray = nil;
-  OpCounts: array[seoDelete..seoInsert] of SizeInt = (0,0);
-  I, SrcIdx, TrgIdx: SizeInt;
+  I: SizeInt;
+  r: TSeqLcsPatch;
 begin
-  aTrg := nil;
-  for I := 0 to System.High(aPatch) do
-    if aPatch[I].Operation in [seoDelete, seoInsert] then
-      Inc(OpCounts[aPatch[I].Operation])
-    else exit(False);
-  System.SetLength(r, System.Length(aSrc) + OpCounts[seoInsert] - OpCounts[seoDelete]);
-  SrcIdx := 0; TrgIdx := 0;
-  for I := 0 to System.High(aPatch) do begin
-    while SrcIdx < aPatch[I].SourceIndex do begin
-      r[TrgIdx] := aSrc[SrcIdx];
-      Inc(SrcIdx); Inc(TrgIdx);
-    end;
-    if aPatch[I].TargetIndex <> TrgIdx then exit(False);
-    if aPatch[I].Operation = seoDelete then begin
-      if not TEqRel.Equal(aSrc[SrcIdx], aPatch[I].Value) then exit(False);
-      Inc(SrcIdx);
-    end else begin
-      r[TrgIdx] := aPatch[I].Value;
-      Inc(TrgIdx);
-    end;
-  end;
-  for I := SrcIdx to System.High(aSrc) do begin
-    r[TrgIdx] := aSrc[I];
-    Inc(TrgIdx);
-  end;
-  aTrg := r;
-  Result := True;
+  r := MakePatienceLcsPatch(aSource, aTarget, aFallback);
+  aStat := Default(TLcsPatchStat);
+  for I := 0 to System.High(r) do
+    Inc(aStat[r[I].Operation]);
+  aStat[seoMatch] := System.Length(aSource) - aStat[seoDelete];
+  Result := r;
 end;
 
-class function TGSeqUtil.MakePatiencePatch(const aSource, aTarget: array of T): TSeqLcsPatch;
+class function TGSeqUtil.MakePatienceLcsPatch(const aSource, aTarget: array of T; aFallback: TLcsAlgo): TSeqLcsPatch;
 var
   EditList: TEditList;
 
@@ -3208,10 +3246,23 @@ var
     SrcOfs, TrgOfs, I, SrcIdx, TrgIdx: SizeInt;
     v: T;
   begin
-    if aSrcLen <= aTrgLen then
-      Lcs := LcsMyersImpl(pSrc, pTrg, aSrcLen, aTrgLen)
-    else
-      Lcs := LcsMyersImpl(pTrg, pSrc, aTrgLen, aSrcLen);
+    case aFallback of
+      laGus:
+        if aSrcLen <= aTrgLen then
+          Lcs := LcsGusImpl(pSrc, pTrg, aSrcLen, aTrgLen)
+        else
+          Lcs := LcsGusImpl(pTrg, pSrc, aTrgLen, aSrcLen);
+      laKr:
+        if aSrcLen <= aTrgLen then
+          Lcs := LcsKRImpl(pSrc, pTrg, aSrcLen, aTrgLen)
+        else
+          Lcs := LcsKRImpl(pTrg, pSrc, aTrgLen, aSrcLen);
+    else // laMyers
+      if aSrcLen <= aTrgLen then
+        Lcs := LcsMyersImpl(pSrc, pTrg, aSrcLen, aTrgLen)
+      else
+        Lcs := LcsMyersImpl(pTrg, pSrc, aTrgLen, aSrcLen);
+    end;
     SrcOfs := pSrc - PItem(@aSource[0]);
     TrgOfs := pTrg - PItem(@aTarget[0]);
     SrcIdx := 0; TrgIdx := 0;
@@ -3362,6 +3413,42 @@ begin
   Result := EditList.ToArray;
 end;
 
+class function TGSeqUtil.ApplyLcsPatch(const aSrc: array of T; const aPatch: TSeqLcsPatch;
+  out aTrg: TArray): Boolean;
+var
+  r: TArray = nil;
+  OpCounts: array[seoDelete..seoInsert] of SizeInt = (0,0);
+  I, SrcIdx, TrgIdx: SizeInt;
+begin
+  aTrg := nil;
+  for I := 0 to System.High(aPatch) do
+    if aPatch[I].Operation in [seoDelete, seoInsert] then
+      Inc(OpCounts[aPatch[I].Operation])
+    else exit(False);
+  System.SetLength(r, System.Length(aSrc) + OpCounts[seoInsert] - OpCounts[seoDelete]);
+  SrcIdx := 0; TrgIdx := 0;
+  for I := 0 to System.High(aPatch) do begin
+    while SrcIdx < aPatch[I].SourceIndex do begin
+      r[TrgIdx] := aSrc[SrcIdx];
+      Inc(SrcIdx); Inc(TrgIdx);
+    end;
+    if aPatch[I].TargetIndex <> TrgIdx then exit(False);
+    if aPatch[I].Operation = seoDelete then begin
+      if not TEqRel.Equal(aSrc[SrcIdx], aPatch[I].Value) then exit(False);
+      Inc(SrcIdx);
+    end else begin
+      r[TrgIdx] := aPatch[I].Value;
+      Inc(TrgIdx);
+    end;
+  end;
+  for I := SrcIdx to System.High(aSrc) do begin
+    r[TrgIdx] := aSrc[I];
+    Inc(TrgIdx);
+  end;
+  aTrg := r;
+  Result := True;
+end;
+
 class function TGSeqUtil.MakePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
   aLcsAlgo: TLcsAlgo): TSeqPatch;
 var
@@ -3420,11 +3507,78 @@ begin
   Result := r;
 end;
 
+class function TGSeqUtil.MakePatiencePatch(const aSource, aTarget: array of T; out aStat: TSeqPatchStat;
+  aFallback: TLcsAlgo): TSeqPatch;
+var
+  r: array of TSeqEdit = nil;
+  rCount: SizeInt = 0;
+  procedure AddEdit(const e: TSeqEdit);
+  begin
+    if rCount = System.Length(r) then System.SetLength(r, rCount*2);
+    r[rCount] := e;
+    Inc(rCount);
+  end;
+var
+  Dif: TDiff;
+  SrcCh, TrgCh: array of Boolean;
+  SrcIdx, TrgIdx, SrcLen, TrgLen: SizeInt;
+begin
+  Dif := PatienceDiff(aSource, aTarget, aFallback);
+  SrcCh := Dif.SourceChanges;
+  TrgCh := Dif.TargetChanges;
+  aStat := Default(TSeqPatchStat);
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  SrcIdx := 0;
+  TrgIdx := 0;
+  SrcLen := System.Length(aSource);
+  TrgLen := System.Length(aTarget);
+  while (SrcIdx < SrcLen) and (TrgIdx < TrgLen) do
+    if SrcCh[SrcIdx] and TrgCh[TrgIdx] then begin
+      AddEdit(TSeqEdit.Rep(aSource[SrcIdx], aTarget[TrgIdx], SrcIdx, TrgIdx));
+      Inc(aStat[seoReplace]);
+      Inc(SrcIdx);
+      Inc(TrgIdx);
+    end else
+      if SrcCh[SrcIdx] then begin
+        AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
+        Inc(aStat[seoDelete]);
+        Inc(SrcIdx);
+      end else
+        if TrgCh[TrgIdx] then begin
+          AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
+          Inc(aStat[seoInsert]);
+          Inc(TrgIdx);
+        end else begin
+          Inc(aStat[seoMatch]);
+          Inc(SrcIdx);
+          Inc(TrgIdx);
+        end;
+  while SrcIdx < SrcLen do begin
+    AddEdit(TSeqEdit.Del(aSource[SrcIdx], SrcIdx, TrgIdx));
+    Inc(aStat[seoDelete]);
+    Inc(SrcIdx);
+  end;
+  while TrgIdx < TrgLen do begin
+    AddEdit(TSeqEdit.Ins(aTarget[TrgIdx], SrcIdx, TrgIdx));
+    Inc(aStat[seoInsert]);
+    Inc(TrgIdx);
+  end;
+  System.SetLength(r, rCount);
+  Result := r;
+end;
+
 class function TGSeqUtil.MakePatch(const aSource, aTarget: array of T; aLcsAlgo: TLcsAlgo): TSeqPatch;
 var
   Dummy: TSeqPatchStat;
 begin
   Result := MakePatch(aSource, aTarget, Dummy, aLcsAlgo);
+end;
+
+class function TGSeqUtil.MakePatiencePatch(const aSource, aTarget: array of T; aFallback: TLcsAlgo): TSeqPatch;
+var
+  Dummy: TSeqPatchStat;
+begin
+  Result := MakePatiencePatch(aSource, aTarget, Dummy, aFallback);
 end;
 
 class function TGSeqUtil.ApplyPatch(const aSrc: array of T; const aPatch: TSeqPatch; out aTrg: TArray): Boolean;
