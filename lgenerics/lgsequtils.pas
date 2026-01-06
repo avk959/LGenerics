@@ -194,8 +194,8 @@ type
     TItemInfo = record
       SourceCount,
       TargetCount,
-      SourceLine,
-      TargetLine: SizeInt;
+      SourceIndex,
+      TargetIndex: SizeInt;
       class function Less(const L, R: TItemInfo): Boolean; static;
     end;
 
@@ -212,7 +212,7 @@ type
     BSIZE_MASK = Pred(BLOCK_SIZE);
     BSIZE_LOG  = 6;
   {$PUSH}{$J-}
-    DEFAULT_INFO: TItemInfo = (SourceCount: 0; TargetCount: 0; SourceLine: -1; TargetLine: -1);
+    DEFAULT_INFO: TItemInfo = (SourceCount: 0; TargetCount: 0; SourceIndex: -1; TargetIndex: -1);
   {$POP}
     class function  SkipPrefix(var pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
     class function  SkipSuffix(pL, pR: PItem; var aLenL, aLenR: SizeInt): SizeInt; static; inline;
@@ -1207,7 +1207,7 @@ end;
 
 class function TGSeqUtil.TItemInfo.Less(const L, R: TItemInfo): Boolean;
 begin
-  Result := L.TargetLine < R.TargetLine;
+  Result := L.TargetIndex < R.TargetIndex;
 end;
 
 { TGSeqUtil }
@@ -3118,8 +3118,8 @@ end;
 class function TGSeqUtil.MakeLcsPatch(const aSource, aTarget: array of T; out aStat: TLcsPatchStat;
   aLcsAlgo: TLcsAlgo): TSeqLcsPatch;
 var
-  I: SizeInt;
   r: TSeqLcsPatch;
+  I: SizeInt;
 begin
   r := MakeLcsPatch(aSource, aTarget, aLcsAlgo);
   aStat := Default(TLcsPatchStat);
@@ -3170,8 +3170,8 @@ end;
 class function TGSeqUtil.MakePatienceLcsPatch(const aSource, aTarget: array of T; out aStat: TLcsPatchStat;
   aFallback: TLcsAlgo): TSeqLcsPatch;
 var
-  I: SizeInt;
   r: TSeqLcsPatch;
+  I: SizeInt;
 begin
   r := MakePatienceLcsPatch(aSource, aTarget, aFallback);
   aStat := Default(TLcsPatchStat);
@@ -3338,16 +3338,16 @@ var
     for I := 0 to Pred(aSrcLen) do begin
       p := InfoMap.GetMutValueDef(pSrc[I], DEFAULT_INFO);
       Inc(p^.SourceCount);
-      if p^.SourceLine = NULL_INDEX then
-        p^.SourceLine := I;
+      if p^.SourceIndex = NULL_INDEX then
+        p^.SourceIndex := I;
     end;
 
     HaveCommon := False;
     for I := 0 to Pred(aTrgLen) do
       if InfoMap.TryGetMutValue(pTrg[I], p) then begin
         Inc(p^.TargetCount);
-        if p^.TargetLine = NULL_INDEX then
-          p^.TargetLine := I;
+        if p^.TargetIndex = NULL_INDEX then
+          p^.TargetIndex := I;
         HaveCommon := True;
       end;
 
@@ -3378,10 +3378,10 @@ var
     TrgPos := 0;
     for I in AscOrderMap do begin
       p := UniqList.UncMutable[I];
-      if (SrcPos < p^.SourceLine) or (TrgPos < p^.TargetLine) then
-        DoDiff(pSrc + SrcPos, pTrg + TrgPos, p^.SourceLine - SrcPos, p^.TargetLine - TrgPos);
-      SrcPos := Succ(p^.SourceLine);
-      TrgPos := Succ(p^.TargetLine);
+      if (SrcPos < p^.SourceIndex) or (TrgPos < p^.TargetIndex) then
+        DoDiff(pSrc + SrcPos, pTrg + TrgPos, p^.SourceIndex - SrcPos, p^.TargetIndex - TrgPos);
+      SrcPos := Succ(p^.SourceIndex);
+      TrgPos := Succ(p^.TargetIndex);
     end;
 
     if (SrcPos < aSrcLen) or (TrgPos < aTrgLen) then
