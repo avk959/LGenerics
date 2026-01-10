@@ -1437,6 +1437,7 @@ var
   s, TagName, TagValue: string;
   Node, TagNode: TJsonNode;
   InstClass: TJtdEntityClass;
+  LoadFailed: Boolean;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   if not aReader.CopyStruct(s) then ReaderFail(aReader);
@@ -1452,11 +1453,13 @@ begin
       ReadError(Format(SEJtdIllegalTagValueFmt, [TagValue]));
     if not Node.Remove(TagName) then InternalError(4);
     FreeAndNil(FInstance);
+    LoadFailed := False;
     try
       FInstance := InstClass.LoadInstance(Node);
     except
-      ReadError(SEJtdInvalidDiscriInst);
+      LoadFailed := True;
     end;
+    if LoadFailed then ReadError(SEJtdInvalidDiscriInst);
     FTag := TagValue;
   finally
     Node.Free;
