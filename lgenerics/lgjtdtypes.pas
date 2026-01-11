@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   A set of classes handy when generating code from JTD schemas.           *                                            *
 *                                                                           *
-*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -118,6 +118,10 @@ type
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     constructor Create; override;
+    constructor Create(aValue: Boolean); virtual; overload;
+    constructor Create(aValue: Double); virtual; overload;
+    constructor Create(const aValue: string); virtual; overload;
+    constructor Create(const aValue: TJVariant); virtual; overload;
     destructor Destroy; override;
     function  IsNull: Boolean; override;
     property Instance: TJsonNode read FInstance;
@@ -747,6 +751,30 @@ constructor TJtdAny.Create;
 begin
   inherited Create;
   FInstance := TJsonNode.Create;
+end;
+
+constructor TJtdAny.Create(aValue: Boolean);
+begin
+  inherited Create;
+  FInstance := TJsonNode.Create(aValue);
+end;
+
+constructor TJtdAny.Create(aValue: Double);
+begin
+  inherited Create;
+  FInstance := TJsonNode.Create(aValue);
+end;
+
+constructor TJtdAny.Create(const aValue: string);
+begin
+  inherited Create;
+  FInstance := TJsonNode.Create(aValue);
+end;
+
+constructor TJtdAny.Create(const aValue: TJVariant);
+begin
+  inherited Create;
+  FInstance := TJsonNode.Create(aValue);
 end;
 
 destructor TJtdAny.Destroy;
