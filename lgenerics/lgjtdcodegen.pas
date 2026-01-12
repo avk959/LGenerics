@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Pascal code generator from JSON TypeDef schemas.                        *                                            *
 *                                                                           *
-*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -709,7 +709,8 @@ procedure TJtdStrEnumElem.WriteImplementation(aText: TStrings);
 var
   I: Integer;
 begin
-  inherited WriteImplementation(aText);
+  aText.Add(Format('{ %s }', [TypeName]));
+  aText.Add('');
   aText.Add(Format('class function %s.IsElement(const aValue: string): Boolean;', [TypeName]));
   aText.Add('begin');
   if HasAsciiNames then
@@ -839,7 +840,8 @@ begin
   if Props <> nil then
     aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
   if (Props <> nil) or (OptionalProps <> nil) then begin
-    aText.Add('  for e in aNode.Entries do');
+    aText.Add('  for e in aNode.Entries do begin');
+    aText.Add('    if (FTagField <> '''') and (e.Key = FTagField) then continue;');
     if HasAsciiNames then
       aText.Add('    case e.Key of')
     else
@@ -865,6 +867,7 @@ begin
     if not AdditionalProps then
       aText.Add('      UnknownProp(e.Key);');
     aText.Add('    end;');
+    aText.Add('  end;');
   end;
   if Props <> nil then begin
     aText.Add('  for I := 0 to System.High(Flags) do');
@@ -899,6 +902,7 @@ begin
   aText.Add('  repeat');
   aText.Add('    if not aReader.Read then ReaderFail(aReader);');
   aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
+  aText.Add('    if (FTagField <> '''') and (aReader.Name = FTagField) then continue;');
   if (Props <> nil) or (OptionalProps <> nil) then begin
     if HasAsciiNames then
       aText.Add('    case aReader.Name of')
@@ -946,9 +950,8 @@ procedure TJtdProps.WritePropsWriteJson(aText: TStrings);
 var
   I: Integer;
 begin
-  aText.Add(Format('procedure %s.DoWriteJson(aWriter: TJsonStrWriter);', [TypeName]));
+  aText.Add(Format('procedure %s.DoWriteProps(aWriter: TJsonStrWriter);', [TypeName]));
   aText.Add('begin');
-  aText.Add('  aWriter.BeginObject;');
   for I := 0 to System.High(Props) do begin
     if HasAsciiNames then
       aText.Add(Format('  aWriter.AddName(''%s'');', [Props[I].JsonPropName]))
@@ -965,7 +968,6 @@ begin
     aText.Add(Format('    %s.WriteJson(aWriter);', [OptionalProps[I].PropName]));
     aText.Add('  end;');
   end;
-  aText.Add('  aWriter.EndObject;');
   aText.Add('end;');
   aText.Add('');
 end;
@@ -1040,7 +1042,7 @@ begin
   aText.Add('  protected');
   aText.Add('    procedure DoReadJson(aNode: TJsonNode); override;');
   aText.Add('    procedure DoReadJson(aReader: TJsonReader); override;');
-  aText.Add('    procedure DoWriteJson(aWriter: TJsonStrWriter); override;');
+  aText.Add('    procedure DoWriteProps(aWriter: TJsonStrWriter); override;');
   aText.Add('  public');
   aText.Add('    procedure Clear; override;');
   for I := 0 to System.High(Props) do begin
@@ -1220,6 +1222,8 @@ end;
 
 procedure TJtdUnionTemplate.WriteImplementation(aText: TStrings);
 begin
+  aText.Add(Format('{ %s }', [TypeName]));
+  aText.Add('');
   WriteGetTagJsonName(aText);
   WriteGetInstanceClass(aText);
   WriteGetters(aText);
@@ -1537,8 +1541,9 @@ begin
   end;
   if aRoot then begin
     Template := TJtdTypeAlias.Create(Alias, TypName, aSchema.Nullable);
+    Template.Description := Format('%s: root unit class', [Alias]);
     if HasDescription(aSchema, d) then
-      Template.Description := d;
+      Template.Description := Template.Description + '; ' + d;
     FTemplateList.Add(Template);
     Result := Alias;
   end else
