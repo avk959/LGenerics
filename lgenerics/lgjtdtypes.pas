@@ -321,15 +321,27 @@ type
     property  Items[const aKey: string]: T read GetItem write AddOrSetValue; default;
   end;
 
+{$PUSH}{$INTERFACES CORBA}
+  IJtdObject = interface
+  ['{F6F86619-4F64-42D8-9BCA-A8925BD5BFD4}']
+    procedure SetTagField(const s: string);
+    procedure DoWriteProps(aWriter: TJsonStrWriter);
+  end;
+{$POP}
+
   { TJtdObject: abstract ancestor class for JTD "properties" form }
-  TJtdObject = class abstract(TJtdGenContainer)
+  TJtdObject = class abstract(TJtdGenContainer, IJtdObject)
   protected
+    FTagField: string;
     class procedure PropNotFound(const aJsonPropName: string; aReader: TJsonReader); static;
     class procedure PropNotFound(const aJsonPropName: string); static;
     class procedure UnknownProp(const aJsonPropName: string; aReader: TJsonReader); static;
     class procedure UnknownProp(const aJsonPropName: string); static;
     class procedure DuplicateProp(aReader: TJsonReader); static;
     class procedure DuplicateProp(const aProp: string); static;
+    procedure SetTagField(const s: string);
+    procedure DoWriteProps(aWriter: TJsonStrWriter); virtual; abstract;
+    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
   { TJtdUnion: abstract ancestor class for JTD "discriminator" form }
@@ -1432,80 +1444,64 @@ begin
   ReadError(SEJtdDupPropNameFmt, [aProp]);
 end;
 
+procedure TJtdObject.SetTagField(const s: string);
+begin
+  FTagField := s;
+end;
+
+procedure TJtdObject.DoWriteJson(aWriter: TJsonStrWriter);
+begin
+  aWriter.BeginObject;
+  DoWriteProps(aWriter);
+  aWriter.EndObject;
+end;
+
 { TJtdUnion }
 
 procedure TJtdUnion.DoReadJson(aNode: TJsonNode);
 var
-  Node, TagNode: TJsonNode;
+  TagNode: TJsonNode;
   TagName: string;
   InstClass: TJtdEntityClass;
 begin
   if not aNode.IsObject then ExpectObject(aNode);
   TagName := GetTagJsonName;
-  if not aNode.Contains(TagName) then
+  if not aNode.Find(TagName, TagNode) then
     ReadError(Format(SEJtdTagNotFoundFmt, [TagName]));
-  Node := aNode.Clone;
-  try
-    Node.Find(TagName, TagNode);
-    if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr);
-    InstClass := GetInstanceClass(TagNode.AsString);
-    if InstClass = nil then
-      ReadError(Format(SEJtdIllegalTagValueFmt, [TagNode.AsString]));
-    FTag := TagNode.AsString;
-    if not Node.Remove(TagName) then InternalError(2);
-    FreeAndNil(FInstance);
-    FInstance := InstClass.LoadInstance(Node);
-  finally
-    Node.Free;
-  end;
+  if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr);
+  InstClass := GetInstanceClass(TagNode.AsString);
+  if InstClass = nil then
+    ReadError(Format(SEJtdIllegalTagValueFmt, [TagNode.AsString]));
+  FTag := TagNode.AsString;
+  FreeAndNil(FInstance);
+  FInstance := InstClass.Create;
+  (FInstance as IJtdObject).SetTagField(TagName);
+  FInstance.ReadJson(aNode);
+  (FInstance as IJtdObject).SetTagField('');
 end;
 
 procedure TJtdUnion.DoReadJson(aReader: TJsonReader);
 var
-  s, TagName, TagValue: string;
-  Node, TagNode: TJsonNode;
-  InstClass: TJtdEntityClass;
-  LoadFailed: Boolean;
+  s: string;
+  Node: TJsonNode;
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
   if not aReader.CopyStruct(s) then ReaderFail(aReader);
-  if not TJsonNode.TryParse(s, Node) then InternalError(3);
+  if not TJsonNode.TryParse(s, Node) then InternalError(2);
   try
-    TagName := GetTagJsonName;
-    if not Node.Find(TagName, TagNode) then
-      ReadError(Format(SEJtdTagNotFoundFmt, [TagName]));
-    if not TagNode.IsString then ReadError(SEJtdDiscriTagNotStr);
-    TagValue := TagNode.AsString;
-    InstClass := GetInstanceClass(TagValue);
-    if InstClass = nil then
-      ReadError(Format(SEJtdIllegalTagValueFmt, [TagValue]));
-    if not Node.Remove(TagName) then InternalError(4);
-    FreeAndNil(FInstance);
-    LoadFailed := False;
-    try
-      FInstance := InstClass.LoadInstance(Node);
-    except
-      LoadFailed := True;
-    end;
-    if LoadFailed then ReadError(SEJtdInvalidDiscriInst);
-    FTag := TagValue;
+    s := '';
+    DoReadJson(Node);
   finally
     Node.Free;
   end;
 end;
 
 procedure TJtdUnion.DoWriteJson(aWriter: TJsonStrWriter);
-var
-  n: TJsonNode;
 begin
-  if not TJsonNode.TryParse(FInstance.AsJson, n) then InternalError(5);
-  try
-    if not n.IsObject then InternalError(6);
-    n.Add(GetTagJsonName, Tag);
-    aWriter.Add(n);
-  finally
-    n.Free;
-  end;
+  aWriter.BeginObject;
+  aWriter.Add(GetTagJsonName, Tag);
+  (FInstance as IJtdObject).DoWriteProps(aWriter);
+  aWriter.EndObject;
 end;
 
 destructor TJtdUnion.Destroy;
