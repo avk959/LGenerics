@@ -22,6 +22,7 @@ type
 
   TFoo = TFoo1;
 
+{ TRootObject: root unit class }
   TRootObject = TFoo;
 
 implementation

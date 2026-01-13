@@ -21,7 +21,7 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
   { refers to "baz" JSON property }
@@ -35,7 +35,7 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
   { refers to "quuz" JSON property }
@@ -78,7 +78,8 @@ begin
   if not aNode.IsObject then ExpectObject(aNode);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
-  for e in aNode.Entries do
+  for e in aNode.Entries do begin
+    if (FTagField <> '') and (e.Key = FTagField) then continue;
     case e.Key of
       'baz':
         if not Flags[0] then begin
@@ -88,6 +89,7 @@ begin
     else
       UnknownProp(e.Key);
     end;
+  end;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
@@ -108,6 +110,7 @@ begin
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
+    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'baz':
         if not Flags[0] then begin
@@ -126,12 +129,10 @@ begin
 end;
 {$POP}
 
-procedure TBarBaz.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TBarBaz.DoWriteProps(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('baz');
   Baz.WriteJson(aWriter);
-  aWriter.EndObject;
 end;
 
 procedure TBarBaz.Clear;
@@ -158,7 +159,8 @@ begin
   if not aNode.IsObject then ExpectObject(aNode);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
-  for e in aNode.Entries do
+  for e in aNode.Entries do begin
+    if (FTagField <> '') and (e.Key = FTagField) then continue;
     case e.Key of
       'quuz':
         if not Flags[0] then begin
@@ -168,6 +170,7 @@ begin
     else
       UnknownProp(e.Key);
     end;
+  end;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
@@ -188,6 +191,7 @@ begin
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
+    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'quuz':
         if not Flags[0] then begin
@@ -206,18 +210,18 @@ begin
 end;
 {$POP}
 
-procedure TQuux.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TQuux.DoWriteProps(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('quuz');
   Quuz.WriteJson(aWriter);
-  aWriter.EndObject;
 end;
 
 procedure TQuux.Clear;
 begin
   FreeAndNil(FQuuz);
 end;
+
+{ TRootObject }
 
 class function TRootObject.GetTagJsonName: string;
 begin

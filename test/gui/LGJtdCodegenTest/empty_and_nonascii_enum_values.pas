@@ -21,6 +21,8 @@ type
 
 implementation
 
+{ TRootObject }
+
 class function TRootObject.IsElement(const aValue: string): Boolean;
 begin
   case TJsonNode.PasStrToAsciiJson(aValue) of

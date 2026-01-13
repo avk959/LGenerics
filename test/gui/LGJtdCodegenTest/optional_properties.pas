@@ -25,7 +25,7 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
 
@@ -71,7 +71,8 @@ var
 begin
   if not aNode.IsObject then ExpectObject(aNode);
   Clear;
-  for e in aNode.Entries do
+  for e in aNode.Entries do begin
+    if (FTagField <> '') and (e.Key = FTagField) then continue;
     case e.Key of
       'foo':
          if FFoo = nil then
@@ -88,6 +89,7 @@ begin
     else
       UnknownProp(e.Key);
     end;
+  end;
 end;
 {$POP}
 
@@ -99,6 +101,7 @@ begin
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
+    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'foo':
          if FFoo = nil then
@@ -119,9 +122,8 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TRootObject.DoWriteProps(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   if Foo <> nil then begin
     aWriter.AddName('foo');
     Foo.WriteJson(aWriter);
@@ -134,7 +136,6 @@ begin
     aWriter.AddName('baz');
     Baz.WriteJson(aWriter);
   end;
-  aWriter.EndObject;
 end;
 
 procedure TRootObject.Clear;

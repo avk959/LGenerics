@@ -16,7 +16,7 @@ type
 
   TRootObjectEnum = (Foo, Bar, Baz);
 
-{ Container for some TRootObjectEnum enumeration element }
+{ TRootObject: container for some TRootObjectEnum enumeration element }
   TRootObject = class sealed(specialize TJtdEnum<TRootObjectEnum>);
 
 implementation

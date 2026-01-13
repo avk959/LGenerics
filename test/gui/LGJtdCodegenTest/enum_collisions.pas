@@ -16,7 +16,7 @@ type
 
   TBarEnum = (x, y);
 
-{ Container for some TBarEnum enumeration element }
+{ TBar: container for some TBarEnum enumeration element }
   TBar = class sealed(specialize TJtdEnum<TBarEnum>);
 
   TFoo = class sealed(TJtdObject)
@@ -26,7 +26,7 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
   { refers to "bar" JSON property }
@@ -35,7 +35,7 @@ type
 
   TFooBarEnum = (x, y);
 
-{ Container for some TFooBarEnum enumeration element }
+{ TFooBar: container for some TFooBarEnum enumeration element }
   TFooBar = class sealed(specialize TJtdEnum<TFooBarEnum>);
 
   TRootObject = class sealed(TJtdObject)
@@ -47,7 +47,7 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
   { refers to "foo" JSON property }
@@ -77,7 +77,8 @@ begin
   if not aNode.IsObject then ExpectObject(aNode);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
-  for e in aNode.Entries do
+  for e in aNode.Entries do begin
+    if (FTagField <> '') and (e.Key = FTagField) then continue;
     case e.Key of
       'bar':
         if not Flags[0] then begin
@@ -87,6 +88,7 @@ begin
     else
       UnknownProp(e.Key);
     end;
+  end;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
@@ -107,6 +109,7 @@ begin
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
+    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'bar':
         if not Flags[0] then begin
@@ -125,12 +128,10 @@ begin
 end;
 {$POP}
 
-procedure TFoo.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TFoo.DoWriteProps(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('bar');
   Bar.WriteJson(aWriter);
-  aWriter.EndObject;
 end;
 
 procedure TFoo.Clear;
@@ -164,7 +165,8 @@ begin
   if not aNode.IsObject then ExpectObject(aNode);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
-  for e in aNode.Entries do
+  for e in aNode.Entries do begin
+    if (FTagField <> '') and (e.Key = FTagField) then continue;
     case e.Key of
       'foo':
         if not Flags[0] then begin
@@ -179,6 +181,7 @@ begin
     else
       UnknownProp(e.Key);
     end;
+  end;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
@@ -200,6 +203,7 @@ begin
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
+    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'foo':
         if not Flags[0] then begin
@@ -224,14 +228,12 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TRootObject.DoWriteProps(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('foo');
   Foo.WriteJson(aWriter);
   aWriter.AddName('foo_bar');
   FooBar.WriteJson(aWriter);
-  aWriter.EndObject;
 end;
 
 procedure TRootObject.Clear;

@@ -27,7 +27,7 @@ type
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
     procedure DoReadJson(aReader: TJsonReader); override;
-    procedure DoWriteJson(aWriter: TJsonStrWriter); override;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
   { refers to "for" JSON property }
@@ -64,7 +64,8 @@ begin
   if not aNode.IsObject then ExpectObject(aNode);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
-  for e in aNode.Entries do
+  for e in aNode.Entries do begin
+    if (FTagField <> '') and (e.Key = FTagField) then continue;
     case e.Key of
       'for':
         if not Flags[0] then begin
@@ -79,6 +80,7 @@ begin
     else
       UnknownProp(e.Key);
     end;
+  end;
   for I := 0 to System.High(Flags) do
     if not Flags[I] then
       case I of
@@ -100,6 +102,7 @@ begin
   repeat
     if not aReader.Read then ReaderFail(aReader);
     if aReader.TokenKind = tkObjectEnd then break;
+    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'for':
         if not Flags[0] then begin
@@ -124,14 +127,12 @@ begin
 end;
 {$POP}
 
-procedure TRootObject.DoWriteJson(aWriter: TJsonStrWriter);
+procedure TRootObject.DoWriteProps(aWriter: TJsonStrWriter);
 begin
-  aWriter.BeginObject;
   aWriter.AddName('for');
   For_.WriteJson(aWriter);
   aWriter.AddName('object');
   Object_.WriteJson(aWriter);
-  aWriter.EndObject;
 end;
 
 procedure TRootObject.Clear;

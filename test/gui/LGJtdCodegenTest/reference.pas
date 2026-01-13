@@ -20,6 +20,7 @@ type
 
   TFoo = TBar;
 
+{ TRootObject: root unit class }
   TRootObject = TFoo;
 
 implementation
