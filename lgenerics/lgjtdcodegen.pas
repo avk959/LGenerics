@@ -1890,9 +1890,10 @@ var
 var
   Temp: TTempVec;
   Deps: specialize TGLiteVector<string>;
+  ForwardDecls: TStrSet;
   Template: TJtdTemplate;
   I, J, Idx: SizeInt;
-  tn, dn: string;
+  tn, dn, sn: string;
   CurrDep: TJtdTemplate.TDependence;
   jt: TJtdType;
   Deferred: Boolean;
@@ -1945,7 +1946,10 @@ begin
           continue;
         end else
           for tn in Deps do
-            FTemplateList.Add(TJtdForwardDecl.Create(tn));
+            if not(TJtdTemplate.IsSpecDecl(tn, sn) or ForwardDecls.Contains(tn))then begin
+              FTemplateList.Add(TJtdForwardDecl.Create(tn));
+              ForwardDecls.Add(tn);
+            end;
       end;
     AddTemplate(Template);
   end;
