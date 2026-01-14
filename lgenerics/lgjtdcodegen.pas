@@ -484,7 +484,7 @@ begin
       if OpenPos = 0 then exit(False);
       ClosePos := System.Pos('>', s, OpenPos + 1);
       if ClosePos = 0 then exit(False);
-      aGenType := System.Copy(s, KeyPos + 1, OpenPos - KeyPos).Trim;
+      aGenType := System.Copy(s, KeyPos + 1, OpenPos - KeyPos - 1).Trim;
       aSpecType := System.Copy(s, OpenPos + 1, ClosePos - OpenPos - 1).Trim;
     end;
 end;
