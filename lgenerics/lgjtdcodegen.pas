@@ -132,6 +132,7 @@ type
     function  HasEnumDescription(aSchema: TJtdSchema; out aDescr: TJsonNode): Boolean;
     function  HasPreferName(aSchema: TJtdSchema; out aName: string): Boolean;
     function  GetPreferName(aSchema: TJtdSchema; const aPredefName: string; aRoot: Boolean): string;
+    function  GetSpecElemAliasName(const aGenType, aSpecType: string): string;
     ////////////////////////////
     function  HandleEmpty(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
     function  HandleRef(aSchema: TJtdSchema; const aTypeName: string = ''; aRoot: Boolean = False): string;
@@ -242,9 +243,9 @@ const
   ENUM_TAG             = 'Enum';
   ELEM_TAG             = 'Elem';
   LIST_TAG             = 'List';
+  LIST_OF_TAG          = 'ListOf';
   MAP_TAG              = 'Map';
-  LIST_ELEM_TAG        = LIST_TAG + ELEM_TAG;
-  MAP_ELEM_TAG         = MAP_TAG + ELEM_TAG;
+  MAP_OF_TAG           = 'MapOf';
   OBJECT_TAG           = 'JObject';
   VARIANT_TAG          = '_Union';
   EMPTY_NAME           = 'EmptyName';
@@ -1498,6 +1499,27 @@ begin
     Result := '';
 end;
 
+function TJtdTemplater.GetSpecElemAliasName(const aGenType, aSpecType: string): string;
+var
+  Suffix: string;
+begin
+  if aGenType = JTD_FORM_ANCESTORS[fkElements] then begin
+    Suffix := System.Copy(
+      aSpecType, Succ(System.Length(aSpecType)-System.Length(LIST_TAG)), System.Length(aSpecType));
+    if Suffix = LIST_TAG then
+      Result := AsUniqTypeName(LIST_OF_TAG + System.Copy(aSpecType, 2, System.Length(aSpecType)))
+    else
+      Result := AsUniqTypeName(System.Copy(aSpecType, 2, System.Length(aSpecType)) + LIST_TAG)
+  end else begin
+    Suffix := System.Copy(
+      aSpecType, Succ(System.Length(aSpecType)-System.Length(MAP_TAG)), System.Length(aSpecType));
+    if Suffix = MAP_TAG then
+      Result := AsUniqTypeName(MAP_OF_TAG + System.Copy(aSpecType, 2, System.Length(aSpecType)))
+    else
+      Result := AsUniqTypeName(System.Copy(aSpecType, 2, System.Length(aSpecType)) + MAP_TAG);
+  end;
+end;
+
 function TJtdTemplater.HandleEmpty(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 var
   Template: TJtdGenAny;
@@ -1632,10 +1654,7 @@ begin
 
   if TypName = '' then begin
     if TJtdTemplate.IsSpecDecl(ElemName, s, d) then begin
-      if s = JTD_FORM_ANCESTORS[fkElements] then
-        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + LIST_TAG + LIST_ELEM_TAG)
-      else
-        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + MAP_TAG + LIST_ELEM_TAG);
+      d := GetSpecElemAliasName(s, d);
       FTemplateList.Add(TJtdTypeAlias.Create(d, ElemName, aSchema.Elements.Nullable));
       ElemName := d;
     end;
@@ -1666,10 +1685,7 @@ begin
 
   if TypName = '' then begin
     if TJtdTemplate.IsSpecDecl(ElemName, s, d) then begin
-      if s = JTD_FORM_ANCESTORS[fkElements] then
-        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + LIST_TAG + MAP_ELEM_TAG)
-      else
-        d := AsUniqTypeName(System.Copy(s, 2, System.Length(s)) + MAP_TAG + MAP_ELEM_TAG);
+      d := GetSpecElemAliasName(s, d);
       FTemplateList.Add(TJtdTypeAlias.Create(d, ElemName, aSchema.Values.Nullable));
       ElemName := d;
     end;
