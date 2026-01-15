@@ -698,9 +698,10 @@ begin
 
       if d <> '' then begin
         d := d + ' }';
-        aText.Add(d);
       end;
     end;
+    if d <> '' then
+      aText.Add(d);
   end;
   aText.Add(Format('  %s = class sealed(TJtdStrEnum)', [TypeName]));
   aText.Add('  public');
