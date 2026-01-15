@@ -106,6 +106,7 @@ type
     FDepth: Integer;
     EUsePasEnums,
     FUniqEnumElems,
+    FRepeatPropDescrs,
     FComments: Boolean;
   private
     procedure FillPasKeywords;
@@ -158,11 +159,14 @@ type
     property  HasUniqEnumElements: Boolean read FUniqEnumElems;
     property  ShowComments: Boolean read FComments write FComments;
     property  UsePasEnums: Boolean read EUsePasEnums write EUsePasEnums;
+    property  RepeatPropDescriptions: Boolean read FRepeatPropDescrs write FRepeatPropDescrs;
   end;
 
   TCodegenOption = (
-    cgoDisablePasEnums, // disable using Pascal's enumerations
-    cgoDisableComments  // disable code comments
+    cgoDisablePasEnums,       // disable using Pascal's enumerations
+    cgoRepeatDescriptions,    // repeat the description of the property type
+                              // in the property declaration
+    cgoDisableComments        // disable code comments
   );
   TCodegenOptions = set of TCodegenOption;
 
@@ -184,6 +188,7 @@ type
     FUseUnits: TStringArray;
     FUsePasEnums,
     FWriteTS,
+    FRepeatPropDescrs,
     FComments: Boolean;
     procedure WriteHeader(aText: TStrings);
     procedure WriteUnitClause(aText: TStrings);
@@ -225,6 +230,7 @@ type
     property  UsePasEnums: Boolean read FUsePasEnums;
   { if True, the header will contain the unit creation timestamp, default is False }
     property  WriteTimeStamp: Boolean read FWriteTS write FWriteTS;
+    property  RepeatPropDescriptions: Boolean read FRepeatPropDescrs;
   end;
 
 implementation
@@ -350,7 +356,8 @@ type
     PropName,
     PropFieldName,
     PropType,
-    Descryption: string;
+    PropDescription,
+    Description: string;
     Nullable: Boolean;
   end;
   TJtdPropList = array of TJtdPropInfo;
@@ -413,31 +420,26 @@ end;
 
 function TJtdTemplate.MakeDescription: string;
 var
-  s: string;
+  s, d: string;
   a: TStringArray;
   I: SizeInt;
 begin
-  s := Description;
-  if s = '' then begin
-    if Nullable then
-      exit('{ ' + TypeName + NULLABLE_COMMENT + ' }');
-    exit(s);
-  end;
-  if IsMultiline(s, a) then begin
-    if Nullable then
-      Insert([NULLABLE_COMMENT], a, System.Length(a));
-    a[0] := '{ ' + a[0];
+  s := '  { ' + TypeName;
+  if Nullable then
+    s += NULLABLE_COMMENT;
+  d := Description;
+  if d = '' then exit(s + ' }');
+  if Nullable then s += ';';
+  s += LineEnding;
+  if IsMultiline(d, a) then begin
+    Insert([s], a, 0);
     a[System.High(a)] := a[System.High(a)] + ' }';
     for I := 1 to System.High(a) do
-      a[I] := '  ' + a[I];
+      a[I] := '    ' + a[I];
     Result := string.Join(LineEnding, a);
   end else begin
-    if Nullable then
-      if s[System.Length(s)] in [',', '.', ';', '?', '!'] then
-        s := s + NULLABLE_COMMENT
-      else
-        s := s + ';' + NULLABLE_COMMENT;
-    Result := '{ ' + SysUtils.WrapText(s, LineEnding + '  ', STOP_CHARS, 78) + ' }';
+    s += LineEnding + '    ';
+    Result := s + SysUtils.WrapText(d, LineEnding + '    ', STOP_CHARS, 76) + ' }';
   end;
 end;
 
@@ -446,6 +448,7 @@ begin
   Result := False;
   with TStringList.Create do
     try
+      TrailingLineBreak := False;
       Text := s;
       if Count > 1 then begin
         aLines := ToStringArray;
@@ -981,26 +984,46 @@ var
 begin
   if not aComment then exit;
   if HasAsciiNames then
-    c := Format('refers to "%s" JSON property', [aProp.JsonPropName])
+    c := Format('  { refers to "%s" JSON property', [aProp.JsonPropName])
   else
-    c := Format('refers to %s JSON property', [aProp.JsonPropName]);
+    c := Format('  { refers to %s JSON property', [aProp.JsonPropName]);
   if aProp.Nullable then
-    c := c + ';' + NULLABLE_COMMENT;
-  d := aProp.Descryption;
-  if d = '' then begin
-    aText.Add('  { ' + c + ' }');
-    exit;
-  end;
-  if IsMultiline(d, a) then begin
-    Insert(['  { ' + c + ';'], a, 0);
-    a[System.High(a)] := a[System.High(a)] + ' }';
-    for I := 1 to System.High(a) do
-      a[I] := '    ' + a[I];
-    aText.Add(string.Join(LineEnding, a));
-  end else begin
-    c := c + '; ' + d;
-    aText.Add('  { ' + SysUtils.WrapText(c, LineEnding + '    ', STOP_CHARS, 76) + ' }');
-  end;
+    c += ';' + NULLABLE_COMMENT;
+  if aProp.PropDescription <> '' then begin
+    d := aProp.PropDescription;
+    if IsMultiline(d, a) then begin
+      Insert([c + ';'], a, 0);
+      for I := 1 to System.High(a) do
+        a[I] := '    ' + a[I];
+      c := string.Join(LineEnding, a);
+    end else begin
+      c += '; ' + LineEnding + '    ';
+      c += SysUtils.WrapText(d, LineEnding + '    ', STOP_CHARS, 76);
+    end;
+    if aProp.Description <> '' then begin
+      d := aProp.Description;
+      c += LineEnding + LineEnding;
+      if IsMultiline(d, a) then begin
+        for I := 1 to System.High(a) do
+          a[I] := '    ' + a[I];
+        c += string.Join(LineEnding, a);
+      end else
+        c += SysUtils.WrapText(d, LineEnding + '    ', STOP_CHARS, 76);
+    end;
+  end else
+    if aProp.Description <> '' then begin
+      d := aProp.Description;
+      if IsMultiline(d, a) then begin
+        Insert([c + ';'], a, 0);
+        for I := 1 to System.High(a) do
+          a[I] := '    ' + a[I];
+        c := string.Join(LineEnding, a);
+      end else begin
+        c += ';' + LineEnding + '    ';
+        c += SysUtils.WrapText(d, LineEnding + '    ', STOP_CHARS, 76);
+      end;
+    end;
+  aText.Add(c + ' }');
 end;
 
 procedure TJtdProps.WriteOptPropsWarning(aText: TStrings; aComment: Boolean);
@@ -1103,25 +1126,25 @@ end;
 procedure TJtdUnionTemplate.WritePropDescription(const aDescr, aTagValue: string; aText: TStrings;
   aComment: Boolean);
 var
-  c, d: string;
+  c: string;
   a: TStringArray;
   I: SizeInt;
 begin
   if not aComment then exit;
-  c := Format('matches the "%s" tag', [aTagValue]);
+  c := Format('  { matches the "%s" tag', [aTagValue]);
   if aDescr = '' then begin
-    aText.Add('  { ' + c + ' }');
+    aText.Add(c + ' }');
     exit;
   end;
   if IsMultiline(aDescr, a) then begin
-    Insert(['  { ' + c + ';'], a, 0);
+    Insert([c + ';'], a, 0);
     a[System.High(a)] := a[System.High(a)] + ' }';
     for I := 1 to System.High(a) do
       a[I] := '    ' + a[I];
     aText.Add(string.Join(LineEnding, a));
   end else begin
-    d := c + '; ' + aDescr;
-    aText.Add('  { ' + SysUtils.WrapText(d, LineEnding + '    ', STOP_CHARS, 76) + ' }');
+    c += ';' + LineEnding + '    ';
+    aText.Add(c + SysUtils.WrapText(aDescr, LineEnding + '    ', STOP_CHARS, 76) + ' }');
   end;
 end;
 
@@ -1558,14 +1581,17 @@ begin
   if Schema.Kind = fkRef then begin
     Template := TJtdTypeAlias.Create(TypName, r, Schema.Nullable);
     if HasDescription(Schema, d) then
-      Template.Description := d;
+      Template.Description := d
+    else
+      Template.Description := '';
     FTemplateList.Add(Template);
   end;
   if aRoot then begin
     Template := TJtdTypeAlias.Create(Alias, TypName, aSchema.Nullable);
-    Template.Description := Format('%s: root unit class', [Alias]);
     if HasDescription(aSchema, d) then
-      Template.Description := Template.Description + '; ' + d;
+      Template.Description := d
+    else
+      Template.Description := '';
     FTemplateList.Add(Template);
     Result := Alias;
   end else
@@ -1735,12 +1761,16 @@ var
         PropInfo.PropType := HandleSchema(e.Value)
       else
         PropInfo.PropType := HandleSchema(e.Value, AsUniqTypeName(PropInfo.PropName));
-      d := '';
       if (PropsDescr <> nil) and PropsDescr.Find(e.Key, Node) and Node.IsString then
-        d := Node.AsString
+        PropInfo.PropDescription := Node.AsString
       else
-        if not HasDescription(e.Value, d) then d := '';
-      PropInfo.Descryption := d;
+        PropInfo.PropDescription := '';
+      if TJtdTemplate.IsSpecDecl(PropInfo.PropType, d) or       //////////////////////
+         RepeatPropDescriptions or (e.Value.Kind = fkRef) then  ////////////////////////////
+        if HasDescription(e.Value, d) then                      ///////////
+          PropInfo.Description := d
+        else
+          PropInfo.Description := '';
       PropInfo.Nullable := e.Value.Nullable;
       List.Add(PropInfo);
     end;
@@ -1822,9 +1852,13 @@ begin
         s := e.Key;
       Mapping[I].PropName := AsPasUniqIdentifier(s, PropNameSet);
     end;
+    s := '';
     Mapping[I].PropType := HandleSchema(e.Value, AsPasUniqTypeName(Mapping[I].PropName));
-    if HasDescription(e.Value, s) then
-      Mapping[I].Description := s;
+    if TJtdTemplate.IsSpecDecl(Mapping[I].PropType, s) or RepeatPropDescriptions then /////////
+      if HasDescription(e.Value, s) then  /////////////////////////
+        Mapping[I].Description := s
+      else
+        Mapping[I].Description := '';
     Inc(I);
   end;
   if AsciiNames then
@@ -2115,8 +2149,10 @@ begin
   FUnitName := DEFAULT_UNIT_NAME;
   FUsePasEnums := not (cgoDisablePasEnums in aOptions);
   FComments := not (cgoDisableComments in aOptions);
+  FRepeatPropDescrs := cgoRepeatDescriptions in aOptions;
   FEngine := TJtdTemplater.Create(aSchema);
   FEngine.UsePasEnums := UsePasEnums;
+  FEngine.RepeatPropDescriptions := RepeatPropDescriptions;
   FSource := TStringList.Create;
 end;
 
