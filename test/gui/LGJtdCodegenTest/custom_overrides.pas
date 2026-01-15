@@ -14,11 +14,15 @@ uses
 
 type
 
+  { TOverrideTypeEnumType }
   TOverrideTypeEnumType = (FOO, BAR);
 
-{ TOverrideTypeEnum: container for some TOverrideTypeEnumType enumeration element }
+  { TOverrideTypeEnum
+
+    TOverrideTypeEnum: container for some TOverrideTypeEnumType enumeration element }
   TOverrideTypeEnum = class sealed(specialize TJtdEnum<TOverrideTypeEnumType>);
 
+  { TOverrideTypeProperties }
   TOverrideTypeProperties = class sealed(TJtdObject)
   private
   protected
@@ -29,6 +33,7 @@ type
     procedure Clear; override;
   end;
 
+  { TBar }
   TBar = class sealed(TJtdObject)
   private
   protected
@@ -39,6 +44,7 @@ type
     procedure Clear; override;
   end;
 
+  { TBaz }
   TBaz = class sealed(TJtdObject)
   private
   protected
@@ -49,6 +55,7 @@ type
     procedure Clear; override;
   end;
 
+  { TOverrideTypeDiscriminator }
   TOverrideTypeDiscriminator = class sealed(TJtdUnion)
   protected
     function  GetBar: TBar;
@@ -64,6 +71,7 @@ type
     property Baz: TBaz read GetBaz write SetBaz;
   end;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FOverrideTypeExpr: TJtdString;

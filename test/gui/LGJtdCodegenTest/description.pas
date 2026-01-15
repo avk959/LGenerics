@@ -14,21 +14,29 @@ uses
 
 type
 
-{ A description for a definition }
+  { TBaz
+
+    A description for a definition }
   TBaz = TJtdString;
 
-{ A description for enum }
+  { TEnumWithDescriptionType
+
+    A description for enum }
   TEnumWithDescriptionType = (
     X, // A description for X
     Y, // A description for Y
     Z // A description for Z
   );
 
-{ TEnumWithDescription: container for some TEnumWithDescriptionType enumeration 
-  element }
+  { TEnumWithDescription
+
+    TEnumWithDescription: container for some TEnumWithDescriptionType enumeration 
+    element }
   TEnumWithDescription = class sealed(specialize TJtdEnum<TEnumWithDescriptionType>);
 
-{ A description for properties }
+  { TPropertiesWithDescription
+
+    A description for properties }
   TPropertiesWithDescription = class sealed(TJtdObject)
   private
   protected
@@ -39,7 +47,9 @@ type
     procedure Clear; override;
   end;
 
-{ A description for discriminator variant }
+  { TBar
+
+    A description for discriminator variant }
   TBar = class sealed(TJtdObject)
   private
   protected
@@ -50,7 +60,9 @@ type
     procedure Clear; override;
   end;
 
-{ A description for discriminator }
+  { TDiscriminatorWithDescription
+
+    A description for discriminator }
   TDiscriminatorWithDescription = class sealed(TJtdUnion)
   protected
     function  GetBar: TBar;
@@ -58,10 +70,11 @@ type
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
-  { matches the "bar" tag; A description for discriminator variant }
+  { matches the "bar" tag }
     property Bar: TBar read GetBar write SetBar;
   end;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FLongDescription: TJtdString;
@@ -82,22 +95,22 @@ type
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
-  { refers to "long_description" JSON property; Whereas disregard and contempt for 
-    human rights have resulted in barbarous acts which have outraged the conscience 
-    of mankind, and the advent of a world in which human beings shall enjoy freedom 
-    of speech and belief and freedom from fear and want has been proclaimed as the 
-    highest aspiration of the common people, }
+  { refers to "long_description" JSON property }
     property LongDescription: TJtdString read FLongDescription write SetLongDescription;
-  { refers to "ref_with_description" JSON property; A description for ref }
+  { refers to "ref_with_description" JSON property;
+    A description for ref }
     property RefWithDescription: TBaz read FRefWithDescription write SetRefWithDescription;
-  { refers to "string_with_description" JSON property; A description for string }
+  { refers to "string_with_description" JSON property;
+    A description for ref }
     property StringWithDescription: TJtdString read FStringWithDescription write SetStringWithDescription;
-  { refers to "enum_with_description" JSON property; A description for enum }
+  { refers to "enum_with_description" JSON property;
+    A description for ref }
     property EnumWithDescription: TEnumWithDescription read FEnumWithDescription write SetEnumWithDescription;
-  { refers to "properties_with_description" JSON property; A description for properties }
+  { refers to "properties_with_description" JSON property;
+    A description for ref }
     property PropertiesWithDescription: TPropertiesWithDescription read FPropertiesWithDescription write SetPropertiesWithDescription;
-  { refers to "discriminator_with_description" JSON property; A description for 
-    discriminator }
+  { refers to "discriminator_with_description" JSON property;
+    A description for ref }
     property DiscriminatorWithDescription: TDiscriminatorWithDescription read FDiscriminatorWithDescription write SetDiscriminatorWithDescription;
   end;
 

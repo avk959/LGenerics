@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TRootObject }
   TRootObject = class sealed(TJtdStrEnum)
   public
     class function IsElement(const aValue: string): Boolean; override;

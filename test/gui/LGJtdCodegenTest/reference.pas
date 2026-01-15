@@ -14,13 +14,16 @@ uses
 
 type
 
+  { TBaz }
   TBaz = TJtdString;
 
+  { TBar }
   TBar = TBaz;
 
+  { TFoo }
   TFoo = TBar;
 
-{ TRootObject: root unit class }
+  { TRootObject }
   TRootObject = TFoo;
 
 implementation

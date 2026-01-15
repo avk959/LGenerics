@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TNestedIdInitialism }
   TNestedIdInitialism = class sealed(TJtdObject)
   private
     FNormalword: TJtdString;
@@ -32,6 +33,7 @@ type
     property Json: TJtdString read FJson write SetJson;
   end;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FId: TJtdString;

@@ -14,11 +14,15 @@ uses
 
 type
 
+  { TBarEnum }
   TBarEnum = (x, y);
 
-{ TBar: container for some TBarEnum enumeration element }
+  { TBar
+
+    TBar: container for some TBarEnum enumeration element }
   TBar = class sealed(specialize TJtdEnum<TBarEnum>);
 
+  { TFoo }
   TFoo = class sealed(TJtdObject)
   private
     FBar: TBar;
@@ -33,11 +37,15 @@ type
     property Bar: TBar read FBar write SetBar;
   end;
 
+  { TFooBarEnum }
   TFooBarEnum = (x, y);
 
-{ TFooBar: container for some TFooBarEnum enumeration element }
+  { TFooBar
+
+    TFooBar: container for some TFooBarEnum enumeration element }
   TFooBar = class sealed(specialize TJtdEnum<TFooBarEnum>);
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FFoo: TFoo;

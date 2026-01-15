@@ -14,10 +14,13 @@ uses
 
 type
 
+  { TFor_ }
   TFor_ = TJtdString;
 
+  { TObject_ }
   TObject_ = TJtdString;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FFor_: TFor_;

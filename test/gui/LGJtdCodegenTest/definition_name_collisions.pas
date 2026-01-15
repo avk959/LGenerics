@@ -14,15 +14,19 @@ uses
 
 type
 
+  { TBar1 }
   TBar1 = TJtdString;
 
+  { TBar }
   TBar = TBar1;
 
+  { TFoo1 }
   TFoo1 = TBar;
 
+  { TFoo }
   TFoo = TFoo1;
 
-{ TRootObject: root unit class }
+  { TRootObject }
   TRootObject = TFoo;
 
 implementation

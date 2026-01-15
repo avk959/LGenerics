@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TBar }
   TBar = class sealed(TJtdObject)
   private
     FX: TJtdBool;
@@ -28,6 +29,7 @@ type
     property X: TJtdBool read FX write SetX;
   end;
 
+  { TFoo }
   TFoo = class sealed(TJtdObject)
   private
     FBar: TBar;
@@ -42,6 +44,7 @@ type
     property Bar: TBar read FBar write SetBar;
   end;
 
+  { TFooBar }
   TFooBar = class sealed(TJtdObject)
   private
     FX: TJtdString;
@@ -56,6 +59,7 @@ type
     property X: TJtdString read FX write SetX;
   end;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FFoo: TFoo;

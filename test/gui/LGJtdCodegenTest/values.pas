@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TRootObject }
   TRootObject = class sealed(specialize TJtdMap<TJtdString>);
 
 implementation

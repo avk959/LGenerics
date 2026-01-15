@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TRootObject }
   TRootObject = TJtdInt32;
 
 implementation

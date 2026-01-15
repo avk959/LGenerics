@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TBarBaz }
   TBarBaz = class sealed(TJtdObject)
   private
     FBaz: TJtdString;
@@ -28,6 +29,7 @@ type
     property Baz: TJtdString read FBaz write SetBaz;
   end;
 
+  { TQuux }
   TQuux = class sealed(TJtdObject)
   private
     FQuuz: TJtdString;
@@ -42,6 +44,7 @@ type
     property Quuz: TJtdString read FQuuz write SetQuuz;
   end;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdUnion)
   protected
     function  GetBarBaz: TBarBaz;

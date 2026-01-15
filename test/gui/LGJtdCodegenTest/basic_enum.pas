@@ -14,9 +14,12 @@ uses
 
 type
 
+  { TRootObjectEnum }
   TRootObjectEnum = (Foo, Bar, Baz);
 
-{ TRootObject: container for some TRootObjectEnum enumeration element }
+  { TRootObject
+
+    TRootObject: container for some TRootObjectEnum enumeration element }
   TRootObject = class sealed(specialize TJtdEnum<TRootObjectEnum>);
 
 implementation

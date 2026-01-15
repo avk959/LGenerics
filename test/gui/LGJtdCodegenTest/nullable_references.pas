@@ -14,21 +14,25 @@ uses
 
 type
 
+  { TNotnullString }
   TNotnullString = TJtdString;
 
-{ TNullString is nullable }
+  { TNullString is nullable }
   TNullString = TJtdString;
 
+  { TNotnullRefNotnullString }
   TNotnullRefNotnullString = TNotnullString;
 
-{ TNullRefNotnullString is nullable }
+  { TNullRefNotnullString is nullable }
   TNullRefNotnullString = TNotnullString;
 
+  { TNotnullRefNullString }
   TNotnullRefNullString = TNullString;
 
-{ TNullRefNullString is nullable }
+  { TNullRefNullString is nullable }
   TNullRefNullString = TNullString;
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FNotnullString: TNotnullString;

@@ -14,6 +14,7 @@ uses
 
 type
 
+  { TRootObject }
   TRootObject = class sealed(TJtdObject)
   private
     FFoo: TJtdString;
