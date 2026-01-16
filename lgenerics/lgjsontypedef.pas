@@ -189,8 +189,8 @@ type
   end;
 
 const
-  DEFAULT_DEPTH  = 256;
-  DEFAULT_ERRORS = 16;
+  DEFAULT_REF_DEPTH  = 256;
+  DEFAULT_ERRORS     = 16;
 
 type
   TJtdValidateResult = (
@@ -210,13 +210,17 @@ type
   aMaxDepth specifies the maximum number of refs to recursively follow before returning jvrMaxDepthExceed;
   returns the list of TValidateError in aErrList, if any, according to the JSON Typedef specification }
   function Validate(aInstance: TJsonNode; aSchema: TJtdSchema; out aErrList: TJtdErrorList;
-                    aMaxErrors: Integer = DEFAULT_ERRORS; aMaxDepth: Integer = DEFAULT_DEPTH): TJtdValidateResult;
+                    aMaxErrors: Integer = DEFAULT_ERRORS; aMaxRefDepth: Integer = DEFAULT_REF_DEPTH): TJtdValidateResult;
+{ a lightweight version of validation, usually significantly faster than the previous one }
+  function JtdTest(aInstance: TJsonNode; aSchema: TJtdSchema; aCheckDuplicates: Boolean = True;
+                   aMaxRefDepth: Integer = DEFAULT_REF_DEPTH): Boolean;
 
 type
-
   TJtdJsonNodeHelper = class helper for TJsonNode
-    function JtdValidate(aSchema: TJtdSchema): Boolean;
-    function JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError): Boolean;
+    function JtdValidate(aSchema: TJtdSchema; aCheckDuplicates: Boolean = True;
+                         aMaxRefDepth: Integer = DEFAULT_REF_DEPTH): Boolean;
+    function JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError;
+                         aMaxRefDepth: Integer = DEFAULT_REF_DEPTH): Boolean;
   end;
 {
   returns True if s is a valid Rfc8927-formatted timestamp, False otherwise;
@@ -893,7 +897,7 @@ type
   EMaxErrorExceed = class(Exception);
 
 function Validate(aInstance: TJsonNode; aSchema: TJtdSchema; out aErrList: TJtdErrorList; aMaxErrors: Integer;
-  aMaxDepth: Integer): TJtdValidateResult;
+  aMaxRefDepth: Integer): TJtdValidateResult;
 var
   InstancePath: TStrList;
   SchemaPath: TPathList;
@@ -913,7 +917,7 @@ var
   end;
   procedure SchemaPathPushRoot; inline;
   begin
-    if SchemaPath.Count = aMaxDepth then raise EMaxDepthExceed.Create('');
+    if SchemaPath.Count = aMaxRefDepth then raise EMaxDepthExceed.Create('');
     SchemaPath.Add(Default(TStrList));
   end;
   procedure SchemaPathPush(const aPart: string); inline;
@@ -987,7 +991,7 @@ var
     SchemaPathPush(aSchema.JTD_PROPS[spElements]);
     if aInst.IsArray then
       for I := 0 to Pred(aInst.Count) do begin
-        InstancePath.Add(IntToStr(I));
+        InstancePath.Add(LgJson.SizeInt2Str(I));
         DoValidate(aInst.Items[I], aSchema.Elements);
         InstancePath.DeleteLast;
       end
@@ -1119,7 +1123,7 @@ var
   end;
 begin
   aErrList := nil;
-  if (aMaxErrors < 1) or (aMaxDepth < 1) then exit(jrvInvalidParam);
+  if (aMaxErrors < 1) or (aMaxRefDepth < 1) then exit(jrvInvalidParam);
   if (aSchema = nil) or (aSchema.Kind = fkNone) then exit(jvrInvalidSchema);
   if aInstance = nil then exit(jvrInvalidInstance);
   if not TJsonNode.DuplicateFree(aInstance) then exit(jvrNonUniqKeys);
@@ -1140,16 +1144,143 @@ begin
     Result := jvrErrors;
 end;
 
-{ TJtdJsonNodeHelper }
-
-function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema): Boolean;
+function JtdTest(aInstance: TJsonNode; aSchema: TJtdSchema; aCheckDuplicates: Boolean;
+  aMaxRefDepth: Integer): Boolean;
 var
-  ErrList: TJtdErrorList;
+  Root: TJtdSchema;
+  Depth: Integer = 0;
+  function DoTest(aInst: TJsonNode; aSchema: TJtdSchema; const aTag: string = ''): Boolean; forward;
+  function DoRef(aInst: TJsonNode; aSchema: TJtdSchema): Boolean;
+  begin
+    if Depth = aMaxRefDepth then exit(False);
+    Inc(Depth);
+    Result := DoTest(aInst, Root.Definitions[aSchema.Ref]);
+    Dec(Depth);
+  end;
+  function DoType(aInst: TJsonNode; aSchema: TJtdSchema): Boolean;
+  var
+    I: Int64;
+    Typ: TJtdSchema.TJtdType;
+  begin
+    Typ := aSchema.ElType;
+    case Typ of
+      jtBool: Result := aInst.IsBoolean;
+      jtFloat32: Result := aInst.IsNumber and (System.Abs(aInst.AsNumber) <= Math.MaxSingle);
+      jtFloat64: Result := aInst.IsNumber;
+      jtInt8, jtUInt8, jtInt16, jtUInt16, jtInt32, jtUInt32:
+        begin
+          if not(aInst.IsNumber and Double.IsExactInt(aInst.AsNumber, I)) then exit(False);
+          case Typ of
+            jtInt8:   Result := (I >= System.Low(ShortInt)) and (I <= System.High(ShortInt)) ;
+            jtUInt8:  Result := (I >= 0) and (I <= System.High(Byte));
+            jtInt16:  Result := (I >= System.Low(SmallInt)) and (I <= System.High(SmallInt));
+            jtUInt16: Result := (I >= 0) and (I <= System.High(Word));
+            jtInt32:  Result := (I >= System.Low(LongInt)) and (I <= System.High(LongInt));
+            jtUInt32: Result := (I >= 0) and (I <= System.High(DWord));
+          else
+            raise Exception.Create('');
+          end;
+        end;
+      jtString: Result := aInst.IsString;
+      jtTimeStamp: Result := aInst.IsString and IsRfc8927TimeStamp(aInst.AsString);
+    else
+      Result := False;
+    end;
+  end;
+  function DoEnum(aInst: TJsonNode; aSchema: TJtdSchema): Boolean;
+  begin
+    Result := aInst.IsString and (aSchema.Enum <> nil) and aSchema.Enum.Contains(aInst.AsString);
+  end;
+  function DoElements(aInst: TJsonNode; aSchema: TJtdSchema): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if not aInst.IsArray then exit(False);
+    for I := 0 to Pred(aInst.Count) do
+      if not DoTest(aInst.Items[I], aSchema.Elements) then
+        exit(False);
+    Result := True;
+  end;
+  function DoProps(aInst: TJsonNode; aSchema: TJtdSchema; const aTag: string = ''): Boolean;
+  var
+    e: TJtdSchemaMap.TEntry;
+    Node: TJsonNode;
+    Prop: string;
+  begin
+    if not aInst.IsObject then exit(False);
+    if aSchema.Properties <> nil then
+      for e in aSchema.Properties do begin
+        if not aInst.Find(e.Key, Node) then exit(False);
+        if not DoTest(Node, e.Value) then exit(False);
+      end;
+    if aSchema.OptionalProperties <> nil then
+      for e in aSchema.OptionalProperties do
+        if aInst.Find(e.Key, Node) then
+          if not DoTest(Node, e.Value) then exit(False);
+    if not aSchema.AdditionalProperties then
+      for Prop in aInst.Names do
+        if not(((aSchema.Properties <> nil) and (aSchema.Properties.Contains(Prop))) or
+               ((aSchema.OptionalProperties <> nil) and (aSchema.OptionalProperties.Contains(Prop))) or
+               (Prop = aTag)) then exit(False);
+    Result := True;
+  end;
+  function DoValues(aInst: TJsonNode; aSchema: TJtdSchema): Boolean;
+  var
+    p: TJsonNode.TPair;
+  begin
+    if not aInst.IsObject then exit(False);
+    for p in aInst.Entries do
+      if not DoTest(p.Value, aSchema.Values) then exit(False);
+    Result := True;
+  end;
+  function DoDiscr(aInst: TJsonNode; aSchema: TJtdSchema): Boolean;
+  var
+    Node: TJsonNode = nil;
+    DiscrKey: string;
+  begin
+    if not aInst.IsObject then exit(False);
+    if not aInst.Find(aSchema.Discriminator, Node) then exit(False);
+    if not Node.IsString then exit(False);
+    DiscrKey := Node.AsString;
+    if not aSchema.Mapping.Contains(DiscrKey) then exit(False);
+    Result := DoTest(aInst, aSchema.Mapping[DiscrKey], aSchema.Discriminator)
+  end;
+  function DoTest(aInst: TJsonNode; aSchema: TJtdSchema; const aTag: string = ''): Boolean;
+  begin
+    if aSchema.Nullable and aInst.IsNull then exit(True);
+    case aSchema.Kind of
+      fkEmpty:         Result := True;
+      fkRef:           Result := DoRef(aInst, aSchema);
+      fkType:          Result := DoType(aInst, aSchema);
+      fkEnum:          Result := DoEnum(aInst, aSchema);
+      fkElements:      Result := DoElements(aInst, aSchema);
+      fkProperties:    Result := DoProps(aInst, aSchema, aTag);
+      fkValues:        Result := DoValues(aInst, aSchema);
+      fkDiscriminator: Result := DoDiscr(aInst, aSchema);
+    else
+      Result := False;
+    end;
+  end;
 begin
-  Result := Validate(Self, aSchema, ErrList, 1) = jvrOk;
+  if (aSchema = nil) or (aSchema.Kind = fkNone) then exit(False);
+  if aInstance = nil then exit(False);
+  if aCheckDuplicates and not TJsonNode.DuplicateFree(aInstance) then
+    exit(False);
+  Root := aSchema;
+  Inc(Depth);
+  Result := DoTest(aInstance, aSchema);
 end;
 
-function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError): Boolean;
+{ TJtdJsonNodeHelper }
+
+function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema; aCheckDuplicates: Boolean;
+  aMaxRefDepth: Integer): Boolean;
+begin
+  Result := JtdTest(Self, aSchema, aCheckDuplicates, aMaxRefDepth);
+end;
+
+function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema; out aErr: TValidateError;
+  aMaxRefDepth: Integer): Boolean;
 var
   ErrList: TJtdErrorList;
 begin
