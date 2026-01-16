@@ -2008,6 +2008,8 @@ end;
 {$POP}
 
 function TJtdTemplater.ProcessSchema: string;
+var
+  s: string;
 begin
   EnumElemSet.Clear;
   FRefMap.Clear;
@@ -2016,6 +2018,12 @@ begin
   FDepth := 0;
   Result := HandleSchema(FRootSchema, AsUniqTypeName(RootClassName), True);
   if FRootSchema.Definitions <> nil then CheckCyclicDeps;
+  if UsePasEnums and HasUniqEnumElements then
+    for s in EnumElemSet do
+      if FGlobNameTable.Contains(s) then begin
+        FUniqEnumElems := False;
+        break;
+      end;
 end;
 
 constructor TJtdTemplater.Create(aSchema: TJtdSchema);
