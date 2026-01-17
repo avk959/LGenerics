@@ -903,13 +903,14 @@ var
   SchemaPath: TPathList;
   ErrorList: TJtdErrorList = nil;
   ErrListPos: SizeInt = 0;
+  SchemaPathLen: SizeInt = 0;
   Root: TJtdSchema = nil;
   procedure PushError;
   var
     pList: ^TStrList;
   begin
     if ErrListPos = aMaxErrors then raise EMaxErrorExceed.Create('');
-    pList := SchemaPath.UncMutable[Pred(SchemaPath.Count)];
+    pList := SchemaPath.UncMutable[Pred(SchemaPathLen)];
     ErrorList[ErrListPos] := TValidateError.Make(
       InstancePath.UncMutable[0][0..Pred(InstancePath.Count)],
       pList^.UncMutable[0][0..Pred(pList^.Count)]);
@@ -917,16 +918,18 @@ var
   end;
   procedure SchemaPathPushRoot; inline;
   begin
-    if SchemaPath.Count = aMaxRefDepth then raise EMaxDepthExceed.Create('');
-    SchemaPath.Add(Default(TStrList));
+    if SchemaPathLen >= aMaxRefDepth then raise EMaxDepthExceed.Create('');
+    Inc(SchemaPathLen);
+    if SchemaPath.Count < SchemaPathLen then
+      SchemaPath.Add(Default(TStrList));
   end;
   procedure SchemaPathPush(const aPart: string); inline;
   begin
-    SchemaPath.UncMutable[Pred(SchemaPath.Count)]^.Add(aPart);
+    SchemaPath.UncMutable[Pred(SchemaPathLen)]^.Add(aPart);
   end;
   procedure SchemaPathPop; inline;
   begin
-    SchemaPath.UncMutable[Pred(SchemaPath.Count)]^.DeleteLast;
+    SchemaPath.UncMutable[Pred(SchemaPathLen)]^.DeleteLast;
   end;
   procedure DoValidate(aInst: TJsonNode; aSchema: TJtdSchema; const aParentTag: string = ''); forward;
   procedure DoRef(aInst: TJsonNode; aSchema: TJtdSchema);
@@ -935,7 +938,8 @@ var
     SchemaPathPush(aSchema.JTD_PROPS[spDefinitions]);
     SchemaPathPush(aSchema.Ref);
     DoValidate(aInst, Root.Definitions[aSchema.Ref]);
-    SchemaPath.DeleteLast;
+    SchemaPath.UncMutable[Pred(SchemaPathLen)]^.MakeEmpty;
+    Dec(SchemaPathLen);
   end;
   procedure DoType(aInst: TJsonNode; aSchema: TJtdSchema);
   var
