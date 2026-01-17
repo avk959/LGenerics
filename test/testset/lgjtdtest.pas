@@ -51,6 +51,7 @@ type
     procedure TestMaxDepth;
     procedure TestMaxErrors;
     procedure TestValidation;
+    procedure TestJtdTest;
   end;
 
   { TJtdInferTest }
@@ -385,6 +386,40 @@ begin
           end
         else
           AssertTrue('TJtdSchema missed an errors in "'+p.Key+'"', ExpectError.Count = 0);
+      finally
+        Schema.Free;
+      end;
+    end;
+  AssertTrue('Unexpected number of samples(' + IntToStr(I) + ')', I = 316);
+end;
+
+procedure TJtdTest.TestJtdTest;
+var
+  FileName: string;
+  NodeRef: specialize TGUniqRef<TJsonNode>;
+  SampleList, SchemaNode, Instance, Errors: TJsonNode;
+  p: TJsonNode.TPair;
+  Schema: TJtdSchema;
+  I: Integer;
+begin
+  AssertTrue('Test folder not found', TestDir <> '');
+  FileName := TestDir + VALIDATION_SET;
+  AssertTrue('Test file "' + VALIDATION_SET + '" not found', FileExists(FileName));
+  AssertTrue('Can not parse file "' + VALIDATION_SET + '"', TJsonNode.TryParseFile(FileName, SampleList));
+  NodeRef.Instance := SampleList;
+  I := 0;
+  for p in SampleList.Entries do
+    begin
+      Inc(I);
+      AssertTrue('Can not find schema in "'+p.Key+'"', p.Value.Find('schema', SchemaNode));
+      AssertTrue('Can not load schema "'+p.Key+'"', TJtdSchema.TryLoad(SchemaNode, Schema));
+      try
+        AssertTrue('Can not find instance in "'+p.Key+'"', p.Value.Find('instance', Instance));
+        AssertTrue('Can not find errors in "'+p.Key+'"', p.Value.Find('errors', Errors));
+        if JtdTest(Instance, Schema) then
+          AssertTrue('False accept in "'+p.Key+'"', Errors.Count = 0)
+        else
+          AssertTrue('False reject in "'+p.Key+'"', Errors.Count <> 0);
       finally
         Schema.Free;
       end;
