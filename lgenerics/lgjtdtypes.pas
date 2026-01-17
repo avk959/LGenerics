@@ -321,16 +321,8 @@ type
     property  Items[const aKey: string]: T read GetItem write AddOrSetValue; default;
   end;
 
-{$PUSH}{$INTERFACES CORBA}
-  IJtdObject = interface
-  ['{F6F86619-4F64-42D8-9BCA-A8925BD5BFD4}']
-    procedure SetTagField(const s: string);
-    procedure DoWriteProps(aWriter: TJsonStrWriter);
-  end;
-{$POP}
-
   { TJtdObject: abstract ancestor class for JTD "properties" form }
-  TJtdObject = class abstract(TJtdGenContainer, IJtdObject)
+  TJtdObject = class abstract(TJtdGenContainer)
   protected
     FTagField: string;
     class procedure PropNotFound(const aJsonPropName: string; aReader: TJsonReader); static;
@@ -1475,9 +1467,9 @@ begin
   FTag := TagNode.AsString;
   FreeAndNil(FInstance);
   FInstance := InstClass.Create;
-  (FInstance as IJtdObject).SetTagField(TagName);
+  TJtdObject(FInstance).SetTagField(TagName);
   FInstance.ReadJson(aNode);
-  (FInstance as IJtdObject).SetTagField('');
+  TJtdObject(FInstance).SetTagField('');
 end;
 
 procedure TJtdUnion.DoReadJson(aReader: TJsonReader);
@@ -1500,7 +1492,7 @@ procedure TJtdUnion.DoWriteJson(aWriter: TJsonStrWriter);
 begin
   aWriter.BeginObject;
   aWriter.Add(GetTagJsonName, Tag);
-  (FInstance as IJtdObject).DoWriteProps(aWriter);
+  TJtdObject(FInstance).DoWriteProps(aWriter);
   aWriter.EndObject;
 end;
 
