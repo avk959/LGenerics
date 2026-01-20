@@ -1825,19 +1825,22 @@ var
   Template: TJtdUnionTemplate;
   I: Integer;
   e: TJtdSchemaMap.TEntry;
-  AsciiNames: Boolean = True;
+  AsciiNames: Boolean;
 begin
   TypName := GetPreferName(aSchema, aTypeName, aRoot);
 
   if TypName = '' then
     TypName := AsPasUniqTypeName(aSchema.Discriminator + VARIANT_TAG);
 
+  AsciiNames := IsAsciiEncoded(aSchema.Discriminator);
+
   System.SetLength(Mapping, aSchema.Mapping.Count);
-  for s in aSchema.Mapping.Keys do
-    if not IsAsciiEncoded(s) then begin
-      AsciiNames := False;
-      break;
-    end;
+  if AsciiNames then
+    for s in aSchema.Mapping.Keys do
+      if not IsAsciiEncoded(s) then begin
+        AsciiNames := False;
+        break;
+      end;
   I := 0;
   for e in aSchema.Mapping do begin
     if AsciiNames then
