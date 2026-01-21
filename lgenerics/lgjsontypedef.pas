@@ -1287,15 +1287,14 @@ function TJtdJsonNodeHelper.JtdValidate(aSchema: TJtdSchema; out aErr: TValidate
   aMaxRefDepth: Integer): Boolean;
 var
   ErrList: TJtdErrorList;
+  r: TJtdValidateResult;
 begin
-  Result := False;
   ErrList := nil;
-  case Validate(Self, aSchema, ErrList, 1) of
-    jvrOk: Result := True;
-    jvrMaxErrorsExceed, jvrErrors:
-      aErr := ErrList[0];
-  else
-  end;
+  aErr := Default(TValidateError);
+  r := Validate(Self, aSchema, ErrList, 1, aMaxRefDepth);
+  Result := r = jvrOk;
+  if not Result and (r in [jvrMaxErrorsExceed, jvrErrors]) then
+    aErr := ErrList[0];
 end;
 
 function RealLeapSecond06(aYear: Word): Boolean; inline;
