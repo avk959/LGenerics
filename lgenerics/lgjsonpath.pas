@@ -3606,7 +3606,7 @@ end;
 
 function TJpQueryParser.ExprLevel0(aSkip: Boolean): TJpExpression;
 begin
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   Result := ExprLevel1(aSkip);
   try
@@ -3627,7 +3627,7 @@ end;
 
 function TJpQueryParser.ExprLevel1(aSkip: Boolean): TJpExpression;
 begin
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   Result := ExprLevel2(aSkip);
   try
@@ -3663,7 +3663,7 @@ end;
 
 function TJpQueryParser.ExprLevel2(aSkip: Boolean): TJpExpression;
 begin
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   Result := ExprLevel3(aSkip);
   try
@@ -3690,7 +3690,7 @@ end;
 
 function TJpQueryParser.ExprLevel3(aSkip: Boolean): TJpExpression;
 begin
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   if aSkip then
     NextToken;
@@ -3712,7 +3712,7 @@ end;
 
 function TJpQueryParser.ExprLevel4: TJpExpression;
 begin
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   Result := nil;
   try
@@ -3751,7 +3751,7 @@ function TJpQueryParser.SubQueryExpr: TJpExpression;
 var
   Path: TRelPathQuery;
 begin
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   if CurrToken = jtkRootId then
     Path := TRelPathQuery.Create(jpiRoot)
@@ -3801,7 +3801,7 @@ var
   I: SizeInt;
 begin
   Assert(CurrChar = '(');
-  if FDepth = MAX_DEPTH then Fail(SEJPathMaxDepthExceed);
+  if FDepth = MAX_DEPTH then Fail(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   FunDef := FFunDef;
   FunName := FStrValue;

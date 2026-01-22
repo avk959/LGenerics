@@ -35,6 +35,7 @@ resourcestring
   SEClassCapacityExceedFmt = '%s maximum capacity exceeded(%d)';
   SECapacityExceedFmt      = 'Maximum capacity exceeded(%d)';
   SEMaxNodeCountExceedFmt  = 'Maximum number of nodes exceeded(%d)';
+  SEMaxRecurseDepthExceed  = 'Maximum recursion depth exceeded';
   SECantUpdDuringIterFmt   = 'Can not update %s during enumeration';
   SEArrIndexOutOfBoundsFmt = 'Array index out of bounds(%d)';
   SEClassIdxOutOfBoundsFmt = '%s index out of bounds(%d)';
@@ -177,7 +178,6 @@ resourcestring
   SEJtdDiscriTagNotStr       = 'Discriminator tag is not string';
   SEJtdIllegalTagValueFmt    = 'Illegal Discriminator tag value "%s"';
   SEJtdInvalidDiscriInst     = 'Invalid Discriminator instance';
-  SEJtdMaxRefDepthExceedFmt  = 'Maximum "ref" depth exceeded(%u)';
   SEJtdTzOffsOutOfRangeFmt   = 'Timezone offset out of range(%d)';
 //JSONPath
   SEJLeadWSNotAllow        = 'Leading spaces are not allowed';
@@ -185,7 +185,6 @@ resourcestring
   SEJPathCantEndWithDot    = 'Query cannot end with a dot';
   SEJPathQueryIsEmpty      = 'Query is empty';
   SEJPathRootMiss          = 'Query must start with a root identifier( $ )';
-  SEJPathMaxDepthExceed    = 'Maximum recursion depth exceeded';
   SEJPathPosErrorFmt       = 'Position %d: %s';
   SEJPathPosExpectFmt      = 'Position %d: expected %s, but got "%s"';
   SEJPathPosUnexpectFmt    = 'Position %d: unexpected symbol "%s"';

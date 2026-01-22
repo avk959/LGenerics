@@ -1881,7 +1881,7 @@ end;
 function TJtdTemplater.HandleSchema(aSchema: TJtdSchema; const aTypeName: string; aRoot: Boolean): string;
 begin
   if FDepth = MAX_DEPTH then
-    raise ECodegen.Create(SEJPathMaxDepthExceed);
+    raise ECodegen.Create(SEMaxRecurseDepthExceed);
   Inc(FDepth);
   case aSchema.Kind of
     fkEmpty:         Result := HandleEmpty(aSchema, aTypeName, aRoot);
