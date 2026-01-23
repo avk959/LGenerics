@@ -105,6 +105,7 @@ type
   public
     constructor Create(const aValue: T); virtual; overload;
     function OrElse(const aDefault: T): T;
+    function OrElseRaise(e: ExceptClass; const aMsg: string = ''): T;
     property Value: T read FValue write FValue;
   end;
 
@@ -714,6 +715,13 @@ begin
     Result := aDefault
   else
     Result := FValue;
+end;
+
+function TJtdValue.OrElseRaise(e: ExceptClass; const aMsg: string): T;
+begin
+  if IsNull then
+    raise e.Create(aMsg);
+  Result := FValue;
 end;
 
 { TJtdAny }
