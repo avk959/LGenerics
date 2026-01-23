@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Most common types and utils.                                            *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -74,6 +74,7 @@ type
   ELGObjectMapError     = class(ELGMapError);
   ELGTableError         = class(Exception);
   EAcFsmError           = class(Exception);
+  ELGInternal           = class(Exception);
 
 const
   MAX_CONTAINER_SIZE         = Succ(High(SizeInt) shr 2);
