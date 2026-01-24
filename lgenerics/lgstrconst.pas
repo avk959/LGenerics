@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Common string resources.                                                *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -85,7 +85,7 @@ resourcestring
   SEInvalidJsonPtr         = 'Invalid JSON Pointer instance';
   SEInvalidJsonStrInst     = 'Invalid JSON string instance';
   SECantParseJsStr         = 'Cannot parse JSON string';
-  SEUnknownJsDataType      = 'Unknown JsonData type';
+  SEUnknownTJsonDataType   = 'Unknown TJsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
 //JsonCfg

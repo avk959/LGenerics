@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some useful JSON utilites.                                              *
 *                                                                           *
-*   Copyright(c) 2025 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2025-2026 A.Koverdyaev(avk)                                     *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -164,7 +164,7 @@ function JsonData2Node(aData: TJsonData): TJsonNode;
     e: TJsonEnum;
   begin
     case aSrc.JSONType of
-      jtUnknown: raise EJsException.Create(SEUnknownJsDataType);
+      jtUnknown: raise EJsException.Create(SEUnknownTJsonDataType);
       jtNull:    aDst.AsNull;
       jtBoolean: aDst.AsBoolean := aSrc.AsBoolean;
       jtNumber:  aDst.AsNumber := aSrc.AsFloat;
