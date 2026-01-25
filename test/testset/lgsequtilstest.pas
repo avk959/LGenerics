@@ -113,8 +113,10 @@ type
     procedure IsPermutationTest;
     procedure TestDiff;
     procedure TestPatienceDiff;
+    procedure TestHistogramDiff;
     procedure TestLcsPatch;
     procedure TestPatienceLcsPatch;
+    procedure TestHistogramLcsPatch;
     procedure TestPatch;
   end;
 
@@ -3880,12 +3882,12 @@ var
   d: TIntSeqUtil.TVecDiff;
   I: Integer;
 begin
-  TIntSeqUtil.PatienceDiff(a, b, d);
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(d.SourceChanges.IsEmpty);
   AssertTrue(d.TargetChanges.IsEmpty);
 
   a := [1, 2, 3];
-  TIntSeqUtil.PatienceDiff(a, b, d);
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(d.SourceChanges.PopCount = Length(a));
   AssertTrue(d.TargetChanges.IsEmpty);
   for I := 0 to High(a) do
@@ -3893,7 +3895,7 @@ begin
 
   a := nil;
   b := [1, 2, 3];
-  TIntSeqUtil.PatienceDiff(a, b, d);
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(d.SourceChanges.IsEmpty);
   AssertTrue(d.TargetChanges.PopCount = Length(b));
   for I := 0 to High(b) do
@@ -3901,7 +3903,7 @@ begin
 
   a := [1, 2, 3, 4, 5, 6, 7];
   b := [7, 1, 2, 3, 4, 5, 6];
-  TIntSeqUtil.PatienceDiff(a, b, d);
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(d.SourceChanges.PopCount = 1);
   AssertTrue(d.SourceChanges[6]);
   AssertTrue(d.TargetChanges.PopCount = 1);
@@ -3909,7 +3911,52 @@ begin
 
   a := [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7];
   b := [7, 7, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6];
-  TIntSeqUtil.PatienceDiff(a, b, d);
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
+  AssertTrue(d.SourceChanges.PopCount = 2);
+  AssertTrue(d.SourceChanges[12]);
+  AssertTrue(d.SourceChanges[13]);
+  AssertTrue(d.TargetChanges.PopCount = 2);
+  AssertTrue(d.TargetChanges[0]);
+  AssertTrue(d.TargetChanges[1]);
+end;
+
+procedure TTestSeqUtils.TestHistogramDiff;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+  d: TIntSeqUtil.TVecDiff;
+  I: Integer;
+begin
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(d.SourceChanges.IsEmpty);
+  AssertTrue(d.TargetChanges.IsEmpty);
+
+  a := [1, 2, 3];
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(d.SourceChanges.PopCount = Length(a));
+  AssertTrue(d.TargetChanges.IsEmpty);
+  for I := 0 to High(a) do
+    AssertTrue(d.SourceChanges[I]);
+
+  a := nil;
+  b := [1, 2, 3];
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(d.SourceChanges.IsEmpty);
+  AssertTrue(d.TargetChanges.PopCount = Length(b));
+  for I := 0 to High(b) do
+    AssertTrue(d.TargetChanges[I]);
+
+  a := [1, 2, 3, 4, 5, 6, 7];
+  b := [7, 1, 2, 3, 4, 5, 6];
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(d.SourceChanges.PopCount = 1);
+  AssertTrue(d.SourceChanges[6]);
+  AssertTrue(d.TargetChanges.PopCount = 1);
+  AssertTrue(d.TargetChanges[0]);
+
+  a := [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7];
+  b := [7, 7, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6];
+  TIntSeqUtil.Diff(a, b, d, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
   AssertTrue(d.SourceChanges.PopCount = 2);
   AssertTrue(d.SourceChanges[12]);
   AssertTrue(d.SourceChanges[13]);
@@ -3968,11 +4015,11 @@ var
   p: TSeqLcsPatch;
   e: TLcsEdit;
 begin
-  p := TIntSeqUtil.MakePatienceLcsPatch(a, b);
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(p = nil);
 
   b := [1,2,3,4,5];
-  p := TIntSeqUtil.MakePatienceLcsPatch(a, b);
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(Length(p) = Length(b));
   for e in p do begin
     AssertTrue(e.Operation = seoInsert);
@@ -3981,11 +4028,11 @@ begin
   AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
 
   a := [1,2,3,4,5];
-  p := TIntSeqUtil.MakePatienceLcsPatch(a, b);
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(p = nil);
 
   b := [0,1,2,42,3,4,5,6,7];
-  p := TIntSeqUtil.MakePatienceLcsPatch(a, b);
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
   AssertTrue(Length(p) = TIntSeqUtil.LcsDistanceWM(a, b));
   for e in p do
     if e.Operation = seoDelete then
@@ -3995,7 +4042,50 @@ begin
   AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
 
   b := nil;
-  p := TIntSeqUtil.MakePatienceLcsPatch(a, b);
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaPatience);
+  AssertTrue(Length(p) = Length(a));
+  for e in p do begin
+    AssertTrue(e.Operation = seoDelete);
+    AssertTrue(e.Value = a[e.SourceIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+end;
+
+procedure TTestSeqUtils.TestHistogramLcsPatch;
+var
+  a: TIntArray = nil;
+  b: TIntArray = nil;
+  p: TSeqLcsPatch;
+  e: TLcsEdit;
+begin
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(p = nil);
+
+  b := [1,2,3,4,5];
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(Length(p) = Length(b));
+  for e in p do begin
+    AssertTrue(e.Operation = seoInsert);
+    AssertTrue(e.Value = b[e.TargetIndex]);
+  end;
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+
+  a := [1,2,3,4,5];
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(p = nil);
+
+  b := [0,1,2,42,3,4,5,6,7];
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
+  AssertTrue(Length(p) = TIntSeqUtil.LcsDistanceWM(a, b));
+  for e in p do
+    if e.Operation = seoDelete then
+      AssertTrue(e.Value = a[e.SourceIndex])
+    else
+      AssertTrue(e.Value = b[e.TargetIndex]);
+  AssertTrue(TIntSeqUtil.Same(ApplyLcsPatch(a, p), b));
+
+  b := nil;
+  p := TIntSeqUtil.MakeLcsPatch(a, b, TIntSeqUtil.TNonLcsDiffAlgo.ndaHistogram);
   AssertTrue(Length(p) = Length(a));
   for e in p do begin
     AssertTrue(e.Operation = seoDelete);
