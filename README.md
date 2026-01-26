@@ -108,6 +108,7 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   - difference between two sequences
     + LCS based
     + Patience Diff
+    + Histogram Diff
   - Levenshtein distance:
     + simple DP algorithm
     + modified Berghel-Roach algorithm
