@@ -846,7 +846,8 @@ begin
     aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
   if (Props <> nil) or (OptionalProps <> nil) then begin
     aText.Add('  for e in aNode.Entries do begin');
-    aText.Add('    if (FTagField <> '''') and (e.Key = FTagField) then continue;');
+    if not AdditionalProps then
+      aText.Add('    if (FTagField <> '''') and (e.Key = FTagField) then continue;');
     if HasAsciiNames then
       aText.Add('    case e.Key of')
     else
@@ -904,11 +905,12 @@ begin
     aText.Add('  Clear;');
   if Props <> nil then
     aText.Add('  System.FillChar(Flags, SizeOf(Flags), 0);');
-  aText.Add('  repeat');
-  aText.Add('    if not aReader.Read then ReaderFail(aReader);');
-  aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
-  aText.Add('    if (FTagField <> '''') and (aReader.Name = FTagField) then continue;');
   if (Props <> nil) or (OptionalProps <> nil) then begin
+    aText.Add('  repeat');
+    aText.Add('    if not aReader.Read then ReaderFail(aReader);');
+    aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
+    if not AdditionalProps then
+      aText.Add('    if (FTagField <> '''') and (aReader.Name = FTagField) then continue;');
     if HasAsciiNames then
       aText.Add('    case aReader.Name of')
     else
@@ -936,8 +938,9 @@ begin
     end else
       aText.Add('      UnknownProp(aReader.Name, aReader);');
     aText.Add('    end;');
-  end;
-  aText.Add('  until False;');
+    aText.Add('  until False;');
+  end else
+    aText.Add('  aReader.Skip;');
   if Props <> nil then begin
     aText.Add('  for I := 0 to System.High(Flags) do');
     aText.Add('    if not Flags[I] then');
@@ -1228,11 +1231,12 @@ var
 begin
   WriteDescription(aText, aComment);
   aText.Add(Format('  %s = class sealed(%s)', [TypeName, JTD_FORM_ANCESTORS[fkDiscriminator]]));
-  aText.Add('  protected');
+  aText.Add('  private');
   for I := 0 to System.High(Mapping) do
     aText.Add(Format('    function  Get%s: %s;', [Mapping[I].PropName, Mapping[I].PropType]));
   for I := 0 to System.High(Mapping) do
     aText.Add(Format('    procedure Set%s(aValue: %s);', [Mapping[I].PropName, Mapping[I].PropType]));
+  aText.Add('  protected');
   aText.Add('    class function GetTagJsonName: string; override;');
   aText.Add('    class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;');
   aText.Add('  public');
