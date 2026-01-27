@@ -46,11 +46,12 @@ type
 
   { TRootObject is nullable }
   TRootObject = class sealed(TJtdUnion)
-  protected
+  private
     function  GetBar: TBar;
     function  GetQuux: TQuux;
     procedure SetBar(aValue: TBar);
     procedure SetQuux(aValue: TQuux);
+  protected
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public

@@ -57,11 +57,12 @@ type
 
   { TOverrideTypeDiscriminator }
   TOverrideTypeDiscriminator = class sealed(TJtdUnion)
-  protected
+  private
     function  GetBar: TBar;
     function  GetBaz: TBaz;
     procedure SetBar(aValue: TBar);
     procedure SetBaz(aValue: TBaz);
+  protected
     class function GetTagJsonName: string; override;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; override;
   public
@@ -121,11 +122,7 @@ end;
 procedure TOverrideTypeProperties.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
-  repeat
-    if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
-    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
-  until False;
+  aReader.Skip;
 end;
 {$POP}
 
@@ -150,11 +147,7 @@ end;
 procedure TBar.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
-  repeat
-    if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
-    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
-  until False;
+  aReader.Skip;
 end;
 {$POP}
 
@@ -179,11 +172,7 @@ end;
 procedure TBaz.DoReadJson(aReader: TJsonReader);
 begin
   if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
-  repeat
-    if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
-    if (FTagField <> '') and (aReader.Name = FTagField) then continue;
-  until False;
+  aReader.Skip;
 end;
 {$POP}
 
