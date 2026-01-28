@@ -1043,12 +1043,12 @@ var
 
   { Bob Jenkins small noncryptographic PRNG
     http://www.burtleburtle.net/bob/rand/smallprng.html }
-  procedure BJSetSeed(aSeed: DWord);
-  procedure BJSetSeed64(aSeed: QWord);
-  procedure BJRandomize;
-  procedure BJRandomize64;
-  function  BJNextRandom: DWord;
-  function  BJNextRandom64: QWord;
+  procedure JsfSeed(aSeed: DWord);
+  procedure Jsf64Seed(aSeed: QWord);
+  procedure JsfRandomize;
+  procedure Jsf64Randomize;
+  function  JsfNext: DWord;
+  function  Jsf64Next: QWord;
 
   {Splitmix64 PRNG}
 var
@@ -1410,7 +1410,7 @@ var
   r64: QWord = QWord($FECAB388259108D9);
   s64: QWord = QWord($7E7F22F098FB479C);
 
-procedure BJSetSeed(aSeed: DWord);
+procedure JsfSeed(aSeed: DWord);
 var
   e: DWord;
   I: Integer;
@@ -1429,7 +1429,7 @@ begin
     end;
 end;
 
-procedure BJSetSeed64(aSeed: QWord);
+procedure Jsf64Seed(aSeed: QWord);
 var
   e: QWord;
   I: Integer;
@@ -1448,17 +1448,17 @@ begin
     end;
 end;
 
-procedure BJRandomize;
+procedure JsfRandomize;
 begin
-  BJSetSeed(GetTickCount64);
+  JsfSeed(DWord(GetTickCount64));
 end;
 
-procedure BJRandomize64;
+procedure Jsf64Randomize;
 begin
-  BJSetSeed64(GetTickCount64);
+  Jsf64Seed(GetTickCount64);
 end;
 
-function BJNextRandom: DWord;
+function JsfNext: DWord;
 var
   e: DWord;
 begin
@@ -1470,7 +1470,7 @@ begin
   Result := s;
 end;
 
-function BJNextRandom64: QWord;
+function Jsf64Next: QWord;
 var
   e: QWord;
 begin
