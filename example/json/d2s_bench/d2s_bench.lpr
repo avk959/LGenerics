@@ -65,7 +65,7 @@ const
   InfExp = QWord($7ff0000000000000);
 begin
   repeat
-    q := BJNextRandom64;
+    q := Jsf64Next;
   until q and InfExp <> InfExp;
   Result := d;
 end;
@@ -92,7 +92,7 @@ var
   I: Integer;
 begin
   Result := nil;
-  BJSetSeed64(2021);
+  Jsf64Seed(2021);
   SetLength(Result, TestSize);
   for I := 0 to High(Result) do
     Result[I] := NextRandomDouble;

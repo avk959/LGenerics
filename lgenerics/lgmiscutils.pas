@@ -5951,9 +5951,9 @@ constructor TGBloomFilter.Create(aMaxExpectCount: SizeInt; aMaxExpectFpp: Double
 var
   Cnt: Int64;
 begin
-  LgUtils.BJRandomize;
-  FSeed1 := LgUtils.BJNextRandom;
-  FSeed2 := LgUtils.BJNextRandom;
+  LgUtils.JsfRandomize;
+  FSeed1 := LgUtils.JsfNext;
+  FSeed2 := LgUtils.JsfNext;
   if aMaxExpectCount < 64 then
     aMaxExpectCount := 64;
   FMaxCount := aMaxExpectCount;

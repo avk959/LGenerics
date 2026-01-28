@@ -726,7 +726,7 @@ const
   InfExp = QWord($7ff0000000000000);
 begin
   repeat
-    q := BJNextRandom64;
+    q := Jsf64Next;
   until (q and InfExp <> InfExp) and (q and InfExp <> 0);
   Result := d;
 end;
@@ -739,7 +739,7 @@ var
 const
   TestSize = 1000000;
 begin
-  BJRandomize64;
+  Jsf64Randomize;
   for I := 1 to TestSize do
     begin
       d := NextRandomDouble;
