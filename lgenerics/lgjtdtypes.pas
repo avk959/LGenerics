@@ -332,7 +332,7 @@ type
     class procedure DuplicateProp(aReader: TJsonReader); static;
     class procedure DuplicateProp(const aProp: string); static;
     procedure SetTagField(const s: string);
-    procedure DoWriteProps(aWriter: TJsonStrWriter); virtual; abstract;
+    procedure DoWriteProps(aWriter: TJsonStrWriter); virtual;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -1439,6 +1439,12 @@ end;
 procedure TJtdObject.SetTagField(const s: string);
 begin
   FTagField := s;
+end;
+
+procedure TJtdObject.DoWriteProps(aWriter: TJsonStrWriter);
+begin
+  Assert(aWriter = aWriter); // make compiler happy
+  NotImplemented({$I %currentRoutine%});
 end;
 
 procedure TJtdObject.DoWriteJson(aWriter: TJsonStrWriter);
