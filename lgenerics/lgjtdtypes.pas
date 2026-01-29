@@ -52,6 +52,7 @@ type
     procedure DoReadJson(aNode: TJsonNode); virtual;
     procedure DoReadJson(aReader: TJsonReader); virtual;
     procedure DoWriteJson(aWriter: TJsonStrWriter); virtual;
+    procedure SetNull; inline;
     class function  GetJtdClass: TJtdEntityClass; virtual;
     class procedure Error(const aMessage: string); static;
     class procedure NotImplemented(const aMethod: string); static;
@@ -92,9 +93,8 @@ type
                    aMaxDepth: SizeInt = DEF_DEPTH);
     procedure LoadFile(const aFileName: string; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                        aMaxDepth: SizeInt = DEF_DEPTH);
-    function  IsNull: Boolean; virtual;
-    procedure SetNull;
-    procedure WriteJson(aWriter: TJsonStrWriter); virtual;
+    function  IsNull: Boolean; inline;
+    procedure WriteJson(aWriter: TJsonStrWriter);
     function  AsJson: string;
   end;
 
@@ -124,7 +124,6 @@ type
     constructor Create(const aValue: string); virtual; overload;
     constructor Create(const aValue: TJVariant); virtual; overload;
     destructor Destroy; override;
-    function  IsNull: Boolean; override;
     property Instance: TJsonNode read FInstance;
   end;
 
@@ -427,6 +426,11 @@ begin
   NotImplemented({$I %currentRoutine%});
 end;
 
+procedure TJtdEntity.SetNull;
+begin
+  FIsNull := True;
+end;
+
 class function TJtdEntity.GetJtdClass: TJtdEntityClass;
 begin
   Result := Self;
@@ -675,11 +679,6 @@ begin
   Result := (Self = nil) or FIsNull;
 end;
 
-procedure TJtdEntity.SetNull;
-begin
-  FIsNull := True;
-end;
-
 procedure TJtdEntity.WriteJson(aWriter: TJsonStrWriter);
 begin
   if IsNull then
@@ -793,13 +792,6 @@ destructor TJtdAny.Destroy;
 begin
   FInstance.Free;
   inherited Destroy;
-end;
-
-function TJtdAny.IsNull: Boolean;
-begin
-  Result := inherited;
-  if not Result then
-    Result := FInstance.IsNull;
 end;
 
 { TJtdBool }
