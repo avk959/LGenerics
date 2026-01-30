@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Helpers for some basic types.                                           *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -27,10 +27,7 @@ unit lgHelpers;
 interface
 
 uses
-  Classes,
-  SysUtils,
-  TypInfo,
-  Variants,
+  Classes, SysUtils, DateUtils, TypInfo, Variants,
   lgUtils,
   lgHash;
 
@@ -40,6 +37,11 @@ type
     class function HashCode(const aValue: TGUID): SizeInt; static; inline;
     class function Equal(const L, R: TGUID): Boolean; static; inline;
     class function Less(const L, R: TGUID): Boolean; static; inline;
+    class function CreateV7(d: TDateTime): TGUID; static;
+    class function CreateV7: TGUID; static; inline;
+    class function CreateV7Ctr(d: TDateTime; aResetCtr: Boolean = False): TGUID; static;
+    class function CreateV7Ctr(aResetCtr: Boolean = False): TGUID; static; inline;
+    function ToString(SkipBrackets: Boolean = False): string;
   end;
 
   TAStrHelper = type helper(TStringHelper) for ansistring
@@ -405,7 +407,7 @@ type
   end;
 {$ENDIF}
 
-  TGDateTimeHelper = type helper for TDateTime
+  TGDateTimeHelper = type helper{$IF FPC_FULLVERSION>30202}(TDateTimeHelper){$ENDIF} for TDateTime
     class function HashCode(aValue: TDateTime): SizeInt; static; inline;
     class function Equal(L, R: TDateTime): Boolean; static; inline;
     class function Less(L, R: TDateTime): Boolean; static; inline;
@@ -621,6 +623,146 @@ end;
 class function TGGuidHelper.Less(const L, R: TGUID): Boolean;
 begin
   Result := CompareMemRange(@L, @R, SizeOf(TGUID)) < 0;
+end;
+
+function FillBufRandom(out aBuffer; aSize: SizeInt): SizeInt;
+{$PUSH}{$J+}
+const
+  InitRequired: Boolean = True;
+{$POP}
+var
+  p: PByte;
+  cnt: SizeInt;
+begin
+  if InitRequired then
+    begin
+      Jsf64Randomize;
+      InitRequired := False;
+    end;
+  p := @aBuffer;
+  Result := 0;
+  while aSize > 0 do
+    begin
+      if aSize > SizeOf(QWord) then
+        cnt := SizeOf(QWord)
+      else
+        cnt := aSize;
+      System.Move(Jsf64Next, p^, cnt);
+      Result += cnt;
+      p += cnt;
+      aSize -= cnt;
+    end;
+end;
+
+class function TGGuidHelper.CreateV7(d: TDateTime): TGUID;
+var
+  ts: QWord;
+  rnd: array[0..9] of Byte;
+begin
+  ts := QWord(MillisecondsBetween(d, UnixEpoch));
+  FillBufRandom(rnd, SizeOf(rnd));
+  Result.D1 := (ts shr 16) and $ffffffff;
+  Result.D2 := (ts shr 4) and $0fff or $7000;
+  Result.D3 := (ts and $0f) shl 12 or (rnd[0]) shl 4 or rnd[1] shr 4;
+  Result.D4[0] := rnd[2] and $3f or $80;
+  System.Move(rnd[3], Result.D4[1], 7);
+end;
+
+class function TGGuidHelper.CreateV7: TGUID;
+begin
+  Result := CreateV7(SysUtils.NowUtc);
+end;
+
+class function TGGuidHelper.CreateV7Ctr(d: TDateTime; aResetCtr: Boolean): TGUID;
+{$PUSH}{$J+}
+const
+  Ctr: DWord = 0;
+{$POP}
+var
+  ts: QWord;
+begin
+  if aResetCtr then Ctr := 0;
+  ts := QWord(MillisecondsBetween(d, UnixEpoch));
+  Result.D1 := (ts shr 16) and $ffffffff;
+  Result.D2 := (ts shr 4) and $0fff or $7000;
+  Result.D3 := (ts and $0f) shl 12 or Ctr shr 6;
+  Result.D4[0] := Ctr and $3f or $80;
+  FillBufRandom(Result.D4[1], SizeOf(Result.D4) - 1);
+  Ctr := (Ctr + 1) and $03ffff;
+end;
+
+class function TGGuidHelper.CreateV7Ctr(aResetCtr: Boolean): TGUID;
+begin
+  Result := CreateV7Ctr(SysUtils.NowUtc, aResetCtr);
+end;
+
+function TGGuidHelper.ToString(SkipBrackets: Boolean): string;
+{$PUSH}{$J-}
+const
+  HexChar: array[0..$f] of AnsiChar = (
+    '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+  );
+{$POP}
+var
+  s: string;
+  p: PAnsiChar;
+begin
+  if SkipBrackets then
+    begin
+      System.SetLength(s, 36);
+      p := Pointer(s);
+    end
+  else
+    begin
+      System.SetLength(s, 38);
+      p := Pointer(s);
+      p[0] := '{';
+      p[37] := '}';
+      Inc(p);
+    end;
+
+  p[ 0] := HexChar[D1 shr 28];
+  p[ 1] := HexChar[(D1 shr 24) and $0f];
+  p[ 2] := HexChar[(D1 shr 20) and $0f];
+  p[ 3] := HexChar[(D1 shr 16) and $0f];
+  p[ 4] := HexChar[(D1 shr 12) and $0f];
+  p[ 5] := HexChar[(D1 shr  8) and $0f];
+  p[ 6] := HexChar[(D1 shr  4) and $0f];
+  p[ 7] := HexChar[D1 and $0f];
+  p[ 8] := '-';
+
+  p[ 9] := HexChar[D2 shr 12];
+  p[10] := HexChar[(D2 shr 8) and $0f];
+  p[11] := HexChar[(D2 shr 4) and $0f];
+  p[12] := HexChar[D2 and $0f];
+  p[13] := '-';
+
+  p[14] := HexChar[D3 shr 12];
+  p[15] := HexChar[(D3 shr 8) and $0f];
+  p[16] := HexChar[(D3 shr 4) and $0f];
+  p[17] := HexChar[D3 and $0f];
+  p[18] := '-';
+
+  p[19] := HexChar[D4[0] shr 4];
+  p[20] := HexChar[D4[0] and $0f];
+  p[21] := HexChar[D4[1] shr 4];
+  p[22] := HexChar[D4[1] and $0f];
+  p[23] := '-';
+
+  p[24] := HexChar[D4[2] shr 4];
+  p[25] := HexChar[D4[2] and $0f];
+  p[26] := HexChar[D4[3] shr 4];
+  p[27] := HexChar[D4[3] and $0f];
+  p[28] := HexChar[D4[4] shr 4];
+  p[29] := HexChar[D4[4] and $0f];
+  p[30] := HexChar[D4[5] shr 4];
+  p[31] := HexChar[D4[5] and $0f];
+  p[32] := HexChar[D4[6] shr 4];
+  p[33] := HexChar[D4[6] and $0f];
+  p[34] := HexChar[D4[7] shr 4];
+  p[35] := HexChar[D4[7] and $0f];
+
+  Result := s;
 end;
 
 class function TAStrHelper.HashCode(const aValue: ansistring): SizeInt;
