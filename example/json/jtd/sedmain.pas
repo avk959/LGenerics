@@ -672,7 +672,7 @@ end;
 
 procedure TfrmMain.acAppExitExecute(Sender: TObject);
 begin
-  Application.Terminate;
+  Close;
 end;
 
 procedure TfrmMain.acBeginArrayExecute(Sender: TObject);
