@@ -8,13 +8,13 @@ object frmMain: TfrmMain
   ClientWidth = 890
   DesignTimePPI = 115
   Menu = mmuMain
+  ShowHint = True
   OnActivate = FormActivate
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnResize = FormResize
   OnShow = FormShow
-  ShowHint = True
   object stbMainStatus: TStatusBar
     Left = 0
     Height = 28
@@ -609,6 +609,8 @@ object frmMain: TfrmMain
           object SynGutterMarks1: TSynGutterMarks
             Width = 29
             MouseActions = <>
+            MaxExtraMarksColums = 0
+            Options = [sgmoDeDuplicateMarksOnOverflow]
           end
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -695,11 +697,11 @@ object frmMain: TfrmMain
             ClickOnSelChange = False
             ExtendedSelect = False
             ItemHeight = 0
-            OnClick = lbxErrorListClick
-            OnDrawItem = lbxErrorListDrawItem
             Style = lbOwnerDrawFixed
             TabOrder = 0
             TabStop = False
+            OnClick = lbxErrorListClick
+            OnDrawItem = lbxErrorListDrawItem
           end
           object stxValidateStatus: TStaticText
             Left = 0
@@ -844,9 +846,9 @@ object frmMain: TfrmMain
         Left = 29
         Top = 0
         Action = acOpen
-        OnArrowClick = tbtOpenArrowClick
         PopupMenu = ppmEdit
         Style = tbsDropDown
+        OnArrowClick = tbtOpenArrowClick
       end
       object ToolButton3: TToolButton
         Left = 71
@@ -899,10 +901,10 @@ object frmMain: TfrmMain
       AutoSize = False
       BorderSpacing.Left = 231
       BorderSpacing.Top = 3
-      OnChange = edSchemaNameChange
-      OnEditingDone = edSchemaNameEditingDone
       TabStop = False
       TabOrder = 0
+      OnChange = edSchemaNameChange
+      OnEditingDone = edSchemaNameEditingDone
     end
     object tlbTools: TToolBar
       AnchorSideLeft.Control = cbMainTools
@@ -953,7 +955,7 @@ object frmMain: TfrmMain
     Left = 288
     Top = 448
     object mmuFile: TMenuItem
-      Caption = 'File'
+      Caption = '&File'
       OnClick = mmuFileClick
       object mmuiNew: TMenuItem
         Action = acSchemaNew
@@ -982,7 +984,7 @@ object frmMain: TfrmMain
       end
     end
     object mmuEdit: TMenuItem
-      Caption = 'Edit'
+      Caption = '&Edit'
       object mmuiUndo: TMenuItem
         Action = acUndo
       end
@@ -1024,7 +1026,7 @@ object frmMain: TfrmMain
       end
     end
     object mmuService: TMenuItem
-      Caption = 'Tools'
+      Caption = '&Tools'
       object mmuiJsonSyntax: TMenuItem
         Action = acSyntaxCheck
       end
@@ -1042,7 +1044,7 @@ object frmMain: TfrmMain
       end
     end
     object mmuHelp: TMenuItem
-      Caption = 'Help'
+      Caption = '&Help'
       object mmuiHelpOnline: TMenuItem
         Action = acHelpOnline
       end
@@ -1063,159 +1065,159 @@ object frmMain: TfrmMain
       Caption = 'New schema ...'
       Hint = 'New empty schema|Create a new empty JTD schema'
       ImageIndex = 0
-      OnExecute = acSchemaNewExecute
       ShortCut = 16462
+      OnExecute = acSchemaNewExecute
     end
     object acOpen: TAction
       Category = 'File'
       Caption = 'Open schema file...'
       Hint = 'Open schema file|Open JSON file containing JTD schema'
       ImageIndex = 1
-      OnExecute = acOpenExecute
       ShortCut = 16463
+      OnExecute = acOpenExecute
     end
     object acSave: TAction
       Category = 'File'
       Caption = 'Save'
       Hint = 'Save schema to file|Save the current schema to file'
       ImageIndex = 3
+      ShortCut = 16467
       OnExecute = acSaveExecute
       OnUpdate = acSaveUpdate
-      ShortCut = 16467
     end
     object acSaveAs: TAction
       Category = 'File'
       Caption = 'Save as ...'
       Hint = 'Save schema to specified file|Save the current schema to specified file'
       ImageIndex = 4
+      ShortCut = 24659
       OnExecute = acSaveAsExecute
       OnUpdate = acSaveAsUpdate
-      ShortCut = 24659
     end
     object acAppExit: TAction
       Category = 'File'
       Caption = 'Exit'
       Hint = 'Exit|Exit the application'
       ImageIndex = 5
-      OnExecute = acAppExitExecute
       SecondaryShortCuts.Strings = (
         'Alt+F4'
       )
       ShortCut = 8219
+      OnExecute = acAppExitExecute
     end
     object acUndo: TAction
       Category = 'Edit'
       Caption = 'Undo'
       ImageIndex = 6
+      ShortCut = 16474
       OnExecute = acUndoExecute
       OnUpdate = acUndoUpdate
-      ShortCut = 16474
     end
     object acRedo: TAction
       Category = 'Edit'
       Caption = 'Redo'
       ImageIndex = 7
+      ShortCut = 24666
       OnExecute = acRedoExecute
       OnUpdate = acRedoUpdate
-      ShortCut = 24666
     end
     object acCut: TAction
       Category = 'Edit'
       Caption = 'Cut'
       ImageIndex = 8
+      ShortCut = 16472
       OnExecute = acCutExecute
       OnUpdate = acCutUpdate
-      ShortCut = 16472
     end
     object acCopy: TAction
       Category = 'Edit'
       Caption = 'Copy'
       ImageIndex = 9
+      ShortCut = 16451
       OnExecute = acCopyExecute
       OnUpdate = acCopyUpdate
-      ShortCut = 16451
     end
     object acPaste: TAction
       Category = 'Edit'
       Caption = 'Paste'
       ImageIndex = 10
+      ShortCut = 16470
       OnExecute = acPasteExecute
       OnUpdate = acPasteUpdate
-      ShortCut = 16470
     end
     object acFind: TAction
       Category = 'Edit'
       Caption = 'Find...'
       ImageIndex = 11
+      ShortCut = 16454
       OnExecute = acFindExecute
       OnUpdate = acFindUpdate
-      ShortCut = 16454
     end
     object acFindNext: TAction
       Category = 'Edit'
       Caption = 'Find next'
       ImageIndex = 12
+      ShortCut = 114
       OnExecute = acFindNextExecute
       OnUpdate = acFindNextUpdate
-      ShortCut = 114
     end
     object acReplace: TAction
       Category = 'Edit'
       Caption = 'Replace...'
       ImageIndex = 13
+      ShortCut = 16466
       OnExecute = acReplaceExecute
       OnUpdate = acReplaceUpdate
-      ShortCut = 16466
     end
     object acFormat: TAction
       Category = 'Edit'
       Caption = 'Format'
       Hint = 'Format editor content|Format the contents of the editor according to the current formatting settings'
       ImageIndex = 14
+      ShortCut = 16452
       OnExecute = acFormatExecute
       OnUpdate = acFormatUpdate
-      ShortCut = 16452
     end
     object acSelectAll: TAction
       Category = 'Edit'
       Caption = 'Select all'
       ImageIndex = 15
+      ShortCut = 16449
       OnExecute = acSelectAllExecute
       OnUpdate = acSelectAllUpdate
-      ShortCut = 16449
     end
     object acSyntaxCheck: TAction
       Category = 'Tools'
       Caption = 'Check schema syntax'
       Hint = 'Check schema syntax|Checking the syntactic correctness of the current schema'
       ImageIndex = 16
+      ShortCut = 16504
       OnExecute = acSyntaxCheckExecute
       OnUpdate = acSyntaxCheckUpdate
-      ShortCut = 16504
     end
     object acNewFromSample: TAction
       Category = 'Tools'
       Caption = 'New schema by example...'
       Hint = 'New schema from JSON samples|Infer the schema type based on the selected JSON samples'
       ImageIndex = 17
-      OnExecute = acNewFromSampleExecute
       ShortCut = 24654
+      OnExecute = acNewFromSampleExecute
     end
     object acGenUnit: TAction
       Category = 'Tools'
       Caption = 'Create Pascal unit...'
       Hint = 'Generate Pascal unit|Generate a Pascal unit based on the current schema'
       ImageIndex = 18
+      ShortCut = 24696
       OnExecute = acGenUnitExecute
       OnUpdate = acGenUnitUpdate
-      ShortCut = 24696
     end
     object acSettings: TAction
       Category = 'Tools'
       Caption = 'Settings...'
       ImageIndex = 19
-      OnExecute = acSettingsExecute
       ShortCut = 24655
+      OnExecute = acSettingsExecute
     end
     object acHelpOnline: TAction
       Category = 'Help'
@@ -1232,36 +1234,36 @@ object frmMain: TfrmMain
     object acBeginObject: TAction
       Category = 'Code'
       Caption = 'acBeginObject'
-      OnExecute = acBeginObjectExecute
       ShortCut = 32847
+      OnExecute = acBeginObjectExecute
     end
     object acBeginArray: TAction
       Category = 'Code'
       Caption = 'acBeginArray'
-      OnExecute = acBeginArrayExecute
       ShortCut = 32833
+      OnExecute = acBeginArrayExecute
     end
     object acQuotes: TAction
       Category = 'Code'
       Caption = 'acQuotes'
-      OnExecute = acQuotesExecute
       ShortCut = 32849
+      OnExecute = acQuotesExecute
     end
     object acSchemaTreeExpand: TAction
       Category = 'Tree'
       Caption = 'Expand'
       ImageIndex = 25
+      ShortCut = 24645
       OnExecute = acSchemaTreeExpandExecute
       OnUpdate = acSchemaTreeExpandUpdate
-      ShortCut = 24645
     end
     object acSchemaTreeCollapse: TAction
       Category = 'Tree'
       Caption = 'Collapse'
       ImageIndex = 26
+      ShortCut = 24643
       OnExecute = acSchemaTreeCollapseExecute
       OnUpdate = acSchemaTreeCollapseUpdate
-      ShortCut = 24643
     end
     object acOpenInstance: TAction
       Category = 'Validate'
@@ -4495,6 +4497,7 @@ object frmMain: TfrmMain
     }
   end
   object SynPluginSyncroEdit: TSynPluginSyncroEdit
+    ScanModes = [spssNoCase, spssWithCase, spssCtxNoCase, spssCtxWithCase]
     GutterGlyph.Data = {
       36040000424D3604000000000000360000002800000010000000100000000100
       2000000000000004000064000000640000000000000000000000FFFFFF000000
