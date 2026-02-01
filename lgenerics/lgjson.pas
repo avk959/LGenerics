@@ -352,10 +352,10 @@ const
 type
   TJsonReader = class;
   { TJsonNode is the entity used to validate, parse, generate, and navigate a json document;
-    the lifetime of all nested elements is determined by the document root node;
-    it is this (and only this) node that requires explicit free;
-    the current implementation preserves the ordering of elements in objects;
-    validator and parser are based on Douglas Crockford's JSON_checker code }
+    the lifetime of all nested elements is determined by the document root node, it is this
+    (and only this) node that requires explicit free; current implementation preserves the
+    order of elements in objects;
+    validator and parser(partially) are based on Douglas Crockford's JSON_checker code }
   TJsonNode = class
   public
   const
@@ -497,8 +497,8 @@ type
     class function JsonStringValid(const s: string): Boolean; static;
   { checks if s represents a valid JSON number }
     class function JsonNumberValid(const s: string): Boolean; static;
-  { returns the parsing result; if the result is True, then the created
-    object is returned in the aRoot parameter, otherwise nil is returned }
+  { returns True and the created object in the aRoot parameter if parsing is successful,
+    otherwise returns False and nil }
     class function TryParse(const s: string; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
                             aSkipBom: Boolean = False; aDepth: Integer = DEF_DEPTH): Boolean; static;
     class function TryParse(aBuffer: PAnsiChar; aCount: SizeInt; out aRoot: TJsonNode; aMode: TDuplicateMode = dumAccept;
