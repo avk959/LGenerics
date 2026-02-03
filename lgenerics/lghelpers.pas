@@ -41,7 +41,9 @@ type
     class function CreateV7: TGUID; static; inline;
     class function CreateV7Ctr(d: TDateTime; aResetCtr: Boolean = False): TGUID; static;
     class function CreateV7Ctr(aResetCtr: Boolean = False): TGUID; static; inline;
-    function ToString(SkipBrackets: Boolean = False): string;
+    class function TryParse(p: PAnsiChar; aCount: SizeInt; out aValue: TGUID): Boolean; static;
+    class function TryParse(const s: string; out aValue: TGUID): Boolean; static; inline;
+    function ToString(aSkipBrackets: Boolean = False): string;
   end;
 
   TAStrHelper = type helper(TStringHelper) for ansistring
@@ -696,7 +698,63 @@ begin
   Result := CreateV7Ctr(SysUtils.NowUtc, aResetCtr);
 end;
 
-function TGGuidHelper.ToString(SkipBrackets: Boolean): string;
+class function TGGuidHelper.TryParse(p: PAnsiChar; aCount: SizeInt; out aValue: TGUID): Boolean;
+const
+{$PUSH}{$J-}
+  HT: array['0'..'f'] of Byte = (
+   0, 1, 2, 3, 4, 5, 6, 7, 8, 9,15,15,15,15,15,15,
+  15,10,11,12,13,14,15,15,15,15,15,15,15,15,15,15,
+  15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
+  15,10,11,12,13,14,15);
+{$POP}
+  HxC = ['0'..'9','A'..'F','a'..'f'];
+begin
+  if p = nil then exit(False);
+  if aCount = 38 then begin
+    if not((p^ = '{') and (p[37] = '}')) then exit(False);
+    Inc(p);
+  end else
+    if aCount <> 36 then exit(False);
+
+  if not((p[0] in HxC) and (p[1] in HxC) and (p[2] in HxC) and (p[3] in HxC) and
+         (p[4] in HxC) and (p[5] in HxC) and (p[6] in HxC) and (p[7] in HxC)) then
+    exit(False);
+  aValue.D1 :=
+    DWord(HT[p[0]]) shl 28 or HT[p[1]] shl 24 or HT[p[2]] shl 20 or HT[p[3]] shl 16 or
+          HT[p[4]]  shl 12 or HT[p[5]] shl  8 or HT[p[6]] shl  4 or HT[p[7]];
+
+  if not((p[8]='-')and(p[9] in HxC)and(p[10] in HxC)and(p[11] in HxC)and(p[12] in HxC))then
+    exit(False);
+  aValue.D2 := Word(HT[p[9]]) shl 12 or HT[p[10]] shl 8 or HT[p[11]] shl 4 or HT[p[12]];
+
+  if not((p[13]='-')and(p[14] in HxC)and(p[15] in HxC)and(p[16] in HxC)and(p[17] in HxC))then
+    exit(False);
+  aValue.D3 := Word(HT[p[14]]) shl 12 or HT[p[15]] shl 8 or HT[p[16]] shl 4 or HT[p[17]];
+
+  if not((p[18]='-')and(p[19] in HxC)and(p[20] in HxC)and(p[21] in HxC)and(p[22] in HxC))then
+    exit(False);
+  aValue.D4[0] := HT[p[19]] shl 4 or HT[p[20]];
+  aValue.D4[1] := HT[p[21]] shl 4 or HT[p[22]];
+
+  if not((p[23]='-')and(p[24] in HxC)and(p[25] in HxC)and(p[26] in HxC)and(p[27] in HxC) and
+         (p[28] in HxC) and (p[29] in HxC) and (p[30] in HxC) and (p[31] in HxC) and
+         (p[32] in HxC) and (p[33] in HxC) and (p[34] in HxC) and(p[35] in HxC)) then
+    exit(False);
+  aValue.D4[2] := HT[p[24]] shl 4 or HT[p[25]];
+  aValue.D4[3] := HT[p[26]] shl 4 or HT[p[27]];
+  aValue.D4[4] := HT[p[28]] shl 4 or HT[p[29]];
+  aValue.D4[5] := HT[p[30]] shl 4 or HT[p[31]];
+  aValue.D4[6] := HT[p[32]] shl 4 or HT[p[33]];
+  aValue.D4[7] := HT[p[34]] shl 4 or HT[p[35]];
+  Result := True;
+end;
+
+class function TGGuidHelper.TryParse(const s: string; out aValue: TGUID): Boolean;
+begin
+  Result := TryParse(Pointer(s), System.Length(s), aValue);
+end;
+
+function TGGuidHelper.ToString(aSkipBrackets: Boolean): string;
 {$PUSH}{$J-}
 const
   HexChar: array[0..$f] of AnsiChar = (
@@ -707,7 +765,7 @@ var
   s: string;
   p: PAnsiChar;
 begin
-  if SkipBrackets then
+  if aSkipBrackets then
     begin
       System.SetLength(s, 36);
       p := Pointer(s);
