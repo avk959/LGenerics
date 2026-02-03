@@ -2033,13 +2033,13 @@ end;
 
 class procedure TGuidPdoHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
 begin
-  aWriter.Add(PGuid(p)^.ToString);
+  aWriter.Add(PGuid(p)^.ToString(True));
 end;
 
 class function TGuidPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
   Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = tkString) and TryStringToGUID(aReader.AsString, PGuid(p)^);
+  Result := (aReader.TokenKind = tkString) and TGuid.TryParse(aReader.AsString, PGuid(p)^);
 end;
 
 { TOptGuidHelper }
@@ -2047,7 +2047,7 @@ end;
 class procedure TOptGuidHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
 begin
   if POptGuid(p)^.Assigned then
-    aWriter.Add(POptGuid(p)^.Value.ToString)
+    aWriter.Add(POptGuid(p)^.Value.ToString(True))
   else
     aWriter.AddNull;
 end;
@@ -2063,7 +2063,7 @@ begin
     end
   else
     begin
-      Result := (aReader.TokenKind = tkString) and TryStringToGUID(aReader.AsString, g);
+      Result := (aReader.TokenKind = tkString) and TGuid.TryParse(aReader.AsString, g);
       if Result then POptGuid(p)^ := g;
     end;
 end;
