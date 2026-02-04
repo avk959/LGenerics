@@ -191,6 +191,27 @@ type
     class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
   end;
 
+  TDateTimeUtc = record
+  private
+    FValue: TDateTime;
+  public
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+    class operator := (const dtu: TDateTimeUtc): TDateTime; inline;
+    class operator := (const dt: TDateTime): TDateTimeUtc; inline;
+    class operator Explicit(const dt: TDateTime): TDateTimeUtc; inline;
+    class operator Explicit(const dtu: TDateTimeUtc): TDateTime; inline;
+  end;
+  PDateTimeUtc = ^TDateTimeUtc;
+
+  TOptDateTimeUtc = specialize TGOptional<TDateTimeUtc>;
+  POptDateTimeUtc = ^TOptDateTimeUtc;
+
+  TOptDateTimeUtcPdoHelper = type helper for TOptDateTimeUtc
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
   TGuidPdoHelper = type helper(TGGuidHelper) for TGuid
     class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
     class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
@@ -249,7 +270,7 @@ type
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, Variants, lgHashMap, lgStrConst;
+  Math, Variants, lgHashMap, lgJsonTypeDef, lgStrConst;
 
 type
   TRecField = record
@@ -2026,6 +2047,66 @@ begin
     begin
       Result := aReader.TokenKind = tkNumber;
       if Result then POptDouble(p)^ := aReader.AsNumber;
+    end;
+end;
+
+{ TDateTimeUtc }
+
+class procedure TDateTimeUtc.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(UTCToRfc8927TimeStamp(PDateTimeUtc(p)^.FValue));
+end;
+
+class function TDateTimeUtc.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  Assert((aOpts = []) or (aOpts <> [])); //
+  Result := (aReader.TokenKind = tkString) and TryRfc8927TimeStampToUTC(aReader.AsString, PDateTimeUtc(p)^.FValue);
+end;
+
+class operator TDateTimeUtc.:=(const dtu: TDateTimeUtc): TDateTime;
+begin
+  Result := dtu.FValue;
+end;
+
+class operator TDateTimeUtc.:=(const dt: TDateTime): TDateTimeUtc;
+begin
+  Result.FValue := dt;
+end;
+
+class operator TDateTimeUtc.Explicit(const dt: TDateTime): TDateTimeUtc;
+begin
+  Result.FValue := dt;
+end;
+
+class operator TDateTimeUtc.Explicit(const dtu: TDateTimeUtc): TDateTime;
+begin
+  Result := dtu.FValue;
+end;
+
+{ TOptDateTimeUtcPdoHelper }
+
+class procedure TOptDateTimeUtcPdoHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptDateTimeUtc(p)^.Assigned then
+    aWriter.Add(UTCToRfc8927TimeStamp(POptDateTimeUtc(p)^.Value.FValue))
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptDateTimeUtcPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader;
+  const aOpts: TJsonReadOptions): Boolean;
+var
+  dtu: TDateTimeUtc;
+begin
+  if aReader.TokenKind = tkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptDateTimeUtc(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = tkString) and TryRfc8927TimeStampToUTC(aReader.AsString, dtu.FValue);
+      if Result then POptDateTimeUtc(p)^ := dtu;
     end;
 end;
 
