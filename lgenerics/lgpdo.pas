@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Plain Data Objects marshalling.                                         *
 *                                                                           *
-*   Copyright(c) 2022-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2022-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -331,11 +331,18 @@ begin
   end;
 end;
 
-function GetPdoEntry(aTypeInfo: Pointer; out e: TPdoCacheEntry): Boolean;
+function GetGlobPdoEntry(aTypeInfo: Pointer; out e: TPdoCacheEntry): Boolean;
+var
+  pce: PPdoCacheEntry;
 begin
   GlobLock.BeginRead;
   try
-    Result := PdoCache.TryGetValue(aTypeInfo, e);
+    Result := PdoCache.TryGetMutValue(aTypeInfo, pce);
+    if Result then begin
+      e.FieldMap := System.Copy(pce^.FieldMap);
+      e.PdoToJsonProc := pce^.PdoToJsonProc;
+      e.JsonToPdoProc := pce^.JsonToPdoProc;
+    end;
   finally
     GlobLock.EndRead;
   end;
@@ -457,6 +464,25 @@ begin
   Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen, aStrict);
 end;
 
+type
+  TPdoEntryInfo = record
+    Data: TPdoCacheEntry;
+    Tested,
+    Registered: Boolean;
+  end;
+  PPdoEntryInfo      = ^TPdoEntryInfo;
+  TLocalPdoCacheType = specialize TGLiteHashMapLP<Pointer, TPdoEntryInfo, Pointer>;
+  TLocalPdoCache     = TLocalPdoCacheType.TMap;
+
+{$PUSH}{$J-}
+const
+  DEF_ENTRY_INFO: TPdoEntryInfo = (
+    Data: (FieldMap: nil; PdoToJsonProc: nil; JsonToPdoProc: nil);
+    Tested: False; Registered: False
+  );
+{$POP}
+
+
 {$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer; aStrict: Boolean): string;
 var
@@ -525,6 +551,26 @@ var
       Writer.AddTrue
     else
       Writer.AddFalse;
+  end;
+
+var
+  LocalPdoCache: TLocalPdoCache;
+
+  function GetPdoEntry(aTypeInfo: PTypeInfo; out e: TPdoCacheEntry): Boolean;
+  var
+    p: PPdoEntryInfo;
+    pce: TPdoCacheEntry;
+  begin
+    p := LocalPdoCache.GetMutValueDef(aTypeInfo, DEF_ENTRY_INFO);
+    if not p^.Tested then begin
+      if GetGlobPdoEntry(aTypeInfo, pce) then begin
+        p^.Data := pce;
+        p^.Registered := True;
+      end;
+      p^.Tested := True;
+    end;
+    Result := p^.Registered;
+    if Result then e := p^.Data;
   end;
 
   procedure WriteField(aTypeInfo: PTypeInfo; aData: Pointer); forward;
@@ -816,7 +862,6 @@ var
   var
     e: TPdoCacheEntry;
   begin
-    e := DEF_CACHE_ENTRY;
     if GetPdoEntry(aTypeInfo, e) and (e.PdoToJsonProc <> nil) then
       TPdoToJsonProc(e.PdoToJsonProc)(aData, Writer)
     else
@@ -895,12 +940,7 @@ begin
   if aTypeInfo = nil then exit;
   WriterRef.Instance := TJsonStrWriter.Create(aInitWriterLen);
   Writer := WriterRef;
-  GlobLock.BeginRead;
-  try
-    WriteField(aTypeInfo, @aValue);
-  finally
-    GlobLock.EndRead;
-  end;
+  WriteField(aTypeInfo, @aValue);
   Result := Writer.JsonString;
 end;
 {$POP}
@@ -976,19 +1016,6 @@ begin
   finally
     GlobLock.EndWrite;
   end;
-end;
-
-type
-  TRecFieldInfo = record
-    Info: PTypeInfo;
-    Offset: Integer;
-    constructor Make(aInfo: PTypeInfo; aOffset: Integer);
-  end;
-
-constructor TRecFieldInfo.Make(aInfo: PTypeInfo; aOffset: Integer);
-begin
-  Info := aInfo;
-  Offset := aOffset;
 end;
 
 generic procedure PdoLoadJson<T>(var aValue: T; const aJson: string; const aOptions: TJsonReadOptions;
@@ -1169,56 +1196,71 @@ var
       otUQWord: PQWord(aData)^ := Ord(b);
     end;
   end;
+
+var
+  LocalPdoCache: TLocalPdoCache;
+
+  function GetPdoEntry(aTypeInfo: PTypeInfo; out e: TPdoCacheEntry): Boolean;
+  var
+    p: PPdoEntryInfo;
+    pce: TPdoCacheEntry;
+    m: TRecFieldMap;
+    I, J: SizeInt;
+  begin
+    p := LocalPdoCache.GetMutValueDef(aTypeInfo, DEF_ENTRY_INFO);
+    if not p^.Tested then begin
+      if GetGlobPdoEntry(aTypeInfo, pce) then begin
+        if pce.FieldMap <> nil then begin
+          m := pce.FieldMap;
+          J := 0;
+          for I := 0 to System.High(m) do
+            if m[I].Name <> '' then begin
+              if I <> J then m[J] := m[I];
+              if IgnoreNameCase then
+                m[J].Name := LowerCase(m[J].Name);
+              Inc(J);
+            end;
+          System.SetLength(pce.FieldMap, J);
+        end;
+        p^.Data := pce;
+        p^.Registered := True;
+      end;
+      p^.Tested := True;
+    end;
+    Result := p^.Registered;
+    if Result then e := p^.Data;
+  end;
+
+  function IndexOf(const aMap: TRecFieldMap; const aName: string): SizeInt;
+  var
+    I: SizeInt;
+    s: string;
+  begin
+    if IgnoreNameCase then
+      s := LowerCase(aName)
+    else
+      s := aName;
+    for I := 0 to System.High(aMap) do
+      if aMap[I].Name = s then exit(I);
+    Result := NULL_INDEX;
+  end;
+
   procedure ReadDynArray(aTypeInfo: PTypeInfo; aData: Pointer); forward;
   procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
   procedure ReadRecord(aTypeInfo: PTypeInfo; aData: Pointer);
   var
-    Map: TRecFieldMap;
-    procedure CopyFieldMap(const aMap: TRecFieldMap);
-    var
-      I, J: Integer;
-    begin
-      System.SetLength(Map, System.Length(aMap));
-      J := 0;
-      for I := 0 to System.High(aMap) do
-        if aMap[I].Name <> '' then
-          begin
-            Map[J] := aMap[I];
-            if IgnoreNameCase then
-              Map[J].Name := LowerCase(Map[J].Name);
-            Inc(J);
-          end;
-      System.SetLength(Map, J);
-    end;
-    function IndexOf(const aName: string): Integer;
-    var
-      I: Integer;
-      s: string;
-    begin
-      if IgnoreNameCase then
-        s := LowerCase(aName)
-      else
-        s := aName;
-      for I := 0 to System.High(Map) do
-        if Map[I].Name = s then exit(I);
-      Result := NULL_INDEX;
-    end;
-  var
     I: Integer;
     e: TPdoCacheEntry;
   begin
-    e := DEF_CACHE_ENTRY;
-    Map := nil;
     if not GetPdoEntry(aTypeInfo, e) then
       Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
     if e.FieldMap <> nil then begin
       if Reader.TokenKind <> tkObjectBegin then
         Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
-      CopyFieldMap(e.FieldMap);
       repeat
         ReadNext;
         if Reader.TokenKind = tkObjectEnd then break;
-        I := IndexOf(Reader.Name);
+        I := IndexOf(e.FieldMap, Reader.Name);
         if  I < 0 then
           begin
             if not SkipUnknownProps then
@@ -1227,7 +1269,7 @@ var
               Reader.Skip;
           end
         else
-          ReadValue(Map[I].Info, PByte(aData) + Map[I].Offset);
+          ReadValue(e.FieldMap[I].Info, PByte(aData) + e.FieldMap[I].Offset);
       until False;
     end else
       if e.JsonToPdoProc <> nil then begin
@@ -1270,25 +1312,17 @@ var
     end;
   end;
 
-type
-  TFieldsMapType = specialize TGLiteChainHashMap<string, TRecFieldInfo, string>;
-  TRecFieldsMap  = TFieldsMapType.TMap;
-
-  procedure ReadMappedRec(aTypeInfo: PTypeInfo; aData: Pointer; const aMap: TRecFieldsMap);
+  procedure ReadMappedRec(aTypeInfo: PTypeInfo; aData: Pointer; const aMap: TRecFieldMap);
   var
-    rfi: TRecFieldInfo;
-    s: string;
+    I: SizeInt;
   begin
     if Reader.TokenKind <> tkObjectBegin then
       Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
     repeat
       ReadNext;
       if Reader.TokenKind = tkObjectEnd then break;
-      if IgnoreNameCase then
-        s := LowerCase(Reader.Name)
-      else
-        s := Reader.Name;
-      if not aMap.TryGetValue(s, rfi) then
+      I := IndexOf(aMap, Reader.Name);
+      if I < 0 then
         begin
           if not SkipUnknownProps then
             Error(Format(SERecordFieldNotFoundFmt, [aTypeInfo^.Name, Reader.Name]));
@@ -1296,7 +1330,7 @@ type
             Reader.Skip;
         end
       else
-        ReadValue(rfi.Info, PByte(aData) + rfi.Offset);
+        ReadValue(aMap[I].Info, PByte(aData) + aMap[I].Offset);
     until False;
   end;
   procedure ReadArray(aTypeInfo: PTypeInfo; aData: Pointer);
@@ -1306,12 +1340,10 @@ type
     ElType: PTypeInfo;
     Arr: PByte;
     I, Count: SizeInt;
-    Map: TRecFieldsMap;
     e: TPdoCacheEntry;
   begin
     if Reader.TokenKind <> tkArrayBegin then
       Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
-    e := DEF_CACHE_ENTRY;
     pTypData := GetTypeData(aTypeInfo);
     ElType := pTypData^.ArrayData.ElType;
     Count := pTypData^.ArrayData.ElCount;
@@ -1319,21 +1351,11 @@ type
     Arr := aData;
     case ElType^.Kind of
       tkRecord:
-        begin
-          if not(GetPdoEntry(ElType, e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil))) then
-            Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
-          if e.FieldMap <> nil then with e do
-            for I := 0 to System.High(FieldMap) do
-              with FieldMap[I] do
-                if Name <> '' then
-                  if IgnoreNameCase then
-                    Map.Add(LowerCase(Name), TRecFieldInfo.Make(Info, Offset))
-                  else
-                    Map.Add(Name, TRecFieldInfo.Make(Info, Offset));
-        end;
+        if not(GetPdoEntry(ElType, e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil))) then
+          Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
       tkObject:
-          if not(GetPdoEntry(ElType, e)and(e.JsonToPdoProc <> nil)) then
-            Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
+        if not(GetPdoEntry(ElType, e)and(e.JsonToPdoProc <> nil)) then
+          Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
     else
     end;
     I := 0;
@@ -1345,7 +1367,7 @@ type
       case ElType^.Kind of
         tkRecord:
           if e.FieldMap <> nil then
-            ReadMappedRec(ElType, Arr, Map)
+            ReadMappedRec(ElType, Arr, e.FieldMap)
           else
             if not TJsonToPdoProc(e.JsonToPdoProc)(Arr, Reader, aOptions) then
               Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
@@ -1366,7 +1388,6 @@ type
     ElSize: SizeUInt;
     ElType: PTypeInfo;
     I, Size: SizeInt;
-    Map: TRecFieldsMap;
     e: TPdoCacheEntry;
   const
     InitSize = 8;
@@ -1382,24 +1403,13 @@ type
         Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
     ElSize := GetTypeData(aTypeInfo)^.ElSize;
     ElType := GetTypeData(aTypeInfo)^.ElType2;
-    e := DEF_CACHE_ENTRY;
     case ElType^.Kind of
       tkRecord:
-        begin
-          if not(GetPdoEntry(ElType,e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil))) then
-            Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
-          if e.FieldMap <> nil then with e do
-            for I := 0 to System.High(FieldMap) do
-              with FieldMap[I] do
-                if Name <> '' then
-                  if IgnoreNameCase then
-                    Map.Add(LowerCase(Name), TRecFieldInfo.Make(Info, Offset))
-                  else
-                    Map.Add(Name, TRecFieldInfo.Make(Info, Offset));
-        end;
+        if not(GetPdoEntry(ElType,e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil))) then
+          Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
       tkObject:
-          if not(GetPdoEntry(ElType, e) and (e.JsonToPdoProc <> nil)) then
-            Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
+        if not(GetPdoEntry(ElType, e) and (e.JsonToPdoProc <> nil)) then
+          Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
     else
     end;
     I := NULL_INDEX;
@@ -1418,7 +1428,7 @@ type
       case ElType^.Kind of
         tkRecord:
           if e.FieldMap <> nil then
-            ReadMappedRec(ElType, PByte(aData^) + SizeUInt(I) * ElSize, Map)
+            ReadMappedRec(ElType, PByte(aData^) + SizeUInt(I) * ElSize, e.FieldMap)
           else
             if not TJsonToPdoProc(e.JsonToPdoProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions) then
               Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
@@ -1622,7 +1632,6 @@ type
         TObject(aData^) := GetTypeData(aTypeInfo)^.ClassType.Create
       else
         Error(Format(SEUnassignClassInstFmt, [aTypeInfo^.Name]));
-    e := DEF_CACHE_ENTRY;
     if (GetPdoEntry(aTypeInfo, e) and (e.JsonToPdoProc <> nil)) then begin
       if not TJsonToPdoProc(e.JsonToPdoProc)(aData, Reader, aOptions) then
         Error(Format(SECallbackFalseRetFmt, [aTypeInfo^.Name]));
@@ -1641,7 +1650,6 @@ type
   var
     e: TPdoCacheEntry;
   begin
-    e := DEF_CACHE_ENTRY;
     if not(GetPdoEntry(aTypeInfo, e) and (e.JsonToPdoProc <> nil)) then
       Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
     if not TJsonToPdoProc(e.JsonToPdoProc)(aData, Reader, aOptions) then
@@ -1798,17 +1806,12 @@ begin
   SkipUnknownProps := jroSkipUnknownProps in aOptions;
   IgnoreNameCase := jroIgnoreNameCase in aOptions;
   RejectNulls := jroRejectNulls in aOptions;
-  GlobLock.BeginRead;
   try
-    try
-      ReadValue(aTypeInfo, @aValue);
-    except
-      on e: EPdoLoadJson do raise;
-      on e: Exception do
-        raise EPdoLoadJson.Create(Format(SEExceptWhileJsonLoadFmt, [e.ClassName, e.Message]), Reader.Path);
-    end;
-  finally
-    GlobLock.EndRead;
+    ReadValue(aTypeInfo, @aValue);
+  except
+    on e: EPdoLoadJson do raise;
+    on e: Exception do
+      raise EPdoLoadJson.Create(Format(SEExceptWhileJsonLoadFmt, [e.ClassName, e.Message]), Reader.Path);
   end;
 end;
 {$POP}
