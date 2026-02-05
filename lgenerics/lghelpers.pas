@@ -672,7 +672,11 @@ end;
 
 class function TGGuidHelper.CreateV7: TGUID;
 begin
-  Result := CreateV7(SysUtils.NowUtc);
+{$IF FPC_FULLVERSION < 30204}
+  Result := CreateV7(DateUtils.LocalTimeToUniversal(SysUtils.Now));
+{$ELSE}
+  Result := CreateV7(SysUtils.Now);
+{$ENDIF}
 end;
 
 class function TGGuidHelper.CreateV7Ctr(d: TDateTime; aResetCtr: Boolean): TGUID;
@@ -695,7 +699,11 @@ end;
 
 class function TGGuidHelper.CreateV7Ctr(aResetCtr: Boolean): TGUID;
 begin
+{$IF FPC_FULLVERSION < 30204}
+  Result := CreateV7Ctr(DateUtils.LocalTimeToUniversal(SysUtils.Now), aResetCtr);
+{$ELSE}
   Result := CreateV7Ctr(SysUtils.NowUtc, aResetCtr);
+{$ENDIF}
 end;
 
 class function TGGuidHelper.TryParse(p: PAnsiChar; aCount: SizeInt; out aValue: TGUID): Boolean;
