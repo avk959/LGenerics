@@ -350,7 +350,6 @@ const
   DEF_INDENT = 4;
 
 type
-  TJsonReader = class;
   { TJsonNode is the entity used to validate, parse, generate, and navigate a json document;
     the lifetime of all nested elements is determined by the document root node, it is this
     (and only this) node that requires explicit free; current implementation preserves the
