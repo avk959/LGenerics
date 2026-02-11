@@ -1997,9 +1997,10 @@ begin
   if FPtr = nil then
     begin
       System.New(FPtr);
-      FillChar(FPtr^, SizeOf(T), 0);
       if IsManagedType(T) then
-        System.Initialize(FPtr^);
+        System.Initialize(FPtr^)
+      else
+        FillChar(FPtr^, SizeOf(T), 0);
       FOwnsPtr := True;
     end;
   Result := FPtr;
@@ -2086,9 +2087,10 @@ function TGCowPtr<T>.NewInstance: PInstance;
 begin
   System.New(FInstance);
   FInstance^.RefCount := 1;
-  FillChar(FInstance^.Value, SizeOf(T), 0);
   if IsManagedType(T) then
-    System.Initialize(FInstance^.Value);
+    System.Initialize(FInstance^.Value)
+  else
+    FillChar(FInstance^.Value, SizeOf(T), 0);
   Result := FInstance;
 end;
 
