@@ -2993,7 +2993,7 @@ var
   I, J, Mask: SizeInt;
 begin
   I := 0;
-  while I < aOldSize - 3 do
+  while I < aOldSize do
     begin
       FNodes[I  ].Chain := 0;
       FNodes[I+1].Chain := 0;
