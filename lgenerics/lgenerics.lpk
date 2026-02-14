@@ -33,7 +33,7 @@
     </CompilerOptions>
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
-    <Version Minor="5" Release="9"/>
+    <Version Minor="6"/>
     <Files>
       <Item>
         <Filename Value="lgutils.pas"/>
