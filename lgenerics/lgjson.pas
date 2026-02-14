@@ -336,6 +336,9 @@ type
     function  ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
     function  Extract(const aKey: string; out aNode: TJsonNode): Boolean;
     function  ExtractUniq(const aKey: string; out aNode: TJsonNode): Boolean;
+    procedure Sort(aCompare: specialize TGLessCompare<TPair>);
+    procedure Sort(aCompare: specialize TGOnLessCompare<TPair>);
+    procedure Sort(aCompare: specialize TGNestLessCompare<TPair>);
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Pairs[aIndex: SizeInt]: TPair read GetPair; default;
@@ -621,6 +624,11 @@ type
     function  ArraySort(aCmp: specialize TGLessCompare<TJsonNode>): Boolean;
     function  ArraySort(aCmp: specialize TGOnLessCompare<TJsonNode>): Boolean;
     function  ArraySort(aCmp: specialize TGNestLessCompare<TJsonNode>): Boolean;
+  { sorts the instance using the specified comparator and returns True
+    if the instance is an object, otherwise returns False }
+    function  ObjectSort(aCmp: specialize TGLessCompare<TPair>): Boolean;
+    function  ObjectSort(aCmp: specialize TGOnLessCompare<TPair>): Boolean;
+    function  ObjectSort(aCmp: specialize TGNestLessCompare<TPair>): Boolean;
   { if the instance is an array and indices L and R are within the array's range,
     then swaps the elements with indices L and R and returns True; otherwise, returns False }
     function  ArraySwap(L, R: SizeInt): Boolean;
@@ -3397,6 +3405,39 @@ begin
     end;
 end;
 
+procedure TJsObject.Sort(aCompare: specialize TGLessCompare<TPair>);
+  function Cmp(const L, R: TNode): Boolean;
+  begin
+    Result := aCompare(L.Data, R.Data);
+  end;
+begin
+  if IsEmpty then exit;
+  specialize TGNestedArrayHelper<TNode>.Sort(FNodes[1..Count], @Cmp);
+  Rehash(Length);
+end;
+
+procedure TJsObject.Sort(aCompare: specialize TGOnLessCompare<TPair>);
+  function Cmp(const L, R: TNode): Boolean;
+  begin
+    Result := aCompare(L.Data, R.Data);
+  end;
+begin
+  if IsEmpty then exit;
+  specialize TGNestedArrayHelper<TNode>.Sort(FNodes[1..Count], @Cmp);
+  Rehash(Length);
+end;
+
+procedure TJsObject.Sort(aCompare: specialize TGNestLessCompare<TPair>);
+  function Cmp(const L, R: TNode): Boolean;
+  begin
+    Result := aCompare(L.Data, R.Data);
+  end;
+begin
+  if IsEmpty then exit;
+  specialize TGNestedArrayHelper<TNode>.Sort(FNodes[1..Count], @Cmp);
+  Rehash(Length);
+end;
+
 { TJsonNode }
 
 class procedure TJsonNode.MoveNode(aSrc, aDst: TJsonNode);
@@ -5866,6 +5907,24 @@ begin
   Result := IsArray;
   if Result and ArrayPtr^.NonEmpty  then
     specialize TGNestedArrayHelper<TJsonNode>.Sort(ArrayPtr^.List[0..Pred(ArrayPtr^.Count)], aCmp);
+end;
+
+function TJsonNode.ObjectSort(aCmp: specialize TGLessCompare<TPair>): Boolean;
+begin
+  Result := IsObject;
+  if Result then ObjectPtr^.Sort(aCmp);
+end;
+
+function TJsonNode.ObjectSort(aCmp: specialize TGOnLessCompare<TPair>): Boolean;
+begin
+  Result := IsObject;
+  if Result then ObjectPtr^.Sort(aCmp);
+end;
+
+function TJsonNode.ObjectSort(aCmp: specialize TGNestLessCompare<TPair>): Boolean;
+begin
+  Result := IsObject;
+  if Result then ObjectPtr^.Sort(aCmp);
 end;
 
 function TJsonNode.ArraySwap(L, R: SizeInt): Boolean;
