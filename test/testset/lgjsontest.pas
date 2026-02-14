@@ -9,6 +9,7 @@ uses
   Classes, SysUtils, StrUtils, fpcunit, testregistry, FileUtil,
   lgUtils,
   lgHelpers,
+  lgArrayHelpers,
   lgJson,
   lgList;
 
@@ -98,6 +99,7 @@ type
     procedure TestExpractPath;
     procedure TestExpractPath2;
     procedure TestExpractPathPtr;
+    procedure TestSortObject;
   end;
 
   { TTestJsonWriter }
@@ -1879,6 +1881,44 @@ begin
 
   Node.Instance.AsJson := '{"a":42,"b":[null,true,1001],"a":null}';
   AssertFalse(Node.Instance.ExtractPathPtr('/a', n));
+end;
+
+procedure TTestJson.TestSortObject;
+type
+  TPair   = TJsonNode.TPair;
+  THelper = specialize TGNestedArrayHelper<TPair>;
+  TPairArray = array of TPair;
+  function Cmp(const L, R: TJsonNode.TPair): Boolean;
+  begin
+    Result := R.Key < L.Key;
+  end;
+  function GetPairs(aNode: TJsonNode): TPairArray;
+  var
+    I: SizeInt;
+    p: TPair;
+  begin
+    Result := nil;
+    if not aNode.IsObject then exit;
+    I := 0;
+    SetLength(Result, aNode.Count);
+    for p in aNode.Entries do begin
+      Result[I] := p;
+      Inc(I);
+    end;
+  end;
+var
+  Node: specialize TGAutoRef<TJsonNode>;
+const
+  Arr = '["a","b","c","d","e"]';
+  Obj = '{"a":"x","b":42,"c":true,"d":false,"e":null,"f":[],"g":{}}';
+begin
+  AssertFalse(Node.Instance.ObjectSort(@Cmp));
+  Node.Instance.AsJson := Arr;
+  AssertFalse(Node.Instance.ObjectSort(@Cmp));
+  Node.Instance.AsJson := Obj;
+  AssertFalse(THelper.IsStrictAscending(GetPairs(Node.Instance), @Cmp));
+  AssertTrue(Node.Instance.ObjectSort(@Cmp));
+  AssertTrue(THelper.IsStrictAscending(GetPairs(Node.Instance), @Cmp));
 end;
 
 { TTestJsonWriter }
