@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic vector implementations.                                         *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -517,6 +517,37 @@ type
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   { does not checks aIndex range }
     property  UncBits[aIndex: SizeInt]: Boolean read GetBitUncheck write SetBitUncheck;
+  end;
+
+  generic TGLiteSimpleObjList<T: class> = record
+  public
+  type
+    TItem = T;
+    PItem = ^TItem;
+  private
+    FItems: PItem;
+    function  GetLength: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
+    function  GetItem(aIndex: SizeInt): T; inline;
+    function  GetUncItem(aIndex: SizeInt): T; inline;
+    function  GetList: PItem;
+    procedure SetLen(aValue: SizeInt); inline;
+    procedure SetCount(aValue: SizeInt); inline;
+  public
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure Clear;
+    procedure MakeEmpty; inline;
+    procedure Add(aValue: T);
+    function  Insert(aIndex: SizeInt; aValue: T): SizeInt;
+    function  Extract(aIndex: SizeInt; out aValue: T): Boolean;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Items[aIndex: SizeInt]: T read GetItem; default;
+    property  UncItems[aIndex: SizeInt]: T read GetUncItem;
+    property  List: PItem read GetList;
   end;
 
   { TGVectorHelpUtil }
@@ -3475,6 +3506,137 @@ begin
                 LgUtils.PopCntSui(FBits[I+2]);
   else
   end;
+end;
+
+{ TGLiteSimpleObjList }
+
+function TGLiteSimpleObjList.GetLength: SizeInt;
+begin
+  if FItems = nil then exit(0);
+  Result := SizeInt(FItems[0]);
+end;
+
+function TGLiteSimpleObjList.GetCount: SizeInt;
+begin
+  if FItems = nil then exit(0);
+  Result := SizeInt(FItems[1]);
+end;
+
+function TGLiteSimpleObjList.GetCapacity: SizeInt;
+begin
+  if FItems = nil then exit(0);
+  Result := SizeInt(FItems[0]) - 2;
+end;
+
+function TGLiteSimpleObjList.GetItem(aIndex: SizeInt): T;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FItems[aIndex + 2];
+end;
+
+function TGLiteSimpleObjList.GetUncItem(aIndex: SizeInt): T;
+begin
+  Result := FItems[aIndex + 2];
+end;
+
+function TGLiteSimpleObjList.GetList: PItem;
+begin
+  if FItems = nil then exit(nil);
+  Result := @FItems[2];
+end;
+
+procedure TGLiteSimpleObjList.SetLen(aValue: SizeInt);
+begin
+  if FItems <> nil then
+    SizeInt(FItems[0]) := aValue;
+end;
+
+procedure TGLiteSimpleObjList.SetCount(aValue: SizeInt);
+begin
+  if FItems <> nil then
+    SizeInt(FItems[1]) := aValue;
+end;
+
+function TGLiteSimpleObjList.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteSimpleObjList.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGLiteSimpleObjList.EnsureCapacity(aValue: SizeInt);
+var
+  Cnt, NewLen: SizeInt;
+begin
+  if aValue <= Capacity then exit;
+  Cnt := Count;
+  if aValue < DEFAULT_CONTAINER_CAPACITY - 1 then
+    NewLen := DEFAULT_CONTAINER_CAPACITY
+  else
+    NewLen := LgUtils.RoundUpTwoPower(aValue + 2);
+  System.ReAllocMem(FItems, NewLen * SizeOf(T));
+  SetLen(NewLen);
+  SetCount(Cnt);
+end;
+
+procedure TGLiteSimpleObjList.Clear;
+var
+  I: SizeInt;
+begin
+  if FItems = nil then exit;
+  for I := 2 to Succ(Count) do FItems[I].Free;
+  System.FreeMem(FItems);
+  FItems := nil;
+end;
+
+procedure TGLiteSimpleObjList.MakeEmpty;
+begin
+  SetCount(0);
+end;
+
+procedure TGLiteSimpleObjList.Add(aValue: T);
+var
+  Cnt: SizeInt;
+begin
+  Cnt := Succ(Count);
+  EnsureCapacity(Cnt);
+  FItems[Cnt + 1] := aValue;
+  SetCount(Cnt);
+end;
+
+function TGLiteSimpleObjList.Insert(aIndex: SizeInt; aValue: T): SizeInt;
+var
+  Cnt: SizeInt;
+begin
+  Cnt := Count;
+  Result := Math.Min(Math.Max(aIndex, 0), Cnt);
+  aIndex := Result + 2;
+  EnsureCapacity(Cnt + 1);
+  SetCount(Cnt + 1);
+  if aIndex < Cnt + 2 then
+    System.Move((@FItems[aIndex])^, (@FItems[Succ(aIndex)])^, (Cnt + 2 - aIndex)*SizeOf(T));
+  FItems[aIndex] := aValue;
+end;
+
+function TGLiteSimpleObjList.Extract(aIndex: SizeInt; out aValue: T): Boolean;
+var
+  Cnt: SizeInt;
+begin
+  aValue := nil;
+  Cnt := Count;
+  Result := SizeUInt(aIndex) < SizeUInt(Cnt);
+  if Result then
+    begin
+      aIndex += 2;
+      aValue := FItems[aIndex];
+      if aIndex < Succ(Cnt) then
+        System.Move((@FItems[Succ(aIndex)])^, (@FItems[aIndex])^, (Succ(Cnt) - aIndex)*SizeOf(T));
+      SetCount(Pred(Cnt));
+    end;
 end;
 
 { TGVectorHelpUtil }

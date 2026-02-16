@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic sorted list implementation.                                     *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -883,6 +883,98 @@ type
     property  Items[aIndex: SizeInt]: TEntry read GetItem write SetItem; default;
   { does not checks index range }
     property  Mutable[aIndex: SizeInt]: PEntry read GetMutable;
+  end;
+
+
+  generic TGLiteObjHashList<TKey; TValue: class; TKeyEqRel> = record
+  private
+  type
+    PHashList = ^TGLiteObjHashList;
+  public
+  type
+    TPair = specialize TGMapEntry<TKey, TValue>;
+    PPair = ^TPair;
+
+    TNode = record
+    private
+      Chain,
+      Hash,
+      Next: SizeInt;
+    public
+      Data: TPair;
+    end;
+    PNode = ^TNode;
+
+    TEqualEnumerator = record
+    private
+      FList: PHashList;
+      FKey: TKey;
+      FCurrIndex,
+      FHash: SizeInt;
+      FInLoop: Boolean;
+      function  GetCurrent: TPair; inline;
+      procedure Init(const aKey: TKey; aList: PHashList);
+      procedure InitEmpty;
+    public
+      function  MoveNext: Boolean;
+      property  Current: TPair read GetCurrent;
+    end;
+
+  private
+    FNodes: PNode;
+    function  GetLength: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
+    procedure SetLen(aValue: SizeInt); inline;
+    procedure SetCount(aValue: SizeInt); inline;
+    function  GetPair(aIndex: SizeInt): TPair; inline;
+    function  GetUncPair(aIndex: SizeInt): TPair; inline;
+    function  GetUncMutPair(aIndex: SizeInt): PPair; inline;
+    function  GetItem(aIndex: SizeInt): TValue; inline;
+    function  GetUncItem(aIndex: SizeInt): TValue; inline;
+    procedure Rehash(aOldSize: SizeInt);
+    procedure DoAdd(const aKey: TKey; aNode: TValue; aHash: SizeInt);
+    function  DoFind(const aKey: TKey; aHash: SizeInt): SizeInt;
+    function  GetCountOf(const aKey: TKey): SizeInt;
+    function  DoFindUniq(const aKey: TKey): SizeInt; //0: not found; -1: found non-unique
+    procedure RemoveFromChain(aIndex: SizeInt);
+    procedure DoExtract(aIndex: SizeInt; out p: TPair);
+    function  TestHasUniq(aIndex: SizeInt): Boolean;
+    function  GetList: PNode; inline;
+    property  Length: SizeInt read GetLength;
+  public
+    class function GetEmptyEqualKeys: TEqualEnumerator; static; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    function  GetEqualKeys(const aKey: TKey): TEqualEnumerator; inline;
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt);
+    function  Contains(const aKey: TKey): Boolean; inline;
+    function  ContainsUniq(const aKey: TKey): Boolean; inline;
+    function  IndexOf(const aKey: TKey): SizeInt; inline;
+    function  CountOf(const aKey: TKey): SizeInt; inline;
+    procedure Add(const aKey: TKey; aNode: TValue);
+    function  AddUniq(const aKey: TKey; out p: PPair): Boolean;
+    function  Find(const aKey: TKey): PPair;
+    function  Find(const aKey: TKey; aHash: SizeInt): SizeInt; inline;
+    function  FindOrAdd(const aKey: TKey; out p: PPair): Boolean;
+    function  FindUniq(const aKey: TKey): PPair;
+    function  HasUniqKey(aIndex: SizeInt): Boolean; inline;
+    function  Extract(aIndex: SizeInt; out aNode: TValue): Boolean;
+    function  ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
+    function  Extract(const aKey: TKey; out aNode: TValue): Boolean;
+    function  ExtractUniq(const aKey: TKey; out aNode: TValue): Boolean;
+    procedure Sort(aCompare: specialize TGLessCompare<TPair>);
+    procedure Sort(aCompare: specialize TGOnLessCompare<TPair>);
+    procedure Sort(aCompare: specialize TGNestLessCompare<TPair>);
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Pairs[aIndex: SizeInt]: TPair read GetPair; default;
+    property  UncPairs[aIndex: SizeInt]: TPair read GetUncPair;
+    property  UncMutPairs[aIndex: SizeInt]: PPair read GetUncMutPair;
+    property  Items[aIndex: SizeInt]: TValue read GetItem;
+    property  UncItems[aIndex: SizeInt]: TValue read GetUncItem;
+    property  List: PNode read GetList;
   end;
 
 implementation
@@ -4636,6 +4728,509 @@ begin
     Result := DoRemove(aKey, e)
   else
     Result := False;
+end;
+
+{ TGLiteObjHashList.TEqualEnumerator }
+
+function TGLiteObjHashList.TEqualEnumerator.GetCurrent: TPair;
+begin
+  Result := FList^.FNodes[FCurrIndex].Data;
+end;
+
+procedure TGLiteObjHashList.TEqualEnumerator.Init(const aKey: TKey; aList: PHashList);
+begin
+  FKey := aKey;
+  FList := aList;
+  FCurrIndex := 0;
+  FHash := TKeyEqRel.HashCode(aKey);
+  FInLoop := False;
+end;
+
+procedure TGLiteObjHashList.TEqualEnumerator.InitEmpty;
+begin
+  FKey := Default(TKey);
+  FList := nil;
+  FCurrIndex := 0;
+  FHash := 0;
+  FInLoop := True;
+end;
+
+function TGLiteObjHashList.TEqualEnumerator.MoveNext: Boolean;
+var
+  I: SizeInt;
+begin
+  if FInLoop then
+    begin
+      if FCurrIndex = 0 then exit(False);
+      with FList^ do
+        begin
+          I := FNodes[FCurrIndex].Next;
+          while I <> 0 do
+            begin
+              if(FNodes[I].Hash = FHash) and TKeyEqRel.Equal(FNodes[I].Data.Key, FKey) then break;
+              I := FNodes[I].Next;
+            end;
+        end;
+      FCurrIndex := I;
+    end
+  else
+    begin
+      if (FList = nil) or (FList^.GetCount = 0) then exit(False);
+      FCurrIndex := FList^.Find(FKey, FHash)+1;
+      FInLoop := True;
+    end;
+  Result := FCurrIndex <> 0;
+end;
+
+{ TGLiteObjHashList }
+
+function TGLiteObjHashList.GetLength: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Next;
+end;
+
+function TGLiteObjHashList.GetCount: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Hash;
+end;
+
+function TGLiteObjHashList.GetCapacity: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := Pred(FNodes[0].Next);
+end;
+
+procedure TGLiteObjHashList.SetLen(aValue: SizeInt);
+begin
+  if FNodes <> nil then
+    FNodes[0].Next := aValue;
+end;
+
+procedure TGLiteObjHashList.SetCount(aValue: SizeInt);
+begin
+  if FNodes <> nil then
+    FNodes[0].Hash := aValue;
+end;
+
+function TGLiteObjHashList.GetPair(aIndex: SizeInt): TPair;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FNodes[Succ(aIndex)].Data;
+end;
+
+function TGLiteObjHashList.GetUncPair(aIndex: SizeInt): TPair;
+begin
+  Result := FNodes[Succ(aIndex)].Data;
+end;
+
+function TGLiteObjHashList.GetUncMutPair(aIndex: SizeInt): PPair;
+begin
+  Result := @FNodes[Succ(aIndex)].Data;
+end;
+
+function TGLiteObjHashList.GetItem(aIndex: SizeInt): TValue;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := FNodes[Succ(aIndex)].Data.Value;
+end;
+
+function TGLiteObjHashList.GetUncItem(aIndex: SizeInt): TValue;
+begin
+  Result := FNodes[Succ(aIndex)].Data.Value;
+end;
+
+procedure TGLiteObjHashList.Rehash(aOldSize: SizeInt);
+var
+  I, J, Mask: SizeInt;
+begin
+  I := 0;
+  while I < aOldSize do
+    begin
+      FNodes[I  ].Chain := 0;
+      FNodes[I+1].Chain := 0;
+      FNodes[I+2].Chain := 0;
+      FNodes[I+3].Chain := 0;
+      I += 4;
+    end;
+  Mask := Pred(Length);
+  for I := 1 to Count do
+    begin
+      J := FNodes[I].Hash and Mask;
+      FNodes[I].Next := FNodes[J].Chain;
+      FNodes[J].Chain := I;
+    end;
+end;
+
+procedure TGLiteObjHashList.DoAdd(const aKey: TKey; aNode: TValue; aHash: SizeInt);
+var
+  NodeIdx, ChainIdx: SizeInt;
+begin
+  ChainIdx := aHash and Pred(Length);
+  NodeIdx := Succ(Count);
+  SetCount(NodeIdx);
+  with FNodes[NodeIdx] do
+    begin
+      Hash := aHash;
+      Next := FNodes[ChainIdx].Chain;
+      Data.Key := aKey;
+      Data.Value := aNode;
+    end;
+  FNodes[ChainIdx].Chain := NodeIdx;
+end;
+
+function TGLiteObjHashList.DoFind(const aKey: TKey; aHash: SizeInt): SizeInt;
+begin
+  Result := FNodes[aHash and Pred(Length)].Chain;
+  while Result <> 0 do
+    begin
+      if (FNodes[Result].Hash = aHash) and TKeyEqRel.Equal(FNodes[Result].Data.Key, aKey) then
+        exit;
+      Result := FNodes[Result].Next;
+    end;
+end;
+
+function TGLiteObjHashList.GetCountOf(const aKey: TKey): SizeInt;
+var
+  I, h: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FNodes[h and Pred(Length)].Chain;
+  Result := 0;
+  while I <> 0 do
+    begin
+      if (FNodes[I].Hash = h) and TKeyEqRel.Equal(FNodes[I].Data.Key, aKey) then
+        Inc(Result);
+      I := FNodes[I].Next;
+    end;
+end;
+
+function TGLiteObjHashList.DoFindUniq(const aKey: TKey): SizeInt;
+var
+  I, h: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FNodes[h and Pred(Length)].Chain;
+  Result := 0;
+  while I <> 0 do
+    begin
+      if (FNodes[I].Hash = h) and TKeyEqRel.Equal(FNodes[I].Data.Key, aKey) then
+        begin
+          if Result <> 0 then exit(NULL_INDEX);
+          Result := I;
+        end;
+      I := FNodes[I].Next;
+    end;
+end;
+
+procedure TGLiteObjHashList.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodes[aIndex].Hash and Pred(Length);
+  Curr := FNodes[I].Chain;
+  Prev := 0;
+  while Curr <> 0 do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev = 0 then
+            FNodes[I].Chain := FNodes[Curr].Next
+          else
+            FNodes[Prev].Next := FNodes[Curr].Next;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodes[Curr].Next;
+    end;
+end;
+
+procedure TGLiteObjHashList.DoExtract(aIndex: SizeInt; out p: TPair);
+var
+  Cnt: SizeInt;
+begin
+  p := FNodes[aIndex].Data;
+  with FNodes[aIndex].Data do
+    begin
+      Key := '';
+      Value := nil;
+    end;
+  Cnt := Count;
+  SetCount(Pred(Cnt));
+  if aIndex < Cnt then
+    begin
+      System.Move(FNodes[Succ(aIndex)], FNodes[aIndex], (Cnt - aIndex)*SizeOf(TNode));
+      System.FillChar(FNodes[Cnt], SizeOf(TNode), 0);
+      Rehash(Length);
+    end
+  else
+    RemoveFromChain(aIndex);
+end;
+
+function TGLiteObjHashList.TestHasUniq(aIndex: SizeInt): Boolean;
+var
+  I, h, Cnt: SizeInt;
+  k: ^TKey;
+begin
+  h := FNodes[aIndex].Hash;
+  k := @FNodes[aIndex].Data.Key;
+  I := FNodes[h and Pred(Length)].Chain;
+  Cnt := 0;
+  while I <> 0 do
+    begin
+      if (I = aIndex) or ((FNodes[I].Hash = h) and (FNodes[I].Data.Key = k^)) then
+        begin
+          if Cnt = 1 then exit(False);
+          Inc(Cnt);
+        end;
+      I := FNodes[I].Next;
+    end;
+  Result := True;
+end;
+
+function TGLiteObjHashList.GetList: PNode;
+begin
+  if FNodes = nil then exit(nil);
+  Result := @FNodes[1];
+end;
+
+class function TGLiteObjHashList.GetEmptyEqualKeys: TEqualEnumerator;
+begin
+  Result.InitEmpty;
+end;
+
+function TGLiteObjHashList.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteObjHashList.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+function TGLiteObjHashList.GetEqualKeys(const aKey: TKey): TEqualEnumerator;
+begin
+  Result.Init(aKey, @Self);
+end;
+
+procedure TGLiteObjHashList.Clear;
+var
+  I: SizeInt;
+begin
+  if FNodes = nil then exit;
+  for I := 1 to Count do
+    with FNodes[I].Data do
+      begin
+        System.Finalize(Key);
+        Value.Free;
+      end;
+  System.FreeMem(FNodes);
+  FNodes := nil;
+end;
+
+procedure TGLiteObjHashList.EnsureCapacity(aValue: SizeInt);
+var
+  OldSize, NewSize: SizeInt;
+begin
+  if aValue > Capacity then
+    begin
+      OldSize := Length;
+      if aValue < DEFAULT_CONTAINER_CAPACITY then
+        NewSize := DEFAULT_CONTAINER_CAPACITY
+      else
+        NewSize := LgUtils.RoundUpTwoPower(Succ(aValue));
+      System.ReAllocMem(FNodes, NewSize * SizeOf(TNode));
+      System.FillChar(FNodes[OldSize], (NewSize - OldSize) * SizeOf(TNode), 0);
+      SetLen(NewSize);
+      if OldSize <> 0 then Rehash(OldSize);
+    end;
+end;
+
+function TGLiteObjHashList.Contains(const aKey: TKey): Boolean;
+begin
+  if IsEmpty then exit(False);
+  Result := DoFind(aKey, TKeyEqRel.HashCode(aKey)) <> 0;
+end;
+
+function TGLiteObjHashList.ContainsUniq(const aKey: TKey): Boolean;
+begin
+  if IsEmpty then exit(False);
+  Result := DoFindUniq(aKey) > 0;
+end;
+
+function TGLiteObjHashList.IndexOf(const aKey: TKey): SizeInt;
+begin
+  if IsEmpty then exit(NULL_INDEX);
+  Result := Pred(DoFind(aKey, TKeyEqRel.HashCode(aKey)));
+end;
+
+function TGLiteObjHashList.CountOf(const aKey: TKey): SizeInt;
+begin
+  if IsEmpty then exit(0);
+  Result := GetCountOf(aKey);
+end;
+
+procedure TGLiteObjHashList.Add(const aKey: TKey; aNode: TValue);
+begin
+  EnsureCapacity(Succ(Count));
+  DoAdd(aKey, aNode, TKeyEqRel.HashCode(aKey));
+end;
+
+function TGLiteObjHashList.AddUniq(const aKey: TKey; out p: PPair): Boolean;
+var
+  h: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  p := nil;
+  if (Count <> 0) and (DoFind(aKey, h) <> 0) then exit(False);
+  EnsureCapacity(Succ(Count));
+  DoAdd(aKey, nil, h);
+  p := @FNodes[Count].Data;
+  Result := True;
+end;
+
+function TGLiteObjHashList.Find(const aKey: TKey): PPair;
+var
+  I: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      I := DoFind(aKey, TKeyEqRel.HashCode(aKey));
+      if I <> 0 then exit(@FNodes[I].Data);
+    end;
+  Result := nil;
+end;
+
+function TGLiteObjHashList.Find(const aKey: TKey; aHash: SizeInt): SizeInt;
+begin
+  if IsEmpty then exit(NULL_INDEX);
+  Result := Pred(DoFind(aKey, aHash));
+end;
+
+function TGLiteObjHashList.FindOrAdd(const aKey: TKey; out p: PPair): Boolean;
+var
+  h, I: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  if Count <> 0 then
+    begin
+      I := DoFind(aKey, h);
+      if I <> 0 then
+        begin
+          p := @FNodes[I].Data;
+          exit(True);
+        end;
+    end;
+  EnsureCapacity(Succ(Count));
+  DoAdd(aKey, nil, h);
+  p := @FNodes[Count].Data;
+  Result := False;
+end;
+
+function TGLiteObjHashList.FindUniq(const aKey: TKey): PPair;
+var
+  I: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      I := DoFindUniq(aKey);
+      if I > 0 then exit(@FNodes[I].Data);
+    end;
+  Result := nil;
+end;
+
+function TGLiteObjHashList.HasUniqKey(aIndex: SizeInt): Boolean;
+begin
+  if SizeUInt(aIndex) < SizeUInt(Count) then exit(TestHasUniq(Succ(aIndex)));
+  Result := False;
+end;
+
+function TGLiteObjHashList.Extract(aIndex: SizeInt; out aNode: TValue): Boolean;
+var
+  p: TPair;
+begin
+  aNode := nil;
+  Result := SizeUInt(aIndex) < SizeUInt(Count);
+  if Result then
+    begin
+      DoExtract(Succ(aIndex), p);
+      aNode := p.Value;
+    end;
+end;
+
+function TGLiteObjHashList.ExtractPair(aIndex: SizeInt; out p: TPair): Boolean;
+begin
+  Result := SizeUInt(aIndex) < SizeUInt(Count);
+  if Result then DoExtract(Succ(aIndex), p);
+end;
+
+function TGLiteObjHashList.Extract(const aKey: TKey; out aNode: TValue): Boolean;
+var
+  I: SizeInt;
+  p: TPair;
+begin
+  aNode := nil;
+  if IsEmpty then exit(False);
+  I := DoFind(aKey, TKeyEqRel.HashCode(aKey));
+  Result := I <> 0;
+  if Result then
+    begin
+      DoExtract(I, p);
+      aNode := p.Value;
+    end;
+end;
+
+function TGLiteObjHashList.ExtractUniq(const aKey: TKey; out aNode: TValue): Boolean;
+var
+  I: SizeInt;
+  p: TPair;
+begin
+  aNode := nil;
+  if IsEmpty then exit(False);
+  I := DoFindUniq(aKey);
+  Result := I > 0;
+  if Result then
+    begin
+      DoExtract(I, p);
+      aNode := p.Value;
+    end;
+end;
+
+procedure TGLiteObjHashList.Sort(aCompare: specialize TGLessCompare<TPair>);
+  function Cmp(const L, R: TNode): Boolean;
+  begin
+    Result := aCompare(L.Data, R.Data);
+  end;
+begin
+  if IsEmpty then exit;
+  specialize TGNestedArrayHelper<TNode>.Sort(FNodes[1..Count], @Cmp);
+  Rehash(Length);
+end;
+
+procedure TGLiteObjHashList.Sort(aCompare: specialize TGOnLessCompare<TPair>);
+  function Cmp(const L, R: TNode): Boolean;
+  begin
+    Result := aCompare(L.Data, R.Data);
+  end;
+begin
+  if IsEmpty then exit;
+  specialize TGNestedArrayHelper<TNode>.Sort(FNodes[1..Count], @Cmp);
+  Rehash(Length);
+end;
+
+procedure TGLiteObjHashList.Sort(aCompare: specialize TGNestLessCompare<TPair>);
+  function Cmp(const L, R: TNode): Boolean;
+  begin
+    Result := aCompare(L.Data, R.Data);
+  end;
+begin
+  if IsEmpty then exit;
+  specialize TGNestedArrayHelper<TNode>.Sort(FNodes[1..Count], @Cmp);
+  Rehash(Length);
 end;
 
 end.
