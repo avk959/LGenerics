@@ -993,16 +993,17 @@ type
     TReadState = (rsStart, rsGo, rsEOF, rsError);
 
     TTokenKind = (
-      tkNone,
-      tkNull,
-      tkFalse,
-      tkTrue,
-      tkNumber,
-      tkString,
-      tkArrayBegin,
-      tkObjectBegin,
-      tkArrayEnd,
-      tkObjectEnd);
+      rtkNone,
+      rtkNull,
+      rtkFalse,
+      rtkTrue,
+      rtkNumber,
+      rtkString,
+      rtkArrayBegin,
+      rtkObjectBegin,
+      rtkArrayEnd,
+      rtkObjectEnd
+    );
 
     TStructKind = (skNone, skArray, skObject);
   private
@@ -9618,7 +9619,7 @@ function TJsonReader.NullValue: Boolean;
 begin
   UpdateArray;
   FState := TReadEnv.OK;
-  FToken := tkNull;
+  FToken := rtkNull;
   Result := True;
 end;
 
@@ -9626,7 +9627,7 @@ function TJsonReader.FalseValue: Boolean;
 begin
   FBoolValue := False;
   UpdateArray;
-  FToken := tkFalse;
+  FToken := rtkFalse;
   FState := TReadEnv.OK;
   Result := True;
 end;
@@ -9636,7 +9637,7 @@ begin
   FBoolValue := True;
   UpdateArray;
   FState := TReadEnv.OK;
-  FToken := tkTrue;
+  FToken := rtkTrue;
   Result := True;
 end;
 
@@ -9651,7 +9652,7 @@ begin
       FNumValue := d;
     end;
   UpdateArray;
-  FToken := tkNumber;
+  FToken := rtkNumber;
   Result := True;
 end;
 
@@ -9684,7 +9685,7 @@ begin
   if ReadMode then
     FStrValue := FsBuilder.ToDecodeString;
   UpdateArray;
-  FToken := tkString;
+  FToken := rtkString;
   FState := TReadEnv.OK;
   Result := True;
 end;
@@ -9708,7 +9709,7 @@ begin
     exit(False);
   end;
   Inc(FStackTop);
-  FToken := tkArrayBegin;
+  FToken := rtkArrayBegin;
   FState := TReadEnv.AR;
   Result := True;
 end;
@@ -9732,7 +9733,7 @@ begin
     exit(False);
   end;
   Inc(FStackTop);
-  FToken := tkObjectBegin;
+  FToken := rtkObjectBegin;
   FState := TReadEnv.OB;
   Result := True;
 end;
@@ -9742,7 +9743,7 @@ begin
   if FStack[Depth].Mode <> pmArray then
     exit(False);
   Dec(FStackTop);
-  FToken := tkArrayEnd;
+  FToken := rtkArrayEnd;
   UpdateArray;
   FState := TReadEnv.OK;
   Result := True;
@@ -9754,7 +9755,7 @@ begin
     exit(False);
   if not NumValue then
     exit(False);
-  FDeferToken := tkArrayEnd;
+  FDeferToken := rtkArrayEnd;
   FState := TReadEnv.OK;
   Result := True;
 end;
@@ -9764,7 +9765,7 @@ begin
   if FStack[Depth].Mode <> pmObject then
     exit(False);
   Dec(FStackTop);
-  FToken := tkObjectEnd;
+  FToken := rtkObjectEnd;
   UpdateArray;
   FState := TReadEnv.OK;
   Result := True;
@@ -9776,7 +9777,7 @@ begin
     exit(False);
   if not NumValue then
     exit(False);
-  FDeferToken := tkObjectEnd;
+  FDeferToken := rtkObjectEnd;
   FState := TReadEnv.OK;
   Result := True;
 end;
@@ -9785,7 +9786,7 @@ function TJsonReader.ObjectEndOb: Boolean;
 begin
   if FStack[Depth].Mode <> pmKey then
     exit(False);
-  FToken := tkObjectEnd;
+  FToken := rtkObjectEnd;
   Dec(FStackTop);
   UpdateArray;
   FState := TReadEnv.OK;
@@ -9795,12 +9796,12 @@ end;
 function TJsonReader.DeferredEnd: Boolean;
 begin
   case DeferToken of
-    tkArrayEnd:  Result := ArrayEnd;
-    tkObjectEnd: Result := ObjectEnd;
+    rtkArrayEnd:  Result := ArrayEnd;
+    rtkObjectEnd: Result := ObjectEnd;
   else
     Result := False;
   end;
-  FDeferToken := tkNone;
+  FDeferToken := rtkNone;
 end;
 
 function TJsonReader.ReadFirstChunk: TReadState;
@@ -9851,7 +9852,7 @@ var
   c: AnsiChar;
 begin
   repeat
-    if DeferToken <> tkNone then exit(DeferredEnd);
+    if DeferToken <> rtkNone then exit(DeferredEnd);
     if (FPosition >= Pred(FByteCount)) and (GetNextChunk > rsGo) then
       exit(False);
     Inc(FPosition);
@@ -9910,7 +9911,7 @@ end;
 
 function TJsonReader.GetIsNull: Boolean;
 begin
-  Result := FToken = tkNull;
+  Result := FToken = rtkNull;
 end;
 
 function TJsonReader.GetAsBoolean: Boolean;
@@ -9931,10 +9932,10 @@ end;
 function TJsonReader.GetToString: string;
 begin
   case TokenKind of
-    tkFalse:  Result := JS_FALSE;
-    tkTrue:   Result := JS_TRUE;
-    tkNumber: Result := Double2StrDef(FNumValue);
-    tkString: Result := FStrValue;
+    rtkFalse:  Result := JS_FALSE;
+    rtkTrue:   Result := JS_TRUE;
+    rtkNumber: Result := Double2StrDef(FNumValue);
+    rtkString: Result := FStrValue;
   else
     Result := JS_NULL;
   end;
@@ -9971,7 +9972,7 @@ begin
       FsbHelp.Append('/');
       Convert(FStack[I].Path);
     end;
-  if TokenKind in [tkNull, tkFalse, tkTrue, tkNumber, tkString] then
+  if TokenKind in [rtkNull, rtkFalse, rtkTrue, rtkNumber, rtkString] then
     begin
       FsbHelp.Append('/');
       Convert(Name);
@@ -10004,17 +10005,17 @@ end;
 
 class function TJsonReader.IsStartToken(aToken: TTokenKind): Boolean;
 begin
-  Result := aToken in [tkArrayBegin, tkObjectBegin];
+  Result := aToken in [rtkArrayBegin, rtkObjectBegin];
 end;
 
 class function TJsonReader.IsEndToken(aToken: TTokenKind): Boolean;
 begin
-  Result := aToken in [tkArrayEnd, tkObjectEnd];
+  Result := aToken in [rtkArrayEnd, rtkObjectEnd];
 end;
 
 class function TJsonReader.IsScalarToken(aToken: TTokenKind): Boolean;
 begin
-  Result := aToken in [tkNull, tkFalse, tkTrue, tkNumber, tkString];
+  Result := aToken in [rtkNull, rtkFalse, rtkTrue, rtkNumber, rtkString];
 end;
 
 constructor TJsonReader.Create(aStream: TStream; aBufSize: SizeInt; aMaxDepth: SizeInt; aSkipBom: Boolean);
@@ -10099,11 +10100,11 @@ begin
   OldDepth := Depth;
   while Read do
     case TokenKind of
-      tkNone,
-      tkArrayBegin,
-      tkObjectBegin: ;
-      tkArrayEnd,
-      tkObjectEnd:
+      rtkNone,
+      rtkArrayBegin,
+      rtkObjectBegin: ;
+      rtkArrayEnd,
+      rtkObjectEnd:
         if Depth < OldDepth then
           break;
     else
@@ -10120,11 +10121,11 @@ begin
   OldDepth := Depth;
   while Read do
     case TokenKind of
-      tkNone,
-      tkArrayBegin,
-      tkObjectBegin: ;
-      tkArrayEnd,
-      tkObjectEnd:
+      rtkNone,
+      rtkArrayBegin,
+      rtkObjectBegin: ;
+      rtkArrayEnd,
+      rtkObjectEnd:
         if Depth < OldDepth then
           break;
     else
@@ -10140,13 +10141,13 @@ begin
   OldDepth := Depth;
   while Read do
     case TokenKind of
-      tkNone,
-      tkArrayEnd,
-      tkObjectEnd:
+      rtkNone,
+      rtkArrayEnd,
+      rtkObjectEnd:
         if Depth < OldDepth then
           break;
-      tkArrayBegin,
-      tkObjectBegin:
+      rtkArrayBegin,
+      rtkObjectBegin:
         if (aOnStruct <> nil) and not aOnStruct(Self) then
           exit;
     else
@@ -10162,13 +10163,13 @@ begin
   OldDepth := Depth;
   while Read do
     case TokenKind of
-      tkNone,
-      tkArrayEnd,
-      tkObjectEnd:
+      rtkNone,
+      rtkArrayEnd,
+      rtkObjectEnd:
         if Depth < OldDepth then
           break;
-      tkArrayBegin,
-      tkObjectBegin:
+      rtkArrayBegin,
+      rtkObjectBegin:
         if (aOnStruct <> nil) and not aOnStruct(Self) then
           exit;
     else
@@ -10184,7 +10185,7 @@ begin
   if not IsStartToken(TokenKind) then
     exit(False);
   FsbHelp.MakeEmpty;
-  if TokenKind = tkArrayBegin then
+  if TokenKind = rtkArrayBegin then
     FsbHelp.Append(chOpenSqrBr)
   else
     FsbHelp.Append(chOpenCurBr);
@@ -10230,13 +10231,13 @@ begin
       end;
     skObject:
       begin
-        if TokenKind = tkObjectBegin then
+        if TokenKind = rtkObjectBegin then
           Read;
         repeat
           if Name = aKey then exit(True);
           if IsStartToken(TokenKind) then
             Skip;
-        until not Read or (TokenKind = tkObjectEnd);
+        until not Read or (TokenKind = rtkObjectEnd);
         Result := False;
       end;
   else
