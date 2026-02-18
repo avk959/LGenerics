@@ -1063,8 +1063,8 @@ var
   var
     I: Int64;
   begin
-    if Reader.TokenKind <> tkNumber then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkNumber), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkNumber then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkNumber), TokenKindName(Reader.TokenKind)]));
     if not Double.IsExactInt(Reader.AsNumber, I) then
       Error(Format(SECantAssignJsonNumFmt, [TypeKindName(aTypeInfo^.Kind)]));
     case GetTypeData(aTypeInfo)^.OrdType of
@@ -1118,8 +1118,8 @@ var
     I: Int64;
     d: Double;
   begin
-    if Reader.TokenKind <> tkNumber then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkNumber), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkNumber then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkNumber), TokenKindName(Reader.TokenKind)]));
     d := Reader.AsNumber;
     case GetTypeData(aTypeInfo)^.FloatType of
       ftSingle:
@@ -1148,8 +1148,8 @@ var
   var
     s: string;
   begin
-    if Reader.TokenKind <> tkString then
-      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkString), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkString then
+      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkString), TokenKindName(Reader.TokenKind)]));
     s := Reader.AsString;
     if System.Length(s) <> 1 then
       Error(Format(SEUnexpectJsonStrLenFmt, [System.Length(s)]));
@@ -1160,8 +1160,8 @@ var
     s: string;
     I: Integer;
   begin
-    if Reader.TokenKind <> tkString then
-      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkString), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkString then
+      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkString), TokenKindName(Reader.TokenKind)]));
     s := Reader.AsString;
     I := GetEnumValue(aTypeInfo, s);
     if I < 0 then
@@ -1181,10 +1181,10 @@ var
   var
     b: Boolean;
   begin
-    if not(Reader.TokenKind in [tkFalse, tkTrue]) then
-      Error(Format(SEUnexpectJsonTokenFmt2, [TokenKindName(tkFalse), TokenKindName(tkTrue),
+    if not(Reader.TokenKind in [rtkFalse, rtkTrue]) then
+      Error(Format(SEUnexpectJsonTokenFmt2, [TokenKindName(rtkFalse), TokenKindName(rtkTrue),
                    TokenKindName(Reader.TokenKind)]));
-    b := Reader.TokenKind = tkTrue;
+    b := Reader.TokenKind = rtkTrue;
     case GetTypeData(aTypeInfo)^.OrdType of
       otSByte:  PShortInt(aData)^ := Ord(b);
       otUByte:  PByte(aData)^ := Ord(b);
@@ -1255,11 +1255,11 @@ var
     if not GetPdoEntry(aTypeInfo, e) then
       Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
     if e.FieldMap <> nil then begin
-      if Reader.TokenKind <> tkObjectBegin then
-        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
+      if Reader.TokenKind <> rtkObjectBegin then
+        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkObjectBegin), TokenKindName(Reader.TokenKind)]));
       repeat
         ReadNext;
-        if Reader.TokenKind = tkObjectEnd then break;
+        if Reader.TokenKind = rtkObjectEnd then break;
         I := IndexOf(e.FieldMap, Reader.Name);
         if  I < 0 then
           begin
@@ -1285,14 +1285,14 @@ var
     d: Double;
   begin
     case Reader.TokenKind of
-      tkNull:
+      rtkNull:
         begin
           CheckNull;
           Variant(aData^) := Null;
         end;
-      tkFalse: Variant(aData^) := False;
-      tkTrue: Variant(aData^) := True;
-      tkNumber:
+      rtkFalse: Variant(aData^) := False;
+      rtkTrue: Variant(aData^) := True;
+      rtkNumber:
         begin
           d := Reader.AsNumber;
           if Double.IsExactInt(d, I) then
@@ -1300,8 +1300,8 @@ var
           else
             Variant(aData^) := d;
         end;
-      tkString: Variant(aData^) := Reader.AsString;
-      tkArrayBegin:
+      rtkString: Variant(aData^) := Reader.AsString;
+      rtkArrayBegin:
         begin
           a := nil;
           ReadDynArray(TypeInfo(a), @a);
@@ -1316,11 +1316,11 @@ var
   var
     I: SizeInt;
   begin
-    if Reader.TokenKind <> tkObjectBegin then
-      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkObjectBegin then
+      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkObjectBegin), TokenKindName(Reader.TokenKind)]));
     repeat
       ReadNext;
-      if Reader.TokenKind = tkObjectEnd then break;
+      if Reader.TokenKind = rtkObjectEnd then break;
       I := IndexOf(aMap, Reader.Name);
       if I < 0 then
         begin
@@ -1342,8 +1342,8 @@ var
     I, Count: SizeInt;
     e: TPdoCacheEntry;
   begin
-    if Reader.TokenKind <> tkArrayBegin then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkArrayBegin then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
     pTypData := GetTypeData(aTypeInfo);
     ElType := pTypData^.ArrayData.ElType;
     Count := pTypData^.ArrayData.ElCount;
@@ -1361,7 +1361,7 @@ var
     I := 0;
     repeat
       ReadNext;
-      if Reader.TokenKind = tkArrayEnd then break;
+      if Reader.TokenKind = rtkArrayEnd then break;
       if I = Count then
         Error(Format(SEJsonArraySizeNotFitFmt, [Count]));
       case ElType^.Kind of
@@ -1392,15 +1392,15 @@ var
   const
     InitSize = 8;
   begin
-    if Reader.TokenKind <> tkArrayBegin then
-      if Reader.TokenKind = tkNull then
+    if Reader.TokenKind <> rtkArrayBegin then
+      if Reader.TokenKind = rtkNull then
         begin
           CheckNull;
           DynArrayClear(Pointer(aData^), aTypeInfo);
           exit;
         end
       else
-        Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+        Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
     ElSize := GetTypeData(aTypeInfo)^.ElSize;
     ElType := GetTypeData(aTypeInfo)^.ElType2;
     case ElType^.Kind of
@@ -1416,7 +1416,7 @@ var
     repeat
       ReadNext;
       Inc(I);
-      if Reader.TokenKind = tkArrayEnd then break;
+      if Reader.TokenKind = rtkArrayEnd then break;
       if I = DynArraySize(Pointer(aData^)) then
         begin
           if I < InitSize then
@@ -1520,11 +1520,11 @@ type
     pInfo: PPropInfo;
     s: string;
   begin
-    if Reader.TokenKind <> tkObjectBegin then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkObjectBegin then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkObjectBegin), TokenKindName(Reader.TokenKind)]));
     repeat
       ReadNext;
-      if Reader.TokenKind = tkObjectEnd then break;
+      if Reader.TokenKind = rtkObjectEnd then break;
       if IgnoreNameCase then
         s := LowerCase(Reader.Name)
       else
@@ -1568,8 +1568,8 @@ type
   var
     Map: TPropMap;
   begin
-    if Reader.TokenKind <> tkObjectBegin then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkObjectBegin), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkObjectBegin then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkObjectBegin), TokenKindName(Reader.TokenKind)]));
     GetPropMap(o, Map);
     ReadMappedClass(o, Map);
   end;
@@ -1589,13 +1589,13 @@ type
   var
     Map: TPropMap;
   begin
-    if Reader.TokenKind <> tkArrayBegin then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkArrayBegin then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
     aCol.Clear;
     GetPropMap(aCol.ItemClass, Map);
     repeat
       ReadNext;
-      if Reader.TokenKind = tkArrayEnd then break;
+      if Reader.TokenKind = rtkArrayEnd then break;
       ReadMappedClass(aCol.Add, Map);
     until False;
   end;
@@ -1604,12 +1604,12 @@ type
   var
     s: string;
   begin
-    if Reader.TokenKind <> tkArrayBegin then
-      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+    if Reader.TokenKind <> rtkArrayBegin then
+      Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
     aStrings.Clear;
     repeat
       ReadNext;
-      if Reader.TokenKind = tkArrayEnd then break;
+      if Reader.TokenKind = rtkArrayEnd then break;
       s := '';
       ReadString(TypeInfo(s), @s);
       aStrings.Add(s);
@@ -1620,7 +1620,7 @@ type
     o: TObject;
     e: TPdoCacheEntry;
   begin
-    if Reader.TokenKind = tkNull then begin
+    if Reader.TokenKind = rtkNull then begin
       CheckNull;
       FreeAndNil(TObject(aData^));
       exit;
@@ -1660,15 +1660,15 @@ type
     s: string;
     MaxLen: Byte;
   begin
-    if Reader.TokenKind <> tkString then
-      if Reader.TokenKind = tkNull then
+    if Reader.TokenKind <> rtkString then
+      if Reader.TokenKind = rtkNull then
         begin
           CheckNull;
           PShortString(aData)^ := '';
           exit;
         end
       else
-        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkString), TokenKindName(Reader.TokenKind)]));
+        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkString), TokenKindName(Reader.TokenKind)]));
     s := Reader.AsString;
     MaxLen := GetTypeData(aTypeInfo)^.MaxLength;
     if System.Length(s) > MaxLen then
@@ -1678,15 +1678,15 @@ type
   end;
   procedure ReadString(aTypeInfo: PTypeInfo; aData: Pointer);
   begin
-    if Reader.TokenKind <> tkString then
-      if Reader.TokenKind = tkNull then
+    if Reader.TokenKind <> rtkString then
+      if Reader.TokenKind = rtkNull then
         begin
           CheckNull;
           PString(aData)^ := '';
           exit;
         end
       else
-        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkString), TokenKindName(Reader.TokenKind)]));
+        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkString), TokenKindName(Reader.TokenKind)]));
     PString(aData)^ := Reader.AsString;
   end;
   procedure ReadWString(aTypeInfo: PTypeInfo; aData: Pointer);
@@ -1730,15 +1730,15 @@ type
     ElKind: TTypeKind;
     c: Char = ' ';
   begin
-    if Reader.TokenKind <> tkArrayBegin then
-      if Reader.TokenKind = tkNull then
+    if Reader.TokenKind <> rtkArrayBegin then
+      if Reader.TokenKind = rtkNull then
         begin
           CheckNull;
           System.FillChar(aData^, GetTypeData(aTypeInfo)^.SetSize, 0);
           exit;
         end
       else
-        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(tkArrayBegin), TokenKindName(Reader.TokenKind)]));
+        Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
     with GetTypeData(aTypeInfo)^ do
       begin
         pElType := CompType;
@@ -1750,7 +1750,7 @@ type
     System.FillChar(pIntData^, Size, 0);
     repeat
       ReadNext;
-      if Reader.TokenKind = tkArrayEnd then break;
+      if Reader.TokenKind = rtkArrayEnd then break;
       case ElKind of
         tkChar:
           begin
@@ -1826,14 +1826,14 @@ end;
 
 class function TOptStrHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptString(p)^.Clear;
     end
   else
     begin
-      Result := aReader.TokenKind = tkString;
+      Result := aReader.TokenKind = rtkString;
       if Result then POptString(p)^ := aReader.AsString;
     end;
 end;
@@ -1853,14 +1853,14 @@ end;
 
 class function TOptBoolHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptBoolean(p)^.Clear;
     end
   else
     begin
-      Result := aReader.TokenKind in [tkFalse, tkTrue];
+      Result := aReader.TokenKind in [rtkFalse, rtkTrue];
       if Result then POptBoolean(p)^ := aReader.AsBoolean;
     end;
 end;
@@ -1880,14 +1880,14 @@ class function TOptShortIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; con
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptShortInt(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkNumber) and aReader.AsNumber.IsExactInt(I) and
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
                 (I >= Low(ShortInt)) and (I <= High(ShortInt));
       if Result then POptShortInt(p)^ := ShortInt(I);
     end;
@@ -1907,14 +1907,14 @@ class function TOptByteHelper.ReadJson(p: Pointer; aReader: TJsonReader; const a
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptByte(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkNumber) and aReader.AsNumber.IsExactInt(I) and
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
                 (I >= 0) and (I <= High(Byte));
       if Result then POptByte(p)^ := Byte(I);
     end;
@@ -1934,14 +1934,14 @@ class function TOptSmallIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; con
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptSmallInt(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkNumber) and aReader.AsNumber.IsExactInt(I) and
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
                 (I >= Low(SmallInt)) and (I <= High(SmallInt));
       if Result then POptSmallInt(p)^ := SmallInt(I);
     end;
@@ -1961,14 +1961,14 @@ class function TOptWordHelper.ReadJson(p: Pointer; aReader: TJsonReader; const a
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptWord(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkNumber) and aReader.AsNumber.IsExactInt(I) and
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
                 (I >= 0) and (I <= High(Word));
       if Result then POptWord(p)^ := Word(I);
     end;
@@ -1988,14 +1988,14 @@ class function TOptIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aO
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptInteger(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkNumber) and aReader.AsNumber.IsExactInt(I) and
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
                 (I >= Low(Integer)) and (I <= High(Integer));
       if Result then POptInteger(p)^ := Integer(I);
     end;
@@ -2015,14 +2015,14 @@ class function TOptCardinalHelper.ReadJson(p: Pointer; aReader: TJsonReader; con
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptCardinal(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkNumber) and aReader.AsNumber.IsExactInt(I) and
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
                 (I >= 0) and (I <= High(Cardinal));
       if Result then POptCardinal(p)^ := Cardinal(I);
     end;
@@ -2041,14 +2041,14 @@ end;
 
 class function TOptDoubleHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptDouble(p)^.Clear;
     end
   else
     begin
-      Result := aReader.TokenKind = tkNumber;
+      Result := aReader.TokenKind = rtkNumber;
       if Result then POptDouble(p)^ := aReader.AsNumber;
     end;
 end;
@@ -2063,7 +2063,7 @@ end;
 class function TDateTimeUtc.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
   Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = tkString) and TryRfc8927TimeStampToUTC(aReader.AsString, PDateTimeUtc(p)^.FValue);
+  Result := (aReader.TokenKind = rtkString) and TryRfc8927TimeStampToUTC(aReader.AsString, PDateTimeUtc(p)^.FValue);
 end;
 
 class operator TDateTimeUtc.:=(const dtu: TDateTimeUtc): TDateTime;
@@ -2101,14 +2101,14 @@ class function TOptDateTimeUtcPdoHelper.ReadJson(p: Pointer; aReader: TJsonReade
 var
   dtu: TDateTimeUtc;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptDateTimeUtc(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkString) and TryRfc8927TimeStampToUTC(aReader.AsString, dtu.FValue);
+      Result := (aReader.TokenKind = rtkString) and TryRfc8927TimeStampToUTC(aReader.AsString, dtu.FValue);
       if Result then POptDateTimeUtc(p)^ := dtu;
     end;
 end;
@@ -2123,7 +2123,7 @@ end;
 class function TGuidPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
   Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = tkString) and TGuid.TryParse(aReader.AsString, PGuid(p)^);
+  Result := (aReader.TokenKind = rtkString) and TGuid.TryParse(aReader.AsString, PGuid(p)^);
 end;
 
 { TOptGuidHelper }
@@ -2140,14 +2140,14 @@ class function TOptGuidHelper.ReadJson(p: Pointer; aReader: TJsonReader; const a
 var
   g: TGuid;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptGuid(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkString) and TGuid.TryParse(aReader.AsString, g);
+      Result := (aReader.TokenKind = rtkString) and TGuid.TryParse(aReader.AsString, g);
       if Result then POptGuid(p)^ := g;
     end;
 end;
@@ -2162,7 +2162,7 @@ end;
 class function TInt64.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
   Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = tkString) and TryStrToInt64(aReader.AsString, PInt64t(p)^.FValue);
+  Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, PInt64t(p)^.FValue);
 end;
 
 class operator TInt64.:=(const i: TInt64): Int64;
@@ -2199,14 +2199,14 @@ class function TOptInt64Helper.ReadJson(p: Pointer; aReader: TJsonReader; const 
 var
   I: Int64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptInt64(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkString) and TryStrToInt64(aReader.AsString, I);
+      Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, I);
       if Result then POptInt64(p)^ := TInt64(I);
     end;
 end;
@@ -2221,7 +2221,7 @@ end;
 class function TUInt64.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
 begin
   Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = tkString) and TryStrToUInt64(aReader.AsString, PUInt64t(p)^.FValue);
+  Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, PUInt64t(p)^.FValue);
 end;
 
 class operator TUInt64.:=(const u: TUInt64): UInt64;
@@ -2259,14 +2259,14 @@ class function TOptUInt64Helper.ReadJson(p: Pointer; aReader: TJsonReader;
 var
   I: UInt64;
 begin
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       Result := not(jroRejectNulls in aOpts);
       if Result then POptUInt64(p)^.Clear;
     end
   else
     begin
-      Result := (aReader.TokenKind = tkString) and TryStrToUInt64(aReader.AsString, I);
+      Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, I);
       if Result then POptUInt64(p)^ := TUInt64(I);
     end;
 end;

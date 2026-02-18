@@ -476,7 +476,7 @@ end;
 
 class function TJtdEntity.ReadInt(aReader: TJsonReader): Int64;
 begin
-  if aReader.TokenKind <> tkNumber then
+  if aReader.TokenKind <> rtkNumber then
     ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
   if not Double.IsExactInt(aReader.AsNumber, Result) then
     ReadError(SEJtdExpectGotFmt, [CSJtdInteger, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -625,7 +625,7 @@ procedure TJtdEntity.ReadJson(aReader: TJsonReader);
 begin
   if (aReader.ReadState = rsStart) and not aReader.Read then ReaderFail(aReader);
   FIsNull := False;
-  if aReader.TokenKind = tkNull then
+  if aReader.TokenKind = rtkNull then
     begin
       SetNull;
       exit;
@@ -737,12 +737,12 @@ var
   s: string;
 begin
   case aReader.TokenKind of
-    tkNull:   Instance.AsNull;
-    tkFalse:  Instance.AsBoolean := False;
-    tkTrue:   Instance.AsBoolean := True;
-    tkNumber: Instance.AsNumber := aReader.AsNumber;
-    TTokenKind.tkString: Instance.AsString := aReader.AsString;
-    tkArrayBegin, tkObjectBegin:
+    rtkNull:   Instance.AsNull;
+    rtkFalse:  Instance.AsBoolean := False;
+    rtkTrue:   Instance.AsBoolean := True;
+    rtkNumber: Instance.AsNumber := aReader.AsNumber;
+    TTokenKind.rtkString: Instance.AsString := aReader.AsString;
+    rtkArrayBegin, rtkObjectBegin:
       begin
         if not aReader.CopyStruct(s) then ReaderFail(aReader);
         if not Instance.TryParse(s) then ReadError(SEInvalidJsonInst, aReader);
@@ -805,9 +805,9 @@ end;
 
 procedure TJtdBool.DoReadJson(aReader: TJsonReader);
 begin
-  if not(aReader.TokenKind in [tkFalse, tkTrue]) then
+  if not(aReader.TokenKind in [rtkFalse, rtkTrue]) then
     ReadError(SEJtdExpectGotFmt, [CSJtdBool, TOKEN_NAMES[aReader.TokenKind]], aReader);
-  FValue := aReader.TokenKind = tkTrue;
+  FValue := aReader.TokenKind = rtkTrue;
 end;
 
 procedure TJtdBool.DoWriteJson(aWriter: TJsonStrWriter);
@@ -836,7 +836,7 @@ procedure TJtdFloat32.DoReadJson(aReader: TJsonReader);
 var
   d: Double;
 begin
-  if aReader.TokenKind <> tkNumber then
+  if aReader.TokenKind <> rtkNumber then
     ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
   d := aReader.AsNumber;
   if System.Abs(d) > Math.MaxSingle then
@@ -860,7 +860,7 @@ end;
 
 procedure TJtdFloat64.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkNumber then
+  if aReader.TokenKind <> rtkNumber then
     ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
   FValue := aReader.AsNumber;
 end;
@@ -1043,7 +1043,7 @@ end;
 
 procedure TJtdString.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> TTokenKind.tkString then
+  if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   FValue := aReader.AsString;
 end;
@@ -1070,7 +1070,7 @@ procedure TJtdDateTimeUTC.DoReadJson(aReader: TJsonReader);
 var
   d: TDateTime;
 begin
-  if aReader.TokenKind <> TTokenKind.tkString then
+  if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   if not TryRfc8927TimeStampToUTC(aReader.AsString, d) then
     ReadError(Format(SEJtdIllform8927TSFmt, [aReader.AsString]), aReader);
@@ -1110,7 +1110,7 @@ var
   d: TDateTime;
   tzo: Integer;
 begin
-  if aReader.TokenKind <> TTokenKind.tkString then
+  if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   if not TryRfc8927TsToDateTime(aReader.AsString, d, tzo) then
     ReadError(Format(SEJtdIllform8927TSFmt, [aReader.AsString]), aReader);
@@ -1141,7 +1141,7 @@ procedure TJtdEnum.DoReadJson(aReader: TJsonReader);
 var
   v: Integer;
 begin
-  if aReader.TokenKind <> TTokenKind.tkString then
+  if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   v := GetEnumValue(TypeInfo(TEnum), aReader.AsString);
   if v < 0 then
@@ -1174,7 +1174,7 @@ end;
 
 procedure TJtdStrEnum.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> TTokenKind.tkString then
+  if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
   if not IsElement(aReader.AsString) then
     ReadError(Format(SEStrNotEnumElemFmt, [aReader.AsString, ClassName]), aReader);
@@ -1237,12 +1237,12 @@ end;
 
 procedure TJtdList.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkArrayBegin then
+  if aReader.TokenKind <> rtkArrayBegin then
     ReadError(SEJtdExpectGotFmt, [CSJtdArray, TOKEN_NAMES[aReader.TokenKind]], aReader);
   Clear;
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkArrayEnd then break;
+    if aReader.TokenKind = rtkArrayEnd then break;
     FList.Add(T(T.LoadInstance(aReader)));
   until False;
 end;
@@ -1321,11 +1321,11 @@ procedure TJtdMap.DoReadJson(aReader: TJsonReader);
 var
   p: TMap.PValue;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     p := FMap.GetMutValueDef(aReader.Name, nil);
     if p^ <> nil then
       ReadError(Format(SEJtdDupValuesKeyFmt, [aReader.Name]), aReader);
@@ -1483,7 +1483,7 @@ var
   s: string;
   Node: TJsonNode;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   if not aReader.CopyStruct(s) then ReaderFail(aReader);
   if not TJsonNode.TryParse(s, Node) then InternalError(2);
   try

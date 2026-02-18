@@ -86,15 +86,15 @@ begin
   if not TJsonReader.IsStartToken(Reader.Instance.TokenKind) then begin
     Write('An instance contains a single element - ');
     case Reader.Instance.TokenKind of
-      tkNull:   WriteLn('null');
-      tkFalse:  WriteLn('false');
-      tkTrue:   WriteLn('true');
-      tkNumber: WriteLn('number ', Reader.Instance.ValueToString);
-      tkString: WriteLn('string ', Reader.Instance.ValueToString);
+      rtkNull:   WriteLn('null');
+      rtkFalse:  WriteLn('false');
+      rtkTrue:   WriteLn('true');
+      rtkNumber: WriteLn('number ', Reader.Instance.ValueToString);
+      rtkString: WriteLn('string ', Reader.Instance.ValueToString);
     else
     end;
   end else begin
-    if Reader.Instance.TokenKind = tkArrayBegin then
+    if Reader.Instance.TokenKind = rtkArrayBegin then
       Write('An instance is an array and contains ')
     else
       Write('An instance is an object and contains ');
@@ -167,7 +167,7 @@ procedure FindPath;
     if aReader.FindPath(TJsonPtr.From(aPath)) then begin
       Write('Found item and it is ');
       if aReader.IsStartToken(aReader.TokenKind) then begin
-        if aReader.TokenKind = tkArrayBegin then
+        if aReader.TokenKind = rtkArrayBegin then
           WriteLn('an array.')
         else
           WriteLn('an object.');
@@ -218,7 +218,7 @@ const
   IndentSize = 2;
 var
   Indent: string = '';
-  PrevToken: TJsonReader.TTokenKind = tkNone;
+  PrevToken: TJsonReader.TTokenKind = rtkNone;
   CurrToken: TJsonReader.TTokenKind;
   procedure MakeIndent(aSize: Integer);
   begin
@@ -232,13 +232,13 @@ begin
   WriteLn;
   while Reader.Instance.Read do begin
     CurrToken := Reader.Instance.TokenKind;
-    if PrevToken <> tkNone then
+    if PrevToken <> rtkNone then
       if TJsonReader.IsStartToken(PrevToken) or TJsonReader.IsEndToken(CurrToken) then
         WriteLn
       else
         WriteLn(',');
     case CurrToken of
-      tkNull, tkFalse, tkTrue, tkNumber, tkString:
+      rtkNull, rtkFalse, rtkTrue, rtkNumber, rtkString:
         begin
           MakeIndent(Reader.Instance.Depth);
           if Reader.Instance.StructKind = skArray then
@@ -246,26 +246,26 @@ begin
           else
             Write(Indent, Reader.Instance.Name, ': ', Reader.Instance.ValueToString);
         end;
-      tkArrayBegin:
+      rtkArrayBegin:
         begin
           MakeIndent(Reader.Instance.Depth - 1);
           if Reader.Instance.ParentKind = skObject then
             WriteLn(Indent, Reader.Instance.ParentName, ': ');
           Write(Indent, '[');
         end;
-      tkObjectBegin:
+      rtkObjectBegin:
         begin
           MakeIndent(Reader.Instance.Depth - 1);
           if Reader.Instance.ParentKind = skObject then
             WriteLn(Indent, Reader.Instance.ParentName, ': ');
           Write(Indent, '{');
         end;
-      tkArrayEnd:
+      rtkArrayEnd:
         begin
           MakeIndent(Reader.Instance.Depth);
           Write(Indent, ']');
         end;
-      tkObjectEnd:
+      rtkObjectEnd:
         begin
           MakeIndent(Reader.Instance.Depth);
           Write(Indent, '}');

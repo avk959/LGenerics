@@ -936,26 +936,26 @@ var
   I: Int64 = 0;
   KeyFound, ValueFound: Boolean;
 begin
-  if aReader.TokenKind <> tkObjectBegin then exit(False);
+  if aReader.TokenKind <> rtkObjectBegin then exit(False);
   KeyFound := False;
   ValueFound:= False;
   repeat
     aReader.Read;
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if jroIgnoreNameCase in aOptions then
       case LowerCase(aReader.Name) of
         'key':
           begin
-            if aReader.TokenKind = tkString then
+            if aReader.TokenKind = rtkString then
               pRec^.Key := aReader.AsString
             else
-              if (aReader.TokenKind = tkNull) and not(jroRejectNulls in aOptions)then
+              if (aReader.TokenKind = rtkNull) and not(jroRejectNulls in aOptions)then
                 pRec^.Key := ''
               else exit(False);
             KeyFound := True;
           end;
         'value':
-          if aReader.TokenKind = tkNumber then
+          if aReader.TokenKind = rtkNumber then
             begin
               d := aReader.AsNumber;
               ValueFound:= True;
@@ -968,16 +968,16 @@ begin
       case aReader.Name of
         'Key':
           begin
-            if aReader.TokenKind = tkString then
+            if aReader.TokenKind = rtkString then
               pRec^.Key := aReader.AsString
             else
-              if (aReader.TokenKind = tkNull) and not(jroRejectNulls in aOptions)then
+              if (aReader.TokenKind = rtkNull) and not(jroRejectNulls in aOptions)then
                 pRec^.Key := ''
               else exit(False);
             KeyFound := True;
           end;
         'Value':
-          if aReader.TokenKind = tkNumber then
+          if aReader.TokenKind = rtkNumber then
             begin
               d := aReader.AsNumber;
               ValueFound:= True;
