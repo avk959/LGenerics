@@ -10,9 +10,10 @@ interface
 uses
   lgUtils, lgStrConst, lgHelpers, lgHash, lgArrayHelpers, lgAbstractContainer, lgVector, lgAvlTree, lgBstUtils, 
   lgTreap, lgHashTable, lgHashMap, lgHashSet, lgHashMultiSet, lgMultiMap, lgTreeMap, lgTreeMultiSet, lgTreeSet, 
-  lgList, lgStack, lgQueue, lgDeque, lgBiMap, lgFunction, lgTable2D, lgAsync, lgPriorityQueue, lgRbTree, lgRootTree, 
-  lgCsvUtils, lgInt128, lgMiscUtils, lgJson, lgSeqUtils, lgStrHelpers, lgJsonCfg, lgJsonPath, lgPdo, lgJsonTypeDef, 
-  lgJtdCodegen, lgJtdInfer, lgJtdTypes, lgSparseGraph, lgSimpleGraph, lgSimpleDigraph, lgJsonUtils;
+  lgList, lgStack, lgQueue, lgDeque, lgBiMap, lgFunction, lgTable2D, lgAsync, lgPriorityQueue, lgRbTree, 
+  lgRootTree, lgCsvUtils, lgInt128, lgMiscUtils, lgJson, lgSeqUtils, lgStrHelpers, lgJsonCfg, lgJsonPath, lgPdo, 
+  lgJsonTypeDef, lgJtdCodegen, lgJtdInfer, lgJtdTypes, lgSparseGraph, lgSimpleGraph, lgSimpleDigraph, 
+  lgJsonUtils, LgMsgPack;
 
 implementation
 

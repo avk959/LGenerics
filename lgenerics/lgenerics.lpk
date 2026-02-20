@@ -219,6 +219,10 @@
         <Filename Value="lgjsonutils.pas"/>
         <UnitName Value="lgJsonUtils"/>
       </Item>
+      <Item>
+        <Filename Value="lgmsgpack.pas"/>
+        <UnitName Value="LgMsgPack"/>
+      </Item>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
