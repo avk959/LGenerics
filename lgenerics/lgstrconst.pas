@@ -84,7 +84,7 @@ resourcestring
   SECantConvertFmt         = 'Cannot convert %s to %s';
   SEInvalidJsonPtr         = 'Invalid JSON Pointer instance';
   SEInvalidJsonStrInst     = 'Invalid JSON string instance';
-  SECantParseJsStr         = 'Cannot parse JSON string';
+  SECantParseJsStr         = 'Failed to parse the JSON string';
   SEUnknownTJsonDataType   = 'Unknown TJsonData type';
   SEJsonInstNotObj         = 'Cannot retrieve pair from non-object instance';
   SESortProcNotAssigned    = 'Sorting procedure not assigned';
@@ -258,6 +258,17 @@ resourcestring
   SEInvalidInt128          = '"%s" is an invalid Int128';
   SEDivByZero128           = 'Division by zero(128)';
   SEInt128Overflow         = 'Arithmetic overflow(128)';
+//MsgPack
+  SEMpNodeInstIsNotMap      = 'Node instance is not a map';
+  SEMpFailParseMpBin        = 'Failed to parse the MessagePack binary';
+  SEMpFailParseMpRaw        = 'Failed to parse the MessagePack raw string';
+  SEMpStrLenExceedsLimitFmt = 'String length exceeds the format limit(%d)';
+  SEMpBinLenExceedsLimitFmt = 'Length of the byte array exceeds the format limit(%d)';
+  SEMpExtLenExceedsLimitFmt = 'Extention size exceeds the format limit(%d)';
+  SEMpInvalidArraySizeFmt   = 'Invalid array size specified(%d)';
+  SEMpArrLenExceedsLimitFmt = 'Array size exceeds the format limit(%d)';
+  SEMpMapLenExceedsLimitFmt = 'Map size exceeds the format limit(%d)';
+  SEMpInvalidMapSizeFmt     = 'Invalid map size specified(%d)';
 
 implementation
 
