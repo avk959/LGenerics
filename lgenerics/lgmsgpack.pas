@@ -242,7 +242,7 @@ type
     class function TryParseFile(const aFileName: string; out aRoot: TMpDomNode;
                                 aDuplicates: TMpDuplicates = mduAccept;
                                 aMaxDepth: SizeInt = DEF_DEPTH): Boolean; static;
-  { tries to parse a JSON document using TJsonReader; exact integer values are treated as Int }
+  { tries to parse a JSON document using TJsonReader; exact integer values are treated as Integer }
     class function TryLoadJson(const aJson: string; out aRoot: TMpDomNode;
                                aDuplicates: TMpDuplicates = mduAccept;
                                aMaxDepth: SizeInt = DEF_DEPTH): Boolean;
@@ -276,7 +276,7 @@ type
     function IsDouble: Boolean; inline;
     function IsFloat: Boolean; inline;
     function IsString: Boolean; inline;
-    function IsBytes: Boolean; inline;
+    function IsBinary: Boolean; inline;
     function IsScalar: Boolean; inline;
     function IsArray: Boolean; inline;
     function IsMap: Boolean; inline;
@@ -1744,7 +1744,7 @@ begin
   Result := Kind = mnkString;
 end;
 
-function TMpDomNode.IsBytes: Boolean;
+function TMpDomNode.IsBinary: Boolean;
 begin
   Result := Kind = mnkBin;
 end;
