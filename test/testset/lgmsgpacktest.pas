@@ -53,6 +53,18 @@ type
     TMpNode = specialize TGAutoRef<TMpDomNode>;
   published
     procedure TestMake;
+    procedure ArrayAdd;
+    procedure ArrayInsert;
+    procedure ArrayDelete;
+    procedure ArrayExtract;
+    procedure MapAdd;
+    procedure MapTryAdd;
+    procedure MapDelete;
+    procedure MapExtract;
+    procedure MapExtractKey;
+    procedure MapRemove;
+    procedure DomTryParseArray;
+    procedure DomTryParseMap;
   end;
 
 
@@ -621,6 +633,7 @@ end;
 procedure TTestMpDomNode.TestMake;
 var
   Node: TMpNode;
+  ts: TMpTimeStamp;
 const
   f = Single(12.55);
   d = Double(2.718281828459045);
@@ -657,6 +670,518 @@ begin
   Node.Instance := TMpDomNode.MakeB(b);
   AssertTrue(Node.Instance.IsBinary);
   AssertTrue(SameBytes(Node.Instance.AsBinary, b));
+
+  ts := TMpTimeStamp.Make(100000000, 100000000);
+  Node.Instance := TMpDomNode.Make(ts);
+  AssertTrue(Node.Instance.IsTimeStamp);
+  AssertTrue(Node.Instance.AsTimeStamp = ts);
+end;
+
+procedure TTestMpDomNode.ArrayAdd;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+const
+  i = 1001;
+  f = Single(2.71);
+  d = Double(3.1415926);
+  s = 'value';
+  b: TBytes = ($21,$22,$23,$24,$25);
+begin
+  AssertTrue(Node.Instance.IsNil);
+  AssertTrue(Node.Instance.Count = 0);
+
+  Node.Instance.AddNil;
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance.Items[0].IsNil);
+
+  Node.Instance.Add(True);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance.Items[1].IsBoolean);
+  AssertTrue(Node.Instance.Items[1].AsBoolean);
+
+  Node.Instance.AddI(i);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance.Items[2].IsInteger);
+  AssertTrue(Node.Instance.Items[2].AsInteger = i);
+
+  Node.Instance.AddS(f);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(Node.Instance.Items[3].IsSingle);
+  AssertTrue(Node.Instance.Items[3].AsSingle = f);
+
+  Node.Instance.AddD(d);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 5);
+  AssertTrue(Node.Instance.Items[4].IsDouble);
+  AssertTrue(Node.Instance.Items[4].AsDouble = d);
+
+  Node.Instance.Add(s);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 6);
+  AssertTrue(Node.Instance.Items[5].IsString);
+  AssertTrue(Node.Instance.Items[5].AsString = s);
+
+  Node.Instance.Add(b);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 7);
+  AssertTrue(Node.Instance.Items[6].IsBinary);
+  AssertTrue(SameBytes(Node.Instance.Items[6].AsBinary, b));
+
+  n := Node.Instance.AddNode;
+  AssertTrue(n.IsNil);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 8);
+  AssertTrue(Node.Instance.Items[7].IsNil);
+end;
+
+procedure TTestMpDomNode.ArrayInsert;
+var
+  Node: TMpNode;
+  I: SizeInt;
+begin
+  AssertTrue(Node.Instance.Count = 0);
+
+  I := Node.Instance.InsertNil(-2);
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(I = 0);
+  AssertTrue(Node.Instance.Items[I].IsNil);
+
+  I := Node.Instance.Insert(5, 'key');
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(I = 1);
+  AssertTrue(Node.Instance.Items[I].IsString);
+
+  I := Node.Instance.InsertI(1, 42);
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(I = 1);
+  AssertTrue(Node.Instance.Items[I].IsInteger);
+
+  I := Node.Instance.Insert(0, False);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(I = 0);
+  AssertTrue(Node.Instance.Items[I].IsBoolean);
+
+  I := Node.Instance.Insert(3, True);
+  AssertTrue(Node.Instance.Count = 5);
+  AssertTrue(I = 3);
+  AssertTrue(Node.Instance.Items[I].IsBoolean);
+end;
+
+procedure TTestMpDomNode.ArrayDelete;
+var
+  Node: TMpNode;
+begin
+  AssertFalse(Node.Instance.Delete(0));
+
+  Node.Instance.Add(False).Add('abcdef').Add([1,2,3,4,5,6,7]).AddI(77);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 4);
+
+  AssertFalse(Node.Instance.Delete(-1));
+  AssertFalse(Node.Instance.Delete(4));
+
+  AssertTrue(Node.Instance.Delete(0));
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance.Items[0].IsString);
+
+  AssertTrue(Node.Instance.Delete(1));
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance.Items[1].IsInteger);
+
+  AssertTrue(Node.Instance.Delete(0));
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance.Items[0].IsInteger);
+
+  AssertTrue(Node.Instance.Delete(0));
+  AssertTrue(Node.Instance.Count = 0);
+end;
+
+procedure TTestMpDomNode.ArrayExtract;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  AssertFalse(Node.Instance.Extract(0, n));
+
+  Node.Instance.Add(False).Add('abcdef').Add([1,2,3,4,5,6,7]).AddI(77);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(Node.Instance.IsArray);
+
+  AssertFalse(Node.Instance.Extract(-1, n));
+  AssertFalse(Node.Instance.Extract(4, n));
+
+  AssertTrue(Node.Instance.Extract(0, n));
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance.Items[0].IsString);
+  AssertTrue(n.IsBoolean);
+  AssertFalse(n.AsBoolean);
+  n.Free;
+
+  AssertTrue(Node.Instance.Extract(1, n));
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance.Items[1].IsInteger);
+  AssertTrue(n.IsBinary);
+  n.Free;
+
+  AssertTrue(Node.Instance.Extract(0, n));
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance.Items[0].IsInteger);
+  AssertTrue(n.IsString);
+  n.Free;
+
+  AssertTrue(Node.Instance.Extract(0, n));
+  AssertTrue(Node.Instance.Count = 0);
+  AssertTrue(n.IsInteger);
+  n.Free;
+end;
+
+procedure TTestMpDomNode.MapAdd;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  k: TMpVariant;
+const
+  i = 1001;
+  f = Single(2.71);
+  d = Double(3.1415926);
+  s = 'value';
+  b: TBytes = ($21,$22,$23,$24,$25);
+begin
+  AssertTrue(Node.Instance.IsNil);
+  AssertTrue(Node.Instance.Count = 0);
+
+  Node.Instance.AddNil(1);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance.Items[0].IsNil);
+  AssertTrue(Node.Instance.FindKey(0, k));
+  AssertTrue(k = 1);
+
+  Node.Instance.Add(2, True);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance.Items[1].IsBoolean);
+  AssertTrue(Node.Instance.Items[1].AsBoolean);
+  AssertTrue(Node.Instance.FindKey(1, k));
+  AssertTrue(k = 2);
+
+  Node.Instance.AddI(3, i);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance.Items[2].IsInteger);
+  AssertTrue(Node.Instance.Items[2].AsInteger = i);
+  AssertTrue(Node.Instance.FindKey(2, k));
+  AssertTrue(k = 3);
+
+  Node.Instance.AddS(4, f);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(Node.Instance.Items[3].IsSingle);
+  AssertTrue(Node.Instance.Items[3].AsSingle = f);
+  AssertTrue(Node.Instance.FindKey(3, k));
+  AssertTrue(k = 4);
+
+  Node.Instance.AddD(5, d);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 5);
+  AssertTrue(Node.Instance.Items[4].IsDouble);
+  AssertTrue(Node.Instance.Items[4].AsDouble = d);
+  AssertTrue(Node.Instance.FindKey(4, k));
+  AssertTrue(k = 5);
+
+  Node.Instance.Add(6, s);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 6);
+  AssertTrue(Node.Instance.Items[5].IsString);
+  AssertTrue(Node.Instance.Items[5].AsString = s);
+  AssertTrue(Node.Instance.FindKey(5, k));
+  AssertTrue(k = 6);
+
+  Node.Instance.Add(7, b);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 7);
+  AssertTrue(Node.Instance.Items[6].IsBinary);
+  AssertTrue(SameBytes(Node.Instance.Items[6].AsBinary, b));
+  AssertTrue(Node.Instance.FindKey(6, k));
+  AssertTrue(k = 7);
+
+  n := Node.Instance.AddNode(8);
+  AssertTrue(n.IsNil);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 8);
+  AssertTrue(Node.Instance.Items[7].IsNil);
+  AssertTrue(Node.Instance.FindKey(7, k));
+  AssertTrue(k = 8);
+end;
+
+procedure TTestMpDomNode.MapTryAdd;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+const
+  i = 1001;
+  f = Single(2.71);
+  d = Double(3.1415926);
+  s = 'value';
+  b: TBytes = ($21,$22,$23,$24,$25);
+begin
+  AssertTrue(Node.Instance.IsNil);
+  AssertTrue(Node.Instance.Count = 0);
+
+  AssertTrue(Node.Instance.TryAddNil(1));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance[1].IsNil);
+
+  AssertFalse(Node.Instance.TryAdd(1, True));
+  AssertTrue(Node.Instance.TryAdd(2, True));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance[2].IsBoolean);
+  AssertTrue(Node.Instance[2].AsBoolean);
+
+  AssertFalse(Node.Instance.TryAdd(2, True));
+  AssertTrue(Node.Instance.TryAddI(3, i));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance[3].IsInteger);
+  AssertTrue(Node.Instance[3].AsInteger = i);
+
+  AssertFalse(Node.Instance.TryAdd(3, True));
+  AssertTrue(Node.Instance.TryAddS(4, f));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(Node.Instance[4].IsSingle);
+  AssertTrue(Node.Instance[4].AsSingle = f);
+
+  AssertFalse(Node.Instance.TryAdd(4, True));
+  AssertTrue(Node.Instance.TryAddD(5, d));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 5);
+  AssertTrue(Node.Instance[5].IsDouble);
+  AssertTrue(Node.Instance[5].AsDouble = d);
+
+  AssertFalse(Node.Instance.TryAdd(5, True));
+  AssertTrue(Node.Instance.TryAdd(6, s));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 6);
+  AssertTrue(Node.Instance[6].IsString);
+  AssertTrue(Node.Instance[6].AsString = s);
+
+  AssertFalse(Node.Instance.TryAdd(6, True));
+  AssertTrue(Node.Instance.TryAdd(7, b));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 7);
+  AssertTrue(Node.Instance[7].IsBinary);
+  AssertTrue(SameBytes(Node.Instance[7].AsBinary, b));
+
+  AssertFalse(Node.Instance.TryAddNode(7, n));
+  AssertTrue(Node.Instance.TryAddNode(8, n));
+  AssertTrue(n.IsNil);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 8);
+  AssertTrue(Node.Instance[8].IsNil);
+end;
+
+procedure TTestMpDomNode.MapDelete;
+var
+  Node: TMpNode;
+begin
+  AssertFalse(Node.Instance.Delete(0));
+
+  Node.Instance.Add(1, False).Add(2, 'abcdef').Add(3, [1,2,3,4,5,6,7]).AddI(4, 77);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(Node.Instance.IsMap);
+
+  AssertFalse(Node.Instance.Delete(-1));
+  AssertFalse(Node.Instance.Delete(4));
+
+  AssertTrue(Node.Instance.Delete(0));
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance.Items[0].IsString);
+
+  AssertTrue(Node.Instance.Delete(1));
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance.Items[1].IsInteger);
+
+  AssertTrue(Node.Instance.Delete(0));
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance.Items[0].IsInteger);
+
+  AssertTrue(Node.Instance.Delete(0));
+  AssertTrue(Node.Instance.Count = 0);
+end;
+
+procedure TTestMpDomNode.MapExtract;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  AssertFalse(Node.Instance.Extract(0, n));
+
+  Node.Instance.Add(1, False).Add(2, 'abcdef').Add(3, [1,2,3,4,5,6,7]).AddI(4, 42);
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(Node.Instance.IsMap);
+
+  AssertFalse(Node.Instance.Extract(-1, n));
+  AssertFalse(Node.Instance.Extract(4, n));
+
+  AssertTrue(Node.Instance.Extract(0, n));
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(Node.Instance.Items[0].IsString);
+  AssertTrue(n.IsBoolean);
+  AssertFalse(n.AsBoolean);
+  n.Free;
+
+  AssertTrue(Node.Instance.Extract(1, n));
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(Node.Instance.Items[1].IsInteger);
+  AssertTrue(n.IsBinary);
+  n.Free;
+
+  AssertTrue(Node.Instance.Extract(0, n));
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(Node.Instance.Items[0].IsInteger);
+  AssertTrue(n.IsString);
+  n.Free;
+
+  AssertTrue(Node.Instance.Extract(0, n));
+  AssertTrue(Node.Instance.Count = 0);
+  AssertTrue(n.IsInteger);
+  n.Free;
+end;
+
+procedure TTestMpDomNode.MapExtractKey;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  AssertFalse(Node.Instance.ExtractKey(1, n));
+
+  Node.Instance.Add(1, False).Add(2, 'abcdef').Add(3, [1,2,3,4,5,6,7]).AddI(4, 42).Add(4, 'key');
+  AssertTrue(Node.Instance.Count = 5);
+  AssertTrue(Node.Instance.IsMap);
+
+  AssertFalse(Node.Instance.ExtractKey(0, n));
+  AssertFalse(Node.Instance.ExtractKey(6, n));
+
+  AssertTrue(Node.Instance.ExtractKey(3, n));
+  AssertTrue(Node.Instance.Count = 4);
+  AssertTrue(n.IsBinary);
+  n.Free;
+
+  AssertTrue(Node.Instance.ExtractKey(1, n));
+  AssertTrue(Node.Instance.Count = 3);
+  AssertTrue(n.IsBoolean);
+  n.Free;
+
+  AssertTrue(Node.Instance.ExtractKey(4, n));
+  AssertTrue(Node.Instance.Count = 2);
+  AssertTrue(n.IsString);
+  n.Free;
+
+  AssertTrue(Node.Instance.ExtractKey(2, n));
+  AssertTrue(Node.Instance.Count = 1);
+  AssertTrue(n.IsString);
+  n.Free;
+
+  AssertTrue(Node.Instance.ExtractKey(4, n));
+  AssertTrue(Node.Instance.Count = 0);
+  AssertTrue(n.IsInteger);
+  n.Free;
+end;
+
+procedure TTestMpDomNode.MapRemove;
+var
+  Node: TMpNode;
+begin
+  AssertFalse(Node.Instance.Remove(1));
+
+  Node.Instance.Add(1, False).Add(2, 'abcdef').Add(3, [1,2,3,4,5,6,7]).AddI(4, 42).Add(4, 'key');
+  AssertTrue(Node.Instance.Count = 5);
+  AssertTrue(Node.Instance.IsMap);
+
+  AssertFalse(Node.Instance.Remove(0));
+  AssertFalse(Node.Instance.Remove(6));
+
+  AssertTrue(Node.Instance.Remove(3));
+  AssertTrue(Node.Instance.Count = 4);
+
+  AssertTrue(Node.Instance.Remove(1));
+  AssertTrue(Node.Instance.Count = 3);
+
+  AssertTrue(Node.Instance.Remove(4));
+  AssertTrue(Node.Instance.Count = 2);
+
+  AssertTrue(Node.Instance.Remove(2));
+  AssertTrue(Node.Instance.Count = 1);
+
+  AssertTrue(Node.Instance.Remove(4));
+  AssertTrue(Node.Instance.Count = 0);
+
+  AssertFalse(Node.Instance.Remove(4));
+end;
+
+procedure TTestMpDomNode.DomTryParseArray;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  b: TBytes;
+begin
+  b := [$90];
+  AssertTrue(Node.Instance.TryParse(b));
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 0);
+
+  b := [$91,$91,$90];
+  AssertTrue(Node.Instance.TryParse(b));
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 1);
+  n := Node.Instance.Items[0];
+  AssertTrue(n.IsArray);
+  AssertTrue(n.Count = 1);
+  n := n.Items[0];
+  AssertTrue(n.IsArray);
+  AssertTrue(n.Count = 0);
+
+  b := [$91,$91,$90,$90];
+  AssertFalse(Node.Instance.TryParse(b));
+end;
+
+procedure TTestMpDomNode.DomTryParseMap;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  b: TBytes;
+  k: TMpVariant;
+begin
+  b := [$80];
+  AssertTrue(Node.Instance.TryParse(b));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 0);
+
+  b := [$81,$a1,$61,$81,$a1,$62,$80];
+  AssertTrue(Node.Instance.TryParse(b));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 1);
+  n := Node.Instance.Items[0];
+  k := Node.Instance.Pairs[0].Key;
+  AssertTrue(k = 'a');
+  AssertTrue(n.IsMap);
+  AssertTrue(n.Count = 1);
+  k := n.Pairs[0].Key;
+  n := n.Items[0];
+  AssertTrue(k = 'b');
+  AssertTrue(n.IsMap);
+  AssertTrue(n.Count = 0);
+
+  b := [$81,$a1,$61,$81,$a1,$62,$80,$80];
+  AssertFalse(Node.Instance.TryParse(b));
 end;
 
 
