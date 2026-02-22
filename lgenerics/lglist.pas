@@ -4955,7 +4955,7 @@ begin
   p := FNodes[aIndex].Data;
   with FNodes[aIndex].Data do
     begin
-      Key := '';
+      System.Finalize(Key);
       Value := nil;
     end;
   Cnt := Count;
