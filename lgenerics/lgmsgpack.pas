@@ -277,6 +277,8 @@ type
     function IsFloat: Boolean; inline;
     function IsString: Boolean; inline;
     function IsBinary: Boolean; inline;
+    function IsTimeStamp: Boolean; inline;
+    function IsExpension: Boolean; inline;
     function IsScalar: Boolean; inline;
     function IsArray: Boolean; inline;
     function IsMap: Boolean; inline;
@@ -309,6 +311,8 @@ type
   { removes a node and returns True if a node with the specified index exists,
     otherwise returns False }
     function Delete(aIndex: SizeInt): Boolean;
+  { extracts a node and returns True if a node with the specified index exists,
+    otherwise returns False }
     function Extract(aIndex: SizeInt; out aNode: TMpDomNode): Boolean;
   { treats the instance as a map; adds the specified value associated with
     the specified key to the instance and returns Self }
@@ -347,6 +351,7 @@ type
     function Find(aIndex: SizeInt; out aValue: TMpDomNode): Boolean;
     function Find(const aKey: TMpVariant; out aValue: TMpDomNode): Boolean;
     function FindUniq(const aKey: TMpVariant; out aValue: TMpDomNode): Boolean;
+    function FindKey(aIndex: SizeInt; out aKey: TMpVariant): Boolean;
     function FindPair(aIndex: SizeInt; out aValue: TPair): Boolean;
     function FindOrAdd(const aKey: TMpVariant; out aValue: TMpDomNode): Boolean;
   { tries to find an element using a path specified as an array of path segments;
@@ -356,8 +361,9 @@ type
     function FindPath(const aPath: array of string; out aNode: TMpDomNode): Boolean;
   { tries to find an element using a path specified as a Pascal string containing a JSON pointer }
     function FindPathPtr(const aPtr: string; out aNode: TMpDomNode): Boolean;
-  {  }
-    function Extract(const aKey: TMpVariant; out aNode: TMpDomNode): Boolean;
+  { extracts a node and returns True if a node with the specified key exists,
+    otherwise returns False }
+    function ExtractKey(const aKey: TMpVariant; out aNode: TMpDomNode): Boolean;
     function Remove(const aKey: TMpVariant): Boolean;
     function RemoveAll(const aKey: TMpVariant): SizeInt;
   { sorts the instance using the specified comparator and returns True
@@ -1108,7 +1114,6 @@ var
   procedure DoWriteNode(aNode: TMpDomNode);
   var
     I: SizeInt;
-    q: QWord;
     I64: Int64;
   begin
     case aNode.Kind of
@@ -1749,6 +1754,16 @@ begin
   Result := Kind = mnkBin;
 end;
 
+function TMpDomNode.IsTimeStamp: Boolean;
+begin
+  Result := Kind = mnkTStamp;
+end;
+
+function TMpDomNode.IsExpension: Boolean;
+begin
+  Result := Kind = mnkExt;
+end;
+
 function TMpDomNode.IsScalar: Boolean;
 begin
   Result := not(Kind in [mnkArray, mnkMap]);
@@ -2123,6 +2138,19 @@ begin
   if Result then aValue := p^.Value;
 end;
 
+{$PUSH}{$WARN 5090 OFF : Variable "$1" of a managed type does not seem to be initialized}
+function TMpDomNode.FindKey(aIndex: SizeInt; out aKey: TMpVariant): Boolean;
+begin
+  if (Kind = mnkMap) and (SizeUInt(aIndex) < SizeUInt(GetMapRef^.Count)) then
+     begin
+       aKey := GetMapRef^.UncMutPairs[aIndex]^.Key;
+       exit(True);
+     end;
+  aKey.Clear;
+  Result := False;
+end;
+{$POP}
+
 function TMpDomNode.FindPair(aIndex: SizeInt; out aValue: TPair): Boolean;
 begin
   if (Kind = mnkMap) and (SizeUInt(aIndex) < SizeUInt(GetMapRef^.Count)) then
@@ -2208,7 +2236,7 @@ begin
   Result := FindPath(Segments, aNode);
 end;
 
-function TMpDomNode.Extract(const aKey: TMpVariant; out aNode: TMpDomNode): Boolean;
+function TMpDomNode.ExtractKey(const aKey: TMpVariant; out aNode: TMpDomNode): Boolean;
 begin
   if Kind <> mnkMap then
     begin
@@ -2222,7 +2250,7 @@ function TMpDomNode.Remove(const aKey: TMpVariant): Boolean;
 var
   Node: TMpDomNode;
 begin
-  Result := Extract(aKey, Node);
+  Result := ExtractKey(aKey, Node);
   if Result then Node.Free;
 end;
 
