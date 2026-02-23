@@ -63,8 +63,15 @@ type
     procedure MapExtract;
     procedure MapExtractKey;
     procedure MapRemove;
+    procedure MapIndexOf;
+    procedure MapCountOf;
     procedure DomTryParseArray;
     procedure DomTryParseMap;
+    procedure TestEqualTo;
+    procedure ArrayEnumerator;
+    procedure MapEnumerator;
+    procedure MapPairs;
+    procedure MapEqualKeys;
   end;
 
 
@@ -1127,6 +1134,44 @@ begin
   AssertFalse(Node.Instance.Remove(4));
 end;
 
+procedure TTestMpDomNode.MapIndexOf;
+var
+  Node: TMpNode;
+  I, Idx: SizeInt;
+begin
+  Node.Instance.Add('abc').Add(False);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.IndexOf(0) < 0);
+  AssertTrue(Node.Instance.IndexOf(1) < 0);
+
+  Node.Instance.AddI(1, 42).AddNil(2).Add(3, True).Add(4, 'string').AddB(5, [1,2,3,4,5])
+               .Add(6, TMpTimeStamp.Make(1000,1000)).AddD(7, 3.1415926);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 7);
+  for I := 1 to Node.Instance.Count do begin
+    Idx := Node.Instance.IndexOf(I);
+    AssertTrue(Idx >= 0);
+    AssertTrue(Node.Instance.Pairs[Idx].Key = I);
+  end;
+end;
+
+procedure TTestMpDomNode.MapCountOf;
+var
+  Node: TMpNode;
+begin
+  Node.Instance.AddI(1, 42).AddNil(1).Add(2, True).Add(3, 'string').AddB(3, [1,2,3,4,5])
+               .Add(3, TMpTimeStamp.Make(1000,1000)).AddD(5, 3.1415926);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 7);
+
+  AssertTrue(Node.Instance.CountOf(0) = 0);
+  AssertTrue(Node.Instance.CountOf(1) = 2);
+  AssertTrue(Node.Instance.CountOf(2) = 1);
+  AssertTrue(Node.Instance.CountOf(3) = 3);
+  AssertTrue(Node.Instance.CountOf(4) = 0);
+  AssertTrue(Node.Instance.CountOf(5) = 1);
+end;
+
 procedure TTestMpDomNode.DomTryParseArray;
 var
   Node: TMpNode;
@@ -1182,6 +1227,134 @@ begin
 
   b := [$81,$a1,$61,$81,$a1,$62,$80,$80];
   AssertFalse(Node.Instance.TryParse(b));
+end;
+
+procedure TTestMpDomNode.TestEqualTo;
+var
+  Node, Other: TMpNode;
+begin
+  AssertTrue(TMpDomNode(nil).EqualTo(TMpDomNode(nil)));
+
+  AssertTrue(Node.Instance.EqualTo(Other.Instance));
+
+  Node.Instance.AddI(42).AddNil.Add(True).Add('string').AddB([1,2,3,4,5])
+  .Add(TMpTimeStamp.Make(1000,1000)).AddNode
+  .AddI(1, 1001).AddNil(2).Add(3, False).Add(4, 'key').AddB(5, [6,7,8,9])
+  .Add(6, TMpTimeStamp.Make(10000,10000));
+
+  Other.Instance := Node.Instance.Clone;
+  AssertTrue(Node.Instance.EqualTo(Other.Instance));
+end;
+
+procedure TTestMpDomNode.ArrayEnumerator;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  I: SizeInt;
+begin
+  I := 0;
+  for n in Node.Instance do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  Node.Instance := TMpDomNode.Make('abcd');
+  for n in Node.Instance do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  Node.Instance.AddI(42).AddNil.Add(True).Add('string').AddB([1,2,3,4,5]).Add(TMpTimeStamp.Make(1000,1000));
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 6);
+  for n in Node.Instance do begin
+    AssertTrue(n.EqualTo(Node.Instance.Items[I]));
+    Inc(I);
+  end;
+  AssertTrue(Node.Instance.Count = I);
+end;
+
+procedure TTestMpDomNode.MapEnumerator;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  I: SizeInt;
+begin
+
+  Node.Instance.AddI(1, 42).AddNil(2).Add(3, True).Add(4, 'string').AddB(5,[1,2,3,4,5])
+               .Add(6, TMpTimeStamp.Make(1000,1000));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 6);
+  I := 0;
+  for n in Node.Instance do begin
+    AssertTrue(n.EqualTo(Node.Instance.Items[I]));
+    Inc(I);
+  end;
+  AssertTrue(Node.Instance.Count = I);
+end;
+
+procedure TTestMpDomNode.MapPairs;
+var
+  Node: TMpNode;
+  I: SizeInt;
+  p: TMpDomNode.TPair;
+begin
+  Node.Instance.AddI(1, 42).AddNil(2).Add(3, True).Add(4, 'string').AddB(5, [1,2,3,4,5])
+               .Add(6, TMpTimeStamp.Make(1000,1000));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 6);
+  I := 0;
+  for p in Node.Instance.PairEnumerator do begin
+    AssertTrue(p.Key = I + 1);
+    AssertTrue(p.Value.EqualTo(Node.Instance.Items[I]));
+    Inc(I);
+  end;
+  AssertTrue(Node.Instance.Count = I);
+end;
+
+procedure TTestMpDomNode.MapEqualKeys;
+var
+  Node: TMpNode;
+  p: TMpDomNode.TPair;
+  I: SizeInt;
+begin
+  Node.Instance.AddI(1, 42).AddNil(1).Add(2, True).Add(3, 'string').AddB(3, [1,2,3,4,5])
+               .Add(3, TMpTimeStamp.Make(1000,1000)).AddD(5, 3.1415926);
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.Count = 7);
+
+  I := 0;
+  for p in Node.Instance.EqualKeys(0) do
+    Inc(I);
+  AssertTrue(I = 0);
+  for p in Node.Instance.EqualKeys(4) do
+    Inc(I);
+  AssertTrue(I = 0);
+
+  for p in Node.Instance.EqualKeys(1) do begin
+    AssertTrue(p.Key = 1);
+    Inc(I);
+  end;
+  AssertTrue(I = 2);
+
+  I := 0;
+  for p in Node.Instance.EqualKeys(2) do begin
+    AssertTrue(p.Key = 2);
+    Inc(I);
+  end;
+  AssertTrue(I = 1);
+
+  I := 0;
+  for p in Node.Instance.EqualKeys(3) do begin
+    AssertTrue(p.Key = 3);
+    Inc(I);
+  end;
+  AssertTrue(I = 3);
+
+  I := 0;
+  for p in Node.Instance.EqualKeys(5) do begin
+    AssertTrue(p.Key = 5);
+    Inc(I);
+  end;
+  AssertTrue(I = 1);
 end;
 
 
