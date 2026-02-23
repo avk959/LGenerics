@@ -246,6 +246,7 @@ type
     class function TryLoadJson(const aJson: string; out aRoot: TMpDomNode;
                                aDuplicates: TMpDuplicates = mduAccept;
                                aMaxDepth: SizeInt = DEF_DEPTH): Boolean;
+    class function Equal(L, R: TMpDomNode): Boolean; static;
     destructor Destroy; override;
     function GetEnumerator: TEnumerator;
     function PairEnumerator: TPairEnumerator;
@@ -268,6 +269,8 @@ type
                          aMaxDepth: SizeInt = DEF_DEPTH): Boolean;
     procedure CopyFrom(aNode: TMpDomNode);
     procedure CopyFrom(aNode: TJsonNode);
+  { note: nodes are considered unequal if at least one contains a map with non-unique keys }
+    function EqualTo(aNode: TMpDomNode): Boolean;
     function Clone: TMpDomNode;
     function IsNil: Boolean; inline;
     function IsBoolean: Boolean; inline;
@@ -278,7 +281,7 @@ type
     function IsString: Boolean; inline;
     function IsBinary: Boolean; inline;
     function IsTimeStamp: Boolean; inline;
-    function IsExpension: Boolean; inline;
+    function IsExtension: Boolean; inline;
     function IsScalar: Boolean; inline;
     function IsArray: Boolean; inline;
     function IsMap: Boolean; inline;
@@ -389,7 +392,7 @@ type
     property AsTimeStamp: TMpTimeStamp read GetAsTStamp write SetAsTStamp;
     property AsArray: TMpDomNode read GetAsArray;
     property AsMap: TMpDomNode read GetAsMap;
-    property AsExtention: TMpExtBlob read GetAsExt write SetAsExt;
+    property AsExtension: TMpExtBlob read GetAsExt write SetAsExt;
     property AsMsgPack: TBytes read GetAsMsgPack write SetAsMsgPack;
     property AsMsgPackStr: rawbytestring read GetMsgPackStr write SetMsgPackStr;
     property AsJson: string read GetAsJson write SetAsJson;
@@ -1153,7 +1156,7 @@ var
           Writer.EndObject;
         end;
       mnkTStamp: Writer.AddJson(aNode.AsTimeStamp.AsJson);
-      mnkExt:    Writer.Add(BinToHexStr(aNode.AsExtention));
+      mnkExt:    Writer.Add(BinToHexStr(aNode.AsExtension));
     end;
   end;
 var
@@ -1501,6 +1504,11 @@ begin
   end;
 end;
 
+class function TMpDomNode.Equal(L, R: TMpDomNode): Boolean;
+begin
+  Result := L.EqualTo(R);
+end;
+
 destructor TMpDomNode.Destroy;
 begin
   DoClear;
@@ -1708,6 +1716,48 @@ begin
   DoCopy(aNode, Self);
 end;
 
+function TMpDomNode.EqualTo(aNode: TMpDomNode): Boolean;
+  function Equals(L, R: TMpDomNode): Boolean;
+  var
+    I: SizeInt;
+    p: ^TPair;
+  begin
+    if L.Kind <> R.Kind then exit(False);
+    case L.Kind of
+      mnkBool:   exit(L.AsBoolean = R.AsBoolean);
+      mnkInt:    exit(L.AsInteger = R.AsInteger);
+      mnkSingle: exit(L.AsSingle = R.AsSingle);
+      mnkDouble: exit(L.AsDouble = R.AsDouble);
+      mnkString: exit(L.AsString = R.AsString);
+      mnkBin:    exit(TMpVariant.EqualBytes(L.AsBinary, R.AsBinary));
+      mnkArray:
+        begin
+          if L.Count <> R.Count then exit(False);
+          for I := 0 to Pred(L.Count) do
+            if not Equals(L.GetArrayRef^.UncItems[I], R.GetArrayRef^.UncItems[I])then
+              exit(False);
+        end;
+      mnkMap:
+        begin
+          if L.Count <> R.Count then exit(False);
+          for I := 0 to Pred(L.Count) do begin
+            p := R.GetMapRef^.FindUniq(L.GetMapRef^.UncMutPairs[I]^.Key);
+            if p = nil then exit(False);
+            if not Equals(L.GetMapRef^.UncItems[I], p^.Value) then exit(False);
+          end;
+        end;
+      mnkTStamp: exit(L.AsTimeStamp = R.AsTimeStamp);
+      mnkExt:    exit(TMpVariant.EqualBytes(L.AsExtension, R.AsExtension));
+    else
+    end;
+    Result := True;
+  end;
+begin
+  if Pointer(Self) = Pointer(aNode) then exit(True);
+  if (Self = nil) or (aNode = nil) then exit(False);
+  Result := Equals(Self, aNode);
+end;
+
 function TMpDomNode.Clone: TMpDomNode;
 begin
   Result := TMpDomNode.Create;
@@ -1759,7 +1809,7 @@ begin
   Result := Kind = mnkTStamp;
 end;
 
-function TMpDomNode.IsExpension: Boolean;
+function TMpDomNode.IsExtension: Boolean;
 begin
   Result := Kind = mnkExt;
 end;
@@ -2430,7 +2480,7 @@ class procedure TMpWriter.WriteDom(aNode: TMpDomNode; aWriter: TMpWriter);
             end;
         end;
       mnkTStamp: aWriter.Add(aNode.AsTimeStamp);
-      mnkExt:    aWriter.Add(aNode.AsExtention);
+      mnkExt:    aWriter.Add(aNode.AsExtension);
     end;
   end;
 begin
@@ -3788,7 +3838,7 @@ class function TMpReader.DoReadDom(aReader: TMpReader; out aNode: TMpDomNode;
       mtkString:     aNode.AsString := aReader.AsString;
       mtkBin:        aNode.AsBinary := aReader.AsBinary;
       mtkTStamp:     aNode.AsTimeStamp := aReader.AsTimeStamp;
-      mtkExt:        aNode.AsExtention := aReader.AsExtention;
+      mtkExt:        aNode.AsExtension := aReader.AsExtention;
     else
       exit(False);
     end;
