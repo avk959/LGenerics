@@ -181,6 +181,8 @@ type
     function  GetArrayRef: PMpArray; inline;
     function  GetMapRef: PMpMap; inline;
     procedure DoClear; inline;
+    function  StrValue: string; inline;
+    function  BinValue: TBytes; inline;
     function  GetAsBool: Boolean;
     function  GetAsInt: Int64;
     function  GetAsSingle: Single;
@@ -351,7 +353,7 @@ type
     function ContainsUniq(const aKey: TMpVariant): Boolean;
     function IndexOf(const aKey: TMpVariant): SizeInt;
     function CountOf(const aKey: TMpVariant): SizeInt;
-    function Find(aIndex: SizeInt; out aValue: TMpDomNode): Boolean;
+    function FindItem(aIndex: SizeInt; out aValue: TMpDomNode): Boolean;
     function Find(const aKey: TMpVariant; out aValue: TMpDomNode): Boolean;
     function FindUniq(const aKey: TMpVariant; out aValue: TMpDomNode): Boolean;
     function FindKey(aIndex: SizeInt; out aKey: TMpVariant): Boolean;
@@ -1021,6 +1023,16 @@ begin
   end;
 end;
 
+function TMpDomNode.StrValue: string;
+begin
+  Result := string(FValue.Ref);
+end;
+
+function TMpDomNode.BinValue: TBytes;
+begin
+  Result := TBytes(FValue.Ref);
+end;
+
 function TMpDomNode.GetAsBool: Boolean;
 begin
   if Kind <> mnkBool then begin
@@ -1650,7 +1662,7 @@ procedure TMpDomNode.CopyFrom(aNode: TMpDomNode);
       mnkSingle: aDst.AsSingle := aSrc.AsSingle;
       mnkDouble: aDst.AsDouble := aSrc.AsDouble;
       mnkString: aDst.AsString := aSrc.AsString;
-      mnkBin:    aDst.AsBinary := aSrc.AsBinary; // todo: Copy ???
+      mnkBin:    aDst.AsBinary := System.Copy(aSrc.AsBinary);
       mnkArray:
         for I := 0 to Pred(aSrc.GetArrayRef^.Count) do begin
           Node := TMpDomNode.Create;
@@ -1665,6 +1677,7 @@ procedure TMpDomNode.CopyFrom(aNode: TMpDomNode);
             aDst.AsMap.GetMapRef^.Add(Key, Node);
           end;
       mnkTStamp: aDst.AsTimeStamp := aSrc.AsTimeStamp;
+      mnkExt:    aDst.AsExtension := System.Copy(aSrc.AsExtension);
     else
     end;
   end;
@@ -1724,12 +1737,12 @@ function TMpDomNode.EqualTo(aNode: TMpDomNode): Boolean;
   begin
     if L.Kind <> R.Kind then exit(False);
     case L.Kind of
-      mnkBool:   exit(L.AsBoolean = R.AsBoolean);
-      mnkInt:    exit(L.AsInteger = R.AsInteger);
-      mnkSingle: exit(L.AsSingle = R.AsSingle);
-      mnkDouble: exit(L.AsDouble = R.AsDouble);
-      mnkString: exit(L.AsString = R.AsString);
-      mnkBin:    exit(TMpVariant.EqualBytes(L.AsBinary, R.AsBinary));
+      mnkBool:   exit(L.FValue.Bool = R.FValue.Bool);
+      mnkInt:    exit(L.FValue.Int = R.FValue.Int);
+      mnkSingle: exit(L.FValue.Flt = R.FValue.Flt);
+      mnkDouble: exit(L.FValue.Dbl = R.FValue.Dbl);
+      mnkString: exit(L.StrValue = R.StrValue);
+      mnkBin:    exit(TMpVariant.EqualBytes(L.BinValue, R.BinValue));
       mnkArray:
         begin
           if L.Count <> R.Count then exit(False);
@@ -1747,7 +1760,7 @@ function TMpDomNode.EqualTo(aNode: TMpDomNode): Boolean;
           end;
         end;
       mnkTStamp: exit(L.AsTimeStamp = R.AsTimeStamp);
-      mnkExt:    exit(TMpVariant.EqualBytes(L.AsExtension, R.AsExtension));
+      mnkExt:    exit(TMpVariant.EqualBytes(L.BinValue, R.BinValue));
     else
     end;
     Result := True;
@@ -2145,7 +2158,7 @@ begin
   Result := GetMapRef^.CountOf(aKey);
 end;
 
-function TMpDomNode.Find(aIndex: SizeInt; out aValue: TMpDomNode): Boolean;
+function TMpDomNode.FindItem(aIndex: SizeInt; out aValue: TMpDomNode): Boolean;
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
     begin
@@ -2264,7 +2277,7 @@ begin
   for I := 0 to System.High(aPath) do
     if Node.IsArray then begin
       if not IsNonNegativeInt(aPath[I], Idx) then exit(False);
-      if not Node.Find(Idx, Node) then exit(False);
+      if not Node.FindItem(Idx, Node) then exit(False);
     end else
       if not Node.FindUniq(aPath[I], Node) then exit(False);
   aNode := Node;
