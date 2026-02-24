@@ -72,6 +72,9 @@ type
     procedure MapEnumerator;
     procedure MapPairs;
     procedure MapEqualKeys;
+    procedure ArrayFindItem;
+    procedure MapFindItem;
+    procedure MapFindUniq;
   end;
 
 
@@ -1244,6 +1247,22 @@ begin
 
   Other.Instance := Node.Instance.Clone;
   AssertTrue(Node.Instance.EqualTo(Other.Instance));
+
+  Other.Instance.Items[Other.Instance.Count - 1][3].AsBoolean := True;
+  AssertFalse(Node.Instance.EqualTo(Other.Instance));
+
+  Other.Instance.Items[Other.Instance.Count - 1][3].AsBoolean := False;
+  AssertTrue(Node.Instance.EqualTo(Other.Instance));
+
+  Inc(Other.Instance.Items[Other.Instance.Count - 1][5].AsBinary[2]);
+  AssertFalse(Node.Instance.EqualTo(Other.Instance));
+
+  Dec(Other.Instance.Items[Other.Instance.Count - 1][5].AsBinary[2]);
+  AssertTrue(Node.Instance.EqualTo(Other.Instance));
+
+  Node.Instance.Items[Other.Instance.Count - 1].Add(7, 'value');
+  Other.Instance.Items[Other.Instance.Count - 1].Add(6, 'value');
+  AssertFalse(Node.Instance.EqualTo(Other.Instance));
 end;
 
 procedure TTestMpDomNode.ArrayEnumerator;
@@ -1355,6 +1374,95 @@ begin
     Inc(I);
   end;
   AssertTrue(I = 1);
+end;
+
+procedure TTestMpDomNode.ArrayFindItem;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  n := Node.Instance;
+  AssertFalse(Node.Instance.FindItem(0, n));
+  AssertTrue(n = nil);
+
+  Node.Instance.AsString := 'abcd';
+  n := Node.Instance;
+  AssertFalse(Node.Instance.FindItem(0, n));
+  AssertTrue(n = nil);
+
+  Node.Instance.AddI(42).AddNil.Add(True).Add('string').AddB([1,2,3,4,5]);
+
+  AssertFalse(Node.Instance.FindItem(-1, n));
+  AssertFalse(Node.Instance.FindItem(5, n));
+
+  AssertTrue(Node.Instance.FindItem(0, n));
+  AssertTrue(n.IsInteger and (n.AsInteger = 42));
+
+  AssertTrue(Node.Instance.FindItem(1, n));
+  AssertTrue(n.IsNil);
+
+  AssertTrue(Node.Instance.FindItem(2, n));
+  AssertTrue(n.IsBoolean and n.AsBoolean);
+
+  AssertTrue(Node.Instance.FindItem(3, n));
+  AssertTrue(n.IsString and (n.AsString = 'string'));
+
+  AssertTrue(Node.Instance.FindItem(4, n));
+  AssertTrue(n.IsBinary and SameBytes(n.AsBinary, [1,2,3,4,5]));
+end;
+
+procedure TTestMpDomNode.MapFindItem;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  Node.Instance.AddI(1, 42).AddNil(2).Add(3, True).Add(4, 'string').AddB(5,[1,2,3,4,5]);
+
+  AssertFalse(Node.Instance.FindItem(-1, n));
+  AssertFalse(Node.Instance.FindItem(5, n));
+
+  AssertTrue(Node.Instance.FindItem(0, n));
+  AssertTrue(n.IsInteger and (n.AsInteger = 42));
+
+  AssertTrue(Node.Instance.FindItem(1, n));
+  AssertTrue(n.IsNil);
+
+  AssertTrue(Node.Instance.FindItem(2, n));
+  AssertTrue(n.IsBoolean and n.AsBoolean);
+
+  AssertTrue(Node.Instance.FindItem(3, n));
+  AssertTrue(n.IsString and (n.AsString = 'string'));
+
+  AssertTrue(Node.Instance.FindItem(4, n));
+  AssertTrue(n.IsBinary and SameBytes(n.AsBinary, [1,2,3,4,5]));
+end;
+
+procedure TTestMpDomNode.MapFindUniq;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  Node.Instance.AddI(1, 42).AddNil(2).Add(3, True).Add(4, 'string').AddB(5,[1,2,3]).AddNil(3).AddI(5, 1001);
+
+  n := Node.Instance;
+  AssertFalse(Node.Instance.FindUniq(0, n));
+  AssertTrue(n = nil);
+  AssertFalse(Node.Instance.FindUniq(5, n));
+
+  AssertTrue(Node.Instance.FindUniq(1, n));
+  AssertTrue(n.IsInteger and (n.AsInteger = 42));
+
+  AssertTrue(Node.Instance.FindUniq(2, n));
+  AssertTrue(n.IsNil);
+
+  AssertFalse(Node.Instance.FindUniq(3, n));
+  AssertTrue(n = nil);
+
+  AssertTrue(Node.Instance.FindUniq(4, n));
+  AssertTrue(n.IsString and (n.AsString = 'string'));
+
+  AssertFalse(Node.Instance.FindUniq(5, n));
+  AssertTrue(n = nil);
 end;
 
 
