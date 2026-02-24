@@ -911,7 +911,6 @@ type
       FKey: TKey;
       FCurrIndex,
       FHash: SizeInt;
-      FInLoop: Boolean;
       function  GetCurrent: TPair; inline;
       procedure Init(const aKey: TKey; aList: PHashList);
       procedure InitEmpty;
@@ -4741,9 +4740,8 @@ procedure TGLiteObjHashList.TEqualEnumerator.Init(const aKey: TKey; aList: PHash
 begin
   FKey := aKey;
   FList := aList;
-  FCurrIndex := 0;
+  FCurrIndex := NULL_INDEX;
   FHash := TKeyEqRel.HashCode(aKey);
-  FInLoop := False;
 end;
 
 procedure TGLiteObjHashList.TEqualEnumerator.InitEmpty;
@@ -4752,34 +4750,26 @@ begin
   FList := nil;
   FCurrIndex := 0;
   FHash := 0;
-  FInLoop := True;
 end;
 
 function TGLiteObjHashList.TEqualEnumerator.MoveNext: Boolean;
 var
   I: SizeInt;
 begin
-  if FInLoop then
-    begin
-      if FCurrIndex = 0 then exit(False);
-      with FList^ do
-        begin
-          I := FNodes[FCurrIndex].Next;
-          while I <> 0 do
-            begin
-              if(FNodes[I].Hash = FHash) and TKeyEqRel.Equal(FNodes[I].Data.Key, FKey) then break;
-              I := FNodes[I].Next;
-            end;
-        end;
-      FCurrIndex := I;
-    end
-  else
-    begin
-      if (FList = nil) or (FList^.GetCount = 0) then exit(False);
-      FCurrIndex := FList^.Find(FKey, FHash)+1;
-      FInLoop := True;
+  if FCurrIndex = 0 then exit(False);
+  if FCurrIndex < 0 then
+    FCurrIndex := FList^.Find(FKey, FHash)+1
+  else begin
+    with FList^ do begin
+      I := FNodes[FCurrIndex].Next;
+      while I <> 0 do begin
+        if(FNodes[I].Hash = FHash) and TKeyEqRel.Equal(FNodes[I].Data.Key, FKey) then break;
+        I := FNodes[I].Next;
+      end;
     end;
-  Result := FCurrIndex <> 0;
+    FCurrIndex := I;
+  end;
+  Result := FCurrIndex > 0;
 end;
 
 { TGLiteObjHashList }
