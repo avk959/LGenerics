@@ -94,9 +94,13 @@ type
     class operator := (aValue: Int64): TMpVariant; inline;
     class operator := (const aValue: string): TMpVariant; inline;
     class operator := (const aValue: TBytes): TMpVariant; inline;
+    class operator Explicit(aValue: Int64): TMpVariant; inline;
+    class operator Explicit(const aValue: string): TMpVariant; inline;
+    class operator Explicit(const aValue: TBytes): TMpVariant; inline;
     class operator = (const L, R: TMpVariant): Boolean;
     class function HashCode(const aValue: TMpVariant): SizeInt; static; inline;
     class function Equal(const L, R: TMpVariant): Boolean; static; inline;
+    class function ArrayEqual(const L, R: array of TMpVariant): Boolean; static;
     procedure Clear; inline;
     function AsInt: Int64; inline;
     function AsString: string; inline;
@@ -291,28 +295,28 @@ type
   { sets the instance to Nil and returns it as a result }
     function AsNil: TMpDomNode;
   { treats the instance as an array; adds the specified value to the instance and returns Self }
-    function AddNil: TMpDomNode; inline;
-    function Add(aValue: Boolean): TMpDomNode; inline;
-    function AddI(aValue: Int64): TMpDomNode; inline;
-    function AddS(aValue: Single): TMpDomNode; inline;
-    function AddD(aValue: Double): TMpDomNode; inline;
-    function Add(const s: string): TMpDomNode; inline;
+    function AddNil: TMpDomNode;
+    function Add(aValue: Boolean): TMpDomNode;
+    function AddI(aValue: Int64): TMpDomNode;
+    function AddS(aValue: Single): TMpDomNode;
+    function AddD(aValue: Double): TMpDomNode;
+    function Add(const s: string): TMpDomNode;
     function Add(const a: array of Byte): TMpDomNode;
-    function AddB(const b: TBytes): TMpDomNode; inline;
-    function Add(const ts: TMpTimeStamp): TMpDomNode; inline;
+    function AddB(const b: TBytes): TMpDomNode;
+    function Add(const ts: TMpTimeStamp): TMpDomNode;
   { treats the instance as an array; adds new node to the instance and returns it as a result }
     function AddNode: TMpDomNode;
   { treats the instance as an array; attempts to insert the specified value at the specified
     position; returns the actual insertion position }
-    function InsertNil(aIndex: SizeInt): SizeInt; inline;
-    function Insert(aIndex: SizeInt; aValue: Boolean): SizeInt; inline;
-    function InsertI(aIndex: SizeInt; aValue: Int64): SizeInt; inline;
-    function InsertS(aIndex: SizeInt; aValue: Single): SizeInt; inline;
-    function InsertD(aIndex: SizeInt; aValue: Double): SizeInt; inline;
-    function Insert(aIndex: SizeInt; const s: string): SizeInt; inline;
+    function InsertNil(aIndex: SizeInt): SizeInt;
+    function Insert(aIndex: SizeInt; aValue: Boolean): SizeInt;
+    function InsertI(aIndex: SizeInt; aValue: Int64): SizeInt;
+    function InsertS(aIndex: SizeInt; aValue: Single): SizeInt;
+    function InsertD(aIndex: SizeInt; aValue: Double): SizeInt;
+    function Insert(aIndex: SizeInt; const s: string): SizeInt;
     function Insert(aIndex: SizeInt; const a: array of Byte): SizeInt;
-    function InsertB(aIndex: SizeInt; const b: TBytes): SizeInt; inline;
-    function Insert(aIndex: SizeInt; const ts: TMpTimeStamp): SizeInt; inline;
+    function InsertB(aIndex: SizeInt; const b: TBytes): SizeInt;
+    function Insert(aIndex: SizeInt; const ts: TMpTimeStamp): SizeInt;
   { removes a node and returns True if a node with the specified index exists,
     otherwise returns False }
     function Delete(aIndex: SizeInt): Boolean;
@@ -363,9 +367,12 @@ type
     if non-unique keys are encountered in the search path, the search terminates
     immediately and returns False }
     function FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
-    function FindPath(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+    function FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
   { tries to find an element using a path specified as a Pascal string containing a JSON pointer }
     function FindPathPtr(const aPtr: string; out aNode: TMpDomNode): Boolean;
+  { returns True and the path to aNode in the instance subtree if instance subtree contains aNode,
+    othewise returns False and nil }
+    function TryGetPath(aNode: TMpDomNode; out aPath: TMpVarArray): Boolean;
   { extracts a node and returns True if a node with the specified key exists,
     otherwise returns False }
     function ExtractKey(const aKey: TMpVariant; out aNode: TMpDomNode): Boolean;
@@ -576,7 +583,7 @@ type
                              aDuplicates: TMpDuplicates = mduAccept): Boolean; static;
     class function DoFind(aReader: TMpReader; const aKey: TMpVariant): Boolean; static;
     class function DoFindPath(aReader: TMpReader; const aPath: array of TMpVariant): Boolean; static;
-    class function DoFindPath(aReader: TMpReader; const aPath: array of string): Boolean; static;
+    class function DoFindPathStr(aReader: TMpReader; const aPath: array of string): Boolean; static;
   public
   const
     DEF_DEPTH = 512;
@@ -595,8 +602,8 @@ type
   { tries to find an element using a path specified as an array of path segments }
     function FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
     function FindPath(const aPath: array of TMpVariant; out aBytes: TBytes): Boolean;
-    function FindPath(const aPath: array of string; out aNode: TMpDomNode): Boolean;
-    function FindPath(const aPath: array of string; out aBytes: TBytes): Boolean;
+    function FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+    function FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
   { tries to find the specified key in the current structure without trying to enter
     nested structures if the current token is the beginning of the structure }
     function Find(const aKey: TMpVariant): Boolean;
@@ -702,10 +709,11 @@ end;
 
 procedure TMpVariant.DoClear;
 begin
-  case FKind of
+  case Kind of
+    mvkNull: ;
+    mvkInt:  FValue.Int := 0;
     mvkStr:  string(FValue.Ref) := '';
     mvkBin:  TBytes(FValue.Ref) := nil;
-  else
   end;
 end;
 
@@ -832,6 +840,33 @@ begin
     FKind := mvkBin;
   end;
 end;
+
+class operator TMpVariant.Explicit(aValue: Int64): TMpVariant;
+begin
+  with Result do begin
+    DoClear;
+    FValue.Int := aValue;
+    FKind := mvkInt;
+  end;
+end;
+
+class operator TMpVariant.Explicit(const aValue: string): TMpVariant;
+begin
+  with Result do begin
+    DoClear;
+    string(FValue.Ref) := aValue;
+    FKind := mvkStr;
+  end;
+end;
+
+class operator TMpVariant.Explicit(const aValue: TBytes): TMpVariant;
+begin
+  with Result do begin
+    DoClear;
+    TBytes(FValue.Ref) := aValue;
+    FKind := mvkBin;
+  end;
+end;
 {$POP}
 
 {$PUSH}{$WARN 5059 OFF : Function result variable does not seem to be initialized}
@@ -860,6 +895,16 @@ end;
 class function TMpVariant.Equal(const L, R: TMpVariant): Boolean;
 begin
   Result := L = R;
+end;
+
+class function TMpVariant.ArrayEqual(const L, R: array of TMpVariant): Boolean;
+var
+  I: SizeInt;
+begin
+  if System.Length(L) <> System.Length(R) then exit(False);
+  for I := 0 to System.High(L) do
+    if L[I] <> R[I] then exit(False);
+  Result := True;
 end;
 
 procedure TMpVariant.Clear;
@@ -893,7 +938,7 @@ const
     '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
 {$POP}
 var
-  s: string;
+  s: string = '';
   p: PAnsiChar;
   I, J, Len: SizeInt;
   b: Byte;
@@ -1014,12 +1059,14 @@ end;
 procedure TMpDomNode.DoClear;
 begin
   case FKind of
+    mnkNil:    ;
     mnkString: string(FValue.Ref) := '';
     mnkBin:    TBytes(FValue.Ref) := nil;
     mnkArray:  TMpArray(FValue.Ref).Clear;
     mnkMap:    TMpMap(FValue.Ref).Clear;
     mnkExt:    TMpExtBlob(FValue.Ref) := nil;
   else
+    FValue.Int := 0;
   end;
 end;
 
@@ -1123,6 +1170,7 @@ begin
   Result := TMpWriter.DomToRawStr(Self);
 end;
 
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 function TMpDomNode.GetAsJson: string;
 var
   Writer: TJsonStrWriter;
@@ -1178,6 +1226,7 @@ begin
   DoWriteNode(Self);
   Result := Writer.JsonString;
 end;
+{$POP}
 
 function TMpDomNode.GetCount: SizeInt;
 begin
@@ -1407,7 +1456,7 @@ end;
 class function TMpDomNode.TryParse(aStream: TStream; out aRoot: TMpDomNode; aCount: SizeInt;
   aDuplicates: TMpDuplicates; aMaxDepth: SizeInt): Boolean;
 var
-  s: rawbytestring;
+  s: rawbytestring = '';
 begin
 {$PUSH}{$Q+}{$R+}
   if aCount < 1 then
@@ -1991,8 +2040,8 @@ end;
 
 function TMpDomNode.AddNil(const aKey: TMpVariant): TMpDomNode;
 begin
-  Result := AsMap;
-  Result.GetMapRef^.Add(aKey, TMpDomNode.Create);
+  AsMap.GetMapRef^.Add(aKey, TMpDomNode.MakeNil);
+  Result := Self;
 end;
 
 function TMpDomNode.Add(const aKey: TMpVariant; aValue: Boolean): TMpDomNode;
@@ -2263,7 +2312,7 @@ begin
   Result := True;
 end;
 
-function TMpDomNode.FindPath(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+function TMpDomNode.FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
 var
   Node: TMpDomNode;
   I, Idx: SizeInt;
@@ -2296,7 +2345,48 @@ begin
     aNode := nil;
     exit(False);
   end;
-  Result := FindPath(Segments, aNode);
+  Result := FindPathStr(Segments, aNode);
+end;
+
+function TMpDomNode.TryGetPath(aNode: TMpDomNode; out aPath: TMpVarArray): Boolean;
+var
+  PathHolder: specialize TGLiteVector<TMpVariant>;
+  Path: TMpVarArray = nil;
+  function DoGetPath(CurrNode: TMpDomNode): Boolean;
+  var
+    I: SizeInt;
+    p: ^TPair;
+  begin
+    if CurrNode = aNode then
+      begin
+        System.SetLength(Path, PathHolder.Count);
+        for I := 0 to Pred(PathHolder.Count) do
+          Path[I] := PathHolder.UncMutable[I]^;
+        exit(True);
+      end;
+    case CurrNode.Kind of
+      mnkArray:
+        for I := 0 to Pred(CurrNode.GetArrayRef^.Count) do
+          begin
+            PathHolder.Add(Int64(I));
+            if DoGetPath(CurrNode.GetArrayRef^.UncItems[I]) then exit(True);
+            PathHolder.DeleteLast;
+          end;
+      mnkMap:
+        for I := 0 to Pred(CurrNode.GetMapRef^.Count) do
+          begin
+            p := CurrNode.GetMapRef^.UncMutPairs[I];
+            PathHolder.Add(p^.Key);
+            if DoGetPath(p^.Value) then exit(True);
+            PathHolder.DeleteLast;
+          end;
+    else
+    end;
+    Result := False;
+  end;
+begin
+  Result := DoGetPath(Self);
+  aPath := Path;
 end;
 
 function TMpDomNode.ExtractKey(const aKey: TMpVariant; out aNode: TMpDomNode): Boolean;
@@ -2981,6 +3071,7 @@ end;
 
 function TMpReader.DoReadString(aLen: SizeInt; out s: string): Boolean;
 begin
+  s := '';
   if FBufPos > FBufSize - aLen then exit(False);
   System.SetLength(s, aLen);
   System.Move(FBuffer[FBufPos], Pointer(s)^, aLen);
@@ -2990,6 +3081,7 @@ end;
 
 function TMpReader.DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean;
 begin
+  b := nil;
   if FBufPos > FBufSize - aLen then exit(False);
   System.SetLength(b, aLen);
   System.Move(FBuffer[FBufPos], Pointer(b)^, aLen);
@@ -3922,7 +4014,7 @@ begin
   Result := True;
 end;
 
-class function TMpReader.DoFindPath(aReader: TMpReader; const aPath: array of string): Boolean;
+class function TMpReader.DoFindPathStr(aReader: TMpReader; const aPath: array of string): Boolean;
 var
   I, Idx: SizeInt;
   Len, J: Int64;
@@ -4113,7 +4205,7 @@ begin
   Result := Reader.CopyStruct(aBytes);
 end;
 
-function TMpReader.FindPath(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+function TMpReader.FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
 var
   Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
@@ -4121,12 +4213,12 @@ begin
   Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
   Reader := Ref;
   if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
-  if not DoFindPath(Reader, aPath) then exit(False);
+  if not DoFindPathStr(Reader, aPath) then exit(False);
   if (Reader.TokenKind in END_TOKENS) and not Reader.Read then exit(False);
   Result := DoReadDom(Reader, aNode);
 end;
 
-function TMpReader.FindPath(const aPath: array of string; out aBytes: TBytes): Boolean;
+function TMpReader.FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
 var
   Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
@@ -4140,7 +4232,7 @@ begin
   end;
   Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
   Reader := Ref;
-  if not DoFindPath(Reader, aPath) then exit(False);
+  if not DoFindPathStr(Reader, aPath) then exit(False);
   if (Reader.TokenKind in END_TOKENS) and not Reader.Read then exit(False);
   Result := Reader.CopyStruct(aBytes);
 end;
