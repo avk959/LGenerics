@@ -75,6 +75,8 @@ type
     procedure ArrayFindItem;
     procedure MapFindItem;
     procedure MapFindUniq;
+    procedure TestFindPath;
+    procedure TestFindPathStr;
   end;
 
 
@@ -1463,6 +1465,106 @@ begin
 
   AssertFalse(Node.Instance.FindUniq(5, n));
   AssertTrue(n = nil);
+end;
+
+procedure TTestMpDomNode.TestFindPath;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  Path, Found: TMpVarArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 4);
+
+  Path := [];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance);
+
+  Path := [0];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[0]);
+
+  Path := [1];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]);
+
+  Path := [2];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[2]);
+
+  Path := [3];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[3]);
+
+  Path := [4];
+  AssertFalse(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = nil);
+
+  Path := [1,'key'];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]['key']);
+  AssertTrue(Node.Instance.TryGetPath(n, Found));
+  AssertTrue(TMpVariant.ArrayEqual(Path, Found));
+
+  Path := [1,'key','str'];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]['key']['str']);
+  AssertTrue(Node.Instance.TryGetPath(n, Found));
+  AssertTrue(TMpVariant.ArrayEqual(Path, Found));
+
+  Path := [1,'key',[1,2,3,4]];
+  AssertTrue(Node.Instance.FindPath(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]['key'][[1,2,3,4]]);
+  AssertTrue(Node.Instance.TryGetPath(n, Found));
+  AssertTrue(TMpVariant.ArrayEqual(Path, Found));
+end;
+
+procedure TTestMpDomNode.TestFindPathStr;
+var
+  Node: TMpNode;
+  n: TMpDomNode;
+  Path: TStringArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+  AssertTrue(Node.Instance.IsArray);
+  AssertTrue(Node.Instance.Count = 4);
+
+  Path := [];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance);
+
+  Path := ['0'];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance.Items[0]);
+
+  Path := ['1'];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]);
+
+  Path := ['2'];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance.Items[2]);
+
+  Path := ['3'];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance.Items[3]);
+
+  Path := ['4'];
+  AssertFalse(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = nil);
+
+  Path := ['1','key'];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]['key']);
+
+  Path := ['1','key','str'];
+  AssertTrue(Node.Instance.FindPathStr(Path, n));
+  AssertTrue(n = Node.Instance.Items[1]['key']['str']);
 end;
 
 
