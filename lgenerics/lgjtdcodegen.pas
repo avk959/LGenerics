@@ -900,7 +900,7 @@ begin
     aText.Add('  I: Integer;');
   end;
   aText.Add('begin');
-  aText.Add('  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);');
+  aText.Add('  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);');
   if (Props <> nil) or (OptionalProps <> nil) then
     aText.Add('  Clear;');
   if Props <> nil then
@@ -908,7 +908,7 @@ begin
   if (Props <> nil) or (OptionalProps <> nil) then begin
     aText.Add('  repeat');
     aText.Add('    if not aReader.Read then ReaderFail(aReader);');
-    aText.Add('    if aReader.TokenKind = tkObjectEnd then break;');
+    aText.Add('    if aReader.TokenKind = rtkObjectEnd then break;');
     if not AdditionalProps then
       aText.Add('    if (FTagField <> '''') and (aReader.Name = FTagField) then continue;');
     if HasAsciiNames then
