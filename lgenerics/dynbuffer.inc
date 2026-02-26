@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -291,8 +291,12 @@ begin
 end;
 
 function TGCustomArrayContainer.ToArray: TArray;
+var
+  r: TArray = nil;
 begin
-  Result := System.Copy(FItems, 0, ElemCount);
+  System.SetLength(r, ElemCount);
+  CopyItems(Pointer(r));
+  Result := r;
 end;
 
 { TGLiteDynBuffer.TEnumerator }
@@ -507,8 +511,19 @@ begin
 end;
 
 function TGLiteDynBuffer.ToArray: TArray;
+var
+  r: TArray = nil;
+  I: SizeInt;
 begin
-  Result := System.Copy(FItems, 0, FCount);
+  if IsManagedType(T) then
+    begin
+      System.SetLength(r, Count);
+      for I := 0 to System.High(r) do
+        r[I] := FItems[I];
+      Result := r;
+    end
+  else
+    Result := System.Copy(FItems, 0, Count);
 end;
 
 function TGLiteDynBuffer.PushLast(const aValue: T): SizeInt;

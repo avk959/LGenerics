@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -164,7 +164,7 @@
     function  GetReverseEnumerator: TReverseEnumerator;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
-    function  ToArray: TArray; inline;
+    function  ToArray: TArray;
     function  PushLast(const aValue: T): SizeInt; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
