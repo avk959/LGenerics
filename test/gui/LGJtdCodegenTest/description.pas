@@ -129,7 +129,7 @@ end;
 {$PUSH}{$WARN 5057 OFF}
 procedure TPropertiesWithDescription.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   aReader.Skip;
 end;
 {$POP}
@@ -154,7 +154,7 @@ end;
 {$PUSH}{$WARN 5057 OFF}
 procedure TBar.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   aReader.Skip;
 end;
 {$POP}
@@ -306,12 +306,12 @@ var
   Flags: array[0..5] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'long_description':

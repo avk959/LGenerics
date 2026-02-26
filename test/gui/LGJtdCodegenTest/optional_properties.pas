@@ -97,11 +97,11 @@ end;
 {$PUSH}{$WARN 5057 OFF}
 procedure TRootObject.DoReadJson(aReader: TJsonReader);
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'foo':

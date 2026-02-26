@@ -125,12 +125,12 @@ var
   Flags: array[0..0] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'x':
@@ -206,12 +206,12 @@ var
   Flags: array[0..0] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'bar':
@@ -287,12 +287,12 @@ var
   Flags: array[0..0] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'x':
@@ -381,12 +381,12 @@ var
   Flags: array[0..1] of Boolean;
   I: Integer;
 begin
-  if aReader.TokenKind <> tkObjectBegin then ExpectObject(aReader);
+  if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;
   System.FillChar(Flags, SizeOf(Flags), 0);
   repeat
     if not aReader.Read then ReaderFail(aReader);
-    if aReader.TokenKind = tkObjectEnd then break;
+    if aReader.TokenKind = rtkObjectEnd then break;
     if (FTagField <> '') and (aReader.Name = FTagField) then continue;
     case aReader.Name of
       'foo':
