@@ -33,6 +33,7 @@ type
   private
   type
     TReader = specialize TGUniqRef<TMpReader>;
+    TMpNode = specialize TGAutoRef<TMpDomNode>;
   published
     procedure TestReadNil;
     procedure TestReadBool;
@@ -43,6 +44,10 @@ type
     procedure TestReadExt;
     procedure TestReadArray;
     procedure TestReadMap;
+    procedure TestFindPath;
+    procedure TestFindPathBin;
+    procedure TestFindPathStr;
+    procedure TestFindPathStrBin;
   end;
 
   { TTestMpDomNode }
@@ -638,6 +643,300 @@ begin
   AssertTrue(Reader.Instance.ReadState = mrsGo);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpReader.TestFindPath;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b: TBytes;
+  Path: TMpVarArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpReader.Create(Pointer(b), Length(b), 3);
+
+  Path := [];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance));
+  n.Free;
+
+  Path := [0];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[0]));
+  n.Free;
+
+  Path := [1];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]));
+  n.Free;
+
+  Path := [2];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[2]));
+  n.Free;
+
+  Path := [3];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[3]));
+  n.Free;
+
+  Path := [4];
+  AssertFalse(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n = nil);
+
+  Path := [1,1];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1][1]));
+  n.Free;
+
+  Path := [1,'key'];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']));
+  n.Free;
+
+  Path := [1,2];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1][2]));
+  n.Free;
+
+  Path := [1,3];
+  AssertFalse(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n = nil);
+
+  Path := [1,'key','str'];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['str']));
+  n.Free;
+
+  Path := [1,'key',[1,2,3,4]];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key'][[1,2,3,4]]));
+  n.Free;
+
+  Path := [1,'key',1];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key'][1]));
+  n.Free;
+end;
+
+procedure TTestMpReader.TestFindPathBin;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b, Found: TBytes;
+  Path: TMpVarArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpReader.Create(Pointer(b), Length(b), 3);
+
+  Path := [];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.AsMsgPack));
+
+  Path := [0];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[0].AsMsgPack));
+
+  Path := [1];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1].AsMsgPack));
+
+  Path := [2];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[2].AsMsgPack));
+
+  Path := [3];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[3].AsMsgPack));
+
+  Path := [4];
+  AssertFalse(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(Found = nil);
+
+  Path := [1,1];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1][1].AsMsgPack));
+
+  Path := [1,'key'];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'].AsMsgPack));
+
+  Path := [1,2];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1][2].AsMsgPack));
+
+  Path := [1,3];
+  AssertFalse(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(Found = nil);
+
+  Path := [1,'key','str'];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['str'].AsMsgPack));
+
+  Path := [1,'key',[1,2,3,4]];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'][[1,2,3,4]].AsMsgPack));
+
+  Path := [1,'key',1];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'][1].AsMsgPack));
+end;
+
+procedure TTestMpReader.TestFindPathStr;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b: TBytes;
+  Path: TStringArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI('11', 1001).AddNil('key').Add('22', False);
+  n.Items[1].Add('str', 'value').AddB('123', [2,3,4,5]).AddI('345', 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpReader.Create(Pointer(b), Length(b), 3);
+
+  Path := [];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance));
+  n.Free;
+
+  Path := ['0'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[0]));
+  n.Free;
+
+  Path := ['1'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]));
+  n.Free;
+
+  Path := ['2'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[2]));
+  n.Free;
+
+  Path := ['3'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[3]));
+  n.Free;
+
+  Path := ['4'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n = nil);
+
+  Path := ['1','11'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['11']));
+  n.Free;
+
+  Path := ['1','key'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']));
+  n.Free;
+
+  Path := ['1','22'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['22']));
+  n.Free;
+
+  Path := ['1','3'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n = nil);
+
+  Path := ['1','key','str'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['str']));
+  n.Free;
+
+  Path := ['1','key','123'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['123']));
+  n.Free;
+
+  Path := ['1','key','345'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['345']));
+  n.Free;
+end;
+
+procedure TTestMpReader.TestFindPathStrBin;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b, Found: TBytes;
+  Path: TStringArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI('11', 1001).AddNil('key').Add('22', False);
+  n.Items[1].Add('str', 'value').AddB('123', [2,3,4,5]).AddI('345', 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpReader.Create(Pointer(b), Length(b), 3);
+
+  Path := [];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.AsMsgPack));
+
+  Path := ['0'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[0].AsMsgPack));
+
+  Path := ['1'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1].AsMsgPack));
+
+  Path := ['2'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[2].AsMsgPack));
+
+  Path := ['3'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[3].AsMsgPack));
+
+  Path := ['4'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(Found = nil);
+
+  Path := ['1','11'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['11'].AsMsgPack));
+
+  Path := ['1','key'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'].AsMsgPack));
+
+  Path := ['1','22'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['22'].AsMsgPack));
+
+  Path := ['1','3'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(Found = nil);
+
+  Path := ['1','key','str'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['str'].AsMsgPack));
+
+  Path := ['1','key','123'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['123'].AsMsgPack));
+
+  Path := ['1','key','345'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['345'].AsMsgPack));
 end;
 
 { TTestMpDomNode }
