@@ -2359,9 +2359,7 @@ var
   begin
     if CurrNode = aNode then
       begin
-        System.SetLength(Path, PathHolder.Count);
-        for I := 0 to Pred(PathHolder.Count) do
-          Path[I] := PathHolder.UncMutable[I]^;
+        Path := PathHolder.ToArray;
         exit(True);
       end;
     case CurrNode.Kind of
@@ -3978,14 +3976,16 @@ begin
       exit(False);
     if Idx = 0 then begin
       if not aReader.Read then exit(False);
-    end else
+    end else begin
       while Idx <> 0 do begin
         if not aReader.Read then exit(False);
         if aReader.TokenKind in START_TOKENS then begin
           aReader.Skip;
           if aReader.ReadState = mrsError then exit(False);
         end;
-      Dec(Idx);
+        Dec(Idx);
+      end;
+      if not((aReader.TokenKind in END_TOKENS) or aReader.Read) then exit(False);
     end;
   end else begin // mtkMapBegin
     Idx := 0;
@@ -4028,7 +4028,7 @@ begin
       if Idx >= Len then exit(False);
       if Idx = 0 then begin
         if not aReader.Read then exit(False);
-      end else
+      end else begin
         for Idx := Idx - 1 downto 0 do begin
           if not aReader.Read then exit(False);
           if aReader.TokenKind in START_TOKENS then begin
@@ -4036,6 +4036,8 @@ begin
             if aReader.ReadState = mrsError then exit(False);
           end;
         end;
+        if not((aReader.TokenKind in END_TOKENS) or aReader.Read) then exit(False);
+      end;
     end else begin // mtkMapBegin
       J := 0;
       while J < Len do begin
@@ -4178,6 +4180,7 @@ var
   Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
 begin
+  aNode := nil;
   Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
   Reader := Ref;
   if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
@@ -4210,6 +4213,7 @@ var
   Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
 begin
+  aNode := nil;
   Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
   Reader := Ref;
   if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
