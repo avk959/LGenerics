@@ -459,11 +459,6 @@ begin
   end;
 end;
 
-generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer; aStrict: Boolean = False): string;
-begin
-  Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen, aStrict);
-end;
-
 type
   TPdoEntryInfo = record
     Data: TPdoCacheEntry;
@@ -944,6 +939,11 @@ begin
   Result := Writer.JsonString;
 end;
 {$POP}
+
+generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer; aStrict: Boolean = False): string;
+begin
+  Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen, aStrict);
+end;
 
 { EPdoLoadJson }
 constructor EPdoLoadJson.Create(const aMessage, aPath: string);
