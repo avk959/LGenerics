@@ -504,17 +504,11 @@ type
     procedure PopStack;
     function  GetMaxDepth: SizeInt; inline;
     function  DoReadByte(out b: Byte): Boolean; inline;
-    function  DoSkipByte: Boolean; inline;
     function  DoReadWord(out w: Word): Boolean; inline;
-    function  DoSkipWord: Boolean; inline;
     function  DoReadDWord(out d: DWord): Boolean; inline;
-    function  DoSkipDWord: Boolean; inline;
     function  DoReadQWord(out q: QWord): Boolean; inline;
-    function  DoSkipQWord: Boolean; inline;
     function  DoReadSingle(out s: Single): Boolean; inline;
-    function  DoSkipSingle: Boolean; inline;
     function  DoReadDouble(out d: Double): Boolean; inline;
-    function  DoSkipDouble: Boolean; inline;
     function  DoReadString(aLen: SizeInt; out s: string): Boolean;
     function  DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean;
     function  DoSkipBytes(aLen: SizeInt): Boolean; inline;
@@ -2990,12 +2984,6 @@ begin
   end;
 end;
 
-function TMpReader.DoSkipByte: Boolean;
-begin
-  Result := FBufPos < FBufSize;
-  if Result then Inc(FBufPos);
-end;
-
 function TMpReader.DoReadWord(out w: Word): Boolean;
 begin
   Result := FBufPos <= FBufSize - SizeOf(Word);
@@ -3003,12 +2991,6 @@ begin
     w := System.BEtoN(PWord(Unaligned(@FBuffer[FBufPos]))^);
     Inc(FBufPos, SizeOf(Word));
   end;
-end;
-
-function TMpReader.DoSkipWord: Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(Word);
-  if Result then Inc(FBufPos, SizeOf(Word));
 end;
 
 function TMpReader.DoReadDWord(out d: DWord): Boolean;
@@ -3020,12 +3002,6 @@ begin
   end;
 end;
 
-function TMpReader.DoSkipDWord: Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(DWord);
-  if Result then Inc(FBufPos, SizeOf(DWord));
-end;
-
 function TMpReader.DoReadQWord(out q: QWord): Boolean;
 begin
   Result := FBufPos <= FBufSize - SizeOf(QWord);
@@ -3035,12 +3011,6 @@ begin
   end;
 end;
 
-function TMpReader.DoSkipQWord: Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(QWord);
-  if Result then Inc(FBufPos, SizeOf(QWord));
-end;
-
 function TMpReader.DoReadSingle(out s: Single): Boolean;
 var
   d: DWord absolute s;
@@ -3048,23 +3018,11 @@ begin
   Result := DoReadDWord(d);
 end;
 
-function TMpReader.DoSkipSingle: Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(Single);
-  if Result then Inc(FBufPos, SizeOf(Single));
-end;
-
 function TMpReader.DoReadDouble(out d: Double): Boolean;
 var
   q: QWord absolute d;
 begin
   Result := DoReadQWord(q);
-end;
-
-function TMpReader.DoSkipDouble: Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(Double);
-  if Result then Inc(FBufPos, SizeOf(Double));
 end;
 
 function TMpReader.DoReadString(aLen: SizeInt; out s: string): Boolean;
@@ -3254,7 +3212,7 @@ begin
     Result := DoReadByte(b);
     if Result then FKey := b;
   end else
-    Result := DoSkipByte;
+    Result := DoSkipBytes(SizeOf(Byte));
 end;
 
 function TMpReader.DoReadUInt16Key: Boolean;
@@ -3265,7 +3223,7 @@ begin
     Result := DoReadWord(w);
     if Result then FKey := w;
   end else
-    Result := DoSkipWord;
+    Result := DoSkipBytes(SizeOf(Word));
 end;
 
 function TMpReader.DoReadUInt32Key: Boolean;
@@ -3276,7 +3234,7 @@ begin
     Result := DoReadDWord(d);
     if Result then FKey := d;
   end else
-    Result := DoSkipDWord;
+    Result := DoSkipBytes(SizeOf(DWord));
 end;
 
 function TMpReader.DoReadUInt64Key: Boolean;
@@ -3287,7 +3245,7 @@ begin
     Result := DoReadQWord(q);
     if Result then FKey := q;
   end else
-    Result := DoSkipQWord;
+    Result := DoSkipBytes(SizeOf(QWord));
 end;
 
 function TMpReader.DoReadInt8Key: Boolean;
@@ -3298,7 +3256,7 @@ begin
     Result := DoReadByte(b);
     if Result then FKey := Int8(b);
   end else
-    Result := DoSkipByte;
+    Result := DoSkipBytes(SizeOf(Byte));
 end;
 
 function TMpReader.DoReadInt16Key: Boolean;
@@ -3309,7 +3267,7 @@ begin
     Result := DoReadWord(w);
     if Result then FKey := Int16(w);
   end else
-    Result := DoSkipWord;
+    Result := DoSkipBytes(SizeOf(Word));
 end;
 
 function TMpReader.DoReadInt32Key: Boolean;
@@ -3320,7 +3278,7 @@ begin
     Result := DoReadDWord(d);
     if Result then FKey := Int32(d);
   end else
-    Result := DoSkipDWord;
+    Result := DoSkipBytes(SizeOf(DWord));
 end;
 
 function TMpReader.DoReadInt64Key: Boolean;
@@ -3331,7 +3289,7 @@ begin
     Result := DoReadQWord(q);
     if Result then FKey := Int16(q);
   end else
-    Result := DoSkipQWord;
+    Result := DoSkipBytes(SizeOf(QWord));
 end;
 
 function TMpReader.DoReadStr8Key: Boolean;
@@ -3554,7 +3512,7 @@ begin
   if ReadMode then
     Result := DoReadSingle(FSingle)
   else
-    Result := DoSkipSingle;
+    Result := DoSkipBytes(SizeOf(Single));
   if Result then begin
     FCurrToken := mtkSingle;
     TermDone;
@@ -3566,7 +3524,7 @@ begin
   if ReadMode then
     Result := DoReadDouble(FDouble)
   else
-    Result := DoSkipDouble;
+    Result := DoSkipBytes(SizeOf(Double));
   if Result then begin
     FCurrToken := mtkDouble;
     TermDone;
@@ -3581,7 +3539,7 @@ begin
     Result := DoReadByte(b);
     FInt := b;
   end else
-    Result := DoSkipByte;
+    Result := DoSkipBytes(SizeOf(Byte));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3596,7 +3554,7 @@ begin
     Result := DoReadWord(w);
     FInt := w;
   end else
-    Result := DoSkipWord;
+    Result := DoSkipBytes(SizeOf(Word));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3611,7 +3569,7 @@ begin
     Result := DoReadDWord(d);
     FInt := d;
   end else
-    Result := DoSkipDWord;
+    Result := DoSkipBytes(SizeOf(DWord));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3626,7 +3584,7 @@ begin
     Result := DoReadQWord(q);
     FInt := Int64(q);
   end else
-    Result := DoSkipWord;
+    Result := DoSkipBytes(SizeOf(QWord));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3641,7 +3599,7 @@ begin
     Result := DoReadByte(b);
     FInt := Int8(b);
   end else
-    Result := DoSkipByte;
+    Result := DoSkipBytes(SizeOf(Byte));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3656,7 +3614,7 @@ begin
     Result := DoReadWord(w);
     FInt := Int16(w);
   end else
-    Result := DoSkipWord;
+    Result := DoSkipBytes(SizeOf(Word));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3671,7 +3629,7 @@ begin
     Result := DoReadDWord(d);
     FInt := Int32(d);
   end else
-    Result := DoSkipDWord;
+    Result := DoSkipBytes(SizeOf(DWord));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
@@ -3686,7 +3644,7 @@ begin
     Result := DoReadQWord(q);
     FInt := Int64(q);
   end else
-    Result := DoSkipWord;
+    Result := DoSkipBytes(SizeOf(QWord));
   if Result then begin
     FCurrToken := mtkInt;
     TermDone;
