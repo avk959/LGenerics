@@ -27,6 +27,16 @@ type
     procedure TestWriteMap;
   end;
 
+  { TTestMpStreamWriter }
+
+  TTestMpStreamWriter = class(TTestCase)
+  private
+  type
+    TWriter = specialize TGUniqRef<TMpStreamWriter>;
+  published
+    procedure TestWriteDom;
+  end;
+
   { TTestMpReader }
 
   TTestMpReader = class(TTestCase)
@@ -345,6 +355,28 @@ begin
   Writer.Instance.Add('a');
   Writer.Instance.BeginMap(0);
   AssertTrue('1', SameBytes(Writer.Instance.ToBytes, [$81,$a1,$61,$80]));
+end;
+
+{ TTestMpStreamWriter }
+
+procedure TTestMpStreamWriter.TestWriteDom;
+var
+  Writer: TWriter;
+  Stream: specialize TGAutoRef<TMemoryStream>;
+  n1, n2: specialize TGAutoRef<TMpDomNode>;
+begin
+  n1.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n1.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n1.Instance.Items[1].Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+
+  Writer.Instance := TMpStreamWriter.Create(Stream.Instance);
+  AssertFalse(n2.Instance.TryParse(Stream.Instance));
+
+  Writer.Instance.WriteDom(n1.Instance);
+  Stream.Instance.Position := 0;
+
+  AssertTrue(n2.Instance.TryParse(Stream.Instance));
+  AssertTrue(n2.Instance.EqualTo(n1.Instance));
 end;
 
 { TTestMpReader }
@@ -1871,6 +1903,7 @@ end;
 initialization
 
   RegisterTest(TTestMpWriter);
+  RegisterTest(TTestMpStreamWriter);
   RegisterTest(TTestMpReader);
   RegisterTest(TTestMpDomNode);
 
