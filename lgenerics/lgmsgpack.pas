@@ -412,8 +412,42 @@ type
     property Values[const aKey: TMpVariant]: TMpDomNode read GetMapProp; default;
   end;
 
+  { TMpCustomWriter }
+  TMpCustomWriter = class abstract
+  private
+    procedure DoError(const aMsg: string);
+    procedure DoError(const aFmt: string; const aParams: array of const);
+  protected
+    FCount: SizeInt;
+    procedure DoWrite(b: Byte); virtual; abstract;
+    procedure DoWrite2(b1, b2: Byte); virtual; abstract;
+    procedure DoWrite3(b1, b2, b3: Byte); virtual; abstract;
+    procedure DoWrite(w: Word); virtual; abstract;
+    procedure DoWrite(d: DWord); virtual; abstract;
+    procedure DoWrite(q: QWord); virtual; abstract;
+    procedure DoWrite(p: PByte; aCount: SizeInt); virtual; abstract;
+  public
+    class procedure WriteDom(aNode: TMpDomNode; aWriter: TMpCustomWriter); static;
+    function AddNil: TMpCustomWriter;
+    function Add(aValue: Boolean): TMpCustomWriter;
+    function Add(aValue: Int64): TMpCustomWriter;
+    function Add(aValue: Single): TMpCustomWriter;
+    function Add(aValue: Double): TMpCustomWriter;
+    function Add(const s: string): TMpCustomWriter;
+    function Add(const s: shortstring): TMpCustomWriter;
+    function Add(const a: array of Byte): TMpCustomWriter;
+    function Add(const ts: TMpTimeStamp): TMpCustomWriter;
+    function Add(const v: TMpVariant): TMpCustomWriter;
+    function AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpCustomWriter;
+    function AddExt(aType: TMpExtType; const aBuffer; aCount: SizeInt): TMpCustomWriter;
+    function BeginArray(aCount: SizeInt): TMpCustomWriter;
+    function BeginMap(aCount: SizeInt): TMpCustomWriter;
+  { number of bytes written }
+    property TotalWritten: SizeInt read FCount;
+  end;
+
   { TMpWriter }
-  TMpWriter = class
+  TMpWriter = class(TMpCustomWriter)
   private
   type
     TBuffer = specialize TGDynArray<Byte>;
@@ -421,43 +455,41 @@ type
     INIT_BUF_LEN = 4096;
   var
     FBuffer: TBuffer;
-    FCount: SizeInt;
     procedure EnsureCapacity(aValue: SizeInt); inline;
-    procedure DoWrite(b: Byte);
-    procedure DoWrite2(b1, b2: Byte);
-    procedure DoWrite3(b1, b2, b3: Byte);
-    procedure DoWrite(w: Word);
-    procedure DoWrite(d: DWord);
-    procedure DoWrite(q: QWord);
-    procedure DoWrite(p: PByte; aCount: SizeInt);
-    procedure DoError(const aMsg: string);
-    procedure DoError(const aFmt: string; const aParams: array of const);
-    class procedure WriteDom(aNode: TMpDomNode; aWriter: TMpWriter); static;
+   protected
+    procedure DoWrite(b: Byte); override;
+    procedure DoWrite2(b1, b2: Byte); override;
+    procedure DoWrite3(b1, b2, b3: Byte); override;
+    procedure DoWrite(w: Word); override;
+    procedure DoWrite(d: DWord); override;
+    procedure DoWrite(q: QWord); override;
+    procedure DoWrite(p: PByte; aCount: SizeInt); override;
   public
     class function DomToRawStr(aNode: TMpDomNode): rawbytestring; static;
     class function DomToBytes(aNode: TMpDomNode): TBytes; static;
     constructor Create;
-    function AddNil: TMpWriter;
-    function Add(aValue: Boolean): TMpWriter;
-    function Add(aValue: Int64): TMpWriter;
-    function Add(aValue: Single): TMpWriter;
-    function Add(aValue: Double): TMpWriter;
-    function Add(const s: string): TMpWriter;
-    function Add(const s: shortstring): TMpWriter;
-    function Add(const a: array of Byte): TMpWriter;
-    function Add(const ts: TMpTimeStamp): TMpWriter;
-    function Add(const v: TMpVariant): TMpWriter;
-    function AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpWriter;
-    function AddExt(aType: TMpExtType; const aBuffer; aCount: SizeInt): TMpWriter;
-    function BeginArray(aCount: SizeInt): TMpWriter;
-    function BeginMap(aCount: SizeInt): TMpWriter;
-  { resets the counter of bytes written }
+  { resets the counter of written bytes }
     procedure Reset; inline;
     function ToStrRaw: rawbytestring;
     function ToBytes: TBytes;
     function SaveToStream(aStream: TStream): SizeInt;
-  { a counter of bytes written }
-    property TotalBytes: SizeInt read FCount;
+  end;
+
+  { TMpStreamWriter }
+  TMpStreamWriter = class(TMpCustomWriter)
+  private
+    FStream: TStream;
+  protected
+    procedure DoWrite(b: Byte); override;
+    procedure DoWrite2(b1, b2: Byte); override;
+    procedure DoWrite3(b1, b2, b3: Byte); override;
+    procedure DoWrite(w: Word); override;
+    procedure DoWrite(d: DWord); override;
+    procedure DoWrite(q: QWord); override;
+    procedure DoWrite(p: PByte; aCount: SizeInt); override;
+  public
+    constructor Create(aStream: TStream);
+    function WriteDom(aNode: TMpDomNode): TMpStreamWriter; overload;
   end;
 
   TMpStructKind  = (mskNone, mskArray, mskMap);
@@ -2473,78 +2505,19 @@ begin
   end;
 end;
 
-{ TMpWriter }
+{ TMpCustomWriter }
 
-procedure TMpWriter.EnsureCapacity(aValue: SizeInt);
-begin
-  if aValue > FBuffer.Length then
-    FBuffer.Length := LgUtils.RoundUpTwoPower(aValue);
-end;
-
-procedure TMpWriter.DoWrite(b: Byte);
-begin
-  EnsureCapacity(Succ(TotalBytes));
-  FBuffer.Ptr[TotalBytes] := b;
-  Inc(FCount);
-end;
-
-procedure TMpWriter.DoWrite2(b1, b2: Byte);
-begin
-  EnsureCapacity(TotalBytes + 2);
-  FBuffer.Ptr[TotalBytes] := b1;
-  FBuffer.Ptr[TotalBytes + 1] := b2;
-  Inc(FCount, 2);
-end;
-
-procedure TMpWriter.DoWrite3(b1, b2, b3: Byte);
-begin
-  EnsureCapacity(TotalBytes + 3);
-  FBuffer.Ptr[TotalBytes] := b1;
-  FBuffer.Ptr[TotalBytes + 1] := b2;
-  FBuffer.Ptr[TotalBytes + 2] := b3;
-  Inc(FCount, 3);
-end;
-
-procedure TMpWriter.DoWrite(w: Word);
-begin
-  EnsureCapacity(TotalBytes + 2);
-  PWord(Unaligned(@FBuffer.Ptr[TotalBytes]))^ := w;
-  Inc(FCount, 2);
-end;
-
-procedure TMpWriter.DoWrite(d: DWord);
-begin
-  EnsureCapacity(TotalBytes + 4);
-  PDWord(Unaligned(@FBuffer.Ptr[TotalBytes]))^ := d;
-  Inc(FCount, 4);
-end;
-
-procedure TMpWriter.DoWrite(q: QWord);
-begin
-  EnsureCapacity(TotalBytes + 8);
-  PQWord(Unaligned(@FBuffer.Ptr[TotalBytes]))^ := q;
-  Inc(FCount, 8);
-end;
-
-procedure TMpWriter.DoWrite(p: PByte; aCount: SizeInt);
-begin
-  if aCount <= 0 then exit;
-  EnsureCapacity(TotalBytes + aCount);
-  System.Move(p^, FBuffer.Ptr[TotalBytes], aCount);
-  Inc(FCount, aCount);
-end;
-
-procedure TMpWriter.DoError(const aMsg: string);
+procedure TMpCustomWriter.DoError(const aMsg: string);
 begin
   raise EMpWrite.Create(aMsg);
 end;
 
-procedure TMpWriter.DoError(const aFmt: string; const aParams: array of const);
+procedure TMpCustomWriter.DoError(const aFmt: string; const aParams: array of const);
 begin
   raise EMpWrite.CreateFmt(aFmt, aParams);
 end;
 
-class procedure TMpWriter.WriteDom(aNode: TMpDomNode; aWriter: TMpWriter);
+class procedure TMpCustomWriter.WriteDom(aNode: TMpDomNode; aWriter: TMpCustomWriter);
   procedure WriteNode(aNode: TMpDomNode);
   var
     I, Cnt: SizeInt;
@@ -2582,45 +2555,13 @@ begin
   WriteNode(aNode);
 end;
 
-class function TMpWriter.DomToRawStr(aNode: TMpDomNode): rawbytestring;
-var
-  Writer: TMpWriter;
-begin
-  Writer := TMpWriter.Create;
-  try
-    WriteDom(aNode, Writer);
-    Result := Writer.ToStrRaw;
-  finally
-    Writer.Free;
-  end;
-end;
-
-class function TMpWriter.DomToBytes(aNode: TMpDomNode): TBytes;
-var
-  Writer: TMpWriter;
-begin
-  Writer := TMpWriter.Create;
-  try
-    WriteDom(aNode, Writer);
-    Result := Writer.ToBytes;
-  finally
-    Writer.Free;
-  end;
-end;
-
-constructor TMpWriter.Create;
-begin
-  inherited;
-  FBuffer.Length := INIT_BUF_LEN;
-end;
-
-function TMpWriter.AddNil: TMpWriter;
+function TMpCustomWriter.AddNil: TMpCustomWriter;
 begin
   DoWrite(Byte($c0));
   Result := Self;
 end;
 
-function TMpWriter.Add(aValue: Boolean): TMpWriter;
+function TMpCustomWriter.Add(aValue: Boolean): TMpCustomWriter;
 begin
   if aValue then
     DoWrite(Byte($c3))
@@ -2629,7 +2570,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.Add(aValue: Int64): TMpWriter;
+function TMpCustomWriter.Add(aValue: Int64): TMpCustomWriter;
 begin
   case aValue of
     System.Low(Int64)..System.Low(Int32)-1:
@@ -2678,21 +2619,21 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.Add(aValue: Single): TMpWriter;
+function TMpCustomWriter.Add(aValue: Single): TMpCustomWriter;
 begin
   DoWrite(Byte($ca));
   DoWrite(System.NToBE(DWord(aValue)));
   Result := Self;
 end;
 
-function TMpWriter.Add(aValue: Double): TMpWriter;
+function TMpCustomWriter.Add(aValue: Double): TMpCustomWriter;
 begin
   DoWrite(Byte($cb));
   DoWrite(System.NToBE(QWord(aValue)));
   Result := Self;
 end;
 
-function TMpWriter.Add(const s: string): TMpWriter;
+function TMpCustomWriter.Add(const s: string): TMpCustomWriter;
 var
   Len: SizeInt;
 begin
@@ -2732,7 +2673,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.Add(const s: shortstring): TMpWriter;
+function TMpCustomWriter.Add(const s: shortstring): TMpCustomWriter;
 var
   Len: SizeInt;
 begin
@@ -2749,7 +2690,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.Add(const a: array of Byte): TMpWriter;
+function TMpCustomWriter.Add(const a: array of Byte): TMpCustomWriter;
 var
   Len: SizeInt;
 begin
@@ -2785,7 +2726,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.Add(const ts: TMpTimeStamp): TMpWriter;
+function TMpCustomWriter.Add(const ts: TMpTimeStamp): TMpCustomWriter;
 begin
   if (ts.Seconds shr 32 = 0) and (ts.NanoSeconds = 0) then begin
     DoWrite2(Byte($d6), Byte(-1));
@@ -2802,7 +2743,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.Add(const v: TMpVariant): TMpWriter;
+function TMpCustomWriter.Add(const v: TMpVariant): TMpCustomWriter;
 begin
   case v.Kind of
     mvkNull: AddNil;
@@ -2813,7 +2754,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpWriter;
+function TMpCustomWriter.AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpCustomWriter;
 var
   Len: SizeInt;
 begin
@@ -2853,12 +2794,12 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.AddExt(aType: TMpExtType; const aBuffer; aCount: SizeInt): TMpWriter;
+function TMpCustomWriter.AddExt(aType: TMpExtType; const aBuffer; aCount: SizeInt): TMpCustomWriter;
 begin
   Result := AddExt(aType, PByte(@aBuffer)[0..Pred(aCount)]);
 end;
 
-function TMpWriter.BeginArray(aCount: SizeInt): TMpWriter;
+function TMpCustomWriter.BeginArray(aCount: SizeInt): TMpCustomWriter;
 begin
   if aCount < 0 then DoError(SEMpInvalidArraySizeFmt, [aCount]);
   if aCount <= $0f then
@@ -2883,7 +2824,7 @@ begin
   Result := Self;
 end;
 
-function TMpWriter.BeginMap(aCount: SizeInt): TMpWriter;
+function TMpCustomWriter.BeginMap(aCount: SizeInt): TMpCustomWriter;
 begin
   if aCount < 0 then DoError(SEMpInvalidMapSizeFmt, [aCount]);
   if aCount <= $0f then
@@ -2908,6 +2849,99 @@ begin
   Result := Self;
 end;
 
+{ TMpWriter }
+
+procedure TMpWriter.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > FBuffer.Length then
+    FBuffer.Length := LgUtils.RoundUpTwoPower(aValue);
+end;
+
+procedure TMpWriter.DoWrite(b: Byte);
+begin
+  EnsureCapacity(Succ(TotalWritten));
+  FBuffer.Ptr[TotalWritten] := b;
+  Inc(FCount);
+end;
+
+procedure TMpWriter.DoWrite2(b1, b2: Byte);
+begin
+  EnsureCapacity(TotalWritten + 2);
+  FBuffer.Ptr[TotalWritten] := b1;
+  FBuffer.Ptr[TotalWritten + 1] := b2;
+  Inc(FCount, 2);
+end;
+
+procedure TMpWriter.DoWrite3(b1, b2, b3: Byte);
+begin
+  EnsureCapacity(TotalWritten + 3);
+  FBuffer.Ptr[TotalWritten] := b1;
+  FBuffer.Ptr[TotalWritten + 1] := b2;
+  FBuffer.Ptr[TotalWritten + 2] := b3;
+  Inc(FCount, 3);
+end;
+
+procedure TMpWriter.DoWrite(w: Word);
+begin
+  EnsureCapacity(TotalWritten + 2);
+  PWord(Unaligned(@FBuffer.Ptr[TotalWritten]))^ := w;
+  Inc(FCount, 2);
+end;
+
+procedure TMpWriter.DoWrite(d: DWord);
+begin
+  EnsureCapacity(TotalWritten + 4);
+  PDWord(Unaligned(@FBuffer.Ptr[TotalWritten]))^ := d;
+  Inc(FCount, 4);
+end;
+
+procedure TMpWriter.DoWrite(q: QWord);
+begin
+  EnsureCapacity(TotalWritten + 8);
+  PQWord(Unaligned(@FBuffer.Ptr[TotalWritten]))^ := q;
+  Inc(FCount, 8);
+end;
+
+procedure TMpWriter.DoWrite(p: PByte; aCount: SizeInt);
+begin
+  if aCount <= 0 then exit;
+  EnsureCapacity(TotalWritten + aCount);
+  System.Move(p^, FBuffer.Ptr[TotalWritten], aCount);
+  Inc(FCount, aCount);
+end;
+
+class function TMpWriter.DomToRawStr(aNode: TMpDomNode): rawbytestring;
+var
+  Writer: TMpWriter;
+begin
+  Writer := TMpWriter.Create;
+  try
+    WriteDom(aNode, Writer);
+    Result := Writer.ToStrRaw;
+  finally
+    Writer.Free;
+  end;
+end;
+
+class function TMpWriter.DomToBytes(aNode: TMpDomNode): TBytes;
+var
+  Writer: TMpWriter;
+begin
+  Writer := TMpWriter.Create;
+  try
+    WriteDom(aNode, Writer);
+    Result := Writer.ToBytes;
+  finally
+    Writer.Free;
+  end;
+end;
+
+constructor TMpWriter.Create;
+begin
+  inherited;
+  FBuffer.Length := INIT_BUF_LEN;
+end;
+
 procedure TMpWriter.Reset;
 begin
   FCount := 0;
@@ -2916,21 +2950,80 @@ end;
 function TMpWriter.ToStrRaw: rawbytestring;
 begin
   Result := '';
-  System.SetLength(Result, TotalBytes);
-  System.Move(FBuffer.Ptr^, Pointer(Result)^, TotalBytes);
+  System.SetLength(Result, TotalWritten);
+  System.Move(FBuffer.Ptr^, Pointer(Result)^, TotalWritten);
 end;
 
 function TMpWriter.ToBytes: TBytes;
 begin
   Result := nil;
-  System.SetLength(Result, TotalBytes);
-  System.Move(FBuffer.Ptr^, Pointer(Result)^, TotalBytes);
+  System.SetLength(Result, TotalWritten);
+  System.Move(FBuffer.Ptr^, Pointer(Result)^, TotalWritten);
 end;
 
 function TMpWriter.SaveToStream(aStream: TStream): SizeInt;
 begin
-  Result := TotalBytes;
+  Result := TotalWritten;
   aStream.WriteBuffer(FBuffer.Ptr^, Result);
+end;
+
+{ TMpStreamWriter }
+
+procedure TMpStreamWriter.DoWrite(b: Byte);
+begin
+  FStream.WriteBuffer(b, SizeOf(b));
+  Inc(FCount);
+end;
+
+procedure TMpStreamWriter.DoWrite2(b1, b2: Byte);
+begin
+  FStream.WriteBuffer(b1, SizeOf(b1));
+  FStream.WriteBuffer(b2, SizeOf(b2));
+  Inc(FCount, 2);
+end;
+
+procedure TMpStreamWriter.DoWrite3(b1, b2, b3: Byte);
+begin
+  FStream.WriteBuffer(b1, SizeOf(b1));
+  FStream.WriteBuffer(b2, SizeOf(b2));
+  FStream.WriteBuffer(b3, SizeOf(b3));
+  Inc(FCount, 3);
+end;
+
+procedure TMpStreamWriter.DoWrite(w: Word);
+begin
+  FStream.WriteBuffer(w, SizeOf(w));
+  Inc(FCount, SizeOf(w));
+end;
+
+procedure TMpStreamWriter.DoWrite(d: DWord);
+begin
+  FStream.WriteBuffer(d, SizeOf(d));
+  Inc(FCount, SizeOf(d));
+end;
+
+procedure TMpStreamWriter.DoWrite(q: QWord);
+begin
+  FStream.WriteBuffer(q, SizeOf(q));
+  Inc(FCount, SizeOf(q));
+end;
+
+procedure TMpStreamWriter.DoWrite(p: PByte; aCount: SizeInt);
+begin
+  FStream.WriteBuffer(p^, aCount);
+  Inc(FCount, aCount);
+end;
+
+constructor TMpStreamWriter.Create(aStream: TStream);
+begin
+  inherited Create;
+  FStream := aStream;
+end;
+
+function TMpStreamWriter.WriteDom(aNode: TMpDomNode): TMpStreamWriter;
+begin
+  WriteDom(aNode, Self);
+  Result := Self;
 end;
 
 { TMpReader.TNode }
