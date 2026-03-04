@@ -494,34 +494,34 @@ type
 
   TMpStructKind  = (mskNone, mskArray, mskMap);
 
-  TMpReaderState = (mrsStart, mrsGo, mrsEof, mrsError);
+  TMpReaderState = (mrsStart, mrsRead, mrsEof, mrsError);
 
   TMpTokenKind = (
     mtkNone, mtkArrayBegin, mtkMapBegin, mtkArrayEnd, mtkMapEnd, mtkNil, mtkBool,
     mtkInt, mtkSingle, mtkDouble, mtkString, mtkBin, mtkTStamp, mtkExt
   );
 
-  { TMpReader }
-  TMpReader = class
-  private
+const
+  MP_START_TOKENS = [mtkArrayBegin, mtkMapBegin];
+  MP_END_TOKENS   = [mtkArrayEnd, mtkMapEnd];
+
+type
+
+  { TMpCustomReader }
+  TMpCustomReader = class
+  protected
   type
     TNode = record
       Count: Int64;
       Struct: TMpStructKind;
       constructor Make(aCount: Int64; aStruct: TMpStructKind);
     end;
-  const
-    START_TOKENS = [mtkArrayBegin, mtkMapBegin];
-    END_TOKENS   = [mtkArrayEnd, mtkMapEnd];
   var
     FStack: array of TNode;
     FKey: TMpVariant;
     FTStamp: TMpTimeStamp;
     FString: string;
     FBytes: TBytes;
-    FBuffer: PByte;
-    FBufSize,
-    FBufPos: SizeInt;
     FInt: Int64;
     FDouble: Double;
     FSingle: Single;
@@ -530,20 +530,21 @@ type
     FState: TMpReaderState;
     FCurrToken: TMpTokenKind;
     FReadMode: Boolean;
+    function  DoReadByte(out b: Byte): Boolean; virtual; abstract;
+    function  DoReadWord(out w: Word): Boolean; virtual; abstract;
+    function  DoReadDWord(out d: DWord): Boolean; virtual; abstract;
+    function  DoReadQWord(out q: QWord): Boolean; virtual; abstract;
+    function  DoReadString(aLen: SizeInt; out s: string): Boolean; virtual; abstract;
+    function  DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean; virtual; abstract;
+    function  DoSkipBytes(aLen: SizeInt): Boolean; virtual; abstract;
+    function  GetTotal: SizeInt; virtual; abstract;
     function  GetStruct: TMpStructKind; inline;
     function  TryPushStack(aCount: Int64; aStruct: TMpStructKind): Boolean;
     procedure TermDone; inline;
     procedure PopStack;
     function  GetMaxDepth: SizeInt; inline;
-    function  DoReadByte(out b: Byte): Boolean; inline;
-    function  DoReadWord(out w: Word): Boolean; inline;
-    function  DoReadDWord(out d: DWord): Boolean; inline;
-    function  DoReadQWord(out q: QWord): Boolean; inline;
-    function  DoReadSingle(out s: Single): Boolean; inline;
+    function  DoReadSingle(out s: Single): Boolean;
     function  DoReadDouble(out d: Double): Boolean; inline;
-    function  DoReadString(aLen: SizeInt; out s: string): Boolean;
-    function  DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean;
-    function  DoSkipBytes(aLen: SizeInt): Boolean; inline;
     function  GetCurrUnread: Int64; inline;
     procedure DoReadFixInt(aPfx: Byte); inline;
     procedure DoReadNegFixInt(aPfx: Byte); inline;
@@ -574,9 +575,6 @@ type
     function  DoReadStr16Key: Boolean;
     function  DoReadStr32Key: Boolean;
     function  DoReadKey: Boolean;
-    function  DoReadTStamp32: Boolean;
-    function  DoReadTStamp64: Boolean;
-    function  DoReadTStamp96: Boolean;
     function  DoReadExt8: Boolean;
     function  DoReadExt16: Boolean;
     function  DoReadExt32: Boolean;
@@ -605,31 +603,20 @@ type
     function  DoRead: Boolean;
     property  StackTop: Integer read FStackTop;
     property  ReadMode: Boolean read FReadMode;
-    class function DoReadDom(aReader: TMpReader; out aNode: TMpDomNode;
+    class function DoReadDom(aReader: TMpCustomReader; out aNode: TMpDomNode;
                              aDuplicates: TMpDuplicates = mduAccept): Boolean; static;
-    class function DoFind(aReader: TMpReader; const aKey: TMpVariant): Boolean; static;
-    class function DoFindPath(aReader: TMpReader; const aPath: array of TMpVariant): Boolean; static;
-    class function DoFindPathStr(aReader: TMpReader; const aPath: array of string): Boolean; static;
+    class function DoFind(aReader: TMpCustomReader; const aKey: TMpVariant): Boolean; static;
+    class function DoFindPath(aReader: TMpCustomReader; const aPath: array of TMpVariant): Boolean; static;
+    class function DoFindPathStr(aReader: TMpCustomReader; const aPath: array of string): Boolean; static;
   public
   const
     DEF_DEPTH = 512;
-  { tries to load the DOM tree from the specified buffer }
-    class function TryReadDom(aBuffer: PByte; aCount: SizeInt; out aNode: TMpDomNode;
-                              aDuplicates: TMpDuplicates = mduAccept;
-                              aMaxDepth: Integer = DEF_DEPTH): Boolean; static;
-    constructor Create(p: PByte; aCount: SizeInt; aMaxDepth: Integer = DEF_DEPTH);
-  { tries to read the next token from the buffer }
-    function Read: Boolean;
+    function Read: Boolean; virtual; abstract;
   { if the current token is the beginning of the structure, it skips its contents and stops
     at the closing token, otherwise it performs only one read }
     procedure Skip;
   { tries to copy the current structure "as is" }
-    function CopyStruct(out aStruct: TBytes): Boolean;
-  { tries to find an element using a path specified as an array of path segments }
-    function FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
-    function FindPath(const aPath: array of TMpVariant; out aBytes: TBytes): Boolean;
-    function FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
-    function FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
+    function CopyStruct(out aStruct: TBytes): Boolean; virtual; abstract;
   { tries to find the specified key in the current structure without trying to enter
     nested structures if the current token is the beginning of the structure }
     function Find(const aKey: TMpVariant): Boolean;
@@ -642,14 +629,83 @@ type
     property AsTimeStamp: TMpTimeStamp read FTStamp;
     property AsExtention: TMpExtBlob read FBytes;
     property KeyValue: TMpVariant read FKey;
-    property Position: SizeInt read FBufPos;
-    property BufferSize: SizeInt read FBufSize;
+    property TotalRead: SizeInt read GetTotal;
     property Depth: Integer read FStackTop;
     property MaxDepth: SizeInt read GetMaxDepth;
     property ReadState: TMpReaderState read FState;
     property TokenKind: TMpTokenKind read FCurrToken;
     property StructKind: TMpStructKind read GetStruct;
     property StructUnread: Int64 read GetCurrUnread;
+  end;
+
+  { TMpReader }
+  TMpReader = class(TMpCustomReader)
+  private
+    FBuffer: PByte;
+    FBufSize,
+    FBufPos: SizeInt;
+  protected
+    function  DoReadByte(out b: Byte): Boolean; override;
+    function  DoReadWord(out w: Word): Boolean; override;
+    function  DoReadDWord(out d: DWord): Boolean; override;
+    function  DoReadQWord(out q: QWord): Boolean; override;
+    function  DoReadString(aLen: SizeInt; out s: string): Boolean; override;
+    function  DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean; override;
+    function  DoSkipBytes(aLen: SizeInt): Boolean; override;
+    function  GetTotal: SizeInt; override;
+  public
+  { tries to load the DOM tree from the specified buffer }
+    class function TryReadDom(aBuffer: PByte; aCount: SizeInt; out aRoot: TMpDomNode;
+                              aDuplicates: TMpDuplicates = mduAccept;
+                              aMaxDepth: Integer = DEF_DEPTH): Boolean; static;
+    constructor Create(p: PByte; aCount: SizeInt; aMaxDepth: Integer = DEF_DEPTH);
+  { tries to read the next token from the buffer }
+    function Read: Boolean; override;
+    function CopyStruct(out aStruct: TBytes): Boolean; override;
+  { tries to find an element using the path specified as an array of path segments;
+    the search is performed from the very beginning of the internal buffer,
+    the current state does not change }
+    function FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
+    function FindPath(const aPath: array of TMpVariant; out aBytes: TBytes): Boolean;
+    function FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+    function FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
+    property BufferSize: SizeInt read FBufSize;
+  end;
+
+  { TMpStreamReader }
+  TMpStreamReader = class(TMpCustomReader)
+  private
+    FStream: TStream;
+    FWriter: TMpWriter;
+    FMaxCount,
+    FCount: Int64;
+    FOwnsStream,
+    FCopyMode: Boolean;
+  protected
+    function  DoReadByte(out b: Byte): Boolean; override;
+    function  DoReadWord(out w: Word): Boolean; override;
+    function  DoReadDWord(out d: DWord): Boolean; override;
+    function  DoReadQWord(out q: QWord): Boolean; override;
+    function  DoReadString(aLen: SizeInt; out s: string): Boolean; override;
+    function  DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean; override;
+    function  DoSkipBytes(aLen: SizeInt): Boolean; override;
+    function  GetTotal: SizeInt; override;
+    property  CopyMode: Boolean read FCopyMode;
+  public
+    constructor Create(aStream: TStream; aCount: SizeInt = 0; aOwnsStream: Boolean = False;
+                       aMaxDepth: Integer = DEF_DEPTH);
+    destructor Destroy; override;
+  { tries to read the next token from the stream }
+    function Read: Boolean; override;
+    function CopyStruct(out aStruct: TBytes): Boolean; override;
+    function TryReadDom(out aRoot: TMpDomNode): Boolean;
+  { tries to find an element using the path specified as an array of path segments;
+    the search is performed from the current position }
+    function FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
+    function FindPath(const aPath: array of TMpVariant; out aBytes: TBytes): Boolean;
+    function FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+    function FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
+    property OwnsStream: Boolean read FOwnsStream;
   end;
 
 implementation
@@ -1485,7 +1541,9 @@ var
   s: rawbytestring = '';
 begin
 {$PUSH}{$Q+}{$R+}
-  if aCount < 1 then
+  if aCount > 0 then
+    aCount := Math.Min(aCount, aStream.Size - aStream.Position)
+  else
     aCount := aStream.Size - aStream.Position;
 {$POP}
   System.SetLength(s, aCount);
@@ -3026,22 +3084,201 @@ begin
   Result := Self;
 end;
 
-{ TMpReader.TNode }
+{ TMpCustomReader.TNode }
 
-constructor TMpReader.TNode.Make(aCount: Int64; aStruct: TMpStructKind);
+constructor TMpCustomReader.TNode.Make(aCount: Int64; aStruct: TMpStructKind);
 begin
   Count := aCount;
   Struct := aStruct;
 end;
 
-{ TMpReader }
+{ TMpCustomReader }
 
-function TMpReader.GetStruct: TMpStructKind;
+function TMpCustomReader.GetStruct: TMpStructKind;
 begin
   Result := FStack[StackTop].Struct;
 end;
 
-function TMpReader.TryPushStack(aCount: Int64; aStruct: TMpStructKind): Boolean;
+class function TMpCustomReader.DoReadDom(aReader: TMpCustomReader; out aNode: TMpDomNode;
+  aDuplicates: TMpDuplicates): Boolean;
+
+  function DoReadNode(aNode: TMpDomNode): Boolean; forward;
+
+  function DoReadArray(aNode: TMpDomNode): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if aReader.TokenKind <> mtkArrayBegin then exit(False);
+  {$PUSH}{$Q+}{$R+}
+    I := aReader.StructUnread;
+  {$POP}
+    aNode.AsArray.EnsureCapacity(I);
+    while I <> 0 do begin
+      if not aReader.Read then exit(False);
+      if not DoReadNode(aNode.AddNode) then exit(False);
+      Dec(I);
+    end;
+    Result := aReader.Read and (aReader.TokenKind = mtkArrayEnd);
+  end;
+
+  function DoReadMap(aNode: TMpDomNode): Boolean;
+  var
+    I: SizeInt;
+    n: TMpDomNode;
+  begin
+    if aReader.TokenKind <> mtkMapBegin then exit(False);
+  {$PUSH}{$Q+}{$R+}
+    I := aReader.StructUnread;
+  {$POP}
+    aNode.AsMap.EnsureCapacity(I);
+    while I <> 0 do begin
+      if not aReader.Read then exit(False);
+      case aDuplicates of
+        mduAccept:  n := aNode.AddNode(aReader.KeyValue);
+        mduRewrite: n := aNode[aReader.KeyValue].AsNil;
+      else // mduIgnore
+        if not aNode.TryAddNode(aReader.KeyValue, n) then begin
+          if aReader.TokenKind in MP_START_TOKENS then begin
+            aReader.Skip;
+            if aReader.ReadState = mrsError then exit(False);
+          end;
+          continue;
+        end;
+      end;
+      if not DoReadNode(n) then exit(False);
+      Dec(I);
+    end;
+    Result := aReader.Read and (aReader.TokenKind = mtkMapEnd);
+  end;
+
+  function DoReadNode(aNode: TMpDomNode): Boolean;
+  begin
+    case aReader.TokenKind of
+      mtkArrayBegin: if not DoReadArray(aNode) then exit(False);
+      mtkMapBegin:   if not DoReadMap(aNode) then exit(False);
+      mtkNil:        aNode.AsNil;
+      mtkBool:       aNode.AsBoolean := aReader.AsBoolean;
+      mtkInt:        aNode.AsInteger := aReader.AsInt;
+      mtkSingle:     aNode.AsSingle := aReader.AsSingle;
+      mtkDouble:     aNode.AsDouble := aReader.AsDouble;
+      mtkString:     aNode.AsString := aReader.AsString;
+      mtkBin:        aNode.AsBinary := aReader.AsBinary;
+      mtkTStamp:     aNode.AsTimeStamp := aReader.AsTimeStamp;
+      mtkExt:        aNode.AsExtension := aReader.AsExtention;
+    else
+      exit(False);
+    end;
+    Result := True;
+  end;
+
+begin
+  aNode := TMpDomNode.Create;
+  try
+    try
+      if (aReader.ReadState = mrsStart) and not aReader.Read then exit(False);
+      Result := DoReadNode(aNode) and (aReader.ReadState <> mrsError);
+    except
+      Result := False;
+    end;
+  finally
+    if not Result then FreeAndNil(aNode);
+  end;
+end;
+
+class function TMpCustomReader.DoFind(aReader: TMpCustomReader; const aKey: TMpVariant): Boolean;
+var
+  Len, Idx: Int64;
+begin
+  if not(aReader.TokenKind in MP_START_TOKENS) then exit(False);
+  Len := aReader.StructUnread;
+  if aReader.TokenKind = mtkArrayBegin then begin
+    if aKey.Kind = mvkInt then begin
+      Idx := aKey.AsInt;
+      if QWord(Idx) >= QWord(Len) then exit(False);
+    end else
+      exit(False);
+    if Idx = 0 then begin
+      if not aReader.Read then exit(False);
+    end else begin
+      while Idx <> 0 do begin
+        if not aReader.Read then exit(False);
+        if aReader.TokenKind in MP_START_TOKENS then begin
+          aReader.Skip;
+          if aReader.ReadState = mrsError then exit(False);
+        end;
+        Dec(Idx);
+      end;
+      if not((aReader.TokenKind in MP_END_TOKENS) or aReader.Read) then exit(False);
+    end;
+  end else begin // mtkMapBegin
+    Idx := 0;
+    while Idx < Len do begin
+      if not aReader.Read then exit(False);
+      if aReader.KeyValue = aKey then break;
+      if aReader.TokenKind in MP_START_TOKENS then begin
+        aReader.Skip;
+        if aReader.ReadState = mrsError then exit(False);
+      end;
+      Inc(Idx);
+    end;
+    if Idx = Len then exit(False);
+  end;
+  Result := True;
+end;
+
+class function TMpCustomReader.DoFindPath(aReader: TMpCustomReader; const aPath: array of TMpVariant): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(aPath) do begin
+    if not((aReader.TokenKind in MP_START_TOKENS) or aReader.Read) then exit(False);
+    if not DoFind(aReader, aPath[I]) then exit(False);
+  end;
+  Result := True;
+end;
+
+class function TMpCustomReader.DoFindPathStr(aReader: TMpCustomReader; const aPath: array of string): Boolean;
+var
+  I, Idx: SizeInt;
+  Len, J: Int64;
+begin
+  for I := 0 to System.High(aPath) do begin
+    if not((aReader.TokenKind in MP_START_TOKENS) or aReader.Read) then exit(False);
+    if not(aReader.TokenKind in MP_START_TOKENS) then exit(False);
+    Len := aReader.StructUnread;
+    if aReader.TokenKind = mtkArrayBegin then begin
+      if not IsNonNegativeInt(aPath[I], Idx) then exit(False);
+      if Idx >= Len then exit(False);
+      if Idx = 0 then begin
+        if not aReader.Read then exit(False);
+      end else begin
+        for Idx := Idx - 1 downto 0 do begin
+          if not aReader.Read then exit(False);
+          if aReader.TokenKind in MP_START_TOKENS then begin
+            aReader.Skip;
+            if aReader.ReadState = mrsError then exit(False);
+          end;
+        end;
+        if not((aReader.TokenKind in MP_END_TOKENS) or aReader.Read) then exit(False);
+      end;
+    end else begin // mtkMapBegin
+      J := 0;
+      while J < Len do begin
+        if not aReader.Read then exit(False);
+        if aReader.KeyValue = aPath[I] then break;
+        if aReader.TokenKind in MP_START_TOKENS then begin
+          aReader.Skip;
+          if aReader.ReadState = mrsError then exit(False);
+        end;
+        Inc(J);
+      end;
+      if J = Len then exit(False);
+    end;
+  end;
+  Result := True;
+end;
+
+function TMpCustomReader.TryPushStack(aCount: Int64; aStruct: TMpStructKind): Boolean;
 begin
   if StackTop = System.High(FStack) then begin
     FState := mrsError;
@@ -3052,144 +3289,81 @@ begin
   Result := True;
 end;
 
-procedure TMpReader.TermDone;
+procedure TMpCustomReader.TermDone;
 begin
   if StackTop <> 0 then Dec(FStack[StackTop].Count);
 end;
 
-procedure TMpReader.PopStack;
+procedure TMpCustomReader.PopStack;
 begin
   Dec(FStackTop);
   TermDone;
 end;
 
-function TMpReader.GetMaxDepth: SizeInt;
+function TMpCustomReader.GetMaxDepth: SizeInt;
 begin
   Result := System.High(FStack);
 end;
 
-function TMpReader.DoReadByte(out b: Byte): Boolean;
-begin
-  Result := FBufPos < FBufSize;
-  if Result then begin
-    b := FBuffer[FBufPos];
-    Inc(FBufPos);
-  end;
-end;
-
-function TMpReader.DoReadWord(out w: Word): Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(Word);
-  if Result then begin
-    w := System.BEtoN(PWord(Unaligned(@FBuffer[FBufPos]))^);
-    Inc(FBufPos, SizeOf(Word));
-  end;
-end;
-
-function TMpReader.DoReadDWord(out d: DWord): Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(DWord);
-  if Result then begin
-    d := System.BEtoN(PDWord(Unaligned(@FBuffer[FBufPos]))^);
-    Inc(FBufPos, SizeOf(DWord));
-  end;
-end;
-
-function TMpReader.DoReadQWord(out q: QWord): Boolean;
-begin
-  Result := FBufPos <= FBufSize - SizeOf(QWord);
-  if Result then begin
-    q := System.BEtoN(PQWord(Unaligned(@FBuffer[FBufPos]))^);
-    Inc(FBufPos, SizeOf(QWord));
-  end;
-end;
-
-function TMpReader.DoReadSingle(out s: Single): Boolean;
+function TMpCustomReader.DoReadSingle(out s: Single): Boolean;
 var
   d: DWord absolute s;
 begin
   Result := DoReadDWord(d);
 end;
 
-function TMpReader.DoReadDouble(out d: Double): Boolean;
+function TMpCustomReader.DoReadDouble(out d: Double): Boolean;
 var
   q: QWord absolute d;
 begin
   Result := DoReadQWord(q);
 end;
 
-function TMpReader.DoReadString(aLen: SizeInt; out s: string): Boolean;
-begin
-  s := '';
-  if FBufPos > FBufSize - aLen then exit(False);
-  System.SetLength(s, aLen);
-  System.Move(FBuffer[FBufPos], Pointer(s)^, aLen);
-  Inc(FBufPos, aLen);
-  Result := True;
-end;
-
-function TMpReader.DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean;
-begin
-  b := nil;
-  if FBufPos > FBufSize - aLen then exit(False);
-  System.SetLength(b, aLen);
-  System.Move(FBuffer[FBufPos], Pointer(b)^, aLen);
-  Inc(FBufPos, aLen);
-  Result := True;
-end;
-
-function TMpReader.DoSkipBytes(aLen: SizeInt): Boolean;
-begin
-  if FBufPos > FBufSize - aLen then exit(False);
-  Inc(FBufPos, aLen);
-  Result := True;
-end;
-
-function TMpReader.GetCurrUnread: Int64;
+function TMpCustomReader.GetCurrUnread: Int64;
 begin
   Result := FStack[StackTop].Count;
 end;
 
-procedure TMpReader.DoReadFixInt(aPfx: Byte);
+procedure TMpCustomReader.DoReadFixInt(aPfx: Byte);
 begin
   FInt := Int8(aPfx);
   FCurrToken := mtkInt;
   TermDone;
 end;
 
-procedure TMpReader.DoReadNegFixInt(aPfx: Byte);
+procedure TMpCustomReader.DoReadNegFixInt(aPfx: Byte);
 begin
   FInt := Int8(aPfx);
   FCurrToken := mtkInt;
   TermDone;
 end;
 
-procedure TMpReader.DoReadNil;
+procedure TMpCustomReader.DoReadNil;
 begin
   FCurrToken := mtkNil;
   TermDone;
 end;
 
-procedure TMpReader.DoReadBool(aValue: Boolean);
+procedure TMpCustomReader.DoReadBool(aValue: Boolean);
 begin
   FBool := aValue;
   FCurrToken := mtkBool;
   TermDone;
 end;
 
-function TMpReader.DoBeginArray(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoBeginArray(aLen: SizeInt): Boolean;
 begin
   Result := TryPushStack(aLen, mskArray);
   if Result then FCurrToken := mtkArrayBegin;
 end;
 
-function TMpReader.DoBeginMap(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoBeginMap(aLen: SizeInt): Boolean;
 begin
   Result := TryPushStack(aLen, mskMap);
   if Result then FCurrToken := mtkMapBegin;
 end;
 
-function TMpReader.DoReadBin(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoReadBin(aLen: SizeInt): Boolean;
 begin
   if ReadMode then
     Result := DoReadBytes(aLen, FBytes)
@@ -3201,7 +3375,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadExt(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoReadExt(aLen: SizeInt): Boolean;
 begin
   if ReadMode then
     Result := DoReadBytes(aLen, FBytes)
@@ -3213,7 +3387,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadBinKey(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoReadBinKey(aLen: SizeInt): Boolean;
 var
   b: TBytes;
 begin
@@ -3224,7 +3398,7 @@ begin
     Result := DoSkipBytes(aLen);
 end;
 
-function TMpReader.DoReadStr(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoReadStr(aLen: SizeInt): Boolean;
 begin
   if ReadMode then
     Result := DoReadString(aLen, FString)
@@ -3236,7 +3410,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadStrKey(aLen: SizeInt): Boolean;
+function TMpCustomReader.DoReadStrKey(aLen: SizeInt): Boolean;
 var
   s: string;
 begin
@@ -3247,7 +3421,7 @@ begin
     Result := DoSkipBytes(aLen);
 end;
 
-function TMpReader.DoReadBin8: Boolean;
+function TMpCustomReader.DoReadBin8: Boolean;
 var
   Len: Byte;
 begin
@@ -3255,7 +3429,7 @@ begin
   Result := DoReadBin(SizeInt(Len));
 end;
 
-function TMpReader.DoReadBin16: Boolean;
+function TMpCustomReader.DoReadBin16: Boolean;
 var
   Len: Word;
 begin
@@ -3263,7 +3437,7 @@ begin
   Result := DoReadBin(SizeInt(Len));
 end;
 
-function TMpReader.DoReadBin32: Boolean;
+function TMpCustomReader.DoReadBin32: Boolean;
 var
   Len: DWord;
 begin
@@ -3272,7 +3446,7 @@ begin
   Result := DoReadBin(SizeInt(Len));
 end;
 
-function TMpReader.DoReadBin8Key: Boolean;
+function TMpCustomReader.DoReadBin8Key: Boolean;
 var
   Len: Byte;
 begin
@@ -3280,7 +3454,7 @@ begin
   Result := DoReadBinKey(SizeInt(Len));
 end;
 
-function TMpReader.DoReadBin16Key: Boolean;
+function TMpCustomReader.DoReadBin16Key: Boolean;
 var
   Len: Word;
 begin
@@ -3288,7 +3462,7 @@ begin
   Result := DoReadBinKey(SizeInt(Len));
 end;
 
-function TMpReader.DoReadBin32Key: Boolean;
+function TMpCustomReader.DoReadBin32Key: Boolean;
 var
   Len: DWord;
 begin
@@ -3297,7 +3471,7 @@ begin
   Result := DoReadBinKey(SizeInt(Len));
 end;
 
-function TMpReader.DoReadUInt8Key: Boolean;
+function TMpCustomReader.DoReadUInt8Key: Boolean;
 var
   b: Byte;
 begin
@@ -3308,7 +3482,7 @@ begin
     Result := DoSkipBytes(SizeOf(Byte));
 end;
 
-function TMpReader.DoReadUInt16Key: Boolean;
+function TMpCustomReader.DoReadUInt16Key: Boolean;
 var
   w: Word;
 begin
@@ -3319,7 +3493,7 @@ begin
     Result := DoSkipBytes(SizeOf(Word));
 end;
 
-function TMpReader.DoReadUInt32Key: Boolean;
+function TMpCustomReader.DoReadUInt32Key: Boolean;
 var
   d: DWord;
 begin
@@ -3330,7 +3504,7 @@ begin
     Result := DoSkipBytes(SizeOf(DWord));
 end;
 
-function TMpReader.DoReadUInt64Key: Boolean;
+function TMpCustomReader.DoReadUInt64Key: Boolean;
 var
   q: QWord;
 begin
@@ -3341,7 +3515,7 @@ begin
     Result := DoSkipBytes(SizeOf(QWord));
 end;
 
-function TMpReader.DoReadInt8Key: Boolean;
+function TMpCustomReader.DoReadInt8Key: Boolean;
 var
   b: Byte;
 begin
@@ -3352,7 +3526,7 @@ begin
     Result := DoSkipBytes(SizeOf(Byte));
 end;
 
-function TMpReader.DoReadInt16Key: Boolean;
+function TMpCustomReader.DoReadInt16Key: Boolean;
 var
   w: Word;
 begin
@@ -3363,7 +3537,7 @@ begin
     Result := DoSkipBytes(SizeOf(Word));
 end;
 
-function TMpReader.DoReadInt32Key: Boolean;
+function TMpCustomReader.DoReadInt32Key: Boolean;
 var
   d: DWord;
 begin
@@ -3374,7 +3548,7 @@ begin
     Result := DoSkipBytes(SizeOf(DWord));
 end;
 
-function TMpReader.DoReadInt64Key: Boolean;
+function TMpCustomReader.DoReadInt64Key: Boolean;
 var
   q: QWord;
 begin
@@ -3385,7 +3559,7 @@ begin
     Result := DoSkipBytes(SizeOf(QWord));
 end;
 
-function TMpReader.DoReadStr8Key: Boolean;
+function TMpCustomReader.DoReadStr8Key: Boolean;
 var
   Len: Byte;
 begin
@@ -3393,7 +3567,7 @@ begin
   Result := DoReadStrKey(SizeInt(Len));
 end;
 
-function TMpReader.DoReadStr16Key: Boolean;
+function TMpCustomReader.DoReadStr16Key: Boolean;
 var
   Len: Word;
 begin
@@ -3401,7 +3575,7 @@ begin
   Result := DoReadStrKey(SizeInt(Len));
 end;
 
-function TMpReader.DoReadStr32Key: Boolean;
+function TMpCustomReader.DoReadStr32Key: Boolean;
 var
   Len: DWord;
 begin
@@ -3489,7 +3663,7 @@ const
   );
 {$POP}
 
-function TMpReader.DoReadKey: Boolean;
+function TMpCustomReader.DoReadKey: Boolean;
 var
   pfx: Byte;
 begin
@@ -3519,71 +3693,29 @@ begin
   end;
 end;
 
-function TMpReader.DoReadTStamp32: Boolean;
-var
-  d: DWord;
-  b: Byte;
-begin
-  if not DoReadByte(b) then exit(False);
-  if TMpExtType(b) <> -1 then exit(False);
-  Result := DoReadDWord(d);
-  if Result then begin
-    FTStamp := TMpTimeStamp.Make(Int64(d), 0);
-    FCurrToken := mtkTStamp;
-    TermDone;
-  end;
-end;
-
-function TMpReader.DoReadTStamp64: Boolean;
-var
-  q: QWord;
-  b: Byte;
-begin
-  if not DoReadByte(b) then exit(False);
-  if TMpExtType(b) <> -1 then exit(False);
-  Result := DoReadQWord(q);
-  if Result then begin
-    FTStamp := TMpTimeStamp.Make(Int64(q and $3ffffffff), DWord(q shr 34));
-    FCurrToken := mtkTStamp;
-    TermDone;
-  end;
-end;
-
-function TMpReader.DoReadTStamp96: Boolean;
-var
-  q: QWord;
-  d: DWord;
-  b: Byte;
-begin
-  if not DoReadByte(b) then exit(False);
-  if TMpExtType(b) <> -1 then exit(False);
-  if not DoReadDWord(d) then exit(False);
-  Result := DoReadQWord(q);
-  if Result then begin
-    FTStamp := TMpTimeStamp.Make(Int64(q), d);
-    FCurrToken := mtkTStamp;
-    TermDone;
-  end;
-end;
-
-function TMpReader.DoReadExt8: Boolean;
+function TMpCustomReader.DoReadExt8: Boolean;
 var
   Len: Byte;
 begin
   if not DoReadByte(Len) then exit(False);
-  if ReadMode then begin
-    if Len = 12 then
-      if (FBufPos < FBufSize) and (TMpExtType(FBuffer[FBufPos]) = -1) then exit(DoReadTStamp96);
-    Result := DoReadBytes(Succ(SizeInt(Len)), FBytes);
-  end else
+  if ReadMode then
+    Result := DoReadBytes(Succ(SizeInt(Len)), FBytes)
+  else
     Result := DoSkipBytes(Succ(SizeInt(Len)));
   if Result then begin
     FCurrToken := mtkExt;
     TermDone;
+    if ReadMode and (Len = 12) and (TMpExtType(FBytes[0]) = -1) then begin
+      FCurrToken := mtkTStamp;
+      FTStamp := TMpTimeStamp.Make(
+        Int64(System.BeToN(PQWord(Unaligned(@FBytes[5]))^)),
+        System.BeToN(PDWord(Unaligned(@FBytes[1]))^)
+      );
+    end;
   end;
 end;
 
-function TMpReader.DoReadExt16: Boolean;
+function TMpCustomReader.DoReadExt16: Boolean;
 var
   Len: Word;
 begin
@@ -3591,7 +3723,7 @@ begin
   Result := DoReadExt(Succ(SizeInt(Len)));
 end;
 
-function TMpReader.DoReadExt32: Boolean;
+function TMpCustomReader.DoReadExt32: Boolean;
 var
   Len: DWord;
 begin
@@ -3600,7 +3732,7 @@ begin
   Result := DoReadExt(Succ(SizeInt(Len)));
 end;
 
-function TMpReader.DoReadFloat32: Boolean;
+function TMpCustomReader.DoReadFloat32: Boolean;
 begin
   if ReadMode then
     Result := DoReadSingle(FSingle)
@@ -3612,7 +3744,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadFloat64: Boolean;
+function TMpCustomReader.DoReadFloat64: Boolean;
 begin
   if ReadMode then
     Result := DoReadDouble(FDouble)
@@ -3624,7 +3756,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadUInt8: Boolean;
+function TMpCustomReader.DoReadUInt8: Boolean;
 var
   b: Byte;
 begin
@@ -3639,7 +3771,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadUInt16: Boolean;
+function TMpCustomReader.DoReadUInt16: Boolean;
 var
   w: Word;
 begin
@@ -3654,7 +3786,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadUInt32: Boolean;
+function TMpCustomReader.DoReadUInt32: Boolean;
 var
   d: DWord;
 begin
@@ -3669,7 +3801,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadUInt64: Boolean;
+function TMpCustomReader.DoReadUInt64: Boolean;
 var
   q: QWord;
 begin
@@ -3684,7 +3816,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadInt8: Boolean;
+function TMpCustomReader.DoReadInt8: Boolean;
 var
   b: Byte;
 begin
@@ -3699,7 +3831,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadInt16: Boolean;
+function TMpCustomReader.DoReadInt16: Boolean;
 var
   w: Word;
 begin
@@ -3714,7 +3846,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadInt32: Boolean;
+function TMpCustomReader.DoReadInt32: Boolean;
 var
   d: DWord;
 begin
@@ -3729,7 +3861,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadInt64: Boolean;
+function TMpCustomReader.DoReadInt64: Boolean;
 var
   q: QWord;
 begin
@@ -3744,7 +3876,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadFixExt1: Boolean;
+function TMpCustomReader.DoReadFixExt1: Boolean;
 begin
   if ReadMode then
     Result := DoReadBytes(2, FBytes)
@@ -3756,7 +3888,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadFixExt2: Boolean;
+function TMpCustomReader.DoReadFixExt2: Boolean;
 begin
   if ReadMode then
     Result := DoReadBytes(3, FBytes)
@@ -3768,33 +3900,42 @@ begin
   end;
 end;
 
-function TMpReader.DoReadFixExt4: Boolean;
+function TMpCustomReader.DoReadFixExt4: Boolean;
 begin
-  if ReadMode then begin
-    if (FBufPos < FBufSize) and (TMpExtType(FBuffer[FBufPos]) = -1) then exit(DoReadTStamp32);
-    Result := DoReadBytes(5, FBytes);
-  end else
+  if ReadMode then
+    Result := DoReadBytes(5, FBytes)
+  else
     Result := DoSkipBytes(5);
   if Result then begin
     FCurrToken := mtkExt;
     TermDone;
+    if ReadMode and (TMpExtType(FBytes[0]) = -1) then begin
+      FCurrToken := mtkTStamp;
+      FTStamp := TMpTimeStamp.Make(Int64(System.BeToN(PDWord(Unaligned(@FBytes[1]))^)), 0);
+    end;
   end;
 end;
 
-function TMpReader.DoReadFixExt8: Boolean;
+function TMpCustomReader.DoReadFixExt8: Boolean;
+var
+  q: QWord;
 begin
-  if ReadMode then begin
-    if (FBufPos < FBufSize) and (TMpExtType(FBuffer[FBufPos]) = -1) then exit(DoReadTStamp64);
-    Result := DoReadBytes(9, FBytes);
-  end else
+  if ReadMode then
+    Result := DoReadBytes(9, FBytes)
+  else
     Result := DoSkipBytes(9);
   if Result then begin
     FCurrToken := mtkExt;
     TermDone;
+    if ReadMode and (TMpExtType(FBytes[0]) = -1) then begin
+      FCurrToken := mtkTStamp;
+      q := System.BeToN(PQWord(Unaligned(@FBytes[1]))^);
+      FTStamp := TMpTimeStamp.Make(Int64(q and $3ffffffff), DWord(q shr 34));
+    end;
   end;
 end;
 
-function TMpReader.DoReadFixExt16: Boolean;
+function TMpCustomReader.DoReadFixExt16: Boolean;
 begin
   if ReadMode then
     Result := DoReadBytes(17, FBytes)
@@ -3806,7 +3947,7 @@ begin
   end;
 end;
 
-function TMpReader.DoReadStr8: Boolean;
+function TMpCustomReader.DoReadStr8: Boolean;
 var
   Len: Byte;
 begin
@@ -3814,7 +3955,7 @@ begin
   Result := DoReadStr(SizeInt(Len));
 end;
 
-function TMpReader.DoReadStr16: Boolean;
+function TMpCustomReader.DoReadStr16: Boolean;
 var
   Len: Word;
 begin
@@ -3822,7 +3963,7 @@ begin
   Result := DoReadStr(SizeInt(Len));
 end;
 
-function TMpReader.DoReadStr32: Boolean;
+function TMpCustomReader.DoReadStr32: Boolean;
 var
   Len: DWord;
 begin
@@ -3831,7 +3972,7 @@ begin
   Result := DoReadStr(SizeInt(Len));
 end;
 
-function TMpReader.DoBeginArray16: Boolean;
+function TMpCustomReader.DoBeginArray16: Boolean;
 var
   Len: Word;
 begin
@@ -3839,7 +3980,7 @@ begin
   Result := DoBeginArray(SizeInt(Len));
 end;
 
-function TMpReader.DoBeginArray32: Boolean;
+function TMpCustomReader.DoBeginArray32: Boolean;
 var
   Len: DWord;
 begin
@@ -3848,7 +3989,7 @@ begin
   Result := DoBeginArray(SizeInt(Len));
 end;
 
-function TMpReader.DoBeginMap16: Boolean;
+function TMpCustomReader.DoBeginMap16: Boolean;
 var
   Len: Word;
 begin
@@ -3856,7 +3997,7 @@ begin
   Result := DoBeginMap(SizeInt(Len));
 end;
 
-function TMpReader.DoBeginMap32: Boolean;
+function TMpCustomReader.DoBeginMap32: Boolean;
 var
   Len: DWord;
 begin
@@ -3865,7 +4006,7 @@ begin
   Result := DoBeginMap(SizeInt(Len));
 end;
 
-function TMpReader.DoRead: Boolean;
+function TMpCustomReader.DoRead: Boolean;
 const
 {$PUSH}{$J-}
   END_TOKEN_ARRAY: array[mskArray..mskMap] of TMpTokenKind = (mtkArrayEnd, mtkMapEnd);
@@ -3927,195 +4068,117 @@ begin
   end;
 end;
 
-class function TMpReader.DoReadDom(aReader: TMpReader; out aNode: TMpDomNode;
-  aDuplicates: TMpDuplicates): Boolean;
-
-  function DoReadNode(aNode: TMpDomNode): Boolean; forward;
-
-  function DoReadArray(aNode: TMpDomNode): Boolean;
-  var
-    I: SizeInt;
-  begin
-    if aReader.TokenKind <> mtkArrayBegin then exit(False);
-  {$PUSH}{$Q+}{$R+}
-    I := aReader.StructUnread;
-  {$POP}
-    aNode.AsArray.EnsureCapacity(I);
-    while I <> 0 do begin
-      if not aReader.Read then exit(False);
-      if not DoReadNode(aNode.AddNode) then exit(False);
-      Dec(I);
-    end;
-    Result := aReader.Read and (aReader.TokenKind = mtkArrayEnd);
-  end;
-
-  function DoReadMap(aNode: TMpDomNode): Boolean;
-  var
-    I: SizeInt;
-    n: TMpDomNode;
-  begin
-    if aReader.TokenKind <> mtkMapBegin then exit(False);
-  {$PUSH}{$Q+}{$R+}
-    I := aReader.StructUnread;
-  {$POP}
-    aNode.AsMap.EnsureCapacity(I);
-    while I <> 0 do begin
-      if not aReader.Read then exit(False);
-      case aDuplicates of
-        mduAccept:  n := aNode.AddNode(aReader.KeyValue);
-        mduRewrite: n := aNode[aReader.KeyValue].AsNil;
-      else // mduIgnore
-        if not aNode.TryAddNode(aReader.KeyValue, n) then begin
-          if aReader.TokenKind in START_TOKENS then begin
-            aReader.Skip;
-            if aReader.ReadState = mrsError then exit(False);
-          end;
-          continue;
-        end;
-      end;
-      if not DoReadNode(n) then exit(False);
-      Dec(I);
-    end;
-    Result := aReader.Read and (aReader.TokenKind = mtkMapEnd);
-  end;
-
-  function DoReadNode(aNode: TMpDomNode): Boolean;
-  begin
-    case aReader.TokenKind of
-      mtkArrayBegin: if not DoReadArray(aNode) then exit(False);
-      mtkMapBegin:   if not DoReadMap(aNode) then exit(False);
-      mtkNil:        aNode.AsNil;
-      mtkBool:       aNode.AsBoolean := aReader.AsBoolean;
-      mtkInt:        aNode.AsInteger := aReader.AsInt;
-      mtkSingle:     aNode.AsSingle := aReader.AsSingle;
-      mtkDouble:     aNode.AsDouble := aReader.AsDouble;
-      mtkString:     aNode.AsString := aReader.AsString;
-      mtkBin:        aNode.AsBinary := aReader.AsBinary;
-      mtkTStamp:     aNode.AsTimeStamp := aReader.AsTimeStamp;
-      mtkExt:        aNode.AsExtension := aReader.AsExtention;
-    else
-      exit(False);
-    end;
-    Result := True;
-  end;
-
+procedure TMpCustomReader.Skip;
+var
+  OldDepth: SizeInt;
+  Token: TMpTokenKind;
+const
+{$PUSH}{$J-}
+  EndsArray: array[mtkArrayBegin..mtkMapBegin] of TMpTokenKind = (mtkArrayEnd, mtkMapEnd);
+{$POP}
 begin
-  aNode := TMpDomNode.Create;
-  try
+  if ReadState > mrsRead then exit;
+  if TokenKind in MP_START_TOKENS then begin
+    Token := EndsArray[TokenKind];
+    OldDepth := Depth;
+    FReadMode := False;
     try
-      if (aReader.ReadState = mrsStart) and not aReader.Read then exit(False);
-      Result := DoReadNode(aNode) and (aReader.ReadState <> mrsError);
-    except
-      Result := False;
+      repeat
+        if not Read then exit;
+      until (Depth = OldDepth) and (TokenKind = Token);
+    finally
+      FReadMode := True;
     end;
-  finally
-    if not Result then FreeAndNil(aNode);
+  end else
+    Read;
+end;
+
+function TMpCustomReader.Find(const aKey: TMpVariant): Boolean;
+begin
+  Result := DoFind(Self, aKey);
+end;
+
+{ TMpReader }
+
+function TMpReader.DoReadByte(out b: Byte): Boolean;
+begin
+  Result := FBufPos < FBufSize;
+  if Result then begin
+    b := FBuffer[FBufPos];
+    Inc(FBufPos);
   end;
 end;
 
-class function TMpReader.DoFind(aReader: TMpReader; const aKey: TMpVariant): Boolean;
-var
-  Len, Idx: Int64;
+function TMpReader.DoReadWord(out w: Word): Boolean;
 begin
-  if not(aReader.TokenKind in START_TOKENS) then exit(False);
-  Len := aReader.StructUnread;
-  if aReader.TokenKind = mtkArrayBegin then begin
-    if aKey.Kind = mvkInt then begin
-      Idx := aKey.AsInt;
-      if QWord(Idx) >= QWord(Len) then exit(False);
-    end else
-      exit(False);
-    if Idx = 0 then begin
-      if not aReader.Read then exit(False);
-    end else begin
-      while Idx <> 0 do begin
-        if not aReader.Read then exit(False);
-        if aReader.TokenKind in START_TOKENS then begin
-          aReader.Skip;
-          if aReader.ReadState = mrsError then exit(False);
-        end;
-        Dec(Idx);
-      end;
-      if not((aReader.TokenKind in END_TOKENS) or aReader.Read) then exit(False);
-    end;
-  end else begin // mtkMapBegin
-    Idx := 0;
-    while Idx < Len do begin
-      if not aReader.Read then exit(False);
-      if aReader.KeyValue = aKey then break;
-      if aReader.TokenKind in START_TOKENS then begin
-        aReader.Skip;
-        if aReader.ReadState = mrsError then exit(False);
-      end;
-      Inc(Idx);
-    end;
-    if Idx = Len then exit(False);
+  Result := FBufPos <= FBufSize - SizeOf(Word);
+  if Result then begin
+    w := System.BEtoN(PWord(Unaligned(@FBuffer[FBufPos]))^);
+    Inc(FBufPos, SizeOf(Word));
   end;
+end;
+
+function TMpReader.DoReadDWord(out d: DWord): Boolean;
+begin
+  Result := FBufPos <= FBufSize - SizeOf(DWord);
+  if Result then begin
+    d := System.BEtoN(PDWord(Unaligned(@FBuffer[FBufPos]))^);
+    Inc(FBufPos, SizeOf(DWord));
+  end;
+end;
+
+function TMpReader.DoReadQWord(out q: QWord): Boolean;
+begin
+  Result := FBufPos <= FBufSize - SizeOf(QWord);
+  if Result then begin
+    q := System.BEtoN(PQWord(Unaligned(@FBuffer[FBufPos]))^);
+    Inc(FBufPos, SizeOf(QWord));
+  end;
+end;
+
+function TMpReader.DoReadString(aLen: SizeInt; out s: string): Boolean;
+begin
+  s := '';
+  if FBufPos > FBufSize - aLen then exit(False);
+  System.SetLength(s, aLen);
+  System.Move(FBuffer[FBufPos], Pointer(s)^, aLen);
+  Inc(FBufPos, aLen);
   Result := True;
 end;
 
-class function TMpReader.DoFindPath(aReader: TMpReader; const aPath: array of TMpVariant): Boolean;
-var
-  I: SizeInt;
+function TMpReader.DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean;
 begin
-  for I := 0 to System.High(aPath) do begin
-    if not((aReader.TokenKind in START_TOKENS) or aReader.Read) then exit(False);
-    if not DoFind(aReader, aPath[I]) then exit(False);
-  end;
+  b := nil;
+  if FBufPos > FBufSize - aLen then exit(False);
+  System.SetLength(b, aLen);
+  System.Move(FBuffer[FBufPos], Pointer(b)^, aLen);
+  Inc(FBufPos, aLen);
   Result := True;
 end;
 
-class function TMpReader.DoFindPathStr(aReader: TMpReader; const aPath: array of string): Boolean;
-var
-  I, Idx: SizeInt;
-  Len, J: Int64;
+function TMpReader.DoSkipBytes(aLen: SizeInt): Boolean;
 begin
-  for I := 0 to System.High(aPath) do begin
-    if not((aReader.TokenKind in START_TOKENS) or aReader.Read) then exit(False);
-    if not(aReader.TokenKind in START_TOKENS) then exit(False);
-    Len := aReader.StructUnread;
-    if aReader.TokenKind = mtkArrayBegin then begin
-      if not IsNonNegativeInt(aPath[I], Idx) then exit(False);
-      if Idx >= Len then exit(False);
-      if Idx = 0 then begin
-        if not aReader.Read then exit(False);
-      end else begin
-        for Idx := Idx - 1 downto 0 do begin
-          if not aReader.Read then exit(False);
-          if aReader.TokenKind in START_TOKENS then begin
-            aReader.Skip;
-            if aReader.ReadState = mrsError then exit(False);
-          end;
-        end;
-        if not((aReader.TokenKind in END_TOKENS) or aReader.Read) then exit(False);
-      end;
-    end else begin // mtkMapBegin
-      J := 0;
-      while J < Len do begin
-        if not aReader.Read then exit(False);
-        if aReader.KeyValue = aPath[I] then break;
-        if aReader.TokenKind in START_TOKENS then begin
-          aReader.Skip;
-          if aReader.ReadState = mrsError then exit(False);
-        end;
-        Inc(J);
-      end;
-      if J = Len then exit(False);
-    end;
-  end;
+  if FBufPos > FBufSize - aLen then exit(False);
+  Inc(FBufPos, aLen);
   Result := True;
 end;
 
-class function TMpReader.TryReadDom(aBuffer: PByte; aCount: SizeInt; out aNode: TMpDomNode;
+function TMpReader.GetTotal: SizeInt;
+begin
+  Result := FBufPos;
+end;
+
+class function TMpReader.TryReadDom(aBuffer: PByte; aCount: SizeInt; out aRoot: TMpDomNode;
   aDuplicates: TMpDuplicates; aMaxDepth: Integer): Boolean;
 var
   Reader: TMpReader;
 begin
+  aRoot := nil;
   if aMaxDepth < 1 then exit(False);
   Reader := TMpReader.Create(aBuffer, aCount, aMaxDepth);
   try
-    if not DoReadDom(Reader, aNode, aDuplicates) then exit(False);
-    Result := Reader.Position = Reader.BufferSize;
+    if not DoReadDom(Reader, aRoot, aDuplicates) then exit(False);
+    Result := Reader.TotalRead = Reader.BufferSize;
     if Result and (Reader.ReadState < mrsEof) then
       while Reader.Read do;
     Result := Result and (Reader.ReadState = mrsEof);
@@ -4143,42 +4206,17 @@ begin
       FState := mrsError;
       exit(False);
     end;
-    FState := mrsGo;
+    FState := mrsRead;
   end else
-    if ReadState > mrsGo then
+    if ReadState > mrsRead then
       exit(False);
   Result := DoRead;
   if not Result then
     if ReadState <> mrsError then
-      if (FBufPos = FBufSize) and (ReadState = mrsGo) and (Depth = 0) then
+      if (FBufPos = FBufSize) and (ReadState = mrsRead) and (Depth = 0) then
         FState := mrsEof
       else
-        FState := mrsError
-end;
-
-procedure TMpReader.Skip;
-var
-  OldDepth: SizeInt;
-  Token: TMpTokenKind;
-const
-{$PUSH}{$J-}
-  EndsArray: array[mtkArrayBegin..mtkMapBegin] of TMpTokenKind = (mtkArrayEnd, mtkMapEnd);
-{$POP}
-begin
-  if ReadState > mrsGo then exit;
-  if TokenKind in START_TOKENS then begin
-    Token := EndsArray[TokenKind];
-    OldDepth := Depth;
-    FReadMode := False;
-    try
-      repeat
-        if not Read then exit;
-      until (Depth = OldDepth) and (TokenKind = Token);
-    finally
-      FReadMode := True;
-    end;
-  end else
-    Read;
+        FState := mrsError;
 end;
 
 function TMpReader.CopyStruct(out aStruct: TBytes): Boolean;
@@ -4189,18 +4227,18 @@ var
 begin
   aStruct := nil;
   if ReadState = mrsError then exit(False);
-  if TokenKind in START_TOKENS then begin
+  if TokenKind in MP_START_TOKENS then begin
     Len := FStack[StackTop].Count;
     case Len of
-      0..$f:      StartPos := Pred(Position);
-      $10..$ffff: StartPos := Position - 3;
+      0..$f:      StartPos := Pred(FBufPos);
+      $10..$ffff: StartPos := FBufPos - 3;
     else
-      StartPos := Position - 5;
+      StartPos := FBufPos - 5;
     end;
     Skip;
     if ReadState = mrsError then exit(False);
-    System.SetLength(aStruct, Position - StartPos);
-    System.Move(FBuffer[StartPos], Pointer(aStruct)^, Position - StartPos);
+    System.SetLength(aStruct, FBufPos - StartPos);
+    System.Move(FBuffer[StartPos], Pointer(aStruct)^, FBufPos - StartPos);
   end else begin
     Writer := TMpWriter.Create;
     try
@@ -4225,77 +4263,294 @@ begin
   Result := True;
 end;
 
-{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 function TMpReader.FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
 var
-  Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
 begin
   aNode := nil;
-  Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
-  Reader := Ref;
-  if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
-  if not DoFindPath(Reader, aPath) then exit(False);
-  if (Reader.TokenKind in END_TOKENS) and not Reader.Read then exit(False);
-  Result := DoReadDom(Reader, aNode);
+  Reader := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
+  try
+    if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
+    if not DoFindPath(Reader, aPath) then exit(False);
+    if (Reader.TokenKind in MP_END_TOKENS) and not Reader.Read then exit(False);
+    Result := DoReadDom(Reader, aNode);
+  finally
+    Reader.Free;
+  end;
 end;
 
 function TMpReader.FindPath(const aPath: array of TMpVariant; out aBytes: TBytes): Boolean;
 var
-  Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
 begin
   aBytes := nil;
   if System.Length(aPath) = 0 then begin
-    System.SetLength(aBytes, BufferSize);
     if BufferSize = 0 then exit(False);
+    System.SetLength(aBytes, BufferSize);
     System.Move(FBuffer^, Pointer(aBytes)^, BufferSize);
     exit(True);
   end;
-  Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
-  Reader := Ref;
-  if not DoFindPath(Reader, aPath) then exit(False);
-  if (Reader.TokenKind in END_TOKENS) and not Reader.Read then exit(False);
-  Result := Reader.CopyStruct(aBytes);
+  Reader := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
+  try
+    if not DoFindPath(Reader, aPath) then exit(False);
+    if (Reader.TokenKind in MP_END_TOKENS) and not Reader.Read then exit(False);
+    Result := Reader.CopyStruct(aBytes);
+  finally
+    Reader.Free;
+  end;
 end;
 
 function TMpReader.FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
 var
-  Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
 begin
   aNode := nil;
-  Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
-  Reader := Ref;
-  if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
-  if not DoFindPathStr(Reader, aPath) then exit(False);
-  if (Reader.TokenKind in END_TOKENS) and not Reader.Read then exit(False);
-  Result := DoReadDom(Reader, aNode);
+  Reader := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
+  try
+    if System.Length(aPath) = 0 then exit(DoReadDom(Reader, aNode));
+    if not DoFindPathStr(Reader, aPath) then exit(False);
+    if (Reader.TokenKind in MP_END_TOKENS) and not Reader.Read then exit(False);
+    Result := DoReadDom(Reader, aNode);
+  finally
+    Reader.Free;
+  end;
 end;
 
 function TMpReader.FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
 var
-  Ref: specialize TGUniqRef<TMpReader>;
   Reader: TMpReader;
 begin
   aBytes := nil;
   if System.Length(aPath) = 0 then begin
-    System.SetLength(aBytes, BufferSize);
     if BufferSize = 0 then exit(False);
+    System.SetLength(aBytes, BufferSize);
     System.Move(FBuffer^, Pointer(aBytes)^, BufferSize);
     exit(True);
   end;
-  Ref.Instance := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
-  Reader := Ref;
-  if not DoFindPathStr(Reader, aPath) then exit(False);
-  if (Reader.TokenKind in END_TOKENS) and not Reader.Read then exit(False);
-  Result := Reader.CopyStruct(aBytes);
+  Reader := TMpReader.Create(FBuffer, FBufSize, System.Length(FStack) - 1);
+  try
+    if not DoFindPathStr(Reader, aPath) then exit(False);
+    if (Reader.TokenKind in MP_END_TOKENS) and not Reader.Read then exit(False);
+    Result := Reader.CopyStruct(aBytes);
+  finally
+    Reader.Free;
+  end;
 end;
-{$POP}
 
-function TMpReader.Find(const aKey: TMpVariant): Boolean;
+
+{ TMpStreamReader }
+
+function TMpStreamReader.DoReadByte(out b: Byte): Boolean;
 begin
-  Result := DoFind(Self, aKey);
+  if FCount > FMaxCount - SizeOf(b) then exit(False);
+  FStream.ReadBuffer(b, SizeOf(b));
+  if CopyMode then FWriter.DoWrite(b);
+  Inc(FCount, SizeOf(b));
+  Result := True;
+end;
+
+function TMpStreamReader.DoReadWord(out w: Word): Boolean;
+begin
+  if FCount > FMaxCount - SizeOf(w) then exit(False);
+  FStream.ReadBuffer(w, SizeOf(w));
+  if CopyMode then FWriter.DoWrite(w);
+  w := System.BEtoN(w);
+  Inc(FCount, SizeOf(w));
+  Result := True;
+end;
+
+function TMpStreamReader.DoReadDWord(out d: DWord): Boolean;
+begin
+  if FCount > FMaxCount - SizeOf(d) then exit(False);
+  FStream.ReadBuffer(d, SizeOf(d));
+  if CopyMode then FWriter.DoWrite(d);
+  d := System.BEtoN(d);
+  Inc(FCount, SizeOf(d));
+  Result := True;
+end;
+
+function TMpStreamReader.DoReadQWord(out q: QWord): Boolean;
+begin
+  if FCount > FMaxCount - SizeOf(q) then exit(False);
+  FStream.ReadBuffer(q, SizeOf(q));
+  if CopyMode then FWriter.DoWrite(q);
+  q := System.BEtoN(q);
+  Inc(FCount, SizeOf(q));
+  Result := True;
+end;
+
+function TMpStreamReader.DoReadString(aLen: SizeInt; out s: string): Boolean;
+begin
+  s := '';
+  if FCount > FMaxCount - aLen then exit(False);
+  System.SetLength(s, aLen);
+  FStream.ReadBuffer(Pointer(s)^, aLen);
+  if CopyMode then FWriter.DoWrite(PByte(s), aLen);
+  Inc(FCount, aLen);
+  Result := True;
+end;
+
+function TMpStreamReader.DoReadBytes(aLen: SizeInt; out b: TBytes): Boolean;
+begin
+  b := nil;
+  if FCount > FMaxCount - aLen then exit(False);
+  System.SetLength(b, aLen);
+  FStream.ReadBuffer(Pointer(b)^, aLen);
+  if CopyMode then FWriter.DoWrite(PByte(b), aLen);
+  Inc(FCount, aLen);
+  Result := True;
+end;
+
+function TMpStreamReader.DoSkipBytes(aLen: SizeInt): Boolean;
+var
+  Buf: array[0..1023] of Byte;
+  Cnt: SizeInt;
+begin
+  if aLen = 0 then exit(True);
+  if FCount > FMaxCount - aLen then exit(False);
+  if CopyMode then begin
+    FWriter.EnsureCapacity(FWriter.TotalWritten + aLen);
+    FStream.ReadBuffer(FWriter.FBuffer.Ptr[FWriter.TotalWritten], aLen);
+    Inc(FWriter.FCount, aLen);
+    Inc(FCount, aLen);
+  end else
+    while aLen > 0 do begin
+      Cnt := FStream.Read(Buf, Math.Min(aLen, SizeOf(Buf)));
+      Dec(aLen, Cnt);
+      Inc(FCount, Cnt);
+    end;
+  Result := True;
+end;
+
+function TMpStreamReader.GetTotal: SizeInt;
+begin
+  Result := FCount;
+end;
+
+constructor TMpStreamReader.Create(aStream: TStream; aCount: SizeInt; aOwnsStream: Boolean; aMaxDepth: Integer);
+begin
+  inherited Create;
+  FStream := aStream;
+  if aCount > 0 then
+    FMaxCount := Math.Min(aCount, FStream.Size - FStream.Position)
+  else
+    FMaxCount := FStream.Size - FStream.Position;
+  FWriter := TMpWriter.Create;
+  FOwnsStream := aOwnsStream;
+  FReadMode := True;
+  FStackTop := NULL_INDEX;
+  if aMaxDepth < 0 then aMaxDepth := 0;
+  System.SetLength(FStack, aMaxDepth + 1);
+  TryPushStack(NULL_INDEX, mskNone);
+end;
+
+destructor TMpStreamReader.Destroy;
+begin
+  FWriter.Free;
+  if OwnsStream then FStream.Free;
+  inherited;
+end;
+
+function TMpStreamReader.Read: Boolean;
+begin
+  if ReadState = mrsStart then begin
+    if FMaxCount < 1 then begin
+      FState := mrsError;
+      exit(False);
+    end;
+    FState := mrsRead;
+  end else
+    if ReadState > mrsRead then
+      exit(False);
+  Result := DoRead;
+  if not Result then
+    if ReadState <> mrsError then
+      if (FCount = FMaxCount) and (ReadState = mrsRead) and (Depth = 0) then
+        FState := mrsEof
+      else
+        FState := mrsError;
+end;
+
+function TMpStreamReader.CopyStruct(out aStruct: TBytes): Boolean;
+begin
+  aStruct := nil;
+  if ReadState = mrsError then exit(False);
+  FWriter.Reset;
+  if TokenKind in MP_START_TOKENS then begin
+    if TokenKind = mtkArrayBegin then
+      FWriter.BeginArray(StructUnread)
+    else
+      FWriter.BeginMap(StructUnread);
+    FCopyMode := True;
+    try
+      Skip;
+      if ReadState = mrsError then exit(False);
+    finally
+      FCopyMode := False;
+    end;
+  end else
+    case TokenKind of
+      mtkNil:    FWriter.AddNil;
+      mtkBool:   FWriter.Add(AsBoolean);
+      mtkInt:    FWriter.Add(AsInt);
+      mtkSingle: FWriter.Add(AsSingle);
+      mtkDouble: FWriter.Add(AsDouble);
+      mtkString: FWriter.Add(AsString);
+      mtkBin:    FWriter.Add(AsBinary);
+      mtkTStamp: FWriter.Add(AsTimeStamp);
+      mtkExt:    FWriter.Add(AsExtention);
+    else
+      exit(False);
+    end;
+  aStruct := FWriter.ToBytes;
+  Result := True;
+end;
+
+function TMpStreamReader.TryReadDom(out aRoot: TMpDomNode): Boolean;
+begin
+  Result := DoReadDom(Self, aRoot);
+end;
+
+function TMpStreamReader.FindPath(const aPath: array of TMpVariant; out aNode: TMpDomNode): Boolean;
+begin
+  if System.Length(aPath) = 0 then exit(DoReadDom(Self, aNode));
+  aNode := nil;
+  if not DoFindPath(Self, aPath) then exit(False);
+  if (TokenKind in MP_END_TOKENS) and not Read then exit(False);
+  Result := DoReadDom(Self, aNode);
+end;
+
+function TMpStreamReader.FindPath(const aPath: array of TMpVariant; out aBytes: TBytes): Boolean;
+begin
+  if System.Length(aPath) = 0 then begin
+    if (ReadState = mrsStart) and not Read then exit(False);
+    exit(CopyStruct(aBytes));
+  end;
+  aBytes := nil;
+  if not DoFindPath(Self, aPath) then exit(False);
+  if (TokenKind in MP_END_TOKENS) and not Read then exit(False);
+  Result := CopyStruct(aBytes);
+end;
+
+function TMpStreamReader.FindPathStr(const aPath: array of string; out aNode: TMpDomNode): Boolean;
+begin
+  if System.Length(aPath) = 0 then exit(DoReadDom(Self, aNode));
+  aNode := nil;
+  if not DoFindPathStr(Self, aPath) then exit(False);
+  if (TokenKind in MP_END_TOKENS) and not Read then exit(False);
+  Result := DoReadDom(Self, aNode);
+end;
+
+function TMpStreamReader.FindPathStr(const aPath: array of string; out aBytes: TBytes): Boolean;
+begin
+  if System.Length(aPath) = 0 then begin
+    if (ReadState = mrsStart) and not Read then exit(False);
+    exit(CopyStruct(aBytes));
+  end;
+  aBytes := nil;
+  if not DoFindPathStr(Self, aPath) then exit(False);
+  if (TokenKind in MP_END_TOKENS) and not Read then exit(False);
+  Result := CopyStruct(aBytes);
 end;
 
 end.
