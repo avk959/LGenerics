@@ -37,13 +37,14 @@ type
     procedure TestWriteDom;
   end;
 
+  TMpNode = specialize TGAutoRef<TMpDomNode>;
+
   { TTestMpReader }
 
   TTestMpReader = class(TTestCase)
   private
   type
     TReader = specialize TGUniqRef<TMpReader>;
-    TMpNode = specialize TGAutoRef<TMpDomNode>;
   published
     procedure TestReadNil;
     procedure TestReadBool;
@@ -60,12 +61,33 @@ type
     procedure TestFindPathStrBin;
   end;
 
+  { TTestMpStreamReader }
+
+  TTestMpStreamReader = class(TTestCase)
+  private
+  type
+    TReader = specialize TGUniqRef<TMpStreamReader>;
+    TStream = specialize TGUniqRef<TBytesStream>;
+  published
+    procedure TestReadNil;
+    procedure TestReadBool;
+    procedure TestReadInt;
+    procedure TestReadStr;
+    procedure TestReadBin;
+    procedure TestReadTs;
+    procedure TestReadExt;
+    procedure TestReadArray;
+    procedure TestReadMap;
+    procedure TestReadDom;
+    procedure TestFindPath;
+    procedure TestFindPathBin;
+    procedure TestFindPathStr;
+    procedure TestFindPathStrBin;
+  end;
+
   { TTestMpDomNode }
 
   TTestMpDomNode = class(TTestCase)
-  private
-  type
-    TMpNode = specialize TGAutoRef<TMpDomNode>;
   published
     procedure TestMake;
     procedure ArrayAdd;
@@ -104,6 +126,16 @@ type
     Blob: TBytes;
   end;
 
+  TMpStrTest = record
+    vStr: string;
+    Blob: TBytes;
+  end;
+
+  TMpBinTest = record
+    Data,
+    Blob: TBytes;
+  end;
+
   TMpExtTest = record
     ExtType: TMpExtType;
     Data,
@@ -137,6 +169,22 @@ const
     (Num:      -2147483649; Blob: ($d3,$ff,$ff,$ff,$ff,$7f,$ff,$ff,$ff)),
     (Num:      -4294967296; Blob: ($d3,$ff,$ff,$ff,$ff,$00,$00,$00,$00)),
     (Num: -281474976710656; Blob: ($d3,$ff,$ff,$00,$00,$00,$00,$00,$00))
+  );
+
+  STR_TESTS: array of TMpStrTest = (
+    (vStr:                                 ''; Blob: ($a0)),
+    (vStr:                                'a'; Blob: ($a1,$61)),
+    (vStr:                         'bbbbbbbb'; Blob: ($a8,$62,$62,$62,$62,$62,$62,$62,$62)),
+    (vStr:  'ccccccccccccccccccccccccccccccc'; Blob: ($bf,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63)),
+    (vStr: 'cccccccccccccccccccccccccccccccd'; Blob: ($d9,$20,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$64)),
+    (vStr:               'почему небо синее?'; Blob: ($d9,$21,$d0,$bf,$d0,$be,$d1,$87,$d0,$b5,$d0,$bc,$d1,$83,$20,$d0,$bd,$d0,$b5,$d0,$b1,$d0,$be,$20,$d1,$81,$d0,$b8,$d0,$bd,$d0,$b5,$d0,$b5,$3f))
+  );
+
+  BIN_TESTS: array of TMpBinTest = (
+    (Data:                            (); Blob: ($c4,$00)),
+    (Data:                         ($01); Blob: ($c4,$01,$01)),
+    (Data:                     ($00,$00); Blob: ($c4,$02,$00,$00)),
+    (Data: ($00,$00,$00,$00,$00,$00,$00); Blob: ($c4,$07,$00,$00,$00,$00,$00,$00,$00))
   );
 
   EXT_TESTS: array of TMpExtTest = (
@@ -205,86 +253,25 @@ end;
 procedure TTestMpWriter.TestWriteStr;
 var
   Writer: TWriter;
-const
-  s0 = '';
-  s1 = 'a';
-  s2 = 'bbbbbbbb';
-  s3 = 'ccccccccccccccccccccccccccccccc';
-  s4 = 'cccccccccccccccccccccccccccccccd';
-  s5 = 'почему небо синее?';
-
-  Ans0: TBytes = ($a0);
-  Ans1: TBytes = ($a1,$61);
-  Ans2: TBytes = ($a8,$62,$62,$62,$62,$62,$62,$62,$62);
-  Ans3: TBytes = ($bf,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63);
-  Ans4: TBytes = ($d9,$20,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$64);
-  Ans5: TBytes = ($d9,$21,$d0,$bf,$d0,$be,$d1,$87,$d0,$b5,$d0,$bc,$d1,$83,$20,$d0,$bd,$d0,$b5,$d0,$b1,$d0,$be,$20,$d1,$81,$d0,$b8,$d0,$bd,$d0,$b5,$d0,$b5,$3f);
+  I: Integer;
 begin
-  Writer.Instance.Add(s0);
-  AssertTrue('0', SameBytes(Writer.Instance.ToBytes, Ans0));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(s1);
-  AssertTrue('1', SameBytes(Writer.Instance.ToBytes, Ans1));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(s2);
-  AssertTrue('2', SameBytes(Writer.Instance.ToBytes, Ans2));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(s3);
-  AssertTrue('3', SameBytes(Writer.Instance.ToBytes, Ans3));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(s4);
-  AssertTrue('4', SameBytes(Writer.Instance.ToBytes, Ans4));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(s5);
-  AssertTrue('5', SameBytes(Writer.Instance.ToBytes, Ans5));
+  for I := 0 to High(STR_TESTS) do begin
+    Writer.Instance.Add(STR_TESTS[I].vStr);
+    AssertTrue(I.ToString, SameBytes(Writer.Instance.ToBytes, STR_TESTS[I].Blob));
+    Writer.Instance.Reset;
+  end;
 end;
 
 procedure TTestMpWriter.TestWriteBin;
 var
   Writer: TWriter;
-  ans: TBytes;
-const
-  b0: TBytes = nil;
-  b1: TBytes = ($01);
-  b2: TBytes = ($00,$00);
-  b3: TBytes = ($00,$00,$00,$00,$00,$00,$00);
-
-  Ans0: TBytes = ($c4,$00);
-  Ans1: TBytes = ($c4,$01,$01);
-  Ans2: TBytes = ($c4,$02,$00,$00);
-  Ans3: TBytes = ($c4,$07,$00,$00,$00,$00,$00,$00,$00);
+  I: Integer;
 begin
-  Writer.Instance.Add(b0);
-  AssertTrue('0', SameBytes(Writer.Instance.ToBytes, Ans0));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(b1);
-  AssertTrue('1', SameBytes(Writer.Instance.ToBytes, Ans1));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(b2);
-  AssertTrue('2', SameBytes(Writer.Instance.ToBytes, Ans2));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(b3);
-  AssertTrue('3', SameBytes(Writer.Instance.ToBytes, Ans3));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(FillBytes(42, 256));
-  ans := FillBytes(42, 256);
-  Insert([$c5, $01, $00], ans, 0);
-  AssertTrue('4', SameBytes(Writer.Instance.ToBytes, ans));
-
-  Writer.Instance.Reset;
-  Writer.Instance.Add(FillBytes(101, 65536));
-  ans := FillBytes(101, 65536);
-  Insert([$c6, $00, $01, $00, $00], ans, 0);
-  AssertTrue('5', SameBytes(Writer.Instance.ToBytes, ans));
+  for I := 0 to High(BIN_TESTS) do begin
+    Writer.Instance.Add(BIN_TESTS[I].Data);
+    AssertTrue(I.ToString, SameBytes(Writer.Instance.ToBytes, BIN_TESTS[I].Blob));
+    Writer.Instance.Reset;
+  end;
 end;
 
 procedure TTestMpWriter.TestWriteTs;
@@ -390,7 +377,7 @@ begin
   Reader.Instance := TMpReader.Create(Pointer(Buffer), Length(Buffer), 2);
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = mtkNil);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 end;
@@ -406,7 +393,7 @@ begin
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = mtkBool);
   AssertFalse(Reader.Instance.AsBoolean);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 
@@ -414,7 +401,7 @@ begin
   AssertTrue(Reader.Instance.Read);
   AssertTrue(Reader.Instance.TokenKind = mtkBool);
   AssertTrue(Reader.Instance.AsBoolean);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 end;
@@ -429,7 +416,7 @@ begin
     AssertTrue(Reader.Instance.Read);
     AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkInt);
     AssertTrue(Reader.Instance.AsInt = NUM_TESTS[I].Num);
-    AssertTrue(Reader.Instance.ReadState = mrsGo);
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
     AssertFalse(Reader.Instance.Read);
     AssertTrue(Reader.Instance.ReadState = mrsEof);
   end;
@@ -438,115 +425,33 @@ end;
 procedure TTestMpReader.TestReadStr;
 var
   Reader: TReader;
-const
-  s0: TBytes = ($a0);
-  s1: TBytes = ($a1,$61);
-  s2: TBytes = ($a8,$62,$62,$62,$62,$62,$62,$62,$62);
-  s3: TBytes = ($bf,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63);
-  s4: TBytes = ($d9,$20,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$63,$64);
-  s5: TBytes = ($d9,$21,$d0,$bf,$d0,$be,$d1,$87,$d0,$b5,$d0,$bc,$d1,$83,$20,$d0,$bd,$d0,$b5,$d0,$b1,$d0,$be,$20,$d1,$81,$d0,$b8,$d0,$bd,$d0,$b5,$d0,$b5,$3f);
-
-  Ans0 = '';
-  Ans1 = 'a';
-  Ans2 = 'bbbbbbbb';
-  Ans3 = 'ccccccccccccccccccccccccccccccc';
-  Ans4 = 'cccccccccccccccccccccccccccccccd';
-  Ans5 = 'почему небо синее?';
+  I: Integer;
 begin
-  Reader.Instance := TMpReader.Create(Pointer(s0), Length(s0), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('0', Reader.Instance.TokenKind = mtkString);
-  AssertTrue(Reader.Instance.AsString = Ans0);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(s1), Length(s1), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('1', Reader.Instance.TokenKind = mtkString);
-  AssertTrue(Reader.Instance.AsString = Ans1);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(s2), Length(s2), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('2', Reader.Instance.TokenKind = mtkString);
-  AssertTrue(Reader.Instance.AsString = Ans2);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(s3), Length(s3), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('3', Reader.Instance.TokenKind = mtkString);
-  AssertTrue(Reader.Instance.AsString = Ans3);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(s4), Length(s4), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('4', Reader.Instance.TokenKind = mtkString);
-  AssertTrue(Reader.Instance.AsString = Ans4);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(s5), Length(s5), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('5', Reader.Instance.TokenKind = mtkString);
-  AssertTrue(Reader.Instance.AsString = Ans5);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
+  for I := 0 to High(STR_TESTS) do begin
+    Reader.Instance := TMpReader.Create(Pointer(STR_TESTS[I].Blob), Length(STR_TESTS[I].Blob), 2);
+    AssertTrue(Reader.Instance.Read);
+    AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkString);
+    AssertTrue(Reader.Instance.AsString = STR_TESTS[I].vStr);
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
+    AssertFalse(Reader.Instance.Read);
+    AssertTrue(Reader.Instance.ReadState = mrsEof);
+  end;
 end;
 
 procedure TTestMpReader.TestReadBin;
 var
   Reader: TReader;
-const
-  b0: TBytes = ($c4,$00);
-  b1: TBytes = ($c4,$01,$01);
-  b2: TBytes = ($c4,$02,$00,$00);
-  b3: TBytes = ($c4,$07,$00,$00,$00,$00,$00,$00,$00);
-
-  Ans0: TBytes = nil;
-  Ans1: TBytes = ($01);
-  Ans2: TBytes = ($00,$00);
-  Ans3: TBytes = ($00,$00,$00,$00,$00,$00,$00);
+  I: Integer;
 begin
-  Reader.Instance := TMpReader.Create(Pointer(b0), Length(b0), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('0', Reader.Instance.TokenKind = mtkBin);
-  AssertTrue(Reader.Instance.AsBinary = Ans0);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(b1), Length(b1), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('1', Reader.Instance.TokenKind = mtkBin);
-  AssertTrue(SameBytes(Reader.Instance.AsBinary, Ans1));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(b2), Length(b2), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('2', Reader.Instance.TokenKind = mtkBin);
-  AssertTrue(SameBytes(Reader.Instance.AsBinary, Ans2));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
-
-  Reader.Instance := TMpReader.Create(Pointer(b3), Length(b3), 2);
-  AssertTrue(Reader.Instance.Read);
-  AssertTrue('3', Reader.Instance.TokenKind = mtkBin);
-  AssertTrue(SameBytes(Reader.Instance.AsBinary, Ans3));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
-  AssertFalse(Reader.Instance.Read);
-  AssertTrue(Reader.Instance.ReadState = mrsEof);
+  for I := 0 to High(BIN_TESTS) do begin
+    Reader.Instance := TMpReader.Create(Pointer(BIN_TESTS[I].Blob), Length(BIN_TESTS[I].Blob), 2);
+    AssertTrue(Reader.Instance.Read);
+    AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkBin);
+    AssertTrue(SameBytes(Reader.Instance.AsBinary, BIN_TESTS[I].Data));
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
+    AssertFalse(Reader.Instance.Read);
+    AssertTrue(Reader.Instance.ReadState = mrsEof);
+  end;
 end;
 
 procedure TTestMpReader.TestReadTs;
@@ -559,7 +464,7 @@ begin
   AssertTrue(Reader.Instance.Read);
   AssertTrue('0', Reader.Instance.TokenKind = mtkTStamp);
   AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($ffff0000, 0));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 
@@ -568,7 +473,7 @@ begin
   AssertTrue(Reader.Instance.Read);
   AssertTrue('1', Reader.Instance.TokenKind = mtkTStamp);
   AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($3ffff0000, $ffff));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 
@@ -577,7 +482,7 @@ begin
   AssertTrue(Reader.Instance.Read);
   AssertTrue('2', Reader.Instance.TokenKind = mtkTStamp);
   AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($7ffff0000, 0));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 
@@ -586,7 +491,7 @@ begin
   AssertTrue(Reader.Instance.Read);
   AssertTrue('3', Reader.Instance.TokenKind = mtkTStamp);
   AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($7ffff0000, $ffff));
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 end;
@@ -604,7 +509,7 @@ begin
     b := Reader.Instance.AsExtention;
     AssertTrue(TMpExtType(b[0]) = EXT_TESTS[I].ExtType);
     AssertTrue(SameBytes(Copy(b, 1, Length(b)), EXT_TESTS[I].Data));
-    AssertTrue(Reader.Instance.ReadState = mrsGo);
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
     AssertFalse(Reader.Instance.Read);
     AssertTrue(Reader.Instance.ReadState = mrsEof);
   end;
@@ -622,7 +527,7 @@ begin
   AssertTrue(Reader.Instance.StructUnread = 0);
   AssertTrue(Reader.Instance.Read);
   AssertTrue('1', Reader.Instance.TokenKind = mtkArrayEnd);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 
@@ -638,7 +543,7 @@ begin
   AssertTrue('4', Reader.Instance.TokenKind = mtkArrayEnd);
   AssertTrue(Reader.Instance.Read);
   AssertTrue('5', Reader.Instance.TokenKind = mtkArrayEnd);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 end;
@@ -655,7 +560,7 @@ begin
   AssertTrue(Reader.Instance.StructUnread = 0);
   AssertTrue(Reader.Instance.Read);
   AssertTrue('1', Reader.Instance.TokenKind = mtkMapEnd);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 
@@ -672,7 +577,7 @@ begin
   AssertTrue('5', Reader.Instance.TokenKind = mtkMapEnd);
   AssertTrue(Reader.Instance.Read);
   AssertTrue('6', Reader.Instance.TokenKind = mtkMapEnd);
-  AssertTrue(Reader.Instance.ReadState = mrsGo);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
   AssertFalse(Reader.Instance.Read);
   AssertTrue(Reader.Instance.ReadState = mrsEof);
 end;
@@ -966,6 +871,592 @@ begin
   AssertTrue(Reader.Instance.FindPathStr(Path, Found));
   AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['123'].AsMsgPack));
 
+  Path := ['1','key','345'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['345'].AsMsgPack));
+end;
+
+{ TTestMpStreamReader }
+
+procedure TTestMpStreamReader.TestReadNil;
+var
+  Stream: TStream;
+  Reader: TReader;
+const
+  Buffer: TBytes = ($c0);
+begin
+  Stream.Instance := TBytesStream.Create(Buffer);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = mtkNil);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpStreamReader.TestReadBool;
+var
+  Stream: TStream;
+  Reader: TReader;
+const
+  BufFalse: TBytes = ($c2);
+  BufTrue: TBytes = ($c3);
+begin
+  Stream.Instance := TBytesStream.Create(BufFalse);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = mtkBool);
+  AssertFalse(Reader.Instance.AsBoolean);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+
+  Stream.Instance := TBytesStream.Create(BufTrue);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.TokenKind = mtkBool);
+  AssertTrue(Reader.Instance.AsBoolean);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpStreamReader.TestReadInt;
+var
+  Stream: TStream;
+  Reader: TReader;
+  I: Integer;
+begin
+  for I := 0 to High(NUM_TESTS) do begin
+    Stream.Instance := TBytesStream.Create(NUM_TESTS[I].Blob);
+    Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+    AssertTrue(Reader.Instance.Read);
+    AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkInt);
+    AssertTrue(Reader.Instance.AsInt = NUM_TESTS[I].Num);
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
+    AssertFalse(Reader.Instance.Read);
+    AssertTrue(Reader.Instance.ReadState = mrsEof);
+  end;
+end;
+
+procedure TTestMpStreamReader.TestReadStr;
+var
+  Stream: TStream;
+  Reader: TReader;
+  I: Integer;
+begin
+  for I := 0 to High(STR_TESTS) do begin
+    Stream.Instance := TBytesStream.Create(STR_TESTS[I].Blob);
+    Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+    AssertTrue(Reader.Instance.Read);
+    AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkString);
+    AssertTrue(Reader.Instance.AsString = STR_TESTS[I].vStr);
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
+    AssertFalse(Reader.Instance.Read);
+    AssertTrue(Reader.Instance.ReadState = mrsEof);
+  end;
+end;
+
+procedure TTestMpStreamReader.TestReadBin;
+var
+  Stream: TStream;
+  Reader: TReader;
+  I: Integer;
+begin
+  for I := 0 to High(BIN_TESTS) do begin
+    Stream.Instance := TBytesStream.Create(BIN_TESTS[I].Blob);
+    Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+    AssertTrue(Reader.Instance.Read);
+    AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkBin);
+    AssertTrue(SameBytes(Reader.Instance.AsBinary, BIN_TESTS[I].Data));
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
+    AssertFalse(Reader.Instance.Read);
+    AssertTrue(Reader.Instance.ReadState = mrsEof);
+  end;
+end;
+
+procedure TTestMpStreamReader.TestReadTs;
+var
+  Stream: TStream;
+  Reader: TReader;
+begin
+  Stream.Instance := TBytesStream.Create([$d6,$ff,$ff,$ff,$00,$00]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('0', Reader.Instance.TokenKind = mtkTStamp);
+  AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($ffff0000, 0));
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+
+  Stream.Instance := TBytesStream.Create([$d7,$ff,$00,$03,$ff,$ff,$ff,$ff,$00,$00]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('1', Reader.Instance.TokenKind = mtkTStamp);
+  AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($3ffff0000, $ffff));
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+
+  Stream.Instance := TBytesStream.Create([$c7,$0c,$ff,$00,$00,$00,$00,$00,$00,$00,$07,$ff,$ff,$00,$00]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('2', Reader.Instance.TokenKind = mtkTStamp);
+  AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($7ffff0000, 0));
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+
+  Stream.Instance := TBytesStream.Create([$c7,$0c,$ff,$00,$00,$ff,$ff,$00,$00,$00,$07,$ff,$ff,$00,$00]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('3', Reader.Instance.TokenKind = mtkTStamp);
+  AssertTrue(Reader.Instance.AsTimeStamp = TMpTimeStamp.Make($7ffff0000, $ffff));
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpStreamReader.TestReadExt;
+var
+  Stream: TStream;
+  Reader: TReader;
+  I: Integer;
+  b: TBytes;
+begin
+  for I := 0 to High(EXT_TESTS) do begin
+    Stream.Instance := TBytesStream.Create(EXT_TESTS[I].Blob);
+    Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+    AssertTrue(Reader.Instance.Read);
+    AssertTrue(I.ToString, Reader.Instance.TokenKind = mtkExt);
+    b := Reader.Instance.AsExtention;
+    AssertTrue(TMpExtType(b[0]) = EXT_TESTS[I].ExtType);
+    AssertTrue(SameBytes(Copy(b, 1, Length(b)), EXT_TESTS[I].Data));
+    AssertTrue(Reader.Instance.ReadState = mrsRead);
+    AssertFalse(Reader.Instance.Read);
+    AssertTrue(Reader.Instance.ReadState = mrsEof);
+  end;
+end;
+
+procedure TTestMpStreamReader.TestReadArray;
+var
+  Stream: TStream;
+  Reader: TReader;
+begin
+  Stream.Instance := TBytesStream.Create([$90]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('0', Reader.Instance.TokenKind = mtkArrayBegin);
+  AssertTrue(Reader.Instance.StructUnread = 0);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('1', Reader.Instance.TokenKind = mtkArrayEnd);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+
+  Stream.Instance := TBytesStream.Create([$91,$90]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('2', Reader.Instance.TokenKind = mtkArrayBegin);
+  AssertTrue(Reader.Instance.StructUnread = 1);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('3', Reader.Instance.TokenKind = mtkArrayBegin);
+  AssertTrue(Reader.Instance.StructUnread = 0);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('4', Reader.Instance.TokenKind = mtkArrayEnd);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('5', Reader.Instance.TokenKind = mtkArrayEnd);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpStreamReader.TestReadMap;
+var
+  Stream: TStream;
+  Reader: TReader;
+begin
+  Stream.Instance := TBytesStream.Create([$80]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('0', Reader.Instance.TokenKind = mtkMapBegin);
+  AssertTrue(Reader.Instance.StructUnread = 0);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('1', Reader.Instance.TokenKind = mtkMapEnd);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+
+  Stream.Instance := TBytesStream.Create([$81,$a1,$61,$80]);
+  Reader.Instance := TMpStreamReader.Create(Stream.Instance);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('2', Reader.Instance.TokenKind = mtkMapBegin);
+  AssertTrue(Reader.Instance.StructUnread = 1);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('3', Reader.Instance.TokenKind = mtkMapBegin);
+  AssertTrue('4', Reader.Instance.KeyValue = 'a');
+  AssertTrue(Reader.Instance.StructUnread = 0);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('5', Reader.Instance.TokenKind = mtkMapEnd);
+  AssertTrue(Reader.Instance.Read);
+  AssertTrue('6', Reader.Instance.TokenKind = mtkMapEnd);
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpStreamReader.TestReadDom;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(Node.Instance.AsMsgPack), 0, True);
+  AssertTrue(Reader.Instance.TryReadDom(n));
+  AssertTrue(n.EqualTo(Node.Instance));
+  n.Free;
+  AssertTrue(Reader.Instance.ReadState = mrsRead);
+  AssertFalse(Reader.Instance.Read);
+  AssertTrue(Reader.Instance.ReadState = mrsEof);
+end;
+
+procedure TTestMpStreamReader.TestFindPath;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b: TBytes;
+  Path: TMpVarArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [0];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[0]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [2];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[2]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [3];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[3]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [4];
+  AssertFalse(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,1];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1][1]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key'];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,2];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1][2]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,3];
+  AssertFalse(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key','str'];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['str']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key',[1,2,3,4]];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key'][[1,2,3,4]]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key',1];
+  AssertTrue(Reader.Instance.FindPath(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key'][1]));
+  n.Free;
+end;
+
+procedure TTestMpStreamReader.TestFindPathBin;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b, Found: TBytes;
+  Path: TMpVarArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI(1, 1001).AddNil('key').Add(2, False);
+  n.Items[1].Add('str', 'value').AddB([1,2,3,4], [2,3,4,5]).AddI(1, 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [0];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[0].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [2];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[2].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [3];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[3].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [4];
+  AssertFalse(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(Found = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,1];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1][1].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key'];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,2];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1][2].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,3];
+  AssertFalse(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(Found = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key','str'];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['str'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key',[1,2,3,4]];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'][[1,2,3,4]].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [1,'key',1];
+  AssertTrue(Reader.Instance.FindPath(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'][1].AsMsgPack));
+end;
+
+procedure TTestMpStreamReader.TestFindPathStr;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b: TBytes;
+  Path: TStringArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI('11', 1001).AddNil('key').Add('22', False);
+  n.Items[1].Add('str', 'value').AddB('123', [2,3,4,5]).AddI('345', 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['0'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[0]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['2'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[2]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['3'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[3]));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['4'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','11'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['11']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','22'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['22']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','3'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key','str'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['str']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key','123'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['123']));
+  n.Free;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key','345'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, n));
+  AssertTrue(n.EqualTo(Node.Instance.Items[1]['key']['345']));
+  n.Free;
+end;
+
+procedure TTestMpStreamReader.TestFindPathStrBin;
+var
+  Reader: TReader;
+  Node: TMpNode;
+  n: TMpDomNode;
+  b, Found: TBytes;
+  Path: TStringArray;
+begin
+  Node.Instance.AddI(42).AddNil.Add('abc').AddNil;
+  n := Node.Instance.Items[1].AddI('11', 1001).AddNil('key').Add('22', False);
+  n.Items[1].Add('str', 'value').AddB('123', [2,3,4,5]).AddI('345', 77);
+  b := Node.Instance.AsMsgPack;
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := [];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['0'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[0].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['2'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[2].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['3'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[3].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['4'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(Found = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','11'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['11'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','22'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['22'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','3'];
+  AssertFalse(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(Found = nil);
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key','str'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['str'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
+  Path := ['1','key','123'];
+  AssertTrue(Reader.Instance.FindPathStr(Path, Found));
+  AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['123'].AsMsgPack));
+
+  Reader.Instance := TMpStreamReader.Create(TBytesStream.Create(b), 0, True);
   Path := ['1','key','345'];
   AssertTrue(Reader.Instance.FindPathStr(Path, Found));
   AssertTrue(SameBytes(Found, Node.Instance.Items[1]['key']['345'].AsMsgPack));
@@ -1905,6 +2396,7 @@ initialization
   RegisterTest(TTestMpWriter);
   RegisterTest(TTestMpStreamWriter);
   RegisterTest(TTestMpReader);
+  RegisterTest(TTestMpStreamReader);
   RegisterTest(TTestMpDomNode);
 
 end.
