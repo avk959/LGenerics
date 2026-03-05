@@ -140,5 +140,6 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
     + inferring JTD schemas from example data(unit lgJtdInfer)
   - JSONPath implementation(unit LgJsonPath)
   - CSV document processing(unit lgCsvUtils)
+  - support for the MessagePack data format(unit LgMsgPack)
   - Eisel-Lemire fast string-to-double conversion algorithm(unit lgJson)
   - Ryū double-to-string conversion algorithm(unit lgJson)
