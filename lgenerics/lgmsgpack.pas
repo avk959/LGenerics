@@ -438,6 +438,7 @@ type
     function Add(const a: array of Byte): TMpCustomWriter;
     function Add(const ts: TMpTimeStamp): TMpCustomWriter;
     function Add(const v: TMpVariant): TMpCustomWriter;
+    function AddJson(aNode: TJsonNode): TMpCustomWriter;
     function AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpCustomWriter;
     function AddExt(aType: TMpExtType; const aBuffer; aCount: SizeInt): TMpCustomWriter;
     function BeginArray(aCount: SizeInt): TMpCustomWriter;
@@ -1039,6 +1040,7 @@ begin
   Result := s;
 end;
 
+{$PUSH}{$WARN 5093 OFF : Function result variable of a managed type does not seem to be initialized}
 function TMpVariant.ToString: string;
 begin
   case Kind of
@@ -1046,10 +1048,9 @@ begin
     mvkInt:  Result := FValue.Int.ToString;
     mvkStr:  Result := string(FValue.Ref);
     mvkBin:  Result := BinToHexStr(TBytes(FValue.Ref));
-  else
-    Result := '';
   end;
 end;
+{$POP}
 
 { TMpDomNode.TEnumerator }
 
@@ -1811,7 +1812,6 @@ procedure TMpDomNode.CopyFrom(aNode: TMpDomNode);
           end;
       mnkTStamp: aDst.AsTimeStamp := aSrc.AsTimeStamp;
       mnkExt:    aDst.AsExtension := System.Copy(aSrc.AsExtension);
-    else
     end;
   end;
 begin
@@ -2812,6 +2812,48 @@ begin
   Result := Self;
 end;
 
+function TMpCustomWriter.AddJson(aNode: TJsonNode): TMpCustomWriter;
+  procedure WriteNode(aNode: TJsonNode);
+  var
+    I64: Int64;
+    d: Double;
+    I: SizeInt;
+  begin
+    case aNode.Kind of
+      jvkNull:   AddNil;
+      jvkFalse:  Add(False);
+      jvkTrue:   Add(True);
+      jvkNumber:
+        begin
+          d := aNode.AsNumber;
+          if d.IsExactInt(I64) then
+            Add(I64)
+          else
+            Add(d);
+        end;
+      jvkString: Add(aNode.AsString);
+      jvkArray:
+        begin
+          BeginArray(aNode.Count);
+          for I := 0 to Pred(aNode.Count) do
+            WriteNode(aNode.Items[I]);
+        end;
+      jvkObject:
+        begin
+          BeginMap(aNode.Count);
+          for I := 0 to Pred(aNode.Count) do
+            with aNode.Pairs[I] do begin
+              Add(Key);
+              WriteNode(Value);
+            end;
+        end;
+    end;
+  end;
+begin
+  WriteNode(aNode);
+  Result := Self;
+end;
+
 function TMpCustomWriter.AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpCustomWriter;
 var
   Len: SizeInt;
@@ -3027,6 +3069,7 @@ end;
 
 { TMpStreamWriter }
 
+{$PUSH}{$WARN 5026 OFF : Value parameter "$1" is assigned but never used}
 procedure TMpStreamWriter.DoWrite(b: Byte);
 begin
   FStream.WriteBuffer(b, SizeOf(b));
@@ -3065,6 +3108,7 @@ begin
   FStream.WriteBuffer(q, SizeOf(q));
   Inc(FCount, SizeOf(q));
 end;
+{$POP}
 
 procedure TMpStreamWriter.DoWrite(p: PByte; aCount: SizeInt);
 begin
@@ -4340,6 +4384,7 @@ end;
 
 { TMpStreamReader }
 
+{$PUSH}{$WARN 5058 OFF : Variable "$1" does not seem to be initialized}
 function TMpStreamReader.DoReadByte(out b: Byte): Boolean;
 begin
   if FCount > FMaxCount - SizeOf(b) then exit(False);
@@ -4378,6 +4423,7 @@ begin
   Inc(FCount, SizeOf(q));
   Result := True;
 end;
+{$POP}
 
 function TMpStreamReader.DoReadString(aLen: SizeInt; out s: string): Boolean;
 begin
@@ -4401,6 +4447,7 @@ begin
   Result := True;
 end;
 
+{$PUSH}{$WARN 5057 OFF : Local variable "$1" does not seem to be initialized}
 function TMpStreamReader.DoSkipBytes(aLen: SizeInt): Boolean;
 var
   Buf: array[0..1023] of Byte;
@@ -4421,6 +4468,7 @@ begin
     end;
   Result := True;
 end;
+{$POP}
 
 function TMpStreamReader.GetTotal: SizeInt;
 begin
