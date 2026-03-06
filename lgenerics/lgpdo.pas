@@ -45,7 +45,7 @@ const
 
 { saves PDO in JSON format; if aStrict is False, unsupported data types will be written as
   "unknown data"(see UNKNOWN_ALIAS), otherwise an exception will be raised;
-  fields of unregistered records will be named as "field1, field2, ..."(see FIELD_ALIAS) }
+  unregistered records will be written as unnamed tuples }
   function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer = DEFAULT_LEN;
                      aStrict: Boolean = False): string;
   generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer = DEFAULT_LEN;
@@ -72,7 +72,6 @@ type
 
 const
   UNKNOWN_ALIAS = 'unknown data';
-  FIELD_ALIAS   = 'field';
   SUPPORT_KINDS = [
     tkInteger, tkChar, tkEnumeration, tkFloat, tkSet, tkSString, tkLString,
     tkAString, tkWString, tkVariant, tkArray, tkRecord, tkClass, tkObject,
@@ -591,14 +590,13 @@ var
     pTypData := GetTypeData(aTypeInfo);
     pManField := PManagedField(
       AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
-    Writer.BeginObject;
+    Writer.BeginArray;
     for I := 0 to Pred(pTypData^.TotalFieldCount) do
       begin
-        Writer.AddName(FIELD_ALIAS + Succ(I).ToString);
         WriteField(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
         Inc(pManField);
       end;
-    Writer.EndObject;
+    Writer.EndArray;
   end;
   procedure WriteRecord(aTypeInfo: PTypeInfo; aData: Pointer); inline;
   var
@@ -1247,13 +1245,35 @@ var
 
   procedure ReadDynArray(aTypeInfo: PTypeInfo; aData: Pointer); forward;
   procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
+  procedure ReadUnregRecord(aTypeInfo: PTypeInfo; aData: Pointer);
+  var
+    pTypData: PTypeData;
+    pManField: PManagedField;
+    I: Integer;
+  begin
+    if Reader.TokenKind <> rtkArrayBegin then
+      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
+    pTypData := GetTypeData(aTypeInfo);
+    pManField := PManagedField(
+      AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+    for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
+      ReadNext;
+      ReadValue(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
+      Inc(pManField);
+    end;
+    ReadNext;
+    if Reader.TokenKind <> rtkArrayEnd then
+      Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkArrayEnd), TokenKindName(Reader.TokenKind)]));
+  end;
   procedure ReadRecord(aTypeInfo: PTypeInfo; aData: Pointer);
   var
     I: Integer;
     e: TPdoCacheEntry;
   begin
-    if not GetPdoEntry(aTypeInfo, e) then
-      Error(Format(SEUnsupportPdoTypeFmt, [aTypeInfo^.Name]));
+    if not GetPdoEntry(aTypeInfo, e) then begin
+      ReadUnregRecord(aTypeInfo, aData);
+      exit;
+    end;
     if e.FieldMap <> nil then begin
       if Reader.TokenKind <> rtkObjectBegin then
         Error(Format(SEUnexpectJsonTokenFmt,[TokenKindName(rtkObjectBegin), TokenKindName(Reader.TokenKind)]));
@@ -1341,6 +1361,7 @@ var
     Arr: PByte;
     I, Count: SizeInt;
     e: TPdoCacheEntry;
+    Registered: Boolean;
   begin
     if Reader.TokenKind <> rtkArrayBegin then
       Error(Format(SEUnexpectJsonTokenFmt, [TokenKindName(rtkArrayBegin), TokenKindName(Reader.TokenKind)]));
@@ -1351,8 +1372,7 @@ var
     Arr := aData;
     case ElType^.Kind of
       tkRecord:
-        if not(GetPdoEntry(ElType, e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil))) then
-          Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
+        Registered := GetPdoEntry(ElType, e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil));
       tkObject:
         if not(GetPdoEntry(ElType, e)and(e.JsonToPdoProc <> nil)) then
           Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
@@ -1366,11 +1386,14 @@ var
         Error(Format(SEJsonArraySizeNotFitFmt, [Count]));
       case ElType^.Kind of
         tkRecord:
-          if e.FieldMap <> nil then
-            ReadMappedRec(ElType, Arr, e.FieldMap)
-          else
-            if not TJsonToPdoProc(e.JsonToPdoProc)(Arr, Reader, aOptions) then
-              Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
+          if Registered then begin
+            if e.FieldMap <> nil then
+              ReadMappedRec(ElType, Arr, e.FieldMap)
+            else
+              if not TJsonToPdoProc(e.JsonToPdoProc)(Arr, Reader, aOptions) then
+                Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
+          end else
+            ReadUnregRecord(ElType, Arr);
         tkObject:
           if not TJsonToPdoProc(e.JsonToPdoProc)(Arr, Reader, aOptions) then
             Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
@@ -1389,6 +1412,7 @@ var
     ElType: PTypeInfo;
     I, Size: SizeInt;
     e: TPdoCacheEntry;
+    Registered: Boolean;
   const
     InitSize = 8;
   begin
@@ -1405,8 +1429,7 @@ var
     ElType := GetTypeData(aTypeInfo)^.ElType2;
     case ElType^.Kind of
       tkRecord:
-        if not(GetPdoEntry(ElType,e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil))) then
-          Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
+        Registered := GetPdoEntry(ElType,e)and((e.FieldMap<>nil)or(e.JsonToPdoProc<>nil));
       tkObject:
         if not(GetPdoEntry(ElType, e) and (e.JsonToPdoProc <> nil)) then
           Error(Format(SEUnsupportPdoTypeFmt, [ElType^.Name]));
@@ -1427,11 +1450,14 @@ var
         end;
       case ElType^.Kind of
         tkRecord:
-          if e.FieldMap <> nil then
-            ReadMappedRec(ElType, PByte(aData^) + SizeUInt(I) * ElSize, e.FieldMap)
-          else
-            if not TJsonToPdoProc(e.JsonToPdoProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions) then
-              Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
+          if Registered then begin
+            if e.FieldMap <> nil then
+              ReadMappedRec(ElType, PByte(aData^) + SizeUInt(I) * ElSize, e.FieldMap)
+            else
+              if not TJsonToPdoProc(e.JsonToPdoProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions) then
+                Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
+          end else
+            ReadUnregRecord(ElType, PByte(aData^) + SizeUInt(I) * ElSize);
         tkObject:
           if not TJsonToPdoProc(e.JsonToPdoProc)(PByte(aData^) + SizeUInt(I) * ElSize, Reader, aOptions) then
             Error(Format(SECallbackFalseRetFmt, [ElType^.Name]));
@@ -1808,6 +1834,9 @@ begin
   RejectNulls := jroRejectNulls in aOptions;
   try
     ReadValue(aTypeInfo, @aValue);
+    if Reader.ReadState = rsGo then Reader.Read;
+    if Reader.ReadState <> rsEof then
+      Error(SEJsonStrNotFullyRead);
   except
     on e: EPdoLoadJson do raise;
     on e: Exception do
