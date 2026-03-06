@@ -188,6 +188,11 @@ type
     end;
 
   published
+    procedure Unregistered;
+    procedure UnregisteredDynArray;
+    procedure UnregisteredArray;
+    procedure UnregisteredArray2D;
+    procedure UnregisteredDynArray2D;
     procedure LoadChar;
     procedure LoadCharError;
     procedure LoadCharError1;
@@ -385,8 +390,7 @@ var
   r: TMyRec;
   s: string;
 const
-  Expect =
-    '{"field1":2147483647,"field2":true,"field3":true,"field4":"just string","field5":"short string","field6":9007199254740991}';
+  Expect = '[2147483647,true,true,"just string","short string",9007199254740991]';
 begin
   r.MyInt := MaxInt;
   r.MyBool := WordBool(42);
@@ -403,7 +407,7 @@ var
   a: TSimpleArray = ((a: 42; b: 'str1'), (a: 1001; b: 'str2'));
   s: string;
 const
-  Expect = '[{"field1":42,"field2":"str1"},{"field1":1001,"field2":"str2"}]';
+  Expect = '[[42,"str1"],[1001,"str2"]]';
 begin
   s := PdoToJson(TypeInfo(a), a);
   AssertTrue(s = Expect);
@@ -416,7 +420,7 @@ var
   a: TArr = ((a: 42; b: 'str1'), (a: 1001; b: 'str2'));
   s: string;
 const
-  Expect = '[{"field1":42,"field2":"str1"},{"field1":1001,"field2":"str2"}]';
+  Expect = '[[42,"str1"],[1001,"str2"]]';
 begin
   s := PdoToJson(TypeInfo(a), a);
   AssertTrue(s = Expect);
@@ -431,8 +435,7 @@ var
     ((a: 12; b: 'str3'), (a: 1024; b: 'str4')));
   s: string;
 const
-  Expect = '[{"field1":42,"field2":"str1"},{"field1":1001,"field2":"str2"},' +
-           '{"field1":12,"field2":"str3"},{"field1":1024,"field2":"str4"}]';
+  Expect = '[[42,"str1"],[1001,"str2"],[12,"str3"],[1024,"str4"]]';
 begin
   s := PdoToJson(TypeInfo(a), a);
   AssertTrue(s = Expect);
@@ -447,8 +450,7 @@ var
     ((a: 12; b: 'str3'), (a: 1024; b: 'str4')));
   s: string;
 const
-  Expect = '[[{"field1":42,"field2":"str1"},{"field1":1001,"field2":"str2"}],' +
-           '[{"field1":12,"field2":"str3"},{"field1":1024,"field2":"str4"}]]';
+  Expect = '[[[42,"str1"],[1001,"str2"]],[[12,"str3"],[1024,"str4"]]]';
 begin
   s := PdoToJson(TypeInfo(a), a);
   AssertTrue(s, s = Expect);
@@ -996,6 +998,95 @@ begin
 end;
 
 { TTestPdoLoadJson }
+
+procedure TTestPdoLoadJson.Unregistered;
+var
+  r: TMyRec;
+const
+  JSON = '[2147483647,true,"just string","short str","meThree"]';
+begin
+  r := Default(TMyRec);
+  PdoLoadJson(TypeInfo(r), r, JSON);
+  AssertTrue(r.IntValue = 2147483647);
+  AssertTrue(r.BoolValue);
+  AssertTrue(r.StrValue = 'just string');
+  AssertTrue(r.SStrValue = 'short str');
+  AssertTrue(r.EnumValue = meThree);
+end;
+
+procedure TTestPdoLoadJson.UnregisteredDynArray;
+var
+  a: array of TTestRec = nil;
+const
+  JSON = '[["foo",42],["bar",1001],["baz",777]]';
+begin
+  PdoLoadJson(TypeInfo(a), a, JSON);
+  AssertTrue(Length(a) = 3);
+  AssertTrue(a[0].Key = 'foo');
+  AssertTrue(a[0].Value = 42);
+  AssertTrue(a[1].Key = 'bar');
+  AssertTrue(a[1].Value = 1001);
+  AssertTrue(a[2].Key = 'baz');
+  AssertTrue(a[2].Value = 777);
+end;
+
+procedure TTestPdoLoadJson.UnregisteredArray;
+type
+  TArray = array[1..3]of TTestRec;
+var
+  a: TArray;
+const
+  JSON = '[["foo",42],["bar",1001],["baz",777]]';
+begin
+  a := Default(TArray);
+  PdoLoadJson(TypeInfo(a), a, JSON);
+  AssertTrue(a[1].Key = 'foo');
+  AssertTrue(a[1].Value = 42);
+  AssertTrue(a[2].Key = 'bar');
+  AssertTrue(a[2].Value = 1001);
+  AssertTrue(a[3].Key = 'baz');
+  AssertTrue(a[3].Value = 777);
+end;
+
+procedure TTestPdoLoadJson.UnregisteredArray2D;
+type
+  TArray = array[0..1,1..2]of TTestRec;
+var
+  a: TArray;
+const
+  JSON = '[["foo",42],["bar",1001],["zoo",777],["baz",513]]';
+begin
+  a := Default(TArray);
+  PdoLoadJson(TypeInfo(a), a, JSON);
+  AssertTrue(a[0,1].Key = 'foo');
+  AssertTrue(a[0,1].Value = 42);
+  AssertTrue(a[0,2].Key = 'bar');
+  AssertTrue(a[0,2].Value = 1001);
+  AssertTrue(a[1,1].Key = 'zoo');
+  AssertTrue(a[1,1].Value = 777);
+  AssertTrue(a[1,2].Key = 'baz');
+  AssertTrue(a[1,2].Value = 513);
+end;
+
+procedure TTestPdoLoadJson.UnregisteredDynArray2D;
+var
+  a: array of array of TTestRec = nil;
+const
+  JSON = '[[["foo",42],["bar",1001]],[["zoo",777],["baz",513]]]';
+begin
+  PdoLoadJson(TypeInfo(a), a, JSON);
+  AssertTrue(Length(a) = 2);
+  AssertTrue(Length(a[0]) = 2);
+  AssertTrue(Length(a[1]) = 2);
+  AssertTrue(a[0,0].Key = 'foo');
+  AssertTrue(a[0,0].Value = 42);
+  AssertTrue(a[0,1].Key = 'bar');
+  AssertTrue(a[0,1].Value = 1001);
+  AssertTrue(a[1,0].Key = 'zoo');
+  AssertTrue(a[1,0].Value = 777);
+  AssertTrue(a[1,1].Key = 'baz');
+  AssertTrue(a[1,1].Value = 513);
+end;
 
 procedure TTestPdoLoadJson.LoadChar;
 var
