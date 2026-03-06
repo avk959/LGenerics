@@ -131,6 +131,7 @@ resourcestring
   SEUnassignClassInstFmt   = 'Unassigned class instance(%s)';
   SECallbackFalseRetFmt    = 'Custom callback returned False when reading %s';
   SEExceptWhileJsonLoadFmt = 'Exception %s with message "%s" when loading JSON';
+  SEJsonStrNotFullyRead    = 'JSON string was not fully read';
 //JTD
   SECantLoadJsStream         = 'Cannot load JSON stream';
   SECantLoadJsFile           = 'Cannot load JSON file';
