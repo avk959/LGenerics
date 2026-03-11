@@ -754,14 +754,10 @@ var
   s: string;
   I: IInterface;
   Raised: Boolean = False;
-const
-  Expect = '"unknown data"';
 begin
   v := I;
-  s := PdoToJson(TypeInfo(v), v);
-  AssertTrue(s = Expect);
   try
-    s := PdoToJson(TypeInfo(v), v, 0, True);
+    s := PdoToJson(TypeInfo(v), v);
   except
     on e: EPdoStoreJson do
       Raised := True;
@@ -772,20 +768,24 @@ end;
 procedure TTestPdoToJson.UnsupportType;
 var
   c: TMyItemClass;
+  I: IInterface;
   s: string;
   Raised: Boolean = False;
-const
-  Expect = '"unknown data"';
 begin
-  s := PdoToJson(TypeInfo(c), c);
-  AssertTrue(s = Expect);
   try
-    s := PdoToJson(TypeInfo(c), c, 0, True);
+    s := PdoToJson(TypeInfo(c), c);
   except
     on e: EPdoStoreJson do
       Raised := True;
   end;
   AssertTrue(Raised);
+  Raised := False;
+  try
+    s := PdoToJson(TypeInfo(I), I);
+  except
+    on e: EPdoStoreJson do
+      Raised := True;
+  end;
 end;
 
 procedure TTestPdoToJson.TestClass;
@@ -887,16 +887,12 @@ var
   o: TMyObj;
   s: string;
   Raised: Boolean = False;
-const
-  Expect = '"unknown data"';
 begin
   o.Name := 'just name';
   o.Value := 42;
   o.Flag := True;
-  s := PdoToJson(TypeInfo(o), o);
-  AssertTrue(s = Expect);
   try
-    s := PdoToJson(TypeInfo(o), o, 0, True);
+    s := PdoToJson(TypeInfo(o), o);
   except
     on e: EPdoStoreJson do
       Raised := True;
