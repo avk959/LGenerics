@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Plain Data Objects marshalling.                                         *
+*   Plain Data Objects serialization.                                       *
 *                                                                           *
 *   Copyright(c) 2022-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
@@ -41,15 +41,22 @@ uses
 }
 
 const
-  DEFAULT_LEN = lgJson.TJsonStrWriter.DEFAULT_LEN;
+  SUPPORT_KINDS = [
+    tkInteger, tkChar, tkEnumeration, tkFloat, tkSet, tkSString, tkLString,
+    tkAString, tkWString, tkVariant, tkArray, tkRecord, tkClass, tkObject,
+    tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
 
-{ saves PDO in JSON format; if aStrict is False, unsupported data types will be written as
-  "unknown data"(see UNKNOWN_ALIAS), otherwise an exception will be raised;
-  unregistered records will be written as unnamed tuples }
-  function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer = DEFAULT_LEN;
-                     aStrict: Boolean = False): string;
-  generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer = DEFAULT_LEN;
-                                aStrict: Boolean = False): string;
+  DEFAULT_DEPTH = TJsonReader.DEF_DEPTH;
+  DEFAULT_LEN   = lgJson.TJsonStrWriter.DEFAULT_LEN;
+
+type
+  EPdoStoreJson  = class(Exception);
+
+{ saves PDO in JSON format; unregistered records will be written as unnamed tuples;
+  raises an exception if an unsupported type is encountered }
+  function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer = DEFAULT_LEN): string;
+  generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer = DEFAULT_LEN): string;
+
   { the type being registered must be a record; associates the field names aFieldNames with
     the record fields by their indexes; to exclude a field from serialization, it is sufficient
     to specify its name as an empty string; returns True on successful registration;
@@ -60,7 +67,6 @@ const
   function UnregisterPdo(aTypeInfo: PTypeInfo): Boolean;
 
 type
-  EPdoStoreJson  = class(Exception);
   TJsonStrWriter = lgJson.TJsonStrWriter;
   TPdoToJsonProc = procedure(p: Pointer; aWriter: TJsonStrWriter);
 
@@ -69,15 +75,6 @@ type
   function RegisterPdoToJsonProc(aTypeInfo: PTypeInfo; aProc: TPdoToJsonProc): Boolean;
   function PdoToJsonProcRegistered(aTypeInfo: PTypeInfo): Boolean;
   function UnregisterPdoToJsonProc(aTypeInfo: PTypeInfo): Boolean;
-
-const
-  UNKNOWN_ALIAS = 'unknown data';
-  SUPPORT_KINDS = [
-    tkInteger, tkChar, tkEnumeration, tkFloat, tkSet, tkSString, tkLString,
-    tkAString, tkWString, tkVariant, tkArray, tkRecord, tkClass, tkObject,
-    tkWChar, tkBool, tkInt64, tkQWord, tkDynArray, tkUString, tkUChar];
-
-  DEFAULT_DEPTH = TJsonReader.DEF_DEPTH;
 
 type
   EPdoLoadJson = class(Exception)
@@ -478,7 +475,7 @@ const
 
 
 {$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
-function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer; aStrict: Boolean): string;
+function PdoToJson(aTypeInfo: PTypeInfo; const aValue; aInitWriterLen: Integer): string;
 var
   Writer: TJsonStrWriter;
   procedure WriteInteger(aTypData: PTypeData; aData: Pointer); inline;
@@ -726,19 +723,15 @@ var
       varUString:
         Writer.Add(string(v));
     else
-      if aStrict then
-        raise EPdoStoreJson.CreateFmt(SEVariantNotSupportFmt, [VarType(v)]);
-      Writer.Add(UNKNOWN_ALIAS);
+      raise EPdoStoreJson.CreateFmt(SEVariantNotSupportFmt, [VarType(v)]);
     end;
   end;
   procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer); forward;
   procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject); forward;
-  function UnknownAlias(aTypeInfo: PTypeInfo): string;
+  procedure NotSupported(aTypeInfo: PTypeInfo);
   begin
-    if aStrict then
-      raise EPdoStoreJson.CreateFmt(SEPdoTypeNotSupportFmt,
-        [aTypeInfo^.Name, GetEnumName(TypeInfo(TTypeKind), Integer(aTypeInfo^.Kind))]);
-    Result := UNKNOWN_ALIAS;
+    raise EPdoStoreJson.CreateFmt(SEPdoTypeNotSupportFmt,
+      [aTypeInfo^.Name, GetEnumName(TypeInfo(TTypeKind), Integer(aTypeInfo^.Kind))]);
   end;
   procedure WriteClassProp(o: TObject; aPropInfo: PPropInfo);
   var
@@ -787,7 +780,7 @@ var
           WriteField(pTypInfo, @p);
         end;
     else
-      Writer.Add(UnknownAlias(pTypInfo));
+      NotSupported(pTypInfo);
     end;
   end;
   procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject);
@@ -835,7 +828,7 @@ var
               for I := 0 to Pred(Count) do
                 Writer.Add(Strings[I]);
             Writer.EndArray;
-          end else begin // todo: if PropCount = 0 ???
+          end else begin
             PropCount := GetPropList(o, pProps);
             try
               Writer.BeginObject;
@@ -858,7 +851,7 @@ var
     if GetPdoEntry(aTypeInfo, e) and (e.PdoToJsonProc <> nil) then
       TPdoToJsonProc(e.PdoToJsonProc)(aData, Writer)
     else
-      Writer.Add(UnknownAlias(aTypeInfo));// todo: empty object ???
+      NotSupported(aTypeInfo);
   end;
   procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer);
   var
@@ -923,7 +916,7 @@ var
       tkUString:            Writer.Add(string(PUnicodeString(aData)^)); ///////////
       tkUChar:              Writer.Add(string(unicodestring(PUnicodeChar(aData)^)));/////////
     else
-      Writer.Add(UnknownAlias(aTypeInfo));
+      NotSupported(aTypeInfo);
     end;
   end;
 var
@@ -938,9 +931,9 @@ begin
 end;
 {$POP}
 
-generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer; aStrict: Boolean = False): string;
+generic function PdoToJson<T>(const aValue: T; aInitWriterLen: Integer): string;
 begin
-  Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen, aStrict);
+  Result := PdoToJson(TypeInfo(T), aValue, aInitWriterLen);
 end;
 
 { EPdoLoadJson }
