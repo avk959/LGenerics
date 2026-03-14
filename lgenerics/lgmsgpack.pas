@@ -220,7 +220,7 @@ type
     class procedure MoveNode(aSrc, aDst: TMpDomNode); static;
   public
   const
-    DEF_DEPTH = 512;
+    DEF_DEPTH = 511;
   {  }
     class function MakeNil: TMpDomNode; static;
     class function Make(aValue: Boolean): TMpDomNode; static;
@@ -440,6 +440,8 @@ type
     function Add(const a: array of Byte): TMpCustomWriter;
     function Add(const ts: TMpTimeStamp): TMpCustomWriter;
     function Add(const v: TMpVariant): TMpCustomWriter;
+    function AddMsgPack(const s: rawbytestring): TMpCustomWriter;
+    function AddMsgPack(const a: array of Byte): TMpCustomWriter;
     function AddJson(aNode: TJsonNode): TMpCustomWriter;
     function AddExt(aType: TMpExtType; const aBytes: array of Byte): TMpCustomWriter;
     function AddExt(aType: TMpExtType; const aBuffer; aCount: SizeInt): TMpCustomWriter;
@@ -613,7 +615,7 @@ type
     class function DoFindPathStr(aReader: TMpCustomReader; const aPath: array of string): Boolean; static;
   public
   const
-    DEF_DEPTH = 512;
+    DEF_DEPTH = 511;
     function Read: Boolean; virtual; abstract;
   { if the current token is the beginning of the structure, it skips its contents and stops
     at the closing token, otherwise it performs only one read }
@@ -713,7 +715,7 @@ type
 
   TUserExtType = 0..127;
 
-{$PUSH}{$INTERFACES COM}
+{$PUSH}{$INTERFACES CORBA}
   IMpUserExt = interface
   ['{981B5219-0EB6-4C1A-87C5-F27E02AABC3D}']
     function CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
@@ -723,7 +725,14 @@ type
   end;
 {$POP}
 
+  EMpWriteExt = class(Exception);
+  EMpReadExt  = class(Exception);
+
+  TMpUserExt = class;
+
   TMpCustomExt = class
+  private
+    FHolder: TMpUserExt;
   protected
     function  GetDataType: PTypeInfo; virtual; abstract;
     function  GetExtType: TUserExtType; virtual; abstract;
@@ -732,6 +741,7 @@ type
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; virtual; abstract;
     property  DataType: PTypeInfo read GetDataType;
     property  ExtType: TUserExtType read GetExtType;
+    property  Holder: TMpUserExt read FHolder write FHolder;
   end;
 
   { TMpExtHook }
@@ -749,7 +759,7 @@ type
   end;
 
   { TMpUserExt }
-  TMpUserExt = class(TInterfacedObject, IMpUserExt)
+  TMpUserExt = class(TObject, IMpUserExt)
   private
   type
     TMapType = specialize TGLiteChainHashMap<PTypeInfo, TUserExtType, Pointer>;
@@ -768,6 +778,8 @@ type
     function CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
     function CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
     function CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
+    generic function CanWrite<T>(const aValue: T; out aBlob: TMpExtBlob): Boolean;
+    generic function CanRead<T>(const aBlob: TMpExtBlob; out aValue: T): Boolean;
     property HookCount: Integer read GetHookCount;
   end;
 
@@ -2880,6 +2892,19 @@ begin
   Result := Self;
 end;
 
+function TMpCustomWriter.AddMsgPack(const s: rawbytestring): TMpCustomWriter;
+begin
+  DoWrite(Pointer(s), System.Length(s));
+  Result := Self;
+end;
+
+function TMpCustomWriter.AddMsgPack(const a: array of Byte): TMpCustomWriter;
+begin
+  if System.Length(a) <> 0 then
+    DoWrite(@a[0], System.Length(a));
+  Result := Self;
+end;
+
 function TMpCustomWriter.AddJson(aNode: TJsonNode): TMpCustomWriter;
   procedure WriteNode(aNode: TJsonNode);
   var
@@ -4717,6 +4742,7 @@ begin
     exit(False);
   FTypeList[aHook.ExtType] := aHook;
   FTypeMap.Add(aHook.DataType, aHook.ExtType);
+  aHook.Holder := Self;
   Result := True;
 end;
 
@@ -4764,8 +4790,7 @@ begin
     $d4..$d8: System.Delete(b, 0, 1);
     $c7:      System.Delete(b, 0, 2);
     $c8:      System.Delete(b, 0, 3);
-  else
-    System.Delete(b, 0, 5);
+  else        System.Delete(b, 0, 5);
   end;
   aBlob := b;
   Result := True;
@@ -4784,6 +4809,17 @@ begin
   if not FTypeMap.TryGetValue(aType, e) or (TUserExtType(aBlob[0]) <> FTypeList[e].ExtType) then
     exit(False);
   Result := FTypeList[e].TryRead(aData, aBlob);
+end;
+
+generic function TMpUserExt.CanWrite<T>(const aValue: T; out aBlob: TMpExtBlob): Boolean;
+begin
+  Result := CanWrite(@aValue, TypeInfo(aValue), aBlob);
+end;
+
+generic function TMpUserExt.CanRead<T>(const aBlob: TMpExtBlob; out aValue: T): Boolean;
+begin
+  aValue := Default(T);
+  Result := CanRead(@aValue, TypeInfo(aValue), aBlob);
 end;
 
 end.
