@@ -774,6 +774,10 @@ type
     function TryAddHook(aHook: TMpCustomExt): Boolean;
     function TryRemoveHook(aExtType: TUserExtType): Boolean;
     function TryRemoveHook(aDataType: PTypeInfo): Boolean;
+    function Supports(aExtType: TUserExtType): Boolean; inline;
+    function Supports(aExtType: TUserExtType; out aDataType: PTypeInfo): Boolean; inline;
+    function Supports(aDataType: PTypeInfo): Boolean; inline;
+    function Supports(aDataType: PTypeInfo; out aExtType: TUserExtType): Boolean; inline;
     function CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
     function CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
     function CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
@@ -4761,6 +4765,28 @@ begin
   if not FTypeMap.Extract(aDataType, e) then exit(False);
   FreeAndNil(FTypeList[e]);
   Result := True;
+end;
+
+function TMpUserExt.Supports(aExtType: TUserExtType): Boolean;
+begin
+  Result := FTypeList[aExtType] <> nil;
+end;
+
+function TMpUserExt.Supports(aExtType: TUserExtType; out aDataType: PTypeInfo): Boolean;
+begin
+  aDataType := nil;
+  Result := FTypeList[aExtType] <> nil;
+  if Result then aDataType := FTypeList[aExtType].DataType;
+end;
+
+function TMpUserExt.Supports(aDataType: PTypeInfo): Boolean;
+begin
+  Result := FTypeMap.Contains(aDataType);
+end;
+
+function TMpUserExt.Supports(aDataType: PTypeInfo; out aExtType: TUserExtType): Boolean;
+begin
+  Result := FTypeMap.TryGetValue(aDataType, aExtType);
 end;
 
 function TMpUserExt.CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
