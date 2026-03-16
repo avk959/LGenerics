@@ -121,7 +121,7 @@ resourcestring
   SEJsonStrNotMatchEnumFmt = 'JSON string "%s" does not match any %s enumeration value';
   SEUnexpectStringLenFmt   = 'String length(%d) does not match SizeOf(AnsiChar)';
   SECantReadJson2VarFmt    = 'Can not assign JSON type "%s" to Variant instance';
-  SECantReadMPack2VarFmt   = 'Can not assign MsgPack type "%s" to Variant instance';
+  SEInvalidMPackVarFormat  = 'Invalid MsgPack Variant format';
   SECantReadJsonNullFmt    = 'Can not assign JSON Null to %s instance';
   SEJsonStrExceedSSLenFmt  = 'Length of the JSON string(%d) exceeds the maximum ShortString length(%u)';
   SEMPackStrExceedSSLenFmt = 'Length of the MsgPack string(%d) exceeds the maximum ShortString length(%u)';
