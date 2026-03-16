@@ -19,7 +19,7 @@
 *****************************************************************************}
 unit lgPdo;
 
-{$MODE OBJFPC}{$H+}{$MODESWITCH ADVANCEDRECORDS}{$MODESWITCH TYPEHELPERS}
+{$MODE OBJFPC}{$H+}{$INLINE ON}
 
 interface
 
@@ -133,172 +133,24 @@ type
 type
   EPdoLoadMsgPack = class(Exception);
 
-{  }
-  generic procedure PdoLoadMsgPack<T>(var aValue: T; const aPack: rawbytestring; aUserExt: IMpUserExt = nil;
+{ loads PDO directly from the MessagePack string buffer; raises EPdoLoadMsgPack in any unexpected cases }
+  generic procedure PdoLoadMsgPack<T>(var aValue: T; const aBuffer: rawbytestring; aUserExt: IMpUserExt = nil;
                                       aMaxDepth: Integer = DEFAULT_DEPTH);
-  procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aPack: rawbytestring;
+  procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aBuffer: rawbytestring;
                            aUserExt: IMpUserExt = nil; aMaxDepth: Integer = DEFAULT_DEPTH);
 
-{  }
-  generic procedure PdoLoadMsgPack<T>(var aValue: T; const aPack: TBytes; aUserExt: IMpUserExt = nil;
+{ loads PDO directly from the MessagePack buffer; raises EPdoLoadMsgPack in any unexpected cases }
+  generic procedure PdoLoadMsgPack<T>(var aValue: T; const aBuffer: TBytes; aUserExt: IMpUserExt = nil;
                                       aMaxDepth: Integer = DEFAULT_DEPTH);
-  procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aPack: TBytes; aUserExt: IMpUserExt = nil;
+  procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aBuffer: TBytes; aUserExt: IMpUserExt = nil;
                            aMaxDepth: Integer = DEFAULT_DEPTH);
-
-
-type
-  TOptString = specialize TGOptional<string>;
-  POptString = ^TOptString;
-
-  TOptStrHelper = type helper for TOptString
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptBoolean = specialize TGOptional<Boolean>;
-  POptBoolean = ^TOptBoolean;
-
-  TOptBoolHelper = type helper for TOptBoolean
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptShortInt = specialize TGOptional<ShortInt>;
-  POptShortInt = ^TOptShortInt;
-
-  TOptShortIntHelper = type helper for TOptShortInt
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptByte = specialize TGOptional<Byte>;
-  POptByte = ^TOptByte;
-
-  TOptByteHelper = type helper for TOptByte
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptSmallInt = specialize TGOptional<SmallInt>;
-  POptSmallInt = ^TOptSmallInt;
-
-  TOptSmallIntHelper = type helper for TOptSmallInt
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptWord = specialize TGOptional<Word>;
-  POptWord = ^TOptWord;
-
-  TOptWordHelper = type helper for TOptWord
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptInteger = specialize TGOptional<Integer>;
-  POptInteger = ^TOptInteger;
-
-  TOptIntHelper = type helper for TOptInteger
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptCardinal = specialize TGOptional<Cardinal>;
-  POptCardinal = ^TOptCardinal;
-
-  TOptCardinalHelper = type helper for TOptCardinal
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptDouble = specialize TGOptional<Double>;
-  POptDouble = ^TOptDouble;
-
-  TOptDoubleHelper = type helper for TOptDouble
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TDateTimeUtc = record
-  private
-    FValue: TDateTime;
-  public
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-    class operator := (const dtu: TDateTimeUtc): TDateTime; inline;
-    class operator := (const dt: TDateTime): TDateTimeUtc; inline;
-    class operator Explicit(const dt: TDateTime): TDateTimeUtc; inline;
-    class operator Explicit(const dtu: TDateTimeUtc): TDateTime; inline;
-  end;
-  PDateTimeUtc = ^TDateTimeUtc;
-
-  TOptDateTimeUtc = specialize TGOptional<TDateTimeUtc>;
-  POptDateTimeUtc = ^TOptDateTimeUtc;
-
-  TOptDateTimeUtcPdoHelper = type helper for TOptDateTimeUtc
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TGuidPdoHelper = type helper(TGGuidHelper) for TGuid
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TOptGuid = specialize TGOptional<TGuid>;
-  POptGuid = ^TOptGuid;
-
-  TOptGuidHelper = type helper for TOptGuid
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TInt64 = record
-  private
-    FValue: Int64;
-  public
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-    class operator := (const i: TInt64): Int64; inline;
-    class operator := (const i: Int64): TInt64; inline;
-    class operator Explicit(const i: TInt64): Int64; inline;
-    class operator Explicit(const i: Int64): TInt64; inline;
-  end;
-  PInt64t = ^TInt64;
-
-  TOptInt64 = specialize TGOptional<TInt64>;
-  POptInt64 = ^TOptInt64;
-
-  TOptInt64Helper = type helper for TOptInt64
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
-
-  TUInt64 = record
-  private
-    FValue: UInt64;
-  public
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-    class operator := (const u: TUInt64): UInt64; inline;
-    class operator := (const u: UInt64): TUInt64; inline;
-    class operator Explicit(const u: TUInt64): UInt64; inline;
-    class operator Explicit(const u: UInt64): TUInt64; inline;
-  end;
-  PUInt64t = ^TUInt64;
-
-  TOptUInt64 = specialize TGOptional<TUInt64>;
-  POptUInt64 = ^TOptUInt64;
-
-  TOptUInt64Helper = type helper for TOptUInt64
-    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
-    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
-  end;
+{  }
+  procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader; aUserExt: IMpUserExt);
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, Variants, lgHashMap, lgJsonTypeDef, lgStrConst;
+  Math, Variants, lgHashMap, lgStrConst;
 
 type
   TRecField = record
@@ -1876,6 +1728,9 @@ begin
 end;
 {$POP}
 
+const
+  MPACK_VAR_ARRAY = High(Word);
+
 procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWriter; aUserExt: IMpUserExt);
 
   procedure NotSupported(aTypeInfo: PTypeInfo);
@@ -1902,11 +1757,11 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
   begin
     Result := 0;
     case aTypeData^.OrdType of
-      otSByte:  Result := PShortInt(aData)^;
+      otSByte:  Result := Int64(PShortInt(aData)^);
       otUByte:  Result := Int64(PByte(aData)^);
-      otSWord:  Result := PSmallInt(aData)^;
+      otSWord:  Result := Int64(PSmallInt(aData)^);
       otUWord:  Result := Int64(PWord(aData)^);
-      otSLong:  Result := PLongInt(aData)^;
+      otSLong:  Result := Int64(PLongInt(aData)^);
       otULong:  Result := Int64(PDword(aData)^);
       otSQWord: Result := PInt64(aData)^;
       otUQWord: Result := Int64(PQWord(aData)^);
@@ -1919,8 +1774,8 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
       ftSingle:   aWriter.Add(PSingle(aData)^);
       ftDouble:   aWriter.Add(PDouble(aData)^);
       ftExtended: aWriter.Add(Double(PExtended(aData)^));
-      ftComp:     aWriter.Add(Int64(PComp(aData)^));
-      ftCurr:     aWriter.Add(Int64(PCurrency(aData)^));
+      ftComp:     aWriter.Add(PInt64(aData)^);
+      ftCurr:     aWriter.Add(PInt64(aData)^);
     end;
   end;
 
@@ -1964,6 +1819,7 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
   procedure WriteVariant(const v: Variant);
   var
     I: SizeInt;
+    vType: TVarType;
   begin
     if VarIsEmpty(v) or VarIsNull(v) then
       begin
@@ -1972,22 +1828,41 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
       end;
     if VarIsArray(v) then
       begin
+        aWriter.BeginArray(2);
+        aWriter.Add(Int64(MPACK_VAR_ARRAY));
         aWriter.BeginArray(Succ(VarArrayHighBound(v, 1) - VarArrayLowBound(v, 1)));
         for I := VarArrayLowBound(v, 1) to VarArrayHighBound(v, 1) do
           WriteVariant(v[I]);
         exit;
       end;
-    case VarType(v) of
-      varSmallInt, varInteger, varShortInt, varByte,
-      varWord, varLongWord, varInt64, varQWord:
-        aWriter.Add(Int64(v));
-      varSingle:  aWriter.Add(Single(v));
-      varCurrency, varDouble:
-        aWriter.Add(Double(v));
-      varDate:    aWriter.Add(TMpTimeStamp.Make(TDateTime(v)));
-      varBoolean: aWriter.Add(Boolean(v));
-      varOleStr, varString, varUString:
-        aWriter.Add(string(v));
+    vType := VarType(v);
+    case vType of
+      varSmallInt, varInteger, varSingle, varDouble, varCurrency, varDate, varOleStr,
+      varShortInt, varByte, varWord, varLongWord, varInt64, varQWord, varBoolean,
+      varString, varUString:
+        begin
+          aWriter.BeginArray(2);
+          aWriter.Add(Int64(vType));
+          case vType of
+            varSmallInt: aWriter.Add(Int64(TVarData(v).vSmallInt));
+            varInteger:  aWriter.Add(Int64(TVarData(v).vInteger));
+            varSingle:   aWriter.Add(TVarData(v).vSingle);
+            varDouble:   aWriter.Add(TVarData(v).vDouble);
+            varCurrency: aWriter.Add(PInt64(@TVarData(v).vCurrency)^);
+            varDate:     aWriter.Add(TVarData(v).vDate);
+            varOleStr:   aWriter.Add(string(widestring(v)));
+            varBoolean:  aWriter.Add(TVarData(v).vBoolean);
+            varShortInt: aWriter.Add(Int64(TVarData(v).vShortInt));
+            varByte:     aWriter.Add(Int64(TVarData(v).vByte));
+            varWord:     aWriter.Add(Int64(TVarData(v).vWord));
+            varLongWord: aWriter.Add(Int64(TVarData(v).vLongWord));
+            varInt64:    aWriter.Add(TVarData(v).vInt64);
+            varQWord:    aWriter.Add(Int64(TVarData(v).vQWord));
+            varString,
+            varUString:  aWriter.Add(string(v));
+          else
+          end;
+        end;
     else
       raise EPdoToMsgPack.CreateFmt(SEVariantNotSupportFmt, [VarType(v)]);
     end;
@@ -2269,6 +2144,11 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
       [aTypeInfo^.Name, GetEnumName(TypeInfo(TTypeKind), Integer(aTypeInfo^.Kind))]);
   end;
 
+  procedure InvalidVarFormat;
+  begin
+    Error(SEInvalidMPackVarFormat);
+  end;
+
   function TokenKindName(aKind: TMpTokenKind): string;
   begin
     Result := GetEnumName(TypeInfo(TMpTokenKind), Integer(aKind));
@@ -2363,12 +2243,12 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
       ftComp:
         begin
           if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
-          PComp(aData)^ := Comp(aReader.AsInt);
+          PInt64(aData)^ := aReader.AsInt;
         end;
       ftCurr:
         begin
           if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
-          PCurrency(aData)^ := Currency(aReader.AsInt);
+          PInt64(aData)^ := aReader.AsInt;
         end;
     end;
   end;
@@ -2470,24 +2350,129 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
 
   procedure ReadVariant(aData: Pointer);
   var
+    v: Variant;
     a: array of Variant;
+    I: Int64;
+    vType: Word;
   begin
-    case aReader.TokenKind of
-      mtkNil:    Variant(aData^) := Null;
-      mtkBool:   Variant(aData^) := aReader.AsBoolean;
-      mtkInt:    Variant(aData^) := aReader.AsInt;
-      mtkSingle: Variant(aData^) := aReader.AsSingle;
-      mtkDouble: Variant(aData^) := aReader.AsDouble;
-      mtkString: Variant(aData^) := aReader.AsString;
-      mtkArrayBegin:
+    if aReader.TokenKind = mtkNil then begin
+      Variant(aData^) := Variants.Null;
+      exit;
+    end;
+    if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+    if aReader.StructUnread <> 2 then InvalidVarFormat;
+    aReader.Read;
+    if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+    if (aReader.AsInt < 0) or (aReader.AsInt > System.High(Word)) then InvalidVarFormat;
+    vType := aReader.AsInt;
+    aReader.Read;
+    case vType of
+      varSmallInt:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then
+            InvalidVarFormat;
+          Variant(aData^) := SmallInt(I);
+        end;
+      varInteger:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then InvalidVarFormat;
+          Variant(aData^) := LongInt(I);
+        end;
+      varSingle:
+        begin
+          if aReader.TokenKind <> mtkSingle then InvalidVarFormat;
+          VarClear(Variant(aData^));
+          TVarData(aData^).vType := vType;
+          TVarData(aData^).vSingle := aReader.AsSingle;
+        end;
+      varDouble:
+        begin
+          if aReader.TokenKind <> mtkDouble then InvalidVarFormat;
+          Variant(aData^) := aReader.AsDouble;
+        end;
+      varCurrency:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          Variant(aData^) := PCurrency(@I)^;
+        end;
+      varDate:
+        begin
+          if aReader.TokenKind <> mtkDouble then InvalidVarFormat;
+          Variant(aData^) := TDateTime(aReader.AsDouble);
+        end;
+      varOleStr:
+        begin
+          if aReader.TokenKind <> mtkString then InvalidVarFormat;
+          Variant(aData^) := widestring(aReader.AsString);
+        end;
+      varBoolean:
+        begin
+          if aReader.TokenKind <> mtkBool then InvalidVarFormat;
+          Variant(aData^) := aReader.AsBoolean;
+        end;
+      varShortInt:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then InvalidVarFormat;
+          Variant(aData^) := ShortInt(I);
+        end;
+      varByte:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          if (I < 0) or (I > System.High(Byte)) then InvalidVarFormat;
+          Variant(aData^) := Byte(I);
+        end;
+      varWord:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          if (I < 0) or (I > System.High(Word)) then InvalidVarFormat;
+          Variant(aData^) := Word(I);
+        end;
+      varLongWord:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          I := aReader.AsInt;
+          if (I < 0) or (I > System.High(LongWord)) then InvalidVarFormat;
+          Variant(aData^) := LongWord(I);
+        end;
+      varInt64:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          Variant(aData^) := aReader.AsInt;
+        end;
+      varQWord:
+        begin
+          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+          Variant(aData^) := QWord(aReader.AsInt);
+        end;
+      varString:
+        begin
+          if aReader.TokenKind <> mtkString then InvalidVarFormat;
+          Variant(aData^) := aReader.AsString;
+        end;
+      varUString:
+        begin
+          if aReader.TokenKind <> mtkString then InvalidVarFormat;
+          Variant(aData^) := unicodestring(aReader.AsString);
+        end;
+      MPACK_VAR_ARRAY:
         begin
           a := nil;
           ReadDynArray(TypeInfo(a), @a);
           Variant(aData^) := VarArrayOf(a);
         end;
     else
-      Error(SECantReadMPack2VarFmt, [TokenKindName(aReader.TokenKind)])
+      Error(SEVariantNotSupportFmt, [vType]);
     end;
+    aReader.Read;
   end;
 
   procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
@@ -2832,510 +2817,60 @@ type
     end;
   end;
 begin
+  if aReader.ReadState = mrsStart then ReadNext;
+  ReadValue(aTypeInfo, @aValue);
+end;
+
+procedure MsgPackToPdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader; aUserExt: IMpUserExt);
+begin
   try
-    if aReader.ReadState = mrsStart then ReadNext;
-    ReadValue(aTypeInfo, @aValue);
+    MsgPack2Pdo(aTypeInfo, aValue, aReader, aUserExt);
     if aReader.ReadState = mrsRead then aReader.Read;
-    if aReader.ReadState <> mrsEof then Error(SEMPackInstNotFullyRead);
+    if aReader.ReadState <> mrsEof then
+      raise EPdoLoadMsgPack.Create(SEMPackInstNotFullyRead);
   except
     on e: EPdoLoadMsgPack do raise;
-    on e: Exception do Error(SEExceptWhenMPackLoadFmt, [e.ClassName, e.Message]);
+    on e: Exception do
+      raise EPdoLoadMsgPack.CreateFmt(SEExceptWhenMPackLoadFmt, [e.ClassName, e.Message]);
   end;
 end;
 
-generic procedure PdoLoadMsgPack<T>(var aValue: T; const aPack: rawbytestring; aUserExt: IMpUserExt;
+generic procedure PdoLoadMsgPack<T>(var aValue: T; const aBuffer: rawbytestring; aUserExt: IMpUserExt;
   aMaxDepth: Integer);
 begin
-  PdoLoadMsgPack(TypeInfo(aValue), aValue, aPack, aUserExt);
+  PdoLoadMsgPack(TypeInfo(aValue), aValue, aBuffer, aUserExt);
 end;
 
-procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aPack: rawbytestring; aUserExt: IMpUserExt;
+procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aBuffer: rawbytestring; aUserExt: IMpUserExt;
   aMaxDepth: Integer);
 var
   Reader: TMpReader;
 begin
-  Reader := TMpReader.Create(Pointer(aPack), System.Length(aPack), aMaxDepth);
+  Reader := TMpReader.Create(Pointer(aBuffer), System.Length(aBuffer), aMaxDepth);
   try
-    MsgPack2Pdo(aTypeInfo, aValue, Reader, aUserExt);
+    MsgPackToPdo(aTypeInfo, aValue, Reader, aUserExt);
   finally
     Reader.Free;
   end;
 end;
 
-generic procedure PdoLoadMsgPack<T>(var aValue: T; const aPack: TBytes; aUserExt: IMpUserExt;
+generic procedure PdoLoadMsgPack<T>(var aValue: T; const aBuffer: TBytes; aUserExt: IMpUserExt;
   aMaxDepth: Integer);
 begin
-  PdoLoadMsgPack(TypeInfo(aValue), aValue, aPack, aUserExt);
+  PdoLoadMsgPack(TypeInfo(aValue), aValue, aBuffer, aUserExt);
 end;
 
-procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aPack: TBytes; aUserExt: IMpUserExt;
+procedure PdoLoadMsgPack(aTypeInfo: PTypeInfo; var aValue; const aBuffer: TBytes; aUserExt: IMpUserExt;
   aMaxDepth: Integer);
 var
   Reader: TMpReader;
 begin
-  Reader := TMpReader.Create(Pointer(aPack), System.Length(aPack), aMaxDepth);
+  Reader := TMpReader.Create(Pointer(aBuffer), System.Length(aBuffer), aMaxDepth);
   try
-    MsgPack2Pdo(aTypeInfo, aValue, Reader, aUserExt);
+    MsgPackToPdo(aTypeInfo, aValue, Reader, aUserExt);
   finally
     Reader.Free;
   end;
-end;
-
-{ TOptStrHelper }
-
-class procedure TOptStrHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptString(p)^.Assigned then
-    aWriter.Add(POptString(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptStrHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptString(p)^.Clear;
-    end
-  else
-    begin
-      Result := aReader.TokenKind = rtkString;
-      if Result then POptString(p)^ := aReader.AsString;
-    end;
-end;
-
-{ TOptBoolHelper }
-
-class procedure TOptBoolHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptBoolean(p)^.Assigned then
-    if POptBoolean(p)^.Value then
-      aWriter.AddTrue
-    else
-      aWriter.AddFalse
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptBoolHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptBoolean(p)^.Clear;
-    end
-  else
-    begin
-      Result := aReader.TokenKind in [rtkFalse, rtkTrue];
-      if Result then POptBoolean(p)^ := aReader.AsBoolean;
-    end;
-end;
-
-{ TOptShortIntHelper }
-
-class procedure TOptShortIntHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptShortInt(p)^.Assigned then
-    aWriter.Add(POptShortInt(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-{$PUSH}{$WARN 5036 OFF : Local variable "$1" does not seem to be initialized}
-class function TOptShortIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptShortInt(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
-                (I >= Low(ShortInt)) and (I <= High(ShortInt));
-      if Result then POptShortInt(p)^ := ShortInt(I);
-    end;
-end;
-
-{ TOptByteHelper }
-
-class procedure TOptByteHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptByte(p)^.Assigned then
-    aWriter.Add(POptByte(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptByteHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptByte(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
-                (I >= 0) and (I <= High(Byte));
-      if Result then POptByte(p)^ := Byte(I);
-    end;
-end;
-
-{ TOptSmallIntHelper }
-
-class procedure TOptSmallIntHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptSmallInt(p)^.Assigned then
-    aWriter.Add(POptSmallInt(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptSmallIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptSmallInt(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
-                (I >= Low(SmallInt)) and (I <= High(SmallInt));
-      if Result then POptSmallInt(p)^ := SmallInt(I);
-    end;
-end;
-
-{ TOptWordHelper }
-
-class procedure TOptWordHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptWord(p)^.Assigned then
-    aWriter.Add(POptWord(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptWordHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptWord(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
-                (I >= 0) and (I <= High(Word));
-      if Result then POptWord(p)^ := Word(I);
-    end;
-end;
-
-{ TOptIntHelper }
-
-class procedure TOptIntHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptInteger(p)^.Assigned then
-    aWriter.Add(POptInteger(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptInteger(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
-                (I >= Low(Integer)) and (I <= High(Integer));
-      if Result then POptInteger(p)^ := Integer(I);
-    end;
-end;
-
-{ TOptCardinalHelper }
-
-class procedure TOptCardinalHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptCardinal(p)^.Assigned then
-    aWriter.Add(POptCardinal(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptCardinalHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptCardinal(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
-                (I >= 0) and (I <= High(Cardinal));
-      if Result then POptCardinal(p)^ := Cardinal(I);
-    end;
-end;
-{$POP}
-
-{ TOptDoubleHelper }
-
-class procedure TOptDoubleHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptDouble(p)^.Assigned then
-    aWriter.Add(POptDouble(p)^.Value)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptDoubleHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptDouble(p)^.Clear;
-    end
-  else
-    begin
-      Result := aReader.TokenKind = rtkNumber;
-      if Result then POptDouble(p)^ := aReader.AsNumber;
-    end;
-end;
-
-{ TDateTimeUtc }
-
-class procedure TDateTimeUtc.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(UTCToRfc8927TimeStamp(PDateTimeUtc(p)^.FValue));
-end;
-
-class function TDateTimeUtc.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = rtkString) and TryRfc8927TimeStampToUTC(aReader.AsString, PDateTimeUtc(p)^.FValue);
-end;
-
-class operator TDateTimeUtc.:=(const dtu: TDateTimeUtc): TDateTime;
-begin
-  Result := dtu.FValue;
-end;
-
-class operator TDateTimeUtc.:=(const dt: TDateTime): TDateTimeUtc;
-begin
-  Result.FValue := dt;
-end;
-
-class operator TDateTimeUtc.Explicit(const dt: TDateTime): TDateTimeUtc;
-begin
-  Result.FValue := dt;
-end;
-
-class operator TDateTimeUtc.Explicit(const dtu: TDateTimeUtc): TDateTime;
-begin
-  Result := dtu.FValue;
-end;
-
-{ TOptDateTimeUtcPdoHelper }
-
-class procedure TOptDateTimeUtcPdoHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptDateTimeUtc(p)^.Assigned then
-    aWriter.Add(UTCToRfc8927TimeStamp(POptDateTimeUtc(p)^.Value.FValue))
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptDateTimeUtcPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader;
-  const aOpts: TJsonReadOptions): Boolean;
-var
-  dtu: TDateTimeUtc;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptDateTimeUtc(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkString) and TryRfc8927TimeStampToUTC(aReader.AsString, dtu.FValue);
-      if Result then POptDateTimeUtc(p)^ := dtu;
-    end;
-end;
-
-{ TGuidPdoHelper }
-
-class procedure TGuidPdoHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(PGuid(p)^.ToString(True));
-end;
-
-class function TGuidPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = rtkString) and TGuid.TryParse(aReader.AsString, PGuid(p)^);
-end;
-
-{ TOptGuidHelper }
-
-class procedure TOptGuidHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptGuid(p)^.Assigned then
-    aWriter.Add(POptGuid(p)^.Value.ToString(True))
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptGuidHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  g: TGuid;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptGuid(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkString) and TGuid.TryParse(aReader.AsString, g);
-      if Result then POptGuid(p)^ := g;
-    end;
-end;
-
-{ TInt64 }
-
-class procedure TInt64.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(PInt64t(p)^.FValue.ToString);
-end;
-
-class function TInt64.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, PInt64t(p)^.FValue);
-end;
-
-class operator TInt64.:=(const i: TInt64): Int64;
-begin
-  Result := i.FValue;
-end;
-
-class operator TInt64.:=(const i: Int64): TInt64;
-begin
-  Result.FValue := i;
-end;
-
-class operator TInt64.Explicit(const i: TInt64): Int64;
-begin
-  Result := i.FValue;
-end;
-
-class operator TInt64.Explicit(const i: Int64): TInt64;
-begin
-  Result.FValue := i;
-end;
-
-{ TOptInt64Helper }
-
-class procedure TOptInt64Helper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptInt64(p)^.Assigned then
-    aWriter.Add(Int64(POptInt64(p)^.Value).ToString)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptInt64Helper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-var
-  I: Int64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptInt64(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, I);
-      if Result then POptInt64(p)^ := TInt64(I);
-    end;
-end;
-
-{ TUInt64 }
-
-class procedure TUInt64.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  aWriter.Add(PUInt64t(p)^.FValue.ToString);
-end;
-
-class function TUInt64.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
-begin
-  Assert((aOpts = []) or (aOpts <> [])); //
-  Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, PUInt64t(p)^.FValue);
-end;
-
-class operator TUInt64.:=(const u: TUInt64): UInt64;
-begin
-  Result := u.FValue;
-end;
-
-class operator TUInt64.:=(const u: UInt64): TUInt64;
-begin
-  Result.FValue := u;
-end;
-
-class operator TUInt64.Explicit(const u: TUInt64): UInt64;
-begin
-  Result := u.FValue;
-end;
-
-class operator TUInt64.Explicit(const u: UInt64): TUInt64;
-begin
-  Result.FValue := u;
-end;
-
-{ TOptUInt64Helper }
-
-class procedure TOptUInt64Helper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
-begin
-  if POptUInt64(p)^.Assigned then
-    aWriter.Add(UInt64(POptUInt64(p)^.Value).ToString)
-  else
-    aWriter.AddNull;
-end;
-
-class function TOptUInt64Helper.ReadJson(p: Pointer; aReader: TJsonReader;
-  const aOpts: TJsonReadOptions): Boolean;
-var
-  I: UInt64;
-begin
-  if aReader.TokenKind = rtkNull then
-    begin
-      Result := not(jroRejectNulls in aOpts);
-      if Result then POptUInt64(p)^.Clear;
-    end
-  else
-    begin
-      Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, I);
-      if Result then POptUInt64(p)^ := TUInt64(I);
-    end;
 end;
 
 initialization

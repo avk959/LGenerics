@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some useful JSON utilites.                                              *
 *                                                                           *
-*   Copyright(c) 2025-2026 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2025-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -20,6 +20,8 @@
 unit lgJsonUtils;
 
 {$MODE OBJFPC}{$H+}
+{$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH TYPEHELPERS}
 
 interface
 
@@ -28,7 +30,7 @@ uses
   lgUtils,
   lgHelpers,
   lgJson,
-  lgStrConst;
+  lgPdo;
 
 type
   { TJsonDataHelper }
@@ -110,8 +112,159 @@ type
   function JsonNode2Data(aNode: TJsonNode): TJsonData;
   function JsonData2Node(aData: TJsonData): TJsonNode;
 
+type
+  TOptString = specialize TGOptional<string>;
+  POptString = ^TOptString;
+
+  TOptStrHelper = type helper for TOptString
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptBoolean = specialize TGOptional<Boolean>;
+  POptBoolean = ^TOptBoolean;
+
+  TOptBoolHelper = type helper for TOptBoolean
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptShortInt = specialize TGOptional<ShortInt>;
+  POptShortInt = ^TOptShortInt;
+
+  TOptShortIntHelper = type helper for TOptShortInt
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptByte = specialize TGOptional<Byte>;
+  POptByte = ^TOptByte;
+
+  TOptByteHelper = type helper for TOptByte
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptSmallInt = specialize TGOptional<SmallInt>;
+  POptSmallInt = ^TOptSmallInt;
+
+  TOptSmallIntHelper = type helper for TOptSmallInt
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptWord = specialize TGOptional<Word>;
+  POptWord = ^TOptWord;
+
+  TOptWordHelper = type helper for TOptWord
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptInteger = specialize TGOptional<Integer>;
+  POptInteger = ^TOptInteger;
+
+  TOptIntHelper = type helper for TOptInteger
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptCardinal = specialize TGOptional<Cardinal>;
+  POptCardinal = ^TOptCardinal;
+
+  TOptCardinalHelper = type helper for TOptCardinal
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptDouble = specialize TGOptional<Double>;
+  POptDouble = ^TOptDouble;
+
+  TOptDoubleHelper = type helper for TOptDouble
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TDateTimeUtc = record
+  private
+    FValue: TDateTime;
+  public
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+    class operator := (const dtu: TDateTimeUtc): TDateTime; inline;
+    class operator := (const dt: TDateTime): TDateTimeUtc; inline;
+    class operator Explicit(const dt: TDateTime): TDateTimeUtc; inline;
+    class operator Explicit(const dtu: TDateTimeUtc): TDateTime; inline;
+  end;
+  PDateTimeUtc = ^TDateTimeUtc;
+
+  TOptDateTimeUtc = specialize TGOptional<TDateTimeUtc>;
+  POptDateTimeUtc = ^TOptDateTimeUtc;
+
+  TOptDateTimeUtcPdoHelper = type helper for TOptDateTimeUtc
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TGuidPdoHelper = type helper(TGGuidHelper) for TGuid
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TOptGuid = specialize TGOptional<TGuid>;
+  POptGuid = ^TOptGuid;
+
+  TOptGuidHelper = type helper for TOptGuid
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TInt64 = record
+  private
+    FValue: Int64;
+  public
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+    class operator := (const i: TInt64): Int64; inline;
+    class operator := (const i: Int64): TInt64; inline;
+    class operator Explicit(const i: TInt64): Int64; inline;
+    class operator Explicit(const i: Int64): TInt64; inline;
+  end;
+  PInt64t = ^TInt64;
+
+  TOptInt64 = specialize TGOptional<TInt64>;
+  POptInt64 = ^TOptInt64;
+
+  TOptInt64Helper = type helper for TOptInt64
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
+  TUInt64 = record
+  private
+    FValue: UInt64;
+  public
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+    class operator := (const u: TUInt64): UInt64; inline;
+    class operator := (const u: UInt64): TUInt64; inline;
+    class operator Explicit(const u: TUInt64): UInt64; inline;
+    class operator Explicit(const u: UInt64): TUInt64; inline;
+  end;
+  PUInt64t = ^TUInt64;
+
+  TOptUInt64 = specialize TGOptional<TUInt64>;
+  POptUInt64 = ^TOptUInt64;
+
+  TOptUInt64Helper = type helper for TOptUInt64
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+uses
+  LgJsonTypeDef, lgStrConst;
 
 function JsonNode2Data(aNode: TJsonNode): TJsonData;
   function CopyNode(aNode: TJsonNode): TJsonData;
@@ -164,18 +317,18 @@ function JsonData2Node(aData: TJsonData): TJsonNode;
     e: TJsonEnum;
   begin
     case aSrc.JSONType of
-      jtUnknown: raise EJsException.Create(SEUnknownTJsonDataType);
-      jtNull:    aDst.AsNull;
-      jtBoolean: aDst.AsBoolean := aSrc.AsBoolean;
-      jtNumber:  aDst.AsNumber := aSrc.AsFloat;
-      jtString:  aDst.AsString := aSrc.AsString;
-      jtArray:
+      TJSONtype.jtUnknown: raise EJsException.Create(SEUnknownTJsonDataType);
+      TJSONtype.jtNull:    aDst.AsNull;
+      TJSONtype.jtBoolean: aDst.AsBoolean := aSrc.AsBoolean;
+      TJSONtype.jtNumber:  aDst.AsNumber := aSrc.AsFloat;
+      TJSONtype.jtString:  aDst.AsString := aSrc.AsString;
+      TJSONtype.jtArray:
         begin
           aDst.AsArray;
           for I := 0 to Pred(aSrc.Count) do
             CopyData(aSrc.Items[I], aDst.AddNode);
         end;
-      jtObject:
+      TJSONtype.jtObject:
         begin
           aDst.AsObject;
           for e in aSrc do
@@ -506,6 +659,463 @@ function TJsonMergePatch.Apply(var aTarget: string): Boolean;
 begin
   if not Loaded then exit(False);
   Result := ApplyPatch(FPatch, aTarget);
+end;
+
+{ TOptStrHelper }
+
+class procedure TOptStrHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptString(p)^.Assigned then
+    aWriter.Add(POptString(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptStrHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptString(p)^.Clear;
+    end
+  else
+    begin
+      Result := aReader.TokenKind = rtkString;
+      if Result then POptString(p)^ := aReader.AsString;
+    end;
+end;
+
+{ TOptBoolHelper }
+
+class procedure TOptBoolHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptBoolean(p)^.Assigned then
+    if POptBoolean(p)^.Value then
+      aWriter.AddTrue
+    else
+      aWriter.AddFalse
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptBoolHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptBoolean(p)^.Clear;
+    end
+  else
+    begin
+      Result := aReader.TokenKind in [rtkFalse, rtkTrue];
+      if Result then POptBoolean(p)^ := aReader.AsBoolean;
+    end;
+end;
+
+{ TOptShortIntHelper }
+
+class procedure TOptShortIntHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptShortInt(p)^.Assigned then
+    aWriter.Add(POptShortInt(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+{$PUSH}{$WARN 5036 OFF : Local variable "$1" does not seem to be initialized}
+class function TOptShortIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptShortInt(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
+                (I >= Low(ShortInt)) and (I <= High(ShortInt));
+      if Result then POptShortInt(p)^ := ShortInt(I);
+    end;
+end;
+
+{ TOptByteHelper }
+
+class procedure TOptByteHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptByte(p)^.Assigned then
+    aWriter.Add(POptByte(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptByteHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptByte(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
+                (I >= 0) and (I <= High(Byte));
+      if Result then POptByte(p)^ := Byte(I);
+    end;
+end;
+
+{ TOptSmallIntHelper }
+
+class procedure TOptSmallIntHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptSmallInt(p)^.Assigned then
+    aWriter.Add(POptSmallInt(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptSmallIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptSmallInt(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
+                (I >= Low(SmallInt)) and (I <= High(SmallInt));
+      if Result then POptSmallInt(p)^ := SmallInt(I);
+    end;
+end;
+
+{ TOptWordHelper }
+
+class procedure TOptWordHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptWord(p)^.Assigned then
+    aWriter.Add(POptWord(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptWordHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptWord(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
+                (I >= 0) and (I <= High(Word));
+      if Result then POptWord(p)^ := Word(I);
+    end;
+end;
+
+{ TOptIntHelper }
+
+class procedure TOptIntHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptInteger(p)^.Assigned then
+    aWriter.Add(POptInteger(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptIntHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptInteger(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
+                (I >= Low(Integer)) and (I <= High(Integer));
+      if Result then POptInteger(p)^ := Integer(I);
+    end;
+end;
+
+{ TOptCardinalHelper }
+
+class procedure TOptCardinalHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptCardinal(p)^.Assigned then
+    aWriter.Add(POptCardinal(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptCardinalHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptCardinal(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkNumber) and aReader.AsNumber.IsExactInt(I) and
+                (I >= 0) and (I <= High(Cardinal));
+      if Result then POptCardinal(p)^ := Cardinal(I);
+    end;
+end;
+{$POP}
+
+{ TOptDoubleHelper }
+
+class procedure TOptDoubleHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptDouble(p)^.Assigned then
+    aWriter.Add(POptDouble(p)^.Value)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptDoubleHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptDouble(p)^.Clear;
+    end
+  else
+    begin
+      Result := aReader.TokenKind = rtkNumber;
+      if Result then POptDouble(p)^ := aReader.AsNumber;
+    end;
+end;
+
+{ TDateTimeUtc }
+
+class procedure TDateTimeUtc.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(UTCToRfc8927TimeStamp(PDateTimeUtc(p)^.FValue));
+end;
+
+class function TDateTimeUtc.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  Assert((aOpts = []) or (aOpts <> [])); //
+  Result := (aReader.TokenKind = rtkString) and TryRfc8927TimeStampToUTC(aReader.AsString, PDateTimeUtc(p)^.FValue);
+end;
+
+class operator TDateTimeUtc.:=(const dtu: TDateTimeUtc): TDateTime;
+begin
+  Result := dtu.FValue;
+end;
+
+class operator TDateTimeUtc.:=(const dt: TDateTime): TDateTimeUtc;
+begin
+  Result.FValue := dt;
+end;
+
+class operator TDateTimeUtc.Explicit(const dt: TDateTime): TDateTimeUtc;
+begin
+  Result.FValue := dt;
+end;
+
+class operator TDateTimeUtc.Explicit(const dtu: TDateTimeUtc): TDateTime;
+begin
+  Result := dtu.FValue;
+end;
+
+{ TOptDateTimeUtcPdoHelper }
+
+class procedure TOptDateTimeUtcPdoHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptDateTimeUtc(p)^.Assigned then
+    aWriter.Add(UTCToRfc8927TimeStamp(POptDateTimeUtc(p)^.Value.FValue))
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptDateTimeUtcPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader;
+  const aOpts: TJsonReadOptions): Boolean;
+var
+  dtu: TDateTimeUtc;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptDateTimeUtc(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkString) and TryRfc8927TimeStampToUTC(aReader.AsString, dtu.FValue);
+      if Result then POptDateTimeUtc(p)^ := dtu;
+    end;
+end;
+
+{ TGuidPdoHelper }
+
+class procedure TGuidPdoHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(PGuid(p)^.ToString(True));
+end;
+
+class function TGuidPdoHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  Assert((aOpts = []) or (aOpts <> [])); //
+  Result := (aReader.TokenKind = rtkString) and TGuid.TryParse(aReader.AsString, PGuid(p)^);
+end;
+
+{ TOptGuidHelper }
+
+class procedure TOptGuidHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptGuid(p)^.Assigned then
+    aWriter.Add(POptGuid(p)^.Value.ToString(True))
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptGuidHelper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  g: TGuid;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptGuid(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkString) and TGuid.TryParse(aReader.AsString, g);
+      if Result then POptGuid(p)^ := g;
+    end;
+end;
+
+{ TInt64 }
+
+class procedure TInt64.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(PInt64t(p)^.FValue.ToString);
+end;
+
+class function TInt64.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  Assert((aOpts = []) or (aOpts <> [])); //
+  Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, PInt64t(p)^.FValue);
+end;
+
+class operator TInt64.:=(const i: TInt64): Int64;
+begin
+  Result := i.FValue;
+end;
+
+class operator TInt64.:=(const i: Int64): TInt64;
+begin
+  Result.FValue := i;
+end;
+
+class operator TInt64.Explicit(const i: TInt64): Int64;
+begin
+  Result := i.FValue;
+end;
+
+class operator TInt64.Explicit(const i: Int64): TInt64;
+begin
+  Result.FValue := i;
+end;
+
+{ TOptInt64Helper }
+
+class procedure TOptInt64Helper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptInt64(p)^.Assigned then
+    aWriter.Add(Int64(POptInt64(p)^.Value).ToString)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptInt64Helper.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptInt64(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, I);
+      if Result then POptInt64(p)^ := TInt64(I);
+    end;
+end;
+
+{ TUInt64 }
+
+class procedure TUInt64.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  aWriter.Add(PUInt64t(p)^.FValue.ToString);
+end;
+
+class function TUInt64.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+begin
+  Assert((aOpts = []) or (aOpts <> [])); //
+  Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, PUInt64t(p)^.FValue);
+end;
+
+class operator TUInt64.:=(const u: TUInt64): UInt64;
+begin
+  Result := u.FValue;
+end;
+
+class operator TUInt64.:=(const u: UInt64): TUInt64;
+begin
+  Result.FValue := u;
+end;
+
+class operator TUInt64.Explicit(const u: TUInt64): UInt64;
+begin
+  Result := u.FValue;
+end;
+
+class operator TUInt64.Explicit(const u: UInt64): TUInt64;
+begin
+  Result.FValue := u;
+end;
+
+{ TOptUInt64Helper }
+
+class procedure TOptUInt64Helper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+begin
+  if POptUInt64(p)^.Assigned then
+    aWriter.Add(UInt64(POptUInt64(p)^.Value).ToString)
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptUInt64Helper.ReadJson(p: Pointer; aReader: TJsonReader;
+  const aOpts: TJsonReadOptions): Boolean;
+var
+  I: UInt64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptUInt64(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, I);
+      if Result then POptUInt64(p)^ := TUInt64(I);
+    end;
 end;
 
 type
