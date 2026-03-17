@@ -461,6 +461,7 @@ type
   var
     FBuffer: TBuffer;
     procedure EnsureCapacity(aValue: SizeInt); inline;
+    function  GetBufPtr: PByte; inline;
    protected
     procedure DoWrite(b: Byte); override;
     procedure DoWrite2(b1, b2: Byte); override;
@@ -478,6 +479,7 @@ type
     function ToStrRaw: rawbytestring;
     function ToBytes: TBytes;
     function SaveToStream(aStream: TStream): SizeInt;
+    property BufPtr: PByte read GetBufPtr;
   end;
 
   { TMpStreamWriter }
@@ -772,6 +774,7 @@ type
     constructor Create(const a: array of TMpCustomExt); overload;
     destructor Destroy; override;
     function TryAddHook(aHook: TMpCustomExt): Boolean;
+    function TryAddAll(const a: array of TMpCustomExt): Integer;
     function TryRemoveHook(aExtType: TUserExtType): Boolean;
     function TryRemoveHook(aDataType: PTypeInfo): Boolean;
     function Supports(aExtType: TUserExtType): Boolean; inline;
@@ -3054,6 +3057,11 @@ begin
     FBuffer.Length := LgUtils.RoundUpTwoPower(aValue);
 end;
 
+function TMpWriter.GetBufPtr: PByte;
+begin
+  Result := FBuffer.Ptr;
+end;
+
 procedure TMpWriter.DoWrite(b: Byte);
 begin
   EnsureCapacity(Succ(TotalWritten));
@@ -4748,6 +4756,16 @@ begin
   FTypeMap.Add(aHook.DataType, aHook.ExtType);
   aHook.Holder := Self;
   Result := True;
+end;
+
+function TMpUserExt.TryAddAll(const a: array of TMpCustomExt): Integer;
+var
+  h: TMpCustomExt;
+begin
+  Result := HookCount;
+  for h in a do
+    if not TryAddHook(h) then h.Free;
+  Result := HookCount - Result;
 end;
 
 function TMpUserExt.TryRemoveHook(aExtType: TUserExtType): Boolean;
