@@ -111,8 +111,10 @@ resourcestring
   SEPdoTypeNotSupportFmt   = 'Type "%s"("%s") is not supported';
   SEUnsuppPdoPropKindFmt   = 'Unsupported property kind(%s)';
   SEUnsupportPdoTypeFmt    = 'Unsupported istance type(%s)';
+  SEMPackExtNotSupportFmt  = 'MsgPack extension type %d is not supported';
   SEUnexpectJsonEnd        = 'Unexpected end of JSON';
   SEUnexpectMPackEnd       = 'Unexpected end of MsgPack';
+  SEMPackUnexpectKeyFmt    = 'Expected map key type "%s", but got "%s"';
   SEInvalidJsonInst        = 'Invalid JSON instance';
   SEInvalidMPackInst       = 'Invalid MsgPack instance';
   SEUnexpectJsonTokenFmt   = 'Expected JSON token kind "%s", but got "%s"';
