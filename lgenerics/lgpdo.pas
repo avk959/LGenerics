@@ -32,9 +32,10 @@ uses
    - numeric, boolean or string types, some limited support of Variant;
    - enumerations;
    - sets;
-   - regular records, it is possible to register a list of field names or a custom callback;
+   - regular records, it is possible to register a list of field names or a custom callback,
+     or use MsgPack extension;
    - classes, using published properties or by registering a custom callback(TStrings and
-     TCollection as a special case);
+     TCollection as a special case) or using MsgPack extension;
    - objects(only by registering a serialization callback or using MsgPack extension);
    - static arrays of PDO(only one-dimensional, multidimensional arrays are written as one-dimensional);
    - dynamic arrays of PDO;
@@ -1839,7 +1840,7 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
     case vType of
       varSmallInt, varInteger, varSingle, varDouble, varCurrency, varDate, varOleStr,
       varShortInt, varByte, varWord, varLongWord, varInt64, varQWord, varBoolean,
-      varString, varUString:
+      varString:
         begin
           aWriter.BeginArray(2);
           aWriter.Add(Int64(vType));
@@ -1858,8 +1859,7 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
             varLongWord: aWriter.Add(Int64(TVarData(v).vLongWord));
             varInt64:    aWriter.Add(TVarData(v).vInt64);
             varQWord:    aWriter.Add(Int64(TVarData(v).vQWord));
-            varString,
-            varUString:  aWriter.Add(string(v));
+            varString:   aWriter.Add(string(v));
           else
           end;
         end;
@@ -2350,7 +2350,6 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
 
   procedure ReadVariant(aData: Pointer);
   var
-    v: Variant;
     a: array of Variant;
     I: Int64;
     vType: Word;
@@ -2361,11 +2360,11 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
     end;
     if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
     if aReader.StructUnread <> 2 then InvalidVarFormat;
-    aReader.Read;
+    ReadNext;
     if aReader.TokenKind <> mtkInt then InvalidVarFormat;
     if (aReader.AsInt < 0) or (aReader.AsInt > System.High(Word)) then InvalidVarFormat;
     vType := aReader.AsInt;
-    aReader.Read;
+    ReadNext;
     case vType of
       varSmallInt:
         begin
@@ -2458,11 +2457,6 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
           if aReader.TokenKind <> mtkString then InvalidVarFormat;
           Variant(aData^) := aReader.AsString;
         end;
-      varUString:
-        begin
-          if aReader.TokenKind <> mtkString then InvalidVarFormat;
-          Variant(aData^) := unicodestring(aReader.AsString);
-        end;
       MPACK_VAR_ARRAY:
         begin
           a := nil;
@@ -2472,7 +2466,8 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
     else
       Error(SEVariantNotSupportFmt, [vType]);
     end;
-    aReader.Read;
+    ReadNext;
+    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
   end;
 
   procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
@@ -2497,7 +2492,7 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
       ReadValue(ElType, Arr);
       Arr += ElSize;
     end;
-    aReader.Read;
+    ReadNext;
     if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
   end;
 
@@ -2521,7 +2516,7 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
       ReadValue(LocElType, Arr);
       Arr += LocElSize;
     end;
-    aReader.Read;
+    ReadNext;
     if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
   end;
 
@@ -2533,7 +2528,9 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
   begin
     if aReader.TokenKind = mtkExt then begin
       if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
-        exit;
+        exit
+      else
+        Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
     end else
       if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
     pTypData := GetTypeData(aTypeInfo);
@@ -2631,8 +2628,13 @@ type
     Count := aReader.StructUnread;
     for I := 0 to Pred(Count) do begin
       ReadNext;
-      if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
-      s := aReader.AsString;
+      if aReader.KeyValue.Kind <> mvkStr then Error(
+        SEMPackUnexpectKeyFmt, [
+          GetEnumName(TypeInfo(TMpVarKind), Integer(mvkStr)),
+          GetEnumName(TypeInfo(TMpVarKind), Integer(aReader.KeyValue.Kind))
+        ]
+      );
+      s := aReader.KeyValue.AsString;
       if aMap.TryGetValue(s, pInfo) then
         ReadClassProp(o, pInfo)
       else
@@ -2728,7 +2730,9 @@ type
   begin
     if aReader.TokenKind = mtkExt then begin
       if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
-        exit;
+        exit
+      else
+        Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
     end else
       if aReader.TokenKind = mtkNil then begin
         FreeAndNil(TObject(aData^));
@@ -2750,7 +2754,9 @@ type
   begin
     if aReader.TokenKind = mtkExt then
       if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
-        exit;
+        exit
+      else
+        Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
     NotSupported(aTypeInfo);
   end;
 
@@ -2874,7 +2880,6 @@ begin
 end;
 
 initialization
-{$WARN 5058 OFF : Variable "$1" does not seem to be initialized}
   GlobLock := TMultiReadExclusiveWriteSynchronizer.Create;
 finalization
   GlobLock := nil;
