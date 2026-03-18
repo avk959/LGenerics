@@ -749,8 +749,8 @@ type
   { TMpExtHook }
   generic TMpExtHook<T> = class abstract(TMpCustomExt)
   type
-    TValue = T;
-    PValue = ^T;
+    TExtValue = T;
+    PExtValue = ^T;
   private
     FExtType: TUserExtType;
   protected
@@ -4710,7 +4710,7 @@ end;
 
 function TMpExtHook.GetDataType: PTypeInfo;
 begin
-  Result := System.TypeInfo(TValue);
+  Result := System.TypeInfo(TExtValue);
 end;
 
 function TMpExtHook.GetExtType: TUserExtType;
