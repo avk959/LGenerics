@@ -2,12 +2,13 @@ unit lgPdoTest;
 
 {$MODE OBJFPC}{$H+}{$OPTIMIZATION NOORDERFIELDS}
 {$MODESWITCH ADVANCEDRECORDS}
-
+{$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined}
+{$WARN 5027 off : Local variable "$1" is assigned but never used}
 interface
 
 uses
   Classes, SysUtils, Variants, fpcunit, testregistry,
-  lgHelpers, lgPdo, lgArrayHelpers, lgJson;
+  lgUtils, lgHelpers, lgPdo, lgArrayHelpers, lgJson, lgMsgPack;
 
 type
   { TTestPdoRegister }
@@ -254,6 +255,72 @@ type
     procedure LoadRecordProcSkipProp;
     procedure LoadRecordProcRangeError;
     procedure LoadArrayRecordFields;
+  end;
+
+  { TTestPdoMsgPack }
+
+  TTestPdoMsgPack = class(TTestCase)
+  private
+  type
+    TMyRec = record
+      MyInt: Integer;
+      MyBoolean: Boolean;
+      MyStr: string;
+      MyCur: Currency;
+      MyQWord: QWord;
+      constructor Make(i: Integer; b: Boolean; s: string; c: Currency; q: QWord);
+      class operator = (const L, R: TMyRec): Boolean;
+    end;
+
+    TColItem = class(TCollectionItem)
+    private
+      FName: string;
+      FValue: Variant;
+    public
+      function Equals(o: TObject): Boolean; override;
+    published
+      property Name: string read FName write FName;
+      property Value: Variant read FValue write FValue;
+    end;
+
+  published
+    procedure TestShortInt;
+    procedure TestByte;
+    procedure TestSmallInt;
+    procedure TestWord;
+    procedure TestLongInt;
+    procedure TestDWord;
+    procedure TestInt64;
+    procedure TestQWord;
+    procedure TestChar;
+    procedure TestEnumeration;
+    procedure TestSingle;
+    procedure TestDouble;
+    procedure TestCurrency;
+    procedure TestSet;
+    procedure TestCharSet;
+    procedure TestByteSet;
+    procedure TestRangeSet1;
+    procedure TestRangeSet2;
+    procedure TestRangeSet4;
+    procedure TestRangeSet5;
+    procedure TestRangeSet6;
+    procedure TestRangeSet7;
+    procedure TestRangeSet31;
+    procedure TestShortString;
+    procedure TestString;
+    procedure TestWString;
+    procedure TestVariant;
+    procedure TestArray;
+    procedure TestArray2;
+    procedure TestRecord;
+    procedure TestStrings;
+    procedure TestCollection;
+    procedure TestWChar;
+    procedure TestDynArray;
+    procedure TestDynArray2;
+    procedure TestBoolean;
+    procedure TestUString;
   end;
 
 implementation
@@ -2004,9 +2071,864 @@ begin
   AssertTrue(UnRegisterPdo(TypeInfo(r)));
 end;
 
+{ TTestPdoMsgPack.TMyRec }
+
+constructor TTestPdoMsgPack.TMyRec.Make(i: Integer; b: Boolean; s: string; c: Currency; q: QWord);
+begin
+  MyInt := i;
+  MyBoolean := b;
+  MyStr := s;
+  MyCur := c;
+  MyQWord := q;
+end;
+
+class operator TTestPdoMsgPack.TMyRec.=(const L, R: TMyRec): Boolean;
+begin
+  Result := (L.MyInt = R.MyInt) and (L.MyBoolean = R.MyBoolean) and (L.MyStr = R.MyStr) and
+            (L.MyCur = R.MyCur) and (L.MyQWord = R.MyQWord);
+end;
+
+{ TTestPdoMsgPack.TColItem }
+
+function TTestPdoMsgPack.TColItem.Equals(o: TObject): Boolean;
+begin
+  if o = Self then exit(True);
+  if (o = nil) or not(o is TColItem) then exit(False);
+  Result := (Name = TColItem(o).Name) and (Value = TColItem(o).Value);
+end;
+
+{ TTestPdoMsgPack }
+
+procedure TTestPdoMsgPack.TestShortInt;
+var
+  v1, v2: ShortInt;
+  b: TBytes;
+begin
+  v1 := Low(ShortInt);
+  v2 := High(ShortInt);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Low(ShortInt));
+
+  v1 := High(ShortInt);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(ShortInt));
+end;
+
+procedure TTestPdoMsgPack.TestByte;
+var
+  v1, v2: Byte;
+  b: TBytes;
+begin
+  v1 := 0;
+  v2 := High(Byte);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 0);
+
+  v1 := High(Byte);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(Byte));
+end;
+
+procedure TTestPdoMsgPack.TestSmallInt;
+var
+  v1, v2: SmallInt;
+  b: TBytes;
+begin
+  v1 := Low(SmallInt);
+  v2 := High(SmallInt);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Low(SmallInt));
+
+  v1 := High(SmallInt);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(SmallInt));
+end;
+
+procedure TTestPdoMsgPack.TestWord;
+var
+  v1, v2: Word;
+  b: TBytes;
+begin
+  v1 := 0;
+  v2 := High(Word);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 0);
+
+  v1 := High(Word);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(Word));
+end;
+
+procedure TTestPdoMsgPack.TestLongInt;
+var
+  v1, v2: LongInt;
+  b: TBytes;
+begin
+  v1 := Low(LongInt);
+  v2 := High(LongInt);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Low(LongInt));
+
+  v1 := High(LongInt);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(LongInt));
+end;
+
+procedure TTestPdoMsgPack.TestDWord;
+var
+  v1, v2: DWord;
+  b: TBytes;
+begin
+  v1 := 0;
+  v2 := High(DWord);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 0);
+
+  v1 := High(DWord);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(DWord));
+end;
+
+procedure TTestPdoMsgPack.TestInt64;
+var
+  v1, v2: Int64;
+  b: TBytes;
+begin
+  v1 := Low(Int64);
+  v2 := High(Int64);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Low(Int64));
+
+  v1 := High(Int64);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(Int64));
+end;
+
+procedure TTestPdoMsgPack.TestQWord;
+var
+  v1, v2: QWord;
+  b: TBytes;
+begin
+  v1 := 0;
+  v2 := High(QWord);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 0);
+
+  v1 := High(QWord);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = High(QWord));
+end;
+
+procedure TTestPdoMsgPack.TestChar;
+var
+  v1, v2: AnsiChar;
+  b: TBytes;
+begin
+  v1 := 'A';
+  v2 := '0';
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 'A');
+
+  v1 := '0';
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = '0');
+end;
+
+procedure TTestPdoMsgPack.TestEnumeration;
+var
+  v1, v2: TMyEnum;
+  b: TBytes;
+begin
+  v1 := meZero;
+  v2 := meFive;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = meZero);
+
+  v1 := meSix;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = meSix);
+end;
+
+procedure TTestPdoMsgPack.TestSingle;
+var
+  v1, v2: Single;
+  b: TBytes;
+begin
+  v1 := Single.MinValue;
+  v2 := Single.MaxValue;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Single.MinValue);
+
+  v1 := Single.MaxValue;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Single.MaxValue);
+end;
+
+procedure TTestPdoMsgPack.TestDouble;
+var
+  v1, v2: Double;
+  b: TBytes;
+begin
+  v1 := Double.MinValue;
+  v2 := Double.MaxValue;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Double.MinValue);
+
+  v1 := Double.MaxValue;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Double.MaxValue);
+end;
+
+procedure TTestPdoMsgPack.TestCurrency;
+var
+  v1, v2: Currency;
+  b: TBytes;
+begin
+  v1 := Currency.MinValue;
+  v2 := Currency.MaxValue;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Currency.MinValue);
+
+  v1 := Currency.MaxValue;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Currency.MaxValue);
+end;
+
+procedure TTestPdoMsgPack.TestSet;
+type
+  TMySet = set of TMyEnum;
+var
+  v1, v2: TMySet;
+  b: TBytes;
+begin
+  v1 := [];
+  v2 := [meOne, meTwo, meFour, meFive];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [meOne, meTwo, meFour, meFive];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [meOne, meTwo, meFour, meFive]);
+end;
+
+procedure TTestPdoMsgPack.TestCharSet;
+var
+  v1, v2: set of AnsiChar;
+  b: TBytes;
+begin
+  v1 := [];
+  v2 := [#0, 'a', #255];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [#0, ' ', '7', 'E', 'a', #255];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [#0, ' ', '7', 'E', 'a', #255]);
+end;
+
+procedure TTestPdoMsgPack.TestByteSet;
+var
+  v1, v2: set of Byte;
+  b: TBytes;
+begin
+  v1 := [];
+  v2 := [1,5,42,77,101,202,255];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [1,5,42,77,101,202,255];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [1,5,42,77,101,202,255]);
+end;
+
+{$PUSH}{$PACKSET 1}
+procedure TTestPdoMsgPack.TestRangeSet1;
+type
+  TSet = set of 0..7;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 1);
+  v1 := [];
+  v2 := [1,7];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [1,5,7];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [1,5,7]);
+end;
+
+procedure TTestPdoMsgPack.TestRangeSet2;
+type
+  TSet = set of 0..15;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 2);
+  v1 := [];
+  v2 := [1,11];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [0,1,5,7,11,15];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [0,1,5,7,11,15]);
+end;
+
+procedure TTestPdoMsgPack.TestRangeSet4;
+type
+  TSet = set of 0..25;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 4);
+  v1 := [];
+  v2 := [1,21];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [0,1,5,7,11,25];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [0,1,5,7,11,25]);
+end;
+
+procedure TTestPdoMsgPack.TestRangeSet5;
+type
+  TSet = set of 0..39;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 5);
+  v1 := [];
+  v2 := [1,31];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [0,1,5,7,11,25,37];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [0,1,5,7,11,25,37]);
+end;
+
+procedure TTestPdoMsgPack.TestRangeSet6;
+type
+  TSet = set of 0..47;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 6);
+  v1 := [];
+  v2 := [1,31];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [0,1,5,7,11,25,37,45];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [0,1,5,7,11,25,37,45]);
+end;
+
+procedure TTestPdoMsgPack.TestRangeSet7;
+type
+  TSet = set of 0..55;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 7);
+  v1 := [];
+  v2 := [1,51];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [0,1,5,7,11,25,37,45,53];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [0,1,5,7,11,25,37,45,53]);
+end;
+
+procedure TTestPdoMsgPack.TestRangeSet31;
+type
+  TSet = set of 0..247;
+var
+  v1, v2: TSet;
+  b: TBytes;
+begin
+  AssertTrue(SizeOf(v1) = 31);
+  v1 := [];
+  v2 := [1,241];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = []);
+
+  v1 := [0,1,5,7,11,25,37,45,53,245];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = [0,1,5,7,11,25,37,45,53,245]);
+end;
+{$POP}
+
+procedure TTestPdoMsgPack.TestShortString;
+var
+  v1, v2: string[11];
+  s: string;
+  b: TBytes;
+  Raised: Boolean = False;
+begin
+  v1 := '';
+  v2 := 'abcd';
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = '');
+
+  v1 := 'abcdefghijk';
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 'abcdefghijk');
+
+  s := v1 + ' ';
+  b := PdoToMsgPack(TypeInfo(s), s);
+  try
+    PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  except
+    on EPdoLoadMsgPack do Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TTestPdoMsgPack.TestString;
+var
+  v1, v2: string;
+  b: TBytes;
+begin
+  v1 := '';
+  v2 := 'abcd';
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = '');
+
+  v1 := 'abcdefghijk只是一组词语';
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = 'abcdefghijk只是一组词语');
+end;
+
+procedure TTestPdoMsgPack.TestWString;
+var
+  v1, v2: widestring;
+  b: TBytes;
+  s: string;
+begin
+  s := 'abcdefghijk只是一组词语';
+  v1 := '';
+  v2 := widestring(s);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = '');
+
+  v1 := widestring(s);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = v1);
+end;
+
+procedure TTestPdoMsgPack.TestVariant;
+var
+  v1, v2: Variant;
+  s: Single;
+  d: Double;
+  c: Currency;
+  dt: TDateTime;
+  b: TBytes;
+  st: string;
+  I, J: Integer;
+begin
+  v1 := Null;
+  v2 := 42;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsNull(v2));
+
+  v1 := SmallInt(42);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varSmallInt) and (v2 = 42));
+
+  v1 := Integer(42);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varInteger) and (v2 = 42));
+
+  s := 111.175;
+  TVarData(v1).vType := varSingle;
+  TVarData(v1).vSingle := s;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varSingle) and (v2 = s));
+
+  d := Pi;
+  v1 := d;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varDouble) and (v2 = d));
+
+  c := 421001.777;
+  v1 := c;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varCurrency) and (v2 = c));
+
+  dt := Now;
+  v1 := dt;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varDate) and (v2 = dt));
+
+  st := 'abcdefghijk只是一组词语';
+
+  v1 := widestring(st);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varOleStr) and (v2 = widestring(st)));
+
+  v1 := True;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varBoolean) and Boolean(v2));
+
+  v1 := ShortInt(42);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varShortInt) and (v2 = 42));
+
+  v1 := Byte(42);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varByte) and (v2 = 42));
+
+  v1 := Word(42);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varWord) and (v2 = 42));
+
+  v1 := LongWord(42);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varLongWord) and (v2 = 42));
+
+  v1 := High(Int64);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varInt64) and (v2 = High(Int64)));
+
+  v1 := High(QWord);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varQWord) and (v2 = High(QWord)));
+
+  v1 := unicodestring(st);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varOleStr) and (v2 = unicodestring(st)));
+
+  v1 := st;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsType(v2, varString) and (v2 = st));
+
+  v1 := VarArrayOf(['foo', False, Null, Now]);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(VarIsArray(v2));
+  AssertTrue(VarArrayDimCount(v2) = 1);
+  AssertTrue(VarArrayHighBound(v1, 1) - VarArrayLowBound(v1, 1) =
+             VarArrayHighBound(v2, 1) - VarArrayLowBound(v2, 1));
+  J := VarArrayLowBound(v1, 1);
+  for I := VarArrayLowBound(v1, 1) to VarArrayHighBound(v1, 1) do begin
+    AssertTrue(v1[I] = v2[J]);
+    Inc(J);
+  end;
+end;
+
+procedure TTestPdoMsgPack.TestArray;
+type
+  TArray = array[2..7] of Integer;
+const
+  Arr: TArray = (1,2,3,4,5,6);
+var
+  v1, v2: TArray;
+  b: TBytes;
+begin
+  v1 := Default(TArray);
+  v2 := Arr;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(CompareByte(v1[2], v2[2], SizeOf(v2)) = 0);
+
+  v1 := Arr;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(CompareByte(v1[2], Arr[2], SizeOf(Arr)) = 0);
+end;
+
+procedure TTestPdoMsgPack.TestArray2;
+type
+  TArray = array[0..2,2..4] of Integer;
+const
+  Arr: TArray = ((1,2,3),(4,5,6),(7,8,9));
+var
+  v1, v2: TArray;
+  b: TBytes;
+begin
+  v1 := Default(TArray);
+  v2 := Arr;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(CompareByte(v1[0,2], v2[0,2], SizeOf(v2)) = 0);
+
+  v1 := Arr;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(CompareByte(v1[0,2], Arr[0,2], SizeOf(Arr)) = 0);
+end;
+
+procedure TTestPdoMsgPack.TestRecord;
+var
+  v1, v2: TMyRec;
+  b: TBytes;
+begin
+  v1 := Default(TMyRec);
+  v2 := TMyRec.Make(42,False,'qwerty',1001.42,High(QWord));
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Default(TMyRec));
+
+  v1 := TMyRec.Make(42,False,'qwerty',1001.42,High(QWord));
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = v1);
+end;
+
+procedure TTestPdoMsgPack.TestStrings;
+var
+  v1, v2: specialize TGAutoRef<TStringList>;
+  sl: TStringList;
+  b: TBytes;
+  I: Integer;
+begin
+  sl := nil;
+  b := PdoToMsgPack(TypeInfo(sl), sl);
+  sl := TStringList.Create;
+  PdoLoadMsgPack(TypeInfo(sl), sl, b);
+  AssertTrue(sl = nil);
+
+  v1.Instance.AddStrings(['111','222','333','444']);
+  b := PdoToMsgPack(TypeInfo(v1.Instance), v1.Instance);
+  PdoLoadMsgPack(TypeInfo(sl), sl, b);
+  v2.Instance := sl;
+  sl := nil;
+  AssertTrue(v1.Instance.Count = v2.Instance.Count);
+  for I := 0 to Pred(v1.Instance.Count) do
+    AssertTrue(v1.Instance[I] = v2.Instance[I]);
+end;
+
+procedure TTestPdoMsgPack.TestCollection;
+var
+  v1, v2: TCollection;
+  b: TBytes;
+  I: Integer;
+begin
+  v1 := nil;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  v2 := TCollection.Create(TColItem);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = nil);
+
+  v1 := TCollection.Create(TColItem);
+  with TColItem(v1.Add) do begin
+    Name := 'Name1';
+    Value := 1001;
+  end;
+  with TColItem(v1.Add) do begin
+    Name := 'Just name';
+    Value := 'value';
+  end;
+  with TColItem(v1.Add) do begin
+    Name := 'Unnamed';
+    Value := Low(Int64);
+  end;
+
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  v2 := TCollection.Create(TColItem);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v1.Count = v2.Count);
+  for I := 0 to Pred(v1.Count) do
+    AssertTrue(v1.Items[I].Equals(v2.Items[I]));
+  v1.Free;
+  v2.Free;
+end;
+
+procedure TTestPdoMsgPack.TestWChar;
+var
+  v1, v2: WideChar;
+  b: TBytes;
+begin
+  v1 := #$0410;
+  v2 := #$00;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = #$0410);
+
+  v1 := #$00;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = #$00);
+end;
+
+procedure TTestPdoMsgPack.TestDynArray;
+var
+  v1, v2: array of Integer;
+  sa1, sa2: TStringArray;
+  b: TBytes;
+  I: Integer;
+begin
+  v1 := nil;
+  v2 := [42];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = nil);
+
+  v1 := [1,2,3,4,5];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(Length(v1) = Length(v2));
+  for I := 0 to High(v1) do
+    AssertTrue(v1[I] = v2[I]);
+
+  sa1 := nil;
+  sa2 := ['111','222'];
+  b := PdoToMsgPack(TypeInfo(sa1), sa1);
+  PdoLoadMsgPack(TypeInfo(sa2), sa2, b);
+  AssertTrue(sa2 = nil);
+
+  sa1 := ['aaa','bbb','ccc','ddd'];
+  b := PdoToMsgPack(TypeInfo(sa1), sa1);
+  PdoLoadMsgPack(TypeInfo(sa2), sa2, b);
+  AssertTrue(Length(sa1) = Length(sa2));
+  for I := 0 to High(sa1) do
+    AssertTrue(sa1[I] = sa2[I]);
+end;
+
+procedure TTestPdoMsgPack.TestDynArray2;
+var
+  v1, v2: array of array of Integer;
+  b: TBytes;
+  I, J: Integer;
+begin
+  v1 := nil;
+  v2 := [[42],[1001]];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = nil);
+
+  v1 := [[1,2,3,4],[5,6,7,8,9],[0,1,3],[7,6,5,4,3]];
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(Length(v1) = Length(v2));
+  for I := 0 to High(v1) do begin
+    AssertTrue(Length(v1[I]) = Length(v2[I]));
+    for J := 0 to High(v1[I]) do
+      AssertTrue(v1[I,J] = v2[I,J]);
+  end;
+end;
+
+procedure TTestPdoMsgPack.TestBoolean;
+var
+  v1, v2: Boolean;
+  b: TBytes;
+begin
+  v1 := False;
+  v2 := True;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertFalse(v2);
+
+  v1 := True;
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2);
+end;
+
+procedure TTestPdoMsgPack.TestUString;
+var
+  v1, v2: unicodestring;
+  b: TBytes;
+  s: string;
+begin
+  s := 'abcdefghijk只是一组词语';
+  v1 := '';
+  v2 := unicodestring(s);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = '');
+
+  v1 := unicodestring(s);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = v1);
+end;
+
 initialization
   RegisterTest(TTestPdoRegister);
   RegisterTest(TTestPdoToJson);
   RegisterTest(TTestPdoLoadJson);
+  RegisterTest(TTestPdoMsgPack);
 end.
 
