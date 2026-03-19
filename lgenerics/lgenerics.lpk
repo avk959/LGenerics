@@ -223,6 +223,10 @@
         <Filename Value="lgmsgpack.pas"/>
         <UnitName Value="LgMsgPack"/>
       </Item>
+      <Item>
+        <Filename Value="lgmsgpackutils.pas"/>
+        <UnitName Value="lgMsgPackUtils"/>
+      </Item>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

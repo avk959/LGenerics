@@ -13,7 +13,7 @@ uses
   lgList, lgStack, lgQueue, lgDeque, lgBiMap, lgFunction, lgTable2D, lgAsync, lgPriorityQueue, lgRbTree, 
   lgRootTree, lgCsvUtils, lgInt128, lgMiscUtils, lgJson, lgSeqUtils, lgStrHelpers, lgJsonCfg, lgJsonPath, lgPdo, 
   lgJsonTypeDef, lgJtdCodegen, lgJtdInfer, lgJtdTypes, lgSparseGraph, lgSimpleGraph, lgSimpleDigraph, 
-  lgJsonUtils, LgMsgPack;
+  lgJsonUtils, LgMsgPack, lgMsgPackUtils;
 
 implementation
 
