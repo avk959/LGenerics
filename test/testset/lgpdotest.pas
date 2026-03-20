@@ -4,11 +4,13 @@ unit lgPdoTest;
 {$MODESWITCH ADVANCEDRECORDS}
 {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined}
 {$WARN 5027 off : Local variable "$1" is assigned but never used}
+{$WARN 5089 off : Local variable "$1" of a managed type does not seem to be initialized}
 interface
 
 uses
   Classes, SysUtils, Variants, fpcunit, testregistry,
-  lgUtils, lgHelpers, lgPdo, lgArrayHelpers, lgJson, lgMsgPack;
+  lgUtils, lgHelpers, lgPdo, lgArrayHelpers, lgJson, lgMsgPack, lgMsgPackUtils,
+  lgVector, LgHashMap;
 
 type
   { TTestPdoRegister }
@@ -321,6 +323,35 @@ type
     procedure TestDynArray2;
     procedure TestBoolean;
     procedure TestUString;
+  end;
+
+  { TTestMsgPackExt }
+
+  TTestMsgPackExt = class(TTestCase)
+  private
+  type
+    TMpExt      = specialize TGAutoRef<TMpUserExt>;
+    TOptString  = specialize TGOptional<string>;
+    TOptGuid    = specialize TGOptional<TGuid>;
+    TIntVector  = specialize TGLiteVector<Integer>;
+    TGuidVector = specialize TGLiteVector<TGuid>;
+
+    TStrGuidMapExt = specialize TGLiteStrHashMapExt<TGuid>;
+    TStrGuidMap    = TStrGuidMapExt.TExtValue;
+    TIntGuidMapExt = specialize TGLiteIntHashMapExt<TGuid>;
+    TIntGuidMap    = TIntGuidMapExt.TExtValue;
+    TGuidTxtMapExt = specialize TGLiteChainHashMapExt<TGuid, TSimpleText, TGuid>;
+    TGuidTxtMap    = TGuidTxtMapExt.TExtValue;
+  published
+    procedure TestGuidExt;
+    procedure TestOptStringExt;
+    procedure TestOptGuidExt;
+    procedure TestIntVectorExt;
+    procedure TestGuidVectorExt;
+    procedure TestStrGuidMapExt;
+    procedure TestIntGuidMapExt;
+    procedure TestTextCompressExt;
+    procedure TestGuidTxtMap;
   end;
 
 implementation
@@ -2925,10 +2956,233 @@ begin
   AssertTrue(v2 = v1);
 end;
 
+{ TTestMsgPackExt }
+
+procedure TTestMsgPackExt.TestGuidExt;
+var
+  v1, v2: TGuid;
+  ext: TMpExt;
+  b: TBytes;
+begin
+  v1 := TGuid.NewGuid;
+  v2 := TGuid.NewGuid;
+  AssertFalse(TGuid.Equal(v1, v2));
+  AssertTrue(ext.Instance.TryAddHook(TGuidExt.Create(0)));
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(TGuid.Equal(v1, v2));
+end;
+
+procedure TTestMsgPackExt.TestOptStringExt;
+var
+  v1, v2: TOptString;
+  ext: TMpExt;
+  b: TBytes;
+begin
+  AssertTrue(ext.Instance.TryAddHook(specialize TGOptionalExt<string>.Create(0)));
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  v2 := 'abcd';
+  AssertTrue(v2.Assigned);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertFalse(v2.Assigned);
+
+  v1 := 'string';
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.Assigned);
+  AssertTrue(v1.Value = v2.Value);
+end;
+
+procedure TTestMsgPackExt.TestOptGuidExt;
+var
+  v1, v2: TOptGuid;
+  ext: TMpExt;
+  b: TBytes;
+begin
+  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), specialize TGOptionalExt<string>.Create(1)]);
+  v2 := TGuid.NewGuid;
+  AssertTrue(v2.Assigned);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertFalse(v2.Assigned);
+
+  v1 := TGuid.NewGuid;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.Assigned);
+  AssertTrue(TGuid.Equal(v1.Value, v2.Value));
+end;
+
+procedure TTestMsgPackExt.TestIntVectorExt;
+var
+  v1, v2: TIntVector;
+  ext: TMpExt;
+  b: TBytes;
+  I: Integer;
+begin
+  AssertTrue(ext.Instance.TryAddHook(specialize TGLiteVectorExt<Integer>.Create(0)));
+  v2.AddAll([1,2,3]);
+  AssertTrue(v2.Count = 3);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.IsEmpty);
+
+  v2.AddAll([1,2,3,4,5,6]);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v1.Count = v2.Count);
+  for I := 0 to Pred(v1.Count) do
+    AssertTrue(v1[I] = v2[I]);
+end;
+
+procedure TTestMsgPackExt.TestGuidVectorExt;
+var
+  v1, v2: TGuidVector;
+  ext: TMpExt;
+  b: TBytes;
+  I: Integer;
+begin
+  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), specialize TGLiteVectorExt<TGuid>.Create(1)]);
+  v2.AddAll([TGuid.NewGuid, TGuid.NewGuid]);
+  AssertTrue(v2.Count = 2);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.IsEmpty);
+
+  v1.AddAll([TGuid.NewGuid, TGuid.NewGuid, TGuid.NewGuid, TGuid.NewGuid]);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v1.Count = v2.Count);
+  for I := 0 to Pred(v1.Count) do
+    AssertTrue(TGuid.Equal(v1[I], v2[I]));
+end;
+
+procedure TTestMsgPackExt.TestStrGuidMapExt;
+type
+  TEntry = TStrGuidMap.TEntry;
+var
+  v1, v2: TStrGuidMap;
+  ext: TMpExt;
+  b: TBytes;
+  e: TEntry;
+  g: TGuid;
+begin
+  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), TStrGuidMapExt.Create(1)]);
+  v2.Add('aaa', TGuid.NewGuid);
+  AssertTrue(v2.Count = 1);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.IsEmpty);
+
+  v1.AddAll(
+    [TEntry.Create('aa',TGuid.NewGuid), TEntry.Create('bb',TGuid.NewGuid),
+     TEntry.Create('cc',TGuid.NewGuid), TEntry.Create('dd',TGuid.NewGuid)
+  ]);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v1.Count = v2.Count);
+  for e in v1 do begin
+    AssertTrue(v2.TryGetValue(e.Key, g));
+    AssertTrue(TGuid.Equal(e.Value, g));
+  end;
+end;
+
+procedure TTestMsgPackExt.TestIntGuidMapExt;
+type
+  TEntry = TIntGuidMap.TEntry;
+var
+  v1, v2: TIntGuidMap;
+  ext: TMpExt;
+  b: TBytes;
+  e: TEntry;
+  g: TGuid;
+begin
+  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), TIntGuidMapExt.Create(1)]);
+  v2.Add(111, TGuid.NewGuid);
+  AssertTrue(v2.Count = 1);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.IsEmpty);
+
+  v1.AddAll(
+    [TEntry.Create(111,TGuid.NewGuid), TEntry.Create(222,TGuid.NewGuid),
+     TEntry.Create(333,TGuid.NewGuid), TEntry.Create(444,TGuid.NewGuid)
+  ]);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v1.Count = v2.Count);
+  for e in v1 do begin
+    AssertTrue(v2.TryGetValue(e.Key, g));
+    AssertTrue(TGuid.Equal(e.Value, g));
+  end;
+end;
+
+procedure TTestMsgPackExt.TestTextCompressExt;
+var
+  v1, v2: TSimpleText;
+  ext: TMpExt;
+  b: TBytes;
+const
+  TXT = 'MessagePack is an object serialization specification like JSON.' +
+        'MessagePack has two concepts: type system and formats.' +
+        'Serialization is conversion from application objects into MessagePack formats via MessagePack type system.' +
+        'Deserialization is conversion from MessagePack formats into application objects via MessagePack type system.' +
+        'This document describes the MessagePack type system, MessagePack formats and conversion of them.' +
+        'MessagePack allows applications to define application-specific types using the Extension type. Extension type consists of an integer and a byte' +
+        'array where the integer represents a kind of types and the byte array represents data.' +
+        'Applications can assign 0 to 127 to store application-specific type information. An example usage is that application defines type = 0 as' +
+        'the application''s unique type system, and stores name of a type and values of the type at the payload.';
+begin
+  ext.Instance := TMpUserExt.Create([TTextCompressExt.Create(0)]);
+  v2 := 'abcdef';
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = '');
+
+  v1 := TXT;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  AssertTrue(Length(b) < Length(TXT));
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = TXT);
+end;
+
+procedure TTestMsgPackExt.TestGuidTxtMap;
+type
+  TEntry = TGuidTxtMap.TEntry;
+var
+  v1, v2: TGuidTxtMap;
+  ext: TMpExt;
+  b: TBytes;
+  e: TEntry;
+  txt: TSimpleText;
+begin
+  ext.Instance := TMpUserExt.Create(
+    [TGuidExt.Create(0), TTextCompressExt.Create(1), TGuidTxtMapExt.Create(2)]);
+  v2.Add(TGuid.NewGuid, 'aaa');
+  AssertTrue(v2.Count = 1);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2.IsEmpty);
+
+  v1.AddAll(
+    [TEntry.Create(TGuid.NewGuid, 'aaa'), TEntry.Create(TGuid.NewGuid, 'bbb'),
+     TEntry.Create(TGuid.NewGuid, 'ccc'), TEntry.Create(TGuid.NewGuid, 'ddd')
+  ]);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v1.Count = v2.Count);
+  for e in v1 do begin
+    AssertTrue(v2.TryGetValue(e.Key, txt));
+    AssertTrue(string(e.Value) = string(txt));
+  end;
+end;
+
 initialization
   RegisterTest(TTestPdoRegister);
   RegisterTest(TTestPdoToJson);
   RegisterTest(TTestPdoLoadJson);
   RegisterTest(TTestPdoMsgPack);
+  RegisterTest(TTestMsgPackExt);
 end.
 
