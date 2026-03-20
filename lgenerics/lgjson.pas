@@ -440,6 +440,7 @@ type
     function  IsNull: Boolean; inline;
     function  IsFalse: Boolean; inline;
     function  IsTrue: Boolean; inline;
+  { note: NaNs and Infinities are not considered numbers }
     function  IsNumber: Boolean; inline;
     function  IsInteger: Boolean; inline;
     function  IsInteger(out aValue: Int64): Boolean; inline;
@@ -850,6 +851,7 @@ type
     procedure DoWriteStr(p: PChar; aCount: SizeInt);
     procedure ValueAdding; inline;
     procedure PairAdding; inline;
+    procedure DoWriteNum(aValue: Double);
   public
     class function New(aStream: TStream; aBufferSize: Integer): TJsonWriter; static; inline;
     class function New(aStream: TStream): TJsonWriter; static; inline;
@@ -904,6 +906,7 @@ type
     procedure ValueAdding; inline;
     procedure PairAdding; inline;
     procedure NameAdding; inline;
+    procedure DoWriteNum(aValue: Double);
   public
   const
     DEFAULT_LEN = 32768;
@@ -1985,10 +1988,11 @@ var
         else
           sb.Append(JS_FALSE);
       vkNumber:
-        begin
+        if Double.IsFinite(aValue.FValue.Num) then begin
           Double2Str(aValue.FValue.Num, s);
           sb.Append(s);
-        end;
+        end else
+          sb.Append(JS_NULL);
       vkString: sb.AppendEncode(string(aValue.FValue.Ref));
       vkArray:
         begin
@@ -3937,10 +3941,11 @@ var
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
       jvkNumber:
-        begin
+        if Double.IsFinite(aInst.FValue.Num) then begin
           Double2Str(aInst.FValue.Num, s);
           sb.Append(s);
-        end;
+        end else
+          sb.Append(JS_NULL);
       jvkString: sb.AppendEncode(aInst.StrVal);
       jvkArray:
         begin
@@ -4656,7 +4661,7 @@ end;
 
 function TJsonNode.IsNumber: Boolean;
 begin
-  Result := Kind = jvkNumber;
+  Result := (Kind = jvkNumber) and Double.IsFinite(FValue.Num);
 end;
 
 function TJsonNode.IsInteger: Boolean;
@@ -5922,10 +5927,11 @@ var
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
       jvkNumber:
-        begin
+        if Double.IsFinite(aInst.FValue.Num) then begin
           Double2Str(aInst.FValue.Num, s);
           sb.Append(s);
-        end;
+        end else
+          sb.Append(JS_NULL);
       jvkString: sb.AppendEncodeOpt(aInst.StrVal, aUEscOpt, aHtmlEsc);
       jvkArray:
         begin
@@ -6014,8 +6020,11 @@ var
   end;
   procedure AppendNumber(aNum: Double); inline;
   begin
-    Double2Str(aNum, s);
-    sb.Append(s);
+    if Double.IsFinite(aNum) then begin
+      Double2Str(aNum, s);
+      sb.Append(s);
+    end else
+      sb.Append(JS_NULL);
   end;
   procedure NewLine(Pos: Integer; aCondition: Boolean); inline;
   begin
@@ -8864,6 +8873,17 @@ begin
   end;
 end;
 
+procedure TJsonWriter.DoWriteNum(aValue: Double);
+var
+  num: shortstring;
+begin
+  if Double.IsFinite(aValue) then begin
+    Double2Str(aValue, num);
+    DoWrite(@num[1], System.Length(num));
+  end else
+    DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+end;
+
 class function TJsonWriter.New(aStream: TStream; aBufferSize: Integer): TJsonWriter;
 begin
   Result := TJsonWriter.Create(aStream, aBufferSize);
@@ -8923,12 +8943,9 @@ begin
 end;
 
 function TJsonWriter.Add(aValue: Double): TJsonWriter;
-var
-  num: shortstring;
 begin
   ValueAdding;
-  Double2Str(aValue, num);
-  DoWrite(@num[1], System.Length(num));
+  DoWriteNum(aValue);
   Result := Self;
 end;
 
@@ -8991,14 +9008,11 @@ begin
 end;
 
 function TJsonWriter.Add(const aName: string; aValue: Double): TJsonWriter;
-var
-  num: shortstring;
 begin
   PairAdding;
-  Double2Str(aValue, num);
   DoWriteStr(Pointer(aName), System.Length(aName));
   DoWriteChar(chColon);
-  DoWrite(@num[1], System.Length(num));
+  DoWriteNum(aValue);
   Result := Self;
 end;
 
@@ -9229,6 +9243,17 @@ begin
   end;
 end;
 
+procedure TJsonStrWriter.DoWriteNum(aValue: Double);
+var
+  num: shortstring;
+begin
+  if Double.IsFinite(aValue) then begin
+    Double2Str(aValue, num);
+    DoWrite(@num[1], System.Length(num));
+  end else
+    DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+end;
+
 class function TJsonStrWriter.New(aInitLen: SizeInt): TJsonStrWriter;
 begin
   Result := TJsonStrWriter.Create(aInitLen);
@@ -9275,12 +9300,9 @@ begin
 end;
 
 function TJsonStrWriter.Add(aValue: Double): TJsonStrWriter;
-var
-  num: shortstring;
 begin
   ValueAdding;
-  Double2Str(aValue, num);
-  DoWrite(@num[1], System.Length(num));
+  DoWriteNum(aValue);
   Result := Self;
 end;
 
@@ -9381,14 +9403,11 @@ begin
 end;
 
 function TJsonStrWriter.Add(const aName: string; aValue: Double): TJsonStrWriter;
-var
-  num: shortstring;
 begin
   PairAdding;
-  Double2Str(aValue, num);
   DoWriteStr(Pointer(aName), System.Length(aName));
   DoWriteChar(chColon);
-  DoWrite(@num[1], System.Length(num));
+  DoWriteNum(aValue);
   Result := Self;
 end;
 

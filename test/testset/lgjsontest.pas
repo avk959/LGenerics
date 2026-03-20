@@ -100,6 +100,7 @@ type
     procedure TestExpractPath2;
     procedure TestExpractPathPtr;
     procedure TestSortObject;
+    procedure TestNans;
   end;
 
   { TTestJsonWriter }
@@ -1919,6 +1920,21 @@ begin
   AssertFalse(THelper.IsStrictAscending(GetPairs(Node.Instance), @Cmp));
   AssertTrue(Node.Instance.ObjectSort(@Cmp));
   AssertTrue(THelper.IsStrictAscending(GetPairs(Node.Instance), @Cmp));
+end;
+
+procedure TTestJson.TestNans;
+var
+  Node: specialize TGAutoRef<TJsonNode>;
+  n: TJsonNode;
+const
+  Expect = '[null,null,null]';
+begin
+  Node.Instance.AddAll([Double.NegativeInfinity, Double.PositiveInfinity, Double.NaN]);
+  for n in Node.Instance do begin
+    AssertTrue(n.Kind = jvkNumber);
+    AssertFalse(n.IsNumber);
+  end;
+  AssertTrue(Node.Instance.AsJson = Expect);
 end;
 
 { TTestJsonWriter }
