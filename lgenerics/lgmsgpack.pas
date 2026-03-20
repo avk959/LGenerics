@@ -733,7 +733,10 @@ type
   TMpUserExt = class;
 
   TMpCustomExt = class
+  const
+    DEF_DEPTH = 7;
   private
+    FMaxDepth: Integer;
     FHolder: TMpUserExt;
   protected
     function  GetDataType: PTypeInfo; virtual; abstract;
@@ -741,6 +744,7 @@ type
   public
     procedure Write(aData: Pointer; aWriter: TMpCustomWriter); virtual; abstract;
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; virtual; abstract;
+    property  MaxDepth: Integer read FMaxDepth;
     property  DataType: PTypeInfo read GetDataType;
     property  ExtType: TUserExtType read GetExtType;
     property  Holder: TMpUserExt read FHolder write FHolder;
@@ -757,7 +761,7 @@ type
     function GetDataType: PTypeInfo; override;
     function GetExtType: TUserExtType; override;
   public
-    constructor Create(aExtType: TUserExtType);
+    constructor Create(aExtType: TUserExtType; aMaxDepth: Integer = DEF_DEPTH);
   end;
 
   { TMpUserExt }
@@ -4718,9 +4722,13 @@ begin
   Result := FExtType;
 end;
 
-constructor TMpExtHook.Create(aExtType: TUserExtType);
+constructor TMpExtHook.Create(aExtType: TUserExtType; aMaxDepth: Integer);
 begin
   inherited Create;
+  if aMaxDepth > 0 then
+    FMaxDepth := aMaxDepth
+  else
+    aMaxDepth := DEF_DEPTH;
   FExtType := aExtType;
 end;
 

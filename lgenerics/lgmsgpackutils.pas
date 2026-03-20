@@ -156,7 +156,7 @@ var
 begin
   p^.Clear;
   if System.Length(aBlob) = 1 then exit(True);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1);
+  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
   try
     Value := Default(T);
     try
@@ -202,7 +202,7 @@ var
 begin
   p^.MakeEmpty;
   Info := TypeInfo(T);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1);
+  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
   try
     Reader.Read;
     if Reader.TokenKind <> mtkArrayBegin then exit(False);
@@ -261,7 +261,7 @@ var
 begin
   p^.MakeEmpty;
   Info := TypeInfo(T);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1);
+  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
   try
     Reader.Read;
     if Reader.TokenKind <> mtkMapBegin then exit(False);
@@ -322,7 +322,7 @@ var
 begin
   p^.MakeEmpty;
   Info := TypeInfo(T);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1);
+  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
   try
     Reader.Read;
     if Reader.TokenKind <> mtkMapBegin then exit(False);
@@ -385,7 +385,7 @@ begin
   p^.MakeEmpty;
   KeyInfo := TypeInfo(TKey);
   ValInfo := TypeInfo(TValue);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1);
+  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
   try
     Reader.Read;
     if Reader.TokenKind <> mtkArrayBegin then exit(False);
