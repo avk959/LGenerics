@@ -1803,16 +1803,25 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
   begin
     RestSize := GetTypeData(aTypeInfo)^.SetSize;
     System.SetLength(b, RestSize);
-    ByteIdx := 0;
-    p := aData;
-    while RestSize <> 0 do begin
-      CurrSize := Math.Min(RestSize, SizeOf(DWord));
-      for I := 0 to Pred(CurrSize) do begin
-        b[ByteIdx] := Byte(p^ shr (I * 8));
-        Inc(ByteIdx);
+    case RestSize of
+      1: b[0] := PByte(aData)^;
+      2:
+        begin
+          b[0] := PByte(aData)^;
+          b[1] := Byte(PWord(aData)^ shr 8);
+        end;
+    else
+      ByteIdx := 0;
+      p := aData;
+      while RestSize <> 0 do begin
+        CurrSize := Math.Min(RestSize, SizeOf(DWord));
+        for I := 0 to Pred(CurrSize) do begin
+          b[ByteIdx] := Byte(p^ shr (I * 8));
+          Inc(ByteIdx);
+        end;
+        Dec(RestSize, CurrSize);
+        Inc(p);
       end;
-      Dec(RestSize, CurrSize);
-      Inc(p);
     end;
     aWriter.Add(b);
   end;
@@ -2296,17 +2305,22 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
     RestSize := GetTypeData(aTypeInfo)^.SetSize;
     if System.Length(b) <> RestSize then
       Error(SEMPackSetSizeErrorFmt, [aTypeInfo^.Name, System.Length(b)]);
-    ByteIdx := 0;
-    p := aData;
-    System.FillChar(p^, RestSize, 0);
-    while RestSize <> 0 do begin
-      CurrSize := Math.Min(RestSize, SizeOf(DWord));
-      for I := 0 to Pred(CurrSize) do begin
-        p^ := p^ or DWord(b[ByteIdx]) shl (I * 8);
-        Inc(ByteIdx);
+    case RestSize of
+      1: PByte(aData)^ := b[0];
+      2: PWord(aData)^ := Word(b[1]) shl 8 or b[0];
+    else
+      ByteIdx := 0;
+      p := aData;
+      System.FillChar(p^, RestSize, 0);
+      while RestSize <> 0 do begin
+        CurrSize := Math.Min(RestSize, SizeOf(DWord));
+        for I := 0 to Pred(CurrSize) do begin
+          p^ := p^ or DWord(b[ByteIdx]) shl (I * 8);
+          Inc(ByteIdx);
+        end;
+        Dec(RestSize, CurrSize);
+        Inc(p);
       end;
-      Dec(RestSize, CurrSize);
-      Inc(p);
     end;
   end;
 
