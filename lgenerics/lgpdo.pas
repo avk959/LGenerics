@@ -32,8 +32,9 @@ uses
    - numeric, boolean or string types, some limited support of Variant;
    - enumerations;
    - sets;
-   - regular records, it is possible to register a list of field names or a custom callback,
-     or use MsgPack extension;
+   - regular records, it is possible to register a list of field names or
+       register custom callback for JSON;
+       use MsgPack extension;
    - classes, using published properties or by registering a custom callback(TStrings and
      TCollection as a special case) or using MsgPack extension;
    - objects(only by registering a serialization callback or using MsgPack extension);
@@ -231,7 +232,8 @@ end;
 
 function RegisterRecordFields(aTypeInfo: PTypeInfo; const aFieldNames: TStringArray): Boolean;
 begin
-  if (aTypeInfo = nil) or (aTypeInfo^.Kind <> tkRecord) then exit(False);
+  if (aTypeInfo = nil) or (aTypeInfo^.Kind <> tkRecord) or (aFieldNames = nil) then
+    exit(False);
   Result := AddPdo(aTypeInfo, aFieldNames);
 end;
 
@@ -1720,7 +1722,7 @@ begin
     ReadValue(aTypeInfo, @aValue);
     if Reader.ReadState = rsGo then Reader.Read;
     if Reader.ReadState <> rsEof then
-      Error(SEJsonStrNotFullyRead);
+      Error(SEJsonTrailingGarbage);
   except
     on e: EPdoLoadJson do raise;
     on e: Exception do
@@ -1903,20 +1905,74 @@ procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWrit
     end;
   end;
 
+type
+  TLocCacheEntry = record
+    FieldMap: TRecFieldMap;
+    Count: Integer;
+    Tested: Boolean;
+  end;
+
+  TRecFieldMapData = record
+    Map: TRecFieldMap;
+    Count: Integer;
+  end;
+
+  TLocalCacheType = specialize TGLiteEquatableHashMap<PTypeInfo, TLocCacheEntry, Pointer>;
+  TLocalCache     = TLocalCacheType.TMap;
+
+var
+  LocalCache: TLocalCache;
+
+  function GetFieldMapData(aTypeInfo: PTypeInfo; out aData: TRecFieldMapData): Boolean;
+  var
+    pe: ^TLocCacheEntry;
+    pce: TPdoCacheEntry;
+    I, Cnt: Integer;
+  begin
+    pe := LocalCache.GetMutValueDef(aTypeInfo, Default(TLocCacheEntry));
+    if not pe^.Tested then begin
+      if GetGlobPdoEntry(aTypeInfo, pce) then begin
+        pe^.FieldMap := pce.FieldMap;
+        if pe^.FieldMap <> nil then begin
+          Cnt := 0;
+          for I := 0 to System.High(pe^.FieldMap) do
+            Inc(Cnt, Ord(pe^.FieldMap[I].Name <> ''));
+          pe^.Count := Cnt;
+        end;
+      end;
+      pe^.Tested := True;
+    end;
+    Result := pe^.FieldMap <> nil;
+    if Result then begin
+      aData.Map := pe^.FieldMap;
+      aData.Count := pe^.Count;
+    end;
+  end;
+
   procedure WriteRecord(aTypeInfo: PTypeInfo; aData: Pointer);
   var
+    MapData: TRecFieldMapData;
     pTypData: PTypeData;
     pManField: PManagedField;
     I: Integer;
   begin
-    if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then exit;
-    pTypData := GetTypeData(aTypeInfo);
-    pManField := PManagedField(
-      AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
-    aWriter.BeginArray(pTypData^.TotalFieldCount);
-    for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
-      WriteValue(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
-      Inc(pManField);
+    if GetFieldMapData(aTypeInfo, MapData) then begin
+      aWriter.BeginMap(MapData.Count);
+      for I := 0 to System.High(MapData.Map) do
+        if MapData.Map[I].Name <> '' then begin
+          aWriter.Add(MapData.Map[I].Name);
+          WriteValue(MapData.Map[I].Info, PByte(aData) + MapData.Map[I].Offset);
+        end;
+    end else begin
+      if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then exit;
+      pTypData := GetTypeData(aTypeInfo);
+      pManField := PManagedField(
+        AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+      aWriter.BeginArray(pTypData^.TotalFieldCount);
+      for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
+        WriteValue(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
+        Inc(pManField);
+      end;
     end;
   end;
 
@@ -2534,28 +2590,86 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
     if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
   end;
 
+type
+  TLocCacheEntry = record
+    FieldMap: TRecFieldMap;
+    Tested: Boolean;
+  end;
+
+  TLocalCacheType = specialize TGLiteEquatableHashMap<PTypeInfo, TLocCacheEntry, Pointer>;
+  TLocalCache     = TLocalCacheType.TMap;
+
+var
+  LocalCache: TLocalCache;
+
+  function GetFieldMap(aTypeInfo: PTypeInfo; out aFieldMap: TRecFieldMap): Boolean;
+  var
+    pe: ^TLocCacheEntry;
+    pce: TPdoCacheEntry;
+  begin
+    pe := LocalCache.GetMutValueDef(aTypeInfo, Default(TLocCacheEntry));
+    if not pe^.Tested then begin
+      if GetGlobPdoEntry(aTypeInfo, pce) then
+        pe^.FieldMap := pce.FieldMap;
+      pe^.Tested := True;
+    end;
+    aFieldMap := pe^.FieldMap;
+    Result := aFieldMap <> nil;
+  end;
+
+  function FindFieldName(const aName: string; const aMap: TRecFieldMap): Integer;
+  var
+    I: Integer;
+  begin
+    if aName <> '' then
+      for I := 0 to System.High(aMap) do
+        if aName = aMap[I].Name then exit(I);
+    Result := -1;
+  end;
+
   procedure ReadRecord(aTypeInfo: PTypeInfo; aData: Pointer);
   var
+    Map: TRecFieldMap;
     pTypData: PTypeData;
     pField: PManagedField;
-    I: Integer;
+    I, J: Integer;
+  const
+    MAP_KEY_NAMES: array[TMpVarKind] of string = ('Null', 'Integer', 'String', 'Bytes');
   begin
     if aReader.TokenKind = mtkExt then begin
       if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
         exit
       else
         Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
-    end else
-      if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-    pTypData := GetTypeData(aTypeInfo);
-    pField := PManagedField(AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
-    for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
-      ReadNext;
-      ReadValue(pField^.TypeRef, PByte(aData) + pField^.FldOffset);
-      Inc(pField);
     end;
-    ReadNext;
-    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
+    if GetFieldMap(aTypeInfo, Map) then begin
+      if aReader.TokenKind <> mtkMapBegin then UnexpectedToken(mtkMapBegin, aReader.TokenKind);
+      for I := 0 to Pred(aReader.StructUnread) do begin
+        ReadNext;
+        if aReader.KeyValue.Kind <> mvkStr then
+          Error(SEMPackNonStrFieldNameFmt, [MAP_KEY_NAMES[aReader.KeyValue.Kind]]);
+        J := FindFieldName(aReader.KeyValue.AsString, Map);
+        if J = -1 then begin
+          if aReader.TokenKind in MP_START_TOKENS then
+            aReader.Skip;
+          continue;
+        end;
+        ReadValue(Map[J].Info, PByte(aData) + Map[J].Offset);
+      end;
+      ReadNext;
+      if aReader.TokenKind <> mtkMapEnd then UnexpectedToken(mtkMapEnd, aReader.TokenKind);
+    end else begin
+      if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+      pTypData := GetTypeData(aTypeInfo);
+      pField := PManagedField(AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+      for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
+        ReadNext;
+        ReadValue(pField^.TypeRef, PByte(aData) + pField^.FldOffset);
+        Inc(pField);
+      end;
+      ReadNext;
+      if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
+    end;
   end;
 
   procedure ReadClassProp(o: TObject; aPropInfo: PPropInfo);
@@ -2847,7 +2961,7 @@ begin
     MsgPack2Pdo(aTypeInfo, aValue, aReader, aUserExt);
     if aReader.ReadState = mrsRead then aReader.Read;
     if aReader.ReadState <> mrsEof then
-      raise EPdoLoadMsgPack.Create(SEMPackInstNotFullyRead);
+      raise EPdoLoadMsgPack.Create(SEMPackTrailingGarbage);
   except
     on e: EPdoLoadMsgPack do raise;
     on e: Exception do
