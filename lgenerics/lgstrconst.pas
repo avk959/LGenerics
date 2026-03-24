@@ -142,8 +142,9 @@ resourcestring
   SECallbackFalseRetFmt    = 'Custom callback returned False when reading %s';
   SEExceptWhileJsonLoadFmt = 'Exception %s with message "%s" when loading JSON';
   SEExceptWhenMPackLoadFmt = 'Exception %s with message "%s" when loading MsgPack';
-  SEJsonStrNotFullyRead    = 'JSON string was not fully read';
-  SEMPackInstNotFullyRead  = 'MsgPack instance was not fully read';
+  SEJsonTrailingGarbage    = 'Trailing garbage in JSON instance';
+  SEMPackTrailingGarbage   = 'Trailing garbage in MsgPack instance';
+  SEMPackNonStrFieldNameFmt= 'Expected string name of the record field, but got %s';
 //JTD
   SECantLoadJsStream         = 'Cannot load JSON stream';
   SECantLoadJsFile           = 'Cannot load JSON file';
