@@ -96,8 +96,41 @@ type
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
   end;
 
+  TRecFieldData = record
+    Name: string;
+    TypeRef: PTypeInfo;
+    Offset: Integer;
+    class function Make(const aName: string; aType: PTypeInfo; aOfs: Integer): TRecFieldData; static; inline;
+  end;
+
+  { TRecFieldMapExt }
+  TRecFieldMapExt = class(TMpCustomExt)
+  private
+  var
+    FMap: array of TRecFieldData;
+    FDataType: PTypeInfo;
+    function FindField(const aName: string): Integer;
+  protected
+    function GetDataType: PTypeInfo; override;
+  public
+    constructor Create(aTypeInfo: PTypeInfo; aExtType: TUserExtType; const aFieldList: array of string;
+                       aMaxDepth: Integer = DEF_DEPTH);
+    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
+    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
+  end;
+
+  { TGRecFieldMapExt }
+  generic TGRecFieldMapExt<T: record> = class
+  const
+    DEF_DEPTH = TMpCustomExt.DEF_DEPTH;
+    class function Make(aExtType: TUserExtType; const aFieldList: array of string;
+                        aMaxDepth: Integer = DEF_DEPTH): TRecFieldMapExt;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+uses
+  Math, TypInfo;
 
 { TGuidExt }
 
@@ -486,6 +519,115 @@ begin
   Result := True;
 end;
 {$POP}
+
+
+{ TRecFieldData }
+
+class function TRecFieldData.Make(const aName: string; aType: PTypeInfo; aOfs: Integer): TRecFieldData;
+begin
+  Result.Name := aName;
+  Result.TypeRef := aType;
+  Result.Offset := aOfs;
+end;
+
+{ TRecFieldMapExt }
+
+function TRecFieldMapExt.FindField(const aName: string): Integer;
+var
+  I: Integer;
+begin
+  if aName <> '' then
+    for I := 0 to System.High(FMap) do
+      if FMap[I].Name = aName then exit(I);
+  Result := -1;
+end;
+
+function TRecFieldMapExt.GetDataType: PTypeInfo;
+begin
+  Result := FDataType;
+end;
+
+constructor TRecFieldMapExt.Create(aTypeInfo: PTypeInfo; aExtType: TUserExtType;
+  const aFieldList: array of string; aMaxDepth: Integer);
+var
+  pTypData: PTypeData;
+  pField: PManagedField;
+  I, Count: Integer;
+begin
+  inherited Create(aExtType, aMaxDepth);
+  FDataType := aTypeInfo;
+  if (aTypeInfo^.Kind <> tkRecord) or (System.Length(aFieldList) = 0) then exit;
+  pTypData := GetTypeData(aTypeInfo);
+  System.SetLength(FMap, Math.Min(pTypData^.TotalFieldCount, System.Length(aFieldList)));
+  pField := PManagedField(AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+  Count := 0;
+  for I := 0 to System.High(FMap) do begin
+    if aFieldList[I] <> '' then begin
+      FMap[Count] := TRecFieldData.Make(aFieldList[I], pField^.TypeRef, pField^.FldOffset);
+      Inc(Count);
+    end;
+    Inc(pField);
+  end;
+  System.SetLength(FMap, Count);
+end;
+
+procedure TRecFieldMapExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
+var
+  Writer: specialize TGAutoRef<TMpWriter>;
+  I: Integer;
+begin
+  Writer.Instance.BeginMap(System.Length(FMap));
+  for I := 0 to System.High(FMap) do begin
+    Writer.Instance.Add(FMap[I].Name);
+    Pdo2MsgPack(FMap[I].TypeRef, (pByte(aData) + FMap[I].Offset)^, Writer.Instance, Holder);
+  end;
+  aWriter.AddExt(ExtType, Writer.Instance.ToBytes);
+end;
+
+function TRecFieldMapExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
+var
+  Reader: TMpReader;
+  I, Cnt, J: SizeInt;
+begin
+  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  try
+    try
+      Reader.Read;
+      if Reader.TokenKind <> mtkMapBegin then exit(False);
+      Cnt := 0;
+      for I := 0 to Pred(Reader.StructUnread) do begin
+        Reader.Read;
+        if Reader.KeyValue.Kind <> mvkStr then exit(False);
+        J := FindField(Reader.KeyValue.AsString);
+        if J = -1 then begin
+          if Reader.TokenKind in MP_START_TOKENS then
+            Reader.Skip;
+          continue;
+        end;
+        MsgPack2Pdo(FMap[J].TypeRef, (PByte(aData) + FMap[J].Offset)^, Reader, Holder);
+        Inc(Cnt);
+      end;
+      if Cnt <> System.Length(FMap) then exit(False);// todo: ???
+      Reader.Read;
+      if Reader.TokenKind <> mtkMapEnd then exit(False);
+      Reader.Read;
+      if Reader.ReadState <> mrsEof then exit(False);
+    except
+      exit(False);
+    end;
+  finally
+    Reader.Free;
+  end;
+  Result := True;
+end;
+
+{ RGRecFieldMapExt }
+
+class function TGRecFieldMapExt.Make(aExtType: TUserExtType; const aFieldList: array of string;
+  aMaxDepth: Integer): TRecFieldMapExt;
+begin
+  Result := TRecFieldMapExt.Create(TypeInfo(T), aExtType, aFieldList, aMaxDepth);
+end;
 
 end.
 
