@@ -274,6 +274,20 @@ type
       class operator = (const L, R: TMyRec): Boolean;
     end;
 
+    TMyRec2 = record
+      IntV: Integer;
+      StrV: string;
+      UIntV: QWord;
+      constructor Make(i: Integer; s: string; u: QWord);
+      class operator = (const L, R: TMyRec2): Boolean;
+    end;
+
+    TMyRec3 = record
+      Name: string;
+      Value: TMyRec2;
+      Date: TDateTime;
+    end;
+
     TColItem = class(TCollectionItem)
     private
       FName: string;
@@ -323,6 +337,7 @@ type
     procedure TestDynArray2;
     procedure TestBoolean;
     procedure TestUString;
+    procedure TestRegisterFields;
   end;
 
   { TTestMsgPackExt }
@@ -342,6 +357,25 @@ type
     TIntGuidMap    = TIntGuidMapExt.TExtValue;
     TGuidTxtMapExt = specialize TGLiteChainHashMapExt<TGuid, TSimpleText, TGuid>;
     TGuidTxtMap    = TGuidTxtMapExt.TExtValue;
+
+    TStr10 = string[10];
+
+    TMyRec = record
+      IntValue: Integer;
+      BoolValue: Boolean;
+      StrValue: string;
+      SStrValue: TStr10;
+      EnumValue: TMyEnum;
+      class function Make(i: Integer; b: Boolean; s: string; const ss: TStr10; e: TMyEnum): TMyRec; static;
+      class operator = (const L, R: TMyRec): Boolean;
+    end;
+
+    TMyRec2 = record
+      IntV: Integer;
+      StrV: string;
+      EnumV: TMyEnum;
+    end;
+
   published
     procedure TestGuidExt;
     procedure TestOptStringExt;
@@ -352,6 +386,7 @@ type
     procedure TestIntGuidMapExt;
     procedure TestTextCompressExt;
     procedure TestGuidTxtMap;
+    procedure TestRecFieldMapExt;
   end;
 
 implementation
@@ -1389,6 +1424,7 @@ const
   Json = '"abcdefgh"';
   Expect = 'abcdefgh';
 begin
+  s := '';
   PdoLoadJson(TypeInfo(s), s, Json);
   AssertTrue(s = Expect);
 end;
@@ -1511,6 +1547,7 @@ var
 const
   Json = '42';
 begin
+  v := Null;
   PdoLoadJson(TypeInfo(v), v, Json);
   AssertTrue(VarIsOrdinal(v));
   AssertTrue(v = 42);
@@ -1522,6 +1559,7 @@ var
 const
   Json = '3.1416';
 begin
+  v := Null;
   PdoLoadJson(TypeInfo(v), v, Json);
   AssertTrue(VarIsFloat(v));
   AssertTrue(VarSameValue(v, 3.1416));
@@ -1533,6 +1571,7 @@ var
 const
   Json = '"Just string"';
 begin
+  v := Null;
   PdoLoadJson(TypeInfo(v), v, Json);
   AssertTrue(VarIsStr(v));
   AssertTrue(v = 'Just string');
@@ -1545,6 +1584,7 @@ var
 const
   Json = '[42, "str", null, [], false]';
 begin
+  v := Null;
   PdoLoadJson(TypeInfo(v), v, Json);
   AssertTrue(VarIsArray(v));
   AssertTrue(VarArrayDimCount(v) = 1);
@@ -1599,6 +1639,7 @@ var
 const
   Json = '"meFive"';
 begin
+  e := meZero;
   PdoLoadJson(TypeInfo(e), e, Json);
   AssertTrue(e = meFive);
 end;
@@ -2117,6 +2158,20 @@ class operator TTestPdoMsgPack.TMyRec.=(const L, R: TMyRec): Boolean;
 begin
   Result := (L.MyInt = R.MyInt) and (L.MyBoolean = R.MyBoolean) and (L.MyStr = R.MyStr) and
             (L.MyCur = R.MyCur) and (L.MyQWord = R.MyQWord);
+end;
+
+{ TTestPdoMsgPack.TMyRec2 }
+
+constructor TTestPdoMsgPack.TMyRec2.Make(i: Integer; s: string; u: QWord);
+begin
+  IntV := i;
+  StrV := s;
+  UIntV := u;
+end;
+
+class operator TTestPdoMsgPack.TMyRec2.=(const L, R: TMyRec2): Boolean;
+begin
+  Result := (L.IntV = R.IntV) and (L.StrV = R.StrV) and (L.UIntV = R.UIntV);
 end;
 
 { TTestPdoMsgPack.TColItem }
@@ -2956,6 +3011,84 @@ begin
   AssertTrue(v2 = v1);
 end;
 
+procedure TTestPdoMsgPack.TestRegisterFields;
+var
+  v1, v2: TMyRec;
+  v3: TMyRec2;
+  v4, v5: TMyRec3;
+  b: TBytes;
+  Node: specialize TGAutoRef<TMpDomNode>;
+const
+  DEF_JSON = '{"int":0,"bool":false,"str":"","cur":0,"uint":0}';
+  JSON     = '{"int":42,"bool":true,"str":"qwerty","cur":10014200,"uint":777777}';
+begin
+  AssertTrue(RegisterRecordFields(TypeInfo(TMyRec), ['int','bool','str','cur','uint']));
+  v1 := Default(TMyRec);
+  v2 := TMyRec.Make(42,True,'qwerty',1001.42,777777);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = Default(TMyRec));
+  AssertTrue(Node.Instance.TryParse(b));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.AsJson = DEF_JSON);
+
+  v1 := TMyRec.Make(42,True,'qwerty',1001.42,777777);
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b);
+  AssertTrue(v2 = v1);
+  AssertTrue(Node.Instance.TryParse(b));
+  AssertTrue(Node.Instance.IsMap);
+  AssertTrue(Node.Instance.AsJson = JSON);
+  AssertTrue(UnRegisterRecordFields(TypeInfo(TMyRec)));
+
+  AssertTrue(RegisterRecordFields(TypeInfo(TMyRec2), ['int','str','uint']));
+  v3 := Default(TMyRec2);
+  PdoLoadMsgPack(TypeInfo(v3), v3, b);
+  AssertTrue(v3.IntV = v1.MyInt);
+  AssertTrue(v3.StrV = v1.MyStr);
+  AssertTrue(v3.UIntV = v1.MyQWord);
+  AssertTrue(UnRegisterRecordFields(TypeInfo(TMyRec2)));
+
+  AssertTrue(RegisterRecordFields(TypeInfo(TMyRec), ['']));
+  b := PdoToMsgPack(TypeInfo(v1), v1);
+  AssertTrue(Length(b) = 1);
+  AssertTrue(b[0] = $80);
+  AssertTrue(UnRegisterRecordFields(TypeInfo(TMyRec)));
+
+  AssertTrue(RegisterRecordFields(TypeInfo(TMyRec3), ['name','value','date']));
+  v4.Name := 'v4 Name';
+  v4.Value := TMyRec2.Make(42,'foo',1001);
+  v4.Date := Now;
+  b := PdoToMsgPack(TypeInfo(v4), v4);
+  AssertTrue(UnRegisterRecordFields(TypeInfo(TMyRec3)));
+
+  AssertTrue(RegisterRecordFields(TypeInfo(TMyRec3), ['name','','date']));
+  v5 := Default(TMyRec3);
+  PdoLoadMsgPack(TypeInfo(v5), v5, b);
+  AssertTrue(v5.Name = v4.Name);
+  AssertTrue(v5.Value = Default(TMyRec2));
+  AssertTrue(v5.Date = v4.Date);
+  AssertTrue(UnRegisterRecordFields(TypeInfo(TMyRec3)));
+end;
+
+{ TTestMsgPackExt.TMyRec }
+
+class function TTestMsgPackExt.TMyRec.Make(i: Integer; b: Boolean; s: string; const ss: TStr10;
+  e: TMyEnum): TMyRec;
+begin
+  Result.IntValue := i;
+  Result.BoolValue := b;
+  Result.StrValue := s;
+  Result.SStrValue := ss;
+  Result.EnumValue := e;
+end;
+
+class operator TTestMsgPackExt.TMyRec.=(const L, R: TMyRec): Boolean;
+begin
+  Result := (L.IntValue = R.IntValue) and (L.BoolValue = R.BoolValue) and
+    (L.StrValue = R.StrValue) and (L.SStrValue = R.SStrValue) and (L.EnumValue = R.EnumValue);
+end;
+
 { TTestMsgPackExt }
 
 procedure TTestMsgPackExt.TestGuidExt;
@@ -3176,6 +3309,36 @@ begin
     AssertTrue(v2.TryGetValue(e.Key, txt));
     AssertTrue(string(e.Value) = string(txt));
   end;
+end;
+
+procedure TTestMsgPackExt.TestRecFieldMapExt;
+type
+  TRecExt  = specialize TGRecFieldMapExt<TMyRec>;
+  TRec2Ext = specialize TGRecFieldMapExt<TMyRec2>;
+var
+  v1, v2: TMyRec;
+  v3: TMyRec2;
+  ext: TMpExt;
+  b: TBytes;
+begin
+  v1 := Default(TMyRec);
+  v2 := TMyRec.Make(41,True,'string','short str', meFour);
+  ext.Instance := TMpUserExt.Create([TRecExt.Make(0, ['int','bool','str','sstr','enum'])]);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2 = Default(TMyRec));
+
+  v1 := TMyRec.Make(41,True,'string','short str', meFour);
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(v2 = v1);
+
+  ext.Instance := TMpUserExt.Create([TRec2Ext.Make(0, ['int','str','enum'])]);
+  v3 := Default(TMyRec2);
+  PdoLoadMsgPack(TypeInfo(v3), v3, b, ext.Instance);
+  AssertTrue(v3.IntV = v1.IntValue);
+  AssertTrue(v3.StrV = v1.StrValue);
+  AssertTrue(v3.EnumV = v1.EnumValue);
 end;
 
 initialization
