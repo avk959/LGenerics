@@ -3161,7 +3161,7 @@ begin
   PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
   AssertTrue(v2.IsEmpty);
 
-  v2.AddAll([1,2,3,4,5,6]);
+  v1.AddAll([1,2,3,4,5,6]);
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
   PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
   AssertTrue(v1.Count = v2.Count);
