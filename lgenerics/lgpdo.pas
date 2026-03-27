@@ -20,6 +20,7 @@
 unit lgPdo;
 
 {$MODE OBJFPC}{$H+}{$INLINE ON}
+{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -1735,176 +1736,6 @@ const
   MPACK_VAR_ARRAY = High(Word);
 
 procedure Pdo2MsgPack(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWriter; aUserExt: IMpUserExt);
-
-  procedure NotSupported(aTypeInfo: PTypeInfo);
-  begin
-    raise EPdoToMsgPack.CreateFmt(SEPdoTypeNotSupportFmt,
-      [aTypeInfo^.Name, GetEnumName(TypeInfo(TTypeKind), Integer(aTypeInfo^.Kind))]);
-  end;
-
-  procedure WriteInteger(aTypeData: PTypeData; aData: Pointer);
-  begin
-    case aTypeData^.OrdType of
-      otSByte:  aWriter.Add(Int64(PShortInt(aData)^));
-      otUByte:  aWriter.Add(Int64(PByte(aData)^));
-      otSWord:  aWriter.Add(Int64(PSmallInt(aData)^));
-      otUWord:  aWriter.Add(Int64(PWord(aData)^));
-      otSLong:  aWriter.Add(Int64(PLongInt(aData)^));
-      otULong:  aWriter.Add(Int64(PDWord(aData)^));
-      otSQWord: aWriter.Add(PInt64(aData)^);
-      otUQWord: aWriter.Add(Int64(PQWord(aData)^));
-    end;
-  end;
-
-  function GetOrdValue(aTypeData: PTypeData; aData: Pointer): Int64;
-  begin
-    Result := 0;
-    case aTypeData^.OrdType of
-      otSByte:  Result := Int64(PShortInt(aData)^);
-      otUByte:  Result := Int64(PByte(aData)^);
-      otSWord:  Result := Int64(PSmallInt(aData)^);
-      otUWord:  Result := Int64(PWord(aData)^);
-      otSLong:  Result := Int64(PLongInt(aData)^);
-      otULong:  Result := Int64(PDword(aData)^);
-      otSQWord: Result := PInt64(aData)^;
-      otUQWord: Result := Int64(PQWord(aData)^);
-    end;
-  end;
-
-  procedure WriteFloat(aTypeData: PTypeData; aData: Pointer);
-  begin
-    case aTypeData^.FloatType of
-      ftSingle:   aWriter.Add(PSingle(aData)^);
-      ftDouble:   aWriter.Add(PDouble(aData)^);
-      ftExtended: aWriter.Add(Double(PExtended(aData)^));
-      ftComp:     aWriter.Add(PInt64(aData)^);
-      ftCurr:     aWriter.Add(PInt64(aData)^);
-    end;
-  end;
-
-  procedure WriteBool(aTypeData: PTypeData; aData: Pointer);
-  begin
-    case aTypeData^.OrdType of
-      otSByte:  aWriter.Add(PShortInt(aData)^ > 0);
-      otUByte:  aWriter.Add(PByte(aData)^ > 0);
-      otSWord:  aWriter.Add(PSmallInt(aData)^ > 0);
-      otUWord:  aWriter.Add(PWord(aData)^ > 0);
-      otSLong:  aWriter.Add(PLongInt(aData)^ > 0);
-      otULong:  aWriter.Add(PDword(aData)^ > 0);
-      otSQWord: aWriter.Add(PInt64(aData)^ > 0);
-      otUQWord: aWriter.Add(PQWord(aData)^ > 0);
-    end;
-  end;
-
-  procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    RestSize, CurrSize: Integer;
-    b: TBytes;
-    p: PDWord;
-    I, ByteIdx: Integer;
-  begin
-    RestSize := GetTypeData(aTypeInfo)^.SetSize;
-    System.SetLength(b, RestSize);
-    case RestSize of
-      1: b[0] := PByte(aData)^;
-      2:
-        begin
-          b[0] := PByte(aData)^;
-          b[1] := Byte(PWord(aData)^ shr 8);
-        end;
-    else
-      ByteIdx := 0;
-      p := aData;
-      while RestSize <> 0 do begin
-        CurrSize := Math.Min(RestSize, SizeOf(DWord));
-        for I := 0 to Pred(CurrSize) do begin
-          b[ByteIdx] := Byte(p^ shr (I * 8));
-          Inc(ByteIdx);
-        end;
-        Dec(RestSize, CurrSize);
-        Inc(p);
-      end;
-    end;
-    aWriter.Add(b);
-  end;
-
-  procedure WriteVariant(const v: Variant);
-  var
-    I: SizeInt;
-    vType: TVarType;
-  begin
-    if VarIsEmpty(v) or VarIsNull(v) then
-      begin
-        aWriter.AddNil;
-        exit;
-      end;
-    if VarIsArray(v) then
-      begin
-        aWriter.BeginArray(2);
-        aWriter.Add(Int64(MPACK_VAR_ARRAY));
-        aWriter.BeginArray(Succ(VarArrayHighBound(v, 1) - VarArrayLowBound(v, 1)));
-        for I := VarArrayLowBound(v, 1) to VarArrayHighBound(v, 1) do
-          WriteVariant(v[I]);
-        exit;
-      end;
-    vType := VarType(v);
-    case vType of
-      varSmallInt, varInteger, varSingle, varDouble, varCurrency, varDate, varOleStr,
-      varShortInt, varByte, varWord, varLongWord, varInt64, varQWord, varBoolean,
-      varString:
-        begin
-          aWriter.BeginArray(2);
-          aWriter.Add(Int64(vType));
-          case vType of
-            varSmallInt: aWriter.Add(Int64(TVarData(v).vSmallInt));
-            varInteger:  aWriter.Add(Int64(TVarData(v).vInteger));
-            varSingle:   aWriter.Add(TVarData(v).vSingle);
-            varDouble:   aWriter.Add(TVarData(v).vDouble);
-            varCurrency: aWriter.Add(PInt64(@TVarData(v).vCurrency)^);
-            varDate:     aWriter.Add(TVarData(v).vDate);
-            varOleStr:   aWriter.Add(string(widestring(v)));
-            varBoolean:  aWriter.Add(TVarData(v).vBoolean);
-            varShortInt: aWriter.Add(Int64(TVarData(v).vShortInt));
-            varByte:     aWriter.Add(Int64(TVarData(v).vByte));
-            varWord:     aWriter.Add(Int64(TVarData(v).vWord));
-            varLongWord: aWriter.Add(Int64(TVarData(v).vLongWord));
-            varInt64:    aWriter.Add(TVarData(v).vInt64);
-            varQWord:    aWriter.Add(Int64(TVarData(v).vQWord));
-            varString:   aWriter.Add(string(v));
-          else
-          end;
-        end;
-    else
-      raise EPdoToMsgPack.CreateFmt(SEVariantNotSupportFmt, [VarType(v)]);
-    end;
-  end;
-
-  procedure WriteValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
-
-  procedure WriteArray(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    pTypData: PTypeData;
-    ElSize: SizeUInt;
-    ElType: PTypeInfo;
-    Arr: PByte;
-    I, Count: SizeInt;
-  begin
-    pTypData := GetTypeData(aTypeInfo);
-    ElType := pTypData^.ArrayData.ElType;
-    Count := pTypData^.ArrayData.ElCount;
-    ElSize := pTypData^.ArrayData.Size div Count;
-    Arr := aData;
-    if ElSize = 1 then
-      aWriter.Add(Arr[0..Pred(Count)])
-    else begin
-      aWriter.BeginArray(Count);
-      for I := 0 to Pred(Count) do begin
-        WriteValue(ElType, Arr);
-        Arr += ElSize;
-      end;
-    end;
-  end;
-
 type
   TLocCacheEntry = record
     FieldMap: TRecFieldMap;
@@ -1923,234 +1754,411 @@ type
 var
   LocalCache: TLocalCache;
 
-  function GetFieldMapData(aTypeInfo: PTypeInfo; out aData: TRecFieldMapData): Boolean;
-  var
-    pe: ^TLocCacheEntry;
-    pce: TPdoCacheEntry;
-    I, Cnt: Integer;
+  procedure NotSupported(aTypeInfo: PTypeInfo);
   begin
-    pe := LocalCache.GetMutValueDef(aTypeInfo, Default(TLocCacheEntry));
-    if not pe^.Tested then begin
-      if GetGlobPdoEntry(aTypeInfo, pce) then begin
-        pe^.FieldMap := pce.FieldMap;
-        if pe^.FieldMap <> nil then begin
-          Cnt := 0;
-          for I := 0 to System.High(pe^.FieldMap) do
-            Inc(Cnt, Ord(pe^.FieldMap[I].Name <> ''));
-          pe^.Count := Cnt;
-        end;
-      end;
-      pe^.Tested := True;
-    end;
-    Result := pe^.FieldMap <> nil;
-    if Result then begin
-      aData.Map := pe^.FieldMap;
-      aData.Count := pe^.Count;
-    end;
+    raise EPdoToMsgPack.CreateFmt(SEPdoTypeNotSupportFmt,
+      [aTypeInfo^.Name, GetEnumName(TypeInfo(TTypeKind), Integer(aTypeInfo^.Kind))]);
   end;
 
-  procedure WriteRecord(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    MapData: TRecFieldMapData;
-    pTypData: PTypeData;
-    pManField: PManagedField;
-    I: Integer;
-  begin
-    if GetFieldMapData(aTypeInfo, MapData) then begin
-      aWriter.BeginMap(MapData.Count);
-      for I := 0 to System.High(MapData.Map) do
-        if MapData.Map[I].Name <> '' then begin
-          aWriter.Add(MapData.Map[I].Name);
-          WriteValue(MapData.Map[I].Info, PByte(aData) + MapData.Map[I].Offset);
+  procedure DoWritePdo(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWriter);
+
+    procedure WriteInteger(aTypeData: PTypeData; aData: Pointer);
+    begin
+      case aTypeData^.OrdType of
+        otSByte:  aWriter.Add(Int64(PShortInt(aData)^));
+        otUByte:  aWriter.Add(Int64(PByte(aData)^));
+        otSWord:  aWriter.Add(Int64(PSmallInt(aData)^));
+        otUWord:  aWriter.Add(Int64(PWord(aData)^));
+        otSLong:  aWriter.Add(Int64(PLongInt(aData)^));
+        otULong:  aWriter.Add(Int64(PDWord(aData)^));
+        otSQWord: aWriter.Add(PInt64(aData)^);
+        otUQWord: aWriter.Add(Int64(PQWord(aData)^));
+      end;
+    end;
+
+    function GetOrdValue(aTypeData: PTypeData; aData: Pointer): Int64;
+    begin
+      Result := 0;
+      case aTypeData^.OrdType of
+        otSByte:  Result := Int64(PShortInt(aData)^);
+        otUByte:  Result := Int64(PByte(aData)^);
+        otSWord:  Result := Int64(PSmallInt(aData)^);
+        otUWord:  Result := Int64(PWord(aData)^);
+        otSLong:  Result := Int64(PLongInt(aData)^);
+        otULong:  Result := Int64(PDword(aData)^);
+        otSQWord: Result := PInt64(aData)^;
+        otUQWord: Result := Int64(PQWord(aData)^);
+      end;
+    end;
+
+    procedure WriteFloat(aTypeData: PTypeData; aData: Pointer);
+    begin
+      case aTypeData^.FloatType of
+        ftSingle:   aWriter.Add(PSingle(aData)^);
+        ftDouble:   aWriter.Add(PDouble(aData)^);
+        ftExtended: aWriter.Add(Double(PExtended(aData)^));
+        ftComp:     aWriter.Add(PInt64(aData)^);
+        ftCurr:     aWriter.Add(PInt64(aData)^);
+      end;
+    end;
+
+    procedure WriteBool(aTypeData: PTypeData; aData: Pointer);
+    begin
+      case aTypeData^.OrdType of
+        otSByte:  aWriter.Add(PShortInt(aData)^ > 0);
+        otUByte:  aWriter.Add(PByte(aData)^ > 0);
+        otSWord:  aWriter.Add(PSmallInt(aData)^ > 0);
+        otUWord:  aWriter.Add(PWord(aData)^ > 0);
+        otSLong:  aWriter.Add(PLongInt(aData)^ > 0);
+        otULong:  aWriter.Add(PDword(aData)^ > 0);
+        otSQWord: aWriter.Add(PInt64(aData)^ > 0);
+        otUQWord: aWriter.Add(PQWord(aData)^ > 0);
+      end;
+    end;
+
+    procedure WriteSet(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      RestSize, CurrSize: Integer;
+      b: TBytes;
+      p: PDWord;
+      I, ByteIdx: Integer;
+    begin
+      RestSize := GetTypeData(aTypeInfo)^.SetSize;
+      System.SetLength(b, RestSize);
+      case RestSize of
+        1: b[0] := PByte(aData)^;
+        2:
+          begin
+            b[0] := PByte(aData)^;
+            b[1] := Byte(PWord(aData)^ shr 8);
+          end;
+      else
+        ByteIdx := 0;
+        p := aData;
+        while RestSize <> 0 do begin
+          CurrSize := Math.Min(RestSize, SizeOf(DWord));
+          for I := 0 to Pred(CurrSize) do begin
+            b[ByteIdx] := Byte(p^ shr (I * 8));
+            Inc(ByteIdx);
+          end;
+          Dec(RestSize, CurrSize);
+          Inc(p);
         end;
-    end else begin
-      if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then exit;
+      end;
+      aWriter.Add(b);
+    end;
+
+    procedure WriteVariant(const v: Variant);
+    var
+      I: SizeInt;
+      vType: TVarType;
+    begin
+      if VarIsEmpty(v) or VarIsNull(v) then
+        begin
+          aWriter.AddNil;
+          exit;
+        end;
+      if VarIsArray(v) then
+        begin
+          aWriter.BeginArray(2);
+          aWriter.Add(Int64(MPACK_VAR_ARRAY));
+          aWriter.BeginArray(Succ(VarArrayHighBound(v, 1) - VarArrayLowBound(v, 1)));
+          for I := VarArrayLowBound(v, 1) to VarArrayHighBound(v, 1) do
+            WriteVariant(v[I]);
+          exit;
+        end;
+      vType := VarType(v);
+      case vType of
+        varSmallInt, varInteger, varSingle, varDouble, varCurrency, varDate, varOleStr,
+        varShortInt, varByte, varWord, varLongWord, varInt64, varQWord, varBoolean,
+        varString:
+          begin
+            aWriter.BeginArray(2);
+            aWriter.Add(Int64(vType));
+            case vType of
+              varSmallInt: aWriter.Add(Int64(TVarData(v).vSmallInt));
+              varInteger:  aWriter.Add(Int64(TVarData(v).vInteger));
+              varSingle:   aWriter.Add(TVarData(v).vSingle);
+              varDouble:   aWriter.Add(TVarData(v).vDouble);
+              varCurrency: aWriter.Add(PInt64(@TVarData(v).vCurrency)^);
+              varDate:     aWriter.Add(TVarData(v).vDate);
+              varOleStr:   aWriter.Add(string(widestring(v)));
+              varBoolean:  aWriter.Add(TVarData(v).vBoolean);
+              varShortInt: aWriter.Add(Int64(TVarData(v).vShortInt));
+              varByte:     aWriter.Add(Int64(TVarData(v).vByte));
+              varWord:     aWriter.Add(Int64(TVarData(v).vWord));
+              varLongWord: aWriter.Add(Int64(TVarData(v).vLongWord));
+              varInt64:    aWriter.Add(TVarData(v).vInt64);
+              varQWord:    aWriter.Add(Int64(TVarData(v).vQWord));
+              varString:   aWriter.Add(string(v));
+            else
+            end;
+          end;
+      else
+        raise EPdoToMsgPack.CreateFmt(SEVariantNotSupportFmt, [VarType(v)]);
+      end;
+    end;
+
+    procedure WriteValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
+
+    procedure WriteArray(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      pTypData: PTypeData;
+      ElSize: SizeUInt;
+      ElType: PTypeInfo;
+      Arr: PByte;
+      I, Count: SizeInt;
+    begin
       pTypData := GetTypeData(aTypeInfo);
-      pManField := PManagedField(
-        AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
-      aWriter.BeginArray(pTypData^.TotalFieldCount);
-      for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
-        WriteValue(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
-        Inc(pManField);
+      ElType := pTypData^.ArrayData.ElType;
+      Count := pTypData^.ArrayData.ElCount;
+      ElSize := pTypData^.ArrayData.Size div Count;
+      Arr := aData;
+      if ElSize = 1 then
+        aWriter.Add(Arr[0..Pred(Count)])
+      else begin
+        aWriter.BeginArray(Count);
+        for I := 0 to Pred(Count) do begin
+          WriteValue(ElType, Arr);
+          Arr += ElSize;
+        end;
       end;
     end;
-  end;
 
-  procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject); forward;
-
-  procedure WriteClassProp(o: TObject; aPropInfo: PPropInfo);
-  var
-    pTypInfo: PTypeInfo;
-    I: Int64;
-    e: Extended;
-    p: Pointer;
-  begin
-    pTypInfo := aPropInfo^.PropType;
-    case pTypInfo^.Kind of
-      tkInteger, tkChar, tkEnumeration, tkWChar, tkBool, tkInt64, tkQWord, tkUChar:
-        begin
-          I := GetOrdProp(o, aPropInfo);
-          WriteValue(pTypInfo, @I);
+    function GetFieldMapData(aTypeInfo: PTypeInfo; out aData: TRecFieldMapData): Boolean;
+    var
+      pe: ^TLocCacheEntry;
+      pce: TPdoCacheEntry;
+      I, Cnt: Integer;
+    begin
+      pe := LocalCache.GetMutValueDef(aTypeInfo, Default(TLocCacheEntry));
+      if not pe^.Tested then begin
+        if GetGlobPdoEntry(aTypeInfo, pce) then begin
+          pe^.FieldMap := pce.FieldMap;
+          if pe^.FieldMap <> nil then begin
+            Cnt := 0;
+            for I := 0 to System.High(pe^.FieldMap) do
+              Inc(Cnt, Ord(pe^.FieldMap[I].Name <> ''));
+            pe^.Count := Cnt;
+          end;
         end;
-      tkFloat:
-        begin
-          e := GetFloatProp(o, aPropInfo);
-          WriteValue(pTypInfo, @e);
-        end;
-      tkSet:
-         begin
-           I := GetOrdProp(o, aPropInfo);
-           WriteValue(pTypInfo, @I);
-         end;
-      tkSString, tkLString, tkAString:
-        begin
-          p := Pointer(GetStrProp(o, aPropInfo));
-          WriteValue(pTypInfo, @p);
-        end;
-      tkWString:
-        begin
-          p := Pointer(GetWideStrProp(o, aPropInfo));
-          WriteValue(pTypInfo, @p);
-        end;
-      tkVariant: WriteVariant(GetVariantProp(o, aPropInfo));
-      tkClass: WriteClass(pTypInfo, GetObjectProp(o, aPropInfo));
-      tkDynArray:
-        begin
-          p := GetDynArrayProp(o, aPropInfo);
-          WriteValue(pTypInfo, @p);
-        end;
-      tkUString:
-        begin
-          p := Pointer(GetUnicodeStrProp(o, aPropInfo));
-          WriteValue(pTypInfo, @p);
-        end;
-    else
-      NotSupported(pTypInfo);
+        pe^.Tested := True;
+      end;
+      Result := pe^.FieldMap <> nil;
+      if Result then begin
+        aData.Map := pe^.FieldMap;
+        aData.Count := pe^.Count;
+      end;
     end;
-  end;
 
-  procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject);
-  var
-    I, J, PropCount, ReadableCount: SizeInt;
-    c: TCollection;
-    pProps: PPropList;
-    pInfo: PPropInfo;
-  begin
-    if (aUserExt <> nil) and aUserExt.CanWrite(@o, aTypeInfo, aWriter) then exit;
-    if o = nil then
-      aWriter.AddNil
-    else
-      if o is TCollection then begin
-        c := TCollection(o);
-        if c.Count = 0 then begin
-          aWriter.BeginArray(0);
-        end else begin
-          aWriter.BeginArray(c.Count);
-          PropCount := GetPropList(c.ItemClass, pProps);
-          try
-            ReadableCount := 0;
-            for J := 0 to Pred(PropCount) do
-              Inc(ReadableCount, Ord(IsReadableProp(pProps^[J])));
-            for I := 0 to Pred(c.Count) do begin
+    procedure WriteRecord(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      MapData: TRecFieldMapData;
+      pTypData: PTypeData;
+      pManField: PManagedField;
+      I: Integer;
+    begin
+      if GetFieldMapData(aTypeInfo, MapData) then begin
+        aWriter.BeginMap(MapData.Count);
+        for I := 0 to System.High(MapData.Map) do
+          if MapData.Map[I].Name <> '' then begin
+            aWriter.Add(MapData.Map[I].Name);
+            WriteValue(MapData.Map[I].Info, PByte(aData) + MapData.Map[I].Offset);
+          end;
+      end else begin
+        if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then exit;
+        pTypData := GetTypeData(aTypeInfo);
+        pManField := PManagedField(
+          AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+        aWriter.BeginArray(pTypData^.TotalFieldCount);
+        for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
+          WriteValue(pManField^.TypeRef, PByte(aData) + pManField^.FldOffset);
+          Inc(pManField);
+        end;
+      end;
+    end;
+
+    procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject); forward;
+
+    procedure WriteClassProp(o: TObject; aPropInfo: PPropInfo);
+    var
+      pTypInfo: PTypeInfo;
+      I: Int64;
+      e: Extended;
+      p: Pointer;
+    begin
+      pTypInfo := aPropInfo^.PropType;
+      case pTypInfo^.Kind of
+        tkInteger, tkChar, tkEnumeration, tkWChar, tkBool, tkInt64, tkQWord, tkUChar:
+          begin
+            I := GetOrdProp(o, aPropInfo);
+            WriteValue(pTypInfo, @I);
+          end;
+        tkFloat:
+          begin
+            e := GetFloatProp(o, aPropInfo);
+            WriteValue(pTypInfo, @e);
+          end;
+        tkSet:
+           begin
+             I := GetOrdProp(o, aPropInfo);
+             WriteValue(pTypInfo, @I);
+           end;
+        tkSString, tkLString, tkAString:
+          begin
+            p := Pointer(GetStrProp(o, aPropInfo));
+            WriteValue(pTypInfo, @p);
+          end;
+        tkWString:
+          begin
+            p := Pointer(GetWideStrProp(o, aPropInfo));
+            WriteValue(pTypInfo, @p);
+          end;
+        tkVariant: WriteVariant(GetVariantProp(o, aPropInfo));
+        tkClass: WriteClass(pTypInfo, GetObjectProp(o, aPropInfo));
+        tkDynArray:
+          begin
+            p := GetDynArrayProp(o, aPropInfo);
+            WriteValue(pTypInfo, @p);
+          end;
+        tkUString:
+          begin
+            p := Pointer(GetUnicodeStrProp(o, aPropInfo));
+            WriteValue(pTypInfo, @p);
+          end;
+      else
+        NotSupported(pTypInfo);
+      end;
+    end;
+
+    procedure WriteClass(aTypeInfo: PTypeInfo; o: TObject);
+    var
+      I, J, PropCount, ReadableCount: SizeInt;
+      c: TCollection;
+      pProps: PPropList;
+      pInfo: PPropInfo;
+    begin
+      if (aUserExt <> nil) and aUserExt.CanWrite(@o, aTypeInfo, aWriter) then exit;
+      if o = nil then
+        aWriter.AddNil
+      else
+        if o is TCollection then begin
+          c := TCollection(o);
+          if c.Count = 0 then begin
+            aWriter.BeginArray(0);
+          end else begin
+            aWriter.BeginArray(c.Count);
+            PropCount := GetPropList(c.ItemClass, pProps);
+            try
+              ReadableCount := 0;
+              for J := 0 to Pred(PropCount) do
+                Inc(ReadableCount, Ord(IsReadableProp(pProps^[J])));
+              for I := 0 to Pred(c.Count) do begin
+                aWriter.BeginMap(ReadableCount);
+                for J := 0 to Pred(ReadableCount) do begin
+                  pInfo := pProps^[J];
+                  if not IsReadableProp(pInfo) then continue;
+                  aWriter.Add(pInfo^.Name);
+                  WriteClassProp(c.Items[I], pInfo);
+                end;
+              end;
+            finally
+              FreeMem(pProps);
+            end;
+          end;
+        end else
+          if o is TStrings then begin
+            aWriter.BeginArray(TStrings(o).Count);
+            with TStrings(o) do
+              for I := 0 to Pred(Count) do
+                aWriter.Add(Strings[I]);
+          end else begin
+            PropCount := GetPropList(o, pProps);
+            try
+              ReadableCount := 0;
+              for J := 0 to Pred(PropCount) do
+                Inc(ReadableCount, Ord(IsReadableProp(pProps^[J])));
               aWriter.BeginMap(ReadableCount);
-              for J := 0 to Pred(ReadableCount) do begin
-                pInfo := pProps^[J];
+              for I := 0 to Pred(PropCount) do begin
+                pInfo := pProps^[I];
                 if not IsReadableProp(pInfo) then continue;
                 aWriter.Add(pInfo^.Name);
-                WriteClassProp(c.Items[I], pInfo);
+                WriteClassProp(o, pInfo);
               end;
+            finally
+              FreeMem(pProps);
             end;
-          finally
-            FreeMem(pProps);
           end;
-        end;
-      end else
-        if o is TStrings then begin
-          aWriter.BeginArray(TStrings(o).Count);
-          with TStrings(o) do
-            for I := 0 to Pred(Count) do
-              aWriter.Add(Strings[I]);
-        end else begin
-          PropCount := GetPropList(o, pProps);
-          try
-            ReadableCount := 0;
-            for J := 0 to Pred(PropCount) do
-              Inc(ReadableCount, Ord(IsReadableProp(pProps^[J])));
-            aWriter.BeginMap(ReadableCount);
-            for I := 0 to Pred(PropCount) do begin
-              pInfo := pProps^[I];
-              if not IsReadableProp(pInfo) then continue;
-              aWriter.Add(pInfo^.Name);
-              WriteClassProp(o, pInfo);
-            end;
-          finally
-            FreeMem(pProps);
-          end;
-        end;
-  end;
-
-  procedure WriteObject(aTypeInfo: PTypeInfo; aData: Pointer);
-  begin
-    if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then
-      exit;
-    NotSupported(aTypeInfo);
-  end;
-
-  procedure WriteDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    pTypData: PTypeData;
-    ElSize: SizeUInt;
-    ElType: PTypeInfo;
-    Arr: PByte;
-    I, Count: SizeInt;
-  begin
-    pTypData := GetTypeData(aTypeInfo);
-    ElSize := pTypData^.elSize;
-    ElType := pTypData^.ElType2;
-    Arr := Pointer(aData^);
-    Count := System.DynArraySize(Arr);
-    if ElSize = 1 then
-      aWriter.Add(Arr[0..Pred(Count)])
-    else begin
-      aWriter.BeginArray(Count);
-      for I := 0 to Pred(Count) do begin
-        WriteValue(ElType, Arr);
-        Arr += ElSize;
-      end;
     end;
-  end;
 
-  procedure WriteValue(aTypeInfo: PTypeInfo; aData: Pointer);
-  begin
-    case aTypeInfo^.Kind of
-      tkInteger, tkInt64,
-      tkQWord:              WriteInteger(GetTypeData(aTypeInfo), aData);
-      tkChar:               aWriter.Add(PAnsiChar(aData)^);
-      tkEnumeration:        aWriter.Add(Int64(GetOrdValue(GetTypeData(aTypeInfo), aData)));
-      tkFloat:              WriteFloat(GetTypeData(aTypeInfo), aData);
-      tkSet:                WriteSet(aTypeInfo, aData);
-      tkSString:            aWriter.Add(PShortString(aData)^);
-      tkLString, tkAString: aWriter.Add(PString(aData)^);
-      tkWString:            aWriter.Add(string(PWideString(aData)^));
-      tkVariant:            WriteVariant(PVariant(aData)^);
-      tkArray:              WriteArray(aTypeInfo, aData);
-      tkRecord:             WriteRecord(aTypeInfo, aData);
-      tkClass:              WriteClass(aTypeInfo, TObject(aData^));
-      tkObject:             WriteObject(aTypeInfo, aData);
-      tkWChar:              aWriter.Add(string(widestring(PWideChar(aData)^)));
-      tkBool:               WriteBool(GetTypeData(aTypeInfo), aData);
-      tkDynArray:           WriteDynArray(aTypeInfo, aData);
-      tkUString:            aWriter.Add(string(PUnicodeString(aData)^));
-      tkUChar:              aWriter.Add(string(unicodestring(PUnicodeChar(aData)^)));
-    else
-      if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then exit;
+    procedure WriteObject(aTypeInfo: PTypeInfo; aData: Pointer);
+    begin
+      if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then
+        exit;
       NotSupported(aTypeInfo);
     end;
+
+    procedure WriteDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      pTypData: PTypeData;
+      ElSize: SizeUInt;
+      ElType: PTypeInfo;
+      Arr: PByte;
+      I, Count: SizeInt;
+    begin
+      pTypData := GetTypeData(aTypeInfo);
+      ElSize := pTypData^.elSize;
+      ElType := pTypData^.ElType2;
+      Arr := Pointer(aData^);
+      Count := System.DynArraySize(Arr);
+      if ElSize = 1 then
+        aWriter.Add(Arr[0..Pred(Count)])
+      else begin
+        aWriter.BeginArray(Count);
+        for I := 0 to Pred(Count) do begin
+          WriteValue(ElType, Arr);
+          Arr += ElSize;
+        end;
+      end;
+    end;
+
+    procedure WriteValue(aTypeInfo: PTypeInfo; aData: Pointer);
+    begin
+      case aTypeInfo^.Kind of
+        tkInteger, tkInt64,
+        tkQWord:              WriteInteger(GetTypeData(aTypeInfo), aData);
+        tkChar:               aWriter.Add(PAnsiChar(aData)^);
+        tkEnumeration:        aWriter.Add(Int64(GetOrdValue(GetTypeData(aTypeInfo), aData)));
+        tkFloat:              WriteFloat(GetTypeData(aTypeInfo), aData);
+        tkSet:                WriteSet(aTypeInfo, aData);
+        tkSString:            aWriter.Add(PShortString(aData)^);
+        tkLString, tkAString: aWriter.Add(PString(aData)^);
+        tkWString:            aWriter.Add(string(PWideString(aData)^));
+        tkVariant:            WriteVariant(PVariant(aData)^);
+        tkArray:              WriteArray(aTypeInfo, aData);
+        tkRecord:             WriteRecord(aTypeInfo, aData);
+        tkClass:              WriteClass(aTypeInfo, TObject(aData^));
+        tkObject:             WriteObject(aTypeInfo, aData);
+        tkWChar:              aWriter.Add(string(widestring(PWideChar(aData)^)));
+        tkBool:               WriteBool(GetTypeData(aTypeInfo), aData);
+        tkDynArray:           WriteDynArray(aTypeInfo, aData);
+        tkUString:            aWriter.Add(string(PUnicodeString(aData)^));
+        tkUChar:              aWriter.Add(string(unicodestring(PUnicodeChar(aData)^)));
+      else
+        if (aUserExt <> nil) and aUserExt.CanWrite(aData, aTypeInfo, aWriter) then exit;
+        NotSupported(aTypeInfo);
+      end;
+    end;
+
+  begin
+    WriteValue(aTypeInfo, @aValue);
   end;
 
 begin
   if aTypeInfo = nil then exit;
-  WriteValue(aTypeInfo, @aValue);
+  if aUserExt <> nil then aUserExt.NestWriteProc := @DoWritePdo;
+  DoWritePdo(aTypeInfo, aValue, aWriter);
+  if aUserExt <> nil then aUserExt.NestWriteProc := nil;
 end;
 
 generic function PdoToMsgPackStr<T>(const aValue: T; aUserExt: IMpUserExt): rawbytestring;
@@ -2229,368 +2237,10 @@ procedure MsgPack2Pdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader
     Error(SEUnexpectMPackTokenFmt, [TokenKindName(aExpected), TokenKindName(aGot)])
   end;
 
-  procedure ReadNext; inline;
-  begin
-    if not aReader.Read then
-      case aReader.ReadState of
-        mrsEOF:   Error(SEUnexpectMPackEnd);
-        mrsError: Error(SEInvalidMPackInst);
-      else
-      end;
-  end;
-
-  procedure ReadInteger(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    I: Int64;
-  begin
-    if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
-    I := aReader.AsInt;
-    case GetTypeData(aTypeInfo)^.OrdType of
-      otSByte:
-        begin
-          if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then
-            Error(SEMPackRangeErrorFmt, ['ShortInt', I]);
-          PShortInt(aData)^ := I;
-        end;
-      otUByte:
-        begin
-          if (I < 0) or (I > System.High(Byte)) then
-            Error(SEMPackRangeErrorFmt, ['Byte', I]);
-          PByte(aData)^ := I;
-        end;
-      otSWord:
-        begin
-          if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then
-            Error(SEMPackRangeErrorFmt, ['SmallInt', I]);
-          PSmallInt(aData)^ := I;
-        end;
-      otUWord:
-        begin
-          if (I < 0) or (I > System.High(Word)) then
-            Error(SEMPackRangeErrorFmt, ['Word', I]);
-          PWord(aData)^ := I;
-        end;
-      otSLong:
-        begin
-          if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then
-            Error(SEMPackRangeErrorFmt, ['LongInt', I]);
-          PLongInt(aData)^ := I;
-        end;
-      otULong:
-        begin
-          if (I < 0) or (I > System.High(DWord)) then
-            Error(SEMPackRangeErrorFmt, ['DWord', I]);
-          PDword(aData)^ := I;
-        end;
-      otSQWord: PInt64(aData)^ := I;
-      otUQWord: PQWord(aData)^ := QWord(I);
-    end;
-  end;
-
-  procedure ReadFloat(aTypeInfo: PTypeInfo; aData: Pointer);
-  begin
-    case GetTypeData(aTypeInfo)^.FloatType of
-      ftSingle:
-        begin
-          if aReader.TokenKind <> mtkSingle then UnexpectedToken(mtkSingle, aReader.TokenKind);
-          PSingle(aData)^ := aReader.AsSingle;
-        end;
-      ftDouble:
-        begin
-          if aReader.TokenKind <> mtkDouble then UnexpectedToken(mtkDouble, aReader.TokenKind);
-          PDouble(aData)^ := aReader.AsDouble;
-        end;
-      ftExtended:
-        begin
-          if aReader.TokenKind <> mtkDouble then UnexpectedToken(mtkDouble, aReader.TokenKind);
-          PExtended(aData)^ := aReader.AsDouble;
-        end;
-      ftComp:
-        begin
-          if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
-          PInt64(aData)^ := aReader.AsInt;
-        end;
-      ftCurr:
-        begin
-          if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
-          PInt64(aData)^ := aReader.AsInt;
-        end;
-    end;
-  end;
-
-  procedure ReadChar(aData: Pointer);
-  var
-    s: string;
-  begin
-    if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
-    s := aReader.AsString;
-    if System.Length(s) <> 1 then Error(SEUnexpectStringLenFmt, [System.Length(s)]);
-    PAnsiChar(aData)^ := s[1];
-  end;
-
-  procedure ReadEnum(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    I: Int64;
-  begin
-    if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
-    I := aReader.AsInt;
-    with GetTypeData(aTypeInfo)^ do begin
-      if (I < MinValue) or (I > MaxValue) then
-        Error(SEMPackRangeErrorFmt, [aTypeInfo^.Name, I]);
-      case OrdType of
-        otSByte:  PShortInt(aData)^ := aReader.AsInt;
-        otUByte:  PByte(aData)^ := aReader.AsInt;
-        otSWord:  PSmallInt(aData)^ := aReader.AsInt;
-        otUWord:  PWord(aData)^ := aReader.AsInt;
-        otSLong:  PLongInt(aData)^ := aReader.AsInt;
-        otULong:  PDword(aData)^ := aReader.AsInt;
-        otSQWord: PInt64(aData)^ := aReader.AsInt;
-        otUQWord: PQWord(aData)^ := QWord(aReader.AsInt);
-      end;
-    end;
-  end;
-
-  procedure ReadSet(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    RestSize, CurrSize, I, ByteIdx: Integer;
-    p: PDWord;
-    b: TBytes;
-  begin
-    if aReader.TokenKind <> mtkBin then UnexpectedToken(mtkBin, aReader.TokenKind);
-    b := aReader.AsBinary;
-    RestSize := GetTypeData(aTypeInfo)^.SetSize;
-    if System.Length(b) <> RestSize then
-      Error(SEMPackSetSizeErrorFmt, [aTypeInfo^.Name, System.Length(b)]);
-    case RestSize of
-      1: PByte(aData)^ := b[0];
-      2: PWord(aData)^ := Word(b[1]) shl 8 or b[0];
-    else
-      ByteIdx := 0;
-      p := aData;
-      System.FillChar(p^, RestSize, 0);
-      while RestSize <> 0 do begin
-        CurrSize := Math.Min(RestSize, SizeOf(DWord));
-        for I := 0 to Pred(CurrSize) do begin
-          p^ := p^ or DWord(b[ByteIdx]) shl (I * 8);
-          Inc(ByteIdx);
-        end;
-        Dec(RestSize, CurrSize);
-        Inc(p);
-      end;
-    end;
-  end;
-
-  procedure ReadSString(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    s: string;
-    MaxLen: Byte;
-  begin
-    if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
-    s := aReader.AsString;
-    MaxLen := GetTypeData(aTypeInfo)^.MaxLength;
-    if System.Length(s) > MaxLen then
-      Error(Format(SEMPackStrExceedSSLenFmt, [System.Length(s), MaxLen]));
-    System.SetLength(PShortString(aData)^, System.Length(s));
-    System.Move(Pointer(s)^, PShortString(aData)^[1], System.Length(PShortString(aData)^));
-  end;
-
-  procedure ReadString(aData: Pointer);
-  begin
-    if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
-    PString(aData)^ := aReader.AsString;
-  end;
-
-  procedure ReadWString(aData: Pointer);
-  var
-    s: string = '';
-  begin
-    ReadString(@s);
-    PWideString(aData)^ := widestring(s);
-  end;
-
-  procedure ReadUString(aData: Pointer);
-  var
-    s: string = '';
-  begin
-    ReadString(@s);
-    PUnicodeString(aData)^ := unicodestring(s);
-  end;
-
-  procedure ReadDynArray(aTypeInfo: PTypeInfo; aData: Pointer); forward;
-
-  procedure ReadVariant(aData: Pointer);
-  var
-    a: array of Variant;
-    I: Int64;
-    vType: Word;
-  begin
-    if aReader.TokenKind = mtkNil then begin
-      Variant(aData^) := Variants.Null;
-      exit;
-    end;
-    if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-    if aReader.StructUnread <> 2 then InvalidVarFormat;
-    ReadNext;
-    if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-    if (aReader.AsInt < 0) or (aReader.AsInt > System.High(Word)) then InvalidVarFormat;
-    vType := aReader.AsInt;
-    ReadNext;
-    case vType of
-      varSmallInt:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then
-            InvalidVarFormat;
-          Variant(aData^) := SmallInt(I);
-        end;
-      varInteger:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then InvalidVarFormat;
-          Variant(aData^) := LongInt(I);
-        end;
-      varSingle:
-        begin
-          if aReader.TokenKind <> mtkSingle then InvalidVarFormat;
-          VarClear(Variant(aData^));
-          TVarData(aData^).vType := vType;
-          TVarData(aData^).vSingle := aReader.AsSingle;
-        end;
-      varDouble:
-        begin
-          if aReader.TokenKind <> mtkDouble then InvalidVarFormat;
-          Variant(aData^) := aReader.AsDouble;
-        end;
-      varCurrency:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          Variant(aData^) := PCurrency(@I)^;
-        end;
-      varDate:
-        begin
-          if aReader.TokenKind <> mtkDouble then InvalidVarFormat;
-          Variant(aData^) := TDateTime(aReader.AsDouble);
-        end;
-      varOleStr:
-        begin
-          if aReader.TokenKind <> mtkString then InvalidVarFormat;
-          Variant(aData^) := widestring(aReader.AsString);
-        end;
-      varBoolean:
-        begin
-          if aReader.TokenKind <> mtkBool then InvalidVarFormat;
-          Variant(aData^) := aReader.AsBoolean;
-        end;
-      varShortInt:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then InvalidVarFormat;
-          Variant(aData^) := ShortInt(I);
-        end;
-      varByte:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          if (I < 0) or (I > System.High(Byte)) then InvalidVarFormat;
-          Variant(aData^) := Byte(I);
-        end;
-      varWord:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          if (I < 0) or (I > System.High(Word)) then InvalidVarFormat;
-          Variant(aData^) := Word(I);
-        end;
-      varLongWord:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          I := aReader.AsInt;
-          if (I < 0) or (I > System.High(LongWord)) then InvalidVarFormat;
-          Variant(aData^) := LongWord(I);
-        end;
-      varInt64:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          Variant(aData^) := aReader.AsInt;
-        end;
-      varQWord:
-        begin
-          if aReader.TokenKind <> mtkInt then InvalidVarFormat;
-          Variant(aData^) := QWord(aReader.AsInt);
-        end;
-      varString:
-        begin
-          if aReader.TokenKind <> mtkString then InvalidVarFormat;
-          Variant(aData^) := aReader.AsString;
-        end;
-      MPACK_VAR_ARRAY:
-        begin
-          a := nil;
-          ReadDynArray(TypeInfo(a), @a);
-          Variant(aData^) := VarArrayOf(a);
-        end;
-    else
-      Error(SEVariantNotSupportFmt, [vType]);
-    end;
-    ReadNext;
-    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
-  end;
-
-  procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
-
-  procedure ReadArray(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    TypData: PTypeData;
-    ElSize: SizeUInt;
-    ElType: PTypeInfo;
-    Arr: PByte;
-    I, Count: SizeInt;
-  begin
-    if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-    TypData := GetTypeData(aTypeInfo);
-    ElType := TypData^.ArrayData.ElType;
-    Count := TypData^.ArrayData.ElCount;
-    ElSize := TypData^.ArrayData.Size div Count;
-    if aReader.StructUnread <> Count then Error(SEMPackArrSizeMismatchFmt, [Count]);
-    Arr := aData;
-    for I := 0 to Pred(Count) do begin
-      ReadNext;
-      ReadValue(ElType, Arr);
-      Arr += ElSize;
-    end;
-    ReadNext;
-    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
-  end;
-
-  procedure ReadDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    LocElSize: SizeUInt;
-    LocElType: PTypeInfo;
-    Arr: PByte;
-    I, Size: SizeInt;
-  begin
-    if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-    Size := aReader.StructUnread;
-    DynArraySetLength(Pointer(aData^), aTypeInfo, 1, @Size);
-    with GetTypeData(aTypeInfo)^ do begin
-      LocElSize := ElSize;
-      LocElType := ElType2;
-    end;
-    Arr := PByte(aData^);
-    for I := 0 to Pred(Size) do begin
-      ReadNext;
-      ReadValue(LocElType, Arr);
-      Arr += LocElSize;
-    end;
-    ReadNext;
-    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
-  end;
-
 type
+  TPropMapType = specialize TGLiteChainHashMap<string, PPropInfo, string>;
+  TPropMap     = TPropMapType.TMap;
+
   TLocCacheEntry = record
     FieldMap: TRecFieldMap;
     Tested: Boolean;
@@ -2602,357 +2252,722 @@ type
 var
   LocalCache: TLocalCache;
 
-  function GetFieldMap(aTypeInfo: PTypeInfo; out aFieldMap: TRecFieldMap): Boolean;
-  var
-    pe: ^TLocCacheEntry;
-    pce: TPdoCacheEntry;
-  begin
-    pe := LocalCache.GetMutValueDef(aTypeInfo, Default(TLocCacheEntry));
-    if not pe^.Tested then begin
-      if GetGlobPdoEntry(aTypeInfo, pce) then
-        pe^.FieldMap := pce.FieldMap;
-      pe^.Tested := True;
-    end;
-    aFieldMap := pe^.FieldMap;
-    Result := aFieldMap <> nil;
-  end;
+  procedure DoReadMsgPack(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader);
 
-  function FindFieldName(const aName: string; const aMap: TRecFieldMap): Integer;
-  var
-    I: Integer;
-  begin
-    if aName <> '' then
-      for I := 0 to System.High(aMap) do
-        if aName = aMap[I].Name then exit(I);
-    Result := -1;
-  end;
-
-  procedure ReadRecord(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    Map: TRecFieldMap;
-    pTypData: PTypeData;
-    pField: PManagedField;
-    I, J: Integer;
-  const
-    MAP_KEY_NAMES: array[TMpVarKind] of string = ('Null', 'Integer', 'String', 'Bytes');
-  begin
-    if aReader.TokenKind = mtkExt then begin
-      if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
-        exit
-      else
-        Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
-    end;
-    if GetFieldMap(aTypeInfo, Map) then begin
-      if aReader.TokenKind <> mtkMapBegin then UnexpectedToken(mtkMapBegin, aReader.TokenKind);
-      for I := 0 to Pred(aReader.StructUnread) do begin
-        ReadNext;
-        if aReader.KeyValue.Kind <> mvkStr then
-          Error(SEMPackNonStrFieldNameFmt, [MAP_KEY_NAMES[aReader.KeyValue.Kind]]);
-        J := FindFieldName(aReader.KeyValue.AsString, Map);
-        if J = -1 then begin
-          if aReader.TokenKind in MP_START_TOKENS then
-            aReader.Skip;
-          continue;
+    procedure ReadNext; inline;
+    begin
+      if not aReader.Read then
+        case aReader.ReadState of
+          mrsEOF:   Error(SEUnexpectMPackEnd);
+          mrsError: Error(SEInvalidMPackInst);
+        else
         end;
-        ReadValue(Map[J].Info, PByte(aData) + Map[J].Offset);
+    end;
+
+    procedure ReadInteger(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      I: Int64;
+    begin
+      if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
+      I := aReader.AsInt;
+      case GetTypeData(aTypeInfo)^.OrdType of
+        otSByte:
+          begin
+            if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then
+              Error(SEMPackRangeErrorFmt, ['ShortInt', I]);
+            PShortInt(aData)^ := I;
+          end;
+        otUByte:
+          begin
+            if (I < 0) or (I > System.High(Byte)) then
+              Error(SEMPackRangeErrorFmt, ['Byte', I]);
+            PByte(aData)^ := I;
+          end;
+        otSWord:
+          begin
+            if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then
+              Error(SEMPackRangeErrorFmt, ['SmallInt', I]);
+            PSmallInt(aData)^ := I;
+          end;
+        otUWord:
+          begin
+            if (I < 0) or (I > System.High(Word)) then
+              Error(SEMPackRangeErrorFmt, ['Word', I]);
+            PWord(aData)^ := I;
+          end;
+        otSLong:
+          begin
+            if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then
+              Error(SEMPackRangeErrorFmt, ['LongInt', I]);
+            PLongInt(aData)^ := I;
+          end;
+        otULong:
+          begin
+            if (I < 0) or (I > System.High(DWord)) then
+              Error(SEMPackRangeErrorFmt, ['DWord', I]);
+            PDword(aData)^ := I;
+          end;
+        otSQWord: PInt64(aData)^ := I;
+        otUQWord: PQWord(aData)^ := QWord(I);
       end;
-      ReadNext;
-      if aReader.TokenKind <> mtkMapEnd then UnexpectedToken(mtkMapEnd, aReader.TokenKind);
-    end else begin
+    end;
+
+    procedure ReadFloat(aTypeInfo: PTypeInfo; aData: Pointer);
+    begin
+      case GetTypeData(aTypeInfo)^.FloatType of
+        ftSingle:
+          begin
+            if aReader.TokenKind <> mtkSingle then UnexpectedToken(mtkSingle, aReader.TokenKind);
+            PSingle(aData)^ := aReader.AsSingle;
+          end;
+        ftDouble:
+          begin
+            if aReader.TokenKind <> mtkDouble then UnexpectedToken(mtkDouble, aReader.TokenKind);
+            PDouble(aData)^ := aReader.AsDouble;
+          end;
+        ftExtended:
+          begin
+            if aReader.TokenKind <> mtkDouble then UnexpectedToken(mtkDouble, aReader.TokenKind);
+            PExtended(aData)^ := aReader.AsDouble;
+          end;
+        ftComp:
+          begin
+            if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
+            PInt64(aData)^ := aReader.AsInt;
+          end;
+        ftCurr:
+          begin
+            if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
+            PInt64(aData)^ := aReader.AsInt;
+          end;
+      end;
+    end;
+
+    procedure ReadChar(aData: Pointer);
+    var
+      s: string;
+    begin
+      if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
+      s := aReader.AsString;
+      if System.Length(s) <> 1 then Error(SEUnexpectStringLenFmt, [System.Length(s)]);
+      PAnsiChar(aData)^ := s[1];
+    end;
+
+    procedure ReadEnum(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      I: Int64;
+    begin
+      if aReader.TokenKind <> mtkInt then UnexpectedToken(mtkInt, aReader.TokenKind);
+      I := aReader.AsInt;
+      with GetTypeData(aTypeInfo)^ do begin
+        if (I < MinValue) or (I > MaxValue) then
+          Error(SEMPackRangeErrorFmt, [aTypeInfo^.Name, I]);
+        case OrdType of
+          otSByte:  PShortInt(aData)^ := aReader.AsInt;
+          otUByte:  PByte(aData)^ := aReader.AsInt;
+          otSWord:  PSmallInt(aData)^ := aReader.AsInt;
+          otUWord:  PWord(aData)^ := aReader.AsInt;
+          otSLong:  PLongInt(aData)^ := aReader.AsInt;
+          otULong:  PDword(aData)^ := aReader.AsInt;
+          otSQWord: PInt64(aData)^ := aReader.AsInt;
+          otUQWord: PQWord(aData)^ := QWord(aReader.AsInt);
+        end;
+      end;
+    end;
+
+    procedure ReadSet(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      RestSize, CurrSize, I, ByteIdx: Integer;
+      p: PDWord;
+      b: TBytes;
+    begin
+      if aReader.TokenKind <> mtkBin then UnexpectedToken(mtkBin, aReader.TokenKind);
+      b := aReader.AsBinary;
+      RestSize := GetTypeData(aTypeInfo)^.SetSize;
+      if System.Length(b) <> RestSize then
+        Error(SEMPackSetSizeErrorFmt, [aTypeInfo^.Name, System.Length(b)]);
+      case RestSize of
+        1: PByte(aData)^ := b[0];
+        2: PWord(aData)^ := Word(b[1]) shl 8 or b[0];
+      else
+        ByteIdx := 0;
+        p := aData;
+        System.FillChar(p^, RestSize, 0);
+        while RestSize <> 0 do begin
+          CurrSize := Math.Min(RestSize, SizeOf(DWord));
+          for I := 0 to Pred(CurrSize) do begin
+            p^ := p^ or DWord(b[ByteIdx]) shl (I * 8);
+            Inc(ByteIdx);
+          end;
+          Dec(RestSize, CurrSize);
+          Inc(p);
+        end;
+      end;
+    end;
+
+    procedure ReadSString(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      s: string;
+      MaxLen: Byte;
+    begin
+      if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
+      s := aReader.AsString;
+      MaxLen := GetTypeData(aTypeInfo)^.MaxLength;
+      if System.Length(s) > MaxLen then
+        Error(Format(SEMPackStrExceedSSLenFmt, [System.Length(s), MaxLen]));
+      System.SetLength(PShortString(aData)^, System.Length(s));
+      System.Move(Pointer(s)^, PShortString(aData)^[1], System.Length(PShortString(aData)^));
+    end;
+
+    procedure ReadString(aData: Pointer);
+    begin
+      if aReader.TokenKind <> mtkString then UnexpectedToken(mtkString, aReader.TokenKind);
+      PString(aData)^ := aReader.AsString;
+    end;
+
+    procedure ReadWString(aData: Pointer);
+    var
+      s: string = '';
+    begin
+      ReadString(@s);
+      PWideString(aData)^ := widestring(s);
+    end;
+
+    procedure ReadUString(aData: Pointer);
+    var
+      s: string = '';
+    begin
+      ReadString(@s);
+      PUnicodeString(aData)^ := unicodestring(s);
+    end;
+
+    procedure ReadDynArray(aTypeInfo: PTypeInfo; aData: Pointer); forward;
+
+    procedure ReadVariant(aData: Pointer);
+    var
+      a: array of Variant;
+      I: Int64;
+      vType: Word;
+    begin
+      if aReader.TokenKind = mtkNil then begin
+        Variant(aData^) := Variants.Null;
+        exit;
+      end;
       if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-      pTypData := GetTypeData(aTypeInfo);
-      pField := PManagedField(AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
-      for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
-        ReadNext;
-        ReadValue(pField^.TypeRef, PByte(aData) + pField^.FldOffset);
-        Inc(pField);
+      if aReader.StructUnread <> 2 then InvalidVarFormat;
+      ReadNext;
+      if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+      if (aReader.AsInt < 0) or (aReader.AsInt > System.High(Word)) then InvalidVarFormat;
+      vType := aReader.AsInt;
+      ReadNext;
+      case vType of
+        varSmallInt:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            if (I < System.Low(SmallInt)) or (I > System.High(SmallInt)) then
+              InvalidVarFormat;
+            Variant(aData^) := SmallInt(I);
+          end;
+        varInteger:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            if (I < System.Low(LongInt)) or (I > System.High(LongInt)) then InvalidVarFormat;
+            Variant(aData^) := LongInt(I);
+          end;
+        varSingle:
+          begin
+            if aReader.TokenKind <> mtkSingle then InvalidVarFormat;
+            VarClear(Variant(aData^));
+            TVarData(aData^).vType := vType;
+            TVarData(aData^).vSingle := aReader.AsSingle;
+          end;
+        varDouble:
+          begin
+            if aReader.TokenKind <> mtkDouble then InvalidVarFormat;
+            Variant(aData^) := aReader.AsDouble;
+          end;
+        varCurrency:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            Variant(aData^) := PCurrency(@I)^;
+          end;
+        varDate:
+          begin
+            if aReader.TokenKind <> mtkDouble then InvalidVarFormat;
+            Variant(aData^) := TDateTime(aReader.AsDouble);
+          end;
+        varOleStr:
+          begin
+            if aReader.TokenKind <> mtkString then InvalidVarFormat;
+            Variant(aData^) := widestring(aReader.AsString);
+          end;
+        varBoolean:
+          begin
+            if aReader.TokenKind <> mtkBool then InvalidVarFormat;
+            Variant(aData^) := aReader.AsBoolean;
+          end;
+        varShortInt:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            if (I < System.Low(ShortInt)) or (I > System.High(ShortInt)) then InvalidVarFormat;
+            Variant(aData^) := ShortInt(I);
+          end;
+        varByte:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            if (I < 0) or (I > System.High(Byte)) then InvalidVarFormat;
+            Variant(aData^) := Byte(I);
+          end;
+        varWord:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            if (I < 0) or (I > System.High(Word)) then InvalidVarFormat;
+            Variant(aData^) := Word(I);
+          end;
+        varLongWord:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            I := aReader.AsInt;
+            if (I < 0) or (I > System.High(LongWord)) then InvalidVarFormat;
+            Variant(aData^) := LongWord(I);
+          end;
+        varInt64:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            Variant(aData^) := aReader.AsInt;
+          end;
+        varQWord:
+          begin
+            if aReader.TokenKind <> mtkInt then InvalidVarFormat;
+            Variant(aData^) := QWord(aReader.AsInt);
+          end;
+        varString:
+          begin
+            if aReader.TokenKind <> mtkString then InvalidVarFormat;
+            Variant(aData^) := aReader.AsString;
+          end;
+        MPACK_VAR_ARRAY:
+          begin
+            a := nil;
+            ReadDynArray(TypeInfo(a), @a);
+            Variant(aData^) := VarArrayOf(a);
+          end;
+      else
+        Error(SEVariantNotSupportFmt, [vType]);
       end;
       ReadNext;
       if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
     end;
-  end;
 
-  procedure ReadClassProp(o: TObject; aPropInfo: PPropInfo);
-  var
-    pTypInfo: PTypeInfo;
-    I: Int64 = 0;
-    e: Extended = 0;
-    v: Variant;
-    ss: shortstring;
-    p: Pointer = nil;
-  begin
-    pTypInfo := aPropInfo^.PropType;
-    case pTypInfo^.Kind of
-      tkInteger, tkChar, tkEnumeration, tkInt64, tkQWord, tkWChar, tkBool, tkUChar:
-        begin
-          ReadValue(pTypInfo, @I);
-          SetOrdProp(o, aPropInfo, I);
-        end;
-      tkFloat:
-        begin
-          ReadFloat(pTypInfo, @e);
-          SetFloatProp(o, aPropInfo, e);
-        end;
-      tkSet:
-        begin
-          ReadValue(pTypInfo, @I);
-          SetOrdProp(o, aPropInfo, I);
-        end;
-      tkSString:
-        begin
-          ReadValue(pTypInfo, @ss);
-          SetStrProp(o, aPropInfo, ss);
-        end;
-      tkLString, tkAString:
-        begin
-          ReadValue(pTypInfo, @p);
-          SetStrProp(o, aPropInfo, string(p));
-          string(p) := '';
-        end;
-      tkWString:
-        begin
-          ReadValue(pTypInfo, @p);
-          SetWideStrProp(o, aPropInfo, widestring(p));
-          widestring(p) := '';
-        end;
-      tkVariant:
-        begin
-          ReadVariant(@v);
-          SetVariantProp(o, aPropInfo, v);
-        end;
-      tkClass:
-        begin
-          ReadValue(pTypInfo, @p);
-          SetObjectProp(o, aPropInfo, TObject(p));
-        end;
-      tkDynArray:
-        begin
-          ReadDynArray(pTypInfo, @p);
-          SetDynArrayProp(o, aPropInfo, p);
-          DynArrayClear(p, pTypInfo);
-        end;
-      tkUString:
-        begin
-          ReadValue(pTypInfo, @p);
-          SetUnicodeStrProp(o, aPropInfo, unicodestring(p));
-          unicodestring(p) := '';
-        end;
-    else
-      Error(SEUnsuppPdoPropKindFmt, [GetEnumName(TypeInfo(TTypeKind), Integer(pTypInfo^.Kind))]);
-    end;
-  end;
+    procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer); forward;
 
-type
-  TPropMapType = specialize TGLiteChainHashMap<string, PPropInfo, string>;
-  TPropMap     = TPropMapType.TMap;
-
-  procedure ReadMappedClass(o: TObject; const aMap: TPropMap);
-  var
-    Count, I: SizeInt;
-    pInfo: PPropInfo;
-    s: string;
-  begin
-    //here aReader.TokenKind already checked
-    Count := aReader.StructUnread;
-    for I := 0 to Pred(Count) do begin
-      ReadNext;
-      if aReader.KeyValue.Kind <> mvkStr then Error(
-        SEMPackUnexpectKeyFmt, [
-          GetEnumName(TypeInfo(TMpVarKind), Integer(mvkStr)),
-          GetEnumName(TypeInfo(TMpVarKind), Integer(aReader.KeyValue.Kind))
-        ]
-      );
-      s := aReader.KeyValue.AsString;
-      if aMap.TryGetValue(s, pInfo) then
-        ReadClassProp(o, pInfo)
-      else
-        Error(SEClassPropNotFoundFmt, [o.ClassName, s]);
-    end;
-    ReadNext;
-    if aReader.TokenKind <> mtkMapEnd then UnexpectedToken(mtkMapEnd, aReader.TokenKind);
-  end;
-
-  procedure GetPropMap(aList: PPropList; aCount: Integer; out aMap: TPropMap);
-  var
-    I: Integer;
-  begin
-    aMap.EnsureCapacity(aCount);
-    for I := 0 to Pred(aCount) do
-      if IsWriteableProp(aList^[I]) then
-        aMap.Add(aList^[I]^.Name, aList^[I]);
-  end;
-
-  procedure GetPropMap(o: TObject; out aMap: TPropMap);
-  var
-    pl: PPropList;
-    Count: Integer;
-  begin
-    Count := GetPropList(o, pl);
-    try
-      GetPropMap(pl, Count, aMap);
-    finally
-      FreeMem(pl);
-    end;
-  end;
-
-  procedure ReadSimpleClass(o: TObject);
-  var
-    Map: TPropMap;
-  begin
-    if aReader.TokenKind <> mtkMapBegin then UnexpectedToken(mtkMapBegin, aReader.TokenKind);
-    GetPropMap(o, Map);
-    ReadMappedClass(o, Map);
-  end;
-
-  procedure GetPropMap(aClass: TClass; out aMap: TPropMap);
-  var
-    pl: PPropList;
-    Count: Integer;
-  begin
-    Count := GetPropList(aClass, pl);
-    try
-      GetPropMap(pl, Count, aMap);
-    finally
-      FreeMem(pl);
-    end;
-  end;
-
-  procedure ReadCollection(aCol: TCollection);
-  var
-    Map: TPropMap;
-    I, Count: SizeInt;
-  begin
-    if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-    Count := aReader.StructUnread;
-    aCol.Clear;
-    GetPropMap(aCol.ItemClass, Map);
-    for I := 0 to Pred(Count) do begin
-      ReadNext;
-      ReadMappedClass(aCol.Add, Map);
-    end;
-    ReadNext;
-    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
-  end;
-
-  procedure ReadStrings(aStrings: TStrings);
-  var
-    s: string;
-    I, Count: SizeInt;
-  begin
-    if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
-    Count := aReader.StructUnread;
-    aStrings.Clear;
-    for I := 0 to Pred(Count) do begin
-      ReadNext;
-      s := '';
-      ReadString(@s);
-      aStrings.Add(s);
-    end;
-    ReadNext;
-    if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
-  end;
-
-  procedure ReadClass(aTypeInfo: PTypeInfo; aData: Pointer);
-  var
-    o: TObject;
-  begin
-    if aReader.TokenKind = mtkExt then begin
-      if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
-        exit
-      else
-        Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
-    end else
-      if aReader.TokenKind = mtkNil then begin
-        FreeAndNil(TObject(aData^));
-        exit;
+    procedure ReadArray(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      TypData: PTypeData;
+      ElSize: SizeUInt;
+      ElType: PTypeInfo;
+      Arr: PByte;
+      I, Count: SizeInt;
+    begin
+      if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+      TypData := GetTypeData(aTypeInfo);
+      ElType := TypData^.ArrayData.ElType;
+      Count := TypData^.ArrayData.ElCount;
+      ElSize := TypData^.ArrayData.Size div Count;
+      if aReader.StructUnread <> Count then Error(SEMPackArrSizeMismatchFmt, [Count]);
+      Arr := aData;
+      for I := 0 to Pred(Count) do begin
+        ReadNext;
+        ReadValue(ElType, Arr);
+        Arr += ElSize;
       end;
-    if TObject(aData^) = nil then
-      TObject(aData^) := GetTypeData(aTypeInfo)^.ClassType.Create;
-    o := TObject(aData^);
-    if o is TCollection then
-      ReadCollection(TCollection(o))
-    else
-      if o is TStrings then
-        ReadStrings(TStrings(o))
-      else
-        ReadSimpleClass(o);
-  end;
-
-  procedure ReadObject(aTypeInfo: PTypeInfo; aData: Pointer);
-  begin
-    if aReader.TokenKind = mtkExt then
-      if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
-        exit
-      else
-        Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
-    NotSupported(aTypeInfo);
-  end;
-
-  procedure ReadWChar(aData: Pointer);
-  var
-    ws: widestring = '';
-  begin
-    ReadWString(@ws);
-    if System.Length(ws) <> 1 then
-      Error(SEStrLenNotMatchSizeFmt, ['WideString', System.Length(ws), 'WideChar']);
-    PWideChar(aData)^ := ws[1];
-  end;
-
-  procedure ReadBool(aTypeInfo: PTypeInfo; aData: Pointer);
-  begin
-    if aReader.TokenKind <> mtkBool then UnexpectedToken(mtkBool, aReader.TokenKind);
-    case GetTypeData(aTypeInfo)^.OrdType of
-      otSByte:  PShortInt(aData)^ := Ord(aReader.AsBoolean);
-      otUByte:  PByte(aData)^ := Ord(aReader.AsBoolean);
-      otSWord:  PSmallInt(aData)^ := Ord(aReader.AsBoolean);
-      otUWord:  PWord(aData)^ := Ord(aReader.AsBoolean);
-      otSLong:  PLongInt(aData)^ := Ord(aReader.AsBoolean);
-      otULong:  PDword(aData)^ := Ord(aReader.AsBoolean);
-      otSQWord: PInt64(aData)^ := Ord(aReader.AsBoolean);
-      otUQWord: PQWord(aData)^ := Ord(aReader.AsBoolean);
+      ReadNext;
+      if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
     end;
-  end;
 
-  procedure ReadUChar(aData: Pointer);
-  var
-    us: unicodestring = '';
-  begin
-    ReadUString(@us);
-    if System.Length(us) <> 1 then
-      Error(SEStrLenNotMatchSizeFmt, ['UnicodeString', System.Length(us), 'UnicodeChar']);
-    PUnicodeChar(aData)^ := us[1];
-  end;
+    procedure ReadDynArray(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      LocElSize: SizeUInt;
+      LocElType: PTypeInfo;
+      Arr: PByte;
+      I, Size: SizeInt;
+    begin
+      if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+      Size := aReader.StructUnread;
+      DynArraySetLength(Pointer(aData^), aTypeInfo, 1, @Size);
+      with GetTypeData(aTypeInfo)^ do begin
+        LocElSize := ElSize;
+        LocElType := ElType2;
+      end;
+      Arr := PByte(aData^);
+      for I := 0 to Pred(Size) do begin
+        ReadNext;
+        ReadValue(LocElType, Arr);
+        Arr += LocElSize;
+      end;
+      ReadNext;
+      if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
+    end;
 
-  procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer);
-  begin
-    case aTypeInfo^.Kind of
-      tkInteger, tkInt64,
-      tkQWord:       ReadInteger(aTypeInfo, aData);
-      tkFloat:       ReadFloat(aTypeInfo, aData);
-      tkChar:        ReadChar(aData);
-      tkEnumeration: ReadEnum(aTypeInfo, aData);
-      tkSet:         ReadSet(aTypeInfo, aData);
-      tkSString:     ReadSString(aTypeInfo, aData);
-      tkLString,
-      tkAString:     ReadString(aData);
-      tkWString:     ReadWString(aData);
-      tkVariant:     ReadVariant(aData);
-      tkArray:       ReadArray(aTypeInfo, aData);
-      tkRecord:      ReadRecord(aTypeInfo, aData);
-      tkClass:       ReadClass(aTypeInfo, aData);
-      tkObject:      ReadObject(aTypeInfo, aData);
-      tkWChar:       ReadWChar(aData);
-      tkBool:        ReadBool(aTypeInfo, aData);
-      tkDynArray:    ReadDynArray(aTypeInfo, aData);
-      tkUString:     ReadUString(aData);
-      tkUChar:       ReadUChar(aData);
-    else
+    function GetFieldMap(aTypeInfo: PTypeInfo; out aFieldMap: TRecFieldMap): Boolean;
+    var
+      pe: ^TLocCacheEntry;
+      pce: TPdoCacheEntry;
+    begin
+      pe := LocalCache.GetMutValueDef(aTypeInfo, Default(TLocCacheEntry));
+      if not pe^.Tested then begin
+        if GetGlobPdoEntry(aTypeInfo, pce) then
+          pe^.FieldMap := pce.FieldMap;
+        pe^.Tested := True;
+      end;
+      aFieldMap := pe^.FieldMap;
+      Result := aFieldMap <> nil;
+    end;
+
+    function FindFieldName(const aName: string; const aMap: TRecFieldMap): Integer;
+    var
+      I: Integer;
+    begin
+      if aName <> '' then
+        for I := 0 to System.High(aMap) do
+          if aName = aMap[I].Name then exit(I);
+      Result := -1;
+    end;
+
+    procedure ReadRecord(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      Map: TRecFieldMap;
+      pTypData: PTypeData;
+      pField: PManagedField;
+      I, J: Integer;
+    const
+      MAP_KEY_NAMES: array[TMpVarKind] of string = ('Null', 'Integer', 'String', 'Bytes');
+    begin
+      if aReader.TokenKind = mtkExt then begin
+        if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
+          exit
+        else
+          Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
+      end;
+      if GetFieldMap(aTypeInfo, Map) then begin
+        if aReader.TokenKind <> mtkMapBegin then UnexpectedToken(mtkMapBegin, aReader.TokenKind);
+        for I := 0 to Pred(aReader.StructUnread) do begin
+          ReadNext;
+          if aReader.KeyValue.Kind <> mvkStr then
+            Error(SEMPackNonStrFieldNameFmt, [MAP_KEY_NAMES[aReader.KeyValue.Kind]]);
+          J := FindFieldName(aReader.KeyValue.AsString, Map);
+          if J = -1 then begin
+            if aReader.TokenKind in MP_START_TOKENS then
+              aReader.Skip;
+            continue;
+          end;
+          ReadValue(Map[J].Info, PByte(aData) + Map[J].Offset);
+        end;
+        ReadNext;
+        if aReader.TokenKind <> mtkMapEnd then UnexpectedToken(mtkMapEnd, aReader.TokenKind);
+      end else begin
+        if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+        pTypData := GetTypeData(aTypeInfo);
+        pField := PManagedField(AlignTypeData(PByte(@pTypData^.TotalFieldCount) + SizeOf(pTypData^.TotalFieldCount)));
+        for I := 0 to Pred(pTypData^.TotalFieldCount) do begin
+          ReadNext;
+          ReadValue(pField^.TypeRef, PByte(aData) + pField^.FldOffset);
+          Inc(pField);
+        end;
+        ReadNext;
+        if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
+      end;
+    end;
+
+    procedure ReadClassProp(o: TObject; aPropInfo: PPropInfo);
+    var
+      pTypInfo: PTypeInfo;
+      I: Int64 = 0;
+      e: Extended = 0;
+      v: Variant;
+      ss: shortstring;
+      p: Pointer = nil;
+    begin
+      pTypInfo := aPropInfo^.PropType;
+      case pTypInfo^.Kind of
+        tkInteger, tkChar, tkEnumeration, tkInt64, tkQWord, tkWChar, tkBool, tkUChar:
+          begin
+            ReadValue(pTypInfo, @I);
+            SetOrdProp(o, aPropInfo, I);
+          end;
+        tkFloat:
+          begin
+            ReadFloat(pTypInfo, @e);
+            SetFloatProp(o, aPropInfo, e);
+          end;
+        tkSet:
+          begin
+            ReadValue(pTypInfo, @I);
+            SetOrdProp(o, aPropInfo, I);
+          end;
+        tkSString:
+          begin
+            ReadValue(pTypInfo, @ss);
+            SetStrProp(o, aPropInfo, ss);
+          end;
+        tkLString, tkAString:
+          begin
+            ReadValue(pTypInfo, @p);
+            SetStrProp(o, aPropInfo, string(p));
+            string(p) := '';
+          end;
+        tkWString:
+          begin
+            ReadValue(pTypInfo, @p);
+            SetWideStrProp(o, aPropInfo, widestring(p));
+            widestring(p) := '';
+          end;
+        tkVariant:
+          begin
+            ReadVariant(@v);
+            SetVariantProp(o, aPropInfo, v);
+          end;
+        tkClass:
+          begin
+            ReadValue(pTypInfo, @p);
+            SetObjectProp(o, aPropInfo, TObject(p));
+          end;
+        tkDynArray:
+          begin
+            ReadDynArray(pTypInfo, @p);
+            SetDynArrayProp(o, aPropInfo, p);
+            DynArrayClear(p, pTypInfo);
+          end;
+        tkUString:
+          begin
+            ReadValue(pTypInfo, @p);
+            SetUnicodeStrProp(o, aPropInfo, unicodestring(p));
+            unicodestring(p) := '';
+          end;
+      else
+        Error(SEUnsuppPdoPropKindFmt, [GetEnumName(TypeInfo(TTypeKind), Integer(pTypInfo^.Kind))]);
+      end;
+    end;
+
+    procedure ReadMappedClass(o: TObject; const aMap: TPropMap);
+    var
+      Count, I: SizeInt;
+      pInfo: PPropInfo;
+      s: string;
+    begin
+      //here aReader.TokenKind already checked
+      Count := aReader.StructUnread;
+      for I := 0 to Pred(Count) do begin
+        ReadNext;
+        if aReader.KeyValue.Kind <> mvkStr then Error(
+          SEMPackUnexpectKeyFmt, [
+            GetEnumName(TypeInfo(TMpVarKind), Integer(mvkStr)),
+            GetEnumName(TypeInfo(TMpVarKind), Integer(aReader.KeyValue.Kind))
+          ]
+        );
+        s := aReader.KeyValue.AsString;
+        if aMap.TryGetValue(s, pInfo) then
+          ReadClassProp(o, pInfo)
+        else
+          Error(SEClassPropNotFoundFmt, [o.ClassName, s]);
+      end;
+      ReadNext;
+      if aReader.TokenKind <> mtkMapEnd then UnexpectedToken(mtkMapEnd, aReader.TokenKind);
+    end;
+
+    procedure GetPropMap(aList: PPropList; aCount: Integer; out aMap: TPropMap);
+    var
+      I: Integer;
+    begin
+      aMap.EnsureCapacity(aCount);
+      for I := 0 to Pred(aCount) do
+        if IsWriteableProp(aList^[I]) then
+          aMap.Add(aList^[I]^.Name, aList^[I]);
+    end;
+
+    procedure GetPropMap(o: TObject; out aMap: TPropMap);
+    var
+      pl: PPropList;
+      Count: Integer;
+    begin
+      Count := GetPropList(o, pl);
+      try
+        GetPropMap(pl, Count, aMap);
+      finally
+        FreeMem(pl);
+      end;
+    end;
+
+    procedure ReadSimpleClass(o: TObject);
+    var
+      Map: TPropMap;
+    begin
+      if aReader.TokenKind <> mtkMapBegin then UnexpectedToken(mtkMapBegin, aReader.TokenKind);
+      GetPropMap(o, Map);
+      ReadMappedClass(o, Map);
+    end;
+
+    procedure GetPropMap(aClass: TClass; out aMap: TPropMap);
+    var
+      pl: PPropList;
+      Count: Integer;
+    begin
+      Count := GetPropList(aClass, pl);
+      try
+        GetPropMap(pl, Count, aMap);
+      finally
+        FreeMem(pl);
+      end;
+    end;
+
+    procedure ReadCollection(aCol: TCollection);
+    var
+      Map: TPropMap;
+      I, Count: SizeInt;
+    begin
+      if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+      Count := aReader.StructUnread;
+      aCol.Clear;
+      GetPropMap(aCol.ItemClass, Map);
+      for I := 0 to Pred(Count) do begin
+        ReadNext;
+        ReadMappedClass(aCol.Add, Map);
+      end;
+      ReadNext;
+      if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
+    end;
+
+    procedure ReadStrings(aStrings: TStrings);
+    var
+      s: string;
+      I, Count: SizeInt;
+    begin
+      if aReader.TokenKind <> mtkArrayBegin then UnexpectedToken(mtkArrayBegin, aReader.TokenKind);
+      Count := aReader.StructUnread;
+      aStrings.Clear;
+      for I := 0 to Pred(Count) do begin
+        ReadNext;
+        s := '';
+        ReadString(@s);
+        aStrings.Add(s);
+      end;
+      ReadNext;
+      if aReader.TokenKind <> mtkArrayEnd then UnexpectedToken(mtkArrayEnd, aReader.TokenKind);
+    end;
+
+    procedure ReadClass(aTypeInfo: PTypeInfo; aData: Pointer);
+    var
+      o: TObject;
+    begin
+      if aReader.TokenKind = mtkExt then begin
+        if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
+          exit
+        else
+          Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
+      end else
+        if aReader.TokenKind = mtkNil then begin
+          FreeAndNil(TObject(aData^));
+          exit;
+        end;
+      if TObject(aData^) = nil then
+        TObject(aData^) := GetTypeData(aTypeInfo)^.ClassType.Create;
+      o := TObject(aData^);
+      if o is TCollection then
+        ReadCollection(TCollection(o))
+      else
+        if o is TStrings then
+          ReadStrings(TStrings(o))
+        else
+          ReadSimpleClass(o);
+    end;
+
+    procedure ReadObject(aTypeInfo: PTypeInfo; aData: Pointer);
+    begin
+      if aReader.TokenKind = mtkExt then
+        if (aUserExt <> nil) and aUserExt.CanRead(aData, aTypeInfo, aReader) then
+          exit
+        else
+          Error(SEMPackExtNotSupportFmt, [TUserExtType(aReader.AsExtention[0])]);
       NotSupported(aTypeInfo);
     end;
+
+    procedure ReadWChar(aData: Pointer);
+    var
+      ws: widestring = '';
+    begin
+      ReadWString(@ws);
+      if System.Length(ws) <> 1 then
+        Error(SEStrLenNotMatchSizeFmt, ['WideString', System.Length(ws), 'WideChar']);
+      PWideChar(aData)^ := ws[1];
+    end;
+
+    procedure ReadBool(aTypeInfo: PTypeInfo; aData: Pointer);
+    begin
+      if aReader.TokenKind <> mtkBool then UnexpectedToken(mtkBool, aReader.TokenKind);
+      case GetTypeData(aTypeInfo)^.OrdType of
+        otSByte:  PShortInt(aData)^ := Ord(aReader.AsBoolean);
+        otUByte:  PByte(aData)^ := Ord(aReader.AsBoolean);
+        otSWord:  PSmallInt(aData)^ := Ord(aReader.AsBoolean);
+        otUWord:  PWord(aData)^ := Ord(aReader.AsBoolean);
+        otSLong:  PLongInt(aData)^ := Ord(aReader.AsBoolean);
+        otULong:  PDword(aData)^ := Ord(aReader.AsBoolean);
+        otSQWord: PInt64(aData)^ := Ord(aReader.AsBoolean);
+        otUQWord: PQWord(aData)^ := Ord(aReader.AsBoolean);
+      end;
+    end;
+
+    procedure ReadUChar(aData: Pointer);
+    var
+      us: unicodestring = '';
+    begin
+      ReadUString(@us);
+      if System.Length(us) <> 1 then
+        Error(SEStrLenNotMatchSizeFmt, ['UnicodeString', System.Length(us), 'UnicodeChar']);
+      PUnicodeChar(aData)^ := us[1];
+    end;
+
+    procedure ReadValue(aTypeInfo: PTypeInfo; aData: Pointer);
+    begin
+      case aTypeInfo^.Kind of
+        tkInteger, tkInt64,
+        tkQWord:       ReadInteger(aTypeInfo, aData);
+        tkFloat:       ReadFloat(aTypeInfo, aData);
+        tkChar:        ReadChar(aData);
+        tkEnumeration: ReadEnum(aTypeInfo, aData);
+        tkSet:         ReadSet(aTypeInfo, aData);
+        tkSString:     ReadSString(aTypeInfo, aData);
+        tkLString,
+        tkAString:     ReadString(aData);
+        tkWString:     ReadWString(aData);
+        tkVariant:     ReadVariant(aData);
+        tkArray:       ReadArray(aTypeInfo, aData);
+        tkRecord:      ReadRecord(aTypeInfo, aData);
+        tkClass:       ReadClass(aTypeInfo, aData);
+        tkObject:      ReadObject(aTypeInfo, aData);
+        tkWChar:       ReadWChar(aData);
+        tkBool:        ReadBool(aTypeInfo, aData);
+        tkDynArray:    ReadDynArray(aTypeInfo, aData);
+        tkUString:     ReadUString(aData);
+        tkUChar:       ReadUChar(aData);
+      else
+        NotSupported(aTypeInfo);
+      end;
+    end;
+  begin
+    if aReader.ReadState = mrsStart then ReadNext;
+    ReadValue(aTypeInfo, @aValue);
   end;
+
 begin
-  if aReader.ReadState = mrsStart then ReadNext;
-  ReadValue(aTypeInfo, @aValue);
+  if aUserExt <> nil then aUserExt.NestReadProc := @DoReadMsgPack;
+  DoReadMsgPack(aTypeInfo, aValue, aReader);
+  if aUserExt <> nil then aUserExt.NestReadProc := nil;
 end;
 
 procedure MsgPackToPdo(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader; aUserExt: IMpUserExt);
