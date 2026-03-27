@@ -665,7 +665,9 @@ type
     class function TryReadDom(aBuffer: PByte; aCount: SizeInt; out aRoot: TMpDomNode;
                               aDuplicates: TMpDuplicates = mduAccept;
                               aMaxDepth: Integer = DEF_DEPTH): Boolean; static;
+    constructor Create(aMaxDepth: Integer = DEF_DEPTH);
     constructor Create(p: PByte; aCount: SizeInt; aMaxDepth: Integer = DEF_DEPTH);
+    procedure Reset(p: PByte; aCount: SizeInt);
   { tries to read the next token from the buffer }
     function Read: Boolean; override;
     function CopyStruct(out aStruct: TBytes): Boolean; override;
@@ -715,82 +717,23 @@ type
     property OwnsStream: Boolean read FOwnsStream;
   end;
 
-  TUserExtType = 0..127;
+  TUserExtType    = 0..127;
+  TMpNestWriteProc = procedure(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWriter) is nested;
+  TMpNestReadProc  = procedure(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader) is nested;
 
 {$PUSH}{$INTERFACES CORBA}
   IMpUserExt = interface
   ['{981B5219-0EB6-4C1A-87C5-F27E02AABC3D}']
-    function CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
-    function CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
-    function CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
-    function CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
+    function  CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
+    function  CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
+    function  CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
+    function  CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
+    procedure SetNestWriteProc(aProc: TMpNestWriteProc);
+    procedure SetNestReadProc(aProc: TMpNestReadProc);
+    property  NestWriteProc: TMpNestWriteProc write SetNestWriteProc;
+    property  NestReadProc: TMpNestReadProc write SetNestReadProc;
   end;
 {$POP}
-
-  EMpWriteExt = class(Exception);
-  EMpReadExt  = class(Exception);
-
-  TMpUserExt = class;
-
-  { TMpCustomExt }
-  TMpCustomExt = class
-  const
-    DEF_DEPTH = 7;
-  private
-    FMaxDepth: Integer;
-    FHolder: TMpUserExt;
-    FExtType: TUserExtType;
-  protected
-    function  GetDataType: PTypeInfo; virtual; abstract;
-    function  GetExtType: TUserExtType; inline;
-  public
-    constructor Create(aExtType: TUserExtType; aMaxDepth: Integer = DEF_DEPTH);
-    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); virtual; abstract;
-    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; virtual; abstract;
-    property  MaxDepth: Integer read FMaxDepth;
-    property  DataType: PTypeInfo read GetDataType;
-    property  ExtType: TUserExtType read GetExtType;
-    property  Holder: TMpUserExt read FHolder write FHolder;
-  end;
-
-  { TMpExtHook }
-  generic TMpExtHook<T> = class abstract(TMpCustomExt)
-  type
-    TExtValue = T;
-    PExtValue = ^T;
-  protected
-    function GetDataType: PTypeInfo; override;
-  end;
-
-  { TMpUserExt }
-  TMpUserExt = class(TObject, IMpUserExt)
-  private
-  type
-    TMapType = specialize TGLiteChainHashMap<PTypeInfo, TUserExtType, Pointer>;
-    TMap     = TMapType.TMap;
-  private
-    FTypeList: array[TUserExtType] of TMpCustomExt;
-    FTypeMap: TMap;
-    function GetHookCount: Integer; inline;
-  public
-    constructor Create(const a: array of TMpCustomExt); overload;
-    destructor Destroy; override;
-    function TryAddHook(aHook: TMpCustomExt): Boolean;
-    function TryAddAll(const a: array of TMpCustomExt): Integer;
-    function TryRemoveHook(aExtType: TUserExtType): Boolean;
-    function TryRemoveHook(aDataType: PTypeInfo): Boolean;
-    function Supports(aExtType: TUserExtType): Boolean; inline;
-    function Supports(aExtType: TUserExtType; out aDataType: PTypeInfo): Boolean; inline;
-    function Supports(aDataType: PTypeInfo): Boolean; inline;
-    function Supports(aDataType: PTypeInfo; out aExtType: TUserExtType): Boolean; inline;
-    function CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
-    function CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
-    function CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
-    function CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
-    generic function CanWrite<T>(const aValue: T; out aBlob: TMpExtBlob): Boolean;
-    generic function CanRead<T>(const aBlob: TMpExtBlob; out aValue: T): Boolean;
-    property HookCount: Integer read GetHookCount;
-  end;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -4338,9 +4281,19 @@ begin
   end;
 end;
 
-constructor TMpReader.Create(p: PByte; aCount: SizeInt; aMaxDepth: Integer);
+constructor TMpReader.Create(aMaxDepth: Integer);
 begin
   inherited Create;
+  FReadMode := True;
+  FStackTop := NULL_INDEX;
+  if aMaxDepth < 0 then aMaxDepth := 0;
+  System.SetLength(FStack, aMaxDepth + 1);
+  TryPushStack(NULL_INDEX, mskNone);
+end;
+
+constructor TMpReader.Create(p: PByte; aCount: SizeInt; aMaxDepth: Integer);
+begin
+  Create(aMaxDepth);
   FBuffer := p;
   FBufSize := aCount;
   FReadMode := True;
@@ -4348,6 +4301,17 @@ begin
   if aMaxDepth < 0 then aMaxDepth := 0;
   System.SetLength(FStack, aMaxDepth + 1);
   TryPushStack(NULL_INDEX, mskNone);
+end;
+
+procedure TMpReader.Reset(p: PByte; aCount: SizeInt);
+begin
+  FStackTop := 0;
+  FBuffer := p;
+  FBufSize := aCount;
+  FBufPos := 0;
+  FState := mrsStart;
+  FCurrToken := mtkNone;
+  FReadMode := True;
 end;
 
 function TMpReader.Read: Boolean;
@@ -4706,172 +4670,6 @@ begin
   if not DoFindPathStr(Self, aPath) then exit(False);
   if (TokenKind in MP_END_TOKENS) and not Read then exit(False);
   Result := CopyStruct(aBytes);
-end;
-
-{ TMpCustomExt }
-
-function TMpCustomExt.GetExtType: TUserExtType;
-begin
-  Result := FExtType;
-end;
-
-constructor TMpCustomExt.Create(aExtType: TUserExtType; aMaxDepth: Integer);
-begin
-  inherited Create;
-  if aMaxDepth > 0 then
-    FMaxDepth := aMaxDepth
-  else
-    aMaxDepth := DEF_DEPTH;
-  FExtType := aExtType;
-end;
-
-{ TMpExtHook }
-
-function TMpExtHook.GetDataType: PTypeInfo;
-begin
-  Result := System.TypeInfo(TExtValue);
-end;
-
-{ TMpUserExt }
-
-function TMpUserExt.GetHookCount: Integer;
-begin
-  Result := FTypeMap.Count;
-end;
-
-constructor TMpUserExt.Create(const a: array of TMpCustomExt);
-var
-  h: TMpCustomExt;
-begin
-  inherited Create;
-  for h in a do
-    if not TryAddHook(h) then h.Free;
-end;
-
-destructor TMpUserExt.Destroy;
-var
-  e: TUserExtType;
-begin
-  for e in FTypeMap.Values do FTypeList[e].Free;
-  inherited;
-end;
-
-function TMpUserExt.TryAddHook(aHook: TMpCustomExt): Boolean;
-begin
-  if (FTypeList[aHook.ExtType] <> nil) or FTypeMap.Contains(aHook.DataType) then
-    exit(False);
-  FTypeList[aHook.ExtType] := aHook;
-  FTypeMap.Add(aHook.DataType, aHook.ExtType);
-  aHook.Holder := Self;
-  Result := True;
-end;
-
-function TMpUserExt.TryAddAll(const a: array of TMpCustomExt): Integer;
-var
-  h: TMpCustomExt;
-begin
-  Result := HookCount;
-  for h in a do
-    if not TryAddHook(h) then h.Free;
-  Result := HookCount - Result;
-end;
-
-function TMpUserExt.TryRemoveHook(aExtType: TUserExtType): Boolean;
-begin
-  if FTypeList[aExtType] = nil then exit(False);
-  FTypeMap.Remove(FTypeList[aExtType].DataType);
-  FreeAndNil(FTypeList[aExtType]);
-  Result := True;
-end;
-
-function TMpUserExt.TryRemoveHook(aDataType: PTypeInfo): Boolean;
-var
-  e: TUserExtType;
-begin
-  if not FTypeMap.Extract(aDataType, e) then exit(False);
-  FreeAndNil(FTypeList[e]);
-  Result := True;
-end;
-
-function TMpUserExt.Supports(aExtType: TUserExtType): Boolean;
-begin
-  Result := FTypeList[aExtType] <> nil;
-end;
-
-function TMpUserExt.Supports(aExtType: TUserExtType; out aDataType: PTypeInfo): Boolean;
-begin
-  aDataType := nil;
-  Result := FTypeList[aExtType] <> nil;
-  if Result then aDataType := FTypeList[aExtType].DataType;
-end;
-
-function TMpUserExt.Supports(aDataType: PTypeInfo): Boolean;
-begin
-  Result := FTypeMap.Contains(aDataType);
-end;
-
-function TMpUserExt.Supports(aDataType: PTypeInfo; out aExtType: TUserExtType): Boolean;
-begin
-  Result := FTypeMap.TryGetValue(aDataType, aExtType);
-end;
-
-function TMpUserExt.CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
-var
-  e: TUserExtType;
-begin
-  Result := FTypeMap.TryGetValue(aType, e);
-  if Result then FTypeList[e].Write(aData, aWriter);
-end;
-
-function TMpUserExt.CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
-var
-  Writer: TMpWriter;
-  e: TUserExtType;
-  b: TBytes;
-begin
-  aBlob := nil;
-  if not FTypeMap.TryGetValue(aType, e) then exit(False);
-  Writer := TMpWriter.Create;
-  try
-    FTypeList[e].Write(aData, Writer);
-    b := Writer.ToBytes;
-  finally
-    Writer.Free;
-  end;
-  case b[0] of
-    $d4..$d8: System.Delete(b, 0, 1);
-    $c7:      System.Delete(b, 0, 2);
-    $c8:      System.Delete(b, 0, 3);
-  else        System.Delete(b, 0, 5);
-  end;
-  aBlob := b;
-  Result := True;
-end;
-
-function TMpUserExt.CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
-begin
-  if aReader.TokenKind <> mtkExt then exit(False);
-  Result := CanRead(aData, aType, aReader.AsExtention);
-end;
-
-function TMpUserExt.CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
-var
-  e: TUserExtType;
-begin
-  if not FTypeMap.TryGetValue(aType, e) or (TUserExtType(aBlob[0]) <> FTypeList[e].ExtType) then
-    exit(False);
-  Result := FTypeList[e].TryRead(aData, aBlob);
-end;
-
-generic function TMpUserExt.CanWrite<T>(const aValue: T; out aBlob: TMpExtBlob): Boolean;
-begin
-  Result := CanWrite(@aValue, TypeInfo(aValue), aBlob);
-end;
-
-generic function TMpUserExt.CanRead<T>(const aBlob: TMpExtBlob; out aValue: T): Boolean;
-begin
-  aValue := Default(T);
-  Result := CanRead(@aValue, TypeInfo(aValue), aBlob);
 end;
 
 end.

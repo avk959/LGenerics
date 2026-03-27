@@ -21,6 +21,7 @@ unit lgMsgPackUtils;
 
 {$MODE OBJFPC}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
 {$INLINE ON}
 
 interface
@@ -35,6 +36,78 @@ uses
   LgPdo;
 
 type
+
+  TMpUserExt = class;
+
+  { TMpCustomExt }
+  TMpCustomExt = class
+  const
+    DEF_DEPTH = 7;
+  private
+    FHolder: TMpUserExt;
+    FExtType: TUserExtType;
+  protected
+    FWriter: TMpWriter;
+    FReader: TMpReader;
+    function  GetDataType: PTypeInfo; virtual; abstract;
+    function  GetExtType: TUserExtType; inline;
+  public
+    constructor Create(aExtType: TUserExtType; aMaxDepth: Integer = DEF_DEPTH);
+    destructor Destroy; override;
+    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); virtual; abstract;
+    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; virtual; abstract;
+    property  DataType: PTypeInfo read GetDataType;
+    property  ExtType: TUserExtType read GetExtType;
+    property  Holder: TMpUserExt read FHolder write FHolder;
+  end;
+
+  { TMpExtHook }
+  generic TMpExtHook<T> = class abstract(TMpCustomExt)
+  type
+    TExtValue = T;
+    PExtValue = ^T;
+  protected
+    function GetDataType: PTypeInfo; override;
+  end;
+
+  { TMpUserExt }
+  TMpUserExt = class(TObject, IMpUserExt)
+  private
+  type
+    TMapType = specialize TGLiteChainHashMap<PTypeInfo, TUserExtType, Pointer>;
+    TMap     = TMapType.TMap;
+  private
+    FTypeList: array[TUserExtType] of TMpCustomExt;
+    FTypeMap: TMap;
+    FWriteProc: TMpNestWriteProc;
+    FReadProc: TMpNestReadProc;
+    function  GetHookCount: Integer; inline;
+  protected
+    procedure SetNestWriteProc(aProc: TMpNestWriteProc);
+    procedure SetNestReadProc(aProc: TMpNestReadProc);
+  public
+    generic function CanWrite<T>(const aValue: T; out aBlob: TMpExtBlob): Boolean;
+    generic function CanRead<T>(const aBlob: TMpExtBlob; out aValue: T): Boolean;
+    constructor Create(const a: array of TMpCustomExt); overload;
+    destructor Destroy; override;
+    function  TryAddHook(aHook: TMpCustomExt): Boolean;
+    function  TryAddAll(const a: array of TMpCustomExt): Integer;
+    function  TryRemoveHook(aExtType: TUserExtType): Boolean;
+    function  TryRemoveHook(aDataType: PTypeInfo): Boolean;
+    function  Supports(aExtType: TUserExtType): Boolean; inline;
+    function  Supports(aExtType: TUserExtType; out aDataType: PTypeInfo): Boolean; inline;
+    function  Supports(aDataType: PTypeInfo): Boolean; inline;
+    function  Supports(aDataType: PTypeInfo; out aExtType: TUserExtType): Boolean; inline;
+    procedure WriteValue(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWriter);
+    procedure ReadValue(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader);
+    function  CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
+    function  CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
+    function  CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
+    function  CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
+    property  HookCount: Integer read GetHookCount;
+  end;
+
+
 
   { TGuidExt }
   TGuidExt = class(specialize TMpExtHook<TGuid>)
@@ -132,6 +205,206 @@ implementation
 uses
   Math, TypInfo;
 
+{ TMpCustomExt }
+
+function TMpCustomExt.GetExtType: TUserExtType;
+begin
+  Result := FExtType;
+end;
+
+constructor TMpCustomExt.Create(aExtType: TUserExtType; aMaxDepth: Integer);
+begin
+  inherited Create;
+  FExtType := aExtType;
+  FWriter := TMpWriter.Create;
+  if aMaxDepth > 0 then
+    FReader := TMpReader.Create(aMaxDepth)
+  else
+    FReader := TMpReader.Create(DEF_DEPTH);
+end;
+
+destructor TMpCustomExt.Destroy;
+begin
+  FWriter.Free;
+  FReader.Free;
+  inherited;
+end;
+
+{ TMpExtHook }
+
+function TMpExtHook.GetDataType: PTypeInfo;
+begin
+  Result := System.TypeInfo(TExtValue);
+end;
+
+{ TMpUserExt }
+
+function TMpUserExt.GetHookCount: Integer;
+begin
+  Result := FTypeMap.Count;
+end;
+
+procedure TMpUserExt.SetNestWriteProc(aProc: TMpNestWriteProc);
+begin
+  FWriteProc := aProc;
+end;
+
+procedure TMpUserExt.SetNestReadProc(aProc: TMpNestReadProc);
+begin
+  FReadProc := aProc;
+end;
+
+generic function TMpUserExt.CanWrite<T>(const aValue: T; out aBlob: TMpExtBlob): Boolean;
+begin
+  Result := CanWrite(@aValue, TypeInfo(aValue), aBlob);
+end;
+
+generic function TMpUserExt.CanRead<T>(const aBlob: TMpExtBlob; out aValue: T): Boolean;
+begin
+  aValue := Default(T);
+  Result := CanRead(@aValue, TypeInfo(aValue), aBlob);
+end;
+
+constructor TMpUserExt.Create(const a: array of TMpCustomExt);
+var
+  h: TMpCustomExt;
+begin
+  inherited Create;
+  for h in a do
+    if not TryAddHook(h) then h.Free;
+end;
+
+destructor TMpUserExt.Destroy;
+var
+  e: TUserExtType;
+begin
+  for e in FTypeMap.Values do FTypeList[e].Free;
+  inherited;
+end;
+
+function TMpUserExt.TryAddHook(aHook: TMpCustomExt): Boolean;
+begin
+  if (FTypeList[aHook.ExtType] <> nil) or FTypeMap.Contains(aHook.DataType) then
+    exit(False);
+  FTypeList[aHook.ExtType] := aHook;
+  FTypeMap.Add(aHook.DataType, aHook.ExtType);
+  aHook.Holder := Self;
+  Result := True;
+end;
+
+function TMpUserExt.TryAddAll(const a: array of TMpCustomExt): Integer;
+var
+  h: TMpCustomExt;
+begin
+  Result := HookCount;
+  for h in a do
+    if not TryAddHook(h) then h.Free;
+  Result := HookCount - Result;
+end;
+
+function TMpUserExt.TryRemoveHook(aExtType: TUserExtType): Boolean;
+begin
+  if FTypeList[aExtType] = nil then exit(False);
+  FTypeMap.Remove(FTypeList[aExtType].DataType);
+  FreeAndNil(FTypeList[aExtType]);
+  Result := True;
+end;
+
+function TMpUserExt.TryRemoveHook(aDataType: PTypeInfo): Boolean;
+var
+  e: TUserExtType;
+begin
+  if not FTypeMap.Extract(aDataType, e) then exit(False);
+  FreeAndNil(FTypeList[e]);
+  Result := True;
+end;
+
+function TMpUserExt.Supports(aExtType: TUserExtType): Boolean;
+begin
+  Result := FTypeList[aExtType] <> nil;
+end;
+
+function TMpUserExt.Supports(aExtType: TUserExtType; out aDataType: PTypeInfo): Boolean;
+begin
+  aDataType := nil;
+  Result := FTypeList[aExtType] <> nil;
+  if Result then aDataType := FTypeList[aExtType].DataType;
+end;
+
+function TMpUserExt.Supports(aDataType: PTypeInfo): Boolean;
+begin
+  Result := FTypeMap.Contains(aDataType);
+end;
+
+function TMpUserExt.Supports(aDataType: PTypeInfo; out aExtType: TUserExtType): Boolean;
+begin
+  Result := FTypeMap.TryGetValue(aDataType, aExtType);
+end;
+
+procedure TMpUserExt.WriteValue(aTypeInfo: PTypeInfo; const aValue; aWriter: TMpCustomWriter);
+begin
+  if FWriteProc <> nil then
+    FWriteProc(aTypeInfo, aValue, aWriter)
+  else
+    Pdo2MsgPack(aTypeInfo, aValue, aWriter, Self);
+end;
+
+procedure TMpUserExt.ReadValue(aTypeInfo: PTypeInfo; var aValue; aReader: TMpCustomReader);
+begin
+  if FReadProc <> nil then
+    FReadProc(aTypeInfo, aValue, aReader)
+  else
+    MsgPack2Pdo(aTypeInfo, aValue, aReader, Self);
+end;
+
+function TMpUserExt.CanWrite(aData: Pointer; aType: PTypeInfo; aWriter: TMpCustomWriter): Boolean;
+var
+  e: TUserExtType;
+begin
+  Result := FTypeMap.TryGetValue(aType, e);
+  if Result then FTypeList[e].Write(aData, aWriter);
+end;
+
+function TMpUserExt.CanWrite(aData: Pointer; aType: PTypeInfo; out aBlob: TMpExtBlob): Boolean;
+var
+  Writer: TMpWriter;
+  e: TUserExtType;
+  b: TBytes;
+begin
+  aBlob := nil;
+  if not FTypeMap.TryGetValue(aType, e) then exit(False);
+  Writer := TMpWriter.Create;
+  try
+    FTypeList[e].Write(aData, Writer);
+    b := Writer.ToBytes;
+  finally
+    Writer.Free;
+  end;
+  case b[0] of
+    $d4..$d8: System.Delete(b, 0, 1);
+    $c7:      System.Delete(b, 0, 2);
+    $c8:      System.Delete(b, 0, 3);
+  else        System.Delete(b, 0, 5);
+  end;
+  aBlob := b;
+  Result := True;
+end;
+
+function TMpUserExt.CanRead(aData: Pointer; aType: PTypeInfo; aReader: TMpCustomReader): Boolean;
+begin
+  if aReader.TokenKind <> mtkExt then exit(False);
+  Result := CanRead(aData, aType, aReader.AsExtention);
+end;
+
+function TMpUserExt.CanRead(aData: Pointer; aType: PTypeInfo; const aBlob: TMpExtBlob): Boolean;
+var
+  e: TUserExtType;
+begin
+  if not FTypeMap.TryGetValue(aType, e) or (TUserExtType(aBlob[0]) <> FTypeList[e].ExtType) then
+    exit(False);
+  Result := FTypeList[e].TryRead(aData, aBlob);
+end;
+
 { TGuidExt }
 
 procedure TGuidExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
@@ -167,16 +440,11 @@ end;
 procedure TGOptionalExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
 var
   p: PExtValue absolute aData;
-  Writer: TMpWriter;
 begin
   if p^.Assigned then begin
-    Writer := TMpWriter.Create;
-    try
-      Pdo2MsgPack(TypeInfo(T), p^.Value, Writer, Holder);
-      aWriter.AddExt(ExtType, Writer.ToBytes);
-    finally
-      Writer.Free;
-    end;
+    FWriter.Reset;
+    Holder.WriteValue(TypeInfo(T), p^.Value, FWriter);
+    aWriter.AddExt(ExtType, FWriter.BufPtr^, FWriter.TotalWritten);
   end else
     aWriter.AddExt(ExtType, []);
 end;
@@ -185,20 +453,15 @@ function TGOptionalExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean
 var
   p: PExtValue absolute aData;
   Value: T;
-  Reader: TMpReader;
 begin
   p^.Clear;
   if System.Length(aBlob) = 1 then exit(True);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  FReader.Reset(@aBlob[1], System.Length(aBlob)-1);
+  Value := Default(T);
   try
-    Value := Default(T);
-    try
-      MsgPack2Pdo(TypeInfo(T), Value, Reader, Holder);
-    except
-      exit(False);
-    end;
-  finally
-    Reader.Free;
+    Holder.ReadValue(TypeInfo(T), Value, FReader);
+  except
+    exit(False);
   end;
   p^ := Value;
   Result := True;
@@ -210,19 +473,14 @@ procedure TGLiteVectorExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
 var
   p: PExtValue absolute aData;
   Info: PTypeInfo;
-  Writer: TMpWriter;
   I: SizeInt;
 begin
   Info := TypeInfo(T);
-  Writer := TMpWriter.Create;
-  try
-    Writer.BeginArray(p^.Count);
-    for I := 0 to Pred(p^.Count) do
-      Pdo2MsgPack(Info, p^.UncMutable[I]^, Writer, Holder);
-    aWriter.AddExt(ExtType, Writer.BufPtr^, Writer.TotalWritten);
-  finally
-    Writer.Free;
-  end;
+  FWriter.Reset;
+  FWriter.BeginArray(p^.Count);
+  for I := 0 to Pred(p^.Count) do
+    Holder.WriteValue(Info, p^.UncMutable[I]^, FWriter);
+  aWriter.AddExt(ExtType, FWriter.BufPtr^, FWriter.TotalWritten);
 end;
 
 function TGLiteVectorExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
@@ -230,33 +488,28 @@ var
   p: PExtValue absolute aData;
   Info: PTypeInfo;
   Value: T;
-  Reader: TMpReader;
   I: SizeInt;
 begin
   p^.MakeEmpty;
   Info := TypeInfo(T);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  FReader.Reset(@aBlob[1], System.Length(aBlob)-1);
+  FReader.Read;
+  if FReader.TokenKind <> mtkArrayBegin then exit(False);
+  p^.EnsureCapacity(FReader.StructUnread);
   try
-    Reader.Read;
-    if Reader.TokenKind <> mtkArrayBegin then exit(False);
-    p^.EnsureCapacity(Reader.StructUnread);
-    try
-      for I := 0 to Pred(Reader.StructUnread) do begin
-        Value := Default(T);
-        Reader.Read;
-        MsgPack2Pdo(Info, Value, Reader, Holder);
-        p^.Add(Value);
-      end
-    except
-      exit(False);
-    end;
-    Reader.Read;
-    if Reader.TokenKind <> mtkArrayEnd then exit(False);
-    Reader.Read;
-    if Reader.ReadState <> mrsEof then exit(False);
-  finally
-    Reader.Free;
+    for I := 0 to Pred(FReader.StructUnread) do begin
+      Value := Default(T);
+      FReader.Read;
+      Holder.ReadValue(Info, Value, FReader);
+      p^.Add(Value);
+    end
+  except
+    exit(False);
   end;
+  FReader.Read;
+  if FReader.TokenKind <> mtkArrayEnd then exit(False);
+  FReader.Read;
+  if FReader.ReadState <> mrsEof then exit(False);
   Result := True;
 end;
 
@@ -267,20 +520,15 @@ var
   p: PExtValue absolute aData;
   Info: PTypeInfo;
   e: TExtValue.TEntry;
-  Writer: TMpWriter;
 begin
   Info := TypeInfo(T);
-  Writer := TMpWriter.Create;
-  try
-    Writer.BeginMap(p^.Count);
-    for e in p^ do begin
-      Writer.Add(e.Key);
-      Pdo2MsgPack(Info, e.Value, Writer, Holder);
-    end;
-    aWriter.AddExt(ExtType, Writer.BufPtr^, Writer.TotalWritten);
-  finally
-    Writer.Free;
+  FWriter.Reset;
+  FWriter.BeginMap(p^.Count);
+  for e in p^ do begin
+    FWriter.Add(e.Key);
+    Holder.WriteValue(Info, e.Value, FWriter);
   end;
+  aWriter.AddExt(ExtType, FWriter.BufPtr^, FWriter.TotalWritten);
 end;
 
 function TGLiteStrHashMapExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
@@ -289,35 +537,30 @@ var
   Info: PTypeInfo;
   k: string;
   v: T;
-  Reader: TMpReader;
   I: SizeInt;
 begin
   p^.MakeEmpty;
   Info := TypeInfo(T);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  FReader.Reset(@aBlob[1], System.Length(aBlob)-1);
+  FReader.Read;
+  if FReader.TokenKind <> mtkMapBegin then exit(False);
+  p^.EnsureCapacity(FReader.StructUnread);
   try
-    Reader.Read;
-    if Reader.TokenKind <> mtkMapBegin then exit(False);
-    p^.EnsureCapacity(Reader.StructUnread);
-    try
-      for I := 0 to Pred(Reader.StructUnread) do begin
-        Reader.Read;
-        if Reader.KeyValue.Kind <> mvkStr then exit(False);
-        k := Reader.KeyValue.AsString;
-        v := Default(T);
-        MsgPack2Pdo(Info, v, Reader, Holder);
-        p^.Add(k, v);
-      end;
-    except
-      exit(False);
+    for I := 0 to Pred(FReader.StructUnread) do begin
+      FReader.Read;
+      if FReader.KeyValue.Kind <> mvkStr then exit(False);
+      k := FReader.KeyValue.AsString;
+      v := Default(T);
+      Holder.ReadValue(Info, v, FReader);
+      p^.Add(k, v);
     end;
-    Reader.Read;
-    if Reader.TokenKind <> mtkMapEnd then exit(False);
-    Reader.Read;
-    if Reader.ReadState <> mrsEof then exit(False);
-  finally
-    Reader.Free;
+  except
+    exit(False);
   end;
+  FReader.Read;
+  if FReader.TokenKind <> mtkMapEnd then exit(False);
+  FReader.Read;
+  if FReader.ReadState <> mrsEof then exit(False);
   Result := True;
 end;
 
@@ -328,20 +571,15 @@ var
   p: PExtValue absolute aData;
   Info: PTypeInfo;
   e: TExtValue.TEntry;
-  Writer: TMpWriter;
 begin
   Info := TypeInfo(T);
-  Writer := TMpWriter.Create;
-  try
-    Writer.BeginMap(p^.Count);
-    for e in p^ do begin
-      Writer.Add(e.Key);
-      Pdo2MsgPack(Info, e.Value, Writer, Holder);
-    end;
-    aWriter.AddExt(ExtType, Writer.BufPtr^, Writer.TotalWritten);
-  finally
-    Writer.Free;
+  FWriter.Reset;
+  FWriter.BeginMap(p^.Count);
+  for e in p^ do begin
+    FWriter.Add(e.Key);
+    Holder.WriteValue(Info, e.Value, FWriter);
   end;
+  aWriter.AddExt(ExtType, FWriter.BufPtr^, FWriter.TotalWritten);
 end;
 
 function TGLiteIntHashMapExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
@@ -350,35 +588,30 @@ var
   Info: PTypeInfo;
   k: Int64;
   v: T;
-  Reader: TMpReader;
   I: SizeInt;
 begin
   p^.MakeEmpty;
   Info := TypeInfo(T);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  FReader.Reset(@aBlob[1], System.Length(aBlob)-1);
+  FReader.Read;
+  if FReader.TokenKind <> mtkMapBegin then exit(False);
+  p^.EnsureCapacity(FReader.StructUnread);
   try
-    Reader.Read;
-    if Reader.TokenKind <> mtkMapBegin then exit(False);
-    p^.EnsureCapacity(Reader.StructUnread);
-    try
-      for I := 0 to Pred(Reader.StructUnread) do begin
-        Reader.Read;
-        if Reader.KeyValue.Kind <> mvkInt then exit(False);
-        k := Reader.KeyValue.AsInt;
-        v := Default(T);
-        MsgPack2Pdo(Info, v, Reader, Holder);
-        p^.Add(k, v);
-      end;
-    except
-      exit(False);
+    for I := 0 to Pred(FReader.StructUnread) do begin
+      FReader.Read;
+      if FReader.KeyValue.Kind <> mvkInt then exit(False);
+      k := FReader.KeyValue.AsInt;
+      v := Default(T);
+      Holder.ReadValue(Info, v, FReader);
+      p^.Add(k, v);
     end;
-    Reader.Read;
-    if Reader.TokenKind <> mtkMapEnd then exit(False);
-    Reader.Read;
-    if Reader.ReadState <> mrsEof then exit(False);
-  finally
-    Reader.Free;
+  except
+    exit(False);
   end;
+  FReader.Read;
+  if FReader.TokenKind <> mtkMapEnd then exit(False);
+  FReader.Read;
+  if FReader.ReadState <> mrsEof then exit(False);
   Result := True;
 end;
 
@@ -389,21 +622,16 @@ var
   p: PExtValue absolute aData;
   KeyInfo, ValInfo: PTypeInfo;
   e: TExtValue.TEntry;
-  Writer: TMpWriter;
 begin
   KeyInfo := TypeInfo(TKey);
   ValInfo := TypeInfo(TValue);
-  Writer := TMpWriter.Create;
-  try
-    Writer.BeginArray(p^.Count*2);
-    for e in p^ do begin
-      Pdo2MsgPack(KeyInfo, e.Key, Writer, Holder);
-      Pdo2MsgPack(ValInfo, e.Value, Writer, Holder);
-    end;
-    aWriter.AddExt(ExtType, Writer.BufPtr^, Writer.TotalWritten);
-  finally
-    Writer.Free;
+  FWriter.Reset;
+  FWriter.BeginArray(p^.Count*2);
+  for e in p^ do begin
+    Holder.WriteValue(KeyInfo, e.Key, FWriter);
+    Holder.WriteValue(ValInfo, e.Value, FWriter);
   end;
+  aWriter.AddExt(ExtType, FWriter.BufPtr^, FWriter.TotalWritten);
 end;
 
 function TGLiteChainHashMapExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
@@ -412,38 +640,33 @@ var
   KeyInfo, ValInfo: PTypeInfo;
   k: TKey;
   v: TValue;
-  Reader: TMpReader;
   I, Cap: SizeInt;
 begin
   p^.MakeEmpty;
   KeyInfo := TypeInfo(TKey);
   ValInfo := TypeInfo(TValue);
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  FReader.Reset(@aBlob[1], System.Length(aBlob)-1);
+  FReader.Read;
+  if FReader.TokenKind <> mtkArrayBegin then exit(False);
+  Cap := FReader.StructUnread div 2;
+  p^.EnsureCapacity(Cap);
   try
-    Reader.Read;
-    if Reader.TokenKind <> mtkArrayBegin then exit(False);
-    Cap := Reader.StructUnread div 2;
-    p^.EnsureCapacity(Cap);
-    try
-      for I := 0 to Pred(Cap) do begin
-        Reader.Read;
-        k := Default(TKey);
-        MsgPack2Pdo(KeyInfo, k, Reader, Holder);
-        Reader.Read;
-        v := Default(TValue);
-        MsgPack2Pdo(ValInfo, v, Reader, Holder);
-        p^.Add(k, v);
-      end;
-    except
-      exit(False);
+    for I := 0 to Pred(Cap) do begin
+      FReader.Read;
+      k := Default(TKey);
+      Holder.ReadValue(KeyInfo, k, FReader);
+      FReader.Read;
+      v := Default(TValue);
+      Holder.ReadValue(ValInfo, v, FReader);
+      p^.Add(k, v);
     end;
-    Reader.Read;
-    if Reader.TokenKind <> mtkArrayEnd then exit(False);
-    Reader.Read;
-    if Reader.ReadState <> mrsEof then exit(False);
-  finally
-    Reader.Free;
+  except
+    exit(False);
   end;
+  FReader.Read;
+  if FReader.TokenKind <> mtkArrayEnd then exit(False);
+  FReader.Read;
+  if FReader.ReadState <> mrsEof then exit(False);
   Result := True;
 end;
 
@@ -573,50 +796,45 @@ end;
 
 procedure TRecFieldMapExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
 var
-  Writer: specialize TGAutoRef<TMpWriter>;
   I: Integer;
 begin
-  Writer.Instance.BeginMap(System.Length(FMap));
+  FWriter.Reset;
+  FWriter.BeginMap(System.Length(FMap));
   for I := 0 to System.High(FMap) do begin
-    Writer.Instance.Add(FMap[I].Name);
-    Pdo2MsgPack(FMap[I].TypeRef, (pByte(aData) + FMap[I].Offset)^, Writer.Instance, Holder);
+    FWriter.Add(FMap[I].Name);
+    Holder.WriteValue(FMap[I].TypeRef, (pByte(aData) + FMap[I].Offset)^, FWriter);
   end;
-  aWriter.AddExt(ExtType, Writer.Instance.ToBytes);
+  aWriter.AddExt(ExtType, FWriter.BufPtr^, FWriter.TotalWritten);
 end;
 
 function TRecFieldMapExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
 var
-  Reader: TMpReader;
   I, Cnt, J: SizeInt;
 begin
-  Reader := TMpReader.Create(@aBlob[1], System.Length(aBlob)-1, MaxDepth);
+  FReader.Reset(@aBlob[1], System.Length(aBlob)-1);
   try
-    try
-      Reader.Read;
-      if Reader.TokenKind <> mtkMapBegin then exit(False);
-      Cnt := 0;
-      for I := 0 to Pred(Reader.StructUnread) do begin
-        Reader.Read;
-        if Reader.KeyValue.Kind <> mvkStr then exit(False);
-        J := FindField(Reader.KeyValue.AsString);
-        if J = -1 then begin
-          if Reader.TokenKind in MP_START_TOKENS then
-            Reader.Skip;
-          continue;
-        end;
-        MsgPack2Pdo(FMap[J].TypeRef, (PByte(aData) + FMap[J].Offset)^, Reader, Holder);
-        Inc(Cnt);
+    FReader.Read;
+    if FReader.TokenKind <> mtkMapBegin then exit(False);
+    Cnt := 0;
+    for I := 0 to Pred(FReader.StructUnread) do begin
+      FReader.Read;
+      if FReader.KeyValue.Kind <> mvkStr then exit(False);
+      J := FindField(FReader.KeyValue.AsString);
+      if J = -1 then begin
+        if FReader.TokenKind in MP_START_TOKENS then
+          FReader.Skip;
+        continue;
       end;
-      if Cnt <> System.Length(FMap) then exit(False);// todo: ???
-      Reader.Read;
-      if Reader.TokenKind <> mtkMapEnd then exit(False);
-      Reader.Read;
-      if Reader.ReadState <> mrsEof then exit(False);
-    except
-      exit(False);
+      Holder.ReadValue(FMap[J].TypeRef, (PByte(aData) + FMap[J].Offset)^, FReader);
+      Inc(Cnt);
     end;
-  finally
-    Reader.Free;
+    if Cnt <> System.Length(FMap) then exit(False);// todo: ???
+    FReader.Read;
+    if FReader.TokenKind <> mtkMapEnd then exit(False);
+    FReader.Read;
+    if FReader.ReadState <> mrsEof then exit(False);
+  except
+    exit(False);
   end;
   Result := True;
 end;
