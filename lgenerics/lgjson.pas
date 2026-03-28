@@ -956,7 +956,6 @@ type
   public
     constructor Create(aCapacity: SizeInt);
     constructor Create(const s: string);
-  private
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure MakeEmpty; inline;
@@ -1012,12 +1011,15 @@ type
   private
   type
     TLevel = record
-      Mode: TParseMode;
-      Path: string;
+      SegName: string;
+      SegIndex,
       CurrIndex: SizeInt;
-      constructor Create(aMode: TParseMode);
-      constructor Create(aMode: TParseMode; aPath: string);
-      constructor Create(aMode: TParseMode; aIndex: SizeInt);
+      Mode: TParseMode;
+      IsStr: Boolean;
+      class function Make(aMode: TParseMode): TLevel; static; inline;
+      class function Make(aMode: TParseMode; const aName: string): TLevel; static; inline;
+      class function Make(aMode: TParseMode; aIndex: SizeInt): TLevel; static; inline;
+      function PathSeg: string; inline;
     end;
 
   var
@@ -1029,16 +1031,15 @@ type
     FBufSize,
     FByteCount,
     FPosition,
-    FStackTop,
-    FStackHigh: SizeInt;
+    FStackTop: SizeInt;
     FState: ShortInt;
     FReadState: TReadState;
     FToken,
     FDeferToken: TTokenKind;
     FName,
     FStrValue: string;
-    FBoolValue: Boolean;
     FNumValue: Double;
+    FBoolValue: Boolean;
     FReadMode,
     FCopyMode,
     FSkipBom,
@@ -1046,6 +1047,7 @@ type
     function  GetIndex: SizeInt; inline;
     function  GetMaxDepth: SizeInt; inline;
     function  GetStructKind: TStructKind; inline;
+    function  GetName: string; inline;
     function  GetParentKind: TStructKind; inline;
     procedure UpdateArray; inline;
     function  NullValue: Boolean;
@@ -1146,7 +1148,7 @@ type
   { indicates the current structure index, or zero if the current structure is an object }
     property  Index: SizeInt read GetIndex;
   { indicates the current name or index if current structure is an array }
-    property  Name: string read FName;
+    property  Name: string read GetName;
     property  ValueToString: string read GetToString;
   { returns current path as a JSON pointer (RFC 6901) }
     property  Path: string read GetPath;
@@ -9569,25 +9571,39 @@ end;
 
 { TJsonReader.TLevel }
 
-constructor TJsonReader.TLevel.Create(aMode: TParseMode);
+class function TJsonReader.TLevel.Make(aMode: TParseMode): TLevel;
 begin
-  Mode := aMode;
-  Path := '';
-  CurrIndex := 0;
+  Result.SegName := '';
+  Result.SegIndex := 0;
+  Result.CurrIndex := 0;
+  Result.Mode := aMode;
+  Result.IsStr := True;
 end;
 
-constructor TJsonReader.TLevel.Create(aMode: TParseMode; aPath: string);
+class function TJsonReader.TLevel.Make(aMode: TParseMode; const aName: string): TLevel;
 begin
-  Mode := aMode;
-  Path := aPath;
-  CurrIndex := 0;
+  Result.SegName := aName;
+  Result.SegIndex := 0;
+  Result.CurrIndex := 0;
+  Result.Mode := aMode;
+  Result.IsStr := True;
 end;
 
-constructor TJsonReader.TLevel.Create(aMode: TParseMode; aIndex: SizeInt);
+class function TJsonReader.TLevel.Make(aMode: TParseMode; aIndex: SizeInt): TLevel;
 begin
-  Mode := aMode;
-  Path := SizeUInt2Str(aIndex);
-  CurrIndex := 0;
+  Result.SegName := '';
+  Result.SegIndex := aIndex;
+  Result.CurrIndex := 0;
+  Result.Mode := aMode;
+  Result.IsStr := False;
+end;
+
+function TJsonReader.TLevel.PathSeg: string;
+begin
+  if IsStr then
+    Result := SegName
+  else
+    Result := SizeUInt2Str(SegIndex);
 end;
 
 { TJsonReader }
@@ -9613,6 +9629,17 @@ begin
   end;
 end;
 
+function TJsonReader.GetName: string;
+begin
+  if TokenKind in [rtkArrayBegin, rtkObjectBegin] then
+    if FStack[Pred(Depth)].Mode = pmArray then
+      exit(SizeUInt2Str(FStack[Pred(Depth)].CurrIndex))else
+  else
+    if FStack[Depth].Mode = pmArray then
+      exit(SizeUInt2Str(Pred(FStack[Depth].CurrIndex)));
+  Result := FName;
+end;
+
 function TJsonReader.GetParentKind: TStructKind;
 begin
   if Depth > 0 then
@@ -9627,11 +9654,7 @@ end;
 procedure TJsonReader.UpdateArray;
 begin
   if FStack[Depth].Mode = pmArray then
-    begin
-      if ReadMode then
-        FName := SizeUInt2Str(FStack[Depth].CurrIndex);
-      Inc(FStack[Depth].CurrIndex);
-    end;
+    Inc(FStack[Depth].CurrIndex);
 end;
 
 function TJsonReader.NullValue: Boolean;
@@ -9711,19 +9734,19 @@ end;
 
 function TJsonReader.ArrayBegin: Boolean;
 begin
-  if Depth = FStackHigh then exit(False);
+  if Depth = System.High(FStack) then exit(False);
   case FStack[Depth].Mode of
-    pmNone: FStack[Succ(Depth)] := TLevel.Create(pmArray);
+    pmNone: FStack[Succ(Depth)] := TLevel.Make(pmArray);
     pmArray:
       if ReadMode then
-        FStack[Succ(Depth)] := TLevel.Create(pmArray, FStack[Depth].CurrIndex)
+        FStack[Succ(Depth)] := TLevel.Make(pmArray, FStack[Depth].CurrIndex)
       else
-        FStack[Succ(Depth)] := TLevel.Create(pmArray);
+        FStack[Succ(Depth)] := TLevel.Make(pmArray);
     pmObject:
       if ReadMode then
-        FStack[Succ(Depth)] := TLevel.Create(pmArray, FName)
+        FStack[Succ(Depth)] := TLevel.Make(pmArray, FName)
       else
-        FStack[Succ(Depth)] := TLevel.Create(pmArray);
+        FStack[Succ(Depth)] := TLevel.Make(pmArray);
   else
     exit(False);
   end;
@@ -9735,19 +9758,19 @@ end;
 
 function TJsonReader.ObjectBegin: Boolean;
 begin
-  if Depth = FStackHigh then exit(False);
+  if Depth = System.High(FStack) then exit(False);
   case FStack[Depth].Mode of
-    pmNone: FStack[Succ(Depth)] := TLevel.Create(pmKey);
+    pmNone: FStack[Succ(Depth)] := TLevel.Make(pmKey);
     pmArray:
       if ReadMode then
-        FStack[Succ(Depth)] := TLevel.Create(pmKey, FStack[Depth].CurrIndex)
+        FStack[Succ(Depth)] := TLevel.Make(pmKey, FStack[Depth].CurrIndex)
       else
-        FStack[Succ(Depth)] := TLevel.Create(pmKey);
+        FStack[Succ(Depth)] := TLevel.Make(pmKey);
     pmObject:
       if ReadMode then
-        FStack[Succ(Depth)] := TLevel.Create(pmKey, FName)
+        FStack[Succ(Depth)] := TLevel.Make(pmKey, FName)
       else
-        FStack[Succ(Depth)] := TLevel.Create(pmKey);
+        FStack[Succ(Depth)] := TLevel.Make(pmKey);
   else
     exit(False);
   end;
@@ -9989,7 +10012,7 @@ begin
   for I := 2 to FStackTop do
     begin
       FsbHelp.Append('/');
-      Convert(FStack[I].Path);
+      Convert(FStack[I].PathSeg);
     end;
   if TokenKind in [rtkNull, rtkFalse, rtkTrue, rtkNumber, rtkString] then
     begin
@@ -10001,7 +10024,7 @@ end;
 
 function TJsonReader.GetParentName: string;
 begin
-  Result := FStack[Depth].Path;
+  Result := FStack[Depth].PathSeg;
 end;
 
 function TJsonReader.GetParentIndex: SizeInt;
@@ -10011,15 +10034,14 @@ end;
 
 procedure TJsonReader.Init(aMaxDepth: SizeInt; aSkipBom: Boolean);
 begin
-  if aMaxDepth < 31 then
-    aMaxDepth := 31;
+  if aMaxDepth < 1 then
+    aMaxDepth := 1;
   System.SetLength(FStack, Succ(aMaxDepth));
-  FStackHigh := aMaxDepth;
   FSkipBom := aSkipBom;
   FReadMode := True;
   FsBuilder.Create(TJsonNode.S_BUILD_INIT_SIZE);
   FsbHelp.Create(TJsonNode.S_BUILD_INIT_SIZE);
-  FStack[0] := TLevel.Create(pmNone);
+  FStack[0] := TLevel.Make(pmNone);
 end;
 
 class function TJsonReader.IsStartToken(aToken: TTokenKind): Boolean;
