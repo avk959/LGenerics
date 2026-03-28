@@ -1049,7 +1049,6 @@ type
     function  GetStructKind: TStructKind; inline;
     function  GetName: string; inline;
     function  GetParentKind: TStructKind; inline;
-    procedure UpdateArray; inline;
     function  NullValue: Boolean;
     function  FalseValue: Boolean;
     function  TrueValue: Boolean;
@@ -9651,35 +9650,29 @@ begin
   Result := skNone;
 end;
 
-procedure TJsonReader.UpdateArray;
-begin
-  if FStack[Depth].Mode = pmArray then
-    Inc(FStack[Depth].CurrIndex);
-end;
-
 function TJsonReader.NullValue: Boolean;
 begin
-  UpdateArray;
   FState := TReadEnv.OK;
   FToken := rtkNull;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
 function TJsonReader.FalseValue: Boolean;
 begin
   FBoolValue := False;
-  UpdateArray;
   FToken := rtkFalse;
   FState := TReadEnv.OK;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
 function TJsonReader.TrueValue: Boolean;
 begin
   FBoolValue := True;
-  UpdateArray;
   FState := TReadEnv.OK;
   FToken := rtkTrue;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
@@ -9693,8 +9686,8 @@ begin
         exit(False);
       FNumValue := d;
     end;
-  UpdateArray;
   FToken := rtkNumber;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
@@ -9726,9 +9719,9 @@ function TJsonReader.StringValue: Boolean;
 begin
   if ReadMode then
     FStrValue := FsBuilder.ToDecodeString;
-  UpdateArray;
   FToken := rtkString;
   FState := TReadEnv.OK;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
@@ -9786,8 +9779,8 @@ begin
     exit(False);
   Dec(FStackTop);
   FToken := rtkArrayEnd;
-  UpdateArray;
   FState := TReadEnv.OK;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
@@ -9808,8 +9801,8 @@ begin
     exit(False);
   Dec(FStackTop);
   FToken := rtkObjectEnd;
-  UpdateArray;
   FState := TReadEnv.OK;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
@@ -9828,10 +9821,10 @@ function TJsonReader.ObjectEndOb: Boolean;
 begin
   if FStack[Depth].Mode <> pmKey then
     exit(False);
-  FToken := rtkObjectEnd;
   Dec(FStackTop);
-  UpdateArray;
+  FToken := rtkObjectEnd;
   FState := TReadEnv.OK;
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
   Result := True;
 end;
 
