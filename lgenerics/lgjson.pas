@@ -1039,7 +1039,6 @@ type
     FName,
     FStrValue: string;
     FNumValue: Double;
-    FBoolValue: Boolean;
     FReadMode,
     FCopyMode,
     FSkipBom,
@@ -4222,15 +4221,9 @@ type
     Comma  = ShortInt( 6);//  ,
     Quote  = ShortInt( 7);//  "
     MiOrD  = ShortInt( 8);//  -, 0123456789
-    LowerA = ShortInt( 9);//  a
-    LowerE = ShortInt(10);//  e
-    LowerF = ShortInt(11);//  f
-    LowerL = ShortInt(12);//  l
-    LowerN = ShortInt(13);//  n
-    LowerR = ShortInt(14);//  r
-    LowerS = ShortInt(15);//  s
-    LowerT = ShortInt(16);//  t
-    LowerU = ShortInt(17);//  u
+    LowerF = ShortInt( 9);//  f
+    LowerN = ShortInt(10);//  n
+    LowerT = ShortInt(11);//  t
 
     // parser states
     __ = ShortInt(-1);// error
@@ -4241,18 +4234,8 @@ type
     CO = ShortInt( 4);// colon
     VA = ShortInt( 5);// value
     AR = ShortInt( 6);// array
-    T1 = ShortInt( 7);// tr
-    T2 = ShortInt( 8);// tru
-    T3 = ShortInt( 9);// true
-    F1 = ShortInt(10);// fa
-    F2 = ShortInt(11);// fal
-    F3 = ShortInt(12);// fals
-    F4 = ShortInt(13);// false
-    N1 = ShortInt(14);// nu
-    N2 = ShortInt(15);// nul
-    N3 = ShortInt(16);// null
 
-    FIRST_ACTION = ShortInt(17);
+    FIRST_ACTION = ShortInt(7);
 
 {$PUSH}{$J-}{$WARN 2005 OFF}
     SymClassTable: array[Byte] of ShortInt = (
@@ -4271,9 +4254,9 @@ type
       -1,    -1,     -1,     -1,     -1,     -1,     -1,     -1,
       -1,    -1,     -1,     LSqrBr, -1,     RSqrBr, -1,     -1,
 
-      -1,    LowerA, -1,     -1,     -1,     LowerE, LowerF, -1,
-      -1,    -1,     -1,     -1,     LowerL, -1,     LowerN, -1,
-      -1,    -1,     LowerR, LowerS, LowerT, LowerU, -1,     -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     LowerF, -1,
+      -1,    -1,     -1,     -1,     -1,     -1,     LowerN, -1,
+      -1,    -1,     -1,     -1,     LowerT, -1,     -1,     -1,
       -1,    -1,     -1,     LCurBr, -1,     RCurBr, -1,     -1,
 
       -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -4282,27 +4265,17 @@ type
       -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
     );
 
-    TransitionTable: array[GO..N3, __..LowerU] of ShortInt = (
+    TransitionTable: array[GO..AR, __..LowerT] of ShortInt = (
 {
                                      -,0-9
-             white {  }  [  ]  :  ,  " |  a  e  f  l  n  r  s  t  u  }
-{start  GO}(__,GO,19,__,20,__,__,__,21,24,__,__,F1,__,N1,__,__,T1,__),
-{ok     OK}(__,OK,__,17,__,18,__,22,__,__,__,__,__,__,__,__,__,__,__),
-{object OB}(__,OB,__,17,__,__,__,__,21,__,__,__,__,__,__,__,__,__,__),
-{key    KE}(__,KE,__,__,__,__,__,__,21,__,__,__,__,__,__,__,__,__,__),
-{colon  CO}(__,CO,__,__,__,__,23,__,__,__,__,__,__,__,__,__,__,__,__),
-{value  VA}(__,VA,19,__,20,__,__,__,21,24,__,__,F1,__,N1,__,__,T1,__),
-{array  AR}(__,AR,19,__,20,18,__,__,21,24,__,__,F1,__,N1,__,__,T1,__),
-{t      T1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T2,__,__,__),
-{tr     T2}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,T3),
-{tru    T3}(__,__,__,__,__,__,__,__,__,__,__,25,__,__,__,__,__,__,__),
-{f      F1}(__,__,__,__,__,__,__,__,__,__,F2,__,__,__,__,__,__,__,__),
-{fa     F2}(__,__,__,__,__,__,__,__,__,__,__,__,__,F3,__,__,__,__,__),
-{fal    F3}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,F4,__,__),
-{fals   F4}(__,__,__,__,__,__,__,__,__,__,__,26,__,__,__,__,__,__,__),
-{n      N1}(__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,N2),
-{nu     N2}(__,__,__,__,__,__,__,__,__,__,__,__,__,N3,__,__,__,__,__),
-{nul    N3}(__,__,__,__,__,__,__,__,__,__,__,__,__,27,__,__,__,__,__)
+             white {  }  [  ]  :  ,  " |  f  n  t  }
+{start  GO}(__,GO, 9,__,10,__,__,__,11,14,16,17,15),
+{ok     OK}(__,OK,__, 7,__, 8,__,12,__,__,__,__,__),
+{object OB}(__,OB,__, 7,__,__,__,__,11,__,__,__,__),
+{key    KE}(__,KE,__,__,__,__,__,__,11,__,__,__,__),
+{colon  CO}(__,CO,__,__,__,__,13,__,__,__,__,__,__),
+{value  VA}(__,VA, 9,__,10,__,__,__,11,14,16,17,15),
+{array  AR}(__,AR, 9,__,10, 8,__,__,11,14,16,17,15)
     );
 {$POP}
   WHITE_SPACE = [#9, #10, #13, ' '];
@@ -8377,17 +8350,17 @@ begin
       State := NextState;
     end else
       case NextState of
-        17: //end object - state = object
+        7: //end object - state = object
           if Stack[sTop].Mode in [pmKey, pmObject] then begin
             Dec(sTop);
             State := OK;
           end else exit(False);
-        18: //end array
+        8: //end array
           if Stack[sTop].Mode = pmArray then begin
             Dec(sTop);
             State := OK;
           end else exit(False);
-        19: //begin object
+        9: //begin object
           if sTop < StackHigh then begin
             case Stack[sTop].Mode of
               pmNone: begin
@@ -8407,7 +8380,7 @@ begin
             end;
             State := OB;
           end else exit(False);
-        20: //begin array
+        10: //begin array
           if sTop < StackHigh then begin
             case Stack[sTop].Mode of
               pmNone: begin
@@ -8427,7 +8400,7 @@ begin
             end;
             State := AR;
           end else exit(False);
-        21: //begin string
+        11: //begin string
           begin
             Advance := ParseString(@Buf[I], Size - I, sb);
             if Advance = 0 then exit(False);
@@ -8452,7 +8425,7 @@ begin
             end;
             continue;
           end;
-        22: //OK - comma
+        12: //OK - comma
           case Stack[sTop].Mode of
             pmObject: begin
                 Stack[sTop].Mode := pmKey;
@@ -8462,12 +8435,12 @@ begin
           else
             exit(False);
           end;
-        23: //colon
+        13: //colon
           if Stack[sTop].Mode = pmKey then begin
             Stack[sTop].Mode := pmObject;
             State := VA;
           end else exit(False);
-        24: begin //begin number
+        14: begin //begin number
             Advance := PCharToDoubleLen(@Buf[I], NumValue);
             if (Advance = 0) or (I + Advance > Size) then exit(False);
             I += Advance;
@@ -8481,8 +8454,10 @@ begin
             State := OK;
             continue;
           end;
-        25: //true literal
+        15: //true literal
           begin
+            if (I > Size - 4) or not((Buf[I+1] = 'r')and(Buf[I+2] = 'u')and(Buf[I+3] = 'e')) then
+              exit(False);
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(True);
               pmObject: Stack[sTop].Node.Add(KeyValue, True);
@@ -8491,9 +8466,13 @@ begin
               Dec(sTop);
             end;
             State := OK;
+            I += 4;
+            continue;
           end;
-        26: //false literal
+        16: //false literal
           begin
+            if (I > Size - 5) or not((Buf[I+1] = 'a')and(Buf[I+2] = 'l')and(Buf[I+3] = 's')and(Buf[I+4] = 'e')) then
+              exit(False);
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.Add(False);
               pmObject: Stack[sTop].Node.Add(KeyValue, False);
@@ -8502,9 +8481,13 @@ begin
               Dec(sTop);
             end;
             State := OK;
+            I += 5;
+            continue;
           end;
-        27: //null literal
+        17: //null literal
           begin
+            if (I > Size - 4) or not((Buf[I+1] = 'u')and(Buf[I+2] = 'l')and(Buf[I+3] = 'l')) then
+              exit(False);
             case Stack[sTop].Mode of
               pmArray:  Stack[sTop].Node.AddNull;
               pmObject: Stack[sTop].Node.AddNull(KeyValue);
@@ -8513,6 +8496,8 @@ begin
               Dec(sTop);
             end;
             State := OK;
+            I += 4;
+            continue;
           end;
       else
         exit(False);
@@ -9660,7 +9645,6 @@ end;
 
 function TJsonReader.FalseValue: Boolean;
 begin
-  FBoolValue := False;
   FToken := rtkFalse;
   FState := TReadEnv.OK;
   if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
@@ -9669,7 +9653,6 @@ end;
 
 function TJsonReader.TrueValue: Boolean;
 begin
-  FBoolValue := True;
   FState := TReadEnv.OK;
   FToken := rtkTrue;
   if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
@@ -9951,7 +9934,7 @@ end;
 
 function TJsonReader.GetAsBoolean: Boolean;
 begin
-  Result := FBoolValue;
+  Result := FToken = rtkTrue;
 end;
 
 function TJsonReader.GetAsNumber: Double;
