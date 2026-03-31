@@ -1145,7 +1145,7 @@ type
     function  ArrayEnd: Boolean;
     function  ObjectBegin: Boolean;
     function  ArrayBegin: Boolean;
-    procedure NameValue;
+    procedure NameValue; inline;
     function  StringValue: Boolean;
     function  NumValue(d: Double): Boolean;
     function  NullValue: Boolean;
@@ -10280,7 +10280,7 @@ end;
 function TJsonReader.GetNextToken: Boolean;
 var
   d: Double;
-   Advance: SizeInt;
+  Advance: SizeInt;
   NextState: ShortInt;
 begin
   while Position < BufferSize do begin
