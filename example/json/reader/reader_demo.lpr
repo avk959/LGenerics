@@ -40,7 +40,7 @@ begin
   WriteStr(Result, aState);
 end;
 
-procedure PrintState(aReader: TJsonReader);
+procedure PrintState(aReader: TCustomJsonReader);
 begin
   WriteLn(
     'token: ', TokenName(aReader.TokenKind),
@@ -53,12 +53,12 @@ end;
 /////////////////////////////////////////////////////////
 var
   Stream: TGUniqRef<TStringStream>;
-  Reader: TGUniqRef<TJsonReader>;
+  Reader: TGUniqRef<TCustomJsonReader>;
 
 procedure Read;
 begin
   Stream.Instance.Position := 0;
-  {%H-}Reader.Instance := TJsonReader.Create(Stream.Instance);
+  {%H-}Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('In this example, we read all tokens from the stream one by one ' +
           'and watch the state of the reader change.');
@@ -75,7 +75,7 @@ var
   Counter: Integer = 0;
 begin
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('Now let''s try to count the number of elements in the our instance.');
   if not Reader.Instance.Read then begin
@@ -107,14 +107,14 @@ begin
 end;
 
 procedure Iterate;
-  function PrintValue(aReader: TJsonReader): Boolean;
+  function PrintValue(aReader: TCustomJsonReader): Boolean;
   begin
     WriteLn(aReader.Name, ': ', aReader.ValueToString);
     Result := True;
   end;
 begin
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('Now let''s try to iterate over all value items.');
   Reader.Instance.Iterate(PrintValue);
@@ -125,7 +125,7 @@ end;
 procedure Iterate2;
 const
   IndentSize = 2;
-  function Struct(aReader: TJsonReader): Boolean;
+  function Struct(aReader: TCustomJsonReader): Boolean;
   var
     Indent: string = '';
   begin
@@ -136,7 +136,7 @@ const
     end;
     Result := True;
   end;
-  function Value(aReader: TJsonReader): Boolean;
+  function Value(aReader: TCustomJsonReader): Boolean;
   var
     Indent: string = '';
   begin
@@ -147,7 +147,7 @@ const
   end;
 begin
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('Now let''s try to iterate over all items.');
   Reader.Instance.Iterate(Struct, Value);
@@ -156,12 +156,12 @@ begin
 end;
 
 procedure FindPath;
-  function PrintValue(aReader: TJsonReader): Boolean;
+  function PrintValue(aReader: TCustomJsonReader): Boolean;
   begin
     WriteLn(aReader.Name, ': ', aReader.ValueToString);
     Result := True;
   end;
-  procedure Find(aReader: TJsonReader; const aPath: string);
+  procedure Find(aReader: TCustomJsonReader; const aPath: string);
   begin
     WriteLn('Search path: ', aPath);
     if aReader.FindPath(TJsonPtr.From(aPath)) then begin
@@ -180,13 +180,13 @@ procedure FindPath;
   end;
 begin
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('Now let''s try to find an item by the specified path and iterate over all its elements.');
   Find(Reader.Instance, '/1/props');
 
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('Let''s try another path');
   Find(Reader.Instance, '/3');
@@ -199,7 +199,7 @@ var
   s: string;
 begin
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
 
   WriteLn('Now let''s try to find the structure at ''/0/items'' and copy it.');
   if Reader.Instance.FindPath(TJsonPtr.From('/0/items')) and Reader.Instance.CopyStruct(s) then
@@ -227,7 +227,7 @@ var
   end;
 begin
   Stream.Instance.Position := 0;
-  Reader.Instance := TJsonReader.Create(Stream.Instance);
+  Reader.Instance := TJsonStreamReader.Create(Stream.Instance);
   WriteLn('Now let''s try to print our JSON in formatted form.');
   WriteLn;
   while Reader.Instance.Read do begin
