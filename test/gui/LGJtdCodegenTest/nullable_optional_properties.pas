@@ -25,7 +25,7 @@ type
     procedure SetBaz(aValue: TJtdBool);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -95,7 +95,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TRootObject.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   Clear;

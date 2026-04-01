@@ -21,7 +21,7 @@ type
     procedure SetX(aValue: TJtdBool);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -36,7 +36,7 @@ type
     procedure SetBar(aValue: TBar);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -51,7 +51,7 @@ type
     procedure SetX(aValue: TJtdString);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -68,7 +68,7 @@ type
     procedure SetFooBar(aValue: TFooBar);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -120,7 +120,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBar.DoReadJson(aReader: TJsonReader);
+procedure TBar.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
@@ -201,7 +201,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TFoo.DoReadJson(aReader: TJsonReader);
+procedure TFoo.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
@@ -282,7 +282,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TFooBar.DoReadJson(aReader: TJsonReader);
+procedure TFooBar.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..0] of Boolean;
   I: Integer;
@@ -376,7 +376,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TRootObject.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;

@@ -23,7 +23,7 @@ type
     procedure SetJson(aValue: TJtdString);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -50,7 +50,7 @@ type
     procedure SetNestedIdInitialism(aValue: TNestedIdInitialism);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -123,7 +123,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TNestedIdInitialism.DoReadJson(aReader: TJsonReader);
+procedure TNestedIdInitialism.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..1] of Boolean;
   I: Integer;
@@ -278,7 +278,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TRootObject.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..5] of Boolean;
   I: Integer;

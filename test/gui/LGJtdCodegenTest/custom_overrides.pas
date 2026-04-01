@@ -27,7 +27,7 @@ type
   private
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -38,7 +38,7 @@ type
   private
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -49,7 +49,7 @@ type
   private
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -89,7 +89,7 @@ type
     procedure SetOverrideTypeDiscriminator(aValue: TOverrideTypeDiscriminator);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteProps(aWriter: TJsonStrWriter); override;
   public
     procedure Clear; override;
@@ -119,7 +119,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TOverrideTypeProperties.DoReadJson(aReader: TJsonReader);
+procedure TOverrideTypeProperties.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   aReader.Skip;
@@ -144,7 +144,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBar.DoReadJson(aReader: TJsonReader);
+procedure TBar.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   aReader.Skip;
@@ -169,7 +169,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TBaz.DoReadJson(aReader: TJsonReader);
+procedure TBaz.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> rtkObjectBegin then ExpectObject(aReader);
   aReader.Skip;
@@ -332,7 +332,7 @@ end;
 {$POP}
 
 {$PUSH}{$WARN 5057 OFF}
-procedure TRootObject.DoReadJson(aReader: TJsonReader);
+procedure TRootObject.DoReadJson(aReader: TCustomJsonReader);
 var
   Flags: array[0..5] of Boolean;
   I: Integer;
