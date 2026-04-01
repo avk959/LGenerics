@@ -44,32 +44,32 @@ type
   TJtdEntity = class abstract
   public
   const
-    DEF_DEPTH    = TJsonReader.DEF_DEPTH;
-    DEF_BUF_SIZE = TJsonReader.DEF_BUF_SIZE;
+    DEF_DEPTH    = TCustomJsonReader.DEF_DEPTH;
+    DEF_BUF_SIZE = TCustomJsonReader.DEF_BUF_SIZE;
   private
     FIsNull: Boolean;
   protected
     procedure DoReadJson(aNode: TJsonNode); virtual;
-    procedure DoReadJson(aReader: TJsonReader); virtual;
+    procedure DoReadJson(aReader: TCustomJsonReader); virtual;
     procedure DoWriteJson(aWriter: TJsonStrWriter); virtual;
     procedure SetNull; inline;
     class function  GetJtdClass: TJtdEntityClass; virtual;
     class procedure Error(const aMessage: string); static;
     class procedure NotImplemented(const aMethod: string); static;
-    class procedure ReadError(const aMessage: string; aReader: TJsonReader); static;
-    class procedure ReadError(const aFmt: string; const Args: array of const; aReader: TJsonReader); static;
+    class procedure ReadError(const aMessage: string; aReader: TCustomJsonReader); static;
+    class procedure ReadError(const aFmt: string; const Args: array of const; aReader: TCustomJsonReader); static;
     class procedure ReadError(const aMessage: string); static;
     class procedure ReadError(const aFmt: string; const Args: array of const); static;
-    class procedure ReaderFail(aReader: TJsonReader); static;
-    class function  ReadInt(aReader: TJsonReader): Int64; static;
+    class procedure ReaderFail(aReader: TCustomJsonReader); static;
+    class function  ReadInt(aReader: TCustomJsonReader): Int64; static;
     class function  ReadInt(aNode: TJsonNode): Int64; static;
-    class procedure ExpectObject(aReader: TJsonReader); static;
+    class procedure ExpectObject(aReader: TCustomJsonReader); static;
     class procedure ExpectObject(aNode: TJsonNode); static;
     class procedure InternalError(aNumber: Byte); static;
   public
   { if the loading fails, an exception will be raised }
     class function LoadInstance(aNode: TJsonNode): TJtdEntity;
-    class function LoadInstance(aReader: TJsonReader): TJtdEntity;
+    class function LoadInstance(aReader: TCustomJsonReader): TJtdEntity;
     class function LoadInstance(aBuffer: PAnsiChar; aCount: SizeInt): TJtdEntity;
     class function LoadInstance(const aJson: string): TJtdEntity;
     class function LoadInstance(aStream: TStream; aSkipBom: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
@@ -85,7 +85,7 @@ type
     constructor Create; virtual;
     constructor CreateNull; virtual;
     procedure ReadJson(aNode: TJsonNode); virtual;
-    procedure ReadJson(aReader: TJsonReader); virtual;
+    procedure ReadJson(aReader: TCustomJsonReader); virtual;
   { if the loading fails, an exception will be raised }
     procedure Load(aBuffer: PAnsiChar; aCount: SizeInt);
     procedure Load(const aJson: string);
@@ -115,7 +115,7 @@ type
     FInstance: TJsonNode;
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     constructor Create; override;
@@ -131,7 +131,7 @@ type
   TJtdBool = class sealed(specialize TJtdValue<Boolean>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -139,7 +139,7 @@ type
   TJtdFloat32 = class sealed(specialize TJtdValue<Single>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -147,7 +147,7 @@ type
   TJtdFloat64 = class sealed(specialize TJtdValue<Double>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -155,7 +155,7 @@ type
   TJtdInt8 = class sealed(specialize TJtdValue<Int8>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -163,7 +163,7 @@ type
   TJtdUInt8 = class sealed(specialize TJtdValue<UInt8>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -171,7 +171,7 @@ type
   TJtdInt16 = class sealed(specialize TJtdValue<Int16>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -179,7 +179,7 @@ type
   TJtdUInt16 = class sealed(specialize TJtdValue<UInt16>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -187,7 +187,7 @@ type
   TJtdInt32 = class sealed(specialize TJtdValue<Int32>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -195,7 +195,7 @@ type
   TJtdUInt32 = class sealed(specialize TJtdValue<UInt32>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -203,7 +203,7 @@ type
   TJtdString = class sealed(specialize TJtdValue<string>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -211,7 +211,7 @@ type
   TJtdDateTimeUTC = class sealed(specialize TJtdValue<TDateTime>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -221,7 +221,7 @@ type
     FTzOffset: Integer;
     procedure SetTzOffset(aValue: Integer);
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     property TzOffset: Integer read FTzOffset write SetTzOffset;
@@ -231,7 +231,7 @@ type
   generic TJtdEnum<TEnum> = class(specialize TJtdValue<TEnum>)
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   end;
 
@@ -240,7 +240,7 @@ type
   protected
     procedure SetValue(const aValue: string);
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     class function IsElement(const aValue: string): Boolean; virtual; abstract;
@@ -269,7 +269,7 @@ type
     procedure SetItem(aIndex: SizeInt; aValue: T);
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
     function  GetEnumerator: TEnumerator; inline;
@@ -299,7 +299,7 @@ type
     function  GetItem(const aKey: string): T; inline;
   protected
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
   public
   { enumerates all pairs (aKey, aValue) }
@@ -325,11 +325,11 @@ type
   TJtdObject = class abstract(TJtdGenContainer)
   protected
     FTagField: string;
-    class procedure PropNotFound(const aJsonPropName: string; aReader: TJsonReader); static;
+    class procedure PropNotFound(const aJsonPropName: string; aReader: TCustomJsonReader); static;
     class procedure PropNotFound(const aJsonPropName: string); static;
-    class procedure UnknownProp(const aJsonPropName: string; aReader: TJsonReader); static;
+    class procedure UnknownProp(const aJsonPropName: string; aReader: TCustomJsonReader); static;
     class procedure UnknownProp(const aJsonPropName: string); static;
-    class procedure DuplicateProp(aReader: TJsonReader); static;
+    class procedure DuplicateProp(aReader: TCustomJsonReader); static;
     class procedure DuplicateProp(const aProp: string); static;
     procedure SetTagField(const s: string);
     procedure DoWriteProps(aWriter: TJsonStrWriter); virtual;
@@ -342,7 +342,7 @@ type
     FTag: string;
     FInstance: TJtdEntity;
     procedure DoReadJson(aNode: TJsonNode); override;
-    procedure DoReadJson(aReader: TJsonReader); override;
+    procedure DoReadJson(aReader: TCustomJsonReader); override;
     procedure DoWriteJson(aWriter: TJsonStrWriter); override;
     class function GetTagJsonName: string; virtual; abstract;
     class function GetInstanceClass(const aTag: string): TJtdEntityClass; virtual; abstract;
@@ -353,7 +353,7 @@ type
   end;
 
 type
-  TTokenKind   = TJsonReader.TTokenKind;
+  TTokenKind   = TCustomJsonReader.TTokenKind;
   TJtdFormKind = TJtdSchema.TFormKind;
   TJtdType     = TJtdSchema.TJtdType;
   TJsValueKind = LgJson.TJsValueKind;
@@ -414,7 +414,7 @@ begin
   NotImplemented({$I %currentRoutine%});
 end;
 
-procedure TJtdEntity.DoReadJson(aReader: TJsonReader);
+procedure TJtdEntity.DoReadJson(aReader: TCustomJsonReader);
 begin
   Assert(aReader = aReader); // make compiler happy
   NotImplemented({$I %currentRoutine%});
@@ -446,12 +446,12 @@ begin
   Error(Format(SEJtdNotImplFmt, [ClassName, aMethod]));
 end;
 
-class procedure TJtdEntity.ReadError(const aMessage: string; aReader: TJsonReader);
+class procedure TJtdEntity.ReadError(const aMessage: string; aReader: TCustomJsonReader);
 begin
   raise EJtdReadJson.Create(aMessage, aReader.Path);
 end;
 
-class procedure TJtdEntity.ReadError(const aFmt: string; const Args: array of const; aReader: TJsonReader);
+class procedure TJtdEntity.ReadError(const aFmt: string; const Args: array of const; aReader: TCustomJsonReader);
 begin
   raise EJtdReadJson.Create(Format(aFmt, Args), aReader.Path);
 end;
@@ -466,7 +466,7 @@ begin
   raise EJtdReadJson.Create(Format(aFmt, Args));
 end;
 
-class procedure TJtdEntity.ReaderFail(aReader: TJsonReader);
+class procedure TJtdEntity.ReaderFail(aReader: TCustomJsonReader);
 begin
   if aReader.ReadState = rsEof then
     raise EJtdReadJson.Create(SEUnexpectJsonEnd)
@@ -474,7 +474,7 @@ begin
     raise EJtdReadJson.Create(SEInvalidJsonInst, aReader.Path);
 end;
 
-class function TJtdEntity.ReadInt(aReader: TJsonReader): Int64;
+class function TJtdEntity.ReadInt(aReader: TCustomJsonReader): Int64;
 begin
   if aReader.TokenKind <> rtkNumber then
     ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -490,7 +490,7 @@ begin
     ReadError(SEJtdExpectGotFmt, [CSJtdInteger, JKIND_NAMES[aNode.Kind]]);
 end;
 
-class procedure TJtdEntity.ExpectObject(aReader: TJsonReader);
+class procedure TJtdEntity.ExpectObject(aReader: TCustomJsonReader);
 begin
   ReadError(SEJtdExpectGotFmt, [CSJtdObject, TOKEN_NAMES[aReader.TokenKind]], aReader);
 end;
@@ -511,7 +511,7 @@ begin
   Result.ReadJson(aNode);
 end;
 
-class function TJtdEntity.LoadInstance(aReader: TJsonReader): TJtdEntity;
+class function TJtdEntity.LoadInstance(aReader: TCustomJsonReader): TJtdEntity;
 begin
   Result := GetJtdClass.Create;
   Result.ReadJson(aReader);
@@ -537,9 +537,9 @@ end;
 class function TJtdEntity.LoadInstance(aStream: TStream; aSkipBom: Boolean; aBufSize: SizeInt;
   aMaxDepth: SizeInt): TJtdEntity;
 var
-  Reader: TJsonReader;
+  Reader: TJsonStreamReader;
 begin
-  Reader := TJsonReader.Create(aStream, aBufSize, aMaxDepth, aSkipBom);
+  Reader := TJsonStreamReader.Create(aStream, False, aBufSize, aMaxDepth, aSkipBom);
   try
     Result := LoadInstance(Reader);
   finally
@@ -621,7 +621,7 @@ begin
   DoReadJson(aNode);
 end;
 
-procedure TJtdEntity.ReadJson(aReader: TJsonReader);
+procedure TJtdEntity.ReadJson(aReader: TCustomJsonReader);
 begin
   if (aReader.ReadState = rsStart) and not aReader.Read then ReaderFail(aReader);
   FIsNull := False;
@@ -652,9 +652,9 @@ end;
 
 procedure TJtdEntity.Load(aStream: TStream; aSkipBom: Boolean; aBufSize: SizeInt; aMaxDepth: SizeInt);
 var
-  Reader: TJsonReader;
+  Reader: TJsonStreamReader;
 begin
-  Reader := TJsonReader.Create(aStream, aBufSize, aMaxDepth, aSkipBom);
+  Reader := TJsonStreamReader.Create(aStream, False, aBufSize, aMaxDepth, aSkipBom);
   try
     ReadJson(Reader);
   finally
@@ -732,7 +732,7 @@ begin
   FInstance.CopyFrom(aNode);
 end;
 
-procedure TJtdAny.DoReadJson(aReader: TJsonReader);
+procedure TJtdAny.DoReadJson(aReader: TCustomJsonReader);
 var
   s: string;
 begin
@@ -803,7 +803,7 @@ begin
   FValue := aNode.IsTrue;
 end;
 
-procedure TJtdBool.DoReadJson(aReader: TJsonReader);
+procedure TJtdBool.DoReadJson(aReader: TCustomJsonReader);
 begin
   if not(aReader.TokenKind in [rtkFalse, rtkTrue]) then
     ReadError(SEJtdExpectGotFmt, [CSJtdBool, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -832,7 +832,7 @@ begin
   FValue := d;
 end;
 
-procedure TJtdFloat32.DoReadJson(aReader: TJsonReader);
+procedure TJtdFloat32.DoReadJson(aReader: TCustomJsonReader);
 var
   d: Double;
 begin
@@ -858,7 +858,7 @@ begin
   FValue := aNode.AsNumber;
 end;
 
-procedure TJtdFloat64.DoReadJson(aReader: TJsonReader);
+procedure TJtdFloat64.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> rtkNumber then
     ReadError(SEJtdExpectGotFmt, [CSJtdNumber, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -882,7 +882,7 @@ begin
   FValue := I;
 end;
 
-procedure TJtdInt8.DoReadJson(aReader: TJsonReader);
+procedure TJtdInt8.DoReadJson(aReader: TCustomJsonReader);
 var
   I: Int64;
 begin
@@ -909,7 +909,7 @@ begin
   FValue := I;
 end;
 
-procedure TJtdUInt8.DoReadJson(aReader: TJsonReader);
+procedure TJtdUInt8.DoReadJson(aReader: TCustomJsonReader);
 var
   I: Int64;
 begin
@@ -936,7 +936,7 @@ begin
   FValue := I;
 end;
 
-procedure TJtdInt16.DoReadJson(aReader: TJsonReader);
+procedure TJtdInt16.DoReadJson(aReader: TCustomJsonReader);
 var
   I: Int64;
 begin
@@ -963,7 +963,7 @@ begin
   FValue := I;
 end;
 
-procedure TJtdUInt16.DoReadJson(aReader: TJsonReader);
+procedure TJtdUInt16.DoReadJson(aReader: TCustomJsonReader);
 var
   I: Int64;
 begin
@@ -990,7 +990,7 @@ begin
   FValue := I;
 end;
 
-procedure TJtdInt32.DoReadJson(aReader: TJsonReader);
+procedure TJtdInt32.DoReadJson(aReader: TCustomJsonReader);
 var
   I: Int64;
 begin
@@ -1017,7 +1017,7 @@ begin
   FValue := I;
 end;
 
-procedure TJtdUInt32.DoReadJson(aReader: TJsonReader);
+procedure TJtdUInt32.DoReadJson(aReader: TCustomJsonReader);
 var
   I: Int64;
 begin
@@ -1041,7 +1041,7 @@ begin
   FValue := aNode.AsString;
 end;
 
-procedure TJtdString.DoReadJson(aReader: TJsonReader);
+procedure TJtdString.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -1066,7 +1066,7 @@ begin
   FValue := d;
 end;
 
-procedure TJtdDateTimeUTC.DoReadJson(aReader: TJsonReader);
+procedure TJtdDateTimeUTC.DoReadJson(aReader: TCustomJsonReader);
 var
   d: TDateTime;
 begin
@@ -1105,7 +1105,7 @@ begin
   FTzOffset := tzo;
 end;
 
-procedure TJtdDateTime.DoReadJson(aReader: TJsonReader);
+procedure TJtdDateTime.DoReadJson(aReader: TCustomJsonReader);
 var
   d: TDateTime;
   tzo: Integer;
@@ -1137,7 +1137,7 @@ begin
   FValue := TEnum(v);
 end;
 
-procedure TJtdEnum.DoReadJson(aReader: TJsonReader);
+procedure TJtdEnum.DoReadJson(aReader: TCustomJsonReader);
 var
   v: Integer;
 begin
@@ -1172,7 +1172,7 @@ begin
   FValue := aNode.AsString;
 end;
 
-procedure TJtdStrEnum.DoReadJson(aReader: TJsonReader);
+procedure TJtdStrEnum.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> TTokenKind.rtkString then
     ReadError(SEJtdExpectGotFmt, [CSJtdString, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -1235,7 +1235,7 @@ begin
     FList.Add(T(T.LoadInstance(n)));
 end;
 
-procedure TJtdList.DoReadJson(aReader: TJsonReader);
+procedure TJtdList.DoReadJson(aReader: TCustomJsonReader);
 begin
   if aReader.TokenKind <> rtkArrayBegin then
     ReadError(SEJtdExpectGotFmt, [CSJtdArray, TOKEN_NAMES[aReader.TokenKind]], aReader);
@@ -1317,7 +1317,7 @@ begin
   end;
 end;
 
-procedure TJtdMap.DoReadJson(aReader: TJsonReader);
+procedure TJtdMap.DoReadJson(aReader: TCustomJsonReader);
 var
   p: TMap.PValue;
 begin
@@ -1406,7 +1406,7 @@ end;
 
 { TJtdObject }
 
-class procedure TJtdObject.PropNotFound(const aJsonPropName: string; aReader: TJsonReader);
+class procedure TJtdObject.PropNotFound(const aJsonPropName: string; aReader: TCustomJsonReader);
 begin
   ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName], aReader);
 end;
@@ -1416,7 +1416,7 @@ begin
   ReadError(SERequiredJPropNotFoundFmt, [ClassName, aJsonPropName]);
 end;
 
-class procedure TJtdObject.UnknownProp(const aJsonPropName: string; aReader: TJsonReader);
+class procedure TJtdObject.UnknownProp(const aJsonPropName: string; aReader: TCustomJsonReader);
 begin
   ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName], aReader);
 end;
@@ -1426,7 +1426,7 @@ begin
   ReadError(SEUnknownPropFoundFmt, [ClassName, aJsonPropName]);
 end;
 
-class procedure TJtdObject.DuplicateProp(aReader: TJsonReader);
+class procedure TJtdObject.DuplicateProp(aReader: TCustomJsonReader);
 begin
   ReadError(SEJtdDupPropNameFmt, [aReader.Name], aReader);
 end;
@@ -1478,7 +1478,7 @@ begin
   TJtdObject(FInstance).SetTagField('');
 end;
 
-procedure TJtdUnion.DoReadJson(aReader: TJsonReader);
+procedure TJtdUnion.DoReadJson(aReader: TCustomJsonReader);
 var
   s: string;
   Node: TJsonNode;
