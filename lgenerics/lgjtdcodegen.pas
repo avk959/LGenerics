@@ -893,7 +893,7 @@ var
   I: Integer;
 begin
   aText.Add('{$PUSH}{$WARN 5057 OFF}');
-  aText.Add(Format('procedure %s.DoReadJson(aReader: TJsonReader);', [TypeName]));
+  aText.Add(Format('procedure %s.DoReadJson(aReader: TCustomJsonReader);', [TypeName]));
   if Props <> nil then begin
     aText.Add('var');
     aText.Add(Format('  Flags: array[0..%d] of Boolean;', [System.High(Props)]));
@@ -1069,7 +1069,7 @@ begin
 
   aText.Add('  protected');
   aText.Add('    procedure DoReadJson(aNode: TJsonNode); override;');
-  aText.Add('    procedure DoReadJson(aReader: TJsonReader); override;');
+  aText.Add('    procedure DoReadJson(aReader: TCustomJsonReader); override;');
   aText.Add('    procedure DoWriteProps(aWriter: TJsonStrWriter); override;');
   aText.Add('  public');
   aText.Add('    procedure Clear; override;');
