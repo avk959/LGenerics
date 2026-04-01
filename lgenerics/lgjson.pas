@@ -1061,7 +1061,9 @@ type
     class function New(const aJson: string; aMaxDepth: SizeInt = DEF_DEPTH;
                        aSkipBom: Boolean = False): TCustomJsonReader;
     constructor Create(aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
+  { tries to read the next token, returning False on error or when reaching the end of the document }
     function  Read: Boolean; virtual; abstract;
+  {  }
     function  ReadNode(out aNode: TJsonNode; aMode: TDuplicateMode = dumAccept): Boolean;
   { if the current token is the beginning of a structure, it skips its contents
     and stops at the closing token, otherwise it just performs one Read }
@@ -1104,30 +1106,32 @@ type
     search is possible only from the document root;
     raises an EJsException if aPtr is not a well-formed JSON Pointer }
     function  FindPathPtr(const aPtr: string): Boolean;
-  { finds a specific place using the path specified as an array of path segments;
+  { tries to find a specific place using the path specified as an array of path segments;
     search is possible only from the document root }
     function  FindPath(const aPath: TStringArray): Boolean; virtual;
-  { True if current value is Null }
+  { True if current the current token is rtkNull }
     property  IsNull: Boolean read GetIsNull;
-  { returns the current boolean value }
+  { current boolean value if the current token in [rtkFalse, rtkTrue] }
     property  AsBoolean: Boolean read GetAsBoolean;
-  { returns the current number value }
+  { current number value if the current token is rtkNumber }
     property  AsNumber: Double read GetAsNumber;
-  { returns the current string value }
+  { current string value if the current token is rtkString }
     property  AsString: string read GetAsString;
-  { indicates the current structure index, or zero if the current structure is an object }
+  { current array index, or zero if the current structure is an object }
     property  Index: SizeInt read GetIndex;
-  { indicates the current name or index if current structure is an array }
+  { current name or index if current structure is an array }
     property  Name: string read GetName;
     property  ValueToString: string read GetToString;
-  { returns current path as a JSON pointer (RFC 6901) }
+  { current path as a JSON pointer (RFC 6901) }
     property  Path: string read GetPath;
+  { current token }
     property  TokenKind: TTokenKind read FToken;
+  { current structure }
     property  StructKind: TStructKind read GetStructKind;
     property  ParentName: string read GetParentName;
     property  ParentIndex: SizeInt read GetParentIndex;
     property  ParentKind: TStructKind read GetParentKind;
-  { indicates the nesting depth of the current structure, zero based }
+  { nesting depth of the current structure, zero based }
     property  Depth: SizeInt read FStackTop;
     property  MaxDepth: SizeInt read GetMaxDepth;
     property  ReadState: TReadState read FReadState;
@@ -1139,7 +1143,9 @@ type
   protected
     FStartPos: SizeInt;
     FDataStr: string;
-    function  CheckBom: TReadState;
+    function  CheckBom: TReadState; inline;
+    function  ObjectSkipped: Boolean;
+    function  ArraySkipped: Boolean;
     function  DoSkip: Boolean;
     function  ObjectEnd: Boolean;
     function  ArrayEnd: Boolean;
@@ -1156,19 +1162,23 @@ type
     constructor Create(aBuffer: PAnsiChar; aCount: SizeInt; aMaxDepth: SizeInt = DEF_DEPTH;
                        aSkipBom: Boolean = False);
     constructor Create(const aJson: string; aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
-  { reads the next token from the stream, returns False if an error is encountered or the end
-    of the stream is reached, otherwise it returns true; on error, the ReadState property
-    will be set to rsError, and upon reaching the end of the stream, to rsEOF }
+  { tries to read the next token from the internal buffer, returning False on error
+    or when reaching the end of the buffer;
+    in case of an error, the ReadState property will be set to rsError,
+    and when the end of the buffer is reached, it will be set to rsEOF }
     function  Read: Boolean; override;
     procedure Skip; override;
     function  CopyStruct(out aStruct: string): Boolean; override;
-  { always search from the document root }
-    function  FindPath(const aPtr: TJsonPtr; out aStruct: string): Boolean; overload;
-  { always search from the document root;
+  { tries to find and copy an element using the path specified as a JSON Pointer;
+    the search is always performed from the root of the document }
+    function  FindPath(const aPtr: TJsonPtr; out aJson: string): Boolean; overload;
+  { tries to find and copy an element using the a JSON Pointer specified as a Pascal string;
+    the search is always performed from the root of the document;
     raises an EJsException if aPtr is not a well-formed JSON Pointer }
-    function  FindPathPtr(const aPtr: string; out aStruct: string): Boolean; overload;
-  { always search from the document root }
-    function  FindPath(const aPath: TStringArray; out aStruct: string): Boolean; overload;
+    function  FindPathPtr(const aPtr: string; out aJson: string): Boolean; overload;
+  { tries to find and copy an element using the path specified as an array of path segments;
+    the search is always performed from the root of the document }
+    function  FindPath(const aPath: TStringArray; out aJson: string): Boolean; overload;
     property  Position: SizeInt read FPosition;
     property  BufferSize: SizeInt read FBufSize;
   end;
@@ -1212,9 +1222,10 @@ type
     constructor Create(aStream: TStream; aOwnsStream: Boolean = False; aBufSize: SizeInt = DEF_BUF_SIZE;
                        aMaxDepth: SizeInt = DEF_DEPTH; aSkipBom: Boolean = False);
     destructor Destroy; override;
-  { reads the next token from the stream, returns False if an error is encountered or the end
-    of the stream is reached, otherwise it returns true; on error, the ReadState property
-    will be set to rsError, and upon reaching the end of the stream, to rsEOF}
+  { tries to read the next token from the internal stream, returning False on error
+    or when reaching the end of the stream;
+    in case of an error, the ReadState property will be set to rsError,
+    and when the end of the buffer is reached, it will be set to rsEOF }
     function  Read: Boolean; override;
     procedure Skip; override;
     function  CopyStruct(out aStruct: string): Boolean; override;
@@ -10067,6 +10078,24 @@ begin
   Result := ReadState;
 end;
 
+function TJsonReader.ObjectSkipped: Boolean;
+begin
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
+  Inc(FPosition);
+  FState := TJsonParser.OK;
+  FToken := rtkObjectEnd;
+  Result := True;
+end;
+
+function TJsonReader.ArraySkipped: Boolean;
+begin
+  if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
+  Inc(FPosition);
+  FState := TJsonParser.OK;
+  FToken := rtkArrayEnd;
+  Result := True;
+end;
+
 function TJsonReader.DoSkip: Boolean;
 type
   TSkipEnv = TBaseValidator;
@@ -10088,53 +10117,35 @@ begin
           begin
             if FStack[Depth].Mode <> pmKey then exit(False);
             Dec(FStackTop);
-            if Depth = OldDepth then begin
-              if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
-              FState := TSkipEnv.OK;
-              FToken := rtkObjectEnd;
-              Inc(FPosition);
-              exit(True);
-            end;
+            if Depth = OldDepth then exit(ObjectSkipped);
             State := TSkipEnv.OK;
           end;
         -8:
           begin
             if FStack[Depth].Mode <> pmObject then exit(False);
             Dec(FStackTop);
-            if Depth = OldDepth then begin
-              if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
-              FState := TSkipEnv.OK;
-              FToken := rtkObjectEnd;
-              Inc(FPosition);
-              exit(True);
-            end;
+            if Depth = OldDepth then exit(ObjectSkipped);
             State := TSkipEnv.OK;
           end;
         -7:
           begin
             if FStack[Depth].Mode <> pmArray then exit(False);
             Dec(FStackTop);
-            if Depth = OldDepth then begin
-              if FStack[Depth].Mode = pmArray then Inc(FStack[Depth].CurrIndex);
-              FState := TSkipEnv.OK;
-              FToken := rtkArrayEnd;
-              Inc(FPosition);
-              exit(True);
-            end;
+            if Depth = OldDepth then exit(ArraySkipped);
             State := TSkipEnv.OK;
           end;
         -6:
           begin
             if FStackTop = System.High(FStack) then exit(False);
             Inc(FStackTop);
-            FStack[Depth] := TLevel.Make(pmKey);
+            FStack[Depth].Mode := pmKey;
             State := TSkipEnv.OB;
           end;
         -5:
           begin
             if FStackTop = System.High(FStack) then exit(False);
             Inc(FStackTop);
-            FStack[Depth] := TLevel.Make(pmArray);
+            FStack[Depth].Mode := pmArray;
             State := TSkipEnv.AR;
           end;
         -4:
@@ -10366,8 +10377,8 @@ end;
 constructor TJsonReader.Create(aBuffer: PAnsiChar; aCount: SizeInt; aMaxDepth: SizeInt; aSkipBom: Boolean);
 begin
   inherited Create(aMaxDepth, aSkipBom);
-  FBufSize := aCount;
   FBuffer := aBuffer;
+  FBufSize := aCount;
 end;
 
 constructor TJsonReader.Create(const aJson: string; aMaxDepth: SizeInt; aSkipBom: Boolean);
@@ -10397,7 +10408,7 @@ begin
   if not Result then
     if Position = BufferSize then
       begin
-        if (FState = TReadEnv.OK) and (Depth = 0) then
+        if (FState = TJsonParser.OK) and (Depth = 0) then
           FReadState := rsEof
         else
           FReadState := rsError;
@@ -10432,28 +10443,28 @@ begin
   Result := True;
 end;
 
-function TJsonReader.FindPath(const aPtr: TJsonPtr; out aStruct: string): Boolean;
+function TJsonReader.FindPath(const aPtr: TJsonPtr; out aJson: string): Boolean;
 begin
-  Result := FindPath(aPtr.ToSegments, aStruct);
+  Result := FindPath(aPtr.ToSegments, aJson);
 end;
 
-function TJsonReader.FindPathPtr(const aPtr: string; out aStruct: string): Boolean;
+function TJsonReader.FindPathPtr(const aPtr: string; out aJson: string): Boolean;
 begin
-  Result := FindPath(TJsonPtr.ToSegments(aPtr), aStruct);
+  Result := FindPath(TJsonPtr.ToSegments(aPtr), aJson);
 end;
 
-function TJsonReader.FindPath(const aPath: TStringArray; out aStruct: string): Boolean;
+function TJsonReader.FindPath(const aPath: TStringArray; out aJson: string): Boolean;
 begin
-  aStruct := '';
+  aJson := '';
   Result := False;
   with TJsonReader.Create(@FBuffer[FStartPos], BufferSize-FStartPos, MaxDepth, False) do
     try
       if FindPath(aPath) then
         if IsStartToken(TokenKind) then
-          Result := CopyStruct(aStruct)
+          Result := CopyStruct(aJson)
         else
           begin
-            aStruct := ValueToString;
+            aJson := ValueToString;
             Result := True;
           end;
     finally
