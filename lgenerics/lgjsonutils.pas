@@ -261,6 +261,27 @@ type
     class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
   end;
 
+  TCurrency = record
+  private
+    FValue: Currency;
+  public
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+    class operator := (const c: TCurrency): Currency; inline;
+    class operator := (const c: Currency): TCurrency; inline;
+    class operator Explicit(const c: TCurrency): Currency; inline;
+    class operator Explicit(const c: Currency): TCurrency; inline;
+  end;
+  PCurrencyT = ^TCurrency;
+
+  TOptCurrency = specialize TGOptional<TCurrency>;
+  POptCurrency = ^TOptCurrency;
+
+  TOptCurrencyHelper = type helper for TOptCurrency
+    class procedure WriteJson(p: Pointer; aWriter: TJsonStrWriter); static;
+    class function  ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean; static;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
@@ -1115,6 +1136,76 @@ begin
     begin
       Result := (aReader.TokenKind = rtkString) and TryStrToUInt64(aReader.AsString, I);
       if Result then POptUInt64(p)^ := TUInt64(I);
+    end;
+end;
+
+{ TCurrency }
+
+class procedure TCurrency.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+var
+  pCurr: PCurrencyT absolute p;
+begin
+  aWriter.Add(IntToStr(PInt64(@pCurr^.FValue)^));
+end;
+
+class function TCurrency.ReadJson(p: Pointer; aReader: TJsonReader; const aOpts: TJsonReadOptions): Boolean;
+var
+  pCurr: PCurrencyT absolute p;
+begin
+  Assert((aOpts = []) or (aOpts <> [])); //
+  Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, PInt64(@pCurr^.FValue)^);
+end;
+
+class operator TCurrency.:=(const c: TCurrency): Currency;
+begin
+  Result := c.FValue;
+end;
+
+class operator TCurrency.:=(const c: Currency): TCurrency;
+begin
+  Result.FValue := c;
+end;
+
+class operator TCurrency.Explicit(const c: TCurrency): Currency;
+begin
+  Result := c.FValue;
+end;
+
+class operator TCurrency.Explicit(const c: Currency): TCurrency;
+begin
+  Result.FValue := c;
+end;
+
+{ TOptCurrencyHelper }
+
+class procedure TOptCurrencyHelper.WriteJson(p: Pointer; aWriter: TJsonStrWriter);
+var
+  pOptCurr: POptCurrency absolute p;
+  c: Currency;
+begin
+  if pOptCurr^.Assigned then
+    begin
+      c := pOptCurr^.Value;
+      aWriter.Add(IntToStr(PInt64(@c)^));
+    end
+  else
+    aWriter.AddNull;
+end;
+
+class function TOptCurrencyHelper.ReadJson(p: Pointer; aReader: TJsonReader;
+  const aOpts: TJsonReadOptions): Boolean;
+var
+  I: Int64;
+begin
+  if aReader.TokenKind = rtkNull then
+    begin
+      Result := not(jroRejectNulls in aOpts);
+      if Result then POptCurrency(p)^.Clear;
+    end
+  else
+    begin
+      Result := (aReader.TokenKind = rtkString) and TryStrToInt64(aReader.AsString, I);
+      if Result then POptCurrency(p)^ := TCurrency(PCurrency(@I)^);
     end;
 end;
 
