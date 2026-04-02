@@ -1225,7 +1225,7 @@ type
   { tries to read the next token from the internal stream, returning False on error
     or when reaching the end of the stream;
     in case of an error, the ReadState property will be set to rsError,
-    and when the end of the buffer is reached, it will be set to rsEOF }
+    and when the end of the stream is reached, it will be set to rsEOF }
     function  Read: Boolean; override;
     procedure Skip; override;
     function  CopyStruct(out aStruct: string): Boolean; override;
