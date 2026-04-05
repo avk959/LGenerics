@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Some useful string routines.                                             *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -665,13 +665,13 @@ type
   function LcsDistanceWM(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
   function LcsDistanceWM(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns the Damerau-Levenshtein distance(restricted) between L and R using modified Berghel-Roach algorithm }
-  function DumDistanceMbr(const L, R: rawbytestring): SizeInt;
-  function DumDistanceMbr(const L, R: array of Byte): SizeInt;
+  function DamDistanceMbr(const L, R: rawbytestring): SizeInt;
+  function DamDistanceMbr(const L, R: array of Byte): SizeInt;
 { the same as above; the aLimit parameter indicates the maximum expected distance,
   if this value is exceeded when calculating the distance, then the function exits
   immediately and returns -1; a negative value of aLimit is considered as no limit }
-  function DumDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
-  function DumDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+  function DamDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+  function DamDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 { returns similarity ratio using specified distance algorithm;
   aLimit specifies the lower bound of the required similarity(0.0 < aLimit <= 1.0),
   if the obtained value is less than the specified one, zero will be returned;
@@ -2328,7 +2328,7 @@ begin
     Result := GetLcsDistWmLim(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
-function DumDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+function DamDistanceMbrImpl(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 
   function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt; inline;
   var
@@ -2449,7 +2449,7 @@ begin
   Result := Dist;
 end;
 
-function GetDumDistanceMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+function GetDamDistanceMbr(pL, pR: PByte; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 begin
   //here aLenL <= aLenR
   if aLenR - aLenL > aLimit then
@@ -2473,10 +2473,10 @@ begin
   if aLimit > aLenR then
     aLimit := aLenR;
 
-  Result := DumDistanceMbrImpl(pL, pR, aLenL, aLenR, aLimit);
+  Result := DamDistanceMbrImpl(pL, pR, aLenL, aLenR, aLimit);
 end;
 
-function DumDistanceMbr(const L, R: rawbytestring): SizeInt;
+function DamDistanceMbr(const L, R: rawbytestring): SizeInt;
 begin
   if L = '' then
     exit(System.Length(R))
@@ -2484,12 +2484,12 @@ begin
     if R = '' then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := GetDumDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
+    Result := GetDamDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := GetDumDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
+    Result := GetDamDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function DumDistanceMbr(const L, R: array of Byte): SizeInt;
+function DamDistanceMbr(const L, R: array of Byte): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -2497,14 +2497,14 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := GetDumDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+    Result := GetDamDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := GetDumDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+    Result := GetDamDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-function DumDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
+function DamDistanceMbr(const L, R: rawbytestring; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then exit(DumDistanceMbr(L, R));
+  if aLimit < 0 then exit(DamDistanceMbr(L, R));
   if L = '' then
     if System.Length(R) <= aLimit then
       exit(System.Length(R))
@@ -2517,14 +2517,14 @@ begin
       else
         exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := GetDumDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
+    Result := GetDamDistanceMbr(Pointer(L), Pointer(R), System.Length(L), System.Length(R), aLimit)
   else
-    Result := GetDumDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
+    Result := GetDamDistanceMbr(Pointer(R), Pointer(L), System.Length(R), System.Length(L), aLimit);
 end;
 
-function DumDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
+function DamDistanceMbr(const L, R: array of Byte; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then exit(DumDistanceMbr(L, R));
+  if aLimit < 0 then exit(DamDistanceMbr(L, R));
   if System.Length(L) = 0 then
     if System.Length(R) <= aLimit then
       exit(System.Length(R))
@@ -2537,9 +2537,9 @@ begin
       else
         exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := GetDumDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := GetDamDistanceMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := GetDumDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := GetDamDistanceMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 function SimRatio(const L, R: rawbytestring; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
@@ -2560,8 +2560,8 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsWM:    Dist := LcsDistanceWM(L, R);
-    else // sdaDumMBR
-      Dist := DumDistanceMbr(L, R);
+    else // sdaDamMBR
+      Dist := DamDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -2578,8 +2578,8 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsWM:    Dist := LcsDistanceWM(L, R, Limit);
-  else // sdaDumMBR
-    Dist := DumDistanceMbr(L, R, Limit);
+  else // sdaDamMBR
+    Dist := DamDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
@@ -2604,8 +2604,8 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsWM:    Dist := LcsDistanceWM(L, R);
-    else // sdaDumMBR
-      Dist := DumDistanceMbr(L, R);
+    else // sdaDamMBR
+      Dist := DamDistanceMbr(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -2622,8 +2622,8 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsWM:    Dist := LcsDistanceWM(L, R, Limit);
-  else // sdaDumMBR
-    Dist := DumDistanceMbr(L, R, Limit);
+  else // sdaDamMBR
+    Dist := DamDistanceMbr(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
