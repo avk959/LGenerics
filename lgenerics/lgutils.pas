@@ -1212,7 +1212,7 @@ type
     sdaLevMBR,    //Levenshtein distance using modified Berghel-Roach algorithm
     sdaLevMyers,  //Levenshtein distance using Myers bit-vector algorithm
     sdaLcsWM,     //LCS distance using Wu-Manber-Myers-Miller O(NP) algorithm
-    sdaDumMBR     //Damerau-Levenshtein distance(restricted) using Berghel-Roach algorithm
+    sdaDamMBR     //Damerau-Levenshtein distance(restricted) using Berghel-Roach algorithm
     );
 
   TSeqMatch = record
