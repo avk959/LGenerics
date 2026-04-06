@@ -255,8 +255,8 @@ type
     class function  LcsDistWmLimImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  GetLcsDistWm(pL, pR: PItem; aLenL, aLenR: SizeInt): SizeInt; static;
     class function  GetLcsDistWmLim(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function  DumDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
-    class function  GetDumDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  DamDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
+    class function  GetDamDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt; static;
     class function  GetPatiencePatch(const aSource, aTarget: array of T): specialize TGArray<TLcsEdit>; static;
     class function  GetHistogramPatch(const aSource, aTarget: array of T): specialize TGArray<TLcsEdit>; static;
 
@@ -305,11 +305,11 @@ type
     class function LcsDistanceWM(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the Damerau-Levenshtein distance(restricted) between L and R using
     modified Berghel-Roach algorithm }
-    class function DumDistanceMBR(const L, R: array of T): SizeInt; static;
+    class function DamDistanceMBR(const L, R: array of T): SizeInt; static;
   { the same as above; the aLimit parameter indicates the maximum expected distance,
     if this value is exceeded when calculating the distance, then the function exits
     immediately and returns -1; if a negative value of aLimit is considered as no limit }
-    class function DumDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
+    class function DamDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt; static;
   { returns the longest common subsequence(LCS) of sequences L and R, reducing the task to LIS,
     with O(SLogN) time complexity, where S is the number of the matching pairs in L and R;
     inspired by Dan Gusfield "Algorithms on Strings, Trees and Sequences", section 12.5 }
@@ -397,8 +397,8 @@ type
   function LcsDistanceWmUtf16(const L, R: unicodestring): SizeInt; inline;
   function LcsDistanceWmUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
 { returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
-  function DumDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
-  function DumDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
+  function DamDistanceMbrUtf16(const L, R: unicodestring): SizeInt; inline;
+  function DamDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt; inline;
   function LcsGusUtf16(const L, R: unicodestring): unicodestring; inline;
   function LcsKRUtf16(const L, R: unicodestring): unicodestring; inline;
   function LcsMyersUtf16(const L, R: unicodestring): unicodestring; inline;
@@ -511,8 +511,8 @@ type
   function LcsDistanceWmUtf8(const L, R: string): SizeInt; inline;
   function LcsDistanceWmUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
 { returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
-  function DumDistanceMbrUtf8(const L, R: string): SizeInt; inline;
-  function DumDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function DamDistanceMbrUtf8(const L, R: string): SizeInt; inline;
+  function DamDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
   function LcsGusUtf8(const L, R: string): string; inline;
   function LcsKrUtf8(const L, R: string): string; inline;
   function LcsMyersUtf8(const L, R: string): string; inline;
@@ -699,7 +699,7 @@ type
   TStrReplaceOptions = set of TStrReplaceOption;
 { replaces occurrences of aPattern in the aSource string (only the first one found or all
   if the sroReplaceAll option is included in aOptions) with the substitution value aSubst;
-  If sroIgnoreCase is enabled in aOptions, aPattern MUST be a valid UTF-8 string
+  if sroIgnoreCase is enabled in aOptions, aPattern MUST be a valid UTF-8 string
   so that a case-insensitive search can be done;
   if the sroOnlyWholeWords option is included in aOptions, the word boundary will be examined
   for each match, i.e. if it is surrounded by non-word characters or string boundaries }
@@ -709,51 +709,96 @@ type
   function StrReplaceUtf8(const aSource, aPattern, aSubst: string; aOptions: TStrReplaceOptions = []): string;
 
 type
+  TApproxMatch = record
+    Offset,
+    Length,
+    Distance: SizeInt;
+    constructor Make(aOfs, aLen, aDist: SizeInt);
+  end;
+
+  TOnApproxMatch   = specialize TGOnTest<TApproxMatch>;
+  TNestApproxMatch = specialize TGNestTest<TApproxMatch>;
+
   { TFuzzySearchEdp: approximate string matching with K differences;
     expects UTF-8 encoded strings as parameters;
-    uses old and simple Ukkonen EDP algorithm with linear space complexity and O(KN)
-    expected time complexity }
+    uses old and simple Ukkonen EDP algorithm with linear space complexity
+    and O(KN) expected time complexity }
   TFuzzySearchEdp = record
   private
   type
-    TEnumerator = record
-    private
-      FPattern: TUcs4Seq;
-      FD: array of SizeInt;
-      FText: string;
-      FK,
-      FTop,
-      FPointIndex,
-      FTextIndex: SizeInt;
-      function GetCurrent: SizeInt; inline;
-    public
-      function MoveNext: Boolean;
-      property Current: SizeInt read GetCurrent;
+    TUcs4Cp = record
+      Offset: SizeInt;
+      Code: Ucs4Char;
+      constructor Make(aOfs: SizeInt; aCode: Ucs4Char);
     end;
+
+  public
+  type
+    TMatchSelectMode = (msmFirst, msmLongest, msmClosest);
 
     TMatches = record
     private
       FSearch: ^TFuzzySearchEdp;
-      FK: SizeInt;
       FText: string;
+      FK: SizeInt;
+      FMatch: TApproxMatch;
     public
-      function GetEnumerator: TEnumerator;
+      function GetEnumerator: TMatches;
+      function MoveNext: Boolean;
+      property Current: TApproxMatch read FMatch;
     end;
-  var
-    FPattern: TUcs4Seq;
+
+  private
+    FPattern,
+    FTestBuf: TUcs4Seq;
+    FQueue: array of TUcs4Cp;
     FD: array of SizeInt;
-    function GetInitialized: Boolean;
-    function GetLength: SizeInt;
+    FMode: TMatchSelectMode;
+    FIgnoreCase,
+    FWholeWords: Boolean;
+    class function ToUcs4SeqLower(p: PByte; aCount: SizeInt): TUcs4Seq; static;
+    class function ToUcs4Seq(p: PByte; aCount: SizeInt): TUcs4Seq; static;
+    class function IsWordBound(p: PByte; Len: SizeInt): Boolean; static; inline;
+    function  GetInitialized: Boolean;
+    function  GetLength: SizeInt;
+    function  DoTest(aOfs, aCpCount, aQueueTop, K: SizeInt; aOnMatch: TNestApproxMatch): Boolean;
+    function  DoTestOww(aOfs, aCpCount, aQueueTop, K: SizeInt; aOnMatch: TNestApproxMatch): Boolean;
+    procedure DoSearch(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
   public
   { aPattern MUST be a non-empty, well-formed UTF-8 encoded string }
-    constructor Create(const aPattern: string);
-    procedure Init(const aPattern: string);
-  { returns an enumerator of indexes of code points(1-based) in aText such that
-    there is an index I such that LevenshteinDistance(aPattern, aText[I..Current]) <= K;
-    K MUST be less then |aPattern| }
-    function Matches(const aText: string; K: SizeInt): TMatches;
-    property Initialized: Boolean read GetInitialized;
-    property Length: SizeInt read GetLength;
+    constructor Create(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
+    procedure Init(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
+  { iterates through approximate occurrences of the pattern (most relevant according to the
+    selection mode) in the string aText, with a Levenshtein distance of at most K,
+    starting the search at position aOffset; K MUST be in the range 0 <= K < Length }
+    function Matches(const aText: string; K: SizeInt; aOffset: SizeInt = 1): TMatches;
+  { returns the next approximate match of the pattern (most relevant according to the
+    selection mode) in the string aText, with a Levenshtein distance of at most K,
+    starting the search at position aOffset;
+    returns TApproxMatch(0,0,0) if the instance is not initialized or 0 > K >= Length;
+    returns TApproxMatch(Length(aText)+1,0,0) if no occurrence is found }
+    function NextMatch(const aText: string; K: SizeInt; aOffset: SizeInt = 1): TApproxMatch;
+  { returns an array of all approximate occurrences of the pattern in the string aText
+    that have a Levenshtein distance of at most K, starting from the index aOffset;
+    if aLimit is greater than zero, it returns no more than aLimit occurrences,
+    otherwise it returns all found occurrences; returns an empty array if no occurrence
+    is found or the instance is not initialized or 0 > K >= Length }
+    function FindMatches(const aText: string; K: SizeInt; aOffset: SizeInt = 1;
+                         aLimit: SizeInt = 0): specialize TGArray<TApproxMatch>;
+  { searches in the string aText starting at position aOffset, passing the found matches
+    (1-based, in bytes) to the callback aOnMatch();
+    immediately exits the procedure if aOnMatch() returns False }
+    procedure Search(const aText: string; K: SizeInt; aOnMatch: TOnApproxMatch; aOffset: SizeInt = 1);
+    procedure Search(const aText: string; K: SizeInt; aOnMatch: TNestApproxMatch; aOffset: SizeInt = 1);
+    property  Initialized: Boolean read GetInitialized;
+  { pattern length (in code points) }
+    property  Length: SizeInt read GetLength;
+  {  }
+    property  SelectMode: TMatchSelectMode read FMode write FMode;
+    property  CaseInsensitive: Boolean read FIgnoreCase;
+  { if set to True, the word boundary will be examined for each match,
+    i.e. if it is surrounded by non-word characters or string boundaries }
+    property  OnlyWholeWords: Boolean read FWholeWords write FWholeWords;
   end;
 
   TOnMatch   = specialize TGOnTest<TMatch>;
@@ -817,16 +862,17 @@ type
     constructor Create(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
     procedure Init(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
   { returns the start position(1-based) and length(in bytes) of the next approximate
-    occurrence of the pattern in the string aText that has a Hamming distance of at most K,
-    starting from the index aOffset; returns TMatch(0,0) if instance is not initialized or
-    no occurrence is found or 0 > K >= MAX_PATTERN_CP }
+    occurrence of the pattern in the string aText that has a Hamming distance of
+    at most K, starting from the index aOffset; returns TMatch(0,0) if instance
+    is not initialized or no occurrence is found or 0 > K >= MAX_PATTERN_CP }
     function NextMatch(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatch;
   { returns an array of all approximate occurrences of the pattern in the string aText
     that have a Hamming distance of at most K, starting from the index aOffset;
     if aLimit is greater than zero, it returns no more than aLimit occurrences,
     otherwise it returns all found occurrences; returns an empty array if no occurrence
     is found or the instance is not initialized or 0 > K >= MAX_PATTERN_CP }
-    function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1; aLimit: SizeInt = 0): specialize TGArray<TMatch>;
+    function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1;
+                         aLimit: SizeInt = 0): specialize TGArray<TMatch>;
   { enumerates the approximate occurrences of the pattern in the string aText that have
     a Hamming distance of at most K, starting from the index aOffset }
     function Matches(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatches;
@@ -2516,7 +2562,7 @@ begin
   Result := LcsDistWmLimImpl(pL, pR, aLenL, aLenR, aLimit);
 end;
 
-class function TGSeqUtil.DumDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.DamDistMbrImpl(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
   function FindRow(k, aDist, aLeft, aAbove, aRight: SizeInt): SizeInt; inline;
   var
     I, MaxRow: SizeInt;
@@ -2638,7 +2684,7 @@ begin
   Result := Dist;
 end;
 
-class function TGSeqUtil.GetDumDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.GetDamDistMbr(pL, pR: PItem; aLenL, aLenR, aLimit: SizeInt): SizeInt;
 begin
   //here aLenL <= aLenR
   if aLenR - aLenL > aLimit then
@@ -2662,7 +2708,7 @@ begin
   if aLimit > aLenR then
     aLimit := aLenR;
 
-  Result := DumDistMbrImpl(pL, pR, aLenL, aLenR, aLimit);
+  Result := DamDistMbrImpl(pL, pR, aLenL, aLenR, aLimit);
 end;
 
 class function TGSeqUtil.GetPatiencePatch(const aSource, aTarget: array of T): specialize TGArray<TLcsEdit>;
@@ -3377,7 +3423,7 @@ begin
     Result := GetLcsDistWmLim(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
-class function TGSeqUtil.DumDistanceMBR(const L, R: array of T): SizeInt;
+class function TGSeqUtil.DamDistanceMBR(const L, R: array of T): SizeInt;
 begin
   if System.Length(L) = 0 then
     exit(System.Length(R))
@@ -3385,14 +3431,14 @@ begin
     if System.Length(R) = 0 then
       exit(System.Length(L));
   if System.Length(L) <= System.Length(R) then
-    Result := GetDumDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
+    Result := GetDamDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), System.Length(R))
   else
-    Result := GetDumDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
+    Result := GetDamDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), System.Length(L));
 end;
 
-class function TGSeqUtil.DumDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt;
+class function TGSeqUtil.DamDistanceMBR(const L, R: array of T; aLimit: SizeInt): SizeInt;
 begin
-  if aLimit < 0 then exit(DumDistanceMBR(L, R));
+  if aLimit < 0 then exit(DamDistanceMBR(L, R));
   if System.Length(L) = 0 then
     if System.Length(R) <= aLimit then
       exit(System.Length(R))
@@ -3405,9 +3451,9 @@ begin
       else
         exit(NULL_INDEX);
   if System.Length(L) <= System.Length(R) then
-    Result := GetDumDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
+    Result := GetDamDistMbr(@L[0], @R[0], System.Length(L), System.Length(R), aLimit)
   else
-    Result := GetDumDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
+    Result := GetDamDistMbr(@R[0], @L[0], System.Length(R), System.Length(L), aLimit);
 end;
 
 class function TGSeqUtil.LcsGus(const L, R: array of T): TArray;
@@ -3457,7 +3503,7 @@ begin
       sdaLevMyers: Dist := LevDistanceMyers(L, R);
       sdaLevMBR:   Dist := LevDistanceMbr(L, R);
       sdaLcsWM:    Dist := LcsDistanceWM(L, R);
-      sdaDumMBR:   Dist := DumDistanceMbr(L, R);
+      sdaDamMBR:   Dist := DamDistanceMBR(L, R);
     end;
     exit(Double(Len - Dist)/Double(Len));
   end;
@@ -3474,7 +3520,7 @@ begin
     sdaLevMBR:   Dist := LevDistanceMbr(L, R, Limit);
     sdaLevMyers: Dist := LevDistanceMyers(L, R, Limit);
     sdaLcsWM:    Dist := LcsDistanceWM(L, R, Limit);
-    sdaDumMBR:   Dist := DumDistanceMbr(L, R, Limit);
+    sdaDamMBR:   Dist := DamDistanceMBR(L, R, Limit);
   end;
   if Dist <> NULL_INDEX then
     Result := Double(Len - Dist)/Double(Len)
@@ -4105,8 +4151,8 @@ end;
 
 type
   TDistFunInternSpec = (
-    dfisMbr, dfisMyers, dfisWmLcs, dfisMbrDum, dfisMbrBound, dfisMyersBound,
-    dfisWmLcsBound, dfisMbrDumBound);
+    dfisMbr, dfisMyers, dfisWmLcs, dfisMbrDam, dfisMbrBound, dfisMyersBound,
+    dfisWmLcsBound, dfisMbrDamBound);
 
 function GenericDistanceUtf16(const L, R: unicodestring; aLimit: SizeInt; aSpec: TDistFunInternSpec): SizeInt;
 var
@@ -4142,13 +4188,13 @@ begin
     dfisMbr:        Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMyers:      Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisWmLcs:      Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMbrDum:     Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisMbrDam:     Result := TUcs4Util.DamDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbrBound:   Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfisMyersBound: Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfisWmLcsBound: Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
-    //dfisMbrDumBound
-    Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    //dfisMbrDamBound
+    Result := TUcs4Util.DamDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   end;
 end;
 
@@ -4215,14 +4261,14 @@ begin
   Result := GenericDistanceUtf16(L, R, aLimit, dfisWmLcsBound);
 end;
 
-function DumDistanceMbrUtf16(const L, R: unicodestring): SizeInt;
+function DamDistanceMbrUtf16(const L, R: unicodestring): SizeInt;
 begin
-  Result := GenericDistanceUtf16(L, R, -1, dfisMbrDum);
+  Result := GenericDistanceUtf16(L, R, -1, dfisMbrDam);
 end;
 
-function DumDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
+function DamDistanceMbrUtf16(const L, R: unicodestring; aLimit: SizeInt): SizeInt;
 begin
-  Result := GenericDistanceUtf16(L, R, aLimit, dfisMbrDumBound);
+  Result := GenericDistanceUtf16(L, R, aLimit, dfisMbrDamBound);
 end;
 
 function LcsGenericUtf16(const L, R: unicodestring; aSpec: TUcs4Util.TLcsAlgo): unicodestring;
@@ -5222,13 +5268,13 @@ begin
     dfisMbr:           Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMyers:         Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisWmLcs:         Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
-    dfisMbrDum:        Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
+    dfisMbrDam:        Result := TUcs4Util.DamDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)]);
     dfisMbrBound:      Result := TUcs4Util.LevDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfisMyersBound:    Result := TUcs4Util.LevDistanceMyers(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
     dfisWmLcsBound:    Result := TUcs4Util.LcsDistanceWM(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   else
-    //dfisMbrDumBound
-    Result := TUcs4Util.DumDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
+    //dfisMbrDamBound
+    Result := TUcs4Util.DamDistanceMBR(pL[0..Pred(LenL)], pR[0..Pred(LenR)], aLimit);
   end;
 end;
 
@@ -5295,14 +5341,14 @@ begin
   Result := GenericDistanceUtf8(L, R, aLimit, dfisWmLcsBound);
 end;
 
-function DumDistanceMbrUtf8(const L, R: string): SizeInt;
+function DamDistanceMbrUtf8(const L, R: string): SizeInt;
 begin
-  Result := GenericDistanceUtf8(L, R, -1, dfisMbrDum);
+  Result := GenericDistanceUtf8(L, R, -1, dfisMbrDam);
 end;
 
-function DumDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
+function DamDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 begin
-  Result := GenericDistanceUtf8(L, R, aLimit, dfisMbrDumBound);
+  Result := GenericDistanceUtf8(L, R, aLimit, dfisMbrDamBound);
 end;
 
 function Ucs4CharToUtf8Char(c: Ucs4Char; out aBytes: TByte4): Integer;
@@ -6775,66 +6821,98 @@ begin
   Result := StrReplaceUtf8(aSource, aPattern, aSubst, Dummy, aOptions);
 end;
 
-{ TFuzzySearchEdp.TEnumerator }
+{ TApproxMatch }
 
-function TFuzzySearchEdp.TEnumerator.GetCurrent: SizeInt;
+constructor TApproxMatch.Make(aOfs, aLen, aDist: SizeInt);
 begin
-  Result := FPointIndex;
+  Offset := aOfs;
+  Length := aLen;
+  Distance := aDist;
 end;
 
-function TFuzzySearchEdp.TEnumerator.MoveNext: Boolean;
-var
-  TextLen, I, Cost, Err: SizeInt;
-  c: Ucs4Char;
+{ TFuzzySearchEdp.TUcs4Cp }
+
+constructor TFuzzySearchEdp.TUcs4Cp.Make(aOfs: SizeInt; aCode: Ucs4Char);
 begin
-  TextLen := System.Length(FText);
-  while FTextIndex <= TextLen do
-    begin
-      c := CodePointToUcs4Char(@FText[FTextIndex], Succ(TextLen - FTextIndex), I);
-      FTextIndex += I;
-      Inc(FPointIndex);
-      Cost := 0;
-      for I := 1 to FTop do
-        begin
-          if FPattern[I-1] = c then
-            Err := Cost
-          else
-            Err := Succ(lgUtils.MinOf3(FD[I-1], FD[I], Cost));
-          Cost := FD[I];
-          FD[I] := Err;
-        end;
-      while FD[FTop] > FK do Dec(FTop);
-      if FTop = System.High(FD) then
-        exit(True)
-      else
-        Inc(FTop);
-    end;
-  Result := False;
+  Offset := aOfs;
+  Code := aCode;
 end;
 
 { TFuzzySearchEdp.TMatches }
 
-function TFuzzySearchEdp.TMatches.GetEnumerator: TEnumerator;
-var
-  I: Integer;
+function TFuzzySearchEdp.TMatches.GetEnumerator: TMatches;
 begin
-  Result.FPattern := nil;
-  Result.FD := nil;
-  Result.FText := '';
-  Result.FTextIndex := 1;
-  Result.FPointIndex := 0;
-  if not FSearch^.Initialized or (SizeUInt(FK) >= SizeUInt(System.Length(FSearch^.FPattern))) then exit;
-  Result.FPattern := FSearch^.FPattern;
-  Result.FK := FK;
-  Result.FTop := Succ(FK);
-  Result.FText := FText;
-  with FSearch^ do
-    for I := 1 to System.High(FD) do
-      FD[I] := I;
-  Result.FD := FSearch^.FD;
+  Result := Self;
+end;
+
+function TFuzzySearchEdp.TMatches.MoveNext: Boolean;
+var
+  Ofs, I: SizeInt;
+begin
+  if FSearch = nil then exit(False);
+  Ofs := FMatch.Offset;
+  if FMatch.Distance <> NULL_INDEX then begin
+    if FSearch^.SelectMode = msmFirst then
+      Ofs += Utf8CodePointLen(@FText[Ofs], Succ(System.Length(FText) - Ofs))
+    else
+      for I := 0 to FK do
+        if Ofs <= System.Length(FText) then
+          Ofs += Utf8CodePointLen(@FText[Ofs], Succ(System.Length(FText) - Ofs))
+        else
+          break;
+  end;
+  if Ofs > System.Length(FText) then exit(False);
+  FMatch := FSearch^.NextMatch(FText, FK, Ofs);
+  Result := FMatch.Length <> 0;
 end;
 
 { TFuzzySearchEdp }
+
+class function TFuzzySearchEdp.ToUcs4SeqLower(p: PByte; aCount: SizeInt): TUcs4Seq;
+var
+  PtLen, I: SizeInt;
+  r: TUcs4Seq;
+  c, LoC: DWord;
+begin
+  System.SetLength(r, Utf8Len(p, aCount));
+  PtLen := 0;
+  for I := 0 to System.High(r) do
+    begin
+      c := CodePointToUcs4Char(p, PtLen);
+      if c <= UC_TBL_HIGH then
+        LoC := UC_CASE_TBL[c] and $ffff
+      else
+        begin
+          LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
+          if LoC = 0 then LoC := c;
+        end;
+      r[I] := LoC;
+      p += PtLen;
+    end;
+  Result := r;
+end;
+
+class function TFuzzySearchEdp.ToUcs4Seq(p: PByte; aCount: SizeInt): TUcs4Seq;
+var
+  PtLen, I: SizeInt;
+  r: TUcs4Seq;
+begin
+  System.SetLength(r, Utf8Len(p, aCount));
+  PtLen := 0;
+  for I := 0 to System.High(r) do
+    begin
+      r[I] := CodePointToUcs4Char(p, PtLen);
+      p += PtLen;
+    end;
+  Result := r;
+end;
+
+class function TFuzzySearchEdp.IsWordBound(p: PByte; Len: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := (Len < 1) or not IsWordChar(CodePointToUcs4Char(p, Len, Dummy));
+end;
 
 function TFuzzySearchEdp.GetInitialized: Boolean;
 begin
@@ -6846,25 +6924,279 @@ begin
   Result := System.Length(FPattern);
 end;
 
-constructor TFuzzySearchEdp.Create(const aPattern: string);
+function TFuzzySearchEdp.DoTest(aOfs, aCpCount, aQueueTop, K: SizeInt; aOnMatch: TNestApproxMatch): Boolean;
+var
+  I, J, Start, Len, Dist: SizeInt;
 begin
-  Init(aPattern);
+  if FTestBuf = nil then System.SetLength(FTestBuf, Length*2);
+  Len := Math.Min(aCpCount, Length + K);
+  J := aQueueTop;
+  for I := Pred(Len) downto 0 do begin
+    Dec(J);
+    if J < 0 then J += System.Length(FQueue);
+    FTestBuf[I] := FQueue[J].Code;
+  end;
+  Start := J;
+  for I := 0 to K*2 do begin
+    Dist := TUcs4Util.LevDistanceMBR(FPattern, FTestBuf[I..Pred(Len)], K);
+    if Dist = NULL_INDEX then continue;
+    J := Start + I;
+    if J >= System.Length(FQueue) then J -= System.Length(FQueue);
+    if not aOnMatch(TApproxMatch.Make(FQueue[J].Offset,aOfs-FQueue[J].Offset,Dist))then exit(False);
+  end;
+  Result := True;
 end;
 
-procedure TFuzzySearchEdp.Init(const aPattern: string);
+function TFuzzySearchEdp.DoTestOww(aOfs, aCpCount, aQueueTop, K: SizeInt; aOnMatch: TNestApproxMatch): Boolean;
+var
+  I, J, Start, Len, Dist: SizeInt;
+begin
+  if FTestBuf = nil then System.SetLength(FTestBuf, Length*2);
+  Len := Math.Min(aCpCount, Length + K);
+  J := aQueueTop;
+  for I := Len downto 0 do begin
+    Dec(J);
+    if J < 0 then J += System.Length(FQueue);
+    FTestBuf[I] := FQueue[J].Code;
+  end;
+  Start := J;
+  for I := 1 to Succ(K*2) do begin
+    if not IsWordChar(FTestBuf[I]) or IsWordChar(FTestBuf[I-1]) then continue;
+    Dist := TUcs4Util.LevDistanceMBR(FPattern, FTestBuf[I..Len], K);
+    if Dist = NULL_INDEX then continue;
+    J := Start + I;
+    if J >= System.Length(FQueue) then J -= System.Length(FQueue);
+    if not aOnMatch(TApproxMatch.Make(FQueue[J].Offset,aOfs-FQueue[J].Offset,Dist))then exit(False);
+  end;
+  Result := True;
+end;
+
+procedure TFuzzySearchEdp.DoSearch(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+var
+  qTop: Integer = 0;
+
+  procedure Push(aOfs: SizeInt; c: Ucs4Char); inline;
+  begin
+    FQueue[qTop].Make(aOfs, c);
+    Inc(qTop);
+    if qTop = System.Length(FQueue) then qTop := 0;
+  end;
+
+  function PrevChar: Ucs4Char; inline;
+  begin
+    if qTop <> 0 then
+      Result := FQueue[qTop-1].Code
+    else
+      Result := FQueue[System.High(FQueue)].Code;
+  end;
+
+var
+  p, pEnd: PByte;
+  DistMx: PSizeInt;
+  CpLen, CharCount, I, PatLen, MaxCol, Cost, Prev: SizeInt;
+  c: Ucs4Char;
+begin
+  p := @s[aOffset];
+  pEnd := PByte(s) + System.Length(s);
+  PatLen := Length;
+  DistMx := Pointer(FD);
+  for I := 1 to PatLen do DistMx[I] := I;
+  MaxCol := Succ(K);
+  if OnlyWholeWords then
+    if aOffset = 1 then
+      Push(0, 0)
+    else begin
+      Prev := PrevCpOffsetUtf8(s, aOffset);
+      Push(Prev, CodePointToUcs4Char(@s[Prev], aOffset - Prev, CpLen));
+    end;
+  CharCount := 0;
+
+  while p < pEnd do begin
+    if CaseInsensitive then
+      c := Ucs4CharToLower(CodePointToUcs4Char(p, pEnd - p, CpLen))
+    else
+      c := CodePointToUcs4Char(p, pEnd - p, CpLen);
+    Push(aOffset, c);
+    aOffset += CpLen;
+    p += CpLen;
+    Inc(CharCount);
+    Prev := 0;
+    for I := 1 to MaxCol do begin
+      if FPattern[I-1] = c then
+        Cost := Prev
+      else
+        Cost := Succ(LgUtils.MinOf3(DistMx[I-1], DistMx[I], Prev));
+      Prev := DistMx[I];
+      DistMx[I] := Cost;
+    end;
+    while DistMx[MaxCol] > K do Dec(MaxCol);
+    if MaxCol = PatLen then
+      if OnlyWholeWords then begin
+        if not(IsWordChar(PrevChar) and IsWordBound(p, pEnd - p)) then continue;
+        if not DoTestOww(aOffset, CharCount, qTop, K, aOnMatch) then exit;
+      end else begin
+        if not DoTest(aOffset, CharCount, qTop, K, aOnMatch) then exit;
+      end
+    else
+      Inc(MaxCol);
+  end;
+end;
+
+constructor TFuzzySearchEdp.Create(const aPattern: string; aIgnoreCase: Boolean; aWholeWords: Boolean);
+begin
+  Init(aPattern, aIgnoreCase, aWholeWords);
+end;
+
+procedure TFuzzySearchEdp.Init(const aPattern: string; aIgnoreCase: Boolean; aWholeWords: Boolean);
 begin
   FPattern := nil;
+  FTestBuf := nil;
+  FQueue := nil;
   FD := nil;
   if (aPattern = '') or not Utf8Validate(aPattern) then exit;
-  FPattern := Utf8ToUcs4Seq(aPattern);
+  FIgnoreCase := aIgnoreCase;
+  FWholeWords := aWholeWords;
+  SelectMode := msmFirst;
+  if aIgnoreCase then
+    FPattern := ToUcs4SeqLower(Pointer(aPattern), System.Length(aPattern))
+  else
+    FPattern := ToUcs4Seq(Pointer(aPattern), System.Length(aPattern));
+  System.SetLength(FQueue, Length*2);
   System.SetLength(FD, Succ(System.Length(FPattern)));
 end;
 
-function TFuzzySearchEdp.Matches(const aText: string; K: SizeInt): TMatches;
+function TFuzzySearchEdp.Matches(const aText: string; K: SizeInt; aOffset: SizeInt): TMatches;
 begin
-  Result.FText := aText;
-  Result.FK := K;
-  Result.FSearch := @Self;
+  if aOffset < 1 then aOffset := 1;
+  if Initialized and (aOffset <= System.Length(aText)) and
+     (SizeUInt(K) < SizeUInt(Length)) then begin
+    Result.FText := aText;
+    Result.FSearch := @Self;
+    Result.FK := K;
+    Result.FMatch := TApproxMatch.Make(aOffset, 0, NULL_INDEX);
+  end else begin
+    Result.FText := '';
+    Result.FSearch := nil;
+    Result.FK := 0;
+    Result.FMatch := Default(TApproxMatch);
+  end;
+end;
+
+function TFuzzySearchEdp.NextMatch(const aText: string; K: SizeInt; aOffset: SizeInt): TApproxMatch;
+var
+  Match: TApproxMatch;
+  EndPt: SizeInt = 0;
+
+  function Found(const m: TApproxMatch): Boolean;
+  var
+    I: SizeInt;
+  begin
+    if SelectMode = msmFirst then begin
+      Match := m;
+      exit(False);
+    end;
+    if EndPt = 0 then begin
+      EndPt := m.Offset + m.Length;
+      I := 0;
+      while (EndPt <= System.Length(aText)) and (I <= K) do begin
+        EndPt += Utf8CodePointLen(@aText[EndPt], Succ(System.Length(aText) - EndPt));
+        Inc(I);
+      end;
+      Match := m;
+    end else begin
+      if m.Offset + m.Length > EndPt then exit(False);
+      if SelectMode = msmLongest then begin
+        if m.Length > Match.Length then
+          Match := m
+        else
+          if m.Length = Match.Length then
+            if m.Offset < Match.Offset then
+              Match := m;
+      end else begin
+          if m.Distance < Match.Distance then
+            Match := m
+          else
+            if m.Distance = Match.Distance then
+              if m.Length > Match.Length then
+                Match := m
+              else
+                if m.Length = Match.Length then
+                  if m.Offset < Match.Offset then
+                    Match := m;
+      end;
+    end;
+    Result := True;
+  end;
+
+begin
+  if aOffset < 1 then aOffset := 1;
+  if not Initialized or (SizeUInt(K) >= SizeUInt(Length)) or
+     (aOffset > System.Length(aText)) then exit(Default(TApproxMatch));
+
+  Match := TApproxMatch.Make(Succ(System.Length(aText)), 0, 0);
+  DoSearch(aText, aOffset, K, @Found);
+  Result := Match;
+end;
+
+function TFuzzySearchEdp.FindMatches(const aText: string; K: SizeInt; aOffset: SizeInt;
+  aLimit: SizeInt): specialize TGArray<TApproxMatch>;
+type
+  TSortHelper = specialize TGNestedTimsort<TApproxMatch>;
+var
+  r: array of TApproxMatch = nil;
+  Count: SizeInt = 0;
+
+  function Found(const m: TApproxMatch): Boolean;
+  begin
+    if System.Length(r) = Count then System.SetLength(r, Count*2);
+    r[Count] := m;
+    Inc(Count);
+    Result := Count < aLimit;
+  end;
+
+  function Cmp(const L, R: TApproxMatch): Boolean;
+  begin
+    if L.Offset <> R.Offset then exit(L.Offset < R.Offset);
+    Result := L.Length > R.Length;
+  end;
+
+begin
+  if aOffset < 1 then aOffset := 1;
+  if not Initialized or (SizeUInt(K) >= SizeUInt(Length)) or
+     (aOffset > System.Length(aText)) then exit(nil);
+
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  if aLimit < 1 then aLimit := System.High(SizeInt);
+  DoSearch(aText, aOffset, K, @Found);
+  System.SetLength(r, Count);
+  TSortHelper.Sort(r, @Cmp);
+  Result := r;
+end;
+
+procedure TFuzzySearchEdp.Search(const aText: string; K: SizeInt; aOnMatch: TOnApproxMatch;
+  aOffset: SizeInt);
+
+  function DoMatch(const m: TApproxMatch): Boolean;
+  begin
+    Result := aOnMatch(m);
+  end;
+
+begin
+  if aOffset < 1 then aOffset := 1;
+  if not(Initialized and(SizeUInt(K)<SizeUInt(Length)) and
+        (aOffset <= System.Length(aText))) then exit;
+
+  DoSearch(aText, aOffset, K, @DoMatch);
+end;
+
+procedure TFuzzySearchEdp.Search(const aText: string; K: SizeInt; aOnMatch: TNestApproxMatch;
+  aOffset: SizeInt);
+begin
+  if aOffset < 1 then aOffset := 1;
+  if not(Initialized and(SizeUInt(K)<SizeUInt(Length)) and
+        (aOffset <= System.Length(aText))) then exit;
+
+  DoSearch(aText, aOffset, K, aOnMatch);
 end;
 
 { TFuzzySearchBitap.TEnumerator }
