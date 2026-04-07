@@ -5,10 +5,13 @@ unit lgSeqUtilsTest;
 interface
 
 uses
-  LazUtf8, Classes, SysUtils, Math, fpcunit, testregistry,
+  LazUtf8, Classes, SysUtils, Math, fpcunit, testregistry, Character,
   lgUtils,
   lgHashSet,
   lgSeqUtils,
+  lgArrayHelpers,
+  lgVector,
+  lgMiscUtils,
   lgHash;
 
 type
@@ -42,15 +45,14 @@ type
     procedure LcsDistWmUtf8;
     procedure LcsDistWmBoundedUtf8;
     procedure LcsDistWmDynUtf8;
-    procedure DumDistMbrUtf8;
-    procedure DumDistMbrBoundedUtf8;
-    procedure DumDistMbrDynUtf8;
+    procedure DamDistMbrUtf8;
+    procedure DamDistMbrBoundedUtf8;
+    procedure DamDistMbrDynUtf8;
     procedure LcsGusUtf8Test;
     procedure LcsKRUtf8Test;
     procedure LcsMyersUtf8Test;
     procedure SimRatioUtf8Test;
     procedure SimRatioExUtf8Test;
-    procedure FuzzySearchEdp;
     procedure Utf8HashTextTest;
     procedure Utf8HashText64Test;
     procedure Utf8SameTextTest;
@@ -71,9 +73,9 @@ type
     procedure LcsDistWmUtf16;
     procedure LcsDistWmBoundedUtf16;
     procedure LcsDistWmDynUtf16;
-    procedure DumDistMbrUtf16;
-    procedure DumDistMbrBoundedUtf16;
-    procedure DumDistMbrDynUtf16;
+    procedure DamDistMbrUtf16;
+    procedure DamDistMbrBoundedUtf16;
+    procedure DamDistMbrDynUtf16;
     procedure LcsGusUtf16Test;
     procedure LcsKRUtf16Test;
     procedure LcsMyersUtf16Test;
@@ -118,6 +120,35 @@ type
     procedure TestPatienceLcsPatch;
     procedure TestHistogramLcsPatch;
     procedure TestPatch;
+  end;
+
+  { TTestFuzzySearchEdp }
+
+  TTestFuzzySearchEdp = class(TTestCase)
+  private
+  const
+    LETTER_OR_DIGIT_CATEGORIES = [
+       TUnicodeCategory.ucUppercaseLetter, TUnicodeCategory.ucLowercaseLetter,
+       TUnicodeCategory.ucTitlecaseLetter, TUnicodeCategory.ucModifierLetter,
+       TUnicodeCategory.ucOtherLetter, TUnicodeCategory.ucDecimalNumber,
+       TUnicodeCategory.ucLetterNumber, TUnicodeCategory.ucOtherNumber,
+       TUnicodeCategory.ucConnectPunctuation];
+  type
+    TSeqHelper  = specialize TGArrayHelpUtil<TApproxMatch>;
+    TSeqUtil    = specialize TGSeqUtil<Ucs4Char, TUcs4Hasher>;
+    TSortHelper = specialize TGDelegatedTimsort<TApproxMatch>;
+    TAmVec      = specialize TGLiteVector<TApproxMatch>;
+    function AmEqual(const L, R: TApproxMatch): Boolean;
+    function AmLess(const L, R: TApproxMatch): Boolean;
+    function BruteForceLev(const aText, aPattern: string; K: SizeInt; aIgnoreCase: Boolean): specialize TGArray<TApproxMatch>;
+    function BruteForceOwwLev(const aText, aPattern: string; K: SizeInt; aIgnoreCase: Boolean): specialize TGArray<TApproxMatch>;
+    function IsWordChar(c: Ucs4Char): Boolean;
+  published
+    procedure TestCreate;
+    procedure TestFindMatches;
+    procedure TestFindMatchesOww;
+    procedure TestNextMatch;
+    procedure TestNextMatchOww;
   end;
 
   { TTestFuzzySearchBitap }
@@ -1334,61 +1365,61 @@ begin
   AssertTrue(LcsDistanceWmUtf8(s2, s1, -1) = 2);
 end;
 
-procedure TTestUnicodeUtils.DumDistMbrUtf8;
+procedure TTestUnicodeUtils.DamDistMbrUtf8;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(DumDistanceMbrUtf8(s1, s1) = 0);
-  AssertTrue(DumDistanceMbrUtf8(s2, s2) = 0);
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 6);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 6);
+  AssertTrue(DamDistanceMbrUtf8(s1, s1) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s2, s2) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 6);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 6);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 1);
 
   s1 := 'аc';
   s2 := 'cba';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 3);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 3);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 3);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 1);
 
   s1 := 'нелли';
   s2 := 'елил';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 2);
 
   s1 := 'мостки';
   s2 := 'костик';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 2);
 
   s1 := 'шапито';
   s2 := 'ашипот';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 3);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
@@ -1397,89 +1428,89 @@ begin
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 5);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 5);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 5);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 5);
 
   s1 := 'ааааааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 0);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 8);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 8);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 8);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 8);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 2);
 
   s1 := 'tests';
   s2 := 'tset';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 2);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1) = 2);
 end;
 
-procedure TTestUnicodeUtils.DumDistMbrBoundedUtf8;
+procedure TTestUnicodeUtils.DamDistMbrBoundedUtf8;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(DumDistanceMbrUtf8(s1, s1, 1) = 0);
-  AssertTrue(DumDistanceMbrUtf8(s2, s2, 1) = 0);
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 5) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 5) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s1, 1) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s2, s2, 1) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 5) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 5) = -1);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 0) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 0) = -1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 0) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 0) = -1);
 
   s1 := 'аc';
   s2 := 'cba';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 2) = -1);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 2) = -1);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 2) = -1);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 0) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 0) = -1);
 
   s1 := 'нелли';
   s2 := 'елил';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 1) = -1);
 
   s1 := 'мостки';
   s2 := 'костик';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 1) = -1);
 
   s1 := 'шапито';
   s2 := 'ашипот';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 2) = -1);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
@@ -1488,85 +1519,85 @@ begin
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 4) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 4) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 4) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 4) = -1);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 7) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 7) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 7) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 7) = -1);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 1) = -1);
 
   s1 := 'tests';
   s2 := 'tset';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 1) = -1);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, 1) = -1);
 end;
 
-procedure TTestUnicodeUtils.DumDistMbrDynUtf8;
+procedure TTestUnicodeUtils.DamDistMbrDynUtf8;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(DumDistanceMbrUtf8(s1, s1, -1) = 0);
-  AssertTrue(DumDistanceMbrUtf8(s2, s2, -1) = 0);
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 6);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 6);
+  AssertTrue(DamDistanceMbrUtf8(s1, s1, -1) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s2, s2, -1) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 6);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 6);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 1);
 
   s1 := 'аc';
   s2 := 'cba';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 3);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 3);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 3);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 1);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 1);
 
   s1 := 'нелли';
   s2 := 'елил';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 2);
 
   s1 := 'мостки';
   s2 := 'костик';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 2);
 
   s1 := 'шапито';
   s2 := 'ашипот';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 3);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
@@ -1575,32 +1606,32 @@ begin
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 5);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 5);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 5);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 5);
 
   s1 := 'ааааааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 0);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 0);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 8);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 8);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 8);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 8);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 2);
 
   s1 := 'tests';
   s2 := 'tset';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 2);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(DumDistanceMbrUtf8(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf8(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf8(s2, s1, -1) = 2);
 end;
 
 procedure TTestUnicodeUtils.LcsGusUtf8Test;
@@ -1761,68 +1792,6 @@ begin
   AssertTrue(SimRatioExUtf8('World hello', ' Hello world, hello', [' ',','], smTokenSet, [soIgnoreCase]) = DblOne);
   AssertTrue(SimRatioExUtf8('World hello', ' Hello another world, hello', [' ',','], smTokenSet, [soIgnoreCase, soPartial]) = DblOne);
   AssertTrue(SimRatioExUtf8('fuzzy was a bear', 'fuzzy fuzzy fuzzy bear', [' '], smTokenSetEx) = DblOne);
-end;
-
-procedure TTestUnicodeUtils.FuzzySearchEdp;
-var
-  p, p1: string;
-  I, J, Len, k: Integer;
-  m: TFuzzySearchEdp;
-const
-  Text: string = 'The Levenshtein distance can also be computed between two longer strings, but the cost to compute it, which is roughly proportional to the product of the two string lengths, makes this impractical';
-begin
-  p := '';
-  k := 0;
-  J := 0;
-  m := TFuzzySearchEdp.Create(p);
-  for I in m.Matches(Text, k) do
-    Inc(J);
-  AssertTrue(J = 0);
-
-  p := 'can';
-  k := 3;
-  m := TFuzzySearchEdp.Create(p);
-  for I in m.Matches(Text, k) do
-    Inc(J);
-  AssertTrue(J = 0);
-
-  p := 'Levenhstein';
-  k := 2;
-  m := TFuzzySearchEdp.Create(p);
-  for I in m.Matches(Text, k) do
-    begin
-      Len := Min(Utf8Length(p), I);
-      p1 := Utf8Copy(Text, Succ(I - Len), Len);
-      AssertTrue(LevDistanceMbrUtf8(p, p1) <= k);
-      Inc(J);
-    end;
-  AssertTrue(J = 1);
-
-  p := 'strung';
-  k := 1;
-  J := 0;
-  m := TFuzzySearchEdp.Create(p);
-  for I in m.Matches(Text, k) do
-    begin
-      Len := Min(Utf8Length(p), I);
-      p1 := Utf8Copy(Text, Succ(I - Len), Len);
-      AssertTrue(LevDistanceMbrUtf8(p, p1) <= k);
-      Inc(J);
-    end;
-  AssertTrue(J = 2);
-
-  p := 'lung';
-  k := 1;
-  J := 0;
-  m := TFuzzySearchEdp.Create(p);
-  for I in m.Matches(Text, k) do
-    begin
-      Len := Min(Utf8Length(p), I);
-      p1 := Utf8Copy(Text, Succ(I - Len), Len);
-      AssertTrue(LevDistanceMbrUtf8(p, p1) <= k);
-      Inc(J);
-    end;
-  AssertTrue(J = 2);
 end;
 
 procedure TTestUnicodeUtils.Utf8HashTextTest;
@@ -2880,273 +2849,273 @@ begin
   AssertTrue(LcsDistanceWmUtf16(s2, s1, -1) = 2);
 end;
 
-procedure TTestUnicodeUtils.DumDistMbrUtf16;
+procedure TTestUnicodeUtils.DamDistMbrUtf16;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(DumDistanceMbrUtf16(s1, s1) = 0);
-  AssertTrue(DumDistanceMbrUtf16(s2, s2) = 0);
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 6);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 6);
+  AssertTrue(DamDistanceMbrUtf16(s1, s1) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s2, s2) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 6);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 6);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 1);
 
   s1 := 'аc';
   s2 := 'cba';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 3);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 3);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 3);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 1);
 
   s1 := 'нелли';
   s2 := 'елил';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 2);
 
   s1 := 'мостки';
   s2 := 'костик';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 2);
 
   s1 := 'шапито';
   s2 := 'ашипот';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 3);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 4);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 4);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 4);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 4);
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 5);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 5);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 5);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 5);
 
   s1 := 'ааааааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 0);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 8);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 8);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 8);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 8);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 2);
 
   s1 := 'tests';
   s2 := 'tset';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 2);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1) = 2);
 end;
 
-procedure TTestUnicodeUtils.DumDistMbrBoundedUtf16;
+procedure TTestUnicodeUtils.DamDistMbrBoundedUtf16;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(DumDistanceMbrUtf16(s1, s1, 1) = 0);
-  AssertTrue(DumDistanceMbrUtf16(s2, s2, 1) = 0);
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 5) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 5) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s1, 1) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s2, s2, 1) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 5) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 5) = -1);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 0) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 0) = -1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 0) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 0) = -1);
 
   s1 := 'аc';
   s2 := 'cba';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 2) = -1);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 2) = -1);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 2) = -1);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 0) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 0) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 0) = -1);
 
   s1 := 'нелли';
   s2 := 'елил';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 1) = -1);
 
   s1 := 'мостки';
   s2 := 'костик';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 1) = -1);
 
   s1 := 'шапито';
   s2 := 'ашипот';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 2) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 2) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 2) = -1);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 3) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 3) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 3) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 3) = -1);
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 4) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 4) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 4) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 4) = -1);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 7) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 7) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 7) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 7) = -1);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 1) = -1);
 
   s1 := 'tests';
   s2 := 'tset';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 1) = -1);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, 1) = -1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, 1) = -1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, 1) = -1);
 end;
 
-procedure TTestUnicodeUtils.DumDistMbrDynUtf16;
+procedure TTestUnicodeUtils.DamDistMbrDynUtf16;
 var
   s1, s2: string;
 begin
   s1 := '';
   s2 := 'привет';
-  AssertTrue(DumDistanceMbrUtf16(s1, s1, -1) = 0);
-  AssertTrue(DumDistanceMbrUtf16(s2, s2, -1) = 0);
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 6);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 6);
+  AssertTrue(DamDistanceMbrUtf16(s1, s1, -1) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s2, s2, -1) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 6);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 6);
 
   s1 := 'аб';
   s2 := 'аа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 1);
 
   s1 := 'аб';
   s2 := 'ба';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 1);
 
   s1 := 'аc';
   s2 := 'cba';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 3);
 
   s1 := 'а';
   s2 := 'ббб';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 3);
 
   s1 := 'аабабаб';
   s2 := 'аббаа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 3);
 
   s1 := 'нелли';
   s2 := 'елли';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 1);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 1);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 1);
 
   s1 := 'нелли';
   s2 := 'елил';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 2);
 
   s1 := 'мостки';
   s2 := 'костик';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 2);
 
   s1 := 'шапито';
   s2 := 'ашипот';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 3);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 3);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 3);
 
   s1 := 'дистанция';
   s2 := 'дисперсия';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 4);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 4);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 4);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 4);
 
   s1 := 'левенштейн';
   s2 := 'франкенштейн';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 5);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 5);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 5);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 5);
 
   s1 := 'ааааааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 0);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 0);
 
   s1 := 'ааааааа';
   s2 := 'бббббббб';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 8);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 8);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 8);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 8);
 
   s1 := 'аааббаааа';
   s2 := 'ааааааа';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 2);
 
   s1 := 'tests';
   s2 := 'tset';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 2);
 
   s1 := '一天，在寒冷的冬天，我从森林里走出来。';
   s2 := '一，在寒冷的冬天，我从森林里走来。';
-  AssertTrue(DumDistanceMbrUtf16(s1, s2, -1) = 2);
-  AssertTrue(DumDistanceMbrUtf16(s2, s1, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s1, s2, -1) = 2);
+  AssertTrue(DamDistanceMbrUtf16(s2, s1, -1) = 2);
 end;
 
 procedure TTestUnicodeUtils.LcsGusUtf16Test;
@@ -4173,6 +4142,324 @@ begin
     AssertTrue(e.SourceValue = a[e.SourceIndex]);
   end;
   AssertTrue(TIntSeqUtil.Same(ApplyPatch(a, p), b));
+end;
+
+{ TTestFuzzySearchEdp }
+
+function TTestFuzzySearchEdp.AmEqual(const L, R: TApproxMatch): Boolean;
+begin
+  Result := (L.Offset = R.Offset) and (L.Length = R.Length) and (L.Distance = R.Distance);
+end;
+
+function TTestFuzzySearchEdp.AmLess(const L, R: TApproxMatch): Boolean;
+begin
+  if L.Offset <> R.Offset then exit(L.Offset < R.Offset);
+  Result := L.Length > R.Length;
+end;
+
+function TTestFuzzySearchEdp.BruteForceLev(const aText, aPattern: string; K: SizeInt;
+  aIgnoreCase: Boolean): specialize TGArray<TApproxMatch>;
+var
+  Vec: TAmVec;
+  I, J, SampleLen, PatLen, MinLen, MaxLen, Dist: SizeInt;
+  TxtSeq: TUtf8CpSeq;
+  PatSeq, Sample: TUcs4Seq;
+begin
+  if (aText = '') or (aPattern = '') or (DWord(K) >= DWord(Length(aPattern))) then exit(nil);
+  if not Utf8Validate(aPattern) then exit(nil);
+  if aIgnoreCase then begin
+    TxtSeq := Utf8StrToCpSeq(Utf8ToLower(aText));
+    PatSeq := Utf8ToUcs4Seq(Utf8ToLower(aPattern));
+  end else begin
+    TxtSeq := Utf8StrToCpSeq(aText);
+    PatSeq := Utf8ToUcs4Seq(aPattern);
+  end;
+  SetLength(Sample, Length(PatSeq) + K + 1);
+  PatLen := Length(PatSeq);
+  MinLen := PatLen - K;
+  MaxLen := PatLen + K;
+  for I := 0 to High(TxtSeq) do
+    if I + Pred(MinLen) <= High(TxtSeq) then begin
+      SampleLen := MinLen;
+      for J := 0 to Pred(SampleLen) do
+        Sample[J] := TxtSeq[I+J].Code;
+      repeat
+        Dist := TSeqUtil.LevDistanceMBR(Sample[0..Pred(SampleLen)], PatSeq, K);
+        if Dist >= 0 then
+          if I+SampleLen < Length(TxtSeq) then
+            Vec.Add(TApproxMatch.Make(TxtSeq[I].Offset, TxtSeq[I+SampleLen].Offset - TxtSeq[I].Offset, Dist))
+          else
+            Vec.Add(TApproxMatch.Make(TxtSeq[I].Offset, Succ(Length(aText) - TxtSeq[I].Offset), Dist));
+        Inc(SampleLen);
+        if I + Pred(SampleLen) > High(TxtSeq) then break;
+        Sample[Pred(SampleLen)] := TxtSeq[I+Pred(SampleLen)].Code;
+      until SampleLen > MaxLen;
+    end;
+  Result := Vec.ToArray;
+  TSortHelper.Sort(Result, @AmLess);
+end;
+
+function TTestFuzzySearchEdp.BruteForceOwwLev(const aText, aPattern: string; K: SizeInt;
+  aIgnoreCase: Boolean): specialize TGArray<TApproxMatch>;
+var
+  Vec: TAmVec;
+  I, J, SampleLen, PatLen, MinLen, MaxLen, Dist: SizeInt;
+  TxtSeq: TUtf8CpSeq;
+  PatSeq, Sample: TUcs4Seq;
+begin
+  if (aText = '') or (aPattern = '') or (DWord(K) >= DWord(Length(aPattern))) then exit(nil);
+  if not Utf8Validate(aPattern) then exit(nil);
+  if aIgnoreCase then begin
+    TxtSeq := Utf8StrToCpSeq(Utf8ToLower(aText));
+    PatSeq := Utf8ToUcs4Seq(Utf8ToLower(aPattern));
+  end else begin
+    TxtSeq := Utf8StrToCpSeq(aText);
+    PatSeq := Utf8ToUcs4Seq(aPattern);
+  end;
+  SetLength(Sample, Length(PatSeq) + K + 1);
+  PatLen := Length(PatSeq);
+  MinLen := PatLen - K;
+  MaxLen := PatLen + K;
+  for I := 0 to High(TxtSeq) do begin
+    if not(((I = 0) or not IsWordChar(TxtSeq[I-1].Code)) and IsWordChar(TxtSeq[I].Code)) then continue;
+    if I + Pred(MinLen) <= High(TxtSeq) then begin
+      SampleLen := MinLen;
+      for J := 0 to Pred(SampleLen) do
+        Sample[J] := TxtSeq[I+J].Code;
+      repeat
+        if IsWordChar(Sample[Pred(SampleLen)]) and
+           ((I + Pred(SampleLen) >= High(TxtSeq)) or not IsWordChar(TxtSeq[I + SampleLen].Code)) then begin
+          Dist := TSeqUtil.LevDistanceMBR(Sample[0..Pred(SampleLen)], PatSeq, K);
+          if Dist >= 0 then
+            if I+SampleLen < Length(TxtSeq) then
+              Vec.Add(TApproxMatch.Make(TxtSeq[I].Offset, TxtSeq[I+SampleLen].Offset - TxtSeq[I].Offset, Dist))
+            else
+              Vec.Add(TApproxMatch.Make(TxtSeq[I].Offset, Succ(Length(aText) - TxtSeq[I].Offset), Dist));
+        end;
+        Inc(SampleLen);
+        if I + Pred(SampleLen) > High(TxtSeq) then break;
+        Sample[Pred(SampleLen)] := TxtSeq[I+Pred(SampleLen)].Code;
+      until SampleLen > MaxLen;
+    end;
+  end;
+  Result := Vec.ToArray;
+  TSortHelper.Sort(Result, @AmLess);
+end;
+
+function TTestFuzzySearchEdp.IsWordChar(c: Ucs4Char): Boolean;
+begin
+  Result := TCharacter.GetUnicodeCategory(TCharacter.ConvertFromUtf32(c), 1) in LETTER_OR_DIGIT_CATEGORIES;
+end;
+
+procedure TTestFuzzySearchEdp.TestCreate;
+var
+  fse: TFuzzySearchEdp;
+  s: string;
+begin
+  fse.Init('');
+  AssertFalse(fse.Initialized);
+  AssertTrue(fse.Length = 0);
+
+  fse := TFuzzySearchEdp.Create('');
+  AssertFalse(fse.Initialized);
+  AssertTrue(fse.Length = 0);
+
+  s := 'a'#160;
+
+  fse.Init(s);
+  AssertFalse(fse.Initialized);
+  AssertTrue(fse.Length = 0);
+
+  fse := TFuzzySearchEdp.Create(s);
+  AssertFalse(fse.Initialized);
+  AssertTrue(fse.Length = 0);
+
+  s := 'ab';
+
+  fse.Init(s);
+  AssertTrue(fse.Initialized);
+  AssertTrue(fse.Length = 2);
+
+  fse := TFuzzySearchEdp.Create(s);
+  AssertTrue(fse.Initialized);
+  AssertTrue(fse.Length = 2);
+end;
+
+procedure TTestFuzzySearchEdp.TestFindMatches;
+var
+  p: string;
+  k: SizeInt;
+  fse: TFuzzySearchEdp;
+  ma1, ma2: array of TApproxMatch;
+  m: TApproxMatch;
+const
+  Text: string = 'In information theory, linguistics, and computer science, the Levenshtein distance is a string metric for measuring the difference between two sequences';
+begin
+  p := 'information';
+  fse := TFuzzySearchEdp.Create(p);
+  AssertTrue(fse.Initialized);
+  for k := 0 to fse.Length - 1 do begin
+    ma1 := fse.FindMatches(Text, k);
+    ma2 := BruteForceLev(Text, p, k, False);
+    AssertTrue(TSeqHelper.Same(ma1, ma2, @AmEqual));
+    for m in ma1 do begin
+      AssertTrue(m.Distance <= k);
+      AssertTrue(LevDistanceMbrUtf8(p, Copy(Text, m.Offset, m.Length)) = m.Distance);
+    end;
+  end;
+
+  p := 'string';
+  fse := TFuzzySearchEdp.Create(p);
+  AssertTrue(fse.Initialized);
+  for k := 0 to fse.Length - 1 do begin
+    ma1 := fse.FindMatches(Text, k);
+    ma2 := BruteForceLev(Text, p, k, False);
+    AssertTrue(TSeqHelper.Same(ma1, ma2, @AmEqual));
+    for m in ma1 do begin
+      AssertTrue(m.Distance <= k);
+      AssertTrue(LevDistanceMbrUtf8(p, Copy(Text, m.Offset, m.Length)) = m.Distance);
+    end;
+  end;
+
+  p := 'LINGUISTICS';
+  fse := TFuzzySearchEdp.Create(p, True);
+  AssertTrue(fse.Initialized);
+  for k := 0 to fse.Length - 1 do begin
+    ma1 := fse.FindMatches(Text, k);
+    ma2 := BruteForceLev(Text, p, k, True);
+    AssertTrue(TSeqHelper.Same(ma1, ma2, @AmEqual));
+    for m in ma1 do begin
+      AssertTrue(m.Distance <= k);
+      AssertTrue(LevDistanceMbrUtf8(Utf8ToLower(p), Utf8ToLower(Copy(Text, m.Offset, m.Length))) = m.Distance);
+    end;
+  end;
+end;
+
+procedure TTestFuzzySearchEdp.TestFindMatchesOww;
+var
+  p: string;
+  k: SizeInt;
+  fse: TFuzzySearchEdp;
+  ma1, ma2: array of TApproxMatch;
+  m: TApproxMatch;
+const
+  Text: string = 'In information theory, linguistics, and computer science, the Levenshtein distance is a string metric for measuring the difference between two sequences';
+begin
+  p := 'information';
+  fse := TFuzzySearchEdp.Create(p);
+  AssertTrue(fse.Initialized);
+  fse.OnlyWholeWords := True;
+  for k := 0 to fse.Length - 1 do begin
+    ma1 := fse.FindMatches(Text, k);
+    ma2 := BruteForceOwwLev(Text, p, k, False);
+    AssertTrue(TSeqHelper.Same(ma1, ma2, @AmEqual));
+    for m in ma1 do begin
+      AssertTrue(m.Distance <= k);
+      AssertTrue(LevDistanceMbrUtf8(p, Copy(Text, m.Offset, m.Length)) = m.Distance);
+    end;
+  end;
+
+  p := 'string';
+  fse := TFuzzySearchEdp.Create(p);
+  AssertTrue(fse.Initialized);
+  fse.OnlyWholeWords := True;
+  for k := 0 to fse.Length - 1 do begin
+    ma1 := fse.FindMatches(Text, k);
+    ma2 := BruteForceOwwLev(Text, p, k, False);
+    AssertTrue(TSeqHelper.Same(ma1, ma2, @AmEqual));
+    for m in ma1 do begin
+      AssertTrue(m.Distance <= k);
+      AssertTrue(LevDistanceMbrUtf8(p, Copy(Text, m.Offset, m.Length)) = m.Distance);
+    end;
+  end;
+
+  p := 'LINGUISTICS';
+  fse := TFuzzySearchEdp.Create(p, True);
+  AssertTrue(fse.Initialized);
+  fse.OnlyWholeWords := True;
+  for k := 0 to fse.Length - 1 do begin
+    ma1 := fse.FindMatches(Text, k);
+    ma2 := BruteForceOwwLev(Text, p, k, True);
+    AssertTrue(TSeqHelper.Same(ma1, ma2, @AmEqual));
+    for m in ma1 do begin
+      AssertTrue(m.Distance <= k);
+      AssertTrue(LevDistanceMbrUtf8(Utf8ToLower(p), Utf8ToLower(Copy(Text, m.Offset, m.Length))) = m.Distance);
+    end;
+  end;
+end;
+
+procedure TTestFuzzySearchEdp.TestNextMatch;
+var
+  fse: TFuzzySearchEdp;
+  p: string;
+  m: TApproxMatch;
+const
+  Text = '12345A 3210B 345678C 012345678D 987654321E';
+begin
+  p := '3456';
+  fse := TFuzzySearchEdp.Create(p);
+  AssertTrue(fse.Initialized);
+  m := fse.NextMatch(Text, 0);
+  AssertTrue(m.Offset = 14);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = p);
+
+  m := fse.NextMatch(Text, 0, m.Offset + 1);
+  AssertTrue(m.Offset = 25);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = p);
+
+  m := fse.NextMatch(Text, 1);
+  AssertTrue(m.Offset = 3);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = '345');
+
+  m := fse.NextMatch(Text, 1, m.Offset + 1);
+  AssertTrue(m.Offset = 14);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = '345');
+
+  fse.SelectMode := msmLongest;
+
+  m := fse.NextMatch(Text, 1);
+  AssertTrue(m.Offset = 3);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = '345A');
+
+  m := fse.NextMatch(Text, 2);
+  AssertTrue(m.Offset = 2);
+  AssertTrue(Copy(Text, m.Offset, m.Length), Copy(Text, m.Offset, m.Length) = '2345A');
+
+  fse.SelectMode := msmClosest;
+
+  m := fse.NextMatch(Text, 2);
+  AssertTrue(m.Offset = 3);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = '345A');
+end;
+
+procedure TTestFuzzySearchEdp.TestNextMatchOww;
+var
+  fse: TFuzzySearchEdp;
+  p: string;
+  m: TApproxMatch;
+const
+  Text = '12345A 3210B 345678C 012345678D 987654321E';
+begin
+  p := '1234567';
+  fse := TFuzzySearchEdp.Create(p);
+  AssertTrue(fse.Initialized);
+  fse.OnlyWholeWords := True;
+
+  m := fse.NextMatch(Text, 1);
+  AssertTrue(m.Offset = Length(Text)+1);
+  AssertTrue(m.Length = 0);
+
+  m := fse.NextMatch(Text, 2);
+  AssertTrue(m.Offset = 1);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = '12345A');
+
+  m := fse.NextMatch(Text, 2, 2);
+  AssertTrue(m.Offset = Length(Text)+1);
+  AssertTrue(m.Length = 0);
+
+  m := fse.NextMatch(Text, 3, 2);
+  AssertTrue(m.Offset = 22);
+  AssertTrue(Copy(Text, m.Offset, m.Length) = '012345678D');
 end;
 
 { TTestFuzzySearchBitap }
@@ -6146,6 +6433,7 @@ initialization
 
   RegisterTest(TTestUnicodeUtils);
   RegisterTest(TTestSeqUtils);
+  RegisterTest(TTestFuzzySearchEdp);
   RegisterTest(TTestFuzzySearchBitap);
   RegisterTest(TACSearchFsmTest);
   RegisterTest(TACPersistFsmTest);
