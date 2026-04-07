@@ -100,14 +100,14 @@ const
 
   SbFuns: array of TSbTestFun = (
     (Fun: @LcsDistanceWm;       Name: 'LcsDistanceWm'),
-    (Fun: @DamDistanceMbr;      Name: 'DumDistanceMbr'),
+    (Fun: @DamDistanceMbr;      Name: 'DamDistanceMbr'),
     (Fun: @LevDistanceMbr;      Name: 'LevDistanceMbr'),
     (Fun: @LevDistanceMyers;    Name: 'LevDistanceMyers'),
     (Fun: @LevenshteinDistance; Name: 'Reference_DP'));
 
   UniFuns: array of TTestFun = (
     (Fun: @LcsDistanceWmUtf8;    Name: 'LcsDistanceWmUtf8'),
-    (Fun: @DamDistanceMbrUtf8;   Name: 'DumDistanceMbrUtf8'),
+    (Fun: @DamDistanceMbrUtf8;   Name: 'DamDistanceMbrUtf8'),
     (Fun: @LevDistanceMbrUtf8;   Name: 'LevDistanceMbrUtf8'),
     (Fun: @LevDistanceMyersUtf8; Name: 'LevDistanceMyersUtf8'),
     (Fun: @LevenshteinDistUtf8;  Name: 'Reference_DP'));
