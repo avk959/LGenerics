@@ -513,9 +513,16 @@ type
 { returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
   function DamDistanceMbrUtf8(const L, R: string): SizeInt; inline;
   function DamDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+{ returns the longest common subsequence of strings L and R }
   function LcsGusUtf8(const L, R: string): string; inline;
   function LcsKrUtf8(const L, R: string): string; inline;
   function LcsMyersUtf8(const L, R: string): string; inline;
+{ searches for the element of the aList array that is closest to the pattern
+  aPattern, according to the specified distance algorithm aDistAlgo;
+  returns the element's index(Result.F1) and distance(Result.F2) if the pattern
+  and array are not empty, otherwise returns (-1, -1) }
+  function FindClosestUtf8(const aList: array of string; const aPattern: string; aIgnoreCase: Boolean = False;
+                           aDistAlgo:  TSeqDistanceAlgo = sdaDefault): specialize TGTuple2<SizeInt, SizeInt>;
 { returns similarity ratio using specified distance algorithm; aLimit specifies
   the lower bound of the required similarity(0<=aLimit<=1.0), if the obtained value
   is less than the specified value, zero will be returned }
@@ -5144,9 +5151,9 @@ const
 function Utf8ToLower(const s: string): string;
 var
   pv, pr, pEnd: PByte;
-  c, LoC: DWord;
-  PtSize: SizeInt;
   r : string;
+  PtSize: SizeInt;
+  c: DWord;
 begin
   if s = '' then exit('');
   System.SetLength(r, System.Length(s) * 2);// * 2 ???
@@ -5158,14 +5165,12 @@ begin
     begin
       c := CodePointToUcs4Char(pv, PtSize);
       if c <= UC_TBL_HIGH then
-        LoC := UC_CASE_TBL[c] and $ffff
+        c := UC_CASE_TBL[c] and $ffff
       else
-        begin
-          LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
-          if LoC = 0 then
-            LoC := c;
-        end;
-      Ucs4Char2Utf8Buffer(pr, LoC);
+        with UnicodeData.GetProps(c)^ do
+          if SimpleLowerCase <> 0 then
+            c := SimpleLowerCase;
+      Ucs4Char2Utf8Buffer(pr, c);
       pv += PtSize;
     end;
   System.SetLength(r, pr - PByte(r));
@@ -5175,9 +5180,9 @@ end;
 function Utf8ToUpper(const s: string): string;
 var
   pv, pr, pEnd: PByte;
-  c, UpC: DWord;
-  PtSize: SizeInt;
   r : string;
+  PtSize: SizeInt;
+  c: DWord;
 begin
   if s = '' then exit('');
   System.SetLength(r, System.Length(s) * 2);
@@ -5189,14 +5194,12 @@ begin
     begin
       c := CodePointToUcs4Char(pv, PtSize);
       if c <= UC_TBL_HIGH then
-        UpC := UC_CASE_TBL[c] shr 16
+        c := UC_CASE_TBL[c] shr 16
       else
-        begin
-          UpC := UnicodeData.GetProps(c)^.SimpleUpperCase;
-          if UpC = 0 then
-            UpC := c;
-        end;
-      Ucs4Char2Utf8Buffer(pr, UpC);
+        with UnicodeData.GetProps(c)^ do
+          if SimpleUpperCase <> 0 then
+            c := SimpleUpperCase;
+      Ucs4Char2Utf8Buffer(pr, c);
       pv += PtSize;
     end;
   System.SetLength(r, pr - PByte(r));
@@ -5643,6 +5646,76 @@ end;
 function LcsMyersUtf8(const L, R: string): string;
 begin
   Result := LcsGenegicUtf8(L, R, laMyers);
+end;
+
+function FindClosestUtf8(const aList: array of string; const aPattern: string; aIgnoreCase: Boolean;
+  aDistAlgo: TSeqDistanceAlgo): specialize TGTuple2<SizeInt, SizeInt>;
+type
+  TVector  = TUcs4Util.TVector;
+
+  procedure ToUcs4Seq(const s: string; var v: TVector);
+  var
+    p, pEnd: PByte;
+    Len: SizeInt;
+    c: DWord;
+  begin
+    v.MakeEmpty;
+    if s = '' then exit;
+    p := PByte(s);
+    pEnd := p + System.Length(s);
+    Len := 0;
+    while p < pEnd do begin
+      c := CodePointToUcs4Char(p, pEnd - p, Len);
+      p += Len;
+      if aIgnoreCase then
+        if c <= UC_TBL_HIGH then
+          c := UC_CASE_TBL[c] and $ffff
+        else
+          with UnicodeData.GetProps(c)^ do
+            if SimpleLowerCase <> 0 then
+              c := SimpleLowerCase;
+      v.Add(c);
+    end;
+  end;
+var
+  PatVec, CurrVec: TUcs4Util.TVector;
+  I, PatHi, CurrHi, BestIdx, BestDist, Dist: SizeInt;
+begin
+  if (aPattern = '') or (System.Length(aList) = 0) then
+    exit(specialize TGTuple2<SizeInt, SizeInt>.Create(NULL_INDEX, NULL_INDEX));
+  System.Initialize(PatVec);
+  System.Initialize(CurrVec);
+  ToUcs4Seq(aPattern, PatVec);
+  PatHi := PatVec.Count - 1;
+  BestIdx := NULL_INDEX;
+  BestDist := System.High(SizeInt);
+
+  if aDistAlgo = sdaDefault then
+    if PatHi < 64 then
+      aDistAlgo := sdaLevMBR
+    else
+      aDistAlgo := sdaLevMyers;
+
+  for I := 0 to System.High(aList) do begin
+    ToUcs4Seq(aList[I], CurrVec);
+    CurrHi := CurrVec.Count - 1;
+    case aDistAlgo of
+      sdaLevMBR:   Dist := TUcs4Util.LevDistanceMBR(
+                     PatVec.UncMutable[0][0..PatHi], CurrVec.UncMutable[0][0..CurrHi], BestDist-1);
+      sdaLevMyers: Dist := TUcs4Util.LevDistanceMyers(
+                     PatVec.UncMutable[0][0..PatHi], CurrVec.UncMutable[0][0..CurrHi], BestDist-1);
+      sdaLcsWM:    Dist := TUcs4Util.LcsDistanceWM(
+                     PatVec.UncMutable[0][0..PatHi], CurrVec.UncMutable[0][0..CurrHi], BestDist-1);
+    else // sdaDamMBR
+      Dist := TUcs4Util.DamDistanceMBR(
+        PatVec.UncMutable[0][0..PatHi], CurrVec.UncMutable[0][0..CurrHi], BestDist-1);
+    end;
+    if Dist < 0 then continue;
+    BestDist := Dist;
+    BestIdx := I;
+    if BestDist = 0 then break;
+  end;
+  Result := specialize TGTuple2<SizeInt, SizeInt>.Create(BestIdx, BestDist);
 end;
 
 function SimRatioUtf8(const L, R: string; aLimit: Double; Algo: TSeqDistanceAlgo): Double;
