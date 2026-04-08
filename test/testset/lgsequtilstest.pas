@@ -51,6 +51,7 @@ type
     procedure LcsGusUtf8Test;
     procedure LcsKRUtf8Test;
     procedure LcsMyersUtf8Test;
+    procedure FindClosestUtf8Test;
     procedure SimRatioUtf8Test;
     procedure SimRatioExUtf8Test;
     procedure Utf8HashTextTest;
@@ -1755,6 +1756,51 @@ begin
   s2 := 'testing123testing';
   s := 'tsitest';
   AssertTrue(LcsMyersUtf8(s1, s2) = s);
+end;
+
+procedure TTestUnicodeUtils.FindClosestUtf8Test;
+var
+  List: TStringArray;
+  p: string;
+  t: specialize TGTuple2<SizeInt, SizeInt>;
+const
+  Txt: string = 'Ce n’est pas une histoire de revenants? – сказал он, усевшись подле княгини и торопливо пристроив к глазам свой лорнет';
+begin
+  p := 'key';
+  List := [];
+  t := FindClosestUtf8(List, p);
+  AssertTrue((t.F1 = -1) and (t.F2 = -1));
+
+  List := ['a','b'];
+  p := '';
+  t := FindClosestUtf8(List, p);
+  AssertTrue((t.F1 = -1) and (t.F2 = -1));
+
+  p := 'aa';
+  t := FindClosestUtf8(List, p);
+  AssertTrue((t.F1 = 0) and (t.F2 = 1));
+
+  p := 'abc';
+  List := ['bba','acb'];
+  t := FindClosestUtf8(List, p);
+  AssertTrue((t.F1 = 0) and (t.F2 = 2));
+
+  t := FindClosestUtf8(List, p, False, sdaDamMBR);
+  AssertTrue((t.F1 = 1) and (t.F2 = 1));
+
+  p := 'ABC';
+  List := ['bba','acb'];
+  t := FindClosestUtf8(List, p, True);
+  AssertTrue((t.F1 = 0) and (t.F2 = 2));
+
+  t := FindClosestUtf8(List, p, True, sdaDamMBR);
+  AssertTrue((t.F1 = 1) and (t.F2 = 1));
+
+  List := Txt.Split([' ','-',','], TStringSplitOptions.ExcludeEmpty);
+  for p in List do begin
+    t := FindClosestUtf8(List, p);
+    AssertTrue(t.F2 = 0);
+  end;
 end;
 
 procedure TTestUnicodeUtils.SimRatioUtf8Test;
