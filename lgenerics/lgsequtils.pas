@@ -731,17 +731,10 @@ type
     uses old and simple Ukkonen EDP algorithm with linear space complexity
     and O(KN) expected time complexity }
   TFuzzySearchEdp = record
-  private
   type
-    TUcs4Cp = record
-      Offset: SizeInt;
-      Code: Ucs4Char;
-      constructor Make(aOfs: SizeInt; aCode: Ucs4Char);
-    end;
 
-  public
-  type
     TMatchSelectMode = (msmFirst, msmLongest, msmClosest);
+    TDistanceMetric  = (dmLevenshtein, dmDamerau);
 
     TMatches = record
     private
@@ -756,11 +749,19 @@ type
     end;
 
   private
+  type
+    TUcs4Cp = record
+      Offset: SizeInt;
+      Code: Ucs4Char;
+      constructor Make(aOfs: SizeInt; aCode: Ucs4Char);
+    end;
+  var
     FPattern,
     FTestBuf: TUcs4Seq;
     FQueue: array of TUcs4Cp;
     FD: array of SizeInt;
     FMode: TMatchSelectMode;
+    FMetric: TDistanceMetric;
     FIgnoreCase,
     FWholeWords: Boolean;
     class function ToUcs4SeqLower(p: PByte; aCount: SizeInt): TUcs4Seq; static;
@@ -770,7 +771,9 @@ type
     function  GetLength: SizeInt;
     function  DoTest(aOfs, aCpCount, aQueueTop, K: SizeInt; aOnMatch: TNestApproxMatch): Boolean;
     function  DoTestOww(aOfs, aCpCount, aQueueTop, K: SizeInt; aOnMatch: TNestApproxMatch): Boolean;
-    procedure DoSearch(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+    procedure DoSearchLev(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+    procedure DoSearchDam(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+    procedure DoSearch(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch); inline;
   public
   { aPattern MUST be a non-empty, well-formed UTF-8 encoded string }
     constructor Create(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
@@ -800,8 +803,10 @@ type
     property  Initialized: Boolean read GetInitialized;
   { pattern length (in code points) }
     property  Length: SizeInt read GetLength;
-  {  }
+  { for the NextMatch() method and the enumerator, defines how to select a single match
+    among several overlapping ones }
     property  SelectMode: TMatchSelectMode read FMode write FMode;
+    property  Metric: TDistanceMetric read FMetric write FMetric;
     property  CaseInsensitive: Boolean read FIgnoreCase;
   { if set to True, the word boundary will be examined for each match,
     i.e. if it is surrounded by non-word characters or string boundaries }
@@ -6011,11 +6016,12 @@ function Ucs4CharToLower(aChar: DWord): DWord; inline;
 begin
   if aChar <= UC_TBL_HIGH then
     Result := UC_CASE_TBL[aChar] and $ffff
-  else begin
-    Result := UnicodeData.GetProps(aChar)^.SimpleLowerCase;
-    if Result = 0 then
-      Result := aChar;
-  end;
+  else
+    with UnicodeData.GetProps(aChar)^ do
+      if SimpleLowerCase <> 0 then
+        Result := SimpleLowerCase
+      else
+        Result := aChar;
 end;
 
 function FilterStringUtf8(const s: string; pBuf: PByte; const aOpts: TStrCompareOptions): SizeInt;
@@ -6945,7 +6951,7 @@ class function TFuzzySearchEdp.ToUcs4SeqLower(p: PByte; aCount: SizeInt): TUcs4S
 var
   PtLen, I: SizeInt;
   r: TUcs4Seq;
-  c, LoC: DWord;
+  c: DWord;
 begin
   System.SetLength(r, Utf8Len(p, aCount));
   PtLen := 0;
@@ -6953,13 +6959,12 @@ begin
     begin
       c := CodePointToUcs4Char(p, PtLen);
       if c <= UC_TBL_HIGH then
-        LoC := UC_CASE_TBL[c] and $ffff
+        c := UC_CASE_TBL[c] and $ffff
       else
-        begin
-          LoC := UnicodeData.GetProps(c)^.SimpleLowerCase;
-          if LoC = 0 then LoC := c;
-        end;
-      r[I] := LoC;
+        with UnicodeData.GetProps(c)^ do
+          if SimpleLowerCase <> 0 then
+            c := SimpleLowerCase;
+      r[I] := c;
       p += PtLen;
     end;
   Result := r;
@@ -7011,7 +7016,10 @@ begin
   end;
   Start := J;
   for I := 0 to K*2 do begin
-    Dist := TUcs4Util.LevDistanceMBR(FPattern, FTestBuf[I..Pred(Len)], K);
+    if Metric = dmLevenshtein then
+      Dist := TUcs4Util.LevDistanceMBR(FPattern, FTestBuf[I..Pred(Len)], K)
+    else
+      Dist := TUcs4Util.DamDistanceMBR(FPattern, FTestBuf[I..Pred(Len)], K);
     if Dist = NULL_INDEX then continue;
     J := Start + I;
     if J >= System.Length(FQueue) then J -= System.Length(FQueue);
@@ -7035,7 +7043,10 @@ begin
   Start := J;
   for I := 1 to Succ(K*2) do begin
     if not IsWordChar(FTestBuf[I]) or IsWordChar(FTestBuf[I-1]) then continue;
-    Dist := TUcs4Util.LevDistanceMBR(FPattern, FTestBuf[I..Len], K);
+    if Metric = dmLevenshtein then
+      Dist := TUcs4Util.LevDistanceMBR(FPattern, FTestBuf[I..Len], K)
+    else
+      Dist := TUcs4Util.DamDistanceMBR(FPattern, FTestBuf[I..Len], K);
     if Dist = NULL_INDEX then continue;
     J := Start + I;
     if J >= System.Length(FQueue) then J -= System.Length(FQueue);
@@ -7044,7 +7055,7 @@ begin
   Result := True;
 end;
 
-procedure TFuzzySearchEdp.DoSearch(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+procedure TFuzzySearchEdp.DoSearchLev(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
 var
   qTop: Integer = 0;
 
@@ -7115,6 +7126,97 @@ begin
   end;
 end;
 
+procedure TFuzzySearchEdp.DoSearchDam(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+var
+  qTop: Integer = 0;
+
+  procedure Push(aOfs: SizeInt; c: Ucs4Char); inline;
+  begin
+    FQueue[qTop].Make(aOfs, c);
+    Inc(qTop);
+    if qTop = System.Length(FQueue) then qTop := 0;
+  end;
+
+  function PrevChar: Ucs4Char; inline;
+  begin
+    if qTop <> 0 then
+      Result := FQueue[qTop-1].Code
+    else
+      Result := FQueue[System.High(FQueue)].Code;
+  end;
+
+var
+  p, pEnd: PByte;
+  Mx0, Mx, pTemp: PSizeInt;
+  CpLen, CharCount, I, PatLen, MaxCol, Cost, Prev, PrevPrev: SizeInt;
+  c, cPrev: Ucs4Char;
+begin
+  p := @s[aOffset];
+  pEnd := PByte(s) + System.Length(s);
+  PatLen := Length;
+  Mx0 := Pointer(FD);
+  Mx := Mx0 + Succ(PatLen);
+  for I := 1 to PatLen do Mx0[I] := I;
+  MaxCol := Succ(K);
+  if OnlyWholeWords then
+    if aOffset = 1 then
+      Push(0, 0)
+    else begin
+      Prev := PrevCpOffsetUtf8(s, aOffset);
+      Push(Prev, CodePointToUcs4Char(@s[Prev], aOffset - Prev, CpLen));
+    end;
+  CharCount := 0;
+  PrevPrev := 0;
+  c := 0;
+
+  while p < pEnd do begin
+    cPrev := c;
+    if CaseInsensitive then
+      c := Ucs4CharToLower(CodePointToUcs4Char(p, pEnd - p, CpLen))
+    else
+      c := CodePointToUcs4Char(p, pEnd - p, CpLen);
+    Push(aOffset, c);
+    aOffset += CpLen;
+    p += CpLen;
+    Inc(CharCount);
+    Prev := 0;
+    for I := 1 to MaxCol do begin
+      if FPattern[I-1] = c then
+        Cost := Mx0[I-1]
+      else
+        Cost := Succ(LgUtils.MinOf3(Mx0[I-1], Mx0[I], Mx[I-1]));
+      if (CharCount > 1) and (I > 1) and (FPattern[I-1] = cPrev) and (FPattern[I-2] = c) then
+        Cost := Math.Min(Cost, PrevPrev+1);
+      PrevPrev := Prev;
+      Prev := Mx[I];
+      Mx[I] := Cost;
+    end;
+    while Mx[MaxCol] > K do Dec(MaxCol);
+    pTemp := Mx0;
+    Mx0 := Mx;
+    Mx := pTemp;
+    if MaxCol = PatLen then
+      if OnlyWholeWords then begin
+        if not(IsWordChar(PrevChar) and IsWordBound(p, pEnd - p)) then continue;
+        if not DoTestOww(aOffset, CharCount, qTop, K, aOnMatch) then exit;
+      end else begin
+        if not DoTest(aOffset, CharCount, qTop, K, aOnMatch) then exit;
+      end
+    else begin
+      Inc(MaxCol);
+      Mx0[MaxCol] := Mx[MaxCol];
+    end;
+  end;
+end;
+
+procedure TFuzzySearchEdp.DoSearch(const s: string; aOffset, K: SizeInt; aOnMatch: TNestApproxMatch);
+begin
+  if Metric = dmLevenshtein then
+    DoSearchLev(s, aOffset, K, aOnMatch)
+  else
+    DoSearchDam(s, aOffset, K, aOnMatch);
+end;
+
 constructor TFuzzySearchEdp.Create(const aPattern: string; aIgnoreCase: Boolean; aWholeWords: Boolean);
 begin
   Init(aPattern, aIgnoreCase, aWholeWords);
@@ -7130,12 +7232,13 @@ begin
   FIgnoreCase := aIgnoreCase;
   FWholeWords := aWholeWords;
   SelectMode := msmFirst;
+  Metric := dmLevenshtein;
   if aIgnoreCase then
     FPattern := ToUcs4SeqLower(Pointer(aPattern), System.Length(aPattern))
   else
     FPattern := ToUcs4Seq(Pointer(aPattern), System.Length(aPattern));
   System.SetLength(FQueue, Length*2);
-  System.SetLength(FD, Succ(System.Length(FPattern)));
+  System.SetLength(FD, Succ(Length)*2);
 end;
 
 function TFuzzySearchEdp.Matches(const aText: string; K: SizeInt; aOffset: SizeInt): TMatches;
@@ -7160,7 +7263,7 @@ var
   Match: TApproxMatch;
   EndPt: SizeInt = 0;
 
-  function Found(const m: TApproxMatch): Boolean;
+  function TestMatch(const m: TApproxMatch): Boolean;
   var
     I: SizeInt;
   begin
@@ -7207,7 +7310,7 @@ begin
      (aOffset > System.Length(aText)) then exit(Default(TApproxMatch));
 
   Match := TApproxMatch.Make(Succ(System.Length(aText)), 0, 0);
-  DoSearch(aText, aOffset, K, @Found);
+  DoSearch(aText, aOffset, K, @TestMatch);
   Result := Match;
 end;
 
@@ -7219,7 +7322,7 @@ var
   r: array of TApproxMatch = nil;
   Count: SizeInt = 0;
 
-  function Found(const m: TApproxMatch): Boolean;
+  function TestMatch(const m: TApproxMatch): Boolean;
   begin
     if System.Length(r) = Count then System.SetLength(r, Count*2);
     r[Count] := m;
@@ -7240,7 +7343,7 @@ begin
 
   System.SetLength(r, ARRAY_INITIAL_SIZE);
   if aLimit < 1 then aLimit := System.High(SizeInt);
-  DoSearch(aText, aOffset, K, @Found);
+  DoSearch(aText, aOffset, K, @TestMatch);
   System.SetLength(r, Count);
   TSortHelper.Sort(r, @Cmp);
   Result := r;
@@ -7249,7 +7352,7 @@ end;
 procedure TFuzzySearchEdp.Search(const aText: string; K: SizeInt; aOnMatch: TOnApproxMatch;
   aOffset: SizeInt);
 
-  function DoMatch(const m: TApproxMatch): Boolean;
+  function TestMatch(const m: TApproxMatch): Boolean;
   begin
     Result := aOnMatch(m);
   end;
@@ -7259,7 +7362,7 @@ begin
   if not(Initialized and(SizeUInt(K)<SizeUInt(Length)) and
         (aOffset <= System.Length(aText))) then exit;
 
-  DoSearch(aText, aOffset, K, @DoMatch);
+  DoSearch(aText, aOffset, K, @TestMatch);
 end;
 
 procedure TFuzzySearchEdp.Search(const aText: string; K: SizeInt; aOnMatch: TNestApproxMatch;
