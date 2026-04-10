@@ -779,17 +779,16 @@ type
     constructor Create(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
     procedure Init(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
   { iterates through approximate occurrences of the pattern (most relevant according to the
-    selection mode) in the string aText, with a Levenshtein distance of at most K,
-    starting the search at position aOffset; K MUST be in the range 0 <= K < Length }
+    selection mode) in the string aText, with a distance of at most K, starting the search
+    at position aOffset; K MUST be in the range 0 <= K < Length }
     function Matches(const aText: string; K: SizeInt; aOffset: SizeInt = 1): TMatches;
-  { returns the next approximate match of the pattern (most relevant according to the
-    selection mode) in the string aText, with a Levenshtein distance of at most K,
-    starting the search at position aOffset;
-    returns TApproxMatch(0,0,0) if the instance is not initialized or 0 > K >= Length;
-    returns TApproxMatch(Length(aText)+1,0,0) if no occurrence is found }
+  { returns the next approximate occurrence of the pattern (most relevant according to the
+    selection mode) in the string aText, with a distance of at most K, starting the search
+    at position aOffset; returns TApproxMatch(0,0,0) if the instance is not initialized
+    or 0 > K >= Length; returns TApproxMatch(Length(aText)+1,0,0) if no occurrence is found }
     function NextMatch(const aText: string; K: SizeInt; aOffset: SizeInt = 1): TApproxMatch;
   { returns an array of all approximate occurrences of the pattern in the string aText
-    that have a Levenshtein distance of at most K, starting from the index aOffset;
+    that have a distance of at most K, starting from the index aOffset;
     if aLimit is greater than zero, it returns no more than aLimit occurrences,
     otherwise it returns all found occurrences; returns an empty array if no occurrence
     is found or the instance is not initialized or 0 > K >= Length }
@@ -7293,10 +7292,10 @@ var
             Match := m
           else
             if m.Distance = Match.Distance then
-              if m.Length > Match.Length then
+              if System.Abs(Length - m.Length) < System.Abs(Length - Match.Length) then
                 Match := m
               else
-                if m.Length = Match.Length then
+                if System.Abs(Length - m.Length) = System.Abs(Length - Match.Length) then
                   if m.Offset < Match.Offset then
                     Match := m;
       end;
