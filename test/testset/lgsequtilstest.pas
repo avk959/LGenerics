@@ -150,6 +150,7 @@ type
     procedure TestFindMatchesOww;
     procedure TestNextMatch;
     procedure TestNextMatchOww;
+    procedure TestNextMatchDam;
   end;
 
   { TTestFuzzySearchBitap }
@@ -4506,6 +4507,34 @@ begin
   m := fse.NextMatch(Text, 3, 2);
   AssertTrue(m.Offset = 22);
   AssertTrue(Copy(Text, m.Offset, m.Length) = '012345678D');
+end;
+
+procedure TTestFuzzySearchEdp.TestNextMatchDam;
+var
+  fse: TFuzzySearchEdp;
+  p: string;
+  m: TApproxMatch;
+  Count, Ofs: Integer;
+const
+  Text = 'arbacadabra1, abarcadabra2, abracdaabra3, abracadarba4';
+begin
+  p := 'abracadabra';
+  fse := TFuzzySearchEdp.Create(p);
+  fse.OnlyWholeWords := True;
+  Count := 0;
+  for m in fse.Matches(Text, 2) do
+    Inc(Count);
+  AssertTrue(Count = 0);
+
+  fse.Metric := dmDamerau;
+  Ofs := 0;
+  for m in fse.Matches(Text, 2) do begin
+    AssertTrue(m.Offset > Ofs);
+    AssertTrue(m.Distance = 2);
+    Ofs := m.Offset;
+    Inc(Count);
+  end;
+  AssertTrue(Count = 4);
 end;
 
 { TTestFuzzySearchBitap }
