@@ -445,7 +445,7 @@ type
   function Utf8ToUpper(const s: string): string;
   function IsSubSequenceUtf8(const aStr, aSub: string): Boolean;
   function Utf8ToUcs4Seq(const s: string): TUcs4Seq; inline;
-  function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
+  function Ucs4SeqToUtf8(const s: TUcs4Seq): string; inline;
   function Ucs4CharToUtf8(c: Ucs4Char): string;
 
 type
@@ -465,6 +465,12 @@ type
   public
     class function Chars(const s: string; aOffset: SizeInt = 1; aCount: SizeInt = 0): TCharEnum; static;
     function ToUtf8: string; inline;
+  end;
+
+  TUcs4SeqHelper = type helper for TUcs4Seq
+    class function Parse(const s: string): TUcs4Seq; inline; static;
+    class function ToString(const aSeq: array of Ucs4Char): string; static;
+    function ToString: string; inline;
   end;
 
   { TUtf8Cp: describes a codepoint within some string }
@@ -4963,20 +4969,20 @@ end;
 function Utf8ToUcs4SeqImpl(const s: rawbytestring): TUcs4Seq;
 var
   r: TUcs4Seq = nil;
-  I, J, PtSize, StrLen: SizeInt;
-  p: PByte absolute s;
+  p, pEnd: PByte;
+  PtSize, I: SizeInt;
 begin
-  System.SetLength(r, System.Length(s));
-  StrLen := System.Length(s);
+  if s = '' then exit(nil);
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  System.SetLength(r, Utf8Len(p, System.Length(s)));
   I := 0;
-  J := 0;
-  while I < StrLen do
+  while p < pEnd do
     begin
-      r[J] := CodePointToUcs4Char(@p[I], PtSize);
-      Inc(J);
-      I += PtSize;
+      r[I] := CodePointToUcs4Char(p, pEnd - p, PtSize);
+      p += PtSize;
+      Inc(I);
     end;
-  System.SetLength(r, J);
   Result := r;
 end;
 
@@ -5406,7 +5412,7 @@ begin
   end;
 end;
 
-function Char32SeqUtf8Len(const r: TUcs4Seq): SizeInt;
+function Char32SeqUtf8Len(const r: array of Ucs4Char): SizeInt;
 var
   I: SizeInt;
 begin
@@ -5415,7 +5421,7 @@ begin
     Result += Ucs4CharUtf8Len(r[I]);
 end;
 
-function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
+function Ucs4SeqToUtf8Impl(const s: array of Ucs4Char): string;
 var
   r: string = '';
   I, J: SizeInt;
@@ -5424,30 +5430,28 @@ var
   p: PByte;
   Bytes: TByte4;
 begin
-  System.SetLength(r, System.Length(s));
+  System.SetLength(r, Char32SeqUtf8Len(s));
   p := Pointer(r);
   I := 0;
   for J := 0 to System.High(s) do
     begin
       Curr := s[J];
       Len := Ucs4CharToUtf8Char(Curr, Bytes);
-      if System.Length(r) < I + Len then
-        begin
-          System.SetLength(r, (I + Len)*2);
-          p := Pointer(r);
-        end;
       case Len of
         1: p[I] := Byte(Curr);
         2: PByte2(@p[I])^ := PByte2(@Bytes)^;
         3: PByte3(@p[I])^ := PByte3(@Bytes)^;
-      else
-        // 4
+      else // 4
         PByte4(@p[I])^ := Bytes;
       end;
       I += Len;
     end;
-  System.SetLength(r, I);
   Result := r;
+end;
+
+function Ucs4SeqToUtf8(const s: TUcs4Seq): string;
+begin
+  Result := Ucs4SeqToUtf8Impl(s);
 end;
 
 function Ucs4CharToUtf8(c: Ucs4Char): string;
@@ -5507,6 +5511,23 @@ end;
 function TUcs4CharHelper.ToUtf8: string;
 begin
   Result := Ucs4CharToUtf8(Self);
+end;
+
+{ TUcs4SeqHelper }
+
+class function TUcs4SeqHelper.Parse(const s: string): TUcs4Seq;
+begin
+  Result := Utf8ToUcs4SeqImpl(s);
+end;
+
+class function TUcs4SeqHelper.ToString(const aSeq: array of Ucs4Char): string;
+begin
+  Result := Ucs4SeqToUtf8Impl(aSeq);
+end;
+
+function TUcs4SeqHelper.ToString: string;
+begin
+  Result := Ucs4SeqToUtf8Impl(Self);
 end;
 
 { TUtf8Cp }
