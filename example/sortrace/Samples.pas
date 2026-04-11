@@ -500,7 +500,7 @@ begin
   Result := Timer.Elapsed;
 end;
 
-function StrCmp({$IF FPC_FULLVERSION>=30301}const{$ELSE}constref{$ENDIF} L, R: string): Integer;
+function StrCmp({$IF FPC_FULLVERSION>30202}const{$ELSE}constref{$ENDIF} L, R: string): Integer;
 begin
   if L > R then
     Result := 1
@@ -538,7 +538,7 @@ begin
   Result := Timer.Elapsed;
 end;
 
-function Vec4Order({$IF FPC_FULLVERSION>=30301}const{$ELSE}constref{$ENDIF} A, B: TVec4): Int32;
+function Vec4Order({$IF FPC_FULLVERSION>30202}const{$ELSE}constref{$ENDIF} A, B: TVec4): Int32;
 var
   sA, sB: Double;
 begin
