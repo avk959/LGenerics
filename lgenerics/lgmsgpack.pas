@@ -1649,7 +1649,7 @@ var
           else
             aNode.AsDouble := d;
         end;
-      rtkString:       aNode.AsString := Reader.AsString;
+      rtkString:      aNode.AsString := Reader.AsString;
       rtkArrayBegin:  if not DoReadArray(aNode) then exit(False);
       rtkObjectBegin: if not DoReadObject(aNode) then exit(False);
     else
