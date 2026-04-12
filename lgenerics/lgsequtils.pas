@@ -738,7 +738,6 @@ type
     and O(KN) expected time complexity }
   TFuzzySearchEdp = record
   type
-
     TMatchSelectMode = (msmFirst, msmLongest, msmClosest);
     TDistanceMetric  = (dmLevenshtein, dmDamerau);
 
@@ -805,6 +804,7 @@ type
     immediately exits the procedure if aOnMatch() returns False }
     procedure Search(const aText: string; K: SizeInt; aOnMatch: TOnApproxMatch; aOffset: SizeInt = 1);
     procedure Search(const aText: string; K: SizeInt; aOnMatch: TNestApproxMatch; aOffset: SizeInt = 1);
+    function  GetErrorLevel(aSimRatio: Double): SizeInt;
     property  Initialized: Boolean read GetInitialized;
   { pattern length (in code points) }
     property  Length: SizeInt read GetLength;
@@ -7393,6 +7393,21 @@ begin
         (aOffset <= System.Length(aText))) then exit;
 
   DoSearch(aText, aOffset, K, aOnMatch);
+end;
+
+function TFuzzySearchEdp.GetErrorLevel(aSimRatio: Double): SizeInt;
+begin
+  if not Initialized then exit(0);
+  if aSimRatio < 0 then
+    aSimRatio := 0
+  else
+    if aSimRatio > 1 then
+      aSimRatio := 1;
+  aSimRatio := aSimRatio*Length;
+  if System.Frac(aSimRatio) = 0 then
+    Result := Length - System.Trunc(aSimRatio)
+  else
+    Result := Pred(Length - System.Trunc(aSimRatio));
 end;
 
 { TFuzzySearchBitap.TEnumerator }
