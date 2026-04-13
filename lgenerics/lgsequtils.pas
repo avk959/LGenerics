@@ -831,49 +831,43 @@ type
 
   private
   type
+    TUcs4Cp = record
+      Offset: SizeInt;
+      Code: Ucs4Char;
+    end;
     TMapType     = specialize TGLiteChainHashMap<Ucs4Char, QWord, TUcs4Hasher>;
     TCharMap     = TMapType.TMap;
-    THelper      = specialize TGArrayHelpUtil<QWord>;
     PSearchBitap = ^TFuzzySearchBitap;
-
-    TEnumerator = record
-    private
-      FText: string;
-      FTable: array of QWord;
-      FQueue: array of SizeInt;
-      FSearch: PSearchBitap;
-      FTxtOfs: SizeInt;
-      FqHead: Integer;
-      FMatch: TMatch;
-      function  GetCurrent: TMatch; inline;
-      procedure Init(pSearch: PSearchBitap; const aText: string; aOfs: SizeInt; aK: Integer);
-    public
-      function  MoveNext: Boolean;
-      property  Current: TMatch read GetCurrent;
-    end;
 
   public
   type
     TMatches = record
     private
-      FSearch: PSearchBitap;
       FText: string;
-      FOfs: SizeInt;
+      FSearch: PSearchBitap;
+      FMatch: TMatch;
       FK: Integer;
     public
-      function GetEnumerator: TEnumerator;
+      function GetEnumerator: TMatches;
+      function MoveNext: Boolean;
+      property Current: TMatch read FMatch;
     end;
 
   private
     FCharMap: TCharMap;
-    FLength: Integer;
+    FQueue: array of TUcs4Cp;
+    FTable: array of QWord;
+    FQueueTop: Integer;
     FIgnoreCase,
     FWholeWords: Boolean;
-    function  GetInitialized: Boolean;
-    function  GetLength: Integer;
+    function  GetInitialized: Boolean; inline;
+    function  GetLength: Integer; inline;
     function  GetCaseInsensitive: Boolean; inline;
-    procedure DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestMatch);
-    class function OnWordBounds(const s: string; aOffset, aLen: SizeInt): Boolean; static;
+    procedure Push(aOfs: SizeInt; c: Ucs4Char); inline;
+    function  TestParams(const s: string; K: Integer; var aOfs: SizeInt): Boolean; inline;
+    procedure SearchInit(const aText: string; K: Integer; aOffset: SizeInt);
+    procedure DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aOnFound: TNestMatch);
+    property  QueueTop: Integer read FQueueTop;
   public
   { aPattern must be a valid non-empty UTF-8 string containing no more than MAX_PATTERN_CP code points }
     constructor Create(const aPattern: string; aIgnoreCase: Boolean = False; aWholeWords: Boolean = False);
@@ -881,13 +875,13 @@ type
   { returns the start position(1-based) and length(in bytes) of the next approximate
     occurrence of the pattern in the string aText that has a Hamming distance of
     at most K, starting from the index aOffset; returns TMatch(0,0) if instance
-    is not initialized or no occurrence is found or 0 > K >= MAX_PATTERN_CP }
+    is not initialized or no occurrence is found or 0 > K >= Length }
     function NextMatch(const aText: string; K: Integer; aOffset: SizeInt = 1): TMatch;
   { returns an array of all approximate occurrences of the pattern in the string aText
     that have a Hamming distance of at most K, starting from the index aOffset;
     if aLimit is greater than zero, it returns no more than aLimit occurrences,
     otherwise it returns all found occurrences; returns an empty array if no occurrence
-    is found or the instance is not initialized or 0 > K >= MAX_PATTERN_CP }
+    is found or the instance is not initialized or 0 > K >= Length }
     function FindMatches(const aText: string; K: Integer; aOffset: SizeInt = 1;
                          aLimit: SizeInt = 0): specialize TGArray<TMatch>;
   { enumerates the approximate occurrences of the pattern in the string aText that have
@@ -7410,139 +7404,108 @@ begin
     Result := Pred(Length - System.Trunc(aSimRatio));
 end;
 
-{ TFuzzySearchBitap.TEnumerator }
-
-function TFuzzySearchBitap.TEnumerator.GetCurrent: TMatch;
-begin
-  Result := FMatch;
-end;
-
-procedure TFuzzySearchBitap.TEnumerator.Init(pSearch: PSearchBitap; const aText: string; aOfs: SizeInt;
-  aK: Integer);
-begin
-  FText := '';
-  FTable := nil;
-  FQueue := nil;
-  FSearch := nil;
-  FqHead := 0;
-  FMatch := TMatch.Make(0, 0);
-  if (pSearch = nil ) or not pSearch^.Initialized or (aText = '') then exit;
-  if aOfs < 1 then aOfs := 1;
-  if aOfs > System.Length(aText) then exit;
-  if DWord(aK) >= DWord(MAX_PATTERN_CP) then exit;
-  aK := Math.Min(aK, pSearch^.Length);
-  FTxtOfs := aOfs;
-  FText := aText;
-  FSearch := pSearch;
-  FTable := THelper.CreateAndFill(not QWord(1), aK + 1);
-  System.SetLength(FQueue, pSearch^.Length);
-end;
-
-function TFuzzySearchBitap.TEnumerator.MoveNext: Boolean;
-var
-  TextLen, cLen: SizeInt;
-  vOld, vTemp, cMask, TestBit: QWord;
-  PatLen, I, K: Integer;
-  c: Ucs4Char;
-  NoCase, WholeWords: Boolean;
-begin
-  if FSearch = nil then exit(False);
-  TextLen := System.Length(FText);
-  PatLen := System.Length(FQueue);
-  K := System.High(FTable);
-  TestBit := QWord(1) shl PatLen;
-  NoCase := FSearch^.FIgnoreCase;
-  WholeWords := FSearch^.OnlyWholeWords;
-  while FTxtOfs <= TextLen do begin
-    FQueue[FqHead] := FTxtOfs;
-    Inc(FqHead);
-    if FqHead = PatLen then
-      FqHead := 0;
-    if NoCase then
-      c := Ucs4Char(Ucs4CharToLower(DWord(CodePointToUcs4Char(@FText[FTxtOfs], Succ(TextLen - FTxtOfs), cLen))))
-    else
-      c := CodePointToUcs4Char(@FText[FTxtOfs], Succ(TextLen - FTxtOfs), cLen);
-    FTxtOfs += cLen;
-    cMask := FSearch^.FCharMap.GetValueDef(c, System.High(QWord));
-    vOld := FTable[0];
-    FTable[0] := (FTable[0] or cMask) shl 1;
-    for I := 1 to K do begin
-      vTemp := FTable[I];
-      FTable[I] := (vOld and (FTable[I] or cMask)) shl 1;
-      vOld := vTemp;
-    end;
-    if FTable[K] and TestBit = 0 then begin
-      if WholeWords and not TFuzzySearchBitap.OnWordBounds(FText,FQueue[FqHead],FTxtOfs-FQueue[FqHead])then
-        continue;
-      FMatch := TMatch.Make(FQueue[FqHead], FTxtOfs - FQueue[FqHead]);
-      exit(True);
-    end;
-  end;
-  Result := False;
-end;
-
 { TFuzzySearchBitap.TMatches }
 
-function TFuzzySearchBitap.TMatches.GetEnumerator: TEnumerator;
+function TFuzzySearchBitap.TMatches.GetEnumerator: TMatches;
 begin
-  Result.Init(FSearch, FText, FOfs, FK);
+  Result := Self;
+end;
+
+function TFuzzySearchBitap.TMatches.MoveNext: Boolean;
+  function Found(const m: TMatch): Boolean;
+  begin
+    FMatch := m;
+    Result := False;
+  end;
+var
+  Ofs: SizeInt;
+begin
+  if (FText = '') or (FMatch.Offset < 1) then exit(False);
+  if FMatch.Length = 0 then begin
+    Ofs := FMatch.Offset;
+    FSearch^.SearchInit(FText, FK, Ofs);
+  end else
+    Ofs := FMatch.Offset + FMatch.Length;
+  FMatch.Make(0, 0);
+  if Ofs > System.Length(FText) then exit(False);
+  FSearch^.DoSearch(FText, FK, Ofs, @Found);
+  Result := FMatch.Length <> 0;
 end;
 
 { TFuzzySearchBitap }
 
 function TFuzzySearchBitap.GetInitialized: Boolean;
 begin
-  Result := FCharMap.NonEmpty;
+  Result := FTable <> nil;
 end;
 
 function TFuzzySearchBitap.GetLength: Integer;
 begin
-  if FCharMap.NonEmpty then
-    Result := FLength
-  else
-    Result := 0;
+  Result := System.Length(FTable)
 end;
 
 function TFuzzySearchBitap.GetCaseInsensitive: Boolean;
 begin
-  if FCharMap.NonEmpty then
-    Result := FIgnoreCase
-  else
-    Result := False;
+  Result := FIgnoreCase;
 end;
 
-{$PUSH}{$WARN 5057 OFF}
-procedure TFuzzySearchBitap.DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aFound: TNestMatch);
+procedure TFuzzySearchBitap.Push(aOfs: SizeInt; c: Ucs4Char);
+begin
+  with FQueue[QueueTop] do
+    begin
+      Offset := aOfs;
+      Code := c;
+    end;
+  Inc(FQueueTop);
+  if FQueueTop > System.High(FQueue) then
+    FQueueTop := 0;
+end;
+
+function TFuzzySearchBitap.TestParams(const s: string; K: Integer; var aOfs: SizeInt): Boolean;
+begin
+  if not Initialized or (s = '') then exit(False);
+  if aOfs < 1 then aOfs := 1;
+  Result := (aOfs <= System.Length(s)) and (DWord(K) < DWord(Length));
+end;
+
+procedure TFuzzySearchBitap.SearchInit(const aText: string; K: Integer; aOffset: SizeInt);
 var
-  Table: array[0..MAX_PATTERN_CP] of QWord;
-  Queue: array[0..Pred(MAX_PATTERN_CP)] of SizeInt;
-  Ofs, TxtLen, cLen: SizeInt;
+  o, sz: SizeInt;
+begin
+  System.FillQWord(FTable[0], K + 1, not QWord(1));
+  FQueueTop := 0;
+  if OnlyWholeWords then
+    if aOffset = 1 then
+      Push(0, 0)
+    else
+      begin
+        o := PrevCpOffsetUtf8(aText, aOffset);
+        Push(o, CodePointToUcs4Char(@aText[o], aOffset - o, sz));
+      end;
+end;
+
+procedure TFuzzySearchBitap.DoSearch(const aText: string; K: Integer; aOffset: SizeInt; aOnFound: TNestMatch);
+var
+  Table: PQWord;
+  p, pEnd: PByte;
+  cLen: SizeInt;
   vOld, vTemp, cMask, TestBit: QWord;
-  I, qHead, PatLen: Integer;
+  PatLen, I, Start, Prev: Integer;
   c: Ucs4Char;
 begin
-  if not Initialized or (DWord(K) >= DWord(MAX_PATTERN_CP)) or (aText = '') then
-    exit;
-  if aOffset < 1 then aOffset := 1;
-  TxtLen := System.Length(aText);
-  if aOffset > TxtLen then
-    exit;
+  Table := Pointer(FTable);
   PatLen := Length;
-  K := Math.Min(K, PatLen);
-  System.FillQWord(Table[0], K + 1, not QWord(1));
-  qHead := 0;
-  Ofs := aOffset;
+  p := @aText[aOffset];
+  pEnd := PByte(aText) + System.Length(aText);
   TestBit := QWord(1) shl PatLen;
-  while Ofs <= TxtLen do begin
-    Queue[qHead] := Ofs;
-    Inc(qHead);
-    if qHead = PatLen then
-      qHead := 0;
-    if FIgnoreCase then
-      c := Ucs4Char(Ucs4CharToLower(DWord(CodePointToUcs4Char(@aText[Ofs], Succ(TxtLen - Ofs), cLen))))
+  while p < pEnd do begin
+    if CaseInsensitive then
+      c := Ucs4Char(Ucs4CharToLower(DWord(CodePointToUcs4Char(p, pEnd - p, cLen))))
     else
-      c := CodePointToUcs4Char(@aText[Ofs], Succ(TxtLen - Ofs), cLen);
-    Ofs += cLen;
+      c := CodePointToUcs4Char(p, pEnd - p, cLen);
+    Push(aOffset, c);
+    aOffset += cLen;
+    p += cLen;
     cMask := FCharMap.GetValueDef(c, System.High(QWord));
     vOld := Table[0];
     Table[0] := (Table[0] or cMask) shl 1;
@@ -7552,23 +7515,19 @@ begin
       vOld := vTemp;
     end;
     if Table[K] and TestBit = 0 then begin
-      if OnlyWholeWords and not OnWordBounds(aText, Queue[qHead], Ofs-Queue[qHead])then continue;
-      if not aFound(TMatch.Make(Queue[qHead], Ofs-Queue[qHead]))then exit;
+      Start := QueueTop - PatLen;
+      if Start < 0 then Start += Succ(PatLen);
+      if OnlyWholeWords then begin
+        if not(IsWordChar(c) and IsWordChar(FQueue[Start].Code)) then continue;
+        if (p < pEnd) and IsWordChar(CodePointToUcs4Char(p, pEnd - p, cLen)) then continue;
+        Prev := Pred(Start);
+        if Prev = -1 then Prev := PatLen;
+        if IsWordChar(FQueue[Prev].Code) then continue;
+      end;
+      with FQueue[Start] do
+        if not aOnFound(TMatch.Make(Offset, aOffset-Offset))then exit;
     end;
   end;
-end;
-{$POP}
-
-class function TFuzzySearchBitap.OnWordBounds(const s: string; aOffset, aLen: SizeInt): Boolean;
-var
-  o, d: SizeInt;
-begin
-  o := PrevCpOffsetUtf8(s, aOffset);
-  if (o > 0) and IsWordChar(CodePointToUcs4Char(@s[o], aOffset - o, d)) then exit(False);
-  o := Pred(aOffset + aLen);
-  if(o < System.Length(s)) and IsWordChar(CodePointToUcs4Char(@s[o+1], System.Length(s) - o, d))then
-    exit(False);
-  Result := True;
 end;
 
 constructor TFuzzySearchBitap.Create(const aPattern: string; aIgnoreCase: Boolean; aWholeWords: Boolean);
@@ -7583,11 +7542,13 @@ var
   c: Ucs4Char;
 begin
   FCharMap := Default(TCharMap);
-  FLength := 0;
+  FQueue := nil;
+  FTable := nil;
   if (aPattern = '') or not Utf8Validate(aPattern) then exit;
-  I := Utf8Len(aPattern);
-  if I > MAX_PATTERN_CP then exit;
-  FLength := I;
+  PatLen := Utf8Len(aPattern);
+  if PatLen > MAX_PATTERN_CP then exit;
+  System.SetLength(FQueue, Succ(PatLen));
+  System.SetLength(FTable, PatLen);
   FIgnoreCase := aIgnoreCase;
   FWholeWords := aWholeWords;
   I := 1;
@@ -7611,10 +7572,12 @@ var
   function Found(const aMatch: TMatch): Boolean;
   begin
     m := aMatch;
-    Found := False;
+    Result := False;
   end;
 begin
   m := TMatch.Make(0, 0);
+  if not TestParams(aText, K, aOffset) then exit(m);
+  SearchInit(aText, K, aOffset);
   DoSearch(aText, K, aOffset, @Found);
   Result := m;
 end;
@@ -7633,9 +7596,11 @@ var
     AddMatch := rLen < aLimit;
   end;
 begin
+  if not TestParams(aText, K, aOffset) then exit(nil);
   System.SetLength(r, ARRAY_INITIAL_SIZE);
   if aLimit < 1 then
     aLimit := System.High(SizeInt);
+  SearchInit(aText, K, aOffset);
   DoSearch(aText, K, aOffset, @AddMatch);
   System.SetLength(r, rLen);
   Result := r;
@@ -7643,17 +7608,12 @@ end;
 
 function TFuzzySearchBitap.Matches(const aText: string; K: Integer; aOffset: SizeInt): TMatches;
 begin
-  if Initialized then begin
-    Result.FSearch := @Self;
-    Result.FText := aText;
-    Result.FOfs := aOffset;
-    Result.FK := K;
-  end else begin
-    Result.FSearch := nil;
-    Result.FText := '';
-    Result.FOfs := 0;
-    Result.FK := 0;
-  end;
+  if not TestParams(aText, K, aOffset) then exit(Default(TMatches));
+  Result.FSearch := @Self;
+  Result.FText := aText;
+  Result.FMatch.Offset := aOffset;
+  Result.FMatch.Length := 0;
+  Result.FK := K;
 end;
 
 type
