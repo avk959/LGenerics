@@ -4546,12 +4546,10 @@ begin
   fsb.Init('');
   AssertFalse(fsb.Initialized);
   AssertTrue(fsb.Length = 0);
-  AssertFalse(fsb.CaseInsensitive);
 
   fsb := TFuzzySearchBitap.Create('');
   AssertFalse(fsb.Initialized);
   AssertTrue(fsb.Length = 0);
-  AssertFalse(fsb.CaseInsensitive);
 
   fsb.Init('a');
   AssertTrue(fsb.Initialized);
@@ -4586,12 +4584,10 @@ begin
   fsb.Init(Utf8StringOfChar('ц', fsb.MAX_PATTERN_CP + 1));
   AssertFalse(fsb.Initialized);
   AssertTrue(fsb.Length = 0);
-  AssertFalse(fsb.CaseInsensitive);
 
   fsb := TFuzzySearchBitap.Create(Utf8StringOfChar('ц', fsb.MAX_PATTERN_CP + 1));
   AssertFalse(fsb.Initialized);
   AssertTrue(fsb.Length = 0);
-  AssertFalse(fsb.CaseInsensitive);
 end;
 
 procedure TTestFuzzySearchBitap.TestNextMatch;
@@ -4608,13 +4604,13 @@ begin
   AssertTrue((m.Offset = 0) and (m.Length = 0));
 
   Text := 'b';
-  m := fsb.NextMatch(Text, 1, 0);
-  AssertTrue((m.Offset = 1) and (m.Length = 1));
-
-  m := fsb.NextMatch(Text, 1, 2);
+  m := fsb.NextMatch(Text, 0, 0);
   AssertTrue((m.Offset = 0) and (m.Length = 0));
 
-  m := fsb.NextMatch(Text, fsb.MAX_PATTERN_CP + 1, 1);
+  m := fsb.NextMatch(Text, 0, 2);
+  AssertTrue((m.Offset = 0) and (m.Length = 0));
+
+  m := fsb.NextMatch(Text, 1, 1);
   AssertTrue((m.Offset = 0) and (m.Length = 0));
 
   Pattern := 'abc';
@@ -4906,16 +4902,14 @@ begin
   AssertTrue(I = 1);
 
   I := 0;
-  TestPos := 1;
   for m in fsb.Matches(Text, 2) do begin
     AssertTrue(Copy(Text, m.Offset, m.Length) = ans[I]);
-    if I = 2 then
-      TestPos := m.Offset + m.Length;
     Inc(I);
   end;
   AssertTrue(I = 5);
 
-  I := 3;
+  I := 2;
+  TestPos := Pos('mesure', Text);
   for m in fsb.Matches(Text, 2, TestPos) do begin
     AssertTrue(Copy(Text, m.Offset, m.Length) = ans[I]);
     Inc(I);
