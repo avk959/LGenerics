@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -507,58 +507,60 @@ type
       procedure Sssp(aSrc: SizeInt);
     end;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
-    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
+    class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
+    class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
   { Dijkstra's pathfinding algorithm }
-    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+    class function DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { bidirectional Dijkstra's pathfinding algorithm }
-    class function  BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+    class function BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
-    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+    class function AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
-    class function  NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+    class function NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   { inplace Bellman-Ford-Moore algorithm }
-    class function  BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
+    class function BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
+                   static;
   { inplace Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
     faster negative cycle detection }
-    class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
-    class function  BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
+    class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
+                   static;
+    class function BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
   { negative cycle detection }
-    class function  NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
+    class function NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { BFMT single-source shortest paths problem }
-    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
-    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-                    static;
+    class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+                   static;
   { BFMT pathfinding }
-    class function  BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
-                    static;
+    class function BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+                   static;
   { returns True if no negative cycle found, otherwise returns False and aPaths will contain
     single element with the index of an element on negative cycle }
-    class function  FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
-    class function  JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
-    class function  BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean; static;
+    class function FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean; static;
   { creates array of length aLen and fills with InfWeight }
-    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static;
+    class function CreateWeightArray(aLen: SizeInt): TWeightArray; static;
   { creates array of length aLen and fills array with NegInfWeight }
-    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
+    class function CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
   { creates array of length aLen and fills array with ZeroWeight }
-    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static;
+    class function CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static;
   { resizes array to length aLen and fills array with aValue }
     class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
-    class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
+    class function CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
-    class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
+    class function CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
   { warning: does not checks input }
-    class function  ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray; static;
+    class function ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray; static;
   { returns bipartite matching of maximum cardinality and minimum weight;
     warning: does not checks if aGraph is bipartite }
-    class function  MinBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
+    class function MinBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   { returns bipartite matching of maximum cardinality and maximum weight;
     warning: does not checks if aGraph is bipartite }
-    class function  MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
+    class function MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
+    class function GetEigenCentrality(g: TGraph; out aValues: TDoubleArray; aMaxIter: Integer;
+                                      aEps: Double): Boolean; static;
   end;
 
   TINodePqMin = specialize TGPairHeapMin<TIntNode>;
