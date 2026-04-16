@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Most common graph types and utils.                                      *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -28,7 +28,7 @@ unit lgSparseGraph;
 interface
 
 uses
-  Classes, SysUtils, DateUtils,
+  Classes, SysUtils, DateUtils, Math,
   lgUtils,
   lgStack,
   lgQueue,
@@ -476,6 +476,11 @@ type
   { test whether the graph is bipartite; if returns True then aWhites and aGrays will contain
     indices of correspondig vertices }
     function  IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
+  { computes the eigenvector centrality for the nodes;
+    returns True and the eigenvector centrality for each instance node in the array aValues
+    if the algorithm converges to aEps in at most aMaxIter iterations, otherwise it returns False }
+    function  FindEigenCentrality(out aValues: TDoubleArray; aMaxIter: Integer = 100;
+                                  aEps: Double = Double(1e-6)): Boolean;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -2267,6 +2272,43 @@ begin
   System.SetLength(aGrays, GrayIdx);
 end;
 
+function TGSparseGraph.FindEigenCentrality(out aValues: TDoubleArray; aMaxIter: Integer; aEps: Double): Boolean;
+var
+  Curr: TDoubleArray = nil;
+  Next: TDoubleArray = nil;
+  Tmp, Lim: Double;
+  vCnt, I, J: SizeInt;
+  p: PAdjItem;
+begin
+  aValues := nil;
+  if IsEmpty then exit(True);
+  vCnt := VertexCount;
+  System.SetLength(Curr, vCnt);
+  System.SetLength(Next, vCnt);
+  Tmp := Double(1.0)/vCnt;
+  for I := 0 to System.High(Next) do
+    Next[I] := Tmp;
+  Lim := System.Abs(aEps) * vCnt;
+  for I := 1 to aMaxIter do begin
+    System.Move(Next[0], Curr[0], SizeOf(Double)*vCnt);
+    for J := 0 to System.High(Next) do
+      for p in AdjLists[J]^ do
+        Next[p^.Destination] += Curr[J];
+    Tmp := Math.Norm(Next);
+    if Tmp = 0 then Tmp := Double(1.0);
+    for J := 0 to System.High(Next) do
+      Next[J] /= Tmp;
+    Tmp := 0;
+    for J := 0 to System.High(Next) do
+      Tmp += System.Abs(Next[J] - Curr[J]);
+    if Tmp < Lim then begin
+      aValues := Next;
+      exit(True);
+    end;
+  end;
+  Result := False;
+end;
+
 function TGSparseGraph.IsMaxMatching(const aMatch: TIntEdgeArray): Boolean;
 var
   vFree: TBoolVector;
@@ -2332,13 +2374,13 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
 
-function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
   AdjEnums: TAdjEnumArray;
@@ -2525,13 +2567,13 @@ begin
       end;
 end;
 
-function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversal(const aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
 
-function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
   Queue: TIntArray;
@@ -5943,6 +5985,44 @@ var
   Helper: THungarian;
 begin
   Result := Helper.MaxMatching(aGraph, w, g);
+end;
+
+class function TGWeightHelper.GetEigenCentrality(g: TGraph; out aValues: TDoubleArray; aMaxIter: Integer;
+  aEps: Double): Boolean;
+var
+  Curr: TDoubleArray = nil;
+  Next: TDoubleArray = nil;
+  Tmp, Lim: Double;
+  vCnt, I, J: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  aValues := nil;
+  if g.IsEmpty then exit(True);
+  vCnt := g.VertexCount;
+  System.SetLength(Curr, vCnt);
+  System.SetLength(Next, vCnt);
+  Tmp := Double(1.0)/vCnt;
+  for I := 0 to System.High(Next) do
+    Next[I] := Tmp;
+  Lim := System.Abs(aEps) * vCnt;
+  for I := 1 to aMaxIter do begin
+    System.Move(Next[0], Curr[0], SizeOf(Double)*vCnt);
+    for J := 0 to System.High(Next) do
+      for p in g.AdjLists[J]^ do
+        Next[p^.Destination] += Curr[J]*p^.Data.Weight;
+    Tmp := Math.Norm(Next);
+    if Tmp = 0 then Tmp := Double(1.0);
+    for J := 0 to System.High(Next) do
+      Next[J] /= Tmp;
+    Tmp := 0;
+    for J := 0 to System.High(Next) do
+      Tmp += System.Abs(Next[J] - Curr[J]);
+    if Tmp < Lim then begin
+      aValues := Next;
+      exit(True);
+    end;
+  end;
+  Result := False;
 end;
 
 { TGBinHeapMin }
