@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic simple undirected graphs implementation.                        *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -835,6 +835,11 @@ type
   { weighted versions of EdgeBetweenessCentrality() for non-negative weights only;
     correct result is not guaranteed if TWeight is a floating-point type }
     procedure FindEdgeBetweenessCentrality(out aBcMap: TIntPair2DoubleMap; aNormalize: Boolean = True);
+  { computes the eigenvector centrality for the nodes, taking into account the edge weights;
+    returns True and the eigenvector centrality for each instance node in the array aValues
+    if the algorithm converges to aEps in at most aMaxIter iterations, otherwise it returns False }
+    function FindWeightedEigenCentrality(out aValues: TDoubleArray; aMaxIter: Integer = 100;
+                                         aEps: Double = Double(1e-6)): Boolean;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -6560,6 +6565,11 @@ begin
     Scale := Double(0.5);
   for pBc in aBcMap.MutValues do
     pBc^ *= Scale;
+end;
+
+function TGWeightedGraph.FindWeightedEigenCentrality(out aValues: TDoubleArray; aMaxIter: Integer; aEps: Double): Boolean;
+begin
+  Result := TWeightHelper.GetEigenCentrality(Self, aValues, aMaxIter, aEps);
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntEdgeArray;
