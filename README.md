@@ -81,6 +81,7 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
     + maximum flow: push/relabel, capacity scaling Dinitz
     + minimum-cost flow: Busacker-Gowen, cost scaling push/relabel algorithm
     + global minimum cut: Stoer–Wagner, Nagamochi-Ibaraki
+    + centrality: degree, closeness, betweenness, eigenvector
 #### Algorithms on arrays and vectors(mostly unit lgArrayHelpers):
   - reverse, right/left cyclic shifts
   - permutations
