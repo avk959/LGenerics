@@ -509,7 +509,7 @@ type
     function  AddVertexRange(aFrom, aTo: Integer): Integer;
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
-    function  AddEdges(const aVertexList: array of Integer): Integer;
+    function  AddEdges(const aVertexList: array of Integer): SizeInt;
   end;
 
   { TIntFlowChartDotWriter }
@@ -535,7 +535,7 @@ type
     procedure LoadFromFile(const aFileName: string);
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
-    function  AddEdges(const aVertexList: array of string): Integer;
+    function  AddEdges(const aVertexList: array of string): SizeInt;
   end;
 
   { TStrFlowChartDotWriter }
@@ -3931,7 +3931,7 @@ begin
     Result += Ord(AddVertex(I));
 end;
 
-function TIntFlowChart.AddEdges(const aVertexList: array of Integer): Integer;
+function TIntFlowChart.AddEdges(const aVertexList: array of Integer): SizeInt;
 var
   I: SizeInt = 0;
 begin
@@ -4027,7 +4027,7 @@ begin
   inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
-function TStrFlowChart.AddEdges(const aVertexList: array of string): Integer;
+function TStrFlowChart.AddEdges(const aVertexList: array of string): SizeInt;
 var
   I: SizeInt = 0;
 begin
