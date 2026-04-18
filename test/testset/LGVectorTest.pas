@@ -337,6 +337,7 @@ type
     procedure Lob;
     procedure Hob;
     procedure ToggleBit;
+    procedure TrySetBit;
     procedure CallByValue;
     procedure Intersecting;
     procedure IntersectionPop;
@@ -3428,6 +3429,36 @@ begin
   AssertTrue(v[111]);
   AssertTrue(v.UncToggleBit(111));
   AssertFalse(v[111]);
+end;
+
+procedure TBoolVectorTest.TrySetBit;
+var
+  v: TBoolVector;
+begin
+  v.Capacity := 125;
+  AssertFalse(v[42]);
+  AssertFalse(v.TrySetBit(42, False));
+  AssertFalse(v[42]);
+  AssertTrue(v.TrySetBit(42, True));
+  AssertTrue(v[42]);
+  AssertFalse(v.TrySetBit(42, True));
+  AssertTrue(v[42]);
+  AssertTrue(v.TrySetBit(42, False));
+  AssertFalse(v[42]);
+  AssertFalse(v.TrySetBit(42, False));
+  AssertFalse(v[42]);
+
+  AssertFalse(v[101]);
+  AssertFalse(v.UncTrySetBit(101, False));
+  AssertFalse(v[101]);
+  AssertTrue(v.UncTrySetBit(101, True));
+  AssertTrue(v[101]);
+  AssertFalse(v.UncTrySetBit(101, True));
+  AssertTrue(v[101]);
+  AssertTrue(v.UncTrySetBit(101, False));
+  AssertFalse(v[101]);
+  AssertFalse(v.UncTrySetBit(101, False));
+  AssertFalse(v[101]);
 end;
 
 procedure TBoolVectorTest.CallByValue;
