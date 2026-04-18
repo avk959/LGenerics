@@ -336,7 +336,7 @@ type
     function  TryInsert(aIndex: SizeInt; const aValue: T): Boolean; inline;
   { inserts all elements of array a into position aIndex and returns count of inserted elements;
     will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed) }
-    function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt; inline;
+    function  InsertAll(aIndex: SizeInt; const a: array of T): SizeInt;
   { inserts all elements of e into position aIndex and returns count of inserted elements;
     will raise ELGListError if aIndex out of bounds(aIndex = Count is allowed) }
     function  InsertAll(aIndex: SizeInt; e: specialize IGEnumerable<T>): SizeInt; inline;
@@ -494,6 +494,12 @@ type
   { changes the bit[aIndex] value to True if it was False and to False if it was True;
     returns old value; does not checks aIndex range}
     function  UncToggleBit(aIndex: SizeInt): Boolean; inline;
+  { sets the bit at index aIndex to value aValue; checks aIndex range;
+    returns True the specified bit has changed, otherwise returns False }
+    function  TrySetBit(aIndex: SizeInt; aValue: Boolean): Boolean;
+  { sets the bit at index aIndex to value aValue; does not checks aIndex range;
+    returns True the specified bit has changed, otherwise returns False }
+    function  UncTrySetBit(aIndex: SizeInt; aValue: Boolean): Boolean;
     function  Intersecting(constref aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aValue }
     function  IntersectionPop(constref aValue: TBoolVector): SizeInt;
@@ -3209,6 +3215,29 @@ begin
   Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
   FBits[aIndex shr INT_SIZE_LOG] :=
     FBits[aIndex shr INT_SIZE_LOG] xor (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+end;
+
+function TBoolVector.TrySetBit(aIndex: SizeInt; aValue: Boolean): Boolean;
+begin
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
+    begin
+      Result :=
+        (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK)) <> 0) xor aValue;
+      if Result then
+        FBits[aIndex shr INT_SIZE_LOG] :=
+          FBits[aIndex shr INT_SIZE_LOG] xor (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+    end
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TBoolVector.UncTrySetBit(aIndex: SizeInt; aValue: Boolean): Boolean;
+begin
+  Result :=
+    (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK)) <> 0) xor aValue;
+  if Result then
+    FBits[aIndex shr INT_SIZE_LOG] :=
+      FBits[aIndex shr INT_SIZE_LOG] xor (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
 function TBoolVector.Intersecting(constref aValue: TBoolVector): Boolean;
