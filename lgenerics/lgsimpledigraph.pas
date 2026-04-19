@@ -142,6 +142,7 @@ type
     function  DoSetEdgeData(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
     procedure EdgeContracting(aSrc, aDst: SizeInt); override;
+    class function IsDirected: Boolean; override;
   public
   type
     TIncomingArc = record
@@ -273,10 +274,7 @@ type
     function  InDegreeI(aIndex: SizeInt): SizeInt;
     function  OutDegree(const aVertex: TVertex): SizeInt; inline;
     function  OutDegreeI(aIndex: SizeInt): SizeInt;
-    function  Degree(const aVertex: TVertex): SizeInt; inline;
-    function  DegreeI(aIndex: SizeInt): SizeInt;
-    function  Isolated(const aVertex: TVertex): Boolean; inline;
-    function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  DegreeI(aIndex: SizeInt): SizeInt; override;
     function  IsSource(const aVertex: TVertex): Boolean; inline;
     function  IsSourceI(aIndex: SizeInt): Boolean;
     function  IsSink(const aVertex: TVertex): Boolean; inline;
@@ -479,24 +477,13 @@ type
     procedure SetIntersectionOf(aChart: TGFlowChart);
   end;
 
-  { TDigraphDotWriter }
-  generic TDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
-    specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
-  protected
-  type
-    TSimpleDigraph = specialize TGSimpleDigraph<TVertex, TEdgeData, TEqRel>;
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
-  public
-    constructor Create;
-  end;
-
   { TIntFlowChart }
 
   TIntFlowChart = class(specialize TGFlowChart<Integer, Integer>)
   protected
     procedure WriteVertex(aStream: TStream; const aValue: Integer);
     procedure ReadVertex(aStream: TStream; out aValue: Integer);
+    function  GetVertexLabel(aIndex: SizeInt): string; override;
   public
     function  Clone: TIntFlowChart;
     function  Reverse: TIntFlowChart;
@@ -512,19 +499,13 @@ type
     function  AddEdges(const aVertexList: array of Integer): SizeInt;
   end;
 
-  { TIntFlowChartDotWriter }
-  TIntFlowChartDotWriter = class(specialize TDigraphDotWriter<Integer, TDummy, Integer>)
-  protected
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
-  end;
-
   { TStrFlowChart
     warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrFlowChart = class(specialize TGFlowChart<string, string>)
   protected
     procedure WriteVertex(aStream: TStream; const aValue: string);
     procedure ReadVertex(aStream: TStream; out aValue: string);
+    function  GetVertexLabel(aIndex: SizeInt): string; override;
   public
     function  Clone: TStrFlowChart;
     function  Reverse: TStrFlowChart;
@@ -536,13 +517,6 @@ type
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
     function  AddEdges(const aVertexList: array of string): SizeInt;
-  end;
-
-  { TStrFlowChartDotWriter }
-  TStrFlowChartDotWriter = class(specialize TDigraphDotWriter<string, TDummy, string>)
-  protected
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   end;
 
   { TGWeightedDigraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -585,6 +559,7 @@ type
     procedure GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
     function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+    function  GetEdgeLabel(const aEdge: TEdge): string; override;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -725,13 +700,6 @@ type
     function DagMaxPaths: TWeightArray;
   end;
 
-  { TWeightedDigraphDotWriter }
-  generic TWeightedDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
-    specialize TDigraphDotWriter<TVertex, TEdgeData, TEqRel>)
-  protected
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
-  end;
-
   { TGDirectInt64Net specializes TWeight with Int64 }
   generic TGDirectInt64Net<TVertex, TEdgeData, TEqRel> = class(
      specialize TGWeightedDigraph<TVertex, Int64, TEdgeData, TEqRel>)
@@ -842,6 +810,7 @@ type
     specialize TGDirectInt64Net<TVertex, TEdgeData, TEqRel>)
   protected
     {$I McfH.inc}
+    function GetEdgeLabel(const aEdge: TEdge): string; override;
   public
 {**********************************************************************************************************
  class management utilities
@@ -2283,6 +2252,11 @@ begin
       DoRemoveEdge(a.Source, aDst);
 end;
 
+class function TGSimpleDigraph.IsDirected: Boolean;
+begin
+  Result := True;
+end;
+
 procedure TGSimpleDigraph.Clear;
 begin
   inherited;
@@ -2359,25 +2333,10 @@ begin
   Result := FNodeList[aIndex].AdjList.Count;
 end;
 
-function TGSimpleDigraph.Degree(const aVertex: TVertex): SizeInt;
-begin
-  Result := DegreeI(IndexOf(aVertex));
-end;
-
 function TGSimpleDigraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].AdjList.Count + FNodeList[aIndex].Tag;
-end;
-
-function TGSimpleDigraph.Isolated(const aVertex: TVertex): Boolean;
-begin
-  Result := Degree(aVertex) = 0;
-end;
-
-function TGSimpleDigraph.IsolatedI(aIndex: SizeInt): Boolean;
-begin
-  Result := DegreeI(aIndex) = 0;
 end;
 
 function TGSimpleDigraph.IsSource(const aVertex: TVertex): Boolean;
@@ -3843,33 +3802,6 @@ begin
   end;
 end;
 
-{ TDigraphDotWriter }
-
-procedure TDigraphDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if TSimpleDigraph(aGraph).IsolatedI(I) then
-      aList.Add(I.ToString);
-end;
-
-procedure TDigraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '%d ' + FEdgeMark + ' %d';
-  for e in aGraph.Edges do
-    aList.Add(Format(Fmt, [e.Source, e.Destination]));
-end;
-
-constructor TDigraphDotWriter.Create;
-begin
-  FGraphMark := 'digraph ';
-  FEdgeMark := '->';
-end;
-
 { TIntFlowChart }
 
 procedure TIntFlowChart.WriteVertex(aStream: TStream; const aValue: Integer);
@@ -3882,6 +3814,11 @@ begin
   aValue := 0;
   aStream.ReadBuffer(aValue, SizeOf(aValue));
   aValue := LEtoN(aValue);
+end;
+
+function TIntFlowChart.GetVertexLabel(aIndex: SizeInt): string;
+begin
+  Result := Items[aIndex].ToString;
 end;
 
 function TIntFlowChart.Clone: TIntFlowChart;
@@ -3944,27 +3881,6 @@ begin
   Result := EdgeCount - Result;
 end;
 
-{ TIntFlowChartDotWriter }
-
-procedure TIntFlowChartDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if TSimpleDigraph(aGraph).IsolatedI(I) then
-      aList.Add(aGraph[I].ToString);
-end;
-
-procedure TIntFlowChartDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '%d ' + FEdgeMark + ' %d';
-  for e in aGraph.Edges do
-    aList.Add(Format(Fmt, [aGraph[e.Source], aGraph[e.Destination]]));
-end;
-
 { TStrFlowChart }
 
 procedure TStrFlowChart.WriteVertex(aStream: TStream; const aValue: string);
@@ -3987,6 +3903,11 @@ begin
   aStream.ReadBuffer(Len{%H-}, SizeOf(Len));
   System.SetLength(aValue, Len);
   aStream.ReadBuffer(Pointer(aValue)^, Len);
+end;
+
+function TStrFlowChart.GetVertexLabel(aIndex: SizeInt): string;
+begin
+  Result := Items[aIndex];
 end;
 
 function TStrFlowChart.Clone: TStrFlowChart;
@@ -4038,27 +3959,6 @@ begin
       I += 2;
     end;
   Result := EdgeCount - Result;
-end;
-
-{ TStrFlowChartDotWriter }
-
-procedure TStrFlowChartDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if TSimpleDigraph(aGraph).IsolatedI(I) then
-      aList.Add('"' + aGraph[I] + '"');
-end;
-
-procedure TStrFlowChartDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '"%s" ' + FEdgeMark + ' "%s"';
-  for e in aGraph.Edges do
-    aList.Add(Format(Fmt, [aGraph[e.Source], aGraph[e.Destination]]));
 end;
 
 { TGWeightedDigraph }
@@ -4216,6 +4116,11 @@ begin
       end
     else
       Stack.Pop;
+end;
+
+function TGWeightedDigraph.GetEdgeLabel(const aEdge: TEdge): string;
+begin
+  Result := aEdge.Data.Weight.ToString;
 end;
 
 class function TGWeightedDigraph.InfWeight: TWeight;
@@ -4982,18 +4887,6 @@ begin
     end;
 end;
 
-{ TWeightedDigraphDotWriter }
-
-procedure TWeightedDigraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '%d ' + FEdgeMark + ' %d [label="%s"];';
-  for e in aGraph.Edges do
-    aList.Add(Format(Fmt, [e.Source, e.Destination, e.Data.Weight.ToString]));
-end;
-
 {$I MaxFlow.inc}
 
 { TGDirectInt64Net }
@@ -5291,6 +5184,11 @@ begin
 end;
 
 {$I Mcf.inc}
+function TGCostedInt64Net.GetEdgeLabel(const aEdge: TEdge): string;
+begin
+  with aEdge.Data do
+    Result := Weight.ToString + '/' + Cost.ToString;
+end;
 
 function TGCostedInt64Net.Clone: TGCostedInt64Net;
 begin

@@ -295,12 +295,9 @@ type
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
-
-    function  Degree(const aVertex: TVertex): SizeInt; inline;
-    function  DegreeI(aIndex: SizeInt): SizeInt;
-    function  Isolated(const aVertex: TVertex): Boolean; inline;
-    function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  DegreeI(aIndex: SizeInt): SizeInt; override;
     function  DistinctEdges: TDistinctEdges;
+    function  GetEdgeList: TEdgeList; override;
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see BitMatrixSizeMax }
     function  CreateComplementMatrix: TAdjacencyMatrix;
@@ -623,6 +620,7 @@ type
   protected
     procedure WriteVertex(aStream: TStream; const aValue: Integer);
     procedure ReadVertex(aStream: TStream; out aValue: Integer);
+    function  GetVertexLabel(aIndex: SizeInt): string; override;
   public
     procedure LoadDIMACSAscii(const aFileName: string);
     function  SeparateGraph(aVertex: Integer): TIntChart;
@@ -643,31 +641,13 @@ type
     function  AddEdges(const aVertexList: array of Integer): SizeInt;
   end;
 
-  { TGraphDotWriter }
-  generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
-    specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
-  protected
-  type
-    TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
-  public
-    constructor Create;
-  end;
-
-  { TIntChartDotWriter }
-  TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TDummy, Integer>)
-  protected
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
-  end;
-
   { TStrChart
     warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrChart = class(specialize TGChart<string, string>)
   protected
     procedure WriteVertex(aStream: TStream; const aValue: string);
     procedure ReadVertex(aStream: TStream; out aValue: string);
+    function  GetVertexLabel(aIndex: SizeInt): string; override;
   public
     function  SeparateGraph(const aVertex: string): TStrChart;
     function  SeparateGraphI(aIndex: SizeInt): TStrChart;
@@ -683,13 +663,6 @@ type
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
     function AddEdges(const aVertexList: array of string): SizeInt;
-  end;
-
-  { TStrChartDotWriter }
-  TStrChartDotWriter = class(specialize TGraphDotWriter<string, TDummy, string>)
-  protected
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); override;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
@@ -727,6 +700,7 @@ type
     TWArrayHelper     = TWeightHelper.TWArrayHelper;
 
     function CreateEdgeArray: TEdgeArray;
+    function GetEdgeLabel(const aEdge: TEdge): string; override;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -848,13 +822,6 @@ type
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntEdgeArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight; Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-  end;
-
-  { TWeightedGraphDotWriter }
-  generic TWeightedGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
-    specialize TGraphDotWriter<TVertex, TEdgeData, TEqRel>)
-  protected
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); override;
   end;
 
   TRealWeight = specialize TGSimpleWeight<ValReal>;
@@ -3441,30 +3408,33 @@ begin
   end;
 end;
 
-function TGSimpleGraph.Degree(const aVertex: TVertex): SizeInt;
-begin
-  Result := DegreeI(IndexOf(aVertex));
-end;
-
 function TGSimpleGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].AdjList.Count;
 end;
 
-function TGSimpleGraph.Isolated(const aVertex: TVertex): Boolean;
-begin
-  Result := Degree(aVertex) = 0;
-end;
-
-function TGSimpleGraph.IsolatedI(aIndex: SizeInt): Boolean;
-begin
-  Result := DegreeI(aIndex) = 0;
-end;
-
 function TGSimpleGraph.DistinctEdges: TDistinctEdges;
 begin
   Result.FGraph := Self;
+end;
+
+function TGSimpleGraph.GetEdgeList: TEdgeList;
+var
+  r: TEdgeList = nil;
+  Cnt: SizeInt;
+  e: TEdge;
+begin
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  Cnt := 0;
+  for e in DistinctEdges do
+    begin
+      if Cnt = System.Length(r) then System.SetLength(r, Cnt*2);
+      r[Cnt] := e;
+      Inc(Cnt);
+    end;
+  System.SetLength(r, Cnt);
+  Result := r;
 end;
 
 function TGSimpleGraph.CreateComplementMatrix: TAdjacencyMatrix;
@@ -5587,6 +5557,11 @@ begin
   aValue := LEtoN(aValue);
 end;
 
+function TIntChart.GetVertexLabel(aIndex: SizeInt): string;
+begin
+  Result := Items[aIndex].ToString;
+end;
+
 procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
 var
   Ref: specialize TGAutoRef<TTextFileReader>;
@@ -5708,54 +5683,6 @@ begin
   Result := EdgeCount - Result;
 end;
 
-{ TGraphDotWriter }
-
-procedure TGraphDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if TSimpleGraph(aGraph).IsolatedI(I) then
-      aList.Add(I.ToString);
-end;
-
-procedure TGraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '%d ' + FEdgeMark + ' %d';
-  for e in TSimpleGraph(aGraph).DistinctEdges do
-    aList.Add(Format(Fmt, [e.Source, e.Destination]));
-end;
-
-constructor TGraphDotWriter.Create;
-begin
-  FGraphMark := 'graph ';
-  FEdgeMark := '--';
-end;
-
-{ TIntChartDotWriter }
-
-procedure TIntChartDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if TSimpleGraph(aGraph).IsolatedI(I) then
-      aList.Add(aGraph[I].ToString);
-end;
-
-procedure TIntChartDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '%d ' + FEdgeMark + ' %d';
-  for e in TSimpleGraph(aGraph).DistinctEdges do
-    aList.Add(Format(Fmt, [aGraph[e.Source], aGraph[e.Destination]]));
-end;
-
 { TStrChart }
 
 procedure TStrChart.WriteVertex(aStream: TStream; const aValue: string);
@@ -5780,6 +5707,11 @@ begin
   Len := LEToN(Len);
   System.SetLength(aValue, Len);
   aStream.ReadBuffer(Pointer(aValue)^, Len);
+end;
+
+function TStrChart.GetVertexLabel(aIndex: SizeInt): string;
+begin
+  Result := Items[aIndex];
 end;
 
 function TStrChart.SeparateGraph(const aVertex: string): TStrChart;
@@ -5859,27 +5791,6 @@ begin
   Result := EdgeCount - Result;
 end;
 
-{ TStrChartDotWriter }
-
-procedure TStrChartDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if TSimpleGraph(aGraph).IsolatedI(I) then
-      aList.Add('"' + aGraph[I] + '"');
-end;
-
-procedure TStrChartDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '"%s" ' + FEdgeMark + ' "%s"';
-  for e in TSimpleGraph(aGraph).DistinctEdges do
-    aList.Add(Format(Fmt, [aGraph[e.Source], aGraph[e.Destination]]));
-end;
-
 { TGWeightedGraph }
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
@@ -5896,6 +5807,11 @@ begin
           Result[J] := TWeightEdge.Create(I, p^.Destination, p^.Data.Weight);
           Inc(J);
         end;
+end;
+
+function TGWeightedGraph.GetEdgeLabel(const aEdge: TEdge): string;
+begin
+  Result := aEdge.Data.Weight.ToString;
 end;
 
 class function TGWeightedGraph.InfWeight: TWeight;
@@ -6631,18 +6547,6 @@ begin
                   end;
         until not Queue.TryDequeue(Item);
       end;
-end;
-
-{ TWeightedGraphDotWriter }
-
-procedure TWeightedGraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
-var
-  e: TGraph.TEdge;
-  Fmt: string;
-begin
-  Fmt := '%d ' + FEdgeMark + ' %d [label="%s"];';
-  for e in TSimpleGraph(aGraph).DistinctEdges do
-    aList.Add(Format(Fmt, [e.Source, e.Destination, e.Data.Weight.ToString]));
 end;
 
 { TPointsChart }

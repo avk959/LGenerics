@@ -299,6 +299,7 @@ type
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
     class function TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray; static;
     class function TreeCycleLen(const aTree: TIntArray; aJoin, aPred: SizeInt): SizeInt; static;
+    class function IsDirected: Boolean; virtual;
   public
   type
     TEdge = record
@@ -308,6 +309,7 @@ type
       constructor Create(aSrc: SizeInt; aItem: PAdjItem); overload;
       constructor Create(aSrc, aDst: SizeInt; const aData: TEdgeData); overload;
     end;
+    TEdgeList = array of TEdge;
 
     TIncidentEdge = record
       Destination: SizeInt; //index of target vertex
@@ -379,6 +381,9 @@ type
       function GetEnumerator: TEdgeEnumerator;
     end;
 
+  protected
+    function GetVertexLabel(aIndex: SizeInt): string; virtual;
+    function GetEdgeLabel(const aEdge: TEdge): string; virtual;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -409,6 +414,10 @@ type
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
+    function  DegreeI(aIndex: SizeInt): SizeInt; virtual; abstract;
+    function  Degree(const aVertex: TVertex): SizeInt; inline;
+    function  Isolated(const aVertex: TVertex): Boolean; inline;
+    function  IsolatedI(aIndex: SizeInt): Boolean; inline;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(const aVertex: TVertex): Boolean;
@@ -459,6 +468,7 @@ type
     function  Vertices: TVertices;
   { enumerates all edges }
     function  Edges: TEdges;
+    function  GetEdgeList: TEdgeList; virtual;
     function  GetEdgeData(const aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean; inline;
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
     function  SetEdgeData(const aSrc, aDst: TVertex; const aValue: TEdgeData): Boolean; inline;
@@ -551,6 +561,7 @@ type
 
     property Title: string read FTitle write FTitle;
     property Description: string read FDescription write FDescription;
+    property Directed: Boolean read IsDirected;
     property VertexCount: SizeInt read FCount;
     property EdgeCount: SizeInt read FEdgeCount;
     property Capacity: SizeInt read GetCapacity;
@@ -558,8 +569,8 @@ type
     property Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
   end;
 
-  { TGAbstractDotWriter: abstract writer to Graphviz dot format }
-  generic TGAbstractDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
+  { TGraphDotWriter: writer to Graphviz dot format }
+  generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class
   public
   type
     TWriteDirection = (wdTopToBottom, wdLeftToWrite);
@@ -569,20 +580,19 @@ type
   const
     DIRECTS: array[TWriteDirection] of string = ('rankdir=TB;', 'rankdir=LR;');
   var
-    FGraphMark,
-    FEdgeMark: string;
     FOnStartWrite: TOnGraphWrite;
     FSizeX,
     FSizeY: Single;
     FDirection: TWriteDirection;
     FShowTitle: Boolean;
     function  Graph2Dot(aGraph: TGraph): TStringList; virtual;
-    procedure WriteVertices(aGraph: TGraph; aList: TStrings); virtual; abstract;
-    procedure WriteEdges(aGraph: TGraph; aList: TStrings); virtual; abstract;
+    procedure WriteVertices(aGraph: TGraph; aList: TStrings); virtual;
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings); virtual;
     function  SizeDefined: Boolean;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
     procedure SaveToFile(aGraph: TGraph; const aFileName: string);
+    function  SaveToString(aGraph: TGraph): string;
     property  Direction: TWriteDirection read FDirection write FDirection;
     property  SizeX: Single read FSizeX write FSizeX; //image width in inches, default 0.0
     property  SizeY: Single read FSizeY write FSizeY; //image height in inches, default 0.0
@@ -1698,6 +1708,23 @@ begin
   until False;
 end;
 
+class function TGSparseGraph.IsDirected: Boolean;
+begin
+  Result := False;
+end;
+
+function TGSparseGraph.GetVertexLabel(aIndex: SizeInt): string;
+begin
+  CheckIndexRange(aIndex);
+  Result := aIndex.ToString;
+end;
+
+function TGSparseGraph.GetEdgeLabel(const aEdge: TEdge): string;
+begin
+  Assert(aEdge.Source >= 0);
+  Result := '';
+end;
+
 class function TGSparseGraph.BitMatrixSizeMax: SizeInt;
 begin
   Result := TSquareBitMatrix.MaxSize;
@@ -1954,6 +1981,21 @@ begin
   end;
 end;
 
+function TGSparseGraph.Degree(const aVertex: TVertex): SizeInt;
+begin
+  Result := DegreeI(IndexOf(aVertex));
+end;
+
+function TGSparseGraph.Isolated(const aVertex: TVertex): Boolean;
+begin
+  Result := Degree(aVertex) = 0;
+end;
+
+function TGSparseGraph.IsolatedI(aIndex: SizeInt): Boolean;
+begin
+  Result := DegreeI(aIndex) = 0;
+end;
+
 function TGSparseGraph.AddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := DoAddVertex(aVertex, aIndex);
@@ -2140,6 +2182,24 @@ end;
 function TGSparseGraph.Edges: TEdges;
 begin
   Result.FGraph := Self;
+end;
+
+function TGSparseGraph.GetEdgeList: TEdgeList;
+var
+  r: TEdgeList = nil;
+  Cnt: SizeInt;
+  e: TEdge;
+begin
+  System.SetLength(r, ARRAY_INITIAL_SIZE);
+  Cnt := 0;
+  for e in Edges do
+    begin
+      if Cnt = System.Length(r) then System.SetLength(r, Cnt*2);
+      r[Cnt] := e;
+      Inc(Cnt);
+    end;
+  System.SetLength(r, Cnt);
+  Result := r;
 end;
 
 function TGSparseGraph.GetEdgeData(const aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean;
@@ -2842,21 +2902,24 @@ begin
         Result := Dist[I];
 end;
 
-{ TGAbstractDotWriter }
+{ TGraphDotWriter }
 
-function TGAbstractDotWriter.Graph2Dot(aGraph: TGraph): TStringList;
+function TGraphDotWriter.Graph2Dot(aGraph: TGraph): TStringList;
 var
   s: string;
 begin
   if aGraph.Title <> '' then
     s := '"' + aGraph.Title + '"'
   else
-    s := 'Untitled';
+    s := '"Untitled"';
   Result := TStringList.Create;
   Result.SkipLastLineBreak := True;
   Result.WriteBOM := False;
   Result.DefaultEncoding := TEncoding.UTF8;
-  Result.Add(FGraphMark + s + ' {');
+  if aGraph.Directed then
+    Result.Add('digraph ' + s + ' {')
+  else
+    Result.Add('graph ' + s + ' {');
   if ShowTitle then
     Result.Add('label=' + s + ';');
   if SizeDefined then
@@ -2869,12 +2932,45 @@ begin
   Result.Add('}');
 end;
 
-function TGAbstractDotWriter.SizeDefined: Boolean;
+procedure TGraphDotWriter.WriteVertices(aGraph: TGraph; aList: TStrings);
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aGraph.IsolatedI(I) then
+      aList.Add(aGraph.GetVertexLabel(I) + ';');
+end;
+
+procedure TGraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
+var
+  List: TGraph.TEdgeList;
+  I: SizeInt;
+  EdgeMark, Line, Lbl, Src, Dst: string;
+begin
+  if aGraph.Directed then
+    EdgeMark := ' -> '
+  else
+    EdgeMark := ' -- ';
+  List := aGraph.GetEdgeList;
+  for I := 0 to System.High(List) do
+    begin
+      Src := aGraph.GetVertexLabel(List[I].Source);
+      Dst := aGraph.GetVertexLabel(List[I].Destination);
+      Lbl := aGraph.GetEdgeLabel(List[I]);
+      if Lbl = '' then
+        Line := Src + EdgeMark + Dst + ';'
+      else
+        Line := Src + EdgeMark + Dst + ' [label="' + Lbl + '"];';
+      aList.Add(Line);
+    end;
+end;
+
+function TGraphDotWriter.SizeDefined: Boolean;
 begin
   Result := (SizeX > 0.0) and (SizeY > 0.0);
 end;
 
-procedure TGAbstractDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
+procedure TGraphDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
 begin
   with Graph2Dot(aGraph) do
     try
@@ -2884,7 +2980,7 @@ begin
     end;
 end;
 
-procedure TGAbstractDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
+procedure TGraphDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
 var
   fs: TFileStream;
 begin
@@ -2894,6 +2990,16 @@ begin
   finally
     fs.Free;
   end;
+end;
+
+function TGraphDotWriter.SaveToString(aGraph: TGraph): string;
+begin
+  with Graph2Dot(aGraph) do
+    try
+      Result := Text;
+    finally
+      Free;
+    end;
 end;
 
 { TGTspHelper.TBbTsp.TMinData }
