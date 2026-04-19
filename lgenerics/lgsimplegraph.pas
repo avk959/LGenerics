@@ -402,7 +402,7 @@ type
     function  IsBiconnected: Boolean;
   { returns the list of edges of each found block in the corresponding elements of the aBlocks }
     procedure FindBlocks(const aVertex: TVertex; out aBlocks: TEdgeArrayVector);
-    procedure FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
+    procedure FindBlocksI(aIndex: SizeInt; out aBlocks: TEdgeArrayVector);
   { returns sets of vertex indices for each block found }
     function  FindBlocks: TIntMatrix;
   { if the number of vertices is not less than 3, make instance biconnected, adding,
@@ -640,7 +640,7 @@ type
     function  AddVertexRange(aFrom, aTo: Integer): Integer;
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
-    function  AddEdges(const aVertexList: array of Integer): Integer;
+    function  AddEdges(const aVertexList: array of Integer): SizeInt;
   end;
 
   { TGraphDotWriter }
@@ -682,7 +682,7 @@ type
     procedure LoadFromFile(const aFileName: string);
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
-    function AddEdges(const aVertexList: array of string): Integer;
+    function AddEdges(const aVertexList: array of string): SizeInt;
   end;
 
   { TStrChartDotWriter }
@@ -4256,12 +4256,12 @@ begin
   FindBlocksI(IndexOf(aVertex), aBlocks);
 end;
 
-procedure TGSimpleGraph.FindBlocksI(aIndex: SizeInt; out aComps: TEdgeArrayVector);
+procedure TGSimpleGraph.FindBlocksI(aIndex: SizeInt; out aBlocks: TEdgeArrayVector);
 begin
-  aComps := Default(TEdgeArrayVector);
+  aBlocks := Default(TEdgeArrayVector);
   CheckIndexRange(aIndex);
   if AdjLists[aIndex]^.Count = 0 then exit;
-  SearchForBlocks(aIndex, aComps);
+  SearchForBlocks(aIndex, aBlocks);
 end;
 
 function TGSimpleGraph.FindBlocks: TIntMatrix;
@@ -5695,7 +5695,7 @@ begin
   Result := VertexCount - Result;
 end;
 
-function TIntChart.AddEdges(const aVertexList: array of Integer): Integer;
+function TIntChart.AddEdges(const aVertexList: array of Integer): SizeInt;
 var
   I: SizeInt = 0;
 begin
@@ -5846,7 +5846,7 @@ begin
   inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
-function TStrChart.AddEdges(const aVertexList: array of string): Integer;
+function TStrChart.AddEdges(const aVertexList: array of string): SizeInt;
 var
   I: SizeInt = 0;
 begin
