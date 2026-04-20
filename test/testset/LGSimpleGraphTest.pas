@@ -35,6 +35,7 @@ type
     function  GenerateTestGr6: TGraph;
     function  GenerateTestGr7: TGraph;
     function  GenerateTestGr5Compl: TGraph;
+    function  GeneratePath(aLen: SizeInt): TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
     function  GenerateCycle11: TGraph;
@@ -96,6 +97,7 @@ type
     procedure CreateAdjacencyMatrix;
     procedure IsTree;
     procedure IsTree1;
+    procedure IsPath;
     procedure IsStar;
     procedure IsCycle;
     procedure IsWheel;
@@ -387,6 +389,16 @@ begin
       if I <> J then
         if not g.Adjacent(I, J) then
           Result.AddEdge(I, J);
+end;
+
+function TSimpleGraphTest.GeneratePath(aLen: SizeInt): TGraph;
+var
+  I: Integer;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, aLen);
+  for I := 2 to aLen do
+    Result.AddEdge(I-1, I);
 end;
 
 function TSimpleGraphTest.GenerateStar: TGraph;
@@ -1354,6 +1366,35 @@ begin
   {%H-}Ref.Instance := GenerateTree;
   g := Ref;
   AssertTrue(g.IsTree);
+end;
+
+procedure TSimpleGraphTest.IsPath;
+var
+  g: TRef;
+  t1, t2: SizeInt;
+begin
+  t1 := 42;
+  t2 := 1001;
+  AssertFalse(g.Instance.IsPath(t1,t2));
+  AssertTrue(t1 = -1);
+  AssertTrue(t2 = -1);
+  g.Instance.AddVertex(1);
+  AssertFalse(g.Instance.IsPath(t1,t2));
+  g.Instance.AddVertex(2);
+  AssertFalse(g.Instance.IsPath(t1,t2));
+
+  g.Instance := GenerateTree;
+  AssertFalse(g.Instance.IsPath(t1,t2));
+
+  g.Instance := GeneratePath(2);
+  AssertTrue(g.Instance.IsPath(t1,t2));
+  AssertTrue((t1 >= 0) and (t2 >= 0) and (t1 <> t2));
+  AssertTrue((g.Instance.DegreeI(t1) = 1) and (g.Instance.DegreeI(t2) = 1));
+
+  g.Instance := GeneratePath(10);
+  AssertTrue(g.Instance.IsPath(t1,t2));
+  AssertTrue((t1 >= 0) and (t2 >= 0) and (t1 <> t2));
+  AssertTrue((g.Instance.DegreeI(t1) = 1) and (g.Instance.DegreeI(t2) = 1));
 end;
 
 procedure TSimpleGraphTest.IsStar;
