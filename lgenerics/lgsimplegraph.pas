@@ -317,6 +317,7 @@ type
   { returns in the result array the vectors of indices of all connected components }
     function  FindSeparates: TIntVectorArray;
     function  IsTree: Boolean;
+    function  IsPath(out aTerm1, aTerm2: SizeInt): Boolean;
     function  IsStar(out aHub: SizeInt): Boolean;
     function  IsCycle: Boolean;
     function  IsWheel(out aHub: SizeInt): Boolean;
@@ -3524,20 +3525,20 @@ end;
 function TGSimpleGraph.FindSeparates: TIntVectorArray;
 var
   Tags: TIntArray;
-  CurrIndex, CurrTag, I: SizeInt;
+  SeparateIndex, CurrTag, I: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
   Tags := CreateIntArray;
-  CurrIndex := NULL_INDEX;
+  SeparateIndex := NULL_INDEX;
   System.SetLength(Result, SeparateCount);
   for I := 0 to Pred(VertexCount) do
     begin
       CurrTag := SeparateTag(I);
       if Tags[CurrTag] = NULL_INDEX then
         begin
-          Inc(CurrIndex);
-          Tags[CurrTag] := CurrIndex;
+          Inc(SeparateIndex);
+          Tags[CurrTag] := SeparateIndex;
         end;
       Result[Tags[CurrTag]].Add(I);
     end;
@@ -3546,6 +3547,38 @@ end;
 function TGSimpleGraph.IsTree: Boolean;
 begin
   Result := (EdgeCount = Pred(VertexCount)) and Connected;
+end;
+
+function TGSimpleGraph.IsPath(out aTerm1, aTerm2: SizeInt): Boolean;
+var
+  I, d: SizeInt;
+  First: Boolean;
+begin
+  if (VertexCount < 2) or not IsTree then
+    begin
+      aTerm1 := NULL_INDEX;
+      aTerm2 := NULL_INDEX;
+      exit(False);
+    end;
+  First := True;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      d := AdjLists[I]^.Count;
+      if d > 2 then begin
+        aTerm1 := NULL_INDEX;
+        aTerm2 := NULL_INDEX;
+        exit(False);
+      end;
+      if d = 1 then
+        if First then
+          begin
+            aTerm1 := I;
+            First := False;
+          end
+        else
+          aTerm2 := I;
+    end;
+  Result := True;
 end;
 
 function TGSimpleGraph.IsStar(out aHub: SizeInt): Boolean;
@@ -6947,7 +6980,6 @@ var
   Total: TBoolVector;
   w: TWeight;
   I: SizeInt;
-  e: TEdge;
 begin
   aCutWeight := 0;
   aCut.A := nil;
