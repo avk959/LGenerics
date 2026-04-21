@@ -406,7 +406,7 @@ type
   { if the number of vertices is not less than 3, make instance biconnected, adding,
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
-    function  MakeBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+    function  MakeBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns an array of indices of the central vertices, if graph is connected, nil otherwise }
