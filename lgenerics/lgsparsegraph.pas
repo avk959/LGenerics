@@ -175,15 +175,17 @@ type
   {$I SparseGraphBitHelpH.inc}
   public
   type
-    TSpecEdgeData  = TEdgeData;
-    TAdjItem       = specialize TGAdjItem<TEdgeData>;
-    PAdjItem       = ^TAdjItem;
-    TVertexArray   = array of TVertex;
-    TOnAddEdge     = procedure(const aSrc, aDst: TVertex; var aData: TEdgeData) of object;
-    TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
-    TOnWriteVertex = procedure(aStream: TStream; const aValue: TVertex) of object;
-    TOnReadData    = procedure(aStream: TStream; out aValue: TEdgeData) of object;
-    TOnWriteData   = procedure(aStream: TStream; const aValue: TEdgeData) of object;
+    TSpecEdgeData    = TEdgeData;
+    TAdjItem         = specialize TGAdjItem<TEdgeData>;
+    PAdjItem         = ^TAdjItem;
+    TOnAdjItemLess   = specialize TGOnLessCompare<TAdjItem>;
+    TNestAdjItemLess = specialize TGNestLessCompare<TAdjItem>;
+    TVertexArray     = array of TVertex;
+    TOnAddEdge       = procedure(const aSrc, aDst: TVertex; var aData: TEdgeData) of object;
+    TOnReadVertex    = procedure(aStream: TStream; out aValue: TVertex) of object;
+    TOnWriteVertex   = procedure(aStream: TStream; const aValue: TVertex) of object;
+    TOnReadData      = procedure(aStream: TStream; out aValue: TEdgeData) of object;
+    TOnWriteData     = procedure(aStream: TStream; const aValue: TEdgeData) of object;
 
     TAdjacencyMatrix = record
     private
@@ -232,6 +234,9 @@ type
       //vertices
       //edges: src index, dst index as little endian LongInt, data
     end;
+
+    TDelgAdjItemHelper = specialize TGDelegatedArrayHelper<TAdjItem>;
+    TNestAdjItemHelper = specialize TGNestedArrayHelper<TAdjItem>;
 
   var
     FNodeList: TNodeList;
@@ -284,7 +289,7 @@ type
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
-  { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
+  { returns an array containing chain of vertex indices of found shortest(in the sense 'number of edges') path,
     empty if path does not exists; does not checks indices }
     function  GetShortestPath(aSrc, aDst: SizeInt): TIntArray;
     procedure VertexReplaced(const v: TVertex); virtual;
@@ -299,6 +304,8 @@ type
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
     class function TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray; static;
     class function TreeCycleLen(const aTree: TIntArray; aJoin, aPred: SizeInt): SizeInt; static;
+  { implements bidirectional BFS; does not do any parameter checks }
+    class function GetShortestPathBidir(g, gRev: TGSparseGraph; aSrc, aDst: SizeInt): TIntArray; static;
     class function IsDirected: Boolean; virtual;
   public
   type
@@ -395,6 +402,18 @@ type
     function  VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
   {  }
     function  IsBisection(const aBisect: TGraphBisection): Boolean;
+  { returns True if aPath is a sequence of vertex indices, each adjacent to the previous one,
+    otherwise returns False }
+    function  IsPath(const aPath: array of SizeInt): Boolean;
+  { returns True if aPath is a path all of whose vertices are pairwise distinct,
+    otherwise returns False }
+    function  IsSimplePath(const aPath: array of SizeInt): Boolean;
+  { returns True if aPath is a path whose first and last vertices are the same,
+    otherwise returns False }
+    function  IsCycle(const aPath: array of SizeInt): Boolean;
+  { returns True if aPath without the last vertex is a simple path and the first and last
+    vertices are the same, otherwise returns False }
+    function  IsSimpleCycle(const aPath: array of SizeInt): Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -473,6 +492,12 @@ type
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
     function  SetEdgeData(const aSrc, aDst: TVertex; const aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; const aValue: TEdgeData): Boolean;
+  { returns True and sorts the adjacency list of the specified vertex if it exists,
+    otherwise returns False }
+    function  SortAdjList(const aVertex: TVertex; c: TOnAdjItemLess; aStable: Boolean = False): Boolean;
+    function  SortAdjListI(aIndex: SizeInt; c: TOnAdjItemLess; aStable: Boolean = False): Boolean;
+    function  SortAdjList(const aVertex: TVertex; c: TNestAdjItemLess; aStable: Boolean = False): Boolean;
+    function  SortAdjListI(aIndex: SizeInt; c: TNestAdjItemLess; aStable: Boolean = False): Boolean;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see TBitMatrixSizeMax }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -1635,13 +1660,15 @@ end;
 function TGSparseGraph.GetShortestPath(aSrc, aDst: SizeInt): TIntArray;
 var
   Queue, Parents: TIntArray;
+  Visited: TBoolVector;
   Curr, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
   System.SetLength(Queue, VertexCount);
   Parents := CreateIntArray;
+  Visited.Capacity := VertexCount;
   Queue[0] := aSrc;
-  Parents[aSrc] := aSrc;
+  Visited.UncBits[aSrc] := True;
   qHead := 0;
   qTail := 1;
   while qHead <> qTail do
@@ -1649,14 +1676,12 @@ begin
       Curr := Queue[qHead];
       Inc(qHead);
       for p in AdjLists[Curr]^ do
-        if Parents[p^.Destination] = NULL_INDEX then
+        if not Visited.UncBits[p^.Destination] then
           begin
+            Visited.UncBits[p^.Destination] := True;
             Parents[p^.Destination] := Curr;
             if p^.Destination = aDst then
-              begin
-                Parents[aSrc] := NULL_INDEX;
-                exit(TreePathTo(Parents, aDst));
-              end;
+              exit(TreePathTo(Parents, aDst));
             Queue[qTail] := p^.Destination;
             Inc(qTail);
           end;
@@ -1706,6 +1731,57 @@ begin
     if J < 0 then
       raise EGraphError.Create(SEInternalDataInconsist);
   until False;
+end;
+
+class function TGSparseGraph.GetShortestPathBidir(g, gRev: TGSparseGraph; aSrc, aDst: SizeInt): TIntArray;
+var
+  Inst: array[Boolean] of TGSparseGraph;
+  Queue: array[Boolean] of TIntQueue;
+  Parents: array[Boolean] of TIntArray;
+  Visited: array[Boolean] of TBoolVector;
+  Node, MeetPoint: SizeInt;
+  p: PAdjItem;
+  Dir: Boolean;
+  label Found;
+const
+  Forward  = False;
+  Backward = True;
+begin
+  Inst[Forward] := g;
+  Inst[Backward] := gRev;
+  Parents[Forward] := g.CreateIntArray;
+  Parents[Backward] := g.CreateIntArray;
+  Visited[Forward].Capacity := g.VertexCount;
+  Visited[Backward].Capacity := g.VertexCount;
+  Queue[Forward].Enqueue(aSrc);
+  Queue[Backward].Enqueue(aDst);
+  Visited[Forward].UncBits[aSrc] := True;
+  Visited[Backward].UncBits[aDst] := True;
+  MeetPoint := NULL_INDEX;
+  Dir := Forward;
+
+  while Queue[Forward].NonEmpty and Queue[Backward].NonEmpty do begin
+    Node := Queue[Dir].Dequeue;
+    for p in Inst[Dir].AdjLists[Node]^ do
+      if not Visited[Dir].UncBits[p^.Destination] then begin
+        Visited[Dir].UncBits[p^.Destination] := True;
+        Parents[Dir][p^.Destination] := Node;
+        if Visited[not Dir].UncBits[p^.Destination] then begin
+          MeetPoint := p^.Destination;
+          goto Found;
+        end;
+        Queue[Dir].Enqueue(p^.Destination);
+      end;
+    if Queue[not Dir].Count < Queue[Dir].Count then
+      Dir := not Dir;
+  end;
+
+  if MeetPoint = NULL_INDEX then exit(nil);
+
+Found:
+  Result := TreePathTo(Parents[Backward], MeetPoint);
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  Result := TIntHelper.CreateMerge(TreePathTo(Parents[Forward], MeetPoint), Result[0..Result.Length-2]);
 end;
 
 class function TGSparseGraph.IsDirected: Boolean;
@@ -1794,6 +1870,58 @@ begin
       vSet.UncBits[Curr] := False;
     end;
   Result := True;
+end;
+
+function TGSparseGraph.IsPath(const aPath: array of SizeInt): Boolean;
+var
+  I: SizeInt;
+  MaxIdx: SizeUInt;
+begin
+  if (System.Length(aPath) < 2) or (VertexCount < 2) then
+    exit(False);
+  MaxIdx := SizeUInt((VertexCount));
+  if SizeUInt(aPath[0]) >= MaxIdx then exit(False);
+  for I := 1 to System.High(aPath) do
+    begin
+      if SizeUInt(aPath[I]) >= MaxIdx then
+        exit(False);
+      if not AdjLists[aPath[I-1]]^.Contains(aPath[I]) then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGSparseGraph.IsSimplePath(const aPath: array of SizeInt): Boolean;
+var
+  vSet: TIntHashSet;
+  I: SizeInt;
+  MaxIdx: SizeUInt;
+begin
+  if (VertexCount < 2) or (System.Length(aPath) > VertexCount) then
+    exit(False);
+  MaxIdx := SizeUInt((VertexCount));
+  if SizeUInt(aPath[0]) >= MaxIdx then exit(False);
+  vSet.Add(aPath[0]);
+  for I := 1 to System.High(aPath) do
+    begin
+      if (SizeUInt(aPath[I]) >= MaxIdx) or not vSet.Add(aPath[I]) then
+        exit(False);
+      if not AdjLists[aPath[I-1]]^.Contains(aPath[I]) then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGSparseGraph.IsCycle(const aPath: array of SizeInt): Boolean;
+begin
+  if System.Length(aPath) < 3 then exit(False);
+  Result := IsPath(aPath[0..Pred(System.High(aPath))]) and (aPath[0] = aPath[System.High(aPath)]);
+end;
+
+function TGSparseGraph.IsSimpleCycle(const aPath: array of SizeInt): Boolean;
+begin
+  if System.Length(aPath) < 3 then exit(False);
+  Result := IsSimplePath(aPath[0..Pred(System.High(aPath))]) and (aPath[0] = aPath[System.High(aPath)]);
 end;
 
 function TGSparseGraph.IsEmpty: Boolean;
@@ -2233,6 +2361,38 @@ begin
     Result := DoSetEdgeData(aSrc, aDst, aValue)
   else
     Result := False;
+end;
+
+function TGSparseGraph.SortAdjList(const aVertex: TVertex; c: TOnAdjItemLess; aStable: Boolean): Boolean;
+begin
+  Result := SortAdjListI(IndexOf(aVertex), c, aStable);
+end;
+
+function TGSparseGraph.SortAdjListI(aIndex: SizeInt; c: TOnAdjItemLess; aStable: Boolean): Boolean;
+begin
+  Result := SizeUInt(aIndex) < SizeUInt(VertexCount);
+  if Result then
+    with AdjLists[aIndex]^ do
+      if aStable then
+        TDelgAdjItemHelper.MergeSort(FItems[0..Pred(Count)], c)
+      else
+        TDelgAdjItemHelper.Sort(FItems[0..Pred(Count)], c);
+end;
+
+function TGSparseGraph.SortAdjList(const aVertex: TVertex; c: TNestAdjItemLess; aStable: Boolean): Boolean;
+begin
+  Result := SortAdjListI(IndexOf(aVertex), c, aStable);
+end;
+
+function TGSparseGraph.SortAdjListI(aIndex: SizeInt; c: TNestAdjItemLess; aStable: Boolean): Boolean;
+begin
+  Result := SizeUInt(aIndex) < SizeUInt(VertexCount);
+  if Result then
+    with AdjLists[aIndex]^ do
+      if aStable then
+        TNestAdjItemHelper.MergeSort(FItems[0..Pred(Count)], c)
+      else
+        TNestAdjItemHelper.Sort(FItems[0..Pred(Count)], c);
 end;
 
 function TGSparseGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -2820,6 +2980,7 @@ end;
 function TGSparseGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
 var
   Queue: TIntArray;
+  Visited: TBoolVector;
   d: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
@@ -2828,7 +2989,9 @@ begin
   CheckIndexRange(aSrc);
   System.SetLength(Queue, VertexCount);
   Result := CreateIntArray;
+  Visited.Capacity := VertexCount;
   Result[aSrc] := 0;
+  Visited.UncBits[aSrc] := True;
   Queue[qTail] := aSrc;
   Inc(qTail);
   while qHead < qTail do
@@ -2837,8 +3000,9 @@ begin
       Inc(qHead);
       d := Succ(Result[aSrc]);
       for p in AdjLists[aSrc]^ do
-        if Result[p^.Destination] = NULL_INDEX then
+        if not Visited.UncBits[p^.Destination] then
           begin
+            Visited.UncBits[p^.Destination] := True;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Result[p^.Destination] := d;
@@ -2854,6 +3018,7 @@ end;
 function TGSparseGraph.ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
 var
   Queue: TIntArray;
+  Visited: TBoolVector;
   d: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
@@ -2863,7 +3028,9 @@ begin
   System.SetLength(Queue, VertexCount);
   Result := CreateIntArray;
   aPathTree := CreateIntArray;
+  Visited.Capacity := VertexCount;
   Result[aSrc] := 0;
+  Visited.UncBits[aSrc] := True;
   Queue[qTail] := aSrc;
   Inc(qTail);
   while qHead < qTail do
@@ -2872,8 +3039,9 @@ begin
       Inc(qHead);
       d := Succ(Result[aSrc]);
       for p in AdjLists[aSrc]^ do
-        if Result[p^.Destination] = NULL_INDEX then
+        if not Visited.UncBits[p^.Destination] then
           begin
+            Visited.UncBits[p^.Destination] := True;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Result[p^.Destination] := d;
