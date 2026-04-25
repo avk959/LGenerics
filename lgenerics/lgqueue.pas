@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic queue implementations.                                          *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -112,7 +112,7 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure Enqueue(constref aValue: T); inline;
+    procedure Enqueue(const aValue: T); inline;
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -138,7 +138,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure Enqueue(constref aValue: T);
+    procedure Enqueue(const aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: PQueue;
@@ -161,7 +161,7 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
     procedure Clear;
-    procedure Enqueue(constref aValue: T);
+    procedure Enqueue(const aValue: T);
     function  Dequeue: T;
     function  Peek: T;
     function  TryPeek(out aValue: T): Boolean;
@@ -197,7 +197,7 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    procedure Enqueue(constref aValue: T);
+    procedure Enqueue(const aValue: T);
   { EXTRACTS element from the head of queue }
     function  Dequeue: T; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -222,7 +222,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure Enqueue(constref aValue: T);
+    procedure Enqueue(const aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: PQueue;
@@ -250,7 +250,7 @@ type
     function  IsEmpty: Boolean;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    procedure Enqueue(constref aValue: T);
+    procedure Enqueue(const aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean; inline;
     property  Count: SizeInt read GetCount;
@@ -269,7 +269,7 @@ type
     function GetCount: SizeInt;
   public
     constructor Create(aSize: SizeInt);
-    function Enqueue(constref aValue: T): Boolean;
+    function Enqueue(const aValue: T): Boolean;
     function TryDequeue(out aValue: T): Boolean;
     function TryPeek(out aValue: T): Boolean;
     property Count: SizeInt read GetCount;
@@ -527,7 +527,7 @@ begin
   FBuffer.TrimToFit;
 end;
 
-procedure TGLiteQueue.Enqueue(constref aValue: T);
+procedure TGLiteQueue.Enqueue(const aValue: T);
 begin
   FBuffer.PushLast(aValue);
 end;
@@ -601,7 +601,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadQueue.Enqueue(constref aValue: T);
+procedure TGLiteThreadQueue.Enqueue(const aValue: T);
 begin
   DoLock;
   try
@@ -694,7 +694,7 @@ begin
   end;
 end;
 
-procedure TGLiteBlockQueue.Enqueue(constref aValue: T);
+procedure TGLiteBlockQueue.Enqueue(const aValue: T);
 begin
   System.EnterCriticalSection(FLock);
   try
@@ -827,7 +827,7 @@ begin
   FQueue.TrimToFit;
 end;
 
-procedure TGLiteObjectQueue.Enqueue(constref aValue: T);
+procedure TGLiteObjectQueue.Enqueue(const aValue: T);
 begin
   FQueue.Enqueue(aValue);
 end;
@@ -891,7 +891,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadObjectQueue.Enqueue(constref aValue: T);
+procedure TGLiteThreadObjectQueue.Enqueue(const aValue: T);
 begin
   DoLock;
   try
@@ -999,7 +999,7 @@ begin
   end;
 end;
 
-procedure TGLiteThreadQueueSL.Enqueue(constref aValue: T);
+procedure TGLiteThreadQueueSL.Enqueue(const aValue: T);
 begin
   FLock.Lock;
   try
@@ -1062,7 +1062,7 @@ begin
   FCount := 0;
 end;
 
-function TGLiteThreadBoundQueueSL.Enqueue(constref aValue: T): Boolean;
+function TGLiteThreadBoundQueueSL.Enqueue(const aValue: T): Boolean;
 begin
   FLock.Lock;
   try
