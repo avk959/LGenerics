@@ -427,10 +427,13 @@ type
   { returns betweenness centrality values for all edges in aBcMap using Brandes' algorithm;
     if aNormalize is True then values will be normalized by 2/(N(N-1)) }
     procedure EdgeBetweenessCentrality(out aBcMap: TIntPair2DoubleMap; aNormalize: Boolean = True);
-  { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
-    path, or an empty array if the path does not exists }
+  { returns an array containing the chain of vertex indices of the found shortest path
+    with unit edge weights, or an empty array if the path does not exist }
     function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+  { same as above, but using bidirectional BFS }
+    function  ShortestPathBidir(const aSrc, aDst: TVertex): TIntArray; inline;
+    function  ShortestPathBidirI(aSrc, aDst: SizeInt): TIntArray;
 
   type
     TCut = TGraphBisection;
@@ -4606,6 +4609,22 @@ begin
   if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
     exit(nil);
   Result := GetShortestPath(aSrc, aDst);
+end;
+
+function TGSimpleGraph.ShortestPathBidir(const aSrc, aDst: TVertex): TIntArray;
+begin
+  Result := ShortestPathBidirI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGSimpleGraph.ShortestPathBidirI(aSrc, aDst: SizeInt): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
+    exit(nil);
+  Result := GetShortestPathBidir(Self, Self, aSrc, aDst);
 end;
 
 function TGSimpleGraph.MinCut: SizeInt;
