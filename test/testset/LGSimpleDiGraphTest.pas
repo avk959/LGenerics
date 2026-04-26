@@ -117,6 +117,8 @@ type
     procedure FindHamiltonCycles2;
     procedure FindHamiltonPaths;
     procedure FindHamiltonPaths1;
+
+    procedure ShortestPath;
   end;
 
   { TWeightedDigraphTest }
@@ -2122,6 +2124,38 @@ begin
   AssertTrue(Paths.Count = 1);
   AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(0)));
   AssertFalse(g.FindHamiltonPaths(1, 0, Paths, 10));
+end;
+
+procedure TSimpleDigraphTest.ShortestPath;
+var
+  Ref, RevRef: TRef;
+  g: TGraph;
+  Path1, Path2: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  {%H-}RevRef.Instance := g.Reverse;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path1 := g.ShortestPathI(0, I);
+      Path2 := g.ShortestPathBidirI(0, I, RevRef.Instance);
+      AssertTrue(g.IsSimplePath(Path1));
+      AssertTrue(g.IsSimplePath(Path2));
+      AssertTrue(Length(Path1) = Length(Path2));
+    end;
+
+  Ref.Instance := GenerateTestDigr4;
+  g := Ref;
+  RevRef.Instance := g.Reverse;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path1 := g.ShortestPathI(0, I);
+      Path2 := g.ShortestPathBidirI(0, I, RevRef.Instance);
+      AssertTrue(g.IsSimplePath(Path1));
+      AssertTrue(g.IsSimplePath(Path2));
+      AssertTrue(Length(Path1) = Length(Path2));
+    end;
 end;
 
 { TWeightedDigraphTest }
