@@ -350,10 +350,13 @@ type
   { returns betweenness centrality values for all edges in aBcMap using Brandes' algorithm;
     if aNormalize is True then values will be normalized by 1/(N(N-1)) }
     procedure EdgeBetweenessCentrality(out aBcMap: TIntEdge2DoubleMap; aNormalize: Boolean = True);
-  { returns an array containing a chain of vertex indices of the found shortest(in the sense of "number of edges")
-    path, or an empty array if the path does not exists }
+  { returns an array containing the chain of vertex indices of the found shortest path
+    with unit edge weights, or an empty array if the path does not exist }
     function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+  { same as above, but using bidirectional BFS; aRev MUST be the reverse graph of the instance }
+    function  ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph): TIntArray; inline;
+    function  ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph): TIntArray;
 {**********************************************************************************************************
   flowgraph utilities
 ***********************************************************************************************************}
@@ -3261,6 +3264,22 @@ begin
   if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
     exit(nil);
   Result := GetShortestPath(aSrc, aDst);
+end;
+
+function TGSimpleDigraph.ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph): TIntArray;
+begin
+  Result := ShortestPathBidirI(IndexOf(aSrc), IndexOf(aDst), aRev);
+end;
+
+function TGSimpleDigraph.ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    exit(nil);
+  Result := GetShortestPathBidir(Self, aRev, aSrc, aDst);
 end;
 
 function TGSimpleDigraph.IsFlowGraph(const aSource: TVertex): Boolean;
