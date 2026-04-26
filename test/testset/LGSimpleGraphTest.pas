@@ -199,6 +199,8 @@ type
     procedure SetIntersectionOf;
     procedure SetIntersectionOf2;
     procedure SetIntersectionOf3;
+
+    procedure ShortestPath;
   end;
 
   { TSimpleObjGraphTest }
@@ -3821,6 +3823,36 @@ begin
   end;
   AssertTrue(g.VertexCount = 12);
   AssertTrue(g.IsCycle);
+end;
+
+procedure TSimpleGraphTest.ShortestPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path1, Path2: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path1 := g.ShortestPathI(0, I);
+      Path2 := g.ShortestPathBidirI(0, I);
+      AssertTrue(g.IsSimplePath(Path1));
+      AssertTrue(g.IsSimplePath(Path2));
+      AssertTrue(Length(Path1) = Length(Path2));
+    end;
+
+  Ref.Instance := GenerateTestGr7;
+  g := Ref;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path1 := g.ShortestPathI(0, I);
+      Path2 := g.ShortestPathBidirI(0, I);
+      AssertTrue(g.IsSimplePath(Path1));
+      AssertTrue(g.IsSimplePath(Path2));
+      AssertTrue(Length(Path1) = Length(Path2));
+    end;
 end;
 
 { TSimpleObjGraphTest.TMyObj }
