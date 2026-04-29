@@ -354,9 +354,17 @@ type
     with unit edge weights, or an empty array if the path does not exist }
     function  ShortestPath(const aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+    function  ShortestPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TOnAcceptEdge): TIntArray; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TOnAcceptEdge): TIntArray;
+    function  ShortestPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TNestAcceptEdge): TIntArray; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge): TIntArray;
   { same as above, but using bidirectional BFS; aRev MUST be the reverse graph of the instance }
     function  ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph): TIntArray; inline;
     function  ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph): TIntArray;
+    function  ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph; aOnEdgeAccept: TOnAcceptEdge): TIntArray; inline;
+    function  ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph; aOnEdgeAccept: TOnAcceptEdge): TIntArray;
+    function  ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph; aOnEdgeAccept: TNestAcceptEdge): TIntArray; inline;
+    function  ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph; aOnEdgeAccept: TNestAcceptEdge): TIntArray;
 {**********************************************************************************************************
   flowgraph utilities
 ***********************************************************************************************************}
@@ -595,28 +603,40 @@ type
     the result contains in the corresponding component the weight of the path to the vertex or
     InfWeight if the vertex is unreachable; used Dijkstra's algorithm;
     raises an exception if aSrc does not exist }
-    function MinPathsMap(const aSrc: TVertex): TWeightArray; inline;
+    function MinPathsMap(const aSrc: TVertex): TWeightArray;
     function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
-    function MinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function MinPathsMap(const aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all arcs MUST be nonnegative;
     returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
     used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
-    function MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function MinPath(const aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-    { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
-      the weights of all edges MUST be nonnegative;
-      the required aRev is a reverse graph;
-      returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
-      used bidirectional Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
+    function MinPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TOnAcceptEdge; out aWeight: TWeight): TIntArray;
+    function MinPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TOnAcceptEdge; out aWeight: TWeight): TIntArray;
+    function MinPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TNestAcceptEdge; out aWeight: TWeight): TIntArray;
+    function MinPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge; out aWeight: TWeight): TIntArray;
+  { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all edges MUST be nonnegative;
+    the required aRev is a reverse graph;
+    returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
+    used bidirectional Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
     function MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph; out aWeight: TWeight): TIntArray;
     function MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph; out aWeight: TWeight): TIntArray;
+    function MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph; aOnEdgeAccept: TOnAcceptEdge;
+                          out aWeight: TWeight): TIntArray;
+    function MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph; aOnEdgeAccept: TOnAcceptEdge;
+                           out aWeight: TWeight): TIntArray;
+    function MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph; aOnEdgeAccept: TNestAcceptEdge;
+                          out aWeight: TWeight): TIntArray;
+    function MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph; aOnEdgeAccept: TNestAcceptEdge;
+                           out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all arcs MUST be nonnegative; used A* algorithm if aEst <> nil;
     raises an exception if aSrc or aDst does not exist }
-    function MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the required aRev is a reverse graph;
@@ -630,18 +650,18 @@ type
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
     but InfWeight if aDst unreachable; used BFMT algorithm }
-    function FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
+    function FindMinPath(const aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { returns False if exists negative weight cycle reachable from aSrc,
     otherwise returns the weights of paths of minimal weight from a given vertex to the remaining
     vertices(SSSP); an aWeights will contain in the corresponding component the weight of the path
     to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm;
     raises an exception if aSrc does not exist  }
-    function FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMap(const aSrc: TVertex; out aWeights: TWeightArray): Boolean;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPaths returns paths,
     if there is a negative weight cycle, then aPaths will contain that cycle }
-    function FindMinPathsMap(const aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMap(const aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
     function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { creates a matrix of weights of arcs }
     function CreateWeightsMatrix: TWeightMatrix; inline;
@@ -3266,6 +3286,39 @@ begin
   Result := GetShortestPath(aSrc, aDst);
 end;
 
+function TGSimpleDigraph.ShortestPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TOnAcceptEdge): TIntArray;
+begin
+  Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst), aOnEdgeAccept);
+end;
+
+function TGSimpleDigraph.ShortestPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TOnAcceptEdge): TIntArray;
+  function Test(const aEdge: TEdge): Boolean; begin Result := aOnEdgeAccept(aEdge) end;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    exit(nil);
+  Result := GetShortestPath(aSrc, aDst, @Test);
+end;
+
+function TGSimpleDigraph.ShortestPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TNestAcceptEdge): TIntArray;
+begin
+  Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst), aOnEdgeAccept);
+end;
+
+function TGSimpleDigraph.ShortestPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    exit(nil);
+  Result := GetShortestPath(aSrc, aDst, aOnEdgeAccept);
+end;
+
 function TGSimpleDigraph.ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph): TIntArray;
 begin
   Result := ShortestPathBidirI(IndexOf(aSrc), IndexOf(aDst), aRev);
@@ -3280,6 +3333,43 @@ begin
   if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
     exit(nil);
   Result := GetShortestPathBidir(Self, aRev, aSrc, aDst);
+end;
+
+function TGSimpleDigraph.ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph;
+  aOnEdgeAccept: TOnAcceptEdge): TIntArray;
+begin
+  Result := ShortestPathBidirI(IndexOf(aSrc), IndexOf(aDst), aRev, aOnEdgeAccept);
+end;
+
+function TGSimpleDigraph.ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph;
+  aOnEdgeAccept: TOnAcceptEdge): TIntArray;
+  function Test(const aEdge: TEdge): Boolean; begin Result := aOnEdgeAccept(aEdge) end;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    exit(nil);
+  Result := GetShortestPathBidir(Self, aRev, aSrc, aDst, @Test);
+end;
+
+function TGSimpleDigraph.ShortestPathBidir(const aSrc, aDst: TVertex; aRev: TGSimpleDigraph;
+  aOnEdgeAccept: TNestAcceptEdge): TIntArray;
+begin
+  Result := ShortestPathBidirI(IndexOf(aSrc), IndexOf(aDst), aRev, aOnEdgeAccept);
+end;
+
+function TGSimpleDigraph.ShortestPathBidirI(aSrc, aDst: SizeInt; aRev: TGSimpleDigraph;
+  aOnEdgeAccept: TNestAcceptEdge): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    exit(nil);
+  Result := GetShortestPathBidir(Self, aRev, aSrc, aDst, aOnEdgeAccept);
 end;
 
 function TGSimpleDigraph.IsFlowGraph(const aSource: TVertex): Boolean;
@@ -4291,6 +4381,55 @@ begin
   Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
+function TGWeightedDigraph.MinPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TOnAcceptEdge;
+  out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aOnEdgeAccept, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TOnAcceptEdge;
+  out aWeight: TWeight): TIntArray;
+  function Test(const e: TEdge): Boolean; begin Result := aOnEdgeAccept(e) end;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, @Test, aWeight);
+end;
+
+function TGWeightedDigraph.MinPath(const aSrc, aDst: TVertex; aOnEdgeAccept: TNestAcceptEdge;
+  out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aOnEdgeAccept, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathI(aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge;
+  out aWeight: TWeight): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aOnEdgeAccept, aWeight);
+end;
+
 function TGWeightedDigraph.MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
   out aWeight: TWeight): TIntArray;
 begin
@@ -4313,6 +4452,55 @@ begin
       exit(nil);
     end;
   Result := TWeightHelper.BiDijkstraPath(Self, aRev, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
+  aOnEdgeAccept: TOnAcceptEdge; out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathBiDirI(IndexOf(aSrc), IndexOf(aDst), aRev, aOnEdgeAccept, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph;
+  aOnEdgeAccept: TOnAcceptEdge; out aWeight: TWeight): TIntArray;
+  function Test(const e: TEdge): Boolean; begin Result := aOnEdgeAccept(e) end;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  Result := TWeightHelper.BiDijkstraPath(Self, aRev, aSrc, aDst, @Test, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathBiDir(const aSrc, aDst: TVertex; aRev: TGWeightedDigraph;
+  aOnEdgeAccept: TNestAcceptEdge; out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathBiDirI(IndexOf(aSrc), IndexOf(aDst), aRev, aOnEdgeAccept, aWeight);
+end;
+
+function TGWeightedDigraph.MinPathBiDirI(aSrc, aDst: SizeInt; aRev: TGWeightedDigraph;
+  aOnEdgeAccept: TNestAcceptEdge; out aWeight: TWeight): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      exit(nil);
+    end;
+  if ReachabilityValid and not FReachabilityMatrix.Reachable(aSrc, aDst) then
+    begin
+      aWeight := InfWeight;
+      exit(nil);
+    end;
+  Result := TWeightHelper.BiDijkstraPath(Self, aRev, aSrc, aDst, aOnEdgeAccept, aWeight);
 end;
 
 function TGWeightedDigraph.MinPathAStar(const aSrc, aDst: TVertex; out aWeight: TWeight;
