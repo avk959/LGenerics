@@ -272,6 +272,18 @@ type
 
     TAdjEnumArray = array of TAdjEnumerator;
 
+    TEdge = record
+      Source,               //index of source vertex
+      Destination: SizeInt; //index of target vertex
+      Data: TEdgeData;
+      constructor Create(aSrc: SizeInt; aItem: PAdjItem); overload;
+      constructor Create(aSrc, aDst: SizeInt; const aData: TEdgeData); overload;
+    end;
+    TEdgeList = array of TEdge;
+
+    TOnAcceptEdge   = specialize TGOnTest<TEdge>;
+    TNestAcceptEdge = specialize TGNestTest<TEdge>;
+
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
     procedure CheckIndexRange(aIndex: SizeInt);
@@ -292,6 +304,7 @@ type
   { returns an array containing chain of vertex indices of found shortest(in the sense 'number of edges') path,
     empty if path does not exists; does not checks indices }
     function  GetShortestPath(aSrc, aDst: SizeInt): TIntArray;
+    function  GetShortestPath(aSrc, aDst: SizeInt; aOnAccept: TNestAcceptEdge): TIntArray;
     procedure VertexReplaced(const v: TVertex); virtual;
     function  DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
@@ -306,18 +319,11 @@ type
     class function TreeCycleLen(const aTree: TIntArray; aJoin, aPred: SizeInt): SizeInt; static;
   { implements bidirectional BFS; does not do any parameter checks }
     class function GetShortestPathBidir(g, gRev: TGSparseGraph; aSrc, aDst: SizeInt): TIntArray; static;
+    class function GetShortestPathBidir(g, gRev: TGSparseGraph; aSrc, aDst: SizeInt;
+                                        aOnAccept: TNestAcceptEdge): TIntArray; static;
     class function IsDirected: Boolean; virtual;
   public
   type
-    TEdge = record
-      Source,               //index of source vertex
-      Destination: SizeInt; //index of target vertex
-      Data: TEdgeData;
-      constructor Create(aSrc: SizeInt; aItem: PAdjItem); overload;
-      constructor Create(aSrc, aDst: SizeInt; const aData: TEdgeData); overload;
-    end;
-    TEdgeList = array of TEdge;
-
     TIncidentEdge = record
       Destination: SizeInt; //index of target vertex
       Data: TEdgeData;
@@ -1664,11 +1670,11 @@ var
   Curr, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
-  System.SetLength(Queue, VertexCount);
   Parents := CreateIntArray;
   Visited.Capacity := VertexCount;
-  Queue[0] := aSrc;
   Visited.UncBits[aSrc] := True;
+  Queue.Length := VertexCount;
+  Queue[0] := aSrc;
   qHead := 0;
   qTail := 1;
   while qHead <> qTail do
@@ -1689,6 +1695,37 @@ begin
   Result := nil;
 end;
 
+function TGSparseGraph.GetShortestPath(aSrc, aDst: SizeInt; aOnAccept: TNestAcceptEdge): TIntArray;
+var
+  Queue, Parents: TIntArray;
+  Visited: TBoolVector;
+  Curr, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  Parents := CreateIntArray;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aSrc] := True;
+  Queue.Length := VertexCount;
+  Queue[0] := aSrc;
+  qHead := 0;
+  qTail := 1;
+  while qHead <> qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[Curr]^ do
+        if not Visited.UncBits[p^.Destination] and aOnAccept(TEdge.Create(Curr, p)) then
+          begin
+            Visited.UncBits[p^.Destination] := True;
+            Parents[p^.Destination] := Curr;
+            if p^.Destination = aDst then
+              exit(TreePathTo(Parents, aDst));
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+          end;
+    end;
+  Result := nil;
+end;
 procedure TGSparseGraph.VertexReplaced(const v: TVertex);
 begin
 {$PUSH}{$C-}Assert(TEqRel.Equal(v, v));{$POP}
@@ -1752,11 +1789,11 @@ begin
   Parents[Forward] := g.CreateIntArray;
   Parents[Backward] := g.CreateIntArray;
   Visited[Forward].Capacity := g.VertexCount;
+  Visited[Forward].UncBits[aSrc] := True;
   Visited[Backward].Capacity := g.VertexCount;
+  Visited[Backward].UncBits[aDst] := True;
   Queue[Forward].Enqueue(aSrc);
   Queue[Backward].Enqueue(aDst);
-  Visited[Forward].UncBits[aSrc] := True;
-  Visited[Backward].UncBits[aDst] := True;
   MeetPoint := NULL_INDEX;
   Dir := Forward;
 
@@ -1764,6 +1801,62 @@ begin
     Node := Queue[Dir].Dequeue;
     for p in Inst[Dir].AdjLists[Node]^ do
       if not Visited[Dir].UncBits[p^.Destination] then begin
+        Visited[Dir].UncBits[p^.Destination] := True;
+        Parents[Dir][p^.Destination] := Node;
+        if Visited[not Dir].UncBits[p^.Destination] then begin
+          MeetPoint := p^.Destination;
+          goto Found;
+        end;
+        Queue[Dir].Enqueue(p^.Destination);
+      end;
+    if Queue[not Dir].Count < Queue[Dir].Count then
+      Dir := not Dir;
+  end;
+
+  if MeetPoint = NULL_INDEX then exit(nil);
+
+Found:
+  Result := TreePathTo(Parents[Backward], MeetPoint);
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  Result := TIntHelper.CreateMerge(TreePathTo(Parents[Forward], MeetPoint), Result[0..Result.Length-2]);
+end;
+
+class function TGSparseGraph.GetShortestPathBidir(g, gRev: TGSparseGraph; aSrc, aDst: SizeInt;
+  aOnAccept: TNestAcceptEdge): TIntArray;
+var
+  Inst: array[Boolean] of TGSparseGraph;
+  Queue: array[Boolean] of TIntQueue;
+  Parents: array[Boolean] of TIntArray;
+  Visited: array[Boolean] of TBoolVector;
+  Node, MeetPoint: SizeInt;
+  p: PAdjItem;
+  Dir: Boolean;
+  label Found;
+const
+  Forward  = False;
+  Backward = True;
+begin
+  Inst[Forward] := g;
+  Inst[Backward] := gRev;
+  Parents[Forward] := g.CreateIntArray;
+  Parents[Backward] := g.CreateIntArray;
+  Visited[Forward].Capacity := g.VertexCount;
+  Visited[Forward].UncBits[aSrc] := True;
+  Visited[Backward].Capacity := g.VertexCount;
+  Visited[Backward].UncBits[aDst] := True;
+  Queue[Forward].Enqueue(aSrc);
+  Queue[Backward].Enqueue(aDst);
+  MeetPoint := NULL_INDEX;
+  Dir := Forward;
+
+  while Queue[Forward].NonEmpty and Queue[Backward].NonEmpty do begin
+    Node := Queue[Dir].Dequeue;
+    for p in Inst[Dir].AdjLists[Node]^ do
+      if not Visited[Dir].UncBits[p^.Destination] then begin
+        if Dir then
+          if not aOnAccept(TEdge.Create(p^.Destination, Node, p^.Data)) then continue else
+        else
+          if not aOnAccept(TEdge.Create(Node, p)) then continue;
         Visited[Dir].UncBits[p^.Destination] := True;
         Parents[Dir][p^.Destination] := Node;
         if Visited[not Dir].UncBits[p^.Destination] then begin
@@ -1915,13 +2008,14 @@ end;
 function TGSparseGraph.IsCycle(const aPath: array of SizeInt): Boolean;
 begin
   if System.Length(aPath) < 3 then exit(False);
-  Result := IsPath(aPath[0..Pred(System.High(aPath))]) and (aPath[0] = aPath[System.High(aPath)]);
+  Result := IsPath(aPath[0..High(aPath)]) and (aPath[0] = aPath[System.High(aPath)]);
 end;
 
 function TGSparseGraph.IsSimpleCycle(const aPath: array of SizeInt): Boolean;
 begin
   if System.Length(aPath) < 3 then exit(False);
-  Result := IsSimplePath(aPath[0..Pred(System.High(aPath))]) and (aPath[0] = aPath[System.High(aPath)]);
+  Result := IsSimplePath(aPath[0..Pred(System.High(aPath))]) and (aPath[0] = aPath[System.High(aPath)]) and
+            AdjLists[aPath[Pred(System.High(aPath))]]^.Contains(aPath[0]);
 end;
 
 function TGSparseGraph.IsEmpty: Boolean;
@@ -5524,7 +5618,47 @@ begin
             end;
   until not Queue.TryDequeue(Item);
   aWeight := TWeight.INF_VALUE;
-  Result := [];
+  Result := nil;
+end;
+
+class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge;
+  out aWeight: TWeight): TIntArray;
+var
+  Queue: TWItemBinHeapMin;
+  Parents: TIntArray;
+  Reached, InQueue: TBoolVector;
+  Item: TWeightItem;
+  p: TGraph.PAdjItem;
+begin
+  Queue := TWItemBinHeapMin.Create(g.VertexCount);
+  Parents := g.CreateIntArray;
+  Reached.Capacity := g.VertexCount;
+  InQueue.Capacity := g.VertexCount;
+  Item := TWeightItem.Create(aSrc, 0);
+  repeat
+    if Item.Index = aDst then
+      begin
+        aWeight := Item.Weight;
+        exit(g.TreePathTo(Parents, aDst));
+      end;
+    Reached.UncBits[Item.Index] := True;
+    for p in g.AdjLists[Item.Index]^ do
+      if not Reached.UncBits[p^.Key] and aOnEdgeAccept(TEdge.Create(Item.Index, p)) then
+        if not InQueue.UncBits[p^.Key] then
+          begin
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+            Parents[p^.Key] := Item.Index;
+            InQueue.UncBits[p^.Key] := True;
+          end
+        else
+          if p^.Data.Weight + Item.Weight < Queue.GetItemPtr(p^.Key)^.Weight then
+            begin
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+              Parents[p^.Key] := Item.Index;
+            end;
+  until not Queue.TryDequeue(Item);
+  aWeight := TWeight.INF_VALUE;
+  Result := nil;
 end;
 
 class function TGWeightHelper.BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt;
@@ -5606,8 +5740,93 @@ begin
   aWeight := BestWeight;
   Result := TGraph.TreePathTo(Parents[Bckwd], MeetPoint); //todo: easier path extraction
   TIntHelper.Reverse(Result[0..Result.Length-2]);
-  Result :=
-    TIntHelper.CreateMerge(TGraph.TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]);
+  Result := TIntHelper.CreateMerge(TGraph.TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]);
+end;
+
+class function TGWeightHelper.BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge;
+  out aWeight: TWeight): TIntArray;
+const
+  Forwd = False;
+  Bckwd = True;
+var
+  Inst: array[Boolean] of TGraph;
+  Queue: array[Boolean] of TWItemBinHeapMin;
+  Parents: array[Boolean] of TIntArray;
+  InQueue: array[Boolean] of TBoolVector;
+  Weights: array[Boolean] of TWeightArray;
+  BestWeight, CurrWeight: TWeight;
+  Item: TWeightItem;
+  MeetPoint: SizeInt = -1;
+  p: TGraph.PAdjItem;
+  Dir: Boolean = Forwd;
+begin
+  Inst[Forwd] := g;
+  Inst[Bckwd] := gRev;
+  Weights[Forwd] := CreateWeightArray(g.VertexCount);
+  Weights[Bckwd] := CreateWeightArray(gRev.VertexCount);
+  Queue[Forwd] := TWItemBinHeapMin.Create(g.VertexCount);
+  Queue[Bckwd] := TWItemBinHeapMin.Create(gRev.VertexCount);
+  Queue[Forwd].Enqueue(aSrc, TWeightItem.Create(aSrc, TWeight(0)));
+  Queue[Bckwd].Enqueue(aDst, TWeightItem.Create(aDst, TWeight(0)));
+  InQueue[Forwd].Capacity := g.VertexCount;
+  InQueue[Bckwd].Capacity := gRev.VertexCount;
+  InQueue[Forwd].UncBits[aSrc] := True;
+  InQueue[Bckwd].UncBits[aDst] := True;
+  Parents[Forwd] := g.CreateIntArray;
+  Parents[Bckwd] := gRev.CreateIntArray;
+  Weights[Forwd][aSrc] := TWeight(0);
+  Weights[Bckwd][aDst] := TWeight(0);
+  BestWeight := TWeight.INF_VALUE;
+  while Queue[Forwd].NonEmpty and Queue[Bckwd].NonEmpty do
+    begin
+      Item := Queue[Dir].Dequeue;
+      if Item.Weight + Queue[not Dir].PeekPtr^.Weight > BestWeight then
+        break;
+      Weights[Dir][Item.Index] := Item.Weight;
+      for p in Inst[Dir].AdjLists[Item.Index]^ do
+        if not (Weights[Dir][p^.Key] < TWeight.INF_VALUE) then
+          begin
+            if Dir then
+              if not aOnEdgeAccept(TEdge.Create(p^.Key, Item.Index, p^.Data)) then continue else
+            else
+              if not aOnEdgeAccept(TEdge.Create(Item.Index, p)) then continue;
+            CurrWeight := Item.Weight + p^.Data.Weight;
+            if not InQueue[Dir].UncBits[p^.Key] then
+              begin
+                Queue[Dir].Enqueue(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                Parents[Dir][p^.Key] := Item.Index;
+                InQueue[Dir].UncBits[p^.Key] := True;
+              end
+            else
+              if CurrWeight < Queue[Dir].GetItemPtr(p^.Key)^.Weight then
+                begin
+                  Queue[Dir].Update(p^.Key, TWeightItem.Create(p^.Key, CurrWeight));
+                  Parents[Dir][p^.Key] := Item.Index;
+                end;
+            if Weights[not Dir][p^.Key] < TWeight.INF_VALUE then
+              begin
+                CurrWeight += Weights[not Dir][p^.Key];
+                if CurrWeight < BestWeight  then
+                  begin
+                    BestWeight := CurrWeight;
+                    MeetPoint := p^.Key;
+                  end;
+              end;
+          end;
+      if Queue[not Dir].Count < Queue[Dir].Count then
+        Dir := not Dir;
+    end;
+
+  if MeetPoint = NULL_INDEX then
+    begin
+      aWeight := TWeight.INF_VALUE;
+      exit(nil);
+    end;
+
+  aWeight := BestWeight;
+  Result := TGraph.TreePathTo(Parents[Bckwd], MeetPoint);
+  TIntHelper.Reverse(Result[0..Result.Length-2]);
+  Result := TIntHelper.CreateMerge(TGraph.TreePathTo(Parents[Forwd], MeetPoint), Result[0..Result.Length-2]);
 end;
 
 class function TGWeightHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
@@ -5653,7 +5872,7 @@ begin
         end;
   until not Queue.TryDequeue(Item);
   aWeight := TWeight.INF_VALUE;
-  Result := [];
+  Result := nil;
 end;
 
 class function TGWeightHelper.NBAStar(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;

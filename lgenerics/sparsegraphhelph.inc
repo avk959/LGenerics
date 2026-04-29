@@ -434,6 +434,8 @@ type
     end;
 
     TGraph            = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
+    TEdge             = TGraph.TEdge;
+    TNestAcceptEdge   = TGraph.TNestAcceptEdge;
     TEstimate         = function(const aSrc, aDst: TVertex): TWeight;
     TEdgeArray        = array of TWeightEdge;
     TWeightMatrix     = array of array of TWeight;
@@ -511,8 +513,12 @@ type
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
   { Dijkstra's pathfinding algorithm }
     class function DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+    class function DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge;
+                                out aWeight: TWeight): TIntArray; static;
   { bidirectional Dijkstra's pathfinding algorithm }
     class function BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+    class function BiDijkstraPath(g, gRev: TGraph; aSrc, aDst: SizeInt; aOnEdgeAccept: TNestAcceptEdge;
+                                  out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   {Wim Pijls, Henk Post: "Yet another bidirectional algorithm for shortest paths" }
@@ -527,7 +533,7 @@ type
     class function BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
   { negative cycle detection }
     class function NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
-  { BFMT single-source shortest paths problem }
+  { BFMT single-source shortest paths }
     class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                    static;
