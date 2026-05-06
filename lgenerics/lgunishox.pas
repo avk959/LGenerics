@@ -1449,7 +1449,10 @@ begin
                     nibble := getNumFromBits(inbuf, ilen, bit_no, 4);
                     if nibble < 0 then break;
                     if olen <= ol then exit(olen + 1);
-                    outbuf[ol] := getHexChar(nibble, idx);
+                    if idx < 3 then
+                      outbuf[ol] := getHexChar(nibble, USX_NIB_HEX_LOWER)
+                    else
+                      outbuf[ol] := getHexChar(nibble, USX_NIB_HEX_UPPER);
                     Inc(ol);
                     if ((idx = 2) or (idx = 4)) and ((nibble_count = 25) or
                        (nibble_count = 21) or (nibble_count = 17) or (nibble_count = 13)) then begin
