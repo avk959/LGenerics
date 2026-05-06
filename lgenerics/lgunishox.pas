@@ -111,24 +111,24 @@ const
   );
 
 { Simple API for compressing a string
-    inbuf    input ASCII / UTF-8 string
-    ilen     length of the input in bytes
-    outbuf   output buffer - should be large enough to hold compressed output
-    olen     length of the output buffer in bytes }
+    inbuf    Input ASCII / UTF-8 string
+    ilen     Length of the input in bytes
+    outbuf   Output buffer - should be large enough to hold compressed output
+    olen     Length of the output buffer in bytes }
   function unishox2_compress_simple(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32): Int32;
 
 { Simple API for decompressing a string
-    inbuf    input compressed bytes (output of unishox2_compress functions)
-    ilen     length of the inbuf in bytes
-    outbuf   output buffer for ASCII / UTF-8 string - should be large enough
-    olen     length of the output buffer in bytes }
+    inbuf    Input compressed bytes (output of unishox2_compress functions)
+    ilen     Length of the inbuf in bytes
+    outbuf   Output buffer for ASCII / UTF-8 string - should be large enough
+    olen     Length of the output buffer in bytes }
   function unishox2_decompress_simple(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32): Int32;
 
 { Comprehensive API for compressing a string
     inbuf          Input ASCII / UTF-8 string
-    ilen           length of the inbuf in bytes
-    outbuf         output buffer - should be large enough to hold compressed output
-    olen           length of the outbuf in bytes
+    ilen           Length of the inbuf in bytes
+    outbuf         Output buffer - should be large enough to hold compressed output
+    olen           Length of the outbuf in bytes
     usx_hcodes     Horizontal codes (array of bytes)
     usx_hcode_lens Length of each element in usx_hcodes array
     usx_freq_seq   Frequently occuring sequences
@@ -138,9 +138,9 @@ const
                              usx_freq_seq: PUsxFreqSeq; usx_templates: PUsxTemplates): Int32;
 { Comprehensive API for de-compressing a string
     inbuf          Input compressed bytes (output of unishox2_compress functions)
-    ilen           length of the inbuf in bytes
-    outbuf         output buffer - should be large enough to hold de-compressed output
-    olen           length of the outbuf in bytes
+    ilen           Llength of the inbuf in bytes
+    outbuf         Output buffer - should be large enough to hold de-compressed output
+    olen           Length of the outbuf in bytes
     usx_hcodes     Horizontal codes (array of bytes)
     usx_hcode_lens Length of each element in usx_hcodes array
     usx_freq_seq   Frequently occuring sequences
@@ -1250,7 +1250,7 @@ var
   spl_code_idx, raw_char, count, nibble_count, nibble, prev_uni, bin_count: Int32;
   dstate, h, b: Byte;
   c, c_t: AnsiChar;
-  is_upper, is_all_upper: Boolean;
+  is_upper, is_all_upper, eof: Boolean;
 begin
   ol := 0;
   bit_no := UNISHOX_MAGIC_BIT_LEN;// ignore the magic bit
@@ -1390,13 +1390,13 @@ begin
               if idx = 0 then begin
                 idx := getStepCodeIdx(inbuf, ilen, bit_no, 4);
                 if idx >= 5 then break;
-                rem := readCount(inbuf, bit_no, ilen);
-                if rem < 0 then break;
-                if usx_templates = nil then break;
                 if (idx < 0) or (idx > 4) or (usx_templates^[idx] = nil) then break;
                 tlen := StrLen(usx_templates^[idx]);
+                rem := readCount(inbuf, bit_no, ilen);
+                if rem < 0 then break;
                 if rem > tlen then break;
                 rem := tlen - rem;
+                eof := False;
                 for j := 0 to rem - 1 do begin
                   c_t := usx_templates^[idx][j];
                   if c_t in ['F', 'f', 'r', 'o', 't'] then begin
@@ -1407,7 +1407,9 @@ begin
                     else        nibble_count := 1;
                     end;
                     raw_char := getNumFromBits(inbuf, ilen, bit_no, nibble_count);
-                    if raw_char < 0 then break;
+                    if raw_char < 0 then begin
+                      eof := True; break;
+                    end;
                     if olen <= ol then exit(olen + 1);
                     if c_t = 'f' then
                       outbuf[ol] := getHexChar(raw_char, USX_NIB_HEX_LOWER)
@@ -1421,21 +1423,21 @@ begin
                     Inc(ol);
                   end;
                 end;
+                if eof then break; // reach input eof
               end else
                 if idx = 5 then begin
                   bin_count := readCount(inbuf, bit_no, ilen);
-                  if bin_count < 0 then break;
-                  if bin_count = 0 then break;
+                  if bin_count <= 0 then break;
                   while bin_count > 0 do begin
                     raw_char := getNumFromBits(inbuf, ilen, bit_no, 8);
                     if raw_char < 0 then break;
                     if olen <= ol then exit(olen + 1);
                     outbuf[ol] := AnsiChar(raw_char);
                     Inc(ol);
-                    Inc(bit_no, 8);
+                    bit_no += 8;
                     Dec(bin_count);
                   end;
-                  if bin_count > 0 then break;
+                  if bin_count > 0 then break; // reach input eof
                 end else begin
                   if (idx = 2) or (idx = 4) then
                     nibble_count := 32
@@ -1458,7 +1460,7 @@ begin
                     Inc(bit_no, 4);
                     Dec(nibble_count);
                   end;
-                  if nibble_count > 0 then break;
+                  if nibble_count > 0 then break; // reach input eof
                 end;
                 if dstate = USX_DELTA then h := USX_DELTA;
                 continue;
@@ -1466,7 +1468,7 @@ begin
             end;
     end;
 
-    if is_upper and (v = 1) then begin
+    if is_upper and (v = 1) then begin // continuous delta coding
       h := USX_DELTA;
       dstate := USX_DELTA;
       continue;
@@ -1505,7 +1507,6 @@ begin
               if (h = USX_SYM) and (v > 24) then begin
                 v := v - 25;
                 if (v >= 0) and (v <= 5) then begin
-                  if usx_freq_seq = nil then break; ///////////
                   freqlen := StrLen(usx_freq_seq^[v]);
                   left := olen - ol;
                   if left <= 0 then exit(olen + 1);
@@ -1516,7 +1517,6 @@ begin
               end else
                 if (h = USX_NUM) and (v > 22) and (v < 26) then begin
                   v := v - 20;
-                  if usx_freq_seq = nil then break; ///////////
                   freqlen := StrLen(usx_freq_seq^[v]);
                   left := olen - ol;
                   if left <= 0 then exit(olen + 1);
@@ -1737,7 +1737,7 @@ begin
       c := usx_sets[i][j];
       if c > 32 then begin
         usx_code_94[c - USX_OFFSET_94] := (i shl 5) + j;
-        if (c >= Byte('a')) and (c <= Byte('z')) then
+        if c in [Byte('a')..Byte('z')] then
           usx_code_94[c - USX_OFFSET_94 - (Byte('a') - Byte('A'))] := (i shl 5) + j;
       end;
     end;
