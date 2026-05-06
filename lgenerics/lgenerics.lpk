@@ -227,6 +227,10 @@
         <Filename Value="lgmsgpackutils.pas"/>
         <UnitName Value="lgMsgPackUtils"/>
       </Item>
+      <Item>
+        <Filename Value="lgunishox.pas"/>
+        <UnitName Value="LgUnishox"/>
+      </Item>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
