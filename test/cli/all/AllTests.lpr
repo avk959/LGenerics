@@ -48,7 +48,8 @@ uses
   lgJtdTest,
   LgJsonPathTest,
   LgJsonUtilsTest,
-  LGMsgPackTest;
+  LGMsgPackTest,
+  LgUnishoxTest;
 
 type
 
