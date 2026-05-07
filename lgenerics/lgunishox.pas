@@ -205,11 +205,6 @@ type
   function unishox2_decompress_preset(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32;
                                       preset: TUsxPreset): Int32;
 
-  function unishox2_compress_preset_lines(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32;
-                                          preset: TUsxPreset; prev_lines: PUSLinkList): Int32;
-
-  function unishox2_decompress_preset_lines(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32;
-                                            preset: TUsxPreset; prev_lines: PUSLinkList): Int32;
 
 implementation
 {$Q-}{$R-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -1700,30 +1695,6 @@ var
 begin
   AdjustPreset(preset, hcodes, hlens, freq, tmpl);
   Result := unishox2_decompress(inbuf, ilen, outbuf, olen, hcodes, hlens, freq, tmpl);
-end;
-
-function unishox2_compress_preset_lines(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32;
-  preset: TUsxPreset; prev_lines: PUSLinkList): Int32;
-var
-  hcodes: TUsxHCodes;
-  hlens: TUsxHCodeLens;
-  freq: PUsxFreqSeq;
-  tmpl: PUsxTemplates;
-begin
-  AdjustPreset(preset, hcodes, hlens, freq, tmpl);
-  Result := unishox2_compress_lines(inbuf, ilen, outbuf, olen, hcodes, hlens, freq, tmpl, prev_lines);
-end;
-
-function unishox2_decompress_preset_lines(const inbuf: PAnsiChar; ilen: Int32; outbuf: PAnsiChar; olen: Int32;
-  preset: TUsxPreset; prev_lines: PUSLinkList): Int32;
-var
-  hcodes: TUsxHCodes;
-  hlens: TUsxHCodeLens;
-  freq: PUsxFreqSeq;
-  tmpl: PUsxTemplates;
-begin
-  AdjustPreset(preset, hcodes, hlens, freq, tmpl);
-  Result := unishox2_decompress_lines(inbuf, ilen, outbuf, olen, hcodes, hlens, freq, tmpl, prev_lines);
 end;
 
 { Fills the usx_code_94 94 letter array based on sets of characters at usx_sets
