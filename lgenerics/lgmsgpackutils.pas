@@ -162,9 +162,15 @@ type
   { TTextCompressExt }
   TTextCompressExt = class(specialize TMpExtHook<TSimpleText>)
   private
+  const
+    SHORT_CUTOFF = 512;
+    BUF_SIZE     = SHORT_CUTOFF + SHORT_CUTOFF div 2;
+    ZLIB_MAGIC   = Byte('z');
+  var
+    FBuffer: array[0..Pred(BUF_SIZE)] of Byte;
     FCompressLevel: TCompressionLevel;
   public
-    constructor Create(aExtType: TUserExtType; aLevel: TCompressionLevel = clFastest);
+    constructor Create(aExtType: TUserExtType; aZLibCompressLevel: TCompressionLevel = clMax);
     procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
   end;
@@ -203,7 +209,7 @@ type
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
-  Math, TypInfo;
+  Math, TypInfo, LgUnishox;
 
 { TMpCustomExt }
 
@@ -694,55 +700,64 @@ end;
 
 { TTextCompressExt }
 
-constructor TTextCompressExt.Create(aExtType: TUserExtType; aLevel: TCompressionLevel);
+constructor TTextCompressExt.Create(aExtType: TUserExtType; aZLibCompressLevel: TCompressionLevel);
 begin
   inherited Create(aExtType);
-  FCompressLevel := aLevel;
+  FCompressLevel := aZLibCompressLevel;
 end;
 
 {$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 procedure TTextCompressExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
 var
-  pText: PExtValue absolute aData;
+  ptxt: ^TSimpleText absolute aData;
   s: string;
   ms: specialize TGAutoRef<TMemoryStream>;
   cs: specialize TGUniqRef<TCompressionStream>;
-const
-  MIN_LEN = 128;
+  Len: Integer;
+  Magic: Byte = ZLIB_MAGIC;
 begin
-  s := pText^;
-  if System.Length(s) >= MIN_LEN then begin
-    cs.Instance := TCompressionStream.Create(FCompressLevel, ms.Instance, True);
-    cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
-    cs.Clear;
-    aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
-  end else
-    aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s));
+  s := ptxt^;
+  if s = '' then
+    aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s))
+  else
+    if System.Length(s) <= SHORT_CUTOFF then begin
+      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, BUF_SIZE, upsFavorAlpha);
+      aWriter.AddExt(ExtType, FBuffer, Len);
+    end else begin
+      ms.Instance.WriteBuffer(Magic, SizeOf(Magic));
+      cs.Instance := TCompressionStream.Create(FCompressLevel, ms.Instance, True);
+      cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
+      cs.Clear;
+      aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
+    end;
 end;
 
 function TTextCompressExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
 var
-  pText: PExtValue absolute aData;
+  ptxt: ^TSimpleText absolute aData;
   s: string;
   ms, rs: specialize TGAutoRef<TMemoryStream>;
   dcs: specialize TGUniqRef<TDecompressionStream>;
+  Len: Integer;
 begin
-  ms.Instance.WriteBuffer(aBlob[1], System.Length(aBlob)-1);
-  ms.Instance.Position := 0;
-  dcs.Instance := TDecompressionStream.Create(ms.Instance, True);
-  try
-    rs.Instance.CopyFrom(dcs.Instance, 0);
-    System.SetLength(s, rs.Instance.Size);
-    System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
-  except
-    System.SetLength(s, System.Length(aBlob)-1);
-    System.Move(aBlob[1], Pointer(s)^, System.Length(aBlob)-1);
-  end;
-  pText^ := s;
+  if System.Length(aBlob) > 1 then
+    if (System.Length(aBlob) > 2) and (aBlob[1] = ZLIB_MAGIC) then begin
+      ms.Instance.WriteBuffer(aBlob[2], System.Length(aBlob)-2);
+      ms.Instance.Position := 0;
+      dcs.Instance := TDecompressionStream.Create(ms.Instance, True);
+      rs.Instance.CopyFrom(dcs.Instance, 0);
+      System.SetLength(s, rs.Instance.Size);
+      System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
+    end else begin
+      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, BUF_SIZE, upsFavorAlpha);
+      if Len > SizeOf(FBuffer) then exit(False);
+      System.SetLength(s, Len);
+      System.Move(FBuffer[0], Pointer(s)^, Len);
+    end;
+  ptxt^ := s;
   Result := True;
 end;
 {$POP}
-
 
 { TRecFieldData }
 
