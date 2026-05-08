@@ -2,7 +2,7 @@
 Collection of algorithms and data structures organized as a Lazarus package.
 In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   - download the package sources.
-  - open the lgenerics/LGenerics.lpk package so Lazarus knows about it.
+  - open the lgenerics/lgenerics.lpk package so Lazarus knows about it.
   - add LGenerics package to your project dependencies.
 #### Implemented primitives:
   - stack(unit lgStack)
@@ -143,5 +143,6 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   - CSV document processing(unit lgCsvUtils)
   - support for the MessagePack data format(unit LgMsgPack)
   - MessagePack serialization/deserialization of native Pascal data structures using RTTI(unit lgPdo)
+  - a port of Unisox2, a C library for compressing short strings(unit lgUnishox)
   - Eisel-Lemire fast string-to-double conversion algorithm(unit lgJson)
   - Ryū double-to-string conversion algorithm(unit lgJson)
