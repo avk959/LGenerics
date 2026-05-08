@@ -3257,15 +3257,17 @@ var
   ext: TMpExt;
   b: TBytes;
 const
-  TXT = 'MessagePack is an object serialization specification like JSON.' +
-        'MessagePack has two concepts: type system and formats.' +
-        'Serialization is conversion from application objects into MessagePack formats via MessagePack type system.' +
-        'Deserialization is conversion from MessagePack formats into application objects via MessagePack type system.' +
-        'This document describes the MessagePack type system, MessagePack formats and conversion of them.' +
-        'MessagePack allows applications to define application-specific types using the Extension type. Extension type consists of an integer and a byte' +
-        'array where the integer represents a kind of types and the byte array represents data.' +
-        'Applications can assign 0 to 127 to store application-specific type information. An example usage is that application defines type = 0 as' +
-        'the application''s unique type system, and stores name of a type and values of the type at the payload.';
+  ShortText = 'The quick brown fox jumps over the lazy dog. Съешь ещё этих мягких французских булок, да выпей чаю. 悲しい時間！ おお魅力！';
+  LongText =
+    'MessagePack is an object serialization specification like JSON.' +
+    'MessagePack has two concepts: type system and formats.' +
+    'Serialization is conversion from application objects into MessagePack formats via MessagePack type system.' +
+    'Deserialization is conversion from MessagePack formats into application objects via MessagePack type system.' +
+    'This document describes the MessagePack type system, MessagePack formats and conversion of them.' +
+    'MessagePack allows applications to define application-specific types using the Extension type. Extension type consists of an integer and a byte' +
+    'array where the integer represents a kind of types and the byte array represents data.' +
+    'Applications can assign 0 to 127 to store application-specific type information. An example usage is that application defines type = 0 as' +
+    'the application''s unique type system, and stores name of a type and values of the type at the payload.';
 begin
   ext.Instance := TMpUserExt.Create([TTextCompressExt.Create(0)]);
   v2 := 'abcdef';
@@ -3273,11 +3275,17 @@ begin
   PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
   AssertTrue(string(v2) = '');
 
-  v1 := TXT;
+  v1 := ShortText;
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
-  AssertTrue(Length(b) < Length(TXT));
+  AssertTrue(Length(b) < Length(ShortText));
   PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
-  AssertTrue(string(v2) = TXT);
+  AssertTrue(string(v2) = ShortText);
+
+  v1 := LongText;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  AssertTrue(Length(b) < Length(LongText));
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = LongText);
 end;
 
 procedure TTestMsgPackExt.TestGuidTxtMap;
