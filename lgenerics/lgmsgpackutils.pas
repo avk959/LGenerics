@@ -107,10 +107,8 @@ type
     property  HookCount: Integer read GetHookCount;
   end;
 
-
-
-  { TGuidExt }
-  TGuidExt = class(specialize TMpExtHook<TGuid>)
+  { TMpGuidExt }
+  TMpGuidExt = class(specialize TMpExtHook<TGuid>)
     procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
   end;
@@ -148,29 +146,137 @@ type
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
   end;
 
-  { TSimpleText }
-  TSimpleText = record
+  { TMpTextCompressHook }
+  generic TMpTextCompressHook<T> = class abstract(specialize TMpExtHook<T>)
+  public
+  type
+    TZLibCompressLevel = ZStream.TCompressionLevel;
+  private
+    FLevel: TCompressionLevel;
+  protected
+  const
+    ZLIB_MAGIC = Byte('z');
+  public
+    constructor Create(aExtType: TUserExtType; aCompressLevel: TZLibCompressLevel = clMax);
+    property CompressLevel: TZLibCompressLevel read FLevel;
+  end;
+
+  { TMpText }
+  TMpText = record
   private
     FText: string;
   public
-    class operator := (const txt: TSimpleText): string; inline;
-    class operator := (const s: string): TSimpleText; inline;
-    class operator Explicit(const txt: TSimpleText): string; inline;
-    class operator Explicit(const s: string): TSimpleText; inline;
+    class operator := (const txt: TMpText): string; inline;
+    class operator := (const s: string): TMpText; inline;
+    class operator Explicit(const txt: TMpText): string; inline;
+    class operator Explicit(const s: string): TMpText; inline;
   end;
 
   { TTextCompressExt }
-  TTextCompressExt = class(specialize TMpExtHook<TSimpleText>)
+  TTextCompressExt = class(specialize TMpTextCompressHook<TMpText>)
   private
   const
     SHORT_CUTOFF = 512;
     BUF_SIZE     = SHORT_CUTOFF + SHORT_CUTOFF div 2;
-    ZLIB_MAGIC   = Byte('z');
   var
     FBuffer: array[0..Pred(BUF_SIZE)] of Byte;
-    FCompressLevel: TCompressionLevel;
   public
-    constructor Create(aExtType: TUserExtType; aZLibCompressLevel: TCompressionLevel = clMax);
+    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
+    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
+  end;
+
+  { TMpUri }
+  TMpUri = record
+  private
+    FUri: string;
+  public
+    class operator := (const u: TMpUri): string; inline;
+    class operator := (const u: string): TMpUri; inline;
+    class operator Explicit(const u: TMpUri): string; inline;
+    class operator Explicit(const u: string): TMpUri; inline;
+  end;
+
+  { TUriCompressExt }
+  TUriCompressExt = class(specialize TMpTextCompressHook<TMpUri>)
+  private
+  const
+    SHORT_CUTOFF = 256;
+    BUF_SIZE     = SHORT_CUTOFF + SHORT_CUTOFF div 2;
+  var
+    FBuffer: array[0..Pred(BUF_SIZE)] of Byte;
+  public
+    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
+    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
+  end;
+
+  { TMpJson }
+  TMpJson = record
+  private
+    FJson: string;
+  public
+    class operator := (const j: TMpJson): string; inline;
+    class operator := (const j: string): TMpJson; inline;
+    class operator Explicit(const j: TMpJson): string; inline;
+    class operator Explicit(const j: string): TMpJson; inline;
+  end;
+
+  { TJsonCompressExt }
+  TJsonCompressExt = class(specialize TMpTextCompressHook<TMpJson>)
+  private
+  const
+    SHORT_CUTOFF = 512;
+    BUF_SIZE     = SHORT_CUTOFF + SHORT_CUTOFF div 2;
+  var
+    FBuffer: array[0..Pred(BUF_SIZE)] of Byte;
+  public
+    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
+    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
+  end;
+
+  { TMpXml }
+  TMpXml = record
+  private
+    FXml: string;
+  public
+    class operator := (const x: TMpXml): string; inline;
+    class operator := (const x: string): TMpXml; inline;
+    class operator Explicit(const x: TMpXml): string; inline;
+    class operator Explicit(const x: string): TMpXml; inline;
+  end;
+
+  { TXmlCompressExt }
+  TXmlCompressExt = class(specialize TMpTextCompressHook<TMpXml>)
+  private
+  const
+    SHORT_CUTOFF = 512;
+    BUF_SIZE     = SHORT_CUTOFF + SHORT_CUTOFF div 2;
+  var
+    FBuffer: array[0..Pred(BUF_SIZE)] of Byte;
+  public
+    procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
+    function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
+  end;
+
+  { TMpHtml }
+  TMpHtml = record
+  private
+    FHtml: string;
+  public
+    class operator := (const h: TMpHtml): string; inline;
+    class operator := (const h: string): TMpHtml; inline;
+    class operator Explicit(const h: TMpHtml): string; inline;
+    class operator Explicit(const h: string): TMpHtml; inline;
+  end;
+
+  { THtmlCompressExt }
+  THtmlCompressExt = class(specialize TMpTextCompressHook<TMpHtml>)
+  private
+  const
+    SHORT_CUTOFF = 512;
+    BUF_SIZE     = SHORT_CUTOFF + SHORT_CUTOFF div 2;
+  var
+    FBuffer: array[0..Pred(BUF_SIZE)] of Byte;
+  public
     procedure Write(aData: Pointer; aWriter: TMpCustomWriter); override;
     function  TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean; override;
   end;
@@ -411,9 +517,9 @@ begin
   Result := FTypeList[e].TryRead(aData, aBlob);
 end;
 
-{ TGuidExt }
+{ TMpGuidExt }
 
-procedure TGuidExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
+procedure TMpGuidExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
 var
   p: PExtValue absolute aData;
   g: TGuid;
@@ -426,7 +532,7 @@ begin
 end;
 
 {$PUSH}{$WARN 5057 OFF}
-function TGuidExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
+function TMpGuidExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
 var
   p: PExtValue absolute aData;
   g: TGuid;
@@ -676,56 +782,58 @@ begin
   Result := True;
 end;
 
+{ TMpTextCompressHook }
+
+constructor TMpTextCompressHook.Create(aExtType: TUserExtType; aCompressLevel: TZLibCompressLevel);
+begin
+  inherited Create(aExtType);
+  FLevel := aCompressLevel;
+end;
+
 { TSimpleText }
 
-class operator TSimpleText.:=(const txt: TSimpleText): string;
+class operator TMpText.:=(const txt: TMpText): string;
 begin
   Result := txt.FText;
 end;
 
-class operator TSimpleText.:=(const s: string): TSimpleText;
+class operator TMpText.:=(const s: string): TMpText;
 begin
   Result.FText := s;
 end;
 
-class operator TSimpleText.Explicit(const txt: TSimpleText): string;
+class operator TMpText.Explicit(const txt: TMpText): string;
 begin
   Result := txt.FText;
 end;
 
-class operator TSimpleText.Explicit(const s: string): TSimpleText;
+class operator TMpText.Explicit(const s: string): TMpText;
 begin
   Result.FText := s;
 end;
 
 { TTextCompressExt }
 
-constructor TTextCompressExt.Create(aExtType: TUserExtType; aZLibCompressLevel: TCompressionLevel);
-begin
-  inherited Create(aExtType);
-  FCompressLevel := aZLibCompressLevel;
-end;
-
 {$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
 procedure TTextCompressExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
 var
-  ptxt: ^TSimpleText absolute aData;
+  p: PExtValue absolute aData;
   s: string;
   ms: specialize TGAutoRef<TMemoryStream>;
   cs: specialize TGUniqRef<TCompressionStream>;
   Len: Integer;
   Magic: Byte = ZLIB_MAGIC;
 begin
-  s := ptxt^;
+  s := p^;
   if s = '' then
     aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s))
   else
     if System.Length(s) <= SHORT_CUTOFF then begin
-      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, BUF_SIZE, upsFavorAlpha);
+      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, SizeOf(FBuffer), upsFavorAlpha);
       aWriter.AddExt(ExtType, FBuffer, Len);
     end else begin
       ms.Instance.WriteBuffer(Magic, SizeOf(Magic));
-      cs.Instance := TCompressionStream.Create(FCompressLevel, ms.Instance, True);
+      cs.Instance := TCompressionStream.Create(CompressLevel, ms.Instance, True);
       cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
       cs.Clear;
       aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
@@ -734,7 +842,7 @@ end;
 
 function TTextCompressExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
 var
-  ptxt: ^TSimpleText absolute aData;
+  p: PExtValue absolute aData;
   s: string;
   ms, rs: specialize TGAutoRef<TMemoryStream>;
   dcs: specialize TGUniqRef<TDecompressionStream>;
@@ -749,12 +857,320 @@ begin
       System.SetLength(s, rs.Instance.Size);
       System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
     end else begin
-      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, BUF_SIZE, upsFavorAlpha);
+      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, SizeOf(FBuffer), upsFavorAlpha);
       if Len > SizeOf(FBuffer) then exit(False);
       System.SetLength(s, Len);
       System.Move(FBuffer[0], Pointer(s)^, Len);
     end;
-  ptxt^ := s;
+  p^ := s;
+  Result := True;
+end;
+{$POP}
+
+{ TMpUri }
+
+class operator TMpUri.:=(const u: TMpUri): string;
+begin
+  Result := u.FUri;
+end;
+
+class operator TMpUri.:=(const u: string): TMpUri;
+begin
+  Result.FUri := u;
+end;
+
+class operator TMpUri.Explicit(const u: TMpUri): string;
+begin
+  Result := u.FUri;
+end;
+
+class operator TMpUri.Explicit(const u: string): TMpUri;
+begin
+  Result.FUri := u;
+end;
+
+{ TUriCompressExt }
+
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
+procedure TUriCompressExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms: specialize TGAutoRef<TMemoryStream>;
+  cs: specialize TGUniqRef<TCompressionStream>;
+  Len: Integer;
+  Magic: Byte = ZLIB_MAGIC;
+begin
+  s := p^;
+  if s = '' then
+    aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s))
+  else
+    if System.Length(s) <= SHORT_CUTOFF then begin
+      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, SizeOf(FBuffer), upsUrl);
+      aWriter.AddExt(ExtType, FBuffer, Len);
+    end else begin
+      ms.Instance.WriteBuffer(Magic, SizeOf(Magic));
+      cs.Instance := TCompressionStream.Create(CompressLevel, ms.Instance, True);
+      cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
+      cs.Clear;
+      aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
+    end;
+end;
+
+function TUriCompressExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms, rs: specialize TGAutoRef<TMemoryStream>;
+  dcs: specialize TGUniqRef<TDecompressionStream>;
+  Len: Integer;
+begin
+  if System.Length(aBlob) > 1 then
+    if (System.Length(aBlob) > 2) and (aBlob[1] = ZLIB_MAGIC) then begin
+      ms.Instance.WriteBuffer(aBlob[2], System.Length(aBlob)-2);
+      ms.Instance.Position := 0;
+      dcs.Instance := TDecompressionStream.Create(ms.Instance, True);
+      rs.Instance.CopyFrom(dcs.Instance, 0);
+      System.SetLength(s, rs.Instance.Size);
+      System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
+    end else begin
+      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, SizeOf(FBuffer), upsUrl);
+      if Len > SizeOf(FBuffer) then exit(False);
+      System.SetLength(s, Len);
+      System.Move(FBuffer[0], Pointer(s)^, Len);
+    end;
+  p^ := s;
+  Result := True;
+end;
+{$POP}
+
+{ TMpJson }
+
+class operator TMpJson.:=(const j: TMpJson): string;
+begin
+  Result := j.FJson;
+end;
+
+class operator TMpJson.:=(const j: string): TMpJson;
+begin
+  Result.FJson := j;
+end;
+
+class operator TMpJson.Explicit(const j: TMpJson): string;
+begin
+  Result := j.FJson;
+end;
+
+class operator TMpJson.Explicit(const j: string): TMpJson;
+begin
+  Result.FJson := j;
+end;
+
+{ TJsonCompressExt }
+
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
+procedure TJsonCompressExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms: specialize TGAutoRef<TMemoryStream>;
+  cs: specialize TGUniqRef<TCompressionStream>;
+  Len: Integer;
+  Magic: Byte = ZLIB_MAGIC;
+begin
+  s := p^;
+  if s = '' then
+    aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s))
+  else
+    if System.Length(s) <= SHORT_CUTOFF then begin
+      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, SizeOf(FBuffer), upsJson);
+      aWriter.AddExt(ExtType, FBuffer, Len);
+    end else begin
+      ms.Instance.WriteBuffer(Magic, SizeOf(Magic));
+      cs.Instance := TCompressionStream.Create(CompressLevel, ms.Instance, True);
+      cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
+      cs.Clear;
+      aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
+    end;
+end;
+
+function TJsonCompressExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms, rs: specialize TGAutoRef<TMemoryStream>;
+  dcs: specialize TGUniqRef<TDecompressionStream>;
+  Len: Integer;
+begin
+  if System.Length(aBlob) > 1 then
+    if (System.Length(aBlob) > 2) and (aBlob[1] = ZLIB_MAGIC) then begin
+      ms.Instance.WriteBuffer(aBlob[2], System.Length(aBlob)-2);
+      ms.Instance.Position := 0;
+      dcs.Instance := TDecompressionStream.Create(ms.Instance, True);
+      rs.Instance.CopyFrom(dcs.Instance, 0);
+      System.SetLength(s, rs.Instance.Size);
+      System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
+    end else begin
+      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, SizeOf(FBuffer), upsJson);
+      if Len > SizeOf(FBuffer) then exit(False);
+      System.SetLength(s, Len);
+      System.Move(FBuffer[0], Pointer(s)^, Len);
+    end;
+  p^ := s;
+  Result := True;
+end;
+{$POP}
+
+{ TMpXml }
+
+class operator TMpXml.:=(const x: TMpXml): string;
+begin
+  Result := x.FXml;
+end;
+
+class operator TMpXml.:=(const x: string): TMpXml;
+begin
+  Result.FXml := x;
+end;
+
+class operator TMpXml.Explicit(const x: TMpXml): string;
+begin
+  Result := x.FXml;
+end;
+
+class operator TMpXml.Explicit(const x: string): TMpXml;
+begin
+  Result.FXml := x;
+end;
+
+{ TXmlCompressExt }
+
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
+procedure TXmlCompressExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms: specialize TGAutoRef<TMemoryStream>;
+  cs: specialize TGUniqRef<TCompressionStream>;
+  Len: Integer;
+  Magic: Byte = ZLIB_MAGIC;
+begin
+  s := p^;
+  if s = '' then
+    aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s))
+  else
+    if System.Length(s) <= SHORT_CUTOFF then begin
+      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, SizeOf(FBuffer), upsXml);
+      aWriter.AddExt(ExtType, FBuffer, Len);
+    end else begin
+      ms.Instance.WriteBuffer(Magic, SizeOf(Magic));
+      cs.Instance := TCompressionStream.Create(CompressLevel, ms.Instance, True);
+      cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
+      cs.Clear;
+      aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
+    end;
+end;
+
+function TXmlCompressExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms, rs: specialize TGAutoRef<TMemoryStream>;
+  dcs: specialize TGUniqRef<TDecompressionStream>;
+  Len: Integer;
+begin
+  if System.Length(aBlob) > 1 then
+    if (System.Length(aBlob) > 2) and (aBlob[1] = ZLIB_MAGIC) then begin
+      ms.Instance.WriteBuffer(aBlob[2], System.Length(aBlob)-2);
+      ms.Instance.Position := 0;
+      dcs.Instance := TDecompressionStream.Create(ms.Instance, True);
+      rs.Instance.CopyFrom(dcs.Instance, 0);
+      System.SetLength(s, rs.Instance.Size);
+      System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
+    end else begin
+      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, SizeOf(FBuffer), upsXml);
+      if Len > SizeOf(FBuffer) then exit(False);
+      System.SetLength(s, Len);
+      System.Move(FBuffer[0], Pointer(s)^, Len);
+    end;
+  p^ := s;
+  Result := True;
+end;
+{$POP}
+
+{ TMpHtml }
+
+class operator TMpHtml.:=(const h: TMpHtml): string;
+begin
+  Result := h.FHtml;
+end;
+
+class operator TMpHtml.:=(const h: string): TMpHtml;
+begin
+  Result.FHtml := h;
+end;
+
+class operator TMpHtml.Explicit(const h: TMpHtml): string;
+begin
+  Result := h.FHtml;
+end;
+
+class operator TMpHtml.Explicit(const h: string): TMpHtml;
+begin
+  Result.FHtml := h;
+end;
+
+{ THtmlCompressExt }
+
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized}
+procedure THtmlCompressExt.Write(aData: Pointer; aWriter: TMpCustomWriter);
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms: specialize TGAutoRef<TMemoryStream>;
+  cs: specialize TGUniqRef<TCompressionStream>;
+  Len: Integer;
+  Magic: Byte = ZLIB_MAGIC;
+begin
+  s := p^;
+  if s = '' then
+    aWriter.AddExt(ExtType, Pointer(s)^, System.Length(s))
+  else
+    if System.Length(s) <= SHORT_CUTOFF then begin
+      Len := unishox2_compress_preset(Pointer(s), System.Length(s), @FBuffer, BUF_SIZE, upsHtml);
+      aWriter.AddExt(ExtType, FBuffer, Len);
+    end else begin
+      ms.Instance.WriteBuffer(Magic, SizeOf(Magic));
+      cs.Instance := TCompressionStream.Create(CompressLevel, ms.Instance, True);
+      cs.Instance.WriteBuffer(Pointer(s)^, System.Length(s));
+      cs.Clear;
+      aWriter.AddExt(ExtType, ms.Instance.Memory^, ms.Instance.Size);
+    end;
+end;
+
+function THtmlCompressExt.TryRead(aData: Pointer; const aBlob: TMpExtBlob): Boolean;
+var
+  p: PExtValue absolute aData;
+  s: string;
+  ms, rs: specialize TGAutoRef<TMemoryStream>;
+  dcs: specialize TGUniqRef<TDecompressionStream>;
+  Len: Integer;
+begin
+  if System.Length(aBlob) > 1 then
+    if (System.Length(aBlob) > 2) and (aBlob[1] = ZLIB_MAGIC) then begin
+      ms.Instance.WriteBuffer(aBlob[2], System.Length(aBlob)-2);
+      ms.Instance.Position := 0;
+      dcs.Instance := TDecompressionStream.Create(ms.Instance, True);
+      rs.Instance.CopyFrom(dcs.Instance, 0);
+      System.SetLength(s, rs.Instance.Size);
+      System.Move(rs.Instance.Memory^, Pointer(s)^, rs.Instance.Size);
+    end else begin
+      Len := unishox2_decompress_preset(@aBlob[1], System.Length(aBlob)-1, @FBuffer, BUF_SIZE, upsHtml);
+      if Len > SizeOf(FBuffer) then exit(False);
+      System.SetLength(s, Len);
+      System.Move(FBuffer[0], Pointer(s)^, Len);
+    end;
+  p^ := s;
   Result := True;
 end;
 {$POP}
@@ -854,7 +1270,7 @@ begin
   Result := True;
 end;
 
-{ RGRecFieldMapExt }
+{ TGRecFieldMapExt }
 
 class function TGRecFieldMapExt.Make(aExtType: TUserExtType; const aFieldList: array of string;
   aMaxDepth: Integer): TRecFieldMapExt;
