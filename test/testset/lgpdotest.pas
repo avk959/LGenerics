@@ -355,7 +355,7 @@ type
     TStrGuidMap    = TStrGuidMapExt.TExtValue;
     TIntGuidMapExt = specialize TGLiteIntHashMapExt<TGuid>;
     TIntGuidMap    = TIntGuidMapExt.TExtValue;
-    TGuidTxtMapExt = specialize TGLiteChainHashMapExt<TGuid, TSimpleText, TGuid>;
+    TGuidTxtMapExt = specialize TGLiteChainHashMapExt<TGuid, TMpText, TGuid>;
     TGuidTxtMap    = TGuidTxtMapExt.TExtValue;
 
     TStr10 = string[10];
@@ -385,6 +385,10 @@ type
     procedure TestStrGuidMapExt;
     procedure TestIntGuidMapExt;
     procedure TestTextCompressExt;
+    procedure TestUriCompressExt;
+    procedure TestJsonCompressExt;
+    procedure TestXmlCompressExt;
+    procedure TestHtmlCompressExt;
     procedure TestGuidTxtMap;
     procedure TestRecFieldMapExt;
   end;
@@ -3100,7 +3104,7 @@ begin
   v1 := TGuid.NewGuid;
   v2 := TGuid.NewGuid;
   AssertFalse(TGuid.Equal(v1, v2));
-  AssertTrue(ext.Instance.TryAddHook(TGuidExt.Create(0)));
+  AssertTrue(ext.Instance.TryAddHook(TMpGuidExt.Create(0)));
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
   PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
   AssertTrue(TGuid.Equal(v1, v2));
@@ -3133,7 +3137,7 @@ var
   ext: TMpExt;
   b: TBytes;
 begin
-  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), specialize TGOptionalExt<string>.Create(1)]);
+  ext.Instance := TMpUserExt.Create([TMpGuidExt.Create(0), specialize TGOptionalExt<string>.Create(1)]);
   v2 := TGuid.NewGuid;
   AssertTrue(v2.Assigned);
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
@@ -3176,7 +3180,7 @@ var
   b: TBytes;
   I: Integer;
 begin
-  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), specialize TGLiteVectorExt<TGuid>.Create(1)]);
+  ext.Instance := TMpUserExt.Create([TMpGuidExt.Create(0), specialize TGLiteVectorExt<TGuid>.Create(1)]);
   v2.AddAll([TGuid.NewGuid, TGuid.NewGuid]);
   AssertTrue(v2.Count = 2);
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
@@ -3201,7 +3205,7 @@ var
   e: TEntry;
   g: TGuid;
 begin
-  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), TStrGuidMapExt.Create(1)]);
+  ext.Instance := TMpUserExt.Create([TMpGuidExt.Create(0), TStrGuidMapExt.Create(1)]);
   v2.Add('aaa', TGuid.NewGuid);
   AssertTrue(v2.Count = 1);
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
@@ -3231,7 +3235,7 @@ var
   e: TEntry;
   g: TGuid;
 begin
-  ext.Instance := TMpUserExt.Create([TGuidExt.Create(0), TIntGuidMapExt.Create(1)]);
+  ext.Instance := TMpUserExt.Create([TMpGuidExt.Create(0), TIntGuidMapExt.Create(1)]);
   v2.Add(111, TGuid.NewGuid);
   AssertTrue(v2.Count = 1);
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
@@ -3253,7 +3257,7 @@ end;
 
 procedure TTestMsgPackExt.TestTextCompressExt;
 var
-  v1, v2: TSimpleText;
+  v1, v2: TMpText;
   ext: TMpExt;
   b: TBytes;
 const
@@ -3288,6 +3292,107 @@ begin
   AssertTrue(string(v2) = LongText);
 end;
 
+procedure TTestMsgPackExt.TestUriCompressExt;
+var
+  v1, v2: TMpUri;
+  ext: TMpExt;
+  b: TBytes;
+const
+  Uri = 'http://example.com/just/some/long/path#fragment';
+begin
+  ext.Instance := TMpUserExt.Create([TUriCompressExt.Create(0)]);
+  v2 := 'abcdef';
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = '');
+
+  v1 := Uri;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  AssertTrue(Length(b) < Length(Uri));
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = Uri);
+end;
+
+procedure TTestMsgPackExt.TestJsonCompressExt;
+var
+  v1, v2: TMpJson;
+  ext: TMpExt;
+  b: TBytes;
+const
+  Json = '{"store": "Electronics","items": [{"id": 1,"name": "Laptop","price": 999.99},{"id": 2,"name": "Smartphone","price": 499.50}]}';
+begin
+  ext.Instance := TMpUserExt.Create([TJsonCompressExt.Create(0)]);
+  v2 := 'abcdef';
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = '');
+
+  v1 := Json;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  AssertTrue(Length(b) < Length(Json));
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = Json);
+end;
+
+procedure TTestMsgPackExt.TestXmlCompressExt;
+var
+  v1, v2: TMpXml;
+  ext: TMpExt;
+  b: TBytes;
+const
+  Xml =
+    '<?xml version="1.1" encoding="UTF-8"?>' + LineEnding +
+    '<note>' + LineEnding +
+    '    <to>Tove</to>' + LineEnding +
+    '    <from>Jani</from>' + LineEnding +
+    '    <heading>Reminder</heading>' + LineEnding +
+    '    <body>Don''t forget me this weekend!</body>' + LineEnding +
+    '</note>';
+begin
+  ext.Instance := TMpUserExt.Create([TXmlCompressExt.Create(0)]);
+  v2 := 'abcdef';
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = '');
+
+  v1 := Xml;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  AssertTrue(Length(b) < Length(Xml));
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = Xml);
+end;
+
+procedure TTestMsgPackExt.TestHtmlCompressExt;
+var
+  v1, v2: TMpHtml;
+  ext: TMpExt;
+  b: TBytes;
+const
+  Html =
+    '<!doctype html>' + LineEnding +
+    '<html>' + LineEnding +
+    '  <head>' + LineEnding +
+    '    <title>This is the title of the webpage!</title>' + LineEnding +
+    '  </head>' + LineEnding +
+    '  <body>' + LineEnding +
+    '    <p>This is an example paragraph.</p>' + LineEnding +
+    '    <p>This is another paragraph.</p>' + LineEnding +
+    '  </body>' + LineEnding +
+    '</html>';
+begin
+  ext.Instance := TMpUserExt.Create([THtmlCompressExt.Create(0)]);
+  v2 := 'abcdef';
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = '');
+
+  v1 := Html;
+  b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
+  AssertTrue(Length(b) < Length(Html));
+  PdoLoadMsgPack(TypeInfo(v2), v2, b, ext.Instance);
+  AssertTrue(string(v2) = Html);
+end;
+
 procedure TTestMsgPackExt.TestGuidTxtMap;
 type
   TEntry = TGuidTxtMap.TEntry;
@@ -3296,10 +3401,10 @@ var
   ext: TMpExt;
   b: TBytes;
   e: TEntry;
-  txt: TSimpleText;
+  txt: TMpText;
 begin
   ext.Instance := TMpUserExt.Create(
-    [TGuidExt.Create(0), TTextCompressExt.Create(1), TGuidTxtMapExt.Create(2)]);
+    [TMpGuidExt.Create(0), TTextCompressExt.Create(1), TGuidTxtMapExt.Create(2)]);
   v2.Add(TGuid.NewGuid, 'aaa');
   AssertTrue(v2.Count = 1);
   b := PdoToMsgPack(TypeInfo(v1), v1, ext.Instance);
