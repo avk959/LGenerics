@@ -7779,15 +7779,12 @@ begin
   Result := True;
 end;
 
-const
-  INF_EXP    = QWord($7ff0000000000000);
-
 function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
 begin
   Val(p, aValue, Code);
-  Result := (Code = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
+  Result := Code = 0;
 end;
 
 { TryPChar2DoubleFast is a relaxed parser, it expects a valid null-terminated
@@ -7884,14 +7881,6 @@ begin
   Result := TryPChar2DoubleFallBack(pOld, aValue);
 end;
 
-function TryPChar2DblFallBack(p: PAnsiChar; out aValue: Double): Boolean;
-var
-  Code: Integer;
-begin
-  Val(p, aValue, Code);
-  Result := Code = 0;
-end;
-
 { TryPChar2Double }
 function TryPChar2Double(p: PAnsiChar; out aValue: Double): Boolean;
 var
@@ -7982,13 +7971,13 @@ begin
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
       if DigCount >= 19 then
-        exit(TryPChar2DblFallBack(pOld, aValue));
+        exit(TryPChar2DoubleFallBack(pOld, aValue));
     end;
   if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    exit(TryPChar2DblFallBack(pOld, aValue));
+    exit(TryPChar2DoubleFallBack(pOld, aValue));
   if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
     exit(True);
-  Result := TryPChar2DblFallBack(pOld, aValue);
+  Result := TryPChar2DoubleFallBack(pOld, aValue);
 end;
 
 { TryPChar2Double2 }
@@ -8197,7 +8186,7 @@ function PCharToDoubleLen(p: PAnsiChar; out aValue: Double): SizeInt;
     System.SetLength(s, Len);
     System.Move(p^, s[1], Len);
     Val(s, aValue, c);
-    Result := (c = 0) and (QWord(aValue) and INF_EXP <> INF_EXP);
+    Result := c = 0;
   end;
 var
   Man: QWord;
@@ -8748,7 +8737,7 @@ begin
   MaxDepth := aMaxDepth;
   sb.Create(TJsonNode.S_BUILD_INIT_SIZE);
   Result := ParseValue(aNode);
-  if Result then begin
+  if Result and (pCurr < pEnd) then begin
     SkipWS;
     Result := pCurr = pEnd;
   end;
