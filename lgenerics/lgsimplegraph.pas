@@ -2746,8 +2746,7 @@ end;
 
 procedure TGSimpleGraph.SearchForBlocks(var aBlocks: TIntArrayVector);
 var
-  Stack: TIntEdgeVector;
-  Block: TIntVector;
+  Stack: TIntVector;
   LowPt, PreOrd, Parents: TIntArray;
   Counter: SizeInt;
   procedure FirstMet(aNode, aParent: SizeInt);
@@ -2755,7 +2754,7 @@ var
     LowPt[aNode] := Counter;
     PreOrd[aNode] := Counter;
     Parents[aNode] := aParent;
-    Stack.Add(TIntEdge.Create(aParent, aNode));
+    Stack.Add(aNode);
     Inc(Counter);
   end;
   procedure BackEdge(aNode, aParent: SizeInt);
@@ -2765,8 +2764,7 @@ var
   end;
   procedure NodeDone(aNode: SizeInt);
   var
-    e: TIntEdge;
-    Prev: SizeInt;
+    I, Prev: SizeInt;
   begin
     if Parents[aNode] = NULL_INDEX then
       begin
@@ -2779,15 +2777,11 @@ var
       LowPt[Prev] := LowPt[aNode];
     if LowPt[aNode] >= PreOrd[Prev] then
       begin
-        e := Default(TIntEdge);
-        with Stack do
-          repeat
-            Stack.DeleteLast(e);
-            Block.Add(e.Destination);
-          until (e.Source = Prev) and (e.Destination = aNode);
-        Block.Add(Prev);
-        aBlocks.Add(Block.ToArray);
-        Block.MakeEmpty;
+        I := Pred(Stack.Count);
+        Stack.Add(Prev);
+        while Stack.UncMutable[I]^ <> aNode do
+          Dec(I);
+        aBlocks.Add(Stack.ExtractAll(I, Stack.Count));
       end;
   end;
 begin
