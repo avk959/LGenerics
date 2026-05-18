@@ -2657,15 +2657,15 @@ end;
 
 procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
 var
-  LowPt, PreOrd, Parents, Across: TIntArray;
+  LowPt, PreOrd, Parents, Childs: TIntArray;
   Counter: SizeInt;
   procedure FirstMet(aNode, aParent: SizeInt);
   begin
     LowPt[aNode] := Counter;
     PreOrd[aNode] := Counter;
     Parents[aNode] := aParent;
-    if (aParent <> NULL_INDEX) and (Across[aParent] = NULL_INDEX) then
-      Across[aParent] := aNode;
+    if (aParent <> NULL_INDEX) and (Childs[aParent] = NULL_INDEX) then
+      Childs[aParent] := aNode;
     Inc(Counter);
   end;
   procedure BackEdge(aNode, aParent: SizeInt);
@@ -2682,17 +2682,17 @@ var
     if LowPt[Prev] > LowPt[aNode] then
       LowPt[Prev] := LowPt[aNode];
     if LowPt[aNode] >= PreOrd[Prev] then
-      if aNode = Across[Prev] then
+      if aNode = Childs[Prev] then
         if Prev <> aRoot then
           aEdges.Add(TIntEdge.Create(Parents[Prev], aNode)) else
       else
-        aEdges.Add(TIntEdge.Create(Across[Prev], aNode));
+        aEdges.Add(TIntEdge.Create(Childs[Prev], aNode));
   end;
 begin
   System.SetLength(LowPt, VertexCount);
   System.SetLength(PreOrd, VertexCount);
   System.SetLength(Parents, VertexCount);
-  Across := CreateIntArray;
+  Childs := CreateIntArray;
   Counter := 0;
   DfsTraversalI(aRoot, @FirstMet, @BackEdge, @NodeDone);
 end;
