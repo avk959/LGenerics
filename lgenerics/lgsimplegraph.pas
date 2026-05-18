@@ -2664,7 +2664,7 @@ var
     LowPt[aNode] := Counter;
     PreOrd[aNode] := Counter;
     Parents[aNode] := aParent;
-    if Across[aParent] = NULL_INDEX then
+    if (aParent <> NULL_INDEX) and (Across[aParent] = NULL_INDEX) then
       Across[aParent] := aNode;
     Inc(Counter);
   end;
