@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2022 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -882,9 +882,10 @@ function TGDirectInt64Net.TDinitzHelper.GetMinCut(aGraph: TGDirectInt64Net; aSou
 var
   I, J: SizeInt;
 begin
+  s := nil;
   CreateResidualNet(aGraph, aSource, aSink);
   Result := Execute;
-  System.SetLength(s{%H-}, ARRAY_INITIAL_SIZE);
+  System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
   for I := 0 to Pred(FNodeCount) do
     if FNodes[I].Distance <> NULL_INDEX then
