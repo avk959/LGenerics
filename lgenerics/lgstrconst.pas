@@ -80,6 +80,7 @@ resourcestring
   SENoSuchEdgeFmt          = 'No such edge (%d, %d)';
   SEInputIsNotProperPermut = 'Input array is not proper permutation';
   SEVertexNonUnique        = 'Vertex label is not unique';
+  SEExpectIntGreaterZero   = 'Expected an integer greater than zero';
 //Json
   SECantConvertFmt         = 'Cannot convert %s to %s';
   SEInvalidJsonPtr         = 'Invalid JSON Pointer instance';

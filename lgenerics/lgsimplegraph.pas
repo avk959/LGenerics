@@ -407,6 +407,9 @@ type
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
     function  MakeBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
+  { returns True if the edge connectivity of the instance is at least aK, False otherwise;
+    raises EGraphError if aK <= 0 }
+    function  IsKEdgeConnected(aK: SizeInt): Boolean;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns an array of indices of the central vertices, if graph is connected, nil otherwise }
@@ -4308,6 +4311,24 @@ begin
         aOnAddEdge(Items[e.Source], Items[e.Destination], d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
+end;
+
+function TGSimpleGraph.IsKEdgeConnected(aK: SizeInt): Boolean;
+var
+  I: SizeInt;
+begin
+  if aK < 1 then
+    raise EGraphError.Create(SEExpectIntGreaterZero);
+  if VertexCount <= aK then exit(False);
+  for I := 0 to Pred(VertexCount) do
+    if FNodeList[I].AdjList.Count < aK then
+      exit(False);
+  case aK of
+    1: Result := Connected;
+    2: Result := Connected and not ContainsBridge;
+  else
+    Result := MinCut >= aK;
+  end;
 end;
 
 function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
