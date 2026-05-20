@@ -687,13 +687,13 @@ end;
 
 procedure TGDirectInt64Net.TDinitzHelper.CreateResidualNet(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt);
 var
-  CurrArcIdx: TIntArray;
+  CurrArcIdx: TIntArray = nil;
   I, J: SizeInt;
   p: PAdjItem;
   Cap: TWeight;
 begin
   FNodeCount := aGraph.VertexCount;
-  System.SetLength(CurrArcIdx{%H-}, FNodeCount);
+  System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
   for I := 0 to System.High(CurrArcIdx) do
     begin
@@ -841,10 +841,11 @@ end;
 
 function TGDirectInt64Net.TDinitzHelper.CreateArcFlows(aGraph: TGDirectInt64Net): TEdgeArray;
 var
+  r: TEdgeArray = nil;
   I, J: SizeInt;
   CurrArc: PArc;
 begin
-  System.SetLength(Result{%H-}, aGraph.EdgeCount);
+  System.SetLength(r, aGraph.EdgeCount);
   J := 0;
   for I := 0 to Pred(FNodeCount) do
     begin
@@ -853,13 +854,13 @@ begin
         begin
           if CurrArc^.IsForward then
             begin
-              Result[J] :=
-                TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResCap);
+              r[J] := TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResCap);
               Inc(J);
             end;
           Inc(CurrArc);
         end;
     end;
+  Result := r;
 end;
 
 function TGDirectInt64Net.TDinitzHelper.GetMaxFlow(aGraph: TGDirectInt64Net; aSource,
