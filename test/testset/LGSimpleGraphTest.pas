@@ -23,7 +23,7 @@ type
   type
     TGraph  = TIntChart;
     TRef    = specialize TGAutoRef<TGraph>;
-    THelper = specialize TGOrdinalArrayHelper<SizeInt>;
+    THelper = TSizeIntHelper;
   var
     FSetVector: TIntArrayVector;
     FCallCount: Integer;
@@ -59,6 +59,7 @@ type
     function  GenerateC125Clique: TGraph;
     function  GenerateC125Mis: TGraph;
     function  GenerateQueen6_6: TGraph;
+    function  GenerateDLKGraph(aDelta, aLambda, aK: Integer): TGraph;
     procedure EdgeAdding(const {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TDummy);
     procedure SetFound(const aSet: TIntArray; var {%H-}aCancel: Boolean);
     procedure SetFound2(const aSet: TIntArray; var aCancel: Boolean);
@@ -147,6 +148,7 @@ type
     procedure FindCenter;
     procedure FindPeripheral;
     procedure MinCut;
+    procedure TestConnectivity;
     procedure FindMaxBipMatchHK;
     procedure GetMaxBipMatchHK;
     procedure FindMaxBipMatchBfs;
@@ -630,6 +632,36 @@ begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 36);
   Result.AddEdges([{$I queen6_6.inc}]);
+end;
+
+function TSimpleGraphTest.GenerateDLKGraph(aDelta, aLambda, aK: Integer): TGraph;
+type
+  TIntHelper = specialize TGOrdinalArrayHelper<Integer>;
+var
+  L, R: array of Integer;
+  I, J: Integer;
+begin
+ { creates a graph with the given values of minimum degree, edge connectivity, and vertex connectivity,
+   if the Whitney's connectivity inequality is not violated }
+  if (aDelta < 2) or (aLambda > aDelta) or (aK > aLambda) then exit(nil);
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, Succ(aDelta)*2);
+  for I := 1 to aDelta do
+    for J := Succ(I) to Succ(aDelta) do
+      Result.ForceAddEdge(I, J);
+  for I := Succ(aDelta)+1 to Succ(aDelta)*2-1 do
+    for J := Succ(I) to Succ(aDelta)*2 do
+      Result.ForceAddEdge(I, J);
+  L := TIntHelper.CreateRandomRangePermutation(1, Succ(aDelta));
+  SetLength(L, aLambda);
+  R := TIntHelper.CreateRandomRangePermutation(Succ(aDelta)+1, Succ(aDelta)*2);
+  SetLength(R, aK);
+  J := 0;
+  for I := 0 to High(L) do begin
+    Result.ForceAddEdge(L[I], R[J]);
+    Inc(J);
+    if J = Length(R) then J := 0;
+  end;
 end;
 
 procedure TSimpleGraphTest.EdgeAdding(const aSrc, aDst: Integer; var aData: TDummy);
@@ -2642,16 +2674,16 @@ var
   CutSize: SizeInt;
 begin
   g := {%H-}Ref;
-  CutSize := g.MinCut;
+  CutSize := g.EdgeConnectivity;
   AssertTrue(CutSize = 0);
   Ref.Instance := GenerateTestGr2;
   g := Ref;
-  CutSize := g.MinCut;
+  CutSize := g.EdgeConnectivity;
   AssertTrue(CutSize = 0);
   Ref.Instance := GenerateTestGr4;
   g := Ref;
   AssertTrue(g.IsBiconnected);
-  CutSize := g.MinCut;
+  CutSize := g.EdgeConnectivity;
   AssertTrue(CutSize = 3);
   g.RemoveEdge(5, 6);
   CutSize := g.MinCut(Cut, Cross);
@@ -2678,6 +2710,25 @@ begin
       AssertTrue(Cross[0].Destination = 8);
       AssertTrue(Cross[1].Source = 4);
       AssertTrue(Cross[1].Destination = 6);
+    end;
+end;
+
+procedure TSimpleGraphTest.TestConnectivity;
+var
+  g: TRef;
+  D, L, K, I: Integer;
+const
+  MaxDelta = 20;
+begin
+  D := MaxDelta;
+  L := MaxDelta - 1;
+  K := MaxDelta - 3;
+  for I := 1 to 15 do
+    begin
+      {%H-}g.Instance := GenerateDLKGraph(D, L, K);
+      AssertTrue(g.Instance.EdgeConnectivity = L);
+      AssertTrue(g.Instance.Connectivity = K);
+      Dec(D); Dec(L); Dec(K);
     end;
 end;
 
