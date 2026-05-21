@@ -407,11 +407,15 @@ type
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
     function  MakeBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
-  { returns vertex-connectivity (or just connectivity) of the instance; a graph has
-    connectivity k if k is the size of the smallest subset of vertices such that the graph
-    becomes disconnected or trivial if you delete them; uses a flow-based algorithm that
+  { returns the vertex-connectivity (or just connectivity) of the instance;
+    the vertex-connectivity of a graph is the minimum number of vertices that must be
+    removed to disconnect the graph or make it trivial; uses a flow-based algorithm that
     performs (n-δ-1+δ(δ-1)/2) MaxFlow() calls on a specially constructed auxiliary digraph }
     function  Connectivity: SizeInt;
+  { returns the edge-connectivity of the instance; the edge-connectivity of a graph is the
+    minimum number of edges that must be removed to disconnect the graph or make it trivial;
+    uses Nagamochi-Ibaraki algorithm }
+    function  EdgeConnectivity: SizeInt;
   { returns True if the edge connectivity of the instance is at least aK, False otherwise;
     raises EGraphError if aK <= 0 }
     function  IsKEdgeConnected(aK: SizeInt): Boolean;
@@ -454,9 +458,8 @@ type
   type
     TCut = TGraphBisection;
 
-  { returns the size of some global minimum cut and thus the edge connectivity;
-    used Nagamochi-Ibaraki algorithm }
-    function  MinCut: SizeInt;
+  { returns the edge-connectivity of the instance and the found global minimum cut in parameter
+    aCut if the instance is connected and non-trivial; otherwise returns 0. }
     function  MinCut(out aCut: TCut): SizeInt;
   { same as above and additionally in aCrossEdges returns array of the edges that cross the minimum cut }
     function  MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
@@ -4329,6 +4332,17 @@ begin
   Result := Helper.GetConnectivity(Self);
 end;
 
+function TGSimpleGraph.EdgeConnectivity: SizeInt;
+var
+  Helper: TNISimpMinCutHelper;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit(0);
+  if BridgeExists then
+    exit(1);
+  Result := Helper.Execute(Self);
+end;
+
 function TGSimpleGraph.IsKEdgeConnected(aK: SizeInt): Boolean;
 var
   I: SizeInt;
@@ -4343,7 +4357,7 @@ begin
     1: Result := Connected;
     2: Result := Connected and not ContainsBridge;
   else
-    Result := MinCut >= aK;
+    Result := EdgeConnectivity >= aK;
   end;
 end;
 
@@ -4738,17 +4752,6 @@ begin
   if ConnectedValid and (SeparateTag(aSrc) <> SeparateTag(aDst)) then
     exit(nil);
   Result := GetShortestPathBidir(Self, Self, aSrc, aDst, aOnEdgeAccept);
-end;
-
-function TGSimpleGraph.MinCut: SizeInt;
-var
-  Helper: TNISimpMinCutHelper;
-begin
-  if not Connected or (VertexCount < 2) then
-    exit(0);
-  if BridgeExists then
-    exit(1);
-  Result := Helper.Execute(Self);
 end;
 
 function TGSimpleGraph.MinCut(out aCut: TCut): SizeInt;
