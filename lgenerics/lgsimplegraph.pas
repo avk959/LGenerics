@@ -410,11 +410,10 @@ type
   { returns the vertex-connectivity (or just connectivity) of the instance;
     the vertex-connectivity of a graph is the minimum number of vertices that must be
     removed to disconnect the graph or make it trivial; uses a flow-based algorithm that
-    performs (n-δ-1+δ(δ-1)/2) MaxFlow() calls on a specially constructed auxiliary digraph }
+    performs (n-δ-1+δ(δ-1)/2) MaxFlow calls on a specially constructed auxiliary digraph }
     function  Connectivity: SizeInt;
-  { returns the edge-connectivity of the instance; the edge-connectivity of a graph is the
-    minimum number of edges that must be removed to disconnect the graph or make it trivial;
-    uses Nagamochi-Ibaraki algorithm }
+  { returns the edge-connectivity of the instance; the edge-connectivity of a graph is the minimum
+    number of edges that must be removed to disconnect the graph; uses Nagamochi-Ibaraki algorithm }
     function  EdgeConnectivity: SizeInt;
   { returns True if the edge connectivity of the instance is at least aK, False otherwise;
     raises EGraphError if aK <= 0 }
