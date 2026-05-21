@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -2945,4 +2945,198 @@ begin
   Index := aIndex;
   WDegree := aWDegree;
   Degree := aDegree;
+end;
+
+{ TGSimpleGraph.TConnectHelper.TArc }
+
+constructor TGSimpleGraph.TConnectHelper.TArc.Make(aTarget: PNode; aReverse: PArc);
+begin
+  Target := aTarget;
+  Reverse := aReverse;
+  Available := True;
+  IsForward := True;
+end;
+
+constructor TGSimpleGraph.TConnectHelper.TArc.MakeReverse(aTarget: PNode; aReverse: PArc);
+begin
+  Target := aTarget;
+  Reverse := aReverse;
+  Available := False;
+  IsForward := False;
+end;
+
+procedure TGSimpleGraph.TConnectHelper.TArc.Push;
+begin
+  Available := False;
+  Reverse^.Available := True;
+end;
+
+procedure TGSimpleGraph.TConnectHelper.TArc.Reset;
+begin
+  Available := IsForward;
+end;
+
+{ TGSimpleGraph.TConnectHelper.TNode }
+
+procedure TGSimpleGraph.TConnectHelper.TNode.Reset;
+begin
+  CurrentArc := FirstArc;
+end;
+
+{ TGSimpleGraph.TConnectHelper }
+
+procedure TGSimpleGraph.TConnectHelper.MakeResidualNet(aGraph: TGSimpleGraph; out aMinDegree,
+  aMinDegIndex: SizeInt);
+var
+  ArcIndex: TIntArray = nil;
+  I, J, Cnt, Deg, Trg: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FNodes, aGraph.VertexCount*2+1);
+  System.SetLength(ArcIndex, System.Length(FNodes));
+  System.SetLength(FArcs, (aGraph.EdgeCount*2 + aGraph.VertexCount)*2+1);
+  aMinDegree := aGraph.VertexCount;
+  aMinDegIndex := NULL_INDEX;
+  Cnt := 0;
+  J := 0;
+  for I := 0 to Pred(aGraph.VertexCount) do begin
+    Deg := aGraph.FNodeList[I].AdjList.Count;
+    if Deg < aMinDegree then begin
+      aMinDegree := Deg;
+      aMinDegIndex := I;
+    end;
+    Inc(Deg);
+    ArcIndex[J] := Cnt; // even halfnodes are sources
+    Cnt += Deg;
+    ArcIndex[J+1] := Cnt;
+    Cnt += Deg;
+    J += 2;
+  end;
+  ArcIndex[J] := Cnt;
+
+  for I := 0 to System.High(FNodes) do
+    FNodes[I].FirstArc := @FArcs[ArcIndex[I]];
+
+  J := 0;
+  for I := 0 to Pred(aGraph.VertexCount) do begin
+    FArcs[ArcIndex[J]] := TArc.MakeReverse(@FNodes[J+1], @FArcs[ArcIndex[J+1]]);
+    FArcs[ArcIndex[J+1]] := TArc.Make(@FNodes[J], @FArcs[ArcIndex[J]]);
+    Inc(ArcIndex[J]); Inc(ArcIndex[J+1]);
+    for p in aGraph.AdjLists[I]^ do begin
+      Trg := Succ(p^.Destination shl 1);
+      FArcs[ArcIndex[J]] := TArc.Make(@FNodes[Trg], @FArcs[ArcIndex[Trg]]);
+      FArcs[ArcIndex[Trg]] := TArc.MakeReverse(@FNodes[J], @FArcs[ArcIndex[J]]);
+      Inc(ArcIndex[J]); Inc(ArcIndex[Trg]);
+    end;
+    J += 2;
+  end;
+
+  FArcs[System.High(FArcs)] := TArc.MakeReverse(@FNodes[System.High(FNodes)], @FArcs[System.High(FArcs)]);
+  FNodes[System.High(FNodes)].CurrentArc := FNodes[System.High(FNodes)].FirstArc;
+  FNodes[System.High(FNodes)].Distance := NULL_INDEX;
+
+  System.SetLength(FQueue, System.High(FNodes));
+end;
+
+procedure TGSimpleGraph.TConnectHelper.ClearLabels;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(System.High(FNodes)) do
+    FNodes[I].Distance := NULL_INDEX;
+  FSource^.Distance := 0;
+  FSource^.Reset;
+end;
+
+function TGSimpleGraph.TConnectHelper.Bfs: Boolean;
+var
+  Curr, Next: PNode;
+  CurrArc: PArc;
+  Dist, qHead, qTail: SizeInt;
+begin
+  ClearLabels;
+  qHead := 0;
+  qTail := 1;
+  FQueue[0] := FSource;
+  while (qHead < qTail) and (FSink^.Distance = NULL_INDEX) do begin
+    Curr := FQueue[qHead];
+    Inc(qHead);
+    Dist := Succ(Curr^.Distance);
+    CurrArc := Curr^.FirstArc;
+    while CurrArc < (Curr + 1)^.FirstArc do begin
+      Next := CurrArc^.Target;
+      if CurrArc^.Available and (Next^.Distance = NULL_INDEX) then begin
+        Next^.Reset;
+        Next^.Distance := Dist;
+        FQueue[qTail] := Next;
+        Inc(qTail);
+      end;
+      Inc(CurrArc);
+    end;
+  end;
+  Result := FSink^.Distance <> NULL_INDEX;
+end;
+
+function TGSimpleGraph.TConnectHelper.Dfs(aNode: PNode): Boolean;
+begin
+  if aNode = FSink then exit(True);
+  while aNode^.CurrentArc < (aNode + 1)^.FirstArc do begin
+    with aNode^.CurrentArc^ do
+      if Available and (Target^.Distance = Succ(aNode^.Distance)) and Dfs(Target) then begin
+        Push;
+        exit(True);
+      end;
+    Inc(aNode^.CurrentArc);
+  end;
+  Result := False;
+end;
+
+procedure TGSimpleGraph.TConnectHelper.ResetNet(const aSource, aTarget: SizeInt);
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(System.High(FArcs)) do
+    FArcs[I].Reset;
+  I := aSource shl 1;
+  FSource := @FNodes[I];
+  FNodes[I+1].FirstArc^.Available := False;
+  FSink := @FNodes[Succ(aTarget shl 1)];
+  FSink^.FirstArc^.Available := False;
+end;
+
+function TGSimpleGraph.TConnectHelper.StFlow(const aSource, aTarget: SizeInt): SizeInt;
+begin
+  ResetNet(aSource, aTarget);
+  Result := 0;
+  while Bfs do
+    while Dfs(FSource) do
+      Inc(Result);
+end;
+
+function TGSimpleGraph.TConnectHelper.GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
+var
+  NonAdjSet: TBoolVector;
+  AdjSet: TIntArray = nil;
+  I, Src, Trg: SizeInt;
+  p: PAdjItem;
+begin
+  MakeResidualNet(aGraph, Result, Src);
+
+  NonAdjSet.InitRange(aGraph.VertexCount);
+  NonAdjSet[Src] := False;
+  System.SetLength(AdjSet, aGraph.AdjLists[Src]^.Count);
+  I := 0;
+  for p in aGraph.AdjLists[Src]^ do begin
+    NonAdjSet[p^.Destination] := False;
+    AdjSet[I] := p^.Destination;
+    Inc(I);
+  end;
+
+  for Trg in NonAdjSet do
+    Result := Math.Min(Result, StFlow(Src, Trg));
+
+  for Src := 0 to Pred(System.High(AdjSet)) do
+    for Trg := Succ(Src) to System.High(AdjSet) do
+      if not aGraph.AdjacentI(AdjSet[Src], AdjSet[Trg]) then
+        Result := Math.Min(Result, StFlow(AdjSet[Src], AdjSet[Trg]));
 end;

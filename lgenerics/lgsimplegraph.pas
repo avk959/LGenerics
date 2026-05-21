@@ -407,6 +407,11 @@ type
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
     function  MakeBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
+  { returns vertex-connectivity (or just connectivity) of the instance; a graph has
+    connectivity k if k is the size of the smallest subset of vertices such that the graph
+    becomes disconnected or trivial if you delete them; uses a flow-based algorithm that
+    performs (n-δ-1+δ(δ-1)/2) MaxFlow() calls on a specially constructed auxiliary digraph }
+    function  Connectivity: SizeInt;
   { returns True if the edge connectivity of the instance is at least aK, False otherwise;
     raises EGraphError if aK <= 0 }
     function  IsKEdgeConnected(aK: SizeInt): Boolean;
@@ -4311,6 +4316,17 @@ begin
         aOnAddEdge(Items[e.Source], Items[e.Destination], d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
+end;
+
+function TGSimpleGraph.Connectivity: SizeInt;
+var
+  Helper: TConnectHelper;
+begin
+  if not Connected then exit(0);
+  if VertexCount < 3  then exit(1);
+  if IsComplete then exit(Pred(VertexCount));
+  if CutVertexExists(0) then exit(1);
+  Result := Helper.GetConnectivity(Self);
 end;
 
 function TGSimpleGraph.IsKEdgeConnected(aK: SizeInt): Boolean;
