@@ -612,11 +612,12 @@ function TGDirectInt64Net.THPrHelper.GetMinCut(aGraph: TGDirectInt64Net; aSource
 var
   I, J: SizeInt;
 begin
+  s := nil;
   CreateResidualNet(aGraph, aSource, aSink);
   Execute;
   FLevels := nil;
   Result := FSink^.Excess;
-  System.SetLength(s{%H-}, ARRAY_INITIAL_SIZE);
+  System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
   for I := 0 to Pred(FNodeCount) do
     if FNodes[I].Distance = FNodeCount then
