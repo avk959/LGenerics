@@ -1,6 +1,6 @@
 unit LGSimpleGraphTest;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}{$H+}{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -8,6 +8,7 @@ uses
   Classes, SysUtils, fpcunit, testregistry, math,
   LGUtils,
   LGArrayHelpers,
+  LGFunction,
   LGVector,
   LGHashSet,
   LGSparseGraph,
@@ -149,6 +150,7 @@ type
     procedure FindPeripheral;
     procedure MinCut;
     procedure TestConnectivity;
+    procedure TestVertexConnectivity;
     procedure FindMaxBipMatchHK;
     procedure GetMaxBipMatchHK;
     procedure FindMaxBipMatchBfs;
@@ -2728,6 +2730,41 @@ begin
       {%H-}g.Instance := GenerateDLKGraph(D, L, K);
       AssertTrue(g.Instance.EdgeConnectivity = L);
       AssertTrue(g.Instance.Connectivity = K);
+      Dec(D); Dec(L); Dec(K);
+    end;
+end;
+
+procedure TSimpleGraphTest.TestVertexConnectivity;
+type
+  TMapping = specialize TGMapping<SizeInt, Integer>;
+var
+  g: TRef;
+  function ToVertex(const I: SizeInt): Integer;
+  begin
+    Result := g.Instance[I];
+  end;
+var
+  sep: TIntArray;
+  VertSep: array of Integer;
+  D, L, K, I, J: Integer;
+const
+  MaxDelta = 20;
+begin
+  D := MaxDelta;
+  L := MaxDelta - 1;
+  K := MaxDelta - 2;
+  for I := 1 to 15 do
+    begin
+      {%H-}g.Instance := GenerateDLKGraph(D, L, K);
+      AssertTrue(g.Instance.Connectivity(sep) = K);
+      VertSep := TMapping.Map(sep, @ToVertex);
+      for J := 0 to High(VertSep) - 1 do
+        begin
+          g.Instance.RemoveVertex(VertSep[J]);
+          AssertTrue(g.Instance.Connected);
+        end;
+      g.Instance.RemoveVertex(VertSep[High(VertSep)]);
+      AssertFalse(g.Instance.Connected);
       Dec(D); Dec(L); Dec(K);
     end;
 end;
