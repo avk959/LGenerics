@@ -492,9 +492,11 @@ type
     procedure ClearLabels;
     function  Bfs: Boolean;
     function  Dfs(aNode: PNode): Boolean;
-    procedure ResetNet(const aSource, aTarget: SizeInt);
-    function  StFlow(const aSource, aTarget: SizeInt): SizeInt;
+    procedure ResetNet(aSource, aTarget: SizeInt);
+    function  StFlow(aSource, aTarget: SizeInt): SizeInt;
+    function  StFlow(aSource, aTarget, aPrevFlow: SizeInt; var aCut: TIntVector): SizeInt;
   public
     function  GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
+    function  GetConnectivity(aGraph: TGSimpleGraph; var aSeparator: TIntVector): SizeInt;
   end;
 

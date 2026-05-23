@@ -232,7 +232,7 @@ type
     function  GreedyColorRlf(out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutVertices(aRoot: SizeInt; var aPoints: TIntHashSet);
-    function  CutVertexExists(aRoot: SizeInt): Boolean;
+    function  CutVertexExists(aRoot: SizeInt; out aCvIndex: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     procedure SearchForBlocks(aRoot: SizeInt; var aBlocks: TEdgeArrayVector);
     procedure SearchForBlocks(var aBlocks: TIntArrayVector);
@@ -412,8 +412,12 @@ type
     removed to disconnect the graph or make it trivial; uses a flow-based algorithm that
     performs (n-δ-1+δ(δ-1)/2) MaxFlow calls on a specially constructed auxiliary digraph }
     function  Connectivity: SizeInt;
-  { returns the edge-connectivity of the instance; the edge-connectivity of a graph is the minimum
-    number of edges that must be removed to disconnect the graph; uses Nagamochi-Ibaraki algorithm }
+  { similar to the above, it additionally returns the some found minimum vertex separator
+    in the aSeparator parameter }
+    function  Connectivity(out aSeparator: TIntArray): SizeInt;
+  { returns the edge-connectivity of the instance; the edge-connectivity of a graph is
+    the minimum number of edges that must be removed to disconnect the graph;
+    uses Nagamochi-Ibaraki edge contraction algorithm }
     function  EdgeConnectivity: SizeInt;
   { returns True if the edge connectivity of the instance is at least aK, False otherwise;
     raises EGraphError if aK <= 0 }
@@ -2617,7 +2621,7 @@ begin
     aPoints.Add(aRoot);
 end;
 
-function TGSimpleGraph.CutVertexExists(aRoot: SizeInt): Boolean;
+function TGSimpleGraph.CutVertexExists(aRoot: SizeInt; out aCvIndex: SizeInt): Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -2634,6 +2638,7 @@ begin
   Stack.Push(aRoot);
   Counter := 1;
   Curr := NULL_INDEX;
+  aCvIndex := NULL_INDEX;
   ChildCount := 0;
   while Stack.TryPeek(Curr) do
     if AdjEnums[Curr].MoveNext then
@@ -2660,9 +2665,14 @@ begin
         if LowPt[Prev] > LowPt[Curr] then
           LowPt[Prev] := LowPt[Curr];
         if (LowPt[Curr] >= PreOrd[Prev]) and (Prev <> aRoot) then
-          exit(True);
+          begin
+            aCvIndex := Prev;
+            exit(True);
+          end;
       end;
   Result := ChildCount > 1;
+  if Result then
+    aCvIndex := aRoot;
 end;
 
 procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -4199,11 +4209,13 @@ begin
 end;
 
 function TGSimpleGraph.ContainsCutVertexI(aIndex: SizeInt): Boolean;
+var
+  cv: SizeInt;
 begin
   CheckIndexRange(aIndex);
   if VertexCount < 3 then
     exit(False);
-  Result := CutVertexExists(aIndex);
+  Result := CutVertexExists(aIndex, cv);
 end;
 
 function TGSimpleGraph.FindCutVertices(const aVertex: TVertex): TIntArray;
@@ -4323,12 +4335,38 @@ end;
 function TGSimpleGraph.Connectivity: SizeInt;
 var
   Helper: TConnectHelper;
+  cv: SizeInt;
 begin
   if not Connected then exit(0);
   if VertexCount < 3  then exit(1);
   if IsComplete then exit(Pred(VertexCount));
-  if CutVertexExists(0) then exit(1);
+  if CutVertexExists(0, cv) then exit(1);
   Result := Helper.GetConnectivity(Self);
+end;
+
+function TGSimpleGraph.Connectivity(out aSeparator: TIntArray): SizeInt;
+var
+  Helper: TConnectHelper;
+  LSeparator: TIntVector;
+  cv: SizeInt;
+begin
+  aSeparator := nil;
+  if not Connected then exit(0);
+  if VertexCount < 3  then begin
+    aSeparator := [0];
+    exit(1);
+  end;
+  if IsComplete then begin
+    aSeparator := TIntHelper.CreateRange(1, Pred(VertexCount));
+    exit(Pred(VertexCount));
+  end;
+  if CutVertexExists(0, cv) then begin
+    aSeparator := [cv];
+    exit(1);
+  end;
+  LSeparator := Default(TIntVector);
+  Result := Helper.GetConnectivity(Self, LSeparator);
+  aSeparator := LSeparator.ToArray;
 end;
 
 function TGSimpleGraph.EdgeConnectivity: SizeInt;

@@ -3091,7 +3091,7 @@ begin
   Result := False;
 end;
 
-procedure TGSimpleGraph.TConnectHelper.ResetNet(const aSource, aTarget: SizeInt);
+procedure TGSimpleGraph.TConnectHelper.ResetNet(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
 begin
@@ -3104,13 +3104,31 @@ begin
   FSink^.FirstArc^.Available := False;
 end;
 
-function TGSimpleGraph.TConnectHelper.StFlow(const aSource, aTarget: SizeInt): SizeInt;
+function TGSimpleGraph.TConnectHelper.StFlow(aSource, aTarget: SizeInt): SizeInt;
 begin
   ResetNet(aSource, aTarget);
   Result := 0;
   while Bfs do
     while Dfs(FSource) do
       Inc(Result);
+end;
+
+function TGSimpleGraph.TConnectHelper.StFlow(aSource, aTarget, aPrevFlow: SizeInt; var aCut: TIntVector): SizeInt;
+var
+  I: SizeInt;
+begin
+  ResetNet(aSource, aTarget);
+  Result := 0;
+  while Bfs do
+    while Dfs(FSource) do
+      Inc(Result);
+
+  if Result < aPrevFlow then begin
+    aCut.MakeEmpty;
+    for I := 0 to Pred(System.High(FNodes)) do
+      if FNodes[I].Distance <> NULL_INDEX then
+        aCut.Add(I);
+  end;
 end;
 
 function TGSimpleGraph.TConnectHelper.GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
@@ -3139,4 +3157,46 @@ begin
     for Trg := Succ(Src) to System.High(AdjSet) do
       if not aGraph.AdjacentI(AdjSet[Src], AdjSet[Trg]) then
         Result := Math.Min(Result, StFlow(AdjSet[Src], AdjSet[Trg]));
+end;
+
+function TGSimpleGraph.TConnectHelper.GetConnectivity(aGraph: TGSimpleGraph; var aSeparator: TIntVector): SizeInt;
+var
+  NonAdjSet: TBoolVector;
+  AdjSet: TIntArray = nil;
+  Cut: TIntVector;
+  CutSet: TIntHashSet;
+  I, Src, Trg: SizeInt;
+  p: PAdjItem;
+begin
+  MakeResidualNet(aGraph, Result, Src);
+  Cut := Default(TIntVector);
+  CutSet := Default(TIntHashSet);
+
+  NonAdjSet.InitRange(aGraph.VertexCount);
+  NonAdjSet[Src] := False;
+  System.SetLength(AdjSet, aGraph.AdjLists[Src]^.Count);
+  I := 0;
+  for p in aGraph.AdjLists[Src]^ do begin
+    NonAdjSet[p^.Destination] := False;
+    AdjSet[I] := p^.Destination;
+    Inc(I);
+  end;
+
+  Inc(Result);
+
+  for Trg in NonAdjSet do
+    Result := Math.Min(Result, StFlow(Src, Trg, Result, Cut));
+
+  for Src := 0 to Pred(System.High(AdjSet)) do
+    for Trg := Succ(Src) to System.High(AdjSet) do
+      if not aGraph.AdjacentI(AdjSet[Src], AdjSet[Trg]) then
+        Result := Math.Min(Result, StFlow(AdjSet[Src], AdjSet[Trg], Result, Cut));
+
+  for I in Cut do
+    if not System.Odd(I) then
+      CutSet.Add(I);
+  for I in Cut do begin
+    if System.Odd(I) and not CutSet.Contains(I-1) then
+      aSeparator.Add(I shr 1);
+  end;
 end;
