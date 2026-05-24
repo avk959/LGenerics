@@ -4337,8 +4337,7 @@ var
   Helper: TConnectHelper;
   cv: SizeInt;
 begin
-  if not Connected then exit(0);
-  if VertexCount < 3  then exit(1);
+  if not Connected or (VertexCount < 2) then exit(0);
   if IsComplete then exit(Pred(VertexCount));
   if CutVertexExists(0, cv) then exit(1);
   Result := Helper.GetConnectivity(Self);
@@ -4351,11 +4350,7 @@ var
   cv: SizeInt;
 begin
   aSeparator := nil;
-  if not Connected then exit(0);
-  if VertexCount < 3  then begin
-    aSeparator := [0];
-    exit(1);
-  end;
+  if not Connected or (VertexCount < 2) then exit(0);
   if IsComplete then begin
     aSeparator := TIntHelper.CreateRange(1, Pred(VertexCount));
     exit(Pred(VertexCount));
