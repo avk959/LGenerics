@@ -2722,12 +2722,17 @@ var
 const
   MaxDelta = 20;
 begin
+  AssertTrue({%H-}g.Instance.Connectivity = 0);
+
+  g.Instance.AddVertex(42);
+  AssertTrue(g.Instance.Connectivity = 0);
+
   D := MaxDelta;
   L := MaxDelta - 1;
   K := MaxDelta - 3;
   for I := 1 to 15 do
     begin
-      {%H-}g.Instance := GenerateDLKGraph(D, L, K);
+      g.Instance := GenerateDLKGraph(D, L, K);
       AssertTrue(g.Instance.EdgeConnectivity = L);
       AssertTrue(g.Instance.Connectivity = K);
       Dec(D); Dec(L); Dec(K);
@@ -2744,19 +2749,27 @@ var
     Result := g.Instance[I];
   end;
 var
-  sep: TIntArray;
+  sep: TIntArray = nil;
   VertSep: array of Integer;
   D, L, K, I, J: Integer;
 const
   MaxDelta = 20;
 begin
+  AssertTrue({%H-}g.Instance.Connectivity(sep) = 0);
+  AssertTrue(sep = nil);
+
+  g.Instance.AddVertex(42);
+  AssertTrue(g.Instance.Connectivity(sep) = 0);
+  AssertTrue(sep = nil);
+
   D := MaxDelta;
   L := MaxDelta - 1;
   K := MaxDelta - 2;
   for I := 1 to 15 do
     begin
-      {%H-}g.Instance := GenerateDLKGraph(D, L, K);
+      g.Instance := GenerateDLKGraph(D, L, K);
       AssertTrue(g.Instance.Connectivity(sep) = K);
+      AssertTrue(sep.Length = K);
       VertSep := TMapping.Map(sep, @ToVertex);
       for J := 0 to High(VertSep) - 1 do
         begin
