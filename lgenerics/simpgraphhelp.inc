@@ -2019,6 +2019,33 @@ begin
       ContractEdge(Edge.Source, Edge.Destination);
 end;
 
+function TGSimpleGraph.TNISimpMinCutHelper.TryShrink(aK: SizeInt): Boolean;
+var
+  I: SizeInt;
+  p: PNiEdge;
+  Edge: TIntEdge;
+begin
+  ScanFirstSearch;
+  if FBestCut < aK then exit(False);
+  for I in FExistNodes do
+    begin
+      p := FNodes[I].AdjHead;
+      while p <> nil do begin
+        if FScanned.UncBits[p - PNiEdge(FEdges)] and (p^.Rank >= FBestCut) then
+          begin
+            FEdgeQueue.Enqueue(TIntEdge.Create(I, p^.Target));
+            FScanned.UncBits[p^.Reverse - PNiEdge(FEdges)] := False;
+          end;
+        p := p^.Next;
+      end;
+    end;
+  Edge := Default(TIntEdge);
+  while FEdgeQueue.TryDequeue(Edge) do
+    if FExistNodes.UncBits[Edge.Source] and FExistNodes.UncBits[Edge.Destination] then
+      ContractEdge(Edge.Source, Edge.Destination);
+  Result := True;
+end;
+
 function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph): SizeInt;
 begin
   Init(aGraph, False);
@@ -2053,11 +2080,8 @@ function TGSimpleGraph.TNISimpMinCutHelper.TestConnectivity(aGraph: TGSimpleGrap
 begin
   Init(aGraph, False);
   while FNodeCount >= 2 do
-    begin
-      Shrink;
-      if FBestCut < aK then
-        exit(False);
-    end;
+    if not TryShrink(aK) then
+      exit(False);
   Result := FBestCut >= aK;
 end;
 

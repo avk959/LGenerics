@@ -347,6 +347,7 @@ type
     procedure ContractEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;
+    function  TryShrink(aK: SizeInt): Boolean;
   public
     function Execute(aGraph: TGSimpleGraph): SizeInt;
     function Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
