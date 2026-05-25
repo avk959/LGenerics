@@ -151,6 +151,7 @@ type
     procedure MinCut;
     procedure TestConnectivity;
     procedure TestVertexConnectivity;
+    procedure TestIsKEdgeConnected;
     procedure FindMaxBipMatchHK;
     procedure GetMaxBipMatchHK;
     procedure FindMaxBipMatchBfs;
@@ -2778,6 +2779,32 @@ begin
         end;
       g.Instance.RemoveVertex(VertSep[High(VertSep)]);
       AssertFalse(g.Instance.Connected);
+      Dec(D); Dec(L); Dec(K);
+    end;
+end;
+
+procedure TSimpleGraphTest.TestIsKEdgeConnected;
+var
+  g: TRef;
+  D, L, K, I: Integer;
+const
+  MaxDelta = 20;
+begin
+  AssertFalse({%H-}g.Instance.IsKEdgeConnected(1));
+
+  g.Instance.AddVertex(42);
+  AssertFalse(g.Instance.IsKEdgeConnected(1));
+
+  D := MaxDelta;
+  L := MaxDelta - 1;
+  K := MaxDelta - 2;
+  for I := 1 to 15 do
+    begin
+      g.Instance := GenerateDLKGraph(D, L, K);
+      AssertTrue(g.Instance.IsKEdgeConnected(L));
+      AssertTrue(g.Instance.IsKEdgeConnected(L-1));
+      AssertTrue(g.Instance.IsKEdgeConnected(L-2));
+      AssertFalse(g.Instance.IsKEdgeConnected(L+1));
       Dec(D); Dec(L); Dec(K);
     end;
 end;
