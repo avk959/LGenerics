@@ -2049,6 +2049,18 @@ begin
   aCut.Assign(FBestSet);
 end;
 
+function TGSimpleGraph.TNISimpMinCutHelper.TestConnectivity(aGraph: TGSimpleGraph; aK: SizeInt): Boolean;
+begin
+  Init(aGraph, False);
+  while FNodeCount >= 2 do
+    begin
+      Shrink;
+      if FBestCut < aK then
+        exit(False);
+    end;
+  Result := FBestCut >= aK;
+end;
+
 { TGSimpleGraph.TPlanarHelper.TArc }
 
 constructor TGSimpleGraph.TPlanarHelper.TArc.Create(aSource, aTarget: PNode);

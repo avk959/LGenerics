@@ -351,6 +351,7 @@ type
     function Execute(aGraph: TGSimpleGraph): SizeInt;
     function Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
     function Execute(aGraph: TGSimpleGraph; const aNodeSet: TBoolVector; out aCut: TIntSet): SizeInt;
+    function TestConnectivity(aGraph: TGSimpleGraph; aK: SizeInt): Boolean;
   end;
 
   { TPlanarHelper: planarity testing algorithm and planar embedding construction

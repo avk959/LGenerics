@@ -4377,6 +4377,7 @@ end;
 
 function TGSimpleGraph.IsKEdgeConnected(aK: SizeInt): Boolean;
 var
+  Helper: TNISimpMinCutHelper;
   I: SizeInt;
 begin
   if aK < 1 then
@@ -4389,7 +4390,7 @@ begin
     1: Result := Connected;
     2: Result := Connected and not ContainsBridge;
   else
-    Result := EdgeConnectivity >= aK;
+    Result := Helper.TestConnectivity(Self, aK);
   end;
 end;
 
