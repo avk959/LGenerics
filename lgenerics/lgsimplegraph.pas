@@ -419,6 +419,9 @@ type
     the minimum number of edges that must be removed to disconnect the graph;
     uses Nagamochi-Ibaraki edge contraction algorithm }
     function  EdgeConnectivity: SizeInt;
+  { same as above and additionally returns the some found minimum edge separator
+    in the aSeparator parameter }
+    function  EdgeConnectivity(out aSeparator: TIntEdgeArray): SizeInt;
   { returns True if the edge connectivity of the instance is at least aK, False otherwise;
     raises EGraphError if aK <= 0 }
     function  IsKEdgeConnected(aK: SizeInt): Boolean;
@@ -4373,6 +4376,13 @@ begin
   if BridgeExists then
     exit(1);
   Result := Helper.Execute(Self);
+end;
+
+function TGSimpleGraph.EdgeConnectivity(out aSeparator: TIntEdgeArray): SizeInt;
+var
+  Dummy: TCut;
+begin
+  Result := MinCut(Dummy, aSeparator);
 end;
 
 function TGSimpleGraph.IsKEdgeConnected(aK: SizeInt): Boolean;
