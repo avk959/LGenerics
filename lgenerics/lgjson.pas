@@ -1172,13 +1172,16 @@ type
   { tries to find and copy an element using the path specified as a JSON Pointer;
     the search is always performed from the root of the document }
     function  FindPath(const aPtr: TJsonPtr; out aJson: string): Boolean; overload;
+    function  FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean; overload;
   { tries to find and copy an element using the a JSON Pointer specified as a Pascal string;
     the search is always performed from the root of the document;
     raises an EJsException if aPtr is not a well-formed JSON Pointer }
     function  FindPathPtr(const aPtr: string; out aJson: string): Boolean; overload;
+    function  FindPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean; overload;
   { tries to find and copy an element using the path specified as an array of path segments;
     the search is always performed from the root of the document }
     function  FindPath(const aPath: TStringArray; out aJson: string): Boolean; overload;
+    function  FindPath(const aPath: TStringArray; out aNode: TJsonNode): Boolean; overload;
     property  Position: SizeInt read FPosition;
     property  BufferSize: SizeInt read FBufSize;
   end;
@@ -10437,9 +10440,19 @@ begin
   Result := FindPath(aPtr.ToSegments, aJson);
 end;
 
+function TJsonReader.FindPath(const aPtr: TJsonPtr; out aNode: TJsonNode): Boolean;
+begin
+  Result := FindPath(aPtr.ToSegments, aNode);
+end;
+
 function TJsonReader.FindPathPtr(const aPtr: string; out aJson: string): Boolean;
 begin
   Result := FindPath(TJsonPtr.ToSegments(aPtr), aJson);
+end;
+
+function TJsonReader.FindPathPtr(const aPtr: string; out aNode: TJsonNode): Boolean;
+begin
+  Result := FindPath(TJsonPtr.ToSegments(aPtr), aNode);
 end;
 
 function TJsonReader.FindPath(const aPath: TStringArray; out aJson: string): Boolean;
@@ -10458,7 +10471,22 @@ begin
           end;
     finally
       Free;
-    end
+    end;
+end;
+
+function TJsonReader.FindPath(const aPath: TStringArray; out aNode: TJsonNode): Boolean;
+var
+  Reader: TJsonReader;
+begin
+  aNode := nil;
+  Result := False;
+  Reader := TJsonReader.Create(@FBuffer[FStartPos], BufferSize-FStartPos, MaxDepth, False);
+  try
+    if Reader.FindPath(aPath) then
+      Result := Reader.ReadNode(aNode);
+  finally
+    Reader.Free;
+  end;
 end;
 
 { TJsonStreamReader }
