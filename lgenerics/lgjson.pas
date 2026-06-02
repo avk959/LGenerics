@@ -411,6 +411,13 @@ type
   { converts a JSON string aJsonStr to a pascal string;
     will raise exception if aJsonStr is not well-formed JSON string }
     class function JsonStrToPas(const aJsonStr: string): string; static;
+  { returns True and a compacted (by removing unnecessary spaces, tabs, and line breaks) JSON
+    in the aCompact parameter if aJson is valid JSON, otherwise returns False }
+    class function MinifyJson(const aJson: string; out aCompact: string; aMaxDepth: Integer = DEF_DEPTH): Boolean; static;
+  { returns True and a formatted (by adding line breaks and indentation) JSON in the aPretty
+    parameter if aJson is valid JSON, otherwise returns False }
+    class function PrettifyJson(const aJson: string; out aPretty: string; aIndentSize: Integer = DEF_INDENT;
+                                aUseTab: Boolean = False; aOffset: Integer = 0; aMaxDepth: Integer = DEF_DEPTH): Boolean; static;
     class function NewNull: TJsonNode; static; inline;
     class function NewNode(aValue: Boolean): TJsonNode; static; inline;
     class function NewNode(aValue: Double): TJsonNode; static; inline;
@@ -1279,6 +1286,14 @@ const
   ssLineBreaks: array[TJsLineBreak] of string[2] = (#10, #13#10);
 {$POP}
 
+procedure DoubleToJson(aValue: Double; out aJson: shortstring); inline;
+begin
+  if Double.IsFinite(aValue) then
+    Double2Str(aValue, aJson)
+  else
+    aJson := JS_NULL;
+end;
+
 { TJsonFormatStyle }
 
 constructor TJsonFormatStyle.Make(const aOptions: TJsFormatOptions);
@@ -2062,11 +2077,10 @@ var
         else
           sb.Append(JS_FALSE);
       vkNumber:
-        if Double.IsFinite(aValue.FValue.Num) then begin
-          Double2Str(aValue.FValue.Num, s);
+        begin
+          DoubleToJson(aValue.FValue.Num, s);
           sb.Append(s);
-        end else
-          sb.Append(JS_NULL);
+        end;
       vkString: sb.AppendEncode(string(aValue.FValue.Ref));
       vkArray:
         begin
@@ -4015,11 +4029,10 @@ var
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
       jvkNumber:
-        if Double.IsFinite(aInst.FValue.Num) then begin
-          Double2Str(aInst.FValue.Num, s);
+        begin
+          DoubleToJson(aInst.FValue.Num, s);
           sb.Append(s);
-        end else
-          sb.Append(JS_NULL);
+        end;
       jvkString: sb.AppendEncode(aInst.StrVal);
       jvkArray:
         begin
@@ -4514,6 +4527,178 @@ begin
     raise EJsException.Create(SEInvalidJsonStrInst);
   Result := s;
 end;
+
+{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized }
+class function TJsonNode.MinifyJson(const aJson: string; out aCompact: string; aMaxDepth: Integer): Boolean;
+var
+  Reader: TJsonReader = nil;
+  Writer: TJsonStrWriter = nil;
+
+  function WriteValue: Boolean; forward;
+  function WriteArray: Boolean;
+  begin
+    if Reader.TokenKind <> rtkArrayBegin then exit(False);
+    Writer.BeginArray;
+    repeat
+      if not Reader.Read then exit(False);
+      if Reader.TokenKind = rtkArrayEnd then break;
+      if not WriteValue then exit(False);
+    until False;
+    Result := Reader.ReadState <> rsError;
+    Writer.EndArray;
+  end;
+
+  function WriteObject: Boolean;
+  begin
+    if Reader.TokenKind <> rtkObjectBegin then exit(False);
+    Writer.BeginObject;
+    repeat
+      if not Reader.Read then exit(False);
+      if Reader.TokenKind = rtkObjectEnd then break;
+      Writer.AddName(Reader.Name);
+      if not WriteValue then exit(False);
+    until False;
+    Result := Reader.ReadState <> rsError;
+    Writer.EndObject;
+  end;
+
+  function WriteValue: Boolean;
+  begin
+    case Reader.TokenKind of
+      rtkArrayBegin:  if not WriteArray then exit(False);
+      rtkObjectBegin: if not WriteObject then exit(False);
+      rtkNull:        Writer.AddNull;
+      rtkFalse:       Writer.AddFalse;
+      rtkTrue:        Writer.AddTrue;
+      rtkNumber:      Writer.Add(Reader.AsNumber);
+      rtkString:      Writer.Add(Reader.AsString);
+    else
+      exit(False);
+    end;
+    Result := True;
+  end;
+
+var
+  ReaderRef: specialize TGUniqRef<TJsonReader>;
+  WriterRef: specialize TGAutoRef<TJsonStrWriter>;
+begin
+  aCompact := '';
+  ReaderRef.Instance := TJsonReader.Create(aJson, aMaxDepth);
+  Reader := ReaderRef;
+  Writer := WriterRef;
+  if not Reader.Read then exit(False);
+  Result := WriteValue and (Reader.ReadState <> rsError);
+  if Result then begin
+    if Reader.ReadState < rsEof then begin
+      Reader.Read;
+      if Reader.ReadState <> rsEof then exit(False);
+    end;
+    aCompact := Writer.JsonString;
+  end;
+end;
+
+class function TJsonNode.PrettifyJson(const aJson: string; out aPretty: string; aIndentSize: Integer;
+  aUseTab: Boolean; aOffset: Integer; aMaxDepth: Integer): Boolean;
+var
+  Reader: TJsonReader = nil;
+  sb: TStrBuilder;
+  IndentChar: AnsiChar = ' ';
+  Indent: Integer = 0;
+  s: shortstring;
+
+  function WriteValue(aNewLine: Boolean = True): Boolean; forward;
+  function WriteArray(aNewLine: Boolean): Boolean;
+  var
+    NotFirst: Boolean;
+  begin
+    if Reader.TokenKind <> rtkArrayBegin then exit(False);
+    if aNewLine then sb.Append(IndentChar, Indent);
+    sb.Append(chOpenSqrBr);
+    Inc(Indent, aIndentSize);
+    NotFirst := False;
+    repeat
+      if not Reader.Read then exit(False);
+      if Reader.TokenKind = rtkArrayEnd then break;
+      if NotFirst then
+        sb.Append(chComma)
+      else
+        NotFirst := True;
+      sb.Append(System.LineEnding);
+      if not Reader.IsStartToken(Reader.TokenKind) then sb.Append(IndentChar, Indent);
+      if not WriteValue then exit(False);
+    until False;
+    Result := Reader.ReadState <> rsError;
+    Dec(Indent, aIndentSize);
+    sb.Append(System.LineEnding);
+    sb.Append(IndentChar, Indent);
+    sb.Append(chClosSqrBr);
+  end;
+
+  function WriteObject(aNewLine: Boolean): Boolean;
+  var
+    NotFirst: Boolean;
+  begin
+    if Reader.TokenKind <> rtkObjectBegin then exit(False);
+    if aNewLine then sb.Append(IndentChar, Indent);
+    sb.Append(chOpenCurBr);
+    Inc(Indent, aIndentSize);
+    NotFirst := False;
+    repeat
+      if not Reader.Read then exit(False);
+      if Reader.TokenKind = rtkObjectEnd then break;
+      if NotFirst then
+        sb.Append(chComma)
+      else
+        NotFirst := True;
+      sb.Append(System.LineEnding);
+      sb.Append(IndentChar, Indent);
+      sb.AppendEncode(Reader.Name);
+      sb.Append(chColon, chSpace);
+      if not WriteValue(False) then exit(False);
+    until False;
+    Result := Reader.ReadState <> rsError;
+    Dec(Indent, aIndentSize);
+    sb.Append(System.LineEnding);
+    sb.Append(IndentChar, Indent);
+    sb.Append(chClosCurBr);
+  end;
+
+  function WriteValue(aNewLine: Boolean = True): Boolean;
+  begin
+    case Reader.TokenKind of
+      rtkArrayBegin:  if not WriteArray(aNewLine) then exit(False);
+      rtkObjectBegin: if not WriteObject(aNewLine) then exit(False);
+      rtkNull:        sb.Append(JS_NULL);
+      rtkFalse:       sb.Append(JS_FALSE);
+      rtkTrue:        sb.Append(JS_TRUE);
+      rtkNumber:      begin DoubleToJson(Reader.AsNumber, s); sb.Append(s); end;
+      rtkString:      sb.AppendEncode(Reader.AsString);
+    else
+      exit(False);
+    end;
+    Result := True;
+  end;
+var
+  ReaderRef: specialize TGUniqRef<TJsonReader>;
+begin
+  aPretty := '';
+  ReaderRef.Instance := TJsonReader.Create(aJson, aMaxDepth);
+  Reader := ReaderRef;
+  sb := TStrBuilder.Create(System.Length(aJson));
+  if aUseTab then IndentChar := #9;
+  if aIndentSize < 1 then aIndentSize := DEF_INDENT;
+  if aOffset > 0 then Indent += aOffset;
+  if not Reader.Read then exit(False);
+  Result := WriteValue and (Reader.ReadState <> rsError);
+  if Result then begin
+    if Reader.ReadState < rsEof then begin
+      Reader.Read;
+      if Reader.ReadState <> rsEof then exit(False);
+    end;
+    aPretty := sb.ToString;
+  end;
+end;
+{$POP}
 
 class function TJsonNode.NewNull: TJsonNode;
 begin
@@ -5975,11 +6160,10 @@ var
       jvkFalse:  sb.Append(JS_FALSE);
       jvkTrue:   sb.Append(JS_TRUE);
       jvkNumber:
-        if Double.IsFinite(aInst.FValue.Num) then begin
-          Double2Str(aInst.FValue.Num, s);
+        begin
+          DoubleToJson(aInst.FValue.Num, s);
           sb.Append(s);
-        end else
-          sb.Append(JS_NULL);
+        end;
       jvkString: sb.AppendEncodeOpt(aInst.StrVal, aUEscOpt, aHtmlEsc);
       jvkArray:
         begin
@@ -6068,11 +6252,8 @@ var
   end;
   procedure AppendNumber(aNum: Double); inline;
   begin
-    if Double.IsFinite(aNum) then begin
-      Double2Str(aNum, s);
-      sb.Append(s);
-    end else
-      sb.Append(JS_NULL);
+    DoubleToJson(aNum, s);
+    sb.Append(s);
   end;
   procedure NewLine(Pos: Integer; aCondition: Boolean); inline;
   begin
@@ -8926,11 +9107,8 @@ procedure TJsonWriter.DoWriteNum(aValue: Double);
 var
   num: shortstring;
 begin
-  if Double.IsFinite(aValue) then begin
-    Double2Str(aValue, num);
-    DoWrite(@num[1], System.Length(num));
-  end else
-    DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+  DoubleToJson(aValue, num);
+  DoWrite(@num[1], System.Length(num));
 end;
 
 class function TJsonWriter.New(aStream: TStream; aBufferSize: Integer): TJsonWriter;
@@ -9296,11 +9474,8 @@ procedure TJsonStrWriter.DoWriteNum(aValue: Double);
 var
   num: shortstring;
 begin
-  if Double.IsFinite(aValue) then begin
-    Double2Str(aValue, num);
-    DoWrite(@num[1], System.Length(num));
-  end else
-    DoWrite(@JS_NULL[1], System.Length(JS_NULL));
+  DoubleToJson(aValue, num);
+  DoWrite(@num[1], System.Length(num));
 end;
 
 class function TJsonStrWriter.New(aInitLen: SizeInt): TJsonStrWriter;
