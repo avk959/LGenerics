@@ -103,6 +103,8 @@ type
     procedure TestExpractPathPtr;
     procedure TestSortObject;
     procedure TestNans;
+    procedure TestPrettify;
+    procedure TestMinify;
   end;
 
   { TTestJsonWriter }
@@ -175,6 +177,7 @@ type
     procedure FindPath1;
     procedure FindPath2;
     procedure FindPath3;
+    procedure FindPath4;
     procedure FindPathPtr;
     procedure FindPathPtr1;
     procedure Path;
@@ -1953,6 +1956,45 @@ begin
   AssertTrue(Node.Instance.AsJson = Expect);
 end;
 
+procedure TTestJson.TestPrettify;
+var
+  Source, Res: specialize TGAutoRef<TJsonNode>;
+  Json, Pretty: string;
+begin
+  Json := '';
+  AssertFalse(TJsonNode.PrettifyJson(Json, Pretty));
+
+  Json := TestJson;
+  Source.Instance.AsJson := Json;
+  AssertTrue(TJsonNode.PrettifyJson(Json, Pretty));
+  AssertTrue(Json <> Pretty);
+  AssertTrue(Res.Instance.TryParse(Pretty));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+
+  AssertTrue(TJsonNode.PrettifyJson(Json, Pretty, 1, True));
+  AssertTrue(Json <> Pretty);
+  AssertTrue(Res.Instance.TryParse(Pretty));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+end;
+
+procedure TTestJson.TestMinify;
+var
+  Source, Res: specialize TGAutoRef<TJsonNode>;
+  Json, Compact: string;
+begin
+  Json := '';
+  AssertFalse(TJsonNode.MinifyJson(Json, Compact));
+
+  AssertTrue(TJsonNode.PrettifyJson(TestJson, Json, 2));
+  Source.Instance.AsJson := Json;
+
+  AssertTrue(TJsonNode.MinifyJson(Json, Compact));
+  AssertTrue(Json <> Compact);
+  AssertTrue(Length(TestJson) = Length(Compact));
+  AssertTrue(Res.Instance.TryParse(Compact));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+end;
+
 { TTestJsonWriter }
 
 procedure TTestJsonWriter.AddNull;
@@ -3110,6 +3152,44 @@ begin
   AssertTrue(Reader.Instance.FindPath(TJsonPtr.From(['m~n'])));
   AssertTrue(Reader.Instance.TokenKind = rtkNumber);
   AssertTrue(Reader.Instance.AsNumber = 8);
+end;
+
+procedure TTestJsonReader.FindPath4;
+var
+  Test, Res: specialize TGAutoRef<TJsonNode>;
+  Reader: specialize TGUniqRef<TJsonReader>;
+  Node: TJsonNode;
+begin
+  Test.Instance.AsJson := TestJson;
+  Reader.Instance := TJsonReader.Create(TestJson);
+
+  AssertTrue(Reader.Instance.FindPath([], Node));
+  Res.Instance := Node;
+  AssertTrue(Test.Instance.EqualTo(Res.Instance));
+
+  AssertTrue(Reader.Instance.FindPathPtr('', Node));
+  Res.Instance := Node;
+  AssertTrue(Test.Instance.EqualTo(Res.Instance));
+
+  AssertTrue(Reader.Instance.FindPath(['0'], Node));
+  Res.Instance := Node;
+  AssertTrue(Test.Instance.FindPath(['0'], Node));
+  AssertTrue(Res.Instance.EqualTo(Node));
+
+  AssertTrue(Reader.Instance.FindPathPtr('/0', Node));
+  Res.Instance := Node;
+  AssertTrue(Test.Instance.FindPathPtr('/0', Node));
+  AssertTrue(Res.Instance.EqualTo(Node));
+
+  AssertTrue(Reader.Instance.FindPath(['1','groups'], Node));
+  Res.Instance := Node;
+  AssertTrue(Test.Instance.FindPath(['1','groups'], Node));
+  AssertTrue(Res.Instance.EqualTo(Node));
+
+  AssertTrue(Reader.Instance.FindPathPtr('/1/groups', Node));
+  Res.Instance := Node;
+  AssertTrue(Test.Instance.FindPathPtr('/1/groups', Node));
+  AssertTrue(Res.Instance.EqualTo(Node));
 end;
 
 procedure TTestJsonReader.FindPathPtr;
