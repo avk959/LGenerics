@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   JSONPath(RFC 9535) implementation: query expressions for JSON.          *
 *                                                                           *
-*   Copyright(c) 2023-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2023-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -262,7 +262,7 @@ uses
 }
 
 type
-  { TJpNode represents JSONPath Node - a value along with its location within the root }
+  { TJpNode represents JSONPath Node - a value along with its location within the query argument }
   TJpNode = record
   const
   {$PUSH}{$J-}
@@ -6035,11 +6035,8 @@ function ValidFunName(const aName: string): Boolean;
 var
   I: SizeInt;
 begin
-  if aName = '' then
-    exit(False)
-  else
-    if not(aName[1] in ['a'..'z']) then
-      exit(False);
+  if aName = '' then exit(False);
+  if not(aName[1] in ['a'..'z']) then exit(False);
   for I := 2 to System.Length(aName) do
     if not(aName[I] in ['a'..'z', '_', '0'..'9']) then
       exit(False);
@@ -6048,10 +6045,8 @@ end;
 
 function JpRegisterFunction(const aName: string; const aFunDef: TJpFunctionDef): Boolean;
 begin
-  if ValidFunName(aName) and (aFunDef.OnExecute <> nil) then
-    Result := AddFunDef(aName, aFunDef)
-  else
-    Result := False;
+  if not(ValidFunName(aName) and (aFunDef.OnExecute <> nil)) then exit(False);
+  Result := AddFunDef(aName, aFunDef);
 end;
 
 procedure RegisterBuiltIns;
