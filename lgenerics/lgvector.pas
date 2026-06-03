@@ -105,9 +105,9 @@ type
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
   { removes all items not satisfying the aTest predicate; returns the number of items removed;
     will raise ELGUpdateLock if instance in iteration }
-    function  Filter(aTest: TTest): SizeInt; virtual;
-    function  Filter(aTest: TOnTest): SizeInt; virtual;
-    function  Filter(aTest: TNestTest): SizeInt; virtual;
+    function  Filter(aTest: TTest): SizeInt; virtual; overload;
+    function  Filter(aTest: TOnTest): SizeInt; virtual; overload;
+    function  Filter(aTest: TNestTest): SizeInt; virtual; overload;
   { will raise ELGListError if aIndex out of bounds;
     will raise ELGUpdateLock if instance in iteration }
     function  Split(aIndex: SizeInt): TGVector;
@@ -140,9 +140,9 @@ type
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
   { removes all items not satisfying the aTest predicate; returns the number of items removed;
     will raise ELGUpdateLock if instance in iteration }
-    function  Filter(aTest: TTest): SizeInt; override;
-    function  Filter(aTest: TOnTest): SizeInt; override;
-    function  Filter(aTest: TNestTest): SizeInt; override;
+    function  Filter(aTest: TTest): SizeInt; override; overload;
+    function  Filter(aTest: TOnTest): SizeInt; override; overload;
+    function  Filter(aTest: TNestTest): SizeInt; override; overload;
   { will raise EArgumentOutOfRangeException if aIndex out of bounds }
     function  Split(aIndex: SizeInt): TGObjectVector;
   { will return False if aIndex out of bounds }
