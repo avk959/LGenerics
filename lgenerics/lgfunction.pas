@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2025 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -27,7 +27,7 @@ interface
 
 uses
 
-  SysUtils,
+  SysUtils, Math,
   lgUtils,
   lgHelpers,
   lgAbstractContainer,
@@ -287,6 +287,117 @@ type
     that TKey implements TKeyEqRel }
   generic TGGrouping<T, TKey> = class(specialize TGBaseGrouping<T, TKey, TKey>);
 
+  { TGZip2 combines elements from two sources }
+  generic TGZip2<T1, T2> = class
+  public
+  type
+    IEnumerable1 = specialize IGEnumerable<T1>;
+    IEnumerable2 = specialize IGEnumerable<T2>;
+    TUnion       = specialize TGTuple2<T1, T2>;
+    IEnumerableU = specialize IGEnumerable<TUnion>;
+    TArrayU      = array of TUnion;
+
+  private
+  type
+    TEnumerator1 = specialize TGEnumerator<T1>;
+    TEnumerator2 = specialize TGEnumerator<T2>;
+
+    TEnumCursor = class(specialize TGAutoEnumerable<TUnion>)
+    private
+      FEnum1: TEnumerator1;
+      FEnum2: TEnumerator2;
+    protected
+      function GetCurrent: TUnion; override;
+    public
+      constructor Create(e1: IEnumerable1; e2: IEnumerable2);
+      destructor Destroy; override;
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+    TArrayCursor = class(specialize TGAutoEnumerable<TUnion>)
+    private
+    type
+      PItem1 = ^T1;
+      PItem2 = ^T2;
+    var
+      F1: PItem1;
+      F2: PItem2;
+      FCurrent,
+      FLast: SizeInt;
+    protected
+      function GetCurrent: TUnion; override;
+    public
+      constructor Create(const a1: array of T1; const a2: array of T2);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+  public
+    class function Apply(e1: IEnumerable1; e2: IEnumerable2): IEnumerableU; static;
+    class function Apply(const a1: array of T1; const a2: array of T2): IEnumerableU; static;
+    class function Zip(e1: IEnumerable1; e2: IEnumerable2): TArrayU; static;
+    class function Zip(const a1: array of T1; const a2: array of T2): TArrayU; static;
+  end;
+
+  { TGZip3 combines elements from three sources }
+  generic TGZip3<T1, T2, T3> = class
+  public
+  type
+    IEnumerable1 = specialize IGEnumerable<T1>;
+    IEnumerable2 = specialize IGEnumerable<T2>;
+    IEnumerable3 = specialize IGEnumerable<T3>;
+    TUnion       = specialize TGTuple3<T1, T2, T3>;
+    IEnumerableU = specialize IGEnumerable<TUnion>;
+    TArrayU      = array of TUnion;
+
+  private
+  type
+    TEnumerator1 = specialize TGEnumerator<T1>;
+    TEnumerator2 = specialize TGEnumerator<T2>;
+    TEnumerator3 = specialize TGEnumerator<T3>;
+
+    TEnumCursor = class(specialize TGAutoEnumerable<TUnion>)
+    private
+      FEnum1: TEnumerator1;
+      FEnum2: TEnumerator2;
+      FEnum3: TEnumerator3;
+    protected
+      function GetCurrent: TUnion; override;
+    public
+      constructor Create(e1: IEnumerable1; e2: IEnumerable2; e3: IEnumerable3);
+      destructor Destroy; override;
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+    TArrayCursor = class(specialize TGAutoEnumerable<TUnion>)
+    private
+    type
+      PItem1 = ^T1;
+      PItem2 = ^T2;
+      PItem3 = ^T3;
+    var
+      F1: PItem1;
+      F2: PItem2;
+      F3: PItem3;
+      FCurrent,
+      FLast: SizeInt;
+    protected
+      function GetCurrent: TUnion; override;
+    public
+      constructor Create(const a1: array of T1; const a2: array of T2; const a3: array of T3);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+  public
+    class function Apply(e1: IEnumerable1; e2: IEnumerable2; e3: IEnumerable3): IEnumerableU; static;
+    class function Apply(const a1: array of T1; const a2: array of T2; const a3: array of T3): IEnumerableU; static;
+    class function Zip(e1: IEnumerable1; e2: IEnumerable2; e3: IEnumerable3): TArrayU; static;
+    class function Zip(const a1: array of T1; const a2: array of T2; const a3: array of T3): TArrayU; static;
+  end;
+
   generic TGUnboundGenerator<TState, TResult> = class(specialize TGEnumerable<TResult>)
   public
   type
@@ -380,8 +491,6 @@ type
     function Call: TResult; inline;
   end;
 
-  { TGDeferTriadic }
-
   generic TGDeferTriadic<T1, T2, T3, TResult> = record
   public
   type
@@ -402,7 +511,7 @@ type
   end;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGMapping.TArrayCursor }
 
@@ -1252,6 +1361,241 @@ begin
 end;
 {$UNDEF ArrayFlatMacro}{$UNDEF EnumFlatMacro}
 {$POP}
+
+{ TGZip2.TEnumCursor }
+
+function TGZip2.TEnumCursor.GetCurrent: TUnion;
+begin
+  Result := TUnion.Create(FEnum1.Current, FEnum2.Current);
+end;
+
+constructor TGZip2.TEnumCursor.Create(e1: IEnumerable1; e2: IEnumerable2);
+begin
+  inherited Create;
+  FEnum1 := e1.GetEnumerator;
+  FEnum2 := e2.GetEnumerator;
+end;
+
+destructor TGZip2.TEnumCursor.Destroy;
+begin
+  FEnum1.Free;
+  FEnum2.Free;
+  inherited;
+end;
+
+function TGZip2.TEnumCursor.MoveNext: Boolean;
+begin
+  Result := FEnum1.MoveNext and FEnum2.MoveNext;
+end;
+
+procedure TGZip2.TEnumCursor.Reset;
+begin
+  FEnum1.Reset;
+  FEnum2.Reset;
+end;
+
+{ TGZip2.TArrayCursor }
+
+function TGZip2.TArrayCursor.GetCurrent: TUnion;
+begin
+  Result := TUnion.Create(F1[FCurrent], F2[FCurrent]);
+end;
+
+constructor TGZip2.TArrayCursor.Create(const a1: array of T1; const a2: array of T2);
+begin
+  inherited Create;
+  if System.Length(a1) > 0 then
+    F1 := @a1[0];
+  if System.Length(a2) > 0 then
+    F2 := @a2[0];
+  FCurrent := NULL_INDEX;
+  FLast := Math.Min(System.High(a1), System.High(a2));
+end;
+
+function TGZip2.TArrayCursor.MoveNext: Boolean;
+begin
+  Result := FCurrent < FLast;
+  Inc(FCurrent, Ord(Result));
+end;
+
+procedure TGZip2.TArrayCursor.Reset;
+begin
+  FCurrent := NULL_INDEX;
+end;
+
+{ TGZip2 }
+
+class function TGZip2.Apply(e1: IEnumerable1; e2: IEnumerable2): IEnumerableU;
+begin
+  Result := TEnumCursor.Create(e1, e2);
+end;
+
+class function TGZip2.Apply(const a1: array of T1; const a2: array of T2): IEnumerableU;
+begin
+  Result := TArrayCursor.Create(a1, a2);
+end;
+
+class function TGZip2.Zip(e1: IEnumerable1; e2: IEnumerable2): TArrayU;
+var
+  r: TArrayU = nil;
+  en1: TEnumerator1;
+  en2: TEnumerator2;
+  Len: SizeInt = 0;
+begin
+  en1 := e1.GetEnumerator;
+  try
+    en2 := e2.GetEnumerator;
+    try
+      System.SetLength(r, ARRAY_INITIAL_SIZE);
+      while en1.MoveNext and en2.MoveNext do begin
+        if System.Length(r) = Len then
+          System.SetLength(r, Len*2);
+        r[Len] := TUnion.Create(en1.Current, en2.Current);
+        Inc(Len);
+      end;
+    finally
+      en2.Free;
+    end;
+  finally
+    en1.Free;
+  end;
+  System.SetLength(r, Len);
+  Result := r;
+end;
+
+class function TGZip2.Zip(const a1: array of T1; const a2: array of T2): TArrayU;
+var
+  r: TArrayU = nil;
+  I: SizeInt;
+begin
+  System.SetLength(r, Math.Min(System.Length(a1), System.Length(a2)));
+  for I := 0 to System.High(r) do
+    r[I] := TUnion.Create(a1[I], a2[I]);
+  Result := r;
+end;
+
+{ TGZip3.TEnumCursor }
+
+function TGZip3.TEnumCursor.GetCurrent: TUnion;
+begin
+  Result := TUnion.Create(FEnum1.Current, FEnum2.Current, FEnum3.Current);
+end;
+
+constructor TGZip3.TEnumCursor.Create(e1: IEnumerable1; e2: IEnumerable2; e3: IEnumerable3);
+begin
+  inherited Create;
+  FEnum1 := e1.GetEnumerator;
+  FEnum2 := e2.GetEnumerator;
+  FEnum3 := e3.GetEnumerator;
+end;
+
+destructor TGZip3.TEnumCursor.Destroy;
+begin
+  FEnum1.Free;
+  FEnum2.Free;
+  FEnum3.Free;
+  inherited;
+end;
+
+function TGZip3.TEnumCursor.MoveNext: Boolean;
+begin
+  Result := FEnum1.MoveNext and FEnum2.MoveNext and FEnum3.MoveNext;
+end;
+
+procedure TGZip3.TEnumCursor.Reset;
+begin
+  FEnum1.Reset;
+  FEnum2.Reset;
+  FEnum3.Reset;
+end;
+
+{ TGZip3.TArrayCursor }
+
+function TGZip3.TArrayCursor.GetCurrent: TUnion;
+begin
+  Result := TUnion.Create(F1[FCurrent], F2[FCurrent], F3[FCurrent]);
+end;
+
+constructor TGZip3.TArrayCursor.Create(const a1: array of T1; const a2: array of T2; const a3: array of T3);
+begin
+  inherited Create;
+  if System.Length(a1) > 0 then
+    F1 := @a1[0];
+  if System.Length(a2) > 0 then
+    F2 := @a2[0];
+  if System.Length(a3) > 0 then
+    F3 := @a3[0];
+  FCurrent := NULL_INDEX;
+  FLast := LgUtils.MinOf3(System.High(a1), System.High(a2), System.High(a3));
+end;
+
+function TGZip3.TArrayCursor.MoveNext: Boolean;
+begin
+  Result := FCurrent < FLast;
+  Inc(FCurrent, Ord(Result));
+end;
+
+procedure TGZip3.TArrayCursor.Reset;
+begin
+  FCurrent := NULL_INDEX;
+end;
+
+{ TGZip3 }
+
+class function TGZip3.Apply(e1: IEnumerable1; e2: IEnumerable2; e3: IEnumerable3): IEnumerableU;
+begin
+  Result := TEnumCursor.Create(e1, e2, e3);
+end;
+
+class function TGZip3.Apply(const a1: array of T1; const a2: array of T2; const a3: array of T3): IEnumerableU;
+begin
+  Result := TArrayCursor.Create(a1, a2, a3);
+end;
+
+class function TGZip3.Zip(e1: IEnumerable1; e2: IEnumerable2; e3: IEnumerable3): TArrayU;
+var
+  r: TArrayU = nil;
+  en1: TEnumerator1;
+  en2: TEnumerator2;
+  en3: TEnumerator3;
+  Len: SizeInt = 0;
+begin
+  en1 := e1.GetEnumerator;
+  try
+    en2 := e2.GetEnumerator;
+    try
+      en3 := e3.GetEnumerator;
+      try
+        System.SetLength(r, ARRAY_INITIAL_SIZE);
+        while en1.MoveNext and en2.MoveNext and en3.MoveNext do begin
+          if System.Length(r) = Len then
+            System.SetLength(r, Len*2);
+          r[Len] := TUnion.Create(en1.Current, en2.Current, en3.Current);
+          Inc(Len);
+        end;
+      finally
+        en3.Free;
+      end;
+    finally
+      en2.Free;
+    end;
+  finally
+    en1.Free;
+  end;
+  System.SetLength(r, Len);
+  Result := r;
+end;
+
+class function TGZip3.Zip(const a1: array of T1; const a2: array of T2; const a3: array of T3): TArrayU;
+var
+  r: TArrayU = nil;
+  I: SizeInt;
+begin
+  System.SetLength(r, LgUtils.MinOf3(System.Length(a1), System.Length(a2), System.Length(a3)));
+  for I := 0 to System.High(r) do
+    r[I] := TUnion.Create(a1[I], a2[I], a3[I]);
+  Result := r;
+end;
 
 { TGUnboundGenerator.TEnumerator }
 
