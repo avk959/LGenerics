@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -34,7 +34,10 @@ end;
 
 procedure TGSparseGraph.TIntSet.Expand;
 begin
-  System.SetLength(FItems, System.Length(FItems) + GRAPH_ADJLIST_GROW);
+  if System.Length(FItems) < GRAPH_ADJLIST_GROW * 4 then
+    System.SetLength(FItems, System.Length(FItems) + GRAPH_ADJLIST_GROW)
+  else
+    System.SetLength(FItems, System.Length(FItems) + System.Length(FItems) shr 2);
 end;
 
 class operator TGSparseGraph.TIntSet.Initialize(var aSet: TIntSet);

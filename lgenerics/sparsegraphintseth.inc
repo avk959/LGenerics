@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018-2024 A.Koverdyaev(avk)                                *
+*   Copyright(c) 2018-2026 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -23,7 +23,7 @@ type
   private
     FItems: TIntArray;
     FCount: SizeInt;
-    procedure Expand; inline;
+    procedure Expand;
     function  GetItem(aIndex: SizeInt): SizeInt; inline;
     class operator Initialize(var aSet: TIntSet);
   public
