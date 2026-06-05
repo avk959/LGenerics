@@ -1376,8 +1376,10 @@ procedure TGSimpleGraph.ResetTags;
 var
   I: SizeInt;
 begin
-  for I := 0 to Pred(VertexCount) do
+  for I := 0 to Pred(VertexCount) do begin
     FNodeList[I].Tag := I;
+    FNodeList[I].Temp := 1;
+  end;
 end;
 
 function TGSimpleGraph.SeparateTag(aIndex: SizeInt): SizeInt;
@@ -1390,59 +1392,67 @@ end;
 function TGSimpleGraph.SeparateJoin(L, R: SizeInt): Boolean;
   function GetSeparateTag(aIndex: SizeInt): SizeInt;
   begin
-    if FNodeList[aIndex].Tag = aIndex then
-      exit(aIndex);
+    if FNodeList[aIndex].Tag = aIndex then exit(aIndex);
     Result := GetSeparateTag(FNodeList[aIndex].Tag);
     FNodeList[aIndex].Tag := Result;
   end;
 begin
   L := GetSeparateTag(L);
   R := GetSeparateTag(R);
-  if L = R then
-    exit(False);
-  if NextRandomBoolean then
+  if L = R then exit(False);
+  if FNodeList[L].Temp < FNodeList[R].Temp then
     FNodeList[L].Tag := R
   else
-    FNodeList[R].Tag := L;
+    begin
+      FNodeList[R].Tag := L;
+      if FNodeList[L].Temp = FNodeList[R].Temp then
+        Inc(FNodeList[L].Temp);
+    end;
   Result := True;
 end;
 
 procedure TGSimpleGraph.ValidateConnected;
 var
-  Queue: TIntQueue;
+  Queue: TIntArray = nil;
   Visited: TBoolVector;
-  I, Curr, Next: SizeInt;
+  I, Curr, Next, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
-  if ConnectedValid then
-    exit;
+  if ConnectedValid then exit;
   if IsEmpty then
     begin
       FCompCount := 0;
       FConnectedValid := True;
       exit;
     end;
+  System.SetLength(Queue, VertexCount);
   Visited.Capacity := VertexCount;
   FCompCount := VertexCount;
   ResetTags;
+  qHead := 0;
+  qTail := 0;
   for I := 0 to Pred(VertexCount) do
     if not Visited.UncBits[I] then
       begin
-        Curr := I;
-        Visited.UncBits[Curr] := True;
-        repeat
-          for p in AdjLists[Curr]^ do
-            begin
-              Next := p^.Key;
-              if not Visited.UncBits[Next] then
-                begin
-                  Visited.UncBits[Next] := True;
-                  Queue.Enqueue(Next);
-                  if SeparateJoin(Curr, Next) then
-                    Dec(FCompCount);
-                end;
-            end;
-        until not Queue{%H-}.TryDequeue(Curr);
+        Visited.UncBits[I] := True;
+        Queue[qTail] := I;
+        Inc(qTail);
+        while qHead <> qTail do
+          begin
+            Curr := Queue[qHead];
+            Inc(qHead);
+            for p in AdjLists[Curr]^ do
+              begin
+                Next := p^.Key;
+                if not Visited.UncBits[Next] then
+                  begin
+                    Visited.UncBits[Next] := True;
+                    Queue[qTail] := Next;
+                    Inc(qTail);
+                    Dec(FCompCount, Ord(SeparateJoin(Curr, Next)));
+                  end;
+              end;
+          end;
       end;
   FConnected := FCompCount = 1;
   FConnectedValid := True;
@@ -3172,16 +3182,14 @@ end;
 function TGSimpleGraph.DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
-  if not Result then
-    exit;
+  if not Result then exit;
+  FNodeList[aIndex].Tag := aIndex;
+  FNodeList[aIndex].Temp := 1;
   if ConnectedValid then
     begin
-      FNodeList[aIndex].Tag := aIndex;
       Inc(FCompCount);
       FConnected := FCompCount = 1;
-    end
-  else
-    FNodeList[aIndex].Tag := FCompCount;
+    end;
 end;
 
 procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
