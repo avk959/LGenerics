@@ -139,7 +139,7 @@ type
     FItems: TAdjItemArray;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    procedure Expand; inline;
+    procedure Expand;
     function  DoFind(aValue: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt); inline;
     class operator Initialize(var aList: TGAdjList);
@@ -214,7 +214,8 @@ type
       AdjList: TAdjList;
       Hash,
       Next,
-      Tag: SizeInt;
+      Tag,
+      Temp: SizeInt;
       procedure Assign(const aSrc: TNode);
     end;
     PNode = ^TNode;
@@ -895,7 +896,7 @@ begin
   if Capacity < GRAPH_ADJLIST_GROW * 4 then
     System.SetLength(FItems, Capacity + GRAPH_ADJLIST_GROW)
   else
-    System.SetLength(FItems, Capacity + Capacity div 3);
+    System.SetLength(FItems, Capacity + Capacity shr 2);
 end;
 
 function TGAdjList.DoFind(aValue: SizeInt): SizeInt;
@@ -1775,11 +1776,10 @@ var
   Inst: array[Boolean] of TGSparseGraph;
   Queue: array[Boolean] of TIntQueue;
   Parents: array[Boolean] of TIntArray;
-  Visited: array[Boolean] of TBoolVector;
-  Node, MeetPoint: SizeInt;
+  Dist: array[Boolean] of TIntArray;
+  Node, Next, CurrDist, TempDist, BestDist, MeetPoint: SizeInt;
   p: PAdjItem;
   Dir: Boolean;
-  label Found;
 const
   Forward  = False;
   Backward = True;
@@ -1788,34 +1788,43 @@ begin
   Inst[Backward] := gRev;
   Parents[Forward] := g.CreateIntArray;
   Parents[Backward] := g.CreateIntArray;
-  Visited[Forward].Capacity := g.VertexCount;
-  Visited[Forward].UncBits[aSrc] := True;
-  Visited[Backward].Capacity := g.VertexCount;
-  Visited[Backward].UncBits[aDst] := True;
+  Dist[Forward] := g.CreateIntArray;
+  Dist[Forward][aSrc] := 0;
+  Dist[Backward] := g.CreateIntArray;
+  Dist[Backward][aDst] := 0;
   Queue[Forward].Enqueue(aSrc);
   Queue[Backward].Enqueue(aDst);
+  BestDist := System.High(SizeInt);
   MeetPoint := NULL_INDEX;
   Dir := Forward;
 
   while Queue[Forward].NonEmpty and Queue[Backward].NonEmpty do begin
     Node := Queue[Dir].Dequeue;
-    for p in Inst[Dir].AdjLists[Node]^ do
-      if not Visited[Dir].UncBits[p^.Destination] then begin
-        Visited[Dir].UncBits[p^.Destination] := True;
-        Parents[Dir][p^.Destination] := Node;
-        if Visited[not Dir].UncBits[p^.Destination] then begin
-          MeetPoint := p^.Destination;
-          goto Found;
+    if(Dist[not Dir][Node] >= 0)and(Dist[Dir][Node] + Dist[not Dir][Node] >= BestDist)then
+      break;
+    CurrDist := Succ(Dist[Dir][Node]);
+    for p in Inst[Dir].AdjLists[Node]^ do begin
+      Next := p^.Destination;
+      if Dist[Dir][Next] < 0 then begin
+        Dist[Dir][Next] := CurrDist;
+        Parents[Dir][Next] := Node;
+        Queue[Dir].Enqueue(Next);
+        TempDist := Dist[not Dir][Next];
+        if TempDist >= 0 then begin
+          TempDist += CurrDist;
+          if TempDist < BestDist then begin
+            BestDist := TempDist;
+            MeetPoint := Next;
+          end;
         end;
-        Queue[Dir].Enqueue(p^.Destination);
       end;
+    end;
     if Queue[not Dir].Count < Queue[Dir].Count then
       Dir := not Dir;
   end;
 
   if MeetPoint = NULL_INDEX then exit(nil);
 
-Found:
   Result := TreePathTo(Parents[Backward], MeetPoint);
   TIntHelper.Reverse(Result[0..Result.Length-2]);
   Result := TIntHelper.CreateMerge(TreePathTo(Parents[Forward], MeetPoint), Result[0..Result.Length-2]);
@@ -1827,11 +1836,10 @@ var
   Inst: array[Boolean] of TGSparseGraph;
   Queue: array[Boolean] of TIntQueue;
   Parents: array[Boolean] of TIntArray;
-  Visited: array[Boolean] of TBoolVector;
-  Node, MeetPoint: SizeInt;
+  Dist: array[Boolean] of TIntArray;
+  Node, Next, CurrDist, TempDist, BestDist, MeetPoint: SizeInt;
   p: PAdjItem;
   Dir: Boolean;
-  label Found;
 const
   Forward  = False;
   Backward = True;
@@ -1840,38 +1848,47 @@ begin
   Inst[Backward] := gRev;
   Parents[Forward] := g.CreateIntArray;
   Parents[Backward] := g.CreateIntArray;
-  Visited[Forward].Capacity := g.VertexCount;
-  Visited[Forward].UncBits[aSrc] := True;
-  Visited[Backward].Capacity := g.VertexCount;
-  Visited[Backward].UncBits[aDst] := True;
+  Dist[Forward] := g.CreateIntArray;
+  Dist[Forward][aSrc] := 0;
+  Dist[Backward] := g.CreateIntArray;
+  Dist[Backward][aDst] := 0;
   Queue[Forward].Enqueue(aSrc);
   Queue[Backward].Enqueue(aDst);
+  BestDist := System.High(SizeInt);
   MeetPoint := NULL_INDEX;
   Dir := Forward;
 
   while Queue[Forward].NonEmpty and Queue[Backward].NonEmpty do begin
     Node := Queue[Dir].Dequeue;
-    for p in Inst[Dir].AdjLists[Node]^ do
-      if not Visited[Dir].UncBits[p^.Destination] then begin
+    if(Dist[not Dir][Node] >= 0)and(Dist[Dir][Node] + Dist[not Dir][Node] >= BestDist)then
+      break;
+    CurrDist := Succ(Dist[Dir][Node]);
+    for p in Inst[Dir].AdjLists[Node]^ do begin
+      Next := p^.Destination;
+      if Dist[Dir][Next] < 0 then begin
         if Dir then
-          if not aOnAccept(TEdge.Create(p^.Destination, Node, p^.Data)) then continue else
+          if not aOnAccept(TEdge.Create(Next, Node, p^.Data)) then continue else
         else
           if not aOnAccept(TEdge.Create(Node, p)) then continue;
-        Visited[Dir].UncBits[p^.Destination] := True;
-        Parents[Dir][p^.Destination] := Node;
-        if Visited[not Dir].UncBits[p^.Destination] then begin
-          MeetPoint := p^.Destination;
-          goto Found;
+        Dist[Dir][Next] := CurrDist;
+        Parents[Dir][Next] := Node;
+        Queue[Dir].Enqueue(Next);
+        TempDist := Dist[not Dir][Next];
+        if TempDist >= 0 then begin
+          TempDist += CurrDist;
+          if TempDist < BestDist then begin
+            BestDist := TempDist;
+            MeetPoint := Next;
+          end;
         end;
-        Queue[Dir].Enqueue(p^.Destination);
       end;
+    end;
     if Queue[not Dir].Count < Queue[Dir].Count then
       Dir := not Dir;
   end;
 
   if MeetPoint = NULL_INDEX then exit(nil);
 
-Found:
   Result := TreePathTo(Parents[Backward], MeetPoint);
   TIntHelper.Reverse(Result[0..Result.Length-2]);
   Result := TIntHelper.CreateMerge(TreePathTo(Parents[Forward], MeetPoint), Result[0..Result.Length-2]);
