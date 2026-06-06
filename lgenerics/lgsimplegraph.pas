@@ -3181,8 +3181,7 @@ end;
 
 function TGSimpleGraph.DoAddVertex(const aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
-  Result := not FindOrAdd(aVertex, aIndex);
-  if not Result then exit;
+  if FindOrAdd(aVertex, aIndex) then exit(False);
   FNodeList[aIndex].Tag := aIndex;
   FNodeList[aIndex].Temp := 1;
   if ConnectedValid then
@@ -3190,6 +3189,7 @@ begin
       Inc(FCompCount);
       FConnected := FCompCount = 1;
     end;
+  Result := True;
 end;
 
 procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
