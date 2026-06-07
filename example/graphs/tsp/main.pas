@@ -7,7 +7,8 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls, Spin,
   lgSparseGraph,
-  lgHashSet;
+  lgHashSet,
+  lgAsync;
 
 type
 
@@ -35,11 +36,13 @@ type
     Panel5: TPanel;
     seSize: TSpinEdit;
     seTtl: TSpinEdit;
+    tmrTestTask: TTimer;
     procedure btNewClick(Sender: TObject);
     procedure btStartBnBClick(Sender: TObject);
     procedure btStartGreedyClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure PaintBoxPaint(Sender: TObject);
+    procedure tmrTestTaskTimer(Sender: TObject);
   private
   type
     TSolver      = specialize TGMetricTspHelper<Integer>;
@@ -47,19 +50,24 @@ type
     THashSet     = THashSetSpec.TSet;
 
   const
-    GAP = 5;
-
+    GAP     = 5;
+    RUN_FMT = 'runnning (%d s)';
   var
     FPoints: TPointArray;
     FMatrix: TSolver.TTspMatrix;
+    FBnBTask: specialize TGFuture<Boolean>;
     FGreedyTour,
     FBnBTour: TIntArray;
     FRange: Integer;
     FGreedyTourCost,
-    FBnBTourCost: Integer;
+    FBnBTourCost,
+    FElapsed: Integer;
     FScale: Double;
     procedure NewPoints;
     procedure RunGreedy;
+    procedure DisableCtrls;
+    procedure EnableCtrls;
+    function  GetBnBSolution: Boolean;
     procedure RunBnB;
   public
 
@@ -152,6 +160,28 @@ begin
     end;
 end;
 
+procedure TfrmMain.tmrTestTaskTimer(Sender: TObject);
+begin
+  if FBnBTask.State > atsExecuting then
+    begin
+      tmrTestTask.Enabled := False;
+      EnableCtrls;
+      if FBnBTask.State = atsFinished then begin
+        if FBnBTask.Value then
+          lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(exact)'
+        else
+          lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(approx)';
+        pbBnB.Invalidate;
+      end else
+        lbBnBCost.Caption := '???';;
+    end
+  else
+    begin
+      Inc(FElapsed);
+      lbBnBCost.Caption := Format(RUN_FMT, [FElapsed]);
+    end;
+end;
+
 procedure TfrmMain.NewPoints;
 var
   HashSet: THashSet;
@@ -196,18 +226,42 @@ begin
   pbGreedy.Invalidate;
 end;
 
+procedure TfrmMain.DisableCtrls;
+begin
+  seTtl.Enabled := False;
+  seSize.Enabled := False;
+  btNew.Enabled := False;
+  btStartGreedy.Enabled := False;
+  btStartBnB.Enabled := False;
+  Screen.Cursor := crHourGlass;
+end;
+
+procedure TfrmMain.EnableCtrls;
+begin
+  seTtl.Enabled := True;
+  seSize.Enabled := True;
+  btNew.Enabled := True;
+  btStartGreedy.Enabled := True;
+  btStartBnB.Enabled := True;
+  Screen.Cursor := crDefault;
+end;
+
+function TfrmMain.GetBnBSolution: Boolean;
+begin
+  Result := TSolver.FindExact(FMatrix, FBnBTour, FBnBTourCost, seTtl.Value);
+end;
+
 procedure TfrmMain.RunBnB;
 begin
   if FPoints = nil then
     exit;
   FBnBTour := nil;
-  lbBnBCost.Caption := 'running';
+  FElapsed := 0;
+  lbBnBCost.Caption := Format(RUN_FMT, [FElapsed]);
+  DisableCtrls;
+  FBnBTask := specialize TGAsyncMethod<Boolean>.Call(@GetBnBSolution);
+  tmrTestTask.Enabled := True;
   Application.ProcessMessages;
-  if TSolver.FindExact(FMatrix, FBnBTour, FBnBTourCost, seTtl.Value) then
-    lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(exact)'
-  else
-    lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(approx)';
-  pbBnB.Invalidate;
 end;
 
 end.

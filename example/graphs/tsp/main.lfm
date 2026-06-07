@@ -3,13 +3,12 @@ object frmMain: TfrmMain
   Height = 781
   Top = 250
   Width = 1540
-  Caption = 'frmMain'
+  Caption = 'TSP test'
   ClientHeight = 781
   ClientWidth = 1540
   DesignTimePPI = 115
-  OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '2.0.10.0'
+  OnCreate = FormCreate
   object Panel1: TPanel
     Left = 0
     Height = 781
@@ -143,8 +142,9 @@ object frmMain: TfrmMain
     Width = 96
     Anchors = [akTop, akRight]
     Caption = 'New points'
-    OnClick = btNewClick
+    ModalResult = 3
     TabOrder = 1
+    OnClick = btNewClick
   end
   object btStartGreedy: TButton
     Left = 1436
@@ -153,8 +153,8 @@ object frmMain: TfrmMain
     Width = 96
     Anchors = [akTop, akRight]
     Caption = 'Start greedy'
-    OnClick = btStartGreedyClick
     TabOrder = 2
+    OnClick = btStartGreedyClick
   end
   object Label1: TLabel
     Left = 1436
@@ -183,7 +183,13 @@ object frmMain: TfrmMain
     Width = 96
     Anchors = [akTop, akRight]
     Caption = 'Start BnB'
-    OnClick = btStartBnBClick
     TabOrder = 4
+    OnClick = btStartBnBClick
+  end
+  object tmrTestTask: TTimer
+    Enabled = False
+    OnTimer = tmrTestTaskTimer
+    Left = 67
+    Top = 266
   end
 end
