@@ -57,6 +57,7 @@ type
     FMatrix: TSolver.TTspMatrix;
     FBnBTask: specialize TGFuture<Boolean>;
     FGreedyTour,
+    FBnBTemp,
     FBnBTour: TIntArray;
     FRange: Integer;
     FGreedyTourCost,
@@ -171,6 +172,7 @@ begin
           lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(exact)'
         else
           lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(approx)';
+        FBnBTour := FBnBTemp;
         pbBnB.Invalidate;
       end else
         lbBnBCost.Caption := '???';;
@@ -248,7 +250,7 @@ end;
 
 function TfrmMain.GetBnBSolution: Boolean;
 begin
-  Result := TSolver.FindExact(FMatrix, FBnBTour, FBnBTourCost, seTtl.Value);
+  Result := TSolver.FindExact(FMatrix, FBnBTemp, FBnBTourCost, seTtl.Value);
 end;
 
 procedure TfrmMain.RunBnB;

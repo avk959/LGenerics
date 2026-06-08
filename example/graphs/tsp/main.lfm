@@ -2,10 +2,10 @@ object frmMain: TfrmMain
   Left = 331
   Height = 781
   Top = 250
-  Width = 1540
+  Width = 1569
   Caption = 'TSP test'
   ClientHeight = 781
-  ClientWidth = 1540
+  ClientWidth = 1569
   DesignTimePPI = 115
   Position = poScreenCenter
   OnCreate = FormCreate
@@ -136,10 +136,10 @@ object frmMain: TfrmMain
     end
   end
   object btNew: TButton
-    Left = 1436
+    Left = 1446
     Height = 30
     Top = 80
-    Width = 96
+    Width = 114
     Anchors = [akTop, akRight]
     Caption = 'New points'
     ModalResult = 3
@@ -147,17 +147,17 @@ object frmMain: TfrmMain
     OnClick = btNewClick
   end
   object btStartGreedy: TButton
-    Left = 1436
+    Left = 1446
     Height = 30
     Top = 124
-    Width = 96
+    Width = 114
     Anchors = [akTop, akRight]
     Caption = 'Start greedy'
     TabOrder = 2
     OnClick = btStartGreedyClick
   end
   object Label1: TLabel
-    Left = 1436
+    Left = 1465
     Height = 19
     Top = 12
     Width = 74
@@ -166,10 +166,10 @@ object frmMain: TfrmMain
     ParentColor = False
   end
   object seSize: TSpinEdit
-    Left = 1436
+    Left = 1446
     Height = 27
     Top = 40
-    Width = 96
+    Width = 112
     Anchors = [akTop, akRight]
     MaxValue = 500
     MinValue = 10
@@ -177,10 +177,10 @@ object frmMain: TfrmMain
     Value = 25
   end
   object btStartBnB: TButton
-    Left = 1436
+    Left = 1446
     Height = 30
     Top = 168
-    Width = 96
+    Width = 114
     Anchors = [akTop, akRight]
     Caption = 'Start BnB'
     TabOrder = 4
