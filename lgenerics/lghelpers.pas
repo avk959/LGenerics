@@ -1801,25 +1801,24 @@ const
     exponent := (bits and EXP_MASK) shr (SIGNIFICAND_SIZE - 1);
 
     // Infinity or NaN
-    if exponent = MAX_IEEE_EXPONENT then
-      if significand = 0 then begin
-        if (bits and SIGN_FLAG) <> 0 then begin
-          aBuffer[0] := '-';
-          Inc(aBuffer);
-        end;
-        Move(sInf[1], aBuffer^, System.Length(sInf));
-        Result := aBuffer + System.Length(sInf);
-        exit;
-      end else begin
-        if bits and QUIET_FLAG <> 0 then begin
-          Move(sQNan[1], aBuffer^, System.Length(sQNan));
-          Result := aBuffer + System.Length(sQNan);
-        end else begin
-          Move(sSNan[1], aBuffer^, System.Length(sSNan));
-          Result := aBuffer + System.Length(sSNan);
-        end;
-        exit;
+    if exponent = MAX_IEEE_EXPONENT then begin
+      if (bits and SIGN_FLAG) <> 0 then begin
+        aBuffer[0] := '-';
+        Inc(aBuffer);
       end;
+      if significand = 0 then begin
+        System.Move(sInf[1], aBuffer^, System.Length(sInf));
+        aBuffer += System.Length(sInf);
+      end else
+        if bits and QUIET_FLAG <> 0 then begin
+          System.Move(sQNan[1], aBuffer^, System.Length(sQNan));
+          aBuffer += System.Length(sQNan);
+        end else begin
+          System.Move(sSNan[1], aBuffer^, System.Length(sSNan));
+          aBuffer += System.Length(sSNan);
+        end;
+      exit(aBuffer);
+    end;
 
     // Finite number
     if (bits and SIGN_FLAG) <> 0 then begin
