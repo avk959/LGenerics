@@ -1252,7 +1252,7 @@ type
   procedure Double2Str(aValue: Double; out s: shortstring; aDecimalSeparator: AnsiChar = '.');
   function  Double2Str(aValue: Double; aDecimalSeparator: AnsiChar = '.'): string;
   function  Double2Str(aValue: Double; aForceShowFrac: Boolean; aDecimalSeparator: AnsiChar = '.'): string;
-{ uses DefaultFormatSettins.DecimalSeparator as aDecimalSeparator }
+{ uses DefaultFormatSettins.DecimalSeparator as the decimal separator }
   function  Double2StrDef(aValue: Double): string;
 { tries to convert a string in decimal or scientific notation to a Double value aValue;
   mostly RFC 8259 compliant: does not accept leading and trailing spaces, leading plus,
