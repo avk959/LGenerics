@@ -1717,6 +1717,7 @@ const
     NumDigits := DecimalLen(aDigs);
     DecPoint := NumDigits + aExp;
     UseFixed := (MIN_FIXED <= DecPoint) and (DecPoint <= MAX_FIXED);
+    FillChar(aBuf^, 32, '0');
 
     if UseFixed then
       if DecPoint <= 0 then
