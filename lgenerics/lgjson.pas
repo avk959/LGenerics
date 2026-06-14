@@ -1251,7 +1251,7 @@ type
   uses Ryū Double-to-String conversion algorithm }
   procedure Double2Str(aValue: Double; out s: shortstring; aDecimalSeparator: AnsiChar = '.');
   function  Double2Str(aValue: Double; aDecimalSeparator: AnsiChar = '.'): string;
-  function  Double2Str(aValue: Double; AlwaysShowFrac: Boolean; aDecimalSeparator: AnsiChar = '.'): string;
+  function  Double2Str(aValue: Double; aForceShowFrac: Boolean; aDecimalSeparator: AnsiChar = '.'): string;
 { uses DefaultFormatSettins.DecimalSeparator as aDecimalSeparator }
   function  Double2StrDef(aValue: Double): string;
 { tries to convert a string in decimal or scientific notation to a Double value aValue;
@@ -3988,14 +3988,14 @@ begin
   System.Move(s[1], Pointer(Result)^, System.Length(s));
 end;
 
-function Double2Str(aValue: Double; AlwaysShowFrac: Boolean; aDecimalSeparator: AnsiChar): string;
+function Double2Str(aValue: Double; aForceShowFrac: Boolean; aDecimalSeparator: AnsiChar): string;
 var
   s: shortstring;
   Len: Integer;
 begin
   Result := '';
   Double2Str(aValue, s, aDecimalSeparator);
-  if AlwaysShowFrac and Double.IsExactInt(aValue) then
+  if aForceShowFrac and Double.IsExactInt(aValue) then
     begin
       Len := System.Length(s);
       System.SetLength(Result, Len + 2);
