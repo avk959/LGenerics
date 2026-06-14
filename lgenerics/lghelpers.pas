@@ -214,6 +214,14 @@ type
   { returns the value of a unit in the last place(JH version) if aNum is a finite number,
     otherwise returns Abs(aNum) }
     class function Ulp(const aNum: Single): Single; static;
+  { converts the value aNum to its shortest possible decimal representation s;
+    returns the length of s; uses Schubfach float-to-string conversion algorithm }
+    class function ToDecString(const aNum: Single; out s: shortstring; aDecSeparator: AnsiChar = '.';
+                               aForceShowFrac: Boolean = False): Integer; static;
+    class function ToDecString(const aNum: Single; aDecSeparator: AnsiChar = '.';
+                               aForceShowFrac: Boolean = False): string; static;
+  { uses the current locale's decimal separator }
+    class function ToDecStringDef(const aNum: Single; aForceShowFrac: Boolean = False): string; static;
     function  IsZero: Boolean; inline;
     function  IsFinite: Boolean; inline;
     function  IsExactInt: Boolean; inline;
@@ -228,6 +236,8 @@ type
     function  NextToward(const aValue: Single): Single; inline;
     function  Quantum: Single; inline;
     function  Ulp: Single; inline;
+    function  ToDecString(aDecSep: AnsiChar = '.'; aForceShowFrac: Boolean = False): string;
+    function  ToDecStringDef(aForceShowFrac: Boolean = False): string;
   end;
 
   TGDoubleHelper = type helper(TDoubleHelper) for Double
@@ -1373,6 +1383,482 @@ begin
     Result -= NextAfter(Result, -1);
 end;
 
+{ Pascal port of the Alexander Bolz's implementation of the Schubfach algorithm for
+  single-precision floating-point numbers (https://github.com/abolz/Drachennest) }
+class function TGSingleHelper.ToDecString(const aNum: Single; out s: shortstring; aDecSeparator: AnsiChar;
+  aForceShowFrac: Boolean): Integer;
+type
+  TSingleRepr = record
+    digits: UInt32;
+    exponent: Int32;
+  end;
+const
+  SIGNIFICAND_SIZE  = 24;          // p (includes hidden bit)
+  EXPONENT_BIAS     = 150;         // max_exp-1 + (p-1) = 128-1+23
+  HIDDEN_BIT        = UInt32(1) shl 23;
+  SIGNIFICAND_MASK  = HIDDEN_BIT - 1;
+  MAX_IEEE_EXPONENT = $FF;
+  { floor division by power of two (arithmetic right shift) }
+  function FloorDivPow2(x: Int32; n: Int32): Int32; inline;
+  begin
+    Result := SarLongint(x, n);
+  end;
+  { floor(log2(10^e)) }
+  function FloorLog2Pow10(e: Int32): Int32; inline;
+  begin
+    Assert(e >= -1233); Assert(e <= 1233);
+    Result := FloorDivPow2(e * 1741647, 19);
+  end;
+  function ComputePow10(k: Int32): UInt64; inline;
+  const
+    K_MIN = -31;
+    K_MAX =  45;
+    g: array[K_MIN..K_MAX] of UInt64 = (
+      UInt64($81CEB32C4B43FCF5), // -31
+      UInt64($A2425FF75E14FC32), // -30
+      UInt64($CAD2F7F5359A3B3F), // -29
+      UInt64($FD87B5F28300CA0E), // -28
+      UInt64($9E74D1B791E07E49), // -27
+      UInt64($C612062576589DDB), // -26
+      UInt64($F79687AED3EEC552), // -25
+      UInt64($9ABE14CD44753B53), // -24
+      UInt64($C16D9A0095928A28), // -23
+      UInt64($F1C90080BAF72CB2), // -22
+      UInt64($971DA05074DA7BEF), // -21
+      UInt64($BCE5086492111AEB), // -20
+      UInt64($EC1E4A7DB69561A6), // -19
+      UInt64($9392EE8E921D5D08), // -18
+      UInt64($B877AA3236A4B44A), // -17
+      UInt64($E69594BEC44DE15C), // -16
+      UInt64($901D7CF73AB0ACDA), // -15
+      UInt64($B424DC35095CD810), // -14
+      UInt64($E12E13424BB40E14), // -13
+      UInt64($8CBCCC096F5088CC), // -12
+      UInt64($AFEBFF0BCB24AAFF), // -11
+      UInt64($DBE6FECEBDEDD5BF), // -10
+      UInt64($89705F4136B4A598), // -9
+      UInt64($ABCC77118461CEFD), // -8
+      UInt64($D6BF94D5E57A42BD), // -7
+      UInt64($8637BD05AF6C69B6), // -6
+      UInt64($A7C5AC471B478424), // -5
+      UInt64($D1B71758E219652C), // -4
+      UInt64($83126E978D4FDF3C), // -3
+      UInt64($A3D70A3D70A3D70B), // -2
+      UInt64($CCCCCCCCCCCCCCCD), // -1
+      UInt64($8000000000000000), //  0
+      UInt64($A000000000000000), //  1
+      UInt64($C800000000000000), //  2
+      UInt64($FA00000000000000), //  3
+      UInt64($9C40000000000000), //  4
+      UInt64($C350000000000000), //  5
+      UInt64($F424000000000000), //  6
+      UInt64($9896800000000000), //  7
+      UInt64($BEBC200000000000), //  8
+      UInt64($EE6B280000000000), //  9
+      UInt64($9502F90000000000), // 10
+      UInt64($BA43B74000000000), // 11
+      UInt64($E8D4A51000000000), // 12
+      UInt64($9184E72A00000000), // 13
+      UInt64($B5E620F480000000), // 14
+      UInt64($E35FA931A0000000), // 15
+      UInt64($8E1BC9BF04000000), // 16
+      UInt64($B1A2BC2EC5000000), // 17
+      UInt64($DE0B6B3A76400000), // 18
+      UInt64($8AC7230489E80000), // 19
+      UInt64($AD78EBC5AC620000), // 20
+      UInt64($D8D726B7177A8000), // 21
+      UInt64($878678326EAC9000), // 22
+      UInt64($A968163F0A57B400), // 23
+      UInt64($D3C21BCECCEDA100), // 24
+      UInt64($84595161401484A0), // 25
+      UInt64($A56FA5B99019A5C8), // 26
+      UInt64($CECB8F27F4200F3A), // 27
+      UInt64($813F3978F8940985), // 28
+      UInt64($A18F07D736B90BE6), // 29
+      UInt64($C9F2C9CD04674EDF), // 30
+      UInt64($FC6F7C4045812297), // 31
+      UInt64($9DC5ADA82B70B59E), // 32
+      UInt64($C5371912364CE306), // 33
+      UInt64($F684DF56C3E01BC7), // 34
+      UInt64($9A130B963A6C115D), // 35
+      UInt64($C097CE7BC90715B4), // 36
+      UInt64($F0BDC21ABB48DB21), // 37
+      UInt64($96769950B50D88F5), // 38
+      UInt64($BC143FA4E250EB32), // 39
+      UInt64($EB194F8E1AE525FE), // 40
+      UInt64($92EFD1B8D0CF37BF), // 41
+      UInt64($B7ABC627050305AE), // 42
+      UInt64($E596B7B0C643C71A), // 43
+      UInt64($8F7E32CE7BEA5C70), // 44
+      UInt64($B35DBF821AE4F38C)  // 45
+    );
+  begin
+    Result := g[k];
+  end;
+  { RoundToOdd: returns (y1 | (y0 > 1)) where y1:y0 are bits 32..95 of g * cp }
+  function RoundToOdd(g: UInt64; cp: UInt32): UInt32;
+  var
+    b01, b11, hi: UInt64;
+    lo_g, hi_g: UInt32;
+  begin
+    lo_g := UInt32(g);
+    hi_g := UInt32(g shr 32);
+    b01 := UInt64(lo_g) * cp;
+    b11 := UInt64(hi_g) * cp;
+    hi := b11 + (b01 shr 32);
+    Result := UInt32(hi shr 32) or (Ord((hi and $FFFFFFFF) > 1));
+  end;
+  { check if value is divisible by 2^e2 }
+  function MultipleOfPow2(value: UInt32; e2: Int32): Boolean; inline;
+  begin
+    Result := (value and ((UInt32(1) shl e2) - 1)) = 0;
+  end;
+  { core conversion algorithm }
+  function ToDecimalRepr(ieee_significand, ieee_exponent: UInt32): TSingleRepr;
+  var
+    pow10: UInt64;
+    c, cbl, cb, cbr, vbl, vb, vbr, lower, upper, s, sp, mid: UInt32;
+    q, k, h: Int32;
+    is_even, accept_lower, accept_upper, lower_boundary_is_closer, up_inside,
+    wp_inside, u_inside, w_inside, round_up: Boolean;
+  begin
+    if ieee_exponent <> 0 then begin
+      c := HIDDEN_BIT or ieee_significand;
+      q := Int32(ieee_exponent) - EXPONENT_BIAS;
+      if (0 <= -q) and (-q < SIGNIFICAND_SIZE) and MultipleOfPow2(c, -q) then begin
+        Result.digits := c shr (-q);
+        Result.exponent := 0;
+        exit;
+      end;
+    end else begin
+      c := ieee_significand;
+      q := 1 - EXPONENT_BIAS;
+    end;
+
+    is_even := not System.Odd(c);
+    accept_lower := is_even;
+    accept_upper := is_even;
+    lower_boundary_is_closer := (ieee_significand = 0) and (ieee_exponent > 1);
+
+    cbl := 4 * c - 2 + Ord(lower_boundary_is_closer);
+    cb  := 4 * c;
+    cbr := 4 * c + 2;
+
+    k := FloorDivPow2(q * 1262611 - (Ord(lower_boundary_is_closer) * 524031), 22);
+    h := q + FloorLog2Pow10(-k) + 1;
+    Assert(h >= 1); Assert(h <= 4);
+
+    pow10 := ComputePow10(-k);
+    vbl := RoundToOdd(pow10, cbl shl h);
+    vb  := RoundToOdd(pow10, cb  shl h);
+    vbr := RoundToOdd(pow10, cbr shl h);
+
+    lower := vbl + Ord(not accept_lower);
+    upper := vbr - Ord(not accept_upper);
+
+    s := vb shr 2;
+
+    if s >= 10 then begin
+      sp := s div 10;
+      up_inside := lower <= 40 * sp;
+      wp_inside := 40 * sp + 40 <= upper;
+      if up_inside <> wp_inside then begin
+        if wp_inside then
+          Result.digits := sp + 1
+        else
+          Result.digits := sp;
+        Result.exponent := k + 1;
+        exit;
+      end;
+    end;
+
+    u_inside := lower <= 4 * s;
+    w_inside := 4 * s + 4 <= upper;
+    if u_inside <> w_inside then begin
+      if w_inside then
+        Result.digits := s + 1
+      else
+        Result.digits := s;
+      Result.exponent := k;
+      exit;
+    end;
+
+    mid := 4 * s + 2;
+    round_up := (vb > mid) or ((vb = mid) and ((s and 1) <> 0));
+    if round_up then
+      Result.digits := s + 1
+    else
+      Result.digits := s;
+    Result.exponent := k;
+  end;
+  { helper for two digit conversion }
+  procedure Print2Digits(aBuffer: PAnsiChar; aIndex: UInt32);
+  const
+    Digits100: array[0..199] of Char = (
+      '0','0','0','1','0','2','0','3','0','4','0','5','0','6','0','7','0','8','0','9',
+      '1','0','1','1','1','2','1','3','1','4','1','5','1','6','1','7','1','8','1','9',
+      '2','0','2','1','2','2','2','3','2','4','2','5','2','6','2','7','2','8','2','9',
+      '3','0','3','1','3','2','3','3','3','4','3','5','3','6','3','7','3','8','3','9',
+      '4','0','4','1','4','2','4','3','4','4','4','5','4','6','4','7','4','8','4','9',
+      '5','0','5','1','5','2','5','3','5','4','5','5','5','6','5','7','5','8','5','9',
+      '6','0','6','1','6','2','6','3','6','4','6','5','6','6','6','7','6','8','6','9',
+      '7','0','7','1','7','2','7','3','7','4','7','5','7','6','7','7','7','8','7','9',
+      '8','0','8','1','8','2','8','3','8','4','8','5','8','6','8','7','8','8','8','9',
+      '9','0','9','1','9','2','9','3','9','4','9','5','9','6','9','7','9','8','9','9'
+    );
+  begin
+    aBuffer[0] := Digits100[aIndex shl 1];
+    aBuffer[1] := Digits100[Succ(aIndex shl 1)];
+  end;
+  function TrailingZeros2Digits(digits: UInt32): Int32; inline;
+  const
+    TrailingZeros: array[0..99] of Int8 = (
+      2,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+      1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+    );
+  begin
+    Result := TrailingZeros[digits];
+  end;
+  { Print decimal digits backwards into the buffer, return number of trailing zeros }
+  function PrintDigitsBackwards(buf: PChar; output: UInt32): Int32;
+  var
+    p: PAnsiChar;
+    q, r, rH, rL: UInt32;
+    tz, nd: Int32;
+  begin
+    p := buf;
+    tz := 0;
+    nd := 0;
+
+    if output >= 10000 then begin
+      q := output div 10000;
+      r := output - q*10000;
+      output := q;
+      Dec(p, 4);
+      if r <> 0 then begin
+        rH := r div 100;
+        rL := r - rH*100;
+        Print2Digits(p, rH);
+        Print2Digits(p + 2, rL);
+        if rL = 0 then
+          tz := TrailingZeros2Digits(rH) + 2
+        else
+          tz := TrailingZeros2Digits(rL);
+      end else
+        tz := 4;
+      nd := 4;
+    end;
+
+    if output >= 100 then begin
+      q := output div 100;
+      r := output - q*100;
+      output := q;
+      Dec(p, 2);
+      Print2Digits(p, r);
+      if tz = nd then
+        Inc(tz, TrailingZeros2Digits(r));
+      Inc(nd, 2);
+
+      if output >= 100 then begin
+        q := output div 100;
+        r := output - q*100;
+        output := q;
+        Dec(p, 2);
+        Print2Digits(p, r);
+        if tz = nd then
+          Inc(tz, TrailingZeros2Digits(r));
+        Inc(nd, 2);
+      end;
+    end;
+
+    // remaining 1 or 2 digits
+    if output >= 10 then begin
+      Dec(p, 2);
+      Print2Digits(p, output);
+      if tz = nd then
+        Inc(tz, TrailingZeros2Digits(output));
+    end else begin
+      Dec(p);
+      p^ := Char(Ord('0') + output);
+    end;
+
+    Result := tz;
+  end;
+  function DecimalLen(v: UInt32): Int32; inline;
+  begin
+    if v < 10000 then
+      if v < 100 then
+        Result := 2 - Ord(v < 10)
+      else
+        Result := 4 - Ord(v < 1000)
+    else
+      if v < 100000000 then
+        if v < 1000000 then
+          Result := 6 - Ord(v < 100000)
+        else
+          Result := 8 - Ord(v < 10000000)
+      else
+        Result := 9;
+  end;
+  { format decimal digits into final string representation;
+    returns pointer after last written character }
+  function FormatDigits(aBuf: PAnsiChar; aDigs: UInt32; aExp: Int32; aDecSep: AnsiChar;
+    aForceShowFrac: Boolean): PAnsiChar;
+  const
+    MIN_FIXED = -4;
+    MAX_FIXED = 9;
+  var
+    //tmp: array[0..31] of AnsiChar;
+    DigitsEnd: PAnsiChar;
+    NumDigits, DecPoint, tz, DecDigitsPos, ScientificExp: Int32;
+    k: UInt32;
+    UseFixed: Boolean;
+  begin
+    NumDigits := DecimalLen(aDigs);
+    DecPoint := NumDigits + aExp;
+    UseFixed := (MIN_FIXED <= DecPoint) and (DecPoint <= MAX_FIXED);
+
+    if UseFixed then
+      if DecPoint <= 0 then
+        DecDigitsPos := 2 - DecPoint   // "0.[000]aDigs"
+      else
+        DecDigitsPos := 0              // "dig.its" or "aDigs[000]"
+    else
+      DecDigitsPos := 1;               // "dE+123" or "d.igitsE+123"
+
+    DigitsEnd := aBuf + DecDigitsPos + NumDigits;
+    tz := PrintDigitsBackwards(DigitsEnd, aDigs);
+    Dec(DigitsEnd, tz);
+    Dec(NumDigits, tz);
+
+    if UseFixed then begin
+      if DecPoint <= 0 then begin
+        // "0.[000]aDigs"
+        aBuf[1] := aDecSep;
+        Result := DigitsEnd;
+      end else
+        if DecPoint < NumDigits then begin
+          // "dig.its"
+          Move(aBuf[DecPoint], aBuf[DecPoint + 1], NumDigits - DecPoint);
+          aBuf[DecPoint] := aDecSep;
+          Result := DigitsEnd + 1;
+        end else begin
+          // "aDigs[000]"
+          Result := aBuf + DecPoint;
+          if aForceShowFrac then
+          begin
+            Result^ := aDecSep;
+            Result[1] := '0';
+            Inc(Result, 2);
+          end;
+        end;
+    end else begin
+      // scientific notation
+      aBuf[0] := aBuf[1];   // move first digit one left
+      if NumDigits = 1 then begin
+        // "dE+123"
+        Result := aBuf + 1;
+      end else begin
+        // "d.igitsE+123"
+        aBuf[1] := aDecSep;
+        Result := DigitsEnd;
+      end;
+
+      ScientificExp := DecPoint - 1;
+      if ScientificExp < 0 then begin
+        Result^ := 'E';
+        Result[1] := '-';
+        k := UInt32(-ScientificExp);
+      end else begin
+        Result^ := 'E';
+        Result[1] := '+';
+        k := UInt32(ScientificExp);
+      end;
+      Inc(Result, 2);
+
+      if k < 10 then begin
+        Result^ := AnsiChar(Ord('0') + k);
+        Inc(Result);
+      end else begin
+        Print2Digits(Result, k);
+        Inc(Result, 2);
+      end;
+    end;
+  end;
+  function ToDecimal(aBuffer: PAnsiChar; const aValue: Single; aDecSep: AnsiChar;
+    aForceShowFrac: Boolean): PAnsiChar;
+  var
+    bits: UInt32 absolute aValue;
+    repr: TSingleRepr;
+    significand, exponent: UInt32;
+  const
+    sInf  = 'Infinity';
+    sQNan = 'qNaN';
+    sSNan = 'sNaN';
+  begin
+    significand := bits and SIGNIFICAND_MASK;
+    exponent := (bits and EXP_MASK) shr (SIGNIFICAND_SIZE - 1);
+
+    // Infinity or NaN
+    if exponent = MAX_IEEE_EXPONENT then
+      if significand = 0 then begin
+        if (bits and SIGN_FLAG) <> 0 then begin
+          aBuffer[0] := '-';
+          Inc(aBuffer);
+        end;
+        Move(sInf[1], aBuffer^, System.Length(sInf));
+        Result := aBuffer + System.Length(sInf);
+        exit;
+      end else begin
+        if bits and QUIET_FLAG <> 0 then begin
+          Move(sQNan[1], aBuffer^, System.Length(sQNan));
+          Result := aBuffer + System.Length(sQNan);
+        end else begin
+          Move(sSNan[1], aBuffer^, System.Length(sSNan));
+          Result := aBuffer + System.Length(sSNan);
+        end;
+        exit;
+      end;
+
+    // Finite number
+    if (bits and SIGN_FLAG) <> 0 then begin
+      aBuffer[0] := '-';
+      Inc(aBuffer);
+    end;
+
+    if (exponent <> 0) or (significand <> 0) then begin
+      repr := ToDecimalRepr(significand, exponent);
+      Result := FormatDigits(aBuffer, repr.digits, repr.exponent, aDecSep, aForceShowFrac);
+    end else begin
+      // Zero
+      aBuffer[0] := '0';
+      Inc(aBuffer);
+      if aForceShowFrac then begin
+        aBuffer^ := aDecSep;
+        aBuffer[1] := '0';
+        Inc(aBuffer, 2);
+      end;
+      Result := aBuffer;
+    end;
+  end;
+begin
+  Result := ToDecimal(@s[1], aNum, aDecSeparator, aForceShowFrac) - PAnsiChar(@s[1]);
+  System.SetLength(s, Result);
+end;
+
+class function TGSingleHelper.ToDecString(const aNum: Single; aDecSeparator: AnsiChar; aForceShowFrac: Boolean): string;
+var
+  ss: shortstring;
+begin
+  System.SetLength(Result, ToDecString(aNum, ss, aDecSeparator, aForceShowFrac));
+  System.Move(ss[1], Pointer(Result)^, System.Length(Result));
+end;
+
+class function TGSingleHelper.ToDecStringDef(const aNum: Single; aForceShowFrac: Boolean): string;
+begin
+  Result := ToDecString(aNum, FormatSettings.DecimalSeparator, aForceShowFrac);
+end;
+
 function TGSingleHelper.IsZero: Boolean;
 begin
   Result:= IsZero(Self);
@@ -1441,6 +1927,16 @@ end;
 function TGSingleHelper.Ulp: Single;
 begin
   Result := Ulp(Self);
+end;
+
+function TGSingleHelper.ToDecString(aDecSep: AnsiChar; aForceShowFrac: Boolean): string;
+begin
+  Result := ToDecString(Self, aDecSep, aForceShowFrac);
+end;
+
+function TGSingleHelper.ToDecStringDef(aForceShowFrac: Boolean): string;
+begin
+  Result := ToDecStringDef(Self, aForceShowFrac);
 end;
 
 class function TGDoubleHelper.IsZero(const aValue: Double): Boolean;
