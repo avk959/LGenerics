@@ -1387,11 +1387,6 @@ end;
   single-precision floating-point numbers (https://github.com/abolz/Drachennest) }
 class function TGSingleHelper.ToDecString(const aNum: Single; out s: shortstring; aDecSeparator: AnsiChar;
   aForceShowFrac: Boolean): Integer;
-type
-  TSingleRepr = record
-    digits: UInt32;
-    exponent: Int32;
-  end;
 const
   SIGNIFICAND_SIZE  = 24;          // p (includes hidden bit)
   EXPONENT_BIAS     = 150;         // max_exp-1 + (p-1) = 128-1+23
@@ -1513,6 +1508,13 @@ const
   begin
     Result := (value and ((UInt32(1) shl e2) - 1)) = 0;
   end;
+
+type
+  TSingleRepr = record
+    digits: UInt32;
+    exponent: Int32;
+  end;
+
   { core conversion algorithm }
   function ToDecimalRepr(ieee_significand, ieee_exponent: UInt32): TSingleRepr;
   var
@@ -1679,7 +1681,7 @@ const
         Inc(tz, TrailingZeros2Digits(output));
     end else begin
       Dec(p);
-      p^ := Char(Ord('0') + output);
+      p^ := AnsiChar(Ord('0') + output);
     end;
 
     Result := tz;
@@ -1704,20 +1706,26 @@ const
     returns pointer after last written character }
   function FormatDigits(aBuf: PAnsiChar; aDigs: UInt32; aExp: Int32; aDecSep: AnsiChar;
     aForceShowFrac: Boolean): PAnsiChar;
+  type
+    TChar16 = array[0..15] of AnsiChar;
+    PChar16 = ^TChar16;
   const
     MIN_FIXED = -4;
     MAX_FIXED = 9;
+    ZERO_16: TChar16 = '0000000000000000';
   var
-    //tmp: array[0..31] of AnsiChar;
     DigitsEnd: PAnsiChar;
     NumDigits, DecPoint, tz, DecDigitsPos, ScientificExp: Int32;
     k: UInt32;
     UseFixed: Boolean;
   begin
+    Assert(aDigs >= 1); Assert(aDigs <= 999999999);
+    Assert(aExp >= -99); Assert(aExp <= 99);
+
     NumDigits := DecimalLen(aDigs);
     DecPoint := NumDigits + aExp;
-    UseFixed := (MIN_FIXED <= DecPoint) and (DecPoint <= MAX_FIXED);
-    FillChar(aBuf^, 32, '0');
+    UseFixed := (DecPoint >= MIN_FIXED) and (DecPoint <= MAX_FIXED);
+    PChar16(aBuf)^ := ZERO_16;
 
     if UseFixed then
       if DecPoint <= 0 then
@@ -1740,7 +1748,7 @@ const
       end else
         if DecPoint < NumDigits then begin
           // "dig.its"
-          Move(aBuf[DecPoint], aBuf[DecPoint + 1], NumDigits - DecPoint);
+          System.Move(aBuf[DecPoint], aBuf[DecPoint + 1], NumDigits - DecPoint);
           aBuf[DecPoint] := aDecSep;
           Result := DigitsEnd + 1;
         end else begin
@@ -1755,7 +1763,7 @@ const
         end;
     end else begin
       // scientific notation
-      aBuf[0] := aBuf[1];   // move first digit one left
+      aBuf[0] := aBuf[1];
       if NumDigits = 1 then begin
         // "dE+123"
         Result := aBuf + 1;
