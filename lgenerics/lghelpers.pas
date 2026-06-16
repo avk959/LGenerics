@@ -1799,9 +1799,9 @@ type
     repr: TSingleRepr;
     significand, exponent: UInt32;
   const
-    sInf  = 'Infinity';
-    sQNan = 'qNaN';
-    sSNan = 'sNaN';
+    S_INF  = 'Infinity';
+    S_QNAN = 'qNaN';
+    S_SNAN = 'sNaN';
   begin
     significand := bits and SIGNIFICAND_MASK;
     exponent := (bits and EXP_MASK) shr (SIGNIFICAND_SIZE - 1);
@@ -1813,15 +1813,15 @@ type
         Inc(aBuffer);
       end;
       if significand = 0 then begin
-        System.Move(sInf[1], aBuffer^, System.Length(sInf));
-        aBuffer += System.Length(sInf);
+        System.Move(S_INF[1], aBuffer^, System.Length(S_INF));
+        aBuffer += System.Length(S_INF);
       end else
         if bits and QUIET_FLAG <> 0 then begin
-          System.Move(sQNan[1], aBuffer^, System.Length(sQNan));
-          aBuffer += System.Length(sQNan);
+          System.Move(S_QNAN[1], aBuffer^, System.Length(S_QNAN));
+          aBuffer += System.Length(S_QNAN);
         end else begin
-          System.Move(sSNan[1], aBuffer^, System.Length(sSNan));
-          aBuffer += System.Length(sSNan);
+          System.Move(S_SNAN[1], aBuffer^, System.Length(S_SNAN));
+          aBuffer += System.Length(S_SNAN);
         end;
       exit(aBuffer);
     end;
