@@ -1501,7 +1501,7 @@ const
     b01 := UInt64(lo_g) * cp;
     b11 := UInt64(hi_g) * cp;
     hi := b11 + (b01 shr 32);
-    Result := UInt32(hi shr 32) or (Ord((hi and $FFFFFFFF) > 1));
+    Result := UInt32(hi shr 32) or Ord(hi and $FFFFFFFF > 1);
   end;
   { check if value is divisible by 2^e2 }
   function MultipleOfPow2(value: UInt32; e2: Int32): Boolean; inline;
@@ -1729,9 +1729,9 @@ type
 
     if UseFixed then
       if DecPoint <= 0 then
-        DecDigitsPos := 2 - DecPoint   // "0.[000]aDigs"
+        DecDigitsPos := 2 - DecPoint   // 0.[000]digits
       else
-        DecDigitsPos := 0              // "dig.its" or "aDigs[000]"
+        DecDigitsPos := 0              // dig.its" or "digits[000]
     else
       DecDigitsPos := 1;               // "dE+123" or "d.igitsE+123"
 
@@ -1742,17 +1742,17 @@ type
 
     if UseFixed then begin
       if DecPoint <= 0 then begin
-        // "0.[000]aDigs"
+        // 0.[000]digits
         aBuf[1] := aDecSep;
         Result := DigitsEnd;
       end else
         if DecPoint < NumDigits then begin
-          // "dig.its"
+          // dig.its
           System.Move(aBuf[DecPoint], aBuf[DecPoint + 1], NumDigits - DecPoint);
           aBuf[DecPoint] := aDecSep;
           Result := DigitsEnd + 1;
         end else begin
-          // "aDigs[000]"
+          // digits[000]
           Result := aBuf + DecPoint;
           if aForceShowFrac then
           begin
@@ -1774,16 +1774,14 @@ type
       end;
 
       ScientificExp := DecPoint - 1;
+      Result^ := 'E';
+      Inc(Result);
       if ScientificExp < 0 then begin
-        Result^ := 'E';
-        Result[1] := '-';
+        Result^ := '-';
         k := UInt32(-ScientificExp);
-      end else begin
-        Result^ := 'E';
-        Result[1] := '+';
+        Inc(Result);
+      end else
         k := UInt32(ScientificExp);
-      end;
-      Inc(Result, 2);
 
       if k < 10 then begin
         Result^ := AnsiChar(Ord('0') + k);
