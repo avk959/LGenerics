@@ -1409,83 +1409,26 @@ const
     K_MIN = -31;
     K_MAX =  45;
     g: array[K_MIN..K_MAX] of UInt64 = (
-      UInt64($81CEB32C4B43FCF5), // -31
-      UInt64($A2425FF75E14FC32), // -30
-      UInt64($CAD2F7F5359A3B3F), // -29
-      UInt64($FD87B5F28300CA0E), // -28
-      UInt64($9E74D1B791E07E49), // -27
-      UInt64($C612062576589DDB), // -26
-      UInt64($F79687AED3EEC552), // -25
-      UInt64($9ABE14CD44753B53), // -24
-      UInt64($C16D9A0095928A28), // -23
-      UInt64($F1C90080BAF72CB2), // -22
-      UInt64($971DA05074DA7BEF), // -21
-      UInt64($BCE5086492111AEB), // -20
-      UInt64($EC1E4A7DB69561A6), // -19
-      UInt64($9392EE8E921D5D08), // -18
-      UInt64($B877AA3236A4B44A), // -17
-      UInt64($E69594BEC44DE15C), // -16
-      UInt64($901D7CF73AB0ACDA), // -15
-      UInt64($B424DC35095CD810), // -14
-      UInt64($E12E13424BB40E14), // -13
-      UInt64($8CBCCC096F5088CC), // -12
-      UInt64($AFEBFF0BCB24AAFF), // -11
-      UInt64($DBE6FECEBDEDD5BF), // -10
-      UInt64($89705F4136B4A598), // -9
-      UInt64($ABCC77118461CEFD), // -8
-      UInt64($D6BF94D5E57A42BD), // -7
-      UInt64($8637BD05AF6C69B6), // -6
-      UInt64($A7C5AC471B478424), // -5
-      UInt64($D1B71758E219652C), // -4
-      UInt64($83126E978D4FDF3C), // -3
-      UInt64($A3D70A3D70A3D70B), // -2
-      UInt64($CCCCCCCCCCCCCCCD), // -1
-      UInt64($8000000000000000), //  0
-      UInt64($A000000000000000), //  1
-      UInt64($C800000000000000), //  2
-      UInt64($FA00000000000000), //  3
-      UInt64($9C40000000000000), //  4
-      UInt64($C350000000000000), //  5
-      UInt64($F424000000000000), //  6
-      UInt64($9896800000000000), //  7
-      UInt64($BEBC200000000000), //  8
-      UInt64($EE6B280000000000), //  9
-      UInt64($9502F90000000000), // 10
-      UInt64($BA43B74000000000), // 11
-      UInt64($E8D4A51000000000), // 12
-      UInt64($9184E72A00000000), // 13
-      UInt64($B5E620F480000000), // 14
-      UInt64($E35FA931A0000000), // 15
-      UInt64($8E1BC9BF04000000), // 16
-      UInt64($B1A2BC2EC5000000), // 17
-      UInt64($DE0B6B3A76400000), // 18
-      UInt64($8AC7230489E80000), // 19
-      UInt64($AD78EBC5AC620000), // 20
-      UInt64($D8D726B7177A8000), // 21
-      UInt64($878678326EAC9000), // 22
-      UInt64($A968163F0A57B400), // 23
-      UInt64($D3C21BCECCEDA100), // 24
-      UInt64($84595161401484A0), // 25
-      UInt64($A56FA5B99019A5C8), // 26
-      UInt64($CECB8F27F4200F3A), // 27
-      UInt64($813F3978F8940985), // 28
-      UInt64($A18F07D736B90BE6), // 29
-      UInt64($C9F2C9CD04674EDF), // 30
-      UInt64($FC6F7C4045812297), // 31
-      UInt64($9DC5ADA82B70B59E), // 32
-      UInt64($C5371912364CE306), // 33
-      UInt64($F684DF56C3E01BC7), // 34
-      UInt64($9A130B963A6C115D), // 35
-      UInt64($C097CE7BC90715B4), // 36
-      UInt64($F0BDC21ABB48DB21), // 37
-      UInt64($96769950B50D88F5), // 38
-      UInt64($BC143FA4E250EB32), // 39
-      UInt64($EB194F8E1AE525FE), // 40
-      UInt64($92EFD1B8D0CF37BF), // 41
-      UInt64($B7ABC627050305AE), // 42
-      UInt64($E596B7B0C643C71A), // 43
-      UInt64($8F7E32CE7BEA5C70), // 44
-      UInt64($B35DBF821AE4F38C)  // 45
+      UInt64($81CEB32C4B43FCF5), UInt64($A2425FF75E14FC32), UInt64($CAD2F7F5359A3B3F), UInt64($FD87B5F28300CA0E),
+      UInt64($9E74D1B791E07E49), UInt64($C612062576589DDB), UInt64($F79687AED3EEC552), UInt64($9ABE14CD44753B53),
+      UInt64($C16D9A0095928A28), UInt64($F1C90080BAF72CB2), UInt64($971DA05074DA7BEF), UInt64($BCE5086492111AEB),
+      UInt64($EC1E4A7DB69561A6), UInt64($9392EE8E921D5D08), UInt64($B877AA3236A4B44A), UInt64($E69594BEC44DE15C),
+      UInt64($901D7CF73AB0ACDA), UInt64($B424DC35095CD810), UInt64($E12E13424BB40E14), UInt64($8CBCCC096F5088CC),
+      UInt64($AFEBFF0BCB24AAFF), UInt64($DBE6FECEBDEDD5BF), UInt64($89705F4136B4A598), UInt64($ABCC77118461CEFD),
+      UInt64($D6BF94D5E57A42BD), UInt64($8637BD05AF6C69B6), UInt64($A7C5AC471B478424), UInt64($D1B71758E219652C),
+      UInt64($83126E978D4FDF3C), UInt64($A3D70A3D70A3D70B), UInt64($CCCCCCCCCCCCCCCD), UInt64($8000000000000000),
+      UInt64($A000000000000000), UInt64($C800000000000000), UInt64($FA00000000000000), UInt64($9C40000000000000),
+      UInt64($C350000000000000), UInt64($F424000000000000), UInt64($9896800000000000), UInt64($BEBC200000000000),
+      UInt64($EE6B280000000000), UInt64($9502F90000000000), UInt64($BA43B74000000000), UInt64($E8D4A51000000000),
+      UInt64($9184E72A00000000), UInt64($B5E620F480000000), UInt64($E35FA931A0000000), UInt64($8E1BC9BF04000000),
+      UInt64($B1A2BC2EC5000000), UInt64($DE0B6B3A76400000), UInt64($8AC7230489E80000), UInt64($AD78EBC5AC620000),
+      UInt64($D8D726B7177A8000), UInt64($878678326EAC9000), UInt64($A968163F0A57B400), UInt64($D3C21BCECCEDA100),
+      UInt64($84595161401484A0), UInt64($A56FA5B99019A5C8), UInt64($CECB8F27F4200F3A), UInt64($813F3978F8940985),
+      UInt64($A18F07D736B90BE6), UInt64($C9F2C9CD04674EDF), UInt64($FC6F7C4045812297), UInt64($9DC5ADA82B70B59E),
+      UInt64($C5371912364CE306), UInt64($F684DF56C3E01BC7), UInt64($9A130B963A6C115D), UInt64($C097CE7BC90715B4),
+      UInt64($F0BDC21ABB48DB21), UInt64($96769950B50D88F5), UInt64($BC143FA4E250EB32), UInt64($EB194F8E1AE525FE),
+      UInt64($92EFD1B8D0CF37BF), UInt64($B7ABC627050305AE), UInt64($E596B7B0C643C71A), UInt64($8F7E32CE7BEA5C70),
+      UInt64($B35DBF821AE4F38C)
     );
   begin
     Result := g[k];
@@ -1493,20 +1436,19 @@ const
   { RoundToOdd: returns (y1 | (y0 > 1)) where y1:y0 are bits 32..95 of g * cp }
   function RoundToOdd(g: UInt64; cp: UInt32): UInt32;
   var
-    b01, b11, hi: UInt64;
+    b01, y: UInt64;
     lo_g, hi_g: UInt32;
   begin
     lo_g := UInt32(g);
     hi_g := UInt32(g shr 32);
     b01 := UInt64(lo_g) * cp;
-    b11 := UInt64(hi_g) * cp;
-    hi := b11 + (b01 shr 32);
-    Result := UInt32(hi shr 32) or Ord(hi and $FFFFFFFF > 1);
+    y := UInt64(hi_g) * cp + b01 shr 32;
+    Result := UInt32(y shr 32) or Ord(UInt32(y) > 1);
   end;
   { check if value is divisible by 2^e2 }
   function MultipleOfPow2(value: UInt32; e2: Int32): Boolean; inline;
   begin
-    Result := (value and ((UInt32(1) shl e2) - 1)) = 0;
+    Result := value and Pred(UInt32(1) shl e2) = 0;
   end;
 
 type
@@ -1521,8 +1463,7 @@ type
     pow10: UInt64;
     c, cbl, cb, cbr, vbl, vb, vbr, lower, upper, s, sp, mid: UInt32;
     q, k, h: Int32;
-    is_even, accept_lower, accept_upper, lower_boundary_is_closer, up_inside,
-    wp_inside, u_inside, w_inside, round_up: Boolean;
+    is_odd, lower_boundary_is_closer, up_inside, wp_inside, u_inside, w_inside: Boolean;
   begin
     if ieee_exponent <> 0 then begin
       c := HIDDEN_BIT or ieee_significand;
@@ -1537,14 +1478,12 @@ type
       q := 1 - EXPONENT_BIAS;
     end;
 
-    is_even := not System.Odd(c);
-    accept_lower := is_even;
-    accept_upper := is_even;
+    is_odd := System.Odd(c);
     lower_boundary_is_closer := (ieee_significand = 0) and (ieee_exponent > 1);
 
-    cbl := 4 * c - 2 + Ord(lower_boundary_is_closer);
-    cb  := 4 * c;
-    cbr := 4 * c + 2;
+    cbl := c shl 2 - 2 + Ord(lower_boundary_is_closer);
+    cb  := c shl 2;
+    cbr := c shl 2 + 2;
 
     k := FloorDivPow2(q * 1262611 - (Ord(lower_boundary_is_closer) * 524031), 22);
     h := q + FloorLog2Pow10(-k) + 1;
@@ -1555,16 +1494,16 @@ type
     vb  := RoundToOdd(pow10, cb  shl h);
     vbr := RoundToOdd(pow10, cbr shl h);
 
-    lower := vbl + Ord(not accept_lower);
-    upper := vbr - Ord(not accept_upper);
+    lower := vbl + Ord(is_odd);
+    upper := vbr - Ord(is_odd);
 
     s := vb shr 2;
 
     if s >= 10 then begin
       sp := s div 10;
       up_inside := lower <= 40 * sp;
-      wp_inside := 40 * sp + 40 <= upper;
-      if up_inside <> wp_inside then begin
+      wp_inside := upper >= 40 * sp + 40;
+      if up_inside xor wp_inside then begin
         if wp_inside then
           Result.digits := sp + 1
         else
@@ -1574,9 +1513,9 @@ type
       end;
     end;
 
-    u_inside := lower <= 4 * s;
-    w_inside := 4 * s + 4 <= upper;
-    if u_inside <> w_inside then begin
+    u_inside := lower <= s shl 2;
+    w_inside := upper >= s shl 2 + 4;
+    if u_inside xor w_inside then begin
       if w_inside then
         Result.digits := s + 1
       else
@@ -1585,9 +1524,8 @@ type
       exit;
     end;
 
-    mid := 4 * s + 2;
-    round_up := (vb > mid) or ((vb = mid) and ((s and 1) <> 0));
-    if round_up then
+    mid := s shl 2 + 2;
+    if (vb > mid) or ((vb = mid) and System.Odd(s)) then
       Result.digits := s + 1
     else
       Result.digits := s;
@@ -1731,9 +1669,9 @@ type
       if DecPoint <= 0 then
         DecDigitsPos := 2 - DecPoint   // 0.[000]digits
       else
-        DecDigitsPos := 0              // dig.its" or "digits[000]
+        DecDigitsPos := 0              // dig.its or digits[000]
     else
-      DecDigitsPos := 1;               // "dE+123" or "d.igitsE+123"
+      DecDigitsPos := 1;               // dE+123 or d.igitsE+123
 
     DigitsEnd := aBuf + DecDigitsPos + NumDigits;
     tz := PrintDigitsBackwards(DigitsEnd, aDigs);
@@ -1765,19 +1703,20 @@ type
       // scientific notation
       aBuf[0] := aBuf[1];
       if NumDigits = 1 then begin
-        // "dE+123"
+        // dE+123
         Result := aBuf + 1;
       end else begin
-        // "d.igitsE+123"
+        // d.igitsE+123
         aBuf[1] := aDecSep;
         Result := DigitsEnd;
       end;
 
       ScientificExp := DecPoint - 1;
       Result^ := 'E';
+      Result[1] := '-';
       Inc(Result);
+
       if ScientificExp < 0 then begin
-        Result^ := '-';
         k := UInt32(-ScientificExp);
         Inc(Result);
       end else
@@ -1806,12 +1745,11 @@ type
     significand := bits and SIGNIFICAND_MASK;
     exponent := (bits and EXP_MASK) shr (SIGNIFICAND_SIZE - 1);
 
+    aBuffer^ := '-';
+    Inc(aBuffer, Ord(bits and SIGN_FLAG <> 0));
+
     // Infinity or NaN
     if exponent = MAX_IEEE_EXPONENT then begin
-      if (bits and SIGN_FLAG) <> 0 then begin
-        aBuffer[0] := '-';
-        Inc(aBuffer);
-      end;
       if significand = 0 then begin
         System.Move(S_INF[1], aBuffer^, System.Length(S_INF));
         aBuffer += System.Length(S_INF);
@@ -1827,17 +1765,12 @@ type
     end;
 
     // Finite number
-    if (bits and SIGN_FLAG) <> 0 then begin
-      aBuffer[0] := '-';
-      Inc(aBuffer);
-    end;
-
     if (exponent <> 0) or (significand <> 0) then begin
       repr := ToDecimalRepr(significand, exponent);
       Result := FormatDigits(aBuffer, repr.digits, repr.exponent, aDecSep, aForceShowFrac);
     end else begin
       // Zero
-      aBuffer[0] := '0';
+      aBuffer^ := '0';
       Inc(aBuffer);
       if aForceShowFrac then begin
         aBuffer^ := aDecSep;
