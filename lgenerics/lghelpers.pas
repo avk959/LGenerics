@@ -1560,13 +1560,11 @@ type
     Result := TrailingZeros[digits];
   end;
   { Print decimal digits backwards into the buffer, return number of trailing zeros }
-  function PrintDigitsBackwards(buf: PChar; output: UInt32): Int32;
+  function PrintDigitsBackwards(buf: PAnsiChar; output: UInt32): Int32;
   var
-    p: PAnsiChar;
     q, r, rH, rL: UInt32;
     tz, nd: Int32;
   begin
-    p := buf;
     tz := 0;
     nd := 0;
 
@@ -1574,12 +1572,12 @@ type
       q := output div 10000;
       r := output - q*10000;
       output := q;
-      Dec(p, 4);
+      Dec(buf, 4);
       if r <> 0 then begin
         rH := r div 100;
         rL := r - rH*100;
-        Print2Digits(p, rH);
-        Print2Digits(p + 2, rL);
+        Print2Digits(buf, rH);
+        Print2Digits(buf + 2, rL);
         if rL = 0 then
           tz := TrailingZeros2Digits(rH) + 2
         else
@@ -1593,8 +1591,8 @@ type
       q := output div 100;
       r := output - q*100;
       output := q;
-      Dec(p, 2);
-      Print2Digits(p, r);
+      Dec(buf, 2);
+      Print2Digits(buf, r);
       if tz = nd then
         Inc(tz, TrailingZeros2Digits(r));
       Inc(nd, 2);
@@ -1603,8 +1601,8 @@ type
         q := output div 100;
         r := output - q*100;
         output := q;
-        Dec(p, 2);
-        Print2Digits(p, r);
+        Dec(buf, 2);
+        Print2Digits(buf, r);
         if tz = nd then
           Inc(tz, TrailingZeros2Digits(r));
         Inc(nd, 2);
@@ -1613,13 +1611,13 @@ type
 
     // remaining 1 or 2 digits
     if output >= 10 then begin
-      Dec(p, 2);
-      Print2Digits(p, output);
+      Dec(buf, 2);
+      Print2Digits(buf, output);
       if tz = nd then
         Inc(tz, TrailingZeros2Digits(output));
     end else begin
-      Dec(p);
-      p^ := AnsiChar(Ord('0') + output);
+      Dec(buf);
+      buf^ := AnsiChar(Ord('0') + output);
     end;
 
     Result := tz;
