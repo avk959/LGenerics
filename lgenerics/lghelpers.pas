@@ -1431,18 +1431,15 @@ const
       UInt64($B35DBF821AE4F38C)
     );
   begin
+    Assert(k >= K_MIN); Assert(k <= K_MAX);
     Result := g[k];
   end;
   { RoundToOdd: returns (y1 | (y0 > 1)) where y1:y0 are bits 32..95 of g * cp }
-  function RoundToOdd(g: UInt64; cp: UInt32): UInt32;
+  function RoundToOdd(const g: UInt64; cp: UInt32): UInt32;
   var
-    b01, y: UInt64;
-    lo_g, hi_g: UInt32;
+    y: UInt64;
   begin
-    lo_g := UInt32(g);
-    hi_g := UInt32(g shr 32);
-    b01 := UInt64(lo_g) * cp;
-    y := UInt64(hi_g) * cp + b01 shr 32;
+    y := (g shr 32) * cp + (UInt64(UInt32(g)) * cp) shr 32;
     Result := UInt32(y shr 32) or Ord(UInt32(y) > 1);
   end;
   { check if value is divisible by 2^e2 }
@@ -1468,7 +1465,7 @@ type
     if ieee_exponent <> 0 then begin
       c := HIDDEN_BIT or ieee_significand;
       q := Int32(ieee_exponent) - EXPONENT_BIAS;
-      if (0 <= -q) and (-q < SIGNIFICAND_SIZE) and MultipleOfPow2(c, -q) then begin
+      if (-q >= 0) and (-q < SIGNIFICAND_SIZE) and MultipleOfPow2(c, -q) then begin
         Result.digits := c shr (-q);
         Result.exponent := 0;
         exit;
