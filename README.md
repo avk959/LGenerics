@@ -146,3 +146,4 @@ In order to use (FPC 3.2.2 and higher and Lazarus 2.2.0 and higher):
   - a port of Unishox2, a C library for compressing short strings(unit lgUnishox)
   - Eisel-Lemire fast string-to-double conversion algorithm(unit lgJson)
   - Ryū double-to-string conversion algorithm(unit lgJson)
+  - Schubfach single-to-string conversion algorithm(unit lgHelpers)
