@@ -7557,14 +7557,12 @@ const
   ELDBL_LOWEST_POWER  = -325;
   ELDBL_HIGHEST_POWER = 308;
 
-{$PUSH}{$Q-}{$R-}{$J-}{$WARN 4080 OFF}
-function TryBuildDoubleEiselLemire(aMantissa: QWord; const aPow10: Int64; aNeg: Boolean; out aValue: Double): Boolean; inline;
+{$PUSH}{$Q-}{$R-}{$J-}{$WARN 5037 OFF}
+function TryBuildDoubleEiselLemire(aMantissa: QWord; aPow10: Int32; aNeg: Boolean; out aValue: Double): Boolean; inline;
 const
-{$IF DEFINED(CPUX86_64) OR DEFINED(CPUAARCH64)}
   TEN_POWER: array[0..22] of Double = (
     1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
     1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22);
-{$ENDIF}
 
   EL_MANTIS_64: array[ELDBL_LOWEST_POWER..ELDBL_HIGHEST_POWER] of QWord = (
     QWord($a5ced43b7e3e9188), QWord($cf42894a5dce35ea), QWord($818995ce7aa0e1b2), QWord($a1ebfb4219491a1f),
@@ -7895,33 +7893,37 @@ var
 begin
   if aMantissa = 0 then
     begin
-      if aNeg then
-        PQWord(@aValue)^ := QWord(1) shl 63
-      else
-        aValue := Double(0.0);
+      aValue := 0;
+      if aNeg then aValue.Negate;
       exit(True);
     end;
-{$IF DEFINED(CPUX86_64) OR DEFINED(CPUAARCH64)}
-  if ((aPow10 >= -22) and (aPow10 <= 22)) and (aMantissa <= QWord(9007199254740991)) and
-     (Math.GetRoundMode = rmNearest) and (Math.GetPrecisionMode in [pmDouble, pmExtended]) then begin
-    aValue := aMantissa;
-    if aPow10 < 0 then
-      aValue /= TEN_POWER[-aPow10]
-    else
-      aValue *= TEN_POWER[aPow10];
-    if aNeg then aValue := -aValue;
-    exit(True);
-  end;
-{$ELSE}
-  if (aMantissa <= QWord(9007199254740991)) and (aPow10 = 0) and
-     (Math.GetPrecisionMode in [pmDouble, pmExtended]) then begin
-    aValue := aMantissa;
-    if aNeg then aValue := -aValue;
-    exit(True);
-  end;
-{$ENDIF}
 
-  Exponent := SarInt64((152170 + 65536) * aPow10, 16) + 1024 + 63;
+  if (aMantissa <= QWord(9007199254740992)) then
+    if aPow10 = 0 then begin
+      aValue := aMantissa;
+      if aNeg then aValue.Negate;
+      exit(True);
+    end else
+      if (aPow10 >= -22) and (aPow10 <= 22) then
+{$IF DEFINED(CPUX86_64) OR DEFINED(CPUAARCH64)}
+        if(Math.GetRoundMode = rmNearest)and(Math.GetPrecisionMode in [pmDouble, pmExtended])then begin
+{$ELSE}
+        if(Math.GetRoundMode = rmNearest)and(Math.GetPrecisionMode = pmDouble)then begin
+{$ENDIF}
+          aValue := aMantissa;
+          if aPow10 < 0 then
+            aValue /= TEN_POWER[-aPow10]
+          else
+            aValue *= TEN_POWER[aPow10];
+          if aNeg then aValue.Negate;
+          exit(True);
+        end;
+
+  Assert(aMantissa <= QWord(999999999999999999));
+  Assert(aPow10 >= ELDBL_LOWEST_POWER);
+  Assert(aPow10 <= ELDBL_HIGHEST_POWER);
+
+  Exponent := SarLongInt((152170 + 65536) * aPow10, 16) + 1024 + 63;
   LzCount := Pred(BitSizeOf(QWord)) - BsrQWord(aMantissa);
   aMantissa := aMantissa shl LzCount;
 
@@ -7976,8 +7978,7 @@ end;
 function TryPChar2DoubleFast(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Man: QWord;
-  Pow10, PowVal: Int64;
-  DigCount: Integer;
+  DigCount, Pow10, PowVal: Int32;
   pOld, pDigStart, pTemp: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
@@ -8019,7 +8020,7 @@ begin
           Man := Man * 10 + Digits[p^];
           Inc(p);
         end;
-      Pow10 := -Int64(p - pTemp);
+      Pow10 := -Int32(p - pTemp);
       DigCount := p - pDigStart - 1;
     end
   else
@@ -8040,7 +8041,7 @@ begin
       Inc(p);
       while p^ in ['0'..'9'] do
         begin
-          if PowVal < $100000000 then
+          if PowVal < 100000 then
             PowVal := PowVal * 10 + Integer(Digits[p^]);
           Inc(p);
         end;
@@ -8069,8 +8070,7 @@ end;
 function TryPChar2Double(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Man: QWord;
-  Pow10, PowVal: Int64;
-  DigCount: Integer;
+  DigCount, Pow10, PowVal: Int32;
   pOld, pDigStart, pTemp: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
@@ -8113,7 +8113,7 @@ begin
           Man := Man * 10 + Digits[p^];
           Inc(p);
         end;
-      Pow10 := -Int64(p - pTemp);
+      Pow10 := -Int32(p - pTemp);
       DigCount := p - pDigStart - 1;
     end
   else
@@ -8135,7 +8135,7 @@ begin
       Inc(p);
       while p^ in ['0'..'9'] do
         begin
-          if PowVal < $100000000 then
+          if PowVal < 100000 then
             PowVal := PowVal * 10 + Integer(Digits[p^]);
           Inc(p);
         end;
@@ -8230,8 +8230,7 @@ function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSe
 
 var
   Mantis: QWord;
-  Pow10, PowVal: Int64;
-  DigCount: Integer;
+  DigCount, Pow10, PowVal: Int32;
   pOld, pDigStart, pTemp, pEnd: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
@@ -8258,10 +8257,8 @@ begin
   while (p < pEnd) and (p^ = '0') do Inc(p); // leading zeros
 
   if p = pEnd then begin
-    if IsNeg then
-      aValue := Double.CopySign(0, -1)
-    else
-      aValue := 0;
+    aValue := 0;
+    if IsNeg then aValue.Negate;
     exit(True);
   end;
 
@@ -8288,7 +8285,7 @@ begin
         Mantis := Mantis * 10 + Digits[p^];
         Inc(p);
       until (p = pEnd) or not(p^ in ['0'..'9']);
-      Pow10 := -Int64(p - pTemp);
+      Pow10 := -Int32(p - pTemp);
       DigCount := p - pDigStart - 1;
     end;
   end;
@@ -8308,7 +8305,7 @@ begin
           if p = pEnd then exit(False);
         end;
       while (p < pEnd) and (p^ in ['0'..'9']) do begin
-        if PowVal < $100000000 then
+        if PowVal < 100000 then
           PowVal := PowVal * 10 + Integer(Digits[p^]);
         Inc(p);
       end;
@@ -8343,7 +8340,6 @@ begin
     exit(True);
   Result := FallBack(pOld, p - pOld, aValue); ////
 end;
-{$POP}
 
 function TryStr2Double(const s: string; out aValue: Double): Boolean;
 begin
@@ -8361,40 +8357,43 @@ end;
   first non-numeric character to a Double value according to RFC 8259;
   if successful, returns the length of this sequence; otherwise, returns zero }
 function PCharToDoubleLen(p: PAnsiChar; out aValue: Double): SizeInt;
-  function FallBack(p: PAnsiChar; Len: SizeInt; out aValue: Double): Boolean;
+  function FallBack(p: PAnsiChar; Len: SizeInt; out aValue: Double): SizeInt;
   var
     s: shortstring;
     c: Integer;
   begin
-    if (Len < 1) or (Len > 255) then exit(False);
+    if (Len < 1) or (Len > 255) then exit(0);
     System.SetLength(s, Len);
     System.Move(p^, s[1], Len);
     Val(s, aValue, c);
-    Result := c = 0;
+    if c = 0 then
+      Result := Len
+    else
+      Result := 0;
   end;
 var
   Man: QWord;
-  Pow10, PowVal: Int64;
-  DigCount: Integer;
+  DigCount, Pow10, PowVal: Int32;
   pOld, pDigStart, pTemp: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
   Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  if (p = nil) or not(p^ in ['-','0'..'9']) then exit(0);
   pOld := p;
+
   IsNeg := False;
   if p^ = '-' then begin
-    Inc(p);
     IsNeg := True;
-  end;
-  if p^ = '0' then begin
     Inc(p);
-    if p^ in ['0'..'9'] then exit(0);
+  end;
+
+  if p^ = '0' then begin
+    if p[1] in ['0'..'9'] then exit(0);
+    Inc(p);
     Man := 0;
     pDigStart := p;
   end else begin
-    if not(p^ in ['1'..'9']) then exit(0);
+    if not(p^ in ['0'..'9']) then exit(0);
     pDigStart := p;
     Man := Digits[p^];
     Inc(p);
@@ -8405,14 +8404,14 @@ begin
   end;
   Pow10 := 0;
   if p^ = '.' then begin
+    if not(p[1] in ['0'..'9']) then exit(0);
     Inc(p);
-    if not(p^ in ['0'..'9']) then exit(0);
     pTemp := p;
     while p^ in ['0'..'9'] do begin
       Man := Man * 10 + Digits[p^];
       Inc(p);
     end;
-    Pow10 := -Int64(p - pTemp);
+    Pow10 := -Int32(p - pTemp);
     DigCount := p - pDigStart - 1;
   end else
     DigCount := p - pDigStart;
@@ -8426,11 +8425,11 @@ begin
       if p^ = '+' then
         Inc(p);
     if not(p^ in ['0'..'9']) then exit(0);
-    PowVal := Integer(Digits[p^]);
+    PowVal := Int32(Digits[p^]);
     Inc(p);
     while p^ in ['0'..'9'] do begin
-      if PowVal < $100000000 then
-        PowVal := PowVal * 10 + Integer(Digits[p^]);
+      if PowVal < 100000 then
+        PowVal := PowVal * 10 + Int32(Digits[p^]);
       Inc(p);
     end;
     if PowIsNeg then
@@ -8445,20 +8444,17 @@ begin
       Inc(pTemp);
     DigCount -= pTemp - pDigStart;
     if DigCount >= 19 then
-      if FallBack(pOld, p - pOld, aValue) then
-        exit(p - pOld)
-      else
-        exit(0);
+      exit(FallBack(pOld, p - pOld, aValue));
   end;
+
   if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    if FallBack(pOld, p - pOld, aValue) then
-      exit(p - pOld)
-    else
-      exit(0);
+    exit(FallBack(pOld, p - pOld, aValue));
+
   if not TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
-    if not FallBack(pOld, p - pOld, aValue) then exit(0);
+    exit(FallBack(pOld, p - pOld, aValue));
   Result := p - pOld;
 end;
+{$POP}
 
 function TryStrToDouble(const s: string; out aValue: Double; aDecSeparator: AnsiChar): Boolean;
 begin
@@ -8474,12 +8470,12 @@ end;
 function TryStrToDouble(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aDecSeparator: AnsiChar): Boolean;
 begin
   if (p = nil) or (aCount < 1) then exit(False);
-  while (aCount <> 0) and (p^ in [#9,' ']) do // skip whitespace characters
+  while (aCount <> 0) and (p^ in [#9,' ']) do // skip leading whitespace characters
     begin
       Inc(p);
       Dec(aCount);
     end;
-  while (aCount <> 0) and (p[Pred(aCount)] in [#9,' ']) do
+  while (aCount <> 0) and (p[Pred(aCount)] in [#9,' ']) do // trim trailing whitespace characters
     Dec(aCount);
   if aCount = 0 then
     exit(False);
