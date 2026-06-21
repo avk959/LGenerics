@@ -1733,19 +1733,19 @@ type
     repr: TSingleRepr;
     significand, exponent: UInt32;
   const
-    S_INF  = 'Infinity';
-    S_QNAN = 'qNaN';
-    S_SNAN = 'sNaN';
+    S_INF  = 'Inf';
+    S_QNAN = 'Nan';
+    S_SNAN = 'SNan';
   begin
     significand := bits and SIGNIFICAND_MASK;
     exponent := (bits and EXP_MASK) shr (SIGNIFICAND_SIZE - 1);
 
     aBuffer^ := '-';
-    Inc(aBuffer, Ord(bits and SIGN_FLAG <> 0));
 
     // Infinity or NaN
     if exponent = MAX_IEEE_EXPONENT then begin
       if significand = 0 then begin
+        Inc(aBuffer, Ord(bits and SIGN_FLAG <> 0));
         System.Move(S_INF[1], aBuffer^, System.Length(S_INF));
         aBuffer += System.Length(S_INF);
       end else
