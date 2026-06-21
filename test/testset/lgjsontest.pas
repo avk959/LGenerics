@@ -461,11 +461,11 @@ begin
   AssertTrue(Double2Str(0.0) = '0');
   QWord(d) := QWord($8000000000000000);
   AssertTrue(Double2Str(d) = '-0');
-  AssertTrue(Double2Str(Double.PositiveInfinity) = 'Infinity');
-  AssertTrue(Double2Str(Double.NegativeInfinity) = '-Infinity');
-  AssertTrue(Double2Str(Double.NaN) = '-qNaN');
+  AssertTrue(Double2Str(Double.PositiveInfinity) = 'Inf');
+  AssertTrue(Double2Str(Double.NegativeInfinity) = '-Inf');
+  AssertTrue(Double2Str(Double.NaN) = 'Nan');
   QWord(d) := Succ(QWord($7ff) shl 52);
-  AssertTrue(Double2Str(d) = 'sNaN');
+  AssertTrue(Double2Str(d) = 'SNan');
 end;
 
 procedure TTestDouble2Str.Bounds;
