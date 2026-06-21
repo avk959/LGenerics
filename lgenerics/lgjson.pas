@@ -3840,8 +3840,8 @@ var
   Tmp: array[0..21] of AnsiChar;
   IsNeg: Boolean;
 const
-  NAN_NAMES:  array[Boolean] of array[Boolean] of string = (('sNaN', '-sNaN'), ('qNaN', '-qNaN'));
-  INF_NAMES:  array[Boolean] of string = ('Infinity', '-Infinity');
+  NAN_NAMES:  array[Boolean] of string = ('SNan', 'Nan');
+  INF_NAMES:  array[Boolean] of string = ('Inf', '-Inf');
   ZERO_NAMES: array[Boolean] of string = ('0', '-0');
 begin
   IsNeg := Boolean(Bits shr (DBL_MANTISSA_BITS + DBL_EXPONENT_BITS));
@@ -3851,7 +3851,7 @@ begin
     begin
       if IeeeMantissa <> 0 then
         begin
-          s := NAN_NAMES[Boolean(IeeeMantissa shr Pred(DBL_MANTISSA_BITS)), IsNeg];
+          s := NAN_NAMES[Boolean(IeeeMantissa shr Pred(DBL_MANTISSA_BITS))];
           exit;
         end;
       if IeeeExp <> 0 then
