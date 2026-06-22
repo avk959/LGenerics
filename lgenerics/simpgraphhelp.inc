@@ -1890,7 +1890,7 @@ begin
       begin
         Inc(FNodeCount);
         EdgeIdx[I] := Tmp;
-        for p in AdjLists[I]^ do
+        for p in aGraph.AdjLists[I]^ do
           if aUsed.UncBits[p^.Key] then
             Inc(Tmp);
       end;
