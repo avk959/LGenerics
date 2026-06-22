@@ -7974,22 +7974,13 @@ end;
 function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
-{$IFDEF FPUX87}
-  mask: TFpuExceptionMask;
 begin
-  mask := Math.GetExceptionMask;
-  Math.SetExceptionMask(mask + [exOverflow]);
+  Result := False;
   try
     System.Val(p, aValue, Code);
-  finally
-    Math.SetExceptionMask(mask);
+    Result := Code = 0;
+  except
   end;
-  Result := Code = 0;
-{$ELSE}
-begin
-  System.Val(p, aValue, Code);
-  Result := Code = 0;
-{$ENDIF}
 end;
 
 { TryPChar2DoubleFast is a relaxed parser, it expects a valid null-terminated
@@ -8080,8 +8071,14 @@ begin
       while pTemp^ in ['0', '.'] do
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
-      if DigCount > ELDBL_MAX_DIGITS then
+      if DigCount > ELDBL_MAX_DIGITS then begin
+        if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
+          aValue := Double.PositiveInfinity;
+          if IsNeg then aValue.Negate;
+          exit(True);
+        end;
         exit(TryPChar2DoubleFallBack(pStart, aValue));
+      end;
     end;
 
   if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
@@ -8194,8 +8191,14 @@ begin
       while pTemp^ in ['0', '.'] do
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
-      if DigCount > ELDBL_MAX_DIGITS then
+      if DigCount > ELDBL_MAX_DIGITS then begin
+        if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
+          aValue := Double.PositiveInfinity;
+          if IsNeg then aValue.Negate;
+          exit(True);
+        end;
         exit(TryPChar2DoubleFallBack(pStart, aValue));
+      end;
     end;
 
   if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
@@ -8268,12 +8271,9 @@ function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSe
   var
     s: shortstring;
     I, Code: Integer;
-  {$IFDEF FPUX87}
-    mask: TFpuExceptionMask;
-  {$ENDIF}
   begin
-    if (aCount < 1) or (aCount > Pred(SizeOf(s))) then
-      exit(False);
+    Result := False;
+    if (aCount < 1) or (aCount > Pred(SizeOf(s))) then exit;
     System.SetLength(s, aCount);
     System.Move(p^, s[1], aCount);
     if aSeparator <> '.' then
@@ -8282,18 +8282,11 @@ function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSe
           s[I] := '.';
           break;
         end;
-  {$IFDEF FPUX87}
-    mask := Math.GetExceptionMask;
-    Math.SetExceptionMask(mask + [exOverflow]);
     try
       System.Val(s, aValue, Code);
-    finally
-      Math.SetExceptionMask(mask);
+      Result := Code = 0;
+    except
     end;
-  {$ELSE}
-    System.Val(s, aValue, Code);
-  {$ENDIF}
-    Result := Code = 0;
   end;
 
 var
@@ -8392,7 +8385,14 @@ begin
     pTemp := pDigStart;
     while (pTemp^ = '0') or (pTemp^ = aSeparator) do Inc(pTemp);
     DigCount -= pTemp - pDigStart;
-    if DigCount > ELDBL_MAX_DIGITS then exit(FallBack(pStart, p - pStart, aValue)); ////
+    if DigCount > ELDBL_MAX_DIGITS then begin
+      if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
+        aValue := Double.PositiveInfinity;
+        if IsNeg then aValue.Negate;
+        exit(True);
+      end;
+      exit(FallBack(pStart, p - pStart, aValue)); ////
+    end;
   end;
 
   if (Mantis = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
@@ -8434,28 +8434,16 @@ function PCharToDoubleLen(p: PAnsiChar; out aValue: Double): SizeInt;
   var
     s: shortstring;
     c: Integer;
-  {$IFDEF FPUX87}
-    mask: TFpuExceptionMask;
-  {$ENDIF}
   begin
-    if (Len < 1) or (Len > Pred(SizeOf(s))) then exit(0);
+    Result := 0;
+    if (Len < 1) or (Len > Pred(SizeOf(s))) then exit;
     System.SetLength(s, Len);
     System.Move(p^, s[1], Len);
-  {$IFDEF FPUX87}
-    mask := Math.GetExceptionMask;
-    Math.SetExceptionMask(mask + [exOverflow]);
     try
-      System.Val(p, aValue, c);
-    finally
-      Math.SetExceptionMask(mask);
+      System.Val(s, aValue, c);
+      if c = 0 then Result := Len;
+    except
     end;
-  {$ELSE}
-    System.Val(s, aValue, c);
-  {$ENDIF}
-    if c = 0 then
-      Result := Len
-    else
-      Result := 0;
   end;
 var
   Man: QWord;
@@ -8529,8 +8517,14 @@ begin
     while pTemp^ in ['0', '.'] do
       Inc(pTemp);
     DigCount -= pTemp - pDigStart;
-    if DigCount > ELDBL_MAX_DIGITS then
+    if DigCount > ELDBL_MAX_DIGITS then begin
+      if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
+        aValue := Double.PositiveInfinity;
+        if IsNeg then aValue.Negate;
+        exit(p - pStart);
+      end;
       exit(FallBack(pStart, p - pStart, aValue));
+    end;
   end;
 
   if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
