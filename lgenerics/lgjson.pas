@@ -7554,8 +7554,10 @@ end;
   https://github.com/lemire/fast_double_parser
 }
 const
-  ELDBL_LOWEST_POWER  = -325;
-  ELDBL_HIGHEST_POWER = 308;
+  ELDBL_LOWEST_POWER    = -342;
+  ELDBL_HIGHEST_POWER   = 308;
+  ELDBL_MAX_DIGITS      = 18;
+  ELDBL_MAX_SIGNIFICAND = QWord(999999999999999999);
 
 {$PUSH}{$Q-}{$R-}{$J-}{$WARN 5037 OFF}
 function TryBuildDoubleEiselLemire(aMantissa: QWord; aPow10: Int32; aNeg: Boolean; out aValue: Double): Boolean; inline;
@@ -7565,6 +7567,11 @@ const
     1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22);
 
   EL_MANTIS_64: array[ELDBL_LOWEST_POWER..ELDBL_HIGHEST_POWER] of QWord = (
+    QWord($eef453d6923bd65a), QWord($9558b4661b6565f8), QWord($baaee17fa23ebf76), QWord($e95a99df8ace6f53),
+    QWord($91d8a02bb6c10594), QWord($b64ec836a47146f9), QWord($e3e27a444d8d98b7), QWord($8e6d8c6ab0787f72),
+    QWord($b208ef855c969f4f), QWord($de8b2b66b3bc4723), QWord($8b16fb203055ac76), QWord($addcb9e83c6b1793),
+    QWord($d953e8624b85dd78), QWord($87d4713d6f33aa6b), QWord($a9c98d8ccb009506), QWord($d43bf0effdc0ba48),
+    QWord($84a57695fe98746d),
     QWord($a5ced43b7e3e9188), QWord($cf42894a5dce35ea), QWord($818995ce7aa0e1b2), QWord($a1ebfb4219491a1f),
     QWord($ca66fa129f9b60a6), QWord($fd00b897478238d0), QWord($9e20735e8cb16382), QWord($c5a890362fddbc62),
     QWord($f712b443bbd52b7b), QWord($9a6bb0aa55653b2d), QWord($c1069cd4eabe89f8), QWord($f148440a256e2c76),
@@ -7726,6 +7733,11 @@ const
     QWord($e3d8f9e563a198e5), QWord($8e679c2f5e44ff8f));
 
   EL_MANTIS_128: array[ELDBL_LOWEST_POWER..ELDBL_HIGHEST_POWER] of QWord = (
+    QWord($113faa2906a13b3f), QWord($4ac7ca59a424c507), QWord($5d79bcf00d2df649), QWord($f4d82c2c107973dc),
+    QWord($79071b9b8a4be869), QWord($9748e2826cdee284), QWord($fd1b1b2308169b25), QWord($fe30f0f5e50e20f7),
+    QWord($bdbd2d335e51a935), QWord($ad2c788035e61382), QWord($4c3bcb5021afcc31), QWord($df4abe242a1bbf3d),
+    QWord($d71d6dad34a2af0d), QWord($8672648c40e5ad68), QWord($680efdaf511f18c2), QWord($0212bd1b2566def2),
+    QWord($014bb630f7604b57),
     QWord($419ea3bd35385e2d), QWord($52064cac828675b9), QWord($7343efebd1940993), QWord($1014ebe6c5f90bf8),
     QWord($d41a26e077774ef6), QWord($8920b098955522b4), QWord($55b46e5f5d5535b0), QWord($eb2189f734aa831d),
     QWord($a5e9ec7501d523e4), QWord($47b233c92125366e), QWord($999ec0bb696e840a), QWord($c00670ea43ca250d),
@@ -7891,12 +7903,10 @@ var
   LzCount: Integer;
   Prod: TOWord;
 begin
-  if aMantissa = 0 then
-    begin
-      aValue := 0;
-      if aNeg then aValue.Negate;
-      exit(True);
-    end;
+  Assert(aMantissa <> 0);
+  Assert(aMantissa <= QWord(ELDBL_MAX_SIGNIFICAND));
+  Assert(aPow10 >= ELDBL_LOWEST_POWER);
+  Assert(aPow10 <= ELDBL_HIGHEST_POWER);
 
   if (aMantissa <= QWord(9007199254740992)) then
     if aPow10 = 0 then begin
@@ -7918,10 +7928,6 @@ begin
           if aNeg then aValue.Negate;
           exit(True);
         end;
-
-  Assert(aMantissa <= QWord(999999999999999999));
-  Assert(aPow10 >= ELDBL_LOWEST_POWER);
-  Assert(aPow10 <= ELDBL_HIGHEST_POWER);
 
   Exponent := SarLongInt((152170 + 65536) * aPow10, 16) + 1024 + 63;
   LzCount := Pred(BitSizeOf(QWord)) - BsrQWord(aMantissa);
@@ -7968,9 +7974,22 @@ end;
 function TryPChar2DoubleFallBack(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Code: Integer;
+{$IFDEF FPUX87}
+  mask: TFpuExceptionMask;
 begin
-  Val(p, aValue, Code);
+  mask := Math.GetExceptionMask;
+  Math.SetExceptionMask(mask + [exOverflow]);
+  try
+    System.Val(p, aValue, Code);
+  finally
+    Math.SetExceptionMask(mask);
+  end;
   Result := Code = 0;
+{$ELSE}
+begin
+  System.Val(p, aValue, Code);
+  Result := Code = 0;
+{$ENDIF}
 end;
 
 { TryPChar2DoubleFast is a relaxed parser, it expects a valid null-terminated
@@ -7979,20 +7998,22 @@ function TryPChar2DoubleFast(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Man: QWord;
   DigCount, Pow10, PowVal: Int32;
-  pOld, pDigStart, pTemp: PAnsiChar;
+  pStart, pDigStart, pTemp: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
   Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  if p^ = #0 then
-    exit(False);
-  pOld := p;
+  if p^ = #0 then exit(False);
+
+  pStart := p;
+
   IsNeg := False;
   if p^ = '-' then
     begin
       Inc(p);
       IsNeg := True;
     end;
+
   if p^ = '0' then
     begin
       Man := 0;
@@ -8010,6 +8031,7 @@ begin
           Inc(p);
         end;
     end;
+
   Pow10 := 0;
   if p^ = '.' then
     begin
@@ -8025,6 +8047,7 @@ begin
     end
   else
     DigCount := p - pDigStart;
+
   if p^ in ['e', 'E'] then
     begin
       PowIsNeg := False;
@@ -8050,20 +8073,35 @@ begin
       else
         Pow10 += PowVal;
     end;
-  if DigCount >= 19 then
+
+  if DigCount > ELDBL_MAX_DIGITS then
     begin
       pTemp := pDigStart;
       while pTemp^ in ['0', '.'] do
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
-      if DigCount >= 19 then
-        exit(TryPChar2DoubleFallBack(pOld, aValue));
+      if DigCount > ELDBL_MAX_DIGITS then
+        exit(TryPChar2DoubleFallBack(pStart, aValue));
     end;
-  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    exit(TryPChar2DoubleFallBack(pOld, aValue));
+
+  if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+    begin
+      aValue := 0;
+      if IsNeg then aValue.Negate;
+      exit(True);
+    end;
+
+  if Pow10 > ELDBL_HIGHEST_POWER then
+    begin
+      aValue := Double.PositiveInfinity;
+      if IsNeg then aValue.Negate;
+      exit(True);
+    end;
+
   if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
     exit(True);
-  Result := TryPChar2DoubleFallBack(pOld, aValue);
+
+  Result := TryPChar2DoubleFallBack(pStart, aValue);
 end;
 
 { TryPChar2Double }
@@ -8071,18 +8109,20 @@ function TryPChar2Double(p: PAnsiChar; out aValue: Double): Boolean;
 var
   Man: QWord;
   DigCount, Pow10, PowVal: Int32;
-  pOld, pDigStart, pTemp: PAnsiChar;
+  pStart, pDigStart, pTemp: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
   Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  pOld := p;
+  pStart := p;
+
   IsNeg := False;
   if p^ = '-' then
     begin
       Inc(p);
       IsNeg := True;
     end;
+
   if p^ = '0' then
     begin
       Inc(p);
@@ -8148,20 +8188,34 @@ begin
   if p^ <> #0 then exit(False);
   ////////////////////////////
 
-  if DigCount >= 19 then
+  if DigCount > ELDBL_MAX_DIGITS then
     begin
       pTemp := pDigStart;
       while pTemp^ in ['0', '.'] do
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
-      if DigCount >= 19 then
-        exit(TryPChar2DoubleFallBack(pOld, aValue));
+      if DigCount > ELDBL_MAX_DIGITS then
+        exit(TryPChar2DoubleFallBack(pStart, aValue));
     end;
-  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    exit(TryPChar2DoubleFallBack(pOld, aValue));
+
+  if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+    begin
+      aValue := 0;
+      if IsNeg then aValue.Negate;
+      exit(True);
+    end;
+
+  if Pow10 > ELDBL_HIGHEST_POWER then
+    begin
+      aValue := Double.PositiveInfinity;
+      if IsNeg then aValue.Negate;
+      exit(True);
+    end;
+
   if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
     exit(True);
-  Result := TryPChar2DoubleFallBack(pOld, aValue);
+
+  Result := TryPChar2DoubleFallBack(pStart, aValue);
 end;
 
 { TryPChar2Double2 }
@@ -8214,8 +8268,12 @@ function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSe
   var
     s: shortstring;
     I, Code: Integer;
+  {$IFDEF FPUX87}
+    mask: TFpuExceptionMask;
+  {$ENDIF}
   begin
-    if aCount > SizeOf(s)-1 then exit(False);
+    if (aCount < 1) or (aCount > Pred(SizeOf(s))) then
+      exit(False);
     System.SetLength(s, aCount);
     System.Move(p^, s[1], aCount);
     if aSeparator <> '.' then
@@ -8224,21 +8282,31 @@ function TryPChar2Double2(p: PAnsiChar; aCount: SizeInt; out aValue: Double; aSe
           s[I] := '.';
           break;
         end;
-    Val(s, aValue, Code);
+  {$IFDEF FPUX87}
+    mask := Math.GetExceptionMask;
+    Math.SetExceptionMask(mask + [exOverflow]);
+    try
+      System.Val(s, aValue, Code);
+    finally
+      Math.SetExceptionMask(mask);
+    end;
+  {$ELSE}
+    System.Val(s, aValue, Code);
+  {$ENDIF}
     Result := Code = 0;
   end;
 
 var
   Mantis: QWord;
   DigCount, Pow10, PowVal: Int32;
-  pOld, pDigStart, pTemp, pEnd: PAnsiChar;
+  pStart, pDigStart, pTemp, pEnd: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
   Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
   //aCount <> 0 and no whitespace characters are assumed
   pEnd := p + aCount;
-  pOld := p;
+  pStart := p;
 
   IsNeg := False;
   if p^ = '-' then begin
@@ -8320,25 +8388,30 @@ begin
   if p <> pEnd then exit(False);
   ////////////////////////////
 
-  if DigCount = 0 then begin
-    if IsNeg then
-      aValue := Double.CopySign(0, -1)
-    else
-      aValue := 0;
-    exit(True);
+  if DigCount > ELDBL_MAX_DIGITS then begin
+    pTemp := pDigStart;
+    while (pTemp^ = '0') or (pTemp^ = aSeparator) do Inc(pTemp);
+    DigCount -= pTemp - pDigStart;
+    if DigCount > ELDBL_MAX_DIGITS then exit(FallBack(pStart, p - pStart, aValue)); ////
   end;
 
-  if DigCount >= 19 then begin
-    pTemp := pDigStart;
-    while pTemp^ in ['0', aSeparator] do Inc(pTemp);
-    DigCount -= pTemp - pDigStart;
-    if DigCount >= 19 then exit(FallBack(pOld, p - pOld, aValue)); ////
-  end;
-  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    exit(FallBack(pOld, p - pOld, aValue)); ////
-  if TryBuildDoubleEiselLemire(Mantis, Pow10, IsNeg, aValue) then
-    exit(True);
-  Result := FallBack(pOld, p - pOld, aValue); ////
+  if (Mantis = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+    begin
+      aValue := 0;
+      if IsNeg then aValue.Negate;
+      exit(True);
+    end;
+
+  if Pow10 > ELDBL_HIGHEST_POWER then
+    begin
+      aValue := Double.PositiveInfinity;
+      if IsNeg then aValue.Negate;
+      exit(True);
+    end;
+
+  if TryBuildDoubleEiselLemire(Mantis, Pow10, IsNeg, aValue) then exit(True);
+
+  Result := FallBack(pStart, p - pStart, aValue);
 end;
 
 function TryStr2Double(const s: string; out aValue: Double): Boolean;
@@ -8361,11 +8434,24 @@ function PCharToDoubleLen(p: PAnsiChar; out aValue: Double): SizeInt;
   var
     s: shortstring;
     c: Integer;
+  {$IFDEF FPUX87}
+    mask: TFpuExceptionMask;
+  {$ENDIF}
   begin
-    if (Len < 1) or (Len > 255) then exit(0);
+    if (Len < 1) or (Len > Pred(SizeOf(s))) then exit(0);
     System.SetLength(s, Len);
     System.Move(p^, s[1], Len);
-    Val(s, aValue, c);
+  {$IFDEF FPUX87}
+    mask := Math.GetExceptionMask;
+    Math.SetExceptionMask(mask + [exOverflow]);
+    try
+      System.Val(p, aValue, c);
+    finally
+      Math.SetExceptionMask(mask);
+    end;
+  {$ELSE}
+    System.Val(s, aValue, c);
+  {$ENDIF}
     if c = 0 then
       Result := Len
     else
@@ -8374,12 +8460,12 @@ function PCharToDoubleLen(p: PAnsiChar; out aValue: Double): SizeInt;
 var
   Man: QWord;
   DigCount, Pow10, PowVal: Int32;
-  pOld, pDigStart, pTemp: PAnsiChar;
+  pStart, pDigStart, pTemp: PAnsiChar;
   IsNeg, PowIsNeg: Boolean;
 const
   Digits: array['0'..'9'] of DWord = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 begin
-  pOld := p;
+  pStart := p;
 
   IsNeg := False;
   if p^ = '-' then begin
@@ -8438,21 +8524,32 @@ begin
       Pow10 += PowVal;
   end;
 
-  if DigCount >= 19 then begin
+  if DigCount > ELDBL_MAX_DIGITS then begin
     pTemp := pDigStart;
     while pTemp^ in ['0', '.'] do
       Inc(pTemp);
     DigCount -= pTemp - pDigStart;
-    if DigCount >= 19 then
-      exit(FallBack(pOld, p - pOld, aValue));
+    if DigCount > ELDBL_MAX_DIGITS then
+      exit(FallBack(pStart, p - pStart, aValue));
   end;
 
-  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
-    exit(FallBack(pOld, p - pOld, aValue));
+  if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+    begin
+      aValue := 0;
+      if IsNeg then aValue.Negate;
+      exit(p - pStart);
+    end;
 
-  if not TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
-    exit(FallBack(pOld, p - pOld, aValue));
-  Result := p - pOld;
+  if Pow10 > ELDBL_HIGHEST_POWER then
+    begin
+      aValue := Double.PositiveInfinity;
+      if IsNeg then aValue.Negate;
+      exit(p - pStart);
+    end;
+
+  if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then exit(p - pStart);
+
+  Result := FallBack(pStart, p - pStart, aValue);
 end;
 {$POP}
 
