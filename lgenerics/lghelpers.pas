@@ -1760,6 +1760,7 @@ type
     end;
 
     // Finite number
+    Inc(aBuffer, Ord(bits and SIGN_FLAG <> 0));
     if (exponent <> 0) or (significand <> 0) then begin
       repr := ToDecimalRepr(significand, exponent);
       Result := FormatDigits(aBuffer, repr.digits, repr.exponent, aDecSep, aForceShowFrac);
