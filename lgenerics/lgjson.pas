@@ -4528,177 +4528,427 @@ begin
   Result := s;
 end;
 
-{$PUSH}{$WARN 5089 OFF : Local variable "$1" of a managed type does not seem to be initialized }
-class function TJsonNode.MinifyJson(const aJson: string; out aCompact: string; aMaxDepth: Integer): Boolean;
+function GetJsonNumberLen(p: PAnsiChar): SizeInt;
 var
-  Reader: TJsonReader = nil;
-  Writer: TJsonStrWriter = nil;
+  pStart: PAnsiChar;
+begin
+  pStart := p;
+  if p^ = '-' then Inc(p);
 
-  function WriteValue: Boolean; forward;
-  function WriteArray: Boolean;
-  begin
-    if Reader.TokenKind <> rtkArrayBegin then exit(False);
-    Writer.BeginArray;
-    repeat
-      if not Reader.Read then exit(False);
-      if Reader.TokenKind = rtkArrayEnd then break;
-      if not WriteValue then exit(False);
-    until False;
-    Result := Reader.ReadState <> rsError;
-    Writer.EndArray;
+  if p^ = '0' then begin
+    if p[1] in ['0'..'9'] then exit(0);
+    Inc(p);
+  end else begin
+    if not(p^ in ['0'..'9']) then exit(0);
+    Inc(p);
+    while p^ in ['0'..'9'] do Inc(p);
   end;
 
-  function WriteObject: Boolean;
-  begin
-    if Reader.TokenKind <> rtkObjectBegin then exit(False);
-    Writer.BeginObject;
-    repeat
-      if not Reader.Read then exit(False);
-      if Reader.TokenKind = rtkObjectEnd then break;
-      Writer.AddName(Reader.Name);
-      if not WriteValue then exit(False);
-    until False;
-    Result := Reader.ReadState <> rsError;
-    Writer.EndObject;
+  if p^ = '.' then begin
+    if not(p[1] in ['0'..'9']) then exit(0);
+    Inc(p);
+    while p^ in ['0'..'9'] do Inc(p);
   end;
 
-  function WriteValue: Boolean;
-  begin
-    case Reader.TokenKind of
-      rtkArrayBegin:  if not WriteArray then exit(False);
-      rtkObjectBegin: if not WriteObject then exit(False);
-      rtkNull:        Writer.AddNull;
-      rtkFalse:       Writer.AddFalse;
-      rtkTrue:        Writer.AddTrue;
-      rtkNumber:      Writer.Add(Reader.AsNumber);
-      rtkString:      Writer.Add(Reader.AsString);
-    else
-      exit(False);
+  if p^ in ['e', 'E'] then begin
+    Inc(p);
+    if (p^ = '-') or (p^ = '+') then Inc(p);
+    if not(p^ in ['0'..'9']) then exit(0);
+    while p^ in ['0'..'9'] do Inc(p);
+  end;
+
+  Result := p - pStart;
+end;
+
+function GetJsonStringLen(p: PAnsiChar; aCount: SizeInt): SizeInt;
+const
+  HEX_CHARS  = ['0'..'9','A'..'F','a'..'f'];
+var
+  I, J: SizeInt;
+begin
+  Assert(p^ = '"');
+  if aCount < 2 then exit(0);
+  I := 1;
+  while I < aCount do begin
+    J := I;
+    while not(p[J] in [#0..#31,'"','\']) do Inc(J);
+    if J <> I then begin
+      I := J;
     end;
-    Result := True;
+    case p[I] of
+      '"': exit(I+1);
+      '\': begin
+        if I > aCount - 3 then exit(0);
+        case p[Succ(I)] of
+          '"', '/', '\', 'b', 'f', 'n', 'r', 't':
+            I += 2;
+          'u':
+            begin
+              if I > aCount - 8 then exit(0);
+              if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
+                     (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
+              I += 6;
+            end;
+        else
+          exit(0);
+        end;
+      end;
+    else //#0..#31
+      exit(0);
+    end;
+  end;
+  Result := 0;
+end;
+
+class function TJsonNode.MinifyJson(const aJson: string; out aCompact: string; aMaxDepth: Integer): Boolean;
+const
+  WHITE_SPACE = [#9, #10, #13, ' '];
+var
+  pCurr, pEnd: PAnsiChar;
+
+  procedure SkipWS; inline;
+  begin
+    while (pCurr < pEnd) and (pCurr^ in WHITE_SPACE) do Inc(pCurr);
   end;
 
 var
-  ReaderRef: specialize TGUniqRef<TJsonReader>;
-  WriterRef: specialize TGAutoRef<TJsonStrWriter>;
+  sb: TStrBuilder;
+
+  function CopyNumber: Boolean;
+  var
+    Len: SizeInt;
+  begin
+    Assert(pCurr^ in ['-','0'..'9']);
+    Len := GetJsonNumberLen(pCurr);
+    Result := (Len <> 0) and (pCurr + Len <= pEnd);
+    if Result then begin
+      sb.Append(pCurr, Len);
+      pCurr += Len;
+    end;
+  end;
+
+  function CopyString: Boolean;
+  var
+    Len: SizeInt;
+  begin
+    Assert(pCurr^ = '"');
+    Len := GetJsonStringLen(pCurr, pEnd - pCurr);
+    Result := Len <> 0;
+    if Result then begin
+      sb.Append(pCurr, Len);
+      pCurr += Len;
+    end;
+  end;
+
+var
+  Depth: Integer = 0;
+
+  function CopyValue: Boolean; forward;
+
+  function CopyArray: Boolean;
+  var
+    NextRequired: Boolean;
+  begin
+    Assert(pCurr^ = '[');
+    if Depth = aMaxDepth then exit(False);
+    Inc(Depth);
+    sb.Append(chOpenSqrBr);
+    Inc(pCurr);
+    NextRequired := False;
+    while pCurr < pEnd do begin
+      SkipWS;
+      if pCurr^ = chClosSqrBr then begin
+        if NextRequired then break;
+        Inc(pCurr);
+        Dec(Depth);
+        sb.Append(chClosSqrBr);
+        exit(True);
+      end;
+      if not CopyValue then break;
+      SkipWS;
+      NextRequired := pCurr^ = chComma;
+      if NextRequired then begin
+        Inc(pCurr);
+        sb.Append(chComma);
+      end else
+        if pCurr^ <> chClosSqrBr then break;
+    end;
+    Result := False;
+  end;
+
+  function CopyObject: Boolean;
+  var
+    NextRequired: Boolean;
+  begin
+    Assert(pCurr^ = '{');
+    if Depth = aMaxDepth then exit(False);
+    sb.Append(chOpenCurBr);
+    Inc(Depth);
+    Inc(pCurr);
+    NextRequired := False;
+    while pCurr < pEnd do begin
+      SkipWS;
+      if pCurr^ = chClosCurBr then begin
+        if NextRequired then break;
+        Inc(pCurr);
+        Dec(Depth);
+        sb.Append(chClosCurBr);
+        exit(True);
+      end;
+      if not((pCurr^ = '"') and CopyString) then break;
+      SkipWS;
+      if pCurr^ <> chColon then break;
+      Inc(pCurr);
+      sb.Append(chColon);
+      if not CopyValue then break;
+      SkipWS;
+      NextRequired := pCurr^ = chComma;
+      if NextRequired then begin
+        Inc(pCurr);
+        sb.Append(chComma);
+      end else
+        if pCurr^ <> chClosCurBr then break;
+    end;
+    Result := False;
+  end;
+
+  function CopyValue: Boolean;
+  begin
+    SkipWS;
+    if pCurr >= pEnd then exit(False);
+    case pCurr^ of
+      '"':          Result := CopyString;
+      '-','0'..'9': Result := CopyNumber;
+      '[':          Result := CopyArray;
+      'f': begin
+          Result := (pEnd - pCurr > 4) and (pCurr[1]='a') and (pCurr[2]='l') and
+                    (pCurr[3]='s') and (pCurr[4]='e');
+          if Result then begin
+            sb.Append(JS_FALSE);
+            Inc(pCurr, 5);
+          end;
+        end;
+      'n': begin
+          Result := (pEnd - pCurr > 3) and (pCurr[1]='u') and (pCurr[2]='l') and (pCurr[3]='l');
+          if Result then begin
+            sb.Append(JS_NULL);
+            Inc(pCurr, 4);
+          end;
+        end;
+      't': begin
+          Result := (pEnd - pCurr > 3) and (pCurr[1]='r') and (pCurr[2]='u') and (pCurr[3]='e');
+          if Result then begin
+            sb.Append(JS_TRUE);
+            Inc(pCurr, 4);
+          end;
+        end;
+      '{': Result := CopyObject;
+    else
+      Result := False;
+    end;
+  end;
+
 begin
   aCompact := '';
-  ReaderRef.Instance := TJsonReader.Create(aJson, aMaxDepth);
-  Reader := ReaderRef;
-  Writer := WriterRef;
-  if not Reader.Read then exit(False);
-  Result := WriteValue and (Reader.ReadState <> rsError);
-  if Result then begin
-    if Reader.ReadState < rsEof then begin
-      Reader.Read;
-      if Reader.ReadState <> rsEof then exit(False);
-    end;
-    aCompact := Writer.JsonString;
+  if aJson = '' then exit(False);
+  if aMaxDepth < 1 then
+    aMaxDepth := 1;
+  pCurr := Pointer(aJson);
+  pEnd := pCurr + System.Length(aJson);
+  sb.Create(System.Length(aJson));
+  Result := CopyValue;
+  if Result and (pCurr < pEnd) then begin
+    SkipWS;
+    Result := pCurr = pEnd;
   end;
+  if Result then
+    aCompact := sb.ToString;
 end;
 
 class function TJsonNode.PrettifyJson(const aJson: string; out aPretty: string; aIndentSize: Integer;
   aUseTab: Boolean; aOffset: Integer; aMaxDepth: Integer): Boolean;
+const
+  WHITE_SPACE = [#9, #10, #13, ' '];
 var
-  Reader: TJsonReader = nil;
+  pCurr, pEnd: PAnsiChar;
+
+  procedure SkipWS; inline;
+  begin
+    while (pCurr < pEnd) and (pCurr^ in WHITE_SPACE) do Inc(pCurr);
+  end;
+
+var
   sb: TStrBuilder;
+
+  function WriteNumber: Boolean;
+  var
+    Len: SizeInt;
+  begin
+    Assert(pCurr^ in ['-','0'..'9']);
+    Len := GetJsonNumberLen(pCurr);
+    Result := (Len <> 0) and (pCurr + Len <= pEnd);
+    if Result then begin
+      sb.Append(pCurr, Len);
+      pCurr += Len;
+    end;
+  end;
+
+  function WriteString: Boolean;
+  var
+    Len: SizeInt;
+  begin
+    Assert(pCurr^ = '"');
+    Len := GetJsonStringLen(pCurr, pEnd - pCurr);
+    Result := Len <> 0;
+    if Result then begin
+      sb.Append(pCurr, Len);
+      pCurr += Len;
+    end;
+  end;
+
+var
+  Depth: Integer = 0;
   IndentChar: AnsiChar = ' ';
   Indent: Integer = 0;
-  s: shortstring;
 
   function WriteValue(aNewLine: Boolean = True): Boolean; forward;
+
   function WriteArray(aNewLine: Boolean): Boolean;
   var
-    NotFirst: Boolean;
+    NextRequired: Boolean;
   begin
-    if Reader.TokenKind <> rtkArrayBegin then exit(False);
+    Assert(pCurr^ = '[');
+    if Depth = aMaxDepth then exit(False);
+    Inc(Depth);
     if aNewLine then sb.Append(IndentChar, Indent);
     sb.Append(chOpenSqrBr);
-    Inc(Indent, aIndentSize);
-    NotFirst := False;
-    repeat
-      if not Reader.Read then exit(False);
-      if Reader.TokenKind = rtkArrayEnd then break;
-      if NotFirst then
-        sb.Append(chComma)
-      else
-        NotFirst := True;
-      sb.Append(System.LineEnding);
-      if not Reader.IsStartToken(Reader.TokenKind) then sb.Append(IndentChar, Indent);
-      if not WriteValue then exit(False);
-    until False;
-    Result := Reader.ReadState <> rsError;
-    Dec(Indent, aIndentSize);
     sb.Append(System.LineEnding);
-    sb.Append(IndentChar, Indent);
-    sb.Append(chClosSqrBr);
+    Inc(pCurr);
+    Inc(Indent, aIndentSize);
+    NextRequired := False;
+    while pCurr < pEnd do begin
+      SkipWS;
+      if pCurr^ = chClosSqrBr then begin
+        if NextRequired then break;
+        Dec(Indent, aIndentSize);
+        Inc(pCurr);
+        Dec(Depth);
+        sb.Append(IndentChar, Indent);
+        sb.Append(chClosSqrBr);
+        exit(True);
+      end;
+      sb.Append(IndentChar, Indent);
+      if not WriteValue(False) then break;
+      SkipWS;
+      NextRequired := pCurr^ = chComma;
+      if NextRequired then begin
+        Inc(pCurr);
+        sb.Append(chComma);
+      end else
+        if pCurr^ <> chClosSqrBr then break;
+      sb.Append(System.LineEnding);
+    end;
+    Result := False;
   end;
 
   function WriteObject(aNewLine: Boolean): Boolean;
   var
-    NotFirst: Boolean;
+    NextRequired: Boolean;
   begin
-    if Reader.TokenKind <> rtkObjectBegin then exit(False);
+    Assert(pCurr^ = '{');
+    if Depth = aMaxDepth then exit(False);
     if aNewLine then sb.Append(IndentChar, Indent);
     sb.Append(chOpenCurBr);
-    Inc(Indent, aIndentSize);
-    NotFirst := False;
-    repeat
-      if not Reader.Read then exit(False);
-      if Reader.TokenKind = rtkObjectEnd then break;
-      if NotFirst then
-        sb.Append(chComma)
-      else
-        NotFirst := True;
-      sb.Append(System.LineEnding);
-      sb.Append(IndentChar, Indent);
-      sb.AppendEncode(Reader.Name);
-      sb.Append(chColon, chSpace);
-      if not WriteValue(False) then exit(False);
-    until False;
-    Result := Reader.ReadState <> rsError;
-    Dec(Indent, aIndentSize);
     sb.Append(System.LineEnding);
-    sb.Append(IndentChar, Indent);
-    sb.Append(chClosCurBr);
+    Inc(Depth);
+    Inc(pCurr);
+    Inc(Indent, aIndentSize);
+    NextRequired := False;
+    while pCurr < pEnd do begin
+      SkipWS;
+      if pCurr^ = chClosCurBr then begin
+        if NextRequired then break;
+        Dec(Indent, aIndentSize);
+        Inc(pCurr);
+        Dec(Depth);
+        sb.Append(IndentChar, Indent);
+        sb.Append(chClosCurBr);
+        exit(True);
+      end;
+      sb.Append(IndentChar, Indent);
+      if not((pCurr^ = '"') and WriteString) then break;
+      SkipWS;
+      if pCurr^ <> chColon then break;
+      Inc(pCurr);
+      sb.Append(chColon);
+      sb.Append(chSpace);
+      if not WriteValue(False) then break;
+      SkipWS;
+      NextRequired := pCurr^ = chComma;
+      if NextRequired then begin
+        Inc(pCurr);
+        sb.Append(chComma);
+      end else
+        if pCurr^ <> chClosCurBr then break;
+      sb.Append(System.LineEnding);
+    end;
+    Result := False;
   end;
 
   function WriteValue(aNewLine: Boolean = True): Boolean;
   begin
-    case Reader.TokenKind of
-      rtkArrayBegin:  if not WriteArray(aNewLine) then exit(False);
-      rtkObjectBegin: if not WriteObject(aNewLine) then exit(False);
-      rtkNull:        sb.Append(JS_NULL);
-      rtkFalse:       sb.Append(JS_FALSE);
-      rtkTrue:        sb.Append(JS_TRUE);
-      rtkNumber:      begin DoubleToJson(Reader.AsNumber, s); sb.Append(s); end;
-      rtkString:      sb.AppendEncode(Reader.AsString);
+    SkipWS;
+    if pCurr >= pEnd then exit(False);
+    case pCurr^ of
+      '"':          Result := WriteString;
+      '-','0'..'9': Result := WriteNumber;
+      '[':          Result := WriteArray(aNewLine);
+      'f': begin
+          Result := (pEnd - pCurr > 4) and (pCurr[1]='a') and (pCurr[2]='l') and
+                    (pCurr[3]='s') and (pCurr[4]='e');
+          if Result then begin
+            sb.Append(JS_FALSE);
+            Inc(pCurr, 5);
+          end;
+        end;
+      'n': begin
+          Result := (pEnd - pCurr > 3) and (pCurr[1]='u') and (pCurr[2]='l') and (pCurr[3]='l');
+          if Result then begin
+            sb.Append(JS_NULL);
+            Inc(pCurr, 4);
+          end;
+        end;
+      't': begin
+          Result := (pEnd - pCurr > 3) and (pCurr[1]='r') and (pCurr[2]='u') and (pCurr[3]='e');
+          if Result then begin
+            sb.Append(JS_TRUE);
+            Inc(pCurr, 4);
+          end;
+        end;
+      '{': Result := WriteObject(aNewLine);
     else
-      exit(False);
+      Result := False;
     end;
-    Result := True;
   end;
-var
-  ReaderRef: specialize TGUniqRef<TJsonReader>;
 begin
   aPretty := '';
-  ReaderRef.Instance := TJsonReader.Create(aJson, aMaxDepth);
-  Reader := ReaderRef;
-  sb := TStrBuilder.Create(System.Length(aJson));
+  if aJson = '' then exit(False);
+  pCurr := Pointer(aJson);
+  pEnd := pCurr + System.Length(aJson);
+  if aMaxDepth < 1 then
+    aMaxDepth := 1;
+  sb.Create(System.Length(aJson));
   if aUseTab then IndentChar := #9;
   if aIndentSize < 1 then aIndentSize := DEF_INDENT;
   if aOffset > 0 then Indent += aOffset;
-  if not Reader.Read then exit(False);
-  Result := WriteValue and (Reader.ReadState <> rsError);
-  if Result then begin
-    if Reader.ReadState < rsEof then begin
-      Reader.Read;
-      if Reader.ReadState <> rsEof then exit(False);
-    end;
-    aPretty := sb.ToString;
+  Result := WriteValue;
+  if Result and (pCurr < pEnd) then begin
+    SkipWS;
+    Result := pCurr = pEnd;
   end;
+  if Result then
+    aPretty := sb.ToString;
 end;
-{$POP}
 
 class function TJsonNode.NewNull: TJsonNode;
 begin
