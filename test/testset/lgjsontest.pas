@@ -1960,9 +1960,34 @@ procedure TTestJson.TestPrettify;
 var
   Source, Res: specialize TGAutoRef<TJsonNode>;
   Json, Pretty: string;
+const
+  JSON1 = ' 42';
+  JSON2 = #9' 1001 '#13#10;
+  JSON3 = '[42, false, "string", ["a", "b", "c"], null, {"a": 1001, "b": {"c": false, "d": [  ], "o": {  } } } ]';
 begin
   Json := '';
   AssertFalse(TJsonNode.PrettifyJson(Json, Pretty));
+
+  Json := JSON1;
+  Source.Instance.AsJson := Json;
+  AssertTrue(TJsonNode.PrettifyJson(Json, Pretty));
+  AssertTrue(Json <> Pretty);
+  AssertTrue(Res.Instance.TryParse(Pretty));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+
+  Json := JSON2;
+  Source.Instance.AsJson := Json;
+  AssertTrue(TJsonNode.PrettifyJson(Json, Pretty));
+  AssertTrue(Json <> Pretty);
+  AssertTrue(Res.Instance.TryParse(Pretty));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+
+  Json := JSON3;
+  Source.Instance.AsJson := Json;
+  AssertTrue(TJsonNode.PrettifyJson(Json, Pretty));
+  AssertTrue(Json <> Pretty);
+  AssertTrue(Res.Instance.TryParse(Pretty));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
 
   Json := TestJson;
   Source.Instance.AsJson := Json;
@@ -1981,9 +2006,34 @@ procedure TTestJson.TestMinify;
 var
   Source, Res: specialize TGAutoRef<TJsonNode>;
   Json, Compact: string;
+const
+  JSON1 = ' 42';
+  JSON2 = #9' 1001 '#13#10;
+  JSON3 = '[42, false, "string", ["a", "b", "c"], null, {"a": 1001, "b": {"c": false, "d": [  ], "o": {  } } } ]';
 begin
   Json := '';
   AssertFalse(TJsonNode.MinifyJson(Json, Compact));
+
+  Json := JSON1;
+  AssertTrue(TJsonNode.MinifyJson(Json, Compact));
+  AssertTrue(Json <> Compact);
+  Source.Instance.AsJson := Json;
+  AssertTrue(Res.Instance.TryParse(Compact));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+
+  Json := JSON2;
+  AssertTrue(TJsonNode.MinifyJson(Json, Compact));
+  AssertTrue(Json <> Compact);
+  Source.Instance.AsJson := Json;
+  AssertTrue(Res.Instance.TryParse(Compact));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
+
+  Json := JSON3;
+  AssertTrue(TJsonNode.MinifyJson(Json, Compact));
+  AssertTrue(Json <> Compact);
+  Source.Instance.AsJson := Json;
+  AssertTrue(Res.Instance.TryParse(Compact));
+  AssertTrue(Source.Instance.EqualTo(Res.Instance));
 
   AssertTrue(TJsonNode.PrettifyJson(TestJson, Json, 2));
   Source.Instance.AsJson := Json;
