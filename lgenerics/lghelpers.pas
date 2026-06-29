@@ -214,13 +214,15 @@ type
   { returns the value of a unit in the last place(JH version) if aNum is a finite number,
     otherwise returns Abs(aNum) }
     class function Ulp(const aNum: Single): Single; static;
-  { converts the value aNum to its shortest possible decimal representation s;
+  { converts the value aNum to its shortest decimal representation s;
     returns the length of s; uses Schubfach float-to-string conversion algorithm }
-    class function ToDecString(const aNum: Single; out s: shortstring; aDecSeparator: AnsiChar = '.';
+    class function ToDecString(const aNum: Single; out s: shortstring; aDecimalSeparator: AnsiChar = '.';
                                aForceShowFrac: Boolean = False): Integer; static;
-    class function ToDecString(const aNum: Single; aDecSeparator: AnsiChar = '.';
+  { returns the shortest decimal representation of the value aNum }
+    class function ToDecString(const aNum: Single; aDecimalSeparator: AnsiChar = '.';
                                aForceShowFrac: Boolean = False): string; static;
-  { uses the current locale's decimal separator }
+  { returns the shortest decimal representation of the value aNum;
+    uses the current locale's decimal separator }
     class function ToDecStringDef(const aNum: Single; aForceShowFrac: Boolean = False): string; static;
     function  IsZero: Boolean; inline;
     function  IsFinite: Boolean; inline;
@@ -1385,7 +1387,7 @@ end;
 
 { Pascal port of the Alexander Bolz's implementation of the Schubfach algorithm for
   single-precision floating-point numbers (https://github.com/abolz/Drachennest) }
-class function TGSingleHelper.ToDecString(const aNum: Single; out s: shortstring; aDecSeparator: AnsiChar;
+class function TGSingleHelper.ToDecString(const aNum: Single; out s: shortstring; aDecimalSeparator: AnsiChar;
   aForceShowFrac: Boolean): Integer;
 const
   SIGNIFICAND_SIZE  = 24;          // p (includes hidden bit)
@@ -1777,15 +1779,15 @@ type
     end;
   end;
 begin
-  Result := ToDecimal(@s[1], aNum, aDecSeparator, aForceShowFrac) - PAnsiChar(@s[1]);
+  Result := ToDecimal(@s[1], aNum, aDecimalSeparator, aForceShowFrac) - PAnsiChar(@s[1]);
   System.SetLength(s, Result);
 end;
 
-class function TGSingleHelper.ToDecString(const aNum: Single; aDecSeparator: AnsiChar; aForceShowFrac: Boolean): string;
+class function TGSingleHelper.ToDecString(const aNum: Single; aDecimalSeparator: AnsiChar; aForceShowFrac: Boolean): string;
 var
   ss: shortstring;
 begin
-  System.SetLength(Result, ToDecString(aNum, ss, aDecSeparator, aForceShowFrac));
+  System.SetLength(Result, ToDecString(aNum, ss, aDecimalSeparator, aForceShowFrac));
   System.Move(ss[1], Pointer(Result)^, System.Length(Result));
 end;
 
