@@ -4263,18 +4263,28 @@ end;
 
 class function TJsonNode.JsonStringValid(const s: string): Boolean;
 var
+  p, pEnd: PAnsiChar;
   Stack: array[0..3] of TParseMode;
 begin
   if System.Length(s) < 2 then exit(False);
-  Result := TBaseValidator.ValidateBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  while p^ in [#9, #10, #13, ' '] do Inc(p);
+  if p^ <> '"' then exit(False);
+  Result := TBaseValidator.ValidateBuf(PByte(p), pEnd - p, TOpenArray.Create(@Stack[0], 1));
 end;
 
 class function TJsonNode.JsonNumberValid(const s: string): Boolean;
 var
+  p, pEnd: PAnsiChar;
   Stack: array[0..3] of TParseMode;
 begin
   if s = '' then exit(False);
-  Result := TBaseValidator.ValidateBuf(Pointer(s), System.Length(s), TOpenArray.Create(@Stack[0], 1));
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  while p^ in [#9, #10, #13, ' '] do Inc(p);
+  if not(p^ in ['-', '0'..'9']) then exit(False);
+  Result := TBaseValidator.ValidateBuf(PByte(p), pEnd - p, TOpenArray.Create(@Stack[0], 1));
 end;
 
 
