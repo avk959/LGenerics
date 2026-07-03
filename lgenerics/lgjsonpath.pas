@@ -274,9 +274,11 @@ type
     Value: TJsonNode;
     constructor Make(const aPath: string; aValue: TJsonNode);
     function AsJson: string;
-  { splits Path into segments; returns an empty array if Path is not a valid normalized path }
+  { splits Path into segments;
+    raises an EConvertError exception if Path is not a valid normalized path }
     function PathToSegments: TStringArray;
-  { tries to split the normalized path aPath into segments; returns False if aPath is not a valid normalized path }
+  { tries to split the normalized path aPath into segments;
+    returns False if aPath is not a valid normalized path }
     class function TrySplitNormalPath(const aPath: string; out aSegments: TStringArray): Boolean; static;
   end;
 
@@ -603,7 +605,8 @@ end;
 
 function TJpNode.PathToSegments: TStringArray;
 begin
-  TrySplitNormalPath(Path, Result);
+  if not TrySplitNormalPath(Path, Result) then
+    raise EConvertError.CreateFmt(SEJPathInvalidNormPathFmt, [Path]);
 end;
 
 {$PUSH}{$WARN 5089 OFF}{$WARN 5094 OFF}{$WARN 5036 OFF}
@@ -612,7 +615,6 @@ class function TJpNode.TrySplitNormalPath(const aPath: string; out aSegments: TS
   begin
     case c of
       '0'..'9': Result := Ord(c) - Ord('0');
-      'A'..'F': Result := Ord(c) - Ord('A') + 10;
       'a'..'f': Result := Ord(c) - Ord('a') + 10;
     else
       Result := $f;
@@ -622,8 +624,9 @@ var
   List: specialize TGLiteVector<string>;
   sb: TStrBuilder;
   p, pEnd: PAnsiChar;
+  c: AnsiChar;
 const
-  HexChars = ['0'..'9','A'..'F','a'..'f'];
+  HexChars = ['0'..'9', 'a'..'f'];
   INIT_CAP = 64;
 begin
   aSegments := nil;
@@ -647,33 +650,37 @@ begin
         end;
       '''': begin
          Inc(p);
-         if p >= pEnd then exit(False);
-         while p^ <> '''' do begin
-           if p^ = '\' then begin
-             if p > pEnd - 2 then exit(False);
-             Inc(p);
-             case p^ of
-               'b': begin sb.Append(#8); Inc(p); end;
-               'f': begin sb.Append(#12); Inc(p); end;
-               'n': begin sb.Append(#10); Inc(p); end;
-               'r': begin sb.Append(#13); Inc(p); end;
-               't': begin sb.Append(#9); Inc(p); end;
-               'u': begin
-                 if (p > pEnd - 5) or (p[1] <> '0') or (p[2] <> '0') or
-                     not ((p[3] in HexChars) and (p[3] in HexChars)) then exit(False);
-                 sb.Append(AnsiChar(Hex2Byte(p[3]) shl 4 or Hex2Byte(p[4])));
-                 p += 5;
-               end
-             else
+         while (p < pEnd - 1) and (p^ <> '''') do
+           if p^ in [#0..#31] then
+             exit(False)
+           else
+             if p^ = '\' then begin
+               if p > pEnd - 2 then exit(False);
+               Inc(p);
+               case p^ of
+                 '''': begin sb.Append(''''); Inc(p); end;
+                 'b':  begin sb.Append(#8);   Inc(p); end;
+                 'f':  begin sb.Append(#12);  Inc(p); end;
+                 'n':  begin sb.Append(#10);  Inc(p); end;
+                 'r':  begin sb.Append(#13);  Inc(p); end;
+                 't':  begin sb.Append(#9);   Inc(p); end;
+                 'u':
+                   begin
+                     if (p > pEnd - 5) or (p[1] <> '0') or (p[2] <> '0') or
+                         not((p[3] in HexChars) and (p[3] in HexChars)) then exit(False);
+                     c := AnsiChar(Hex2Byte(p[3]) shl 4 or Hex2Byte(p[4]));
+                     if not(c in [#0..#31]-[#8,#9,#10,#12,#13]) then exit(False);
+                     sb.Append(c);
+                     p += 5;
+                   end;
+               else
+                 exit(False);
+               end;
+             end else begin
                sb.Append(p^);
                Inc(p);
              end;
-           end else begin
-             sb.Append(p^);
-             Inc(p);
-           end;
-           if p >= pEnd then exit(False);
-         end;
+         if (p > pEnd - 2) or (p^ <> '''') then  exit(False);
          Inc(p);
          if p^ <> ']' then exit(False);
          Inc(p);
