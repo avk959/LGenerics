@@ -247,6 +247,7 @@ resourcestring
   SEJPathFunParamExtraFmt  = 'extra %s() parameter(s)';
   SEJPathParamMismatchFmt  = 'Position %d: %s() parameter type mismatch(%d)';
   SEJPathTrailFiltGarbage  = 'trailing garbage in filter expression';
+  SEJPathInvalidNormPathFmt= '%s is not a valid normalized path';
 //I-Regexp
   SEIreBadExprEncoding     = 'Bad expression encoding';
   SEIreInternalErrorFmt    = 'Internal exception %s with message "%s"';
