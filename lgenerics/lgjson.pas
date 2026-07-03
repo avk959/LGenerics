@@ -4261,30 +4261,83 @@ begin
   end;
 end;
 
-class function TJsonNode.JsonStringValid(const s: string): Boolean;
+function GetJsonStringLen(p: PAnsiChar; aCount: SizeInt): SizeInt;
+const
+  HEX_CHARS  = ['0'..'9','A'..'F','a'..'f'];
 var
-  p, pEnd: PAnsiChar;
-  Stack: array[0..3] of TParseMode;
+  I: SizeInt;
 begin
-  if System.Length(s) < 2 then exit(False);
-  p := Pointer(s);
-  pEnd := p + System.Length(s);
-  while p^ in [#9, #10, #13, ' '] do Inc(p);
-  if p^ <> '"' then exit(False);
-  Result := TBaseValidator.ValidateBuf(PByte(p), pEnd - p, TOpenArray.Create(@Stack[0], 1));
+  if (aCount < 2) or (p^ <> '"') then exit(0);
+  I := 1;
+  while I < aCount do begin
+    while not(p[I] in [#0..#31,'"','\']) do Inc(I);
+    case p[I] of
+      '"': exit(I+1);
+      '\': begin
+        if I > aCount - 3 then exit(0);
+        case p[Succ(I)] of
+          '"', '/', '\', 'b', 'f', 'n', 'r', 't':
+            I += 2;
+          'u':
+            begin
+              if I > aCount - 8 then exit(0);
+              if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
+                     (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
+              I += 6;
+            end;
+        else
+          exit(0);
+        end;
+      end;
+    else //#0..#31
+      exit(0);
+    end;
+  end;
+  Result := 0;
+end;
+
+class function TJsonNode.JsonStringValid(const s: string): Boolean;
+begin
+  if not Utf8Validate(s) then exit(False);
+  Result := GetJsonStringLen(Pointer(s), System.Length(s)) = System.Length(s);
+end;
+
+function GetJsonNumberLen(p: PAnsiChar): SizeInt;
+var
+  pStart: PAnsiChar;
+begin
+  pStart := p;
+  if p^ = '-' then Inc(p);
+
+  if p^ = '0' then begin
+    if p[1] in ['0'..'9'] then exit(0);
+    Inc(p);
+  end else begin
+    if not(p^ in ['0'..'9']) then exit(0);
+    Inc(p);
+    while p^ in ['0'..'9'] do Inc(p);
+  end;
+
+  if p^ = '.' then begin
+    if not(p[1] in ['0'..'9']) then exit(0);
+    Inc(p);
+    while p^ in ['0'..'9'] do Inc(p);
+  end;
+
+  if p^ in ['e', 'E'] then begin
+    Inc(p);
+    if (p^ = '-') or (p^ = '+') then Inc(p);
+    if not(p^ in ['0'..'9']) then exit(0);
+    while p^ in ['0'..'9'] do Inc(p);
+  end;
+
+  Result := p - pStart;
 end;
 
 class function TJsonNode.JsonNumberValid(const s: string): Boolean;
-var
-  p, pEnd: PAnsiChar;
-  Stack: array[0..3] of TParseMode;
 begin
   if s = '' then exit(False);
-  p := Pointer(s);
-  pEnd := p + System.Length(s);
-  while p^ in [#9, #10, #13, ' '] do Inc(p);
-  if not(p^ in ['-', '0'..'9']) then exit(False);
-  Result := TBaseValidator.ValidateBuf(PByte(p), pEnd - p, TOpenArray.Create(@Stack[0], 1));
+  Result := GetJsonNumberLen(Pointer(s)) = System.Length(s);
 end;
 
 
@@ -4536,78 +4589,6 @@ begin
   if not TryJsonStrToPas(aJsonStr, s) then
     raise EJsException.Create(SEInvalidJsonStrInst);
   Result := s;
-end;
-
-function GetJsonNumberLen(p: PAnsiChar): SizeInt;
-var
-  pStart: PAnsiChar;
-begin
-  pStart := p;
-  if p^ = '-' then Inc(p);
-
-  if p^ = '0' then begin
-    if p[1] in ['0'..'9'] then exit(0);
-    Inc(p);
-  end else begin
-    if not(p^ in ['0'..'9']) then exit(0);
-    Inc(p);
-    while p^ in ['0'..'9'] do Inc(p);
-  end;
-
-  if p^ = '.' then begin
-    if not(p[1] in ['0'..'9']) then exit(0);
-    Inc(p);
-    while p^ in ['0'..'9'] do Inc(p);
-  end;
-
-  if p^ in ['e', 'E'] then begin
-    Inc(p);
-    if (p^ = '-') or (p^ = '+') then Inc(p);
-    if not(p^ in ['0'..'9']) then exit(0);
-    while p^ in ['0'..'9'] do Inc(p);
-  end;
-
-  Result := p - pStart;
-end;
-
-function GetJsonStringLen(p: PAnsiChar; aCount: SizeInt): SizeInt;
-const
-  HEX_CHARS  = ['0'..'9','A'..'F','a'..'f'];
-var
-  I, J: SizeInt;
-begin
-  Assert(p^ = '"');
-  if aCount < 2 then exit(0);
-  I := 1;
-  while I < aCount do begin
-    J := I;
-    while not(p[J] in [#0..#31,'"','\']) do Inc(J);
-    if J <> I then begin
-      I := J;
-    end;
-    case p[I] of
-      '"': exit(I+1);
-      '\': begin
-        if I > aCount - 3 then exit(0);
-        case p[Succ(I)] of
-          '"', '/', '\', 'b', 'f', 'n', 'r', 't':
-            I += 2;
-          'u':
-            begin
-              if I > aCount - 8 then exit(0);
-              if not((p[I+2] in HEX_CHARS) and (p[I+3] in HEX_CHARS) and
-                     (p[I+4] in HEX_CHARS) and (p[I+5] in HEX_CHARS))then exit(0);
-              I += 6;
-            end;
-        else
-          exit(0);
-        end;
-      end;
-    else //#0..#31
-      exit(0);
-    end;
-  end;
-  Result := 0;
 end;
 
 class function TJsonNode.MinifyJson(const aJson: string; out aCompact: string; aMaxDepth: Integer): Boolean;
