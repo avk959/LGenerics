@@ -8312,29 +8312,19 @@ begin
       while pTemp^ in ['0', '.'] do
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
-      if DigCount > ELDBL_MAX_DIGITS then begin
-        if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
-          aValue := Double.PositiveInfinity;
-          if IsNeg then aValue.Negate;
-          exit(True);
-        end;
+      if DigCount > ELDBL_MAX_DIGITS then
         exit(TryPChar2DoubleFallBack(pStart, aValue));
-      end;
     end;
 
-  if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+  if Man = 0 then
     begin
       aValue := 0;
       if IsNeg then aValue.Negate;
       exit(True);
     end;
 
-  if Pow10 > ELDBL_HIGHEST_POWER then
-    begin
-      aValue := Double.PositiveInfinity;
-      if IsNeg then aValue.Negate;
-      exit(True);
-    end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    exit(TryPChar2DoubleFallBack(pStart, aValue));
 
   if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
     exit(True);
@@ -8432,29 +8422,19 @@ begin
       while pTemp^ in ['0', '.'] do
         Inc(pTemp);
       DigCount -= pTemp - pDigStart;
-      if DigCount > ELDBL_MAX_DIGITS then begin
-        if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
-          aValue := Double.PositiveInfinity;
-          if IsNeg then aValue.Negate;
-          exit(True);
-        end;
+      if DigCount > ELDBL_MAX_DIGITS then
         exit(TryPChar2DoubleFallBack(pStart, aValue));
-      end;
     end;
 
-  if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+  if Man = 0 then
     begin
       aValue := 0;
       if IsNeg then aValue.Negate;
       exit(True);
     end;
 
-  if Pow10 > ELDBL_HIGHEST_POWER then
-    begin
-      aValue := Double.PositiveInfinity;
-      if IsNeg then aValue.Negate;
-      exit(True);
-    end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    exit(TryPChar2DoubleFallBack(pStart, aValue));
 
   if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
     exit(True);
@@ -8626,31 +8606,22 @@ begin
     pTemp := pDigStart;
     while (pTemp^ = '0') or (pTemp^ = aSeparator) do Inc(pTemp);
     DigCount -= pTemp - pDigStart;
-    if DigCount > ELDBL_MAX_DIGITS then begin
-      if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
-        aValue := Double.PositiveInfinity;
-        if IsNeg then aValue.Negate;
-        exit(True);
-      end;
+    if DigCount > ELDBL_MAX_DIGITS then
       exit(FallBack(pStart, p - pStart, aValue)); ////
-    end;
   end;
 
-  if (Mantis = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+  if Mantis = 0 then
     begin
       aValue := 0;
       if IsNeg then aValue.Negate;
       exit(True);
     end;
 
-  if Pow10 > ELDBL_HIGHEST_POWER then
-    begin
-      aValue := Double.PositiveInfinity;
-      if IsNeg then aValue.Negate;
-      exit(True);
-    end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    exit(FallBack(pStart, p - pStart, aValue));
 
-  if TryBuildDoubleEiselLemire(Mantis, Pow10, IsNeg, aValue) then exit(True);
+  if TryBuildDoubleEiselLemire(Mantis, Pow10, IsNeg, aValue) then
+    exit(True);
 
   Result := FallBack(pStart, p - pStart, aValue);
 end;
@@ -8758,31 +8729,22 @@ begin
     while pTemp^ in ['0', '.'] do
       Inc(pTemp);
     DigCount -= pTemp - pDigStart;
-    if DigCount > ELDBL_MAX_DIGITS then begin
-      if DigCount - ELDBL_MAX_DIGITS + Pow10 > ELDBL_HIGHEST_POWER then begin
-        aValue := Double.PositiveInfinity;
-        if IsNeg then aValue.Negate;
-        exit(p - pStart);
-      end;
+    if DigCount > ELDBL_MAX_DIGITS then
       exit(FallBack(pStart, p - pStart, aValue));
-    end;
   end;
 
-  if (Man = 0) or (Pow10 < ELDBL_LOWEST_POWER) then
+  if Man = 0 then
     begin
       aValue := 0;
       if IsNeg then aValue.Negate;
       exit(p - pStart);
     end;
 
-  if Pow10 > ELDBL_HIGHEST_POWER then
-    begin
-      aValue := Double.PositiveInfinity;
-      if IsNeg then aValue.Negate;
-      exit(p - pStart);
-    end;
+  if (Pow10 < ELDBL_LOWEST_POWER) or (Pow10 > ELDBL_HIGHEST_POWER) then
+    exit(FallBack(pStart, p - pStart, aValue));
 
-  if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then exit(p - pStart);
+  if TryBuildDoubleEiselLemire(Man, Pow10, IsNeg, aValue) then
+    exit(p - pStart);
 
   Result := FallBack(pStart, p - pStart, aValue);
 end;
