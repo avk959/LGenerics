@@ -164,6 +164,8 @@ type
     class function  Equal(const L, R: Single): Boolean; inline; static;
     class function  Less(const L, R: Single): Boolean; inline; static;
     class function  IsFinite(const aValue: Single): Boolean; inline; static;
+    class function  IsNormal(const aValue: Single): Boolean; inline; static;
+    class function  IsSubnormal(const aValue: Single): Boolean; inline; static;
     class function  IsExactInt(const aValue: Single): Boolean; inline; static;
     class function  IsExactInt(const aValue: Single; out aIntValue: Int32): Boolean; inline; static;
     class procedure Negate(var aValue: Single); inline; static;
@@ -226,6 +228,8 @@ type
     class function ToDecStringDef(const aNum: Single; aForceShowFrac: Boolean = False): string; static;
     function  IsZero: Boolean; inline;
     function  IsFinite: Boolean; inline;
+    function  IsNormal: Boolean; inline;
+    function  IsSubnormal: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int32): Boolean; inline;
     procedure Negate; inline;
@@ -258,6 +262,8 @@ type
     class function  Equal(const L, R: Double): Boolean; inline; static;
     class function  Less(const L, R: Double): Boolean; inline; static;
     class function  IsFinite(const aValue: Double): Boolean; inline; static;
+    class function  IsNormal(const aValue: Double): Boolean; inline; static;
+    class function  IsSubnormal(const aValue: Double): Boolean; inline; static;
     class function  IsExactInt(const aValue: Double): Boolean; inline; static;
     class function  IsExactInt(const aValue: Double; out aIntValue: Int64): Boolean; inline; static;
     class procedure Negate(var aValue: Double); inline; static;
@@ -310,6 +316,8 @@ type
     class function Ulp(const aNum: Double): Double; static;
     function  IsZero: Boolean; inline;
     function  IsFinite: Boolean; inline;
+    function  IsNormal: Boolean; inline;
+    function  IsSubnormal: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int64): Boolean; inline;
     procedure Negate; inline;
@@ -346,6 +354,8 @@ type
     class function  Equal(const L, R: Extended): Boolean; inline; static;
     class function  Less(const L, R: Extended): Boolean; inline; static;
     class function  IsFinite(const aValue: Extended): Boolean; inline; static;
+    class function  IsNormal(const aValue: Extended): Boolean; inline; static;
+    class function  IsSubnormal(const aValue: Extended): Boolean; inline; static;
     class function  IsExactInt(const aValue: Extended): Boolean; inline; static;
     class function  IsExactInt(const aValue: Extended; out aIntValue: Int64): Boolean; static;
     class procedure Negate(var aValue: Extended); inline; static;
@@ -398,6 +408,8 @@ type
     class function Ulp(const aNum: Extended): Extended; static;
     function  IsZero: Boolean; inline;
     function  IsFinite: Boolean; inline;
+    function  IsNormal: Boolean; inline;
+    function  IsSubnormal: Boolean; inline;
     function  IsExactInt: Boolean; inline;
     function  IsExactInt(out aValue: Int64): Boolean; inline;
     procedure Negate; inline;
@@ -1140,6 +1152,18 @@ begin
   Result := (DWord(aValue) and not SIGN_FLAG) < EXP_MASK;
 end;
 
+class function TGSingleHelper.IsNormal(const aValue: Single): Boolean;
+begin
+  Result := (DWord(aValue) and not SIGN_FLAG <> 0) and
+            (DWord(aValue) and EXP_MASK <> EXP_MASK) and
+            (DWord(aValue) and EXP_MASK <> 0);
+end;
+
+class function TGSingleHelper.IsSubnormal(const aValue: Single): Boolean;
+begin
+  Result := (DWord(aValue) and not SIGN_FLAG <> 0) and (DWord(aValue) and EXP_MASK = 0);
+end;
+
 class function TGSingleHelper.IsExactInt(const aValue: Single): Boolean;
 begin
   if not IsFinite(aValue) then exit(False);
@@ -1806,6 +1830,16 @@ begin
   Result := IsFinite(Self);
 end;
 
+function TGSingleHelper.IsNormal: Boolean;
+begin
+  Result := IsNormal(Self);
+end;
+
+function TGSingleHelper.IsSubnormal: Boolean;
+begin
+  Result := IsSubnormal(Self);
+end;
+
 function TGSingleHelper.IsExactInt: Boolean;
 begin
   Result := IsExactInt(Self);
@@ -1902,6 +1936,18 @@ end;
 class function TGDoubleHelper.IsFinite(const aValue: Double): Boolean;
 begin
   Result := (QWord(aValue) and not SIGN_FLAG) < EXP_MASK;
+end;
+
+class function TGDoubleHelper.IsNormal(const aValue: Double): Boolean;
+begin
+  Result := (QWord(aValue) and not SIGN_FLAG <> 0) and
+            (QWord(aValue) and EXP_MASK <> EXP_MASK) and
+            (QWord(aValue) and EXP_MASK <> 0);
+end;
+
+class function TGDoubleHelper.IsSubnormal(const aValue: Double): Boolean;
+begin
+  Result := (QWord(aValue) and not SIGN_FLAG <> 0) and (QWord(aValue) and EXP_MASK = 0);
 end;
 
 class function TGDoubleHelper.IsExactInt(const aValue: Double): Boolean;
@@ -2163,6 +2209,16 @@ begin
   Result := IsFinite(Self);
 end;
 
+function TGDoubleHelper.IsNormal: Boolean;
+begin
+  Result := IsNormal(Self);
+end;
+
+function TGDoubleHelper.IsSubnormal: Boolean;
+begin
+  Result := IsSubnormal(Self);
+end;
+
 function TGDoubleHelper.IsExactInt: Boolean;
 begin
   Result := IsExactInt(Self);
@@ -2253,11 +2309,25 @@ end;
 class function TGExtendedHelper.IsFinite(const aValue: Extended): Boolean;
 begin
   case TPWord(aValue).PExp and EXP_MASK of
-    0:        Result := TPWord(aValue).Mantis and INT_FLAG = 0;
+    0:        Result := True;
     EXP_MASK: Result := False;
   else
     Result := TPWord(aValue).Mantis and INT_FLAG <> 0;
   end;
+end;
+
+class function TGExtendedHelper.IsNormal(const aValue: Extended): Boolean;
+begin
+  Result := (TPWord(aValue).PExp and EXP_MASK <> 0) and
+            (TPWord(aValue).PExp and EXP_MASK <> EXP_MASK) and
+            (TPWord(aValue).Mantis and INT_FLAG <> 0);
+end;
+
+class function TGExtendedHelper.IsSubnormal(const aValue: Extended): Boolean;
+begin
+  Result := (TPWord(aValue).PExp and EXP_MASK = 0) and
+            (TPWord(aValue).Mantis and INT_FLAG = 0) and
+            (TPWord(aValue).Mantis and not INT_FLAG <> 0);
 end;
 
 class function TGExtendedHelper.IsExactInt(const aValue: Extended): Boolean;
@@ -2503,7 +2573,7 @@ begin
   if aNum = aTo then exit(aTo);
   if aNum = 0 then begin
     TPWord(Result).Mantis := QWord(1);
-    TPWord(Result).PExp :=  TPWord(aTo).PExp and SIGN_FLAG;
+    TPWord(Result).PExp := TPWord(aTo).PExp and SIGN_FLAG;
   end else
     if(aNum.Sign xor aTo.Sign)or(System.Abs(aNum) > System.Abs(aTo))then begin
       //to zero
@@ -2518,10 +2588,14 @@ begin
     end else begin
       TPWord(Result).PExp := TPWord(aNum).PExp;
       TPWord(Result).Mantis := Succ(TPWord(aNum).Mantis);
-      if TPWord(Result).Mantis = 0 then begin
-        Inc(TPWord(Result).PExp);
-        TPWord(Result).Mantis := INT_FLAG;
-      end;
+      if TPWord(Result).PExp and not SIGN_FLAG <> 0 then begin
+        if TPWord(Result).Mantis = 0 then begin
+          Inc(TPWord(Result).PExp);
+          TPWord(Result).Mantis := INT_FLAG;
+        end;
+      end else
+        if TPWord(Result).Mantis = INT_FLAG then
+          Inc(TPWord(Result).PExp);
     end;
 end;
 
@@ -2550,6 +2624,16 @@ end;
 function TGExtendedHelper.IsFinite: Boolean;
 begin
   Result := IsFinite(Self);
+end;
+
+function TGExtendedHelper.IsNormal: Boolean;
+begin
+  Result := IsNormal(Self);
+end;
+
+function TGExtendedHelper.IsSubnormal: Boolean;
+begin
+  Result := IsSubnormal(Self);
 end;
 
 function TGExtendedHelper.IsExactInt: Boolean;
