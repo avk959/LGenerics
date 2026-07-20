@@ -506,23 +506,23 @@ type
   function CpSeqToUtf8Str(const s: array of TUtf8Cp): string;
 
 { returns the edit distance using DP algorithm }
-  function EditDistanceUtf8(const L, R: string; const aCost: TSeqEditCost): SizeInt; inline;
+  function EditDistanceUtf8(const L, R: string; const aCost: TSeqEditCost): SizeInt;
 { returns the Levenshtein distance using Berghel-Roach algorithm }
-  function LevDistanceMbrUtf8(const L, R: string): SizeInt; inline;
-  function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function LevDistanceMbrUtf8(const L, R: string): SizeInt;
+  function LevDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 { returns the Levenshtein distance using Myers bit-vector algorithm }
-  function LevDistanceMyersUtf8(const L, R: string): SizeInt; inline;
-  function LevDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function LevDistanceMyersUtf8(const L, R: string): SizeInt;
+  function LevDistanceMyersUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 { returns the LCS distance using Wu-Manber-Myers-Miller O(NP) algorithm }
-  function LcsDistanceWmUtf8(const L, R: string): SizeInt; inline;
-  function LcsDistanceWmUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function LcsDistanceWmUtf8(const L, R: string): SizeInt;
+  function LcsDistanceWmUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 { returns the restricted Damerau-Levenshtein distance using Berghel-Roach algorithm }
-  function DamDistanceMbrUtf8(const L, R: string): SizeInt; inline;
-  function DamDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt; inline;
+  function DamDistanceMbrUtf8(const L, R: string): SizeInt;
+  function DamDistanceMbrUtf8(const L, R: string; aLimit: SizeInt): SizeInt;
 { returns the longest common subsequence of strings L and R }
-  function LcsGusUtf8(const L, R: string): string; inline;
-  function LcsKrUtf8(const L, R: string): string; inline;
-  function LcsMyersUtf8(const L, R: string): string; inline;
+  function LcsGusUtf8(const L, R: string): string;
+  function LcsKrUtf8(const L, R: string): string;
+  function LcsMyersUtf8(const L, R: string): string;
 { searches for the element of the aList array that is closest to the pattern
   aPattern, according to the specified distance algorithm aDistAlgo;
   returns the element's index(Result.F1) and distance(Result.F2) if the pattern
@@ -4982,18 +4982,20 @@ end;
 
 procedure Utf8ToUcs4SeqImpl(const s: rawbytestring; aPtr: PUcs4Char; out aLen: SizeInt);
 var
-  I, PtSize, StrLen: SizeInt;
-  p: PByte absolute s;
+  pStart: PUcs4Char;
+  p, pEnd: PByte;
+  PtSize: SizeInt;
 begin
-  StrLen := System.Length(s);
-  I := 0;
-  aLen := 0;
-  while I < StrLen do
+  pStart := aPtr;
+  p := Pointer(s);
+  pEnd := p + System.Length(s);
+  while p < pEnd do
     begin
-      aPtr[aLen] := CodePointToUcs4Char(@p[I], PtSize);
-      Inc(aLen);
-      I += PtSize;
+      aPtr^ := CodePointToUcs4Char(p, pEnd - p, PtSize);
+      p += PtSize;
+      Inc(aPtr);
     end;
+  aLen := aPtr - pStart;
 end;
 
 { see http://bjoern.hoehrmann.de/utf-8/decoder/dfa; optimized version based on Rich Felker's variant }
